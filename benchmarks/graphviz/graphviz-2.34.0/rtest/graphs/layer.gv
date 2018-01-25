@@ -1,0 +1,11 @@
+
+digraph G {
+	layers="local:pvt:test:new:ofc";
+
+	node1  [layer="pvt"];
+	node2  [layer="all"];
+	node3  [layer="pvt:ofc"];		/* pvt, test, new, and ofc */
+	node2 -> node3  [layer="pvt:all"];	/* same as pvt:ofc */
+	node2 -> node4 [layer=3];		/* same as test */
+}
+

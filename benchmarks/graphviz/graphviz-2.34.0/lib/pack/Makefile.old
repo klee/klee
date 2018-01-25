@@ -1,0 +1,54 @@
+all:	libpack.a
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+INCS =  -I. \
+	    -I$(ROOT) \
+	    -I../gvc \
+	    -I../common \
+	    -I../neatogen \
+	    -I../graph \
+	    -I../cdt \
+	    -I../pathplan
+
+DEFINES = -DHAVE_CONFIG_H
+
+HDRS = pack.h
+
+OBJS = ccomps.o pack.o
+
+libpack.a : $(OBJS)
+	$(RM) libpack.a
+	$(AR) cr libpack.a $(OBJS)
+	$(RANLIB) libpack.a
+
+install: libpack.a 
+	$(MKPATH) $(INCDIR)
+	$(INSTALL) pack.h $(INCDIR)
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libpack.a $(LIBDIR)
+	$(MKPATH) $(LIBMANDIR)
+	$(INSTALL) pack.3 $(LIBMANDIR)
+
+pack.o : pack.h
+ccomps.o : pack.h
+
+TESTLIBS =  -L../neatogen -lneato -L../common -ldotneato \
+            -L../pathplan -lpathplan \
+            -L../graph -lgraph \
+            -L../cdt -lcdt \
+            -L../gd -lgd \
+            $(EXTLIB_LIB) -lm
+
+ptest : ptest.o libpack.a
+	$(CC) $(LDFLAGS) -o ptest ptest.o libpack.a $(TESTLIBS)
+
+ptest.o : ptest.c pack.h
+	$(CC) -c -DDATE="\"`date`\"" $(CCFLAGS) $(DEFINES) $(INCS) ptest.c
+
+clean:
+	$(RM) core *.o
+
+distclean: clean
+	$(RM) *.a ptest

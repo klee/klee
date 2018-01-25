@@ -1,0 +1,36 @@
+digraph G {
+   b [style=bold]
+   c [style=dashed]
+   d [style=dotted]
+   e [style="setlinewidth(3)"]
+   f [style=invis]
+   g [style=solid]
+   a -> b [style=bold]
+   a -> c [style=dashed]
+   a -> d [style=dotted]
+   a -> e [style="setlinewidth(3)"]
+   a -> f [style=invis]
+   a -> g [style=solid]
+   B [shape=box,style="bold,rounded"]
+   C [shape=diamond,style="dashed,rounded"]
+   D [style="dotted,rounded"]
+   E [style="setlinewidth(3),rounded"]
+   BD [style="bold,rounded,diagonals"]
+   CD [shape=diamond, style="dashed,rounded,diagonals"]
+   DD [style="dotted,rounded,diagonals"]
+   ED [style="setlinewidth(3),rounded,diagonals"]
+   BFD [style="filled, bold,rounded,diagonals"]
+   CFD [style="filled, dashed,rounded,diagonals"]
+   DFD [style="filled, dotted,rounded,diagonals"]
+   EFD [style="filled, setlinewidth(3),rounded,diagonals"]
+   B -> BD -> BFD
+   C -> CD -> CFD
+   D -> DD -> DFD
+   E -> ED -> EFD
+   subgraph clusterA {
+      style=rounded
+      1 -> {2 3}
+   }
+
+  
+}

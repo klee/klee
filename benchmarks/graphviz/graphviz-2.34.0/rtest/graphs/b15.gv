@@ -1,0 +1,235 @@
+digraph g {
+	concentrate=true;
+	node [shape = record];
+	Stand [ label = " <In> Stand | | <Normal> Normal | | <Target> Target "];
+	FaceBack [ label = " <In> FaceBack | | <Always> Always "];
+	subgraph clusterWalking {
+		label = walking;
+		Walk [ label = " <In> Walk | | <Normal> Normal | | <Target> Target "];
+		WalkStepUp [ label = " <In> WalkStepUp | | <Normal> Normal "];
+		WalkStepDown [ label = " <In> WalkStepDown | | <Normal> Normal "];
+	}
+	subgraph cluster0 {
+		label = running;
+		Run [ label = " <In> Run | | { <Normal> Normal | | <Target> Target }"];
+		RunToStop [ label = " <In> RunToStop | | <Always> Always "];
+		RunStepUp [ label = " <In> RunStepUp | | <Normal> Normal "];
+		RunStepDown [ label = " <In> RunStepDown | | <Normal> Normal "];
+	}
+	Strafe [ label = " <In> Strafe | | <Always> Always "];
+	JumpVertical [ label = " <In> JumpVertical | | <Normal> Normal | | <Target> Target "];
+	JumpRunning [ label = " <In> JumpRunning | | <Normal> Normal | | <Target> Target "];
+	MidJump [ label = " <In> MidJump | | <Normal> Normal | | <Target> Target "];
+	MidJumpFaceBack [ label = " <In> MidJumpFaceBack | | <Normal> Normal "];
+	LandVertical [ label = " <In> LandVertical | | <Normal> Normal | | <Target> Target "];
+	LandRunning [ label = " <In> LandRunning | | <Normal> Normal | | <Target> Target "];
+	Fall [ label = " <In> Fall | | <Normal> Normal | | <Target> Target "];
+	FallFaceBack [ label = " <In> FallFaceBack | | <Normal> Normal "];
+	Flight [ label = " <In> Flight | | <Normal> Normal | | <Target> Target | | <Target> Target | | <Target> Target "];
+	FlightToHover [ label = " <In> FlightToHover | | <Normal> Normal | | <Target> Target "];
+	FlightStrafe [ label = " <In> FlightStrafe | | <Normal> Normal "];
+	subgraph cluster1 {
+		label = FPM;
+		FPMStand [ label = " <In> FPMStand | | <Always> Always "];
+		FPMRotate [ label = " <In> FPMRotate | | <Always> Always "];
+		FPMStep [ label = " <In> FPMStep | | <Always> Always "];
+		FPMCenter [ label = " <In> FPMCenter | | <Always> Always "];
+	}
+	subgraph cluster2 {
+		label = FPMHover;
+		FPMHover [ label = " <In> FPMHover | | <Always> Always "];
+		FPMHoverRotate [ label = " <In> FPMHoverRotate | | <Always> Always "];
+		FPMHoverStep [ label = " <In> FPMHoverStep | | <Always> Always "];
+		FPMHoverCenter [ label = " <In> FPMHoverCenter | | <Always> Always "];
+	}
+	subgraph cluster3 {
+		label = hover;
+		HoverRest [ label = " <In> HoverRest | | <Normal> Normal | | <Target> Target "];
+		HoverForward [ label = " <In> HoverForward | | <Normal> Normal | | <Target> Target "];
+		HoverForwardToStop [ label = " <In> HoverForwardToStop | | <Normal> Normal | | <Target> Target "];
+		HoverFaceBack [ label = " <In> HoverFaceBack | | <Normal> Normal "];
+		HoverStrafeToStop [ label = " <In> HoverStrafeToStop | | <Normal> Normal | | <Target> Target "];
+		HoverStrafe [ label = " <In> HoverStrafe | | <Normal> Normal | | <Target> Target "];
+	}
+	HoverToFlight [ label = " <In> HoverToFlight | | <Normal> Normal | | <Target> Target "];
+	Stand:Normal->FPMStand:In
+	Stand:Normal->Fall:In
+	Stand:Normal->JumpVertical:In
+	Stand:Normal->Walk:In
+	Stand:Normal->Strafe:In
+	Stand:Normal->FaceBack:In
+	Stand:Target->FPMStand:In
+	Stand:Target->Fall:In
+	Stand:Target->JumpVertical:In
+	Stand:Target->Walk:In
+	FaceBack:Always->Fall:In
+	FaceBack:Always->JumpVertical:In
+	FaceBack:Always->Stand:In
+	Walk:Normal->Fall:In
+	Walk:Normal->Stand:In
+	Walk:Normal->Stand:In
+	Walk:Normal->JumpRunning:In
+	Walk:Normal->WalkStepUp:In
+	Walk:Normal->WalkStepDown:In
+	Walk:Normal->Run:In
+	Walk:Normal->Strafe:In
+	Walk:Normal->FaceBack:In
+	Walk:Target->Fall:In
+	Walk:Target->Stand:In
+	Walk:Target->Stand:In
+	Walk:Target->JumpRunning:In
+	Walk:Target->WalkStepUp:In
+	Walk:Target->WalkStepDown:In
+	Walk:Target->Run:In
+	WalkStepUp:Normal->Fall:In
+	WalkStepUp:Normal->Walk:In
+	WalkStepDown:Normal->Fall:In
+	WalkStepDown:Normal->Walk:In
+	Run:Normal->Fall:In
+	Run:Normal->RunToStop:In
+	Run:Normal->RunToStop:In
+	Run:Normal->Walk:In
+	Run:Normal->JumpRunning:In
+	Run:Normal->RunStepUp:In
+	Run:Normal->RunStepDown:In
+	Run:Normal->Strafe:In
+	Run:Normal->FaceBack:In
+	Run:Target->Fall:In
+	Run:Target->RunToStop:In
+	Run:Target->RunToStop:In
+	Run:Target->Walk:In
+	Run:Target->JumpRunning:In
+	Run:Target->RunStepUp:In
+	Run:Target->RunStepDown:In
+	RunToStop:Always->Fall:In
+	RunToStop:Always->Stand:In
+	RunToStop:Always->Stand:In
+	RunToStop:Always->Run:In
+	RunToStop:Always->Walk:In
+	RunStepUp:Normal->Fall:In
+	RunStepUp:Normal->Run:In
+	RunStepDown:Normal->Fall:In
+	RunStepDown:Normal->Run:In
+	Strafe:Always->Fall:In
+	Strafe:Always->Stand:In
+	Strafe:Always->Run:In
+	Strafe:Always->Stand:In
+	JumpVertical:Normal->MidJump:In
+	JumpVertical:Target->MidJump:In
+	JumpRunning:Normal->MidJump:In
+	JumpRunning:Target->MidJump:In
+	MidJump:Normal->HoverRest:In
+	MidJump:Normal->Fall:In
+	MidJump:Normal->MidJumpFaceBack:In
+	MidJump:Target->HoverRest:In
+	MidJump:Target->Fall:In
+	MidJumpFaceBack:Normal->HoverRest:In
+	MidJumpFaceBack:Normal->FallFaceBack:In
+	MidJumpFaceBack:Normal->MidJump:In
+	LandVertical:Normal->Stand:In
+	LandVertical:Target->Stand:In
+	LandRunning:Normal->Stand:In
+	LandRunning:Normal->Run:In
+	LandRunning:Target->Stand:In
+	LandRunning:Target->Run:In
+	Fall:Normal->HoverRest:In
+	Fall:Normal->LandVertical:In
+	Fall:Normal->LandRunning:In
+	Fall:Normal->FallFaceBack:In
+	Fall:Target->HoverRest:In
+	Fall:Target->LandVertical:In
+	Fall:Target->LandRunning:In
+	FallFaceBack:Normal->HoverRest:In
+	FallFaceBack:Normal->LandVertical:In
+	FallFaceBack:Normal->LandRunning:In
+	FallFaceBack:Normal->Fall:In
+	HoverRest:Normal->FPMHover:In
+	HoverRest:Normal->Fall:In
+	HoverRest:Normal->HoverToFlight:In
+	HoverRest:Normal->HoverStrafe:In
+	HoverRest:Normal->HoverForward:In
+	HoverRest:Target->FPMHover:In
+	HoverRest:Target->Fall:In
+	HoverRest:Target->HoverToFlight:In
+	HoverRest:Target->HoverStrafe:In
+	HoverRest:Target->HoverForward:In
+	HoverForward:Normal->HoverForwardToStop:In
+	HoverForward:Normal->Fall:In
+	HoverForward:Normal->HoverToFlight:In
+	HoverForward:Normal->HoverForwardToStop:In
+	HoverForward:Normal->HoverStrafe:In
+	HoverForward:Normal->HoverFaceBack:In
+	HoverForward:Target->HoverForwardToStop:In
+	HoverForward:Target->Fall:In
+	HoverForward:Target->HoverToFlight:In
+	HoverForward:Target->HoverForwardToStop:In
+	HoverForward:Target->HoverStrafe:In
+	HoverForwardToStop:Normal->HoverRest:In
+	HoverForwardToStop:Normal->Fall:In
+	HoverForwardToStop:Normal->HoverToFlight:In
+	HoverForwardToStop:Normal->HoverStrafe:In
+	HoverForwardToStop:Normal->HoverForward:In
+	HoverForwardToStop:Normal->HoverRest:In
+	HoverForwardToStop:Target->HoverRest:In
+	HoverForwardToStop:Target->Fall:In
+	HoverForwardToStop:Target->HoverToFlight:In
+	HoverForwardToStop:Target->HoverStrafe:In
+	HoverForwardToStop:Target->HoverForward:In
+	HoverForwardToStop:Target->HoverRest:In
+	HoverFaceBack:Normal->Fall:In
+	HoverFaceBack:Normal->HoverToFlight:In
+	HoverFaceBack:Normal->HoverRest:In
+	HoverStrafe:Normal->HoverStrafeToStop:In
+	HoverStrafe:Normal->Fall:In
+	HoverStrafe:Normal->HoverToFlight:In
+	HoverStrafe:Normal->HoverForward:In
+	HoverStrafe:Normal->HoverStrafeToStop:In
+	HoverStrafe:Target->HoverStrafeToStop:In
+	HoverStrafe:Target->Fall:In
+	HoverStrafe:Target->HoverToFlight:In
+	HoverStrafe:Target->HoverForward:In
+	HoverStrafe:Target->HoverStrafeToStop:In
+	HoverStrafeToStop:Normal->HoverRest:In
+	HoverStrafeToStop:Normal->Fall:In
+	HoverStrafeToStop:Normal->HoverToFlight:In
+	HoverStrafeToStop:Normal->HoverStrafe:In
+	HoverStrafeToStop:Normal->HoverForward:In
+	HoverStrafeToStop:Normal->HoverRest:In
+	HoverStrafeToStop:Target->HoverRest:In
+	HoverStrafeToStop:Target->Fall:In
+	HoverStrafeToStop:Target->HoverToFlight:In
+	HoverStrafeToStop:Target->HoverStrafe:In
+	HoverStrafeToStop:Target->HoverForward:In
+	HoverStrafeToStop:Target->HoverRest:In
+	HoverToFlight:Normal->HoverRest:In
+	HoverToFlight:Normal->Fall:In
+	HoverToFlight:Normal->Flight:In
+	HoverToFlight:Target->HoverRest:In
+	HoverToFlight:Target->Fall:In
+	HoverToFlight:Target->Flight:In
+	Flight:Normal->FlightStrafe:In
+	Flight:Normal->FlightToHover:In
+	Flight:Target->FlightToHover:In
+	Flight:Target->FlightToHover:In
+	FlightToHover:Normal->HoverRest:In
+	FlightToHover:Target->HoverRest:In
+	FlightStrafe:Normal->Flight:In
+	FlightStrafe:Normal->Flight:In
+	FlightStrafe:Normal->FlightToHover:In
+	FPMStand:Always->Stand:In
+	FPMStand:Always->FPMStep:In
+	FPMStand:Always->FPMRotate:In
+	FPMRotate:Always->FPMStep:In
+	FPMRotate:Always->FPMStand:In
+	FPMStep:Always->FPMCenter:In
+	FPMCenter:Always->FPMStep:In
+	FPMCenter:Always->FPMStand:In
+	FPMHover:Always->HoverRest:In
+	FPMHover:Always->FPMHoverStep:In
+	FPMHover:Always->FPMHoverRotate:In
+	FPMHoverRotate:Always->FPMHoverStep:In
+	FPMHoverRotate:Always->FPMHover:In
+	FPMHoverStep:Always->FPMHoverCenter:In
+	FPMHoverCenter:Always->FPMHoverStep:In
+	FPMHoverCenter:Always->FPMHover:In
+}

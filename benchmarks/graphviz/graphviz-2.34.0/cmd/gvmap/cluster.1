@@ -1,0 +1,101 @@
+.de TQ
+.  br
+.  ns
+.  TP \\$1
+..
+.TH CLUSTER 1 "3 March 2011"
+.SH NAME
+cluster \- find clusters in a graph and augment the graph with this information.
+.SH SYNOPSIS
+.B cluster
+[\fB\-v?\fP]
+[
+.BI \-C k
+]
+[
+.BI \-c k
+]
+[
+.B \-o
+.I outfile
+]
+[ 
+.I files
+]
+.SH DESCRIPTION
+.B cluster
+takes as input a graph in DOT format, finds node clusters and augments 
+the graph with this information. 
+The clusters are specified by the "cluster" attribute attached to nodes; cluster
+values are non-negative integers.
+.B cluster
+attempts to maximize the modularity of the clustering.
+If the edge attribute "weight" is defined, this will be used in 
+computing the clustering.
+.SH OPTIONS
+The following options are supported:
+.TP
+.BI \-C k 
+specifies a targeted number of clusters that should be generated.
+The specified number \fIk\fP is only a suggestion and may not be realisable. 
+If \fIk == 0\fP, the default, the number of clusters that approximately optimizes the modularity is returned.
+.TP
+.BI \-c k
+specifies clustering method.
+If \fIk == 0\fP, the default, modularity clustering will be used. 
+If \fIk == 1\fP modularity quality will be used.
+.TP
+.BI \-o outfile 
+Specifies that output should go into the file \fIoutfile\fP. By default,
+\fIstdout\fP is used.
+.TP
+.BI \-v 
+Verbose mode.
+.SH EXAMPLES
+.PP
+Applying 
+.B cluster
+to the following graph,
+.PP
+.nf
+\fB   graph {
+       1--2 [weight=10.]
+       2--3 [weight=1]
+       3--4 [weight=10.]
+       4--5 [weight=10]
+       5--6 [weight=10]
+       3--6 [weight=0.1]
+       4--6 [weight=10.]
+      }\fP
+.fi
+.PP
+gives
+.PP
+.nf
+\fB   graph {
+         node [cluster="-1"];
+         1 [cluster=1];
+         2 [cluster=1];
+         3 [cluster=2];
+         4 [cluster=2];
+         5 [cluster=2];
+         6 [cluster=2];
+         1 -- 2 [weight="10."];
+         2 -- 3 [weight=1];
+         3 -- 4 [weight="10."];
+         4 -- 5 [weight=10];
+         5 -- 6 [weight=10];
+         3 -- 6 [weight="0.1"];
+         4 -- 6 [weight="10."];
+   }\fP
+.fi
+
+
+.SH AUTHOR
+Yifan Hu <yifanhu@research.att.com>
+.SH "SEE ALSO"
+.PP
+gvmap(1)
+.PP
+
+Blondel, V.D., Guillaume, J.L., Lambiotte, R., Lefebvre, E.: Fast unfolding of communities in large networks. Journal of Statistical Mechanics: Theory and Experiment (2008), P10008.

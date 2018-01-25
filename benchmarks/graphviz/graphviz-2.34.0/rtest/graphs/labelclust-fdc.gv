@@ -1,0 +1,17 @@
+digraph G {
+  rankdir="LR";
+  label = "label demo";
+  subgraph cluster0 {
+    a;
+    b;
+    a->b;
+    label = "cluster0";
+    labeljust="center";
+  }
+  subgraph cluster1 {
+    c;
+    d;
+    c->d;
+    label = "cluster1";
+  }
+}

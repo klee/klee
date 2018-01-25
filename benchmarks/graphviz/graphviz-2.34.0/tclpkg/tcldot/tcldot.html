@@ -1,0 +1,198 @@
+<html>
+<head>
+<title> Tcl Dot API (tcldot)</title>
+<link rev=made href="mailto:ellson@graphviz.org">
+</head>
+<body>
+<h1> Tcl Dot API (tcldot)</h1>
+<p>(Tcl Dot also pulls in Gdtclft for writing to a gif image.)
+<p><hr>
+Create a new graph.
+<pre>
+        <b>dotnew</b> <i>graphtype</i> ?<i>attributeName attributeValue</i>? ?...?
+          -> <i>graphHandle</i>
+
+	<i>graphtype</i>:= (<b>graph</b>|<b>digraph</b>|<b>graphstrict</b>|<b>digraphstrict</b>)
+</pre>
+Read a graph.
+<pre>
+        <b>dotread</b> <i>fileHandle</i>
+          -> <i>graphHandle</i>
+</pre>
+Add a node to a graph
+<pre>
+        <i>graphHandle</i> <b>addnode</b> ?<i>nodeName</i>? ?<i>attributeName attributeValue</i>? ?...?
+          -> <i>nodeHandle</i>
+
+	If the <i>nodeName</i> parameter is omitted the name of the
+	node defaults to <i>nodeHandle</i>.
+</pre>
+Add an edge to a graph
+<pre>
+        <i>graphHandle</i> <b>addedge</b> <i>tailnode</i> <i>headnode</i> ?<i>attributeName attributeValue</i>? ?...?
+          -> <i>edgeHandle</i>
+
+        <i>tailnode</i> = (<i>tailnodeHandle</i>|<i>tailnodeName</i>)
+        <i>headnode</i> = (<i>headnodeHandle</i>|<i>headnodeName</i>)
+
+        NodeHandles take precedence, so if nodeName is of the form
+        "node99" it may conflict.  The precedence can be overridden
+        with code such as:
+            <i>graphHandle</i> <b>addedge</b> <b>\</b>
+                   <b>[</b><i>graphHandle</i> <b>findnode</b> <i>tailnodeName</i><b>]</b> <b>\</b>
+                   <b>[</b><i>graphHandle</i> <b>findnode</b> <i>headnodeName</i><b>]</b> 
+</pre>
+Add a subgraph to a graph
+<pre>
+        <i>graphHandle</i> <b>addsubgraph</b> ?<i>subgName</i>? ?<i>attributeName attributeValue</i>? ?...?
+          -> <i>subgHandle</i>
+
+	If the <i>subgName</i> parameter is omitted the name of the
+	node defaults to <i>subgHandle</i>.
+
+	Clusters are created by giving a subgraph a name that begins
+	with "cluster".
+</pre>
+Add a edge to a node
+<pre>
+        <i>tailnodeHandle</i> <b>addedge</b> <i>headnode</i> ?<i>attributeName attributeValue</i>? ?...?
+          -> <i>edgeHandle</i>
+
+        <i>headnode</i> = (<i>headnodeHandle</i>|<i>headnodeName</i>)
+</pre>
+Delete a graph/node/edge
+<pre>
+        <i>graphHandle</i> <b>delete</b>
+        <i>nodeHandle</i> <b>delete</b>
+        <i>edgeHandle</i> <b>delete</b>
+</pre>
+Count nodes/edges
+<pre>
+        <i>graphHandle</i> <b>countnodes</b>
+	  -> <i>integer</i>
+        <i>graphHandle</i> <b>countedges</b>
+	  -> <i>integer</i>
+</pre>
+List subgraphs/nodes/edges
+<pre>
+        <i>graphHandle</i> <b>listnodes</b>
+	  -> <i>{nodeHandle ... }</i>
+
+        <i>nodeHandle</i> <b>listedges</b>
+	  -> <i>{edgeHandle ... }</i>
+        <i>nodeHandle</i> <b>listoutedges</b>
+	  -> <i>{edgeHandle ... }</i>
+        <i>nodeHandle</i> <b>listinedges</b>
+	  -> <i>{edgeHandle ... }</i>
+
+        <i>edgeHandle</i> <b>listnodes</b>
+	  -> <i>tailnodeHandle</i> <i>headnodeHandle</i>
+
+        <i>graphHandle</i> <b>listsubgraphs</b>
+	  -> <i>{graphHandle ... }</i>
+</pre>
+Find nodes/edges by nodename
+<pre>
+        <i>graphHandle</i> <b>findnode</b> <i>nodename</i>
+	  -> <i>nodeHandle</i>
+
+        <i>graphHandle</i> <b>findedge</b> <i>tailnodename</i> <i>headnodename</i>
+	  -> <i>edgeHandle</i>
+
+        <i>nodeHandle</i> <b>findedge</b> <i>nodename</i>
+	  -> <i>edgeHandle</i>
+</pre>
+Show graph/node/edge name
+<pre>
+        <i>graphHandle</i> <b>showname</b>
+	  -> <i>graphname</i>
+
+        <i>nodeHandle</i> <b>showname</b>
+	  -> <i>nodename</i>
+
+        <i>edgeHandle</i> <b>showname</b>
+	  -> <i>edgename</i>
+</pre>
+Set default node/edge attributes
+<pre>
+        <i>graphHandle</i> <b>setnodeattributes</b> <i>attributeName attributeValue</i> ?...?
+        <i>graphHandle</i> <b>setedgeattributes</b> <i>attributeName attributeValue</i> ?...?
+</pre>
+List node/edge attribute names
+<pre>
+        <i>graphHandle</i> <b>listnodeattributes</b>
+	  -> <i>{attributeName ... }</i>
+        <i>graphHandle</i> <b>listedgeattributes</b>
+	  -> <i>{attributeName ... }</i>
+</pre>
+Query default node/edge attributes
+<pre>
+        <i>graphHandle</i> <b>querynodeattributes</b> <i>attributeName</i> ?...?
+	  -> <i>{attributeValue ... }</i>
+        <i>graphHandle</i> <b>queryedgeattributes</b> <i>attributeName</i> ?...?
+	  -> <i>{attributeValue ... }</i>
+</pre>
+Set graph/node/edge attributes
+<pre>
+        <i>graphHandle</i> <b>setattributes</b> <I>attributeName attributeValue</i> ?...?
+        <i>nodeHandle</i> <b>setattributes</b> <i>attributeName attributeValue</i> ?...?
+        <i>edgeHandle</i> <b>setattributes</b> <i>attributeName attributeValue</i> ?...?
+</pre>
+List graph/node/edge attribute names
+<pre>
+        <i>graphHandle</i> <b>listattributes</b>
+	  -> <i>{attributeName ... }</i>
+        <i>nodeHandle</i> <b>listattributes</b>
+	  -> <i>{attributeName ... }</i>
+        <i>edgeHandle</i> <b>listattributes</b>
+	  -> <i>{attributeName ... }</i>
+</pre>
+Query graph/node/edge attribute values
+<pre>
+        <i>graphHandle</i> <b>queryattributes</b> <i>attributeName</i> ?<i>attributeName</i>? ?...?
+	  -> <i>{attributeValue ... }</i>
+        <i>nodeHandle</i> <b>queryattributes</b> <i>attributeName</i> ?<i>attributeName</i>? ?...?
+	  -> <i>{attributeValue ... }</i>
+        <i>edgeHandle</i> <b>queryattributes</b> <i>attributeName</i> ?<i>attributeName</i>? ?...?
+	  -> <i>{attributeValue ... }</i>
+</pre>
+Layout nodes
+<pre>
+        <i>graphHandle</i> <b>layoutNodes</b>
+
+	<b>NOTE:</b> Not yet implemented.  Use:
+	      <i>graphHandle</i> <b>layout</b>
+        to layout both nodes and edges.
+</pre>
+Layout edges
+<pre>
+        <i>graphHandle</i> <b>layoutEdges</b> -<i>style</i>
+
+	<i>style</i>:= (<b>straight</b>|<b>spline</b>)
+
+	<b>NOTE:</b> Not yet implemented.  Use:
+	      <i>graphHandle</i> <b>layout</b>
+        to layout both nodes and edges.
+</pre>
+Write graph to file
+<pre>
+        <i>graphHandle</i> <b>write</b> <i>filehandle</i> <i>format</i>
+
+	<i>format</i>:= (<b>ps</b>|<b>mif</b>|<b>hpgl</b>|<b>gif</b>|<b>plain</b>|<b>dot</b>)
+</pre>
+Render graph to existing or new gifImage (see:
+<a href=http://guraldi.hgp.med.umich.edu/gdtcl.html>gdTcl</a>)
+<pre>
+        <i>graphHandle</i> <b>rendergd</b> ?<i>gdHandle</i>?
+          -> <i>gdHandle</i>
+</pre>
+Render graph to canvas (tkdot only)
+<pre>
+        <i>graphHandle</i> <b>render</b> <i>canvashandle</i>
+
+	<b>NOTE:</b> Not yet fully implemented.  For now use:
+	      <b>set c</b> <i>canvasHandle</i>
+	      <b>eval [</b><i>graphHandle</i> <b>render]</b>
+</pre>
+</body>
+</html>

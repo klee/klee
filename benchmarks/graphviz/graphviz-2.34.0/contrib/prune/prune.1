@@ -1,0 +1,166 @@
+.\" Copyright (c) 2002 Marcus Harnisch <marcus.harnisch@gmx.net>
+.\"
+.\" This is free documenation. It is provided to you without any
+.\" warranty that it is useful or that you can understand it.
+.\"
+.\" You are granted the right to use and redistribute the source code
+.\" or parts of it (even single words and letters), provided that the
+.\" copyright notice and the license terms will not be removed.
+.\"
+.TH prune 1
+
+.SH NAME
+prune \- Prune directed graphs
+.SH SYNOPSIS
+.B prune
+[
+.BI \-n " node"
+]
+[
+.BI \-N " attrspec"
+]
+[
+.B \-v
+]
+[
+.BR \- ( h | ? )
+]
+[
+.I files ...
+]
+.SH DESCRIPTION
+.B prune
+reads directed graphs in the same format used by 
+.B dot(1)
+and removes subgraphs rooted at nodes specified on the
+command line via options. These nodes themselves will not be removed,
+but can be given attributes so that they can be easily located by a
+graph stream editor such as
+.B gvpr(1).
+.B prune
+correctly handles cycles, loops and multi\(hyedges.
+
+Both options can appear multiple times on the command line. All
+subgraphs rooted at the respective nodes given will then be
+processed. If a node does not exist,
+.B prune
+will skip it and print a warning message to stderr.
+If multiple attributes are given, they will be applied to
+all nodes that have been processed.
+.B prune
+writes the result to the stdout.
+.SH OPTIONS
+.TP
+.BI \-n " name"
+Specifies name of node to prune.
+.TP
+.BI \-N " attrspec"
+Specifies attribute that will be set (or changed if it exists) for any
+pruned node.
+.I attrspec
+is a string of the form
+.IR attr "=" value.
+.TP
+.B \-v
+Verbose output.
+.TP
+.BR \-h " "\-?
+Prints the usage and exits.
+.SH EXAMPLES
+An input graph
+.I test.gv
+of the form
+.PP
+	digraph DG {
+.br
+	  A \-> B;
+.br
+	  A \-> C;
+.br
+
+.br
+	  B \-> D;
+.br
+	  B \-> E;
+.br
+	}
+.br
+
+, processed by the command
+.PP
+	prune \-n B test.gv
+.PP
+would produce the following output (the actual code might be formatted
+in a slightly different way).
+.PP
+	digraph DG {
+.br
+	  A \-> B;
+.br
+	  A \-> C;
+.br
+	}
+.br
+
+Another input graph
+.I test.gv
+of the form
+.PP
+	digraph DG {
+.br
+	  A \-> B;
+.br
+	  A \-> C;
+.br
+
+.br
+	  B \-> D;
+.br
+	  B \-> E;
+.br
+
+.br
+	  C \-> E;
+.br
+	}
+.br
+
+(note the additional edge from
+.I C
+to
+.I E
+), processed by the command
+.PP
+	prune \-n B \-N color=red test.gv
+.PP
+results in
+.PP
+	digraph DG {
+.br
+	  B [color=red];
+.br
+	  A \-> B;
+.br
+	  A \-> C;
+.br
+	  C \-> E;
+.br
+	}
+.br
+
+Node
+.I E
+has not been removed since its second parent
+.I C
+is not being pruned.
+
+.SH "EXIT STATUS"
+.B prune
+returns 0 on successful completion.
+It returns 1 if an error occurs.
+.SH SEE ALSO
+.BR dot (1),
+.BR gvpr (1)
+
+.SH AUTHOR
+Marcus Harnisch <marcus.harnisch@gmx.net>

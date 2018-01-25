@@ -1,0 +1,31 @@
+all:	libgvplugin_gs.a
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+INCS =  -I. \
+	-I$(ROOT) \
+        -I../../lib/common \
+        -I../../lib/pathplan \
+        -I../../lib/graph \
+        -I../../lib/cdt \
+        -I../../lib/gvc 
+
+DEFINES = -DHAVE_CONFIG_H
+
+OBJS = gvloadimage_gs.o gvplugin_gs.o
+
+libgvplugin_gs.a : $(OBJS)
+	$(RM) libgvplugin_gs.a
+	$(AR) cr libgvplugin_gs.a $(OBJS)
+	$(RANLIB) libgvplugin_gs.a
+
+install: libgvplugin_gs.a
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libgvplugin_gs.a $(LIBDIR)
+
+clean:
+	$(RM) core *.o
+
+distclean: clean
+	$(RM) *.a ptest

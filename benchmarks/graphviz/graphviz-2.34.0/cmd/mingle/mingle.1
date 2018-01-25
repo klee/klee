@@ -1,0 +1,95 @@
+.EQ
+delim $$
+.EN
+.de TQ
+.  br
+.  ns
+.  TP \\$1
+..
+.TH MINGLE 1 "16 August 2013"
+.SH NAME
+mingle \- fast edge bundling
+.SH SYNOPSIS
+.B mingle
+[
+.I options
+]
+[
+.BI \-o
+.I outfile
+]
+[ 
+.I files
+]
+.SH DESCRIPTION
+.B mingle
+takes as input a graph in DOT format with node position information (the \fIpos\fP attribute) and
+bundles the edges.
+.SH OPTIONS
+The following options are supported:
+.TP
+.BI \-m " k"
+indicates which method to use for bundling. A value of 0 corresponds to a force-directed bundling.
+A value of 2 uses a cluster plus ink saving approach. If available, a value 1 denotes 
+an agglomerative ink saving method. Normally, the last is the default.
+.TP
+.BI \-a " k"
+specifies the maximum turning angle, in degrees, as a non-negative real.
+The larger the value, the more edges may bend. If the value is 0, there is no limitation on
+the turning angle. The default is 40.
+The parameter is not used in force-directed bundling.
+.TP
+.BI \-c " v"
+specifies which compatability measure to use. The value 0, the default, uses a distance metric,
+while a value of 1 relies on full compatability. This value is only used in force-directed bundling.
+.TP
+.BI \-i " k"
+gives the maximum number of iterative divisions of edges allowd in force-directed bundling.
+The default is 4.
+.TP
+.BI \-k " k"
+gives the number of neighbors to be used in forming a nearest neighbor graph. This parameter is
+only used in the agglomerative method. The default is 10.
+.TP
+.BI \-K " k"
+is a positive real value giving the force constant used in force-directed bundling. By default,
+the value is determined automatically.
+.TP
+.BI \-o " file" 
+puts output in \fIfile\fP. Default output is stdout
+.TP
+.BI \-p " k"  
+Except for the force-directed method, bundling minimizes $ink * (k - cos(turning angle))$. The larger the
+value of \fIk\fP, the less emphasis is put on avoiding sharp turning angles and the faster the bundling.
+The default value is -1.
+.TP
+.BI \-r " k"  
+is a non-negative integer giving the maximum recursion level used in the agglomerative method. The default is 100.
+.TP
+.BI \-T " fmt"  
+specifies the output format. At present, the output is always in the DOT format. If \fIfmt\fP is "simple",
+the output is a simple, schematic representation of the drawing. Only the node positions and edges are
+retained from the original graph. If \fIfmt\fP is "gv", the drawing information is attached to the
+input graph. 
+.TP
+.BI \-v " k"  
+determines the verbose level used for tracing the algorithm. The value \fIk\fP is optional; if not
+provided, the value 1 is used.
+.TP
+.BI \-? 
+Print usage and exit.
+
+.SH BUGS
+At present, \fBmingle\fP does not handle graphs with loops or directed multiedges. So, a graph with edges
+\fIa -> b\fP and \fIb -> a\fP is acceptable, but not if it has edges \fIa -> b\fP and \fIa -> b\fP or
+\fIa -- b\fP and \fIa -- b\fP.
+.SH AUTHOR
+Emden R. Gansner <erg@research.att.com>
+Yifan Hu <yifanhu@research.att.com>
+.SH "SEE ALSO"
+.PP
+sfdp(1), neato(1), gvpr(1)
+.PP
+Emden R. Gansner, Yifan Hu, Stephen C. North and Carlos Scheidegger, 
+``Multilevel Agglomerative Edge Bundling for Visualizing Large Graphs'',
+IEEE Pacific Visualization Symposium PacificVis, pp. 187\(hy194, 2011.

@@ -1,0 +1,79 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<!--
+    This is a generated document.  Do not edit.
+-->
+<HTML VERSION="2.0">
+<HEAD>
+<TITLE>Node, Edge and Graph Attributes</TITLE>
+</HEAD>
+<BODY BGCOLOR=white>
+<A NAME="top"></A>
+<H1 align=CENTER>Node, Edge and Graph Attributes</H1>
+<HR>
+The table below describes the attributes used by various Graphviz tools.
+The table gives the name of the attribute, the graph components (node,
+edge, etc.) which use the attribute and the type of the attribute
+(strings representing legal values of that type). Where applicable, the table
+also gives a default value for the attribute, a minimum allowed setting
+for numeric attributes, and certain restrictions on the use of the attribute.
+<P>
+Note that attribute names are case-sensitive. 
+This is usually true for attribute values as well, unless noted.
+<P>
+All Graphviz attributes are specified by name-value pairs. Thus, to
+set the fillcolor of a node <TT>abc</TT>, one would use
+<TABLE>
+<TR><TD><TT>abc [fillcolor = red]</TT></TR>
+</TABLE>
+Similarly, to set the arrowhead style of an edge <TT>abc -> def</TT>,
+one would use
+<TABLE>
+<TR><TD><TT>abc -> def [arrowhead = diamond]</TT></TR>
+</TABLE>
+Further details concerning the setting of attributes can be found
+in the description of the
+<A HREF=lang.html>DOT language.</A>
+<P>
+At present, most device-independent units are either inches or
+<A NAME="points"></A>
+<A HREF="http://en.wikipedia.org/wiki/Point_(typography)">points</A>,
+which we take as 72 points per inch.
+<P>
+<A NAME=h:undir_note><STRONG>Note:</STRONG></A> Some attributes, such as
+<A HREF=#d:dir>dir</A> or <A HREF=#d:arrowtail>arrowtail</A>, are
+ambiguous when used in
+<A HREF=lang.html>DOT</A>
+with an undirected graph since the head and tail of an edge are meaningless.
+As a convention, the first time an undirected edge appears, the
+<A HREF=lang.html>DOT</A>
+parser will assign the left node as the tail node and the right node as
+the head. For example, the edge <TT>A -- B</TT> will have tail <TT>A</TT>
+and head <TT>B</TT>. It is the user's responsibility to handle such
+edges consistently. If the edge appears later, in the format
+<TABLE>
+<TR><TD><TT>B -- A [taillabel = "tail"]</TT></TR>
+</TABLE>
+the drawing will attach the tail label to node <TT>A</TT>.
+To avoid possible confusion when such attributes are required, the user
+is encouraged to use a directed graph.
+If it is important to make the graph appear undirected, this can be
+done using the <A HREF=#d:dir>dir</A>, <A HREF=#d:arrowtail>arrowtail</A>
+or <A HREF=#d:arrowhead>arrowhead</A> attributes.
+<P>
+The tools accept standard C representations for <EM>int</EM> and
+<EM>double</EM> types.
+For the <A NAME=k:bool><EM>bool</EM></A> type, TRUE values are
+represented by "true" or "yes" (case-insensitive)
+and any non-zero integer, and FALSE values by "false" or "no" (case-insensitive)
+and zero.
+In addition, there are a variety of specialized types such as
+<EM>arrowType</EM>, <EM>color</EM>,
+<EM>point</EM> and <EM>rankdir</EM>. Legal values for these types are given
+at the end.
+<P>
+In the <A NAME=h:uses><STRONG>Used By</STRONG></A> field, the
+characters E, N, G, S and C
+represent edges, nodes, the root graph, subgraphs
+and cluster subgraphs, respectively.
+This field indicates which graph component uses the attribute.
+<HR ALIGN=CENTER WIDTH="70%" SIZE=3>

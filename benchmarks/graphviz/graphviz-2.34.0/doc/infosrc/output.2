@@ -1,0 +1,29 @@
+<H1 align=CENTER><A NAME=d:image_fmts>Image Formats</A></H1>
+<HR>
+The <A HREF=attrs.html#a:image>image</A> and <A HREF=attrs.html#a:shapefile>shapefile</A> attributes specify an image file to be included
+as part of the final diagram. Not all image formats can be read. In addition,
+even if read, not all image formats can necessarily be used in a given
+output format.
+<P>
+The graph below shows what image formats can be used in which output formats,
+and the required plugins. On the left are the supported image formats. 
+On the right are the supported output formats.
+In the middle are the plugins: image loaders, renderers, drivers, arranged by 
+plugin library.  
+This presents the most general case. A given installation may not provide
+one of the plugins, in which case, that transformation is not possible.
+<BR>
+<IMG WIDTH="80%" SRC="plugins.png">
+<HR>
+<H2>Notes</H2>
+<OL TYPE="1">
+<LI>
+<A NAME=ID></A>In the formats: -Tcmap, -Tcmapx, -Tsvg, -Tvml, the output generates
+'id="node#"' properties for nodes, 'id="edge#"' properties for edges, and 'id="cluster#"' properties for clusters, with the '#' replaced by an internally assigned integer. These strings can be provided instead by an externally provided "id=xxx" attribute on the object.
+Normal "&#92;N" "&#92;E" "&#92;G" substitutions are applied.
+Externally provided id values are not used internally, and it is the use's reponsibilty to ensure
+that they are sufficiently unique for their intended downstream use.
+Note, in particular, that "&#92;E" is not a unique id for multiedges.
+</OL>
+</BODY>
+</HTML>

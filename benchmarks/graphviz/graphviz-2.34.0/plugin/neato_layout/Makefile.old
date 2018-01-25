@@ -1,0 +1,31 @@
+all:	libgvplugin_neato_layout.a
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+INCS =  -I. \
+	-I$(ROOT) \
+        -I../../lib/common \
+        -I../../lib/pathplan \
+        -I../../lib/graph \
+        -I../../lib/cdt \
+        -I../../lib/gvc 
+
+DEFINES = -DHAVE_CONFIG_H
+
+OBJS = gvplugin_neato_layout.o gvlayout_neato_layout.o
+
+libgvplugin_neato_layout.a : $(OBJS)
+	$(RM) libgvplugin_neato_layout.a
+	$(AR) cr libgvplugin_neato_layout.a $(OBJS)
+	$(RANLIB) libgvplugin_neato_layout.a
+
+install: libgvplugin_neato_layout.a
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libgvplugin_neato_layout.a $(LIBDIR)
+
+clean:
+	$(RM) core *.o
+
+distclean: clean
+	$(RM) *.a ptest

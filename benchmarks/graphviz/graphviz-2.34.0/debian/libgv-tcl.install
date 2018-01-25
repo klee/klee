@@ -1,0 +1,5 @@
+usr/lib/graphviz/tcl          usr/lib/tcltk/graphviz
+usr/share/man/man3/gv.3tcl
+usr/share/man/man3/gdtclft.3tcl
+usr/share/man/man3/tkspline.3tk
+usr/share/man/man3/tcldot.3tcl

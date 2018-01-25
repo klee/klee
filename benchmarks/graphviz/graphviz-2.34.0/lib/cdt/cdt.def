@@ -1,0 +1,26 @@
+LIBRARY	"cdt"
+
+EXPORTS
+Dtbag	
+dtclose	
+dtdisc	
+dtextract
+dtflatten
+Dthash
+Dtlist
+dtmethod
+Dtobag
+dtopen
+Dtorder
+Dtoset
+Dtqueue
+dtrenew
+dtrestore
+Dtset
+dtsize
+Dtstack
+dtstat
+dtstrhash
+Dttree
+dtview
+dtwalk

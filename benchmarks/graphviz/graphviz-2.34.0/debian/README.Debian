@@ -1,0 +1,28 @@
+graphviz for Debian
+-------------------
+
+  * Various examples are available in the graphviz-doc package,
+    shipped under /usr/share/doc/graphviz/examples. It might be needed
+    to adjust some paths to make the demo scripts work out of the box,
+    patches are welcome.
+  * One might also be interested in the contrib/ directory of the
+    source package. Note that starting with 2.16.1-1, the diffimg
+    utility is built and shipped in the graphviz package.
+  * Original notes about packages suggested by graphviz:
+     - The msttcorefonts package is suggested so that TrueType fonts
+       are available if necessary.
+     - The gsfonts package is suggested in case X isn't installed,
+       since it contains default fonts.
+  * Those notes were kept verbatim and probably need an update, like
+    the package relationships themselves. Comments are welcome in the
+    meanwhile.
+  * A “global” manpage (graphviz.7) is available so that one can
+    easily find all graphviz-related binaries and their role. Thanks
+    again to Joachim Berdal Haga <jbh@lupus.ig3.net> for having
+    proposed such a list.
+  * For references, from the 2.12-4 upload (Thu, 09 Aug 2007): Java
+    and C# bindings (#360970 and #360977) are not planned at the
+    moment, given the restrictions on the architectures on which they
+    are available. Anyway, any tested patch is welcome to add them.
+
+ -- Cyril Brulebois <cyril.brulebois@enst-bretagne.fr>, Thu, 14 Feb 2008 14:15:32 +0100

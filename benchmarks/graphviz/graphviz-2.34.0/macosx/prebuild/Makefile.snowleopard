@@ -1,0 +1,894 @@
+# tools
+
+CURL=curl
+MAKE=make
+TAR=tar
+
+PREFIX=$(HOME)/FIX/Darwin.i386
+
+ARCHS=-arch i386 -arch x86_64
+
+# package URL
+
+include Makefile-packages.incl
+
+# bins
+AUTOCONF=autoconf
+AUTOMAKE=automake
+LIBTOOL=libtoolize
+PKGCONFIG=pkg-config
+
+# libs
+FREETYPE=libfreetype.la
+FONTCONFIG=libfontconfig.la
+XFT=libXft.la
+GD=libgd.la
+PIXMAN=libpixman-1.la
+PNG=libpng15.la
+CAIRO=libcairo.la
+INTL=libintl.la
+GLIB=libglib-2.0.la
+PANGO=libpango-1.0.la
+GTS=libgts.la
+GTK=libgtk+.la
+ATK=libatk-1.0.la
+TIFF=libtiff.la
+JPEG=libjpeg.a
+
+# directories
+dirname=$(basename $(basename $(notdir $(1))))
+AUTOCONF_DIR=$(call dirname, $(AUTOCONF_URL))
+AUTOMAKE_DIR=$(call dirname, $(AUTOMAKE_URL))
+LIBTOOL_DIR=$(call dirname, $(LIBTOOL_URL))
+PKGCONFIG_DIR=$(call dirname, $(PKGCONFIG_URL))
+FREETYPE_DIR=$(call dirname, $(FREETYPE_URL))
+FONTCONFIG_DIR=$(call dirname, $(FONTCONFIG_URL))
+XFT_DIR=$(call dirname, $(XFT_URL))
+GD_DIR=$(call dirname, $(GD_URL))
+PIXMAN_DIR=$(call dirname, $(PIXMAN_URL))
+PNG_DIR=$(call dirname, $(PNG_URL))
+CAIRO_DIR=$(call dirname, $(CAIRO_URL))
+GETTEXT_DIR=$(call dirname, $(GETTEXT_URL))
+GLIB_DIR=$(call dirname, $(GLIB_URL))
+PANGO_DIR=$(call dirname, $(PANGO_URL))
+GTS_DIR=$(call dirname, $(GTS_URL))
+GTK_DIR=$(call dirname, $(GTK_URL))
+ATK_DIR=$(call dirname, $(ATK_URL))
+TIFF_DIR=$(call dirname, $(TIFF_URL))
+JPEG_DIR=$(call dirname, $(JPEG_URL))
+
+#
+# target
+#
+# --prefix to dump results into $(PREFIX) not /usr/local
+# --disable-dependency-tracking since this is one-off build
+# --enable-static=yes since this builds static libraries
+# --enable-shared=no since this doesn't build dynamic libraries
+# -O2 to optimize code for speed and performance
+# -arch to build 32-bit/64-bit Universal Binaries
+# pkgconfig to look for X11 libraries too
+
+BASE_CONFIG=--prefix=$(PREFIX) --disable-dependency-tracking --enable-static=yes --enable-shared=no PKG_CONFIG="$(PREFIX)/bin/pkg-config" PKG_CONFIG_PATH="$(PREFIX)/lib/pkgconfig:/usr/X11/lib/pkgconfig"
+FLAG_CONFIG=CFLAGS="-O2 $(ARCHS) -I$(PREFIX)/include" LDFLAGS="$(ARCHS) -L$(PREFIX)/lib -framework CoreFoundation -framework CoreServices" 
+
+install: install-bins install-libs
+install-bins: $(PREFIX)/bin/$(AUTOCONF) $(PREFIX)/bin/$(AUTOMAKE) $(PREFIX)/bin/$(LIBTOOL) $(PREFIX)/bin/$(PKGCONFIG)
+install-libs: $(PREFIX)/lib/$(PANGO) $(PREFIX)/lib/$(GD) $(PREFIX)/lib/$(GTS)
+
+# gtk dropped, unable to build....
+# $(PREFIX)/lib/$(GTK)
+
+uninstall:
+	$(MAKE) -C $(JPEG_DIR) uninstall
+	$(MAKE) -C $(TIFF_DIR) uninstall
+	$(MAKE) -C $(ATK_DIR) uninstall
+	$(MAKE) -C $(GTK_DIR) uninstall
+	$(MAKE) -C $(GTS_DIR) uninstall
+	$(MAKE) -C $(PANGO_DIR) uninstall
+	$(MAKE) -C $(GLIB_DIR) uninstall
+	$(MAKE) -C $(GETTEXT_DIR) uninstall
+	$(MAKE) -C $(CAIRO_DIR) uninstall
+	$(MAKE) -C $(PIXMAN_DIR) uninstall
+	$(MAKE) -C $(PNG_DIR) uninstall
+	$(MAKE) -C $(GD_DIR) uninstall
+	$(MAKE) -C $(FONTCONFIG_DIR) uninstall
+	$(MAKE) -C $(FREETYPE_DIR) uninstall
+	$(MAKE) -C $(PKGCONFIG_DIR) uninstall
+	
+clean:
+	$(MAKE) -C $(JPEG_DIR) clean
+	$(MAKE) -C $(TIFF_DIR) clean
+	$(MAKE) -C $(ATK_DIR) clean
+	$(MAKE) -C $(GTK_DIR) clean
+	$(MAKE) -C $(GTS_DIR) clean
+	$(MAKE) -C $(PANGO_DIR) clean
+	$(MAKE) -C $(GLIB_DIR) clean
+	$(MAKE) -C $(GETTEXT_DIR) clean
+	$(MAKE) -C $(CAIRO_DIR) clean
+	$(MAKE) -C $(PIXMAN_DIR) clean
+	$(MAKE) -C $(PNG_DIR) clean
+	$(MAKE) -C $(GD_DIR) clean
+	$(MAKE) -C $(FONTCONFIG_DIR) clean
+	$(MAKE) -C $(FREETYPE_DIR) clean
+	$(MAKE) -C $(PKGCONFIG_DIR) clean
+	
+distclean:
+	$(MAKE) -C $(JPEG_DIR) distclean
+	$(MAKE) -C $(TIFF_DIR) distclean
+	$(MAKE) -C $(ATK_DIR) distclean
+	$(MAKE) -C $(GTK_DIR) distclean
+	$(MAKE) -C $(GTS_DIR) distclean
+	$(MAKE) -C $(PANGO_DIR) distclean
+	$(MAKE) -C $(GLIB_DIR) distclean
+	$(MAKE) -C $(GETTEXT_DIR) distclean
+	$(MAKE) -C $(CAIRO_DIR) distclean
+	$(MAKE) -C $(PIXMAN_DIR) distclean
+	$(MAKE) -C $(PNG_DIR) distclean
+	$(MAKE) -C $(GD_DIR) distclean
+	$(MAKE) -C $(FONTCONFIG_DIR) distclean
+	$(MAKE) -C $(FREETYPE_DIR) distclean
+	$(MAKE) -C $(PKGCONFIG_DIR) distclean
+
+#
+# jpeg
+#
+
+$(PREFIX)/lib/$(JPEG): $(JPEG_DIR)/$(JPEG)
+	@echo
+	@echo INSTALLING JPEG...
+	@echo
+	$(MAKE) -C $(JPEG_DIR) install
+	rm -f $(PREFIX)/lib/*.la
+
+$(JPEG_DIR)/$(JPEG): $(JPEG_DIR)/Makefile
+	@echo
+	@echo MAKING JPEG...
+	@echo
+	if [[ -e $@ ]]; then $(MAKE) -C $(JPEG_DIR) clean; fi && \
+	PATH=$(PATH):$(PREFIX)/bin $(MAKE) -C $(JPEG_DIR)
+	
+$(JPEG_DIR)/Makefile: | $(PREFIX)/bin/$(PKGCONFIG) $(JPEG_DIR)/configure
+	@echo
+	@echo CONFIGURING JPEG...
+	@echo
+	cd $(JPEG_DIR) && ./configure $(BASE_CONFIG) $(FLAG_CONFIG) --enable-static=no
+
+$(JPEG_DIR)/configure: | $(JPEG_DIR).tar.gz
+	@echo
+	@echo UNTARRING JPEG...
+	@echo
+	$(TAR) xzf $| 
+	ln -s jpeg-8b $(JPEG_DIR)
+		
+$(JPEG_DIR).tar.gz:
+	@echo
+	@echo TRANSFERRING JPEG...
+	@echo
+	$(CURL) --remote-name --location $(JPEG_URL) || rm -f $(JPEG_DIR).tar.gz
+
+#
+# tiff
+#
+
+$(PREFIX)/lib/$(TIFF): $(TIFF_DIR)/libtiff/$(TIFF)
+	@echo
+	@echo INSTALLING TIFF...
+	@echo
+	$(MAKE) -C $(TIFF_DIR) install
+	rm -f $(PREFIX)/lib/*.la
+
+$(TIFF_DIR)/libtiff/$(TIFF): $(TIFF_DIR)/Makefile
+	@echo
+	@echo MAKING TIFF...
+	@echo
+	if [[ -e $@ ]]; then $(MAKE) -C $(TIFF_DIR) clean; fi && \
+	PATH=$(PATH):$(PREFIX)/bin $(MAKE) -C $(TIFF_DIR)
+	
+$(TIFF_DIR)/Makefile: $(PREFIX)/lib/$(JPEG) | $(PREFIX)/bin/$(PKGCONFIG) $(TIFF_DIR)/configure
+	@echo
+	@echo CONFIGURING TIFF...
+	@echo
+	cd $(TIFF_DIR) && ./configure $(BASE_CONFIG) $(FLAG_CONFIG) --with-jpeg-include-dir=$(PREFIX)/include --with-jpeg-lib-dir=$(PREFIX)/lib
+
+$(TIFF_DIR)/configure: | $(TIFF_DIR).tar.gz
+	@echo
+	@echo UNTARRING TIFF...
+	@echo
+	$(TAR) xzf $| 
+		
+$(TIFF_DIR).tar.gz:
+	@echo
+	@echo TRANSFERRING TIFF...
+	@echo
+	$(CURL) --remote-name --location $(TIFF_URL) || rm -f $(TIFF_DIR).tar.gz
+
+#
+# atk
+#
+
+$(PREFIX)/lib/$(ATK): $(ATK_DIR)/atk/$(ATK)
+	@echo
+	@echo INSTALLING ATK...
+	@echo
+	$(MAKE) -C $(ATK_DIR) install
+	rm -f $(PREFIX)/lib/*.la
+
+$(ATK_DIR)/atk/$(ATK): $(ATK_DIR)/Makefile
+	@echo
+	@echo MAKING ATK...
+	@echo
+	if [[ -e $@ ]]; then $(MAKE) -C $(ATK_DIR) clean; fi && \
+	PATH=$(PATH):$(PREFIX)/bin $(MAKE) -C $(ATK_DIR)
+	
+$(ATK_DIR)/Makefile: | $(PREFIX)/bin/$(PKGCONFIG) $(ATK_DIR)/configure
+	@echo
+	@echo CONFIGURING ATK...
+	@echo
+	cd $(ATK_DIR) && ./configure $(BASE_CONFIG) $(FLAG_CONFIG)
+
+$(ATK_DIR)/configure: | $(ATK_DIR).tar.gz
+	@echo
+	@echo UNTARRING ATK...
+	@echo
+	$(TAR) xzf $| 
+		
+$(ATK_DIR).tar.gz:
+	@echo
+	@echo TRANSFERRING ATK...
+	@echo
+	$(CURL) --remote-name --location $(ATK_URL) || rm -f $(ATK_DIR).tar.gz
+
+#
+# gtk+
+#
+
+$(PREFIX)/lib/$(GTK): $(GTK_DIR)/gtk/$(GTK)
+	@echo
+	@echo INSTALLING GTK...
+	@echo
+	$(MAKE) -C $(GTK_DIR) install
+	rm -f $(PREFIX)/lib/*.la
+
+$(GTK_DIR)/gtk/$(GTK): $(GTK_DIR)/Makefile
+	@echo
+	@echo MAKING GTK...
+	@echo
+	if [[ -e $@ ]]; then $(MAKE) -C $(GTK_DIR) clean; fi && \
+	PATH=$(PATH):$(PREFIX)/bin $(MAKE) -C $(GTK_DIR)
+	
+$(GTK_DIR)/Makefile: $(PREFIX)/lib/$(PANGO) $(PREFIX)/lib/$(ATK) $(PREFIX)/lib/$(PNG) $(PREFIX)/lib/$(JPEG) $(PREFIX)/lib/$(TIFF) | $(PREFIX)/bin/$(PKGCONFIG) $(GTK_DIR)/configure
+	@echo
+	@echo CONFIGURING GTK...
+	@echo
+	cd $(GTK_DIR) && ./configure $(BASE_CONFIG) $(FLAG_CONFIG) --without-libjasper --without-libjpeg --disable-modules
+
+$(GTK_DIR)/configure: | $(GTK_DIR).tar.gz
+	@echo
+	@echo UNTARRING GTK...
+	@echo
+	$(TAR) xzf $| 
+		
+$(GTK_DIR).tar.gz:
+	@echo
+	@echo TRANSFERRING GTK...
+	@echo
+	$(CURL) --remote-name --location $(GTK_URL) || rm -f $(GTK_DIR).tar.gz
+
+#
+# gts
+#
+
+$(PREFIX)/lib/$(GTS): $(GTS_DIR)/src/$(GTS)
+	@echo
+	@echo INSTALLING GTS...
+	@echo
+	$(MAKE) -C $(GTS_DIR) install
+	rm -f $(PREFIX)/lib/*.la
+
+$(GTS_DIR)/src/$(GTS): $(GTS_DIR)/Makefile
+	@echo
+	@echo MAKING GTS...
+	@echo
+	if [[ -e $@ ]]; then $(MAKE) -C $(GTS_DIR) clean; fi && \
+	PATH=$(PATH):$(PREFIX)/bin $(MAKE) -C $(GTS_DIR)
+	
+$(GTS_DIR)/Makefile: | $(PREFIX)/bin/$(PKGCONFIG) $(GTS_DIR)/configure
+	@echo
+	@echo CONFIGURING GTS...
+	@echo
+	cd $(GTS_DIR) && ./configure $(BASE_CONFIG) $(FLAG_CONFIG)
+
+$(GTS_DIR)/configure: | $(GTS_DIR).tar.gz
+	@echo
+	@echo UNTARRING GTS...
+	@echo
+	$(TAR) xzf $| 
+		
+$(GTS_DIR).tar.gz:
+	@echo
+	@echo TRANSFERRING GTS...
+	@echo
+	$(CURL) --remote-name --location $(GTS_URL) || rm -f $(GTS_DIR).tar.gz
+
+#
+# pango
+#
+# --with-included-modules=yes to embed pango modules within pango itself
+# link also to CoreFoundation and CoreServices because of gettext dependency
+
+$(PREFIX)/lib/$(PANGO): $(PANGO_DIR)/pango/$(PANGO)
+	@echo
+	@echo INSTALLING PANGO...
+	@echo
+	$(MAKE) -C $(PANGO_DIR) install
+	rm -f $(PREFIX)/lib/*.la
+
+$(PANGO_DIR)/pango/$(PANGO): $(PANGO_DIR)/Makefile
+	@echo
+	@echo MAKING PANGO...
+	@echo
+	if [[ -e $@ ]]; then $(MAKE) -C $(PANGO_DIR) clean; fi && \
+	PATH=$(PATH):$(PREFIX)/bin $(MAKE) -C $(PANGO_DIR)
+	
+$(PANGO_DIR)/Makefile: $(PREFIX)/lib/$(CAIRO) $(PREFIX)/lib/$(GLIB) $(PREFIX)/lib/$(FONTCONFIG) $(PREFIX)/lib/$(XFT) $(PREFIX)/lib/$(FREETYPE) | $(PREFIX)/bin/$(PKGCONFIG) $(PANGO_DIR)/configure
+	@echo
+	@echo CONFIGURING PANGO...
+	@echo
+	cd $(PANGO_DIR) && ./configure $(BASE_CONFIG) $(FLAG_CONFIG) --with-included-modules=yes
+
+$(PANGO_DIR)/configure: | $(PANGO_DIR).tar.gz
+	@echo
+	@echo UNTARRING PANGO...
+	@echo
+	$(TAR) xzf $| && (cd $(PANGO_DIR); patch -p1 <../pango.patch)
+		
+$(PANGO_DIR).tar.gz:
+	@echo
+	@echo TRANSFERRING PANGO...
+	@echo
+	$(CURL) --remote-name --location $(PANGO_URL) || rm -f $(PANGO_DIR).tar.gz
+
+#
+# glib
+#
+# patch to fix libiconv_open absent in 64-bit
+# run configure + make once to create glib-genmarshal for cross-building support
+# run configure once for each architecture, capturing config.h and glib/glibconfig.h
+# run configure again for Universal Binary, recomposing config.h and glib/glibconfig.h from captured versions
+
+$(PREFIX)/lib/$(GLIB): $(GLIB_DIR)/glib/$(GLIB)
+	@echo
+	@echo INSTALLING GLIB...
+	@echo
+	$(MAKE) -C $(GLIB_DIR) install
+	rm -f $(PREFIX)/lib/*.la
+	
+$(GLIB_DIR)/glib/$(GLIB): $(GLIB_DIR)/Makefile
+	@echo
+	@echo MAKING GLIB...
+	@echo
+	if [[ -e $@ ]]; then $(MAKE) -C $(GLIB_DIR) clean; fi && \
+	$(MAKE) -C $(GLIB_DIR)
+	
+$(GLIB_DIR)/Makefile: $(PREFIX)/lib/$(INTL) | $(PREFIX)/bin/$(PKGCONFIG) $(GLIB_DIR)/configure 
+	@echo
+	@echo CONFIGURING GLIB...
+	@echo
+	cd $(GLIB_DIR) && \
+	OSREL=`uname -r` && \
+	BUILD=`./config.guess` && \
+	rm -f darwin.cache && \
+	echo "glib_cv_long_long_format=ll" >>darwin.cache && \
+	echo "glib_cv_stack_grows=no" >>darwin.cache && \
+	echo "glib_cv_uscore=no" >>darwin.cache && \
+	echo "ac_cv_func_posix_getpwuid_r=yes" >>darwin.cache && \
+	echo "ac_cv_func_posix_getgrgid_r=yes" >>darwin.cache && \
+	echo "ac_cv_func_vsnprintf_c99=yes" >>darwin.cache && \
+	echo "ac_cv_func_printf_unix98=yes" >>darwin.cache && \
+	PATH=$(PREFIX)/bin:gobject:gio:$$PATH && \
+	echo --- GLIB-GENMARSHAL PASS --- && \
+	./configure $(BASE_CONFIG) CFLAGS="-I$(PREFIX)/include" LDFLAGS="-L$(PREFIX)/lib" && \
+	$(MAKE) -C glib && \
+	$(MAKE) -C gthread && \
+	$(MAKE) -C gobject && \
+	$(MAKE) -C gmodule && \
+	$(MAKE) -C gio && \
+	$(MAKE) -C gobject glib-genmarshal && \
+	cp darwin.cache darwinian.cache && \
+	echo --- I386 PASS --- && \
+	./configure --cache-file=darwinian.cache --build=$$BUILD --host=i686-apple-darwin$$OSREL $(BASE_CONFIG) CFLAGS="-O2 -arch i386 -I$(PREFIX)/include" LDFLAGS="-arch i386 -L$(PREFIX)/lib" && \
+	cp config.h config.i386.h && \
+	cp glib/glibconfig.h glib/glibconfig.i386.h && \
+	cp darwin.cache darwinian.cache && \
+	echo --- X86_64 PASS --- && \
+	./configure --cache-file=darwinian.cache --build=$$BUILD --host=x86_64-apple-darwin$$OSREL $(BASE_CONFIG) CFLAGS="-O2 -arch x86_64 -I$(PREFIX)/include" LDFLAGS="-arch x86_64 -L$(PREFIX)/lib" && \
+	cp config.h config.x86_64.h && \
+	cp glib/glibconfig.h glib/glibconfig.x86_64.h && \
+	cp darwin.cache darwinian.cache && \
+	echo --- UNIVERSAL BINARY PASS --- && \
+	./configure $(BASE_CONFIG) CFLAGS="-O2 $(ARCHS) -I$(PREFIX)/include" LDFLAGS="$(ARCHS) -L$(PREFIX)/lib" && \
+	rm config.h && \
+	echo "#if defined(__i386__)" >>config.h && \
+	cat config.i386.h >>config.h && \
+	echo "#elif defined(__x86_64__)" >>config.h && \
+	cat config.x86_64.h >>config.h && \
+	echo "#endif" >>config.h && \
+	rm glib/glibconfig.h && \
+	echo "#if defined(__i386__)" >>glib/glibconfig.h && \
+	cat glib/glibconfig.i386.h >>glib/glibconfig.h && \
+	echo "#elif defined(__x86_64__)" >>glib/glibconfig.h && \
+	cat glib/glibconfig.x86_64.h >>glib/glibconfig.h && \
+	echo "#endif" >>glib/glibconfig.h && \
+	touch stamp-gc-h && \
+	$(MAKE) clean
+	
+$(GLIB_DIR)/configure: | $(GLIB_DIR).tar.gz
+	@echo
+	@echo CONFIGURING GLIB...
+	@echo
+	$(TAR) xzf $| && (cd $(GLIB_DIR); patch -p1 <../glib.patch)
+	
+$(GLIB_DIR).tar.gz:
+	@echo
+	@echo TRANSFERRING GLIB...
+	@echo
+	$(CURL) --remote-name --location $(GLIB_URL) || rm -f $(GLIB_DIR).tar.gz
+
+#
+# gettext
+#
+
+$(PREFIX)/lib/$(INTL): $(GETTEXT_DIR)/gettext-runtime/intl/$(INTL)
+	@echo
+	@echo INSTALLING GETTEXT...
+	@echo
+	$(MAKE) -C $(GETTEXT_DIR) install
+	rm -f $(PREFIX)/lib/*.la
+	
+$(GETTEXT_DIR)/gettext-runtime/intl/$(INTL): $(GETTEXT_DIR)/Makefile
+	@echo
+	@echo MAKING GETTEXT...
+	@echo
+	if [[ -e $@ ]]; then $(MAKE) -C $(GETTEXT_DIR) clean; fi && \
+	$(MAKE) -C $(GETTEXT_DIR)
+	
+$(GETTEXT_DIR)/Makefile: | $(GETTEXT_DIR)/configure
+	@echo
+	@echo CONFIGURING GETTEXT...
+	@echo
+	cd $(GETTEXT_DIR) && ./configure $(BASE_CONFIG) $(FLAG_CONFIG)
+	
+$(GETTEXT_DIR)/configure: | $(GETTEXT_DIR).tar.gz
+	@echo
+	@echo UNTARRING GETTEXT...
+	@echo
+	$(TAR) xzf $| && (cd $(GETTEXT_DIR); patch -p1 <../gettext.patch)
+	
+$(GETTEXT_DIR).tar.gz:
+	@echo
+	@echo TRANSFERRING GETTEXT...
+	@echo
+	$(CURL) --remote-name --location $(GETTEXT_URL) || rm -f $(GETTEXT_DIR).tar.gz
+
+#
+# cairo
+#
+# patch to fence missing ATSUI API in 64-bit
+# patch to require pixman-1 in linking
+
+$(PREFIX)/lib/$(CAIRO): $(CAIRO_DIR)/src/$(CAIRO)
+	@echo
+	@echo INSTALLING CAIRO...
+	@echo
+	$(MAKE) -C $(CAIRO_DIR) install
+	rm -f $(PREFIX)/lib/*.la
+	
+$(CAIRO_DIR)/src/$(CAIRO): $(CAIRO_DIR)/Makefile
+	@echo
+	@echo MAKING CAIRO...
+	@echo
+	if [[ -e $@ ]]; then $(MAKE) -C $(CAIRO_DIR) clean; fi && \
+	$(MAKE) -C $(CAIRO_DIR)
+	
+$(CAIRO_DIR)/Makefile: $(PREFIX)/lib/$(PIXMAN) $(PREFIX)/lib/$(FONTCONFIG) $(PREFIX)/lib/$(PNG) | $(PREFIX)/bin/$(PKGCONFIG) $(CAIRO_DIR)/configure
+	@echo
+	@echo CONFIGURING CAIRO...
+	@echo
+	cd $(CAIRO_DIR) && ./configure $(BASE_CONFIG) $(FLAG_CONFIG)  --enable-quartz --enable-quartz-font --enable-quartz-image
+	
+$(CAIRO_DIR)/configure: | $(CAIRO_DIR).tar.gz
+	@echo
+	@echo UNTARRING CAIRO...
+	@echo
+	$(TAR) xzf $| && (cd $(CAIRO_DIR); patch -p1 <../cairo.patch)
+	
+$(CAIRO_DIR).tar.gz:
+	@echo
+	@echo TRANSFERRING CAIRO...
+	@echo
+	$(CURL) --remote-name --location $(CAIRO_URL) || rm -f $(CAIRO_DIR).tar.gz
+
+#
+# libpng
+#
+
+$(PREFIX)/lib/$(PNG): $(PNG_DIR)/$(PNG)
+	@echo
+	@echo INSTALLING PNG...
+	@echo
+	$(MAKE) -C $(PNG_DIR) install
+	rm -f $(PREFIX)/lib/*.la
+	
+$(PNG_DIR)/$(PNG): $(PNG_DIR)/Makefile
+	@echo
+	@echo MAKING PNG...
+	@echo
+	if [[ -e $@ ]]; then $(MAKE) -C $(PNG_DIR) clean; fi && \
+	$(MAKE) -C $(PNG_DIR)
+	
+$(PNG_DIR)/Makefile: | $(PREFIX)/bin/$(PKGCONFIG) $(PNG_DIR)/configure 
+	@echo
+	@echo CONFIGURING PNG...
+	@echo
+	cd $(PNG_DIR) && ./configure $(BASE_CONFIG) CFLAGS="$(ARCHS) -I$(PREFIX)/include" LDFLAGS="$(ARCHS) -L$(PREFIX)/lib"
+	
+$(PNG_DIR)/configure: | $(PNG_DIR).tar.gz
+	@echo
+	@echo UNTARRING PNG...
+	@echo
+	$(TAR) xzf $| 
+	
+$(PNG_DIR).tar.gz:
+	@echo
+	@echo TRANSFERRING PNG...
+	@echo
+	$(CURL) --remote-name --location $(PNG_URL) || rm -f $(PIXMAN_DIR).tar.gz
+
+#
+# pixman
+#
+# patch to detect endianness, MMX, SSE and SSE2 during Universal Binary build
+# omit -O2 since it bombs Apple gcc
+
+$(PREFIX)/lib/$(PIXMAN): $(PIXMAN_DIR)/pixman/$(PIXMAN)
+	@echo
+	@echo INSTALLING PIXMAN...
+	@echo
+	$(MAKE) -C $(PIXMAN_DIR) install
+	rm -f $(PREFIX)/lib/*.la
+	
+$(PIXMAN_DIR)/pixman/$(PIXMAN): $(PIXMAN_DIR)/Makefile
+	@echo
+	@echo MAKING PIXMAN...
+	@echo
+	if [[ -e $@ ]]; then $(MAKE) -C $(PIXMAN_DIR) clean; fi && \
+	$(MAKE) -C $(PIXMAN_DIR)
+	
+$(PIXMAN_DIR)/Makefile: | $(PREFIX)/bin/$(PKGCONFIG) $(PIXMAN_DIR)/configure 
+	@echo
+	@echo CONFIGURING PIXMAN...
+	@echo
+	cd $(PIXMAN_DIR) && ./configure $(BASE_CONFIG) CFLAGS="$(ARCHS) -I$(PREFIX)/include" LDFLAGS="$(ARCHS) -L$(PREFIX)/lib"
+	
+$(PIXMAN_DIR)/configure: | $(PIXMAN_DIR).tar.gz
+	@echo
+	@echo UNTARRING PIXMAN...
+	@echo
+#	$(TAR) xzf $| && (cd $(PIXMAN_DIR); patch -p1 <../pixman.patch)
+	$(TAR) xzf $|
+	
+$(PIXMAN_DIR).tar.gz:
+	@echo
+	@echo TRANSFERRING PIXMAN...
+	@echo
+	$(CURL) --remote-name --location $(PIXMAN_URL) || rm -f $(PIXMAN_DIR).tar.gz
+
+#
+# gd
+#
+
+$(PREFIX)/lib/$(GD): $(GD_DIR)/$(GD)
+	@echo
+	@echo INSTALLING GD...
+	@echo
+	$(MAKE) -C $(GD_DIR) install
+	rm -f $(PREFIX)/lib/*.la
+	
+$(GD_DIR)/$(GD): $(GD_DIR)/Makefile
+	@echo
+	@echo MAKING GD...
+	@echo
+	if [[ -e $@ ]]; then $(MAKE) -C $(GD_DIR) clean; fi && \
+	$(MAKE) -C $(GD_DIR)
+	
+$(GD_DIR)/Makefile: $(PREFIX)/lib/$(FONTCONFIG) $(PREFIX)/lib/$(PNG) $(PREFIX)/lib/$(JPEG) | $(GD_DIR)/configure
+	@echo
+	@echo CONFIGURING GD...
+	@echo
+	cd $(GD_DIR) && ./configure $(BASE_CONFIG) $(FLAG_CONFIG) LIBS="-liconv -lexpat" --with-fontconfig=$(PREFIX) --with-png=$(PREFIX)
+	
+$(GD_DIR)/configure: | $(GD_DIR).tar.gz
+	@echo
+	@echo UNTARRING GD...
+	@echo
+	$(TAR) xzf $|
+	
+$(GD_DIR).tar.gz:
+	@echo
+	@echo TRANSFERRING GD...
+	@echo
+	$(CURL) --remote-name --location $(GD_URL) || rm -f $(GD_DIR).tar.gz
+	
+#
+# freetype
+#
+
+$(PREFIX)/lib/$(FREETYPE): $(FREETYPE_DIR)/objs/$(FREETYPE)
+	@echo
+	@echo INSTALLING FREETYPE...
+	@echo
+	$(MAKE) -C $(FREETYPE_DIR) install
+	rm -f $(PREFIX)/lib/*.la
+	
+$(FREETYPE_DIR)/objs/$(FREETYPE): $(FREETYPE_DIR)/Makefile
+	@echo
+	@echo MAKING FREETYPE...
+	@echo
+	if [[ -e $@ ]]; then $(MAKE) -C $(FREETYPE_DIR) clean; fi && \
+	$(MAKE) -C $(FREETYPE_DIR)
+	
+$(FREETYPE_DIR)/Makefile: | $(PREFIX)/bin/$(PKGCONFIG) $(FREETYPE_DIR)/configure
+	@echo
+	@echo CONFIGURING FREETYPE...
+	@echo
+	cd $(FREETYPE_DIR) && ./configure $(BASE_CONFIG) $(FLAG_CONFIG)
+	
+$(FREETYPE_DIR)/configure: | $(FREETYPE_DIR).tar.gz
+	@echo
+	@echo UNTARRING FREETYPE...
+	@echo
+	$(TAR) xzf $|
+	
+$(FREETYPE_DIR).tar.gz:
+	@echo
+	@echo TRANSFERRING FREETYPE...
+	@echo
+	$(CURL) --remote-name --location $(FREETYPE_URL) || rm -f $(FREETYPE_DIR).tar.gz
+
+#
+# xft
+#
+
+$(PREFIX)/lib/$(XFT): $(XFT_DIR)/src/$(XFT)
+	@echo
+	@echo INSTALLING XFT...
+	@echo
+	$(MAKE) -C $(XFT_DIR) install
+	rm -f $(PREFIX)/lib/*.la
+	
+$(XFT_DIR)/src/$(XFT): $(XFT_DIR)/Makefile
+	@echo
+	@echo MAKING XFT...
+	@echo
+	if [[ -e $@ ]]; then $(MAKE) -C $(XFT_DIR) clean; fi && \
+	$(MAKE) -C $(XFT_DIR)
+	
+$(XFT_DIR)/Makefile: $(PREFIX)/lib/$(FONTCONFIG) | $(PREFIX)/bin/$(PKGCONFIG) $(XFT_DIR)/configure
+	@echo
+	@echo CONFIGURING XFT...
+	@echo
+	cd $(XFT_DIR) && ./configure $(BASE_CONFIG) $(FLAG_CONFIG)
+	
+$(XFT_DIR)/configure: | $(XFT_DIR).tar.gz
+	@echo
+	@echo UNTARRING XFT...
+	@echo
+	$(TAR) xzf $|
+	
+$(XFT_DIR).tar.gz:
+	@echo
+	@echo TRANSFERRING XFT...
+	@echo
+	$(CURL) --remote-name --location $(XFT_URL) || rm -f $(XFT_DIR).tar.gz
+
+#
+# fontconfig
+#
+# patch to produce correct architecture cache files under Universal Binary builds
+# and fix undefined FcDebug symbol under dead stripping
+# make install to skip actual fonts.conf install
+
+$(PREFIX)/lib/$(FONTCONFIG): $(FONTCONFIG_DIR)/src/$(FONTCONFIG)
+	@echo
+	@echo INSTALLING FONTCONFIG...
+	@echo
+	$(MAKE) -C $(FONTCONFIG_DIR)/fontconfig install
+	$(MAKE) -C $(FONTCONFIG_DIR)/fc-case install
+	$(MAKE) -C $(FONTCONFIG_DIR)/fc-lang install
+	$(MAKE) -C $(FONTCONFIG_DIR)/fc-glyphname install
+	$(MAKE) -C $(FONTCONFIG_DIR)/fc-arch install
+	$(MAKE) -C $(FONTCONFIG_DIR)/src install
+	$(MAKE) -C $(FONTCONFIG_DIR)/fc-cache install
+	$(MAKE) -C $(FONTCONFIG_DIR)/fc-cat install
+	$(MAKE) -C $(FONTCONFIG_DIR)/fc-list install
+	$(MAKE) -C $(FONTCONFIG_DIR)/fc-match install
+	rm -f $(PREFIX)/lib/*.la
+	
+$(FONTCONFIG_DIR)/src/$(FONTCONFIG): $(FONTCONFIG_DIR)/Makefile
+	@echo
+	@echo MAKING FONTCONFIG...
+	@echo
+	if [[ -e $@ ]]; then $(MAKE) -C $(FONTCONFIG_DIR) clean; fi && \
+	$(MAKE) -C $(FONTCONFIG_DIR)
+	
+$(FONTCONFIG_DIR)/Makefile: $(PREFIX)/lib/$(FREETYPE) | $(PREFIX)/bin/$(PKGCONFIG) $(FONTCONFIG_DIR)/configure
+	@echo
+	@echo CONFIGURING FONTCONFIG...
+	@echo
+	cd $(FONTCONFIG_DIR) && ./configure $(BASE_CONFIG) $(FLAG_CONFIG) --with-confdir="$(PREFIX)/etc/fontconfig" --with-cache-dir="$(PREFIX)/var/cache/fontconfig" 
+	
+$(FONTCONFIG_DIR)/configure: | $(FONTCONFIG_DIR).tar.gz
+	@echo
+	@echo UNTARRING FONTCONFIG...
+	@echo
+	$(TAR) xzf $| && (cd $(FONTCONFIG_DIR); patch -p1 <../fontconfig.patch)
+	
+$(FONTCONFIG_DIR).tar.gz:
+	@echo
+	@echo TRANSFERRING FONTCONFIG...
+	@echo
+	$(CURL) --remote-name --location $(FONTCONFIG_URL) || rm -f $(FONTCONFIG_DIR).tar.gz
+
+#
+# autoconf
+#
+# only needed during build, don't need Universal Binary
+
+$(PREFIX)/bin/$(AUTOCONF): $(AUTOCONF_DIR)/$(AUTOCONF)
+	@echo
+	@echo INSTALLING AUTOCONF...
+	@echo
+	$(MAKE) -C $(AUTOCONF_DIR) install
+	rm -f $(PREFIX)/lib/*.la
+	
+$(AUTOCONF_DIR)/$(AUTOCONF): $(AUTOCONF_DIR)/Makefile
+	@echo
+	@echo MAKING AUTOCONF...
+	@echo
+	if [[ -e $@ ]]; then $(MAKE) -C $(AUTOCONF_DIR) clean; fi && \
+	$(MAKE) -C $(AUTOCONF_DIR)
+	
+$(AUTOCONF_DIR)/Makefile: | $(AUTOCONF_DIR)/configure
+	@echo
+	@echo CONFIGURING AUTOCONF...
+	@echo
+	cd $(AUTOCONF_DIR) && ./configure --prefix=$(PREFIX) --disable-dependency-tracking
+	
+$(AUTOCONF_DIR)/configure: | $(AUTOCONF_DIR).tar.gz
+	@echo
+	@echo UNTARRING AUTOCONF...
+	@echo
+	$(TAR) xzf $|
+	
+$(AUTOCONF_DIR).tar.gz:
+	@echo
+	@echo TRANSFERRING AUTOCONF...
+	@echo
+	$(CURL) --remote-name --location $(AUTOCONF_URL) || rm -f $(AUTOCONF_DIR).tar.gz
+
+#
+# automake
+#
+# only needed during build, don't need Universal Binary
+
+$(PREFIX)/bin/$(AUTOMAKE): $(AUTOMAKE_DIR)/$(AUTOMAKE)
+	@echo
+	@echo INSTALLING AUTOMAKE...
+	@echo
+	$(MAKE) -C $(AUTOMAKE_DIR) install
+	rm -f $(PREFIX)/lib/*.la
+	
+$(AUTOMAKE_DIR)/$(AUTOMAKE): $(AUTOMAKE_DIR)/Makefile
+	@echo
+	@echo MAKING AUTOMAKE...
+	@echo
+	if [[ -e $@ ]]; then $(MAKE) -C $(AUTOMAKE_DIR) clean; fi && \
+	$(MAKE) -C $(AUTOMAKE_DIR)
+	
+$(AUTOMAKE_DIR)/Makefile: | $(AUTOMAKE_DIR)/configure
+	@echo
+	@echo CONFIGURING AUTOMAKE...
+	@echo
+	cd $(AUTOMAKE_DIR) && ./configure --prefix=$(PREFIX) --disable-dependency-tracking
+	
+$(AUTOMAKE_DIR)/configure: | $(AUTOMAKE_DIR).tar.gz
+	@echo
+	@echo UNTARRING AUTOMAKE...
+	@echo
+	$(TAR) xzf $|
+	
+$(AUTOMAKE_DIR).tar.gz:
+	@echo
+	@echo TRANSFERRING AUTOMAKE...
+	@echo
+	$(CURL) --remote-name --location $(AUTOMAKE_URL) || rm -f $(AUTOMAKE_DIR).tar.gz
+
+#
+# libtool
+#
+# only needed during build, don't need Universal Binary
+
+$(PREFIX)/bin/$(LIBTOOL): $(LIBTOOL_DIR)/$(LIBTOOL)
+	@echo
+	@echo INSTALLING LIBTOOL...
+	@echo
+	$(MAKE) -C $(LIBTOOL_DIR) install
+	rm -f $(PREFIX)/lib/*.la
+	
+$(LIBTOOL_DIR)/$(LIBTOOL): $(LIBTOOL_DIR)/Makefile
+	@echo
+	@echo MAKING LIBTOOL...
+	@echo
+	if [[ -e $@ ]]; then $(MAKE) -C $(LIBTOOL_DIR) clean; fi && \
+	$(MAKE) -C $(LIBTOOL_DIR)
+	
+$(LIBTOOL_DIR)/Makefile: | $(LIBTOOL_DIR)/configure
+	@echo
+	@echo CONFIGURING LIBTOOL...
+	@echo
+	cd $(LIBTOOL_DIR) && ./configure --prefix=$(PREFIX) --disable-dependency-tracking
+	
+$(LIBTOOL_DIR)/configure: | $(LIBTOOL_DIR).tar.gz
+	@echo
+	@echo UNTARRING LIBTOOL...
+	@echo
+	$(TAR) xzf $|
+	
+$(LIBTOOL_DIR).tar.gz:
+	@echo
+	@echo TRANSFERRING LIBTOOL...
+	@echo
+	$(CURL) --remote-name --location $(LIBTOOL_URL) || rm -f $(LIBTOOL_DIR).tar.gz
+
+#
+# pkgconfig
+#
+# only needed during build, don't need Universal Binary
+
+$(PREFIX)/bin/$(PKGCONFIG): $(PKGCONFIG_DIR)/$(PKGCONFIG)
+	@echo
+	@echo INSTALLING PKGCONFIG...
+	@echo
+	$(MAKE) -C $(PKGCONFIG_DIR) install
+	rm -f $(PREFIX)/lib/*.la
+	
+$(PKGCONFIG_DIR)/$(PKGCONFIG): $(PKGCONFIG_DIR)/Makefile
+	@echo
+	@echo MAKING PKGCONFIG...
+	@echo
+	if [[ -e $@ ]]; then $(MAKE) -C $(PKGCONFIG_DIR) clean; fi && \
+	$(MAKE) -C $(PKGCONFIG_DIR)
+	
+$(PKGCONFIG_DIR)/Makefile: | $(PKGCONFIG_DIR)/configure
+	@echo
+	@echo CONFIGURING PKGCONFIG...
+	@echo
+	cd $(PKGCONFIG_DIR) && ./configure --prefix=$(PREFIX) --disable-dependency-tracking
+	
+$(PKGCONFIG_DIR)/configure: | $(PKGCONFIG_DIR).tar.gz
+	@echo
+	@echo UNTARRING PKGCONFIG...
+	@echo
+	$(TAR) xzf $|
+	
+$(PKGCONFIG_DIR).tar.gz:
+	@echo
+	@echo TRANSFERRING PKGCONFIG...
+	@echo
+	$(CURL) --remote-name --location $(PKGCONFIG_URL) || rm -f $(PKGCONFIG_DIR).tar.gz
+
+#
+# phony
+#
+
+.PHONY: install uninstall clean distclean

@@ -1,0 +1,1858 @@
+%!PS-Adobe-3.0
+%%Creator: graphviz version 2.27.0 (20110318.0136)
+%%Title: test
+%%Pages: (atend)
+%%BoundingBox: (atend)
+%%EndComments
+save
+%%BeginProlog
+/DotDict 200 dict def
+DotDict begin
+
+/setupLatin1 {
+mark
+/EncodingVector 256 array def
+ EncodingVector 0
+
+ISOLatin1Encoding 0 255 getinterval putinterval
+EncodingVector 45 /hyphen put
+
+% Set up ISO Latin 1 character encoding
+/starnetISO {
+        dup dup findfont dup length dict begin
+        { 1 index /FID ne { def }{ pop pop } ifelse
+        } forall
+        /Encoding EncodingVector def
+        currentdict end definefont
+} def
+/Times-Roman starnetISO def
+/Times-Italic starnetISO def
+/Times-Bold starnetISO def
+/Times-BoldItalic starnetISO def
+/Helvetica starnetISO def
+/Helvetica-Oblique starnetISO def
+/Helvetica-Bold starnetISO def
+/Helvetica-BoldOblique starnetISO def
+/Courier starnetISO def
+/Courier-Oblique starnetISO def
+/Courier-Bold starnetISO def
+/Courier-BoldOblique starnetISO def
+cleartomark
+} bind def
+
+%%BeginResource: procset graphviz 0 0
+/coord-font-family /Times-Roman def
+/default-font-family /Times-Roman def
+/coordfont coord-font-family findfont 8 scalefont def
+
+/InvScaleFactor 1.0 def
+/set_scale {
+       dup 1 exch div /InvScaleFactor exch def
+       scale
+} bind def
+
+% styles
+/solid { [] 0 setdash } bind def
+/dashed { [9 InvScaleFactor mul dup ] 0 setdash } bind def
+/dotted { [1 InvScaleFactor mul 6 InvScaleFactor mul] 0 setdash } bind def
+/invis {/fill {newpath} def /stroke {newpath} def /show {pop newpath} def} bind def
+/bold { 2 setlinewidth } bind def
+/filled { } bind def
+/unfilled { } bind def
+/rounded { } bind def
+/diagonals { } bind def
+
+% hooks for setting color 
+/nodecolor { sethsbcolor } bind def
+/edgecolor { sethsbcolor } bind def
+/graphcolor { sethsbcolor } bind def
+/nopcolor {pop pop pop} bind def
+
+/beginpage {	% i j npages
+	/npages exch def
+	/j exch def
+	/i exch def
+	/str 10 string def
+	npages 1 gt {
+		gsave
+			coordfont setfont
+			0 0 moveto
+			(\() show i str cvs show (,) show j str cvs show (\)) show
+		grestore
+	} if
+} bind def
+
+/set_font {
+	findfont exch
+	scalefont setfont
+} def
+
+% draw text fitted to its expected width
+/alignedtext {			% width text
+	/text exch def
+	/width exch def
+	gsave
+		width 0 gt {
+			[] 0 setdash
+			text stringwidth pop width exch sub text length div 0 text ashow
+		} if
+	grestore
+} def
+
+/boxprim {				% xcorner ycorner xsize ysize
+		4 2 roll
+		moveto
+		2 copy
+		exch 0 rlineto
+		0 exch rlineto
+		pop neg 0 rlineto
+		closepath
+} bind def
+
+/ellipse_path {
+	/ry exch def
+	/rx exch def
+	/y exch def
+	/x exch def
+	matrix currentmatrix
+	newpath
+	x y translate
+	rx ry scale
+	0 0 1 0 360 arc
+	setmatrix
+} bind def
+
+/endpage { showpage } bind def
+/showpage { } def
+
+/layercolorseq
+	[	% layer color sequence - darkest to lightest
+		[0 0 0]
+		[.2 .8 .8]
+		[.4 .8 .8]
+		[.6 .8 .8]
+		[.8 .8 .8]
+	]
+def
+
+/layerlen layercolorseq length def
+
+/setlayer {/maxlayer exch def /curlayer exch def
+	layercolorseq curlayer 1 sub layerlen mod get
+	aload pop sethsbcolor
+	/nodecolor {nopcolor} def
+	/edgecolor {nopcolor} def
+	/graphcolor {nopcolor} def
+} bind def
+
+/onlayer { curlayer ne {invis} if } def
+
+/onlayers {
+	/myupper exch def
+	/mylower exch def
+	curlayer mylower lt
+	curlayer myupper gt
+	or
+	{invis} if
+} def
+
+/curlayer 0 def
+
+%%EndResource
+%%EndProlog
+%%BeginSetup
+14 default-font-family set_font
+1 setmiterlimit
+% /arrowlength 10 def
+% /arrowwidth 5 def
+
+% make sure pdfmark is harmless for PS-interpreters other than Distiller
+/pdfmark where {pop} {userdict /pdfmark /cleartomark load put} ifelse
+% make '<<' and '>>' safe on PS Level 1 devices
+/languagelevel where {pop languagelevel}{1} ifelse
+2 lt {
+    userdict (<<) cvn ([) cvn load put
+    userdict (>>) cvn ([) cvn load put
+} if
+
+%%EndSetup
+%! SDL shapes for Graphviz/dot in PostScript output mode
+
+% FILE
+%   sdl.ps  -  SDL shapes for Graphviz/dot in PostScript output mode
+%
+% USE
+%   All procedures expect to be passed a rectangular bounding box in the
+%   order [upper right, lower right, lower left, upper left, upper right].
+%   All procedures expect to be used with "peripheries = 0".
+%
+% BUGS
+%   The following shapes are currently not implemented:
+%   - frame/system/block/process/procedure/service/procedure, and types thereof
+%   - macro inlet/outlet/call
+%   - exception handler/handle/raise
+%   - decision (suggest use diamond)
+%   - alternative (suggest use triangle)
+%   - internal input/output (suggest stop using historical relics!)
+%
+% COPYRIGHT AND PERMISSION NOTICE
+%   Copyright (C) 2005 Cambridge Silicon Radio Ltd.; all rights reserved.
+%
+%   Permission is hereby granted, free of charge, to any person obtaining
+%   a copy of this software and associated documentation files (the
+%   "Software"), to deal in the Software without restriction, including
+%   without limitation the rights to use, copy, modify, merge, publish,
+%   distribute, sublicense, and/or sell copies of the Software, and to
+%   permit persons to whom the Software is furnished to do so, subject to
+%   the following conditions:
+%
+%   The above copyright notice and this permission notice shall be
+%   included in all copies or substantial portions of the Software.
+%
+%   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+%   EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+%   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+%   NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+%   LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+%   OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+%   WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+%
+%   Except as contained in this notice, the name of a copyright holder
+%   shall not be used in advertising or otherwise to promote the sale, use
+%   or other dealings in the Software without prior written authorization
+%   of the copyright holder.
+%
+% REVISION
+%   #4
+
+/xdef {exch def} bind def
+
+% SDL task
+
+/sdl_task {
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        newpath
+        moveto
+        lineto
+        lineto
+        lineto
+        pop pop
+        closepath
+        { fill } { stroke } ifelse
+} bind def
+
+% SDL input from right
+% The indent has lines at 45 degrees
+% There should be a few spaces at the end of this shape's label
+
+/sdl_input_from_right {
+    9 dict begin
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        /ury xdef /urx xdef
+        /lry xdef /lrx xdef
+        /lly xdef /llx xdef
+        /uly xdef /ulx xdef
+        /h2 ury lry sub 2 div def
+        newpath
+        moveto
+        urx h2 sub ury h2 sub lineto
+        lrx lry lineto
+        llx lly lineto
+        ulx uly lineto
+        closepath
+        { fill } { stroke } ifelse
+    end
+} bind def
+
+% SDL input from left
+% Similar to SDL input from right
+% There should be a few spaces at the start of this shape's label
+
+/sdl_input_from_left {
+    9 dict begin
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        /ury xdef /urx xdef
+        /lry xdef /lrx xdef
+        /lly xdef /llx xdef
+        /uly xdef /ulx xdef
+        /h2 uly lly sub 2 div def
+        newpath
+        moveto
+        lrx lry lineto
+        llx lly lineto
+        ulx h2 add ury h2 sub lineto
+        ulx uly lineto
+        closepath
+        { fill } { stroke } ifelse
+    end
+} bind def
+
+% SDL priority input from right
+% Similar to SDL input from right
+% The chevrons are displaced by an eighth of the shape height
+% The filled version is indistinguishable from a non-priority SDL input
+
+/sdl_priority_input_from_right {
+    9 dict begin
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        /ury xdef /urx xdef
+        /lry xdef /lrx xdef
+        /lly xdef /llx xdef
+        /uly xdef /ulx xdef
+        /h2 ury lry sub 2 div def
+        newpath
+        moveto
+        urx h2 sub ury h2 sub lineto
+        lrx lry lineto
+        llx lly lineto
+        ulx uly lineto
+        closepath
+        { fill } { stroke
+        urx h2 4 div sub ury moveto
+        urx h2 sub h2 4 div sub ury h2 sub lineto
+        lrx h2 4 div sub lry lineto
+        stroke } ifelse
+    end
+} bind def
+
+% SDL priority input from left
+% Similar to SDL priority input from right
+
+/sdl_priority_input_from_left {
+    9 dict begin
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        /ury xdef /urx xdef
+        /lry xdef /lrx xdef
+        /lly xdef /llx xdef
+        /uly xdef /ulx xdef
+        /h2 uly lly sub 2 div def
+        newpath
+        moveto
+        lrx lry lineto
+        llx lly lineto
+        ulx h2 add uly h2 sub lineto
+        ulx uly lineto
+        closepath
+        { fill } { stroke
+        llx h2 4 div add lly moveto
+        ulx h2 add h2 4 div add uly h2 sub lineto
+        ulx h2 4 div add uly lineto
+        stroke } ifelse
+    end
+} bind def
+
+% SDL start
+% The left and right sides are semicircles
+% This should be used with "label = "                ""
+
+/sdl_start {
+    9 dict begin
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        /ury xdef /urx xdef
+        /lry xdef /lrx xdef
+        /lly xdef /llx xdef
+        /uly xdef /ulx xdef
+        pop pop
+        /r ury lry sub 2 div def
+        newpath
+        urx r sub ury r sub r 90 -90 arcn
+        ulx r add uly r sub r -90 90 arcn
+        closepath
+        { fill } { stroke } ifelse
+    end
+} bind def
+
+% SDL procedure start
+% Similar to SDL start
+% The filled version is indistinguishable from an SDL start
+% This should be used with "label = "                ""
+
+/sdl_procedure_start {
+    9 dict begin
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        /ury xdef /urx xdef
+        /lry xdef /lrx xdef
+        /lly xdef /llx xdef
+        /uly xdef /ulx xdef
+        pop pop
+        /r ury lry sub 2 div def
+        newpath
+        urx r sub ury r sub r 90 -90 arcn
+        ulx r add uly r sub r -90 90 arcn
+        closepath
+        { fill } { stroke
+        lrx r sub lry moveto
+        0 r 2 mul rlineto
+        llx r add lly moveto
+        0 r 2 mul rlineto
+        stroke } ifelse
+    end
+} bind def
+
+% SDL state/nextstate
+% The left and right sides are arcs
+
+/sdl_state {
+    12 dict begin
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        /ury xdef /urx xdef
+        /lry xdef /lrx xdef
+        /lly xdef /llx xdef
+        /uly xdef /ulx xdef
+        pop pop
+        /h2 ury lry sub 2 div def
+        /w2 h2 1.5 mul def % was urx ulx sub 2 div def but this made curvature width-dependent
+        /r w2 def
+        /th h2 r dup mul h2 dup mul sub sqrt atan def
+        newpath
+        urx w2 sub ury h2 sub r th th neg arcn
+        ulx w2 add uly h2 sub r -180 th add -180 th sub arcn
+        closepath
+        { fill } { stroke } ifelse
+    end
+} bind def
+
+% SDL output to right
+% The outdent has lines at 45 degrees
+% There should be a few spaces at the end of this shape's label
+
+/sdl_output_to_right {
+    9 dict begin
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        /ury xdef /urx xdef
+        /lry xdef /lrx xdef
+        /lly xdef /llx xdef
+        /uly xdef /ulx xdef
+        /h2 ury lry sub 2 div def
+        newpath
+        exch h2 sub exch moveto
+        urx ury h2 sub lineto
+        lrx h2 sub lry lineto
+        llx lly lineto
+        ulx uly lineto
+        closepath
+        { fill } { stroke } ifelse
+    end
+} bind def
+
+% SDL output to left
+% Similar to SDL output to right
+% There should be a few spaces at the start of this shape's label
+
+/sdl_output_to_left {
+    9 dict begin
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        /ury xdef /urx xdef
+        /lry xdef /lrx xdef
+        /lly xdef /llx xdef
+        /uly xdef /ulx xdef
+        /h2 ury lry sub 2 div def
+        newpath
+        moveto
+        lrx lry lineto
+        llx h2 add lly lineto
+        ulx ury h2 sub lineto
+        ulx h2 add uly lineto
+        closepath
+        { fill } { stroke } ifelse
+    end
+} bind def
+
+% SDL continuous signal/enabling condition
+% The chevrons have lines at 45 degrees
+% There should be a few spaces at the start and end of this shape's label
+
+/sdl_condition {
+    9 dict begin
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        /ury xdef /urx xdef
+        /lry xdef /lrx xdef
+        /lly xdef /llx xdef
+        /uly xdef /ulx xdef
+        /h2 ury lry sub 2 div def
+        newpath
+        exch h2 sub exch moveto
+        urx ury h2 sub lineto
+        lrx h2 sub lry lineto
+        dup llx h2 add lly 3 -1 roll { lineto } { moveto } ifelse
+        ulx uly h2 sub lineto
+        ulx h2 add uly lineto
+        { fill } { stroke } ifelse
+    end
+} bind def
+
+% SDL save
+% The left and right edges are at about 60 degrees
+% There should be a few spaces at the start and end of this shape's label
+
+/sdl_save {
+    9 dict begin
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        /ury xdef /urx xdef
+        /lry xdef /lrx xdef
+        /lly xdef /llx xdef
+        /uly xdef /ulx xdef
+        /h3 ury lry sub 3 div def
+        newpath
+        moveto
+        lrx h3 sub lry lineto
+        llx lly lineto
+        ulx h3 add uly lineto
+        closepath
+        { fill } { stroke } ifelse
+    end
+} bind def
+
+% SDL stop
+% The width of the bounding box is ignored; the lines are set at 45 degrees
+% This shape cannot be filled
+% This should be used with "label = """ and "arrowhead = none, headclip = false"
+
+/sdl_stop {
+    7 dict begin
+        { stop } if % make sure not asked to fill this
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        pop pop
+        /lry xdef /lrx xdef
+        /lly xdef /llx xdef
+        /uly xdef pop
+        /h2 uly lly sub 2 div def
+        /mx llx lrx add 2 div def
+        newpath
+        mx h2 add exch moveto pop
+        mx h2 sub lly lineto
+        mx h2 sub uly moveto
+        mx h2 add lry lineto
+        closepath
+        stroke
+    end
+} bind def
+
+% SDL return
+% The width of the bounding box is ignored; the lines are set at 45 degrees
+% The filled version is indistinguishable from an SDL connection
+
+/sdl_return {
+    9 dict begin
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        /ury xdef pop
+        /lry xdef /lrx xdef
+        /lly xdef /llx xdef
+        /uly xdef pop
+        pop pop
+        /h2 uly lly sub 2 div 2 sqrt div def
+        /mx llx lrx add 2 div def
+        /my lry ury add 2 div def
+        newpath
+        mx my uly lly sub 2 div 0 360 arc
+        { fill } { stroke
+        mx h2 add my h2 add moveto
+        mx h2 sub my h2 sub lineto
+        mx h2 sub my h2 add moveto
+        mx h2 add my h2 sub lineto
+        stroke } ifelse
+    end
+} bind def
+
+% SDL create
+% The extra lines are displaced by an eighth of the shape height
+% The filled version is indistinguishable from an SDL task
+
+/sdl_create {
+    9 dict begin
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        /ury xdef /urx xdef
+        /lry xdef /lrx xdef
+        /lly xdef /llx xdef
+        /uly xdef /ulx xdef
+        /h8 ury lry sub 8 div def
+        newpath
+        moveto
+        lrx lry lineto
+        llx lly lineto
+        ulx uly lineto
+        closepath
+        { fill } { stroke
+        ulx uly h8 sub moveto
+        urx ury h8 sub lineto
+        llx lly h8 add moveto
+        lrx lry h8 add lineto
+        stroke } ifelse
+    end
+} bind def
+
+% SDL call
+% The extra lines are displaced by an eighth of the shape height
+% The filled version is indistinguishable from an SDL task
+% There should be a few spaces at the start and end of this shape's label
+
+/sdl_call {
+    9 dict begin
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        /ury xdef /urx xdef
+        /lry xdef /lrx xdef
+        /lly xdef /llx xdef
+        /uly xdef /ulx xdef
+        /h8 ury lry sub 8 div def
+        newpath
+        moveto
+        lrx lry lineto
+        llx lly lineto
+        ulx uly lineto
+        closepath
+        { fill } { stroke
+        urx h8 sub ury moveto
+        lrx h8 sub lry lineto
+        llx h8 add lly moveto
+        ulx h8 add uly lineto
+        stroke } ifelse
+    end
+} bind def
+
+% SDL text symbol
+% The corner has a size of twice the H height
+
+/sdl_text {
+    10 dict begin
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        /ury xdef /urx xdef
+        /lry xdef /lrx xdef
+        /lly xdef /llx xdef
+        /uly xdef /ulx xdef
+        /h8 ury lry sub 8 div def
+        newpath
+        moveto
+        /d (H) true charpath flattenpath pathbbox exch pop exch sub exch pop 2 mul def
+        newpath
+        urx ury d sub moveto
+        lrx lry lineto
+        llx lly lineto
+        ulx uly lineto
+        urx d sub ury lineto
+        closepath
+        { fill } { stroke } ifelse
+        urx ury d sub moveto
+        d neg 0 rlineto
+        0 d rlineto
+        stroke
+    end
+} bind def
+
+% SDL text extension from left
+% This should be used with "rank = same"
+
+/sdl_text_extension_from_left {
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        pop pop
+        moveto
+        lineto
+        lineto
+        lineto
+        { fill } { stroke } ifelse
+} bind def
+
+% SDL text extension from right
+% This should be used with "rank = same"
+
+/sdl_text_extension_from_right {
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        pop pop
+        8 4 roll
+        moveto
+        lineto
+        lineto
+        lineto
+        { fill } { stroke } ifelse
+} bind def
+
+% SDL comment from left
+% This should be used with "style = dashed" and "rank = same"
+
+/sdl_comment_from_left { sdl_text_extension_from_left } bind def
+
+% SDL comment from right
+% This should be used with "style = dashed" and "rank = same"
+
+/sdl_comment_from_right { sdl_text_extension_from_right } bind def
+
+% SDL connector
+% The width of the bounding box is ignored
+
+/sdl_connector {
+    7 dict begin
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        pop pop
+        /lry xdef /lrx xdef
+        /lly xdef /llx xdef
+        /uly xdef pop
+        pop pop
+        /h2 uly lly sub 2 div def
+        /mx llx lrx add 2 div def
+        newpath
+        mx uly h2 sub h2 0 360 arc
+        { fill } { stroke } ifelse
+    end
+} bind def
+
+% SDL set (extension)
+% The hourglass has a size of twice the H height
+% There should be a few spaces at the start of this shape's label
+
+/sdl_set {
+    10 dict begin
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        /ury xdef /urx xdef
+        /lry xdef /lrx xdef
+        /lly xdef /llx xdef
+        /uly xdef /ulx xdef
+        /my uly lly add 2 div def
+        newpath
+        moveto
+        /d (H) true charpath flattenpath pathbbox exch pop exch sub exch pop def
+        newpath
+        llx d add my d add moveto
+        ulx d add uly lineto
+        urx ury lineto
+        lrx lry lineto
+        llx d add lly lineto
+        llx d add my d sub lineto
+        dup { closepath fill } { stroke } ifelse
+        llx my d sub moveto
+        d 2 mul dup rlineto
+        d 2 mul neg 0 rlineto
+        d 2 mul dup neg rlineto
+        closepath
+        { fill } { stroke } ifelse
+    end
+} bind def
+
+% SDL reset (extension)
+% The cross has a size of twice the H height
+% There should be a few spaces at the start of this shape's label
+
+/sdl_reset {
+    10 dict begin
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        /ury xdef /urx xdef
+        /lry xdef /lrx xdef
+        /lly xdef /llx xdef
+        /uly xdef /ulx xdef
+        /my uly lly add 2 div def
+        newpath
+        moveto
+        /d (H) true charpath flattenpath pathbbox exch pop exch sub exch pop def
+        newpath
+        urx ury moveto
+        lrx lry lineto
+        llx d add lly lineto
+        ulx d add uly lineto
+        closepath
+        { fill } { stroke } ifelse
+        llx my d sub moveto
+        d 2 mul dup rlineto
+        llx d 2 mul add my d sub moveto
+        d 2 mul dup neg exch rlineto
+        stroke
+    end
+} bind def
+
+% SDL export (extension)
+% The store has a width of twice the H height
+% There should be a few spaces at the start of this shape's label
+
+/sdl_export {
+    10 dict begin
+        3 1 roll % put filled flag at end
+        4 ne { stop } if % sanity-check number of sides
+        aload pop
+        /ury xdef /urx xdef
+        /lry xdef /lrx xdef
+        /lly xdef /llx xdef
+        /uly xdef /ulx xdef
+        /my uly lly add 2 div def
+        newpath
+        moveto
+        /d (H) true charpath flattenpath pathbbox exch pop exch sub exch pop def
+        newpath
+        llx d add my d 2 div add moveto
+        ulx d add uly lineto
+        urx ury lineto
+        lrx lry lineto
+        llx d add lly lineto
+        llx d add my d 2 div sub lineto
+        { closepath fill } { stroke } ifelse
+        llx my d 2 div sub moveto
+        d 2 mul 0 rlineto
+        llx my d 2 div add moveto
+        d 2 mul 0 rlineto
+        stroke
+    end
+} bind def
+setupLatin1
+%%Page: 1 1
+%%PageBoundingBox: 36 36 3357 152
+%%PageOrientation: Portrait
+0 0 1 beginpage
+gsave
+36 36 3321 116 boxprim clip newpath
+1 1 set_scale 0 rotate 40 41 translate
+% sdl_task
+gsave
+0.49804 1 1 nodecolor
+[ 62 108 0 108 0 72 62 72 62 108 ]  4 true sdl_task
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 62 108 0 108 0 72 62 72 62 108 ]  4 false sdl_task
+0 0 0 nodecolor
+14 /Times-Roman set_font
+8 86.3 moveto 46 (sdl_task) alignedtext
+grestore
+% sdl_task2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 62 36 0 36 0 0 62 0 62 36 ]  4 false sdl_task
+0 0 0 nodecolor
+14 /Times-Roman set_font
+8 14.3 moveto 46 (sdl_task) alignedtext
+grestore
+% sdl_task->sdl_task2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 31 71.7 moveto
+31 63.98 31 54.71 31 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 34.5 46.1 moveto
+31 36.1 lineto
+27.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 34.5 46.1 moveto
+31 36.1 lineto
+27.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_input_from_right
+gsave
+0.49804 1 1 nodecolor
+[ 223 108 87 108 87 72 223 72 223 108 ]  4 true sdl_input_from_right
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 223 108 87 108 87 72 223 72 223 108 ]  4 false sdl_input_from_right
+0 0 0 nodecolor
+14 /Times-Roman set_font
+95 86.3 moveto 120 (sdl_input_from_right) alignedtext
+grestore
+% sdl_input_from_right2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 230 36 80 36 80 0 230 0 230 36 ]  4 false sdl_input_from_right
+0 0 0 nodecolor
+14 /Times-Roman set_font
+88 14.3 moveto 134 (sdl_input_from_right    ) alignedtext
+grestore
+% sdl_input_from_right->sdl_input_from_right2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 155 71.7 moveto
+155 63.98 155 54.71 155 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 158.5 46.1 moveto
+155 36.1 lineto
+151.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 158.5 46.1 moveto
+155 36.1 lineto
+151.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_input_from_left
+gsave
+0.49804 1 1 nodecolor
+[ 383 108 255 108 255 72 383 72 383 108 ]  4 true sdl_input_from_left
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 383 108 255 108 255 72 383 72 383 108 ]  4 false sdl_input_from_left
+0 0 0 nodecolor
+14 /Times-Roman set_font
+263 86.3 moveto 112 (sdl_input_from_left) alignedtext
+grestore
+% sdl_input_from_left2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 390 36 248 36 248 0 390 0 390 36 ]  4 false sdl_input_from_left
+0 0 0 nodecolor
+14 /Times-Roman set_font
+256 14.3 moveto 126 (    sdl_input_from_left) alignedtext
+grestore
+% sdl_input_from_left->sdl_input_from_left2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 319 71.7 moveto
+319 63.98 319 54.71 319 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 322.5 46.1 moveto
+319 36.1 lineto
+315.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 322.5 46.1 moveto
+319 36.1 lineto
+315.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_priority_input_from_right
+gsave
+0.49804 1 1 nodecolor
+[ 602.25 108 417.75 108 417.75 72 602.25 72 602.25 108 ]  4 true sdl_priority_input_from_right
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 602.25 108 417.75 108 417.75 72 602.25 72 602.25 108 ]  4 false sdl_priority_input_from_right
+0 0 0 nodecolor
+14 /Times-Roman set_font
+425.5 86.3 moveto 169 (sdl_priority_input_from_right) alignedtext
+grestore
+% sdl_priority_input_from_right2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 611.25 36 408.75 36 408.75 0 611.25 0 611.25 36 ]  4 false sdl_priority_input_from_right
+0 0 0 nodecolor
+14 /Times-Roman set_font
+416.5 14.3 moveto 187 (sdl_priority_input_from_right     ) alignedtext
+grestore
+% sdl_priority_input_from_right->sdl_priority_input_from_right2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 510 71.7 moveto
+510 63.98 510 54.71 510 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 513.5 46.1 moveto
+510 36.1 lineto
+506.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 513.5 46.1 moveto
+510 36.1 lineto
+506.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_priority_input_from_left
+gsave
+0.49804 1 1 nodecolor
+[ 815.25 108 638.75 108 638.75 72 815.25 72 815.25 108 ]  4 true sdl_priority_input_from_left
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 815.25 108 638.75 108 638.75 72 815.25 72 815.25 108 ]  4 false sdl_priority_input_from_left
+0 0 0 nodecolor
+14 /Times-Roman set_font
+646.5 86.3 moveto 161 (sdl_priority_input_from_left) alignedtext
+grestore
+% sdl_priority_input_from_left2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 824.25 36 629.75 36 629.75 0 824.25 0 824.25 36 ]  4 false sdl_priority_input_from_left
+0 0 0 nodecolor
+14 /Times-Roman set_font
+637.5 14.3 moveto 179 (     sdl_priority_input_from_left) alignedtext
+grestore
+% sdl_priority_input_from_left->sdl_priority_input_from_left2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 727 71.7 moveto
+727 63.98 727 54.71 727 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 730.5 46.1 moveto
+727 36.1 lineto
+723.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 730.5 46.1 moveto
+727 36.1 lineto
+723.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_start
+gsave
+0.49804 1 1 nodecolor
+[ 911 108 847 108 847 72 911 72 911 108 ]  4 true sdl_start
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 911 108 847 108 847 72 911 72 911 108 ]  4 false sdl_start
+0 0 0 nodecolor
+14 /Times-Roman set_font
+855 86.3 moveto 48 (sdl_start) alignedtext
+grestore
+% sdl_start2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 915.25 36 842.75 36 842.75 0 915.25 0 915.25 36 ]  4 false sdl_start
+0 0 0 nodecolor
+14 /Times-Roman set_font
+850.5 14.3 moveto 57 (                ) alignedtext
+grestore
+% sdl_start->sdl_start2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 879 71.7 moveto
+879 63.98 879 54.71 879 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 882.5 46.1 moveto
+879 36.1 lineto
+875.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 882.5 46.1 moveto
+879 36.1 lineto
+875.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_procedure_start
+gsave
+0.49804 1 1 nodecolor
+[ 1056.25 108 929.75 108 929.75 72 1056.25 72 1056.25 108 ]  4 true sdl_procedure_start
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 1056.25 108 929.75 108 929.75 72 1056.25 72 1056.25 108 ]  4 false sdl_procedure_start
+0 0 0 nodecolor
+14 /Times-Roman set_font
+937.5 86.3 moveto 111 (sdl_procedure_start) alignedtext
+grestore
+% sdl_procedure_start2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 1029.25 36 956.75 36 956.75 0 1029.25 0 1029.25 36 ]  4 false sdl_procedure_start
+0 0 0 nodecolor
+14 /Times-Roman set_font
+964.5 14.3 moveto 57 (                ) alignedtext
+grestore
+% sdl_procedure_start->sdl_procedure_start2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 993 71.7 moveto
+993 63.98 993 54.71 993 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 996.5 46.1 moveto
+993 36.1 lineto
+989.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 996.5 46.1 moveto
+993 36.1 lineto
+989.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_state
+gsave
+0.49804 1 1 nodecolor
+[ 1139.25 108 1074.75 108 1074.75 72 1139.25 72 1139.25 108 ]  4 true sdl_state
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 1139.25 108 1074.75 108 1074.75 72 1139.25 72 1139.25 108 ]  4 false sdl_state
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1082.5 86.3 moveto 49 (sdl_state) alignedtext
+grestore
+% sdl_state2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 1143 36 1071 36 1071 0 1143 0 1143 36 ]  4 false sdl_state
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1079 14.3 moveto 56 (sdl_state2) alignedtext
+grestore
+% sdl_state->sdl_state2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 1107 71.7 moveto
+1107 63.98 1107 54.71 1107 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 1110.5 46.1 moveto
+1107 36.1 lineto
+1103.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1110.5 46.1 moveto
+1107 36.1 lineto
+1103.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_output_to_right
+gsave
+0.49804 1 1 nodecolor
+[ 1291.25 108 1164.75 108 1164.75 72 1291.25 72 1291.25 108 ]  4 true sdl_output_to_right
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 1291.25 108 1164.75 108 1164.75 72 1291.25 72 1291.25 108 ]  4 false sdl_output_to_right
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1172.5 86.3 moveto 111 (sdl_output_to_right) alignedtext
+grestore
+% sdl_output_to_right2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 1295 36 1161 36 1161 0 1295 0 1295 36 ]  4 false sdl_output_to_right
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1169 14.3 moveto 118 (sdl_output_to_right  ) alignedtext
+grestore
+% sdl_output_to_right->sdl_output_to_right2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 1228 71.7 moveto
+1228 63.98 1228 54.71 1228 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 1231.5 46.1 moveto
+1228 36.1 lineto
+1224.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1231.5 46.1 moveto
+1228 36.1 lineto
+1224.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_output_to_left
+gsave
+0.49804 1 1 nodecolor
+[ 1435.25 108 1316.75 108 1316.75 72 1435.25 72 1435.25 108 ]  4 true sdl_output_to_left
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 1435.25 108 1316.75 108 1316.75 72 1435.25 72 1435.25 108 ]  4 false sdl_output_to_left
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1324.5 86.3 moveto 103 (sdl_output_to_left) alignedtext
+grestore
+% sdl_output_to_left2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 1439 36 1313 36 1313 0 1439 0 1439 36 ]  4 false sdl_output_to_left
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1321 14.3 moveto 110 (  sdl_output_to_left) alignedtext
+grestore
+% sdl_output_to_left->sdl_output_to_left2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 1376 71.7 moveto
+1376 63.98 1376 54.71 1376 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 1379.5 46.1 moveto
+1376 36.1 lineto
+1372.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1379.5 46.1 moveto
+1376 36.1 lineto
+1372.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_condition
+gsave
+0.49804 1 1 nodecolor
+[ 1557.25 108 1464.75 108 1464.75 72 1557.25 72 1557.25 108 ]  4 true sdl_condition
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 1557.25 108 1464.75 108 1464.75 72 1557.25 72 1557.25 108 ]  4 false sdl_condition
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1472.5 86.3 moveto 77 (sdl_condition) alignedtext
+grestore
+% sdl_condition2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 1564.25 36 1457.75 36 1457.75 0 1564.25 0 1564.25 36 ]  4 false sdl_condition
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1465.5 14.3 moveto 91 (  sdl_condition  ) alignedtext
+grestore
+% sdl_condition->sdl_condition2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 1511 71.7 moveto
+1511 63.98 1511 54.71 1511 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 1514.5 46.1 moveto
+1511 36.1 lineto
+1507.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1514.5 46.1 moveto
+1511 36.1 lineto
+1507.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_save
+gsave
+0.49804 1 1 nodecolor
+[ 1654.25 108 1589.75 108 1589.75 72 1654.25 72 1654.25 108 ]  4 true sdl_save
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 1654.25 108 1589.75 108 1589.75 72 1654.25 72 1654.25 108 ]  4 false sdl_save
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1597.5 86.3 moveto 49 (sdl_save) alignedtext
+grestore
+% sdl_save2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 1661.25 36 1582.75 36 1582.75 0 1661.25 0 1661.25 36 ]  4 false sdl_save
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1590.5 14.3 moveto 63 (  sdl_save  ) alignedtext
+grestore
+% sdl_save->sdl_save2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 1622 71.7 moveto
+1622 63.98 1622 54.71 1622 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 1625.5 46.1 moveto
+1622 36.1 lineto
+1618.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1625.5 46.1 moveto
+1622 36.1 lineto
+1618.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_stop
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 1738.25 108 1675.75 108 1675.75 72 1738.25 72 1738.25 108 ]  4 false sdl_stop
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1683.5 86.3 moveto 47 (sdl_stop) alignedtext
+grestore
+% sdl_stop2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 1734 36 1680 36 1680 0 1734 0 1734 36 ]  4 false sdl_stop
+grestore
+% sdl_stop->sdl_stop2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 1707 71.7 moveto
+1707 50.97 1707 19 1707 19 curveto
+stroke
+grestore
+% sdl_return
+gsave
+0.49804 1 1 nodecolor
+[ 1829.25 108 1756.75 108 1756.75 72 1829.25 72 1829.25 108 ]  4 true sdl_return
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 1829.25 108 1756.75 108 1756.75 72 1829.25 72 1829.25 108 ]  4 false sdl_return
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1764.5 86.3 moveto 57 (sdl_return) alignedtext
+grestore
+% sdl_return2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 1820 36 1766 36 1766 0 1820 0 1820 36 ]  4 false sdl_return
+grestore
+% sdl_return->sdl_return2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 1793 71.7 moveto
+1793 63.98 1793 54.71 1793 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 1796.5 46.1 moveto
+1793 36.1 lineto
+1789.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1796.5 46.1 moveto
+1793 36.1 lineto
+1789.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_create
+gsave
+0.49804 1 1 nodecolor
+[ 1920.25 108 1847.75 108 1847.75 72 1920.25 72 1920.25 108 ]  4 true sdl_create
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 1920.25 108 1847.75 108 1847.75 72 1920.25 72 1920.25 108 ]  4 false sdl_create
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1855.5 86.3 moveto 57 (sdl_create) alignedtext
+grestore
+% sdl_create2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 1924 36 1844 36 1844 0 1924 0 1924 36 ]  4 false sdl_create
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1852 14.3 moveto 64 (sdl_create2) alignedtext
+grestore
+% sdl_create->sdl_create2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 1884 71.7 moveto
+1884 63.98 1884 54.71 1884 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 1887.5 46.1 moveto
+1884 36.1 lineto
+1880.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1887.5 46.1 moveto
+1884 36.1 lineto
+1880.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_call
+gsave
+0.49804 1 1 nodecolor
+[ 2009 108 1949 108 1949 72 2009 72 2009 108 ]  4 true sdl_call
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 2009 108 1949 108 1949 72 2009 72 2009 108 ]  4 false sdl_call
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1957 86.3 moveto 44 (sdl_call) alignedtext
+grestore
+% sdl_call2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 2016 36 1942 36 1942 0 2016 0 2016 36 ]  4 false sdl_call
+0 0 0 nodecolor
+14 /Times-Roman set_font
+1950 14.3 moveto 58 (  sdl_call  ) alignedtext
+grestore
+% sdl_call->sdl_call2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 1979 71.7 moveto
+1979 63.98 1979 54.71 1979 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 1982.5 46.1 moveto
+1979 36.1 lineto
+1975.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 1982.5 46.1 moveto
+1979 36.1 lineto
+1975.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_text
+gsave
+0.49804 1 1 nodecolor
+[ 2098.25 108 2037.75 108 2037.75 72 2098.25 72 2098.25 108 ]  4 true sdl_text
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 2098.25 108 2037.75 108 2037.75 72 2098.25 72 2098.25 108 ]  4 false sdl_text
+0 0 0 nodecolor
+14 /Times-Roman set_font
+2045.5 86.3 moveto 45 (sdl_text) alignedtext
+grestore
+% sdl_text2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 2102 36 2034 36 2034 0 2102 0 2102 36 ]  4 false sdl_text
+0 0 0 nodecolor
+14 /Times-Roman set_font
+2042 14.3 moveto 52 (sdl_text2) alignedtext
+grestore
+% sdl_text->sdl_text2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 2068 71.7 moveto
+2068 63.98 2068 54.71 2068 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 2071.5 46.1 moveto
+2068 36.1 lineto
+2064.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 2071.5 46.1 moveto
+2068 36.1 lineto
+2064.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_text_extension_from_left
+gsave
+0.49804 1 1 nodecolor
+[ 2304.25 108 2123.75 108 2123.75 72 2304.25 72 2304.25 108 ]  4 true sdl_text_extension_from_left
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 2304.25 108 2123.75 108 2123.75 72 2304.25 72 2304.25 108 ]  4 false sdl_text_extension_from_left
+0 0 0 nodecolor
+14 /Times-Roman set_font
+2131.5 86.3 moveto 165 (sdl_text_extension_from_left) alignedtext
+grestore
+% sdl_text_extension_from_left2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 2308 36 2120 36 2120 0 2308 0 2308 36 ]  4 false sdl_text_extension_from_left
+0 0 0 nodecolor
+14 /Times-Roman set_font
+2128 14.3 moveto 172 (sdl_text_extension_from_left2) alignedtext
+grestore
+% sdl_text_extension_from_left->sdl_text_extension_from_left2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 2214 71.7 moveto
+2214 63.98 2214 54.71 2214 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 2217.5 46.1 moveto
+2214 36.1 lineto
+2210.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 2217.5 46.1 moveto
+2214 36.1 lineto
+2210.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_text_extension_from_right
+gsave
+0.49804 1 1 nodecolor
+[ 2518.25 108 2329.75 108 2329.75 72 2518.25 72 2518.25 108 ]  4 true sdl_text_extension_from_right
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 2518.25 108 2329.75 108 2329.75 72 2518.25 72 2518.25 108 ]  4 false sdl_text_extension_from_right
+0 0 0 nodecolor
+14 /Times-Roman set_font
+2337.5 86.3 moveto 173 (sdl_text_extension_from_right) alignedtext
+grestore
+% sdl_text_extension_from_right2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 2522 36 2326 36 2326 0 2522 0 2522 36 ]  4 false sdl_text_extension_from_right
+0 0 0 nodecolor
+14 /Times-Roman set_font
+2334 14.3 moveto 180 (sdl_text_extension_from_right2) alignedtext
+grestore
+% sdl_text_extension_from_right->sdl_text_extension_from_right2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 2424 71.7 moveto
+2424 63.98 2424 54.71 2424 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 2427.5 46.1 moveto
+2424 36.1 lineto
+2420.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 2427.5 46.1 moveto
+2424 36.1 lineto
+2420.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_comment_from_left
+gsave
+0.49804 1 1 nodecolor
+[ 2696 108 2544 108 2544 72 2696 72 2696 108 ]  4 true sdl_comment_from_left
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 2696 108 2544 108 2544 72 2696 72 2696 108 ]  4 false sdl_comment_from_left
+0 0 0 nodecolor
+14 /Times-Roman set_font
+2552 86.3 moveto 136 (sdl_comment_from_left) alignedtext
+grestore
+% sdl_comment_from_left2
+gsave
+1 setlinewidth
+dashed
+0 0 0 nodecolor
+[ 2699.25 36 2540.75 36 2540.75 0 2699.25 0 2699.25 36 ]  4 false sdl_comment_from_left
+0 0 0 nodecolor
+14 /Times-Roman set_font
+2548.5 14.3 moveto 143 (sdl_comment_from_left2) alignedtext
+grestore
+% sdl_comment_from_left->sdl_comment_from_left2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 2620 71.7 moveto
+2620 63.98 2620 54.71 2620 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 2623.5 46.1 moveto
+2620 36.1 lineto
+2616.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 2623.5 46.1 moveto
+2620 36.1 lineto
+2616.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_comment_from_right
+gsave
+0.49804 1 1 nodecolor
+[ 2881 108 2721 108 2721 72 2881 72 2881 108 ]  4 true sdl_comment_from_right
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 2881 108 2721 108 2721 72 2881 72 2881 108 ]  4 false sdl_comment_from_right
+0 0 0 nodecolor
+14 /Times-Roman set_font
+2729 86.3 moveto 144 (sdl_comment_from_right) alignedtext
+grestore
+% sdl_comment_from_right2
+gsave
+1 setlinewidth
+dashed
+0 0 0 nodecolor
+[ 2884.25 36 2717.75 36 2717.75 0 2884.25 0 2884.25 36 ]  4 false sdl_comment_from_right
+0 0 0 nodecolor
+14 /Times-Roman set_font
+2725.5 14.3 moveto 151 (sdl_comment_from_right2) alignedtext
+grestore
+% sdl_comment_from_right->sdl_comment_from_right2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 2801 71.7 moveto
+2801 63.98 2801 54.71 2801 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 2804.5 46.1 moveto
+2801 36.1 lineto
+2797.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 2804.5 46.1 moveto
+2801 36.1 lineto
+2797.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_connector
+gsave
+0.49804 1 1 nodecolor
+[ 3001.25 108 2906.75 108 2906.75 72 3001.25 72 3001.25 108 ]  4 true sdl_connector
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 3001.25 108 2906.75 108 2906.75 72 3001.25 72 3001.25 108 ]  4 false sdl_connector
+0 0 0 nodecolor
+14 /Times-Roman set_font
+2914.5 86.3 moveto 79 (sdl_connector) alignedtext
+grestore
+% sdl_connector2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 3005 36 2903 36 2903 0 3005 0 3005 36 ]  4 false sdl_connector
+0 0 0 nodecolor
+14 /Times-Roman set_font
+2911 14.3 moveto 86 (sdl_connector2) alignedtext
+grestore
+% sdl_connector->sdl_connector2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 2954 71.7 moveto
+2954 63.98 2954 54.71 2954 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 2957.5 46.1 moveto
+2954 36.1 lineto
+2950.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 2957.5 46.1 moveto
+2954 36.1 lineto
+2950.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_set
+gsave
+0.49804 1 1 nodecolor
+[ 3088.25 108 3033.75 108 3033.75 72 3088.25 72 3088.25 108 ]  4 true sdl_set
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 3088.25 108 3033.75 108 3033.75 72 3088.25 72 3088.25 108 ]  4 false sdl_set
+0 0 0 nodecolor
+14 /Times-Roman set_font
+3041.5 86.3 moveto 39 (sdl_set) alignedtext
+grestore
+% sdl_set2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 3099 36 3023 36 3023 0 3099 0 3099 36 ]  4 false sdl_set
+0 0 0 nodecolor
+14 /Times-Roman set_font
+3031 14.3 moveto 60 (    sdl_set2) alignedtext
+grestore
+% sdl_set->sdl_set2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 3061 71.7 moveto
+3061 63.98 3061 54.71 3061 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 3064.5 46.1 moveto
+3061 36.1 lineto
+3057.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 3064.5 46.1 moveto
+3061 36.1 lineto
+3057.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_reset
+gsave
+0.49804 1 1 nodecolor
+[ 3194 108 3128 108 3128 72 3194 72 3194 108 ]  4 true sdl_reset
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 3194 108 3128 108 3128 72 3194 72 3194 108 ]  4 false sdl_reset
+0 0 0 nodecolor
+14 /Times-Roman set_font
+3136 86.3 moveto 50 (sdl_reset) alignedtext
+grestore
+% sdl_reset2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 3204.25 36 3117.75 36 3117.75 0 3204.25 0 3204.25 36 ]  4 false sdl_reset
+0 0 0 nodecolor
+14 /Times-Roman set_font
+3125.5 14.3 moveto 71 (    sdl_reset2) alignedtext
+grestore
+% sdl_reset->sdl_reset2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 3161 71.7 moveto
+3161 63.98 3161 54.71 3161 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 3164.5 46.1 moveto
+3161 36.1 lineto
+3157.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 3164.5 46.1 moveto
+3161 36.1 lineto
+3157.5 46.1 lineto
+closepath stroke
+grestore
+% sdl_export
+gsave
+0.49804 1 1 nodecolor
+[ 3306 108 3230 108 3230 72 3306 72 3306 108 ]  4 true sdl_export
+1 setlinewidth
+filled
+0 1 1 nodecolor
+[ 3306 108 3230 108 3230 72 3306 72 3306 108 ]  4 false sdl_export
+0 0 0 nodecolor
+14 /Times-Roman set_font
+3238 86.3 moveto 60 (sdl_export) alignedtext
+grestore
+% sdl_export2
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+[ 3313 36 3223 36 3223 0 3313 0 3313 36 ]  4 false sdl_export
+0 0 0 nodecolor
+14 /Times-Roman set_font
+3231 14.3 moveto 74 (    sdl_export) alignedtext
+grestore
+% sdl_export->sdl_export2
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 3268 71.7 moveto
+3268 63.98 3268 54.71 3268 46.11 curveto
+stroke
+0 0 0 edgecolor
+newpath 3271.5 46.1 moveto
+3268 36.1 lineto
+3264.5 46.1 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 3271.5 46.1 moveto
+3268 36.1 lineto
+3264.5 46.1 lineto
+closepath stroke
+grestore
+endpage
+showpage
+grestore
+%%PageTrailer
+%%EndPage: 1
+%%Trailer
+%%Pages: 1
+%%BoundingBox: 36 36 3357 152
+end
+restore
+%%EOF

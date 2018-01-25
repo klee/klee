@@ -1,0 +1,15 @@
+digraph G {
+  style=radial bgcolor="yellow:blue" label="Graph"
+
+  subgraph cluster_1 {
+    style=radial fillcolor="green:magenta" label="Cluster" fontcolor="white"
+    node [style=radial]
+	n5 [ shape="box",fillcolor="antiquewhite:aquamarine" ]
+	n4 [ shape="ellipse",fillcolor="bisque4:blue2" ]
+	n3 [ shape="circle",fillcolor="cadetblue1:chocolate1" ]
+	n2 [ shape="diamond",fillcolor="crimson:cyan4" ]
+	n1 [ shape="triangle",fillcolor="deepskyblue2:firebrick" ]
+	n0 [ shape="pentagon",fillcolor="gray24:gray88" ]
+  }
+
+}

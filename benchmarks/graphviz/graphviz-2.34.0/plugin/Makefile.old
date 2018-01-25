@@ -1,0 +1,8 @@
+SUBDIRS = core gd pango dot_layout neato_layout
+
+all install clean :
+	(for i in ${SUBDIRS}; do (cd $$i; make $@); done)       
+
+distclean :
+	(for i in ${SUBDIRS}; do (cd $$i; make $@); done)       
+	rm -rf lib include

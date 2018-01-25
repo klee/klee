@@ -1,0 +1,9 @@
+/* bug 1364, nonconstraint flat edge cycle */
+digraph {
+"tcp" -> "kernel_linux" [ label="linux" ];
+"usmStats" -> "usmStats-5.5" [ color=red,constraint=false ];
+"usmStats-5.5" -> "usmStats" [ color=red,constraint=false ];
+"snmpv3mibs" -> "snmpEngine";
+"snmpv3mibs" -> "usmStats-5.5";
+"snmpv3mibs" -> "usmStats" [ style=dashed ];
+}

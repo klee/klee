@@ -1,0 +1,2 @@
+As for building smyrna for binary packages, it relies on having glut, gtkglext, gtk+ and glade, which are not always installed.
+

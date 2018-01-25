@@ -1,0 +1,465 @@
+# List of attribute types
+# Each item consists of line of the form :<typename>
+# followed by a description of the type in HTML
+# The items are alphabetized when the page is created.
+#
+# The type <typename> is given the anchor k:<typename>, so
+# the description can be linked with <HREF="k:<typename>">
+:addDouble
+<P>A double with an optional prefix '+'.
+:addPoint
+<P>A <A HREF="#k:point">point</A> with an optional prefix '+'.
+:aspectType
+<p>An aspect ratio, double, followed optionally by a ',' and a maximum pass 
+count. If the aspect ratio is given, but no maximum pass count, the
+latter defaults to 5.
+:arrowType
+<TABLE>
+  <TR><TD>"normal"<TD><IMG SRC="a_normal.gif">
+      <TD>"inv"<TD><IMG SRC="a_inv.gif"></TR>
+  <TR><TD>"dot"<TD><IMG SRC="a_dot.gif">
+      <TD>"invdot"<TD><IMG SRC="a_invdot.gif"></TR>
+  <TR><TD>"odot"<TD><IMG SRC="a_odot.gif">
+      <TD>"invodot"<TD><IMG SRC="a_invodot.gif"></TR>
+  <TR><TD>"none"<TD><IMG SRC="a_none.gif">
+      <TD>"tee"<TD><IMG SRC="a_tee.gif"></TR>
+  <TR><TD>"empty"<TD><IMG SRC="a_empty.gif">
+      <TD>"invempty"<TD><IMG SRC="a_invempty.gif"></TR>
+  <TR><TD>"diamond"<TD><IMG SRC="a_diamond.gif">
+      <TD>"odiamond"<TD><IMG SRC="a_odiamond.gif"></TR>
+  <TR><TD>"ediamond"<TD><IMG SRC="a_ediamond.gif">
+      <TD>"crow"<TD><IMG SRC="a_crow.gif"></TR>
+  <TR><TD>"box"<TD><IMG SRC="a_box.gif">
+      <TD>"obox"<TD><IMG SRC="a_obox.gif"></TR>
+  <TR><TD>"open"<TD><IMG SRC="a_open.gif">
+      <TD>"halfopen"<TD><IMG SRC="a_halfopen.gif"></TR>
+  <TR><TD>"vee"<TD><IMG SRC="a_open.gif">
+</TABLE>
+<P>
+These are the basic set of backward-compatible arrow shapes. In addition,
+there is a grammar of <A HREF=arrows.html>arrow shapes</A>
+which can be used to describe a collection of 1,544,761 arrow combinations of the 36 varations of the primitive set of 9 arrows. The basic arrows shown
+above contain all of the primitive shapes
+(<TT>box</TT>, <TT>crow</TT>, <TT>diamond</TT>,
+<TT>dot</TT>, <TT>inv</TT>, <TT>none</tt>,
+<TT>normal</tt>, <TT>tee</TT>, <TT>vee</TT>)
+plus ones that can be derived from the grammar
+(<TT>odot</TT>, <TT>invdot</TT>, <TT>invodot</TT>,
+<TT>obox</TT>, <TT>odiamond</TT>)
+plus some supported as special cases for backward-compatibility
+(<TT>ediamond</TT>, <TT>open</TT>, <TT>halfopen</TT>,
+<TT>empty</TT>, <TT>invempty</TT>).
+:clusterMode
+"local","global","none"
+:color
+Colors can be specified using one of four formats.
+       <TABLE><TR><TD>"#%2x%2x%2x"<TD>Red-Green-Blue (RGB)</TR>
+       <TR><TD>"#%2x%2x%2x%2x"<TD>Red-Green-Blue-Alpha (RGBA)</TR>
+       <TR><TD>"H[,&#160;]+S[,&#160;]+V"<TD>Hue-Saturation-Value (HSV) 0.0 <= H,S,V <= 1.0</TR>
+       <TR><TD>string<TD><A HREF=colors.html>color name</A></TR></TABLE>
+ The specification for the RGB and RGBA formats are the format strings used by
+ <TT>sscanf</TT> to scan the color value. Thus, these values have the form
+ "#RGB" or "#RGBA", where R, G, B, and A each consist of 2 hexidecimal
+ digits, and can be separated by whitespace. HSV colors have the form of 3
+ numbers between 0 and 1, separated by whitespace or commas.
+<P>
+String-valued color specifications are case-insensitive and interpreted
+in the context of the current color scheme, as specified by the
+<A HREF=#d:colorscheme>colorscheme</A> attribute. If this is undefined,
+the X11 naming scheme will be used.
+An initial <TT>"/"</TT> character can be used to override the use of
+the <TT>colorscheme</TT> attribute. In particular, a single initial
+<TT>"/"</TT> will cause the string to be evaluated using the default
+X11 naming. If the color value has the form <TT>"/ssss/yyyy"</TT>,
+the name <TT>yyyy</TT> is interpreted using the schema <TT>ssss</TT>.
+If the color scheme name is empty, i.e., the color has the
+form <TT>"//yyyy"</TT>, the <TT>colorscheme</TT> attribute is used.
+Thus, the forms <TT>"yyyy"</TT> and <TT>"//yyyy"</TT> are
+equivalent.
+<P>At present, Graphviz recognizes the default color scheme <TT>X11</TT>,
+and the <A HREF="colors.html#brewer">Brewer color schemes</A> (cf. <A HREF="http://www.personal.psu.edu/faculty/c/a/cab38/ColorBrewer/ColorBrewer_intro.html">ColorBrewer</A>). Please note that Brewer
+color schemes are covered by this <A HREF=colors.html#brewer_license>license</A>.
+<P>
+Examples:<BR>
+  <TABLE border=1>
+    <TR><TH>Color<TH>RGB<TH>HSV<TH>String</TR>
+    <TR><TD align=center bgcolor=#ffffff>White<TD>"#ffffff"<TD>"0.000 0.000 1.000"<TD>"white"</TR>
+    <TR><TD align=center bgcolor=#000000><font color=white>Black</font><TD>"#000000"<TD>"0.000 0.000 0.000"<TD>"black"</TR>
+    <TR><TD align=center bgcolor=#ff0000>Red<TD>"#ff0000"<TD>"0.000 1.000 1.000"<TD>"red"</TR>
+    <TR><TD align=center bgcolor=#40e0d0>Turquoise<TD>"#40e0d0"<TD>"0.482 0.714 0.878"<TD>"turquoise"</TR>
+    <TR><TD align=center bgcolor=#a0522d>Sienna<TD>"#a0522d"<TD>"0.051 0.718 0.627"<TD>"sienna"</TR>
+  </TABLE>
+<P>
+ The string value <TT>transparent</TT> can be used to indicate no color.
+ This is only available in the output formats
+ ps, svg, fig, vmrl, and the bitmap formats. It can be used whenever a
+ color is needed but is most useful with
+ the <A HREF=#d:bgcolor>bgcolor</A> attribute.
+ Usually, the same effect can be achieved by setting
+ <A HREF=#d:style>style</A> to <TT>invis</TT>.
+:colorList
+A colon-separated list of weighted color values: <I>WC</I>(:<I>WC</I>)*
+where each <I>WC</I> has the form <I>C(;F)?</I> with C a <A HREF=#k:color>color</A> value
+and the optional <I>F</I> a floating-point number, 0 &le; <I>F</I> &le; 1. The sum of the 
+floating-point numbers in a <TT>colorList</TT> must sum to at most 1.
+<P>
+<b>NOTE:</b> Gradient fills, described below, are currently only available via CAIRO or SVG rendering.
+<P>
+If the colorList value specifies multiple colors, with no weights, and a filled style is specified,
+a linear gradient fill is done using the first two colors.
+If weights are present, a degenerate linear gradient fill is done. This essentially does a fill using
+two colors, with the weights specifying how much of region is filled with each color. 
+If the <A HREF=#a:style>style</A> attribute contains the value <tt>radial</tt>, then
+a radial gradient fill is done. These fills work with any shape. 
+<P>
+For certain shapes, the <A HREF=#a:style>style</A> attribute can be set
+to do fills using more than 2 colors. See the <A HREF=#k:style>style</A> type for more information.
+<P>
+The following table shows some variations of the <TT>yellow:blue</TT> color list depending on the
+<A HREF=#a:style>style</A> and <A HREF=#a:gradientangle>gradientangle</A> attributes.
+  <TABLE border=1>
+    <TR><TH>Gradient angle<TH><tt>style=filled</tt><TH><tt>style=filled<br>fillcolor=yellow;0.3:blue</tt><TH><tt>style=radial</tt></TR>
+    <TR><TD align=center>0<TD><IMG SRC="g_lin0.png"><TD ALIGN="CENTER"><IMG SRC="g_wlin0.png"><TD><IMG SRC="g_rad0.png"></TR>
+    <TR><TD align=center>45<TD><IMG SRC="g_lin45.png"><TD ALIGN="CENTER"><IMG SRC="g_wlin45.png"><TD><IMG SRC="g_rad45.png"></TR>
+    <TR><TD align=center>90<TD><IMG SRC="g_lin90.png"><TD ALIGN="CENTER"><IMG SRC="g_wlin90.png"><TD><IMG SRC="g_rad90.png"></TR>
+    <TR><TD align=center>180<TD><IMG SRC="g_lin180.png"><TD ALIGN="CENTER"><IMG SRC="g_wlin180.png"><TD><IMG SRC="g_rad180.png"></TR>
+    <TR><TD align=center>270<TD><IMG SRC="g_lin270.png"><TD ALIGN="CENTER"><IMG SRC="g_wlin270.png"><TD><IMG SRC="g_rad270.png"></TR>
+    <TR><TD align=center>360<TD><IMG SRC="g_lin360.png"><TD ALIGN="CENTER"><IMG SRC="g_wlin360.png"><TD><IMG SRC="g_rad360.png"></TR>
+  </TABLE>
+:dirType
+For an edge <CODE>T -> H;</CODE>
+  <TABLE>
+  <TR><TD>"forward"<TD><IMG SRC="forward.gif">
+      <TD>"back"<TD><IMG SRC="back.gif"></TR>
+  <TR><TD>"both"<TD><IMG SRC="both.gif">
+      <TD>"none"<TD><IMG SRC="nohead.gif"></TR>
+  </TABLE>
+That is, a glyph is drawn at the head end of an edge if and only
+if dirType is "forward" or "both";
+a glyph is drawn at the tail end of an edge if and only
+if dirType is "back" or "both";
+<P>
+For undirected edges <CODE>T -- H;</CODE>, one of the nodes, usually
+the righthand one, is treated as the head for the purpose of
+interpreting "forward" and "back".
+:doubleList
+A colon-separated list of doubles: "<I>%f</I>(:<I>%f</I>)*"
+ where each <I>%f</I> is a double.
+:escString
+string allowing escape sequences which are replaced according
+to the context.
+For node attributes, the substring "&#92;N" is replaced by the name of the node,
+and the substring "&#92;G" by the name of the graph.
+For graph or cluster attributes, the substring "&#92;G" is replaced by the
+name of the graph or cluster.
+For edge attributes, the substring "&#92;E" is replaced by the name of the edge,
+the substring "&#92;G" is replaced by the name of the graph or cluster,
+and the substrings "&#92;T" and "&#92;H" by the names of
+the tail and head nodes, respectively.
+The name of an edge is the string formed from the name of the
+tail node, the appropriate edge operator ("--" or "->") and the name of the
+head node.
+In all cases, the substring "&#92;L" is replaced by the object's label attribute.
+<P>
+In addition, if the associated attribute is
+<A HREF=#a:label>label</A>,
+<A HREF=#a:headlabel>headlabel</A> or <A HREF=#a:taillabel>taillabel</A>,
+the escape sequences "&#92;n", "&#92;l" and "&#92;r"
+divide the label into lines, centered, left-justified, and right-justified,
+respectively.
+:lblString
+an <A HREF=#k:escString>escString</A>
+or an <A HREF=shapes.html#html>HTML label</A>.
+:layerList
+list of strings separated by characters from the
+<A HREF=#a:layersep>layersep</A> attribute (by default, colons,
+tabs or spaces), defining <A HREF=#a:layer>layer</A>
+names and implicitly numbered 1,2,...
+:layerRange
+specifies a list of layers defined by the <A HREF=#a:layers>layers</A> attribute.
+It consists of a list of layer intervals separated by any collection of characters from
+the <A HREF=#a:layerlistsep>layerlistsep</A> attribute.
+Each layer interval is specified as either a
+layerId or a layerId<B>s</B>layerId<BR>, where layerId = "all",
+a decimal integer or a <A HREF=#a:layer>layer</A> name.
+(An integer i corresponds to layer i, layers being numbered from 1.)
+The string <B>s</B> consists of 1 or more separator characters specified
+by the <A HREF=#a:layersep>layersep</A> attribute.
+<P>
+Thus, assuming the default values for <A HREF=#a:layersep>layersep</A>
+and <A HREF=#a:layerlistsep>layerlistsep</A>, if <TT>layers="a:b:c:d:e:f:g:h"</TT>, the
+layerRange string <TT>layers="a:b,d,f:all"</TT> would denote the layers
+<TT>a b d f g h"</TT>.
+:outputMode
+"breadthfirst","nodesfirst","edgesfirst"
+These specify the order in which nodes and edges are drawn in concrete
+output. The default "breadthfirst" is the simplest, but when the graph
+layout does not avoid edge-node overlap, this mode will sometimes have
+edges drawn over nodes and sometimes on top of nodes. If the mode
+"nodesfirst" is chosen, all nodes are drawn first, followed by the
+edges. This guarantees an edge-node overlap will not be mistaken for
+an edge ending at a node. On the other hand, usually for aesthetic
+reasons, it may be desirable that all edges appear beneath nodes, even
+if the resulting drawing is ambiguous. This can be achieved by choosing
+"edgesfirst".
+:packMode
+"node", "clust" , "graph" , "array(_<I>flags</I>)?(%d)?"
+<P>
+The modes "node", "clust" or "graph"
+specify that the components should be packed together tightly, using
+the specified granularity.
+A value of "node" causes
+packing at the node and edge level, with no overlapping of these objects.
+This produces a layout with the least area, but it also allows interleaving,
+where a node of one component may lie between two nodes in another
+component. A value of "graph" does a packing using the bounding box of the
+component. Thus, there will be a rectangular region around a component
+free of elements of any other component.
+A value of "clust" guarantees that top-level clusters are kept intact.
+What effect a value has also depends on the layout algorithm. For
+example, neato does not support clusters, so a value of "clust" will
+have the same effect as the default "node" value.
+<P>
+The mode "array(_<I>flag</I>)?(%d)?"
+indicates that the components should be packed at the 
+graph level into an array of graphs. By default, the components
+are in row-major order, with the number of columns roughly the
+square root of the number of components. If the optional flags
+contains 'c', then column-major order is used. Finally, if the
+optional integer suffix is used, this specifies the number of 
+columns for row-major or the number of rows for column-major.
+Thus, the mode "array_c4" indicates array packing, with 4 rows,
+starting in the upper left and going down the first column, then
+down the second column, etc., until all components are used.
+<P>
+If a graph is smaller than the array cell it occupies, it is centered by default.
+The optional flags may contain 't', 'b', 'l', or 'r', indicating that the graphs
+should be aligned along the top, bottom, left or right, respectively.
+<P>
+If the optional flags contains 'u', this causes the insertion
+order of elements in the array to be determined by user-supplied
+values. Each component can specify its sort value by a 
+non-negative integer using the <A HREF="#d:sortv">sortv</A> attribute. 
+Components are
+inserted in order, starting with the one with the smallest
+sort value. If no sort value is specified, zero is used.
+:pagedir
+"BL", "BR", "TL", "TR", "RB", "RT", "LB", "LT".
+These specify the 8 row or column major orders for traversing a
+rectangular array, the first character corresponding to the major
+order and the second to the minor order. Thus, for "BL", the
+major order is from bottom to top, and the minor order is from left
+to right. This means the bottom row is traversed first, from left
+to right, then the next row up, from left to right, and so on,
+until the topmost row is traversed.
+:point
+"%f,%f('!')?" representing the point (x,y). The
+optional '!' indicates the
+node position should not change (input-only).
+<P>
+If <A HREF=#d:dim>dim</A> is 3, <B>point</B> may also have
+the format "%f,%f,%f('!')?" to represent the point (x,y,z).
+:pointList
+A list of points, separated by spaces.
+:portPos
+modifier indicating where on a node an edge should be aimed.
+It has the form <TT><I>portname</I>(:<I>compass_point</I>)?</TT>
+or <TT><I>compass_point</I></TT>.
+If the first form is used, the corresponding node must either have
+<A HREF=shapes.html#record>record</A> shape with one of its fields
+having the given <I>portname</I>,
+or have an <A HREF=shapes.html#html>HTML-like label</A>, one of
+whose components has a <TT>PORT</TT> attribute set to <I>portname</I>.
+<P>
+If a compass point is used, it must have the form
+<TT>"n","ne","e","se","s","sw","w","nw","c","_"</TT>. This modifies the edge
+placement to aim for the corresponding compass point on the port or,
+in the second form where no <I>portname</I> is supplied, on the node
+itself. The compass point "c" specifies the center of the node or port.
+The compass point "_" specifies that an appropriate side of the port
+adjacent to the exterior of the node should be used, if such exists.
+Otherwise, the center is used.
+If no compass point is used with a portname, the default value is "_".
+<P>
+<P>
+This attribute can be attached to an edge using the
+<A HREF=#d:headport>headport</A> and
+<A HREF=#d:tailport>tailport</A> attributes, or as part of the
+edge description as in
+<CENTER>
+<TT>node1:port1 -> node2:port5:nw;</TT>
+</CENTER>
+<P>
+Note that it is legal to have a portname the same as one of
+the compass points. In this case, this reference will be resolved to
+the port. Thus, if node <TT>A</TT> has a port <TT>w</TT>, then
+<TT>headport=w</TT> will refer to the port and not the compass point.
+At present, in this case, there is no way to specify that the compass
+point should be used.
+:quadType
+"normal", "fast", "none". 
+<P>
+Using "fast" gives about a 2-4 times overall speedup compared with "normal", 
+though layout quality can suffer a little. 
+:rankdir
+"TB", "LR", "BT", "RL", corresponding to directed graphs drawn
+from top to bottom, from left to right, from bottom to top, and from
+right to left, respectively.
+:splineType
+spline ( ';' spline )*<BR>
+<TABLE>
+ <TR><TD ALIGN=right>where spline<TD>=<TD>(endp)? (startp)? point (triple)+</TR>
+ <TR><TD ALIGN=right>and triple<TD>=<TD>point point point</TR>
+ <TR><TD ALIGN=right>and endp<TD>=<TD>"e,%f,%f"</TR>
+ <TR><TD ALIGN=right>and startp<TD>=<TD>"s,%f,%f"</TR>
+</TABLE>
+If a spline has points p<SUB>1</SUB> p<SUB>2</SUB> p<SUB>3</SUB> ... p<SUB>n</SUB>, (n = 1 (mod 3)), the points
+ correspond to the control points of a cubic B-spline from p<SUB>1</SUB> to p<SUB>n</SUB>. If startp
+ is given, it touches one node of the edge, and the arrowhead
+ goes from p<SUB>1</SUB> to startp. If startp is not given, p<SUB>1</SUB> touches a node.
+ Similarly for p<SUB>n</SUB>  and endp.
+:rankType
+"same", "min", "source", "max", "sink"
+:rect
+"%f,%f,%f,%f"  The rectangle llx,lly,urx,ury gives the coordinates, in
+ points, of the lower-left corner (llx,lly) and the upper-right corner
+ (urx,ury).
+:smoothType
+Values are "none", "avg_dist", "graph_dist", "power_dist", "rng", 
+"spring" and "triangle".
+:style
+styleItem ( ',' styleItem )*<BR>
+<TABLE>
+<TR><TD ALIGN=right>where styleItem<TD>=<TD>name or name'('args')'</TR>
+<TR><TD ALIGN=right>and args<TD>=<TD>name ( ',' name )*</TR>
+</TABLE>
+and name can be any string of characters not containing a space, a left or
+right parenthesis, or a comma.
+Note that whitespace characters are ignored.
+<P>
+<B>NOTE:</B><EM>The styles <tt>tapered, striped</tt> and <tt>wedged</tt>
+are only available in release 2.30 and later.</EM>
+<P>
+At present, the recognized style names are
+"dashed", "dotted", "solid", "invis" and "bold" for nodes and edges,
+"tapered" for edges only,
+and "filled", "striped", "wedged", "diagonals" and "rounded" for nodes only.
+The styles "filled", "striped" and "rounded" are recognized for clusters.
+The style "radial" is recognized for nodes, clusters and graphs, and indicates a
+radial-style gradient fill if applicable.
+<P>
+The style "striped" causes the
+fill to be done as a set of vertical stripes. The colors are specified via a <A HREF=#k:colorList>colorList</A>, 
+the colors drawn from left to right in list order. Optional color weights can be specified to indicate the
+proportional widths of the bars. If the sum of the weights is less than 1, the remainder is divided evenly
+among the colors with no weight. <B>Note</B>: The style "striped" is only supported with clusters and
+rectangularly-shaped nodes.
+<P>
+The style "wedged" causes the
+fill to be done as a set of wedges. The colors are specified via a <A HREF=#k:colorList>colorList</A>, 
+with the colors drawn counter-clockwise starting at angle 0. Optional color weights are interpreted
+analogously to the striped case described above.
+<B>Note</B>: The style "wedged" is allowed only for elliptically-shaped nodes.
+<P>
+The following tables illustrate some of the effects of the style settings. 
+Examples of tapered line styles are given below.
+Examples of linear and radial gradient fill can be seen under  <A HREF=#k:colorList>colorList</A>.
+<P>
+  <TABLE border=1>
+    <TR><TD align="center"><tt>solid</tt><TD align="center"><tt>dashed</tt><TD align="center"><tt>dotted</tt><TD align="center"><tt>bold</tt><TD align="center"><tt>rounded</tt><TD align="center"><tt>diagonals</tt><TD align="center"><tt>filled</tt><TD align="center"><tt>striped</tt><TD align="center"><tt>wedged</tt></TR>
+    <TR><TD><IMG SRC="n_solid.png"><TD><IMG SRC="n_dashed.png"><TD><IMG SRC="n_dotted.png"><TD><IMG SRC="n_bold.png"><TD><IMG SRC="n_rounded.png"><TD><IMG SRC="n_diagonals.png"><TD><IMG SRC="n_filled.png"><TD><IMG SRC="n_striped.png"><TD><IMG SRC="n_wedged.png"></TR>
+    <CAPTION>Basic style settings for nodes</CAPTION>
+  </TABLE>
+<P>
+  <TABLE border=1>
+    <TR><TD align="center"><tt>solid</tt><TD align="center"><tt>dashed</tt><TD align="center"><tt>dotted</tt><TD align="center"><tt>bold</tt></TR>
+    <TR><TD><IMG SRC="e_solid.png"><TD><IMG SRC="e_dashed.png"><TD><IMG SRC="e_dotted.png"><TD><IMG SRC="e_bold.png"></TR>
+    <CAPTION>Basic style settings for edges</CAPTION>
+  </TABLE>
+<P>
+  <TABLE border=1>
+    <TR><TD align="center"><tt>solid</tt><TD align="center"><tt>dashed</tt><TD align="center"><tt>dotted</tt><TD align="center"><tt>bold</tt><TD align="center"><tt>rounded</tt><TD align="center"><tt>filled</tt><TD align="center"><tt>striped</tt></TR>
+    <TR><TD><IMG SRC="c_solid.png"><TD><IMG SRC="c_dashed.png"><TD><IMG SRC="c_dotted.png"><TD><IMG SRC="c_bold.png"><TD><IMG SRC="c_rounded.png"><TD><IMG SRC="c_filled.png"><TD><IMG SRC="c_striped.png"></TR>
+    <CAPTION>Basic style settings for clusters</CAPTION>
+  </TABLE>
+<P>
+The effect of <tt>style=tapered</tt> depends on the <A HREF=#d:penwidth>penwidth</A>,
+<A HREF=#d:dir>dir</A>, <A HREF=#d:arrowhead>arrowhead</A> and <A HREF=#d:arrowtail>arrowtail</A> attributes.
+The edge starts with width <tt>penwidth</tt> and tapers to width 1, in points. The <tt>dir</tt> attribute
+determines whether the tapering goes from tail to head (<tt>dir=forward</tt>), from head to 
+tail (<tt>dir=forward</tt>), from the middle to both the head and tail (<tt>dir=both</tt>), or no
+tapering at all (<tt>dir=none</tt>). If the <tt>dir</tt> is not explicitly set, the default for the
+graph type is used (see <A HREF=#a:dir>dir</A>). Arrowheads and arrowtails are also drawn, based on the
+value of <tt>dir</tt>; to avoid this, set <tt>arrowhead</tt> and/or <TT>arrowtail</TT> to <TT>"none"</TT>.
+<P>
+The following table illustrates the <tt>style=tapered</tt> with <tt>penwidth=7</tt> and
+<tt>arrowtail=none</tt>.
+  <TABLE border=1>
+    <TR><TD><tt>arrowhead</tt> &#92; <tt>dir</tt><TD align="center"><tt>forward</tt><TD align="center"><tt>back</tt><TD align="center"><tt>both</tt><TD align="center"><tt>none</tt></TR>
+    <TR><TD><tt>normal</tt><TD><IMG SRC="normal_forward.png"><TD><IMG SRC="normal_back.png"><TD><IMG SRC="normal_both.png"><TD><IMG SRC="normal_none.png"></TR>
+    <TR><TD><tt>none</tt><TD><IMG SRC="none_forward.png"><TD><IMG SRC="none_back.png"><TD><IMG SRC="none_both.png"><TD><IMG SRC="none_none.png"></TR>
+  </TABLE>
+<P>
+Additional styles are available in
+device-dependent form. Style lists are passed to device drivers, which
+can use this to generate appropriate output.
+<P>
+The <TT>setlinewidth</TT> style value can be
+used for more control over the width of node borders and edges than is
+allowed by <TT>bold</TT>. This style value takes an argument, specifying the
+width of the line in <A HREF=#points>points</A>. For example, <TT>style="bold"</TT> is
+equivalent to <TT>style="setlinewidth(2)"</TT>.
+<B>The use of <TT>setlinewidth</TT> is deprecated; one should use the
+<A HREF=#d:penwidth><TT>penwidth</TT></A> attribute instead.</B>
+:shape
+A string specifying the <A HREF=shapes.html>shape</A> of a node.
+There are three
+main types of shapes :
+<A HREF=shapes.html#polygon>polygon-based</A>,
+<A HREF=shapes.html#record>record-based</A> and
+<A HREF=shapes.html#epsf>user-defined</A>.
+The record-based shape has largely been superseded and greatly generalized
+by <A HREF=shapes.html#html>HTML-like labels</A>. 
+That is, instead of using <TT>shape=record</TT>, one might
+consider using <TT>shape=none</TT> and an HTML-like label.
+:startType
+has the syntax <TT>(<I>style</I>)?(<I>seed</I>)?</TT>.
+<P>
+If <I>style</I> is present, it must be one of the strings <TT>"regular"</TT>,
+<TT>"self"</TT>, or <TT>"random"</TT>. In the first case, the nodes are
+placed regularly about a circle. In the second case,
+an abbreviated version of neato is run to obtain the initial layout.
+In the last case, the nodes are placed randomly in a unit square.
+<P>
+If <I>seed</I> is present, it specifies a seed for the random number
+generator. If <I>seed</I> is a positive number, this is used as the
+seed. If it is anything else,
+the current time, and possibly the process id, is used to pick a seed,
+thereby making the choice more random. In this case, the seed value
+is stored in the graph.
+<P>
+If the value is just <TT>"random"</TT>, a time-based seed is chosen.
+<P>
+Note that input positions, specified by a node's
+<A HREF=#d:pos>pos</A>
+attribute, are only used when the style is <TT>"random"</TT>.
+:viewPort
+"%lf,%lf,%lf,%lf,%lf" or  "%lf,%lf,%lf,'%s'"
+<P>
+The viewPort <TT>W,H,Z,x,y</TT> or <TT>W,H,Z,N</TT>
+specifies a viewport for the final image. The pair (W,H) gives the
+dimensions (width and height) of the final image, in
+<A HREF=#points>points</A>.
+The optional Z is the zoom factor, i.e., the image in the original layout will be
+W/Z by H/Z points in size. By default, Z is 1.
+The optional last part is either a pair (x,y) giving a position in the original layout of the
+graph, in
+<A HREF=#points>points</A>, of the center of the viewport, or the name N
+of a node whose center should used as the focus.
+By default, the focus is the center of the graph bounding box, i.e.,
+(bbx/2,bby/2), where "bbx,bby" is the
+value of the bounding box attribute <A HREF=#a:bb>bb</A>.
+<P>
+Sample values: <TT>50,50,.5,'2.8 BSD'</T> or <TT>100,100,2,450,300</TT>.
+The first will take the 100x100 point square centered on the node <TT>2.8 BSD</TT>
+and scale it down by 0.5, yielding a 50x50 point final image.

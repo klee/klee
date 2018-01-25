@@ -1,0 +1,363 @@
+.TH gv 3sharp "06 September 2013"
+
+.SH NAME
+
+gv_sharp - graph manipulation in sharp
+
+.SH SYNOPSIS
+
+
+
+.SH USAGE
+
+
+
+.SH INTRODUCTION
+
+.B gv_sharp
+is a dynamically loaded extension for
+.B sharp
+that provides access to the graph facilities of
+.B graphviz.
+
+.SH COMMANDS
+
+.TP
+\fBNew graphs\fR
+.br
+.TP
+New empty graph
+.br
+\fISWIGTYPE_p_Agraph_t\fR \fBgv.graph\fR \fI(string name);\fR
+.br
+\fISWIGTYPE_p_Agraph_t\fR \fBgv.digraph\fR \fI(string name);\fR
+.br
+\fISWIGTYPE_p_Agraph_t\fR \fBgv.strictgraph\fR \fI(string name);\fR
+.br
+\fISWIGTYPE_p_Agraph_t\fR \fBgv.strictdigraph\fR \fI(string name);\fR
+.br
+.TP
+New graph from a dot-syntax string or file
+.br
+\fISWIGTYPE_p_Agraph_t\fR \fBgv.readstring\fR \fI(string string);\fR
+.br
+\fISWIGTYPE_p_Agraph_t\fR \fBgv.read\fR \fI(string filename);\fR
+.br
+\fISWIGTYPE_p_Agraph_t\fR \fBgv.read\fR \fI(SWIGTYPE_p_FILE f);\fR
+.br
+.TP
+Add new subgraph to existing graph
+.br
+\fISWIGTYPE_p_Agraph_t\fR \fBgv.graph\fR \fI(SWIGTYPE_p_Agraph_t g, string name);\fR
+.br
+.TP
+\fBNew nodes\fR
+.br
+.TP
+Add new node to existing graph
+.br
+\fISWIGTYPE_p_Agnode_t\fR \fBgv.node\fR \fI(SWIGTYPE_p_Agraph_t g, string name);\fR
+.br
+.TP
+\fBNew edges\fR
+.br
+.TP
+Add new edge between existing nodes
+.br
+\fISWIGTYPE_p_Agedge_t\fR \fBgv.edge\fR \fI(SWIGTYPE_p_Agnode_t t, SWIGTYPE_p_Agnode_t h);\fR
+.br
+.TP
+Add a new edge between an existing tail node, and a named head node which will be induced in the graph if it doesn't already exist
+.br
+\fISWIGTYPE_p_Agedge_t\fR \fBgv.edge\fR \fI(SWIGTYPE_p_Agnode_t t, string hname);\fR
+.br
+.TP
+Add a new edge between an existing head node, and a named tail node which will be induced in the graph if it doesn't already exist
+.br
+\fISWIGTYPE_p_Agedge_t\fR \fBgv.edge\fR \fI(string tname, SWIGTYPE_p_Agnode_t h);\fR
+.br
+.TP
+Add a new edge between named tail  and head nodes which will be induced in the graph if they don't already exist
+.br
+\fISWIGTYPE_p_Agedge_t\fR \fBgv.edge\fR \fI(SWIGTYPE_p_Agraph_t g, string tname, string hname);\fR
+.br
+.TP
+\fBSetting attribute values\fR
+.br
+.TP
+Set value of named attribute of graph/node/edge - creating attribute if necessary
+.br
+\fIstring\fR \fBgv.setv\fR \fI(SWIGTYPE_p_Agraph_t g, string attr, string val);\fR
+.br
+\fIstring\fR \fBgv.setv\fR \fI(SWIGTYPE_p_Agnode_t n, string attr, string val);\fR
+.br
+\fIstring\fR \fBgv.setv\fR \fI(SWIGTYPE_p_Agedge_t e, string attr, string val);\fR
+.br
+.TP
+Set value of existing attribute of graph/node/edge (using attribute handle)
+.br
+\fIstring\fR \fBgv.setv\fR \fI(SWIGTYPE_p_Agraph_t g, SWIGTYPE_p_Agsym_t a, string val);\fR
+.br
+\fIstring\fR \fBgv.setv\fR \fI(SWIGTYPE_p_Agnode_t n, SWIGTYPE_p_Agsym_t a, string val);\fR
+.br
+\fIstring\fR \fBgv.setv\fR \fI(SWIGTYPE_p_Agedge_t e, SWIGTYPE_p_Agsym_t a, string val);\fR
+.br
+.TP
+\fBGetting attribute values\fR
+.br
+.TP
+Get value of named attribute of graph/node/edge
+.br
+\fIstring\fR \fBgv.getv\fR \fI(SWIGTYPE_p_Agraph_t g, string attr);\fR
+.br
+\fIstring\fR \fBgv.getv\fR \fI(SWIGTYPE_p_Agnode_t n, string attr);\fR
+.br
+\fIstring\fR \fBgv.getv\fR \fI(SWIGTYPE_p_Agedge_t e, string attr);\fR
+.br
+.TP
+Get value of attribute of graph/node/edge (using attribute handle)
+.br
+\fIstring\fR \fBgv.getv\fR \fI(SWIGTYPE_p_Agraph_t g, SWIGTYPE_p_Agsym_t a);\fR
+.br
+\fIstring\fR \fBgv.getv\fR \fI(SWIGTYPE_p_Agnode_t n, SWIGTYPE_p_Agsym_t a);\fR
+.br
+\fIstring\fR \fBgv.getv\fR \fI(SWIGTYPE_p_Agedge_t e, SWIGTYPE_p_Agsym_t a);\fR
+.br
+.TP
+\fBObtain names from handles\fR
+.br
+\fIstring\fR \fBgv.nameof\fR \fI(SWIGTYPE_p_Agraph_t g);\fR
+.br
+\fIstring\fR \fBgv.nameof\fR \fI(SWIGTYPE_p_Agnode_t n);\fR
+.br
+\fIstring\fR \fBgv.nameof\fR \fI(SWIGTYPE_p_Agsym_t a);\fR
+.br
+.TP
+\fBFind handles from names\fR
+.br
+\fISWIGTYPE_p_Agraph_t\fR \fBgv.findsubg\fR \fI(SWIGTYPE_p_Agraph_t g, string name);\fR
+.br
+\fISWIGTYPE_p_Agnode_t\fR \fBgv.findnode\fR \fI(SWIGTYPE_p_Agraph_t g, string name);\fR
+.br
+\fISWIGTYPE_p_Agedge_t\fR \fBgv.findedge\fR \fI(SWIGTYPE_p_Agnode_t t, SWIGTYPE_p_Agnode_t h);\fR
+.br
+\fISWIGTYPE_p_Agsym_t\fR \fBgv.findattr\fR \fI(SWIGTYPE_p_Agraph_t g, string name);\fR
+.br
+\fISWIGTYPE_p_Agsym_t\fR \fBgv.findattr\fR \fI(SWIGTYPE_p_Agnode_t n, string name);\fR
+.br
+\fISWIGTYPE_p_Agsym_t\fR \fBgv.findattr\fR \fI(SWIGTYPE_p_Agedge_t e, string name);\fR
+.br
+.TP
+\fBMisc graph navigators returning handles\fR
+.br
+\fISWIGTYPE_p_Agnode_t\fR \fBgv.headof\fR \fI(SWIGTYPE_p_Agedge_t e);\fR
+.br
+\fISWIGTYPE_p_Agnode_t\fR \fBgv.tailof\fR \fI(SWIGTYPE_p_Agedge_t e);\fR
+.br
+\fISWIGTYPE_p_Agraph_t\fR \fBgv.graphof\fR \fI(SWIGTYPE_p_Agraph_t g);\fR
+.br
+\fISWIGTYPE_p_Agraph_t\fR \fBgv.graphof\fR \fI(SWIGTYPE_p_Agedge_t e);\fR
+.br
+\fISWIGTYPE_p_Agraph_t\fR \fBgv.graphof\fR \fI(SWIGTYPE_p_Agnode_t n);\fR
+.br
+\fISWIGTYPE_p_Agraph_t\fR \fBgv.rootof\fR \fI(SWIGTYPE_p_Agraph_t g);\fR
+.br
+.TP
+\fBObtain handles of proto node/edge for setting default attribute values\fR
+.br
+\fISWIGTYPE_p_Agnode_t\fR \fBgv.protonode\fR \fI(SWIGTYPE_p_Agraph_t g);\fR
+.br
+\fISWIGTYPE_p_Agedge_t\fR \fBgv.protoedge\fR \fI(SWIGTYPE_p_Agraph_t g);\fR
+.br
+.TP
+\fBIterators\fR
+.br
+.TP
+Iteration termination tests
+.br
+\fIbool\fR \fBgv.ok\fR \fI(SWIGTYPE_p_Agraph_t g);\fR
+.br
+\fIbool\fR \fBgv.ok\fR \fI(SWIGTYPE_p_Agnode_t n);\fR
+.br
+\fIbool\fR \fBgv.ok\fR \fI(SWIGTYPE_p_Agedge_t e);\fR
+.br
+\fIbool\fR \fBgv.ok\fR \fI(SWIGTYPE_p_Agsym_t a);\fR
+.br
+.TP
+Iterate over subgraphs of a graph
+.br
+\fISWIGTYPE_p_Agraph_t\fR \fBgv.firstsubg\fR \fI(SWIGTYPE_p_Agraph_t g);\fR
+.br
+\fISWIGTYPE_p_Agraph_t\fR \fBgv.nextsubg\fR \fI(SWIGTYPE_p_Agraph_t g, SWIGTYPE_p_Agraph_t sg);\fR
+.br
+.TP
+Iterate over supergraphs of a graph (obscure and rarely useful)
+.br
+\fISWIGTYPE_p_Agraph_t\fR \fBgv.firstsupg\fR \fI(SWIGTYPE_p_Agraph_t g);\fR
+.br
+\fISWIGTYPE_p_Agraph_t\fR \fBgv.nextsupg\fR \fI(SWIGTYPE_p_Agraph_t g, SWIGTYPE_p_Agraph_t sg);\fR
+.br
+.TP
+Iterate over edges of a graph
+.br
+\fISWIGTYPE_p_Agedge_t\fR \fBgv.firstedge\fR \fI(SWIGTYPE_p_Agraph_t g);\fR
+.br
+\fISWIGTYPE_p_Agedge_t\fR \fBgv.nextedge\fR \fI(SWIGTYPE_p_Agraph_t g, SWIGTYPE_p_Agedge_t e);\fR
+.br
+.TP
+Iterate over outedges of a graph
+.br
+\fISWIGTYPE_p_Agedge_t\fR \fBgv.firstout\fR \fI(SWIGTYPE_p_Agraph_t g);\fR
+.br
+\fISWIGTYPE_p_Agedge_t\fR \fBgv.nextout\fR \fI(SWIGTYPE_p_Agraph_t g, SWIGTYPE_p_Agedge_t e);\fR
+.br
+.TP
+Iterate over edges of a node
+.br
+\fISWIGTYPE_p_Agedge_t\fR \fBgv.firstedge\fR \fI(SWIGTYPE_p_Agnode_t n);\fR
+.br
+\fISWIGTYPE_p_Agedge_t\fR \fBgv.nextedge\fR \fI(SWIGTYPE_p_Agnode_t n, SWIGTYPE_p_Agedge_t e);\fR
+.br
+.TP
+Iterate over out-edges of a node
+.br
+\fISWIGTYPE_p_Agedge_t\fR \fBgv.firstout\fR \fI(SWIGTYPE_p_Agnode_t n);\fR
+.br
+\fISWIGTYPE_p_Agedge_t\fR \fBgv.nextout\fR \fI(SWIGTYPE_p_Agnode_t n, SWIGTYPE_p_Agedge_t e);\fR
+.br
+.TP
+Iterate over head nodes reachable from out-edges of a node
+.br
+\fISWIGTYPE_p_Agnode_t\fR \fBgv.firsthead\fR \fI(SWIGTYPE_p_Agnode_t n);\fR
+.br
+\fISWIGTYPE_p_Agnode_t\fR \fBgv.nexthead\fR \fI(SWIGTYPE_p_Agnode_t n, SWIGTYPE_p_Agnode_t h);\fR
+.br
+.TP
+Iterate over in-edges of a graph
+.br
+\fISWIGTYPE_p_Agedge_t\fR \fBgv.firstin\fR \fI(SWIGTYPE_p_Agraph_t g);\fR
+.br
+\fISWIGTYPE_p_Agedge_t\fR \fBgv.nextin\fR \fI(SWIGTYPE_p_Agnode_t n, SWIGTYPE_p_Agedge_t e);\fR
+.br
+.TP
+Iterate over in-edges of a node
+.br
+\fISWIGTYPE_p_Agedge_t\fR \fBgv.firstin\fR \fI(SWIGTYPE_p_Agnode_t n);\fR
+.br
+\fISWIGTYPE_p_Agedge_t\fR \fBgv.nextin\fR \fI(SWIGTYPE_p_Agraph_t g, SWIGTYPE_p_Agedge_t e);\fR
+.br
+.TP
+Iterate over tail nodes reachable from in-edges of a node
+.br
+\fISWIGTYPE_p_Agnode_t\fR \fBgv.firsttail\fR \fI(SWIGTYPE_p_Agnode_t n);\fR
+.br
+\fISWIGTYPE_p_Agnode_t\fR \fBgv.nexttail\fR \fI(SWIGTYPE_p_Agnode_t n, SWIGTYPE_p_Agnode_t t);\fR
+.br
+.TP
+Iterate over nodes of a graph
+.br
+\fISWIGTYPE_p_Agnode_t\fR \fBgv.firstnode\fR \fI(SWIGTYPE_p_Agraph_t g);\fR
+.br
+\fISWIGTYPE_p_Agnode_t\fR \fBgv.nextnode\fR \fI(SWIGTYPE_p_Agraph_t g, SWIGTYPE_p_Agnode_t n);\fR
+.br
+.TP
+Iterate over nodes of an edge
+.br
+\fISWIGTYPE_p_Agnode_t\fR \fBgv.firstnode\fR \fI(SWIGTYPE_p_Agedge_t e);\fR
+.br
+\fISWIGTYPE_p_Agnode_t\fR \fBgv.nextnode\fR \fI(SWIGTYPE_p_Agedge_t e, SWIGTYPE_p_Agnode_t n);\fR
+.br
+.TP
+Iterate over attributes of a graph
+.br
+\fISWIGTYPE_p_Agsym_t\fR \fBgv.firstattr\fR \fI(SWIGTYPE_p_Agraph_t g);\fR
+.br
+\fISWIGTYPE_p_Agsym_t\fR \fBgv.nextattr\fR \fI(SWIGTYPE_p_Agraph_t g, SWIGTYPE_p_Agsym_t a);\fR
+.br
+.TP
+Iterate over attributes of an edge
+.br
+\fISWIGTYPE_p_Agsym_t\fR \fBgv.firstattr\fR \fI(SWIGTYPE_p_Agedge_t e);\fR
+.br
+\fISWIGTYPE_p_Agsym_t\fR \fBgv.nextattr\fR \fI(SWIGTYPE_p_Agedge_t e, SWIGTYPE_p_Agsym_t a);\fR
+.br
+.TP
+Iterate over attributes of a node
+.br
+\fISWIGTYPE_p_Agsym_t\fR \fBgv.firstattr\fR \fI(SWIGTYPE_p_Agnode_t n);\fR
+.br
+\fISWIGTYPE_p_Agsym_t\fR \fBgv.nextattr\fR \fI(SWIGTYPE_p_Agnode_t n, SWIGTYPE_p_Agsym_t a);\fR
+.br
+.TP
+\fBRemove graph objects\fR
+.br
+\fIbool\fR \fBgv.rm\fR \fI(SWIGTYPE_p_Agraph_t g);\fR
+.br
+\fIbool\fR \fBgv.rm\fR \fI(SWIGTYPE_p_Agnode_t n);\fR
+.br
+\fIbool\fR \fBgv.rm\fR \fI(SWIGTYPE_p_Agedge_t e);\fR
+.br
+.TP
+\fBLayout\fR
+.br
+.TP
+Annotate a graph with layout attributes and values using a specific layout engine
+.br
+\fIbool\fR \fBgv.layout\fR \fI(SWIGTYPE_p_Agraph_t g, string engine);\fR
+.br
+.TP
+\fBRender\fR
+.br
+.TP
+Render a layout into attributes of the graph
+.br
+\fIbool\fR \fBgv.render\fR \fI(SWIGTYPE_p_Agraph_t g);\fR
+.br
+.TP
+Render a layout to stdout
+.br
+\fIbool\fR \fBgv.render\fR \fI(SWIGTYPE_p_Agraph_t g, string format);\fR
+.br
+.TP
+Render to an open file
+.br
+\fIbool\fR \fBgv.render\fR \fI(SWIGTYPE_p_Agraph_t g, string format, SWIGTYPE_p_FILE fout);\fR
+.br
+.TP
+Render a layout to an unopened file by name
+.br
+\fIbool\fR \fBgv.render\fR \fI(SWIGTYPE_p_Agraph_t g, string format, string filename);\fR
+.br
+.TP
+Render to an open channel
+.br
+\fIbool\fR \fBgv.renderchannel\fR \fI(SWIGTYPE_p_Agraph_t g, string format, string channelname);\fR
+.br
+.TP
+Render to a string result
+.br
+\fBgv.renderresult\fR \fI(SWIGTYPE_p_Agraph_t g, string format, string outdata);\fR
+.br
+.TP
+Render a layout to a malloc'ed string, to be free'd by the caller
+.br
+.TP
+(deprecated - too easy to leak memory)
+.br
+.TP
+(still needed for "eval [gv::renderdata $G tk]" )
+.br
+\fIstring\fR \fBgv.renderdata\fR \fI(SWIGTYPE_p_Agraph_t g, string format);\fR
+.br
+.TP
+Writing graph back to file
+.br
+\fIbool\fR \fBgv.write\fR \fI(SWIGTYPE_p_Agraph_t g, string filename);\fR
+.br
+\fIbool\fR \fBgv.write\fR \fI(SWIGTYPE_p_Agraph_t g, SWIGTYPE_p_FILE f);\fR
+.br
+
+.SH KEYWORDS
+
+graph, dot, neato, fdp, circo, twopi, sharp.
+

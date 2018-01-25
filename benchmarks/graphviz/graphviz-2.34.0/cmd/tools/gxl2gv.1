@@ -1,0 +1,92 @@
+.TH GXL2GV,GV2GXL 1 "20 December 2002"
+.SH NAME
+gxl2gv,gv2gxl \- GXL-GV converters
+.SH SYNOPSIS
+.B gxl2gv
+[
+.B \-gd?
+]
+[
+.BI -o outfile
+]
+[ 
+.I files
+]
+.br
+.B gv2gxl
+[
+.B \-gd?
+]
+[
+.BI -o outfile
+]
+[ 
+.I files
+]
+.SH DESCRIPTION
+.B gxl2gv
+converts between graphs represented in GXL and in the
+GV language. Unless a conversion type is specified using
+a flag,
+.B gxl2gv
+will deduce the type of conversion from the suffix of
+the input file, a ".gv" suffix causing a conversion from GV
+to GXL, and a ".gxl" suffix causing a conversion from GXL to GV.
+If no suffix is available, e.g. when the input is from a pipe,
+and no flags are used then
+.B gxl2gv
+assumes the type of the input file from its executable name
+so that
+.B gxl2gv
+converts from GXL to GV, and
+.B gv2gxl
+converts from GV to GXL.
+.PP
+GXL supports a much richer graph model than GV. \fBgxl2gv\fP
+will attempt to map GXL constructs into the analogous GV construct
+when this is possible. If not, the GXL information is stored as
+an attribute. The intention is that applying \fBgxl2gv|gv2gxl\fP
+is semantically equivalent to the identity operator.
+.SH OPTIONS
+The following options are supported:
+.TP
+.B \-g
+The command name and input file extensions are ignored, the
+input is taken as a GV file and a GXL file is generated.
+.TP
+.B \-d
+The command name and input file extensions are ignored, the
+input is taken as a GXL file and a GV file is generated.
+.TP
+.B \-?
+Prints usage information and exits.
+.TP
+.BI \-o " outfile"
+If specified, the output will be written into the file
+\fIoutfile\fP. Otherwise, output is written to standard out.
+.SH OPERANDS
+The following operand is supported:
+.TP 8
+.I files
+Names of files containing 1 or more graphs in GXL or GV.
+If no
+.I files
+operand is specified,
+the standard input will be used.
+.SH RETURN CODES
+Both \fBgxl2gv\fP and \fBgv2gxl\fP return \fB0\fP
+if there were no problems during conversion;
+and non-zero if any error occurred.
+.SH "BUGS"
+\fBgxl2gv\fP will only convert in one direction even if given multiple files
+with varying suffixes.
+.PP
+The conversion can only handle one graph per GXL file.
+.PP
+There are some GXL constructs which \fBgxl2gv\fP cannot handle.
+.SH AUTHORS
+Krishnam Pericherla <kp@research.att.com>
+.br
+Emden R. Gansner <erg@research.att.com>
+.SH "SEE ALSO"
+dot(1), libgraph(3), libagraph(3), neato(1), twopi(1)

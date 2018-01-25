@@ -1,0 +1,309 @@
+digraph "class_hierarchy" {
+  size="8.5,11";
+	graph [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	node [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		shape = "ellipse"
+		color = "black"
+	]
+	edge [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"\<base-output\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		label = "{ \<base-output\> | { Ivars | Public } | { { output-name | output-title } | { active? | aseek-end-sequence | aseek-got-one-right | aseek-got-one-wrong | aseek-start-msg | create-link | destroy-link | done-init-supervisors | get-name | get-title | initialize | initialize-coderack | print@level | ready-to-guess-about-to-submit | reset | seek-declares-guess | shutdown | start-init-environment | start-init-supervisors | update-views | workspace-seeded } } }"
+		shape = "record"
+		color = "black"
+	]
+	"\<dangler\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		label = "{ \<dangler\> | { Ivars | Public } | { { children | name | parent | position } | { get-children | get-name | get-parent | get-position | set-name! | set-position! } } }"
+		shape = "record"
+		color = "black"
+	]
+	"\<replace-dangler\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		label = "{ \<replace-dangler\> | { Ivars | Public } | { { by } | { gen-descriptor | init | run } } }"
+		shape = "record"
+		color = "black"
+	]
+	"\<doubler-dangler\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		label = "{ \<doubler-dangler\> | { Ivars | Public } | { { result | spent } | { gen-descriptor | init | run } } }"
+		shape = "record"
+		color = "black"
+	]
+	"\<seek-diagram\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		label = "{ \<seek-diagram\> | { Ivars | Protected | Public } | { { descriptor | diagram | dotgraph | dotoutput | graph | origdescriptor } | { eval-dangler | eval-descriptor } | { destroy | eval-dangler | eval-descriptor | gen-dotgraph | get-descriptor | get-diagram | get-dotgraph | get-dotoutput | get-graph | get-range | init | node-ref | print | reset | run! | runn! | stringify | update-descriptor | update-graph } } }"
+		shape = "record"
+		color = "black"
+	]
+	"\<diagram-node\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		label = "{ \<diagram-node\> | { Ivars | Protected | Public } | { { children | current-danglers | danglers | in-run | name | output-tag | parent | position | title | unique-name } | { run-danglers } | { add-danglers! | gen-descriptor | gen-dotgraph | gen-node-descriptor | get-children | get-danglers | get-name | get-parent | get-position | get-title | get-unique-name | init | reset | run! | set-position! } } }"
+		shape = "record"
+		color = "black"
+	]
+	"\<countup-node\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		label = "{ \<countup-node\> | { Ivars | Public } | { { curnum | firsttime | spent } | { init | run-node! } } }"
+		shape = "record"
+		color = "black"
+	]
+	"\<constant-node\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		label = "{ \<constant-node\> | { Ivars | Public } | { { num | spent } | { gen-node-descriptor | init | run-node! } } }"
+		shape = "record"
+		color = "black"
+	]
+	"\<repeat-node\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		label = "{ \<repeat-node\> | { Public } | { { init | run-node! } } }"
+		shape = "record"
+		color = "black"
+	]
+	"\<cycle-node\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		label = "{ \<cycle-node\> | { Ivars | Public } | { { current-children | spent } | { init | reset | run-node! } } }"
+		shape = "record"
+		color = "black"
+	]
+	"\<tuple-node\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		label = "{ \<tuple-node\> | { Ivars | Public } | { { current-children } | { init | reset | run-node! } } }"
+		shape = "record"
+		color = "black"
+	]
+	"\<dot-thread\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		label = "{ \<dot-thread\> | { Ivars | Public } | { { gifbuffer | inp | outp | prcss } | { close | init-file | init-gif | init-plain | process-str | process-str-\>gif | send-str } } }"
+		shape = "record"
+		color = "black"
+	]
+	"\<graphics-output\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		label = "{ \<graphics-output\> | { Ivars | Protected | Public } | { { active | conceptnet-view | diagram-view | lastrendered-sequence | output-name | output-title | seektext-view | sequence | workspace-view } | { place-windows } | { active? | aseek-end-sequence | aseek-got-one-right | aseek-got-one-wrong | aseek-start-msg | create-link | destroy-link | get-name | get-title | get-workspace-view | initialize | pop-sequence | ready-to-guess-about-to-submit | reset | seek-declares-guess | shutdown | update-views | workspace-seeded } } }"
+		shape = "record"
+		color = "black"
+	]
+	"\<text-output\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		label = "{ \<text-output\> | { Ivars | Public } | { { output-name | output-title } | { active? | aseek-end-sequence | aseek-got-one-right | aseek-got-one-wrong | aseek-start-msg | done-init-supervisors | get-name | get-title | print@level | ready-to-guess-about-to-submit | seek-declares-guess | start-init-supervisors } } }"
+		shape = "record"
+		color = "black"
+	]
+	"\<seekstructure\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		label = "{ \<seekstructure\> | { Ivars | Public } | { { flex-info | happiness | name | salience } | { get-flex-info | get-happiness | get-name | get-salience | get-type | init | set-flex-info! | set-happiness! | set-name! | set-salience! | stringify | type? } } }"
+		shape = "record"
+		color = "black"
+	]
+	"\<link\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		label = "{ \<link\> | { Ivars | Public } | { { directed? | from | to } | { get-directed? | get-from | get-to | get-type | init | set-directed?! | set-from! | set-to! | stringify | type? } } }"
+		shape = "record"
+		color = "black"
+	]
+	"\<group\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		label = "{ \<group\> | { Ivars | Public } | { { from | items | ordered? | to } | { get-directed? | get-from | get-to | init | set-directed?! | set-from! | set-to! | stringify | type? } } }"
+		shape = "record"
+		color = "black"
+	]
+	"\<seekobject\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		label = "{ \<seekobject\> | { Ivars | Public } | { { groups-in | links-from | links-to | output-tag | serialization | tags } | { get-groups-in | get-links-from | get-links-to | get-output-tag | get-type | init | marshal | print | set-groups-in! | set-links-from! | set-links-to! | set-output-tag! | stringify | type? } } }"
+		shape = "record"
+		color = "black"
+	]
+	"\<numentry\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		label = "{ \<numentry\> | { Ivars | Public } | { { number | numspace-links | salience } | { get-number | get-numspace-links | get-salience | get-type | init | set-number! | set-numspace-links! | set-salience! | stringify | type? } } }"
+		shape = "record"
+		color = "black"
+	]
+	"\<seqentry\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		label = "{ \<seqentry\> | { Ivars | Public } | { { ghost? | happiness | left | pos | right } | { get-ghost? | get-left | get-length | get-pos | get-right | get-sequence | get-tags | get-type | init | set-ghost?! | set-left! | set-pos! | set-right! | set-tags! | stringify | type? } } }"
+		shape = "record"
+		color = "black"
+	]
+	"\<base\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		shape = "ellipse"
+		color = "black"
+	]
+	"\<base\>" -> "\<base-output\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"\<base\>" -> "\<dangler\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"\<dangler\>" -> "\<replace-dangler\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"\<dangler\>" -> "\<doubler-dangler\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"\<base\>" -> "\<seek-diagram\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"\<base\>" -> "\<diagram-node\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"\<diagram-node\>" -> "\<countup-node\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"\<diagram-node\>" -> "\<constant-node\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"\<diagram-node\>" -> "\<repeat-node\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"\<diagram-node\>" -> "\<cycle-node\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"\<diagram-node\>" -> "\<tuple-node\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"\<base\>" -> "\<dot-thread\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"\<base-output\>" -> "\<graphics-output\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"\<base\>" -> "\<seekobject\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"\<seekobject\>" -> "\<numentry\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"\<numentry\>" -> "\<seqentry\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"\<base-output\>" -> "\<text-output\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"\<seekobject\>" -> "\<seekstructure\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"\<seekstructure\>" -> "\<link\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"\<seekstructure\>" -> "\<group\>" [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+}

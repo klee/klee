@@ -1,0 +1,8 @@
+:PACKAGE: graphviz
+
+:ALL:
+
+GVUI.exe : .TERMINAL
+
+$(BINDIR) :INSTALLDIR: GVUI.exe
+

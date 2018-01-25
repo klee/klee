@@ -1,0 +1,20 @@
+all : lneato
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+BIN_SCRIPTS = lneato
+
+lneato: lneato.sh
+	cp lneato.sh lneato
+	chmod +x lneato
+
+install:  $(BIN_SCRIPTS)
+	$(MKPATH) $(BINDIR)
+	$(INSTALL) $(BIN_SCRIPTS) $(BINDIR)
+
+clean:
+	true
+
+distclean:
+	true

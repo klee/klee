@@ -1,0 +1,61 @@
+diff -u3pr zlib-1.2.3/win32/Makefile.gcc zlib-1.2.3-mingwPORT/win32/Makefile.gcc
+--- zlib-1.2.3/win32/Makefile.gcc	Fri Aug  1 23:49:00 2003
++++ zlib-1.2.3-mingwPORT/win32/Makefile.gcc	Wed Feb  1 11:48:04 2006
+@@ -25,7 +25,8 @@
+ 
+ STATICLIB = libz.a
+ SHAREDLIB = zlib1.dll
+-IMPLIB    = libzdll.a
++IMPLIB    = libz.dll.a
++ALTIMPLIB = libzdll.a
+ 
+ #LOC = -DASMV
+ #LOC = -DDEBUG -g
+@@ -53,6 +54,10 @@ RM = rm -f
+ prefix = /usr/local
+ exec_prefix = $(prefix)
+ 
++INCLUDE_PATH = $(prefix)/include
++LIBRARY_PATH = $(prefix)/lib
++BINARY_PATH  = $(prefix)/bin
++
+ OBJS = adler32.o compress.o crc32.o deflate.o gzio.o infback.o \
+        inffast.o inflate.o inftrees.o trees.o uncompr.o zutil.o
+ OBJA =
+@@ -99,28 +104,31 @@ zlibrc.o: win32/zlib1.rc
+ 	$(RC) $(RCFLAGS) -o $@ win32/zlib1.rc
+ 
+ 
+-# INCLUDE_PATH and LIBRARY_PATH must be set.
+-
+ .PHONY: install uninstall clean
+ 
+-install: zlib.h zconf.h $(LIB)
+-	-@if not exist $(INCLUDE_PATH)/nul mkdir $(INCLUDE_PATH)
+-	-@if not exist $(LIBRARY_PATH)/nul mkdir $(LIBRARY_PATH)
++install: zlib.h zconf.h $(STATICLIB) $(SHAREDLIB)
++	@if [ ! -d $(BINARY_PATH) ] ; then mkdir -p $(BINARY_PATH) ; fi
++	@if [ ! -d $(INCLUDE_PATH) ] ; then mkdir -p $(INCLUDE_PATH) ; fi
++	@if [ ! -d $(LIBRARY_PATH) ] ; then mkdir -p $(LIBRARY_PATH) ; fi
++	-$(INSTALL) $(SHAREDLIB) $(BINARY_PATH)
+ 	-$(INSTALL) zlib.h $(INCLUDE_PATH)
+ 	-$(INSTALL) zconf.h $(INCLUDE_PATH)
+ 	-$(INSTALL) $(STATICLIB) $(LIBRARY_PATH)
+ 	-$(INSTALL) $(IMPLIB) $(LIBRARY_PATH)
++	-$(INSTALL) $(IMPLIB) $(LIBRARY_PATH)/$(ALTIMPLIB)
+ 
+ uninstall:
+ 	-$(RM) $(INCLUDE_PATH)/zlib.h
+ 	-$(RM) $(INCLUDE_PATH)/zconf.h
+ 	-$(RM) $(LIBRARY_PATH)/$(STATICLIB)
+ 	-$(RM) $(LIBRARY_PATH)/$(IMPLIB)
++	-$(RM) $(LIBRARY_PATH)/$(ALTIMPLIB)
+ 
+ clean:
+ 	-$(RM) $(STATICLIB)
+ 	-$(RM) $(SHAREDLIB)
+ 	-$(RM) $(IMPLIB)
++	-$(RM) $(ALTIMPLIB)
+ 	-$(RM) *.o
+ 	-$(RM) *.exe
+ 	-$(RM) foo.gz

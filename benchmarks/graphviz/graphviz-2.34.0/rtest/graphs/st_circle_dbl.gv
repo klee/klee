@@ -1,0 +1,62 @@
+digraph G{ label="SelfTop"
+node [shape = circle] "node13"; 
+"node13" -> "node13"[label ="tailport=nw headport=ne" tailport=nw headport=ne];
+"node13" -> "node13"[label ="tailport=nw headport=ne" tailport=nw headport=ne];
+"node13" -> "node14"  
+"node14" -> "node14"[label ="tailport=nw headport=e" tailport=nw headport=e];
+"node14" -> "node14"[label ="tailport=nw headport=e" tailport=nw headport=e];
+"node14" -> "node15"  
+"node15" -> "node15"[label ="tailport=nw headport=se" tailport=nw headport=se];
+"node15" -> "node15"[label ="tailport=nw headport=se" tailport=nw headport=se];
+"node15" -> "node22"  
+"node22" -> "node22"[label ="tailport=n headport=n" tailport=n headport=n];
+"node22" -> "node22"[label ="tailport=n headport=n" tailport=n headport=n];
+"node22" -> "node31"  
+"node31" -> "node31"[label ="tailport=ne headport=nw" tailport=ne headport=nw];
+"node31" -> "node31"[label ="tailport=ne headport=nw" tailport=ne headport=nw];
+"node31" -> "node33"  
+"node33" -> "node33"[label ="tailport=ne headport=ne" tailport=ne headport=ne];
+"node33" -> "node33"[label ="tailport=ne headport=ne" tailport=ne headport=ne];
+"node33" -> "node37"  
+"node37" -> "node37"[label ="tailport=ne headport=sw" tailport=ne headport=sw];
+"node37" -> "node37"[label ="tailport=ne headport=sw" tailport=ne headport=sw];
+"node37" -> "node38"  
+"node38" -> "node38"[label ="tailport=ne headport=w" tailport=ne headport=w];
+"node38" -> "node38"[label ="tailport=ne headport=w" tailport=ne headport=w];
+"node38" -> "node41"  
+"node41" -> "node41"[label ="tailport=e headport=nw" tailport=e headport=nw];
+"node41" -> "node41"[label ="tailport=e headport=nw" tailport=e headport=nw];
+"node41" -> "node47"  
+"node47" -> "node47"[label ="tailport=e headport=sw" tailport=e headport=sw];
+"node47" -> "node47"[label ="tailport=e headport=sw" tailport=e headport=sw];
+"node47" -> "node48"  
+"node48" -> "node48"[label ="tailport=e headport=w" tailport=e headport=w];
+"node48" -> "node48"[label ="tailport=e headport=w" tailport=e headport=w];
+"node48" -> "node51"  
+"node51" -> "node51"[label ="tailport=se headport=nw" tailport=se headport=nw];
+"node51" -> "node51"[label ="tailport=se headport=nw" tailport=se headport=nw];
+"node51" -> "node57"  
+"node57" -> "node57"[label ="tailport=se headport=sw" tailport=se headport=sw];
+"node57" -> "node57"[label ="tailport=se headport=sw" tailport=se headport=sw];
+"node57" -> "node58"  
+"node58" -> "node58"[label ="tailport=se headport=w" tailport=se headport=w];
+"node58" -> "node58"[label ="tailport=se headport=w" tailport=se headport=w];
+"node58" -> "node73"  
+"node73" -> "node73"[label ="tailport=sw headport=ne" tailport=sw headport=ne];
+"node73" -> "node73"[label ="tailport=sw headport=ne" tailport=sw headport=ne];
+"node73" -> "node74"  
+"node74" -> "node74"[label ="tailport=sw headport=e" tailport=sw headport=e];
+"node74" -> "node74"[label ="tailport=sw headport=e" tailport=sw headport=e];
+"node74" -> "node75"  
+"node75" -> "node75"[label ="tailport=sw headport=se" tailport=sw headport=se];
+"node75" -> "node75"[label ="tailport=sw headport=se" tailport=sw headport=se];
+"node75" -> "node83"  
+"node83" -> "node83"[label ="tailport=w headport=ne" tailport=w headport=ne];
+"node83" -> "node83"[label ="tailport=w headport=ne" tailport=w headport=ne];
+"node83" -> "node84"  
+"node84" -> "node84"[label ="tailport=w headport=e" tailport=w headport=e];
+"node84" -> "node84"[label ="tailport=w headport=e" tailport=w headport=e];
+"node84" -> "node85"  
+"node85" -> "node85"[label ="tailport=w headport=se" tailport=w headport=se];
+"node85" -> "node85"[label ="tailport=w headport=se" tailport=w headport=se];
+}

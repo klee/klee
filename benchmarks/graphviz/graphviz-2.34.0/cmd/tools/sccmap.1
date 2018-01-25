@@ -1,0 +1,65 @@
+.TH SCCMAP 1 "21 March 2001"
+.SH NAME
+sccmap \- extract strongly connected components of directed graphs
+.SH SYNOPSIS
+\fBsccmap\fR
+[\fB\-dsv\fR]
+[
+.BI \-o outfile
+]
+[
+.I files
+]
+.SH DESCRIPTION
+.I sccmap
+decomposes digraphs into strongly connected components
+and an auxiliary map of the relationship between components.
+In this map, each component is collapsed into a node.
+The resulting graphs are printed to standard out.
+The number of nodes, edges and strongly connected components
+are printed to standard error.
+.B sccmap
+is a way of partitioning large graphs into more manageable pieces.
+.SH OPTIONS
+The following options are supported:
+.TP
+.B \-d
+Preserve degenerate components of only one node.
+.TP
+.B \-s
+Do not print the resulting graphs. Only the statistics are
+important.
+.TP
+.B \-S
+Just print the resulting graphs. No statistics are printed.
+.TP
+.BI \-o "output"
+Prints output to the file \fIoutput\fP. If not given, \fBsccmap\fP
+uses stdout.
+.TP
+.B \-v
+Generate additional statistics. In particular,
+.B sccmap
+prints the number of nodes, edges, connected components,
+and strongly connected components, followed by the fraction of
+nodes in a non-trivial strongly connected components,
+the maximum degree of the graph, and fraction of non-tree edges
+in the graph.
+.SH OPERANDS
+The following operand is supported:
+.TP 8
+.I files
+Names of files containing 1 or more graphs in dot format.
+If no
+.I files
+operand is specified,
+the standard input will be used.
+.SH "DIAGNOSTICS"
+\fBsccmap\fP emits a warning if it encounters an undirected graph,
+and ignores it.
+.SH AUTHORS
+Stephen C. North <north@research.att.com>
+.br
+Emden R. Gansner <erg@research.att.com>
+.SH "SEE ALSO"
+gc(1), dot(1), acyclic(1), gvpr(1), gvcolor(1), ccomps(1), tred(1), libgraph(3)

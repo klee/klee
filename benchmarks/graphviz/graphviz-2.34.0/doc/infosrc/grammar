@@ -1,0 +1,13 @@
+graph         = [ T_strict ] ( T_graph | T_digraph ) [ ID ] '{' stmt_list '}' 
+stmt_list     = [ stmt [ ';' ]  [ stmt_list ] ] 
+stmt          =  node_stmt |  edge_stmt |  attr_stmt | ID '=' ID |  subgraph
+attr_stmt     =  ( T_graph | T_node | T_edge )  attr_list
+attr_list     =  '[' [ a_list ] ']' [ attr_list ]
+a_list        =  ID '=' ID [ ',' ] [ a_list ]
+edge_stmt     =  ( node_id | subgraph ) edgeRHS [ attr_list ]
+edgeRHS       =  edgeop ( node_id | subgraph ) [ edgeRHS ]
+node_stmt     =  node_id [ attr_list ]
+node_id       =  ID [ port ]
+port          =  ':' ID [ ':' compass_pt ] | ':' compass_pt
+subgraph      =  [ T_subgraph [ ID ] ] '{' stmt_list '}'
+compass_pt    =  ( T_n | T_ne | T_e | T_se | T_s | T_sw | T_w | T_nw | T_c | T__ )

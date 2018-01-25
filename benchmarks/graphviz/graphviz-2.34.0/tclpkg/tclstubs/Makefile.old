@@ -1,0 +1,23 @@
+
+all:	libtclstubs.a
+
+include ../Config.mk
+include ../makearch/$(ARCH)
+
+INCS =	-I. -I$(TCL_INCDIR)
+
+OBJS =	tclStubLib.o
+
+libtclstubs.a: $(OBJS)
+	$(AR) cr libtclstubs.a $(OBJS)
+	$(RANLIB) libtclstubs.a
+
+install: libtclstubs.a
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libtclstubs.a $(LIBDIR)
+
+clean:
+	$(RM) *.o core
+
+distclean: clean
+	$(RM) *.a lib*.so.*

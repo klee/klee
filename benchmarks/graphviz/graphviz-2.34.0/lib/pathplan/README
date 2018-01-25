@@ -1,0 +1,26 @@
+Spline-o-matic Bezier path planner
+David Dobkin, Emden Gansner, Eleftherios Koutsofios, Stephen North
+Alpha release 5/16/98
+
+NOTES
+Makefile is for AT&T nmake, available as part of "astkit" at
+	http://akpublic.research.att.com:9000/sw/tools/reuse/
+	The entire build is controlled from the Makefile.
+
+makefile is for old make (works with GNU) and employs recursive makes.
+	Edit the configuration in Config.mk (for platform independent
+	definitions) and makearch/$(ARCH) (for platform dependent definitions).  
+
+The makefiles build the path planner library, and an interactive TCL/tk
+front end for demos.  To run the interactive demo, the general idea is
+to build visitk (an executable that contains tclsh) or Visitk.so
+(a dynamic shared library that can be loaded into tclsh) and then
+run path.tcl to get the demo.
+
+The library is still being developed.  Our plan is to clean up the
+internal interfaces (where data structures are copied and converted
+so we could glue in some older code).  We also changed the spline
+fitter router so that the output spline is not forced to hit all the
+points of the input path.  We plan to extend the library interface to
+let the caller determine which path points must be hit.
+

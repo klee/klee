@@ -1,0 +1,41 @@
+digraph G {
+
+  URL="http://www.graphviz.org/doc/info/output.html"
+  label=output
+  lang [ URL="http://www.graphviz.org/doc/info/lang.html" ]
+   colors [
+  style=filled
+  fillcolor=lightblue
+  URL="http://www.graphviz.org/doc/info/output.html"
+label=<<table href="http://www.graphviz.org/doc/info/colors.html"><tr><td BGCOLOR="green">colors</td></tr></table>>];
+
+  subgraph cluster0 {
+     style=filled
+     fillcolor=yellow
+     URL="http://www.graphviz.org/doc/info/arrows.html"
+     label=arrows
+     command [ style=filled
+        fillcolor=grey
+        URL="http://www.graphviz.org/doc/info/command.html" ]
+     name [ URL="\G \N"]
+  }
+  lang ->  command [ URL="http://www.graphviz.org/doc/info/shapes.html" 
+  ]
+  lang -> colors [ URL="\E" edgetooltip=self ]
+  lang -> size [ URL="headurl" edgetooltip=headurl headlabel=size headURL=headsize]
+  word -> size [ URL="tailurl" taillabel=size tailURL=tailsize]
+  word -> garf [ URL="labelurl" label=garf labelURL=garf]
+  line -> all [ 
+    URL="labelurl" 
+    edgeurl="edgeurl" 
+    edgetooltip=edgetooltip
+    label=garf 
+    labelURL=garf
+    headURL=headURL
+    headlabel=headlabel
+    headtooltip=headtooltip
+    tailURL=tailURL
+    taillabel=taillabel
+    tailtooltip=tailtooltip
+  ]
+}

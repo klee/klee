@@ -1,0 +1,16 @@
+digraph
+{
+graph [ordering = "out"]
+node  [shape =  polygon]
+v3 [label = "SIMPLE\nVAR\n(AVROOM)"];
+v4 [label = "INT(55)"];
+v5 [label = "SIMPLE\nVAR\n(GIDI)"];
+v6 [label = "EXP\nVAR"];
+v6 -> v5;
+v7 [label = "BINOP(+)"
+v7 -> v4 [weight = -19];
+v7 -> v6;
+v8 [label = "ASSIGN\nleft := right"];
+v8 -> v3;
+v8 -> v7;
+}

@@ -1,0 +1,31 @@
+.TH NOP 1 "21 March 2001"
+.SH NAME
+nop \- pretty-print graph file
+.SH SYNOPSIS
+.B nop
+[
+.B \-p?
+]
+[ 
+.I files 
+]
+.SH DESCRIPTION
+.B nop
+reads a stream of graphs and prints each in pretty-printed (canonical) format
+on stdout. If no
+.I files
+are given, it reads from stdin.
+.SH OPTIONS
+The following options are supported:
+.TP
+.B \-p
+Produce no output - just check the input for valid DOT.
+.TP
+.B \-?
+Print usage information.
+.SH "EXIT STATUS"
+If any errors occurred while processing any input, such as a file
+not found or a file containing illegal DOT, a non-zero exit value
+is returned. Otherwise, zero is returned.
+.SH "SEE ALSO"
+wc(1), acyclic(1), gvpr(1), gvcolor(1), ccomps(1), sccmap(1), tred(1), libgraph(3)

@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@/@PACKAGE@
+
+Name: libexpr
+Description: C-like expression evaluation library
+Version: @VERSION@
+Libs: -L${libdir} -lexpr
+Cflags: -I${includedir}

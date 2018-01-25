@@ -1,0 +1,74 @@
+# tools
+
+MAKE=make
+PACKAGEMAKER=/Developer/Applications/Utilities/PackageMaker.app/Contents/MacOS/PackageMaker
+XCODEBUILD=xcodebuild
+
+# prefix
+
+PREFIX=$(HOME)/FIX/tiger
+
+# arch(s)
+
+#ARCHS32=-arch i386 -arch ppc
+#ARCHS64=-arch x86_64 -arch ppc64
+ARCHS32=-arch i386
+ARCHS64=
+ARCHS=$(ARCHS32) $(ARCHS64)
+
+# base
+
+GV_DIR=../..
+DOT=dot_static
+
+#
+# graphviz
+#
+
+graphviz.pkg: graphviz.pmdoc usr/local/bin/$(DOT) Release/Graphviz.app postinstall
+	@echo
+	@echo PACKAGING GRAPHVIZ...
+	@echo
+	"$(PACKAGEMAKER)" --doc graphviz.pmdoc --out $@
+
+#usr/local/bin/$(DOT): $(GV_DIR)/cmd/dot/.libs/$(DOT)
+
+usr/local/bin/$(DOT): $(GV_DIR)/cmd/dot/$(DOT)
+	@echo
+	@echo INSTALLING GRAPHVIZ...
+	@echo
+	$(MAKE) DESTDIR=$(CURDIR) -C $(GV_DIR) install-strip
+	rm -rf usr/local/lib/graphviz/tcl/libtcldot_builtin.*
+	cp $(PREFIX)/bin/fc-cache usr/local/bin/gv-fc-cache
+	
+#Release/Graphviz.app: ../*.m ../*.h $(GV_DIR)/cmd/dot/.libs/$(DOT)
+
+Release/Graphviz.app: ../*.m ../*.h $(GV_DIR)/cmd/dot/$(DOT)
+	@echo
+	@echo BUILDING GRAPHVIZ GUI...
+	@echo
+	"$(XCODEBUILD)" -project ../graphviz.xcodeproj -configuration Release
+
+postinstall:
+	echo "/usr/local/bin/$(DOT) -c" >$@
+	make -n -C ../../tclpkg install-data-hook >>$@
+	echo "arch $(ARCHS32) /usr/local/bin/gv-fc-cache" >>$@
+	echo 'if test `sysctl -n hw.cpu64bit_capable` = 1; then arch $(ARCHS64) /usr/local/bin/gv-fc-cache; fi' >>$@
+
+#$(GV_DIR)/cmd/dot/.libs/$(DOT): $(GV_DIR)/Makefile
+
+$(GV_DIR)/cmd/dot/$(DOT): $(GV_DIR)/Makefile
+	@echo
+	@echo MAKING GRAPHVIZ...
+	@echo
+	if [[ -e $@ ]]; then $(MAKE) -C $(GV_DIR) clean; fi
+	$(MAKE) -C $(GV_DIR)/tclpkg/tkstubs
+	$(MAKE) -C $(GV_DIR)/tclpkg/tclstubs
+	$(MAKE) -C $(GV_DIR)/tclpkg/tkspline CFLAGS="-O2 $(ARCHS32) -I$(PREFIX)/include" LDFLAGS="$(ARCHS32) -L$(PREFIX)/lib -Wl,-dead_strip"
+	$(MAKE) -C $(GV_DIR)
+	
+$(GV_DIR)/Makefile: $(GV_DIR)/configure
+	@echo
+	@echo CONFIGURING GRAPHVIZ...
+	@echo
+	cd $(GV_DIR) && ./configure --disable-shared --enable-static --disable-dependency-tracking --with-ipsepcola --without-quartz CFLAGS="-O2 $(ARCHS) -I$(PREFIX)/include" CXXFLAGS="-O2 $(ARCHS) -I$(PREFIX)/include" OBJCFLAGS="-O2 $(ARCHS) -I$(PREFIX)/include" LDFLAGS="$(ARCHS) -L$(PREFIX)/lib -Wl,-dead_strip" GDLIB_CONFIG="$(PREFIX)/bin/gdlib-config" PKG_CONFIG="$(PREFIX)/bin/pkg-config" PKG_CONFIG_PATH="$(PREFIX)/lib/pkgconfig:/usr/X11/lib/pkgconfig" LIBS="-framework CoreFoundation -framework CoreServices -framework ApplicationServices -fexceptions"

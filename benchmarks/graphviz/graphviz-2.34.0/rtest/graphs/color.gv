@@ -1,0 +1,10 @@
+digraph G {
+  node [style=filled]
+  abc [color=green]
+  def [color="0.2,0.8,0.8"]
+  ghi [color="#FF0000"]
+  kl [color="#FF00007F"]
+  mno [color=yellow, fontcolor="#FF00007F"]
+  pqr [label=mno, color=yellow, fontcolor="#FF0000"]
+  abc -> def [color="red:blue:#00FF00"]
+}

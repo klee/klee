@@ -1,0 +1,32 @@
+=head1 NAME
+
+libgraphviz##SONAME##-config-update - maintain libgraphviz's configuration file
+
+
+=head1 SYNOPSIS
+
+B<libgraphviz##SONAME##-config-update> B<-c>
+
+
+=head1 DESCRIPTION
+
+Graphviz tools are using a configuration file
+(F</usr/lib/graphviz/config##SONAME##> at the moment) to get some
+plugin options. This command is used in B<libgraphviz##SONAME##> and
+B<libgraphviz##SONAME##-*-plugin> packages' maintainer scripts to
+update this configuration file when plugins are installed, updated, or
+removed.
+
+
+=head1 NOTE
+
+This tool is intended to be used only in maintainer scripts and it
+shouldn't be needed to run it manually.
+
+
+=head1 AUTHOR
+
+This manual page was written by Cyril Brulebois
+<cyril.brulebois@enst-bretagne.fr>.
+
+It can be distributed under the same terms as the graphviz package.

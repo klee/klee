@@ -1,0 +1,11 @@
+#ifdef DARWIN
+#define TIMES "Times"
+#elif defined(WIN32)
+#define TIMES "Times New Roman"
+#else
+#define TIMES "Times"
+#endif
+#define COURIER "Courier"
+#define HELVETICA "Helvetica"
+#define SYMBOL "Symbol"
+#define PALATINO "Palatino Linotype"

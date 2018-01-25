@@ -1,0 +1,54 @@
+all:	libcircogen.a
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+INCS =	-I. -I$(ROOT) \
+	-I../common \
+	-I../neatogen \
+	-I../sparse \
+	-I../dotgen \
+	-I../pack \
+	-I../gvc \
+	-I../pathplan \
+	-I../graph \
+	-I../cdt \
+	-I../gd
+
+DEFINES = -DHAVE_CONFIG_H
+
+OBJS = circularinit.o nodelist.o block.o edgelist.o stack.o circular.o \
+       deglist.o blocktree.o blockpath.o circpos.o nodeset.o
+
+HFILES = circular.h nodelist.h edgelist.h deglist.h stack.h \
+         block.h
+
+libcircogen.a : $(OBJS)
+	$(RM) libcircogen.a
+	$(AR) cr libcircogen.a $(OBJS)
+	$(RANLIB) libcircogen.a
+
+BASEH = circular.h nodelist.h block.h stack.h
+
+block.o : $(BASEH)
+blockpath.o : $(BASEH) blockpath.h edgelist.h nodeset.h deglist.h
+blocktree.o : blocktree.h $(BASEH)
+circpos.o : blockpath.h $(BASEH)
+circular.o : blocktree.h circpos.h $(BASEH)
+circularinit.o : $(BASEH)
+deglist.o : deglist.h blockpath.h $(BASEH)
+edgelist.o : edgelist.h
+nodelist.o : $(BASEH)
+nodeset.o : nodeset.h
+stack.o : $(BASEH)
+$(OBJS) : ../common/types.h
+
+install: libcircogen.a
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libcircogen.a $(LIBDIR)
+
+clean:
+	$(RM) *.o core
+
+distclean: clean
+	$(RM) *.a lib*.so.*

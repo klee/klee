@@ -1,0 +1,35 @@
+all:	libortho.a
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+INCS =	-I. -I$(ROOT) \
+	-I../common \
+	-I../gvc \
+	-I../ortho \
+	-I../pathplan \
+	-I../graph \
+	-I../cdt \
+	-I../gd
+
+DEFINES = -DHAVE_CONFIG_H
+
+OBJS =  fPQ.o intset.o maze.o ortho.o partition.o rawgraph.o sgraph.o trapezoid.o
+
+libortho.a: $(OBJS)
+	$(RM) libortho.a
+	$(AR) cr libortho.a $(OBJS)
+	$(RANLIB) libortho.a
+
+install: libortho.a
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libortho.a $(LIBDIR)
+#	$(SHLIB_LD) -o $(LIBDIR)/libortho.so.$(VERSION) $(OBJS)
+#	$(MKPATH) $(LIBMANDIR)
+#	$(INSTALL) ortho.3 $(LIBMANDIR)
+
+clean:
+	$(RM) *.o core
+
+distclean: clean
+	$(RM) *.a lib*.so.*

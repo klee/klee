@@ -1,0 +1,13 @@
+digraph G {
+
+  node [style=filled, shape=box]
+  ddddddd [fontcolor=yellow, fillcolor=blue, color=orange]
+  subgraph clusterA {
+    style=filled
+    fillcolor=lightgray
+    pencolor=blue
+    eeeee [peripheries=3, fontcolor=red, color=yellow]
+    eeeee -> ee
+  }
+  ddddddd -> eeeee [labelfontcolor=chocolate, headlabel=headlabel, label=flue, fontcolor=green, color=lightblue]
+}

@@ -1,0 +1,272 @@
+#!/usr/bin/make -f
+# Sample debian/rules that uses debhelper.
+# GNU copyright 1997 to 1999 by Joey Hess.
+
+# Uncomment this to turn on verbose mode.
+#export DH_VERBOSE=1
+
+include /usr/share/quilt/quilt.make
+
+# Get build platform info
+export DEB_HOST_GNU_TYPE  ?= $(shell dpkg-architecture -qDEB_HOST_GNU_TYPE)
+export DEB_BUILD_GNU_TYPE ?= $(shell dpkg-architecture -qDEB_BUILD_GNU_TYPE)
+
+UPSTREAM_VERSION  = $(shell dpkg-parsechangelog | perl -ne 'print $$1 if /^Version: (.*?)-(.*)$$/')
+PATHPLAN_SONAME   = 4
+GVC_SONAME        = 6
+CDT_SONAME        = 5
+GRAPH_SONAME      = 5
+CGRAPH_SONAME     = 6
+GVPR_SONAME       = 2
+EXPR_SONAME       = 4
+XDOT_SONAME       = 4
+GRAPHVIZ_SONAME	  = 4
+
+OCAMLABI          = $(shell ocamlc -version)
+OCAML_PACKAGE     = $(CURDIR)/debian/libgv-ocaml
+
+PHP_EXTENSION_DIR = $(shell php-config5 --extension-dir)
+PHP_PACKAGE       = $(CURDIR)/debian/libgv-php5
+
+LUA_VERSION       = 5.1
+LUA_PACKAGE       = $(CURDIR)/debian/libgv-lua
+
+DEV_PACKAGE       = $(CURDIR)/debian/libgraphviz-dev
+
+PYTHON_VERSIONS   = $(shell pyversions -s)
+PYTHON_PACKAGE    = $(CURDIR)/debian/libgv-python
+
+RUBY_VERSION      = 1.8
+RUBY_PACKAGE      = $(CURDIR)/debian/libgv-ruby
+
+CONFIG_SCRIPTS=config/config.guess lib/gd/config/config.guess libltdl/config.guess \
+	       config/config.sub   lib/gd/config/config.sub   libltdl/config.sub
+
+configure: patch configure-stamp
+configure-stamp:
+	dh_testdir
+
+	# Update the config scripts
+	for i in $(CONFIG_SCRIPTS); do \
+		cp /usr/share/misc/`basename $$i` $$i ; \
+	done
+
+	# Configure the package
+	./configure --build=$(DEB_BUILD_GNU_TYPE) --host=$(DEB_HOST_GNU_TYPE) \
+	--prefix=/usr \
+	--datadir=\$${prefix}/share \
+	--infodir=\$${prefix}/share/info \
+	--mandir=\$${prefix}/share/man \
+	--disable-static \
+	--with-pangocairo \
+	--with-x \
+	--with-gdk-pixbuf \
+	--with-ghostscript \
+	--with-gtk \
+	--with-gtkgl \
+	--with-gtkglext \
+	--with-glade \
+	--with-ipsepcola \
+	--with-lasi \
+	--with-rsvg \
+	--with-devil \
+	--with-gts \
+	--with-ortho \
+	--with-sfdp \
+	--with-smyrna \
+	--disable-sharp \
+	--enable-guile \
+	--disable-java \
+	--disable-io \
+	--enable-lua \
+	--enable-ocaml \
+	--enable-php \
+	--enable-python \
+	--disable-python23 \
+	--disable-python24 \
+	--disable-python25 \
+	--disable-python26 \
+	--disable-python27 \
+	--disable-r \
+	--enable-ruby \
+	--enable-tcl \
+	LDFLAGS="-Wl,--as-needed"
+	touch configure-stamp
+
+build: configure build-stamp
+build-stamp:
+	dh_testdir
+
+	# Build
+	$(MAKE)
+	touch build-stamp
+
+#	# Build the manpage from SONAME-independent perlpod
+#	sed -e 's/##SONAME##/$(SONAME)/g' \
+#		debian/libgraphviz-config-update.pod.in > \
+#		debian/libgraphviz$(SONAME)-config-update.pod
+#	pod2man --center "GRAPHVIZ CONFIGURATION MANAGEMENT" \
+#		--release $(UPSTREAM_VERSION) \
+#		debian/libgraphviz$(SONAME)-config-update.pod \
+#		debian/libgraphviz$(SONAME)-config-update.1
+
+clean: clean-patched unpatch
+clean-patched:
+	dh_testdir
+	dh_testroot
+	rm -f build-stamp configure-stamp
+
+	# Clean up if a build already happened
+	[ ! -f Makefile ] || $(MAKE) distclean
+
+#	# Clean up intermediate and generated manpages
+#	rm -f debian/libgraphviz$(SONAME)-config-update.pod
+#	rm -f debian/libgraphviz$(SONAME)-config-update.1
+
+	dh_clean $(CONFIG_SCRIPTS) \
+		tclpkg/gv/gv.R tclpkg/gv/php_gv.h
+
+install: build
+	dh_testdir
+	dh_testroot
+	dh_prep
+	dh_installdirs
+
+	# Install the package into debian/tmp
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
+
+	# Remove .la files
+	find -name '*.la' -delete
+
+	# Install lintian overrides
+	install -d $(CURDIR)/debian/tmp/usr/share/lintian/overrides
+	install -m 644 $(CURDIR)/debian/libgraphviz$(GRAPHVIZ_SONAME).lintian-overrides \
+		$(CURDIR)/debian/tmp/usr/share/lintian/overrides/libgraphviz$(GRAPHVIZ_SONAME)
+
+	# Compute the dependencies of the -dev package
+	# NOTE: It is important to do that before splitting the files into
+	# their respective packages, otherwise the symlinks are broken
+	d-devlibdeps \
+		--override s/libpathplan$(PATHPLAN_SONAME)-dev// \
+		--override s/libcgraph$(CGRAPH_SONAME)-dev//   \
+		--override s/libgraph$(GRAPH_SONAME)-dev//    \
+		--override s/libxdot$(XDOT_SONAME)-dev//     \
+		--override s/libcdt$(CDT_SONAME)-dev//      \
+		--override s/libgvpr$(GVPR_SONAME)-dev//      \
+		--override s/libgvc$(GVC_SONAME)-dev//      \
+		--override s/libexpr$(EXPR_SONAME)-dev//      \
+		--override s/libgts-0.7-5-dev/libgts-dev/ \
+		$(CURDIR)/debian/libgraphviz-dev.substvars \
+		$(CURDIR)/debian/tmp/usr/lib/*.so
+
+	# Move from debian/tmp to the appropriate packages, rename one binary
+	dh_install --sourcedir=debian/tmp --list-missing
+	mv $(CURDIR)/debian/libgraphviz$(GRAPHVIZ_SONAME)/usr/sbin/dot \
+		$(CURDIR)/debian/libgraphviz$(GRAPHVIZ_SONAME)/usr/sbin/libgraphviz$(GRAPHVIZ_SONAME)-config-update
+
+	# Some additional work for libgv-php5
+	install -d $(PHP_PACKAGE)/$(PHP_EXTENSION_DIR)
+	mv $(PHP_PACKAGE)/usr/lib/graphviz/php/libgv_php.so* \
+		$(PHP_PACKAGE)/$(PHP_EXTENSION_DIR)
+	rm -rf $(PHP_PACKAGE)/usr/lib/graphviz
+
+	# Some additional work for libgv-lua
+	# 1. Rename using the LUA_VERSION
+	mv $(LUA_PACKAGE)/usr/lib/graphviz/lua/libgv_lua.so \
+		$(LUA_PACKAGE)/usr/lib/graphviz/lua/liblua$(LUA_VERSION)-libgv.so
+	# 2. Add a symlink
+	install -d $(LUA_PACKAGE)/usr/lib/lua/$(LUA_VERSION)
+	ln -s /usr/lib/graphviz/lua/liblua$(LUA_VERSION)-libgv.so \
+		$(LUA_PACKAGE)/usr/lib/lua/$(LUA_VERSION)/gv.so
+
+	# Some additional work for libgv-ocaml
+	# 1. Move the shared object to the stublibs directory
+	install -d $(OCAML_PACKAGE)/usr/lib/ocaml/$(OCAMLABI)/stublibs
+	mv $(OCAML_PACKAGE)/usr/lib/graphviz/ocaml/libgv_ocaml.so \
+		$(OCAML_PACKAGE)/usr/lib/ocaml/$(OCAMLABI)/stublibs/dllgv.so
+	# 2. Move the devel files where they belong
+	# dev files have been removed by recommendation of rpmlint
+
+	#install -d $(DEV_PACKAGE)/usr/lib/ocaml/$(OCAMLABI)/gv
+	#mv $(OCAML_PACKAGE)/usr/lib/graphviz/ocaml/*.cm* \
+	#	$(DEV_PACKAGE)/usr/lib/ocaml/$(OCAMLABI)/gv
+
+	# 3. Trash the (almost empty) directory (and its .la)
+	rm -rf $(OCAML_PACKAGE)/usr/lib/graphviz
+
+	# Some additional work for libgv-python
+	# Note the sed call because of python{24,25} instead of python{2.4,2.5}
+	# Note gv.py isn't really duplicated, it's just installed in a location
+	# where python-support will find it. Both being identical, python-support
+	# will just do the right thing.
+	for i in $(PYTHON_VERSIONS); do \
+		install -d $(PYTHON_PACKAGE)/usr/lib/$$i/site-packages ; \
+		cp $(PYTHON_PACKAGE)/usr/lib/graphviz/python/gv.py \
+			$(PYTHON_PACKAGE)/usr/lib/$$i/site-packages ; \
+		mv $(PYTHON_PACKAGE)/usr/lib/graphviz/$$(echo $$i|sed -e 's/\.//')/*.so \
+			$(PYTHON_PACKAGE)/usr/lib/$$i/site-packages ; \
+	done
+	rm -rf $(PYTHON_PACKAGE)/usr/lib/graphviz
+
+	# Debian-specific manpage
+#	dh_installman -plibgraphviz$(SONAME)      \
+#		$(CURDIR)/debian/libgraphviz$(SONAME)-config-update.1
+
+	# Some additional work for libgv-ruby
+	install -d $(RUBY_PACKAGE)/usr/lib/ruby/$(RUBY_VERSION)
+	mv $(RUBY_PACKAGE)/usr/lib/graphviz/ruby/libgv_ruby.so \
+		$(RUBY_PACKAGE)/usr/lib/ruby/$(RUBY_VERSION)/gv.so
+	rm -rf $(RUBY_PACKAGE)/usr/lib/graphviz
+
+	# Install additional ocaml files
+	install -d $(DEV_PACKAGE)/usr/lib/ocaml/$(OCAMLABI)/gv
+	cp debian/tmp/usr/lib/graphviz/ocaml/gv.cm* \
+		$(DEV_PACKAGE)/usr/lib/ocaml/$(OCAMLABI)/gv
+	install -d $(DEV_PACKAGE)/usr/lib/ocaml/$(OCAMLABI)/METAS
+	mv debian/tmp/usr/lib/graphviz/ocaml/META.gv \
+		$(DEV_PACKAGE)/usr/lib/ocaml/$(OCAMLABI)/METAS
+
+# Build architecture-independent files here.
+binary-indep: build install
+	dh_testdir -i
+	dh_testroot -i
+	dh_installdocs -i
+	dh_installmenu -i
+	dh_installchangelogs ChangeLog -i
+	dh_perl -i
+	dh_link -i
+	dh_strip -i
+	dh_compress -i -X.pdf
+	dh_fixperms -i
+	dh_makeshlibs -i
+	dh_installdeb -i
+	dh_shlibdeps -i
+	dh_gencontrol -i
+	dh_md5sums -i
+	dh_builddeb -i
+
+# Build architecture-dependent files here.
+# Pass -a to all debhelper commands in this target to reduce clutter.
+binary-arch: build install
+	dh_testdir -a
+	dh_testroot -a
+	dh_installdocs -a -XMakefile
+	dh_installexamples -a
+	dh_installmenu -a
+	dh_installman -a
+	dh_installchangelogs ChangeLog -a
+	dh_perl -a
+	dh_python2 -a
+	dh_link -a
+	dh_strip -a
+	dh_compress -a
+	dh_fixperms -a
+	dh_makeshlibs -plibgraphviz$(GRAPHVIZ_SONAME) -V 'libgraphviz4 (>= 2.18)'
+	dh_installdeb -a
+	dh_shlibdeps -a -L libgraphviz$(GRAPHVIZ_SONAME) $(CURDIR)/debian/libgraphviz$(GRAPHVIZ_SONAME)/usr/lib
+	dh_gencontrol -a -- -VF:OCamlABI="$(OCAMLABI)"
+	dh_md5sums -a
+	dh_builddeb -a
+
+binary: binary-indep binary-arch
+.PHONY: build clean binary-indep binary-arch binary install configure

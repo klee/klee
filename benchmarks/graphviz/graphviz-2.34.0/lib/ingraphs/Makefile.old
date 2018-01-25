@@ -1,0 +1,30 @@
+ALL = libingraphs.a
+
+all : $(ALL)
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+LOC_INCDIR=../include
+LOC_LIBDIR=../lib
+
+DEFINES = -DHAVE_CONFIG_H
+
+INCS =  -I. -I$(ROOT) -I../agraph -I../graph -I../cdt
+
+libingraphs.a : ingraphs.o
+	$(AR) cr $@ ingraphs.o
+	$(MKPATH) $(LOC_INCDIR)
+	cp ingraphs.h $(LOC_INCDIR)
+	$(MKPATH) $(LOC_LIBDIR)
+	cp libingraphs.a $(LOC_LIBDIR)
+
+install : $(ALL)
+	$(MKPATH) $(LIBDIR)
+	cp $(ALL) $(LIBDIR)
+
+clean :
+	$(RM) *.o 
+
+distclean : clean
+	$(RM) $(ALL)

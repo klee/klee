@@ -1,0 +1,18 @@
+
+include ../../Config.mk
+include ../../makearch/$(ARCH)
+
+FILES = dotty.lefty dotty_draw.lefty dotty_edit.lefty dotty_ui.lefty
+
+all :
+	true
+
+install:
+	$(MKPATH) $(LIBDIR)/lefty
+	$(INSTALL) $(FILES) $(LIBDIR)/lefty
+
+clean:
+	true
+
+distclean:
+	true

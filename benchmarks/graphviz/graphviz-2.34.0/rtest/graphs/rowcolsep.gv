@@ -1,0 +1,8 @@
+digraph G {
+  node [shape=box]
+
+  aaa -> bbb
+  aaa -> BBB
+  AAA -> BBB
+  AAA -> bbb
+}

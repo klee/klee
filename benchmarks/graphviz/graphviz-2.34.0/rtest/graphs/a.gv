@@ -1,0 +1,4 @@
+digraph G {
+  a -> b
+  label="this is a graph"
+}

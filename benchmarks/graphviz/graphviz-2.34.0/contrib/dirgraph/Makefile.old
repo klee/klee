@@ -1,0 +1,18 @@
+
+include ../../Config.mk
+include ../../makearch/$(ARCH)
+
+FILES = dirgraph.pl
+
+all :
+	true
+
+install:
+	$(MKPATH) $(BINDIR)
+	$(INSTALL) $(FILES) $(BINDIR)
+
+clean:
+	true
+
+distclean:
+	true

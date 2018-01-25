@@ -1,0 +1,20 @@
+
+include ../Config.mk
+include ../makearch/$(ARCH)
+
+SUBDIRS = lefty-grace dirgraph prune
+FILES = dotmcl.pl gprof2dot.awk webdot.cgi
+
+all clean distclean:
+	(for i in ${SUBDIRS}; do (cd $$i; make $@); done)       
+
+install :
+	(for i in ${SUBDIRS}; do (cd $$i; make $@); done)       
+	$(MKPATH) $(BINDIR)
+	$(CP) ($FILES) $(BINDIR)
+
+clean :
+	true
+
+distclean :
+	true

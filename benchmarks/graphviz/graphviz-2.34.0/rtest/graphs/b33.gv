@@ -1,0 +1,9 @@
+digraph JAAS {
+    fontname=arial;
+    fontsize=20;
+    subgraph cluster0 {
+    label="Foo";
+        JOC [ label="JAAS" ];
+    };
+}
+

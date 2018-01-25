@@ -1,0 +1,11 @@
+Document: graphviz-index
+Title: Graphviz - Documentation Index
+Author: The Graphviz Team
+Abstract: Graphviz is a suite of graph drawing tools. This document provides
+ a single index to all the graphviz related documentation.
+Section: Graphics
+
+Format: HTML
+Index: /usr/share/doc/graphviz/html/index.html
+Files: /usr/share/doc/graphviz/html/*.html
+       /usr/share/doc/graphviz/html/info/*

@@ -1,0 +1,63 @@
+all:	libneatogen.a
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+INCS =  -I. -I$(ROOT) \
+        -I../common \
+        -I../pack \
+        -I../vpsc \
+        -I../gvc \
+        -I../cdt \
+        -I../ortho \
+        -I../rbtree \
+        -I../sfdpgen \
+        -I../sparse \
+        -I../pathplan \
+		-I../gd \
+		-I../graph
+
+DEFINES = -DHAVE_CONFIG_H
+
+HDRS = adjust.h edges.h geometry.h heap.h hedges.h info.h mem.h \
+       neato.h neatoprocs.h poly.h site.h voronoi.h \
+       quad_prog_vpsc.h mosek_quad_solve.h
+
+NOBJS  = stress.o kkutils.o pca.o matrix_ops.o embed_graph.o dijkstra.o \
+       conjgrad.o closest.o bfs.o compute_hierarchy.o opt_arrangement.o \
+       smart_ini_x.o constrained_majorization.o quad_prog_solve.o
+POBJS = quad_prog_vpsc.o constrained_majorization_ipsep.o mosek_quad_solve.o
+OBJS = adjust.o circuit.o edges.o geometry.o heap.o hedges.o \
+       info.o neatoinit.o legal.o lu.o matinv.o memory.o poly.o \
+       printvis.o site.o solve.o neatosplines.o stuff.o voronoi.o \
+       overlap.o delaunay.o call_tri.o multispline.o \
+       $(NOBJS) $(POBJS) constraint.o
+
+libneatogen.a : $(OBJS)
+	$(RM) libneatogen.a
+	$(AR) cr libneatogen.a $(OBJS)
+	$(RANLIB) libneatogen.a
+
+$(NOBJS) : defs.h
+bfs.o dijkstra.o embed_graph.o kkutils.o stress.o : bfs.h
+pca.o closest.o : closest.h
+stress.o conjgrad.o : conjgrad.h
+dijkstra.o embed_graph.o kkutils.o stress.o : dijkstra.h
+embed_graph.o stress.o : embed_graph.h
+kkutils.o stress.o closest.o : kkutils.h
+stress.o pca.o conjgrad.o matrix_ops.o : matrix_ops.h
+stress.o pca.o : pca.h
+stress.o : stress.h
+$(OBJS) : ../common/types.h
+
+install: libneatogen.a 
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libneatogen.a $(LIBDIR)
+
+$(OBJS) : $(HDRS)
+
+clean:
+	$(RM) core *.o
+
+distclean: clean
+	$(RM) *.a

@@ -1,0 +1,4 @@
+LIBRARY	"gvplugin_dot_layout"
+EXPORTS
+gvplugin_dot_layout_LTX_library	
+

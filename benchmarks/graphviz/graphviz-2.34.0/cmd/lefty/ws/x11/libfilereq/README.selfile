@@ -1,0 +1,83 @@
+
+
+
+                  XsraSelFile File Selection Dialog Package
+
+
+
+This directory contains the XsraSelFile file selection dialog package. This
+package allows an application to obtain a filename from a user. The filename is
+selected by typing in a text widget or by browsing with the mouse in directory
+listings.
+
+The following is a brief description of the available features.
+
+* filename completion
+
+    When the user types a filename in the Text widget, SelFile shows the
+    possible completions in the directory listings. The user can hit the space
+    bar to complete the filename.
+
+* fast directory reading
+
+    When a directory is opened, the entries are read and sorted. Then the stats
+    of only the first screenful of entries are taken, and these entries are
+    displayed. The stats of the other entries are taken upon demand (i.e. when
+    the user wishes to see them by scrolling, etc.) or in the background. The
+    Xt work procedure facility is used to do background work. The idea here is
+    to give the user some feedback as soon as possible.
+
+    "It's just an illu--sion" :-)
+
+* Xaw and/or Xw widgets
+
+    SelFile can be linked with Xaw (Athena) and/or Xw (Hewlett-Packard)
+    widgets. Normally, SelFile is linked with the R3 or a later version of the
+    Xt Intrinsics, but it can be linked with the R2 Xt. See the Imakefile for
+    details.
+
+* automatic display update after directory modification
+
+    Every now and then SelFile looks at the directories being displayed to see
+    if they have been updated, and updates the display accordingly. Similarly,
+    file modes are checked (but not as often).
+
+* tilde (~) for home directories
+
+    When the user types a tilde at the beginning of the Text widget, SelFile
+    shows the home directories.
+
+-------------------------------------------------------------------------------
+
+This work is loosely based on (and the name comes from) an earlier X10 SelFile
+by Michiharu `NinjaTerm' Ariza.
+
+Admittedly, this X11 SelFile also looks a bit like the directory browser on the
+NeXT machine.
+
+-------------------------------------------------------------------------------
+
+If you have any
+
+    porting problems
+
+    bug reports
+
+    comments (particularly about ideas in the TODO file)
+
+    or any other type of feedback
+
+please send mail to
+
+    erik@sra.co.jp
+                                           OR
+    erik%sra.co.jp@uunet.uu.net
+                                           OR
+    erik%sra.co.jp@mcvax.uucp
+                                           OR
+    try junet instead of co.jp
+                                           OR
+    Erik M. van der Poel
+    Software Research Associates, Inc.
+    1-1-1 Hirakawa-cho, Chiyoda-ku
+    Tokyo 102 Japan. TEL +81-3-234-2692

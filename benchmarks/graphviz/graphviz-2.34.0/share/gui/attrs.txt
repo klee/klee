@@ -1,0 +1,97 @@
+F,Damping, 0.99, GRAPH, NEATO
+F,Epsilon, , GRAPH, NEATO
+A,URL, , ANY_ELEMENT, ALL_ENGINES
+A,arrowhead, normal, EDGE, ALL_ENGINES
+F,arrowsize, 1.0, EDGE, ALL_ENGINES
+A,arrowtail, normal, EDGE, ALL_ENGINES
+A,bb, , GRAPH, ALL_ENGINES
+C,bgcolor, white, GRAPH Or CLUSTER, ALL_ENGINES
+A,bottomlabel, , NODE, ALL_ENGINES
+B,center, false, GRAPH, ALL_ENGINES
+A,clusterrank, local, GRAPH, DOT
+C,color, black, EDGE Or NODE Or CLUSTER, ALL_ENGINES
+A,comment, , EDGE Or NODE Or GRAPH, ALL_ENGINES
+B,compound, false, GRAPH, DOT
+B,concentrate, false, GRAPH, DOT
+B,constraint, true, EDGE, DOT
+B,decorate, false, EDGE, ALL_ENGINES
+D,dir, forward, EDGE, ALL_ENGINES
+F,distortion, 0.0, NODE, ALL_ENGINES
+C,fillcolor, lightgrey, NODE Or CLUSTER, ALL_ENGINES
+B,fixedsize, false, NODE, ALL_ENGINES
+C,fontcolor, green, EDGE Or NODE Or GRAPH Or CLUSTER, ALL_ENGINES
+A,fontname, Times-Roman, EDGE Or NODE Or GRAPH Or CLUSTER, ALL_ENGINES
+A,fontpath, , GRAPH, ALL_ENGINES
+I,fontsize, 14.0, EDGE Or NODE Or GRAPH Or CLUSTER, ALL_ENGINES
+A,group, , NODE, DOT
+A,headURL, , EDGE, ALL_ENGINES
+A,headlabel, , EDGE, ALL_ENGINES
+A,headport, center, EDGE, ALL_ENGINES
+F,height, 0.5, NODE, ALL_ENGINES
+A,label, , EDGE Or NODE Or GRAPH Or CLUSTER, ALL_ENGINES
+F,labelangle, -25.0, EDGE, ALL_ENGINES
+F,labeldistance, 1.0, EDGE, ALL_ENGINES
+B,labelfloat, false, EDGE, ALL_ENGINES
+C,labelfontcolor, black, EDGE, ALL_ENGINES
+A,labelfontname, Times-Roman, EDGE, ALL_ENGINES
+I,labelfontsize, 11.0, EDGE, ALL_ENGINES
+A,labeljust, , ANY_ELEMENT, DOT
+A,labelloc, t, GRAPH Or CLUSTER, DOT
+A,layer, , EDGE Or NODE, ALL_ENGINES
+A,layers, , GRAPH, ALL_ENGINES
+F,len, 1.0, EDGE, NEATO
+A,lhead, , EDGE, DOT
+A,lp, , EDGE Or GRAPH Or CLUSTER, ALL_ENGINES
+A,ltail, , EDGE, DOT
+F,margin, , GRAPH, ALL_ENGINES
+I,maxiter, , GRAPH, NEATO
+F,mclimit, 1.0, GRAPH, DOT
+I,minlen, 1, EDGE, DOT
+A,model, , GRAPH, NEATO
+F,nodesep, 0.25, GRAPH, DOT
+B,normalize, false, GRAPH, NEATO
+F,nslimit, , GRAPH, DOT
+A,ordering, , GRAPH, DOT
+F,orientation, 0.0, NODE, ALL_ENGINES
+A,orientation, , GRAPH, ALL_ENGINES
+B,overlap, , GRAPH, NEATO
+B,pack, false, GRAPH, NEATO
+A,page, , GRAPH, ALL_ENGINES
+A,pagedir, BL, GRAPH, ALL_ENGINES
+C,pencolor, black, CLUSTER, ALL_ENGINES
+I,peripheries, 0, NODE, ALL_ENGINES
+B,pin, false, NODE, NEATO
+A,pos, , EDGE Or NODE, ALL_ENGINES
+F,quantum, 0.0, GRAPH, ALL_ENGINES
+A,rank, , SUBGRAPH, DOT
+A,rankdir, , GRAPH, DOT
+F,ranksep, , GRAPH, ALL_ENGINES
+F,ratio, , GRAPH, ALL_ENGINES
+A,rects, , NODE, ALL_ENGINES
+B,regular, false, NODE, ALL_ENGINES
+B,remincross, false, GRAPH, DOT
+I,rotate, 0, GRAPH, ALL_ENGINES
+A,samehead, , EDGE, DOT
+A,sametail, , EDGE, DOT
+I,samplepoints, 8, GRAPH, ALL_ENGINES
+I,searchsize, 30, GRAPH, DOT
+F,sep, 0.01, GRAPH, NEATO
+A,shape, ellipse, NODE, ALL_ENGINES
+A,shapefile, , NODE, ALL_ENGINES
+I,showboxes, 0, EDGE Or NODE Or GRAPH, DOT
+I,sides, 4, NODE, ALL_ENGINES
+F,size, , GRAPH, ALL_ENGINES
+F,skew, 0.0, NODE, ALL_ENGINES
+B,splines, false, GRAPH, NEATO
+A,start, , GRAPH, ALL_ENGINES
+A,style, , EDGE Or NODE, ALL_ENGINES
+A,stylesheet, , GRAPH, ALL_ENGINES
+A,tailURL, , EDGE, ALL_ENGINES
+A,taillabel, , EDGE, ALL_ENGINES
+A,tailport, center, EDGE, ALL_ENGINES
+A,toplabel, , NODE, ALL_ENGINES
+A,vertices, , NODE, ALL_ENGINES
+F,voro_margin, 0.05, GRAPH, NEATO
+F,weight, , EDGE, DOT Or NEATO
+F,width, 0.75, NODE, ALL_ENGINES
+F,z, 0.0, NODE, ALL_ENGINES

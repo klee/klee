@@ -1,0 +1,443 @@
+.TH OSAGE 1 "27 May 2009"
+.SH NAME
+osage \- filter for drawing clustered graphs
+.SH SYNOPSIS
+\fBosage\fR
+[\fB\-\fR(\fBG\fR|\fBN\fR|\fBE\fR)\fIname=value\fR]
+[\fB\-T\fIlang\fR]
+[\fB\-l\fIlibfile\fR]
+[\fB\-o\fIoutfile\fR]
+[\fB\-O\fR]
+[\fB\-P\fR]
+[\fB\-v\fR]
+[\fB\-V\fR]
+[files]
+.SH DESCRIPTION
+.I osage
+draws clustered graphs. As input, it takes any graph in the
+.I dot
+format. It draws the graph recursively. At each level, there will
+be a collection of nodes and a collection of cluster subgraphs.
+The internals of each cluster subgraph are laid out, then the 
+cluster subgraphs and nodes at the current level are positioned
+relative to each other, treating each cluster subgraph as a node. 
+.P
+At each level, the nodes and cluster subgraphs are viewed as rectangles
+to be packed together. At present, edges are ignored during packing.
+Packing is done using the standard packing functions. In particular,
+the graph attributes \fBpack\fP and \fBpackmode\fP control the layout.
+Each graph and cluster can specify its own values for these attributes.
+Remember also that a cluster inherits its attribute values from
+its parent graph.
+.P
+After all nodes and clusters, edges are routed based on the value of
+the \fBsplines\fP attribute.
+.SH OUTPUT FORMATS
+Osage uses an extensible plugin mechanism for its output renderers,
+so to see what output formats your installation of osage supports
+you can use ``osage \-Txxx'' (where xxx is an unlikely format)
+and check the warning message.
+Also, The plugin mechanism supports multiple implementations
+of the output formats.
+To see what variants are available, use, for example: ``osage \-Tpng:''
+and to force a particular variant, use, for example: ``osage \-Tpng:gd''
+.P
+Traditionally, osage supports the following:
+\fB\-Tps\fP (PostScript),
+\fB\-Tsvg\fP \fB\-Tsvgz\fP (Structured Vector Graphics),
+\fB\-Tfig\fP (XFIG graphics),
+\fB\-Tmif\fP (FrameMaker graphics),
+\fB\-Thpgl\fP (HP pen plotters), and \fB\-Tpcl\fP (Laserjet printers),
+\fB\-Tpng\fP \fB\-Tgif\fP (bitmap graphics),
+\fB\-Tdia\fP (GTK+ based diagrams),
+\fB\-Timap\fP (imagemap files for httpd servers for each node or edge
+that has a non\(hynull "href" attribute.),
+\fB\-Tcmapx\fP (client\(hyside imagemap for use in html and xhtml).
+Additional less common or more special\(hypurpose output formats
+can be found at http://www.graphviz.org/cvs/doc/info/output.html.)
+.P
+Alternative plugins providing support for a given output format
+can be found from the error message resulting from appending a ':' to the format. e.g. \fB-Tpng:\fP
+The first plugin listed is always the default.
+.SH GRAPH FILE LANGUAGE
+Here is a synopsis of the graph file language, normally using the extension \fB.gv\fR, for graphs:
+.PP
+[\fBstrict\fR] (\fBgraph\fR|\fBdigraph\fR) \fIname\fP { \fIstatement\(hylist\fP }\fR
+.br 
+Is the top level graph. If the graph is \fBstrict\fR then multiple edges are
+not allowed between the same pairs of nodes.
+If it is a directed graph, indicated by \fBdigraph\fR,
+then the \fIedgeop\fR must be "\->". If it is an undirected \fBgraph\fR
+then the \fIedgeop\fR must be "\-\-".
+Statements may be:
+.PP
+\fIname\fB=\fIval\fB;\fR
+.br
+\fBnode [\fIname\fB=\fIval\fB];\fR
+.br
+\fBedge [\fIname\fB=\fIval\fB];\fR
+.br
+Set default graph, node, or edge attribute \fIname\fP to \fIval\fP.
+Any subgraph, node, or edge appearing after this inherits the new
+default attributes.
+.PP
+\fBn0 [\fIname0=val0,name1=val1,...\fB];\fR
+Creates node \fBn0\fP (if it does not already exist)
+and sets its attributes according to the optional list. 
+.PP
+\fBn0 \fIedgeop\fR n1 \fIedgeop\fR \fI...\fB \fIedgeop\fR nn [\fIname0=val0,name1=val1,...\fB];\fR
+.br
+Creates edges between nodes \fBn0\fP, \fBn1\fP, ..., \fBnn\fP and sets
+their attributes according to the optional list.
+Creates nodes as necessary.
+.PP
+[\fBsubgraph \fIname\fB] { \fIstatement\(hylist \fB}\fR
+.br
+Creates a subgraph.  Subgraphs may be used in place
+of \fBn0\fP, ..., \fBnn\fP in the above statements to create edges.
+[\fBsubgraph \fIname\fR] is optional;
+if missing, the subgraph is assigned an internal name. 
+.PP
+Comments may be /*C\(hylike*/ or //C++\(hylike.
+
+.PP
+Attribute names and values are ordinary (C\(hystyle) strings.
+The following sections describe attributes that control graph layout.
+
+.SH "GRAPH ATTRIBUTES"
+.PP
+\fBsize="\fIx,y\fP"\fR sets bounding box of drawing in inches.
+.PP
+\fBpage="\fIx,y\fP"\fR sets the PostScript pagination unit.
+.PP
+\fBratio=\fIf\fR sets the aspect ratio to \fIf\fP which may be
+a floating point number, or one of the keywords \fBfill\fP,
+\fBcompress\fP, or \fBauto\fP.
+.PP
+\fBpagedir=\fR[TBLR][TBLR] sets the major and minor order of pagination.
+.PP
+\fBrotate=90\fR sets landscape mode. 
+(\fBorientation=land\fR is backward compatible but obsolete.)
+.PP
+\fBcenter=\fIn\fR a non\(hyzero value centers the drawing on the page.
+.PP
+\fBlayers="\fIid:id:id:id\fR" is a sequence of layer identifiers for
+overlay diagrams.  The PostScript array variable \fIlayercolorseq\fR
+sets the assignment of colors to layers. The least index is 1 and 
+each element must be a 3\(hyelement array to be interpreted as a color coordinate.
+.PP
+\fBcolor=\fIcolorvalue\fR sets foreground color (\fBbgcolor\fP for background).
+.PP
+\fBhref=\fI"url"\fR the default url for image map files; in PostScript files,
+the base URL for all relative URLs, as recognized by Acrobat Distiller
+3.0 and up.
+.PP
+\fBURL=\fI"url"\fR ("URL" is a synonym for "href".)
+.PP
+\fBstylesheet=\fI"file.css"\fR includes a reference to a stylesheet
+in \-Tsvg and \-Tsvgz outputs.  Ignored by other formats.
+.PP
+\fBsplines\fR. If set to \fItrue\fR, edges are
+drawn as splines.
+If set to \fIpolyline\fR, edges are 
+drawn as polylines.
+If set to \fIortho\fR, edges are 
+drawn as orthogonal polylines.
+In all of these cases, the nodes may not overlap.
+If \fBsplines=\fIfalse\fR or \fBsplines=\fIline\fR, edges are 
+drawn as line segments.
+The default is \fIfalse\fR.
+
+.SH "NODE ATTRIBUTES"
+.PP
+\fBheight=\fId\fR or \fBwidth=\fId\fR sets minimum height or width.
+Adding \fBfixedsize=true\fP forces these to be the actual size
+(text labels are ignored).
+.PP
+\fBshape=record polygon epsf \fIbuiltin_polygon\fR
+.br
+\fIbuiltin_polygon\fR is one of: \fBplaintext ellipse oval circle egg 
+triangle box diamond trapezium parallelogram house hexagon octagon
+note tab box3d component.\fR
+(Polygons are defined or modified by the following node attributes:
+\fBregular\fR, \fBperipheries\fR, \fBsides\fR, \fBorientation\fR,
+\fBdistortion\fR and \fBskew\fR.)  \fBepsf\fR uses the node's
+\fBshapefile\fR attribute as the path name of an external
+EPSF file to be automatically loaded for the node shape.
+.PP
+\fBlabel=\fItext\fR where \fItext\fP may include escaped newlines
+\\\|n, \\\|l, or \\\|r for center, left, and right justified lines.
+The string '\\N' value will be replaced by the node name.
+The string '\\G' value will be replaced by the graph name.
+Record labels may contain recursive box lists delimited by { | }.
+Port identifiers in labels are set off by angle brackets < >.
+In the graph file, use colon (such as, \fBnode0:port28\fR).
+.PP
+\fBfontsize=\fIn\fR sets the label type size to \fIn\fP points.
+.PP
+\fBfontname=\fIname\fR sets the label font family name.
+.PP
+\fBcolor=\fIcolorvalue\fR sets the outline color, and the default fill color
+if style=filled and \fBfillcolor\fR is not specified.
+.PP
+\fBfillcolor=\fIcolorvalue\fR sets the fill color
+when style=filled.  If not specified, the fillcolor when style=filled defaults
+to be the same as the outline color.
+.PP
+\fBfontcolor=\fIcolorvalue\fR sets the label text color.
+.PP
+A \fIcolorvalue\fP may be "\fIh,s,v\fB"\fR (hue, saturation, brightness)
+floating point numbers between 0 and 1, or an X11 color name such as
+\fBwhite black red green blue yellow magenta cyan\fR or \fBburlywood\fR,
+or a "\fI#rrggbb" (red, green, blue, 2 hex characters each) value.
+.PP
+\fBstyle=filled solid dashed dotted bold invis\fP or any Postscript code.
+.PP
+\fBlayer=\fIid\fR or \fIid:id\fR or "all" sets the node's active layers.
+The empty string means no layers (invisible).
+.PP
+The following attributes apply only to polygon shape nodes:
+.PP
+\fBregular=\fIn\fR if \fIn\fR is non\(hyzero then the polygon is made 
+regular, i.e. symmetric about the x and y axis, otherwise the
+polygon takes on the aspect ratio of the label. 
+\fIbuiltin_polygons\fR that are not already regular are made regular
+by this attribute.
+\fIbuiltin_polygons\fR that are already regular are not affected (i.e.
+they cannot be made asymmetric).
+.PP
+\fBperipheries=\fIn\fR sets the number of periphery lines drawn around
+the polygon.  This value supersedes the number of periphery lines
+of \fIbuiltin_polygons\fR.
+.PP
+\fBsides=\fIn\fR sets the number of sides to the polygon. \fIn\fR<3
+results in an ellipse.
+This attribute is ignored by \fIbuiltin_polygons\fR.
+.PP
+\fBorientation=\fIf\fR sets the orientation of the first apex of the
+polygon counterclockwise from the vertical, in degrees.
+\fIf\fR may be a floating point number.
+The orientation of labels is not affected by this attribute.
+This attribute is added to the initial orientation of \fIbuiltin_polygons.\fR
+.PP
+\fBdistortion=\fIf\fR sets the amount of broadening of the top and
+narrowing of the bottom of the polygon (relative to its orientation). 
+Floating point values between \-1 and +1 are suggested.
+This attribute is ignored by \fIbuiltin_polygons\fR.
+.PP                                                            
+\fBskew=\fIf\fR sets the amount of right\(hydisplacement of the top and
+left\(hydisplacement of the bottom of the polygon (relative to its
+orientation).
+Floating point values between \-1 and +1 are suggested.
+This attribute is ignored by \fIbuiltin_polygons\fR.
+.PP
+\fBhref=\fI"url"\fR sets the url for the node in imagemap, PostScript and SVG
+files.
+The substrings '\\N' and '\\G' are substituted in the same manner as
+for the node label attribute.
+Additionally the substring '\\L' is substituted with the node label string.
+.PP
+\fBURL=\fI"url"\fR ("URL" is a synonym for "href".)
+.PP
+\fBtarget=\fI"target"\fR is a target string for client\(hyside imagemaps
+and SVG, effective when nodes have a URL.
+The target string is used to determine which window of the browser is used
+for the URL.  Setting it to "_graphviz" will open a new window if it doesn't
+already exist, or reuse it if it does.
+If the target string is empty, the default,
+then no target attribute is included in the output.
+The substrings '\\N' and '\\G' are substituted in the same manner as
+for the node label attribute.
+Additionally the substring '\\L' is substituted with the node label string.
+.PP
+\fBtooltip=\fI"tooltip"\fR is a tooltip string for client\(hyside imagemaps
+and SVG, effective when nodes have a URL.  The tooltip string defaults to be the
+same as the label string, but this attribute permits nodes without
+labels to still have tooltips thus permitting denser graphs.
+The substrings '\\N' and '\\G' are substituted in the same manner as
+for the node label attribute.
+Additionally the substring '\\L' is substituted with the node label string.
+
+
+.SH "EDGE ATTRIBUTES"
+.PP
+\fBlabel=\fItext\fR where \fItext\fR may include escaped newlines
+\\\|n, \\\|l, or \\\|r for centered, left, or right justified lines.
+If the substring '\\T' is found in a label it will be replaced by the tail_node name.
+If the substring '\\H' is found in a label it will be replaced by the head_node name.
+If the substring '\\E' value is found in a label it will be replaced by: tail_node_name\->head_node_name
+If the substring '\\G' is found in a label it will be replaced by the graph name.
+or by: tail_node_name\-\-head_node_name for undirected graphs.
+.PP
+\fBfontsize=\fIn\fR sets the label type size to \fIn\fP points.
+.PP
+\fBfontname=\fIname\fR sets the label font family name.
+.PP
+\fBfontcolor=\fIcolorvalue\fR sets the label text color.
+.PP
+\fBstyle=solid dashed dotted bold invis\fP
+.PP
+\fBcolor=\fIcolorvalue\fR sets the line color for edges.
+.PP
+\fBcolor=\fIcolorvaluelist\fR a ':' separated list of \fIcolorvalue\fR creates
+parallel edges, one edge for each color.
+.PP
+\fBdir=forward back both none\fP controls arrow direction.
+.PP
+\fBtailclip,headclip=false\fP disables endpoint shape clipping.
+.PP
+\fBhref=\fI"url"\fR sets the url for the node in imagemap, PostScript and SVG
+files.
+The substrings '\\T', '\\H', '\\E' and '\\G' are substituted in the same manner as
+for the edge label attribute.
+Additionally the substring '\\L' is substituted with the edge label string.
+.PP
+\fBURL=\fI"url"\fR ("URL" is a synonym for "href".)
+.PP
+\fBtarget=\fI"target"\fR is a target string for client\(hyside imagemaps
+and SVG, effective when edges have a URL.
+If the target string is empty, the default,
+then no target attribute is included in the output.
+The substrings '\\T', '\\H', '\\E' and '\\G' are substituted in the same manner as
+for the edge label attribute.
+Additionally the substring '\\L' is substituted with the edge label string.
+.PP
+\fBtooltip=\fI"tooltip"\fR is a tooltip string for client\(hyside imagemaps
+effective when edges have a URL.  The tooltip string defaults to be the
+same as the edge label string. 
+The substrings '\\T', '\\H', '\\E' and '\\G' are substituted in the same manner as
+for the edge label attribute.
+Additionally the substring '\\L' is substituted with the edge label string.
+.PP
+\fBarrowhead,arrowtail=none, normal, inv, dot, odot, invdot, invodot,
+tee, empty, invempty, open, halfopen, diamond, odiamond, box, obox, crow\fP.
+.PP
+\fBarrowsize\fP (norm_length=10,norm_width=5,
+inv_length=6,inv_width=7,dot_radius=2) 
+.PP
+\fBheadlabel,taillabel=string\fP for port labels.
+\fBlabelfontcolor\fP,\fBlabelfontname\fP,\fBlabelfontsize\fP
+for head and tail labels.
+The substrings '\\T', '\\H', '\\E' and '\\G' are substituted in the same manner as
+for the edge label attribute.
+Additionally the substring '\\L' is substituted with the edge label string.
+.PP
+\fBheadhref=\fI"url"\fR sets the url for the head port in imagemap, PostScript and SVG files.
+The substrings '\\T', '\\H', '\\E' and '\\G' are substituted in the same manner as
+for the edge label attribute.
+Additionally the substring '\\L' is substituted with the edge label string.
+.PP
+\fBheadURL=\fI"url"\fR ("headURL" is a synonym for "headhref".)
+.PP
+\fBheadtarget=\fI"headtarget"\fR is a target string for client\(hyside imagemaps
+and SVG, effective when edge heads have a URL.
+The headtarget string is used to determine which window of the browser is used
+for the URL.  If the headtarget string is empty, the default,
+then headtarget defaults to the same value as target for the edge.
+The substrings '\\T', '\\H', '\\E' and '\\G' are substituted in the same manner as
+for the edge label attribute.
+Additionally the substring '\\L' is substituted with the edge label string.
+.PP
+\fBheadtooltip=\fI"tooltip"\fR is a tooltip string for client\(hyside imagemaps
+effective when head ports have a URL.  The tooltip string defaults to be the
+same as the headlabel string. 
+The substrings '\\T', '\\H', and '\\E' are substituted in the same manner as
+for the edge label attribute.
+Additionally the substring '\\L' is substituted with the edge label string.
+.PP
+\fBtailhref=\fI"url"\fR sets the url for the tail port in imagemap, PostScript and SVG files.
+The substrings '\\T', '\\H', '\\E' and '\\G' are substituted in the same manner as
+for the edge label attribute.
+Additionally the substring '\\L' is substituted with the edge label string.
+.PP
+\fBtailURL=\fI"url"\fR ("tailURL" is a synonym for "tailhref".)
+.PP
+\fBtailtarget=\fI"tailtarget"\fR is a target string for client\(hyside imagemaps
+and SVG, effective when edge tails have a URL.
+The tailtarget string is used to determine which window of the browser is used
+for the URL.  If the tailtarget string is empty, the default,
+then tailtarget defaults to the same value as target for the edge.
+The substrings '\\T', '\\H', '\\E' and '\\G' are substituted in the same manner as
+for the edge label attribute.
+Additionally the substring '\\L' is substituted with the edge label string.
+.PP
+\fBtailtooltip=\fI"tooltip"\fR is a tooltip string for client\(hyside imagemaps
+effective when tail ports have a URL.  The tooltip string defaults to be the
+same as the taillabel string. 
+The substrings '\\T', '\\H', '\\E' and '\\G' are substituted in the same manner as
+for the edge label attribute.
+Additionally the substring '\\L' is substituted with the edge label string.
+.PP
+\fBlabeldistance\fP and \fPport_label_distance\fP set distance; also
+\fBlabelangle\fP (in degrees CCW)
+.PP
+\fBdecorate\fP draws line from edge to label.
+.PP
+\fBsamehead,sametail\fP aim edges having the same value to the
+same port, using the average landing point.
+.PP
+\fBlayer=\fIid\fR or \fIid:id\fR or "all" sets the edge's active layers.
+The empty string means no layers (invisible).
+
+.PP
+\fB(neato\(hyspecific attributes)\fR
+.br
+\fBw=\fIf\fR sets the weight (spring constant) of an edge
+to the given floating point value.  The default is 1.0;
+greater values make the edge tend more toward its optimal length.
+.PP
+\fBlen=\fIf\fR sets the optimal length of an edge.
+The default is 1.0.
+.SH "COMMAND LINE OPTIONS"
+\fB\-G\fP sets a default graph attribute.
+.br
+\fB\-N\fP sets a default node attribute.
+.br
+\fB\-E\fP sets a default edge attribute.
+Example: \fB\-Gsize="7,8" \-Nshape=box \-Efontsize=8\fR
+.PP
+\fB\-l\fIfile\fR loads custom PostScript library files.
+Usually these define custom shapes or styles.
+If \fB\-l\fP is given by itself, the standard library is omitted.
+.PP
+\fB\-T\fIlang\fR sets the output language as described above.
+.PP
+\fB\-O\fP automatically generate output filenames based on the input filename and the \-T format.
+.PP
+\fB\-v\fP (verbose) prints various information useful for debugging.
+.PP
+\fB\-V\fP (version) prints version information and exits.
+.PP
+\fB\-?\fP prints the usage and exits.
+.SH "EXAMPLES"
+.nf
+digraph test123 {
+        pack=8
+        subgraph cluster0 {
+          packmode=array
+          x y x0 y0 x1
+          subgraph cluster1 {
+            m n
+          }
+        }
+        b [shape=box];
+        c [label="hello\enworld",color=blue,fontsize=24,
+             fontname="Palatino\-Italic",fontcolor=red,style=filled];
+        a \-> z
+        x \-> z
+        a \-> b \-> c;
+        a \-> {x y};
+        edge [style=dashed,color=red];
+        b \-> x;
+}
+.fi
+.SH AUTHORS
+Emden R. Gansner <erg@research.att.com>
+.SH "SEE ALSO"
+This man page contains only a small amount of the information related
+to the Graphviz layout programs. The most complete information can be
+found at http://www.graphviz.org/Documentation.php, especially in the
+on\(hyline reference pages. Most of these documents are also available in the
+\fIdoc\fP and \fIdoc/info\fP subtrees in the source and binary distributions.
+.PP
+dot(1)

@@ -1,0 +1,44 @@
+digraph G{ label="SelfLeft"
+node [shape = box] "node11"; 
+"node11" -> "node11"[label ="tailport=nw headport=nw" tailport=nw headport=nw];
+"node11" -> "node12"  
+"node12" -> "node12"[label ="tailport=nw headport=n" tailport=nw headport=n];
+"node12" -> "node16"  
+"node16" -> "node16"[label ="tailport=nw headport=s" tailport=nw headport=s];
+"node16" -> "node17"  
+"node17" -> "node17"[label ="tailport=nw headport=sw" tailport=nw headport=sw];
+"node17" -> "node18"  
+"node18" -> "node18"[label ="tailport=nw headport=w" tailport=nw headport=w];
+"node18" -> "node21"  
+"node21" -> "node21"[label ="tailport=n headport=nw" tailport=n headport=nw];
+"node21" -> "node27"  
+"node27" -> "node27"[label ="tailport=n headport=sw" tailport=n headport=sw];
+"node27" -> "node28"  
+"node28" -> "node28"[label ="tailport=n headport=w" tailport=n headport=w];
+"node28" -> "node61"  
+"node61" -> "node61"[label ="tailport=s headport=nw" tailport=s headport=nw];
+"node61" -> "node67"  
+"node67" -> "node67"[label ="tailport=s headport=sw" tailport=s headport=sw];
+"node67" -> "node68"  
+"node68" -> "node68"[label ="tailport=s headport=w" tailport=s headport=w];
+"node68" -> "node71"  
+"node71" -> "node71"[label ="tailport=sw headport=nw" tailport=sw headport=nw];
+"node71" -> "node72"  
+"node72" -> "node72"[label ="tailport=sw headport=n" tailport=sw headport=n];
+"node72" -> "node76"  
+"node76" -> "node76"[label ="tailport=sw headport=s" tailport=sw headport=s];
+"node76" -> "node77"  
+"node77" -> "node77"[label ="tailport=sw headport=sw" tailport=sw headport=sw];
+"node77" -> "node78"  
+"node78" -> "node78"[label ="tailport=sw headport=w" tailport=sw headport=w];
+"node78" -> "node81"  
+"node81" -> "node81"[label ="tailport=w headport=nw" tailport=w headport=nw];
+"node81" -> "node82"  
+"node82" -> "node82"[label ="tailport=w headport=n" tailport=w headport=n];
+"node82" -> "node86"  
+"node86" -> "node86"[label ="tailport=w headport=s" tailport=w headport=s];
+"node86" -> "node87"  
+"node87" -> "node87"[label ="tailport=w headport=sw" tailport=w headport=sw];
+"node87" -> "node88"  
+"node88" -> "node88"[label ="tailport=w headport=w" tailport=w headport=w];
+}

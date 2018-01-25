@@ -1,0 +1,106 @@
+.\" -*- nroff -*-
+.\" This manual is for graphviz, a rich set of graph drawing tools, and it
+.\" can be distributed under the same terms as the graphviz package.
+.\" 
+.\" Copyright (C) 2006 Cyril Brulebois <cyril.brulebois@enst-bretagne.fr>
+.\"
+.TH GRAPHVIZ 7 "November 19, 2006"
+.SH "NAME"
+graphviz \- rich set of graph drawing tools
+
+.SH "SYNOPSIS"
+This manpage has been written to fulfil the need of a centralized documentation
+presenting all available tools in the graphviz package.
+
+.SH "AVAILABLE TOOLS"
+
+.SS "Graph layout programs"
+.TP
+.B dot
+filter for hierarchical layouts of graphs
+.TP
+.B neato
+filter for symmetric layouts of graphs
+.TP
+.B twopi
+filter for radial layouts of graphs
+.TP
+.B circo
+filter for circular layout of graphs
+.TP
+.B fdp
+filter for symmetric layouts of graphs
+.PP
+All of the filters work with either directed or undirected graphs, though
+.B dot
+is typically used for directed graphs and
+.B neato
+for undirected graphs.
+Note also that \fBneato \-n[2]\fP can be used to render layouts produced
+by the other filters.
+.SS "Graph drawing programs"
+.TP
+.B lefty
+A Programmable Graphics Editor
+.TP
+.B lneato
+lefty + neato
+.TP
+.B dotty
+lefty + dot
+
+
+.SS "Graph layout enhancement"
+.TP
+.B gvcolor
+flow colors through a ranked digraph
+.TP
+.B unflatten
+adjust directed graphs to improve layout aspect ratio
+.TP
+.B gvpack
+merge and pack disjoint graphs
+
+.SS "Graph information and transformation"
+.TP
+.B gc
+count graph components
+.TP
+.B acyclic
+make directed graph acyclic
+.TP
+.B nop
+pretty-print graph file
+.TP
+.B ccomps
+connected components filter for graphs
+.TP
+.B sccmap
+extract strongly connected components of directed graphs
+.TP
+.B tred
+transitive reduction filter for directed graphs
+.TP
+.B dijkstra
+single-source distance filter
+.TP
+.B bcomps
+biconnected components filter for graphs
+.TP
+.B gvpr
+graph pattern scanning and processing language
+.TP
+.B prune
+prune directed graphs
+
+.SS "Other"
+.TP
+.B "gxl2dot, dot2gxl"
+GXL-DOT converters
+
+.SH "AUTHOR"
+This manual page was written by Cyril Brulebois
+<cyril.brulebois@enst\-bretagne.fr> in november 2006, based on an initial
+documentation effort by Joachim Berdal Haga <jbh@lupus.ig3.net>. It can be
+distributed under the same terms as the graphviz package.
+

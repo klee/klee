@@ -1,0 +1,18 @@
+
+The dot layout engine assumes a spline smoothing
+algorithm for edges, rather than Tk's default smoothing.
+So edges rendered to Tk canvas will look
+better if the Tkspline extension is available.
+
+Tkspline is available from:
+
+	ftp://ftp.graphviz.org/pub/
+
+For Tk prior to tk8.3.0 Jan Nijtmans' dash patches
+are required by Tkspline.
+
+Dash patches are available from:
+
+	http://home.wxs.nl/~nijtmans/
+
+

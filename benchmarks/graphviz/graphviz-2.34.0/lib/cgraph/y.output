@@ -1,0 +1,953 @@
+Terminals unused in grammar
+
+   T_list
+   T_attr
+
+
+Grammar
+
+    0 $accept: graph $end
+
+    1 graph: hdr body
+    2      | error
+    3      | /* empty */
+
+    4 body: '{' optstmtlist '}'
+
+    5 hdr: optstrict graphtype optgraphname
+
+    6 optgraphname: atom
+    7             | /* empty */
+
+    8 optstrict: T_strict
+    9          | /* empty */
+
+   10 graphtype: T_graph
+   11          | T_digraph
+
+   12 optstmtlist: stmtlist
+   13            | /* empty */
+
+   14 stmtlist: stmtlist stmt
+   15         | stmt
+
+   16 optsemi: ';'
+   17        | /* empty */
+
+   18 stmt: attrstmt optsemi
+   19     | compound optsemi
+
+   20 compound: simple rcompound optattr
+
+   21 simple: nodelist
+   22       | subgraph
+
+   23 $@1: /* empty */
+
+   24 $@2: /* empty */
+
+   25 rcompound: T_edgeop $@1 simple $@2 rcompound
+   26          | /* empty */
+
+   27 nodelist: node
+   28         | nodelist ',' node
+
+   29 node: atom
+   30     | atom ':' atom
+   31     | atom ':' atom ':' atom
+
+   32 attrstmt: attrtype optmacroname attrlist
+   33         | graphattrdefs
+
+   34 attrtype: T_graph
+   35         | T_node
+   36         | T_edge
+
+   37 optmacroname: atom '='
+   38             | /* empty */
+
+   39 optattr: attrlist
+   40        | /* empty */
+
+   41 attrlist: optattr '[' optattrdefs ']'
+
+   42 optattrdefs: optattrdefs attrdefs
+   43            | /* empty */
+
+   44 attrdefs: attritem optseparator
+
+   45 attritem: attrassignment
+   46         | attrmacro
+
+   47 attrassignment: atom '=' atom
+
+   48 attrmacro: '@' atom
+
+   49 graphattrdefs: attrassignment
+
+   50 $@3: /* empty */
+
+   51 subgraph: optsubghdr $@3 body
+
+   52 optsubghdr: T_subgraph atom
+   53           | T_subgraph
+   54           | /* empty */
+
+   55 optseparator: ';'
+   56             | ','
+   57             | /* empty */
+
+   58 atom: T_atom
+   59     | qatom
+
+   60 qatom: T_qatom
+   61      | qatom '+' T_qatom
+
+
+Terminals, with rules where they appear
+
+$end (0) 0
+'+' (43) 61
+',' (44) 28 56
+':' (58) 30 31
+';' (59) 16 55
+'=' (61) 37 47
+'@' (64) 48
+'[' (91) 41
+']' (93) 41
+'{' (123) 4
+'}' (125) 4
+error (256) 2
+T_graph (258) 10 34
+T_node (259) 35
+T_edge (260) 36
+T_digraph (261) 11
+T_subgraph (262) 52 53
+T_strict (263) 8
+T_edgeop (264) 25
+T_list (265)
+T_attr (266)
+T_atom (267) 58
+T_qatom (268) 60 61
+
+
+Nonterminals, with rules where they appear
+
+$accept (24)
+    on left: 0
+graph (25)
+    on left: 1 2 3, on right: 0
+body (26)
+    on left: 4, on right: 1 51
+hdr (27)
+    on left: 5, on right: 1
+optgraphname (28)
+    on left: 6 7, on right: 5
+optstrict (29)
+    on left: 8 9, on right: 5
+graphtype (30)
+    on left: 10 11, on right: 5
+optstmtlist (31)
+    on left: 12 13, on right: 4
+stmtlist (32)
+    on left: 14 15, on right: 12 14
+optsemi (33)
+    on left: 16 17, on right: 18 19
+stmt (34)
+    on left: 18 19, on right: 14 15
+compound (35)
+    on left: 20, on right: 19
+simple (36)
+    on left: 21 22, on right: 20 25
+rcompound (37)
+    on left: 25 26, on right: 20 25
+$@1 (38)
+    on left: 23, on right: 25
+$@2 (39)
+    on left: 24, on right: 25
+nodelist (40)
+    on left: 27 28, on right: 21 28
+node (41)
+    on left: 29 30 31, on right: 27 28
+attrstmt (42)
+    on left: 32 33, on right: 18
+attrtype (43)
+    on left: 34 35 36, on right: 32
+optmacroname (44)
+    on left: 37 38, on right: 32
+optattr (45)
+    on left: 39 40, on right: 20 41
+attrlist (46)
+    on left: 41, on right: 32 39
+optattrdefs (47)
+    on left: 42 43, on right: 41 42
+attrdefs (48)
+    on left: 44, on right: 42
+attritem (49)
+    on left: 45 46, on right: 44
+attrassignment (50)
+    on left: 47, on right: 45 49
+attrmacro (51)
+    on left: 48, on right: 46
+graphattrdefs (52)
+    on left: 49, on right: 33
+subgraph (53)
+    on left: 51, on right: 22
+$@3 (54)
+    on left: 50, on right: 51
+optsubghdr (55)
+    on left: 52 53 54, on right: 51
+optseparator (56)
+    on left: 55 56 57, on right: 44
+atom (57)
+    on left: 58 59, on right: 6 29 30 31 37 47 48 52
+qatom (58)
+    on left: 60 61, on right: 59 61
+
+
+state 0
+
+    0 $accept: . graph $end
+
+    error     shift, and go to state 1
+    T_strict  shift, and go to state 2
+
+    $end       reduce using rule 3 (graph)
+    T_graph    reduce using rule 9 (optstrict)
+    T_digraph  reduce using rule 9 (optstrict)
+
+    graph      go to state 3
+    hdr        go to state 4
+    optstrict  go to state 5
+
+
+state 1
+
+    2 graph: error .
+
+    $default  reduce using rule 2 (graph)
+
+
+state 2
+
+    8 optstrict: T_strict .
+
+    $default  reduce using rule 8 (optstrict)
+
+
+state 3
+
+    0 $accept: graph . $end
+
+    $end  shift, and go to state 6
+
+
+state 4
+
+    1 graph: hdr . body
+
+    '{'  shift, and go to state 7
+
+    body  go to state 8
+
+
+state 5
+
+    5 hdr: optstrict . graphtype optgraphname
+
+    T_graph    shift, and go to state 9
+    T_digraph  shift, and go to state 10
+
+    graphtype  go to state 11
+
+
+state 6
+
+    0 $accept: graph $end .
+
+    $default  accept
+
+
+state 7
+
+    4 body: '{' . optstmtlist '}'
+
+    T_graph     shift, and go to state 12
+    T_node      shift, and go to state 13
+    T_edge      shift, and go to state 14
+    T_subgraph  shift, and go to state 15
+    T_atom      shift, and go to state 16
+    T_qatom     shift, and go to state 17
+
+    '{'       reduce using rule 54 (optsubghdr)
+    $default  reduce using rule 13 (optstmtlist)
+
+    optstmtlist     go to state 18
+    stmtlist        go to state 19
+    stmt            go to state 20
+    compound        go to state 21
+    simple          go to state 22
+    nodelist        go to state 23
+    node            go to state 24
+    attrstmt        go to state 25
+    attrtype        go to state 26
+    attrassignment  go to state 27
+    graphattrdefs   go to state 28
+    subgraph        go to state 29
+    optsubghdr      go to state 30
+    atom            go to state 31
+    qatom           go to state 32
+
+
+state 8
+
+    1 graph: hdr body .
+
+    $default  reduce using rule 1 (graph)
+
+
+state 9
+
+   10 graphtype: T_graph .
+
+    $default  reduce using rule 10 (graphtype)
+
+
+state 10
+
+   11 graphtype: T_digraph .
+
+    $default  reduce using rule 11 (graphtype)
+
+
+state 11
+
+    5 hdr: optstrict graphtype . optgraphname
+
+    T_atom   shift, and go to state 16
+    T_qatom  shift, and go to state 17
+
+    $default  reduce using rule 7 (optgraphname)
+
+    optgraphname  go to state 33
+    atom          go to state 34
+    qatom         go to state 32
+
+
+state 12
+
+   34 attrtype: T_graph .
+
+    $default  reduce using rule 34 (attrtype)
+
+
+state 13
+
+   35 attrtype: T_node .
+
+    $default  reduce using rule 35 (attrtype)
+
+
+state 14
+
+   36 attrtype: T_edge .
+
+    $default  reduce using rule 36 (attrtype)
+
+
+state 15
+
+   52 optsubghdr: T_subgraph . atom
+   53           | T_subgraph .
+
+    T_atom   shift, and go to state 16
+    T_qatom  shift, and go to state 17
+
+    $default  reduce using rule 53 (optsubghdr)
+
+    atom   go to state 35
+    qatom  go to state 32
+
+
+state 16
+
+   58 atom: T_atom .
+
+    $default  reduce using rule 58 (atom)
+
+
+state 17
+
+   60 qatom: T_qatom .
+
+    $default  reduce using rule 60 (qatom)
+
+
+state 18
+
+    4 body: '{' optstmtlist . '}'
+
+    '}'  shift, and go to state 36
+
+
+state 19
+
+   12 optstmtlist: stmtlist .
+   14 stmtlist: stmtlist . stmt
+
+    T_graph     shift, and go to state 12
+    T_node      shift, and go to state 13
+    T_edge      shift, and go to state 14
+    T_subgraph  shift, and go to state 15
+    T_atom      shift, and go to state 16
+    T_qatom     shift, and go to state 17
+
+    '{'       reduce using rule 54 (optsubghdr)
+    $default  reduce using rule 12 (optstmtlist)
+
+    stmt            go to state 37
+    compound        go to state 21
+    simple          go to state 22
+    nodelist        go to state 23
+    node            go to state 24
+    attrstmt        go to state 25
+    attrtype        go to state 26
+    attrassignment  go to state 27
+    graphattrdefs   go to state 28
+    subgraph        go to state 29
+    optsubghdr      go to state 30
+    atom            go to state 31
+    qatom           go to state 32
+
+
+state 20
+
+   15 stmtlist: stmt .
+
+    $default  reduce using rule 15 (stmtlist)
+
+
+state 21
+
+   19 stmt: compound . optsemi
+
+    ';'  shift, and go to state 38
+
+    $default  reduce using rule 17 (optsemi)
+
+    optsemi  go to state 39
+
+
+state 22
+
+   20 compound: simple . rcompound optattr
+
+    T_edgeop  shift, and go to state 40
+
+    $default  reduce using rule 26 (rcompound)
+
+    rcompound  go to state 41
+
+
+state 23
+
+   21 simple: nodelist .
+   28 nodelist: nodelist . ',' node
+
+    ','  shift, and go to state 42
+
+    $default  reduce using rule 21 (simple)
+
+
+state 24
+
+   27 nodelist: node .
+
+    $default  reduce using rule 27 (nodelist)
+
+
+state 25
+
+   18 stmt: attrstmt . optsemi
+
+    ';'  shift, and go to state 38
+
+    $default  reduce using rule 17 (optsemi)
+
+    optsemi  go to state 43
+
+
+state 26
+
+   32 attrstmt: attrtype . optmacroname attrlist
+
+    T_atom   shift, and go to state 16
+    T_qatom  shift, and go to state 17
+
+    $default  reduce using rule 38 (optmacroname)
+
+    optmacroname  go to state 44
+    atom          go to state 45
+    qatom         go to state 32
+
+
+state 27
+
+   49 graphattrdefs: attrassignment .
+
+    $default  reduce using rule 49 (graphattrdefs)
+
+
+state 28
+
+   33 attrstmt: graphattrdefs .
+
+    $default  reduce using rule 33 (attrstmt)
+
+
+state 29
+
+   22 simple: subgraph .
+
+    $default  reduce using rule 22 (simple)
+
+
+state 30
+
+   51 subgraph: optsubghdr . $@3 body
+
+    $default  reduce using rule 50 ($@3)
+
+    $@3  go to state 46
+
+
+state 31
+
+   29 node: atom .
+   30     | atom . ':' atom
+   31     | atom . ':' atom ':' atom
+   47 attrassignment: atom . '=' atom
+
+    ':'  shift, and go to state 47
+    '='  shift, and go to state 48
+
+    $default  reduce using rule 29 (node)
+
+
+state 32
+
+   59 atom: qatom .
+   61 qatom: qatom . '+' T_qatom
+
+    '+'  shift, and go to state 49
+
+    $default  reduce using rule 59 (atom)
+
+
+state 33
+
+    5 hdr: optstrict graphtype optgraphname .
+
+    $default  reduce using rule 5 (hdr)
+
+
+state 34
+
+    6 optgraphname: atom .
+
+    $default  reduce using rule 6 (optgraphname)
+
+
+state 35
+
+   52 optsubghdr: T_subgraph atom .
+
+    $default  reduce using rule 52 (optsubghdr)
+
+
+state 36
+
+    4 body: '{' optstmtlist '}' .
+
+    $default  reduce using rule 4 (body)
+
+
+state 37
+
+   14 stmtlist: stmtlist stmt .
+
+    $default  reduce using rule 14 (stmtlist)
+
+
+state 38
+
+   16 optsemi: ';' .
+
+    $default  reduce using rule 16 (optsemi)
+
+
+state 39
+
+   19 stmt: compound optsemi .
+
+    $default  reduce using rule 19 (stmt)
+
+
+state 40
+
+   25 rcompound: T_edgeop . $@1 simple $@2 rcompound
+
+    $default  reduce using rule 23 ($@1)
+
+    $@1  go to state 50
+
+
+state 41
+
+   20 compound: simple rcompound . optattr
+
+    $default  reduce using rule 40 (optattr)
+
+    optattr   go to state 51
+    attrlist  go to state 52
+
+
+state 42
+
+   28 nodelist: nodelist ',' . node
+
+    T_atom   shift, and go to state 16
+    T_qatom  shift, and go to state 17
+
+    node   go to state 53
+    atom   go to state 54
+    qatom  go to state 32
+
+
+state 43
+
+   18 stmt: attrstmt optsemi .
+
+    $default  reduce using rule 18 (stmt)
+
+
+state 44
+
+   32 attrstmt: attrtype optmacroname . attrlist
+
+    $default  reduce using rule 40 (optattr)
+
+    optattr   go to state 55
+    attrlist  go to state 56
+
+
+state 45
+
+   37 optmacroname: atom . '='
+
+    '='  shift, and go to state 57
+
+
+state 46
+
+   51 subgraph: optsubghdr $@3 . body
+
+    '{'  shift, and go to state 7
+
+    body  go to state 58
+
+
+state 47
+
+   30 node: atom ':' . atom
+   31     | atom ':' . atom ':' atom
+
+    T_atom   shift, and go to state 16
+    T_qatom  shift, and go to state 17
+
+    atom   go to state 59
+    qatom  go to state 32
+
+
+state 48
+
+   47 attrassignment: atom '=' . atom
+
+    T_atom   shift, and go to state 16
+    T_qatom  shift, and go to state 17
+
+    atom   go to state 60
+    qatom  go to state 32
+
+
+state 49
+
+   61 qatom: qatom '+' . T_qatom
+
+    T_qatom  shift, and go to state 61
+
+
+state 50
+
+   25 rcompound: T_edgeop $@1 . simple $@2 rcompound
+
+    T_subgraph  shift, and go to state 15
+    T_atom      shift, and go to state 16
+    T_qatom     shift, and go to state 17
+
+    $default  reduce using rule 54 (optsubghdr)
+
+    simple      go to state 62
+    nodelist    go to state 23
+    node        go to state 24
+    subgraph    go to state 29
+    optsubghdr  go to state 30
+    atom        go to state 54
+    qatom       go to state 32
+
+
+state 51
+
+   20 compound: simple rcompound optattr .
+   41 attrlist: optattr . '[' optattrdefs ']'
+
+    '['  shift, and go to state 63
+
+    $default  reduce using rule 20 (compound)
+
+
+state 52
+
+   39 optattr: attrlist .
+
+    $default  reduce using rule 39 (optattr)
+
+
+state 53
+
+   28 nodelist: nodelist ',' node .
+
+    $default  reduce using rule 28 (nodelist)
+
+
+state 54
+
+   29 node: atom .
+   30     | atom . ':' atom
+   31     | atom . ':' atom ':' atom
+
+    ':'  shift, and go to state 47
+
+    $default  reduce using rule 29 (node)
+
+
+state 55
+
+   41 attrlist: optattr . '[' optattrdefs ']'
+
+    '['  shift, and go to state 63
+
+
+state 56
+
+   32 attrstmt: attrtype optmacroname attrlist .
+   39 optattr: attrlist .
+
+    '['       reduce using rule 39 (optattr)
+    $default  reduce using rule 32 (attrstmt)
+
+
+state 57
+
+   37 optmacroname: atom '=' .
+
+    $default  reduce using rule 37 (optmacroname)
+
+
+state 58
+
+   51 subgraph: optsubghdr $@3 body .
+
+    $default  reduce using rule 51 (subgraph)
+
+
+state 59
+
+   30 node: atom ':' atom .
+   31     | atom ':' atom . ':' atom
+
+    ':'  shift, and go to state 64
+
+    $default  reduce using rule 30 (node)
+
+
+state 60
+
+   47 attrassignment: atom '=' atom .
+
+    $default  reduce using rule 47 (attrassignment)
+
+
+state 61
+
+   61 qatom: qatom '+' T_qatom .
+
+    $default  reduce using rule 61 (qatom)
+
+
+state 62
+
+   25 rcompound: T_edgeop $@1 simple . $@2 rcompound
+
+    $default  reduce using rule 24 ($@2)
+
+    $@2  go to state 65
+
+
+state 63
+
+   41 attrlist: optattr '[' . optattrdefs ']'
+
+    $default  reduce using rule 43 (optattrdefs)
+
+    optattrdefs  go to state 66
+
+
+state 64
+
+   31 node: atom ':' atom ':' . atom
+
+    T_atom   shift, and go to state 16
+    T_qatom  shift, and go to state 17
+
+    atom   go to state 67
+    qatom  go to state 32
+
+
+state 65
+
+   25 rcompound: T_edgeop $@1 simple $@2 . rcompound
+
+    T_edgeop  shift, and go to state 40
+
+    $default  reduce using rule 26 (rcompound)
+
+    rcompound  go to state 68
+
+
+state 66
+
+   41 attrlist: optattr '[' optattrdefs . ']'
+   42 optattrdefs: optattrdefs . attrdefs
+
+    T_atom   shift, and go to state 16
+    T_qatom  shift, and go to state 17
+    ']'      shift, and go to state 69
+    '@'      shift, and go to state 70
+
+    attrdefs        go to state 71
+    attritem        go to state 72
+    attrassignment  go to state 73
+    attrmacro       go to state 74
+    atom            go to state 75
+    qatom           go to state 32
+
+
+state 67
+
+   31 node: atom ':' atom ':' atom .
+
+    $default  reduce using rule 31 (node)
+
+
+state 68
+
+   25 rcompound: T_edgeop $@1 simple $@2 rcompound .
+
+    $default  reduce using rule 25 (rcompound)
+
+
+state 69
+
+   41 attrlist: optattr '[' optattrdefs ']' .
+
+    $default  reduce using rule 41 (attrlist)
+
+
+state 70
+
+   48 attrmacro: '@' . atom
+
+    T_atom   shift, and go to state 16
+    T_qatom  shift, and go to state 17
+
+    atom   go to state 76
+    qatom  go to state 32
+
+
+state 71
+
+   42 optattrdefs: optattrdefs attrdefs .
+
+    $default  reduce using rule 42 (optattrdefs)
+
+
+state 72
+
+   44 attrdefs: attritem . optseparator
+
+    ';'  shift, and go to state 77
+    ','  shift, and go to state 78
+
+    $default  reduce using rule 57 (optseparator)
+
+    optseparator  go to state 79
+
+
+state 73
+
+   45 attritem: attrassignment .
+
+    $default  reduce using rule 45 (attritem)
+
+
+state 74
+
+   46 attritem: attrmacro .
+
+    $default  reduce using rule 46 (attritem)
+
+
+state 75
+
+   47 attrassignment: atom . '=' atom
+
+    '='  shift, and go to state 48
+
+
+state 76
+
+   48 attrmacro: '@' atom .
+
+    $default  reduce using rule 48 (attrmacro)
+
+
+state 77
+
+   55 optseparator: ';' .
+
+    $default  reduce using rule 55 (optseparator)
+
+
+state 78
+
+   56 optseparator: ',' .
+
+    $default  reduce using rule 56 (optseparator)
+
+
+state 79
+
+   44 attrdefs: attritem optseparator .
+
+    $default  reduce using rule 44 (attrdefs)

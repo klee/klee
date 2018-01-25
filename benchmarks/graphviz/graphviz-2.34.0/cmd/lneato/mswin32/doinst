@@ -1,0 +1,7 @@
+set -x
+
+if [[ $1 == '' || $1 == '-d' ]] then
+    cp -p debug/lneato.exe ../bin
+elif [[ $1 == '-a' ]] then
+    cp -p release/lneato.exe ../bin
+fi

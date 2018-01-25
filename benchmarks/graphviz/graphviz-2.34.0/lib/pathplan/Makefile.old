@@ -1,0 +1,29 @@
+all:	libpathplan.a
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+INCS =	-I. -I..
+
+OBJS =	cvt.o inpoly.o route.o shortest.o shortestpth.o solvers.o \
+  triang.o util.o visibility.o
+
+libpathplan.a: $(OBJS)
+	$(RM) libpathplan.a
+	$(AR) cr libpathplan.a $(OBJS)
+	$(RANLIB) libpathplan.a
+
+install: libpathplan.a
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libpathplan.a $(LIBDIR)
+#	$(SHLIB_LD) -o $(LIBDIR)/libpathplan.so.$(VERSION) $(OBJS)
+	$(MKPATH) $(INCDIR)
+	$(INSTALL) pathgeom.h $(INCDIR)
+	$(MKPATH) $(LIBMANDIR)
+	$(INSTALL) pathplan.3 $(LIBMANDIR)
+
+clean:
+	$(RM) *.o core
+
+distclean: clean
+	$(RM) *.a lib*.so.*

@@ -1,0 +1,48 @@
+digraph G {
+  bgcolor=blue
+
+
+  node [ style=filled]
+	subgraph cluster_1 { fontcolor=white
+		n5 [ shape="box",fillcolor="antiquewhite:aquamarine" ]
+		n4 [ shape="ellipse",fillcolor="bisque4:blue2" ]
+		n3 [ shape="circle",fillcolor="cadetblue1:chocolate1" ]
+		n2 [ shape="diamond",fillcolor="crimson:cyan4" ]
+		n1 [ shape="triangle",fillcolor="deepskyblue2:firebrick" ]
+		n0 [ shape="pentagon",fillcolor="gray24:gray88" ]
+
+		label = "X11 Colors";
+	}
+	subgraph cluster_2 { fontcolor=white
+		n11 [ shape="box",fillcolor="bisque:brown" ]
+		n10 [ shape="ellipse",fillcolor="green:darkorchid" ]
+		n9 [ shape="circle",fillcolor="deepskyblue:gold" ]
+		n8 [ shape="diamond",fillcolor="lightseagreen:orangered" ]
+		n7 [ shape="triangle",fillcolor="turquoise:salmon" ]
+		n6 [ shape="pentagon",fillcolor="snow:black" ]
+
+		label = "SVG Colors";
+	}
+	subgraph cluster_3 { fontcolor=white
+		n17 [ shape="box",fillcolor="/accent3/1:/accent3/3" ]
+		n16 [ shape="ellipse",fillcolor="/accent4/1:/accent4/4" ]
+		n15 [ shape="circle",fillcolor="/accent5/1:/accent5/5" ]
+		n14 [ shape="diamond",fillcolor="/accent6/1:/accent6/6" ]
+		n13 [ shape="triangle",fillcolor="/accent7/1:/accent7/7" ]
+		n12 [ shape="pentagon",fillcolor="/accent8/1:/accent8/8" ]
+
+		label = "Brewer - accent";
+	}
+	subgraph cluster_4 { fontcolor=white
+		n23 [ shape="box",fillcolor="/blues3/1:/blues3/2" ]
+		n22 [ shape="ellipse",fillcolor="/blues4/1:/blues4/3" ]
+		n21 [ shape="circle",fillcolor="/blues5/1:/blues5/4" ]
+		n20 [ shape="diamond",fillcolor="/blues6/1:/blues6/5" ]
+		n19 [ shape="triangle",fillcolor="/blues7/1:/blues7/6" ]
+		n18 [ shape="pentagon",fillcolor="/blues8/1:/blues8/7" ]
+
+		label = "Brewer - blues";
+	}
+
+n3 -> n9 -> n15 -> n21;
+}

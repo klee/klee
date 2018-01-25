@@ -1,0 +1,272 @@
+.TH LIBGRAPH 3 "01 MARCH 1993"
+.SH NAME
+\fBlibgraph\fR \- abstract graph library
+.SH SYNOPSIS
+.ta .75i 1.5i 2.25i 3i 3.75i 4.5i 5.25i 6i
+.PP
+.nf
+\f5
+#include <graphviz/graph.h>
+void        aginit();
+Agraph_t    *agread(FILE*);
+int         agwrite(Agraph_t*, FILE*);
+int         agerrors();
+Agraph_t    *agopen(char *name, int kind);
+void        agclose(Agraph_t *g);
+Agraph_t    *agsubg(Agraph_t *g, char *name);
+Agraph_t    *agfindsubg(Agraph_t *g, char *name);
+Agnode_t    *agmetanode(Agraph_t *g);
+Agraph_t    *agusergraph(Agnode_t *metanode);
+int         agnnodes(Agraph_t *g), agnedges(Agraph_t *g);
+.sp .i1
+int         agcontains(Agraph_t *g, void *obj);
+int         aginsert(Agraph_t *g, void *obj);
+int         agdelete(Agraph_t *g, void *obj);
+.sp .1i
+Agnode_t    *agnode(Agraph_t *g, char *name);
+Agnode_t    *agfindnode(Agraph_t *g, char *name);
+Agnode_t    *agfstnode(Agraph_t *g);
+Agnode_t    *agnxtnode(Agraph_t *g, Agnode_t *n);
+Agnode_t    *aglstnode(Agraph_t *g);
+Agnode_t    *agprvnode(Agraph_t *g, Agnode_t *n);
+.sp .1i
+Agedge_t    *agedge(Agraph_t *g, Agnode_t *tail, Agnode_t *head);
+Agedge_t    *agfindedge(Agraph_t *g, Agnode_t *tail, Agnode_t *head);
+Agedge_t    *agfstedge(Agraph_t *g, Agnode_t *n);
+Agedge_t    *agnxtedge(Agraph_t *g, Agedge_t *e, Agnode_t *n);
+Agedge_t    *agfstin(Agraph_t *g, Agnode_t *n);
+Agedge_t    *agnxtin(Agraph_t *g, Agedge_t *e);
+Agedge_t    *agfstout(Agraph_t *g, Agnode_t *n);
+Agedge_t    *agnxtout(Agraph_t *g, Agedge_t *e);
+.sp .1i
+char        *agget(void *obj, char *name);
+char        *agxget(void *obj, int index);
+void        agset(void *obj, char *name, char *value);
+void        agxset(void *obj, int index, char *value);
+int         agindex(void *obj, char *name);
+.sp .1i
+Agsym_t*    agraphattr(Agraph_t *g,char *name,char *value);
+Agsym_t*    agnodeattr(Agraph_t *g,char *name,char *value);
+Agsym_t*    agedgeattr(Agraph_t *g,char *name,char *value);
+Agsym_t*    agfindattr(void *obj,char *name);
+\fP
+.fi
+.SH DESCRIPTION
+\fIlibgraph\fP maintains directed and undirected attributed graphs
+in memory and reads and writes graph files.  Graphs are composed of
+nodes, edges, and nested subgraphs.   A subgraph may contain any
+nodes and edges of its parents, and may be passed to any
+\fIlibgraph\fP function taking a graph pointer, except the three
+that create new attributes (where a main graph is required).
+
+Attributes are internal or external.
+Internal attributes are fields in the graph, node and edge structs
+defined at compile time.
+These allow efficient representation and direct access to values
+such as marks, weights, and pointers for writing graph algorithms.
+External attributes, on the other hand, are character strings
+(name\(hyvalue pairs) dynamically allocated at runtime and accessed
+through \fIlibgraph\fP calls.  External attributes are used in
+graph file I/O; internal attributes are not.  Conversion between
+internal and external attributes must be explicitly programmed.
+
+The subgraphs in a main graph are represented by an auxiliary directed
+graph (a meta\(hygraph).  Meta\(hynodes correspond to subgraphs, and meta\(hyedges
+signify containment of one subgraph in another. 
+\f5agmetanode\fP and \f5agusergraph\fP map between
+subgraphs and meta\(hynodes.  The nodes and edges of the meta\(hygraph may
+be traversed by the usual \fIlibgraph\fP functions for this purpose.
+
+.SH USE
+1. Define types \f5Agraphinfo_t\fP, \f5Agnodeinfo_t\fP,
+and \f5Agedgeinfo_t\fP (usually in a header file) before
+including \f5<graphviz/graph.h>\fP. 
+
+2. Call \f5aginit()\fP before any other \fIlibgraph\fP functions.
+(This is a macro that calls \f5aginitlib()\fP to define the sizes
+of Agraphinfo_t, Agnodeinfo_t, and Agedgeinfo_t.)
+
+3. Compile with \-lgraph \-lcdt.
+
+Except for the \fBu\fP fields, \fIlibgraph\fP
+data structures must be considered read\(hyonly.
+Corrupting their contents by direct updates can cause
+catastrophic errors.
+
+Warning: the library is not thread-safe.
+
+.SH "GRAPHS"
+.nf
+\f5
+typedef struct Agraph_t {
+    char                 kind;
+    char                *name;
+    Agraph_t             *root;
+    char                **attr;
+    graphdata_t         *univ;
+    Dict_t              *nodes,*inedges,*outedges;
+    proto_t             *proto;
+    Agraphinfo_t         u;
+} Agraph_t;
+
+typedef struct graphdata_t {
+    Dict_t              *node_dict;
+    attrdict_t          *nodeattr, *edgeattr, *globattr;
+} graphdata_t;
+
+typedef struct proto_t {
+    Agnode_t            *n;
+    Agedge_t            *e;
+    proto_t             *prev;
+} proto_t;
+\fP
+.fi
+A graph \fIkind\fP is one of:
+AGRAPH, AGRAPHSTRICT, AGDIGRAPH, or AGDIGRAPHSTRICT.
+There are related macros for testing the properties of a graph:
+AG_IS_DIRECTED(g) and AG_IS_STRICT(g).
+Strict graphs cannot have self\(hyarcs or multi\(hyedges.
+\fBattr\fP is the array of external attribute values.
+\fBuniv\fP points to values shared by all subgraphs of a main graph.
+\fBnodes\fP, \fBinedges\fP, and \fBoutedges\fP are sets maintained
+by \fBcdt(3)\fP.  Normally you don't access these dictionaries
+directly, though the edge dictionaries may be re\(hyordered to support
+programmer\(hydefined ordered edges (see \f5dtreorder\fP in \fIcdt(3)\fP).
+\fBproto\fP is a stack of templates for node and edge initialization.
+The attributes of these nodes and edges are set in the usual way (\f5agget\fP,
+\f5agset\fP, etc.) to set defaults.
+.PP
+\f5agread\fP reads a file and returns a new graph if one
+was successfully parsed, otherwise returns NULL if
+\f5EOF\fP or a syntax error was encountered.
+Errors are reported on stderr and a count is returned from
+\g5agerrors()\fP.
+\f5write_graph\fP prints a graph on a file.
+\f5agopen\fP and \f5agsubg\fP create new empty graph and subgraphs.
+\f5agfindsubg\fP searches for a subgraph by name, returning NULL
+when the search fails.
+
+.SH ALL OBJECTS
+\f5agcontains\fP, \f5aginsert\fP, \f5agdelete\fP are generic functions
+for nodes, edges, and graphs.  \f5gcontains\fP is a predicate that tests
+if an object belongs to the given graph.  \f5aginsert\fP inserts an
+object in a graph and \f5agdelete\fP undoes this operation.
+A node or edge is destroyed (and its storage freed) at the time it
+is deleted from the main graph.  Likewise a subgraph is destroyed
+when it is deleted from its last parent or when its last parent is deleted.
+
+.SH NODES
+.nf
+\f5
+typedef struct Agnode_t {
+    char                *name;
+    Agraph_t            *graph;
+    char                **attr;
+    Agnodeinfo_t        u;
+} Agnode_t;
+\fP
+.fi
+
+\f5agnode\fP attempts to create a node.
+If one with the requested name already exists, the old node 
+is returned unmodified.
+Otherwise a new node is created, with attributed copied from g\->proto\->n.
+\f5agfstnode\fP (\f5agnxtnode\fP) return the first (next) element
+in the node set of a graph, respectively, or NULL.
+\f5aglstnode\fP (\f5agprvnode\fP) return the last (previous) element
+in the node set of a graph, respectively, or NULL.
+
+.SH EDGES
+.nf
+\f5
+typedef struct Agedge_t {
+    Agnode_t            *head,*tail;
+    char                **attr;
+    Agedgeinfo_t        u;
+} Agedge_t;
+\fP
+.fi
+\f5agedge\fP creates a new edge with the attributes of g\->proto\->e
+including its key if not empty.
+\f5agfindedge\fP finds the first (u,v) edge in \f5g\fP.
+\f5agfstedge\fP (\f5agnxtedge\fP) return the first (next) element
+in the edge set of a graph, respectively, or NULL.
+\f5agfstin\fP, \f5agnxtin\fP, \f5agfstout\fP, \f5agnxtout\fP
+refer to in\(hy or out\(hyedge sets.
+The idiomatic usage in a directed graph is:
+.sp
+\f5    for (e = agfstout(g,n); e; e = agnextout(g,e)) your_fun(e);\fP
+.P
+An edge is uniquely identified by its endpoints and its \f5key\fP
+attribute (if there are multiple edges).
+If the \f5key\fP of \f5g\->proto\->e\fP is empty,
+new edges are assigned an internal value.
+Edges also have \f5tailport\fP and \f5headport\fP values.
+These have special syntax in the graph file language but are
+not otherwise interpreted.
+.PP
+.SH ATTRIBUTES
+.nf
+\f5
+typedef struct attrsym_t {
+    char                *name,*value;
+    int                 index;
+    unsigned char       printed;
+} attrsym_t;
+.bp
+typedef struct attrdict_t  {
+    char                *name;
+    Dict_t              *dict;
+    attrsym_t           **list;
+} attrdict_t;
+\fP
+.fi
+\f5agraphattr\fP, \f5agnodeattr\fP, and \f5agedgeattr\fP make new attributes.
+\f5g\fP should be a main graph, or \f5NULL\fP for declarations
+applying to all graphs subsequently read or created.
+\f5agfindattr\fP searches for an existing attribute.
+.PP
+External attributes are accessed by \f5agget\fP and \f5agset\fP
+These take a pointer to any graph, node, or edge, and an attribute name.
+Also, each attribute has an integer index.  For efficiency this index
+may be passed instead of the name, by calling \f5agxget\fP and \f5agxset\fP.
+The \f5printed\fP flag of an attribute may be set to 0 to skip it
+when writing a graph file.
+.PP
+The \f5list\fP in an attribute dictionary is maintained in order of creation
+and is NULL terminated.
+Here is a program fragment to print node attribute names:
+.nf
+    \f5attrsym_t *aptr;
+    for (i = 0; aptr = g\->univ\->nodedict\->list[i]; i++) puts(aptr\->name);\fP
+.fi
+.SH EXAMPLE GRAPH FILES
+.nf
+graph any_name {            /* an undirected graph */
+    a \-\- b;                 /* a simple edge */
+    a \-\- x1 \-\- x2 \-\- x3;    /* a chain of edges */
+    "x3.a!" \-\- a;           /* quotes protect special characters */
+    b \-\- {q r s t};         /* edges that fan out */
+    b [color="red",size=".5,.5"];   /* set various node attributes */
+    node [color=blue];      /* set default attributes */
+    b \-\- c [weight=25];     /* set edge attributes */
+    subgraph sink_nodes {a b c};    /* make a subgraph */
+}
+
+digraph G {
+    size="8.5,11";            /* sets a graph attribute */
+    a \-> b;                 /* makes a directed edge */
+    chip12.pin1 \-> chip28.pin3; /* uses named node "ports" */
+}
+.fi
+
+.SH SEE ALSO
+.BR dot (1),
+.BR neato (1),
+.BR libdict (3)
+.br
+S. C. North and K. P. Vo, "Dictionary and Graph Libraries''
+1993 Winter USENIX Conference Proceedings, pp. 1\(hy11.
+
+.SH AUTHOR
+Stephen North (north@ulysses.att.com), AT&T Bell Laboratories.

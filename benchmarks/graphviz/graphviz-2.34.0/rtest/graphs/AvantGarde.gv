@@ -1,0 +1,37 @@
+digraph{
+	1 -> 2 -> 3 -> 4;
+
+	1[ fontname="AvantGarde-Book" shape=box width=0 height=0 margin="0,0"
+	label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+	<TR><TD>"AvantGarde-Book"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ"</TD></TR>
+	<TR><TD>"abcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\nabcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	</TABLE>>];
+
+	2[ fontname="AvantGarde-BookOblique" shape=box width=0 height=0 margin="0,0"
+	label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+	<TR><TD>"AvantGarde-BookOblique"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ"</TD></TR>
+	<TR><TD>"abcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\nabcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	</TABLE>>];
+
+	3[ fontname="AvantGarde-Demi" shape=box width=0 height=0 margin="0,0"
+	label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+	<TR><TD>"AvantGarde-Demi"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ"</TD></TR>
+	<TR><TD>"abcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\nabcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	</TABLE>>];
+
+	4[ fontname="AvantGarde-DemiOblique" shape=box width=0 height=0 margin="0,0"
+	label=<<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0">
+	<TR><TD>"AvantGarde-DemiOblique"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ"</TD></TR>
+	<TR><TD>"abcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	<TR><TD>"ABCDEFGHIJLKLMNOPQRSTUVWXYZ\nabcdefghijlklmnopqrstuvwxyz"</TD></TR>
+	</TABLE>>];
+
+
+}

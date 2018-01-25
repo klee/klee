@@ -1,0 +1,27 @@
+digraph TopLevel {
+    bgcolor = lightcyan1
+    fontname = Arial
+    label = "test.rb"
+    fontsize = 8
+    node [
+        fontname = Arial,
+        color = black,
+        fontsize = 8
+    ]
+
+    subgraph cluster_1 {
+        bgcolor = palegreen1
+        fontname = Arial
+        color = blue
+        label = "ModuleName"
+        ClassName [
+            style = filled,
+            URL = "classes/ModuleName/ClassName.html",
+            fontcolor = black,
+            color = palegoldenrod,
+            label = "ClassName"
+        ]
+
+    }
+
+}

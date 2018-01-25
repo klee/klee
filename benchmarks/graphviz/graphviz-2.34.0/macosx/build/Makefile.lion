@@ -1,0 +1,82 @@
+# tools
+
+MAKE=make
+PACKAGEMAKER=/Developer/Applications/Utilities/PackageMaker.app/Contents/MacOS/PackageMaker
+XCODEBUILD=xcodebuild
+PMSURVEY=$(CURDIR)/pmsurvey
+
+# prefix
+
+PREFIX=/Users/gviz/FIX/Lion.x86_64
+
+# base
+
+GV_DIR=../..
+DOT=dot
+
+ARCH = 
+
+#
+# graphviz
+#
+
+graphviz.pkg: usr/local/bin/$(DOT) graphviz.pmdoc/02graphviz-contents.xml postinstall
+	@echo
+	@echo PACKAGING GRAPHVIZ...
+	@echo
+	"$(PACKAGEMAKER)" --verbose --doc graphviz.pmdoc --out $@
+
+graphviz.pmdoc/02graphviz-contents.xml: Release/Graphviz.app
+	@echo
+	@echo SURVEYING GRAPHVIZ...
+	@echo
+	"$(PMSURVEY)" "$(CURDIR)/Release/Graphviz.app" >$@ 
+
+usr/local/bin/$(DOT): $(GV_DIR)/cmd/dot/.libs/$(DOT)
+	@echo
+	@echo INSTALLING GRAPHVIZ...
+	@echo
+	$(MAKE) DESTDIR=$(CURDIR) -C $(GV_DIR) install-strip
+	rm -rf usr/local/lib/*.la
+	rm -rf usr/local/lib/graphviz/*.la
+	rm -rf usr/local/lib/graphviz/tcl/libtcldot_builtin.*
+	cp $(PREFIX)/bin/fc-cache usr/local/bin/gv-fc-cache
+	
+Release/Graphviz.app: ../*.m ../*.h $(GV_DIR)/cmd/dot/.libs/$(DOT)
+	@echo
+	@echo BUILDING GRAPHVIZ GUI...
+	@echo
+	"$(XCODEBUILD)" -project ../graphviz.xcodeproj -configuration Release
+
+postinstall:
+	echo "#!/bin/sh" >$@
+	echo >>$@
+	echo 'if [[ `uname -m` = i386 ]]; then rm /usr/local/lib/graphviz/*pango*; fi' >>$@
+	echo "/usr/local/bin/dot -c" >>$@
+	# make -n -C ../../tclpkg install-data-hook >>$@ 
+	echo "arch -arch i386 /usr/local/bin/gv-fc-cache" >>$@
+	echo 'if test `sysctl -n hw.cpu64bit_capable` = 1; then arch -arch x86_64 /usr/local/bin/gv-fc-cache; fi' >>$@
+
+$(GV_DIR)/cmd/dot/.libs/$(DOT): $(GV_DIR)/Makefile
+	@echo
+	@echo MAKING GRAPHVIZ...
+	@echo
+	if [[ -e $@ ]]; then $(MAKE) -C $(GV_DIR) clean; fi
+	$(MAKE) -C $(GV_DIR)/tclpkg/tkstubs
+	$(MAKE) -C $(GV_DIR)/tclpkg/tclstubs
+	$(MAKE) -C $(GV_DIR)/tclpkg/tkspline CFLAGS="-O2 $(ARCH) -I$(PREFIX)/include" LDFLAGS="$(ARCH) -L$(PREFIX)/lib -Wl,-dead_strip"
+	$(MAKE) -C $(GV_DIR)
+	
+$(GV_DIR)/Makefile: $(GV_DIR)/configure
+	@echo
+	@echo CONFIGURING GRAPHVIZ...
+	@echo
+	cd $(GV_DIR) && ./configure --enable-swig=no --disable-dependency-tracking --with-ipsepcola --with-quartz --with-smyrna=no --disable-perl --with-extra-includedir="$(PREFIX)/include" --with-extra-libdir="$(PREFIX)/lib" CFLAGS="-O2 $(ARCH)" CXXFLAGS="-O2 $(ARCH)" OBJCFLAGS="-O2 $(ARCH)" LDFLAGS="$(ARCH) -Wl,-dead_strip" GDLIB_CONFIG="$(PREFIX)/bin/gdlib-config" PKG_CONFIG="$(PREFIX)/bin/pkg-config" PKG_CONFIG_PATH="$(PREFIX)/lib/pkgconfig:/usr/X11/lib/pkgconfig" LIBS="-framework CoreFoundation -framework CoreServices -framework ApplicationServices -fexceptions"
+
+
+
+clean:
+	$(MAKE) -C $(GV_DIR) clean
+
+distclean:
+	$(MAKE) -C $(GV_DIR) distclean

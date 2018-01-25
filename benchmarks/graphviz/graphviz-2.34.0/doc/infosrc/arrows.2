@@ -1,0 +1,78 @@
+</TABLE>
+<P>
+The primitive shapes are:
+<CENTER>
+<TABLE>
+  <TR>
+    <TD>"box"<TD><IMG SRC="a_box.gif">
+    <TD>"crow"<TD><IMG SRC="a_crow.gif">
+    <TD>"curve"<TD><IMG SRC="a_curve.gif">
+    <TD>"diamond"<TD><IMG SRC="a_diamond.gif">
+    <TD>"dot"<TD><IMG SRC="a_dot.gif">
+  </TR>
+  <TR>
+  </TR>
+  <TR>
+    <TD>"inv"<TD><IMG SRC="a_inv.gif">
+    <TD>"none"<TD><IMG SRC="a_none.gif">
+    <TD>"normal"<TD><IMG SRC="a_normal.gif">
+    <TD>"tee"<TD><IMG SRC="a_tee.gif">
+    <TD>"vee"<TD><IMG SRC="a_open.gif">
+  </TR>
+</TABLE>
+</CENTER>
+<P>
+As for the modifiers:
+<DL>
+<DT>'l'
+  <DD> Clip the shape, leaving only the part to the left of the edge.
+<DT>'r'
+  <DD> Clip the shape, leaving only the part to the right of the edge.
+<DT>'o'
+  <DD> Use an open (non-filled) version of the shape.
+</DL>
+Left and right are defined as those directions determined by looking
+from the edge towards the point where the arrow "touches" the node.
+<P>
+As an example, the arrow shape <TT>lteeoldiamond</TT> is parsed as
+<TT>'l' 'tee' 'o' 'l' 'diamond'</TT> and corresponds to the shape
+<CENTER>
+<IMG SRC="a_lteeoldiamond.gif">
+</CENTER>
+Note that the first arrow shape specified occurs closest to the node.
+Subsequent arrow shapes, if specified, occur further from the node.
+Also, a shape of <tt>none</tt> uses space, so, for example, the arrowhead <tt>nonenormal</tt>
+is not the same as <tt>normal</tt>.
+<P>
+Not all syntactically legal combinations of modifiers are meaningful
+or semantically valid.
+For example, none of the modifiers make any sense with <TT>none</TT>.
+The following table indicates which modifiers are allowed with which shapes.
+<P>
+<CENTER>
+<TABLE BORDER=2>
+<TR ALIGN=CENTER>
+ <TH>Modifier</TH>
+ <TH>box
+ <TH>crow
+ <TH>diamond
+ <TH>dot
+ <TH>inv
+ <TH>none
+ <TH>normal
+ <TH>tee
+ <TH>vee
+</TR>
+<TR ALIGN=CENTER><TD>'l'/'r'<TD>X<TD>X<TD>X<TD>&nbsp;<TD>X<TD>&nbsp;<TD>X<TD>X<TD>X</TR>
+<TR ALIGN=CENTER><TD>'o'    <TD>X<TD>&nbsp;<TD>X<TD>X<TD>X<TD>&nbsp;<TD>X<TD>&nbsp;<TD>&nbsp;</TR>
+</TABLE>
+</CENTER>
+<P>
+This yields 36 different arrow shapes. The optional second, third, fourth shapes
+can independently be any of the 36, but since <TT>nonenone</TT> 
+is redundant, there are 35**4 + 35**3 + 35**2 + 35 + 1 = 1,544,761 different combinations.
+<P>
+The following display contains the 36 combinations possible with a single
+arrow shape. The node attached to the arrow is not drawn but would appear
+on the right side of the edge.
+<P>

@@ -1,0 +1,4 @@
+usr/lib/graphviz/perl/gv.pm         usr/lib/perl5
+usr/lib/graphviz/perl/gv.so         usr/lib/perl5/auto/gv
+usr/lib/graphviz/perl/libgv_perl.so usr/lib/perl5/auto/gv
+usr/share/man/man3/gv.3perl

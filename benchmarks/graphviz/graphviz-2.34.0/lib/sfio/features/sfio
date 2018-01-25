@@ -1,0 +1,495 @@
+##################################################################
+# This file defines probes for local features that sfio requires.
+# Such probes are interpreted by the "iffe" language interpreter.
+# Results are stored in the FEATURE directory.
+# Written by Kiem-Phong Vo (06/27/92).
+# Converted to sfio v10/01/94 by Giampiero Sierra (06/08/95).
+##################################################################
+
+hdr time
+sys time
+
+hdr string
+hdr math
+lib qfrexp
+lib qldexp
+
+hdr unistd
+hdr values
+hdr floatingpoint
+hdr float
+hdr limits
+lib atexit
+lib onexit
+
+lib ftruncate
+
+lib lseek64
+lib stat64
+lib mmap64
+typ off64_t
+typ struct_stat64 compile{
+	#include	<sys/types.h>
+	#include	<sys/stat.h>
+	main()
+	{	struct stat64 statb;
+	}
+}end
+
+exit    cleanup note{ stuck with standard _cleanup }end execute{
+        #include <stdio.h>
+        _BEGIN_EXTERNS_
+        extern void exit _ARG_((int));
+        extern void _exit _ARG_((int));
+        extern void _cleanup();
+        void _cleanup() { _exit(0); }
+        _END_EXTERNS_
+        main() { printf("cleanup\n"); exit(1); }
+}end
+
+lib bcopy
+lib bzero
+lib memcpy
+lib memset
+lib memalign
+
+lib memchr note{ see if memchr is fast }end execute{
+	#include	<sys/types.h>
+	#include	<sys/times.h>
+	#include	<stdlib.h>
+
+	main()
+	{	struct tms	stm1, etm1, stm2, etm2;
+		register int	i, p;
+		register char	*s, *ends;
+		long		t1, t2;
+		char		buf[128];
+	
+		for(p = 0; p < 100; ++p)
+			buf[p] = '0' + (p%10);
+		buf[p++] = '\n';
+		buf[p] = 0;
+	
+		times(&stm1);
+		for(i = 0; i < 100000; ++i)
+			s = memchr(buf,'\n',p);
+		times(&etm1);
+	
+		times(&stm2);
+		for(i = 0; i < 100000; ++i)
+		{	ends = (s = buf) + p;
+			while(*s != '\n')
+				if((s += 1) == ends)
+					break;
+		}
+		times(&etm2);
+	
+		t1 = (etm1.tms_utime - stm1.tms_utime) +
+		     (etm1.tms_stime - stm1.tms_stime);
+		t2 = (etm2.tms_utime - stm2.tms_utime) +
+		     (etm2.tms_stime - stm2.tms_stime);
+	
+		return t1 < t2 ? 0 : 1;
+	}
+}end
+
+lib memccpy note{ see if memccpy is fast }end execute{
+	#include	<sys/types.h>
+	#include	<sys/times.h>
+	#include	<stdlib.h>
+
+	main()
+	{	struct tms	stm1, etm1, stm2, etm2;
+		register int	i, p;
+		register char	*s1, *s2;
+		long		t1, t2;
+		char		buf1[128], buf2[128];
+	
+		for(i = 0; i < 100; ++i)
+			buf1[i] = '0' + (i%10);
+		buf1[i++] = '\n';
+		buf1[i] = 0;
+	
+		times(&stm1);
+		for(i = 0; i < 100000; ++i)
+		{	p = 128;
+			memccpy(buf2,buf1,'\n',p);
+		}
+		times(&etm1);
+	
+		times(&stm2);
+		for(i = 0; i < 100000; ++i)
+		{	s1 = buf1; s2 = buf2; p = 128;
+			while((*s2++ = *s1++) != '\n' && --p > 0)
+				;
+		}
+		times(&etm2);
+	
+		t1 = (etm1.tms_utime - stm1.tms_utime) +
+		     (etm1.tms_stime - stm1.tms_stime);
+		t2 = (etm2.tms_utime - stm2.tms_utime) +
+		     (etm2.tms_stime - stm2.tms_stime);
+	
+		return t1 < t2 ? 0 : 1;
+	}
+}end
+
+sys stat note{ stat() in default lib(s) }end link{
+	#if _STD_
+	#include	<stddef.h>
+	#else
+	#include	<sys/types.h>
+	#endif
+	#include	<time.h>
+	#include	<sys/stat.h>
+	main()
+	{	struct stat	st;
+		fstat(0,&st);
+	}
+}end
+
+hdr stat note{ stat() in default lib(s) }end link{
+	#if _STD_
+	#include	<stddef.h>
+	#else
+	#include	<sys/types.h>
+	#endif
+	#include	<time.h>
+	#include	<stat.h>
+	main()
+	{	struct stat	st;
+		fstat(0,&st);
+	}
+}end
+
+#############################################################
+# See if  memory mapping is available and fast enough to use
+#############################################################
+sys mman
+
+tst	output{
+	#include	<sys/types.h>
+	#include	<sys/mman.h>
+	#include	<sys/times.h>
+	
+	_BEGIN_EXTERNS_
+	int creat _ARG_((char*, int));
+	int open _ARG_((char*, int));
+	int unlink _ARG_((char*));
+	int read _ARG_((int, char*, int));
+	_END_EXTERNS_
+	
+	#define MAPSIZE (64*1024)
+	#define BUFSIZE	(MAPSIZE/8)
+	#define WRITE   (64)
+	#define RUN	(64)
+	
+	#define Failed(file)	(unlink(file),1)
+	
+	#if _STD_
+	main(int argc, char** argv)
+	#else
+	main(argc,argv)
+	int     argc;
+	char**  argv;
+	#endif
+	{
+		caddr_t		mm;
+		char		*t, *f;
+		int		i, fd, k, run;
+		char		file[1024], buf[MAPSIZE];
+		struct tms	stm, etm;
+		clock_t		rdtm, mmtm;
+	
+		/* create data file */
+		f = argv[0]; t = file;
+		while (*t = *f++)
+			t++;
+		*t++ = '.'; *t++ = 'D'; *t = 0;
+		if ((fd = creat(file,0666)) < 0)
+			return 1;
+	
+		for (i = 0; i < sizeof(buf); ++i)
+			buf[i] = '0' + (i%10);
+		for (i = 0; i < WRITE; ++i)
+			if (write(fd,buf,sizeof(buf)) != sizeof(buf))
+				return Failed(file);
+		close(fd);
+	
+		/* read time */
+		times(&stm);
+		for(run = 0; run < RUN; ++run)
+		{	if((fd = open(file, 0)) < 0)
+				return Failed(file);
+			for (i = 0; i < WRITE; ++i)
+			{	for(k = 0; k < MAPSIZE; k += BUFSIZE)
+					if (read(fd,buf,BUFSIZE) != BUFSIZE)
+						return Failed(file);
+			}
+			close(fd);
+		}
+		times(&etm);
+		rdtm = (etm.tms_utime-stm.tms_utime) + (etm.tms_stime-stm.tms_stime);
+	
+		/* mmap time */
+		times(&stm);
+		for(run = 0; run < RUN; ++run)
+		{	if ((fd = open(file,0)) < 0)
+				return Failed(file);
+			for(i = 0, mm = (caddr_t)0; i < WRITE; ++i)
+			{	if(mm)
+					munmap(mm, MAPSIZE);
+				mm = (caddr_t)mmap((caddr_t)0, MAPSIZE,
+						   (PROT_READ|PROT_WRITE),
+						   MAP_PRIVATE, fd, i*MAPSIZE );
+				if(mm == (caddr_t)(-1) || mm == (caddr_t)0)
+					return Failed(file);
+	
+				/* the memcpy is < BUFSIZE to simulate the
+				   fact that functions like sfreserve/sfgetr do
+				   not do buffer copying.
+				*/
+				t = (char*)mm;
+				for(k = 0; k < MAPSIZE; k += BUFSIZE, t += BUFSIZE)
+					memcpy(buf,t,(3*BUFSIZE)/4);
+			}
+			close(fd);
+		}
+		times(&etm);
+		mmtm = (etm.tms_utime-stm.tms_utime) + (etm.tms_stime-stm.tms_stime);
+
+		unlink(file);
+	
+		if(4*mmtm <= 3*rdtm)		/* mmap is great! */
+			printf("#define _mmap_worthy	2	\n");
+		else if(4*mmtm <= 5*rdtm)	/* mmap is good	*/
+			printf("#define _mmap_worthy	1	\n");
+	
+		return 0;
+	}
+}end
+
+##################################################
+# vfork and any associated header files
+##################################################
+
+hdr vfork
+sys vfork
+lib vfork
+
+##################################################
+# file control checks
+##################################################
+
+hdr filio
+sys filio
+sys ioctl
+lib remove
+lib unlink
+lib waitpid
+lib getpagesize
+
+tmp rmfail note{ file not removable if still opened }end execute{
+	#include	<sys/time.h>
+	_BEGIN_EXTERNS_
+	extern int creat _ARG_((char*, int));
+	extern int unlink _ARG_((char*));
+	extern int write _ARG_((int, char*, int));
+	_END_EXTERNS_
+	main()
+	{	int		fw, fr;
+		char		file[128];
+		sprintf(file,"/tmp/iffe%lu",(unsigned long)time(0));
+		if((fw = creat(file,0666)) < 0)
+			return 0;
+		if((fr = open(file,0)) < 0 )
+			return 0;
+		if(unlink(file) < 0)
+			return 0;
+		if(write(fw,"0123456789",11) != 11 )
+			return 0;
+		if(read(fr,file,11) != 11)
+			return 0;
+		if(strcmp(file,"0123456789") != 0)
+			return 0;
+		return 1;
+	}
+}end
+
+more void_int note{ voidptr is larger than int }end execute{
+	main() {
+	return sizeof(char*) > sizeof(int) ? 0 : 1;
+	}
+}end
+
+more long_int note{ long is larger than int }end execute{
+	main() {
+	return sizeof(long) > sizeof(int) ? 0 : 1;
+	}
+}end
+
+################################################################
+# See if there is a preferred block size for a file system
+################################################################
+
+stat blksize note{ st_blksize is a field in struct stat }end compile{
+	#include	<sys/types.h>
+	#include	<sys/stat.h>
+	main () {
+		struct stat sb;
+		sb.st_blksize = 0;
+		return 0;
+	}
+}end
+
+##################################################
+# See if certain prototypes are required
+##################################################
+
+proto open note{ open() has a vararg prototype }end compile{
+	#include	<sys/types.h>
+	#include	<errno.h>
+	#include	<ctype.h>
+	#include	<fcntl.h>
+
+	_BEGIN_EXTERNS_
+	extern int open _ARG_((const char*,int,...));
+	_END_EXTERNS_
+	main()
+	{
+		open("file",0);
+		open("file",0,1);
+	}
+}end
+
+proto bcopy note{ bcopy() has prototype }end compile{
+	#include	<string.h>
+	main()
+	{	char	buf[128];
+		bcopy(buf, "abc", 3);
+	}
+}end
+
+proto bzero note{ bzero() has prototype }end compile{
+	#include	<string.h>
+	main()
+	{	char	buf[128];
+		bzero(buf, 128);
+	}
+}end
+
+lib     poll_fd_1 note{ fd is first arg to poll() }end execute{
+        #include <poll.h>
+        _BEGIN_EXTERNS_
+        extern int      pipe _ARG_((int*));
+        _END_EXTERNS_
+        main()
+        {       int             rw[2];
+                struct pollfd   fd;
+                if (pipe(rw) < 0) return 1;
+                fd.fd = rw[0];
+                fd.events = POLLIN;
+                fd.revents = 0;
+                return poll(&fd, 1, 0) < 0;
+        }
+}end
+
+lib     poll_fd_2 note{ fd is second arg to poll() }end execute{
+        #include <poll.h>
+        _BEGIN_EXTERNS_
+        extern int      pipe _ARG_((int*));
+        _END_EXTERNS_
+        main()
+        {       int             rw[2];
+                struct pollfd   fd;
+                if (pipe(rw) < 0) return 1;
+                fd.fd = rw[0];
+                fd.events = POLLIN;
+                fd.revents = 0;
+                return poll(1, &fd, 0) < 0;
+        }
+}end
+
+lib	select note{ select() has standard 5 arg interface }end link{
+	#include <sys/types.h>
+        #include <sys/time.h>
+        #include <sys/socket.h>
+        main()
+        {       struct timeval  tmb;
+                fd_set          rd;
+                FD_ZERO(&rd);
+                FD_SET(0,&rd);
+                tmb.tv_sec = 0;
+                tmb.tv_usec = 0;
+                select(1,&rd,(fd_set*)0,(fd_set*)0,&tmb);
+                return 0;
+        }
+}end
+
+################################################################
+## See if we can peek ahead in unseekable devices
+################################################################
+
+stream	peek note{ ioctl(I_PEEK) works }end link{
+        #include <sys/types.h>
+        #include <stropts.h>
+        main()
+        {       struct strpeek  pbuf;
+                pbuf.flags = 0;
+                pbuf.ctlbuf.maxlen = pbuf.databuf.maxlen =
+                pbuf.ctlbuf.len = pbuf.databuf.len = 0;
+                pbuf.ctlbuf.buf = pbuf.databuf.buf = 0;
+                ioctl(0,I_PEEK,&pbuf);
+                return 0;
+        }
+}end
+
+socket	peek note{ recv(MSG_PEEK) works }end link{
+        #include <sys/types.h>
+        #include <sys/socket.h>
+        main()
+        {       char    buf[128];
+                recv(0,buf,sizeof(buf),MSG_PEEK);
+                return 0;
+        }
+}end
+
+
+################################################################
+## See if register layout is ok for vax string operations
+################################################################
+
+vax asm note{ register layout ok for vax string operations }end execute{
+        main()
+        {
+        #ifndef vax
+                return absurd = -1;
+        #else
+                register int    r11, r10, r9, r8, r7, r6;
+                r11 = r10 = r9 = r8 = r7 = r6 = -1;
+                asm("clrw       r11");
+                asm("clrw       r10");
+                asm("clrw       r9");
+                asm("clrw       r8");
+                asm("clrw       r7");
+                asm("clrw       r6");
+                if(sizeof(int) != sizeof(char*) || r11 || r10 || r9 || r8 || r7 || r6 )
+                        return -1;
+                return 0;
+        #endif
+        }
+}end
+
+lib strtod note{ native strtod exists }end
+
+################################################################
+## See if there is "locale" stuff for conditioning printf/scanf
+################################################################
+
+lib locale note{ Check for localeconv }end compile{
+	#include	<locale.h>
+	main()
+	{	struct lconv* lv = localeconv();
+		return 0;
+	}
+}end

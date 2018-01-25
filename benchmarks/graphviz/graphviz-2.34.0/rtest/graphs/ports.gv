@@ -1,0 +1,26 @@
+digraph G {
+  node [shape=box]
+  TOP -> {rank=same a b c d e f } -> BOTTOM
+  b [shape=record, label="<left>left |{<up>up | <middle>middle | <down>down } | right"]
+  d [shape=none 
+    label=<<TABLE BORDER="0" CELLPADDING="0" CELLSPACING="0" CELLBORDER="1">
+    <TR>
+    <TD PORT="htmlleft">LEFT</TD>
+    <TD>MIDDLE</TD>
+    <TD BORDER="0">
+      <TABLE PORT="inner" BORDER="0" CELLPADDING="0" CELLSPACING="0" CELLBORDER="1">
+        <TR><TD>RIGHTTOP</TD></TR>
+        <TR><TD>RIGHTBOTTOM</TD></TR>
+      </TABLE>
+    </TD>
+    </TR>
+  </TABLE>> ]
+  A:s -> a:n
+  a:w ->f:e
+  f:n -> d:htmlleft
+  a:ne -> d:inner:n
+  a:s ->b:down:se
+  a:w -> B:e
+  D -> b:left
+  C -> b:middle:e
+}

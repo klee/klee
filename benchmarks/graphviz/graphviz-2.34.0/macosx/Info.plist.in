@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<!-- support older .dot extension -->
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>dot</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>GraphDot.icns</string>
+			<key>CFBundleTypeName</key>
+			<string>GVDocumentTypeGraph</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>NSDocumentClass</key>
+			<string>GVDocument</string>
+		</dict>
+		<!-- support newer .gv extension -->
+		<dict>
+			<key>CFBundleTypeIconFile</key>
+			<string>GraphGv.icns</string>
+			<key>CFBundleTypeName</key>
+			<string>GVDocumentTypeGraph</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.att.graphviz.graph</string>
+			</array>
+			<key>NSDocumentClass</key>
+			<string>GVDocument</string>
+		</dict>
+	</array>
+	<key>CFBundleExecutable</key>
+	<string>${EXECUTABLE_NAME}</string>
+	<key>CFBundleIconFile</key>
+	<string>Graphviz</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.att.graphviz</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>${PRODUCT_NAME}</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleSignature</key>
+	<string>GRVZ</string>
+	<!-- use configure-generated version numbers -->
+	<key>CFBundleShortVersionString</key>
+	<string>@GRAPHVIZ_VERSION_MAJOR@.@GRAPHVIZ_VERSION_MINOR@</string>
+	<key>CFBundleVersion</key>
+	<string>@VERSION@</string>
+	<key>CFBundleHelpBookFolder</key>
+	<string>graphviz.help</string>
+	<key>CFBundleHelpBookName</key>
+	<string>Graphviz Help</string>
+	<key>NSMainNibFile</key>
+	<string>MainMenu</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeDescription</key>
+			<string>GVDocumentTypeGraph</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.text</string>
+			</array>
+			<key>UTTypeIconFile</key>
+			<string>GraphGv.icns</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.att.graphviz.graph</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>gv</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>text/vnd.graphviz</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+</dict>
+</plist>

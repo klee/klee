@@ -1,0 +1,263 @@
+.TH LIBXDOT 3 "31 JULY 2009"
+.SH NAME
+\fBlibxdot\fR \- parsing and deparsing of xdot operations
+.SH SYNOPSIS
+.ta .75i 1.5i 2.25i 3i 3.75i 4.5i 5.25i 6i
+.PP
+.nf
+\f5
+#include <graphviz/xdot.h>
+
+typedef enum {
+    xd_none,
+    xd_linear,
+    xd_radial
+} xdot_grad_type;
+
+typedef struct {
+    float frac;
+    char* color;
+} xdot_color_stop;
+
+typedef struct {
+    double x0, y0;
+    double x1, y1;
+    int n_stops;
+    xdot_color_stop* stops;
+} xdot_linear_grad;
+
+typedef struct {
+    double x0, y0, r0;
+    double x1, y1, r1;
+    int n_stops;
+    xdot_color_stop* stops;
+} xdot_radial_grad;
+
+typedef struct {
+    xdot_grad_type type;
+    union {
+	char* clr;
+	xdot_linear_grad ling;
+	xdot_radial_grad ring;
+    } u;
+} xdot_color;
+
+typedef enum {
+    xd_left, xd_center, xd_right
+} xdot_align;
+
+typedef struct {
+    double x, y, z;
+} xdot_point;
+
+typedef struct {
+    double x, y, w, h;
+} xdot_rect;
+
+typedef struct {
+    int cnt;
+    xdot_point* pts;
+} xdot_polyline;
+
+typedef struct {
+  double x, y;
+  xdot_align align;
+  double width;
+  char* text;
+} xdot_text;
+
+typedef struct {
+    xdot_rect pos;
+    char* name;
+} xdot_image;
+
+typedef struct {
+    double size;
+    char* name;
+} xdot_font;
+
+typedef enum {
+    xd_filled_ellipse, xd_unfilled_ellipse,
+    xd_filled_polygon, xd_unfilled_polygon,
+    xd_filled_bezier,  xd_unfilled_bezier,
+    xd_polyline,       xd_text,
+    xd_fill_color,     xd_pen_color, xd_font, xd_style, xd_image,
+    xd_grad_fill_color,     xd_grad_pen_color
+} xdot_kind; 
+    
+typedef enum {
+    xop_ellipse,
+    xop_polygon,
+    xop_bezier,
+    xop_polyline,       xop_text,
+    xop_fill_color,     xop_pen_color, xop_font, xop_style, xop_image,
+    xop_grad_fill_color,     xop_grad_pen_color
+} xop_kind; 
+    
+typedef struct _xdot_op xdot_op;
+typedef void (*drawfunc_t)(xdot_op*, int);
+typedef void (*freefunc_t)(xdot_op*);
+
+struct _xdot_op {
+    xdot_kind kind;
+    union {
+      xdot_rect ellipse;       /* xd_filled_ellipse, xd_unfilled_ellipse */
+      xdot_polyline polygon;   /* xd_filled_polygon, xd_unfilled_polygon */
+      xdot_polyline polyline;  /* xd_polyline */
+      xdot_polyline bezier;    /* xd_filled_bezier,  xd_unfilled_bezier */
+      xdot_text text;          /* xd_text */
+      xdot_image image;        /* xd_image */
+      char* color;             /* xd_fill_color, xd_pen_color */
+      xdot_color grad_color;   /* xd_grad_fill_color, xd_grad_pen_color */
+      xdot_font font;          /* xd_font */
+      char* style;             /* xd_style */
+    } u;
+    drawfunc_t drawfunc;
+};
+
+#define XDOT_PARSE_ERROR 1
+
+typedef struct {
+    int cnt;
+    int sz;
+    xdot_op* ops;
+    freefunc_t freefunc;
+    int flags;
+} xdot;
+
+xdot* parseXDotF (char*, drawfunc_t opfns[], int sz);
+xdot* parseXDot (char*);
+char* sprintXDot (xdot*);
+void fprintXDot (FILE*, xdot*);
+void freeXDot (xdot*);
+
+xdot_grad_type colorType (char*);
+xdot_color* parseXDotColor (char*);
+void freeXDotColor (xdot_color*);
+\fP
+.fi
+.SH DESCRIPTION
+\fIlibxdot\fP provides support for parsing and deparsing
+graphical operations specificed by the \fIxdot\fP language.
+.SS "Types"
+.PP
+.SS "  xdot"
+This encapsulates a series of \fIcnt\fP xdot operations, stored
+in the array pointed to by \fIops\fP. The \fIsz\fP indicates
+the size of each item stored in \fIops\fP. If the user sets
+the \fIfreefunc\fP field, this function will be called on each
+item in \fIops\fP during \fIfreeXDot\fP before the library does
+its own clean up of the item. This allows the user to free any
+resources stored in the item by using an expansion of the \fIxdot_op\fP
+structure. 
+.PP
+.SS "  xdot_op"
+A value of this type represents one xdot operation. The operation
+is specified by the \fIkind\fP field. The corresponding data is
+stored in the union \fIu\fP, with the subfield associated with
+a given \fIkind\fP indicated by the comments. 
+.PP
+The \fIdrawfunc\fP field allows the user to attach a drawing-specific
+function to the operation, providing an object-based interface. These
+functions can be automatically attached during parsing by providing a
+non-NULL second argument to \fBparseXDotF\fP.
+.PP
+.SS "  xop_kind"
+This type provides an enumeration of the allowed xdot operations.
+See 
+.br
+    http://www.graphviz.org/doc/info/output.html#d:xdot 
+.br
+for the specific semantics associated with each operation.
+.PP
+.SS "  xdot_rect"
+This represents a rectangle. For ellipses,
+the \fIx\fP and \fIx\fP fields represent the center of the rectangle,
+and \fIw\fP and \fIh\fP give the half-width and half-height, respectively.
+For images, (\fIx\fP,\fIy\fP) gives the lower left corner of the
+rectangle, and \fIw\fP and \fIh\fP give the width and height, respectively.
+.PP
+.SS "  xdot_polyline"
+This type encapsulates a series of \fIcnt\fP points.
+.PP
+.SS "  xdot_text"
+A value of this type corresponds to printing the string \fItext\fP
+using the baseline point (\fIx\fP,\fIy\fP).
+The \fIwidth\fP field gives an approximation of how wide the printed
+string will be using the current font and font size.
+The \fIalign\fP field indicates how the text should be horizontally 
+aligned with the point (\fIx\fP,\fIy\fP).
+.PP
+.SS "  xdot_image"
+This denotes the insertion of an image. The image source is
+given by \fIname\fP. The images is to be placed into the rectangle
+\fIpos\fP.
+.PP
+.SS "  xdot_font"
+The fields give the name and size, in points, of a font.
+.PP
+.SS "  xdot_align"
+This enumeration type corresponds to the xdot alignment values
+-1, 0 and 1 used with the text operator, or '\\l', '\\n' and '\\r'
+used in dot text.
+.SS "Functions"
+.PP
+.SS "  xdot* parseXDotF (char *str, drawfunc_t* opfns, int sz)"
+Parses the string \fIstr\fP as a sequence of xdot operations
+and returns a pointer to the resulting \fIxdot\fP structure.
+The function parses as many xdot operations as it can. If some
+unknown or incorrect input was encountered in \fIstr\fP,  
+the \fIops\fP and \fIcnt\fP fields will reflect the operations
+parsed before the error, and
+the \fIXDOT_PARSE_ERROR\fP bit will be set in the \fIflags\fP field.
+The function returns NULL if it cannot parse anything.
+.PP
+If \fIsz\fP is non-zero, it is assumed to be the size of some
+structure type containing \fIxdot_op\fP as a prefix. In this case,
+the elements in the array pointed to by \fIops\fP will each have
+size \fIsz\fP.
+.PP
+If \fIopfns\fP is non-zero, it is taken to be any array of functions
+indexed by \fIxop_kind\fP. During parsing, the \fIdrawfunc\fP member
+of \fIxop_op\fP will be set to the corresponding function in \fIopfns\fP.
+.PP
+.SS "  xdot* parseXDot (char *str)"
+This is equivalent to \fIparseXDotF(str, 0, 0)\fP .
+.PP
+.SS "  void freeXDot (xdot* xp)"
+This frees the resources associated with the argument.
+If \fIxp\fP is NULL, nothing happens.
+.PP
+.SS "  extern char* sprintXDot (xdot* xp)"
+.SS "  extern void fprintXDot (FILE* fp, xdot* xp)"
+These two functions deparse the argument xdot structure, producing
+a string representation. \fIfprintXDot\fP writes the output onto
+the open stream \fIfp\fP; \fIsprintXDot\fP returns a heap-allocated
+string.
+.PP
+The color string with fill and draw operations can encode linear
+and radial gradients. These values are parsed automatically by
+\fBparseXDotF\fP or \fBparseXDot\fP, 
+with \fIxdot_op\fP having kind \fIxd_grad_pen_color\fP or
+\fIxd_grad_fill_color\fP and the value is stored in \fIgrad_color\fP.
+.PP
+For an application that handles its own parsing of xdot, the library
+provides three helper functions.
+.PP
+.SS "  xdot_grad_type colorTypeXDot (char *str)"
+returns the color type described by the input string.
+.PP
+.SS "  char* parseXDotColor (char *str, xdot_color* clr)"
+attempts to parse the string \fIstr\fP as a color value, storing
+the result in \fIclr\fP. It returns NULL on failure.
+.PP
+.SS "  void freeXDotColor (xdot_color* cp)"
+This frees the resources associated with a value of type \fIxdot_color\fP.
+
+.SH BUGS
+Although some small checking is done on the \fIsz\fP argument to
+\fIparseXDotF\fP, it is assumed it is a valid value from \fIsizeof\fP
+applied to some structure type containing \fIxdot_op\fP as its first
+field. There can be no validation of the \fIopfns\fP argument.
+.SH AUTHORS
+Emden R. Gansner (erg@research.att.com).

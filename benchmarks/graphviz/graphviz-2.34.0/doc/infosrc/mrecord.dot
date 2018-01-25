@@ -1,0 +1,3 @@
+digraph structs {
+    struct1 [shape=Mrecord,label="<f0> left|<f1> mid\ dle|<f2> right"];
+}

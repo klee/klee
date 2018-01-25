@@ -1,0 +1,53 @@
+diff -ru pixman-0.12.0/config.h.in pixman-0.12.0.patched/config.h.in
+--- pixman-0.12.0/config.h.in	2008-09-18 01:14:59.000000000 +0800
++++ pixman-0.12.0.patched/config.h.in	2009-01-30 12:12:32.000000000 +0900
+@@ -70,6 +70,30 @@
+    first (like Motorola and SPARC, unlike Intel and VAX). */
+ #undef WORDS_BIGENDIAN
+ 
++/* Deal with multiple architecture compiles on Mac OS X */
++#ifdef __APPLE_CC__
++#ifdef __BIG_ENDIAN__
++#define WORDS_BIGENDIAN 1
++#else
++#undef WORDS_BIGENDIAN
++#endif
++#ifdef __MMX__
++#define USE_MMX
++#else
++#undef USE_MMX
++#endif
++#ifdef __SSE__
++#define USE_SSE
++#else
++#undef USE_SSE
++#endif
++#ifdef __SSE2__
++#define USE_SSE2
++#else
++#undef USE_SSE2
++#endif
++#endif
++
+ /* Define to `__inline__' or `__inline' if that's what the C compiler
+    calls it, or to nothing if 'inline' is not supported under any name.  */
+ #ifndef __cplusplus
+diff -ru pixman-0.12.0/pixman/pixman-pict.c pixman-0.12.0.patched/pixman/pixman-pict.c
+--- pixman-0.12.0/pixman/pixman-pict.c	2008-03-27 19:58:20.000000000 +0900
++++ pixman-0.12.0.patched/pixman/pixman-pict.c	2008-04-25 00:05:08.000000000 +0800
+@@ -40,6 +40,15 @@
+ #   define inline __inline__ __attribute__ ((__always_inline__))
+ #endif
+ 
++#ifdef __APPLE_CC__
++#ifdef USE_MMX
++#include "pixman-mmx.c"
++#endif
++#ifdef USE_SSE2
++#include "pixman-sse2.c"
++#endif
++#endif
++
+ #define FbFullMask(n)   ((n) == 32 ? (uint32_t)-1 : ((((uint32_t) 1) << n) - 1))
+ 
+ #undef READ

@@ -1,0 +1,46 @@
+all:	libgraph.a
+
+ROOT=../..
+
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+INCS =	-I. -I../cdt
+
+OBJS =	agxbuf.o attribs.o graph.o node.o edge.o graphio.o \
+	lexer.o parser.o refstr.o trie.o
+
+libgraph.a: $(OBJS)
+	$(RM) libgraph.a
+	$(AR) cr libgraph.a $(OBJS)
+	$(RANLIB) libgraph.a
+
+# this is a home-made tool
+# trie.c : trie_input
+#	triegen  < trie_input > trie.c
+
+lexer.o : parser.o
+
+parser.c : parser.y
+	$(YACC) -dv parser.y
+	if test $(ARCH) = "netbsd.i386" -o $(ARCH) = "osx.i386"; then $(SED) "s/yy/ag/g" < y.tab.c > parser.c; else $(SED) 1s/#include.*// < y.tab.c | $(SED) "s/yy/ag/g" > parser.c; fi
+	$(SED) "s/yy/ag/g" < y.tab.h > parser.h
+	$(RM) y.tab.c y.tab.h
+
+trie.o : parser.h
+agxbuf.o lexer.o : agxbuf.h
+
+install: libgraph.a
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libgraph.a $(LIBDIR)
+#	$(SHLIB_LD) -o $(LIBDIR)/libgraph.so.$(VERSION) $(OBJS)
+	$(MKPATH) $(INCDIR)
+	$(INSTALL) graph.h $(INCDIR)
+	$(MKPATH) $(LIBMANDIR)
+	$(INSTALL) graph.3 $(LIBMANDIR)
+
+clean:
+	$(RM) *.o core parser.[ch] y.output
+
+distclean: clean
+	$(RM) *.a lib*.so.*

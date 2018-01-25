@@ -1,0 +1,44 @@
+digraph G{ label="SelfRight"
+node [shape = circle] "node23"; 
+"node23" -> "node23"[label ="tailport=n headport=ne" tailport=n headport=ne];
+"node23" -> "node24"  
+"node24" -> "node24"[label ="tailport=n headport=e" tailport=n headport=e];
+"node24" -> "node25"  
+"node25" -> "node25"[label ="tailport=n headport=se" tailport=n headport=se];
+"node25" -> "node26"  
+"node26" -> "node26"[label ="tailport=n headport=s" tailport=n headport=s];
+"node26" -> "node32"  
+"node32" -> "node32"[label ="tailport=ne headport=n" tailport=ne headport=n];
+"node32" -> "node34"  
+"node34" -> "node34"[label ="tailport=ne headport=e" tailport=ne headport=e];
+"node34" -> "node35"  
+"node35" -> "node35"[label ="tailport=ne headport=se" tailport=ne headport=se];
+"node35" -> "node36"  
+"node36" -> "node36"[label ="tailport=ne headport=s" tailport=ne headport=s];
+"node36" -> "node42"  
+"node42" -> "node42"[label ="tailport=e headport=n" tailport=e headport=n];
+"node42" -> "node43"  
+"node43" -> "node43"[label ="tailport=e headport=ne" tailport=e headport=ne];
+"node43" -> "node44"  
+"node44" -> "node44"[label ="tailport=e headport=e" tailport=e headport=e];
+"node44" -> "node45"  
+"node45" -> "node45"[label ="tailport=e headport=se" tailport=e headport=se];
+"node45" -> "node46"  
+"node46" -> "node46"[label ="tailport=e headport=s" tailport=e headport=s];
+"node46" -> "node52"  
+"node52" -> "node52"[label ="tailport=se headport=n" tailport=se headport=n];
+"node52" -> "node53"  
+"node53" -> "node53"[label ="tailport=se headport=ne" tailport=se headport=ne];
+"node53" -> "node54"  
+"node54" -> "node54"[label ="tailport=se headport=e" tailport=se headport=e];
+"node54" -> "node56"  
+"node56" -> "node56"[label ="tailport=se headport=s" tailport=se headport=s];
+"node56" -> "node62"  
+"node62" -> "node62"[label ="tailport=s headport=n" tailport=s headport=n];
+"node62" -> "node63"  
+"node63" -> "node63"[label ="tailport=s headport=ne" tailport=s headport=ne];
+"node63" -> "node64"  
+"node64" -> "node64"[label ="tailport=s headport=e" tailport=s headport=e];
+"node64" -> "node65"  
+"node65" -> "node65"[label ="tailport=s headport=se" tailport=s headport=se];
+}

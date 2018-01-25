@@ -1,0 +1,12 @@
+digraph G {
+	node [label="\N"];
+	graph [bb="0,0,126,108"];
+	ab [pos="27,90", width="0.75", height="0.5"];
+	cd [pos="27,18", width="0.75", height="0.5"];
+	CD [pos="99,18", width="0.75", height="0.5"];
+	AB [pos="99,90", width="0.75", height="0.5"];
+	ab -> cd [pos="e,27,36.104 27,71.697 27,63.983 27,54.712 27,46.112"];
+	ab -> CD [tailclip=false, pos="e,84.43,33.166 27,89 27,89 55.866,60.936 77.043,40.347"];
+	AB -> CD [headclip=false, pos="e,99,19 99,71.697 99,58.417 99,40.525 99,29.381"];
+	AB -> cd [tailclip=false, headclip=false, pos="e,27,19 99,89 99,89 52.83,44.112 34.434,26.228"];
+}

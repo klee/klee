@@ -1,0 +1,24 @@
+digraph G {
+        rankdir=LR;
+node [shape=box];
+        size = "7.5,10.0";
+ratio = "fill";
+center =1;
+
+        /* Node Definitions */
+
+
+        dc1 [shape=plaintext,label="DC 1"];
+        dc10 [shape=plaintext,label="DC 10"];
+        dc100 [shape=plaintext,label="DC 100"];
+
+        { rank = same; "dc1"; "dc10"; "dc100"; }
+
+        /* Link Definitions */
+
+        /* Marking Unused Dialing Plans */
+
+        no_dc [shape=plaintext,label="NOTHING"];
+        { rank = min; "no_dc"; }
+}
+

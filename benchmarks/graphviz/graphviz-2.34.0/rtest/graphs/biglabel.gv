@@ -1,0 +1,92 @@
+digraph structs {
+node [shape=record];
+    struct1 [shape=record,label="<f0> left|<f1> middle|<f2> right"];
+    struct2 [shape=record,label="<f0> one|<f1> two"];
+    struct3 [shape=record,label="hello\nworld\n\
+and  | { Thats the reason | post-menopausal | estrogen } | is\n\
+given together with another hormone called\n\
+progestin: The combination lowers the risk of\n\
+endometrial cancer.\n\
+\n\
+But the NTP advisers said putting all\n\
+estrogens on the federal list would help\n\
+women trying to balance the benefits and\n\
+risks when choosing hormone therapy.\n\
+Physicians never discuss any of these risks\n\
+when they are prescribing hormone therapy.\n\
+They only discuss benefits. Listing might\n\
+force it on the table, Michelle Medinsky, a\n\
+toxicologist from Durham, N.C., said before\n\
+the vote.\n\
+\n\
+The committee of scientists advises the NTP,\n\
+a branch of the National Institutes of Health\n\
+that every two years updates the federal list\n\
+of proven and suspected cancer-causing\n\
+substances.\n\
+\n\
+The NTP typically follows its advisers\n\
+recommendations, but an officially updated\n\
+carcinogen list isnt expected until 2002.\n\
+\n\
+Thursday, after a daylong debate, the panel\n\
+declined to add talc powder to the list,\n\
+saying there wasnt enough evidence linking\n\
+its use in feminine hygiene products to\n\
+ovarian cancer. The panel deadlocked over\n\
+whether to a second type of talc, fibrous\n\
+talc that some studies have linked to lung\n\
+cancer in talc miners.\n\
+\n\
+On Wednesday, the panel voted to add\n\
+ultraviolet radiation -- those\n\
+sunburn-causing rays long known to cause skin\n\
+cancer -- to the official carcinogen list.\n\
+\n\
+The panel on Friday continued debating an\n\
+association between cancers of the nose and\n\
+sinuses with industrial exposure to wood\n\
+dust.\n\
+\n\
+Talc has long been controversial. When\n\
+studies first appeared suggesting it migrated\n\
+into the ovaries to cause tumors, many\n\
+feminine hygiene products replaced talc with\n\
+cornstarch.\n\
+\n\
+Panelist Medinsky said she had been prepared\n\
+to list talc powder as reasonably believed\n\
+to cause cancer. But after listening to\n\
+hours of industry attacks on the science,\n\
+the evidence has knocked me out of the\n\
+reasonably category into not list, she\n\
+said before the panel voted 7-3 against\n\
+listing talc.\n\
+\n\
+Talc has long been controversial. When\n\
+studies first appeared suggesting it migrated\n\
+into the ovaries to cause tumors, many\n\
+feminine hygiene products replaced talc with\n\
+cornstarch.\n\
+\n\
+Panelist Medinsky said she had been prepared\n\
+to list talc powder as reasonably believed\n\
+to cause cancer. But after listening to\n\
+hours of industry attacks on the science,\n\
+the evidence has knocked me out of the\n\
+reasonably category into not list, she\n\
+said before the panel voted 7-3 against\n\
+listing talc.\n\
+\n\
+Talc in one form or the other can be found in\n\
+many papers, paints, ceramics, food wrappers,\n\
+hard candy, chewing gum, cosmetics and pills.\n\
+Most people are familiar with talc as a loose\n\
+powder used in cosmetics and as a drying\n\
+powder.\n\
+abde\
+ |{ b |{c|<here> d|e}| f}| g | h"];
+    struct1:f1 -> struct2:f0;
+    struct1:f2 -> struct3:here;
+}
+

@@ -1,0 +1,6 @@
+digraph G{ label="SelfBottom"
+node [shape = circle] "node55"; 
+"node55" -> "node55"[label ="tailport=se headport=se" tailport=se headport=se];
+"node55" -> "node66"  
+"node66" -> "node66"[label ="tailport=s headport=s" tailport=s headport=s];
+}

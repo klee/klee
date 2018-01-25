@@ -1,0 +1,15 @@
+doted.tcl - Graph Editor based on dot
+
+Author: John Ellson <ellson@graphviz.org>
+
+Package requires: wish, tcldot, tkspline
+
+A graph editor with batch layout.  This script is designed to exercise
+the graph layout package: tcldot
+
+The button in the lower-right corner triggers a relayout of the graph.
+
+To Do:
+	- complete Help feature
+	- add zooming
+	- make it easier to edit attributes

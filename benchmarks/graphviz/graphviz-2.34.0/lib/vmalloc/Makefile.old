@@ -1,0 +1,55 @@
+#	libvmalloc.a old make makefile
+#	Written by Kiem-Phong Vo (03/18/1998)
+
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+LOC_LIBDIR=	../lib
+LOC_INCDIR=	../include
+
+INCS = -I.
+
+HDRS=	vmalloc.h vmhdr.h
+SRCS=	malloc.c vmbest.c vmclear.c vmclose.c vmdcheap.c \
+	vmdisc.c vmdebug.c vmlast.c vmopen.c vmpool.c vmprivate.c vmregion.c \
+	vmset.c vmstat.c vmtrace.c vmprofile.c vmexit.c vmsegment.c vmwalk.c
+OBJS=	malloc.o vmbest.o vmclear.o vmclose.o vmdcheap.o \
+	vmdisc.o vmdebug.o vmlast.o vmopen.o vmpool.o vmprivate.o vmregion.o \
+	vmset.o vmstat.o vmtrace.o vmprofile.o vmexit.o vmsegment.o vmwalk.o \
+    vmstrdup.o
+
+all:	loc_install
+
+libvmalloc.a : ast_common.h FEATURE/vmalloc $(OBJS)
+	ar cr libvmalloc.a $(OBJS)
+	-(ranlib libvmalloc.a; exit 0) >/dev/null 2>&1
+
+$(OBJS) : ast_common.h
+
+#ast_common.h : features/common
+#	../../iffe - set cc $(CC) $(CCMODE) $(CXFLAGS) : run features/common > ast_common.h
+
+ast_common.h : ../cdt/ast_common.h
+	rm -f ast_common.h
+	$(LN) ../cdt/ast_common.h .
+
+../cdt/ast_common.h : ../cdt/features/common
+	(cd ../cdt; make ast_common.h)
+
+FEATURE/vmalloc : features/vmalloc
+	$(ROOT)/iffe set cc $(CC) $(CCMODE) $(CXFLAGS) : run features/vmalloc
+
+loc_install : libvmalloc.a
+	$(MKPATH) $(LOC_INCDIR)
+	cp vmalloc.h $(LOC_INCDIR)
+	$(MKPATH) $(LOC_LIBDIR)
+	cp libvmalloc.a $(LOC_LIBDIR)
+	-(ranlib $(LOC_LIBDIR)/libvmalloc.a; exit 0) >/dev/null 2>&1
+
+install : loc_install
+
+clean :
+	-(rm ast_common.h $(OBJS) libvmalloc.a FEATURE/*; exit 0) >/dev/null 2>&1
+
+distclean : clean

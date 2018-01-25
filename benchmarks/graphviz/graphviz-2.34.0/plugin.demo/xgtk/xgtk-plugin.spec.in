@@ -1,0 +1,98 @@
+# $Id$ $Revision$
+# @configure_input@
+
+Name:    xgtk-plugin
+Summary: xgtk-plugin for graphviz
+Version: @VERSION@
+
+%define truerelease 1
+%{?distroagnostic: %define release %{truerelease}}
+%{!?distroagnostic: %define release %{truerelease}%{?dist}}
+
+Release: %{?release}
+
+Group:   Applications/Multimedia
+License: CPL
+URL:     http://www.graphviz.org/
+Source0: http://www.graphviz.org/pub/@GRAPHVIZ_SOURCES@/xgtk-plugin-@VERSION@.tar.gz
+
+# graphviz is relocatable - Caution: this feature is used in AT&T,
+#   but probably will not be supported in Redhat/Fedora/Centos distros
+Prefix: /usr
+
+BuildRoot:     %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
+BuildRequires: graphviz-devel gtk2-devel
+
+Requires: graphviz gtk2
+
+%description
+A graphviz plugin providind a gtk UI to graphviz.  
+
+# run "dot -c" to generate plugin config in %{libdir}/graphviz/config
+# (don't rely on ldconfig to find libraries since it won't
+#  help if --prefix was used to relocate binaries)
+# we want errors if "dot -c" in post fails
+%post
+LD_LIBRARY_PATH=$RPM_INSTALL_PREFIX0/%{_lib} $RPM_INSTALL_PREFIX0/bin/dot -c
+
+# don't care so much about uninstall errors if "dot -c" in post fails
+#   - in fact, dot may have been uninstalled before this package
+%postun
+[ -x $RPM_INSTALL_PREFIX0/bin/dot ] && LD_LIBRARY_PATH=$RPM_INSTALL_PREFIX0/%{_lib} $RPM_INSTALL_PREFIX0/bin/dot -c || :
+
+%files
+%defattr(-,root,root,-)
+%doc AUTHORS COPYING ChangeLog NEWS README
+%dir %{_libdir}/graphviz
+%{_libdir}/graphviz/*.so.*
+%exclude %{_libdir}/graphviz/*.so
+
+#-- building --------------------------------------------------
+
+%prep
+%setup -q
+
+%build
+# XXX ix86 only used to have -ffast-math, let's use everywhere
+%{expand: %%define optflags %{optflags} -ffast-math}
+
+# %%configure is broken in RH7.3 rpmbuild
+CFLAGS="$RPM_OPT_FLAGS" \
+./configure \
+        --prefix=%{_prefix} \
+        --bindir=%{_bindir} \
+        --libdir=%{_libdir} \
+        --includedir=%{_includedir} \
+        --datadir=%{_datadir} \
+        --mandir=%{_mandir} \
+        --with-x \
+	--disable-static \
+        --disable-dependency-tracking
+make %{?_smp_mflags}
+
+%install
+make DESTDIR=%{buildroot} install
+find %{buildroot} -type f -name "*.la" -exec rm -f {} ';'
+
+%check
+%ifnarch ppc64 ppc
+# regression test, segfaults on ppc/ppc64, possible endian issues?
+# regressions tests require ksh93 - not available on centos3
+#cd rtest
+#make rtest
+%endif
+
+%clean
+# optional regression test using the products in the build tree
+%if 0%{?rtest}
+cd rtest
+make rtest
+%endif
+# clean up temporary installation
+rm -rf %{buildroot}
+
+#-- changelog --------------------------------------------------
+
+%changelog
+* Thu Jul 30 2009 John Ellson <ellson@research.att.com>
+- new package

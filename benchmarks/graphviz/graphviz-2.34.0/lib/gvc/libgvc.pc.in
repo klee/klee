@@ -1,0 +1,15 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@/@PACKAGE@
+plugins=@GVPLUGIN_VERSION@
+@WITH_CGRAPH_FALSE@GRAPH = graph
+@WITH_CGRAPH_TRUE@GRAPH = cgraph
+
+
+Name: libgvc
+Description: The GraphVizContext library 
+Version: @VERSION@
+Libs: -L${libdir} -lgvc -l${GRAPH} -lcdt
+Cflags: -I${includedir}
+

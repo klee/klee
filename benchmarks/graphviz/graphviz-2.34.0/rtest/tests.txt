@@ -1,0 +1,346 @@
+# Graphviz test suite
+# Tests are separated by blank or comment lines.
+# Tests have the following syntax:
+#  testname
+#  Test input (one-line graph or name of .gv file or =)
+#    In the last case, the input file is taken as testname.gv
+#  One or more subtests of the form: 
+#     layout_alg output_format additional_flags
+#  
+# For example, the test
+#   Shapes
+#   shapes.gv
+#   dot ps
+#   neato png "-Gsize=3,3 -Ncolor=red"
+# specifies the "shapes" test, using shapes.gv as input, and
+# run "dot -Tps" and "neato -Tpng -Gsize=3,3 -Ncolor=red" on the input.
+
+shapes
+=
+dot gv
+dot ps
+
+crazy
+=
+dot png
+dot ps
+
+arrows
+=
+dot gv
+dot ps
+
+arrowsize
+=
+dot png
+
+center
+=
+dot ps
+dot png -Gmargin=1
+
+# color encodings
+# multiple edge colors
+color
+=
+dot png
+dot png -Gbgcolor=lightblue
+
+decorate
+=
+dot png
+
+record
+= 
+dot gv 
+dot ps 
+
+html 
+= 
+dot gv 
+dot ps 
+
+html2 
+= 
+dot gv 
+dot ps
+
+pslib
+=
+dot ps -lgraphs/sdl.ps
+
+user_shapes
+=
+dot ps
+dot png:gd
+#dot png - doesn't work: Warning: No loadimage plugin for "gif:cairo"
+
+# bug - the epsf version has problems
+ps_user_shapes
+=
+dot ps -Nshapefile=graphs/dice.ps
+#dot ps -Nshape=epsf -Nshapefile=graphs/dice.ps
+
+colorscheme
+=
+dot ps
+dot png
+
+compound
+=
+dot gv
+
+dir
+=
+dot ps
+
+clusters
+=
+dot ps
+dot png
+
+clustlabel
+=
+dot ps -Glabelloc=t -Glabeljust=r
+dot ps -Glabelloc=b -Glabeljust=r 
+dot ps -Glabelloc=t -Glabeljust=l 
+dot ps -Glabelloc=b -Glabeljust=l 
+dot ps -Glabelloc=t -Glabeljust=c 
+dot ps -Glabelloc=b -Glabeljust=c 
+dot ps -Glabelloc=t
+dot ps -Glabelloc=b
+
+rootlabel
+=
+dot ps -Glabelloc=t -Glabeljust=r
+dot ps -Glabelloc=b -Glabeljust=r 
+dot ps -Glabelloc=t -Glabeljust=l 
+dot ps -Glabelloc=b -Glabeljust=l 
+dot ps -Glabelloc=t -Glabeljust=c 
+dot ps -Glabelloc=b -Glabeljust=c 
+dot ps -Glabelloc=t
+dot ps -Glabelloc=b
+
+layers
+=
+dot ps
+
+# check mode=hier
+mode
+=
+neato ps -Gmode=KK
+neato ps -Gmode=hier
+neato ps -Gmode=hier -Glevelsgap=1
+
+model
+mode.gv
+neato ps -Gmodel=circuit
+neato ps -Gmodel=subset
+
+# cairo versions have problems
+nojustify
+=
+dot png
+dot png:gd
+dot ps
+dot ps:cairo
+
+# bug
+ordering
+=
+dot gv -Gordering=in 
+dot gv -Gordering=out 
+
+overlap
+=
+neato gv -Goverlap=false
+neato gv -Goverlap=scale
+
+pack
+=
+neato gv
+neato gv -Gpack=20
+neato gv -Gpackmode=graph
+
+page
+mode.gv
+neato ps -Gpage=8.5,11
+neato ps -Gpage=8.5,11 -Gpagedir=TL
+neato ps -Gpage=8.5,11 -Gpagedir=TR
+
+# pencolor, fontcolor, fillcolor
+colors
+=
+dot ps
+
+polypoly
+=
+dot ps
+dot png
+
+ports
+=
+dot gv
+
+rotate
+crazy.gv
+dot png -Glandscape
+dot ps -Glandscape
+dot png -Grotate=90
+dot ps -Grotate=90
+
+rankdir
+crazy.gv
+dot gv -Grankdir=LR
+dot gv -Grankdir=BT
+dot gv -Grankdir=RL
+
+url
+=
+dot ps2
+dot svg -Gstylesheet=stylesheet
+dot imap
+dot cmapx
+dot imap_np
+dot cmapx_np
+
+viewport
+=
+neato png -Gviewport=300,300 -n2
+neato ps -Gviewport=300,300 -n2
+neato png -Gviewport=300,300,1,200,620 -n2
+neato ps -Gviewport=300,300,1,200,620 -n2
+neato png -Gviewport=300,300,2,200,620 -n2
+neato ps -Gviewport=300,300,2,200,620 -n2
+
+rowcolsep
+=
+dot gv -Gnodesep=0.5
+dot gv -Granksep=1.5
+
+size
+mode.gv
+neato ps -Gsize=5,5
+neato png -Gsize=5,5
+
+# size with !
+size_ex
+root.gv
+dot ps -Gsize=6,6!
+dot png -Gsize=6,6!
+
+dotsplines
+size.gv
+dot gv -Gsplines=line
+dot gv -Gsplines=polyline
+#dot gv -Gsplines=ortho
+
+neatosplines
+overlap.gv
+neato gv -Goverlap=false -Gsplines
+neato gv -Goverlap=false -Gsplines=polyline
+#neato gv -Goverlap=false -Gsplines=ortho
+
+style
+=
+dot ps
+dot png
+
+# edge clipping
+edgeclip
+=
+dot gv
+
+# edge weight
+weight
+=
+dot gv
+
+root
+=
+twopi gv
+circo gv
+
+cairo
+=
+dot ps:cairo 
+dot png:cairo 
+dot svg:cairo 
+
+flatedge
+=
+dot gv
+
+nestedclust
+=
+dot gv
+
+rd_rules
+=
+dot png
+
+sq_rules
+=
+dot png
+
+fdp_clus
+fdp.gv
+fdp png
+
+japanese
+=
+dot png
+
+russian
+=
+dot png
+
+AvantGarde
+=
+dot png
+dot ps
+
+Bookman
+=
+dot png
+dot ps
+
+Courier
+=
+dot png
+dot ps
+
+Helvetica
+=
+dot png
+dot ps
+
+NewCenturySchlbk
+=
+dot png
+dot ps
+
+Palatino
+=
+dot png
+dot ps
+
+Times
+=
+dot png
+dot ps
+
+ZapfChancery
+=
+dot png
+dot ps
+
+ZapfDingbats
+=
+dot png
+dot ps
+
+xlabels
+=
+dot png
+neato png

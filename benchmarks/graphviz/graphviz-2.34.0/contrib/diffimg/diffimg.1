@@ -1,0 +1,21 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.TH DIFFIMG 1 "Jan 31, 2010"
+.SH NAME
+diffimg \- Calculates intersection between two images
+.SH SYNOPSIS
+.B diffimg
+.RI image1
+.RI image2
+.RI [ outimage ]
+.SH DESCRIPTION
+.PP
+\fBdiffimg\fP generates an image where each pixel is the difference between the corresponding pixel
+in each of the two source images.  Thus, if the source images are the same the resulting image will
+be black, otherwise it will have regions of non-black where the images differ.
+.PP 
+Currently supports: .png, .gif, .jpg, and .ps by using ghostscript
+.SH AUTHOR
+diffimg was written by John Ellson <ellson@research.att.com>
+.PP
+This manual page was written by David Claughton <dave@eclecticdave.com>,
+for the Debian project (but may be used by others).

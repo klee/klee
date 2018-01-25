@@ -1,0 +1,123 @@
+.TH LEFTY 1
+.SH NAME
+lefty \- A Programmable Graphics Editor
+.SH SYNOPSIS
+.B lefty
+[
+.I options
+] [
+.I file
+]
+.SH DESCRIPTION
+.B lefty
+is a two-view graphics editor for technical pictures. This editor has
+no hardwired knowledge about specific picture layouts or editing operations.
+Each picture is described by a program that contains functions to draw the
+picture and functions to perform editing operations that are appropriate for
+the specific picture. Primitive user actions, like mouse and keyboard events,
+are also bound to functions in this program. Besides the graphical view of the
+picture itself, the editor presents a textual view of the program that
+describes the picture. Programmability and the two-view interface allow the
+editor to handle a variety of pictures, but are particularly useful for
+pictures used in technical contexts, e.g., graphs and trees. Also,
+.B lefty
+can communicate with other processes. This feature allows it to use existing
+tools to compute specific picture layouts and allows external processes to use
+the editor as a front end to display their data structures graphically.
+.SH USAGE
+The file name is optional. It may be
+.BR - ,
+for reading from standard input.
+.B lefty
+uses two environment variables,
+.B LEFTYPATH
+and
+.BR LEFTYOPTIONS .
+.B LEFTYPATH
+is a colon separated list of directories. When
+.B lefty
+tries to open a file, it searches that path for the file. When
+.B lefty
+tries to start up another process, it searches
+.B LEFTYPATH
+first, then the standard
+.B PATH
+variable.
+.B LEFTYOPTIONS
+can be used to set specific options. Options specified on the command line
+override options set through this variable.
+.SH OPTIONS
+.TP
+.B -x
+Instructs the editor to exit after processing
+.BR file .
+.TP
+.B "-e <expression>"
+.B <expression>
+is parsed and executed.
+.TP
+.B -el <num>
+Set error reporting level. The default value is
+.BR 0 .
+.B 0
+never prints any messages.
+.B 1
+prints severe errors, such as trying to return from a non function.
+.B 2
+is the most useful: it reports function calls that cannot be executed, either
+because there is no function, or because of argument mismatches.
+.B 3
+also warns about bad variable names.
+.B 4,5
+warn about expressions that do not return a value. Only level
+.B 1
+messages are real errors. The rest arise from legal
+.B lefty
+statements, but may be caused by some logic errors.
+.TP
+.B "-sd <num>"
+Specifies how much of the stack to show, when an error message is to be
+printed. The default value is
+.BR 2 .
+With
+.BR 0 ,
+no part of the stack is shown. With
+.BR 1 ,
+only the top stack frame is printed. With
+.BR 2 ,
+the full stack is printed.
+.TP
+.B "-sb <num>"
+Specifies how much of each function in the stack to show, when an error message
+is to be printed. The default value is
+.BR 2 .
+With
+.BR 0 ,
+no part of the function is shown. With
+.BR 1 ,
+only the line around the error is printed. With
+.BR 2 ,
+the full function body is printed.
+.TP
+.B "-df <string>"
+Sets the default font. This font is used whenever a requested font cannot be
+found. The string must be a legal X font. If string is
+.BR "''" ,
+.B lefty
+will draw small boxes instead of text.
+.TP
+.B "-ps <file>"
+Specifies a default file name for postscript files. This name is used when no
+name is specified in the
+.B createwidget
+call. The default file name is
+.BR out.ps .
+.TP
+.B -V
+Prints the version.
+.TP
+.B -?
+Prints the usage and exits.
+.SH SEE ALSO
+.I lefty
+user guide.

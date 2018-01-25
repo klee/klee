@@ -1,0 +1,10 @@
+diGraph G{
+graph [charset="utf8"]
+1[label="Umlaut"];
+2[label="ü"];
+3[label="ä"];
+4[label="ö"];
+1->2;
+1->3;
+1->4;
+}

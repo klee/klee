@@ -1,0 +1,38 @@
+all:	libsparse.a
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+INCS =  -I. \
+        -I$(ROOT) \
+        -I../cdt \
+        -I../common \
+	-I../gvc 
+
+DEFINES = -DHAVE_CONFIG_H
+
+AWKDIR = $(ROOT)/awk
+
+NOINST_HDRS = SparseMatrix.h
+
+OBJS = SparseMatrix.o
+
+libsparse.a : $(OBJS)
+	$(RM) libsparse.a
+	$(AR) cr libsparse.a $(OBJS)
+	$(RANLIB) libsparse.a
+
+install: libsparse.a 
+#	$(MKPATH) $(INCDIR)
+#	$(INSTALL) $(INST_HDRS) $(INCDIR)
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libsparse.a $(LIBDIR)
+
+$(OBJS) : $(INST_HDRS) $(NOINST_HDRS)
+SparseMatrix.o : SparseMatrix.h
+
+clean:
+	$(RM) core *.o 
+
+distclean: clean
+	$(RM) *.a

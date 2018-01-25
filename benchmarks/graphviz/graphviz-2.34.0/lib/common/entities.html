@@ -1,0 +1,682 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html lang="en"><head>
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>Character entity references in HTML 4</title>
+
+<link rel="previous" href="http://www.w3.org/TR/REC-html40/sgml/framesetdtd.html">
+<link rel="next" href="http://www.w3.org/TR/REC-html40/appendix/changes.html">
+<link rel="contents" href="http://www.w3.org/TR/REC-html40/cover.html#toc">
+<link rel="stylesheet" type="text/css" href="entities.html_files/W3C-REC.css">
+<link rel="STYLESHEET" href="entities.html_files/default.css" type="text/css"></head>
+
+<body>
+<div class="navbar" align="center">&nbsp;<a href="http://www.w3.org/TR/REC-html40/sgml/framesetdtd.html">
+previous</a> &nbsp; <a href="http://www.w3.org/TR/REC-html40/appendix/changes.html">next</a> &nbsp; <a href="http://www.w3.org/TR/REC-html40/cover.html#minitoc">contents</a> &nbsp; <a href="http://www.w3.org/TR/REC-html40/index/elements.html">
+elements</a> &nbsp; <a href="http://www.w3.org/TR/REC-html40/index/attributes.html">attributes</a> &nbsp; <a href="http://www.w3.org/TR/REC-html40/index/list.html">index</a> 
+
+<hr></div>
+
+<h1 align="center"><a name="h-24">24</a> <a name="entities">Character entity
+references in HTML 4</a></h1>
+
+<div class="subtoc">
+<p><strong>Contents</strong></p>
+
+<ol>
+<li><a class="tocxref" href="#h-24.1">Introduction to character entity
+references</a></li>
+
+<li><a class="tocxref" href="#h-24.2">Character entity references for ISO
+8859-1 characters</a> 
+
+<ol>
+<li><a class="tocxref" href="#h-24.2.1">The list of characters</a></li>
+</ol>
+</li>
+
+<li><a class="tocxref" href="#h-24.3">Character entity references for symbols,
+mathematical symbols, and Greek letters</a> 
+
+<ol>
+<li><a class="tocxref" href="#h-24.3.1">The list of characters</a></li>
+</ol>
+</li>
+
+<li><a class="tocxref" href="#h-24.4">Character entity references for
+markup-significant and internationalization characters</a> 
+
+<ol>
+<li><a class="tocxref" href="#h-24.4.1">The list of characters</a></li>
+</ol>
+</li>
+</ol>
+</div>
+
+<h2><a name="h-24.1">24.1</a> Introduction to character entity references</h2>
+
+A <a href="http://www.w3.org/TR/REC-html40/charset.html#entities">character entity reference</a> is an SGML
+construct that references a character of the <a href="http://www.w3.org/TR/REC-html40/charset.html">document
+character set.</a> 
+
+<p>This version of HTML supports several sets of character entity
+references:</p>
+
+<ul>
+<li><a href="#iso-88591">ISO 8859-1 (Latin-1) characters</a> In accordance with
+section 14 of <a rel="biblioentry" href="http://www.w3.org/TR/REC-html40/references.html#ref-RFC1866" class="informref">[RFC1866]</a>, the set of Latin-1 entities has been extended by
+this specification to cover the whole right part of ISO-8859-1 (all code
+positions with the high-order bit set), including the already commonly used
+&amp;nbsp;, &amp;copy; and &amp;reg;. The names of the entities are taken from
+the appendices of SGML (defined in <a rel="biblioentry" href="http://www.w3.org/TR/REC-html40/references.html#ref-ISO8879" class="normref">[ISO8879]</a>).</li>
+
+<li><a href="#sym">symbols, mathematical symbols, and Greek letters</a>. These
+characters may be represented by glyphs in the Adobe font "Symbol".</li>
+
+<li><a href="#misc">markup-significant and internationalization characters</a>
+(e.g., for bidirectional text).</li>
+</ul>
+
+<p>The following sections present the complete lists of character entity
+references. Although, by convention, <a rel="biblioentry" href="http://www.w3.org/TR/REC-html40/references.html#ref-ISO10646" class="normref">[ISO10646]</a> the comments
+following each entry are usually written with uppercase letters, we have
+converted them to lowercase in this specification for reasons of
+readability.</p>
+
+<h2><a name="h-24.2">24.2</a> <a name="iso-88591">Character entity references
+for ISO 8859-1 characters</a></h2>
+
+<p>The character entity references in this section produce characters whose
+numeric equivalents should already be supported by conforming HTML 2.0 user
+agents. Thus, the character entity reference &amp;divide; is a more convenient
+form than &amp;#247; for obtaining the division sign (÷).</p>
+
+<p>To support these named entities, user agents need only recognize the entity
+names and convert them to characters that lie within the repertoire of <a rel="biblioentry" href="http://www.w3.org/TR/REC-html40/references.html#ref-ISO88591" class="normref">
+[ISO88591]</a>.</p>
+
+<p>Character 65533 (FFFD hexadecimal) is the last valid character in UCS-2.
+65534 (FFFE hexadecimal) is unassigned and reserved as the byte-swapped version
+of ZERO WIDTH NON-BREAKING SPACE for byte-order detection purposes. 65535 (FFFF
+hexadecimal) is unassigned.</p>
+
+<h3><a name="h-24.2.1">24.2.1</a> The list of characters</h3>
+
+<div class="dtd-fragment">
+<pre>&lt;!-- Portions © International Organization for Standardization 1986
+     Permission to copy in any form is granted for use with
+     conforming SGML systems and applications as defined in
+     ISO 8879, provided this notice is included in all copies.
+--&gt;
+&lt;!-- Character entity set. Typical invocation:
+     &lt;!ENTITY % HTMLlat1 PUBLIC
+       "-//W3C//ENTITIES Latin 1//EN//HTML"&gt;
+     %HTMLlat1;
+--&gt;
+
+&lt;!ENTITY nbsp   CDATA "&amp;#160;" -- no-break space = non-breaking space,
+                                  U+00A0 ISOnum --&gt;
+&lt;!ENTITY iexcl  CDATA "&amp;#161;" -- inverted exclamation mark, U+00A1 ISOnum --&gt;
+&lt;!ENTITY cent   CDATA "&amp;#162;" -- cent sign, U+00A2 ISOnum --&gt;
+&lt;!ENTITY pound  CDATA "&amp;#163;" -- pound sign, U+00A3 ISOnum --&gt;
+&lt;!ENTITY curren CDATA "&amp;#164;" -- currency sign, U+00A4 ISOnum --&gt;
+&lt;!ENTITY yen    CDATA "&amp;#165;" -- yen sign = yuan sign, U+00A5 ISOnum --&gt;
+&lt;!ENTITY brvbar CDATA "&amp;#166;" -- broken bar = broken vertical bar,
+                                  U+00A6 ISOnum --&gt;
+&lt;!ENTITY sect   CDATA "&amp;#167;" -- section sign, U+00A7 ISOnum --&gt;
+&lt;!ENTITY uml    CDATA "&amp;#168;" -- diaeresis = spacing diaeresis,
+                                  U+00A8 ISOdia --&gt;
+&lt;!ENTITY copy   CDATA "&amp;#169;" -- copyright sign, U+00A9 ISOnum --&gt;
+&lt;!ENTITY ordf   CDATA "&amp;#170;" -- feminine ordinal indicator, U+00AA ISOnum --&gt;
+&lt;!ENTITY laquo  CDATA "&amp;#171;" -- left-pointing double angle quotation mark
+                                  = left pointing guillemet, U+00AB ISOnum --&gt;
+&lt;!ENTITY not    CDATA "&amp;#172;" -- not sign, U+00AC ISOnum --&gt;
+&lt;!ENTITY shy    CDATA "&amp;#173;" -- soft hyphen = discretionary hyphen,
+                                  U+00AD ISOnum --&gt;
+&lt;!ENTITY reg    CDATA "&amp;#174;" -- registered sign = registered trade mark sign,
+                                  U+00AE ISOnum --&gt;
+&lt;!ENTITY macr   CDATA "&amp;#175;" -- macron = spacing macron = overline
+                                  = APL overbar, U+00AF ISOdia --&gt;
+&lt;!ENTITY deg    CDATA "&amp;#176;" -- degree sign, U+00B0 ISOnum --&gt;
+&lt;!ENTITY plusmn CDATA "&amp;#177;" -- plus-minus sign = plus-or-minus sign,
+                                  U+00B1 ISOnum --&gt;
+&lt;!ENTITY sup2   CDATA "&amp;#178;" -- superscript two = superscript digit two
+                                  = squared, U+00B2 ISOnum --&gt;
+&lt;!ENTITY sup3   CDATA "&amp;#179;" -- superscript three = superscript digit three
+                                  = cubed, U+00B3 ISOnum --&gt;
+&lt;!ENTITY acute  CDATA "&amp;#180;" -- acute accent = spacing acute,
+                                  U+00B4 ISOdia --&gt;
+&lt;!ENTITY micro  CDATA "&amp;#181;" -- micro sign, U+00B5 ISOnum --&gt;
+&lt;!ENTITY para   CDATA "&amp;#182;" -- pilcrow sign = paragraph sign,
+                                  U+00B6 ISOnum --&gt;
+&lt;!ENTITY middot CDATA "&amp;#183;" -- middle dot = Georgian comma
+                                  = Greek middle dot, U+00B7 ISOnum --&gt;
+&lt;!ENTITY cedil  CDATA "&amp;#184;" -- cedilla = spacing cedilla, U+00B8 ISOdia --&gt;
+&lt;!ENTITY sup1   CDATA "&amp;#185;" -- superscript one = superscript digit one,
+                                  U+00B9 ISOnum --&gt;
+&lt;!ENTITY ordm   CDATA "&amp;#186;" -- masculine ordinal indicator,
+                                  U+00BA ISOnum --&gt;
+&lt;!ENTITY raquo  CDATA "&amp;#187;" -- right-pointing double angle quotation mark
+                                  = right pointing guillemet, U+00BB ISOnum --&gt;
+&lt;!ENTITY frac14 CDATA "&amp;#188;" -- vulgar fraction one quarter
+                                  = fraction one quarter, U+00BC ISOnum --&gt;
+&lt;!ENTITY frac12 CDATA "&amp;#189;" -- vulgar fraction one half
+                                  = fraction one half, U+00BD ISOnum --&gt;
+&lt;!ENTITY frac34 CDATA "&amp;#190;" -- vulgar fraction three quarters
+                                  = fraction three quarters, U+00BE ISOnum --&gt;
+&lt;!ENTITY iquest CDATA "&amp;#191;" -- inverted question mark
+                                  = turned question mark, U+00BF ISOnum --&gt;
+&lt;!ENTITY Agrave CDATA "&amp;#192;" -- latin capital letter A with grave
+                                  = latin capital letter A grave,
+                                  U+00C0 ISOlat1 --&gt;
+&lt;!ENTITY Aacute CDATA "&amp;#193;" -- latin capital letter A with acute,
+                                  U+00C1 ISOlat1 --&gt;
+&lt;!ENTITY Acirc  CDATA "&amp;#194;" -- latin capital letter A with circumflex,
+                                  U+00C2 ISOlat1 --&gt;
+&lt;!ENTITY Atilde CDATA "&amp;#195;" -- latin capital letter A with tilde,
+                                  U+00C3 ISOlat1 --&gt;
+&lt;!ENTITY Auml   CDATA "&amp;#196;" -- latin capital letter A with diaeresis,
+                                  U+00C4 ISOlat1 --&gt;
+&lt;!ENTITY Aring  CDATA "&amp;#197;" -- latin capital letter A with ring above
+                                  = latin capital letter A ring,
+                                  U+00C5 ISOlat1 --&gt;
+&lt;!ENTITY AElig  CDATA "&amp;#198;" -- latin capital letter AE
+                                  = latin capital ligature AE,
+                                  U+00C6 ISOlat1 --&gt;
+&lt;!ENTITY Ccedil CDATA "&amp;#199;" -- latin capital letter C with cedilla,
+                                  U+00C7 ISOlat1 --&gt;
+&lt;!ENTITY Egrave CDATA "&amp;#200;" -- latin capital letter E with grave,
+                                  U+00C8 ISOlat1 --&gt;
+&lt;!ENTITY Eacute CDATA "&amp;#201;" -- latin capital letter E with acute,
+                                  U+00C9 ISOlat1 --&gt;
+&lt;!ENTITY Ecirc  CDATA "&amp;#202;" -- latin capital letter E with circumflex,
+                                  U+00CA ISOlat1 --&gt;
+&lt;!ENTITY Euml   CDATA "&amp;#203;" -- latin capital letter E with diaeresis,
+                                  U+00CB ISOlat1 --&gt;
+&lt;!ENTITY Igrave CDATA "&amp;#204;" -- latin capital letter I with grave,
+                                  U+00CC ISOlat1 --&gt;
+&lt;!ENTITY Iacute CDATA "&amp;#205;" -- latin capital letter I with acute,
+                                  U+00CD ISOlat1 --&gt;
+&lt;!ENTITY Icirc  CDATA "&amp;#206;" -- latin capital letter I with circumflex,
+                                  U+00CE ISOlat1 --&gt;
+&lt;!ENTITY Iuml   CDATA "&amp;#207;" -- latin capital letter I with diaeresis,
+                                  U+00CF ISOlat1 --&gt;
+&lt;!ENTITY ETH    CDATA "&amp;#208;" -- latin capital letter ETH, U+00D0 ISOlat1 --&gt;
+&lt;!ENTITY Ntilde CDATA "&amp;#209;" -- latin capital letter N with tilde,
+                                  U+00D1 ISOlat1 --&gt;
+&lt;!ENTITY Ograve CDATA "&amp;#210;" -- latin capital letter O with grave,
+                                  U+00D2 ISOlat1 --&gt;
+&lt;!ENTITY Oacute CDATA "&amp;#211;" -- latin capital letter O with acute,
+                                  U+00D3 ISOlat1 --&gt;
+&lt;!ENTITY Ocirc  CDATA "&amp;#212;" -- latin capital letter O with circumflex,
+                                  U+00D4 ISOlat1 --&gt;
+&lt;!ENTITY Otilde CDATA "&amp;#213;" -- latin capital letter O with tilde,
+                                  U+00D5 ISOlat1 --&gt;
+&lt;!ENTITY Ouml   CDATA "&amp;#214;" -- latin capital letter O with diaeresis,
+                                  U+00D6 ISOlat1 --&gt;
+&lt;!ENTITY times  CDATA "&amp;#215;" -- multiplication sign, U+00D7 ISOnum --&gt;
+&lt;!ENTITY Oslash CDATA "&amp;#216;" -- latin capital letter O with stroke
+                                  = latin capital letter O slash,
+                                  U+00D8 ISOlat1 --&gt;
+&lt;!ENTITY Ugrave CDATA "&amp;#217;" -- latin capital letter U with grave,
+                                  U+00D9 ISOlat1 --&gt;
+&lt;!ENTITY Uacute CDATA "&amp;#218;" -- latin capital letter U with acute,
+                                  U+00DA ISOlat1 --&gt;
+&lt;!ENTITY Ucirc  CDATA "&amp;#219;" -- latin capital letter U with circumflex,
+                                  U+00DB ISOlat1 --&gt;
+&lt;!ENTITY Uuml   CDATA "&amp;#220;" -- latin capital letter U with diaeresis,
+                                  U+00DC ISOlat1 --&gt;
+&lt;!ENTITY Yacute CDATA "&amp;#221;" -- latin capital letter Y with acute,
+                                  U+00DD ISOlat1 --&gt;
+&lt;!ENTITY THORN  CDATA "&amp;#222;" -- latin capital letter THORN,
+                                  U+00DE ISOlat1 --&gt;
+&lt;!ENTITY szlig  CDATA "&amp;#223;" -- latin small letter sharp s = ess-zed,
+                                  U+00DF ISOlat1 --&gt;
+&lt;!ENTITY agrave CDATA "&amp;#224;" -- latin small letter a with grave
+                                  = latin small letter a grave,
+                                  U+00E0 ISOlat1 --&gt;
+&lt;!ENTITY aacute CDATA "&amp;#225;" -- latin small letter a with acute,
+                                  U+00E1 ISOlat1 --&gt;
+&lt;!ENTITY acirc  CDATA "&amp;#226;" -- latin small letter a with circumflex,
+                                  U+00E2 ISOlat1 --&gt;
+&lt;!ENTITY atilde CDATA "&amp;#227;" -- latin small letter a with tilde,
+                                  U+00E3 ISOlat1 --&gt;
+&lt;!ENTITY auml   CDATA "&amp;#228;" -- latin small letter a with diaeresis,
+                                  U+00E4 ISOlat1 --&gt;
+&lt;!ENTITY aring  CDATA "&amp;#229;" -- latin small letter a with ring above
+                                  = latin small letter a ring,
+                                  U+00E5 ISOlat1 --&gt;
+&lt;!ENTITY aelig  CDATA "&amp;#230;" -- latin small letter ae
+                                  = latin small ligature ae, U+00E6 ISOlat1 --&gt;
+&lt;!ENTITY ccedil CDATA "&amp;#231;" -- latin small letter c with cedilla,
+                                  U+00E7 ISOlat1 --&gt;
+&lt;!ENTITY egrave CDATA "&amp;#232;" -- latin small letter e with grave,
+                                  U+00E8 ISOlat1 --&gt;
+&lt;!ENTITY eacute CDATA "&amp;#233;" -- latin small letter e with acute,
+                                  U+00E9 ISOlat1 --&gt;
+&lt;!ENTITY ecirc  CDATA "&amp;#234;" -- latin small letter e with circumflex,
+                                  U+00EA ISOlat1 --&gt;
+&lt;!ENTITY euml   CDATA "&amp;#235;" -- latin small letter e with diaeresis,
+                                  U+00EB ISOlat1 --&gt;
+&lt;!ENTITY igrave CDATA "&amp;#236;" -- latin small letter i with grave,
+                                  U+00EC ISOlat1 --&gt;
+&lt;!ENTITY iacute CDATA "&amp;#237;" -- latin small letter i with acute,
+                                  U+00ED ISOlat1 --&gt;
+&lt;!ENTITY icirc  CDATA "&amp;#238;" -- latin small letter i with circumflex,
+                                  U+00EE ISOlat1 --&gt;
+&lt;!ENTITY iuml   CDATA "&amp;#239;" -- latin small letter i with diaeresis,
+                                  U+00EF ISOlat1 --&gt;
+&lt;!ENTITY eth    CDATA "&amp;#240;" -- latin small letter eth, U+00F0 ISOlat1 --&gt;
+&lt;!ENTITY ntilde CDATA "&amp;#241;" -- latin small letter n with tilde,
+                                  U+00F1 ISOlat1 --&gt;
+&lt;!ENTITY ograve CDATA "&amp;#242;" -- latin small letter o with grave,
+                                  U+00F2 ISOlat1 --&gt;
+&lt;!ENTITY oacute CDATA "&amp;#243;" -- latin small letter o with acute,
+                                  U+00F3 ISOlat1 --&gt;
+&lt;!ENTITY ocirc  CDATA "&amp;#244;" -- latin small letter o with circumflex,
+                                  U+00F4 ISOlat1 --&gt;
+&lt;!ENTITY otilde CDATA "&amp;#245;" -- latin small letter o with tilde,
+                                  U+00F5 ISOlat1 --&gt;
+&lt;!ENTITY ouml   CDATA "&amp;#246;" -- latin small letter o with diaeresis,
+                                  U+00F6 ISOlat1 --&gt;
+&lt;!ENTITY divide CDATA "&amp;#247;" -- division sign, U+00F7 ISOnum --&gt;
+&lt;!ENTITY oslash CDATA "&amp;#248;" -- latin small letter o with stroke,
+                                  = latin small letter o slash,
+                                  U+00F8 ISOlat1 --&gt;
+&lt;!ENTITY ugrave CDATA "&amp;#249;" -- latin small letter u with grave,
+                                  U+00F9 ISOlat1 --&gt;
+&lt;!ENTITY uacute CDATA "&amp;#250;" -- latin small letter u with acute,
+                                  U+00FA ISOlat1 --&gt;
+&lt;!ENTITY ucirc  CDATA "&amp;#251;" -- latin small letter u with circumflex,
+                                  U+00FB ISOlat1 --&gt;
+&lt;!ENTITY uuml   CDATA "&amp;#252;" -- latin small letter u with diaeresis,
+                                  U+00FC ISOlat1 --&gt;
+&lt;!ENTITY yacute CDATA "&amp;#253;" -- latin small letter y with acute,
+                                  U+00FD ISOlat1 --&gt;
+&lt;!ENTITY thorn  CDATA "&amp;#254;" -- latin small letter thorn,
+                                  U+00FE ISOlat1 --&gt;
+&lt;!ENTITY yuml   CDATA "&amp;#255;" -- latin small letter y with diaeresis,
+                                  U+00FF ISOlat1 --&gt;
+</pre>
+</div>
+
+<h2><a name="h-24.3">24.3</a> <a name="sym">Character entity references for
+symbols, mathematical symbols, and Greek letters</a></h2>
+
+<p>The character entity references in this section produce characters that may
+be represented by glyphs in the widely available Adobe Symbol font, including
+Greek characters, various bracketing symbols, and a selection of mathematical
+operators such as gradient, product, and summation symbols.</p>
+
+<p>To support these entities, user agents may support full <a rel="biblioentry" href="http://www.w3.org/TR/REC-html40/references.html#ref-ISO10646" class="normref">[ISO10646]</a> or use
+other means. Display of glyphs for these characters may be obtained by being
+able to display the relevant <a rel="biblioentry" href="http://www.w3.org/TR/REC-html40/references.html#ref-ISO10646" class="normref">[ISO10646]</a> characters or
+by other means, such as internally mapping the listed entities, numeric
+character references, and characters to the appropriate position in some font
+that contains the requisite glyphs.</p>
+
+<div class="note">
+<p><em><strong>When to use Greek entities.</strong> This entity set contains
+all the letters used in modern Greek. However, it does not include Greek
+punctuation, precomposed accented characters nor the non-spacing accents
+(tonos, dialytika) required to compose them. There are no archaic letters,
+Coptic-unique letters, or precomposed letters for Polytonic Greek. The entities
+defined here are not intended for the representation of modern Greek text and
+would not be an efficient representation; rather, they are intended for
+occasional Greek letters used in technical and mathematical works.</em></p>
+</div>
+
+<h3><a name="h-24.3.1">24.3.1</a> The list of characters</h3>
+
+<div class="dtd-fragment">
+<pre>&lt;!-- Mathematical, Greek and Symbolic characters for HTML --&gt;
+
+&lt;!-- Character entity set. Typical invocation:
+     &lt;!ENTITY % HTMLsymbol PUBLIC
+       "-//W3C//ENTITIES Symbols//EN//HTML"&gt;
+     %HTMLsymbol; --&gt;
+
+&lt;!-- Portions © International Organization for Standardization 1986:
+     Permission to copy in any form is granted for use with
+     conforming SGML systems and applications as defined in
+     ISO 8879, provided this notice is included in all copies.
+--&gt;
+
+&lt;!-- Relevant ISO entity set is given unless names are newly introduced.
+     New names (i.e., not in ISO 8879 list) do not clash with any
+     existing ISO 8879 entity names. ISO 10646 character numbers
+     are given for each character, in hex. CDATA values are decimal
+     conversions of the ISO 10646 values and refer to the document
+     character set. Names are ISO 10646 names. 
+
+--&gt;
+
+&lt;!-- Latin Extended-B --&gt;
+&lt;!ENTITY fnof     CDATA "&amp;#402;" -- latin small f with hook = function
+                                    = florin, U+0192 ISOtech --&gt;
+
+&lt;!-- Greek --&gt;
+&lt;!ENTITY Alpha    CDATA "&amp;#913;" -- greek capital letter alpha, U+0391 --&gt;
+&lt;!ENTITY Beta     CDATA "&amp;#914;" -- greek capital letter beta, U+0392 --&gt;
+&lt;!ENTITY Gamma    CDATA "&amp;#915;" -- greek capital letter gamma,
+                                    U+0393 ISOgrk3 --&gt;
+&lt;!ENTITY Delta    CDATA "&amp;#916;" -- greek capital letter delta,
+                                    U+0394 ISOgrk3 --&gt;
+&lt;!ENTITY Epsilon  CDATA "&amp;#917;" -- greek capital letter epsilon, U+0395 --&gt;
+&lt;!ENTITY Zeta     CDATA "&amp;#918;" -- greek capital letter zeta, U+0396 --&gt;
+&lt;!ENTITY Eta      CDATA "&amp;#919;" -- greek capital letter eta, U+0397 --&gt;
+&lt;!ENTITY Theta    CDATA "&amp;#920;" -- greek capital letter theta,
+                                    U+0398 ISOgrk3 --&gt;
+&lt;!ENTITY Iota     CDATA "&amp;#921;" -- greek capital letter iota, U+0399 --&gt;
+&lt;!ENTITY Kappa    CDATA "&amp;#922;" -- greek capital letter kappa, U+039A --&gt;
+&lt;!ENTITY Lambda   CDATA "&amp;#923;" -- greek capital letter lambda,
+                                    U+039B ISOgrk3 --&gt;
+&lt;!ENTITY Mu       CDATA "&amp;#924;" -- greek capital letter mu, U+039C --&gt;
+&lt;!ENTITY Nu       CDATA "&amp;#925;" -- greek capital letter nu, U+039D --&gt;
+&lt;!ENTITY Xi       CDATA "&amp;#926;" -- greek capital letter xi, U+039E ISOgrk3 --&gt;
+&lt;!ENTITY Omicron  CDATA "&amp;#927;" -- greek capital letter omicron, U+039F --&gt;
+&lt;!ENTITY Pi       CDATA "&amp;#928;" -- greek capital letter pi, U+03A0 ISOgrk3 --&gt;
+&lt;!ENTITY Rho      CDATA "&amp;#929;" -- greek capital letter rho, U+03A1 --&gt;
+&lt;!-- there is no Sigmaf, and no U+03A2 character either --&gt;
+&lt;!ENTITY Sigma    CDATA "&amp;#931;" -- greek capital letter sigma,
+                                    U+03A3 ISOgrk3 --&gt;
+&lt;!ENTITY Tau      CDATA "&amp;#932;" -- greek capital letter tau, U+03A4 --&gt;
+&lt;!ENTITY Upsilon  CDATA "&amp;#933;" -- greek capital letter upsilon,
+                                    U+03A5 ISOgrk3 --&gt;
+&lt;!ENTITY Phi      CDATA "&amp;#934;" -- greek capital letter phi,
+                                    U+03A6 ISOgrk3 --&gt;
+&lt;!ENTITY Chi      CDATA "&amp;#935;" -- greek capital letter chi, U+03A7 --&gt;
+&lt;!ENTITY Psi      CDATA "&amp;#936;" -- greek capital letter psi,
+                                    U+03A8 ISOgrk3 --&gt;
+&lt;!ENTITY Omega    CDATA "&amp;#937;" -- greek capital letter omega,
+                                    U+03A9 ISOgrk3 --&gt;
+
+&lt;!ENTITY alpha    CDATA "&amp;#945;" -- greek small letter alpha,
+                                    U+03B1 ISOgrk3 --&gt;
+&lt;!ENTITY beta     CDATA "&amp;#946;" -- greek small letter beta, U+03B2 ISOgrk3 --&gt;
+&lt;!ENTITY gamma    CDATA "&amp;#947;" -- greek small letter gamma,
+                                    U+03B3 ISOgrk3 --&gt;
+&lt;!ENTITY delta    CDATA "&amp;#948;" -- greek small letter delta,
+                                    U+03B4 ISOgrk3 --&gt;
+&lt;!ENTITY epsilon  CDATA "&amp;#949;" -- greek small letter epsilon,
+                                    U+03B5 ISOgrk3 --&gt;
+&lt;!ENTITY zeta     CDATA "&amp;#950;" -- greek small letter zeta, U+03B6 ISOgrk3 --&gt;
+&lt;!ENTITY eta      CDATA "&amp;#951;" -- greek small letter eta, U+03B7 ISOgrk3 --&gt;
+&lt;!ENTITY theta    CDATA "&amp;#952;" -- greek small letter theta,
+                                    U+03B8 ISOgrk3 --&gt;
+&lt;!ENTITY iota     CDATA "&amp;#953;" -- greek small letter iota, U+03B9 ISOgrk3 --&gt;
+&lt;!ENTITY kappa    CDATA "&amp;#954;" -- greek small letter kappa,
+                                    U+03BA ISOgrk3 --&gt;
+&lt;!ENTITY lambda   CDATA "&amp;#955;" -- greek small letter lambda,
+                                    U+03BB ISOgrk3 --&gt;
+&lt;!ENTITY mu       CDATA "&amp;#956;" -- greek small letter mu, U+03BC ISOgrk3 --&gt;
+&lt;!ENTITY nu       CDATA "&amp;#957;" -- greek small letter nu, U+03BD ISOgrk3 --&gt;
+&lt;!ENTITY xi       CDATA "&amp;#958;" -- greek small letter xi, U+03BE ISOgrk3 --&gt;
+&lt;!ENTITY omicron  CDATA "&amp;#959;" -- greek small letter omicron, U+03BF NEW --&gt;
+&lt;!ENTITY pi       CDATA "&amp;#960;" -- greek small letter pi, U+03C0 ISOgrk3 --&gt;
+&lt;!ENTITY rho      CDATA "&amp;#961;" -- greek small letter rho, U+03C1 ISOgrk3 --&gt;
+&lt;!ENTITY sigmaf   CDATA "&amp;#962;" -- greek small letter final sigma,
+                                    U+03C2 ISOgrk3 --&gt;
+&lt;!ENTITY sigma    CDATA "&amp;#963;" -- greek small letter sigma,
+                                    U+03C3 ISOgrk3 --&gt;
+&lt;!ENTITY tau      CDATA "&amp;#964;" -- greek small letter tau, U+03C4 ISOgrk3 --&gt;
+&lt;!ENTITY upsilon  CDATA "&amp;#965;" -- greek small letter upsilon,
+                                    U+03C5 ISOgrk3 --&gt;
+&lt;!ENTITY phi      CDATA "&amp;#966;" -- greek small letter phi, U+03C6 ISOgrk3 --&gt;
+&lt;!ENTITY chi      CDATA "&amp;#967;" -- greek small letter chi, U+03C7 ISOgrk3 --&gt;
+&lt;!ENTITY psi      CDATA "&amp;#968;" -- greek small letter psi, U+03C8 ISOgrk3 --&gt;
+&lt;!ENTITY omega    CDATA "&amp;#969;" -- greek small letter omega,
+                                    U+03C9 ISOgrk3 --&gt;
+&lt;!ENTITY thetasym CDATA "&amp;#977;" -- greek small letter theta symbol,
+                                    U+03D1 NEW --&gt;
+&lt;!ENTITY upsih    CDATA "&amp;#978;" -- greek upsilon with hook symbol,
+                                    U+03D2 NEW --&gt;
+&lt;!ENTITY piv      CDATA "&amp;#982;" -- greek pi symbol, U+03D6 ISOgrk3 --&gt;
+
+&lt;!-- General Punctuation --&gt;
+&lt;!ENTITY bull     CDATA "&amp;#8226;" -- bullet = black small circle,
+                                     U+2022 ISOpub  --&gt;
+&lt;!-- bullet is NOT the same as bullet operator, U+2219 --&gt;
+&lt;!ENTITY hellip   CDATA "&amp;#8230;" -- horizontal ellipsis = three dot leader,
+                                     U+2026 ISOpub  --&gt;
+&lt;!ENTITY prime    CDATA "&amp;#8242;" -- prime = minutes = feet, U+2032 ISOtech --&gt;
+&lt;!ENTITY Prime    CDATA "&amp;#8243;" -- double prime = seconds = inches,
+                                     U+2033 ISOtech --&gt;
+&lt;!ENTITY oline    CDATA "&amp;#8254;" -- overline = spacing overscore,
+                                     U+203E NEW --&gt;
+&lt;!ENTITY frasl    CDATA "&amp;#8260;" -- fraction slash, U+2044 NEW --&gt;
+
+&lt;!-- Letterlike Symbols --&gt;
+&lt;!ENTITY weierp   CDATA "&amp;#8472;" -- script capital P = power set
+                                     = Weierstrass p, U+2118 ISOamso --&gt;
+&lt;!ENTITY image    CDATA "&amp;#8465;" -- blackletter capital I = imaginary part,
+                                     U+2111 ISOamso --&gt;
+&lt;!ENTITY real     CDATA "&amp;#8476;" -- blackletter capital R = real part symbol,
+                                     U+211C ISOamso --&gt;
+&lt;!ENTITY trade    CDATA "&amp;#8482;" -- trade mark sign, U+2122 ISOnum --&gt;
+&lt;!ENTITY alefsym  CDATA "&amp;#8501;" -- alef symbol = first transfinite cardinal,
+                                     U+2135 NEW --&gt;
+&lt;!-- alef symbol is NOT the same as hebrew letter alef,
+     U+05D0 although the same glyph could be used to depict both characters --&gt;
+
+&lt;!-- Arrows --&gt;
+&lt;!ENTITY larr     CDATA "&amp;#8592;" -- leftwards arrow, U+2190 ISOnum --&gt;
+&lt;!ENTITY uarr     CDATA "&amp;#8593;" -- upwards arrow, U+2191 ISOnum--&gt;
+&lt;!ENTITY rarr     CDATA "&amp;#8594;" -- rightwards arrow, U+2192 ISOnum --&gt;
+&lt;!ENTITY darr     CDATA "&amp;#8595;" -- downwards arrow, U+2193 ISOnum --&gt;
+&lt;!ENTITY harr     CDATA "&amp;#8596;" -- left right arrow, U+2194 ISOamsa --&gt;
+&lt;!ENTITY crarr    CDATA "&amp;#8629;" -- downwards arrow with corner leftwards
+                                     = carriage return, U+21B5 NEW --&gt;
+&lt;!ENTITY lArr     CDATA "&amp;#8656;" -- leftwards double arrow, U+21D0 ISOtech --&gt;
+&lt;!-- ISO 10646 does not say that lArr is the same as the 'is implied by' arrow
+    but also does not have any other character for that function. So ? lArr can
+    be used for 'is implied by' as ISOtech suggests --&gt;
+&lt;!ENTITY uArr     CDATA "&amp;#8657;" -- upwards double arrow, U+21D1 ISOamsa --&gt;
+&lt;!ENTITY rArr     CDATA "&amp;#8658;" -- rightwards double arrow,
+                                     U+21D2 ISOtech --&gt;
+&lt;!-- ISO 10646 does not say this is the 'implies' character but does not have 
+     another character with this function so ?
+     rArr can be used for 'implies' as ISOtech suggests --&gt;
+&lt;!ENTITY dArr     CDATA "&amp;#8659;" -- downwards double arrow, U+21D3 ISOamsa --&gt;
+&lt;!ENTITY hArr     CDATA "&amp;#8660;" -- left right double arrow,
+                                     U+21D4 ISOamsa --&gt;
+
+&lt;!-- Mathematical Operators --&gt;
+&lt;!ENTITY forall   CDATA "&amp;#8704;" -- for all, U+2200 ISOtech --&gt;
+&lt;!ENTITY part     CDATA "&amp;#8706;" -- partial differential, U+2202 ISOtech  --&gt;
+&lt;!ENTITY exist    CDATA "&amp;#8707;" -- there exists, U+2203 ISOtech --&gt;
+&lt;!ENTITY empty    CDATA "&amp;#8709;" -- empty set = null set = diameter,
+                                     U+2205 ISOamso --&gt;
+&lt;!ENTITY nabla    CDATA "&amp;#8711;" -- nabla = backward difference,
+                                     U+2207 ISOtech --&gt;
+&lt;!ENTITY isin     CDATA "&amp;#8712;" -- element of, U+2208 ISOtech --&gt;
+&lt;!ENTITY notin    CDATA "&amp;#8713;" -- not an element of, U+2209 ISOtech --&gt;
+&lt;!ENTITY ni       CDATA "&amp;#8715;" -- contains as member, U+220B ISOtech --&gt;
+&lt;!-- should there be a more memorable name than 'ni'? --&gt;
+&lt;!ENTITY prod     CDATA "&amp;#8719;" -- n-ary product = product sign,
+                                     U+220F ISOamsb --&gt;
+&lt;!-- prod is NOT the same character as U+03A0 'greek capital letter pi' though
+     the same glyph might be used for both --&gt;
+&lt;!ENTITY sum      CDATA "&amp;#8721;" -- n-ary sumation, U+2211 ISOamsb --&gt;
+&lt;!-- sum is NOT the same character as U+03A3 'greek capital letter sigma'
+     though the same glyph might be used for both --&gt;
+&lt;!ENTITY minus    CDATA "&amp;#8722;" -- minus sign, U+2212 ISOtech --&gt;
+&lt;!ENTITY lowast   CDATA "&amp;#8727;" -- asterisk operator, U+2217 ISOtech --&gt;
+&lt;!ENTITY radic    CDATA "&amp;#8730;" -- square root = radical sign,
+                                     U+221A ISOtech --&gt;
+&lt;!ENTITY prop     CDATA "&amp;#8733;" -- proportional to, U+221D ISOtech --&gt;
+&lt;!ENTITY infin    CDATA "&amp;#8734;" -- infinity, U+221E ISOtech --&gt;
+&lt;!ENTITY ang      CDATA "&amp;#8736;" -- angle, U+2220 ISOamso --&gt;
+&lt;!ENTITY and      CDATA "&amp;#8743;" -- logical and = wedge, U+2227 ISOtech --&gt;
+&lt;!ENTITY or       CDATA "&amp;#8744;" -- logical or = vee, U+2228 ISOtech --&gt;
+&lt;!ENTITY cap      CDATA "&amp;#8745;" -- intersection = cap, U+2229 ISOtech --&gt;
+&lt;!ENTITY cup      CDATA "&amp;#8746;" -- union = cup, U+222A ISOtech --&gt;
+&lt;!ENTITY int      CDATA "&amp;#8747;" -- integral, U+222B ISOtech --&gt;
+&lt;!ENTITY there4   CDATA "&amp;#8756;" -- therefore, U+2234 ISOtech --&gt;
+&lt;!ENTITY sim      CDATA "&amp;#8764;" -- tilde operator = varies with = similar to,
+                                     U+223C ISOtech --&gt;
+&lt;!-- tilde operator is NOT the same character as the tilde, U+007E,
+     although the same glyph might be used to represent both  --&gt;
+&lt;!ENTITY cong     CDATA "&amp;#8773;" -- approximately equal to, U+2245 ISOtech --&gt;
+&lt;!ENTITY asymp    CDATA "&amp;#8776;" -- almost equal to = asymptotic to,
+                                     U+2248 ISOamsr --&gt;
+&lt;!ENTITY ne       CDATA "&amp;#8800;" -- not equal to, U+2260 ISOtech --&gt;
+&lt;!ENTITY equiv    CDATA "&amp;#8801;" -- identical to, U+2261 ISOtech --&gt;
+&lt;!ENTITY le       CDATA "&amp;#8804;" -- less-than or equal to, U+2264 ISOtech --&gt;
+&lt;!ENTITY ge       CDATA "&amp;#8805;" -- greater-than or equal to,
+                                     U+2265 ISOtech --&gt;
+&lt;!ENTITY sub      CDATA "&amp;#8834;" -- subset of, U+2282 ISOtech --&gt;
+&lt;!ENTITY sup      CDATA "&amp;#8835;" -- superset of, U+2283 ISOtech --&gt;
+&lt;!-- note that nsup, 'not a superset of, U+2283' is not covered by the Symbol 
+     font encoding and is not included. Should it be, for symmetry?
+     It is in ISOamsn  --&gt; 
+&lt;!ENTITY nsub     CDATA "&amp;#8836;" -- not a subset of, U+2284 ISOamsn --&gt;
+&lt;!ENTITY sube     CDATA "&amp;#8838;" -- subset of or equal to, U+2286 ISOtech --&gt;
+&lt;!ENTITY supe     CDATA "&amp;#8839;" -- superset of or equal to,
+                                     U+2287 ISOtech --&gt;
+&lt;!ENTITY oplus    CDATA "&amp;#8853;" -- circled plus = direct sum,
+                                     U+2295 ISOamsb --&gt;
+&lt;!ENTITY otimes   CDATA "&amp;#8855;" -- circled times = vector product,
+                                     U+2297 ISOamsb --&gt;
+&lt;!ENTITY perp     CDATA "&amp;#8869;" -- up tack = orthogonal to = perpendicular,
+                                     U+22A5 ISOtech --&gt;
+&lt;!ENTITY sdot     CDATA "&amp;#8901;" -- dot operator, U+22C5 ISOamsb --&gt;
+&lt;!-- dot operator is NOT the same character as U+00B7 middle dot --&gt;
+
+&lt;!-- Miscellaneous Technical --&gt;
+&lt;!ENTITY lceil    CDATA "&amp;#8968;" -- left ceiling = apl upstile,
+                                     U+2308 ISOamsc  --&gt;
+&lt;!ENTITY rceil    CDATA "&amp;#8969;" -- right ceiling, U+2309 ISOamsc  --&gt;
+&lt;!ENTITY lfloor   CDATA "&amp;#8970;" -- left floor = apl downstile,
+                                     U+230A ISOamsc  --&gt;
+&lt;!ENTITY rfloor   CDATA "&amp;#8971;" -- right floor, U+230B ISOamsc  --&gt;
+&lt;!ENTITY lang     CDATA "&amp;#9001;" -- left-pointing angle bracket = bra,
+                                     U+2329 ISOtech --&gt;
+&lt;!-- lang is NOT the same character as U+003C 'less than' 
+     or U+2039 'single left-pointing angle quotation mark' --&gt;
+&lt;!ENTITY rang     CDATA "&amp;#9002;" -- right-pointing angle bracket = ket,
+                                     U+232A ISOtech --&gt;
+&lt;!-- rang is NOT the same character as U+003E 'greater than' 
+     or U+203A 'single right-pointing angle quotation mark' --&gt;
+
+&lt;!-- Geometric Shapes --&gt;
+&lt;!ENTITY loz      CDATA "&amp;#9674;" -- lozenge, U+25CA ISOpub --&gt;
+
+&lt;!-- Miscellaneous Symbols --&gt;
+&lt;!ENTITY spades   CDATA "&amp;#9824;" -- black spade suit, U+2660 ISOpub --&gt;
+&lt;!-- black here seems to mean filled as opposed to hollow --&gt;
+&lt;!ENTITY clubs    CDATA "&amp;#9827;" -- black club suit = shamrock,
+                                     U+2663 ISOpub --&gt;
+&lt;!ENTITY hearts   CDATA "&amp;#9829;" -- black heart suit = valentine,
+                                     U+2665 ISOpub --&gt;
+&lt;!ENTITY diams    CDATA "&amp;#9830;" -- black diamond suit, U+2666 ISOpub --&gt;
+</pre>
+</div>
+
+<h2><a name="h-24.4">24.4</a> <a name="misc">Character entity references for
+markup-significant and internationalization characters</a></h2>
+
+<p>The character entity references in this section are for escaping
+markup-significant characters (these are the same as those in HTML 2.0 and
+3.2), for denoting spaces and dashes. Other characters in this section apply to
+internationalization issues such as the disambiguation of bidirectional text
+(see the section on <a href="http://www.w3.org/TR/REC-html40/struct/dirlang.html#bidirection">bidirectional
+text</a> for details).</p>
+
+<p>Entities have also been added for the remaining characters occurring in
+CP-1252 which do not occur in the HTMLlat1 or HTMLsymbol entity sets. These all
+occur in the 128 to 159 range within the CP-1252 charset. These entities permit
+the characters to be denoted in a platform-independent manner.</p>
+
+<p>To support these entities, user agents may support full <a rel="biblioentry" href="http://www.w3.org/TR/REC-html40/references.html#ref-ISO10646" class="normref">[ISO10646]</a> or use
+other means. Display of glyphs for these characters may be obtained by being
+able to display the relevant <a rel="biblioentry" href="http://www.w3.org/TR/REC-html40/references.html#ref-ISO10646" class="normref">[ISO10646]</a> characters or
+by other means, such as internally mapping the listed entities, numeric
+character references, and characters to the appropriate position in some font
+that contains the requisite glyphs.</p>
+
+<h3><a name="h-24.4.1">24.4.1</a> The list of characters</h3>
+
+<div class="dtd-fragment">
+<pre>&lt;!-- Special characters for HTML --&gt;
+
+&lt;!-- Character entity set. Typical invocation:
+     &lt;!ENTITY % HTMLspecial PUBLIC
+       "-//W3C//ENTITIES Special//EN//HTML"&gt;
+     %HTMLspecial; --&gt;
+
+&lt;!-- Portions © International Organization for Standardization 1986:
+     Permission to copy in any form is granted for use with
+     conforming SGML systems and applications as defined in
+     ISO 8879, provided this notice is included in all copies.
+--&gt;
+
+&lt;!-- Relevant ISO entity set is given unless names are newly introduced.
+     New names (i.e., not in ISO 8879 list) do not clash with any
+     existing ISO 8879 entity names. ISO 10646 character numbers
+     are given for each character, in hex. CDATA values are decimal
+     conversions of the ISO 10646 values and refer to the document
+     character set. Names are ISO 10646 names. 
+
+--&gt;
+
+&lt;!-- C0 Controls and Basic Latin --&gt;
+&lt;!ENTITY quot    CDATA "&amp;#34;"   -- quotation mark = APL quote,
+                                    U+0022 ISOnum --&gt;
+&lt;!ENTITY amp     CDATA "&amp;#38;"   -- ampersand, U+0026 ISOnum --&gt;
+&lt;!ENTITY lt      CDATA "&amp;#60;"   -- less-than sign, U+003C ISOnum --&gt;
+&lt;!ENTITY gt      CDATA "&amp;#62;"   -- greater-than sign, U+003E ISOnum --&gt;
+
+&lt;!-- Latin Extended-A --&gt;
+&lt;!ENTITY OElig   CDATA "&amp;#338;"  -- latin capital ligature OE,
+                                    U+0152 ISOlat2 --&gt;
+&lt;!ENTITY oelig   CDATA "&amp;#339;"  -- latin small ligature oe, U+0153 ISOlat2 --&gt;
+&lt;!-- ligature is a misnomer, this is a separate character in some languages --&gt;
+&lt;!ENTITY Scaron  CDATA "&amp;#352;"  -- latin capital letter S with caron,
+                                    U+0160 ISOlat2 --&gt;
+&lt;!ENTITY scaron  CDATA "&amp;#353;"  -- latin small letter s with caron,
+                                    U+0161 ISOlat2 --&gt;
+&lt;!ENTITY Yuml    CDATA "&amp;#376;"  -- latin capital letter Y with diaeresis,
+                                    U+0178 ISOlat2 --&gt;
+
+&lt;!-- Spacing Modifier Letters --&gt;
+&lt;!ENTITY circ    CDATA "&amp;#710;"  -- modifier letter circumflex accent,
+                                    U+02C6 ISOpub --&gt;
+&lt;!ENTITY tilde   CDATA "&amp;#732;"  -- small tilde, U+02DC ISOdia --&gt;
+
+&lt;!-- General Punctuation --&gt;
+&lt;!ENTITY ensp    CDATA "&amp;#8194;" -- en space, U+2002 ISOpub --&gt;
+&lt;!ENTITY emsp    CDATA "&amp;#8195;" -- em space, U+2003 ISOpub --&gt;
+&lt;!ENTITY thinsp  CDATA "&amp;#8201;" -- thin space, U+2009 ISOpub --&gt;
+&lt;!ENTITY zwnj    CDATA "&amp;#8204;" -- zero width non-joiner,
+                                    U+200C NEW RFC 2070 --&gt;
+&lt;!ENTITY zwj     CDATA "&amp;#8205;" -- zero width joiner, U+200D NEW RFC 2070 --&gt;
+&lt;!ENTITY lrm     CDATA "&amp;#8206;" -- left-to-right mark, U+200E NEW RFC 2070 --&gt;
+&lt;!ENTITY rlm     CDATA "&amp;#8207;" -- right-to-left mark, U+200F NEW RFC 2070 --&gt;
+&lt;!ENTITY ndash   CDATA "&amp;#8211;" -- en dash, U+2013 ISOpub --&gt;
+&lt;!ENTITY mdash   CDATA "&amp;#8212;" -- em dash, U+2014 ISOpub --&gt;
+&lt;!ENTITY lsquo   CDATA "&amp;#8216;" -- left single quotation mark,
+                                    U+2018 ISOnum --&gt;
+&lt;!ENTITY rsquo   CDATA "&amp;#8217;" -- right single quotation mark,
+                                    U+2019 ISOnum --&gt;
+&lt;!ENTITY sbquo   CDATA "&amp;#8218;" -- single low-9 quotation mark, U+201A NEW --&gt;
+&lt;!ENTITY ldquo   CDATA "&amp;#8220;" -- left double quotation mark,
+                                    U+201C ISOnum --&gt;
+&lt;!ENTITY rdquo   CDATA "&amp;#8221;" -- right double quotation mark,
+                                    U+201D ISOnum --&gt;
+&lt;!ENTITY bdquo   CDATA "&amp;#8222;" -- double low-9 quotation mark, U+201E NEW --&gt;
+&lt;!ENTITY dagger  CDATA "&amp;#8224;" -- dagger, U+2020 ISOpub --&gt;
+&lt;!ENTITY Dagger  CDATA "&amp;#8225;" -- double dagger, U+2021 ISOpub --&gt;
+&lt;!ENTITY permil  CDATA "&amp;#8240;" -- per mille sign, U+2030 ISOtech --&gt;
+&lt;!ENTITY lsaquo  CDATA "&amp;#8249;" -- single left-pointing angle quotation mark,
+                                    U+2039 ISO proposed --&gt;
+&lt;!-- lsaquo is proposed but not yet ISO standardized --&gt;
+&lt;!ENTITY rsaquo  CDATA "&amp;#8250;" -- single right-pointing angle quotation mark,
+                                    U+203A ISO proposed --&gt;
+&lt;!-- rsaquo is proposed but not yet ISO standardized --&gt;
+&lt;!ENTITY euro   CDATA "&amp;#8364;"  -- euro sign, U+20AC NEW --&gt;
+</pre>
+</div>
+
+<div class="navbar" align="center">
+<hr><a href="http://www.w3.org/TR/REC-html40/sgml/framesetdtd.html">previous</a> &nbsp; <a href="http://www.w3.org/TR/REC-html40/appendix/changes.html">next</a> &nbsp; <a href="http://www.w3.org/TR/REC-html40/cover.html#minitoc">
+contents</a> &nbsp; <a href="http://www.w3.org/TR/REC-html40/index/elements.html">elements</a> &nbsp; <a href="http://www.w3.org/TR/REC-html40/index/attributes.html">attributes</a> &nbsp; <a href="http://www.w3.org/TR/REC-html40/index/list.html">index</a></div>
+</body></html>

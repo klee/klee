@@ -1,0 +1,39 @@
+all: gv_test.png
+
+################################################
+# This demo uses some files shipped with the distro.
+# You could replace these with your own.
+INCLUDEDIR=`pkg-config libgvc_builtins --variable=includedir`
+gv.i: 
+	cp $(INCLUDEDIR)/gv.i .
+gv.cpp: 
+	cp $(INCLUDEDIR)/gv.cpp .
+builtins.cpp: 
+	cat $(INCLUDEDIR)/dot_builtins.c $(INCLUDEDIR)/no_demand_loading.c > builtins.cpp
+
+BUILTINS = -lgvplugin_dot_layout -lgvplugin_neato_layout -lgvplugin_gd -lgvplugin_pangocairo
+
+EXTRACLEAN = gv.i gv.cpp builtins.cpp
+################################################
+
+PYTHON_PREFIX = `python -c "import sys; print sys.prefix"`
+PYTHON_VERSION = `python -c 'import sys; print sys.version[:3]'`
+
+CXXFLAGS = `pkg-config libgvc_builtins --cflags` \
+	-I$(PYTHON_PREFIX)/include/python$(PYTHON_VERSION) \
+	-Wall -g -O2 -fPIC
+
+LDFLAGS = -Wl,--rpath -Wl,`pkg-config libgvc_builtins --variable=libdir` \
+	`pkg-config libgvc_builtins --libs` -shared $(BUILTINS)
+
+gv_test.png: gv_test.py _gv.so
+	./gv_test.py
+
+_gv.so: gv.o gv_python.o builtins.o
+	g++ $(LDFLAGS) gv.o gv_python.o -o _gv.so
+	
+gv_python.cpp gv.py: gv.i
+	swig -c++ -python -o gv_python.cpp gv.i
+
+clean:
+	rm -f gv.py gv_python.cpp _gv.so *.o gv_test.png $(EXTRACLEAN)

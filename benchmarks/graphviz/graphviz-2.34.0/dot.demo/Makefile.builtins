@@ -1,0 +1,26 @@
+all: dot demo simple example
+
+################################################
+# This demo uses some files shipped with the distro.
+# You could replace these with your own.
+INCLUDEDIR=`pkg-config libgvc_builtins --variable=includedir`
+builtins.c:
+	cat $(INCLUDEDIR)/dot_builtins.c $(INCLUDEDIR)/no_demand_loading.c > builtins.c
+
+BUILTINS = -lgvplugin_dot_layout -lgvplugin_neato_layout -lgvplugin_gd -lgvplugin_pangocairo
+
+EXTRACLEAN = gv.i gv.cpp builtins.cpp
+################################################
+
+CFLAGS=`pkg-config libgvc_builtins --cflags` -Wall -g -O2 
+LDFLAGS=-Wl,--rpath -Wl,`pkg-config libgvc_builtins --variable=libdir` \
+	`pkg-config libgvc_builtins --libs` $(BUILTINS)
+
+
+dot: dot.o builtins.o
+demo: demo.o builtins.o
+simple: simple.o builtins.o
+example: example.o builtins.o
+
+clean:
+	rm -rf *.o dot demo simple example *.png $(EXTRACLEAN)

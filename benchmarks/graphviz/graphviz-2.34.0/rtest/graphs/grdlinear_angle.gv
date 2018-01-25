@@ -1,0 +1,102 @@
+digraph G { 
+  bgcolor="purple:pink" label="Graph" fontcolor="white"
+  subgraph cluster1 {
+    bgcolor="blue:green" label="Cluster" fontcolor="white"
+	a0 [shape=circle fillcolor="gold:brown" style="radial" gradientangle=180
+		label=<
+ <TABLE border="10" cellspacing="10" cellpadding="10" style="rounded" bgcolor="yellow:violet" gradientangle="315">
+<TR><TD border="3" bgcolor="yellow" gradientangle="315">00</TD>
+<TD border="3" bgcolor="yellow:green" gradientangle="315">01</TD>
+<TD border="3" bgcolor="green" gradientangle="315">02</TD>
+<TD border="3" bgcolor="green:blue" gradientangle="315">03</TD>
+<TD border="3" bgcolor="blue" gradientangle="315">04</TD>
+<TD border="3" bgcolor="blue:purple" gradientangle="315">05</TD>
+<TD border="3" bgcolor="purple" gradientangle="315">06</TD>
+<TD border="3" bgcolor="purple:violet" gradientangle="315">07</TD>
+<TD border="3" bgcolor="violet" gradientangle="315">08</TD></TR>
+  
+<TR><TD border="3" bgcolor="yellow:gold"  gradientangle="315">10</TD>
+<TD border="3" bgcolor="yellow:green"  gradientangle="315">11</TD>
+<TD border="3" bgcolor="yellow:green"  gradientangle="315">12</TD>
+<TD border="3" bgcolor="yellow:blue"  gradientangle="315">13</TD>
+<TD border="3" bgcolor="yellow:blue"  gradientangle="315">14</TD>
+<TD border="3" bgcolor="yellow:purple"  gradientangle="315">15</TD>
+<TD border="3" bgcolor="yellow:purple"  gradientangle="315">16</TD>
+<TD border="3" bgcolor="yellow:violet"  gradientangle="315">17</TD>
+<TD border="3" bgcolor="yellow:violet"  gradientangle="315">18</TD></TR>
+  
+<TR><TD border="3" bgcolor="gold"  gradientangle="315">20</TD>
+<TD border="3" bgcolor="gold:green"  gradientangle="315">21</TD>
+<TD border="3" bgcolor="gold:green"  gradientangle="315">22</TD>
+<TD border="3" bgcolor="gold:blue"  gradientangle="315">23</TD>
+<TD border="3" bgcolor="gold:blue"  gradientangle="315">24</TD>
+<TD border="3" bgcolor="gold:purple"  gradientangle="315">25</TD>
+<TD border="3" bgcolor="gold:purple"  gradientangle="315">26</TD>
+<TD border="3" bgcolor="gold:violet"  gradientangle="315">27</TD>
+<TD border="3" bgcolor="gold:violet"  gradientangle="315">28</TD></TR>
+  
+<TR><TD border="3" bgcolor="gold:orange"  gradientangle="315">30</TD>
+<TD border="3" bgcolor="orange:green"  gradientangle="315">31</TD>
+<TD border="3" bgcolor="orange:green"  gradientangle="315">32</TD>
+<TD border="3" bgcolor="orange:blue"  gradientangle="315">33</TD>
+<TD border="3" bgcolor="orange:blue"  gradientangle="315">34</TD>
+<TD border="3" bgcolor="orange:purple"  gradientangle="315">35</TD>
+<TD border="3" bgcolor="orange:purple"  gradientangle="315">36</TD>
+<TD border="3" bgcolor="orange:violet"  gradientangle="315">37</TD>
+<TD border="3" bgcolor="orange:violet"  gradientangle="315">38</TD></TR>
+  
+<TR><TD border="3" bgcolor="orange"  gradientangle="315">40</TD>
+<TD border="3" bgcolor="orange:green"  gradientangle="315">41</TD>
+<TD border="3" bgcolor="orange:green"  gradientangle="315">42</TD>
+<TD border="3" bgcolor="orange:blue"  gradientangle="315">43</TD>
+<TD border="3" bgcolor="orange:blue"  gradientangle="315">44</TD>
+<TD border="3" bgcolor="orange:purple"  gradientangle="315">45</TD>
+<TD border="3" bgcolor="orange:purple"  gradientangle="315">46</TD>
+<TD border="3" bgcolor="orange:violet"  gradientangle="315">47</TD>
+<TD border="3" bgcolor="orange:violet"  gradientangle="315">48</TD></TR>
+  
+<TR><TD border="3" bgcolor="orange:red"  gradientangle="315">50</TD>
+<TD border="3" bgcolor="red:green"  gradientangle="315">51</TD>
+<TD border="3" bgcolor="red:green"  gradientangle="315">52</TD>
+<TD border="3" bgcolor="red:blue"  gradientangle="315">53</TD>
+<TD border="3" bgcolor="red:blue"  gradientangle="315">54</TD>
+<TD border="3" bgcolor="red:purple"  gradientangle="315">55</TD>
+<TD border="3" bgcolor="red:purple"  gradientangle="315">56</TD>
+<TD border="3" bgcolor="red:violet"  gradientangle="315">57</TD>
+<TD border="3" bgcolor="red:violet"  gradientangle="315">58</TD></TR>
+  
+<TR><TD border="3" bgcolor="red"  gradientangle="315">60</TD>
+<TD border="3" bgcolor="red:green"  gradientangle="315">61</TD>
+<TD border="3" bgcolor="red:green"  gradientangle="315">62</TD>
+<TD border="3" bgcolor="red:blue"  gradientangle="315">63</TD>
+<TD border="3" bgcolor="red:blue"  gradientangle="315">64</TD>
+<TD border="3" bgcolor="red:purple"  gradientangle="315">65</TD>
+<TD border="3" bgcolor="red:purple"  gradientangle="315">66</TD>
+<TD border="3" bgcolor="red:violet"  gradientangle="315">67</TD>
+<TD border="3" bgcolor="red:violet"  gradientangle="315">68</TD></TR>
+  
+<TR><TD border="3" bgcolor="red:brown"  gradientangle="315">70</TD>
+<TD border="3" bgcolor="brown:green"  gradientangle="315">71</TD>
+<TD border="3" bgcolor="brown:green"  gradientangle="315">72</TD>
+<TD border="3" bgcolor="brown:blue"  gradientangle="315">73</TD>
+<TD border="3" bgcolor="brown:blue"  gradientangle="315">74</TD>
+<TD border="3" bgcolor="brown:purple"  gradientangle="315">75</TD>
+<TD border="3" bgcolor="brown:purple"  gradientangle="315">76</TD>
+<TD border="3" bgcolor="brown:violet"  gradientangle="315">77</TD>
+<TD border="3" bgcolor="brown:violet"  gradientangle="315">78</TD></TR>
+  
+<TR><TD border="3" bgcolor="brown"  gradientangle="315">80</TD>
+<TD border="3" bgcolor="brown:green"  gradientangle="315">81</TD>
+<TD border="3" bgcolor="brown:green"  gradientangle="315">82</TD>
+<TD border="3" bgcolor="brown:blue"  gradientangle="315">83</TD>
+<TD border="3" bgcolor="brown:blue"  gradientangle="315">84</TD>
+<TD border="3" bgcolor="brown:purple"  gradientangle="315">85</TD>
+<TD border="3" bgcolor="brown:purple"  gradientangle="315">86</TD>
+<TD border="3" bgcolor="brown:violet"  gradientangle="315">87</TD>
+<TD border="3" bgcolor="brown:violet"  gradientangle="315">88</TD></TR>
+  
+</TABLE>>];
+
+}
+
+} 

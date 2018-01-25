@@ -1,0 +1,36 @@
+#Handled actions:
+#MM_PAN		
+#MM_ROTATE
+#MM_SINGLE_SELECT
+#MM_RECTANGULAR_SELECT
+#MM_POLYGON_SELECT
+#MM_MOVE
+#MM_FISHEYE_MAGNIFIER
+#keys:These are pre defined keys in the code , more keys can be added by using their GTK key event correspondants, 0 means no key
+#B_LSHIFT	Left Shift
+#B_RSHIFT	Right Shift
+#B_LCTRL	Left CTRL
+#B_RCTRL	Right CTRL
+#view modes , use one from the following list for each line
+#ALL		Action is always active
+#2D		active only in 2D mode
+#3D		active in only 3D mode
+#FISHEYE	active in only fisheye mode
+#NO_FISHEYE	active when mode is not fisheye
+#mouse_button
+#LEFT
+#RIGHT
+#MIDDLE
+#drag
+#specify if action requires mouse to be dragged
+#Line format
+#Action,hotkey,view_mode,mouse_button,drag
+#COMBO1
+MM_PAN,0,ALL,LEFT,1
+MM_ROTATE,B_LSHIFT,3D,LEFT,1
+MM_SINGLE_SELECT,0,NO_FISHEYE,RIGHT,0 
+MM_RECTANGULAR_SELECT,0,ALL,RIGHT,1 
+MM_MOVE,B_LCTRL,2D,LEFT,1 
+MM_FISHEYE_MAGNIFIER,B_LSHIFT,2D,LEFT,1 
+MM_FISHEYE_PICK,0,FISHEYE,RIGHT,0 
+MM_POLYGON_SELECT,B_LCTRL,NO_FISHEYE,RIGHT,0

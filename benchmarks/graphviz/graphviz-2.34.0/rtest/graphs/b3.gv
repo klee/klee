@@ -1,0 +1,43 @@
+digraph "g" {
+	graph [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	node [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		shape = "ellipse"
+		color = "black"
+	]
+	edge [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+	]
+	"n0" [
+		label = "(balanced)"
+		color = "black"
+		width = "0.833333"
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		pos = "151.378446,405.811623"
+		height = "0.416667"
+		shape = "ellipse"
+	]
+	"n1" [
+		label = "(unbalanced"
+		color = "black"
+		width = "0.833333"
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		pos = "163.408521,310.621242"
+		height = "0.416667"
+		shape = "ellipse"
+	]
+}

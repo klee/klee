@@ -1,0 +1,4 @@
+digraph G {
+  a [style=filled shape=DFDbox]
+  a -> b
+}

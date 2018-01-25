@@ -1,0 +1,130 @@
+.TH CCOMPS 1 "30 April 2011"
+.SH NAME
+ccomps \- connected components filter for graphs
+.SH SYNOPSIS
+.B ccomps
+[
+.B \-sxvenzC?
+]
+[
+.BI -X [#%]s[-f]
+]
+[
+.BI -o outfile
+]
+[ 
+.I files
+]
+.SH DESCRIPTION
+.B ccomps
+decomposes graphs into their connected components,
+printing the components to standard output.
+.SH OPTIONS
+The following options are supported:
+.TP
+.B \-e
+Do not induce edges in the connected components.
+.TP
+.B \-s
+No output graph is printed. The return value can be used to
+check if the graph is connected or not.
+.TP
+.B \-x
+Only the connected components are printed, as separate graphs.
+.TP
+.B \-v
+Counts of nodes, edges and connected components are printed.
+.TP
+.B \-z
+Sort components by size, with the largest first. This is only
+effective if either \fB-x\fP or \fB-X#\fP is present.
+Thus, \fB-zX#0\fP will cause the largest component to be printed.
+.TP
+.B \-C
+Use clusters in computing components in addition to normal edge
+connectivity. In essence, this gives the connected components of the
+derived graph in which nodes top-level clusters and nodes in the
+original graph. This maintains all subgraph structure within a
+component, even if a subgraph does not contain any nodes.
+.TP
+.B \-n
+Do not project subgraph structure. Normally, if 
+.B ccomps
+produces components as graphs distinct from the input graph, it will
+define subgraphs which are projections of subgraphs of the input graph
+onto the component. (If the projection is empty, no subgraph is produced.)
+If this flag is set, the component contains only the relevant nodes and
+edges.
+.TP
+.BI \-X " node_name"
+Prints only the component containing the node \fInode_name\fP,
+if any.
+.TP
+.BI \-X# " start"
+.TP
+.BI \-X# " start-"
+.TP
+.BI \-X# " start-last"
+Prints only components in the given range of indices. In the first form, only
+the component whose index is \fIstart\fP, if any, is printed.
+In the second form, each component whose index is at least \fIstart\fP
+is printed. In the last form, only those components whose indices are
+in the range \fB[\fP\fIIstart\fP\fB,\fP\fIlast\fP\fB]\fP are printed.
+Thus, the flag \fB-x\fP is equivalent to \fB-X#0-\fP.
+.TP
+.BI \-X# " min"
+.TP
+.BI \-X# " min-"
+.TP
+.BI \-X# " min-max"
+Prints only components in the given range of sizes. In the first form, only
+a component whose size is \fImin\fP, if any, is printed.
+In the second form, each component whose size is at least \fImin\fP
+is printed. In the last form, only those components whose sizes are
+in the range \fB[\fP\fIImin\fP\fB,\fP\fImax\fP\fB]\fP are printed.
+.TP
+.BI \-o " outfile"
+If specified, each graph will be written to a different file
+with the names derived from \fIoutfile\fP. In particular, 
+if both \fB-o\fP and \fB-x\fP flags are used, then each connected
+component is written to a different file. If \fIoutfile\fP does
+not have a suffix, the first file will have the name \fIoutfile\fP;
+then next \fIoutfile_1\fP, then next \fIoutfile_2\fP, and so on.
+If \fIoutfile\fP has a suffix, i.e., has the form \fIbase.sfx\fP,
+then the files will be named \fIbase.sfx\fP, \fIbase_1.sfx\fP, 
+\fIbase_2.sfx\fP, etc.
+.LP
+By default, each input graph is printed, with each connected
+component given as a subgraph whose name is a concatenation of
+the name of the input graph, the string "_cc_" and the
+number of the component.
+.SH OPERANDS
+The following operand is supported:
+.TP 8
+.I files
+Names of files containing 1 or more graphs in dot format.
+If no
+.I files
+operand is specified,
+the standard input will be used.
+.SH RETURN CODES
+Unless used to extract a single connected component,
+.B ccomps
+returns
+.B 0
+if all the input graphs are connected; and
+non-zero if any graph has multiple components, or any error occurred.
+If just extracting a single component,
+.B ccomps
+returns
+.B 0
+on success and non-zero if an error occurred.
+.SH "BUGS"
+It is possible, though unlikely, that the names used for connected
+components and their subgraphs may conflict with existing subgraph names.
+.SH AUTHORS
+Stephen C. North <north@research.att.com>
+.br
+Emden R. Gansner <erg@research.att.com>
+.SH "SEE ALSO"
+gc(1), dot(1), gvpr(1), gvcolor(1), acyclic(1), sccmap(1), tred(1), libgraph(3)

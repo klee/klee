@@ -1,0 +1,8 @@
+digraph inheritance
+{
+  Node1100 [shape="box",label="exotkAF_ViewType.hxx",fontsize=10,height=0.2,width=0.4,fontname="doxfont",color="black",style="filled" fontcolor="white"];
+  Node1101 -> Node1100 [color="midnightblue",fontsize=10,style="solid",fontname="doxfont"];
+  Node1101 [shape="box",label="exotkAF_View.cxx",fontsize=10,height=0.2,width=0.4,fontname="doxfont",color="black",URL="$exotkAF__View_8cxx.html"];
+  Node1102 -> Node1100 [color="midnightblue",fontsize=10,style="solid",fontname="doxfont"];
+  Node1102 [shape="box",label="exotkAF_ViewPopup.cxx",fontsize=10,height=0.2,width=0.4,fontname="doxfont",color="black",URL="$exotkAF__ViewPopup_8cxx.html"];
+}

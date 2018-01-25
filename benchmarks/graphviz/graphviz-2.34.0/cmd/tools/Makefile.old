@@ -1,0 +1,169 @@
+ALL_BIN = gc gvcolor acyclic nop ccomps sccmap tred unflatten gxl2gv \
+          gv2gxl dijkstra gvpack bcomps mm2gv gml2gv gvgen
+ALL = $(ALL_BIN) gv2gxl.1
+
+all : $(ALL)
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+LOC_LIB=$(ROOT)/lib
+LOC_PLUG=$(ROOT)/plugin
+LOC_INCDIR=$(LOC_LIB)/include
+LOC_LIBDIR=$(LOC_LIB)/lib
+
+DEFINES = -DDEMAND_LOADING=0 -DHAVE_CONFIG_H -DUSE_CGRAPH
+
+INCS =  -I. -I$(ROOT) -I$(LOC_LIB)/cgraph \
+        -I$(LOC_LIB)/ingraphs -I$(LOC_LIB)/cdt
+PINCS =  -I. -I$(ROOT) -I$(LOC_LIB)/graph \
+        -I$(LOC_LIB)/ingraphs -I$(LOC_LIB)/cdt
+DNINCS = -I$(LOC_LIB)/pack -I$(LOC_LIB)/neatogen  \
+         -I$(LOC_LIB)/sparse \
+         -I$(LOC_LIB)/gvc \
+         -I$(LOC_LIB)/pathplan \
+         -I$(LOC_LIB)/common -I$(LOC_LIB)
+
+LIBS =  -L$(LOC_LIB)/cgraph -lcgraph -L$(LOC_LIB)/cdt -lcdt
+PLIBS =  -L$(LOC_LIB)/graph -lgraph -L$(LOC_LIB)/cdt -lcdt
+PLUGS = -L$(LOC_PLUG)/neato_layout -lgvplugin_neato_layout \
+	-L$(LOC_PLUG)/dot_layout -lgvplugin_dot_layout \
+	-L$(LOC_PLUG)/core -lgvplugin_core \
+	-L$(LOC_PLUG)/gd -lgvplugin_gd \
+	-L$(LOC_PLUG)/pango -lgvplugin_pango
+
+GVLIBS = -L$(LOC_LIB)/gvc -lgvc $(PLUGS) \
+        -L$(LOC_LIB)/common -lcommon \
+        -L$(LOC_LIB)/gvc -lgvc $(PLUGS) \
+        -L$(LOC_LIB)/xdot -lxdot \
+        -L$(LOC_LIB)/neatogen -lneatogen \
+        -L$(LOC_LIB)/vpsc -lvpsc \
+        -L$(LOC_LIB)/dotgen -ldotgen \
+        -L$(LOC_LIB)/circogen -lcircogen \
+        -L$(LOC_LIB)/fdpgen -lfdpgen \
+        -L$(LOC_LIB)/osage -losage \
+        -L$(LOC_LIB)/ortho -lortho \
+        -L$(LOC_LIB)/sfdpgen -lsfdpgen \
+        -L$(LOC_LIB)/patchwork -lpatchwork \
+        -L$(LOC_LIB)/sparse -lsparse \
+        -L$(LOC_LIB)/rbtree -lrbtree \
+        -L$(LOC_LIB)/twopigen -ltwopigen \
+        -L$(LOC_LIB)/pack -lpack \
+        -L$(LOC_LIB)/common -lcommon \
+        -L$(LOC_LIB)/pathplan -lpathplan \
+        -L$(LOC_LIB)/gd -lgd
+DNLIBS = $(GVLIBS) \
+         $(LIBS) \
+         $(EXTLIB_LIB) $(EXPAT_LIB) $(LTDL_LIB) -lm
+PDNLIBS = $(GVLIBS) \
+         $(PLIBS) \
+         $(EXTLIB_LIB) $(EXPAT_LIB) $(LTDL_LIB) -lm
+INGLIB = -L$(LOC_LIB)/ingraphs -lingraphs
+
+ALIBS = -L$(LOC_LIB)/cgraph -lcgraph -L$(LOC_LIB)/cdt -lcdt
+
+ACYCLICOBJS = acyclic.o
+NOPOBJS = nop.o
+COLOROBJS = gvcolor.o colxlate.o
+UNFLATOBJS = unflatten.o
+GCOBJS = gc.o
+TOBJS = tred.o
+CCOBJS = ccomps.o
+SCCOBJS = sccmap.o
+GXLOBJS = cvtgxl.o   gv2gxl.o  gxl2gv.o
+GVPOBJS = gvpack.o gvpack_builtins.o
+BCCOBJS = bcomps.o
+MANS = acyclic.1 gvcolor.1 nop.1 tred.1 ccomps.1 gc.1 sccmap.1 \
+	unflatten.1 gxl2gv.1 gv2gxl.1 gvpack.1 bcomps.1
+
+gvpack : $(GVPOBJS)
+	$(CPP) $(LDFLAGS) $(GVPOBJS) $(INGLIB) $(PDNLIBS) -o $@
+
+gvpack.o : gvpack.c
+	$(CC) -c $(CCFLAGS) $(DEFINES) $(DNINCS) $(PINCS) gvpack.c
+
+gvpack_builtins.o : gvpack_builtins.c
+	$(CC) -c $(CCFLAGS) $(DEFINES) $(DNINCS) $(INCS) gvpack_builtins.c
+
+dijkstra : dijkstra.o
+	$(CSLD) $(LDFLAGS) dijkstra.o $(INGLIB) $(ALIBS) -o $@
+
+dijkstra.o : dijkstra.c
+	$(CC) -c $(CCFLAGS) $(DEFINES) $(DNINCS) $(INCS) dijkstra.c
+
+gxl2gv : $(GXLOBJS)
+	$(CSLD) $(LDFLAGS) $(GXLOBJS) $(INGLIB) $(ALIBS) $(EXPAT_LIB) -o $@
+
+gv2gxl : gxl2gv
+	$(RM) -f $@
+	$(LN) -s $? $@
+
+cvtgxl.o : cvtgxl.c
+	$(CC) -c $(CCFLAGS) $(DEFINES) $(INCS) $(EXPAT_INC) cvtgxl.c
+
+gv2gxl.o : gv2gxl.c
+	$(CC) -c $(CCFLAGS) $(DEFINES) $(INCS) $(EXPAT_INC) gv2gxl.c
+
+gxl2gv.o : gxl2gv.c
+	$(CC) -c $(CCFLAGS) $(DEFINES) $(INCS) $(EXPAT_INC) gxl2gv.c
+
+sccmap : $(SCCOBJS)
+	$(CSLD) $(LDFLAGS) $(SCCOBJS) $(INGLIB) $(ALIBS) -o $@
+
+ccomps : $(CCOBJS)
+	$(CSLD) $(LDFLAGS) $(CCOBJS) $(INGLIB) $(LIBS) -o $@
+
+tred : $(TOBJS)
+	$(CSLD) $(LDFLAGS) $(TOBJS) $(INGLIB) $(LIBS) -o $@
+
+unflatten : $(UNFLATOBJS)
+	$(CSLD) $(LDFLAGS) $(UNFLATOBJS) $(INGLIB) $(ALIBS) -o $@
+
+acyclic : $(ACYCLICOBJS)
+	$(CSLD) $(LDFLAGS) $(ACYCLICOBJS) $(LIBS) -o $@
+
+nop : $(NOPOBJS)
+	$(CSLD) $(LDFLAGS) $(NOPOBJS) $(INGLIB) $(LIBS) -o $@
+
+gvcolor : $(COLOROBJS)
+	$(CSLD) $(LDFLAGS) $(COLOROBJS) $(INGLIB) $(LIBS) -o $@
+
+gc : $(GCOBJS)
+	$(CSLD) $(LDFLAGS) $(GCOBJS) $(INGLIB) $(LIBS) -o $@
+
+bcomps : $(BCCOBJS)
+	$(CSLD) $(LDFLAGS) $(BCCOBJS) $(INGLIB) $(LIBS) -o $@
+
+gml2gv : gml2gv.o
+	$(CSLD) $(LDFLAGS) dijkstra.o $(INGLIB) $(ALIBS) -o $@
+
+gml2gv.o : gml2gv.c
+	$(CC) -c $(CCFLAGS) $(DEFINES) $(INCS) $(EXPAT_INC) gml2gv.c
+
+gvgen : gvgen.o
+	$(CSLD) $(LDFLAGS) dijkstra.o $(INGLIB) $(ALIBS) -o $@
+
+gvgen.o : gvgen.c
+	$(CC) -c $(CCFLAGS) $(DEFINES) $(INCS) $(EXPAT_INC) gvgen.c
+
+mm2gv : mm2gv.o
+	$(CSLD) $(LDFLAGS) dijkstra.o $(INGLIB) $(ALIBS) -o $@
+
+mm2gv.o : mm2gv.c
+	$(CC) -c $(CCFLAGS) $(DEFINES) $(DNINCS) $(INCS) mm2gv.c
+
+gv2gxl.1: gxl2gv.1
+	$(RM) -f $@
+	$(LN) -s $? $@
+
+install : $(ALL)
+	$(MKPATH) $(BINDIR)
+	cp $(ALL_BIN) $(BINDIR)
+	$(MKPATH) $(MANDIR)
+	$(INSTALL) $(MANS) $(MANDIR)
+
+clean :
+	$(RM) *.o 
+
+distclean : clean
+	$(RM) $(ALL)

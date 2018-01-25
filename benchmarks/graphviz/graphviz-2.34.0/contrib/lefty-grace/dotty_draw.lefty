@@ -1,0 +1,779 @@
+#
+# dotty_draw: drawing functions and data structures
+#
+dotty.protogt.drawgraph = function (gt, views) {
+    local gid, eid, nid, graph;
+
+    graph = gt.graph;
+    gt.drawsgraph (gt, views, graph);
+    for (gid in graph.graphs)
+        gt.drawsgraph (gt, views, graph.graphs[gid]);
+    for (eid in graph.edges)
+        gt.drawedge (gt, views, graph.edges[eid]);
+    for (nid in graph.nodes)
+        gt.drawnode (gt, views, graph.nodes[nid]);
+};
+dotty.protogt.redrawgraph = function (gt, views) {
+    local vid;
+
+    for (vid in views)
+        clear (views[vid].canvas);
+    gt.drawgraph (gt, views);
+};
+dotty.protogt.setviewsize = function (views, r) {
+    local vid, vt, w2v, scale, attr;
+
+    for (vid in views) {
+        vt = views[vid];
+        vt.wrect = copy (r);
+        if (r[1].x == 0 | r[1].y == 0) {
+            attr = getwidgetattr (vt.scroll, [0 = 'size';]);
+            vt.wrect[1] = copy (attr.size);
+        }
+        if (vt.type == 'birdseye') {
+            attr = getwidgetattr (vt.scroll, [0 = 'size';]);
+            scale.x = (vt.wrect[1].x - vt.wrect[0].x) / attr.size.x;
+            scale.y = (vt.wrect[1].y - vt.wrect[0].y) / attr.size.y;
+            if (scale.x > 1 & scale.x > scale.y)
+                vt.w2v = scale.x;
+            else if (scale.y > 1)
+                vt.w2v = scale.y;
+            else
+                vt.w2v = 1;
+        }
+        w2v = vt.w2v;
+        vt.vsize = [
+            'x' = (vt.wrect[1].x - vt.wrect[0].x) / w2v;
+            'y' = (vt.wrect[1].y - vt.wrect[0].y) / w2v;
+        ];
+        setwidgetattr (vt.canvas, [
+            'window' = vt.wrect;
+            'viewport' = vt.vsize;
+        ]);
+    }
+};
+dotty.protogt.setviewscale = function (views, factor) {
+    local vid, vt, w2v;
+
+    for (vid in views) {
+        vt = views[vid];
+        if ((w2v = vt.w2v * factor) < 0.01) {
+            dotty.message (0, 'cannot zoom any closer');
+            return;
+        }
+        vt.w2v = w2v;
+        vt.vsize = [
+            'x' = (vt.wrect[1].x - vt.wrect[0].x) / w2v;
+            'y' = (vt.wrect[1].y - vt.wrect[0].y) / w2v;
+        ];
+        setwidgetattr (vt.canvas, ['viewport' = vt.vsize;]);
+    }
+};
+dotty.protogt.setviewcenter = function (views, center) {
+    local vid, vt, pos;
+
+    for (vid in views) {
+        vt = views[vid];
+        pos = [
+            'x' = center.x * vt.vsize.x / (vt.wrect[1].x - vt.wrect[0].x);
+            'y' = (vt.wrect[1].y - center.y) * vt.vsize.y /
+                (vt.wrect[1].y - vt.wrect[0].y);
+        ];
+        setwidgetattr (vt.scroll, ['childcenter' = pos;]);
+    }
+};
+dotty.protogt.foldsgraph = function (gt, views, sgraph) {
+    local nid;
+
+#   gt.undrawsgraph(gt, views, sgraph);
+    for (nid in sgraph.nodes)
+        gt.undrawnode (gt, views, graph.nodes[nid]);
+};
+
+dotty.protogt.drawsgraph = function (gt, views, sgraph) {
+    local vid, canvas, pos;
+
+    sgraph.draw = 1;
+    if (~sgraph.rect[0] | sgraph.graphattr.style == 'invis')
+        return;
+    for (vid in views) {
+        canvas = views[vid].canvas;
+        if (~sgraph.type) # 'type' only exists on top level
+            box (canvas, null, sgraph.rect, ['color' = sgraph.color;]);
+        if (sgraph.graphattr.label) {
+            if (sgraph.lp.x >= 0) {
+                pos = sgraph.lp;
+                text (canvas, null, pos, sgraph.graphattr.label,
+                        sgraph.fontname, sgraph.fontsize, 'cc',
+                        ['color' = sgraph.fontcolor;]);
+            } else {
+                pos = ['x' = sgraph.rect[0].x; 'y' = sgraph.rect[1].y;];
+                text (canvas, null, pos, sgraph.graphattr.label,
+                        sgraph.fontname, sgraph.fontsize, 'ld',
+                        ['color' = sgraph.fontcolor;]);
+            }
+        }
+    }
+};
+dotty.protogt.undrawsgraph = function (gt, views, sgraph) {
+    local vid, canvas, pos;
+
+    if (~sgraph.drawn)
+        return;
+    sgraph.drawn = 0;
+    if (~sgraph.rect[0] | sgraph.graphattr.style == 'invis')
+        return;
+    for (vid in views) {
+        canvas = views[vid].canvas;
+        if (~sgraph.type) # 'type' only exists on top level
+            box (canvas, null, sgraph.rect, ['color' = 0;]);
+        if (sgraph.graphattr.label) {
+            if (sgraph.lp.x >= 0) {
+                pos = sgraph.lp;
+                text (canvas, null, pos, sgraph.graphattr.label,
+                        sgraph.fontname, sgraph.fontsize, 'cc',
+                        ['color' = 0;]);
+            } else {
+                pos = ['x' = sgraph.rect[0].x; 'y' = sgraph.rect[1].y;];
+                text (canvas, null, pos, sgraph.graphattr.label,
+                        sgraph.fontname, sgraph.fontsize, 'ld',
+                        ['color' = 0;]);
+            }
+        }
+        clearpick (canvas, sgraph);
+    }
+};
+dotty.protogt.drawnode = function (gt, views, node) {
+    local vid, func, pos, size, rect;
+
+    node.drawn = 1;
+    if (~node.pos)
+        return;
+    if (node.attr.style == 'invis') {
+        pos = node.pos;
+        size = node.size;
+        rect[0] = ['x' = pos.x - size.x / 2; 'y' = pos.y - size.y / 2;];
+        rect[1] = ['x' = rect[0].x + size.x; 'y' = rect[0].y + size.y;];
+        for (vid in views)
+            setpick (views[vid].canvas, node, rect);
+        return;
+    }
+
+    if ( node.attr.folded == '1' )
+        func = gt.shapefunc['Msquare'];
+    else if (~(func = gt.shapefunc[node.attr.shape]))
+        func = gt.shapefunc['box'];
+    for (vid in views)
+        func (gt, views[vid].canvas, node);
+};
+dotty.protogt.undrawnode = function (gt, views, node) {
+    local vid, func, pos, size, rect, color, fontcolor, outlinecolor;
+
+    if (~node.drawn)
+        return;
+    node.drawn = 0;
+    if (~node.pos)
+        return;
+    if (node.attr.style == 'invis') {
+        pos = node.pos;
+        size = node.size;
+        rect[0] = ['x' = pos.x - size.x / 2; 'y' = pos.y - size.y / 2;];
+        rect[1] = ['x' = rect[0].x + size.x; 'y' = rect[0].y + size.y;];
+        for (vid in views)
+            clearpick (views[vid].canvas, node);
+        return;
+    }
+    color = node.color;
+    node.color = 0;
+    fontcolor = node.fontcolor;
+    node.fontcolor = 0;
+    outlinecolor = dotty.outlinecolor;
+    dotty.outlinecolor = 0;
+    if ( node.attr.folded == '1' )
+        func = gt.shapefunc['Msquare'];
+    else if (~(func = gt.shapefunc[node.attr.shape]))
+        func = gt.shapefunc['box'];
+    for (vid in views) {
+        func (gt, views[vid].canvas, node);
+        clearpick (views[vid].canvas, node);
+    }
+    node.color = color;
+    node.fontcolor = fontcolor;
+    dotty.outlinecolor = outlinecolor;
+};
+dotty.protogt.shapefunc.record = function (gt, canvas, node) {
+    local rect, pos, size;
+
+    pos = node.pos;
+    size = node.size;
+    rect[0] = ['x' = pos.x - size.x / 2; 'y' = pos.y - size.y / 2;];
+    rect[1] = ['x' = rect[0].x + size.x; 'y' = rect[0].y + size.y;];
+    if (node.attr.style == 'filled') {
+        box (canvas, node, rect, ['color' = node.color; 'fill' = 'on';]);
+        box (canvas, node, rect, ['color' = dotty.outlinecolor;]);
+    }
+    gt.shapefunc.rfields (gt, canvas, node, node.fields);
+    setpick (canvas, node, rect);
+};
+dotty.protogt.shapefunc.rfields = function (gt, canvas, node, fields) {
+    local fid, field, pos, label;
+
+    for (fid in fields) {
+        field = fields[fid];
+        if (field.fields)
+            gt.shapefunc.rfields (gt, canvas, node, field.fields);
+        else {
+            if (node.attr.style == 'filled')
+                box (canvas, null, field.rect, ['color' = dotty.outlinecolor;]);
+            else
+                box (canvas, null, field.rect, ['color' = node.color;]);
+            pos.x = (field.rect[1].x + field.rect[0].x) / 2;
+            pos.y = (field.rect[1].y + field.rect[0].y) / 2;
+            if (~(label = field.text) | label == '\N')
+                label = node.name;
+            text (canvas, null, pos, label, node.fontname, node.fontsize,
+                    'cc', ['color' = node.fontcolor;]);
+        }
+    }
+};
+dotty.protogt.shapefunc.plaintext = function (gt, canvas, node) {
+    local pos, size, label, rect;
+
+    pos = node.pos;
+    size = node.size;
+    if (~(label = node.attr.label) | label == '\N')
+        label = node.name;
+    rect[0] = ['x' = pos.x - size.x / 2; 'y' = pos.y - size.y / 2;];
+    rect[1] = ['x' = rect[0].x + size.x; 'y' = rect[0].y + size.y;];
+    setpick (canvas, node, rect);
+    text (canvas, null, pos, label, node.fontname, node.fontsize,
+            'cc', ['color' = node.fontcolor;]);
+};
+dotty.protogt.shapefunc.box = function (gt, canvas, node) {
+    local pos, size, label, rect;
+
+    pos = node.pos;
+    size = node.size;
+    if (~(label = node.attr.label) | label == '\N')
+        label = node.name;
+    rect[0] = ['x' = pos.x - size.x / 2; 'y' = pos.y - size.y / 2;];
+    rect[1] = ['x' = rect[0].x + size.x; 'y' = rect[0].y + size.y;];
+    if (node.attr.style == 'filled') {
+        box (canvas, node, rect, ['color' = node.color; 'fill' = 'on';]);
+        box (canvas, node, rect, ['color' = dotty.outlinecolor;]);
+    } else
+        box (canvas, node, rect, ['color' = node.color;]);
+    text (canvas, null, pos, label, node.fontname, node.fontsize,
+            'cc', ['color' = node.fontcolor;]);
+};
+dotty.protogt.shapefunc.Msquare = function (gt, canvas, node) {
+    local pos, size, label, rect, color;
+
+    pos = node.pos;
+    size = node.size;
+    if (~(label = node.attr.label) | label == '\N')
+        label = node.name;
+    rect[0] = ['x' = pos.x - size.x / 2; 'y' = pos.y - size.y / 2;];
+    rect[1] = ['x' = rect[0].x + size.x; 'y' = rect[0].y + size.y;];
+    if (node.attr.style == 'filled') {
+        box (canvas, node, rect, ['color' = node.color; 'fill' = 'on';]);
+        color = dotty.outlinecolor;
+        box (canvas, node, rect, ['color' = color;]);
+        line (canvas, null, ['x' = rect[0].x; 'y' = rect[0].y + 10;],
+                ['x' = rect[0].x + 10; 'y' = rect[0].y;], ['color' = color;]);
+        line (canvas, null, ['x' = rect[0].x; 'y' = rect[1].y - 10;],
+                ['x' = rect[0].x + 10; 'y' = rect[1].y;], ['color' = color;]);
+        line (canvas, null, ['x' = rect[1].x; 'y' = rect[0].y + 10;],
+                ['x' = rect[1].x - 10; 'y' = rect[0].y;], ['color' = color;]);
+        line (canvas, null, ['x' = rect[1].x; 'y' = rect[1].y - 10;],
+                ['x' = rect[1].x - 10; 'y' = rect[1].y;], ['color' = color;]);
+    } else {
+        color = node.color;
+        box (canvas, node, rect, ['color' = color;]);
+        line (canvas, null, ['x' = rect[0].x; 'y' = rect[0].y + 10;],
+                ['x' = rect[0].x + 10; 'y' = rect[0].y;], ['color' = color;]);
+        line (canvas, null, ['x' = rect[0].x; 'y' = rect[1].y - 10;],
+                ['x' = rect[0].x + 10; 'y' = rect[1].y;], ['color' = color;]);
+        line (canvas, null, ['x' = rect[1].x; 'y' = rect[0].y + 10;],
+                ['x' = rect[1].x - 10; 'y' = rect[0].y;], ['color' = color;]);
+        line (canvas, null, ['x' = rect[1].x; 'y' = rect[1].y - 10;],
+                ['x' = rect[1].x - 10; 'y' = rect[1].y;], ['color' = color;]);
+    }
+    text (canvas, null, pos, label, node.fontname, node.fontsize,
+            'cc', ['color' = node.fontcolor;]);
+};
+dotty.protogt.shapefunc.ellipse = function (gt, canvas, node) {
+    local pos, size, label;
+
+    pos = node.pos;
+    size.x = node.size.x / 2;
+    size.y = node.size.y / 2;
+    if (~(label = node.attr.label) | label == '\N')
+        label = node.name;
+    if (node.attr.style == 'filled') {
+        if (node.attr.shape == 'doublecircle') {
+            arc (canvas, node, pos, size, ['color' = dotty.outlinecolor;]);
+            size.x = size.x - 4;
+            size.y = size.y - 4;
+        }
+        arc (canvas, node, pos, size, ['color' = node.color; 'fill' = 'on';]);
+        arc (canvas, node, pos, size, ['color' = dotty.outlinecolor;]);
+    } else {
+        if (node.attr.shape == 'doublecircle') {
+            arc (canvas, node, pos, size, ['color' = node.color;]);
+            size.x = size.x - 4;
+            size.y = size.y - 4;
+        }
+        arc (canvas, node, pos, size, ['color' = node.color;]);
+    }
+    text (canvas, null, pos, label, node.fontname, node.fontsize,
+            'cc', ['color' = node.fontcolor;]);
+};
+dotty.protogt.shapefunc.circle = dotty.protogt.shapefunc.ellipse;
+dotty.protogt.shapefunc.doublecircle = dotty.protogt.shapefunc.ellipse;
+dotty.protogt.shapefunc.diamond = function (gt, canvas, node) {
+    local pos, size, label, p, rect;
+
+    pos = node.pos;
+    size = node.size;
+    if (~(label = node.attr.label) | label == '\N')
+        label = node.name;
+    p[0] = ['x' = pos.x; 'y' = pos.y + size.y / 2;];
+    p[1] = ['x' = pos.x + size.x / 2; 'y' = pos.y;];
+    p[2] = ['x' = pos.x; 'y' = pos.y - size.y / 2;];
+    p[3] = ['x' = pos.x - size.x / 2; 'y' = pos.y;];
+    p[4] = p[0];
+    rect[0] = ['x' = pos.x - size.x / 2; 'y' = pos.y - size.y / 2;];
+    rect[1] = ['x' = rect[0].x + size.x; 'y' = rect[0].y + size.y;];
+    if (node.attr.style == 'filled') {
+        polygon (canvas, node, p, ['color' = node.color; 'fill' = 'on';]);
+        polygon (canvas, node, p, ['color' = dotty.outlinecolor;]);
+    } else
+        polygon (canvas, node, p, ['color' = node.color;]);
+    setpick (canvas, node, rect);
+    text (canvas, null, pos, label, node.fontname, node.fontsize,
+            'cc', ['color' = node.fontcolor;]);
+};
+dotty.protogt.shapefunc.parallelogram = function (gt, canvas, node) {
+    local pos, size, label, rect, color, dx, p;
+
+    pos = node.pos;
+    size = node.size;
+    if (~(label = node.attr.label) | label == '\N')
+        label = node.name;
+    rect[0] = ['x' = pos.x - size.x / 2; 'y' = pos.y - size.y / 2;];
+    rect[1] = ['x' = rect[0].x + size.x; 'y' = rect[0].y + size.y;];
+    dx = (rect[1].x - rect[0].x) / 5;
+    p[0] = ['x' = rect[0].x; 'y' = rect[0].y;];
+    p[1] = ['x' = rect[1].x - dx; 'y' = rect[0].y;];
+    p[2] = ['x' = rect[1].x; 'y' = rect[1].y;];
+    p[3] = ['x' = rect[0].x + dx; 'y' = rect[1].y;];
+    p[4] = ['x' = rect[0].x; 'y' = rect[0].y;];
+    if (node.attr.style == 'filled') {
+        polygon (canvas, node, p, ['color' = node.color; 'fill' = 'on';]);
+        polygon (canvas, node, p, ['color' = dotty.outlinecolor;]);
+    } else
+        polygon (canvas, node, p, ['color' = node.color;]);
+    setpick (canvas, node, rect);
+    text (canvas, null, pos, label, node.fontname, node.fontsize,
+            'cc', ['color' = node.fontcolor;]);
+};
+dotty.protogt.shapefunc.trapezium = function (gt, canvas, node) {
+    local pos, size, label, rect, color, dx, p;
+
+    pos = node.pos;
+    size = node.size;
+    if (~(label = node.attr.label) | label == '\N')
+        label = node.name;
+    rect[0] = ['x' = pos.x - size.x / 2; 'y' = pos.y - size.y / 2;];
+    rect[1] = ['x' = rect[0].x + size.x; 'y' = rect[0].y + size.y;];
+    dx = (rect[1].x - rect[0].x) / 5;
+    p[0] = ['x' = rect[0].x; 'y' = rect[0].y;];
+    p[1] = ['x' = rect[1].x; 'y' = rect[0].y;];
+    p[2] = ['x' = rect[1].x - dx; 'y' = rect[1].y;];
+    p[3] = ['x' = rect[0].x + dx; 'y' = rect[1].y;];
+    p[4] = ['x' = rect[0].x; 'y' = rect[0].y;];
+    if (node.attr.style == 'filled') {
+        polygon (canvas, node, p, ['color' = node.color; 'fill' = 'on';]);
+        polygon (canvas, node, p, ['color' = dotty.outlinecolor;]);
+    } else
+        polygon (canvas, node, p, ['color' = node.color;]);
+    setpick (canvas, node, rect);
+    text (canvas, null, pos, label, node.fontname, node.fontsize,
+            'cc', ['color' = node.fontcolor;]);
+};
+dotty.protogt.shapefunc.triangle = function (gt, canvas, node) {
+    local pos, size, label, rect, color, dx, dy, p;
+
+    pos = node.pos;
+    size = node.size;
+    if (~(label = node.attr.label) | label == '\N')
+        label = node.name;
+    rect[0] = ['x' = pos.x - size.x / 2; 'y' = pos.y - size.y / 2;];
+    rect[1] = ['x' = rect[0].x + size.x; 'y' = rect[0].y + size.y;];
+    if (node.attr.orientation ~= -90) {
+        dx = size.x / 2;
+        dy = size.y / 4;
+        p[0] = ['x' = pos.x - dx; 'y' = pos.y - dy;];
+        p[1] = ['x' = pos.x + dx; 'y' = pos.y - dy;];
+        p[2] = ['x' = pos.x;      'y' = rect[1].y;];
+        p[3] = ['x' = pos.x - dx; 'y' = pos.y - dy;];
+    } else {
+        dx = size.x / 4;
+        dy = size.y / 2;
+        p[0] = ['x' = pos.x - dx; 'y' = pos.y - dy;];
+        p[1] = ['x' = pos.x - dx; 'y' = pos.y + dy;];
+        p[2] = ['x' = pos.x + dx * 2; 'y' = pos.y;];
+        p[3] = ['x' = pos.x - dx; 'y' = pos.y - dy;];
+    }
+    if (node.attr.style == 'filled') {
+        polygon (canvas, node, p, ['color' = node.color; 'fill' = 'on';]);
+        polygon (canvas, node, p, ['color' = dotty.outlinecolor;]);
+    } else
+        polygon (canvas, node, p, ['color' = node.color;]);
+    setpick (canvas, node, rect);
+    text (canvas, null, pos, label, node.fontname, node.fontsize,
+            'cc', ['color' = node.fontcolor;]);
+};
+dotty.protogt.movenode = function (gt, node, pos) {
+    local ppos, eid, edge, p, fp, lp;
+
+    ppos = copy (node.pos);
+    gt.undrawnode (gt, gt.views, node);
+    node.pos.x = pos.x;
+    node.pos.y = pos.y;
+    if (node.attr.shape == 'record')
+        gt.moverecordfields (gt, node.fields, pos.x - ppos.x, pos.y - ppos.y);
+    for (eid in node.edges) {
+        edge = node.edges[eid];
+        if (~edge.dir & edge.head ~= edge.tail) {
+            p = edge.tail.pos;
+            fp = edge.points[0];
+            lp = edge.points[tablesize (edge.points)  - 1];
+            if (((p.x - fp.x) * (p.x - fp.x) + (p.y - fp.y) * (p.y - fp.y)) <
+                    ((p.x - lp.x) * (p.x - lp.x) + (p.y - lp.y) * (p.y - lp.y)))
+                edge.dir = 1;
+            else
+                edge.dir = -1;
+        }
+        gt.moveedge (gt, edge, node, ppos, pos);
+    }
+    gt.drawnode (gt, gt.views, node);
+};
+dotty.protogt.moverecordfields = function (gt, fields, dx, dy) {
+    local fid, field;
+
+    for (fid in fields) {
+        field = fields[fid];
+        if (field.fields)
+            gt.moverecordfields (gt, field.fields, dx, dy);
+        else {
+            field.rect[0].x = field.rect[0].x + dx;
+            field.rect[0].y = field.rect[0].y + dy;
+            field.rect[1].x = field.rect[1].x + dx;
+            field.rect[1].y = field.rect[1].y + dy;
+        }
+    }
+};
+dotty.protogt.drawedge = function (gt, views, edge) {
+    local vid, canvas;
+
+    edge.drawn = 1;
+    if (~edge.points)
+        return;
+    if (edge.attr.style == 'invis') {
+        if (gt.edgehandles == 0)
+            return;
+        for (vid in views) {
+            arc (views[vid].canvas, edge, [
+                'x' = (edge.points[1].x + edge.points[2].x) / 2;
+                'y' = (edge.points[1].y + edge.points[2].y) / 2;
+            ], ['x' = 5; 'y' = 5;], ['color' = 1;]);
+        }
+        return;
+    }
+    for (vid in views) {
+        canvas = views[vid].canvas;
+        if (edge.attr.style == 'bold')
+            setgfxattr (canvas, ['width' = 3;]);
+        splinegon (canvas, null, edge.points,
+                ['color' = edge.color; 'style' = edge.attr.style;]);
+        if (edge.sp)
+            arrow (canvas, null, edge.points[0],
+                    edge.sp, ['color' = edge.color;]);
+        if (edge.ep)
+            arrow (canvas, null, edge.points[tablesize (edge.points) - 1],
+                    edge.ep, ['color' = edge.color;]);
+        if (edge.attr.style == 'bold')
+            setgfxattr (canvas, ['width' = 0;]);
+        if (edge.lp)
+            text (canvas, null, edge.lp, edge.attr.label, edge.fontname,
+                    edge.fontsize, 'cc', ['color' = edge.fontcolor;]);
+        if (gt.edgehandles == 0)
+            continue;
+        arc (canvas, edge, [
+            'x' = (edge.points[1].x + edge.points[2].x) / 2;
+            'y' = (edge.points[1].y + edge.points[2].y) / 2;
+        ], ['x' = 5; 'y' = 5;], ['color' = 1;]);
+    }
+};
+dotty.protogt.undrawedge = function (gt, views, edge) {
+    local vid, canvas;
+
+    if (~edge.drawn)
+        return;
+    edge.drawn = 0;
+    if (~edge.points)
+        return;
+    if (edge.attr.style == 'invis') {
+        if (gt.edgehandles == 0)
+            return;
+        for (vid in views) {
+            arc (views[vid].canvas, edge, [
+                'x' = (edge.points[1].x + edge.points[2].x) / 2;
+                'y' = (edge.points[1].y + edge.points[2].y) / 2;
+            ], ['x' = 5; 'y' = 5;], ['color' = 0;]);
+            clearpick (views[vid].canvas, edge);
+        }
+        return;
+    }
+    for (vid in views) {
+        canvas = views[vid].canvas;
+        if (edge.attr.style == 'bold')
+            setgfxattr (canvas, ['width' = 3;]);
+        splinegon (canvas, null, edge.points, ['color' = 0;]);
+        if (edge.sp)
+            arrow (canvas, null, edge.points[0],
+                    edge.sp, ['color' = 0;]);
+        if (edge.ep)
+            arrow (canvas, null, edge.points[tablesize (edge.points) - 1],
+                    edge.ep, ['color' = 0;]);
+        if (edge.attr.style == 'bold')
+            setgfxattr (canvas, ['width' = 0;]);
+        if (edge.lp)
+            text (canvas, null, edge.lp, edge.attr.label, edge.fontname,
+                    edge.fontsize, 'cc', ['color' = 0;]);
+        if (gt.edgehandles == 0)
+            continue;
+        arc (canvas, edge, [
+            'x' = (edge.points[1].x + edge.points[2].x) / 2;
+            'y' = (edge.points[1].y + edge.points[2].y) / 2;
+        ], ['x' = 5; 'y' = 5;], ['color' = 0;]);
+        clearpick (canvas, edge);
+    }
+};
+dotty.protogt.moveedge = function (gt, edge, node, pb, pc) {
+    local dx, dy, tp, hp, pid, p, pa, da, lab, lac, s, ce, se, n, x, y, dir;
+
+    gt.undrawedge (gt, gt.views, edge);
+    dx = pc.x - pb.x; dy = pc.y - pb.y;
+    tp = edge.sp;
+    hp = edge.ep;
+    if (edge.tail == node) {
+        if (edge.head == node) {
+            for (pid in edge.points) {
+                p = edge.points[pid];
+                p.x = p.x + dx; p.y = p.y + dy;
+            }
+            if (tp) {
+                tp.x = tp.x + dx; tp.y = tp.y + dy;
+            }
+            if (hp) {
+                hp.x = hp.x + dx; hp.y = hp.y + dy;
+            }
+            if (edge.lp) {
+                edge.lp.x = edge.lp.x + dx;
+                edge.lp.y = edge.lp.y + dy;
+            }
+            gt.drawedge (gt, gt.views, edge);
+            return;
+        }
+        pa = edge.head.pos;
+        dir = 1;
+    } else {
+        pa = edge.tail.pos;
+        dir = -1;
+    }
+    dir = edge.dir * dir;
+    da = atan (pc.y - pa.y, pc.x - pa.x) - atan (pb.y - pa.y, pb.x - pa.x);
+    lab = sqrt ((pb.y - pa.y) * (pb.y - pa.y) +
+            (pb.x - pa.x) * (pb.x - pa.x));
+    lac = sqrt ((pc.y - pa.y) * (pc.y - pa.y) +
+            (pc.x - pa.x) * (pc.x - pa.x));
+    s = lac / lab;
+    ce = cos (da);
+    se = sin (da);
+    n = tablesize (edge.points);
+    for (pid = 1; pid < n - 1; pid = pid + 1) {
+        p = edge.points[pid];
+        x = p.x - pa.x;
+        y = p.y - pa.y;
+        p.x = pa.x + (ce * x - se * y) * s;
+        p.y = pa.y + (se * x + ce * y) * s;
+    }
+    if (dir == 1) {
+        p = edge.points[0];
+        p.x = p.x + dx; p.y = p.y + dy;
+        if (tp) {
+            tp.x = tp.x + dx; tp.y = tp.y + dy;
+        }
+    } else {
+        p = edge.points[n - 1];
+        p.x = p.x + dx; p.y = p.y + dy;
+        if (hp) {
+            hp.x = hp.x + dx; hp.y = hp.y + dy;
+        }
+    }
+    if (edge.lp) {
+        x = edge.lp.x - pa.x;
+        y = edge.lp.y - pa.y;
+        edge.lp.x = pa.x + (ce * x - se * y) * s;
+        edge.lp.y = pa.y + (se * x + ce * y) * s;
+    }
+    gt.drawedge (gt, gt.views, edge);
+};
+dotty.protogt.getcolor = function (views, name) {
+    local vid, vt, color, t;
+
+    for (vid in views) {
+        vt = views[vid];
+        if (~(color >= 0)) {
+            if (~(vt.colors[name] >= 0))
+                color = (vt.colors[name] = vt.colorn);
+            else {
+                color = vt.colors[name];
+                break;
+            }
+        } else if (~(vt.colors[name] >= 0))
+            vt.colors[name] = color;
+        else if (vt.colors[name] ~= color)
+            dotty.message (0, concat ('inconsistent color ids for ', name));
+        if (setwidgetattr (vt.canvas, ['color' = [color = name;];]) ~= 1) {
+            t = split (name, ' ');
+            if (tablesize (t) ~= 3 |
+                    setwidgetattr (vt.canvas, ['color' = [color = [
+                        'h' = ston (t[0]); 's' = ston (t[1]); 'v' = ston (t[2]);
+                    ];];]) ~= 1) {
+                dotty.message (0, concat ('unknown color ', name, ' using #1'));
+                return 1;
+            }
+        }
+        vt.colorn = color + 1;
+    }
+    return color;
+};
+dotty.protogt.unpacksgraphattr = function (gt, sgraph) {
+    local attr;
+
+    attr = sgraph.graphattr;
+    if (dotty.fontmap[attr.fontname])
+        sgraph[dotty.keys.fname] = dotty.fontmap[attr.fontname];
+    else
+        sgraph[dotty.keys.fname] = attr.fontname;
+    sgraph[dotty.keys.fsize] = ston (attr.fontsize);
+    sgraph[dotty.keys.fcolor] = gt.getcolor (gt.views, attr.fontcolor);
+    if (attr.style == 'filled' & attr.color == 'black')
+        sgraph[dotty.keys.color] = gt.getcolor (gt.views, 'grey');
+    else
+        sgraph[dotty.keys.color] = gt.getcolor (gt.views, attr.color);
+};
+dotty.protogt.unpacknodeattr = function (gt, node) {
+    local attr;
+
+    attr = node.attr;
+    if (dotty.fontmap[attr.fontname])
+        node[dotty.keys.fname] = dotty.fontmap[attr.fontname];
+    else
+        node[dotty.keys.fname] = attr.fontname;
+    node[dotty.keys.fsize] = ston (attr.fontsize);
+    node[dotty.keys.fcolor] = gt.getcolor (gt.views, attr.fontcolor);
+    if (attr.style == 'filled' & attr.color == 'black')
+        node[dotty.keys.color] = gt.getcolor (gt.views, 'grey');
+    else
+        node[dotty.keys.color] = gt.getcolor (gt.views, attr.color);
+};
+dotty.protogt.unpackedgeattr = function (gt, edge) {
+    local attr, n;
+
+    attr = edge.attr;
+    if (dotty.fontmap[attr.fontname])
+        edge[dotty.keys.fname] = dotty.fontmap[attr.fontname];
+    else
+        edge[dotty.keys.fname] = attr.fontname;
+    edge[dotty.keys.fsize] = ston (attr.fontsize);
+    edge[dotty.keys.fcolor] = gt.getcolor (gt.views, attr.fontcolor);
+    if (attr.style == 'filled' & attr.color == 'black')
+        edge[dotty.keys.color] = gt.getcolor (gt.views, 'grey');
+    else
+        edge[dotty.keys.color] = gt.getcolor (gt.views, attr.color);
+    if (attr.label & attr.label ~= '' & ~edge.lp & edge.points) {
+        if ((n = tablesize (edge.points)) > 4)
+            edge.lp = [
+                'x' = edge.points[toint (n / 2)].x + 5;
+                'y' = edge.points[toint (n / 2)].y + 5;
+            ];
+        else
+            edge.lp = [
+                'x' = (edge.points[1].x + edge.points[2].x) / 2 + 5;
+                'y' = (edge.points[1].y + edge.points[2].y) / 2 + 5;
+            ];
+    }
+};
+dotty.protogt.unpackattr = function (gt) {
+    local gid, sgraph, nid, node, eid, edge, graph, attr;
+
+    graph = gt.graph;
+    attr = graph.graphattr;
+    if (dotty.fontmap[attr.fontname])
+        graph[dotty.keys.fname] = dotty.fontmap[attr.fontname];
+    else
+        graph[dotty.keys.fname] = attr.fontname;
+    graph[dotty.keys.fsize] = ston (attr.fontsize);
+    graph[dotty.keys.fcolor] = gt.getcolor (gt.views, attr.fontcolor);
+    if (attr.style == 'filled' & attr.color == 'black')
+        graph[dotty.keys.color] = gt.getcolor (gt.views, 'grey');
+    else
+        graph[dotty.keys.color] = gt.getcolor (gt.views, attr.color);
+
+#  Does this work?  Want to save/restore parent filename in graph specification
+    graph[dotty.keys.parent] = attr.parent;
+    for (gid in graph.graphdict) {
+        sgraph = graph.graphs[graph.graphdict[gid]];
+        attr = sgraph.graphattr;
+        if (dotty.fontmap[attr.fontname])
+            sgraph[dotty.keys.fname] = dotty.fontmap[attr.fontname];
+        else
+            sgraph[dotty.keys.fname] = attr.fontname;
+        sgraph[dotty.keys.fsize] = ston (attr.fontsize);
+        sgraph[dotty.keys.fcolor] = gt.getcolor (gt.views, attr.fontcolor);
+        if (attr.style == 'filled' & attr.color == 'black')
+            sgraph[dotty.keys.color] = gt.getcolor (gt.views, 'grey');
+        else
+            sgraph[dotty.keys.color] = gt.getcolor (gt.views, attr.color);
+    }
+    for (nid in graph.nodedict) {
+        node = graph.nodes[graph.nodedict[nid]];
+        attr = node.attr;
+        if (dotty.fontmap[attr.fontname])
+            node[dotty.keys.fname] = dotty.fontmap[attr.fontname];
+        else
+            node[dotty.keys.fname] = attr.fontname;
+        node[dotty.keys.fsize] = ston (attr.fontsize);
+        node[dotty.keys.fcolor] = gt.getcolor (gt.views, attr.fontcolor);
+        if (attr.style == 'filled' & attr.color == 'black')
+            node[dotty.keys.color] = gt.getcolor (gt.views, 'grey');
+        else
+            node[dotty.keys.color] = gt.getcolor (gt.views, attr.color);
+    }
+    for (eid in graph.edges) {
+        edge = graph.edges[eid];
+        attr = edge.attr;
+        if (dotty.fontmap[attr.fontname])
+            edge[dotty.keys.fname] = dotty.fontmap[attr.fontname];
+        else
+            edge[dotty.keys.fname] = attr.fontname;
+        edge[dotty.keys.fsize] = ston (attr.fontsize);
+        edge[dotty.keys.fcolor] = gt.getcolor (gt.views, attr.fontcolor);
+        edge[dotty.keys.color] = gt.getcolor (gt.views, attr.color);
+    }
+};

@@ -1,0 +1,11 @@
+pathplan.tcl - Pathplan demo
+
+Author: John Ellson <ellson@graphviz.org>
+
+Package requires: wish, tclpathplan, tkspline
+
+Pathplan is a library for finding stright-line or bezier routes
+around abitrary polygon obstacles.  This script is a demo of
+the capabilities of the library.  It supports the creation of polygon
+obstacles and the specification of the endpoints of paths between
+which the shortest path is found.

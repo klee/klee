@@ -1,0 +1,97 @@
+"Damping", "0.99", GRAPH, NEATO
+"Epsilon", "", GRAPH, NEATO
+"URL", "", ANY_ELEMENT, ALL_ENGINES
+"arrowhead", "normal", EDGE, ALL_ENGINES
+"arrowsize", "1.0", EDGE, ALL_ENGINES
+"arrowtail", "normal", EDGE, ALL_ENGINES
+"bb", "", GRAPH, ALL_ENGINES
+"bgcolor", "", GRAPH Or CLUSTER, ALL_ENGINES
+"bottomlabel", "", NODE, ALL_ENGINES
+"center", "false", GRAPH, ALL_ENGINES
+"clusterrank", "local", GRAPH, DOT
+"color", "black", EDGE Or NODE Or CLUSTER, ALL_ENGINES
+"comment", "", EDGE Or NODE Or GRAPH, ALL_ENGINES
+"compound", "false", GRAPH, DOT
+"concentrate", "false", GRAPH, DOT
+"constraint", "true", EDGE, DOT
+"decorate", "false", EDGE, ALL_ENGINES
+"dir", "forward", EDGE, ALL_ENGINES
+"distortion", "0.0", NODE, ALL_ENGINES
+"fillcolor", "lightgrey", NODE Or CLUSTER, ALL_ENGINES
+"fixedsize", "false", NODE, ALL_ENGINES
+"fontcolor", "black", EDGE Or NODE Or GRAPH Or CLUSTER, ALL_ENGINES
+"fontname", "Times-Roman", EDGE Or NODE Or GRAPH Or CLUSTER, ALL_ENGINES
+"fontpath", "", GRAPH, ALL_ENGINES
+"fontsize", "14.0", EDGE Or NODE Or GRAPH Or CLUSTER, ALL_ENGINES
+"group", "", NODE, DOT
+"headURL", "", EDGE, ALL_ENGINES
+"headlabel", "", EDGE, ALL_ENGINES
+"headport", "center", EDGE, ALL_ENGINES
+"height", "0.5", NODE, ALL_ENGINES
+"label", "", EDGE Or NODE Or GRAPH Or CLUSTER, ALL_ENGINES
+"labelangle", "-25.0", EDGE, ALL_ENGINES
+"labeldistance", "1.0", EDGE, ALL_ENGINES
+"labelfloat", "false", EDGE, ALL_ENGINES
+"labelfontcolor", "black", EDGE, ALL_ENGINES
+"labelfontname", "Times-Roman", EDGE, ALL_ENGINES
+"labelfontsize", "11.0", EDGE, ALL_ENGINES
+"labeljust", "", ANY_ELEMENT, DOT
+"labelloc", "t", GRAPH Or CLUSTER, DOT
+"layer", "", EDGE Or NODE, ALL_ENGINES
+"layers", "", GRAPH, ALL_ENGINES
+"len", "1.0", EDGE, NEATO
+"lhead", "", EDGE, DOT
+"lp", "", EDGE Or GRAPH Or CLUSTER, ALL_ENGINES
+"ltail", "", EDGE, DOT
+"margin", "", GRAPH, ALL_ENGINES
+"maxiter", "", GRAPH, NEATO
+"mclimit", "1.0", GRAPH, DOT
+"minlen", "1", EDGE, DOT
+"model", "", GRAPH, NEATO
+"nodesep", "0.25", GRAPH, DOT
+"normalize", "false", GRAPH, NEATO
+"nslimit", "", GRAPH, DOT
+"ordering", "", GRAPH, DOT
+"orientation", "0.0", NODE, ALL_ENGINES
+"orientation", "", GRAPH, ALL_ENGINES
+"overlap", "", GRAPH, NEATO
+"pack", "false", GRAPH, NEATO
+"page", "", GRAPH, ALL_ENGINES
+"pagedir", "", GRAPH, ALL_ENGINES
+"pencolor", "black", CLUSTER, ALL_ENGINES
+"peripheries", "0", NODE, ALL_ENGINES
+"pin", "false", NODE, NEATO
+"pos", "", EDGE Or NODE, ALL_ENGINES
+"quantum", "0.0", GRAPH, ALL_ENGINES
+"rank", "", SUBGRAPH, DOT
+"rankdir", "", GRAPH, DOT
+"ranksep", "", GRAPH, ALL_ENGINES
+"ratio", "", GRAPH, ALL_ENGINES
+"rects", "", NODE, ALL_ENGINES
+"regular", "false", NODE, ALL_ENGINES
+"remincross", "false", GRAPH, DOT
+"rotate", "0", GRAPH, ALL_ENGINES
+"samehead", "", EDGE, DOT
+"sametail", "", EDGE, DOT
+"samplepoints", "8", GRAPH, ALL_ENGINES
+"searchsize", "30", GRAPH, DOT
+"sep", "0.01", GRAPH, NEATO
+"shape", "ellipse", NODE, ALL_ENGINES
+"shapefile", "", NODE, ALL_ENGINES
+"showboxes", "0", EDGE Or NODE Or GRAPH, DOT
+"sides", "4", NODE, ALL_ENGINES
+"size", "", GRAPH, ALL_ENGINES
+"skew", "0.0", NODE, ALL_ENGINES
+"splines", "false", GRAPH, NEATO
+"start", "", GRAPH, ALL_ENGINES
+"style", "", EDGE Or NODE, ALL_ENGINES
+"stylesheet", "", GRAPH, ALL_ENGINES
+"tailURL", "", EDGE, ALL_ENGINES
+"taillabel", "", EDGE, ALL_ENGINES
+"tailport", "center", EDGE, ALL_ENGINES
+"toplabel", "", NODE, ALL_ENGINES
+"vertices", "", NODE, ALL_ENGINES
+"voro_margin", "0.05", GRAPH, NEATO
+"weight", "", EDGE, DOT Or NEATO
+"width", "0.75", NODE, ALL_ENGINES
+"z", "0.0", NODE, ALL_ENGINES

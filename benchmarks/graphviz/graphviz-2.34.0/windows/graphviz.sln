@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 9.00
+# Visual Studio 2005
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "graphviz", "graphviz.csproj", "{DECED886-4C60-47C7-BBB9-44A32EDBE62D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DECED886-4C60-47C7-BBB9-44A32EDBE62D}.Debug|x86.ActiveCfg = Release|x86
+		{DECED886-4C60-47C7-BBB9-44A32EDBE62D}.Debug|x86.Build.0 = Release|x86
+		{DECED886-4C60-47C7-BBB9-44A32EDBE62D}.Release|x86.ActiveCfg = Release|x86
+		{DECED886-4C60-47C7-BBB9-44A32EDBE62D}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

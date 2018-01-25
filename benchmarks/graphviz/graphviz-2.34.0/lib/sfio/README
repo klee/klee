@@ -1,0 +1,63 @@
+DIRECTORY HIERARCHY:
+
+This directory hierarchy has the source of Sfio, the Safe/Fast I/O library.
+
+. :		source code for Sfio.
+./features:	source code for generating configuration parameters.
+./Sfio_f:	function versions of sfio macros.
+./Stdio_s:	the source level <stdio> compatibility package.
+./Stdio_b:	the binary level <stdio> compatibility package.
+./Sfio_dc:	a collection of functions to create useful disciplines.
+./Sfio_t:	a set of regression tests for the Sfio library.
+./Stdio_t:	a set of regression tests for certain Stdio behaviors and
+		for the compatibility packages.
+
+SOFTWARE CONSTRUCTION:
+
+The build procedure is based on the iffe language for automatic
+configuration. An iffe interpreter and its manual pages are included in
+this code distribution. See the files in ./features for examples of iffe
+probes to generate configuration parameters.
+
+Two sets of libraries will be built:
+	libsfio.a and libstdio.a: for uni-threaded applications, and
+	libsfio-mt.a and libstdio-mt.a: for multi-threaded applications.
+
+Depending on the local platform, an application using the multi-threaded
+libraries may need to specify a thread library for linkage. For example,
+below are the known requirements for a few popular platforms:
+
+	Irix, Linux, Solaris systems:	-lpthread
+	Hpux:				-lcma
+	BSD:				none
+
+SFIO DISCIPLINES:
+
+IO disciplines allow applications to extend stream data processing.
+See the Sfio manual pages for detail on creating discipline structures
+and inserting them into streams. The directory Sfio_dc contains a number
+of useful disciplines, including one to uncompress a file compressed
+by the Unix compress program and one to make reading DOS text files more
+comfortable by translating \r\n to \n.
+
+Disciplines are reusable code, please contribute any interesting disciplines
+that you come up with. This is best done by sending such code to me at
+the address below. Sharing reusable code means that the name space must
+be managed. Therefore, I recommend that each discipline package provides
+the following public interface:
+
+Sfdisc_t* sfdcXXX(Sfio_t* f, other arguments):
+	Create a discipline of the type XXX and insert it into the
+	stream f. For example, the below call create a discipline that
+	make the stream "f" act as if it's the union of the "n" streams
+	given in "array".
+		sfdcunion(Sfio_t* f, Sfio_t** array, int n);
+
+CORRESPONDENCE:
+Comments, etc. should be sent to:
+
+	Phong Vo
+	AT&T Labs - Research
+	180 Park Avenue
+	Florham Park, NJ 07932
+	e-mail: kpv@research.att.com

@@ -1,0 +1,39 @@
+all:	libfdpgen.a
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+INCS =  -I. -I$(ROOT) \
+    -I../common \
+    -I../neatogen \
+    -I../pack \
+    -I../gvc \
+    -I../sparse \
+    -I../pathplan \
+    -I../graph \
+    -I../cdt \
+    -I../gd
+
+DEFINES = -DDEBUG -DHAVE_CONFIG_H
+
+OBJS = layout.o fdpinit.o comp.o tlayout.o xlayout.o dbg.o grid.o \
+       clusteredges.o
+
+HFILES = fdp.h ../common/types.h 
+
+libfdpgen.a : $(OBJS)
+	$(RM) libfdpgen.a
+	$(AR) cr libfdpgen.a $(OBJS)
+	$(RANLIB) libfdpgen.a
+
+$(OBJS) : $(HFILES)
+
+install: libfdpgen.a
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libfdpgen.a $(LIBDIR)
+
+clean:
+	$(RM) *.o core *.a
+
+distclean: clean
+	$(RM) lib*.so.*

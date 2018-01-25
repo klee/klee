@@ -1,0 +1,48 @@
+
+Enhancements to the dotty interface:
+
+- Smooth scroll following mouse - activated by pressing/holding the TAB
+  key down and scrolling to point where mouse pointer is.
+- Add "zoom slowly" function to use , and . and follow mouse to fine-grain
+  zoom in on a particular region w/ mouse panning.  'Z' and 'z'
+  still work for coarse zoom, but this will pan to cursor as well.
+- Add new node with 'n' key (dialog prompts for name).  This worked 
+  better for me than the dual-use left mouse button.
+- Add new edge with 'e' key (ditto)
+- Folding option, using 'f' key over node to fold all child
+  nodes into parent (folded node has "Msquare" cornered box appearance)
+  , and unfold with another 'f' keypress.  Child
+  nodes that are shared with another parent are not folded.
+  Would like to use unique node shape, or maybe you can think of
+  a better way to represent a folded node (thick border, etc?)
+- Added a 'change label' menu item for node/edge menu
+- Added 'Q' for quit, which prompts for save
+  (will unfold any folded nodes before any save is done, since I haven't
+  figured out how to encode/restore fold info to/from the graph file)
+- Added save prompt for current graph on 'load graph' menu selection
+- Rudimentary "hyperlink" - click on node and select "load subgraph"
+  from the menu to load and display ./{nodename}.gv graph.  Can
+  navigate back to immediate parent thru menu selection.
+  '+' also goes to parent, '-' to subgraph of a node.  Was not able to
+  store parent information in graph spec file, so a graph has to be 
+  loaded as a subgraph to another graph before the "parent" feature will
+  work.  Needs improvement...
+
+To install, copy the *.lefty files here into 
+
+  <GraphVizRoot>/lib/lefty
+
+or before building and installing, copy the files into
+
+  <GraphVizRoot>/src/pkg/dotty
+
+and then build the system.
+
+Author:
+ Robert M. Grace
+ Software Engineer
+ Draper Laboratory
+ 555 Technology Sq. MS 34 
+ Cambridge, MA 02139
+ rgrace@draper.com
+

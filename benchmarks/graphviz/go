@@ -1,0 +1,1 @@
+gdb -x ./gdbCommands.txt --args ./build/cmd/dot/.libs/dot -Tjpeg -oInput.jpeg Input.txt

@@ -1,0 +1,8 @@
+spline.tcl - demo additional smoothing method of tkspline
+
+Author: John Ellson <ellson@graphviz.org>
+
+Package requires: wish, tkspline
+
+A demo of various line and polygon smoothing methods.
+This script is designed to exercise the spline smoothing package: tkspline

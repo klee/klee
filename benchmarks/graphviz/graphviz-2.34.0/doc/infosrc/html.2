@@ -1,0 +1,471 @@
+</TABLE>
+<P>
+Above, a <I>string</I> is any collection of printable characters, including
+all spaces. Note that outside of the body of a &lt;TD&gt; element, 
+whitespace characters are ignored; within a &lt;TD&gt; element, spaces
+are preserved but all other white space characters are discarded.
+HTML comments are allowed within an HTML string. They can occur anywhere
+provided that, if they contain part of an HTML element, they must contain
+the entire element.
+<P>
+As is obvious from the above description, the interpretation of white space
+characters is one place where HTML-like labels is very different from 
+standard HTML. In HTML, any sequence of white space characters is 
+collapsed to a single space, If the user does not want this to happen, the
+input must use non-breaking spaces "&amp;nbsp;". This makes sense in
+HTML, where text layout depends dynamically on the space available. In
+Graphviz, the layout is statically determined by the input, so it is
+reasonable to treat ordinary space characters as non-breaking. In addition,
+ignoring tabs and newlines allows the input text to be formatted for
+easier reading. 
+<P>
+Each of the HTML elements has a set of optional attributes.
+Attribute values must appear in double quotes.
+<P>
+  &lt;!-- Table element --&gt;
+<PRE>
+&lt;TABLE
+  ALIGN="CENTER|LEFT|RIGHT"
+  BGCOLOR="<I>color</I>"
+  BORDER="<I>value</I>"
+  CELLBORDER="<I>value</I>"
+  CELLPADDING="<I>value</I>"
+  CELLSPACING="<I>value</I>"
+  COLOR="<I>color</I>"
+  COLUMNS="<I>value</I>"
+  FIXEDSIZE="FALSE|TRUE"
+  GRADIENTANGLE="<I>value</I>"
+  HEIGHT="<I>value</I>"
+  HREF="<I>value</I>"
+  ID="<I>value</I>"
+  PORT="<I>portName</I>"
+  ROWS="<I>value</I>"
+  STYLE="<I>value</I>"
+  TARGET="<I>value</I>"
+  TITLE="<I>value</I>"
+  TOOLTIP="<I>value</I>"
+  VALIGN="MIDDLE|BOTTOM|TOP"
+  WIDTH="<I>value</I>"
+&gt;
+</PRE>
+<P>
+  &lt;!-- Table row --&gt;
+<PRE>&lt;TR
+  &lt;!-- No attributes --&gt;
+&gt;
+</PRE>
+<P>
+  &lt;!-- Table cell --&gt;
+<PRE>&lt;TD
+  ALIGN="CENTER|LEFT|RIGHT|TEXT"
+  BALIGN="CENTER|LEFT|RIGHT"
+  BGCOLOR="<I>color</I>"
+  BORDER="<I>value</I>"
+  CELLPADDING="<I>value</I>"
+  CELLSPACING="<I>value</I>"
+  COLOR="<I>color</I>"
+  COLSPAN="<I>value</I>"
+  FIXEDSIZE="FALSE|TRUE"
+  GRADIENTANGLE="<I>value</I>"
+  HEIGHT="<I>value</I>"
+  HREF="<I>value</I>"
+  ID="<I>value</I>"
+  PORT="<I>portName</I>"
+  ROWSPAN="<I>value</I>"
+  STYLE="<I>value</I>"
+  TARGET="<I>value</I>"
+  TITLE="<I>value</I>"
+  TOOLTIP="<I>value</I>"
+  VALIGN="MIDDLE|BOTTOM|TOP"
+  WIDTH="<I>value</I>"
+&gt;
+</PRE>
+
+<P>
+  &lt;!-- Font specification --&gt;
+<PRE>&lt;FONT
+  COLOR="<I>color</I>"
+  FACE="<I>fontname</I>"
+  POINT-SIZE="<I>value</I>"
+&gt;
+</PRE>
+
+<P>
+  &lt;!-- Line break --&gt;
+<PRE>&lt;BR
+  ALIGN="CENTER|LEFT|RIGHT"
+/&gt;
+</PRE>
+
+<P>
+  &lt;!-- Image inclusion --&gt;
+<PRE>&lt;IMG
+  SCALE="FALSE|TRUE|WIDTH|HEIGHT|BOTH"
+  SRC="<I>value</I>"
+&gt;
+</PRE>
+<P>
+  &lt;!-- Italic style --&gt;
+<PRE>&lt;I
+  &lt;!-- No attributes --&gt;
+&gt;
+</PRE>
+<P>
+  &lt;!-- Bold style --&gt;
+<PRE>&lt;B
+  &lt;!-- No attributes --&gt;
+&gt;
+</PRE>
+<P>
+  &lt;!-- Underlined text --&gt;
+<PRE>&lt;U
+  &lt;!-- No attributes --&gt;
+&gt;
+</PRE>
+<P>
+  &lt;!-- Subscript text --&gt;
+<PRE>&lt;SUB
+  &lt;!-- No attributes --&gt;
+&gt;
+</PRE>
+<P>
+  &lt;!-- Superscript text --&gt;
+<PRE>&lt;SUP
+  &lt;!-- No attributes --&gt;
+&gt;
+</PRE>
+<P>
+  &lt;!-- Horizontal rule --&gt;
+<PRE>&lt;HR
+  &lt;!-- No attributes --&gt;
+/&gt;
+</PRE>
+<P>
+  &lt;!-- Vertical rule --&gt;
+<PRE>&lt;VR
+  &lt;!-- No attributes --&gt;
+/&gt;
+</PRE>
+
+<P>
+<B><I><FONT SIZE=-1>ALIGN</FONT> </I></B>
+<BLOCKQUOTE>
+specifies horizontal placement. When an object is allocated
+more space than required, this value determines where the extra space
+is placed left and right of the object.
+<P>
+<ul>
+<LI>CENTER aligns the object in the center. (Default) </LI>
+<LI>LEFT aligns the object on the left.</LI>
+<LI>RIGHT aligns the object on the right.  </LI>
+<LI>(<T>&lt;TD&gt;</T> only) TEXT aligns lines of text using the full
+cell width. The alignment of a line is determined by its (possibly
+implicit) associated <T>&lt;BR&gt;</T> element.</LI> 
+</ul>
+<P>
+The contents of a cell are normally aligned as a block. In particular,
+lines of text are first aligned as a text block based on the width of
+the widest line and the corresponding <T>&lt;BR&gt;</T> elements. Then,
+the entire text block is aligned within a cell. If, however, the
+cell's <B><I>ALIGN</I></B> value is <T>"TEXT"</T>, and the cell contains
+lines of text, then the lines are justified using the entire available
+width of the cell. If the cell does not contain text, then the contained
+image or table is centered.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>BALIGN</FONT> </I></B>
+<BLOCKQUOTE>
+specifies the default alignment of <T>&lt;BR&gt;</T> elements contained
+in the cell. That is, if a <T>&lt;BR&gt;</T> element has no
+explicit <B><I>ALIGN</I></B> attribute, the attribute value is specified
+by the value of <B><I>BALIGN</I></B>.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>BGCOLOR="color"</FONT></I></B>
+<BLOCKQUOTE>
+sets the color of the background. This color can be 
+overridden by a <B><I>BGCOLOR</I></B> attribute in descendents.
+The value can be a single color or two colors separated by a colon, the
+latter indicating a gradient fill.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>BORDER="value"</FONT></I></B>
+<BLOCKQUOTE>
+specifies the width of the border around the object in points.
+A value of zero indicates no border. The default is 1.
+The maximum value is 255.
+If set in a table, and <B><I>CELLBORDER</I></B> is not set,
+this value is also used for all cells in the table.
+It can be overridden by a <B><I>BORDER</I></B> tag in  a cell.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>CELLBORDER="value"</FONT></I></B>
+<BLOCKQUOTE>
+specifies the width of the border for all cells in a table.
+It can be overridden by a <B><I>BORDER</I></B> tag in  a cell.
+The maximum value is 255.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>CELLPADDING="value"</FONT></I></B>
+<BLOCKQUOTE>
+specifies the space, in points, between a cell's border and its content.
+The default is 2.
+The maximum value is 255.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>CELLSPACING="value"</FONT></I></B>
+<BLOCKQUOTE>
+specifies the space, in points, between cells in a table and between
+a cell and the table's border.  The default is 2.
+The maximum value is 127.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>COLOR="color"</FONT></I></B>
+<BLOCKQUOTE>
+sets the color of the font within the scope of
+&lt;FONT&gt;...&lt;/FONT&gt;, or the border color
+of the table or cell within the scope of
+&lt;TABLE&gt;...&lt;/TABLE&gt;,
+or &lt;TD&gt;...&lt;/TD&gt;.
+This color can be 
+overridden by a <B><I>COLOR</I></B> attribute in descendents.
+By default, the font color is determined by the
+<A HREF="attrs.html#d:fontcolor">fontcolor</A> attribute of
+the corresponding node, edge or graph, and the border color
+is determined by the
+<A HREF="attrs.html#d:color">color</A> attribute of
+the corresponding node, edge or graph.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>COLSPAN="value"</FONT></I></B>
+<BLOCKQUOTE>
+specifies the number of columns spanned by the cell. The default is 1.
+The maximum value is 65535.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>COLUMNS="value"</FONT></I></B>
+<BLOCKQUOTE>
+provides general formatting information concerning the columns.
+At present, the only legal value is "*", which causes a vertical rule to
+appear between every cell in every row.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>FACE="fontname"</FONT></I></B>
+<BLOCKQUOTE>
+specifies the font to use within the scope of
+&lt;FONT&gt;...&lt;/FONT&gt;.
+This can be 
+overridden by a <B><I>FACE</I></B> attribute in descendents.
+By default, the font name is determined by the
+<A HREF="attrs.html#d:fontname">fontname</A> attribute of the corresponding
+node, edge or graph.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>FIXEDSIZE</FONT> </I></B>
+<BLOCKQUOTE>
+specifies whether the values given by the <B><I>WIDTH</I></B> 
+and <B><I>HEIGHT</I></B> attributes are enforced.
+<P>
+<ul>
+<LI>FALSE allows the object to grow so that all its contents will fit. (Default) </LI>
+<LI>TRUE fixes the object size to its given <B><I>WIDTH</I></B> 
+and <B><I>HEIGHT</I></B>.
+Both of these attributes must be supplied.</LI>
+</ul>
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>GRADIENTANGLE="value"</FONT></I></B>
+<BLOCKQUOTE>
+gives the angle used in a gradient fill if the 
+<B><I>BGCOLOR</I></B> is a color list. For the default linear gradient,
+this specifies 
+the angle of a line through the center along which the colors transform.
+Thus, an angle of 0 will cause a left-to-right progression.
+For radial gradients (see <B><I>STYLE</I></B>), the angle specifies the position
+of the center of the coloring. An angle of 0 places the center at the center of the
+table or cell; an non-zero angle places the fill center along that angle near the
+boundary.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>HEIGHT="value"</FONT></I></B>
+<BLOCKQUOTE>
+specifies the mininum height, in points, of the object. The height
+includes the contents, any spacing and the border. Unless
+<B><I>FIXEDSIZE</I></B> is true, the height will be expanded to allow
+the contents to fit.
+The maximum value is 65535.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>HREF="value"</FONT></I></B>
+<BLOCKQUOTE>
+attaches a URL to the object.
+Note that the <TT>"value"</TT> is treated as an
+<A HREF=attrs.html#k:escString>escString</A> similarly to the
+<A HREF=attrs.html#d:URL>URL</A> attribute.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>ID="value"</FONT></I></B>
+<BLOCKQUOTE>
+allows the user to specify a unique ID for a table or cell. See
+the <A HREF=attrs.html#d:id>id</A> attribute for more information.
+Note that the <TT>"value"</TT> is treated as an
+<A HREF=attrs.html#k:escString>escString</A> similarly to the
+<A HREF=attrs.html#d:id>id</A> attribute.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>POINT-SIZE="value"</FONT></I></B>
+<BLOCKQUOTE>
+sets the size of the font, in points, used within the scope of
+&lt;FONT&gt;...&lt;/FONT&gt;.
+This can be 
+overridden by a <B><I>POINT-SIZE</I></B> attribute in descendents.
+By default, the font size is determined by the
+<A HREF="attrs.html#d:fontsize">fontsize</A> attribute of the corresponding
+node, edge or graph.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>PORT="value"</FONT></I></B>
+<BLOCKQUOTE>
+attaches a portname to the object.
+(See <A HREF=attrs.html#k:portPos>portPos</A>.)
+This can be used to modify the head
+or tail of an edge, so that the end attaches directly to the object.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>ROWS="value"</FONT></I></B>
+<BLOCKQUOTE>
+provides general formatting information concerning the rows.
+At present, the only legal value is "*", which causes a horizontal rule to
+appear between every row.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>ROWSPAN="value"</FONT></I></B>
+<BLOCKQUOTE>
+specifies the number of rows spanned by the cell. The default is 1.
+The maximum value is 65535.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>SCALE</FONT></I></B>
+<BLOCKQUOTE>
+specifies how an image will use any extra space available in its cell.
+Allowed values are
+<ul>
+<LI>FALSE : keep image its natural size. (Default) </LI>
+<LI>TRUE : scale image uniformly to fit.</LI>
+<LI>WIDTH : expand image width to fill  </LI>
+<LI>HEIGHT : expand image height to fill  </LI>
+<LI>BOTH : expand both image width height to fill  </LI>
+</ul>
+If this attribute is undefined, 
+the image inherits the <A HREF="attrs.html#d:imagescale">imagescale</A> 
+attribute of the graph object being drawn.
+As with the <A HREF="attrs.html#d:imagescale">imagescale</A>
+attribute, if the cell has a fixed size and the image is too large,
+any offending dimension will be shrunk to fit the space, the
+scaling being uniform in width and height if <I>SCALE=<TT>"true"</TT></I>.
+Note that the containing cell's <B><I>ALIGN</I></B> 
+and <B><I>VALIGN</I></B> attributes override
+an image's <B><I>SCALE</I></B> attribute.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>SRC="value"</FONT></I></B>
+<BLOCKQUOTE>
+specifies the image file to be displayed in the cell.
+Note that if the software is used as a web server, file system access
+to images is more restricted. See <A HREF="command.html#d:GV_FILE_PATH">GV_FILE_PATH</A>
+and <A HREF="command.html#d:SERVER_NAME">SERVER_NAME</A>.
+</BLOCKQUOTE>
+
+<P>
+<B><I><FONT SIZE=-1>STYLE</FONT> </I></B>
+<BLOCKQUOTE>
+specifies style characteristics of the table or cell. Style characteristics are
+given as a comma or space separated list of style attributes. At present, the only
+legal attributes are "ROUNDED" and "RADIAL" for tables, and "RADIAL" for cells.
+If "ROUNDED" is specified, the table will have rounded corners.
+This probably works best if the outmost cells have no borders, or their CELLSPACING
+is sufficiently large.
+If it is desirable to have borders around the cells, use <I><B>HR</B></I>
+and <I><B>VR</B></I> elements, or the <I><B>COLUMNS</B></I> and <I><B>ROWS</B></I> attributes of <I><B>TABLE</B></I>.
+<P>
+The "RADIAL" attribute indicates a radial gradient fill. See the <B><I>BGCOLOR</I></B> and
+<B><I>GRADIENTANGLE</I></B> attributes.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>TARGET="value"</FONT></I></B>
+<BLOCKQUOTE>
+determines which window of the browser is used for the URL if the object 
+has one. 
+See <A HREF="http://www.w3.org/TR/html401/present/frames.html#adef-target">W3C documentation</A>.
+Note that the <TT>"value"</TT> is treated as an
+<A HREF=attrs.html#k:escString>escString</A> similarly to the
+<A HREF=attrs.html#d:target>target</A> attribute.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>TITLE="value"</FONT></I></B>
+<BLOCKQUOTE>
+sets the tooltip annotation attached to the element. 
+This is used only if the element has a HREF attribute.
+Note that the <TT>"value"</TT> is treated as an
+<A HREF=attrs.html#k:escString>escString</A> similarly to the
+<A HREF=attrs.html#d:tooltip>tooltip</A> attribute.
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>TOOLTIP="value"</FONT></I></B>
+<BLOCKQUOTE>
+is an alias for <B><I><FONT SIZE=-1>TITLE</FONT></I></B>.
+</BLOCKQUOTE>
+
+<P>
+<B><I><FONT SIZE=-1>VALIGN</FONT> </I></B>
+<BLOCKQUOTE>
+specifies vertical placement. When an object is allocated
+more space than required, this value determines where the extra space
+is placed above and below the object.
+<P>
+<ul>
+<LI>MIDDLE aligns the object in the center. (Default) </LI>
+<LI>BOTTOM aligns the object on the bottom.</LI>
+<LI>TOP aligns the object on the top.  </LI>
+</ul>
+</BLOCKQUOTE>
+
+<B><I><FONT SIZE=-1>WIDTH="value"</FONT></I></B>
+<BLOCKQUOTE>
+specifies the mininum width, in points, of the object. The width
+includes the contents, any spacing and the border. Unless
+<B><I>FIXEDSIZE</I></B> is true, the width will be expanded to allow
+the contents to fit.
+The maximum value is 65535.
+</BLOCKQUOTE>
+
+<P>
+There is some inheritance among the attributes. If a table specifies
+a <I><B>CELLPADDING</B></I>, <I><B>CELLBORDER</B></I> or <I><B>BORDER</B></I> 
+value, this value is used by the table's
+cells unless overridden. If a cell or table specifies a <I><B>BGCOLOR</B></I>,
+this will be the background color for all of its descendents.
+Of course, if a background or fill color is specified for the
+graph object owning the label, this will be the original
+background for the label.
+The object's fontname, fontcolor and fontsize attributes
+are the default for drawing text. These can be overridden by using
+<I><B>FONT</B></I> to set new values. The new font values will hold
+until overridden by an enclosed <I><B>FONT</B></I> element.
+Finally, the pencolor or color of the graph object will be used as
+the border color.
+<P>
+If you want horizontal or vertical rules used uniformly within a table, consider
+using the <I><B>COLUMNS</B></I> or <I><B>ROWS</B></I> attributes 
+rather than using many
+<I><B>HR</B></I> and <I><B>VR</B></I> elements.
+<P>
+Because of certain limitations in handling tables in a device-independent
+manner, when <I><B>BORDER</B></I> is 1 and both table and cell borders
+are on and <I><B>CELLSPACING</B></I> is less than 2, anomalies can arise
+in the output, such as gaps between sides of borders which should be
+abutting or even collinear. The user can usual get around this by increasing
+the border size or the spacing, or turning off the table border.
+<P>
+As an example of HTML labels, the dot input 
+<XMP>

@@ -1,0 +1,4 @@
+digraph G { node[style=filled fillcolor="#00ff005f" color="#00ff005f"]
+subgraph {e->f subgraph cluster_ss81 {a->b->c}};
+subgraph { subgraph { subgraph { subgraph cluster_x { x; subgraph cluster_y {y }}}}}
+}

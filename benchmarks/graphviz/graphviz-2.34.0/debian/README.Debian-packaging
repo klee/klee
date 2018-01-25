@@ -1,0 +1,46 @@
+Packaging graphviz for Debian
+-----------------------------
+
+  [ New upstream release ]
+  * Update the list of config scripts if needed.
+
+  [ Patches ]
+  * Patch management: quilt is used, remember to run "autoreconf -vfi" with
+    automake1.10 installed, so as to produce the appropriate patch, stored as
+    the last patch of the series, 0_autoreconf_run. One shouldn't forget to
+    delete autom4te.cache directories before refreshing the patch.
+  * As of 2.14, there are no longer patches which imply an autoreconf run, so
+    this patch no longer exists. Anyway, upstream now uses automake1.10.
+  * The following prefix convention was originally used for patch names:
+     0 - Debian-specific fix
+     1 - Backported fix (followed by a 4-digit upstream bug number, if any)
+     2 - Submitted fix (followed by a 4-digit upstream bug number, if any)
+     3 - Not-yet submitted fix.
+    The frontier between 2 and 3 is no longer clear, since there was a lot of
+    patches sent upstream during the last weeks (may 2007), so 3_* patches
+    might have already been incorporated into upstream's CVS, and further
+    patches are likely to be sent upstream as soon as added to the package.
+
+  [ Library handling ]
+  * dh_makeshlibs: the -V option is used to ensure that the versioned-Depends
+    on libgraphvizN is sufficient, so that one is sure that the config file
+    update mechanism is present.
+
+  [ Plugins & config file ]
+  * They are/will be named libgraphvizN-*-plugin.
+  * They have to use this mechanism in post{inst,rm} scripts to ensure that
+    they are correctly registered. Copying the first stanza (about
+    libgraphvizN-dev-config-update) of libgraphvizN's postinst to both plugin's
+    postinst and postrm should be sufficient.
+  * Each libgraphvizN should take care of its own "configN" file (creation,
+    update, removal). In addition, "config" file should be removed (e.g. in
+    postinst), since it may have subsisted during 2.8 -> 2.12 migration.
+  * Care must be taken about the plugin files, they have to be excluded from
+    the libgraphvizN package (see libgraphvizN.install), that's why the content
+    of this latter package has to be listed in extenso, and that's why jokers
+    aren't used for some files (esp. under /usr/lib/graphviz).
+  * lib/gvc/gvconfig.c:gvconfig() is patched to use "configN" instead of
+    "config", so as to be able to have several library versions installed at
+    the same time, which is not possible with a common configuration file.
+
+ -- Cyril Brulebois <cyril.brulebois@enst-bretagne.fr>  Mon, 21 May 2007 04:56:17 +0200

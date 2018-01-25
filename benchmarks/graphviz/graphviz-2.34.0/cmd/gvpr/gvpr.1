@@ -1,0 +1,1198 @@
+.de TQ
+.  br
+.  ns
+.  TP \\$1
+..
+.TH GVPR 1 "29 August 2013"
+.SH NAME
+gvpr \- graph pattern scanning and processing language
+.br
+.SH SYNOPSIS
+.B gvpr
+[\fB\-icnqV?\fP]
+[
+.BI \-o
+.I outfile
+]
+[
+.BI \-a
+.I args
+]
+[
+.I 'prog'
+|
+.BI \-f
+.I progfile
+]
+[ 
+.I files 
+]
+.SH DESCRIPTION
+.B gvpr
+(previously known as
+.BR gpr )
+is a graph stream editor inspired by \fBawk\fP.
+It copies input graphs to its
+output, possibly transforming their structure and attributes,
+creating new graphs, or printing arbitrary information.
+The graph model is that provided by
+.IR libcgraph (3).
+In particular, \fBgvpr\fP reads and writes graphs using the
+dot language.
+.PP
+Basically,
+.B gvpr
+traverses each input graph, denoted by \fB$G\fP, visiting each node and edge,
+matching it with the predicate\(hyaction rules supplied in the input program.
+The rules are evaluated in order.
+For each predicate evaluating to true, the corresponding 
+action is performed. 
+During the traversal, the current node or edge being visited
+is denoted by \fB$\fP.
+.PP
+For each input graph, there is a target subgraph, denoted by
+\fB$T\fP, initially empty and used to accumulate
+chosen entities, and an output graph, \fB$O\fP, used for final processing
+and then written to output. 
+By default, the output graph is the target graph.
+The output graph can be set in the program or, in a limited sense,
+on the command line.
+.SH OPTIONS
+The following options are supported:
+.TP
+.BI \-a " args"
+The string \fIargs\fP is split into whitespace\(hyseparated tokens, 
+with the individual tokens
+available as strings in the \fBgvpr\fP program 
+as \fBARGV[\fI0\fP],...,ARGV[ARGC\-1]\fR.
+Whitespace characters within single or double quoted substrings, or
+preceded by a backslash, are ignored as separators. 
+In general, a backslash character turns off any special meaning of the
+following character.
+Note that the tokens derived from multiple \fB\-a\fP flags are concatenated.
+.TP
+.B \-c
+Use the source graph as the output graph.
+.TP
+.B \-i
+Derive the node\(hyinduced subgraph extension of the output graph in the context 
+of its root graph.
+.TP
+.BI \-o " outfile"
+Causes the output stream to be written to the specified file; by default,
+output is written to \fBstdout\fP.
+.TP
+.BI \-f " progfile"
+Use the contents of the specified file as the program to execute
+on the input. If \fIprogfile\fP contains a slash character, the name is taken
+as the pathname of the file. Otherwise, \fBgvpr\fP will use the
+directories specified in the environment variable \fBGVPRPATH\fP to look
+for the file. If 
+.B \-f
+is not given,
+.B gvpr
+will use the first non\(hyoption argument as the program.
+.TP
+.B \-q
+Turns off warning messages.
+.TP
+.B \-n
+Turns off graph read-ahead. By default, the variable \fB$NG\fP is set to the next
+graph to be processed. This requires a read of the next graph before processing the
+current graph, which may block if the next graph is only generated in response to
+some action pertaining to the processing of the current graph.
+.TP
+.B \-V
+Causes the program to print version information and exit.
+.TP
+.B \-?
+Causes the program to print usage information and exit.
+.SH OPERANDS
+The following operand is supported:
+.TP 8
+.I files
+Names of files containing 1 or more graphs in the dot language.
+If no
+.B \-f
+option is given, the first name is removed from the list and used 
+as the input program. If the list of files is empty, \fBstdin\fP will be used.
+.SH PROGRAMS
+A
+.B gvpr
+program consists of a list of predicate\(hyaction clauses, having one
+of the forms:
+.IP
+.BI "BEGIN { "  action " }"
+.IP
+.BI "BEG_G { "  action " }"
+.IP
+.BI "N [ " predicate " ] { " action " }
+.IP
+.BI "E [ " predicate " ] { " action " }
+.IP
+.BI "END_G { "  action " }"
+.IP
+.BI "END { "  action " }"
+.PP
+A program can contain at most one of each of the \fBBEGIN\fP, 
+\fBEND_G\fP and \fBEND\fP clauses. 
+There can be any number of \fBBEG_G\fP, \fBN\fP and \fBE\fP statements,
+the first applied to graphs, the second to nodes, the third to edges.
+These are separated into blocks, a block consisting of an optional
+\fBBEG_G\fP statement and all \fBN\fP and \fBE\fP statements up to 
+the next \fBBEG_G\fP statement, if any.
+The top\(hylevel semantics of a \fBgvpr\fP program are:
+.PP
+.RS
+.nf
+Evaluate the \fBBEGIN\fP clause, if any.
+For each input graph \fIG\fP {
+    For each block {
+        Set \fIG\fP as the current graph and current object.
+        Evaluate the \fBBEG_G\fP clause, if any.
+        For each node and edge in \fIG\fP {
+            Set the node or edge as the current object.
+            Evaluate the \fBN\fP or \fBE\fP clauses, as appropriate.
+        } 
+    } 
+    Set \fIG\fP as the current object.
+    Evaluate the \fBEND_G\fP clause, if any.
+} 
+Evaluate the \fBEND\fP clause, if any.
+.fi
+.RE
+.DT
+.PP
+The actions of the \fBBEGIN\fP, \fBBEG_G\fP, \fBEND_G\fP and \fBEND\fP clauses
+are performed when the clauses are evaluated.
+For \fBN\fP or \fBE\fP clauses,
+either the predicate or action may be omitted. 
+If there is no predicate with an action, the action is 
+performed on every node or edge, as appropriate.
+If there is no action and the predicate evaluates to true,
+the associated node or edge is added to the target graph. 
+.PP
+The blocks are evaluated in the order in which they occur.
+Within a block, the \fBN\fP clauses 
+(\fBE\fP clauses, respectively) are evaluated in the
+order in which the occur. Note, though, that within a block, 
+\fBN\fP or \fBE\fP clauses may be interlaced, depending on the
+traversal order.
+.PP
+Predicates and actions are sequences of statements in the C dialect 
+supported by the
+.IR expr (3)
+library.
+The only difference between predicates and actions is that the former
+must have a type that may interpreted as either true or false.
+Here the usual C convention is followed, in which a non\(hyzero value is
+considered true. This would include non\(hyempty strings and non\(hyempty
+references to nodes, edges, etc. However, if a string can be 
+converted to an integer, this value is used.
+.PP
+In addition to the usual C base types
+(\fBvoid\fP, \fBint\fP, \fBchar\fP, \fBfloat\fP, \fBlong\fP, 
+\fBunsigned\fP and \fBdouble\fP), 
+\fBgvpr\fP \fRprovides \fBstring\fP as a synonym for \fBchar*\fP, and 
+the graph\(hybased types \fBnode_t\fP,
+\fBedge_t\fP, \fBgraph_t\fP and \fBobj_t\fP.
+The \fBobj_t\fP type can be viewed as a supertype of the other 3 concrete types;
+the correct base type is maintained dynamically.
+Besides these base types, the only other supported type expressions
+are (associative) arrays. 
+.PP
+Constants follow C syntax, but strings may be quoted with either
+\fB"..."\fP or \fB'...'\fP.
+\fBgvpr\fP accepts C++ comments as well as cpp\(hytype comments.
+For the latter, if a line begins with a '#' character, the rest of
+the line is ignored.
+.PP
+A statement can be a declaration of a function, a variable
+or an array, or an executable statement. For declarations, there
+is a single scope. Array declarations have the form: 
+.PP
+.RS
+.nf
+\fI type array \fB[\fP type0 \fB]\fR
+.fi
+.RE
+.DT
+.PP
+where \fI type0 \fP is optional. If it is supplied, the parser will 
+enforce that all array subscripts have the specified type. If it is
+not supplied, objects of all types can be used as subscripts.
+As in C, variables and arrays must
+be declared. In particular, an undeclared variable will be interpreted
+as the name of an attribute of a node, edge or graph, depending on the
+context.
+.PP
+Executable statements can be one of the following:
+.RS
+.TS
+l l.
+\fB{\fR [\fI statement ... \fR] \fB}\fR
+\fIexpression\fP	\fR// commonly\fP\fI var \fB=\fP expression\fR
+\fBif(\fI expression \fP)\fI statement \fR[ \fBelse\fI statement \fR]
+\fBfor(\fI expression \fP;\fI expression \fP;\fI expression \fP)\fI statement\fP
+\fBfor(\fI array \fP[\fI var \fP])\fI statement\fP
+\fBforr(\fI array \fP[\fI var \fP])\fI statement\fP
+\fBwhile(\fI expression \fP)\fI statement\fP
+\fBswitch(\fI expression \fP)\fI case statements\fP
+\fBbreak [\fI expression \fP]
+\fBcontinue [\fI expression \fP]
+\fBreturn [\fI expression \fP]\fR
+.TE
+.RE
+.SM
+Items in brackets are optional.
+.PP
+In the second form of the \fBfor\fP statement and the \fBforr\fP statement, the variable \fIvar\fP
+is set to each value used as an index in the specified array and then
+the associated \fIstatement\fP is evaluated. For numeric and string indices, the indices are 
+returned in increasing (decreasing) numeric or lexicographic order for 
+\fBfor\fP (\fBforr\fP, respectively). This can be used for sorting.
+.PP
+Function definitions can only appear in the \fBBEGIN\fP clause.
+.PP
+Expressions include the usual C expressions. 
+String comparisons using \fB==\fP and \fB!=\fP
+treat the right hand operand as a pattern
+for the purpose of regular expression matching.
+Patterns use
+.IR ksh (1)
+file match pattern syntax.
+(For simple string equality, use the \fBstrcmp\fP function.
+.PP
+\fBgvpr\fP will attempt to use an expression as a string or numeric value 
+as appropriate. Both C-like casts and function templates will cause
+conversions to be performed, if possible.
+.PP
+Expressions of graphical type (i.e., \fBgraph_t, node_t,
+edge_t, obj_t\fP) may be followed by a field reference in the
+form of \fB.\fP\fIname\fP. The resulting value is the value
+of the attribute named \fIname\fP of the given object.
+In addition, in certain contexts an undeclared, unmodified
+identifier is taken to be an
+attribute name. Specifically, such identifiers denote attributes
+of the current node or edge, respectively, in \fBN\fP
+and \fBE\fP clauses, and the current graph in \fBBEG_G\fP and \fBEND_G\fP
+clauses.
+.PP
+As usual in the 
+.IR libcgraph (3)
+model, attributes are string\(hyvalued.
+In addition,
+.B gvpr
+supports certain pseudo\(hyattributes of graph objects, not necessarily
+string\(hyvalued. These reflect intrinsic properties of the graph objects
+and cannot be set by the user.
+.TP
+\fBhead\fR : \fBnode_t\fR
+the head of an edge.
+.TP
+\fBtail\fR : \fBnode_t\fR
+the tail of an edge.
+.TP
+\fBname\fR : \fBstring\fR
+the name of an edge, node or graph. The name of an edge has the
+form "\fI<tail\(hyname><edge\(hyop><head\(hyname>\fB[\fI<key>\fB]\fR",
+where \fI<edge\(hyop>\fP is "\fB\->\fP" or "\fB\-\-\fP" depending on
+whether the graph is directed or not. The bracket part \fB[\fI<key>\fB]\fR
+only appears if the edge has a non\(hytrivial key.
+.TP
+\fBindegree\fR : \fBint\fR
+the indegree of a node.
+.TP
+\fBoutdegree\fR : \fBint\fR
+the outdegree of a node.
+.TP
+\fBdegree\fR : \fBint\fR
+the degree of a node.
+.TP
+\fBroot\fR : \fBgraph_t\fR
+the root graph of an object. The root of a root graph
+is itself.
+.TP
+\fBparent\fR : \fBgraph_t\fR
+the parent graph of a subgraph. The parent of a root graph
+is \fBNULL\fP
+.TP
+\fBn_edges\fR : \fBint\fR
+the number of edges in the graph
+.TP
+\fBn_nodes\fR : \fBint\fR
+the number of nodes in the graph
+.TP
+\fBdirected\fR : \fBint\fR
+true (non\(hyzero) if the graph is directed
+.TP
+\fBstrict\fR : \fBint\fR
+true (non\(hyzero) if the graph is strict
+.SH "BUILT\(hyIN FUNCTIONS"
+.PP
+The following functions are built into \fBgvpr\fP. Those functions
+returning references to graph objects return \fBNULL\fP in case of failure.
+.SS "Graphs and subgraph"
+.TP
+\fBgraph\fP(\fIs\fP : \fBstring\fP, \fIt\fP : \fBstring\fP) : \fBgraph_t\fP
+creates a graph whose name is \fIs\fP and whose type is
+specified by the string \fIt\fP. Ignoring case, the characters
+\fBU, D, S, N\fR have the interpretation undirected, directed,
+strict, and non\(hystrict, respectively. If \fIt\fP is empty,
+a directed, non\(hystrict graph is generated.
+.TP
+\fBsubg\fP(\fIg\fP : \fBgraph_t\fP, \fIs\fP : \fBstring\fP) : \fBgraph_t\fP
+creates a subgraph in graph \fIg\fP with name \fIs\fP. If the subgraph
+already exists, it is returned.
+.TP
+\fBisSubg\fP(\fIg\fP : \fBgraph_t\fP, \fIs\fP : \fBstring\fP) : \fBgraph_t\fP
+returns the subgraph in graph \fIg\fP with name \fIs\fP, if it exists,
+or \fBNULL\fP otherwise.
+.TP
+\fBfstsubg\fP(\fIg\fP : \fBgraph_t\fP) : \fBgraph_t\fP
+returns the first subgraph in graph \fIg\fP, or \fBNULL\fP if none exists.
+.TP
+\fBnxtsubg\fP(\fIsg\fP : \fBgraph_t\fP) : \fBgraph_t\fP
+returns the next subgraph after \fIsg\fP, or \fBNULL\fP.
+.TP
+\fBisDirect\fP(\fIg\fP : \fBgraph_t\fP) : \fBint\fP
+returns true if and only if \fIg\fP is directed.
+.TP
+\fBisStrict\fP(\fIg\fP : \fBgraph_t\fP) : \fBint\fP
+returns true if and only if \fIg\fP is strict.
+.TP
+\fBnNodes\fP(\fIg\fP : \fBgraph_t\fP) : \fBint\fP
+returns the number of nodes in \fIg\fP.
+.TP
+\fBnEdges\fP(\fIg\fP : \fBgraph_t\fP) : \fBint\fP
+returns the number of edges in \fIg\fP.
+.SS "Nodes"
+.TP
+\fBnode\fP(\fIsg\fP : \fBgraph_t\fP, \fIs\fP : \fBstring\fP) : \fBnode_t\fP
+creates a node in graph \fIg\fP of name \fIs\fP. If such a node
+already exists, it is returned.
+.TP
+\fBsubnode\fP(\fIsg\fP : \fBgraph_t\fP, \fIn\fP : \fBnode_t\fP) : \fBnode_t\fP
+inserts the node \fIn\fP into the subgraph \fIg\fP. Returns the node.
+.TP
+\fBfstnode\fP(\fIg\fP : \fBgraph_t\fP) : \fBnode_t\fP
+returns the first node in graph \fIg\fP, or \fBNULL\fP if none exists.
+.TP
+\fBnxtnode\fP(\fIn\fP : \fBnode_t\fP) : \fBnode_t\fP
+returns the next node after \fIn\fP in the root graph, or \fBNULL\fP.
+.TP
+\fBnxtnode_sg\fP(\fIsg\fP : \fBgraph_t\fP, \fIn\fP : \fBnode_t\fP) : \fBnode_t\fP
+returns the next node after \fIn\fP in \fIsg\fP, or \fBNULL\fP.
+.TP
+\fBisNode\fP(\fIsg\fP : \fBgraph_t\fP, \fIs\fP : \fBstring\fP) : \fBnode_t\fP
+looks for a node in (sub)graph \fIsg\fP of name \fIs\fP. If such a node
+exists, it is returned. Otherwise, \fBNULL\fP is returned.
+.TP
+\fBisSubnode\fP(\fIsg\fP : \fBgraph_t\fP, \fIn\fP : \fBnode_t\fP) : \fBint\fP
+returns non-zero if node \fIn\fP is in (sub)graph \fIsg\fP, or zero
+otherwise.
+.TP
+\fBindegreeOf\fP(\fIsg\fP : \fBgraph_t\fP, \fIn\fP : \fBnode_t\fP) : \fBint\fP
+returns the indegree of node \fIn\fP in (sub)graph \fIsg\fP.
+.TP
+\fBoutdegreeOf\fP(\fIsg\fP : \fBgraph_t\fP, \fIn\fP : \fBnode_t\fP) : \fBint\fP
+returns the outdegree of node \fIn\fP in (sub)graph \fIsg\fP.
+.TP
+\fBdegreeOf\fP(\fIsg\fP : \fBgraph_t\fP, \fIn\fP : \fBnode_t\fP) : \fBint\fP
+returns the degree of node \fIn\fP in (sub)graph \fIsg\fP.
+.SS "Edges"
+.TP
+\fBedge\fP(\fIt\fP : \fBnode_t\fP, \fIh\fP : \fBnode_t\fP, \fIs\fP : \fBstring\fP) : \fBedge_t\fP
+creates an edge with tail node \fIt\fP, head node \fIh\fP and
+name \fIs\fP in the root graph. If the graph is undirected, the 
+distinction between head and tail nodes is unimportant.
+If such an edge already exists, it is returned.
+.TP
+\fBedge_sg\fP(\fIsg\fP : \fBgraph_t\fP, \fIt\fP : \fBnode_t\fP, \fIh\fP : \fBnode_t\fP, \fIs\fP : \fBstring\fP) : \fBedge_t\fP
+creates an edge with tail node \fIt\fP, head node \fIh\fP and name \fIs\fP 
+in (sub)graph \fIsg\fP (and all parent graphs). If the graph is undirected, the distinction between
+head and tail nodes is unimportant.
+If such an edge already exists, it is returned.
+.TP
+\fBsubedge\fP(\fIg\fP : \fBgraph_t\fP, \fIe\fP : \fBedge_t\fP) : \fBedge_t\fP
+inserts the edge \fIe\fP into the subgraph \fIg\fP. Returns the edge.
+.TP
+\fBisEdge\fP(\fIt\fP : \fBnode_t\fP, \fIh\fP : \fBnode_t\fP, \fIs\fP : \fBstring\fP) : \fBedge_t\fP
+looks for an edge with tail node \fIt\fP, head node \fIh\fP and
+name \fIs\fP. If the graph is undirected, the distinction between
+head and tail nodes is unimportant.
+If such an edge exists, it is returned. Otherwise, \fBNULL\fP is returned.
+.TP
+\fBisEdge_sg\fP(\fIsg\fP : \fBgraph_t\fP, \fIt\fP : \fBnode_t\fP, \fIh\fP : \fBnode_t\fP, \fIs\fP : \fBstring\fP) : \fBedge_t\fP
+looks for an edge with tail node \fIt\fP, head node \fIh\fP and
+name \fIs\fP in (sub)graph \fIsg\fP. If the graph is undirected, the distinction between
+head and tail nodes is unimportant.
+If such an edge exists, it is returned. Otherwise, \fBNULL\fP is returned.
+.TP
+\fBisSubedge\fP(\fIg\fP : \fBgraph_t\fP, \fIe\fP : \fBedge_t\fP) : \fBint\fP
+returns non-zero if edge \fIe\fP is in (sub)graph \fIsg\fP, or zero
+otherwise.
+.TP
+\fBfstout\fP(\fIn\fP : \fBnode_t\fP) : \fBedge_t\fP
+returns the first outedge of node \fIn\fP in the root graph.
+.TP
+\fBfstout_sg\fP(\fIsg\fP : \fBgraph_t\fP, \fIn\fP : \fBnode_t\fP) : \fBedge_t\fP
+returns the first outedge of node \fIn\fP in (sub)graph \fIsg\fP.
+.TP
+\fBnxtout\fP(\fIe\fP : \fBedge_t\fP) : \fBedge_t\fP
+returns the next outedge after \fIe\fP in the root graph.
+.TP
+\fBnxtout_sg\fP(\fIsg\fP : \fBgraph_t\fP, \fIe\fP : \fBedge_t\fP) : \fBedge_t\fP
+returns the next outedge after \fIe\fP in graph \fIsg\fP.
+.TP
+\fBfstin\fP(\fIn\fP : \fBnode_t\fP) : \fBedge_t\fP
+returns the first inedge of node \fIn\fP in the root graph.
+.TP
+\fBfstin_sg\fP(\fIsg\fP : \fBgraph_t\fP, \fIn\fP : \fBnode_t\fP) : \fBedge_t\fP
+returns the first inedge of node \fIn\fP in graph \fIsg\fP.
+.TP
+\fBnxtin\fP(\fIe\fP : \fBedge_t\fP) : \fBedge_t\fP
+returns the next inedge after \fIe\fP in the root graph.
+.TP
+\fBnxtin_sg\fP(\fIsg\fP : \fBgraph_t\fP, \fIe\fP : \fBedge_t\fP) : \fBedge_t\fP
+returns the next inedge after \fIe\fP in graph \fIsg\fP.
+.TP
+\fBfstedge\fP(\fIn\fP : \fBnode_t\fP) : \fBedge_t\fP
+returns the first edge of node \fIn\fP in the root graph.
+.TP
+\fBfstedge_sg\fP(\fIsg\fP : \fBgraph_t\fP, \fIn\fP : \fBnode_t\fP) : \fBedge_t\fP
+returns the first edge of node \fIn\fP in graph \fIsg\fP.
+.TP
+\fBnxtedge\fP(\fIe\fP : \fBedge_t\fP, \fBnode_t\fP) : \fBedge_t\fP
+returns the next edge after \fIe\fP in the root graph.
+.TP
+\fBnxtedge_sg\fP(\fIsg\fP : \fBgraph_t\fP, \fIe\fP : \fBedge_t\fP, \fBnode_t\fP) : \fBedge_t\fP
+returns the next edge after \fIe\fP in the graph \fIsg\fP.
+.TP
+\fBopp\fP(\fIe\fP : \fBedge_t\fP, \fBnode_t\fP) : \fBnode_t\fP
+returns the node on the edge \fIe\fP not equal to \fIn\fP.
+Returns NULL if \fIn\fP is not a node of \fIe\fP.
+This can be useful when using \fBfstedge\fP and \fBnxtedge\fP
+to enumerate the neighbors of \fIn\fP.
+.SS "Graph I/O"
+.TP
+\fBwrite\fP(\fIg\fP : \fBgraph_t\fP) : \fBvoid\fP
+prints \fIg\fP in dot format onto the output stream.
+.TP
+\fBwriteG\fP(\fIg\fP : \fBgraph_t\fP, \fIfname\fP : \fBstring\fP) : \fBvoid\fP
+prints \fIg\fP in dot format into the file \fIfname\fP.
+.TP
+\fBfwriteG\fP(\fIg\fP : \fBgraph_t\fP, \fIfd\fP : \fBint\fP) : \fBvoid\fP
+prints \fIg\fP in dot format onto the open stream denoted
+by the integer \fIfd\fP.
+.TP
+\fBreadG\fP(\fIfname\fP : \fBstring\fP) : \fBgraph_t\fP
+returns a graph read from the file \fIfname\fP. The graph should be
+in dot format. If no graph can be read, \fBNULL\fP is returned.
+.TP
+\fBfreadG\fP(\fIfd\fP : \fBint\fP) : \fBgraph_t\fP
+returns the next graph read from the open stream \fIfd\fP.
+Returns \fBNULL\fP at end of file.
+.SS "Graph miscellany"
+.TP
+\fBdelete\fP(\fIg\fP : \fBgraph_t\fP, \fIx\fP : \fBobj_t\fP) : \fBvoid\fP
+deletes object \fIx\fP from graph \fIg\fP.
+If \fIg\fP is \fBNULL\fP, the function uses the root graph of \fIx\fP.
+If \fIx\fP is a graph or subgraph, it is closed unless \fIx\fP is locked.
+.TP
+\fBisIn\fP(\fIg\fP : \fBgraph_t\fP, \fIx\fP : \fBobj_t\fP) : \fBint\fP
+returns true if \fIx\fP is in subgraph \fIg\fP.
+.TP
+\fBcloneG\fP(\fIg\fP : \fBgraph_t\fP, \fIs\fP : \fBstring\fP) : \fBgraph_t\fP
+creates a clone of graph \fIg\fP with name of \fIs\fP.
+If \fIs\fP is "", the created graph has the same name as \fIg\fP.
+.TP
+\fBclone\fP(\fIg\fP : \fBgraph_t\fP, \fIx\fP : \fBobj_t\fP) : \fBobj_t\fP
+creates a clone of object \fIx\fP in graph \fIg\fP.
+In particular, the new object has the same name/value attributes
+and structure as the original object.
+If an object with the same key as \fIx\fP already exists, its attributes
+are overlaid by those of \fIx\fP and the object is returned.
+If an edge is cloned, both endpoints are implicitly cloned.
+If a graph is cloned, all nodes, edges and subgraphs are implicitly
+cloned.
+If \fIx\fP is a graph, \fIg\fP may be \fBNULL\fP, in which case the cloned
+object will be a new root graph. In this case, the call is equivalent
+to \fBcloneG(\fP\fIx\fP\fB,"")\fP.
+.TP
+\fBcopy\fP(\fIg\fP : \fBgraph_t\fP, \fIx\fP : \fBobj_t\fP) : \fBobj_t\fP
+creates a copy of object \fIx\fP in graph \fIg\fP,
+where the new object has the same name/value attributes
+as the original object.
+If an object with the same key as \fIx\fP already exists, its attributes
+are overlaid by those of \fIx\fP and the object is returned.
+Note that this is a shallow copy. If \fIx\fP is a graph, none of its nodes, 
+edges or subgraphs are copied into the new graph. If \fIx\fP is an edge,
+the endpoints are created if necessary, but they are not cloned.
+If \fIx\fP is a graph, \fIg\fP may be \fBNULL\fP, in which case the cloned
+object will be a new root graph.
+.TP
+\fBcopyA\fP(\fIsrc\fP : \fBobj_t\fP, \fItgt\fP : \fBobj_t\fP) : \fBint\fP
+copies the attributes of object \fIsrc\fP to object \fItgt\fP, overwriting
+any attribute values \fItgt\fP may initially have.
+.TP
+\fBinduce\fP(\fIg\fP : \fBgraph_t\fP) : \fBvoid\fP
+extends \fIg\fP to its node\(hyinduced subgraph extension in its root graph.
+.TP
+\fBhasAttr\fP(\fIsrc\fP : \fBobj_t\fP, \fIname\fP : \fBstring\fP) : \fBint\fP
+returns non-zero if object \fIsrc\fP has an attribute whose name is
+\fIname\fP. It returns 0 otherwise.
+.TP
+\fBisAttr\fP(\fIg\fP : \fBgraph_t\fP, \fIkind\fP : \fBstring\fP, \fIname\fP : \fBstring\fP) : \fBint\fP
+returns non-zero if an attribute \fIname\fP has been defined in \fIg\fP
+for objects of the given \fIkind\fP. For nodes, edges, and graphs, \fIkind\fP
+should be "N", "E", and "G", respectively.
+It returns 0 otherwise.
+.TP
+\fBaget\fP(\fIsrc\fP : \fBobj_t\fP, \fIname\fP : \fBstring\fP) : \fBstring\fP
+returns the value of attribute \fIname\fP in object \fIsrc\fP. This is
+useful for those cases when \fIname\fP conflicts with one of the keywords
+such as "head" or "root".
+If the attribute has not been declared in the graph, the function will
+initialize it with a default value of "". To avoid this, one should use
+the \fBhasAttr\fP or \fBisAttr\fP function to check that the attribute exists.
+.TP
+\fBaset\fP(\fIsrc\fP : \fBobj_t\fP, \fIname\fP : \fBstring\fP, \fIvalue\fP : \fBstring\fP) : \fBint\fP
+sets the value of attribute \fIname\fP in object \fIsrc\fP to \fIvalue\fP.
+Returns 0 on success, non\(hyzero on failure. See \fBaget\fP above.
+.TP
+\fBgetDflt\fP(\fIg\fP : \fBgraph_t\fP, \fIkind\fP : \fBstring\fP, \fIname\fP : \fBstring\fP) : \fBstring\fP
+returns the default value of attribute \fIname\fP in objects in \fIg\fP of
+the given \fIkind\fP. For nodes, edges, and graphs, \fIkind\fP
+should be "N", "E", and "G", respectively.
+If the attribute has not been declared in the graph, the function will
+initialize it with a default value of "". To avoid this, one should use
+the \fBisAttr\fP function to check that the attribute exists.
+.TP
+\fBsetDflt\fP(\fIg\fP : \fBgraph_t\fP, \fIkind\fP : \fBstring\fP, \fIname\fP : \fBstring\fP, \fIvalue\fP : \fBstring\fP) : \fBint\fP
+sets the default value of attribute \fIname\fP to \fIvalue\fP in 
+objects in \fIg\fP of
+the given \fIkind\fP. For nodes, edges, and graphs, \fIkind\fP
+should be "N", "E", and "G", respectively.
+Returns 0 on success, non\(hyzero on failure. See \fBgetDflt\fP above.
+.TP
+\fBfstAttr\fP(\fIg\fP : \fBgraph_t\fP, \fIkind\fP : \fBstring\fP) : \fBstring\fP
+returns the name of the first attribute of objects in \fIg\fP of
+the given \fIkind\fP. For nodes, edges, and graphs, \fIkind\fP
+should be "N", "E", and "G", respectively.
+If there are no attributes, the string "" is returned.
+.TP
+\fBnxtAttr\fP(\fIg\fP : \fBgraph_t\fP, \fIkind\fP : \fBstring\fP, \fIname\fP : \fBstring\fP) : \fBstring\fP
+returns the name of the next attribute of objects in \fIg\fP of
+the given \fIkind\fP after the attribute \fIname\fP. 
+The argument \fIname\fP must be the name of an existing attribute; it will
+typically be the return value of an previous call to \fBfstAttr\fP or
+\fBnxtAttr\fP.
+For nodes, edges, and graphs, \fIkind\fP
+should be "N", "E", and "G", respectively.
+If there are no attributes left, the string "" is returned.
+.TP
+\fBcompOf\fP(\fIg\fP : \fBgraph_t\fP, \fIn\fP : \fBnode_t\fP) : \fBgraph_t\fP
+returns the connected component of the graph \fIg\fP containing node \fIn\fP,
+as a subgraph of \fIg\fP. The subgraph only contains the nodes. One can
+use \fIinduce\fP to add the edges. The function fails and returns \fBNULL\fP
+if \fIn\fP is not in \fIg\fP. Connectivity is based on the underlying
+undirected graph of \fIg\fP.
+.TP
+\fBkindOf\fP(\fIobj\fP : \fBobj_t\fP) : \fBstring\fP
+returns an indication of the type of \fIobj\fP.
+For nodes, edges, and graphs, it returns "N", "E", and "G", respectively.
+.TP
+\fBlock\fP(\fIg\fP : \fBgraph_t\fP, \fIv\fP : \fBint\fP) : \fBint\fP
+implements graph locking on root graphs. If the integer \fIv\fP is positive, the
+graph is set so that future calls to \fBdelete\fP have no immediate effect.
+If \fIv\fP is zero, the graph is unlocked. If there has been a call
+to delete the graph while it was locked, the graph is closed.
+If \fIv\fP is negative, nothing is done.
+In all cases, the previous lock value is returned.
+.SS "Strings"
+.TP
+\fBsprintf\fP(\fIfmt\fP : \fBstring\fP, \fI...\fP) : \fBstring\fP
+returns the string resulting from formatting
+the values of the expressions occurring after \fIfmt\fP
+according to the
+.IR printf (3)
+format
+.I fmt
+.TP
+\fBgsub\fP(\fIstr\fP : \fBstring\fP, \fIpat\fP : \fBstring\fP) : \fBstring\fP
+.TP
+\fBgsub\fP(\fIstr\fP : \fBstring\fP, \fIpat\fP : \fBstring\fP, \fIrepl\fP : \fBstring\fP) : \fBstring\fP
+returns \fIstr\fP with all substrings matching \fIpat\fP
+deleted or replaced by \fIrepl\fP, respectively.
+.TP
+\fBsub\fP(\fIstr\fP : \fBstring\fP, \fIpat\fP : \fBstring\fP) : \fBstring\fP
+.TP
+\fBsub\fP(\fIstr\fP : \fBstring\fP, \fIpat\fP : \fBstring\fP, \fIrepl\fP : \fBstring\fP) : \fBstring\fP
+returns \fIstr\fP with the leftmost substring matching \fIpat\fP
+deleted or replaced by \fIrepl\fP, respectively. The 
+characters '^' and '$'
+may be used at the beginning and end, respectively,
+of \fIpat\fP to anchor the pattern to the beginning or end of \fIstr\fP.
+.TP
+\fBsubstr\fP(\fIstr\fP : \fBstring\fP, \fIidx\fP : \fBint\fP) : \fBstring\fP
+.TP
+\fBsubstr\fP(\fIstr\fP : \fBstring\fP, \fIidx\fP : \fBint\fP, \fIlen\fP : \fBint\fP) : \fBstring\fP
+returns the substring of \fIstr\fP starting at position \fIidx\fP to
+the end of the string or of length \fIlen\fP, respectively.
+Indexing starts at 0. If \fIidx\fP is negative or \fIidx\fP is greater than
+the length of \fIstr\fP, a fatal error occurs. Similarly, in the second
+case, if \fIlen\fP is negative or \fIidx\fP + \fIlen\fP is greater than the
+length of \fIstr\fP, a fatal error occurs.
+.TP
+\fBstrcmp\fP(\fIs1\fP : \fBstring\fP, \fIs2\fP : \fBstring\fP) : \fBint\fP
+provides the standard C function
+.IR strcmp (3).
+.TP
+\fBlength\fP(\fIs\fP : \fBstring\fP) : \fBint\fP
+returns the length of string \fIs\fP.
+.TP
+\fBindex\fP(\fIs\fP : \fBstring\fP, \fIt\fP : \fBstring\fP) : \fBint\fP
+.TP
+\fBrindex\fP(\fIs\fP : \fBstring\fP, \fIt\fP : \fBstring\fP) : \fBint\fP
+returns the index of the character in string \fIs\fP where the leftmost
+(rightmost) copy of string \fIt\fP can be found, or \-1 if \fIt\fP is not a 
+substring of \fIs\fP.
+.TP
+\fBmatch\fP(\fIs\fP : \fBstring\fP, \fIp\fP : \fBstring\fP) : \fBint\fP
+returns the index of the character in string \fIs\fP where the leftmost
+match of pattern \fIp\fP can be found, or \-1 if no substring of \fIs\fP
+matches \fIp\fP.
+.TP
+\fBtoupper\fP(\fIs\fP : \fBstring\fP) : \fBstring\fP
+returns a version of \fIs\fP with the alphabetic characters converted to upper-case.
+.TP
+\fBtolower\fP(\fIs\fP : \fBstring\fP) : \fBstring\fP
+returns a version of \fIs\fP with the alphabetic characters converted to lower-case.
+.TP
+\fBcanon\fP(\fIs\fP : \fBstring\fP) : \fBstring\fP
+returns a version of \fIs\fP appropriate to be used as an identifier
+in a dot file.
+.TP
+\fBhtml\fP(\fIg\fP : \fBgraph_t\fP, \fIs\fP : \fBstring\fP) : \fBstring\fP
+returns a ``magic'' version  of \fIs\fP as an HTML string. This will typically be
+used to attach an HTML-like label to a graph object. Note that the returned string
+lives in \fIg\fP. In particular, it will be freed when \fIg\fP is closed, and to
+act as an HTML string, it has to be used with an object of \fIg\fP. In addition,
+note that the
+angle bracket quotes should not be part of \fIs\fP. These will be added if 
+\fIg\fP is written in concrete DOT format.
+.TP
+\fBishtml\fP(\fIs\fP : \fBstring\fP) : \fBint\fP
+returns non-zero if and only if \fIs\fP is an HTML string.
+.TP
+\fBxOf\fP(\fIs\fP : \fBstring\fP) : \fBstring\fP
+returns the string "\fIx\fP" if \fIs\fP has the form "\fIx\fP,\fIy\fP", 
+where both \fIx\fP and \fIy\fP are numeric.
+.TP
+\fByOf\fP(\fIs\fP : \fBstring\fP) : \fBstring\fP
+returns the string "\fIy\fP" if \fIs\fP has the form "\fIx\fP,\fIy\fP", 
+where both \fIx\fP and \fIy\fP are numeric.
+.TP
+\fBllOf\fP(\fIs\fP : \fBstring\fP) : \fBstring\fP
+returns the string "\fIllx\fP,\fIlly\fP" if \fIs\fP has the form 
+"\fIllx\fP,\fIlly\fP,\fIurx\fP,\fIury\fP",
+where all of \fIllx\fP, \fIlly\fP, \fIurx\fP, and \fIury\fP are numeric.
+.TP
+.BI urOf( s )
+\fBurOf\fP(\fIs\fP : \fBstring\fP) : \fBstring\fP
+returns the string "\fIurx\fP,\fIury\fP" if \fIs\fP has the form 
+"\fIllx\fP,\fIlly\fP,\fIurx\fP,\fIury\fP",
+where all of \fIllx\fP, \fIlly\fP, \fIurx\fP, and \fIury\fP are numeric.
+.TP
+\fBsscanf\fP(\fIs\fP : \fBstring\fP, \fIfmt\fP : \fBstring\fP, \fI...\fP) : \fBint\fP
+scans the string \fIs\fP, extracting values
+according to the
+.IR sscanf (3)
+format
+.IR fmt .
+The values are stored in the addresses following \fIfmt\fP,
+addresses having the form \fB&\fP\fIv\fP, where \fIv\fP is some declared
+variable of the correct type.
+Returns the number of items successfully scanned.
+.TP
+\fBsplit\fP(\fIs\fP : \fBstring\fP, \fIarr\fP : \fBarray\fP, \fIseps\fP : \fBstring\fP) : \fBint\fP
+.TP
+\fBsplit\fP(\fIs\fP : \fBstring\fP, \fIarr\fP : \fBarray\fP) : \fBint\fP
+.TP
+\fBtokens\fP(\fIs\fP : \fBstring\fP, \fIarr\fP : \fBarray\fP, \fIseps\fP : \fBstring\fP) : \fBint\fP
+.TP
+\fBtokens\fP(\fIs\fP : \fBstring\fP, \fIarr\fP : \fBarray\fP) : \fBint\fP
+The \fBsplit\fP function breaks the string \fIs\fP into fields, while the \fBtokens\fP function
+breaks the string into tokens. 
+A field consists of all non-separator characters between two separator characters or the beginning or
+end of the string. Thus, a field may be the empty string. A
+token is a maximal, non-empty substring not containing a separator character.
+The separator characters are those given in the \fIseps\fP argument.
+If \fIseps\fP is not provided, the default value is " \\t\\n". 
+The functions return the number of fields or tokens.
+.sp
+The fields and tokens are stored in the argument array. The array must be \fBstring\fP-valued and,
+if an index type is specified, it must be \fBint\fP. The entries are indexed by consecutive
+integers, starting at 0. Any values already stored in the array will be either overwritten, or
+still be present after the function returns.
+.SS "I/O"
+.TP
+\fBprint\fP(\fI...\fP) : \fBvoid\fP
+.BI print( " expr" , " ...\fB )
+prints a string representation of each argument in turn onto
+\fBstdout\fP, followed by a newline.
+.TP
+\fBprintf\fP(\fIfmt\fP : \fBstring\fP, \fI...\fP) : \fBint\fP
+.TP
+\fBprintf\fP(\fIfd\fP : \fBint\fP, \fIfmt\fP : \fBstring\fP, \fI...\fP) : \fBint\fP
+prints the string resulting from formatting
+the values of the expressions following \fIfmt\fP
+according to the
+.IR printf (3)
+format
+.IR fmt .
+Returns 0 on success.
+By default, it prints on \fBstdout\fP.
+If the optional integer \fIfd\fP is given, output is written on the open
+stream associated with \fIfd\fP.
+.TP
+\fBscanf\fP(\fIfmt\fP : \fBstring\fP, \fI...\fP) : \fBint\fP
+.TP
+\fBscanf\fP(\fIfd\fP : \fBint\fP, \fIfmt\fP : \fBstring\fP, \fI...\fP) : \fBint\fP
+scans in values from an input stream according to the
+.IR scanf (3)
+format
+.IR fmt .
+The values are stored in the addresses following \fIfmt\fP,
+addresses having the form \fB&\fP\fIv\fP, where \fIv\fP is some declared
+variable of the correct type.
+By default, it reads from \fBstdin\fP.
+If the optional integer \fIfd\fP is given, input is read from the open
+stream associated with \fIfd\fP.
+Returns the number of items successfully scanned.
+.TP
+\fBopenF\fP(\fIs\fP : \fBstring\fP, \fIt\fP : \fBstring\fP) : \fBint\fP
+opens the file \fIs\fP as an I/O stream. The string argument \fIt\fP
+specifies how the file is opened. The arguments are the same as for
+the C function
+.IR fopen (3).
+It returns an integer denoting the stream, or \-1 on error.
+.sp
+As usual, streams 0, 1 and 2 are already open as \fBstdin\fP, \fBstdout\fP,
+and \fBstderr\fP, respectively. Since \fBgvpr\fP may use \fBstdin\fP to
+read the input graphs, the user should avoid using this stream.
+.TP
+\fBcloseF\fP(\fIfd\fP : \fBint\fP) : \fBint\fP
+closes the open stream denoted by the integer \fIfd\fP.
+Streams  0, 1 and 2 cannot be closed.
+Returns 0 on success.
+.TP
+\fBreadL\fP(\fIfd\fP : \fBint\fP) : \fBstring\fP
+returns the next line read from the input stream \fIfd\fP. It returns
+the empty string "" on end of file. Note that the newline character is
+left in the returned string.
+.SS "Math"
+.TP
+\fBexp\fP(\fId\fP : \fBdouble\fP) : \fBdouble\fP
+returns e to the \fId\fPth power.
+.TP
+\fBlog\fP(\fId\fP : \fBdouble\fP) : \fBdouble\fP
+returns the natural log of \fId\fP.
+.TP
+\fBsqrt\fP(\fId\fP : \fBdouble\fP) : \fBdouble\fP
+returns the square root of the double \fId\fP.
+.TP
+\fBpow\fP(\fId\fP : \fBdouble\fP, \fIx\fP : \fBdouble\fP) : \fBdouble\fP
+returns \fId\fP raised to the \fIx\fPth power.
+.TP
+\fBcos\fP(\fId\fP : \fBdouble\fP) : \fBdouble\fP
+returns the cosine of \fId\fP.
+.TP
+\fBsin\fP(\fId\fP : \fBdouble\fP) : \fBdouble\fP
+returns the sine of \fId\fP.
+.TP
+\fBatan2\fP(\fIy\fP : \fBdouble\fP, \fIx\fP : \fBdouble\fP) : \fBdouble\fP
+returns the arctangent of \fIy/x\fP in the range \-pi to pi.
+.TP
+\fBMIN\fP(\fIy\fP : \fBdouble\fP, \fIx\fP : \fBdouble\fP) : \fBdouble\fP
+returns the minimum of \fIy\fP and \fIx\fP.
+.TP
+\fBMAX\fP(\fIy\fP : \fBdouble\fP, \fIx\fP : \fBdouble\fP) : \fBdouble\fP
+returns the maximum of \fIy\fP and \fIx\fP.
+.SS "Associative Arrays"
+.TP
+\fB#\fP \fIarr\fP : \fBint\fP
+returns the number of elements in the array \fIarr\fP.
+.TP
+\fIidx\fP \fBin\fP \fIarr\fP : \fBint\fP
+returns 1 if a value has been set for index \fIidx\fP in the array \fIarr\fP.
+It returns 0 otherwise.
+.TP
+\fBunset\fP(\fIv\fP : \fBarray\fP, \fIidx\fP) : \fBint\fP
+removes the item indexed by \fIidx\fP. It returns 1 if the item existed, 0 otherwise.
+.TP
+\fBunset\fP(\fIv\fP : \fBarray\fP) : \fBvoid\fP
+re-initializes the array.
+.SS "Miscellaneous"
+.TP
+\fBexit\fP(\fIv\fP : \fBint\fP) : \fBvoid\fP
+causes
+.B gvpr
+to exit with the exit code
+.IR v .
+.TP
+\fBsystem\fP(\fIcmd\fP : \fBstring\fP) : \fBint\fP
+provides the standard C function
+.IR system (3).
+It executes \fIcmd\fP in the user's shell environment, and
+returns the exit status of the shell.
+.TP
+\fBrand\fP() : \fBdouble\fP
+returns a pseudo\(hyrandom double between 0 and 1.
+.TP
+\fBsrand\fP() : \fBint\fP
+.TP
+\fBsrand\fP(\fIv\fP : \fBint\fP) : \fBint\fP
+sets a seed for the random number generator. The optional argument gives
+the seed; if it is omitted, the current time is used. The previous seed
+value is returned. \fBsrand\fP should be called before any calls to
+\fBrand\fP.
+.TP
+\fBcolorx\fP(\fIcolor\fP : \fBstring\fP, \fIfmt\fP : \fBstring\fP) : \fBstring\fP
+translates a color from one format to another. The \fIcolor\fP argument should be
+a color in one of the recognized string representations. The \fIfmt\fP value should
+be one of "RGB", "RGBA", "HSV", or "HSVA".
+An empty string is returned on error.
+.SH "BUILT\(hyIN VARIABLES"
+.PP
+.B gvpr
+provides certain special, built\(hyin variables, whose values are set
+automatically by \fBgvpr\fP depending on the context. Except as noted,
+the user cannot modify their values.
+.TP
+\fB$\fP : \fBobj_t\fP
+denotes the current object (node, edge, graph) depending on the
+context.  It is not available in \fBBEGIN\fP or \fBEND\fP clauses.
+.TP
+\fB$F\fP : \fBstring\fP
+is the name of the current input file. 
+.TP
+\fB$G\fP : \fBgraph_t\fP
+denotes the current graph being processed. It is not available
+in \fBBEGIN\fP or \fBEND\fP clauses.
+.TP
+\fB$NG\fP : \fBgraph_t\fP
+denotes the next graph to be processed. If \fB$NG\fP is NULL, 
+the current graph \fB$G\fP is the last graph. Note that if the input
+comes from stdin, the last graph cannot be determined until the input
+pipe is closed. 
+It is not available in \fBBEGIN\fP or \fBEND\fP clauses, or if the 
+\fB-n\fP flag is used.
+.TP
+\fB$O\fP : \fBgraph_t\fP
+denotes the output graph. Before graph traversal, it is initialized
+to the target graph. After traversal and any \fBEND_G\fP actions,
+if it refers to a non\(hyempty graph, that graph is printed onto the output stream.
+It is only valid in \fBN\fP, \fBE\fP and \fBEND_G\fP clauses.
+The output graph may be set by the user.
+.TP
+\fB$T\fP : \fBgraph_t\fP
+denotes the current target graph. It is a subgraph of \fB$G\fP
+and is available only in \fBN\fP, \fBE\fP and \fBEND_G\fP clauses.
+.TP
+\fB$tgtname\fP : \fBstring\fP
+denotes the name of the target graph. 
+By default, it is set to \fB"gvpr_result"\fP.
+If used multiple times during the execution of
+.BR gvpr ,
+the name will be appended with an integer. 
+This variable may be set by the user.
+.TP
+\fB$tvroot\fP : \fBnode_t\fP
+indicates the starting node for a (directed or undirected)
+depth\(hyfirst or breadth\(hyfirst traversal of the
+graph (cf. \fB$tvtype\fP below).
+The default value is \fBNULL\fP for each input graph.
+After the traversal at the given root, if the value of \fB$tvroot\fP has changed,
+a new traversal will begin with the new value of \fB$tvroot\fP. Also, set \fB$tvnext\fP below.
+.TP
+\fB$tvnext\fP : \fBnode_t\fP
+indicates the next starting node for a (directed or undirected)
+depth\(hyfirst or breadth\(hyfirst traversal of the
+graph (cf. \fB$tvtype\fP below).
+If a traversal finishes and the \fB$tvroot\fP has not been reset but the \fB$tvnext\fP has been
+set but not used, this node will be used as the next choice for \fB$tvroot\fP.
+The default value is \fBNULL\fP for each input graph.
+.TP
+\fB$tvedge\fP : \fBedge_t\fP
+For BFS and DFS traversals, this is set to the edge used to arrive at the
+current node or edge. At the beginning of a traversal, or for other traversal
+types, the value is \fBNULL\fP.
+.TP
+\fB$tvtype\fP : \fBtvtype_t\fP
+indicates how \fBgvpr\fP traverses a graph. It can only take
+one of the constant values with the previx "TV_" described below.
+\fBTV_flat\fP is the default.
+.IP
+In the underlying graph library
+.IR cgraph (3),
+edges in undirected graphs are given an arbitrary direction. This is
+used for traversals, such as \fBTV_fwd\fR, requiring directed edges.
+.
+.TP
+\fBARGC\fP : \fBint\fP
+denotes the number of arguments specified by the 
+\fB\-a\fP \fIargs\fP command\(hyline argument.
+.TP
+\fBARGV\fP : \fBstring array\fP
+denotes the array of arguments specified by the 
+\fB\-a\fP \fIargs\fP
+command\(hyline argument. The \fIi\fPth argument is given
+by \fBARGV[\fIi\fP]\fR.
+.SH "BUILT\(hyIN CONSTANTS"
+.PP
+There are several symbolic constants defined by \fBgvpr\fP.
+.TP
+\fBNULL\fR : \fIobj_t\fR
+a null object reference, equivalent to 0.
+.TP
+\fBTV_flat\fR : \fItvtype_t\fR
+a simple, flat traversal, with graph objects visited in
+seemingly arbitrary order.
+.TP
+\fBTV_ne\fR : \fItvtype_t\fR
+a traversal which first visits all of the nodes, then all
+of the edges.
+.TP
+\fBTV_en\fR : \fItvtype_t\fR
+a traversal which first visits all of the edges, then all
+of the nodes.
+.TP
+\fBTV_dfs\fR : \fItvtype_t\fR
+.TQ
+\fBTV_postdfs\fR : \fItvtype_t\fR
+.TQ
+\fBTV_prepostdfs\fR : \fItvtype_t\fR
+a traversal of the graph using a depth\(hyfirst search on the
+underlying undirected graph. 
+To do the traversal, \fBgvpr\fP will check the value of
+\fB$tvroot\fP. If this has the same value that it had previously
+(at the start, the previous value is initialized to \fBNULL\fP.), \fBgvpr\fP
+will simply look for some unvisited node and traverse its connected
+component. On the other hand, if \fB$tvroot\fP has changed, its connected
+component will be toured, assuming it has not been previously visited or,
+if \fB$tvroot\fP is \fBNULL\fP, the traversal will stop. Note that using
+\fBTV_dfs\fP and \fB$tvroot\fP, it is possible to create an infinite loop.
+.
+.IP
+By default, the traversal is done in pre-order. That is, a node is
+visited before all of its unvisited edges. For \fBTV_postdfs\fR,
+all of a node's unvisited edges are visited before the node. For
+\fBTV_prepostdfs\fR, a node is visited twice, before and after all of
+its unvisited edges.
+.
+.TP
+\fBTV_fwd\fR : \fItvtype_t\fR
+.TQ
+\fBTV_postfwd\fR : \fItvtype_t\fR
+.TQ
+\fBTV_prepostfwd\fR : \fItvtype_t\fR
+A traversal of the graph using a depth\(hyfirst search on the
+graph following only forward arcs.
+The choice of roots for the traversal is the
+same as described for \fBTV_dfs\fR above.
+The different order of visitation specified by \fBTV_fwd\fR,
+\fBTV_postfwd\fR and \fBTV_prepostfwd\fR are the same as those
+specified by the analogous traversals \fBTV_dfs\fR,
+\fBTV_postdfs\fR and \fBTV_prepostdfs\fR.
+.TP
+\fBTV_rev\fR : \fItvtype_t\fR
+.TQ
+\fBTV_postrev\fR : \fItvtype_t\fR
+.TQ
+\fBTV_prepostrev\fR : \fItvtype_t\fR
+A traversal of the graph using a depth\(hyfirst search on the
+graph following only reverse arcs.
+The choice of roots for the traversal is the
+same as described for \fBTV_dfs\fR above.
+The different order of visitation specified by \fBTV_rev\fR,
+\fBTV_postrev\fR and \fBTV_prepostrev\fR are the same as those
+specified by the analogous traversals \fBTV_dfs\fR,
+\fBTV_postdfs\fR and \fBTV_prepostdfs\fR.
+.TP
+\fBTV_bfs\fR : \fItvtype_t\fR
+A traversal of the graph using a breadth\(hyfirst search on the
+graph ignoring edge directions. See the item on \fBTV_dfs\fR above
+for the role of \fB$tvroot\fP.
+.SH EXAMPLES
+.PP
+.RS
+.nf
+\fBgvpr \-i 'N[color=="blue"]' file.gv\fP
+.fi
+.RE
+.DT
+.PP
+Generate the node\(hyinduced subgraph of all nodes with color blue.
+.PP
+.RS
+.nf
+\fBgvpr \-c 'N[color=="blue"]{color = "red"}' file.gv\fP
+.fi
+.RE
+.DT
+.PP
+Make all blue nodes red.
+.PP
+.RS
+.nf
+\fBBEGIN { int n, e; int tot_n = 0; int tot_e = 0; }
+BEG_G {
+  n = nNodes($G);
+  e = nEdges($G);
+  printf ("%d nodes %d edges %s\\n", n, e, $G.name);
+  tot_n += n;
+  tot_e += e;
+}
+END { printf ("%d nodes %d edges total\\n", tot_n, tot_e) }\fP
+.fi
+.RE
+.DT
+.PP
+Version of the program \fBgc\fP.
+.PP
+.RS
+.nf
+\fBgvpr \-c ""\fP
+.fi
+.RE
+.DT
+.PP
+Equivalent to \fBnop\fP.
+.PP
+.RS
+.nf
+\fBBEG_G { graph_t g = graph ("merge", "S"); }
+E {
+  node_t h = clone(g,$.head);
+  node_t t = clone(g,$.tail);
+  edge_t e = edge(t,h,"");
+  e.weight = e.weight + 1;
+}
+END_G { $O = g; }\fP
+.fi
+.RE
+.DT
+.PP
+Produces a strict version of the input graph, where the weight attribute
+of an edge indicates how many edges from the input graph the edge represents.
+.PP
+.RS
+.nf
+\fBBEGIN {node_t n; int deg[]}
+E{deg[head]++; deg[tail]++; }
+END_G {
+  for (deg[n]) {
+    printf ("deg[%s] = %d\\n", n.name, deg[n]);
+  }
+}\fP
+.fi
+.RE
+.DT
+.PP
+Computes the degrees of nodes with edges.
+.PP
+.RS
+.nf
+\fBBEGIN {
+  int i, indent;
+  int seen[string];
+  void prInd (int cnt) {
+    for (i = 0; i < cnt; i++) printf ("  ");
+  }
+}
+BEG_G {
+
+   $tvtype = TV_prepostfwd;
+   $tvroot = node($,ARGV[0]);
+}
+N {
+  if (seen[$.name]) indent--;
+  else {
+    prInd(indent);
+      print ($.name);
+    seen[$.name] = 1;
+    indent++;
+  }
+}\fP
+.fi
+.RE
+.DT
+.PP
+Prints the depth-first traversal of the graph, starting
+with the node whose name is \fBARGV[0]\fP, as an indented list.
+.SH ENVIRONMENT
+.TP
+.B GVPRPATH
+Colon\(hyseparated list of directories to be searched to find
+the file specified by the \-f option. \fBgvpr\fP has a default list built in. If \fBGVPRPATH\fP
+is not defined, the default list is used. If \fBGVPRPATH\fP starts with colon, the list is formed
+by appending \fBGVPRPATH\fP to the default list. If \fBGVPRPATH\fP ends with colon, the list is formed
+by appending the default list to \fBGVPRPATH\fP. Otherwise, \fBGVPRPATH\fP is used for the list.
+.P
+On Windows systems, replace ``colon'' with ``semicolon'' in the previous paragraph.
+.SH BUGS AND WARNINGS
+Scripts should be careful deleting nodes during \fBN{}\fP and \fBE{}\fP
+blocks using BFS and DFS traversals as these rely on stacks and queues of
+nodes. 
+.PP
+When the program is given as a command line argument, the usual
+shell interpretation takes place, which may affect some of the
+special names in \fBgvpr\fP. To avoid this, it is best to wrap the
+program in single quotes.
+.PP
+If string constants contain pattern metacharacters that you want to
+escape to avoid pattern matching, two backslashes will probably be
+necessary, as a single backslash will be lost when the string is
+originally scanned. Usually, it is simpler to use \fBstrcmp\fP to
+avoid pattern matching.
+.PP
+As of 24 April 2008, \fBgvpr\fP switched to using a new, underlying
+graph library, which uses the simpler model that there is only one
+copy of a node, not one copy for each subgraph logically containing
+it. This means that iterators such as \fInxtnode\fP cannot traverse
+a subgraph using just a node argument. For this reason, subgraph
+traversal requires new functions ending in "_sg", which also take
+a subgraph argument. The versions without that suffix will always
+traverse the root graph.
+.PP
+There is a single global scope, except for formal function parameters,
+and even these can interfere with the type system. Also, the 
+extent of all variables is the entire life of the program. 
+It might be preferable for scope
+to reflect the natural nesting of the clauses, or for the program
+to at least reset locally declared variables.
+For now, it is advisable to use distinct names for all variables.
+.PP
+If a function ends with a complex statement, such as an
+IF statement, with each branch doing a return, type checking may fail. 
+Functions should use a return at the end.
+.PP
+The expr library does not support string values of (char*)0.
+This means we can't distinguish between "" and (char*)0 edge keys.
+For the purposes of looking up and creating edges, we translate "" 
+to be (char*)0, since this latter value is
+necessary in order to look up any edge with a matching head and tail.
+.PP
+Related to this, strings converted to integers act like char pointers,
+getting the value 0 or 1 depending on whether the string consists
+solely of zeroes or not. Thus, the ((int)"2") evaluates to 1.
+.PP
+The language inherits the usual C problems such as dangling references
+and the confusion between '=' and '=='.
+.SH AUTHOR
+Emden R. Gansner <erg@research.att.com>
+.SH "SEE ALSO"
+.PP
+awk(1), gc(1), dot(1), nop(1), expr(3), cgraph(3)

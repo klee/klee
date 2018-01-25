@@ -1,0 +1,31 @@
+all:	libgvplugin_gdk_pixbuf.a
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+INCS =  -I. \
+	-I$(ROOT) \
+        -I../../lib/common \
+        -I../../lib/pathplan \
+        -I../../lib/graph \
+        -I../../lib/cdt \
+        -I../../lib/gvc 
+
+DEFINES = -DHAVE_CONFIG_H
+
+OBJS = gvformatter_gdk_pixbuf.o gvplugin_gdk_pixbuf.o
+
+libgvplugin_gdk_pixbuf.a : $(OBJS)
+	$(RM) libgvplugin_gdk_pixbuf.a
+	$(AR) cr libgvplugin_gdk_pixbuf.a $(OBJS)
+	$(RANLIB) libgvplugin_gdk_pixbuf.a
+
+install: libgvplugin_gdk_pixbuf.a
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libgvplugin_gdk_pixbuf.a $(LIBDIR)
+
+clean:
+	$(RM) core *.o
+
+distclean: clean
+	$(RM) *.a ptest

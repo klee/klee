@@ -1,0 +1,120 @@
+.TH LIBPATH 3 "01 APRIL 1997"
+.SH NAME
+\fBlibpathplan\fR \- finds and smooths shortest paths
+.SH SYNOPSIS
+.ta .75i 1.5i 2.25i 3i 3.75i 4.5i 5.25i 6i
+.PP
+.nf
+\f5
+#include <graphviz/pathplan.h>
+
+typedef struct Pxy_t {
+    double x, y;
+} Pxy_t;
+
+typedef struct Pxy_t Ppoint_t;
+typedef struct Pxy_t Pvector_t;
+
+typedef struct Ppoly_t {
+    Ppoint_t *ps;
+    int pn;
+} Ppoly_t;
+
+typedef Ppoly_t Ppolyline_t;
+
+typedef struct Pedge_t {
+    Ppoint_t a, b;
+} Pedge_t;
+
+typedef struct vconfig_s vconfig_t;
+
+#define POLYID_NONE	
+#define POLYID_UNKNOWN
+
+int Pshortestpath(Ppoly_t *boundary, Ppoint_t endpoints[2], Ppolyline_t *output_route);
+
+vconfig_t *Pobsopen(Ppoly_t **obstacles, int n_obstacles);
+int Pobspath(vconfig_t *config, Ppoint_t p0, int poly0, Ppoint_t p1, int poly1, Ppolyline_t *output_route);
+void Pobsclose(vconfig_t *config);
+
+int Proutespline (Pedge_t *barriers, int n_barriers, Ppolyline_t input_route, Pvector_t endpoint_slopes[2],
+	Ppolyline_t *output_route);
+
+int Ppolybarriers(Ppoly_t **polys, int n_polys, Pedge_t **barriers, int *n_barriers);
+\fP
+.fi
+.SH DESCRIPTION
+\fBlibpathplan\fR provides functions for creating spline paths in the plane that
+are constrained by a polygonal boundary or obstacles to avoid.
+All polygons must be simple, but need not be convex.
+.P
+.SS "   int Pshortestpath(Ppoly_t *boundary, Ppoint_t endpoints[2], Ppolyline_t *output_route);"
+The function \fIPshortestpath\fP 
+finds a shortest path between two points in a simple polygon.
+The polygon is specified by a list of its vertices, 
+in either clockwise or counterclockwise order.
+You pass endpoints interior to the polygon boundary.
+A shortest path connecting the points that remains in the polygon
+is returned in \fIoutput_route\fP.  If either endpoint does not lie in
+the polygon, -1 is returned; otherwise, 0 is returned on success.
+The array of points in \fIoutput_route\fP is static to the library. It should
+not be freed, and should be used before another call to \fIPshortestpath\fP.
+.P
+.SS "    vconfig_t *Pobsopen(Ppoly_t **obstacles, int n_obstacles);"
+.SS "    Pobspath(vconfig_t *config, Ppoint_t p0, int poly0, Ppoint_t p1, int poly1, Ppolyline_t *output_route);"
+.SS "    void Pobsclose(vconfig_t *config);"
+.P
+These functions find a shortest path between two points in the plane
+that contains polygonal obstacles (holes).
+\fIPobsopen\fP creates a configuration (an opaque struct of type
+\f5vconfig_t\fP) on a set of obstacles. 
+The \fIn_obstacles\fP obstacles are given in the array \fIobstacles\fP; 
+the points of each polygon should be in clockwise order.
+The function \fIPobsclose\fP frees the data allocated in \fIPobsopen\fP.
+.P
+\f5Pobspath\fP finds
+a shortest path between the endpoints that remains outside the
+obstacles.  If the endpoints are known to lie inside obstacles,
+\f5poly0\fP or \f5poly1\fP should be set to the index in the
+\f5obstacles\fP array.  If an endpoint is definitely not inside
+an obstacle, then \f5POLYID_NONE\fP should be passed.  If the
+caller has not checked, then \f5POLYID_UNKNOWN\fP should be passed,
+and the path library will perform the test. The resulting shortest path
+is returned in \fIoutput_route\fP. Note that this function does not provide
+for a boundary polygon. The array of points stored in \fIoutput_route\fP are
+allocated by the library, but should be freed by the user.
+.P
+.SS "   int Proutespline (Pedge_t *barriers, int n_barriers, Ppolyline_t input_route, Pvector_t endpoint_slopes[2], Ppolyline_t *output_route);"
+This function fits a cubic B-spline curve to a polyline path. 
+The curve is constructed to avoid a set of \fIn_barriers\fP barrier line segments 
+specified in the array \fIbarriers\fP. If you start with polygonal obstacles, you
+can supply each polygon's edges as part of the barrier list.
+The polyline \f5input_route\fP provides a template for the final path; it
+is usually the \f5output_route\fP of one of the shortest path
+finders, but it can be any simple path that doesn't cross
+any barrier segment.  The input also allows the specification of desired 
+slopes at the endpoints via \fIendpoint_slopes\fP. These are specified as vectors.
+For example, to have an angle of \fIT\fP at an endpoing, one could use 
+\fI(cos(T),sin(T))\fP.
+A vector (0,0) means unconstrained slope.  
+The output is returned in \fIoutput_route\fP and consists of the control points
+of the B-spline. The function return 0 on success; a return value of -1 indicates
+failure.
+The array of points in \fIoutput_route\fP is static to the library. It should
+not be freed, and should be used before another call to \fIProutespline\fP.
+.P
+.SS "   int Ppolybarriers(Ppoly_t **polys, int n_polys, Pedge_t **barriers, int *n_barriers);"
+This is a utility function that converts an input list of polygons
+into an output list of barrier segments.
+The array of points in \fIbarriers\fP is static to the library. It should
+not be freed, and should be used before another call to \fIPpolybarriers\fP.
+The function returns 1 on success.
+.SH BUGS
+The function \fIProutespline\fP does not guarantee that it will preserve the
+topology of the input path as regards the boundaries. For example, if
+some of the segments correspond to a small polygon, it may be possible that the
+final path has flipped over the obstacle.
+.SH AUTHORS
+David Dobkin (dpd@cs.princeton.edu),
+Eleftherios Koutsofios (ek@research.att.com),
+Emden Gansner (erg@research.att.com).

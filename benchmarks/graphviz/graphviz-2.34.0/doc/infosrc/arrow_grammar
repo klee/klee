@@ -1,0 +1,5 @@
+arrowname =  aname [ aname  [ aname  [ aname ] ] ]
+aname = [ modifiers ] shape
+modifiers = [ 'o' ] [ side ]
+side = 'l' | 'r'
+shape = T_box | T_crow | T_curve | T_diamond | T_dot | T_inv | T_none | T_normal | T_tee | T_vee 

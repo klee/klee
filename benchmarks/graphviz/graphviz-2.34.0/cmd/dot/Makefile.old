@@ -1,0 +1,96 @@
+ROOT=../..
+
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+LOC_LIB = $(ROOT)/lib
+LOC_PLUG=$(ROOT)/plugin
+
+INCS =  -I$(LOC_LIB)/gvc -I$(LOC_LIB)/common -I$(ROOT) -I$(LOC_LIB)/cdt \
+        -I$(LOC_LIB)/pathplan -I$(LOC_LIB)/gd -I$(LOC_LIB)/graph -I$(LOC_LIB)/pack
+
+ALLINCS = -I$(LOC_LIB)/dotgen -I$(LOC_LIB)/neatogen -I$(LOC_LIB)/twopigen \
+          -I$(LOC_LIB)/circogen -I$(LOC_LIB)/fdpgen -I$(LOC_LIB)/sfdpgen $(INCS)
+
+DEFINES = -DDEMAND_LOADING=0 -DHAVE_CONFIG_H
+
+XLIBS = -L$(LOC_LIB)/pathplan -lpathplan \
+        -L$(LOC_LIB)/graph -lgraph \
+        -L$(LOC_LIB)/cdt -lcdt \
+        -L$(LOC_LIB)/gd -lgd \
+        $(EXTLIB_LIB) $(EXPAT_LIB) $(LTDL_LIB) -lm
+
+PLUGS = -L$(LOC_PLUG)/core -lgvplugin_core \
+        -L$(LOC_PLUG)/dot_layout -lgvplugin_dot_layout \
+        -L$(LOC_PLUG)/neato_layout -lgvplugin_neato_layout \
+        -L$(LOC_PLUG)/gd -lgvplugin_gd \
+        -L$(LOC_PLUG)/pango -lgvplugin_pango
+
+LIBS = -L$(LOC_LIB)/gvc -lgvc_dot_builtins $(PLUGS) \
+       -L$(LOC_LIB)/common -lcommon \
+       -L$(LOC_LIB)/gvc -lgvc_dot_builtins $(PLUGS) \
+       -L$(LOC_LIB)/xdot -lxdot \
+       -L$(LOC_LIB)/dotgen -ldotgen \
+       -L$(LOC_LIB)/circogen -lcircogen \
+       -L$(LOC_LIB)/fdpgen -lfdpgen \
+       -L$(LOC_LIB)/sfdpgen -lsfdpgen \
+       -L$(LOC_LIB)/neatogen -lneatogen \
+       -L$(LOC_LIB)/ortho -lortho \
+       -L$(LOC_LIB)/vpsc -lvpsc \
+       -L$(LOC_LIB)/patchwork -lpatchwork \
+       -L$(LOC_LIB)/osage -losage \
+       -L$(LOC_LIB)/sparse -lsparse \
+       -L$(LOC_LIB)/rbtree -lrbtree \
+       -L$(LOC_LIB)/twopigen -ltwopigen \
+       -L$(LOC_LIB)/pack -lpack \
+       -L$(LOC_LIB)/common -lcommon \
+       $(XLIBS)
+
+DOTLIBS = $(LOC_LIB)/common/libcommon.a \
+          $(LOC_LIB)/dotgen/libdotgen.a \
+          $(LOC_LIB)/neatogen/libneatogen.a \
+          $(LOC_LIB)/fdpgen/libfdpgen.a \
+          $(LOC_LIB)/ortho/libortho.a \
+          $(LOC_LIB)/sfdpgen/libsfdpgen.a \
+          $(LOC_LIB)/gvc/libgvc_dot_builtins.a \
+          $(LOC_LIB)/vpsc/libvpsc.a \
+          $(LOC_LIB)/twopigen/libtwopigen.a \
+          $(LOC_LIB)/circogen/libcircogen.a \
+          $(LOC_PLUG)/core/libgvplugin_core.a \
+          $(LOC_PLUG)/dot_layout/libgvplugin_dot_layout.a \
+          $(LOC_PLUG)/neato_layout/libgvplugin_neato_layout.a \
+          $(LOC_PLUG)/gd/libgvplugin_gd.a \
+          $(LOC_PLUG)/pango/libgvplugin_pango.a
+
+OBJS = dot.o dot_builtins.o
+
+all : dot
+
+dot : $(OBJS) $(DOTLIBS)
+	$(CPP) $(LDFLAGS) $(OBJS) $(LIBS) -o /tmp/dot
+	mv /tmp/dot dot
+
+dot.o : dot.c
+	$(CPP) -c $(CCFLAGS) $(DEFINES) $(INCS) dot.c
+
+dot_builtins.o : dot_builtins.c
+	$(CPP) -c $(CCFLAGS) $(DEFINES) $(INCS) dot_builtins.c
+
+install: all
+	$(MKPATH) $(BINDIR)
+	$(INSTALL) dot $(BINDIR)
+	$(RM) $(BINDIR)/neato; $(LN) -s $(BINDIR)/dot $(BINDIR)/neato
+	$(RM) $(BINDIR)/fdp; $(LN) -s $(BINDIR)/dot $(BINDIR)/fdp
+	$(RM) $(BINDIR)/circo; $(LN) -s $(BINDIR)/dot $(BINDIR)/circo
+	$(RM) $(BINDIR)/twopi; $(LN) -s $(BINDIR)/dot $(BINDIR)/twopi
+	$(MKPATH) $(MANDIR)
+	$(INSTALL) dot.1 $(MANDIR)
+	$(RM) $(MANDIR)/neato.1 $(MANDIR)/fdp.1 $(MANDIR)/circo.1 $(MANDIR)/twopi.1
+	$(LN) -s $(MANDIR)/dot.1 $(MANDIR)/neato.1
+	$(LN) -s $(MANDIR)/dot.1 $(MANDIR)/fdp.1
+	$(LN) -s $(MANDIR)/dot.1 $(MANDIR)/circo.1
+	$(LN) -s $(MANDIR)/dot.1 $(MANDIR)/twopi.1
+
+distclean clean:
+	$(RM) *.o core $(all)
+

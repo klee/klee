@@ -1,0 +1,38 @@
+all:	libdotgen.a
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+INCS =	-I. -I$(ROOT) \
+	-I../common \
+	-I../gvc \
+	-I../ortho \
+	-I../pathplan \
+	-I../graph \
+	-I../cdt \
+	-I../gd
+
+DEFINES = -DHAVE_CONFIG_H
+
+OBJS = acyclic.o compound.o flat.o sameport.o class1.o conc.o \
+       position.o dotsplines.o class2.o decomp.o dotinit.o rank.o \
+       cluster.o fastgr.o mincross.o aspect.o
+
+HFILES = dot.h dotprocs.h
+
+libdotgen.a : $(OBJS)
+	$(RM) libdotgen.a
+	$(AR) cr libdotgen.a $(OBJS)
+	$(RANLIB) libdotgen.a
+
+$(OBJS) : $(HFILES) ../common/types.h
+
+install: libdotgen.a
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libdotgen.a $(LIBDIR)
+
+clean:
+	$(RM) *.o core
+
+distclean: clean
+	$(RM) *.a dot lib*.so.*

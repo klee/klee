@@ -1,0 +1,24 @@
+DIRECTORY HIERARCHY:
+This directory hierarchy contains the source of the Vmalloc library.
+
+. :		source code for Vmalloc functions
+./features:	source code for generating configuration parameters.
+./Vmalloc_t:	a set of regression tests - executable with "runtest"
+
+SOFTWARE CONSTRUCTION:
+
+There are two make files, Makefile for Glenn Fowler's nmake and
+makefile for old make.  The build procedure is based on the
+iffe language for automatic configuration. An iffe interpreter
+and its manual pages are included in this code distribution.
+See the files in ./features for examples of iffe probes to generate
+configuration parameters.
+
+CORRESPONDENCE:
+Comments, etc. should be sent to:
+
+	Phong Vo
+	AT&T Labs - Research
+	180 Park Avenue
+	Florham Park, NJ 07932
+	e-mail: kpv@research.att.com

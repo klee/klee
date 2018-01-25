@@ -1,0 +1,26 @@
+ATK_URL=http://ftp.acc.umu.se/pub/gnome/sources/atk/1.32/atk-1.32.0.tar.gz
+AUTOCONF_URL=http://ftp.gnu.org/gnu/autoconf/autoconf-2.68.tar.gz
+AUTOMAKE_URL=http://ftp.gnu.org/gnu/automake/automake-1.11.tar.gz
+CAIRO_URL=http://cairographics.org/snapshots/cairo-1.11.2.tar.gz
+# FFI_URL=http://ltsp.mirrors.tds.net/pub/sourceware.org/libffi/libffi-3.0.10rc8.tar.gz
+FONTCONFIG_URL=http://fontconfig.org/release/fontconfig-2.8.0.tar.gz
+FREETYPE_URL=http://download.savannah.gnu.org/releases-noredirect/freetype/freetype-2.4.4.tar.gz
+# This seems to be permanently down.
+# GD_URL=http://www.libgd.org/releases/gd-2.0.36RC1.tar.gz
+GD_URL=http://www.graphviz.org/pub/tmp/gd-2.0.36RC1.tar.gz
+GETTEXT_URL=ftp://mirrors.kernel.org/gnu/gettext/gettext-0.18.1.tar.gz
+GLIB_URL=http://ftp.gnome.org/pub/gnome/sources/glib/2.28/glib-2.28.7.tar.gz
+GTK_URL=http://ftp.gnome.org/pub/gnome/sources/gtk+/2.23/gtk+-2.23.90.tar.gz
+GTS_URL=http://downloads.sourceforge.net/gts/gts-0.7.6.tar.gz
+#JPEG_URL=http://www.ijg.org/files/jpegsrc.v8c.tar.gz
+JPEG_URL=http://www.imagemagick.org/download/delegates/jpegsrc.v8b.tar.gz
+LIBICONV_URL=http://ftp.gnu.org/pub/gnu/libiconv/libiconv-1.13.tar.gz
+LIBTOOL_URL=http://ftp.gnu.org/gnu/libtool/libtool-2.2.8.tar.gz
+LIBXML2_URL=ftp://xmlsoft.org/libxml2/libxml2-2.7.8.tar.gz
+PANGO_URL=http://ftp.gnome.org/pub/GNOME/sources/pango/1.28/pango-1.28.4.tar.gz
+PIXMAN_URL=http://cairographics.org/releases/pixman-0.20.2.tar.gz
+PKGCONFIG_URL=http://pkgconfig.freedesktop.org/releases/pkg-config-0.25.tar.gz
+PNG_URL=http://downloads.sourceforge.net/libpng/libpng-1.5.1.tar.gz
+TIFF_URL=ftp://ftp.remotesensing.org/pub/libtiff/tiff-4.0.0beta6.tar.gz
+XFT_URL=http://xorg.freedesktop.org/releases/individual/lib/libXft-2.1.14.tar.gz
+ZLIB_URL=http://www.zlib.net/zlib-1.2.5.tar.gz

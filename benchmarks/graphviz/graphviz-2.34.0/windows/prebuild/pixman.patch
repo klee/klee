@@ -1,0 +1,12 @@
+diff -ru pixman-0.10.0/pixman/Makefile.in pixman-0.10.0.patched/pixman/Makefile.in
+--- pixman-0.10.0/pixman/Makefile.in	Thu Mar 27 23:02:10 2008
++++ pixman-0.10.0.patched/pixman/Makefile.in	Sun May 11 21:47:37 2008
+@@ -232,7 +232,7 @@
+ top_builddir = @top_builddir@
+ top_srcdir = @top_srcdir@
+ lib_LTLIBRARIES = libpixman-1.la
+-libpixman_1_la_LDFLAGS = -version-info $(LT_VERSION_INFO)
++libpixman_1_la_LDFLAGS = -version-info $(LT_VERSION_INFO) -no-undefined
+ libpixman_1_la_LIBADD = @DEP_LIBS@ -lm $(am__append_2) $(am__append_4)
+ libpixman_1_la_SOURCES = \
+ 	pixman.h			\

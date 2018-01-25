@@ -1,0 +1,27 @@
+digraph {
+greek[fontname=Symbol label="&alpha;&beta;&gamma;&delta;&epsilon;&zeta;&eta;&theta;&iota;&kappa;&lambda;&mu;&nu;&xi;&omicron;&pi;&rho;&sigmaf;&sigma;&tau;&upsilon;&phi;&chi;&psi;&omega;&upsih;&piv;"
+];
+subgraph {
+a[ fontname=Symbol label="for all: &forall;"];
+b[ fontname=Symbol label="part: &part;"];
+c[ fontname=Symbol label="exists: &exist;"];
+d[ fontname=Symbol label="empty: &empty;"];
+e[ fontname=Symbol label="nabla: &nabla;"];
+f[ fontname=Symbol label="isin: &isin;"];
+g[ fontname=Symbol label="notin: &notin;"];
+a->b->c->d->e->f->g;
+};
+subgraph {
+i[ fontname=Symbol label="ni: &ni;"];
+j[ fontname=Symbol label="prod: &prod;"];
+k[ fontname=Symbol label="sum: &sum;"];
+l[ fontname=Symbol label="lowast: &lowast;"];
+m[ fontname=Symbol label="square root: &radic;"];
+n[ fontname=Symbol label="proportional to: &prop;"];
+o[ fontname=Symbol label="infinity&infin;"];
+i->j->k->l->m->n->o
+};
+greek->a
+greek->i
+}
+

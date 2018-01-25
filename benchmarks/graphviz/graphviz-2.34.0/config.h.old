@@ -1,0 +1,152 @@
+/* : : generated from config.iffe by iffe version 2004-08-11 : : */
+#ifndef _GVIZ_CONFIG_H
+#define _GVIZ_CONFIG_H	1
+#define HAVE_SYS_TYPES_H	1	/* #include <sys/types.h> ok */
+
+
+#define HAVE___FREADABLE	1	/* __freadable() in default lib(s) */
+#define HAVE_MATH_H	1	/* #include <math.h> ok */
+#define HAVE_M_LIB	1	/* -lm is a library */
+#define HAVE_CBRT	1	/* cbrt() in default lib(s) */
+#define HAVE_SETENV	1	/* setenv() in default lib(s) */
+#define HAVE_VSNPRINTF	1	/* vsnprintf() in default lib(s) */
+#undef	HAVE_SETMODE		/* setmode() not in default lib(s) */
+#define HAVE_ICONV	1	/* iconv() in default lib(s) */
+#undef	HAVE_LSQRT		/* lsqrt() not in default lib(s) */
+#define HAVE_DRAND48	1	/* drand48() in default lib(s) */
+#define HAVE_FENV_H	1	/* #include <fenv.h> ok */
+#define HAVE_FEENABLEEXCEPT	1	/* feenableexcept() in default lib(s) */
+#define HAVE_FESETENV	1	/* fesetenv() in default lib(s) */
+#define HAVE_LRAND48	1	/* lrand48() in default lib(s) */
+#define HAVE_SRAND48	1	/* srand48() in default lib(s) */
+#undef	HAVE_SINCOS		/* sincos() not in default lib(s) */
+#define HAVE_STRCASECMP	1	/* strcasecmp() in default lib(s) */
+#define HAVE_STRNCASECMP	1	/* strncasecmp() in default lib(s) */
+#define HAVE_STRERROR	1	/* strerror() in default lib(s) */
+#define HAVE_DIRENT_H	1	/* #include <dirent.h> ok */
+#define HAVE_DLFCN_H	1	/* #include <dlfcn.h> ok */
+#define HAVE_ERRNO_H	1	/* #include <errno.h> ok */
+#define HAVE_FPU_CONTROL_H	1	/* #include <fpu_control.h> ok */
+#undef	HAVE_FT2BUILD_H		/* #include <ft2build.h> not ok */
+#define HAVE_GETOPT_H	1	/* #include <getopt.h> ok */
+#define HAVE_ICONV_H	1	/* #include <iconv.h> ok */
+#define HAVE_INTTYPES_H	1	/* #include <inttypes.h> ok */
+#define HAVE_LIMITS_H	1	/* #include <limits.h> ok */
+#define HAVE_MALLOC_H	1	/* #include <malloc.h> ok */
+#undef	HAVE_NDIR_H		/* #include <ndir.h> not ok */
+#define HAVE_NETDB_H	1	/* #include <netdb.h> ok */
+#define HAVE_SEARCH_H	1	/* #include <search.h> ok */
+#define HAVE_STDARG_H	1	/* #include <stdarg.h> ok */
+#define HAVE_STDDEF_H	1	/* #include <stddef.h> ok */
+#define HAVE_STDINT_H	1	/* #include <stdint.h> ok */
+#define HAVE_STDLIB_H	1	/* #include <stdlib.h> ok */
+#define HAVE_STRING_H	1	/* #include <string.h> ok */
+#define HAVE_STRINGS_H	1	/* #include <strings.h> ok */
+#define HAVE_TERMIOS_H	1	/* #include <termios.h> ok */
+#define HAVE_UNISTD_H	1	/* #include <unistd.h> ok */
+#define HAVE_VALUES_H	1	/* #include <values.h> ok */
+#define HAVE_SYS_SOCKET_H	1	/* #include <sys/socket.h> ok */
+#define HAVE_SYS_STAT_H	1	/* #include <sys/stat.h> ok */
+#define HAVE_SYS_SELECT_H	1	/* #include <sys/select.h> ok */
+#undef	HAVE_SYS_FPU_H		/* #include <sys/fpu.h> not ok */
+#undef	HAVE_SYS_NDIR_H		/* #include <sys/ndir.h> not ok */
+
+
+#define HAVE_STDIO_H	1	/* #include <stdio.h> ok */
+#define HAVE_ERRNO_DATA	1	/* errno in default lib(s) */
+/* Define if errno is declared in system include files.  */
+#define HAVE_ERRNO_DECL 1
+
+/* Define if FILE has _IO_read_end field */
+#define HAVE_FILE_IO_READ_END 1
+
+/* Define if intptr_t is declared */
+#define HAVE_INTPTR_T 1
+
+/* Define if intptr_t is declared */
+#define HAVE_SOCKLEN_T 1
+
+/* Define if <iconv.h> defines iconv_t. */
+#define HAVE_ICONV_T_DEF 1
+
+/*******************************************************************/
+/* Undefine if you don't want the libgd features or don't have the */
+/* necessary 3rd party library.                                    */
+/*******************************************************************/
+/* Define if the GD library has the GD_FONTCONFIG feature */
+#define HAVE_GD_FONTCONFIG 1
+
+/* Define if the GD library has the GD_FREETYPE feature */
+#define HAVE_GD_FREETYPE 1
+
+/* Define if the GD library has the GD_GIF feature */
+#define HAVE_GD_GIF 1
+
+/* Define if the GD library has the GD_JPEG feature */
+#define HAVE_GD_JPEG 1
+
+/* Define if the GD library has the GD_PNG feature */
+#define HAVE_GD_PNG 1
+
+/*******************************************************************/
+/* Undefine if you don't have the necessary 3rd party library.     */
+/*******************************************************************/
+/* Define if you have the jpeg library (-ljpeg).  */
+#define	HAVE_LIBJPEG    1
+
+/* Define if you have the `m' library (-lm). */
+#define HAVE_LIBM 1
+
+/* Define if you have the png library (-lpng).  */
+#define HAVE_LIBPNG     1
+
+/* Define if you have the freetype library (-lfreetype),  */
+#define	HAVE_LIBFREETYPE   1
+
+/* Define to 1 if you have the <ft2build.h> header file. */
+#define HAVE_FT2BUILD_H 1
+
+/* Define if you have the FONTCONFIG library */
+#define HAVE_LIBFONTCONFIG 1
+
+/* Define if you have the z library (-lz).  */
+#define HAVE_LIBZ       1
+
+/* Define if you have the expat library (-lexpat). */
+#define HAVE_LIBEXPAT       1
+
+/* Define if you have the xpm library (-lXpm).  */
+/* At present, the xpm library isn't really used */
+/* #define HAVE_LIBXPM       1 */
+
+/*******************************************************************/
+/* The following usually aren't changed.                           */
+/*******************************************************************/
+/* Define if you don't want on-demand plugin loading */
+#define DISABLE_LTDL 1
+
+/* Define if you want the gd renderers (png, gif, etc ) */
+#define GD_RENDER 1
+
+/* Default DPI. */
+#define DEFAULT_DPI 96
+
+#define VERSION "VVVV"
+#define BUILDDATE "DDDD"
+
+#ifndef DEFAULT_FONTPATH
+# ifdef _UWIN
+#  define DEFAULT_FONTPATH    "/win/fonts"
+#  define PATHSEPARATOR ":"
+#  else
+#  ifdef MSWIN32
+#   define DEFAULT_FONTPATH    "C:/WINDOWS/FONTS;C:/WINNT/Fonts;C:/winnt/fonts"
+#   define PATHSEPARATOR ";"
+#  else
+#   define DEFAULT_FONTPATH    "/usr/share/ttf:/usr/local/share/ttf:/usr/share/fonts/ttf:/usr/local/share/fonts/ttf:/usr/lib/fonts:/usr/local/lib/fonts:/usr/lib/fonts/ttf:/usr/local/lib/fonts/ttf:/usr/common/share/fonts/ttf:/usr/common/graphviz/lib/fonts/ttf:/windows/fonts:/dos/windows/fonts:/usr/add-on/share/ttf:/usr/openwin/lib/X11/fonts/TrueType:."
+#   define PATHSEPARATOR ":"
+#  endif
+# endif
+#endif
+
+#endif

@@ -1,0 +1,67 @@
+.TH DIJKSTRA 1 "21 March 2001"
+.SH NAME
+dijkstra \- single-source distance filter
+.SH SYNOPSIS
+.B dijkstra
+[
+.B \-adp?
+]
+[ 
+.I sourcenode file
+]
+.SH DESCRIPTION
+.B dijkstra
+reads a stream of graphs and for each computes the distance of every
+node from
+.I sourcenode.
+Edge length is given in the 
+.I len
+attribute, and the default is 1.  The 
+.I dist
+attribute of every node is set to its distance from
+.I sourcenode.
+If the \fB-p\fP flag is used, the
+.I prev
+attribute of each node reachable from
+.I sourcenode
+is set to the name of the previous node on a shortest path.
+The graph attribute
+.I maxdist
+is set to the maximum 
+.I dist
+of all nodes in the graph.
+.P
+If the \fB-d\fP flag is used, the graph is treated as directed and 
+only forward edges are used.
+.P
+By default, if the graph is disconnected, the
+.I dist
+attribute of nodes unreachable from
+.I sourcenode
+are left untouched, and
+.I maxdist
+is set to the maximum of any previous value and the largest
+distance recorded in this run. On the other hand, if
+the \fB-a\fP flag is used, the
+.I dist
+attribute of an unreachable node is assigned a very large value,
+and
+.I maxdist
+records the maximum distance found in the component containing
+.I sourcenode.
+.P
+Any number of
+.I sourcenode file
+pairs may be given.
+If the last 
+.I file 
+is missing, \fBstdin\fP is used.
+All output is written to \fBstdout\fP.
+.P
+In a typical application,
+.I dist
+and 
+.I maxdist
+can drive a downstream calculation of color or some other attribute.
+.SH "SEE ALSO"
+gvpr(1), gvcolor(1), libgraph(3)

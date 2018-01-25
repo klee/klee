@@ -1,0 +1,31 @@
+/* : : generated from ../../../lib/sfio/features/sfio by iffe version 2004-08-11 : : */
+#ifndef _def_time_Sfio_f
+#define _def_time_Sfio_f	1
+#define _sys_types	1	/* #include <sys/types.h> ok */
+#define _hdr_time	1	/* #include <time.h> ok */
+#define _sys_time	1	/* #include <sys/time.h> ok */
+#define _hdr_string	1	/* #include <string.h> ok */
+#define _hdr_math	1	/* #include <math.h> ok */
+//#define _hdr_unistd	1	/* #include <unistd.h> ok */
+#define _hdr_values	1	/* #include <values.h> ok */
+#define _hdr_float	1	/* #include <float.h> ok */
+#define _hdr_limits	1	/* #include <limits.h> ok */
+#define _lib_atexit	1	/* atexit() in default lib(s) */
+#define _lib_ftruncate	0	/* ftruncate() in default lib(s) */
+#define _lib_lseek64	1	/* lseek64() in default lib(s) */
+#define _hdr_stddef	1	/* #include <stddef.h> ok */
+#define _hdr_stdlib	1	/* #include <stdlib.h> ok */
+#define _typ_off64_t	1	/* off64_t is a type */
+#define _lib_memcpy	1	/* memcpy() in default lib(s) */
+#define _lib_memset	1	/* memset() in default lib(s) */
+#define _sys_stat	1	/* stat() in default lib(s) */
+#define _lib_remove	1	/* remove() in default lib(s) */
+#define _lib_unlink	1	/* unlink() in default lib(s) */
+#define _lib_getpagesize	0	/* getpagesize() in default lib(s) */
+#define _tmp_rmfail	1	/* file not removable if still opened */
+#define _proto_open	1	/* open() has a vararg prototype */
+#define _proto_bcopy	1	/* bcopy() has prototype */
+#define _proto_bzero	1	/* bzero() has prototype */
+#define _lib_strtod	1	/* strtod() in default lib(s) */
+#define _lib_locale	1	/* Check for localeconv */
+#endif

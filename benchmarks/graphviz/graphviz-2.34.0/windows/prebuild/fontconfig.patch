@@ -1,0 +1,44 @@
+diff -ru fontconfig-2.5.91/Makefile.in fontconfig-2.5.91.patched/Makefile.in
+--- fontconfig-2.5.91/Makefile.in	Fri Jan 11 03:59:03 2008
++++ fontconfig-2.5.91.patched/Makefile.in	Wed May 14 10:24:09 2008
+@@ -796,8 +796,8 @@
+ 	  $(INSTALL_DATA) fonts.conf $(DESTDIR)$(configdir)/fonts.conf; \
+ 	fi; fi
+ 	@(if $(RUN_FC_CACHE_TEST); then \
+-	    echo " fc-cache/fc-cache -s -f -v"; \
+-	    fc-cache/fc-cache -s -f -v; \
++	    echo " $(bindir)/fc-cache -s -f -v"; \
++	    $(bindir)/fc-cache -s -f -v; \
+ 	else \
+ 	    echo "***"; \
+ 	    echo "*** Warning: fonts.cache not built"; \
+diff -ru fontconfig-2.5.91/fontconfig/fontconfig.h fontconfig-2.5.91.patched/fontconfig/fontconfig.h
+--- fontconfig-2.5.91/fontconfig/fontconfig.h	Fri Jan 11 03:58:25 2008
++++ fontconfig-2.5.91.patched/fontconfig/fontconfig.h	Wed May 14 14:13:19 2008
+@@ -513,10 +513,6 @@
+ FcPublic void
+ FcDirCacheUnload (FcCache *cache);
+ 
+-/* fcfreetype.c */
+-FcPublic FcPattern *
+-FcFreeTypeQuery (const FcChar8 *file, int id, FcBlanks *blanks, int *count);
+-
+ /* fcfs.c */
+ 
+ FcPublic FcFontSet *
+diff -ru fontconfig-2.5.91/src/Makefile.in fontconfig-2.5.91.patched/src/Makefile.in
+--- fontconfig-2.5.91/src/Makefile.in	Fri Jan 11 03:59:02 2008
++++ fontconfig-2.5.91.patched/src/Makefile.in	Wed May 14 14:10:59 2008
+@@ -652,10 +652,10 @@
+ fcftalias.h: $(top_srcdir)/src/makealias $(PUBLIC_FT_FILES)
+ 	sh $(top_srcdir)/src/makealias "$(top_srcdir)/src" fcftalias.h fcftaliastail.h $(PUBLIC_FT_FILES)
+ 
+-fontconfig.def: $(PUBLIC_FILES)
++fontconfig.def: $(PUBLIC_FILES) $(PUBLIC_FT_FILES)
+ 	echo Generating $@
+ 	(echo EXPORTS; \
+-	(cat $(PUBLIC_FILES) || echo 'FcERROR ()' ) | \
++	(cat $(PUBLIC_FILES) $(PUBLIC_FT_FILES) || echo 'FcERROR ()' ) | \
+  	grep '^Fc[^ ]* *(' | sed -e 's/ *(.*$$//' -e 's/^/	/' | \
+ 	sort; \
+ 	echo LIBRARY libfontconfig-@LT_CURRENT_MINUS_AGE@.dll; \

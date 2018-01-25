@@ -1,0 +1,43 @@
+
+------------------------------------------------------------------------
+                      tcldot - graphviz release
+------------------------------------------------------------------------
+  This version will only work with Tcl version 7.6 and beyond.
+
+  Please send comments or suggestions to John Ellson (ellson@graphviz.org)
+========================================================================
+              Copyright (c) 1995   AT&T Bell Laboratories
+              Copyright (c) 1996   Lucent Technologies
+========================================================================
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that the copyright notice and warranty disclaimer appear in
+supporting documentation, and that the names of AT&T Bell Laboratories,
+Lucent Technologies, or any of their entities not be used in advertising 
+or publicity pertaining to distribution of the software without specific,
+written prior permission.
+
+Lucent disclaims all warranties with regard to this software, including
+all implied warranties of merchantability and fitness.  In no event
+shall Lucent be liable for any special, indirect or consequential
+damages or any damages whatsoever resulting from loss of use, data or
+profits, whether in an action of contract, negligence or other
+tortuous action, arising out of or in connection with the use or
+performance of this software.
+========================================================================
+
+INTRODUCTION
+
+tcldot adds graph manipulation facilities to tcl based on the
+capabilities of dot.  It permits a script programmer to add and delete
+nodes and edges to abstract graphs, then have the graph layed out
+according to dot's heuristics about what makes an eye-pleasing graph.
+The graph can rendered in various forms including to tk's canvas.
+
+tcldot is distributed with the Graph Visualization tools available
+from:  http://www.research.att.com/orgs/ssr/book/reuse/
+
+Please report any problems to the author:
+
+John Ellson (ellson@graphviz.org)

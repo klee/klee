@@ -1,0 +1,8 @@
+digraph ID {
+graph [
+        concentrate = true
+      ];
+A -> B
+B -> A
+}
+

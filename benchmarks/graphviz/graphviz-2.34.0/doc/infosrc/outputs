@@ -1,0 +1,424 @@
+# List of Graphviz output formats
+# Each item consists of line of the form :<name>:<long description>
+# followed by a description of the format in HTML
+# The name may consist of multiple, related names, separated by '/'.
+# The long description is just text.
+# The items are alphabetized when the page is created.
+#
+:eps:Encapsulated PostScript
+Produces Encapsulated PostScript output.
+At present, this is only guaranteed to be correct for a single
+input graph since the Bounding Box information has to appear
+at the beginning of the output, and this will be based on the first graph.
+:ps:PostScript
+Produces PostScript output.
+<P>
+Note: The default PostScript renderer can only handle the Latin-1
+character set. To get non-Latin-1 characters into PostScript output,
+use <TT>-Tps:cairo</TT>, assuming your version was built with the
+Cairo renderer.
+:ps2:PostScript for PDF
+Produces PostScript output with PDF notations. It is assumed the output
+will be directly converted into PDF format. The notations include PDF
+bounding box information, so that the resulting PDF file can be correctly
+used with pdf tools, such as <STRONG>pdflatex</STRONG>.
+In addition, if a node has a URL
+attribute, this gets translated into PDF code such that the node,
+when viewed in a PDF-viewer, e.g.,
+<STRONG>acroread</STRONG>,
+is a link to the given URL. If a URL is attached to the graph, this serves
+as a base, such that relative URLs on nodes are derived from it.
+:gd/gd2:GD/GD2 formats
+Output images in the GD and GD2 format. These are the internal
+formats used by the gd library. The latter is compressed.
+:gif:GIF
+Outputs GIF bitmap images.
+:jpg/jpeg/jpe:JPEG
+Output JPEG compressed image files.
+:png:Portable Network Graphics format
+Produces output in the PNG (Portable Network Graphics) format.
+:wbmp:Wireless BitMap format
+Produces output in the Wireless BitMap (WBMP) format, optimized for
+mobile computing.
+#xbm outputs XPM (X pixmap) files - (Not implemented in gd?)
+:ismap:Server-side imagemap (deprecated)
+Produces HTML image map files. This is a predecessor (circa 1994)
+of the IMAP format.  Most servers now use the latter.
+<A HREF=attrs.html#d:URL>URLs</A> can be attached to the root graph,
+nodes and edges. Since edge
+links are attached to edge labels, an edge must
+have a <A HREF=attrs.html#d:label>label</A> for its
+URL to be used. For both nodes and edges, if the URL has the escape
+sequence "&#92;N" embedded in its string, this will be replaced with the
+node or edge name.
+:cmap:Client-side imagemap (deprecated)
+Produces map files for client-side image maps. The cmap format is
+mostly identical to cmapx, but the latter is well-formed XML amenable
+to processing by XML tools. In particular, the cmapx output is wrapped in
+&lt;map&gt;&lt;/map&gt;.
+<P>
+See <A HREF=#ID>Note</A>.
+:imap/cmapx:Server-side and client-side imagemaps
+Produces map files for server-side and client-side image maps.
+These can be used in a web page with
+a graphical form of the output, e.g. in JPEG, GIF or PNG format, to attach
+links to nodes and edges. 
+Graphviz generates an object's map information only if the object has a non-trival 
+<A HREF=attrs.html#d:URL>URL</A> or <A HREF=attrs.html#d:href>href</A>
+attribute, or if it has an explicit <A HREF=attrs.html#d:tooltip>tooltip</A> attribute.
+<P>
+For example, to create a server-side map
+given the dot file
+<PRE>
+/* x.gv */
+digraph mainmap {
+  URL="http://www.research.att.com/base.html";
+  command [URL="http://www.research.att.com/command.html"];
+  command -> output [URL="colors.html"];
+}
+</PRE>
+one would process the graph and generate two output files:
+<PRE>
+dot -Timap -ox.map -Tgif -ox.gif x.gv
+</PRE>
+and then refer to it in a web page:
+<XMP>
+<A HREF="x.map"><IMG SRC="x.gif" ismap="ismap" /></A>
+</XMP>
+For client-side maps, one again generates two output files:
+<PRE>
+dot -Tcmapx -ox.map -Tgif -ox.gif x.gv
+</PRE>
+and uses the HTML
+<XMP>
+<IMG SRC="x.gif" USEMAP="#mainmap" />
+... [content of x.map] ...
+</XMP>
+Note that the name given in the USEMAP attribute must be the same
+as the ID attribute of the MAP element. The Graphviz renderer
+uses the name of the graph as the ID. Thus, in the example above,
+where the graph's name is <T>mainmap</T>, we have <T>USEMAP="#mainmap"</T>
+in the IMG attribute, and x.map will look like
+<XMP>
+<map id="mainmap" name="mainmap">
+... 
+</map>
+</XMP>
+<P>
+<A HREF=attrs.html#d:URL>URLs</A> can be attached to the root
+graph, nodes and edges. If a node has a URL, clicking in the node
+will activate the link.
+If an edge has a URL, various
+points along the edge (but not necessarily the head or tail)
+will link to it. In addition, if the edge has a
+<A HREF=attrs.html#d:label>label</A>, that will link
+to the URL.
+As for the head of the edge, this is linked to the
+<A HREF=attrs.html#d:headURL>headURL</A>, if set.
+Otherwise, it is linked to the edge's URL if that is defined.
+The analogous description holds for the tail and the
+<A HREF=attrs.html#d:tailURL>tailURL</A>.
+A URL associated with the graph is used as a default link.
+<P>
+If the URL
+of a node contains the escape sequence "&#92;N", it will be replaced by
+the node's name.
+If the headURL is defined and contains the escape sequence "&#92;N",
+it will be replaced by
+the <A HREF=attrs.html#d:headlabel>headlabel</A>, if defined.
+The analogous result holds for the tailURL and the
+<A HREF=attrs.html#d:taillabel>taillabel</A>.
+<P>
+See <A HREF=#ID>Note</A>.
+:imap_np/cmapx_np:Server-side and client-side imagemaps
+These are identical to the imap and cmapx formats, except they
+rely solely on rectangles as active areas.
+:vrml:VRML
+Outputs graphs in the <A HREF="http://www.vrml.org/">VRML</A> format.
+To get a 3D embedding, nodes must have a <A HREF=attrs.html#d:z>z</A>
+attribute. These can either be supplied as part of the input graph, or
+be generated by neato provided <A HREF=attrs.html#d:dim>dim</A><TT>=3</TT>
+and at least one node has a <B>z</B> value.
+<P>
+Line segments are drawn as cylinders.
+In general, VRML output relies on having the PNG library to produce images
+used to texture-fill the node shapes. However, if
+<A HREF=attrs.html#d:shape>shape</A><TT>=point</TT>,
+a node is drawn as a 3D sphere.
+:fig:FIG
+Outputs graphs in the FIG graphics language.
+:svg/svgz:Scalable Vector Graphics
+Produce <A HREF="http://www.adobe.com/svg/">SVG</A> output,
+the latter in compressed format.
+<P>
+See <A HREF=#ID>Note</A>.
+:canon/dot/xdot:DOT
+These formats produce output in the
+<A HREF=lang.html>dot language</A>.
+Using <B>canon</B> produces a prettyprinted version of the input,
+with no layout performed.
+<P>
+The <B>dot</B> option corresponds to attributed dot output,
+and is the default output format.
+It reproduces the input, along with layout information for the graph.
+In particular, a <A HREF=attrs.html#d:bb>bb</A> attribute is
+attached to the graph, specifying the bounding box of the drawing.
+If the graph has a label, its position is specified by the
+<A HREF=attrs.html#d:lp>lp</A> attribute.
+<P>
+Each node gets <A HREF=attrs.html#d:pos>pos</A>,
+<A HREF=attrs.html#d:width>width</A> and
+<A HREF=attrs.html#d:height>height</A> attributes. If the node is a record,
+the record rectangles are given in the
+<A HREF=attrs.html#d:rects>rects</A> attribute.
+If the node is a polygon and the
+<A HREF=attrs.html#d:vertices>vertices</A> attribute is defined, this
+attribute contains the vertices of the node.
+<P>
+Every edge is
+assigned a <A HREF=attrs.html#d:pos>pos</A> attribute,
+and if the edge has a label, the label position
+is given in <A HREF=attrs.html#d:lp>lp</A>.
+<P>
+The <B>xdot</B> format extends the
+<B>dot</B> format by providing much more detailed information about
+how graph components are drawn. It relies on additional attributes
+for nodes, edges and graphs.
+<P>
+The format is preliminary; comments and
+suggestions for better representations are welcome.
+To allow for changes in the format, Graphviz attaches the attribute
+<TT>xdotversion</TT> to the graph.
+<P>
+Additional drawing attributes can appear on nodes, edges, clusters and 
+on the graph itself. There are six new attributes: 
+<SPACER TYPE=VERTICAL size=10>
+<TABLE  border bgcolor=beige>
+<TR><TD>_draw_<TD colspan=2>Drawing operations
+<TR><TD>_ldraw_<TD colspan=2>Label drawing
+<TR><TD>_hdraw_<TD>Head arrowhead<TD>Edge only
+<TR><TD>_tdraw_<TD>Tail arrowhead<TD>Edge only
+<TR><TD>_hldraw_<TD>Head label<TD>Edge only
+<TR><TD>_tldraw_<TD>Tail label<TD>Edge only
+</TABLE>
+<P>
+For a given graph object, one will typically a draw directive before the
+label directive. For example, for a node, one would first use the commands
+in <B>_draw_</B> followed by the commands in <B>_ldraw_</B>.
+<P>
+The value of these attributes consists of the concatenation of some
+(multi-)set of the following 13 rendering or attribute operations.
+(The number is parentheses gives the xdot version when the operation
+was added to the format. If no version number is given, the operation
+was in the original specification.)
+<SPACER TYPE=VERTICAL size=10>
+<TABLE border bgcolor=beige>
+<TR><TD>E x<sub>0</sub> y<sub>0</sub> w h
+<TD>Filled ellipse ((x-x<sub>0</sub>)/w)<sup>2</sup> + ((y-y<sub>0</sub>)/h)<sup>2</sup> = 1
+<TR><TD>e x<sub>0</sub> y<sub>0</sub> w h
+<TD>Unfilled ellipse ((x-x<sub>0</sub>)/w)<sup>2</sup> + ((y-y<sub>0</sub>)/h)<sup>2</sup> = 1
+<TR><TD>P n x<sub>1</sub> y<sub>1</sub> ... x<sub>n</sub> y<sub>n</sub>
+<TD>Filled polygon using the given n points
+<TR><TD>p n x<sub>1</sub> y<sub>1</sub> ... x<sub>n</sub> y<sub>n</sub>
+<TD>Unfilled polygon using the given n points
+<TR><TD>L n x<sub>1</sub> y<sub>1</sub> ... x<sub>n</sub> y<sub>n</sub>
+<TD>Polyline using the given n points
+<TR><TD>B n x<sub>1</sub> y<sub>1</sub> ... x<sub>n</sub> y<sub>n</sub>
+<TD>B-spline using the given n control points
+<TR><TD>b n x<sub>1</sub> y<sub>1</sub> ... x<sub>n</sub> y<sub>n</sub>
+<TD>Filled B-spline using the given n control points (1.1)
+<TR><TD>T x y j w n -<I>b<sub>1</sub>b<sub>2</sub>...b<sub>n</sub></I>
+<TD>Text drawn using the baseline point (x,y). The text consists of the
+n bytes following '-'. The text should be left-aligned (centered,
+right-aligned) on the point if j is -1 (0, 1), respectively. The value
+w gives the width of the text as computed by the library.
+<TR><TD>C n -<I>b<sub>1</sub>b<sub>2</sub>...b<sub>n</sub></I>
+<TD>Set fill color. The color value consists of the
+n bytes following '-'. (1.1)
+<TR><TD>c n -<I>b<sub>1</sub>b<sub>2</sub>...b<sub>n</sub></I>
+<TD>Set pen color. The color value consists of the
+n bytes following '-'. (1.1)
+<TR><TD>F s n -<I>b<sub>1</sub>b<sub>2</sub>...b<sub>n</sub></I>
+<TD>Set font. The font size is s points. The font name consists of the
+n bytes following '-'. (1.1)
+<TR><TD>S n -<I>b<sub>1</sub>b<sub>2</sub>...b<sub>n</sub></I>
+<TD>Set style attribute. The style value consists of the
+n bytes following '-'. The syntax of the value is the same as
+specified for a <B>styleItem</B> in <A HREF=attrs.html#k:style>style</A>. (1.1)
+<TR><TD>I x y w h n -<I>b<sub>1</sub>b<sub>2</sub>...b<sub>n</sub></I>
+<TD>Externally-specified image drawn in the box with lower left
+corner (x,y) and upper right corner (x+w,y+h). The name of the image
+consists of the n bytes following '-'. This is usually a bitmap
+image. Note that the image size, even when converted from pixels to
+points, might be different from the required size (w,h). It is
+assumed the renderer will perform the necessary scaling. (1.2)
+</TABLE>
+<P>
+Note that the filled figures (ellipses, polygons and B-Splines)
+imply two operations: first, drawing the filled figure with the
+current fill color; second, drawing an unfilled figure with the
+current pen color, pen width and pen style.
+<P>
+Style values which can be incorporated in the graphics model do not
+appear in xdot output. In particular, the style values
+<TT>filled</TT>, <TT>rounded</TT>, <TT>diagonals</TT>, and <TT>invis</TT>
+will not appear. Indeed, if style contains <TT>invis</TT>, 
+there will not be any xdot output at all.
+<P>
+With version 1.4 of xdot, color strings may now encode linear and radial gradients. Linear
+gradients have the form <br>
+&nbsp;&nbsp;&nbsp;&nbsp;'[' x<sub>0</sub> y<sub>0</sub> x<sub>1</sub> y<sub>1</sub> n [<I>color-stop</I>]<sup>+</sup> ']'<br>
+where (x<sub>0</sub>,y<sub>0</sub>) and (x<sub>1</sub>,y<sub>1</sub>) define the starting and
+ending points of the gradient line segment, and n gives the number of <I>color-stops</I>. Each
+<I>color-stop</I> has the form<br>
+&nbsp;&nbsp;&nbsp;&nbsp;v m -<I>b<sub>1</sub>b<sub>2</sub>...b<sub>m</sub></I><br>
+where v is a number in the range [0,1] defining a position on the gradient line segment, with
+color specified by the m byte string <I>b<sub>1</sub>b<sub>2</sub>...b<sub>m</sub></I>, 
+the same format as used for colors in the 'c' and 'C' operations.
+<P>
+Radial gradients have the form<br>
+&nbsp;&nbsp;&nbsp;&nbsp;'(' x<sub>0</sub> y<sub>0</sub> r<sub>0</sub> x<sub>1</sub> y<sub>1</sub> r<sub>1</sub> n [<I>color-stop</I>]<sup>+</sup> ')' <br>
+where x<sub><i>j</i></sub> y<sub><i>j</i></sub> r<sub><i>j</i></sub>, for <i>j</i>=0,1, specify
+the center and radius of the start and ending circle, and n gives the number of <I>color-stops</I>.
+A <I>color-stop</I> has the same format as defined for linear gradients, again given the fractional
+offset and its associated color. 
+<P>
+In handling text alignment, the application may want to recompute the
+string width using its own rendering primitives.
+<P>
+The text operation is only used in the label attributes. Normally,
+the non-text operations are only used in the non-label attributes.
+If, however, the <A HREF=attrs.html#d:decorate>decorate</A>
+attribute is set on an edge, its label
+attribute will also contain a polyline operation.
+In addition, if a label is a complex, HTML-like label, it will also
+contain non-text operations.
+<P>
+All coordinates and sizes are in points.
+Note though that if
+an edge or node is invisible, no drawing operations are attached to it.
+<P>
+Version info:
+<TABLE  border="1" >
+<TR><TH>Xdot version</TH><TH>Graphviz version</TH><TH>Modification</TH></TR>
+<TR><TD>1.0</TD> <TD>1.9</TD><TD> </TD></TR>
+<TR><TD>1.1</TD> <TD>2.8</TD><TD>First plug-in version</TD></TR>
+<TR><TD>1.2</TD><TD>2.13</TD><TD>Support image operator <b>I</b></TD></TR>
+<TR><TD>1.3</TD><TD>2.31</TD><TD>Add numerical precision</TD</TR>
+<TR><TD>1.4</TD><TD>2.32</TD><TD>Add gradient colors</TD</TR>
+<TR><TD>1.5</TD><TD>2.34</TD><TD>Fix text layout problem; fix inverted vector in gradient; support version-specific output</TD</TR>
+</TABLE>
+:plain/plain-ext:Simple text format
+The plain and plain-ext formats produce output using
+a simple, line-based language.
+The latter format differs in that, on edges, it provides port names
+on head and tail nodes when applicable.
+<P>
+There are four types of statements.
+<PRE>
+ <STRONG>graph</STRONG> <I>scale</I> <I>width</I> <I>height</I>
+ <STRONG>node</STRONG> <I>name</I> <I>x</I> <I>y</I> <I>width</I> <I>height</I> <I>label</I> <I>style</I> <I>shape</I> <I>color</I> <I>fillcolor</I>
+ <STRONG>edge</STRONG> <I>tail</I> <I>head</I> <I>n</I> <I>x<sub>1</sub></I> <I>y<sub>1</sub></I> .. <I>x<sub>n</sub></I> <I>y<sub>n</sub></I> [<I>label</I> <I>xl</I> <I>yl</I>] <I>style</I> <I>color</I>
+ <STRONG>stop</STRONG>
+</PRE>
+<DL>
+<DT><STRONG>graph</STRONG>
+<DD>The <I>width</I> and <I>height</I> values give the width and height
+of the drawing. The lower left corner of the drawing is at the origin.
+The <I>scale</I> value indicates how the drawing should be scaled
+if a <A HREF=attrs.html#d:size>size</A> attribute was given and the drawing
+needs to be scaled to conform to that size. If no scaling is necessary,
+it will be set to 1.0. Note that all graph, node and edge
+coordinates and lengths are given unscaled.
+<DT><STRONG>node</STRONG>
+<DD>The <I>name</I> value is the name of the node, and <I>x</I> and <I>y</I>
+give the node's position. The <I>width</I> and <I>height</I> are the
+width and height of the node.
+The <I>label</I>,
+<I>style</I>, <I>shape</I>, <I>color</I> and <I>fillcolor</I> give the
+node's <A HREF=attrs.html#d:label>label</A>,
+<A HREF=attrs.html#d:style>style</A>, <A HREF=attrs.html#d:shape>shape</A>,
+<A HREF=attrs.html#d:color>color</A> and
+<A HREF=attrs.html#d:fillcolor>fillcolor</A>,
+respectively, using attribute default values where necessary. If the
+node does not have a style attribute, "solid" is used.
+<DT><STRONG>edge</STRONG>
+<DD>The <I>tail</I> and <I>head</I> values give the names of the head and
+tail nodes. In plain-ext format, the head or tail name will be appended
+with a colon and a portname if the edge connects to the node at a port.
+<I>n</I> is the number of control points defining the
+B-spline forming the edge. This is followed by 2*<I>n</I> numbers giving
+the x and y coordinates of the control points in order from tail to head.
+If the edge has a <A HREF=attrs.html#d:label>label</A>, this comes next
+followed by the x and y coordinates of the label's position.
+The edge description is completed by the edge's
+<A HREF=attrs.html#d:style>style</A> and <A HREF=attrs.html#d:color>color</A>.
+As with nodes, if a style is not defined, "solid" is used.
+<P>
+<B>Note:</B> The control points given in an edge statement define the
+body of the edge. In particular, if the edge has an arrowhead to the
+head or tail node,
+there will be a gap between the last or first control points and the
+boundary of the associated node. There are at least 3 possible ways
+of handling this gap:
+<UL>
+<LI> Arrange that the input graph uses <TT>dir=none</TT>,
+<TT>arrowhead=none</TT>, or <TT>arrowtail=none</TT> for all edges.
+In this case, the terminating control points will always touch the node.
+<LI> Consider the line segment joining the control point and the center
+of the node, and determine the point where the segment intersects the
+node's boundary. Then use the control point and the intersection point
+as the main axis of an arrowhead. The problem with this approach is
+that, if the edge has a port, the edge will not be pointing to the
+center of the node. In this case, rather than use the control point
+and center point, one can use the control point and its tangent.
+<LI> Arrange that the input graph uses <TT>headclip=false</TT> or
+<TT>tailclip=false</TT>. In this case, the edge will terminate at
+the node's center rather than its boundary. If arrowheads are used,
+there will still be a gap, but normally this will occur within the
+node. The application will still need to clip the spline to the node
+boundary. Also, as with the previous item, if the edge points to
+a node port, this technique will fail.
+</UL>
+</DL>
+The output consists of one <STRONG>graph</STRONG> line, a sequence of
+<STRONG>node</STRONG> lines, one per node, a sequence of
+<STRONG>edge</STRONG> lines, one per edge, and a final <STRONG>stop</STRONG>
+line. All units are in inches, represented by a floating point number.
+<P>
+Note that the plain formats provide minimal information, really giving not
+much more than node positions and sizes, and edge spline control points.
+These formats are usually most useful to applications wanting just this
+geometric information, and willing to fill in all of the graphical details.
+The only real advantages to these formats is their terseness and their
+ease of parsing. In general, the <A HREF=#d:dot>dot</A> and
+<A HREF=#d:xdot>xdot</A> are preferable in terms of the quantity of
+information provided.
+:bmp: Windows Bitmap Format
+Outputs images in the Windows <A HREF="http://en.wikipedia.org/wiki/Bitmap">BMP</A> format.
+:ico: Icon Image File Format
+Outputs images in the Windows <A HREF="http://en.wikipedia.org/wiki/ICO_(icon_image_file_format)">ICO format</A>.
+:pdf: Portable Document Format (PDF)
+Produces <A HREF="http://www.adobe.com/devnet/pdf/">PDF</A> output.
+(This option assumes Graphviz includes the Cairo renderer.)
+Alternatively, one can use the <A HREF="#d:ps2">ps2</A> option to
+produce PDF-compatible PostScript, and then use a ps-to-pdf converter.
+<P>
+Note: At present, this option does not support anchors, etc. To get these
+included in your PDF output, use <A HREF="#d:ps2">ps2</A>.
+:tif/tiff: TIFF (Tag Image File Format)
+Produces <A HREF="http://www.libtiff.org/">TIFF</A> output.
+:vml/vmlz: Vector Markup Language (VML)
+Produces <A HREF="http://www.w3.org/TR/NOTE-VML">VML</A> output,
+the latter in compressed format.
+<P>
+See <A HREF=#ID>Note</A>.
+:gtk: GTK canvas
+Creates a <A HREF="http://www.gtk.org/">GTK</A> window and displays the output there.
+:webp: Image format for the Web
+Produces output in the image format for the Web (WEBP) format, optimized for
+web devices such as tablets.
+See Wikipedia's <a href="http://en.wikipedia.org/wiki/Webp">WebP</a>
+or Google's <a href="http://code.google.com/speed/webp/">webp</a> pages.
+:xlib: Xlib canvas
+Creates an <A HREF="http://en.wikipedia.org/wiki/Xlib">Xlib</A> window and displays the output there.

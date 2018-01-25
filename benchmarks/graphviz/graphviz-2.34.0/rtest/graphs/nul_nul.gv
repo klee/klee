@@ -1,0 +1,10 @@
+graph G { imagepath=""
+
+a[shape=plaintext,label=<<TABLE CELLSPACING="2" CELLPADDING="2" BORDER="0" 
+CELLBORDER="0"><TR><TD><TABLE CELLSPACING="3" CELLPADDING="1" BORDER="0" 
+CELLBORDER="0">
+<TR><TD ALIGN="left"><FONT POINT-SIZE="30.0" FACE="Helvetica-Bold">image attribute (null)</FONT></TD></TR><TR><TD ALIGN="left"><FONT POINT-SIZE="30.0" FACE="Helvetica-Bold">imagepath attribute (null)</FONT></TD></TR>
+</TABLE></TD></TR></TABLE>>];
+b[shape=box,fontsize=30,fontname="Helvetica-Bold",label="image in working directory should be displayed",image="image.jpg",labelloc=b];
+}
+

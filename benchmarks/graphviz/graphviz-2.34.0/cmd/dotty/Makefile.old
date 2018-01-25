@@ -1,0 +1,28 @@
+all:	dotty
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+PACKAGE=lefty
+LIB_SCRIPTS = dotty.lefty dotty_draw.lefty dotty_edit.lefty \
+	dotty_layout.lefty dotty_ui.lefty
+BIN_SCRIPTS = dotty
+MAN1 = dotty.1
+
+dotty: dotty.sh
+	cp dotty.sh dotty
+	chmod +x dotty
+
+install: $(LIB_SCRIPTS) $(BIN_SCRIPTS)
+	$(MKPATH) $(LIBDIR)/$(PACKAGE)
+	$(INSTALL) $(LIB_SCRIPTS) $(LIBDIR)/$(PACKAGE)
+	$(MKPATH) $(BINDIR)
+	$(INSTALL) $(BIN_SCRIPTS) $(BINDIR)
+	$(MKPATH) $(MANDIR)
+	$(INSTALL) dotty.1 $(MANDIR)
+
+clean:
+	true
+
+distclean:
+	true

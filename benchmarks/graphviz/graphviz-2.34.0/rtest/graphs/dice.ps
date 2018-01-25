@@ -1,0 +1,277 @@
+%!PS-Adobe-3.0
+%%Page: 1 1
+%%PageBoundingBox: 175 316 437 579
+%%BoundingBox: 175 316 437 579
+
+/strdimensions {
+	gsave
+	newpath
+	0 0 moveto
+    false charpath flattenpath pathbbox 
+    exch 4 -1 roll sub
+    3 1 roll exch sub
+	grestore
+} def
+
+/die1_data [
+%	[50 33 33 48 67 67 50]
+%	[27 7 31 34 30 5 0]
+	[50 33 33 48 67 67 50]
+	[27 7 31 34 30 5 0]
+	[
+		[50 30 2 1 0]
+		[54 21 1.2 2 0]
+		[63 11 1.2 2 0]
+		[46 21 1.2 2 0]
+		[46 7 1.2 2 0]
+	]
+]def
+
+/die2_data [
+%	[15 0 0 19 40 40 15]
+%	[25 9 31 33 27 2 0]
+	[15 0 0 19 40 40 15]
+	[25 7 31 33 27 0 -3]
+	[
+		[18 29 2 1 0]
+		[28 12 2 2 0]
+		[21 4 2 2 0]
+		[21 19 2 2 0]
+		[35 5 2 2 0]
+		[35 20 2 2 0]
+		[4 10 1.2 2 0]
+		[11.5 20.5 1.4 2 0]
+	]
+] def
+
+% cx cy rx ry ang mk_ellipse -
+/mk_ellipse {
+	/ang exch def
+	/ry exch def
+	/rx exch def
+	/cy exch def
+	/cx exch def
+
+	gsave
+		newpath
+		cx cy translate
+		ang rotate
+		rx ry scale
+		0 0 1 0 360 arc
+		fill
+	grestore
+} def
+
+/fill_die {
+	1 setgray
+	newpath
+	xval 1 get yval 1 get moveto
+	xval 2 get yval 2 get lineto
+	xval 3 get yval 3 get lineto
+	xval 4 get yval 4 get lineto
+	xval 5 get yval 5 get lineto
+	xval 6 get yval 6 get lineto
+	closepath
+	fill
+} def
+
+/outline_die {
+	0 setgray
+	newpath
+	xval 1 get yval 1 get moveto
+	xval 2 get yval 2 get lineto
+	xval 3 get yval 3 get lineto
+	xval 4 get yval 4 get lineto
+	xval 5 get yval 5 get lineto
+	xval 6 get yval 6 get lineto
+	closepath
+	xval 0 get yval 0 get moveto
+	xval 2 get yval 2 get lineto
+	xval 0 get yval 0 get moveto
+	xval 4 get yval 4 get lineto
+	xval 0 get yval 0 get moveto
+	xval 6 get yval 6 get lineto
+	stroke
+} def
+
+/do_spot {
+	aload pop
+	mk_ellipse
+} def
+
+/spot_die {
+	spots { 
+		do_spot
+	} forall
+	
+} def
+
+/do_die {
+	dup 0 get /xval exch def
+	dup 1 get /yval exch def
+	2 get /spots exch def
+	fill_die
+	outline_die
+	spot_die
+} def
+
+/dicedict 32 dict def
+
+/do_dice {
+	save
+	mark
+	-94 -45 translate
+	2.8 2.8 scale
+	dicedict begin
+		die1_data do_die
+		die2_data do_die
+	end
+	cleartomark
+	restore
+} def
+
+/outsidecircletext
+ { circtextdict begin
+   /radius exch def
+   /centerangle exch def
+   /ptsize exch def
+   /str exch def
+   /xradius radius ptsize 4 div add def
+
+   gsave
+	 centerangle str findhalfangle add rotate
+
+	 str
+	   { /charcode exch def
+		 (A) dup 0 charcode put outsideplacechar
+	   } forall
+
+   grestore
+  end
+} def
+
+
+/insidecircletext
+ { circtextdict begin
+   /radius exch def
+   /centerangle exch def
+   /ptsize exch def
+   /str exch def
+   /xradius radius ptsize 4 div add def
+
+   /radius radius charheight add def
+
+   gsave
+	 centerangle str findhalfangle sub rotate
+
+	 str
+	   { /charcode exch def
+		 (A) dup 0 charcode put insideplacechar
+	   } forall
+
+   grestore
+  end
+} def
+
+/circtextdict 16 dict def
+circtextdict begin
+  /findhalfangle
+    { stringwidth pop 2 div
+        2 xradius mul pi mul div 360 mul
+    } def
+
+  /outsideplacechar
+    { /char exch def
+      /halfangle char findhalfangle def
+      gsave
+        halfangle neg rotate
+        radius 0 translate
+        -90 rotate
+        char stringwidth pop 2 div neg 0 moveto
+        char show
+      grestore
+      halfangle 2 mul neg rotate
+    } def
+
+  /insideplacechar
+    { /char exch def
+      /halfangle char findhalfangle def
+      gsave
+        halfangle rotate
+        radius 0 translate
+        90 rotate
+        char stringwidth pop 2 div neg 0 moveto
+        char show
+      grestore
+      halfangle 2 mul rotate
+    } def
+
+  /charheight
+	{
+      newpath
+      0 0 moveto 
+      (A) true charpath flattenpath pathbbox 
+      exch 4 -1 roll pop pop
+      exch sub
+	} def
+
+  /pi 3.1415923 def
+end
+
+/makecircle {
+	/crad exch def
+	/cy exch def
+	/cx exch def
+	newpath
+	cx cy crad 0 360 arc stroke
+} def
+
+/centertext {
+	/str exch def
+
+	str strdimensions
+	2 div exch 2 div
+	4 -1 roll exch sub
+	3 1 roll sub
+	moveto str show
+} def
+
+/ptSize 31 def
+/Radius 108 def
+
+/Helvetica-Bold findfont ptSize scalefont setfont
+
+306 448 translate
+
+% 0 0 Radius makecircle
+% 0 0 1 makecircle
+
+(REUSABLE CODE) ptSize 90 Radius outsidecircletext
+
+(BETTER PROGRAMS NOW) ptSize 270 Radius insidecircletext
+
+do_dice
+
+/Helvetica-Bold findfont 70 scalefont setfont
+
+gsave
+1 setgray
+2 -52 (C++) centertext
+grestore
+gsave
+1 setgray
+-2 -52 (C++) centertext
+grestore
+gsave
+1 setgray
+-2 -48 (C++) centertext
+grestore
+gsave
+1 setgray
+2 -48 (C++) centertext
+grestore
+0 setgray
+0 -50 (C++) centertext
+
+showpage
+

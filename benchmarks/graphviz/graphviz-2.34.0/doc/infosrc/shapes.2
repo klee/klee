@@ -1,0 +1,193 @@
+</TABLE>
+As the figures suggest, the shapes <TT>rect</TT> and <TT>rectangle</TT> are synonyms for <TT>box</TT>, and <TT>none</TT> is a synonym for <TT>plaintext</TT>.
+Also, unlike the rest, we have shown these last two 
+without <TT>style=filled</TT>
+to indicate the normal use. If fill were turned on, the label text would
+appear in a filled rectangle.
+<P>
+The geometries of polygon-based shapes are also affected
+by the node attributes 
+<A HREF=attrs.html#d:regular><TT>regular</TT></A>, 
+<A HREF=attrs.html#d:peripheries><TT>peripheries</TT></A> and
+<A HREF=attrs.html#d:orientation><TT>orientation</TT></A>.
+If <TT>shape="polygon"</TT>, the attributes
+<A HREF=attrs.html#d:sides><TT>sides</TT></A>, 
+<A HREF=attrs.html#d:skew><TT>skew</TT></A> and
+<A HREF=attrs.html#d:distortion><TT>distortion</TT></A> are also used.
+If unset, they default to 4, 0.0 and 0.0, respectively.
+The point shape is special in that it is
+only affected by the <A HREF=attrs.html#d:peripheries><TT>peripheries</TT></A>, 
+<A HREF=attrs.html#d:width><TT>width</TT></A> and
+<A HREF=attrs.html#d:height><TT>height</TT></A> attributes.
+<P>
+The shapes: <TT>note</TT>, <TT>tab</TT>, <TT>folder</TT>,
+<TT>box3d</TT> and <TT>component</TT> were provided by Pander.
+The synthetic biology shapes:
+<TT>promoter</TT>,
+<TT>cds</TT>,
+<TT>terminator</TT>,
+<TT>utr</TT>,
+<TT>primersite</TT>,
+<TT>restrictionsite</TT>,
+<TT>fivepoverhang</TT>,
+<TT>threepoverhang</TT>,
+<TT>noverhang</TT>,
+<TT>assembly</TT>,
+<TT>signature</TT>,
+<TT>insulator</TT>,
+<TT>ribosite</TT>,
+<TT>rnastab</TT>,
+<TT>proteasesite</TT>,
+<TT>proteinstab</TT>,
+<TT>rpromoter</TT>,
+<TT>rarrow</TT>,
+<TT>larrow</TT> and
+<TT>lpromoter</TT>
+were contributed by Jenny Cheng.
+
+<H2><A NAME=record>Record-based Nodes</A></H2>
+These are specified by shape values of "record" and "Mrecord".
+The structure of a record-based node is determined by 
+its <A HREF=attrs.html#d:label><TT>label</TT></A>,
+which has the following schema:
+  <TABLE>
+  <TR><TD ALIGN=right><I>rlabel</I><TD>=<TD><I>field</I> ( '|' <I>field</I> )*</TR>
+  <TR><TD ALIGN=right>where <I>field</I><TD>=<TD>fieldId</I> or '{' <I>rlabel</I> '}'</TR>
+  <TR><TD ALIGN=right>and <I>fieldId</I><TD>=<TD> [ '<' <I>string</I> '>'] [ <I>string</I> ]</TR>
+  </TABLE>
+Braces, vertical bars and angle brackets must be escaped with
+a backslash character if you wish them to appear as a literal character.
+Spaces are interpreted as separators between tokens,
+so they must be escaped if you want spaces in the text.
+<P>
+The first string in <I>fieldId</I> assigns a portname to the field and can 
+be combined with the node name to indicate where to attach an edge
+to the node. (See <A HREF=attrs.html#k:portPos>portPos</A>.)
+The second string is used as the text for the field; it supports the usual
+<A HREF=attrs.html#k:escString>escape sequences</A> &#92;n, &#92;l and &#92;r.
+<P>
+Visually, a record is a box, with fields represented by alternating
+rows of horizontal or vertical subboxes. The Mrecord shape is identical
+to a record shape, except that the outermost box has rounded corners.
+Flipping between horizontal and vertical layouts is done by nesting
+fields in braces "{...}". The top-level orientation in a record is
+horizontal. Thus, a record with label "A | B | C | D" will have 4 fields 
+oriented left to right, while "{A | B | C | D}" will have them 
+from top to bottom and "A | { B | C } | D" will have "B" over "C", with
+"A" to the left and "D" to the right of "B" and "C".
+<P> 
+The initial orientation of a record node depends on the
+<A HREF="attrs.html#d:rankdir">rankdir</A> attribute. If this attribute
+is <TT>TB</TT> (the default) or <TT>TB</TT>, corresponding to vertical
+layouts, the top-level fields in a record are displayed horizontally.
+If, however, this attribute is <TT>LR</TT> or <TT>RL</TT>, 
+corresponding to horizontal layouts, the top-level fields are 
+displayed vertically.
+<P>
+As an example of a record node, the dot input
+<XMP>
+digraph structs {
+    node [shape=record];
+    struct1 [label="<f0> left|<f1> mid&#92; dle|<f2> right"];
+    struct2 [label="<f0> one|<f1> two"];
+    struct3 [label="hello&#92;nworld |{ b |{c|<here> d|e}| f}| g | h"];
+    struct1:f1 -> struct2:f0;
+    struct1:f2 -> struct3:here;
+}
+</XMP>
+
+yields the figure<BR>
+<IMG SRC=record.gif>
+<P>
+If we add the line
+<XMP>
+    rankdir=LR
+</XMP>
+we get the layout<BR>
+<IMG SRC=record2.gif>
+<P>
+If we change node <TT>struct1</TT> to have shape <TT>Mrecord</TT>,
+it then looks like:<BR>
+<IMG SRC=mrecord.gif>
+
+<H2><A NAME="d:style">Styles for Nodes</A></H2>
+The <A HREF=attrs.html#d:style><TT>style</TT></A>
+attribute can be used to modify the appearance of a node.
+At present, there are 8 style values recognized:
+<TT>filled</TT>, <TT>invisible</TT>, <TT>diagonals</TT>, <TT>rounded</TT>.
+<TT>dashed</TT>, <TT>dotted</TT>, <TT>solid</TT> and <TT>bold</TT>.
+As usual, the value of the <A HREF=attrs.html#d:style><TT>style</TT></A>
+attribute can be a comma-separated list of any of these. If the
+style contains conflicts (e.g, <TT>style="dotted, solid"</TT>), the last
+attribute wins.
+<DL>
+<DT><A NAME=d:filled></A><TT>filled</TT>
+  <DD>This value indicates that the node's interior should be filled.
+The color used is the node's <TT>fillcolor</TT> or, if that's not defined, its
+<TT>color</TT>. For unfilled nodes, the interior of the node is transparent to
+whatever color is the current graph or cluster background color.
+Note that <TT>point</TT> shapes are always filled.
+<P>
+Thus, the code
+<XMP>
+digraph G {
+  rankdir=LR
+  node [shape=box, color=blue]
+  node1 [style=filled] 
+  node2 [style=filled, fillcolor=red] 
+  node0 -> node1 -> node2
+}
+</XMP>
+yields the figure<BR>
+<IMG SRC=fill.gif>
+
+<DT><A NAME=d:invisible></A><TT>invisible</TT>
+  <DD>Setting this style causes the node not to be displayed at all.
+Note that the node is still used in laying out the graph.
+
+<DT><A NAME=d:diagonals></A><TT>diagonals</TT>
+  <DD>The diagonals style causes small chords to be drawn near the vertices
+of the node's polygon or, in case of circles and ellipses, two chords near
+the top and the bottom of the shape. The special node shapes
+<A HREF=#d:Msquare><TT>Msquare</TT></A>,
+<A HREF=#d:Mcircle><TT>Mcircle</TT></A>, and
+<A HREF=#d:Mdiamond><TT>Mdiamond</TT></A>
+are simply an ordinary square, circle and
+diamond with the diagonals style set.
+
+<DT><A NAME=d:rounded></A><TT>rounded</TT>
+  <DD>The rounded style causes the polygonal corners to be smoothed.
+Note that this style also applies to record-based nodes. Indeed,
+the <TT>Mrecord</TT> shape is simply shorthand for setting this style.
+Also, prior to 26 April 2005, the rounded and filled styles were 
+mutually exclusive.
+<P>
+As an example of rounding, dot uses the graph
+<XMP>
+digraph R {
+  rankdir=LR
+  node [style=rounded]
+  node1 [shape=box]
+  node2 [fillcolor=yellow, style="rounded,filled", shape=diamond]
+  node3 [shape=record, label="{ a | b | c }"]
+
+  node1 -> node2 -> node3
+}
+</XMP>
+to produce the figure<BR>
+<IMG SRC=round.gif>
+<DT><A NAME=d:dashed></A><TT>dashed</TT>
+  <DD>This style causes the node's border to be drawn as a dashed line.
+<DT><A NAME=d:dotted></A><TT>dotted</TT>
+  <DD>This style causes the node's border to be drawn as a dotted line.
+<DT><A NAME=d:solid></A><TT>solid</TT>
+  <DD>This style causes the node's border to be drawn as a solid line,
+which is the default.
+<DT><A NAME=d:bold></A><TT>bold</TT>
+  <DD>This style causes the node's border to be drawn as a bold line.
+See also <A HREF=attrs.html#d:penwidth>penwidth</A>.
+
+</DL>
+
+<P>
+Additional styles may be available with a specific code generator.

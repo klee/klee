@@ -1,0 +1,1095 @@
+graphviz (@VERSION@-1) intrepid; urgency=low
+
+  * Modified build scripts for Launchpad use
+
+ -- Graphviz Development <gviz_adm@graphviz.org>  Wed, 17 Oct 2012 13:07:00 -0400
+
+graphviz (2.18-1ubuntu5) intrepid; urgency=low
+
+  * libcgraph API bump ->5
+
+ -- John Ellson <ellson@research.att.com>  Tue, 19 Jan 2010 09:07:00 -0400
+
+graphviz (2.18-1ubuntu4) intrepid; urgency=low
+
+  * Enabled "--with-sfdp"  new layout engine
+
+ -- John Ellson <ellson@research.att.com>  Tue, 2 Jun 2009 22:38:00 -0400
+
+graphviz (2.18-1ubuntu3) intrepid; urgency=low
+
+  * Adapted for upstream nightly builds by applying graphviz_2.18-1ubuntu2.diff.gz
+    to CVS sources and adding the debian/ subtree to CVS.
+
+  * Removed all debian/patches/[0123]* and emptied debian/patches/series
+    since upstream should never need patches.
+    - Drop 0_tcl_manpages_section - applied upstream
+    - Drop 0_autoreconf_run - not needed
+    - Drop 1_disable_lumping_all_include_directories - applied upstream
+    - Drop 0_libtool_linking_reorder_workaround - not needed - previously disabled
+    - Drop 0_bindings_documentation - applied upstream
+    - Drop 0_versioned_plugin_config_file - applied upstream
+   
+  * Enabled "--with-rsvg" to provide support for node images in svg format.
+  * Enabled "--with-devil" to provide support for additional output formats.
+  * Enabled "--with-gdk-pixbuf" to provide support for additional output formats.
+  * Enabled "--with-ipsepcola" (was only disabled because of concern about C++ portability)
+
+ -- John Ellson <ellson@research.att.com>  Fri, 29 Aug 2008 09:55:33 -0400
+
+graphviz (2.18-1ubuntu2) intrepid; urgency=low
+
+  * Build against the newer guile 1.8 instead of the older 1.6.
+    (See LP #232428)
+
+ -- Martin Pitt <martin.pitt@ubuntu.com>  Wed, 06 Aug 2008 12:18:57 +0200
+
+graphviz (2.18-1ubuntu1) intrepid; urgency=low
+
+  * Merge from debian unstable, remaining changes:
+    - Build depend on liblualib50-dev instead of liblua5.1-0-dev.
+    - Drop libttf-dev (libttf-dev is in universe) (LP: #174749).
+    - Replace gs-common with ghostscript.
+    - Build-depend on python-dev instead of python2.4-dev or python2.5-dev.
+    - Mention the correct python version for the python bindings in the
+      package description.
+
+ -- Bryce Harrington <bryce@ubuntu.com>  Thu, 19 Jun 2008 20:23:23 -0700
+
+graphviz (2.18-1) unstable; urgency=low
+
+  * New upstream release:
+     - Move from Tcl/Tk 8.4 to 8.5.
+     - Now build python2.4 and python2.5 modules.
+  * debian/control:
+     - Replace tcl8.4-dev and tk8.4-dev with tcl8.5-dev and tk8.5-dev in
+       Build-Depends accordingly.
+     - Update the version in the long description of libgv-tcl.
+     - Add python2.5-dev to Build-Depends.
+     - Mention both versions in the long description of libgv-python.
+     - Drop libttf-dev from Build-Depends since that's a deprecated
+       package, replaced by libfreetype6-dev (which is already there),
+       thanks to Moritz Muehlenhoff for the notice (Closes: #473487).
+  * debian/libgv-tcl.install:
+     - Delete the entry about pkgIndex.tcl since it's now shipped under
+       the tcl directory.
+  * debian/libgv-python/install:
+     - Add “usr/lib/graphviz/python{24,25}”, later rearranged through
+       debian/rules.
+  * debian/pyversions:
+     - Add it, containing “2.4,2.5”.
+  * debian/rules:
+     - Pass an extra flag to configure: “--without-rsvg” to avoid an extra
+       plugin to be built, which would pull many other dependencies. A new
+       binary package might be introduced later, with both gtk and rsvg
+       plugins.
+     - Bump shlibs, new symbols.
+     - Use “pyversions -s” rather than “pyversions -d”.
+     - Use “--enable-python{24,25}” instead of just “--enable-python”.
+     - Install both python modules under appropriate site-packages
+       directories.
+     - Duplicate gv.py in both directories, then taken care of by
+       python-support.
+     - Get rid of tclpkg/gv/gv.R and tclpkg/gv/php_gv.h through dh_clean
+       to keep the diff clean.
+  * Drop workaround for FTBFS with gcc-4.3, fixed upstream:
+     - 2_workaround_ftbfs_with_gcc-4.3.
+  * Backport fix from CVS, preventing all include directories from being
+    lumped together, does causing python2.5 to be misbuilt (using
+    python2.4 includes).
+     - Add 1_disable_lumping_all_include_directories: Actual fix.
+     - Add 0_autoreconf_run: Needed since a Makefile.am is touched.
+     - Disable 0_libtool_linking_reorder_workaround: no longer applies
+       because of the autoreconf run.
+
+ -- Cyril Brulebois <cyril.brulebois@enst-bretagne.fr>  Sat, 12 Apr 2008 02:11:00 +0200
+
+graphviz (2.16.1-3) unstable; urgency=low
+
+  * Add workaround for FTBFS with gcc-4.3 (Closes: #466810):
+     - 2_workaround_ftbfs_with_gcc-4.3.
+  * Update doc-base section: from “Apps/Graphics” to “Graphics”.
+
+ -- Cyril Brulebois <cyril.brulebois@enst-bretagne.fr>  Wed, 26 Mar 2008 00:43:57 +0100
+
+graphviz (2.16.1-2) unstable; urgency=low
+
+  * Improved debian/copyright:
+     - Distinguish between copyright and license.
+     - Add copyright years and copyright holder (AT&T Corp.).
+     - Use “Copyright” and “©” instead of “(C)”.
+
+ -- Cyril Brulebois <cyril.brulebois@enst-bretagne.fr>  Tue, 26 Feb 2008 14:33:24 +0100
+
+graphviz (2.16.1-1) experimental; urgency=low
+
+  * New upstream release:
+     - Fixes regressions in dotty (Closes: #461530).
+  * Replaced “-V” with “-V 'libgraphviz4 (>= 2.16)'” in the dh_makeshlibs
+    call since no shlibs bump is required for this new upstream release.
+  * Dropped patch (merged upstream):
+     - 2_ocaml_tweak.
+     - 0_autoreconf_run (it was only needed because of 2_ocaml_tweak).
+  * Refreshed patches:
+     - 0_versioned_plugin_config_file.
+     - 0_bindings_documentation.
+  * Moved sections, resolving override disparities:
+     - libgv-python: from interpreters to python.
+     - graphviz-dev: from graphics to devel.
+  * Now ship diffimg since it actually looks useful to at least someone,
+    thanks to David Liontooth for having requested it (Closes: #460595).
+    Done by reverting the diffimg deletion in “install” target.
+  * Adapted Tcl bindings: moved to a subdirectory of /usr/lib/tcltk to
+    comply with the Tcl/Tk policy.
+  * Adapted the manpage accordingly: in the “load” call, adjusted the
+    path to the shared object.
+  * Dropped NEWS.Debian since its content wasn't really what one would
+    expect when stumbling upon it, thanks to Steve Langasek for the
+    original comment.
+  * Refreshed README.Debian:
+     - Dropped the note about gpr->gvpr and colorize->gvcolor renames.
+       That was done long ago (graphviz 1.10).
+     - Dropped notices about: bindings, -dev, and -doc packages.
+     - Updated pointers to examples and contrib files (Closes: #459955).
+     - Added a note about diffimg now being shipped (see above).
+     - Kept notes about the suggested packages mostly as-is, they need an
+       update.
+     - Refreshed entry about graphviz.7 (included upstream).
+     - Included former NEWS.Debian's item about C# and Java bindings.
+  * Improved handling of libgraphvizN-config-update:
+     - Build it from perlpod: debian/libgraphviz-config-update.pod.in
+       (and delete generated files in the “clean” target).
+     - Use a placeholder to refresh the SONAME automatically.
+     - Dropped debian/libgraphviz4-config-update.1 accordingly.
+  * No longer ship any .la file. Remaining ones were shipped through
+    libgraphviz-dev and libgv-tcl. Reverse dependencies can still be built
+    from sources without any troubles, so this deletion sounds safe.
+
+ -- Cyril Brulebois <cyril.brulebois@enst-bretagne.fr>  Thu, 21 Feb 2008 23:25:37 +0100
+
+graphviz (2.16-3ubuntu2) hardy; urgency=low
+
+  * Build depend on liblualib50-dev instead of liblua50-dev.
+
+ -- Matthias Klose <doko@ubuntu.com>  Fri, 08 Feb 2008 11:39:01 +0000
+
+graphviz (2.16-3ubuntu1) hardy; urgency=low
+
+  * Merge with Debian; remaining changes:
+    - Drop libttf-dev (libttf-dev is in universe) (LP: #174749).
+    - Replace gs-common with ghostscript.
+    - Build-depend on python-dev instead of python2.4-dev.
+    - Build-depend on liblua50-dev instead of liblua5.1-0-dev.
+    - Mention the correct python version for the python bindings in the
+      package description.
+
+ -- Matthias Klose <doko@ubuntu.com>  Fri, 08 Feb 2008 02:06:56 +0100
+
+graphviz (2.16-3) unstable; urgency=low
+
+  * Renamed libgraphviz4-dev to libgraphviz-dev since a single version is
+    supported at once:
+     - debian/control:
+        - Replaced libgraphviz4-dev with libgraphviz-dev.
+        - Added “Conflicts/Replaces: libgraphviz4-dev (<< 2.16-3)” to the
+          libgraphviz-dev package so that upgrades are possible for people
+          having installed the libgraphviz4-dev package from experimental.
+        - Added “Replaces: libgraphviz3-dev” at the same time.
+     - debian/rules: Removed $(SONAME) from libgraphviz$(SONAME)-dev.
+     - debian/libgraphviz4-dev.install -> debian/ libgraphviz-dev.install.
+  * Added “LDFLAGS="-Wl,--as-needed"” to the ./configure call so as to
+    avoid extra linking. It works for all binaries (/usr/bin/*) at least.
+  * Since the above isn't sufficient to get rid of extra linking in
+    libraries (because of libtool's bug #347650), the following patch
+    against config/ltmain.sh and libltdl/ltmain.sh has been added:
+     - 0_libtool_linking_reorder_workaround.
+  * Added “--without-ipsepcola” to ./configure to avoid FTBFS on arm. The
+    problem is due to a wrong linking of C++ code (since g++ isn't used
+    at the moment). Not that easy to fix (but being worked on), disabling
+    this feature for now.
+  * Nuke trailing whitespaces in various debian/* files.
+  * Order ./configure arguments, grouping them by category (build options,
+    general options, features, bindings).
+  * Switch to a build-time update of config.{guess,sub} scripts:
+     - Listed in $(CONFIG_SCRIPTS), to be updated on each new upstream
+       release (added to debian/README.Debian-packaging).
+     - Updated during the “configure” target, dh_clean'd during the
+       “clean” one.
+     - The Build-Depends on autotools-dev was there already.
+  * Deleted patch (no longer needed, see above):
+     - 0_autotools_config_files.
+  * Don't ship empty directories, by deleting /usr/lib/graphviz for php
+    and python bindings, rather than /usr/lib/graphviz/$LANGUAGE.
+  * Fixed ruby bindings, now that a policy draft exists:
+     - Ship the ruby module where it belongs (Closes: #454622).
+     - Updated patch (the RUBYLIB trick is no longer needed):
+        - 0_bindings_documentation.
+     - Added an explicit dependency on ruby1.8.
+  * Moved the build dependency from libgd2-xpm-dev to libgd2-noxpm-dev,
+    since this latter is sufficient, and since appropriate dependencies
+    are computed (libgd2-xpm | libgd2-noxpm). This allows for more
+    flexibility from a user point of view (Closes: #459537). Many thanks
+    to Ben Finney for the notice. The only change regarding the supported
+    features is that “xbm” is no longer supported in “loadimage”
+    according to the output of “dot -v”.
+  * Removed unneeded “Conflicts: graphviz (<< 2.12)” from libgv-ruby,
+    which got here when copying the libgv-tcl stanza.
+  * Bumped Standards-Version to 3.7.3 (no change needed).
+  * Added a copyright statement about the Debian packaging.
+
+ -- Cyril Brulebois <cyril.brulebois@enst-bretagne.fr>  Wed, 09 Jan 2008 03:18:46 +0100
+
+graphviz (2.16-2) experimental; urgency=low
+
+  * Added patches:
+     - 2_ocaml_tweaks:
+        - Make the generation of native objects conditional since ocamlopt
+          isn't available on every arch. Upstream didn't include the
+          conditional statements when merging the submitted patch. This patch
+          adds an AM_CHECK_PROG on ocamlopt and conditionally adds the native
+          objects to OCAML_data when needed (Closes: Bug#451763).
+        - Also delete duplicates in the OCAML_data, while adding the missing
+          gv.cmo file.
+     - 0_autoreconf_run: Needed again since configure.ac and a Makefile.am are
+       touched. Only keep in there the changes to aclocal.m4, configure, and
+       all Makefile.in's.
+  * Dropped OCaml-related files (merged upstream) and adapted related
+    instructions in debian/rules:
+     - debian/ocaml/Makefile.ocaml
+     - debian/ocaml/META.gv
+
+ -- Cyril Brulebois <cyril.brulebois@enst-bretagne.fr>  Mon, 19 Nov 2007 02:47:51 +0100
+
+graphviz (2.16-1) experimental; urgency=low
+
+  * New upstream release (Closes: #438420).
+  * Fixed regression in this new upstream release:
+     - Corrupted output creation for certain inputs (Closes: #432890).
+  * Fixed bug:
+     - Invalid EPS code creation (Closes: #397060). It was probably a bug in
+       2.8, thus might be fixed in 2.12 already. This version closes it for
+       sure at least. Further explanations from upstream are available on the
+       bugreport.
+  * Refreshed patches:
+     - 0_autotools_config_files: Updated to autotools-dev/20070725.1. Added a
+       TODO item about moving this patch to a build-time update.
+     - 0_versioned_plugin_config_file: Drop the first hunk, which modified
+       cmd/dot/Makefile.am to not run “dot -c”. Upstream now has a better
+       way to detect the installation for packaging purposes (using DESTDIR).
+     - 0_bindings_documentation: Updated lua manpage from lua5.0 old style to
+       lua5.1, thanks to Enrico Tassi (Closes: #448365).
+  * Dropped patches:
+     - 3_manpages_fix: Merged upstream.
+     - 3_manpages_hyphen_fix: Merged upstream.
+     - 1_diffimg_Makefile.am_fix: Merged upstream.
+     - 1_lefty_fix: Merged upstream.
+     - 3_gnomeui_configure.ac_fix: Merged upstream.
+     - 3_ruby-bindings_configure.ac_fix: Merged upstream.
+     - 3_php5-bindings_configure.ac_fix: Merged upstream.
+     - 3_bindings_Makefile.am_fix: Merged upstream.
+     - 3_lua-bindings_configure.ac_fix: Merged upstream.
+     - 0_autoreconf_run: No longer needed, given the dropped patches.
+  * Added patch:
+     - 0_tcl_manpages_section: Upstream ships tcl-related manpages in “mann”
+       instead of “man3” and wants to keep it that way. This patch modifies
+       the headers so that they contain “3” instead of “n”.
+  * debian/rules:
+     - Use a SONAME variable to ease SONAME transitions.
+     - Remove the extra “rm” calls now that upstream's “make distclean” is
+       sufficient.
+     - Modify the manpage handling since upstream now installs *.n manpages
+       under usr/share/man/mann. Also adapted some *.install files to install
+       some additional manpages.
+     - Drop the parameter of the “-V” option in the “dh_makeshlibs” call,
+       since a dependency based on the upstream version number is sufficient
+       by now.
+     - Do not install the “diffimg” binary, see NEWS.Debian.
+  * debian/NEWS:
+     - Add a note about “diffimg”.
+     - Add a status update about the bindings, especially about the python
+       one.
+  * debian/libgraphvizN.install:
+     - Made SONAME-independant: only specifies the overrides directory, no
+       longer the filename.
+  * debian/README.Debian-packaging:
+     - Updated to match the autoreconf patch dropping, and document the needed
+       automake version in case this patch has to be added again.
+  * debian/graphviz.7:
+     - Dropped, merged upstream.
+  * SONAME 3 -> 4 transition (all files are in debian/):
+     - rules:
+        - Adjusted SONAME variable.
+        - Adjusted versioned dependency for the shlibs.
+     - libgraphviz3-config-update.1:
+     - libgraphviz3.install:
+     - libgraphviz3.lintian-overrides:
+     - libgraphviz3.postinst:
+     - libgraphviz3.postrm:
+        - Renamed with s/3/4/.
+     - libgraphviz4.lintian-overrides:
+        - Updated SONAME in each override.
+     - libgraphviz4.post{inst,rm}:
+        - Updated with s/3/4/.
+     - patches/0_versioned_plugin_config_file:
+        - Updated with s/config3/config4/.
+     - control:
+        - Adjusted libgv-ocaml long description, which mentions the
+          libgraphvizN-dev package.
+  * debian/libgraphviz4.lintian-overrides:
+     - In addition to the SONAME bump, deletion of “libexpr” since it is now
+       used a convenience library, and addition of “libcgraph”.
+  * debian/watch:
+     - Upstream now uses x.y.z and not only x.y, updated regex to catch
+       [0-9.]+\.tar\.gz (the development snapshots are in another directory).
+  * debian/control:
+     - Version the B-D on libgd2-xpm-dev (>= 2.0.35) to ensure the internal
+       code copy isn't used.
+  * NOT added support for the gdk-pixbuf renderer:
+     - It supports .bmp .ico .jpg .png .tif.
+     - debian/control would need an additional B-D on libgtk2.0-dev.
+     - debian/rules would need an additional “--with-gdk-pixbuf”.
+     - But that pulls gtk, which is far too much for what graphviz has to do.
+     - Therefore, added a “--without-gdk-pixbuf” to ensure it isn't built,
+       even if gdk-pixbuf development files are available.
+
+ -- Cyril Brulebois <cyril.brulebois@enst-bretagne.fr>  Tue, 13 Nov 2007 00:50:12 +0100
+
+graphviz (2.12-5ubuntu2) hardy; urgency=low
+
+  * debian/control: Build-Depends:
+    + Drop libttf-dev (libttf-dev is in universe) (LP: #174749).
+    + Replace gs-common with ghostscript.
+  * Remaining Ubuntu changes (missing in the last changelog entry):
+    + Build-depend on python-dev instead of python2.4-dev.
+    + Build-depend on liblua50-dev instead of liblua5.1-0-dev.
+    + Mention the correct python version for the python bindings in the
+      package description.
+    + Set Ubuntu maintainer address.
+
+ -- Michael Bienia <geser@ubuntu.com>  Fri, 07 Dec 2007 21:54:45 +0100
+
+graphviz (2.12-5ubuntu1) hardy; urgency=low
+
+  * Merge with Debian; remaining changes:
+
+ -- Matthias Klose <doko@ubuntu.com>  Wed, 05 Dec 2007 19:23:49 +0000
+
+graphviz (2.12-5) unstable; urgency=low
+
+  * Modified bindings handling:
+     - tclpkg/gv/Makefile.am is now patched to set “-module -avoid-version” in
+       LDFLAGS. There are dynamically loadable modules rather than shared
+       libraries.
+     - Added patch for this:
+        - 3_bindings_module_avoid-version_options.
+     - Refreshed patch so as to refresh the appropriate Makefile.in (with only
+       an automake run):
+        - 0_autoreconf_run.
+     - There's still Tcl parts that are versioned.
+  * Fixed libgv-guile description, thanks to Kanru Chen (Closes: #439385).
+  * Fixed libgv-lua (Closes: #439525):
+     - After a discussion with Enrico Tassi, it has been decided to only build
+       against lua5.1, and not against both lua5.0 and lua5.1 as planned at
+       the beginning. Description updated to mention lua5.1 explicitely.
+     - debian/libgv-lua.install: Only mention the .so now (the .la's are
+       probably unneeded for bindings, they'll probably be amm dropped once
+       the tcl case has been sorted out).
+     - debian/rules: Some additional work is done to make it loadable
+       directly, and to document the used liblua version.
+        - Rename libgv_lua.so into liblua$(LUA_VERSION)-libgv.so.
+        - Add a symlink from /usr/lib/lua5.1/gv.so to the .so in /usr/lib.
+     - It looks like it is now usable directly with a single “require "gv"”.
+     - The documentation has still to be updated, though.
+  * Fixed libgv-ocaml:
+     - Rebuild against ocaml 3.10 (Closes: #441494).
+     - debian/control: Added a Suggests: on ocaml-base-nox to the -dev package
+       since it is needed for the OCaml development files, but not a stronger
+       relation since one will usually want to use the C headers.
+     - debian/control: Also added a Suggests: on ocaml-findlib to the -dev
+       package since it is suggested to use findlib to use the package (and
+       per pkg-ocaml-maint policy).
+     - debian/control: Modified long descriptions to detail the decision about
+       the OCaml binary packages.
+     - debian/rules: Moved the library to the stublibs directory of the
+       current ocaml version. Moved the devel files to the -dev package.
+       Drop the .la file and the now-empty /usr/lib/graphviz/ocaml directory.
+     - debian/ocaml/Makefile.ocaml: Add some instructions to build the missing
+       library files so that it is possible to actually load the gv library in
+       the interpreter. This file is copied into the source tree after the
+       usual build, and then use to build them. Its “clean” target is called
+       from debian/rules, and it gets removed before the usual “clean”.
+     - debian/ocaml/META.gv: Add META file used to handle OCaml dependencies.
+  * Improved libgv-python (Closes: #440829):
+     - debian/control: Added python-support to Build-Depends, python:Depends
+       to libgv-python's Depends.
+     - debian/rules: Added a call to dh_pysupport. Move to a site-packages
+       directory depending on the current default python version.
+     - Dropped the use of “-lpython”:
+        - Added patch: 3_python-bindings_configure.ac_fix.
+        - Refreshed patch: 0_autoreconf_run.
+     - Dropped .la file.
+     - Other points of the bugreports are already mentioned above.
+  * Other bindings (libgv-guile, libgv-perl, libgv-ruby):
+     - Dropped .la by specifying only the .so in their respective .install
+       file, instead of “*”.
+  * Adapted documentation:
+     - Lua: updated instructions (package.loadlib, new path).
+     - Python: one can now “import gv” directly.
+     - Refreshed patch: 0_bindings_documentation.
+  * debian/control: (thanks to dpkg 1.14.7)
+     - Rename XS-Vcs-* to Vcs-*.
+     - Move the Homepage from the description to the new header.
+
+ -- Cyril Brulebois <cyril.brulebois@enst-bretagne.fr>  Tue, 23 Oct 2007 03:21:13 +0200
+
+graphviz (2.12-4ubuntu3) gutsy; urgency=low
+
+  * Brown paper bag bug, change the control file, not just the changelog.
+
+ -- Matthias Klose <doko@ubuntu.com>  Tue, 04 Sep 2007 16:40:45 +0000
+
+graphviz (2.12-4ubuntu2) gutsy; urgency=low
+
+  * Build-depend on liblualib50-dev instead of liblua50-dev.
+
+ -- Matthias Klose <doko@ubuntu.com>  Tue, 04 Sep 2007 16:10:05 +0000
+
+graphviz (2.12-4ubuntu1) gutsy; urgency=low
+
+  * Merge with Debian; remaining changes:
+    - Remove build-dependency on libttf-dev.
+  * Build-depend on python-dev instead of python2.4-dev.
+  * Build-depend on liblua50-dev instead of liblua5.1-0-dev.
+  * Set Ubuntu maintainer address.
+
+ -- Matthias Klose <doko@ubuntu.com>  Tue, 04 Sep 2007 14:58:14 +0000
+
+graphviz (2.12-4) unstable; urgency=low
+
+  * Added bindings:
+     - guile      (Closes: #360969);
+     - lua        (Closes: #360971);
+     - ocaml      (Closes: #360975);
+     - php5       (Closes: #360973);
+     - python     (Closes: #360974);
+     - ruby       (Closes: #360978).
+  * Added Build-Depends accordingly:
+     - guile-1.6-dev;
+     - liblua5.1-0-dev;
+     - ocaml-nox;
+     - php5-dev, php5-cli;
+     - python2.4-dev, python-minimal;
+     - ruby1.8-dev, ruby.
+  * Some patches are needed to enable some bindings:
+     - added 3_bindings_Makefile.am_fix, since some variables were missing;
+     - added 3_ruby-bindings_configure.ac_fix to force ``-lruby1.8'' instead
+       of ``-lruby'', which isn't working;
+     - added 3_lua-bindings_configure.ac_fix to detect lua correctly.
+     - added 3_php5-bindings_configure.ac_fix to fix include paths (basically,
+       it does s/php/php5/g on this line). Maybe php5-cli might be unneeded,
+       if the detection of the php binary is turned off (it looks like
+       unneeded).
+  * Added a variable (control, rules) for ocaml, so that the Depends: is set
+    on the correct ocaml-base-nox-${F:OCamlABI} package.
+  * Binding manpages are shipped as gv_*.3, after some modifications to the
+    upstream templates, stored in the 0_bindings_documentation patch.
+  * Enabled diffimg:
+     - modified 0_disable_diffimg to only modify contrib/Makefile.am, since
+       now an autoconf/automake round is needed, due to the modifications to
+       configure.ac et al. This way it can be pop'd.
+     - renamed into 1_diffimg_Makefile.am_fix, since diffimg is now built,
+       thanks to a slight modification to the Makefile.am: there was an
+       erroneous condition on WITH_LIBGD, instead of WITH_MYLIBGD (this is
+       fixed in CVS).
+  * Added README.Debian-packaging to document some packaging howtos (at the
+    moment, what should be done to get the last patch: autoreconf run).
+  * Refreshed 0_autotools_config_files to patch config.{guess,sub} in the
+    following directories, with files from autotools-dev_20070306.1:
+     - config
+     - lib/gd/config
+     - libltdl
+  * Added 1_lefty_fix, which is a backport of a regression (2.8 -> 2.12) fix
+    for lefty, thanks to Sune Vuorela for reporting, and to Emden R. Gansner
+    for the patch.
+  * Adjusted clean target in debian/rules to clean appropriately.
+  * Added the -V 'libgraphviz3 (>= 2.12-3)' parameter to the dh_makeshlibs
+    call so that the appropriate library version is depended on, avoiding the
+    hardcoded values in the control file, and the duplicates in the Depends:
+    fields after substitution. Now ${shlibs:Depends} is used instead, almost
+    everywhere. libgraphviz3-dev still has hardcoded dependencies, see
+    TODO.Debian. Also turned ``-a'' into ``-plibgraphviz3'' since it is the
+    only package needing an shlibs file and ldconfig calls in post{inst,rm}
+    scripts.
+  * Added installation of /usr/bin/dot under /usr/sbin in the libgraphviz3
+    package, so that it can be called when needed, during libgraphviz3 or
+    libgraphviz3-*-plugin installation or removal. Added a call to ``mv'' in
+    debian/rules to rename it to libgraphviz3-config-update since dh_install
+    doesn't allow renaming.
+  * Changed 0_test_fix into 0_versioned_plugin_config_file:
+     - Former patch needed so that no ``dot -c'' is run at build time.
+     - Adjusted configuration file accordingly, by patching
+       lib/gvc/gvconfig.c, using "config3" instead of "config".
+  * Added ``--list-missing'' option to dh_install, so that files not installed
+    are spotted easily.
+  * Maintainer scripts, plugin configuration file:
+     - Dropped debian/postinst and debian/postrm, the configuration
+       (``dot -c'') of the plugins is now handled as documented in
+       through libgraphviz3(|*-plugin).{postinst,postrm}, as documented in
+       README.Debian-packaging.
+     - Added a check and a removal-when-needed for the ancient "config" file.
+     - Added a manpage accordingly.
+  * Fixed some hyphens in Debian-specific manpages.
+  * Fixed broken links in index.html by not compressing PDF files (``-X.pdf''
+    added to the ``dh_compress -i'' call), since they are in a separate
+    package, there's not much space loss, and it makes users' life easier
+    (Closes: #378522).
+  * Adapted lintian overrides since the output changed (SONAMES are now
+    sorted, see #428681, fixed in lintian 1.23.32).
+  * Fixed pango plugin misconfiguration, due to some autotools blackmagic. Now
+    that ./configure and the like are regenerated, everything seems to be
+    fine (Closes: #424883, #422859). Please also note that the upstream
+    graphviz-cairo package is now superseded by the graphviz package.
+  * Added missing -dev packages to the Depends: of the libgraphviz3-dev
+    package, in particular libexpat1-dev (libfreetype6-dev seems to be no
+    longer needed), using d-devlibdeps from the d-shlibs package. Build
+    dependency added accordingly (Closes: #404384).
+  * Set the Maintainer field to myself.
+  * Do not ignore ``make distclean'' errors.
+  * Added XS-Vcs-Git and XS-Vcs-Browser fields in debian/control.
+  * Moved ``Apps/Graphics'' to ``Applications/Graphics'' for the menu
+    transition.
+
+ -- Cyril Brulebois <cyril.brulebois@enst-bretagne.fr>  Thu, 09 Aug 2007 16:25:51 +0200
+
+graphviz (2.12-3ubuntu1) gutsy; urgency=low
+
+  * Build using freetype2.
+
+ -- Matthias Klose <doko@ubuntu.com>  Fri, 13 Jul 2007 15:52:33 +0000
+
+graphviz (2.12-3) unstable; urgency=low
+
+  * Re-enable lefty, which was a leftover during the 2.8 -> 2.12 upgrade:
+     - turned back configure's --without-x to --with-x;
+     - adjusted graphviz.install to install *.lefty under
+       /usr/share/graphviz/lefty
+    (Closes: #423541).
+
+ -- Cyril Brulebois <cyril.brulebois@enst-bretagne.fr>  Sun, 13 May 2007 21:20:24 +0200
+
+graphviz (2.12-2) unstable; urgency=low
+
+  * Fixed gnomeui + pango/cairo pulling: (Closes: #422862, #422873)
+     - added 3_gnomeui_configure_fix patch: adds support in configure.ac
+       for --with(out)-gnomeui, so that it can be used to disable the link
+       against gnomeui libraries even if they are found;
+     - added configure_autoconf_rerun: contains the modifications to configure
+       after autoconf has been rerun;
+     - added --without-gnomeui and --without-pangocairo in debian/rules
+       accordingly;
+     - added --without-gtk as well, and turned --with-x into --without-x
+       since the associated shared objects weren't built anyway.
+  * The associated features might be added in separate package(s) later.
+
+ -- Cyril Brulebois <cyril.brulebois@enst-bretagne.fr>  Tue, 08 May 2007 17:16:29 +0200
+
+graphviz (2.12-1) unstable; urgency=low
+
+  * New upstream release.
+    Hopefully it addresses the longstanding rpath issue, since all public
+    libraries now belongs to /usr/lib (Closes: #312532, #343476, #360968).
+    The problem of language bindings will be addressed in further uploads.
+  * Maintainer upload.
+     - Added myself in the Uploaders field.
+  * ACK previous NMUs: many thanks for having taken care of graphviz when
+    needed.
+     - Margarita Manterola <marga@debian.org> (no NMU diff in the BTS);
+     - Steinar H. Gunderson <sesse@debian.org> (Closes: #375024, #389396);
+     - and my own NMUs (Closes: #399212, #400161).
+
+  [debian/patches]
+  * Disabled no longer needed backported patches:
+     - 10000_lua_python_bindings;
+     - 10918_nop_fix.
+  * Disabled the build of the contrib `diffimg' tool since it looks like
+    there's a missing .la file:
+     - 0_disable_diffimg.
+  * Added a patch to handle minus vs hyphen signs in the manpages: 
+     - 3_manpages_hyphen_fix. 
+
+  [debian/control]
+  * Made the package binNMU safe by switching from `${Source-Version}' to
+    `{binary:Version}'.
+  * Resplitted packaging into graphviz, libgraphvizN, libgraphvizN-dev,
+    graphviz-doc, where N matches the SONAME, currently 3.
+  * Additional packages also count the following bindings: libgv-perl and
+    libgv-tcl, which were included in the monolithic graphviz package before.
+    The transition should be quite smooth this way. The bindings package will
+    be named libgv-* so as to avoid name clashing with e.g. libgraphviz-perl,
+    which is a pure perl package. It also reflects the name of the bindings
+    (shared objects). The dependencies have still to be polished, that is
+    listed in TODO(.Debian).
+     - Perl's "gv"  has been moved under /usr/lib/perl5, according to the
+       Debian Perl Policy, and this module is loadable without the additional
+       `use lib' line, which can be kept though because:
+         1) it is harmless;
+         2) it should ensure compatibility with default upstream installation
+            paths.
+     - Tcl files are kept under /usr/lib/graphviz/tcl, as in the previous
+       packages. When loading it through the "load" instruction specified in
+       the manpage, everything's alright. But if it is loaded using the
+       following, an error is displayed, although apparently harmless:
+         % package require Tcldot
+         Error: invalid api in config: libgvplugin_usershape_gd.so.2 usershape
+         2.12
+       It can happen when an older graphviz package hasn't been purged, so
+       that an older config file is still present under /usr/lib/graphviz.
+  * Not added a conflict between libgraphviz3 and former versions of graphviz,
+    since there is no file overlapping, with both SONAME bump and package
+    resplit (in particular thanks to the binding packages).
+  * Added a conflict between new graphviz-doc and older graphviz, since
+    documentation and examples are now in graphviz-doc.
+  * Added a transitional graphviz-dev package to ensure a smooth upgrade from
+    graphviz-dev to libgraphviz3-dev.
+  * Adjusted all the descriptions, and the sections the packages belong to.
+
+  [debian/rules]
+  * Revamped the install target of the debian Makefile to use dh_install and
+    *.install files instead of dh_movefiles and *.{dirs,files}. These
+    *.install files have been adjusted to be as clean as possible. Some files
+    (documentation, examples) present in the previous packages might now be
+    missing, but it is already known, see the updated TODO(.Debian) file.
+  * Turned the dh_shlibdeps call into a normal call w/o rpath since upstream
+    now ships under /usr/lib and no longer under /usr/lib/graphviz.
+  * Deleted the `-n' option of `dh_makeshlibs' so that the needed `ldconfig'
+    calls are added in the maintainer scripts.
+  * Added an override for libgraphviz3 since we are aware of the multiple
+    share objects, and since lintian signals that all have `3' as SONAME,
+    which is considered an error...
+  * Renamed menu to graphviz.menu to ensure it gets installed properly.
+  * Changed the ``make install'' to using ``DESTDIR='' instead of ``prefix='',
+    thanks to Alexander Sack.
+  * Added dh_perl calls, to be able to use ${perl:Depends} in the control
+    file, even though no dependency is added for now.
+
+ -- Cyril Brulebois <cyril.brulebois@enst-bretagne.fr>  Thu, 16 Apr 2007 16:45:34 +0200
+
+graphviz (2.8-2.6) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Moved groff-base and gs-common from Build-Depends-Indep to Build-Depends.
+    Fixes FTBFS when building binary-arch only.
+
+ -- Cyril Brulebois <cyril.brulebois@enst-bretagne.fr>  Fri,  8 Dec 2006 11:47:06 +0000
+
+graphviz (2.8-2.5) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Switched to the quilt system to keep the patches readable and handy. As a
+    convention, the following prefixes are used:
+     0 - Debian-specific fix
+     1 - Backported fix (followed by a 4-digit upstream bug number)
+     2 - Submitted fix (followed by a 4-digit upstream bug number)
+     3 - Not-yet submitted fix
+    Patches already present:
+     - 0_autotools_config_files:
+         Adds config.{guess,sub} from /usr/share/misc (from the autotools-dev
+         package). debian/rules adjusted accordingly so that it doesn't
+         refresh them. The autotools-dev B-D could probably be dropped.
+     - 0_test_fix:
+         Fixes an error during the build due to the fact that the installation
+         is not done directly into the system but on a subdirectory.
+     - 10000_lua_python_bindings:
+         Backport from upstream modification into configure.ac, patch
+         generated after having run `autoconf'.
+     - 10918_nop_fix:
+         Backport introduced in 2.8-2.4.
+     - 3_manpages_fix:
+         See the next two items.
+  * Added a patch to fix some warnings in the manpages (Closes: #381063).
+  * Added a graphviz.7 manpage and a reference to it in README.Debian.
+    Thanks to Joachim Berdal Haga <jbh@lupus.ig3.net> for the documentation
+    effort this manpage is based on (Closes: #389105).
+  * Updated debian/rules to use dh_installman to handle manpages.
+  * Modified debian/graphviz.dirs so that the build is less vulnerable to
+    behaviour modifications of core utils (Closes: #376049).
+    Thanks to Florent Bayle <florent@sarcelle.net> for the patch.
+  * Updated URL in debian/control (Closes: #377691).
+  * Improved descriptions in debian/control.
+  * Removed the erroneous trailing backslash in debian/graphviz-doc.doc-base.
+  * Bumped Standards-Version from 3.6.2 to 3.7.2 (no change needed).
+  * Bumped debhelper compatibility from 4 to 5 (no change needed).
+
+ -- Cyril Brulebois <cyril.brulebois@enst-bretagne.fr>  Mon, 20 Nov 2006 04:46:07 +0000
+
+graphviz (2.8-2.4) unstable; urgency=low
+
+  * Non-maintainer upload.
+  * Fixed totally broken `nop' utility by applying a patch backported from the
+    2.9 version, fixing the linking against a wrong library. Since the current
+    packaging doesn't provide any means of keeping patches separate, the files
+    cmd/tools/Makefile.{am,in} are patched directly, using the patch submitted
+    in the BTS (closes: #359870).
+
+ -- Cyril Brulebois <cyril.brulebois@enst-bretagne.fr>  Fri, 17 Nov 2006 21:05:35 +0100
+
+graphviz (2.8-2.3) unstable; urgency=medium
+
+  * Non-maintainer upload.
+  * Tell configure not to build language packages we don't distribute; fixes
+    FTBFS when libruby1.8-dev is installed. (Closes: #388056)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Mon, 25 Sep 2006 15:16:12 +0200
+
+graphviz (2.8-2.2) unstable; urgency=medium
+
+  * NMU to fix a Failure To Build From Source due to a missing dependency on
+    liblua50-dev. (Closes: #377694).
+  * Fixed debian/rules so that the .diff.gz is cleaner. (Closes: #373256) 
+
+ -- Margarita Manterola <marga@debian.org>  Tue, 18 Jul 2006 15:27:49 -0300
+
+graphviz (2.8-2.1) unstable; urgency=high
+
+  * Non-maintainer upload.
+  * When moving the demo tree into /usr/share/doc/graphviz/examples, don't
+    try to move demo/pathplan_data/* after demo/*, since the latter includes
+    the former anyhow; fixes FTBFS. (Closes: #373254)
+
+ -- Steinar H. Gunderson <sesse@debian.org>  Thu, 22 Jun 2006 21:27:26 +0200
+
+graphviz (2.8-2) unstable; urgency=low
+
+  * Awaken Tcl parts missed in 2.8-1 package 
+  * Apply patch from upstream enabling python I/F to build on 64bit machines
+  * Apply patch from upstream adding warn when python won't be built
+  * Ensure all index.html links work again (Closes: Bug#298463)
+  * Move -doc package to arch-all from any (Closes: Bug#360967)
+  * Ensure libs exist for symlinks (Closes: Bug#361444)
+  * Ensure graphviz plugins exist (Closes: Bug#359998)
+  * v2.8 fixes segfault (Closes: Bug#292635)
+
+ -- Stephen M Moraco <stephen@debian.org>  Sat,  8 Apr 2006 17:04:15 -0600
+
+graphviz (2.8-1) unstable; urgency=low
+
+  * Accept NM contributions from Dirk, Thanks! (Closes: Bug#320813)
+  * The NMUs fix: (Closes: Bug#359808, #360049, #359903, #359622)
+    and (Closes: Bug#359312, #360207)
+  * This upstream release closes many bugs.  (Closes: Bug#332205)
+    and (Closes: Bug#332204, #332203, #332202, #332201, #335175, #344256)
+    and (Closes: Bug#312596, #321128, #305375, #298133)
+  * Add gsfonts to suggested packages list. This is normally already installed
+    with X but when using graphviz w/o X then we need this package for the
+    default fonts (Closes: Bug#353050)
+  * Moved files to proper pkgconfig directory (Closes: Bug#313508)
+
+ -- Stephen M Moraco <stephen@debian.org>  Sat,  1 Apr 2006 16:12:12 -0700
+
+graphviz (2.8-0.4) unstable; urgency=low
+
+  * NMU, coordinating with the maintainer
+  * debian/control: At last added libltdl3-dev to Build-Depends which 
+    should have happened in revision 2.8-0.2 	(Closes: #359903, #360049)
+  * debian/rules: Give dh_shlibdeps an explicit -l target
+  * debian/rules: Add -n to dh_mkshlibs call to not modify post{inst,rm}
+  * debian/control: Increase Standards-Version: to 3.6.2
+
+ -- Dirk Eddelbuettel <edd@debian.org>  Thu, 30 Mar 2006 20:04:06 -0600
+
+graphviz (2.8-0.3) unstable; urgency=low
+
+  * NMU, coordinating with the maintainer
+  
+  * debian/postinst: Call 'dot -c' to pre-seed configuration. This is 
+    typically done at build-time via the upstream Makefile, but cannot be
+    used for a Debian build (yet, at least).  Running it in the postinst 
+    is a close enough approximation.   (Closes: #359312, #359622, #359808)
+  
+ -- Dirk Eddelbuettel <edd@debian.org>  Wed, 29 Mar 2006 17:53:20 -0600
+
+graphviz (2.8-0.2) unstable; urgency=low
+
+  * NMU 
+  * debian/rules: Remove /usr/lib/libltdl.* and /usr/include/ltdl.h
+  * debian/control: Add Depends: libltdl3-dev to graphiviz-dev
+  
+ -- Dirk Eddelbuettel <edd@debian.org>  Sat, 25 Mar 2006 22:35:51 -0600
+
+graphviz (2.8-0.1) unstable; urgency=low
+
+  * NMU
+  * New upstream release (Closes: #320813)
+
+  * cmd/doc/Makefile.{in,am}: Comment out 'doc -c' in install-exec-hook
+    as shared libs cannot be resolved right after build
+
+  * debian/rules: Set DH_COMPAT=4
+  * debian/rules: As the upstream change a few things since the last Debian 
+    new build of a new major release a year ago, chose to commented out a 
+    large section of postprocessing and cleaning following make install 
+  * debian/rules: Added removal of dot_static and extra COPYING (lintian)
+
+ -- Dirk Eddelbuettel <edd@debian.org>  Sat, 25 Mar 2006 17:05:35 -0600
+
+graphviz (2.2.1-1sarge1) stable-security; urgency=high
+
+  * Non-maintainer upload by the Security Team
+  * Applied upstream patch to fix insecure temporary file creation
+    [dotty/dotty.lefty, CAN-2005-2965]
+
+ -- Martin Schulze <joey@infodrom.org>  Fri, 30 Sep 2005 14:00:46 +0200
+
+graphviz (2.2.1-1) unstable; urgency=low
+
+  * New Upstream Version
+  * Fix Suggests missing comma (Closes: Bug#301216)
+  * Comma-fix allows suggests to work (Closes: Bug#303248)
+  * Added menu items for dotty,lefty (Closes: Bug#297238)
+
+ -- Stephen M Moraco <stephen@debian.org>  Sun, 10 Apr 2005 23:58:56 -0600
+
+graphviz (2.2-2) unstable; urgency=low
+
+  * Fix -doc depend (Closes: Bug#292428)
+
+ -- Stephen M Moraco <stephen@debian.org>  Mon,  7 Feb 2005 22:42:28 -0700
+
+graphviz (2.2-1) unstable; urgency=low
+
+  * New Upstream Version
+  * Moving from non-free to main.  Yeay! 
+     License is now cpl-1.0 (Closes: Bug#290112)
+  * Fixed doc-base files, now simply using top-level index (Closes: Bug#285642)
+  * Fixed neato: die with SIGFPE 8 on simple graph (Closes: Bug#270492)
+  * Fixed neato: fixes for abnormal term. cases (Closes: Bug#212192)
+  * Fixed dotty: fixes segfault on mouse wheel movement (Closes: Bug#178938)
+  * Fixed dotty: mouse/numlock interaction (Closes: Bug#268132)
+  * Fixed dot: SVG output corruption (Closes: Bug#278176)
+  * Fixed dot: manpage/doc updated (Closes: Bug#249589)
+
+ -- Stephen M Moraco <stephen@debian.org>  Wed, 19 Jan 2005 20:56:43 -0700
+
+graphviz (1.16-1) unstable; urgency=low
+
+  * New Upstream
+
+ -- Stephen M Moraco <stephen@debian.org>  Mon,  1 Nov 2004 21:00:59 -0700
+
+graphviz (1.14-1) unstable; urgency=low
+
+  * New Upstream Version
+
+ -- Stephen M Moraco <stephen@debian.org>  Mon, 30 Aug 2004 19:29:30 -0600
+
+graphviz (1.12-3) unstable; urgency=low
+
+  * Fix -dev section
+  * Cleanup copyright file (Closes: Bug#268565)
+
+ -- Stephen M Moraco <stephen@debian.org>  Sat, 28 Aug 2004 17:41:35 -0600
+
+graphviz (1.12-2) unstable; urgency=low
+
+  * Adopt NMU... (Closes: Bug#241124, Bug#255982) Thanks Dirk!
+  * Split stuff supporting build to -dev package (Closes: Bug#212682)
+    -- this treats differently the work done in 1.12-1 
+  * debian/control: Added Suggests for "msttcorefonts" for 
+    Times font (Closes: Bug#239486).  If writing .png files then you
+    may find that you want the Times font as suggested by this bug.
+    NOTE: if there is a better package for the Times font, please let
+    me know.
+  * debian/control: Backoff Standards-Version to 3.6.1
+
+ -- Stephen M Moraco <stephen@debian.org>  Tue, 17 Aug 2004 13:25:47 -0600
+
+graphviz (1.12-1) unstable; urgency=low
+
+  * Non-maintainer hijacking and new upstream upload
+  * This package _really_ needs a new maintainer (see #255982)
+  * New upstream version (Closes: #241124)
+    -- this potentially closes a few of the open bugs on functionality
+    -- could someone please volunteer and check this ?
+  * debian/rules: do not remove include files so that other packages
+    can actually build against graphviz  (Closes: #212682) -- though
+    #212682 also calls for an explicit libgraphviz package.
+  * debian/rules: do not muck around among the freshly built libraries
+
+  * debian/control: Updated Build-Depends: "libjpeg62-dev, libpng12-dev, 
+    libxaw7-dev" instead of unversioned "libjpeg-dev, libpng-dev, libxaw-dev"
+  * debian/control: Added Build-Depends "libttf-dev" for Freetype
+  * debian/control: Added Build-Depends "libexpat1-dev" for Expat
+  * debian/changelog: Remove obsolete emacs mode variable
+  * debian/control: Updated Standards-Version to 3.6.1.1
+
+ -- Dirk Eddelbuettel <edd@debian.org>  Mon, 26 Jul 2004 20:59:06 -0500
+
+graphviz (1.10.20030915.0415-2) unstable; urgency=low
+
+  * Fix embedded path to lefty libs (Closes: Bug#211443)
+
+ -- Stephen M Moraco <stephen@debian.org>  Wed, 17 Sep 2003 20:56:33 -0600
+
+graphviz (1.10.20030915.0415-1) unstable; urgency=low
+
+  * New Upstream Version (Closes: Bug#204457)
+  * Fixes dot -Tfig when '>' used in names (Closes: Bug#167890)
+  * Fixes font finding algorithm (Closes: Bug#193560)
+  * Unable to recreate non-end of neato with this version (Closes: Bug#197059)
+  * Unable to recreate TclDot rendergd failure this version (Closes: Bug#203208)
+  * This is official 1.10 plus fixes specifically for Debian reported issues
+     (generated by graphviz team): new manpage, tool renames, Makefile fixes
+  * Update per debhelper best practice changes
+  * Adjust Depends (Closes: Bug#195223, Bug#194433, Bug#200694)
+  * Update Policy Version
+
+ -- Stephen M Moraco <stephen@debian.org>  Mon, 15 Sep 2003 20:40:22 -0600
+
+graphviz (1.8.9-1) unstable; urgency=low
+
+  * Update to latest policy version
+  * New Upstream Version (Closes: Bug#147424, Bug#157980, Bug#148457)
+
+ -- Stephen M Moraco <stephen@debian.org>  Sat, 21 Sep 2002 15:21:06 -0600
+
+graphviz (1.8.5-2) unstable; urgency=low
+
+  * Fix doc-base links, add missing doc (Closes: Bug#149647)
+  * Apply missing bracket fix (to ihi script in examples), Bug148457 is marked
+     as fixed but stays open awaiting upstream fix
+
+ -- Stephen M Moraco <stephen@debian.org>  Thu,  4 Jul 2002 12:02:22 -0600
+
+graphviz (1.8.5-1) unstable; urgency=low
+
+  * New upstram version (Closes: Bug#138425)
+
+ -- Stephen M Moraco <stephen@debian.org>  Tue, 16 Apr 2002 23:09:06 -0600
+
+graphviz (1.7.16-2) unstable; urgency=low
+
+  * Rename gpr(1) to gvgpr and fix refs to it. (Closes: Bug#132543)
+  * Head off next bug by renaming colorize to gvcolorize (before the
+    overlap is discovered and reported ;-)
+
+ -- Stephen M Moraco <stephen@debian.org>  Tue,  5 Feb 2002 18:52:12 -0700
+
+graphviz (1.7.16-1) unstable; urgency=low
+
+  * New upstream version (Closes: Bug#127118)
+  * Add autoupdate of config.sub, config.guess
+  * Questionable postscript output appears fixed (Closes: Bug#128648)
+  * Update to latest policy version
+
+ -- Stephen M Moraco <stephen@debian.org>  Sat,  2 Feb 2002 00:58:13 -0700
+
+graphviz (1.7.5-7) unstable; urgency=low
+
+  * Fixup build-depends (Closes: Bug#101331)
+
+ -- Stephen M Moraco <stephen@debian.org>  Mon, 25 Jun 2001 21:11:40 -0600
+
+graphviz (1.7.5-6) unstable; urgency=low
+
+  * Fix path in lefty / remove LEFTYPATH overrides from lneato/dotty
+
+ -- Stephen M Moraco <stephen@debian.org>  Fri, 20 Apr 2001 08:48:49 -0600
+
+graphviz (1.7.5-5) unstable; urgency=low
+
+  * Now fix searchpath in lefty binary (2nd attempt on 94373)
+    first attempt fixed all but lefty binary
+
+ -- Stephen M Moraco <stephen@debian.org>  Fri, 20 Apr 2001 03:01:45 -0600
+
+graphviz (1.7.5-4) unstable; urgency=low
+
+  * Correct LEFTY library paths (Closes: Bug#94373)
+
+ -- Stephen M Moraco <stephen@debian.org>  Wed, 18 Apr 2001 10:02:19 -0600
+
+graphviz (1.7.5-3) unstable; urgency=low
+
+  * Build against newer libs (Closes: Bug#91466)
+
+ -- Stephen M Moraco <stephen@debian.org>  Mon, 26 Mar 2001 15:00:24 -0700
+
+graphviz (1.7.5-2) unstable; urgency=low
+
+  * Fix man3 removal cmds (didn't work first time...)
+
+ -- Stephen M Moraco <stephen@debian.org>  Sun, 25 Mar 2001 18:50:58 -0700
+
+graphviz (1.7.5-1) unstable; urgency=low
+
+  * Remove man3 pages as they are not for end-user and conflict with blt-dev
+  * Convert to use freetype6 and remove xaw3dg build-dep (Closes: Bug#90378)
+  * Add Conflicts: with gdtclft pkg (Closes: Bug#90544) 
+    NOTE: this may not be final solution. 90378 proposes alternatives, 
+    still negotiating
+  * Directories verified, close fixed-by-NMU (Closes: Bug#76025)
+  * Lefty.psp verified, close fixed-by-NMU (Closes: Bug#78511)
+  * Is latest upstream, close fixed-by-NMU (Closes: Bug#89387)
+  * Delivered HTML for otherwise missing section-n man-pages.
+  * Registered all docs with dwww, dhelp via doc-base mech.
+
+ -- Stephen M Moraco <stephen@debian.org>  Wed, 21 Mar 2001 20:48:01 -0700
+
+graphviz (1.7.5-0.3) unstable; urgency=low
+
+  * See README.Debian for issues and work remaining
+  * tkspline lib now present (Closes: Bug#76030)
+  * New version uses installed libs vs. had own (Closes: Bug#66941)
+  * Adjust to new maintainer address
+    (Thanks Torsten for handling things during my absence)
+
+ -- Stephen M Moraco <stephen@debian.org>  Mon, 19 Mar 2001 08:37:46 -0700
+
+graphviz (1.7.5-0.2) unstable; urgency=low
+
+  * NMU
+  * this and the last NMU closes: #78511, #76025
+  * fixed some lintian warnings and errors
+  * fixed Depends and Build-Depends (partially)
+
+ -- Torsten Werner <twerner@debian.org>  Sun, 18 Mar 2001 14:40:33 +0100
+
+graphviz (1.7.5-0.1) unstable; urgency=low
+
+  * NMU
+  * new upstream, closes: #89387
+
+ -- Torsten Werner <twerner@debian.org>  Sun, 18 Mar 2001 02:22:08 +0100
+
+graphviz (1.5-3) unstable; urgency=low
+
+  * restore to non-free location
+
+ -- Stephen M. Moraco <stephen@col.hp.com>  Wed, 19 Jul 2000 15:29:42 -0600
+
+graphviz (1.5-2) unstable; urgency=low
+
+  * removed manpages that overlap with real package (this is only partial
+    solution called for in #66941.  I'll finish the conversion in next
+    upload.)
+  * tcldot.1 manpage should really be a tcldot.n - need to figure out what's
+    correct for Debian and correct, if need be, in next upload
+  * added Build-Depends to source package
+  * adjusted text in tcldot.1 to show accuate syntax for shell script
+    -- (missing required back-slash)
+  * adjusted build of dotty/lneato to build-in default lefty path
+  * removed man3 pages (may appear later in -dev)
+  * converted makes to build w/ -fPIC for .so use
+  * add rest of system to package (Closes: #63520, #63685)
+    -- new /usr/lib/lefty & Tcldot... subtrees
+    -- corrected mod-bits in examples tree  (per lintian)
+  * fixed URL in copyright file (Closes: #66020)
+
+ -- Stephen M. Moraco <stephen@col.hp.com>  Wed, 19 Jul 2000 15:29:07 -0600
+
+graphviz (1.5-1) unstable; urgency=low
+
+  * Initial Release.  
+
+ -- Stephen M. Moraco <stephen@col.hp.com>  Fri, 31 Dec 1999 15:37:17 -0700
+

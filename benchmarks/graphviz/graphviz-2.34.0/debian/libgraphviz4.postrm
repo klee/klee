@@ -1,0 +1,12 @@
+#!/bin/sh
+
+set -e
+
+# Remove the configuration file if present, see README.Debian-packaging
+# Needed only in libgraphivzN
+if [ -f /usr/lib/graphviz/config4 ]; then
+	rm -f /usr/lib/graphviz/config4
+fi
+
+
+#DEBHELPER#

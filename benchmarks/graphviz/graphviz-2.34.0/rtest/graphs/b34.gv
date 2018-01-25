@@ -1,0 +1,20 @@
+digraph grafo {
+graph [charset=latin1]
+"0" [ fontname=verdana height=0.1 width=0.1 shape=box label = "seres" ];
+"1" [ fontname=verdana height=0.1 width=0.1 shape=box label = "vivos" ];
+"2" [ fontname=verdana height=0.1 width=0.1 shape=box label = "animales" ];
+"3" [ fontname=verdana height=0.1 width=0.1 shape=box label = "pensantes" ];
+"4" [ fontname=verdana height=0.1 width=0.1 shape=box label = "nopensantes" ];
+"5" [ fontname=verdana height=0.1 width=0.1 shape=box label = "plantas" ];
+"6" [ fontname=verdana height=0.1 width=0.1 shape=box label = "inertes" ];
+"7" [ fontname=verdana height=0.1 width=0.1 shape=box label = "montañas" ];
+"8" [ fontname=verdana height=0.1 width=0.1 shape=box label = "lagos" ];
+"0" -> "1";
+"0" -> "6";
+"1" -> "2";
+"1" -> "5";
+"2" -> "3";
+"2" -> "4";
+"6" -> "7";
+"6" -> "8";
+}

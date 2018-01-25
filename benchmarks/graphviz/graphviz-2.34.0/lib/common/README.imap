@@ -1,0 +1,44 @@
+
+Description:  this code adds a new output filter to dot/tcldot.
+The new filter is called "imap".  It is used just like "ps,"
+"ismap," "gif," and the rest of the output filters.
+
+The new filter produces an "imap" file, the new-style
+Apache-compatible equivalent of the old-style "ismap" file which
+dot already knows how to produce.  In either case, the purpose is
+to map regions or points on a gif image to URLs, so that the user
+of a web browser can click on the gif image and activate anchors
+that invoke other pages.  The "ismap" map file style which was
+commonly used with early (NCSA) http servers required an external 
+mapping mechanism kept in the cgi-bin dir (ismap executable or
+user-supplied equivalent), whereas recent Apache servers include 
+the imap functionality in the server itself.  To configure an 
+Apache server to use imap files correctly, uncomment this line
+
+	# If you wish to use server-parsed imagemap files, use
+	AddHandler imap-file map
+
+in srm.conf.  From then on, you can use files of the form mumble.map
+as follows:
+
+     <A HREF="./EER.Database.map"> 
+     <IMG ISMAP SRC="./EER.Database.gif"> 
+     </A> 
+
+The .map file will be used as the image map for the associated
+gif image.  The new "imapgen" filter for dot produces valid imap
+files for use with Apache servers.
+
+In addition to being Apache-compliant, the imap file produced 
+by imapgen can include clickable edge points as well as node 
+rectangles.  If the attribute "URL" is defined for an edge, then 
+the label virtual node will be bound/mapped to that URL, as will 
+spline points along the edge.  If the special attributes "tailURL"
+and/or "headURL" are set, then the head and tail points of the 
+edge will be bound to those URL, otherwise the head and tail will 
+default to the main URL.  The older ismapgen code did not 
+support edge URLs.
+
+[JCE may wish to correct my wording in the description of ismap
+ (old-style) files above]
+

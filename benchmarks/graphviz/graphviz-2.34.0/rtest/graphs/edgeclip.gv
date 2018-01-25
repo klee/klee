@@ -1,0 +1,6 @@
+digraph G {
+   ab -> cd
+   ab -> CD [tailclip=false]
+   AB -> CD [headclip=false]
+   AB -> cd [tailclip=false, headclip=false]
+}

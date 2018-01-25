@@ -1,0 +1,76 @@
+
+include ../Config.mk
+include ../makearch/$(ARCH)
+
+PACKAGE		= Tcldot
+OBJS		= tcldot.o tkgen.o tclhandle.o
+
+INCS =  -I. -I.. \
+        -I../graph \
+        -I../pathplan \
+        -I../cdt \
+        -I../gd \
+        -I../dotneato/dotgen \
+        -I../dotneato/neatogen \
+        -I../dotneato/twopigen \
+        -I../dotneato/circogen \
+        -I../dotneato/fdpgen \
+        -I../dotneato/gvrender \
+        -I../dotneato/common \
+        -I../tclhandle \
+        -I../tkstubs \
+        -I$(TCL_INCDIR)
+
+LIBS =  ../gdtclft/libgdtclft.a \
+        ../dotneato/dotgen/libdot.a \
+        ../dotneato/neatogen/libneato.a \
+        ../dotneato/twopigen/libtwopi.a \
+        ../dotneato/circogen/libcirco.a \
+        ../dotneato/pack/libpack.a \
+        ../dotneato/gvrender/libgvrender.a \
+        ../dotneato/common/libcommon.a \
+        ../graph/libgraph.a \
+        ../pathplan/libpathplan.a \
+        ../gd/libgd.a \
+        ../cdt/libcdt.a \
+         $(EXTLIB_LIB)
+
+LDLL        = libtcldot$(SHLIB_SUFFIX).$(VERSION)
+DLL         = $(PACKAGE)$(SHLIB_SUFFIX)
+PACKAGEDIR	= $(TCL_PKGDIR)/$(PACKAGE)
+
+DEFINES = -DHAVE_CONFIG_H -D_BLD_tcldot
+
+all: libtcldot.a $(LDLL) TcldotIndex.tcl
+
+tcldot.o : tcldot.c
+	$(CC) -c -DDATE="\"`date`\"" $(CCFLAGS) $(DEFINES) $(INCS) tcldot.c
+
+$(LDLL): $(OBJS)
+	$(SHLIB_LD) -o $@ $(OBJS) $(LIBS)
+
+TcldotIndex.tcl:
+	echo 'package ifneeded $(PACKAGE) $(VERSION) [list load [file join $$dir $(DLL).$(VERSION)] $(PACKAGE)]' > TcldotIndex.tcl
+
+install: all
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libtcldot.a $(LIBDIR)
+	$(MKPATH) $(PACKAGEDIR)
+	$(INSTALL) $(LDLL) $(PACKAGEDIR)/$(DLL)
+	$(INSTALL) $(LDLL) $(PACKAGEDIR)/$(DLL).$(VERSION)
+	$(INSTALL) TcldotIndex.tcl $(PACKAGEDIR)/pkgIndex.tcl
+	$(MKPATH) $(XPLDIR)/tcldot
+	$(CP) demo/doted* demo/gcat* $(XPLDIR)/tcldot
+
+clean: 
+	rm -f *.[oa] core 
+
+distclean: clean
+	rm -f $(LDLL) TcldotIndex.tcl
+
+libtcldot.a : $(OBJS)
+	$(AR) cr libtcldot.a $(OBJS)
+	$(RANLIB) libtcldot.a
+
+tclhandle.o : ../tclhandle/tclhandle.c
+	$(CC) -c $(CCFLAGS) $(DEFINES) $(INCS) $?

@@ -1,0 +1,28 @@
+From: "Diomidis Spinellis" <dds@aueb.gr>
+To: <north@research.att.com>
+Sent: Wednesday, November 28, 2001 11:54 AM
+Subject: Perl script to create .dot graphs out of directory hierarchies
+
+Hi Stephen,
+
+I started using dot about a year ago, and it has changed the way I am
+thinking about graphs as documentation aids;  previously I tried to
+avoid them, now I am looking for excuses to use a graph.  As a token
+gift in return I am enclosing a small Perl script that creates dot
+graphs out of directory hierarchies.  It correctly handles some tricky
+parts like names with invalid characters, and the same directory name
+appearing in sibling or parent nodes.  It works under Unix and Windows. 
+The gzipped tar file contains the script and a few graphs I created with
+it.  On the BSD and the linux kernel graphs I tuned a few parameters to
+make them fit on a page.  Feel free to include whatever you see fit in
+upcoming graphviz releases.
+
+Cheers,
+
+Diomidis
+--
+Diomidis Spinellis                      Assistant Professor
+Department of Management Science and Technology
+Athens University of Economics and Business (AUEB)
++30 108203682         Patision 76, GR-104 34 Athina, GREECE
+http://www.dmst.aueb.gr/dds/ mailto:dds@aueb.gr

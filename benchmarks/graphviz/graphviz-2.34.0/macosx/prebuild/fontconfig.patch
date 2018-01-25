@@ -1,0 +1,36 @@
+diff -ru fontconfig-2.6.0/fc-arch/fc-arch.c fontconfig-2.6.0.patched/fc-arch/fc-arch.c
+--- fontconfig-2.6.0/fc-arch/fc-arch.c	2006-09-04 06:37:14.000000000 +0800
++++ fontconfig-2.6.0.patched/fc-arch/fc-arch.c	2009-02-19 10:48:05.000000000 +0900
+@@ -92,6 +92,20 @@
+     
+     if (strcmp (arch, "auto") == 0)
+     {
++#if defined(__APPLE__) && defined(__MACH__)
++	printf(
++		"#if defined(__ppc__)\n"
++		"#define FC_ARCHITECTURE \"ppc\"\n"
++		"#elif defined(__ppc64__)\n"
++		"#define FC_ARCHITECTURE \"ppc64\"\n"
++		"#elif defined(__i386__)\n"
++		"#define FC_ARCHITECTURE \"x86\"\n"
++		"#elif defined(__x86_64__)\n"
++		"#define FC_ARCHITECTURE \"x86-64\"\n"
++		"#endif\n");
++	fflush (stdout);
++	exit (ferror (stdout));
++#endif
+ 	arch = NULL;
+ 	/*
+ 	 * Search for signature
+diff -ru fontconfig-2.6.0/src/fcdbg.c fontconfig-2.6.0.patched/src/fcdbg.c
+--- fontconfig-2.6.0/src/fcdbg.c	2006-09-05 16:56:47.000000000 +0800
++++ fontconfig-2.6.0.patched/src/fcdbg.c	2009-02-19 21:35:23.000000000 +0900
+@@ -396,7 +396,7 @@
+     }
+ }
+ 
+-int FcDebugVal;
++int FcDebugVal = 0;
+ 
+ void
+ FcInitDebug (void)

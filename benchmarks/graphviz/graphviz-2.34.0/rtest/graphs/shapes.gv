@@ -1,0 +1,40 @@
+digraph G {
+ a [shape=box]
+ b [shape=polygon]
+ c [shape=ellipse]
+ d [shape=circle]
+ e [shape=point]
+ f [shape=egg]
+ g [shape=triangle]
+ h [shape=plaintext]
+ i [shape=diamond]
+ j [shape=trapezium]
+ k [shape=parallelogram]
+ l [shape=house]
+ m [shape=pentagon]
+ n [shape=hexagon]
+ o [shape=septagon]
+ p [shape=octagon]
+ q [shape=doublecircle]
+ r [shape=doubleoctagon]
+ s [shape=tripleoctagon]
+ t [shape=invtriangle]
+ u [shape=invtrapezium]
+ v [shape=invhouse]
+ w [shape=Mdiamond]
+ x [shape=Msquare]
+ y [shape=Mcircle]
+ z [shape=rect]
+ 1 [shape=rectangle]
+ 2 [shape=none]
+ 3 [shape=note]
+ 4 [shape=tab]
+ 5 [shape=box3d]
+ 6 [shape=component]
+ 7 [shape=folder]
+ a  -> b  -> c  -> d  -> e  -> f  -> g
+ h  -> i  -> j  -> k  -> l  -> m  -> n
+ o  -> p  -> q  -> r  -> s  -> t  -> u
+ v  -> w  -> x  -> y  -> z  -> 1  -> 2
+ 3  -> 4  -> 5  -> 6  -> 7
+}

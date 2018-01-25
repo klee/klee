@@ -1,0 +1,51 @@
+diff -ru glib-2.16.3/glib/gconvert.c glib-2.16.3.patched/glib/gconvert.c
+--- glib-2.16.3/glib/gconvert.c	2008-04-08 11:47:29.000000000 +0800
++++ glib-2.16.3.patched/glib/gconvert.c	2008-04-24 14:41:44.000000000 +0800
+@@ -48,12 +48,14 @@
+ 
+ #include "glibintl.h"
+ 
++#if !defined(__APPLE_CC__) || !defined(__LP64__)
+ #if defined(USE_LIBICONV_GNU) && !defined (_LIBICONV_H)
+ #error GNU libiconv in use but included iconv.h not from libiconv
+ #endif
+ #if !defined(USE_LIBICONV_GNU) && defined (_LIBICONV_H)
+ #error GNU libiconv not in use but included iconv.h is from libiconv
+ #endif
++#endif
+ 
+ #include "galias.h"
+ 
+--- glib-2.27.3/glib/gvariant.c.old	2011-01-12 12:36:42.000000000 -0500
++++ glib-2.27.3/glib/gvariant.c	2011-01-12 12:37:15.000000000 -0500
+@@ -3875,8 +3875,8 @@
+ }
+ 
+ /* The code below assumes this */
+-G_STATIC_ASSERT (sizeof (gboolean) == sizeof (guint32));
+-G_STATIC_ASSERT (sizeof (gdouble) == sizeof (guint64));
++//G_STATIC_ASSERT (sizeof (gboolean) == sizeof (guint32));
++//G_STATIC_ASSERT (sizeof (gdouble) == sizeof (guint64));
+ 
+ static void
+ g_variant_valist_get_leaf (const gchar **str,
+--- glib-2.27.3/gio/gdbusmessage.c.old	2011-01-12 12:54:28.000000000 -0500
++++ glib-2.27.3/gio/gdbusmessage.c	2011-01-12 12:54:52.000000000 -0500
+@@ -1186,7 +1186,7 @@
+           v = g_data_input_stream_read_uint64 (dis, NULL, &local_error);
+           if (local_error != NULL)
+             goto fail;
+-          G_STATIC_ASSERT (sizeof (gdouble) == sizeof (guint64));
++//          G_STATIC_ASSERT (sizeof (gdouble) == sizeof (guint64));
+           encoded = (gdouble *) &v;
+           ret = g_variant_new_double (*encoded);
+         }
+@@ -1938,7 +1938,7 @@
+         {
+           guint64 *encoded;
+           gdouble v = g_variant_get_double (value);
+-          G_STATIC_ASSERT (sizeof (gdouble) == sizeof (guint64));
++//          G_STATIC_ASSERT (sizeof (gdouble) == sizeof (guint64));
+           encoded = (guint64 *) &v;
+           g_data_output_stream_put_uint64 (dos, *encoded, NULL, NULL);
+         }

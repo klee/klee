@@ -1,0 +1,530 @@
+.TH tcldot 3tcl "Tcl Extensions"
+
+.SH NAME
+
+tcldot \- graph manipulation in tcl
+
+.SH SYNOPSIS
+
+#!/usr/local/bin/tclsh
+.br
+package require \fBTcldot\fR
+
+.SH USAGE
+Requires the dynamic loading facilities of tcl7.6 or later.
+
+.SH INTRODUCTION
+
+.B tcldot
+is a tcl dynamically loaded extension that incorporates
+the directed graph facilities of 
+.B dot(1), 
+and the undirected graph facilities of
+.B neato(1),
+into tcl and provides a set of commands to control those
+facilities.
+.B tcldot
+converts
+.B dot
+and 
+.B neato
+from batch processing tools to an interpreted and, if needed, interactive set
+of graph manipulation facilities.
+
+.SH COMMANDS
+
+.B tcldot
+initially adds only three commands to tcl, namely
+.B dotnew,
+.B dotread,
+and
+.B dotstring.
+These commands return a handle for the graph that has just been created
+and that handle can then be used as a command for further actions on the graph.
+
+All other "commands" are of the form:
+.IP
+.I handle
+.B <method>
+.I parameters
+.PP
+Many of the methods return further
+handles of graphs, nodes of edges, which are themselves registered as commands.
+
+The methods are described in detail below, but in summary:
+.PP
+Graph methods are:
+.IP
+.B "addedge, addnode, addsubgraph, countedges, countnodes, layout, listattributes, listedgeattributes, listnodeattributes, listedges, listnodes, listnodesrev, listsubgraphs, render, rendergd, queryattributes, queryedgeattributes, querynodeattributes, queryattributevalues, queryedgeattributevalues, querynodeattributevalues, setattributes, setedgeattributes, setnodeattributes, showname, write."
+.PP
+Node methods are:
+.IP
+.B "addedge, listattributes, listedges, listinedges, listoutedges, queryattributes, queryattributevalues, setattributes, showname."
+.PP
+Edge methods are: 
+.IP
+.B "delete, listattributes, listnodes, queryattributes, queryattributevalues, setattributes, showname."
+
+.TP
+\fBdotnew\fR \fIgraphType ?attributeName attributeValue? ?...?\fR
+
+creates a new empty graph and returns its 
+.I graphHandle.
+
+.I graphType
+can be any supported by 
+.B dot(1)
+namely: "graph," "digraph," "graphstrict," or "digraphstrict."
+(In digraphs edges have a direction from tail to head. "Strict" graphs
+or digraphs collapse multiple edges between the same pair of
+nodes into a single edge.)
+
+Following the mandatory 
+.I graphType
+parameter the 
+.B dotnew
+command will accept an arbitrary number of attribute name/value pairs
+for the graph.
+Certain special graph attributes and permitted values are described in
+.B dot(1), 
+but the programmer can arbitrarily invent and assign values
+to additional attributes beyond these.
+In 
+.B dot
+the attribute name is separated from the value by an "=" character.
+In
+.B tcldot
+the "=" has been replaced by a " " (space)  to be more consistent
+with
+.B tcl
+syntax.
+e.g.
+.nf
+
+    set g [dotnew digraph rankdir LR]
+
+.fi
+.TP
+\fBdotread\fR \fIfileHandle\fR
+
+reads in a dot-language description of a graph from a previously opened
+file identified by the 
+.I fileHandle.
+The command returns the
+.I graphHandle
+of the newly read graph.  e.g.
+.nf
+
+    set f [open test.dot r]
+    set g [dotread $f]
+
+.fi
+.TP
+\fBdotstring\fR \fIstring\fR
+
+reads in a dot-language description of a graph from a Tcl string;
+The command returns the
+.I graphHandle
+of the newly read graph.  e.g.
+.nf
+
+    set g [dotstring $dotsyntaxstring]
+
+.fi
+.TP
+\fIgraphHandle\fR \fBaddnode\fR \fI?nodeName? ?attributeName attributeValue? ?...?\fR
+
+creates a new node in the graph whose handle is
+.I graphHandle
+and returns its
+.I nodeHandle.
+The handle of a node is a string like: "node0" where the integer value is
+different for each node.
+There can be an arbitrary number of attribute name/value pairs
+for the node.
+Certain special node attributes and permitted values are described in
+.B dot(1), 
+but the programmer can arbitrarily invent and assign values
+to additional attributes beyond these.
+e.g.
+.nf
+
+    set n [$g addnode "N" label "Top\\nNode" shape triangle eggs easyover]
+
+.fi
+A possible cause of confusion in 
+.B tcldot
+is the distinction between handles, names, labels, and variables.
+The distinction is primarily in who owns them.
+Handles are owned by tcldot and are guaranteed to be unique within
+one interpreter session.  Typically handles are assigned to variables,
+like "n" above, for manipulation within a tcl script.
+Variables are owned by the programmer.
+Names are owned by the application that is using the
+graph, typically names are important when reading in a graph from
+an external program or file.  Labels are the text that is displayed with
+the node
+(or edge) when the graph is displayed, labels are meaningful to the
+reader of the graph.  Only the handles and variables are essential to 
+.B tcldot's
+ability to manipulate abstract graphs.  If a name is not specified then
+it defaults to the string representation of the handle, if a label is
+not specified then it defaults to the name.
+
+.TP
+\fIgraphHandle\fR \fBaddedge\fR \fItailNode headNode ?attributeName attributeValue? ?...?\fR
+
+creates a new edge in the graph whose handle is
+.I graphHandle
+and returns its
+.B edgeHandle.
+.I tailNode 
+and
+.I headNode
+can be specified either by their
+.I nodeHandle
+or by their 
+.I nodeName.
+e.g.
+.nf
+
+    set n [$g addnode]
+    set m [$g addnode]
+    $g addedge $n $m label "NM"
+
+    $g addnode N
+    $g addnode M
+    $g addedge N M label "NM"
+
+.fi
+The argument is recognized as a handle if possible and so it is best
+to avoid names like "node6" for nodes.  If there is potential for conflict then use
+.B findnode
+to translate explicitly from names to handles.
+e.g.
+.nf
+
+    $g addnode "node6"
+    $g addnode "node99"
+    $g addedge [$g findnode "node6"] [$g findnode "node99"]
+
+.fi
+There can be an arbitrary number of attribute name/value pairs
+for the edge.
+Certain special edge attributes and permitted values are described in
+.B dot(1), 
+but the programmer can arbitrarily invent and assign values
+to additional attributes beyond these.
+
+.TP
+\fIgraphHandle\fR \fBaddsubgraph\fR \fI?graphName? ?attributeName attributeValue? ?...?\fR
+
+creates a new subgraph in the graph and returns its
+.I graphHandle.
+If the
+.I graphName
+is omitted then the name of the subgraph defaults to it's 
+.I graphHandle.
+There can be an arbitrary number of attribute name/value pairs
+for the subgraph.
+Certain special graph attributes and permitted values are described in
+.B dot(1), 
+but the programmer can arbitrarily invent and assign values
+to additional attributes beyond these.
+e.g.
+.nf
+
+    set sg [$g addsubgraph dinglefactor 6]
+
+.fi
+Clusters, as described in
+.B dot(1),
+are created by giving the subgraph a name that begins with the string:
+"cluster".  Cluster can be labelled by using the \fIlabel\fR attibute.
+e.g.
+.nf
+
+    set cg [$g addsubgraph cluster_A label dongle dinglefactor 6]
+
+.fi
+.TP
+\fInodeHandle\fR \fBaddedge\fR \fIheadNode ?attributeName attributeValue? ?...?\fR
+
+creates a new edge from the tail node identified by tha
+.I nodeHandle
+to the 
+.I headNode
+which can be specified either by 
+.I nodeHandle
+or by 
+.I nodeName
+(with preference to recognizing the argument as a handle).
+The graph in which this is drawn is the graph in which both nodes are
+members.
+There can be an arbitrary number of attribute name/value pairs
+for the edge.
+These edge attributes and permitted values are described in
+.B dot(1).
+e.g.
+.nf
+
+    [$g addnode] addedge [$g addnode] label "NM"
+
+.fi
+.TP 
+\fIgraphHandle\fR \fBdelete\fR
+.TP
+\fInodeHandle\fR \fBdelete\fR
+.TP
+\fIedgeHandle\fR \fBdelete\fR
+
+Delete all data structures associated with the graph, node or edge
+from the internal storage of the interpreter.  Deletion of a node also
+results in the the deletion of all subtending edges on that node.
+Deletion of a graph also results in the deletion of all nodes and
+subgraphs within that graph (and hence all edges too).  The return from
+these delete commands is a null string.
+
+.TP
+\fIgraphHandle\fR \fBcountnodes\fR
+.TP
+\fIgraphHandle\fR \fBcountedges\fR
+
+Returns the number of nodes, or edges, in the graph.
+
+.TP
+\fIgraphHandle\fR \fBlistedges\fR
+.TP
+\fIgraphHandle\fR \fBlistnodes\fR
+.TP
+\fIgraphHandle\fR \fBlistnodesrev\fR
+.TP
+\fIgraphHandle\fR \fBlistsubgraphs\fR
+.TP
+\fInodeHandle\fR \fBlistedges\fR
+.TP
+\fInodeHandle\fR \fBlistinedges\fR
+.TP
+\fInodeHandle\fR \fBlistoutedges\fR
+.TP
+\fIedgeHandle\fR \fBlistnodes\fR
+
+Each return a list of handles of graphs, nodes or edges, as appropriate.
+
+.TP
+\fIgraphHandle\fR \fBfindnode\fR \fInodeName\fR
+.TP
+\fIgraphHandle\fR \fBfindedge\fR \fItailnodeName headNodeName\fR
+.TP
+\fInodeHandle\fR \fBfindedge\fR \fInodeName\fR
+
+Each return the handle of the item if found, or an error if none are found.  
+For non-strict graphs when there are multiple edges between two nodes
+.B findedge
+will return an arbitrary edge from the set.
+
+.TP
+\fIgraphHandle\fR \fBshowname\fR
+.TP
+\fInodeHandle\fR \fBshowname\fR
+.TP
+\fIedgeHandle\fR \fBshowname\fR
+
+Each return the name of the item.  Edge names are of the form:
+"a\->b" where "a" and "b" are the names of the nodes and the connector
+"\->" indicates the tail-to-head direction of the edge. In undirected
+graphs the connector "\-\-" is used.
+
+.TP
+\fIgraphHandle\fR \fBsetnodeattributes\fR \fIattributeName attributeValue ?...?\fR
+.TP
+\fIgraphHandle\fR \fBsetedgeattributes\fR \fIattributeName attributeValue ?...?\fR
+
+Set one or more default attribute name/values that are to apply to
+all nodes (edges) unless overridden by subgraphs or per-node
+(per-edge) attributes. 
+
+.TP
+\fIgraphHandle\fR \fBlistnodeattributes\fR
+.TP
+\fIgraphHandle\fR \fBlistedgeattributes\fR
+
+Return a list of attribute names.
+
+.TP
+\fIgraphHandle\fR \fBquerynodeattributes\fR \fIattributeName ?...?\fR
+.TP
+\fIgraphHandle\fR \fBqueryedgeattributes\fR \fIattributeName ?...?\fR
+
+Return a list of default attribute value, one value for each of the
+attribute names provided with the command.
+
+.TP
+\fIgraphHandle\fR \fBquerynodeattributes\fR \fIattributeName ?...?\fR
+.TP
+\fIgraphHandle\fR \fBqueryedgeattributes\fR \fIattributeName ?...?\fR
+
+Return a list of pairs of attrinute name and default attribute value,
+one pair for each of the attribute names provided with the command.
+
+.TP
+\fIgraphHandle\fR \fBsetattributes\fR \fIattributeName attributeValue ?...?\fR
+.TP
+\fInodeHandle\fR \fBsetattributes\fR \fIattributeName attributeValue ?...?\fR
+.TP
+\fIedgeHandle\fR \fBsetattributes\fR \fIattributeName attributeValue ?...?\fR
+
+Set one or more attribute name/value pairs for a specific graph, node,
+or edge instance.
+
+.TP
+\fIgraphHandle\fR \fBlistattributes\fR
+.TP
+\fInodeHandle\fR \fBlistattributes\fR
+.TP
+\fIedgeHandle\fR \fBlistattributes\fR
+
+Return a list of attribute names (attribute values are provided by
+.B queryattribute
+
+.TP
+\fIgraphHandle\fR \fBqueryattributes\fR \fIattributeName ?...?\fR
+.TP
+\fInodeHandle\fR \fBqueryattributes\fR \fIattributeName ?...?\fR
+.TP
+\fIedgeHandle\fR \fBqueryattributes\fR \fIattributeName ?...?\fR
+
+Return a list of attribute value, one value for each of the
+attribute names provided with the command.
+
+.TP
+\fIgraphHandle\fR \fBqueryattributevalues\fR \fIattributeName ?...?\fR
+.TP
+\fInodeHandle\fR \fBqueryattributevalues\fR \fIattributeName ?...?\fR
+.TP
+\fIedgeHandle\fR \fBqueryattributevalues\fR \fIattributeName ?...?\fR
+
+Return a list of pairs or attribute name and attribute value,
+one value for each of the attribute names provided with the command.
+
+.TP
+\fIgraphHandle\fR \fBlayout ?dot|neato|circo|twopi|fdp|nop?\fR
+
+Annotate the graph with layout information.  This commands takes an
+abstract graph add shape and position information to it according to 
+the layout engine's rules of eye-pleasing graph layout. If the layout engine is
+unspecified then it defaults to \fBdot\fR for directed graphs, and \fBneato\fR otherwise.
+If the \fBnop\fR engine is specified then layout infomation from the input graph is used.
+The result of the layout is stored
+as additional attributes name/value pairs in the graph, node and edges.
+These attributes are intended to be interpreted by subsequent 
+.I write
+or
+.I render
+commands.
+
+.TP
+\fIgraphHandle\fR \fBwrite\fR \fIfileHandle format ?dot|neato|circo|twopi|fdp|nop?\fR
+
+Write a graph to the open file represented by
+.I fileHandle
+in a specific
+.I format.
+Possible
+.I formats
+are: "ps" "mif" "hpgl" "plain" "dot" "gif" "ismap"
+If the layout hasn't been already done, then it will be done as part
+of this operation using the same rules for selecting the layout engine
+as for the layout command.
+
+.TP
+\fIgraphHandle\fR \fBrendergd\fR \fIgdHandle\fR
+
+Generates a rendering of a graph to a new
+or existing gifImage structure (see
+.B gdTcl(1)
+).  Returns the 
+.I gdHandle
+of the image.
+If the layout hasn't been already done, then it will be done as part
+of this operation using the same rules for selecting the layout engine
+as for the layout command.
+
+.TP
+\fIgraphHandle\fR \fBrender\fR \fI?canvas ?dot|neato|circo|twopi|fdp|nop??\fR
+
+If no \fIcanvas\fR argument is provided then \fBrender\fR
+returns a string of commands which, when evaluated, will render the
+graph to a 
+.B Tk
+canvas whose 
+.I canvasHandle
+is available in variable 
+.B $c
+
+If a \fIcanvas\fR argument is provided then \fBrender\fR
+produces a set of commands for \fIcanvas\fR instead of $c.
+
+If the layout hasn't been already done, then it will be done as part
+of this operation using the same rules for selecting the layout engine
+as for the layout command.
+.nf
+
+    #!/usr/local/bin/wish
+    package require Tcldot
+    set c [canvas .c]
+    pack $c
+    set g [dotnew digraph rankdir LR]
+    $g setnodeattribute style filled color white
+    [$g addnode Hello] addedge [$g addnode World!]
+    $g layout
+    if {[info exists debug]} {
+        puts [$g render]         ;# see what render produces
+    }
+    eval [$g render]
+
+.fi
+
+.B Render
+generates a series of canvas commands for each graph element, for example
+a node typically consist of two items on the canvas, one for the shape
+and the other for the label.  The canvas items are automatically 
+.I tagged
+(See
+.B canvas(n)
+) by the commands generated by render.  The tags take one of two forms:
+text items are tagged with 0<handle> and
+shapes and lines are rendered with 1<handle>.
+
+The tagging can be used to recognize when a user wants to interact with
+a graph element using the mouse.  See the script in
+.I examples/disp
+of the tcldot distribution for a demonstration of this facility.
+
+.SH BUGS
+
+Still batch-oriented.  It would be nice if the layout was maintained incrementally.
+(The intent is to address this limitation in graphviz_2_0.)
+
+.SH AUTHOR
+
+John Ellson (ellson@graphviz.org)
+
+.SH ACKNOWLEDGEMENTS
+
+John Ousterhout, of course, for 
+.B tcl
+and
+.B tk.
+Steven North and Eleftherios Koutsofios for
+.B dot.
+Karl Lehenbauer and Mark Diekhans of NeoSoft
+for the handles.c code which was derived from tclXhandles.c.
+Tom Boutell of the Quest Center at Cold Spring Harbor Labs for the gif drawing routines.
+Spencer Thomas of the University of Michigan for gdTcl.c.
+Dayatra Shands for coding much of the initial implementation of 
+.B tcldot.
+
+.SH KEYWORDS
+
+graph, tcl, tk, dot, neato.

@@ -1,0 +1,31 @@
+all:	libgvplugin_devil.a
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+INCS =  -I. \
+	-I$(ROOT) \
+        -I../../lib/common \
+        -I../../lib/pathplan \
+        -I../../lib/graph \
+        -I../../lib/cdt \
+        -I../../lib/gvc 
+
+DEFINES = -DHAVE_CONFIG_H
+
+OBJS = gvplugin_devil.o gvrender_devil.o cairo_devil.o
+
+libgvplugin_devil.a : $(OBJS)
+	$(RM) libgvplugin_devil.a
+	$(AR) cr libgvplugin_devil.a $(OBJS)
+	$(RANLIB) libgvplugin_devil.a
+
+install: libgvplugin_devil.a
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libgvplugin_devil.a $(LIBDIR)
+
+clean:
+	$(RM) core *.o
+
+distclean: clean
+	$(RM) *.a ptest

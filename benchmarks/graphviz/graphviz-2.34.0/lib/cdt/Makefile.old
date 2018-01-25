@@ -1,0 +1,58 @@
+#	libcdt.a old make makefile
+#	Written by Kiem-Phong Vo (03/18/1998)
+#   Modified for graphviz by erg (5 Oct 2000)
+
+ROOT=../..
+
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+CXFLAGS=
+CCMODE= -O
+DEFINES= $(CCMODE) -I. $(CXFLAGS)
+
+HDRS =	cdt.h dthdr.h
+SRCS =	dtclose.c dtdisc.c dtflatten.c dthash.c dtmethod.c dtopen.c dtsize.c \
+	dtextract.c dtrestore.c dtlist.c dtstat.c dttree.c dttreeset.c dtview.c \
+	dtrenew.c dtwalk.c dtstrhash.c
+OBJS =	dtclose.o dtdisc.o dtflatten.o dthash.o dtmethod.o dtopen.o dtsize.o \
+	dtextract.o dtrestore.o dtlist.o dtstat.o dttree.o dttreeset.o dtview.o \
+	dtrenew.o dtwalk.o dtstrhash.o
+SRC_P=	Cdt_p/tsearch.c Cdt_p/hsearch.c
+OBJ_P=	tsearch.o hsearch.o
+
+all: libcdt.a
+
+cleanup :
+	rm -f ast_common.h
+
+libcdt.a : ast_common.h $(OBJS)
+	$(RM) libcdt.a
+	$(AR) cr libcdt.a $(OBJS)
+	-(ranlib libcdt.a; exit 0) >/dev/null 2>&1
+
+tsearch.o : Cdt_p/tsearch.c
+	$(CC) -c $(DEFINES) Cdt_p/tsearch.c
+
+hsearch.o : Cdt_p/hsearch.c
+	$(CC) -c $(DEFINES) Cdt_p/hsearch.c
+
+ast_common.h : features/common
+	$(ROOT)/iffe - set cc $(CC) $(CCMODE) $(CXFLAGS) : run features/common > ast_common.h
+
+$(OBJS) : ast_common.h
+
+install : libcdt.a
+	$(MKPATH) $(LIBDIR)
+	$(MKPATH) $(INCDIR)
+	-(rm -f $(INCDIR)/cdt.h $(INCDIR)/dict.h; exit 0) >/dev/null 2>&1
+	-(rm -f $(LIBDIR)/libcdt.a $(LIBDIR)/libdict.a; exit 0) >/dev/null 2>&1
+	cp cdt.h $(INCDIR)
+	cp libcdt.a $(LIBDIR)
+	-(ranlib $(LIBDIR)/libcdt.a; exit 0) >/dev/null 2>&1
+
+clean :
+	-(rm ast_common.h $(OBJS) libcdt.a FEATURE/*; exit 0) >/dev/null 2>&1
+
+distclean :
+	-(rm ast_common.h $(OBJS) libcdt.a FEATURE/*; exit 0) >/dev/null 2>&1

@@ -1,0 +1,18 @@
+digraph weight_tree{
+node [shape=box color=lightblue,style=filled];
+ 
+all [label="All items",xlabel="100"];
+t1 [label="Part 1",xlabel="75"];
+t2 [label="Part 2",xlabel="25"];
+p1 [label="pPart 1",xlabel="50"];
+p2 [label="pPart 2",xlabel="50"];
+p3 [label="pPart 3",xlabel="50"];
+p4 [label="pPart 4",xlabel="50"];
+all -> t1 [label="75%"];
+all -> t2;
+t1 -> p1 [label="20%"];
+t1 -> p2;
+t2 -> p3;
+t2 -> p4;
+}
+ 

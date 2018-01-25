@@ -1,0 +1,64 @@
+.TH GRAPHML2GV 1 "14 July 2011"
+.SH NAME
+graphml2gv \- GRAPHML-DOT converter
+.SH SYNOPSIS
+.B graphml2gv
+[
+.B \-?v
+]
+[
+.BI -g gname
+]
+[
+.BI -o outfile
+]
+[ 
+.I files
+]
+.SH DESCRIPTION
+.B graphml2gv
+converts a graph specified in the GRAPHML format to a graph in the GV (formerly DOT) format.
+.SH OPTIONS
+The following options are supported:
+.TP
+.B \-v
+Turns on verbose mode
+.TP
+.B \-?
+Prints usage information and exits.
+.TP
+.BI \-g "gname"
+The string \fIgname\fP is used as the name of the generated graph.
+If multiple graphs are generated, subsequent graphs use the name
+\fIgname\fP appended with an integer.
+.TP
+.BI \-o "outfile"
+Prints output to the file \fIoutfile\fP. If not given, \fBgraphml2gv\fP
+uses stdout.
+.TP
+.SH OPERANDS
+The following operand is supported:
+.TP 8
+.I files
+Names of files containing 1 or more graphs in GRAPHML.
+If no
+.I files
+operand is specified,
+the standard input will be used.
+.SH RETURN CODES
+Return \fB0\fP
+if there were no problems during conversion;
+and non-zero if any error occurred.
+.SH "LIMITATIONS"
+As both the graph and graphics models of GV and GML differ significantly, the
+conversion can only be at best approximate.
+In particular, GV currently has no notion of hyperedges or edges containing graphs.
+.P
+At present, 
+.B graphml2gv
+only supports the basic graph topology. Specifically, the <KEY> and <DATA>
+elements are not handled, though they could be.
+.SH AUTHORS
+Emden R. Gansner <erg@research.att.com>
+.SH "SEE ALSO"
+dot(1), libcgraph(3)

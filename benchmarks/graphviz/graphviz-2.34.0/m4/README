@@ -1,0 +1,6 @@
+The files: iconv.m4 lib-ld.m4  lib-link.m4  lib-prefix.m4
+were obtained from gettext-0.11.4-5 sources.
+
+The file: glib-gettext.m4 was obtained from glib2-devel (go figure!)
+
+They are used in graphviz to avoid requiring gettext be installed.

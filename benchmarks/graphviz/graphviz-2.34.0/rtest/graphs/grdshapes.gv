@@ -1,0 +1,47 @@
+digraph G {bgcolor=blue
+
+  subgraph cluster_1 {
+    fontcolor=white
+    node [style=filled fillcolor="bisque:brown"]
+    n27 [shape = "polygon" ]
+	n26 [shape = "oval" ]
+	n25 [shape = "egg" ]
+	n24 [shape = "trapezium" ]
+	n23 [shape = "parallelogram" ]
+	n22 [shape = "house" ]
+	n21 [shape = "octagon" ]
+	n20 [shape = box  ]
+	n19 [shape = "circle" ]
+	n18 [shape = "diamond" ]
+	n17 [shape = "ellipse" ]
+	n16 [shape = "hexagon" ]
+	n15 [shape = "invtriangle" ]
+	n14 [shape = "pentagon" ]
+	n13 [shape = "rect" ]
+	n12 [shape = "septagon" ]
+	n11 [shape = "triangle" ]
+	n10 [shape = "rectangle" ]
+	n9 [shape = "square" ]
+	n8 [shape = "doublecircle" ]
+	n7 [shape = "doubleoctagon" ]
+	n6 [shape = "tripleoctagon" ]
+	n5 [shape = "invtrapezium" ]
+	n4 [shape = "invhouse" ]
+	n3 [shape = "Mdiamond" ]
+	n2 [shape = "Msquare" ]
+	n1 [shape = "Mcircle"  ]
+	x1 [shape = "note"  ]
+	x2 [shape = "tab"  ]
+	x3 [shape = "folder"  ]
+	x4 [shape = "box3d"  ]
+	x5 [shape = "component"  ]
+
+	label = "Shape Variations";
+  }
+  n1 -> n2-> n3 -> n4 -> n5 -> n6 -> n7 -> n8 -> n9 -> n10 -> n11 -> n12 -> n13 -> n14 
+  n15 -> n16 -> n17 -> n18 -> n19 -> n20 -> n21 -> n22 -> n23 -> n24 -> n25 -> n26 -> n27
+  x1 -> x2 -> x3 -> x4 -> x5
+}
+
+
+

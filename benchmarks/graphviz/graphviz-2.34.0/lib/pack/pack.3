@@ -1,0 +1,215 @@
+.TH LIBPACK 3 "04 APRIL 2009"
+.SH NAME
+\fBlibpack\fR \- support for connected components
+.SH SYNOPSIS
+.ta .75i 1.5i 2.25i 3i 3.75i 4.5i 5.25i 6i
+.PP
+.nf
+\f5
+#include <graphviz/pack.h>
+
+typedef enum { l_clust, l_node, l_graph, l_array} pack_mode;
+
+typedef struct {
+	float aspect;		 /* desired aspect ratio */
+	int sz;			     /* row/column size size */
+	unsigned int margin; /* margin left around objects, in points */
+	int doSplines;		 /* use splines in constructing graph shape */
+	pack_mode mode;		 /* granularity and method */
+	boolean *fixed;		 /* fixed[i] == true implies g[i] should not be moved */
+	packval_t* vals;	 /* for arrays, sort numbers */
+	int flags;       
+} pack_info;
+
+point*     putRects(int ng, boxf* bbs, pack_info* pinfo);
+int        packRects(int ng, boxf* bbs, pack_info* pinfo);
+
+point*     putGraphs (int, Agraph_t**, Agraph_t*, pack_info*);
+int        packGraphs (int, Agraph_t**, Agraph_t*, pack_info*);
+int        packSubgraphs (int, Agraph_t**, Agraph_t*, pack_info*);
+
+pack_mode  getPackMode (Agraph_t*, pack_mode dflt);
+int        getPack (Agraph_t*, int, int);
+
+int        isConnected (Agraph_t*);
+Agraph_t** ccomps (Agraph_t*, int*, char*);
+Agraph_t** pccomps (Agraph_t*, int*, char*, boolean*);
+int        nodeInduce (Agraph_t*);
+
+\fP
+.fi
+.SH DESCRIPTION
+\fIlibpack\fP supports the use of connected components in the
+context of laying out graphs using other \fIgraphviz\fP libraries.
+One set of functions can be used to take a single graph and
+break it apart into connected components. A complementary set
+of functions takes a collection of graphs (not necessarily components
+of a single graph) which have been laid out separately, and packs them
+together.
+
+As this library is meant to be used with \fIlibcommon\fP, it relies
+on the \fIAgraphinfo_t\fP, \fIAgnodeinfo_t\fP and \fIAgedgeinfo_t\fP used 
+in that
+library. The specific dependencies are given below in the function
+descriptions.
+
+.SS "Creating components"
+.PP
+.SS "  Agraph_t** ccomps (Agraph_t* g, int* cnt, char* pfx)"
+The function \fIccomps\fP takes a graph \fIg\fP and returns an array
+of pointers to subgraphs of \fIg\fP which are its connected components.
+\fIcnt\fP is set to the number of components. If \fIpfx\fP is non-NULL,
+it is used as a prefix for the names of the subgraphs; otherwise, the
+string ``_cc_'' is used.
+Note that the subgraphs only contain the relevant nodes, not any
+corresponding edges. Depending on the use, this allows the caller
+to retrieve edge information from the root graph.
+.PP
+The array returned is obtained from \fImalloc\fP and must be freed by
+the caller. The function relies on the \fImark\fP field in
+\fIAgnodeinfo_t\fP.
+.PP
+.SS "  Agraph_t** pccomps (Agraph_t* g, int* cnt, char* pfx, boolean* pinned)"
+This is identical to \fIccomps\fP except that is puts all pinned nodes
+in the first component returned. In addition, if \fIpinned\fP is non-NULL,
+it is set to true if pinned nodes are found and false otherwise.
+.PP
+.SS "  int nodeInduce (Agraph_t* g)"
+This function takes a subgraph \fIg\fP and finds all edges in its root
+graph both of whose endpoints are in \fIg\fP. It returns the number of
+such edges and, if this edge is not already
+in the subgraph, it is added.
+.PP
+.SS "  int isConnected (Agraph_t* g)"
+This function returns non-zero if the graph \fIg\fP is connected.
+
+.SS "Packing components"
+.PP
+.SS "  point* putGraphs (int ng, Agraph_t** gs, Agraph_t* root, pack_info ip)"
+\fIputGraphs\fP packs together a collection of laid out graphs into a
+single layout which avoids any overlap. It takes as input \fIng\fP 
+graphs \fIgs\fP. For each graph, it is assumed that all the nodes have
+been positioned using \fIpos\fP, and that the \fIxsize\fP and \fIysize\fP
+fields have been set.
+.PP
+If \fIroot\fP is non-NULL, it is taken as the root
+graph of the subgraphs \fIgs\fP and is used to find the edges. Otherwise, 
+\fIputGraphs\fP uses the edges found in each graph \fIgs[i]\fP.
+.PP
+For the modes \fIl_node\fP, \fIl_clust\fP, and \fIl_graph\fP,
+the packing is done using the polyomino-based
+algorithm of Freivalds et al. This allows for a fairly tight packing, in
+which a convex part of one graph might be inserted into the concave part
+of another.
+The granularity of the polyominoes used depends on the value of
+\fIip->mode\fP. If this is \fIl_node\fP, a polyomino is constructed
+to approximate the nodes and edges. If this is \fIl_clust\fP, the
+polyomino treats top-level clusters as single rectangles, unioned
+with the polyominoes for the remaining nodes and edges. If the value
+is \fIl_graph\fP, the polyomino for a graph is a single rectangle
+corresponding to the bounding box of the graph.
+.PP
+The mode \fIl_node\fP specifies that the graphs should be packed as an
+array.
+.PP
+If \fIip->doSplines\fP is true, the function uses the spline information
+in the \fIspl\fP field of an edge, if it exists. 
+Otherwise, the algorithm represents an edge as a 
+straight line segment connecting node centers.
+.PP
+The parameter \fIip->margin\fP specifies a boundary of \fImargin\fP points 
+to be allowed around each node. It must be non-negative.
+.PP
+The parameter \fIip->fixed\fP, if non-null, should point to an array
+of \fIng\fP booleans. If \fIip->fixed[i]\fP is true, graph \fIgs[i]\fP
+should be left at its original position. The packing will first first
+place all of the fixed graphs, then fill in the with the remaining
+graphs.
+.PP
+The function returns an array of points which can be used as the origin of 
+the bounding box of each graph. If the
+graphs are translated to these positions, none of the graph components
+will overlap. 
+The array returned is obtained from \fImalloc\fP and must be freed by
+the caller. If any problem occurs, \fIputGraphs\fP returns NULL.
+As a side-effect, at its start, \fIputGraphs\fP sets the \fIbb\fP 
+of each graph to reflect its initial layout. Note that \fIputGraphs\fP
+does not do any translation or change the input graphs in any other way
+than setting the \fIbb\fP.
+.PP
+This function uses the \fIbb\fP field in \fIAgraphinfo_t\fP,
+the \fIpos\fP, \fIxsize\fP and \fIysize\fP fields in \fInodehinfo_t\fP and
+the \fIspl\fP field in \fIAedgeinfo_t\fP.
+.PP
+.SS "  int packGraphs (int ng, Agraph_t** gs, Agraph_t* root, pack_info* ip)"
+This function takes \fIng\fP subgraphs \fIgs\fP of a root graph \fIroot\fP
+and calls \fIputGraphs\fP with the given arguments to generate
+a packing of the subgraphs. If successful, it then invokes
+shifts the subgraphs to their new positions. It returns 0 on success.
+.PP
+.SS "  int packSubgraphs (int ng, Agraph_t** gs, Agraph_t* root, pack_info* ip)"
+This function simply calls \fIpackGraphs\fP with the given arguments, and
+then recomputes the bounding box of the \fIroot\fP graph.
+.PP
+.SS "  int pack_graph(int ng, Agraph_t** gs, Agraph_t* root, boolean* fixed)"
+uses \fIpackSubgraphs\fP to place the individual subgraphs into a single layout
+with the parameters obtained from \fIgetPackInfo\fP. If successful, 
+\fIdotneato_postprocess\fP is called on the root graph.
+.PP
+.SS "  point* putRects (int ng, boxf* bbs, pack_info* ip)"
+\fIputRects\fP packs together a collection of rectangles into a
+single layout which avoids any overlap. It takes as input \fIng\fP 
+rectangles \fIbbs\fP.
+.PP
+Its behavior and return value are analogous to those of \fIputGraphs\fP.
+However, the modes \fIl_node\fP and \fIl_clust\fP are illegal.
+The fields \fIfixed\fP and \fIdoSplines\fP of \fIip\fP
+are unused.
+.PP
+.SS "  int packRects (int ng, boxf* bbs, pack_info* ip)"
+\fIpackRects\fP is analogous to \fIpackGraphs\fP: it calls
+\fIputRects\fP and, if this is successful, it translates
+the rectangles in \fIbbs\fP appropriately.
+.SS "Utility functions"
+The library provides several functions which can be used to tailor the
+packing based on graph attributes.
+.SS "  pack_mode parsePackModeInfo(char* p, pack_mode dflt, pack_info* pinfo)"
+analyzes \fIp\fP as a string representation of pack mode, storing the
+information in \fIpinfo\fP.
+If \fIp\fP is "cluster", it returns
+\fIl_clust\fP; for "graph", it returns \fIl_graph\fP;
+for "node", it returns \fIl_node\fP;
+for "array", it returns \fIl_array\fP;
+for "aspect", it returns \fIl_aspect\fP;
+otherwise, it returns \fIdflt\fP.
+Related data is also stored in \fIpinfo\fP.
+.SS "  pack_mode getPackModeInfo(Agraph_t * g, pack_mode dflt, pack_info* pinfo)"
+This function processes the graph's \fI"packmode"\fP attribute, storing the
+information in \fIpinfo\fP. It returns \fIpinfo->mode\fP.
+The attribute is processed using \fIparsePackModeInfo\fP with \fIdflt\fP passed
+as the default argument.
+.SS "  pack_mode getPackMode (Agraph_t* g, pack_mode dflt)"
+This function returns a \fIpack_mode\fP associated with \fIg\fP.
+.SS "  int getPack (Agraph_t* g, int not_def, int dflt)"
+This function queries the graph attribute \fI"pack"\fP. If this is
+defined as a non-negative integer, the integer is returned; if it
+is defined as "true", the value \fIdflt\fP is returned; otherwise,
+the value \fInot_def\fP is returned.
+.SS "  pack_mode getPackInfo(Agraph_t * g, pack_mode dflt, int dfltMargin, pack_info* pinfo)"
+This function calls both \fIgetPackModeInfo\fP and \fIgetPack\fP, storing the
+information in \fIpinfo\fP. \fIdfltMargin\fP is used for both integer arguments 
+of \fIgetPack\fP, with the result saved as \fIpinfo->margin\fP.
+It returns \fIpinfo->mode\fP.
+.SH SEE ALSO
+.BR dot (1),
+.BR neato (1),
+.BR twopi (1),
+.BR libgraph (3)
+.br
+K. Freivalds et al., "Disconnected Graph Layout and the Polyomino 
+Packing Approach", GD0'01, LNCS 2265, pp. 378-391.
+
+.SH "BUGS"
+The packing does not take into account edge or graph labels.
+.SH AUTHORS
+Emden Gansner (erg@research.att.com).

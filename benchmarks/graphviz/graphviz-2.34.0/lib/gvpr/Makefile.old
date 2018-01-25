@@ -1,0 +1,50 @@
+#   gvpr library make file
+#   Written by Emden R. Gansner (23 June 2009)
+ALL = libgvpr.a
+all : $(ALL)
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+LOC_LIB=$(ROOT)/lib
+LOC_INCDIR=$(LOC_LIB)/include
+LOC_LIBDIR=$(LOC_LIB)/lib
+
+INCS = -I. -I$(ROOT) -I$(LOC_INCDIR) -I$(LOC_LIB)/common -I$(LOC_LIB)/cgraph -I$(LOC_LIB)/cdt \
+    -I$(LOC_LIB)/expr -I$(LOC_LIB)/ast -I$(LOC_LIB)/sfio -I$(LOC_LIB)/vmalloc -I$(LOC_LIB)/ingraphs
+
+DEFINES = -DHAVE_CONFIG_H -DUSE_CGRAPH
+
+OBJS = gvpr.o parse.o compile.o gprstate.o actions.o queue.o
+
+
+compile.o : gdefs.h
+
+gdefs.h : gprdata mkdefs
+	mkdefs gdefs.h < gprdata
+
+mkdefs : mkdefs.o
+	$(CC) $(LDFLAGS) mkdefs.o -o $@
+
+GLIBS = -L$(LOC_LIB)/cgraph -L$(LOC_LIB)/cdt -lcgraph -lcdt
+LIBS = -L$(LOC_LIBDIR) -lexpr -last -lvmalloc -lsfio -lingraphs $(GLIBS) -lm
+
+gvpr : $(OBJS) $(LOC_LIBDIR)/libexpr.a
+	$(CSLD) $(LDFLAGS) $(OBJS) $(LIBS) -o $@
+libgvpr.a: $(OBJS)
+	$(RM) libgvpr.a
+	$(AR) cr libgvpr.a $(OBJS)
+	$(RANLIB) libgvpr.a
+
+install: libgvpr.a
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libgvpr.a $(LIBDIR)
+
+
+$(OBJS) : gdefs.h
+
+clean :
+	$(RM) core gdefs.h *.o 
+
+distclean : clean
+	$(RM) mkdefs $(ALL)

@@ -1,0 +1,1169 @@
+Terminals unused in grammar
+
+   LIST
+
+
+Grammar
+
+    0 $accept: graph $end
+
+    1 graph: optalist hdr body
+    2      | error
+    3      | /* empty */
+
+    4 hdr: GRAPH
+
+    5 body: '[' optglist ']'
+
+    6 optglist: glist
+    7         | /* empty */
+
+    8 glist: glist glistitem
+    9      | glistitem
+
+   10 glistitem: node
+   11          | edge
+   12          | hdr body
+   13          | DIRECTED INTEGER
+   14          | ID INTEGER
+   15          | alistitem
+
+   16 $@1: /* empty */
+
+   17 node: NODE $@1 '[' nlist ']'
+
+   18 nlist: nlist nlistitem
+   19      | nlistitem
+
+   20 nlistitem: ID INTEGER
+   21          | alistitem
+
+   22 $@2: /* empty */
+
+   23 edge: EDGE $@2 '[' elist ']'
+
+   24 elist: elist elistitem
+   25      | elistitem
+
+   26 elistitem: SOURCE INTEGER
+   27          | TARGET INTEGER
+   28          | ID INTEGER
+   29          | alistitem
+
+   30 $@3: /* empty */
+
+   31 attrlist: '[' $@3 optalist ']'
+
+   32 optalist: alist
+   33         | /* empty */
+
+   34 alist: alist alistitem
+   35      | alistitem
+
+   36 alistitem: NAME INTEGER
+   37          | NAME REAL
+   38          | NAME STRING
+   39          | NAME attrlist
+   40          | XVAL REAL
+   41          | XVAL INTEGER
+   42          | YVAL REAL
+   43          | WVAL REAL
+   44          | HVAL REAL
+   45          | LABEL STRING
+   46          | GRAPHICS attrlist
+   47          | LABELGRAPHICS attrlist
+   48          | TYPE STRING
+   49          | FILL STRING
+   50          | OUTLINE STRING
+   51          | OUTLINESTYLE STRING
+   52          | OUTLINEWIDTH INTEGER
+   53          | WIDTH REAL
+   54          | STYLE STRING
+   55          | STYLE attrlist
+   56          | LINE attrlist
+   57          | POINT attrlist
+   58          | TEXT STRING
+   59          | FONTNAME STRING
+   60          | FONTSIZE INTEGER
+   61          | COLOR STRING
+
+
+Terminals, with rules where they appear
+
+$end (0) 0
+'[' (91) 5 17 23 31
+']' (93) 5 17 23 31
+error (256) 2
+GRAPH (258) 4
+NODE (259) 17
+EDGE (260) 23
+DIRECTED (261) 13
+SOURCE (262) 26
+TARGET (263) 27
+XVAL (264) 40 41
+YVAL (265) 42
+WVAL (266) 43
+HVAL (267) 44
+LABEL (268) 45
+GRAPHICS (269) 46
+LABELGRAPHICS (270) 47
+TYPE (271) 48
+FILL (272) 49
+OUTLINE (273) 50
+OUTLINESTYLE (274) 51
+OUTLINEWIDTH (275) 52
+WIDTH (276) 53
+STYLE (277) 54 55
+LINE (278) 56
+POINT (279) 57
+TEXT (280) 58
+FONTSIZE (281) 60
+FONTNAME (282) 59
+COLOR (283) 61
+INTEGER (284) 13 14 20 26 27 28 36 41 52 60
+REAL (285) 37 40 42 43 44 53
+STRING (286) 38 45 48 49 50 51 54 58 59 61
+ID (287) 14 20 28
+NAME (288) 36 37 38 39
+LIST (289)
+
+
+Nonterminals, with rules where they appear
+
+$accept (37)
+    on left: 0
+graph (38)
+    on left: 1 2 3, on right: 0
+hdr (39)
+    on left: 4, on right: 1 12
+body (40)
+    on left: 5, on right: 1 12
+optglist (41)
+    on left: 6 7, on right: 5
+glist (42)
+    on left: 8 9, on right: 6 8
+glistitem (43)
+    on left: 10 11 12 13 14 15, on right: 8 9
+node (44)
+    on left: 17, on right: 10
+$@1 (45)
+    on left: 16, on right: 17
+nlist (46)
+    on left: 18 19, on right: 17 18
+nlistitem (47)
+    on left: 20 21, on right: 18 19
+edge (48)
+    on left: 23, on right: 11
+$@2 (49)
+    on left: 22, on right: 23
+elist (50)
+    on left: 24 25, on right: 23 24
+elistitem (51)
+    on left: 26 27 28 29, on right: 24 25
+attrlist (52)
+    on left: 31, on right: 39 46 47 55 56 57
+$@3 (53)
+    on left: 30, on right: 31
+optalist (54)
+    on left: 32 33, on right: 1 31
+alist (55)
+    on left: 34 35, on right: 32 34
+alistitem (56)
+    on left: 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53
+    54 55 56 57 58 59 60 61, on right: 15 21 29 34 35
+
+
+state 0
+
+    0 $accept: . graph $end
+
+    error          shift, and go to state 1
+    XVAL           shift, and go to state 2
+    YVAL           shift, and go to state 3
+    WVAL           shift, and go to state 4
+    HVAL           shift, and go to state 5
+    LABEL          shift, and go to state 6
+    GRAPHICS       shift, and go to state 7
+    LABELGRAPHICS  shift, and go to state 8
+    TYPE           shift, and go to state 9
+    FILL           shift, and go to state 10
+    OUTLINE        shift, and go to state 11
+    OUTLINESTYLE   shift, and go to state 12
+    OUTLINEWIDTH   shift, and go to state 13
+    WIDTH          shift, and go to state 14
+    STYLE          shift, and go to state 15
+    LINE           shift, and go to state 16
+    POINT          shift, and go to state 17
+    TEXT           shift, and go to state 18
+    FONTSIZE       shift, and go to state 19
+    FONTNAME       shift, and go to state 20
+    COLOR          shift, and go to state 21
+    NAME           shift, and go to state 22
+
+    $end   reduce using rule 3 (graph)
+    GRAPH  reduce using rule 33 (optalist)
+
+    graph      go to state 23
+    optalist   go to state 24
+    alist      go to state 25
+    alistitem  go to state 26
+
+
+state 1
+
+    2 graph: error .
+
+    $default  reduce using rule 2 (graph)
+
+
+state 2
+
+   40 alistitem: XVAL . REAL
+   41          | XVAL . INTEGER
+
+    INTEGER  shift, and go to state 27
+    REAL     shift, and go to state 28
+
+
+state 3
+
+   42 alistitem: YVAL . REAL
+
+    REAL  shift, and go to state 29
+
+
+state 4
+
+   43 alistitem: WVAL . REAL
+
+    REAL  shift, and go to state 30
+
+
+state 5
+
+   44 alistitem: HVAL . REAL
+
+    REAL  shift, and go to state 31
+
+
+state 6
+
+   45 alistitem: LABEL . STRING
+
+    STRING  shift, and go to state 32
+
+
+state 7
+
+   46 alistitem: GRAPHICS . attrlist
+
+    '['  shift, and go to state 33
+
+    attrlist  go to state 34
+
+
+state 8
+
+   47 alistitem: LABELGRAPHICS . attrlist
+
+    '['  shift, and go to state 33
+
+    attrlist  go to state 35
+
+
+state 9
+
+   48 alistitem: TYPE . STRING
+
+    STRING  shift, and go to state 36
+
+
+state 10
+
+   49 alistitem: FILL . STRING
+
+    STRING  shift, and go to state 37
+
+
+state 11
+
+   50 alistitem: OUTLINE . STRING
+
+    STRING  shift, and go to state 38
+
+
+state 12
+
+   51 alistitem: OUTLINESTYLE . STRING
+
+    STRING  shift, and go to state 39
+
+
+state 13
+
+   52 alistitem: OUTLINEWIDTH . INTEGER
+
+    INTEGER  shift, and go to state 40
+
+
+state 14
+
+   53 alistitem: WIDTH . REAL
+
+    REAL  shift, and go to state 41
+
+
+state 15
+
+   54 alistitem: STYLE . STRING
+   55          | STYLE . attrlist
+
+    STRING  shift, and go to state 42
+    '['     shift, and go to state 33
+
+    attrlist  go to state 43
+
+
+state 16
+
+   56 alistitem: LINE . attrlist
+
+    '['  shift, and go to state 33
+
+    attrlist  go to state 44
+
+
+state 17
+
+   57 alistitem: POINT . attrlist
+
+    '['  shift, and go to state 33
+
+    attrlist  go to state 45
+
+
+state 18
+
+   58 alistitem: TEXT . STRING
+
+    STRING  shift, and go to state 46
+
+
+state 19
+
+   60 alistitem: FONTSIZE . INTEGER
+
+    INTEGER  shift, and go to state 47
+
+
+state 20
+
+   59 alistitem: FONTNAME . STRING
+
+    STRING  shift, and go to state 48
+
+
+state 21
+
+   61 alistitem: COLOR . STRING
+
+    STRING  shift, and go to state 49
+
+
+state 22
+
+   36 alistitem: NAME . INTEGER
+   37          | NAME . REAL
+   38          | NAME . STRING
+   39          | NAME . attrlist
+
+    INTEGER  shift, and go to state 50
+    REAL     shift, and go to state 51
+    STRING   shift, and go to state 52
+    '['      shift, and go to state 33
+
+    attrlist  go to state 53
+
+
+state 23
+
+    0 $accept: graph . $end
+
+    $end  shift, and go to state 54
+
+
+state 24
+
+    1 graph: optalist . hdr body
+
+    GRAPH  shift, and go to state 55
+
+    hdr  go to state 56
+
+
+state 25
+
+   32 optalist: alist .
+   34 alist: alist . alistitem
+
+    XVAL           shift, and go to state 2
+    YVAL           shift, and go to state 3
+    WVAL           shift, and go to state 4
+    HVAL           shift, and go to state 5
+    LABEL          shift, and go to state 6
+    GRAPHICS       shift, and go to state 7
+    LABELGRAPHICS  shift, and go to state 8
+    TYPE           shift, and go to state 9
+    FILL           shift, and go to state 10
+    OUTLINE        shift, and go to state 11
+    OUTLINESTYLE   shift, and go to state 12
+    OUTLINEWIDTH   shift, and go to state 13
+    WIDTH          shift, and go to state 14
+    STYLE          shift, and go to state 15
+    LINE           shift, and go to state 16
+    POINT          shift, and go to state 17
+    TEXT           shift, and go to state 18
+    FONTSIZE       shift, and go to state 19
+    FONTNAME       shift, and go to state 20
+    COLOR          shift, and go to state 21
+    NAME           shift, and go to state 22
+
+    $default  reduce using rule 32 (optalist)
+
+    alistitem  go to state 57
+
+
+state 26
+
+   35 alist: alistitem .
+
+    $default  reduce using rule 35 (alist)
+
+
+state 27
+
+   41 alistitem: XVAL INTEGER .
+
+    $default  reduce using rule 41 (alistitem)
+
+
+state 28
+
+   40 alistitem: XVAL REAL .
+
+    $default  reduce using rule 40 (alistitem)
+
+
+state 29
+
+   42 alistitem: YVAL REAL .
+
+    $default  reduce using rule 42 (alistitem)
+
+
+state 30
+
+   43 alistitem: WVAL REAL .
+
+    $default  reduce using rule 43 (alistitem)
+
+
+state 31
+
+   44 alistitem: HVAL REAL .
+
+    $default  reduce using rule 44 (alistitem)
+
+
+state 32
+
+   45 alistitem: LABEL STRING .
+
+    $default  reduce using rule 45 (alistitem)
+
+
+state 33
+
+   31 attrlist: '[' . $@3 optalist ']'
+
+    $default  reduce using rule 30 ($@3)
+
+    $@3  go to state 58
+
+
+state 34
+
+   46 alistitem: GRAPHICS attrlist .
+
+    $default  reduce using rule 46 (alistitem)
+
+
+state 35
+
+   47 alistitem: LABELGRAPHICS attrlist .
+
+    $default  reduce using rule 47 (alistitem)
+
+
+state 36
+
+   48 alistitem: TYPE STRING .
+
+    $default  reduce using rule 48 (alistitem)
+
+
+state 37
+
+   49 alistitem: FILL STRING .
+
+    $default  reduce using rule 49 (alistitem)
+
+
+state 38
+
+   50 alistitem: OUTLINE STRING .
+
+    $default  reduce using rule 50 (alistitem)
+
+
+state 39
+
+   51 alistitem: OUTLINESTYLE STRING .
+
+    $default  reduce using rule 51 (alistitem)
+
+
+state 40
+
+   52 alistitem: OUTLINEWIDTH INTEGER .
+
+    $default  reduce using rule 52 (alistitem)
+
+
+state 41
+
+   53 alistitem: WIDTH REAL .
+
+    $default  reduce using rule 53 (alistitem)
+
+
+state 42
+
+   54 alistitem: STYLE STRING .
+
+    $default  reduce using rule 54 (alistitem)
+
+
+state 43
+
+   55 alistitem: STYLE attrlist .
+
+    $default  reduce using rule 55 (alistitem)
+
+
+state 44
+
+   56 alistitem: LINE attrlist .
+
+    $default  reduce using rule 56 (alistitem)
+
+
+state 45
+
+   57 alistitem: POINT attrlist .
+
+    $default  reduce using rule 57 (alistitem)
+
+
+state 46
+
+   58 alistitem: TEXT STRING .
+
+    $default  reduce using rule 58 (alistitem)
+
+
+state 47
+
+   60 alistitem: FONTSIZE INTEGER .
+
+    $default  reduce using rule 60 (alistitem)
+
+
+state 48
+
+   59 alistitem: FONTNAME STRING .
+
+    $default  reduce using rule 59 (alistitem)
+
+
+state 49
+
+   61 alistitem: COLOR STRING .
+
+    $default  reduce using rule 61 (alistitem)
+
+
+state 50
+
+   36 alistitem: NAME INTEGER .
+
+    $default  reduce using rule 36 (alistitem)
+
+
+state 51
+
+   37 alistitem: NAME REAL .
+
+    $default  reduce using rule 37 (alistitem)
+
+
+state 52
+
+   38 alistitem: NAME STRING .
+
+    $default  reduce using rule 38 (alistitem)
+
+
+state 53
+
+   39 alistitem: NAME attrlist .
+
+    $default  reduce using rule 39 (alistitem)
+
+
+state 54
+
+    0 $accept: graph $end .
+
+    $default  accept
+
+
+state 55
+
+    4 hdr: GRAPH .
+
+    $default  reduce using rule 4 (hdr)
+
+
+state 56
+
+    1 graph: optalist hdr . body
+
+    '['  shift, and go to state 59
+
+    body  go to state 60
+
+
+state 57
+
+   34 alist: alist alistitem .
+
+    $default  reduce using rule 34 (alist)
+
+
+state 58
+
+   31 attrlist: '[' $@3 . optalist ']'
+
+    XVAL           shift, and go to state 2
+    YVAL           shift, and go to state 3
+    WVAL           shift, and go to state 4
+    HVAL           shift, and go to state 5
+    LABEL          shift, and go to state 6
+    GRAPHICS       shift, and go to state 7
+    LABELGRAPHICS  shift, and go to state 8
+    TYPE           shift, and go to state 9
+    FILL           shift, and go to state 10
+    OUTLINE        shift, and go to state 11
+    OUTLINESTYLE   shift, and go to state 12
+    OUTLINEWIDTH   shift, and go to state 13
+    WIDTH          shift, and go to state 14
+    STYLE          shift, and go to state 15
+    LINE           shift, and go to state 16
+    POINT          shift, and go to state 17
+    TEXT           shift, and go to state 18
+    FONTSIZE       shift, and go to state 19
+    FONTNAME       shift, and go to state 20
+    COLOR          shift, and go to state 21
+    NAME           shift, and go to state 22
+
+    $default  reduce using rule 33 (optalist)
+
+    optalist   go to state 61
+    alist      go to state 25
+    alistitem  go to state 26
+
+
+state 59
+
+    5 body: '[' . optglist ']'
+
+    GRAPH          shift, and go to state 55
+    NODE           shift, and go to state 62
+    EDGE           shift, and go to state 63
+    DIRECTED       shift, and go to state 64
+    XVAL           shift, and go to state 2
+    YVAL           shift, and go to state 3
+    WVAL           shift, and go to state 4
+    HVAL           shift, and go to state 5
+    LABEL          shift, and go to state 6
+    GRAPHICS       shift, and go to state 7
+    LABELGRAPHICS  shift, and go to state 8
+    TYPE           shift, and go to state 9
+    FILL           shift, and go to state 10
+    OUTLINE        shift, and go to state 11
+    OUTLINESTYLE   shift, and go to state 12
+    OUTLINEWIDTH   shift, and go to state 13
+    WIDTH          shift, and go to state 14
+    STYLE          shift, and go to state 15
+    LINE           shift, and go to state 16
+    POINT          shift, and go to state 17
+    TEXT           shift, and go to state 18
+    FONTSIZE       shift, and go to state 19
+    FONTNAME       shift, and go to state 20
+    COLOR          shift, and go to state 21
+    ID             shift, and go to state 65
+    NAME           shift, and go to state 22
+
+    $default  reduce using rule 7 (optglist)
+
+    hdr        go to state 66
+    optglist   go to state 67
+    glist      go to state 68
+    glistitem  go to state 69
+    node       go to state 70
+    edge       go to state 71
+    alistitem  go to state 72
+
+
+state 60
+
+    1 graph: optalist hdr body .
+
+    $default  reduce using rule 1 (graph)
+
+
+state 61
+
+   31 attrlist: '[' $@3 optalist . ']'
+
+    ']'  shift, and go to state 73
+
+
+state 62
+
+   17 node: NODE . $@1 '[' nlist ']'
+
+    $default  reduce using rule 16 ($@1)
+
+    $@1  go to state 74
+
+
+state 63
+
+   23 edge: EDGE . $@2 '[' elist ']'
+
+    $default  reduce using rule 22 ($@2)
+
+    $@2  go to state 75
+
+
+state 64
+
+   13 glistitem: DIRECTED . INTEGER
+
+    INTEGER  shift, and go to state 76
+
+
+state 65
+
+   14 glistitem: ID . INTEGER
+
+    INTEGER  shift, and go to state 77
+
+
+state 66
+
+   12 glistitem: hdr . body
+
+    '['  shift, and go to state 59
+
+    body  go to state 78
+
+
+state 67
+
+    5 body: '[' optglist . ']'
+
+    ']'  shift, and go to state 79
+
+
+state 68
+
+    6 optglist: glist .
+    8 glist: glist . glistitem
+
+    GRAPH          shift, and go to state 55
+    NODE           shift, and go to state 62
+    EDGE           shift, and go to state 63
+    DIRECTED       shift, and go to state 64
+    XVAL           shift, and go to state 2
+    YVAL           shift, and go to state 3
+    WVAL           shift, and go to state 4
+    HVAL           shift, and go to state 5
+    LABEL          shift, and go to state 6
+    GRAPHICS       shift, and go to state 7
+    LABELGRAPHICS  shift, and go to state 8
+    TYPE           shift, and go to state 9
+    FILL           shift, and go to state 10
+    OUTLINE        shift, and go to state 11
+    OUTLINESTYLE   shift, and go to state 12
+    OUTLINEWIDTH   shift, and go to state 13
+    WIDTH          shift, and go to state 14
+    STYLE          shift, and go to state 15
+    LINE           shift, and go to state 16
+    POINT          shift, and go to state 17
+    TEXT           shift, and go to state 18
+    FONTSIZE       shift, and go to state 19
+    FONTNAME       shift, and go to state 20
+    COLOR          shift, and go to state 21
+    ID             shift, and go to state 65
+    NAME           shift, and go to state 22
+
+    $default  reduce using rule 6 (optglist)
+
+    hdr        go to state 66
+    glistitem  go to state 80
+    node       go to state 70
+    edge       go to state 71
+    alistitem  go to state 72
+
+
+state 69
+
+    9 glist: glistitem .
+
+    $default  reduce using rule 9 (glist)
+
+
+state 70
+
+   10 glistitem: node .
+
+    $default  reduce using rule 10 (glistitem)
+
+
+state 71
+
+   11 glistitem: edge .
+
+    $default  reduce using rule 11 (glistitem)
+
+
+state 72
+
+   15 glistitem: alistitem .
+
+    $default  reduce using rule 15 (glistitem)
+
+
+state 73
+
+   31 attrlist: '[' $@3 optalist ']' .
+
+    $default  reduce using rule 31 (attrlist)
+
+
+state 74
+
+   17 node: NODE $@1 . '[' nlist ']'
+
+    '['  shift, and go to state 81
+
+
+state 75
+
+   23 edge: EDGE $@2 . '[' elist ']'
+
+    '['  shift, and go to state 82
+
+
+state 76
+
+   13 glistitem: DIRECTED INTEGER .
+
+    $default  reduce using rule 13 (glistitem)
+
+
+state 77
+
+   14 glistitem: ID INTEGER .
+
+    $default  reduce using rule 14 (glistitem)
+
+
+state 78
+
+   12 glistitem: hdr body .
+
+    $default  reduce using rule 12 (glistitem)
+
+
+state 79
+
+    5 body: '[' optglist ']' .
+
+    $default  reduce using rule 5 (body)
+
+
+state 80
+
+    8 glist: glist glistitem .
+
+    $default  reduce using rule 8 (glist)
+
+
+state 81
+
+   17 node: NODE $@1 '[' . nlist ']'
+
+    XVAL           shift, and go to state 2
+    YVAL           shift, and go to state 3
+    WVAL           shift, and go to state 4
+    HVAL           shift, and go to state 5
+    LABEL          shift, and go to state 6
+    GRAPHICS       shift, and go to state 7
+    LABELGRAPHICS  shift, and go to state 8
+    TYPE           shift, and go to state 9
+    FILL           shift, and go to state 10
+    OUTLINE        shift, and go to state 11
+    OUTLINESTYLE   shift, and go to state 12
+    OUTLINEWIDTH   shift, and go to state 13
+    WIDTH          shift, and go to state 14
+    STYLE          shift, and go to state 15
+    LINE           shift, and go to state 16
+    POINT          shift, and go to state 17
+    TEXT           shift, and go to state 18
+    FONTSIZE       shift, and go to state 19
+    FONTNAME       shift, and go to state 20
+    COLOR          shift, and go to state 21
+    ID             shift, and go to state 83
+    NAME           shift, and go to state 22
+
+    nlist      go to state 84
+    nlistitem  go to state 85
+    alistitem  go to state 86
+
+
+state 82
+
+   23 edge: EDGE $@2 '[' . elist ']'
+
+    SOURCE         shift, and go to state 87
+    TARGET         shift, and go to state 88
+    XVAL           shift, and go to state 2
+    YVAL           shift, and go to state 3
+    WVAL           shift, and go to state 4
+    HVAL           shift, and go to state 5
+    LABEL          shift, and go to state 6
+    GRAPHICS       shift, and go to state 7
+    LABELGRAPHICS  shift, and go to state 8
+    TYPE           shift, and go to state 9
+    FILL           shift, and go to state 10
+    OUTLINE        shift, and go to state 11
+    OUTLINESTYLE   shift, and go to state 12
+    OUTLINEWIDTH   shift, and go to state 13
+    WIDTH          shift, and go to state 14
+    STYLE          shift, and go to state 15
+    LINE           shift, and go to state 16
+    POINT          shift, and go to state 17
+    TEXT           shift, and go to state 18
+    FONTSIZE       shift, and go to state 19
+    FONTNAME       shift, and go to state 20
+    COLOR          shift, and go to state 21
+    ID             shift, and go to state 89
+    NAME           shift, and go to state 22
+
+    elist      go to state 90
+    elistitem  go to state 91
+    alistitem  go to state 92
+
+
+state 83
+
+   20 nlistitem: ID . INTEGER
+
+    INTEGER  shift, and go to state 93
+
+
+state 84
+
+   17 node: NODE $@1 '[' nlist . ']'
+   18 nlist: nlist . nlistitem
+
+    XVAL           shift, and go to state 2
+    YVAL           shift, and go to state 3
+    WVAL           shift, and go to state 4
+    HVAL           shift, and go to state 5
+    LABEL          shift, and go to state 6
+    GRAPHICS       shift, and go to state 7
+    LABELGRAPHICS  shift, and go to state 8
+    TYPE           shift, and go to state 9
+    FILL           shift, and go to state 10
+    OUTLINE        shift, and go to state 11
+    OUTLINESTYLE   shift, and go to state 12
+    OUTLINEWIDTH   shift, and go to state 13
+    WIDTH          shift, and go to state 14
+    STYLE          shift, and go to state 15
+    LINE           shift, and go to state 16
+    POINT          shift, and go to state 17
+    TEXT           shift, and go to state 18
+    FONTSIZE       shift, and go to state 19
+    FONTNAME       shift, and go to state 20
+    COLOR          shift, and go to state 21
+    ID             shift, and go to state 83
+    NAME           shift, and go to state 22
+    ']'            shift, and go to state 94
+
+    nlistitem  go to state 95
+    alistitem  go to state 86
+
+
+state 85
+
+   19 nlist: nlistitem .
+
+    $default  reduce using rule 19 (nlist)
+
+
+state 86
+
+   21 nlistitem: alistitem .
+
+    $default  reduce using rule 21 (nlistitem)
+
+
+state 87
+
+   26 elistitem: SOURCE . INTEGER
+
+    INTEGER  shift, and go to state 96
+
+
+state 88
+
+   27 elistitem: TARGET . INTEGER
+
+    INTEGER  shift, and go to state 97
+
+
+state 89
+
+   28 elistitem: ID . INTEGER
+
+    INTEGER  shift, and go to state 98
+
+
+state 90
+
+   23 edge: EDGE $@2 '[' elist . ']'
+   24 elist: elist . elistitem
+
+    SOURCE         shift, and go to state 87
+    TARGET         shift, and go to state 88
+    XVAL           shift, and go to state 2
+    YVAL           shift, and go to state 3
+    WVAL           shift, and go to state 4
+    HVAL           shift, and go to state 5
+    LABEL          shift, and go to state 6
+    GRAPHICS       shift, and go to state 7
+    LABELGRAPHICS  shift, and go to state 8
+    TYPE           shift, and go to state 9
+    FILL           shift, and go to state 10
+    OUTLINE        shift, and go to state 11
+    OUTLINESTYLE   shift, and go to state 12
+    OUTLINEWIDTH   shift, and go to state 13
+    WIDTH          shift, and go to state 14
+    STYLE          shift, and go to state 15
+    LINE           shift, and go to state 16
+    POINT          shift, and go to state 17
+    TEXT           shift, and go to state 18
+    FONTSIZE       shift, and go to state 19
+    FONTNAME       shift, and go to state 20
+    COLOR          shift, and go to state 21
+    ID             shift, and go to state 89
+    NAME           shift, and go to state 22
+    ']'            shift, and go to state 99
+
+    elistitem  go to state 100
+    alistitem  go to state 92
+
+
+state 91
+
+   25 elist: elistitem .
+
+    $default  reduce using rule 25 (elist)
+
+
+state 92
+
+   29 elistitem: alistitem .
+
+    $default  reduce using rule 29 (elistitem)
+
+
+state 93
+
+   20 nlistitem: ID INTEGER .
+
+    $default  reduce using rule 20 (nlistitem)
+
+
+state 94
+
+   17 node: NODE $@1 '[' nlist ']' .
+
+    $default  reduce using rule 17 (node)
+
+
+state 95
+
+   18 nlist: nlist nlistitem .
+
+    $default  reduce using rule 18 (nlist)
+
+
+state 96
+
+   26 elistitem: SOURCE INTEGER .
+
+    $default  reduce using rule 26 (elistitem)
+
+
+state 97
+
+   27 elistitem: TARGET INTEGER .
+
+    $default  reduce using rule 27 (elistitem)
+
+
+state 98
+
+   28 elistitem: ID INTEGER .
+
+    $default  reduce using rule 28 (elistitem)
+
+
+state 99
+
+   23 edge: EDGE $@2 '[' elist ']' .
+
+    $default  reduce using rule 23 (edge)
+
+
+state 100
+
+   24 elist: elist elistitem .
+
+    $default  reduce using rule 24 (elist)

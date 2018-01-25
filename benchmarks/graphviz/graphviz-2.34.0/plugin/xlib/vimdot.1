@@ -1,0 +1,25 @@
+.\"                                      Hey, EMACS: -*- nroff -*-
+.TH VIMDOT 1 "Jan 31, 2010"
+.SH NAME
+vimdot \- Combined text editor and dot viewer
+.SH SYNOPSIS
+.B vimdot
+.RI [ file ]
+.SH DESCRIPTION
+.PP
+\fBvimdot\fP is a simple script which launches the gvim or vim editor along with a GUI window showing the
+dot output of the edited file.  The dot output window automatically refreshes everytime the file is saved
+in the editor.
+.PP
+If no filename is given, vimdot will use 'noname.gv' and initialise it with an example graph to get you
+started.
+.PP
+The GUI window (provided by "dot -Txlib") supports zooming using the mouse scroll-wheel, and panning by holding the scroll-wheel down and dragging.
+.SH SEE ALSO
+.br
+vim(1), dot(1)
+.SH AUTHOR
+vimdot was written by John Ellson <ellson@research.att.com>
+.PP
+This manual page was written by David Claughton <dave@eclecticdave.com>,
+for the Debian project (but may be used by others).

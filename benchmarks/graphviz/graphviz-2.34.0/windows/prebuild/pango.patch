@@ -1,0 +1,37 @@
+diff -ru pango-1.20.2/modules/Makefile.in pango-1.20.2.patched/modules/Makefile.in
+--- pango-1.20.2/modules/Makefile.in	Thu Apr 10 03:04:14 2008
++++ pango-1.20.2.patched/modules/Makefile.in	Wed May 14 00:20:14 2008
+@@ -556,10 +556,10 @@
+ install-data-local: $(top_builddir)/pango/pango-querymodules$(EXEEXT)
+ 	@if $(RUN_QUERY_MODULES_TEST) && test -z "$(DESTDIR)" ; then 	\
+ 	  echo $(mkinstalldirs) $(DESTDIR)$(sysconfdir)/pango \&\& 	\
+-	  $(top_builddir)/pango/pango-querymodules$(EXEEXT) 		\
++	  $(bindir)/pango-querymodules$(EXEEXT) 		\
+ 		\> $(DESTDIR)$(sysconfdir)/pango/pango.modules ;	\
+ 	  $(mkinstalldirs) $(DESTDIR)$(sysconfdir)/pango && 		\
+-	  $(top_builddir)/pango/pango-querymodules$(EXEEXT) 		\
++	  $(bindir)/pango-querymodules$(EXEEXT) 		\
+ 		> $(DESTDIR)$(sysconfdir)/pango/pango.modules ;		\
+ 	else								\
+ 	  echo "***" ; 							\
+diff -ru pango-1.20.2/pango/Makefile.in pango-1.20.2.patched/pango/Makefile.in
+--- pango-1.20.2/pango/Makefile.in	Thu Apr 10 03:04:19 2008
++++ pango-1.20.2.patched/pango/Makefile.in	Wed May 14 08:19:59 2008
+@@ -1391,7 +1391,7 @@
+ pango-enum-types.h: s-enum-types-h
+ 	@true
+ s-enum-types-h: @REBUILD@ $(pango_headers) Makefile
+-	( cd $(srcdir) && glib-mkenums \
++	( cd $(srcdir) && $(bindir)/glib-mkenums \
+ 			--fhead "#ifndef __PANGO_ENUM_TYPES_H__\n#define __PANGO_ENUM_TYPES_H__\n\n#include <glib-object.h>\n\nG_BEGIN_DECLS\n" \
+ 			--fprod "/* enumerations from \"@filename@\" */\n" \
+ 			--vhead "GType @enum_name@_get_type (void);\n#define PANGO_TYPE_@ENUMSHORT@ (@enum_name@_get_type())\n" 	\
+@@ -1404,7 +1404,7 @@
+ pango-enum-types.c: s-enum-types-c
+ 	@true
+ s-enum-types-c: @REBUILD@ $(pango_headers) Makefile
+-	( cd $(srcdir) && glib-mkenums \
++	( cd $(srcdir) && $(bindir)/glib-mkenums \
+ 			--fhead "#include <pango.h>" \
+ 			--fprod "\n/* enumerations from \"@filename@\" */" \
+ 			--vhead "GType\n@enum_name@_get_type (void)\n{\n  static GType etype = 0;\n  if (etype == 0) {\n    static const G@Type@Value values[] = {" 	\

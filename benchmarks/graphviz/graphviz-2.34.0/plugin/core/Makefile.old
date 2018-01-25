@@ -1,0 +1,33 @@
+all:	libgvplugin_core.a 
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+INCS =  -I. \
+	-I$(ROOT) \
+        -I../../lib/common \
+        -I../../lib/pathplan \
+        -I../../lib/graph \
+        -I../../lib/cdt \
+        -I../../lib/gvc 
+
+DEFINES = -DHAVE_CONFIG_H
+
+OBJS = gvplugin_core.o gvrender_core_ps.o gvrender_core_svg.o \
+          gvrender_core_map.o gvloadimage_core.o gvrender_core_fig.o \
+          gvrender_core_dot.o gvrender_core_vml.o gvrender_core_tk.o
+
+libgvplugin_core.a : $(OBJS)
+	$(RM) libgvplugin_core.a
+	$(AR) cr libgvplugin_core.a $(OBJS)
+	$(RANLIB) libgvplugin_core.a
+
+install: libgvplugin_core.a
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libgvplugin_core.a $(LIBDIR)
+
+clean:
+	$(RM) core *.o
+
+distclean: clean
+	$(RM) *.a ptest

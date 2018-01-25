@@ -1,0 +1,34 @@
+digraph G {
+  subgraph cluster0 {
+    fillcolor="blue:red"
+	style="filled,rounded"
+    0
+  }
+  subgraph cluster1 {
+    peripheries=0
+    fillcolor="blue:red"
+	style=filled
+    1
+  }
+  subgraph cluster2 {
+    fillcolor="blue"
+	style=filled
+    2
+  }
+  subgraph cluster3 {
+    peripheries=0
+    fillcolor="red"
+	style="filled,rounded"
+    3
+  }
+  subgraph cluster4 {
+    peripheries=0
+    bgcolor="red:blue"
+    4
+  }
+  subgraph cluster5 {
+    bgcolor="red:blue"
+    5
+  }
+  0 -> 1 -> 2 -> 3 -> 4
+}

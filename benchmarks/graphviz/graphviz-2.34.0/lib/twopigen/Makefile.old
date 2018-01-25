@@ -1,0 +1,38 @@
+all:	libtwopigen.a
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+INCS =	-I. -I$(ROOT) \
+	-I../common \
+	-I../neatogen \
+	-I../sparse \
+	-I../pack \
+	-I../gvc \
+	-I../pathplan \
+	-I../graph \
+	-I../cdt \
+	-I../gd
+
+DEFINES = -DHAVE_CONFIG_H
+
+OBJS = twopiinit.o circle.o 
+
+HFILES = circle.h 
+
+libtwopigen.a : $(OBJS)
+	$(RM) libtwopigen.a
+	$(AR) cr libtwopigen.a $(OBJS)
+	$(RANLIB) libtwopigen.a
+
+$(OBJS) : $(HFILES) ../common/types.h
+
+install: libtwopigen.a
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libtwopigen.a $(LIBDIR)
+
+clean:
+	$(RM) *.o core
+
+distclean: clean
+	$(RM) *.a twopi lib*.so.*

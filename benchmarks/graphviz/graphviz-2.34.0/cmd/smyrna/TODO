@@ -1,0 +1,31 @@
+Features:
+Undo
+Allow user control of max. node size
+Set focus on a node
+  "Find node whose name is abc"
+=>File browser should return to previously used directory
+Re-add "Select all nodes/edges" operations?
+edge positions should be handled by smyrna if available
+
+Multiple views
+GUI for canned gvpr programs
+Additional edge attributes : dash/dotted, width
+Multiedges
+Select in 3D
+Mechanism for semantic zoom
+  separate overlapping nodes
+  add more detail
+alpha, node size in topfish
+
+Bugs: 
+
+Catch window kill button for node list
+Use full disk when picking nodes
+Why is smyrna so slow to shut down?
+
+Labels don't appear when alpha colors are enabled 
+Edges should not disappear when node is off screen ?
+Make sure all buttons do something or remove them
+Trap "window close" on Smyrna Settings widget, or fix problem
+
+

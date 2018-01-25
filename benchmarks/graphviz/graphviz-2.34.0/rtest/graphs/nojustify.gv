@@ -1,0 +1,11 @@
+digraph G{
+  node [shape=box, label="aaaaaaaaaaaaaa\nddd\l"]
+  n [width=3]
+  m [width=3, nojustify=true]
+  b [nojustify=true]
+  n -> m 
+  l -> p
+  l [shape=record, label="{aaaaaaaaaaaaaa\n | bbbbbb\nddd\l}"]
+  p [nojustify=true, shape=record, label="{aaaaaaaaaaaaaa\n | bbbbbb\nddd\l}"]
+  a -> b
+}

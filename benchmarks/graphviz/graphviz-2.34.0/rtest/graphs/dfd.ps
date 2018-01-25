@@ -1,0 +1,31 @@
+/xdef {exch def} bind def
+/DFDbox {
+	10 dict begin
+		/fflag xdef
+		/sides xdef
+		dup
+		aload pop
+		% draw the sides
+		newpath
+		moveto
+		1 1 sides {
+			2 mod 0 ne
+			{moveto} % even sides
+			{lineto currentpoint stroke moveto} % odd sides
+			ifelse
+		} for
+		fflag   % if shape is filled
+		{
+			aload pop
+			newpath
+			moveto
+			/y1 xdef
+			/x1 xdef
+			lineto stroke newpath
+			x1 y1 moveto lineto stroke
+			pop pop
+		}
+		{pop}
+		ifelse
+	end
+} bind def

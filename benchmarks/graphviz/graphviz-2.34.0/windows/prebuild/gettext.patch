@@ -1,0 +1,12 @@
+diff -ru gettext-0.17/gettext-runtime/intl/loadmsgcat.c gettext-0.17.patched/gettext-runtime/intl/loadmsgcat.c
+--- gettext-0.17/gettext-runtime/intl/loadmsgcat.c	2007-10-14 00:26:32.000000000 +0800
++++ gettext-0.17.patched/gettext-runtime/intl/loadmsgcat.c	2008-05-20 14:43:12.000000000 +0800
+@@ -503,7 +503,7 @@
+ /* We need a sign, whether a new catalog was loaded, which can be associated
+    with all translations.  This is important if the translations are
+    cached by one of GCC's features.  */
+-int _nl_msg_cat_cntr;
++int _nl_msg_cat_cntr = 0;
+ 
+ 
+ /* Expand a system dependent string segment.  Return NULL if unsupported.  */

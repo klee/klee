@@ -1,0 +1,50 @@
+digraph G {
+ subgraph cluster_base{
+ label = "table border:10,cellspacing:0,cellpadding:0,cell border:1";
+ node [shape=plaintext]
+ tbl1100 [label=<
+ <TABLE rows="*" columns="*" border="10" cellborder="1" cellspacing="0" cellpadding="0">
+  <TR><TD>00</TD><VR/><TD >01</TD><TD >02</TD><TD >03</TD></TR>
+  <TR><TD >10</TD><TD  rowspan="2">11</TD><TD >12</TD><TD >13</TD></TR>
+  <HR/>
+  <TR><TD >20</TD><TD  colspan="2">22</TD></TR>
+  <TR><TD >30</TD><TD >31</TD><TD >32</TD><TD >33</TD></TR>
+</TABLE>>];
+}
+ subgraph cluster_table_border {
+ label="table border:10,cellspacing:2,cellpadding:10,cell border:1";
+ node [shape=plaintext]
+ tbl1010 [label=<
+ <TABLE border="10" columns="*" cellspacing="2" cellpadding="10" cellborder="1">
+  <TR><TD >00</TD><TD >01</TD><TD >02</TD><TD >03</TD></TR>
+  <TR><TD >10</TD><TD  rowspan="2">11</TD><TD >12</TD><TD >13</TD></TR>
+  <HR/>
+  <TR><TD >20</TD><TD  colspan="2">22</TD></TR>
+  <TR><TD >30</TD><TD >31</TD><TD >32</TD><TD >33</TD></TR>
+</TABLE>>];
+}
+
+ subgraph cluster_cellspacing {
+ label="table border:10,cellspacing:10,cellpadding:10,cell border:0";
+ node [shape=plaintext]
+ tbl1110 [label=<
+ <TABLE border="10" cellspacing="10" cellpadding="10" cellborder="0" rows="*">
+  <TR><TD >00</TD><VR/><TD >01</TD><TD >02</TD><TD >03</TD></TR>
+  <TR><TD >10</TD><TD  rowspan="2">11</TD><VR/><TD >12</TD><TD >13</TD></TR>
+  <TR><TD >20</TD><TD  colspan="2">22</TD></TR>
+  <TR><TD >30</TD><TD >31</TD><TD >32</TD><VR/><TD >33</TD></TR>
+</TABLE>>];
+}
+
+ subgraph cluster_cellpadding {
+ label="table border:10,cellspacing:10,cellpadding:10,cell border:3";
+ node [shape=plaintext]
+ tbl1111 [label=<
+ <TABLE border="10" cellspacing="10" cellpadding="10" cellborder="3" rows="*">
+  <TR><TD >00</TD><VR/><TD >01</TD><TD >02</TD><TD >03</TD></TR>
+  <TR><TD >10</TD><TD  rowspan="2">11</TD><VR/><TD >12</TD><TD >13</TD></TR>
+  <TR><TD >20</TD><TD  colspan="2">22</TD></TR>
+  <TR><TD >30</TD><TD >31</TD><TD >32</TD><VR/><TD >33</TD></TR>
+</TABLE>>];
+}
+} 

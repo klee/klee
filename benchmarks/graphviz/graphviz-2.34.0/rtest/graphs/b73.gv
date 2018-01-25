@@ -1,0 +1,5 @@
+digraph test {
+    gvds_array0 [label="{<port1>fi}|{<port2>b}", shape="record"];
+    "gvds_array0":port1 -> gvds_array0;
+}
+

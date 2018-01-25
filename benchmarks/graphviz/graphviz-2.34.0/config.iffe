@@ -1,0 +1,279 @@
+# Run using: iffe - set cc cc : run configdata > out
+# Second cc can be replace with $(CC) $(CFLAGS)
+set config
+iff GVIZ_CONFIG
+cat{
+}end
+lib __freadable
+lib cbrt math.h -lm
+lib setenv
+lib vsnprintf
+lib setmode
+lib iconv
+lib lsqrt
+lib drand48
+lib feenableexcept -D_GNU_SOURCE fenv.h -lm
+lib fesetenv -D_GNU_SOURCE fenv.h -lm
+lib lrand48
+lib srand48
+lib sincos
+lib strcasecmp
+lib strncasecmp
+lib strerror
+
+hdr dirent
+hdr dlfcn
+hdr errno
+hdr fenv
+hdr fpu_control
+hdr ft2build
+hdr getopt
+hdr iconv
+hdr inttypes
+hdr limits
+hdr malloc
+hdr ndir
+hdr netdb
+hdr search
+hdr stdarg
+hdr stdbool
+hdr stddef
+hdr stdint
+hdr stdlib
+hdr string
+hdr strings
+hdr termios
+hdr unistd
+hdr values
+
+sys types
+sys socket
+sys mman
+sys stat
+sys select
+sys fpu
+sys ndir
+cat{ }end
+
+dat errno stdio.h errno.h yes{
+/* Define if errno is declared in system include files.  */
+#define HAVE_ERRNO_DECL 1
+}end
+
+#  Specify internal structure of FILE.
+#  This is used to determine if more characters are waiting in the stream.
+if mem - FILE._cnt stdio.h {
+/* Define if FILE has _cnt field */
+#define HAVE_FILE_CNT 1
+}
+elif mem - FILE._IO_read_end stdio.h {
+/* Define if FILE has _IO_read_end field */
+#define HAVE_FILE_IO_READ_END 1
+}
+elif mem - FILE.next stdio.h {
+/* Define if FILE has next field */
+#define HAVE_FILE_NEXT 1
+}
+elif mem - FILE._r stdio.h {
+/* Define if FILE has _r field */
+#define HAVE_FILE_R 1
+}
+else {
+# error "Unknown field in FILE for remaining characters"
+}
+endif
+
+link{
+    #if HAVE_STDLIB_H
+    #include <stdlib.h>
+    #endif
+    #if HAVE_STDINT_H
+    #include <stdint.h>
+    #endif
+    #if HAVE_INTTYPES_H
+    #include <inttypes.h>
+    #endif
+    #if HAVE_UNISTD_H
+    #include <unistd.h>
+    #endif
+    intptr_t  abc;
+    int main() {}
+}end yes{
+/* Define if intptr_t is declared */
+#define HAVE_INTPTR_T 1
+}end
+
+link{
+	#include <stdlib.h>
+	#include <stdio.h>
+	#if HAVE_UNISTD_H
+	#include <unistd.h>
+	#endif
+    int main () {
+	if ( optopt ) exit(0); else exit(1);
+	}
+}end yes{
+/* Define if getopt externs are declared */
+#define HAVE_GETOPT_DECL 1
+}end
+
+link{
+    #if HAVE_NETDB_H
+    #include <netdb.h>
+    #endif
+    #if HAVE_SYS_SOCKET_H
+    #include <sys/socket.h>
+    #endif
+    #if HAVE_UNISTD_H
+    #include <unistd.h>
+    #endif
+    socklen_t  abc;
+    int main() {}
+}end yes{
+/* Define if intptr_t is declared */
+#define HAVE_SOCKLEN_T 1
+}end
+
+compile{
+    #ifdef HAVE_STDBOOL_H
+    #include <stdbool.h>
+    #endif
+    bool xx = true, yy = false; 
+}end yes{
+/* Define to 1 if compiler supports bool */
+#define HAVE_BOOL 1
+}end
+
+compile{
+    #include <iconv.h>
+    iconv_t xx; 
+}end yes{
+/* Define if <iconv.h> defines iconv_t. */
+#define HAVE_ICONV_T_DEF 1
+}end
+
+compile{
+    #include <sys/types.h>
+    #include <fcntl.h>
+    #include <stdio.h>
+    struct dioattr  xx; 
+}end yes{
+/* Define if you have struct dioattr in <sys/fcntl.h>. */
+#define HAVE_STRUCT_DIOATTR 1
+}end
+
+compile{
+    #include <fenv.h>
+    void foo() {fesetenv (FE_NONIEEE_ENV);} 
+}end yes{
+/* Define if FE_NONIEEE_ENV defined in <fenv.h>. */
+#define FE_NONIEEE_ENV 1
+}end
+
+# libgd features
+cat{
+/*******************************************************************/
+/* Undefine if you don't want the libgd features or don't have the */
+/* necessary 3rd party library.                                    */
+/*******************************************************************/
+/* Define if the GD library has the GD_FONTCONFIG feature */
+#define HAVE_GD_FONTCONFIG 1
+
+/* Define if the GD library has the GD_FREETYPE feature */
+#define HAVE_GD_FREETYPE 1
+
+/* Define if the GD library has the GD_GIF feature */
+#define HAVE_GD_GIF 1
+
+/* Define if the GD library has the GD_JPEG feature */
+#define HAVE_GD_JPEG 1
+
+/* Define if the GD library has the GD_PNG feature */
+#define HAVE_GD_PNG 1
+
+/* Define if either internal or external GD library is available */
+#define HAVE_LIBGD 1
+}end
+
+# 3rd party libraries features
+cat{
+/*******************************************************************/
+/* Undefine if you don't have the necessary 3rd party library.     */
+/*******************************************************************/
+/* Define if you have the jpeg library (-ljpeg).  */
+#define	HAVE_LIBJPEG    1
+
+/* Define if you have the `m' library (-lm). */
+#define HAVE_LIBM 1
+
+/* Define if you have the png library (-lpng).  */
+#define HAVE_LIBPNG     1	
+
+/* Define if you have the freetype library (-lfreetype),  */
+#define	HAVE_LIBFREETYPE   1
+#define	HAVE_FREETYPE2   1
+
+/* Define to 1 if you have the <ft2build.h> header file. */
+#define HAVE_FT2BUILD_H 1
+
+/* Define if you have the FONTCONFIG library */
+#define HAVE_LIBFONTCONFIG 1
+
+/* Define if you have the z library (-lz).  */
+#define HAVE_LIBZ       1
+
+/* Define if you have the expat library (-lexpat). */
+#define HAVE_LIBEXPAT       1
+
+/* Define if you have the xpm library (-lXpm).  */
+/* At present, the xpm library isn't really used */
+/* #define HAVE_LIBXPM       1 */
+}end
+
+cat{
+/*******************************************************************/
+/* The following usually aren't changed.                           */
+/*******************************************************************/
+/* Define if you don't want on-demand plugin loading */
+#define DISABLE_LTDL 1
+
+/* Define if you want the gd renderers (png, gif, etc ) */
+#define GD_RENDER 1
+
+/* Default DPI. */
+#define DEFAULT_DPI 96
+ 
+/* Define if you want SFDP. */
+#define SFDP 1
+ 
+/* Define if you want to use the triangle library. */
+#define HAVE_TRIANGLE 1
+ 
+#define VERSION "VVVV"
+
+/* Define if you have the pango library with cairo support */
+/* #define HAVE_PANGOCAIRO 1 */
+
+/* Define if you want DIGCOLA */ 
+#define DIGCOLA 1
+/* Define if you want IPSEPCOLA */ 
+#define IPSEPCOLA 1
+
+/* #define MOSEK 1 */
+
+#ifndef DEFAULT_FONTPATH
+# ifdef _UWIN
+#  define DEFAULT_FONTPATH    "/win/fonts"
+#  define PATHSEPARATOR ":"
+#  else
+#  ifdef MSWIN32
+#   define DEFAULT_FONTPATH    "C:/WINDOWS/FONTS;C:/WINNT/Fonts;C:/winnt/fonts"
+#   define PATHSEPARATOR ";"
+#  else
+#   define DEFAULT_FONTPATH    "/usr/share/ttf:/usr/local/share/ttf:/usr/share/fonts/ttf:/usr/local/share/fonts/ttf:/usr/lib/fonts:/usr/local/lib/fonts:/usr/lib/fonts/ttf:/usr/local/lib/fonts/ttf:/usr/common/share/fonts/ttf:/usr/common/graphviz/lib/fonts/ttf:/windows/fonts:/dos/windows/fonts:/usr/add-on/share/ttf:/usr/openwin/lib/X11/fonts/TrueType:."
+#   define PATHSEPARATOR ":"
+#  endif
+# endif
+#endif
+}end
+

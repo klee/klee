@@ -1,0 +1,100 @@
+digraph test
+{
+    ranksep=0.25 
+    rankdir=LR 
+    edge [style=invis]
+    node [peripheries=0]
+
+/* row nine */
+    sdl_export [shape=none]
+    sdl_export2 [shape=sdl_export, label=""]
+    sdl_export -> sdl_export2;
+/* row eight */
+    sdl_connector [shape=none]
+    sdl_connector2 [shape=sdl_connector, label=""]
+    sdl_set [shape=none]
+    sdl_set2 [shape=sdl_set, label=""]
+    sdl_reset [shape=none]
+    sdl_reset2 [shape=sdl_reset, label=""]
+    sdl_connector -> sdl_connector2 ->
+    sdl_set -> sdl_set2 ->
+    sdl_reset -> sdl_reset2
+/* row seven */
+    sdl_text_extension_from_right [shape=none]
+    sdl_text_extension_from_right2 [shape=sdl_text_extension_from_right, label=""]
+    sdl_comment_from_left [shape=none]
+    sdl_comment_from_left2 [shape=sdl_comment_from_left, style=dashed, label=""]
+    sdl_comment_from_right [shape=none]
+    sdl_comment_from_right2 [shape=sdl_comment_from_right, style=dashed, label=""]
+    sdl_text_extension_from_right -> sdl_text_extension_from_right2 ->
+    sdl_comment_from_left -> sdl_comment_from_left2 ->
+    sdl_comment_from_right -> sdl_comment_from_right2
+
+/* row six */
+    sdl_call [shape=none]
+    sdl_call2 [shape=sdl_call, label=""]
+    sdl_text [shape=none]
+    sdl_text2 [shape=sdl_text, label=""]
+    sdl_text_extension_from_left [shape=none]
+    sdl_text_extension_from_left2 [shape=sdl_text_extension_from_left, label=""]
+    sdl_call -> sdl_call2 ->
+    sdl_text -> sdl_text2 ->
+    sdl_text_extension_from_left -> sdl_text_extension_from_left2
+
+/* row five */
+    sdl_stop [shape=none]
+    sdl_stop2 [shape=sdl_stop, label=""]
+    sdl_return [shape=none]
+    sdl_return2 [shape=sdl_return, label=""]
+    sdl_create [shape=none]
+    sdl_create2 [shape=sdl_create, label=""]
+    sdl_stop -> sdl_stop2 ->
+    sdl_return -> sdl_return2 ->
+    sdl_create -> sdl_create2
+
+
+/* row four */
+    sdl_output_to_left [shape=none]
+    sdl_output_to_left2 [shape=sdl_output_to_left, label=""]
+    sdl_condition [shape=none]
+    sdl_condition2 [shape=sdl_condition, label=""]
+    sdl_save [shape=none]
+    sdl_save2 [shape=sdl_save, label=""]
+    sdl_output_to_left -> sdl_output_to_left2 ->
+    sdl_condition -> sdl_condition2 ->
+    sdl_save -> sdl_save2
+
+/* row three */
+    sdl_procedure_start [shape=none]
+    sdl_procedure_start2 [shape=sdl_procedure_start, label=""]
+    sdl_state [shape=none]
+    sdl_state2 [shape=sdl_state, label=""]
+    sdl_output_to_right [shape=none]
+    sdl_output_to_right2 [shape=sdl_output_to_right, label=""]
+    sdl_procedure_start -> sdl_procedure_start2 ->
+    sdl_state -> sdl_state2 ->
+    sdl_output_to_right -> sdl_output_to_right2
+
+/* row two */
+    sdl_priority_input_from_right [shape=none]
+    sdl_priority_input_from_right2 [shape=sdl_priority_input_from_right, label=""]
+    sdl_priority_input_from_left [shape=none]
+    sdl_priority_input_from_left2 [shape=sdl_priority_input_from_left, label=""]
+    sdl_start [shape=none]
+    sdl_start2 [shape=sdl_start, label=""]
+    sdl_priority_input_from_right -> sdl_priority_input_from_right2 ->
+    sdl_priority_input_from_left -> sdl_priority_input_from_left2 ->
+    sdl_start -> sdl_start2;
+
+/* row one */
+    sdl_task [shape=none]
+    sdl_task2 [shape=sdl_task, label=""]
+    sdl_input_from_right [shape=none]
+    sdl_input_from_right2 [shape=sdl_input_from_right, label=""]
+    sdl_input_from_left [shape=none]
+    sdl_input_from_left2 [shape=sdl_input_from_left, label=""]
+    sdl_task -> sdl_task2 -> 
+    sdl_input_from_right -> sdl_input_from_right2 ->
+    sdl_input_from_left -> sdl_input_from_left2
+
+}

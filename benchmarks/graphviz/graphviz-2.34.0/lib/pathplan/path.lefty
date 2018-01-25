@@ -1,0 +1,212 @@
+path = [
+    'data' = [
+    ];
+    'defvattr' = [
+        'vieworig' = ['x' = 1; 'y' = 1;];
+        'viewsize' = ['x' = 820; 'y' = 520;];
+        'wrect' = [
+            0 = ['x' = -400; 'y' = 0;];
+            1 = ['x' = 400; 'y' = 500;];
+        ];
+        'vsize' = ['x' = 800; 'y' = 500;];
+        'w2v' = 1;
+    ];
+];
+path.init = function () {
+    local i, j, n, s, t, start, end;
+
+    path.createview (null);
+    i = 0;
+    fd = openio ('file', '/tmp/ek', 'r');
+#    while ((path.descs[i] = path.readdesc ()))
+#        i = i + 1;
+    echo ('ready');
+};
+path.createview = function (attr) {
+    local name, vieworig, viewsize;
+    name = attr.name;
+    if (~attr.name)
+        name = 'PATH';
+    vieworig = attr.vieworig;
+    if (~attr.vieworig)
+        vieworig = path.defvattr.vieworig;
+    viewsize = attr.viewsize;
+    if (~attr.viewsize)
+        viewsize = path.defvattr.viewsize;
+    path.view = createwidget (-1, [
+        'type'   = 'view';
+        'name'   = name;
+        'origin' = vieworig;
+        'size'   = viewsize;
+    ]);
+    path.scroll = createwidget (path.view, ['type' = 'scroll';]);
+    widgets[path.view].closeview  = path.closeview;
+    path.canvas = createwidget (path.scroll, ['type' = 'canvas';]);
+    setwidgetattr (path.canvas, [
+        'window' = path.data.defvattr.wrect;
+        'viewport' = viewsize;
+    ]);
+    clear (path.canvas);
+    if (attr.funcs) {
+        for (fid in attr.funcs)
+            widgets[path.canvas][fid] = attr.funcs[fid];
+    } else {
+        widgets[path.canvas].leftup     = path.leftup;
+        widgets[path.canvas].leftmove   = path.leftmove;
+        widgets[path.canvas].leftdown   = path.leftdown;
+        widgets[path.canvas].middledown = path.middledown;
+        widgets[path.canvas].middlemove = path.middlemove;
+        widgets[path.canvas].middleup   = path.middleup;
+        widgets[path.canvas].rightdown  = path.rightdown;
+        widgets[path.canvas].rightmove  = path.rightmove;
+        widgets[path.canvas].rightup    = path.rightup;
+        widgets[path.canvas].keyup      = path.keyup;
+        widgets[path.canvas].keydown    = path.keydown;
+        widgets[path.canvas].redraw     = path.redraw;
+    }
+    setwidgetattr (path.canvas, ['color' = [2 = 'red';];]);
+    setwidgetattr (path.canvas, ['color' = [3 = 'green';];]);
+    return path.canvas;
+};
+path.readdesc = function () {
+    local desc, s, t, n, i;
+
+    wrect = [
+        0 = ['x' = 9999; 'y' = 9999;];
+        1 = ['x' = -9999; 'y' = -9999;];
+    ];
+    if (~(s = readline (fd))) {
+        echo ('EOF/0', 'choice', 'ok');
+        return;
+    }
+echo ('> ', s);
+    if (s ~= 'edge') {
+        ask ('error in file/0', 'choice', 'ok');
+        return;
+    }
+    if (~(s = readline (fd))) {
+        ask ('EOF/01', 'choice', 'ok');
+        return;
+    }
+    desc.tail = s;
+    if (~(s = readline (fd))) {
+        ask ('EOF/02', 'choice', 'ok');
+        return;
+    }
+    desc.head = s;
+    if (~(s = readline (fd))) {
+        ask ('EOF', 'choice', 'ok');
+        return;
+    }
+    if (s ~= 'points') {
+        ask ('error in file', 'choice', 'ok');
+        return;
+    }
+    s = readline (fd);
+    n = ston (s);
+    for (i = 0; i < n; i = i + 1) {
+        s = readline (fd);
+        t = split (s, ' ');
+        desc.points[i] = ['x' = ston (t[0]); 'y' = ston (t[1]);];
+        if (wrect[0].x > desc.points[i].x - 10)
+            wrect[0].x = desc.points[i].x - 10;
+        if (wrect[0].y > desc.points[i].y - 10)
+            wrect[0].y = desc.points[i].y - 10;
+        if (wrect[1].x < desc.points[i].x + 10)
+            wrect[1].x = desc.points[i].x + 10;
+        if (wrect[1].y < desc.points[i].y + 10)
+            wrect[1].y = desc.points[i].y + 10;
+    }
+    desc.points[i] = copy (desc.points[0]);
+    if (~(s = readline (fd))) {
+        ask ('EOF/2', 'choice', 'ok');
+        return;
+    }
+    if (s ~= 'splpoints') {
+        ask ('error in file/2', 'choice', 'ok');
+        return;
+    }
+    s = readline (fd);
+    n = ston (s);
+    for (i = 0; i < n; i = i + 1) {
+        s = readline (fd);
+        t = split (s, ' ');
+        desc.splpoints[i] = ['x' = ston (t[0]); 'y' = ston (t[1]);];
+        if (wrect[0].x > desc.splpoints[i].x - 10)
+            wrect[0].x = desc.splpoints[i].x - 10;
+        if (wrect[0].y > desc.splpoints[i].y - 10)
+            wrect[0].y = desc.splpoints[i].y - 10;
+        if (wrect[1].x < desc.splpoints[i].x + 10)
+            wrect[1].x = desc.splpoints[i].x + 10;
+        if (wrect[1].y < desc.splpoints[i].y + 10)
+            wrect[1].y = desc.splpoints[i].y + 10;
+    }
+    desc.wrect = wrect;
+    return desc;
+};
+path.drawdesc = function (desc) {
+    local i;
+
+    tt = getwidgetattr (path.canvas, [0 = 'size';]);
+    wrect = copy (desc.wrect);
+    r1 = (wrect[1].x - wrect[0].x) / (wrect[1].y - wrect[0].y);
+    r2 = tt.size.x / tt.size.y;
+    if (r1 > r2)
+        wrect[1].y = wrect[0].y + (wrect[1].x - wrect[0].x) / r2;
+    else
+        wrect[1].x = wrect[0].x + (wrect[1].y - wrect[0].y) * r2;
+    setwidgetattr (path.canvas, ['window' = wrect;]);
+    clear (path.canvas);
+#    for (i = 0; desc.points[i]; i = i + 1) {
+#        text (path.canvas, null,
+#                ['x' = desc.points[i].x + 10; 'y' = desc.points[i].y;],
+#                concat ('p ', i), 'fixed', 14, 'lc');
+#    }
+    polygon (path.canvas, null, desc.points);
+    for (i = 0; desc.splpoints[i]; i = i + 1) {
+        text (path.canvas, null,
+                ['x' = desc.splpoints[i].x + 10; 'y' = desc.splpoints[i].y;],
+                concat ('sp ', i), 'fixed', 14, 'lc');
+    }
+#    polygon (path.canvas, null, desc.splpoints);
+    splinegon (path.canvas, null, desc.splpoints);
+    text (path.canvas, null,
+            ['x' = desc.wrect[0].x + 1; 'y' = desc.wrect[0].y + 10;],
+            concat (tail, ' -> ', head), 'fixed', 14, 'lc');
+};
+path.redraw = function (data) {
+    path.drawdesc (path.desc);
+};
+path.keyup = function (data) {
+    if (data.key == 'n') {
+        clear (path.canvas);
+        if ((path.desc = path.readdesc ()))
+            path.drawdesc (path.desc);
+    } else if (data.key == ' ')
+        path.redraw (data);
+};
+path.init ();
+monitorfile = function (data) {
+echo (111);
+    if (~(tail = readline (0))) {
+        echo ('eof1');
+        exit ();
+    }
+echo (222);
+    if (~(head = readline (0))) {
+        echo ('eof2');
+        exit ();
+    }
+echo (head);
+echo (333);
+    for (i in path.descs) {
+        desc = path.descs[i];
+        if (desc.tail == tail & desc.head == head) {
+echo (111122222);
+            path.drawdesc (desc);
+            break;
+        }
+    }
+echo (444);
+};
+monitor ('on', 0);

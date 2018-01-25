@@ -1,0 +1,23 @@
+
+all:	libtclhandle.a
+
+include ../Config.mk
+include ../makearch/$(ARCH)
+
+INCS =	-I.
+
+OBJS =	tclhandle.o
+
+libtclhandle.a: $(OBJS)
+	$(AR) cr libtclhandle.a $(OBJS)
+	$(RANLIB) libtclhandle.a
+
+install: libtclhandle.a
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libtclhandle.a $(LIBDIR)
+
+clean:
+	$(RM) *.o core
+
+distclean: clean
+	$(RM) *.a lib*.so.*

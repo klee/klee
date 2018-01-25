@@ -1,0 +1,58 @@
+all:	libgvc.a libgvc_dot_builtins.a
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+INCS =  -I. \
+        -I$(ROOT) \
+        -I../cdt \
+        -I../pathplan \
+        -I../xdot \
+	-I../graph \
+	-I../common \
+	$(EXTLIB_INC)
+
+DEFINES = -DHAVE_CONFIG_H -DGVLIBDIR=\"$(LIBDIR)\"
+
+INST_HDRS = gvc.h gvcint.h gvcjob.h gvcext.h gvplugin.h \
+	gvplugin_render.h gvplugin_device.h \
+	gvplugin_layout.h gvplugin_textlayout.h 
+
+NOINST_HDRS = gvcproc.h
+
+OBJS = gvrender.o gvlayout.o gvdevice.o gvcontext.o gvjobs.o gvloadimage.o \
+	gvplugin.o gvconfig.o gvevent.o gvtextlayout.o gvusershape.o gvc.o
+
+libgvc_dot_builtins.a : $(OBJS)
+	$(RM) libgvc_dot_builtins.a
+	$(AR) cr libgvc_dot_builtins.a $(OBJS)
+	$(RANLIB) libgvc_dot_builtins.a
+
+libgvc.a : $(OBJS)
+	$(RM) libgvc.a
+	$(AR) cr libgvc.a $(OBJS)
+	$(RANLIB) libgvc.a
+
+install: libgvc.a libgvc_dot_builtins.a
+	$(MKPATH) $(INCDIR)
+	$(INSTALL) $(INST_HDRS) $(INCDIR)
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libgvc.a libgvc_dot_builtins.a $(LIBDIR)
+
+$(OBJS) $(EXTRA_OBJS): $(INST_HDRS) $(NOINST_HDRS)
+
+gvcontext.o : $(ROOT)/config.h $(ROOT)/builddate.h
+
+$(ROOT)/config.h $(ROOT)/builddate.h : renew
+
+renew :
+	(D=`date`; echo "#define BUILDDATE \"$$D\"" > $(ROOT)/builddate.h)
+	(VM=`awk '/m4_define\(graphviz_version_major/ {print $$2}' $(ROOT)/configure.ac`; VM=$${VM%\)}; \
+	 Vm=`awk '/m4_define\(graphviz_version_minor/ {print $$2}' $(ROOT)/configure.ac`; Vm=$${Vm%\)}; \
+    sed "s/define VERSION.*/define VERSION \"$$VM.$$Vm.0\"/" $(ROOT)/config.h > out; mv out $(ROOT)/config.h)
+
+clean:
+	$(RM) core *.o
+
+distclean: clean
+	$(RM) *.a

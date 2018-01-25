@@ -1,0 +1,24 @@
+#!/bin/ksh
+
+echo "This script has generated Makefiles for a traditional make process."
+echo "If you are using GNU tools, please use './configure' instead."
+
+# We could do other configuration things in this script, but the 
+# basic need is to generate Makefiles. We can't leave Makefiles
+# in CVS because they would be overwritten by the Makefiles generated
+# by GNU automake/autoconf.
+for i in `find . -name Makefile.old`; do cp $i ${i%%.old}; done
+
+# do the same for config.h plus insert VERSION and BUILDDATE
+V=$(grep 'AC_INIT(graphviz' configure.ac | m4 '-DAC_INIT=$2')
+D=$(date)
+./iffe - set cc cc : run config.iffe | sed "s/VVVV/$V/" > config.h
+echo "#define BUILDDATE \"$D\"" > builddate.h
+
+# Append VERSION to Config.mk
+cp Config.mk.old Config.mk
+echo "VERSION=$V" >> Config.mk
+
+# Remove cdt/ast_common.h if it came with the distribution
+# so a fresh one is generated.
+rm -f cdt/ast_common.h

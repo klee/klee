@@ -1,0 +1,17 @@
+#!/bin/sh
+
+set -e
+
+# Update the configuration file (/usr/lib/graphviz/config3)
+# Needed for the plugins too
+if [ -x /usr/sbin/libgraphviz4-config-update ]; then
+	/usr/sbin/libgraphviz4-config-update -c
+fi
+
+# Remove the old configuration file if present, see README.Debian-packaging
+# Needed only in libgraphivzN
+if [ -f /usr/lib/graphviz/config ]; then
+	rm -f /usr/lib/graphviz/config
+fi
+
+#DEBHELPER#

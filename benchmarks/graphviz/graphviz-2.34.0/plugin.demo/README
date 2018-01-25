@@ -1,0 +1,29 @@
+xtgk is a demo of a separately compiled and install plugin for graphviz.
+
+To build from CVS, use:
+
+	cd xgtk
+	./autogen.sh 
+	make
+	make install
+
+To make a distributable version, use:
+
+	cd xgtk
+	./autogen.sh
+	make dist
+	
+
+	zcat xgtk-plugin-0.1tar.gz | tar xf -
+	cd xgtk-plugin-0.1
+	./configure 
+	make 
+	make install
+
+
+To make an rpm:
+
+	cd xgtk
+	./autogen.sh
+	make rpm
+

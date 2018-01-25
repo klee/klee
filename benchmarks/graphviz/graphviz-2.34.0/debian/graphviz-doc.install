@@ -1,0 +1,11 @@
+usr/share/graphviz/lefty    usr/share/doc/graphviz/examples
+usr/share/graphviz/graphs   usr/share/doc/graphviz/examples
+usr/share/graphviz/demo     usr/share/doc/graphviz/examples
+usr/share/graphviz/doc/pdf  usr/share/doc/graphviz
+usr/share/graphviz/doc/html usr/share/doc/graphviz
+
+usr/share/graphviz/doc/AUTHORS               usr/share/doc/graphviz
+usr/share/graphviz/doc/ChangeLog             usr/share/doc/graphviz
+usr/share/graphviz/doc/Dot.ref               usr/share/doc/graphviz
+usr/share/graphviz/doc/latex_suggestions.txt usr/share/doc/graphviz
+

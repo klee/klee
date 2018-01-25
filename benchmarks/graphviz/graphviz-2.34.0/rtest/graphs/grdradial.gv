@@ -1,0 +1,102 @@
+digraph G { 
+  bgcolor="purple:pink" label="Graph" fontcolor="white"
+  subgraph cluster1 {
+    fillcolor="blue:green" style="filled" label="Cluster" fontcolor="white"
+	a0 [shape=circle fillcolor="gold:brown" style="radial" gradientangle=180
+		label=<
+ <TABLE border="10" cellspacing="10" cellpadding="10" style="rounded" bgcolor="yellow:violet" gradientangle="315">
+<TR><TD border="3" style="radial" bgcolor="yellow">00</TD>
+<TD border="3" style="radial" bgcolor="yellow:green">01</TD>
+<TD border="3" style="radial" bgcolor="green">02</TD>
+<TD border="3" style="radial" bgcolor="green:blue">03</TD>
+<TD border="3" style="radial" bgcolor="blue">04</TD>
+<TD border="3" style="radial" bgcolor="blue:purple">05</TD>
+<TD border="3" style="radial" bgcolor="purple">06</TD>
+<TD border="3" style="radial" bgcolor="purple:violet">07</TD>
+<TD border="3" style="radial" bgcolor="violet">08</TD></TR>
+  
+<TR><TD border="3" style="radial" bgcolor="yellow:gold" >10</TD>
+<TD border="3" style="radial" bgcolor="yellow:green" >11</TD>
+<TD border="3" style="radial" bgcolor="yellow:green" >12</TD>
+<TD border="3" style="radial" bgcolor="yellow:blue" >13</TD>
+<TD border="3" style="radial" bgcolor="yellow:blue" >14</TD>
+<TD border="3" style="radial" bgcolor="yellow:purple" >15</TD>
+<TD border="3" style="radial" bgcolor="yellow:purple" >16</TD>
+<TD border="3" style="radial" bgcolor="yellow:violet" >17</TD>
+<TD border="3" style="radial" bgcolor="yellow:violet" >18</TD></TR>
+  
+<TR><TD border="3" style="radial" bgcolor="gold" >20</TD>
+<TD border="3" style="radial" bgcolor="gold:green" >21</TD>
+<TD border="3" style="radial" bgcolor="gold:green" >22</TD>
+<TD border="3" style="radial" bgcolor="gold:blue" >23</TD>
+<TD border="3" style="radial" bgcolor="gold:blue" >24</TD>
+<TD border="3" style="radial" bgcolor="gold:purple" >25</TD>
+<TD border="3" style="radial" bgcolor="gold:purple" >26</TD>
+<TD border="3" style="radial" bgcolor="gold:violet" >27</TD>
+<TD border="3" style="radial" bgcolor="gold:violet" >28</TD></TR>
+  
+<TR><TD border="3" style="radial" bgcolor="gold:orange" >30</TD>
+<TD border="3" style="radial" bgcolor="orange:green" >31</TD>
+<TD border="3" style="radial" bgcolor="orange:green" >32</TD>
+<TD border="3" style="radial" bgcolor="orange:blue" >33</TD>
+<TD border="3" style="radial" bgcolor="orange:blue" >34</TD>
+<TD border="3" style="radial" bgcolor="orange:purple" >35</TD>
+<TD border="3" style="radial" bgcolor="orange:purple" >36</TD>
+<TD border="3" style="radial" bgcolor="orange:violet" >37</TD>
+<TD border="3" style="radial" bgcolor="orange:violet" >38</TD></TR>
+  
+<TR><TD border="3" style="radial" bgcolor="orange" >40</TD>
+<TD border="3" style="radial" bgcolor="orange:green" >41</TD>
+<TD border="3" style="radial" bgcolor="orange:green" >42</TD>
+<TD border="3" style="radial" bgcolor="orange:blue" >43</TD>
+<TD border="3" style="radial" bgcolor="orange:blue" >44</TD>
+<TD border="3" style="radial" bgcolor="orange:purple" >45</TD>
+<TD border="3" style="radial" bgcolor="orange:purple" >46</TD>
+<TD border="3" style="radial" bgcolor="orange:violet" >47</TD>
+<TD border="3" style="radial" bgcolor="orange:violet" >48</TD></TR>
+  
+<TR><TD border="3" style="radial" bgcolor="orange:red" >50</TD>
+<TD border="3" style="radial" bgcolor="red:green" >51</TD>
+<TD border="3" style="radial" bgcolor="red:green" >52</TD>
+<TD border="3" style="radial" bgcolor="red:blue" >53</TD>
+<TD border="3" style="radial" bgcolor="red:blue" >54</TD>
+<TD border="3" style="radial" bgcolor="red:purple" >55</TD>
+<TD border="3" style="radial" bgcolor="red:purple" >56</TD>
+<TD border="3" style="radial" bgcolor="red:violet" >57</TD>
+<TD border="3" style="radial" bgcolor="red:violet" >58</TD></TR>
+  
+<TR><TD border="3" style="radial" bgcolor="red" >60</TD>
+<TD border="3" style="radial" bgcolor="red:green" >61</TD>
+<TD border="3" style="radial" bgcolor="red:green" >62</TD>
+<TD border="3" style="radial" bgcolor="red:blue" >63</TD>
+<TD border="3" style="radial" bgcolor="red:blue" >64</TD>
+<TD border="3" style="radial" bgcolor="red:purple" >65</TD>
+<TD border="3" style="radial" bgcolor="red:purple" >66</TD>
+<TD border="3" style="radial" bgcolor="red:violet" >67</TD>
+<TD border="3" style="radial" bgcolor="red:violet" >68</TD></TR>
+  
+<TR><TD border="3" style="radial" bgcolor="red:brown" >70</TD>
+<TD border="3" style="radial" bgcolor="brown:green" >71</TD>
+<TD border="3" style="radial" bgcolor="brown:green" >72</TD>
+<TD border="3" style="radial" bgcolor="brown:blue" >73</TD>
+<TD border="3" style="radial" bgcolor="brown:blue" >74</TD>
+<TD border="3" style="radial" bgcolor="brown:purple" >75</TD>
+<TD border="3" style="radial" bgcolor="brown:purple" >76</TD>
+<TD border="3" style="radial" bgcolor="brown:violet" >77</TD>
+<TD border="3" style="radial" bgcolor="brown:violet" >78</TD></TR>
+  
+<TR><TD border="3" style="radial" bgcolor="brown" >80</TD>
+<TD border="3" style="radial" bgcolor="brown:green" >81</TD>
+<TD border="3" style="radial" bgcolor="brown:green" >82</TD>
+<TD border="3" style="radial" bgcolor="brown:blue" >83</TD>
+<TD border="3" style="radial" bgcolor="brown:blue" >84</TD>
+<TD border="3" style="radial" bgcolor="brown:purple" >85</TD>
+<TD border="3" style="radial" bgcolor="brown:purple" >86</TD>
+<TD border="3" style="radial" bgcolor="brown:violet" >87</TD>
+<TD border="3" style="radial" bgcolor="brown:violet" >88</TD></TR>
+  
+</TABLE>>];
+
+}
+
+} 

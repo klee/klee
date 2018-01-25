@@ -1,0 +1,102 @@
+.TH GC 1 "9 December 2009"
+.SH NAME
+smyrna \- interactive graph viewer
+.SH SYNOPSIS
+.B smyrna
+[
+.B \-v?
+]
+[ 
+.I file
+]
+.SH DESCRIPTION
+.B smyrna
+is a viewer for graphs in the DOT format.
+It is especially designed to handle large graphs, and
+allows flat and topological fisheye views.
+It is assumed the input graph has position information
+associated with all nodes. Using the Graphviz convention,
+a node's position is given by its \fIpos\fP attribute
+consisting of 2 or 3 floating point numbers separated by commas.
+Nodes are drawn as points and edges as line segments.
+.P
+If \fBsmyrna\fP detects that the file contains \fIxdot\fP 
+attributes, it will use this information when drawing nodes
+and edges.
+.P
+\fBsmyrna\fP supports panning and zooming; node and edge selection;
+setting and retrieving node and edge attributes, especially colors;
+and node movement.
+The Smyrna Settings dialogue box available under the Edit pull-down
+menu gives the user many choices for tailoring the graph view. These
+include whether or not nodes/edges are drawn; what labels are 
+associated with nodes/edges; node size; transparency settings for
+nodes/edges; parameters associated with the topological fisheye view.
+.P
+For the purposes of exploratory data analysis, \fBsmyrna\fP provides
+access to the \fBgvpr\fP library. This allows the user to arbitrarily
+query, filter or manipulate a graph. When filtering or manipulating
+a graph, the user has the option of performing the changes directly
+on the input graph, or to create a new version with the changes. 
+.SH OPTIONS
+The following options are supported:
+.TP
+.B \-v
+Verbose mode.
+.TP
+.B \-?
+Print usage information.
+.LP
+By default, 
+.I gc
+returns the number of nodes and edges.
+.SH OPERANDS
+The following operand is supported:
+.TP 8
+.I file
+Name of file containing a graph in DOT format.
+If no
+.I file
+operand is specified,
+the user can employ the File pull-down menu to select a file
+to be opened.
+.SH "EXIT STATUS"
+The following exit values are returned:
+.TP 4
+.B 0
+Successful completion.
+.TP
+.B 1
+If no No appropriate OpenGL-capable visual found,
+or if the default attributes template graph file or
+the default attributes widget graph file could not be read.
+.SH "FILES"
+\fBsmyrna\fP relies on numerous support files. These are 
+usually installed in the "share/graphviz/smyrna" directory
+below the installation root. The principal files are:
+.TP
+.I template.dot
+A file in DOT format specifying the default \fBsmyrna\fP settings.
+In particular, these are used to initialize the settings of the
+Smyrna Settings dialogue box. 
+.TP
+.I mouse_actions.txt
+A text file specifying the mapping of concrete mouse and keyboard
+events with \fBsmyrna\fP actions such as panning and selecting.
+.TP
+.I attr_widgets.dot
+A file in DOT format specifying the bindings between GUI widgets
+and \fBsmyrna\fP parameters.
+.SH "ENVIRONMENT VARIABLES"
+.TP
+.B SMYRNA_PATH
+allows a user to override the built-in path to the directory
+containing all of \fBsmyrna\fP's files described above.
+.SH AUTHOR
+Arif Bilgin <arif@research.att.com>
+.br
+Emden R. Gansner <erg@research.att.com>
+.SH "SEE ALSO"
+gvpr(1), dotty(1), libcgraph(3)
+.br
+"Smyrna Tutorial and Reference Manual"

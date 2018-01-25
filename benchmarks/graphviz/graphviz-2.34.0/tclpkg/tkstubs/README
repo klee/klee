@@ -1,0 +1,6 @@
+The purpose of this directory is just to fool libtool
+which doesn't understand that libtkstubs${ver}.a contains
+code suitable for incuding in a shared library.
+
+Not sure whose bug this really is: tcl's for not using libtool
+or libtool's for not supporting use of .a convenience libraries.

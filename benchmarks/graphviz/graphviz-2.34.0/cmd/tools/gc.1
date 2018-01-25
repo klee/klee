@@ -1,0 +1,86 @@
+.TH GC 1 "21 March 2001"
+.SH NAME
+gc \- count graph components
+.SH SYNOPSIS
+.B gc
+[
+.B \-necCaDUrsv?
+]
+[ 
+.I files
+]
+.SH DESCRIPTION
+.B gc
+is a graph analogue to 
+.B wc 
+in that it prints to standard output 
+the number of nodes, edges, connected components or clusters contained
+in the input files.
+It also prints a total count for
+all graphs if more than one graph is given.
+.SH OPTIONS
+The following options are supported:
+.TP
+.B \-n
+Count nodes.
+.TP
+.B \-e
+Count edges.
+.TP
+.B \-c
+Count connected components.
+.TP
+.B \-C
+Count clusters. By definition, a cluster is a graph or
+subgraph whose name begins with "cluster".
+.TP
+.B \-a
+Count all. Equivalent to
+.B \-encC
+.TP
+.B \-r
+Recursively analyze subgraphs.
+.TP
+.B \-s
+Print no output. Only exit value is important.
+.TP
+.B \-D
+Only analyze directed graphs.
+.TP
+.B \-U
+Only analyze undirected graphs.
+.TP
+.B \-v
+Verbose output.
+.TP
+.B \-?
+Print usage information.
+.LP
+By default, 
+.I gc
+returns the number of nodes and edges.
+.SH OPERANDS
+The following operand is supported:
+.TP 8
+.I files
+Names of files containing 1 or more graphs in dot format.
+If no
+.I files
+operand is specified,
+the standard input will be used.
+.SH "EXIT STATUS"
+The following exit values are returned:
+.TP 4
+.B 0
+Successful completion.
+.TP
+.B 1
+The
+.B \-U
+or
+.B \-E
+option was used, and a graph of the wrong type was encountered.
+.SH AUTHOR
+Emden R. Gansner <erg@research.att.com>
+.SH "SEE ALSO"
+wc(1), acyclic(1), gvpr(1), gvcolor(1), ccomps(1), sccmap(1), tred(1), libgraph(3)

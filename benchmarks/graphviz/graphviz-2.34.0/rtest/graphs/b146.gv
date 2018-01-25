@@ -1,0 +1,5 @@
+digraph mygraph {
+        label_foo [shape="record",label="<foo>foo"];
+    label_foo:foo -> label_foo
+}
+

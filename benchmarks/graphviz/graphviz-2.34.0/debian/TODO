@@ -1,0 +1,27 @@
+TODO for graphviz
+-----------------
+
+  * Check the dependencies for all bindings, e.g. libgv-guile doesn't seem to
+    depend on any guile package.
+  * The handling of the libgv-php5 package could be better. An idea would be to
+    have a debian/libgv-php5.install.in file, which would be preprocessed, so
+    that the appropriate path is computed at build-time (using the output of
+    the “php-config5 --extension-dir” command).
+  * That should really be done for all languages needing extra work,
+    see debian/rules.
+  * Think about putting the configuration file into /var, see the discussion
+    with Alexander on the 10th of August.
+  * Stop using -lstdc++ and use CXX (not trivial actually).
+  * Adjust --build and --host options to ./configure so as to support cross-
+    compilation correctly.
+  * The Conflicts between libgv-perl and older graphviz might go away since the
+    location of perl files was adapted to follow the perl policy. To be checked
+    with piuparts.
+  * Check and eventually refresh the package relationships (Suggests:,
+    and maybe the Conflicts: towards gdtclft).
+  * Tcl/Tk:
+     - Check the .0.0.0 stuff for the Tcl parts. Should it be using
+       “-module -avoid-version” too?
+  * fontconfig results in no dependency, that might be dropped from the B-D.
+
+ -- Cyril Brulebois <cyril.brulebois@enst-bretagne.fr>  Wed, 09 Jan 2008 03:18:46 +0100

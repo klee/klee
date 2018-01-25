@@ -1,0 +1,3 @@
+LIBRARY	"gvplugin_gdiplus"
+EXPORTS
+gvplugin_gdiplus_LTX_library 

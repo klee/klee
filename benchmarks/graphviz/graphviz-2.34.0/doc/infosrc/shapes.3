@@ -1,0 +1,28 @@
+<H2><A NAME=epsf>User-defined Nodes</A></H2>
+
+There is a third type of node shape which is specified by the user.
+Typically, these shapes rely on the details of a concrete graphics
+format. At present, shapes can be described using PostScript, via a
+file or add-on library, for use in PostScript output, or shapes can
+be specified by a bitmap-image file for use with SVG or bitmap (jpeg,
+gif, etc.) output. More information can be found on the page 
+<A HREF="http://www.graphviz.org/wiki/how-create-custom-shapes">
+How to create custom shapes</A>.
+
+<H2><A NAME=sdlshapes>SDL Shapes for PostScript</A></H2>
+One example of user-defined node shapes is provided by Mark Rison of CSR.
+These are the <A  HREF=http://www.sdl-forum.org/SDL/index.htm>SDL</A> shapes.
+These are available as PostScript functions whose use is described in
+<A HREF="http://www.graphviz.org/Documentation/html/shapehowto.html#psprocs"> External PostScript procedures</A>.
+The necessary PostScript library file and sample use can be found in the
+<tt>contrib/sdlshapes</tt> directory in the release. Please note the
+COPYRIGHT AND PERMISSION NOTICE contained in the library file <tt>sdl.ps</tt>.
+<P>
+The table below
+gives the shape names and the corresponding node shapes.
+<P>
+<CENTER>
+<IMG SRC=sdlshapes.jpg>
+</CENTER>
+</BODY>
+</HTML>

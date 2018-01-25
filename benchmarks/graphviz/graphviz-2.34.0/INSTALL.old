@@ -1,0 +1,70 @@
+
+Basic Installation
+==================
+
+These instructions describe building Graphviz using standard make.
+To build Graphviz using GNU tools, see ./INSTALL.
+
+ - Run configure.old
+
+ - Edit config.h
+    This defines a variety of preprocessor flags describing the system
+   on which you are building Graphviz. Comment or uncomment the flags
+   as they pertain to your machine.
+
+    In particular, Graphviz relies on a variety of optional, external
+   libraries and commands:
+
+     libjpeg - Functions for handling JPEG images.
+     libpng  - Functions for handling PNG (portable network graphics) images.
+     libz    - A compression library.
+     libfreetype - Freetype 2 library for TrueType and other fonts.
+     libttf  - Freetype 1 library for TrueType and other fonts.
+     curl or wget - tool for transferring files with URL syntax
+     libexpat - Functions for parsing XML
+
+   If these are not already on your machine, they are freely
+   available on the Internet. You can get the software, install it, and
+   then set the appropriate flag. Note that only one of HAVE_LIBFREETYPE 
+   and HAVE_LIBTTF should be set. You'll also need to specify where these
+   libraries can be found. See EXTLIB_INC and EXTLIB_LIB below.
+
+   Note: You can build Graphviz without these libraries. This will simply
+   limit your output formats to various non-bitmap output such as PostScript,
+   SVG, HPGL, or Dot.
+
+ - Edit Config.mk. In particular, set:
+
+    ARCH - one of the known OS.
+    INSTALLROOT - the directory to which binaries, libraries, documents,
+                  etc. should be copied by 'make install'.
+    TCLDIR - the root directory of tcl.
+    TKDIR - the root directory of tk.
+    EXPAT_INC - indicates directory containing expat.h.
+    EXPAT_LIB - flags for linking in expat library. 
+    EXTLIB_INC - indicates the directories where the include files for
+                 the optional libraries such as libjpeg (see above) 
+                 can be found, if they are not in the default include 
+                 directories. This is a list of -I compiler flags.
+    EXTLIB_LIB - indicates which optional libraries to use and which
+                 directories to look in. This is a list of -L and -l 
+                 compiler flags.
+
+ - Check settings in makearch/$(ARCH).
+
+ - Run make.
+
+After a successful build, the software can be moved to INSTALLROOT
+by running:
+
+  make install
+
+To clean up .o files:
+
+  make clean
+
+To remove almost all generated files:
+
+  make distclean
+
+

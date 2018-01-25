@@ -1,0 +1,18 @@
+diff -ru glib-2.16.3/glib/gconvert.c glib-2.16.3.patched/glib/gconvert.c
+--- glib-2.16.3/glib/gconvert.c	2008-04-08 11:47:29.000000000 +0800
++++ glib-2.16.3.patched/glib/gconvert.c	2008-04-24 14:41:44.000000000 +0800
+@@ -48,12 +48,14 @@
+ 
+ #include "glibintl.h"
+ 
++#if !defined(__APPLE_CC__) || !defined(__LP64__)
+ #if defined(USE_LIBICONV_GNU) && !defined (_LIBICONV_H)
+ #error GNU libiconv in use but included iconv.h not from libiconv
+ #endif
+ #if !defined(USE_LIBICONV_GNU) && defined (_LIBICONV_H)
+ #error GNU libiconv not in use but included iconv.h is from libiconv
+ #endif
++#endif
+ 
+ #include "galias.h"
+

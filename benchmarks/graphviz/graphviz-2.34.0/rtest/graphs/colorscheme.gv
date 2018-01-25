@@ -1,0 +1,19 @@
+digraph G {
+
+  node [shape=box, style=filled]
+
+  subgraph {
+    node [colorscheme=spectral11]
+    1 [color=1]
+    4 [color=4]
+    8 [color=8]
+    11 [color="//11"]
+  }
+
+  ylgn7 [color="/ylgn7/5"]
+  X11 [color="/X11/thistle"]
+  indigo [color="/X11/indigo"]
+  magenta [color="magenta"]
+  
+
+}

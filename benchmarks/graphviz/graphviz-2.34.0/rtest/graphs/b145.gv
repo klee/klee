@@ -1,0 +1,10 @@
+digraph bla {
+    rankdir=LR;
+    compound=true;
+    subgraph cluster_foo {
+        label_foo [shape="record",label="<foo>foo"];
+    }
+    cluster_foo -> label_xxxxxxx [lhead="cluster_foo"]
+    columns_foo_insider:foo -> label_foo [lhead="cluster_foo"]
+}
+

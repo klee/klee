@@ -1,0 +1,20 @@
+digraph G {
+  rankdir="LR";
+  label = "label demo";
+  labelloc="top";
+  labeljust="left";
+  subgraph cluster0 {
+    a;
+    b;
+    a->b;
+    label = "cluster0";
+    labelloc="bottom"
+  }
+  subgraph cluster1 {
+    c;
+    d;
+    c->d;
+    label = "cluster1";
+    labelloc="top"
+  }
+}

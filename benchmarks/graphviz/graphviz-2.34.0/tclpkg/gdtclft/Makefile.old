@@ -1,0 +1,27 @@
+
+all:	libgdtclft.a
+
+include ../Config.mk
+include ../makearch/$(ARCH)
+
+INCS =	-I. -I.. -I../gd -I../tclhandle -I$(TCL_INCDIR)
+
+OBJS =	gdtclft.o
+
+DEFINES = -DHAVE_CONFIG_H
+
+libgdtclft.a: $(OBJS)
+	$(AR) cr libgdtclft.a $(OBJS)
+	$(RANLIB) libgdtclft.a
+
+install: libgdtclft.a
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libgdtclft.a $(LIBDIR)
+	$(MKPATH) $(XPLDIR)/tcldot
+	$(CP) demo/enti* $(XPLDIR)/tcldot
+
+clean:
+	$(RM) *.o core
+
+distclean: clean
+	$(RM) *.a lib*.so.*

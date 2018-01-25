@@ -1,0 +1,17 @@
+####################
+# Pagination = off #
+####################
+set pagination off
+
+#######################
+# Initial breakpoints #
+####################### 
+dir /home/oren/GIT/klee/benchmarks/graphviz/graphviz-2.34.0/lib/cgraph
+dir /home/oren/GIT/klee/benchmarks/graphviz/graphviz-2.34.0/lib/common
+set libthread-db-search-path /tmp
+start
+break input.c:570
+break grammar.c:1281
+break dot.c:210
+run
+

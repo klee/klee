@@ -1,0 +1,18 @@
+digraph G {
+  compound=true
+
+  subgraph clusterA {
+    a1 -> a2 -> a3
+  }
+  subgraph clusterB {
+    subgraph clusterC {
+      c1 -> c2
+    }
+    b1 -> b2
+    b1 -> b3
+    b1 -> c2
+  }
+  a1 -> b2 [lhead=clusterB]
+  c2 -> a3 [ltail=clusterC]
+  b3 -> a3 [ltail=clusterB, lhead=clusterA]
+}

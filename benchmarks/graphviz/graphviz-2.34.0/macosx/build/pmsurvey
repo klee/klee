@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# set up owner, group and permissions for system or user directories (2nd parameter)
+OWNER=root
+GROUP=admin
+DIRMOD=16893	# drwxrwxr-x
+EXEMOD=33277	# -rwxrwxr-x
+LINKMOD=41469	# lrwxrwxr-x
+FILEMOD=33204	# -rw-rw-r--
+
+# recursive survey of directory:
+# ignore cvs, svn and Finder crap
+# choose file mode depending on what kind of file we got
+	
+survey ()
+{
+	for file in `ls -1A $1`
+	do
+		case $file in
+			CVS | .svn | .cvsignore | .cvspass | .DS_Store )
+				;;
+			* )
+				if [ -d "$1/$file" ]
+				then
+					echo "<f n='$file' o='$OWNER' g='$GROUP' p='$DIRMOD'>"
+					survey "$1/$file"
+					echo "<mod>mode</mod>"
+					echo "</f>"
+				elif [ -x "$1/$file" ]
+				then
+					echo "<f n='$file' o='$OWNER' g='$GROUP' p='$EXEMOD'>"
+					echo "<mod>mode</mod>"
+					echo "</f>"
+				elif [ -L "$1/$file" ]
+				then
+					echo "<f n='$file' o='$OWNER' g='$GROUP' p='$LINKMOD'>"
+					echo "<mod>mode</mod>"
+					echo "</f>"
+				else
+					echo "<f n='$file' o='$OWNER' g='$GROUP' p='$FILEMOD'>"
+					echo "<mod>mode</mod>"
+					echo "</f>"
+				fi
+				;;
+		esac
+	done
+} 
+
+# output root XML and top directory, then recursively survey the directories
+
+echo "<?xml version='1.0'?>"
+echo "<pkg-contents spec='1.12'>"
+echo "<f n='${1##*/}' o='$OWNER' g='$GROUP' p='$DIRMOD' pt='$1' m='true' t='file'>"
+survey "$1"
+echo "<mod>mode</mod>"
+echo "</f>"
+echo "</pkg-contents>"

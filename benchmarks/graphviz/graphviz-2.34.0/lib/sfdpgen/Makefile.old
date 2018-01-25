@@ -1,0 +1,37 @@
+all:	libsfdpgen.a
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+INCS =  -I. -I$(ROOT) \
+    -I../common \
+    -I../neatogen \
+    -I../pack \
+    -I../gvc \
+    -I../pathplan \
+    -I../sparse \
+    -I../rbtree \
+    -I../graph \
+    -I../cdt \
+    -I../gd
+
+DEFINES = -DDEBUG -DHAVE_CONFIG_H
+
+OBJS = sfdpinit.o spring_electrical.o LinkedList.o \
+	sparse_solve.o post_process.o \
+	QuadTree.o Multilevel.o PriorityQueue.o
+
+libsfdpgen.a : $(OBJS)
+	$(RM) libsfdpgen.a
+	$(AR) cr libsfdpgen.a $(OBJS)
+	$(RANLIB) libsfdpgen.a
+
+install: libsfdpgen.a
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libsfdpgen.a $(LIBDIR)
+
+clean:
+	$(RM) *.o core *.a
+
+distclean: clean
+	$(RM) lib*.so.*

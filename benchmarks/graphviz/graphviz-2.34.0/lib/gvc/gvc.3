@@ -1,0 +1,70 @@
+.TH LIBGVC 3
+.SH NAME
+\fBlibgvc\fR \- Graphviz context library
+.SH SYNOPSIS
+.ta .75i 1.5i 2.25i 3i 3.75i 4.5i 5.25i 6i
+.PP
+.nf
+\f5
+#include <graphviz/gvc.h>
+
+/* set up a graphviz context */
+extern GVC_t *gvNEWcontext(char **info, char *user);
+extern char *gvUsername(void);
+
+/*  set up a graphviz context \(hy alternative */
+/*     (wraps the above two functions using info built into libgvc) */
+extern GVC_t *gvContext(void);
+
+/* parse command line args \(hy minimally argv[0] sets layout engine */
+extern int gvParseArgs(GVC_t *gvc, int argc, char **argv);
+extern graph_t *gvNextInputGraph(GVC_t *gvc);
+
+/* Compute a layout using a specified engine */
+extern int gvLayout(GVC_t *gvc, graph_t *g, char *engine);
+
+/* Compute a layout using layout engine from command line args */
+extern int gvLayoutJobs(GVC_t *gvc, graph_t *g);
+
+/* Render layout into string attributes of the graph */
+extern void attach_attrs(graph_t *g);
+
+/* Parse an html string */
+extern char *agstrdup_html(char *s);
+extern int aghtmlstr(char *s);
+
+/* Render layout in a specified format to an open FILE */
+extern int gvRender(GVC_t *gvc, graph_t *g, char *format, FILE *out);
+
+/* Render layout in a specified format to an open FILE */
+extern int gvRenderFilename(GVC_t *gvc, graph_t *g, char *format, char *filename);
+
+/* Render layout according to \-T and \-o options found by gvParseArgs */
+extern int gvRenderJobs(GVC_t *gvc, graph_t *g);
+
+/* Clean up layout data structures \(hy layouts are not nestable (yet) */
+extern int gvFreeLayout(GVC_t *gvc, graph_t *g);
+
+/* Clean up graphviz context */
+extern int gvFreeContext(GVC_t *gvc);
+
+/* Inquire about available plugins */
+/* See comment in gvc.h            */
+extern char** gvPluginList(GVC_t *gvc, char* kind, int* cnt, char*);
+
+\fP
+.fi
+.SH DESCRIPTION
+\fIlibgvc\fP provides a context for applications wishing to manipulate
+and render graphs.  It provides a command line parsing, common rendering code,
+and a plugin mechanism for renderers.
+
+.SH SEE ALSO
+.BR dot (1),
+.BR neato (1),
+.BR libcdt (3)
+.BR libgraph (3)
+.br
+
+.SH AUTHOR
+John Ellson (ellson@research.att.com), AT&T

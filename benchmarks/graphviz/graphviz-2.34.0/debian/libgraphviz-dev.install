@@ -1,0 +1,12 @@
+usr/include/graphviz
+usr/lib/pkgconfig
+usr/lib/*.so
+usr/lib/graphviz/*.so
+
+# usr/share/man/man3/*  w/o  gv_*.3 (bindings)
+usr/share/man/man3/cdt.3
+# usr/share/man/man3/graph.3   # lib/cgraph/ is now the default
+usr/share/man/man3/cgraph.3
+usr/share/man/man3/pathplan.3
+usr/share/man/man3/gvc.3
+usr/share/man/man3/xdot.3

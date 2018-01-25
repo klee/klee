@@ -1,0 +1,67 @@
+.TH DOTTY 1
+.SH NAME
+dotty \- A Customizable Graph Editor
+.SH SYNOPSIS
+.B dotty
+[
+.B -V
+] [
+.BI -lm mode
+] [
+.BI -el lev
+] [
+.I file
+]
+.SH DESCRIPTION
+.B dotty
+is a graph editor for the X Window System.  It may be run as a standalone
+editor, or as a front end for applications that use graphs.  It can control
+multiple windows viewing different graphs.
+
+.B dotty
+is written on top of
+.B dot
+and
+.BR lefty .
+.B lefty
+is a general-purpose programmable editor for technical pictures.  It has an
+interpretive programming language similar to AWK and C.  The user interface and
+graph editing operations of
+.B dotty
+are written as
+.B lefty
+functions.
+Programmer-defined graph operations may be loaded as well.  Graph layouts are
+made by
+.BR dot ,
+which runs as a separate process that communicates with
+.B lefty
+through pipes.
+
+If the input graph contains xdot attributes,
+.B dotty
+will use that to display the graph. Otherwise, it runs
+.B dot
+to obtain layout information.
+.SH USAGE
+The file name is optional. If present, the graph contained in that file is
+displayed in the
+.B dotty
+window.
+.SH OPTIONS
+.TP
+.B -V
+Prints the version.
+.TP
+.BI -lm mode
+Sets the layout mode. The \fImode\fP can be \fBsync\fP or \fBasync\fP. The default is \fBasync\fP.
+.TP
+.BI -el lev
+Sets the mesage level. The \fIlev\fP can be \fB0\fP or \fB1\fP. The default is \fB0\fP.
+.SH BUGS
+The lefty parser does not accept anonymous graphs.
+.SH SEE ALSO
+dot(1), lefty(1), lneato(1), xdot(3)
+.br
+.I dotty
+user guide.

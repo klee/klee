@@ -1,0 +1,65 @@
+digraph "g" {
+	graph [
+		concentrate="true" /* Edges are merged and have common endpoints*/
+		charset=latin1
+		fontsize = "14"
+		fontname = "Helvetica"
+		fontcolor = "black"
+		color = "black"
+		rankdir="LR"
+		ratio="compress"
+	]
+	
+	node [
+		fontsize = "14"
+		fontname = "Helvetica"
+		fontcolor = "black"
+		shape = "plaintext"
+		color = "black"
+		
+	]
+	edge [
+		fontsize = "14"
+		fontname = "Times-Roman"
+		fontcolor = "black"
+		color = "black"
+		
+		
+		
+	]
+	
+	
+	
+	
+	/*generation*/
+	Torwaechter [label="Torwächter"];
+	Torschluessel [label="Torschlüssel"]; /* tests the ü*/
+	Schluesseloel [label="Schluesselöl"]; /* tests the ö*/
+	Schluesseltraeger [label="Schlueßelträger"]; /*tests the ß*/
+	Tor -> Schlosstor ;
+	Tor -> Torfenster;
+	Tor -> Torschluessel ;
+	Tor -> Torwaechter;
+	Torschluessel -> Schluesselbund;
+	Torschluessel -> Schluesseltraeger;
+	Torschluessel -> Schluesseloel;
+	Torwaechter -> Torwaechterhaeuschen;
+	
+	
+	/*Derivation with plaintext*/
+	Prefix[label="ge\nPräfix"];
+	Stem[label="legen\nStamm"];
+	Suffix[label="heit\nSuffix"];
+	Prefix->Wort[style="invis"];
+	Stem->Wort;
+	Suffix->Wort[style="invis"];
+	Dieb -> Wort;
+	
+	
+	/* mit records und node ports*/
+	creation[shape="record",label="<f0>ge\nPräfix|<f1>legen\nStamm|<f2>heit\nSuffix", style="invis"]
+	creation1[shape="record",label="<f0>ge\nPräfix|<f1>Dieb\nStamm|<f2>heit\nSuffix", style="invis"]
+	"creation":f1 -> Fragewort
+	"creation1":f1 ->Fragewort
+	
+}

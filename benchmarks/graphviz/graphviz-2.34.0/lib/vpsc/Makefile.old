@@ -1,0 +1,43 @@
+all:	libvpsc.a
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+INCS =  -I. \
+	    -I$(ROOT) \
+	    -Ipairingheap
+
+DEFINES = -DHAVE_CONFIG_H
+
+HDRS = block.h constraint.h generate-constraints.h solve_VPSC.h \
+       blocks.h csolve_VPSC.h remove_rectangle_overlap.h variable.h
+
+OBJS = block.o constraint.o generate-constraints.o solve_VPSC.o \
+       blocks.o csolve_VPSC.o remove_rectangle_overlap.o variable.o
+
+libvpsc.a : $(OBJS)
+	$(RM) libvpsc.a
+	$(AR) cr libvpsc.a $(OBJS)
+	$(RANLIB) libvpsc.a
+
+install: libvpsc.a 
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libvpsc.a $(LIBDIR)
+
+block.o : pairingheap/PairingHeap.h pairingheap/PairingHeap.cpp block.h \
+          blocks.h constraint.h variable.h
+constraint.o : constraint.h block.h variable.h
+generate-constraints.o : generate-constraints.h constraint.h block.h variable.h
+solve_VPSC.o : block.h blocks.h constraint.h variable.h solve_VPSC.h
+blocks.o : block.h blocks.h constraint.h variable.h
+csolve_VPSC.o : csolve_VPSC.h
+remove_rectangle_overlap.o : csolve_VPSC.h generate-constraints.h variable.h \
+                         block.h constraint.h blocks.h
+variable.o : variable.h block.h
+
+
+clean:
+	$(RM) core *.o
+
+distclean: clean
+	$(RM) *.a ptest

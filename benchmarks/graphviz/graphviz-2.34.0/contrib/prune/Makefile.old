@@ -1,0 +1,33 @@
+#   prune make file
+#   Written by Emden R. Gansner (1 Mar 2002)
+ALL = prune
+all : $(ALL)
+
+include ../../Config.mk
+include ../../makearch/$(ARCH)
+
+INCS = -I. -I../.. -I../../tools/src -I../../agraph -I../../cdt
+
+DEFINES = -DHAVE_CONFIG_H
+
+OBJS = prune.o generic_list.o
+
+generic_list.o : generic_list.h
+
+GLIBS = -L../../agraph -L../../cdt -lagraph -lcdt
+LIBS = -L../../tools/src -lingraphs $(GLIBS)
+
+prune : $(OBJS)
+	$(CC) $(LDFLAGS) $(OBJS) $(LIBS) -o $@
+
+install : all
+	$(MKPATH) $(BINDIR)
+	$(CP) prune $(BINDIR)
+	$(MKPATH) $(MANDIR)
+	$(INSTALL) prune.1 $(MANDIR)
+
+clean :
+	$(RM) core *.o 
+
+distclean : clean
+	$(RM) $(ALL)

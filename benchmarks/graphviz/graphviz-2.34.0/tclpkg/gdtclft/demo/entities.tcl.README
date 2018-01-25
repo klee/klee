@@ -1,0 +1,9 @@
+entities.tcl - Display Unicode entities in a given font
+
+Author: John Ellson <ellson@graphviz.org>
+
+Package requires: tclsh, gdtclft, webfonts
+
+Demonstrate truetype font support in gdtclft by outputting a PNG
+image of all the Unicode characters supported by the times.ttf font
+to stdout.

@@ -1,0 +1,3 @@
+LIBRARY	"gvplugin_gd"
+EXPORTS
+gvplugin_gd_LTX_library

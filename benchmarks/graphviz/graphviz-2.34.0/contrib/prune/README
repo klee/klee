@@ -1,0 +1,37 @@
+$Id$
+
+Introduction
+============
+
+prune reads directed graphs in the same format used by dot(1) and
+removes subgraphs rooted at nodes specified on the commandline via
+options. These nodes themselves will not be removed, but can be given
+attributes so that they can be easily located by a graph stream editor
+such as gvpr(1).
+
+dot and gvpr are part of graphviz (http://www.graphviz.org), a graph
+processing software by AT&T.
+
+Installation
+============
+
+1. Get the graphviz sources and compile them. You don't have to
+   install graphviz. Make sure that you comply with the graphviz
+   license terms.
+
+2. make GRAPHVIZ_DIR=<path to graphviz directory>
+
+3. make install
+
+4. RTFM (Read The Fine Manual)
+
+License Terms
+=============
+
+Prune uses components of the graphviz software by statically linking
+graphviz libraries. This requires that you have to follow the graphviz
+license terms on top of mine if you want to use prune. Prune's license
+terms are in the source code.
+
+Enjoy,
+  Marcus Harnisch <marcus.harnisch@gmx.net>

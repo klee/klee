@@ -1,0 +1,269 @@
+digraph structs {
+node [shape=record];
+    struct1 [shape=record,label="<f0> left|<f1> middle|<f2> right"];
+    struct2 [shape=record,label="<f0> one|<f1> two"];
+    struct3 [shape=record,label="hello\nworld\n\
+and  | { Thats the reason | post-menopausal | estrogen } | is\n\
+given together with another hormone called\n\
+progestin: The combination lowers the risk of\n\
+endometrial cancer.\n\
+\n\
+But the NTP advisers said putting all\n\
+estrogens on the federal list would help\n\
+women trying to balance the benefits and\n\
+risks when choosing hormone therapy.\n\
+Physicians never discuss any of these risks\n\
+when they are prescribing hormone therapy.\n\
+They only discuss benefits. Listing might\n\
+force it on the table, Michelle Medinsky, a\n\
+toxicologist from Durham, N.C., said before\n\
+the vote.\n\
+\n\
+The committee of scientists advises the NTP,\n\
+a branch of the National Institutes of Health\n\
+that every two years updates the federal list\n\
+of proven and suspected cancer-causing\n\
+substances.\n\
+\n\
+The NTP typically follows its advisers\n\
+recommendations, but an officially updated\n\
+carcinogen list isnt expected until 2002.\n\
+\n\
+Thursday, after a daylong debate, the panel\n\
+declined to add talc powder to the list,\n\
+saying there wasnt enough evidence linking\n\
+its use in feminine hygiene products to\n\
+ovarian cancer. The panel deadlocked over\n\
+whether to a second type of talc, fibrous\n\
+talc that some studies have linked to lung\n\
+cancer in talc miners.\n\
+\n\
+On Wednesday, the panel voted to add\n\
+ultraviolet radiation -- those\n\
+sunburn-causing rays long known to cause skin\n\
+cancer -- to the official carcinogen list.\n\
+\n\
+The panel on Friday continued debating an\n\
+association between cancers of the nose and\n\
+sinuses with industrial exposure to wood\n\
+dust.\n\
+\n\
+Talc has long been controversial. When\n\
+studies first appeared suggesting it migrated\n\
+into the ovaries to cause tumors, many\n\
+feminine hygiene products replaced talc with\n\
+cornstarch.\n\
+\n\
+Panelist Medinsky said she had been prepared\n\
+to list talc powder as reasonably believed\n\
+to cause cancer. But after listening to\n\
+hours of industry attacks on the science,\n\
+the evidence has knocked me out of the\n\
+reasonably category into not list, she\n\
+said before the panel voted 7-3 against\n\
+listing talc.\n\
+\n\
+Talc has long been controversial. When\n\
+studies first appeared suggesting it migrated\n\
+into the ovaries to cause tumors, many\n\
+feminine hygiene products replaced talc with\n\
+cornstarch.\n\
+\n\
+Panelist Medinsky said she had been prepared\n\
+to list talc powder as reasonably believed\n\
+to cause cancer. But after listening to\n\
+hours of industry attacks on the science,\n\
+the evidence has knocked me out of the\n\
+reasonably category into not list, she\n\
+said before the panel voted 7-3 against\n\
+listing talc.\n\
+\n\
+Talc in one form or the other can be found in\n\
+many papers, paints, ceramics, food wrappers,\n\
+hard candy, chewing gum, cosmetics and pills.\n\
+Most people are familiar with talc as a loose\n\
+powder used in cosmetics and as a drying\n\
+powder.\n\
+\n\
+Industry officials also attacked studies that\n\
+showed increased lung cancer in talc miners\n\
+in New York State and questioned an\n\
+experiment that showed that rats breathing\n\
+high concentrations of talc got lung cancer.\n\
+\n\
+Higher lung-cancer rates in talc miners may\n\
+have resulted from their smoking or from the\n\
+presence of radon gas in the mines or\n\
+asbestos in soils nearby, industry officials\n\
+said.\n\
+\n\
+The scientific advisers then deadlocked on\n\
+whether this second type of talc, fibrous\n\
+talc, caused lung cancer, voting 5-5 on\n\
+adding it to the carcinogen list.\n\
+\n\
+UV light, however, was a no-brainer for the\n\
+panel, which voted unanimously that it was a\n\
+known human carcinogen.\n\
+\n\
+UV radiation is not visible, but it is felt\n\
+as heat and can damage the eyes and skin. It\n\
+comes in three forms, ranging from the\n\
+relatively long-wavelength UVA to the\n\
+shortest wavelength UVC. UVA accounts for\n\
+most of the solar UV radiation because it is\n\
+not absorbed by the atmosphere. UVB is mostly\n\
+absorbed by the ozone layer and UVC is\n\
+totally absorbed.\n\
+\n\
+All three are produced by mercury arc sun\n\
+lamps, while other lamps that simulate\n\
+sunlight produce primarily UVA.\n\
+\n\
+SYDNEY, Australia (AP) -- Botanists have\n\
+found a stand of living fossil trees from\n\
+a species dating back to prehistoric times in\n\
+the dense rainforests north of Sydney,\n\
+authorities said Friday.\n\
+\n\
+About 20 mature trees found in the Nightcap\n\
+Range about 400 miles north of Sydney bear\n\
+nuts similar in structure to those discovered\n\
+in fossilized form in 1875 by botanist Baron\n\
+Ferdinand von Mueller.\n\
+\n\
+It gives us another small paragraph or a\n\
+page of the insight into the evolution of\n\
+flowering plants and the incredible changes                    \n\
+that have occurred on this continent through\n\
+enormous periods of time, said botanist\n\
+Peter Kooyman, who discovered the trees in\n\
+August.\n\
+\n\
+The exact location is being kept secret to\n\
+protect the trees, state environment minister\n\
+Bob Debus said.\n\
+\n\
+Kooyman sent details of his find to Sydneys\n\
+Royal Botanic Gardens, which identified the\n\
+rainforests which once covered the ancient \n\
+super-continent of Gondwanaland -- now\n\
+Australia, Africa, South America and New\n\
+Zealand, Debus said.\n\
+\n\
+The biggest of the newly discovered trees is\n\
+at least 120 feet tall and has beautiful,\n\
+primitive and messy flowers with a scent\n\
+similar to aniseed, Kooyman said.\n\
+\n\
+A similar discovery was made in the Blue\n\
+Mountains west of Sydney in 1994, when\n\
+botanists discovered a stand of living fossil\n\
+trees known as the Wollemi Pines.\n\
+\n\
+provocative Turkish  \n\
+study suggests that     \n\
+using honey as an      \n\
+ointment during a     \n\
+certain type of      \n\
+colon-cancer surgery\n\
+can help prevent tumors       \n\
+from recurring.              \n\
+\n\
+While the research was     \n\
+done in mice and no one   \n\
+expects hospitals t\n\
+start stocking    \n\
+operating rooms with    \n\
+honey jars, honey has  \n\
+been used as a folk   \n\
+remedy for healing   \n\
+since biblical times\n\
+\n\
+And a Mayo Clinic \n\
+cancer expert said the       \n\
+results, though             \n\
+preliminary, are too       \n\
+fascinating to be         \n\
+dismissed.               \n\
+\n\
+The research was aimed \n\
+at improving the safety   \n\
+of laparoscopic          \n\
+surgery, an\n\
+increasingly popular technique that involves\n\
+tiny keyhole incisions and skinny\n\
+instruments.\n\
+\n\
+Enthusiasm for the technique has been\n\
+tempered by some reports that laparoscopy for\n\
+colon cancer can itself cause tumors to\n\
+develop in the abdominal wall, along the path\n\
+the surgical instruments took.\n\
+\n\
+The Turkish researchers suggest honey might\n\
+work as a barrier to tumor cells when it is\n\
+spread in the incisions. The findings, based\n\
+on a study of 60 mice, were published in\n\
+Decembers issue of the Archives of Surgery.\n\
+\n\
+Dr. Tonia Young-Fadok, a Mayo Clinic surgeon\n\
+participating in a U.S. study on whether\n\
+laparoscopic surgery for colon cancer can\n\
+cause new tumors, said substances in honey\n\
+might actually help dissolve tumor cells.\n\
+\n\
+Its not clear what the power of honey is,\n\
+but theres certainly something here thats\n\
+of interest, Young-Fadok said.\n\
+\n\
+Laparoscopies are being used increasingly to\n\
+treat a variety of conditions that formerly\n\
+required major operations. Skinny instruments\n\
+and a slender viewing tube called a\n\
+laparoscope are inserted through tiny\n\
+incisions. Carbon dioxide gas is injected\n\
+into the body cavity to cause the abdomen to\n\
+swell, creating a work space for surgeons.\n\
+\n\
+Colon tumors are essentially the only type of\n\
+cancer for which doctors use laparoscopy.\n\
+\n\
+Some theorize that the gas might cause cancer\n\
+cells to shift location and form tumors.\n\
+Others suggest that inexperienced surgeons\n\
+might inadvertently cause malignant cells to\n\
+implant as they extract the tumor.\n\
+\n\
+Young-Fadok said some research has found that\n\
+tumors occur in less than 1 percent of cases\n\
+and that when the laparoscopy is done by\n\
+experienced surgeons, the risk is essentially\n\
+zero.\n\
+\n\
+In the Turkish study, led by Dr. Ismail\n\
+Hamzaoglu of Istanbul University, researchers\n\
+injected the mice with air, made neck\n\
+incisions and injected the animals with tumor\n\
+cells. The researchers spread honey inside\n\
+the incisions in one group of mice before and\n\
+after the injections.\n\
+\n\
+All 30 mice without honey developed tumors,\n\
+compared with only eight of the 30\n\
+honey-treated mice.\n\
+\n\
+In a commentary accompanying the study,\n\
+Chicago plastic surgeon Dr. Thomas Mustoe\n\
+noted that other research has suggested honey\n\
+has anti-bacterial properties and may be an\n\
+effective treatment for burns.\n\
+\n\
+The study highlights another potential\n\
+use, Mustoe said.\n\
+abde\
+ |{ b |{c|<here> d|e}| f}| g | h"];
+    struct1:f1 -> struct2:f0;
+    struct1:f2 -> struct3:here;
+}
+

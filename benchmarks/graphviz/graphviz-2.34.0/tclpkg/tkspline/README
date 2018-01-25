@@ -1,0 +1,20 @@
+Tkspline
+
+An additional smoothing method for canvas items.
+
+This code was written to be part of a larger 
+application, but Tkspline is released as an 
+illustration of the new smooth method hooks in
+Jan Nijtman's "dash" patch.
+
+	http://home.wxs.nl/~nijtmans/
+
+Please see INSTALL for installation instructions
+and tkspline.n for more information about splines.
+
+The latest version of Tkspline is kept at:
+
+	http://www.graphviz.org/pub/
+
+John Ellson  (ellson@graphviz.org)
+October 1st, 1997

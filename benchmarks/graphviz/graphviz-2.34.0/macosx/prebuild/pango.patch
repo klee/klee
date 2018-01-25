@@ -1,0 +1,43 @@
+--- pango-1.28.3/pango/opentype/Makefile.am.old	2011-01-11 20:00:41.000000000 -0500
++++ pango-1.28.3/pango/opentype/Makefile.am	2011-01-11 20:00:52.000000000 -0500
+@@ -47,7 +47,7 @@
+ libharfbuzz_la_CPPFLAGS = -DHAVE_GLIB $(GLIB_CFLAGS)
+ libharfbuzz_la_LIBADD = $(GLIB_LIBS)
+ 
+-noinst_PROGRAMS = main
++#noinst_PROGRAMS = main
+ 
+ main_SOURCES = main.cc
+ main_CPPFLAGS = -DHAVE_GLIB $(GLIB_CFLAGS)
+--- pango-1.28.3/pango/opentype/Makefile.in.old	2011-01-11 20:02:33.000000000 -0500
++++ pango-1.28.3/pango/opentype/Makefile.in	2011-01-11 20:02:55.000000000 -0500
+@@ -37,7 +37,7 @@
+ POST_UNINSTALL = :
+ build_triplet = @build@
+ host_triplet = @host@
+-noinst_PROGRAMS = main$(EXEEXT)
++#noinst_PROGRAMS = main$(EXEEXT)
+ subdir = pango/opentype
+ DIST_COMMON = README $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
+ 	COPYING TODO
+--- pango-1.28.3/Makefile.in.old	2011-01-11 20:10:24.000000000 -0500
++++ pango-1.28.3/Makefile.in	2011-01-11 20:11:19.000000000 -0500
+@@ -329,7 +329,7 @@
+ top_build_prefix = @top_build_prefix@
+ top_builddir = @top_builddir@
+ top_srcdir = @top_srcdir@
+-SUBDIRS = pango modules pango-view examples docs tools tests
++SUBDIRS = pango modules 
+ EXTRA_DIST = \
+ 	autogen.sh		\
+ 	pango.pc.in		\
+--- pango-1.28.3/Makefile.am.old	2011-01-11 20:09:44.000000000 -0500
++++ pango-1.28.3/Makefile.am	2011-01-11 20:10:08.000000000 -0500
+@@ -1,6 +1,6 @@
+ ## Process this file with automake to create Makefile.in.
+ 
+-SUBDIRS= pango modules pango-view examples docs tools tests
++SUBDIRS= pango modules 
+ 
+ EXTRA_DIST = 			\
+ 	autogen.sh		\

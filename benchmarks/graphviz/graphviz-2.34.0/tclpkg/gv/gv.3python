@@ -1,0 +1,367 @@
+.TH gv 3python "06 September 2013"
+
+.SH NAME
+
+gv_python - graph manipulation in python
+
+.SH SYNOPSIS
+
+#!/usr/bin/python
+.br
+import sys
+.br
+import gv
+
+.SH USAGE
+
+
+
+.SH INTRODUCTION
+
+.B gv_python
+is a dynamically loaded extension for
+.B python
+that provides access to the graph facilities of
+.B graphviz.
+
+.SH COMMANDS
+
+.TP
+\fBNew graphs\fR
+.br
+.TP
+New empty graph
+.br
+\fIgraph_handle\fR \fBgv.graph\fR \fI(name);\fR
+.br
+\fIgraph_handle\fR \fBgv.digraph\fR \fI(name);\fR
+.br
+\fIgraph_handle\fR \fBgv.strictgraph\fR \fI(name);\fR
+.br
+\fIgraph_handle\fR \fBgv.strictdigraph\fR \fI(name);\fR
+.br
+.TP
+New graph from a dot-syntax string or file
+.br
+\fIgraph_handle\fR \fBgv.readstring\fR \fI(string);\fR
+.br
+\fIgraph_handle\fR \fBgv.read\fR \fI(string filename);\fR
+.br
+\fIgraph_handle\fR \fBgv.read\fR \fI(channel);\fR
+.br
+.TP
+Add new subgraph to existing graph
+.br
+\fIgraph_handle\fR \fBgv.graph\fR \fI(graph_handle, name);\fR
+.br
+.TP
+\fBNew nodes\fR
+.br
+.TP
+Add new node to existing graph
+.br
+\fInode_handle\fR \fBgv.node\fR \fI(graph_handle, name);\fR
+.br
+.TP
+\fBNew edges\fR
+.br
+.TP
+Add new edge between existing nodes
+.br
+\fIedge_handle\fR \fBgv.edge\fR \fI(tail_node_handle, head_node_handle);\fR
+.br
+.TP
+Add a new edge between an existing tail node, and a named head node which will be induced in the graph if it doesn't already exist
+.br
+\fIedge_handle\fR \fBgv.edge\fR \fI(tail_node_handle, head_name);\fR
+.br
+.TP
+Add a new edge between an existing head node, and a named tail node which will be induced in the graph if it doesn't already exist
+.br
+\fIedge_handle\fR \fBgv.edge\fR \fI(tail_name, head_node_handle);\fR
+.br
+.TP
+Add a new edge between named tail  and head nodes which will be induced in the graph if they don't already exist
+.br
+\fIedge_handle\fR \fBgv.edge\fR \fI(graph_handle, tail_name, head_name);\fR
+.br
+.TP
+\fBSetting attribute values\fR
+.br
+.TP
+Set value of named attribute of graph/node/edge - creating attribute if necessary
+.br
+\fIstring\fR \fBgv.setv\fR \fI(graph_handle, attr_name, attr_value);\fR
+.br
+\fIstring\fR \fBgv.setv\fR \fI(node_handle, attr_name, attr_value);\fR
+.br
+\fIstring\fR \fBgv.setv\fR \fI(edge_handle, attr_name, attr_value);\fR
+.br
+.TP
+Set value of existing attribute of graph/node/edge (using attribute handle)
+.br
+\fIstring\fR \fBgv.setv\fR \fI(graph_handle, attr_handle, attr_value);\fR
+.br
+\fIstring\fR \fBgv.setv\fR \fI(node_handle, attr_handle, attr_value);\fR
+.br
+\fIstring\fR \fBgv.setv\fR \fI(edge_handle, attr_handle, attr_value);\fR
+.br
+.TP
+\fBGetting attribute values\fR
+.br
+.TP
+Get value of named attribute of graph/node/edge
+.br
+\fIstring\fR \fBgv.getv\fR \fI(graph_handle, attr_name);\fR
+.br
+\fIstring\fR \fBgv.getv\fR \fI(node_handle, attr_name);\fR
+.br
+\fIstring\fR \fBgv.getv\fR \fI(edge_handle, attr_name);\fR
+.br
+.TP
+Get value of attribute of graph/node/edge (using attribute handle)
+.br
+\fIstring\fR \fBgv.getv\fR \fI(graph_handle, attr_handle);\fR
+.br
+\fIstring\fR \fBgv.getv\fR \fI(node_handle, attr_handle);\fR
+.br
+\fIstring\fR \fBgv.getv\fR \fI(edge_handle, attr_handle);\fR
+.br
+.TP
+\fBObtain names from handles\fR
+.br
+\fIstring\fR \fBgv.nameof\fR \fI(graph_handle);\fR
+.br
+\fIstring\fR \fBgv.nameof\fR \fI(node_handle);\fR
+.br
+\fIstring\fR \fBgv.nameof\fR \fI(attr_handle);\fR
+.br
+.TP
+\fBFind handles from names\fR
+.br
+\fIgraph_handle\fR \fBgv.findsubg\fR \fI(graph_handle, name);\fR
+.br
+\fInode_handle\fR \fBgv.findnode\fR \fI(graph_handle, name);\fR
+.br
+\fIedge_handle\fR \fBgv.findedge\fR \fI(tail_node_handle, head_node_handle);\fR
+.br
+\fIattribute_handle\fR \fBgv.findattr\fR \fI(graph_handle, name);\fR
+.br
+\fIattribute_handle\fR \fBgv.findattr\fR \fI(node_handle, name);\fR
+.br
+\fIattribute_handle\fR \fBgv.findattr\fR \fI(edge_handle, name);\fR
+.br
+.TP
+\fBMisc graph navigators returning handles\fR
+.br
+\fInode_handle\fR \fBgv.headof\fR \fI(edge_handle);\fR
+.br
+\fInode_handle\fR \fBgv.tailof\fR \fI(edge_handle);\fR
+.br
+\fIgraph_handle\fR \fBgv.graphof\fR \fI(graph_handle);\fR
+.br
+\fIgraph_handle\fR \fBgv.graphof\fR \fI(edge_handle);\fR
+.br
+\fIgraph_handle\fR \fBgv.graphof\fR \fI(node_handle);\fR
+.br
+\fIgraph_handle\fR \fBgv.rootof\fR \fI(graph_handle);\fR
+.br
+.TP
+\fBObtain handles of proto node/edge for setting default attribute values\fR
+.br
+\fInode_handle\fR \fBgv.protonode\fR \fI(graph_handle);\fR
+.br
+\fIedge_handle\fR \fBgv.protoedge\fR \fI(graph_handle);\fR
+.br
+.TP
+\fBIterators\fR
+.br
+.TP
+Iteration termination tests
+.br
+\fIbool\fR \fBgv.ok\fR \fI(graph_handle);\fR
+.br
+\fIbool\fR \fBgv.ok\fR \fI(node_handle);\fR
+.br
+\fIbool\fR \fBgv.ok\fR \fI(edge_handle);\fR
+.br
+\fIbool\fR \fBgv.ok\fR \fI(attr_handle);\fR
+.br
+.TP
+Iterate over subgraphs of a graph
+.br
+\fIgraph_handle\fR \fBgv.firstsubg\fR \fI(graph_handle);\fR
+.br
+\fIgraph_handle\fR \fBgv.nextsubg\fR \fI(graph_handle, subgraph_handle);\fR
+.br
+.TP
+Iterate over supergraphs of a graph (obscure and rarely useful)
+.br
+\fIgraph_handle\fR \fBgv.firstsupg\fR \fI(graph_handle);\fR
+.br
+\fIgraph_handle\fR \fBgv.nextsupg\fR \fI(graph_handle, subgraph_handle);\fR
+.br
+.TP
+Iterate over edges of a graph
+.br
+\fIedge_handle\fR \fBgv.firstedge\fR \fI(graph_handle);\fR
+.br
+\fIedge_handle\fR \fBgv.nextedge\fR \fI(graph_handle, edge_handle);\fR
+.br
+.TP
+Iterate over outedges of a graph
+.br
+\fIedge_handle\fR \fBgv.firstout\fR \fI(graph_handle);\fR
+.br
+\fIedge_handle\fR \fBgv.nextout\fR \fI(graph_handle, edge_handle);\fR
+.br
+.TP
+Iterate over edges of a node
+.br
+\fIedge_handle\fR \fBgv.firstedge\fR \fI(node_handle);\fR
+.br
+\fIedge_handle\fR \fBgv.nextedge\fR \fI(node_handle, edge_handle);\fR
+.br
+.TP
+Iterate over out-edges of a node
+.br
+\fIedge_handle\fR \fBgv.firstout\fR \fI(node_handle);\fR
+.br
+\fIedge_handle\fR \fBgv.nextout\fR \fI(node_handle, edge_handle);\fR
+.br
+.TP
+Iterate over head nodes reachable from out-edges of a node
+.br
+\fInode_handle\fR \fBgv.firsthead\fR \fI(node_handle);\fR
+.br
+\fInode_handle\fR \fBgv.nexthead\fR \fI(node_handle, head_node_handle);\fR
+.br
+.TP
+Iterate over in-edges of a graph
+.br
+\fIedge_handle\fR \fBgv.firstin\fR \fI(graph_handle);\fR
+.br
+\fIedge_handle\fR \fBgv.nextin\fR \fI(node_handle, edge_handle);\fR
+.br
+.TP
+Iterate over in-edges of a node
+.br
+\fIedge_handle\fR \fBgv.firstin\fR \fI(node_handle);\fR
+.br
+\fIedge_handle\fR \fBgv.nextin\fR \fI(graph_handle, edge_handle);\fR
+.br
+.TP
+Iterate over tail nodes reachable from in-edges of a node
+.br
+\fInode_handle\fR \fBgv.firsttail\fR \fI(node_handle);\fR
+.br
+\fInode_handle\fR \fBgv.nexttail\fR \fI(node_handle, tail_node_handle);\fR
+.br
+.TP
+Iterate over nodes of a graph
+.br
+\fInode_handle\fR \fBgv.firstnode\fR \fI(graph_handle);\fR
+.br
+\fInode_handle\fR \fBgv.nextnode\fR \fI(graph_handle, node_handle);\fR
+.br
+.TP
+Iterate over nodes of an edge
+.br
+\fInode_handle\fR \fBgv.firstnode\fR \fI(edge_handle);\fR
+.br
+\fInode_handle\fR \fBgv.nextnode\fR \fI(edge_handle, node_handle);\fR
+.br
+.TP
+Iterate over attributes of a graph
+.br
+\fIattribute_handle\fR \fBgv.firstattr\fR \fI(graph_handle);\fR
+.br
+\fIattribute_handle\fR \fBgv.nextattr\fR \fI(graph_handle, attr_handle);\fR
+.br
+.TP
+Iterate over attributes of an edge
+.br
+\fIattribute_handle\fR \fBgv.firstattr\fR \fI(edge_handle);\fR
+.br
+\fIattribute_handle\fR \fBgv.nextattr\fR \fI(edge_handle, attr_handle);\fR
+.br
+.TP
+Iterate over attributes of a node
+.br
+\fIattribute_handle\fR \fBgv.firstattr\fR \fI(node_handle);\fR
+.br
+\fIattribute_handle\fR \fBgv.nextattr\fR \fI(node_handle, attr_handle);\fR
+.br
+.TP
+\fBRemove graph objects\fR
+.br
+\fIbool\fR \fBgv.rm\fR \fI(graph_handle);\fR
+.br
+\fIbool\fR \fBgv.rm\fR \fI(node_handle);\fR
+.br
+\fIbool\fR \fBgv.rm\fR \fI(edge_handle);\fR
+.br
+.TP
+\fBLayout\fR
+.br
+.TP
+Annotate a graph with layout attributes and values using a specific layout engine
+.br
+\fIbool\fR \fBgv.layout\fR \fI(graph_handle, string engine);\fR
+.br
+.TP
+\fBRender\fR
+.br
+.TP
+Render a layout into attributes of the graph
+.br
+\fIbool\fR \fBgv.render\fR \fI(graph_handle);\fR
+.br
+.TP
+Render a layout to stdout
+.br
+\fIbool\fR \fBgv.render\fR \fI(graph_handle, string format);\fR
+.br
+.TP
+Render to an open file
+.br
+\fIbool\fR \fBgv.render\fR \fI(graph_handle, string format, channel fout);\fR
+.br
+.TP
+Render a layout to an unopened file by name
+.br
+\fIbool\fR \fBgv.render\fR \fI(graph_handle, string format, string filename);\fR
+.br
+.TP
+Render to an open channel
+.br
+\fIbool\fR \fBgv.renderchannel\fR \fI(graph_handle, string format, string channelname);\fR
+.br
+.TP
+Render to a string result
+.br
+\fBgv.renderresult\fR \fI(graph_handle, string format, string outdata);\fR
+.br
+.TP
+Render a layout to a malloc'ed string, to be free'd by the caller
+.br
+.TP
+(deprecated - too easy to leak memory)
+.br
+.TP
+(still needed for "eval [gv::renderdata $G tk]" )
+.br
+\fIstring\fR \fBgv.renderdata\fR \fI(graph_handle, string format);\fR
+.br
+.TP
+Writing graph back to file
+.br
+\fIbool\fR \fBgv.write\fR \fI(graph_handle, string filename);\fR
+.br
+\fIbool\fR \fBgv.write\fR \fI(graph_handle, channel);\fR
+.br
+
+.SH KEYWORDS
+
+graph, dot, neato, fdp, circo, twopi, python.
+

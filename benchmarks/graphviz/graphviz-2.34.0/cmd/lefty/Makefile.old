@@ -1,0 +1,137 @@
+all:	lefty
+ROOT=../..
+include $(ROOT)/Config.mk
+include $(ROOT)/makearch/$(ARCH)
+
+# lefty build parameters
+#not useful / old:
+#  FEATURE_CS          coshell support
+#  FEATURE_NETSCAPE    build lefty as a netscape plugin
+#  FEATURE_RUSAGE      print rusage stats on exit
+#  FEATURE_VFORK       use vfork instead of fork
+#  FEATURE_GMAP        build performer version of lefty (source in lefty3d)
+#  FEATURE_MESAGL      assume MesaGL instead of SGI's OpenGL for GMAP
+# FEATURE_MINTSIZE     use int instead of short to hold object sizes.
+#                      allows for larger objects (strings, hash tables, etc.)
+# FEATURE_MS           assume windows system calls (as opposed to UNIX)
+#                      to use when building on ms windows without UWIN
+# FEATURE_X11          assume X11 graphics calls
+# FEATURE_BACKINGSTORE ask X server to use backing store for canvas
+# FEATURE_NEXTAW       when linking with -lnextaw a widget lib ala NeXT
+# FEATURE_XAW3D        when linking with -lXaw3d a nicer looking widget lib
+# FEATURE_WIN32        assume WIN32 graphics calls
+# FEATURE_DOT          when linking in the dot2l code, a graph parser
+
+DOT2L = dot2l
+WM = ws/x11
+OS = os/unix
+
+LEFTYLIBDIR= $(LIBDIR)/lefty
+DEFINES=-DLEFTYDATADIR=\"$(LEFTYLIBDIR)\" -DHAVE_CONFIG_H
+
+INCS =	-I. -I$(ROOT) \
+	-I$(DOT2L) \
+	-I$(X11INC) \
+	-I$(WM) \
+	-I$(WM)/libfilereq \
+	-I$(OS)
+
+DOT2LEFTYOBJ = dotparse.o dot2l.o dotlex.o dottrie.o
+
+OSOBJ = io.o
+
+OBJS = lefty.o gfxview.o txtview.o internal.o display.o str.o exec.o parse.o \
+	lex.o tbl.o code.o $(DOT2LEFTYOBJ) $(OSOBJ)
+
+GOBJS = g.o gcommon.o garray.o gbutton.o gcanvas.o glabel.o gmenu.o \
+    gpcanvas.o gquery.o gscroll.o gtext.o gview.o mem.o common.o \
+    SelFile.o Draw.o Path.o Dir.o
+
+lefty: $(OBJS) libgfx.a
+	$(CC) $(LDFLAGS) -L. -L$(X11LIB) $(OBJS) -lgfx -lXaw -lXmu -lXt -lXext -lX11 -lm  $(LEFTYLIBS) -o lefty
+
+libgfx.a : $(GOBJS)
+	$(AR) cr libgfx.a $(GOBJS)
+
+dot2l.o:	$(DOT2L)/dot2l.c
+	$(CC) -c $(CCFLAGS) $(INCS) $(DEFINES) $?
+
+dotlex.o:	$(DOT2L)/dotlex.c
+	$(CC) -c $(CCFLAGS) $(INCS) $(DEFINES) $?
+
+dottrie.o:	$(DOT2L)/dottrie.c
+	$(CC) -c $(CCFLAGS) $(INCS) $(DEFINES) $?
+
+cs2l.o:	$(CS2L)/cs2l.c
+	$(CC) -c $(CCFLAGS) $(INCS) $(DEFINES) $?
+
+gcommon.o:	$(WM)/gcommon.c
+	$(CC) -c $(CCFLAGS) $(INCS) $(DEFINES) $?
+
+garray.o:	$(WM)/garray.c
+	$(CC) -c $(CCFLAGS) $(INCS) $(DEFINES) $?
+
+gbutton.o:	$(WM)/gbutton.c
+	$(CC) -c $(CCFLAGS) $(INCS) $(DEFINES) $?
+
+gcanvas.o:	$(WM)/gcanvas.c
+	$(CC) -c $(CCFLAGS) $(INCS) $(DEFINES) $?
+
+glabel.o:	$(WM)/glabel.c
+	$(CC) -c $(CCFLAGS) $(INCS) $(DEFINES) $?
+
+gmenu.o:	$(WM)/gmenu.c
+	$(CC) -c $(CCFLAGS) $(INCS) $(DEFINES) $?
+
+gpcanvas.o:	$(WM)/gpcanvas.c
+	$(CC) -c $(CCFLAGS) $(INCS) $(DEFINES) $?
+
+gquery.o:	$(WM)/gquery.c
+	$(CC) -c $(CCFLAGS) $(INCS) $(DEFINES) $?
+
+gscroll.o:	$(WM)/gscroll.c
+	$(CC) -c $(CCFLAGS) $(INCS) $(DEFINES) $?
+
+gtext.o:	$(WM)/gtext.c
+	$(CC) -c $(CCFLAGS) $(INCS) $(DEFINES) $?
+
+gview.o:	$(WM)/gview.c
+	$(CC) -c $(CCFLAGS) $(INCS) $(DEFINES) $?
+
+Dir.o:	$(WM)/libfilereq/Dir.c
+	$(CC) -c $(CCFLAGS) $(INCS) $(DEFINES) $?
+
+Draw.o:	$(WM)/libfilereq/Draw.c
+	$(CC) -c $(CCFLAGS) $(INCS) $(DEFINES) $?
+
+Path.o:	$(WM)/libfilereq/Path.c
+	$(CC) -c $(CCFLAGS) $(INCS) $(DEFINES) $?
+
+SelFile.o:	$(WM)/libfilereq/SelFile.c
+	$(CC) -c $(CCFLAGS) $(INCS) $(DEFINES) $?
+
+io.o:	$(OS)/io.c
+	$(CC) -c $(CCFLAGS) $(INCS) $(DEFINES) $?
+
+dotparse.c: $(DOT2L)/dotparse.y
+	$(YACC) -d $(DOT2L)/dotparse.y
+	$(MV) y.tab.c dotparse.c
+	$(MV) y.tab.h dotparse.h
+
+dotparse.o: dotparse.c
+
+install: lefty
+	$(MKPATH) $(BINDIR)
+	$(INSTALL) lefty $(BINDIR)
+	$(MKPATH) $(MANDIR)
+	$(INSTALL) lefty.1 $(MANDIR)
+	$(MKPATH) $(LIBDIR)
+	$(INSTALL) libgfx.a $(LIBDIR)
+	$(MKPATH) $(LIBDIR)/lefty
+	$(INSTALL) examples/def.lefty examples/fractal.lefty examples/tree.lefty lefty.psp $(LIBDIR)/lefty
+
+clean:
+	$(RM) core *.o dotparse.[ch]
+
+distclean: clean
+	$(RM) lefty *.a

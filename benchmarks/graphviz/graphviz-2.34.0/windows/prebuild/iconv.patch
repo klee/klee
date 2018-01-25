@@ -1,0 +1,42 @@
+diff -ru win_iconv/src/Makefile win_iconv.patched/src/Makefile
+--- win_iconv/src/Makefile	Wed Mar 19 23:43:38 2008
++++ win_iconv.patched/src/Makefile	Sun May 11 17:32:22 2008
+@@ -10,7 +10,7 @@
+ 
+ iconv.dll: win_iconv.c
+ 	gcc $(CFLAGS) -c win_iconv.c -DMAKE_DLL
+-	dllwrap --dllname iconv.dll --def iconv.def win_iconv.o
++	dllwrap --dllname iconv.dll --implib libiconv.dll.a --def iconv.def win_iconv.o
+ 	strip iconv.dll
+ 
+ libiconv.a: win_iconv.c
+@@ -32,6 +32,7 @@
+ 	rm -f win_iconv.exe
+ 	rm -f win_iconv.o
+ 	rm -f iconv.dll
++	rm -f libiconv.dll.a
+ 	rm -f libiconv.a
+ 	rm -f win_iconv_test.exe
+ 	rm -f libmlang.a
+diff -ru win_iconv/src/iconv.h win_iconv.patched/src/iconv.h
+--- win_iconv/src/iconv.h	Wed Mar 19 23:43:38 2008
++++ win_iconv.patched/src/iconv.h	Sun May 11 17:30:23 2008
+@@ -1,5 +1,18 @@
++#ifndef WIN_ICONV_H
++#define WIN_ICONV_H
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
+ #include <stddef.h>
+ typedef void* iconv_t;
+ iconv_t iconv_open(const char *tocode, const char *fromcode);
+ int iconv_close(iconv_t cd);
+ size_t iconv(iconv_t cd, const char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft);
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif

@@ -1,0 +1,9 @@
+gcat.tcl - simple graph filter using tcldot
+
+Author: John Ellson <ellson@graphviz.org>
+
+Package requires: tclsh, tcldot
+
+Usage:  gcat.tcl f1 [f2 ... ]
+
+merge a number of digraphs into one and output to stdout
