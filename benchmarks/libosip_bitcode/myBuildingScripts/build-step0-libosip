@@ -1,17 +1,48 @@
+#!/bin/bash
+####################################
+# REMOVE OLD STUFF JUST TO BE SURE #
+####################################
 rm -rf build
 rm -rf libosip2-4.1.0
 rm -rf libosip2-4.1.0.tar.gz
 
+#####################################
+# GET SOURCE CODE FOR BUGGY LIBOSIP #
+#####################################
 wget https://ftp.gnu.org/gnu/osip/libosip2-4.1.0.tar.gz
+
+######################
+# UNPACK IT HERE ... #
+######################
 tar xf libosip2-4.1.0.tar.gz
 
-cp ./mySourceFiles/torture.c ./libosip2-4.1.0/src/test/
+#########################################
+# Use the right clang for klee == 3.4.2 #
+#########################################
+PATH=/home/oren/GIT/LatestKlee/llvm/Release/bin:$PATH
 
+##########################################
+# Prepare an out of tree build directory #
+##########################################
 mkdir build
-cd build
-CC=wllvm LLVM_COMPILER=clang ../libosip2-4.1.0/configure --enable-test --disable-shared
-LLVM_COMPILER=clang LDFLAGS="-L/home/oren/GIT/LatestKlee/klee/build/lib/" make -j
 
+##############################
+# Get inside build directory #
+##############################
+cd build
+
+#################
+# Configure ... #
+#################
+CC=wllvm LLVM_COMPILER=clang ../libosip2-4.1.0/configure --enable-test --disable-shared
+
+###############
+# Make it !!! #
+###############
+LLVM_COMPILER=clang make -j
+
+###################
+# extract bitcode #
+###################
 cd ./src/test
 extract-bc ./torture_test
-file ./torture_test.bc
