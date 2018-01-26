@@ -13,4 +13,14 @@ compile_and_run:
 	./myInput/Input                              \
 	0                                            \
 	-c
-
+.PHONY: build_everything_from_scratch
+build_everything_from_scratch:
+	@clear
+	@setterm -term linux -fore blue
+	@echo "*************************************"
+	@echo "*                                   *"
+	@echo "* Build everything from scratch ... *"
+	@echo "*                                   *"
+	@echo "*************************************"
+	@setterm -term linux -fore white
+	./myBuildingScripts/build-step0-libosip

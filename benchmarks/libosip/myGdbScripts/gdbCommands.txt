@@ -8,8 +8,107 @@ set pagination off
 ####################### 
 start
 break osip_body.c:368
-break osip_body.c:421
+break osip_body.c:375
+break osip_body.c:381
+break osip_body.c:390
+break osip_body.c:420
 break osip_body.c:427
 break torture.c:170
 run
+cont
+cont
+cont
+cont
+cont
+cont
+cont
+shell clear
+next
+shell setterm -term linux -fore blue
+call (void) printf("**************************************************\n")
+call (void) printf("* See (immediately above) how tmp_body is about  *\n")
+call (void) printf("* to allocate 72 bytes:                          *\n")
+call (void) printf("*                                                *\n")
+call (void) printf("* tmp_body = (char *) osip_malloc (length);      *\n")
+call (void) printf("*                                                *\n")
+call (void) printf("**************************************************\n")
+call (void) printf("**************************************************\n")
+call (void) printf("* length = %d                                    *\n",length)
+call (void) printf("**************************************************\n")
+shell setterm -term linux -fore white
+shell sleep 3
+next
+next
+shell setterm -term linux -fore blue
+call (void) printf("*******************************************************\n")
+call (void) printf("* We are going to use ptr (= tmp_body) in this debug  *\n")
+call (void) printf("* session ... like it says in the comment:            *\n")
+call (void) printf("* \"ptr is the initial string address\"                 *\n")
+call (void) printf("* (of the overflowed buffer tmp_body ...)             *\n")
+call (void) printf("*******************************************************\n")
+call (void) printf("*******************************************************\n")
+call (void) printf("* =================== ptr (STEP 0) ================== *\n")
+call (void) printf("*******************************************************\n")
+call (void) printf("********************************************************\n")
+call (void) printf("* Since ptr points to a 72 bytes long buffer, it is 18 *\n")
+call (void) printf("* words long ... the 19th word is heap administrative  *\n")
+call (void) printf("* data ... the 19th word will be corrupted, which will *\n")
+call (void) printf("* later cause an application abort in libc while       *\n")
+call (void) printf("* trying to call realloc ...                           *\n")
+call (void) printf("********************************************************\n")
+call (void) printf("*******************************************************\n")
+call (void) printf("* doing x/19wx ptr now:                               *\n")
+call (void) printf("*******************************************************\n")
+shell setterm -term linux -fore white
+shell sleep 5
+x/19wx ptr
+cont
+next
+shell setterm -term linux -fore blue
+call (void) printf("*******************************************************\n")
+call (void) printf("* now appending \"content-type: \" to ptr ...           *\n")
+call (void) printf("*******************************************************\n")
+shell sleep 2
+shell setterm -term linux -fore white
+print ptr
+x/19wx ptr
+cont
+shell setterm -term linux -fore blue
+call (void) printf("*******************************************************\n")
+call (void) printf("* BUG ... < instead of <=  *\n")
+call (void) printf("*******************************************************\n")
+shell setterm -term linux -fore white
+print length
+print tmp_body - ptr + strlen (tmp) + 4
+cont
+next
+shell setterm -term linux -fore blue
+call (void) printf("*******************************************************\n")
+call (void) printf("* Now appending message body ...                      *\n")
+call (void) printf("*******************************************************\n")
+shell setterm -term linux -fore white
+print ptr
+x/19wx ptr
+next
+next
+shell setterm -term linux -fore blue
+call (void) printf("*******************************************************\n")
+call (void) printf("* Now appending \\r\\n                                  *\n")
+call (void) printf("*******************************************************\n")
+shell setterm -term linux -fore white
+x/19wx ptr
+shell setterm -term linux -fore blue
+call (void) printf("*******************************************************\n")
+call (void) printf("* And another append \\r\\n0 overflows buffer ...       *\n")
+call (void) printf("*******************************************************\n")
+shell setterm -term linux -fore white
+cont
+next
+x/19wx ptr
+cont
+shell setterm -term linux -fore blue
+call (void) printf("**************************************************************\n")
+call (void) printf("* type next to see the application crashes ... MOO HA HA !!! *\n")
+call (void) printf("**************************************************************\n")
+shell setterm -term linux -fore white
 
