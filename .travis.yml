@@ -100,6 +100,7 @@ addons:
     - lcov
 
 cache:
+  ccache: true
   apt: true
   directories:
     - $HOME/Library/Caches/Homebrew
@@ -110,7 +111,7 @@ before_install:
     ###########################################################################
     # Update package information
     - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get update; fi
-    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update && brew tap klee/klee; fi
+    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update && brew tap klee/klee && brew install ccache && export PATH="/usr/local/opt/ccache/libexec:$PATH" ; fi
     ###########################################################################
     # Set up out of source build directory
     ###########################################################################
