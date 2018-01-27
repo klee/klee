@@ -3,20 +3,30 @@
 set -e
 : ${SOLVERS?"Solvers must be specified"}
 
+coverage_setup()
+{
+  # Zero coverage for any file, e.g. previous tests
+  lcov --directory . --no-external --zerocounters
+  # Create a baseline by capturing any file used for compilation, no execution yet
+  lcov --rc lcov_branch_coverage=1 --directory . --base-directory=${KLEE_SRC} --no-external --capture --initial --output-file coverage_base.info
+  lcov --rc lcov_branch_coverage=1 --remove coverage_base.info 'test/*' --output-file coverage_base.info
+  lcov --rc lcov_branch_coverage=1 --remove coverage_base.info 'unittests/*' --output-file coverage_base.info
+}
+
 coverageup()
 {
   # Create report
   # (NOTE: "--rc lcov_branch_coverage=1" needs to be added in all calls, otherwise branch coverage gets dropped)
-  lcov --rc lcov_branch_coverage=1 --directory . --capture --output-file coverage.info
+  lcov --rc lcov_branch_coverage=1 --directory . --base-directory=${KLEE_SRC} --no-external --capture --output-file coverage.info
   # Exclude uninteresting coverage goals (LLVM, googletest, and KLEE system and unit tests)
-  lcov --rc lcov_branch_coverage=1 --remove coverage.info '/usr/*' --output-file coverage.info
-  lcov --rc lcov_branch_coverage=1 --remove coverage.info 'test-utils/*' --output-file coverage.info
-  lcov --rc lcov_branch_coverage=1 --remove coverage.info 'klee/test/*' --output-file coverage.info
-  lcov --rc lcov_branch_coverage=1 --remove coverage.info 'klee/unittests/*' --output-file coverage.info
+  lcov --rc lcov_branch_coverage=1 --remove coverage.info 'test/*' --output-file coverage.info
+  lcov --rc lcov_branch_coverage=1 --remove coverage.info 'unittests/*' --output-file coverage.info
+  # Combine baseline and measured coverage
+  lcov --rc lcov_branch_coverage=1 -a coverage_base.info -a coverage.info -o coverage_all.info
   # Debug info
-  lcov --rc lcov_branch_coverage=1 --list coverage.info
+  lcov --rc lcov_branch_coverage=1 --list coverage_all.info
   # Uploading report to CodeCov
-  bash <(curl -s https://codecov.io/bash) -X gcov -y ${KLEE_SRC}/codecov.yml -f coverage.info -F $1
+  bash <(curl -s https://codecov.io/bash) -R ${KLEE_SRC} -X gcov -y ${KLEE_SRC}/.codecov.yml -f coverage_all.info -F $1
 }
 
 ###############################################################################
@@ -153,6 +163,10 @@ make
 ###############################################################################
 # Unit tests
 ###############################################################################
+# Prepare coverage information if COVERAGE is set
+if [ ${COVERAGE} -eq 1 ]; then
+  coverage_setup
+fi
 make unittests
 
 # Generate and upload coverage if COVERAGE is set
@@ -163,6 +177,9 @@ fi
 ###############################################################################
 # lit tests
 ###############################################################################
+if [ ${COVERAGE} -eq 1 ]; then
+  coverage_setup
+fi
 make systemtests
 
 # If metaSMT is the only solver, then rerun lit tests with non-default metaSMT backends

@@ -6,6 +6,9 @@ coverage:
     project: no
     patch: yes
     changes: no
+  precision: 2
+  round: down
+  range: "70...100"
 
 fixes:
   - "home/travis/build/klee/klee::"
@@ -14,3 +17,6 @@ ignore:
   - "test/"
   - "unittests"
   - "**/test-utils"
+comment:
+  layout: "header, diff, changes, uncovered, tree"
+  behavior: default
