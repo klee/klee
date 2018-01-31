@@ -26,68 +26,113 @@ void MyWriteCharToStringAtOffset(char *p,int offset2,char c);
 /************/
 int main(int argc, char **argv)
 {
-	char  c1;
-	char  c2;
 	int   i1;
-	int   i2 = 3;
-	char *p1;
-	char *p2;
+	char *p1 = (char *) malloc(700);
+	char *p3;
+	char *p4;
+	char *p5;
+	char *p6;
+	char *p7;
+	char *p8;
+	char *q1 = "SIP/";
 
-	/**********************************/
-	/* [7] And make them symbolic ... */
-	/**********************************/
-	klee_make_symbolic(&i1,sizeof(i1),"i1");
+	p1[696] = '\0';
+	p1[697] = '\0';
+	p1[698] = '\0';
+	p1[699] = '\0';
 
-	/********************************/
-	/* [8] example tests to try out */
-	/********************************/
-	if ((5 <= i1) && (i1 <= 6))
-	{	
-		/****************************************/
-		/*                                      */
-		/* allocate buffers of symbolic size i1 */
-		/*                                      */
-		/****************************************/
-		p1 = malloc(i1);
-		p2 = malloc(i1);
-		
-		/********************************/
-		/*                              */
-		/*       +---+---+---+---+---+  */
-		/* p1 == | P | ? | Q | D |x00|  */
-		/*       +---+---+---+---+---+  */
-		/*                              */
-		/********************************/
-		p1[0] = 'T';
-		p1[1] = 'M';
-		p1[2] = 'P';
-		p1[3] = 'G';
-		p1[4] =  0 ;
-		 
-		/********************************/
-		/*                              */
-		/*       +---+---+---+---+---+  */
-		/* p2 == | P | ? | Q | D |x00|  */
-		/*       +---+---+---+---+---+  */
-		/*                              */
-		/********************************/
-		p2[0] = 'T';
-		//p2[1] = 'M';
-		p2[2] = 'P';
-		p2[3] = 'G';
-		p2[4] =  0 ;
+	/* skip initial \r\n */
+	while (p1[0] == '\r' || p1[0] == '\n')
+	{
+		p1++;
+	}
 
-		/********************************/
-		/*                              */
-		/*                              */
-		/* can p1 and p2 be different ? */
-		/*                              */
-		/*                              */
-		/********************************/
-		if (strcmp(p1,p2) != 0)
+	for (; p1[0] != '\0'; p1 = p1+1)
+	{
+		if (('\0' == p1[0]) ||
+			('\0' == p1[1]) ||
+			('\0' == p1[2]) ||
+			('\0' == p1[3]))
 		{
-			MyPrintOutput("INSIDE if (...)");
-			assert(0);
+			return 0;
+		}
+
+		if ((('\r' == p1[0]) && ('\n' == p1[1]) && ('\r' == p1[2]) && ('\n' == p1[3])) ||
+			(('\r' == p1[0]) && ('\r' == p1[1]))                                       ||
+			(('\n' == p1[0]) && ('\n' == p1[1])))
+		{
+			/* end of message */
+			return 0;
+		}
+
+		if ((('\r' == p1[0]) && ('\n' == p1[1]) && ((' ' == p1[2]) || ('\t' == p1[2]))) ||
+			(('\r' == p1[0]) && ((' ' == p1[1]) || ('\t' == p1[1])))                    ||
+			(('\n' == p1[0]) && ((' ' == p1[1]) || ('\t' == p1[1]))))
+		{
+			/* replace line end and TAB symbols by SP */
+			p1[0] = ' ';
+			p1[1] = ' ';
+			p1 = p1 + 2;
+			/* replace all following TAB symbols */
+			for (; ('\t' == p1[0] || ' ' == p1[0]);)
+			{
+				p1[0] = ' ';
+				p1++;
+			}
+		}
+	}
+
+	if (strncmp(p1,q1,4) != 0)
+	{
+		p6 = p1;
+
+		/* search for first SPACE */
+		p3 = strchr (p1, ' ');
+		if (p3 == NULL)
+		{
+			MyPrintOutput("OSIP_SYNTAXERROR 1");
+		}
+		p5 = (char *) malloc (p3 - p6 + 1);
+		strncpy (p5, p6, p3 - p6);
+
+		p4 = strchr (p3 + 1, ' ');
+		if (p4 == NULL)
+		{
+			MyPrintOutput("OSIP_SYNTAXERROR 2");
+		}
+		if (sscanf (p3 + 1, "%d", &i1) != 1)
+		{
+			/* Non-numeric status code */
+			MyPrintOutput("OSIP_SYNTAXERROR 3");
+		}
+
+		if (i1 == 0)
+		{
+			MyPrintOutput("OSIP_SYNTAXERROR 4");
+		}
+
+		{
+			char *p7 = p4;
+
+			while ((*p7 != '\r') && (*p7 != '\n'))
+			{
+				if (*p7)
+				{
+					p7++;
+				}
+				else
+				{
+					MyPrintOutput("No crlf found\n");
+				}
+    		}
+			p8 = (char *) malloc (p7 - p4);
+			strncpy (p8, p4 + 1, p7 - p4 - 1);
+
+			p7++;
+			if ((*p7) && ('\r' == p7[-1]) && ('\n' == p7[0]))
+			{
+				p7++;
+			}
 		}
 	}
 }
