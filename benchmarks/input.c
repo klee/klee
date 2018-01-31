@@ -72,8 +72,8 @@ int main(int argc, char **argv)
 		/*                              */
 		/********************************/
 		p2[0] = 'T';
-		p2[1] = 'M';
-		// p2[2] = 'P';
+		//p2[1] = 'M';
+		p2[2] = 'P';
 		p2[3] = 'G';
 		p2[4] =  0 ;
 
@@ -84,9 +84,7 @@ int main(int argc, char **argv)
 		/*                              */
 		/*                              */
 		/********************************/
-		c1 = p1[2];
-
-		if (c1 > 'Q')
+		if (strcmp(p1,p2) != 0)
 		{
 			MyPrintOutput("INSIDE if (...)");
 			assert(0);

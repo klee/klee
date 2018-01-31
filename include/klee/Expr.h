@@ -89,6 +89,17 @@ Todo: Shouldn't bool \c Xor just be written as not equal?
 
 class Expr {
 public:
+
+  enum SortKind
+  {
+    StringSort=0,
+    IntSort=1,
+    BV8Sort=2,
+    BV32Sort=3,
+    BV64Sort=4
+  };
+
+public:
   static unsigned count;
   static const unsigned MAGIC_HASH_CONSTANT = 39;
 

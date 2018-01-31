@@ -1,3 +1,16 @@
+###############
+# DIRECTORIES #
+###############
+BASEDIR        = $(shell pwd)
+KLEE_ROOT_DIR  = /home/oren/GIT/klee/vanilla.klee
+KLEE_SRC_DIR   = ${KLEE_ROOT_DIR}/klee
+KLEE_BUILD_DIR = ${KLEE_ROOT_DIR}/build
+
+#########
+# FILES #
+#########
+KLEE = ${KLEE_BUILD_DIR}/bin/klee
+
 .PHONY: compile_and_run
 compile_and_run:
 	@clear
@@ -55,7 +68,7 @@ compile_and_run:
 	@echo "*********************************************"
 	@setterm -term linux -fore white
 	#gdb -x ./myGdbScripts/gdbCommands.txt --args   \
-	klee                                            \
+	${KLEE}                                         \
 	--libc=uclibc                                   \
 	--posix-runtime                                 \
 	-solver-backend=z3                              \
