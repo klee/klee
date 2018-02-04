@@ -100,6 +100,10 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("MyReadCharFromStringAtOffset",handleMyReadCharFromStringAtOffset,true),
   add("MyReadCharFromStringAtConstOffset",handleMyReadCharFromStringAtConstOffset,true),
   add("MyStringAssignWithOffset",    handleMyStringAssignWithOffset,    false),
+  add("MySubtractPointers",          handleMySubtractPointers,          true),
+  add("MyStringAssignWithConstOffset",handleMyStringAssignWithConstOffset,false),
+  add("MyReadCharAtConstOffset_Is_EQ_ToConstChar",  handleMyReadCharAtConstOffset_Is_EQ_ToConstChar,true),
+  add("MyReadCharAtConstOffset_Is_NEQ_ToConstChar", handleMyReadCharAtConstOffset_Is_NEQ_ToConstChar,true),
   add("MyMalloc",                    handleMyMalloc,                    false),
   add("strcpy",                      handleMyStrcpy,                    true),
   add("strchr",                      handleMyStrchr,                    true),
@@ -1639,6 +1643,166 @@ void SpecialFunctionHandler::handleMyStrcmp(
 /*                                                      */
 /*                                                      */
 /*                                                      */
+/*  ii                PPPPPPPPPP          qqqqqqqqqq    */
+/*                    pp      PP          qq      qq    */
+/*  ii                pp      PP          qq      qq    */
+/*  ii         . __   pp      PP          qq      qq    */
+/*  ii         . __   ppPPPPPPPP   ____   qqqqqqqqqq    */
+/*  ii                pp                          qq    */
+/*  ii    ii          pp                          qq    */
+/*  iii  iii          pp                          qq    */
+/*   iiiiii           pp                          qq    */
+/*                                                      */
+/*                                                      */
+/*                                                      */
+/*                                                      */
+/********************************************************/
+void SpecialFunctionHandler::handleMySubtractPointers(
+	ExecutionState &state,
+	KInstruction *target,
+	std::vector<ref<Expr> > &arguments)
+{
+	bool result;
+
+	/*****************************************/
+	/* [1] Extract the llvm call instruction */
+	/*****************************************/
+	llvm::CallInst *callInst = (llvm::CallInst *) target->inst;
+
+	/*********************************************/
+	/* [2] Extract the all three input arguments */
+	/*********************************************/
+	llvm::Value *value0 = callInst->getArgOperand(0);
+	llvm::Value *value1 = callInst->getArgOperand(1);
+		
+	/********************************************/
+	/* [3] Take the name of the input arguments */
+	/********************************************/
+	std::string varName0 = value0->getName().str();
+	std::string varName1 = value1->getName().str();
+
+	/*****************************************************/
+	/* [4] Go back to the original local variables names */
+	/*****************************************************/
+	std::string p = state.varNames[varName0];
+	std::string q = state.varNames[varName1];
+
+	/*******************************************/
+	/* [5] Make sure that p-q is substractable */
+	/*******************************************/
+	if (state.ab_serial[p] != state.ab_serial[q])
+	{
+		klee_error(
+			"Illegal opinters substraction %s - %s",
+			p.c_str(),
+			q.c_str());
+	}
+
+	/*********************************************************/
+	/* [6] bind the return value to be offset(p) - offset(q) */
+	/*********************************************************/
+	executor.bindLocal(
+		target, 
+		state,
+		SubExpr::create(
+			state.ab_offset[p],
+			state.ab_offset[q]));
+}
+
+/********************************************************/
+/*                                                      */
+/*                                                      */
+/*                                                      */
+/*                                                      */
+/*   PPPPPPPPPP          qqqqqqqqqq                     */
+/*   pp      PP          qq      qq           ii        */
+/*   pp      PP          qq      qq     +               */
+/*   pp      PP          qq      qq     +     ii        */
+/*   ppPPPPPPPP   . __   qqqqqqqqqq   +++++   ii        */
+/*   pp           . __           qq     +     ii        */
+/*   pp                          qq     +     ii   ii   */
+/*   pp                          qq           iii iii   */
+/*   pp                          qq            iiiii    */
+/*                                                      */
+/*                                                      */
+/*                                                      */
+/*                                                      */
+/********************************************************/
+void SpecialFunctionHandler::handleMyStringAssignWithConstOffset(
+	ExecutionState &state,
+	KInstruction *target,
+	std::vector<ref<Expr> > &arguments)
+{
+	bool result;
+
+	/*****************************************/
+	/* [1] Extract the llvm call instruction */
+	/*****************************************/
+	llvm::CallInst *callInst = (llvm::CallInst *) target->inst;
+
+	/*********************************************/
+	/* [2] Extract the all three input arguments */
+	/*********************************************/
+	llvm::Value *value0 = callInst->getArgOperand(0);
+	llvm::Value *value1 = callInst->getArgOperand(1);
+	llvm::Value *value2 = callInst->getArgOperand(2);
+		
+	/********************************************/
+	/* [3] Take the name of the input arguments */
+	/********************************************/
+	std::string varName0 = value0->getName().str();
+	std::string varName1 = value1->getName().str();
+
+	/*****************************************************/
+	/* [4] Go back to the original local variables names */
+	/*****************************************************/
+	std::string p = state.varNames[varName0];
+	std::string q = state.varNames[varName1];
+
+	int i = (((llvm::Constant *) value1)->getUniqueInteger()).getLimitedValue();
+
+	/******************************************************************************/
+	/* [5] Add ANSI C constraint that q+i does NOT point beyond buffer boundaries */
+	/******************************************************************************/
+	ref<Expr> e = SgeExpr::create(
+		AddExpr::create(
+			state.ab_offset[q],
+			ConstantExpr::create(i,Expr::Int32)),
+		state.ab_size[state.ab_serial[q]]);
+
+	/****************************************************************************/
+	/* [6] Check with the solver whether q+i can point beyond buffer boundaries */
+	/****************************************************************************/
+	executor.solver->mayBeTrue(state,e,result);
+	if (result)
+	{
+		klee_error(
+			"Illegal Assignment %s := %s + %d",
+			p.c_str(),
+			q.c_str(),
+			i);
+			
+		assert(0);
+	}
+
+	/*********************************/
+	/* [7] Add the actual constraint */
+	/*********************************/
+	state.addConstraint(NotExpr::create(e));
+
+	/*********************************************************/
+	/* [8] Update the state's data structure with p := q + i */
+	/*********************************************************/
+	state.ab_serial[p] = state.ab_serial[q];
+	state.ab_offset[p] = AddExpr::create(state.ab_offset[q],ConstantExpr::create(i,Expr::Int32));	
+}
+
+
+/********************************************************/
+/*                                                      */
+/*                                                      */
+/*                                                      */
+/*                                                      */
 /*   PPPPPPPPPP          qqqqqqqqqq                     */
 /*   pp      PP          qq      qq           ii        */
 /*   pp      PP          qq      qq     +               */
@@ -1722,25 +1886,251 @@ void SpecialFunctionHandler::handleMyStringAssignWithOffset(
 	state.ab_offset[p] = AddExpr::create(state.ab_offset[q],arguments[2]);	
 }
 
-/**************************************************************/
-/*                                                            */
-/*                                                            */
-/*                                                            */
-/*                                                            */
-/*                                                            */
-/*      cccccc           PPPPPPPPPP    [[[[           ]]]]    */
-/*     cc    cc          pp      PP    [[    ii         ]]    */
-/*    cc                 pp      PP    [[               ]]    */
-/*    cc          . __   pp      PP    [[    ii         ]]    */
-/*    cc          . __   ppPPPPPPPP    [[    ii         ]]    */
-/*    cc                 pp            [[    ii         ]]    */
-/*    cc                 pp            [[    ii   ii    ]]    */
-/*     cc    cc          pp            [[    iii iii    ]]    */
-/*      cccccc           pp            [[[[   iiiii   ]]]]    */
-/*                                                            */
-/*                                                            */
-/*                                                            */
-/**************************************************************/
+/***************************************************************/
+/*                                                             */
+/*                                                             */
+/*                                                             */
+/*    PPPPPPPPPP    [[[[           ]]]]           cccccc       */
+/*    pp      PP    [[    ii         ]]          cc    cc      */
+/*    pp      PP    [[               ]]         cc             */
+/*    pp      PP    [[    ii         ]]  __ __  cc             */
+/*    ppPPPPPPPP    [[    ii         ]]  __ __  cc             */
+/*    pp            [[    ii         ]]         cc             */
+/*    pp            [[    ii   ii    ]]         cc             */
+/*    pp            [[    iii iii    ]]          cc    cc      */
+/*    pp            [[[[   iiiii   ]]]]           cccccc       */
+/*                                                             */
+/*                                                             */
+/*                                                             */
+/***************************************************************/
+void SpecialFunctionHandler::handleMyReadCharAtConstOffset_Is_EQ_ToConstChar(
+	ExecutionState &state,
+	KInstruction *target,
+	std::vector<ref<Expr> > &arguments)
+{
+	bool result;
+
+	ref<Expr> one  = ConstantExpr::create(1,Expr::Int32);
+	ref<Expr> zero = ConstantExpr::create(0,Expr::Int32);
+
+	char AB_p_name[AB_MAX_NAME_LENGTH]={0};
+	
+	/*****************************************/
+	/* [1] Extract the llvm call instruction */
+	/*****************************************/
+	llvm::CallInst *callInst = (llvm::CallInst *) target->inst;
+
+	/*********************************************/
+	/* [2] Extract the all three input arguments */
+	/*********************************************/
+	llvm::Value *value0 = callInst->getArgOperand(0);
+	llvm::Value *value1 = callInst->getArgOperand(1);
+	llvm::Value *value2 = callInst->getArgOperand(2);
+		
+	/********************************************/
+	/* [3] Take the name of the input arguments */
+	/********************************************/
+	std::string varName0 = value0->getName().str();
+	std::string varName1 = value1->getName().str();
+	std::string varName2 = value2->getName().str();
+
+	/*****************************************************/
+	/* [4] Go back to the original local variables names */
+	/*****************************************************/
+	std::string p = state.varNames[varName0];
+	std::string i = state.varNames[varName0];
+	std::string c = state.varNames[varName1];
+
+	/****************************/
+	/* [5] Extract serial for p */
+	/****************************/
+	int serial_p = state.ab_serial[p];
+
+	/**********************************/
+	/* [6] Extract last version for p */
+	/**********************************/
+	int last_p = state.ab_last[serial_p];
+
+	/*******************************************************************************/
+	/* [7] Assemble the abstract buffers name (with its serial number and version) */
+	/*******************************************************************************/
+	Assemble_Abstract_Buffer_Name(serial_p,last_p,AB_p_name);
+	
+	/******************************************************************************/
+	/* [8] Add ANSI C constraint that p+i does NOT point beyond buffer boundaries */
+	/******************************************************************************/
+	ref<Expr> p_plus_i_points_outside_AB = SgeExpr::create(
+		AddExpr::create(
+			state.ab_offset[p],
+			arguments[1]),
+		state.ab_size[serial_p]);
+
+	/****************************************************************************/
+	/* [9] Check with the solver whether p+i can point beyond buffer boundaries */
+	/****************************************************************************/
+	executor.solver->mayBeTrue(state,p_plus_i_points_outside_AB,result);
+	if (result)
+	{
+		klee_error(
+			"%s[%s] points outside allocated memory",
+			p.c_str()+strlen("OISH_"),
+			i.c_str()+strlen("OISH_"));
+		assert(0);
+	}
+
+	/**********************************************************************/
+	/* [10] Add the constraint that p+i points inside the abstract buffer */
+	/**********************************************************************/
+	state.addConstraint(NotExpr::create(p_plus_i_points_outside_AB));
+
+	/***********************/
+	/* [11] bind local ... */
+	/***********************/
+	executor.bindLocal(
+		target, 
+		state,
+		SelectExpr::create(
+			StrEqExpr::create(
+				StrCharAtExpr::create(
+					StrVarExpr::create(AB_p_name),
+					arguments[1]),
+				StrFromBitVector8Expr::create(
+					arguments[2])),
+			one,
+			zero));
+}
+
+/****************************************************************/
+/*                                                              */
+/*                                                              */
+/*                                                              */
+/*    PPPPPPPPPP    [[[[           ]]]]            cccccc       */
+/*    pp      PP    [[    ii         ]]           cc    cc      */
+/*    pp      PP    [[               ]]  !!      cc             */
+/*    pp      PP    [[    ii         ]]  !! __   cc             */
+/*    ppPPPPPPPP    [[    ii         ]]  !! __   cc             */
+/*    pp            [[    ii         ]]  ..      cc             */
+/*    pp            [[    ii   ii    ]]          cc             */
+/*    pp            [[    iii iii    ]]           cc    cc      */
+/*    pp            [[[[   iiiii   ]]]]            cccccc       */
+/*                                                              */
+/*                                                              */
+/*                                                              */
+/****************************************************************/
+void SpecialFunctionHandler::handleMyReadCharAtConstOffset_Is_NEQ_ToConstChar(
+	ExecutionState &state,
+	KInstruction *target,
+	std::vector<ref<Expr> > &arguments)
+{
+	bool result;
+
+	ref<Expr> one  = ConstantExpr::create(1,Expr::Int32);
+	ref<Expr> zero = ConstantExpr::create(0,Expr::Int32);
+
+	char AB_p_name[AB_MAX_NAME_LENGTH]={0};
+	
+	/*****************************************/
+	/* [1] Extract the llvm call instruction */
+	/*****************************************/
+	llvm::CallInst *callInst = (llvm::CallInst *) target->inst;
+
+	/*********************************************/
+	/* [2] Extract the all three input arguments */
+	/*********************************************/
+	llvm::Value *value0 = callInst->getArgOperand(0);
+	llvm::Value *value1 = callInst->getArgOperand(1);
+	llvm::Value *value2 = callInst->getArgOperand(2);
+		
+	/********************************************/
+	/* [3] Take the name of the input arguments */
+	/********************************************/
+	std::string varName0 = value0->getName().str();
+	std::string varName1 = value1->getName().str();
+	std::string varName2 = value2->getName().str();
+
+	/*****************************************************/
+	/* [4] Go back to the original local variables names */
+	/*****************************************************/
+	std::string p = state.varNames[varName0];
+	std::string i = state.varNames[varName0];
+	std::string c = state.varNames[varName1];
+
+	/****************************/
+	/* [5] Extract serial for p */
+	/****************************/
+	int serial_p = state.ab_serial[p];
+
+	/**********************************/
+	/* [6] Extract last version for p */
+	/**********************************/
+	int last_p = state.ab_last[serial_p];
+
+	/*******************************************************************************/
+	/* [7] Assemble the abstract buffers name (with its serial number and version) */
+	/*******************************************************************************/
+	Assemble_Abstract_Buffer_Name(serial_p,last_p,AB_p_name);
+	
+	/******************************************************************************/
+	/* [8] Add ANSI C constraint that p+i does NOT point beyond buffer boundaries */
+	/******************************************************************************/
+	ref<Expr> p_plus_i_points_outside_AB = SgeExpr::create(
+		AddExpr::create(
+			state.ab_offset[p],
+			arguments[1]),
+		state.ab_size[serial_p]);
+
+	/****************************************************************************/
+	/* [9] Check with the solver whether p+i can point beyond buffer boundaries */
+	/****************************************************************************/
+	executor.solver->mayBeTrue(state,p_plus_i_points_outside_AB,result);
+	if (result)
+	{
+		klee_error(
+			"%s[%s] points outside allocated memory",
+			p.c_str()+strlen("OISH_"),
+			i.c_str()+strlen("OISH_"));
+		assert(0);
+	}
+
+	/**********************************************************************/
+	/* [10] Add the constraint that p+i points inside the abstract buffer */
+	/**********************************************************************/
+	state.addConstraint(NotExpr::create(p_plus_i_points_outside_AB));
+
+	/***********************/
+	/* [11] bind local ... */
+	/***********************/
+	executor.bindLocal(
+		target, 
+		state,
+		SelectExpr::create(
+			StrEqExpr::create(
+				StrCharAtExpr::create(
+					StrVarExpr::create(AB_p_name),
+					arguments[1]),
+				StrFromBitVector8Expr::create(
+					arguments[2])),
+			zero,
+			one));
+}
+
+/*****************************************/
+/*                                       */
+/*                                       */
+/*                                       */
+/*  PPPPPPPPPP    [[[[           ]]]]    */
+/*  pp      PP    [[    ii         ]]    */
+/*  pp      PP    [[               ]]    */
+/*  pp      PP    [[    ii         ]]    */
+/*  ppPPPPPPPP    [[    ii         ]]    */
+/*  pp            [[    ii         ]]    */
+/*  pp            [[    ii   ii    ]]    */
+/*  pp            [[    iii iii    ]]    */
+/*  pp            [[[[   iiiii   ]]]]    */
+/*                                       */
+/*                                       */
+/*                                       */
+/*****************************************/
 void SpecialFunctionHandler::handleMyReadCharFromStringAtOffset(
 	ExecutionState &state,
 	KInstruction *target,
@@ -1760,19 +2150,16 @@ void SpecialFunctionHandler::handleMyReadCharFromStringAtOffset(
 	/*********************************************/
 	llvm::Value *value0 = callInst->getArgOperand(0);
 	llvm::Value *value1 = callInst->getArgOperand(1);
-	// llvm::Value *value2 = callInst->getArgOperand(2);
 		
 	/********************************************/
 	/* [3] Take the name of the input arguments */
 	/********************************************/
 	std::string varName0 = value0->getName().str();
 	std::string varName1 = value1->getName().str();
-	// std::string varName2 = value2->getName().str();
 
 	/*****************************************************/
 	/* [4] Go back to the original local variables names */
 	/*****************************************************/
-	// std::string c = state.varNames[varName0];
 	std::string p = state.varNames[varName0];
 	std::string i = state.varNames[varName1];
 
@@ -1834,25 +2221,23 @@ void SpecialFunctionHandler::handleMyReadCharFromStringAtOffset(
 		ConstantExpr::create('F',Expr::Int8)))))))));
 }
 
-/**************************************************************/
-/*                                                            */
-/*                                                            */
-/*                                                            */
-/*                                                            */
-/*                                                            */
-/*      cccccc           PPPPPPPPPP    [[[[           ]]]]    */
-/*     cc    cc          pp      PP    [[    ii         ]]    */
-/*    cc                 pp      PP    [[               ]]    */
-/*    cc          . __   pp      PP    [[    ii         ]]    */
-/*    cc          . __   ppPPPPPPPP    [[    ii         ]]    */
-/*    cc                 pp            [[    ii         ]]    */
-/*    cc                 pp            [[    ii   ii    ]]    */
-/*     cc    cc          pp            [[    iii iii    ]]    */
-/*      cccccc           pp            [[[[   iiiii   ]]]]    */
-/*                                                            */
-/*                                                            */
-/*                                                            */
-/**************************************************************/
+/*****************************************/
+/*                                       */
+/*                                       */
+/*                                       */
+/*  PPPPPPPPPP    [[[[           ]]]]    */
+/*  pp      PP    [[    ii         ]]    */
+/*  pp      PP    [[               ]]    */
+/*  pp      PP    [[    ii         ]]    */
+/*  ppPPPPPPPP    [[    ii         ]]    */
+/*  pp            [[    ii         ]]    */
+/*  pp            [[    ii   ii    ]]    */
+/*  pp            [[    iii iii    ]]    */
+/*  pp            [[[[   iiiii   ]]]]    */
+/*                                       */
+/*                                       */
+/*                                       */
+/*****************************************/
 void SpecialFunctionHandler::handleMyReadCharFromStringAtConstOffset(
 	ExecutionState &state,
 	KInstruction *target,

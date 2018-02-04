@@ -20,11 +20,15 @@ void MyMalloc(char *p, int size);
 void MyConstStringAssign(char *p,const char *q);
 void MyStringAssignWithOffset(char *p, char *q,int offset1);
 void MyWriteCharToStringAtOffset(char *p,int offset2,char c);
+void MyWriteCharToStringAtOffset(char *p,int offset2,char c);
+int  MyReadCharAtConstOffset_Is_EQ_ToConstChar(char *p,int offset,char c);
+int  MyReadCharAtConstOffset_Is_NEQ_ToConstChar(char *p,int offset,char c);
 
 void MyMyPrintOutput(char *s)
 {
 	fprintf(stdout,"%s\n",s);
 }
+
 /************/
 /* main ... */
 /************/
@@ -72,6 +76,20 @@ int main(int argc, char **argv)
 	//klee_make_symbolic(msg,700,"msg");
 	//p1 = msg;
 	///////////////////////////////
+	klee_make_symbolic( &i1, sizeof(i1), "i1" );
+	klee_make_symbolic( &i1, sizeof(i2), "i2" );
+	klee_make_symbolic( &i1, sizeof(i3), "i3" );
+	klee_make_symbolic( &i1, sizeof(i4), "i4" );
+	klee_make_symbolic( &i1, sizeof(i5), "i5" );
+	klee_make_symbolic( &i1, sizeof(i6), "i6" );
+	klee_make_symbolic( &i1, sizeof(i7), "i7" );
+	klee_make_symbolic( &i1, sizeof(i8), "i8" );
+	klee_make_symbolic( &i1, sizeof(i9), "i9" );
+	klee_make_symbolic( &i1, sizeof(i10),"i10");
+	klee_make_symbolic( &i1, sizeof(i11),"i11");
+	klee_make_symbolic( &i1, sizeof(i12),"i12");
+	klee_make_symbolic( &i1, sizeof(i13),"i13");
+
 	p1 = malloc(32);
 
 	p1[31] = 0;

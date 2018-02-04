@@ -132,8 +132,12 @@ namespace klee {
     HANDLER(handleMyConstStringAssign);
     HANDLER(handleMyStringAssignWithOffset);
     HANDLER(handleMyWriteCharToStringAtOffset);
+    HANDLER(handleMyStringAssignWithConstOffset);
     HANDLER(handleMyWriteConstCharToStringAtOffset);
     HANDLER(handleMyWriteConstCharToStringAtConstOffset);
+    HANDLER(handleMyReadCharAtConstOffset_Is_EQ_ToConstChar);
+    HANDLER(handleMyReadCharAtConstOffset_Is_NEQ_ToConstChar);
+    HANDLER(handleMySubtractPointers);
     HANDLER(handleMyReadCharFromStringAtOffset);    
     HANDLER(handleMyReadCharFromStringAtConstOffset);    
     HANDLER(handlePreferCex);
