@@ -8,15 +8,14 @@ OUTPUT_FILE=$2
 ####################
 # HELPER VARIABLES #
 ####################
-DIGIT="\([0-9]\)"
+DIGIT="\([0-9]\{1,2\}\)"
 
 ####################
 # HELPER VARIABLES #
 ####################
-SIZE="\([0-9]\)"
-CHAR="\('[a-zA-Z]'\)"
+SIZE="\([0-9]\{1,2\}\)"
+CHAR="\('[a-zA-Z ]'\)"
 CHARTAG="\('[\n]'\)"
-ZERO="0"
 
 ####################
 # HELPER VARIABLES #
@@ -25,7 +24,7 @@ pVar="p$DIGIT"
 rVar="r$DIGIT"
 iVar="i$DIGIT"
 cVar="c$DIGIT"
-Idx="\([0-9]\)"
+Idx="\([0-9]\{1,2\}\)"
 
 ####################
 # HELPER VARIABLES #
@@ -34,6 +33,8 @@ ASSIGN="\( *= *\)"
 EQ="\( *== *\)"
 NEQ="\( *!= *\)"
 PLUS="\( *+ *\)"
+MINUS="\( *- *\)"
+ZERO="\( *0 *\)"
 
 ####################
 # HELPER VARIABLES #
@@ -44,6 +45,8 @@ CONST_STRING="\(\"[^\"]*\"\)"
 # ACTUAL SED COMMAND #
 ######################
 sed                                                                                              \
+-e "s/*${pVar}/p\1\[0\]/g"                                                                       \
+-e "s/${pVar}${MINUS}${pVar}/MySubtractPointers(p\1,p\3)/g"                                      \
 -e "s/${pVar}${ASSIGN}malloc($SIZE)/MyMalloc(p\1, \3)/g"                                         \
 -e "s/${pVar}${ASSIGN}malloc($iVar)/MyMalloc(p\1,i\3)/g"                                         \
 -e "s/${pVar}\[$Idx\]${ASSIGN}${CHAR}/MyWriteConstCharToStringAtConstOffset(p\1,\2,\4)/g"        \
@@ -53,18 +56,23 @@ sed                                                                             
 -e "s/${pVar}\[$iVar\]${ASSIGN}${cVar}/MyWriteCharToStringAtOffset(p\1,i\2,c\4)/g"               \
 -e "s/${pVar}\[$iVar\]${ASSIGN}${ZERO}/MyWriteConstCharToStringAtOffset(p\1,i\2, 0)/g"           \
 -e "s/${pVar}\[$iVar\]${EQ}${CHARTAG}/MyReadCharAndCompare(p\1,i\2,\3)/g"                        \
+-e "s/${pVar}\[$Idx\]${EQ}${ZERO}/MyReadCharAtConstOffset_Is_EQ_ToConstChar(p\1,\2,0)/g"         \
 -e "s/${pVar}\[$Idx\]${EQ}'\\\\t'/MyReadCharAtConstOffset_Is_EQ_ToConstChar(p\1,\2,'\\\\t')/g"   \
 -e "s/${pVar}\[$Idx\]${EQ}'\\\\r'/MyReadCharAtConstOffset_Is_EQ_ToConstChar(p\1,\2,'\\\\r')/g"   \
 -e "s/${pVar}\[$Idx\]${EQ}'\\\\n'/MyReadCharAtConstOffset_Is_EQ_ToConstChar(p\1,\2,'\\\\n')/g"   \
 -e "s/${pVar}\[$Idx\]${EQ}'\\\\0'/MyReadCharAtConstOffset_Is_EQ_ToConstChar(p\1,\2,'\\\\0')/g"   \
+-e "s/${pVar}\[$Idx\]${NEQ}${ZERO}/MyReadCharAtConstOffset_Is_NEQ_ToConstChar(p\1,\2,0)/g"       \
 -e "s/${pVar}\[$Idx\]${NEQ}'\\\\t'/MyReadCharAtConstOffset_Is_NEQ_ToConstChar(p\1,\2,'\\\\t')/g" \
 -e "s/${pVar}\[$Idx\]${NEQ}'\\\\r'/MyReadCharAtConstOffset_Is_NEQ_ToConstChar(p\1,\2,'\\\\r')/g" \
 -e "s/${pVar}\[$Idx\]${NEQ}'\\\\n'/MyReadCharAtConstOffset_Is_NEQ_ToConstChar(p\1,\2,'\\\\n')/g" \
 -e "s/${pVar}\[$Idx\]${NEQ}'\\\\0'/MyReadCharAtConstOffset_Is_NEQ_ToConstChar(p\1,\2,'\\\\0')/g" \
+-e "s/${ZERO}${EQ}${pVar}\[$Idx\]/MyReadCharAtConstOffset_Is_EQ_ToConstChar(p\3,\4,0)/g"         \
 -e "s/'\\\\t'${EQ}${pVar}\[$Idx\]/MyReadCharAtConstOffset_Is_EQ_ToConstChar(p\2,\3,'\\\\t')/g"   \
 -e "s/'\\\\r'${EQ}${pVar}\[$Idx\]/MyReadCharAtConstOffset_Is_EQ_ToConstChar(p\2,\3,'\\\\r')/g"   \
 -e "s/'\\\\n'${EQ}${pVar}\[$Idx\]/MyReadCharAtConstOffset_Is_EQ_ToConstChar(p\2,\3,'\\\\n')/g"   \
 -e "s/'\\\\0'${EQ}${pVar}\[$Idx\]/MyReadCharAtConstOffset_Is_EQ_ToConstChar(p\2,\3,'\\\\0')/g"   \
+-e "s/' '${EQ}${pVar}\[$Idx\]/MyReadCharAtConstOffset_Is_EQ_ToConstChar(p\2,\3,' ')/g"           \
+-e "s/${ZERO}${NEQ}${pVar}\[$Idx\]/MyReadCharAtConstOffset_Is_NEQ_ToConstChar(p\3,\4,0)/g"       \
 -e "s/'\\\\t'${NEQ}${pVar}\[$Idx\]/MyReadCharAtConstOffset_Is_NEQ_ToConstChar(p\2,\3,'\\\\t')/g" \
 -e "s/'\\\\r'${NEQ}${pVar}\[$Idx\]/MyReadCharAtConstOffset_Is_NEQ_ToConstChar(p\2,\3,'\\\\r')/g" \
 -e "s/'\\\\n'${NEQ}${pVar}\[$Idx\]/MyReadCharAtConstOffset_Is_NEQ_ToConstChar(p\2,\3,'\\\\n')/g" \
