@@ -156,6 +156,17 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(Sle);
     X(Sgt);
     X(Sge);
+    X(Str_Eq);
+    X(Str_Var);
+    X(Str_Atoi);
+    X(Str_Itoa);
+    X(Str_Const);
+    X(Str_CharAt);
+    X(Str_Substr);
+    X(Str_Length);
+    X(Str_Compare);
+    X(Str_FirstIdxOf);
+    X(Str_FromBitVec8);
 #undef X
   default:
     assert(0 && "invalid kind");

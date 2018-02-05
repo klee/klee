@@ -1140,7 +1140,6 @@ public:
 
 #define MAX_CONST_STRING_LENGTH 512
 #define MAX_STRING_VAR_NAME_LENGTH 512
-
 class StrConstExpr : public Expr {
 public:
 	char value[MAX_CONST_STRING_LENGTH];
@@ -1178,7 +1177,7 @@ public:
 	virtual Kind      getKind()                 const {return   Expr::Str_Const;}	
 	virtual Width     getWidth()                const {return   32;}	
 	virtual unsigned  getNumKids()              const {return   0;}	
-	virtual ref<Expr> getKid(unsigned int)      const {assert(0); ref<Expr> moish; return moish;}
+	virtual ref<Expr> getKid(unsigned int)      const {return NULL;}
 	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {assert(0); ref<Expr> moish; return moish;}
 	static bool classof(const Expr *E) { return E->getKind() == Expr::Str_Const; }
 	static bool classof(const ConstantExpr *) { return false; }	
@@ -1221,7 +1220,7 @@ public:
 	virtual Kind      getKind()                 const {return   Expr::Str_Var;}	
 	virtual Width     getWidth()                const {return   32;}	
 	virtual unsigned  getNumKids()              const {return   0;}	
-	virtual ref<Expr> getKid(unsigned int)      const {ref<Expr> moish; assert(0); return moish;}
+	virtual ref<Expr> getKid(unsigned int)      const {return   0;}
 	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {ref<Expr> moish; assert(0); return moish;}
 	static bool classof(const Expr *E) { return E->getKind() == Expr::Str_Var; }
 	static bool classof(const ConstantExpr *) { return false; }	

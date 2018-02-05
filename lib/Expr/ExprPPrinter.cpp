@@ -357,10 +357,22 @@ public:
 	PC << ")";
     }    
   }
+  void printStrVar(const ref<StrVarExpr> &e, PrintContext &PC, 
+                  bool printWidth) {
+      PC << e->name;
+  }
+  void printStrConst(const ref<StrConstExpr> &e, PrintContext &PC, 
+                  bool printWidth) {
+      PC << e->value;
+  }
 
   void print(const ref<Expr> &e, PrintContext &PC, bool printConstWidth=false) {
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
       printConst(CE, PC, printConstWidth);
+    else if (StrVarExpr *SV = dyn_cast<StrVarExpr>(e))
+      printStrVar(SV, PC, printConstWidth);
+    else if (StrConstExpr *SC = dyn_cast<StrConstExpr>(e))
+      printStrConst(SC, PC, printConstWidth);
     else {
       std::map<ref<Expr>, unsigned>::iterator it = bindings.find(e);
       if (it!=bindings.end()) {
