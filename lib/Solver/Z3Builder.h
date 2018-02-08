@@ -133,6 +133,7 @@ private:
   Z3ASTHandle iffExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
   Z3ASTHandle bvXorExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
   Z3ASTHandle bvSignExtend(Z3ASTHandle src, unsigned width);
+  Z3ASTHandle ConvertBitVec64ToInt(Z3_ast ast);
 
   // Array operations
   Z3ASTHandle writeExpr(Z3ASTHandle array, Z3ASTHandle index,

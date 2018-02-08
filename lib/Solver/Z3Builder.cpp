@@ -447,6 +447,7 @@ Z3ASTHandle Z3Builder::getArrayForUpdate(const Array *root,
 Z3ASTHandle Z3Builder::construct(ref<Expr> e, int *width_out) {
   // TODO: We could potentially use Z3_simplify() here
   // to store simpler expressions.
+//  e->dump();
   if (!UseConstructHashZ3 || isa<ConstantExpr>(e)) {
     return constructActual(e, width_out);
   } else {
@@ -558,6 +559,10 @@ Z3ASTHandle Z3Builder::ConvertInt2BitVec32(Z3_ast ast)
 			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,-1,Z3_mk_int_sort(ctx)),ctx)),
 			bvConst32(32,-1),
 			bvConst32(32,200))))))))));
+}
+Z3ASTHandle Z3Builder::ConvertBitVec64ToInt(Z3_ast ast) {
+    return Z3ASTHandle(Z3_mk_bv2int(ctx, ast, false), ctx);
+
 }
 
 /** if *width_out!=1 then result is a bitvector,
@@ -674,7 +679,6 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
   // String
   case Expr::Str_Eq:
   {
-  	int irrelevant_width=0;
 
   	/*********************************/
   	/* Cast e to an StrEqExpr ...    */
@@ -688,6 +692,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
   	/******************************************/
   	/* Build a Z3ASTHandle from the Z3 eq AST */
   	/******************************************/
+  	int irrelevant_width=0;
 	Z3ASTHandle firstString  = constructActual(see->s1,&irrelevant_width);
 	Z3ASTHandle secondString = constructActual(see->s2,&irrelevant_width);
 
@@ -718,7 +723,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 	Z3ASTHandle result2 = Z3ASTHandle(
 		Z3_mk_const(
 			ctx,
-			Z3_mk_string_symbol(ctx, sve->name),
+			Z3_mk_string_symbol(ctx, sve->name.c_str()),
 			Z3SortHandle(Z3_mk_string_sort(ctx), ctx)),
 		ctx);
 				
@@ -785,7 +790,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 		Z3_mk_seq_at(
 			ctx,
 			constructActual(scae->s,&irrelevant_width),
-			ConvertBitVec32ToInt(constructActual(scae->i,&irrelevant_width))),
+			ConvertBitVec64ToInt(constructActual(scae->i,&irrelevant_width))),
 		ctx);
 
   	/*************************/
@@ -813,8 +818,8 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 		Z3_mk_seq_extract(
 			ctx,
 			constructActual(sbtre->s,     &irrelevant_width),
-			ConvertBitVec32ToInt(constructActual(sbtre->offset,&irrelevant_width)),
-			ConvertBitVec32ToInt(constructActual(sbtre->length,&irrelevant_width))),
+			ConvertBitVec64ToInt(constructActual(sbtre->offset,&irrelevant_width)),
+			ConvertBitVec64ToInt(constructActual(sbtre->length,&irrelevant_width))),
 		ctx);
 
   	/*************************/

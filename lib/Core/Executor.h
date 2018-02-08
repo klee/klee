@@ -114,6 +114,7 @@ public:
     Unhandled
   };
 
+  TimingSolver *solver;
 private:
   static const char *TerminateReasonNames[];
 
@@ -124,7 +125,6 @@ private:
   Searcher *searcher;
 
   ExternalDispatcher *externalDispatcher;
-  TimingSolver *solver;
   MemoryManager *memory;
   std::set<ExecutionState*> states;
   StatsTracker *statsTracker;

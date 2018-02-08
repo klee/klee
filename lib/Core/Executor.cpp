@@ -3281,6 +3281,52 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
   if (success) {
     const MemoryObject *mo = op.first;
+    if(isWrite && value->getWidth() == 8) {
+        errs() << "Modifying mo serial " << mo->serial << " version " << mo->version << " with ";
+        errs() << (char)dyn_cast<ConstantExpr>(value)->getZExtValue() << "\n";
+        ref<Expr> offset = mo->getOffsetExpr(address);
+        assert(dyn_cast<ConstantExpr>(offset) && "Todo non constant offests");
+
+        ref<Expr> one  = ConstantExpr::create(1,Expr::Int64);
+        ref<Expr> zero = ConstantExpr::create(0,Expr::Int64);
+        ref<Expr> prefixStart  = zero;
+        ref<Expr> prefixLength = offset;
+        ref<Expr> suffixStart  = AddExpr::create(prefixLength,one);
+        ref<Expr> suffixLength = SubExpr::create(mo->getSizeExpr(),suffixStart);
+        ref<Expr> AB_p_var     = StrVarExpr::create(mo->getABSerial());
+        const_cast<MemoryObject*>(mo)->version++;
+        ref<Expr> AB_p_new_var = StrVarExpr::create(mo->getABSerial());
+      
+        /************************/
+        /* [11] prefix equation */
+        /************************/
+        ref<Expr> prefixEq = StrEqExpr::create(
+          StrSubstrExpr::create(AB_p_var,    prefixStart,prefixLength),
+          StrSubstrExpr::create(AB_p_new_var,prefixStart,prefixLength));
+            
+        /************************/
+        /* [12] suffix equation */
+        /************************/
+        ref<Expr> suffixEq = StrEqExpr::create(
+          StrSubstrExpr::create(AB_p_var,    suffixStart,suffixLength),	
+          StrSubstrExpr::create(AB_p_new_var,suffixStart,suffixLength));
+      
+        /************************/
+        /* [13] middle equation */
+        /************************/
+        ref<Expr> middleEq = StrEqExpr::create(
+          StrCharAtExpr::create(AB_p_new_var,offset),
+          StrFromBitVector8Expr::create(value));
+      
+        /************************/
+        /* [12] Add constraints */
+        /************************/
+        state.addConstraint(prefixEq);
+        state.addConstraint(suffixEq);
+        state.addConstraint(middleEq);
+        return;
+	
+    }
 
     if (MaxSymArraySize && mo->size>=MaxSymArraySize) {
       address = toConstant(state, address, "max-sym-array-size");

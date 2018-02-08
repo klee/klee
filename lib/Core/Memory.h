@@ -53,6 +53,9 @@ public:
   bool isUserSpecified;
 
   MemoryManager *parent;
+  int serial;
+  int version;
+
 
   /// "Location" for which this memory object was allocated. This
   /// should be either the allocating instruction or the global object
@@ -79,6 +82,8 @@ public:
       size(0),
       isFixed(true),
       parent(NULL),
+      serial(-1),
+      version(-1),
       allocSite(0) {
   }
 
@@ -96,6 +101,8 @@ public:
       isFixed(_isFixed),
       isUserSpecified(false),
       parent(_parent), 
+      serial(-1),
+      version(-1),
       allocSite(_allocSite) {
   }
 
@@ -106,6 +113,14 @@ public:
 
   void setName(std::string name) const {
     this->name = name;
+  }
+
+  std::string getABSerial() const {
+      assert(serial >= 0 && version >= 0 && "Can't get serial name of a non abstratc buffer memory object");
+      std::stringstream ss;
+      ss << "AB_serial_" << serial << "_version_" << version;
+
+      return ss.str();
   }
 
   ref<ConstantExpr> getBaseExpr() const { 

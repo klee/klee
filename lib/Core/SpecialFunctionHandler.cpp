@@ -105,6 +105,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("MyReadCharAtConstOffset_Is_EQ_ToConstChar",  handleMyReadCharAtConstOffset_Is_EQ_ToConstChar,true),
   add("MyReadCharAtConstOffset_Is_NEQ_ToConstChar", handleMyReadCharAtConstOffset_Is_NEQ_ToConstChar,true),
   add("MyMalloc",                    handleMyMalloc,                    false),
+  add("markString",                  handleMarkString,                    false),
   add("strcpy",                      handleMyStrcpy,                    true),
   add("strchr",                      handleMyStrchr,                    true),
   add("strcmp",                      handleMyStrcmp,                    true),
@@ -405,8 +406,6 @@ void SpecialFunctionHandler::handleMalloc(ExecutionState &state,
                                   std::vector<ref<Expr> > &arguments) {
   // XXX should type check args
   assert(arguments.size()==1 && "invalid number of arguments to malloc");
-  // OISH :: MALLOC FROM HERE
-  llvm::errs() << "execute alloc from here" << "\n";
   executor.executeAlloc(state, arguments[0], false, target);
 }
 
@@ -679,26 +678,6 @@ void SpecialFunctionHandler::handleCheckMemoryAccess(ExecutionState &state,
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-/*****************************************************************************/
-
 ObjectPair op;
 const MemoryObject *mo;
 const ObjectState  *os;
@@ -780,12 +759,7 @@ void SpecialFunctionHandler::handleMyStrlen(
 	std::string p = state.varNames[varName0];
 	if (p.size() == 0)
 	{
-		system("setterm -term linux -fore red");
-		fprintf(
-			stdout,
-			"KLEE ERROR: variable %s is not recgnized as a string variable\n\n",
-			varName0.c_str());
-		system("setterm -term linux -fore white");
+    klee_error("KLEE ERROR: variable %s is not recgnized as a string variable\n\n", varName0.c_str());
 	}
 
 	/****************************/
@@ -1290,6 +1264,8 @@ void SpecialFunctionHandler::handleMyStrcmp(
 	KInstruction *target,
 	std::vector<ref<Expr> > &arguments)
 {
+  executor.bindLocal(target, state, ConstantExpr::create(0, 32));
+  return;
 	bool result=false;
 	
 	char AB_p_name[AB_MAX_NAME_LENGTH]={0};
@@ -2335,6 +2311,10 @@ void SpecialFunctionHandler::handleMyPrintOutput(
 	KInstruction *target,
 	std::vector<ref<Expr> > &arguments)
 {
+ // ref<ConstantExpr> ce;
+
+//  executor.solver->getValue(state, StrVarExpr::create("AB_serial_1_version_4"), ce);
+//  ce->dump();
 	llvm::Value *value0;
 
 	std::string varName0;
@@ -2374,13 +2354,11 @@ void SpecialFunctionHandler::handleMyPrintOutput(
 	/*******************************/
 	/* [6] Print Message to stdout */
 	/*******************************/
-	system("setterm -term linux -fore red");
-	fprintf(stdout, "\n\n>> KLEE ERROR: %s\n\n",actualCStringContent.c_str());
-	system("setterm -term linux -fore white");
+	klee_warning("%s",actualCStringContent.c_str());
 	system("z3QueriesParser");
 	system("cat /tmp/output.txt");
 	// system("./myParseOutput/parseMe");
-//	exit(0);
+	exit(0);
 }
 
 /**************************************************************/
@@ -3035,7 +3013,37 @@ void SpecialFunctionHandler::handleMy_p_assign_NULL(
 	/***********************************/
 	llvm::errs() << varName << "\n";
 }
+void SpecialFunctionHandler::handleMarkString(
+	ExecutionState &state,
+	KInstruction *target,
+	std::vector<ref<Expr> > &arguments) {
+    assert(arguments.size() == 1 && "Mark symbolic only accepts a single pointer");
 
+//	state.ab_serial[p] = ++state.numABSerials;
+//	state.ab_last[state.ab_serial[p]] = 0;
+//	state.ab_offset[p] = ConstantExpr::create(0,Expr::Int32);
+//	state.ab_size[state.ab_serial[p]] = a
+  
+  Executor::ExactResolutionList rl;
+  executor.resolveExact(state, arguments[0], rl, "mark string");
+  
+  for (Executor::ExactResolutionList::iterator it = rl.begin(), 
+         ie = rl.end(); it != ie; ++it) {
+    MemoryObject *mo = const_cast<MemoryObject*>(it->first.first);
+    mo->serial = ++state.numABSerials;
+    mo->version = 0;
+    std::string ab_name = mo->getABSerial();
+
+    errs() << "Creating an ab serial " << ab_name << " size " << mo->size << "\n";
+	  state.addConstraint(EqExpr::create(
+  		Expr::createZExtToPointerWidth(StrLengthExpr::create(StrVarExpr::create(ab_name.c_str()))),
+      mo->getSizeExpr()));
+    
+  }
+
+
+
+}
 void SpecialFunctionHandler::handleMyMalloc(
 	ExecutionState &state,
 	KInstruction *target,
