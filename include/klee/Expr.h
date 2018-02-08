@@ -1089,7 +1089,7 @@ public:
 	/*************************************************************************/
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_Substr;}	
-	virtual Width     getWidth()                const {return   32;}	
+	virtual Width     getWidth()                const {return   64;}	
 	virtual unsigned  getNumKids()              const {return   3;}	
 	virtual ref<Expr> getKid(unsigned int i)    const	{
 															if(i==0){return s;}
@@ -1261,7 +1261,7 @@ public:
 	/*************************************************************************/
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_Length;}	
-	virtual Width     getWidth()                const {return   32;}	
+	virtual Width     getWidth()                const {return   64;}	
 	virtual unsigned  getNumKids()              const {return   1;}	
 	virtual ref<Expr> getKid(unsigned int i)    const	{
 															if(i==0){return s;}

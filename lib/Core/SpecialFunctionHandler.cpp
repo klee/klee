@@ -1264,7 +1264,9 @@ void SpecialFunctionHandler::handleMyStrcmp(
 	KInstruction *target,
 	std::vector<ref<Expr> > &arguments)
 {
-  executor.bindLocal(target, state, ConstantExpr::create(0, 32));
+  assert(arguments.size() == 2 && "Strcmp takes 2 arguments!");
+  executor.executeStrcmp(state, target, arguments[0], arguments[1]);
+
   return;
 	bool result=false;
 	
