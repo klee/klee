@@ -3363,9 +3363,11 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   if (success) {
     const MemoryObject *mo = op.first;
     if(isWrite && value->getWidth() == 8) {
+        ref<Expr> offset = mo->getOffsetExpr(address);
         errs() << "Modifying mo serial " << mo->serial << " version " << mo->version << " with ";
         errs() << (char)dyn_cast<ConstantExpr>(value)->getZExtValue() << "\n";
-        ref<Expr> offset = mo->getOffsetExpr(address);
+        errs() << "At offset: ";
+        offset->dump();
         assert(dyn_cast<ConstantExpr>(offset) && "Todo non constant offests");
 
         ref<Expr> one  = ConstantExpr::create(1,Expr::Int64);
@@ -3376,7 +3378,11 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         ref<Expr> suffixLength = SubExpr::create(mo->getSizeExpr(),suffixStart);
         ref<Expr> AB_p_var     = StrVarExpr::create(mo->getABSerial());
         const_cast<MemoryObject*>(mo)->version++;
-        ref<Expr> AB_p_new_var = StrVarExpr::create(mo->getABSerial());
+         ref<Expr> AB_p_new_var = StrVarExpr::create(mo->getABSerial());
+
+ 	      state.addConstraint(EqExpr::create(
+  		      StrLengthExpr::create(AB_p_new_var),
+  		      mo->getSizeExpr()));
       
         /************************/
         /* [11] prefix equation */
