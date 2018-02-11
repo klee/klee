@@ -447,6 +447,7 @@ Z3ASTHandle Z3Builder::getArrayForUpdate(const Array *root,
 Z3ASTHandle Z3Builder::construct(ref<Expr> e, int *width_out) {
   // TODO: We could potentially use Z3_simplify() here
   // to store simpler expressions.
+//  e->dump();
   if (!UseConstructHashZ3 || isa<ConstantExpr>(e)) {
     return constructActual(e, width_out);
   } else {
@@ -559,7 +560,73 @@ Z3ASTHandle Z3Builder::ConvertInt2BitVec32(Z3_ast ast)
 			bvConst32(32,-1),
 			bvConst32(32,200))))))))));
 }
+Z3ASTHandle Z3Builder::ConvertBitVec64ToInt(Z3_ast ast) {
+  	return
+		iteExpr(
+			eqExpr(Z3ASTHandle(ast,ctx),bvConst64(64,0)),
+			Z3ASTHandle(Z3_mk_int(ctx,0,Z3_mk_int_sort(ctx)),ctx),
+		iteExpr(
+			eqExpr(Z3ASTHandle(ast,ctx),bvConst64(64,1)),
+			Z3ASTHandle(Z3_mk_int(ctx,1,Z3_mk_int_sort(ctx)),ctx),
+		iteExpr(
+			eqExpr(Z3ASTHandle(ast,ctx),bvConst64(64,2)),
+			Z3ASTHandle(Z3_mk_int(ctx,2,Z3_mk_int_sort(ctx)),ctx),
+		iteExpr(
+			eqExpr(Z3ASTHandle(ast,ctx),bvConst64(64,3)),
+			Z3ASTHandle(Z3_mk_int(ctx,3,Z3_mk_int_sort(ctx)),ctx),
+		iteExpr(
+			eqExpr(Z3ASTHandle(ast,ctx),bvConst64(64,4)),
+			Z3ASTHandle(Z3_mk_int(ctx,4,Z3_mk_int_sort(ctx)),ctx),
+		iteExpr(
+			eqExpr(Z3ASTHandle(ast,ctx),bvConst64(64,5)),
+			Z3ASTHandle(Z3_mk_int(ctx,5,Z3_mk_int_sort(ctx)),ctx),
+		iteExpr(
+			eqExpr(Z3ASTHandle(ast,ctx),bvConst64(64,6)),
+			Z3ASTHandle(Z3_mk_int(ctx,6,Z3_mk_int_sort(ctx)),ctx),
+		iteExpr(
+			eqExpr(Z3ASTHandle(ast,ctx),bvConst64(64,30)),
+			Z3ASTHandle(Z3_mk_int(ctx,30,Z3_mk_int_sort(ctx)),ctx),
+		iteExpr(
+			eqExpr(Z3ASTHandle(ast,ctx),bvConst64(64,-1)),
+			Z3ASTHandle(Z3_mk_int(ctx,-1,Z3_mk_int_sort(ctx)),ctx),
+			Z3ASTHandle(Z3_mk_int(ctx,750,Z3_mk_int_sort(ctx)),ctx))))))))));
 
+  //return Z3ASTHandle(Z3_mk_bv2int(ctx, ast, false), ctx);
+}
+
+Z3ASTHandle Z3Builder::ConvertIntToBitVec64(Z3_ast ast) {
+	return
+		iteExpr(
+			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,0,Z3_mk_int_sort(ctx)),ctx)),
+			bvConst64(64,0),
+		iteExpr(
+			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,1,Z3_mk_int_sort(ctx)),ctx)),
+			bvConst64(64,1),
+		iteExpr(
+			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,2,Z3_mk_int_sort(ctx)),ctx)),
+			bvConst64(64,2),
+		iteExpr(
+			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,3,Z3_mk_int_sort(ctx)),ctx)),
+			bvConst64(64,3),
+		iteExpr(
+			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,4,Z3_mk_int_sort(ctx)),ctx)),
+			bvConst64(64,4),
+		iteExpr(
+			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,5,Z3_mk_int_sort(ctx)),ctx)),
+			bvConst64(64,5),
+		iteExpr(
+			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,6,Z3_mk_int_sort(ctx)),ctx)),
+			bvConst64(64,6),
+		iteExpr(
+			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,30,Z3_mk_int_sort(ctx)),ctx)),
+			bvConst64(64,30),
+		iteExpr(
+			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,-1,Z3_mk_int_sort(ctx)),ctx)),
+			bvConst64(64,-1),
+			bvConst64(64,200))))))))));
+
+    //return Z3ASTHandle(Z3_mk_int2bv(ctx, 64,ast), ctx);
+}
 /** if *width_out!=1 then result is a bitvector,
     otherwise it is a bool */
 Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
@@ -674,7 +741,6 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
   // String
   case Expr::Str_Eq:
   {
-  	int irrelevant_width=0;
 
   	/*********************************/
   	/* Cast e to an StrEqExpr ...    */
@@ -688,6 +754,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
   	/******************************************/
   	/* Build a Z3ASTHandle from the Z3 eq AST */
   	/******************************************/
+  	int irrelevant_width=0;
 	Z3ASTHandle firstString  = constructActual(see->s1,&irrelevant_width);
 	Z3ASTHandle secondString = constructActual(see->s2,&irrelevant_width);
 
@@ -718,7 +785,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 	Z3ASTHandle result2 = Z3ASTHandle(
 		Z3_mk_const(
 			ctx,
-			Z3_mk_string_symbol(ctx, sve->name),
+			Z3_mk_string_symbol(ctx, sve->name.c_str()),
 			Z3SortHandle(Z3_mk_string_sort(ctx), ctx)),
 		ctx);
 				
@@ -785,7 +852,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 		Z3_mk_seq_at(
 			ctx,
 			constructActual(scae->s,&irrelevant_width),
-			ConvertBitVec32ToInt(constructActual(scae->i,&irrelevant_width))),
+			ConvertBitVec64ToInt(constructActual(scae->i,&irrelevant_width))),
 		ctx);
 
   	/*************************/
@@ -813,8 +880,8 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 		Z3_mk_seq_extract(
 			ctx,
 			constructActual(sbtre->s,     &irrelevant_width),
-			ConvertBitVec32ToInt(constructActual(sbtre->offset,&irrelevant_width)),
-			ConvertBitVec32ToInt(constructActual(sbtre->length,&irrelevant_width))),
+			ConvertBitVec64ToInt(constructActual(sbtre->offset,&irrelevant_width)),
+			ConvertBitVec64ToInt(constructActual(sbtre->length,&irrelevant_width))),
 		ctx);
 
   	/*************************/
@@ -852,7 +919,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
   	/******************************/
   	/* ORIGINALLY: return result; */
   	/******************************/
-	Z3ASTHandle result2 = Z3ASTHandle(ConvertInt2BitVec32(result),ctx);
+	Z3ASTHandle result2 = Z3ASTHandle(ConvertIntToBitVec64(result),ctx);
 	return result2;
   }
   case Expr::Str_Compare:
@@ -917,7 +984,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
   	/******************************/
   	/* ORIGINALLY: return result; */
   	/******************************/
-	Z3ASTHandle result2 = Z3ASTHandle(ConvertInt2BitVec32(result),ctx);
+	Z3ASTHandle result2 = Z3ASTHandle(ConvertIntToBitVec64(result),ctx);
 	return result2;
   }
   //case Expr::Str_Atoi:       {Z3ASTHandle result;return result;}

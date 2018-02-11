@@ -3252,7 +3252,88 @@ void Executor::resolveExact(ExecutionState &state,
                           Ptr, NULL, getAddressInfo(*unbound, p));
   }
 }
+void Executor::executeStrcmp(ExecutionState &state, KInstruction *target, 
+                             ref<Expr> s1, ref<Expr> s2) {
+  ObjectPair s1OP;
+  bool success;
+  solver->setTimeout(coreSolverTimeout);
+  if (!state.addressSpace.resolveOne(state, solver, s1, s1OP, success)) {
+    s1 = toConstant(state,s1, "resolveOne failure");
+    success = state.addressSpace.resolveOne(cast<ConstantExpr>(s1), s1OP);
+  }
+  assert(success && "TODO: handle failure");
 
+  ObjectPair s2OP;
+  solver->setTimeout(coreSolverTimeout);
+  if (!state.addressSpace.resolveOne(state, solver, s2, s2OP, success)) {
+    s2 = toConstant(state, s2, "resolveOne failure");
+    success = state.addressSpace.resolveOne(cast<ConstantExpr>(s2), s2OP);
+  }
+  assert(success && "TODO: handle failure");
+  const MemoryObject* moP = s1OP.first;
+  const MemoryObject* moQ= s2OP.first;
+
+	ref<Expr> one  = ConstantExpr::create(1,Expr::Int64);
+	ref<Expr> zero  = ConstantExpr::create(0,Expr::Int64);
+	ref<Expr> minusOne = SubExpr::create(zero,one);
+
+
+	ref<Expr> x00      = StrConstExpr::create("\\x00");
+ 	ref<Expr> AB_p_var = StrVarExpr::create(moP->getABSerial());
+	ref<Expr> AB_q_var = StrVarExpr::create(moQ->getABSerial());
+
+  ref<Expr> p_size_minus_offset = SubExpr::create(moP->getSizeExpr(),moP->getOffsetExpr(s1));
+  ref<Expr> q_size_minus_offset = SubExpr::create(moQ->getSizeExpr(),moQ->getOffsetExpr(s2));
+
+	ref<Expr> AB_p_offset_var = StrSubstrExpr::create(AB_p_var,moP->getOffsetExpr(s1), p_size_minus_offset);
+	ref<Expr> AB_q_offset_var = StrSubstrExpr::create(AB_q_var,moQ->getOffsetExpr(s2), q_size_minus_offset);
+
+	ref<Expr> firstIdxOf_x00_in_p = StrFirstIdxOfExpr::create(AB_p_offset_var,x00);
+	ref<Expr> firstIdxOf_x00_in_q = StrFirstIdxOfExpr::create(AB_q_offset_var,x00);
+
+	ref<Expr> p_is_not_NULL_terminated = EqExpr::create(firstIdxOf_x00_in_p,minusOne);
+	ref<Expr> q_is_not_NULL_terminated = EqExpr::create(firstIdxOf_x00_in_q,minusOne);
+
+  errs() << "before not\n";
+	ref<Expr> p_is_NULL_terminated = NotExpr::create(p_is_not_NULL_terminated);
+	ref<Expr> q_is_NULL_terminated = NotExpr::create(q_is_not_NULL_terminated);
+  errs() << "after not\n";
+	
+	ref<Expr> p_and_q_are_both_not_NULL_terminated =
+	AndExpr::create(p_is_not_NULL_terminated,q_is_not_NULL_terminated);
+
+	ref<Expr> p_and_q_are_both_NULL_terminated =
+	NotExpr::create(p_and_q_are_both_not_NULL_terminated);
+
+	ref<Expr> min_length_p_q = SelectExpr::create(
+		SltExpr::create(
+			p_size_minus_offset,
+      q_size_minus_offset),
+		p_size_minus_offset,
+		q_size_minus_offset);
+//================= START the actual constraints =================
+	ref<Expr> p_and_q_are_equal_from_0_to_min_length_p_q =
+	StrEqExpr::create(
+		StrSubstrExpr::create(AB_p_var,moP->getOffsetExpr(s1),min_length_p_q),
+		StrSubstrExpr::create(AB_q_var,moQ->getOffsetExpr(s2),min_length_p_q));
+//===========================
+  ref<Expr> e1 = AndExpr::create(
+			p_and_q_are_both_NULL_terminated,
+			p_and_q_are_equal_from_0_to_min_length_p_q);
+			
+	ref<Expr> e600 = AndExpr::create(
+			p_and_q_are_both_NULL_terminated,
+			StrEqExpr::create(
+				StrSubstrExpr::create(AB_p_offset_var,zero,StrFirstIdxOfExpr::create(AB_p_offset_var,x00)),
+				StrSubstrExpr::create(AB_q_offset_var,zero,StrFirstIdxOfExpr::create(AB_q_offset_var,x00))));
+
+	bindLocal(target,state,SelectExpr::create(e600,
+                                            ConstantExpr::create(0,Expr::Int32),	
+                                            ConstantExpr::create(1,Expr::Int32)));
+
+	
+}
+ 
 void Executor::executeMemoryOperation(ExecutionState &state,
                                       bool isWrite,
                                       ref<Expr> address,
@@ -3281,6 +3362,58 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
   if (success) {
     const MemoryObject *mo = op.first;
+    if(isWrite && value->getWidth() == 8) {
+        ref<Expr> offset = mo->getOffsetExpr(address);
+        errs() << "Modifying mo serial " << mo->serial << " version " << mo->version << " with ";
+        errs() << (char)dyn_cast<ConstantExpr>(value)->getZExtValue() << "\n";
+        errs() << "At offset: ";
+        offset->dump();
+        assert(dyn_cast<ConstantExpr>(offset) && "Todo non constant offests");
+
+        ref<Expr> one  = ConstantExpr::create(1,Expr::Int64);
+        ref<Expr> zero = ConstantExpr::create(0,Expr::Int64);
+        ref<Expr> prefixStart  = zero;
+        ref<Expr> prefixLength = offset;
+        ref<Expr> suffixStart  = AddExpr::create(prefixLength,one);
+        ref<Expr> suffixLength = SubExpr::create(mo->getSizeExpr(),suffixStart);
+        ref<Expr> AB_p_var     = StrVarExpr::create(mo->getABSerial());
+        const_cast<MemoryObject*>(mo)->version++;
+         ref<Expr> AB_p_new_var = StrVarExpr::create(mo->getABSerial());
+
+ 	      state.addConstraint(EqExpr::create(
+  		      StrLengthExpr::create(AB_p_new_var),
+  		      mo->getSizeExpr()));
+      
+        /************************/
+        /* [11] prefix equation */
+        /************************/
+        ref<Expr> prefixEq = StrEqExpr::create(
+          StrSubstrExpr::create(AB_p_var,    prefixStart,prefixLength),
+          StrSubstrExpr::create(AB_p_new_var,prefixStart,prefixLength));
+            
+        /************************/
+        /* [12] suffix equation */
+        /************************/
+        ref<Expr> suffixEq = StrEqExpr::create(
+          StrSubstrExpr::create(AB_p_var,    suffixStart,suffixLength),	
+          StrSubstrExpr::create(AB_p_new_var,suffixStart,suffixLength));
+      
+        /************************/
+        /* [13] middle equation */
+        /************************/
+        ref<Expr> middleEq = StrEqExpr::create(
+          StrCharAtExpr::create(AB_p_new_var,offset),
+          StrFromBitVector8Expr::create(value));
+      
+        /************************/
+        /* [12] Add constraints */
+        /************************/
+        state.addConstraint(prefixEq);
+        state.addConstraint(suffixEq);
+        state.addConstraint(middleEq);
+        return;
+	
+    }
 
     if (MaxSymArraySize && mo->size>=MaxSymArraySize) {
       address = toConstant(state, address, "max-sym-array-size");

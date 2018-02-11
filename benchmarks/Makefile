@@ -1,6 +1,7 @@
 OPT:=opt-3.4
 CLANG:=clang-3.4
-SED_SCRIPT:=../scripts/sedScript
+#SED_SCRIPT:=../scripts/sedScript
+SED_SCRIPT:=cp
 
 BENCHMARKS:=$(wildcard *.c)
 

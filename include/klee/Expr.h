@@ -13,6 +13,7 @@
 #include "klee/util/Bits.h"
 #include "klee/util/Ref.h"
 
+
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/DenseSet.h"
@@ -889,7 +890,7 @@ public:
 	/*************************************************************************/
 	virtual int compareContents(const Expr &b)  const {return   0;}	
 	virtual Kind      getKind()                 const {return   Expr::Str_CharAt;}	
-	virtual Width     getWidth()                const {return   32;}	
+	virtual Width     getWidth()                const {return   64;}	
 	virtual unsigned  getNumKids()              const {return    2;}
 	virtual ref<Expr> getKid(unsigned int i)    const	{
 															if(i==0){return s;}
@@ -927,7 +928,7 @@ public:
 	/*************************************************************************/	
 	virtual int       compareContents(const Expr &b)  const {return   0;}	
 	virtual Kind      getKind()                 const {return   Expr::Str_FromBitVec8;}	
-	virtual Width     getWidth()                const {return   32;}	
+	virtual Width     getWidth()                const {return   64;}	
 	virtual unsigned  getNumKids()              const {return   1;}	
 	virtual ref<Expr> getKid(unsigned int i)    const	{
 															if(i==0){return someBitVec8;}
@@ -978,7 +979,7 @@ public:
 	/*************************************************************************/
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_FirstIdxOf;}	
-	virtual Width     getWidth()                const {return   32;}	
+	virtual Width     getWidth()                const {return   64;}	
 	virtual unsigned  getNumKids()              const {return    2;}	
 	virtual ref<Expr> getKid(unsigned int i)    const	{
 															if(i==0){return haystack;}
@@ -1088,7 +1089,7 @@ public:
 	/*************************************************************************/
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_Substr;}	
-	virtual Width     getWidth()                const {return   32;}	
+	virtual Width     getWidth()                const {return   64;}	
 	virtual unsigned  getNumKids()              const {return   3;}	
 	virtual ref<Expr> getKid(unsigned int i)    const	{
 															if(i==0){return s;}
@@ -1175,7 +1176,7 @@ public:
 	/*************************************************************************/
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_Const;}	
-	virtual Width     getWidth()                const {return   32;}	
+	virtual Width     getWidth()                const {return   64;}	
 	virtual unsigned  getNumKids()              const {return   0;}	
 	virtual ref<Expr> getKid(unsigned int)      const {return NULL;}
 	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {assert(0); ref<Expr> moish; return moish;}
@@ -1186,23 +1187,27 @@ public:
 
 class StrVarExpr : public Expr {
 public:
-	char name[MAX_STRING_VAR_NAME_LENGTH];
+  std::string name;
 
-	StrVarExpr(const char *in_name)
-	{
-		memset(name,0,MAX_STRING_VAR_NAME_LENGTH);
-		strncpy(name,in_name,MAX_STRING_VAR_NAME_LENGTH);		
-	}
+	StrVarExpr(const std::string n): name(n) {}
+	StrVarExpr(const char *in_name): name(in_name) {}
+
 
 	virtual unsigned computeHash();
 
 public:
 	static ref<Expr> create(const char *in_name)
 	{
+    std::string s(in_name);
+		return StrVarExpr::alloc(s);
+	}
+	static ref<Expr> create(std::string in_name)
+	{
 		return StrVarExpr::alloc(in_name);
 	}
 
-	static ref<Expr> alloc(const char *in_name)
+
+	static ref<Expr> alloc(std::string& in_name)
 	{
 		ref<Expr> res(new StrVarExpr(in_name));
 		res->computeHash();
@@ -1218,7 +1223,7 @@ public:
 	/*************************************************************************/
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_Var;}	
-	virtual Width     getWidth()                const {return   32;}	
+	virtual Width     getWidth()                const {return   64;}	
 	virtual unsigned  getNumKids()              const {return   0;}	
 	virtual ref<Expr> getKid(unsigned int)      const {return   0;}
 	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {ref<Expr> moish; assert(0); return moish;}
@@ -1256,7 +1261,7 @@ public:
 	/*************************************************************************/
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_Length;}	
-	virtual Width     getWidth()                const {return   32;}	
+	virtual Width     getWidth()                const {return   64;}	
 	virtual unsigned  getNumKids()              const {return   1;}	
 	virtual ref<Expr> getKid(unsigned int i)    const	{
 															if(i==0){return s;}
@@ -1290,7 +1295,7 @@ public:
 	/*************************************************************************/
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_Compare;}	
-	virtual Width     getWidth()                const {return   32;}	
+	virtual Width     getWidth()                const {return   64;}	
 	virtual unsigned  getNumKids()              const {return   2;}	
 	virtual ref<Expr> getKid(unsigned int i)    const {if (i==0) return s1;if (i==1) return s2;return 0;}
 	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {return create(kids[0],kids[1]);}
