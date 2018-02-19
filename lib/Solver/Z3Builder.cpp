@@ -468,165 +468,19 @@ Z3ASTHandle Z3Builder::construct(ref<Expr> e, int *width_out) {
   }
 }
 
-Z3ASTHandle Z3Builder::ConvertBitVec32ToInt(Z3_ast ast)
+
+Z3ASTHandle Z3Builder::ConvertBitVec64ToInt(Z3_ast ast)
 {
-	return
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),bvConst32(32,0)),
-			Z3ASTHandle(Z3_mk_int(ctx,0,Z3_mk_int_sort(ctx)),ctx),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),bvConst32(32,1)),
-			Z3ASTHandle(Z3_mk_int(ctx,1,Z3_mk_int_sort(ctx)),ctx),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),bvConst32(32,2)),
-			Z3ASTHandle(Z3_mk_int(ctx,2,Z3_mk_int_sort(ctx)),ctx),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),bvConst32(32,3)),
-			Z3ASTHandle(Z3_mk_int(ctx,3,Z3_mk_int_sort(ctx)),ctx),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),bvConst32(32,4)),
-			Z3ASTHandle(Z3_mk_int(ctx,4,Z3_mk_int_sort(ctx)),ctx),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),bvConst32(32,5)),
-			Z3ASTHandle(Z3_mk_int(ctx,5,Z3_mk_int_sort(ctx)),ctx),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),bvConst32(32,6)),
-			Z3ASTHandle(Z3_mk_int(ctx,6,Z3_mk_int_sort(ctx)),ctx),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),bvConst32(32,30)),
-			Z3ASTHandle(Z3_mk_int(ctx,30,Z3_mk_int_sort(ctx)),ctx),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),bvConst32(32,-1)),
-			Z3ASTHandle(Z3_mk_int(ctx,-1,Z3_mk_int_sort(ctx)),ctx),
-			Z3ASTHandle(Z3_mk_int(ctx,750,Z3_mk_int_sort(ctx)),ctx))))))))));
-
-	//return
-	//	iteExpr(
-	//		eqExpr(Z3ASTHandle(ast,ctx),bvConst32(32,0)),
-	//		Z3ASTHandle(Z3_mk_int(ctx,0,Z3_mk_int_sort(ctx)),ctx),
-	//	iteExpr(
-	//		eqExpr(Z3ASTHandle(ast,ctx),bvConst32(32,1)),
-	//		Z3ASTHandle(Z3_mk_int(ctx,1,Z3_mk_int_sort(ctx)),ctx),
-	//	iteExpr(
-	//		eqExpr(Z3ASTHandle(ast,ctx),bvConst32(32,2)),
-	//		Z3ASTHandle(Z3_mk_int(ctx,2,Z3_mk_int_sort(ctx)),ctx),
-	//	iteExpr(
-	//		eqExpr(Z3ASTHandle(ast,ctx),bvConst32(32,3)),
-	//		Z3ASTHandle(Z3_mk_int(ctx,3,Z3_mk_int_sort(ctx)),ctx),
-	//	iteExpr(
-	//		eqExpr(Z3ASTHandle(ast,ctx),bvConst32(32,4)),
-	//		Z3ASTHandle(Z3_mk_int(ctx,4,Z3_mk_int_sort(ctx)),ctx),
-	//	iteExpr(
-	//		eqExpr(Z3ASTHandle(ast,ctx),bvConst32(32,5)),
-	//		Z3ASTHandle(Z3_mk_int(ctx,5,Z3_mk_int_sort(ctx)),ctx),
-	//	iteExpr(
-	//		eqExpr(Z3ASTHandle(ast,ctx),bvConst32(32,6)),
-	//		Z3ASTHandle(Z3_mk_int(ctx,6,Z3_mk_int_sort(ctx)),ctx),
-	//	iteExpr(
-	//		eqExpr(Z3ASTHandle(ast,ctx),bvConst32(32,-1)),
-	//		Z3ASTHandle(Z3_mk_int(ctx,-1,Z3_mk_int_sort(ctx)),ctx),
-	//		Z3ASTHandle(Z3_mk_int(ctx,8,Z3_mk_int_sort(ctx)),ctx)))))))));
+  return Z3ASTHandle(Z3_mk_bv2int(ctx, ast, true), ctx);
 }
 
-Z3ASTHandle Z3Builder::ConvertInt2BitVec32(Z3_ast ast)
+Z3ASTHandle Z3Builder::ConvertIntToBitVec64(Z3_ast ast)
 {
-	return
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,0,Z3_mk_int_sort(ctx)),ctx)),
-			bvConst32(32,0),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,1,Z3_mk_int_sort(ctx)),ctx)),
-			bvConst32(32,1),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,2,Z3_mk_int_sort(ctx)),ctx)),
-			bvConst32(32,2),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,3,Z3_mk_int_sort(ctx)),ctx)),
-			bvConst32(32,3),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,4,Z3_mk_int_sort(ctx)),ctx)),
-			bvConst32(32,4),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,5,Z3_mk_int_sort(ctx)),ctx)),
-			bvConst32(32,5),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,6,Z3_mk_int_sort(ctx)),ctx)),
-			bvConst32(32,6),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,30,Z3_mk_int_sort(ctx)),ctx)),
-			bvConst32(32,30),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,-1,Z3_mk_int_sort(ctx)),ctx)),
-			bvConst32(32,-1),
-			bvConst32(32,200))))))))));
-}
-Z3ASTHandle Z3Builder::ConvertBitVec64ToInt(Z3_ast ast) {
-  	return
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),bvConst64(64,0)),
-			Z3ASTHandle(Z3_mk_int(ctx,0,Z3_mk_int_sort(ctx)),ctx),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),bvConst64(64,1)),
-			Z3ASTHandle(Z3_mk_int(ctx,1,Z3_mk_int_sort(ctx)),ctx),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),bvConst64(64,2)),
-			Z3ASTHandle(Z3_mk_int(ctx,2,Z3_mk_int_sort(ctx)),ctx),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),bvConst64(64,3)),
-			Z3ASTHandle(Z3_mk_int(ctx,3,Z3_mk_int_sort(ctx)),ctx),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),bvConst64(64,4)),
-			Z3ASTHandle(Z3_mk_int(ctx,4,Z3_mk_int_sort(ctx)),ctx),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),bvConst64(64,5)),
-			Z3ASTHandle(Z3_mk_int(ctx,5,Z3_mk_int_sort(ctx)),ctx),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),bvConst64(64,6)),
-			Z3ASTHandle(Z3_mk_int(ctx,6,Z3_mk_int_sort(ctx)),ctx),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),bvConst64(64,30)),
-			Z3ASTHandle(Z3_mk_int(ctx,30,Z3_mk_int_sort(ctx)),ctx),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),bvConst64(64,-1)),
-			Z3ASTHandle(Z3_mk_int(ctx,-1,Z3_mk_int_sort(ctx)),ctx),
-			Z3ASTHandle(Z3_mk_int(ctx,750,Z3_mk_int_sort(ctx)),ctx))))))))));
-
-  //return Z3ASTHandle(Z3_mk_bv2int(ctx, ast, false), ctx);
+    return Z3ASTHandle(Z3_mk_int2bv(ctx, 64,ast), ctx);
 }
 
-Z3ASTHandle Z3Builder::ConvertIntToBitVec64(Z3_ast ast) {
-	return
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,0,Z3_mk_int_sort(ctx)),ctx)),
-			bvConst64(64,0),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,1,Z3_mk_int_sort(ctx)),ctx)),
-			bvConst64(64,1),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,2,Z3_mk_int_sort(ctx)),ctx)),
-			bvConst64(64,2),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,3,Z3_mk_int_sort(ctx)),ctx)),
-			bvConst64(64,3),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,4,Z3_mk_int_sort(ctx)),ctx)),
-			bvConst64(64,4),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,5,Z3_mk_int_sort(ctx)),ctx)),
-			bvConst64(64,5),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,6,Z3_mk_int_sort(ctx)),ctx)),
-			bvConst64(64,6),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,30,Z3_mk_int_sort(ctx)),ctx)),
-			bvConst64(64,30),
-		iteExpr(
-			eqExpr(Z3ASTHandle(ast,ctx),Z3ASTHandle(Z3_mk_int(ctx,-1,Z3_mk_int_sort(ctx)),ctx)),
-			bvConst64(64,-1),
-			bvConst64(64,200))))))))));
 
-    //return Z3ASTHandle(Z3_mk_int2bv(ctx, 64,ast), ctx);
-}
+
 /** if *width_out!=1 then result is a bitvector,
     otherwise it is a bool */
 Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
