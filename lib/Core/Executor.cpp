@@ -3333,6 +3333,64 @@ void Executor::executeStrcmp(ExecutionState &state, KInstruction *target,
 
 	
 }
+
+void Executor::executeStrchr(ExecutionState &state, KInstruction *target, 
+                             ref<Expr> s, ref<Expr> c) {
+  ObjectPair sOP;
+  bool success;
+  solver->setTimeout(coreSolverTimeout);
+  if (!state.addressSpace.resolveOne(state, solver, s, sOP, success)) {
+    s = toConstant(state,s, "resolveOne failure");
+    success = state.addressSpace.resolveOne(cast<ConstantExpr>(s), sOP);
+  }
+  assert(success && "TODO: handle failure");
+
+  const MemoryObject* mos = sOP.first;
+
+	ref<Expr> one  = ConstantExpr::create(1,Expr::Int64);
+	ref<Expr> zero = ConstantExpr::create(0,Expr::Int64);
+	ref<Expr> minusOne = SubExpr::create(zero,one);
+
+	/*******************************/
+	/* [8] Check if c appears in p */
+	/*******************************/
+	ref<Expr> x00 = StrConstExpr::create("\\x00");
+	ref<Expr> size   = mos->getSizeExpr();
+	ref<Expr> offset = mos->getOffsetExpr(s);	
+	ref<Expr> p_var  = StrSubstrExpr::create(
+		StrVarExpr::create(mos->getABSerial()),
+		offset,
+		SubExpr::create(size,offset));
+
+	/*******************************/
+	/* [8] Check if c appears in p */
+	/*******************************/
+	ref<Expr> c_as_length_1_string = StrFromBitVector8Expr::create(c);
+
+	/*******************************/
+	/* [8] Check if c appears in p */
+	/*******************************/
+	ref<Expr> firstIndexOfc   = StrFirstIdxOfExpr::create(p_var,c_as_length_1_string);
+	ref<Expr> firstIndexOfx00 = StrFirstIdxOfExpr::create(p_var,x00);
+
+	/*******************************/
+	/* [8] Check if c appears in p */
+	/*******************************/
+	ref<Expr> c_appears_in_p = NotExpr::create(EqExpr::create(firstIndexOfc,minusOne));	
+	ref<Expr> c_appears_in_p_before_x00 = SltExpr::create(firstIndexOfc,firstIndexOfx00);
+
+	bindLocal(
+		target, 
+		state,
+		SelectExpr::create(
+			AndExpr::create(
+				c_appears_in_p,
+				c_appears_in_p_before_x00),
+			AddExpr::create(
+				ZExtExpr::create(firstIndexOfc,Expr::Int64),
+				s),
+			ZExtExpr::create(zero,Expr::Int64)));
+}
  
 void Executor::executeMemoryOperation(ExecutionState &state,
                                       bool isWrite,

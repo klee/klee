@@ -311,6 +311,7 @@ private:
   void executeMakeSymbolic(ExecutionState &state, const MemoryObject *mo,
                            const std::string &name);
   void executeStrcmp(ExecutionState &state, KInstruction *target, ref<Expr>, ref<Expr>);
+  void executeStrchr(ExecutionState &state, KInstruction *target, ref<Expr>, ref<Expr>);
 
   /// Create a new state where each input condition has been added as
   /// a constraint and return the results. The input state is included

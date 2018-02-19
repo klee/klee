@@ -3137,6 +3137,9 @@ void SpecialFunctionHandler::handleMyStrchr(
 	KInstruction *target,
 	std::vector<ref<Expr> > &arguments)
 {
+	executor.executeStrchr(state, target,arguments[0],arguments[1]);
+	return;
+#if 0
 	char AB_p_name[AB_MAX_NAME_LENGTH]={0};
 
 	ref<Expr> one  = ConstantExpr::create(1,Expr::Int32);
@@ -3227,6 +3230,7 @@ void SpecialFunctionHandler::handleMyStrchr(
 				ZExtExpr::create(firstIndexOfc,Expr::Int64),
 				arguments[0]),
 			ZExtExpr::create(zero,Expr::Int64)));
+#endif
 }
 
 void SpecialFunctionHandler::handleMyAtoi(

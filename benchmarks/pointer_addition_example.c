@@ -44,11 +44,11 @@ int main(int argc, char **argv)
 
 	q = p + i;
 
-	// r = strchr(q, '#');
+	r = strchr(q, '#');
 
-	klee_assume(i < 1);
+	if (i < 1)
 	{
-		if (q - p > 2)
+		if (r - p > 2)
 		{
 //MyPrintOutput("GOT IT !!! \n");
 			fprintf(stdout,">> GOT IT !!! \n");
