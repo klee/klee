@@ -3365,7 +3365,7 @@ void Executor::executeStrchr(ExecutionState &state, KInstruction *target,
 	/*******************************/
 	/* [8] Check if c appears in p */
 	/*******************************/
-	ref<Expr> c_as_length_1_string = StrFromBitVector8Expr::create(c);
+	ref<Expr> c_as_length_1_string = StrFromBitVector8Expr::create(ExtractExpr::create(c,0,8));
 
 	/*******************************/
 	/* [8] Check if c appears in p */
@@ -3387,9 +3387,9 @@ void Executor::executeStrchr(ExecutionState &state, KInstruction *target,
 				c_appears_in_p,
 				c_appears_in_p_before_x00),
 			AddExpr::create(
-				ZExtExpr::create(firstIndexOfc,Expr::Int64),
+				firstIndexOfc,
 				s),
-			ZExtExpr::create(zero,Expr::Int64)));
+			zero));
 }
  
 void Executor::executeMemoryOperation(ExecutionState &state,

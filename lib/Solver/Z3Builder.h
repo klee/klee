@@ -26,14 +26,18 @@ protected:
   T node;
   ::Z3_context context;
 
+public:
+
+  Z3_sort_kind z3sort;
+
 private:
   // To be specialised
   inline ::Z3_ast as_ast();
 
 public:
-  Z3NodeHandle() : node(NULL), context(NULL) {}
+  Z3NodeHandle() : node(NULL), context(NULL), z3sort(Z3_UNKNOWN_SORT) {}
   Z3NodeHandle(const T _node, const ::Z3_context _context)
-      : node(_node), context(_context) {
+      : node(_node), context(_context), z3sort(Z3_BV_SORT) {
     if (node && context) {
       ::Z3_inc_ref(context, as_ast());
     }
@@ -43,7 +47,7 @@ public:
       ::Z3_dec_ref(context, as_ast());
     }
   }
-  Z3NodeHandle(const Z3NodeHandle &b) : node(b.node), context(b.context) {
+  Z3NodeHandle(const Z3NodeHandle &b) : node(b.node), context(b.context), z3sort(b.z3sort) {
     if (node && context) {
       ::Z3_inc_ref(context, as_ast());
     }
@@ -124,6 +128,8 @@ private:
   Z3ASTHandle bvVarRightShift(Z3ASTHandle expr, Z3ASTHandle shift);
   Z3ASTHandle bvVarArithRightShift(Z3ASTHandle expr, Z3ASTHandle shift);
 
+  Z3ASTHandle toInt(Z3ASTHandle ast);
+
   Z3ASTHandle notExpr(Z3ASTHandle expr);
   Z3ASTHandle bvNotExpr(Z3ASTHandle expr);
   Z3ASTHandle andExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
@@ -133,7 +139,7 @@ private:
   Z3ASTHandle iffExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
   Z3ASTHandle bvXorExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
   Z3ASTHandle bvSignExtend(Z3ASTHandle src, unsigned width);
-  Z3ASTHandle ConvertBitVec64ToInt(Z3_ast ast);
+  Z3ASTHandle ConvertBitVecToInt(Z3_ast ast);
   Z3ASTHandle ConvertIntToBitVec64(Z3_ast ast);
 
   // Array operations
