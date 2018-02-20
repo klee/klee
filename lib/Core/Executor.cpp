@@ -3334,6 +3334,87 @@ void Executor::executeStrcmp(ExecutionState &state, KInstruction *target,
 	
 }
 
+void Executor::executeStrcpy(ExecutionState &state, KInstruction *target, 
+                             ref<Expr> dst, ref<Expr> src)
+{
+  ObjectPair dstOP;
+  bool success;
+  solver->setTimeout(coreSolverTimeout);
+  if (!state.addressSpace.resolveOne(state, solver, dst, dstOP, success)) {
+    dst = toConstant(state,dst, "resolveOne failure");
+    success = state.addressSpace.resolveOne(cast<ConstantExpr>(dst), dstOP);
+  }
+  assert(success && "TODO: handle failure");
+
+  ObjectPair srcOP;
+  solver->setTimeout(coreSolverTimeout);
+  if (!state.addressSpace.resolveOne(state, solver, src, srcOP, success)) {
+    src = toConstant(state, src, "resolveOne failure");
+    success = state.addressSpace.resolveOne(cast<ConstantExpr>(src), srcOP);
+  }
+  assert(success && "TODO: handle failure");
+  const MemoryObject* moDst = dstOP.first;
+  const MemoryObject* moSrc = srcOP.first;
+
+  ref<Expr> AB_dst_var = StrVarExpr::create(moDst->getABSerial());
+  ref<Expr> AB_src_var = StrVarExpr::create(moSrc->getABSerial());
+
+  ref<Expr> dst_offset = moDst->getOffsetExpr(dst);
+  ref<Expr> src_offset = moSrc->getOffsetExpr(src);
+
+  ref<Expr> dst_size = SubExpr::create(moDst->getSizeExpr(),moDst->getOffsetExpr(dst));
+  ref<Expr> src_size = SubExpr::create(moSrc->getSizeExpr(),moSrc->getOffsetExpr(src));
+
+  ref<Expr> one  = ConstantExpr::create(1,Expr::Int64);
+  ref<Expr> zero = ConstantExpr::create(0,Expr::Int64);
+  ref<Expr> minusOne = SubExpr::create(zero,one);
+
+	ref<Expr> prefixStart  = zero;
+	ref<Expr> prefixLength = dst_offset;
+
+	ref<Expr> firstIdxOf_x00_in_src = StrFirstIdxOfExpr::create(
+		StrSubstrExpr::create(AB_src_var,src_offset,src_size),
+		StrConstExpr::create("\\x00"));
+
+	ref<Expr> middleLength = AddExpr::create(firstIdxOf_x00_in_src,one);
+	ref<Expr> suffixStart  = AddExpr::create(prefixLength,middleLength);
+	ref<Expr> suffixLength = SubExpr::create(moDst->getSizeExpr(),suffixStart);
+
+  const_cast<MemoryObject*>(moDst)->version++;
+  ref<Expr> AB_dst_new_var = StrVarExpr::create(moDst->getABSerial());
+
+	/*******************/
+	/* prefix equation */
+	/*******************/
+	ref<Expr> prefixEq = StrEqExpr::create(
+		StrSubstrExpr::create(AB_dst_var,    prefixStart,prefixLength),
+		StrSubstrExpr::create(AB_dst_new_var,prefixStart,prefixLength));
+			
+	/*******************/
+	/* suffix equation */
+	/*******************/
+	ref<Expr> suffixEq = StrEqExpr::create(
+		StrSubstrExpr::create(AB_dst_var,    suffixStart,suffixLength),	
+		StrSubstrExpr::create(AB_dst_new_var,suffixStart,suffixLength));
+			
+	/*******************/
+	/* middle equation */
+	/*******************/
+	ref<Expr> middleEq = StrEqExpr::create(
+		StrSubstrExpr::create(AB_src_var,    src_offset,middleLength),	
+		StrSubstrExpr::create(AB_dst_new_var,dst_offset,middleLength));
+
+	state.addConstraint(prefixEq);
+	state.addConstraint(suffixEq);
+	state.addConstraint(middleEq);
+
+  	state.addConstraint(EqExpr::create(
+		StrLengthExpr::create(AB_dst_var),
+		StrLengthExpr::create(AB_dst_new_var)));
+
+}
+
+
 void Executor::executeStrchr(ExecutionState &state, KInstruction *target, 
                              ref<Expr> s, ref<Expr> c) {
   ObjectPair sOP;
@@ -3420,13 +3501,13 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
   if (success) {
     const MemoryObject *mo = op.first;
-    if(isWrite && value->getWidth() == 8) {
+    if(isWrite && type == 8 && (mo->serial >= 0)) {
         ref<Expr> offset = mo->getOffsetExpr(address);
         errs() << "Modifying mo serial " << mo->serial << " version " << mo->version << " with ";
-        errs() << (char)dyn_cast<ConstantExpr>(value)->getZExtValue() << "\n";
+       // errs() << (char)dyn_cast<ConstantExpr>(value)->getZExtValue() << "\n";
         errs() << "At offset: ";
         offset->dump();
-        assert(dyn_cast<ConstantExpr>(offset) && "Todo non constant offests");
+        //assert(dyn_cast<ConstantExpr>(offset) && "Todo non constant offests");
 
         ref<Expr> one  = ConstantExpr::create(1,Expr::Int64);
         ref<Expr> zero = ConstantExpr::create(0,Expr::Int64);
@@ -3472,6 +3553,29 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         return;
 	
     }
+	else if (type == 8 && (mo->serial >= 0))
+	{
+        ref<Expr> offset = mo->getOffsetExpr(address);		
+        errs() << "Reading mo serial " << mo->serial << " version " << mo->version << "\n";
+        assert(dyn_cast<ConstantExpr>(offset) && "Todo non constant offests");
+        errs() << "At offset: ";
+        offset->dump();
+        ref<Expr> AB_p_var = StrVarExpr::create(mo->getABSerial());
+
+		bindLocal(
+			target, 
+			state,
+			SelectExpr::create(StrEqExpr::create(StrConstExpr::create("T"),StrCharAtExpr::create(AB_p_var,offset)),ConstantExpr::create('T',Expr::Int8),
+			SelectExpr::create(StrEqExpr::create(StrConstExpr::create("M"),StrCharAtExpr::create(AB_p_var,offset)),ConstantExpr::create('M',Expr::Int8),
+			SelectExpr::create(StrEqExpr::create(StrConstExpr::create("P"),StrCharAtExpr::create(AB_p_var,offset)),ConstantExpr::create('P',Expr::Int8),
+			SelectExpr::create(StrEqExpr::create(StrConstExpr::create("G"),StrCharAtExpr::create(AB_p_var,offset)),ConstantExpr::create('G',Expr::Int8),
+			SelectExpr::create(StrEqExpr::create(StrConstExpr::create("#"),StrCharAtExpr::create(AB_p_var,offset)),ConstantExpr::create('#',Expr::Int8),
+			SelectExpr::create(StrEqExpr::create(StrConstExpr::create("A"),StrCharAtExpr::create(AB_p_var,offset)),ConstantExpr::create('A',Expr::Int8),
+			SelectExpr::create(StrEqExpr::create(StrConstExpr::create("B"),StrCharAtExpr::create(AB_p_var,offset)),ConstantExpr::create('B',Expr::Int8),
+			ConstantExpr::create('F',Expr::Int8)))))))));
+		return;
+
+	}
 
     if (MaxSymArraySize && mo->size>=MaxSymArraySize) {
       address = toConstant(state, address, "max-sym-array-size");

@@ -856,6 +856,8 @@ void SpecialFunctionHandler::handleMyStrcpy(
 	KInstruction *target,
 	std::vector<ref<Expr> > &arguments)
 {
+	executor.executeStrcpy(state,target,arguments[0],arguments[1]);
+#if 0
 	bool result=false;
 	
 	ref<Expr> minusOne = SubExpr::create(
@@ -1114,6 +1116,7 @@ void SpecialFunctionHandler::handleMyStrcpy(
 	AB_All_Versions_fl = fopen("/tmp/AB_All_Versions.txt","at");
 	fprintf(AB_All_Versions_fl,"%s ",AB_p_new_name);
 	fclose(AB_All_Versions_fl);
+#endif
 }
 
 void SpecialFunctionHandler::handleMyConstStringAssign(
