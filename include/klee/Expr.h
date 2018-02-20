@@ -90,23 +90,25 @@ Todo: Shouldn't bool \c Xor just be written as not equal?
 
 class Expr {
 public:
-
-  enum SortKind
-  {
-    StringSort=0,
-    IntSort=1,
-    BV8Sort=2,
-    BV32Sort=3,
-    BV64Sort=4
-  };
-
-public:
   static unsigned count;
   static const unsigned MAGIC_HASH_CONSTANT = 39;
 
   /// The type of an expression is simply its width, in bits. 
+  //typedef unsigned Width; 
+  /*
+  enum Width {
+      InvalidWidth = 0,
+      Bool = 1,
+      Int8 = 8,
+      Int16 = 16,
+      Int32 = 32,
+      Int64 = 64,
+      Fl80 = 80,
+      Int = 100000,
+      String = 100001
+  }; */
   typedef unsigned Width; 
-  
+      
   static const Width InvalidWidth = 0;
   static const Width Bool = 1;
   static const Width Int8 = 8;
@@ -114,8 +116,9 @@ public:
   static const Width Int32 = 32;
   static const Width Int64 = 64;
   static const Width Fl80 = 80;
+  static const Width String = 100001;
+  static const Width Int = 100000;
   
-
   enum Kind {
     InvalidKind = -1,
 
@@ -155,6 +158,8 @@ public:
 	Str_Compare,
 	Str_FirstIdxOf,
 	Str_FromBitVec8,
+
+  BvToInt,
 
     // All subsequent kinds are binary.
 
@@ -890,7 +895,7 @@ public:
 	/*************************************************************************/
 	virtual int compareContents(const Expr &b)  const {return   0;}	
 	virtual Kind      getKind()                 const {return   Expr::Str_CharAt;}	
-	virtual Width     getWidth()                const {return   64;}	
+	virtual Width     getWidth()                const {return   Expr::String;}	
 	virtual unsigned  getNumKids()              const {return    2;}
 	virtual ref<Expr> getKid(unsigned int i)    const	{
 															if(i==0){return s;}
@@ -928,7 +933,7 @@ public:
 	/*************************************************************************/	
 	virtual int       compareContents(const Expr &b)  const {return   0;}	
 	virtual Kind      getKind()                 const {return   Expr::Str_FromBitVec8;}	
-	virtual Width     getWidth()                const {return   64;}	
+	virtual Width     getWidth()                const {return   Expr::String;}	
 	virtual unsigned  getNumKids()              const {return   1;}	
 	virtual ref<Expr> getKid(unsigned int i)    const	{
 															if(i==0){return someBitVec8;}
@@ -979,7 +984,7 @@ public:
 	/*************************************************************************/
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_FirstIdxOf;}	
-	virtual Width     getWidth()                const {return   64;}	
+	virtual Width     getWidth()                const {return   Expr::Int;}	
 	virtual unsigned  getNumKids()              const {return    2;}	
 	virtual ref<Expr> getKid(unsigned int i)    const	{
 															if(i==0){return haystack;}
@@ -999,7 +1004,9 @@ public:
 	ref<Expr> s1;
 	ref<Expr> s2;
 
-	StrEqExpr(const ref<Expr> &in_s1,const ref<Expr> &in_s2) : s1(in_s1),s2(in_s2) {}
+	StrEqExpr(const ref<Expr> &in_s1,const ref<Expr> &in_s2) : s1(in_s1),s2(in_s2) {
+     assert(in_s1->getWidth() == Expr::String && in_s2->getWidth() == Expr::String && "StrEq takes 2 strings");
+  }
 
 	virtual unsigned computeHash();
 
@@ -1025,7 +1032,7 @@ public:
 	/*************************************************************************/
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_Eq;}	
-	virtual Width     getWidth()                const {return   1;}	
+	virtual Width     getWidth()                const {return   Expr::Bool;}	
 	virtual unsigned  getNumKids()              const {return   2;}	
 	virtual ref<Expr> getKid(unsigned int i)    const	{
 															if(i==0){return s1;}
@@ -1054,7 +1061,11 @@ public:
 		s(in_s),
 		offset(in_offset),
 		length(in_length)
-	{}
+	{
+     assert(in_s->getWidth() == Expr::String  && "First argument to substr must be string");
+     assert(in_offset->getWidth() == Expr::Int  && "Second argument to substring must be int");
+     assert(in_length->getWidth() == Expr::Int  && "third argument to substring must be int");
+  }
 
 	virtual unsigned computeHash();
 
@@ -1089,7 +1100,7 @@ public:
 	/*************************************************************************/
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_Substr;}	
-	virtual Width     getWidth()                const {return   64;}	
+	virtual Width     getWidth()                const {return   Expr::String;}	
 	virtual unsigned  getNumKids()              const {return   3;}	
 	virtual ref<Expr> getKid(unsigned int i)    const	{
 															if(i==0){return s;}
@@ -1106,7 +1117,11 @@ class StrFromBitVec8Expr : public Expr {
 public:
 	ref<Expr> c;
 
-	StrFromBitVec8Expr(const ref<Expr> &in_c) : c(in_c) {}
+	StrFromBitVec8Expr(const ref<Expr> &in_c) : c(in_c) {
+      
+     assert(in_c->getWidth() == Expr::String  && "First argument to strfrombv8 must be a char of width 8");
+      
+  }
 
 	virtual unsigned computeHash();
 
@@ -1131,7 +1146,7 @@ public:
 	/*************************************************************************/
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_FromBitVec8;}	
-	virtual Width     getWidth()                const {return   8;}	
+	virtual Width     getWidth()                const {return   Expr::String;}	
 	virtual unsigned  getNumKids()              const {return   0;}	
 	virtual ref<Expr> getKid(unsigned int i)    const { if(i==0){return c;} return 0;}
 	virtual ref<Expr> rebuild(ref<Expr> kids[]) const { return create(kids[0]); }
@@ -1176,7 +1191,7 @@ public:
 	/*************************************************************************/
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_Const;}	
-	virtual Width     getWidth()                const {return   64;}	
+	virtual Width     getWidth()                const {return   Expr::String;}	
 	virtual unsigned  getNumKids()              const {return   0;}	
 	virtual ref<Expr> getKid(unsigned int)      const {return NULL;}
 	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {assert(0); ref<Expr> moish; return moish;}
@@ -1223,7 +1238,7 @@ public:
 	/*************************************************************************/
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_Var;}	
-	virtual Width     getWidth()                const {return   64;}	
+	virtual Width     getWidth()                const {return   Expr::String;}	
 	virtual unsigned  getNumKids()              const {return   0;}	
 	virtual ref<Expr> getKid(unsigned int)      const {return   0;}
 	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {ref<Expr> moish; assert(0); return moish;}
@@ -1231,11 +1246,46 @@ public:
 	static bool classof(const ConstantExpr *) { return false; }	
 };
 
+class BvToIntExpr : public Expr {
+	ref<Expr> intExpr;
+	BvToIntExpr(const ref<Expr> &e) : intExpr(e) {
+    assert(e->getWidth() != Expr::Int && e->getWidth() != Expr::String && "Can't bv2nt an int or string");
+  }
+	virtual unsigned computeHash();
+
+	static ref<Expr> create(const ref<Expr> &in_s)
+	{
+		return BvToIntExpr::alloc(in_s);
+	}
+	
+	static ref<Expr> alloc(const ref<Expr> &in_s)
+	{
+		ref<Expr> res(new BvToIntExpr(in_s));
+		res->computeHash();
+		return res;
+	}
+	virtual int compareContents(const Expr &b)  const {return   0;}		
+	virtual Kind      getKind()                 const {return   Expr::BvToInt;}	
+	virtual Width     getWidth()                const {return   Expr::Int;}	
+	virtual unsigned  getNumKids()              const {return   1;}	
+	virtual ref<Expr> getKid(unsigned int i)    const	{
+															if(i==0){return intExpr;}
+															return 0;
+														}
+	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {return create(kids[0]);}
+	static bool classof(const Expr *E) { return E->getKind() == Expr::BvToInt; }
+	static bool classof(const ConstantExpr *) { return false; }	
+
+
+
+};
 class StrLengthExpr : public Expr {
 public:
 	ref<Expr> s;
 	
-	StrLengthExpr(const ref<Expr> &in_s) : s(in_s) {}
+	StrLengthExpr(const ref<Expr> &in_s) : s(in_s) {
+      assert(in_s->getWidth() == Expr::String && "First argument to strlen must be a string");
+  }
 
 	virtual unsigned computeHash();
 
@@ -1261,7 +1311,7 @@ public:
 	/*************************************************************************/
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_Length;}	
-	virtual Width     getWidth()                const {return   64;}	
+	virtual Width     getWidth()                const {return   Expr::Int;}	
 	virtual unsigned  getNumKids()              const {return   1;}	
 	virtual ref<Expr> getKid(unsigned int i)    const	{
 															if(i==0){return s;}
@@ -1276,13 +1326,15 @@ class StrCmpExpr : public Expr {
 public:
 	ref<Expr> s1;
 	ref<Expr> s2;
+  StrCmpExpr(const ref<Expr> &s1,const ref<Expr> &s2) {
+    assert(s1->getWidth() == Expr::String && "First argument to strcmp must be a string");
+    assert(s2->getWidth() == Expr::String && "Second argument to strcmp must be a string");
+  }
 
 public:
 	static ref<Expr> create(const ref<Expr> &s1,const ref<Expr> &s2)
 	{
-		StrCmpExpr *e = new StrCmpExpr;
-		e->s1 = s1;
-		e->s2 = s2;
+		StrCmpExpr *e = new StrCmpExpr(s1,s2);
 		return e;
 	}
 
@@ -1295,7 +1347,7 @@ public:
 	/*************************************************************************/
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_Compare;}	
-	virtual Width     getWidth()                const {return   64;}	
+	virtual Width     getWidth()                const {return   Expr::Int;}	
 	virtual unsigned  getNumKids()              const {return   2;}	
 	virtual ref<Expr> getKid(unsigned int i)    const {if (i==0) return s1;if (i==1) return s2;return 0;}
 	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {return create(kids[0],kids[1]);}
@@ -1473,7 +1525,7 @@ private:
 public:
   ~ConstantExpr() {}
 
-  Width getWidth() const { return value.getBitWidth(); }
+  Width getWidth() const { return (Width)value.getBitWidth(); }
   Kind getKind() const { return Constant; }
 
   unsigned getNumKids() const { return 0; }
