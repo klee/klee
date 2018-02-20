@@ -52,7 +52,7 @@ llvm::cl::opt<klee::ExprSMTLIBPrinter::AbbreviationMode> abbreviationMode(
 namespace klee {
 
 ExprSMTLIBPrinter::ExprSMTLIBPrinter()
-    : usedArrays(), o(NULL), query(NULL), p(NULL), haveConstantArray(false),
+    : usedArrays(), o(NULL), query(NULL), p(NULL), haveConstantArray(false), usedAbs(),
 	logicToUse(QF_S),
 	// logicToUse(QF_AUFBV),
       humanReadable(ExprSMTLIBOptions::humanReadableSMTLIB),
@@ -62,14 +62,12 @@ ExprSMTLIBPrinter::ExprSMTLIBPrinter()
 }
 
 ExprSMTLIBPrinter::~ExprSMTLIBPrinter() {
-  if (p != NULL)
-    delete p;
+  delete p;
 }
 
 void ExprSMTLIBPrinter::setOutput(llvm::raw_ostream &output) {
   o = &output;
-  if (p != NULL)
-    delete p;
+  delete p;
 
   p = new PrintContext(output);
 }
@@ -85,6 +83,7 @@ void ExprSMTLIBPrinter::reset() {
   orderedBindings.clear();
   seenExprs.clear();
   usedArrays.clear();
+  usedAbs.clear();
   haveConstantArray = false;
 
   /* Clear the PRODUCE_MODELS option if it was automatically set.
@@ -482,10 +481,7 @@ const char *ExprSMTLIBPrinter::getSMTLIBKeyword(const ref<Expr> &e)
     return "seq.unit";
   case Expr::Str_Var:
   {
-  	char *name = (char *) malloc(512);
-  	memset(name,0,512);
-  	sprintf(name,"%s", ((StrVarExpr *) e.get())->name);
-    return name;
+    return ((StrVarExpr*)e.get())->name.c_str();
   }
   case Expr::Str_Const:
   {
@@ -579,25 +575,8 @@ void ExprSMTLIBPrinter::printSetLogic() {
     *o << "QF_AUFBV";
     break;
   case QF_S:
-	{
-		char msg[512];
-		memset(msg,0,512);
-
-    	*o << "QF_S)\n";
-		sprintf(msg,"(declare-const %s String)\n","AB_serial_0_version_0"); *o << msg;
-		sprintf(msg,"(declare-const %s String)\n","AB_serial_0_version_1"); *o << msg;
-		sprintf(msg,"(declare-const %s String)\n","AB_serial_0_version_2"); *o << msg;
-		sprintf(msg,"(declare-const %s String)\n","AB_serial_0_version_3"); *o << msg;
-		sprintf(msg,"(declare-const %s String)\n","AB_serial_1_version_0"); *o << msg;
-		sprintf(msg,"(declare-const %s String)\n","AB_serial_1_version_1"); *o << msg;
-		sprintf(msg,"(declare-const %s String)\n","AB_serial_1_version_2"); *o << msg;
-		sprintf(msg,"(declare-const %s String)\n","AB_serial_1_version_3"); *o << msg;
-		sprintf(msg,"(declare-const %s String)\n","AB_serial_2_version_0"); *o << msg;
-		sprintf(msg,"(declare-const %s String)\n","AB_serial_2_version_1"); *o << msg;
-		sprintf(msg,"(declare-const %s String)\n","AB_serial_2_version_2"); *o << msg;
-		sprintf(msg,"(declare-const %s String)\n","AB_serial_2_version_3"); *o << msg;
-		return;
-	}
+    *o << "QF_S";
+   	break;
   }
   *o << " )\n";
 
@@ -629,6 +608,9 @@ void ExprSMTLIBPrinter::printArrayDeclarations() {
        << (*it)->getDomain() << ") "
                                 "(_ BitVec " << (*it)->getRange() << ") ) )"
        << "\n";
+  }
+  for(auto &ab : usedAbs) {
+      *o << "(declare-const " << ab << " String)\n";
   }
 
   // Set array values for constant values
@@ -767,6 +749,8 @@ void ExprSMTLIBPrinter::scan(const ref<Expr> &e) {
         // scan the update list
         scanUpdates(re->updates.head);
       }
+    } else if(const StrVarExpr *strVar = dyn_cast<StrVarExpr>(e)) {
+      usedAbs.insert(strVar->name);
     }
 
     // recurse into the children
