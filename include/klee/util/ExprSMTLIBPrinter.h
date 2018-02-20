@@ -213,6 +213,7 @@ public:
 protected:
   /// Contains the arrays found during scans
   std::set<const Array *> usedArrays;
+  std::set<std::string> usedAbs;
 
   /// Set of expressions seen during scan.
   std::set<ref<Expr> > seenExprs;
