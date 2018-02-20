@@ -1184,9 +1184,21 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     UltExpr *ue = cast<UltExpr>(e);
     Z3ASTHandle left = construct(ue->left, width_out);
     Z3ASTHandle right = construct(ue->right, width_out);
-    assert(*width_out != 1 && "uncanonicalized ult");
+    // assert(*width_out != 1 && "uncanonicalized ult");
+
+	Z3ASTHandle result;
+    if (left.z3sort == Z3_INT_SORT || right.z3sort == Z3_INT_SORT) { 
+	 	left = toInt(left);
+		right = toInt(right);
+	    result = Z3ASTHandle(Z3_mk_lt(ctx, left, right), ctx);
+		result.z3sort = Z3_BOOL_SORT; 
+	} else {
+		result = bvLtExpr(left, right);
+		result.z3sort = Z3_BOOL_SORT; 
+	}
+
     *width_out = 1;
-    return bvLtExpr(left, right);
+    return result;
   }
 
   case Expr::Ule: {

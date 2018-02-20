@@ -726,6 +726,9 @@ void SpecialFunctionHandler::handleMyStrlen(
 	KInstruction *target,
 	std::vector<ref<Expr> > &arguments)
 {
+	executor.executeStrlen(state,target,arguments[0]);
+
+#if 0
 	bool result = false;
 	char AB_p_name[AB_MAX_NAME_LENGTH]={0};
 
@@ -827,6 +830,7 @@ void SpecialFunctionHandler::handleMyStrlen(
 		SExtExpr::create(
 			StrFirstIdxOfExpr::create(p_var,x00),
 			Expr::Int64));
+#endif
 }
 
 static FILE *AB_Legend_fl;

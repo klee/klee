@@ -77,8 +77,8 @@ int main(int argc, char **argv)
 		/*****************/
 		/*               */
 		/* mark strings  */
-		/*                                      */
-		/****************************************/		
+		/*               */
+		/*****************/
 		markString(p1);
 		markString(p2);
 		markString(r1);

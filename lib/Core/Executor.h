@@ -313,6 +313,7 @@ private:
   void executeStrcmp(ExecutionState &state, KInstruction *target, ref<Expr>, ref<Expr>);
   void executeStrchr(ExecutionState &state, KInstruction *target, ref<Expr>, ref<Expr>);
   void executeStrcpy(ExecutionState &state, KInstruction *target, ref<Expr>, ref<Expr>);
+  void executeStrlen(ExecutionState	&state,	KInstruction *target, ref<Expr>	          );
 
   /// Create a new state where each input condition has been added as
   /// a constraint and return the results. The input state is included
