@@ -386,6 +386,39 @@ inline std::stringstream &operator<<(std::stringstream &os, const Expr::Kind kin
 }
 
 // Utility classes
+class BvToIntExpr : public Expr {
+public:
+	ref<Expr> bvExpr;
+	BvToIntExpr(const ref<Expr> &e) : bvExpr(e) {
+    assert(e->getWidth() != Expr::Int && e->getWidth() != Expr::String && "Can't bv2nt an int or string");
+  }
+	virtual unsigned computeHash();
+
+	static ref<Expr> create(const ref<Expr> &in_s)
+	{
+    if(in_s->getWidth() == Expr::Int) return in_s;
+		return BvToIntExpr::alloc(in_s);
+	}
+	
+	static ref<Expr> alloc(const ref<Expr> &in_s)
+	{
+		ref<Expr> res(new BvToIntExpr(in_s));
+		res->computeHash();
+		return res;
+	}
+	virtual int compareContents(const Expr &b)  const {return   0;}		
+	virtual Kind      getKind()                 const {return   Expr::BvToInt;}	
+	virtual Width     getWidth()                const {return   Expr::Int;}	
+	virtual unsigned  getNumKids()              const {return   1;}	
+	virtual ref<Expr> getKid(unsigned int i)    const	{
+															if(i==0){return bvExpr;}
+															return 0;
+														}
+	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {return create(kids[0]);}
+	static bool classof(const Expr *E) { return E->getKind() == Expr::BvToInt; }
+	static bool classof(const ConstantExpr *) { return false; }	
+
+};
 
 class NonConstantExpr : public Expr {
 public:
@@ -871,14 +904,17 @@ class StrCharAtExpr : public Expr {
 public:
 	ref<Expr> s;
 	ref<Expr> i;
+  StrCharAtExpr(ref<Expr> ps,ref<Expr> pi): s(ps), i(pi) {
+      assert(ps->getWidth() == Expr::String && "First argument to str char at must be a string");
+      assert(pi->getWidth() == Expr::Int && "Second argument to str char at must be an int");
+  }
 
 public:
 	static ref<Expr> create(ref<Expr> s,ref<Expr> i)
 	{
-		StrCharAtExpr *e = new StrCharAtExpr;
-		e->s = s;
-		e->i = i;
-		return e;
+    ref<Expr> r(new StrCharAtExpr(s,i));
+    r->computeHash();
+    return r;
 	}
 
 	virtual unsigned computeHash();
@@ -1165,37 +1201,6 @@ public:
 	static bool classof(const ConstantExpr *) { return false; }	
 };
 
-class BvToIntExpr : public Expr {
-	ref<Expr> intExpr;
-	BvToIntExpr(const ref<Expr> &e) : intExpr(e) {
-    assert(e->getWidth() != Expr::Int && e->getWidth() != Expr::String && "Can't bv2nt an int or string");
-  }
-	virtual unsigned computeHash();
-
-	static ref<Expr> create(const ref<Expr> &in_s)
-	{
-		return BvToIntExpr::alloc(in_s);
-	}
-	
-	static ref<Expr> alloc(const ref<Expr> &in_s)
-	{
-		ref<Expr> res(new BvToIntExpr(in_s));
-		res->computeHash();
-		return res;
-	}
-	virtual int compareContents(const Expr &b)  const {return   0;}		
-	virtual Kind      getKind()                 const {return   Expr::BvToInt;}	
-	virtual Width     getWidth()                const {return   Expr::Int;}	
-	virtual unsigned  getNumKids()              const {return   1;}	
-	virtual ref<Expr> getKid(unsigned int i)    const	{
-															if(i==0){return intExpr;}
-															return 0;
-														}
-	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {return create(kids[0]);}
-	static bool classof(const Expr *E) { return E->getKind() == Expr::BvToInt; }
-	static bool classof(const ConstantExpr *) { return false; }	
-
-};
 class StrLengthExpr : public Expr {
 public:
 	ref<Expr> s;

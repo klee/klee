@@ -663,6 +663,7 @@ ref<Expr> ConcatExpr::create8(const ref<Expr> &kid1, const ref<Expr> &kid2,
 ref<Expr> ExtractExpr::create(ref<Expr> expr, unsigned off, Width w) {
   unsigned kw = expr->getWidth();
   assert(w > 0 && off + w <= kw && "invalid extract");
+  assert(expr->getWidth() < 1024 && "Extract of non bv type");
   
   if (w == kw) {
     return expr;
@@ -967,6 +968,10 @@ static ref<Expr> AShrExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 
 #define BCREATE_R(_e_op, _op, partialL, partialR) \
 ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
+  if(l->getWidth() == Expr::Int || r->getWidth() == Expr::Int)  {   \
+      if(l->getWidth() == Expr::Int) {return _e_op ## _create(l.get(), BvToIntExpr::create(r).get());} \
+      else {return _e_op ## _create(BvToIntExpr::create(l).get(), r.get());}    \
+  }                                                                 \
   if (l->getWidth()!=r->getWidth()) {                                   \
     llvm::errs() << "left  width = " << l->getWidth() << "\n";          \
     llvm::errs() << "right width = " << r->getWidth() << "\n";          \
@@ -984,11 +989,15 @@ ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
 
 #define BCREATE(_e_op, _op) \
 ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
+  if(l->getWidth() == Expr::Int || r->getWidth() == Expr::Int)  {   \
+      if(l->getWidth() == Expr::Int) {return _e_op ## _create(l, BvToIntExpr::create(r));} \
+      else {return _e_op ## _create(BvToIntExpr::create(l), r);}    \
+  }                                                                 \
   assert(l->getWidth()==r->getWidth() && "type mismatch");          \
   if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l))                 \
     if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))               \
       return cl->_op(cr);                                           \
-  return _e_op ## _create(l, r);                                    \
+  return  _e_op ## _create(l, r);                                   \
 }
 
 BCREATE_R(AddExpr, Add, AddExpr_createPartial, AddExpr_createPartialR)

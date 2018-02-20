@@ -3044,8 +3044,8 @@ void SpecialFunctionHandler::handleMarkString(
 
     errs() << "Creating an ab serial " << ab_name << " size " << mo->size << "\n";
 	  state.addConstraint(EqExpr::create(
-  		Expr::createZExtToPointerWidth(StrLengthExpr::create(StrVarExpr::create(ab_name.c_str()))),
-      mo->getSizeExpr()));
+  		(StrLengthExpr::create(StrVarExpr::create(ab_name.c_str()))),
+      mo->getIntSizeExpr()));
     
   }
 

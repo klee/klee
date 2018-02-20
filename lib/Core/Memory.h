@@ -126,6 +126,9 @@ public:
   ref<ConstantExpr> getBaseExpr() const { 
     return ConstantExpr::create(address, Context::get().getPointerWidth());
   }
+  ref<Expr> getIntSizeExpr() const { 
+    return BvToIntExpr::create(ConstantExpr::create(size, Context::get().getPointerWidth()));
+  }
   ref<ConstantExpr> getSizeExpr() const { 
     return ConstantExpr::create(size, Context::get().getPointerWidth());
   }

@@ -494,6 +494,8 @@ const char *ExprSMTLIBPrinter::getSMTLIBKeyword(const ref<Expr> &e)
   }
   case Expr::Str_Length:
     return "str.len";
+  case Expr::BvToInt:
+    return "bv2int";
 
   default:
     llvm_unreachable("Conversion from Expr to SMTLIB keyword failed");

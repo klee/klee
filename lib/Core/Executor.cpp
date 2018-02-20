@@ -3273,8 +3273,8 @@ void Executor::executeStrcmp(ExecutionState &state, KInstruction *target,
   const MemoryObject* moP = s1OP.first;
   const MemoryObject* moQ= s2OP.first;
 
-	ref<Expr> one  = ConstantExpr::create(1,Expr::Int64);
-	ref<Expr> zero  = ConstantExpr::create(0,Expr::Int64);
+	ref<Expr> one  = BvToIntExpr::create(ConstantExpr::create(1,Expr::Int64));
+	ref<Expr> zero  = BvToIntExpr::create(ConstantExpr::create(0,Expr::Int64));
 	ref<Expr> minusOne = SubExpr::create(zero,one);
 
 
@@ -3282,11 +3282,11 @@ void Executor::executeStrcmp(ExecutionState &state, KInstruction *target,
  	ref<Expr> AB_p_var = StrVarExpr::create(moP->getABSerial());
 	ref<Expr> AB_q_var = StrVarExpr::create(moQ->getABSerial());
 
-  ref<Expr> p_size_minus_offset = SubExpr::create(moP->getSizeExpr(),moP->getOffsetExpr(s1));
-  ref<Expr> q_size_minus_offset = SubExpr::create(moQ->getSizeExpr(),moQ->getOffsetExpr(s2));
+  ref<Expr> p_size_minus_offset = SubExpr::create(moP->getIntSizeExpr(),moP->getOffsetExpr(s1));
+  ref<Expr> q_size_minus_offset = SubExpr::create(moQ->getIntSizeExpr(),moQ->getOffsetExpr(s2));
 
-	ref<Expr> AB_p_offset_var = StrSubstrExpr::create(AB_p_var,moP->getOffsetExpr(s1), p_size_minus_offset);
-	ref<Expr> AB_q_offset_var = StrSubstrExpr::create(AB_q_var,moQ->getOffsetExpr(s2), q_size_minus_offset);
+	ref<Expr> AB_p_offset_var = StrSubstrExpr::create(AB_p_var,BvToIntExpr::create(moP->getOffsetExpr(s1)), p_size_minus_offset);
+	ref<Expr> AB_q_offset_var = StrSubstrExpr::create(AB_q_var,BvToIntExpr::create(moQ->getOffsetExpr(s2)), q_size_minus_offset);
 
 	ref<Expr> firstIdxOf_x00_in_p = StrFirstIdxOfExpr::create(AB_p_offset_var,x00);
 	ref<Expr> firstIdxOf_x00_in_q = StrFirstIdxOfExpr::create(AB_q_offset_var,x00);
@@ -3314,8 +3314,8 @@ void Executor::executeStrcmp(ExecutionState &state, KInstruction *target,
 //================= START the actual constraints =================
 	ref<Expr> p_and_q_are_equal_from_0_to_min_length_p_q =
 	StrEqExpr::create(
-		StrSubstrExpr::create(AB_p_var,moP->getOffsetExpr(s1),min_length_p_q),
-		StrSubstrExpr::create(AB_q_var,moQ->getOffsetExpr(s2),min_length_p_q));
+		StrSubstrExpr::create(AB_p_var,BvToIntExpr::create(moP->getOffsetExpr(s1)),min_length_p_q),
+		StrSubstrExpr::create(AB_q_var,BvToIntExpr::create(moQ->getOffsetExpr(s2)),min_length_p_q));
 //===========================
   ref<Expr> e1 = AndExpr::create(
 			p_and_q_are_both_NULL_terminated,
@@ -3584,10 +3584,10 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         offset->dump();
         //assert(dyn_cast<ConstantExpr>(offset) && "Todo non constant offests");
 
-        ref<Expr> one  = ConstantExpr::create(1,Expr::Int64);
-        ref<Expr> zero = ConstantExpr::create(0,Expr::Int64);
+        ref<Expr> one  = BvToIntExpr::create(ConstantExpr::create(1,Expr::Int8));
+        ref<Expr> zero = BvToIntExpr::create(ConstantExpr::create(0,Expr::Int8));
         ref<Expr> prefixStart  = zero;
-        ref<Expr> prefixLength = offset;
+        ref<Expr> prefixLength = BvToIntExpr::create(offset);
         ref<Expr> suffixStart  = AddExpr::create(prefixLength,one);
         ref<Expr> suffixLength = SubExpr::create(mo->getSizeExpr(),suffixStart);
         ref<Expr> AB_p_var     = StrVarExpr::create(mo->getABSerial());
@@ -3596,7 +3596,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
  	      state.addConstraint(EqExpr::create(
   		      StrLengthExpr::create(AB_p_new_var),
-  		      mo->getSizeExpr()));
+  		      BvToIntExpr::create(mo->getSizeExpr())));
       
         /************************/
         /* [11] prefix equation */
@@ -3616,7 +3616,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         /* [13] middle equation */
         /************************/
         ref<Expr> middleEq = StrEqExpr::create(
-          StrCharAtExpr::create(AB_p_new_var,offset),
+          StrCharAtExpr::create(AB_p_new_var, BvToIntExpr::create(offset)),
           StrFromBitVector8Expr::create(value));
       
         /************************/
