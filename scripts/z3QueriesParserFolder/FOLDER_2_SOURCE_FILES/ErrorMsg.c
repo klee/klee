@@ -42,6 +42,7 @@ static int lineNum = 1;
 /* GLOBAL VARIABLES */
 /********************/
 int ErrorMsg_tokPos=0;
+static int numQueries=0;
 
 /**********************/
 /* EXTERNAL VARIABLES */
@@ -79,8 +80,8 @@ FILE *ErrorMsg_Log_fl;
 /************************/
 void ErrorMsg_OpenLog()
 {
-	ErrorMsg_Log_fl = fopen(ErrorMsg_Log_Filename,"w+t");
-	if (ErrorMsg_Log_fl == NULL) return;
+	//ErrorMsg_Log_fl = fopen(ErrorMsg_Log_Filename,"w+t");
+	//if (ErrorMsg_Log_fl == NULL) return;
 }
 
 /*************************/
@@ -88,8 +89,8 @@ void ErrorMsg_OpenLog()
 /*************************/
 void ErrorMsg_CloseLog()
 {
-	fclose(ErrorMsg_Log_fl);
-  ErrorMsg_Log_fl = NULL;
+	//fclose(ErrorMsg_Log_fl);
+	//ErrorMsg_Log_fl = NULL;
 }
 
 /*************************/
@@ -97,11 +98,28 @@ void ErrorMsg_CloseLog()
 /*************************/
 void ErrorMsg_Log(char *message)
 {
+	FILE *fl;
+	char cmd[1024]={0};
+	char filename[MAX_FILENAME_LENGTH]={0};
+
+	if (strlen(message) < 5) { return; }
+
+	sprintf(filename,"%s_%d.txt",ErrorMsg_Log_Filename,numQueries++);
+
+	fl = fopen(filename,"w+t");
+	fprintf(fl,"%s",message);
+	fclose(fl);
+
+	sprintf(cmd,"cp %s /tmp/lastQuery.txt",filename);
+	system(cmd);
+
 	/*****************/
 	/* Write Message */
 	/*****************/
-  if(ErrorMsg_Log_fl != NULL)
-	fprintf(ErrorMsg_Log_fl,"%s",message);
+	//if (ErrorMsg_Log_fl != NULL)
+	//{
+	//	fprintf(ErrorMsg_Log_fl,"%s",message);
+	//}
 }
 
 /***********/

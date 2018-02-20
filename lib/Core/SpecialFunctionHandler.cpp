@@ -2351,7 +2351,7 @@ void SpecialFunctionHandler::handleMyPrintOutput(
 	llvm::GlobalVariable    *actualCStringVar     = (llvm::GlobalVariable    *) (value0Gep->getOperand(0));
 	llvm::ConstantDataArray *actualCStringVarTag  = (llvm::ConstantDataArray *) (actualCStringVar->getInitializer());
 	std::string actualCStringContent              = actualCStringVarTag->getAsCString();
-  errs() << "HELLO!\n";
+	errs() << "HELLO!\n";
 	
 	/*******************************/
 	/* [6] Print Message to stdout */
@@ -2359,7 +2359,6 @@ void SpecialFunctionHandler::handleMyPrintOutput(
 	klee_warning("%s",actualCStringContent.c_str());
 	system("z3QueriesParser");
 	system("cat /tmp/output.txt");
-	// system("./myParseOutput/parseMe");
 	exit(0);
 }
 

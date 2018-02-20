@@ -50,9 +50,7 @@ int main(int argc, char **argv)
 	{
 		if (r - p > 2)
 		{
-//MyPrintOutput("GOT IT !!! \n");
-			fprintf(stdout,">> GOT IT !!! \n");
-			assert(0);
+			MyPrintOutput(">> strchr + pointer arithmetic works !!!\n");
 		}
 	}
 }

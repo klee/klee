@@ -1,5 +1,8 @@
 #!/bin/bash
-PARSER /tmp/Z3queries.txt /tmp/lastQuery.txt
+#PARSER /tmp/Z3queries.txt /tmp/lastQuery.txt
+oldQueries="/tmp/lastQuery_*.txt"
+rm $oldQueries
+PARSER /tmp/Z3queries.txt /tmp/lastQuery
 echo "))" >> /tmp/AB_All_Versions.txt
 sed -i 's/(reset)/ /g' /tmp/lastQuery.txt
 cat /tmp/AB_All_Versions.txt >> /tmp/lastQuery.txt
