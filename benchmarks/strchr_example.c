@@ -48,6 +48,8 @@ int main(int argc, char **argv)
 		/****************************************/
 		p1 = malloc(i1);
 		p2 = malloc(i1);
+    markString(p1);
+    markString(p2);
 		
 		/********************************/
 		/*                              */

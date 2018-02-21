@@ -1016,6 +1016,10 @@ BCREATE(AShrExpr, AShr)
 
 #define CMPCREATE(_e_op, _op) \
 ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
+  if(l->getWidth() == Expr::Int || r->getWidth() == Expr::Int)  {   \
+      if(l->getWidth() == Expr::Int) {return _e_op ## _create(l, BvToIntExpr::create(r));} \
+      else {return _e_op ## _create(BvToIntExpr::create(l), r);}    \
+  }                                                                 \
   assert(l->getWidth()==r->getWidth() && "type mismatch");              \
   if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l))                     \
     if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))                   \
@@ -1025,6 +1029,10 @@ ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
 
 #define CMPCREATE_T(_e_op, _op, _reflexive_e_op, partialL, partialR) \
 ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) {    \
+   if(l->getWidth() == Expr::Int || r->getWidth() == Expr::Int)  {   \
+      if(l->getWidth() == Expr::Int) {return _e_op ## _create(l.get(), BvToIntExpr::create(r).get());} \
+      else {return _e_op ## _create(BvToIntExpr::create(l).get(), r.get());}    \
+  }                                                                 \
   assert(l->getWidth()==r->getWidth() && "type mismatch");             \
   if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l)) {                  \
     if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))                  \

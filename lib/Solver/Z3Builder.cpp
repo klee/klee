@@ -1049,7 +1049,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     int left_width = *width_out;
     Z3ASTHandle right = construct(ee->right, width_out);
     assert(*width_out == left_width && "Sort of eq don't match");
- //   llvm::errs() << "Eq: left: " << left_width << " right: " << *width_out << "\n";
+    llvm::errs() << "Eq: left: " << left_width << " right: " << *width_out << "\n";
 //    ee->dump();
 
    if (*width_out == 1) {

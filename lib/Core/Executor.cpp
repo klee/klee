@@ -3503,19 +3503,19 @@ void Executor::executeStrchr(ExecutionState &state, KInstruction *target,
 
   const MemoryObject* mos = sOP.first;
 
-	ref<Expr> one  = ConstantExpr::create(1,Expr::Int64);
-	ref<Expr> zero = ConstantExpr::create(0,Expr::Int64);
+	ref<Expr> one  = BvToIntExpr::create(ConstantExpr::create(1,Expr::Int64));
+	ref<Expr> zero = BvToIntExpr::create(ConstantExpr::create(0,Expr::Int64));
 	ref<Expr> minusOne = SubExpr::create(zero,one);
 
 	/*******************************/
 	/* [8] Check if c appears in p */
 	/*******************************/
 	ref<Expr> x00 = StrConstExpr::create("\\x00");
-	ref<Expr> size   = mos->getSizeExpr();
+	ref<Expr> size   = mos->getIntSizeExpr();
 	ref<Expr> offset = mos->getOffsetExpr(s);	
 	ref<Expr> p_var  = StrSubstrExpr::create(
 		StrVarExpr::create(mos->getABSerial()),
-		offset,
+		BvToIntExpr::create(offset),
 		SubExpr::create(size,offset));
 
 	/*******************************/
@@ -3532,6 +3532,7 @@ void Executor::executeStrchr(ExecutionState &state, KInstruction *target,
 	/*******************************/
 	/* [8] Check if c appears in p */
 	/*******************************/
+  errs() << firstIndexOfc->getWidth() << " minusOne: " << minusOne->getWidth() << "\n";
 	ref<Expr> c_appears_in_p = NotExpr::create(EqExpr::create(firstIndexOfc,minusOne));	
 	ref<Expr> c_appears_in_p_before_x00 = SltExpr::create(firstIndexOfc,firstIndexOfx00);
 
