@@ -41,6 +41,7 @@ int main(int argc, char **argv)
 
 	p = malloc(10);
 	markString(p);
+  klee_assume(i < 5);
 
 	q = p + i;
 

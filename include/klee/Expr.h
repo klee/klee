@@ -290,6 +290,7 @@ public:
 
   /// returns the smallest number of bytes in which the given width fits
   static inline unsigned getMinBytesForWidth(Width w) {
+      if(w > 1024) return 8;
       return (w + 7) / 8;
   }
 

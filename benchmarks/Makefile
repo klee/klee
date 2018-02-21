@@ -15,7 +15,7 @@ all: $(BENCHMARKS:.c=.bc)
 	
 
 %.unopt.bc: %.preproc.c
-	$(CLANG) -c -emit-llvm -I$(KLEE_INCLUDES) -o $@ $<
+	$(CLANG) -g -c -emit-llvm -I$(KLEE_INCLUDES) -o $@ $<
 
 %.bc: %.unopt.bc
 	$(OPT) -instnamer -o $@ $<

@@ -543,6 +543,7 @@ void ObjectState::write(unsigned offset, ref<Expr> value) {
     write8(offset, ZExtExpr::create(value, Expr::Int8));
     return;
   }
+  if(w > 1024) w = 64;
 
   // Otherwise, follow the slow general case.
   unsigned NumBytes = w / 8;

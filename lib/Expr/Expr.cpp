@@ -662,8 +662,11 @@ ref<Expr> ConcatExpr::create8(const ref<Expr> &kid1, const ref<Expr> &kid2,
 
 ref<Expr> ExtractExpr::create(ref<Expr> expr, unsigned off, Width w) {
   unsigned kw = expr->getWidth();
+  if(kw > 1024){
+      kw = 64;
+  }
   assert(w > 0 && off + w <= kw && "invalid extract");
-  assert(expr->getWidth() < 1024 && "Extract of non bv type");
+  //assert(expr->getWidth() < 1024 && "Extract of non bv type");
   
   if (w == kw) {
     return expr;

@@ -3492,6 +3492,7 @@ void Executor::executeStrcpy(ExecutionState &state, KInstruction *target,
 
 void Executor::executeStrchr(ExecutionState &state, KInstruction *target, 
                              ref<Expr> s, ref<Expr> c) {
+  errs() << "Starting resolution\n";
   ObjectPair sOP;
   bool success;
   solver->setTimeout(coreSolverTimeout);
@@ -3500,6 +3501,7 @@ void Executor::executeStrchr(ExecutionState &state, KInstruction *target,
     success = state.addressSpace.resolveOne(cast<ConstantExpr>(s), sOP);
   }
   assert(success && "TODO: handle failure");
+  errs() << "Resolved\n";
 
   const MemoryObject* mos = sOP.first;
 
@@ -3634,6 +3636,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         ref<Expr> offset = mo->getOffsetExpr(address);		
         errs() << "Reading mo serial " << mo->serial << " version " << mo->version << "\n";
         assert(dyn_cast<ConstantExpr>(offset) && "Todo non constant offests");
+        offset = BvToIntExpr::create(offset);		
         errs() << "At offset: ";
         offset->dump();
         ref<Expr> AB_p_var = StrVarExpr::create(mo->getABSerial());
