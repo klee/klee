@@ -485,12 +485,8 @@ const char *ExprSMTLIBPrinter::getSMTLIBKeyword(const ref<Expr> &e)
   }
   case Expr::Str_Const:
   {
-  	char *value = (char *) malloc(512);
-  	memset(value,0,512);
-	value[0] = '\"';
-  	strncpy(value+1,((StrConstExpr *) e.get())->value,256);
-	value[strlen(value)]='\"';
-    return value;
+    std::string s = "\"" + dyn_cast<StrConstExpr>(e)->value + "\"";
+    return s.c_str();
   }
   case Expr::Str_Length:
     return "str.len";

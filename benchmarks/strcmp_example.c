@@ -38,7 +38,7 @@ int main(int argc, char **argv)
 	/********************************/
 	/* [8] example tests to try out */
 	/********************************/
-	if ((5 <= i1) && (i1 <= 6))
+	if ((15 <= i1) && (i1 <= 16))
 	{	
 		/****************************************/
 		/*                                      */
@@ -83,7 +83,8 @@ int main(int argc, char **argv)
 		/********************************/
 		if (strcmp(p2,p1) != 0)
 		{
-			MyPrintOutput("INSIDE if (...)");
+			//MyPrintOutput("INSIDE if (...)");
+			MyPrintOutput(p2);
 			assert(0);
 		}
 	}

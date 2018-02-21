@@ -560,6 +560,7 @@ public:
   /// a symbolic array. If non-empty, this size of this array is equivalent to
   /// the array size.
   const std::vector<ref<ConstantExpr> > constantValues;
+  Array(const std::string &_name): name(_name), size(0), domain(0), range(0){};
 
 private:
   unsigned hashValue;
@@ -1131,41 +1132,6 @@ public:
 	static bool classof(const ConstantExpr *) { return false; }	
 };
 
-#define MAX_CONST_STRING_LENGTH 512
-#define MAX_STRING_VAR_NAME_LENGTH 512
-class StrConstExpr : public Expr {
-public:
-	char value[MAX_CONST_STRING_LENGTH];
-
-	StrConstExpr(const char *in_value)
-	{
-		memset(value,0,MAX_CONST_STRING_LENGTH);
-		strncpy(value,in_value,MAX_CONST_STRING_LENGTH-1);		
-		value[MAX_CONST_STRING_LENGTH-1]=0;
-	}
-
-	static ref<Expr> create(const char *value)
-	{
-		return StrConstExpr::alloc(value);
-	}
-
-	static ref<Expr> alloc(const char *value)
-	{
-		ref<Expr> res(new StrConstExpr(value));
-		res->computeHash();
-		return res;
-	}
-	virtual unsigned computeHash();
-	virtual int compareContents(const Expr &b)  const {return   0;}		
-	virtual Kind      getKind()                 const {return   Expr::Str_Const;}	
-	virtual Width     getWidth()                const {return   Expr::String;}	
-	virtual unsigned  getNumKids()              const {return   0;}	
-	virtual ref<Expr> getKid(unsigned int)      const {return NULL;}
-	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {assert(0); ref<Expr> moish; return moish;}
-	static bool classof(const Expr *E) { return E->getKind() == Expr::Str_Const; }
-	static bool classof(const ConstantExpr *) { return false; }	
-};
-
 
 class StrVarExpr : public Expr {
 public:
@@ -1424,8 +1390,10 @@ public:
 
 private:
   llvm::APInt value;
+  std::string str_value;
 
-  ConstantExpr(const llvm::APInt &v) : value(v) {}
+  ConstantExpr(const llvm::APInt &v) : value(v), str_value("") {}
+  ConstantExpr(const std::string &v) : value((unsigned)8, (uint64_t)0), str_value(v) {}
 
 public:
   ~ConstantExpr() {}
@@ -1487,6 +1455,11 @@ public:
   void toMemory(void *address);
 
   static ref<ConstantExpr> alloc(const llvm::APInt &v) {
+    ref<ConstantExpr> r(new ConstantExpr(v));
+    r->computeHash();
+    return r;
+  }
+  static ref<ConstantExpr> create(std::string &v) {
     ref<ConstantExpr> r(new ConstantExpr(v));
     r->computeHash();
     return r;
@@ -1568,6 +1541,39 @@ public:
   ref<ConstantExpr> Neg();
   ref<ConstantExpr> Not();
 };
+
+class StrConstExpr : public Expr {
+public:
+	std::string value;
+
+	StrConstExpr(std::string _value): value(_value){ }
+
+	static ref<Expr> create(const char *value)
+	{
+		return StrConstExpr::alloc(std::string(value));
+	}
+	static ref<Expr> create(std::string value)
+	{
+		return StrConstExpr::alloc(value);
+	}
+
+	static ref<Expr> alloc(std::string value)
+	{
+		ref<Expr> res(new StrConstExpr(value));
+		res->computeHash();
+		return res;
+	}
+	virtual unsigned computeHash();
+	virtual int compareContents(const Expr &b)  const {return   0;}		//TODO: do proper compare andprobably hash
+	virtual Kind      getKind()                 const {return   Expr::Str_Const;}	
+	virtual Width     getWidth()                const {return   Expr::String;}	
+	virtual unsigned  getNumKids()              const {return   0;}	
+	virtual ref<Expr> getKid(unsigned int)      const {return NULL;}
+	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {assert(0); ref<Expr> moish; return moish;}
+	static bool classof(const Expr *E) { return E->getKind() == Expr::Str_Const; }
+	static bool classof(const ConstantExpr *) { return false; }	
+};
+
 
 // Implementations
 

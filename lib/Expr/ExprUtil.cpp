@@ -95,6 +95,11 @@ protected:
 
     return Action::doChildren();
   }
+  Action visitStrVar(const StrVarExpr &sv) {
+    Array *dummyArray = new Array(sv.name);
+    objects.push_back(dummyArray);
+    return Action::doChildren();
+  }
 
 public:
   std::set<const Array*> results;

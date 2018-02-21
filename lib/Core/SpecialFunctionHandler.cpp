@@ -2357,16 +2357,53 @@ void SpecialFunctionHandler::handleMyPrintOutput(
 	/**********************************************/
 	llvm::GlobalVariable    *actualCStringVar     = (llvm::GlobalVariable    *) (value0Gep->getOperand(0));
 	llvm::ConstantDataArray *actualCStringVarTag  = (llvm::ConstantDataArray *) (actualCStringVar->getInitializer());
-	std::string actualCStringContent              = actualCStringVarTag->getAsCString();
+//	std::string actualCStringContent              = actualCStringVarTag->getAsCString();
 	errs() << "HELLO!\n";
 	
 	/*******************************/
 	/* [6] Print Message to stdout */
 	/*******************************/
-	klee_warning("%s",actualCStringContent.c_str());
-	system("z3QueriesParser");
-	system("cat /tmp/output.txt");
-	exit(0);
+//	klee_warning("%s",actualCStringContent.c_str());
+	//system("z3QueriesParser");
+//	  ref<ConstantExpr> ce;
+//    bool success = executor.solver->getValue(state, arguments[0], ce);
+//    errs() << success <<  "is success\n";
+//    ce->dump();
+//    exit(0);
+ //system("cat /tmp/output.txt");
+  Executor::ExactResolutionList rl;
+  executor.resolveExact(state, arguments[0], rl, "mark string");
+  
+  for (Executor::ExactResolutionList::iterator it = rl.begin(), 
+         ie = rl.end(); it != ie; ++it) {
+    const MemoryObject *mo = it->first.first;
+    std::string ab_name = mo->getABSerial();
+
+    errs() << "Looking up an ab serial " << ab_name << " size " << mo->size << "\n";
+    ref<ConstantExpr> ce;
+    bool success = executor.solver->getValue(state, StrVarExpr::create(ab_name.c_str()), ce);
+    assert(success && "Failed to succesfully get value");
+    std::string ab_value;
+    ce->toString(ab_value, 1024);
+    std::string s = "";
+    // loop through all characters
+    for(char c : ab_value)
+    {
+      if(isprint(c))
+         s += c;
+         else
+         {
+           std::stringstream stream;
+           stream << std::hex << (unsigned int)(unsigned char)(c);
+           std::string code = stream.str();
+           s += std::string("\\x")+(code.size()<2?"0":"")+code;
+        }
+    }
+    outs() << ab_name << ": " << s << "\n";
+  }
+
+ 
+exit(0);
 }
 
 /**************************************************************/

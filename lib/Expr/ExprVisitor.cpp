@@ -39,19 +39,6 @@ ref<Expr> ExprVisitor::visit(const ref<Expr> &e) {
 
 ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) 
 {
-  if (e.get()->getKind() == Expr::Str_Eq)          return e;
-  if (e.get()->getKind() == Expr::Str_Var)         return e;
-  if (e.get()->getKind() == Expr::Str_Atoi)        return e;
-  if (e.get()->getKind() == Expr::Str_Itoa)        return e;
-  if (e.get()->getKind() == Expr::Str_Const)       return e;
-  if (e.get()->getKind() == Expr::Str_CharAt)      return e;
-  if (e.get()->getKind() == Expr::Str_Substr)      return e;
-  if (e.get()->getKind() == Expr::Str_Length)      return e;
-  if (e.get()->getKind() == Expr::Str_Compare)     return e;
-  if (e.get()->getKind() == Expr::Str_FirstIdxOf)  return e;
-  if (e.get()->getKind() == Expr::Str_FromBitVec8) return e;
-  if (e.get()->getKind() == Expr::BvToInt) return e;
-
   if (isa<ConstantExpr>(e)) {    
     return e;
   } else {
@@ -100,6 +87,20 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e)
     case Expr::Sle: res = visitSle(static_cast<SleExpr&>(ep)); break;
     case Expr::Sgt: res = visitSgt(static_cast<SgtExpr&>(ep)); break;
     case Expr::Sge: res = visitSge(static_cast<SgeExpr&>(ep)); break;
+    case Expr::Str_Eq: res = visitStrEq(static_cast<StrEqExpr&>(ep)); break;
+    case Expr::Str_Var: res = visitStrVar(static_cast<StrVarExpr&>(ep)); break; 
+//    case Expr::Str_Atoi: res = visitStr(static_cast<Str_Itoa>(ep)); breal;
+//  if (e.get()->getKind() == Expr::Str_Itoa)        return e;
+    case Expr::Str_Const: res = visitStrConst(static_cast<StrConstExpr&>(ep)); break;
+    case Expr::Str_CharAt: res = visitCharAt(static_cast<StrCharAtExpr&>(ep)); break;
+    case Expr::Str_Substr: res = visitStrSubstr(static_cast<StrSubstrExpr&>(ep)); break;
+    case Expr::Str_Length: res = visitStrLen(static_cast<StrLengthExpr&>(ep)); break;
+    case Expr::Str_Compare: res = visitStrCompare(static_cast<StrCmpExpr&>(ep)); break;
+    case Expr::Str_FirstIdxOf: res = visitFirstIndexOf(static_cast<StrFirstIdxOfExpr&>(ep)); break;
+    case Expr::Str_FromBitVec8: res = visitStrFromBv8(static_cast<StrFromBitVector8Expr&>(ep)); break;
+    case Expr::BvToInt: res = visitBvToInt(static_cast<BvToIntExpr&>(ep)); break;
+
+
     case Expr::Constant:
     default:
       assert(0 && "invalid expression kind");
@@ -149,6 +150,16 @@ ExprVisitor::Action ExprVisitor::visitExprPost(const Expr&) {
 ExprVisitor::Action ExprVisitor::visitNotOptimized(const NotOptimizedExpr&) {
   return Action::doChildren(); 
 }
+ExprVisitor::Action ExprVisitor::visitStrEq(const StrEqExpr&)     { return Action::doChildren();}
+ExprVisitor::Action ExprVisitor::visitStrVar(const StrVarExpr&)   { return Action::doChildren();}
+ExprVisitor::Action ExprVisitor::visitStrConst(const StrConstExpr&) { return Action::doChildren();}
+ExprVisitor::Action ExprVisitor::visitCharAt(const StrCharAtExpr&) { return Action::doChildren();}
+ExprVisitor::Action ExprVisitor::visitStrSubstr(const StrSubstrExpr&) { return Action::doChildren();}
+ExprVisitor::Action ExprVisitor::visitStrLen(const StrLengthExpr&) { return Action::doChildren();}
+ExprVisitor::Action ExprVisitor::visitStrCompare(const StrCmpExpr&) { return Action::doChildren();}
+ExprVisitor::Action ExprVisitor::visitFirstIndexOf(const StrFirstIdxOfExpr&) { return Action::doChildren();}
+ExprVisitor::Action ExprVisitor::visitStrFromBv8(const StrFromBitVector8Expr&) { return Action::doChildren();}
+ExprVisitor::Action ExprVisitor::visitBvToInt(const BvToIntExpr&) { return Action::doChildren();}
 
 ExprVisitor::Action ExprVisitor::visitRead(const ReadExpr&) {
   return Action::doChildren(); 

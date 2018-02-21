@@ -372,6 +372,9 @@ void ConstantExpr::toMemory(void *address) {
 }
 
 void ConstantExpr::toString(std::string &Res, unsigned radix) const {
+  if(!str_value.empty() && radix == 1024) {
+    Res = str_value; return;
+  }
   Res = value.toString(radix, false);
 }
 
