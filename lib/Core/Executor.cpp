@@ -3434,14 +3434,14 @@ void Executor::executeStrcpy(ExecutionState &state, KInstruction *target,
   ref<Expr> AB_dst_var = StrVarExpr::create(moDst->getABSerial());
   ref<Expr> AB_src_var = StrVarExpr::create(moSrc->getABSerial());
 
-  ref<Expr> dst_offset = moDst->getOffsetExpr(dst);
-  ref<Expr> src_offset = moSrc->getOffsetExpr(src);
+  ref<Expr> dst_offset = BvToIntExpr::create(moDst->getOffsetExpr(dst));
+  ref<Expr> src_offset = BvToIntExpr::create(moSrc->getOffsetExpr(src));
 
-  ref<Expr> dst_size = SubExpr::create(moDst->getSizeExpr(),moDst->getOffsetExpr(dst));
-  ref<Expr> src_size = SubExpr::create(moSrc->getSizeExpr(),moSrc->getOffsetExpr(src));
+  ref<Expr> dst_size = SubExpr::create(moDst->getIntSizeExpr(),moDst->getOffsetExpr(dst));
+  ref<Expr> src_size = SubExpr::create(moSrc->getIntSizeExpr(),moSrc->getOffsetExpr(src));
 
-  ref<Expr> one  = ConstantExpr::create(1,Expr::Int64);
-  ref<Expr> zero = ConstantExpr::create(0,Expr::Int64);
+  ref<Expr> one  = BvToIntExpr::create(ConstantExpr::create(1,Expr::Int64));
+  ref<Expr> zero = BvToIntExpr::create(ConstantExpr::create(0,Expr::Int64));
   ref<Expr> minusOne = SubExpr::create(zero,one);
 
 	ref<Expr> prefixStart  = zero;
