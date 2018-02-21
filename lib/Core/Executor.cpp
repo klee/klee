@@ -3366,16 +3366,16 @@ void Executor::executeStrlen(
 	/*********************************************/
 	/* [4] zero, one and minusOne as ref<Expr>'s */
 	/*********************************************/
-	ref<Expr> one  = ConstantExpr::create(1,Expr::Int64);
-	ref<Expr> zero = ConstantExpr::create(0,Expr::Int64);
+	ref<Expr> one  = BvToIntExpr::create(ConstantExpr::create(1,Expr::Int64));
+	ref<Expr> zero = BvToIntExpr::create(ConstantExpr::create(0,Expr::Int64));
 	ref<Expr> minusOne = SubExpr::create(zero,one);
 
 	/*********************************/
 	/* [5] AB, svar, offset and size */
 	/*********************************/
 	ref<Expr> AB = StrVarExpr::create(mos->getABSerial());
-	ref<Expr> offset = mos->getOffsetExpr(s);
-	ref<Expr> size = SubExpr::create(mos->getSizeExpr(),offset);
+	ref<Expr> offset = BvToIntExpr::create(mos->getOffsetExpr(s));
+	ref<Expr> size = SubExpr::create(mos->getIntSizeExpr(),offset);
 
 	/*****************************/
 	/* [6] Is s NULL terminated? */

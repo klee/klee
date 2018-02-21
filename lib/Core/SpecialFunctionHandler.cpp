@@ -2401,9 +2401,6 @@ void SpecialFunctionHandler::handleMyPrintOutput(
     }
     outs() << ab_name << ": " << s << "\n";
   }
-
- 
-exit(0);
 }
 
 /**************************************************************/

@@ -380,13 +380,25 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
 
 //        std::string str = "hel\x03lao";
         ::Z3_ast out;
-        Z3_model_eval(builder->ctx, theModel, 
-              Z3_mk_const(builder->ctx,Z3_mk_string_symbol(builder->ctx,array->name.c_str()),Z3_mk_string_sort(builder->ctx))
-              ,Z3_TRUE, &out);
-  
-        std::string str(Z3_get_string(builder->ctx,out));
+        bool successfulEval =
+        Z3_model_eval(builder->ctx, 
+              theModel, 
+              Z3_mk_const(builder->ctx,
+                          Z3_mk_string_symbol(builder->ctx,
+                                              array->name.c_str()),
+                          Z3_mk_string_sort(builder->ctx)),
+              Z3_TRUE, 
+              &out);
+        assert(successfulEval && "Failed to evaluate model");
+        Z3_inc_ref(builder->ctx, out);
+
+        const char *c =  Z3_get_string(builder->ctx,out);
+        fprintf(stderr, "str is %s\n", c);
+        std::string str(c);
+        llvm::errs() << "str: " << str << "\n";
         std::vector<unsigned char> data(str.begin(), str.end());
         values->push_back(data);
+        Z3_dec_ref(builder->ctx, out);
 
       }
     }
