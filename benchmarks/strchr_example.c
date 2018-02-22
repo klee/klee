@@ -15,81 +15,34 @@
 /* KLEE INCLUDE FILES */
 /**********************/
 #include "klee/klee.h"
-
-void MyMalloc(char *p, int size);
-void MyConstStringAssign(char *p,const char *q);
-void MyStringAssignWithOffset(char *p, char *q,int offset1);
-void MyWriteCharToStringAtOffset(char *p,int offset2,char c);
-
 /************/
 /* main ... */
 /************/
 int main(int argc, char **argv)
 {
-	int   i1;
-	int   i2 = 3;
-	char *p1;
-	char *p2;
+	char *p;
+	char *q;
+	char *r;
 
-	/**********************************/
-	/* [7] And make them symbolic ... */
-	/**********************************/
-	klee_make_symbolic(&i1,sizeof(i1),"i1");
+	unsigned int i;
 
-	/********************************/
-	/* [8] example tests to try out */
-	/********************************/
-	if ((5 <= i1) && (i1 <= 6))
-	{	
-		/****************************************/
-		/*                                      */
-		/* allocate buffers of symbolic size i1 */
-		/*                                      */
-		/****************************************/
-		p1 = malloc(i1);
-		p2 = malloc(i1);
-    markString(p1);
-    markString(p2);
-		
-		/********************************/
-		/*                              */
-		/*       +---+---+---+---+---+  */
-		/* p1 == | P | ? | Q | D |x00|  */
-		/*       +---+---+---+---+---+  */
-		/*                              */
-		/********************************/
-		p1[0] = 'P';
-		p1[1] = 'M';
-		p1[2] = 'Q';
-		p1[3] = 'D';
-		p1[4] =  0 ;
-		 
-		/********************************/
-		/*                              */
-		/*       +---+---+---+---+---+  */
-		/* p2 == | P | ? | Q | D |x00|  */
-		/*       +---+---+---+---+---+  */
-		/*                              */
-		/********************************/
-		p2[4] = 'M';
-		p2[0] = 'P';
-		p2[2] = 'Q';
-		p2[3] = 'D';
+	klee_make_symbolic(&i,sizeof( i ), "i");
 
-		/********************************/
-		/*                              */
-		/*                              */
-		/* can p1 and p2 be different ? */
-		/*                              */
-		/*                              */
-		/********************************/
-		if (strchr(p1,'M'))
+	p = malloc(10);
+	markString(p);
+
+	p[9]=0;
+	p[8]=0;
+
+	if (i < 20)
+	{
+		q = p + i;
+
+		r = strchr(q, '#');
+
+		if ((r - p > 5) && (r - q < 5))
 		{
-			if (strchr(p1,'M') > p1)
-			{
-				MyPrintOutput("INSIDE if (...)");
-				assert(0);
-			}
+			MyPrintOutput(">> strchr + pointer arithmetic works !!!\n");
 		}
 	}
 }

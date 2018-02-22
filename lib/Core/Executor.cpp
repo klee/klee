@@ -3252,49 +3252,80 @@ void Executor::resolveExact(ExecutionState &state,
                           Ptr, NULL, getAddressInfo(*unbound, p));
   }
 }
-void Executor::executeStrcmp(ExecutionState &state, KInstruction *target, 
-                             ref<Expr> s1, ref<Expr> s2) {
-  ObjectPair s1OP;
-  bool success;
-  solver->setTimeout(coreSolverTimeout);
-  if (!state.addressSpace.resolveOne(state, solver, s1, s1OP, success)) {
-    s1 = toConstant(state,s1, "resolveOne failure");
-    success = state.addressSpace.resolveOne(cast<ConstantExpr>(s1), s1OP);
-  }
-  assert(success && "TODO: handle failure");
+void Executor::executeStrcmp(
+	ExecutionState &state,
+	KInstruction *target,
+	ref<Expr> s1,
+	ref<Expr> s2)
+{
+	bool result;
+	bool success;
+	ObjectPair s1OP;
+	ObjectPair s2OP;
 
-  ObjectPair s2OP;
-  solver->setTimeout(coreSolverTimeout);
-  if (!state.addressSpace.resolveOne(state, solver, s2, s2OP, success)) {
-    s2 = toConstant(state, s2, "resolveOne failure");
-    success = state.addressSpace.resolveOne(cast<ConstantExpr>(s2), s2OP);
-  }
-  assert(success && "TODO: handle failure");
-  const MemoryObject* moP = s1OP.first;
-  const MemoryObject* moQ= s2OP.first;
+	/*****************************/
+	/* [1] Resolve the string s1 */
+	/*****************************/
+	solver->setTimeout(coreSolverTimeout);
+	if (!state.addressSpace.resolveOne(state, solver, s1, s1OP, success))
+	{
+		s1 = toConstant(state,s1, "resolveOne failure");
+		success = state.addressSpace.resolveOne(cast<ConstantExpr>(s1), s1OP);
+	}
+	assert(success && "TODO: handle failure");
 
+	/*****************************/
+	/* [3] Resolve the string s1 */
+	/*****************************/
+	solver->setTimeout(coreSolverTimeout);
+	if (!state.addressSpace.resolveOne(state, solver, s2, s2OP, success))
+	{
+		s2 = toConstant(state, s2, "resolveOne failure");
+		success = state.addressSpace.resolveOne(cast<ConstantExpr>(s2), s2OP);
+	}
+
+	/******************************************/
+	/* [4] Make sure everything went well ... */
+	/******************************************/
+	assert(success && "TODO: handle failure");
+
+	/**************************/
+	/* [5] The memory objects */
+	/**************************/
+	const MemoryObject* moP = s1OP.first;
+	const MemoryObject* moQ = s2OP.first;
+
+	/*********************************************/
+	/* [6] zero, one and minusOne as ref<Expr>'s */
+	/*********************************************/
 	ref<Expr> one  = BvToIntExpr::create(ConstantExpr::create(1,Expr::Int64));
 	ref<Expr> zero  = BvToIntExpr::create(ConstantExpr::create(0,Expr::Int64));
 	ref<Expr> minusOne = SubExpr::create(zero,one);
 
-
 	ref<Expr> x00      = StrConstExpr::create("\\x00");
- 	ref<Expr> AB_p_var = StrVarExpr::create(moP->getABSerial());
-	ref<Expr> AB_q_var = StrVarExpr::create(moQ->getABSerial());
+	/*********************************/
+	/* [7] AB, svar, offset and size */
+	/*********************************/
+	ref<Expr> ABp_size = moP->getIntSizeExpr();
+	ref<Expr> ABq_size = moQ->getIntSizeExpr();
+	ref<Expr> offset_p = BvToIntExpr::create(moP->getOffsetExpr(s1));
+	ref<Expr> offset_q = BvToIntExpr::create(moQ->getOffsetExpr(s2));
+ 	ref<Expr> ABp      = StrVarExpr::create(moP->getABSerial());
+	ref<Expr> ABq      = StrVarExpr::create(moQ->getABSerial());
+	ref<Expr> p_size   = SubExpr::create(ABp_size,offset_p);
+	ref<Expr> q_size   = SubExpr::create(ABq_size,offset_q);
+	ref<Expr> p_var    = StrSubstrExpr::create(ABp,offset_p, p_size);
+	ref<Expr> q_var    = StrSubstrExpr::create(ABq,offset_q, q_size);
 
-  ref<Expr> p_size_minus_offset = SubExpr::create(moP->getIntSizeExpr(),moP->getOffsetExpr(s1));
-  ref<Expr> q_size_minus_offset = SubExpr::create(moQ->getIntSizeExpr(),moQ->getOffsetExpr(s2));
-
-	ref<Expr> AB_p_offset_var = StrSubstrExpr::create(AB_p_var,BvToIntExpr::create(moP->getOffsetExpr(s1)), p_size_minus_offset);
-	ref<Expr> AB_q_offset_var = StrSubstrExpr::create(AB_q_var,BvToIntExpr::create(moQ->getOffsetExpr(s2)), q_size_minus_offset);
-
-	ref<Expr> firstIdxOf_x00_in_p = StrFirstIdxOfExpr::create(AB_p_offset_var,x00);
-	ref<Expr> firstIdxOf_x00_in_q = StrFirstIdxOfExpr::create(AB_q_offset_var,x00);
+	/*****************************/
+	/* [8] NULL temination stuff */
+	/*****************************/
+	ref<Expr> firstIdxOf_x00_in_p = StrFirstIdxOfExpr::create(p_var,x00);
+	ref<Expr> firstIdxOf_x00_in_q = StrFirstIdxOfExpr::create(q_var,x00);
 
 	ref<Expr> p_is_not_NULL_terminated = EqExpr::create(firstIdxOf_x00_in_p,minusOne);
 	ref<Expr> q_is_not_NULL_terminated = EqExpr::create(firstIdxOf_x00_in_q,minusOne);
 
-  errs() << "before not\n";
 	ref<Expr> p_is_NULL_terminated = NotExpr::create(p_is_not_NULL_terminated);
 	ref<Expr> q_is_NULL_terminated = NotExpr::create(q_is_not_NULL_terminated);
   errs() << "after not\n";
@@ -3312,26 +3343,33 @@ void Executor::executeStrcmp(ExecutionState &state, KInstruction *target,
 		p_size_minus_offset,
 		q_size_minus_offset);
 //================= START the actual constraints =================
-	ref<Expr> p_and_q_are_equal_from_0_to_min_length_p_q =
-	StrEqExpr::create(
-		StrSubstrExpr::create(AB_p_var,BvToIntExpr::create(moP->getOffsetExpr(s1)),min_length_p_q),
-		StrSubstrExpr::create(AB_q_var,BvToIntExpr::create(moQ->getOffsetExpr(s2)),min_length_p_q));
-//===========================
-  ref<Expr> e1 = AndExpr::create(
-			p_and_q_are_both_NULL_terminated,
-			p_and_q_are_equal_from_0_to_min_length_p_q);
-			
-	ref<Expr> e600 = AndExpr::create(
-			p_and_q_are_both_NULL_terminated,
-			StrEqExpr::create(
-				StrSubstrExpr::create(AB_p_offset_var,zero,StrFirstIdxOfExpr::create(AB_p_offset_var,x00)),
-				StrSubstrExpr::create(AB_q_offset_var,zero,StrFirstIdxOfExpr::create(AB_q_offset_var,x00))));
+	ref<Expr> p_and_q_are_both_NULL_terminated = AndExpr::create(
+		p_is_NULL_terminated,
+		q_is_NULL_terminated);
 
-	bindLocal(target,state,SelectExpr::create(e600,
-                                            ConstantExpr::create(0,Expr::Int32),	
-                                            ConstantExpr::create(1,Expr::Int32)));
 
-	
+	/**********************************************************************/
+	/* [9] Check with the solver whether both strings are NULL terminated */
+	/**********************************************************************/
+	solver->mayBeTrue(state,NotExpr::create(p_and_q_are_both_NULL_terminated),result);
+	if (result)
+	{
+		const char *underline = "                       ===";
+		klee_error("Comparing some non NULL terminated string\n%s",underline);			
+		assert(0);
+	}
+
+	ref<Expr> final_exp = StrEqExpr::create(
+			StrSubstrExpr::create(p_var,zero,firstIdxOf_x00_in_p),
+			StrSubstrExpr::create(q_var,zero,firstIdxOf_x00_in_q));
+
+	bindLocal(
+		target,
+		state,
+		SelectExpr::create(
+			final_exp,
+			ConstantExpr::create(0,Expr::Int32),
+			ConstantExpr::create(1,Expr::Int32)));
 }
 
 void Executor::executeStrlen(
@@ -3391,8 +3429,8 @@ void Executor::executeStrlen(
 	solver->mayBeTrue(state,p_is_not_NULL_terminated,result);
 	if (result)
 	{
-		const char *underline = "                                  ===";
-		klee_error("Invoking strlen on a non NULL terminated string %s\n",underline);			
+		const char *underline = "                                 ===";
+		klee_error("Invoking strlen on a non NULL terminated string\n %s\n",underline);			
 		assert(0);
 	}
 
@@ -3408,42 +3446,95 @@ void Executor::executeStrlen(
 	bindLocal(target,state,firstIdxOf_x00_in_s);
 }
 
-
-void Executor::executeStrcpy(ExecutionState &state, KInstruction *target, 
-                             ref<Expr> dst, ref<Expr> src)
+/**************************************************************************************************************/
+/*                                                                                                            */
+/*     ssssss    tt                                                                                           */
+/*   sss         tt                                                                                           */
+/*  sss          tttttt    rr  rrrr    cccccccc   pppppppp   yy     yy     ((  pppppppp       qqqqqqqq  ))    */
+/*   sss         tt        rr rr      cc          pp     pp   yy    yy    ((   pp     pp     qq     qq   ))   */
+/*     sss       tt        rrrr      cc           pp     pp    yy   yy   ((    pp     pp     qq     qq    ))  */
+/*       sss     tt        rrr       cc           pp     pp     yy  yy   ((    pp     pp     qq     qq    ))  */
+/*        sss    tt        rr        cc           pp     pp      yy yy   ((    pp     pp     qq     qq    ))  */
+/*        sss     tt       rr         cc          pp    pp        yyyy   ((    pp    pp      qq     qq    ))  */
+/*   sssssss       ttttt   rr          cccccccc   ppppppp          yyy    ((   ppppppp   ,,   qqqqqqqq   ))   */
+/*                                                pp                yy     ((  pp        ,,         qq  ))    */
+/*                                                pp                yy         pp       ,,          qq        */
+/*                                                pp                yy         pp                   qq        */
+/*                                                pp               yy          pp                   qq        */
+/*                                                pp          yy  yy           pp                   qq        */
+/*                                                pp           yyyy            pp                   qq        */
+/*                                                                                                            */
+/**************************************************************************************************************/
+void Executor::executeStrcpy(
+	ExecutionState &state,
+	KInstruction *target,
+	ref<Expr> dst,
+	ref<Expr> src)
 {
-  ObjectPair dstOP;
-  bool success;
-  solver->setTimeout(coreSolverTimeout);
-  if (!state.addressSpace.resolveOne(state, solver, dst, dstOP, success)) {
-    dst = toConstant(state,dst, "resolveOne failure");
-    success = state.addressSpace.resolveOne(cast<ConstantExpr>(dst), dstOP);
-  }
-  assert(success && "TODO: handle failure");
+	bool result;
+	bool success;
+	ObjectPair dstOP;
+	ObjectPair srcOP;
 
-  ObjectPair srcOP;
-  solver->setTimeout(coreSolverTimeout);
-  if (!state.addressSpace.resolveOne(state, solver, src, srcOP, success)) {
-    src = toConstant(state, src, "resolveOne failure");
-    success = state.addressSpace.resolveOne(cast<ConstantExpr>(src), srcOP);
-  }
-  assert(success && "TODO: handle failure");
-  const MemoryObject* moDst = dstOP.first;
-  const MemoryObject* moSrc = srcOP.first;
+	/******************************/
+	/* [1] Resolve the string dst */
+	/******************************/
+	solver->setTimeout(coreSolverTimeout);
+	if (!state.addressSpace.resolveOne(state, solver, dst, dstOP, success))
+	{
+		dst = toConstant(state,dst, "resolveOne failure");
+		success = state.addressSpace.resolveOne(cast<ConstantExpr>(dst), dstOP);
+	}
 
-  ref<Expr> AB_dst_var = StrVarExpr::create(moDst->getABSerial());
-  ref<Expr> AB_src_var = StrVarExpr::create(moSrc->getABSerial());
+	/******************************************/
+	/* [2] Make sure everything went well ... */
+	/******************************************/
+	assert(success && "TODO: handle failure");
 
-  ref<Expr> dst_offset = BvToIntExpr::create(moDst->getOffsetExpr(dst));
-  ref<Expr> src_offset = BvToIntExpr::create(moSrc->getOffsetExpr(src));
+	/******************************/
+	/* [3] Resolve the string dst */
+	/******************************/
+	solver->setTimeout(coreSolverTimeout);
+	if (!state.addressSpace.resolveOne(state, solver, src, srcOP, success))
+	{
+		src = toConstant(state, src, "resolveOne failure");
+		success = state.addressSpace.resolveOne(cast<ConstantExpr>(src), srcOP);
+	}
 
-  ref<Expr> dst_size = SubExpr::create(moDst->getIntSizeExpr(),moDst->getOffsetExpr(dst));
-  ref<Expr> src_size = SubExpr::create(moSrc->getIntSizeExpr(),moSrc->getOffsetExpr(src));
+	/******************************************/
+	/* [4] Make sure everything went well ... */
+	/******************************************/
+	assert(success && "TODO: handle failure");
 
-  ref<Expr> one  = BvToIntExpr::create(ConstantExpr::create(1,Expr::Int64));
-  ref<Expr> zero = BvToIntExpr::create(ConstantExpr::create(0,Expr::Int64));
-  ref<Expr> minusOne = SubExpr::create(zero,one);
+	/**************************/
+	/* [5] The memory objects */
+	/**************************/
+	const MemoryObject* moDst = dstOP.first;
+	const MemoryObject* moSrc = srcOP.first;
 
+	/*********************************************/
+	/* [6] zero, one and minusOne as ref<Expr>'s */
+	/*********************************************/
+	ref<Expr> one  = BvToIntExpr::create(ConstantExpr::create(1,Expr::Int64));
+	ref<Expr> zero = BvToIntExpr::create(ConstantExpr::create(0,Expr::Int64));
+	ref<Expr> minusOne = SubExpr::create(zero,one);
+
+		
+
+	/*********************************/
+	/* [7] AB, svar, offset and size */
+	/*********************************/
+	ref<Expr> AB_dst_var = StrVarExpr::create(moDst->getABSerial());
+	ref<Expr> AB_src_var = StrVarExpr::create(moSrc->getABSerial());
+	ref<Expr> dst_offset = BvToIntExpr::create(moDst->getOffsetExpr(dst));
+	ref<Expr> src_offset = BvToIntExpr::create(moSrc->getOffsetExpr(src));
+
+	ref<Expr> dst_size = SubExpr::create(moDst->getIntSizeExpr(),moDst->getOffsetExpr(dst));
+	ref<Expr> src_size = SubExpr::create(moSrc->getIntSizeExpr(),moSrc->getOffsetExpr(src));
+
+	/******************************/
+	/* [8] Prefix, Middle, Suffix */
+	/******************************/
 	ref<Expr> prefixStart  = zero;
 	ref<Expr> prefixLength = dst_offset;
 
@@ -3455,62 +3546,105 @@ void Executor::executeStrcpy(ExecutionState &state, KInstruction *target,
 	ref<Expr> suffixStart  = AddExpr::create(prefixLength,middleLength);
 	ref<Expr> suffixLength = SubExpr::create(moDst->getSizeExpr(),suffixStart);
 
-  const_cast<MemoryObject*>(moDst)->version++;
-  ref<Expr> AB_dst_new_var = StrVarExpr::create(moDst->getABSerial());
+	/***************************/
+	/* [9] New Dst Version ... */
+	/***************************/
+	const_cast<MemoryObject*>(moDst)->version++;
+	ref<Expr> AB_dst_new_var = StrVarExpr::create(moDst->getABSerial());
 
-	/*******************/
-	/* prefix equation */
-	/*******************/
+	/************************/
+	/* [10] prefix equation */
+	/************************/
 	ref<Expr> prefixEq = StrEqExpr::create(
 		StrSubstrExpr::create(AB_dst_var,    prefixStart,prefixLength),
 		StrSubstrExpr::create(AB_dst_new_var,prefixStart,prefixLength));
 			
-	/*******************/
-	/* suffix equation */
-	/*******************/
+	/************************/
+	/* [11] suffix equation */
+	/************************/
 	ref<Expr> suffixEq = StrEqExpr::create(
 		StrSubstrExpr::create(AB_dst_var,    suffixStart,suffixLength),	
 		StrSubstrExpr::create(AB_dst_new_var,suffixStart,suffixLength));
 			
-	/*******************/
-	/* middle equation */
-	/*******************/
+	/************************/
+	/* [12] middle equation */
+	/************************/
 	ref<Expr> middleEq = StrEqExpr::create(
 		StrSubstrExpr::create(AB_src_var,    src_offset,middleLength),	
 		StrSubstrExpr::create(AB_dst_new_var,dst_offset,middleLength));
 
+	/*********************************************************************/
+	/* [13] Check with the solver whether src can be NOT NULL terminated */
+	/*********************************************************************/
+	ref<Expr> Is_src_not_NULL_terminated = EqExpr::create(
+		firstIdxOf_x00_in_src,
+		minusOne);
+	solver->mayBeTrue(state,Is_src_not_NULL_terminated,result);
+	if (result)
+	{
+		const char *underline = "                       ===";
+		klee_error("Copying a non NULL terminated string\n%s",underline);			
+		assert(0);
+	}
+
+	/********************************************************************/
+	/* [14] Add prefix middle and suffix equations to state constraints */
+	/********************************************************************/
 	state.addConstraint(prefixEq);
 	state.addConstraint(suffixEq);
 	state.addConstraint(middleEq);
 
+	/***************************************************/
+	/* [15] Add length constraint to state constraints */
+	/***************************************************/
   	state.addConstraint(EqExpr::create(
 		StrLengthExpr::create(AB_dst_var),
 		StrLengthExpr::create(AB_dst_new_var)));
-
 }
 
+void Executor::executeStrchr(
+	ExecutionState &state,
+	KInstruction *target,
+	ref<Expr> s,
+	ref<Expr> c)
+{
+	bool result;
+	bool success;
+	ObjectPair sOP;
 
-void Executor::executeStrchr(ExecutionState &state, KInstruction *target, 
-                             ref<Expr> s, ref<Expr> c) {
-  errs() << "Starting resolution\n";
-  ObjectPair sOP;
-  bool success;
-  solver->setTimeout(coreSolverTimeout);
-  if (!state.addressSpace.resolveOne(state, solver, s, sOP, success)) {
-    s = toConstant(state,s, "resolveOne failure");
-    success = state.addressSpace.resolveOne(cast<ConstantExpr>(s), sOP);
-  }
-  assert(success && "TODO: handle failure");
-  errs() << "Resolved\n";
+	/****************************/
+	/* [1] Resolve the string s */
+	/****************************/
+	solver->setTimeout(coreSolverTimeout);
+	if (!state.addressSpace.resolveOne(state, solver, s, sOP, success))
+	{
+		s = toConstant(state,s, "resolveOne failure");
+		success = state.addressSpace.resolveOne(cast<ConstantExpr>(s), sOP);
+	}
+    
 
-  const MemoryObject* mos = sOP.first;
+	/******************************************/
+	/* [2] Make sure everything went well ... */
+	/******************************************/
+	assert(success && "TODO: handle failure");
 
+	/*************************/
+	/* [3] The memory object */
+	/*************************/
+	const MemoryObject* mos = sOP.first;
+	ref<Expr> inBounds = mos->getBoundsCheckPointer(s);
+	solver->mustBeTrue(state, inBounds, result);
+	assert(result && "Out of bound access");
+
+	/*********************************************/
+	/* [4] zero, one and minusOne as ref<Expr>'s */
+	/*********************************************/
 	ref<Expr> one  = BvToIntExpr::create(ConstantExpr::create(1,Expr::Int64));
 	ref<Expr> zero = BvToIntExpr::create(ConstantExpr::create(0,Expr::Int64));
 	ref<Expr> minusOne = SubExpr::create(zero,one);
 
 	/*******************************/
-	/* [8] Check if c appears in p */
+	/* [5] Check if c appears in p */
 	/*******************************/
 	ref<Expr> x00 = StrConstExpr::create("\\x00");
 	ref<Expr> size   = mos->getIntSizeExpr();
@@ -3521,12 +3655,12 @@ void Executor::executeStrchr(ExecutionState &state, KInstruction *target,
 		SubExpr::create(size,offset));
 
 	/*******************************/
-	/* [8] Check if c appears in p */
+	/* [6] Check if c appears in p */
 	/*******************************/
 	ref<Expr> c_as_length_1_string = StrFromBitVector8Expr::create(ExtractExpr::create(c,0,8));
 
 	/*******************************/
-	/* [8] Check if c appears in p */
+	/* [7] Check if c appears in p */
 	/*******************************/
 	ref<Expr> firstIndexOfc   = StrFirstIdxOfExpr::create(p_var,c_as_length_1_string);
 	ref<Expr> firstIndexOfx00 = StrFirstIdxOfExpr::create(p_var,x00);
@@ -3538,6 +3672,24 @@ void Executor::executeStrchr(ExecutionState &state, KInstruction *target,
 	ref<Expr> c_appears_in_p = NotExpr::create(EqExpr::create(firstIndexOfc,minusOne));	
 	ref<Expr> c_appears_in_p_before_x00 = SltExpr::create(firstIndexOfc,firstIndexOfx00);
 
+	/****************************************************************************/
+	/* [9] Issue an error when invoking strchr on a non NULL terminated string, */
+	/*     and the specific char can be missing ...                             */
+	/****************************************************************************/
+	ref<Expr> accessViolation = AndExpr::create(
+		EqExpr::create(firstIndexOfc,  minusOne),
+		EqExpr::create(firstIndexOfx00,minusOne));
+	solver->mayBeTrue(state,accessViolation,result);
+	if (result)
+	{
+		const char *underline = "                                                                   ===                             ===";
+		klee_error("Invoking strchr(s,c) and it is possible that both s is non NULL terminated, and c does not appear in s.\n %s\n",underline);			
+		assert(0);
+	}
+
+	/**************************************/
+	/* [10] bind the result of strchr ... */
+	/**************************************/
 	bindLocal(
 		target, 
 		state,

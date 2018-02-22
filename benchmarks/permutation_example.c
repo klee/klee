@@ -16,61 +16,44 @@
 /**********************/
 #include "klee/klee.h"
 
-void MyMalloc(char *p, int size);
-void MyConstStringAssign(char *p,const char *q);
-void MyStringAssignWithOffset(char *p, char *q,int offset1);
-void MyWriteCharToStringAtOffset(char *p,int offset2,char c);
-
 /************/
 /* main ... */
 /************/
 int main(int argc, char **argv)
 {
-	int   i1;
 	char *p1;
 	char *p2;
 
-	/**********************************/
-	/* [7] And make them symbolic ... */
-	/**********************************/
-	klee_make_symbolic(&i1,sizeof(i1),"i1");
+	/****************************************/
+	/*                                      */
+	/* allocate buffers of symbolic size i1 */
+	/*                                      */
+	/****************************************/
+	p1 = malloc(10);
+	p2 = malloc(10);
 
-	/********************************/
-	/* [8] example tests to try out */
-	/********************************/
-	if (i1 <= 30)
-	{	
-		/****************************************/
-		/*                                      */
-		/* allocate buffers of symbolic size i1 */
-		/*                                      */
-		/****************************************/
-		p1 = malloc(i1);
-		p2 = malloc(i1);
+	markString(p1);
+	markString(p2);
+
+	p1[9]=0;
+	p2[9]=0;
 		
-		if (strchr(p1,'A'))
+	if (strchr(p1,'A'))
+	{
+		if (strchr(p1,'B'))
 		{
-			if (strchr(p1,'B'))
+			if (strchr(p2,'D'))
 			{
-				if (strchr(p1,'C'))
+				if (strchr(p2,'M'))
 				{
-					if (strchr(p2,'D'))
+					if (strlen(p1) <= 6)
 					{
-						if (strchr(p2,'E'))
+						if (strlen(p2) <= 6)
 						{
-							if (strchr(p2,'F'))
+							if (strcmp(p1,p2) == 0)
 							{
-								if (strlen(p1) <= 6)
-								{
-									if (strlen(p2) <= 6)
-									{
-										if (strcmp(p1,p2) == 0)
-										{
-											MyPrintOutput("INSIDE if (...)");
-											assert(0);
-										}
-									}
-								}
+								MyPrintOutput("INSIDE if (...)");
+								assert(0);
 							}
 						}
 					}
@@ -79,3 +62,5 @@ int main(int argc, char **argv)
 		}
 	}
 }
+
+

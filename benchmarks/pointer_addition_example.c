@@ -16,16 +16,6 @@
 /**********************/
 #include "klee/klee.h"
 
-void MyMalloc(char *p, int size);
-void MyConstStringAssign(char *p,const char *q);
-void MyStringAssignWithOffset(char *p, char *q,int offset1);
-void MyWriteCharToStringAtOffset(char *p,int offset2,char c);
-
-void MyPrintOutput(char *s)
-{
-	fprintf(stdout,"%s\n",s);
-}
-
 /************/
 /* main ... */
 /************/
@@ -47,9 +37,9 @@ int main(int argc, char **argv)
 
 	r = strchr(q, '#');
 
-	if (i < 1)
+	if (i < 3)
 	{
-		if (r - p > 2)
+		if ((r - p > 5) && (r - q < 5))
 		{
 			MyPrintOutput(">> strchr + pointer arithmetic works !!!\n");
 		}

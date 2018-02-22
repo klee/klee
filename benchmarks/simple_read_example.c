@@ -16,11 +16,6 @@
 /**********************/
 #include "klee/klee.h"
 
-void MyMalloc(char *p, int size);
-void MyConstStringAssign(char *p,const char *q);
-void MyStringAssignWithOffset(char *p, char *q,int offset1);
-void MyWriteCharToStringAtOffset(char *p,int offset2,char c);
-
 /************/
 /* main ... */
 /************/
@@ -55,7 +50,7 @@ int main(int argc, char **argv)
 		/********************************/
 		/*                              */
 		/*       +---+---+---+---+---+  */
-		/* p1 == | P | ? | Q | D |x00|  */
+		/* p1 == | P | ? | M | T |x00|  */
 		/*       +---+---+---+---+---+  */
 		/*                              */
 		/********************************/
@@ -67,7 +62,7 @@ int main(int argc, char **argv)
 		/********************************/
 		/*                              */
 		/*       +---+---+---+---+---+  */
-		/* p2 == | P | ? | Q | D |x00|  */
+		/* p2 == | P | ? | M | T |x00|  */
 		/*       +---+---+---+---+---+  */
 		/*                              */
 		/********************************/
@@ -80,14 +75,6 @@ int main(int argc, char **argv)
 		r[2] = p2[2];
 		r[3] = p2[3];
 		r[4] = p2[4];
-
-		//if (r[2] == p1[3])
-		//{
-		//	MyPrintOutput("INSIDE if (...)");
-		//}
-		//r[2] = p2[2];
-		//r[3] = p2[3];
-		//r[4] = p2[4];
 
 		/********************************/
 		/*                              */

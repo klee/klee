@@ -1,5 +1,5 @@
-OPT:=opt-3.4
-CLANG:=clang-3.4
+OPT:=opt
+CLANG:=clang
 #SED_SCRIPT:=../scripts/sedScript
 SED_SCRIPT:=cp
 
@@ -21,7 +21,7 @@ all: $(BENCHMARKS:.c=.bc)
 	$(OPT) -instnamer -o $@ $<
 
 
-PATH:=$(shell realpath ../../build-klee/bin):$(shell realpath ../scripts):$(shell realpath ../scripts/z3QueriesParserFolder/FOLDER_4_PARSER):$(PATH)
+PATH:=$(shell realpath ../../build/bin):$(shell realpath ../scripts):$(shell realpath ../scripts/z3QueriesParserFolder/FOLDER_4_PARSER):$(PATH)
 export PATH
 
 .PHONY: phony_explicit
