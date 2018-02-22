@@ -1286,7 +1286,7 @@ void SpecialFunctionHandler::handleMyStrcmp(
           "One of the strings in strcmp is not null terminated", Executor::Ptr);
   }
 
-  executor.bindLocal(target,state, m.first);
+  executor.bindLocal(target,*p_q_NULL_terminated, m.first);
 //  executor.executeStrcmp(state, target, arguments[0], arguments[1]);
 }
 
@@ -2844,100 +2844,20 @@ void SpecialFunctionHandler::handleMyStrchr(
 	KInstruction *target,
 	std::vector<ref<Expr> > &arguments)
 {
-	executor.executeStrchr(state, target,arguments[0],arguments[1]);
-	return;
-#if 0
-	char AB_p_name[AB_MAX_NAME_LENGTH]={0};
+  StrModel m = stringModel.modelStrchr(
+                      executor.resolveOne(state,arguments[0]).first, 
+                      arguments[0],
+                      arguments[1]);
 
-	ref<Expr> one  = ConstantExpr::create(1,Expr::Int32);
-	ref<Expr> zero = ConstantExpr::create(0,Expr::Int32);
-	ref<Expr> minusOne = SubExpr::create(zero,one);
+  Executor::StatePair branches = executor.fork(state, m.second, true);
+  ExecutionState *valid_access = branches.first;
+  ExecutionState *invalid_access= branches.second;
+  if(invalid_access) {
+      executor.terminateStateOnError(*invalid_access, 
+          "Strchr has out of bounds behaviour", Executor::Ptr);
+  }
 
-	/****************************************************/
-	/* [0] Inside handleMyWriteCharToStringAtOffset ... */
-	/****************************************************/
-	llvm::errs() << "Inside handleMyStrchr" << "\n";
-
-	/*****************************************/
-	/* [1] Extract the llvm call instruction */
-	/*****************************************/
-	llvm::CallInst *callInst = (llvm::CallInst *) target->inst;
-
-	/*********************************************/
-	/* [2] Extract the all three input arguments */
-	/*********************************************/
-	llvm::Value *value0 = callInst->getArgOperand(0);
-	llvm::Value *value1 = callInst->getArgOperand(1);
-		
-	/********************************************/
-	/* [3] Take the name of the input arguments */
-	/********************************************/
-	std::string varName0 = value0->getName().str();
-	// std::string varName1 = value1->getName().str();
-	int c = (((llvm::Constant *) value1)->getUniqueInteger()).getLimitedValue();
-
-	/*****************************************************/
-	/* [4] Go back to the original local variables names */
-	/*****************************************************/
-	std::string p = state.varNames[varName0];
-	// std::string c = state.varNames[varName1];
-
-	/****************************/
-	/* [5] Extract serial for p */
-	/****************************/
-	int serial_p = state.ab_serial[p];
-
-	/**********************************/
-	/* [6] Extract last version for p */
-	/**********************************/
-	int last_p = state.ab_last[serial_p];
-
-	/*******************************************************************************/
-	/* [7] Assemble the abstract buffers name (with its serial number and version) */
-	/*******************************************************************************/
-	Assemble_Abstract_Buffer_Name(serial_p,last_p,  AB_p_name);
-
-	/*******************************/
-	/* [8] Check if c appears in p */
-	/*******************************/
-	ref<Expr> x00 = StrConstExpr::create("\\x00");
-	ref<Expr> size   = state.ab_size[serial_p];
-	ref<Expr> offset = state.ab_offset[p];	
-	ref<Expr> p_var  = StrSubstrExpr::create(
-		StrVarExpr::create(AB_p_name),
-		state.ab_offset[p],
-		SubExpr::create(size,offset));
-
-	/*******************************/
-	/* [8] Check if c appears in p */
-	/*******************************/
-	ref<Expr> c_as_length_1_string =
-	StrFromBitVector8Expr::create(ConstantExpr::create(c,Expr::Int8));
-
-	/*******************************/
-	/* [8] Check if c appears in p */
-	/*******************************/
-	ref<Expr> firstIndexOfc   = StrFirstIdxOfExpr::create(p_var,c_as_length_1_string);
-	ref<Expr> firstIndexOfx00 = StrFirstIdxOfExpr::create(p_var,x00);
-
-	/*******************************/
-	/* [8] Check if c appears in p */
-	/*******************************/
-	ref<Expr> c_appears_in_p = NotExpr::create(EqExpr::create(firstIndexOfc,minusOne));	
-	ref<Expr> c_appears_in_p_before_x00 = SltExpr::create(firstIndexOfc,firstIndexOfx00);
-
-	executor.bindLocal(
-		target, 
-		state,
-		SelectExpr::create(
-			AndExpr::create(
-				c_appears_in_p,
-				c_appears_in_p_before_x00),
-			AddExpr::create(
-				ZExtExpr::create(firstIndexOfc,Expr::Int64),
-				arguments[0]),
-			ZExtExpr::create(zero,Expr::Int64)));
-#endif
+  executor.bindLocal(target,*valid_access, m.first);
 }
 
 void SpecialFunctionHandler::handleMyAtoi(

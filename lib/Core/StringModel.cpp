@@ -70,4 +70,62 @@ StrModel StringModel::modelStrcmp(
    );
 }
 
+StrModel StringModel::modelStrchr(const MemoryObject* mos, ref<Expr> s, ref<Expr> c) {
+	/*******************************/
+	/* [5] Check if c appears in p */
+	/*******************************/
+	ref<Expr> size   = mos->getIntSizeExpr();
+	ref<Expr> offset = mos->getOffsetExpr(s);	
+	ref<Expr> p_var  = StrSubstrExpr::create(
+		StrVarExpr::create(mos->getABSerial()),
+		BvToIntExpr::create(offset),
+		SubExpr::create(size,offset));
+
+	/*******************************/
+	/* [6] Check if c appears in p */
+	/*******************************/
+	ref<Expr> c_as_length_1_string = StrFromBitVector8Expr::create(ExtractExpr::create(c,0,8));
+
+	/*******************************/
+	/* [7] Check if c appears in p */
+	/*******************************/
+	ref<Expr> firstIndexOfc   = StrFirstIdxOfExpr::create(p_var,c_as_length_1_string);
+	ref<Expr> firstIndexOfx00 = StrFirstIdxOfExpr::create(p_var,x00);
+
+	/*******************************/
+	/* [8] Check if c appears in p */
+	/*******************************/
+	ref<Expr> c_appears_in_p = NotExpr::create(EqExpr::create(firstIndexOfc,minusOne));	
+	ref<Expr> c_appears_in_p_before_x00 = SltExpr::create(firstIndexOfc,firstIndexOfx00);
+
+	/****************************************************************************/
+	/* [9] Issue an error when invoking strchr on a non NULL terminated string, */
+	/*     and the specific char can be missing ...                             */
+	/****************************************************************************/
+  ref<Expr> validAcess = AndExpr::create(
+    AndExpr::create(
+       NotExpr::create(EqExpr::create(firstIndexOfc,  minusOne)),
+       NotExpr::create(EqExpr::create(firstIndexOfx00,  minusOne))
+    ),
+    mos->getBoundsCheckPointer(s)
+  );
+
+ ref<Expr> strchrReturnValue = 
+    SelectExpr::create(
+          AndExpr::create(
+            c_appears_in_p,
+            c_appears_in_p_before_x00),
+          AddExpr::create(
+            firstIndexOfc,
+            s),
+          zero);
+
+ return std::make_pair(strchrReturnValue, validAcess);
+}
+
+StrModel StringModel::modelStrlen(const MemoryObject* moS, ref<Expr>	s) {
+
+}
+
+
 } //end klee namespace

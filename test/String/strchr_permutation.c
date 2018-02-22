@@ -31,7 +31,8 @@ int main(int argc, char **argv)
   		&& strchr(p2,'E')
   		&& strlen(p1) == 4
   		&& strlen(p2)  == 4
-  		&& strcmp(p1,p2) == 0)
+  		&& strcmp(p1,p2) == 0
+      )
   {
 			 MyPrintOutput(p1);
        printf("\n");

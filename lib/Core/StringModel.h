@@ -40,10 +40,9 @@ public:
     StrModel modelStrcmp(const MemoryObject* moP, ref<Expr> p,
                          const MemoryObject* moQ, ref<Expr> q);
 
-
- // void executeStrchr(ExecutionState &state, KInstruction *target, ref<Expr>, ref<Expr>);
+    StrModel modelStrchr(const MemoryObject* moS, ref<Expr> s, ref<Expr> c);
+    StrModel modelStrlen(const MemoryObject* moS, ref<Expr>	s);
  // void executeStrcpy(ExecutionState &state, KInstruction *target, ref<Expr>, ref<Expr>);
- // void executeStrlen(ExecutionState	&state,	KInstruction *target, ref<Expr>	          );
 
 
  };

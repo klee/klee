@@ -3342,25 +3342,6 @@ void Executor::executeStrlen(
 	bindLocal(target,state,firstIdxOf_x00_in_s);
 }
 
-/**************************************************************************************************************/
-/*                                                                                                            */
-/*     ssssss    tt                                                                                           */
-/*   sss         tt                                                                                           */
-/*  sss          tttttt    rr  rrrr    cccccccc   pppppppp   yy     yy     ((  pppppppp       qqqqqqqq  ))    */
-/*   sss         tt        rr rr      cc          pp     pp   yy    yy    ((   pp     pp     qq     qq   ))   */
-/*     sss       tt        rrrr      cc           pp     pp    yy   yy   ((    pp     pp     qq     qq    ))  */
-/*       sss     tt        rrr       cc           pp     pp     yy  yy   ((    pp     pp     qq     qq    ))  */
-/*        sss    tt        rr        cc           pp     pp      yy yy   ((    pp     pp     qq     qq    ))  */
-/*        sss     tt       rr         cc          pp    pp        yyyy   ((    pp    pp      qq     qq    ))  */
-/*   sssssss       ttttt   rr          cccccccc   ppppppp          yyy    ((   ppppppp   ,,   qqqqqqqq   ))   */
-/*                                                pp                yy     ((  pp        ,,         qq  ))    */
-/*                                                pp                yy         pp       ,,          qq        */
-/*                                                pp                yy         pp                   qq        */
-/*                                                pp               yy          pp                   qq        */
-/*                                                pp          yy  yy           pp                   qq        */
-/*                                                pp           yyyy            pp                   qq        */
-/*                                                                                                            */
-/**************************************************************************************************************/
 void Executor::executeStrcpy(
 	ExecutionState &state,
 	KInstruction *target,
@@ -3498,106 +3479,6 @@ void Executor::executeStrcpy(
 		StrLengthExpr::create(AB_dst_new_var)));
 }
 
-void Executor::executeStrchr(
-	ExecutionState &state,
-	KInstruction *target,
-	ref<Expr> s,
-	ref<Expr> c)
-{
-	bool result;
-	bool success;
-	ObjectPair sOP;
-
-	/****************************/
-	/* [1] Resolve the string s */
-	/****************************/
-	solver->setTimeout(coreSolverTimeout);
-	if (!state.addressSpace.resolveOne(state, solver, s, sOP, success))
-	{
-		s = toConstant(state,s, "resolveOne failure");
-		success = state.addressSpace.resolveOne(cast<ConstantExpr>(s), sOP);
-	}
-    
-
-	/******************************************/
-	/* [2] Make sure everything went well ... */
-	/******************************************/
-	assert(success && "TODO: handle failure");
-
-	/*************************/
-	/* [3] The memory object */
-	/*************************/
-	const MemoryObject* mos = sOP.first;
-	ref<Expr> inBounds = mos->getBoundsCheckPointer(s);
-	solver->mustBeTrue(state, inBounds, result);
-	assert(result && "Out of bound access");
-
-	/*********************************************/
-	/* [4] zero, one and minusOne as ref<Expr>'s */
-	/*********************************************/
-	ref<Expr> one  = BvToIntExpr::create(ConstantExpr::create(1,Expr::Int64));
-	ref<Expr> zero = BvToIntExpr::create(ConstantExpr::create(0,Expr::Int64));
-	ref<Expr> minusOne = SubExpr::create(zero,one);
-
-	/*******************************/
-	/* [5] Check if c appears in p */
-	/*******************************/
-	ref<Expr> x00 = StrConstExpr::create("\\x00");
-	ref<Expr> size   = mos->getIntSizeExpr();
-	ref<Expr> offset = mos->getOffsetExpr(s);	
-	ref<Expr> p_var  = StrSubstrExpr::create(
-		StrVarExpr::create(mos->getABSerial()),
-		BvToIntExpr::create(offset),
-		SubExpr::create(size,offset));
-
-	/*******************************/
-	/* [6] Check if c appears in p */
-	/*******************************/
-	ref<Expr> c_as_length_1_string = StrFromBitVector8Expr::create(ExtractExpr::create(c,0,8));
-
-	/*******************************/
-	/* [7] Check if c appears in p */
-	/*******************************/
-	ref<Expr> firstIndexOfc   = StrFirstIdxOfExpr::create(p_var,c_as_length_1_string);
-	ref<Expr> firstIndexOfx00 = StrFirstIdxOfExpr::create(p_var,x00);
-
-	/*******************************/
-	/* [8] Check if c appears in p */
-	/*******************************/
-  errs() << firstIndexOfc->getWidth() << " minusOne: " << minusOne->getWidth() << "\n";
-	ref<Expr> c_appears_in_p = NotExpr::create(EqExpr::create(firstIndexOfc,minusOne));	
-	ref<Expr> c_appears_in_p_before_x00 = SltExpr::create(firstIndexOfc,firstIndexOfx00);
-
-	/****************************************************************************/
-	/* [9] Issue an error when invoking strchr on a non NULL terminated string, */
-	/*     and the specific char can be missing ...                             */
-	/****************************************************************************/
-	ref<Expr> accessViolation = AndExpr::create(
-		EqExpr::create(firstIndexOfc,  minusOne),
-		EqExpr::create(firstIndexOfx00,minusOne));
-
-  StatePair branches = fork(state, accessViolation, true);
-  ExecutionState *violated_state = branches.first;
-  ExecutionState* good_state = branches.second;
-  if(violated_state) {
-      terminateStateOnError(*violated_state, "strchr string is not null terminated", Ptr);
-  }
-	/**************************************/
-	/* [10] bind the result of strchr ... */
-	/**************************************/
-	bindLocal(
-		target, 
-		*good_state,
-		SelectExpr::create(
-			AndExpr::create(
-				c_appears_in_p,
-				c_appears_in_p_before_x00),
-			AddExpr::create(
-				firstIndexOfc,
-				s),
-			zero));
-}
- 
 void Executor::executeMemoryOperation(ExecutionState &state,
                                       bool isWrite,
                                       ref<Expr> address,

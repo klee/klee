@@ -313,7 +313,6 @@ private:
 
   void executeMakeSymbolic(ExecutionState &state, const MemoryObject *mo,
                            const std::string &name);
-  void executeStrchr(ExecutionState &state, KInstruction *target, ref<Expr>, ref<Expr>);
   void executeStrcpy(ExecutionState &state, KInstruction *target, ref<Expr>, ref<Expr>);
   void executeStrlen(ExecutionState	&state,	KInstruction *target, ref<Expr>	          );
 
