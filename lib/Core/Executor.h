@@ -264,6 +264,9 @@ private:
                     ExactResolutionList &results,
                     const std::string &name);
 
+  //Resolve the pointer p, relaxed version of resolveExact;
+  ObjectPair resolveOne(ExecutionState &state, ref<Expr> p);
+
   /// Allocate and bind a new object in a particular state. NOTE: This
   /// function may fork.
   ///
@@ -310,7 +313,6 @@ private:
 
   void executeMakeSymbolic(ExecutionState &state, const MemoryObject *mo,
                            const std::string &name);
-  void executeStrcmp(ExecutionState &state, KInstruction *target, ref<Expr>, ref<Expr>);
   void executeStrchr(ExecutionState &state, KInstruction *target, ref<Expr>, ref<Expr>);
   void executeStrcpy(ExecutionState &state, KInstruction *target, ref<Expr>, ref<Expr>);
   void executeStrlen(ExecutionState	&state,	KInstruction *target, ref<Expr>	          );

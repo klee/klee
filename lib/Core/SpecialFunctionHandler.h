@@ -15,6 +15,8 @@
 #include <vector>
 #include <string>
 
+#include "StringModel.h"
+
 namespace llvm {
   class Function;
 }
@@ -27,6 +29,7 @@ namespace klee {
   template<typename T> class ref;
   
   class SpecialFunctionHandler {
+    StringModel stringModel;    
   public:
     typedef void (SpecialFunctionHandler::*Handler)(ExecutionState &state,
                                                     KInstruction *target, 

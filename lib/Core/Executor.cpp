@@ -3252,114 +3252,20 @@ void Executor::resolveExact(ExecutionState &state,
                           Ptr, NULL, getAddressInfo(*unbound, p));
   }
 }
-void Executor::executeStrcmp(
-	ExecutionState &state,
-	KInstruction *target,
-	ref<Expr> s1,
-	ref<Expr> s2)
-{
-	bool result;
-	bool success;
-	ObjectPair s1OP;
-	ObjectPair s2OP;
 
-	/*****************************/
-	/* [1] Resolve the string s1 */
-	/*****************************/
+ObjectPair Executor::resolveOne(ExecutionState &state, ref<Expr> s1) {
+	ObjectPair s1OP;
+  bool success;
+
 	solver->setTimeout(coreSolverTimeout);
 	if (!state.addressSpace.resolveOne(state, solver, s1, s1OP, success))
 	{
 		s1 = toConstant(state,s1, "resolveOne failure");
 		success = state.addressSpace.resolveOne(cast<ConstantExpr>(s1), s1OP);
 	}
-	/******************************************/
-	/* [2] Make sure everything went well ... */
-	/******************************************/
 	assert(success && "TODO: handle failure");
+  return s1OP;
 
-	/*****************************/
-	/* [3] Resolve the string s1 */
-	/*****************************/
-	solver->setTimeout(coreSolverTimeout);
-	if (!state.addressSpace.resolveOne(state, solver, s2, s2OP, success))
-	{
-		s2 = toConstant(state, s2, "resolveOne failure");
-		success = state.addressSpace.resolveOne(cast<ConstantExpr>(s2), s2OP);
-	}
-
-	/******************************************/
-	/* [4] Make sure everything went well ... */
-	/******************************************/
-	assert(success && "TODO: handle failure");
-
-	/**************************/
-	/* [5] The memory objects */
-	/**************************/
-	const MemoryObject* moP = s1OP.first;
-	const MemoryObject* moQ = s2OP.first;
-
-	/*********************************************/
-	/* [6] zero, one and minusOne as ref<Expr>'s */
-	/*********************************************/
-	ref<Expr> one  = BvToIntExpr::create(ConstantExpr::create(1,Expr::Int64));
-	ref<Expr> zero = BvToIntExpr::create(ConstantExpr::create(0,Expr::Int64));
-	ref<Expr> minusOne = SubExpr::create(zero,one);
-
-	ref<Expr> x00      = StrConstExpr::create("\\x00");
-	/*********************************/
-	/* [7] AB, svar, offset and size */
-	/*********************************/
-	ref<Expr> ABp_size = moP->getIntSizeExpr();
-	ref<Expr> ABq_size = moQ->getIntSizeExpr();
-	ref<Expr> offset_p = BvToIntExpr::create(moP->getOffsetExpr(s1));
-	ref<Expr> offset_q = BvToIntExpr::create(moQ->getOffsetExpr(s2));
- 	ref<Expr> ABp      = StrVarExpr::create(moP->getABSerial());
-	ref<Expr> ABq      = StrVarExpr::create(moQ->getABSerial());
-	ref<Expr> p_size   = SubExpr::create(ABp_size,offset_p);
-	ref<Expr> q_size   = SubExpr::create(ABq_size,offset_q);
-	ref<Expr> p_var    = StrSubstrExpr::create(ABp,offset_p, p_size);
-	ref<Expr> q_var    = StrSubstrExpr::create(ABq,offset_q, q_size);
-
-	/*****************************/
-	/* [8] NULL temination stuff */
-	/*****************************/
-	ref<Expr> firstIdxOf_x00_in_p = StrFirstIdxOfExpr::create(p_var,x00);
-	ref<Expr> firstIdxOf_x00_in_q = StrFirstIdxOfExpr::create(q_var,x00);
-
-	ref<Expr> p_is_not_NULL_terminated = EqExpr::create(firstIdxOf_x00_in_p,minusOne);
-	ref<Expr> q_is_not_NULL_terminated = EqExpr::create(firstIdxOf_x00_in_q,minusOne);
-
-	ref<Expr> p_is_NULL_terminated = NotExpr::create(p_is_not_NULL_terminated);
-	ref<Expr> q_is_NULL_terminated = NotExpr::create(q_is_not_NULL_terminated);
-	
-	ref<Expr> p_and_q_are_both_NULL_terminated = AndExpr::create(
-		p_is_NULL_terminated,
-		q_is_NULL_terminated);
-
-  StatePair branches = fork(state, p_and_q_are_both_NULL_terminated, true);
-  ExecutionState *p_q_NULL_terminated = branches.first;
-  ExecutionState *p_q_NOT_NULL_terminated = branches.second;
-  if(p_q_NOT_NULL_terminated) {
-      terminateStateOnError(*p_q_NULL_terminated, "One of the strings in strcmp is not null terminated", Ptr);
-  }
-
-	/************************************************************/
-	/* [10] Finally ... check whether p and q are identical ... */
-	/************************************************************/
-	ref<Expr> final_exp = StrEqExpr::create(
-			StrSubstrExpr::create(p_var,zero,firstIdxOf_x00_in_p),
-			StrSubstrExpr::create(q_var,zero,firstIdxOf_x00_in_q));
-
-	/**********************************/
-	/* [11] Bind local the result ... */
-	/**********************************/
-	bindLocal(
-		target,
-		*p_q_NULL_terminated,
-		SelectExpr::create(
-			final_exp,
-			ConstantExpr::create(0,Expr::Int32),
-			ConstantExpr::create(1,Expr::Int32)));
 }
 
 void Executor::executeStrlen(

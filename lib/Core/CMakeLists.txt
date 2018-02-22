@@ -24,6 +24,7 @@ klee_add_component(kleeCore
   Searcher.cpp
   SeedInfo.cpp
   SpecialFunctionHandler.cpp
+  StringModel.cpp
   StatsTracker.cpp
   TimingSolver.cpp
   UserSearcher.cpp
