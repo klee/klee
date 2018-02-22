@@ -3272,6 +3272,9 @@ void Executor::executeStrcmp(
 		s1 = toConstant(state,s1, "resolveOne failure");
 		success = state.addressSpace.resolveOne(cast<ConstantExpr>(s1), s1OP);
 	}
+	/******************************************/
+	/* [2] Make sure everything went well ... */
+	/******************************************/
 	assert(success && "TODO: handle failure");
 
 	/*****************************/
@@ -3299,7 +3302,7 @@ void Executor::executeStrcmp(
 	/* [6] zero, one and minusOne as ref<Expr>'s */
 	/*********************************************/
 	ref<Expr> one  = BvToIntExpr::create(ConstantExpr::create(1,Expr::Int64));
-	ref<Expr> zero  = BvToIntExpr::create(ConstantExpr::create(0,Expr::Int64));
+	ref<Expr> zero = BvToIntExpr::create(ConstantExpr::create(0,Expr::Int64));
 	ref<Expr> minusOne = SubExpr::create(zero,one);
 
 	ref<Expr> x00      = StrConstExpr::create("\\x00");
@@ -3328,25 +3331,10 @@ void Executor::executeStrcmp(
 
 	ref<Expr> p_is_NULL_terminated = NotExpr::create(p_is_not_NULL_terminated);
 	ref<Expr> q_is_NULL_terminated = NotExpr::create(q_is_not_NULL_terminated);
-  errs() << "after not\n";
 	
-	ref<Expr> p_and_q_are_both_not_NULL_terminated =
-	AndExpr::create(p_is_not_NULL_terminated,q_is_not_NULL_terminated);
-
-	ref<Expr> p_and_q_are_both_NULL_terminated =
-	NotExpr::create(p_and_q_are_both_not_NULL_terminated);
-
-	ref<Expr> min_length_p_q = SelectExpr::create(
-		SltExpr::create(
-			p_size_minus_offset,
-      q_size_minus_offset),
-		p_size_minus_offset,
-		q_size_minus_offset);
-//================= START the actual constraints =================
 	ref<Expr> p_and_q_are_both_NULL_terminated = AndExpr::create(
 		p_is_NULL_terminated,
 		q_is_NULL_terminated);
-
 
 	/**********************************************************************/
 	/* [9] Check with the solver whether both strings are NULL terminated */
@@ -3359,10 +3347,16 @@ void Executor::executeStrcmp(
 		assert(0);
 	}
 
+	/************************************************************/
+	/* [10] Finally ... check whether p and q are identical ... */
+	/************************************************************/
 	ref<Expr> final_exp = StrEqExpr::create(
 			StrSubstrExpr::create(p_var,zero,firstIdxOf_x00_in_p),
 			StrSubstrExpr::create(q_var,zero,firstIdxOf_x00_in_q));
 
+	/**********************************/
+	/* [11] Bind local the result ... */
+	/**********************************/
 	bindLocal(
 		target,
 		state,
