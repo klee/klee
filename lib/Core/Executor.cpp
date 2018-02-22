@@ -3336,16 +3336,12 @@ void Executor::executeStrcmp(
 		p_is_NULL_terminated,
 		q_is_NULL_terminated);
 
-	/**********************************************************************/
-	/* [9] Check with the solver whether both strings are NULL terminated */
-	/**********************************************************************/
-	solver->mayBeTrue(state,NotExpr::create(p_and_q_are_both_NULL_terminated),result);
-	if (result)
-	{
-		const char *underline = "                       ===";
-		klee_error("Comparing some non NULL terminated string\n%s",underline);			
-		assert(0);
-	}
+  StatePair branches = fork(state, p_and_q_are_both_NULL_terminated, true);
+  ExecutionState *p_q_NULL_terminated = branches.first;
+  ExecutionState *p_q_NOT_NULL_terminated = branches.second;
+  if(p_q_NOT_NULL_terminated) {
+      terminateStateOnError(*p_q_NULL_terminated, "One of the strings in strcmp is not null terminated", Ptr);
+  }
 
 	/************************************************************/
 	/* [10] Finally ... check whether p and q are identical ... */
@@ -3359,7 +3355,7 @@ void Executor::executeStrcmp(
 	/**********************************/
 	bindLocal(
 		target,
-		state,
+		*p_q_NULL_terminated,
 		SelectExpr::create(
 			final_exp,
 			ConstantExpr::create(0,Expr::Int32),
@@ -3673,20 +3669,19 @@ void Executor::executeStrchr(
 	ref<Expr> accessViolation = AndExpr::create(
 		EqExpr::create(firstIndexOfc,  minusOne),
 		EqExpr::create(firstIndexOfx00,minusOne));
-	solver->mayBeTrue(state,accessViolation,result);
-	if (result)
-	{
-		const char *underline = "                                                                   ===                             ===";
-		klee_error("Invoking strchr(s,c) and it is possible that both s is non NULL terminated, and c does not appear in s.\n %s\n",underline);			
-		assert(0);
-	}
 
+  StatePair branches = fork(state, accessViolation, true);
+  ExecutionState *violated_state = branches.first;
+  ExecutionState* good_state = branches.second;
+  if(violated_state) {
+      terminateStateOnError(*violated_state, "strchr string is not null terminated", Ptr);
+  }
 	/**************************************/
 	/* [10] bind the result of strchr ... */
 	/**************************************/
 	bindLocal(
 		target, 
-		state,
+		*good_state,
 		SelectExpr::create(
 			AndExpr::create(
 				c_appears_in_p,
