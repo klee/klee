@@ -42,8 +42,8 @@ public:
 
     StrModel modelStrchr(const MemoryObject* moS, ref<Expr> s, ref<Expr> c);
     StrModel modelStrlen(const MemoryObject* moS, ref<Expr>	s);
- // void executeStrcpy(ExecutionState &state, KInstruction *target, ref<Expr>, ref<Expr>);
-
+    StrModel modelStrcpy(const MemoryObject* moDst, ref<Expr> dst,
+                         const MemoryObject* moSrc, ref<Expr> src);
 
  };
 } // End klee namespace

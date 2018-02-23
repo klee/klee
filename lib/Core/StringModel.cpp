@@ -141,6 +141,79 @@ StrModel StringModel::modelStrlen(const MemoryObject* mos, ref<Expr>	s) {
 	/*************************************/
   return std::make_pair(firstIdxOf_x00_in_s, p_is_NULL_terminated);
 }
+StrModel StringModel::modelStrcpy(const MemoryObject* moDst, ref<Expr> dst,
+                     const MemoryObject* moSrc, ref<Expr> src) {
 
+  ref<Expr> AB_dst_var = StrVarExpr::create(moDst->getABSerial());
+	ref<Expr> AB_src_var = StrVarExpr::create(moSrc->getABSerial());
+	ref<Expr> dst_offset = BvToIntExpr::create(moDst->getOffsetExpr(dst));
+	ref<Expr> src_offset = BvToIntExpr::create(moSrc->getOffsetExpr(src));
+
+	ref<Expr> dst_size = SubExpr::create(moDst->getIntSizeExpr(),
+                                       moDst->getOffsetExpr(dst));
+	ref<Expr> src_size = SubExpr::create(moSrc->getIntSizeExpr(),
+                                       moSrc->getOffsetExpr(src));
+
+	/******************************/
+	/* [8] Prefix, Middle, Suffix */
+	/******************************/
+	ref<Expr> prefixStart  = zero;
+	ref<Expr> prefixLength = dst_offset;
+
+	ref<Expr> firstIdxOf_x00_in_src = StrFirstIdxOfExpr::create(
+		StrSubstrExpr::create(AB_src_var,src_offset,src_size),
+		x00);
+
+	ref<Expr> middleLength = AddExpr::create(firstIdxOf_x00_in_src,one);
+	ref<Expr> suffixStart  = AddExpr::create(prefixLength,middleLength);
+	ref<Expr> suffixLength = SubExpr::create(moDst->getSizeExpr(),suffixStart);
+
+	/***************************/
+	/* [9] New Dst Version ... */
+	/***************************/
+	const_cast<MemoryObject*>(moDst)->version++;
+	ref<Expr> AB_dst_new_var = StrVarExpr::create(moDst->getABSerial());
+
+	/************************/
+	/* [10] prefix equation */
+	/************************/
+	ref<Expr> prefixEq = StrEqExpr::create(
+		StrSubstrExpr::create(AB_dst_var,    prefixStart,prefixLength),
+		StrSubstrExpr::create(AB_dst_new_var,prefixStart,prefixLength));
+			
+	/************************/
+	/* [11] suffix equation */
+	/************************/
+	ref<Expr> suffixEq = StrEqExpr::create(
+		StrSubstrExpr::create(AB_dst_var,    suffixStart,suffixLength),	
+		StrSubstrExpr::create(AB_dst_new_var,suffixStart,suffixLength));
+			
+	/************************/
+	/* [12] middle equation */
+	/************************/
+	ref<Expr> middleEq = StrEqExpr::create(
+		StrSubstrExpr::create(AB_src_var,    src_offset,middleLength),	
+		StrSubstrExpr::create(AB_dst_new_var,dst_offset,middleLength));
+
+	/*********************************************************************/
+	/* [13] Check with the solver whether src can be NOT NULL terminated */
+	/*********************************************************************/
+	ref<Expr> Is_src_not_NULL_terminated = EqExpr::create(
+		firstIdxOf_x00_in_src,
+		minusOne);
+  ref<Expr> Is_src_NULL_terminated = NotExpr::create(Is_src_not_NULL_terminated);
+
+  ref<Expr> same_len = 
+  	        EqExpr::create(
+		          StrLengthExpr::create(AB_dst_var),
+		          StrLengthExpr::create(AB_dst_new_var));
+
+  ref<Expr> finalExpr = 
+      AndExpr::create(suffixEq,
+        AndExpr::create(middleEq,
+          AndExpr::create(prefixEq,same_len)));
+
+  return std::make_pair(finalExpr, Is_src_NULL_terminated);
+}
 
 } //end klee namespace
