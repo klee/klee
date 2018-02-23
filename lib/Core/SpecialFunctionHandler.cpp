@@ -1632,57 +1632,6 @@ void SpecialFunctionHandler::handleMyPrintOutput(
 	KInstruction *target,
 	std::vector<ref<Expr> > &arguments)
 {
- // ref<ConstantExpr> ce;
-
-//  executor.solver->getValue(state, StrVarExpr::create("AB_serial_1_version_4"), ce);
-//  ce->dump();
-	llvm::Value *value0;
-
-	std::string varName0;
-	std::string varName0Tag;
-
-	llvm::GetElementPtrInst * value0Gep;
-	
-	/*****************************************/
-	/* [1] Extract the llvm call instruction */
-	/*****************************************/
-	llvm::CallInst *callInst = (llvm::CallInst *) target->inst;
-	
-	/**********************************/
-	/* [2] Extract the input argument */
-	/**********************************/
-	value0 = callInst->getArgOperand(0);
-
-	/******************/
-	/* [3] Gep it !!! */
-	/******************/
-	value0Gep = ((llvm::GetElementPtrInst *) value0);
-
-	/***********************************************/
-	/* [4] Extract the name of the input arguments */
-	/***********************************************/
-	varName0      = value0Gep->getName();
-	varName0Tag   = value0Gep->getOperand(0)->getName();
-
-	/**********************************************/
-	/* [5] Extract the actual underlying c string */
-	/**********************************************/
-	llvm::GlobalVariable    *actualCStringVar     = (llvm::GlobalVariable    *) (value0Gep->getOperand(0));
-	llvm::ConstantDataArray *actualCStringVarTag  = (llvm::ConstantDataArray *) (actualCStringVar->getInitializer());
-//	std::string actualCStringContent              = actualCStringVarTag->getAsCString();
-	errs() << "HELLO!\n";
-	
-	/*******************************/
-	/* [6] Print Message to stdout */
-	/*******************************/
-//	klee_warning("%s",actualCStringContent.c_str());
-	//system("z3QueriesParser");
-//	  ref<ConstantExpr> ce;
-//    bool success = executor.solver->getValue(state, arguments[0], ce);
-//    errs() << success <<  "is success\n";
-//    ce->dump();
-//    exit(0);
- //system("cat /tmp/output.txt");
   Executor::ExactResolutionList rl;
   executor.resolveExact(state, arguments[0], rl, "mark string");
   
