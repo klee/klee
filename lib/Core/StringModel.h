@@ -39,11 +39,15 @@ public:
     */
     StrModel modelStrcmp(const MemoryObject* moP, ref<Expr> p,
                          const MemoryObject* moQ, ref<Expr> q);
+    StrModel modelStrncmp(const MemoryObject* moP, ref<Expr> p,
+                         const MemoryObject* moQ, ref<Expr> q, ref<Expr> n);
 
     StrModel modelStrchr(const MemoryObject* moS, ref<Expr> s, ref<Expr> c);
     StrModel modelStrlen(const MemoryObject* moS, ref<Expr>	s);
     StrModel modelStrcpy(const MemoryObject* moDst, ref<Expr> dst,
                          const MemoryObject* moSrc, ref<Expr> src);
+    StrModel modelStrncpy(const MemoryObject* moDst, ref<Expr> dst,
+                         const MemoryObject* moSrc, ref<Expr> src, ref<Expr> n);
 
  };
 } // End klee namespace

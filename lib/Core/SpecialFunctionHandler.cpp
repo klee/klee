@@ -106,9 +106,11 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("MyReadCharAtConstOffset_Is_NEQ_ToConstChar", handleMyReadCharAtConstOffset_Is_NEQ_ToConstChar,true),
   add("MyMalloc",                    handleMyMalloc,                    false),
   add("markString",                  handleMarkString,                    false),
-  add("strcpy",                      handleStrcpy,                    true),
+  add("strcpy",                      handleStrcpy,                    false),
+  add("strncpy",                     handleStrncpy,                   false),
   add("strchr",                      handleStrchr,                    true),
   add("strcmp",                      handleStrcmp,                    true),
+  add("strncmp",                     handleStrncmp,                   true),
   add("strlen",                      handleStrlen,                    true),
   add("klee_get_value_i32", handleGetValue, true),
   add("klee_get_value_i64", handleGetValue, true),
@@ -766,6 +768,53 @@ void SpecialFunctionHandler::handleStrcpy(
   }
 
   src_is_NULL_terminated->addConstraint(m.first);
+}
+
+void SpecialFunctionHandler::handleStrncmp(
+	ExecutionState &state,
+	KInstruction *target,
+	std::vector<ref<Expr> > &arguments)
+{
+  assert(arguments.size() == 3 && "Strncmp takes 3 arguments!");
+  StrModel m = stringModel.modelStrncmp(
+                      executor.resolveOne(state,arguments[0]).first, 
+                      arguments[0],
+                      executor.resolveOne(state,arguments[1]).first,
+                      arguments[1],
+						arguments[2]);
+
+  Executor::StatePair branches = executor.fork(state, m.second, true);
+  ExecutionState *not_access_after_end = branches.first;
+  ExecutionState *access_after_end = branches.second;
+  if(access_after_end) {
+      executor.terminateStateOnError(*access_after_end, 
+          "n in strncmp is bigger than sizes", Executor::Ptr);
+  }
+  executor.bindLocal(target,*not_access_after_end, m.first);
+}
+
+void SpecialFunctionHandler::handleStrncpy(
+	ExecutionState &state,
+	KInstruction *target,
+	std::vector<ref<Expr> > &arguments)
+{
+  assert(arguments.size() == 3 && "Strncpy takes 3 arguments!");
+  StrModel m = stringModel.modelStrncpy(
+                      executor.resolveOne(state,arguments[0]).first, 
+                      arguments[0],
+                      executor.resolveOne(state,arguments[1]).first,
+                      arguments[1],
+						arguments[2]);
+
+  Executor::StatePair branches = executor.fork(state, m.second, true);
+  ExecutionState *not_access_after_end = branches.first;
+  ExecutionState *access_after_end = branches.second;
+  if(access_after_end) {
+      executor.terminateStateOnError(*access_after_end, 
+          "n in strncpy is bigger than sizes", Executor::Ptr);
+  }
+
+  not_access_after_end->addConstraint(m.first);
 }
 
 void SpecialFunctionHandler::handleMyConstStringAssign(

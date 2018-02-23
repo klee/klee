@@ -125,7 +125,9 @@ namespace klee {
     HANDLER(handleMyAtoi);
     HANDLER(handleMyMalloc);
     HANDLER(handleStrcmp);
+    HANDLER(handleStrncmp);
     HANDLER(handleStrcpy);
+    HANDLER(handleStrncpy);
     HANDLER(handleStrchr);
     HANDLER(handleStrlen);
     HANDLER(handleMyIntAssign);
