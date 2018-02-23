@@ -37,7 +37,6 @@ int main(int argc, char **argv)
   	if (strcmp(p2,p1) == 0)
 		{
 			MyPrintOutput(p1);
-      printf("\n");
 			MyPrintOutput(p2);
 		}
 }
