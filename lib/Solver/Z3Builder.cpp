@@ -604,10 +604,18 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
   // String
   case Expr::BvToInt: {
   	BvToIntExpr *b2i = (BvToIntExpr *) e.get();
+    ConstantExpr* CE = dyn_cast<ConstantExpr>(b2i->bvExpr);
+    if(CE != nullptr) {
+        Z3ASTHandle i = Z3ASTHandle(
+                    Z3_mk_numeral(ctx, CE->getAPValue().toString(10,true).c_str(),
+                    Z3_mk_int_sort(ctx)), ctx);
+        *width_out = Expr::Int;
+        return i;
+    }
   	int bv_width=0;
 	  Z3ASTHandle bv  = constructActual(b2i->bvExpr,&bv_width);
-    assert(bv_width < 1024 && "BvToInt on non bv");
     *width_out = Expr::Int;
+    assert(bv_width < 1024 && "BvToInt on non bv");
     return ConvertBitVecToInt(bv);
   }
  

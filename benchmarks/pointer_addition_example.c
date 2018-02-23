@@ -41,7 +41,7 @@ int main(int argc, char **argv)
 	{
 		if ((r - p > 5) && (r - q < 5))
 		{
-			MyPrintOutput(">> strchr + pointer arithmetic works !!!\n");
+			printf(">> strchr + pointer arithmetic works !!!\n");
 		}
 	}
 }
