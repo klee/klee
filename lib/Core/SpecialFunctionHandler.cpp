@@ -1709,7 +1709,8 @@ void SpecialFunctionHandler::handleMyPrintOutput(
            s += std::string("\\x")+(code.size()<2?"0":"")+code;
         }
     }
-    outs() << ab_name << ": " << s << "\n";
+    printf("%s: %s\n", ab_name.c_str(), s.c_str());
+//    outs() << ab_name << ": " << s << "\n";
   }
 }
 
