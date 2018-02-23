@@ -123,8 +123,23 @@ StrModel StringModel::modelStrchr(const MemoryObject* mos, ref<Expr> s, ref<Expr
  return std::make_pair(strchrReturnValue, validAcess);
 }
 
-StrModel StringModel::modelStrlen(const MemoryObject* moS, ref<Expr>	s) {
+StrModel StringModel::modelStrlen(const MemoryObject* mos, ref<Expr>	s) {
+	ref<Expr> AB = StrVarExpr::create(mos->getABSerial());
+	ref<Expr> offset = BvToIntExpr::create(mos->getOffsetExpr(s));
+	ref<Expr> size = SubExpr::create(mos->getIntSizeExpr(),offset);
 
+	/*****************************/
+	/* [6] Is s NULL terminated? */
+	/*****************************/
+	ref<Expr> svar = StrSubstrExpr::create(AB,offset,size);
+	ref<Expr> firstIdxOf_x00_in_s = StrFirstIdxOfExpr::create(svar,x00);
+	ref<Expr> p_is_not_NULL_terminated = EqExpr::create(firstIdxOf_x00_in_s,minusOne);
+	ref<Expr> p_is_NULL_terminated = NotExpr::create(p_is_not_NULL_terminated);
+
+	/*************************************/
+	/* [9] bind the result of strlen ... */
+	/*************************************/
+  return std::make_pair(firstIdxOf_x00_in_s, p_is_NULL_terminated);
 }
 
 

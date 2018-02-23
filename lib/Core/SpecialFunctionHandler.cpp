@@ -726,112 +726,21 @@ void SpecialFunctionHandler::handleMyStrlen(
 	KInstruction *target,
 	std::vector<ref<Expr> > &arguments)
 {
-	executor.executeStrlen(state,target,arguments[0]);
+  assert(arguments.size() == 1 && "Strlen can only have 1 argument");
+  StrModel m = stringModel.modelStrlen(
+                      executor.resolveOne(state,arguments[0]).first, 
+                      arguments[0]);
 
-#if 0
-	bool result = false;
-	char AB_p_name[AB_MAX_NAME_LENGTH]={0};
-
-	llvm::errs() << "INSIDE STRLEN TRANSFORMER\n";
-
-	/*********************************************/
-	/* [0] zero, one and minusOne as ref<Expr>'s */
-	/*********************************************/
-	ref<Expr> one  = ConstantExpr::create(1,Expr::Int32);
-	ref<Expr> zero = ConstantExpr::create(0,Expr::Int32);
-	ref<Expr> minusOne = SubExpr::create(zero,one);
-
-	/*****************************************/
-	/* [1] Extract the llvm call instruction */
-	/*****************************************/
-	llvm::CallInst *callInst = (llvm::CallInst *) target->inst;
-
-	/*************************************/
-	/* [2] Extract the input argument(s) */
-	/*************************************/
-	llvm::Value *value0 = callInst->getArgOperand(0);
-		
-	/********************************************/
-	/* [3] Take the name of the input arguments */
-	/********************************************/
-	std::string varName0 = value0->getName().str();
-
-	/*****************************************************/
-	/* [4] Go back to the original local variables names */
-	/*****************************************************/
-	std::string p = state.varNames[varName0];
-	if (p.size() == 0)
-	{
-    klee_error("KLEE ERROR: variable %s is not recgnized as a string variable\n\n", varName0.c_str());
-	}
-
-	/****************************/
-	/* [5] Extract serial for p */
-	/****************************/
-	int serial_p = state.ab_serial[p];
-
-	/**********************************/
-	/* [6] Extract last version for p */
-	/**********************************/
-	int last_p = state.ab_last[serial_p];
-
-	/*******************************************************************************/
-	/* [7] Assemble the abstract buffers name (with its serial number and version) */
-	/*******************************************************************************/
-	Assemble_Abstract_Buffer_Name(serial_p,last_p,AB_p_name);
-
-	/**************************************************************/
-	/* [8] Extract size of serial_p and offset of p within the AB */
-	/**************************************************************/
-	ref<Expr> size   = state.ab_size[serial_p];
-	ref<Expr> offset = state.ab_offset[p];
-	ref<Expr> x00    = StrConstExpr::create("\\x00");
-
-	/*********************************************/
-	/* [9] Check for out of bounds memory access */
-	/*********************************************/
-	ref<Expr> p_var =
-	StrSubstrExpr::create(
-		StrVarExpr::create(AB_p_name),
-		state.ab_offset[p],
-		SubExpr::create(size,offset));
-
-	/*********************************************/
-	/* [9] Check for out of bounds memory access */
-	/*********************************************/
-	ref<Expr> p_is_not_NULL_terminated =
-	EqExpr::create(
-		StrFirstIdxOfExpr::create(p_var,x00),
-		minusOne);
-
-	/*********************************************/
-	/* [9] Check for out of bounds memory access */
-	/*********************************************/
-	executor.solver->mayBeTrue(state,p_is_not_NULL_terminated,result);
-	if (result)
-	{
-		const char *underline = "                                  ===";
-		klee_error("Invoking strlen on a non NULL terminated string %s\n%s",p.c_str(),underline);			
-		assert(0);
-	}
-
-	/*****************************************/
-	/* [10] Assume that p is NULL terminated */
-	/*                    ==                 */
-	/*****************************************/
-	state.addConstraint(NotExpr::create(p_is_not_NULL_terminated));
-
-	/**************************************/
-	/* [11] bind the result of strlen ... */
-	/**************************************/
-	executor.bindLocal(
-		target, 
-		state,
-		SExtExpr::create(
-			StrFirstIdxOfExpr::create(p_var,x00),
-			Expr::Int64));
-#endif
+  Executor::StatePair branches = executor.fork(state, m.second, true);
+  ExecutionState *is_null_terminated = branches.first;
+  ExecutionState *is_not_null_termianted = branches.second;
+  if(is_not_null_termianted) {
+      executor.terminateStateOnError(*is_not_null_termianted, 
+          "String passed to strlen is not null terminated", Executor::Ptr);
+  }
+  executor.bindLocal(target,*is_null_terminated, m.first);
 }
+
 
 static FILE *AB_Legend_fl;
 static FILE *AB_All_Versions_fl;

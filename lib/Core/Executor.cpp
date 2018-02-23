@@ -3268,79 +3268,7 @@ ObjectPair Executor::resolveOne(ExecutionState &state, ref<Expr> s1) {
 
 }
 
-void Executor::executeStrlen(
-	ExecutionState	&state,
-	KInstruction	*target,
-	ref<Expr>		s)
-{
-	bool result;
-	bool success;
-	ObjectPair sOP;
 
-	/****************************/
-	/* [1] Resolve the string s */
-	/****************************/
-	solver->setTimeout(coreSolverTimeout);
-	if (!state.addressSpace.resolveOne(state, solver, s, sOP, success))
-	{
-		s = toConstant(state,s,"resolveOne failure");
-		success = state.addressSpace.resolveOne(cast<ConstantExpr>(s), sOP);
-	}
-
-	/******************************************/
-	/* [2] Make sure everything went well ... */
-	/******************************************/
-	assert(success && "TODO: handle failure");
-
-	/*************************/
-	/* [3] The memory object */
-	/*************************/
-	const MemoryObject* mos = sOP.first;
-
-	/*********************************************/
-	/* [4] zero, one and minusOne as ref<Expr>'s */
-	/*********************************************/
-	ref<Expr> one  = BvToIntExpr::create(ConstantExpr::create(1,Expr::Int64));
-	ref<Expr> zero = BvToIntExpr::create(ConstantExpr::create(0,Expr::Int64));
-	ref<Expr> minusOne = SubExpr::create(zero,one);
-
-	/*********************************/
-	/* [5] AB, svar, offset and size */
-	/*********************************/
-	ref<Expr> AB = StrVarExpr::create(mos->getABSerial());
-	ref<Expr> offset = BvToIntExpr::create(mos->getOffsetExpr(s));
-	ref<Expr> size = SubExpr::create(mos->getIntSizeExpr(),offset);
-
-	/*****************************/
-	/* [6] Is s NULL terminated? */
-	/*****************************/
-	ref<Expr> x00 = StrConstExpr::create("\\x00");
-	ref<Expr> svar = StrSubstrExpr::create(AB,offset,size);
-	ref<Expr> firstIdxOf_x00_in_s = StrFirstIdxOfExpr::create(svar,x00);
-	ref<Expr> p_is_not_NULL_terminated = EqExpr::create(firstIdxOf_x00_in_s,minusOne);
-
-	/***************************************************************************/
-	/* [7] Issue an error when invoking strlen on a non NULL terminated string */
-	/***************************************************************************/
-	solver->mayBeTrue(state,p_is_not_NULL_terminated,result);
-	if (result)
-	{
-		const char *underline = "                                 ===";
-		klee_error("Invoking strlen on a non NULL terminated string\n %s\n",underline);			
-		assert(0);
-	}
-
-	/****************************************/
-	/* [8] Assume that p is NULL terminated */
-	/*                   ==                 */
-	/****************************************/
-	state.addConstraint(NotExpr::create(p_is_not_NULL_terminated));
-
-	/*************************************/
-	/* [9] bind the result of strlen ... */
-	/*************************************/
-	bindLocal(target,state,firstIdxOf_x00_in_s);
-}
 
 void Executor::executeStrcpy(
 	ExecutionState &state,
