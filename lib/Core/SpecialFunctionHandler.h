@@ -124,10 +124,10 @@ namespace klee {
     HANDLER(handleNewArray);
     HANDLER(handleMyAtoi);
     HANDLER(handleMyMalloc);
-    HANDLER(handleMyStrcmp);
-    HANDLER(handleMyStrcpy);
-    HANDLER(handleMyStrchr);
-    HANDLER(handleMyStrlen);
+    HANDLER(handleStrcmp);
+    HANDLER(handleStrcpy);
+    HANDLER(handleStrchr);
+    HANDLER(handleStrlen);
     HANDLER(handleMyIntAssign);
     HANDLER(handleMyPrintOutput);
     HANDLER(handleMyCharAssign);

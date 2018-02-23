@@ -106,10 +106,10 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("MyReadCharAtConstOffset_Is_NEQ_ToConstChar", handleMyReadCharAtConstOffset_Is_NEQ_ToConstChar,true),
   add("MyMalloc",                    handleMyMalloc,                    false),
   add("markString",                  handleMarkString,                    false),
-  add("strcpy",                      handleMyStrcpy,                    true),
-  add("strchr",                      handleMyStrchr,                    true),
-  add("strcmp",                      handleMyStrcmp,                    true),
-  add("strlen",                      handleMyStrlen,                    true),
+  add("strcpy",                      handleStrcpy,                    true),
+  add("strchr",                      handleStrchr,                    true),
+  add("strcmp",                      handleStrcmp,                    true),
+  add("strlen",                      handleStrlen,                    true),
   add("klee_get_value_i32", handleGetValue, true),
   add("klee_get_value_i64", handleGetValue, true),
   add("klee_define_fixed_object", handleDefineFixedObject, false),
@@ -721,7 +721,7 @@ void Assemble_Abstract_Buffer_Name(int serial, int version, char name[AB_MAX_NAM
 	strcpy(name,nameTag.c_str());
 }
 
-void SpecialFunctionHandler::handleMyStrlen(
+void SpecialFunctionHandler::handleStrlen(
 	ExecutionState &state,
 	KInstruction *target,
 	std::vector<ref<Expr> > &arguments)
@@ -745,26 +745,7 @@ void SpecialFunctionHandler::handleMyStrlen(
 static FILE *AB_Legend_fl;
 static FILE *AB_All_Versions_fl;
 
-/**************************************************************************************************************/
-/*                                                                                                            */
-/*     ssssss    tt                                                                                           */
-/*   sss         tt                                                                                           */
-/*  sss          tttttt    rr  rrrr    cccccccc   pppppppp   yy     yy     ((  pppppppp       qqqqqqqq  ))    */
-/*   sss         tt        rr rr      cc          pp     pp   yy    yy    ((   pp     pp     qq     qq   ))   */
-/*     sss       tt        rrrr      cc           pp     pp    yy   yy   ((    pp     pp     qq     qq    ))  */
-/*       sss     tt        rrr       cc           pp     pp     yy  yy   ((    pp     pp     qq     qq    ))  */
-/*        sss    tt        rr        cc           pp     pp      yy yy   ((    pp     pp     qq     qq    ))  */
-/*        sss     tt       rr         cc          pp    pp        yyyy   ((    pp    pp      qq     qq    ))  */
-/*   sssssss       ttttt   rr          cccccccc   ppppppp          yyy    ((   ppppppp   ,,   qqqqqqqq   ))   */
-/*                                                pp                yy     ((  pp        ,,         qq  ))    */
-/*                                                pp                yy         pp       ,,          qq        */
-/*                                                pp                yy         pp                   qq        */
-/*                                                pp               yy          pp                   qq        */
-/*                                                pp          yy  yy           pp                   qq        */
-/*                                                pp           yyyy            pp                   qq        */
-/*                                                                                                            */
-/**************************************************************************************************************/
-void SpecialFunctionHandler::handleMyStrcpy(
+void SpecialFunctionHandler::handleStrcpy(
 	ExecutionState &state,
 	KInstruction *target,
 	std::vector<ref<Expr> > &arguments)
@@ -930,7 +911,7 @@ void SpecialFunctionHandler::handleMyConstStringAssign(
 /*                                                             pp                  pp                   qq        */
 /*                                                                                                                */
 /******************************************************************************************************************/
-void SpecialFunctionHandler::handleMyStrcmp(
+void SpecialFunctionHandler::handleStrcmp(
 	ExecutionState &state,
 	KInstruction *target,
 	std::vector<ref<Expr> > &arguments)
@@ -2503,7 +2484,7 @@ void SpecialFunctionHandler::handleMyMalloc(
 	}
 }
 
-void SpecialFunctionHandler::handleMyStrchr(
+void SpecialFunctionHandler::handleStrchr(
 	ExecutionState &state,
 	KInstruction *target,
 	std::vector<ref<Expr> > &arguments)
