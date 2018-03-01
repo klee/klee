@@ -1,0 +1,44 @@
+#!/bin/bash
+#########
+# FILES #
+#########
+PACKAGE_NAME=wavpack-5.1.0
+PACKAGE_TAR_FILE=${PACKAGE_NAME}.tar.bz2
+PACKAGE_FTP_SITE=https://ftp.openbsd.org/pub/OpenBSD/distfiles
+
+####################################
+# REMOVE OLD STUFF JUST TO BE SURE #
+####################################
+rm -rf build
+rm -rf ${PACKAGE_NAME}
+rm -rf ${PACKAGE_TAR_FILE}
+
+#####################################
+# Get source code for buggy package #
+#####################################
+wget ${PACKAGE_FTP_SITE}/${PACKAGE_TAR_FILE}
+
+######################
+# Unpack it here ... #
+######################
+tar xf ${PACKAGE_TAR_FILE}
+
+##########################################
+# Prepare an out of tree build directory #
+##########################################
+mkdir build
+
+##############################
+# Get inside build directory #
+##############################
+cd build
+
+#################
+# Configure ... #
+#################
+../${PACKAGE_NAME}/configure
+
+###############
+# Make it !!! #
+###############
+make -j
