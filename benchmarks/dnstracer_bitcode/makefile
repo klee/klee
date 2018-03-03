@@ -64,7 +64,7 @@ compile_and_run:
 	@echo "*                                           *"
 	@echo "*********************************************"
 	@setterm -term linux -fore white
-	#gdb -x ./myGdbScripts/gdbCommands.txt --args   \
+	gdb -x ./myGdbScripts/gdbCommands.txt --args    \
 	${KLEE}                                         \
 	--libc=uclibc                                   \
 	--posix-runtime                                 \
@@ -76,7 +76,8 @@ compile_and_run:
 	-use-query-log=solver:smt2                      \
 	-debug-z3-dump-queries=Z3queries.txt            \
 	-debug-z3-log-api-interaction=Z3LogAPI.txt      \
-	build/dnstracer_no_dbg_with_names.bc 
+	build/dnstracer_no_dbg_with_names.bc            \
+	--sym-args 0 1 1050
 	@setterm -term linux -fore blue
 	@echo "******************************************"
 	@echo "*                                        *"
