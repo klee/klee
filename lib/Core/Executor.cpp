@@ -3352,7 +3352,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
   if (!replayKTest) {
     // Find a unique name for this array.  First try the original name,
     // or if that fails try adding a unique identifier.
-    unsigned id = 0;
+    static unsigned id = 0;
     std::string uniqueName = name;
     while (!state.arrayNames.insert(uniqueName).second) {
       uniqueName = name + "_" + llvm::utostr(++id);
