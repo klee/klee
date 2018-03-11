@@ -1,0 +1,16 @@
+####################
+# Pagination = off #
+####################
+set pagination off
+
+#######################
+# Initial breakpoints #
+####################### 
+start
+break main
+break pdf-write.c:3023
+###########
+# run ... #
+###########
+run
+

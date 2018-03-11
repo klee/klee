@@ -2,9 +2,9 @@
 #########
 # FILES #
 #########
-PACKAGE_NAME=dnstracer-1.6
-PACKAGE_TAR_FILE=${PACKAGE_NAME}.tar.gz
-PACKAGE_FTP_SITE=http://ftp.iij.ad.jp/pub/linux/momonga/1/PKGS/SOURCES/
+PACKAGE_NAME=mupdf-1.12.0-source
+PACKAGE_TAR_FILE=${PACKAGE_NAME}.tar.xz
+PACKAGE_FTP_SITE=https://mupdf.com/downloads/
 
 ####################################
 # REMOVE OLD STUFF JUST TO BE SURE #
@@ -23,22 +23,15 @@ wget ${PACKAGE_FTP_SITE}/${PACKAGE_TAR_FILE}
 ######################
 tar xf ${PACKAGE_TAR_FILE}
 
-##########################################
-# Prepare an out of tree build directory #
-##########################################
-mkdir build
-
-##############################
-# Get inside build directory #
-##############################
-cd build
-
 #################
 # Configure ... #
 #################
-CC=wllvm LLVM_COMPILER=clang CFLAGS="-g -O0" ../${PACKAGE_NAME}/configure
+cd ${PACKAGE_NAME}
 
 ###############
 # Make it !!! #
 ###############
-LLVM_COMPILER=clang make -j
+CC=wllvm
+LLVM_COMPILER=clang
+XCFLAGS="-g -O0"
+make debug

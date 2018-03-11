@@ -1,7 +1,6 @@
 #########
 # INPUT #
 #########
-STRING_1025_A = $(shell python -c 'print "A"*1025')
 
 ##################
 # DEFAULT TARGET #
@@ -12,23 +11,11 @@ compile_and_run:
 	@setterm -term linux -fore blue
 	@echo "******************************************************************"
 	@echo "*                                                                *"
-	@echo "* Run dnstracer with specially crafted input that causes failure *"
+	@echo "* Run tiffsplit with specially crafted input that causes failure *"
 	@echo "*                                                                *"
 	@echo "******************************************************************"
 	@setterm -term linux -fore white
-	gdb -x ./myGdbScripts/gdbCommands.txt --args ./build/dnstracer -v $(shell python -c 'print "A"*1025')
-.PHONY: print_all_c_stmts
-print_all_c_stmts:
-	@clear
-	@setterm -term linux -fore blue
-	@echo "**********************************************************"
-	@echo "*                                                        *"
-	@echo "* Print all c statements until critical point is reached *"
-	@echo "*                                                        *"
-	@echo "**********************************************************"
-	@setterm -term linux -fore white
-	gdb -x ./myGdbScripts/gdbCommandsSingleStep.txt --args \
-	./build/cli/.libs/wavpack -y ./myInput/Input.wav
+	./build/tools/tiffsplit myInput/Input.tif `perl -e 'print "a"x40000;'`
 .PHONY: build_everything_from_scratch
 build_everything_from_scratch:
 	@clear
@@ -39,4 +26,4 @@ build_everything_from_scratch:
 	@echo "*                                   *"
 	@echo "*************************************"
 	@setterm -term linux -fore white
-	./myBuildingScripts/build-step0-dnstracer
+	./myBuildingScripts/build-step0-libtiff

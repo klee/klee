@@ -1,3 +1,51 @@
+####################
+# BENCHMARKS STUFF #
+####################
+
+#####################
+# all tar files ... #
+#####################
+**/*.tar.*
+
+###########
+#         #
+# libtiff #
+#         #
+###########
+benchmarks/libtiff*/tiff-3.8.2/*
+benchmarks/libtiff*/build/*
+
+#########
+#       #
+# mupdf #
+#       #
+#########
+benchmarks/mupdf*/mupdf-1.12.0-source/*
+
+############
+#          #
+# openjpeg #
+#          #
+############
+benchmarks/openjpeg*/openjpeg-2.3.0/*
+benchmarks/openjpeg*/build/*
+
+#############
+#           #
+# dnstracer #
+#           #
+#############
+benchmarks/dnstracer*/dnstracer-1.6/*
+benchmarks/dnstracer*/build/*
+
+###########
+#         #
+# libosip #
+#         #
+###########
+benchmarks/libosip*/libosip2-4.1.0/*
+benchmarks/libosip*/build/*
+
 Release/
 Release+Asserts/
 Debug/

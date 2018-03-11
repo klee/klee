@@ -1,7 +1,6 @@
 #########
 # INPUT #
 #########
-STRING_1025_A = $(shell python -c 'print "A"*1025')
 
 ##################
 # DEFAULT TARGET #
@@ -10,13 +9,13 @@ STRING_1025_A = $(shell python -c 'print "A"*1025')
 compile_and_run:
 	@clear
 	@setterm -term linux -fore blue
-	@echo "******************************************************************"
-	@echo "*                                                                *"
-	@echo "* Run dnstracer with specially crafted input that causes failure *"
-	@echo "*                                                                *"
-	@echo "******************************************************************"
+	@echo "*****************************************************************"
+	@echo "*                                                               *"
+	@echo "* Run openjpeg with specially crafted input that causes failure *"
+	@echo "*                                                               *"
+	@echo "*****************************************************************"
 	@setterm -term linux -fore white
-	gdb -x ./myGdbScripts/gdbCommands.txt --args ./build/dnstracer -v $(shell python -c 'print "A"*1025')
+	gdb -x ./myGdbScripts/gdbCommands.txt --args ./mupdf-1.12.0-source/build/debug/mutool poster ~/Downloads/mutool_poster_crash
 .PHONY: print_all_c_stmts
 print_all_c_stmts:
 	@clear
@@ -39,4 +38,4 @@ build_everything_from_scratch:
 	@echo "*                                   *"
 	@echo "*************************************"
 	@setterm -term linux -fore white
-	./myBuildingScripts/build-step0-dnstracer
+	./myBuildingScripts/build-step0-mupdf

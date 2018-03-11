@@ -2,9 +2,9 @@
 #########
 # FILES #
 #########
-PACKAGE_NAME=dnstracer-1.6
+PACKAGE_NAME=tiff-3.8.2
 PACKAGE_TAR_FILE=${PACKAGE_NAME}.tar.gz
-PACKAGE_FTP_SITE=http://ftp.iij.ad.jp/pub/linux/momonga/1/PKGS/SOURCES/
+PACKAGE_FTP_SITE=http://libtiff.maptools.org/dl
 
 ####################################
 # REMOVE OLD STUFF JUST TO BE SURE #
@@ -36,9 +36,12 @@ cd build
 #################
 # Configure ... #
 #################
-CC=wllvm LLVM_COMPILER=clang CFLAGS="-g -O0" ../${PACKAGE_NAME}/configure
+CC=wllvm
+LLVM_COMPILER=clang
+CFLAGS="-g -O0"
+../${PACKAGE_NAME}/configure --disable-shared
 
 ###############
 # Make it !!! #
 ###############
-LLVM_COMPILER=clang make -j
+make -j

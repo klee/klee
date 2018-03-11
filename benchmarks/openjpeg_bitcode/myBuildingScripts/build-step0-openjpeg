@@ -2,9 +2,9 @@
 #########
 # FILES #
 #########
-PACKAGE_NAME=dnstracer-1.6
+PACKAGE_NAME=openjpeg-2.3.0
 PACKAGE_TAR_FILE=${PACKAGE_NAME}.tar.gz
-PACKAGE_FTP_SITE=http://ftp.iij.ad.jp/pub/linux/momonga/1/PKGS/SOURCES/
+PACKAGE_FTP_SITE=https://ftp.osuosl.org/pub/blfs/conglomeration/openjpeg
 
 ####################################
 # REMOVE OLD STUFF JUST TO BE SURE #
@@ -36,9 +36,9 @@ cd build
 #################
 # Configure ... #
 #################
-CC=wllvm LLVM_COMPILER=clang CFLAGS="-g -O0" ../${PACKAGE_NAME}/configure
+CC=wllvm CXX=wllvm++ cmake -DBUILD_MJ2=On ../${PACKAGE_NAME}
 
 ###############
 # Make it !!! #
 ###############
-LLVM_COMPILER=clang make -j
+make -j

@@ -1,0 +1,37 @@
+####################
+# Pagination = off #
+####################
+set pagination off
+
+#######################
+# Initial breakpoints #
+####################### 
+start
+break SpecialFunctionHandler.cpp:1842
+run
+step
+next
+next
+step
+step
+next
+next
+step
+step
+next
+next
+step
+next
+step
+next
+next
+step
+next
+next
+step
+next
+step
+next
+next
+step
+next

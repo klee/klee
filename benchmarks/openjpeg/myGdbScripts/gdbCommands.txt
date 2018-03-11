@@ -1,0 +1,15 @@
+####################
+# Pagination = off #
+####################
+set pagination off
+
+#######################
+# Initial breakpoints #
+####################### 
+start
+break opj_mj2_extract.c:143
+###########
+# run ... #
+###########
+run
+
