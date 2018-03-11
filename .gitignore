@@ -46,6 +46,14 @@ benchmarks/dnstracer*/build/*
 benchmarks/libosip*/libosip2-4.1.0/*
 benchmarks/libosip*/build/*
 
+###########
+#         #
+# libosip #
+#         #
+###########
+benchmarks/gzip*/gzip-1.2.4a/*
+benchmarks/gzip*/build/*
+
 Release/
 Release+Asserts/
 Debug/
