@@ -36,9 +36,9 @@ cd build
 #################
 # Configure ... #
 #################
-CC=wllvm
-LLVM_COMPILER=clang
-CFLAGS="-g -O0"
+export CC=wllvm
+export LLVM_COMPILER=clang
+export CFLAGS="-g -O0"
 ../${PACKAGE_NAME}/configure --disable-shared
 
 ###############
