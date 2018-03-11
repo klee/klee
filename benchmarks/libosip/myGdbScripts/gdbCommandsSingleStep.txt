@@ -1,0 +1,34 @@
+####################
+# Pagination = off #
+####################
+set pagination off
+
+#######################
+# Initial breakpoints #
+####################### 
+start
+set logging on
+break main
+skip -file exit.c
+skip -file malloc.c
+skip -file strops.c
+skip -file genops.c
+skip -file fileops.c
+skip -file iofgets.c
+skip -file iofclose.c
+skip -file vfprintf.c
+skip -file iogetline.c
+skip -file vsnprintf.c
+skip -file ../sysdeps/x86_64/multiarch/strchr-avx2.S
+skip -file ../sysdeps/x86_64/multiarch/strlen-avx2.S
+skip -file ../sysdeps/x86_64/multiarch/memchr-avx2.S
+skip -file ../sysdeps/x86_64/multiarch/strcmp-sse42.S
+skip -file ../sysdeps/x86_64/multiarch/strstr-sse2-unaligned.S
+skip -file ../sysdeps/x86_64/multiarch/strcpy-sse2-unaligned.S
+skip -file ../sysdeps/x86_64/multiarch/strcmp-sse2-unaligned.S
+skip -file ../sysdeps/x86_64/multiarch/memset-vec-unaligned-erms.S
+skip -file ../sysdeps/x86_64/multiarch/memmove-vec-unaligned-erms.S
+run
+while 1
+step
+end

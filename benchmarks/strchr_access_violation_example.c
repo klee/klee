@@ -16,32 +16,31 @@
 /**********************/
 #include "klee/klee.h"
 
-#define N 150
-
-//static char fname[N+200];
-
 /************/
 /* main ... */
 /************/
 int main(int argc, char **argv)
 {
-	char fname[N-2];
-	char *argv0 = (char *) malloc(N);
-	char *argv1 = (char *) malloc(N);
-	char *argv2 = (char *) malloc(N);
+	char *p;
+	char *q;
+	char *r;
 
-	/*****************/
-	/*               */
-	/* mark strings  */
-	/*               */
-	/*****************/
-	markString(argv0);
-	markString(argv1);
-	markString(argv2);
-	markString(fname);
+	unsigned int i;
 
-	// argv2[N-1]=0;
-	
-	strcpy(fname,argv2);
+	klee_make_symbolic(&i,sizeof( i ), "i");
+
+	p = malloc(10);
+	markString(p);
+
+	q = p + i;
+
+	r = strchr(q, '#');
+
+	if (i < 3)
+	{
+		if ((r - p > 5) && (r - q < 5))
+		{
+			MyPrintOutput(">> strchr + pointer arithmetic works !!!\n");
+		}
+	}
 }
-
