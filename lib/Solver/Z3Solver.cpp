@@ -226,8 +226,8 @@ bool Z3SolverImpl::computeValue(const Query &query, ref<Expr> &result) {
 
   } else {
   // Evaluate the expression with the computed assignment.
-    Assignment a(objects, values);
-    result = a.evaluate(query.expr);
+  Assignment a(objects, values);
+  result = a.evaluate(query.expr);
   }
   result->dump();
 

@@ -60,6 +60,16 @@ namespace klee {
     ref<Expr> getInitialValue(const Array &mo, unsigned index) {
       return a.evaluate(&mo, index);
     }
+    const Array* getStringArray(std::string AB_name) {
+        for(auto& b : a.bindings) {
+            const Array* a = b.first;
+            if(a->size == 0 && a->name == AB_name) {
+                return a;
+            }
+        }
+        assert(false && "Didn't find ab name");
+        return nullptr;
+    };
     
   public:
     AssignmentEvaluator(const Assignment &_a) : a(_a) {}    
