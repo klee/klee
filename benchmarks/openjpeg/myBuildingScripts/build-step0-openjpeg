@@ -36,7 +36,7 @@ cd build
 #################
 # Configure ... #
 #################
-CFLAGS="-ggdb -O0" cmake -DBUILD_MJ2=On ../${PACKAGE_NAME}
+CFLAGS="-ggdb -O0 -fno-stack-protector" cmake -DBUILD_MJ2=On ../${PACKAGE_NAME}
 
 ###############
 # Make it !!! #
