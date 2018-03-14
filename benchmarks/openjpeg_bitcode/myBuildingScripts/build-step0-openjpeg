@@ -36,7 +36,7 @@ cd build
 #################
 # Configure ... #
 #################
-CC=wllvm CXX=wllvm++ cmake -DBUILD_MJ2=On ../${PACKAGE_NAME}
+CC=wllvm CXX=wllvm++ cmake -DBUILD_SHARED_LIBS=OFF -DBUILD_MJ2=On ../${PACKAGE_NAME}
 
 ###############
 # Make it !!! #
