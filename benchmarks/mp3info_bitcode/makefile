@@ -38,7 +38,7 @@ compile_and_run:
 	@echo "*                                *"
 	@echo "**********************************"
 	@setterm -term linux -fore white
-	#extract-bc ${PROGRAM_PATH}/${PROGRAM_NAME}
+	extract-bc ${PROGRAM_PATH}/${PROGRAM_NAME}
 	@setterm -term linux -fore blue
 	@echo "*******************************************"
 	@echo "*                                         *"
