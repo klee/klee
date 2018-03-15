@@ -26,6 +26,10 @@ namespace klee {
     Action visitURem(const URemExpr &e);
     Action visitSRem(const SRemExpr &e);
     Action visitExprPost(const Expr& e);
+    Action visitStrSubstr(const StrSubstrExpr&);
+    Action visitBvToInt(const BvToIntExpr&);
+    Action visitFirstIndexOf(const StrFirstIdxOfExpr&);
+    Action visitStrFromBv8(const StrFromBitVector8Expr&);
       
   public:
     ExprEvaluator() {}
@@ -36,6 +40,7 @@ namespace klee {
     /// out-of-bounds. If the value is unknown then the user should return a
     /// ReadExpr at the initial version of this array.
     virtual ref<Expr> getInitialValue(const Array& os, unsigned index) = 0;
+    virtual const Array* getStringArray(std::string AB_name) {assert(false && "TODO");};
   };
 }
 

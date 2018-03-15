@@ -89,6 +89,9 @@ bool Solver::getValue(const Query& query, ref<ConstantExpr> &result) {
   if (!impl->computeValue(query, tmp))
     return false;
   
+
+  llvm::errs() << "Width: " << tmp->getWidth() << "\n";
+  tmp->dump();
   result = cast<ConstantExpr>(tmp);
   return true;
 }

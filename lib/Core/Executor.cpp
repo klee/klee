@@ -654,6 +654,23 @@ void Executor::initializeGlobals(ExecutionState &state) {
       ObjectState *wos = state.addressSpace.getWriteable(mo, os);
       
       initializeGlobalObject(state, wos, i->getInitializer(), 0);
+      if(i->isConstant() 
+         && i->getType()->getElementType()->isArrayTy()
+         && dyn_cast<ArrayType>(i->getType()->getElementType())->getElementType()->isIntegerTy(8)) {
+         char c[wos->size + 1];
+         for(int i = 0; i < wos->size; i++) {
+             c[i] = (char)dyn_cast<ConstantExpr>(wos->read8(i))->getZExtValue(8);
+         }
+         mo->setName(i->getName());
+         mo->serial = 0;
+         mo->version = 0;
+         std::stringstream ss;
+         ss << c << "\\x00";
+         errs() << mo->name;
+         printf("Found constant %s\n", ss.str().c_str());
+	       state.addConstraint(StrEqExpr::create(StrVarExpr::create(mo->getABSerial()), 
+                                                      StrConstExpr::create(ss.str())));
+      }
       // if(i->isConstant()) os->setReadOnly(true);
     }
   }

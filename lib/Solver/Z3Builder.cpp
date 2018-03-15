@@ -635,56 +635,56 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
   	StrVarExpr *sve = (StrVarExpr *) e.get();
 	ABname = sve->name.c_str();
 
-	switch (*(ABname+strlen("AB_serial_"))) {
-	case ('0'): serial=0; break;
-	case ('1'): serial=1; break;
-	case ('2'): serial=2; break;
-	case ('3'): serial=3; break;
-	case ('4'): serial=4; break;
-	case ('5'): serial=5; break;
-	case ('6'): serial=6; break;
-	case ('7'): serial=7; break;
-	case ('8'): serial=8; break;
-	case ('9'): serial=9; break;
-	}
-
-	switch (*(ABname+strlen("AB_serial_x_version_"))) {
-	case ('0'): version=0; break;
-	case ('1'): version=1; break;
-	case ('2'): version=2; break;
-	case ('3'): version=3; break;
-	case ('4'): version=4; break;
-	case ('5'): version=5; break;
-	case ('6'): version=6; break;
-	case ('7'): version=7; break;
-	case ('8'): version=8; break;
-	case ('9'): version=9; break;
-	}
-
- 	//llvm::errs() << "****************************************\n";
-  	//llvm::errs() << "* Expr::Str_Var( " << sve->name << " ) *\n";
-  	//llvm::errs() << "****************************************\n";
-
-	/********************************************************************************/
-	/* Whenever a new Abstract buffer is referenced, add its get-value to the query */
-	/********************************************************************************/
-	if (firstTime == 1)
-	{
-		firstTime = 0;
-		AB_All_Versions_fl = fopen("/tmp/AB_All_Versions.txt","w+t");
-		fprintf(AB_All_Versions_fl,"(get-value (%s ",sve->name.c_str());
-		fclose(AB_All_Versions_fl);
-	}
-	else
-	{
-		if (usedABs[serial][version] == 0)
-		{
-			AB_All_Versions_fl = fopen("/tmp/AB_All_Versions.txt","at");
-			fprintf(AB_All_Versions_fl,"%s ",sve->name.c_str());
-			fclose(AB_All_Versions_fl);
-			usedABs[serial][version]=1;
-		}
-	}
+//	switch (*(ABname+strlen("AB_serial_"))) {
+//	case ('0'): serial=0; break;
+//	case ('1'): serial=1; break;
+//	case ('2'): serial=2; break;
+//	case ('3'): serial=3; break;
+//	case ('4'): serial=4; break;
+//	case ('5'): serial=5; break;
+//	case ('6'): serial=6; break;
+//	case ('7'): serial=7; break;
+//	case ('8'): serial=8; break;
+//	case ('9'): serial=9; break;
+//	}
+//
+//	switch (*(ABname+strlen("AB_serial_x_version_"))) {
+//	case ('0'): version=0; break;
+//	case ('1'): version=1; break;
+//	case ('2'): version=2; break;
+//	case ('3'): version=3; break;
+//	case ('4'): version=4; break;
+//	case ('5'): version=5; break;
+//	case ('6'): version=6; break;
+//	case ('7'): version=7; break;
+//	case ('8'): version=8; break;
+//	case ('9'): version=9; break;
+//	}
+//
+// 	//llvm::errs() << "****************************************\n";
+//  	//llvm::errs() << "* Expr::Str_Var( " << sve->name << " ) *\n";
+//  	//llvm::errs() << "****************************************\n";
+//
+//	/********************************************************************************/
+//	/* Whenever a new Abstract buffer is referenced, add its get-value to the query */
+//	/********************************************************************************/
+//	if (firstTime == 1)
+//	{
+//		firstTime = 0;
+//		AB_All_Versions_fl = fopen("/tmp/AB_All_Versions.txt","w+t");
+//		fprintf(AB_All_Versions_fl,"(get-value (%s ",sve->name.c_str());
+//		fclose(AB_All_Versions_fl);
+//	}
+//	else
+//	{
+//		if (usedABs[serial][version] == 0)
+//		{
+//			AB_All_Versions_fl = fopen("/tmp/AB_All_Versions.txt","at");
+//			fprintf(AB_All_Versions_fl,"%s ",sve->name.c_str());
+//			fclose(AB_All_Versions_fl);
+//			usedABs[serial][version]=1;
+//		}
+//	}
 
   	/*******************************************************************/
   	/* Build a Z3ASTHandle from the name of the (string-sort) variable */

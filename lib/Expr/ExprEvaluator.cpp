@@ -41,7 +41,7 @@ ExprVisitor::Action ExprEvaluator::visitExpr(const Expr &e) {
   // construction. Don't do this for reads though, because we want them to go to
   // the normal rewrite path.
   unsigned N = e.getNumKids();
-  if (!N || isa<ReadExpr>(e))
+  if (!N || isa<ReadExpr>(e) || isa<BvToIntExpr>(e) || isa<StrFromBitVector8Expr>(e))
     return Action::doChildren();
 
   for (unsigned i = 0; i != N; ++i)
@@ -56,14 +56,68 @@ ExprVisitor::Action ExprEvaluator::visitExpr(const Expr &e) {
 
   return Action::changeTo(e.rebuild(Kids));
 }
+ExprVisitor::Action ExprEvaluator::visitBvToInt(const BvToIntExpr& e) {
+  return Action::changeTo(e.bvExpr);
+}
+ExprVisitor::Action ExprEvaluator::visitStrFromBv8(const StrFromBitVector8Expr& e) {
+  return Action::changeTo(e.someBitVec8);
+}
+ExprVisitor::Action ExprEvaluator::visitFirstIndexOf(const StrFirstIdxOfExpr& sfi) {
+    ref<Expr> _haystack = visit(sfi.haystack);
+    ref<Expr> _needle = visit(sfi.needle);
 
+    _haystack->dump();
+    _needle->dump();
+    StrConstExpr* haystack = dyn_cast<StrConstExpr>(_haystack);
+    assert(haystack && "Haystack must be a constant string");
+    std::string needle;
+    if(ConstantExpr* n = dyn_cast<ConstantExpr>(_needle)) {
+        needle = std::string(1,(char)n->getZExtValue(8));
+    } else if(StrConstExpr* n = dyn_cast<StrConstExpr>(_needle)) {
+        needle = n->value;
+    } else  
+      assert(false && "Needle must be constant bitvec");
+    size_t firstIndex = haystack->value.find_first_of(needle);
+    assert(firstIndex != std::string::npos && "Character must be present");
+
+    llvm::errs() << "Needle: !!!!" << firstIndex << "\n";
+    return Action::changeTo(ConstantExpr::create(firstIndex, Expr::Int64));
+}
+ExprVisitor::Action ExprEvaluator::visitStrSubstr(const StrSubstrExpr &subStrE) {
+    ref<Expr> _offset = visit(subStrE.offset);
+    ref<Expr> _length = visit(subStrE.length);
+    ConstantExpr* offset = dyn_cast<ConstantExpr>(_offset);
+    ConstantExpr* length = dyn_cast<ConstantExpr>(_length);
+    if(offset != nullptr && length != nullptr) {
+      llvm::errs() << "substr " << offset->getZExtValue() << " of len " << length->getZExtValue() << "\n";
+      StrVarExpr* se = dyn_cast<StrVarExpr>(subStrE.s);
+      if(se) {
+        const Array *a = getStringArray(se->name);
+        assert(a && "nullptr array from ab name");
+        char c[length->getZExtValue()];
+        for(int i = offset->getZExtValue(); i < length->getZExtValue(); i++) {
+            c[i] = (char)dyn_cast<ConstantExpr>(getInitialValue(*a, i))->getZExtValue(8);
+        }
+        return Action::changeTo(StrConstExpr::create(c));
+      } else {
+        subStrE.s->dump();
+        return Action::doChildren();
+      }
+    } else {
+      _offset->dump();
+      _length->dump();
+      assert(false && "Non constant offsets for substr");
+      return Action::doChildren();
+    }
+
+}
 ExprVisitor::Action ExprEvaluator::visitRead(const ReadExpr &re) {
   ref<Expr> v = visit(re.index);
   
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(v)) {
     return evalRead(re.updates, CE->getZExtValue());
   } else {
-    return Action::doChildren();
+      return Action::doChildren();
   }
 }
 

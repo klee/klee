@@ -976,9 +976,15 @@ void SpecialFunctionHandler::handleStrcmp(
   ExecutionState *p_q_NULL_terminated = branches.first;
   ExecutionState *p_q_NOT_NULL_terminated = branches.second;
   if(p_q_NOT_NULL_terminated) {
-      executor.terminateStateOnError(*p_q_NULL_terminated, 
+      executor.terminateStateOnError(*p_q_NOT_NULL_terminated, 
           "One of the strings in strcmp is not null terminated", Executor::Ptr);
   }
+
+  if(!p_q_NULL_terminated) {
+      klee_warning("P and q can't be null terminated");
+      return;
+  }
+
 
   executor.bindLocal(target,*p_q_NULL_terminated, m.first);
 //  executor.executeStrcmp(state, target, arguments[0], arguments[1]);

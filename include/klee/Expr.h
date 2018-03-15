@@ -560,7 +560,7 @@ public:
   /// a symbolic array. If non-empty, this size of this array is equivalent to
   /// the array size.
   const std::vector<ref<ConstantExpr> > constantValues;
-  Array(const std::string &_name): name(_name), size(0), domain(0), range(0){};
+  Array(const std::string &_name): name(_name), size(0), domain(Expr::Int32), range(Expr::Int8){};
 
 private:
   unsigned hashValue;
