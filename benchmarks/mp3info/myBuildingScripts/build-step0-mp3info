@@ -1,0 +1,38 @@
+#!/bin/bash
+#########
+# FILES #
+#########
+PACKAGE_NAME=mp3info-0.8.5
+PACKAGE_TAR_FILE=${PACKAGE_NAME}.tgz
+PACKAGE_FTP_SITE=http://www.ibiblio.org/pub/linux/apps/sound/mp3-utils/mp3info/
+
+####################################
+# REMOVE OLD STUFF JUST TO BE SURE #
+####################################
+rm -rf ${PACKAGE_NAME}
+rm -rf ${PACKAGE_TAR_FILE}
+
+#####################################
+# Get source code for buggy package #
+#####################################
+wget ${PACKAGE_FTP_SITE}/${PACKAGE_TAR_FILE}
+
+######################
+# Unpack it here ... #
+######################
+tar xf ${PACKAGE_TAR_FILE}
+
+###############################
+# Get inside source directory #
+###############################
+cd ${PACKAGE_NAME}
+
+#################
+# Configure ... #
+#################
+sed -i s/-O2/-O0/g Makefile
+
+###############
+# Make it !!! #
+###############
+make

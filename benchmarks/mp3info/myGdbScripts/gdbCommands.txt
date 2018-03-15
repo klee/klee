@@ -1,0 +1,55 @@
+####################
+# Pagination = off #
+####################
+set pagination off
+
+#######################
+# Initial breakpoints #
+####################### 
+start
+break mp3info.c:186
+###########
+# run ... #
+###########
+run
+shell clear
+shell setterm -term linux -fore blue
+call (void) printf("********************************************************\n")
+call (void) printf("* Here is the contents of local variable print_format: *\n")
+call (void) printf("********************************************************\n")
+shell setterm -term linux -fore white
+print print_format
+shell setterm -term linux -fore blue
+call (void) printf("****************************************************\n")
+call (void) printf("* And here is the contents of char error_msg[256]: *\n")
+call (void) printf("****************************************************\n")
+shell setterm -term linux -fore white
+x/64wx error_msg
+shell setterm -term linux -fore blue
+call (void) printf("***************************************\n")
+call (void) printf("* Now perform overflowing sprintf ... *\n")
+call (void) printf("***************************************\n")
+shell setterm -term linux -fore white
+next
+next
+shell setterm -term linux -fore red
+call (void) printf("*********************************************************\n")
+call (void) printf("*  See the contents of error_msg[256] and print_format  *\n")
+call (void) printf("*                                                       *\n")
+call (void) printf("* ==============  AFTER they got ruined  ============== *\n")
+call (void) printf("*                                                       *\n")
+call (void) printf("*                  MOO HA HA !!!                        *\n")
+call (void) printf("*********************************************************\n")
+call (void) printf("************************************************\n")
+call (void) printf("* Here is the contents of char error_msg[256]: *\n")
+call (void) printf("************************************************\n")
+shell setterm -term linux -fore white
+x/64wx error_msg
+shell setterm -term linux -fore red
+call (void) printf("************************************************************\n")
+call (void) printf("* And here is the contents of local variable print_format: *\n")
+call (void) printf("************************************************************\n")
+shell setterm -term linux -fore white
+print print_format
+
+
