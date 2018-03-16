@@ -31,7 +31,7 @@ cd build
 #################
 # Configure ... #
 #################
-../${PACKAGE_NAME}/configure
+../${PACKAGE_NAME}/configure --enable-shared=no --enable-static=yes --without-threads
 
 ###############
 # Make it !!! #
