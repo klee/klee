@@ -1,13 +1,14 @@
-########
-# KLEE #
-########
-KLEE=/home/oren/GIT/klee/vanilla.klee/build/bin/klee
-
 ################
 # PROGRAM NAME #
 ################
-PROGRAM_PATH=mp3info-0.8.5
-PROGRAM_NAME=mp3info
+PROGRAM_PATH=build/.libs
+PROGRAM_NAME=xmllint
+
+######################
+# INPUT REPRODUCTION #
+######################
+s=$(printf "%-757s" "0")
+t=$(printf "%-4924s" "0")
 
 ##################
 # DEFAULT TARGET #
@@ -16,78 +17,14 @@ PROGRAM_NAME=mp3info
 compile_and_run:
 	@clear
 	@setterm -term linux -fore blue
-	@echo "*********************************************"
-	@echo "*                                           *"
-	@echo "* [0] Copy from my source files to openjpeg *"
-	@echo "*                                           *"
-	@echo "*********************************************"
+	@echo "****************************************************************"
+	@echo "*                                                              *"
+	@echo "* Run xmllint with specially crafted input that causes failure *"
+	@echo "*                                                              *"
+	@echo "****************************************************************"
 	@setterm -term linux -fore white
-	#cp mySourceFiles/dnstracer.c dnstracer-1.6
-	@setterm -term linux -fore blue
-	@echo "****************************"
-	@echo "*                          *"
-	@echo "* [1] Bulid openjpeg-2.3.0 *"
-	@echo "*                          *"
-	@echo "****************************"
-	@setterm -term linux -fore white
-	cd ${PROGRAM_PATH} && (LLVM_COMPILER=clang make)
-	@setterm -term linux -fore blue
-	@echo "**********************************"
-	@echo "*                                *"
-	@echo "* [2] extract ${PROGRAM_NAME}.bc *"
-	@echo "*                                *"
-	@echo "**********************************"
-	@setterm -term linux -fore white
-	extract-bc ${PROGRAM_PATH}/${PROGRAM_NAME}
-	@setterm -term linux -fore blue
-	@echo "*******************************************"
-	@echo "*                                         *"
-	@echo "* [3] Remove debug info from bitcode file *"
-	@echo "*                                         *"
-	@echo "*******************************************"
-	@setterm -term linux -fore white
-	opt -strip-debug -o                       \
-	${PROGRAM_PATH}/${PROGRAM_NAME}_no_dbg.bc \
-	${PROGRAM_PATH}/${PROGRAM_NAME}.bc
-	@setterm -term linux -fore blue
-	@echo "************************************************"
-	@echo "*                                              *"
-	@echo "* [4] Add names to insructions in bitcode file *"
-	@echo "*                                              *"
-	@echo "************************************************"
-	@setterm -term linux -fore white
-	opt -instnamer -o                                    \
-	${PROGRAM_PATH}/${PROGRAM_NAME}_no_dbg_with_names.bc \
-	${PROGRAM_PATH}/${PROGRAM_NAME}_no_dbg.bc
-	@setterm -term linux -fore blue
-	@echo "*********************************************"
-	@echo "*                                           *"
-	@echo "* [5] Run KLEE with its BAZILLION flags ... *"
-	@echo "*                                           *"
-	@echo "*********************************************"
-	@setterm -term linux -fore white
-	#gdb -x ./myGdbScripts/gdbCommands.txt --args         \
-	${KLEE}                                              \
-	--libc=uclibc                                        \
-	--posix-runtime                                      \
-	-solver-backend=z3                                   \
-	-output-module                                       \
-	-output-source                                       \
-	-use-cex-cache=0                                     \
-	-use-independent-solver=0                            \
-	-use-query-log=solver:smt2                           \
-	-debug-z3-dump-queries=Z3queries.txt                 \
-	-debug-z3-log-api-interaction=Z3LogAPI.txt           \
-	${PROGRAM_PATH}/${PROGRAM_NAME}_no_dbg_with_names.bc \
-	--sym-args 0 1 1050                                        
-	@setterm -term linux -fore blue
-	@echo "******************************************"
-	@echo "*                                        *"
-	@echo "* [6] Make a human readable bitcode file *"
-	@echo "*                                        *"
-	@echo "******************************************"
-	@setterm -term linux -fore white
-	llvm-dis klee-last/final.bc
+	echo '<!DOCTYPEa[<!ELEMENT a (F'"${s// /0}:${t// /0}"')><!ATTLIST a><!ELEMENT b EMPTY><!ATTLIST b s CDATA #IMPLIED>]><a/>' > bug1.xml
+	gdb -x myGdbScripts/gdbCommands.txt --args ${PROGRAM_PATH}/${PROGRAM_NAME} --valid bug1.xml
 .PHONY: build_everything_from_scratch
 build_everything_from_scratch:
 	@clear
@@ -98,4 +35,4 @@ build_everything_from_scratch:
 	@echo "*                                   *"
 	@echo "*************************************"
 	@setterm -term linux -fore white
-	./myBuildingScripts/build-step0-xml
+	./myBuildingScripts/build-step0-mp3info

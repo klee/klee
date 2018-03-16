@@ -1,0 +1,14 @@
+####################
+# Pagination = off #
+####################
+set pagination off
+
+#######################
+# Initial breakpoints #
+####################### 
+start
+break xmlSnprintfElementContent
+###########
+# run ... #
+###########
+run
