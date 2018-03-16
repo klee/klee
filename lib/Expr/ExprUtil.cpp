@@ -104,6 +104,21 @@ public:
     : objects(_objects) {}
 };
 
+ExprVisitor::Action ConstantArrayFinder::visitRead(const ReadExpr &re) {
+  const UpdateList &ul = re.updates;
+
+  // FIXME should we memo better than what ExprVisitor is doing for us?
+  for (const UpdateNode *un = ul.head; un; un = un->next) {
+    visit(un->index);
+    visit(un->value);
+  }
+
+  if (ul.root->isConstantArray()) {
+    results.insert(ul.root);
+  }
+
+  return Action::doChildren();
+}
 }
 
 template<typename InputIterator>
