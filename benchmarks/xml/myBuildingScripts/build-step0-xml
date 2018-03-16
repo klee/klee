@@ -1,0 +1,39 @@
+#!/bin/bash
+#########
+# FILES #
+#########
+PACKAGE_NAME=libxml2-2.9.4
+PACKAGE_TAR_FILE=${PACKAGE_NAME}.tar.gz
+PACKAGE_FTP_SITE=ftp://xmlsoft.org/libxml2/
+
+####################################
+# REMOVE OLD STUFF JUST TO BE SURE #
+####################################
+rm -rf ${PACKAGE_NAME}
+rm -rf ${PACKAGE_TAR_FILE}
+
+#####################################
+# Get source code for buggy package #
+#####################################
+wget ${PACKAGE_FTP_SITE}/${PACKAGE_TAR_FILE}
+
+######################
+# Unpack it here ... #
+######################
+tar xf ${PACKAGE_TAR_FILE}
+
+mkdir build
+###############################
+# Get inside source directory #
+###############################
+cd build
+
+#################
+# Configure ... #
+#################
+../${PACKAGE_NAME}/configure
+
+###############
+# Make it !!! #
+###############
+make -j
