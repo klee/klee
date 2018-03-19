@@ -27,7 +27,7 @@
 #include <osipparser2/osip_parser.h>
 #include <osipparser2/sdp_message.h>
 
-#include "/home/oren/GIT/LatestKlee/vanillaKlee/include/klee/klee.h"
+#include "klee/klee.h"
 
 void klee_make_symbolic(void *addr,size_t count, const char *message);
 

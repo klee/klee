@@ -30,6 +30,8 @@ namespace klee {
     Action visitBvToInt(const BvToIntExpr&);
     Action visitFirstIndexOf(const StrFirstIdxOfExpr&);
     Action visitStrFromBv8(const StrFromBitVector8Expr&);
+    Action visitCharAt(const StrCharAtExpr &charAtE);
+    Action visitStrEq(const StrEqExpr &eqE);
       
   public:
     ExprEvaluator() {}

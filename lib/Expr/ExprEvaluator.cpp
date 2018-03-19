@@ -83,6 +83,16 @@ ExprVisitor::Action ExprEvaluator::visitFirstIndexOf(const StrFirstIdxOfExpr& sf
     llvm::errs() << "Needle: !!!!" << firstIndex << "\n";
     return Action::changeTo(ConstantExpr::create(firstIndex, Expr::Int64));
 }
+
+ExprVisitor::Action ExprEvaluator::visitStrEq(const StrEqExpr &eqE) {
+    ref<Expr> _left = visit(eqE.s1);
+    ref<Expr> _right = visit(eqE.s2);
+    StrConstExpr* left = dyn_cast<StrConstExpr>(_left);
+    StrConstExpr* right = dyn_cast<StrConstExpr>(_right);
+    assert(left != nullptr && "Non constant strign expr in eq expr");
+    assert(right != nullptr && "Non constant strign expr in eq expr");
+    return Action::changeTo(ConstantExpr::create(left->value == right->value, Expr::Bool));
+}
 ExprVisitor::Action ExprEvaluator::visitStrSubstr(const StrSubstrExpr &subStrE) {
     ref<Expr> _offset = visit(subStrE.offset);
     ref<Expr> _length = visit(subStrE.length);
@@ -111,6 +121,35 @@ ExprVisitor::Action ExprEvaluator::visitStrSubstr(const StrSubstrExpr &subStrE) 
     }
 
 }
+
+ExprVisitor::Action ExprEvaluator::visitCharAt(const StrCharAtExpr &charAtE) {
+    ref<Expr> _index = visit(charAtE.i);
+    ConstantExpr* index = dyn_cast<ConstantExpr>(_index);
+    if(index != nullptr) {
+      llvm::errs() << "charat " << index->getZExtValue() << "\n";
+      StrVarExpr* se = dyn_cast<StrVarExpr>(charAtE.s);
+      int idx = index->getZExtValue();
+      char c[2] = {0,0};
+      if(se) {
+        const Array *a = getStringArray(se->name);
+        assert(a && "nullptr array from ab name");
+        c[0] = (char)dyn_cast<ConstantExpr>(getInitialValue(*a, idx))->getZExtValue(8);
+
+      } else {
+        ref<Expr> _string = visit(charAtE.s);
+        StrConstExpr* str = dyn_cast<StrConstExpr>(_string);
+        assert(str != nullptr && "Failed to make the string constant");
+        c[0] = str->value.at(idx); 
+      }
+      return Action::changeTo(StrConstExpr::create(c));
+    } else {
+      _index->dump();
+      assert(false && "Non constant offsets for substr");
+      return Action::doChildren();
+    }
+
+}
+
 ExprVisitor::Action ExprEvaluator::visitRead(const ReadExpr &re) {
   ref<Expr> v = visit(re.index);
   
