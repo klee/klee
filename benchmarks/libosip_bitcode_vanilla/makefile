@@ -6,6 +6,12 @@ KLEE_ROOT_DIR  = /home/oren/GIT/klee/vanilla.klee
 KLEE_SRC_DIR   = ${KLEE_ROOT_DIR}/klee
 KLEE_BUILD_DIR = ${KLEE_ROOT_DIR}/build
 
+################
+# PROGRAM NAME #
+################
+PROGRAM_PATH=build/src/test
+PROGRAM_NAME=torture_test
+
 #########
 # FILES #
 #########
@@ -21,9 +27,9 @@ compile_and_run:
 	@echo "*                                          *"
 	@echo "********************************************"
 	@setterm -term linux -fore white
-	cp mySourceFiles/torture.c   libosip2-4.1.0/src/test
+	#cp mySourceFiles/torture.c   libosip2-4.1.0/src/test
 	#cp mySourceFiles/osip_body.c libosip2-4.1.0/src/osipparser2
-	#cp mySourceFiles/osip_port.c libosip2-4.1.0/src/osipparser2
+	cp mySourceFiles/osip_port.c libosip2-4.1.0/src/osipparser2
 	@setterm -term linux -fore blue
 	@echo "************************************************"
 	@echo "*                                              *"
@@ -39,7 +45,7 @@ compile_and_run:
 	@echo "*                             *"
 	@echo "*******************************"
 	@setterm -term linux -fore white
-	extract-bc build/src/test/torture_test
+	extract-bc ${PROGRAM_PATH}/${PROGRAM_NAME}
 	@setterm -term linux -fore blue
 	@echo "*******************************************"
 	@echo "*                                         *"
@@ -47,9 +53,9 @@ compile_and_run:
 	@echo "*                                         *"
 	@echo "*******************************************"
 	@setterm -term linux -fore white
-	opt -strip-debug -o                   \
-	build/src/test/torture_test_no_dbg.bc \
-	build/src/test/torture_test.bc
+	opt -strip-debug -o                       \
+	${PROGRAM_PATH}/${PROGRAM_NAME}_no_dbg.bc \
+	${PROGRAM_PATH}/${PROGRAM_NAME}.bc
 	@setterm -term linux -fore blue
 	@echo "************************************************"
 	@echo "*                                              *"
@@ -57,9 +63,9 @@ compile_and_run:
 	@echo "*                                              *"
 	@echo "************************************************"
 	@setterm -term linux -fore white
-	opt -instnamer -o                                \
-	build/src/test/torture_test_no_dbg_with_names.bc \
-	build/src/test/torture_test_no_dbg.bc
+	opt -instnamer -o                                    \
+	${PROGRAM_PATH}/${PROGRAM_NAME}_no_dbg_with_names.bc \
+	${PROGRAM_PATH}/${PROGRAM_NAME}_no_dbg.bc
 	@setterm -term linux -fore blue
 	@echo "*********************************************"
 	@echo "*                                           *"
@@ -67,19 +73,19 @@ compile_and_run:
 	@echo "*                                           *"
 	@echo "*********************************************"
 	@setterm -term linux -fore white
-	#gdb -x ./myGdbScripts/gdbCommands.txt --args    \
-	${KLEE}                                         \
-	--libc=uclibc                                   \
-	--posix-runtime                                 \
-	-solver-backend=z3                              \
-	-output-module                                  \
-	-output-source                                  \
-	-use-cex-cache=0                                \
-	-use-independent-solver=0                       \
-	-use-query-log=solver:smt2                      \
-	-debug-z3-dump-queries=Z3queries.txt            \
-	-debug-z3-log-api-interaction=Z3LogAPI.txt      \
-	build/src/test/torture_test_no_dbg_with_names.bc 
+	#gdb -x ./myGdbScripts/gdbCommands.txt --args       \
+	${KLEE}                                             \
+	--libc=uclibc                                       \
+	--posix-runtime                                     \
+	-solver-backend=z3                                  \
+	-output-module                                      \
+	-output-source                                      \
+	-use-cex-cache=0                                    \
+	-use-independent-solver=0                           \
+	-use-query-log=solver:smt2                          \
+	-debug-z3-dump-queries=Z3queries.txt                \
+	-debug-z3-log-api-interaction=Z3LogAPI.txt          \
+	${PROGRAM_PATH}/${PROGRAM_NAME}_no_dbg_with_names.bc 
 	@setterm -term linux -fore blue
 	@echo "******************************************"
 	@echo "*                                        *"

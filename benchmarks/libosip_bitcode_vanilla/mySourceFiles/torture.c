@@ -144,10 +144,8 @@ main (int argc, char **argv)
   //  len = strlen (msg);
   //}
 
-  // klee_make_symbolic(msg,700,"MsG");
-  
-  markString(msg);
-  
+  klee_make_symbolic(msg,700,"MsG");
+    
   fprintf (stdout, ">> LIBOSIP BREAKPOINT[1]\n");  
   
   len = strlen(msg);
