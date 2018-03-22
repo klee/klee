@@ -30,7 +30,7 @@ compile_and_run:
 	@echo "*                          *"
 	@echo "****************************"
 	@setterm -term linux -fore white
-	#cd build && (LLVM_COMPILER=clang make)	
+	cd ${PROGRAM_PATH} && (LLVM_COMPILER=clang make)
 	@setterm -term linux -fore blue
 	@echo "**********************************"
 	@echo "*                                *"
