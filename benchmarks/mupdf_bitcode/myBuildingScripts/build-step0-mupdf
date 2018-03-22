@@ -31,7 +31,12 @@ cd ${PACKAGE_NAME}
 ###############
 # Make it !!! #
 ###############
-CC=wllvm
-LLVM_COMPILER=clang
-XCFLAGS="-g -O0"
+export CC=wllvm
+export LLVM_COMPILER=clang
+export XCFLAGS="-g -O0 -fPIC"
 make debug
+
+###################
+# Extract bitcode #
+###################
+extract-bc ./build/debug/mutool

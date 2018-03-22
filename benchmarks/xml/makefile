@@ -35,4 +35,4 @@ build_everything_from_scratch:
 	@echo "*                                   *"
 	@echo "*************************************"
 	@setterm -term linux -fore white
-	./myBuildingScripts/build-step0-mp3info
+	./myBuildingScripts/build-step0-xml

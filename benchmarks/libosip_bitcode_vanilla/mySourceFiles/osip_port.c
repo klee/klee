@@ -901,6 +901,8 @@ osip_trace (char *filename_long, int li, osip_trace_level_t level, FILE * f, cha
     relative_time = relative_time - 1 + ((now.tv_usec - start.tv_usec) / 1000);
 #endif
 
+  fprintf(stdout,">>>>>>>>>>>>>>>>>>>>>>>>>>> NOW INSIDE OSIP TRACE FUNCTION (%s)\n\n\n",filename_long);
+
   if (filename_long != NULL) {
     fi = strrchr (filename_long, '/');
     if (fi == NULL)

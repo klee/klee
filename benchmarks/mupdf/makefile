@@ -15,7 +15,7 @@ compile_and_run:
 	@echo "*                                                               *"
 	@echo "*****************************************************************"
 	@setterm -term linux -fore white
-	gdb -x ./myGdbScripts/gdbCommands.txt --args ./mupdf-1.12.0-source/build/debug/mutool poster ~/Downloads/mutool_poster_crash
+	gdb -x ./myGdbScripts/gdbCommands.txt --args ./mupdf-1.12.0-source/build/debug/mutool poster myInput/Input.pdf
 .PHONY: print_all_c_stmts
 print_all_c_stmts:
 	@clear

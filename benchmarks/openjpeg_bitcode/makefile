@@ -1,7 +1,7 @@
 ########
 # KLEE #
 ########
-KLEE=/home/oren/GIT/klee/vanilla.KLEE/klee/build/bin
+KLEE=/home/oren/GIT/klee/vanilla.klee/build/bin/klee
 
 ################
 # PROGRAM NAME #
@@ -30,7 +30,7 @@ compile_and_run:
 	@echo "*                          *"
 	@echo "****************************"
 	@setterm -term linux -fore white
-	cd build && (LLVM_COMPILER=clang make)	
+	#cd build && (LLVM_COMPILER=clang make)	
 	@setterm -term linux -fore blue
 	@echo "**********************************"
 	@echo "*                                *"
@@ -38,7 +38,7 @@ compile_and_run:
 	@echo "*                                *"
 	@echo "**********************************"
 	@setterm -term linux -fore white
-	extract-bc ${PROGRAM_PATH}/${PROGRAM_NAME}
+	#extract-bc ${PROGRAM_PATH}/${PROGRAM_NAME}
 	@setterm -term linux -fore blue
 	@echo "*******************************************"
 	@echo "*                                         *"
@@ -66,19 +66,22 @@ compile_and_run:
 	@echo "*                                           *"
 	@echo "*********************************************"
 	@setterm -term linux -fore white
-	#gdb -x ./myGdbScripts/gdbCommands.txt --args    \
-	${KLEE}                                         \
-	--libc=uclibc                                   \
-	--posix-runtime                                 \
-	-solver-backend=z3                              \
-	-output-module                                  \
-	-output-source                                  \
-	-use-cex-cache=0                                \
-	-use-independent-solver=0                       \
-	-use-query-log=solver:smt2                      \
-	-debug-z3-dump-queries=Z3queries.txt            \
-	-debug-z3-log-api-interaction=Z3LogAPI.txt      \
-	build/dnstracer_no_dbg_with_names.bc
+	#gdb -x ./myGdbScripts/gdbCommands.txt --args         \
+	${KLEE}                                              \
+	--libc=uclibc                                        \
+	--posix-runtime                                      \
+	-solver-backend=z3                                   \
+	-output-module                                       \
+	-output-source                                       \
+	-use-cex-cache=0                                     \
+	-use-independent-solver=0                            \
+	-use-query-log=solver:smt2                           \
+	-debug-z3-dump-queries=Z3queries.txt                 \
+	-debug-z3-log-api-interaction=Z3LogAPI.txt           \
+	${PROGRAM_PATH}/${PROGRAM_NAME}_no_dbg_with_names.bc \
+	-help                                                \
+	-sym-file 1 1000 A                                   \
+	--sym-arg 100                                        
 	@setterm -term linux -fore blue
 	@echo "******************************************"
 	@echo "*                                        *"

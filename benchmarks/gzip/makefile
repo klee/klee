@@ -17,8 +17,9 @@ compile_and_run:
 	@echo "*                                                      *"
 	@echo "********************************************************"
 	@setterm -term linux -fore white
-	gdb -x ./myGdbScripts/gdbCommands.txt --args \
-	build/gzip                                   \
+	#gdb -x ./myGdbScripts/gdbCommands.txt --args \
+	gdb --args \
+	build/gzip \
 	${INPUT}
 ############################
 # PRINT C TRACE OF CVE ... #

@@ -7,7 +7,7 @@ set pagination off
 # Initial breakpoints #
 ####################### 
 start
-break xmlSnprintfElementContent
+break valid.c:1271
 ###########
 # run ... #
 ###########

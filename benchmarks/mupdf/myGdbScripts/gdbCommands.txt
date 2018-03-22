@@ -7,8 +7,7 @@ set pagination off
 # Initial breakpoints #
 ####################### 
 start
-break main
-break pdf-write.c:3023
+#break pdf-lex.c:181
 ###########
 # run ... #
 ###########

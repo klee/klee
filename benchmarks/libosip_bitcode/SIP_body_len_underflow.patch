@@ -1,0 +1,34 @@
+From 90edddbac250a7bc58d30ece52ebdea89330c779 Mon Sep 17 00:00:00 2001
+From: Bhargava Shastry <bshastry@sec.t-labs.tu-berlin.de>
+Date: Tue, 14 Jun 2016 19:10:54 +0000
+Subject: [PATCH] Patch 3: Fixes body length underflow in sip body message
+ parsing
+
+---
+ libosip2-4.1.0/src/osipparser2/osip_message_parse.c | 10 ++++++++++
+ 1 file changed, 10 insertions(+)
+
+diff --git a/libosip2-4.1.0/src/osipparser2/osip_message_parse.c b/libosip2-4.1.0/src/osipparser2/osip_message_parse.c
+index 7ad377b..77b27fc 100644
+--- a/libosip2-4.1.0/src/osipparser2/osip_message_parse.c
++++ b/libosip2-4.1.0/src/osipparser2/osip_message_parse.c
+@@ -812,6 +812,16 @@ msg_osip_body_parse (osip_message_t * sip, const char *start_of_buf, const char
+     if ('\n' == start_of_body[0] || '\r' == start_of_body[0])
+       start_of_body++;
+ 
++    /* Bail out if message body is empty or contains a single CR/LF */
++    /* If '\n++--\r\n++--', then end_of_body = start_of_body - 1    */
++    /* If '\n++--\r\r\n++--', then end_of_body = start_of_body      */
++    /* If '\n++--\r\n\n++--', then end_of_body = start_of_body      */
++    if (end_of_body <= start_of_body) {
++      osip_free (sep_boundary);
++      OSIP_TRACE (osip_trace (__FILE__, __LINE__, OSIP_ERROR, NULL, "Could not parse message body.\n"));
++      return OSIP_SYNTAXERROR;
++    }
++
+     body_len = end_of_body - start_of_body;
+ 
+     /* Skip CR before end boundary. */
+-- 
+1.9.1
+

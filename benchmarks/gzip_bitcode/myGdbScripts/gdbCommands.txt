@@ -1,0 +1,47 @@
+####################
+# Pagination = off #
+####################
+set pagination off
+
+#######################
+# Initial breakpoints #
+####################### 
+start
+break gzip.c:1009
+run
+shell clear
+x/50b ifname+1000
+shell setterm -term linux -fore blue
+call (void) printf("**************************************************\n")
+call (void) printf("* See how ifname ends at 1024, and istat global  *\n")
+call (void) printf("* variable starts immediately after it ...       *\n")
+call (void) printf("**************************************************\n")
+call (void) printf("**************************************************\n")
+call (void) printf("* Here is the contents of istat global variable: *\n")
+call (void) printf("*                                                *\n")
+call (void) printf("* ===========  BEFORE it gets ruined =========== *\n")
+call (void) printf("*                                                *\n")
+call (void) printf("* See how it is all initialized to zeros ...     *\n")
+call (void) printf("**************************************************\n")
+shell setterm -term linux -fore white
+print istat
+shell setterm -term linux -fore blue
+call (void) printf("*********************************************\n")
+call (void) printf("*       strlen(iname) = %d                *\n", strlen(iname))
+call (void) printf("*********************************************\n")
+call (void) printf("*********************************************\n")
+call (void) printf("*     now excuting strcpy(ifname,iname)     *\n")
+call (void) printf("*********************************************\n")
+shell setterm -term linux -fore white
+next
+print istat
+shell setterm -term linux -fore red
+call (void) printf("**************************************************\n")
+call (void) printf("*   See the contents of istat global variable:   *\n")
+call (void) printf("*                                                *\n")
+call (void) printf("* ===========  AFTER it got ruined   =========== *\n")
+call (void) printf("*                                                *\n")
+call (void) printf("*                  MOO HA HA !!!                 *\n")
+call (void) printf("**************************************************\n")
+shell setterm -term linux -fore white
+
