@@ -3367,27 +3367,38 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     }
 	else if (type == 8 && (mo->serial >= 0))
 	{
+		char name[256]={0};
+		static int index=0;
+		sprintf(name,"tempBitVec8_serial_%d",index++);
         ref<Expr> offset = mo->getOffsetExpr(address);		
         errs() << "Reading mo serial " << mo->serial << " version " << mo->version << "\n";
-        assert(dyn_cast<ConstantExpr>(offset) && "Todo non constant offests");
+        //assert(dyn_cast<ConstantExpr>(offset) && "Todo non constant offests");
         offset = BvToIntExpr::create(offset);		
         errs() << "At offset: ";
         offset->dump();
         ref<Expr> AB_p_var = StrVarExpr::create(mo->getABSerial());
+		ref<Expr> c = BitVector8VarExpr::create(name);
+		//bool result;
+		//solver->mayBeTrue(
+		//	state,
+		//	StrEqExpr::create(
+		//		StrFromBitVector8Expr::create(c),
+		//		StrCharAtExpr::create(AB_p_var,offset)),
+		//	result);
+		//if (result == true)
+		//{
+		//	llvm::errs() << ">>>> Query may be TRUE" << "\n";
+		//}
+		//else
+		//{
+		//	llvm::errs() << ">>>> Query can not be TRUE" << "\n";
+		//}
+		state.addConstraint(StrEqExpr::create(
+			StrFromBitVector8Expr::create(c),
+			StrCharAtExpr::create(AB_p_var,offset)));
 
-		bindLocal(
-			target, 
-			state,
-			SelectExpr::create(StrEqExpr::create(StrConstExpr::create("T"),StrCharAtExpr::create(AB_p_var,offset)),ConstantExpr::create('T',Expr::Int8),
-			SelectExpr::create(StrEqExpr::create(StrConstExpr::create("M"),StrCharAtExpr::create(AB_p_var,offset)),ConstantExpr::create('M',Expr::Int8),
-			SelectExpr::create(StrEqExpr::create(StrConstExpr::create("P"),StrCharAtExpr::create(AB_p_var,offset)),ConstantExpr::create('P',Expr::Int8),
-			SelectExpr::create(StrEqExpr::create(StrConstExpr::create("G"),StrCharAtExpr::create(AB_p_var,offset)),ConstantExpr::create('G',Expr::Int8),
-			SelectExpr::create(StrEqExpr::create(StrConstExpr::create("#"),StrCharAtExpr::create(AB_p_var,offset)),ConstantExpr::create('#',Expr::Int8),
-			SelectExpr::create(StrEqExpr::create(StrConstExpr::create("A"),StrCharAtExpr::create(AB_p_var,offset)),ConstantExpr::create('A',Expr::Int8),
-			SelectExpr::create(StrEqExpr::create(StrConstExpr::create("B"),StrCharAtExpr::create(AB_p_var,offset)),ConstantExpr::create('B',Expr::Int8),
-			ConstantExpr::create('F',Expr::Int8)))))))));
+		bindLocal(target,state,c);
 		return;
-
 	}
 
     if (MaxSymArraySize && mo->size>=MaxSymArraySize) {

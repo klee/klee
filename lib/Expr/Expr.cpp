@@ -166,6 +166,7 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(Str_Length);
     X(Str_Compare);
     X(Str_FirstIdxOf);
+    X(BitVector8_Var);
     X(Str_FromBitVec8);
     X(BvToInt);
 #undef X
@@ -199,8 +200,8 @@ unsigned StrConstExpr::computeHash()         {static unsigned value = 0x8d425ff2
 unsigned StrLengthExpr::computeHash()        {static unsigned value = 0x9d425ff0;hashValue = value++;return hashValue;}
 unsigned StrSubstrExpr::computeHash()        {static unsigned value = 0xad425ff0;hashValue = value++;return hashValue;}
 unsigned StrCharAtExpr::computeHash()        {static unsigned value = 0xbd425ff0;hashValue = value++;return hashValue;}
+unsigned BitVector8VarExpr::computeHash()    {static unsigned value = 0x66615ff1;hashValue = value++;return hashValue;}
 unsigned StrFirstIdxOfExpr::computeHash()    {static unsigned value = 0xcd333ff0;hashValue = value++;return hashValue;}
-unsigned StrFromBitVec8Expr::computeHash()   {static unsigned value = 0xdd0000f0;hashValue = value++;return hashValue;}
 unsigned StrFromBitVector8Expr::computeHash(){static unsigned value = 0xe0000490;hashValue = value++;return hashValue;}
 unsigned BvToIntExpr::computeHash()          {static unsigned value = 0xe00a0490;hashValue = value++;return hashValue;}
 
@@ -1042,6 +1043,8 @@ ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) {    \
       if(l->getWidth() == Expr::Int) {return _e_op ## _create(l.get(), BvToIntExpr::create(r).get());} \
       else {return _e_op ## _create(BvToIntExpr::create(l).get(), r.get());}    \
   }                                                                 \
+  llvm::errs() << "left  width = " << l->getWidth() << "\n";           \
+  llvm::errs() << "right width = " << r->getWidth() << "\n";           \
   assert(l->getWidth()==r->getWidth() && "type mismatch");             \
   if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l)) {                  \
     if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))                  \

@@ -158,6 +158,7 @@ public:
 	Str_Compare,
 	Str_FirstIdxOf,
 	Str_FromBitVec8,
+	BitVector8_Var,
 
   BvToInt,
 
@@ -960,6 +961,9 @@ public:
 	static bool classof(const ConstantExpr *) { return false; }	
 };
 
+
+
+
 class StrFirstIdxOfExpr : public Expr {
 public:
 	ref<Expr> haystack;
@@ -1099,15 +1103,14 @@ public:
 	static bool classof(const ConstantExpr *) { return false; }	
 };
 
+#if 0
 class StrFromBitVec8Expr : public Expr {
 public:
 	ref<Expr> c;
 
-	StrFromBitVec8Expr(const ref<Expr> &in_c) : c(in_c) {
-      
-     assert(in_c->getWidth() == Expr::String  && "First argument to strfrombv8 must be a char of width 8");
-      
-  }
+	StrFromBitVec8Expr(const ref<Expr> &in_c) : c(in_c) {}
+	// assert(in_c->getWidth() == Expr::String  && "First argument to strfrombv8 must be a char of width 8");
+	//}
 
 	virtual unsigned computeHash();
 
@@ -1131,7 +1134,42 @@ public:
 	static bool classof(const Expr *E) { return E->getKind() == Expr::Str_FromBitVec8; }
 	static bool classof(const ConstantExpr *) { return false; }	
 };
+#endif
 
+class BitVector8VarExpr : public Expr {
+public:
+	std::string name;
+
+	BitVector8VarExpr(const std::string n): name(n) {}
+	BitVector8VarExpr(const char *in_name): name(in_name) {}
+
+	virtual unsigned computeHash();
+
+	static ref<Expr> create(const char *in_name)
+	{
+		std::string s(in_name);
+		return BitVector8VarExpr::alloc(s);
+	}
+	static ref<Expr> create(std::string in_name)
+	{
+		return BitVector8VarExpr::alloc(in_name);
+	}
+
+	static ref<Expr> alloc(std::string& in_name)
+	{
+		ref<Expr> res(new BitVector8VarExpr(in_name));
+		res->computeHash();
+		return res;
+	}
+	virtual int compareContents(const Expr &b)  const {return   0;}		
+	virtual Kind      getKind()                 const {return   Expr::BitVector8_Var;}	
+	virtual Width     getWidth()                const {return   Expr::Int8;}	
+	virtual unsigned  getNumKids()              const {return   0;}	
+	virtual ref<Expr> getKid(unsigned int)      const {return   0;}
+	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {ref<Expr> moish; assert(0); return moish;}
+	static bool classof(const Expr *E) { return E->getKind() == Expr::BitVector8_Var; }
+	static bool classof(const ConstantExpr *) { return false; }	
+};
 
 class StrVarExpr : public Expr {
 public:

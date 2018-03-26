@@ -455,6 +455,11 @@ void ExprPPrinter::printOne(llvm::raw_ostream &os,
 }
 
 void ExprPPrinter::printSingleExpr(llvm::raw_ostream &os, const ref<Expr> &e) {
+
+  //if (e.get()->getKind() == Expr::BitVector8_Var) return;
+  return;
+
+
   PPrinter p(os);
   p.scan(e);
 

@@ -55,6 +55,8 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e)
       return res.argument;
     }
 
+    if (ep.getKind() == Expr::BitVector8_Var) return e;
+
     switch(ep.getKind()) {
     case Expr::NotOptimized: res = visitNotOptimized(static_cast<NotOptimizedExpr&>(ep)); break;
     case Expr::Read: res = visitRead(static_cast<ReadExpr&>(ep)); break;

@@ -30,6 +30,7 @@ namespace klee {
   /// expression.
   void findSymbolicObjects(ref<Expr> e,
                            std::vector<const Array*> &results);
+void findStrVarSymbolicObjects(ref<Expr> e, std::vector<const Array*> &results) ;
 
   /// Return a list of all unique symbolic objects referenced by the
   /// given expression range.

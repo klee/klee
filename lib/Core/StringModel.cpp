@@ -121,6 +121,10 @@ StrModel StringModel::modelStrcmp(
 		p_is_NULL_terminated,
 		q_is_NULL_terminated);
 
+	ref<Expr> p_or_q_are_both_NULL_terminated = OrExpr::create(
+		p_is_NULL_terminated,
+		q_is_NULL_terminated);
+
 	/************************************************************/
 	/* [10] Finally ... check whether p and q are identical ... */
 	/************************************************************/
@@ -133,7 +137,7 @@ StrModel StringModel::modelStrcmp(
 	  		final_exp,
 	  		ConstantExpr::create(0,Expr::Int32),
 	  		ConstantExpr::create(1,Expr::Int32)),
-      p_and_q_are_both_NULL_terminated  
+      p_or_q_are_both_NULL_terminated  
    );
 }
 
@@ -170,7 +174,7 @@ StrModel StringModel::modelStrchr(const MemoryObject* mos, ref<Expr> s, ref<Expr
 	/*     and the specific char can be missing ...                             */
 	/****************************************************************************/
   ref<Expr> validAcess = AndExpr::create(
-    AndExpr::create(
+    OrExpr::create(
        NotExpr::create(EqExpr::create(firstIndexOfc,  minusOne)),
        NotExpr::create(EqExpr::create(firstIndexOfx00,  minusOne))
     ),
@@ -295,7 +299,7 @@ StrModel StringModel::modelStrncpy(const MemoryObject* moDst, ref<Expr> dst,
 StrModel StringModel::modelStrcpy(const MemoryObject* moDst, ref<Expr> dst,
                      const MemoryObject* moSrc, ref<Expr> src) {
 
-  ref<Expr> AB_dst_var = StrVarExpr::create(moDst->getABSerial());
+	ref<Expr> AB_dst_var = StrVarExpr::create(moDst->getABSerial());
 	ref<Expr> AB_src_var = StrVarExpr::create(moSrc->getABSerial());
 	ref<Expr> dst_offset = BvToIntExpr::create(moDst->getOffsetExpr(dst));
 	ref<Expr> src_offset = BvToIntExpr::create(moSrc->getOffsetExpr(src));
@@ -311,9 +315,9 @@ StrModel StringModel::modelStrcpy(const MemoryObject* moDst, ref<Expr> dst,
 	ref<Expr> prefixStart  = zero;
 	ref<Expr> prefixLength = dst_offset;
 
-	ref<Expr> firstIdxOf_x00_in_src = StrFirstIdxOfExpr::create(
-		StrSubstrExpr::create(AB_src_var,src_offset,src_size),
-		x00);
+	ref<Expr> firstIdxOf_x00_in_src = StrFirstIdxOfExpr::create(AB_src_var,x00);
+	//	StrSubstrExpr::create(AB_src_var,src_offset,src_size),
+	//	x00);
 
 	ref<Expr> middleLength = AddExpr::create(firstIdxOf_x00_in_src,one);
 	ref<Expr> suffixStart  = AddExpr::create(prefixLength,middleLength);
@@ -349,22 +353,35 @@ StrModel StringModel::modelStrcpy(const MemoryObject* moDst, ref<Expr> dst,
 	/*********************************************************************/
 	/* [13] Check with the solver whether src can be NOT NULL terminated */
 	/*********************************************************************/
-	ref<Expr> Is_src_not_NULL_terminated = EqExpr::create(
+	ref<Expr> src_is_not_NULL_terminated = EqExpr::create(
 		firstIdxOf_x00_in_src,
 		minusOne);
-  ref<Expr> Is_src_NULL_terminated = NotExpr::create(Is_src_not_NULL_terminated);
+	ref<Expr> src_is_NULL_terminated = NotExpr::create(src_is_not_NULL_terminated);
 
-  ref<Expr> same_len = 
-  	        EqExpr::create(
-		          StrLengthExpr::create(AB_dst_var),
-		          StrLengthExpr::create(AB_dst_new_var));
+	ref<Expr> same_len = EqExpr::create(
+		StrLengthExpr::create(AB_dst_var),
+		StrLengthExpr::create(AB_dst_new_var));
 
-  ref<Expr> finalExpr = 
-      AndExpr::create(suffixEq,
-        AndExpr::create(middleEq,
-          AndExpr::create(prefixEq,same_len)));
+	ref<Expr> finalExpr = 
+		AndExpr::create(suffixEq,
+			AndExpr::create(middleEq,
+			AndExpr::create(prefixEq,same_len)));
 
-  return std::make_pair(finalExpr, Is_src_NULL_terminated);
+	return std::make_pair(
+		finalExpr,
+		AndExpr::create(
+			src_is_NULL_terminated,
+			SltExpr::create(
+				dst_size,
+				AddExpr::create(firstIdxOf_x00_in_src,one))));
+
+	//return std::make_pair(
+	//	finalExpr,
+	//	OrExpr::create(
+	//		src_is_not_NULL_terminated,
+	//		SltExpr::create(
+	//			dst_size,
+	//			AddExpr::create(firstIdxOf_x00_in_src,one))));
 }
 
 } //end klee namespace
