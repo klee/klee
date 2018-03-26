@@ -1,6 +1,6 @@
-// RUN: %llvmgcc -DPREFER_VALUE=33 %s -emit-llvm -g -O0 -c -o %t.bc
+// RUN: %llvmgcc %s -emit-llvm -g -O0 -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --search=dfs %t.bc
+// RUN: %klee --output-dir=%t.klee-out %t.bc
 
 // This should produce three test cases.
 // RUN: test -f %t.klee-out/test000001.ktest
@@ -32,10 +32,12 @@ int main(int argc, char** argv) {
       // It's fine if the prefered value cannot be used
       // CHECK_3: x=1, y=0
     } else {
+      printf("x is allowed to be 33\n");
       // The prefered value should be used if it can be
       // CHECK_2: x=33
     }
   } else {
+    printf("x is not allowed to be 33\n");
     // CHECK_1-NOT: x=33
   }
 
