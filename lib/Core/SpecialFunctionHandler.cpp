@@ -2510,6 +2510,23 @@ void SpecialFunctionHandler::handleStrchr(
 	KInstruction *target,
 	std::vector<ref<Expr> > &arguments)
 {
+  bool isOnlyCompare = true;
+  errs() << "Uses of strchr: \n";
+  for(auto i = target->inst->use_begin(); i != target->inst->use_end(); i++) {
+      i->print(errs());
+      User* ui = *i;
+      errs() << "\n";
+      isOnlyCompare &= isa<CmpInst>(ui);
+  }
+  errs() << "Is only used in compare: " << isOnlyCompare << "\n";
+
+  if(isOnlyCompare) {
+    //Use contains semantics
+  } else {
+    //Use firstIdxOf semantics
+  }
+
+
   StrModel m = stringModel.modelStrchr(
                       executor.resolveOne(state,arguments[0]).first, 
                       arguments[0],
