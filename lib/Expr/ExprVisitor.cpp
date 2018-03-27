@@ -101,6 +101,7 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e)
     case Expr::Str_FirstIdxOf: res = visitFirstIndexOf(static_cast<StrFirstIdxOfExpr&>(ep)); break;
     case Expr::Str_FromBitVec8: res = visitStrFromBv8(static_cast<StrFromBitVector8Expr&>(ep)); break;
     case Expr::BvToInt: res = visitBvToInt(static_cast<BvToIntExpr&>(ep)); break;
+    case Expr::BitVector8_Var: res = visitBv8Var(static_cast<BitVector8VarExpr&>(ep)); break;
 
 
     case Expr::Constant:
@@ -162,6 +163,7 @@ ExprVisitor::Action ExprVisitor::visitStrCompare(const StrCmpExpr&) { return Act
 ExprVisitor::Action ExprVisitor::visitFirstIndexOf(const StrFirstIdxOfExpr&) { return Action::doChildren();}
 ExprVisitor::Action ExprVisitor::visitStrFromBv8(const StrFromBitVector8Expr&) { return Action::doChildren();}
 ExprVisitor::Action ExprVisitor::visitBvToInt(const BvToIntExpr&) { return Action::doChildren();}
+ExprVisitor::Action ExprVisitor::visitBv8Var(const BitVector8VarExpr&) { return Action::doChildren();}
 
 ExprVisitor::Action ExprVisitor::visitRead(const ReadExpr&) {
   return Action::doChildren(); 

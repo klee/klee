@@ -89,6 +89,7 @@ namespace klee {
     virtual Action visitFirstIndexOf(const StrFirstIdxOfExpr&);
     virtual Action visitStrFromBv8(const StrFromBitVector8Expr&);
     virtual Action visitBvToInt(const BvToIntExpr&);
+    virtual Action visitBv8Var(const BitVector8VarExpr&);
   private:
     typedef ExprHashMap< ref<Expr> > visited_ty;
     visited_ty visited;
