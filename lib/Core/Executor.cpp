@@ -300,6 +300,11 @@ namespace {
   MaxMemoryInhibit("max-memory-inhibit",
             cl::desc("Inhibit forking at memory cap (vs. random terminate) (default=on)"),
             cl::init(true));
+
+  cl::opt<bool>
+  ConstantsAsABs("constants-as-ABs",
+            cl::desc("Treat constant strings as Abstract buffers"),
+            cl::init(false));
 }
 
 
@@ -654,7 +659,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
       ObjectState *wos = state.addressSpace.getWriteable(mo, os);
       
       initializeGlobalObject(state, wos, i->getInitializer(), 0);
-      if(i->isConstant() 
+      if(ConstantsAsABs && i->isConstant() 
          && i->getType()->getElementType()->isArrayTy()
          && dyn_cast<ArrayType>(i->getType()->getElementType())->getElementType()->isIntegerTy(8)) {
          char c[wos->size + 1];
@@ -666,8 +671,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
          mo->version = 0;
          std::stringstream ss;
          ss << c << "\\x00";
-         errs() << mo->name;
-         printf("Found constant %s\n", ss.str().c_str());
+         errs() << mo->name << " " << ss.str() << " os size: " << wos->size << "\n";
 	       state.addConstraint(StrEqExpr::create(StrVarExpr::create(mo->getABSerial()), 
                                                       StrConstExpr::create(ss.str())));
       }
@@ -3318,7 +3322,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         errs() << "Modifying mo serial " << mo->serial << " version " << mo->version << " with ";
        // errs() << (char)dyn_cast<ConstantExpr>(value)->getZExtValue() << "\n";
         errs() << "At offset: ";
-        offset->dump();
+//        offset->dump();
         //assert(dyn_cast<ConstantExpr>(offset) && "Todo non constant offests");
 
         ref<Expr> one  = BvToIntExpr::create(ConstantExpr::create(1,Expr::Int8));
@@ -3375,7 +3379,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         //assert(dyn_cast<ConstantExpr>(offset) && "Todo non constant offests");
         offset = BvToIntExpr::create(offset);		
         errs() << "At offset: ";
-        offset->dump();
+ //       offset->dump();
         ref<Expr> AB_p_var = StrVarExpr::create(mo->getABSerial());
 		ref<Expr> c = BitVector8VarExpr::create(name);
 		//bool result;
