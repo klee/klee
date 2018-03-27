@@ -66,8 +66,6 @@ ExprVisitor::Action ExprEvaluator::visitFirstIndexOf(const StrFirstIdxOfExpr& sf
     ref<Expr> _haystack = visit(sfi.haystack);
     ref<Expr> _needle = visit(sfi.needle);
 
-    _haystack->dump();
-    _needle->dump();
     StrConstExpr* haystack = dyn_cast<StrConstExpr>(_haystack);
     assert(haystack && "Haystack must be a constant string");
     std::string needle;
@@ -110,12 +108,9 @@ ExprVisitor::Action ExprEvaluator::visitStrSubstr(const StrSubstrExpr &subStrE) 
         }
         return Action::changeTo(StrConstExpr::create(c));
       } else {
-        subStrE.s->dump();
         return Action::doChildren();
       }
     } else {
-      _offset->dump();
-      _length->dump();
       assert(false && "Non constant offsets for substr");
       return Action::doChildren();
     }
@@ -126,7 +121,7 @@ ExprVisitor::Action ExprEvaluator::visitCharAt(const StrCharAtExpr &charAtE) {
     ref<Expr> _index = visit(charAtE.i);
     ConstantExpr* index = dyn_cast<ConstantExpr>(_index);
     if(index != nullptr) {
-      llvm::errs() << "charat " << index->getZExtValue() << "\n";
+//      llvm::errs() << "charat " << index->getZExtValue() << "\n";
       StrVarExpr* se = dyn_cast<StrVarExpr>(charAtE.s);
       int idx = index->getZExtValue();
       char c[2] = {0,0};
@@ -143,7 +138,6 @@ ExprVisitor::Action ExprEvaluator::visitCharAt(const StrCharAtExpr &charAtE) {
       }
       return Action::changeTo(StrConstExpr::create(c));
     } else {
-      _index->dump();
       assert(false && "Non constant offsets for substr");
       return Action::doChildren();
     }

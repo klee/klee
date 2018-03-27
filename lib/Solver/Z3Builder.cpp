@@ -563,7 +563,6 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle src = construct(ee->expr, width_out);
     *width_out = ee->getWidth();
     assert(*width_out < 1024 && "Extract of non bv type");
-    ee->dump();
     if (*width_out == 1) {
       return bvBoolExtract(src, ee->offset);
     } else {

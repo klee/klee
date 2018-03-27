@@ -29,12 +29,14 @@ int main(int argc, char **argv)
 	int   i1;
 	char *p1;
 	char *p2;
+  const char *cst = "blar";
 
 	p1 = malloc(8);
 	markString(p1);
   p1[6] = 0;
+  markString(cst);
 		
-	if (strcmp("blarp",p1) == 0)
+	if (strcmp(cst,p1) == 0)
 		{
 			MyPrintOutput(p1);
 		}

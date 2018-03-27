@@ -2392,11 +2392,27 @@ void SpecialFunctionHandler::handleMarkString(
     mo->serial = ++state.numABSerials;
     mo->version = 0;
     std::string ab_name = mo->getABSerial();
+    if(mo->isGlobal) {
+        const GlobalVariable* v = dynamic_cast<const GlobalVariable*>(mo->allocSite);
+        assert(v && "Unsusported marks string of a non glbal variable global");
+        assert(v->isConstant() && "mark string of non constant global");
+        const ObjectState* wos = it->first.second;
+        char c[wos->size + 1];
+        for(int i = 0; i < wos->size; i++) {
+            c[i] = (char)dyn_cast<ConstantExpr>(wos->read8(i))->getZExtValue(8);
+        }
+        std::stringstream ss;
+        ss << c << "\\x00";
+        errs() << "Marking constant " << mo->name << " " << ss.str() << " os size: " << wos->size << "\n";
+	      state.addConstraint(StrEqExpr::create(StrVarExpr::create(mo->getABSerial()), 
+                                                      StrConstExpr::create(ss.str())));
+    } else {
 
     errs() << "Creating an ab serial " << ab_name << " size " << mo->size << "\n";
 	  state.addConstraint(EqExpr::create(
   		(StrLengthExpr::create(StrVarExpr::create(ab_name.c_str()))),
       mo->getIntSizeExpr()));
+    }
     
   }
 

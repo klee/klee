@@ -229,7 +229,7 @@ bool Z3SolverImpl::computeValue(const Query &query, ref<Expr> &result) {
   Assignment a(objects, values);
   result = a.evaluate(query.expr);
   }
-  result->dump();
+  //result->dump();
 
   return true;
 }
