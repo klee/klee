@@ -2577,15 +2577,11 @@ void Executor::checkMemoryUsage() {
 void Executor::doDumpStates() {
   if (!DumpStatesOnHalt || states.empty())
     return;
+
   klee_message("halting execution, dumping remaining states");
-  for (std::set<ExecutionState *>::iterator it = states.begin(),
-                                            ie = states.end();
-       it != ie; ++it) {
-    ExecutionState &state = **it;
-    stepInstruction(state); // keep stats rolling
-    terminateStateEarly(state, "Execution halting.");
-  }
-  updateStates(0);
+  for (const auto &state : states)
+    terminateStateEarly(*state, "Execution halting.");
+  updateStates(nullptr);
 }
 
 void Executor::run(ExecutionState &initialState) {
