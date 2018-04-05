@@ -38,10 +38,10 @@ double MergeHandler::getMean() {
   if (closedStateCount == 0)
     return 0;
 
-  return closeMean;
+  return closedMean;
 }
 
-unsigned MergeHandler::getInstrDistance(ExecutionState *es){
+unsigned MergeHandler::getInstructionDistance(ExecutionState *es){
   return es->steppedInstructions - openInstruction;
 }
 
@@ -50,7 +50,7 @@ ExecutionState *MergeHandler::getPrioritizeState(){
     bool stateIsClosed = (executor->inCloseMerge.find(cur_state) !=
                           executor->inCloseMerge.end());
 
-    if (!stateIsClosed && (getInstrDistance(cur_state) < 2 * getMean())) {
+    if (!stateIsClosed && (getInstructionDistance(cur_state) < 2 * getMean())) {
       return cur_state;
     }
   }
@@ -77,18 +77,21 @@ void MergeHandler::addClosedState(ExecutionState *es,
                                          llvm::Instruction *mp) {
   // Update stats
   ++closedStateCount;
-  closeMean += (static_cast<double>(getInstrDistance(es)) - closeMean) /
+
+  // Incremental update of mean (travelling mean)
+  // https://math.stackexchange.com/a/1836447
+  closedMean += (static_cast<double>(getInstructionDistance(es)) - closedMean) /
                closedStateCount;
 
   // Remove from openStates
   removeOpenState(es);
 
-  auto closePoint = reachedMergeClose.find(mp);
+  auto closePoint = reachedCloseMerge.find(mp);
 
   // If no other state has yet encountered this klee_close_merge instruction,
   // add a new element to the map
-  if (closePoint == reachedMergeClose.end()) {
-    reachedMergeClose[mp].push_back(es);
+  if (closePoint == reachedCloseMerge.end()) {
+    reachedCloseMerge[mp].push_back(es);
     executor->pauseState(*es);
   } else {
     // Otherwise try to merge with any state in the map element for this
@@ -111,16 +114,16 @@ void MergeHandler::addClosedState(ExecutionState *es,
 }
 
 void MergeHandler::releaseStates() {
-  for (auto& curMergeGroup: reachedMergeClose) {
+  for (auto& curMergeGroup: reachedCloseMerge) {
     for (auto curState: curMergeGroup.second) {
       executor->continueState(*curState);
     }
   }
-  reachedMergeClose.clear();
+  reachedCloseMerge.clear();
 }
 
 bool MergeHandler::hasMergedStates() {
-  return (!reachedMergeClose.empty());
+  return (!reachedCloseMerge.empty());
 }
 
 MergeHandler::MergeHandler(Executor *_executor, ExecutionState *es)
