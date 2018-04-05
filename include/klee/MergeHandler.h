@@ -48,6 +48,22 @@
  * reaches zero, every state which ran into the same `klee_open_merge()` is now
  * paused and waiting to be merged. The destructor of the MergeHandler
  * then continues the scheduling of the corresponding paused states.
+ *
+ * # Non-blocking State Merging
+ *
+ * This feature adds functionality to the BoundedMergingSearcher that will
+ * prioritize (e.g., immediately schedule) states running inside a bounded-merge
+ * region once a state has reached a corresponding klee_close_merge() call. The
+ * goal is to quickly gather all states inside the merging region in order to
+ * release the waiting states. However, states that are running for more than
+ * twice the mean number of instructions compared to the states that are already
+ * waiting, will not be prioritized anymore.
+ *
+ * Once no more states are available for prioritizing, but there are states
+ * waiting to be released, these states (which have already been merged as good as
+ * possible) will be continued without waiting for the remaining states. When a
+ * remaining state now enters a close-merge point, it will again wait for the
+ * other states, or until the 'timeout' is reached.
 */
 
 #ifndef KLEE_MERGEHANDLER_H
@@ -85,14 +101,14 @@ private:
 
   /// @brief The average number of instructions between the open and close merge of each
   /// state that has finished so far
-  double closeMean;
+  double closedMean;
 
   /// @brief Number of states that are tracked by this MergeHandler, that ran
   /// into a relevant klee_close_merge
   unsigned closedStateCount;
 
   /// @brief Get distance of state from the openInstruction
-  unsigned getInstrDistance(ExecutionState *es);
+  unsigned getInstructionDistance(ExecutionState *es);
 
   /// @brief States that ran through the klee_open_merge, but not yet into a
   /// corresponding klee_close_merge
@@ -101,7 +117,7 @@ private:
   /// @brief Mapping the different 'klee_close_merge' calls to the states that ran into
   /// them
   std::map<llvm::Instruction *, std::vector<ExecutionState *> >
-      reachedMergeClose;
+      reachedCloseMerge;
 
 public:
 
