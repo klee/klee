@@ -3383,7 +3383,13 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         errs() << "At offset: ";
  //       offset->dump();
         ref<Expr> AB_p_var = StrVarExpr::create(mo->getABSerial());
-		ref<Expr> c = BitVector8VarExpr::create(name);
+		//ref<Expr> c = BitVector8VarExpr::create(name);    unsigned id = 0;
+    static unsigned id = 1;
+    std::string uniqueName = "tmp_read_arr_" + llvm::utostr(id++);
+    const Array *tmpArray = arrayCache.CreateArray(uniqueName, 1);
+    UpdateList* ul = new UpdateList(tmpArray, 0) ; //need to mamange this memory properly
+		ref<Expr> c = ReadExpr::create(*ul, ConstantExpr::create(0, Expr::Int32));
+
 		//bool result;
 		//solver->mayBeTrue(
 		//	state,
