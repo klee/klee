@@ -88,8 +88,6 @@ bool Solver::getValue(const Query& query, ref<ConstantExpr> &result) {
   ref<Expr> tmp;
   if (!impl->computeValue(query, tmp))
     return false;
-  
-
   result = cast<ConstantExpr>(tmp);
   return true;
 }

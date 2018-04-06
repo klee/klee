@@ -583,10 +583,6 @@ int ReadExpr::compareContents(const Expr &b) const {
 
 ref<Expr> SelectExpr::create(ref<Expr> c, ref<Expr> t, ref<Expr> f) {
   Expr::Width kt = t->getWidth();
-  t->dump();
-  f->dump();
-  errs() << "kt: " << kt << " false: " << f->getWidth() << "\n";
-
   assert(c->getWidth()==Bool && "type mismatch");
   assert(kt==f->getWidth() && "type mismatch");
 

@@ -1065,6 +1065,8 @@ ref<Expr> Executor::toUnique(const ExecutionState &state,
   if (!isa<ConstantExpr>(e)) {
     ref<ConstantExpr> value;
     bool isTrue = false;
+    errs() << "To unqiue\n";
+    e->dump();
 
     solver->setTimeout(coreSolverTimeout);      
     if (solver->getValue(state, e, value) &&
