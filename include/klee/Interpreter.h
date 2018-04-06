@@ -128,9 +128,8 @@ public:
   virtual void useSeeds(const std::vector<struct KTest *> *seeds) = 0;
 
   virtual void runFunctionAsMain(llvm::Function *f,
-                                 int argc,
-                                 char **argv,
-                                 char **envp) = 0;
+                                 const std::vector<std::string> &args,
+                                 const std::vector<std::string> &envs) = 0;
 
   /*** Runtime options ***/
 

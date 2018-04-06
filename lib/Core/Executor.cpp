@@ -3419,10 +3419,11 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
 /***/
 
 void Executor::runFunctionAsMain(Function *f,
-				 int argc,
-				 char **argv,
-				 char **envp) {
+                                 const std::vector<std::string> &args,
+                                 const std::vector<std::string> &envs) {
   std::vector<ref<Expr> > arguments;
+  auto argc = args.size();
+  auto envc = envs.size();
 
   // force deterministic initialization of memory objects
   srand(1);
@@ -3434,9 +3435,6 @@ void Executor::runFunctionAsMain(Function *f,
   // doing we lay out the environments at the end of the argv array
   // (both are terminated by a null). There is also a final terminating
   // null that uclibc seems to expect, possibly the ELF header?
-
-  int envc;
-  for (envc=0; envp[envc]; ++envc) ;
 
   unsigned NumPtrBytes = Context::get().getPointerWidth() / 8;
   KFunction *kf = kmodule->functionMap[f];
@@ -3484,13 +3482,13 @@ void Executor::runFunctionAsMain(Function *f,
   if (argvMO) {
     ObjectState *argvOS = bindObjectInState(*state, argvMO, false);
 
-    for (int i=0; i<argc+1+envc+1+1; i++) {
+    for (unsigned i=0; i<argc+1+envc+1+1; i++) {
       if (i==argc || i>=argc+1+envc) {
         // Write NULL pointer
         argvOS->write(i * NumPtrBytes, Expr::createPointer(0));
       } else {
-        char *s = i<argc ? argv[i] : envp[i-(argc+1)];
-        int j, len = strlen(s);
+        const auto &s = i<argc ? args[i] : envs[i-(argc+1)];
+        const auto len = s.size();
 
         MemoryObject *arg =
             memory->allocate(len + 1, /*isLocal=*/false, /*isGlobal=*/true,
@@ -3498,8 +3496,8 @@ void Executor::runFunctionAsMain(Function *f,
         if (!arg)
           klee_error("Could not allocate memory for function arguments");
         ObjectState *os = bindObjectInState(*state, arg, false);
-        for (j=0; j<len+1; j++)
-          os->write8(j, s[j]);
+        for (unsigned j=0; j<len+1; j++)
+          os->write8(j, (std::uint8_t) s[j]);
 
         // Write pointer to newly allocated and initialised argv/envp c-string
         argvOS->write(i * NumPtrBytes, arg->getBaseExpr());

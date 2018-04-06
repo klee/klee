@@ -487,10 +487,9 @@ public:
     usingSeeds = seeds;
   }
 
-  virtual void runFunctionAsMain(llvm::Function *f,
-                                 int argc,
-                                 char **argv,
-                                 char **envp);
+  void runFunctionAsMain(llvm::Function *f,
+                         const std::vector<std::string> &args,
+                         const std::vector<std::string> &envs) override;
 
   /*** Runtime options ***/
   

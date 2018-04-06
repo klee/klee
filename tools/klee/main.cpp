@@ -70,10 +70,23 @@ namespace {
                cl::init("main"));
 
   cl::opt<std::string>
-  RunInDir("run-in", cl::desc("Change to the given directory prior to executing"));
+  RunInDir("run-in",
+           cl::desc("Change to the given directory prior to executing"));
+
+  cl::opt<bool>
+  EnvSystem("env-system",
+            cl::desc("Add actual environment variables"),
+            cl::init(false));
 
   cl::opt<std::string>
-  Environ("environ", cl::desc("Parse environ from given file (in \"env\" format)"));
+  EnvFile("env-file",
+          cl::desc("Add environment variables from file (in \"env\" format)"),
+          cl::value_desc("filename"));
+
+  cl::list<std::string>
+  EnvVariable("env-variable",
+              cl::desc("Add environment variable (in \"env\" format)"),
+              cl::value_desc("VAR=DATA"));
 
   cl::list<std::string>
   InputArgv(cl::ConsumeAfter,
@@ -225,11 +238,10 @@ private:
   unsigned m_pathsExplored; // number of paths explored so far
 
   // used for writing .ktest files
-  int m_argc;
-  char **m_argv;
+  const std::vector<std::string> &m_args;
 
 public:
-  KleeHandler(int argc, char **argv);
+  explicit KleeHandler(const std::vector<std::string> &m_args);
   ~KleeHandler();
 
   llvm::raw_ostream &getInfoStream() const { return *m_infoFile; }
@@ -259,10 +271,10 @@ public:
   static std::string getRunTimeLibraryPath(const char *argv0);
 };
 
-KleeHandler::KleeHandler(int argc, char **argv)
+KleeHandler::KleeHandler(const std::vector<std::string> &m_args)
     : m_interpreter(0), m_pathWriter(0), m_symPathWriter(0), m_infoFile(0),
       m_outputDirectory(), m_numTotalTests(0), m_numGeneratedTests(0),
-      m_pathsExplored(0), m_argc(argc), m_argv(argv) {
+      m_pathsExplored(0), m_args(m_args) {
 
   // create output directory (OutputDir or "klee-out-<i>")
   bool dir_given = OutputDir != "";
@@ -410,9 +422,14 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     unsigned id = ++m_numTotalTests;
 
     if (success) {
+      std::vector<char *> cargs;
+      cargs.reserve(m_args.size());
+      for (const auto &arg : m_args)
+        cargs.push_back(const_cast<char *>(arg.c_str()));
+
       KTest b;
-      b.numArgs = m_argc;
-      b.args = m_argv;
+      b.numArgs = cargs.size();
+      b.args = &cargs[0];
       b.symArgvs = 0;
       b.symArgvLen = 0;
       b.numObjects = out.size();
@@ -605,16 +622,6 @@ std::string KleeHandler::getRunTimeLibraryPath(const char *argv0) {
 //===----------------------------------------------------------------------===//
 // main Driver function
 //
-static std::string strip(std::string &in) {
-  unsigned len = in.size();
-  unsigned lead = 0, trail = len;
-  while (lead<len && isspace(in[lead]))
-    ++lead;
-  while (trail>lead && isspace(in[trail-1]))
-    --trail;
-  return in.substr(lead, trail-lead);
-}
-
 static void parseArguments(int argc, char **argv) {
   cl::SetVersionPrinter(klee::printVersion);
   // This version always reads response files
@@ -972,6 +979,49 @@ static char *format_tdiff(char *buf, long seconds)
   return buf;
 }
 
+static std::vector<std::string> getArguments() {
+  std::vector<std::string> args;
+
+  // filename + arguments
+  args.reserve(InputArgv.size() + 1);
+  args.push_back(InputFile);
+  args.insert(std::end(args), std::begin(InputArgv), std::end(InputArgv));
+
+  return args;
+}
+
+static std::vector<std::string> getEnvironmentVariables(char **envp) {
+  std::vector<std::string> env;
+
+  // system
+  if (EnvSystem) {
+    for(; *envp; ++envp)
+      env.emplace_back(*envp);
+  }
+
+  // file
+  if (!EnvFile.empty()) {
+    std::ifstream f(EnvFile);
+    if (!f.is_open())
+      klee_error("unable to open --env-file: %s", EnvFile.c_str());
+    std::string line;
+    while(getline(f, line)) {
+      if (!line.empty())
+        env.emplace_back(line);
+    }
+    if (f.bad())
+      klee_error("error while reading --env-file: %s", EnvFile.c_str());
+    f.close();
+  }
+
+  // argument
+  if (!EnvVariable.empty()) {
+    env.insert(std::end(env), std::begin(EnvVariable), std::end(EnvVariable));
+  }
+
+  return env;
+}
+
 #ifndef SUPPORT_KLEE_UCLIBC
 static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) {
   klee_error("invalid libc, no uclibc support!\n");
@@ -1256,46 +1306,8 @@ int main(int argc, char **argv, char **envp) {
     klee_error("'%s' function not found in module.", EntryPoint.c_str());
   }
 
-  // FIXME: Change me to std types.
-  int pArgc;
-  char **pArgv;
-  char **pEnvp;
-  if (Environ != "") {
-    std::vector<std::string> items;
-    std::ifstream f(Environ.c_str());
-    if (!f.good())
-      klee_error("unable to open --environ file: %s", Environ.c_str());
-    while (!f.eof()) {
-      std::string line;
-      std::getline(f, line);
-      line = strip(line);
-      if (!line.empty())
-        items.push_back(line);
-    }
-    f.close();
-    pEnvp = new char *[items.size()+1];
-    unsigned i=0;
-    for (; i != items.size(); ++i)
-      pEnvp[i] = strdup(items[i].c_str());
-    pEnvp[i] = 0;
-  } else {
-    pEnvp = envp;
-  }
-
-  pArgc = InputArgv.size() + 1;
-  pArgv = new char *[pArgc];
-  for (unsigned i=0; i<InputArgv.size()+1; i++) {
-    std::string &arg = (i==0 ? InputFile : InputArgv[i-1]);
-    unsigned size = arg.size() + 1;
-    char *pArg = new char[size];
-
-    std::copy(arg.begin(), arg.end(), pArg);
-    pArg[size - 1] = 0;
-
-    pArgv[i] = pArg;
-  }
-
   std::vector<bool> replayPath;
+  const auto args = getArguments();
 
   if (ReplayPathFile != "") {
     KleeHandler::loadPathFile(ReplayPathFile, replayPath);
@@ -1303,7 +1315,7 @@ int main(int argc, char **argv, char **envp) {
 
   Interpreter::InterpreterOptions IOpts;
   IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
-  KleeHandler *handler = new KleeHandler(pArgc, pArgv);
+  auto *handler = new KleeHandler(args);
   Interpreter *interpreter =
     theInterpreter = Interpreter::create(ctx, IOpts, handler);
   handler->setInterpreter(interpreter);
@@ -1367,7 +1379,10 @@ int main(int argc, char **argv, char **envp) {
                    << " bytes)"
                    << " (" << ++i << "/" << kTestFiles.size() << ")\n";
       // XXX should put envp in .ktest ?
-      interpreter->runFunctionAsMain(mainFn, out->numArgs, out->args, pEnvp);
+      std::vector<std::string> args;
+      for (std::size_t i = 0; i < out->numArgs; ++i)
+        args.emplace_back(out->args[i]);
+      interpreter->runFunctionAsMain(mainFn, args, getEnvironmentVariables(envp));
       if (interrupted) break;
     }
     interpreter->setReplayKTest(0);
@@ -1416,7 +1431,7 @@ int main(int argc, char **argv, char **envp) {
                    sys::StrError(errno).c_str());
       }
     }
-    interpreter->runFunctionAsMain(mainFn, pArgc, pArgv, pEnvp);
+    interpreter->runFunctionAsMain(mainFn, args, getEnvironmentVariables(envp));
 
     while (!seeds.empty()) {
       kTest_free(seeds.back());
@@ -1431,11 +1446,6 @@ int main(int argc, char **argv, char **envp) {
   strcpy(buf, "Elapsed: ");
   strcpy(format_tdiff(buf, t[1] - t[0]), "\n");
   handler->getInfoStream() << buf;
-
-  // Free all the args.
-  for (unsigned i=0; i<InputArgv.size()+1; i++)
-    delete[] pArgv[i];
-  delete[] pArgv;
 
   delete interpreter;
 
