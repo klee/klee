@@ -617,28 +617,6 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     assert(bv_width < 1024 && "BvToInt on non bv");
     return ConvertBitVecToInt(bv);
   }
- 
-  case Expr::BitVector8_Var:
-  {
-  	/**********************************/
-  	/* Cast e to an StrVarExpr ...    */
-  	/**********************************/
-  	BitVector8VarExpr *bv8e = (BitVector8VarExpr *) e.get();
-
-  	/****************************************************************/
-  	/* Build a Z3ASTHandle from the name of the (bv8-sort) variable */
-  	/****************************************************************/
-	Z3ASTHandle result = Z3ASTHandle(
-		Z3_mk_const(
-			ctx,
-			Z3_mk_string_symbol(ctx, bv8e->name.c_str()),
-			Z3SortHandle(Z3_mk_bv_sort(ctx,8), ctx)),
-		ctx);
-				
-    *width_out = Expr::Int8;
-	return result;
-  }
-
   case Expr::Str_Var:
   {
 	int serial=0;

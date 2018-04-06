@@ -483,10 +483,6 @@ const char *ExprSMTLIBPrinter::getSMTLIBKeyword(const ref<Expr> &e)
   {
     return ((StrVarExpr*)e.get())->name.c_str();
   }
-  case Expr::BitVector8_Var:
-  {
-    return ((BitVector8VarExpr*)e.get())->name.c_str();
-  }
   case Expr::Str_Const:
   {
     std::string s = "\"" + dyn_cast<StrConstExpr>(e)->value + "\"";

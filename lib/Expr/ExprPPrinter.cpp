@@ -373,8 +373,6 @@ public:
       printStrVar(SV, PC, printConstWidth);
     else if (StrConstExpr *SC = dyn_cast<StrConstExpr>(e))
       printStrConst(SC, PC, printConstWidth);
-    else if (BitVector8VarExpr *bv8e = dyn_cast<BitVector8VarExpr>(e))
-        PC << bv8e->name;
     else {
       std::map<ref<Expr>, unsigned>::iterator it = bindings.find(e);
       if (it!=bindings.end()) {
