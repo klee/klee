@@ -3335,11 +3335,11 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         ref<Expr> suffixLength = SubExpr::create(mo->getSizeExpr(),suffixStart);
         ref<Expr> AB_p_var     = StrVarExpr::create(mo->getABSerial());
         const_cast<MemoryObject*>(mo)->version++;
-         ref<Expr> AB_p_new_var = StrVarExpr::create(mo->getABSerial());
+        ref<Expr> AB_p_new_var = StrVarExpr::create(mo->getABSerial());
 
- 	      state.addConstraint(EqExpr::create(
-  		      StrLengthExpr::create(AB_p_new_var),
-  		      BvToIntExpr::create(mo->getSizeExpr())));
+ 	    state.addConstraint(EqExpr::create(
+  		  StrLengthExpr::create(AB_p_new_var),
+  		  BvToIntExpr::create(mo->getSizeExpr())));
       
         /************************/
         /* [11] prefix equation */
@@ -3362,11 +3362,16 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           StrCharAtExpr::create(AB_p_new_var, BvToIntExpr::create(offset)),
           StrFromBitVector8Expr::create(value));
       
+        /*******************************/
+        /* [12] Extract Version Number */
+        /*******************************/
+        int version=const_cast<MemoryObject*>(mo)->version;
+
         /************************/
         /* [12] Add constraints */
         /************************/
-        state.addConstraint(prefixEq);
-        state.addConstraint(suffixEq);
+        if (version > 1) { assert(0); state.addConstraint(prefixEq); }
+        if (version > 1) { state.addConstraint(suffixEq); }
         state.addConstraint(middleEq);
         return;
 	

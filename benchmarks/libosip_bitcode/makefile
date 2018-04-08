@@ -2,9 +2,9 @@
 # DIRECTORIES #
 ###############
 BASEDIR        = $(shell pwd)
-KLEE_ROOT_DIR  = /data/str.klee
+KLEE_ROOT_DIR  = /home/oren/GIT/klee/str.klee
 KLEE_SRC_DIR   = ${KLEE_ROOT_DIR}/klee
-KLEE_BUILD_DIR = ${KLEE_ROOT_DIR}/build-klee
+KLEE_BUILD_DIR = ${KLEE_ROOT_DIR}/build
 
 #########
 # FILES #
@@ -21,9 +21,11 @@ compile_and_run:
 	@echo "*                                          *"
 	@echo "********************************************"
 	@setterm -term linux -fore white
-	cp mySourceFiles/torture.c   libosip2-4.1.0/src/test
-	cp mySourceFiles/osip_body.c libosip2-4.1.0/src/osipparser2
-	cp mySourceFiles/osip_port.c libosip2-4.1.0/src/osipparser2
+	cp mySourceFiles/torture.c            libosip2-4.1.0/src/test
+	#cp mySourceFiles/osip_body.c          libosip2-4.1.0/src/osipparser2
+	#cp mySourceFiles/osip_port.c          libosip2-4.1.0/src/osipparser2
+	cp mySourceFiles/osip_parser_cfg.c    libosip2-4.1.0/src/osipparser2
+	cp mySourceFiles/osip_message_parse.c libosip2-4.1.0/src/osipparser2
 	@setterm -term linux -fore blue
 	@echo "************************************************"
 	@echo "*                                              *"
@@ -31,7 +33,7 @@ compile_and_run:
 	@echo "*                                              *"
 	@echo "************************************************"
 	@setterm -term linux -fore white
-	cd build && (LLVM_COMPILER=clang C_INCLUDE_PATH=${KLEE_SRC_DIR}/include make)	
+	cd build && (LLVM_COMPILER=clang make)	
 	@setterm -term linux -fore blue
 	@echo "*******************************"
 	@echo "*                             *"
@@ -47,7 +49,7 @@ compile_and_run:
 	@echo "*                                         *"
 	@echo "*******************************************"
 	@setterm -term linux -fore white
-	opt-3.4  -o                   \
+	opt -strip-debug -o                   \
 	build/src/test/torture_test_no_dbg.bc \
 	build/src/test/torture_test.bc
 	@setterm -term linux -fore blue
@@ -57,7 +59,7 @@ compile_and_run:
 	@echo "*                                              *"
 	@echo "************************************************"
 	@setterm -term linux -fore white
-	opt-3.4 -instnamer -o                                \
+	opt -instnamer -o                                \
 	build/src/test/torture_test_no_dbg_with_names.bc \
 	build/src/test/torture_test_no_dbg.bc
 	@setterm -term linux -fore blue
@@ -67,10 +69,11 @@ compile_and_run:
 	@echo "*                                           *"
 	@echo "*********************************************"
 	@setterm -term linux -fore white
-	#gdb -x ./myGdbScripts/gdbCommands.txt --args   \
+	#--posix-runtime                                 \
+	#-constants-as-ABs                               \
+	#gdb -x ./myGdbScripts/gdbCommands.txt --args    \
 	${KLEE}                                         \
 	--libc=uclibc                                   \
-	--posix-runtime                                 \
 	-solver-backend=z3                              \
 	-output-module                                  \
 	-output-source                                  \

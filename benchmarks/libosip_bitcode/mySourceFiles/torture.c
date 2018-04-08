@@ -104,7 +104,7 @@ main (int argc, char **argv)
   int binary = 0;
   FILE *torture_file;
   //char *msg;
-  char msg[700];
+  char msg[70];
   // int pos;
   int len;
 
@@ -147,10 +147,13 @@ main (int argc, char **argv)
   // klee_make_symbolic(msg,700,"MsG");
   
   markString(msg);
-  
+  msg[60]=0;
   fprintf (stdout, ">> LIBOSIP BREAKPOINT[1]\n");  
   
   len = strlen(msg);
+
+  fprintf (stdout, ">> LIBOSIP BREAKPOINT[888]\n");
+
   success = test_message (msg, len, verbose, clone);
   //if (verbose) {
   //  fprintf (stdout, "test %s : ============================ \n", argv[2]);
@@ -186,9 +189,11 @@ test_message (char *msg, size_t len, int verbose, int clone)
 
     if (verbose)
       fprintf (stdout, "Trying %i sequentials calls to osip_message_init(), osip_message_parse() and osip_message_free()\n", j);
+
     while (j != 0) {
       j--;
       osip_message_init (&sip);
+
       if (osip_message_parse (sip, msg, len) != 0) {
         fprintf (stdout, "LIBOSIP ERROR: failed while parsing!\n");
         osip_message_free (sip);

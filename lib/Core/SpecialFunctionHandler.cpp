@@ -2393,9 +2393,9 @@ void SpecialFunctionHandler::handleMarkString(
     mo->version = 0;
     std::string ab_name = mo->getABSerial();
     if(mo->isGlobal) {
-        const GlobalVariable* v = dynamic_cast<const GlobalVariable*>(mo->allocSite);
-        assert(v && "Unsusported marks string of a non glbal variable global");
-        assert(v->isConstant() && "mark string of non constant global");
+        //const GlobalVariable* v = dynamic_cast<const GlobalVariable*>(mo->allocSite);
+        //assert(v && "Unsusported marks string of a non glbal variable global");
+        //assert(v->isConstant() && "mark string of non constant global");
         const ObjectState* wos = it->first.second;
         char c[wos->size + 1];
         for(int i = 0; i < wos->size; i++) {

@@ -976,10 +976,6 @@ ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
       if(l->getWidth() == Expr::Int) {return _e_op ## _create(l.get(), BvToIntExpr::create(r).get());} \
       else {return _e_op ## _create(BvToIntExpr::create(l).get(), r.get());}    \
   }                                                                 \
-  if (l->getWidth()!=r->getWidth()) {                                   \
-    llvm::errs() << "left  width = " << l->getWidth() << "\n";          \
-    llvm::errs() << "right width = " << r->getWidth() << "\n";          \
-  }                                                                     \
   assert(l->getWidth()==r->getWidth() && "type mismatch");              \
   if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l)) {                   \
     if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))                   \
@@ -1037,8 +1033,6 @@ ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) {    \
       if(l->getWidth() == Expr::Int) {return _e_op ## _create(l.get(), BvToIntExpr::create(r).get());} \
       else {return _e_op ## _create(BvToIntExpr::create(l).get(), r.get());}    \
   }                                                                 \
-  llvm::errs() << "left  width = " << l->getWidth() << "\n";           \
-  llvm::errs() << "right width = " << r->getWidth() << "\n";           \
   assert(l->getWidth()==r->getWidth() && "type mismatch");             \
   if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l)) {                  \
     if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))                  \
