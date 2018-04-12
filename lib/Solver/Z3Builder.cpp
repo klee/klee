@@ -560,9 +560,10 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 
   case Expr::Extract: {
     ExtractExpr *ee = cast<ExtractExpr>(e);
+    assert(ee->expr->getWidth() < 1024 && "Extract of non bv type");
     Z3ASTHandle src = construct(ee->expr, width_out);
     *width_out = ee->getWidth();
-    assert(*width_out < 1024 && "Extract of non bv type");
+    // assert(*width_out < 1024 && "Extract of non bv type");
     if (*width_out == 1) {
       return bvBoolExtract(src, ee->offset);
     } else {
@@ -575,9 +576,10 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
   case Expr::ZExt: {
     int srcWidth;
     CastExpr *ce = cast<CastExpr>(e);
+    assert(ce->src->getWidth() < 1024 && "Extract of non bv type");
     Z3ASTHandle src = construct(ce->src, &srcWidth);
     *width_out = ce->getWidth();
-    assert(*width_out < 1024 && "ZExt of non bv type");
+    // assert(*width_out < 1024 && "ZExt of non bv type");
     if (srcWidth == 1) {
       return iteExpr(src, bvOne(*width_out), bvZero(*width_out));
     } else {
@@ -590,9 +592,10 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
   case Expr::SExt: {
     int srcWidth;
     CastExpr *ce = cast<CastExpr>(e);
+    assert(ce->src->getWidth() < 1024 && "Extract of non bv type");
     Z3ASTHandle src = construct(ce->src, &srcWidth);
     *width_out = ce->getWidth();
-    assert(*width_out < 1024 && "SExt of non bv type");
+    // assert(*width_out < 1024 && "SExt of non bv type");
     if (srcWidth == 1) {
       return iteExpr(src, bvMinusOne(*width_out), bvZero(*width_out));
     } else {
