@@ -560,8 +560,13 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 
   case Expr::Extract: {
     ExtractExpr *ee = cast<ExtractExpr>(e);
-    assert(ee->expr->getWidth() < 1024 && "Extract of non bv type");
+    // assert(ee->expr->getWidth() < 1024 && "Extract of non bv type");
     Z3ASTHandle src = construct(ee->expr, width_out);
+    if (ee->expr->getWidth() >= 1024)
+    {
+    	*width_out = Expr::Int;
+    	return src;
+    }
     *width_out = ee->getWidth();
     // assert(*width_out < 1024 && "Extract of non bv type");
     if (*width_out == 1) {
@@ -592,8 +597,22 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
   case Expr::SExt: {
     int srcWidth;
     CastExpr *ce = cast<CastExpr>(e);
-    assert(ce->src->getWidth() < 1024 && "Extract of non bv type");
-    Z3ASTHandle src = construct(ce->src, &srcWidth);
+    // assert(ce->src->getWidth() < 1024 && "Extract of non bv type");
+    // if (ce->src->getKind() == Expr::Extract)
+    // {
+    //   ExtractExpr *e = (ExtractExpr *) ((ce->src).get());
+    //	 if (e->expr->getWidth() >= 1024)
+    //	 {
+    //		Z3ASTHandle result = construct(e->expr,width_out);
+    //		*width_out = Expr::Int;
+    //		return result;
+    //	 }
+    // }
+    Z3ASTHandle src = constructActual(ce->src, &srcWidth);
+    if (srcWidth == Expr::Int)
+    {
+    	return src;
+    }
     *width_out = ce->getWidth();
     // assert(*width_out < 1024 && "SExt of non bv type");
     if (srcWidth == 1) {
@@ -1004,9 +1023,13 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle left = construct(ee->left, width_out);
     int left_width = *width_out;
     Z3ASTHandle right = construct(ee->right, width_out);
-    assert(*width_out == left_width && "Sort of eq don't match");
-//    llvm::errs() << "Eq: left: " << left_width << " right: " << *width_out << "\n";
-//    ee->dump();
+    // assert(*width_out == left_width && "Sort of eq don't match");
+    if (*width_out != left_width)
+    {
+		llvm::errs() << "Eq: left: " << left_width << " right: " << *width_out << "\n";
+		ee->dump();
+		assert(0);
+	}
 
    if (*width_out == 1) {
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(ee->left)) {
