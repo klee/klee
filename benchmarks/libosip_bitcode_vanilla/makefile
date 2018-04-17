@@ -27,7 +27,7 @@ compile_and_run:
 	@echo "*                                          *"
 	@echo "********************************************"
 	@setterm -term linux -fore white
-	#cp mySourceFiles/torture.c   libosip2-4.1.0/src/test
+	cp mySourceFiles/torture.c   libosip2-4.1.0/src/test
 	#cp mySourceFiles/osip_body.c libosip2-4.1.0/src/osipparser2
 	cp mySourceFiles/osip_port.c libosip2-4.1.0/src/osipparser2
 	@setterm -term linux -fore blue
