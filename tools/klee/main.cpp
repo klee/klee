@@ -641,7 +641,7 @@ static int initEnv(Module *mainModule) {
   }
 
   if (mainFn->arg_size() < 2) {
-    klee_error("Cannot handle ""--posix-runtime"" when entry funciton '%s' has less than two arguments.\n", EntryPoint.c_str());
+    klee_error("Cannot handle ""--posix-runtime"" when entry funciton '%s' has less than two arguments.", EntryPoint.c_str());
   }
 
   Instruction *firstInst = &*(mainFn->begin()->begin());
