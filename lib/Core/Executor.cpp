@@ -3370,7 +3370,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         /************************/
         /* [12] Add constraints */
         /************************/
-        if (version > 1) { assert(0); state.addConstraint(prefixEq); }
+        if (version > 1) { state.addConstraint(prefixEq); }
         if (version > 1) { state.addConstraint(suffixEq); }
         state.addConstraint(middleEq);
         return;

@@ -75,10 +75,14 @@ ExprVisitor::Action ExprEvaluator::visitFirstIndexOf(const StrFirstIdxOfExpr& sf
         needle = n->value;
     } else  
       assert(false && "Needle must be constant bitvec");
-    size_t firstIndex = haystack->value.find_first_of(needle);
+    size_t firstIndex = haystack->value.find(needle);
+    // size_t firstIndex = haystack->value.find_first_of(needle);
+    llvm::errs() << "haystack->value is: " << haystack->value << "\n";
+    llvm::errs() << "needle          is: " << needle          << "\n";
+    llvm::errs() << "firstIndex      is: " << firstIndex      << "\n";
     assert(firstIndex != std::string::npos && "Character must be present");
 
-    llvm::errs() << "Needle: !!!!" << firstIndex << "\n";
+    llvm::errs() << "Needle found at offset = " << firstIndex << "\n";
     return Action::changeTo(ConstantExpr::create(firstIndex, Expr::Int64));
 }
 
@@ -97,14 +101,22 @@ ExprVisitor::Action ExprEvaluator::visitStrSubstr(const StrSubstrExpr &subStrE) 
     ConstantExpr* offset = dyn_cast<ConstantExpr>(_offset);
     ConstantExpr* length = dyn_cast<ConstantExpr>(_length);
     if(offset != nullptr && length != nullptr) {
-      llvm::errs() << "substr " << offset->getZExtValue() << " of len " << length->getZExtValue() << "\n";
+      llvm::errs() << "substr starting from: " << offset->getZExtValue() << " of len " << length->getZExtValue() << "\n";
       StrVarExpr* se = dyn_cast<StrVarExpr>(subStrE.s);
       if(se) {
+        int fixedLength=0;
         const Array *a = getStringArray(se->name);
         assert(a && "nullptr array from ab name");
-        char c[length->getZExtValue()];
-        for(int i = offset->getZExtValue(); i < length->getZExtValue(); i++) {
+        char c[1024]={0};
+        fixedLength=length->getZExtValue();
+        // char c[length->getZExtValue()];
+        for (int i = offset->getZExtValue(); i < fixedLength; i++)
+        {
             c[i] = (char)dyn_cast<ConstantExpr>(getInitialValue(*a, i))->getZExtValue(8);
+            if (c[i] == '\\')
+            {
+            	fixedLength += 3;
+            }
         }
         return Action::changeTo(StrConstExpr::create(c));
       } else {
