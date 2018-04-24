@@ -62,6 +62,59 @@ ExprVisitor::Action ExprEvaluator::visitBvToInt(const BvToIntExpr& e) {
 ExprVisitor::Action ExprEvaluator::visitStrFromBv8(const StrFromBitVector8Expr& e) {
   return Action::changeTo(e.someBitVec8);
 }
+
+std::string NormalizeZ3String(const std::string &s)
+{
+	int i=0;
+	int j=0;
+	int i1=0;
+	int i2=0;
+	char c1=0;
+	char c2=0;
+	char normalized[1024]={0};
+		
+	for (i=0;i<s.size();i++)
+	{
+		if (s[i] != '\\')
+		{
+			normalized[j++]=s[i];
+		}
+		else
+		{
+			assert(s[i+1] == 'x');
+
+			c1 = s[i+2];
+			c2 = s[i+3];
+
+			int c1_is_a_digit=0;
+			int c2_is_a_digit=0;
+
+			int c1_is_a_to_f=0;
+			int c2_is_a_to_f=0;
+
+			int c1_is_hex_valid=0;
+			int c2_is_hex_valid=0;
+			
+			if (('0' <= c1) && (c1 <= '9')) { c1_is_a_digit=1; i1 = c1-'0'; }
+			if (('0' <= c2) && (c2 <= '9')) { c2_is_a_digit=1; i2 = c2-'0'; }
+
+			if (('a' <= c1) && (c1 <= 'f')) { c1_is_a_to_f =1; i1 = c1-'a'; }
+			if (('a' <= c2) && (c2 <= 'f')) { c2_is_a_to_f =1; i2 = c2-'a';}
+
+			if (c1_is_a_digit || c1_is_a_to_f) { c1_is_hex_valid=1; }
+			if (c2_is_a_digit || c2_is_a_to_f) { c2_is_hex_valid=1; }
+			
+			assert(c1_is_hex_valid && c2_is_hex_valid);
+			
+			normalized[j++] = 16*i1+i2;
+
+			i += 3;
+		}
+	}
+	
+	return normalized;
+}
+
 ExprVisitor::Action ExprEvaluator::visitFirstIndexOf(const StrFirstIdxOfExpr& sfi) {
     ref<Expr> _haystack = visit(sfi.haystack);
     ref<Expr> _needle = visit(sfi.needle);
@@ -73,13 +126,30 @@ ExprVisitor::Action ExprEvaluator::visitFirstIndexOf(const StrFirstIdxOfExpr& sf
         needle = std::string(1,(char)n->getZExtValue(8));
     } else if(StrConstExpr* n = dyn_cast<StrConstExpr>(_needle)) {
         needle = n->value;
-    } else  
+    } else {
       assert(false && "Needle must be constant bitvec");
-    size_t firstIndex = haystack->value.find(needle);
+    }
+
+	size_t firstIndex=0;
+	std::string normalizedNeedle  =NormalizeZ3String(needle);
+	std::string normalizedHaystack=NormalizeZ3String(haystack->value);
+
+	if (normalizedNeedle.size() == 0)
+	{
+		firstIndex = normalizedHaystack.size();
+	}
+	else
+	{
+		firstIndex = normalizedHaystack.find(normalizedNeedle);
+	}
+    // size_t firstIndex = (NormalizeZ3String(haystack->value)).find(NormalizeZ3String(needle));
+    // size_t firstIndex = haystack->value.find(needle);
     // size_t firstIndex = haystack->value.find_first_of(needle);
-    llvm::errs() << "haystack->value is: " << haystack->value << "\n";
-    llvm::errs() << "needle          is: " << needle          << "\n";
-    llvm::errs() << "firstIndex      is: " << firstIndex      << "\n";
+    llvm::errs() << "haystack->value     is: " << haystack->value    << "\n";
+    llvm::errs() << "normalized haystack is: " << normalizedHaystack << "\n";
+    llvm::errs() << "needle              is: " << needle             << "\n";
+    llvm::errs() << "normalized needle   is: " << normalizedNeedle   << "\n";
+    llvm::errs() << "firstIndex          is: " << firstIndex         << "\n";
     assert(firstIndex != std::string::npos && "Character must be present");
 
     llvm::errs() << "Needle found at offset = " << firstIndex << "\n";
