@@ -28,6 +28,7 @@
 #include <termios.h>
 #include <sys/select.h>
 #include <klee/klee.h>
+#include <sys/time.h>
 
 /* Returns pointer to the symbolic file structure fs the pathname is symbolic */
 static exe_disk_file_t *__get_sym_file(const char *pathname) {
@@ -246,6 +247,14 @@ int utimes(const char *path, const struct timeval times[2]) {
   exe_disk_file_t *dfile = __get_sym_file(path);
 
   if (dfile) {
+
+    if (!times) {
+      struct timeval newTimes[2];
+      gettimeofday(&(newTimes[0]), NULL);
+      newTimes[1] = newTimes[0];
+      times = newTimes;
+    }
+
     /* don't bother with usecs */
     dfile->stat->st_atime = times[0].tv_sec;
     dfile->stat->st_mtime = times[1].tv_sec;
