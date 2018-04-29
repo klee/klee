@@ -260,6 +260,15 @@ int utimes(const char *path, const struct timeval times[2]) {
   exe_disk_file_t *dfile = __get_sym_file(path);
 
   if (dfile) {
+
+    if(!times) {
+      time_t now;
+      time(&now);
+      struct timeval newTimes[2];
+      newTimes[0].tv_sec = newTimes[1].tv_sec = now;
+      times = newTimes;
+    }
+
     /* don't bother with usecs */
     dfile->stat->st_atime = times[0].tv_sec;
     dfile->stat->st_mtime = times[1].tv_sec;
