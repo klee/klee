@@ -28,6 +28,7 @@
 #include <termios.h>
 #include <sys/select.h>
 #include <klee/klee.h>
+#include <sys/time.h>
 
 /* #define DEBUG */
 
@@ -261,11 +262,10 @@ int utimes(const char *path, const struct timeval times[2]) {
 
   if (dfile) {
 
-    if(!times) {
-      time_t now;
-      time(&now);
+    if (!times) {
       struct timeval newTimes[2];
-      newTimes[0].tv_sec = newTimes[1].tv_sec = now;
+      gettimeofday(&(newTimes[0]), NULL);
+      newTimes[1] = newTimes[0];
       times = newTimes;
     }
 
