@@ -7,5 +7,4 @@ set pagination off
 # Initial breakpoints #
 ####################### 
 start
-break Solver.cpp:93
 run
