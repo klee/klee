@@ -34,7 +34,7 @@ cd build
 #################
 # Configure ... #
 #################
-CC=wllvm LLVM_COMPILER=clang ../libosip2-4.1.0/configure --enable-test --disable-shared
+CC=wllvm LLVM_COMPILER=clang ../libosip2-4.1.0/configure --enable-test --disable-shared --disable-trace --disable-hashtable
 
 ###############
 # Make it !!! #

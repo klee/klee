@@ -286,6 +286,8 @@ osip_util_replace_all_lws (char *sip_message)
   /* const char *end_of_message; */
   char *tmp;
 
+  fprintf(stdout,">> LIBOSIP BREAKPOINT[6]\n");
+
   if (sip_message == NULL)
     return;
 
@@ -858,24 +860,27 @@ _osip_message_parse (osip_message_t * sip, const char *buf, size_t length, int s
   char *tmp;
   char *beg;
 
-  fprintf(stdout,"++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ BREAKPOINT");
+  fprintf(stdout,">> LIBOSIP BREAKPOINT[5.a]\n");
 
+  // tmp = malloc (173+length);
   // tmp = osip_malloc (length + 2);
-  tmp = malloc (length + 2);
+  tmp = malloc (length+2);
+  markString(tmp);
 
-  fprintf(stdout,">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> BREAKPOINT");
+  fprintf(stdout,">> LIBOSIP BREAKPOINT[5.b]\n");
 
   if (tmp == NULL) {
     OSIP_TRACE (osip_trace (__FILE__, __LINE__, OSIP_ERROR, NULL, "Could not allocate memory.\n"));
     return OSIP_NOMEM;
   }
   beg = tmp;
-  memcpy (tmp, buf, length);    /* may contain binary data */
+  // memcpy (tmp, buf, length);    /* may contain binary data */
+  strncpy(tmp,buf,length);    /* may contain binary data */
   tmp[length] = '\0';
   /* skip initial \r\n */
   while (tmp[0] == '\r' || tmp[0] == '\n')
     tmp++;
-  fprintf(stdout,">> LIBOSIP BREAKPOINT[3]\n");
+  fprintf(stdout,">> LIBOSIP BREAKPOINT[5.c]\n");
   osip_util_replace_all_lws (tmp);
   /* parse request or status line */
   i = __osip_message_startline_parse (sip, tmp, &next_header_index);

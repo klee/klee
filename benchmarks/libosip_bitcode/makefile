@@ -71,7 +71,7 @@ compile_and_run:
 	@setterm -term linux -fore white
 	#--posix-runtime                                 \
 	#-constants-as-ABs                               \
-	#gdb -x ./myGdbScripts/gdbCommands.txt --args    \
+	gdb -x ./myGdbScripts/gdbCommands.txt --args    \
 	${KLEE}                                         \
 	--libc=uclibc                                   \
 	-solver-backend=z3                              \

@@ -611,6 +611,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     Z3ASTHandle src = constructActual(ce->src, &srcWidth);
     if (srcWidth == Expr::Int)
     {
+    	*width_out = Expr::Int;
     	return src;
     }
     *width_out = ce->getWidth();
@@ -636,7 +637,11 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
   	int bv_width=0;
 	  Z3ASTHandle bv  = constructActual(b2i->bvExpr,&bv_width);
     *width_out = Expr::Int;
-    assert(bv_width < 1024 && "BvToInt on non bv");
+    if (bv_width >= 1024) return bv;
+    //{
+    //	b2i->dump();
+	//	assert(bv_width < 1024 && "BvToInt on non bv");
+	//}
     return ConvertBitVecToInt(bv);
   }
   case Expr::Str_Var:
@@ -765,21 +770,55 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
   // Arithmetic
   case Expr::Add: {
     AddExpr *ae = cast<AddExpr>(e);
-    Z3ASTHandle left = construct(ae->left, width_out);
-    int left_width = *width_out;
-    Z3ASTHandle right = construct(ae->right, width_out);
+    
+    int left_width = 0;
+    int right_width = 0;
+    Z3ASTHandle left  = construct(ae->left,  &left_width);
+    Z3ASTHandle right = construct(ae->right, &right_width);
+    
+    //Z3ASTHandle left = construct(ae->left, width_out);
+    //int left_width = *width_out;
+    //Z3ASTHandle right = construct(ae->right, width_out);
     assert(*width_out != 1 && "uncanonicalized add");
-    assert(left_width == *width_out && "Sides of add don't have same sort");
+    // assert(left_width == *width_out && "Sides of add don't have same sort");
+    //if (left_width != (*width_out))
+    //{
+    //	fprintf(stdout,"Sides of add don't have same sort");
+    //}
 
-	  Z3ASTHandle result;
-    if (*width_out == Expr::Int) { 
-	  	Z3_ast params[2] = {left, right}; 
-	    result = Z3ASTHandle(Z3_mk_add(ctx, 2, params), ctx);
-	  } else {
-	  	result = Z3ASTHandle(Z3_mk_bvadd(ctx, left, right), ctx);
-	  	assert(getBVLength(result) == static_cast<unsigned>(*width_out) && "width mismatch");
-	  }
-    return result;
+	if (left_width == Expr::Int)
+    {
+    	if (right_width == Expr::Int)
+    	{
+	    	*width_out = Expr::Int;
+			Z3_ast params[2] = {left, right}; 
+			return Z3ASTHandle(Z3_mk_add(ctx, 2, params), ctx);
+    	}
+    	else
+    	{
+	    	*width_out = Expr::Int;
+    		Z3ASTHandle Bv2Int_right = Z3ASTHandle(Z3_mk_bv2int(ctx,right,true),ctx);
+			Z3_ast params[2] = {left, Bv2Int_right}; 
+			return Z3ASTHandle(Z3_mk_add(ctx, 2, params), ctx);
+    	}
+    }
+    else
+    {
+		if (right_width == Expr::Int)
+		{
+	    	*width_out = Expr::Int;
+    		Z3ASTHandle Bv2Int_left = Z3ASTHandle(Z3_mk_bv2int(ctx,left,true),ctx);
+			Z3_ast params[2] = {Bv2Int_left, right}; 
+			return Z3ASTHandle(Z3_mk_add(ctx, 2, params), ctx);
+		}
+		else
+		{
+			assert((left_width == right_width) && "bvadd violates: width(left) == width(right)");
+		  	Z3ASTHandle result = Z3ASTHandle(Z3_mk_bvadd(ctx, left, right), ctx);
+		  	assert(getBVLength(result) == static_cast<unsigned>(*width_out) && "width mismatch");
+		  	return result;
+		}
+	}
   }
 
   case Expr::Sub: {
@@ -1047,18 +1086,39 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
 
   case Expr::Ult: {
     UltExpr *ue = cast<UltExpr>(e);
-    Z3ASTHandle left = construct(ue->left, width_out);
-    int left_width = *width_out;
-    Z3ASTHandle right = construct(ue->right, width_out);
-    assert(*width_out != 1 && "uncanonicalized ult");
-    assert(*width_out == left_width && "Sort of ult don't match");
+    int left_width = 0;
+    int right_width = 0;
+    Z3ASTHandle left  = construct(ue->left,  &left_width);
+    Z3ASTHandle right = construct(ue->right, &right_width);
+    // assert(*width_out != 1          && "uncanonicalized ult");
+    // assert(*width_out == left_width && "Sort of ult don't match");
 
     *width_out = 1;
-    if (left_width == Expr::Int) { 
-	    return Z3ASTHandle(Z3_mk_lt(ctx, left, right), ctx);
-	  } else {
-		  return bvLtExpr(left, right);
-	  }
+    if (left_width == Expr::Int)
+    {
+    	if (right_width == Expr::Int)
+    	{
+    		return Z3ASTHandle(Z3_mk_lt(ctx, left, right), ctx);
+    	}
+    	else
+    	{
+    		Z3ASTHandle Bv2Int_right = Z3ASTHandle(Z3_mk_bv2int(ctx,right,true),ctx);
+    		return Z3ASTHandle(Z3_mk_lt(ctx, left, Bv2Int_right), ctx);
+    	}
+    }
+    else
+    {
+		if (right_width == Expr::Int)
+		{
+    		Z3ASTHandle Bv2Int_left = Z3ASTHandle(Z3_mk_bv2int(ctx,left,true),ctx);
+    		return Z3ASTHandle(Z3_mk_lt(ctx, Bv2Int_left, right), ctx);
+		}
+		else
+		{
+			assert((left_width == right_width) && "Ult violates width(left) == width(right)");
+			return bvLtExpr(left, right);
+		}
+	}
   }
 
   case Expr::Ule: {

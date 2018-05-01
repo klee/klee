@@ -663,6 +663,12 @@ ref<Expr> ConcatExpr::create8(const ref<Expr> &kid1, const ref<Expr> &kid2,
 
 ref<Expr> ExtractExpr::create(ref<Expr> expr, unsigned off, Width w) {
   unsigned kw = expr->getWidth();
+  
+  //if (kw == Expr::Int)
+  //{
+  //	return expr;
+  //}
+  
   if(kw > 1024){
       kw = 64;
   }
@@ -720,6 +726,10 @@ ref<Expr> ZExtExpr::create(const ref<Expr> &e, Width w) {
 
 ref<Expr> SExtExpr::create(const ref<Expr> &e, Width w) {
   unsigned kBits = e->getWidth();
+  //if (kBits == Expr::Int)
+  //{
+  //	return e;
+  //}
   if (w == kBits) {
     return e;
   } else if (w < kBits) { // trunc
@@ -1000,8 +1010,67 @@ ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
   return  _e_op ## _create(l, r);                                   \
 }
 
-BCREATE_R(AddExpr, Add, AddExpr_createPartial, AddExpr_createPartialR)
-BCREATE_R(SubExpr, Sub, SubExpr_createPartial, SubExpr_createPartialR)
+// #define BCREATE_R(_e_op, _op, partialL, partialR)
+ref<Expr> AddExpr::create(const ref<Expr> &l, const ref<Expr> &r)
+{
+	if (l->getWidth() == Expr::Int || r->getWidth() == Expr::Int)
+	{
+		if (l->getWidth() == Expr::Int)
+		{
+			return AddExpr_create(l.get(), BvToIntExpr::create(r).get());
+		}
+		else
+		{
+			return AddExpr_create(BvToIntExpr::create(l).get(), r.get());
+		}
+	}
+	assert(l->getWidth()==r->getWidth() && "type mismatch");
+	if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l))
+	{
+		if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))
+		{
+			return cl->Add(cr);
+		}
+		return AddExpr_createPartialR(cl, r.get());
+	}
+	else if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))
+	{
+		return AddExpr_createPartial(l.get(), cr);
+	}
+	return AddExpr_create(l.get(), r.get());
+}
+
+ref<Expr> SubExpr::create(const ref<Expr> &l, const ref<Expr> &r)
+{
+	if (l->getWidth() == Expr::Int || r->getWidth() == Expr::Int)
+	{
+		if (l->getWidth() == Expr::Int)
+		{
+			return SubExpr_create(l.get(), BvToIntExpr::create(r).get());
+		}
+		else
+		{
+			return SubExpr_create(BvToIntExpr::create(l).get(), r.get());
+		}
+	}
+	assert(l->getWidth()==r->getWidth() && "type mismatch");
+	if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l))
+	{
+		if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))
+		{
+			return cl->Sub(cr);
+		}
+		return SubExpr_createPartialR(cl, r.get());
+	}
+	else if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))
+	{
+		return SubExpr_createPartial(l.get(), cr);
+	}
+	return SubExpr_create(l.get(), r.get());
+}
+
+//BCREATE_R(AddExpr, Add, AddExpr_createPartial, AddExpr_createPartialR)
+//BCREATE_R(SubExpr, Sub, SubExpr_createPartial, SubExpr_createPartialR)
 BCREATE_R(MulExpr, Mul, MulExpr_createPartial, MulExpr_createPartialR)
 BCREATE_R(AndExpr, And, AndExpr_createPartial, AndExpr_createPartialR)
 BCREATE_R(OrExpr, Or, OrExpr_createPartial, OrExpr_createPartialR)
@@ -1226,9 +1295,51 @@ static ref<Expr> SleExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
   }
 }
 
+ref<Expr> UltExpr::create(const ref<Expr> &l, const ref<Expr> &r)
+{
+	if (l->getWidth() == Expr::Int || r->getWidth() == Expr::Int)
+	{
+		if (l->getWidth() == Expr::Int)
+		{
+			return UltExpr_create(l.get(), BvToIntExpr::create(r).get());
+		}
+		else
+		{
+			return UltExpr_create(BvToIntExpr::create(l).get(),r.get());
+		}
+	}
+	assert(l->getWidth()==r->getWidth() && "type mismatch");
+	if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l))
+		if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))
+			return cl->Ult(cr);
+
+	return UltExpr_create(l, r);
+}
+
+ref<Expr> UleExpr::create(const ref<Expr> &l, const ref<Expr> &r)
+{
+	if (l->getWidth() == Expr::Int || r->getWidth() == Expr::Int)
+	{
+		if (l->getWidth() == Expr::Int)
+		{
+			return UleExpr_create(l.get(), BvToIntExpr::create(r).get());
+		}
+		else
+		{
+			return UleExpr_create(BvToIntExpr::create(l).get(),r.get());
+		}
+	}
+	assert(l->getWidth()==r->getWidth() && "type mismatch");
+	if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l))
+		if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))
+			return cl->Ule(cr);
+
+	return UleExpr_create(l, r);
+}
+
 CMPCREATE_T(EqExpr, Eq, EqExpr, EqExpr_createPartial, EqExpr_createPartialR)
-CMPCREATE(UltExpr, Ult)
-CMPCREATE(UleExpr, Ule)
+//CMPCREATE(UltExpr, Ult)
+//CMPCREATE(UleExpr, Ule)
 CMPCREATE(SltExpr, Slt)
 CMPCREATE(SleExpr, Sle)
 
