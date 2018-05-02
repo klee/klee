@@ -110,7 +110,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("strncpy",                     handleStrncpy,                   false),
   add("strchr",                      handleStrchr,                    true),
   add("strcmp",                      handleStrcmp,                    true),
-  add("strncmp",                     handleStrncmp,                   true),
+  add("myStrncmp",                   handleStrncmp,                   true),
   add("strlen",                      handleStrlen,                    true),
   add("klee_get_value_i32", handleGetValue, true),
   add("klee_get_value_i64", handleGetValue, true),

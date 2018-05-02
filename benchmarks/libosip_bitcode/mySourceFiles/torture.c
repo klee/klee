@@ -106,7 +106,7 @@ main (int argc, char **argv)
   int binary = 0;
   FILE *torture_file;
   //char *msg;
-  char msg[9];
+  char msg[10];
   // int pos;
   int len;
 
@@ -151,10 +151,10 @@ main (int argc, char **argv)
   // klee_make_symbolic(msg,70,"MsG");
   
   markString(msg);
-  msg[0]='a';
-  msg[1]='b';
-  msg[3]='c';
-  msg[8]= 0 ;
+  //msg[0]='a';
+  //msg[1]='b';
+  //msg[3]='c';
+  msg[9]= 0 ;
   
   len = strlen(msg);
 

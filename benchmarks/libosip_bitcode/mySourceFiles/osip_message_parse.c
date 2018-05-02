@@ -283,46 +283,77 @@ __osip_find_next_occurence (const char *str, const char *buf, const char **index
 static void
 osip_util_replace_all_lws (char *sip_message)
 {
-  /* const char *end_of_message; */
-  char *tmp;
+	/* const char *end_of_message; */
+	char *tmp;
 
-  fprintf(stdout,">> LIBOSIP BREAKPOINT[6]\n");
+	fprintf(stdout,">> LIBOSIP BREAKPOINT[6]\n");
 
-  if (sip_message == NULL)
-    return;
+	if (sip_message == NULL)
+	{
+		return;
+	}
 
-  /* end_of_message = sip_message + strlen (sip_message); */
+	/* end_of_message = sip_message + strlen (sip_message); */
 
-  tmp = sip_message;
-  for (; tmp[0] != '\0'; tmp++) {
-    if (('\0' == tmp[0])
-        || ('\0' == tmp[1]) || ('\0' == tmp[2]) || ('\0' == tmp[3]))
-      return;
+	tmp = sip_message;
+	for (; tmp[0] != '\0'; tmp++)
+	{
+		if (('\0' == tmp[0]) ||
+			('\0' == tmp[1]) ||
+			('\0' == tmp[2]) ||
+			('\0' == tmp[3]))
+		{
+			fprintf(stdout,">> LIBOSIP BREAKPOINT[7]\n");
+			return;
+		}
 
-    if ((('\r' == tmp[0]) && ('\n' == tmp[1])
-         && ('\r' == tmp[2]) && ('\n' == tmp[3]))
-        || (('\r' == tmp[0]) && ('\r' == tmp[1]))
-        || (('\n' == tmp[0]) && ('\n' == tmp[1])))
-      return;                   /* end of message */
+		if ((
+			('\r' == tmp[0]) &&
+			('\n' == tmp[1]) &&
+			('\r' == tmp[2]) &&
+			('\n' == tmp[3])
+			)
+			||
+			(
+			('\r' == tmp[0]) &&
+			('\r' == tmp[1])
+			)
+			||
+			(
+			('\n' == tmp[0]) &&
+			('\n' == tmp[1])
+			))
+		{
+			fprintf(stdout,">> LIBOSIP BREAKPOINT[8]\n");
+			return;/* end of message */
+		}
   
-    fprintf(stdout,">> LIBOSIP BREAKPOINT[555555]\n");
+		fprintf(stdout,">> LIBOSIP BREAKPOINT[9]\n");
 
-    if ((('\r' == tmp[0]) && ('\n' == tmp[1])
-         && ((' ' == tmp[2]) || ('\t' == tmp[2])))
-        || (('\r' == tmp[0])
-            && ((' ' == tmp[1]) || ('\t' == tmp[1])))
-        || (('\n' == tmp[0]) && ((' ' == tmp[1]) || ('\t' == tmp[1])))) {
-      /* replace line end and TAB symbols by SP */
-      tmp[0] = ' ';
-      tmp[1] = ' ';
-      tmp = tmp + 2;
-      /* replace all following TAB symbols */
-      for (; ('\t' == tmp[0] || ' ' == tmp[0]);) {
-        tmp[0] = ' ';
-        tmp++;
-      }
-    }
-  }
+		if ((
+			('\r' == tmp[0]) &&
+			('\n' == tmp[1]) &&
+			((' ' == tmp[2]) || ('\t' == tmp[2]))
+			)
+			||
+			(('\r' == tmp[0]) &&
+			((' '  == tmp[1]) || ('\t' == tmp[1])))
+			||
+			(('\n' == tmp[0]) &&
+			((' '  == tmp[1]) || ('\t' == tmp[1]))))
+		{
+			/* replace line end and TAB symbols by SP */
+			tmp[0] = ' ';
+			tmp[1] = ' ';
+			tmp = tmp + 2;
+			/* replace all following TAB symbols */
+			for (; ('\t' == tmp[0] || ' ' == tmp[0]);)
+			{
+				tmp[0] = ' ';
+				tmp++;
+			}
+		}
+	}
 }
 
 int
@@ -864,7 +895,7 @@ _osip_message_parse (osip_message_t * sip, const char *buf, size_t length, int s
 
   // tmp = malloc (173+length);
   // tmp = osip_malloc (length + 2);
-  tmp = malloc (length+2);
+  tmp = malloc (length+17);
   markString(tmp);
 
   fprintf(stdout,">> LIBOSIP BREAKPOINT[5.b]\n");
