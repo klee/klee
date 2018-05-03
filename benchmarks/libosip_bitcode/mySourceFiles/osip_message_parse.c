@@ -895,7 +895,7 @@ _osip_message_parse (osip_message_t * sip, const char *buf, size_t length, int s
 
   // tmp = malloc (173+length);
   // tmp = osip_malloc (length + 2);
-  tmp = malloc (length+17);
+  tmp = malloc (length+2);
   markString(tmp);
 
   fprintf(stdout,">> LIBOSIP BREAKPOINT[5.b]\n");
@@ -906,13 +906,18 @@ _osip_message_parse (osip_message_t * sip, const char *buf, size_t length, int s
   }
   beg = tmp;
   // memcpy (tmp, buf, length);    /* may contain binary data */
-  strncpy(tmp,buf,length);    /* may contain binary data */
+  // strncpy(tmp,buf,length);    /* may contain binary data */
+  strcpy(tmp,buf);    /* may contain binary data */
   tmp[length] = '\0';
   /* skip initial \r\n */
   while (tmp[0] == '\r' || tmp[0] == '\n')
+  {
+    fprintf(stdout,">> LIBOSIP BREAKPOINT[5.c]\n");
     tmp++;
-  fprintf(stdout,">> LIBOSIP BREAKPOINT[5.c]\n");
+  }
+  fprintf(stdout,">> LIBOSIP BREAKPOINT[5.d]\n");
   osip_util_replace_all_lws (tmp);
+  fprintf(stdout,">> LIBOSIP BREAKPOINT[5.e]\n");
   /* parse request or status line */
   i = __osip_message_startline_parse (sip, tmp, &next_header_index);
   if (i != 0 && !sipfrag) {
