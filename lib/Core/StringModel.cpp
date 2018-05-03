@@ -372,8 +372,8 @@ StrModel StringModel::modelStrcpy(const MemoryObject* moDst, ref<Expr> dst,
 		AndExpr::create(
 			src_is_NULL_terminated,
 			SltExpr::create(
-				dst_size,
-				AddExpr::create(firstIdxOf_x00_in_src,one))));
+				firstIdxOf_x00_in_src,
+				dst_size)));
 
 	//return std::make_pair(
 	//	finalExpr,
