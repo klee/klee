@@ -1,4 +1,4 @@
-// RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t2.bc
+// RUN: %llvmgcc %s -emit-llvm -O0 -c -g -o %t2.bc
 // RUN: rm -rf %t.klee-out %t.klee-out-tmp
 // RUN: %gentmp %t.klee-out-tmp
 // RUN: %klee --output-dir=%t.klee-out --run-in=%t.klee-out-tmp --libc=uclibc --posix-runtime --exit-on-error %t2.bc --sym-files 2 2
@@ -11,8 +11,8 @@
 
 // For this test really to work as intended it needs to be run in a
 // directory large enough to cause uclibc to do multiple getdents
-// calls (otherwise uclibc will handle the seeks itself). We should
-// create a bunch of files or something.
+// calls (otherwise uclibc will handle the seeks itself).
+// Therefore gentmp generates a directory with a specific amount of entries
 
 #include <assert.h>
 #include <stdio.h>
@@ -29,7 +29,6 @@ int main(int argc, char **argv) {
   assert(de);
   strcpy(first, de->d_name);
   off_t pos = telldir(d);
-  printf("pos: %ld\n", telldir(d));
   de = readdir(d);
   assert(de);
   strcpy(second, de->d_name);
@@ -41,9 +40,10 @@ int main(int argc, char **argv) {
   assert(strcmp(de->d_name, second) == 0);
 
   // Go to end, then back to 2nd
-  while (de)
+  while (de) {
     de = readdir(d);
-  assert(!errno);
+    assert(!errno);
+  }
   seekdir(d, pos);
   assert(telldir(d) == pos);
   de = readdir(d);

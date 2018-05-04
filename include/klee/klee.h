@@ -157,6 +157,9 @@ extern "C" {
 
   /* Merge all paths of the state that went through klee_open_merge */
   void klee_close_merge();
+
+  /* Get errno value of the current state */
+  int klee_get_errno(void);
 #ifdef __cplusplus
 }
 #endif

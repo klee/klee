@@ -525,6 +525,9 @@ public:
 
   Expr::Width getWidthForLLVMType(llvm::Type *type) const;
   size_t getAllocationAlignment(const llvm::Value *allocSite) const;
+
+  /// Returns the errno location in memory of the state
+  int *getErrnoLocation(const ExecutionState &state) const;
 };
   
 } // End klee namespace

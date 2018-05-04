@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/ioctl.h>
 #include <termios.h>
 #include <asm/ioctls.h>
 #include <errno.h>
