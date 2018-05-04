@@ -1,14 +1,14 @@
-// This tests the functionality of setting and getting file access time and modification time
+// Tests the functionality of setting and getting file access and modification times
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --libc=uclibc --posix-runtime %t1.bc --sym-files 0 0 --max-fail 1
+// RUN: %klee --output-dir=%t.klee-out --libc=uclibc --posix-runtime %t1.bc --sym-files 1 1
 
 #include <stdio.h>
 #include <assert.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 
-const char filePath[] = "Some-File";
+const char filePath[] = "A";
 
 int main(int argc, char** argv) {
 
@@ -21,7 +21,7 @@ int main(int argc, char** argv) {
   struct timeval now;
   gettimeofday(&now, NULL);
 
-  struct timeval times[2] = {now};
+  struct timeval times[2] = {now, now};
   times[1].tv_sec += 100; // Introduce difference between access time and modification time
   utimes(filePath, times);
 
@@ -42,6 +42,6 @@ int main(int argc, char** argv) {
 
   assert(sb.st_atim.tv_sec >= now.tv_sec && sb.st_atim.tv_sec <= someTimeAfter.tv_sec);
   assert(sb.st_mtim.tv_sec >= now.tv_sec && sb.st_mtim.tv_sec <= someTimeAfter.tv_sec);
-
+  
   return 0;
 }
