@@ -125,6 +125,15 @@ namespace klee {
     /// \retval true The copy succeeded. 
     /// \retval false The copy failed because a read-only object was modified.
     bool copyInConcretes();
+
+    /// Updates the memory object with the raw memory from the address
+    ///
+    /// @param mo The MemoryObject to update
+    /// @param os The associated memory state containing the actual data
+    /// @param src_address the address to copy from
+    /// @return
+    bool copyInConcrete(const MemoryObject *mo, const ObjectState *os,
+                        uint64_t src_address);
   };
 } // End klee namespace
 

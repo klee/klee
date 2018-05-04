@@ -313,19 +313,26 @@ bool AddressSpace::copyInConcretes() {
 
     if (!mo->isUserSpecified) {
       const ObjectState *os = it->second;
-      uint8_t *address = (uint8_t*) (unsigned long) mo->address;
 
-      if (memcmp(address, os->concreteStore, mo->size)!=0) {
-        if (os->readOnly) {
-          return false;
-        } else {
-          ObjectState *wos = getWriteable(mo, os);
-          memcpy(wos->concreteStore, address, mo->size);
-        }
-      }
+      if (!copyInConcrete(mo, os, mo->address))
+        return false;
     }
   }
 
+  return true;
+}
+
+bool AddressSpace::copyInConcrete(const MemoryObject *mo, const ObjectState *os,
+                                  uint64_t src_address) {
+  uint8_t *address = (uint8_t *)(unsigned long)src_address;
+  if (memcmp(address, os->concreteStore, mo->size) != 0) {
+    if (os->readOnly) {
+      return false;
+    } else {
+      ObjectState *wos = getWriteable(mo, os);
+      memcpy(wos->concreteStore, address, mo->size);
+    }
+  }
   return true;
 }
 
