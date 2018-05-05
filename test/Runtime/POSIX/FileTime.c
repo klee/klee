@@ -1,0 +1,47 @@
+// This tests the functionality of setting and getting file access time and modification time
+// RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --libc=uclibc --posix-runtime %t1.bc --sym-files 0 0 --max-fail 1
+
+#include <stdio.h>
+#include <assert.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+
+const char filePath[] = "Some-File";
+
+int main(int argc, char** argv) {
+
+  // Create the file
+  FILE* const f = fopen(filePath, "w");
+  assert(f);
+  const int r = fclose(f);
+  assert(r == 0);
+
+  struct timeval now;
+  gettimeofday(&now, NULL);
+
+  struct timeval times[2] = {now};
+  times[1].tv_sec += 100; // Introduce difference between access time and modification time
+  utimes(filePath, times);
+
+  struct stat sb;
+  stat(filePath, &sb);
+
+  assert(sb.st_atim.tv_sec == times[0].tv_sec);
+  assert(sb.st_mtim.tv_sec == times[1].tv_sec);
+
+  gettimeofday(&now, NULL);
+  // Test with setting access time and modification time to current time
+  utimes(filePath, NULL);
+
+  struct timeval someTimeAfter;
+  gettimeofday(&someTimeAfter, NULL);
+
+  stat(filePath, &sb);
+
+  assert(sb.st_atim.tv_sec >= now.tv_sec && sb.st_atim.tv_sec <= someTimeAfter.tv_sec);
+  assert(sb.st_mtim.tv_sec >= now.tv_sec && sb.st_mtim.tv_sec <= someTimeAfter.tv_sec);
+
+  return 0;
+}
