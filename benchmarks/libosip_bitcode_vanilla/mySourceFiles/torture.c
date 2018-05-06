@@ -96,8 +96,10 @@ read_text (int num, FILE * torture_file)
 #include <assert.h>
 
 void markString(char *p){}
-int
-main (int argc, char **argv)
+
+void klee_make_symbolic(void *addr,size_t count, const char *message){}
+
+int main (int argc, char **argv)
 {
   int success = 1;
 
@@ -148,9 +150,7 @@ main (int argc, char **argv)
   //  len = strlen (msg);
   //}
 
-  // klee_make_symbolic(msg,70,"MsG");
-  
-  markString(msg);
+  klee_make_symbolic(msg,10,"MsG");
   //msg[0]='a';
   //msg[1]='b';
   //msg[3]='c';

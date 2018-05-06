@@ -896,7 +896,7 @@ _osip_message_parse (osip_message_t * sip, const char *buf, size_t length, int s
   // tmp = malloc (173+length);
   // tmp = osip_malloc (length + 2);
   tmp = malloc (length+2);
-  markString(tmp);
+  // markString(tmp);
 
   fprintf(stdout,">> LIBOSIP BREAKPOINT[5.b]\n");
 
