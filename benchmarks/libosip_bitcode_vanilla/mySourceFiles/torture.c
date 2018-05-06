@@ -93,6 +93,8 @@ read_text (int num, FILE * torture_file)
   return msg;
 }
 
+#include <assert.h>
+
 void markString(char *p){}
 int
 main (int argc, char **argv)
@@ -104,7 +106,7 @@ main (int argc, char **argv)
   int binary = 0;
   FILE *torture_file;
   //char *msg;
-  char msg[700];
+  char msg[10];
   // int pos;
   int len;
 
@@ -133,6 +135,8 @@ main (int argc, char **argv)
   /* initialize parser */
   parser_init ();
 
+  fprintf(stdout,">> LIBOSIP BREAKPOINT[1]\n");
+  
   //if (binary) {
   //  if (read_binary (&msg, &len, torture_file) < 0)
   //    return -1;
@@ -144,11 +148,18 @@ main (int argc, char **argv)
   //  len = strlen (msg);
   //}
 
-  klee_make_symbolic(msg,700,"MsG");
-    
-  fprintf (stdout, ">> LIBOSIP BREAKPOINT[1]\n");  
+  // klee_make_symbolic(msg,70,"MsG");
+  
+  markString(msg);
+  //msg[0]='a';
+  //msg[1]='b';
+  //msg[3]='c';
+  msg[9]= 0 ;
   
   len = strlen(msg);
+
+  fprintf(stdout,">> LIBOSIP BREAKPOINT[2]\n");
+
   success = test_message (msg, len, verbose, clone);
   //if (verbose) {
   //  fprintf (stdout, "test %s : ============================ \n", argv[2]);
@@ -184,9 +195,15 @@ test_message (char *msg, size_t len, int verbose, int clone)
 
     if (verbose)
       fprintf (stdout, "Trying %i sequentials calls to osip_message_init(), osip_message_parse() and osip_message_free()\n", j);
+
+    fprintf(stdout,">> LIBOSIP BREAKPOINT[3]\n");
+
     while (j != 0) {
       j--;
       osip_message_init (&sip);
+
+      fprintf(stdout,">> LIBOSIP BREAKPOINT[4]\n");
+
       if (osip_message_parse (sip, msg, len) != 0) {
         fprintf (stdout, "LIBOSIP ERROR: failed while parsing!\n");
         osip_message_free (sip);
