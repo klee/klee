@@ -29,9 +29,12 @@
 #include "llvm/IR/DataLayout.h"
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+#include "llvm/Analysis/Verifier.h"
+#include "llvm/Linker.h"
 #include "llvm/Support/CallSite.h"
 #else
 #include "llvm/IR/CallSite.h"
+#include "llvm/Linker/Linker.h"
 #endif
 
 #include "klee/Internal/Module/LLVMPassManager.h"
@@ -42,10 +45,6 @@
 #include "llvm/Transforms/Scalar.h"
 
 #include "llvm/Transforms/Utils/Cloning.h"
-
-#include "llvm/Analysis/Verifier.h"
-
-#include "llvm/Linker.h"
 
 #include <sstream>
 
@@ -99,8 +98,6 @@ KModule::~KModule() {
   for (std::map<const llvm::Constant*, KConstant*>::iterator it=constantMap.begin(),
       itE=constantMap.end(); it!=itE;++it)
     delete it->second;
-
-  delete targetData;
 }
 
 /***/
@@ -193,7 +190,7 @@ void KModule::addInternalFunction(const char* functionName){
   internalFunctions.insert(internalFunction);
 }
 
-void KModule::link(std::vector<llvm::Module *> &modules,
+void KModule::link(std::vector<std::unique_ptr<llvm::Module> > &modules,
                    const Interpreter::ModuleOptions &opts,
                    InterpreterHandler *ih) {
   // Link with KLEE intrinsics library before running any optimizations
@@ -210,7 +207,7 @@ void KModule::link(std::vector<llvm::Module *> &modules,
   if (!module)
     klee_error("Could not link KLEE files %s", error.c_str());
 
-  targetData = new DataLayout(module.get());
+  targetData = std::unique_ptr<llvm::DataLayout>(new DataLayout(module.get()));
 }
 
 void KModule::instrument(const Interpreter::ModuleOptions &opts) {
@@ -238,13 +235,6 @@ void KModule::instrument(const Interpreter::ModuleOptions &opts) {
 void KModule::optimiseAndPrepare(
     const Interpreter::ModuleOptions &opts, InterpreterHandler *ih,
     llvm::ArrayRef<const char *> preservedFunctions) {
-  // FIXME: Missing force import for various math functions.
-
-  // Remember
-
-  // FIXME: Find a way that we can test programs without requiring
-  // this to be linked in, it makes low level debugging much more
-  // annoying.
   if (opts.Optimize)
     Optimize(module.get(), preservedFunctions);
 

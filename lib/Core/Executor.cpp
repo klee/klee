@@ -390,8 +390,9 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
   }
 }
 
-llvm::Module *Executor::setModule(std::vector<llvm::Module *> &modules,
-                                  const ModuleOptions &opts) {
+llvm::Module *
+Executor::setModule(std::vector<std::unique_ptr<llvm::Module> > &modules,
+                    const ModuleOptions &opts) {
   assert(!kmodule && !modules.empty() &&
          "can only register one module"); // XXX gross
 
@@ -411,6 +412,8 @@ llvm::Module *Executor::setModule(std::vector<llvm::Module *> &modules,
   specialFunctionHandler->prepare(preservedFunctions);
 
   preservedFunctions.push_back(opts.EntryPoint.c_str());
+
+  // Preserve the freestanding library calls
   preservedFunctions.push_back("memset");
   preservedFunctions.push_back("memcpy");
   preservedFunctions.push_back("memcmp");
@@ -431,7 +434,7 @@ llvm::Module *Executor::setModule(std::vector<llvm::Module *> &modules,
   }
 
   // Initialize the context.
-  DataLayout *TD = kmodule->targetData;
+  DataLayout *TD = kmodule->targetData.get();
   Context::initialize(TD->isLittleEndian(),
                       (Expr::Width)TD->getPointerSizeInBits());
 
@@ -458,7 +461,7 @@ Executor::~Executor() {
 void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
                                       const Constant *c, 
                                       unsigned offset) {
-  DataLayout *targetData = kmodule->targetData;
+  const auto targetData = kmodule->targetData.get();
   if (const ConstantVector *cp = dyn_cast<ConstantVector>(c)) {
     unsigned elementSize =
       targetData->getTypeStoreSize(cp->getType()->getElementType());

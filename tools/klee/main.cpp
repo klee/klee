@@ -988,9 +988,10 @@ static void replaceOrRenameFunction(llvm::Module *module,
   }
 }
 
-static void createLibCWrapper(std::vector<llvm::Module *> modules,
-                              llvm::StringRef intendedFunction,
-                              llvm::StringRef libcMainFunction) {
+static void
+createLibCWrapper(std::vector<std::unique_ptr<llvm::Module> > &modules,
+                  llvm::StringRef intendedFunction,
+                  llvm::StringRef libcMainFunction) {
   // XXX we need to rearchitect so this can also be used with
   // programs externally linked with uclibc.
 
@@ -1009,7 +1010,7 @@ static void createLibCWrapper(std::vector<llvm::Module *> modules,
 
   // force import of __uClibc_main
   llvm::Function *uclibcMainFn = nullptr;
-  for (auto module : modules) {
+  for (auto &module : modules) {
     if ((uclibcMainFn = module->getFunction(libcMainFunction)))
       break;
   }
@@ -1051,8 +1052,9 @@ static void createLibCWrapper(std::vector<llvm::Module *> modules,
   new UnreachableInst(ctx, bb);
 }
 
-static void linkWithUclibc(StringRef libDir,
-                           std::vector<llvm::Module *> &modules) {
+static void
+linkWithUclibc(StringRef libDir,
+               std::vector<std::unique_ptr<llvm::Module> > &modules) {
   LLVMContext &ctx = modules[0]->getContext();
 
   size_t newModules = modules.size();
@@ -1116,8 +1118,8 @@ static void linkWithUclibc(StringRef libDir,
       }
     }
 
-    replaceOrRenameFunction(modules[i], "__libc_open", "open");
-    replaceOrRenameFunction(modules[i], "__libc_fcntl", "fcntl");
+    replaceOrRenameFunction(modules[i].get(), "__libc_open", "open");
+    replaceOrRenameFunction(modules[i].get(), "__libc_fcntl", "fcntl");
   }
 
   createLibCWrapper(modules, EntryPoint, "__uClibc_main");
@@ -1204,7 +1206,7 @@ int main(int argc, char **argv, char **envp) {
   // Load the bytecode...
   std::string errorMsg;
   LLVMContext ctx;
-  std::vector<llvm::Module *> loadedModules;
+  std::vector<std::unique_ptr<llvm::Module> > loadedModules;
   if (!klee::loadFile(InputFile, ctx, loadedModules, errorMsg)) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                errorMsg.c_str());
@@ -1212,15 +1214,17 @@ int main(int argc, char **argv, char **envp) {
   // Load and link the whole files content. The assumption is that this is the
   // application under test.
   // Nothing gets removed in the first place.
-  Module *mainModule = klee::linkModules(
-      loadedModules, false /* we want all methods linked */, errorMsg);
-  if (!mainModule) {
+  std::unique_ptr<llvm::Module> M(klee::linkModules(
+      loadedModules, false /* we want all methods linked */, errorMsg));
+  if (!M) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                errorMsg.c_str());
   }
 
+  llvm::Module *mainModule = M.get();
   // Push the module as the first entry
-  loadedModules.push_back(mainModule);
+  loadedModules.emplace_back(std::move(M));
+
   if (WithPOSIXRuntime) {
     initEnv(mainModule);
   }

@@ -84,7 +84,7 @@ namespace klee {
   class KModule {
   public:
     std::unique_ptr<llvm::Module> module;
-    llvm::DataLayout *targetData;
+    std::unique_ptr<llvm::DataLayout> targetData;
 
     // Our shadow versions of LLVM structures.
     std::vector<KFunction*> functions;
@@ -130,7 +130,7 @@ namespace klee {
     /// Link provided modules together as one KLEE module
     ///
     // FIXME: ihandler should not be here
-    void link(std::vector<llvm::Module *> &modules,
+    void link(std::vector<std::unique_ptr<llvm::Module> > &modules,
               const Interpreter::ModuleOptions &opts,
               InterpreterHandler *ihandler);
 

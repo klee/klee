@@ -13,8 +13,6 @@
 #include "klee/Config/Version.h"
 
 #include "llvm/IR/Module.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/LLVMContext.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
 #include "llvm/IR/CallSite.h"
@@ -22,19 +20,25 @@
 #include "llvm/Support/CallSite.h"
 #endif
 
+#include <memory>
 #include <string>
+#include <vector>
 
 namespace klee {
 
 /// Links all the modules together into one and returns it.
 ///
-/// @param modules List of modules to link together
+/// All the modules which are used for resolving entities are freed,
+/// all the remaining ones are preserved.
+///
+/// @param modules List of modules to link together: if resolveOnly true,
+/// everything is linked against the first entry.
 /// @param resolveOnly true, use all the modules, to solve unresolved methods
-/// from the first module,
-///                    false: merges all modules together
+/// from the first module, false: merges all modules together
 /// @return final module or null in this case errorMsg is set
-llvm::Module *linkModules(std::vector<llvm::Module *> &modules,
-                          bool resolveOnly, std::string &errorMsg);
+std::unique_ptr<llvm::Module>
+linkModules(std::vector<std::unique_ptr<llvm::Module> > &modules,
+            bool resolveOnly, std::string &errorMsg);
 
 /// Return the Function* target of a Call or Invoke instruction, or
 /// null if it cannot be determined (should be only for indirect
@@ -64,7 +68,8 @@ bool functionEscapes(const llvm::Function *f);
 /// loaded
 /// @return true if successful otherwise false
 bool loadFile(const std::string &libraryName, llvm::LLVMContext &context,
-              std::vector<llvm::Module *> &modules, std::string &errorMsg);
+              std::vector<std::unique_ptr<llvm::Module> > &modules,
+              std::string &errorMsg);
 
 void checkModule(llvm::Module *m);
 }
