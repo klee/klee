@@ -35,7 +35,7 @@ build/src/test/torture_test_no_dbg_with_names.bc: $(addprefix libosip2-4.1.0/src
 	extract-bc build/src/test/torture_test
 	$(OPT) -instnamer -o                                \
 	build/src/test/torture_test_no_dbg_with_names.bc \
-	build/src/test/torture_test_no_dbg.bc
+	build/src/test/torture_test.bc
 
 .PHONY: run
 run: build/src/test/torture_test_no_dbg_with_names.bc
