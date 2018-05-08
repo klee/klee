@@ -144,7 +144,7 @@ static void AddStandardCompilePasses(klee::LegacyLLVMPassManagerTy &PM) {
 /// Optimize - Perform link time optimizations. This will run the scalar
 /// optimizations, any loaded plugin-optimization modules, and then the
 /// inter-procedural optimizations if applicable.
-void Optimize(Module *M, const std::string &EntryPoint) {
+void Optimize(Module *M, llvm::ArrayRef<const char *> preservedFunctions) {
 
   // Instantiate the pass manager to organize the passes.
   klee::LegacyLLVMPassManagerTy Passes;
@@ -172,8 +172,7 @@ void Optimize(Module *M, const std::string &EntryPoint) {
     // for a main function.  If main is defined, mark all other functions
     // internal.
     if (!DisableInternalize) {
-      ModulePass *pass = createInternalizePass(
-          std::vector<const char *>(1, EntryPoint.c_str()));
+      ModulePass *pass = createInternalizePass(preservedFunctions);
       addPass(Passes, pass);
     }
 

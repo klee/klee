@@ -25,30 +25,48 @@
 #include <string>
 
 namespace klee {
-  /// Load llvm module from a bitcode archive file.
-  llvm::Module *loadModule(llvm::LLVMContext &ctx,
-                           const std::string &path,
-                           std::string &errorMsg);
 
-  /// Link a module with a specified bitcode archive.
-  llvm::Module *linkWithLibrary(llvm::Module *module,
-                                const std::string &libraryName);
+/// Links all the modules together into one and returns it.
+///
+/// @param modules List of modules to link together
+/// @param resolveOnly true, use all the modules, to solve unresolved methods
+/// from the first module,
+///                    false: merges all modules together
+/// @return final module or null in this case errorMsg is set
+llvm::Module *linkModules(std::vector<llvm::Module *> &modules,
+                          bool resolveOnly, std::string &errorMsg);
 
-  /// Return the Function* target of a Call or Invoke instruction, or
-  /// null if it cannot be determined (should be only for indirect
-  /// calls, although complicated constant expressions might be
-  /// another possibility).
-  ///
-  /// If `moduleIsFullyLinked` is set to true it will be assumed that the
-  //  module containing the `llvm::CallSite` is fully linked. This assumption
-  //  allows resolution of functions that are marked as overridable.
-  llvm::Function *getDirectCallTarget(llvm::CallSite, bool moduleIsFullyLinked);
+/// Return the Function* target of a Call or Invoke instruction, or
+/// null if it cannot be determined (should be only for indirect
+/// calls, although complicated constant expressions might be
+/// another possibility).
+///
+/// If `moduleIsFullyLinked` is set to true it will be assumed that the
+///  module containing the `llvm::CallSite` is fully linked. This assumption
+///  allows resolution of functions that are marked as overridable.
+llvm::Function *getDirectCallTarget(llvm::CallSite, bool moduleIsFullyLinked);
 
-  /// Return true iff the given Function value is used in something
-  /// other than a direct call (or a constant expression that
-  /// terminates in a direct call).
-  bool functionEscapes(const llvm::Function *f);
+/// Return true iff the given Function value is used in something
+/// other than a direct call (or a constant expression that
+/// terminates in a direct call).
+bool functionEscapes(const llvm::Function *f);
 
+/// Loads the file libraryName and reads all possible modules out of it.
+///
+/// Different file types are possible:
+/// * .bc binary file
+/// * .ll IR file
+/// * .a archive containing .bc and .ll files
+///
+/// @param libraryName library to read
+/// @param modules contains extracted modules
+/// @param errorMsg contains the error description in case the file could not be
+/// loaded
+/// @return true if successful otherwise false
+bool loadFile(const std::string &libraryName, llvm::LLVMContext &context,
+              std::vector<llvm::Module *> &modules, std::string &errorMsg);
+
+void checkModule(llvm::Module *m);
 }
 
 #endif

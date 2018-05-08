@@ -102,9 +102,8 @@ public:
   ///
   /// \return The final module after it has been optimized, checks
   /// inserted, and modified for interpretation.
-  virtual const llvm::Module * 
-  setModule(llvm::Module *module, 
-            const ModuleOptions &opts) = 0;
+  virtual llvm::Module *setModule(std::vector<llvm::Module *> &module,
+                                  const ModuleOptions &opts) = 0;
 
   // supply a tree stream writer which the interpreter will use
   // to record the concrete path (as a stream of '0' and '1' bytes).

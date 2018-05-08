@@ -164,18 +164,18 @@ int SpecialFunctionHandler::size() {
 SpecialFunctionHandler::SpecialFunctionHandler(Executor &_executor) 
   : executor(_executor) {}
 
-
-void SpecialFunctionHandler::prepare() {
+void SpecialFunctionHandler::prepare(
+    std::vector<const char *> &preservedFunctions) {
   unsigned N = size();
 
   for (unsigned i=0; i<N; ++i) {
     HandlerInfo &hi = handlerInfo[i];
     Function *f = executor.kmodule->module->getFunction(hi.name);
-    
+
     // No need to create if the function doesn't exist, since it cannot
     // be called in that case.
-  
     if (f && (!hi.doNotOverride || f->isDeclaration())) {
+      preservedFunctions.push_back(hi.name);
       // Make sure NoReturn attribute is set, for optimization and
       // coverage counting.
       if (hi.doesNotReturn)

@@ -77,7 +77,10 @@ namespace klee {
     /// prepared for execution. At the moment this involves deleting
     /// unused function bodies and marking intrinsics with appropriate
     /// flags for use in optimizations.
-    void prepare();
+    ///
+    /// @param preservedFunctions contains all the function names which should
+    /// be preserved during optimization
+    void prepare(std::vector<const char *> &preservedFunctions);
 
     /// Initialize the internal handler map after the module has been
     /// prepared for execution.
