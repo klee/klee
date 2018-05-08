@@ -9,10 +9,11 @@
 #ifndef KLEE_INTERPRETER_H
 #define KLEE_INTERPRETER_H
 
-#include <vector>
-#include <string>
 #include <map>
+#include <memory>
 #include <set>
+#include <string>
+#include <vector>
 
 struct KTest;
 
@@ -102,8 +103,8 @@ public:
   ///
   /// \return The final module after it has been optimized, checks
   /// inserted, and modified for interpretation.
-  virtual const llvm::Module * 
-  setModule(llvm::Module *module, 
+  virtual llvm::Module *
+  setModule(std::vector<std::unique_ptr<llvm::Module> > &module,
             const ModuleOptions &opts) = 0;
 
   // supply a tree stream writer which the interpreter will use

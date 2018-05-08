@@ -13,7 +13,10 @@
 #include "klee/Config/Version.h"
 #include "klee/Interpreter.h"
 
+#include "llvm/ADT/ArrayRef.h"
+
 #include <map>
+#include <memory>
 #include <set>
 #include <vector>
 
@@ -80,8 +83,8 @@ namespace klee {
 
   class KModule {
   public:
-    llvm::Module *module;
-    llvm::DataLayout *targetData;
+    std::unique_ptr<llvm::Module> module;
+    std::unique_ptr<llvm::DataLayout> targetData;
 
     // Our shadow versions of LLVM structures.
     std::vector<KFunction*> functions;
@@ -107,14 +110,31 @@ namespace klee {
     void addInternalFunction(const char* functionName);
 
   public:
-    KModule(llvm::Module *_module);
+    KModule();
     ~KModule();
 
-    /// Initialize local data structures.
+    /// Optimise and prepare module such that KLEE can execute it
     //
     // FIXME: ihandler should not be here
-    void prepare(const Interpreter::ModuleOptions &opts, 
-                 InterpreterHandler *ihandler);
+    void optimiseAndPrepare(const Interpreter::ModuleOptions &opts,
+                            InterpreterHandler *ihandler,
+                            llvm::ArrayRef<const char *>);
+
+    /// Manifests the generated module (e.g. assembly.ll, output.bc) and
+    /// prepares KModule
+    ///
+    /// @param ih
+    /// @param forceSourceOutput true if assembly.ll should be created
+    void manifest(InterpreterHandler *ih, bool forceSourceOutput);
+
+    /// Link provided modules together as one KLEE module
+    ///
+    // FIXME: ihandler should not be here
+    void link(std::vector<std::unique_ptr<llvm::Module> > &modules,
+              const Interpreter::ModuleOptions &opts,
+              InterpreterHandler *ihandler);
+
+    void instrument(const Interpreter::ModuleOptions &opts);
 
     /// Return an id for the given constant, creating a new one if necessary.
     unsigned getConstantID(llvm::Constant *c, KInstruction* ki);

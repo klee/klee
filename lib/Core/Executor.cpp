@@ -390,22 +390,40 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
   }
 }
 
+llvm::Module *
+Executor::setModule(std::vector<std::unique_ptr<llvm::Module> > &modules,
+                    const ModuleOptions &opts) {
+  assert(!kmodule && !modules.empty() &&
+         "can only register one module"); // XXX gross
 
-const Module *Executor::setModule(llvm::Module *module, 
-                                  const ModuleOptions &opts) {
-  assert(!kmodule && module && "can only register one module"); // XXX gross
-  
-  kmodule = new KModule(module);
+  kmodule = new KModule();
 
-  // Initialize the context.
-  DataLayout *TD = kmodule->targetData;
-  Context::initialize(TD->isLittleEndian(),
-                      (Expr::Width) TD->getPointerSizeInBits());
+  // Preparing the final module happens in multiple stages
 
+  // 1.) Link the modules together
+  kmodule->link(modules, opts, interpreterHandler);
+
+  // 2.) Apply different instrumentation
+  kmodule->instrument(opts);
+
+  // Create a list of functions that should be preserved if used
+  std::vector<const char *> preservedFunctions;
   specialFunctionHandler = new SpecialFunctionHandler(*this);
+  specialFunctionHandler->prepare(preservedFunctions);
 
-  specialFunctionHandler->prepare();
-  kmodule->prepare(opts, interpreterHandler);
+  preservedFunctions.push_back(opts.EntryPoint.c_str());
+
+  // Preserve the freestanding library calls
+  preservedFunctions.push_back("memset");
+  preservedFunctions.push_back("memcpy");
+  preservedFunctions.push_back("memcmp");
+
+  // 3.) Optimise and prepare for KLEE
+  kmodule->optimiseAndPrepare(opts, interpreterHandler, preservedFunctions);
+
+  // 4.) Manifest the module
+  kmodule->manifest(interpreterHandler, StatsTracker::useStatistics());
+
   specialFunctionHandler->bind();
 
   if (StatsTracker::useStatistics() || userSearcherRequiresMD2U()) {
@@ -414,8 +432,13 @@ const Module *Executor::setModule(llvm::Module *module,
                        interpreterHandler->getOutputFilename("assembly.ll"),
                        userSearcherRequiresMD2U());
   }
-  
-  return module;
+
+  // Initialize the context.
+  DataLayout *TD = kmodule->targetData.get();
+  Context::initialize(TD->isLittleEndian(),
+                      (Expr::Width)TD->getPointerSizeInBits());
+
+  return kmodule->module.get();
 }
 
 Executor::~Executor() {
@@ -438,7 +461,7 @@ Executor::~Executor() {
 void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
                                       const Constant *c, 
                                       unsigned offset) {
-  DataLayout *targetData = kmodule->targetData;
+  const auto targetData = kmodule->targetData.get();
   if (const ConstantVector *cp = dyn_cast<ConstantVector>(c)) {
     unsigned elementSize =
       targetData->getTypeStoreSize(cp->getType()->getElementType());
@@ -498,7 +521,7 @@ MemoryObject * Executor::addExternalObject(ExecutionState &state,
 extern void *__dso_handle __attribute__ ((__weak__));
 
 void Executor::initializeGlobals(ExecutionState &state) {
-  Module *m = kmodule->module;
+  Module *m = kmodule->module.get();
 
   if (m->getModuleInlineAsm() != "")
     klee_warning("executable has module level assembly (ignoring)");
@@ -1398,9 +1421,8 @@ Function* Executor::getTargetFunction(Value *calledVal, ExecutionState &state) {
 #endif
       std::string alias = state.getFnAlias(gv->getName());
       if (alias != "") {
-        llvm::Module* currModule = kmodule->module;
         GlobalValue *old_gv = gv;
-        gv = currModule->getNamedValue(alias);
+        gv = kmodule->module->getNamedValue(alias);
         if (!gv) {
           klee_error("Function %s(), alias for %s not found!\n", alias.c_str(),
                      old_gv->getName().str().c_str());

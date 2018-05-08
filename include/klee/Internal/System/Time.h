@@ -10,7 +10,7 @@
 #ifndef KLEE_UTIL_TIME_H
 #define KLEE_UTIL_TIME_H
 
-#include <llvm/Support/TimeValue.h>
+#include "llvm/Support/TimeValue.h"
 
 namespace klee {
   namespace util {
