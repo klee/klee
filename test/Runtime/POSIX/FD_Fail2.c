@@ -4,7 +4,7 @@
 //
 // Check that generated assembly doesn't use puts to output strings
 // RUN: FileCheck -input-file=%t.klee-out/assembly.ll %s
-// CHECK-NOT: puts
+// CHECK-NOT: call i32 @puts(
 //
 // RUN: test -f %t.klee-out/test000001.ktest
 // RUN: test -f %t.klee-out/test000002.ktest
