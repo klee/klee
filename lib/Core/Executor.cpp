@@ -487,8 +487,8 @@ void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
 MemoryObject * Executor::addExternalObject(ExecutionState &state, 
                                            void *addr, unsigned size, 
                                            bool isReadOnly) {
-  MemoryObject *mo = memory->allocateFixed((uint64_t) (unsigned long) addr, 
-                                           size, 0);
+  auto mo = memory->allocateFixed(reinterpret_cast<std::uint64_t>(addr),
+                                  size, nullptr);
   ObjectState *os = bindObjectInState(state, mo, false);
   for(unsigned i = 0; i < size; i++)
     os->write8(i, ((uint8_t*)addr)[i]);
@@ -520,8 +520,8 @@ void Executor::initializeGlobals(ExecutionState &state) {
         !externalDispatcher->resolveSymbol(f->getName())) {
       addr = Expr::createPointer(0);
     } else {
-      addr = Expr::createPointer((unsigned long) (void*) f);
-      legalFunctions.insert((uint64_t) (unsigned long) (void*) f);
+      addr = Expr::createPointer(reinterpret_cast<std::uint64_t>(f));
+      legalFunctions.insert(reinterpret_cast<std::uint64_t>(f));
     }
     
     globalAddresses.insert(std::make_pair(f, addr));
@@ -1564,7 +1564,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       destinations.insert(d);
 
       // create address expression
-      const auto PE = Expr::createPointer((uint64_t) (unsigned long) (void *) d);
+      const auto PE = Expr::createPointer(reinterpret_cast<std::uint64_t>(d));
       ref<Expr> e = EqExpr::create(address, PE);
 
       // exclude address from errorCase
@@ -1814,7 +1814,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
             // Don't give warning on unique resolution
             if (res.second || !first)
-              klee_warning_once((void*) (unsigned long) addr, 
+              klee_warning_once(reinterpret_cast<void*>(addr),
                                 "resolved symbolic function pointer to: %s",
                                 f->getName().data());
 
