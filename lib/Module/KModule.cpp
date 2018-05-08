@@ -278,9 +278,6 @@ void KModule::optimiseAndPrepare(
 }
 
 void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
-  // Write out the .ll assembly file. We truncate long lines to work
-  // around a kcachegrind parsing bug (it puts them on new lines), so
-  // that source browsing works.
   if (OutputSource || forceSourceOutput) {
     std::unique_ptr<llvm::raw_fd_ostream> os(ih->openOutputFile("assembly.ll"));
     assert(os && !os->has_error() && "unable to open source output");

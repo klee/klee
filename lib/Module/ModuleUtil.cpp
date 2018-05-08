@@ -350,8 +350,10 @@ bool klee::loadFile(const std::string &fileName, LLVMContext &context,
 
   if (magic == sys::fs::file_magic::bitcode) {
     SMDiagnostic Err;
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
     std::unique_ptr<llvm::Module> module(parseIR(Buffer, Err, context));
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+    std::unique_ptr<llvm::Module> module(ParseIR(Buffer, Err, context));
 #else
     std::unique_ptr<llvm::Module> module(ParseIR(Buffer.take(), Err, context));
 #endif
@@ -373,7 +375,7 @@ bool klee::loadFile(const std::string &fileName, LLVMContext &context,
     ErrorOr<object::Binary *> archOwner =
         object::createBinary(std::move(bufferErr.get()), &context);
     ec = archOwner.getError();
-    llvm::object::Binary *arch = archOwner;
+    llvm::object::Binary *arch = archOwner.get();
 #else
     OwningPtr<object::Binary> archOwner;
     ec = object::createBinary(Buffer.take(), archOwner);
@@ -448,8 +450,10 @@ bool klee::loadFile(const std::string &fileName, LLVMContext &context,
 // FIXME: Maybe load bitcode file lazily? Then if we need to link, materialise
 // the module
 SMDiagnostic Err;
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
 std::unique_ptr<llvm::Module> module = parseIR(buff.get(), Err, context);
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+std::unique_ptr<llvm::Module> module(ParseIR(buff.get(), Err, context));
 #else
 std::unique_ptr<llvm::Module> module(ParseIR(buff.take(), Err, context));
 #endif
@@ -483,8 +487,10 @@ if (!module) {
   }
   // This might still be an assembly file. Let's try to parse it.
   SMDiagnostic Err;
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
   std::unique_ptr<llvm::Module> module(parseIR(Buffer, Err, context));
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+  std::unique_ptr<llvm::Module> module(ParseIR(Buffer, Err, context));
 #else
   std::unique_ptr<llvm::Module> module(ParseIR(Buffer.take(), Err, context));
 #endif
