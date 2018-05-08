@@ -3339,7 +3339,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
  	    state.addConstraint(EqExpr::create(
   		  StrLengthExpr::create(AB_p_new_var),
-  		  BvToIntExpr::create(mo->getSizeExpr())));
+  		  StrLengthExpr::create(AB_p_var)));
       
         /************************/
         /* [11] prefix equation */
