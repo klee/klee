@@ -10,7 +10,6 @@ LEVEL := ../
 
 include $(LEVEL)/Makefile.cmake.bitcode.config
 
-# Create one single .bc module
-MODULE_NAME=kleeRuntimeFreeStanding
+ARCHIVE_NAME=kleeRuntimeFreeStanding
 
 include $(LEVEL)/Makefile.cmake.bitcode.rules

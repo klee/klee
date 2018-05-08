@@ -14,7 +14,6 @@ include $(LEVEL)/Makefile.cmake.bitcode.config
 # of builtins
 LLVMCC.Flags += -D__NO_INLINE__
 
-# Create one single .bc module
-MODULE_NAME=klee-libc
+ARCHIVE_NAME=klee-libc
 
 include $(LEVEL)/Makefile.cmake.bitcode.rules
