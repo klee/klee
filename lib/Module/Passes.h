@@ -59,16 +59,12 @@ class IntrinsicCleanerPass : public llvm::ModulePass {
   static char ID;
   const llvm::DataLayout &DataLayout;
   llvm::IntrinsicLowering *IL;
-  bool LowerIntrinsics;
 
   bool runOnBasicBlock(llvm::BasicBlock &b, llvm::Module &M);
 public:
-  IntrinsicCleanerPass(const llvm::DataLayout &TD,
-                       bool LI=true)
-    : llvm::ModulePass(ID),
-      DataLayout(TD),
-      IL(new llvm::IntrinsicLowering(TD)),
-      LowerIntrinsics(LI) {}
+  IntrinsicCleanerPass(const llvm::DataLayout &TD, bool LI = true)
+      : llvm::ModulePass(ID), DataLayout(TD),
+        IL(new llvm::IntrinsicLowering(TD)) {}
   ~IntrinsicCleanerPass() { delete IL; } 
   
   virtual bool runOnModule(llvm::Module &M);
