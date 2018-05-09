@@ -121,6 +121,14 @@ int Expr::compare(const Expr &b, ExprEquivSet &equivs) const {
   return 0;
 }
 
+void Expr::printType(llvm::raw_ostream &os, Type type) {
+    switch (type) {
+        case Type::Integer: os << "Int"; break;
+        case Type::String: os << "String"; break;
+        case Type::BitVector: os << "BV"; break;
+        default: assert(false && "Invalid type");
+    }
+}
 void Expr::printKind(llvm::raw_ostream &os, Kind k) {
   switch(k) {
 #define X(C) case C: os << #C; break
@@ -582,7 +590,7 @@ int ReadExpr::compareContents(const Expr &b) const {
 ref<Expr> SelectExpr::create(ref<Expr> c, ref<Expr> t, ref<Expr> f) {
   Expr::Width kt = t->getWidth();
   assert(c->getWidth()==Bool && "type mismatch");
-  assert(kt==f->getWidth() && "type mismatch");
+  assert(t->getType()==f->getType() && "type mismatch");
 
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(c)) {
     return CE->isTrue() ? t : f;
@@ -609,7 +617,38 @@ ref<Expr> SelectExpr::create(ref<Expr> c, ref<Expr> t, ref<Expr> f) {
 
 /***/
 
+static ExtractExpr* findFirstReal(ref<Expr> e) {
+  ExtractExpr *ep = dyn_cast<ExtractExpr>(e);  
+  if(ep == nullptr) return nullptr;
+  
+  while(ExtractExpr *ep1 = dyn_cast<ExtractExpr>(ep->expr))
+      ep = ep1;
+
+  return ep;
+}
+
 ref<Expr> ConcatExpr::create(const ref<Expr> &l, const ref<Expr> &r) {
+  if(l->isInteger() || r->isInteger()) {
+     errs() << "========================\n";
+     l->dump();
+     r->dump();
+     assert(r->isInteger() && "Trying to concat integer with non integer!");
+     ExtractExpr *ee_left = findFirstReal(l);
+     ExtractExpr *ee_right = findFirstReal(r);
+     assert((ee_left != nullptr || ee_right != nullptr) && "Trying to concat non extract integers");
+     if(ee_left == nullptr) {
+        assert(l == ee_right->expr && "Left concat integer doesn't match right extract integer");
+        return l;
+     }
+     else if(ee_right == nullptr) {
+        assert(r == ee_left->expr && "Right concat integer doesn't match left extract integer");
+        return r;
+     }
+     else {
+        assert(ee_left->expr == ee_right->expr && "Trying to concat different integers");
+        return ee_left->expr;
+     }
+  }
   Expr::Width w = l->getWidth() + r->getWidth();
   
   // Fold concatenation of constants.
@@ -663,18 +702,15 @@ ref<Expr> ConcatExpr::create8(const ref<Expr> &kid1, const ref<Expr> &kid2,
 
 ref<Expr> ExtractExpr::create(ref<Expr> expr, unsigned off, Width w) {
   unsigned kw = expr->getWidth();
-  
-  //if (kw == Expr::Int)
-  //{
-  //	return expr;
-  //}
-  
-  if(kw > 1024){
-      kw = 64;
+  if(expr->isInteger()) {
+//      errs() << "Integer extract off " << off << " req witdh " << w << " kw " << kw << "\n";
+ //     expr->dump();
+      if(w >= kw) return expr;
+      errs() << "return expr at off " << off << "\n";
+      return ExtractExpr::alloc(expr, off, w);
   }
-  assert(w > 0 && off + w <= kw && "invalid extract");
-  //assert(expr->getWidth() < 1024 && "Extract of non bv type");
   
+  assert(w > 0 && off + w <= kw && "invalid extract");
   if (w == kw) {
     return expr;
   } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
@@ -712,6 +748,7 @@ ref<Expr> NotExpr::create(const ref<Expr> &e) {
 /***/
 
 ref<Expr> ZExtExpr::create(const ref<Expr> &e, Width w) {
+  if(e->isInteger()) return e;
   unsigned kBits = e->getWidth();
   if (w == kBits) {
     return e;
@@ -725,6 +762,7 @@ ref<Expr> ZExtExpr::create(const ref<Expr> &e, Width w) {
 }
 
 ref<Expr> SExtExpr::create(const ref<Expr> &e, Width w) {
+  if(e->isInteger()) return e;
   unsigned kBits = e->getWidth();
   //if (kBits == Expr::Int)
   //{
@@ -982,11 +1020,11 @@ static ref<Expr> AShrExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 
 #define BCREATE_R(_e_op, _op, partialL, partialR) \
 ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
-  if(l->getWidth() == Expr::Int || r->getWidth() == Expr::Int)  {   \
-      if(l->getWidth() == Expr::Int) {return _e_op ## _create(l.get(), BvToIntExpr::create(r).get());} \
+  if(l->isInteger() || r->isInteger())  {   \
+      if(l->isInteger()) {return _e_op ## _create(l.get(), BvToIntExpr::create(r).get());} \
       else {return _e_op ## _create(BvToIntExpr::create(l).get(), r.get());}    \
   }                                                                 \
-  assert(l->getWidth()==r->getWidth() && "type mismatch");              \
+  assert(l->getType()==r->getType() && "type mismatch");              \
   if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l)) {                   \
     if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))                   \
       return cl->_op(cr);                                               \
@@ -999,78 +1037,19 @@ ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
 
 #define BCREATE(_e_op, _op) \
 ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
-  if(l->getWidth() == Expr::Int || r->getWidth() == Expr::Int)  {   \
-      if(l->getWidth() == Expr::Int) {return _e_op ## _create(l, BvToIntExpr::create(r));} \
+  if(l->isInteger() || r->isInteger())  {   \
+      if(l->isInteger()) {return _e_op ## _create(l, BvToIntExpr::create(r));} \
       else {return _e_op ## _create(BvToIntExpr::create(l), r);}    \
   }                                                                 \
-  assert(l->getWidth()==r->getWidth() && "type mismatch");          \
+  assert(l->getType()==r->getType() && "type mismatch");          \
   if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l))                 \
     if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))               \
       return cl->_op(cr);                                           \
   return  _e_op ## _create(l, r);                                   \
 }
 
-// #define BCREATE_R(_e_op, _op, partialL, partialR)
-ref<Expr> AddExpr::create(const ref<Expr> &l, const ref<Expr> &r)
-{
-	if (l->getWidth() == Expr::Int || r->getWidth() == Expr::Int)
-	{
-		if (l->getWidth() == Expr::Int)
-		{
-			return AddExpr_create(l.get(), BvToIntExpr::create(r).get());
-		}
-		else
-		{
-			return AddExpr_create(BvToIntExpr::create(l).get(), r.get());
-		}
-	}
-	assert(l->getWidth()==r->getWidth() && "type mismatch");
-	if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l))
-	{
-		if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))
-		{
-			return cl->Add(cr);
-		}
-		return AddExpr_createPartialR(cl, r.get());
-	}
-	else if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))
-	{
-		return AddExpr_createPartial(l.get(), cr);
-	}
-	return AddExpr_create(l.get(), r.get());
-}
-
-ref<Expr> SubExpr::create(const ref<Expr> &l, const ref<Expr> &r)
-{
-	if (l->getWidth() == Expr::Int || r->getWidth() == Expr::Int)
-	{
-		if (l->getWidth() == Expr::Int)
-		{
-			return SubExpr_create(l.get(), BvToIntExpr::create(r).get());
-		}
-		else
-		{
-			return SubExpr_create(BvToIntExpr::create(l).get(), r.get());
-		}
-	}
-	assert(l->getWidth()==r->getWidth() && "type mismatch");
-	if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l))
-	{
-		if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))
-		{
-			return cl->Sub(cr);
-		}
-		return SubExpr_createPartialR(cl, r.get());
-	}
-	else if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))
-	{
-		return SubExpr_createPartial(l.get(), cr);
-	}
-	return SubExpr_create(l.get(), r.get());
-}
-
-//BCREATE_R(AddExpr, Add, AddExpr_createPartial, AddExpr_createPartialR)
-//BCREATE_R(SubExpr, Sub, SubExpr_createPartial, SubExpr_createPartialR)
+BCREATE_R(AddExpr, Add, AddExpr_createPartial, AddExpr_createPartialR)
+BCREATE_R(SubExpr, Sub, SubExpr_createPartial, SubExpr_createPartialR)
 BCREATE_R(MulExpr, Mul, MulExpr_createPartial, MulExpr_createPartialR)
 BCREATE_R(AndExpr, And, AndExpr_createPartial, AndExpr_createPartialR)
 BCREATE_R(OrExpr, Or, OrExpr_createPartial, OrExpr_createPartialR)
@@ -1085,11 +1064,11 @@ BCREATE(AShrExpr, AShr)
 
 #define CMPCREATE(_e_op, _op) \
 ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
-  if(l->getWidth() == Expr::Int || r->getWidth() == Expr::Int)  {   \
-      if(l->getWidth() == Expr::Int) {return _e_op ## _create(l, BvToIntExpr::create(r));} \
+  if(l->isInteger() || r->isInteger())  {   \
+      if(l->isInteger()) {return _e_op ## _create(l, BvToIntExpr::create(r));} \
       else {return _e_op ## _create(BvToIntExpr::create(l), r);}    \
   }                                                                 \
-  assert(l->getWidth()==r->getWidth() && "type mismatch");              \
+  assert(l->getType()==r->getType() && "type mismatch");              \
   if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l))                     \
     if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))                   \
       return cl->_op(cr);                                               \
@@ -1098,11 +1077,11 @@ ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) { \
 
 #define CMPCREATE_T(_e_op, _op, _reflexive_e_op, partialL, partialR) \
 ref<Expr>  _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) {    \
-   if(l->getWidth() == Expr::Int || r->getWidth() == Expr::Int)  {   \
-      if(l->getWidth() == Expr::Int) {return _e_op ## _create(l.get(), BvToIntExpr::create(r).get());} \
+   if(l->isInteger() || r->isInteger())  {   \
+      if(l->isInteger()) {return _e_op ## _create(l.get(), BvToIntExpr::create(r).get());} \
       else {return _e_op ## _create(BvToIntExpr::create(l).get(), r.get());}    \
   }                                                                 \
-  assert(l->getWidth()==r->getWidth() && "type mismatch");             \
+  assert(l->getType()==r->getType() && "type mismatch");             \
   if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l)) {                  \
     if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))                  \
       return cl->_op(cr);                                              \
@@ -1199,7 +1178,7 @@ static ref<Expr> EqExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {
   } else if (rk == Expr::Extract) {
     // (extract(a,T)==c) == (a==c)
     const ExtractExpr *ee = cast<ExtractExpr>(r);
-    if (ee->expr->getWidth() == Expr::Int)
+    if (ee->expr->isInteger())
     {
       return EqExpr::create(cl,ee->expr);
     }
@@ -1295,86 +1274,8 @@ static ref<Expr> SleExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
   }
 }
 
-ref<Expr> UltExpr::create(const ref<Expr> &l, const ref<Expr> &r)
-{
-	if (l->getWidth() == Expr::Int || r->getWidth() == Expr::Int)
-	{
-		if (l->getWidth() == Expr::Int)
-		{
-			return UltExpr_create(l.get(), BvToIntExpr::create(r).get());
-		}
-		else
-		{
-			return UltExpr_create(BvToIntExpr::create(l).get(),r.get());
-		}
-	}
-	assert(l->getWidth()==r->getWidth() && "type mismatch");
-	if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l))
-		if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))
-			return cl->Ult(cr);
-
-	return UltExpr_create(l, r);
-}
-
-ref<Expr> UleExpr::create(const ref<Expr> &l, const ref<Expr> &r)
-{
-	if (l->getWidth() == Expr::Int || r->getWidth() == Expr::Int)
-	{
-		if (l->getWidth() == Expr::Int)
-		{
-			return UleExpr_create(l.get(), BvToIntExpr::create(r).get());
-		}
-		else
-		{
-			return UleExpr_create(BvToIntExpr::create(l).get(),r.get());
-		}
-	}
-	assert(l->getWidth()==r->getWidth() && "type mismatch");
-	if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l))
-		if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))
-			return cl->Ule(cr);
-
-	return UleExpr_create(l, r);
-}
-
 CMPCREATE_T(EqExpr, Eq, EqExpr, EqExpr_createPartial, EqExpr_createPartialR)
-//CMPCREATE(UltExpr, Ult)
-//CMPCREATE(UleExpr, Ule)
+CMPCREATE(UltExpr, Ult)
+CMPCREATE(UleExpr, Ule)
 CMPCREATE(SltExpr, Slt)
 CMPCREATE(SleExpr, Sle)
-
-#if 0
-ref<Expr> EqExpr ::create(const ref<Expr> &l, const ref<Expr> &r)
-{
-	l.get()->dump();
-	r.get()->dump();
-	if (l->getWidth() == Expr::Int || r->getWidth() == Expr::Int)
-	{
-		if (l->getWidth() == Expr::Int)
-		{
-			return EqExpr_create(l.get(), BvToIntExpr::create(r).get());
-		}
-		else
-		{
-			return EqExpr_create(BvToIntExpr::create(l).get(), r.get());
-		}
-	}
-	assert(l->getWidth()==r->getWidth() && "type mismatch");
-	if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l))
-	{
-		if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))
-		{
-			return cl->Eq(cr);
-		}
-		return EqExpr_createPartialR(cl, r.get());
-	}
-	else if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))
-	{
-    	return EqExpr_createPartial(l.get(), cr);
-	}
-	else
-	{
-		return EqExpr_create(l.get(), r.get());
-	}
-}
-#endif
