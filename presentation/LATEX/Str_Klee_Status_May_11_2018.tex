@@ -1,0 +1,172 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+% document class: beamer %
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass{beamer}
+
+%%%%%%%%%%%%
+% PACKAGES %
+%%%%%%%%%%%%
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{multirow}
+\hypersetup{colorlinks=true,urlcolor=blue}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% no navigation bars please %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setbeamertemplate{footline}[frame number]{}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% no navigation symbols please %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setbeamertemplate{navigation symbols}{}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% no footers at all please %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setbeamertemplate{footline}{}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% center the title please %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\setbeamertemplate{frametitle}[default][center]
+
+%%%%%%%%%%%%%%%%%%
+% begin document %
+%%%%%%%%%%%%%%%%%%
+\begin{document}
+
+%%%%%%%%%
+% title %
+%%%%%%%%%
+\title{Strings Enhanced Symbolic Execution}   
+
+%%%%%%%%%%
+% author %
+%%%%%%%%%%
+\author{Treating Strings as ADTs in a KLEE/Z3 framework}
+
+%%%%%%%%%%%%
+% date ... %
+%%%%%%%%%%%%
+\date{\today} 
+
+%%%%%%%%%%%%%
+% frame ... %
+%%%%%%%%%%%%%
+\frame{\titlepage} 
+
+%\frame{\frametitle{Table of contents}\tableofcontents} 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SECTION :: Introduction %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Section Introduction} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Frame Title :: Introduction %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\frame{\frametitle{Introduction}
+%%%%%%%%%%%%%%%%%%
+% Items :: Begin %
+%%%%%%%%%%%%%%%%%%
+\begin{itemize}
+\item
+str.klee is gradually becoming more stable.
+\item
+A multitude of artificial examples supports str.klee
+\item
+The following four (previously known) CVEs are discovered:
+\begin{table}[h]
+\centering
+\begin{tabular}{ |c|c|c| }
+\hline
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    &    str.klee    &  vanilla.klee  \\
+CVE & discovery time & discovery time \\
+    &    (minutes)   &    (minutes)   \\
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\hline
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\href{https://www.cvedetails.com/cve/CVE-2017-9430}{dnstracer CVE-2017-9430} &
+31                                                                           &
+33                                                                          \\
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\hline
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\href{https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2006-2656}{libtiff CVE-2006-2656} &
+34                                                                                         &
+29                                                                                        \\
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\hline
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\href{https://www.cvedetails.com/cve/CVE-2001-1228/}{gzip CVE-2001-1228} &
+30                                                                       &
+$-$                                                                     \\
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\hline
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\href{https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2006-2465}{mp3info CVE-2006-2465} &
+56                                                                                         &
+$-$                                                                                       \\
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\hline
+\end{tabular}
+\end{table}
+\end{itemize}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SECTION :: Running Example %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Running Example} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Frame Title :: Running Example %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\frame{\frametitle{Main Opportunities}
+%%%%%%%%%%%%%%%%%%
+% Items :: Begin %
+%%%%%%%%%%%%%%%%%%
+\begin{itemize}
+\item
+C to C transformations, like \href{https://github.com/OrenGitHub/klee/issues/24}{this example}
+\item
+C to Z3 transformations, like these examples:
+\begin{itemize}
+\item
+while (tmp[0] == 'A' $||$ tmp[1] == 'B') $\{$tmp++;$\}$
+\item
+\href{https://github.com/OrenGitHub/klee/issues/22}{translated to Z3}
+\item
+do $\{$ $*$p = 0; p++; i++; $\}$ while (i $<$ len);
+\item
+\href{https://github.com/OrenGitHub/klee/issues/23}{translated to Z3}
+\end{itemize}
+\item
+C to C under approximations of execution flow:
+\begin{itemize}
+\item
+for (i = 0; i $<$ len; i++) \\
+~ ~ ~ ~if ('A' $\leq$ p[i] $\leq$ 'Z') $\{$ p[i] = p[i] + 32; $\}$
+\item
+\href{https://github.com/OrenGitHub/klee/issues/25}{replacing with: nop+string constraints will help here}
+\item
+if (fiLong $\neq$ NULL) $\{$ \\
+~ ~ ~ ~fi = strrchr (fiLong, '/');\\
+~ ~ ~ ~if (fi == NULL) $\{$ fi = strrchr (fiLong, '\textbackslash \textbackslash'); $\}$ \\
+~ ~ ~ ~if (fi $\neq$ NULL) $\{$ fi++;        $\}$ \\
+~ ~ ~ ~if (fi   ==   NULL) $\{$ fi = fiLong; $\}\}$ \\
+\item
+Replacing with: fi=fiLong+string constraints will help.
+\end{itemize}
+\item
+Improve reads/writes with caching / reduction of versions
+\item
+Context aware sorts in SE
+%%%%%%%%%%%%%%%%
+% Items :: End %
+%%%%%%%%%%%%%%%%
+\end{itemize}
+}
+
+\end{document}
