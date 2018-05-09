@@ -65,7 +65,7 @@ ExprVisitor::Action ExprEvaluator::visitStrFromBv8(const StrFromBitVector8Expr& 
 
 std::string NormalizeZ3String(const std::string &s)
 {
-	int i=0;
+	unsigned i=0;
 	int j=0;
 	int i1=0;
 	int i2=0;

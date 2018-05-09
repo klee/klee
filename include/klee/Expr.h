@@ -95,18 +95,6 @@ public:
 
   /// The type of an expression is simply its width, in bits. 
   //typedef unsigned Width; 
-  /*
-  enum Width {
-      InvalidWidth = 0,
-      Bool = 1,
-      Int8 = 8,
-      Int16 = 16,
-      Int32 = 32,
-      Int64 = 64,
-      Fl80 = 80,
-      Int = 100000,
-      String = 100001
-  }; */
   typedef unsigned Width; 
       
   static const Width InvalidWidth = 0;
@@ -116,8 +104,12 @@ public:
   static const Width Int32 = 32;
   static const Width Int64 = 64;
   static const Width Fl80 = 80;
-  static const Width String = 100001;
-  static const Width Int = 100000;
+
+  enum Type {
+      BitVector = 0,
+      Integer,
+      String
+  };
   
   enum Kind {
     InvalidKind = -1,
@@ -206,6 +198,7 @@ public:
   unsigned refCount;
 
 protected:  
+  Type type;
   unsigned hashValue;
 
   /// Compares `b` to `this` Expr and determines how they are ordered
@@ -233,7 +226,7 @@ protected:
   virtual int compareContents(const Expr &b) const = 0;
 
 public:
-  Expr() : refCount(0) { Expr::count++; }
+  Expr() : refCount(0), type(BitVector) { Expr::count++; }
   virtual ~Expr() { Expr::count--; } 
 
   virtual Kind getKind() const = 0;
@@ -274,6 +267,10 @@ public:
   virtual ref<Expr> rebuild(ref<Expr> kids[/* getNumKids() */]) const = 0;
 
   //
+  bool isInteger() const {return type == Type::Integer;}
+  bool isString() const {return type == Type::String;}
+  bool isBitVector() const {return type == Type::BitVector;}
+  Type getType() const {return type;}
 
   /// isZero - Is this a constant zero.
   bool isZero() const;
@@ -288,10 +285,10 @@ public:
 
   static void printKind(llvm::raw_ostream &os, Kind k);
   static void printWidth(llvm::raw_ostream &os, Expr::Width w);
+  static void printType(llvm::raw_ostream &os, Type t);
 
   /// returns the smallest number of bytes in which the given width fits
   static inline unsigned getMinBytesForWidth(Width w) {
-      if(w > 1024) return 8;
       return (w + 7) / 8;
   }
 
@@ -371,6 +368,11 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Expr::Kind kin
   return os;
 }
 
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Expr::Type type) {
+  Expr::printType(os, type);
+  return os;
+}
+
 inline std::stringstream &operator<<(std::stringstream &os, const Expr &e) {
   std::string str;
   llvm::raw_string_ostream TmpStr(str);
@@ -387,18 +389,54 @@ inline std::stringstream &operator<<(std::stringstream &os, const Expr::Kind kin
   return os;
 }
 
+inline std::stringstream &operator<<(std::stringstream &os, const Expr::Type type) {
+  std::string str;
+  llvm::raw_string_ostream TmpStr(str);
+  Expr::printType(TmpStr, type);
+  os << TmpStr.str();
+  return os;
+}
 // Utility classes
+
+//class TagExpr : public Expr {
+//public:
+//  ref<Expr> e;
+//  TagExpr(const ref<Expr> &exp) : e(exp) { 
+//      type = e->getType();
+//  }
+//
+//	virtual unsigned computeHash();
+//	virtual int compareContents(const Expr &b)  const {return   0;}		
+//	virtual Width     getWidth()                const {return   e->getWidth()}	
+//	virtual unsigned  getNumKids()              const {return   1;}	
+//	virtual ref<Expr> getKid(unsigned int i)    const	{
+//															if(i==0){return e;}
+//															return 0;
+//														}
+//	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {return create(kids[0]);}
+//	static bool classof(const Expr *E) { return isa<TagExpr>(E); }
+//	static bool classof(const ConstantExpr *) { return false; }	
+//
+//};
+//
+//class ExtractedIntExpr : public TagExpr {
+//  ExtractedIntExpr(const ref<Expr> &e): TagExpr(e) {}
+//	static ref<Expr> create(const ref<Expr> &in_s) {
+//  }
+//}
+
 class BvToIntExpr : public Expr {
 public:
 	ref<Expr> bvExpr;
 	BvToIntExpr(const ref<Expr> &e) : bvExpr(e) {
-    assert(e->getWidth() != Expr::Int && e->getWidth() != Expr::String && "Can't bv2nt an int or string");
+    type = Type::Integer;
+    assert(e->isBitVector() && "Can't bv2nt an int or string");
   }
 	virtual unsigned computeHash();
 
 	static ref<Expr> create(const ref<Expr> &in_s)
 	{
-    if(in_s->getWidth() == Expr::Int) return in_s;
+    if(in_s->isInteger()) return in_s;
 		return BvToIntExpr::alloc(in_s);
 	}
 	
@@ -410,7 +448,7 @@ public:
 	}
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::BvToInt;}	
-	virtual Width     getWidth()                const {return   Expr::Int;}	
+	virtual Width     getWidth()                const {return   Expr::Int8;}	
 	virtual unsigned  getNumKids()              const {return   1;}	
 	virtual ref<Expr> getKid(unsigned int i)    const	{
 															if(i==0){return bvExpr;}
@@ -719,7 +757,7 @@ public:
 
 private:
   SelectExpr(const ref<Expr> &c, const ref<Expr> &t, const ref<Expr> &f) 
-    : cond(c), trueExpr(t), falseExpr(f) {}
+    : cond(c), trueExpr(t), falseExpr(f) {type = t->getType();}
 
 public:
   static bool classof(const Expr *E) {
@@ -845,7 +883,7 @@ public:
 
 private:
   ExtractExpr(const ref<Expr> &e, unsigned b, Width w) 
-    : expr(e),offset(b),width(w) {}
+    : expr(e),offset(b),width(w) { type = e->getType();}
 
 public:
   static bool classof(const Expr *E) {
@@ -908,8 +946,9 @@ public:
 	ref<Expr> s;
 	ref<Expr> i;
   StrCharAtExpr(ref<Expr> ps,ref<Expr> pi): s(ps), i(pi) {
-      assert(ps->getWidth() == Expr::String && "First argument to str char at must be a string");
-      assert(pi->getWidth() == Expr::Int && "Second argument to str char at must be an int");
+      type = Type::String;
+      assert(ps->isString() && "First argument to str char at must be a string");
+      assert(pi->isInteger() && "Second argument to str char at must be an int");
   }
 
 public:
@@ -923,7 +962,7 @@ public:
 	virtual unsigned computeHash();
 	virtual int compareContents(const Expr &b)  const {return   0;}	
 	virtual Kind      getKind()                 const {return   Expr::Str_CharAt;}	
-	virtual Width     getWidth()                const {return   Expr::String;}	
+	virtual Width     getWidth()                const {return   Expr::Int8;}	
 	virtual unsigned  getNumKids()              const {return    2;}
 	virtual ref<Expr> getKid(unsigned int i)    const	{
 															if(i==0){return s;}
@@ -938,19 +977,22 @@ public:
 class StrFromBitVector8Expr : public Expr {
 public:
 	ref<Expr> someBitVec8;
+  StrFromBitVector8Expr(ref<Expr> sb8): someBitVec8(sb8) {
+      type = Type::String;
+      assert(sb8->isBitVector() && "Can't convert non bitvector into string");
+      assert(sb8->getWidth() == Expr::Int8 && "Non 1 byte bit vector");
+  }
 
-public:
 	static ref<Expr> create(ref<Expr> someBitVec8)
 	{
-		StrFromBitVector8Expr *e = new StrFromBitVector8Expr;
-		e->someBitVec8 = someBitVec8;
+		StrFromBitVector8Expr *e = new StrFromBitVector8Expr(someBitVec8);
 		return e;
 	}
 
 	virtual unsigned computeHash();
 	virtual int       compareContents(const Expr &b)  const {return   0;}	
 	virtual Kind      getKind()                 const {return   Expr::Str_FromBitVec8;}	
-	virtual Width     getWidth()                const {return   Expr::String;}	
+	virtual Width     getWidth()                const {return   Expr::Int8;}	
 	virtual unsigned  getNumKids()              const {return   1;}	
 	virtual ref<Expr> getKid(unsigned int i)    const	{
 															if(i==0){return someBitVec8;}
@@ -974,8 +1016,12 @@ public:
 		const ref<Expr> &in_needle)
 		:
 		haystack(in_haystack),
-		needle(in_needle)
-	{}
+		needle(in_needle) {
+        type = Type::Integer;
+        assert(haystack->isString());
+        assert(needle->isString());
+  
+  }
 
 	virtual unsigned computeHash();
 
@@ -993,7 +1039,7 @@ public:
 	}
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_FirstIdxOf;}	
-	virtual Width     getWidth()                const {return   Expr::Int;}	
+	virtual Width     getWidth()                const {return   Expr::Int8;}	
 	virtual unsigned  getNumKids()              const {return    2;}	
 	virtual ref<Expr> getKid(unsigned int i)    const	{
 															if(i==0){return haystack;}
@@ -1011,7 +1057,7 @@ public:
 	ref<Expr> s2;
 
 	StrEqExpr(const ref<Expr> &in_s1,const ref<Expr> &in_s2) : s1(in_s1),s2(in_s2) {
-     assert(in_s1->getWidth() == Expr::String && in_s2->getWidth() == Expr::String && "StrEq takes 2 strings");
+     assert(in_s1->isString() && in_s2->isString() && "StrEq takes 2 strings");
   }
 
 	virtual unsigned computeHash();
@@ -1060,9 +1106,10 @@ public:
 		offset(in_offset),
 		length(in_length)
 	{
-     assert(in_s->getWidth() == Expr::String  && "First argument to substr must be string");
-     assert(in_offset->getWidth() == Expr::Int  && "Second argument to substring must be int");
-     assert(in_length->getWidth() == Expr::Int  && "third argument to substring must be int");
+     assert(in_s->isString()  && "First argument to substr must be string");
+     assert(in_offset->isInteger()  && "Second argument to substring must be int");
+     assert(in_length->isInteger()  && "third argument to substring must be int");
+     type = Type::String;
   }
 
 	virtual unsigned computeHash();
@@ -1090,7 +1137,7 @@ public:
 	}
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_Substr;}	
-	virtual Width     getWidth()                const {return   Expr::String;}	
+	virtual Width     getWidth()                const {return   Expr::Int8;}	
 	virtual unsigned  getNumKids()              const {return   3;}	
 	virtual ref<Expr> getKid(unsigned int i)    const	{
 															if(i==0){return s;}
@@ -1103,46 +1150,12 @@ public:
 	static bool classof(const ConstantExpr *) { return false; }	
 };
 
-#if 0
-class StrFromBitVec8Expr : public Expr {
-public:
-	ref<Expr> c;
-
-	StrFromBitVec8Expr(const ref<Expr> &in_c) : c(in_c) {}
-	// assert(in_c->getWidth() == Expr::String  && "First argument to strfrombv8 must be a char of width 8");
-	//}
-
-	virtual unsigned computeHash();
-
-	static ref<Expr> create(const ref<Expr> &in_c)
-	{
-		return StrFromBitVec8Expr::alloc(in_c);
-	}
-	
-	static ref<Expr> alloc(const ref<Expr> &in_c)
-	{
-		ref<Expr> res(new StrFromBitVec8Expr(in_c));
-		res->computeHash();
-		return res;
-	}
-	virtual int compareContents(const Expr &b)  const {return   0;}		
-	virtual Kind      getKind()                 const {return   Expr::Str_FromBitVec8;}	
-	virtual Width     getWidth()                const {return   Expr::String;}	
-	virtual unsigned  getNumKids()              const {return   0;}	
-	virtual ref<Expr> getKid(unsigned int i)    const { if(i==0){return c;} return 0;}
-	virtual ref<Expr> rebuild(ref<Expr> kids[]) const { return create(kids[0]); }
-	static bool classof(const Expr *E) { return E->getKind() == Expr::Str_FromBitVec8; }
-	static bool classof(const ConstantExpr *) { return false; }	
-};
-#endif
-
-
 class StrVarExpr : public Expr {
 public:
   std::string name;
 
-	StrVarExpr(const std::string n): name(n) {}
-	StrVarExpr(const char *in_name): name(in_name) {}
+	StrVarExpr(const std::string n): name(n) { type = Type::String;}
+	StrVarExpr(const char *in_name): name(in_name) {type = Type::String;}
 
 	virtual unsigned computeHash();
 
@@ -1164,7 +1177,7 @@ public:
 	}
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_Var;}	
-	virtual Width     getWidth()                const {return   Expr::String;}	
+	virtual Width     getWidth()                const {return   Expr::Int8;}	
 	virtual unsigned  getNumKids()              const {return   0;}	
 	virtual ref<Expr> getKid(unsigned int)      const {return   0;}
 	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {ref<Expr> moish; assert(0); return moish;}
@@ -1177,7 +1190,8 @@ public:
 	ref<Expr> s;
 	
 	StrLengthExpr(const ref<Expr> &in_s) : s(in_s) {
-      assert(in_s->getWidth() == Expr::String && "First argument to strlen must be a string");
+      assert(in_s->isString() && "First argument to strlen must be a string");
+      type = Type::Integer;
   }
 
 	static ref<Expr> create(const ref<Expr> &in_s)
@@ -1194,7 +1208,7 @@ public:
 	virtual unsigned computeHash();
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_Length;}	
-	virtual Width     getWidth()                const {return   Expr::Int;}	
+	virtual Width     getWidth()                const {return   Expr::Int8;}	
 	virtual unsigned  getNumKids()              const {return   1;}	
 	virtual ref<Expr> getKid(unsigned int i)    const	{
 															if(i==0){return s;}
@@ -1210,8 +1224,9 @@ public:
 	ref<Expr> s1;
 	ref<Expr> s2;
   StrCmpExpr(const ref<Expr> &s1,const ref<Expr> &s2) {
-    assert(s1->getWidth() == Expr::String && "First argument to strcmp must be a string");
-    assert(s2->getWidth() == Expr::String && "Second argument to strcmp must be a string");
+    assert(s1->isString() && "First argument to strcmp must be a string");
+    assert(s2->isString() && "Second argument to strcmp must be a string");
+    type = Type::Integer;
   }
 
 	static ref<Expr> create(const ref<Expr> &s1,const ref<Expr> &s2)
@@ -1222,7 +1237,7 @@ public:
 
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_Compare;}	
-	virtual Width     getWidth()                const {return   Expr::Int;}	
+	virtual Width     getWidth()                const {return   Expr::Int8;}	
 	virtual unsigned  getNumKids()              const {return   2;}	
 	virtual ref<Expr> getKid(unsigned int i)    const {if (i==0) return s1;if (i==1) return s2;return 0;}
 	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {return create(kids[0],kids[1]);}
@@ -1301,7 +1316,7 @@ CAST_EXPR_CLASS(ZExt)
                                                                                \
   public:                                                                      \
     _class_kind##Expr(const ref<Expr> &l, const ref<Expr> &r)                  \
-        : BinaryExpr(l, r) {}                                                  \
+        : BinaryExpr(l, r) { assert(l->getType() == r->getType()); type = l->getType();}  \
     static ref<Expr> alloc(const ref<Expr> &l, const ref<Expr> &r) {           \
       ref<Expr> res(new _class_kind##Expr(l, r));                              \
       res->computeHash();                                                      \
@@ -1350,7 +1365,7 @@ ARITHMETIC_EXPR_CLASS(AShr)
                                                                                \
   public:                                                                      \
     _class_kind##Expr(const ref<Expr> &l, const ref<Expr> &r)                  \
-        : CmpExpr(l, r) {}                                                     \
+        : CmpExpr(l, r) { assert(l->getType() == r->getType() && "Inconsitent cmp expr");}                                                     \
     static ref<Expr> alloc(const ref<Expr> &l, const ref<Expr> &r) {           \
       ref<Expr> res(new _class_kind##Expr(l, r));                              \
       res->computeHash();                                                      \
@@ -1550,7 +1565,7 @@ class StrConstExpr : public Expr {
 public:
 	std::string value;
 
-	StrConstExpr(std::string _value): value(_value){ }
+	StrConstExpr(std::string _value): value(_value){ type = Type::String;}
 
 	static ref<Expr> create(const char *value)
 	{
@@ -1570,7 +1585,7 @@ public:
 	virtual unsigned computeHash();
 	virtual int compareContents(const Expr &b)  const {return   0;}		//TODO: do proper compare andprobably hash
 	virtual Kind      getKind()                 const {return   Expr::Str_Const;}	
-	virtual Width     getWidth()                const {return   Expr::String;}	
+	virtual Width     getWidth()                const {return   Expr::Int8;}	
 	virtual unsigned  getNumKids()              const {return   0;}	
 	virtual ref<Expr> getKid(unsigned int)      const {return NULL;}
 	virtual ref<Expr> rebuild(ref<Expr> kids[]) const {assert(0); ref<Expr> moish; return moish;}

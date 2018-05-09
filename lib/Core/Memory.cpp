@@ -469,6 +469,7 @@ ref<Expr> ObjectState::read(ref<Expr> offset, Expr::Width width) const {
     ref<Expr> Byte = read8(AddExpr::create(offset, 
                                            ConstantExpr::create(idx, 
                                                                 Expr::Int32)));
+    if(Byte->isInteger()) return Byte;
     Res = i ? ConcatExpr::create(Byte, Res) : Byte;
   }
 
@@ -487,6 +488,7 @@ ref<Expr> ObjectState::read(unsigned offset, Expr::Width width) const {
   for (unsigned i = 0; i != NumBytes; ++i) {
     unsigned idx = Context::get().isLittleEndian() ? i : (NumBytes - i - 1);
     ref<Expr> Byte = read8(offset + idx);
+    if(Byte->isInteger()) return Byte;
     Res = i ? ConcatExpr::create(Byte, Res) : Byte;
   }
 

@@ -882,6 +882,7 @@ msg_osip_body_parse (osip_message_t * sip, const char *start_of_buf, const char 
   return OSIP_SYNTAXERROR;
 }
 
+void klee_print_expr(const char* a, void* b) {}
 /* osip_message_t *sip is filled while analysing buf */
 static int
 _osip_message_parse (osip_message_t * sip, const char *buf, size_t length, int sipfrag)
@@ -908,7 +909,7 @@ _osip_message_parse (osip_message_t * sip, const char *buf, size_t length, int s
   // memcpy (tmp, buf, length);    /* may contain binary data */
   // strncpy(tmp,buf,length);    /* may contain binary data */
   strcpy(tmp,buf);    /* may contain binary data */
-  tmp[length] = '\0';
+  tmp[length + 1] = '\0';
   /* skip initial \r\n */
   while (tmp[0] == '\r' || tmp[0] == '\n')
   {

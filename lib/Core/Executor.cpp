@@ -663,7 +663,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
          && i->getType()->getElementType()->isArrayTy()
          && dyn_cast<ArrayType>(i->getType()->getElementType())->getElementType()->isIntegerTy(8)) {
          char c[wos->size + 1];
-         for(int i = 0; i < wos->size; i++) {
+         for(unsigned i = 0; i < wos->size; i++) {
              c[i] = (char)dyn_cast<ConstantExpr>(wos->read8(i))->getZExtValue(8);
          }
          mo->setName(i->getName());
@@ -3167,6 +3167,20 @@ void Executor::executeAlloc(ExecutionState &state,
         break;
       example = tmp;
     }
+    while (example->Ult(ConstantExpr::alloc(10, W))->isTrue()) {
+      ref<ConstantExpr> tmp = example->Add(ConstantExpr::alloc(3, W));
+      bool res;
+      bool success = solver->mayBeTrue(state, EqExpr::create(tmp, size), res);
+      assert(success && "FIXME: Unhandled solver failure");      
+      (void) success;
+      if (!res)
+        break;
+      example = tmp;
+    }
+ 
+    errs() << "===Example get width: " << W << " size witdth " << size->getWidth() << "\n";
+    example->dump();
+    size->dump();
 
     StatePair fixedSize = fork(state, EqExpr::create(example, size), true);
     
@@ -3339,7 +3353,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
  	    state.addConstraint(EqExpr::create(
   		  StrLengthExpr::create(AB_p_new_var),
-  		  BvToIntExpr::create(mo->getSizeExpr())));
+  		  StrLengthExpr::create(AB_p_var)));
       
         /************************/
         /* [11] prefix equation */
@@ -3756,31 +3770,37 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
   // the preferred constraints.  See test/Features/PreferCex.c for
   // an example) While this process can be very expensive, it can
   // also make understanding individual test cases much easier.
-  for (unsigned i = 0; i != state.symbolics.size(); ++i) {
-    const MemoryObject *mo = state.symbolics[i].first;
-    std::vector< ref<Expr> >::const_iterator pi = 
-      mo->cexPreferences.begin(), pie = mo->cexPreferences.end();
-    for (; pi != pie; ++pi) {
-      bool mustBeTrue;
-      // Attempt to bound byte to constraints held in cexPreferences
-      bool success = solver->mustBeTrue(tmp, Expr::createIsZero(*pi), 
-					mustBeTrue);
-      // If it isn't possible to constrain this particular byte in the desired
-      // way (normally this would mean that the byte can't be constrained to
-      // be between 0 and 127 without making the entire constraint list UNSAT)
-      // then just continue on to the next byte.
-      if (!success) break;
-      // If the particular constraint operated on in this iteration through
-      // the loop isn't implied then add it to the list of constraints.
-      if (!mustBeTrue) tmp.addConstraint(*pi);
-    }
-    if (pi!=pie) break;
-  }
+//  for (unsigned i = 0; i != state.symbolics.size(); ++i) {
+//    const MemoryObject *mo = state.symbolics[i].first;
+//    std::vector< ref<Expr> >::const_iterator pi = 
+//      mo->cexPreferences.begin(), pie = mo->cexPreferences.end();
+//    for (; pi != pie; ++pi) {
+//      bool mustBeTrue;
+//      // Attempt to bound byte to constraints held in cexPreferences
+//      bool success = solver->mustBeTrue(tmp, Expr::createIsZero(*pi), 
+//					mustBeTrue);
+//      // If it isn't possible to constrain this particular byte in the desired
+//      // way (normally this would mean that the byte can't be constrained to
+//      // be between 0 and 127 without making the entire constraint list UNSAT)
+//      // then just continue on to the next byte.
+//      if (!success) break;
+//      // If the particular constraint operated on in this iteration through
+//      // the loop isn't implied then add it to the list of constraints.
+//      if (!mustBeTrue) tmp.addConstraint(*pi);
+//    }
+//    if (pi!=pie) break;
+//  }
 
   std::vector< std::vector<unsigned char> > values;
   std::vector<const Array*> objects;
-  for (unsigned i = 0; i != state.symbolics.size(); ++i)
-    objects.push_back(state.symbolics[i].second);
+  for (unsigned i = 0; i != state.symbolics.size(); ++i) {
+    const MemoryObject* mo = state.symbolics[i].first;
+    if(mo->serial == 0) { //Bitvector
+      objects.push_back(state.symbolics[i].second);
+    } else { //String
+      objects.push_back(new Array(mo->getABSerial()));
+    }
+  }
   bool success = solver->getInitialValues(tmp, objects, values);
   solver->setTimeout(0);
   if (!success) {
@@ -3790,8 +3810,46 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
     return false;
   }
   
-  for (unsigned i = 0; i != state.symbolics.size(); ++i)
-    res.push_back(std::make_pair(state.symbolics[i].first->name, values[i]));
+  for (unsigned i = 0; i != state.symbolics.size(); ++i) {
+    const MemoryObject* mo = state.symbolics[i].first;
+    if(mo->serial == 0) { //Bitvector
+      res.push_back(std::make_pair(state.symbolics[i].first->name, values[i]));
+    } else { //String
+      errs() << "Working on " << mo->name << " size: " << mo->size << "\n";
+      std::vector<unsigned char> buf(mo->size);
+      char numBuf[3];
+      numBuf[2] = 0;
+      int idx = 0;
+      int numBufIdx = -1;
+     // for(unsigned char &c : values[i]) 
+     //     errs() << c;
+     // errs() << "\n";
+      for(unsigned char &c : values[i]) {
+     //   printf("%c: idx: %d, numBufIdx: %d, numBuf: %s\n", c, idx, numBufIdx, numBuf);
+        buf[idx] = c;
+        if(numBufIdx >= 0) {
+            numBuf[numBufIdx] = c;
+            numBufIdx++;
+        }
+
+        if(numBufIdx == 2) {
+            numBufIdx = -1;
+            buf[idx] = (unsigned char)strtol(numBuf,NULL, 16);
+        }
+
+        if(idx > 0 && c == 'x' && buf[idx-1] == '\\') {
+            numBufIdx = 0;
+            idx--;
+        }
+
+        if(numBufIdx == -1) {
+            idx++;
+        }
+      }
+      res.push_back(std::make_pair(state.symbolics[i].first->name, buf));
+        
+    }
+  }
   return true;
 }
 
