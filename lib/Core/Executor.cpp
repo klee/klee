@@ -3167,6 +3167,20 @@ void Executor::executeAlloc(ExecutionState &state,
         break;
       example = tmp;
     }
+    while (example->Ult(ConstantExpr::alloc(10, W))->isTrue()) {
+      ref<ConstantExpr> tmp = example->Add(ConstantExpr::alloc(3, W));
+      bool res;
+      bool success = solver->mayBeTrue(state, EqExpr::create(tmp, size), res);
+      assert(success && "FIXME: Unhandled solver failure");      
+      (void) success;
+      if (!res)
+        break;
+      example = tmp;
+    }
+ 
+    errs() << "===Example get width: " << W << " size witdth " << size->getWidth() << "\n";
+    example->dump();
+    size->dump();
 
     StatePair fixedSize = fork(state, EqExpr::create(example, size), true);
     

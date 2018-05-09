@@ -27,7 +27,7 @@
 #include <osipparser2/osip_parser.h>
 #include <osipparser2/sdp_message.h>
 
-#include "/home/oren/GIT/klee/str.klee/klee/include/klee/klee.h"
+#include "klee/klee.h"
 
 void klee_make_symbolic(void *addr,size_t count, const char *message);
 
@@ -106,9 +106,9 @@ main (int argc, char **argv)
   int binary = 0;
   FILE *torture_file;
   //char *msg;
-  char msg[10];
+  char msg[20];
   // int pos;
-  int len;
+  uint64_t len;
 
   fprintf(stdout,">> LIBOSIP BREAKPOINT[0]\n");
 
@@ -148,13 +148,13 @@ main (int argc, char **argv)
   //  len = strlen (msg);
   //}
 
-  // klee_make_symbolic(msg,70,"MsG");
+//   klee_make_symbolic(msg,sizeof msg,"MsG");
   
   markString(msg);
   //msg[0]='a';
   //msg[1]='b';
   //msg[3]='c';
-  msg[9]= 0 ;
+  msg[19]= 0 ;
   
   len = strlen(msg);
 

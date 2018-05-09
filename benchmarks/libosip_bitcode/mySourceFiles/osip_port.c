@@ -1340,8 +1340,10 @@ osip_hash (const char *str)
   unsigned int hash = 5381;
   int c;
 
-  while ((c = *str++))
+  while ((c = *str++)) {
+    //printf("C: %c\n", (char)c);
     hash = ((hash << 5) + hash) + c;
+  }
 
   return hash & 0xFFFFFFFFu;
 }
