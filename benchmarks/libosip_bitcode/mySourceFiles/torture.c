@@ -107,6 +107,7 @@ main (int argc, char **argv)
   FILE *torture_file;
   //char *msg;
   char msg[20];
+  klee_make_symbolic(msg, sizeof(msg), "msg");
   // int pos;
   uint64_t len;
 
