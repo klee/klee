@@ -60,13 +60,13 @@
 %\frame{\frametitle{Table of contents}\tableofcontents} 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
-% SECTION :: Introduction %
+% SECTION :: Background %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Section Introduction} 
+\section{Section Background} 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Frame Title :: Introduction %
+% Frame Title :: Background %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\frame{\frametitle{Introduction}
+\frame{\frametitle{Background}
 %%%%%%%%%%%%%%%%%%
 % Items :: Begin %
 %%%%%%%%%%%%%%%%%%
@@ -81,7 +81,19 @@ String SMT solvers allow a direct encoding of string library
 code to SMT formulae, thus reducing dramatically the number
 of explored states.
 \item
-The following four (previously known) CVEs are discovered:
+Several string solvers exist:
+\href{https://people.csail.mit.edu/akiezun/issta54-kiezun.pdf}{Hampi},
+\href{http://webblaze.cs.berkeley.edu/2010/kudzu/kudzu.pdf}{Kaluza},
+\href{https://pdfs.semanticscholar.org/33b1/576783490f94fe28f40570d6bf396f6369a4.pdf}{Pisa},
+\href{http://www.cs.ucsb.edu/~bultan/publications/tacas10.pdf}{Stranger}
+\href{https://github.com/OrenGitHub/klee/issues/22}{CVC4},
+\href{https://www.comp.nus.edu.sg/~joxan/papers/S3.pdf}{S3},
+\href{https://ece.uwaterloo.ca/~vganesh/Publications_files/vg2017-Z3str3-FMCAD2017.pdf}{Z3str3},
+and they have been used (to some extent) to analyze SQL querries and
+programs in Java, JavaScript and PHP.
+%%%%%%%%%%%%%%%%
+% Items :: End %
+%%%%%%%%%%%%%%%%
 \end{itemize}
 }
 
@@ -92,7 +104,60 @@ The following four (previously known) CVEs are discovered:
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Frame Title :: Running Example %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\frame{\frametitle{Main Opportunities}
+\frame{\frametitle{Sort Aware Symbolic Execution}
+%%%%%%%%%%%%%%%%%%
+% Items :: Begin %
+%%%%%%%%%%%%%%%%%%
+\begin{itemize}
+\item
+
+\item
+C to Z3 transformations, like these examples:
+\begin{itemize}
+\item
+while (tmp[0] == 'A' $||$ tmp[1] == 'B') $\{$tmp++;$\}$
+\item
+\href{https://github.com/OrenGitHub/klee/issues/22}{translated to Z3}
+\item
+do $\{$ $*$p = 0; p++; i++; $\}$ while (i $<$ len);
+\item
+\href{https://github.com/OrenGitHub/klee/issues/23}{translated to Z3}
+\end{itemize}
+\item
+C to C under approximations of execution flow:
+\begin{itemize}
+\item
+for (i = 0; i $<$ len; i++) \\
+~ ~ ~ ~if ('A' $\leq$ p[i] $\leq$ 'Z') $\{$ p[i] = p[i] + 32; $\}$
+\item
+\href{https://github.com/OrenGitHub/klee/issues/25}{replacing with: nop+string constraints will help here}
+\item
+if (fiLong $\neq$ NULL) $\{$ \\
+~ ~ ~ ~fi = strrchr (fiLong, '/');\\
+~ ~ ~ ~if (fi == NULL) $\{$ fi = strrchr (fiLong, '\textbackslash \textbackslash'); $\}$ \\
+~ ~ ~ ~if (fi $\neq$ NULL) $\{$ fi++;        $\}$ \\
+~ ~ ~ ~if (fi   ==   NULL) $\{$ fi = fiLong; $\}\}$ \\
+\item
+Replacing with: fi=fiLong+string constraints will help.
+\end{itemize}
+\item
+Improve reads/writes with caching / reduction of versions
+\item
+Context aware sorts in SE
+%%%%%%%%%%%%%%%%
+% Items :: End %
+%%%%%%%%%%%%%%%%
+\end{itemize}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SECTION :: Running Example %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Running Example} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Frame Title :: Running Example %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\frame{\frametitle{Sort Aware Symbolic Execution}
 %%%%%%%%%%%%%%%%%%
 % Items :: Begin %
 %%%%%%%%%%%%%%%%%%
