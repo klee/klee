@@ -72,47 +72,16 @@
 %%%%%%%%%%%%%%%%%%
 \begin{itemize}
 \item
-str.klee is gradually becoming more stable.
+String intensive programs are abundant,
+and analyzing them naively in a symbolic execution framework
+is hard: string library code is analyzed as a bundle with
+application code, spawning a huge amount of irrelevent states. 
 \item
-A multitude of artificial examples supports str.klee
+String SMT solvers allow a direct encoding of string library
+code to SMT formulae, thus reducing dramatically the number
+of explored states.
 \item
 The following four (previously known) CVEs are discovered:
-\begin{table}[h]
-\centering
-\begin{tabular}{ |c|c|c| }
-\hline
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    &    str.klee    &  vanilla.klee  \\
-CVE & discovery time & discovery time \\
-    &    (minutes)   &    (minutes)   \\
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\hline
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\href{https://www.cvedetails.com/cve/CVE-2017-9430}{dnstracer CVE-2017-9430} &
-31                                                                           &
-33                                                                          \\
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\hline
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\href{https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2006-2656}{libtiff CVE-2006-2656} &
-34                                                                                         &
-29                                                                                        \\
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\hline
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\href{https://www.cvedetails.com/cve/CVE-2001-1228/}{gzip CVE-2001-1228} &
-30                                                                       &
-$-$                                                                     \\
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\hline
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\href{https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2006-2465}{mp3info CVE-2006-2465} &
-56                                                                                         &
-$-$                                                                                       \\
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\hline
-\end{tabular}
-\end{table}
 \end{itemize}
 }
 
