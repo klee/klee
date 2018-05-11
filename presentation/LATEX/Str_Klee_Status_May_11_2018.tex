@@ -136,53 +136,116 @@ Which expression should be converted? we say: whichever is faster!
 \end{itemize}
 }
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% SECTION :: Running Example %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Running Example} 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Frame Title :: Running Example %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\frame{\frametitle{Sort Aware Symbolic Execution}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SECTION :: Accelerations %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Accelerations} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Frame Title :: Accelerations %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\frame{\frametitle{Accelerations List}
 %%%%%%%%%%%%%%%%%%
 % Items :: Begin %
 %%%%%%%%%%%%%%%%%%
 \begin{itemize}
 \item
-C to C transformations, like \href{https://github.com/OrenGitHub/klee/issues/24}{this example}
+Context Aware Sorts
+\begin{itemize}
+\item ((*s) == 'a') vs. ((*s) $<<$ 5)
+\end{itemize}
 \item
-C to Z3 transformations, like these examples:
+Tailored String Semantics
+\begin{itemize}
+\item int strcmp(s1,s2) $\rightarrow$ bool strcmp(s1,s2)
+\item char *strchr(s,c) $\rightarrow$ bool strchr(s,c)
+\end{itemize}
+\item
+Solver Performance Driven Query Rewriting
+\begin{itemize}
+\item str.indexof $\rightarrow$ str.contains
+\item str.indexof $\rightarrow$ str.len
+\item automatic deducing of query invariants
+\end{itemize}
+\item
+Reducing Number of States with C to C translations:
+
+char *f(char *d,char *s)
+$\{$
+while (*d++ = *s++);
+$\}$
+return d;
+$\rightarrow$ \\
+strcpy(d,s);\\
+return d+strlen(src);
+%%%%%%%%%%%%%%%%
+% Items :: End %
+%%%%%%%%%%%%%%%%
+\end{itemize}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SECTION :: Accelerations %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Accelerations} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Frame Title :: Accelerations %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\frame{\frametitle{Accelerations :: Context Aware Sorts}
+%%%%%%%%%%%%%%%%%%
+% Items :: Begin %
+%%%%%%%%%%%%%%%%%%
 \begin{itemize}
 \item
-while (tmp[0] == 'A' $||$ tmp[1] == 'B') $\{$tmp++;$\}$
+Sort conversions are expansive, and in some cases they can be avoided altogether.
+Think of the following examples:\\
+~ ~ ~ ~if ((*s) == ' ')           $\{$ s++; $\}$ \\
+~ ~ ~ ~if (((*s) $<<$ 3) $<$ 100) $\{$ s++; $\}$ \\
+Since the returned value from (*s) has a string sort,
+then in order to shift it left, it needs to be converted to a bit vector.
+In constrast, if it is simply compared to the space character,
+then it needs not be converted at all.
 \item
-\href{https://github.com/OrenGitHub/klee/issues/22}{translated to Z3}
-\item
-do $\{$ $*$p = 0; p++; i++; $\}$ while (i $<$ len);
-\item
-\href{https://github.com/OrenGitHub/klee/issues/23}{translated to Z3}
-\end{itemize}
+A simple pre processing of the program can easily identify locations
+where such conversions are not needed.
 \item
 C to C under approximations of execution flow:
-\begin{itemize}
-\item
-for (i = 0; i $<$ len; i++) \\
-~ ~ ~ ~if ('A' $\leq$ p[i] $\leq$ 'Z') $\{$ p[i] = p[i] + 32; $\}$
-\item
-\href{https://github.com/OrenGitHub/klee/issues/25}{replacing with: nop+string constraints will help here}
-\item
-if (fiLong $\neq$ NULL) $\{$ \\
-~ ~ ~ ~fi = strrchr (fiLong, '/');\\
-~ ~ ~ ~if (fi == NULL) $\{$ fi = strrchr (fiLong, '\textbackslash \textbackslash'); $\}$ \\
-~ ~ ~ ~if (fi $\neq$ NULL) $\{$ fi++;        $\}$ \\
-~ ~ ~ ~if (fi   ==   NULL) $\{$ fi = fiLong; $\}\}$ \\
-\item
-Replacing with: fi=fiLong+string constraints will help.
-\end{itemize}
 \item
 Improve reads/writes with caching / reduction of versions
 \item
 Context aware sorts in SE
+%%%%%%%%%%%%%%%%
+% Items :: End %
+%%%%%%%%%%%%%%%%
+\end{itemize}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SECTION :: Accelerations %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Accelerations} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Frame Title :: Accelerations %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\frame{\frametitle{Accelerations :: (Solver) Performance Driven Semantics}
+%%%%%%%%%%%%%%%%%%
+% Items :: Begin %
+%%%%%%%%%%%%%%%%%%
+\begin{itemize}
+\item
+The semantics of string library functions often contains more
+details then actually needed by users.
+For example, whenever two strings are compared with strcmp(s1,s2),
+the returned value is either $0$ when they areidentical,
+or the ascii difference between the first place of change is returned.
+Almost all users simply ask whether the result is $0$ or not.
+This gives a chance for a sound optimization, since it enables us
+to use the native returned boolean from the solver, and ignore
+the ascii difference since the program makes no use of this value.
+\item
+Similarly, some programs use strchr to simply check the existence of
+a certain character in a string:
+
+if (strchr( s, ' ')) $\{$ return -1; $\}$
 %%%%%%%%%%%%%%%%
 % Items :: End %
 %%%%%%%%%%%%%%%%
