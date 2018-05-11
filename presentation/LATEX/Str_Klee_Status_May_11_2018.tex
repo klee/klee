@@ -91,59 +91,45 @@ Several string solvers exist:
 \href{https://ece.uwaterloo.ca/~vganesh/Publications_files/vg2017-Z3str3-FMCAD2017.pdf}{Z3str3},
 and they have been used (to some extent) to analyze SQL querries and
 programs in Java, JavaScript and PHP.
+\item
+str.KLEE enables symbolic execution of arbitrary C programs,
+which are (considerably) more widespread than previously mentioned
+PL, and have a more complicated semantics.
+It uses KLEE together with Z3, state-of-the-art SE and solver.
 %%%%%%%%%%%%%%%%
 % Items :: End %
 %%%%%%%%%%%%%%%%
 \end{itemize}
 }
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% SECTION :: Running Example %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Running Example} 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Frame Title :: Running Example %
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\frame{\frametitle{Sort Aware Symbolic Execution}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SECTION :: Implementation (High Level) Description %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Implementation (High Level) Description} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Frame Title :: Implementation (High Level) Description %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\frame{\frametitle{Implementation (High Level) Description}
 %%%%%%%%%%%%%%%%%%
 % Items :: Begin %
 %%%%%%%%%%%%%%%%%%
 \begin{itemize}
 \item
-
+Resolving occurrences of program string variables is
+not trivial in C, which is weakly typed, and allows
+taking the memory location of stored variables:
+msg$\rightarrow$contents = (void *) $\&$buf;
 \item
-C to Z3 transformations, like these examples:
-\begin{itemize}
+We use the term abstract buffers to denote the corresponding solver string variables.
+As the program modifies strings with writes, strcpy etc.
+abstrct buffers accumulate these changes by keeping consecutive
+versions for abstract buffers.
 \item
-while (tmp[0] == 'A' $||$ tmp[1] == 'B') $\{$tmp++;$\}$
-\item
-\href{https://github.com/OrenGitHub/klee/issues/22}{translated to Z3}
-\item
-do $\{$ $*$p = 0; p++; i++; $\}$ while (i $<$ len);
-\item
-\href{https://github.com/OrenGitHub/klee/issues/23}{translated to Z3}
-\end{itemize}
-\item
-C to C under approximations of execution flow:
-\begin{itemize}
-\item
-for (i = 0; i $<$ len; i++) \\
-~ ~ ~ ~if ('A' $\leq$ p[i] $\leq$ 'Z') $\{$ p[i] = p[i] + 32; $\}$
-\item
-\href{https://github.com/OrenGitHub/klee/issues/25}{replacing with: nop+string constraints will help here}
-\item
-if (fiLong $\neq$ NULL) $\{$ \\
-~ ~ ~ ~fi = strrchr (fiLong, '/');\\
-~ ~ ~ ~if (fi == NULL) $\{$ fi = strrchr (fiLong, '\textbackslash \textbackslash'); $\}$ \\
-~ ~ ~ ~if (fi $\neq$ NULL) $\{$ fi++;        $\}$ \\
-~ ~ ~ ~if (fi   ==   NULL) $\{$ fi = fiLong; $\}\}$ \\
-\item
-Replacing with: fi=fiLong+string constraints will help.
-\end{itemize}
-\item
-Improve reads/writes with caching / reduction of versions
-\item
-Context aware sorts in SE
+Using a many sorted solver inevitably introduces sort conversion issues.
+Suppose that a bitvector is added to an integer:
+(i $<<$ 5) + strlen( msg )
+and it is sound to do this addition in both bitvector and integer domains.
+Which expression should be converted? we say: whichever is faster!
 %%%%%%%%%%%%%%%%
 % Items :: End %
 %%%%%%%%%%%%%%%%
