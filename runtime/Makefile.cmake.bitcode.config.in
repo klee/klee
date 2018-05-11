@@ -22,7 +22,6 @@ ROOT_OBJ := @CMAKE_CURRENT_BINARY_DIR@/runtime_build_@KLEE_RUNTIME_BUILD_TYPE@/
 
 # FIXME: For legacy reasons this is where the libraries need to end up
 ARCHIVE_DEST := @KLEE_RUNTIME_DIRECTORY@
-MODULE_DEST := $(ARCHIVE_DEST)
 
 # Build type
 IS_RELEASE := @RUNTIME_IS_RELEASE@
