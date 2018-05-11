@@ -282,4 +282,26 @@ if (strchr( s, ' ')) $\{$ return -1; $\}$
 \end{itemize}
 }
 
+\frame{\frametitle{Implementation :: Details}
+\begin{itemize}
+\item Keep KLEE's memory model: Each allocation has a MemoryObject.
+\item Use $markString$ calls to tag memory objects which we want to consider as strings.
+\item Writes to strings get translated to $version_{i+1} = prefixVersion_i ++ newChar ++ suffixVersion_i$ 
+\item For each read we introduce a new BitVectorVariable, that is return of the read. Then we make a string out of it and assert it is equal to the desired read location
+\item Allocations of symbolic sizes are currently conretize to a value between 10 and 128. (Easy to change this)
+\item Currently support $strcmp$, $str(n)cpy$, $strchr$ and $strlen$.
+\item Calls to these intercepted in SpecialFunctionHandler, arguments resolved to MemoryObjects and through them to AbstractBuffers. Then appropriate constraints are added to the state.
+\end{itemize}
+}
+
+\frame{\frametitle{Implementation :: Integration with KLEE}
+\begin{itemize}
+\item KLEE is very bitvector orientated: expressions need witdh, and symbolic things can only be Arrays of bitvectors.
+\item Width is important to corectly interface with Extract and Concat expression and Casting.
+\item Arrays are important to correctly interface with the solver and test case generation
+\item Currently we set the width of all Strings/Ints to 8 (se they fit in1 memory cell) and special case on type (we started to type the Expression language)
+\item Arrays for Strings are represented as 0 length Arrays of bitvectors (seems to work well enough so far)
+\end{itemize}
+}
+
 \end{document}
