@@ -140,30 +140,6 @@ clean::
 	@echo "Removing dependency files"
 	$(Verb) $(RM) -f $(BC_FILES:.bc=.dep)
 
-
-ifndef MODULE_NAME
-ifndef ARCHIVE_NAME
-$(error MODULE_NAME or ARCHIVE_NAME must be defined)
-endif
-endif
-
-ifdef MODULE_NAME
-MODULE_FILE := $(MODULE_DEST)/$(MODULE_NAME).bc
-build_at_level:: $(MODULE_FILE)
-
-# Rule for building LLVM bitcode module
-# NOTE: Dependency on $(BC_FILE_LIST_FILE) is to force
-# rebuild when list of BC_FILES changes.
-$(MODULE_FILE): $(BC_FILES) $(BC_FILE_LIST_FILE)
-	$(Verb) $(MKDIR) -p $(MODULE_DEST)
-	@echo "Creating LLVM module $@"
-	$(Verb)$(LLVM_LINK) -o $@ $(BC_FILES)
-
-clean::
-	@echo "Removing LLVM module $(MODULE_FILE)"
-	$(Verb) $(RM) -f $(MODULE_FILE)
-endif # MODULE_NAME
-
 ifdef ARCHIVE_NAME
 ARCHIVE_FILE := $(ARCHIVE_DEST)/lib$(ARCHIVE_NAME).bca
 
@@ -181,7 +157,8 @@ $(ARCHIVE_FILE): $(BC_FILES) $(BC_FILE_LIST_FILE)
 clean::
 	@echo "Removing LLVM bitcode archive $(ARCHIVE_FILE)"
 	$(Verb) $(RM) -f $(ARCHIVE_FILE)
-
+else
+$(error ARCHIVE_NAME must be defined)
 endif # ARCHIVE_NAME
 
 
@@ -207,7 +184,6 @@ debug_vars:
 	@echo "LLVMCC.Flags := $(LLVMCC.Flags)"
 	@echo "LLVMCC.ExtraFlags := $(LLVMCC.ExtraFlags)"
 	@echo "LLVMCC.Warnings := $(LLVMCC.Warnings)"
-	@echo "MODULE_FILE := $(MODULE_FILE)"
 	@echo "ROOT_OBJ := $(ROOT_OBJ)"
 	@echo "RUNTIME_CONFIG_STRING := $(RUNTIME_CONFIG_STRING)"
 	@echo "SRC_DIR := $(SRC_DIR)"
