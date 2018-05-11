@@ -167,16 +167,19 @@ Solver Performance Driven Query Rewriting
 \item automatic deducing of query invariants
 \end{itemize}
 \item
-Reducing Number of States with C to C translations:
-
+Reducing Number of States with C to C translations:\\
 char *f(char *d,char *s)
 $\{$
 while (*d++ = *s++);
 $\}$
 return d;
-$\rightarrow$ \\
-strcpy(d,s);\\
-return d+strlen(src);
+$\rightarrow$ strcpy(d,s); return d+strlen(src);
+\item
+Caching reads/writes.
+\item
+Reducing number of generated abtract buffer versions.
+\item
+
 %%%%%%%%%%%%%%%%
 % Items :: End %
 %%%%%%%%%%%%%%%%
@@ -207,12 +210,6 @@ then it needs not be converted at all.
 \item
 A simple pre processing of the program can easily identify locations
 where such conversions are not needed.
-\item
-C to C under approximations of execution flow:
-\item
-Improve reads/writes with caching / reduction of versions
-\item
-Context aware sorts in SE
 %%%%%%%%%%%%%%%%
 % Items :: End %
 %%%%%%%%%%%%%%%%
@@ -226,7 +223,40 @@ Context aware sorts in SE
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Frame Title :: Accelerations %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\frame{\frametitle{Accelerations :: (Solver) Performance Driven Semantics}
+\frame{\frametitle{Accelerations :: Tailored String Semantics}
+%%%%%%%%%%%%%%%%%%
+% Items :: Begin %
+%%%%%%%%%%%%%%%%%%
+\begin{itemize}
+\item
+The semantics of string library functions often contains more
+details then actually needed by users.
+For example, whenever two strings are compared with strcmp(s1,s2),
+the returned value is either $0$ when they areidentical,
+or the ascii difference between the first place of change is returned.
+Almost all users simply ask whether the result is $0$ or not.
+This gives a chance for a sound optimization, since it enables us
+to use the native returned boolean from the solver, and ignore
+the ascii difference since the program makes no use of this value.
+\item
+Similarly, some programs use strchr to simply check the existence of
+a certain character in a string:
+
+if (strchr( s, ' ')) $\{$ return -1; $\}$
+%%%%%%%%%%%%%%%%
+% Items :: End %
+%%%%%%%%%%%%%%%%
+\end{itemize}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SECTION :: Accelerations %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Accelerations} 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Frame Title :: Accelerations %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\frame{\frametitle{Accelerations :: Query Rewriting}
 %%%%%%%%%%%%%%%%%%
 % Items :: Begin %
 %%%%%%%%%%%%%%%%%%
