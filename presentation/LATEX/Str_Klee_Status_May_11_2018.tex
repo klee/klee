@@ -264,20 +264,21 @@ This enables a faster query.
 %%%%%%%%%%%%%%%%%%
 \begin{itemize}
 \item
-The semantics of string library functions often contains more
-details then actually needed by users.
-For example, whenever two strings are compared with strcmp(s1,s2),
-the returned value is either $0$ when they areidentical,
-or the ascii difference between the first place of change is returned.
-Almost all users simply ask whether the result is $0$ or not.
-This gives a chance for a sound optimization, since it enables us
-to use the native returned boolean from the solver, and ignore
-the ascii difference since the program makes no use of this value.
+Some queries happen often, like boundaries checks before each strcpy operation.
+The solver tries to figure out whether the first null termination of the source
+can be larger than the destination's size. As it so happens, sometimes the
+source buffer has no other constraints, and so clearly the null termination 
+can be the very last byte. In these cases, replacing str.indexof with str.len
+is much faster.
 \item
-Similarly, some programs use strchr to simply check the existence of
-a certain character in a string:
-
-if (strchr( s, ' ')) $\{$ return -1; $\}$
+In the strchr case described before, str.indexof can be replaced with str.contains
+which is much faster.
+\item
+Some queries deal with very large ($>$ 1000 bytes long) strings.
+As the solver struggles with the huge size,
+it is sometimes possible to automatically prove an equivalent satisfiable query
+with much shorter sizes, and infer back the model from the small string
+to the large original string
 %%%%%%%%%%%%%%%%
 % Items :: End %
 %%%%%%%%%%%%%%%%
