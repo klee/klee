@@ -23,7 +23,7 @@
 int exe_selinux = 1;
 
 /* NULL is the default policy behavior */
-KLEE_SELINUX_CTX_CONST char *create_con = NULL;
+security_context_t create_con = NULL;
 
 
 int is_selinux_enabled() {
@@ -33,13 +33,13 @@ int is_selinux_enabled() {
 
 /***/
 
-int getfscreatecon(char **context) {
-  *context = (char *)create_con;
+int getfscreatecon(security_context_t *context) {
+  *context = create_con;
   return 0;
 }
 
 
-int setfscreatecon(KLEE_SELINUX_CTX_CONST char *context) {
+int setfscreatecon(security_context_t context) {
   if (context == NULL) {
     create_con = context;
     return 0;
@@ -56,7 +56,7 @@ int setfscreatecon(KLEE_SELINUX_CTX_CONST char *context) {
 
 /***/
 
-int setfilecon(const char *path, KLEE_SELINUX_CTX_CONST char *con) {
+int setfilecon(const char *path, security_context_t con) {
   if (con)
     return 0;
   
@@ -64,17 +64,32 @@ int setfilecon(const char *path, KLEE_SELINUX_CTX_CONST char *con) {
   return -1;  
 }
 
-int lsetfilecon(const char *path, KLEE_SELINUX_CTX_CONST char *con) {
+int lsetfilecon(const char *path, security_context_t con) {
   return setfilecon(path, con);
 }
 
-int fsetfilecon(int fd, KLEE_SELINUX_CTX_CONST char *con) {
+int fsetfilecon(int fd, security_context_t con) {
   return setfilecon("", con);
 }
 
+int getfilecon(const char *path, security_context_t* con) {
+  errno = ENODATA;
+  return -1;
+}
+
+int lgetfilecon(const char *path, security_context_t* con) {
+  return getfilecon(path, con);
+}
+
+int fgetfilecon(int fd, security_context_t* con) {
+  errno = ENODATA;
+  return -1;
+}
+
+
 /***/
 
-void freecon(char *con) {}
-void freeconary(char **con) {}
+void freecon(security_context_t con) {}
+void freeconary(security_context_t *con) {}
 
 #endif

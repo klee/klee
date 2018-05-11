@@ -7,46 +7,47 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define _XOPEN_SOURCE 700
-
-#include <errno.h>
-#include <limits.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
+#include <errno.h>
+#include <signal.h>
 #include <time.h>
-#include <unistd.h>
 #include <utime.h>
 #include <utmp.h>
+#include <unistd.h>
+#include <limits.h>
+#include <stdlib.h>
 #include <sys/mman.h>
-#include <sys/resource.h>
 #include <sys/stat.h>
+#include <sys/resource.h>
 #include <sys/times.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-
+#include <sys/syscall.h>
+#include <sys/socket.h>
+#include <klee/klee.h>
 #include "klee/Config/config.h"
 
 void klee_warning(const char*);
 void klee_warning_once(const char*);
+int klee_get_errno(void);
 
 /* Silent ignore */
 
-int __syscall_rt_sigaction(int signum, const struct sigaction *act,
+int __syscall_rt_sigaction(int signum, const struct sigaction *act, 
                            struct sigaction *oldact, size_t _something)
      __attribute__((weak));
 
-int __syscall_rt_sigaction(int signum, const struct sigaction *act,
+int __syscall_rt_sigaction(int signum, const struct sigaction *act, 
                            struct sigaction *oldact, size_t _something) {
   klee_warning_once("silently ignoring");
   return 0;
 }
-
-int sigaction(int signum, const struct sigaction *act,
+/*
+int sigaction(int signum, const struct sigaction *act, 
               struct sigaction *oldact) __attribute__((weak));
 
-int sigaction(int signum, const struct sigaction *act,
+int sigaction(int signum, const struct sigaction *act, 
               struct sigaction *oldact) {
   klee_warning_once("silently ignoring");
   return 0;
@@ -58,30 +59,32 @@ int sigprocmask(int how, const sigset_t *set, sigset_t *oldset) {
   klee_warning_once("silently ignoring");
   return 0;
 }
-
+*/
 /* Not even worth warning about these */
+/*
 int fdatasync(int fd) __attribute__((weak));
 int fdatasync(int fd) {
   return 0;
 }
-
+*/
 /* Not even worth warning about this */
+/*
 void sync(void) __attribute__((weak));
 void sync(void) {
 }
-
+*/
 /* Error ignore */
 
 extern int __fgetc_unlocked(FILE *f);
 extern int __fputc_unlocked(int c, FILE *f);
-
+/*
 int __socketcall(int type, int *args) __attribute__((weak));
 int __socketcall(int type, int *args) {
   klee_warning("ignoring (EAFNOSUPPORT)");
   errno = EAFNOSUPPORT;
   return -1;
 }
-
+*/
 int _IO_getc(FILE *f) __attribute__((weak));
 int _IO_getc(FILE *f) {
   return __fgetc_unlocked(f);
@@ -91,7 +94,7 @@ int _IO_putc(int c, FILE *f) __attribute__((weak));
 int _IO_putc(int c, FILE *f) {
   return __fputc_unlocked(c, f);
 }
-
+/*
 int mkdir(const char *pathname, mode_t mode) __attribute__((weak));
 int mkdir(const char *pathname, mode_t mode) {
   klee_warning("ignoring (EIO)");
@@ -124,32 +127,37 @@ int link(const char *oldpath, const char *newpath) __attribute__((weak));
 int link(const char *oldpath, const char *newpath) {
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
-  return -1;
+  return -1;  
 }
 
 int symlink(const char *oldpath, const char *newpath) __attribute__((weak));
 int symlink(const char *oldpath, const char *newpath) {
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
-  return -1;
+  return -1;  
 }
-
+*/
+typedef int original_rename_t(const char*, const char*);
 int rename(const char *oldpath, const char *newpath) __attribute__((weak));
 int rename(const char *oldpath, const char *newpath) {
-  klee_warning("ignoring (EPERM)");
-  errno = EPERM;
-  return -1;
-}
+  klee_warning("Calling rename with possibly symbolic arguments");
 
+  int r = syscall(__NR_rename, oldpath, newpath);
+  if (-1 == r) {
+    errno = klee_get_errno();
+  }
+  return r;
+}
+/*
 int nanosleep(const struct timespec *req, struct timespec *rem) __attribute__((weak));
 int nanosleep(const struct timespec *req, struct timespec *rem) {
   return 0;
 }
-
+*/
 /* XXX why can't I call this internally? */
+
 int clock_gettime(clockid_t clk_id, struct timespec *res) __attribute__((weak));
 int clock_gettime(clockid_t clk_id, struct timespec *res) {
-  /* Fake */
   struct timeval tv;
   gettimeofday(&tv, NULL);
   res->tv_sec = tv.tv_sec;
@@ -163,7 +171,7 @@ int clock_settime(clockid_t clk_id, const struct timespec *res) {
   errno = EPERM;
   return -1;
 }
-
+/*
 time_t time(time_t *t) {
   struct timeval tv;
   gettimeofday(&tv, NULL);
@@ -173,16 +181,10 @@ time_t time(time_t *t) {
 }
 
 clock_t times(struct tms *buf) {
-  /* Fake */
-  if (!buf)
-    klee_warning("returning 0\n");
-  else {
-    klee_warning("setting all times to 0 and returning 0\n");
-    buf->tms_utime = 0;
-    buf->tms_stime = 0;
-    buf->tms_cutime = 0;
-    buf->tms_cstime = 0;
-  }
+  buf->tms_utime = 0;
+  buf->tms_stime = 0;
+  buf->tms_cutime = 0;
+  buf->tms_cstime = 0;
   return 0;
 }
 
@@ -229,45 +231,50 @@ int utime(const char *filename, const struct utimbuf *buf) {
   return -1;
 }
 
+int utimes(const char *filename, const struct timeval times[2]) __attribute__((weak));
+int utimes(const char *filename, const struct timeval times[2]) {
+  klee_warning("ignoring (EPERM)");
+  errno = EPERM;
+  return -1;
+}
+
 int futimes(int fd, const struct timeval times[2]) __attribute__((weak));
 int futimes(int fd, const struct timeval times[2]) {
   klee_warning("ignoring (EBADF)");
   errno = EBADF;
   return -1;
 }
-
+*/
 int strverscmp (__const char *__s1, __const char *__s2) {
   return strcmp(__s1, __s2); /* XXX no doubt this is bad */
 }
 
-#if __GLIBC_PREREQ(2, 25)
-#define gnu_dev_type	dev_t
-#else
-#define gnu_dev_type	unsigned long long int
-#endif
-
-unsigned int gnu_dev_major(gnu_dev_type __dev) __attribute__((weak));
-unsigned int gnu_dev_major(gnu_dev_type __dev) {
+unsigned int gnu_dev_major(unsigned long long int __dev) __attribute__((weak));
+unsigned int gnu_dev_major(unsigned long long int __dev) {
   return ((__dev >> 8) & 0xfff) | ((unsigned int) (__dev >> 32) & ~0xfff);
 }
 
-unsigned int gnu_dev_minor(gnu_dev_type __dev) __attribute__((weak));
-unsigned int gnu_dev_minor(gnu_dev_type __dev) {
+unsigned int gnu_dev_minor(unsigned long long int __dev) __attribute__((weak));
+unsigned int gnu_dev_minor(unsigned long long int __dev) {
   return (__dev & 0xff) | ((unsigned int) (__dev >> 12) & ~0xff);
 }
 
-gnu_dev_type gnu_dev_makedev(unsigned int __major, unsigned int __minor) __attribute__((weak));
-gnu_dev_type gnu_dev_makedev(unsigned int __major, unsigned int __minor) {
+unsigned long long int gnu_dev_makedev(unsigned int __major, unsigned int __minor) __attribute__((weak));
+unsigned long long int gnu_dev_makedev(unsigned int __major, unsigned int __minor) {
   return ((__minor & 0xff) | ((__major & 0xfff) << 8)
-          | (((gnu_dev_type) (__minor & ~0xff)) << 12)
-          | (((gnu_dev_type) (__major & ~0xfff)) << 32));
+	  | (((unsigned long long int) (__minor & ~0xff)) << 12)
+	  | (((unsigned long long int) (__major & ~0xfff)) << 32));
 }
 
 char *canonicalize_file_name (const char *name) __attribute__((weak));
 char *canonicalize_file_name (const char *name) {
-  return realpath(name, NULL);
+  char *res = malloc(PATH_MAX);
+  char *rp_res = realpath(name, res);
+  if (!rp_res)
+    free(res);
+  return rp_res;
 }
-
+/*
 int getloadavg(double loadavg[], int nelem) __attribute__((weak));
 int getloadavg(double loadavg[], int nelem) {
   klee_warning("ignoring (-1 result)");
@@ -308,11 +315,11 @@ pid_t waitid(idtype_t idtype, id_t id, siginfo_t *infop, int options) {
   errno = ECHILD;
   return -1;
 }
-
+*/
 /* ACL */
 
 /* FIXME: We need autoconf magic for this. */
-
+/*
 #ifdef HAVE_SYS_ACL_H
 
 #include <sys/acl.h>
@@ -561,3 +568,18 @@ int munmap(void*start, size_t length) {
   errno = EPERM;
   return -1;
 }
+*/
+char* setlocale(int a, char* b) __attribute__((weak));
+char* setlocale(int a, char* b) {
+  klee_warning("ignoring (EPERM)");
+  return 0;
+}
+
+char* getenv(const char* b) __attribute__((weak));
+char* getenv(const char* b) {
+  klee_warning("ignoring (EPERM)");
+  return 0;
+}
+
+//why is this needed? I don't know
+#include "sockets.c.inc"

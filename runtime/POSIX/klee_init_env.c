@@ -24,26 +24,102 @@ static void __emit_error(const char *msg) {
   klee_report_error(__FILE__, __LINE__, msg, "user.err");
 }
 
+static int __getodigit(const char c) {
+  return (('0' <= c) && (c <= '7')) ? (c - '0') : -1;
+}
+
+static int __getxdigit(const char c) {
+  return (('0' <= c) && (c <= '9')) ? (c - '0') :
+         (('A' <= c) && (c <= 'F')) ? (c - 'A') + 10:
+         (('a' <= c) && (c <= 'f')) ? (c - 'a') + 10: -1;
+}
+
 /* Helper function that converts a string to an integer, and
    terminates the program with an error message is the string is not a
    proper number */   
 static long int __str_to_int(char *s, const char *error_msg) {
   long int res = 0;
   char c;
+  int d;
+  int base = 10;
 
   if (!*s) __emit_error(error_msg);
-
+  if (s[0] == '0' && (s[1] == 'x' || s[1] == 'X')) {
+    base = 16;
+    s += 2;
+  }
   while ((c = *s++)) {
-    if (c == '\0') {
-      break;
-    } else if (c>='0' && c<='9') {
-      res = res*10 + (c - '0');
+    d = __getxdigit(c);
+    if (d != -1) {
+      res = res*base + d;
     } else {
       __emit_error(error_msg);
     }
   }
   return res;
 }
+
+
+/* Convert in-place, but it's okay because no escape sequences "expand". */
+static size_t __convert_escape_sequences(char *s)
+{
+  char *d0 = s, *d = s;
+
+  while (*s) {
+    if (*s != '\\')
+      *d++ = *s++;
+    else {
+      s++;
+      switch (*s++) {
+        int n[3];
+      default:  *d++ = s[-1]; break;
+      case 'a': *d++ = '\a'; break;
+      case 'b': *d++ = '\b'; break;
+      case 'f': *d++ = '\f'; break;
+      case 'n': *d++ = '\n'; break;
+      case 'r': *d++ = '\r'; break;
+      case 't': *d++ = '\t'; break;
+      case 'v': *d++ = '\v'; break;
+      case '0':
+      case '1':
+      case '2':
+      case '3':
+      case '4':
+      case '5':
+      case '6':
+      case '7':
+        n[0] = __getodigit(s[-1]);
+        if ((n[1] = __getodigit(*s)) >= 0) {
+          s++;
+          if ((n[2] = __getodigit(*s)) >= 0) {
+            s++;
+            *d++ = (n[0] << 6) | (n[1] << 3) | n[2];
+          }
+          else
+            *d++ = (n[0] << 3) | n[1];
+        }
+        else
+          *d++ = n[0];
+        break;
+      case 'x':
+        if ((n[0] = __getxdigit(*s)) >= 0) {
+          s++;
+          if ((n[1] = __getxdigit(*s)) >= 0) {
+            s++;
+            *d++ = (n[0] << 4) | n[1];
+          }
+          else
+            *d++ = n[0];
+        }
+        else /* error */
+          __emit_error("invalid escape sequence");
+        break;
+      }
+    }
+  }
+  return d - d0;
+}
+
 
 static int __isprint(const char c) {
   /* Assume ASCII */
@@ -67,7 +143,7 @@ static char *__get_sym_str(int numChars, char *name) {
   klee_make_symbolic(s, numChars+1, name);
 
   for (i=0; i<numChars; i++)
-    klee_posix_prefer_cex(s, __isprint(s[i]));
+    klee_prefer_cex(s, __isprint(s[i]));
   
   s[numChars] = '\0';
   return s;
@@ -90,9 +166,17 @@ void klee_init_env(int* argcPtr, char*** argvPtr) {
   char* new_argv[1024];
   unsigned max_len, min_argvs, max_argvs;
   unsigned sym_files = 0, sym_file_len = 0;
-  unsigned sym_stdin_len = 0;
+  unsigned sym_streams = 0, sym_stream_len = 0;
+  unsigned sym_dgrams = 0, sym_dgram_len = 0;
+
   int sym_stdout_flag = 0;
   int save_all_writes_flag = 0;
+  int one_line_streams_flag = 0;
+  fill_info_t stream_fill_info[100];
+  unsigned n_stream_fill_info = 0;
+  fill_info_t dgram_fill_info[100];
+  unsigned n_dgram_fill_info = 0;
+
   int fd_fail = 0;
   char** final_argv;
   char sym_arg_name[5] = "arg";
@@ -103,23 +187,18 @@ void klee_init_env(int* argcPtr, char*** argvPtr) {
 
   // Recognize --help when it is the sole argument.
   if (argc == 2 && __streq(argv[1], "--help")) {
-    __emit_error("klee_init_env\n\n\
+  __emit_error("klee_init_env\n\n\
 usage: (klee_init_env) [options] [program arguments]\n\
   -sym-arg <N>              - Replace by a symbolic argument with length N\n\
   -sym-args <MIN> <MAX> <N> - Replace by at least MIN arguments and at most\n\
                               MAX arguments, each with maximum length N\n\
-  -sym-files <NUM> <N>      - Make NUM symbolic files ('A', 'B', 'C', etc.),\n\
-                              each with size N\n\
-  -sym-stdin <N>            - Make stdin symbolic with size N.\n\
+  -sym-files <NUM> <N>      - Make stdin and up to NUM symbolic files, each\n\
+                              with maximum size N.\n\
   -sym-stdout               - Make stdout symbolic.\n\
-  -save-all-writes          - Allow write operations to execute as expected\n\
-                              even if they exceed the file size. If set to 0, all\n\
-                              writes exceeding the initial file size are discarded.\n\
-                              Note: file offset is always incremented.\n\
-  -max-fail <N>             - Allow up to N injected failures\n\
+  -max-fail <N>             - Allow up to <N> injected failures\n\
   -fd-fail                  - Shortcut for '-max-fail 1'\n\n");
   }
-
+  
   while (k < argc) {
     if (__streq(argv[k], "--sym-arg") || __streq(argv[k], "-sym-arg")) {
       const char *msg = "--sym-arg expects an integer argument <max-len>";
@@ -162,17 +241,8 @@ usage: (klee_init_env) [options] [program arguments]\n\
       sym_files = __str_to_int(argv[k++], msg);
       sym_file_len = __str_to_int(argv[k++], msg);
 
-    } else if (__streq(argv[k], "--sym-stdin") ||
-               __streq(argv[k], "-sym-stdin")) {
-      const char *msg =
-          "--sym-stdin expects one integer argument <sym-stdin-len>";
-
-      if (++k == argc)
-        __emit_error(msg);
-
-      sym_stdin_len = __str_to_int(argv[k++], msg);
-    } else if (__streq(argv[k], "--sym-stdout") ||
-               __streq(argv[k], "-sym-stdout")) {
+    }
+    else if (__streq(argv[k], "--sym-stdout") || __streq(argv[k], "-sym-stdout")) {
       sym_stdout_flag = 1;
       k++;
     }
@@ -191,6 +261,112 @@ usage: (klee_init_env) [options] [program arguments]\n\
 		
       fd_fail = __str_to_int(argv[k++], msg);
     }
+    else if (__streq(argv[k], "--sym-streams") || __streq(argv[k], "-sym-streams")) {
+      const char* msg = "--sym-streams expects two integer arguments <no-streams> <bytes-per-stream>";
+
+      if (k+2 >= argc)
+        __emit_error(msg);
+
+      k++;
+      sym_streams = __str_to_int(argv[k++], msg);
+      sym_stream_len = __str_to_int(argv[k++], msg);
+    }
+    else if (__streq(argv[k], "--sym-datagrams") || __streq(argv[k], "-sym-datagrams")) {
+      const char* msg = "--sym-datagrams expects two integer arguments <no-datagrams> <bytes-per-datagram>";
+
+      if (k+2 >= argc)
+        __emit_error(msg);
+
+      k++;
+      sym_dgrams = __str_to_int(argv[k++], msg);
+      sym_dgram_len = __str_to_int(argv[k++], msg);
+    }
+    else if (__streq(argv[k], "--one-line-streams") || __streq(argv[k], "-one-line-streams")) {
+      one_line_streams_flag = 1;
+      k++;
+    }
+    else if (__streq(argv[k], "--fill-streams") || __streq(argv[k], "-fill-streams")) {
+      const char* msg = "--fill-streams expects arguments <offset> \"set\" <length> <value> or <offset> \"copy\" <string> or <offset> \"file\" <string>";
+      const char* msg2 = "--fill-streams: too many blocks";
+
+      if (n_stream_fill_info >= sizeof(stream_fill_info) / sizeof(*stream_fill_info))
+        __emit_error(msg2);
+      if (k + 2 >= argc)
+        __emit_error(msg);
+      k++;
+      stream_fill_info[n_stream_fill_info].offset = __str_to_int(argv[k++], msg);
+      if (__streq(argv[k], "set")) {
+        k++;
+        if (k + 1 >= argc)
+          __emit_error(msg);
+        stream_fill_info[n_stream_fill_info].fill_method = fill_set;
+        stream_fill_info[n_stream_fill_info].length      = __str_to_int(argv[k++], msg);
+        stream_fill_info[n_stream_fill_info].arg.value   = __str_to_int(argv[k++], msg);
+        n_stream_fill_info++;
+      }
+      else if (__streq(argv[k], "copy")) {
+        k++;
+        if (k >= argc)
+          __emit_error(msg);
+        stream_fill_info[n_stream_fill_info].fill_method = fill_copy;
+        stream_fill_info[n_stream_fill_info].arg.string  = argv[k++];
+        stream_fill_info[n_stream_fill_info].length      =
+          __convert_escape_sequences(stream_fill_info[n_stream_fill_info].arg.string);
+        n_stream_fill_info++;
+      }
+      else if (__streq(argv[k], "file")) {
+        k++;
+        if (k >= argc)
+          __emit_error(msg);
+        stream_fill_info[n_stream_fill_info].fill_method = fill_file;
+        stream_fill_info[n_stream_fill_info].arg.string  = argv[k++];
+        n_stream_fill_info++;
+      }
+      else
+        __emit_error(msg);
+
+    }
+    else if (__streq(argv[k], "--fill-datagrams") || __streq(argv[k], "-fill-datagrams")) {
+      const char* msg = "--fill-datagrams expects arguments <offset> \"set\" <length> <value> or <offset> \"copy\" <string>";
+      const char* msg2 = "--fill-datagrams: too many blocks";
+
+      if (n_dgram_fill_info >= sizeof(dgram_fill_info) / sizeof(*dgram_fill_info))
+        __emit_error(msg2);
+      if (k + 2 >= argc)
+        __emit_error(msg);
+      k++;
+      dgram_fill_info[n_dgram_fill_info].offset = __str_to_int(argv[k++], msg);
+      if (__streq(argv[k], "set")) {
+        k++;
+        if (k + 1 >= argc)
+          __emit_error(msg);
+        dgram_fill_info[n_dgram_fill_info].fill_method = fill_set;
+        dgram_fill_info[n_dgram_fill_info].length      = __str_to_int(argv[k++], msg);
+        dgram_fill_info[n_dgram_fill_info].arg.value   = __str_to_int(argv[k++], msg);
+        n_dgram_fill_info++;
+      }
+      else if (__streq(argv[k], "copy")) {
+        k++;
+        if (k >= argc)
+          __emit_error(msg);
+        dgram_fill_info[n_dgram_fill_info].fill_method = fill_copy;
+        dgram_fill_info[n_dgram_fill_info].arg.string  = argv[k++];
+        dgram_fill_info[n_dgram_fill_info].length      =
+          __convert_escape_sequences(dgram_fill_info[n_dgram_fill_info].arg.string);
+        n_dgram_fill_info++;
+      }
+      else if (__streq(argv[k], "file")) {
+        k++;
+        if (k >= argc)
+          __emit_error(msg);
+        dgram_fill_info[n_dgram_fill_info].fill_method = fill_file;
+        dgram_fill_info[n_dgram_fill_info].arg.string  = argv[k++];
+        n_dgram_fill_info++;
+      }
+      else
+        __emit_error(msg);
+
+    }
     else {
       /* simply copy arguments */
       __add_arg(&new_argc, new_argv, argv[k++], 1024);
@@ -205,7 +381,13 @@ usage: (klee_init_env) [options] [program arguments]\n\
   *argcPtr = new_argc;
   *argvPtr = final_argv;
 
-  klee_init_fds(sym_files, sym_file_len, sym_stdin_len, sym_stdout_flag,
-                save_all_writes_flag, fd_fail);
+  klee_init_fds(sym_files, sym_file_len,
+                sym_stdout_flag, save_all_writes_flag,
+                sym_streams, sym_stream_len,
+                sym_dgrams, sym_dgram_len,
+                fd_fail, one_line_streams_flag,
+                stream_fill_info, n_stream_fill_info,
+                dgram_fill_info, n_dgram_fill_info);
+
 }
 
