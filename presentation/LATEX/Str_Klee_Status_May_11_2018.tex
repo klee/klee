@@ -179,7 +179,8 @@ Caching reads/writes.
 \item
 Reducing number of generated abtract buffer versions.
 \item
-
+Under approximation of programs paths.
+For example, Ignoring toUpper and adding relevant constraints.
 %%%%%%%%%%%%%%%%
 % Items :: End %
 %%%%%%%%%%%%%%%%
@@ -205,7 +206,7 @@ Think of the following examples:\\
 ~ ~ ~ ~if (((*s) $<<$ 3) $<$ 100) $\{$ s++; $\}$ \\
 Since the returned value from (*s) has a string sort,
 then in order to shift it left, it needs to be converted to a bit vector.
-In constrast, if it is simply compared to the space character,
+In constrast, if it is simply compared to the white-space character,
 then it needs not be converted at all.
 \item
 A simple pre processing of the program can easily identify locations
@@ -231,18 +232,19 @@ where such conversions are not needed.
 \item
 The semantics of string library functions often contains more
 details then actually needed by users.
-For example, whenever two strings are compared with strcmp(s1,s2),
-the returned value is either $0$ when they areidentical,
-or the ascii difference between the first place of change is returned.
-Almost all users simply ask whether the result is $0$ or not.
-This gives a chance for a sound optimization, since it enables us
-to use the native returned boolean from the solver, and ignore
-the ascii difference since the program makes no use of this value.
 \item
-Similarly, some programs use strchr to simply check the existence of
-a certain character in a string:
-
-if (strchr( s, ' ')) $\{$ return -1; $\}$
+For example, whenever two strings are compared with strcmp(s1,s2),
+the returned value is either $0$ when they are identical,
+or the ascii difference between the first place of change.
+\item
+Usually users just ask whether the result is $0$ or not.
+This gives a chance for a sound optimization, since it enables us
+to use the native returned boolean sort from the solver
+\item
+Similarly, it is quite usual to use strchr to check the existence of
+a certain character in a string:\\
+if (strchr( s, ' ')) $\{$ return -1; $\}$\\
+This enables a faster query.
 %%%%%%%%%%%%%%%%
 % Items :: End %
 %%%%%%%%%%%%%%%%
