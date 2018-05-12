@@ -49,8 +49,8 @@ class RaiseAsmPass : public llvm::ModulePass {
 
 public:
   RaiseAsmPass() : llvm::ModulePass(ID), TLI(0) {}
-  
-  virtual bool runOnModule(llvm::Module &M);
+
+  bool runOnModule(llvm::Module &M) override;
 };
 
   // This is a module pass because it can add and delete module
@@ -62,12 +62,12 @@ class IntrinsicCleanerPass : public llvm::ModulePass {
 
   bool runOnBasicBlock(llvm::BasicBlock &b, llvm::Module &M);
 public:
-  IntrinsicCleanerPass(const llvm::DataLayout &TD, bool LI = true)
+  IntrinsicCleanerPass(const llvm::DataLayout &TD)
       : llvm::ModulePass(ID), DataLayout(TD),
         IL(new llvm::IntrinsicLowering(TD)) {}
   ~IntrinsicCleanerPass() { delete IL; } 
   
-  virtual bool runOnModule(llvm::Module &M);
+  bool runOnModule(llvm::Module &M) override;
 };
   
   // performs two transformations which make interpretation
@@ -87,15 +87,15 @@ class PhiCleanerPass : public llvm::FunctionPass {
 
 public:
   PhiCleanerPass() : llvm::FunctionPass(ID) {}
-  
-  virtual bool runOnFunction(llvm::Function &f);
+
+  bool runOnFunction(llvm::Function &f) override;
 };
   
 class DivCheckPass : public llvm::ModulePass {
   static char ID;
 public:
   DivCheckPass(): ModulePass(ID) {}
-  virtual bool runOnModule(llvm::Module &M);
+  bool runOnModule(llvm::Module &M) override;
 };
 
 /// This pass injects checks to check for overshifting.
@@ -116,7 +116,7 @@ class OvershiftCheckPass : public llvm::ModulePass {
   static char ID;
 public:
   OvershiftCheckPass(): ModulePass(ID) {}
-  virtual bool runOnModule(llvm::Module &M);
+  bool runOnModule(llvm::Module &M) override;
 };
 
 /// LowerSwitchPass - Replace all SwitchInst instructions with chained branch
@@ -125,10 +125,10 @@ public:
 class LowerSwitchPass : public llvm::FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  LowerSwitchPass() : FunctionPass(ID) {} 
-  
-  virtual bool runOnFunction(llvm::Function &F);
-  
+  LowerSwitchPass() : FunctionPass(ID) {}
+
+  bool runOnFunction(llvm::Function &F) override;
+
   struct SwitchCase {
     llvm ::Constant *value;
     llvm::BasicBlock *block;
@@ -170,8 +170,7 @@ public:
   static char ID;
   InstructionOperandTypeCheckPass()
       : llvm::ModulePass(ID), instructionOperandsConform(true) {}
-  // TODO: Add `override` when we switch to C++11
-  bool runOnModule(llvm::Module &M);
+  bool runOnModule(llvm::Module &M) override;
   bool checkPassed() const { return instructionOperandsConform; }
 };
 }
