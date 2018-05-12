@@ -45,15 +45,13 @@ bool IntrinsicCleanerPass::runOnModule(Module &M) {
 
 bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
   bool dirty = false;
-  bool block_split=false;
   LLVMContext &ctx = M.getContext();
   
   unsigned WordSize = DataLayout.getPointerSizeInBits() / 8;
-  for (BasicBlock::iterator i = b.begin(), ie = b.end();
-       (i != ie) && (block_split == false);) {
+  for (BasicBlock::iterator i = b.begin(), ie = b.end(); i != ie;) {
     IntrinsicInst *ii = dyn_cast<IntrinsicInst>(&*i);
-    // increment now since LowerIntrinsic deletion makes iterator invalid.
-    ++i;  
+    // increment now since deletion of instructions makes iterator invalid.
+    ++i;
     if(ii) {
       switch (ii->getIntrinsicID()) {
       case Intrinsic::vastart:
@@ -89,8 +87,8 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
           pSrc = GetElementPtrInst::Create(pSrc, off, std::string(), ii);
           val = new LoadInst(pSrc, std::string(), ii); new StoreInst(val, pDst, ii);
         }
-        ii->removeFromParent();
-        delete ii;
+        ii->eraseFromParent();
+        dirty = true;
         break;
       }
 
@@ -176,20 +174,20 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         resultStruct = builder.CreateInsertValue(resultStruct, overflow, 1);
         
         ii->replaceAllUsesWith(resultStruct);
-        ii->removeFromParent();
-        delete ii;
+        ii->eraseFromParent();
         dirty = true;
         break;
       }
 
       case Intrinsic::dbg_value:
-      case Intrinsic::dbg_declare:
+      case Intrinsic::dbg_declare: {
         // Remove these regardless of lower intrinsics flag. This can
         // be removed once IntrinsicLowering is fixed to not have bad
         // caches.
         ii->eraseFromParent();
         dirty = true;
         break;
+      }
 
       case Intrinsic::trap: {
         // Intrisic instruction "llvm.trap" found. Directly lower it to
