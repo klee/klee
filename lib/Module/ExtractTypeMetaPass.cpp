@@ -103,7 +103,11 @@ bool klee::ExtractTypeMetaCheck::runOnModule(llvm::Module &M) {
 	if (!metaOutFile) {
 		return changed;
 	}
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 	DataLayout dl = DataLayout(M.getDataLayout());
+#else
+	DataLayout dl = M.getDataLayout();
+#endif
 	if (!isEndiannessWritten) {
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 		writeLine(M.getEndianness() == llvm::Module::Endianness::LittleEndian ? "little" : "big");
