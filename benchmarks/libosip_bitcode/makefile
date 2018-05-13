@@ -16,7 +16,7 @@ PROGRAM_NAME=torture_test
 # FILES #
 #########
 KLEE = ${KLEE_BUILD_DIR}/bin/klee
-OPT := opt-3.4
+OPT := opt
 
 .PHONY: all
 all: run

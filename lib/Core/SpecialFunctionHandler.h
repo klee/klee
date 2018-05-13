@@ -128,6 +128,7 @@ namespace klee {
     HANDLER(handleStrncmp);
     HANDLER(handleStrcpy);
     HANDLER(handleStrncpy);
+    HANDLER(handleBREAKPOINT);
     HANDLER(handleStrchr);
     HANDLER(handleStrlen);
     HANDLER(handleMyIntAssign);

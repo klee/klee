@@ -112,6 +112,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("strcmp",                      handleStrcmp,                    true),
   add("myStrncmp",                   handleStrncmp,                   true),
   add("strlen",                      handleStrlen,                    true),
+  add("BREAKPOINT",                  handleBREAKPOINT,                false),
   add("klee_get_value_i32", handleGetValue, true),
   add("klee_get_value_i64", handleGetValue, true),
   add("klee_define_fixed_object", handleDefineFixedObject, false),
@@ -721,6 +722,19 @@ void Assemble_Abstract_Buffer_Name(int serial, int version, char name[AB_MAX_NAM
 	/* [4] Copy abstract buffer name */
 	/*********************************/
 	strcpy(name,nameTag.c_str());
+}
+
+void SpecialFunctionHandler::handleBREAKPOINT(
+	ExecutionState &state,
+	KInstruction *target,
+	std::vector<ref<Expr> > &arguments)
+{
+	int serial = ((llvm::ConstantInt *) (((llvm::CallInst *) target->inst)->getArgOperand(0)))->getZExtValue();
+	fprintf(stdout,">> LIBOSIP BREAKPOINT [%d]\n",serial);
+	if (serial == 320)
+	{
+		fprintf(stdout,"\n");
+	}
 }
 
 void SpecialFunctionHandler::handleStrlen(

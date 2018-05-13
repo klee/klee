@@ -29,7 +29,7 @@
 
 #include "klee/klee.h"
 
-void klee_make_symbolic(void *addr,size_t count, const char *message);
+void klee_make_symbolic(void *addr,size_t count, const char *message){}
 
 int test_message (char *msg, size_t len, int verbose, int clone);
 static void usage (void);
