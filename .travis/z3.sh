@@ -10,8 +10,11 @@ if [ "X${IS_SANITIZED_BUILD}" != "X0" ]; then
 fi
 
 if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-  # Should we install libz3-dbg too?
-  sudo apt-get -y install libz3 libz3-dev
+  wget -qO- https://github.com/Z3Prover/z3/archive/z3-4.6.0.tar.gz | tar xz --strip-components=1
+  python scripts/mk_make.py
+  cd build
+  make -j`nproc`
+  sudo make install
 elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
   set +e
   brew install python@2

@@ -12,16 +12,19 @@ for solver in ${SOLVER_LIST}; do
     echo "STP"
     mkdir stp
     cd stp
-    ${KLEE_SRC}/.travis/stp.sh
+    CC=${STP_CC:-${CC}} CXX=${STP_CXX:-${CXX}} ${KLEE_SRC}/.travis/stp.sh
     cd ../
     ;;
   Z3)
     echo "Z3"
-    ${KLEE_SRC}/.travis/z3.sh
+    mkdir z3
+    cd z3
+    CC=${Z3_CC:-${CC}} CXX=${Z3_CXX:-${CXX}} ${KLEE_SRC}/.travis/z3.sh
+    cd ../
     ;;
   metaSMT)
     echo "metaSMT"
-    ${KLEE_SRC}/.travis/metaSMT.sh
+    CC=${METASMT_CC:-${CC}} CXX=${METASMT_CXX:-${CXX}} ${KLEE_SRC}/.travis/metaSMT.sh
     ;;
   *)
     echo "Unknown solver ${solver}"
