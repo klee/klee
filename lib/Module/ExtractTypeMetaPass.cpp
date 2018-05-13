@@ -5,6 +5,7 @@
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/Endian.h"
 
 #include <cstring>
@@ -102,11 +103,15 @@ bool klee::ExtractTypeMetaCheck::runOnModule(llvm::Module &M) {
 	if (!metaOutFile) {
 		return changed;
 	}
+	DataLayout dl = DataLayout(M.getDataLayout());
 	if (!isEndiannessWritten) {
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 		writeLine(M.getEndianness() == llvm::Module::Endianness::LittleEndian ? "little" : "big");
+#else
+		writeLine(dl.isLittleEndian() ? "little" : "big");
+#endif
 		isEndiannessWritten = true;
 	}
-	DataLayout dl = DataLayout(M.getDataLayout());
 	for (Module::iterator mi = M.begin(), me = M.end(); mi != me; ++mi) {
 		for (Function::iterator bi = mi->begin(), be = mi->end(); bi != be; ++bi) {
 			for (BasicBlock::iterator ii = bi->begin(), ie = bi->end(); ii != ie; ++ii) {
