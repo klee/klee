@@ -112,7 +112,7 @@ bool klee::ExtractTypeMetaCheck::runOnModule(llvm::Module &M) {
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 		writeLine(M.getEndianness() == llvm::Module::Endianness::LittleEndian ? "little" : "big");
 #else
-		writeLine(dl.isLittleEndian() ? "little" : "big");
+		writeLine(dl->isLittleEndian() ? "little" : "big");
 #endif
 		isEndiannessWritten = true;
 	}

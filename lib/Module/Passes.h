@@ -45,7 +45,7 @@ class ExtractTypeMetaCheck : public llvm::ModulePass {
   llvm::raw_fd_ostream *metaOutFile;
   bool isEndiannessWritten;
 
-  std::string getTypeMetaData(llvm::Type *t, const llvm::DataLayout &dl);
+  std::string getTypeMetaData(llvm::Type *t, const llvm::DataLayout *dl);
   std::string getSymbolicName(llvm::CallInst *ci);
   llvm::Type* getSymbolicType(llvm::CallInst *ci);
   void writeLine(std::string line);
