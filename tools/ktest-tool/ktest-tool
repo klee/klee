@@ -12,11 +12,142 @@
 import os
 import struct
 import sys
+import re
+import json
+import itertools as it
 
 version_no=3
+type_meta_filename='type-meta.kmeta'
+python_version=sys.version_info[0]
 
 class KTestError(Exception):
     pass
+
+class KMeta:
+    def __init__(self, metaInfos, byteOrder):
+        self.metaInfos = metaInfos
+        self.byteOrder = byteOrder
+
+    @staticmethod
+    def fromfile(path):
+        metaPath = os.path.join(os.path.dirname(path), type_meta_filename)
+        if not os.path.exists(metaPath):
+            return False
+        metaInfos = dict()
+        with open(metaPath, "r") as file:
+            byteOrder = file.readline()
+            if (python_version < 3):
+                file_lines_by_two = it.izip_longest(*[file]*2)
+            else:
+                file_lines_by_two = it.zip_longest(*[file]*2)
+            for name,typeMeta in file_lines_by_two:
+                if name and typeMeta:
+                    metaInfos[str(name).strip('\n\r\0')] = str(typeMeta).strip('\n\r\0')
+        kmeta = KMeta(metaInfos, byteOrder)
+        return kmeta
+
+    def getType(self, name):
+        return self.metaInfos.get(name, None)
+
+    @staticmethod
+    def getUnpackString(typeMeta, count=1, recurs=1):
+        if recurs > 3:
+            return "no deeper"
+        metas = typeMeta.split(':')
+        unpackStr = ''
+        if metas[0] == 'int':
+            bitWidth = int(metas[1])
+            # TODO could not extract sign information from llvm, that is missing currently
+            if (bitWidth == 2):
+                unpackStr = str(count) + 'h'
+            elif (bitWidth == 4):
+                unpackStr = str(count) + 'i'
+            elif (bitWidth == 8):
+                unpackStr = str(count) + 'q'
+        elif metas[0] == 'array':
+            unpackStr = KMeta.getUnpackString(typeMeta[typeMeta.find(metas[2]):],
+                                              int(metas[1]), recurs + 1)
+        elif metas[0] == 'char':
+            unpackStr = str(count) + 'c'
+        #TODO other types as well
+        elif metas[0] == 'double':
+            unpackStr = 'unhandled'
+        elif metas[0] == 'float':
+            unpackStr = 'unhandled'
+        elif metas[0] == 'unhandled':
+            return 'unhandled'
+        else:
+            return 'unhandled'
+        return unpackStr
+
+    @staticmethod
+    def formatData(type, extractedData):
+        formattedData = {}
+        typeMeta = type.split(':')
+        typeName = typeMeta[0]
+        if typeName == 'array':
+            arrayName = 'array(' + typeMeta[2] + ')[' + typeMeta[1] + ']'
+            formattedData[arrayName] = [] 
+            if (typeMeta[2] == 'char'):
+                for elem in extractedData:
+                    formattedData[arrayName].append(elem.decode('utf-8'))
+            else:
+                for elem in extractedData:
+                    formattedData[arrayName].append(elem)
+        else:
+            if typeName == 'char':
+                formattedData[typeName] = extractedData[0].decode('utf-8')
+            else:
+                formattedData[typeName] = extractedData[0]
+        return formattedData
+
+
+
+    @staticmethod
+    def extractData(typeMeta, data, byteOrder, offset=0):
+        if byteOrder == 'big':
+            byteOrder = '>'
+        else:
+            byteOrder = '<'
+        metas = typeMeta.split(':')
+        if metas[0] == 'struct':
+            currentStruct = {}
+            structName = metas[1]
+            currentStruct[structName] = []
+            typeMeta = re.sub('###$', '', typeMeta)
+            types = typeMeta[typeMeta.find(metas[1])+len(metas[1])+1:].split(">>>")
+            i = 0
+            while i < len(types):
+                typ = types[i]
+                metaChunks = typ.split(':')
+                if (metaChunks[0] == 'struct'):
+                    currOffset = offset
+                    j = -1
+                    for j in reversed(range(len(types))):
+                        if '###' in types[j]:
+                            currMetaChunks = types[j].split(':')
+                            currOffset = int(currMetaChunks[-1])
+                            break
+                    lowerTypeMeta = re.sub('[^#]+$', '', '>>>'.join(types[i:j+1]))
+                    i = j + 1
+                    currentStruct[structName].append(KMeta.extractData(lowerTypeMeta, data, byteOrder, offset + currOffset))
+                    continue
+                unpackStr = KMeta.getUnpackString(typ)
+                if (unpackStr != 'unhandled'):
+                    extractedData = struct.unpack_from(byteOrder + unpackStr,
+                                                   data, int(metaChunks[-1]) + offset)
+                    currentStruct[structName].append(KMeta.formatData(typ, extractedData))
+                else:
+                    currentStruct[structName].append('unhandled')
+                i += 1
+            return currentStruct
+        else:
+            unpackStr = KMeta.getUnpackString(typeMeta)
+            if unpackStr != 'unhandled':
+                extractedData = struct.unpack(byteOrder + unpackStr, data)
+                return KMeta.formatData(typeMeta, extractedData)
+            else:
+                return 'unhandled'
 
 class KTest:
     @staticmethod
@@ -81,6 +212,57 @@ def trimZeros(str):
         if str[i] != '\x00':
             return str[:i+1]
     return ''
+
+def printFileInfos(file, b):
+    print('ktest file : %r' % file)
+    print('args       : %r' % b.args)
+    print('num objects: %r' % len(b.objects))
+
+def printObjectRegularly(i, name, data, opts):
+    if opts.trimZeros:
+        str = trimZeros(data)
+    else:
+        str = data
+
+    print('object %4d: name: %r' % (i, name.decode('utf-8')))
+    print('object %4d: size: %r' % (i, len(data)))
+    if opts.writeInts and len(data) == 4: 
+        print('object %4d: data: %r' % (i, struct.unpack('i',str)[0]))
+    else:
+        print('object %4d: data: %r' % (i, str))
+
+
+def printRegularly(file, opts):
+    b = KTest.fromfile(file)
+    pos = 0
+    printFileInfos(file, b)
+    for i,(name,data) in enumerate(b.objects):
+        printObjectRegularly(i, name, data, opts)
+        if i < len(b.objects) - 1:
+            print('')
+
+def printBeautifully(file, opts):
+    m = KMeta.fromfile(file)
+    if not m:
+        print('Could not find type meta informations to beautify')
+        printRegularly(file, opts)
+        return
+    b = KTest.fromfile(file)
+    printFileInfos(file, b)
+    for i,(name,data) in enumerate(b.objects):
+        #TODO python 2 vs 3, currently works with python 3
+        typeMeta = m.getType(name.decode('utf-8').strip('\n\r\0'))
+        if typeMeta:
+            print('object %4d: name: %s' % (i, name.decode('utf-8')))
+            print('object %4d: size: %r' % (i, len(data)))
+            print('object %4d: data:\n%s' % (i, json.dumps(KMeta.extractData(typeMeta,
+                                                               data, m.byteOrder), indent=2)))
+        else:
+            printObjectRegularly(i, name, data, opts)
+        if i < len(b.objects) - 1:
+            print('')
+
+
     
 def main(args):
     from optparse import OptionParser
@@ -91,31 +273,21 @@ def main(args):
     op.add_option('','--write-ints', dest='writeInts', action='store_true',
                   default=False,
                   help='convert 4-byte sequences to integers')
+    op.add_option('', '--beautify', dest='beautify', action='store_true',
+                  default=False,
+                  help='try to make the output more readable ' +
+                       '(this ignores any other arguments)')
     
     opts,args = op.parse_args()
     if not args:
         op.error("incorrect number of arguments")
 
-    for file in args:
-        b = KTest.fromfile(file)
-        pos = 0
-        print('ktest file : %r' % file)
-        print('args       : %r' % b.args)
-        print('num objects: %r' % len(b.objects))
-        for i,(name,data) in enumerate(b.objects):
-            if opts.trimZeros:
-                str = trimZeros(data)
-            else:
-                str = data
-
-            print('object %4d: name: %r' % (i, name))
-            print('object %4d: size: %r' % (i, len(data)))
-            if opts.writeInts and len(data) == 4: 
-                print('object %4d: data: %r' % (i, struct.unpack('i',str)[0]))
-            else:
-                print('object %4d: data: %r' % (i, str))
-        if file != args[-1]:
-            print()
-
+    for i,file in enumerate(args):
+        if opts.beautify:
+            printBeautifully(file, opts)
+        else:
+            printRegularly(file, opts)
+        if i < len(args) - 1:
+            print('')
 if __name__=='__main__':
     main(sys.argv)
