@@ -224,7 +224,7 @@ def printObjectRegularly(i, name, data, opts):
     else:
         str = data
 
-    print('object %4d: name: %r' % (i, name.decode('utf-8')))
+    print('object %4d: name: %r' % (i, name))
     print('object %4d: size: %r' % (i, len(data)))
     if opts.writeInts and len(data) == 4: 
         print('object %4d: data: %r' % (i, struct.unpack('i',str)[0]))
