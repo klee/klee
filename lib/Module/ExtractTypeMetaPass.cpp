@@ -33,7 +33,7 @@ void klee::ExtractTypeMetaCheck::writeLine(std::string line) {
 	}
 }
 
-std::string klee::ExtractTypeMetaCheck::getTypeMetaData(Type *t, const llvm::DataLayout &dl) {
+std::string klee::ExtractTypeMetaCheck::getTypeMetaData(Type *t, const llvm::DataLayout *dl) {
 	std::stringstream ss;
 	//TODO should somehow find out if integer is signed or unsigned,
 	//however llvm does not store this information
@@ -49,7 +49,7 @@ std::string klee::ExtractTypeMetaCheck::getTypeMetaData(Type *t, const llvm::Dat
 		ss << "array:" << at->getNumElements() << ":" << getTypeMetaData(at->getElementType(), dl);
 	} else if (t->isStructTy()) {
 		StructType *st = dyn_cast<StructType>(t);
-		const StructLayout *sl = dl.getStructLayout(st);
+		const StructLayout *sl = dl->getStructLayout(st);
 		ss << "struct:" << (st->hasName() ? st->getName().str() : "unknown") << ":";
 		size_t i = 0;
 		//TODO currently recursively traverses the whole struct, maybe should limit the depth?
@@ -104,9 +104,9 @@ bool klee::ExtractTypeMetaCheck::runOnModule(llvm::Module &M) {
 		return changed;
 	}
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
-	DataLayout dl = DataLayout(M.getDataLayout());
+	const DataLayout dl = DataLayout(M.getDataLayout());
 #else
-	DataLayout dl = M.getDataLayout();
+	const DataLayout *dl = M.getDataLayout();
 #endif
 	if (!isEndiannessWritten) {
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
@@ -127,7 +127,11 @@ bool klee::ExtractTypeMetaCheck::runOnModule(llvm::Module &M) {
 							StringRef name = ci->getCalledFunction()->getName();
 							if (name.equals("klee_make_symbolic")) {
 								writeLine(getSymbolicName(ci));
+								#if LLVM_VERSION_CODE < LLVM_VERSION(3,5)
+								writeLine(getTypeMetaData(getSymbolicType(ci), &dl));
+								#else
 								writeLine(getTypeMetaData(getSymbolicType(ci), dl));
+								#endif
 							}
 						}
 					}
