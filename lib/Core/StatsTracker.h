@@ -48,6 +48,7 @@ namespace klee {
 
   public:
     static bool useStatistics();
+    static bool useIStats();
 
   private:
     void updateStateStatistics(uint64_t addend);
