@@ -142,6 +142,7 @@ fi
 # Configure KLEE
 CXXFLAGS="${COVERAGE_FLAGS} ${SANITIZER_CXX_FLAGS}" \
 CFLAGS="${COVERAGE_FLAGS} ${SANITIZER_C_FLAGS}" \
+LDFLAGS="${SANITIZER_LD_FLAGS}" \
 cmake \
   -DLLVM_CONFIG_BINARY="${LLVM_CONFIG}" \
   -DLLVMCC="${KLEE_CC}" \
@@ -158,7 +159,7 @@ cmake \
   -DENABLE_SYSTEM_TESTS=TRUE \
   -DLIT_ARGS="-v" \
   ${KLEE_SRC}
-make
+make VERBOSE=1
 
 ###############################################################################
 # Unit tests

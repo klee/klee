@@ -20,10 +20,12 @@ if [ "x${STP_VERSION}" != "x" ]; then
   if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     CFLAGS="${SANITIZER_C_FLAGS}" \
     CXXFLAGS="${SANITIZER_CXX_FLAGS}" \
+    LDFLAGS="${SANITIZER_LD_FLAGS}" \
     cmake -DCMAKE_INSTALL_PREFIX=/usr ..
   elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
     CFLAGS="${SANITIZER_C_FLAGS}" \
     CXXFLAGS="${SANITIZER_CXX_FLAGS}" \
+    LDFLAGS="${SANITIZER_LD_FLAGS}" \
     cmake -DCMAKE_INSTALL_PREFIX=/usr/local ..
   else
     echo "Unhandled TRAVIS_OS_NAME \"${TRAVIS_OS_NAME}\""
@@ -55,6 +57,7 @@ if [ "x${STP_VERSION}" != "x" ]; then
   # Don't build against boost because that is broken when mixing packaged boost libraries and gcc 4.8
   CFLAGS="${SANITIZER_C_FLAGS}" \
   CXXFLAGS="${SANITIZER_CXX_FLAGS}" \
+  LDFLAGS="${SANITIZER_LD_FLAGS}" \
   cmake "${STP_CMAKE_FLAGS[@]}" ../src
 
   set +e # Do not exit if build fails because we need to display the log
