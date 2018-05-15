@@ -28,7 +28,7 @@ namespace klee {
     
   public:
     Context() {}
-    
+
     /// initialize - Construct the global Context instance.
     static void initialize(bool IsLittleEndian, Expr::Width PointerWidth);
 

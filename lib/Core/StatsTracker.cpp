@@ -195,7 +195,7 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
         "--istats-write-after-instructions cannot be enabled at the same "
         "time.");
 
-  KModule *km = executor.kmodule;
+  KModule *km = executor.kmodule.get();
 
   if (!sys::path::is_absolute(objectFilename)) {
     SmallString<128> current(objectFilename);
@@ -219,9 +219,8 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
   if (OutputIStats)
     theStatisticManager->useIndexedStats(km->infos->getMaxID());
 
-  for (std::vector<KFunction*>::iterator it = km->functions.begin(), 
-         ie = km->functions.end(); it != ie; ++it) {
-    KFunction *kf = *it;
+  for (auto &kfp : km->functions) {
+    KFunction *kf = kfp.get();
     kf->trackCoverage = 1;
 
     for (unsigned i=0; i<kf->numInstructions; ++i) {
@@ -469,7 +468,7 @@ void StatsTracker::updateStateStatistics(uint64_t addend) {
 }
 
 void StatsTracker::writeIStats() {
-  Module *m = executor.kmodule->module;
+  const auto m = executor.kmodule->module.get();
   uint64_t istatsMask = 0;
   llvm::raw_fd_ostream &of = *istatsFile;
   
@@ -666,8 +665,8 @@ uint64_t klee::computeMinDistToUncovered(const KInstruction *ki,
 }
 
 void StatsTracker::computeReachableUncovered() {
-  KModule *km = executor.kmodule;
-  Module *m = km->module;
+  KModule *km = executor.kmodule.get();
+  const auto m = km->module.get();
   static bool init = true;
   const InstructionInfoTable &infos = *km->infos;
   StatisticManager &sm = *theStatisticManager;

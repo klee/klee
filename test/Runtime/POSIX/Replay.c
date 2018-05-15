@@ -13,6 +13,7 @@
 #ifdef KLEE_EXECUTION
 #define EXIT klee_silent_exit
 #else
+#include <stdlib.h>
 #define EXIT exit
 #endif
 
