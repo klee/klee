@@ -26,17 +26,6 @@ else()
   set(RUNTIME_HAS_DEBUG_SYMBOLS 0)
 endif()
 
-
-# FIXME: This is a horrible hack that needs to die.
-# Things are very inconsistent. The runtime instrinsic
-# is sometimes a LLVM module or a bitcode archive.
-if ("${LLVM_PACKAGE_VERSION}" VERSION_EQUAL "3.3" OR
-    "${LLVM_PACKAGE_VERSION}" VERSION_GREATER "3.3")
-  set(USE_RUNTIME_BINARY_TYPE_HACK 1)
-else()
-  set(USE_RUNTIME_BINARY_TYPE_HACK 0)
-endif()
-
 if (ENABLE_POSIX_RUNTIME)
   set(BUILD_POSIX_RUNTIME 1)
 else()
@@ -55,7 +44,7 @@ configure_file("Makefile.cmake.bitcode.rules" "Makefile.cmake.bitcode.rules" COP
 
 # Makefile for root runtime directory
 # Copy over makefiles for libraries
-set(BITCODE_LIBRARIES "Intrinsic" "klee-libc")
+set(BITCODE_LIBRARIES "Intrinsic" "klee-libc" "FreeStanding")
 if (ENABLE_POSIX_RUNTIME)
   list(APPEND BITCODE_LIBRARIES "POSIX")
 endif()
@@ -130,19 +119,11 @@ add_dependencies(clean_all clean_runtime)
 ###############################################################################
 set(RUNTIME_FILES_TO_INSTALL)
 
-# This is quite fragile and depends on knowledge in the bitcode
-# build system. Hopefully it won't change very often though.
-
-# FIXME: This hack needs to die!
-if (USE_RUNTIME_BINARY_TYPE_HACK)
-  list(APPEND RUNTIME_FILES_TO_INSTALL
-    "${KLEE_RUNTIME_DIRECTORY}/kleeRuntimeIntrinsic.bc"
-    "${KLEE_RUNTIME_DIRECTORY}/klee-libc.bc")
-else()
-  list(APPEND RUNTIME_FILES_TO_INSTALL
-    "${KLEE_RUNTIME_DIRECTORY}/libkleeRuntimeIntrinsic.bca"
-    "${KLEE_RUNTIME_DIRECTORY}/libklee-libc.bca")
-endif()
+list(APPEND RUNTIME_FILES_TO_INSTALL
+  "${KLEE_RUNTIME_DIRECTORY}/kleeRuntimeIntrinsic.bc"
+  "${KLEE_RUNTIME_DIRECTORY}/klee-libc.bc"
+  "${KLEE_RUNTIME_DIRECTORY}/kleeRuntimeFreeStanding.bc"
+  )
 
 if (ENABLE_POSIX_RUNTIME)
   list(APPEND RUNTIME_FILES_TO_INSTALL
