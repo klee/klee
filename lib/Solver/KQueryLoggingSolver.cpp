@@ -11,7 +11,6 @@
 
 #include "klee/Expr.h"
 #include "klee/util/ExprPPrinter.h"
-#include "klee/Internal/Support/QueryLog.h"
 
 using namespace klee;
 

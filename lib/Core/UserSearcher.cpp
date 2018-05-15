@@ -14,6 +14,8 @@
 
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/CommandLine.h"
+#include "klee/MergeHandler.h"
+
 
 #include "llvm/Support/CommandLine.h"
 
@@ -119,6 +121,10 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
 
   if (UseBatchingSearch) {
     searcher = new BatchingSearcher(searcher, BatchTime, BatchInstructions);
+  }
+
+  if (UseMerge && UseIncompleteMerge) {
+    searcher = new MergingSearcher(executor, searcher);
   }
 
   if (UseIterativeDeepeningTimeSearch) {
