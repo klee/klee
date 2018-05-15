@@ -171,7 +171,7 @@ make unittests
 
 # Generate and upload coverage if COVERAGE is set
 if [ ${COVERAGE} -eq 1 ]; then
-  coverageup "unittests"
+  coverageup "unittests,LLVM${LLVM_VERSION//.}"
 fi
 
 ###############################################################################
@@ -198,5 +198,5 @@ fi
 
 # Generate and upload coverage if COVERAGE is set
 if [ ${COVERAGE} -eq 1 ]; then
-  coverageup "systemtests"
+  coverageup "systemtests,LLVM${LLVM_VERSION//.}"
 fi
