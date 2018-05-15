@@ -354,6 +354,9 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
 
   initializeSearchOptions();
 
+  if (OnlyOutputStatesCoveringNew && !StatsTracker::useIStats())
+    klee_error("To use --only-output-states-covering-new, you need to enable --output-istats.");
+
   if (DebugPrintInstructions.isSet(FILE_ALL) ||
       DebugPrintInstructions.isSet(FILE_COMPACT) ||
       DebugPrintInstructions.isSet(FILE_SRC)) {

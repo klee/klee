@@ -110,6 +110,10 @@ bool StatsTracker::useStatistics() {
   return OutputStats || OutputIStats;
 }
 
+bool StatsTracker::useIStats() {
+  return OutputIStats;
+}
+
 namespace klee {
   class WriteIStatsTimer : public Executor::Timer {
     StatsTracker *statsTracker;
