@@ -9,10 +9,11 @@
 #ifndef KLEE_INTERPRETER_H
 #define KLEE_INTERPRETER_H
 
-#include <vector>
-#include <string>
 #include <map>
+#include <memory>
 #include <set>
+#include <string>
+#include <vector>
 
 struct KTest;
 
@@ -98,12 +99,13 @@ public:
                              const InterpreterOptions &_interpreterOpts,
                              InterpreterHandler *ih);
 
-  /// Register the module to be executed.  
-  ///
+  /// Register the module to be executed.
+  /// \param modules A list of modules that should form the final
+  ///                module
   /// \return The final module after it has been optimized, checks
   /// inserted, and modified for interpretation.
-  virtual const llvm::Module * 
-  setModule(llvm::Module *module, 
+  virtual llvm::Module *
+  setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
             const ModuleOptions &opts) = 0;
 
   // supply a tree stream writer which the interpreter will use
