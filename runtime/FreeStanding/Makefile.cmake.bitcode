@@ -6,15 +6,10 @@
 # License. See LICENSE.TXT for details.
 #
 #===------------------------------------------------------------------------===#
-LEVEL := ./
+LEVEL := ../
+
 include $(LEVEL)/Makefile.cmake.bitcode.config
 
-DIRS += Intrinsic
-DIRS += klee-libc
-DIRS += FreeStanding
-
-ifneq ($(ENABLE_POSIX_RUNTIME),0)
-	DIRS += POSIX
-endif
+ARCHIVE_NAME=kleeRuntimeFreeStanding
 
 include $(LEVEL)/Makefile.cmake.bitcode.rules

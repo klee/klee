@@ -10,13 +10,6 @@ LEVEL := ../
 
 include $(LEVEL)/Makefile.cmake.bitcode.config
 
-LLVMCC.Flags += -fno-builtin
-
-# FIXME: This is a horrible hack
-ifeq ($(USE_MODULE_INSTEAD_OF_BCA),1)
-	MODULE_NAME=kleeRuntimeIntrinsic
-else
-	ARCHIVE_NAME=kleeRuntimeIntrinsic
-endif
+ARCHIVE_NAME=kleeRuntimeIntrinsic
 
 include $(LEVEL)/Makefile.cmake.bitcode.rules
