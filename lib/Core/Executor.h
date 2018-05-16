@@ -384,6 +384,14 @@ private:
   /// value). Otherwise return the original expression.
   ref<Expr> toUnique(const ExecutionState &state, ref<Expr> &e);
 
+  // Return a constant value for the given expression in the given state,
+  // AFTER copying the current state and adding constraints for all of the 
+  // concrete inputs in the current seed map to the state. This will give
+  // us a concretization that respects the seed, which we want during 
+  // replay mode if an input byte is used as part of an argument to 
+  // some function like malloc.
+  ref<Expr> concretizeWithSeed(const ExecutionState &state, ref<Expr> &e);
+
   /// Return a constant value for the given expression, forcing it to
   /// be constant in the given state by adding a constraint if
   /// necessary. Note that this function breaks completeness and
