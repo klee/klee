@@ -3293,71 +3293,11 @@ void Executor::executeAlloc(ExecutionState &state,
     // return argument first). This shows up in pcre when llvm
     // collapses the size expression with a select.
 
-    /*if (OnlyReplaySeeds) {
-      // Make a copy of the state, and add constraints for our seed to 
-      // that state. Then, ask the solver for a value for the size 
-      // parameter and check if that size is symbolic or not. 
-      // It should never be symbolic in this case.  
-
-      ExecutionState tempState(state);
-      auto           U = seedMap.find(&state);
-      assert(U != seedMap.end());
-      
-      // For now, just constrain stdin. 
-      for (auto &SI : U->second) {
-        KTest *T = SI.input;
-        for (unsigned idx = 0; idx < T->numObjects; idx++) {
-          std::string objName(T->objects[idx].name);
-
-          if (objName == "stdin") {
-            // Make a read expression, then an equal expression to the concrete
-            // value for this array, and add that as a constraint to tempState
-            
-            const Array *stdinArr = 
-              arrayCache.CreateArray("stdin", T->objects[idx].numBytes);
-            UpdateList ul(stdinArr, 0);
-            for (unsigned j = 0; j < T->objects[idx].numBytes; j++) {
-              ref<ConstantExpr> c = 
-                ConstantExpr::create(T->objects[idx].bytes[j], Expr::Int8);
-              ref<Expr> read = 
-                ReadExpr::create(ul, ConstantExpr::create(j, Expr::Int32));
-              ref<Expr> eq = EqExpr::create(c, read);
-              ref<Expr> tr = ConstantExpr::create(true, Expr::Bool);
-              tempState.addConstraint(EqExpr::create(tr, eq));
-            }
-          }
-        }
-      }
-
-      // Ask what an example we could get based on tempState. 
-      ref<ConstantExpr> cexample;
-      bool csuccess = solver->getValue(tempState, size, cexample);
-      assert(csuccess && "FIXME: Unhandled solver failure");
-      (void) csuccess;
-      bool res;
-      csuccess = solver->mustBeTrue(tempState, 
-                                    EqExpr::create(cexample, size),
-                                    res);
-      assert(csuccess && "FIXME: Unhandled solver failure");      
-      if (res) {
-        executeAlloc(state, cexample, isLocal,
-                     target, zeroMemory, reallocFrom);
-        return; 
-      } else {
-        std::string Str;
-        llvm::raw_string_ostream info(Str);
-        ExprPPrinter::printOne(info, "  size expr", size);
-        info << "  concretization : " << cexample << "\n";
-        terminateStateOnError(state, "state is symbolic, should be concrete",
-                              Model, NULL, info.str());
-      }
-    }*/
-
     ref<ConstantExpr> example;
     bool success = solver->getValue(state, size, example);
     assert(success && "FIXME: Unhandled solver failure");
     (void) success;
-        
+
     // Try and start with a small example.
     Expr::Width W = example->getWidth();
     while (example->Ugt(ConstantExpr::alloc(128, W))->isTrue()) {
