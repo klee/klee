@@ -40,14 +40,19 @@ compressed_fd_ostream::compressed_fd_ostream(const char *Filename,
     FD = -1;
   }
   // Initialize the compression library
-  strm.zalloc = 0;
-  strm.zfree = 0;
+  strm.zalloc = Z_NULL;
+  strm.zfree = Z_NULL;
+  strm.opaque = Z_NULL;
+  strm.next_in = Z_NULL;
   strm.next_out = buffer;
+  strm.avail_in = 0;
   strm.avail_out = BUFSIZE;
 
-  deflateInit2(&strm, Z_BEST_COMPRESSION, Z_DEFLATED, 15 | 16,
-               8 /* memory usage default, 0 smalles, 9 highest*/,
-               Z_DEFAULT_STRATEGY);
+  const auto ret = deflateInit2(&strm, Z_BEST_COMPRESSION, Z_DEFLATED, 31,
+                                8 /* memory usage default, 0 smallest, 9 highest*/,
+                                Z_DEFAULT_STRATEGY);
+  if (ret != Z_OK)
+    ErrorInfo = "Deflate initialisation returned with error: " + std::to_string(ret);
 }
 
 void compressed_fd_ostream::writeFullCompressedData() {
@@ -91,7 +96,7 @@ void compressed_fd_ostream::write_impl(const char *Ptr, size_t Size) {
   // Check if there is still data to compress
   while (strm.avail_in != 0) {
     // compress data
-    int res = deflate(&strm, Z_NO_FLUSH); (void) res;
+    const auto res __attribute__ ((unused)) = deflate(&strm, Z_NO_FLUSH);
     assert(res == Z_OK);
     writeFullCompressedData();
   }
