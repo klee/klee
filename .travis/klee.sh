@@ -159,7 +159,7 @@ cmake \
   -DENABLE_SYSTEM_TESTS=TRUE \
   -DLIT_ARGS="-v" \
   ${KLEE_SRC}
-make VERBOSE=1
+make
 
 ###############################################################################
 # Unit tests
