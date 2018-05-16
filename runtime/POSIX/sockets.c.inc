@@ -72,7 +72,7 @@ int __socketcall(int type, unsigned long *args) {
 #define PORT(addr) ( \
     ((struct sockaddr *)(addr))->sa_family == PF_INET  ? ((struct sockaddr_in  *)(addr))->sin_port : \
     ((struct sockaddr *)(addr))->sa_family == PF_INET6 ? ((struct sockaddr_in6 *)(addr))->sin6_port : \
-    (assert(0 && "unsupported domain"), 0))
+    ((assert(0 && "unsupported domain"), 0)))
 
 /* checks only the port numbers */
 #define HAS_ADDR(a) (assert((a)->addr), PORT((a)->addr) != 0)
@@ -332,28 +332,36 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
 
   if (f->dfile) {
     /* symbolic file descriptor */
+
     assert(f->foreign->addr);
+    printf("sym socket  1\n");
     if (!(f->flags & eDgramSocket)) {
+      printf("HAS addr %d\n", HAS_ADDR(f->foreign));
       assert(HAS_ADDR(f->foreign));
       errno = EISCONN;  /* Transport endpoint is already connected */
       return -1;
     }
+    printf("sym socket  4\n");
     if (!ADDR_COMPATIBLE(addr, addrlen, f->foreign)) {
       errno = EINVAL;   /* The addrlen is wrong */
       return -1;
     }
+    printf("sym socket  5 %d\n", PORT(addr));
     if (PORT(addr) == 0) {
       errno = EADDRNOTAVAIL;  /* Cannot assign requested address */
     }
+    printf("sym socket  6\n");
     if (PORT(f->local.addr) == 0) {
       /* TODO: choose an ephemeral port */
     }
     /* assign the address to the socket */
+    printf("sym socket  7\n");
     memcpy(f->foreign->addr, addr, addrlen);
   }
 
   else {
     /* concrete file descriptor */
+    assert(0 && "disabled concrete, reable!");
     os_r = syscall(__NR_connect, f->fd, addr, addrlen);
     if (os_r < 0) {
       errno = klee_get_errno();
@@ -361,6 +369,7 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
     return os_r;
   }
 
+    printf("sym socket  8\n");
   return 0;
 }
 
@@ -867,23 +876,23 @@ int setsockopt(int sockfd, int level, int optname,
 {
   return 0;
 }
-#undef htons
-#undef htonl
-#undef ntohs
-#undef ntohl
-
-uint16_t htons(uint16_t v) {
-      return (v >> 8) | (v << 8);
-}
-
-uint32_t htonl(uint32_t v) {
-      return htons(v >> 16) | (htons((uint16_t) v) << 16);
-}
-
-uint16_t ntohs(uint16_t v) {
-      return htons(v);
-}
-
-uint32_t ntohl(uint32_t v) {
-      return htonl(v);
-}
+//#undef htons
+//#undef htonl
+//#undef ntohs
+//#undef ntohl
+//
+//uint16_t htons(uint16_t v) {
+//      return (v >> 8) | (v << 8);
+//}
+//
+//uint32_t htonl(uint32_t v) {
+//      return htons(v >> 16) | (htons((uint16_t) v) << 16);
+//}
+//
+//uint16_t ntohs(uint16_t v) {
+//      return htons(v);
+//}
+//
+//uint32_t ntohl(uint32_t v) {
+//      return htonl(v);
+//}
