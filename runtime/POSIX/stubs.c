@@ -581,5 +581,3 @@ char* getenv(const char* b) {
   return 0;
 }
 
-//why is this needed? I don't know
-#include "sockets.c.inc"
