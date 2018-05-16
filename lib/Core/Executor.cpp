@@ -3297,7 +3297,7 @@ void Executor::executeAlloc(ExecutionState &state,
     bool success = solver->getValue(state, size, example);
     assert(success && "FIXME: Unhandled solver failure");
     (void) success;
-
+    
     // Try and start with a small example.
     Expr::Width W = example->getWidth();
     while (example->Ugt(ConstantExpr::alloc(128, W))->isTrue()) {
