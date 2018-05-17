@@ -364,6 +364,9 @@ ssize_t read(int fd, void *buf, size_t count) {
   }
   
   f = __get_file(fd);
+  if ((f->flags & eSocket)) {
+      return recv(fd, buf, count, 0);
+  }
 
   if (!f) {
     errno = EBADF;
@@ -556,6 +559,36 @@ int __fd_stat(const char *path, struct stat64 *buf) {
   }
 }
 
+int fstatat(int fd, const char *path, struct stat *buf, int flags) {  
+  if (fd != AT_FDCWD) {
+    exe_file_t *f = __get_file(fd);
+
+    if (!f) {
+      errno = EBADF;
+      return -1;
+    } else if (f->dfile) {
+      klee_warning("symbolic file descriptor, ignoring (ENOENT)");
+      errno = ENOENT;
+      return -1;
+    }
+    fd = f->fd;
+  }
+  exe_disk_file_t *dfile = __get_sym_file(path);
+  if (dfile) {
+    memcpy(buf, dfile->stat, sizeof(*dfile->stat));
+    return 0;
+  } 
+
+#if (defined __NR_newfstatat) && (__NR_newfstatat != 0)
+  return syscall(__NR_newfstatat, (long)fd,
+                 (path ? __concretize_string(path) : NULL), buf, (long)flags);
+#else
+  return syscall(__NR_fstatat64, (long)fd,
+                 (path ? __concretize_string(path) : NULL), buf, (long)flags);
+#endif
+}
+
+
 int __fd_lstat(const char *path, struct stat64 *buf) {
   exe_disk_file_t *dfile = __get_sym_file(path);
   if (dfile) {
@@ -720,108 +753,6 @@ int __fd_fstat(int fd, struct stat64 *buf) {
   memcpy(buf, f->dfile->stat, sizeof(*f->dfile->stat));
   return 0;
 }
-
-int fstatat(int fd, const char* path, struct stat *buf, int flags) {
-  exe_disk_file_t *dfile = __get_sym_file(path);
-  if (dfile) {
-    klee_warning("fstatat: symbolic path, ignoring (ENOENT)");
-    errno = ENOENT;
-    return -1;
-  }
-  exe_file_t* f = __get_file(fd);
-  //keep in mind that fd can have 'magic' values
-  if (f && f->dfile) {
-    klee_warning("fstatat: symbolic file descriptor, ignoring (ENOENT)");
-    errno = ENOENT;
-    return -1;
-  }
-#ifdef _DEBUG_STUBS
-  if (f)
-    printf("fstatat %d(%d) %s\n", f->fd, fd, path);
-  else
-    printf("fstatat %d(nil) %s\n", fd, path);
-#endif
-  if (f) fd = f->fd;
- 
-#if (defined __NR_newfstatat) && (__NR_newfstatat != 0)
-  int r = syscall(__NR_newfstatat, (long)fd,
-               (path ? __concretize_string(path) : NULL),
-               buf, (long)flags); 
-#else
-  int r = syscall(__NR_fstatat64, (long)fd,
-               (path ? __concretize_string(path) : NULL),
-               buf, (long)flags);
-#endif
-  if (r == -1)
-    errno = klee_get_errno();
-#ifdef _DEBUG_STUBS
-  printf("fstatat returns %d (errno %d)\n", r, errno);
-  if (r == -1)
-    perror("fstatat");
-#endif
-  return r;
-}
-
-
-int futimens(int fd, const struct timespec times[2]) {
-  exe_file_t* f = __get_file(fd);
-  if (f && f->dfile) {
-    klee_warning("futimens: symbolic file descriptor, ignoring (ENOENT)");
-    errno = ENOENT;
-    return -1;
-  }
-  if (!f) {
-    errno = EBADF;
-    return -1;
-  }
-
-  //see the man page for details
-  int r = syscall(__NR_utimensat, (long)f->fd, 0L,
-                  times, 0L);
-  if (r == -1)
-    errno = klee_get_errno();
-  return r;
-}
-
-
-int link(const char* oldpath, const char* newpath) {
-  exe_disk_file_t *dfile = __get_sym_file(oldpath);
-  if (dfile) {
-    klee_warning("link: symbolic path, ignoring (ENOENT)");
-    errno = ENOENT;
-    return -1;
-  }
-  dfile = __get_sym_file(newpath);
-  if (dfile) {
-    klee_warning("link: symbolic path, ignoring (ENOENT)");
-    errno = ENOENT;
-    return -1;
-  }
-    int r = syscall(__NR_link, __concretize_string(oldpath), __concretize_string(newpath));
-    if (r == -1)
-      errno = klee_get_errno();
-    return r;
-}
-
-int symlink(const char* oldpath, const char* newpath) {
-  exe_disk_file_t *dfile = __get_sym_file(oldpath);
-  if (dfile) {
-    klee_warning("symlink: symbolic path, ignoring (ENOENT)");
-    errno = ENOENT;
-    return -1;
-  }
-  dfile = __get_sym_file(newpath);
-  if (dfile) {
-    klee_warning("symlink: symbolic path, ignoring (ENOENT)");
-    errno = ENOENT;
-    return -1;
-  }
-    int r = syscall(__NR_symlink, __concretize_string(oldpath), __concretize_string(newpath));
-    if (r == -1)
-      errno = klee_get_errno();
-    return r;
-}
-
 
 int __fd_ftruncate(int fd, off64_t length) {
   static int n_calls = 0;

@@ -1,6 +1,6 @@
 // RUN: %llvmgcc %s -g -emit-llvm -O0 -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out -libc=uclibc --posix-runtime %t.bc -sym-streams 1 1 > %t.log 2>&1
+// RUN: %klee --output-dir=%t.klee-out -libc=uclibc --posix-runtime %t.bc -sym-stream 1 2 -sym-datagrams 1 2 > %t.log 2>&1
 // RUN: cat %t.log | FileCheck %s
 
 #include <stdio.h>
@@ -38,11 +38,12 @@ int main(int argc, char **argv) {
   assert(connect(sockfd,(struct sockaddr *) &serv_addr, sizeof(serv_addr)) >= 0 && "Can't connect");
   printf("connect\n"); 
 
-  int n = write(sockfd, "hello", 1);
+  int n = write(sockfd, "hello", 5);
   assert(n == 5 && "Couldn't write 5 bytes");
   char buf[3];
   n = read(sockfd, buf, 2);
-  assert(n == 1 && "Didn't read enough bytes from socket");
+  printf("Read %d\n", n);
+  assert(n == 2 && "Didn't read enough bytes from socket");
   if(buf[0] > 'a' & buf[0] < 'z') 
       printf("Got a small letter\n");
       //CHECK-DAG: Got a small letter

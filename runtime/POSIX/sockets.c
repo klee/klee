@@ -334,28 +334,22 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
     /* symbolic file descriptor */
 
     assert(f->foreign->addr);
-    printf("sym socket  1\n");
-    if (!(f->flags & eDgramSocket)) {
-      printf("HAS addr %d\n", HAS_ADDR(f->foreign));
-      assert(HAS_ADDR(f->foreign));
-      errno = EISCONN;  /* Transport endpoint is already connected */
-      return -1;
-    }
-    printf("sym socket  4\n");
+//    if (!(f->flags & eDgramSocket)) {
+//      assert(HAS_ADDR(f->foreign));
+//      errno = EISCONN;  /* Transport endpoint is already connected */
+//      return -1;
+//    }
     if (!ADDR_COMPATIBLE(addr, addrlen, f->foreign)) {
       errno = EINVAL;   /* The addrlen is wrong */
       return -1;
     }
-    printf("sym socket  5 %d\n", PORT(addr));
     if (PORT(addr) == 0) {
       errno = EADDRNOTAVAIL;  /* Cannot assign requested address */
     }
-    printf("sym socket  6\n");
     if (PORT(f->local.addr) == 0) {
       /* TODO: choose an ephemeral port */
     }
     /* assign the address to the socket */
-    printf("sym socket  7\n");
     memcpy(f->foreign->addr, addr, addrlen);
   }
 
@@ -717,10 +711,10 @@ ssize_t __fd_recvfrom(int fd, void *buf, size_t len, int flags, struct sockaddr 
   struct msghdr msg;
   ssize_t s;
 
-  if (from != NULL && fromlen == NULL) {
-    errno = EFAULT;
-    return -1;
-  }
+  //if (from != NULL && fromlen == NULL) {
+  //  errno = EFAULT;
+  //  return -1;
+  //}
 
   iov.iov_base = buf;
   iov.iov_len = len;
