@@ -60,11 +60,9 @@ typedef struct exe_file_t {
 typedef struct {
   unsigned n_sym_files; /* number of symbolic input files, excluding stdin */
   unsigned n_sym_files_used;
-  unsigned n_cp_files; /* number of concrete path input files */
   exe_disk_file_t *sym_stdin, *sym_stdout;
   unsigned stdout_writes; /* how many chars were written to stdout */
   exe_disk_file_t *sym_files;
-  exe_disk_file_t *cp_files;
   /* --- */
   unsigned n_sym_streams;
   unsigned n_sym_streams_used;
@@ -99,16 +97,6 @@ typedef struct {
 extern exe_file_system_t __exe_fs;
 extern exe_sym_env_t __exe_env;
 
-typedef struct {
-  unsigned offset;
-  enum { fill_set, fill_copy, fill_file } fill_method;
-  unsigned length;
-  union {
-    int value;
-    char *string;
-  } arg;
-} fill_info_t;
-
 void klee_init_fds(unsigned n_files, unsigned file_length,  unsigned sym_stdin_len,
 		   int sym_stdout_flag, int do_all_writes_flag, 
                    unsigned n_streams, unsigned stream_len,
@@ -116,8 +104,6 @@ void klee_init_fds(unsigned n_files, unsigned file_length,  unsigned sym_stdin_l
 		   unsigned max_failures);
 
 void klee_init_env(int *argcPtr, char ***argvPtr);
-exe_disk_file_t* klee_init_cp_file(const char* path, int flags);
-int native_read_file(const char* path, int flags, char** _buf);
 exe_file_t* __get_file(int fd);
 
 int __get_new_fd(exe_file_t **pf);

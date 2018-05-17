@@ -87,26 +87,6 @@ static exe_disk_file_t *__get_sym_file_internal(const char *pathname, int flags,
         fprintf(stderr, "ZEST: opening symbolic file (.test) %s\n", pathname);
       }
     }
-    if (file_check) {
-      // concretize the file name in-place
-      const char* concrete_path = __concretize_string(pathname);
-      for (i=0; i<__exe_fs.n_cp_files; ++i) {
-        if (__exe_fs.cp_files[i].path && 0 == strcmp(__exe_fs.cp_files[i].path, pathname)) {
-          df = &__exe_fs.cp_files[i];
-        }
-      }
-      if (!df) {
-        df = klee_init_cp_file(concrete_path, flags);
-        /* if (!df)
-          klee_warning("Unable to open symbolic file.");
-        */
-      }
-      // free(concrete_pathname);
-      return df;
-    } 
-    else {
-      fprintf(stderr, "ZEST: opening concrete file %s\n", pathname);
-    }
   }
   
   return NULL;
