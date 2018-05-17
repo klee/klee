@@ -1415,21 +1415,6 @@ static const char *__concretize_string(const char *s) {
   return s;
 }
 
-static const char *__concretize_buffer(const char *s, unsigned size) {
-  char *sc = __concretize_ptr(s);
-  unsigned i;
-
-  for (i=0; i < size; ++i) {
-    char c = *sc;
-    char cc = (char) klee_get_valuel((long)c);
-    klee_assume(cc == c);
-    *sc++ = cc;
-  }
-
-  return s;
-}
-
-
 
 /* Trivial model:
    if path is "/" (basically no change) accept, otherwise reject
@@ -1449,22 +1434,6 @@ int chroot(const char *path) {
   return -1;
 }
 
-
-int utime(const char *path, const void* times) {
-  exe_disk_file_t *dfile = __get_sym_file(path);
-
-  if (dfile) {
-    /* XXX incorrect */
-    klee_warning("utime: symbolic file, ignoring (ENOENT)");
-    errno = ENOENT;
-    return -1;
-  }
-
-  int r = syscall(__NR_utime, __concretize_string(path), times);
-  if (r == -1)
-    errno = klee_get_errno();
-  return r;
-}
 
 /* Returns next available fd.  Sets eOpen in associated flags.  
    If no more fds are available, returns -1 and sets errno to ENFILE.
@@ -1643,28 +1612,5 @@ ssize_t writev(int fd, const struct iovec *iov, int iovcnt) {
   else {
     return __fd_gather_write(f, iov, iovcnt);
   }
-}
-
-
-
-ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count)
-{
-  exe_file_t *out_f = __get_file(out_fd);
-  exe_file_t *in_f = __get_file(in_fd);
-
-  if (out_f->dfile || in_f->dfile) {
-    errno = EINVAL;
-    return -1;
-  } else {
-    ssize_t os = syscall(__NR_sendfile, out_f->fd, in_f->fd, offset, count);
-    if (os < 0)
-      errno = klee_get_errno();
-    return os;
-  }
-}
-
-ssize_t sendfile64(int out_fd, int in_fd, off_t *offset, size_t count)
-{
-  return sendfile(out_fd, in_fd, offset, count);
 }
 
