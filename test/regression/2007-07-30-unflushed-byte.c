@@ -7,7 +7,7 @@
 int main() {
   char i, x[3];
 
-  klee_make_symbolic(&i, sizeof i);
+  klee_make_symbolic(&i, sizeof i, "i");
 
   x[0] = i;
 

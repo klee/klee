@@ -12,7 +12,7 @@
 int main() {
   unsigned char a;
 
-  klee_make_symbolic(&a, sizeof a);
+  klee_make_symbolic(&a, sizeof a, "a");
 
   // demand was firing here because an invalid constant
   // value was being created when implied value did not

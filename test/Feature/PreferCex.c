@@ -10,7 +10,7 @@
 int main() {
   char buf[4];
 
-  klee_make_symbolic(buf, sizeof buf);
+  klee_make_symbolic(buf, sizeof buf, "buf");
   // CHECK: Hi\x00\x00
   klee_prefer_cex(buf, buf[0]=='H');
   klee_prefer_cex(buf, buf[1]=='i');

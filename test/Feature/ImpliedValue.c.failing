@@ -15,15 +15,15 @@ int main() {
   unsigned char which;
   volatile unsigned char a,b,c,d,e,f,g,h;
 
-  klee_make_symbolic(&which, sizeof which);
-  klee_make_symbolic(&a, sizeof a);
-  klee_make_symbolic(&b, sizeof b);
-  klee_make_symbolic(&c, sizeof c);
-  klee_make_symbolic(&d, sizeof d);
-  klee_make_symbolic(&e, sizeof e);
-  klee_make_symbolic(&f, sizeof f);
-  klee_make_symbolic(&g, sizeof g);
-  klee_make_symbolic(&h, sizeof h);
+  klee_make_symbolic(&which, sizeof which, "which");
+  klee_make_symbolic(&a, sizeof a, "a");
+  klee_make_symbolic(&b, sizeof b, "b");
+  klee_make_symbolic(&c, sizeof c, "c");
+  klee_make_symbolic(&d, sizeof d, "d");
+  klee_make_symbolic(&e, sizeof e, "e");
+  klee_make_symbolic(&f, sizeof f, "f");
+  klee_make_symbolic(&g, sizeof g, "g");
+  klee_make_symbolic(&h, sizeof h, "h");
 
   switch (which) {
 // RUN: grep "simple read(2) = value case" %t4.out

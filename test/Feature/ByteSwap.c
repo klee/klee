@@ -8,7 +8,7 @@
 int main() {
   
   uint32_t n = 0;
-  klee_make_symbolic(&n, sizeof(n));
+  klee_make_symbolic(&n, sizeof(n), "n");
   
   uint32_t h = ntohl(n);
   assert(htonl(h) == n);

@@ -23,7 +23,7 @@ int constantArr[16 ] = {
 
 int main() {
   char buf[4];
-  klee_make_symbolic(buf, sizeof buf);
+  klee_make_symbolic(buf, sizeof buf, "buf");
 
   buf[1] = 'a';
 

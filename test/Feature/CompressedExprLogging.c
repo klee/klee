@@ -16,7 +16,7 @@ int constantArr[16] = {1 << 0,  1 << 1,  1 << 2,  1 << 3, 1 << 4,  1 << 5,
 
 int main() {
   char buf[4];
-  klee_make_symbolic(buf, sizeof buf);
+  klee_make_symbolic(buf, sizeof buf, "buf");
 
   buf[1] = 'a';
 

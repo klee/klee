@@ -20,7 +20,7 @@ int main() {
   int res = 1;
   int x;
 
-  klee_make_symbolic(&x, sizeof x);
+  klee_make_symbolic(&x, sizeof x, "x");
 
   if (x&1) res *= 2; else cond_exit();
   if (x&2) res *= 3; else cond_exit();

@@ -4,7 +4,7 @@
 
 unsigned sym() {
   unsigned x;
-  klee_make_symbolic(&x, sizeof x);
+  klee_make_symbolic(&x, sizeof x, "x");
   return x;
 }
 

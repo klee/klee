@@ -13,7 +13,7 @@
 int main() {
   int d;
 
-  klee_make_symbolic( &d, sizeof(d) );
+  klee_make_symbolic(&d, sizeof(d), "d");
 
   // CHECK-NOT: unable to compute initial values (invalid constraints?)!
   if ((d & 2) / 4)
