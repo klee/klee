@@ -47,7 +47,7 @@ fi
 # klee-uclibc
 ###############################################################################
 if [ "${KLEE_UCLIBC}" != "0" ]; then
-    git clone --depth 1 -b ${KLEE_UCLIBC} git://github.com/kren1/klee-uclibc.git sockets
+    git clone --depth 1 -b sockets git://github.com/kren1/klee-uclibc.git 
     cd klee-uclibc
     ./configure --make-llvm-lib --with-cc "${KLEE_CC}" --with-llvm-config /usr/bin/llvm-config-${LLVM_VERSION}
     make
