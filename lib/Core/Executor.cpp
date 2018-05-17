@@ -1153,7 +1153,7 @@ void Executor::printDebugInstructions(ExecutionState &state) {
 
   if (!DebugPrintInstructions.isSet(STDERR_COMPACT) &&
       !DebugPrintInstructions.isSet(FILE_COMPACT)) {
-    (*stream) << "     " << state.pc->printFileLine() << ":";
+    (*stream) << "     " << state.pc->getSourceLocation() << ":";
   }
 
   (*stream) << state.pc->info->assemblyLine;
@@ -3080,7 +3080,7 @@ void Executor::callExternalFunction(ExecutionState &state,
       if (i != arguments.size()-1)
         os << ", ";
     }
-    os << ") at " << state.pc->printFileLine();
+    os << ") at " << state.pc->getSourceLocation();
     
     if (AllExternalWarnings)
       klee_warning("%s", os.str().c_str());
