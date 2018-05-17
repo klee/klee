@@ -524,14 +524,18 @@ void Executor::initializeGlobals(ExecutionState &state) {
     globalAddresses.insert(std::make_pair(f, addr));
   }
 
+#ifndef WINDOWS
+  int *errno_addr = getErrnoLocation(state);
+  MemoryObject *errnoObj =
+      addExternalObject(state, (void *)errno_addr, sizeof *errno_addr, false);
+  // Copy values from and to program space explicitly
+  errnoObj->isUserSpecified = true;
+#endif
+
   // Disabled, we don't want to promote use of live externals.
 #ifdef HAVE_CTYPE_EXTERNALS
 #ifndef WINDOWS
 #ifndef DARWIN
-  /* From /usr/include/errno.h: it [errno] is a per-thread variable. */
-  int *errno_addr = __errno_location();
-  addExternalObject(state, (void *)errno_addr, sizeof *errno_addr, false);
-
   /* from /usr/include/ctype.h:
        These point into arrays of 384, so they can be indexed by any `unsigned
        char' value [0,255]; by EOF (-1); or by any `signed char' value
@@ -1173,6 +1177,7 @@ void Executor::stepInstruction(ExecutionState &state) {
     statsTracker->stepInstruction(state);
 
   ++stats::instructions;
+  ++state.steppedInstructions;
   state.prevPC = state.pc;
   ++state.pc;
 
@@ -1526,6 +1531,79 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     }
     break;
   }
+  case Instruction::IndirectBr: {
+    // implements indirect branch to a label within the current function
+    const auto bi = cast<IndirectBrInst>(i);
+    auto address = eval(ki, 0, state).value;
+    address = toUnique(state, address);
+
+    // concrete address
+    if (const auto CE = dyn_cast<ConstantExpr>(address.get())) {
+      const auto bb_address = (BasicBlock *) CE->getZExtValue(Context::get().getPointerWidth());
+      transferToBasicBlock(bb_address, bi->getParent(), state);
+      break;
+    }
+
+    // symbolic address
+    const auto numDestinations = bi->getNumDestinations();
+    std::vector<BasicBlock *> targets;
+    targets.reserve(numDestinations);
+    std::vector<ref<Expr>> expressions;
+    expressions.reserve(numDestinations);
+
+    ref<Expr> errorCase = ConstantExpr::alloc(1, Expr::Bool);
+    SmallPtrSet<BasicBlock *, 5> destinations;
+    // collect and check destinations from label list
+    for (unsigned k = 0; k < numDestinations; ++k) {
+      // filter duplicates
+      const auto d = bi->getDestination(k);
+      if (destinations.count(d)) continue;
+      destinations.insert(d);
+
+      // create address expression
+      const auto PE = Expr::createPointer((uint64_t) (unsigned long) (void *) d);
+      ref<Expr> e = EqExpr::create(address, PE);
+
+      // exclude address from errorCase
+      errorCase = AndExpr::create(errorCase, Expr::createIsZero(e));
+
+      // check feasibility
+      bool result;
+      bool success __attribute__ ((unused)) = solver->mayBeTrue(state, e, result);
+      assert(success && "FIXME: Unhandled solver failure");
+      if (result) {
+        targets.push_back(d);
+        expressions.push_back(e);
+      }
+    }
+    // check errorCase feasibility
+    bool result;
+    bool success __attribute__ ((unused)) = solver->mayBeTrue(state, errorCase, result);
+    assert(success && "FIXME: Unhandled solver failure");
+    if (result) {
+      expressions.push_back(errorCase);
+    }
+
+    // fork states
+    std::vector<ExecutionState *> branches;
+    branch(state, expressions, branches);
+
+    // terminate error state
+    if (result) {
+      terminateStateOnExecError(*branches.back(), "indirectbr: illegal label address");
+      branches.pop_back();
+    }
+
+    // branch states to resp. target blocks
+    assert(targets.size() == branches.size());
+    for (std::vector<ExecutionState *>::size_type k = 0; k < branches.size(); ++k) {
+      if (branches[k]) {
+        transferToBasicBlock(targets[k], bi->getParent(), *branches[k]);
+      }
+    }
+
+    break;
+  }
   case Instruction::Switch: {
     SwitchInst *si = cast<SwitchInst>(i);
     ref<Expr> cond = eval(ki, 0, state).value;
@@ -1641,7 +1719,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       }
     }
     break;
- }
+  }
   case Instruction::Unreachable:
     // Note that this is not necessarily an internal bug, llvm will
     // generate unreachable instructions in cases where it knows the
@@ -2962,7 +3040,28 @@ void Executor::callExternalFunction(ExecutionState &state,
     }
   }
 
+  // Prepare external memory for invoking the function
   state.addressSpace.copyOutConcretes();
+#ifndef WINDOWS
+  // Update external errno state with local state value
+  int *errno_addr = getErrnoLocation(state);
+  ObjectPair result;
+  bool resolved = state.addressSpace.resolveOne(
+      ConstantExpr::create((uint64_t)errno_addr, Expr::Int64), result);
+  if (!resolved)
+    klee_error("Could not resolve memory object for errno");
+  ref<Expr> errValueExpr = result.second->read(0, sizeof(*errno_addr) * 8);
+  ConstantExpr *errnoValue = dyn_cast<ConstantExpr>(errValueExpr);
+  if (!errnoValue) {
+    terminateStateOnExecError(state,
+                              "external call with errno value symbolic: " +
+                                  function->getName());
+    return;
+  }
+
+  externalDispatcher->setLastErrno(
+      errnoValue->getZExtValue(sizeof(*errno_addr) * 8));
+#endif
 
   if (!SuppressExternalWarnings) {
 
@@ -2982,6 +3081,7 @@ void Executor::callExternalFunction(ExecutionState &state,
     else
       klee_warning_once(function, "%s", os.str().c_str());
   }
+
   bool success = externalDispatcher->executeCall(function, target->inst, args);
   if (!success) {
     terminateStateOnError(state, "failed external call: " + function->getName(),
@@ -2994,6 +3094,13 @@ void Executor::callExternalFunction(ExecutionState &state,
                           External);
     return;
   }
+
+#ifndef WINDOWS
+  // Update errno memory object with the errno value from the call
+  int error = externalDispatcher->getLastErrno();
+  state.addressSpace.copyInConcrete(result.first, result.second,
+                                    (uint64_t)&error);
+#endif
 
   Type *resultType = target->inst->getType();
   if (resultType != Type::getVoidTy(function->getContext())) {
@@ -3745,6 +3852,17 @@ void Executor::prepareForEarlyExit() {
     statsTracker->done();
   }
 }
+
+/// Returns the errno location in memory
+int *Executor::getErrnoLocation(const ExecutionState &state) const {
+#ifndef __APPLE__
+  /* From /usr/include/errno.h: it [errno] is a per-thread variable. */
+  return __errno_location();
+#else
+  return __error();
+#endif
+}
+
 ///
 
 Interpreter *Interpreter::create(LLVMContext &ctx, const InterpreterOptions &opts,

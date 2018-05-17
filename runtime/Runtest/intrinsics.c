@@ -172,6 +172,12 @@ int klee_range(int begin, int end, const char* name) {
   return x;
 }
 
+void klee_prefer_cex(void *object, uintptr_t condition) { }
+
+void klee_abort() {
+  abort();
+}
+
 /* not sure we should even define.  is for debugging. */
 void klee_print_expr(const char *msg, ...) { }
 

@@ -24,14 +24,74 @@ llvm::cl::opt<bool>
         llvm::cl::init(false),
         llvm::cl::desc("Enhanced verbosity for region based merge operations"));
 
+llvm::cl::opt<bool>
+    UseIncompleteMerge("use-incomplete-merge",
+        llvm::cl::init(false),
+        llvm::cl::desc("Heuristic based merging"));
+
+llvm::cl::opt<bool>
+    DebugLogIncompleteMerge("debug-log-incomplete-merge",
+        llvm::cl::init(false),
+        llvm::cl::desc("Debug info about incomplete merging"));
+
+double MergeHandler::getMean() {
+  if (closedStateCount == 0)
+    return 0;
+
+  return closedMean;
+}
+
+unsigned MergeHandler::getInstructionDistance(ExecutionState *es){
+  return es->steppedInstructions - openInstruction;
+}
+
+ExecutionState *MergeHandler::getPrioritizeState(){
+  for (ExecutionState *cur_state : openStates) {
+    bool stateIsClosed = (executor->inCloseMerge.find(cur_state) !=
+                          executor->inCloseMerge.end());
+
+    if (!stateIsClosed && (getInstructionDistance(cur_state) < 2 * getMean())) {
+      return cur_state;
+    }
+  }
+  return 0;
+}
+
+
+void MergeHandler::addOpenState(ExecutionState *es){
+  openStates.push_back(es);
+}
+
+void MergeHandler::removeOpenState(ExecutionState *es){
+  auto it = std::find(openStates.begin(), openStates.end(), es);
+  assert(it != openStates.end());
+  std::swap(*it, openStates.back());
+  openStates.pop_back();
+}
+
+void MergeHandler::removeFromCloseMergeSet(ExecutionState *es){
+  executor->inCloseMerge.erase(es);
+}
+
 void MergeHandler::addClosedState(ExecutionState *es,
                                          llvm::Instruction *mp) {
-  auto closePoint = reachedMergeClose.find(mp);
+  // Update stats
+  ++closedStateCount;
+
+  // Incremental update of mean (travelling mean)
+  // https://math.stackexchange.com/a/1836447
+  closedMean += (static_cast<double>(getInstructionDistance(es)) - closedMean) /
+               closedStateCount;
+
+  // Remove from openStates
+  removeOpenState(es);
+
+  auto closePoint = reachedCloseMerge.find(mp);
 
   // If no other state has yet encountered this klee_close_merge instruction,
   // add a new element to the map
-  if (closePoint == reachedMergeClose.end()) {
-    reachedMergeClose[mp].push_back(es);
+  if (closePoint == reachedCloseMerge.end()) {
+    reachedCloseMerge[mp].push_back(es);
     executor->pauseState(*es);
   } else {
     // Otherwise try to merge with any state in the map element for this
@@ -54,23 +114,31 @@ void MergeHandler::addClosedState(ExecutionState *es,
 }
 
 void MergeHandler::releaseStates() {
-  for (auto& curMergeGroup: reachedMergeClose) {
+  for (auto& curMergeGroup: reachedCloseMerge) {
     for (auto curState: curMergeGroup.second) {
       executor->continueState(*curState);
     }
   }
-  reachedMergeClose.clear();
+  reachedCloseMerge.clear();
 }
 
 bool MergeHandler::hasMergedStates() {
-  return (!reachedMergeClose.empty());
+  return (!reachedCloseMerge.empty());
 }
 
-MergeHandler::MergeHandler(Executor *_executor)
-    : executor(_executor), refCount(0) {
+MergeHandler::MergeHandler(Executor *_executor, ExecutionState *es)
+    : executor(_executor), openInstruction(es->steppedInstructions),
+      closedStateCount(0), refCount(0) {
+  executor->mergeGroups.push_back(this);
+  addOpenState(es);
 }
 
 MergeHandler::~MergeHandler() {
+  auto it = std::find(executor->mergeGroups.begin(),
+                      executor->mergeGroups.end(), this);
+  std::swap(*it, executor->mergeGroups.back());
+  executor->mergeGroups.pop_back();
+
   releaseStates();
 }
 }

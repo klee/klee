@@ -41,7 +41,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Transforms/Scalar.h"
 
-#include <llvm/Transforms/Utils/Cloning.h>
+#include "llvm/Transforms/Utils/Cloning.h"
 
 #include <sstream>
 
@@ -54,10 +54,6 @@ namespace {
     eSwitchTypeLLVM,
     eSwitchTypeInternal
   };
-    
-  cl::opt<bool>
-  NoTruncateSourceLines("no-truncate-source-lines",
-                        cl::desc("Don't truncate long lines in the output source"));
 
   cl::opt<bool>
   OutputSource("output-source",
@@ -215,11 +211,8 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   pm.add(createScalarizerPass());
   if (opts.CheckDivZero) pm.add(new DivCheckPass());
   if (opts.CheckOvershift) pm.add(new OvershiftCheckPass());
-  // FIXME: This false here is to work around a bug in
-  // IntrinsicLowering which caches values which may eventually be
-  // deleted (via RAUW). This can be removed once LLVM fixes this
-  // issue.
-  pm.add(new IntrinsicCleanerPass(*targetData, false));
+
+  pm.add(new IntrinsicCleanerPass(*targetData));
   pm.run(*module);
 
   if (opts.Optimize)
@@ -276,42 +269,10 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
     klee_error("Unexpected instruction operand types detected");
   }
 
-  // Write out the .ll assembly file. We truncate long lines to work
-  // around a kcachegrind parsing bug (it puts them on new lines), so
-  // that source browsing works.
   if (OutputSource) {
-    llvm::raw_fd_ostream *os = ih->openOutputFile("assembly.ll");
+    std::unique_ptr<llvm::raw_fd_ostream> os(ih->openOutputFile("assembly.ll"));
     assert(os && !os->has_error() && "unable to open source output");
-
-    // We have an option for this in case the user wants a .ll they
-    // can compile.
-    if (NoTruncateSourceLines) {
-      *os << *module;
-    } else {
-      std::string string;
-      llvm::raw_string_ostream rss(string);
-      rss << *module;
-      rss.flush();
-      const char *position = string.c_str();
-
-      for (;;) {
-        const char *end = index(position, '\n');
-        if (!end) {
-          *os << position;
-          break;
-        } else {
-          unsigned count = (end - position) + 1;
-          if (count<255) {
-            os->write(position, count);
-          } else {
-            os->write(position, 254);
-            *os << "\n";
-          }
-          position = end+1;
-        }
-      }
-    }
-    delete os;
+    *os << *module;
   }
 
   if (OutputModule) {

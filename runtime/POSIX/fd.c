@@ -31,7 +31,6 @@
 #include <net/if.h>
 #include <stdbool.h>
 #include <sys/mman.h>
-
 #include <klee/klee.h>
 #include <sys/time.h>
 
@@ -82,24 +81,6 @@ int access(const char *pathname, int mode) {
     return 0;
   }
   return syscall(__NR_access, __concretize_string(pathname), mode);
-}
-
-int euidaccess(const char *pathname, int mode) {
-  exe_disk_file_t *dfile = __get_sym_file(pathname);
-  
-#ifdef _DEBUG_STUBS
-  printf("euidaccess %s\n", pathname);
-#endif
-  if (dfile) {
-    /* XXX we should check against stat values but we also need to
-       enforce in open and friends then. */
-    return 0;
-  } else {
-    int r = syscall(__NR_access, __concretize_string(pathname), mode);
-    if (r == -1)
-      errno = klee_get_errno();
-    return r;
-  } 
 }
 
 

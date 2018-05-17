@@ -153,19 +153,10 @@ char *Z3SolverImpl::getConstraintLog(const Query &query) {
   // with whatever the solver's builder is set to do.
   Z3Builder temp_builder(/*autoClearConstructCache=*/false,
                          /*z3LogInteractionFile=*/NULL);
-
-  for (std::vector<ref<Expr> >::const_iterator it = query.constraints.begin(),
-                                               ie = query.constraints.end();
-       it != ie; ++it) {
-    assumptions.push_back(temp_builder.construct(*it));
-  }
-  ::Z3_ast *assumptionsArray = NULL;
-  int numAssumptions = query.constraints.size();
-  if (numAssumptions) {
-    assumptionsArray = (::Z3_ast *)malloc(sizeof(::Z3_ast) * numAssumptions);
-    for (int index = 0; index < numAssumptions; ++index) {
-      assumptionsArray[index] = (::Z3_ast)assumptions[index];
-    }
+  ConstantArrayFinder constant_arrays_in_query;
+  for (auto const &constraint : query.constraints) {
+    assumptions.push_back(temp_builder.construct(constraint));
+    constant_arrays_in_query.visit(constraint);
   }
 
   // KLEE Queries are validity queries i.e.
@@ -176,6 +167,25 @@ char *Z3SolverImpl::getConstraintLog(const Query &query) {
   Z3ASTHandle formula = Z3ASTHandle(
       Z3_mk_not(temp_builder.ctx, temp_builder.construct(query.expr)),
       temp_builder.ctx);
+  constant_arrays_in_query.visit(query.expr);
+
+  for (auto const &constant_array : constant_arrays_in_query.results) {
+    assert(builder->constant_array_assertions.count(constant_array) == 1 &&
+           "Constant array found in query, but not handled by Z3Builder");
+    for (auto const &arrayIndexValueExpr :
+         builder->constant_array_assertions[constant_array]) {
+      assumptions.push_back(arrayIndexValueExpr);
+    }
+  }
+
+  ::Z3_ast *assumptionsArray = NULL;
+  int numAssumptions = assumptions.size();
+  if (numAssumptions) {
+    assumptionsArray = (::Z3_ast *)malloc(sizeof(::Z3_ast) * numAssumptions);
+    for (int index = 0; index < numAssumptions; ++index) {
+      assumptionsArray[index] = (::Z3_ast)assumptions[index];
+    }
+  }
 
   ::Z3_string result = Z3_benchmark_to_smtlib_string(
       temp_builder.ctx,
@@ -249,10 +259,10 @@ bool Z3SolverImpl::internalRunSolver(
 
   runStatusCode = SOLVER_RUN_STATUS_FAILURE;
 
-  for (ConstraintManager::const_iterator it = query.constraints.begin(),
-                                         ie = query.constraints.end();
-       it != ie; ++it) {
-    Z3_solver_assert(builder->ctx, theSolver, builder->construct(*it));
+  ConstantArrayFinder constant_arrays_in_query;
+  for (auto const &constraint : query.constraints) {
+    Z3_solver_assert(builder->ctx, theSolver, builder->construct(constraint));
+    constant_arrays_in_query.visit(constraint);
   }
   ++stats::queries;
   if (objects)
@@ -260,6 +270,16 @@ bool Z3SolverImpl::internalRunSolver(
 
   Z3ASTHandle z3QueryExpr =
       Z3ASTHandle(builder->construct(query.expr), builder->ctx);
+  constant_arrays_in_query.visit(query.expr);
+
+  for (auto const &constant_array : constant_arrays_in_query.results) {
+    assert(builder->constant_array_assertions.count(constant_array) == 1 &&
+           "Constant array found in query, but not handled by Z3Builder");
+    for (auto const &arrayIndexValueExpr :
+         builder->constant_array_assertions[constant_array]) {
+      Z3_solver_assert(builder->ctx, theSolver, arrayIndexValueExpr);
+    }
+  }
 
   // KLEE Queries are validity queries i.e.
   // ∀ X Constraints(X) → query(X)
