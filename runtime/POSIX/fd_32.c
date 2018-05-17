@@ -6,7 +6,18 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+// Contains 32bit definitions of posix file functions
+//===---
 
+#if __GNUC__
+#if __x86_64__ || __ppc64__
+#define ENV64
+#else
+#define ENV32
+#endif
+#endif
+
+#include "klee/Config/Version.h"
 #define _LARGEFILE64_SOURCE
 #include "fd.h"
 
@@ -46,6 +57,7 @@ static void __stat64_to_stat(struct stat64 *a, struct stat *b) {
   b->st_mtim.tv_nsec = a->st_mtim.tv_nsec;
   b->st_ctim.tv_nsec = a->st_ctim.tv_nsec;
 #endif
+
 }
 
 /***/
@@ -62,6 +74,20 @@ int open(const char *pathname, int flags, ...) {
   }
 
   return __fd_open(pathname, flags, mode);
+}
+
+int openat(int fd, const char *pathname, int flags, ...) {
+  mode_t mode = 0;
+
+  if (flags & O_CREAT) {
+    /* get mode */
+    va_list ap;
+    va_start(ap, flags);
+    mode = va_arg(ap, mode_t);
+    va_end(ap);
+  }
+
+  return __fd_openat(fd, pathname, flags, mode);
 }
 
 off_t lseek(int fd, off_t off, int whence) {
@@ -165,8 +191,7 @@ int __getdents(unsigned int fd, struct dirent *dirp, unsigned int count)
 
 /* Forward to 64 versions (uclibc expects versions w/o asm specifier) */
 
-int open64(const char *pathname, int flags, ...) __attribute__((weak));
-int open64(const char *pathname, int flags, ...) {
+__attribute__((weak)) int open64(const char *pathname, int flags, ...) {
   mode_t mode = 0;
 
   if (flags & O_CREAT) {
@@ -179,23 +204,3 @@ int open64(const char *pathname, int flags, ...) {
 
   return __fd_open(pathname, flags, mode);
 }
-
-off64_t lseek64(int fd, off64_t off, int whence) __attribute__((weak));
-off64_t lseek64(int fd, off64_t off, int whence) {
-  return __fd_lseek(fd, off, whence);
-}
-
-//int stat64(const char *path, struct stat64 *buf) __attribute__((weak));
-//int stat64(const char *path, struct stat64 *buf) {
-//  return __fd_stat(path, buf);
-//}
-
-//int lstat64(const char *path, struct stat64 *buf) __attribute__((weak));
-//int lstat64(const char *path, struct stat64 *buf) {
-//  return __fd_lstat(path, buf);
-//}
-//
-//int fstat64(int fd, struct stat64 *buf) __attribute__((weak));
-//int fstat64(int fd, struct stat64 *buf) {
-//  return __fd_fstat(fd, buf);
-//}
