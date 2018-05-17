@@ -8,8 +8,8 @@ int main() {
   int a;
   unsigned char *p = malloc(4);
 
-  klee_make_symbolic(&a, sizeof a);
-  klee_make_symbolic(p, sizeof p);
+  klee_make_symbolic(&a, sizeof a, "a");
+  klee_make_symbolic(p, sizeof p, "p");
 
   p[0] |= 16;
 

@@ -11,7 +11,7 @@
 
 unsigned klee_urange(unsigned start, unsigned end) {
   unsigned x;
-  klee_make_symbolic(&x, sizeof x);
+  klee_make_symbolic(&x, sizeof x, "x");
   if (x-start>=end-start) klee_silent_exit(0);
   return x;
 }

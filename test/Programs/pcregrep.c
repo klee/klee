@@ -486,8 +486,8 @@ llvm_cbe_cond_next69:
   ft_make_symbolic_array(ltmp_1_1, llvm_cbe_tmp22, "pattern");
   ft_make_symbolic_array(ltmp_3_1, llvm_cbe_tmp42, "source");
 #else
-  klee_make_symbolic(ltmp_1_1, llvm_cbe_tmp22);
-  klee_make_symbolic(ltmp_3_1, llvm_cbe_tmp42);
+  klee_make_symbolic(ltmp_1_1, llvm_cbe_tmp22, "ltmp_1_1");
+  klee_make_symbolic(ltmp_3_1, llvm_cbe_tmp42, "ltmp_3_1");
 #endif
   *(&ltmp_1_1[(llvm_cbe_tmp22 + ((unsigned int )-1))]) = ((unsigned char )0);
   *(&ltmp_3_1[(llvm_cbe_tmp42 + ((unsigned int )-1))]) = ((unsigned char )0);

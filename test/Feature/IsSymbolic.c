@@ -6,8 +6,8 @@
 
 int main() {
   int x, y, z = 0;
-  klee_make_symbolic(&x, sizeof x);
-  klee_make_symbolic(&y, sizeof y);
+  klee_make_symbolic(&x, sizeof x, "x");
+  klee_make_symbolic(&y, sizeof y, "y");
   if (x) {
     assert(klee_is_symbolic(y));
   } else {

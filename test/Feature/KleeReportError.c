@@ -8,8 +8,8 @@
 int main(int argc, char** argv) {
   int x, y, *p = 0;
   
-  klee_make_symbolic(&x, sizeof x);
-  klee_make_symbolic(&y, sizeof y);
+  klee_make_symbolic(&x, sizeof x, "x");
+  klee_make_symbolic(&y, sizeof y, "y");
 
   if (x)
     fprintf(stderr, "x\n");

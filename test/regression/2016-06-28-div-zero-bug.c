@@ -15,7 +15,7 @@ int safe_div(short p1, int p2) {
 }
 
 int main() {
-  klee_make_symbolic(&b, sizeof b);
+  klee_make_symbolic(&b, sizeof b, "b");
   if (safe_div(*c, 0))
     *f = (int)&b % *c;
 

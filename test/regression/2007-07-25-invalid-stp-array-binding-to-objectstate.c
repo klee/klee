@@ -7,7 +7,7 @@
 int main(void) {
   char c[2];
 
-  klee_make_symbolic(&c, sizeof(c));
+  klee_make_symbolic(&c, sizeof(c), "c");
 
   if (c[0] > 10) {
     int x;

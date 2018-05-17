@@ -8,7 +8,7 @@
 int main() {
   unsigned char x, y;
 
-  klee_make_symbolic(&x, sizeof x);
+  klee_make_symbolic(&x, sizeof x, "x");
   
   y = x;
 

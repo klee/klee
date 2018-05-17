@@ -9,8 +9,8 @@
 int main() {
   unsigned x, y;
   
-  klee_make_symbolic(&x, sizeof x);
-  klee_make_symbolic(&y, sizeof y);
+  klee_make_symbolic(&x, sizeof x, "x");
+  klee_make_symbolic(&y, sizeof y, "y");
 
   if (!x) { // should give x = 0 hit by ivc
     printf("ok\n");

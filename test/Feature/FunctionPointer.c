@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
   xx("called via xx");
 
 #if 0
-  klee_make_symbolic(&fp, sizeof fp);
+  klee_make_symbolic(&fp, sizeof fp, "fp");
   if(fp == baz) {
     printf("fp = %p, baz = %p\n", fp, baz);
     fp("calling via symbolic!");

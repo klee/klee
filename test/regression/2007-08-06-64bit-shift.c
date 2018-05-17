@@ -7,7 +7,7 @@
 int main() {
   int d;
   
-  klee_make_symbolic( &d, sizeof(d) );
+  klee_make_symbolic(&d, sizeof(d), "d");
 
   int l = d - 1;
   unsigned long long m = ((unsigned long long) l << 32) / d;

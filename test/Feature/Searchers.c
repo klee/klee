@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
   unsigned char *buf = malloc(N);
   int i;
   
-  klee_make_symbolic(buf, N);
+  klee_make_symbolic(buf, N, "buf");
   if (validate(buf, N))
     return buf[0];
   return 0;

@@ -8,7 +8,7 @@ int main() {
   char buf[4];
   char *s = "foo";
 
-  klee_make_symbolic(buf, sizeof buf);
+  klee_make_symbolic(buf, sizeof buf, "buf");
   buf[3] = 0;
 
   if (strcmp(buf, s)==0) {
