@@ -33,105 +33,55 @@
 #include <sys/mman.h>
 
 #include <klee/klee.h>
+#include <sys/time.h>
 
-/* #define DEBUG */
-/* #define _DEBUG_STUBS */
-#define INJECT_SYMBOLIC_DIR_ENTRIES 1
-#define USE_TRANSPARENT_FDS 0
-
-bool UseConcretePath;
-
-void klee_warning(const char*);
-void klee_warning_once(const char*);
-int klee_get_errno(void);
-
-static void *__concretize_ptr(const void *p);
-static size_t __concretize_size(size_t s);
-static const char *__concretize_string(const char *s);
-static const char *__concretize_buffer(const char *s, unsigned size);
-
-static exe_disk_file_t *__get_sym_file_internal(const char *pathname, int flags, bool cp_treat_symbolic);
-
+/* Returns pointer to the symbolic file structure fs the pathname is symbolic */
 static exe_disk_file_t *__get_sym_file(const char *pathname) {
-  return __get_sym_file_internal(pathname, 0, false);
-}
-
-/* Returns pointer to the symbolic file structure is the pathname is symbolic */
-static exe_disk_file_t *__get_sym_file_internal(const char *pathname, int flags, bool cp_treat_symbolic) {
-  char c;
-  unsigned i;
-  if (!pathname || !pathname[0])
+  if (!pathname)
     return NULL;
-  UseConcretePath = (klee_zest_enabled() == 1);
-  if (!pathname[1]) { // standard one-letter symbolic file
-    c = pathname[0];
 
-    for (i=0; i<__exe_fs.n_sym_files; ++i) {
-      if (c == 'A' + (char) i) {
-        exe_disk_file_t *df = &__exe_fs.sym_files[i];
-        if (df->stat->st_ino == 0)
-          return NULL;
-        return df;
-      }
-    }
-  } else if (UseConcretePath && cp_treat_symbolic) {
-    exe_disk_file_t* df = NULL;
-    bool file_check = false;
-    if (klee_is_symbolic(pathname[0])) {
-      fprintf(stderr, "ZEST: opening symbolic file %s\n", pathname);
-      file_check = true;
-    } else {
-      char* dot = strchr(pathname, '.');
-      if (dot && 0 == strcmp(dot, ".test")) {
-        file_check = true;
-        fprintf(stderr, "ZEST: opening symbolic file (.test) %s\n", pathname);
-      }
+  char c = pathname[0];
+  unsigned i;
+
+  if (c == 0 || pathname[1] != 0)
+    return NULL;
+
+  for (i=0; i<__exe_fs.n_sym_files; ++i) {
+    if (c == 'A' + (char) i) {
+      exe_disk_file_t *df = &__exe_fs.sym_files[i];
+      if (df->stat->st_ino == 0)
+        return NULL;
+      return df;
     }
   }
   
   return NULL;
 }
 
+static void *__concretize_ptr(const void *p);
+static size_t __concretize_size(size_t s);
+static const char *__concretize_string(const char *s);
+
 /* Returns pointer to the file entry for a valid fd */
 exe_file_t *__get_file(int fd) {
-#if USE_TRANSPARENT_FDS
-  if (fd >= 0) {
-    unsigned i;
-    for(i = 0; i < MAX_FDS; ++i) {
-      exe_file_t *f = &__exe_env.fds[i];
-      if (f->flags & eOpen && f->fd == fd) {
-        return f;
-      }
-    }
-    return NULL;
-  }
-#else
-  if (fd >= 0 && fd < MAX_FDS) {
+  if (fd>=0 && fd<MAX_FDS) {
     exe_file_t *f = &__exe_env.fds[fd];
     if (f->flags & eOpen)
       return f;
   }
-#endif
 
-  return NULL;
+  return 0;
 }
 
 int access(const char *pathname, int mode) {
   exe_disk_file_t *dfile = __get_sym_file(pathname);
   
-#ifdef _DEBUG_STUBS
-  printf("access %s\n", pathname);
-#endif
   if (dfile) {
     /* XXX we should check against stat values but we also need to
        enforce in open and friends then. */
     return 0;
-  } else {
-    int r = syscall(__NR_access, __concretize_string(pathname), mode);
-    if (r == -1)
-      errno = klee_get_errno();
-    return r;
-  } 
+  }
+  return syscall(__NR_access, __concretize_string(pathname), mode);
 }
 
 int euidaccess(const char *pathname, int mode) {
@@ -191,7 +141,8 @@ static int has_permission(int flags, struct stat64 *s) {
 
   return 1;
 }
-//#define _DEBUG_STUBS
+
+
 int __fd_open(const char *pathname, int flags, mode_t mode) {
   exe_disk_file_t *df;
   exe_file_t *f;
@@ -207,24 +158,15 @@ int __fd_open(const char *pathname, int flags, mode_t mode) {
   
   f = &__exe_env.fds[fd];
 
-#ifdef _DEBUG_STUBS
-  printf("open %s\n", pathname);
-#endif
   /* Should be the case if file was available, but just in case. */
-  // memset is expensive. we already do it in close
-  //memset(f, 0, sizeof *f);
-  df = __get_sym_file_internal(pathname, flags, (flags & O_ACCMODE) == O_RDONLY);
-  if (df) {
-#ifdef _DEBUG_STUBS
-    printf("opened symbolic file\n");
-#endif
+  memset(f, 0, sizeof *f);
+
+  df = __get_sym_file(pathname); 
+  if (df) {    
     /* XXX Should check access against mode / stat / possible
        deletion. */
     f->dfile = df;
-#if USE_TRANSPARENT_FDS
-    // we need a dummy fd (ideally the lowest not-used fd)
-    f->fd = open(".", O_RDONLY);
-#endif
+    
     if ((flags & O_CREAT) && (flags & O_EXCL)) {
       errno = EEXIST;
       return -1;
@@ -233,7 +175,7 @@ int __fd_open(const char *pathname, int flags, mode_t mode) {
     if ((flags & O_TRUNC) && (flags & O_RDONLY)) {
       /* The result of using O_TRUNC with O_RDONLY is undefined, so we
 	 return error */
-      fprintf(stderr, "Undefined call to open(): O_TRUNC | O_RDONLY\n");
+      klee_warning("Undefined call to open(): O_TRUNC | O_RDONLY\n");
       errno = EACCES;
       return -1;
     }
@@ -241,7 +183,7 @@ int __fd_open(const char *pathname, int flags, mode_t mode) {
     if ((flags & O_EXCL) && !(flags & O_CREAT)) {
       /* The result of using O_EXCL without O_CREAT is undefined, so
 	 we return error */
-      fprintf(stderr, "Undefined call to open(): O_EXCL w/o O_RDONLY\n");
+      klee_warning("Undefined call to open(): O_EXCL w/o O_RDONLY\n");
       errno = EACCES;
       return -1;
     }
@@ -253,43 +195,10 @@ int __fd_open(const char *pathname, int flags, mode_t mode) {
     else
       f->dfile->stat->st_mode = ((f->dfile->stat->st_mode & ~0777) |
 				 (mode & ~__exe_env.umask));
-  } else {
-    // concretize pathname. should be fine
-    int os_fd;
-    __concretize_string(pathname);
-#if USE_TRANSPARENT_FDS == 0
-    if (strncmp(pathname, "/proc/self/fd/", 14) == 0) {
-      // program (or fdopendir) is using some hacky way to open a file/folder
-      // try to make it work by substituing the runtime fd with the real fd
-      char buffer[1024];
-      int runtime_fd = atoi(pathname+14);
-      exe_file_t *f = __get_file(runtime_fd);
-      if (f) {
-        char* pathtail = strchr(pathname+14, '/');
-        snprintf(buffer, sizeof(buffer)-1, "/proc/self/fd/%d%s", f->fd, (pathtail ? pathtail : ""));
-        buffer[sizeof(buffer)-1] = 0;
-        os_fd = syscall(__NR_open, buffer, flags, mode);
-#ifdef _DEBUG_STUBS
-        printf("open: automagically opening %s\n", buffer);
-#endif
-      } else {
-        os_fd = syscall(__NR_open, pathname, flags, mode);
-      }
-    } else
-#endif
-    {
-      os_fd = syscall(__NR_open, pathname, flags, mode);
-    }
-    
-#ifdef _DEBUG_STUBS
-     printf("open returns %d (errno %d)\n", os_fd, errno);
-     if (os_fd < 0)
-        perror("open");
-#endif
-    if (os_fd == -1) {
-      errno = klee_get_errno();
+  } else {    
+    int os_fd = syscall(__NR_open, __concretize_string(pathname), flags, mode);
+    if (os_fd == -1)
       return -1;
-    }
     f->fd = os_fd;
   }
   
@@ -301,11 +210,8 @@ int __fd_open(const char *pathname, int flags, mode_t mode) {
   } else { /* XXX What actually happens here if != O_RDWR. */
     f->flags |= eReadable | eWriteable;
   }
-#if USE_TRANSPARENT_FDS 
-  return f->fd;
-#else
+  
   return fd;
-#endif
 }
 
 int close(int fd) {
@@ -316,14 +222,6 @@ int close(int fd) {
   n_calls++;  
 
   f = __get_file(fd);
-
-#ifdef _DEBUG_STUBS
-  if (f)
-    printf("close %d(%d)\n", f->fd, fd);
-  else
-    printf("close %d(nil)\n", fd);
-#endif
-
   if (!f) {
     errno = EBADF;
     return -1;
@@ -342,9 +240,9 @@ int close(int fd) {
      * On the downside, paths which find the socket
      * closed are not going to be very useful */
     r = syscall(__NR_close, f->fd);
-  } else {
-    r = 0;
   }
+  else r = 0;
+
 
   memset(f, 0, sizeof *f);
   
@@ -387,35 +285,14 @@ ssize_t read(int fd, void *buf, size_t count) {
        before concretization, at least once the routine has been fixed
        to properly work with symbolics. */
     klee_check_memory_access(buf, count);
-    void* incoming = buf;
-    if ((f->flags & eSocket)  && klee_zest_enabled()) {
-      // HAVE to read the data in a pristine concrete variable.
-      // otherwise the concrete values may not be copied by mempcpy
-      // and klee_make_symbolic won't be able to create the seeds
-      incoming = malloc(count);
-      if (!incoming) {
-        assert(0 && "unable to allocate memory");
-      }
-    }
-
-    /* XXX Paul: pread breaks dup'ed descriptors */ 
     if (f->fd == 0 || (f->flags & eSocket))
-      r = syscall(__NR_read, f->fd, incoming, count);
+      r = syscall(__NR_read, f->fd, buf, count);
     else
       r = syscall(__NR_pread64, f->fd, buf, count, (off64_t) f->off);
- 
-    if ((f->flags & eSocket)  && klee_zest_enabled()) {
-      if (-1 != r) {
-        klee_make_symbolic(incoming, count, "read data");
-        memcpy(buf, incoming, r);
-      }
-      free(incoming);
-    }
-   
-    if (r == -1) {
-      errno = klee_get_errno();
+
+    if (r == -1)
       return -1;
-    }
+    
     if (f->fd != 0)
       f->off += r;
     return r;
@@ -424,6 +301,7 @@ ssize_t read(int fd, void *buf, size_t count) {
     assert(f->off >= 0);
     if (((off64_t)f->dfile->size) < f->off)
       return 0;
+
     /* symbolic file */
     if (f->off + count > f->dfile->size) {
       count = f->dfile->size - f->off;
@@ -436,70 +314,6 @@ ssize_t read(int fd, void *buf, size_t count) {
   }
 }
 
-ssize_t pread(int fd, void *buf, size_t count, off_t offset) {
-  static int n_calls = 0;
-  exe_file_t *f;
-
-  n_calls++;
-
-  if (count == 0)
-    return 0;
-
-  if (buf == NULL) {
-    errno = EFAULT;
-    return -1;
-  }
-  if (offset < 0) {
-    errno = EINVAL;
-    return -1;
-  }
-
-  f = __get_file(fd);
-
-  if (!f) {
-    errno = EBADF;
-    return -1;
-  }  
-
-  if (__exe_fs.max_failures && *__exe_fs.read_fail == n_calls) {
-    __exe_fs.max_failures--;
-    errno = EIO;
-    return -1;
-  }
-  
-  if (!f->dfile) {
-    /* concrete file */
-    int r;
-    buf = __concretize_ptr(buf);
-    count = __concretize_size(count);
-    /* XXX In terms of looking for bugs we really should do this check
-       before concretization, at least once the routine has been fixed
-       to properly work with symbolics. */
-    klee_check_memory_access(buf, count);
-
-    r = syscall(__NR_pread64, f->fd, buf, count, offset);
-
-    if (r == -1) {
-      errno = klee_get_errno();
-      return -1;
-    }
-
-    return r;
-  }
-  else {
-    if (((off64_t)f->dfile->size) < offset)
-      return 0;
-    /* symbolic file */
-    if (offset + count > f->dfile->size) {
-      count = f->dfile->size - offset;
-    }
-
-    memcpy(buf, f->dfile->contents + offset, count);
-    return count;
-  }
-}
-
-
 
 ssize_t write(int fd, const void *buf, size_t count) {
   static int n_calls = 0;
@@ -508,6 +322,7 @@ ssize_t write(int fd, const void *buf, size_t count) {
   n_calls++;
 
   f = __get_file(fd);
+
   if (!f) {
     errno = EBADF;
     return -1;
@@ -521,30 +336,19 @@ ssize_t write(int fd, const void *buf, size_t count) {
 
   if (!f->dfile) {
     int r;
-    char *cbuf = NULL;
+
     buf = __concretize_ptr(buf);
     count = __concretize_size(count);
     /* XXX In terms of looking for bugs we really should do this check
        before concretization, at least once the routine has been fixed
        to properly work with symbolics. */
     klee_check_memory_access(buf, count);
-    UseConcretePath = (klee_zest_enabled() == 1);
-    if (UseConcretePath &&
-        count > 0) {
-      cbuf = malloc(count);
-      assert(cbuf);
-      memcpy(cbuf, buf, count);
-      buf = __concretize_buffer(cbuf, count);
-    }
     if (f->fd == 1 || f->fd == 2)
       r = syscall(__NR_write, f->fd, buf, count);
     else r = syscall(__NR_pwrite64, f->fd, buf, count, (off64_t) f->off);
-    free(cbuf);
 
-    if (r == -1) {
-      errno = klee_get_errno();
+    if (r == -1)
       return -1;
-    }
     
     assert(r >= 0);
     if (f->fd != 1 && f->fd != 2)
@@ -570,7 +374,7 @@ ssize_t write(int fd, const void *buf, size_t count) {
       memcpy(f->dfile->contents + f->off, buf, actual_count);
     
     if (count != actual_count)
-      fprintf(stderr, "WARNING: write() ignores bytes.\n");
+      klee_warning("write() ignores bytes.\n");
 
     if (f->dfile == __exe_fs.sym_stdout)
       __exe_fs.stdout_writes += actual_count;
@@ -584,7 +388,7 @@ ssize_t write(int fd, const void *buf, size_t count) {
 off64_t __fd_lseek(int fd, off64_t offset, int whence) {
   off64_t new_off;
   exe_file_t *f = __get_file(fd);
-  offset = __concretize_size(offset);
+
   if (!f) {
     errno = EBADF;
     return -1;
@@ -610,10 +414,8 @@ off64_t __fd_lseek(int fd, off64_t offset, int whence) {
       }
     }
 
-    if (new_off == -1) {
-      errno = klee_get_errno();
+    if (new_off == -1)
       return -1;
-    }
 
     f->off = new_off;
     return new_off;
@@ -644,26 +446,13 @@ int __fd_stat(const char *path, struct stat64 *buf) {
     memcpy(buf, dfile->stat, sizeof(*dfile->stat));
     return 0;
   } 
-#ifdef _DEBUG_STUBS
-  printf("stat %s\n", path);
-#endif
-  char *pathcpy = malloc(strlen(path)+1);
-  strcpy(pathcpy, path);
+
   {
 #if __WORDSIZE == 64
-    int r = syscall(__NR_stat, __concretize_string(pathcpy), buf);
+    return syscall(__NR_stat, __concretize_string(path), buf);
 #else
-    int r = syscall(__NR_stat64, __concretize_string(pathcpy), buf);
+    return syscall(__NR_stat64, __concretize_string(path), buf);
 #endif
-    if (r == -1)
-      errno = klee_get_errno();
-#ifdef _DEBUG_STUBS
-    printf("stat returns %d (errno %d)\n", r, errno);
-    if (r != 0)
-      perror("stat");
-#endif
-    free(pathcpy);
-    return r;
   }
 }
 
@@ -672,20 +461,14 @@ int __fd_lstat(const char *path, struct stat64 *buf) {
   if (dfile) {
     memcpy(buf, dfile->stat, sizeof(*dfile->stat));
     return 0;
-  }
+  } 
 
-  char *pathcpy = malloc(strlen(path)+1);
-  strcpy(pathcpy, path);
-  {
+  {    
 #if __WORDSIZE == 64
-    int r = syscall(__NR_lstat, __concretize_string(pathcpy), buf);
+    return syscall(__NR_lstat, __concretize_string(path), buf);
 #else
-    int r = syscall(__NR_lstat64, __concretize_string(pathcpy), buf);
+    return syscall(__NR_lstat64, __concretize_string(path), buf);
 #endif
-    if (r == -1)
-      errno = klee_get_errno();
-    free(pathcpy);
-    return r;
   }
 }
 
@@ -699,12 +482,7 @@ int chdir(const char *path) {
     return -1;
   }
 
-  {
-    int r = syscall(__NR_chdir, __concretize_string(path));
-    if (r == -1)
-      errno = klee_get_errno();
-    return r;
-  }
+  return syscall(__NR_chdir, __concretize_string(path));
 }
 
 int fchdir(int fd) {
@@ -719,95 +497,9 @@ int fchdir(int fd) {
     klee_warning("symbolic file, ignoring (ENOENT)");
     errno = ENOENT;
     return -1;
-  } else {
-    int r = syscall(__NR_fchdir, f->fd);
-    if (r == -1)
-      errno = klee_get_errno();
-    return r;
-  }
-}
-
-void* mmap_simple(int fd, size_t length, off_t off) {
-  void* buffer = malloc(length);
-  __fd_lseek(fd, off, SEEK_SET);
-
-  size_t count = 0;
-  ssize_t r;
-  while(count < length) {
-    r = read(fd, buffer, length-count);
-    if (0 == r) {
-      klee_warning("mmap_simple: unable to read requested size");
-      break;
-    } if (-1 == r) {
-      klee_warning("mmap_simple: read");
-      break;
-    }
-    count += r;
-  }
-  return buffer;
-}
-
-/* 64 bits only */
-void* mmap64(void* addr, size_t length, int prot,
-         int flags, int fd, off64_t off) {
-  if (NULL == addr && PROT_READ == prot)
-    return mmap_simple(fd, length, off*4096);
-  else {
-    klee_warning("mmap64: unsupported mmap call");
-    return (void*)-1l;
-  }
-  exe_file_t *f = __get_file(fd);
-  if (!f) {
-    errno = EBADF;
-    return (void*)-1l;
   }
 
-  if (f->dfile) {
-    klee_warning("mmap64: symbolic file, ignoring (ENOENT)");
-    errno = ENOENT;
-    return (void*)-1l;
-  } else {
-    long r = syscall(__NR_mmap, addr, length, prot,
-                    flags, f->fd, off);
-    if (r == -1)
-      errno = klee_get_errno();
-    return (void*)r;
-  }
-}
-
-
-void* mmap(void* addr, size_t length, int prot,
-         int flags, int fd, off_t off) {
-  if (NULL == addr && PROT_READ == prot)
-    return mmap_simple(fd, length, off);
-  else {
-    klee_warning("mmap64: unsupported mmap call");
-    return (void*)-1l;
-  }
-
-  exe_file_t *f = __get_file(fd); 
-  if (!f) {
-    errno = EBADF;
-    return (void*)-1l;
-  }
-
-  if (f->dfile) {
-    klee_warning("mmap: symbolic file, ignoring (ENOENT)");
-    errno = ENOENT;
-    return (void*)-1l;
-  } else {
-    long r = syscall(__NR_mmap, addr, length, prot,
-                    flags, f->fd, off);
-    if (r == -1)
-      errno = klee_get_errno();
-    return (void*)r;
-  }
-}
-
-int munmap(void *addr, size_t length)
-{
-  free(addr);
-  return 0;
+  return syscall(__NR_fchdir, f->fd);
 }
 
 /* Sets mode and or errno and return appropriate result. */
@@ -838,12 +530,9 @@ int chmod(const char *path, mode_t mode) {
 
   if (dfile) {
     return __df_chmod(dfile, mode);
-  } else {
-    int r = syscall(__NR_chmod, __concretize_string(path), mode);
-    if (r == -1)
-      errno = klee_get_errno();
-    return r;
   }
+
+  return syscall(__NR_chmod, __concretize_string(path), mode);
 }
 
 int fchmod(int fd, mode_t mode) {
@@ -865,12 +554,9 @@ int fchmod(int fd, mode_t mode) {
 
   if (f->dfile) {
     return __df_chmod(f->dfile, mode);
-  } else {
-    int r = syscall(__NR_fchmod, f->fd, mode);
-    if (r == -1)
-      errno = klee_get_errno();
-    return r;
-  }  
+  }
+
+  return syscall(__NR_fchmod, f->fd, mode);
 }
 
 static int __df_chown(exe_disk_file_t *df, uid_t owner, gid_t group) {
@@ -884,12 +570,9 @@ int chown(const char *path, uid_t owner, gid_t group) {
 
   if (df) {
     return __df_chown(df, owner, group);
-  } else {
-    int r = syscall(__NR_chown, __concretize_string(path), owner, group);
-    if (r == -1)
-      errno = klee_get_errno();
-    return r;
   }
+
+  return syscall(__NR_chown, __concretize_string(path), owner, group);
 }
 
 int fchown(int fd, uid_t owner, gid_t group) {
@@ -902,12 +585,9 @@ int fchown(int fd, uid_t owner, gid_t group) {
 
   if (f->dfile) {
     return __df_chown(f->dfile, owner, group);
-  } else {
-    int r = syscall(__NR_fchown, f->fd, owner, group);
-    if (r == -1)
-      errno = klee_get_errno();
-    return r;
   }
+
+  return syscall(__NR_fchown, fd, owner, group);
 }
 
 int lchown(const char *path, uid_t owner, gid_t group) {
@@ -916,47 +596,27 @@ int lchown(const char *path, uid_t owner, gid_t group) {
 
   if (df) {
     return __df_chown(df, owner, group);
-  } else {
-    int r = syscall(__NR_lchown, __concretize_string(path), owner, group);
-    if (r == -1)
-      errno = klee_get_errno();
-    return r;
   }
+
+  return syscall(__NR_chown, __concretize_string(path), owner, group);
 }
 
 int __fd_fstat(int fd, struct stat64 *buf) {
   exe_file_t *f = __get_file(fd);
 
-#ifdef _DEBUG_STUBS
-  if (f)
-    printf("fstat %d(%d)\n", f->fd, fd);
-  else
-    printf("fstat %d, __get_file failed\n", fd);
-#endif
- 
   if (!f) {
     errno = EBADF;
     return -1;
   }
- 
+  
   if (!f->dfile) {
 #if __WORDSIZE == 64
-    int r = syscall(__NR_fstat, f->fd, buf);
+    return syscall(__NR_fstat, f->fd, buf);
 #else
-    int r = syscall(__NR_fstat64, f->fd, buf);
+    return syscall(__NR_fstat64, f->fd, buf);
 #endif
-    if (r == -1)
-      errno = klee_get_errno();
-#ifdef _DEBUG_STUBS
-  printf("fstat returns %d (errno %d)\n", r, errno);
-  if (r != 0)
-    perror("fstat");
-#endif
-    return r;
   }
-#ifdef _DEBUG_STUBS
-  printf("fstat: using symbolic stat data\n");
-#endif
+  
   memcpy(buf, f->dfile->stat, sizeof(*f->dfile->stat));
   return 0;
 }
@@ -1002,38 +662,7 @@ int fstatat(int fd, const char* path, struct stat *buf, int flags) {
   return r;
 }
 
-int unlinkat(int fd, const char* path, int flags) {
-  exe_disk_file_t *dfile = __get_sym_file(path);
-  if (dfile) {
-    klee_warning("unlinkat: symbolic path, ignoring (ENOENT)");
-    errno = ENOENT;
-    return -1;
-  }
-  exe_file_t* f = __get_file(fd);
-  if (f && f->dfile) {
-    klee_warning("unlinkat: symbolic file descriptor, ignoring (ENOENT)");
-    errno = ENOENT;
-    return -1;
-  }
-#ifdef _DEBUG_STUBS
-  if (f)
-    printf("unlinkat %d(%d) %s\n", f->fd, fd, path);
-  else
-    printf("unlinkat %d(nil) %s\n", fd, path);
-#endif
-  if (f) fd = f->fd;
-  int r = syscall(__NR_unlinkat, (long)fd, 
-               (path ? __concretize_string(path) : NULL),
-               (long)flags);
-  if (r == -1)
-    errno = klee_get_errno();
-#ifdef _DEBUG_STUBS
-  printf("unlinkat returns %d (errno %d)\n", r, errno);
-  if (r != 0)
-    perror("unlinkat");
-#endif
-  return r;
-}
+
 
 int futimesat(int fd, const char* path, const struct timeval times[2]) {
   exe_disk_file_t *dfile = __get_sym_file(path);
@@ -1250,17 +879,12 @@ int __fd_ftruncate(int fd, off64_t length) {
     klee_warning("symbolic file, ignoring (EIO)");
     errno = EIO;
     return -1;
-  } else {
-    length = __concretize_size(length);
+  }
 #if __WORDSIZE == 64
-    int r = syscall(__NR_ftruncate, f->fd, length);
+  return syscall(__NR_ftruncate, f->fd, length);
 #else
-    int r = syscall(__NR_ftruncate64, f->fd, length);
+  return syscall(__NR_ftruncate64, f->fd, length);
 #endif
-    if (r == -1)
-      errno = klee_get_errno();
-    return r;
-  }  
 }
 
 int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
@@ -1270,20 +894,15 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
     errno = EBADF;
     return -1;
   }
-  
-#ifdef _DEBUG_STUBS
-  printf("getdents %d(%d) count=%u offset=%ul\n", f->fd, fd, count, (long)f->off);
-#endif
+
   if (f->dfile) {
     klee_warning("getdents called on symbolic file, ignoring (EINVAL)");
     errno = EINVAL;
     return -1;
   } else {
-    // Paul: the code below always injects symbolic files in readdir calls
-    // disabled for now
-    if (INJECT_SYMBOLIC_DIR_ENTRIES && (unsigned long) f->off < 4096u) {
+    if ((unsigned long) f->off < 4096u) {
       /* Return our dirents */
-      unsigned i, pad, bytes=0;
+      off64_t i, pad, bytes=0;
 
       /* What happens for bad offsets? */
       i = f->off / sizeof(*dirp);
@@ -1313,12 +932,12 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
       dirp->d_off = 4096;
       bytes += dirp->d_reclen;
       f->off = pad;
+
       return bytes;
     } else {
-#if INJECT_SYMBOLIC_DIR_ENTRIES
-      unsigned os_pos = f->off - 4096;
-#endif
+      off64_t os_pos = f->off - 4096;
       int res;
+      off64_t s = 0;
 
       /* For reasons which I really don't understand, if I don't
          memset this then sometimes the kernel returns d_ino==0 for
@@ -1328,35 +947,27 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
          Even more bizarre, interchanging the memset and the seek also
          case strange behavior. Really should be debugged properly. */
       memset(dirp, 0, count);
-#if INJECT_SYMBOLIC_DIR_ENTRIES
-      int s;
-      s = syscall(__NR_lseek, f->fd, (int) os_pos, SEEK_SET);
+      s = syscall(__NR_lseek, f->fd, os_pos, SEEK_SET);
       assert(s != (off64_t) -1);
-#endif
       res = syscall(__NR_getdents64, f->fd, dirp, count);
-      if (res == -1) {
-        errno = klee_get_errno();
-      } else {
-#if INJECT_SYMBOLIC_DIR_ENTRIES
+      if (res > -1) {
         int pos = 0;
-
-        f->off = syscall(__NR_lseek, f->fd, 0, SEEK_CUR) + 4096;
+        f->off = syscall(__NR_lseek, f->fd, 0, SEEK_CUR);
+        assert(f->off != (off64_t)-1);
+        f->off += 4096;
 
         /* Patch offsets */
-
         while (pos < res) {
           struct dirent64 *dp = (struct dirent64*) ((char*) dirp + pos);
           dp->d_off += 4096;
           pos += dp->d_reclen;
         }
-#endif
       }
       return res;
     }
   }
 }
 
-#if 0
 #if __WORDSIZE == 64
 int ioctl(int fd, unsigned long int request, ...) {
 #else
@@ -1366,6 +977,9 @@ int ioctl(int fd, unsigned long request, ...) {
   va_list ap;
   void *buf;
 
+#if 0
+  printf("In ioctl(%d, ...)\n", fd);
+#endif
 
   if (!f) {
     errno = EBADF;
@@ -1375,7 +989,6 @@ int ioctl(int fd, unsigned long request, ...) {
   va_start(ap, request);
   buf = va_arg(ap, void*);
   va_end(ap);
-  
   if (f->dfile) {
     struct stat *stat = (struct stat*) f->dfile->stat;
 
@@ -1492,35 +1105,51 @@ int ioctl(int fd, unsigned long request, ...) {
       errno = EINVAL;
       return -1;
     }
+    case SIOCGIFINDEX: {
+      struct ifreq *ifr = buf;
+      ifr->ifr_ifindex = 0;
+      return 0;
+    }
+    case SIOCGIFHWADDR: {
+      struct ifreq *ifr = buf;
+      char (*ia)[14] = &ifr->ifr_hwaddr.sa_data;
+    /*klee_make_symbolic(ia, sizeof(*ia), "IFADDR");*/
+      memset(ia, 0xdd, sizeof(*ia));
+      return 0;
+    }
+    case SIOCGIFADDR: {
+      struct ifreq *ifr = buf;
+      switch (ifr->ifr_addr.sa_family) {
+      default:
+        ifr->ifr_addr.sa_family = AF_INET;
+        /* fall through */
+      case AF_INET: {
+        struct in_addr* ia = &((struct sockaddr_in *)&ifr->ifr_addr)->sin_addr;
+      /*klee_make_symbolic(ia, sizeof(*ia), "IFADDR");*/
+        memset(ia, 0xdd, sizeof(*ia));
+        return 0;
+      }
+      case AF_INET6: {
+        struct in6_addr* ia = &((struct sockaddr_in6 *)&ifr->ifr_addr)->sin6_addr;
+      /*klee_make_symbolic(ia, sizeof(*ia), "IFADDR");*/
+        memset(ia, 0xdd, sizeof(*ia));
+        return 0;
+      }
+      }
+    }
     default:
       klee_warning("symbolic file, ignoring (EINVAL)");
       errno = EINVAL;
       return -1;
     }
-  } else {
-    int r = syscall(__NR_ioctl, f->fd, request, buf );
-    if (r == -1) 
-      errno = klee_get_errno();
-    return r;
   }
+  return syscall(__NR_ioctl, f->fd, request, buf);
 }
-#endif
 
 int fcntl(int fd, int cmd, ...) {
   exe_file_t *f = __get_file(fd);
   va_list ap;
   unsigned arg; /* 32 bit assumption (int/ptr) */
-
-#ifdef _DEBUG_STUBS
-  if (f)
-    printf("fcntl %d(%d)\n", f->fd, fd);
-  else
-    printf("fcntl %d(nil)\n", fd);
-    char x[512];
-    sprintf(x, "fcntl file %d %d\n", fd, (f ? f->fd : -666));
-    write(2, x, strlen(x)+1);
-    klee_warning("XXX");
-#endif
 
   if (!f) {
     errno = EBADF;
@@ -1565,12 +1194,8 @@ int fcntl(int fd, int cmd, ...) {
       errno = EINVAL;
       return -1;
     }
-  } else {
-    int r = syscall(__NR_fcntl, f->fd, cmd, arg );
-    if (r == -1)
-      errno = klee_get_errno();
-    return r;
   }
+  return syscall(__NR_fcntl, f->fd, cmd, arg);
 }
 
 int __fd_statfs(const char *path, struct statfs *buf) {
@@ -1582,12 +1207,7 @@ int __fd_statfs(const char *path, struct statfs *buf) {
     return -1;
   }
 
-  {
-    int r = syscall(__NR_statfs, __concretize_string(path), buf);
-    if (r == -1)
-      errno = klee_get_errno();
-    return r;
-  }
+  return syscall(__NR_statfs, __concretize_string(path), buf);
 }
 
 int fstatfs(int fd, struct statfs *buf) {
@@ -1602,12 +1222,8 @@ int fstatfs(int fd, struct statfs *buf) {
     klee_warning("symbolic file, ignoring (EBADF)");
     errno = EBADF;
     return -1;
-  } else {
-    int r = syscall(__NR_fstatfs, f->fd, buf);
-    if (r == -1)
-      errno = klee_get_errno();
-    return r;
   }
+  return syscall(__NR_fstatfs, f->fd, buf);
 }
 
 int fsync(int fd) {
@@ -1618,60 +1234,33 @@ int fsync(int fd) {
     return -1;
   } else if (f->dfile) {
     return 0;
-  } else {
-    int r = syscall(__NR_fsync, f->fd);
-    if (r == -1)
-      errno = klee_get_errno();
-    return r;
   }
+  return syscall(__NR_fsync, f->fd);
 }
 
 int dup2(int oldfd, int newfd) {
   exe_file_t *f = __get_file(oldfd);
 
-#ifdef _DEBUG_STUBS
-  printf("dup2 %d %d\n", oldfd, newfd);
-#endif
-  if (!f || !(newfd >= 0 && newfd < MAX_FDS)) {
+  if (!f || !(newfd>=0 && newfd<MAX_FDS)) {
     errno = EBADF;
     return -1;
-  } 
-  
-  int i, idx = -1;
-  for (i = 0; i < MAX_FDS; ++i) {
-    if (__exe_env.fds[i].fd == newfd) {
-      idx = i;
-      break;
-    }
-    if (idx == -1 && !(__exe_env.fds[i].flags & eOpen))
-      idx = i;
-  }
-  if (-1 == idx) {
-    errno = EMFILE;
-    return -1;
-  }
+  } else {
+    exe_file_t *f2 = &__exe_env.fds[newfd];
+    if (f2->flags & eOpen) close(newfd);
 
-  exe_file_t *f2 = &__exe_env.fds[idx];
-  if (f2->flags & eOpen) close(newfd);
-#if USE_TRANSPARENT_FDS
-  newfd = syscall(__NR_dup2, oldfd, newfd);
-  if (-1 == newfd)
-    errno = klee_get_errno();
-  else
-    f2->flags = f->flags & (~eCloseOnExec);
-#else
-  /* XXX Incorrect, really we need another data structure for open
-     files */
-  *f2 = *f;
+    /* XXX Incorrect, really we need another data structure for open
+       files */
+    *f2 = *f;
 
-  f2->flags &= ~eCloseOnExec;
+    f2->flags &= ~eCloseOnExec;
       
-  /* I'm not sure it is wise, but we can get away with not dup'ng
-     the OS fd, since actually that will in many cases effect the
-     sharing of the open file (and the process should never have
-     access to it). */
-#endif
-  return newfd;
+    /* I'm not sure it is wise, but we can get away with not dup'ng
+       the OS fd, since actually that will in many cases effect the
+       sharing of the open file (and the process should never have
+       access to it). */
+
+    return newfd;
+  }
 }
 
 int dup(int oldfd) {
@@ -1680,9 +1269,6 @@ int dup(int oldfd) {
     errno = EBADF;
     return -1;
   } else {
-#if USE_TRANSPARENT_FDS
-    klee_warning_once("Cannot guarantee dup semantics with transparent file descriptors\n");
-#endif
     int fd;
     for (fd = 0; fd < MAX_FDS; ++fd)
       if (!(__exe_env.fds[fd].flags & eOpen))
@@ -1707,17 +1293,16 @@ int rmdir(const char *pathname) {
       errno = ENOTDIR;
       return -1;
     }
-  } else {
-    int r = syscall(__NR_rmdir, __concretize_string(pathname));
-    if (r == -1)
-      errno = klee_get_errno();
-    return r;
   }
+
+  klee_warning("ignoring (EPERM)");
+  errno = EPERM;
+  return -1;
 }
 
 int unlink(const char *pathname) {
-    exe_disk_file_t *dfile = __get_sym_file(pathname);
-    if (dfile) {
+  exe_disk_file_t *dfile = __get_sym_file(pathname);
+  if (dfile) {
     /* XXX check access */ 
     if (S_ISREG(dfile->stat->st_mode)) {
       dfile->stat->st_ino = 0;
@@ -1729,12 +1314,34 @@ int unlink(const char *pathname) {
       errno = EPERM;
       return -1;
     }
-  } else {
-    int r = syscall(__NR_unlink, __concretize_string(pathname));
-    if (r == -1)
-      errno = klee_get_errno();
-    return r;
   }
+
+  klee_warning("ignoring (EPERM)");
+  errno = EPERM;
+  return -1;
+}
+
+int unlinkat(int dirfd, const char *pathname, int flags) {
+  /* similar to unlink. keep them separated though to avoid
+     problems if unlink changes to actually delete files */
+  exe_disk_file_t *dfile = __get_sym_file(pathname);
+  if (dfile) {
+    /* XXX check access */ 
+    if (S_ISREG(dfile->stat->st_mode)) {
+      dfile->stat->st_ino = 0;
+      return 0;
+    } else if (S_ISDIR(dfile->stat->st_mode)) {
+      errno = EISDIR;
+      return -1;
+    } else {
+      errno = EPERM;
+      return -1;
+    }
+  }
+
+  klee_warning("ignoring (EPERM)");
+  errno = EPERM;
+  return -1;
 }
 
 ssize_t readlink(const char *path, char *buf, size_t bufsize) {
@@ -1753,12 +1360,8 @@ ssize_t readlink(const char *path, char *buf, size_t bufsize) {
       errno = EINVAL;
       return -1;
     }
-  } else {
-    int r = syscall(__NR_readlink, path, buf, bufsize);
-    if (r == -1)
-      errno = klee_get_errno();
-    return r;
   }
+  return syscall(__NR_readlink, path, buf, bufsize);
 }
 
 #undef FD_SET
@@ -1773,12 +1376,6 @@ int select(int nfds, fd_set *read, fd_set *write,
            fd_set *except, struct timeval *timeout) {
   fd_set in_read, in_write, in_except, os_read, os_write, os_except;
   int i, count = 0, os_nfds = 0;
-  //char msg[64];
-  //int sec = -1; int usec = 0;
-  //if(timeout) { sec = timeout->tv_sec; usec = timeout->tv_usec;} 
-
-  //sprintf(msg, "model select for %d fds. timeout %d s %d us", nfds, sec, usec);
-  //klee_warning(msg);
 
   if (read) {
     in_read = *read;
@@ -1816,8 +1413,6 @@ int select(int nfds, fd_set *read, fd_set *write,
         /* Operations on this fd will never block... */
         unsigned flags = 0;
         if (FD_ISSET(i, &in_read)) {
-          //sprintf(msg, "read on %d", i);
-          //klee_warning(msg);
           if (!(f->flags & eSocket))
             flags |= 01;
           else if (f->flags & eDgramSocket)
@@ -1829,8 +1424,6 @@ int select(int nfds, fd_set *read, fd_set *write,
           if (flags & 01) FD_SET(i, read);
         }
         if (FD_ISSET(i, &in_write)) {
-          //sprintf(msg, "write on %d", i);
-          //klee_warning(msg);
           flags |= 02; FD_SET(i, write);
         }
         //if (FD_ISSET(i, &in_except)) { flags |= 04; FD_SET(i, except); }
@@ -1854,10 +1447,8 @@ int select(int nfds, fd_set *read, fd_set *write,
     if (r == -1) {
       /* If no symbolic results, return error. Otherwise we will
          silently ignore the OS error. */
-      if (!count) {
-        errno = klee_get_errno();
+      if (!count)
         return -1;
-      }
     } else {
       count += r;
 
@@ -1875,7 +1466,6 @@ int select(int nfds, fd_set *read, fd_set *write,
 
   return count;
 }
-
 
 /*** Library functions ***/
 
@@ -1904,11 +1494,8 @@ char *getcwd(char *buf, size_t size) {
      to properly work with symbolics. */
   klee_check_memory_access(buf, size);
   r = syscall(__NR_getcwd, buf, size);
-  if (r == -1) {
-    errno = klee_get_errno();
+  if (r == -1)
     return NULL;
-  }
-    
   return buf;
 }
 
@@ -1930,10 +1517,10 @@ static size_t __concretize_size(size_t s) {
 static const char *__concretize_string(const char *s) {
   char *sc = __concretize_ptr(s);
   unsigned i;
-  
+
   for (i=0; ; ++i) {
     char c = *sc;
-    if (!UseConcretePath && !(i&(i-1))) {
+    if (!(i&(i-1))) {
       if (!c) {
         *sc++ = 0;
         break;
@@ -2198,184 +1785,7 @@ ssize_t writev(int fd, const struct iovec *iov, int iovcnt) {
   }
 }
 
-int ioctl(int fd, unsigned long request, ...) {
-  exe_file_t *f = __get_file(fd);
-  va_list ap;
-  void *buf;
 
-#if 0
-  printf("In ioctl(%d, ...)\n", fd);
-#endif
-
-  if (!f) {
-    errno = EBADF;
-    return -1;
-  }
-  
-  va_start(ap, request);
-  buf = va_arg(ap, void*);
-  va_end(ap);
-  
-  if (f->dfile) {
-    struct stat *stat = (struct stat*) f->dfile->stat;
-
-    switch (request) {
-    case TCGETS: {      
-      struct termios *ts = buf;
-
-      klee_warning_once("(TCGETS) symbolic file, incomplete model");
-
-      /* XXX need more data, this is ok but still not good enough */
-      if (S_ISCHR(stat->st_mode)) {
-        /* Just copied from my system, munged to match what fields
-           uclibc thinks are there. */
-        ts->c_iflag = 27906;
-        ts->c_oflag = 5;
-        ts->c_cflag = 1215;
-        ts->c_lflag = 35287;
-        ts->c_line = 0;
-        ts->c_cc[0] = '\x03';
-        ts->c_cc[1] = '\x1c';
-        ts->c_cc[2] = '\x7f';
-        ts->c_cc[3] = '\x15';
-        ts->c_cc[4] = '\x04';
-        ts->c_cc[5] = '\x00';
-        ts->c_cc[6] = '\x01';
-        ts->c_cc[7] = '\xff';
-        ts->c_cc[8] = '\x11';
-        ts->c_cc[9] = '\x13';
-        ts->c_cc[10] = '\x1a';
-        ts->c_cc[11] = '\xff';
-        ts->c_cc[12] = '\x12';
-        ts->c_cc[13] = '\x0f';
-        ts->c_cc[14] = '\x17';
-        ts->c_cc[15] = '\x16';
-        ts->c_cc[16] = '\xff';
-        ts->c_cc[17] = '\x0';
-        ts->c_cc[18] = '\x0';
-        return 0;
-      } else {
-        errno = ENOTTY;
-        return -1;
-      }
-    }
-    case TCSETS: {
-      /* const struct termios *ts = buf; */
-      klee_warning_once("(TCSETS) symbolic file, silently ignoring");
-      if (S_ISCHR(stat->st_mode)) {
-        return 0;
-      } else {
-        errno = ENOTTY;
-        return -1;
-      }
-    }
-    case TCSETSW: {
-      /* const struct termios *ts = buf; */
-      klee_warning_once("(TCSETSW) symbolic file, silently ignoring");
-      if (fd==0) {
-        return 0;
-      } else {
-        errno = ENOTTY;
-        return -1;
-      }
-    }
-    case TCSETSF: {
-      /* const struct termios *ts = buf; */
-      klee_warning_once("(TCSETSF) symbolic file, silently ignoring");
-      if (S_ISCHR(stat->st_mode)) {        
-        return 0;
-      } else {
-        errno = ENOTTY;
-        return -1;
-      }
-    }
-    case TIOCGWINSZ: {
-      struct winsize *ws = buf;
-      ws->ws_row = 24;
-      ws->ws_col = 80;
-      klee_warning_once("(TIOCGWINSZ) symbolic file, incomplete model");
-      if (S_ISCHR(stat->st_mode)) {
-        return 0;
-      } else {
-        errno = ENOTTY;
-        return -1;
-      }
-    }
-    case TIOCSWINSZ: {
-      /* const struct winsize *ws = buf; */
-      klee_warning_once("(TIOCSWINSZ) symbolic file, ignoring (EINVAL)");
-      if (S_ISCHR(stat->st_mode)) {
-        errno = EINVAL;
-        return -1;
-      } else {
-        errno = ENOTTY;
-        return -1;
-      }
-    }
-    case FIONREAD: {
-      int *res = buf;
-      klee_warning_once("(FIONREAD) symbolic file, incomplete model");
-      if (S_ISCHR(stat->st_mode)) {
-        if (f->off < f->dfile->size) {
-          *res = f->dfile->size - f->off;
-        } else {
-          *res = 0;
-        }
-        return 0;
-      } else {
-        errno = ENOTTY;
-        return -1;
-      }
-    }
-    case MTIOCGET: {
-      klee_warning("(MTIOCGET) symbolic file, ignoring (EINVAL)");
-      errno = EINVAL;
-      return -1;
-    }
-    case SIOCGIFINDEX: {
-      struct ifreq *ifr = buf;
-      ifr->ifr_ifindex = 0;
-      return 0;
-    }
-    case SIOCGIFHWADDR: {
-      struct ifreq *ifr = buf;
-      char (*ia)[14] = &ifr->ifr_hwaddr.sa_data;
-    /*klee_make_symbolic(ia, sizeof(*ia), "IFADDR");*/
-      memset(ia, 0xdd, sizeof(*ia));
-      return 0;
-    }
-    case SIOCGIFADDR: {
-      struct ifreq *ifr = buf;
-      switch (ifr->ifr_addr.sa_family) {
-      default:
-        ifr->ifr_addr.sa_family = AF_INET;
-        /* fall through */
-      case AF_INET: {
-        struct in_addr* ia = &((struct sockaddr_in *)&ifr->ifr_addr)->sin_addr;
-      /*klee_make_symbolic(ia, sizeof(*ia), "IFADDR");*/
-        memset(ia, 0xdd, sizeof(*ia));
-        return 0;
-      }
-      case AF_INET6: {
-        struct in6_addr* ia = &((struct sockaddr_in6 *)&ifr->ifr_addr)->sin6_addr;
-      /*klee_make_symbolic(ia, sizeof(*ia), "IFADDR");*/
-        memset(ia, 0xdd, sizeof(*ia));
-        return 0;
-      }
-      }
-    }
-    default:
-      klee_warning("symbolic file, ignoring (EINVAL)");
-      errno = EINVAL;
-      return -1;
-    }
-  } else {
-    int r = syscall(__NR_ioctl, f->fd, request, buf );
-    if (r == -1) 
-      errno = klee_get_errno();
-    return r;
-  }
-}
 
 ssize_t sendfile(int out_fd, int in_fd, off_t *offset, size_t count)
 {
