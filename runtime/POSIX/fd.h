@@ -109,14 +109,11 @@ typedef struct {
   } arg;
 } fill_info_t;
 
-void klee_init_fds(unsigned n_files, unsigned file_length, 
+void klee_init_fds(unsigned n_files, unsigned file_length,  unsigned sym_stdin_len,
 		   int sym_stdout_flag, int do_all_writes_flag, 
                    unsigned n_streams, unsigned stream_len,
                    unsigned n_dgrams, unsigned dgram_len,
-		   unsigned max_failures,
-                   int one_line_streams,
-                   const fill_info_t stream_fill_info[], unsigned n_stream_fill_info,
-                   const fill_info_t dgram_fill_info[], unsigned n_dgram_fill_info);
+		   unsigned max_failures);
 
 void klee_init_env(int *argcPtr, char ***argvPtr);
 exe_disk_file_t* klee_init_cp_file(const char* path, int flags);
