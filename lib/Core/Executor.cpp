@@ -3404,10 +3404,6 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   bool incomplete = state.addressSpace.resolve(state, solver, address, rl,
                                                0, coreSolverTimeout);
   solver->setTimeout(0);
-  if(rl.size() > 1)  {
-      state.dumpStack(errs());
-      klee_warning("Multiple addresses resolution %d ... forking!\n", rl.size());
-  }
   
   // XXX there is some query wasteage here. who cares?
   ExecutionState *unbound = &state;
