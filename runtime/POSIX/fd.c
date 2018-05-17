@@ -214,6 +214,106 @@ int __fd_open(const char *pathname, int flags, mode_t mode) {
   return fd;
 }
 
+int __fd_openat(int basefd, const char *pathname, int flags, mode_t mode) {
+  exe_file_t *f;
+  int fd;
+  if (basefd != AT_FDCWD) {
+    exe_file_t *bf = __get_file(basefd);
+
+    if (!bf) {
+      errno = EBADF;
+      return -1;
+    } else if (bf->dfile) {
+      klee_warning("symbolic file descriptor, ignoring (ENOENT)");
+      errno = ENOENT;
+      return -1;
+    }
+    basefd = bf->fd;
+  }
+
+  if (__get_sym_file(pathname)) {
+    /* for a symbolic file, it doesn't matter if/where it exists on disk */
+    return __fd_open(pathname, flags, mode);
+  }
+
+  for (fd = 0; fd < MAX_FDS; ++fd)
+    if (!(__exe_env.fds[fd].flags & eOpen))
+      break;
+  if (fd == MAX_FDS) {
+    errno = EMFILE;
+    return -1;
+  }
+  
+  f = &__exe_env.fds[fd];
+
+  /* Should be the case if file was available, but just in case. */
+  memset(f, 0, sizeof *f);
+
+  int os_fd = syscall(__NR_openat, (long)basefd, __concretize_string(pathname), (long)flags, mode);
+  if (os_fd == -1)
+    return -1;
+
+  f->fd = os_fd;
+  f->flags = eOpen;
+  if ((flags & O_ACCMODE) == O_RDONLY) {
+    f->flags |= eReadable;
+  } else if ((flags & O_ACCMODE) == O_WRONLY) {
+    f->flags |= eWriteable;
+  } else { /* XXX What actually happens here if != O_RDWR. */
+    f->flags |= eReadable | eWriteable;
+  }
+
+  return fd;
+}
+
+
+int utimes(const char *path, const struct timeval times[2]) {
+  exe_disk_file_t *dfile = __get_sym_file(path);
+
+  if (dfile) {
+
+    if (!times) {
+      struct timeval newTimes[2];
+      gettimeofday(&(newTimes[0]), NULL);
+      newTimes[1] = newTimes[0];
+      times = newTimes;
+    }
+
+    /* don't bother with usecs */
+    dfile->stat->st_atime = times[0].tv_sec;
+    dfile->stat->st_mtime = times[1].tv_sec;
+#ifdef _BSD_SOURCE
+    dfile->stat->st_atim.tv_nsec = 1000000000ll * times[0].tv_sec;
+    dfile->stat->st_mtim.tv_nsec = 1000000000ll * times[1].tv_sec;
+#endif
+    return 0;
+  }
+  return syscall(__NR_utimes, __concretize_string(path), times);
+}
+
+
+int futimesat(int fd, const char* path, const struct timeval times[2]) {
+  if (fd != AT_FDCWD) {
+    exe_file_t *f = __get_file(fd);
+
+    if (!f) {
+      errno = EBADF;
+      return -1;
+    } else if (f->dfile) {
+      klee_warning("symbolic file descriptor, ignoring (ENOENT)");
+      errno = ENOENT;
+      return -1;
+    }
+    fd = f->fd;
+  }
+  if (__get_sym_file(path)) {
+    return utimes(path, times);
+  }
+
+  return syscall(__NR_futimesat, (long)fd,
+                 (path ? __concretize_string(path) : NULL), times);
+}
+ 
 int close(int fd) {
   static int n_calls = 0;
   exe_file_t *f;
@@ -662,37 +762,6 @@ int fstatat(int fd, const char* path, struct stat *buf, int flags) {
   return r;
 }
 
-
-
-int futimesat(int fd, const char* path, const struct timeval times[2]) {
-  exe_disk_file_t *dfile = __get_sym_file(path);
-  if (dfile) {
-    klee_warning("futimesat: symbolic path, ignoring (ENOENT)");
-    errno = ENOENT;
-    return -1;
-  }
-  exe_file_t* f = __get_file(fd);
-  if (f && f->dfile) {
-    klee_warning("futimesat: symbolic file descriptor, ignoring (ENOENT)");
-    errno = ENOENT;
-    return -1;
-  }
-  if (f) fd = f->fd;
-#ifdef _DEBUG_STUBS
-  printf("futimesat %d %s %ld %ld\n", fd, path, times[0].tv_sec, times[0].tv_usec);
-#endif    
- int r = syscall(__NR_futimesat, (long)fd, 
-                 (path ? __concretize_string(path) : NULL),
-                 times);
-  if (r == -1)
-    errno = klee_get_errno();
-#ifdef _DEBUG_STUBS
-  printf("futimesat returns %d (errno %d)\n", r, errno);
-  if (r == -1)
-    perror("futimesat");
-#endif
-  return r;
-}
 
 int futimens(int fd, const struct timespec times[2]) {
   exe_file_t* f = __get_file(fd);
@@ -1468,23 +1537,6 @@ int chroot(const char *path) {
   return -1;
 }
 
-int utimes(const char *path, const struct timeval* times) {
-  exe_disk_file_t *dfile = __get_sym_file(path);
-
-  if (dfile) {
-    klee_warning("utimes: symbolic file, ignoring (ENOENT)");
-    errno = ENOENT;
-    return -1;
-  }
-  /* may not be needed but got spurious results with
-     coreutils tests without
-  */
-  int r = syscall(__NR_utimes, __concretize_string(path), times);
-  if (r == -1)
-    errno = klee_get_errno();
-
-  return r;
-}
 
 int utime(const char *path, const void* times) {
   exe_disk_file_t *dfile = __get_sym_file(path);
