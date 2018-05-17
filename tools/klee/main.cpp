@@ -545,11 +545,11 @@ void KleeHandler::getKTestFilesInDir(std::string directoryPath,
 #else
   std::error_code ec;
 #endif
-  for (llvm::sys::fs::directory_iterator i(directoryPath, ec), e; i != e && !ec;
-       i.increment(ec)) {
-    std::string f = (*i).path();
-    if (f.substr(f.size()-6,f.size()) == ".ktest") {
-          results.push_back(f);
+  llvm::sys::fs::directory_iterator i(directoryPath, ec), e;
+  for (; i != e && !ec; i.increment(ec)) {
+    auto f = i->path();
+    if (f.size() >= 6 && f.substr(f.size()-6,f.size()) == ".ktest") {
+      results.push_back(f);
     }
   }
 
