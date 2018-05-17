@@ -362,8 +362,6 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
     }
     return os_r;
   }
-
-    printf("sym socket  8\n");
   return 0;
 }
 

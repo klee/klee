@@ -345,14 +345,15 @@ ssize_t read(int fd, void *buf, size_t count) {
   }
   
   f = __get_file(fd);
-  if ((f->flags & eSocket)) {
-      return recv(fd, buf, count, 0);
-  }
-
+ 
   if (!f) {
     errno = EBADF;
     return -1;
   }  
+
+  if ((f->flags & eSocket)) {
+      return recv(fd, buf, count, 0);
+  }
 
   if (__exe_fs.max_failures && *__exe_fs.read_fail == n_calls) {
     __exe_fs.max_failures--;
