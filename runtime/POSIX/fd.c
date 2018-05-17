@@ -1465,33 +1465,6 @@ void  __undo_get_new_fd(exe_file_t *f) {
   memset(f, 0, sizeof *f);
 }
 
-int pipe(int filedes[2]) __attribute__((weak));
-int pipe(int filedes[2]) {
-  exe_file_t *f[2];
-  int os_filedes[2];
-  int r;
-
-  if ((filedes[0] = __get_new_fd(&f[0])) < 0) {
-    errno = klee_get_errno();
-    return filedes[0];
-  }
-  if ((filedes[1] = __get_new_fd(&f[1])) < 0) {
-    errno = klee_get_errno();
-    return filedes[1];
-  }
-
-  r = syscall(__NR_pipe, os_filedes);
-  if (r < 0) {
-    errno = klee_get_errno();
-    return r;
-  }
-
-  f[0]->fd = os_filedes[0]; f[0]->flags = eOpen | eReadable;
-  f[1]->fd = os_filedes[1]; f[1]->flags = eOpen | eWriteable;
-  fprintf(stderr, "KLEE: MODEL: pipe: returning {%d,%d}->{%d,%d}\n", filedes[0], filedes[1], os_filedes[0], os_filedes[1]);
-  return 0;
-}
-
 ssize_t __fd_scatter_read(exe_file_t *f, const struct iovec *iov, int iovcnt)
 {
   klee_warning("scatter read malfunctions when provided a symbolic iovec");
