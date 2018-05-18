@@ -1,27 +1,27 @@
 #!/bin/bash -x
 # Make sure we exit if there is a failure
 set -e
-: ${SOLVERS?"Solvers must be specified"}
 
-SOLVER_LIST=$(echo "${SOLVERS}" | sed 's/:/ /')
+DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${DIR}/common-defaults.sh"
+
+: ${SOLVERS?"Solvers must be specified"}
+SOLVER_LIST=$(echo "${SOLVERS}" | sed 's/:/ /g')
 
 for solver in ${SOLVER_LIST}; do
   echo "Getting solver ${solver}"
   case ${solver} in
   STP)
     echo "STP"
-    mkdir stp
-    cd stp
-    ${KLEE_SRC}/.travis/stp.sh
-    cd ../
+    "${DIR}/solver-stp.sh"
     ;;
   Z3)
     echo "Z3"
-    ${KLEE_SRC}/.travis/z3.sh
+    "${DIR}/solver-z3.sh"
     ;;
   metaSMT)
     echo "metaSMT"
-    ${KLEE_SRC}/.travis/metaSMT.sh
+    "${DIR}/solver-metasmt.sh"
     ;;
   *)
     echo "Unknown solver ${solver}"
