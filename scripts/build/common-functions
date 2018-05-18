@@ -1,0 +1,217 @@
+# Defines common function and variables used by the scripts
+
+function git_clone_or_update() {
+  local url="$1"
+  local destination="$2"
+  local branch="$3"
+
+  if [[ ! -e "${destination}/.git" ]]; then
+    git clone $([ "${branch}x" != "x" ] && echo "--depth 1 -b ${branch}" || echo "") "$url" "$destination"
+  else
+    cd "$destination"
+    git pull
+    if [[ ! -z "$branch" ]]; then
+      git checkout "${branch}"
+    fi
+  fi
+}
+
+function to_upper() {
+  echo "$1" | tr '[:lower:]' '[:upper:]'
+}
+
+function to_lower() {
+  echo "$1" | tr '[:upper:]' '[:lower:]'
+}
+
+# This file is meant to be included by shell scripts
+# that need to do a sanitized build.
+
+# Users of this script can use this variable
+# to detect if a Sanitized build was enabled.
+IS_SANITIZED_BUILD=0
+
+# Remove ":" separator
+sanitizers=(${SANITIZER_BUILD//:/ })
+# Sort sanitizers
+IFS=$'\n' sorted_sanitizers=($(sort <<<"${sanitizers[*]}"))
+unset IFS
+
+# Set variables used by clients.
+## Build variables
+SANITIZER_CXX_FLAGS=""
+SANITIZER_C_FLAGS=""
+SANITIZER_LD_FLAGS=""
+# Docker_suffix
+SANITIZER_SUFFIX=""
+
+#
+for sanitizer in ${sorted_sanitizers[@]}; do
+  # AddressSanitizer
+  if [ "X${sanitizer}" == "Xaddress" ]; then
+    echo "Using ASan"
+    flags=" -fsanitize=address -fno-omit-frame-pointer -g"
+    SANITIZER_CXX_FLAGS+=" ${flags}"
+    SANITIZER_C_FLAGS+=" ${flags}"
+    SANITIZER_LD_FLAGS+=" ${flags}"
+    SANITIZER_SUFFIX+="_asan"
+    IS_SANITIZED_BUILD=1
+    continue
+  fi
+
+  # Undefined Behaviour Sanitizer
+  if [ "X${sanitizer}" == "Xundefined" ]; then
+    echo "Using UBSan"
+    flags="-fsanitize=undefined -fno-omit-frame-pointer -g"
+    SANITIZER_CXX_FLAGS+=" ${flags}"
+    SANITIZER_C_FLAGS+=" ${flags}"
+    SANITIZER_LD_FLAGS+=" ${flags} -lubsan -fuse-ld=gold"
+    SANITIZER_SUFFIX+="_ubsan"
+    IS_SANITIZED_BUILD=1
+    continue
+  fi
+
+  # Undefined Behaviour Sanitizer
+  if [ "X${sanitizer}" == "Xmemory" ]; then
+    echo "Using Memory Sanitizer"
+    if [[ "X${PACKAGED}" == "X1" ]]; then
+      echo "simultanously memory sanitizer and packaged is not supported "
+      exit 1
+    fi
+
+    SANITIZER_SUFFIX+="_memsan"
+    SANITIZER_LLVM_UNINSTRUMENTED="${LLVM_BUILD}_uninstrumented"
+    SANITIZER_LLVM_LIBCXX="${LLVM_BUILD}_libcxx"
+
+    SANITIZER_C_COMPILER="${SANITIZER_LLVM_UNINSTRUMENTED}/bin/clang"
+    SANITIZER_CXX_COMPILER="${SANITIZER_LLVM_UNINSTRUMENTED}/bin/clang++"
+    SANITIZER_CMAKE_C_COMPILER="-DCMAKE_C_COMPILER=${SANITIZER_C_COMPILER}"
+    SANITIZER_CMAKE_CXX_COMPILER="-DCMAKE_CXX_COMPILER=${SANITIZER_CXX_COMPILER}"
+
+    MSAN_LINK_FLAGS="-lc++abi -Wl,--rpath=${SANITIZER_LLVM_LIBCXX}/lib -L${SANITIZER_LLVM_LIBCXX}/lib";
+    MSAN_FLAGS="$MSAN_LINK_FLAGS -nostdinc++ \
+       -isystem ${SANITIZER_LLVM_LIBCXX}/include \
+       -isystem ${SANITIZER_LLVM_LIBCXX}/include/c++/v1  \
+       -fsanitize=memory \
+       -fsanitize-memory-track-origins \
+       -w -fno-omit-frame-pointer -g";
+
+    SANITIZER_CXX_FLAGS+="${MSAN_FLAGS} -stdlib=libc++"
+    SANITIZER_C_FLAGS+="${MSAN_FLAGS}"
+    SANITIZER_LD_FLAGS+="${MSAN_LINK_FLAGS}"
+
+    IS_SANITIZED_BUILD=1
+    continue
+  fi
+
+  echo "Unknown sanitizer: $sanitizer"
+  exit 1
+done
+
+# This file is meant to be included by shell scripts
+# that need to retrieve llvm-specifi variables
+
+LLVM_VERSION_SHORT="${LLVM_VERSION/./}"
+LLVM_SUFFIX=""
+
+BuildMode=''
+
+# Build from source
+if [[ "${PACKAGED}x" == "1x" ]]; then
+  LLVM_SUFFIX+="_packaged"
+  set +e
+  llvm_config_path=$(which llvm-config-${LLVM_VERSION})
+  if [[ -e "${llvm_config_path}" ]]; then
+    LLVM_BIN="$(llvm-config-${LLVM_VERSION} --bindir)"
+  fi
+  set -e
+else
+  if [[ "${ENABLE_OPTIMIZED}" == "1" ]]; then
+    LLVM_SUFFIX+="_O"
+    BuildMode="Release"
+  else
+    LLVM_SUFFIX+="_NO"
+  fi
+
+  if [[ ("${ENABLE_DEBUG}" == "1") || ("${ENABLE_OPTIMIZED}" != "1") ]]; then
+    LLVM_SUFFIX+="_D"
+    [ -z "$BuildMode" ] && BuildMode="Debug" || BuildMode="$BuildMode+Debug"
+  else
+    LLVM_SUFFIX+="_ND"
+  fi
+
+  if [[ "${DISABLE_ASSERTIONS}" == "1" || -z "${DISABLE_ASSERTIONS}" ]]; then
+    LLVM_SUFFIX+="_NA"
+  else
+    LLVM_SUFFIX+="_A"
+    [ -z "$BuildMode" ] && BuildMode="Asserts" || BuildMode="$BuildMode+Asserts"
+  fi
+
+  if [[ "${REQUIRES_RTTI}" == "1" ]]; then
+    LLVM_SUFFIX+="_RTTI"
+  fi
+
+  if [[ "${SANITIZER_SUFFIX}x" != "x" ]]; then
+    LLVM_SUFFIX+="${SANITIZER_SUFFIX}"
+  fi
+
+  LLVM_BASE="${BASE}/llvm-${LLVM_VERSION_SHORT}"
+  LLVM_BUILD="${LLVM_BASE}-build${LLVM_SUFFIX}"
+  LLVM_INSTALL="${LLVM_BASE}-install${LLVM_SUFFIX}"
+  LLVM_BIN="${LLVM_INSTALL}/bin"
+  if [[ ${LLVM_VERSION_SHORT} -le 37 ]]; then
+    LLVM_BUILDMODE="$BuildMode"
+    LLVM_BUILD_BIN="${LLVM_BUILD}/${LLVM_BUILDMODE}/bin"
+  else
+    LLVM_BUILD_BIN="${LLVM_BUILD}/bin"
+  fi
+fi
+
+# Generate the suffix used for the solver combination
+# Every solver needs to have a version explicitly specified
+SOLVER_SUFFIX=""
+
+# Remove ":" separator
+solvers=(${SOLVERS//:/ })
+
+# Sort solvers
+IFS=$'\n' sorted_solvers=($(sort <<<"${solvers[*]}"))
+unset IFS
+
+for solver in ${sorted_solvers[@]}; do
+  # Make sure version a solver specific version variable is used
+  solver_var="$(to_upper "$solver")_VERSION"
+  SOLVER_VERSION="${!solver_var}"
+  if [[ -z "${SOLVER_VERSION}" ]] ; then
+  	echo "Solver version for $solver not defined"
+  	exit 1
+  fi
+  # Add the solver to the suffix and lower case it
+  SOLVER_SUFFIX+="_$(to_lower "$solver")$(to_lower "$SOLVER_VERSION")"
+  echo $SOLVER_SUFFIX
+  if [[ "$(to_lower "$solver")" == "metasmt" ]]; then
+    if [[ "${REQUIRES_RTTI}x" != "1x" ]]; then
+      echo "METASMT requires an RTTI build"
+      exit 1
+    fi
+    if [[ -z "${METASMT_DEFAULT}" ]]; then
+      echo "METASMT_DEFAULT not defined"
+      exit 1
+    fi
+    if [[ -z "${METASMT_BOOST_VERSION}" ]] ; then
+      echo "METASMT_BOOST_VERSION not defined - use default"
+      SOLVER_SUFFIX+="_$(to_lower "$METASMT_DEFAULT")_boost-dev"
+    else
+      SOLVER_SUFFIX+="_$(to_lower "$METASMT_DEFAULT")_$(to_lower "$METASMT_BOOST_VERSION")"
+    fi
+  fi
+done
+
+# This file is meant to be included by shell scripts that handle dependencies by
+# KLEE beside LLVM and solvers
+#
+# Generate the suffix used for direct dependencies of KLEE like uclibc
+DEPS_SUFFIX=""
+if [[ "${KLEE_UCLIBC}" != "0" ]]; then
+  DEPS_SUFFIX+="_${KLEE_UCLIBC}"
+fi
