@@ -279,7 +279,7 @@ static bool linkBCA(object::Archive* archive, Module* composite, std::string& er
       }
       else
       {
-        errorMessage="Buffer was NULL!";
+        errorMessage="Buffer was a nullptr!";
         return false;
       }
 
@@ -510,22 +510,22 @@ Function *klee::getDirectCallTarget(CallSite cs, bool moduleIsFullyLinked) {
       if (moduleIsFullyLinked || !(ga->mayBeOverridden())) {
         v = ga->getAliasee();
       } else {
-        v = NULL;
+        v = nullptr;
       }
     } else if (llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(v)) {
       viaConstantExpr = true;
       v = ce->getOperand(0)->stripPointerCasts();
     } else {
-      v = NULL;
+      v = nullptr;
     }
-  } while (v != NULL);
+  } while (v != nullptr);
 
   // NOTE: This assert may fire, it isn't necessarily a problem and
   // can be disabled, I just wanted to know when and if it happened.
   (void) viaConstantExpr;
   assert((!viaConstantExpr) &&
          "FIXME: Unresolved direct target for a constant expression");
-  return NULL;
+  return nullptr;
 }
 
 static bool valueIsOnlyCalled(const Value *v) {

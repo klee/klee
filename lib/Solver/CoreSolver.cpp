@@ -27,7 +27,7 @@ Solver *createCoreSolver(CoreSolverType cst) {
     return new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
 #else
     klee_message("Not compiled with STP support");
-    return NULL;
+    return nullptr;
 #endif
   case METASMT_SOLVER:
 #ifdef ENABLE_METASMT
@@ -35,7 +35,7 @@ Solver *createCoreSolver(CoreSolverType cst) {
     return createMetaSMTSolver();
 #else
     klee_message("Not compiled with MetaSMT support");
-    return NULL;
+    return nullptr;
 #endif
   case DUMMY_SOLVER:
     return createDummySolver();
@@ -45,11 +45,11 @@ Solver *createCoreSolver(CoreSolverType cst) {
     return new Z3Solver();
 #else
     klee_message("Not compiled with Z3 support");
-    return NULL;
+    return nullptr;
 #endif
   case NO_SOLVER:
     klee_message("Invalid solver");
-    return NULL;
+    return nullptr;
   default:
     llvm_unreachable("Unsupported CoreSolverType");
   }

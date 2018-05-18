@@ -679,7 +679,7 @@ void Executor::branch(ExecutionState &state,
       if (i == next) {
         result.push_back(&state);
       } else {
-        result.push_back(NULL);
+        result.push_back(nullptr);
       }
     }
   } else {
@@ -741,7 +741,7 @@ void Executor::branch(ExecutionState &state,
       for (unsigned i=0; i<N; ++i) {
         if (result[i] && !seedMap.count(result[i])) {
           terminateState(*result[i]);
-          result[i] = NULL;
+          result[i] = nullptr;
         }
       } 
     }
@@ -2415,7 +2415,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> agg = eval(ki, 0, state).value;
     ref<Expr> val = eval(ki, 1, state).value;
 
-    ref<Expr> l = NULL, r = NULL;
+    ref<Expr> l = nullptr, r = nullptr;
     unsigned lOffset = kgepi->offset*8, rOffset = kgepi->offset*8 + val->getWidth();
 
     if (lOffset > 0)
@@ -2457,7 +2457,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> idx = eval(ki, 2, state).value;
 
     ConstantExpr *cIdx = dyn_cast<ConstantExpr>(idx);
-    if (cIdx == NULL) {
+    if (cIdx == nullptr) {
       terminateStateOnError(
           state, "InsertElement, support for symbolic index not implemented",
           Unhandled);
@@ -2495,7 +2495,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> idx = eval(ki, 1, state).value;
 
     ConstantExpr *cIdx = dyn_cast<ConstantExpr>(idx);
-    if (cIdx == NULL) {
+    if (cIdx == nullptr) {
       terminateStateOnError(
           state, "ExtractElement, support for symbolic index not implemented",
           Unhandled);
@@ -3265,7 +3265,7 @@ void Executor::executeAlloc(ExecutionState &state,
           info << "  concretization : " << example << "\n";
           info << "  unbound example: " << tmp << "\n";
           terminateStateOnError(*hugeSize.second, "concretized symbolic size",
-                                Model, NULL, info.str());
+                                Model, nullptr, info.str());
         }
       }
     }
@@ -3292,10 +3292,10 @@ void Executor::executeFree(ExecutionState &state,
            ie = rl.end(); it != ie; ++it) {
       const MemoryObject *mo = it->first.first;
       if (mo->isLocal) {
-        terminateStateOnError(*it->second, "free of alloca", Free, NULL,
+        terminateStateOnError(*it->second, "free of alloca", Free, nullptr,
                               getAddressInfo(*it->second, address));
       } else if (mo->isGlobal) {
-        terminateStateOnError(*it->second, "free of global", Free, NULL,
+        terminateStateOnError(*it->second, "free of global", Free, nullptr,
                               getAddressInfo(*it->second, address));
       } else {
         it->second->addressSpace.unbindObject(mo);
@@ -3331,7 +3331,7 @@ void Executor::resolveExact(ExecutionState &state,
 
   if (unbound) {
     terminateStateOnError(*unbound, "memory error: invalid pointer: " + name,
-                          Ptr, NULL, getAddressInfo(*unbound, p));
+                          Ptr, nullptr, getAddressInfo(*unbound, p));
   }
 }
 
@@ -3452,7 +3452,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
       terminateStateEarly(*unbound, "Query timed out (resolve).");
     } else {
       terminateStateOnError(*unbound, "memory error: out of bound pointer", Ptr,
-                            NULL, getAddressInfo(*unbound, address));
+                            nullptr, getAddressInfo(*unbound, address));
     }
   }
 }
@@ -3602,7 +3602,7 @@ void Executor::runFunctionAsMain(Function *f,
 
     for (int i=0; i<argc+1+envc+1+1; i++) {
       if (i==argc || i>=argc+1+envc) {
-        // Write NULL pointer
+        // Write a nullptr
         argvOS->write(i * NumPtrBytes, Expr::createPointer(0));
       } else {
         char *s = i<argc ? argv[i] : envp[i-(argc+1)];
@@ -3633,7 +3633,7 @@ void Executor::runFunctionAsMain(Function *f,
 
   // hack to clear memory objects
   delete memory;
-  memory = new MemoryManager(NULL);
+  memory = new MemoryManager(nullptr);
 
   globalObjects.clear();
   globalAddresses.clear();
@@ -3789,7 +3789,7 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
   // and should fetch the default from elsewhere.
   const size_t forcedAlignment = 8;
   size_t alignment = 0;
-  llvm::Type *type = NULL;
+  llvm::Type *type = nullptr;
   std::string allocationSiteName(allocSite->getName().str());
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(allocSite)) {
     alignment = GV->getAlignment();
@@ -3816,7 +3816,7 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
     if (fn)
       allocationSiteName = fn->getName().str();
 
-    klee_warning_once(fn != NULL ? fn : allocSite,
+    klee_warning_once(fn != nullptr ? fn : allocSite,
                       "Alignment of memory from call \"%s\" is not "
                       "modelled. Using alignment of %zu.",
                       allocationSiteName.c_str(), forcedAlignment);
@@ -3826,7 +3826,7 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
   }
 
   if (alignment == 0) {
-    assert(type != NULL);
+    assert(type != nullptr);
     // No specified alignment. Get the alignment for the type.
     if (type->isSized()) {
       alignment = kmodule->targetData->getPrefTypeAlignment(type);

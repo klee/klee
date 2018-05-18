@@ -172,7 +172,7 @@ ObjectState::~ObjectState() {
 }
 
 ArrayCache *ObjectState::getArrayCache() const {
-  assert(object && "object was NULL");
+  assert(object && "object was a nullptr");
   return object->parent->getArrayCache();
 }
 

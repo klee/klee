@@ -30,6 +30,6 @@ TEST(AssignmentTest, FoldNotOptimized)
   // Now evaluate. The OptimizedExpr should be folded
   ref<Expr> evaluated = assignment.evaluate(read);
   const ConstantExpr* asConstant = dyn_cast<ConstantExpr>(evaluated);
-  ASSERT_TRUE(asConstant != NULL);
+  ASSERT_TRUE(asConstant != nullptr);
   ASSERT_EQ(asConstant->getZExtValue(), (unsigned) 128);
 }

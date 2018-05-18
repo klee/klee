@@ -228,7 +228,7 @@ private:
     // right now, all Reads are byte reads but some
     // transformations might change this
     if (!base || base->getWidth() != Expr::Int8)
-      return NULL;
+      return nullptr;
     
     // Get stride expr in proper index width.
     Expr::Width idxWidth = base->index->getWidth();
@@ -241,14 +241,14 @@ private:
     while (e->getKind() == Expr::Concat) {
       offset = AddExpr::create(offset, strideExpr);
       if (!isReadExprAtOffset(e->getKid(0), base, offset))
-	return NULL;
+	return nullptr;
       
       e = e->getKid(1);
     }
     
     offset = AddExpr::create(offset, strideExpr);
     if (!isReadExprAtOffset(e, base, offset))
-      return NULL;
+      return nullptr;
     
     if (stride == -1)
       return cast<ReadExpr>(e.get());
@@ -380,7 +380,7 @@ public:
         // a declaration.
         if (PCMultibyteReads && e->getKind() == Expr::Concat) {
 	  const ReadExpr *base = hasOrderedReads(e, -1);
-	  int isLSB = (base != NULL);
+	  int isLSB = (base != nullptr);
 	  if (!isLSB)
 	    base = hasOrderedReads(e, 1);
 	  if (base) {

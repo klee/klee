@@ -320,12 +320,12 @@ KleeHandler::KleeHandler(int argc, char **argv)
 
   // open warnings.txt
   std::string file_path = getOutputFilename("warnings.txt");
-  if ((klee_warning_file = fopen(file_path.c_str(), "w")) == NULL)
+  if ((klee_warning_file = fopen(file_path.c_str(), "w")) == nullptr)
     klee_error("cannot open file \"%s\": %s", file_path.c_str(), strerror(errno));
 
   // open messages.txt
   file_path = getOutputFilename("messages.txt");
-  if ((klee_message_file = fopen(file_path.c_str(), "w")) == NULL)
+  if ((klee_message_file = fopen(file_path.c_str(), "w")) == nullptr)
     klee_error("cannot open file \"%s\": %s", file_path.c_str(), strerror(errno));
 
   // open info
@@ -372,7 +372,7 @@ llvm::raw_fd_ostream *KleeHandler::openOutputFile(const std::string &filename) {
                  "descriptors: try to increase the maximum number of open file "
                  "descriptors by using ulimit (%s).",
                  path.c_str(), Error.c_str());
-    return NULL;
+    return nullptr;
   }
   return f;
 }
@@ -664,7 +664,7 @@ static int initEnv(Module *mainModule) {
                                                    Type::getVoidTy(ctx),
                                                    argcPtr->getType(),
                                                    argvPtr->getType(),
-                                                   NULL));
+                                                   nullptr));
   assert(initEnvFn);
   std::vector<Value*> args;
   args.push_back(argcPtr);
@@ -1024,19 +1024,19 @@ static llvm::Module *linkWithUclibc(llvm::Module *mainModule, StringRef libDir) 
                                     PointerType::getUnqual(i8Ty),
                                     PointerType::getUnqual(i8Ty),
                                     PointerType::getUnqual(i8Ty),
-                                    NULL);
+                                    nullptr);
     mainModule->getOrInsertFunction("getutent",
                                     PointerType::getUnqual(i8Ty),
-                                    NULL);
+                                    nullptr);
     mainModule->getOrInsertFunction("__fgetc_unlocked",
                                     Type::getInt32Ty(ctx),
                                     PointerType::getUnqual(i8Ty),
-                                    NULL);
+                                    nullptr);
     mainModule->getOrInsertFunction("__fputc_unlocked",
                                     Type::getInt32Ty(ctx),
                                     Type::getInt32Ty(ctx),
                                     PointerType::getUnqual(i8Ty),
-                                    NULL);
+                                    nullptr);
   }
 
   f = mainModule->getFunction("__ctype_get_mb_cur_max");
@@ -1325,7 +1325,7 @@ int main(int argc, char **argv, char **envp) {
 
   char buf[256];
   time_t t[2];
-  t[0] = time(NULL);
+  t[0] = time(nullptr);
   strftime(buf, sizeof(buf), "Started: %Y-%m-%d %H:%M:%S\n", localtime(&t[0]));
   handler->getInfoStream() << buf;
   handler->getInfoStream().flush();
@@ -1426,7 +1426,7 @@ int main(int argc, char **argv, char **envp) {
     }
   }
 
-  t[1] = time(NULL);
+  t[1] = time(nullptr);
   strftime(buf, sizeof(buf), "Finished: %Y-%m-%d %H:%M:%S\n", localtime(&t[1]));
   handler->getInfoStream() << buf;
 

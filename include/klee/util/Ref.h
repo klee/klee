@@ -31,8 +31,8 @@ class ref {
   T *ptr;
 
 public:
-  // default constructor: create a NULL reference
-  ref() : ptr(0) { }
+  // default constructor: create a nullptr reference
+  ref() : ptr(nullptr) { }
   ~ref () { dec (); }
 
 private:
@@ -96,7 +96,7 @@ public:
     return ptr;
   }
 
-  bool isNull() const { return ptr == 0; }
+  bool isNull() const { return ptr == nullptr; }
 
   // assumes non-null arguments
   int compare(const ref &rhs) const {

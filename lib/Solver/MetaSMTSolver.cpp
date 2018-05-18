@@ -126,9 +126,9 @@ MetaSMTSolverImpl<SolverContext>::MetaSMTSolverImpl(
     shared_memory_id =
         shmget(IPC_PRIVATE, shared_memory_size, IPC_CREAT | 0700);
     assert(shared_memory_id >= 0 && "shmget failed");
-    shared_memory_ptr = (unsigned char *)shmat(shared_memory_id, NULL, 0);
+    shared_memory_ptr = (unsigned char *)shmat(shared_memory_id, nullptr, 0);
     assert(shared_memory_ptr != (void *)-1 && "shmat failed");
-    shmctl(shared_memory_id, IPC_RMID, NULL);
+    shmctl(shared_memory_id, IPC_RMID, nullptr);
   }
 }
 
@@ -426,7 +426,7 @@ void MetaSMTSolver<SolverContext>::setCoreSolverTimeout(double timeout) {
 Solver *createMetaSMTSolver() {
   using namespace metaSMT;
 
-  Solver *coreSolver = NULL;
+  Solver *coreSolver = nullptr;
   std::string backend;
   switch (MetaSMTBackend) {
 #ifdef METASMT_HAVE_STP

@@ -534,7 +534,7 @@ DeclResult ParserImpl::ParseArrayDecl() {
 
   // Create the initial version reference.
   VersionSymTab.insert(std::make_pair(Label,
-                                      UpdateList(Root, NULL)));
+                                      UpdateList(Root, nullptr)));
 
   return AD;
 }
@@ -582,7 +582,7 @@ DeclResult ParserImpl::ParseQueryCommand() {
   for (std::map<const Identifier*, const ArrayDecl*>::iterator
          it = ArraySymTab.begin(), ie = ArraySymTab.end(); it != ie; ++it) {
     VersionSymTab.insert(std::make_pair(it->second->Name,
-                                        UpdateList(it->second->Root, NULL)));
+                                        UpdateList(it->second->Root, nullptr)));
   }
 
 
@@ -1298,7 +1298,7 @@ VersionResult ParserImpl::ParseVersionSpecifier() {
       
       if (it == VersionSymTab.end()) {
         Error("invalid version reference.", LTok);
-        return VersionResult(false, UpdateList(0, NULL));
+        return VersionResult(false, UpdateList(0, nullptr));
       }
 
       return it->second;
@@ -1316,7 +1316,7 @@ VersionResult ParserImpl::ParseVersionSpecifier() {
   if (!Res.isValid()) {
     // FIXME: I'm not sure if this is right. Do we need a unique array here?
     Res =
-        VersionResult(true, UpdateList(TheArrayCache.CreateArray("", 0), NULL));
+        VersionResult(true, UpdateList(TheArrayCache.CreateArray("", 0), nullptr));
   }
   
   if (Label)
@@ -1345,7 +1345,7 @@ namespace {
 /// update-list - lhs '=' rhs [',' update-list]
 VersionResult ParserImpl::ParseVersion() {
   if (Tok.kind != Token::LSquare)
-    return VersionResult(false, UpdateList(0, NULL));
+    return VersionResult(false, UpdateList(0, nullptr));
   
   std::vector<WriteInfo> Writes;
   ConsumeLSquare();
@@ -1371,11 +1371,11 @@ VersionResult ParserImpl::ParseVersion() {
   }
   ExpectRSquare("expected close of update list");
 
-  VersionHandle Base(0, NULL);
+  VersionHandle Base(0, nullptr);
 
   if (Tok.kind != Token::At) {
     Error("expected '@'.", Tok);
-    return VersionResult(false, UpdateList(0, NULL));
+    return VersionResult(false, UpdateList(0, nullptr));
   } 
 
   ConsumeExpectedToken(Token::At);

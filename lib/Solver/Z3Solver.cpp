@@ -95,7 +95,7 @@ Z3SolverImpl::Z3SolverImpl()
           /*autoClearConstructCache=*/false,
           /*z3LogInteractionFileArg=*/Z3LogInteractionFile.size() > 0
               ? Z3LogInteractionFile.c_str()
-              : NULL)),
+              : nullptr)),
       timeout(0.0), runStatusCode(SOLVER_RUN_STATUS_FAILURE),
       dumpedQueriesFile(0) {
   assert(builder && "unable to create Z3Builder");
@@ -152,7 +152,7 @@ char *Z3SolverImpl::getConstraintLog(const Query &query) {
   // NOTE: The builder does not set `z3LogInteractionFile` to avoid conflicting
   // with whatever the solver's builder is set to do.
   Z3Builder temp_builder(/*autoClearConstructCache=*/false,
-                         /*z3LogInteractionFile=*/NULL);
+                         /*z3LogInteractionFile=*/nullptr);
   ConstantArrayFinder constant_arrays_in_query;
   for (auto const &constraint : query.constraints) {
     assumptions.push_back(temp_builder.construct(constraint));
@@ -178,7 +178,7 @@ char *Z3SolverImpl::getConstraintLog(const Query &query) {
     }
   }
 
-  ::Z3_ast *assumptionsArray = NULL;
+  ::Z3_ast *assumptionsArray = nullptr;
   int numAssumptions = assumptions.size();
   if (numAssumptions) {
     assumptionsArray = (::Z3_ast *)malloc(sizeof(::Z3_ast) * numAssumptions);
@@ -204,7 +204,7 @@ char *Z3SolverImpl::getConstraintLog(const Query &query) {
   // We do this indirectly by emptying `assumptions` and assigning to
   // `formula`.
   assumptions.clear();
-  formula = Z3ASTHandle(NULL, temp_builder.ctx);
+  formula = Z3ASTHandle(nullptr, temp_builder.ctx);
   // Client is responsible for freeing the returned C-string
   return strdup(result);
 }
@@ -212,7 +212,7 @@ char *Z3SolverImpl::getConstraintLog(const Query &query) {
 bool Z3SolverImpl::computeTruth(const Query &query, bool &isValid) {
   bool hasSolution;
   bool status =
-      internalRunSolver(query, /*objects=*/NULL, /*values=*/NULL, hasSolution);
+      internalRunSolver(query, /*objects=*/nullptr, /*values=*/nullptr, hasSolution);
   isValid = !hasSolution;
   return status;
 }
@@ -332,7 +332,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
     hasSolution = true;
     if (!objects) {
       // No assignment is needed
-      assert(values == NULL);
+      assert(values == nullptr);
       return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
     }
     assert(values && "values cannot be nullptr");

@@ -697,7 +697,7 @@ public:
   ref<Expr> getKid(unsigned i) const { 
     if (i == 0) return left; 
     else if (i == 1) return right;
-    else return NULL;
+    else return nullptr;
   }
 
   /// Shortcuts to create larger concats.  The chain returned is unbalanced to the right
