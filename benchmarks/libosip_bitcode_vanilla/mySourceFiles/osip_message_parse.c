@@ -882,6 +882,8 @@ msg_osip_body_parse (osip_message_t * sip, const char *start_of_buf, const char 
   return OSIP_SYNTAXERROR;
 }
 
+void BREAKPOINT(int serial){}
+
 /* osip_message_t *sip is filled while analysing buf */
 static int
 _osip_message_parse (osip_message_t * sip, const char *buf, size_t length, int sipfrag)
@@ -891,7 +893,7 @@ _osip_message_parse (osip_message_t * sip, const char *buf, size_t length, int s
   char *tmp;
   char *beg;
 
-  fprintf(stdout,">> LIBOSIP BREAKPOINT[5.a]\n");
+  BREAKPOINT(5);
 
   // tmp = malloc (173+length);
   // tmp = osip_malloc (length + 2);

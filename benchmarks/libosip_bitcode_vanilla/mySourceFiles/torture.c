@@ -99,6 +99,8 @@ void markString(char *p){}
 
 void klee_make_symbolic(void *addr,size_t count, const char *message){}
 
+extern void BREAKPOINT(int serial);
+
 int main (int argc, char **argv)
 {
   int success = 1;
@@ -112,7 +114,7 @@ int main (int argc, char **argv)
   // int pos;
   int len;
 
-  fprintf(stdout,">> LIBOSIP BREAKPOINT[0]\n");
+  BREAKPOINT(0);
 
   //for (pos = 3; pos < argc; pos++) {
   //  if (0 == strncmp (argv[pos], "-v", 2))
@@ -137,7 +139,7 @@ int main (int argc, char **argv)
   /* initialize parser */
   parser_init ();
 
-  fprintf(stdout,">> LIBOSIP BREAKPOINT[1]\n");
+  BREAKPOINT(1);
   
   //if (binary) {
   //  if (read_binary (&msg, &len, torture_file) < 0)
@@ -158,7 +160,7 @@ int main (int argc, char **argv)
   
   len = strlen(msg);
 
-  fprintf(stdout,">> LIBOSIP BREAKPOINT[2]\n");
+  BREAKPOINT(2);
 
   success = test_message (msg, len, verbose, clone);
   //if (verbose) {
@@ -196,7 +198,7 @@ test_message (char *msg, size_t len, int verbose, int clone)
     if (verbose)
       fprintf (stdout, "Trying %i sequentials calls to osip_message_init(), osip_message_parse() and osip_message_free()\n", j);
 
-    fprintf(stdout,">> LIBOSIP BREAKPOINT[3]\n");
+    BREAKPOINT(3);
 
     while (j != 0) {
       j--;

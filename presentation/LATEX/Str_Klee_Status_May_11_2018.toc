@@ -1,2 +1,6 @@
-\beamer@sectionintoc {1}{Section Introduction}{2}{0}{1}
-\beamer@sectionintoc {2}{Running Example}{3}{0}{2}
+\beamer@sectionintoc {1}{Section Background}{2}{0}{1}
+\beamer@sectionintoc {2}{Implementation (High Level) Description}{3}{0}{2}
+\beamer@sectionintoc {3}{Accelerations}{4}{0}{3}
+\beamer@sectionintoc {4}{Accelerations}{5}{0}{4}
+\beamer@sectionintoc {5}{Accelerations}{6}{0}{5}
+\beamer@sectionintoc {6}{Accelerations}{7}{0}{6}

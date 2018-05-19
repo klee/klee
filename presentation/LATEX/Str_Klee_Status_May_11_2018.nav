@@ -1,17 +1,41 @@
 \headcommand {\slideentry {0}{0}{1}{1/1}{}{0}}
 \headcommand {\beamer@framepages {1}{1}}
-\headcommand {\sectionentry {1}{Section Introduction}{2}{Section Introduction}{0}}
+\headcommand {\sectionentry {1}{Section Background}{2}{Section Background}{0}}
 \headcommand {\beamer@sectionpages {1}{1}}
 \headcommand {\beamer@subsectionpages {1}{1}}
 \headcommand {\slideentry {1}{0}{1}{2/2}{}{0}}
 \headcommand {\beamer@framepages {2}{2}}
-\headcommand {\sectionentry {2}{Running Example}{3}{Running Example}{0}}
+\headcommand {\sectionentry {2}{Implementation (High Level) Description}{3}{Implementation (High Level) Description}{0}}
 \headcommand {\beamer@sectionpages {2}{2}}
 \headcommand {\beamer@subsectionpages {2}{2}}
 \headcommand {\slideentry {2}{0}{1}{3/3}{}{0}}
 \headcommand {\beamer@framepages {3}{3}}
-\headcommand {\beamer@partpages {1}{3}}
-\headcommand {\beamer@subsectionpages {3}{3}}
+\headcommand {\sectionentry {3}{Accelerations}{4}{Accelerations}{0}}
 \headcommand {\beamer@sectionpages {3}{3}}
-\headcommand {\beamer@documentpages {3}}
-\headcommand {\def \inserttotalframenumber {3}}
+\headcommand {\beamer@subsectionpages {3}{3}}
+\headcommand {\slideentry {3}{0}{1}{4/4}{}{0}}
+\headcommand {\beamer@framepages {4}{4}}
+\headcommand {\sectionentry {4}{Accelerations}{5}{Accelerations}{0}}
+\headcommand {\beamer@sectionpages {4}{4}}
+\headcommand {\beamer@subsectionpages {4}{4}}
+\headcommand {\slideentry {4}{0}{1}{5/5}{}{0}}
+\headcommand {\beamer@framepages {5}{5}}
+\headcommand {\sectionentry {5}{Accelerations}{6}{Accelerations}{0}}
+\headcommand {\beamer@sectionpages {5}{5}}
+\headcommand {\beamer@subsectionpages {5}{5}}
+\headcommand {\slideentry {5}{0}{1}{6/6}{}{0}}
+\headcommand {\beamer@framepages {6}{6}}
+\headcommand {\sectionentry {6}{Accelerations}{7}{Accelerations}{0}}
+\headcommand {\beamer@sectionpages {6}{6}}
+\headcommand {\beamer@subsectionpages {6}{6}}
+\headcommand {\slideentry {6}{0}{1}{7/7}{}{0}}
+\headcommand {\beamer@framepages {7}{7}}
+\headcommand {\slideentry {6}{0}{2}{8/8}{}{0}}
+\headcommand {\beamer@framepages {8}{8}}
+\headcommand {\slideentry {6}{0}{3}{9/9}{}{0}}
+\headcommand {\beamer@framepages {9}{9}}
+\headcommand {\beamer@partpages {1}{9}}
+\headcommand {\beamer@subsectionpages {7}{9}}
+\headcommand {\beamer@sectionpages {7}{9}}
+\headcommand {\beamer@documentpages {9}}
+\headcommand {\def \inserttotalframenumber {9}}

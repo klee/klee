@@ -1,0 +1,114 @@
+; start Z3 query
+(declare-fun MsG0 () (Array (_ BitVec 32) (_ BitVec 8)))
+(assert (not (not (= #x00 (select MsG0 #x00000000)))))
+(check-sat)
+(reset)
+; end Z3 query
+
+; start Z3 query
+(declare-fun MsG0 () (Array (_ BitVec 32) (_ BitVec 8)))
+(assert (not (= #x00 (select MsG0 #x00000000))))
+(check-sat)
+(reset)
+; end Z3 query
+
+; start Z3 query
+(declare-fun MsG0 () (Array (_ BitVec 32) (_ BitVec 8)))
+(assert (not (= #x00 (select MsG0 #x00000000))))
+(assert (not (not (= #x00 (select MsG0 #x00000001)))))
+(check-sat)
+(reset)
+; end Z3 query
+
+; start Z3 query
+(declare-fun MsG0 () (Array (_ BitVec 32) (_ BitVec 8)))
+(assert (not (= #x00 (select MsG0 #x00000000))))
+(assert (not (= #x00 (select MsG0 #x00000001))))
+(check-sat)
+(reset)
+; end Z3 query
+
+; start Z3 query
+(declare-fun MsG0 () (Array (_ BitVec 32) (_ BitVec 8)))
+(assert (not (= #x00 (select MsG0 #x00000000))))
+(assert (not (= #x00 (select MsG0 #x00000001))))
+(assert (not (not (= #x00 (select MsG0 #x00000002)))))
+(check-sat)
+(reset)
+; end Z3 query
+
+; start Z3 query
+(declare-fun MsG0 () (Array (_ BitVec 32) (_ BitVec 8)))
+(assert (not (= #x00 (select MsG0 #x00000000))))
+(assert (not (= #x00 (select MsG0 #x00000001))))
+(assert (not (= #x00 (select MsG0 #x00000002))))
+(check-sat)
+(reset)
+; end Z3 query
+
+; start Z3 query
+(declare-fun MsG0 () (Array (_ BitVec 32) (_ BitVec 8)))
+(assert (not (= #x00 (select MsG0 #x00000000))))
+(assert (not (= #x00 (select MsG0 #x00000001))))
+(assert (not (= #x00 (select MsG0 #x00000002))))
+(assert (not (not (= #x00 (select MsG0 #x00000003)))))
+(check-sat)
+(reset)
+; end Z3 query
+
+; start Z3 query
+(declare-fun MsG0 () (Array (_ BitVec 32) (_ BitVec 8)))
+(assert (not (= #x00 (select MsG0 #x00000000))))
+(assert (not (= #x00 (select MsG0 #x00000001))))
+(assert (not (= #x00 (select MsG0 #x00000002))))
+(assert (not (= #x00 (select MsG0 #x00000003))))
+(check-sat)
+(reset)
+; end Z3 query
+
+; start Z3 query
+(declare-fun MsG0 () (Array (_ BitVec 32) (_ BitVec 8)))
+(assert (not (= #x00 (select MsG0 #x00000000))))
+(assert (not (= #x00 (select MsG0 #x00000001))))
+(assert (not (= #x00 (select MsG0 #x00000002))))
+(assert (not (= #x00 (select MsG0 #x00000003))))
+(assert (not (not (= #x00 (select MsG0 #x00000004)))))
+(check-sat)
+(reset)
+; end Z3 query
+
+; start Z3 query
+(declare-fun MsG0 () (Array (_ BitVec 32) (_ BitVec 8)))
+(assert (not (= #x00 (select MsG0 #x00000000))))
+(assert (not (= #x00 (select MsG0 #x00000001))))
+(assert (not (= #x00 (select MsG0 #x00000002))))
+(assert (not (= #x00 (select MsG0 #x00000003))))
+(assert (not (= #x00 (select MsG0 #x00000004))))
+(check-sat)
+(reset)
+; end Z3 query
+
+; start Z3 query
+(declare-fun MsG0 () (Array (_ BitVec 32) (_ BitVec 8)))
+(assert (not (= #x00 (select MsG0 #x00000000))))
+(assert (not (= #x00 (select MsG0 #x00000001))))
+(assert (not (= #x00 (select MsG0 #x00000002))))
+(assert (not (= #x00 (select MsG0 #x00000003))))
+(assert (not (= #x00 (select MsG0 #x00000004))))
+(assert (not (not (= #x00 (select MsG0 #x00000005)))))
+(check-sat)
+(reset)
+; end Z3 query
+
+; start Z3 query
+(declare-fun MsG0 () (Array (_ BitVec 32) (_ BitVec 8)))
+(assert (not (= #x00 (select MsG0 #x00000000))))
+(assert (not (= #x00 (select MsG0 #x00000001))))
+(assert (not (= #x00 (select MsG0 #x00000002))))
+(assert (not (= #x00 (select MsG0 #x00000003))))
+(assert (not (= #x00 (select MsG0 #x00000004))))
+(assert (not (= #x00 (select MsG0 #x00000005))))
+(check-sat)
+(reset)
+; end Z3 query
+

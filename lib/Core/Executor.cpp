@@ -2730,6 +2730,10 @@ void Executor::run(ExecutionState &initialState) {
     stepInstruction(state);
 
     executeInstruction(state, ki);
+    //if (ki->info->assemblyLine == 8270)
+    //{
+    //	fprintf(stdout,"Interesting Branch Here ...\n");
+    //}
     processTimers(&state, MaxInstructionTime);
 
     checkMemoryUsage();
