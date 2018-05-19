@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
 
   if (argc < 2) {
     fprintf(stderr, "Usage: %s <random-seed> <argument-types>\n", argv[0]);
-    fprintf(stderr, "       If <random-seed> is 0, time(NULL)*getpid() is used as a seed\n");
+    fprintf(stderr, "       If <random-seed> is 0, time(nullptr)*getpid() is used as a seed\n");
     fprintf(stderr, "       <argument-types> are the ones accepted by KLEE: --sym-args, --sym-files etc.\n");
     fprintf(stderr, "   Ex: %s 100 --sym-args 0 2 2 --sym-files 1 8\n", argv[0]);
     exit(1);
@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
   unsigned seed = atoi(argv[1]);
   if (seed)
     srandom(seed);
-  else srandom(time(NULL) * getpid());
+  else srandom(time(nullptr) * getpid());
 
   KTest b;
   b.numArgs = argc;

@@ -218,7 +218,7 @@ namespace expr {
     /// ParseTopLevelDecl - Parse and return a top level declaration,
     /// which the caller assumes ownership of.
     ///
-    /// \return NULL indicates the end of the file has been reached.
+    /// \return nullptr indicates the end of the file has been reached.
     virtual Decl *ParseTopLevelDecl() = 0;
 
     /// CreateParser - Create a parser implementation for the given

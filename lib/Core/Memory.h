@@ -79,7 +79,7 @@ public:
       address(_address),
       size(0),
       isFixed(true),
-      parent(NULL),
+      parent(nullptr),
       allocSite(0) {
   }
 

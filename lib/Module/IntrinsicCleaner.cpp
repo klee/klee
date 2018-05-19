@@ -196,7 +196,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         // a call of the abort() function.
         Function *F = cast<Function>(
           M.getOrInsertFunction(
-            "abort", Type::getVoidTy(ctx), NULL));
+            "abort", Type::getVoidTy(ctx), nullptr));
         F->setDoesNotReturn();
         F->setDoesNotThrow();
 
@@ -217,7 +217,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         ConstantInt *minArgAsInt = dyn_cast<ConstantInt>(minArg);
         assert(minArgAsInt && "Second arg is not a ConstantInt");
         assert(minArgAsInt->getBitWidth() == 1 && "Second argument is not an i1");
-        Value *replacement = NULL;
+        Value *replacement = nullptr;
         IntegerType *intType = dyn_cast<IntegerType>(ii->getType());
         assert(intType && "intrinsic does not have integer return type");
         if (minArgAsInt->isZero()) {

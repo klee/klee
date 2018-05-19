@@ -371,8 +371,8 @@ static bool printInputAsSMTLIBv2(const char *Filename,
 			 * query(ConstraintManager(QC->Constraints),QC->Query);
 			 *
 			 * For some reason if constructed this way the first
-			 * constraint in the constraint set is set to NULL and
-			 * will later cause a NULL pointer dereference.
+			 * constraint in the constraint set is set to a nullptr and
+			 * will later cause a nullptr dereference.
 			 */
 			ConstraintManager constraintM(QC->Constraints);
 			Query query(constraintM,QC->Query);

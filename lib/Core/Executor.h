@@ -325,7 +325,7 @@ private:
   /// Create a new state where each input condition has been added as
   /// a constraint and return the results. The input state is included
   /// as one of the results. Note that the output vector may included
-  /// NULL pointers for states which were unable to be created.
+  /// nullptrs for states which were unable to be created.
   void branch(ExecutionState &state, 
               const std::vector< ref<Expr> > &conditions,
               std::vector<ExecutionState*> &result);
@@ -368,16 +368,16 @@ private:
                     ref<Expr> value);
 
   /// Evaluates an LLVM constant expression.  The optional argument ki
-  /// is the instruction where this constant was encountered, or NULL
+  /// is the instruction where this constant was encountered, or nullptr
   /// if not applicable/unavailable.
   ref<klee::ConstantExpr> evalConstantExpr(const llvm::ConstantExpr *c,
-					   const KInstruction *ki = NULL);
+					   const KInstruction *ki = nullptr);
 
   /// Evaluates an LLVM constant.  The optional argument ki is the
-  /// instruction where this constant was encountered, or NULL if
+  /// instruction where this constant was encountered, or nullptr if
   /// not applicable/unavailable.
   ref<klee::ConstantExpr> evalConstant(const llvm::Constant *c,
-				       const KInstruction *ki = NULL);
+				       const KInstruction *ki = nullptr);
 
   /// Return a unique constant value for the given expression in the
   /// given state, if it has one (i.e. it provably only has a single
@@ -420,7 +420,7 @@ private:
   // call error handler and terminate state
   void terminateStateOnError(ExecutionState &state, const llvm::Twine &message,
                              enum TerminateReason termReason,
-                             const char *suffix = NULL,
+                             const char *suffix = nullptr,
                              const llvm::Twine &longMessage = "");
 
   // call error handler and terminate state, for execution errors
@@ -429,7 +429,7 @@ private:
   void terminateStateOnExecError(ExecutionState &state, 
                                  const llvm::Twine &message,
                                  const llvm::Twine &info="") {
-    terminateStateOnError(state, message, Exec, NULL, info);
+    terminateStateOnError(state, message, Exec, nullptr, info);
   }
 
   /// bindModuleConstants - Initialize the module constant table.

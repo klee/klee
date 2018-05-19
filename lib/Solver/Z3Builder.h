@@ -32,7 +32,7 @@ private:
   inline ::Z3_ast as_ast();
 
 public:
-  Z3NodeHandle() : node(NULL), context(NULL) {}
+  Z3NodeHandle() : node(nullptr), context(nullptr) {}
   Z3NodeHandle(const T _node, const ::Z3_context _context)
       : node(_node), context(_context) {
     if (node && context) {
@@ -50,15 +50,15 @@ public:
     }
   }
   Z3NodeHandle &operator=(const Z3NodeHandle &b) {
-    if (node == NULL && context == NULL) {
+    if (node == nullptr && context == nullptr) {
       // Special case for when this object was constructed
       // using the default constructor. Try to inherit a non null
       // context.
       context = b.context;
     }
     assert(context == b.context && "Mismatched Z3 contexts!");
-    // node != nullptr ==> context != NULL
-    assert((node == NULL || context) &&
+    // node != nullptr ==> context != nullptr
+    assert((node == nullptr || context) &&
            "Can't have non nullptr node with nullptr context");
 
     if (node && context) {

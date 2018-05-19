@@ -100,7 +100,7 @@ namespace klee {
 
     virtual char *getConstraintLog(const Query& query)  {
         // dummy
-        return(NULL);
+        return nullptr;
     }
 
     virtual void setCoreSolverTimeout(double timeout) {};

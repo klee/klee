@@ -36,7 +36,7 @@ llvm::cl::opt<unsigned> DeterministicAllocationSize(
 
 llvm::cl::opt<bool>
     NullOnZeroMalloc("return-null-on-zero-malloc",
-                     llvm::cl::desc("Returns NULL in case malloc(size) was "
+                     llvm::cl::desc("Returns a null pointer in case malloc(size) was "
                                     "called with size 0 (default=off)."),
                      llvm::cl::init(false));
 
@@ -100,13 +100,13 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
                          " bytes.  KLEE may run out of memory.",
                       size);
 
-  // Return NULL if size is zero, this is equal to error during allocation
+  // Return a nullptr if size is zero, this is equal to error during allocation
   if (NullOnZeroMalloc && size == 0)
-    return 0;
+    return nullptr;
 
   if (!llvm::isPowerOf2_64(alignment)) {
     klee_warning("Only alignment of power of two is supported");
-    return 0;
+    return nullptr;
   }
 
   uint64_t address = 0;
@@ -140,7 +140,7 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
   }
 
   if (!address)
-    return 0;
+    return nullptr;
 
   ++stats::allocations;
   MemoryObject *res = new MemoryObject(address, size, isLocal, isGlobal, false,

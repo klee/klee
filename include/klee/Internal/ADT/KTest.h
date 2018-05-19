@@ -44,7 +44,7 @@ extern "C" {
   /* return true iff file at path matches KTest header */
   int   kTest_isKTestFile(const char *path);
 
-  /* returns NULL on (unspecified) error */
+  /* returns a nullptr on (unspecified) error */
   KTest* kTest_fromFile(const char *path);
 
   /* returns 1 on success, 0 on (unspecified) error */

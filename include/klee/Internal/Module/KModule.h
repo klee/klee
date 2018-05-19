@@ -70,7 +70,7 @@ namespace klee {
     /// The constant ID.
     unsigned id;
 
-    /// First instruction where this constant was encountered, or NULL
+    /// First instruction where this constant was encountered, or nullptr
     /// if not applicable/unavailable.
     KInstruction *ki;
 

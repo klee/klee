@@ -67,7 +67,7 @@ bool AssignmentValidatingSolver::computeInitialValues(
     ref<Expr> constraint = *it;
     ref<Expr> constraintEvaluated = assignment.evaluate(constraint);
     ConstantExpr *CE = dyn_cast<ConstantExpr>(constraintEvaluated);
-    if (CE == NULL) {
+    if (CE == nullptr) {
       llvm::errs() << "Constraint did not evalaute to a constant:\n";
       llvm::errs() << "Constraint:\n" << constraint << "\n";
       llvm::errs() << "Evaluated Constraint:\n" << constraintEvaluated << "\n";
@@ -88,7 +88,7 @@ bool AssignmentValidatingSolver::computeInitialValues(
 
   ref<Expr> queryExprEvaluated = assignment.evaluate(query.expr);
   ConstantExpr *CE = dyn_cast<ConstantExpr>(queryExprEvaluated);
-  if (CE == NULL) {
+  if (CE == nullptr) {
     llvm::errs() << "Query expression did not evalaute to a constant:\n";
     llvm::errs() << "Expression:\n" << query.expr << "\n";
     llvm::errs() << "Evaluated expression:\n" << queryExprEvaluated << "\n";

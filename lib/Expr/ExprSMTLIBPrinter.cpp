@@ -52,10 +52,10 @@ llvm::cl::opt<klee::ExprSMTLIBPrinter::AbbreviationMode> abbreviationMode(
 namespace klee {
 
 ExprSMTLIBPrinter::ExprSMTLIBPrinter()
-    : usedArrays(), o(NULL), query(NULL), p(NULL), haveConstantArray(false),
+    : usedArrays(), o(nullptr), query(nullptr), p(nullptr), haveConstantArray(false),
       logicToUse(QF_AUFBV),
       humanReadable(ExprSMTLIBOptions::humanReadableSMTLIB),
-      smtlibBoolOptions(), arraysToCallGetValueOn(NULL) {
+      smtlibBoolOptions(), arraysToCallGetValueOn(nullptr) {
   setConstantDisplayMode(ExprSMTLIBOptions::argConstantDisplayMode);
   setAbbreviationMode(ExprSMTLIBOptions::abbreviationMode);
 }
@@ -88,10 +88,10 @@ void ExprSMTLIBPrinter::reset() {
    * We need to do this because the next query might not need the
    * (get-value) SMT-LIBv2 command.
    */
-  if (arraysToCallGetValueOn != NULL)
+  if (arraysToCallGetValueOn != nullptr)
     setSMTLIBboolOption(PRODUCE_MODELS, OPTION_DEFAULT);
 
-  arraysToCallGetValueOn = NULL;
+  arraysToCallGetValueOn = nullptr;
 }
 
 bool ExprSMTLIBPrinter::isHumanReadable() { return humanReadable; }
@@ -473,7 +473,7 @@ const char *ExprSMTLIBPrinter::getSMTLIBKeyword(const ref<Expr> &e) {
 
 void ExprSMTLIBPrinter::printUpdatesAndArray(const UpdateNode *un,
                                              const Array *root) {
-  if (un != NULL) {
+  if (un != nullptr) {
     *p << "(store ";
     p->pushIndent();
     printSeperator();
@@ -514,7 +514,7 @@ void ExprSMTLIBPrinter::scanAll() {
 }
 
 void ExprSMTLIBPrinter::generateOutput() {
-  if (p == NULL || query == NULL || o == NULL) {
+  if (p == nullptr || query == nullptr || o == nullptr) {
     llvm::errs() << "ExprSMTLIBPrinter::generateOutput() Can't print SMTLIBv2. "
                     "Output or query bad!\n";
     return;
@@ -672,7 +672,7 @@ void ExprSMTLIBPrinter::printAction() {
   /* If we have arrays to find the values of then we'll
    * ask the solver for the value of each bitvector in each array
    */
-  if (arraysToCallGetValueOn != NULL && !arraysToCallGetValueOn->empty()) {
+  if (arraysToCallGetValueOn != nullptr && !arraysToCallGetValueOn->empty()) {
 
     const Array *theArray = 0;
 
@@ -691,7 +691,7 @@ void ExprSMTLIBPrinter::printAction() {
 }
 
 void ExprSMTLIBPrinter::scan(const ref<Expr> &e) {
-  assert(!(e.isNull()) && "found NULL expression");
+  assert(!(e.isNull()) && "found null expression");
 
   if (isa<ConstantExpr>(e))
     return; // we don't need to scan simple constants
@@ -817,7 +817,7 @@ void ExprSMTLIBPrinter::scanBindingExprDeps() {
 }
 
 void ExprSMTLIBPrinter::scanUpdates(const UpdateNode *un) {
-  while (un != NULL) {
+  while (un != nullptr) {
     scan(un->index);
     scan(un->value);
     un = un->next;

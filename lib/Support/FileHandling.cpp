@@ -32,7 +32,7 @@ llvm::raw_fd_ostream *klee_open_output_file(std::string &path,
 #endif
   if (!error.empty()) {
     delete f;
-    f = NULL;
+    f = nullptr;
   }
   return f;
 }

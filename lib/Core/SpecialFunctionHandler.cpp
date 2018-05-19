@@ -146,8 +146,8 @@ SpecialFunctionHandler::const_iterator SpecialFunctionHandler::begin() {
 }
 
 SpecialFunctionHandler::const_iterator SpecialFunctionHandler::end() {
-  // NULL pointer is sentinel
-  return SpecialFunctionHandler::const_iterator(0);
+  // use nullptr as a sentinel
+  return SpecialFunctionHandler::const_iterator(nullptr);
 }
 
 SpecialFunctionHandler::const_iterator& SpecialFunctionHandler::const_iterator::operator++() {
@@ -706,7 +706,7 @@ void SpecialFunctionHandler::handleCheckMemoryAccess(ExecutionState &state,
     if (!state.addressSpace.resolveOne(cast<ConstantExpr>(address), op)) {
       executor.terminateStateOnError(state,
                                      "check_memory_access: memory error",
-				     Executor::Ptr, NULL,
+				     Executor::Ptr, nullptr,
                                      executor.getAddressInfo(state, address));
     } else {
       ref<Expr> chk = 
@@ -715,7 +715,7 @@ void SpecialFunctionHandler::handleCheckMemoryAccess(ExecutionState &state,
       if (!chk->isTrue()) {
         executor.terminateStateOnError(state,
                                        "check_memory_access: memory error",
-				       Executor::Ptr, NULL,
+				       Executor::Ptr, nullptr,
                                        executor.getAddressInfo(state, address));
       }
     }

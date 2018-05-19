@@ -110,10 +110,10 @@ STPSolverImpl::STPSolverImpl(bool _useForkedSTP, bool _optimizeDivides)
         shmget(IPC_PRIVATE, shared_memory_size, IPC_CREAT | 0700);
     if (shared_memory_id < 0)
       llvm::report_fatal_error("unable to allocate shared memory region");
-    shared_memory_ptr = (unsigned char *)shmat(shared_memory_id, NULL, 0);
+    shared_memory_ptr = (unsigned char *)shmat(shared_memory_id, nullptr, 0);
     if (shared_memory_ptr == (void *)-1)
       llvm::report_fatal_error("unable to attach shared memory region");
-    shmctl(shared_memory_id, IPC_RMID, NULL);
+    shmctl(shared_memory_id, IPC_RMID, nullptr);
   }
 }
 

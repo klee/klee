@@ -325,7 +325,7 @@ KConstant* KModule::getKConstant(const Constant *c) {
   std::map<const llvm::Constant*, KConstant*>::iterator it = constantMap.find(c);
   if (it != constantMap.end())
     return it->second;
-  return NULL;
+  return nullptr;
 }
 
 unsigned KModule::getConstantID(Constant *c, KInstruction* ki) {

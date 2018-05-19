@@ -29,7 +29,7 @@ namespace klee {
 
 struct EquivArrayCmpFn {
   bool operator()(const Array *array1, const Array *array2) const {
-    if (array1 == NULL || array2 == NULL)
+    if (array1 == nullptr || array2 == nullptr)
       return false;
     return (array1->size == array2->size) && (array1->name == array2->name);
   }
@@ -53,10 +53,10 @@ public:
   /// \param _size The size of the array in bytes
   /// \param constantValuesBegin A pointer to the beginning of a block of
   //         memory that constains a ``ref<ConstantExpr>`` (i.e. concrete values
-  //         for the //array). This should be NULL for symbolic arrays.
+  //         for the //array). This should be a nullptr for symbolic arrays.
   /// for symbolic arrays.
   /// \param constantValuesEnd A pointer +1 pass the end of a block of memory
-  ///        that contains a ``ref<ConstantExpr>``. This should be NULL for a
+  ///        that contains a ``ref<ConstantExpr>``. This should be a nullptr for a
   ///        symbolic array.
   /// \param _domain The size of the domain (i.e. the bitvector used to index
   /// the array)

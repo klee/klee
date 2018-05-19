@@ -194,7 +194,7 @@ bool ExternalDispatcherImpl::executeCall(Function *f, Instruction *i,
   }
 #endif
 
-  Module *dispatchModule = NULL;
+  Module *dispatchModule = nullptr;
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
   // The MCJIT generates whole modules at a time so for every call that we
   // haven't made before we need to create a new Module.

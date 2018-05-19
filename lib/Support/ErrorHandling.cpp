@@ -23,8 +23,8 @@
 using namespace klee;
 using namespace llvm;
 
-FILE *klee::klee_warning_file = NULL;
-FILE *klee::klee_message_file = NULL;
+FILE *klee::klee_warning_file = nullptr;
+FILE *klee::klee_message_file = nullptr;
 
 static const char *warningPrefix = "WARNING";
 static const char *warningOncePrefix = "WARNING ONCE";
@@ -104,7 +104,7 @@ static void klee_vfmessage(FILE *fp, const char *pfx, const char *msg,
 
 /* Prints a message/warning.
 
-   If pfx is NULL, this is a regular message, and it's sent to
+   If pfx is a nullptr, this is a regular message, and it's sent to
    klee_message_file (messages.txt).  Otherwise, it is sent to
    klee_warning_file (warnings.txt).
 
@@ -125,7 +125,7 @@ static void klee_vmessage(const char *pfx, bool onlyToFile, const char *msg,
 void klee::klee_message(const char *msg, ...) {
   va_list ap;
   va_start(ap, msg);
-  klee_vmessage(NULL, false, msg, ap);
+  klee_vmessage(nullptr, false, msg, ap);
   va_end(ap);
 }
 
@@ -133,7 +133,7 @@ void klee::klee_message(const char *msg, ...) {
 void klee::klee_message_to_file(const char *msg, ...) {
   va_list ap;
   va_start(ap, msg);
-  klee_vmessage(NULL, true, msg, ap);
+  klee_vmessage(nullptr, true, msg, ap);
   va_end(ap);
 }
 
