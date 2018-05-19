@@ -342,6 +342,7 @@ osip_util_replace_all_lws (char *sip_message)
 			(('\n' == tmp[0]) &&
 			((' '  == tmp[1]) || ('\t' == tmp[1]))))
 		{
+			fprintf(stdout,">> LIBOSIP BREAKPOINT[################################################]\n");
 			/* replace line end and TAB symbols by SP */
 			tmp[0] = ' ';
 			tmp[1] = ' ';
