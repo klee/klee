@@ -228,6 +228,8 @@ bool Z3SolverImpl::computeValue(const Query &query, ref<Expr> &result) {
     // Evaluate the expression with the computed assignment.
     Assignment a(objects, values);
     result = a.evaluate(query.expr);
+    llvm::errs() << "Dumping query and result";
+    query.expr->dump();
     result->dump();
   }
 
@@ -288,7 +290,7 @@ bool Z3SolverImpl::internalRunSolver(
   }
 
   ::Z3_lbool satisfiable = Z3_solver_check(builder->ctx, theSolver);
-
+//  query.dump();
   runStatusCode = handleSolverResponse(theSolver, satisfiable, objects, values,
                                        hasSolution);
 //  if(values != nullptr) {
@@ -393,7 +395,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
         Z3_inc_ref(builder->ctx, out);
 
         const char *c =  Z3_get_string(builder->ctx,out);
-        fprintf(stderr, "str is %s\n", c);
+        fprintf(stderr, "str is:%sEND\n", c);
         std::string str(c);
         llvm::errs() << "str: " << str << "\n";
         std::vector<unsigned char> data(str.begin(), str.end());

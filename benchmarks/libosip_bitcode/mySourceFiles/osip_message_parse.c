@@ -18,6 +18,7 @@
 */
 
 #include <osipparser2/internal.h>
+#include <assert.h>
 
 #include <osipparser2/osip_port.h>
 #include <osipparser2/osip_parser.h>
@@ -344,6 +345,7 @@ osip_util_replace_all_lws (char *sip_message)
 		{
 			fprintf(stdout,">> LIBOSIP BREAKPOINT[################################################]\n");
 			/* replace line end and TAB symbols by SP */
+      assert(0 && "Want to hit this assert");
 			tmp[0] = ' ';
 			tmp[1] = ' ';
 			tmp = tmp + 2;

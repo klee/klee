@@ -116,6 +116,7 @@ std::string NormalizeZ3String(const std::string &s)
 }
 
 ExprVisitor::Action ExprEvaluator::visitFirstIndexOf(const StrFirstIdxOfExpr& sfi) {
+    sfi.dump();
     ref<Expr> _haystack = visit(sfi.haystack);
     ref<Expr> _needle = visit(sfi.needle);
 
@@ -145,11 +146,11 @@ ExprVisitor::Action ExprEvaluator::visitFirstIndexOf(const StrFirstIdxOfExpr& sf
     // size_t firstIndex = (NormalizeZ3String(haystack->value)).find(NormalizeZ3String(needle));
     // size_t firstIndex = haystack->value.find(needle);
     // size_t firstIndex = haystack->value.find_first_of(needle);
-    llvm::errs() << "haystack->value     is: " << haystack->value    << "\n";
-    llvm::errs() << "normalized haystack is: " << normalizedHaystack << "\n";
-    llvm::errs() << "needle              is: " << needle             << "\n";
-    llvm::errs() << "normalized needle   is: " << normalizedNeedle   << "\n";
-    llvm::errs() << "firstIndex          is: " << firstIndex         << "\n";
+    llvm::errs() << "haystack->value     is:" << haystack->value    << "END\n";
+    llvm::errs() << "normalized haystack is:" << normalizedHaystack << "END\n";
+    llvm::errs() << "needle              is:" << needle             << "END\n";
+    llvm::errs() << "normalized needle   is:" << normalizedNeedle   << "END\n";
+    llvm::errs() << "firstIndex          is:" << firstIndex         << "\n";
     assert(firstIndex != std::string::npos && "Character must be present");
 
     llvm::errs() << "Needle found at offset = " << firstIndex << "\n";
@@ -183,6 +184,8 @@ ExprVisitor::Action ExprEvaluator::visitStrSubstr(const StrSubstrExpr &subStrE) 
         for (int i = offset->getZExtValue(); i < fixedLength; i++)
         {
             c[i] = (char)dyn_cast<ConstantExpr>(getInitialValue(*a, i))->getZExtValue(8);
+//            printf("i: %d, c[i] %c\n", i, c[i]);
+
             if (c[i] == '\\')
             {
             	fixedLength += 3;

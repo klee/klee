@@ -2,9 +2,9 @@
 # DIRECTORIES #
 ###############
 BASEDIR        = $(shell pwd)
-KLEE_ROOT_DIR  = /home/oren/GIT/klee/vanilla.klee
+KLEE_ROOT_DIR  = /data
 KLEE_SRC_DIR   = ${KLEE_ROOT_DIR}/klee
-KLEE_BUILD_DIR = ${KLEE_ROOT_DIR}/build
+KLEE_BUILD_DIR = ${KLEE_ROOT_DIR}/klee/build
 
 ################
 # PROGRAM NAME #
@@ -39,7 +39,7 @@ compile_and_run:
 	@echo "*                                              *"
 	@echo "************************************************"
 	@setterm -term linux -fore white
-	cd build && (LLVM_COMPILER=clang make)	
+	cd build && (LLVM_COMPILER=clang C_INCLUDE_PATH=${KLEE_SRC_DIR}/include make)	
 	@setterm -term linux -fore blue
 	@echo "*******************************"
 	@echo "*                             *"
@@ -55,9 +55,9 @@ compile_and_run:
 	@echo "*                                         *"
 	@echo "*******************************************"
 	@setterm -term linux -fore white
-	opt -strip-debug -o                       \
-	${PROGRAM_PATH}/${PROGRAM_NAME}_no_dbg.bc \
-	${PROGRAM_PATH}/${PROGRAM_NAME}.bc
+	opt-3.4 -strip-debug -o                   \
+	build/src/test/torture_test_no_dbg.bc \
+	build/src/test/torture_test.bc
 	@setterm -term linux -fore blue
 	@echo "************************************************"
 	@echo "*                                              *"
@@ -65,9 +65,9 @@ compile_and_run:
 	@echo "*                                              *"
 	@echo "************************************************"
 	@setterm -term linux -fore white
-	opt -instnamer -o                                    \
-	${PROGRAM_PATH}/${PROGRAM_NAME}_no_dbg_with_names.bc \
-	${PROGRAM_PATH}/${PROGRAM_NAME}_no_dbg.bc
+	opt-3.4 -instnamer -o                                \
+	build/src/test/torture_test_no_dbg_with_names.bc \
+	build/src/test/torture_test_no_dbg.bc
 	@setterm -term linux -fore blue
 	@echo "*********************************************"
 	@echo "*                                           *"

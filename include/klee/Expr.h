@@ -153,6 +153,8 @@ public:
 	BitVector8_Var,
 
   BvToInt,
+  //ExtractedInt,
+  //EmptyExtractedInt,
 
     // All subsequent kinds are binary.
 
