@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/StringExtras.h"
 
+#include <cstdint>
 #include <vector>
 #include <string>
 
@@ -41,7 +42,7 @@ private:
 
 public:
   unsigned id;
-  uint64_t address;
+  std::uintptr_t address;
 
   /// size in bytes
   unsigned size;
@@ -73,7 +74,7 @@ public:
 public:
   // XXX this is just a temp hack, should be removed
   explicit
-  MemoryObject(uint64_t _address) 
+  MemoryObject(std::uintptr_t _address) 
     : refCount(0),
       id(counter++), 
       address(_address),
@@ -83,7 +84,7 @@ public:
       allocSite(0) {
   }
 
-  MemoryObject(uint64_t _address, unsigned _size, 
+  MemoryObject(std::uintptr_t _address, unsigned _size, 
                bool _isLocal, bool _isGlobal, bool _isFixed,
                const llvm::Value *_allocSite,
                MemoryManager *_parent)
