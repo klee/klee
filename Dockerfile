@@ -5,6 +5,8 @@ MAINTAINER Dan Liew <daniel.liew@imperial.ac.uk>
 # squash the layers from within a Dockerfile so
 # the resulting image is unnecessarily large!
 
+ARG DEBIAN_FRONTEND=noninteractive
+
 ENV LLVM_VERSION=3.4 \
     SOLVERS=STP:Z3 \
     STP_VERSION=2.1.2 \
@@ -16,8 +18,8 @@ ENV LLVM_VERSION=3.4 \
     BUILD_DIR=/home/klee/klee_build \
     ASAN_BUILD=0 \
     UBSAN_BUILD=0 \
-    TRAVIS_OS_NAME=linux \
-    DEBIAN_FRONTEND=noninteractive
+    TRAVIS_OS_NAME=linux
+
 
 RUN apt-get update && \
     apt-get -y --no-install-recommends install \
