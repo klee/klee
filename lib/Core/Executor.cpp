@@ -356,6 +356,7 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
 
   this->solver = new TimingSolver(solver, EqualitySubstitution);
   memory = new MemoryManager(&arrayCache);
+  StrVarExpr::arrayCache = &arrayCache;
 
   initializeSearchOptions();
 
@@ -3802,7 +3803,7 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
     if(mo->serial == 0) { //Bitvector
       objects.push_back(state.symbolics[i].second);
     } else { //String
-      objects.push_back(new Array(mo->getABSerial()));
+      objects.push_back(arrayCache.StringArray(mo->getABSerial()));
     }
   }
   bool success = solver->getInitialValues(tmp, objects, values);

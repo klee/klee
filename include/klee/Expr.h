@@ -1155,9 +1155,11 @@ public:
 class StrVarExpr : public Expr {
 public:
   std::string name;
+  const Array* arr;
+  static ArrayCache * arrayCache;
 
-	StrVarExpr(const std::string n): name(n) { type = Type::String;}
-	StrVarExpr(const char *in_name): name(in_name) {type = Type::String;}
+	StrVarExpr(const std::string n, const Array* a): name(n), arr(a) { type = Type::String;}
+	StrVarExpr(const char *in_name, const Array* a): name(in_name), arr(a) {type = Type::String;}
 
 	virtual unsigned computeHash();
 
@@ -1171,12 +1173,7 @@ public:
 		return StrVarExpr::alloc(in_name);
 	}
 
-	static ref<Expr> alloc(std::string& in_name)
-	{
-		ref<Expr> res(new StrVarExpr(in_name));
-		res->computeHash();
-		return res;
-	}
+	static ref<Expr> alloc(std::string& in_name);
 	virtual int compareContents(const Expr &b)  const {return   0;}		
 	virtual Kind      getKind()                 const {return   Expr::Str_Var;}	
 	virtual Width     getWidth()                const {return   Expr::Int8;}	

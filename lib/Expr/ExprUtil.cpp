@@ -96,8 +96,7 @@ protected:
     return Action::doChildren();
   }
   Action visitStrVar(const StrVarExpr &sv) {
-    Array *dummyArray = new Array(sv.name);
-    objects.push_back(dummyArray);
+    objects.push_back(sv.arr);
     return Action::doChildren();
   }
 

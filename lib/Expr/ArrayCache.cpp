@@ -14,6 +14,11 @@ ArrayCache::~ArrayCache() {
        ai != e; ++ai) {
     delete *ai;
   }
+  for (ArrayHashMap::iterator ai = cachedStringArrays.begin(),
+                              e = cachedStringArrays.end();
+       ai != e; ++ai) {
+    delete *ai;
+  }
 }
 
 const Array *
@@ -43,5 +48,18 @@ ArrayCache::CreateArray(const std::string &_name, uint64_t _size,
     concreteArrays.push_back(array); // For deletion later
     return array;
   }
+}
+const Array * ArrayCache::StringArray(const std::string &name) {
+    const Array * array =  new Array(name, 0);
+    std::pair<ArrayHashMap::const_iterator, bool> success =
+        cachedStringArrays.insert(array);
+    if (success.second) {
+      // Cache miss
+      return array;
+    }
+    // Cache hit
+    delete array;
+    array = *(success.first);
+    return array;
 }
 }

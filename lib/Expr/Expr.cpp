@@ -18,6 +18,7 @@
 #include "klee/Internal/Support/IntEvaluation.h"
 
 #include "klee/util/ExprPPrinter.h"
+#include "klee/util/ArrayCache.h"
 
 #include <sstream>
 
@@ -855,6 +856,15 @@ static ref<Expr> SubExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {
     }
   }
 }
+
+ArrayCache *StrVarExpr::arrayCache ;
+ref<Expr> StrVarExpr::alloc(std::string& in_name)
+{
+	ref<Expr> res(new StrVarExpr(in_name, StrVarExpr::arrayCache->StringArray(in_name)));
+	res->computeHash();
+	return res;
+}
+
 static ref<Expr> SubExpr_createPartial(Expr *l, const ref<ConstantExpr> &cr) {
   // l - c => l + (-c)
   return AddExpr_createPartial(l, 

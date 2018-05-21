@@ -67,10 +67,13 @@ public:
                            Expr::Width _domain = Expr::Int32,
                            Expr::Width _range = Expr::Int8);
 
+  const Array *StringArray(const std::string &name);
+
 private:
   typedef unordered_set<const Array *, klee::ArrayHashFn,
                         klee::EquivArrayCmpFn> ArrayHashMap;
   ArrayHashMap cachedSymbolicArrays;
+  ArrayHashMap cachedStringArrays;
   typedef std::vector<const Array *> ArrayPtrVec;
   ArrayPtrVec concreteArrays;
 };
