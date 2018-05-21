@@ -24,10 +24,12 @@ StringModel::StringModel() {
 }
 
 StrModel StringModel::modelStrncmp(
-  const MemoryObject* moP, ref<Expr> s1,
-  const MemoryObject* moQ, ref<Expr> s2,
+  const ObjectState* osP, ref<Expr> s1,
+  const ObjectState* osQ, ref<Expr> s2,
 	ref<Expr> n)
 {
+  const MemoryObject* moP = osP->getObject();
+  const MemoryObject* moQ = osQ->getObject();
 	ref<Expr> n_int = BvToIntExpr::create(n);
 
 	 /*********************************/
@@ -37,8 +39,8 @@ StrModel StringModel::modelStrncmp(
 	ref<Expr> ABq_size = moQ->getIntSizeExpr();
 	ref<Expr> offset_p = BvToIntExpr::create(moP->getOffsetExpr(s1));
 	ref<Expr> offset_q = BvToIntExpr::create(moQ->getOffsetExpr(s2));
- 	ref<Expr> ABp      = StrVarExpr::create(moP->getABSerial());
-	ref<Expr> ABq      = StrVarExpr::create(moQ->getABSerial());
+ 	ref<Expr> ABp      = StrVarExpr::create(osP->getABSerial());
+	ref<Expr> ABq      = StrVarExpr::create(osQ->getABSerial());
 	ref<Expr> p_size   = SubExpr::create(ABp_size,offset_p);
 	ref<Expr> q_size   = SubExpr::create(ABq_size,offset_q);
 	ref<Expr> p_var    = StrSubstrExpr::create(ABp,offset_p, p_size);
@@ -91,8 +93,10 @@ StrModel StringModel::modelStrncmp(
 }
 
 StrModel StringModel::modelStrcmp(
-  const MemoryObject* moP, ref<Expr> s1,
-  const MemoryObject* moQ, ref<Expr> s2) {
+  const ObjectState* osP, ref<Expr> s1,
+  const ObjectState* osQ, ref<Expr> s2) {
+  const MemoryObject* moP = osP->getObject();
+  const MemoryObject* moQ = osQ->getObject();
  /*********************************/
 	/* [7] AB, svar, offset and size */
 	/*********************************/
@@ -100,8 +104,8 @@ StrModel StringModel::modelStrcmp(
 	ref<Expr> ABq_size = moQ->getIntSizeExpr();
 	ref<Expr> offset_p = BvToIntExpr::create(moP->getOffsetExpr(s1));
 	ref<Expr> offset_q = BvToIntExpr::create(moQ->getOffsetExpr(s2));
- 	ref<Expr> ABp      = StrVarExpr::create(moP->getABSerial());
-	ref<Expr> ABq      = StrVarExpr::create(moQ->getABSerial());
+ 	ref<Expr> ABp      = StrVarExpr::create(osP->getABSerial());
+	ref<Expr> ABq      = StrVarExpr::create(osQ->getABSerial());
 	ref<Expr> p_size   = SubExpr::create(ABp_size,offset_p);
 	ref<Expr> q_size   = SubExpr::create(ABq_size,offset_q);
 	ref<Expr> p_var    = StrSubstrExpr::create(ABp,offset_p, p_size);
@@ -143,14 +147,15 @@ StrModel StringModel::modelStrcmp(
    );
 }
 
-StrModel StringModel::modelStrchr(const MemoryObject* mos, ref<Expr> s, ref<Expr> c) {
+StrModel StringModel::modelStrchr(const ObjectState* os, ref<Expr> s, ref<Expr> c) {
+  const MemoryObject* mos = os->getObject();
 	/*******************************/
 	/* [5] Check if c appears in p */
 	/*******************************/
 	ref<Expr> size   = mos->getIntSizeExpr();
 	ref<Expr> offset = mos->getOffsetExpr(s);	
 	ref<Expr> p_var  = StrSubstrExpr::create(
-		StrVarExpr::create(mos->getABSerial()),
+		StrVarExpr::create(os->getABSerial()),
 		BvToIntExpr::create(offset),
 		SubExpr::create(size,offset));
 
@@ -196,8 +201,9 @@ StrModel StringModel::modelStrchr(const MemoryObject* mos, ref<Expr> s, ref<Expr
  return std::make_pair(strchrReturnValue, validAcess);
 }
 
-StrModel StringModel::modelStrlen(const MemoryObject* mos, ref<Expr>	s) {
-	ref<Expr> AB = StrVarExpr::create(mos->getABSerial());
+StrModel StringModel::modelStrlen(const ObjectState* os, ref<Expr>	s) {
+  const MemoryObject* mos = os->getObject();
+	ref<Expr> AB = StrVarExpr::create(os->getABSerial());
 	ref<Expr> offset = BvToIntExpr::create(mos->getOffsetExpr(s));
 	ref<Expr> size = SubExpr::create(mos->getIntSizeExpr(),offset);
 
@@ -214,11 +220,13 @@ StrModel StringModel::modelStrlen(const MemoryObject* mos, ref<Expr>	s) {
 	/*************************************/
   return std::make_pair(firstIdxOf_x00_in_s, p_is_NULL_terminated);
 }
-StrModel StringModel::modelStrncpy(const MemoryObject* moDst, ref<Expr> dst,
-                     const MemoryObject* moSrc, ref<Expr> src, ref<Expr> n) {
+StrModel StringModel::modelStrncpy(const ObjectState* osDst, ref<Expr> dst,
+                     const ObjectState* osSrc, ref<Expr> src, ref<Expr> n) {
 
-  ref<Expr> AB_dst_var = StrVarExpr::create(moDst->getABSerial());
-	ref<Expr> AB_src_var = StrVarExpr::create(moSrc->getABSerial());
+  const MemoryObject* moDst = osDst->getObject();
+  const MemoryObject* moSrc = osSrc->getObject();
+  ref<Expr> AB_dst_var = StrVarExpr::create(osDst->getABSerial());
+	ref<Expr> AB_src_var = StrVarExpr::create(osSrc->getABSerial());
 	ref<Expr> dst_offset = BvToIntExpr::create(moDst->getOffsetExpr(dst));
 	ref<Expr> src_offset = BvToIntExpr::create(moSrc->getOffsetExpr(src));
 
@@ -249,8 +257,8 @@ StrModel StringModel::modelStrncpy(const MemoryObject* moDst, ref<Expr> dst,
 	/***************************/
 	/* [9] New Dst Version ... */
 	/***************************/
-	const_cast<MemoryObject*>(moDst)->version++;
-	ref<Expr> AB_dst_new_var = StrVarExpr::create(moDst->getABSerial());
+	const_cast<ObjectState*>(osDst)->version++;
+	ref<Expr> AB_dst_new_var = StrVarExpr::create(osDst->getABSerial());
 
 	/************************/
 	/* [10] prefix equation */
@@ -298,11 +306,13 @@ StrModel StringModel::modelStrncpy(const MemoryObject* moDst, ref<Expr> dst,
 		SleExpr::create(n,src_size)));
 }
 
-StrModel StringModel::modelStrcpy(const MemoryObject* moDst, ref<Expr> dst,
-                     const MemoryObject* moSrc, ref<Expr> src) {
-
-	ref<Expr> AB_dst_var = StrVarExpr::create(moDst->getABSerial());
-	ref<Expr> AB_src_var = StrVarExpr::create(moSrc->getABSerial());
+StrModel StringModel::modelStrcpy(const ObjectState* osDst, ref<Expr> dst,
+                     const ObjectState* osSrc, ref<Expr> src) {
+  
+  const MemoryObject* moDst = osDst->getObject();
+  const MemoryObject* moSrc = osSrc->getObject();
+	ref<Expr> AB_dst_var = StrVarExpr::create(osDst->getABSerial());
+	ref<Expr> AB_src_var = StrVarExpr::create(osSrc->getABSerial());
 	ref<Expr> dst_offset = BvToIntExpr::create(moDst->getOffsetExpr(dst));
 	ref<Expr> src_offset = BvToIntExpr::create(moSrc->getOffsetExpr(src));
 
@@ -328,8 +338,8 @@ StrModel StringModel::modelStrcpy(const MemoryObject* moDst, ref<Expr> dst,
 	/***************************/
 	/* [9] New Dst Version ... */
 	/***************************/
-	const_cast<MemoryObject*>(moDst)->version++;
-	ref<Expr> AB_dst_new_var = StrVarExpr::create(moDst->getABSerial());
+	const_cast<ObjectState*>(osDst)->version++;
+	ref<Expr> AB_dst_new_var = StrVarExpr::create(osDst->getABSerial());
 
 	/************************/
 	/* [10] prefix equation */

@@ -102,6 +102,8 @@ ObjectState::ObjectState(const MemoryObject *mo)
     knownSymbolics(0),
     updates(0, 0),
     size(mo->size),
+    serial(-1),
+    version(-1),
     readOnly(false) {
   mo->refCount++;
   if (!UseConstantArrays) {
@@ -124,6 +126,8 @@ ObjectState::ObjectState(const MemoryObject *mo, const Array *array)
     knownSymbolics(0),
     updates(array, 0),
     size(mo->size),
+    serial(-1),
+    version(-1),
     readOnly(false) {
   mo->refCount++;
   makeSymbolic();
@@ -140,6 +144,8 @@ ObjectState::ObjectState(const ObjectState &os)
     knownSymbolics(0),
     updates(os.updates),
     size(os.size),
+    serial(os.serial),
+    version(os.version),
     readOnly(false) {
   assert(!os.readOnly && "no need to copy read only object?");
   if (object)
@@ -176,6 +182,17 @@ ArrayCache *ObjectState::getArrayCache() const {
   return object->parent->getArrayCache();
 }
 
+std::string ObjectState::getABSerial() const {
+      assert(serial >= 0 && version >= 0 && "Can't get serial name of a non abstratc buffer object state");
+      std::stringstream ss;
+      if(object->isGlobal) {
+          ss << "AB_" << object->name << "_" << serial << "_version_" << version;
+          return ss.str();
+      }
+      ss << "AB_serial_" << serial << "_version_" << version;
+
+      return ss.str();
+}
 /***/
 
 const UpdateList &ObjectState::getUpdates() const {

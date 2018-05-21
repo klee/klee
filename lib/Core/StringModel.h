@@ -37,17 +37,17 @@ public:
     Returns a pair of expression. First is the return value of strcmp.
     Second is the constrain that must hold in the state
     */
-    StrModel modelStrcmp(const MemoryObject* moP, ref<Expr> p,
-                         const MemoryObject* moQ, ref<Expr> q);
-    StrModel modelStrncmp(const MemoryObject* moP, ref<Expr> p,
-                         const MemoryObject* moQ, ref<Expr> q, ref<Expr> n);
+    StrModel modelStrcmp(const ObjectState* moP, ref<Expr> p,
+                         const ObjectState* moQ, ref<Expr> q);
+    StrModel modelStrncmp(const ObjectState* moP, ref<Expr> p,
+                         const ObjectState* moQ, ref<Expr> q, ref<Expr> n);
 
-    StrModel modelStrchr(const MemoryObject* moS, ref<Expr> s, ref<Expr> c);
-    StrModel modelStrlen(const MemoryObject* moS, ref<Expr>	s);
-    StrModel modelStrcpy(const MemoryObject* moDst, ref<Expr> dst,
-                         const MemoryObject* moSrc, ref<Expr> src);
-    StrModel modelStrncpy(const MemoryObject* moDst, ref<Expr> dst,
-                         const MemoryObject* moSrc, ref<Expr> src, ref<Expr> n);
+    StrModel modelStrchr(const ObjectState* moS, ref<Expr> s, ref<Expr> c);
+    StrModel modelStrlen(const ObjectState* moS, ref<Expr>	s);
+    StrModel modelStrcpy(const ObjectState* moDst, ref<Expr> dst,
+                         const ObjectState* moSrc, ref<Expr> src);
+    StrModel modelStrncpy(const ObjectState* moDst, ref<Expr> dst,
+                         const ObjectState* moSrc, ref<Expr> src, ref<Expr> n);
 
  };
 } // End klee namespace

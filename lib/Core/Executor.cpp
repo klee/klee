@@ -668,12 +668,12 @@ void Executor::initializeGlobals(ExecutionState &state) {
              c[i] = (char)dyn_cast<ConstantExpr>(wos->read8(i))->getZExtValue(8);
          }
          mo->setName(i->getName());
-         mo->serial = 0;
-         mo->version = 0;
+         wos->serial = 0;
+         wos->version = 0;
          std::stringstream ss;
          ss << c << "\\x00";
          errs() << mo->name << " " << ss.str() << " os size: " << wos->size << "\n";
-	       state.addConstraint(StrEqExpr::create(StrVarExpr::create(mo->getABSerial()), 
+	       state.addConstraint(StrEqExpr::create(StrVarExpr::create(os->getABSerial()), 
                                                       StrConstExpr::create(ss.str())));
       }
       // if(i->isConstant()) os->setReadOnly(true);
@@ -3338,9 +3338,10 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
   if (success) {
     const MemoryObject *mo = op.first;
-    if(isWrite && type == 8 && (mo->serial >= 0)) {
+    const ObjectState *os = op.second;
+    if(isWrite && type == 8 && (os->serial >= 0)) {
         ref<Expr> offset = mo->getOffsetExpr(address);
-        errs() << "Modifying mo serial " << mo->serial << " version " << mo->version << " with ";
+        errs() << "Modifying mo serial " << os->serial << " version " << os->version << " with ";
        // errs() << (char)dyn_cast<ConstantExpr>(value)->getZExtValue() << "\n";
         errs() << "At offset: ";
 //        offset->dump();
@@ -3352,9 +3353,9 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         ref<Expr> prefixLength = BvToIntExpr::create(offset);
         ref<Expr> suffixStart  = AddExpr::create(prefixLength,one);
         ref<Expr> suffixLength = SubExpr::create(mo->getSizeExpr(),suffixStart);
-        ref<Expr> AB_p_var     = StrVarExpr::create(mo->getABSerial());
-        const_cast<MemoryObject*>(mo)->version++;
-        ref<Expr> AB_p_new_var = StrVarExpr::create(mo->getABSerial());
+        ref<Expr> AB_p_var     = StrVarExpr::create(os->getABSerial());
+        const_cast<ObjectState*>(os)->version++;
+        ref<Expr> AB_p_new_var = StrVarExpr::create(os->getABSerial());
 
  	    state.addConstraint(EqExpr::create(
   		  StrLengthExpr::create(AB_p_new_var),
@@ -3384,7 +3385,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         /*******************************/
         /* [12] Extract Version Number */
         /*******************************/
-        int version=const_cast<MemoryObject*>(mo)->version;
+        int version=const_cast<ObjectState*>(os)->version;
 
         /************************/
         /* [12] Add constraints */
@@ -3395,18 +3396,18 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         return;
 	
     }
-	else if (type == 8 && (mo->serial >= 0))
+	else if (type == 8 && (os->serial >= 0))
 	{
 		char name[256]={0};
 		static int index=0;
 		sprintf(name,"tempBitVec8_serial_%d",index++);
         ref<Expr> offset = mo->getOffsetExpr(address);		
-        errs() << "Reading mo serial " << mo->serial << " version " << mo->version << "\n";
+        errs() << "Reading mo serial " << os->serial << " version " << os->version << "\n";
         //assert(dyn_cast<ConstantExpr>(offset) && "Todo non constant offests");
         offset = BvToIntExpr::create(offset);		
         errs() << "At offset: ";
  //       offset->dump();
-        ref<Expr> AB_p_var = StrVarExpr::create(mo->getABSerial());
+        ref<Expr> AB_p_var = StrVarExpr::create(os->getABSerial());
 		//ref<Expr> c = BitVector8VarExpr::create(name);    unsigned id = 0;
     static unsigned id = 1;
     std::string uniqueName = "tmp_read_arr_" + llvm::utostr(id++);
@@ -3800,10 +3801,11 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
   std::vector<const Array*> objects;
   for (unsigned i = 0; i != state.symbolics.size(); ++i) {
     const MemoryObject* mo = state.symbolics[i].first;
-    if(mo->serial == 0) { //Bitvector
+    const ObjectState* os = state.addressSpace.findObject(mo);
+    if(os->serial == 0) { //Bitvector
       objects.push_back(state.symbolics[i].second);
     } else { //String
-      objects.push_back(arrayCache.StringArray(mo->getABSerial()));
+      objects.push_back(arrayCache.StringArray(os->getABSerial()));
     }
   }
   bool success = solver->getInitialValues(tmp, objects, values);
@@ -3817,7 +3819,8 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
   
   for (unsigned i = 0; i != state.symbolics.size(); ++i) {
     const MemoryObject* mo = state.symbolics[i].first;
-    if(mo->serial == 0) { //Bitvector
+    const ObjectState* os = state.addressSpace.findObject(mo);
+    if(os->serial == 0) { //Bitvector
       res.push_back(std::make_pair(state.symbolics[i].first->name, values[i]));
     } else { //String
       errs() << "Working on " << mo->name << " size: " << mo->size << "\n";

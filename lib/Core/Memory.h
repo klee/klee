@@ -53,8 +53,6 @@ public:
   bool isUserSpecified;
 
   MemoryManager *parent;
-  int serial;
-  int version;
 
 
   /// "Location" for which this memory object was allocated. This
@@ -82,8 +80,6 @@ public:
       size(0),
       isFixed(true),
       parent(NULL),
-      serial(-1),
-      version(-1),
       allocSite(0) {
   }
 
@@ -101,8 +97,6 @@ public:
       isFixed(_isFixed),
       isUserSpecified(false),
       parent(_parent), 
-      serial(-1),
-      version(-1),
       allocSite(_allocSite) {
   }
 
@@ -115,17 +109,7 @@ public:
     this->name = name;
   }
 
-  std::string getABSerial() const {
-      assert(serial >= 0 && version >= 0 && "Can't get serial name of a non abstratc buffer memory object");
-      std::stringstream ss;
-      if(isGlobal) {
-          ss << "AB_" << name << "_" << serial << "_version_" << version;
-          return ss.str();
-      }
-      ss << "AB_serial_" << serial << "_version_" << version;
-
-      return ss.str();
-  }
+  
 
   ref<ConstantExpr> getBaseExpr() const { 
     return ConstantExpr::create(address, Context::get().getPointerWidth());
@@ -190,6 +174,8 @@ private:
 public:
   unsigned size;
 
+  int serial;
+  int version;
   bool readOnly;
 
 public:
@@ -205,6 +191,7 @@ public:
   ObjectState(const ObjectState &os);
   ~ObjectState();
 
+  std::string getABSerial() const ;
   const MemoryObject *getObject() const { return object; }
 
   void setReadOnly(bool ro) { readOnly = ro; }

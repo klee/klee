@@ -744,7 +744,7 @@ void SpecialFunctionHandler::handleStrlen(
 {
   assert(arguments.size() == 1 && "Strlen can only have 1 argument");
   StrModel m = stringModel.modelStrlen(
-                      executor.resolveOne(state,arguments[0]).first, 
+                      executor.resolveOne(state,arguments[0]).second, 
                       arguments[0]);
 
   Executor::StatePair branches = executor.fork(state, m.second, true);
@@ -768,9 +768,9 @@ void SpecialFunctionHandler::handleStrcpy(
 {
   assert(arguments.size() == 2 && "Strcpy takes 2 arguments!");
   StrModel m = stringModel.modelStrcpy(
-                      executor.resolveOne(state,arguments[0]).first, 
+                      executor.resolveOne(state,arguments[0]).second, 
                       arguments[0],
-                      executor.resolveOne(state,arguments[1]).first,
+                      executor.resolveOne(state,arguments[1]).second,
                       arguments[1]);
 
   Executor::StatePair branches = executor.fork(state, m.second, true);
@@ -791,9 +791,9 @@ void SpecialFunctionHandler::handleStrncmp(
 {
   assert(arguments.size() == 3 && "Strncmp takes 3 arguments!");
   StrModel m = stringModel.modelStrncmp(
-                      executor.resolveOne(state,arguments[0]).first, 
+                      executor.resolveOne(state,arguments[0]).second, 
                       arguments[0],
-                      executor.resolveOne(state,arguments[1]).first,
+                      executor.resolveOne(state,arguments[1]).second,
                       arguments[1],
 						arguments[2]);
 
@@ -814,9 +814,9 @@ void SpecialFunctionHandler::handleStrncpy(
 {
   assert(arguments.size() == 3 && "Strncpy takes 3 arguments!");
   StrModel m = stringModel.modelStrncpy(
-                      executor.resolveOne(state,arguments[0]).first, 
+                      executor.resolveOne(state,arguments[0]).second, 
                       arguments[0],
-                      executor.resolveOne(state,arguments[1]).first,
+                      executor.resolveOne(state,arguments[1]).second,
                       arguments[1],
 						arguments[2]);
 
@@ -981,9 +981,9 @@ void SpecialFunctionHandler::handleStrcmp(
 {
   assert(arguments.size() == 2 && "Strcmp takes 2 arguments!");
   StrModel m = stringModel.modelStrcmp(
-                      executor.resolveOne(state,arguments[0]).first, 
+                      executor.resolveOne(state,arguments[0]).second, 
                       arguments[0],
-                      executor.resolveOne(state,arguments[1]).first,
+                      executor.resolveOne(state,arguments[1]).second,
                       arguments[1]);
 
   Executor::StatePair branches = executor.fork(state, m.second, true);
@@ -1707,7 +1707,8 @@ void SpecialFunctionHandler::handleMyPrintOutput(
   for (Executor::ExactResolutionList::iterator it = rl.begin(), 
          ie = rl.end(); it != ie; ++it) {
     const MemoryObject *mo = it->first.first;
-    std::string ab_name = mo->getABSerial();
+    const ObjectState *os = it->first.second;
+    std::string ab_name = os->getABSerial();
 
     errs() << "Looking up an ab serial " << ab_name << " size " << mo->size << "\n";
     ref<ConstantExpr> ce;
@@ -2403,14 +2404,14 @@ void SpecialFunctionHandler::handleMarkString(
   for (Executor::ExactResolutionList::iterator it = rl.begin(), 
          ie = rl.end(); it != ie; ++it) {
     MemoryObject *mo = const_cast<MemoryObject*>(it->first.first);
-    mo->serial = ++state.numABSerials;
-    mo->version = 0;
-    std::string ab_name = mo->getABSerial();
+    ObjectState* wos = const_cast<ObjectState*>(it->first.second);
+    wos->serial = ++state.numABSerials;
+    wos->version = 0;
+    std::string ab_name = wos->getABSerial();
     if(mo->isGlobal) {
         //const GlobalVariable* v = dynamic_cast<const GlobalVariable*>(mo->allocSite);
         //assert(v && "Unsusported marks string of a non glbal variable global");
         //assert(v->isConstant() && "mark string of non constant global");
-        const ObjectState* wos = it->first.second;
         char c[wos->size + 1];
         for(int i = 0; i < wos->size; i++) {
             c[i] = (char)dyn_cast<ConstantExpr>(wos->read8(i))->getZExtValue(8);
@@ -2418,7 +2419,7 @@ void SpecialFunctionHandler::handleMarkString(
         std::stringstream ss;
         ss << c << "\\x00";
         errs() << "Marking constant " << mo->name << " " << ss.str() << " os size: " << wos->size << "\n";
-	      state.addConstraint(StrEqExpr::create(StrVarExpr::create(mo->getABSerial()), 
+	      state.addConstraint(StrEqExpr::create(StrVarExpr::create(wos->getABSerial()), 
                                                       StrConstExpr::create(ss.str())));
     } else {
 
@@ -2542,7 +2543,7 @@ void SpecialFunctionHandler::handleStrchr(
 
 
   StrModel m = stringModel.modelStrchr(
-                      executor.resolveOne(state,arguments[0]).first, 
+                      executor.resolveOne(state,arguments[0]).second, 
                       arguments[0],
                       arguments[1]);
 
