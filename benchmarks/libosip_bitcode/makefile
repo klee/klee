@@ -2,9 +2,10 @@
 # DIRECTORIES #
 ###############
 BASEDIR        = $(shell pwd)
-KLEE_ROOT_DIR  = /home/oren/GIT/klee/str.klee
+KLEE_ROOT_DIR  = /data/str.klee
 KLEE_SRC_DIR   = ${KLEE_ROOT_DIR}/klee
-KLEE_BUILD_DIR = ${KLEE_ROOT_DIR}/build
+KLEE_BUILD_DIR = ${KLEE_ROOT_DIR}/santized-build-klee
+
 
 ################
 # PROGRAM NAME #
@@ -16,7 +17,7 @@ PROGRAM_NAME=torture_test
 # FILES #
 #########
 KLEE = ${KLEE_BUILD_DIR}/bin/klee
-OPT := opt
+OPT := opt-3.4
 
 .PHONY: all
 all: run
@@ -48,16 +49,16 @@ run: build/src/test/torture_test_no_dbg_with_names.bc
 	@setterm -term linux -fore white
 	#--posix-runtime                                 \
 	#-constants-as-ABs                               \
+	#--libc=uclibc                                   \
+	#-use-query-log=all:kquery                                  \
+	#-use-query-log=solver:smt2                      \
+#	-use-independent-solver=0                       \
 	# gdb -x ./myGdbScripts/gdbCommands.txt --args    \
 	${KLEE}                                         \
-	--libc=uclibc                                   \
 	-solver-backend=z3                              \
 	-output-module                                  \
 	-output-source                                  \
-	-use-query-log=all:kquery                                  \
 	-use-cex-cache=0                                \
-	-use-independent-solver=0                       \
-	-use-query-log=solver:smt2                      \
 	-debug-z3-dump-queries=Z3queries.txt            \
 	-debug-z3-log-api-interaction=Z3LogAPI.txt      \
 	${PROGRAM_PATH}/${PROGRAM_NAME}_no_dbg_with_names.bc 

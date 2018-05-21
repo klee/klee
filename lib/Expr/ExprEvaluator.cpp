@@ -60,7 +60,11 @@ ExprVisitor::Action ExprEvaluator::visitBvToInt(const BvToIntExpr& e) {
   return Action::changeTo(e.bvExpr);
 }
 ExprVisitor::Action ExprEvaluator::visitStrFromBv8(const StrFromBitVector8Expr& e) {
-  return Action::changeTo(e.someBitVec8);
+  ref<Expr> _c = visit(e.someBitVec8);
+  ConstantExpr *c = dyn_cast<ConstantExpr>(_c);
+  assert(c && "non constant bv in strfrobv8");
+  char arr[1] = { (char)c->getZExtValue(8) };
+  return Action::changeTo(StrConstExpr::create(arr));
 }
 
 std::string NormalizeZ3String(const std::string &s)
@@ -158,10 +162,13 @@ ExprVisitor::Action ExprEvaluator::visitFirstIndexOf(const StrFirstIdxOfExpr& sf
 }
 
 ExprVisitor::Action ExprEvaluator::visitStrEq(const StrEqExpr &eqE) {
+    eqE.dump();
     ref<Expr> _left = visit(eqE.s1);
     ref<Expr> _right = visit(eqE.s2);
     StrConstExpr* left = dyn_cast<StrConstExpr>(_left);
     StrConstExpr* right = dyn_cast<StrConstExpr>(_right);
+    _right->dump();
+    _left->dump();
     assert(left != nullptr && "Non constant strign expr in eq expr");
     assert(right != nullptr && "Non constant strign expr in eq expr");
     return Action::changeTo(ConstantExpr::create(left->value == right->value, Expr::Bool));
@@ -206,7 +213,7 @@ ExprVisitor::Action ExprEvaluator::visitCharAt(const StrCharAtExpr &charAtE) {
     ref<Expr> _index = visit(charAtE.i);
     ConstantExpr* index = dyn_cast<ConstantExpr>(_index);
     if(index != nullptr) {
-//      llvm::errs() << "charat " << index->getZExtValue() << "\n";
+      llvm::errs() << "charat " << index->getZExtValue() << "\n";
       StrVarExpr* se = dyn_cast<StrVarExpr>(charAtE.s);
       int idx = index->getZExtValue();
       char c[2] = {0,0};
@@ -221,7 +228,11 @@ ExprVisitor::Action ExprEvaluator::visitCharAt(const StrCharAtExpr &charAtE) {
         assert(str != nullptr && "Failed to make the string constant");
         c[0] = str->value.at(idx); 
       }
-      return Action::changeTo(StrConstExpr::create(c));
+      llvm::errs() << "char at return " << c[0] << "\n";
+      fprintf(stderr,"c is '%s'\n", c);
+      ref<Expr> ret = StrConstExpr::create(c);
+      ret->dump();
+      return Action::changeTo(ret);
     } else {
       assert(false && "Non constant offsets for substr");
       return Action::doChildren();
