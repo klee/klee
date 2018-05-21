@@ -130,20 +130,23 @@ ExprVisitor::Action ExprEvaluator::visitStrVar(const StrVarExpr& se) {
    const Array *a = getStringArray(se.name);
    llvm:: errs() << "array name " << a->name << "\n";
    assert(a && "nullptr array from ab name");
-   std::vector<char> c(MAX_SIZE);
+   std::vector<unsigned char> c(MAX_SIZE);
 
    char numBuf[3] = {0};
    numBuf[2] = 0;
    int idx = 0;
    int numBufIdx = -1; 
-   c[idx] = 1;
-   while(c[idx] != '\0') { //not null terminated
-        llvm::errs() << a <<  a->name <<  " In loop\n";
-        ref<Expr> ch = getInitialValue(*a, idx);
-        llvm::errs() << ch.get() << "\n";
-        if(ch.get() == nullptr) break;
+   int getChrIdx = 0;
+   while(idx < 25) { //not null terminated
+        //llvm::errs() << a <<  a->name <<  " In loop\n";
+        ref<Expr> ch = getInitialValue(*a, getChrIdx);
+        if(isa<NotOptimizedExpr>(ch)) break;
         c[idx] = (char)dyn_cast<ConstantExpr>(ch)->getZExtValue(8);
-        printf("%c: idx: %d, numBufIdx: %d, numBuf: %s\n", c[idx], idx, numBufIdx, numBuf);
+//        printf("%c: idx: %d, numBufIdx: %d, numBuf: %s\n", c[idx], idx, numBufIdx, numBuf);
+//        llvm::errs() << "str at: ";
+//        for(auto &h : c) llvm::errs() << (int)h << "-";
+//        llvm::errs() << "\n";
+//        llvm::errs() << " as string "<< std::string(c.begin(), c.end()) << "\n";
         if(numBufIdx >= 0) {
             numBuf[numBufIdx] = c[idx];
             numBufIdx++;
@@ -159,12 +162,21 @@ ExprVisitor::Action ExprEvaluator::visitStrVar(const StrVarExpr& se) {
             idx--;
         }
 
+        //printf("%c: idx: %d, numBufIdx: %d, numBuf: %s\n", c[idx], idx, numBufIdx, numBuf);
+        //llvm::errs() << "str at: ";// << std::string(c.begin(), c.end()) << "\n";
+        //for(auto &h : c) llvm::errs() << h << "-";
+        //llvm::errs() << "\n";
         if(numBufIdx == -1) {
             idx++;
         }
+        //llvm::errs() << "\n";
+        getChrIdx++;
    }
-   llvm::errs() << "Evaluated str var to " << std::string(c.begin(), c.end()) << "\n";
-   return Action::changeTo(StrConstExpr::create(std::string(c.begin(), c.end())));
+   llvm::errs() << "Evaluated str var to " ;//<< std::string(c.begin(), c.end()) << "\n";
+   std::vector<unsigned char> ret(c.begin(), c.begin() + idx);
+   for(auto &h : ret) llvm::errs() << h << "-";
+   llvm::errs() << "\n";
+   return Action::changeTo(StrConstExpr::alloc(ret));
 }
 
 ExprVisitor::Action ExprEvaluator::visitStrLen(const StrLengthExpr& sle) {
@@ -174,7 +186,7 @@ ExprVisitor::Action ExprEvaluator::visitStrLen(const StrLengthExpr& sle) {
     StrConstExpr* s = dyn_cast<StrConstExpr>(_s);
     assert(s && "_s must be a constant string");
 //    std::string normalizedS = NormalizeZ3String(s->value);
-    size_t len = strlen(s->value.c_str());
+    size_t len = s->data.size();
     llvm::errs() << "Strlen returning " <<  len << "\n";
     return Action::changeTo(ConstantExpr::create(len, Expr::Int64));
 }
@@ -186,39 +198,44 @@ ExprVisitor::Action ExprEvaluator::visitFirstIndexOf(const StrFirstIdxOfExpr& sf
 
     StrConstExpr* haystack = dyn_cast<StrConstExpr>(_haystack);
     assert(haystack && "Haystack must be a constant string");
-    std::string needle;
+    std::vector<unsigned char> needle;
     if(ConstantExpr* n = dyn_cast<ConstantExpr>(_needle)) {
-        needle = std::string(1,(char)n->getZExtValue(8));
+        std::vector<unsigned char> tm(1);
+        tm[0] = n->getZExtValue(8);
+        needle = tm; //std::string(1,(char)n->getZExtValue(8));
     } else if(StrConstExpr* n = dyn_cast<StrConstExpr>(_needle)) {
-        needle = n->value;
+        needle = n->data;
     } else {
       assert(false && "Needle must be constant bitvec");
     }
 
-	size_t firstIndex=0;
-	std::string normalizedNeedle  = NormalizeZ3String(needle);
-	std::string normalizedHaystack= NormalizeZ3String(haystack->value);
-
-	if (normalizedNeedle.size() == 0)
-	{
-		firstIndex = strlen(normalizedHaystack.c_str());
-	}
-	else
-	{
-		firstIndex = normalizedHaystack.find(normalizedNeedle);
-	}
+    auto firstIndex = std::search(haystack->data.begin(), haystack->data.end(),
+                needle.begin(), needle.end());
+//	size_t firstIndex=0;
+//	std::string normalizedNeedle  = NormalizeZ3String(needle);
+//	std::string normalizedHaystack= NormalizeZ3String(haystack->value);
+//
+//	if (normalizedNeedle.size() == 0)
+//	{
+//		firstIndex = strlen(normalizedHaystack.c_str());
+//	}
+//	else
+//	{
+//		firstIndex = normalizedHaystack.find(normalizedNeedle);
+//	}
     // size_t firstIndex = (NormalizeZ3String(haystack->value)).find(NormalizeZ3String(needle));
     // size_t firstIndex = haystack->value.find(needle);
     // size_t firstIndex = haystack->value.find_first_of(needle);
-    llvm::errs() << "haystack->value     is:" << haystack->value    << "END\n";
-    llvm::errs() << "normalized haystack is:" << normalizedHaystack << "END\n";
-    llvm::errs() << "needle              is:" << needle             << "END\n";
-    llvm::errs() << "normalized needle   is:" << normalizedNeedle   << "END\n";
-    llvm::errs() << "firstIndex          is:" << firstIndex         << "\n";
-    assert(firstIndex != std::string::npos && "Character must be present");
+    size_t fstIdx = std::distance(haystack->data.begin(), firstIndex);
+    assert(firstIndex != haystack->data.end()  && "Character must be present");
+//    llvm::errs() << "haystack->value     is:" << haystack->value    << "END\n";
+    //llvm::errs() << "normalized haystack is:" << normalizedHaystack << "END\n";
+//    llvm::errs() << "needle              is:" << needle             << "END\n";
+   // llvm::errs() << "normalized needle   is:" << normalizedNeedle   << "END\n";
+    llvm::errs() << "firstIndex          is:" << fstIdx         << "\n";
 
-    llvm::errs() << "Needle found at offset = " << firstIndex << "\n";
-    return Action::changeTo(ConstantExpr::create(firstIndex, Expr::Int64));
+    llvm::errs() << "Needle found at offset = " << fstIdx << "\n";
+    return Action::changeTo(ConstantExpr::create(fstIdx, Expr::Int64));
 }
 
 ExprVisitor::Action ExprEvaluator::visitStrEq(const StrEqExpr &eqE) {
@@ -230,7 +247,7 @@ ExprVisitor::Action ExprEvaluator::visitStrEq(const StrEqExpr &eqE) {
     StrConstExpr* right = dyn_cast<StrConstExpr>(_right);
     assert(left != nullptr && "Non constant strign expr in eq expr");
     assert(right != nullptr && "Non constant strign expr in eq expr");
-    return Action::changeTo(ConstantExpr::create(left->value == right->value, Expr::Bool));
+    return Action::changeTo(ConstantExpr::create(left->data == right->data, Expr::Bool));
 }
 ExprVisitor::Action ExprEvaluator::visitStrSubstr(const StrSubstrExpr &subStrE) {
     ref<Expr> _offset = visit(subStrE.offset);
@@ -242,8 +259,9 @@ ExprVisitor::Action ExprEvaluator::visitStrSubstr(const StrSubstrExpr &subStrE) 
       ref<Expr> _theString = visit(subStrE.s);
       StrConstExpr* theString = dyn_cast<StrConstExpr>(_theString);
       assert(theString != nullptr && "Non constant strign expr in SubString expr");
-      return Action::changeTo(
-          StrConstExpr::create(theString->value.substr(offset->getZExtValue(), length->getZExtValue())));
+      std::vector<unsigned char> subStr(theString->data.begin() + offset->getZExtValue(),
+                                        theString->data.begin() + offset->getZExtValue() + length->getZExtValue());
+      return Action::changeTo(StrConstExpr::alloc(subStr));
     } else {
       assert(false && "Non constant offsets for substr");
       return Action::doChildren();
@@ -261,7 +279,7 @@ ExprVisitor::Action ExprEvaluator::visitCharAt(const StrCharAtExpr &charAtE) {
       ref<Expr> _string = visit(charAtE.s);
       StrConstExpr* str = dyn_cast<StrConstExpr>(_string);
       assert(str != nullptr && "Failed to make the string constant");
-      c[0] = str->value.at(idx); 
+      c[0] = str->data[idx]; 
 //    fprintf(stderr,"c is '%s'\n", c);
       ref<Expr> ret = StrConstExpr::create(c);
       return Action::changeTo(ret);

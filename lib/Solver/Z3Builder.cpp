@@ -637,7 +637,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
   {
   	StrConstExpr *sce = (StrConstExpr *) e.get();
 	  Z3ASTHandle result2 = Z3ASTHandle(
-		  Z3_mk_string(ctx,	sce->value.c_str()),
+		  Z3_mk_string(ctx,	(char*)sce->data.data()),
 		  ctx);
     *width_out = Expr::Int8;
 	  return result2;

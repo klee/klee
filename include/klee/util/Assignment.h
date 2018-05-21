@@ -81,10 +81,11 @@ namespace klee {
                                         unsigned index) const {
     assert(array);
     bindings_ty::const_iterator it = bindings.find(array);
+    if(it!=bindings.end() && index >= it->second.size()) {
+        return NotOptimizedExpr::create(ConstantExpr::create(0, Expr::Int8));
+        llvm::errs() << "GT SIZE!!!!!!!!!!\n";
+    }
     if (it!=bindings.end() && index<it->second.size()) {
-       if(index >= it->second.size()) {
-           llvm::errs() << "GT SIZE!!!!!!!!!!\n";
-       }
       return ConstantExpr::alloc(it->second[index], array->getRange());
     } else {
       if (allowFreeValues) {

@@ -1562,20 +1562,31 @@ public:
 
 class StrConstExpr : public Expr {
 public:
-	std::string value;
+	std::vector<unsigned char> data;
 
-	StrConstExpr(std::string _value): value(_value){ type = Type::String;}
+	StrConstExpr(std::vector<unsigned char> _data): data(_data){ type = Type::String;}
 
 	static ref<Expr> create(const char *value)
 	{
-		return StrConstExpr::alloc(std::string(value));
+    std::vector<unsigned char> d;
+    while(*value != '\0') {
+        d.push_back((unsigned char)*value);
+        value++;
+    }
+    d.push_back('\0');
+		return StrConstExpr::alloc(d);
 	}
 	static ref<Expr> create(std::string value)
 	{
-		return StrConstExpr::alloc(value);
+    std::vector<unsigned char> d;
+    for(auto &c : value) {
+        d.push_back(c);
+    }
+    d.push_back('\0');
+		return StrConstExpr::alloc(d);
 	}
 
-	static ref<Expr> alloc(std::string value)
+	static ref<Expr> alloc(std::vector<unsigned char> value)
 	{
 		ref<Expr> res(new StrConstExpr(value));
 		res->computeHash();

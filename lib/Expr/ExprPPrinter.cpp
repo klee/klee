@@ -363,7 +363,11 @@ public:
   }
   void printStrConst(const ref<StrConstExpr> &e, PrintContext &PC, 
                   bool printWidth) {
-      PC << e->value;
+      PC << "'";
+      for(auto &c: e->data) {
+        PC << c;
+      }
+      PC << "'";
   }
 
   void print(const ref<Expr> &e, PrintContext &PC, bool printConstWidth=false) {

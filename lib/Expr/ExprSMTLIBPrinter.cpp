@@ -485,7 +485,7 @@ const char *ExprSMTLIBPrinter::getSMTLIBKeyword(const ref<Expr> &e)
   }
   case Expr::Str_Const:
   {
-    std::string s = "\"" + dyn_cast<StrConstExpr>(e)->value + "\"";
+    std::string s = "\"" + std::string((char *)dyn_cast<StrConstExpr>(e)->data.data()) + "\"";
     return s.c_str();
   }
   case Expr::Str_Length:
