@@ -85,7 +85,7 @@ template<class T>
 bool ArrayExprHash<T>::lookupArrayExpr(const Array* array, T& exp) const {
   bool res = false;
   
-#ifdef DEBUG
+#ifdef KLEE_ARRAY_DEBUG
   TimerStatIncrementer t(stats::arrayHashTime);
 #endif
   
@@ -101,7 +101,7 @@ bool ArrayExprHash<T>::lookupArrayExpr(const Array* array, T& exp) const {
 template<class T>
 void ArrayExprHash<T>::hashArrayExpr(const Array* array, T& exp) {
   
-#ifdef DEBUG  
+#ifdef KLEE_ARRAY_DEBUG
    TimerStatIncrementer t(stats::arrayHashTime);
 #endif
    
@@ -114,7 +114,7 @@ bool ArrayExprHash<T>::lookupUpdateNodeExpr(const UpdateNode* un, T& exp) const
 {
   bool res = false;
   
-#ifdef DEBUG
+#ifdef KLEE_ARRAY_DEBUG
   TimerStatIncrementer t(stats::arrayHashTime);
 #endif
   
@@ -130,7 +130,7 @@ bool ArrayExprHash<T>::lookupUpdateNodeExpr(const UpdateNode* un, T& exp) const
 template<class T>
 void ArrayExprHash<T>::hashUpdateNodeExpr(const UpdateNode* un, T& exp) 
 {
-#ifdef DEBUG
+#ifdef KLEE_ARRAY_DEBUG
   TimerStatIncrementer t(stats::arrayHashTime);
 #endif
   
