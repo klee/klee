@@ -9,25 +9,34 @@
 
 #include "klee/Internal/Support/PrintVersion.h"
 #include "klee/Config/config.h"
+#include "klee/Config/Version.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/CommandLine.h"
 
 #include "klee/Config/CompileTimeInfo.h"
 
-void klee::printVersion()
-{
-  llvm::outs() << PACKAGE_STRING " (" PACKAGE_URL ")\n";
-#ifdef KLEE_ENABLE_TIMESTAMP
-  llvm::outs() << "  Built " __DATE__ " (" __TIME__ ")\n";
-#endif
-  llvm::outs() << "  Build mode: " << KLEE_BUILD_MODE "\n";
-  llvm::outs() << "  Build revision: ";
-#ifdef KLEE_BUILD_REVISION
-  llvm::outs() << KLEE_BUILD_REVISION "\n";
+#if LLVM_VERSION_CODE >= LLVM_VERSION(6, 0)
+void klee::printVersion(llvm::raw_ostream &OS)
 #else
-  llvm::outs() << "unknown\n";
+void klee::printVersion()
+#endif
+{
+#if LLVM_VERSION_CODE < LLVM_VERSION(6, 0)
+  llvm::raw_ostream &OS = llvm::outs();
+#endif
+
+  OS << PACKAGE_STRING " (" PACKAGE_URL ")\n";
+#ifdef KLEE_ENABLE_TIMESTAMP
+  OS << "  Built " __DATE__ " (" __TIME__ ")\n";
+#endif
+  OS << "  Build mode: " << KLEE_BUILD_MODE "\n";
+  OS << "  Build revision: ";
+#ifdef KLEE_BUILD_REVISION
+  OS << KLEE_BUILD_REVISION "\n";
+#else
+  OS << "unknown\n";
 #endif
   // Show LLVM version information
-  llvm::outs() << "\n";
+  OS << "\n";
   llvm::cl::PrintVersionMessage();
 }
