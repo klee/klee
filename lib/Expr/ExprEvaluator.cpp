@@ -119,6 +119,49 @@ std::string NormalizeZ3String(const std::string &s)
 	return normalized;
 }
 
+#define MAX_SIZE 1024
+ExprVisitor::Action ExprEvaluator::visitStrVar(const StrVarExpr& se) {
+   llvm::errs() << "looking at array name " << se.name << "\n";
+   const Array *a = getStringArray(se.name);
+   llvm:: errs() << "array name " << a->name << "\n";
+   assert(a && "nullptr array from ab name");
+   std::vector<char> c(MAX_SIZE);
+
+   char numBuf[3] = {0};
+   numBuf[2] = 0;
+   int idx = 0;
+   int numBufIdx = -1; 
+   c[idx] = 1;
+   while(c[idx] != '\0') { //not null terminated
+        llvm::errs() << a <<  a->name <<  " In loop\n";
+        ref<Expr> ch = getInitialValue(*a, idx);
+        llvm::errs() << ch.get() << "\n";
+        if(ch.get() == nullptr) break;
+        c[idx] = (char)dyn_cast<ConstantExpr>(ch)->getZExtValue(8);
+        printf("%c: idx: %d, numBufIdx: %d, numBuf: %s\n", c[idx], idx, numBufIdx, numBuf);
+        if(numBufIdx >= 0) {
+            numBuf[numBufIdx] = c[idx];
+            numBufIdx++;
+        }
+
+        if(numBufIdx == 2) {
+            numBufIdx = -1;
+            c[idx] = (unsigned char)strtol(numBuf,NULL, 16);
+        }
+
+        if(idx > 0 && c[idx] == 'x' && c[idx-1] == '\\') {
+            numBufIdx = 0;
+            idx--;
+        }
+
+        if(numBufIdx == -1) {
+            idx++;
+        }
+   }
+   llvm::errs() << "Evaluated str var to " << std::string(c.begin(), c.end()) << "\n";
+   return Action::changeTo(StrConstExpr::create(std::string(c.begin(), c.end())));
+}
+
 ExprVisitor::Action ExprEvaluator::visitFirstIndexOf(const StrFirstIdxOfExpr& sfi) {
     sfi.dump();
     ref<Expr> _haystack = visit(sfi.haystack);
@@ -162,13 +205,10 @@ ExprVisitor::Action ExprEvaluator::visitFirstIndexOf(const StrFirstIdxOfExpr& sf
 }
 
 ExprVisitor::Action ExprEvaluator::visitStrEq(const StrEqExpr &eqE) {
-    eqE.dump();
     ref<Expr> _left = visit(eqE.s1);
     ref<Expr> _right = visit(eqE.s2);
     StrConstExpr* left = dyn_cast<StrConstExpr>(_left);
     StrConstExpr* right = dyn_cast<StrConstExpr>(_right);
-    _right->dump();
-    _left->dump();
     assert(left != nullptr && "Non constant strign expr in eq expr");
     assert(right != nullptr && "Non constant strign expr in eq expr");
     return Action::changeTo(ConstantExpr::create(left->value == right->value, Expr::Bool));
@@ -213,7 +253,7 @@ ExprVisitor::Action ExprEvaluator::visitCharAt(const StrCharAtExpr &charAtE) {
     ref<Expr> _index = visit(charAtE.i);
     ConstantExpr* index = dyn_cast<ConstantExpr>(_index);
     if(index != nullptr) {
-      llvm::errs() << "charat " << index->getZExtValue() << "\n";
+//      llvm::errs() << "charat " << index->getZExtValue() << "\n";
       StrVarExpr* se = dyn_cast<StrVarExpr>(charAtE.s);
       int idx = index->getZExtValue();
       char c[2] = {0,0};
@@ -228,10 +268,8 @@ ExprVisitor::Action ExprEvaluator::visitCharAt(const StrCharAtExpr &charAtE) {
         assert(str != nullptr && "Failed to make the string constant");
         c[0] = str->value.at(idx); 
       }
-      llvm::errs() << "char at return " << c[0] << "\n";
-      fprintf(stderr,"c is '%s'\n", c);
+//      fprintf(stderr,"c is '%s'\n", c);
       ref<Expr> ret = StrConstExpr::create(c);
-      ret->dump();
       return Action::changeTo(ret);
     } else {
       assert(false && "Non constant offsets for substr");

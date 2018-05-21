@@ -347,7 +347,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
                                                     ie = objects->end();
          it != ie; ++it) {
       const Array *array = *it;
-      llvm::errs() << "array size: " << array->size << "\n";
+//      llvm::errs() << "array size: " << array->size << "\n";
       if(array->size > 0) {
           std::vector<unsigned char> data;
 
@@ -395,16 +395,15 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
         Z3_inc_ref(builder->ctx, out);
 
         const char *c =  Z3_get_string(builder->ctx,out);
-        fprintf(stderr, "str is:%sEND\n", c);
         std::string str(c);
-        llvm::errs() << "str: " << str << "\n";
+//        llvm::errs() << "str: " << str << "\n";
         std::vector<unsigned char> data(str.begin(), str.end());
         llvm::errs() << "data is: ";
-        for (int oren = 0;oren<data.size();oren++)
+        for (unsigned oren = 0;oren<data.size();oren++)
         {
         	llvm::errs() << data[oren];
         }
-        llvm::errs() << "\n";
+        llvm::errs() << "END\n";
         values->push_back(data);
         Z3_dec_ref(builder->ctx, out);
 
