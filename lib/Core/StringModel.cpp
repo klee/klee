@@ -18,7 +18,9 @@ StringModel::StringModel() {
 	one      = BvToIntExpr::create(ConstantExpr::create(1,Expr::Int64));
 	zero     = BvToIntExpr::create(ConstantExpr::create(0,Expr::Int64));
 	minusOne = SubExpr::create(zero,one);
-	x00      = StrConstExpr::create("\\x00");
+	//x00      = StrConstExpr::create("\\x00");
+	//x00      = StrConstExpr::create("");
+  x00 = StrFromBitVector8Expr::create(ConstantExpr::create(0, Expr::Int8));
 }
 
 StrModel StringModel::modelStrncmp(

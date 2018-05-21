@@ -68,8 +68,11 @@ ExprVisitor::Action ExprEvaluator::visitStrFromBv8(const StrFromBitVector8Expr& 
   return Action::changeTo(StrConstExpr::create(arr));
 }
 
+//This should not be neccesary now
+
 std::string NormalizeZ3String(const std::string &s)
 {
+    return s;
 	unsigned i=0;
 	int j=0;
 	int i1=0;
@@ -84,9 +87,8 @@ std::string NormalizeZ3String(const std::string &s)
 		{
 			normalized[j++]=s[i];
 		}
-		else
+		else if(s[i+1] == 'x')
 		{
-			assert(s[i+1] == 'x');
 
 			c1 = s[i+2];
 			c2 = s[i+3];
@@ -114,7 +116,9 @@ std::string NormalizeZ3String(const std::string &s)
 			normalized[j++] = 16*i1+i2;
 
 			i += 3;
-		}
+		} else {
+        normalized[j++] = '\\';
+    }
 	}
 	
 	return normalized;
@@ -192,12 +196,12 @@ ExprVisitor::Action ExprEvaluator::visitFirstIndexOf(const StrFirstIdxOfExpr& sf
     }
 
 	size_t firstIndex=0;
-	std::string normalizedNeedle  =NormalizeZ3String(needle);
-	std::string normalizedHaystack=NormalizeZ3String(haystack->value);
+	std::string normalizedNeedle  = NormalizeZ3String(needle);
+	std::string normalizedHaystack= NormalizeZ3String(haystack->value);
 
 	if (normalizedNeedle.size() == 0)
 	{
-		firstIndex = normalizedHaystack.size();
+		firstIndex = strlen(normalizedHaystack.c_str());
 	}
 	else
 	{
@@ -220,6 +224,8 @@ ExprVisitor::Action ExprEvaluator::visitFirstIndexOf(const StrFirstIdxOfExpr& sf
 ExprVisitor::Action ExprEvaluator::visitStrEq(const StrEqExpr &eqE) {
     ref<Expr> _left = visit(eqE.s1);
     ref<Expr> _right = visit(eqE.s2);
+    _left->dump();
+    _right->dump();
     StrConstExpr* left = dyn_cast<StrConstExpr>(_left);
     StrConstExpr* right = dyn_cast<StrConstExpr>(_right);
     assert(left != nullptr && "Non constant strign expr in eq expr");
@@ -233,28 +239,11 @@ ExprVisitor::Action ExprEvaluator::visitStrSubstr(const StrSubstrExpr &subStrE) 
     ConstantExpr* length = dyn_cast<ConstantExpr>(_length);
     if(offset != nullptr && length != nullptr) {
       llvm::errs() << "substr starting from: " << offset->getZExtValue() << " of len " << length->getZExtValue() << "\n";
-      StrVarExpr* se = dyn_cast<StrVarExpr>(subStrE.s);
-      if(se) {
-        int fixedLength=0;
-        const Array *a = getStringArray(se->name);
-        assert(a && "nullptr array from ab name");
-        char c[1024]={0};
-        fixedLength=length->getZExtValue();
-        // char c[length->getZExtValue()];
-        for (int i = offset->getZExtValue(); i < fixedLength; i++)
-        {
-            c[i] = (char)dyn_cast<ConstantExpr>(getInitialValue(*a, i))->getZExtValue(8);
-//            printf("i: %d, c[i] %c\n", i, c[i]);
-
-            if (c[i] == '\\')
-            {
-            	fixedLength += 3;
-            }
-        }
-        return Action::changeTo(StrConstExpr::create(c));
-      } else {
-        return Action::doChildren();
-      }
+      ref<Expr> _theString = visit(subStrE.s);
+      StrConstExpr* theString = dyn_cast<StrConstExpr>(_theString);
+      assert(theString != nullptr && "Non constant strign expr in SubString expr");
+      return Action::changeTo(
+          StrConstExpr::create(theString->value.substr(offset->getZExtValue(), length->getZExtValue())));
     } else {
       assert(false && "Non constant offsets for substr");
       return Action::doChildren();

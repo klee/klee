@@ -82,12 +82,17 @@ namespace klee {
     assert(array);
     bindings_ty::const_iterator it = bindings.find(array);
     if (it!=bindings.end() && index<it->second.size()) {
+       if(index >= it->second.size()) {
+           llvm::errs() << "GT SIZE!!!!!!!!!!\n";
+       }
       return ConstantExpr::alloc(it->second[index], array->getRange());
     } else {
       if (allowFreeValues) {
+           llvm::errs() << "FREE vall\n";
         return ReadExpr::create(UpdateList(array, 0), 
                                 ConstantExpr::alloc(index, array->getDomain()));
       } else {
+           llvm::errs() << "zeroooooooooooo\n";
         return ConstantExpr::alloc(0, array->getRange());
       }
     }
