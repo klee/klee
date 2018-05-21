@@ -157,9 +157,14 @@ ExprVisitor::Action ExprEvaluator::visitStrVar(const StrVarExpr& se) {
             c[idx] = (unsigned char)strtol(numBuf,NULL, 16);
         }
 
-        if(idx > 0 && c[idx] == 'x' && c[idx-1] == '\\') {
-            numBufIdx = 0;
+        if(idx > 0 && c[idx-1] == '\\') {
             idx--;
+            switch(c[idx+1]) {
+              case 'n': c[idx] = '\n'; break;
+              case 'r': c[idx] = '\r'; break;
+              case 'x': numBufIdx = 0; break;
+              case '\\': c[idx] = '\\'; break;
+            }
         }
 
         //printf("%c: idx: %d, numBufIdx: %d, numBuf: %s\n", c[idx], idx, numBufIdx, numBuf);
@@ -173,7 +178,7 @@ ExprVisitor::Action ExprEvaluator::visitStrVar(const StrVarExpr& se) {
         getChrIdx++;
    }
    llvm::errs() << "Evaluated str var to " ;//<< std::string(c.begin(), c.end()) << "\n";
-   std::vector<unsigned char> ret(c.begin(), c.begin() + idx);
+   std::vector<unsigned char> ret(c.begin(), c.begin() + idx );
    for(auto &h : ret) llvm::errs() << h << "-";
    llvm::errs() << "\n";
    return Action::changeTo(StrConstExpr::alloc(ret));
