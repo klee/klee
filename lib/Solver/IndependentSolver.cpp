@@ -138,6 +138,13 @@ public:
         }
       }
     }
+    std::vector< const Array * > symbolicArrays;
+    findSymbolicObjects(e, symbolicArrays);
+    for(auto &a : symbolicArrays) {
+      if(a->size == 0) { //if is string array 
+        wholeObjects.insert(a);
+      }
+    }
   }
   IndependentElementSet(const IndependentElementSet &ies) : 
     elements(ies.elements),
@@ -164,7 +171,7 @@ public:
         os << ", ";
       }
 
-      os << "MO" << array->name;
+      os << "MO " << array->name << "@" << array;
     }
     for (elements_ty::const_iterator it = elements.begin(), ie = elements.end();
          it != ie; ++it) {
@@ -177,9 +184,9 @@ public:
         os << ", ";
       }
 
-      os << "MO" << array->name << " : " << dis;
+      os << "MO " << array->name << " : " << dis;
     }
-    os << "}";
+    os << "}\n";
   }
 
   // more efficient when this is the smaller set
@@ -473,6 +480,9 @@ bool assertCreatedPointEvaluatesToTrue(const Query &query,
   for(ConstraintManager::constraint_iterator it = query.constraints.begin();
       it != query.constraints.end(); ++it){
     ref<Expr> ret = assign.evaluate(*it);
+    (*it)->dump();
+    llvm::errs() << "factors ret:\n";
+    ret->dump(); 
 
     assert(isa<ConstantExpr>(ret) && "assignment evaluation did not result in constant");
     ref<ConstantExpr> evaluatedConstraint = dyn_cast<ConstantExpr>(ret);
@@ -496,7 +506,13 @@ bool IndependentSolver::computeInitialValues(const Query& query,
   hasSolution = true;
   // FIXME: When we switch to C++11 this should be a std::unique_ptr so we don't need
   // to remember to manually call delete
+  llvm::errs() << "Indepentdt compute initial vals";
+  query.dump();
+
   std::list<IndependentElementSet> *factors = getAllIndependentConstraintsSets(query);
+  for(auto &ies : *factors) {
+      ies.print(llvm::errs());
+  }
 
   //Used to rearrange all of the answers into the correct order
   std::map<const Array*, std::vector<unsigned char> > retMap;

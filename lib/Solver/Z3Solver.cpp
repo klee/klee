@@ -398,7 +398,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
         std::string str(c);
 //        llvm::errs() << "str: " << str << "\n";
         std::vector<unsigned char> data(str.begin(), str.end());
-        llvm::errs() << "data is: ";
+        llvm::errs() << array->name << " data is: ";
         for (unsigned oren = 0;oren<data.size();oren++)
         {
         	llvm::errs() << data[oren];

@@ -59,6 +59,7 @@ ExprVisitor::Action ExprEvaluator::visitExpr(const Expr &e) {
 ExprVisitor::Action ExprEvaluator::visitBvToInt(const BvToIntExpr& e) {
   return Action::changeTo(e.bvExpr);
 }
+
 ExprVisitor::Action ExprEvaluator::visitStrFromBv8(const StrFromBitVector8Expr& e) {
   ref<Expr> _c = visit(e.someBitVec8);
   ConstantExpr *c = dyn_cast<ConstantExpr>(_c);
@@ -162,6 +163,18 @@ ExprVisitor::Action ExprEvaluator::visitStrVar(const StrVarExpr& se) {
    return Action::changeTo(StrConstExpr::create(std::string(c.begin(), c.end())));
 }
 
+ExprVisitor::Action ExprEvaluator::visitStrLen(const StrLengthExpr& sle) {
+    ref<Expr> _s = visit(sle.s);
+    sle.dump();
+    _s->dump();
+    StrConstExpr* s = dyn_cast<StrConstExpr>(_s);
+    assert(s && "_s must be a constant string");
+//    std::string normalizedS = NormalizeZ3String(s->value);
+    size_t len = strlen(s->value.c_str());
+    llvm::errs() << "Strlen returning " <<  len << "\n";
+    return Action::changeTo(ConstantExpr::create(len, Expr::Int64));
+}
+
 ExprVisitor::Action ExprEvaluator::visitFirstIndexOf(const StrFirstIdxOfExpr& sfi) {
     sfi.dump();
     ref<Expr> _haystack = visit(sfi.haystack);
@@ -254,21 +267,13 @@ ExprVisitor::Action ExprEvaluator::visitCharAt(const StrCharAtExpr &charAtE) {
     ConstantExpr* index = dyn_cast<ConstantExpr>(_index);
     if(index != nullptr) {
 //      llvm::errs() << "charat " << index->getZExtValue() << "\n";
-      StrVarExpr* se = dyn_cast<StrVarExpr>(charAtE.s);
       int idx = index->getZExtValue();
       char c[2] = {0,0};
-      if(se) {
-        const Array *a = getStringArray(se->name);
-        assert(a && "nullptr array from ab name");
-        c[0] = (char)dyn_cast<ConstantExpr>(getInitialValue(*a, idx))->getZExtValue(8);
-
-      } else {
-        ref<Expr> _string = visit(charAtE.s);
-        StrConstExpr* str = dyn_cast<StrConstExpr>(_string);
-        assert(str != nullptr && "Failed to make the string constant");
-        c[0] = str->value.at(idx); 
-      }
-//      fprintf(stderr,"c is '%s'\n", c);
+      ref<Expr> _string = visit(charAtE.s);
+      StrConstExpr* str = dyn_cast<StrConstExpr>(_string);
+      assert(str != nullptr && "Failed to make the string constant");
+      c[0] = str->value.at(idx); 
+//    fprintf(stderr,"c is '%s'\n", c);
       ref<Expr> ret = StrConstExpr::create(c);
       return Action::changeTo(ret);
     } else {

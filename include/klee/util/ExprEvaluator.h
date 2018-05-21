@@ -33,6 +33,7 @@ namespace klee {
     Action visitCharAt(const StrCharAtExpr &charAtE);
     Action visitStrEq(const StrEqExpr &eqE);
     Action visitStrVar(const StrVarExpr& se);
+    Action visitStrLen(const StrLengthExpr& sle);
       
   public:
     ExprEvaluator() {}
