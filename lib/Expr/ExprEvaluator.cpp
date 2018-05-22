@@ -64,7 +64,7 @@ ExprVisitor::Action ExprEvaluator::visitStrFromBv8(const StrFromBitVector8Expr& 
   ref<Expr> _c = visit(e.someBitVec8);
   ConstantExpr *c = dyn_cast<ConstantExpr>(_c);
   assert(c && "non constant bv in strfrobv8");
-  char arr[1] = { (char)c->getZExtValue(8) };
+  char arr[2] = { (char)c->getZExtValue(8), 0 };
   return Action::changeTo(StrConstExpr::create(arr));
 }
 
@@ -124,6 +124,10 @@ std::string NormalizeZ3String(const std::string &s)
 	return normalized;
 }
 
+static void printVectorString(std::vector<unsigned char> &ret) {
+   for(auto &h : ret) llvm::errs() << h << "-";
+   llvm::errs() << "\n";
+}
 #define MAX_SIZE 1024
 ExprVisitor::Action ExprEvaluator::visitStrVar(const StrVarExpr& se) {
    llvm::errs() << "looking at array name " << se.name << "\n";
@@ -179,14 +183,14 @@ ExprVisitor::Action ExprEvaluator::visitStrVar(const StrVarExpr& se) {
    }
    llvm::errs() << "Evaluated str var to " ;//<< std::string(c.begin(), c.end()) << "\n";
    std::vector<unsigned char> ret(c.begin(), c.begin() + idx );
-   for(auto &h : ret) llvm::errs() << h << "-";
-   llvm::errs() << "\n";
+   printVectorString(ret);
    return Action::changeTo(StrConstExpr::alloc(ret));
 }
 
+
 ExprVisitor::Action ExprEvaluator::visitStrLen(const StrLengthExpr& sle) {
-    ref<Expr> _s = visit(sle.s);
     sle.dump();
+    ref<Expr> _s = visit(sle.s);
     _s->dump();
     StrConstExpr* s = dyn_cast<StrConstExpr>(_s);
     assert(s && "_s must be a constant string");
@@ -231,6 +235,10 @@ ExprVisitor::Action ExprEvaluator::visitFirstIndexOf(const StrFirstIdxOfExpr& sf
     // size_t firstIndex = (NormalizeZ3String(haystack->value)).find(NormalizeZ3String(needle));
     // size_t firstIndex = haystack->value.find(needle);
     // size_t firstIndex = haystack->value.find_first_of(needle);
+    llvm::errs() << "Haystack: ";
+    printVectorString(haystack->data);
+    llvm::errs() << "Needle: ";
+    printVectorString(needle);
     size_t fstIdx = std::distance(haystack->data.begin(), firstIndex);
     assert(firstIndex != haystack->data.end()  && "Character must be present");
 //    llvm::errs() << "haystack->value     is:" << haystack->value    << "END\n";
