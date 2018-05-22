@@ -130,9 +130,10 @@ static void printVectorString(std::vector<unsigned char> &ret) {
 }
 #define MAX_SIZE 1024
 ExprVisitor::Action ExprEvaluator::visitStrVar(const StrVarExpr& se) {
-   llvm::errs() << "looking at array name " << se.name << "\n";
+//   llvm::errs() << "looking at array name " << se.name << "\n";
    const Array *a = getStringArray(se.name);
-   llvm:: errs() << "array name " << a->name << "\n";
+   if(a == nullptr) return Action::skipChildren();
+//   llvm:: errs() << "array name " << a->name << "\n";
    assert(a && "nullptr array from ab name");
    std::vector<unsigned char> c(MAX_SIZE);
 
@@ -181,31 +182,33 @@ ExprVisitor::Action ExprEvaluator::visitStrVar(const StrVarExpr& se) {
         //llvm::errs() << "\n";
         getChrIdx++;
    }
-   llvm::errs() << "Evaluated str var to " ;//<< std::string(c.begin(), c.end()) << "\n";
    std::vector<unsigned char> ret(c.begin(), c.begin() + idx );
-   printVectorString(ret);
+   //llvm::errs() << "Evaluated str var to " ;//<< std::string(c.begin(), c.end()) << "\n";
+   //printVectorString(ret);
    return Action::changeTo(StrConstExpr::alloc(ret));
 }
 
 
 ExprVisitor::Action ExprEvaluator::visitStrLen(const StrLengthExpr& sle) {
-    sle.dump();
+ //   sle.dump();
     ref<Expr> _s = visit(sle.s);
-    _s->dump();
+ //   _s->dump();
     StrConstExpr* s = dyn_cast<StrConstExpr>(_s);
+   if(s == nullptr) return Action::skipChildren();
     assert(s && "_s must be a constant string");
 //    std::string normalizedS = NormalizeZ3String(s->value);
     size_t len = s->data.size();
-    llvm::errs() << "Strlen returning " <<  len << "\n";
+  //  llvm::errs() << "Strlen returning " <<  len << "\n";
     return Action::changeTo(ConstantExpr::create(len, Expr::Int64));
 }
 
 ExprVisitor::Action ExprEvaluator::visitFirstIndexOf(const StrFirstIdxOfExpr& sfi) {
-    sfi.dump();
+//    sfi.dump();
     ref<Expr> _haystack = visit(sfi.haystack);
     ref<Expr> _needle = visit(sfi.needle);
 
     StrConstExpr* haystack = dyn_cast<StrConstExpr>(_haystack);
+    if(haystack == nullptr) return Action::skipChildren();
     assert(haystack && "Haystack must be a constant string");
     std::vector<unsigned char> needle;
     if(ConstantExpr* n = dyn_cast<ConstantExpr>(_needle)) {
@@ -215,6 +218,7 @@ ExprVisitor::Action ExprEvaluator::visitFirstIndexOf(const StrFirstIdxOfExpr& sf
     } else if(StrConstExpr* n = dyn_cast<StrConstExpr>(_needle)) {
         needle = n->data;
     } else {
+      return Action::skipChildren();
       assert(false && "Needle must be constant bitvec");
     }
 
@@ -235,49 +239,51 @@ ExprVisitor::Action ExprEvaluator::visitFirstIndexOf(const StrFirstIdxOfExpr& sf
     // size_t firstIndex = (NormalizeZ3String(haystack->value)).find(NormalizeZ3String(needle));
     // size_t firstIndex = haystack->value.find(needle);
     // size_t firstIndex = haystack->value.find_first_of(needle);
-    llvm::errs() << "Haystack: ";
-    printVectorString(haystack->data);
-    llvm::errs() << "Needle: ";
-    printVectorString(needle);
+ //   llvm::errs() << "Haystack: ";
+ //   printVectorString(haystack->data);
+ //   llvm::errs() << "Needle: ";
+ //   printVectorString(needle);
     size_t fstIdx = std::distance(haystack->data.begin(), firstIndex);
     assert(firstIndex != haystack->data.end()  && "Character must be present");
-//    llvm::errs() << "haystack->value     is:" << haystack->value    << "END\n";
-    //llvm::errs() << "normalized haystack is:" << normalizedHaystack << "END\n";
-//    llvm::errs() << "needle              is:" << needle             << "END\n";
-   // llvm::errs() << "normalized needle   is:" << normalizedNeedle   << "END\n";
-    llvm::errs() << "firstIndex          is:" << fstIdx         << "\n";
+//    llvm::errs() << "firstIndex          is:" << fstIdx         << "\n";
 
-    llvm::errs() << "Needle found at offset = " << fstIdx << "\n";
+//    llvm::errs() << "Needle found at offset = " << fstIdx << "\n";
     return Action::changeTo(ConstantExpr::create(fstIdx, Expr::Int64));
 }
 
 ExprVisitor::Action ExprEvaluator::visitStrEq(const StrEqExpr &eqE) {
     ref<Expr> _left = visit(eqE.s1);
     ref<Expr> _right = visit(eqE.s2);
-    _left->dump();
-    _right->dump();
+//    _left->dump();
+//    _right->dump();
     StrConstExpr* left = dyn_cast<StrConstExpr>(_left);
     StrConstExpr* right = dyn_cast<StrConstExpr>(_right);
+    if(left == nullptr) return Action::skipChildren();
+    if(right == nullptr) return Action::skipChildren();
     assert(left != nullptr && "Non constant strign expr in eq expr");
     assert(right != nullptr && "Non constant strign expr in eq expr");
     return Action::changeTo(ConstantExpr::create(left->data == right->data, Expr::Bool));
 }
 ExprVisitor::Action ExprEvaluator::visitStrSubstr(const StrSubstrExpr &subStrE) {
+//    subStrE.dump();
     ref<Expr> _offset = visit(subStrE.offset);
     ref<Expr> _length = visit(subStrE.length);
     ConstantExpr* offset = dyn_cast<ConstantExpr>(_offset);
     ConstantExpr* length = dyn_cast<ConstantExpr>(_length);
     if(offset != nullptr && length != nullptr) {
-      llvm::errs() << "substr starting from: " << offset->getZExtValue() << " of len " << length->getZExtValue() << "\n";
+//      llvm::errs() << "substr starting from: " << offset->getZExtValue() << " of len " << length->getZExtValue() << "\n";
       ref<Expr> _theString = visit(subStrE.s);
       StrConstExpr* theString = dyn_cast<StrConstExpr>(_theString);
+      if(theString == nullptr) return Action::skipChildren();
       assert(theString != nullptr && "Non constant strign expr in SubString expr");
+      if(offset->Add(length)->getZExtValue() > theString->data.size()) return Action::skipChildren();
+//      llvm::errs() << "string size: " << theString->data.size() << "\n";
       std::vector<unsigned char> subStr(theString->data.begin() + offset->getZExtValue(),
                                         theString->data.begin() + offset->getZExtValue() + length->getZExtValue());
       return Action::changeTo(StrConstExpr::alloc(subStr));
     } else {
+      return Action::skipChildren();
       assert(false && "Non constant offsets for substr");
-      return Action::doChildren();
     }
 
 }
@@ -291,14 +297,16 @@ ExprVisitor::Action ExprEvaluator::visitCharAt(const StrCharAtExpr &charAtE) {
       char c[2] = {0,0};
       ref<Expr> _string = visit(charAtE.s);
       StrConstExpr* str = dyn_cast<StrConstExpr>(_string);
+      if(str == nullptr) return Action::skipChildren();
       assert(str != nullptr && "Failed to make the string constant");
+      if(idx >= str->data.size()) return Action::skipChildren();
       c[0] = str->data[idx]; 
 //    fprintf(stderr,"c is '%s'\n", c);
       ref<Expr> ret = StrConstExpr::create(c);
       return Action::changeTo(ret);
     } else {
+      return Action::skipChildren();
       assert(false && "Non constant offsets for substr");
-      return Action::doChildren();
     }
 
 }

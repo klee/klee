@@ -730,6 +730,7 @@ void SpecialFunctionHandler::handleStrncmp(
 	std::vector<ref<Expr> > &arguments)
 {
   assert(arguments.size() == 3 && "Strncmp takes 3 arguments!");
+  state.dumpStack(errs());
   StrModel m = stringModel.modelStrncmp(
                       executor.resolveOne(state,arguments[0]).second, 
                       arguments[0],
@@ -846,13 +847,9 @@ void SpecialFunctionHandler::handleMarkString(
 	ExecutionState &state,
 	KInstruction *target,
 	std::vector<ref<Expr> > &arguments) {
-    assert(arguments.size() == 1 && "Mark symbolic only accepts a single pointer");
 
-//	state.ab_serial[p] = ++state.numABSerials;
-//	state.ab_last[state.ab_serial[p]] = 0;
-//	state.ab_offset[p] = ConstantExpr::create(0,Expr::Int32);
-//	state.ab_size[state.ab_serial[p]] = a
-  
+  assert(arguments.size() == 1 && "Mark symbolic only accepts a single pointer");
+
   Executor::ExactResolutionList rl;
   executor.resolveExact(state, arguments[0], rl, "mark string");
   
@@ -863,6 +860,8 @@ void SpecialFunctionHandler::handleMarkString(
     wos->serial = ++numABSerials;
     wos->version = 0;
     std::string ab_name = wos->getABSerial();
+    errs() << "Creating " << ab_name << " at:\n:";
+    state.dumpStack(errs());
     if(mo->isGlobal) {
         //const GlobalVariable* v = dynamic_cast<const GlobalVariable*>(mo->allocSite);
         //assert(v && "Unsusported marks string of a non glbal variable global");
