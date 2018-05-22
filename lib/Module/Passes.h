@@ -20,18 +20,18 @@
 #include "llvm/Pass.h"
 
 namespace llvm {
-  class Function;
-  class Instruction;
-  class Module;
-  class DataLayout;
-  class TargetLowering;
-  class Type;
-}
+class Function;
+class Instruction;
+class Module;
+class DataLayout;
+class TargetLowering;
+class Type;
+} // namespace llvm
 
 namespace klee {
 
-  /// RaiseAsmPass - This pass raises some common occurences of inline
-  /// asm which are used by glibc into normal LLVM IR.
+/// RaiseAsmPass - This pass raises some common occurences of inline
+/// asm which are used by glibc into normal LLVM IR.
 class RaiseAsmPass : public llvm::ModulePass {
   static char ID;
 
@@ -53,35 +53,36 @@ public:
   bool runOnModule(llvm::Module &M) override;
 };
 
-  // This is a module pass because it can add and delete module
-  // variables (via intrinsic lowering).
+// This is a module pass because it can add and delete module
+// variables (via intrinsic lowering).
 class IntrinsicCleanerPass : public llvm::ModulePass {
   static char ID;
   const llvm::DataLayout &DataLayout;
   llvm::IntrinsicLowering *IL;
 
   bool runOnBasicBlock(llvm::BasicBlock &b, llvm::Module &M);
+
 public:
   IntrinsicCleanerPass(const llvm::DataLayout &TD)
       : llvm::ModulePass(ID), DataLayout(TD),
         IL(new llvm::IntrinsicLowering(TD)) {}
-  ~IntrinsicCleanerPass() { delete IL; } 
-  
+  ~IntrinsicCleanerPass() { delete IL; }
+
   bool runOnModule(llvm::Module &M) override;
 };
-  
-  // performs two transformations which make interpretation
-  // easier and faster.
-  //
-  // 1) Ensure that all the PHI nodes in a basic block have
-  //    the incoming block list in the same order. Thus the
-  //    incoming block index only needs to be computed once
-  //    for each transfer.
-  // 
-  // 2) Ensure that no PHI node result is used as an argument to
-  //    a subsequent PHI node in the same basic block. This allows
-  //    the transfer to execute the instructions in order instead
-  //    of in two passes.
+
+// performs two transformations which make interpretation
+// easier and faster.
+//
+// 1) Ensure that all the PHI nodes in a basic block have
+//    the incoming block list in the same order. Thus the
+//    incoming block index only needs to be computed once
+//    for each transfer.
+//
+// 2) Ensure that no PHI node result is used as an argument to
+//    a subsequent PHI node in the same basic block. This allows
+//    the transfer to execute the instructions in order instead
+//    of in two passes.
 class PhiCleanerPass : public llvm::FunctionPass {
   static char ID;
 
@@ -90,11 +91,12 @@ public:
 
   bool runOnFunction(llvm::Function &f) override;
 };
-  
+
 class DivCheckPass : public llvm::ModulePass {
   static char ID;
+
 public:
-  DivCheckPass(): ModulePass(ID) {}
+  DivCheckPass() : ModulePass(ID) {}
   bool runOnModule(llvm::Module &M) override;
 };
 
@@ -114,8 +116,9 @@ public:
 /// \endcode
 class OvershiftCheckPass : public llvm::ModulePass {
   static char ID;
+
 public:
-  OvershiftCheckPass(): ModulePass(ID) {}
+  OvershiftCheckPass() : ModulePass(ID) {}
   bool runOnModule(llvm::Module &M) override;
 };
 
@@ -132,20 +135,17 @@ public:
   struct SwitchCase {
     llvm ::Constant *value;
     llvm::BasicBlock *block;
-    
-    SwitchCase() : value(0), block(0) { }
-    SwitchCase(llvm::Constant *v, llvm::BasicBlock *b) :
-      value(v), block(b) { }
+
+    SwitchCase() : value(0), block(0) {}
+    SwitchCase(llvm::Constant *v, llvm::BasicBlock *b) : value(v), block(b) {}
   };
-  
-  typedef std::vector<SwitchCase>           CaseVector;
+
+  typedef std::vector<SwitchCase> CaseVector;
   typedef std::vector<SwitchCase>::iterator CaseItr;
-  
+
 private:
   void processSwitchInst(llvm::SwitchInst *SI);
-  void switchConvert(CaseItr begin,
-                     CaseItr end,
-                     llvm::Value *value,
+  void switchConvert(CaseItr begin, CaseItr end, llvm::Value *value,
                      llvm::BasicBlock *origBlock,
                      llvm::BasicBlock *defaultBlock);
 };
@@ -153,7 +153,7 @@ private:
 // This is the interface to a back-ported LLVM pass.
 // Therefore this interface is only needed for
 // LLVM 3.4.
-#if LLVM_VERSION_CODE == LLVM_VERSION(3,4)
+#if LLVM_VERSION_CODE == LLVM_VERSION(3, 4)
 llvm::FunctionPass *createScalarizerPass();
 #endif
 
@@ -173,6 +173,6 @@ public:
   bool runOnModule(llvm::Module &M) override;
   bool checkPassed() const { return instructionOperandsConform; }
 };
-}
+} // namespace klee
 
 #endif
