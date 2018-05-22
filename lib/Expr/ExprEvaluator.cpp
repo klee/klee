@@ -68,71 +68,20 @@ ExprVisitor::Action ExprEvaluator::visitStrFromBv8(const StrFromBitVector8Expr& 
   return Action::changeTo(StrConstExpr::create(arr));
 }
 
-//This should not be neccesary now
-
-std::string NormalizeZ3String(const std::string &s)
-{
-    return s;
-	unsigned i=0;
-	int j=0;
-	int i1=0;
-	int i2=0;
-	char c1=0;
-	char c2=0;
-	char normalized[1024]={0};
-		
-	for (i=0;i<s.size();i++)
-	{
-		if (s[i] != '\\')
-		{
-			normalized[j++]=s[i];
-		}
-		else if(s[i+1] == 'x')
-		{
-
-			c1 = s[i+2];
-			c2 = s[i+3];
-
-			int c1_is_a_digit=0;
-			int c2_is_a_digit=0;
-
-			int c1_is_a_to_f=0;
-			int c2_is_a_to_f=0;
-
-			int c1_is_hex_valid=0;
-			int c2_is_hex_valid=0;
-			
-			if (('0' <= c1) && (c1 <= '9')) { c1_is_a_digit=1; i1 = c1-'0'; }
-			if (('0' <= c2) && (c2 <= '9')) { c2_is_a_digit=1; i2 = c2-'0'; }
-
-			if (('a' <= c1) && (c1 <= 'f')) { c1_is_a_to_f =1; i1 = c1-'a'; }
-			if (('a' <= c2) && (c2 <= 'f')) { c2_is_a_to_f =1; i2 = c2-'a';}
-
-			if (c1_is_a_digit || c1_is_a_to_f) { c1_is_hex_valid=1; }
-			if (c2_is_a_digit || c2_is_a_to_f) { c2_is_hex_valid=1; }
-			
-			assert(c1_is_hex_valid && c2_is_hex_valid);
-			
-			normalized[j++] = 16*i1+i2;
-
-			i += 3;
-		} else {
-        normalized[j++] = '\\';
-    }
-	}
-	
-	return normalized;
-}
 
 static void printVectorString(std::vector<unsigned char> &ret) {
-   for(auto &h : ret) llvm::errs() << h << "-";
+   for(auto &h : ret) llvm::errs() << (int)h << "-";
+   //for(auto &h : ret) llvm::errs() << h << "-";
    llvm::errs() << "\n";
 }
 #define MAX_SIZE 1024
 ExprVisitor::Action ExprEvaluator::visitStrVar(const StrVarExpr& se) {
 //   llvm::errs() << "looking at array name " << se.name << "\n";
    const Array *a = getStringArray(se.name);
-   if(a == nullptr) return Action::skipChildren();
+   if(a == nullptr) {
+       //llvm::errs() << "Skipping " << se.name << "\n";
+       return Action::skipChildren();
+   }
 //   llvm:: errs() << "array name " << a->name << "\n";
    assert(a && "nullptr array from ab name");
    std::vector<unsigned char> c(MAX_SIZE);
@@ -183,8 +132,8 @@ ExprVisitor::Action ExprEvaluator::visitStrVar(const StrVarExpr& se) {
         getChrIdx++;
    }
    std::vector<unsigned char> ret(c.begin(), c.begin() + idx );
-   //llvm::errs() << "Evaluated str var to " ;//<< std::string(c.begin(), c.end()) << "\n";
-   //printVectorString(ret);
+//   llvm::errs() << "Evaluated str var " << se.name << " to " ;//<< std::string(c.begin(), c.end()) << "\n";
+//   printVectorString(ret);
    return Action::changeTo(StrConstExpr::alloc(ret));
 }
 
@@ -224,30 +173,17 @@ ExprVisitor::Action ExprEvaluator::visitFirstIndexOf(const StrFirstIdxOfExpr& sf
 
     auto firstIndex = std::search(haystack->data.begin(), haystack->data.end(),
                 needle.begin(), needle.end());
-//	size_t firstIndex=0;
-//	std::string normalizedNeedle  = NormalizeZ3String(needle);
-//	std::string normalizedHaystack= NormalizeZ3String(haystack->value);
-//
-//	if (normalizedNeedle.size() == 0)
-//	{
-//		firstIndex = strlen(normalizedHaystack.c_str());
-//	}
-//	else
-//	{
-//		firstIndex = normalizedHaystack.find(normalizedNeedle);
-//	}
-    // size_t firstIndex = (NormalizeZ3String(haystack->value)).find(NormalizeZ3String(needle));
-    // size_t firstIndex = haystack->value.find(needle);
-    // size_t firstIndex = haystack->value.find_first_of(needle);
- //   llvm::errs() << "Haystack: ";
- //   printVectorString(haystack->data);
- //   llvm::errs() << "Needle: ";
- //   printVectorString(needle);
+//    llvm::errs() << "Haystack: ";
+//    printVectorString(haystack->data);
+//    llvm::errs() << "Needle: ";
+//    printVectorString(needle);
     size_t fstIdx = std::distance(haystack->data.begin(), firstIndex);
+    if(firstIndex == haystack->data.end()) {
+//        llvm::errs() << "Character not found\n";
+        return Action::changeTo(ConstantExpr::create(-1, Expr::Int64));
+    }
     assert(firstIndex != haystack->data.end()  && "Character must be present");
-//    llvm::errs() << "firstIndex          is:" << fstIdx         << "\n";
-
-//    llvm::errs() << "Needle found at offset = " << fstIdx << "\n";
+ //   llvm::errs() << "Needle found at offset = " << fstIdx << "\n";
     return Action::changeTo(ConstantExpr::create(fstIdx, Expr::Int64));
 }
 
@@ -271,13 +207,16 @@ ExprVisitor::Action ExprEvaluator::visitStrSubstr(const StrSubstrExpr &subStrE) 
     ConstantExpr* offset = dyn_cast<ConstantExpr>(_offset);
     ConstantExpr* length = dyn_cast<ConstantExpr>(_length);
     if(offset != nullptr && length != nullptr) {
-//      llvm::errs() << "substr starting from: " << offset->getZExtValue() << " of len " << length->getZExtValue() << "\n";
+  //  llvm::errs() << "substr starting from: " << offset->getZExtValue() << " of len " << length->getZExtValue() << "\n";
       ref<Expr> _theString = visit(subStrE.s);
       StrConstExpr* theString = dyn_cast<StrConstExpr>(_theString);
-      if(theString == nullptr) return Action::skipChildren();
+      if(theString == nullptr) {
+   //       llvm::errs() << "skiping substring\n";
+          return Action::skipChildren();
+      }
       assert(theString != nullptr && "Non constant strign expr in SubString expr");
       if(offset->Add(length)->getZExtValue() > theString->data.size()) return Action::skipChildren();
-//      llvm::errs() << "string size: " << theString->data.size() << "\n";
+    //  llvm::errs() << "string size: " << theString->data.size() << "\n";
       std::vector<unsigned char> subStr(theString->data.begin() + offset->getZExtValue(),
                                         theString->data.begin() + offset->getZExtValue() + length->getZExtValue());
       return Action::changeTo(StrConstExpr::alloc(subStr));

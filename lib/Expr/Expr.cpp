@@ -591,6 +591,19 @@ int ReadExpr::compareContents(const Expr &b) const {
 ref<Expr> SelectExpr::create(ref<Expr> c, ref<Expr> t, ref<Expr> f) {
   Expr::Width kt = t->getWidth();
   assert(c->getWidth()==Bool && "type mismatch");
+  if(t->getType() != f->getType()) {
+      c->dump(); t->dump(); f->dump();
+      //This can happen when t gets evaluated to a BitVector, but f didn't have the right assigment so it's still an Int
+      if( (t->getType() == Expr::Type::BitVector && f->getType() == Expr::Type::Integer) 
+          || (f->getType() == Expr::Type::BitVector && t->getType() == Expr::Type::Integer)) {
+
+          if(isa<ConstantExpr>(t)) { //this also means t is a BV
+            t = BvToIntExpr::create(t);
+          } else if (isa<ConstantExpr>(f)) { //also means f is a BV
+            f = BvToIntExpr::create(f);
+          }
+      }
+  }
   assert(t->getType()==f->getType() && "type mismatch");
 
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(c)) {
