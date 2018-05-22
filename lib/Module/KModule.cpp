@@ -201,6 +201,8 @@ void KModule::prepare(const Interpreter::ModuleOptions &opts,
   // optimize is seeing what is as close as possible to the final
   // module.
   LegacyLLVMPassManagerTy pm;
+  pm.add(new ExtractTypeMetaCheck(ih));
+  // This pass will save type meta datas for readable ktest-tool output.
   pm.add(new RaiseAsmPass());
   // This pass will scalarize as much code as possible so that the Executor
   // does not need to handle operands of vector type for most instructions
