@@ -59,6 +59,7 @@ int main() {
   ASSERT_ELV4(c, *, a, b);
 
   // Test division
+  // We do not use && on purpose = make klee fork exactly once
   if ((data[4] != 0) & (data[5] != 0) & (data[6] != 0) & (data[7] != 0)) {
     c = a / b;
     ASSERT_ELV4(c, /, a, b);
@@ -82,7 +83,8 @@ int main() {
   ASSERT_ELV4(c, ^, a, b);
 
   // Test left shift
-  if ((data[0]) < 32 & (data[1] < 32) & (data[2] < 32) & (data[3] < 32)) {
+  // no '&&', the same as above
+  if (((data[0]) < 32) & (data[1] < 32) & (data[2] < 32) & (data[3] < 32)) {
     c = b << a;
     ASSERT_ELV4(c, <<, b, a);
 
