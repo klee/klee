@@ -2,8 +2,8 @@
 ; so this LLVM IR fails to verify for that version.
 ;
 ; LLVM 3.7 requires a type as the first argument to 'load'
-; LLVM 5 added nullunknown parameter to @llvm.objectsize
-; REQUIRES: geq-llvm-5.0
+; REQUIRES: geq-llvm-3.7
+; REQUIRES: lt-llvm-5.0
 ; RUN: %llvmas %s -o=%t.bc
 ; RUN: rm -rf %t.klee-out
 ; RUN: %klee -exit-on-error --output-dir=%t.klee-out -disable-opt %t.bc
@@ -15,13 +15,13 @@ define i32 @main() nounwind uwtable {
 entry:
   %a = alloca i8*, align 8
   %0 = load i8*, i8** %a, align 8
-  %1 = call i64 @llvm.objectsize.i64.p0i8(i8* %0, i1 true, i1 false)
+  %1 = call i64 @llvm.objectsize.i64.p0i8(i8* %0, i1 true)
   %cmp = icmp ne i64 %1, 0
   br i1 %cmp, label %abort.block, label %continue.block
 
 continue.block:
   %2 = load i8*, i8** %a, align 8
-  %3 = call i64 @llvm.objectsize.i64.p0i8(i8* %2, i1 false, i1 false)
+  %3 = call i64 @llvm.objectsize.i64.p0i8(i8* %2, i1 false)
   %cmp1 = icmp ne i64 %3, -1
   br i1 %cmp1, label %abort.block, label %exit.block
 
@@ -33,6 +33,6 @@ abort.block:
   unreachable
 }
 
-declare i64 @llvm.objectsize.i64.p0i8(i8*, i1, i1) nounwind readnone
+declare i64 @llvm.objectsize.i64.p0i8(i8*, i1) nounwind readnone
 
 declare void @abort() noreturn nounwind
