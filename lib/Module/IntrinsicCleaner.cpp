@@ -227,13 +227,29 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       case Intrinsic::objectsize: {
         // We don't know the size of an object in general so we replace
         // with 0 or -1 depending on the second argument to the intrinsic.
+#if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
+        assert(ii->getNumArgOperands() == 3 && "wrong number of arguments");
+#else
         assert(ii->getNumArgOperands() == 2 && "wrong number of arguments");
+#endif
+
         Value *minArg = ii->getArgOperand(1);
         assert(minArg && "Failed to get second argument");
         ConstantInt *minArgAsInt = dyn_cast<ConstantInt>(minArg);
         assert(minArgAsInt && "Second arg is not a ConstantInt");
         assert(minArgAsInt->getBitWidth() == 1 &&
                "Second argument is not an i1");
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
+        auto nullArg = ii->getArgOperand(2);
+        assert(nullArg && "Failed to get second argument");
+        auto nullArgAsInt = dyn_cast<ConstantInt>(nullArg);
+        assert(nullArgAsInt && "Third arg is not a ConstantInt");
+        assert(nullArgAsInt->getBitWidth() == 1 &&
+               "Third argument is not an i1");
+	/* TODO should we do something with the 3rd argument? */
+#endif
+
         Value *replacement = NULL;
         IntegerType *intType = dyn_cast<IntegerType>(ii->getType());
         assert(intType && "intrinsic does not have integer return type");
