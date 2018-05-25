@@ -172,7 +172,11 @@ else()
     set(targets_to_return "")
     set(created_targets "")
     foreach (llvm_lib ${_llvm_libs_list})
+      # a bug in llvm-config from LLVM 3.9
+      string(REGEX REPLACE "lib(libLLVM[-.a-zA-Z0-9]+\\.so)\\.so$" "\\1" llvm_lib "${llvm_lib}")
+
       get_filename_component(llvm_lib_file_name "${llvm_lib}" NAME)
+
       string(REGEX REPLACE "^(lib)?(LLVM[-.a-zA-Z0-9]+)\\..+$" "\\2" target_name "${llvm_lib_file_name}")
       list(APPEND targets_to_return "${target_name}")
       if (NOT TARGET "${target_name}")
