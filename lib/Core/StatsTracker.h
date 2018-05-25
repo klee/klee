@@ -15,6 +15,7 @@
 
 #include <memory>
 #include <set>
+#include <sqlite3.h>
 
 namespace llvm {
   class BranchInst;
@@ -38,7 +39,11 @@ namespace klee {
     Executor &executor;
     std::string objectFilename;
 
-    std::unique_ptr<llvm::raw_fd_ostream> statsFile, istatsFile;
+    std::unique_ptr<llvm::raw_fd_ostream> istatsFile;
+    sqlite3 *statsFile;
+    sqlite3_stmt *insertStmt;
+    unsigned writeCount;
+    unsigned commitEvery;
     time::Point startWallTime;
 
     unsigned numBranches;
@@ -61,7 +66,7 @@ namespace klee {
   public:
     StatsTracker(Executor &_executor, std::string _objectFilename,
                  bool _updateMinDistToUncovered);
-    ~StatsTracker() = default;
+    ~StatsTracker();
 
     // called after a new StackFrame has been pushed (for callpath tracing)
     void framePushed(ExecutionState &es, StackFrame *parentFrame);
