@@ -20,6 +20,7 @@ import os
 import re
 import sys
 import argparse
+import sqlite3
 
 from operator import itemgetter
 try:
@@ -65,14 +66,27 @@ def getLogFile(path):
 
 class LazyEvalList:
     """Store all the lines in run.stats and eval() when needed."""
-    def __init__(self, lines):
+    def __init__(self, fileName):
         # The first line in the records contains headers.
-        self.lines = lines[1:]
+      #  self.lines = lines[1:]
+      self.conn = sqlite3.connect(fileName);
+      self.c = self.conn.cursor()
+      self.c.execute("SELECT * FROM stats ORDER BY Instructions DESC LIMIT 1")
+      self.lines = self.c.fetchone()
+
+    def aggregateRecords(self):
+        memC = self.conn.cursor()
+        memC.execute("SELECT max(MallocUsage) / 1024 / 1024, avg(MallocUsage) / 1024 / 1024 from stats")
+        maxMem, avgMem = memC.fetchone()
+
+        stateC = self.conn.cursor()
+        stateC.execute("SELECT max(NumStates), avg(NumStates) from stats")
+        maxStates, avgStates = stateC.fetchone()
+        return (maxMem, avgMem, maxStates, avgStates)
+
 
     def __getitem__(self, index):
-        if isinstance(self.lines[index], str):
-            self.lines[index] = eval(self.lines[index])
-        return self.lines[index]
+        return self.lines
 
     def __len__(self):
         return len(self.lines)
@@ -91,23 +105,6 @@ def getMatchedRecordIndex(records, column, target):
             hi = mid
     return lo
 
-
-def aggregateRecords(records):
-    # index for memUsage and stateCount in run.stats
-    memIndex = 6
-    stateIndex = 5
-
-    # maximum and average memory usage
-    memValues = list(map(itemgetter(memIndex), records))
-    maxMem = max(memValues) / 1024 / 1024
-    avgMem = sum(memValues) / len(memValues) / 1024 / 1024
-
-    # maximum and average number of states
-    stateValues = list(map(itemgetter(stateIndex), records))
-    maxStates = max(stateValues)
-    avgStates = sum(stateValues) / len(stateValues)
-
-    return (maxMem, avgMem, maxStates, avgStates)
 
 
 def stripCommonPathPrefix(paths):
@@ -296,6 +293,9 @@ def main():
                         type=isPositiveInt, default='10', metavar='n',
                         help='Sample a data point every n lines for a '
                         'run.stats (default: 10)')
+    parser.add_argument('-to-csv',
+                          action='store_true', dest='toCsv',
+                          help='Dump run.stats to STDOUT in CSV format')
 
     # argument group for controlling output verboseness
     pControl = parser.add_mutually_exclusive_group(required=False)
@@ -343,6 +343,7 @@ def main():
 
     args = parser.parse_args()
 
+
     # get print controls
     pr = 'NONE'
     if args.pAll:
@@ -359,7 +360,21 @@ def main():
         print('no klee output dir found', file=sys.stderr)
         exit(1)
     # read contents from every run.stats file into LazyEvalList
-    data = [LazyEvalList(list(open(getLogFile(d)))) for d in dirs]
+    data = [LazyEvalList(getLogFile(d)) for d in dirs]
+
+    if args.toCsv:
+        import csv
+        data = data[0]
+        c = data.conn.cursor()
+        sql3_cursor = c.execute("SELECT * FROM stats")
+        csv_out = csv.writer(sys.stdout)
+        # write header                        
+        csv_out.writerow([d[0] for d in sql3_cursor.description])
+        # write data                          
+        for result in sql3_cursor:
+          csv_out.writerow(result)
+ 
+        return
     if len(data) > 1:
         dirs = stripCommonPathPrefix(dirs)
     # attach the stripped path
@@ -392,12 +407,12 @@ def main():
         if args.compBy:
             matchIndex = getMatchedRecordIndex(
                 records, itemgetter(compIndex), refValue)
-            stats = aggregateRecords(LazyEvalList(records[:matchIndex + 1]))
+            stats = recrods.aggregateRecords() # aggregateRecords(LazyEvalList(records[:matchIndex + 1]))
             totStats.append(stats)
             row.extend(getRow(records[matchIndex], stats, pr))
             totRecords.append(records[matchIndex])
         else:
-            stats = aggregateRecords(records)
+            stats = records.aggregateRecords()
             totStats.append(stats)
             row.extend(getRow(records[-1], stats, pr))
             totRecords.append(records[-1])
