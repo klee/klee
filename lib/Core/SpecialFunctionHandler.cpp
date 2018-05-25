@@ -2424,7 +2424,7 @@ void SpecialFunctionHandler::handleMarkString(
     } else {
 
     errs() << "Creating an ab serial " << ab_name << " size " << mo->size << "\n";
-	  state.addConstraint(UleExpr::create(
+	  state.addConstraint(EqExpr::create(
   		(StrLengthExpr::create(StrVarExpr::create(ab_name.c_str()))),
       mo->getIntSizeExpr()));
     }
