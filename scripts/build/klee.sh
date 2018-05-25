@@ -116,6 +116,8 @@ else
   CMAKE_BUILD_TYPE="Debug"
 fi
 
+python -m pip install --user tabulate
+
 # TODO: We should support Ninja too
 # Configure KLEE
 echo "CXXFLAGS=\"${COVERAGE_FLAGS} ${SANITIZER_CXX_FLAGS}\" \
