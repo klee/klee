@@ -49,15 +49,15 @@ run: build/src/test/torture_test_no_dbg_with_names.bc
 	@setterm -term linux -fore white
 	#--posix-runtime                                 \
 	#-constants-as-ABs                               \
-	#-use-query-log=all:kquery                                  \
 	#-use-query-log=solver:smt2                      \
 	# gdb -x ./myGdbScripts/gdbCommands.txt --args    \
 	${KLEE}                                         \
-	--libc=uclibc                                   \
 	-solver-backend=z3                              \
 	-output-module                                  \
 	-output-source                                  \
-	-use-independent-solver=0                       \
+	--libc=uclibc                                   \
+	-use-query-log=all:kquery                                  \
+	-use-independent-solver=1                       \
 	-use-cex-cache=1                                \
 	-debug-z3-dump-queries=Z3queries.txt            \
 	-debug-z3-log-api-interaction=Z3LogAPI.txt      \

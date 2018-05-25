@@ -67,7 +67,7 @@ namespace klee {
                 return a;
             }
         }
-        assert(false && "Didn't find ab name");
+        //assert(false && "Didn't find ab name");
         return nullptr;
     };
     
@@ -93,7 +93,6 @@ namespace klee {
         return ReadExpr::create(UpdateList(array, 0), 
                                 ConstantExpr::alloc(index, array->getDomain()));
       } else {
-           llvm::errs() << "zeroooooooooooo\n";
         return ConstantExpr::alloc(0, array->getRange());
       }
     }

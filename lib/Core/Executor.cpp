@@ -2006,31 +2006,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::Load: {
     ref<Expr> base = eval(ki, 0, state).value;
-    /***************************************/
-    /* [1] Cast instruction i into a loadi */
-  	/***************************************/
-    llvm::LoadInst *loadi = (llvm::LoadInst *) i;
-
-    /******************************************/
-    /* [2] Extract dst and src var names ...  */
-  	/******************************************/
-	char srcVarName[256];
-	char dstVarName[256];
-	
-	memset(srcVarName,0,sizeof(srcVarName));
-	memset(dstVarName,0,sizeof(dstVarName));
-	
-	strcpy(srcVarName,loadi->getPointerOperand()->getName().str().c_str());
-	strcpy(dstVarName,loadi->getName().str().c_str());
-
-    /****************************************/
-    /* [3] Print dst and src var names ...  */
-  	/****************************************/
-  	if (strncmp(srcVarName,"OISH_",strlen("OISH_")) == 0)
-  	{
-		llvm::errs() << "OISH LOAD DST(" << dstVarName << ") = SRC(" << srcVarName << ")\n";
-		state.varNames[dstVarName] = srcVarName;
-	}
 
     executeMemoryOperation(state, false, base, 0, ki);
     break;
@@ -3829,12 +3804,12 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
       numBuf[2] = 0;
       int idx = 0;
       int numBufIdx = -1;
-     // for(unsigned char &c : values[i]) 
-     //     errs() << c;
-     // errs() << "\n";
+      for(unsigned char &c : values[i]) 
+          errs() << c;
+      errs() << "\n";
       for(unsigned char &c : values[i]) {
-     //   printf("%c: idx: %d, numBufIdx: %d, numBuf: %s\n", c, idx, numBufIdx, numBuf);
-        buf[idx] = c;
+//        printf("%c: idx: %d, numBufIdx: %d, numBuf: %s\n", c, idx, numBufIdx, numBuf);
+        if(idx < (int)mo->size) buf[idx] = c;
         if(numBufIdx >= 0) {
             numBuf[numBufIdx] = c;
             numBufIdx++;
@@ -3845,11 +3820,15 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
             buf[idx] = (unsigned char)strtol(numBuf,NULL, 16);
         }
 
-        if(idx > 0 && c == 'x' && buf[idx-1] == '\\') {
-            numBufIdx = 0;
+        if(idx > 0 && buf[idx-1] == '\\') {
             idx--;
+            switch(c) {
+              case 'n': buf[idx] = '\n'; break;
+              case 'r': buf[idx] = '\r'; break;
+              case 'x': numBufIdx = 0; break;
+              case '\\': buf[idx] = '\\'; break;
+            }
         }
-
         if(numBufIdx == -1) {
             idx++;
         }

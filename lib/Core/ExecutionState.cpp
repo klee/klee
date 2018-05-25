@@ -117,49 +117,10 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     ptreeNode(state.ptreeNode),
     symbolics(state.symbolics),
     arrayNames(state.arrayNames),
-    openMergeStack(state.openMergeStack),
-    localVariables(state.localVariables),
-    varNames(state.varNames),
-    svars(state.svars),
-    ab_serial(state.ab_serial),
-    ab_offset(state.ab_offset),
-    ab_size(state.ab_size),
-    ab_last(state.ab_last)
+    openMergeStack(state.openMergeStack)
 {
   for (unsigned int i=0; i<symbolics.size(); i++)
     symbolics[i].first->refCount++;
-
-  /************************************/
-  /* OISH inside copy constructor ... */
-  /************************************/
-  /**************************************/
-  /* Make sure copy construction worked */
-  /**************************************/
-  	std::map<std::string,        int>::iterator it1;
-  	std::map<std::string,        int>::iterator end1   = ab_serial.end();
-  	std::map<std::string,        int>::iterator begin1 = ab_serial.begin();
-
-  	std::map<std::string, ref<Expr> >::iterator it2;
-  	std::map<std::string, ref<Expr> >::iterator end2   = ab_offset.end();
-  	std::map<std::string, ref<Expr> >::iterator begin2 = ab_offset.begin();
-
-  	std::map<std::string,std::string>::iterator it3;
-  	std::map<std::string,std::string>::iterator end3   = varNames.end();
-  	std::map<std::string,std::string>::iterator begin3 = varNames.begin();
-
-  	std::map<int,         ref<Expr> >::iterator it4;
-  	std::map<int,         ref<Expr> >::iterator end4   = ab_size.end();
-  	std::map<int,         ref<Expr> >::iterator begin4 = ab_size.begin();
-
-  	std::map<int,                int>::iterator it5;
-  	std::map<int,                int>::iterator end5   = ab_last.end();
-  	std::map<int,                int>::iterator begin5 = ab_last.begin();
-  	
-  	for (it1=begin1;it1!=end1;it1++){llvm::errs()<<(*it1).first<<" "<<(*it1).second<<"\n";}
-  	for (it2=begin2;it2!=end2;it2++){llvm::errs()<<(*it2).first<<" "<<(*it2).second<<"\n";}
-  	for (it3=begin3;it3!=end3;it3++){llvm::errs()<<(*it3).first<<" "<<(*it3).second<<"\n";}
-  	for (it4=begin4;it4!=end4;it4++){llvm::errs()<<(*it4).first<<" "<<(*it4).second<<"\n";}
-  	for (it5=begin5;it5!=end5;it5++){llvm::errs()<<(*it5).first<<" "<<(*it5).second<<"\n";}
 }
 
 ExecutionState *ExecutionState::branch() {
