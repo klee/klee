@@ -99,7 +99,7 @@ namespace klee {
     std::map<K, Node> children;
     
   public:
-    Node() : isEndOfSet(false) {}
+    Node() : value(), isEndOfSet(false) {}
   };
   
   template<class K, class V>
@@ -187,9 +187,9 @@ namespace klee {
   template<class K, class V>
   void MapOfSets<K,V>::insert(const std::set<K> &set, const V &value) {
     Node *n = &root;
-    for (typename std::set<K>::const_iterator it = set.begin(), ie = set.end();
-         it != ie; ++it)
-      n = &n->children.insert(std::make_pair(*it, Node())).first->second;
+    for (auto const& element : set) {
+      n = &n->children.insert(std::make_pair(element, Node())).first->second;
+    }
     n->isEndOfSet = true;
     n->value = value;
   }
