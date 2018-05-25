@@ -5,6 +5,8 @@ MAINTAINER Dan Liew <daniel.liew@imperial.ac.uk>
 # squash the layers from within a Dockerfile so
 # the resulting image is unnecessarily large!
 
+ARG DEBIAN_FRONTEND=noninteractive
+
 ENV LLVM_VERSION=3.4 \
     SOLVERS=STP:Z3 \
     STP_VERSION=2.1.2 \
@@ -18,6 +20,7 @@ ENV LLVM_VERSION=3.4 \
     UBSAN_BUILD=0 \
     TRAVIS_OS_NAME=linux
 
+
 RUN apt-get update && \
     apt-get -y --no-install-recommends install \
         clang-${LLVM_VERSION} \
@@ -25,6 +28,8 @@ RUN apt-get update && \
         llvm-${LLVM_VERSION}-dev \
         llvm-${LLVM_VERSION}-runtime \
         llvm \
+        gcc \
+        g++ \
         libcap-dev \
         git \
         subversion \
@@ -45,8 +50,6 @@ RUN apt-get update && \
         binutils && \
     pip3 install -U lit tabulate wllvm && \
     update-alternatives --install /usr/bin/python python /usr/bin/python3 50 && \
-    ( wget -O - http://download.opensuse.org/repositories/home:delcypher:z3/xUbuntu_14.04/Release.key | apt-key add - ) && \
-    echo 'deb http://download.opensuse.org/repositories/home:/delcypher:/z3/xUbuntu_14.04/ /' >> /etc/apt/sources.list.d/z3.list && \
     apt-get update
 
 # Create ``klee`` user for container with password ``klee``.
@@ -69,7 +72,7 @@ RUN sudo chown --recursive klee: ${KLEE_SRC}
 RUN mkdir -p ${BUILD_DIR}
 
 # Build/Install SMT solvers (use TravisCI script)
-RUN cd ${BUILD_DIR} && ${KLEE_SRC}/.travis/solvers.sh
+RUN cd ${BUILD_DIR} && STP_CXX=g++ STP_CC=gcc Z3_CXX=g++ Z3_CC=gcc ${KLEE_SRC}/.travis/solvers.sh
 
 # Install testing utils (use TravisCI script)
 RUN cd ${BUILD_DIR} && mkdir test-utils && cd test-utils && \
