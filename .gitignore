@@ -70,6 +70,12 @@ Debug+Asserts/
 Output/
 *.swp
 
+benchmarks/libosip_bitcode/makefile
+benchmarks/libosip_bitcode/myGdbScripts/gdbCommands.txt
+benchmarks/libosip_bitcode_vanilla/Z3LogAPI.txt
+benchmarks/libosip_bitcode_vanilla/Z3queries.txt
+benchmarks/libosip_bitcode_vanilla/makefile
+
 # commonly used as cmake build directory
 /build
 
