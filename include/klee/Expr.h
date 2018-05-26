@@ -146,6 +146,7 @@ public:
 	Str_Const,
 	Str_CharAt,
 	Str_Substr,
+	Str_Concat,
 	Str_Length,
 	Str_Compare,
 	Str_FirstIdxOf,
@@ -1050,6 +1051,51 @@ public:
 														}
 	virtual ref<Expr> rebuild(ref<Expr> kids[]) const { return create(kids[0],kids[1]); }
 	static bool classof(const Expr *E) { return E->getKind() == Expr::Str_FirstIdxOf; }
+	static bool classof(const ConstantExpr *) { return false; }	
+};
+
+class StrConcatExpr : public Expr {
+public:
+	ref<Expr> s1;
+	ref<Expr> s2;
+
+	StrConcatExpr(
+		const ref<Expr> &in_s1,
+		const ref<Expr> &in_s2)
+		:
+		s1(in_s1),
+		s2(in_s2) {
+        type = Type::String;
+        assert(s1->isString());
+        assert(s2->isString());
+  
+  }
+
+	virtual unsigned computeHash();
+
+public:
+	static ref<Expr> create(const ref<Expr> &in_s1,const ref<Expr> &in_s2)
+	{
+		return StrConcatExpr::alloc(in_s1,in_s2);
+	}
+	
+	static ref<Expr> alloc(const ref<Expr> &in_s1,const ref<Expr> &in_s2)
+	{
+		ref<Expr> res(new StrConcatExpr(in_s1,in_s2));
+		res->computeHash();
+		return res;
+	}
+	virtual int compareContents(const Expr &b)  const {return   0;}		
+	virtual Kind      getKind()                 const {return   Expr::Str_Concat;}	
+	virtual Width     getWidth()                const {return   Expr::Int8;}	
+	virtual unsigned  getNumKids()              const {return    2;}	
+	virtual ref<Expr> getKid(unsigned int i)    const	{
+															if(i==0){return s1;}
+															if(i==1){return s2;}
+															return 0;
+														}
+	virtual ref<Expr> rebuild(ref<Expr> kids[]) const { return create(kids[0],kids[1]); }
+	static bool classof(const Expr *E) { return E->getKind() == Expr::Str_Concat; }
 	static bool classof(const ConstantExpr *) { return false; }	
 };
 

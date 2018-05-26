@@ -151,6 +151,49 @@ ExprVisitor::Action ExprEvaluator::visitStrLen(const StrLengthExpr& sle) {
     return Action::changeTo(ConstantExpr::create(len, Expr::Int64));
 }
 
+ExprVisitor::Action ExprEvaluator::visitConcatStringsExpr(const StrConcatExpr& sc) {
+//    sfi.dump();
+    ref<Expr> _s1 = visit(sc.s1);
+    ref<Expr> _s2 = visit(sc.s2);
+
+    StrConstExpr* s1 = dyn_cast<StrConstExpr>(_s1);
+    if(s1 == nullptr) return Action::skipChildren();
+    assert(s1 && "s1 must be a constant string");
+
+    StrConstExpr* s2 = dyn_cast<StrConstExpr>(_s2);
+    if(s2 == nullptr) return Action::skipChildren();
+    assert(s2 && "s2 must be a constant string");
+
+    //auto firstIndex = std::search(haystack->data.begin(), haystack->data.end(),
+    //            needle.begin(), needle.end());
+    //    llvm::errs() << "Haystack: ";
+    //    printVectorString(haystack->data);
+    //    llvm::errs() << "Needle: ";
+    //    printVectorString(needle);
+    // size_t fstIdx = std::distance(haystack->data.begin(), firstIndex);
+    // if(firstIndex == haystack->data.end()) {
+    //        llvm::errs() << "Character not found\n";
+    //    return Action::changeTo(ConstantExpr::create(-1, Expr::Int64));
+    // }
+    //assert(firstIndex != haystack->data.end()  && "Character must be present");
+    // llvm::errs() << "Needle found at offset = " << fstIdx << "\n";
+    std::string oren_s1;
+    std::string oren_s2;
+ 
+    int i=0;
+    
+    for (i=0;i < s1->data.size(); i++) { oren_s1[i]=s1->data[i]; }
+    for (i=0;i < s2->data.size(); i++) { oren_s2[i]=s2->data[i]; }
+    
+    for (i=0;i < s1->data.size(); i++) { llvm::errs() << s1[i]; }
+    llvm::errs() << " ++ ";
+    for (i=0;i < s2->data.size(); i++) { llvm::errs() << s2[i]; }
+    llvm::errs() << " == ";
+    llvm::errs() << oren_s1+oren_s2 << "\n";
+    
+    return Action::changeTo(StrConstExpr::create(oren_s1+oren_s2));
+}
+
 ExprVisitor::Action ExprEvaluator::visitFirstIndexOf(const StrFirstIdxOfExpr& sfi) {
 //    sfi.dump();
     ref<Expr> _haystack = visit(sfi.haystack);

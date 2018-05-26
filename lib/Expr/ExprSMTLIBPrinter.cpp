@@ -475,6 +475,8 @@ const char *ExprSMTLIBPrinter::getSMTLIBKeyword(const ref<Expr> &e)
     return "str.at";
   case Expr::Str_FirstIdxOf:
     return "str.indexof";
+  case Expr::Str_Concat:
+    return "str.++";
   case Expr::Str_Substr:
     return "str.substr";
   case Expr::Str_FromBitVec8:

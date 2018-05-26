@@ -173,6 +173,7 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(Str_CharAt);
     X(Str_Substr);
     X(Str_Length);
+    X(Str_Concat);
     X(Str_Compare);
     X(Str_FirstIdxOf);
     X(Str_FromBitVec8);
@@ -208,6 +209,7 @@ unsigned StrConstExpr::computeHash()         {static unsigned value = 0x8d425ff2
 unsigned StrLengthExpr::computeHash()        {static unsigned value = 0x9d425ff0;hashValue = value++;return hashValue;}
 unsigned StrSubstrExpr::computeHash()        {static unsigned value = 0xad425ff0;hashValue = value++;return hashValue;}
 unsigned StrCharAtExpr::computeHash()        {static unsigned value = 0xbd425ff0;hashValue = value++;return hashValue;}
+unsigned StrConcatExpr::computeHash()        {static unsigned value = 0xcd121ff0;hashValue = value++;return hashValue;}
 unsigned StrFirstIdxOfExpr::computeHash()    {static unsigned value = 0xcd333ff0;hashValue = value++;return hashValue;}
 unsigned StrFromBitVector8Expr::computeHash(){static unsigned value = 0xe0000490;hashValue = value++;return hashValue;}
 unsigned BvToIntExpr::computeHash()          {static unsigned value = 0xe00a0490;hashValue = value++;return hashValue;}

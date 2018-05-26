@@ -29,6 +29,7 @@ namespace klee {
     Action visitStrSubstr(const StrSubstrExpr&);
     Action visitBvToInt(const BvToIntExpr&);
     Action visitFirstIndexOf(const StrFirstIdxOfExpr&);
+    Action visitConcatStringsExpr(const StrConcatExpr&);
     Action visitStrFromBv8(const StrFromBitVector8Expr&);
     Action visitCharAt(const StrCharAtExpr &charAtE);
     Action visitStrEq(const StrEqExpr &eqE);

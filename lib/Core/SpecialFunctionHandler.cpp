@@ -1056,3 +1056,108 @@ void SpecialFunctionHandler::handleDivRemOverflow(ExecutionState &state,
   executor.terminateStateOnError(state, "overflow on division or remainder",
                                  Executor::Overflow);
 }
+
+static int tmpStrVarSerialIdx=800;
+
+void SpecialFunctionHandler::handle_da_loop_killer_f1(
+	ExecutionState &state,
+	KInstruction *target,
+	std::vector<ref<Expr> > &arguments)
+{
+	/*************************************************/
+	/* [1] Make sure f1 can only get 1 parameter ... */
+	/*************************************************/
+	assert(arguments.size() == 1 && "f1 can only have 1 argument");
+
+	/********************************/
+	/* [2] Extract Object State ... */
+	/********************************/
+	const ObjectState* os = executor.resolveOne(state,arguments[0]).second;
+	const MemoryObject* mos = os->getObject();
+
+	/***********************************/
+	/* [3] Extract AB, offset and size */
+	/***********************************/
+	ref<Expr> AB = StrVarExpr::create(os->getABSerial());
+	ref<Expr> offset = BvToIntExpr::create(mos->getOffsetExpr(arguments[0]));
+	ref<Expr> size = SubExpr::create(mos->getIntSizeExpr(),offset);
+	ref<Expr> s = StrSubstrExpr::create(AB,offset,size);
+	
+	/****************************************************/
+	/* [4] Assemble pre + res to express the fact that: */
+	/*     [-] pre does not contain "a" or "b"          */
+	/*     [-] res[0] is not "a" nor "b"                */
+	/****************************************************/
+	ref<Expr> c   = StrVarExpr::create(std::string("c"  )+std::to_string(tmpStrVarSerialIdx++));
+	ref<Expr> res = StrVarExpr::create(std::string("res")+std::to_string(tmpStrVarSerialIdx++));
+	ref<Expr> pre = StrVarExpr::create(std::string("pre")+std::to_string(tmpStrVarSerialIdx++));
+
+	/********************/
+	/* [-] c is not "a" */
+	/********************/
+	executor.addConstraint(state,
+		NotExpr::create(
+			StrEqExpr::create(
+				c,
+				StrConstExpr::create("a"))));
+				
+	/********************/
+	/* [-] c is not "b" */
+	/********************/
+	executor.addConstraint(state,
+		NotExpr::create(
+			StrEqExpr::create(
+				c,
+				StrConstExpr::create("b"))));
+
+	/*********************/
+	/* [-] c is length 1 */
+	/*********************/
+	executor.addConstraint(state,
+		EqExpr::create(
+			StrLengthExpr::create(c),
+			ConstantExpr::create(1,Expr::Int64)));
+	
+	/******************************/
+	/* [-] pre does not contain c */
+	/******************************/
+	executor.addConstraint(state,
+		EqExpr::create(
+			StrFirstIdxOfExpr::create(pre,c),
+			ConstantExpr::create(-1,Expr::Int64)));
+
+	/***********************/
+	/* [-] s == pre ++ res */
+	/***********************/
+	executor.addConstraint(state,
+		StrEqExpr::create(
+			s,
+			StrConcatExpr::create(pre,res)));
+
+	/*************************/
+	/* [-] res[0] is not "a" */
+	/*************************/
+	executor.addConstraint(state,
+		NotExpr::create(
+			StrEqExpr::create(
+				StrCharAtExpr::create(res,ConstantExpr::create(0,Expr::Int64)),
+				StrConstExpr::create("a"))));
+
+	/*************************/
+	/* [-] res[0] is not "b" */
+	/*************************/
+	executor.addConstraint(state,
+		NotExpr::create(
+			StrEqExpr::create(
+				StrCharAtExpr::create(res,ConstantExpr::create(0,Expr::Int64)),
+				StrConstExpr::create("b"))));
+
+	/*****************************/
+	/* [5] return s + strle(pre) */
+	/*****************************/
+	executor.bindLocal(target,state,
+		AddExpr::create(
+			arguments[0],
+			StrLengthExpr::create(pre)));
+}
+
