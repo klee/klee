@@ -21,6 +21,10 @@ config.llvmgxx = "@LLVMCXX@"
 config.cc = "@NATIVE_CC@"
 config.cxx = "@NATIVE_CXX@"
 
+config.O0opt = "-O0"
+if @LLVM_VERSION_MAJOR@ >= 5:
+  config.O0opt += " -Xclang -disable-O0-optnone"
+
 # Features
 config.enable_uclibc = True if @ENABLE_UCLIBC@ == 1 else False
 config.enable_posix_runtime = True if @ENABLE_POSIX_RUNTIME@ == 1 else False

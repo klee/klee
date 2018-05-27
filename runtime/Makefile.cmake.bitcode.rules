@@ -40,7 +40,7 @@ endif
 ifeq ($(IS_RELEASE),1)
 LLVMCC.Flags += -O2
 else
-LLVMCC.Flags += -O0
+LLVMCC.Flags += $(O0OPT)
 endif
 
 # Handle assertion flags

@@ -1,6 +1,6 @@
 // Check that we properly detect states covering new instructions.
 //
-// RUN: %llvmgcc -I../../../include %s -emit-llvm -O0 -c -o %t1.bc
+// RUN: %llvmgcc -I../../../include %s -emit-llvm %O0opt -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --only-output-states-covering-new %t1.bc
 

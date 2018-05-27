@@ -1,4 +1,4 @@
-// RUN: %llvmgcc %s -emit-llvm -O0 -c -g -o %t1.bc
+// RUN: %llvmgcc %s -emit-llvm %O0opt -c -g -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // This test needs deterministic allocation with enough spacing between the allocations.
 // Otherwise, if by coincidence the allocated vararg memory object is directly before another valid memory object,
