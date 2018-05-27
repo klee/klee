@@ -1,4 +1,4 @@
-// RUN: %llvmgcc %s -fsanitize=signed-integer-overflow -emit-llvm -g -O0 -c -o %t.bc
+// RUN: %llvmgcc %s -fsanitize=signed-integer-overflow -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out %t.bc 2>&1 | FileCheck %s
 

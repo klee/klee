@@ -1,4 +1,4 @@
-// RUN: %llvmgcc -emit-llvm -c -g -O0 %s -o %t.bc
+// RUN: %llvmgcc -emit-llvm -c -g %O0opt %s -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out -check-div-zero -emit-all-errors=0 %t.bc 2> %t.log
 // RUN: FileCheck --input-file=%t.log %s

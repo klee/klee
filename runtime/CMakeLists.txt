@@ -91,13 +91,19 @@ ExternalProject_Add(BuildKLEERuntimes
   INSTALL_COMMAND "${CMAKE_COMMAND}" -E echo "" # Dummy command
 )
 
+set(O0OPT "-O0")
+if (${LLVM_VERSION_MAJOR} GREATER 4)
+	set(O0OPT "${O0OPT} -Xclang -disable-O0-optnone")
+endif()
+
+
 # Use `ExternalProject_Add_Step` with `ALWAYS` argument instead of directly
 # building in `ExternalProject_Add` with `BUILD_ALWAYS` argument due to lack of
 # support for the `BUILD_ALWAYS` argument in CMake < 3.1.
 ExternalProject_Add_Step(BuildKLEERuntimes RuntimeBuild
   # `env` is used here to make sure `MAKEFLAGS` of KLEE's build
   # is not propagated into the bitcode build system.
-  COMMAND ${ENV_BINARY} MAKEFLAGS="" ${MAKE_BINARY} -f Makefile.cmake.bitcode all
+  COMMAND ${ENV_BINARY} MAKEFLAGS="" O0OPT=${O0OPT} ${MAKE_BINARY} -f Makefile.cmake.bitcode all
   ALWAYS ${EXTERNAL_PROJECT_BUILD_ALWAYS_ARG}
   WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
   ${EXTERNAL_PROJECT_ADD_STEP_USES_TERMINAL_ARG}
