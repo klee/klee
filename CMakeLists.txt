@@ -386,6 +386,7 @@ if (ENABLE_TCMALLOC)
         "Found \"${TCMALLOC_HEADER}\" but could not find library")
     endif()
     list(APPEND KLEE_COMPONENT_EXTRA_LIBRARIES ${TCMALLOC_LIBRARIES})
+    list(APPEND KLEE_COMPONENT_EXTRA_INCLUDE_DIRS ${TCMALLOC_INCLUDE_DIR})
     if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang") OR ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU"))
       # TCMalloc's documentation says its safest to pass these flags when
       # building with gcc because gcc can optimize assuming its using its own
