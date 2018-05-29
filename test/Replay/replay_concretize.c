@@ -1,5 +1,5 @@
 // RUN: %llvmgcc %s -emit-llvm -g -O0 -c -o %t.bc
-// RUN: klee --seed-out=%S/replay_concretize_testcase.ktest --only-replay-seeds --write-smt2s -libc=uclibc -posix-runtime %t.bc --sym-stdin 7
+// RUN: klee --seed-out=%S/replay_concretize_testcase.ktest --only-replay-seeds -posix-runtime %t.bc --sym-stdin 7
 
 #include <string.h>
 #include <assert.h>
