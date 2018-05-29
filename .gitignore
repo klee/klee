@@ -38,6 +38,14 @@ benchmarks/openjpeg*/build/*
 benchmarks/dnstracer*/dnstracer-1.6/*
 benchmarks/dnstracer*/build/*
 
+#############
+#           #
+#    vlc    #
+#           #
+#############
+benchmarks/vlc*/vlc-2.2.0/*
+benchmarks/vlc*/build/*
+
 ###########
 #         #
 # libosip #

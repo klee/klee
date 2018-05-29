@@ -1,0 +1,13 @@
+####################
+# Pagination = off #
+####################
+set pagination off
+
+#######################
+# Initial breakpoints #
+####################### 
+start
+#break Memory.h:119
+#break StringModel.cpp:194
+#break Executor.cpp:1665
+run
