@@ -375,6 +375,8 @@ void SpecialFunctionHandler::handleCloseMerge(ExecutionState &state,
     warning << &state << " ran into a close at " << i << " without a preceding open";
     klee_warning("%s", warning.str().c_str());
   } else {
+    assert(executor.inCloseMerge.find(&state) == executor.inCloseMerge.end() &&
+           "State cannot run into close_merge while being closed");
     executor.inCloseMerge.insert(&state);
     state.openMergeStack.back()->addClosedState(&state, i);
     state.openMergeStack.pop_back();

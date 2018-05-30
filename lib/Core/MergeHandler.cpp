@@ -69,10 +69,6 @@ void MergeHandler::removeOpenState(ExecutionState *es){
   openStates.pop_back();
 }
 
-void MergeHandler::removeFromCloseMergeSet(ExecutionState *es){
-  executor->inCloseMerge.erase(es);
-}
-
 void MergeHandler::addClosedState(ExecutionState *es,
                                          llvm::Instruction *mp) {
   // Update stats
@@ -102,6 +98,7 @@ void MergeHandler::addClosedState(ExecutionState *es,
     for (auto& mState: cpv) {
       if (mState->merge(*es)) {
         executor->terminateState(*es);
+        executor->inCloseMerge.erase(es);
         mergedSuccessful = true;
         break;
       }
@@ -117,6 +114,7 @@ void MergeHandler::releaseStates() {
   for (auto& curMergeGroup: reachedCloseMerge) {
     for (auto curState: curMergeGroup.second) {
       executor->continueState(*curState);
+      executor->inCloseMerge.erase(curState);
     }
   }
   reachedCloseMerge.clear();
