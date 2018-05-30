@@ -133,9 +133,6 @@ public:
   /// @brief Remove state from the 'openStates' vector
   void removeOpenState(ExecutionState *es);
 
-  /// @brief Remove state from the 'inCloseMerge' set in the executor
-  void removeFromCloseMergeSet(ExecutionState *es);
-
   /// @brief True, if any states have run into 'klee_close_merge()' and have
   /// not been released yet
   bool hasMergedStates();
