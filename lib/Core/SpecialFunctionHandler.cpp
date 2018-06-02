@@ -96,6 +96,9 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
 #else
   add("__error", handleErrnoLocation, true),
 #endif
+
+  add("klee_newlocale", handleNewlocale, true),
+  add("klee_freelocale", handleFreelocale, true),
   add("klee_is_symbolic", handleIsSymbolic, true),
   add("klee_make_symbolic", handleMakeSymbolic, false),
   add("klee_mark_global", handleMarkGlobal, false),
@@ -631,6 +634,31 @@ void SpecialFunctionHandler::handleErrnoLocation(
                            executor.kmodule->targetData->getTypeSizeInBits(
                                target->inst->getType())));
 }
+
+void SpecialFunctionHandler::handleNewlocale(ExecutionState &state,
+                                            KInstruction *target,
+                                            std::vector<ref<Expr> > &arguments) {
+#ifdef __APPLE__
+  executor.terminateStateOnError(
+      state, "check_memory_access requires constant args", Executor::User);
+#else
+  int mask =
+      dyn_cast<ConstantExpr>(arguments[0])->getZExtValue(sizeof(int) * 8);
+  locale_t base = (locale_t)dyn_cast<ConstantExpr>(arguments[2])
+                      ->getZExtValue(sizeof(locale_t) * 8);
+  locale_t x =
+      newlocale(mask, readStringAtAddress(state, arguments[1]).c_str(), base);
+  MemoryObject *p = executor.addExternalObject(state, x, sizeof(*x), true);
+  executor.bindLocal(target, state, p->getBaseExpr());
+#endif
+}
+
+void SpecialFunctionHandler::handleFreelocale(ExecutionState &state,
+                                            KInstruction *target,
+                                            std::vector<ref<Expr> > &arguments) {
+  executor.executeFree(state, arguments[0]);
+}
+
 void SpecialFunctionHandler::handleCalloc(ExecutionState &state,
                             KInstruction *target,
                             std::vector<ref<Expr> > &arguments) {

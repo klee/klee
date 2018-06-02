@@ -12,6 +12,12 @@
 
 #include "stdint.h"
 #include "stddef.h"
+#include "locale.h"
+
+#ifdef __APPLE__
+# include <string.h>
+# include <xlocale.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -160,6 +166,11 @@ extern "C" {
 
   /* Get errno value of the current state */
   int klee_get_errno(void);
+
+  /* Intrinsic newlocale/freelocale helper */
+  locale_t klee_newlocale(int mask, const char* locale, locale_t base);
+  locale_t klee_freelocale(locale_t locobj);
+
 #ifdef __cplusplus
 }
 #endif
