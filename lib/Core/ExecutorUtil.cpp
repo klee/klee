@@ -59,6 +59,12 @@ namespace klee {
       } else if (isa<ConstantPointerNull>(c)) {
         return Expr::createPointer(0);
       } else if (isa<UndefValue>(c) || isa<ConstantAggregateZero>(c)) {
+        if (getWidthForLLVMType(c->getType()) == 0) {
+          if (isa<llvm::LandingPadInst>(ki->inst)) {
+            klee_warning_once(0, "Using zero size array fix for landingpad instruction filter");
+            return ConstantExpr::create(0, 1);
+          }
+        }
         return ConstantExpr::create(0, getWidthForLLVMType(c->getType()));
       } else if (const ConstantDataSequential *cds =
                  dyn_cast<ConstantDataSequential>(c)) {
