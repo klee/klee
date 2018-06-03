@@ -96,6 +96,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("strcpy",                      handleStrcpy,                    false),
   add("strncpy",                     handleStrncpy,                   false),
   add("strchr",                      handleStrchr,                    true),
+  add("strrchr",                     handleStrrchr,                   true),
   add("strcmp",                      handleStrcmp,                    true),
   add("myStrncmp",                   handleStrncmp,                   true),
   add("strlen",                      handleStrlen,                    true),
@@ -888,6 +889,196 @@ void SpecialFunctionHandler::handleMarkString(
 
 
 }
+
+void SpecialFunctionHandler::handleStrrchr(
+	ExecutionState &state,
+	KInstruction *target,
+	std::vector<ref<Expr> > &arguments)
+{
+	ref<Expr> x00 = StrConstExpr::create("\\x00");
+	ref<Expr> one = BvToIntExpr::create(ConstantExpr::create(1,Expr::Int64));
+	ref<Expr> zero= BvToIntExpr::create(ConstantExpr::create(0,Expr::Int64));
+	ref<Expr> minusOne = SubExpr::create(zero,one);
+
+	/***************************************************/
+	/* [0] Make sure strrchr can only get 2 parameters */
+	/***************************************************/
+	assert(arguments.size() == 2 && "strrchr must have 2 arguments");
+	
+	/********************************/
+	/* [1] Extract Object State ... */
+	/********************************/
+	const ObjectState* os = executor.resolveOne(state,arguments[0]).second;
+	const MemoryObject* mos = os->getObject();
+
+	/****************************************/
+	/* [2] Extract s and c ... strrchr(s,c) */
+	/****************************************/
+	ref<Expr> s = arguments[0];
+	ref<Expr> c = arguments[1];
+
+	/*******************************/
+	/* [3] Check if c appears in p */
+	/*******************************/
+	ref<Expr> size   = mos->getIntSizeExpr();
+	ref<Expr> offset = mos->getOffsetExpr(s);	
+	ref<Expr> p_var  = StrSubstrExpr::create(
+		StrVarExpr::create(os->getABSerial()),
+		BvToIntExpr::create(offset),
+		SubExpr::create(size,offset));
+
+	/************************************/
+	/* [4] Build c as a length 1 String */
+	/************************************/
+	ref<Expr> c_as_length_1_string = StrFromBitVector8Expr::create(ExtractExpr::create(c,0,8));
+
+	/*******************************/
+	/* [5] Check if c appears in p */
+	/*******************************/
+	ref<Expr> firstIndexOfc   = StrFirstIdxOfExpr::create(p_var,c_as_length_1_string);
+	ref<Expr> firstIndexOfx00 = StrFirstIdxOfExpr::create(p_var,x00);
+
+	/*******************************/
+	/* [6] Check if c appears in p */
+	/*******************************/
+	ref<Expr> c_appears_in_p = NotExpr::create(EqExpr::create(firstIndexOfc,minusOne));	
+	ref<Expr> c_appears_in_p_before_x00 = SltExpr::create(firstIndexOfc,firstIndexOfx00);
+
+	/*****************************************************************************/
+	/* [7] Issue an error when invoking strrchr on a non NULL terminated string, */
+	/*     and the specific char can be missing ...                              */
+	/*****************************************************************************/
+	ref<Expr> validAccess = AndExpr::create(
+		OrExpr::create(
+			NotExpr::create(EqExpr::create(firstIndexOfc,  minusOne)),
+			NotExpr::create(EqExpr::create(firstIndexOfx00,minusOne))),
+		mos->getBoundsCheckPointer(s));
+
+	static int auxiliary_serial_index=0;
+	/*********************************************/
+	/* [8] Auxiliary string variables s1 and s2 */
+	/*********************************************/
+	std::string auxiliary_string_variable_s00 =
+		std::string("AUX_STRING_")               +
+		std::to_string(auxiliary_serial_index++) +
+		std::string("_s00");
+	ref<Expr> s00 = StrVarExpr::create(
+		auxiliary_string_variable_s00);
+
+	/*********************************************/
+	/* [9] Auxiliary string variables s1 and s2 */
+	/*********************************************/
+	std::string auxiliary_string_variable_s1 =
+		std::string("AUX_STRING_")               +
+		std::to_string(auxiliary_serial_index++) +
+		std::string("_s1");
+	ref<Expr> s1 = StrVarExpr::create(
+		auxiliary_string_variable_s1);
+
+	/*********************************************/
+	/* [10] Auxiliary string variables s1 and s2 */
+	/*********************************************/
+	std::string auxiliary_string_variable_s2 =
+		std::string("AUX_STRING_")               +
+		std::to_string(auxiliary_serial_index++) +
+		std::string("_s2");
+	ref<Expr> s2 = StrVarExpr::create(
+		auxiliary_string_variable_s2);
+
+	/*************************************************************/
+	/* [11] Auxiliary constraints                                */
+	/* --------------------------------------------------------- */
+	/* (= s00 (str.substr p_var 0 (str.indexof p_var "\x00" 0))) */
+	/*************************************************************/
+	executor.addConstraint(state,
+		StrEqExpr::create(
+			StrSubstrExpr::create(
+				p_var,
+				zero,
+				firstIndexOfx00),
+			s00));
+				
+	/*******************************/
+	/* [12] Auxiliary constraints  */
+	/* --------------------------- */
+	/* (str.suffixof s1 s00)       */
+	/*******************************/
+	executor.addConstraint(state,StrSuffixExpr::create(s00,s1));
+
+	/*******************************/
+	/* [13] Auxiliary constraints  */
+	/* --------------------------- */
+	/* (str.suffixof s2 s1)        */
+	/*******************************/
+	executor.addConstraint(state,StrSuffixExpr::create(s1,s2));
+
+	/***************************************/
+	/* [14] Auxiliary constraints          */
+	/* ----------------------------------- */
+	/* (= (str.len s1) (+ (str.len s2) 1)) */
+	/***************************************/
+	executor.addConstraint(state,
+		EqExpr::create(
+			StrLengthExpr::create(s1),
+			AddExpr::create(
+				StrLengthExpr::create(s2),
+				one)));
+
+	/*************************************/
+	/* [15] Auxiliary constraints        */
+	/* --------------------------------- */
+	/* (or (and (str.contains s00 c)     */
+	/*          (str.contains s1  c))    */
+	/*     (not (str.contains s00 c)))   */
+	/*************************************/
+	executor.addConstraint(state,
+		OrExpr::create(
+			AndExpr::create(
+				StrContainsExpr::create(s00,c),
+				StrContainsExpr::create(s1, c)),
+			NotExpr::create(
+				StrContainsExpr::create(s00,c))));
+
+	/*******************************/
+	/* [16] Auxiliary constraints  */
+	/* --------------------------- */
+	/* (not (str.contains s2 c))   */
+	/*******************************/
+	executor.addConstraint(state,
+		NotExpr::create(
+			StrContainsExpr::create(s2,c)));
+	
+	/*************************/
+	/* [17] return value ... */
+	/*************************/
+	ref<Expr> strrchrReturnValue = 
+		SelectExpr::create(
+			NotExpr::create(
+				StrContainsExpr::create(s00,c)),
+			zero,
+			SubExpr::create(
+				StrLengthExpr::create(s00),
+				StrLengthExpr::create(s1)));
+	
+	/******************************************************/
+	/* [18] From here on the same as strchr behaviour ... */
+	/******************************************************/
+	Executor::StatePair branches = executor.fork(state, validAccess, true);
+	ExecutionState *invalid_access= branches.second;
+	if (invalid_access)
+	{
+		executor.terminateStateOnError(
+			*invalid_access,
+			"Strrchr has out of bounds behaviour",
+			Executor::Ptr);
+	}
+
+	/********************************/
+	/* [19] Finally, bind local !!! */
+	/********************************/
+	executor.bindLocal(target,*(branches.first), strrchrReturnValue);
+}
+
 void SpecialFunctionHandler::handleStrchr(
 	ExecutionState &state,
 	KInstruction *target,

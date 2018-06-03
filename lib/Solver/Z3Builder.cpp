@@ -725,6 +725,53 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     *width_out = Expr::Int8;
     return result;
   }
+
+  case Expr::Str_Concat:
+  {
+   	int irrelevant_width=0;
+  	StrConcatExpr *sc = (StrConcatExpr *) e.get();
+
+	Z3_ast params[2];
+	params[0]=constructActual(sc->s1,&irrelevant_width);
+	params[1]=constructActual(sc->s2,&irrelevant_width);
+
+    Z3ASTHandle result = Z3ASTHandle(
+		  Z3_mk_seq_concat(ctx,2,params),
+		  ctx);
+    *width_out = Expr::Int8;
+    return result;
+  }
+
+  case Expr::Str_Suffix:
+  {
+   	int irrelevant_width=0;
+  	StrSuffixExpr *se = (StrSuffixExpr *) e.get();
+
+    Z3ASTHandle result = Z3ASTHandle(
+		  Z3_mk_seq_suffix(
+		  	ctx,
+		  	constructActual(se->suffix,&irrelevant_width),
+		  	constructActual(se->s     ,&irrelevant_width)),
+		  ctx);
+    *width_out = Expr::Int8;
+    return result;
+  }
+
+  case Expr::Str_Contains:
+  {
+   	int irrelevant_width=0;
+  	StrContainsExpr *sc = (StrContainsExpr *) e.get();
+
+    Z3ASTHandle result = Z3ASTHandle(
+		  Z3_mk_seq_contains(
+		  	ctx,
+		  	constructActual(sc->haystack,&irrelevant_width),
+		  	constructActual(sc->needle ,&irrelevant_width)),
+		  ctx);
+    *width_out = Expr::Int8;
+    return result;
+  }
+
   //case Expr::Str_Atoi:       {Z3ASTHandle result;return result;}
   //case Expr::Str_Itoa:       {Z3ASTHandle result;return result;}
   

@@ -138,6 +138,7 @@ namespace klee {
     //HANDLER(handle_da_loop_killer_f1);
     //HANDLER(handle_da_loop_killer_f1);
     HANDLER(handleStrchr);
+    HANDLER(handleStrrchr);
     HANDLER(handleStrlen);
     HANDLER(handleMyIntAssign);
     HANDLER(handleMyPrintOutput);

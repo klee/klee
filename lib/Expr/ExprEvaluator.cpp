@@ -151,6 +151,89 @@ ExprVisitor::Action ExprEvaluator::visitStrLen(const StrLengthExpr& sle) {
     return Action::changeTo(ConstantExpr::create(len, Expr::Int64));
 }
 
+bool ends_with(std::string const & value, std::string const & ending)
+{
+    if (ending.size() > value.size()) return false;
+    return std::equal(ending.rbegin(), ending.rend(), value.rbegin());
+}
+
+ExprVisitor::Action ExprEvaluator::visitContainsStringsExpr(const StrContainsExpr& sc)
+{
+    ref<Expr> _haystack = visit(sc.haystack);
+    ref<Expr> _needle = visit(sc.needle);
+
+    StrConstExpr* haystack = dyn_cast<StrConstExpr>(_haystack);
+    if(haystack == nullptr) return Action::skipChildren();
+    assert(haystack && "haystack must be a constant string");
+
+    StrConstExpr* needle = dyn_cast<StrConstExpr>(_needle);
+    if(needle == nullptr) return Action::skipChildren();
+    assert(needle && "needle must be a constant string");
+
+    std::string oren_haystack;
+    std::string oren_needle;
+ 
+    int i=0;
+    
+    for (i=0;i < haystack->data.size(); i++) { oren_haystack[i]=haystack->data[i]; }
+    for (i=0;i < needle->data.size();   i++) { oren_needle[i]=needle->data[i]; }
+    
+    for (i=0;i < haystack->data.size(); i++) { llvm::errs() << haystack[i]; }
+    llvm::errs() << " contains ";
+    for (i=0;i < needle->data.size(); i++) { llvm::errs() << needle[i]; }
+    llvm::errs() << " == ";
+
+	bool res;
+	
+	if (oren_haystack.find(oren_needle) != std::string::npos)
+	{
+		res = true;
+	}
+	else
+	{
+		res = false;
+	}
+
+    if (res) { llvm::errs() << "True \n"; }
+    else     { llvm::errs() << "False\n"; }
+    
+    return Action::changeTo(ConstantExpr::create(res,Expr::Bool));	
+}
+
+ExprVisitor::Action ExprEvaluator::visitSuffixStringsExpr(const StrSuffixExpr& se)
+{
+    ref<Expr> _s      = visit(se.s);
+    ref<Expr> _suffix = visit(se.suffix);
+
+    StrConstExpr* s = dyn_cast<StrConstExpr>(_s);
+    if(s == nullptr) return Action::skipChildren();
+    assert(s && "s must be a constant string");
+
+    StrConstExpr* suffix = dyn_cast<StrConstExpr>(_suffix);
+    if(suffix == nullptr) return Action::skipChildren();
+    assert(suffix && "suffix must be a constant string");
+
+    std::string oren_s;
+    std::string oren_suffix;
+ 
+    int i=0;
+    
+    for (i=0;i < s->data.size();      i++) { oren_s[i]=s->data[i]; }
+    for (i=0;i < suffix->data.size(); i++) { oren_suffix[i]=suffix->data[i]; }
+    
+    for (i=0;i < s->data.size(); i++) { llvm::errs() << s[i]; }
+    llvm::errs() << " contains ";
+    for (i=0;i < suffix->data.size(); i++) { llvm::errs() << suffix[i]; }
+    llvm::errs() << " == ";
+
+	bool res = ends_with(oren_s,oren_suffix);
+
+    if (res) { llvm::errs() << "True \n"; }
+    else     { llvm::errs() << "False\n"; }
+    
+    return Action::changeTo(ConstantExpr::create(res,Expr::Bool));
+}
+
 ExprVisitor::Action ExprEvaluator::visitConcatStringsExpr(const StrConcatExpr& sc) {
 //    sfi.dump();
     ref<Expr> _s1 = visit(sc.s1);

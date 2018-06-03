@@ -147,8 +147,10 @@ public:
 	Str_CharAt,
 	Str_Substr,
 	Str_Concat,
+	Str_Suffix,
 	Str_Length,
 	Str_Compare,
+	Str_Contains,
 	Str_FirstIdxOf,
 	Str_FromBitVec8,
 	BitVector8_Var,
@@ -1006,9 +1008,6 @@ public:
 	static bool classof(const ConstantExpr *) { return false; }	
 };
 
-
-
-
 class StrFirstIdxOfExpr : public Expr {
 public:
 	ref<Expr> haystack;
@@ -1022,9 +1021,8 @@ public:
 		needle(in_needle) {
         type = Type::Integer;
         assert(haystack->isString());
-        assert(needle->isString());
-  
-  }
+        assert(needle->isString());  
+	}
 
 	virtual unsigned computeHash();
 
@@ -1051,6 +1049,94 @@ public:
 														}
 	virtual ref<Expr> rebuild(ref<Expr> kids[]) const { return create(kids[0],kids[1]); }
 	static bool classof(const Expr *E) { return E->getKind() == Expr::Str_FirstIdxOf; }
+	static bool classof(const ConstantExpr *) { return false; }	
+};
+
+class StrContainsExpr : public Expr {
+public:
+	ref<Expr> haystack;
+	ref<Expr> needle;
+	
+	StrContainsExpr(
+		const ref<Expr> &in_haystack,
+		const ref<Expr> &in_needle)
+		:
+		haystack(in_haystack),
+		needle(in_needle) {
+		type = Type::Integer;
+		assert(haystack->isString());
+		assert(needle->isString());
+	}
+
+	virtual unsigned computeHash();
+
+public:
+	static ref<Expr> create(const ref<Expr> &in_haystack,const ref<Expr> &in_needle)
+	{
+		return StrContainsExpr::alloc(in_haystack,in_needle);
+	}
+	
+	static ref<Expr> alloc(const ref<Expr> &in_haystack,const ref<Expr> &in_needle)
+	{
+		ref<Expr> res(new StrContainsExpr(in_haystack,in_needle));
+		res->computeHash();
+		return res;
+	}
+	virtual int compareContents(const Expr &b)  const {return   0;}		
+	virtual Kind      getKind()                 const {return   Expr::Str_Contains;}
+	virtual Width     getWidth()                const {return   Expr::Int8;}
+	virtual unsigned  getNumKids()              const {return    2;}
+	virtual ref<Expr> getKid(unsigned int i)    const	{
+															if(i==0){return haystack;}
+															if(i==1){return needle;}
+															return 0;
+														}
+	virtual ref<Expr> rebuild(ref<Expr> kids[]) const { return create(kids[0],kids[1]); }
+	static bool classof(const Expr *E) { return E->getKind() == Expr::Str_Contains; }
+	static bool classof(const ConstantExpr *) { return false; }	
+};
+
+class StrSuffixExpr : public Expr {
+public:
+	ref <Expr> s;
+	ref <Expr> suffix;
+	
+	StrSuffixExpr(
+		const ref<Expr> &in_s,
+		const ref<Expr> &in_suffix)
+		:
+		s(in_s),
+		suffix(in_suffix) {
+		type = Type::Integer;
+		assert(s->isString());
+		assert(suffix->isString());
+	}
+
+	virtual unsigned computeHash();
+
+public:
+	static ref<Expr> create(const ref<Expr> &in_s,const ref<Expr> &in_suffix)
+	{
+		return StrSuffixExpr::alloc(in_s,in_suffix);
+	}
+	
+	static ref<Expr> alloc(const ref<Expr> &in_s,const ref<Expr> &in_suffix)
+	{
+		ref<Expr> res(new StrSuffixExpr(in_s,in_suffix));
+		res->computeHash();
+		return res;
+	}
+	virtual int compareContents(const Expr &b)  const {return   0;}		
+	virtual Kind      getKind()                 const {return   Expr::Str_Suffix;}
+	virtual Width     getWidth()                const {return   Expr::Int8;}
+	virtual unsigned  getNumKids()              const {return    2;}
+	virtual ref<Expr> getKid(unsigned int i)    const	{
+															if(i==0){return s;}
+															if(i==1){return suffix;}
+															return 0;
+														}
+	virtual ref<Expr> rebuild(ref<Expr> kids[]) const { return create(kids[0],kids[1]); }
+	static bool classof(const Expr *E) { return E->getKind() == Expr::Str_Suffix; }
 	static bool classof(const ConstantExpr *) { return false; }	
 };
 
