@@ -33,8 +33,8 @@ int main(int argc, char **argv)
 	char *p;
 	
 	p = malloc(20);
-	markString(p);
 	klee_make_symbolic(p,20,"p");
+	markString(p);
 
 	p[ 0] = 'a';
 	p[ 1] = 'b';

@@ -175,6 +175,7 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(Str_Length);
     X(Str_Concat);
     X(Str_Suffix);
+    X(Str_Contains);
     X(Str_Compare);
     X(Str_FirstIdxOf);
     X(Str_FromBitVec8);

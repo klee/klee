@@ -170,21 +170,21 @@ ExprVisitor::Action ExprEvaluator::visitContainsStringsExpr(const StrContainsExp
     if(needle == nullptr) return Action::skipChildren();
     assert(needle && "needle must be a constant string");
 
-    std::string oren_haystack;
-    std::string oren_needle;
- 
+	std::string oren_haystack(haystack->data.begin(),haystack->data.end());
+	std::string oren_needle(needle->data.begin(),needle->data.end());
+	
     int i=0;
     
-    for (i=0;i < haystack->data.size(); i++) { oren_haystack[i]=haystack->data[i]; }
-    for (i=0;i < needle->data.size();   i++) { oren_needle[i]=needle->data[i]; }
+    //for (i=0;i < haystack->data.size(); i++) { oren_haystack[i]=haystack->data[i]; }
+    //for (i=0;i < needle->data.size();   i++) { oren_needle[i]=needle->data[i]; }
     
-    for (i=0;i < haystack->data.size(); i++) { llvm::errs() << haystack[i]; }
-    llvm::errs() << " contains ";
-    for (i=0;i < needle->data.size(); i++) { llvm::errs() << needle[i]; }
-    llvm::errs() << " == ";
+    //for (i=0;i < oren_haystack.size(); i++) { llvm::errs() << oren_haystack[i]; }
+    //llvm::errs() << " contains ";
+    //for (i=0;i < oren_needle.size(); i++) { llvm::errs() << oren_needle[i]; }
+    //llvm::errs() << " == ";
 
-	bool res;
-	
+	bool res = false;
+				
 	if (oren_haystack.find(oren_needle) != std::string::npos)
 	{
 		res = true;
@@ -213,18 +213,18 @@ ExprVisitor::Action ExprEvaluator::visitSuffixStringsExpr(const StrSuffixExpr& s
     if(suffix == nullptr) return Action::skipChildren();
     assert(suffix && "suffix must be a constant string");
 
-    std::string oren_s;
-    std::string oren_suffix;
+    std::string oren_s(s->data.begin(),s->data.end());
+    std::string oren_suffix(suffix->data.begin(),suffix->data.end());
  
     int i=0;
     
-    for (i=0;i < s->data.size();      i++) { oren_s[i]=s->data[i]; }
-    for (i=0;i < suffix->data.size(); i++) { oren_suffix[i]=suffix->data[i]; }
+    //for (i=0;i < s->data.size();      i++) { oren_s[i]=s->data[i]; }
+    //for (i=0;i < suffix->data.size(); i++) { oren_suffix[i]=suffix->data[i]; }
     
-    for (i=0;i < s->data.size(); i++) { llvm::errs() << s[i]; }
-    llvm::errs() << " contains ";
-    for (i=0;i < suffix->data.size(); i++) { llvm::errs() << suffix[i]; }
-    llvm::errs() << " == ";
+    //for (i=0;i < s->data.size(); i++) { llvm::errs() << s[i]; }
+    //llvm::errs() << " contains ";
+    //for (i=0;i < suffix->data.size(); i++) { llvm::errs() << suffix[i]; }
+    //llvm::errs() << " == ";
 
 	bool res = ends_with(oren_s,oren_suffix);
 

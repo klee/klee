@@ -100,6 +100,7 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e)
     case Expr::Str_FirstIdxOf: res = visitFirstIndexOf(static_cast<StrFirstIdxOfExpr&>(ep)); break;
     case Expr::Str_Concat:     res = visitConcatStringsExpr(static_cast<StrConcatExpr&>(ep)); break;
     case Expr::Str_Suffix:     res = visitSuffixStringsExpr(static_cast<StrSuffixExpr&>(ep)); break;
+    case Expr::Str_Contains:   res = visitContainsStringsExpr(static_cast<StrContainsExpr&>(ep)); break;
     case Expr::Str_FromBitVec8: res = visitStrFromBv8(static_cast<StrFromBitVector8Expr&>(ep)); break;
     case Expr::BvToInt: res = visitBvToInt(static_cast<BvToIntExpr&>(ep)); break;
 
