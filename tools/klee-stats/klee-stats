@@ -252,6 +252,71 @@ def drawLineChart(vectors, titles):
                 transparent=False)
 
 
+def grafana(dirs):
+  dr = getLogFile(dirs[0])
+  from flask import Flask, jsonify, request
+  from json import dumps
+  import datetime
+  import time
+  app = Flask(__name__)
+
+  def toepoch(date_text):
+    dt = datetime.datetime.strptime(date_text, "%Y-%m-%dT%H:%M:%S.%fZ")
+    epoch = (dt - datetime.datetime(1970, 1, 1)).total_seconds()
+    return epoch
+
+  @app.route('/')
+  def status():
+      return 'OK'
+
+  @app.route('/search', methods=['GET', 'POST'])
+  def search():
+      jsn = request.get_json()
+      conn = sqlite3.connect(dr);
+      cursor = conn.execute('SELECT * FROM stats')
+      names = [description[0] for description in cursor.description]
+      return jsonify(names)
+
+  @app.route('/query', methods=['POST'])
+  def query():
+      jsn = request.get_json()
+#      print(dumps(jsn))
+      interval = jsn["intervalMs"]
+      limit = jsn["maxDataPoints"]
+      frm = toepoch(jsn["range"]["from"])
+      to = toepoch(jsn["range"]["to"])
+      targets = [str(t["target"]) for t in jsn["targets"]]
+      startTime = os.path.getmtime(dr)
+      fromTime = frm - startTime if frm - startTime > 0 else 0
+      toTime =  to - startTime if to - startTime > fromTime else fromTime + 100
+#      print(startTime)
+      conn = sqlite3.connect(dr);
+      s = "SELECT WallTime + " + str(startTime) + ","  + ",".join(targets) + " FROM stats GROUP BY WallTime/3 LIMIT ?"
+      s = "SELECT WallTime + {startTime} , {fields} " \
+          + " FROM stats" \
+          + " WHERE WallTime >= {fromTime} AND WallTime <= {toTime}" \
+          + " GROUP BY WallTime/{intervalSeconds} LIMIT {limit}"
+      s = s.format(startTime=startTime,
+                   fields=",".join(["AVG( {0} )".format(t) for t in targets]),
+                   intervalSeconds=interval/1000,
+                   fromTime=fromTime,
+                   toTime=toTime,
+                   limit=limit)
+      cursor = conn.execute(s)
+      result = [ {"target": t, "datapoints": []} for t in targets ]
+      for line in cursor:
+          unixtimestamp = int(line[0] * 1000) #miliseconds
+          for field, datastream in zip(line[1:], result):
+              datastream["datapoints"].append([field, unixtimestamp])
+
+#      print(len(result[0]["datapoints"]))
+      ret = jsonify(result)
+#      print(result)
+      return ret
+
+  app.run()
+  return 0
+
 def main():
     # function for sanitizing arguments
     def isPositiveInt(value):
@@ -296,6 +361,9 @@ def main():
     parser.add_argument('-to-csv',
                           action='store_true', dest='toCsv',
                           help='Dump run.stats to STDOUT in CSV format')
+    parser.add_argument('-grafana',
+                          action='store_true', dest='grafana',
+                          help='Start a graphan web server')
 
     # argument group for controlling output verboseness
     pControl = parser.add_mutually_exclusive_group(required=False)
@@ -356,6 +424,8 @@ def main():
         pr = 'more'
 
     dirs = getKleeOutDirs(args.dir)
+    if args.grafana:
+      return grafana(dirs)
     if len(dirs) == 0:
         print('no klee output dir found', file=sys.stderr)
         exit(1)
