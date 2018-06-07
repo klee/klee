@@ -92,20 +92,6 @@ class LazyEvalList:
         return len(self.lines)
 
 
-def getMatchedRecordIndex(records, column, target):
-    """Find target from the specified column in records."""
-    target = int(target)
-    lo = 0
-    hi = len(records) - 1
-    while lo < hi:
-        mid = (lo + hi) // 2
-        if column(records[mid]) <= target:
-            lo = mid + 1
-        else:
-            hi = mid
-    return lo
-
-
 
 def stripCommonPathPrefix(paths):
     paths = map(os.path.normpath, paths)
