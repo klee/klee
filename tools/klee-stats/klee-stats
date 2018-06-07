@@ -323,15 +323,6 @@ def main():
                           help='Print extra information (needed when '
                           'monitoring an ongoing run).')
 
-    # arguments for sorting
-    parser.add_argument('--sort-by', dest='sortBy', metavar='header',
-                        help='Key value to sort by. Must be chosen from '
-                        'the headers of the table outputted  (e.g., '
-                        '--sort-by=Instrs).')
-    parser.add_argument('--ascending',
-                        dest='ascending', action='store_true',
-                        help='Sort in ascending order (default: False).')
-
     # arguments for comparing
     parser.add_argument('--compare-by', dest='compBy', metavar='header',
                         help='Key value on which to compare runs to the '
@@ -431,10 +422,6 @@ def main():
     totStats = [sum(e) for e in zip(*totStats)]
     totalRow = ['Total ({0})'.format(len(table))]
     totalRow.extend(getRow(totRecords, totStats, pr))
-
-    if args.sortBy:
-        table = sorted(table, key=itemgetter(getKeyIndex(args.sortBy, labels)),
-                       reverse=(not args.ascending))
 
     if len(data) > 1:
         table.append(totalRow)
