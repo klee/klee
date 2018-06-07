@@ -256,18 +256,6 @@ def grafana(dirs):
   return 0
 
 def main():
-    # function for sanitizing arguments
-    def isPositiveInt(value):
-        try:
-            value = int(value)
-        except ValueError:
-            raise argparse.ArgumentTypeError(
-                'integer expected: {0}'.format(value))
-        if value <= 0:
-            raise argparse.ArgumentTypeError(
-                'positive integer expected: {0}'.format(value))
-        return value
-
     parser = argparse.ArgumentParser(
         description='output statistics logged by klee',
         epilog='LEGEND\n' + tabulate(Legend),
@@ -275,11 +263,6 @@ def main():
 
     parser.add_argument('dir', nargs='+', help='klee output directory')
 
-    parser.add_argument('--precision',
-                        dest='precision', type=isPositiveInt,
-                        default=2, metavar='n',
-                        help='Floating point numbers display precision '
-                        '(default: 2).')
     parser.add_argument('--table-format',
                         choices=['plain', 'simple', 'grid', 'pipe', 'orgtbl',
                                  'rst', 'mediawiki', 'latex', 'klee'],
@@ -383,13 +366,13 @@ def main():
         print(tabulate(
             table, headers='firstrow',
             tablefmt=args.tableFormat,
-            floatfmt='.{p}f'.format(p=args.precision),
+            floatfmt='.{p}f'.format(p=2),
             numalign='right', stralign='center'))
     else:
         stream = tabulate(
             table, headers='firstrow',
             tablefmt=KleeTable,
-            floatfmt='.{p}f'.format(p=args.precision),
+            floatfmt='.{p}f'.format(p=2),
             numalign='right', stralign='center')
         # add a line separator before the total line
         if len(data) > 1:
