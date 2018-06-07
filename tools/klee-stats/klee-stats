@@ -118,18 +118,6 @@ def stripCommonPathPrefix(paths):
     return ['/'.join(p[i:]) for p in paths]
 
 
-def getKeyIndex(key, labels):
-    """Get the index of the specified key in labels."""
-    def normalizeKey(key):
-        return re.split('\W', key)[0]
-
-    for i, title in enumerate(labels):
-        if normalizeKey(title) == normalizeKey(key):
-            return i
-    else:
-        raise ValueError('invalid key: {0}'.format(key))
-
-
 def getKleeOutDirs(dirs):
     kleeOutDirs = []
     for dir in dirs:
@@ -323,22 +311,6 @@ def main():
                           help='Print extra information (needed when '
                           'monitoring an ongoing run).')
 
-    # arguments for comparing
-    parser.add_argument('--compare-by', dest='compBy', metavar='header',
-                        help='Key value on which to compare runs to the '
-                        'reference one (which is the first one). Must be '
-                        'chosen from the headers of the table oputputted. '
-                        'e.g., --compare-by=Instrs shows how each run '
-                        'compares to the reference run after executing the '
-                        'same number of instructions as the reference run. '
-                        "If a run hasn't executed as many instructions as "
-                        'the reference one, we simply print the statistics '
-                        'at the end of that run.')
-    parser.add_argument('--compare-at', dest='compAt', metavar='value',
-                        help='Value to compare the runs at. Can be special '
-                        "value 'last' to compare at the last point which "
-                        'makes sense. Use in conjunction with --compare-by.')
-
     args = parser.parse_args()
 
 
@@ -386,36 +358,16 @@ def main():
     rawLabels = ('Instrs', '', '', '', '', '', '', 'Queries',
                  '', '', 'Time', 'ICov', '', '', '', '', '', '')
 
-    if args.compBy:
-        # index in the record of run.stats
-        compIndex = getKeyIndex(args.compBy, rawLabels)
-        if args.compAt:
-            if args.compAt == 'last':
-                # [records][last-record][compare-by-index]
-                refValue = min(map(lambda r: r[1][-1][compIndex], data))
-            else:
-                refValue = args.compAt
-        else:
-            refValue = data[0][1][-1][compIndex]
-
     # build the main body of the table
     table = []
     totRecords = []  # accumulated records
     totStats = []    # accumulated stats
     for path, records in data:
         row = [path]
-        if args.compBy:
-            matchIndex = getMatchedRecordIndex(
-                records, itemgetter(compIndex), refValue)
-            stats = recrods.aggregateRecords() # aggregateRecords(LazyEvalList(records[:matchIndex + 1]))
-            totStats.append(stats)
-            row.extend(getRow(records[matchIndex], stats, pr))
-            totRecords.append(records[matchIndex])
-        else:
-            stats = records.aggregateRecords()
-            totStats.append(stats)
-            row.extend(getRow(records[-1], stats, pr))
-            totRecords.append(records[-1])
+        stats = records.aggregateRecords()
+        totStats.append(stats)
+        row.extend(getRow(records[-1], stats, pr))
+        totRecords.append(records[-1])
         table.append(row)
     # calculate the total
     totRecords = [sum(e) for e in zip(*totRecords)]
