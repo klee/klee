@@ -202,56 +202,6 @@ def getRow(record, stats, pr):
     return row
 
 
-def drawLineChart(vectors, titles):
-    """Draw a line chart based on data from vectors.
-
-    Args:
-        vectors: A list of vectors. Each vector is drawn in a separate
-                 subchart.
-        titles: A list of strings. Each string is an explanation of the
-                corresponding vector.
-    """
-    try:
-        import matplotlib
-        matplotlib.use('Agg')  # plot without X-server connection
-        import matplotlib.pyplot as plt
-    except:
-        print('Error: Package "matplotlib" required for figure plotting. '
-              'Please install it using "pip" or your package manager.',
-              file=sys.stderr)
-        exit(1)
-    from math import sqrt, ceil
-
-    nFigs = len(vectors)       # number of subfigures
-    nRow = int(sqrt(nFigs))    # number of rows in the figure
-    nCol = ceil(nFigs / nRow)  # number of columns in the figure
-
-    fig = plt.figure()
-    for i in range(nFigs):
-        ax = fig.add_subplot(nRow, nCol, i+1)
-        ax.plot(vectors[i])
-        ax.set_title(titles[i])
-        #ax.set_xlabel()
-        #ax.set_ylabel()
-
-    #fig.show()
-    #raw_input('Press any key to continue..')
-
-    def getFileName():
-        """Get a unused file name in current directory."""
-        i = 0
-        fileName = 'fig-klee-stats-{0}.png'.format(i)
-        while os.path.exists(fileName):
-            i = i + 1
-            fileName = 'fig-klee-stats-{0}.png'.format(i)
-        return fileName
-
-    plt.savefig(getFileName(),
-                dpi=150,  # dots-per-inch, default: 100
-                bbox_inches='tight',  # tighter bbox
-                transparent=False)
-
-
 def grafana(dirs):
   dr = getLogFile(dirs[0])
   from flask import Flask, jsonify, request
@@ -347,13 +297,6 @@ def main():
                                  'rst', 'mediawiki', 'latex', 'klee'],
                         dest='tableFormat', default='klee',
                         help='Table format for the summary.')
-    parser.add_argument('--draw-line-chart',
-                        dest='drawLineChart', metavar='header-list',
-                        help='Draw line chart for a list of columns. '
-                        'Columns must be chosen from the headers of the '
-                        'table outputted and separated by comma (e.g., '
-                        '--draw-line-chart=Instrs,Time). Data points '
-                        'on x-axis correspond to lines in run.stats.')
     parser.add_argument('--sample-interval', dest='sampleInterv',
                         type=isPositiveInt, default='10', metavar='n',
                         help='Sample a data point every n lines for a '
@@ -520,36 +463,6 @@ def main():
             stream = '\n'.join(stream)
         print(stream)
 
-    if args.drawLineChart:
-        if len(dirs) != 1:
-            print('--draw-line-chart only supports using a single file',
-                  file=sys.stderr)
-            exit(1)
-
-        # sample according to the given interval
-        samples = [r for i, r in enumerate(data[0][1])
-                   if i % args.sampleInterv == 0]
-        vectors = []
-        for i in range(len(samples)):
-            # aggregate all the samples upto the i-th one
-            stats = aggregateRecords(samples[:i + 1])
-            vectors.append(getRow(samples[i], stats, pr))
-
-        titles = args.drawLineChart.split(',')
-        # Index returned by getKeyIndex() against labels is starting from
-        # 'Path' column.  vectors here doesn't have the 'Path' column.
-        indices = [getKeyIndex(e, labels) - 1 for e in titles]
-        # get one more column to make sure itemgetter always return tuples
-        indices.append(0)
-        # strip columns not specified by the user
-        vectors = map(itemgetter(*indices), vectors)
-        # combine elements in the same column into the same tuple
-        vectors = list(zip(*vectors))
-        # remove the column we get but not needed
-        vectors = vectors[:-1]
-
-        drawLineChart(vectors, titles)
-
-
+   
 if __name__ == '__main__':
     main()
