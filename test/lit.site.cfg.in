@@ -28,6 +28,10 @@ config.have_selinux = True if @HAVE_SELINUX@ == 1 else False
 config.enable_stp = True if @ENABLE_STP@ == 1 else False
 config.enable_z3 = True if @ENABLE_Z3@ == 1 else False
 
+# Add sanitizer list
+config.environment['LSAN_OPTIONS'] = "suppressions=@KLEE_UTILS_DIR@/sanitizers/lsan.txt"
+config.environment['UBSAN_OPTIONS'] = "suppressions=@KLEE_UTILS_DIR@/sanitizers/ubsan.txt"
+
 # Current target
 config.target_triple = "@TARGET_TRIPLE@"
 
