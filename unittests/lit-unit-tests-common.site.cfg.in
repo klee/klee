@@ -7,3 +7,5 @@ config.unit_test_exe_suffix = "@UNIT_TEST_EXE_SUFFIX@"
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@CMAKE_SOURCE_DIR@/unittests/lit-unit-tests-common.cfg")
+config.environment['LSAN_OPTIONS'] = "suppressions=@KLEE_UTILS_DIR@/sanitizers/lsan.txt"
+config.environment['UBSAN_OPTIONS'] = "suppressions=@KLEE_UTILS_DIR@/sanitizers/ubsan.txt"
