@@ -151,6 +151,7 @@ RandomSearcher::update(ExecutionState *current,
                                                      ie = removedStates.end();
        it != ie; ++it) {
     ExecutionState *es = *it;
+    __attribute__((unused))
     bool ok = false;
 
     for (std::vector<ExecutionState*>::iterator it = states.begin(),

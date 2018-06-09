@@ -352,6 +352,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
         ::Z3_ast arrayElementExpr;
         Z3ASTHandle initial_read = builder->getInitialRead(array, offset);
 
+        __attribute__((unused))
         bool successfulEval =
             Z3_model_eval(builder->ctx, theModel, initial_read,
                           /*model_completion=*/Z3_TRUE, &arrayElementExpr);
@@ -362,6 +363,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
                "Evaluated expression has wrong sort");
 
         int arrayElementValue = 0;
+        __attribute__((unused))
         bool successGet = Z3_get_numeral_int(builder->ctx, arrayElementExpr,
                                              &arrayElementValue);
         assert(successGet && "failed to get value back");
@@ -417,6 +419,7 @@ bool Z3SolverImpl::validateZ3Model(::Z3_solver &theSolver, ::Z3_model &theModel)
         Z3_ast_vector_get(builder->ctx, constraints, index), builder->ctx);
 
     ::Z3_ast rawEvaluatedExpr;
+    __attribute__((unused))
     bool successfulEval =
         Z3_model_eval(builder->ctx, theModel, constraint,
                       /*model_completion=*/Z3_TRUE, &rawEvaluatedExpr);
