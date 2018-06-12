@@ -144,6 +144,9 @@ else()
 endif()
 
 
+# Reference specific library paths used during linking for install
+SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
 ################################################################################
 # Add our CMake module directory to the list of module search directories
 ################################################################################
@@ -160,6 +163,7 @@ set(KLEE_COMPONENT_CXX_DEFINES "")
 set(KLEE_COMPONENT_CXX_FLAGS "")
 set(KLEE_SOLVER_LIBRARIES "")
 set(KLEE_COMPONENT_EXTRA_LIBRARIES "")
+
 
 ################################################################################
 # Assertions
@@ -640,6 +644,7 @@ message(STATUS "KLEE_COMPONENT_EXTRA_INCLUDE_DIRS: '${KLEE_COMPONENT_EXTRA_INCLU
 message(STATUS "KLEE_COMPONENT_CXX_DEFINES: '${KLEE_COMPONENT_CXX_DEFINES}'")
 message(STATUS "KLEE_COMPONENT_CXX_FLAGS: '${KLEE_COMPONENT_CXX_FLAGS}'")
 message(STATUS "KLEE_COMPONENT_EXTRA_LIBRARIES: '${KLEE_COMPONENT_EXTRA_LIBRARIES}'")
+message(STATUS "KLEE_SOLVER_LIBRARIES: '${KLEE_SOLVER_LIBRARIES}'")
 
 ################################################################################
 # KLEE components
