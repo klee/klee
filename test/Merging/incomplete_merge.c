@@ -1,12 +1,12 @@
 // RUN: %llvmgcc -emit-llvm -g -c -o %t.bc %s
 // RUN: rm -rf %t.klee-out
-// RUN: klee --output-dir=%t.klee-out --use-merge --debug-log-merge --use-incomplete-merge --debug-log-incomplete-merge --search=nurs:covnew --use-batching-search %t.bc 2>&1 | FileCheck %s
+// RUN: %klee --output-dir=%t.klee-out --use-merge --debug-log-merge --use-incomplete-merge --debug-log-incomplete-merge --search=nurs:covnew --use-batching-search %t.bc 2>&1 | FileCheck %s
 // RUN: rm -rf %t.klee-out
-// RUN: klee --output-dir=%t.klee-out --use-merge --debug-log-merge --use-incomplete-merge --debug-log-incomplete-merge --search=bfs --use-batching-search %t.bc 2>&1 | FileCheck %s
+// RUN: %klee --output-dir=%t.klee-out --use-merge --debug-log-merge --use-incomplete-merge --debug-log-incomplete-merge --search=bfs --use-batching-search %t.bc 2>&1 | FileCheck %s
 // RUN: rm -rf %t.klee-out
-// RUN: klee --output-dir=%t.klee-out --use-merge --debug-log-merge --use-incomplete-merge --debug-log-incomplete-merge --search=dfs --use-batching-search %t.bc 2>&1 | FileCheck %s
+// RUN: %klee --output-dir=%t.klee-out --use-merge --debug-log-merge --use-incomplete-merge --debug-log-incomplete-merge --search=dfs --use-batching-search %t.bc 2>&1 | FileCheck %s
 // RUN: rm -rf %t.klee-out
-// RUN: klee --output-dir=%t.klee-out --use-merge --debug-log-merge --use-incomplete-merge --debug-log-incomplete-merge --search=nurs:covnew %t.bc 2>&1 | FileCheck %s
+// RUN: %klee --output-dir=%t.klee-out --use-merge --debug-log-merge --use-incomplete-merge --debug-log-incomplete-merge --search=nurs:covnew %t.bc 2>&1 | FileCheck %s
 
 // CHECK: open merge:
 // 5 close merges
