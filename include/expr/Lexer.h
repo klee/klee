@@ -70,6 +70,8 @@ namespace expr {
 
     // dump - Dump the token to stderr.
     void dump();
+
+    Token() : kind(Unknown), start(nullptr) {}
   };
 
   /// Lexer - Interface for lexing tokens from a .kquery language file.
