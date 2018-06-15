@@ -424,8 +424,19 @@ bool klee::loadFile(const std::string &fileName, LLVMContext &context,
 
         StringRef memberName;
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
-        ErrorOr<StringRef> memberNameErr = AI->getName();
-        std::error_code ec = memberNameErr.getError();
+        std::error_code ec;
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+        ErrorOr<object::Archive::Child> childOrErr = *AI;
+        ec = childOrErr.getError();
+        if (ec) {
+                errorMsg = ec.message();
+                return false;
+        }
+#else
+	object::Archive::child_iterator childOrErr = AI;
+#endif
+        ErrorOr<StringRef> memberNameErr = childOrErr->getName();
+        ec = memberNameErr.getError();
         if (!ec) {
           memberName = memberNameErr.get();
 #else
@@ -443,7 +454,7 @@ bool klee::loadFile(const std::string &fileName, LLVMContext &context,
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
         ErrorOr<std::unique_ptr<llvm::object::Binary>> child =
-            AI->getAsBinary();
+            childOrErr->getAsBinary();
         ec = child.getError();
 #else
         OwningPtr<object::Binary> child;
@@ -452,7 +463,7 @@ bool klee::loadFile(const std::string &fileName, LLVMContext &context,
         if (ec) {
 // If we can't open as a binary object file its hopefully a bitcode file
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
-          ErrorOr<MemoryBufferRef> buff = AI->getMemoryBufferRef();
+          ErrorOr<MemoryBufferRef> buff = childOrErr->getMemoryBufferRef();
           ec = buff.getError();
 #elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
           ErrorOr<std::unique_ptr<MemoryBuffer>> buffErr =
