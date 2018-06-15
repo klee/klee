@@ -159,7 +159,12 @@ GetAllUndefinedSymbols(Module *M, std::set<std::string> &UndefinedSymbols) {
 static bool linkTwoModules(llvm::Module *Dest,
                            std::unique_ptr<llvm::Module> Src,
                            std::string &errorMsg) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+  // Get the potential error message (Src is moved and won't be available later)
+  errorMsg = "Linking module " + Src->getModuleIdentifier() + " failed";
+  auto linkResult = Linker::linkModules(*Dest, std::move(Src));
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
   raw_string_ostream Stream(errorMsg);
   DiagnosticPrinterRawOStream DP(Stream);
   auto linkResult = Linker::LinkModules(
