@@ -18,7 +18,7 @@
 #ifdef HAVE_MALLINFO
 #include <malloc.h>
 #endif
-#ifdef HAVE_MALLOC_MALLOC_H
+#ifdef HAVE_MALLOC_ZONE_STATISTICS
 #include <malloc/malloc.h>
 #endif
 
@@ -95,7 +95,7 @@ size_t util::GetTotalMallocUsage() {
   MallocExtension::instance()->GetNumericProperty(
       "generic.current_allocated_bytes", &value);
   return value;
-#elif HAVE_MALLINFO
+#elif defined(HAVE_MALLINFO)
   struct mallinfo mi = ::mallinfo();
   // The malloc implementation in glibc (pmalloc2)
   // does not include mmap()'ed memory in mi.uordblks
@@ -106,7 +106,7 @@ size_t util::GetTotalMallocUsage() {
   return (unsigned)mi.uordblks;
 #endif
 
-#elif defined(HAVE_MALLOC_ZONE_STATISTICS) && defined(HAVE_MALLOC_MALLOC_H)
+#elif defined(HAVE_MALLOC_ZONE_STATISTICS)
 
   // Support memory usage on Darwin.
   malloc_statistics_t Stats;

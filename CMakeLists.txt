@@ -182,9 +182,9 @@ option(KLEE_ENABLE_TIMESTAMP "Add timestamps to KLEE sources" OFF)
 # Include useful CMake functions
 ################################################################################
 include(GNUInstallDirs)
+include(CheckCXXSymbolExists)
 include(CheckIncludeFile)
 include(CheckIncludeFileCXX)
-include(CheckFunctionExists)
 include(CheckPrototypeDefinition)
 include("${CMAKE_SOURCE_DIR}/cmake/string_to_list.cmake")
 include("${CMAKE_SOURCE_DIR}/cmake/klee_component_add_cxx_flag.cmake")
@@ -434,11 +434,9 @@ endif()
 ################################################################################
 # Miscellaneous header file detection
 ################################################################################
-check_function_exists(mallinfo HAVE_MALLINFO) # FIXME: should test CXX compiler not C
-check_function_exists(__ctype_b_loc HAVE_CTYPE_EXTERNALS) # FIXME: should test CXX compiler not C
-
-check_include_file_cxx(malloc/malloc.h HAVE_MALLOC_MALLOC_H)
-check_function_exists(malloc_zone_statistics HAVE_MALLOC_ZONE_STATISTICS)
+check_cxx_symbol_exists(__ctype_b_loc ctype.h HAVE_CTYPE_EXTERNALS)
+check_cxx_symbol_exists(mallinfo malloc.h HAVE_MALLINFO)
+check_cxx_symbol_exists(malloc_zone_statistics malloc/malloc.h HAVE_MALLOC_ZONE_STATISTICS)
 
 # FIXME: This is needed by the runtime not KLEE itself so we are testing the wrong
 # compiler.
