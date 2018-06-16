@@ -6,6 +6,7 @@
 # License. See LICENSE.TXT for details.
 #
 #===------------------------------------------------------------------------===#
+include(CMakePushCheckState)
 
 find_package(Z3)
 # Set the default so that if the following is true:
@@ -31,12 +32,12 @@ if (ENABLE_SOLVER_Z3)
     list(APPEND KLEE_SOLVER_LIBRARIES ${Z3_LIBRARIES})
 
     # Check the signature of `Z3_get_error_msg()`
-    set (_old_CMAKE_REQUIRED_LIBRARIES "${CMAKE_REQUIRED_LIBRARIES}")
+    cmake_push_check_state()
     set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} ${Z3_LIBRARIES})
     check_prototype_definition(Z3_get_error_msg
       "Z3_string Z3_get_error_msg(Z3_context c, Z3_error_code err)"
       "NULL" "${Z3_INCLUDE_DIRS}/z3.h" HAVE_Z3_GET_ERROR_MSG_NEEDS_CONTEXT)
-    set(CMAKE_REQUIRED_LIBRARIES ${_old_CMAKE_REQUIRED_LIBRARIES})
+    cmake_pop_check_state()
     if (HAVE_Z3_GET_ERROR_MSG_NEEDS_CONTEXT)
       message(STATUS "Z3_get_error_msg requires context")
     else()
