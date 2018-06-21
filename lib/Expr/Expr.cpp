@@ -182,7 +182,12 @@ unsigned Expr::computeHash() {
 }
 
 unsigned ConstantExpr::computeHash() {
-  hashValue = hash_value(value) ^ (getWidth() * MAGIC_HASH_CONSTANT);
+  Expr::Width w = getWidth();
+  if (w <= 64)
+    hashValue = value.getLimitedValue() ^ (w * MAGIC_HASH_CONSTANT);
+  else
+    hashValue = hash_value(value) ^ (w * MAGIC_HASH_CONSTANT);
+
   return hashValue;
 }
 
