@@ -27,11 +27,11 @@ int main(int argc, char **argv) {
   }
 
   // CHECK-DFS: default
-  // CHECK-DFS: space
   // CHECK-DFS: tab
+  // CHECK-DFS: space
 
-  // CHECK-BFS: tab
   // CHECK-BFS: space
+  // CHECK-BFS: tab
   // CHECK-BFS: default
 
   return 0;
