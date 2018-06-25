@@ -6,6 +6,7 @@
 
 int main() {
   int x, y, z = 0;
+  int array[5] = {1,1,1,1,1};
   klee_make_symbolic(&x, sizeof x, "x");
   klee_make_symbolic(&y, sizeof y, "y");
   if (x) {
@@ -13,5 +14,9 @@ int main() {
   } else {
     assert(!klee_is_symbolic(z));
   }
+
+  klee_assume(y >= 0 & y <= 4);
+  assert(!klee_is_symbolic(array[y]));
+
   return 0;
 }
