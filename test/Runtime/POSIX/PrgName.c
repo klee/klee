@@ -1,6 +1,10 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t2.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --posix-runtime --exit-on-error %t2.bc --sym-arg 10 >%t.log
+// RUN: perf record -F 999 -a -o %t.out.data  -g -- %klee --output-dir=%t.klee-out --posix-runtime --exit-on-error %t2.bc --sym-arg 10 >%t.log
+// RUN:   perf script -i %t.out.data > %t.out.perf
+// RUN:   /data/Random/FlameGraph/stackcollapse-perf.pl %t.out.perf > %t.out.folded
+// RUN:   cat %t.out.folded | /data/Random/FlameGraph/flamegraph.pl > %t.data.svg
+
 // RUN: test -f %t.klee-out/test000001.ktest
 // RUN: test -f %t.klee-out/test000002.ktest
 // RUN: grep -q "No" %t.log
