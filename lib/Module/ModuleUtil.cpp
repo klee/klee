@@ -306,9 +306,13 @@ Function *klee::getDirectCallTarget(CallSite cs, bool moduleIsFullyLinked) {
 }
 
 static bool valueIsOnlyCalled(const Value *v) {
-  for (Value::const_use_iterator it = v->use_begin(), ie = v->use_end();
-       it != ie; ++it) {
-    if (const Instruction *instr = dyn_cast<Instruction>(*it)) {
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
+  for (auto it = v->use_begin(), ie = v->use_end(); it != ie; ++it) {
+    auto user = *it;
+#else
+  for (auto user : v->users()) {
+#endif
+    if (const Instruction *instr = dyn_cast<Instruction>(user)) {
       if (instr->getOpcode()==0) continue; // XXX function numbering inst
 
       // Make sure the instruction is a call or invoke.
@@ -320,12 +324,12 @@ static bool valueIsOnlyCalled(const Value *v) {
       if (cs.hasArgument(v))
         return false;
     } else if (const llvm::ConstantExpr *ce =
-               dyn_cast<llvm::ConstantExpr>(*it)) {
+               dyn_cast<llvm::ConstantExpr>(user)) {
       if (ce->getOpcode()==Instruction::BitCast)
         if (valueIsOnlyCalled(ce))
           continue;
       return false;
-    } else if (const GlobalAlias *ga = dyn_cast<GlobalAlias>(*it)) {
+    } else if (const GlobalAlias *ga = dyn_cast<GlobalAlias>(user)) {
       // XXX what about v is bitcast of aliasee?
       if (v==ga->getAliasee() && !valueIsOnlyCalled(ga))
         return false;
