@@ -296,21 +296,22 @@ void ObjectState::fastRangeCheckOffset(ref<Expr> offset,
 
 void ObjectState::flushRangeForRead(unsigned rangeBase, 
                                     unsigned rangeSize) const {
-  if (!flushMask) flushMask = new BitArray(size, true);
+//  if (!flushMask) flushMask = new BitArray(size, true);
  
   for (unsigned offset=rangeBase; offset<rangeBase+rangeSize; offset++) {
-    if (!isByteFlushed(offset)) {
+  //  if (isByteFlushed(offset)) {
       if (isByteConcrete(offset)) {
         updates.extend(ConstantExpr::create(offset, Expr::Int32),
                        ConstantExpr::create(concreteStore[offset], Expr::Int8));
-      } else {
+      } else if(isByteKnownSymbolic(offset)) {
         assert(isByteKnownSymbolic(offset) && "invalid bit set in flushMask");
         updates.extend(ConstantExpr::create(offset, Expr::Int32),
                        knownSymbolics[offset]);
       }
 
-      flushMask->unset(offset);
-    }
+  //    if(flushMask)
+  //      flushMask->unset(offset);
+  //  }
   } 
 }
 
@@ -395,6 +396,7 @@ void ObjectState::setKnownSymbolic(unsigned offset,
 /***/
 
 ref<Expr> ObjectState::read8(unsigned offset) const {
+//  flushRangeForRead(0, size);
   if (isByteConcrete(offset)) {
     return ConstantExpr::create(concreteStore[offset], Expr::Int8);
   } else if (isByteKnownSymbolic(offset)) {
