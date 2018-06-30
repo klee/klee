@@ -10,7 +10,7 @@ if [ "X${ASAN_BUILD}" == "X1" ]; then
   echo "Using ASan"
   ASAN_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer"
   ASAN_C_FLAGS="${ASAN_CXX_FLAGS}"
-  ASAN_LD_FLAGS="${ASAN_CXX_FLAGS}"
+  ASAN_LD_FLAGS="${ASAN_CXX_FLAGS} -fuse-ld=gold"
   IS_SANITIZED_BUILD=1
 else
   echo "Not using ASan"
@@ -24,7 +24,7 @@ if [ "X${UBSAN_BUILD}" == "X1" ]; then
   echo "Using UBSan"
   UBSAN_CXX_FLAGS="-fsanitize=undefined"
   UBSAN_C_FLAGS="${UBSAN_CXX_FLAGS}"
-  UBSAN_LD_FLAGS="${UBSAN_CXX_FLAGS}"
+  UBSAN_LD_FLAGS="${UBSAN_CXX_FLAGS} -fuse-ld=gold"
   IS_SANITIZED_BUILD=1
 else
   echo "Not using UBSan"

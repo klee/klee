@@ -7,6 +7,9 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   sudo apt-get install -y llvm-${LLVM_VERSION}-tools clang-${LLVM_VERSION}
   sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-${LLVM_VERSION} 20
   sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-${LLVM_VERSION} 20
+
+  sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 60 --slave /usr/bin/g++ g++ /usr/bin/g++-7
+  sudo update-alternatives --config gcc
 elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
   # We use our own local cache if possible
   set +e
