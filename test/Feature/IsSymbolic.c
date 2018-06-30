@@ -12,10 +12,13 @@ int main() {
   klee_assume(y >= 0 & y <= 4);
 
   int array[5] = {1,1,x,1,1};
+  assert(klee_is_symbolic(array[2]));
   if (x == 1) {
+    assert(!klee_is_symbolic(array[2]));
     assert(klee_is_symbolic(y));
     assert(!klee_is_symbolic(array[y]));
   } else {
+    assert(klee_is_symbolic(array[2]));
     assert(!klee_is_symbolic(z));
     assert(klee_is_symbolic(array[y]));
   }
