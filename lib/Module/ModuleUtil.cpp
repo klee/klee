@@ -498,16 +498,9 @@ Module *klee::linkWithLibrary(Module *module,
     }
 
   } else if (magic.is_object()) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
-    std::unique_ptr<object::Binary> obj;
-#else
-    OwningPtr<object::Binary> obj;
-#endif
-    if (obj.get()->isObject()) {
-      klee_warning("Link with library: Object file %s in archive %s found. "
-          "Currently not supported.",
-          obj.get()->getFileName().data(), libraryName.c_str());
-    }
+    klee_warning(
+        "Link with object file in library %s: Currently not supported.",
+        libraryName.c_str());
   } else {
     klee_error("Link with library %s failed: Unrecognized file type.",
         libraryName.c_str());
