@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
   int x = 0;
   int y = 0;
   klee_make_symbolic(&x, sizeof(x), "x");
-  klee_make_symbolic(&y, sizeof(x), "y");
+  klee_make_symbolic(&y, sizeof(y), NULL);
 
   klee_assume(x == 1);
   klee_assume(y == 128);

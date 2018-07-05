@@ -50,6 +50,10 @@ static void report_internal_error(const char *msg, ...) {
 }
 
 void klee_make_symbolic(void *array, size_t nbytes, const char *name) {
+
+  if (!name)
+    name = "unnamed";
+
   static int rand_init = -1;
 
   if (rand_init == -1) {
