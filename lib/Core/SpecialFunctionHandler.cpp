@@ -304,8 +304,12 @@ void SpecialFunctionHandler::handleSilentExit(ExecutionState &state,
 void SpecialFunctionHandler::handleAliasFunction(ExecutionState &state,
 						 KInstruction *target,
 						 std::vector<ref<Expr> > &arguments) {
-  assert(arguments.size()==2 && 
-         "invalid number of arguments to klee_alias_function");
+  if (arguments.size() != 2) {
+    executor.terminateStateOnError(state,
+        "invalid number of arguments to klee_alias_function",
+        Executor::TerminateReason::User);
+  }
+
   std::string old_fn = readStringAtAddress(state, arguments[0]);
   std::string new_fn = readStringAtAddress(state, arguments[1]);
   KLEE_DEBUG_WITH_TYPE("alias_handling", llvm::errs() << "Replacing " << old_fn
@@ -318,12 +322,22 @@ void SpecialFunctionHandler::handleAliasFunction(ExecutionState &state,
 void SpecialFunctionHandler::handleAliasFunctionRegex(ExecutionState &state,
 						      KInstruction *target,
 						      std::vector<ref<Expr> > &arguments) {
-  assert(arguments.size()==2 && 
-         "invalid number of arguments to klee_alias_function_regex");
-  assert(isa<klee::ConstantExpr>(arguments[0]) &&
-         "first arg to klee_alias_function_regex cannot be a symbol");
-  assert(isa<klee::ConstantExpr>(arguments[1]) &&
-         "second arg to klee_alias_function_regex cannot be a symbol");
+  if (arguments.size() != 2) {
+    executor.terminateStateOnError(state,
+        "invalid number of arguments to klee_alias_function_regex",
+        Executor::TerminateReason::User);
+  }
+  if (!isa<klee::ConstantExpr>(arguments[0])) {
+    executor.terminateStateOnError(state,
+        "first arg to klee_alias_function_regex cannot be a symbol",
+        Executor::TerminateReason::User);
+  }
+  if (!isa<klee::ConstantExpr>(arguments[1])) {
+    executor.terminateStateOnError(state,
+        "second arg to klee_alias_function_regex cannot be a symbol",
+        Executor::TerminateReason::User);
+  }
+
   std::string fn_regex = readStringAtAddress(state, arguments[0]);
   std::string new_fn = readStringAtAddress(state, arguments[1]);
   KLEE_DEBUG_WITH_TYPE("alias_handling", llvm::errs() << "Replacing by regex " << fn_regex
@@ -334,10 +348,17 @@ void SpecialFunctionHandler::handleAliasFunctionRegex(ExecutionState &state,
 void SpecialFunctionHandler::handleAliasUndo(ExecutionState &state,
 					     KInstruction *target,
 					     std::vector<ref<Expr> > &arguments) {
-  assert(arguments.size()==1 && 
-         "invalid number of arguments to klee_alias_undo");
-  assert(isa<klee::ConstantExpr>(arguments[0]) &&
-         "single arg to klee_alias_undo cannot be a symbol");
+  if (arguments.size() != 1) {
+    executor.terminateStateOnError(state,
+        "invalid number of arguments to klee_alias_undo",
+        Executor::TerminateReason::User);
+  }
+  if (!isa<klee::ConstantExpr>(arguments[0])) {
+    executor.terminateStateOnError(state,
+        "single arg to klee_alias_undo cannot be a symbol",
+        Executor::TerminateReason::User);
+  }
+
   std::string alias = readStringAtAddress(state, arguments[0]);
   KLEE_DEBUG_WITH_TYPE("alias_handling", llvm::errs() << "Undoing alias " << alias << "\n");
   state.removeFnAlias(alias);
