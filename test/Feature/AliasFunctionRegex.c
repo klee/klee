@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <klee/klee.h>
+
 void __attribute__ ((noinline)) fooXYZ() { printf("  foo()\n"); }
 void __attribute__ ((noinline)) bar() { printf("  bar()\n"); }
 

@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include <klee/klee.h>
+
 void start(int x) {
   printf("START\n");
   if (x == 53)
