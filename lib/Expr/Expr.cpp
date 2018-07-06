@@ -531,29 +531,30 @@ unsigned Array::computeHash() {
 /***/
 
 ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index) {
-  // rollback index when possible... 
+  // rollback update nodes if possible
 
-  // XXX this doesn't really belong here... there are basically two
-  // cases, one is rebuild, where we want to optimistically try various
-  // optimizations when the index has changed, and the other is 
-  // initial creation, where we expect the ObjectState to have constructed
-  // a smart UpdateList so it is not worth rescanning.
-
+  // Iterate throught the update list from the most recent to the
+  // least reasent to find a potential written value for a concrete index;
+  // stop, if an update with symbolic has been found as we don't know which
+  // array element has been updated
   const UpdateNode *un = ul.head;
   bool updateListHasSymbolicWrites = false;
   for (; un; un=un->next) {
+    // Check if we have an equivalent concrete index
     ref<Expr> cond = EqExpr::create(index, un->index);
-    
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(cond)) {
       if (CE->isTrue())
+        // Return the found value
         return un->value;
     } else {
+      // Found write with symbolic index
       updateListHasSymbolicWrites = true;
       break;
     }
   }
 
   if (ul.root->isConstantArray() && !updateListHasSymbolicWrites) {
+    // No updates with symbolic index to a constant array have been found
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(index)) {
       assert(CE->getWidth() <= 64 && "Index too large");
       uint64_t concreteIndex = CE->getZExtValue();
@@ -561,6 +562,19 @@ ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index) {
       if (concreteIndex < size) {
         return ul.root->constantValues[concreteIndex];
       }
+    }
+  }
+
+  // Now, no update with this concrete index exists
+  // Try to remove any most recent but unimportant updates
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(index)) {
+    assert(CE->getWidth() <= 64 && "Index too large");
+    uint64_t concreteIndex = CE->getZExtValue();
+    uint64_t size = ul.root->size;
+    if (concreteIndex < size) {
+      // Create shortened update list
+      UpdateList newUpdateList(ul.root, un);
+      return ReadExpr::alloc(newUpdateList, index);
     }
   }
 
