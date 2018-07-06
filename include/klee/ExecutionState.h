@@ -68,6 +68,8 @@ struct FunctionAlias {
   std::regex nameRegex;
   std::string name;
   std::string alias;
+  // required by klee:ref
+  unsigned refCount;
 };
 
 /// @brief ExecutionState representing a path under exploration
@@ -79,7 +81,7 @@ private:
   // unsupported, use copy constructor
   ExecutionState &operator=(const ExecutionState &);
 
-  std::vector<FunctionAlias> fnAliases;
+  std::vector<ref<FunctionAlias>> fnAliases;
 
 public:
   // Execution - Control Flow specific
