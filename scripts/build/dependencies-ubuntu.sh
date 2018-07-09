@@ -19,6 +19,7 @@ apt -y --no-install-recommends install \
   binutils \
   bison \
   cmake \
+  curl \
   flex \
   git \
   groff-base \
