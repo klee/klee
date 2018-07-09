@@ -34,10 +34,6 @@ namespace stats {
   /// isn't normally up-to-date.
   extern Statistic states;
 
-  /// Instruction level statistic for tracking number of reachable
-  /// uncovered instructions.
-  extern Statistic reachableUncovered;
-
   /// Instruction level statistic tracking the minimum intraprocedural
   /// distance to an uncovered instruction; this is only periodically
   /// updated.
@@ -46,7 +42,6 @@ namespace stats {
   /// Instruction level statistic tracking the minimum intraprocedural
   /// distance to a function return.
   extern Statistic minDistToReturn;
-
 }
 }
 
