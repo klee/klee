@@ -187,7 +187,7 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
 elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
   # We use our own local cache if possible
   set +e
-  brew install "$HOME/Library/Caches/Homebrew/llvm\@${LLVM_VERSION}*.bottle.tar.gz"
+  brew install "$HOME"/Library/Caches/Homebrew/llvm\@${LLVM_VERSION}*.bottle.tar.gz
   RES=$?
   set -ev
   if [ ${RES} -ne 0 ]; then
