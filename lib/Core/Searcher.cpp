@@ -10,26 +10,27 @@
 #include "Searcher.h"
 
 #include "CoreStats.h"
+#include "CoverageTracker.h"
 #include "Executor.h"
 #include "PTree.h"
 #include "StatsTracker.h"
 
 #include "klee/ExecutionState.h"
-#include "klee/MergeHandler.h"
-#include "klee/Statistics.h"
+#include "klee/Internal/ADT/DiscretePDF.h"
+#include "klee/Internal/ADT/RNG.h"
 #include "klee/Internal/Module/InstructionInfoTable.h"
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
-#include "klee/Internal/ADT/DiscretePDF.h"
-#include "klee/Internal/ADT/RNG.h"
+#include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Internal/Support/ModuleUtil.h"
 #include "klee/Internal/System/Time.h"
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/MergeHandler.h"
+#include "klee/Statistics.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
-
+#include "llvm/Support/InstIterator.h"
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Support/CallSite.h"
 #else
@@ -41,8 +42,6 @@
 #include <climits>
 
 using namespace klee;
-using namespace llvm;
-
 
 namespace klee {
   extern RNG theRNG;
@@ -169,18 +168,32 @@ RandomSearcher::update(ExecutionState *current,
 
 ///
 
-WeightedRandomSearcher::WeightedRandomSearcher(WeightType _type)
-  : states(new DiscretePDF<ExecutionState*>()),
-    type(_type) {
+WeightedRandomSearcher::WeightedRandomSearcher(StatsTracker &statsTracker,
+                                               WeightType _type)
+    : states(new DiscretePDF<ExecutionState *>()), type(_type) {
   switch(type) {
   case Depth: 
     updateWeights = false;
     break;
-  case InstCount:
-  case CPInstCount:
-  case QueryCost:
+  case InstCount: {
+    statsTracker.doTrackByInstruction();
+    updateWeights = true;
+    break;
+  }
   case MinDistToUncovered:
-  case CoveringNew:
+  case CoveringNew: {
+    // Request statistics for coverage tracking
+    statsTracker.doTrackCoverage();
+    statsTracker.requestAutomaticDistanceMetricUpdates();
+    updateWeights = true;
+    break;
+  }
+  case CPInstCount: {
+    statsTracker.doTrackCodePath();
+    updateWeights = true;
+    break;
+  }
+  case QueryCost:
     updateWeights = true;
     break;
   default:
@@ -196,7 +209,8 @@ ExecutionState &WeightedRandomSearcher::selectState() {
   return *states->choose(theRNG.getDoubleL());
 }
 
-double WeightedRandomSearcher::getWeight(ExecutionState *es) {
+double WeightedRandomSearcher::getWeight(WeightType type,
+                                         const ExecutionState *es) {
   switch(type) {
   default:
   case Depth: 
@@ -208,7 +222,7 @@ double WeightedRandomSearcher::getWeight(ExecutionState *es) {
     return inv * inv;
   }
   case CPInstCount: {
-    StackFrame &sf = es->stack.back();
+    const StackFrame &sf = es->stack.back();
     uint64_t count = sf.callPathNode->statistics.getValue(stats::instructions);
     double inv = 1. / std::max((uint64_t) 1, count);
     return inv;
@@ -239,13 +253,13 @@ void WeightedRandomSearcher::update(
   if (current && updateWeights &&
       std::find(removedStates.begin(), removedStates.end(), current) ==
           removedStates.end())
-    states->update(current, getWeight(current));
+    states->update(current, getWeight(type, current));
 
   for (std::vector<ExecutionState *>::const_iterator it = addedStates.begin(),
                                                      ie = addedStates.end();
        it != ie; ++it) {
     ExecutionState *es = *it;
-    states->insert(es, getWeight(es));
+    states->insert(es, getWeight(type, es));
   }
 
   for (std::vector<ExecutionState *>::const_iterator it = removedStates.begin(),

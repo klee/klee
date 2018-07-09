@@ -8,10 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "CoreStats.h"
+#include "CoverageTracker.h"
 #include "Executor.h"
+#include "ExecutorTimerInfo.h"
 #include "PTree.h"
 #include "StatsTracker.h"
-#include "ExecutorTimerInfo.h"
 
 #include "klee/ExecutionState.h"
 #include "klee/Internal/Module/InstructionInfoTable.h"
@@ -145,13 +146,13 @@ void Executor::processTimers(ExecutionState *current,
             }
           }
           *os << "], ";
-
           StackFrame &sf = es->stack.back();
-          uint64_t md2u = computeMinDistToUncovered(es->pc,
-                                                    sf.minDistToUncoveredOnReturn);
-          uint64_t icnt = theStatisticManager->getIndexedValue(stats::instructions,
-                                                               es->pc->info->id);
-          uint64_t cpicnt = sf.callPathNode->statistics.getValue(stats::instructions);
+          uint64_t md2u =
+              computeMinDistToUncovered(es->pc, sf.minDistToUncoveredOnReturn);
+          uint64_t icnt = theStatisticManager->getIndexedValue(
+              stats::instructions, es->pc->info->id);
+          uint64_t cpicnt =
+              sf.callPathNode->statistics.getValue(stats::instructions);
 
           *os << "{";
           *os << "'depth' : " << es->depth << ", ";

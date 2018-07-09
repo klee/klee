@@ -1277,6 +1277,8 @@ int main(int argc, char **argv, char **envp) {
 
   Interpreter::InterpreterOptions IOpts;
   IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
+  IOpts.generatePerTestCoverage = !NoOutput && WriteCov;
+
   KleeHandler *handler = new KleeHandler(pArgc, pArgv);
   Interpreter *interpreter =
     theInterpreter = Interpreter::create(ctx, IOpts, handler);

@@ -22,6 +22,7 @@
 #include "TimingSolver.h"
 #include "UserSearcher.h"
 #include "ExecutorTimerInfo.h"
+#include "CoverageTracker.h"
 
 
 #include "klee/ExecutionState.h"
@@ -353,9 +354,6 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
 
   initializeSearchOptions();
 
-  if (OnlyOutputStatesCoveringNew && !StatsTracker::useIStats())
-    klee_error("To use --only-output-states-covering-new, you need to enable --output-istats.");
-
   if (DebugPrintInstructions.isSet(FILE_ALL) ||
       DebugPrintInstructions.isSet(FILE_COMPACT) ||
       DebugPrintInstructions.isSet(FILE_SRC)) {
@@ -435,12 +433,15 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
   kmodule->optimiseAndPrepare(opts, preservedFunctions);
 
   // 4.) Manifest the module
-  kmodule->manifest(interpreterHandler, StatsTracker::useStatistics());
+  // XXX change true to conditianal generation of assembly.ll
+  kmodule->manifest(interpreterHandler, true);
 
   specialFunctionHandler->bind();
 
   statsTracker = std::unique_ptr<StatsTracker>(new StatsTracker(
       *this, interpreterHandler->getOutputFilename("assembly.ll")));
+  if (interpreterOpts.generatePerTestCoverage)
+    statsTracker->doTrackCoverage();
 
   // Initialize the context.
   DataLayout *TD = kmodule->targetData.get();
@@ -1212,6 +1213,10 @@ void Executor::stepInstruction(ExecutionState &state) {
     haltExecution = true;
 }
 
+void Executor::postExecuteInstruction(ExecutionState &state) {
+  statsTracker->postStepInstruction(state);
+}
+
 void Executor::executeCall(ExecutionState &state, 
                            KInstruction *ki,
                            Function *f,
@@ -1291,8 +1296,8 @@ void Executor::executeCall(ExecutionState &state,
 
     statsTracker->framePushed(state, &state.stack[state.stack.size() - 2]);
 
-     // TODO: support "byval" parameter attribute
-     // TODO: support zeroext, signext, sret attributes
+    // TODO: support "byval" parameter attribute
+    // TODO: support zeroext, signext, sret attributes
 
     unsigned callingArgs = arguments.size();
     unsigned funcArgs = f->arg_size();
@@ -3815,12 +3820,8 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
     type = AI->getAllocatedType();
   } else if (isa<InvokeInst>(allocSite) || isa<CallInst>(allocSite)) {
     // FIXME: Model the semantics of the call to use the right alignment
-    llvm::Value *allocSiteNonConst = const_cast<llvm::Value *>(allocSite);
-    const CallSite cs = (isa<InvokeInst>(allocSiteNonConst)
-                             ? CallSite(cast<InvokeInst>(allocSiteNonConst))
-                             : CallSite(cast<CallInst>(allocSiteNonConst)));
-    llvm::Function *fn =
-        klee::getDirectCallTarget(cs, /*moduleIsFullyLinked=*/true);
+    ImmutableCallSite cs(allocSite);
+    auto fn = klee::getDirectCallTarget(cs, /*moduleIsFullyLinked=*/true);
     if (fn)
       allocationSiteName = fn->getName().str();
 

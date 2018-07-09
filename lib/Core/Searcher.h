@@ -27,6 +27,9 @@ namespace klee {
   template<class T> class DiscretePDF;
   class ExecutionState;
   class Executor;
+  class KInstruction;
+  class KModule;
+  class StatsTracker;
 
   class Searcher {
   public:
@@ -133,15 +136,15 @@ namespace klee {
       CoveringNew
     };
 
+    static double getWeight(WeightType type, const ExecutionState *);
+
   private:
     DiscretePDF<ExecutionState*> *states;
     WeightType type;
     bool updateWeights;
     
-    double getWeight(ExecutionState*);
-
   public:
-    WeightedRandomSearcher(WeightType type);
+    WeightedRandomSearcher(StatsTracker &statsTracker, WeightType type);
     ~WeightedRandomSearcher();
 
     ExecutionState &selectState();

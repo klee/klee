@@ -25,10 +25,11 @@
 
 #include "llvm/ADT/Twine.h"
 
-#include <vector>
-#include <string>
 #include <map>
+#include <memory>
 #include <set>
+#include <string>
+#include <vector>
 
 struct KTest;
 
@@ -79,6 +80,7 @@ namespace klee {
   /// removedStates, and haltExecution, among others.
 
 class Executor : public Interpreter {
+  friend class CoverageTracker;
   friend class RandomPathSearcher;
   friend class OwningSearcher;
   friend class WeightedRandomSearcher;
@@ -234,6 +236,9 @@ private:
                                     ExecutionState &state);
   
   void executeInstruction(ExecutionState &state, KInstruction *ki);
+
+  /// Process updates after an instruction has been made
+  void postExecuteInstruction(ExecutionState &state);
 
   void printFileLine(ExecutionState &state, KInstruction *ki,
                      llvm::raw_ostream &file);
@@ -454,12 +459,6 @@ private:
                                     ref<Expr> e,
                                     ref<ConstantExpr> value);
 
-  /// Add a timer to be executed periodically.
-  ///
-  /// \param timer The timer object to run on firings.
-  /// \param rate The approximate delay (in seconds) between firings.
-  void addTimer(Timer *timer, double rate);
-
   void initTimers();
   void processTimers(ExecutionState *current,
                      double maxInstTime);
@@ -543,6 +542,12 @@ public:
 
   /// Returns the errno location in memory of the state
   int *getErrnoLocation(const ExecutionState &state) const;
+
+  /// Add a timer to be executed periodically.
+  ///
+  /// \param timer The timer object to run on firings.
+  /// \param rate The approximate delay (in seconds) between firings.
+  void addTimer(Timer *timer, double rate);
 };
   
 } // End klee namespace

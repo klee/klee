@@ -270,34 +270,39 @@ klee::linkModules(std::vector<std::unique_ptr<llvm::Module>> &modules,
   return composite;
 }
 
-Function *klee::getDirectCallTarget(CallSite cs, bool moduleIsFullyLinked) {
-  Value *v = cs.getCalledValue();
+const Function *klee::getDirectCallTarget(const ImmutableCallSite cs,
+                                          bool moduleIsFullyLinked) {
+  const Value *v = cs.getCalledValue();
   bool viaConstantExpr = false;
   // Walk through aliases and bitcasts to try to find
   // the function being called.
   do {
-    if (Function *f = dyn_cast<Function>(v)) {
+    if (const Function *f = dyn_cast<Function>(v))
       return f;
-    } else if (llvm::GlobalAlias *ga = dyn_cast<GlobalAlias>(v)) {
+
+    if (const llvm::GlobalAlias *ga = dyn_cast<GlobalAlias>(v)) {
       if (moduleIsFullyLinked || !(ga->mayBeOverridden())) {
         v = ga->getAliasee();
-      } else {
-        v = NULL;
+        continue;
       }
-    } else if (llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(v)) {
+      v = nullptr;
+      break;
+    }
+
+    if (const llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(v)) {
       viaConstantExpr = true;
       v = ce->getOperand(0)->stripPointerCasts();
-    } else {
-      v = NULL;
+      continue;
     }
-  } while (v != NULL);
+    v = nullptr;
+  } while (v != nullptr);
 
   // NOTE: This assert may fire, it isn't necessarily a problem and
   // can be disabled, I just wanted to know when and if it happened.
   (void) viaConstantExpr;
   assert((!viaConstantExpr) &&
          "FIXME: Unresolved direct target for a constant expression");
-  return NULL;
+  return nullptr;
 }
 
 static bool valueIsOnlyCalled(const Value *v) {

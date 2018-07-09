@@ -82,9 +82,12 @@ public:
     /// symbolic execution on concrete programs.
     unsigned MakeConcreteSymbolic;
 
+    /// Indicator if coverage information should be generated for each
+    /// test written.
+    bool generatePerTestCoverage;
+
     InterpreterOptions()
-      : MakeConcreteSymbolic(false)
-    {}
+        : MakeConcreteSymbolic(false), generatePerTestCoverage(false) {}
   };
 
 protected:
