@@ -127,8 +127,12 @@ private:
   ExternalDispatcher *externalDispatcher;
   TimingSolver *solver;
   MemoryManager *memory;
+
+public:
   std::set<ExecutionState*> states;
-  StatsTracker *statsTracker;
+  std::unique_ptr<StatsTracker> statsTracker;
+
+private:
   TreeStreamWriter *pathWriter, *symPathWriter;
   SpecialFunctionHandler *specialFunctionHandler;
   std::vector<TimerInfo*> timers;
