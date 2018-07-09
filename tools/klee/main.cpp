@@ -215,7 +215,7 @@ class KleeHandler : public InterpreterHandler {
 private:
   Interpreter *m_interpreter;
   TreeStreamWriter *m_pathWriter, *m_symPathWriter;
-  llvm::raw_ostream *m_infoFile;
+  std::unique_ptr<llvm::raw_ostream> m_infoFile;
 
   SmallString<128> m_outputDirectory;
 
@@ -244,9 +244,11 @@ public:
                        const char *errorSuffix);
 
   std::string getOutputFilename(const std::string &filename);
-  llvm::raw_fd_ostream *openOutputFile(const std::string &filename);
+  std::unique_ptr<llvm::raw_fd_ostream>
+  openOutputFile(const std::string &filename) override;
   std::string getTestFilename(const std::string &suffix, unsigned id);
-  llvm::raw_fd_ostream *openTestFile(const std::string &suffix, unsigned id);
+  std::unique_ptr<llvm::raw_fd_ostream> openTestFile(const std::string &suffix,
+                                                     unsigned id);
 
   // load a .path file
   static void loadPathFile(std::string name,
@@ -259,7 +261,7 @@ public:
 };
 
 KleeHandler::KleeHandler(int argc, char **argv)
-    : m_interpreter(0), m_pathWriter(0), m_symPathWriter(0), m_infoFile(0),
+    : m_interpreter(0), m_pathWriter(0), m_symPathWriter(0),
       m_outputDirectory(), m_numTotalTests(0), m_numGeneratedTests(0),
       m_pathsExplored(0), m_argc(argc), m_argv(argv) {
 
@@ -336,7 +338,6 @@ KleeHandler::~KleeHandler() {
   delete m_symPathWriter;
   fclose(klee_warning_file);
   fclose(klee_message_file);
-  delete m_infoFile;
 }
 
 void KleeHandler::setInterpreter(Interpreter *i) {
@@ -361,18 +362,16 @@ std::string KleeHandler::getOutputFilename(const std::string &filename) {
   return path.str();
 }
 
-llvm::raw_fd_ostream *KleeHandler::openOutputFile(const std::string &filename) {
-  llvm::raw_fd_ostream *f;
+std::unique_ptr<llvm::raw_fd_ostream>
+KleeHandler::openOutputFile(const std::string &filename) {
   std::string Error;
   std::string path = getOutputFilename(filename);
-  f = klee_open_output_file(path, Error);
-  if (!Error.empty()) {
+  std::unique_ptr<llvm::raw_fd_ostream> f = klee_open_output_file(path, Error);
+  if (!Error.empty())
     klee_warning("error opening file \"%s\".  KLEE may have run out of file "
                  "descriptors: try to increase the maximum number of open file "
                  "descriptors by using ulimit (%s).",
                  path.c_str(), Error.c_str());
-    return NULL;
-  }
   return f;
 }
 
@@ -382,8 +381,8 @@ std::string KleeHandler::getTestFilename(const std::string &suffix, unsigned id)
   return filename.str();
 }
 
-llvm::raw_fd_ostream *KleeHandler::openTestFile(const std::string &suffix,
-                                                unsigned id) {
+std::unique_ptr<llvm::raw_fd_ostream>
+KleeHandler::openTestFile(const std::string &suffix, unsigned id) {
   return openOutputFile(getTestFilename(suffix, id));
 }
 
@@ -433,30 +432,29 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     }
 
     if (errorMessage) {
-      llvm::raw_ostream *f = openTestFile(errorSuffix, id);
-      *f << errorMessage;
-      delete f;
+      auto f = openTestFile(errorSuffix, id);
+      if (f)
+        *f << errorMessage;
     }
 
     if (m_pathWriter) {
       std::vector<unsigned char> concreteBranches;
       m_pathWriter->readStream(m_interpreter->getPathStreamID(state),
                                concreteBranches);
-      llvm::raw_fd_ostream *f = openTestFile("path", id);
-      for (std::vector<unsigned char>::iterator I = concreteBranches.begin(),
-                                                E = concreteBranches.end();
-           I != E; ++I) {
-        *f << *I << "\n";
-      }
-      delete f;
+      auto f = openTestFile("path", id);
+      if (f)
+        for (std::vector<unsigned char>::iterator I = concreteBranches.begin(),
+                                                  E = concreteBranches.end();
+             I != E; ++I) {
+          *f << *I << "\n";
+        }
     }
 
     if (errorMessage || WriteKQueries) {
       std::string constraints;
       m_interpreter->getConstraintLog(state, constraints,Interpreter::KQUERY);
-      llvm::raw_ostream *f = openTestFile("kquery", id);
+      auto f = openTestFile("kquery", id);
       *f << constraints;
-      delete f;
     }
 
     if (WriteCVCs) {
@@ -464,43 +462,46 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       // SMT-LIBv2 not CVC which is a bit confusing
       std::string constraints;
       m_interpreter->getConstraintLog(state, constraints, Interpreter::STP);
-      llvm::raw_ostream *f = openTestFile("cvc", id);
-      *f << constraints;
-      delete f;
+      auto f = openTestFile("cvc", id);
+      if (f)
+        *f << constraints;
     }
 
     if(WriteSMT2s) {
       std::string constraints;
         m_interpreter->getConstraintLog(state, constraints, Interpreter::SMTLIB2);
-        llvm::raw_ostream *f = openTestFile("smt2", id);
-        *f << constraints;
-        delete f;
+        auto f = openTestFile("smt2", id);
+        if (f)
+          *f << constraints;
     }
 
     if (m_symPathWriter) {
       std::vector<unsigned char> symbolicBranches;
       m_symPathWriter->readStream(m_interpreter->getSymbolicPathStreamID(state),
                                   symbolicBranches);
-      llvm::raw_fd_ostream *f = openTestFile("sym.path", id);
-      for (std::vector<unsigned char>::iterator I = symbolicBranches.begin(), E = symbolicBranches.end(); I!=E; ++I) {
-        *f << *I << "\n";
-      }
-      delete f;
+      auto f = openTestFile("sym.path", id);
+      if (f)
+        for (std::vector<unsigned char>::iterator I = symbolicBranches.begin(),
+                                                  E = symbolicBranches.end();
+             I != E; ++I) {
+          *f << *I << "\n";
+        }
     }
 
     if (WriteCov) {
       std::map<const std::string*, std::set<unsigned> > cov;
       m_interpreter->getCoveredLines(state, cov);
-      llvm::raw_ostream *f = openTestFile("cov", id);
-      for (std::map<const std::string*, std::set<unsigned> >::iterator
-             it = cov.begin(), ie = cov.end();
-           it != ie; ++it) {
-        for (std::set<unsigned>::iterator
-               it2 = it->second.begin(), ie = it->second.end();
-             it2 != ie; ++it2)
-          *f << *it->first << ":" << *it2 << "\n";
-      }
-      delete f;
+      auto f = openTestFile("cov", id);
+      if (f)
+        for (std::map<const std::string *, std::set<unsigned>>::iterator
+                 it = cov.begin(),
+                 ie = cov.end();
+             it != ie; ++it) {
+          for (std::set<unsigned>::iterator it2 = it->second.begin(),
+                                            ie = it->second.end();
+               it2 != ie; ++it2)
+            *f << *it->first << ":" << *it2 << "\n";
+        }
     }
 
     if (m_numGeneratedTests == StopAfterNTests)
@@ -508,10 +509,9 @@ void KleeHandler::processTestCase(const ExecutionState &state,
 
     if (WriteTestInfo) {
       double elapsed_time = util::getWallTime() - start_time;
-      llvm::raw_ostream *f = openTestFile("info", id);
-      *f << "Time to generate test case: "
-         << elapsed_time << "s\n";
-      delete f;
+      auto f = openTestFile("info", id);
+      if (f)
+        *f << "Time to generate test case: " << elapsed_time << "s\n";
     }
   }
   

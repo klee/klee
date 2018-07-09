@@ -15,25 +15,29 @@
 #include "llvm/Support/FileSystem.h"
 #endif
 
+#include <memory>
+
 namespace klee {
 
-llvm::raw_fd_ostream *klee_open_output_file(std::string &path,
-                                            std::string &error) {
-  llvm::raw_fd_ostream *f;
+std::unique_ptr<llvm::raw_fd_ostream>
+klee_open_output_file(std::string &path, std::string &error) {
+  std::unique_ptr<llvm::raw_fd_ostream> f;
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
   std::error_code ec;
-  f = new llvm::raw_fd_ostream(path.c_str(), ec, llvm::sys::fs::F_None);
+  f = std::unique_ptr<llvm::raw_fd_ostream>(
+      new llvm::raw_fd_ostream(path.c_str(), ec, llvm::sys::fs::F_None));
   if (ec)
     error = ec.message();
 #elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
-  f = new llvm::raw_fd_ostream(path.c_str(), error, llvm::sys::fs::F_None);
+  f = std::unique_ptr<llvm::raw_fd_ostream>(
+      new llvm::raw_fd_ostream(path.c_str(), error, llvm::sys::fs::F_None));
 #else
-  f = new llvm::raw_fd_ostream(path.c_str(), error, llvm::sys::fs::F_Binary);
+  f = std::unique_ptr<llvm::raw_fd_ostream>(
+      new llvm::raw_fd_ostream(path.c_str(), error, llvm::sys::fs::F_Binary));
 #endif
-  if (!error.empty()) {
-    delete f;
-    f = NULL;
-  }
+  if (!error.empty())
+    f.reset();
+
   return f;
 }
 }

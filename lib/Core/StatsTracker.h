@@ -12,6 +12,7 @@
 
 #include "CallPathManager.h"
 
+#include <memory>
 #include <set>
 
 namespace llvm {
@@ -36,13 +37,13 @@ namespace klee {
     Executor &executor;
     std::string objectFilename;
 
-    llvm::raw_fd_ostream *statsFile, *istatsFile;
     double startWallTime;
     
     unsigned numBranches;
     unsigned fullBranches, partialBranches;
 
     CallPathManager callPathManager;    
+  std::unique_ptr<llvm::raw_fd_ostream> statsFile, istatsFile;
 
     bool updateMinDistToUncovered;
 
@@ -59,7 +60,6 @@ namespace klee {
   public:
     StatsTracker(Executor &_executor, std::string _objectFilename,
                  bool _updateMinDistToUncovered);
-    ~StatsTracker();
 
     // called after a new StackFrame has been pushed (for callpath tracing)
     void framePushed(ExecutionState &es, StackFrame *parentFrame);
