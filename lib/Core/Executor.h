@@ -472,20 +472,20 @@ public:
     return *interpreterHandler;
   }
 
-  virtual void setPathWriter(TreeStreamWriter *tsw) {
+  virtual void setPathWriter(TreeStreamWriter *tsw) override {
     pathWriter = tsw;
   }
-  virtual void setSymbolicPathWriter(TreeStreamWriter *tsw) {
+  virtual void setSymbolicPathWriter(TreeStreamWriter *tsw) override {
     symPathWriter = tsw;
   }
 
-  virtual void setReplayKTest(const struct KTest *out) {
+  virtual void setReplayKTest(const struct KTest *out) override {
     assert(!replayPath && "cannot replay both buffer and path");
     replayKTest = out;
     replayPosition = 0;
   }
 
-  virtual void setReplayPath(const std::vector<bool> *path) {
+  virtual void setReplayPath(const std::vector<bool> *path) override {
     assert(!replayKTest && "cannot replay both buffer and path");
     replayPath = path;
     replayPosition = 0;
@@ -494,45 +494,45 @@ public:
   llvm::Module *setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
                           const ModuleOptions &opts) override;
 
-  virtual void useSeeds(const std::vector<struct KTest *> *seeds) { 
+  virtual void useSeeds(const std::vector<struct KTest *> *seeds) override {
     usingSeeds = seeds;
   }
 
   virtual void runFunctionAsMain(llvm::Function *f,
                                  int argc,
                                  char **argv,
-                                 char **envp);
+                                 char **envp) override;
 
   /*** Runtime options ***/
   
-  virtual void setHaltExecution(bool value) {
+  virtual void setHaltExecution(bool value) override {
     haltExecution = value;
   }
 
-  virtual void setInhibitForking(bool value) {
+  virtual void setInhibitForking(bool value) override {
     inhibitForking = value;
   }
 
-  void prepareForEarlyExit();
+  void prepareForEarlyExit() override;
 
   /*** State accessor methods ***/
 
-  virtual unsigned getPathStreamID(const ExecutionState &state);
+  virtual unsigned getPathStreamID(const ExecutionState &state) override;
 
-  virtual unsigned getSymbolicPathStreamID(const ExecutionState &state);
+  virtual unsigned getSymbolicPathStreamID(const ExecutionState &state) override;
 
   virtual void getConstraintLog(const ExecutionState &state,
                                 std::string &res,
-                                Interpreter::LogType logFormat = Interpreter::STP);
+                                Interpreter::LogType logFormat = Interpreter::STP) override;
 
   virtual bool getSymbolicSolution(const ExecutionState &state, 
                                    std::vector< 
                                    std::pair<std::string,
                                    std::vector<unsigned char> > >
-                                   &res);
+                                   &res) override;
 
   virtual void getCoveredLines(const ExecutionState &state,
-                               std::map<const std::string*, std::set<unsigned> > &res);
+                               std::map<const std::string*, std::set<unsigned> > &res) override;
 
   Expr::Width getWidthForLLVMType(llvm::Type *type) const;
   size_t getAllocationAlignment(const llvm::Value *allocSite) const;
