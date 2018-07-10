@@ -96,5 +96,5 @@ if [[ -z ${DOCKER_BUILD_DEPS_ONLY} || "${DOCKER_BUILD_DEPS_ONLY}x" == "1x" ]]; t
 fi
 
 if [[ -z ${DOCKER_BUILD_DEPS_ONLY} || "${DOCKER_BUILD_DEPS_ONLY}x" != "1x" ]]; then
-  docker build -f "${DIR}/Dockerfile_klee" "${DOCKER_OPTS[@]}" --build-arg SOLVERS="$SOLVERS" -t ${REPOSITORY}/klee:${LLVM_VERSION_SHORT}${LLVM_SUFFIX}${SANITIZER_SUFFIX}${SOLVER_SUFFIX}${DEPS_SUFFIX} "${KLEEDIR}"
+  docker build -f "${DIR}/Dockerfile_klee" "${DOCKER_OPTS[@]}" -t ${REPOSITORY}/klee:${LLVM_VERSION_SHORT}${LLVM_SUFFIX}${SOLVER_SUFFIX}${DEPS_SUFFIX} "${KLEEDIR}"
 fi

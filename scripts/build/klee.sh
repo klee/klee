@@ -160,6 +160,8 @@ coverage_setup()
 
 coverageup()
 {
+  tags=$1
+  codecov_suffix=(${tags// /})
   # Create report
   # (NOTE: "--rc lcov_branch_coverage=1" needs to be added in all calls, otherwise branch coverage gets dropped)
   lcov --rc lcov_branch_coverage=1 --directory . --base-directory="${KLEE_SRC}" --no-external --capture --output-file coverage.info
@@ -167,11 +169,9 @@ coverageup()
   lcov --rc lcov_branch_coverage=1 --remove coverage.info 'test/*' --output-file coverage.info
   lcov --rc lcov_branch_coverage=1 --remove coverage.info 'unittests/*' --output-file coverage.info
   # Combine baseline and measured coverage
-  lcov --rc lcov_branch_coverage=1 -a coverage_base.info -a coverage.info -o coverage_all.info
+  lcov --rc lcov_branch_coverage=1 -a coverage_base.info -a coverage.info -o coverage_all.info.${codecov_suffix}
   # Debug info
-  lcov --rc lcov_branch_coverage=1 --list coverage_all.info
-  # Uploading report to CodeCov
-  bash <(curl -s https://codecov.io/bash) -R "${KLEE_SRC}" -X gcov -y "${KLEE_SRC}/.codecov.yml" -f coverage_all.info -F $1
+  lcov --rc lcov_branch_coverage=1 --list coverage_all.info.${codecov_suffix}
 }
 
 COVERAGE=${COVERAGE:=0}

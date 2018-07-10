@@ -37,7 +37,7 @@ ENV DOCKER_BUILD=1
 ADD / ${BASE}/klee_src
 
 # TODO Remove when STP is fixed
-RUN export LD_LIBRARY_PATH=${BASE}/metaSMT/deps/stp-git-basic/lib/ && export KLEE_SRC=${BASE}/klee_src && ${BASE}/klee_src/scripts/build/klee.sh && rm -rf ${BASE}/klee_src/.git
+RUN export LD_LIBRARY_PATH=${BASE}/metaSMT/deps/stp-git-basic/lib/ && export KLEE_SRC=${BASE}/klee_src && ${BASE}/klee_src/scripts/build/klee.sh && rm -rf ${BASE}/klee_src/.git && ln -s ${BASE}/klee_build* ${BASE}/klee_build
 
 # Create ``klee`` user for container with password ``klee``.
 # and give it password-less sudo access (temporarily so we can use the TravisCI scripts)
@@ -53,6 +53,6 @@ USER klee
 WORKDIR /home/klee
 
 # Add KLEE binary directory to PATH
-RUN /bin/bash -c 'DIR="${BASE}/klee_src/scripts/build" source ${BASE}/klee_src/scripts/build/common-defaults.sh && ln -s ${BASE}/klee_build* ${BASE}/klee_build && echo "export PATH=\"$PATH:${LLVM_BIN}:${BASE}/klee_build/bin\"" >> /home/klee/.bashrc'
+RUN /bin/bash -c 'DIR="${BASE}/klee_src/scripts/build" source ${BASE}/klee_src/scripts/build/common-defaults.sh && ln -s ${BASE}/klee_src /home/klee/ && ln -s ${BASE}/klee_build /home/klee/ && echo "export PATH=\"$PATH:${LLVM_BIN}:/home/klee/klee_build/bin\"" >> /home/klee/.bashrc'
 # TODO Remove when STP is fixed
 RUN /bin/bash -c 'echo "export LD_LIBRARY_PATH=${BASE}/metaSMT/deps/stp-git-basic/lib/" >> /home/klee/.bashrc'
