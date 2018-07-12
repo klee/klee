@@ -22,6 +22,7 @@
 #include "TimingSolver.h"
 #include "UserSearcher.h"
 #include "ExecutorTimerInfo.h"
+#include "CoverageTracker.h"
 
 
 #include "klee/ExecutionState.h"
@@ -326,11 +327,10 @@ const char *Executor::TerminateReasonNames[] = {
 Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
                    InterpreterHandler *ih)
     : Interpreter(opts), interpreterHandler(ih), searcher(0),
-      externalDispatcher(new ExternalDispatcher(ctx)), statsTracker(0),
-      pathWriter(0), symPathWriter(0), specialFunctionHandler(0),
-      processTree(0), replayKTest(0), replayPath(0), usingSeeds(0),
-      atMemoryLimit(false), inhibitForking(false), haltExecution(false),
-      ivcEnabled(false),
+      externalDispatcher(new ExternalDispatcher(ctx)), pathWriter(0),
+      symPathWriter(0), specialFunctionHandler(0), processTree(0),
+      replayKTest(0), replayPath(0), usingSeeds(0), atMemoryLimit(false),
+      inhibitForking(false), haltExecution(false), ivcEnabled(false),
       coreSolverTimeout(MaxCoreSolverTime != 0 && MaxInstructionTime != 0
                             ? std::min(MaxCoreSolverTime, MaxInstructionTime)
                             : std::max(MaxCoreSolverTime, MaxInstructionTime)),
@@ -353,9 +353,6 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
   memory = new MemoryManager(&arrayCache);
 
   initializeSearchOptions();
-
-  if (OnlyOutputStatesCoveringNew && !StatsTracker::useIStats())
-    klee_error("To use --only-output-states-covering-new, you need to enable --output-istats.");
 
   if (DebugPrintInstructions.isSet(FILE_ALL) ||
       DebugPrintInstructions.isSet(FILE_COMPACT) ||
@@ -436,16 +433,15 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
   kmodule->optimiseAndPrepare(opts, preservedFunctions);
 
   // 4.) Manifest the module
-  kmodule->manifest(interpreterHandler, StatsTracker::useStatistics());
+  // XXX change true to conditianal generation of assembly.ll
+  kmodule->manifest(interpreterHandler, true);
 
   specialFunctionHandler->bind();
 
-  if (StatsTracker::useStatistics() || userSearcherRequiresMD2U()) {
-    statsTracker = 
-      new StatsTracker(*this,
-                       interpreterHandler->getOutputFilename("assembly.ll"),
-                       userSearcherRequiresMD2U());
-  }
+  statsTracker = std::unique_ptr<StatsTracker>(new StatsTracker(
+      *this, interpreterHandler->getOutputFilename("assembly.ll")));
+  if (interpreterOpts.generatePerTestCoverage)
+    statsTracker->doTrackCoverage();
 
   // Initialize the context.
   DataLayout *TD = kmodule->targetData.get();
@@ -460,7 +456,6 @@ Executor::~Executor() {
   delete externalDispatcher;
   delete processTree;
   delete specialFunctionHandler;
-  delete statsTracker;
   delete solver;
   while(!timers.empty()) {
     delete timers.back();
@@ -1207,8 +1202,7 @@ void Executor::printDebugInstructions(ExecutionState &state) {
 
 void Executor::stepInstruction(ExecutionState &state) {
   printDebugInstructions(state);
-  if (statsTracker)
-    statsTracker->stepInstruction(state);
+  statsTracker->stepInstruction(state);
 
   ++stats::instructions;
   ++state.steppedInstructions;
@@ -1217,6 +1211,10 @@ void Executor::stepInstruction(ExecutionState &state) {
 
   if (stats::instructions==StopAfterNInstructions)
     haltExecution = true;
+}
+
+void Executor::postExecuteInstruction(ExecutionState &state) {
+  statsTracker->postStepInstruction(state);
 }
 
 void Executor::executeCall(ExecutionState &state, 
@@ -1296,11 +1294,10 @@ void Executor::executeCall(ExecutionState &state,
     state.pushFrame(state.prevPC, kf);
     state.pc = kf->instructions;
 
-    if (statsTracker)
-      statsTracker->framePushed(state, &state.stack[state.stack.size()-2]);
+    statsTracker->framePushed(state, &state.stack[state.stack.size() - 2]);
 
-     // TODO: support "byval" parameter attribute
-     // TODO: support zeroext, signext, sret attributes
+    // TODO: support "byval" parameter attribute
+    // TODO: support zeroext, signext, sret attributes
 
     unsigned callingArgs = arguments.size();
     unsigned funcArgs = f->arg_size();
@@ -1495,9 +1492,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       terminateStateOnExit(state);
     } else {
       state.popFrame();
-
-      if (statsTracker)
-        statsTracker->framePopped(state);
+      statsTracker->framePopped(state);
 
       if (InvokeInst *ii = dyn_cast<InvokeInst>(caller)) {
         transferToBasicBlock(ii->getNormalDest(), caller->getParent(), state);
@@ -1554,7 +1549,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // requires that we still be in the context of the branch
       // instruction (it reuses its statistic id). Should be cleaned
       // up with convenient instruction specific data.
-      if (statsTracker && state.stack.back().kf->trackCoverage)
+      if (state.stack.back().kf->trackCoverage)
         statsTracker->markBranchVisited(branches.first, branches.second);
 
       if (branches.first)
@@ -2722,6 +2717,7 @@ void Executor::run(ExecutionState &initialState) {
       stepInstruction(state);
 
       executeInstruction(state, ki);
+
       processTimers(&state, MaxInstructionTime * numSeeds);
       updateStates(&state);
 
@@ -3609,9 +3605,7 @@ void Executor::runFunctionAsMain(Function *f,
   if (symPathWriter) 
     state->symPathOS = symPathWriter->open();
 
-
-  if (statsTracker)
-    statsTracker->framePushed(*state, 0);
+  statsTracker->framePushed(*state, 0);
 
   assert(arguments.size() == f->arg_size() && "wrong number of arguments");
   for (unsigned i = 0, e = f->arg_size(); i != e; ++i)
@@ -3658,8 +3652,7 @@ void Executor::runFunctionAsMain(Function *f,
   globalObjects.clear();
   globalAddresses.clear();
 
-  if (statsTracker)
-    statsTracker->done();
+  statsTracker->done();
 }
 
 unsigned Executor::getPathStreamID(const ExecutionState &state) {
@@ -3827,12 +3820,8 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
     type = AI->getAllocatedType();
   } else if (isa<InvokeInst>(allocSite) || isa<CallInst>(allocSite)) {
     // FIXME: Model the semantics of the call to use the right alignment
-    llvm::Value *allocSiteNonConst = const_cast<llvm::Value *>(allocSite);
-    const CallSite cs = (isa<InvokeInst>(allocSiteNonConst)
-                             ? CallSite(cast<InvokeInst>(allocSiteNonConst))
-                             : CallSite(cast<CallInst>(allocSiteNonConst)));
-    llvm::Function *fn =
-        klee::getDirectCallTarget(cs, /*moduleIsFullyLinked=*/true);
+    ImmutableCallSite cs(allocSite);
+    auto fn = klee::getDirectCallTarget(cs, /*moduleIsFullyLinked=*/true);
     if (fn)
       allocationSiteName = fn->getName().str();
 
@@ -3872,10 +3861,8 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
 }
 
 void Executor::prepareForEarlyExit() {
-  if (statsTracker) {
-    // Make sure stats get flushed out
-    statsTracker->done();
-  }
+  // Make sure stats get flushed out
+  statsTracker->done();
 }
 
 /// Returns the errno location in memory

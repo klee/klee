@@ -8,10 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "CoreStats.h"
+#include "CoverageTracker.h"
 #include "Executor.h"
+#include "ExecutorTimerInfo.h"
 #include "PTree.h"
 #include "StatsTracker.h"
-#include "ExecutorTimerInfo.h"
 
 #include "klee/ExecutionState.h"
 #include "klee/Internal/Module/InstructionInfoTable.h"
@@ -116,18 +117,16 @@ void Executor::processTimers(ExecutionState *current,
     if (dumpPTree) {
       char name[32];
       sprintf(name, "ptree%08d.dot", (int) stats::instructions);
-      llvm::raw_ostream *os = interpreterHandler->openOutputFile(name);
+      auto os = interpreterHandler->openOutputFile(name);
       if (os) {
         processTree->dump(*os);
-        delete os;
       }
-      
       dumpPTree = 0;
     }
 
     if (dumpStates) {
-      llvm::raw_ostream *os = interpreterHandler->openOutputFile("states.txt");
-      
+      auto os = interpreterHandler->openOutputFile("states.txt");
+
       if (os) {
         for (std::set<ExecutionState*>::const_iterator it = states.begin(), 
                ie = states.end(); it != ie; ++it) {
@@ -147,13 +146,13 @@ void Executor::processTimers(ExecutionState *current,
             }
           }
           *os << "], ";
-
           StackFrame &sf = es->stack.back();
-          uint64_t md2u = computeMinDistToUncovered(es->pc,
-                                                    sf.minDistToUncoveredOnReturn);
-          uint64_t icnt = theStatisticManager->getIndexedValue(stats::instructions,
-                                                               es->pc->info->id);
-          uint64_t cpicnt = sf.callPathNode->statistics.getValue(stats::instructions);
+          uint64_t md2u =
+              computeMinDistToUncovered(es->pc, sf.minDistToUncoveredOnReturn);
+          uint64_t icnt = theStatisticManager->getIndexedValue(
+              stats::instructions, es->pc->info->id);
+          uint64_t cpicnt =
+              sf.callPathNode->statistics.getValue(stats::instructions);
 
           *os << "{";
           *os << "'depth' : " << es->depth << ", ";
@@ -167,8 +166,6 @@ void Executor::processTimers(ExecutionState *current,
           *os << "}";
           *os << ")\n";
         }
-        
-        delete os;
       }
 
       dumpStates = 0;

@@ -12,6 +12,8 @@
 
 #include "CallPathManager.h"
 
+#include "llvm/Support/TimeValue.h"
+#include <memory>
 #include <set>
 
 namespace llvm {
@@ -22,73 +24,89 @@ namespace llvm {
 }
 
 namespace klee {
-  class ExecutionState;
-  class Executor;  
-  class InstructionInfoTable;
-  class InterpreterHandler;
-  struct KInstruction;
-  struct StackFrame;
+class CoverageTracker;
+class ExecutionState;
+class Executor;
+class InstructionInfoTable;
+class InterpreterHandler;
+struct KInstruction;
+struct StackFrame;
 
-  class StatsTracker {
-    friend class WriteStatsTimer;
-    friend class WriteIStatsTimer;
+class StatsTracker {
+  friend class WriteStatsTimer;
+  friend class WriteIStatsTimer;
 
-    Executor &executor;
-    std::string objectFilename;
+  Executor &executor;
 
-    llvm::raw_fd_ostream *statsFile, *istatsFile;
-    double startWallTime;
-    
-    unsigned numBranches;
-    unsigned fullBranches, partialBranches;
+  std::string objectFilename;
 
-    CallPathManager callPathManager;    
+  std::unique_ptr<llvm::raw_fd_ostream> statsFile, istatsFile;
+  double startWallTime;
 
-    bool updateMinDistToUncovered;
+  llvm::sys::TimeValue lastNowTime;
+  llvm::sys::TimeValue lastUserTime;
 
-  public:
-    static bool useStatistics();
-    static bool useIStats();
+  /// Handles coverage-related tracking
+  std::unique_ptr<CoverageTracker> coverageTracker;
 
-  private:
-    void updateStateStatistics(uint64_t addend);
-    void writeStatsHeader();
-    void writeStatsLine();
-    void writeIStats();
+  /// Indicates if statistics should be tracked
+  bool instructionGranularityTracking;
 
-  public:
-    StatsTracker(Executor &_executor, std::string _objectFilename,
-                 bool _updateMinDistToUncovered);
-    ~StatsTracker();
+  /// Handles tracking of call paths per state
+  CallPathManager callPathManager;
 
-    // called after a new StackFrame has been pushed (for callpath tracing)
-    void framePushed(ExecutionState &es, StackFrame *parentFrame);
+  /// Indicates if tracking per call state is enabled
+  bool codePathGranularityTracking;
 
-    // called after a StackFrame has been popped 
-    void framePopped(ExecutionState &es);
+private:
+  /// Update state counter
+  void updateStateStatistics(uint64_t addend);
+  void writeStatsHeader();
+  void writeStatsLine();
+  void writeIStats();
 
-    // called when some side of a branch has been visited. it is
-    // imperative that this be called when the statistics index is at
-    // the index for the branch itself.
-    void markBranchVisited(ExecutionState *visitedTrue, 
-                           ExecutionState *visitedFalse);
-    
-    // called when execution is done and stats files should be flushed
-    void done();
+public:
+  ///
+  /// @param executor Executor instance
+  /// @param objectFilename for istats tracker
+  StatsTracker(Executor &executor, std::string objectFilename);
 
-    // process stats for a single instruction step, es is the state
-    // about to be stepped
-    void stepInstruction(ExecutionState &es);
+  // called after a new StackFrame has been pushed (for callpath tracing)
+  void framePushed(ExecutionState &es, StackFrame *parentFrame);
 
-    /// Return time in seconds since execution start.
-    double elapsed();
+  // called after a StackFrame has been popped
+  void framePopped(ExecutionState &es);
 
-    void computeReachableUncovered();
-  };
+  // called when some side of a branch has been visited. it is
+  // imperative that this be called when the statistics index is at
+  // the index for the branch itself.
+  void markBranchVisited(ExecutionState *visitedTrue,
+                         ExecutionState *visitedFalse);
 
-  uint64_t computeMinDistToUncovered(const KInstruction *ki,
-                                     uint64_t minDistAtRA);
+  // called when execution is done and stats files should be flushed
+  void done();
 
+  // process stats for a single instruction step, es is the state
+  // about to be stepped
+  void stepInstruction(ExecutionState &es);
+
+  // Process and update statistics after the step has been made
+  void postStepInstruction(ExecutionState &es);
+
+  /// Return time in seconds since execution start.
+  double elapsed();
+
+  /// Requests tracking of instruction granularity
+  void doTrackByInstruction();
+
+  /// Requests tracking coverage of instruction and branch level
+  void doTrackCoverage();
+
+  void requestAutomaticDistanceMetricUpdates();
+
+  /// Request tracking of code path granularity
+  void doTrackCodePath();
+};
 }
 
 #endif

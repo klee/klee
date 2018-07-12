@@ -260,13 +260,16 @@ void KModule::optimiseAndPrepare(
 
 void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
   if (OutputSource || forceSourceOutput) {
-    std::unique_ptr<llvm::raw_fd_ostream> os(ih->openOutputFile("assembly.ll"));
-    assert(os && !os->has_error() && "unable to open source output");
+    auto os = ih->openOutputFile("assembly.ll");
+    if (!os)
+      klee_error("Unable to open output file for generated LLVM IR");
     *os << *module;
   }
 
   if (OutputModule) {
-    std::unique_ptr<llvm::raw_fd_ostream> f(ih->openOutputFile("final.bc"));
+    auto f = ih->openOutputFile("final.bc");
+    if (!f)
+      klee_error("Unable to open output file for generated LLVM IR");
     WriteBitcodeToFile(module.get(), *f);
   }
 

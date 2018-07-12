@@ -14,9 +14,6 @@ namespace klee {
   class Executor;
   class Searcher;
 
-  // XXX gross, should be on demand?
-  bool userSearcherRequiresMD2U();
-
   void initializeSearchOptions();
 
   Searcher *constructUserSearcher(Executor &executor);

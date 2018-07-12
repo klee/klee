@@ -12,6 +12,7 @@ klee_add_component(kleeCore
   CallPathManager.cpp
   Context.cpp
   CoreStats.cpp
+  CoverageTracker.cpp
   ExecutionState.cpp
   Executor.cpp
   ExecutorTimers.cpp
