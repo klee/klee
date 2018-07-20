@@ -665,8 +665,8 @@ static void initEnv(Module *mainModule) {
     cast<Function>(mainModule->getOrInsertFunction("klee_init_env",
                                                    Type::getVoidTy(ctx),
                                                    argcPtr->getType(),
-                                                   argvPtr->getType(),
-                                                   NULL));
+                                                   argvPtr->getType()
+                                                   KLEE_LLVM_GOIF_TERMINATOR));
   assert(initEnvFn);
   std::vector<Value*> args;
   args.push_back(argcPtr);
@@ -1028,7 +1028,8 @@ createLibCWrapper(std::vector<std::unique_ptr<llvm::Module>> &modules,
     klee_error("Could not add %s wrapper", libcMainFunction.str().c_str());
 
   auto inModuleRefernce = libcMainFn->getParent()->getOrInsertFunction(
-      userMainFn->getName(), userMainFn->getFunctionType());
+      userMainFn->getName(), userMainFn->getFunctionType()
+      KLEE_LLVM_GOIF_TERMINATOR);
 
   const auto ft = libcMainFn->getFunctionType();
 
