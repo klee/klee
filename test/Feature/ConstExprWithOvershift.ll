@@ -1,3 +1,5 @@
+; LLVM versions starting from 3.5 replace test code with "ret undef"
+; see https://github.com/klee/klee/issues/268
 ; REQUIRES: llvm-3.4
 ; RUN: llvm-as %s -f -o %t.bc
 ; RUN: rm -rf %t.klee-out

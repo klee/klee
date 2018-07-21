@@ -1,10 +1,10 @@
+; LLVM versions starting from 3.5 replace test code with "ret undef"
+; see https://github.com/klee/klee/issues/268
 ; REQUIRES: llvm-3.4
 ; RUN: llvm-as %s -f -o %t.bc
 ; RUN: rm -rf %t.klee-out
 ; RUN: not %klee --output-dir=%t.klee-out %t.bc 2> %t.log
 ; RUN: FileCheck --input-file %t.log %s
-
-; See https://github.com/klee/klee/issues/268
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
