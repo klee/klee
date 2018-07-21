@@ -1,4 +1,3 @@
-// REQUIRES: geq-llvm-3.4
 // RUN: %llvmgcc %s -emit-llvm -O0 -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: not %klee --output-dir=%t.klee-out --exit-on-error %t1.bc > %t.log 2>&1

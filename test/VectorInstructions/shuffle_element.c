@@ -1,4 +1,3 @@
-// REQUIRES: geq-llvm-3.4
 // RUN: %llvmgcc %s -emit-llvm -O0 -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // NOTE: Have to pass `--optimize=false` to avoid vector operations being
