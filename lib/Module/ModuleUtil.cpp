@@ -312,9 +312,7 @@ static bool valueIsOnlyCalled(const Value *v) {
 #else
   for (auto user : v->users()) {
 #endif
-    if (const Instruction *instr = dyn_cast<Instruction>(user)) {
-      if (instr->getOpcode()==0) continue; // XXX function numbering inst
-
+    if (const auto *instr = dyn_cast<Instruction>(user)) {
       // Make sure the instruction is a call or invoke.
       CallSite cs(const_cast<Instruction *>(instr));
       if (!cs) return false;
@@ -323,16 +321,17 @@ static bool valueIsOnlyCalled(const Value *v) {
       // not an argument.
       if (cs.hasArgument(v))
         return false;
-    } else if (const llvm::ConstantExpr *ce =
-               dyn_cast<llvm::ConstantExpr>(user)) {
-      if (ce->getOpcode()==Instruction::BitCast)
+    } else if (const auto *ce = dyn_cast<ConstantExpr>(user)) {
+      if (ce->getOpcode() == Instruction::BitCast)
         if (valueIsOnlyCalled(ce))
           continue;
       return false;
-    } else if (const GlobalAlias *ga = dyn_cast<GlobalAlias>(user)) {
-      // XXX what about v is bitcast of aliasee?
-      if (v==ga->getAliasee() && !valueIsOnlyCalled(ga))
+    } else if (const auto *ga = dyn_cast<GlobalAlias>(user)) {
+      if (v == ga->getAliasee() && !valueIsOnlyCalled(ga))
         return false;
+    } else if (isa<BlockAddress>(user)) {
+      // only valid as operand to indirectbr or comparison against null
+      continue;
     } else {
       return false;
     }
