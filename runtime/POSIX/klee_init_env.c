@@ -209,3 +209,12 @@ usage: (klee_init_env) [options] [program arguments]\n\
                 save_all_writes_flag, fd_fail);
 }
 
+/* The following function represents the main function of the user application
+ * and is renamed during POSIX setup */
+int __klee_posix_wrapped_main(int argc, char **argv);
+
+/* This wrapper gets called instead of main if POSIX setup is used */
+int __klee_posix_wrapper(int argcPtr, char **argvPtr) {
+  klee_init_env(&argcPtr, &argvPtr);
+  return __klee_posix_wrapped_main(argcPtr, argvPtr);
+}
