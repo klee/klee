@@ -626,62 +626,41 @@ static void parseArguments(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, " klee\n");
 }
 
-static void initEnv(Module *mainModule) {
+static void
+preparePOSIX(std::vector<std::unique_ptr<llvm::Module>> &loadedModules,
+             llvm::StringRef libCPrefix) {
+  // Get the main function from the main module and rename it such that it can
+  // be called after the POSIX setup
+  Function *mainFn = nullptr;
+  for (auto &module : loadedModules) {
+    mainFn = module->getFunction(EntryPoint);
+    if (mainFn)
+      break;
+  }
 
-  /*
-    nArgcP = alloc oldArgc->getType()
-    nArgvV = alloc oldArgv->getType()
-    store oldArgc nArgcP
-    store oldArgv nArgvP
-    klee_init_environment(nArgcP, nArgvP)
-    nArgc = load nArgcP
-    nArgv = load nArgvP
-    oldArgc->replaceAllUsesWith(nArgc)
-    oldArgv->replaceAllUsesWith(nArgv)
-  */
-
-  Function *mainFn = mainModule->getFunction(EntryPoint);
   if (!mainFn)
     klee_error("'%s' function not found in module.", EntryPoint.c_str());
+  mainFn->setName("__klee_posix_wrapped_main");
 
-  if (mainFn->arg_size() < 2)
-    klee_error("Cannot handle ""--posix-runtime"" when main() has less than two arguments.\n");
+  // Add a definition of the entry function if needed. This is the case if we
+  // link against a libc implementation. Preparing for libc linking (i.e.
+  // linking with uClibc will expect a main function and rename it to
+  // _user_main. We just provide the definition here.
+  if (!libCPrefix.empty())
+    mainFn->getParent()->getOrInsertFunction(EntryPoint,
+                                             mainFn->getFunctionType());
 
-  Instruction *firstInst = &*(mainFn->begin()->begin());
+  llvm::Function *wrapper = nullptr;
+  for (auto &module : loadedModules) {
+    wrapper = module->getFunction("__klee_posix_wrapper");
+    if (wrapper)
+      break;
+  }
+  assert(wrapper && "klee_posix_wrapper not found");
 
-  Value *oldArgc = &*(mainFn->arg_begin());
-  Value *oldArgv = &*(++mainFn->arg_begin());
-
-  AllocaInst* argcPtr =
-    new AllocaInst(oldArgc->getType(), "argcPtr", firstInst);
-  AllocaInst* argvPtr =
-    new AllocaInst(oldArgv->getType(), "argvPtr", firstInst);
-
-  /* Insert void klee_init_env(int* argc, char*** argv) */
-  std::vector<const Type*> params;
-  LLVMContext &ctx = mainModule->getContext();
-  params.push_back(Type::getInt32Ty(ctx));
-  params.push_back(Type::getInt32Ty(ctx));
-  Function* initEnvFn =
-    cast<Function>(mainModule->getOrInsertFunction("klee_init_env",
-                                                   Type::getVoidTy(ctx),
-                                                   argcPtr->getType(),
-                                                   argvPtr->getType(),
-                                                   NULL));
-  assert(initEnvFn);
-  std::vector<Value*> args;
-  args.push_back(argcPtr);
-  args.push_back(argvPtr);
-  Instruction* initEnvCall = CallInst::Create(initEnvFn, args,
-					      "", firstInst);
-  Value *argc = new LoadInst(argcPtr, "newArgc", firstInst);
-  Value *argv = new LoadInst(argvPtr, "newArgv", firstInst);
-
-  oldArgc->replaceAllUsesWith(argc);
-  oldArgv->replaceAllUsesWith(argv);
-
-  new StoreInst(oldArgc, argcPtr, initEnvCall);
-  new StoreInst(oldArgv, argvPtr, initEnvCall);
+  // Rename the POSIX wrapper to prefixed entrypoint, e.g. _user_main as uClibc
+  // would expect it or main otherwise
+  wrapper->setName(libCPrefix + EntryPoint);
 }
 
 
@@ -1184,15 +1163,24 @@ int main(int argc, char **argv, char **envp) {
   // Push the module as the first entry
   loadedModules.emplace_back(std::move(M));
 
-  if (WithPOSIXRuntime) {
-    initEnv(mainModule);
-  }
-
   std::string LibraryDir = KleeHandler::getRunTimeLibraryPath(argv[0]);
   Interpreter::ModuleOptions Opts(LibraryDir.c_str(), EntryPoint,
                                   /*Optimize=*/OptimizeModule,
                                   /*CheckDivZero=*/CheckDivZero,
                                   /*CheckOvershift=*/CheckOvershift);
+
+  if (WithPOSIXRuntime) {
+    SmallString<128> Path(Opts.LibraryDir);
+    llvm::sys::path::append(Path, "libkleeRuntimePOSIX.bca");
+    klee_message("NOTE: Using POSIX model: %s", Path.c_str());
+    if (!klee::loadFile(Path.c_str(), mainModule->getContext(), loadedModules,
+                        errorMsg))
+      klee_error("error loading POSIX support '%s': %s", Path.c_str(),
+                 errorMsg.c_str());
+
+    std::string libcPrefix = (Libc == LibcType::UcLibc ? "__user_" : "");
+    preparePOSIX(loadedModules, libcPrefix);
+  }
 
   switch (Libc) {
   case LibcType::KleeLibc: {
@@ -1217,16 +1205,6 @@ int main(int argc, char **argv, char **envp) {
   case LibcType::UcLibc:
     linkWithUclibc(LibraryDir, loadedModules);
     break;
-  }
-
-  if (WithPOSIXRuntime) {
-    SmallString<128> Path(Opts.LibraryDir);
-    llvm::sys::path::append(Path, "libkleeRuntimePOSIX.bca");
-    klee_message("NOTE: Using POSIX model: %s", Path.c_str());
-    if (!klee::loadFile(Path.c_str(), mainModule->getContext(), loadedModules,
-                        errorMsg))
-      klee_error("error loading POSIX support '%s': %s", Path.c_str(),
-                 errorMsg.c_str());
   }
 
   for (const auto &library : LinkLibraries) {
