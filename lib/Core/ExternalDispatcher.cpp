@@ -132,6 +132,7 @@ ExternalDispatcherImpl::ExternalDispatcherImpl(LLVMContext &ctx)
   // so we can use the EngineBuilder API.
   auto dispatchModuleUniq = std::unique_ptr<Module>(singleDispatchModule);
   executionEngine = EngineBuilder(std::move(dispatchModuleUniq))
+                        .setErrorStr(&error)
                         .setEngineKind(EngineKind::JIT)
                         .create();
 #endif
