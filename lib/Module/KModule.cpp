@@ -275,9 +275,13 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
   infos = std::unique_ptr<InstructionInfoTable>(
       new InstructionInfoTable(module.get()));
 
+  std::vector<Function *> declarations;
+
   for (auto &Function : *module) {
-    if (Function.isDeclaration())
+    if (Function.isDeclaration()) {
+      declarations.push_back(&Function);
       continue;
+    }
 
     auto kf = std::unique_ptr<KFunction>(new KFunction(&Function, this));
 
@@ -295,6 +299,11 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
   for (auto &kf : functions) {
     if (functionEscapes(kf->function))
       escapingFunctions.insert(kf->function);
+  }
+
+  for (auto &declaration : declarations) {
+    if (functionEscapes(declaration))
+      escapingFunctions.insert(declaration);
   }
 
   if (DebugPrintEscapingFunctions && !escapingFunctions.empty()) {
