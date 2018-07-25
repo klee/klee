@@ -80,26 +80,6 @@ for sanitizer in ${sorted_sanitizers[@]}; do
     fi
 
     SANITIZER_SUFFIX+="_memsan"
-    SANITIZER_LLVM_UNINSTRUMENTED="${LLVM_BUILD}_uninstrumented"
-    SANITIZER_LLVM_LIBCXX="${LLVM_BUILD}_libcxx"
-
-    SANITIZER_C_COMPILER="${SANITIZER_LLVM_UNINSTRUMENTED}/bin/clang"
-    SANITIZER_CXX_COMPILER="${SANITIZER_LLVM_UNINSTRUMENTED}/bin/clang++"
-    SANITIZER_CMAKE_C_COMPILER="-DCMAKE_C_COMPILER=${SANITIZER_C_COMPILER}"
-    SANITIZER_CMAKE_CXX_COMPILER="-DCMAKE_CXX_COMPILER=${SANITIZER_CXX_COMPILER}"
-
-    MSAN_LINK_FLAGS="-lc++abi -Wl,--rpath=${SANITIZER_LLVM_LIBCXX}/lib -L${SANITIZER_LLVM_LIBCXX}/lib";
-    MSAN_FLAGS="$MSAN_LINK_FLAGS -nostdinc++ \
-       -isystem ${SANITIZER_LLVM_LIBCXX}/include \
-       -isystem ${SANITIZER_LLVM_LIBCXX}/include/c++/v1  \
-       -fsanitize=memory \
-       -fsanitize-memory-track-origins \
-       -w -fno-omit-frame-pointer -g";
-
-    SANITIZER_CXX_FLAGS+="${MSAN_FLAGS} -stdlib=libc++"
-    SANITIZER_C_FLAGS+="${MSAN_FLAGS}"
-    SANITIZER_LD_FLAGS+="${MSAN_LINK_FLAGS}"
-
     IS_SANITIZED_BUILD=1
     continue
   fi
@@ -174,6 +154,39 @@ else
   BITCODE_CC="${LLVM_BIN}/clang"
   BITCODE_CXX="${LLVM_BIN}/clang++"
 fi
+
+for sanitizer in ${sorted_sanitizers[@]}; do
+  # Undefined Behaviour Sanitizer
+  if [ "X${sanitizer}" == "Xmemory" ]; then
+    SANITIZER_LLVM_UNINSTRUMENTED="${LLVM_BUILD}_uninstrumented"
+    SANITIZER_LLVM_LIBCXX="${LLVM_BUILD}_libcxx"
+
+    SANITIZER_C_COMPILER="${SANITIZER_LLVM_UNINSTRUMENTED}/bin/clang"
+    SANITIZER_CXX_COMPILER="${SANITIZER_LLVM_UNINSTRUMENTED}/bin/clang++"
+    SANITIZER_CMAKE_C_COMPILER=(-DCMAKE_C_COMPILER=${SANITIZER_C_COMPILER})
+    SANITIZER_CMAKE_CXX_COMPILER=(-DCMAKE_CXX_COMPILER=${SANITIZER_CXX_COMPILER})
+
+    MSAN_LINK_FLAGS=(-lc++abi -Wl,--rpath="${SANITIZER_LLVM_LIBCXX}/lib" -L"${SANITIZER_LLVM_LIBCXX}/lib")
+    MSAN_FLAGS=("${MSAN_LINK_FLAGS[@]}" -nostdinc++ \
+       -isystem "${SANITIZER_LLVM_LIBCXX}/include" \
+       -isystem "${SANITIZER_LLVM_LIBCXX}/include/c++/v1"  \
+       -fsanitize=memory \
+       -fsanitize-memory-track-origins \
+       -w -fno-omit-frame-pointer -g)
+    SANITIZER_CXX_FLAGS+=("${MSAN_FLAGS[@]}" -stdlib=libc++)
+    SANITIZER_C_FLAGS+=("${MSAN_FLAGS[@]}")
+    SANITIZER_LD_FLAGS+=("${MSAN_LINK_FLAGS[@]}")
+
+    IS_SANITIZED_BUILD=1
+
+    # Use the uninstrumented compiler
+    BITCODE_CC="${SANITIZER_C_COMPILER}"
+    BITCODE_CXX="${SANITIZER_CXX_COMPILER}"
+    # But point to the instrumented llvm-config
+    LLVM_CONFIG="${LLVM_BIN}/llvm-config"
+  fi
+done
+
 # Handle OSX version
 
 if [[ "$TRAVIS_OS_NAME" = "osx" ]] ; then
