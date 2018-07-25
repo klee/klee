@@ -14,13 +14,13 @@
 #===------------------------------------------------------------------------===#
 
 message(STATUS "Looking for bitcode compilers")
-
 find_program(
   LLVMCC
   NAMES "clang-${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}" "clang" "llvm-gcc"
-   # Give the LLVM tools directory higher priority than the system directory.
-  HINTS "${LLVM_TOOLS_BINARY_DIR}"
+  # Give the provided LLVMCC and  LLVM tools directory higher priority than the system directory.
+  HINTS "${LLVMCC}" "${LLVM_TOOLS_BINARY_DIR}"
 )
+
 if (LLVMCC)
   message(STATUS "Found ${LLVMCC}")
 else()
@@ -31,7 +31,7 @@ find_program(
   LLVMCXX
   NAMES "clang++-${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}" "clang++" "llvm-g++"
    # Give the LLVM tools directory higher priority than the system directory.
-  HINTS "${LLVM_TOOLS_BINARY_DIR}"
+  HINTS "${LLVMCXX}" "${LLVM_TOOLS_BINARY_DIR}"
 )
 if (LLVMCXX)
   message(STATUS "Found ${LLVMCXX}")
