@@ -126,6 +126,9 @@ if [[ "${PACKAGED}x" == "1x" ]]; then
     LLVM_BIN="$(llvm-config-${LLVM_VERSION} --bindir)"
   fi
   set -e
+  LLVM_CONFIG="${llvm_config_path}"
+  BITCODE_CC="${LLVM_BIN}/clang"
+  BITCODE_CXX="${LLVM_BIN}/clang++"
 else
   if [[ "${ENABLE_OPTIMIZED}" == "1" ]]; then
     LLVM_SUFFIX+="_O"
@@ -166,6 +169,18 @@ else
   else
     LLVM_BUILD_BIN="${LLVM_BUILD}/bin"
   fi
+
+  LLVM_CONFIG="${LLVM_BIN}/llvm-config"
+  BITCODE_CC="${LLVM_BIN}/clang"
+  BITCODE_CXX="${LLVM_BIN}/clang++"
+fi
+# Handle OSX version
+
+if [[ "$TRAVIS_OS_NAME" = "osx" ]] ; then
+  LLVM_CONFIG="/usr/local/bin/llvm-config-${LLVM_VERSION}"
+  LLVM_INSTALL="$(${LLVM_CONFIG} --src-root)"
+  BITCODE_CC="/usr/local/bin/clang-${LLVM_VERSION}"
+  BITCODE_CXX="/usr/local/bin/clang++-${LLVM_VERSION}"
 fi
 
 ###############################################################################

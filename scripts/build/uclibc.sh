@@ -20,6 +20,6 @@ if [ "${KLEE_UCLIBC}" != "0" ]; then
   fi
   git_clone_or_update git://github.com/klee/klee-uclibc.git "${BASE}/klee-uclibc-${LLVM_VERSION_SHORT}" "${KLEE_UCLIBC}"
   cd "${BASE}/klee-uclibc-${LLVM_VERSION_SHORT}"
-  ./configure --make-llvm-lib --with-cc ${KLEE_CC} --with-llvm-config ${LLVM_CONFIG}
+  ./configure --make-llvm-lib --with-cc ${BITCODE_CC} --with-llvm-config ${LLVM_CONFIG}
   make
 fi
