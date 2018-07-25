@@ -72,15 +72,17 @@ if [[ "${SANITIZER_BUILD}" == "memory" ]]; then
    # Build instrumented clang
    mkdir "${LLVM_BUILD}"
    cd "${LLVM_BUILD}"
+   C_F="${SANITIZER_C_FLAGS[@]}"
+   CXX_F="${SANITIZER_CXX_FLAGS[@]}"
+   LD_F="${SANITIZER_LD_FLAGS[@]}"
    cmake -GNinja \
-      ${SANITIZER_CMAKE_C_COMPILER} \
-      ${SANITIZER_CMAKE_CXX_COMPILER} \
-      -DCMAKE_C_FLAGS="$SANITIZER_C_FLAGS" \
-      -DCMAKE_CXX_FLAGS="$SANITIZER_CXX_FLAGS" \
-      -DCMAKE_BUILD_TYPE=Release \
+      "${SANITIZER_CMAKE_C_COMPILER[@]}" \
+      "${SANITIZER_CMAKE_CXX_COMPILER[@]}" \
+      -DCMAKE_C_FLAGS="$C_F" \
+      -DCMAKE_CXX_FLAGS="${CXX_F}" \
       -DLLVM_USE_SANITIZER=MemoryWithOrigins \
       -DLLVM_ENABLE_LIBCXX=ON \
-      -DCMAKE_EXE_LINKER_FLAGS="$SANITIZER_LD_FLAGS" \
+      -DCMAKE_EXE_LINKER_FLAGS="${LD_F}" \
       -DCMAKE_INSTALL_PREFIX="${LLVM_INSTALL}" \
       "${LLVM_BASE}"
   # Build clang as a dependency and install all needed packages
@@ -136,7 +138,10 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     fi
     CC=${CC} CXX=${CXX} CFLAGS="${LLVM_CFLAGS}" CXXFLAGS="${LLVM_CXXFLAGS}" LDFLAGS="${LLVM_LDFLAGS}" "${LLVM_BASE}/configure" "${CONFIG[@]}"
   else
-    CONFIG=(-DCMAKE_INSTALL_PREFIX="${LLVM_INSTALL}")
+    CONFIG=( \
+        -DCMAKE_INSTALL_PREFIX="${LLVM_INSTALL}" \
+	-LLVM_BUILD_LLVM_DYLIB=TRUE \
+    )
     # cmake build
     if [[ "${ENABLE_OPTIMIZED}" == "1" && "${ENABLE_DEBUG}" != "1" ]]; then
       CONFIG+=(-DCMAKE_BUILD_TYPE=Release)

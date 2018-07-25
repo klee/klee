@@ -14,10 +14,12 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   mkdir -p "${BASE}/z3-${Z3_VERSION}"
   cd "${BASE}/z3-${Z3_VERSION}"
   wget -qO- https://github.com/Z3Prover/z3/archive/z3-${Z3_VERSION}.tar.gz | tar xz --strip-components=1
-  LDFLAGS="${SANITIZER_LD_FLAGS}" \
-  CXXFLAGS="${SANITIZER_CXX_FLAGS}" \
   python scripts/mk_make.py --prefix "${BASE}/z3-${Z3_VERSION}-install"
   cd build
+  LDFLAGS="${SANITIZER_LD_FLAGS[@]}" \
+  CXXFLAGS="${SANITIZER_CXX_FLAGS[@]}" \
+  CC="${SANITIZER_C_COMPILER}" \
+  CXX="${SANITIZER_CXX_COMPILER}" \
   make -j$(nproc)
   make install
 elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then

@@ -39,9 +39,9 @@ unset IFS
 
 # Set variables used by clients.
 ## Build variables
-SANITIZER_CXX_FLAGS=""
-SANITIZER_C_FLAGS=""
-SANITIZER_LD_FLAGS=""
+SANITIZER_CXX_FLAGS=()
+SANITIZER_C_FLAGS=()
+SANITIZER_LD_FLAGS=()
 # Docker_suffix
 SANITIZER_SUFFIX=""
 
@@ -50,10 +50,10 @@ for sanitizer in ${sorted_sanitizers[@]}; do
   # AddressSanitizer
   if [ "X${sanitizer}" == "Xaddress" ]; then
     echo "Using ASan"
-    flags=" -fsanitize=address -fno-omit-frame-pointer -g"
-    SANITIZER_CXX_FLAGS+=" ${flags}"
-    SANITIZER_C_FLAGS+=" ${flags}"
-    SANITIZER_LD_FLAGS+=" ${flags}"
+    flags=( -fsanitize=address -fno-omit-frame-pointer -g)
+    SANITIZER_CXX_FLAGS+=(${flags})
+    SANITIZER_C_FLAGS+=(${flags})
+    SANITIZER_LD_FLAGS+=(${flags})
     SANITIZER_SUFFIX+="_asan"
     IS_SANITIZED_BUILD=1
     continue
@@ -62,10 +62,10 @@ for sanitizer in ${sorted_sanitizers[@]}; do
   # Undefined Behaviour Sanitizer
   if [ "X${sanitizer}" == "Xundefined" ]; then
     echo "Using UBSan"
-    flags="-fsanitize=undefined -fno-omit-frame-pointer -g"
-    SANITIZER_CXX_FLAGS+=" ${flags}"
-    SANITIZER_C_FLAGS+=" ${flags}"
-    SANITIZER_LD_FLAGS+=" ${flags} -lubsan -fuse-ld=gold"
+    flags=(-fsanitize=undefined -fno-omit-frame-pointer -g)
+    SANITIZER_CXX_FLAGS+=(${flags})
+    SANITIZER_C_FLAGS+=(${flags})
+    SANITIZER_LD_FLAGS+=(${flags} -lubsan -fuse-ld=gold)
     SANITIZER_SUFFIX+="_ubsan"
     IS_SANITIZED_BUILD=1
     continue
@@ -74,8 +74,8 @@ for sanitizer in ${sorted_sanitizers[@]}; do
   # Undefined Behaviour Sanitizer
   if [ "X${sanitizer}" == "Xmemory" ]; then
     echo "Using Memory Sanitizer"
-    if [[ "X${PACKAGED}" == "X1" ]]; then
-      echo "simultanously memory sanitizer and packaged is not supported "
+    if [[ ("X${PACKAGED}" == "X1") || ( "${#sanitizers[@]}" != "1") ]]; then
+      echo "Memory sanitizers in combination with others or with packages are not supported "
       exit 1
     fi
 

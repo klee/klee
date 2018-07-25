@@ -15,10 +15,10 @@ if [ "x${STP_VERSION}" != "x" ]; then
   cd "${BASE}/minisat/build"
   MINISAT_DIR="$(pwd)"
   if [[ "$TRAVIS_OS_NAME" == "linux" || "$TRAVIS_OS_NAME" == "osx" ]]; then
-    CFLAGS="${SANITIZER_C_FLAGS}" \
-    CXXFLAGS="${SANITIZER_CXX_FLAGS}" \
-    LDFLAGS="${SANITIZER_LD_FLAGS}" \
     cmake -DCMAKE_INSTALL_PREFIX="${BASE}/minisat-install" \
+    CFLAGS="${SANITIZER_C_FLAGS[@]}" \
+    CXXFLAGS="${SANITIZER_CXX_FLAGS[@]}" \
+    LDFLAGS="${SANITIZER_LD_FLAGS[@]}" \
       ${SANITIZER_CMAKE_C_COMPILER} \
       ${SANITIZER_CMAKE_CXX_COMPILER} \
       "${BASE}/minisat"
@@ -42,12 +42,12 @@ if [ "x${STP_VERSION}" != "x" ]; then
   )
   # Disabling building of shared libs is a workaround.
   # Don't build against boost because that is broken when mixing packaged boost libraries and gcc 4.8
-  CFLAGS="${SANITIZER_C_FLAGS}" \
-  CXXFLAGS="${SANITIZER_CXX_FLAGS}" \
-  LDFLAGS="${SANITIZER_LD_FLAGS}" \
-  cmake ${STP_CMAKE_FLAGS} \
         -DCMAKE_PREFIX_PATH="${BASE}/minisat-install" "${BASE}/stp-${STP_VERSION}" \
         -DCMAKE_INSTALL_PREFIX="${BASE}/stp-${STP_VERSION}-install"
+  CFLAGS="${SANITIZER_C_FLAGS[@]}" \
+  CXXFLAGS="${SANITIZER_CXX_FLAGS[@]}" \
+  LDFLAGS="${SANITIZER_LD_FLAGS[@]}" \
+  cmake "${STP_CMAKE_FLAGS[@]}" \
   make
   make install
 else
