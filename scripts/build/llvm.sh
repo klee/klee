@@ -54,13 +54,13 @@ if [[ "${SANITIZER_BUILD}" == "memory" ]]; then
      exit 1
    fi
    # Build uninstrumented compiler
-   mkdir "${SANITIZER_LLVM_UNINSTRUMENTED}"
+   mkdir -p "${SANITIZER_LLVM_UNINSTRUMENTED}"
    cd "${SANITIZER_LLVM_UNINSTRUMENTED}"
    cmake -GNinja -DCMAKE_BUILD_TYPE=Release "${LLVM_BASE}"
    ninja
 
    # Build instrumented libc/libc++
-   mkdir "${SANITIZER_LLVM_LIBCXX}"
+   mkdir -p "${SANITIZER_LLVM_LIBCXX}"
    cd "${SANITIZER_LLVM_LIBCXX}"
    cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DLLVM_USE_SANITIZER=MemoryWithOrigins \
@@ -70,7 +70,7 @@ if [[ "${SANITIZER_BUILD}" == "memory" ]]; then
    ninja cxx cxxabi
 
    # Build instrumented clang
-   mkdir "${LLVM_BUILD}"
+   mkdir -p "${LLVM_BUILD}"
    cd "${LLVM_BUILD}"
    C_F="${SANITIZER_C_FLAGS[@]}"
    CXX_F="${SANITIZER_CXX_FLAGS[@]}"
@@ -80,6 +80,8 @@ if [[ "${SANITIZER_BUILD}" == "memory" ]]; then
       "${SANITIZER_CMAKE_CXX_COMPILER[@]}" \
       -DCMAKE_C_FLAGS="$C_F" \
       -DCMAKE_CXX_FLAGS="${CXX_F}" \
+      -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+      -DLLVM_ENABLE_ASSERTIONS=On \
       -DLLVM_USE_SANITIZER=MemoryWithOrigins \
       -DLLVM_ENABLE_LIBCXX=ON \
       -DCMAKE_EXE_LINKER_FLAGS="${LD_F}" \
@@ -87,9 +89,10 @@ if [[ "${SANITIZER_BUILD}" == "memory" ]]; then
       "${LLVM_BASE}"
   # Build clang as a dependency and install all needed packages
   ninja clang
-  ninja install-clang install-llvm-config install-llvm-objdump \
+  LLVM_PACKAGES=( \
+      install-clang install-llvm-config install-llvm-objdump \
       install-llvm-link install-llvm-ar install-llvm-nm install-llvm-dis \
-      install-clang-headers install-llvm-as installhdrs install-LLVMX86Disassembler \
+      install-clang-headers install-llvm-as install-LLVMX86Disassembler \
       install-LLVMX86AsmParser install-LLVMX86CodeGen install-LLVMSelectionDAG \
       install-LLVMAsmPrinter install-LLVMX86Desc install-LLVMMCDisassembler \
       install-LLVMX86Info install-LLVMX86AsmPrinter install-LLVMX86Utils \
@@ -99,7 +102,15 @@ if [[ "${SANITIZER_BUILD}" == "memory" ]]; then
       install-LLVMInstCombine install-LLVMInstrumentation install-LLVMProfileData \
       install-LLVMObject install-LLVMMCParser install-LLVMTransformUtils install-LLVMMC \
       install-LLVMAnalysis install-LLVMBitWriter install-LLVMBitReader install-LLVMCore \
-      install-llvm-symbolizer install-LLVMSupport install-lli not FileCheck
+      install-llvm-symbolizer install-LLVMSupport install-lli not FileCheck )
+
+  if [[ ${LLVM_VERSION_SHORT} -eq 38 ]]; then
+	LLVM_PACKAGES=(${LLVM_PACKAGES[@]} installhdrs)
+  else
+	LLVM_PACKAGES=(${LLVM_PACKAGES[@]} install-llvm-headers install-LLVMDemangle)
+  fi
+
+  ninja "${LLVM_PACKAGES[@]}"
   cp "${LLVM_BUILD}/bin/FileCheck" "${LLVM_INSTALL}/bin/"
   cp "${LLVM_BUILD}/bin/not" "${LLVM_INSTALL}/bin/"
   exit 0
