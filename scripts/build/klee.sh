@@ -18,24 +18,6 @@ fi
 
 CMAKE_PREFIX_PATH=""
 ###############################################################################
-# Handling LLVM configuration
-###############################################################################
-if [[ "$TRAVIS_OS_NAME" = "linux" ]] ; then
-  LLVM_CONFIG="${LLVM_BIN}/llvm-config"
-  LLVM_BUILD_DIR="/usr/lib/llvm-${LLVM_VERSION_SHORT}/build"
-  KLEE_CC="${LLVM_BIN}/clang"
-  KLEE_CXX="${LLVM_BIN}/clang++"
-elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
-  LLVM_CONFIG="/usr/local/bin/llvm-config-${LLVM_VERSION}"
-  LLVM_BUILD_DIR="$(${LLVM_CONFIG} --src-root)"
-  KLEE_CC="/usr/local/bin/clang-${LLVM_VERSION}"
-  KLEE_CXX="/usr/local/bin/clang++-${LLVM_VERSION}"
-else
-  echo "Unhandled TRAVIS_OS_NAME \"${TRAVIS_OS_NAME}\""
-  exit 1
-fi
-
-###############################################################################
 # klee-uclibc
 ###############################################################################
 if [ "${KLEE_UCLIBC}" != "0" ]; then

@@ -11,18 +11,6 @@ if [[ -z "${KLEE_UCLIBC}" ]]; then
 fi
 
 ###############################################################################
-# Handling LLVM configuration
-###############################################################################
-if [[ "$TRAVIS_OS_NAME" = "linux"  ||  "$TRAVIS_OS_NAME" = "osx" ]] ; then
-  LLVM_CONFIG="${LLVM_BIN}/llvm-config"
-  KLEE_CC="${LLVM_BIN}/clang"
-  KLEE_CXX="${LLVM_BIN}/clang++"
-else
-  echo "Unhandled TRAVIS_OS_NAME \"${TRAVIS_OS_NAME}\""
-  exit 1
-fi
-
-###############################################################################
 # klee-uclibc
 ###############################################################################
 if [ "${KLEE_UCLIBC}" != "0" ]; then

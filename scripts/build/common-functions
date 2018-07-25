@@ -108,8 +108,9 @@ for sanitizer in ${sorted_sanitizers[@]}; do
   exit 1
 done
 
-# This file is meant to be included by shell scripts
-# that need to retrieve llvm-specifi variables
+###############################################################################
+# Handling LLVM configuration
+###############################################################################
 
 LLVM_VERSION_SHORT="${LLVM_VERSION/./}"
 LLVM_SUFFIX=""
@@ -167,6 +168,10 @@ else
   fi
 fi
 
+###############################################################################
+# Handling solver configuration
+###############################################################################
+
 # Generate the suffix used for the solver combination
 # Every solver needs to have a version explicitly specified
 SOLVER_SUFFIX=""
@@ -207,9 +212,9 @@ for solver in ${sorted_solvers[@]}; do
   fi
 done
 
-# This file is meant to be included by shell scripts that handle dependencies by
-# KLEE beside LLVM and solvers
-#
+###############################################################################
+# Handling uclibc configuration
+###############################################################################
 # Generate the suffix used for direct dependencies of KLEE like uclibc
 DEPS_SUFFIX=""
 if [[ "${KLEE_UCLIBC}" != "0" ]]; then
