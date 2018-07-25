@@ -160,7 +160,7 @@ else()
       _run_llvm_config(_system_libs "--ldflags")
       # TODO: Filter out `-L<path>` flag.
     else()
-      _run_llvm_config(_system_libs "--system-libs")
+      _run_llvm_config(_system_libs "--system-libs" ${ARGN})
     endif()
     string_to_list("${_system_libs}" _system_libs_list)
 
