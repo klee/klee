@@ -51,13 +51,13 @@ TEST(SearcherTest, RandomPath) {
   }
 
   rp.update(&es, {&es1}, {&es});
-  PTree::remove(es.ptreeNode);
+  processTree.remove(es.ptreeNode);
   for (int i = 0; i < 100; i++) {
     EXPECT_EQ(&rp.selectState(), &es1);
   }
 
   rp.update(&es1, {}, {&es1});
-  PTree::remove(es1.ptreeNode);
+  processTree.remove(es1.ptreeNode);
   EXPECT_TRUE(rp.empty());
 }
 
@@ -103,16 +103,16 @@ TEST(SearcherTest, TwoRandomPath) {
   }
 
   rp1.update(&es, {}, {&es});
-  PTree::remove(es.ptreeNode);
+  processTree.remove(es.ptreeNode);
   EXPECT_TRUE(rp1.empty());
   EXPECT_EQ(&rp.selectState(), &es1);
 
   rp.update(&es1, {}, {&es1});
-  PTree::remove(es1.ptreeNode);
+  processTree.remove(es1.ptreeNode);
   EXPECT_TRUE(rp.empty());
   EXPECT_TRUE(rp1.empty());
 
-  PTree::remove(root.ptreeNode);
+  processTree.remove(root.ptreeNode);
 }
 
 TEST(SearcherTest, TwoRandomPathDot) {
@@ -174,7 +174,7 @@ TEST(SearcherTest, TwoRandomPathDot) {
   rp1.update(nullptr, {&es}, {&es1});
 
   rp1.update(&es, {}, {&es});
-  PTree::remove(es.ptreeNode);
+  processTree.remove(es.ptreeNode);
 
   modelPTreeDot.str("");
   modelPTreeDot
@@ -198,15 +198,15 @@ TEST(SearcherTest, TwoRandomPathDot) {
   pTreeDot = "";
   processTree.dump(pTreeDotStream);
   EXPECT_EQ(modelPTreeDot.str(), pTreeDotStream.str());
-  PTree::remove(es1.ptreeNode);
-  PTree::remove(root.ptreeNode);
+  processTree.remove(es1.ptreeNode);
+  processTree.remove(root.ptreeNode);
 }
 TEST(SearcherDeathTest, TooManyRandomPaths) {
   // First state
   ExecutionState es;
   PTree processTree(&es);
   es.ptreeNode = processTree.root.getPointer();
-  PTree::remove(es.ptreeNode); // Need to remove to avoid leaks
+  processTree.remove(es.ptreeNode); // Need to remove to avoid leaks
 
   RNG rng;
   RandomPathSearcher rp(processTree, rng);
