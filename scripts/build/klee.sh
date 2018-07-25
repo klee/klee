@@ -45,13 +45,13 @@ for solver in ${SOLVER_LIST}; do
   echo "Setting CMake configuration option for ${solver}"
   case ${solver} in
   STP)
-    KLEE_STP_CONFIGURE_OPTION=(-DENABLE_SOLVER_STP=TRUE -DSTP_DIR="${BASE}/stp-${STP_VERSION}-install")
+    KLEE_STP_CONFIGURE_OPTION=(-DENABLE_SOLVER_STP=TRUE -DSTP_DIR="${BASE}/stp-${STP_VERSION}-build${SANITIZER_SUFFIX}/")
     ;;
   Z3)
     echo "Z3"
     KLEE_Z3_CONFIGURE_OPTION=(-DENABLE_SOLVER_Z3=TRUE)
     if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
-    	KLEE_Z3_CONFIGURE_OPTION+=(-DZ3_INCLUDE_DIRS="${BASE}/z3-${Z3_VERSION}-install/include" -DZ3_LIBRARIES="${BASE}/z3-${Z3_VERSION}-install/lib/libz3.so")
+    	KLEE_Z3_CONFIGURE_OPTION+=(-DZ3_INCLUDE_DIRS="${BASE}/z3-${Z3_VERSION}-install${SANITIZER_SUFFIX}/include" -DZ3_LIBRARIES="${BASE}/z3-${Z3_VERSION}-install${SANITIZER_SUFFIX}/lib/libz3.so")
     fi
     ;;
   metaSMT)
