@@ -55,6 +55,6 @@ int main(int argc, char *argv[]) {
     uint64_t (*f4)(void) =(uint64_t (*)(void))bitcasted_function_declaration;
     f4();
 
-    // CHECK: KLEE: escaping functions: {{\[((functionpointer|functionpointer_as_argument|bitcasted_functionpointer|function_declaration|bitcasted_function_declaration), ){5}\]}}
+    // CHECK: KLEE: escaping functions: {{\[((functionpointer|functionpointer_as_argument|bitcasted_functionpointer|function_declaration|bitcasted_function_declaration)(, )?){5}\]}}
     return 0;
 }
