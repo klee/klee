@@ -44,6 +44,6 @@ int main(int argc, char *argv[]) {
     // cast when aliasing should not result in either function being marked as escaping
     bitcast_in_global_alias();
 
-    // CHECK: KLEE: escaping functions: {{\[((bitcast_of_global_alias|bitcast_of_global_aliasee), ){2}\]}}
+    // CHECK: KLEE: escaping functions: {{\[((bitcast_of_global_alias|bitcast_of_global_aliasee)(, )?){2}\]}}
     return 0;
 }
