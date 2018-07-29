@@ -16,6 +16,7 @@
 
 #include "Passes.h"
 #include "klee/Config/Version.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
 #include <algorithm>
 
@@ -60,7 +61,8 @@ void LowerSwitchPass::switchConvert(CaseItr begin, CaseItr end,
 {
   BasicBlock *curHead = defaultBlock;
   Function *F = origBlock->getParent();
-  
+  llvm::IRBuilder<> Builder(defaultBlock);
+
   // iterate through all the cases, creating a new BasicBlock for each
   for (CaseItr it = begin; it < end; ++it) {
     BasicBlock *newBlock = BasicBlock::Create(F->getContext(), "NodeBlock");
@@ -70,10 +72,9 @@ void LowerSwitchPass::switchConvert(CaseItr begin, CaseItr end,
     Function::iterator FI = origBlock;
 #endif
     F->getBasicBlockList().insert(++FI, newBlock);
-    
-    ICmpInst *cmpInst = 
-      new ICmpInst(*newBlock, ICmpInst::ICMP_EQ, value, it->value, "case.cmp");
-    BranchInst::Create(it->block, curHead, cmpInst, newBlock);
+    Builder.SetInsertPoint(newBlock);
+    auto cmpValue = Builder.CreateICmpEQ(value, it->value, "case.cmp");
+    Builder.CreateCondBr(cmpValue, it->block, curHead);
 
     // If there were any PHI nodes in this successor, rewrite one entry
     // from origBlock to come from newBlock.
@@ -89,7 +90,8 @@ void LowerSwitchPass::switchConvert(CaseItr begin, CaseItr end,
   }
 
   // Branch to our shiny new if-then stuff...
-  BranchInst::Create(curHead, origBlock);
+  Builder.SetInsertPoint(origBlock);
+  Builder.CreateBr(curHead);
 }
 
 // processSwitchInst - Replace the specified switch instruction with a sequence
@@ -104,13 +106,14 @@ void LowerSwitchPass::processSwitchInst(SwitchInst *SI) {
   // Create a new, empty default block so that the new hierarchy of
   // if-then statements go to this and the PHI nodes are happy.
   BasicBlock* newDefault = BasicBlock::Create(F->getContext(), "newDefault");
+  llvm::IRBuilder<> Builder(newDefault);
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
   F->getBasicBlockList().insert(defaultBlock->getIterator(), newDefault);
 #else
   F->getBasicBlockList().insert(defaultBlock, newDefault);
 #endif
-  BranchInst::Create(defaultBlock, newDefault);
+  Builder.CreateBr(defaultBlock);
 
   // If there is an entry in any PHI nodes for the default edge, make sure
   // to update them as well.

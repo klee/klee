@@ -22,11 +22,12 @@
 #include "klee/Internal/Support/ModuleUtil.h"
 
 #include "llvm/Bitcode/ReaderWriter.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ValueSymbolTable.h"
-#include "llvm/IR/DataLayout.h"
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
 #include "llvm/Analysis/Verifier.h"
@@ -105,14 +106,15 @@ static Function *getStubFunctionForCtorList(Module *m,
 				  name,
                               m);
   BasicBlock *bb = BasicBlock::Create(m->getContext(), "entry", fn);
-  
+  llvm::IRBuilder<> Builder(bb);
+
   // From lli:
   // Should be an array of '{ int, void ()* }' structs.  The first value is
   // the init priority, which we ignore.
-  ConstantArray *arr = dyn_cast<ConstantArray>(gv->getInitializer());
+  auto arr = dyn_cast<ConstantArray>(gv->getInitializer());
   if (arr) {
     for (unsigned i=0; i<arr->getNumOperands(); i++) {
-      ConstantStruct *cs = cast<ConstantStruct>(arr->getOperand(i));
+      auto cs = cast<ConstantStruct>(arr->getOperand(i));
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
       // There is a third *optional* element in global_ctor elements (``i8
       // @data``).
@@ -121,21 +123,21 @@ static Function *getStubFunctionForCtorList(Module *m,
 #else
       assert(cs->getNumOperands()==2 && "unexpected element in ctor initializer list");
 #endif
-      Constant *fp = cs->getOperand(1);      
+      auto fp = cs->getOperand(1);
       if (!fp->isNullValue()) {
-        if (llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(fp))
+        if (auto ce = dyn_cast<llvm::ConstantExpr>(fp))
           fp = ce->getOperand(0);
 
-        if (Function *f = dyn_cast<Function>(fp)) {
-	  CallInst::Create(f, "", bb);
+        if (auto f = dyn_cast<Function>(fp)) {
+          Builder.CreateCall(f);
         } else {
           assert(0 && "unable to get function pointer from ctor initializer list");
         }
       }
     }
   }
-  
-  ReturnInst::Create(m->getContext(), bb);
+
+  Builder.CreateRetVoid();
 
   return fn;
 }
@@ -143,21 +145,30 @@ static Function *getStubFunctionForCtorList(Module *m,
 static void injectStaticConstructorsAndDestructors(Module *m) {
   GlobalVariable *ctors = m->getNamedGlobal("llvm.global_ctors");
   GlobalVariable *dtors = m->getNamedGlobal("llvm.global_dtors");
-  
-  if (ctors || dtors) {
-    Function *mainFn = m->getFunction("main");
-    if (!mainFn)
-      klee_error("Could not find main() function.");
 
-    if (ctors)
-    CallInst::Create(getStubFunctionForCtorList(m, ctors, "klee.ctor_stub"),
-		     "", &*(mainFn->begin()->begin()));
-    if (dtors) {
-      Function *dtorStub = getStubFunctionForCtorList(m, dtors, "klee.dtor_stub");
-      for (Function::iterator it = mainFn->begin(), ie = mainFn->end();
-           it != ie; ++it) {
-        if (isa<ReturnInst>(it->getTerminator()))
-	  CallInst::Create(dtorStub, "", it->getTerminator());
+  if (!ctors && !dtors)
+    return;
+
+  Function *mainFn = m->getFunction("main");
+  if (!mainFn)
+    klee_error("Could not find main() function.");
+
+  if (ctors) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    llvm::IRBuilder<> Builder(&*mainFn->begin()->begin());
+#else
+    llvm::IRBuilder<> Builder(mainFn->begin()->begin());
+#endif
+    Builder.CreateCall(getStubFunctionForCtorList(m, ctors, "klee.ctor_stub"));
+  }
+
+  if (dtors) {
+    Function *dtorStub = getStubFunctionForCtorList(m, dtors, "klee.dtor_stub");
+    for (Function::iterator it = mainFn->begin(), ie = mainFn->end(); it != ie;
+         ++it) {
+      if (isa<ReturnInst>(it->getTerminator())) {
+        llvm::IRBuilder<> Builder(it->getTerminator());
+        Builder.CreateCall(dtorStub);
       }
     }
   }

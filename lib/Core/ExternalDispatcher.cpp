@@ -12,6 +12,7 @@
 
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -306,12 +307,13 @@ Function *ExternalDispatcherImpl::createDispatcher(Function *target,
 
   BasicBlock *dBB = BasicBlock::Create(ctx, "entry", dispatcher);
 
+  llvm::IRBuilder<> Builder(dBB);
   // Get a Value* for &gTheArgsP, as an i64**.
-  Instruction *argI64sp = new IntToPtrInst(
+  auto argI64sp = Builder.CreateIntToPtr(
       ConstantInt::get(Type::getInt64Ty(ctx), (uintptr_t)(void *)&gTheArgsP),
       PointerType::getUnqual(PointerType::getUnqual(Type::getInt64Ty(ctx))),
-      "argsp", dBB);
-  Instruction *argI64s = new LoadInst(argI64sp, "args", dBB);
+      "argsp");
+  auto argI64s = Builder.CreateLoad(argI64sp, "args");
 
   // Get the target function type.
   FunctionType *FTy = cast<FunctionType>(
@@ -321,34 +323,33 @@ Function *ExternalDispatcherImpl::createDispatcher(Function *target,
   unsigned i = 0, idx = 2;
   for (CallSite::arg_iterator ai = cs.arg_begin(), ae = cs.arg_end(); ai != ae;
        ++ai, ++i) {
-    // Determine the type the argument will be passed as. This accomodates for
+    // Determine the type the argument will be passed as. This accommodates for
     // the corresponding code in Executor.cpp for handling calls to bitcasted
     // functions.
-    Type *argTy =
+    auto argTy =
         (i < FTy->getNumParams() ? FTy->getParamType(i) : (*ai)->getType());
-    Instruction *argI64p = GetElementPtrInst::Create(
-        KLEE_LLVM_GEP_TYPE(nullptr)
-        argI64s, ConstantInt::get(Type::getInt32Ty(ctx), idx), "", dBB);
+    auto argI64p =
+        Builder.CreateGEP(KLEE_LLVM_GEP_TYPE(nullptr) argI64s,
+                          ConstantInt::get(Type::getInt32Ty(ctx), idx));
 
-    Instruction *argp =
-        new BitCastInst(argI64p, PointerType::getUnqual(argTy), "", dBB);
-    args[i] = new LoadInst(argp, "", dBB);
+    auto argp = Builder.CreateBitCast(argI64p, PointerType::getUnqual(argTy));
+    args[i] = Builder.CreateLoad(argp);
 
     unsigned argSize = argTy->getPrimitiveSizeInBits();
     idx += ((!!argSize ? argSize : 64) + 63) / 64;
   }
 
-  Constant *dispatchTarget = module->getOrInsertFunction(
-      target->getName(), FTy, target->getAttributes());
-  Instruction *result = CallInst::Create(
-      dispatchTarget, llvm::ArrayRef<Value *>(args, args + i), "", dBB);
+  auto dispatchTarget = module->getOrInsertFunction(target->getName(), FTy,
+                                                    target->getAttributes());
+  auto result = Builder.CreateCall(dispatchTarget,
+                                   llvm::ArrayRef<Value *>(args, args + i));
   if (result->getType() != Type::getVoidTy(ctx)) {
-    Instruction *resp = new BitCastInst(
-        argI64s, PointerType::getUnqual(result->getType()), "", dBB);
-    new StoreInst(result, resp, dBB);
+    auto resp = Builder.CreateBitCast(
+        argI64s, PointerType::getUnqual(result->getType()));
+    Builder.CreateStore(result, resp);
   }
 
-  ReturnInst::Create(ctx, dBB);
+  Builder.CreateRetVoid();
 
   delete[] args;
 
