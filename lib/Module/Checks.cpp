@@ -11,6 +11,8 @@
 
 #include "klee/Config/Version.h"
 
+#include "KLEEIRMetaData.h"
+
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -54,6 +56,11 @@ bool DivCheckPass::runOnModule(Module &M) {
           if (!coOp->isZeroValue())
             continue;
         }
+
+        // Check if the operand is already checked by "klee_div_zero_check"
+        if (KleeIRMetaData::hasAnnotation(I, "klee.check.div", "True"))
+          continue;
+        divInstruction.push_back(binOp);
       }
     }
   }
@@ -63,6 +70,7 @@ bool DivCheckPass::runOnModule(Module &M) {
     return false;
 
   LLVMContext &ctx = M.getContext();
+  KleeIRMetaData md(ctx);
   auto divZeroCheckFunction = cast<Function>(
       M.getOrInsertFunction("klee_div_zero_check", Type::getVoidTy(ctx),
                             Type::getInt64Ty(ctx), NULL));
@@ -74,6 +82,7 @@ bool DivCheckPass::runOnModule(Module &M) {
                               false, /* sign doesn't matter */
                               "int_cast_to_i64");
     Builder.CreateCall(divZeroCheckFunction, denominator);
+    md.addAnnotation(*divInst, "klee.check.div", "True");
   }
 
   return true;
