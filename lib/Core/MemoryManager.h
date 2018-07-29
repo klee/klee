@@ -10,8 +10,9 @@
 #ifndef KLEE_MEMORYMANAGER_H
 #define KLEE_MEMORYMANAGER_H
 
+#include <cstddef>
 #include <set>
-#include <stdint.h>
+#include <cstdint>
 
 namespace llvm {
 class Value;

@@ -10,6 +10,8 @@
 #ifndef KLEE_SOLVERIMPL_H
 #define KLEE_SOLVERIMPL_H
 
+#include "Solver.h"
+
 #include <vector>
 
 namespace klee {
