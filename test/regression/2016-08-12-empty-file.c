@@ -1,3 +1,4 @@
+// REQUIRES: posix-runtime
 // RUN: %llvmgcc %s -emit-llvm -g -O0 -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: not %klee --output-dir=%t.klee-out %t.bc >%t1.log 2>&1
