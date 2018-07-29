@@ -20,6 +20,7 @@ extern "C" {
 namespace klee {
   class ExecutionState;
   class TimingSolver;
+  class MemoryObject;
 
   class SeedInfo {
   public:
