@@ -47,6 +47,12 @@ bool DivCheckPass::runOnModule(Module &M) {
         if (opcode != Instruction::SDiv && opcode != Instruction::UDiv &&
             opcode != Instruction::SRem && opcode != Instruction::URem)
           continue;
+
+        // Check if the operand is constant and not zero, skip in that case.
+        const auto &operand = binOp->getOperand(1);
+        if (const auto &coOp = dyn_cast<llvm::Constant>(operand)) {
+          if (!coOp->isZeroValue())
+            continue;
         }
       }
     }
