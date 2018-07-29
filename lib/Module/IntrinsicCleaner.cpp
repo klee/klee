@@ -64,40 +64,40 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         // FIXME: This is much more target dependent than just the word size,
         // however this works for x86-32 and x86-64.
       case Intrinsic::vacopy: { // (dst, src) -> *((i8**) dst) = *((i8**) src)
+        llvm::IRBuilder<> Builder(ii);
         Value *dst = ii->getArgOperand(0);
         Value *src = ii->getArgOperand(1);
 
         if (WordSize == 4) {
           Type *i8pp = PointerType::getUnqual(
               PointerType::getUnqual(Type::getInt8Ty(ctx)));
-          Value *castedDst =
-              CastInst::CreatePointerCast(dst, i8pp, "vacopy.cast.dst", ii);
-          Value *castedSrc =
-              CastInst::CreatePointerCast(src, i8pp, "vacopy.cast.src", ii);
-          Value *load = new LoadInst(castedSrc, "vacopy.read", ii);
-          new StoreInst(load, castedDst, false, ii);
+          auto castedDst =
+              Builder.CreatePointerCast(dst, i8pp, "vacopy.cast.dst");
+          auto castedSrc =
+              Builder.CreatePointerCast(src, i8pp, "vacopy.cast.src");
+          auto load = Builder.CreateLoad(castedSrc, "vacopy.read");
+          Builder.CreateStore(load, castedDst, false /* isVolatile */);
         } else {
           assert(WordSize == 8 && "Invalid word size!");
           Type *i64p = PointerType::getUnqual(Type::getInt64Ty(ctx));
-          Value *pDst =
-              CastInst::CreatePointerCast(dst, i64p, "vacopy.cast.dst", ii);
-          Value *pSrc =
-              CastInst::CreatePointerCast(src, i64p, "vacopy.cast.src", ii);
-          Value *val = new LoadInst(pSrc, std::string(), ii);
-          new StoreInst(val, pDst, ii);
-          Value *off = ConstantInt::get(Type::getInt64Ty(ctx), 1);
-          pDst = GetElementPtrInst::Create(KLEE_LLVM_GEP_TYPE(nullptr)
-              pDst, off, std::string(), ii);
-          pSrc = GetElementPtrInst::Create(KLEE_LLVM_GEP_TYPE(nullptr)
-              pSrc, off, std::string(), ii);
-          val = new LoadInst(pSrc, std::string(), ii);
-          new StoreInst(val, pDst, ii);
-          pDst = GetElementPtrInst::Create(KLEE_LLVM_GEP_TYPE(nullptr)
-              pDst, off, std::string(), ii);
-          pSrc = GetElementPtrInst::Create(KLEE_LLVM_GEP_TYPE(nullptr)
-              pSrc, off, std::string(), ii);
-          val = new LoadInst(pSrc, std::string(), ii);
-          new StoreInst(val, pDst, ii);
+          auto pDst = Builder.CreatePointerCast(dst, i64p, "vacopy.cast.dst");
+          auto pSrc = Builder.CreatePointerCast(src, i64p, "vacopy.cast.src");
+          auto val = Builder.CreateLoad(pSrc, std::string());
+          Builder.CreateStore(val, pDst, ii);
+
+          auto off = ConstantInt::get(Type::getInt64Ty(ctx), 1);
+          pDst = Builder.CreateGEP(KLEE_LLVM_GEP_TYPE(nullptr) pDst, off,
+                                   std::string());
+          pSrc = Builder.CreateGEP(KLEE_LLVM_GEP_TYPE(nullptr) pSrc, off,
+                                   std::string());
+          val = Builder.CreateLoad(pSrc, std::string());
+          Builder.CreateStore(val, pDst);
+          pDst = Builder.CreateGEP(KLEE_LLVM_GEP_TYPE(nullptr) pDst, off,
+                                   std::string());
+          pSrc = Builder.CreateGEP(KLEE_LLVM_GEP_TYPE(nullptr) pSrc, off,
+                                   std::string());
+          val = Builder.CreateLoad(pSrc, std::string());
+          Builder.CreateStore(val, pDst);
         }
         ii->eraseFromParent();
         dirty = true;
@@ -207,15 +207,16 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       }
 
       case Intrinsic::trap: {
-        // Intrisic instruction "llvm.trap" found. Directly lower it to
+        // Intrinsic instruction "llvm.trap" found. Directly lower it to
         // a call of the abort() function.
         Function *F = cast<Function>(
             M.getOrInsertFunction("abort", Type::getVoidTy(ctx), NULL));
         F->setDoesNotReturn();
         F->setDoesNotThrow();
 
-        CallInst::Create(F, Twine(), ii);
-        new UnreachableInst(ctx, ii);
+        llvm::IRBuilder<> Builder(ii);
+        Builder.CreateCall(F);
+        Builder.CreateUnreachable();
 
         ii->eraseFromParent();
 
