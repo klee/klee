@@ -116,6 +116,9 @@ bool OvershiftCheckPass::runOnModule(Module &M) {
             continue;
         }
 
+        if (KleeIRMetaData::hasAnnotation(I, "klee.check.shift", "True"))
+          continue;
+
         shiftInstructions.push_back(binOp);
       }
     }
@@ -126,6 +129,7 @@ bool OvershiftCheckPass::runOnModule(Module &M) {
 
   // Retrieve the checker function
   auto &ctx = M.getContext();
+  KleeIRMetaData md(ctx);
   auto overshiftCheckFunction = cast<Function>(M.getOrInsertFunction(
       "klee_overshift_check", Type::getVoidTy(ctx), Type::getInt64Ty(ctx),
       Type::getInt64Ty(ctx), NULL));
@@ -147,6 +151,7 @@ bool OvershiftCheckPass::runOnModule(Module &M) {
     args.push_back(shiftValue);
 
     Builder.CreateCall(overshiftCheckFunction, args);
+    md.addAnnotation(*shiftInst, "klee.check.shift", "True");
   }
 
   return true;
