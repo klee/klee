@@ -96,9 +96,10 @@ cache:
 before_install:
     ###########################################################################
     # Set up the locations to get various packages from
-    # We assume the Travis image uses Ubuntu 14.04 LTS
+    # We assume the Travis image uses Ubuntu 16.04 LTS
     ###########################################################################
     # Update package information
+    - export COMMIT_RANGE="$TRAVIS_BRANCH..FETCH_HEAD"
     - export KLEE_SRC=`pwd`
     - export KLEE_SRC_TRAVIS=`pwd`
     - cd ../
