@@ -87,7 +87,7 @@ matrix:
 #      osx_image: xcode8.3
 #      env: LLVM_VERSION=3.4 SOLVERS=STP:Z3 STP_VERSION=2.1.2 Z3_VERSION=4.4.1 KLEE_UCLIBC=0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=0
     - name: Checking Clang-Format
-      env: LLVM_VERSION=3.4 SOLVERS=STP:Z3 STP_VERSION=2.1.2 Z3_VERSION=4.4.1 KLEE_UCLIBC=0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=0
+      env: VALIDATE_CODE="clang-format"
       addons:
         apt:
           update: true
@@ -119,6 +119,7 @@ before_install:
     - ${KLEE_SRC_TRAVIS}/scripts/build/build-travis.sh
 script:
     # Build KLEE and run tests
-    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export PATH="/usr/local/opt/ccache/libexec:$PATH"; ${KLEE_SRC_TRAVIS}/scripts/build/klee.sh; fi
-    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ${KLEE_SRC_TRAVIS}/scripts/build/build-docker.sh; fi
+    - if [[ "$TRAVIS_OS_NAME" == "osx" && "$VALIDATE_CODE" == "" ]]; then export PATH="/usr/local/opt/ccache/libexec:$PATH"; ${KLEE_SRC_TRAVIS}/scripts/build/klee.sh; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" && "$VALIDATE_CODE" == "" ]]; then ${KLEE_SRC_TRAVIS}/scripts/build/build-docker.sh; fi
     - if [[ "$COVERAGE" == "1" ]]; then ${KLEE_SRC_TRAVIS}/scripts/build/run-coverage.sh; fi
+    - if [[ "$VALIDATE_COVERAGE" == "clang-format" ]]; then scripts/clang-format.sh; fi
