@@ -86,6 +86,16 @@ matrix:
     - os: osx
       osx_image: xcode8.3
       env: LLVM_VERSION=3.4 SOLVERS=STP:Z3 STP_VERSION=2.1.2 Z3_VERSION=4.4.1 KLEE_UCLIBC=0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=0
+    - name: Checking Clang-Format
+      env: LLVM_VERSION=3.4 SOLVERS=STP:Z3 STP_VERSION=2.1.2 Z3_VERSION=4.4.1 KLEE_UCLIBC=0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=0
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-precise
+          packages:
+            - clang-6.0
+            - clang-format-6.0
+            - colordiff
 
 cache:
   ccache: true
