@@ -92,11 +92,7 @@ matrix:
         apt:
           update: true
           sources:
-            - llvm-toolchain-precise
-        apt:
-          update: true
-          sources:
-            - llvm-toolchain-precise
+            - llvm-toolchain-trusty-6.0
           packages:
             - clang-6
             - clang-format-6
