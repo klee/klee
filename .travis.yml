@@ -116,7 +116,7 @@ before_install:
     - export KLEE_SRC_TRAVIS=`pwd`
     - cd ../
     - export BASE=`pwd`
-    - ${KLEE_SRC_TRAVIS}/scripts/build/build-travis.sh
+    - if [[ "$VALIDATE_CODE" == "" ]]; then ${KLEE_SRC_TRAVIS}/scripts/build/build-travis.sh; fi
 script:
     # Build KLEE and run tests
     - if [[ "$TRAVIS_OS_NAME" == "osx" && "$VALIDATE_CODE" == "" ]]; then export PATH="/usr/local/opt/ccache/libexec:$PATH"; ${KLEE_SRC_TRAVIS}/scripts/build/klee.sh; fi
