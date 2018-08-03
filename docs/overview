@@ -20,7 +20,7 @@
 /// bitcode interpreter. klee::Executor is the main concrete instance of this
 /// class.
 /// Application states (i.e. memory, registers and PC) are stored in instances of
-/// class klee::ExecutionState. There is one such instance for each path beeing
+/// class klee::ExecutionState. There is one such instance for each path being
 /// executed (except when some states are merged together).
 /// On a branch, if condition is symbolic, klee::Executor::fork returns a
 /// klee::ExecutionState::StatePair which is a pair of ExecutionState to be
