@@ -86,6 +86,9 @@
 /* klee-uclibc is supported */
 #cmakedefine SUPPORT_KLEE_UCLIBC @SUPPORT_KLEE_UCLIBC@
 
+/* libcxx is supported */
+#cmakedefine SUPPORT_KLEE_LIBCXX @SUPPORT_KLEE_LIBCXX@
+
 /* Configuration type of KLEE's runtime libraries */
 #define RUNTIME_CONFIGURATION "@KLEE_RUNTIME_BUILD_TYPE@"
 

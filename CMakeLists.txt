@@ -612,6 +612,49 @@ else()
 endif()
 
 ################################################################################
+# KLEE libcxx support
+################################################################################
+option(ENABLE_KLEE_LIBCXX "Enable libcxx for klee" OFF)
+if (ENABLE_KLEE_LIBCXX)
+  message(STATUS "klee-libcxx support enabled")
+  set(SUPPORT_KLEE_LIBCXX 1) # For config.h
+  set(KLEE_LIBCXX_EXTERNAL_OBJECT "" CACHE PATH "Path to llvm libcxx shared object")
+  if (NOT EXISTS "${KLEE_LIBCXX_EXTERNAL_OBJECT}")
+    message(FATAL_ERROR
+      "${KLEE_LIBCXX_EXTERNAL_OBJECT} does not exist. Try passing -DKLEE_LIBCXX_EXTERNAL_OBJECT=<path>")
+  endif()
+
+  if (NOT IS_DIRECTORY "${KLEE_LIBCXX_INCLUDE_DIR}")
+    message(FATAL_ERROR
+      "${KLEE_LIBCXX_INCLUDE_DIR} does not exist. Try passing -DKLEE_LIBCXX_INCLUDE_DIR=<path>")
+  endif()
+
+  set(KLEE_LIBCXX_BC_NAME "libcxx.so.bc")
+
+  # Make a symlink to KLEE_LIBCXX_EXTERNAL_OBJECT so KLEE can find it where it
+  # is expected.
+  file(MAKE_DIRECTORY "${KLEE_RUNTIME_DIRECTORY}")
+  execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink
+    "${KLEE_LIBCXX_EXTERNAL_OBJECT}"
+    "${KLEE_RUNTIME_DIRECTORY}/${KLEE_LIBCXX_BC_NAME}"
+  )
+  list(APPEND KLEE_COMPONENT_CXX_DEFINES
+    -DKLEE_LIBCXX_BC_NAME=\"${KLEE_LIBCXX_BC_NAME}\")
+
+  # Add libcxx to the install target. We install the original
+  # file rather than the symlink because CMake would just copy the symlink
+  # rather than the file.
+  install(FILES "${KLEE_LIBCXX_EXTERNAL_OBJECT}"
+    DESTINATION "${KLEE_INSTALL_RUNTIME_DIR}"
+    RENAME "${KLEE_LIBCXX_BC_NAME}"
+    )
+
+else()
+  message(STATUS "libcxx support disabled")
+  set(SUPPORT_KLEE_LIBCXX 0) # For config.h
+endif()
+
+################################################################################
 # Sanitizer support
 ################################################################################
 message(STATUS "${CMAKE_CXX_FLAGS}")
