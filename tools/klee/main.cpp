@@ -287,6 +287,11 @@ namespace {
            cl::desc("Use a watchdog process to enforce --max-time."),
            cl::init(0),
            cl::cat(TerminationCat));
+
+  cl::opt<bool>
+  UseLibcxx("use-libcxx",
+           cl::desc("Link the llvm libc++ library into the bitcode"),
+           cl::init(0));
 }
 
 namespace klee {
@@ -1260,6 +1265,20 @@ int main(int argc, char **argv, char **envp) {
 
     std::string libcPrefix = (Libc == LibcType::UcLibc ? "__user_" : "");
     preparePOSIX(loadedModules, libcPrefix);
+  }
+
+  if (UseLibcxx) {
+#ifndef SUPPORT_KLEE_LIBCXX
+    klee_error("Klee was not compiled with libcxx support");
+#else
+    SmallString<128> LibcxxBC(Opts.LibraryDir);
+    llvm::sys::path::append(LibcxxBC, KLEE_LIBCXX_BC_NAME);
+    if (!klee::loadFile(LibcxxBC.c_str(), mainModule->getContext(), loadedModules,
+                        errorMsg))
+      klee_error("error loading free standing support '%s': %s",
+                 LibcxxBC.c_str(), errorMsg.c_str());
+    klee_message("NOTE: Using libcxx : %s", LibcxxBC.c_str());
+#endif
   }
 
   switch (Libc) {
