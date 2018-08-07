@@ -327,7 +327,7 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
   /* Build shadow structures */
 
   infos = std::unique_ptr<InstructionInfoTable>(
-      new InstructionInfoTable(module.get()));
+      new InstructionInfoTable(*module.get()));
 
   std::vector<Function *> declarations;
 
@@ -341,7 +341,7 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
 
     for (unsigned i=0; i<kf->numInstructions; ++i) {
       KInstruction *ki = kf->instructions[i];
-      ki->info = &infos->getInfo(ki->inst);
+      ki->info = &infos->getInfo(*ki->inst);
     }
 
     functionMap.insert(std::make_pair(&Function, kf.get()));

@@ -1587,11 +1587,6 @@ Function* Executor::getTargetFunction(Value *calledVal, ExecutionState &state) {
   }
 }
 
-/// TODO remove?
-static bool isDebugIntrinsic(const Function *f, KModule *KM) {
-  return false;
-}
-
 static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
   switch(width) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
@@ -1921,7 +1916,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Function *f = getTargetFunction(fp, state);
 
     // Skip debug intrinsics, we can't evaluate their metadata arguments.
-    if (f && isDebugIntrinsic(f, kmodule.get()))
+    if (isa<DbgInfoIntrinsic>(i))
       break;
 
     if (isa<InlineAsm>(fp)) {
