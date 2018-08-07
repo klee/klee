@@ -10,9 +10,10 @@
 #ifndef KLEE_LIB_INSTRUCTIONINFOTABLE_H
 #define KLEE_LIB_INSTRUCTIONINFOTABLE_H
 
-#include <map>
+#include <memory>
 #include <string>
-#include <set>
+#include <unordered_map>
+#include <vector>
 
 namespace llvm {
   class Function;
@@ -27,44 +28,48 @@ namespace klee {
     unsigned id;
     const std::string &file;
     unsigned line;
+    unsigned column;
     unsigned assemblyLine;
 
   public:
-    InstructionInfo(unsigned _id,
-                    const std::string &_file,
-                    unsigned _line,
-                    unsigned _assemblyLine)
-      : id(_id), 
-        file(_file),
-        line(_line),
-        assemblyLine(_assemblyLine) {
-    }
+    InstructionInfo(unsigned _id, const std::string &_file, unsigned _line,
+                    unsigned _column, unsigned _assemblyLine)
+        : id(_id), file(_file), line(_line), column(_column),
+          assemblyLine(_assemblyLine) {}
+  };
+
+  /* Stores debug information for a KInstruction */
+  struct FunctionInfo {
+    unsigned id;
+    const std::string &file;
+    unsigned line;
+    uint64_t assemblyLine;
+
+  public:
+    FunctionInfo(unsigned _id, const std::string &_file, unsigned _line,
+                 uint64_t _assemblyLine)
+        : id(_id), file(_file), line(_line), assemblyLine(_assemblyLine) {}
+
+    FunctionInfo(const FunctionInfo &) = delete;
+    FunctionInfo &operator=(FunctionInfo const &) = delete;
+
+    FunctionInfo(FunctionInfo &&) = default;
   };
 
   class InstructionInfoTable {
-    struct ltstr { 
-      bool operator()(const std::string *a, const std::string *b) const {
-        return *a<*b;
-      }
-    };
-
-    std::string dummyString;
-    InstructionInfo dummyInfo;
-    std::map<const llvm::Instruction*, InstructionInfo> infos;
-    std::set<const std::string *, ltstr> internedStrings;
-
-  private:
-    const std::string *internString(std::string s);
-    bool getInstructionDebugInfo(const llvm::Instruction *I,
-                                 const std::string *&File, unsigned &Line);
+    std::unordered_map<const llvm::Instruction *,
+                       std::unique_ptr<InstructionInfo>>
+        infos;
+    std::unordered_map<const llvm::Function *, std::unique_ptr<FunctionInfo>>
+        functionInfos;
+    std::vector<std::unique_ptr<std::string>> internedStrings;
 
   public:
-    InstructionInfoTable(llvm::Module *m);
-    ~InstructionInfoTable();
+    InstructionInfoTable(const llvm::Module &m);
 
     unsigned getMaxID() const;
-    const InstructionInfo &getInfo(const llvm::Instruction*) const;
-    const InstructionInfo &getFunctionInfo(const llvm::Function*) const;
+    const InstructionInfo &getInfo(const llvm::Instruction &) const;
+    const FunctionInfo &getFunctionInfo(const llvm::Function &) const;
   };
 
 }
