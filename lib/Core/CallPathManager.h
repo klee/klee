@@ -13,6 +13,7 @@
 #include "klee/Statistics.h"
 
 #include <map>
+#include <memory>
 #include <vector>
 
 namespace llvm {
@@ -31,20 +32,23 @@ namespace klee {
     CallSiteInfo() : count(0) {}
   };
 
-  typedef std::map<llvm::Instruction*,
-                   std::map<llvm::Function*, CallSiteInfo> > CallSiteSummaryTable;    
-  
+  typedef std::map<const llvm::Instruction *,
+                   std::map<const llvm::Function *, CallSiteInfo>>
+      CallSiteSummaryTable;
+
   class CallPathNode {
     friend class CallPathManager;
 
   public:
-    typedef std::map<std::pair<llvm::Instruction*, 
-                               llvm::Function*>, CallPathNode*> children_ty;
+    typedef std::map<
+        std::pair<const llvm::Instruction *, const llvm::Function *>,
+        CallPathNode *>
+        children_ty;
 
     // form list of (callSite,function) path
     CallPathNode *parent;
-    llvm::Instruction *callSite;
-    llvm::Function *function;
+    const llvm::Instruction *callSite;
+    const llvm::Function *function;
     children_ty children;
 
     StatisticRecord statistics;
@@ -52,31 +56,30 @@ namespace klee {
     unsigned count;
 
   public:
-    CallPathNode(CallPathNode *parent, 
-                 llvm::Instruction *callSite,
-                 llvm::Function *function);
+    CallPathNode(CallPathNode *parent, const llvm::Instruction *callSite,
+                 const llvm::Function *function);
 
     void print();
   };
 
   class CallPathManager {
     CallPathNode root;
-    std::vector<CallPathNode*> paths;
+    std::vector<std::unique_ptr<CallPathNode>> paths;
 
   private:
-    CallPathNode *computeCallPath(CallPathNode *parent, 
-                                  llvm::Instruction *callSite,
-                                  llvm::Function *f);
-    
+    CallPathNode *computeCallPath(CallPathNode *parent,
+                                  const llvm::Instruction *callSite,
+                                  const llvm::Function *f);
+
   public:
     CallPathManager();
-    ~CallPathManager();
+    ~CallPathManager() = default;
 
     void getSummaryStatistics(CallSiteSummaryTable &result);
-    
-    CallPathNode *getCallPath(CallPathNode *parent, 
-                              llvm::Instruction *callSite,
-                              llvm::Function *f);
+
+    CallPathNode *getCallPath(CallPathNode *parent,
+                              const llvm::Instruction *callSite,
+                              const llvm::Function *f);
   };
 }
 

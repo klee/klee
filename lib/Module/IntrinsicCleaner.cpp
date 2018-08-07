@@ -198,11 +198,11 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
 
       case Intrinsic::dbg_value:
       case Intrinsic::dbg_declare: {
-        // Remove these regardless of lower intrinsics flag. This can
-        // be removed once IntrinsicLowering is fixed to not have bad
-        // caches.
-        ii->eraseFromParent();
-        dirty = true;
+        //        // Remove these regardless of lower intrinsics flag. This can
+        //        // be removed once IntrinsicLowering is fixed to not have bad
+        //        // caches.
+        //        ii->eraseFromParent();
+        //        dirty = true;
         break;
       }
 
