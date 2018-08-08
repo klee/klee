@@ -104,11 +104,8 @@ static std::string getFullPath(llvm::StringRef Directory,
 
 class DebugInfoExtractor {
   std::vector<std::unique_ptr<std::string>> &internedStrings;
-  llvm::DebugInfoFinder DIF;
-
-  uint64_t counter;
-
   std::map<uintptr_t, uint64_t> lineTable;
+  llvm::DebugInfoFinder DIF;
 
   const llvm::Module &module;
 
@@ -116,7 +113,7 @@ public:
   DebugInfoExtractor(
       std::vector<std::unique_ptr<std::string>> &_internedStrings,
       const llvm::Module &_module)
-      : internedStrings(_internedStrings), counter(0), module(_module) {
+      : internedStrings(_internedStrings), module(_module) {
     DIF.processModule(module);
     lineTable = buildInstructionToLineMap(module);
   }
@@ -149,13 +146,12 @@ public:
       auto path =
           getFullPath(SubProgram.getDirectory(), SubProgram.getFilename());
 
-      return std::unique_ptr<FunctionInfo>(
-          new FunctionInfo(counter++, getInternedString(path),
-                           SubProgram.getLineNumber(), asmLine));
+      return std::unique_ptr<FunctionInfo>(new FunctionInfo(
+          0, getInternedString(path), SubProgram.getLineNumber(), asmLine));
     }
 
     return std::unique_ptr<FunctionInfo>(
-        new FunctionInfo(counter++, getInternedString(""), 0, asmLine));
+        new FunctionInfo(0, getInternedString(""), 0, asmLine));
   }
 
   std::unique_ptr<InstructionInfo>
@@ -167,17 +163,18 @@ public:
       llvm::DIScope Scope(Loc.getScope(module.getContext()));
       auto full_path = getFullPath(Scope.getDirectory(), Scope.getFilename());
       return std::unique_ptr<InstructionInfo>(
-          new InstructionInfo(counter++, getInternedString(full_path),
-                              Loc.getLine(), Loc.getCol(), asmLine));
+          new InstructionInfo(0, getInternedString(full_path), Loc.getLine(),
+                              Loc.getCol(), asmLine));
     }
 
     // If nothing found, use the surrounding function
     return std::unique_ptr<InstructionInfo>(
-        new InstructionInfo(counter++, f.file, f.line, 0, asmLine));
+        new InstructionInfo(0, f.file, f.line, 0, asmLine));
   }
 };
 
 InstructionInfoTable::InstructionInfoTable(const llvm::Module &m) {
+  // Generate all debug instruction information
   DebugInfoExtractor DI(internedStrings, m);
   for (const auto &Func : m) {
     auto F = DI.getFunctionInfo(Func);
@@ -190,6 +187,13 @@ InstructionInfoTable::InstructionInfoTable(const llvm::Module &m) {
       infos.insert(std::make_pair(instr, DI.getInstructionInfo(*instr, *FD)));
     }
   }
+
+  // Make sure that every item has a unique ID
+  size_t idCounter = 0;
+  for (auto &item : infos)
+    item.second->id = idCounter++;
+  for (auto &item : functionInfos)
+    item.second->id = idCounter++;
 }
 
 unsigned InstructionInfoTable::getMaxID() const {
