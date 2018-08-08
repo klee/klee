@@ -96,6 +96,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
 #else
   add("__error", handleErrnoLocation, true),
 #endif
+  add("_klee_is_symbolic", handleIsSymbolic, true),
   add("klee_is_symbolic", handleIsSymbolic, true),
   add("klee_make_symbolic", handleMakeSymbolic, false),
   add("klee_mark_global", handleMarkGlobal, false),
@@ -456,7 +457,8 @@ void SpecialFunctionHandler::handleAssume(ExecutionState &state,
 void SpecialFunctionHandler::handleIsSymbolic(ExecutionState &state,
                                 KInstruction *target,
                                 std::vector<ref<Expr> > &arguments) {
-  assert(arguments.size()==1 && "invalid number of arguments to klee_is_symbolic");
+  assert(arguments.size() < 3 && "invalid number of arguments to klee_is_symbolic");
+  assert(arguments.size() > 0 && "invalid number of arguments to klee_is_symbolic");
 
   ref<Expr> arg0 = executor.toUnique(state, arguments[0]);
 
