@@ -40,9 +40,9 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   fi
 
   # Apply existing patches if needed
-  if [ -f "${BASE}/scripts/build/llvm${LLVM_VERSION_SHORT}.patch" ]; then
+  if [ -f "${DIR}/patches/llvm${LLVM_VERSION_SHORT}.patch" ]; then
      cd "${LLVM_BASE}"
-     patch -p0 -i "${BASE}/scripts/build/llvm${LLVM_VERSION_SHORT}.patch"
+     patch -p0 -i "${DIR}/patches/llvm${LLVM_VERSION_SHORT}.patch"
   fi
 fi
 
