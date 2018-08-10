@@ -18,11 +18,15 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <termios.h>
-#include <pty.h>
 #include <time.h>
 #include <sys/wait.h>
 #include <sys/time.h>
 #include <assert.h>
+#ifdef HAVE_UTIL_H
+#include <util.h>
+#else
+#include <pty.h>
+#endif
 
 static void create_file(int target_fd, 
                        const char *target_name, 
