@@ -152,7 +152,7 @@ def getLabels(pr):
         labels = ('Path', 'Instrs', 'Time(s)', 'ICov(%)', 'BCov(%)', 'ICount',
                   'TSolver(%)', 'States', 'maxStates', 'avgStates', 'Mem(MB)',
                   'maxMem(MB)', 'avgMem(MB)', 'Queries', 'AvgQC', 'Tcex(%)',
-                  'Tfork(%)', 'QCexCMisses', 'QCexCHits')
+                  'Tfork(%)', 'TResolve(%)', 'QCexCMisses', 'QCexCHits')
     elif pr == 'reltime':
         labels = ('Path', 'Time(s)', 'TUser(%)', 'TSolver(%)',
                   'Tcex(%)', 'Tfork(%)', 'TResolve(%)')
@@ -185,8 +185,8 @@ def getRow(record, stats, pr):
         row = (I, Treal, 100 * SCov / (SCov + SUnc),
                100 * (2 * BFull + BPart) / (2 * BTot), SCov + SUnc,
                100 * Ts / Treal, St, maxStates, avgStates,
-               Mem, maxMem, avgMem, QTot, AvgQC,
-               100 * Tcex / Treal, 100 * Tf / Treal, QCexMiss, QCexHits)
+               Mem, maxMem, avgMem, QTot, AvgQC, 100 * Tcex / Treal,
+               100 * Tf / Treal, 100 * Tr / Treal, QCexMiss, QCexHits)
     elif pr == 'reltime':
         row = (Treal, 100 * T / Treal, 100 * Ts / Treal,
                100 * Tcex / Treal, 100 * Tf / Treal,
