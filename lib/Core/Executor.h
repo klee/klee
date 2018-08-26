@@ -301,12 +301,17 @@ private:
   /// done (realloc semantics). The initialized bytes will be the
   /// minimum of the size of the old and new objects, with remaining
   /// bytes initialized as specified by zeroMemory.
+  ///
+  /// \param allocationAlignment If non-zero, the given alignment is
+  /// used. Otherwise, the alignment is deduced via
+  /// Executor::getAllocationAlignment
   void executeAlloc(ExecutionState &state,
                     ref<Expr> size,
                     bool isLocal,
                     KInstruction *target,
                     bool zeroMemory=false,
-                    const ObjectState *reallocFrom=0);
+                    const ObjectState *reallocFrom=0,
+                    size_t allocationAlignment=0);
 
   /// Free the given address with checking for errors. If target is
   /// given it will be bound to 0 in the resulting states (this is a

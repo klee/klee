@@ -3286,11 +3286,14 @@ void Executor::executeAlloc(ExecutionState &state,
                             bool isLocal,
                             KInstruction *target,
                             bool zeroMemory,
-                            const ObjectState *reallocFrom) {
+                            const ObjectState *reallocFrom,
+                            size_t allocationAlignment) {
   size = toUnique(state, size);
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(size)) {
     const llvm::Value *allocSite = state.prevPC->inst;
-    size_t allocationAlignment = getAllocationAlignment(allocSite);
+    if (allocationAlignment == 0) {
+      allocationAlignment = getAllocationAlignment(allocSite);
+    }
     MemoryObject *mo =
         memory->allocate(CE->getZExtValue(), isLocal, /*isGlobal=*/false,
                          allocSite, allocationAlignment);
