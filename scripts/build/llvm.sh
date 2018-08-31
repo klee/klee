@@ -177,13 +177,6 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   cp "${LLVM_BUILD_BIN}/FileCheck" "${LLVM_INSTALL}/bin/"
   cp "${LLVM_BUILD_BIN}/not" "${LLVM_INSTALL}/bin/"
 
-  if [[ "${KEEP_BUILD}x" != "1x" ]]; then
-    rm -rf "${LLVM_BUILD}"
-  fi
-
-  if [[ "${KEEP_SRC}x" != "1x" ]]; then
-    rm -rf "${LLVM_BASE}"
-  fi
 elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
   # We use our own local cache if possible
   set +e

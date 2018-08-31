@@ -63,7 +63,7 @@ for solver in ${SOLVER_LIST}; do
   echo "Setting CMake configuration option for ${solver}"
   case ${solver} in
   STP)
-    KLEE_STP_CONFIGURE_OPTION=(-DENABLE_SOLVER_STP=TRUE -DSTP_DIR="${BASE}/stp-${STP_VERSION}-install")
+    KLEE_STP_CONFIGURE_OPTION=(-DENABLE_SOLVER_STP=TRUE -DSTP_DIR="${BASE}/stp-${STP_VERSION}-install/lib/cmake/STP")
     ;;
   Z3)
     echo "Z3"
@@ -103,7 +103,7 @@ fi
 KLEE_BUILD="${BASE}/klee_build${LLVM_VERSION_SHORT}${LLVM_SUFFIX}${SOLVER_SUFFIX}${DEPS_SUFFIX}"
 mkdir -p "${KLEE_BUILD}"
 cd "${KLEE_BUILD}"
-GTEST_SRC_DIR="${BASE}/googletest-release-${GTEST_VERSION}/"
+GTEST_SRC_DIR="${BASE}/gtest/"
 if [ "X${DISABLE_ASSERTIONS}" == "X1" ]; then
   KLEE_ASSERTS_OPTION="-DENABLE_KLEE_ASSERTS=FALSE"
 else

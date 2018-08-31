@@ -40,4 +40,4 @@ apt -y --no-install-recommends install \
 apt clean
 
 # Install lit for testing
-pip3 install wheel && pip3 install lit
+pip3 install wheel && pip3 install lit && pip3 install wllvm

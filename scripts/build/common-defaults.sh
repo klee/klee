@@ -5,8 +5,6 @@
 # Defines defaults used to build a default docker image outside of Travis
 if [[ "${DOCKER_BUILD}x" == "1x" ]]; then
   # Default for docker: Do not keep build and source files for small images
-  : "${KEEP_BUILD:=0}"
-  : "${KEEP_SRC:=0}"
   echo "DOCKER_BUILD"
 fi
 if [[ "${KLEE_TRAVIS_BUILD}x" != "1x" ]]; then
@@ -27,9 +25,6 @@ if [[ "${KLEE_TRAVIS_BUILD}x" != "1x" ]]; then
 : "${PACKAGED:=0}"
 # undefined, address, memory
 : "${SANITIZER_BUILD:=}"
-# Defines if source and build artifacts should be preserved
-: "${KEEP_BUILD:=1}"
-: "${KEEP_SRC:=1}"
 OS="$(uname)"
 case $OS in
   'Linux')

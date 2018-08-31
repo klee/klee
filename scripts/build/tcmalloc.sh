@@ -17,13 +17,6 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
     --prefix="${BASE}/tcmalloc-install"
   make
   make install
-  if [[ "${KEEP_BUILD}x" != "1x" ]]; then
-    rm -rf "${BASE}/gperftools-${TCMALLOC_VERSION}"
-  fi
-
-  if [[ "${KEEP_SRC}x" != "1x" ]]; then
-    rm -f "${BASE}/gperftools-${TCMALLOC_VERSION}.tar.gz"
-  fi
 elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
   if [ ${USE_TCMALLOC:-0} -eq 1 ] ; then
     echo "Error: Requested to install TCMalloc on macOS, which is not supported"
