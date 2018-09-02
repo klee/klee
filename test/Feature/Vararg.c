@@ -1,8 +1,8 @@
-// REQUIRES: not-darwin
-// RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc
+// RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc -g
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out %t1.bc > %t2.out
-// RUN: grep "types: (52, 37, 2.00, (9,12,15))" %t2.out
+// RUN: %klee --output-dir=%t.klee-out --allocate-determ=true %t1.bc | FileCheck %s
+// RUN: cat %t.klee-out/assembly.ll
+// RUN: ls -l %t.klee-out/
 // RUN: test -f %t.klee-out/test000001.ptr.err
 
 #include <stdarg.h>
@@ -72,13 +72,16 @@ int va_array(int N, ...) {
 int main() {
   struct triple p = { 9, 12, 15 };
   test1(-1, 52, 37ll, 2.0, p);
+  // CHECK: types: (52, 37, 2.00, (9,12,15))
 
   assert(sum(2, 3, 4) == 11);
   assert(sum(0) == 0);
   assert(va_array(5, 0, 5, 1, 1, 2, 1)==45); // 15 + 30
 
+  printf("should die:\n");
   // should give memory error
   test1(-1, 52, 2.0, p);
+  printf("didn't die\n");
 
   return 0;
 }
