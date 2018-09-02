@@ -44,6 +44,11 @@
 #include "llvm/Transforms/Scalar/GVN.h"
 #endif
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
+#include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/InstCombine/InstCombine.h"
+#endif
+
 using namespace llvm;
 
 // Don't verify at the end
