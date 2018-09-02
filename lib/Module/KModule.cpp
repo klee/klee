@@ -288,7 +288,11 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
 
   if (OutputModule) {
     std::unique_ptr<llvm::raw_fd_ostream> f(ih->openOutputFile("final.bc"));
+#if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
+    WriteBitcodeToFile(*module, *f);
+#else
     WriteBitcodeToFile(module.get(), *f);
+#endif
   }
 
   /* Build shadow structures */
