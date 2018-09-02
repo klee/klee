@@ -51,6 +51,10 @@
 
 #include "llvm/Transforms/Utils/Cloning.h"
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
+#include "llvm/Transforms/Utils.h"
+#endif
+
 #include <sstream>
 
 using namespace llvm;
