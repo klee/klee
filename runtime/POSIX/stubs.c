@@ -7,8 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define _XOPEN_SOURCE 700
-
 #include <errno.h>
 #include <limits.h>
 #include <signal.h>
@@ -265,7 +263,15 @@ gnu_dev_type gnu_dev_makedev(unsigned int __major, unsigned int __minor) {
 
 char *canonicalize_file_name (const char *name) __attribute__((weak));
 char *canonicalize_file_name (const char *name) {
-  return realpath(name, NULL);
+  // Although many C libraries allocate resolved_name in realpath() if it is NULL,
+  // this behaviour is implementation-defined (POSIX) and not implemented in uclibc.
+  char * resolved_name = malloc(PATH_MAX);
+  if (!resolved_name) return NULL;
+  if (!realpath(name, resolved_name)) {
+    free(resolved_name);
+    return NULL;
+  }
+  return resolved_name;
 }
 
 int getloadavg(double loadavg[], int nelem) __attribute__((weak));
