@@ -8,7 +8,7 @@ ENV DOCKER_BUILD=1
 ARG BASE=/tmp
 
 # Copy across all source files
-ADD /scripts/build/* scripts/build/
+ADD /scripts/build/dependencies-ubuntu.sh scripts/build/dependencies-ubuntu.sh
 
 # Install packages
 RUN scripts/build/dependencies-ubuntu.sh && rm -rf /var/lib/apt/lists/*

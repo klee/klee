@@ -20,5 +20,9 @@ ARG TRAVIS_OS_NAME
 WORKDIR $BASE
 
 # Copy across source files needed for build
-ADD /scripts/build/* scripts/build/
+ADD /scripts/build/patches scripts/build/patches
+ADD /scripts/build/common-defaults.sh scripts/build/common-defaults.sh
+ADD /scripts/build/common-functions scripts/build/common-functions
+ADD /scripts/build/llvm.sh scripts/build/llvm.sh
+
 RUN ./scripts/build/llvm.sh

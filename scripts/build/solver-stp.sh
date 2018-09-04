@@ -46,7 +46,7 @@ if [ "x${STP_VERSION}" != "x" ]; then
   CFLAGS="${SANITIZER_C_FLAGS}" \
   CXXFLAGS="${SANITIZER_CXX_FLAGS}" \
   LDFLAGS="${SANITIZER_LD_FLAGS}" \
-  cmake ${STP_CMAKE_FLAGS} \
+  cmake ${STP_CMAKE_FLAGS[@]} \
         -DCMAKE_PREFIX_PATH="${BASE}/minisat-install" "${BASE}/stp-${STP_VERSION}" \
         -DCMAKE_INSTALL_PREFIX="${BASE}/stp-${STP_VERSION}-install"
   make

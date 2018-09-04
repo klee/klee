@@ -14,10 +14,12 @@ add-apt-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial main"
 wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key| apt-key add -
 apt update -y
 
+#clang-4.0 is needed as a compiler for memsan builds
 #Install essential dependencies
 apt -y --no-install-recommends install \
   binutils \
   bison \
+  clang-4.0 \
   cmake \
   curl \
   flex \

@@ -53,12 +53,6 @@ if [[ "${SANITIZER_BUILD}" == "memory" ]]; then
      echo "Memory sanitizer builds for <= LLVM 3.7 are not supported"
      exit 1
    fi
-   # Build uninstrumented compiler
-   mkdir "${SANITIZER_LLVM_UNINSTRUMENTED}"
-   cd "${SANITIZER_LLVM_UNINSTRUMENTED}"
-   cmake -GNinja -DCMAKE_BUILD_TYPE=Release "${LLVM_BASE}"
-   ninja
-
    # Build instrumented libc/libc++
    mkdir "${SANITIZER_LLVM_LIBCXX}"
    cd "${SANITIZER_LLVM_LIBCXX}"
@@ -176,6 +170,17 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
 
   cp "${LLVM_BUILD_BIN}/FileCheck" "${LLVM_INSTALL}/bin/"
   cp "${LLVM_BUILD_BIN}/not" "${LLVM_INSTALL}/bin/"
+
+#This prevents COPY from failing in builds whitout memsan
+#Otherwise we would have to have different dockerfiles for memsan builds
+  mkdir -p ${BASE}/llvm-38-build_O_ND_A_libcxx
+  mkdir -p ${BASE}/llvm-${LLVM_VERSION_SHORT}-build${LLVM_SUFFIX}_libcxx
+  
+#If debug is enabled the build direcotry gets impractically big (11GB)
+#We therefore clean it, it can eaisly be rebuilt, by running make again.
+  if [[ "${ENABLE_DEBUG}" == "1" && "${DOCKER_BUILD}x" == "1x" ]]; then
+      make -C ${LLVM_BUILD} clean ; true
+  fi
 
 elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
   # We use our own local cache if possible
