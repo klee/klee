@@ -173,8 +173,8 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
 
 #This prevents COPY from failing in builds whitout memsan
 #Otherwise we would have to have different dockerfiles for memsan builds
-  mkdir -p ${BASE}/llvm-38-build_O_ND_A_libcxx
-  mkdir -p ${BASE}/llvm-${LLVM_VERSION_SHORT}-build${LLVM_SUFFIX}_libcxx
+  mkdir -p "${BASE}/llvm-38-build_O_ND_A_libcxx"
+  mkdir -p "${BASE}/llvm-${LLVM_VERSION_SHORT}-build${LLVM_SUFFIX}_libcxx"
   
 #If debug is enabled the build direcotry gets impractically big (11GB)
 #We therefore clean it, it can eaisly be rebuilt, by running make again.
