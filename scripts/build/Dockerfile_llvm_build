@@ -11,7 +11,9 @@ ARG DISABLE_ASSERTIONS
 ARG ENABLE_OPTIMIZED
 ARG ENABLE_DEBUG
 ARG KLEE_TRAVIS_BUILD
+ARG LLVM_SUFFIX
 ARG LLVM_VERSION
+ARG LLVM_VERSION_SHORT
 ARG PACKAGED
 ARG REQUIRES_RTTI
 ARG SANITIZER_BUILD
@@ -26,3 +28,8 @@ ADD /scripts/build/common-functions scripts/build/common-functions
 ADD /scripts/build/llvm.sh scripts/build/llvm.sh
 
 RUN ./scripts/build/llvm.sh
+
+#This prevents COPY from failing in builds without memsan
+#Otherwise we would have to have different dockerfiles for memsan builds
+RUN  mkdir -p "${BASE}/llvm-38-build_O_ND_A_libcxx"
+RUN  mkdir -p "${BASE}/llvm-${LLVM_VERSION_SHORT}-build${LLVM_SUFFIX}_libcxx"

@@ -63,7 +63,11 @@ for solver in ${SOLVER_LIST}; do
   echo "Setting CMake configuration option for ${solver}"
   case ${solver} in
   STP)
-    KLEE_STP_CONFIGURE_OPTION=(-DENABLE_SOLVER_STP=TRUE -DSTP_DIR="${BASE}/stp-${STP_VERSION}-install/lib/cmake/STP")
+    if [[ "${DOCKER_BUILD}x" == "1x" ]]; then
+      KLEE_STP_CONFIGURE_OPTION=(-DENABLE_SOLVER_STP=TRUE -DSTP_DIR="${BASE}/stp-${STP_VERSION}-install/lib/cmake/STP")
+    else
+      KLEE_STP_CONFIGURE_OPTION=(-DENABLE_SOLVER_STP=TRUE -DSTP_DIR="${BASE}/stp-${STP_VERSION}-install")
+    fi
     ;;
   Z3)
     echo "Z3"

@@ -171,15 +171,11 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   cp "${LLVM_BUILD_BIN}/FileCheck" "${LLVM_INSTALL}/bin/"
   cp "${LLVM_BUILD_BIN}/not" "${LLVM_INSTALL}/bin/"
 
-#This prevents COPY from failing in builds without memsan
-#Otherwise we would have to have different dockerfiles for memsan builds
-  mkdir -p "${BASE}/llvm-38-build_O_ND_A_libcxx"
-  mkdir -p "${BASE}/llvm-${LLVM_VERSION_SHORT}-build${LLVM_SUFFIX}_libcxx"
   
 #If debug is enabled the build direcotry gets impractically big (11GB)
 #Therefore clean it. It can easily be rebuilt by running make again.
-  if [[ "${ENABLE_DEBUG}" == "1" && "${DOCKER_BUILD}x" == "1x" ]]; then
-      make -C ${LLVM_BUILD} clean ; true
+  if [[ "${ENABLE_DEBUG}x" == "1x" && "${DOCKER_BUILD}x" == "1x" ]]; then
+      make -i -k -C ${LLVM_BUILD} clean ; true
   fi
 
 elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
