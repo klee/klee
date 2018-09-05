@@ -25,6 +25,8 @@ apt -y --no-install-recommends install \
   flex \
   git \
   groff-base \
+  gperf \
+  libgmp-dev \
   libboost-program-options-dev \
   libncurses-dev \
   ninja-build \

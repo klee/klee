@@ -6,12 +6,6 @@ source "${DIR}/common-defaults.sh"
 
 : ${METASMT_VERSION?"METASMT_VERSION not specified"}
 
-# Get Z3, libgmp, gperf (required by yices2)
-apt update
-apt -y --no-install-recommends install gperf libgmp-dev
-apt clean
-rm -rf /var/lib/apt/lists/*
-
 # Clone
 git clone --single-branch --depth 1 https://github.com/hoangmle/metaSMT.git "${BASE}/metaSMT"
 cd "${BASE}/metaSMT"
