@@ -20,7 +20,7 @@ public:
 Test t;
 
 int main() {
-  assert(t.getX()==22);
+  assert(t.getX() == 22);
 
   return 0;
 }

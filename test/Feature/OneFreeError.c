@@ -6,8 +6,7 @@
 int main() {
   int *x = malloc(4);
   free(x);
-  // CHECK: OneFreeError.c:11: memory error: out of bound pointer
-  // FIXME: Use FileCheck's relative line numbers
+  // CHECK: OneFreeError.c:[[@LINE+1]]: memory error: out of bound pointer
   x[0] = 1;
   return 0;
 }

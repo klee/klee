@@ -19,37 +19,25 @@
 
 // CHECK-NEXT: {{[1-9][0-9]*}} {{[1-9][0-9]*}}
 
-
-// Ensure we have the right line number (and check called function markers).
-// CHECK: fn=f1
-// CHECK: cfn=f0
-// CHECK-NEXT: calls=1 {{[1-9][0-9]*}}
-// CHECK-NEXT: {{[1-9][0-9]*}} 48 {{.*}}
-
-// This check just brackets the checks above, to make sure they fall in the
-// appropriate region of the run.istats file.
-//
-// CHECK: fn=main
-
-
-
-
-
-
-
-// KEEP THIS AS LINE 40
-
 int f0(int a, int b) {
   return a + b;
 }
 
 int f1(int a, int b) {
-  // f0 is called on line 48
+  // Ensure we have the right line number (and check called function markers).
+  // CHECK: fn=f1
+  // CHECK: cfn=f0
+  // CHECK-NEXT: calls=1 {{[1-9][0-9]*}}
+  // CHECK-NEXT: {{[1-9][0-9]*}} [[@LINE+1]] {{.*}}
   return f0(a, b);
 }
 
+// This check just brackets the checks above, to make sure they fall in the
+// appropriate region of the run.istats file.
+//
+// CHECK: fn=main
 int main() {
   int x = f1(1, 2);
-  
+
   return x;
 }
