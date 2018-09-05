@@ -2,7 +2,8 @@
 ARG REPOSITORY
 ARG LLVM_VERSION_SHORT
 ARG LLVM_SUFFIX
-FROM ${REPOSITORY}/llvm_built:${LLVM_VERSION_SHORT}${LLVM_SUFFIX}
+ARG SANITIZER_SUFFIX
+FROM ${REPOSITORY}/llvm_built:${LLVM_VERSION_SHORT}${LLVM_SUFFIX}${SANITIZER_SUFFIX}   
 LABEL maintainer="Martin Nowack <m.nowack@imperial.ac.uk>"
 
 # Define all variables that can be changed as argument to the docker build

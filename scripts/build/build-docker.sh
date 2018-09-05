@@ -88,12 +88,12 @@ docker_build_and_push() {
 if [[ -z ${DOCKER_BUILD_DEPS_ONLY} || "${DOCKER_BUILD_DEPS_ONLY}x" == "1x" ]]; then
   echo "Build dependencies"
   docker_build_and_push 1 ${REPOSITORY}/base Dockerfile_base "${DOCKER_OPTS[@]}"
-  docker_build_and_push 1 ${REPOSITORY}/llvm_built:${LLVM_VERSION_SHORT}${LLVM_SUFFIX} Dockerfile_llvm_build "${DOCKER_OPTS[@]}"
-  docker_build_and_push 1 ${REPOSITORY}/solver:${SOLVER_SUFFIX} Dockerfile_solver_build "${DOCKER_OPTS[@]}"
-  docker_build_and_push 1 ${REPOSITORY}/klee_deps:${LLVM_VERSION_SHORT}${LLVM_SUFFIX} Dockerfile_klee_deps "${DOCKER_OPTS[@]}"
+  docker_build_and_push 1 ${REPOSITORY}/llvm_built:${LLVM_VERSION_SHORT}${LLVM_SUFFIX}${SANITIZER_SUFFIX} Dockerfile_llvm_build "${DOCKER_OPTS[@]}"
+  docker_build_and_push 1 ${REPOSITORY}/solver:${SOLVER_SUFFIX}${SANITIZER_SUFFIX} Dockerfile_solver_build "${DOCKER_OPTS[@]}"
+  docker_build_and_push 1 ${REPOSITORY}/klee_deps:${LLVM_VERSION_SHORT}${LLVM_SUFFIX}${SANITIZER_SUFFIX} Dockerfile_klee_deps "${DOCKER_OPTS[@]}"
 
 fi
 
 if [[ -z ${DOCKER_BUILD_DEPS_ONLY} || "${DOCKER_BUILD_DEPS_ONLY}x" != "1x" ]]; then
-  docker build -f "${DIR}/Dockerfile_klee" "${DOCKER_OPTS[@]}" -t ${REPOSITORY}/klee:${LLVM_VERSION_SHORT}${LLVM_SUFFIX}${SOLVER_SUFFIX}${DEPS_SUFFIX} "${KLEEDIR}"
+  docker build -f "${DIR}/Dockerfile_klee" "${DOCKER_OPTS[@]}" -t ${REPOSITORY}/klee:${LLVM_VERSION_SHORT}${LLVM_SUFFIX}${SOLVER_SUFFIX}${DEPS_SUFFIX}${SANITIZER_SUFFIX} "${KLEEDIR}"
 fi

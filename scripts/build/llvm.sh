@@ -174,7 +174,8 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   
 #If debug is enabled the build direcotry gets impractically big (11GB)
 #Therefore clean it. It can easily be rebuilt by running make again.
-  if [[ "${ENABLE_DEBUG}x" == "1x" && "${DOCKER_BUILD}x" == "1x" ]]; then
+  echo "debug: ${ENABLE_DEBUG}, DOCKER: ${DOCKER_BUILD}"
+  if [[ (("${ENABLE_DEBUG}" == "1") || ("${ENABLE_OPTIMIZED}" != "1")) && "${DOCKER_BUILD}x" == "1x" ]]; then
       make -i -k -C ${LLVM_BUILD} clean ; true
   fi
 
