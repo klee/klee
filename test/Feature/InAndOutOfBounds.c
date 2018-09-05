@@ -8,15 +8,15 @@
 unsigned klee_urange(unsigned start, unsigned end) {
   unsigned x;
   klee_make_symbolic(&x, sizeof x, "x");
-  if (x-start>=end-start) klee_silent_exit(0);
+  if (x - start >= end - start)
+    klee_silent_exit(0);
   return x;
 }
 
 int main() {
   int *x = malloc(sizeof(int));
-  // FIXME: Use newer FileCheck syntax to support relative line numbers
-  // CHECK: InAndOutOfBounds.c:19: memory error: out of bound pointer
-  x[klee_urange(0,2)] = 1;
+  // CHECK: InAndOutOfBounds.c:[[@LINE+1]]: memory error: out of bound pointer
+  x[klee_urange(0, 2)] = 1;
   free(x);
   return 0;
 }

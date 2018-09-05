@@ -4,13 +4,14 @@
 // RUN: ls %t.klee-out/ | grep .ktest | wc -l | grep 4
 // RUN: ls %t.klee-out/ | grep .err | wc -l | grep 3
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 unsigned klee_urange(unsigned start, unsigned end) {
   unsigned x;
   klee_make_symbolic(&x, sizeof x, "x");
-  if (x-start>=end-start) klee_silent_exit(0);
+  if (x - start >= end - start)
+    klee_silent_exit(0);
   return x;
 }
 
@@ -22,21 +23,20 @@ int *make_int(int i) {
 
 int main() {
   int *buf[4];
-  int i,s;
+  int i, s;
 
-  for (i=0; i<3; i++)
+  for (i = 0; i < 3; i++)
     buf[i] = make_int(i);
   buf[3] = 0;
 
-  s = klee_urange(0,4);
+  s = klee_urange(0, 4);
 
   free(buf[s]);
 
-  // CHECK: MultipleFreeResolution.c:40: memory error: out of bound pointer
-  // CHECK: MultipleFreeResolution.c:40: memory error: out of bound pointer
-  // CHECK: MultipleFreeResolution.c:40: memory error: out of bound pointer
-  // FIXME: Use FileCheck's relative line numbers
-  for (i=0; i<3; i++) {
+  for (i = 0; i < 3; i++) {
+    // CHECK: MultipleFreeResolution.c:[[@LINE+3]]: memory error: out of bound pointer
+    // CHECK: MultipleFreeResolution.c:[[@LINE+2]]: memory error: out of bound pointer
+    // CHECK: MultipleFreeResolution.c:[[@LINE+1]]: memory error: out of bound pointer
     printf("*buf[%d] = %d\n", i, *buf[i]);
   }
 

@@ -4,8 +4,7 @@
 
 #include "klee/klee.h"
 
-int main()
-{
+int main() {
   unsigned int x;
   unsigned int y;
   volatile unsigned int result;
@@ -13,13 +12,13 @@ int main()
   klee_make_symbolic(&x, sizeof(x), "x");
   klee_make_symbolic(&y, sizeof(y), "y");
 
-  // CHECK: ubsan_unsigned_overflow.c:17: overflow on addition
+  // CHECK: ubsan_unsigned_overflow.c:[[@LINE+1]]: overflow on addition
   result = x + y;
 
-  // CHECK: ubsan_unsigned_overflow.c:20: overflow on subtraction
+  // CHECK: ubsan_unsigned_overflow.c:[[@LINE+1]]: overflow on subtraction
   result = x - y;
 
-  // CHECK: ubsan_unsigned_overflow.c:23: overflow on multiplication
+  // CHECK: ubsan_unsigned_overflow.c:[[@LINE+1]]: overflow on multiplication
   result = x * y;
 
   return 0;
