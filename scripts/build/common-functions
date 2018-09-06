@@ -89,10 +89,6 @@ else
     LLVM_SUFFIX+="_RTTI"
   fi
 
-  if [[ "${SANITIZER_SUFFIX}x" != "x" ]]; then
-    LLVM_SUFFIX+="${SANITIZER_SUFFIX}"
-  fi
-
   LLVM_BASE="${BASE}/llvm-${LLVM_VERSION_SHORT}"
   LLVM_BUILD="${LLVM_BASE}-build${LLVM_SUFFIX}"
   LLVM_INSTALL="${LLVM_BASE}-install${LLVM_SUFFIX}"
@@ -123,7 +119,7 @@ for sanitizer in ${sorted_sanitizers[@]}; do
     echo "Using UBSan"
     flags="-fsanitize=undefined -fno-omit-frame-pointer -g"
     SANITIZER_CXX_FLAGS+=" ${flags}"
-    SANITIZER_C_FLAGS+=" ${flags}"
+    SANITIZER_C_FLAGS+=" ${flags} -fuse-ld=gold"
     SANITIZER_LD_FLAGS+=" ${flags} -lubsan -fuse-ld=gold"
     SANITIZER_SUFFIX+="_ubsan"
     IS_SANITIZED_BUILD=1

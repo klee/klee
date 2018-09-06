@@ -10,8 +10,10 @@ ARG SOLVER_SUFFIX
 FROM ${REPOSITORY}/solver:${SOLVER_SUFFIX}${SANITIZER_SUFFIX} as solver
 
 ARG BASE=/tmp
-#Create the dir so COPY does not fail if this image has no metaSMT
+#Remove all but the install dirs from the solver image, so that we can copy the whole
+#${BASE}/ dir, because we don't know which solvers are there.
 RUN bash -O extglob -c "rm -r !(*-install|metaSMT)"
+#Create the dir so COPY does not fail if this image has no metaSMT
 RUN mkdir -p ${BASE}/metaSMT
 
 # Build the final KLEE layer
@@ -66,7 +68,8 @@ COPY --from=llvmdeps ${BASE}/klee-uclibc-${LLVM_VERSION_SHORT} ${BASE}/klee-ucli
 COPY --from=llvmdeps ${BASE}/gtest ${BASE}/gtest
 
 # TODO Remove when STP is fixed
-RUN export LD_LIBRARY_PATH=${BASE}/metaSMT/deps/stp-git-basic/lib/ && export KLEE_SRC=${BASE}/klee_src && ${BASE}/klee_src/scripts/build/klee.sh && rm -rf ${BASE}/klee_src/.git && ln -s ${BASE}/klee_build* ${BASE}/klee_build
+RUN export LD_LIBRARY_PATH=${BASE}/metaSMT/deps/stp-git-basic/lib/:${BASE}/minisat-install/lib && export KLEE_SRC=${BASE}/klee_src && ${BASE}/klee_src/scripts/build/klee.sh && rm -rf ${BASE}/klee_src/.git && ln -s ${BASE}/klee_build* ${BASE}/klee_build 
+
 
 # Create ``klee`` user for container with password ``klee``.
 # and give it password-less sudo access (temporarily so we can use the TravisCI scripts)
