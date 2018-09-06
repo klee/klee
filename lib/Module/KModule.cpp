@@ -153,7 +153,8 @@ injectStaticConstructorsAndDestructors(Module *m,
 
   Function *mainFn = m->getFunction(entryFunction);
   if (!mainFn)
-    klee_error("Could not find main() function.");
+    klee_error("Entry function '%s' not found in module.",
+               entryFunction.str().c_str());
 
   if (ctors) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
