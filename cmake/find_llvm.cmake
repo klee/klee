@@ -22,7 +22,11 @@
 option(USE_CMAKE_FIND_PACKAGE_LLVM "Use find_package(LLVM CONFIG) to find LLVM" OFF)
 
 if (USE_CMAKE_FIND_PACKAGE_LLVM)
-  find_package(LLVM CONFIG REQUIRED)
+  find_package(LLVM CONFIG REQUIRED
+	       HINTS "${LLVM_DIR}"
+               )
+  message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
+  message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
   # Provide function to map LLVM components to libraries.
   function(klee_get_llvm_libs output_var)
@@ -160,7 +164,7 @@ else()
       _run_llvm_config(_system_libs "--ldflags")
       # TODO: Filter out `-L<path>` flag.
     else()
-      _run_llvm_config(_system_libs "--system-libs")
+      _run_llvm_config(_system_libs "--system-libs" ${ARGN})
     endif()
     string_to_list("${_system_libs}" _system_libs_list)
 

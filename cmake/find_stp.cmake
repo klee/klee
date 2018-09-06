@@ -12,6 +12,8 @@
 # Although find_package() will set `STP_DIR` for us add it here so that
 # is displayed in `ccmake` and `cmake-gui`.
 set(STP_DIR "" CACHE PATH "Path to directory containing STPConfig.cmake")
+# Backup STP_DIR and check if it changes
+set(STP_DIR_BACKUP "${STP_DIR}")
 find_package(STP CONFIG)
 
 # Set the default so that if the following is true:
@@ -31,6 +33,11 @@ option(ENABLE_SOLVER_STP "Enable STP solver support" ${ENABLE_SOLVER_STP_DEFAULT
 if (ENABLE_SOLVER_STP)
   message(STATUS "STP solver support enabled")
   if (STP_FOUND)
+    # Check if the backup changed
+    if (STP_DIR_BACKUP AND NOT ${STP_DIR_BACKUP} STREQUAL ${STP_DIR}) 
+        message(FATAL_ERROR "Provided STP_DIR path does not match found path for STP")
+    endif()
+
     message(STATUS "Found STP version ${STP_VERSION}")
     # Try the STP shared library first
     if ("${STP_SHARED_LIBRARY}" STREQUAL "")
