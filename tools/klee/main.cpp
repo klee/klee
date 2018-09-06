@@ -639,7 +639,7 @@ preparePOSIX(std::vector<std::unique_ptr<llvm::Module>> &loadedModules,
   }
 
   if (!mainFn)
-    klee_error("'%s' function not found in module.", EntryPoint.c_str());
+    klee_error("Entry function '%s' not found in module.", EntryPoint.c_str());
   mainFn->setName("__klee_posix_wrapped_main");
 
   // Add a definition of the entry function if needed. This is the case if we
@@ -1278,7 +1278,7 @@ int main(int argc, char **argv, char **envp) {
   auto finalModule = interpreter->setModule(loadedModules, Opts);
   Function *mainFn = finalModule->getFunction(EntryPoint);
   if (!mainFn) {
-    klee_error("'%s' function not found in module.", EntryPoint.c_str());
+    klee_error("Entry function '%s' not found in module.", EntryPoint.c_str());
   }
 
   externalsAndGlobalsCheck(finalModule);
