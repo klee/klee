@@ -10,8 +10,7 @@
 #ifndef KLEE_ADDRESSSPACE_H
 #define KLEE_ADDRESSSPACE_H
 
-#include "ObjectHolder.h"
-
+#include "Memory.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Internal/ADT/ImmutableMap.h"
 #include "klee/Internal/System/Time.h"
@@ -31,8 +30,9 @@ namespace klee {
   struct MemoryObjectLT {
     bool operator()(const MemoryObject *a, const MemoryObject *b) const;
   };
-  
-  typedef ImmutableMap<const MemoryObject*, ObjectHolder, MemoryObjectLT> MemoryMap;
+
+  typedef ImmutableMap<const MemoryObject *, ref<ObjectState>, MemoryObjectLT>
+      MemoryMap;
 
   class AddressSpace {
   private:

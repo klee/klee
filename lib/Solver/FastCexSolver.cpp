@@ -804,8 +804,8 @@ public:
       const Array *array = re->updates.root;
       CexObjectData &cod = getObjectData(array);
       CexValueData index = evalRangeForExpr(re->index);
-        
-      for (const UpdateNode *un = re->updates.head; un; un = un->next) {
+
+      for (const auto *un = re->updates.head.get(); un; un = un->next.get()) {
         CexValueData ui = evalRangeForExpr(un->index);
 
         // If these indices can't alias, continue propogation

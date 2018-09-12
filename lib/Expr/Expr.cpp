@@ -537,10 +537,9 @@ ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index) {
   // least recent to find a potential written value for a concrete index;
   // stop if an update with symbolic has been found as we don't know which
   // array element has been updated
-  const UpdateNode *un = ul.head;
+  auto un = ul.head.get();
   bool updateListHasSymbolicWrites = false;
-  for (; un; un=un->next) {
-    // Check if we have an equivalent concrete index
+  for (; un; un = un->next.get()) {
     ref<Expr> cond = EqExpr::create(index, un->index);
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(cond)) {
       if (CE->isTrue())

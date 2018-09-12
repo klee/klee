@@ -120,8 +120,7 @@ public:
       const Array *array = re->updates.root;
       
       // Reads of a constant array don't alias.
-      if (re->updates.root->isConstantArray() &&
-          !re->updates.head)
+      if (re->updates.root->isConstantArray() && re->updates.head.isNull())
         continue;
 
       if (!wholeObjects.count(array)) {

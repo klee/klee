@@ -279,7 +279,7 @@ void ExprSMTLIBPrinter::printReadExpr(const ref<ReadExpr> &e) {
   printSeperator();
 
   // print array with updates recursively
-  printUpdatesAndArray(e->updates.head, e->updates.root);
+  printUpdatesAndArray(e->updates.head.get(), e->updates.root);
 
   // print index
   printSeperator();
@@ -483,7 +483,7 @@ void ExprSMTLIBPrinter::printUpdatesAndArray(const UpdateNode *un,
     printSeperator();
 
     // recurse to get the array or update that this store operations applies to
-    printUpdatesAndArray(un->next, root);
+    printUpdatesAndArray(un->next.get(), root);
 
     printSeperator();
 
@@ -713,7 +713,7 @@ void ExprSMTLIBPrinter::scan(const ref<Expr> &e) {
           haveConstantArray = true;
 
         // scan the update list
-        scanUpdates(re->updates.head);
+        scanUpdates(re->updates.head.get());
       }
     }
 
@@ -824,7 +824,7 @@ void ExprSMTLIBPrinter::scanUpdates(const UpdateNode *un) {
   while (un != NULL) {
     scan(un->index);
     scan(un->value);
-    un = un->next;
+    un = un->next.get();
   }
 }
 
