@@ -480,12 +480,11 @@ ExprHandle STPBuilder::getInitialRead(const Array *root, unsigned index) {
       bool hashed = _arr_hash.lookupUpdateNodeExpr(un, un_expr);
       
       if (!hashed) {
-	un_expr = vc_writeExpr(vc,
-                               getArrayForUpdate(root, un->next),
-                               construct(un->index, 0),
-                               construct(un->value, 0));
-	
-	_arr_hash.hashUpdateNodeExpr(un, un_expr);
+        un_expr =
+            vc_writeExpr(vc, getArrayForUpdate(root, un->next.get()),
+                         construct(un->index, 0), construct(un->value, 0));
+
+        _arr_hash.hashUpdateNodeExpr(un, un_expr);
       }
       
       return un_expr;
@@ -560,9 +559,9 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     ReadExpr *re = cast<ReadExpr>(e);
     assert(re && re->updates.root);
     *width_out = re->updates.root->getRange();
-    return vc_readExpr(vc,
-                       getArrayForUpdate(re->updates.root, re->updates.head),
-                       construct(re->index, 0));
+    return vc_readExpr(
+        vc, getArrayForUpdate(re->updates.root, re->updates.head.get()),
+        construct(re->index, 0));
   }
     
   case Expr::Select: {

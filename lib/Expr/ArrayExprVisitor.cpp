@@ -63,7 +63,7 @@ ConstantArrayExprVisitor::visitConcat(const ConcatExpr &ce) {
     // that is read at a symbolic index
     if (base->updates.root->isConstantArray() &&
         !isa<ConstantExpr>(base->index)) {
-      for (const UpdateNode *un = base->updates.head; un; un = un->next) {
+      for (const auto *un = base->updates.head.get(); un; un = un->next.get()) {
         if (!isa<ConstantExpr>(un->index) || !isa<ConstantExpr>(un->value)) {
           incompatible = true;
           return Action::skipChildren();
@@ -97,7 +97,7 @@ ExprVisitor::Action ConstantArrayExprVisitor::visitRead(const ReadExpr &re) {
   // It is an interesting ReadExpr if it contains a concrete array
   // that is read at a symbolic index
   if (re.updates.root->isConstantArray() && !isa<ConstantExpr>(re.index)) {
-    for (const UpdateNode *un = re.updates.head; un; un = un->next) {
+    for (const auto *un = re.updates.head.get(); un; un = un->next.get()) {
       if (!isa<ConstantExpr>(un->index) || !isa<ConstantExpr>(un->value)) {
         incompatible = true;
         return Action::skipChildren();
@@ -132,7 +132,7 @@ ExprVisitor::Action ConstantArrayExprVisitor::visitRead(const ReadExpr &re) {
 
 ExprVisitor::Action
 IndexCompatibilityExprVisitor::visitRead(const ReadExpr &re) {
-  if (re.updates.head) {
+  if (!re.updates.head.isNull()) {
     compatible = false;
     return Action::skipChildren();
   } else if (re.updates.root->isConstantArray() &&
@@ -198,13 +198,13 @@ ExprVisitor::Action ArrayReadExprVisitor::inspectRead(ref<Expr> hash,
   // pre(*): index is symbolic
   if (!isa<ConstantExpr>(re.index)) {
     if (readInfo.find(&re) == readInfo.end()) {
-      if (re.updates.root->isSymbolicArray() && !re.updates.head) {
+      if (re.updates.root->isSymbolicArray() && re.updates.head.isNull()) {
         return Action::doChildren();
       }
-      if (re.updates.head) {
+      if (!re.updates.head.isNull()) {
         // Check preconditions on UpdateList nodes
         bool hasConcreteValues = false;
-        for (const UpdateNode *un = re.updates.head; un; un = un->next) {
+        for (const auto *un = re.updates.head.get(); un; un = un->next.get()) {
           // Symbolic case - \inv(update): index is concrete
           if (!isa<ConstantExpr>(un->index)) {
             incompatible = true;

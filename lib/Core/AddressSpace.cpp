@@ -30,23 +30,23 @@ void AddressSpace::unbindObject(const MemoryObject *mo) {
 }
 
 const ObjectState *AddressSpace::findObject(const MemoryObject *mo) const {
-  const MemoryMap::value_type *res = objects.lookup(mo);
-  
-  return res ? res->second : 0;
+  const auto res = objects.lookup(mo);
+  return res ? res->second.get() : nullptr;
 }
 
 ObjectState *AddressSpace::getWriteable(const MemoryObject *mo,
                                         const ObjectState *os) {
   assert(!os->readOnly);
 
-  if (cowKey==os->copyOnWriteOwner) {
+  // If this address space owns they object, return it
+  if (cowKey == os->copyOnWriteOwner)
     return const_cast<ObjectState*>(os);
-  } else {
-    ObjectState *n = new ObjectState(*os);
-    n->copyOnWriteOwner = cowKey;
-    objects = objects.replace(std::make_pair(mo, n));
-    return n;    
-  }
+
+  // Add a copy of this object state that can be updated
+  ref<ObjectState> newObjectState(new ObjectState(*os));
+  newObjectState->copyOnWriteOwner = cowKey;
+  objects = objects.replace(std::make_pair(mo, newObjectState));
+  return newObjectState.get();
 }
 
 /// 
@@ -56,13 +56,14 @@ bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr,
   uint64_t address = addr->getZExtValue();
   MemoryObject hack(address);
 
-  if (const MemoryMap::value_type *res = objects.lookup_previous(&hack)) {
-    const MemoryObject *mo = res->first;
+  if (const auto res = objects.lookup_previous(&hack)) {
+    const auto &mo = res->first;
     // Check if the provided address is between start and end of the object
     // [mo->address, mo->address + mo->size) or the object is a 0-sized object.
     if ((mo->size==0 && address==mo->address) ||
         (address - mo->address < mo->size)) {
-      result = *res;
+      result.first = res->first;
+      result.second = res->second.get();
       return true;
     }
   }
@@ -88,12 +89,13 @@ bool AddressSpace::resolveOne(ExecutionState &state,
       return false;
     uint64_t example = cex->getZExtValue();
     MemoryObject hack(example);
-    const MemoryMap::value_type *res = objects.lookup_previous(&hack);
-    
+    const auto res = objects.lookup_previous(&hack);
+
     if (res) {
       const MemoryObject *mo = res->first;
       if (example - mo->address < mo->size) {
-        result = *res;
+        result.first = res->first;
+        result.second = res->second.get();
         success = true;
         return true;
       }
@@ -108,14 +110,15 @@ bool AddressSpace::resolveOne(ExecutionState &state,
     MemoryMap::iterator start = oi;
     while (oi!=begin) {
       --oi;
-      const MemoryObject *mo = oi->first;
-        
+      const auto &mo = oi->first;
+
       bool mayBeTrue;
       if (!solver->mayBeTrue(state, 
                              mo->getBoundsCheckPointer(address), mayBeTrue))
         return false;
       if (mayBeTrue) {
-        result = *oi;
+        result.first = oi->first;
+        result.second = oi->second.get();
         success = true;
         return true;
       } else {
@@ -131,7 +134,7 @@ bool AddressSpace::resolveOne(ExecutionState &state,
 
     // search forwards
     for (oi=start; oi!=end; ++oi) {
-      const MemoryObject *mo = oi->first;
+      const auto &mo = oi->first;
 
       bool mustBeTrue;
       if (!solver->mustBeTrue(state, 
@@ -148,7 +151,8 @@ bool AddressSpace::resolveOne(ExecutionState &state,
                                mayBeTrue))
           return false;
         if (mayBeTrue) {
-          result = *oi;
+          result.first = oi->first;
+          result.second = oi->second.get();
           success = true;
           return true;
         }
@@ -240,8 +244,10 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
       if (timeout && timeout < timer.delta())
         return true;
 
+      auto op = std::make_pair<>(mo, oi->second.get());
+
       int incomplete =
-          checkPointerInObject(state, solver, p, *oi, rl, maxResolutions);
+          checkPointerInObject(state, solver, p, op, rl, maxResolutions);
       if (incomplete != 2)
         return incomplete ? true : false;
 
@@ -265,9 +271,10 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
         return true;
       if (mustBeTrue)
         break;
+      auto op = std::make_pair<>(mo, oi->second.get());
 
       int incomplete =
-          checkPointerInObject(state, solver, p, *oi, rl, maxResolutions);
+          checkPointerInObject(state, solver, p, op, rl, maxResolutions);
       if (incomplete != 2)
         return incomplete ? true : false;
     }
@@ -288,7 +295,7 @@ void AddressSpace::copyOutConcretes() {
     const MemoryObject *mo = it->first;
 
     if (!mo->isUserSpecified) {
-      ObjectState *os = it->second;
+      const auto &os = it->second;
       auto address = reinterpret_cast<std::uint8_t*>(mo->address);
 
       if (!os->readOnly)
@@ -298,14 +305,13 @@ void AddressSpace::copyOutConcretes() {
 }
 
 bool AddressSpace::copyInConcretes() {
-  for (MemoryMap::iterator it = objects.begin(), ie = objects.end(); 
-       it != ie; ++it) {
-    const MemoryObject *mo = it->first;
+  for (auto &obj : objects) {
+    const MemoryObject *mo = obj.first;
 
     if (!mo->isUserSpecified) {
-      const ObjectState *os = it->second;
+      const auto &os = obj.second;
 
-      if (!copyInConcrete(mo, os, mo->address))
+      if (!copyInConcrete(mo, os.get(), mo->address))
         return false;
     }
   }

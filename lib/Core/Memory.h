@@ -148,10 +148,12 @@ public:
 class ObjectState {
 private:
   friend class AddressSpace;
+  friend class ref<ObjectState>;
+
   unsigned copyOnWriteOwner; // exclusively for AddressSpace
 
-  friend class ObjectHolder;
-  unsigned refCount;
+  /// @brief Required by klee::ref-managed objects
+  class ReferenceCounter _refCount;
 
   const MemoryObject *object;
 
