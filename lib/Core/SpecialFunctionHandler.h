@@ -142,6 +142,8 @@ namespace klee {
     HANDLER(handleMulOverflow);
     HANDLER(handleSubOverflow);
     HANDLER(handleDivRemOverflow);
+    HANDLER(handleNewlocale);
+    HANDLER(handleFreelocale);
 #undef HANDLER
   };
 } // End klee namespace
