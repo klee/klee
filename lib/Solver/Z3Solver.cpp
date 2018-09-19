@@ -58,7 +58,7 @@ private:
                          const std::vector<const Array *> *objects,
                          std::vector<std::vector<unsigned char> > *values,
                          bool &hasSolution);
-bool validateZ3Model(::Z3_solver &theSolver, ::Z3_model &theModel);
+  bool validateZ3Model(::Z3_solver &theSolver, ::Z3_model &theModel);
 
 public:
   Z3SolverImpl();
@@ -210,7 +210,7 @@ char *Z3SolverImpl::getConstraintLog(const Query &query) {
 }
 
 bool Z3SolverImpl::computeTruth(const Query &query, bool &isValid) {
-  bool hasSolution;
+  bool hasSolution = false; // to remove compiler warning
   bool status =
       internalRunSolver(query, /*objects=*/NULL, /*values=*/NULL, hasSolution);
   isValid = !hasSolution;
