@@ -144,6 +144,9 @@ usage: (klee_init_env) [options] [program arguments]\n\
       max_argvs = __str_to_int(argv[k++], msg);
       max_len = __str_to_int(argv[k++], msg);
 
+      if ( (min_argvs > max_argvs) || (min_argvs == 0 && max_argvs == 0) )
+        __emit_error("Invalid range to --sym-args");
+
       n_args = klee_range(min_argvs, max_argvs+1, "n_args");
       for (i=0; i < n_args; i++) {
         sym_arg_name[3] = '0' + sym_arg_num++;
@@ -157,10 +160,19 @@ usage: (klee_init_env) [options] [program arguments]\n\
 
       if (k+2 >= argc)
 	__emit_error(msg);
+
+      if (sym_files != 0)
+        __emit_error("Multiple --sym-files are not allowed.\n");
       
       k++;
       sym_files = __str_to_int(argv[k++], msg);
       sym_file_len = __str_to_int(argv[k++], msg);
+
+      if (sym_files == 0)
+        __emit_error("The first argument to --sym-files (number of files) cannot be 0\n");
+
+      if (sym_file_len == 0)
+        __emit_error("The second argument to --sym-files (file size) cannot be 0\n");
 
     } else if (__streq(argv[k], "--sym-stdin") ||
                __streq(argv[k], "-sym-stdin")) {
