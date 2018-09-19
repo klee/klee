@@ -7,7 +7,7 @@
 // RUN: %klee --output-dir=%t.klee-out --run-in=%t.klee-out-tmp --libc=uclibc --posix-runtime --exit-on-error %t2.bc --sym-files 1 2
 // RUN: rm -rf %t.klee-out %t.klee-out-tmp
 // RUN: %gentmp %t.klee-out-tmp
-// RUN: %klee --output-dir=%t.klee-out --run-in=%t.klee-out-tmp --libc=uclibc --posix-runtime --exit-on-error %t2.bc --sym-files 0 2
+// RUN: %klee --output-dir=%t.klee-out --run-in=%t.klee-out-tmp --libc=uclibc --posix-runtime --exit-on-error %t2.bc --sym-files 1 2 --sym-stdin 2
 
 // For this test really to work as intended it needs to be run in a
 // directory large enough to cause uclibc to do multiple getdents
@@ -15,10 +15,8 @@
 // Therefore gentmp generates a directory with a specific amount of entries
 
 #include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <sys/types.h>
 #include <dirent.h>
-#include <sys/stat.h>
 #include <errno.h>
 #include <string.h>
 
@@ -54,7 +52,7 @@ int main(int argc, char **argv) {
   rewinddir(d);
   de = readdir(d);
   assert(de);
-  assert(strcmp(de->d_name, first) == 0);  
+  assert(strcmp(de->d_name, first) == 0);
   closedir(d);
 
   return 0;
