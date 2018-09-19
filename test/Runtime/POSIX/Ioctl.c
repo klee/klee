@@ -1,17 +1,15 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --posix-runtime --exit-on-error %t.bc --sym-files 0 4
+// RUN: %klee --output-dir=%t.klee-out --posix-runtime --exit-on-error %t.bc --sym-stdin 4
 
 #include <assert.h>
-#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <termios.h>
-#include <asm/ioctls.h>
 #include <errno.h>
 #include <stdio.h>
 
-int main(int argc, char **argv) {
+int main() {
   struct stat s;
   struct termios ts;
 
