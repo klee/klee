@@ -1,10 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --libc=uclibc --posix-runtime %t1.bc --sym-files 0 0 --max-fail 1 > %t.log
-// RUN: grep -q "fread(): ok" %t.log
-// RUN: grep -q "fread(): fail" %t.log
-// RUN: grep -q "fclose(): ok" %t.log
-// RUN: grep -q "fclose(): fail" %t.log
+// RUN: %klee --output-dir=%t.klee-out --libc=uclibc --posix-runtime %t1.bc --max-fail 1 | FileCheck %s
 
 #include <stdio.h>
 #include <assert.h>
@@ -17,10 +13,14 @@ int main(int argc, char** argv) {
   int r = fread(buf, 1, 100, f);
   printf("fread(): %s\n", 
          r ? "ok" : "fail");
+  // CHECK-DAG: fread(): ok
+  // CHECK-DAG: fread(): fail
 
   r = fclose(f);
   printf("fclose(): %s\n", 
          r ? "ok" : "fail");
+  // CHECK-DAG: fclose(): ok
+  // CHECK-DAG: fclose(): fail
 
   return 0;
 }
