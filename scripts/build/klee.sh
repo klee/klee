@@ -12,7 +12,7 @@ if [[ -z "${KLEE_UCLIBC}" ]]; then
   exit 1
 fi
 if [[ -z "${KLEE_SRC}" ]]; then
-  # Assumeption: this build script is part of the KLEE source tree
+  # Assumption: this build script is part of the KLEE source tree
   KLEE_SRC="${DIR}/../.."
 fi
 
