@@ -160,12 +160,43 @@ bool AddressSpace::resolveOne(ExecutionState &state,
   }
 }
 
-bool AddressSpace::resolve(ExecutionState &state,
-                           TimingSolver *solver, 
-                           ref<Expr> p, 
-                           ResolutionList &rl, 
-                           unsigned maxResolutions,
-                           double timeout) {
+int AddressSpace::checkPointerInObject(ExecutionState &state,
+                                       TimingSolver *solver, ref<Expr> p,
+                                       const ObjectPair &op, ResolutionList &rl,
+                                       unsigned maxResolutions) const {
+  // XXX in the common case we can save one query if we ask
+  // mustBeTrue before mayBeTrue for the first result. easy
+  // to add I just want to have a nice symbolic test case first.
+  const MemoryObject *mo = op.first;
+  ref<Expr> inBounds = mo->getBoundsCheckPointer(p);
+  bool mayBeTrue;
+  if (!solver->mayBeTrue(state, inBounds, mayBeTrue)) {
+    return 1;
+  }
+
+  if (mayBeTrue) {
+    rl.push_back(op);
+
+    // fast path check
+    auto size = rl.size();
+    if (size == 1) {
+      bool mustBeTrue;
+      if (!solver->mustBeTrue(state, inBounds, mustBeTrue))
+        return 1;
+      if (mustBeTrue)
+        return 0;
+    }
+    else
+      if (size == maxResolutions)
+        return 1;
+  }
+
+  return 2;
+}
+
+bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
+                           ref<Expr> p, ResolutionList &rl,
+                           unsigned maxResolutions, double timeout) {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(p)) {
     ObjectPair res;
     if (resolveOne(CE, res))
@@ -173,112 +204,73 @@ bool AddressSpace::resolve(ExecutionState &state,
     return false;
   } else {
     TimerStatIncrementer timer(stats::resolveTime);
-    uint64_t timeout_us = (uint64_t) (timeout*1000000.);
+    uint64_t timeout_us = (uint64_t) (timeout * 1000000.);
 
     // XXX in general this isn't exactly what we want... for
     // a multiple resolution case (or for example, a \in {b,c,0})
     // we want to find the first object, find a cex assuming
     // not the first, find a cex assuming not the second...
     // etc.
-    
+
     // XXX how do we smartly amortize the cost of checking to
     // see if we need to keep searching up/down, in bad cases?
     // maybe we don't care?
-    
+
     // XXX we really just need a smart place to start (although
     // if its a known solution then the code below is guaranteed
     // to hit the fast path with exactly 2 queries). we could also
     // just get this by inspection of the expr.
-    
+
     ref<ConstantExpr> cex;
     if (!solver->getValue(state, p, cex))
       return true;
     uint64_t example = cex->getZExtValue();
     MemoryObject hack(example);
-    
+
     MemoryMap::iterator oi = objects.upper_bound(&hack);
     MemoryMap::iterator begin = objects.begin();
     MemoryMap::iterator end = objects.end();
-      
+
     MemoryMap::iterator start = oi;
-      
-    // XXX in the common case we can save one query if we ask
-    // mustBeTrue before mayBeTrue for the first result. easy
-    // to add I just want to have a nice symbolic test case first.
-      
     // search backwards, start with one minus because this
     // is the object that p *should* be within, which means we
-    // get write off the end with 4 queries (XXX can be better,
-    // no?)
-    while (oi!=begin) {
+    // get write off the end with 4 queries
+    while (oi != begin) {
       --oi;
       const MemoryObject *mo = oi->first;
       if (timeout_us && timeout_us < timer.check())
         return true;
 
-      // XXX I think there is some query wasteage here?
-      ref<Expr> inBounds = mo->getBoundsCheckPointer(p);
-      bool mayBeTrue;
-      if (!solver->mayBeTrue(state, inBounds, mayBeTrue))
-        return true;
-      if (mayBeTrue) {
-        rl.push_back(*oi);
-        
-        // fast path check
-        unsigned size = rl.size();
-        if (size==1) {
-          bool mustBeTrue;
-          if (!solver->mustBeTrue(state, inBounds, mustBeTrue))
-            return true;
-          if (mustBeTrue)
-            return false;
-        } else if (size==maxResolutions) {
-          return true;
-        }
-      }
-        
+      int incomplete =
+          checkPointerInObject(state, solver, p, *oi, rl, maxResolutions);
+      if (incomplete != 2)
+        return incomplete ? true : false;
+
       bool mustBeTrue;
-      if (!solver->mustBeTrue(state, 
-                              UgeExpr::create(p, mo->getBaseExpr()),
+      if (!solver->mustBeTrue(state, UgeExpr::create(p, mo->getBaseExpr()),
                               mustBeTrue))
         return true;
       if (mustBeTrue)
         break;
     }
+
     // search forwards
-    for (oi=start; oi!=end; ++oi) {
+    for (oi = start; oi != end; ++oi) {
       const MemoryObject *mo = oi->first;
       if (timeout_us && timeout_us < timer.check())
         return true;
 
       bool mustBeTrue;
-      if (!solver->mustBeTrue(state, 
-                              UltExpr::create(p, mo->getBaseExpr()),
+      if (!solver->mustBeTrue(state, UltExpr::create(p, mo->getBaseExpr()),
                               mustBeTrue))
         return true;
       if (mustBeTrue)
         break;
-      
-      // XXX I think there is some query wasteage here?
-      ref<Expr> inBounds = mo->getBoundsCheckPointer(p);
-      bool mayBeTrue;
-      if (!solver->mayBeTrue(state, inBounds, mayBeTrue))
-        return true;
-      if (mayBeTrue) {
-        rl.push_back(*oi);
-        
-        // fast path check
-        unsigned size = rl.size();
-        if (size==1) {
-          bool mustBeTrue;
-          if (!solver->mustBeTrue(state, inBounds, mustBeTrue))
-            return true;
-          if (mustBeTrue)
-            return false;
-        } else if (size==maxResolutions) {
-          return true;
-        }
-      }
+
+      int incomplete =
+          checkPointerInObject(state, solver, p, *oi, rl, maxResolutions);
+      if (incomplete != 2)
+        return incomplete ? true : false;
     }
   }
 
