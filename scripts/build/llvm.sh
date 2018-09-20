@@ -172,7 +172,7 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   cp "${LLVM_BUILD_BIN}/not" "${LLVM_INSTALL}/bin/"
 
   
-#If debug is enabled the build direcotry gets impractically big (11GB)
+#If debug is enabled the build directory gets impractically big (11GB)
 #Therefore clean it. It can easily be rebuilt by running make again.
   echo "debug: ${ENABLE_DEBUG}, DOCKER: ${DOCKER_BUILD}"
   if [[ (("${ENABLE_DEBUG}" == "1") || ("${ENABLE_OPTIMIZED}" != "1")) && "${DOCKER_BUILD}x" == "1x" ]]; then

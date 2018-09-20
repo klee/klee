@@ -126,7 +126,7 @@ for sanitizer in ${sorted_sanitizers[@]}; do
     continue
   fi
 
-  # Memory Behaviour Sanitizer
+  # Memory Sanitizer
   if [ "X${sanitizer}" == "Xmemory" ]; then
     echo "Using Memory Sanitizer"
     if [[ "X${PACKAGED}" == "X1" ]]; then

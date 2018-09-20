@@ -12,3 +12,4 @@ cd "${BASE}"
 wget https://github.com/google/googletest/archive/release-${GTEST_VERSION}.zip
 unzip -o release-${GTEST_VERSION}.zip
 mv googletest-release-${GTEST_VERSION} gtest
+rm release-${GTEST_VERSION}.zip
