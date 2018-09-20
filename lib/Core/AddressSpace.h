@@ -69,7 +69,7 @@ namespace klee {
     /// Resolve address to an ObjectPair in result.
     /// \return true iff an object was found.
     bool resolveOne(const ref<ConstantExpr> &address, 
-                    ObjectPair &result);
+                    ObjectPair &result) const;
 
     /// Resolve address to an ObjectPair in result.
     ///
@@ -84,7 +84,7 @@ namespace klee {
                     TimingSolver *solver,
                     ref<Expr> address,
                     ObjectPair &result,
-                    bool &success);
+                    bool &success) const;
 
     /// Resolve pointer `p` to a list of `ObjectPairs` it can point
     /// to. If `maxResolutions` is non-zero then no more than that many
@@ -97,7 +97,7 @@ namespace klee {
                  ref<Expr> p,
                  ResolutionList &rl, 
                  unsigned maxResolutions=0,
-                 double timeout=0.);
+                 double timeout=0.) const;
 
     /***/
 
