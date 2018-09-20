@@ -1,5 +1,6 @@
 ARG REPOSITORY
-FROM ${REPOSITORY}/llvm_built:38_O_ND_A as llvmcxx
+ARG LIB_CXX_MEMSAN_FOLDER_IMAGE 
+FROM ${REPOSITORY}/${LIB_CXX_MEMSAN_FOLDER_IMAGE} as llvmcxx
 
 
 ARG REPOSITORY
@@ -21,12 +22,13 @@ ARG STP_VERSION
 ARG STORAGE_SPACE_OPTIMIZED=1
 ARG TRAVIS_OS_NAME
 ARG Z3_VERSION
+ARG LIB_CXX_MEMSAN_FOLDER
 
 WORKDIR $BASE
 
 #This can be a fixed llvm version, because solvers can use their own stdlib, needs to be
-#compiled with the same compiler probably, so clang-4.0
-COPY --from=llvmcxx ${BASE}/llvm-38-build_O_ND_A_libcxx/ ${BASE}/llvm-38-build_O_ND_A_libcxx/
+#compiled with the same compiler probably. This is only needed for memsan builds.
+COPY --from=llvmcxx ${BASE}/${LIB_CXX_MEMSAN_FOLDER}/ ${BASE}/${LIB_CXX_MEMSAN_FOLDER}/
 
 #This ensure that we are indepedent of llvm in this dockerfile
 ENV LLVM_VERSION=3.8

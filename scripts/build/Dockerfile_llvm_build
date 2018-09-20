@@ -18,6 +18,7 @@ ARG PACKAGED
 ARG REQUIRES_RTTI
 ARG SANITIZER_BUILD
 ARG TRAVIS_OS_NAME
+ARG LIB_CXX_MEMSAN_FOLDER
 
 WORKDIR $BASE
 
@@ -31,5 +32,5 @@ RUN ./scripts/build/llvm.sh
 
 #This prevents COPY from failing in builds without memsan
 #Otherwise we would have to have different dockerfiles for memsan builds
-RUN  mkdir -p "${BASE}/llvm-38-build_O_ND_A_libcxx"
+RUN  mkdir -p "${BASE}/${LIB_CXX_MEMSAN_FOLDER}"
 RUN  mkdir -p "${BASE}/llvm-${LLVM_VERSION_SHORT}-build${LLVM_SUFFIX}_libcxx"

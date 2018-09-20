@@ -210,3 +210,9 @@ DEPS_SUFFIX=""
 if [[ "${KLEE_UCLIBC}" != "0" ]]; then
   DEPS_SUFFIX+="_${KLEE_UCLIBC}"
 fi
+
+#For memsan we need to build with sanitized version of libcxx. We don't want to
+#couple solver images with an llvm version. These two variables fix the libcxx
+#version for solver images for memsan builds
+LIB_CXX_MEMSAN_FOLDER="llvm-38-build_O_ND_A_libcxx"
+LIB_CXX_MEMSAN_FOLDER_IMAGE="llvm_built:38_O_ND_A"

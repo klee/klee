@@ -52,6 +52,8 @@ for v in \
   COVERAGE \
   TCMALLOC_VERSION \
   GTEST_VERSION \
+  LIB_CXX_MEMSAN_FOLDER \
+  LIB_CXX_MEMSAN_FOLDER_IMAGE \
   SOLVERS \
   ; do
   DOCKER_OPTS+=($(add_arg_variable $v))
