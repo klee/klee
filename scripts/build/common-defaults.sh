@@ -25,6 +25,10 @@ if [[ "${KLEE_TRAVIS_BUILD}x" != "1x" ]]; then
 : "${PACKAGED:=0}"
 # undefined, address, memory
 : "${SANITIZER_BUILD:=}"
+# The compiler to use in memsan builds
+# The usuall default (gcc) doesn't support memsan
+: "${MEMSAN_C_COMPILER:=clang-4.0}"
+: "${MEMSAN_CXX_COMPILER:=clang++-4.0}"
 OS="$(uname)"
 case $OS in
   'Linux')
