@@ -2584,9 +2584,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 void Executor::updateStates(ExecutionState *current) {
   if (searcher) {
     searcher->update(current, addedStates, removedStates);
-    searcher->update(nullptr, continuedStates, pausedStates);
-    pausedStates.clear();
-    continuedStates.clear();
   }
   
   states.insert(addedStates.begin(), addedStates.end());
@@ -2607,6 +2604,12 @@ void Executor::updateStates(ExecutionState *current) {
     delete es;
   }
   removedStates.clear();
+
+  if (searcher) {
+    searcher->update(nullptr, continuedStates, pausedStates);
+    pausedStates.clear();
+    continuedStates.clear();
+  }
 }
 
 template <typename TypeIt>
