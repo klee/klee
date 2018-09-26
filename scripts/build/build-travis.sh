@@ -14,7 +14,7 @@ elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
      brew link --overwrite python@2
   fi
   set -e
-  pip install lit
+  pip install lit==0.6.0
   export PATH="/usr/local/opt/ccache/libexec:$PATH"
   "${KLEE_SRC_TRAVIS}/scripts/build/install-klee-deps.sh"
 else
