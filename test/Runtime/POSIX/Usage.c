@@ -23,6 +23,10 @@
 // RUN: grep "Invalid range to --sym-args" %t5
 // RUN: rm -rf %t.klee-out
 
+// RUN: not %klee --output-dir=%t.klee-out --exit-on-error --posix-runtime %t.bc --sym-arg 5 --sym-args 0 99 5 --sym-arg 5 &> %t6
+// RUN: grep "No more than 100 symbolic arguments allowed." %t6
+// RUN: rm -rf %t.klee-out
+
 int main(int argc, char** argv) {
   return 0;
 }
