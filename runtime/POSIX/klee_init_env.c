@@ -82,24 +82,24 @@ static void __add_arg(int *argc, char **argv, char *arg, int argcMax) {
   }
 }
 
-void klee_init_env(int* argcPtr, char*** argvPtr) {
+void klee_init_env(int *argcPtr, char ***argvPtr) {
   int argc = *argcPtr;
-  char** argv = *argvPtr;
+  char **argv = *argvPtr;
 
   int new_argc = 0, n_args;
-  char* new_argv[1024];
+  char *new_argv[1024];
   unsigned max_len, min_argvs, max_argvs;
   unsigned sym_files = 0, sym_file_len = 0;
   unsigned sym_stdin_len = 0;
   int sym_stdout_flag = 0;
   int save_all_writes_flag = 0;
   int fd_fail = 0;
-  char** final_argv;
-  char sym_arg_name[5] = "arg";
+  char **final_argv;
+  char sym_arg_name[6] = "arg";
   unsigned sym_arg_num = 0;
-  int k=0, i;
+  int k = 0, i;
 
-  sym_arg_name[4] = '\0';
+  sym_arg_name[5] = '\0';
 
   // Recognize --help when it is the sole argument.
   if (argc == 2 && __streq(argv[1], "--help")) {
@@ -123,56 +123,70 @@ usage: (klee_init_env) [options] [program arguments]\n\
   while (k < argc) {
     if (__streq(argv[k], "--sym-arg") || __streq(argv[k], "-sym-arg")) {
       const char *msg = "--sym-arg expects an integer argument <max-len>";
-      if (++k == argc)        
-	__emit_error(msg);
-		
-      max_len = __str_to_int(argv[k++], msg);
-      sym_arg_name[3] = '0' + sym_arg_num++;
-      __add_arg(&new_argc, new_argv, 
-                __get_sym_str(max_len, sym_arg_name),
-                1024);
-    }
-    else if (__streq(argv[k], "--sym-args") || __streq(argv[k], "-sym-args")) {
-      const char *msg = 
-        "--sym-args expects three integer arguments <min-argvs> <max-argvs> <max-len>";
+      if (++k == argc)
+        __emit_error(msg);
 
-      if (k+3 >= argc)
-	__emit_error(msg);
-      
+      max_len = __str_to_int(argv[k++], msg);
+
+      if (sym_arg_num > 99)
+        __emit_error("No more than 100 symbolic arguments allowed.");
+
+      sym_arg_name[3] = '0' + sym_arg_num / 10;
+      sym_arg_name[4] = '0' + sym_arg_num % 10;
+      sym_arg_num++;
+      __add_arg(&new_argc, new_argv, __get_sym_str(max_len, sym_arg_name),
+                1024);
+    } else if (__streq(argv[k], "--sym-args") ||
+               __streq(argv[k], "-sym-args")) {
+      const char *msg = "--sym-args expects three integer arguments "
+                        "<min-argvs> <max-argvs> <max-len>";
+
+      if (k + 3 >= argc)
+        __emit_error(msg);
+
       k++;
       min_argvs = __str_to_int(argv[k++], msg);
       max_argvs = __str_to_int(argv[k++], msg);
       max_len = __str_to_int(argv[k++], msg);
 
-      if ( (min_argvs > max_argvs) || (min_argvs == 0 && max_argvs == 0) )
+      if ((min_argvs > max_argvs) || (min_argvs == 0 && max_argvs == 0))
         __emit_error("Invalid range to --sym-args");
 
-      n_args = klee_range(min_argvs, max_argvs+1, "n_args");
-      for (i=0; i < n_args; i++) {
-        sym_arg_name[3] = '0' + sym_arg_num++;
-        __add_arg(&new_argc, new_argv, 
-                  __get_sym_str(max_len, sym_arg_name),
+      n_args = klee_range(min_argvs, max_argvs + 1, "n_args");
+
+      if (sym_arg_num + max_argvs > 99)
+        __emit_error("No more than 100 symbolic arguments allowed.");
+      
+      for (i = 0; i < n_args; i++) {
+        sym_arg_name[3] = '0' + sym_arg_num / 10;
+        sym_arg_name[4] = '0' + sym_arg_num % 10;
+        sym_arg_num++;
+
+        __add_arg(&new_argc, new_argv, __get_sym_str(max_len, sym_arg_name),
                   1024);
       }
-    }
-    else if (__streq(argv[k], "--sym-files") || __streq(argv[k], "-sym-files")) {
-      const char* msg = "--sym-files expects two integer arguments <no-sym-files> <sym-file-len>";      
+    } else if (__streq(argv[k], "--sym-files") ||
+               __streq(argv[k], "-sym-files")) {
+      const char *msg = "--sym-files expects two integer arguments "
+                        "<no-sym-files> <sym-file-len>";
 
-      if (k+2 >= argc)
-	__emit_error(msg);
+      if (k + 2 >= argc)
+        __emit_error(msg);
 
       if (sym_files != 0)
         __emit_error("Multiple --sym-files are not allowed.\n");
-      
+
       k++;
       sym_files = __str_to_int(argv[k++], msg);
       sym_file_len = __str_to_int(argv[k++], msg);
 
       if (sym_files == 0)
-        __emit_error("The first argument to --sym-files (number of files) cannot be 0\n");
+        __emit_error("The first argument to --sym-files (number of files) "
+                     "cannot be 0\n");
 
       if (sym_file_len == 0)
-        __emit_error("The second argument to --sym-files (file size) cannot be 0\n");
+        __emit_error("The second argument to --sym-files (file size) "
+                     "cannot be 0\n");
 
     } else if (__streq(argv[k], "--sym-stdin") ||
                __streq(argv[k], "-sym-stdin")) {
@@ -187,29 +201,27 @@ usage: (klee_init_env) [options] [program arguments]\n\
                __streq(argv[k], "-sym-stdout")) {
       sym_stdout_flag = 1;
       k++;
-    }
-    else if (__streq(argv[k], "--save-all-writes") || __streq(argv[k], "-save-all-writes")) {
+    } else if (__streq(argv[k], "--save-all-writes") ||
+               __streq(argv[k], "-save-all-writes")) {
       save_all_writes_flag = 1;
       k++;
-    }
-    else if (__streq(argv[k], "--fd-fail") || __streq(argv[k], "-fd-fail")) {
+    } else if (__streq(argv[k], "--fd-fail") || __streq(argv[k], "-fd-fail")) {
       fd_fail = 1;
       k++;
-    }
-    else if (__streq(argv[k], "--max-fail") || __streq(argv[k], "-max-fail")) {
+    } else if (__streq(argv[k], "--max-fail") ||
+               __streq(argv[k], "-max-fail")) {
       const char *msg = "--max-fail expects an integer argument <max-failures>";
       if (++k == argc)
-	__emit_error(msg);
-		
+        __emit_error(msg);
+
       fd_fail = __str_to_int(argv[k++], msg);
-    }
-    else {
+    } else {
       /* simply copy arguments */
       __add_arg(&new_argc, new_argv, argv[k++], 1024);
     }
   }
 
-  final_argv = (char**) malloc((new_argc+1) * sizeof(*final_argv));
+  final_argv = (char **)malloc((new_argc + 1) * sizeof(*final_argv));
   klee_mark_global(final_argv);
   memcpy(final_argv, new_argv, new_argc * sizeof(*final_argv));
   final_argv[new_argc] = 0;
