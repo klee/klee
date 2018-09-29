@@ -2566,6 +2566,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // instructions.
     terminateStateOnExecError(state, "Unexpected ShuffleVector instruction");
     break;
+  case Instruction::AtomicRMW:
+    terminateStateOnExecError(state, "Unexpected Atomic instruction, should be "
+                                     "lowered by LowerAtomicInstructionPass");
+    break;
+  case Instruction::AtomicCmpXchg:
+    terminateStateOnExecError(state,
+                              "Unexpected AtomicCmpXchg instruction, should be "
+                              "lowered by LowerAtomicInstructionPass");
+    break;
   // Other instructions...
   // Unhandled
   default:
