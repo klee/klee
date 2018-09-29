@@ -224,6 +224,9 @@ void KModule::instrument(const Interpreter::ModuleOptions &opts) {
   // NOTE: Must come before division/overshift checks because those passes
   // don't know how to handle vector instructions.
   pm.add(createScalarizerPass());
+
+  // This pass will replace atomic instructions with non-atomic operations
+  pm.add(createLowerAtomicPass());
   if (opts.CheckDivZero) pm.add(new DivCheckPass());
   if (opts.CheckOvershift) pm.add(new OvershiftCheckPass());
 
