@@ -173,14 +173,6 @@ std::string ExecutionState::getFnAlias(std::string fn) {
   else return "";
 }
 
-void ExecutionState::addFnAlias(std::string old_fn, std::string new_fn) {
-  fnAliases[old_fn] = new_fn;
-}
-
-void ExecutionState::removeFnAlias(std::string fn) {
-  fnAliases.erase(fn);
-}
-
 /**/
 
 llvm::raw_ostream &klee::operator<<(llvm::raw_ostream &os, const MemoryMap &mm) {

@@ -138,14 +138,6 @@ extern "C" {
   /* Enable/disable forking. */
   void klee_set_forking(unsigned enable);
 
-  /* klee_alias_function("foo", "bar") will replace, at runtime (on
-     the current path and all paths spawned on the current path), all
-     calls to foo() by calls to bar().  foo() and bar() have to exist
-     and have identical types.  Use klee_alias_function("foo", "foo")
-     to undo.  Be aware that some special functions, such as exit(),
-     may not always work. */
-  void klee_alias_function(const char* fn_name, const char* new_fn_name);
-
   /* Print stack trace. */
   void klee_stack_trace(void);
 
