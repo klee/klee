@@ -13,7 +13,7 @@
 #include "Executor.h"
 
 #include "klee/Internal/Support/ErrorHandling.h"
-#include "klee/CommandLine.h"
+#include "klee/SolverCmdLine.h"
 #include "klee/MergeHandler.h"
 
 
