@@ -10,16 +10,14 @@
 #include "klee-replay.h"
 
 #include "klee/Internal/ADT/KTest.h"
-#include "klee/Config/config.h"
 
 #include <assert.h>
+#include <errno.h>
+#include <getopt.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdint.h>
-#include <getopt.h>
-
-#include <errno.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -43,7 +41,7 @@ static KTest* input;
 static unsigned obj_index;
 
 static const char *progname = 0;
-static unsigned monitored_pid = 0;    
+static unsigned monitored_pid = 0;
 static unsigned monitored_timeout;
 
 static char *rootdir = NULL;
@@ -101,7 +99,7 @@ static void stop_monitored(int process) {
 }
 
 static void int_handler(int signal) {
-  fprintf(stderr, "%s: Received signal %d.  Killing monitored process(es)\n", 
+  fprintf(stderr, "%s: Received signal %d.  Killing monitored process(es)\n",
           progname, signal);
   if (monitored_pid) {
     stop_monitored(monitored_pid);
@@ -114,7 +112,7 @@ static void int_handler(int signal) {
   }
 }
 static void timeout_handler(int signal) {
-  fprintf(stderr, "%s: EXIT STATUS: TIMED OUT (%d seconds)\n", progname, 
+  fprintf(stderr, "%s: EXIT STATUS: TIMED OUT (%d seconds)\n", progname,
           monitored_timeout);
   if (monitored_pid) {
     stop_monitored(monitored_pid);
@@ -161,11 +159,11 @@ static inline char *strip_root_dir(char *executable, char *rootdir) {
 
 static void run_monitored(char *executable, int argc, char **argv) {
   int pid;
-  const char *t = getenv("KLEE_REPLAY_TIMEOUT");  
+  const char *t = getenv("KLEE_REPLAY_TIMEOUT");
   if (!t)
-    t = "10000000";  
+    t = "10000000";
   monitored_timeout = atoi(t);
-  
+
   if (monitored_timeout==0) {
     fprintf(stderr, "ERROR: invalid timeout (%s)\n", t);
     _exit(1);
@@ -174,7 +172,7 @@ static void run_monitored(char *executable, int argc, char **argv) {
   /* Kill monitored process(es) on SIGINT and SIGTERM */
   signal(SIGINT, int_handler);
   signal(SIGTERM, int_handler);
-  
+
   signal(SIGALRM, timeout_handler);
   pid = fork();
   if (pid < 0) {
@@ -182,7 +180,7 @@ static void run_monitored(char *executable, int argc, char **argv) {
     _exit(66);
   } else if (pid == 0) {
     /* This process actually executes the target program.
-     *  
+     *
      * Create a new process group for pid, and the process tree it may spawn. We
      * do this, because later on we might want to kill pid _and_ all processes
      * spawned by it and its descendants.
@@ -225,7 +223,7 @@ static void run_monitored(char *executable, int argc, char **argv) {
       perror("waitpid");
       _exit(66);
     }
-    
+
     /* Just in case, kill the process group of pid.  Since we called setpgrp()
        for pid, this will not kill us, or any of our ancestors */
     kill(-pid, SIGKILL);
@@ -265,7 +263,7 @@ static void usage(void) {
 
 int main(int argc, char** argv) {
   int prg_argc;
-  char ** prg_argv;  
+  char ** prg_argv;
 
   progname = argv[0];
 
@@ -281,9 +279,9 @@ int main(int argc, char** argv) {
          */
         if (argc != 3)
           usage();
-    
+
         char* input_fname = optarg;
-    
+
         input = kTest_fromFile(input_fname);
         if (!input) {
           fprintf(stderr, "%s: error: input file %s not valid.\n", progname,
@@ -314,7 +312,7 @@ int main(int argc, char** argv) {
   if (rootdir)
     ensure_capsyschroot(progname);
 #endif
-  
+
   /* rootdir should be a prefix of executable's path. */
   if (rootdir && strstr(executable, rootdir) != executable) {
     fprintf(stderr, "Error: chroot: root dir should be a parent dir of executable.\n");
@@ -333,14 +331,14 @@ int main(int argc, char** argv) {
   for (idx = optind + 1; idx != argc; ++idx) {
     char* input_fname = argv[idx];
     unsigned i;
-    
+
     input = kTest_fromFile(input_fname);
     if (!input) {
-      fprintf(stderr, "%s: error: input file %s not valid.\n", progname, 
+      fprintf(stderr, "%s: error: input file %s not valid.\n", progname,
               input_fname);
       exit(1);
     }
-    
+
     obj_index = 0;
     prg_argc = input->numArgs;
     prg_argv = input->args;
@@ -354,7 +352,7 @@ int main(int argc, char** argv) {
     for (i=0; i != (unsigned) prg_argc; ++i) {
       char *s = prg_argv[i];
       if (s[0]=='A' && s[1] && !s[2]) s[1] = '\0';
-      fprintf(stderr, "\"%s\" ", prg_argv[i]); 
+      fprintf(stderr, "\"%s\" ", prg_argv[i]);
     }
     fprintf(stderr, "\n");
 
@@ -377,7 +375,7 @@ int main(int argc, char** argv) {
       do {
         res = waitpid(pid, &status, 0);
       } while (res < 0 && errno == EINTR);
-      
+
       if (res < 0) {
         perror("waitpid");
         _exit(66);
@@ -471,19 +469,19 @@ int klee_range(int start, int end, const char* name) {
   if (start+1 == end)
     return start;
   else {
-    klee_make_symbolic(&r, sizeof r, name); 
+    klee_make_symbolic(&r, sizeof r, name);
 
     if (r < start || r >= end) {
-      fprintf(stderr, "klee_range(%d, %d, %s) returned invalid result: %d\n", 
+      fprintf(stderr, "klee_range(%d, %d, %s) returned invalid result: %d\n",
         start, end, name, r);
       exit(1);
     }
-    
+
     return r;
   }
 }
 
-void klee_report_error(const char *file, int line, 
+void klee_report_error(const char *file, int line,
                        const char *message, const char *suffix) {
   __emit_error(message);
 }
