@@ -12,7 +12,6 @@
 #include "klee/Config/Version.h"
 #include "klee/Internal/Support/Debug.h"
 #include "klee/Internal/Support/ErrorHandling.h"
-#include "../Core/SpecialFunctionHandler.h"
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
