@@ -22,8 +22,16 @@
 #include <errno.h>
 #include <time.h>
 #include <unistd.h>
-#include <sys/signal.h>
+
 #include <sys/wait.h>
+
+#if defined(__APPLE__)
+#include <signal.h>
+#define fgetc_unlocked(x) fgetc (x)
+#define fputc_unlocked(x,y) fputc (x,y)
+#else
+#include <sys/signal.h>
+#endif
 
 #ifdef HAVE_SYS_CAPABILITY_H
 #include <sys/capability.h>

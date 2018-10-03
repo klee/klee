@@ -17,12 +17,22 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <termios.h>
-#include <pty.h>
 #include <time.h>
 #include <sys/wait.h>
 #include <sys/time.h>
 #include <assert.h>
+
+#ifdef HAVE_PTY_H
+#include <pty.h>
+#elif defined(HAVE_UTIL_H)
+#include <util.h>
+#endif
+
+#if defined(__APPLE__)
+#include <sys/termios.h>
+#else
+#include <termios.h>
+#endif
 
 static void create_file(int target_fd, 
                        const char *target_name, 
@@ -105,7 +115,9 @@ static int create_char_dev(const char *fname, exe_disk_file_t *dfile,
   ts->c_oflag = 5;
   ts->c_cflag = 1215;
   ts->c_lflag = 35287;
+#ifndef __APPLE__
   ts->c_line = 0;
+#endif
   ts->c_cc[0] = '\x03';
   ts->c_cc[1] = '\x1c';
   ts->c_cc[2] = '\x7f';
@@ -152,16 +164,20 @@ static int create_char_dev(const char *fname, exe_disk_file_t *dfile,
 
       fprintf(stderr, "note: pty slave: setting raw mode\n");
       {
-        struct termio mode;
+        struct termios mode;
         
-        int res = ioctl(aslave, TCGETA, &mode);
+        int res = tcgetattr(aslave, &mode);
         assert(!res);
         mode.c_iflag = IGNBRK;
+#if defined(__APPLE__)
+        mode.c_oflag &= ~(ONLCR | OCRNL | ONLRET);
+#else
         mode.c_oflag &= ~(OLCUC | ONLCR | OCRNL | ONLRET);
+#endif
         mode.c_lflag = 0;
         mode.c_cc[VMIN] = 1;
         mode.c_cc[VTIME] = 0;
-        res = ioctl(aslave, TCSETA, &mode);
+        res = tcsetattr(aslave, TCSANOW, &mode);
         assert(res == 0);
       }
 

@@ -42,6 +42,9 @@ set(CMAKE_USER_MAKE_RULES_OVERRIDE_CXX
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cxx_flags_override.cmake")
 project(KLEE CXX C)
 
+include(CheckFunctionExists)
+include(CheckLibraryExists)
+
 ###############################################################################
 # Project version
 ###############################################################################
@@ -429,15 +432,19 @@ endif()
 ################################################################################
 # Detect libutil
 ################################################################################
-check_include_file("pty.h" HAVE_PTY_H)
-if (HAVE_PTY_H)
-  find_library(LIBUTIL_LIBRARIES
-    NAMES util
-    DOC "libutil library. Typically part of glibc")
-  if (NOT LIBUTIL_LIBRARIES)
-    message(FATAL_ERROR "Found \"pty.h\" but could not find libutil")
-  endif()
-endif()
+check_include_file(pty.h HAVE_PTY_H)
+check_include_file(util.h HAVE_UTIL_H)
+if (HAVE_PTY_H OR HAVE_UTIL_H)
+  check_function_exists(openpty openpty_in_libc)
+  if (NOT openpty_in_libc)
+    check_library_exists(util openpty "" openpty_in_libutil)
+    if (openpty_in_libutil)
+      set(LIBUTIL_LIBRARIES util)
+    else ()
+      message(FATAL_ERROR "Could not find libutil")
+    endif (openpty_in_libutil)
+  endif (NOT openpty_in_libc)
+endif (HAVE_PTY_H OR HAVE_UTIL_H)
 
 ################################################################################
 # Miscellaneous header file detection
@@ -445,6 +452,8 @@ endif()
 check_cxx_symbol_exists(__ctype_b_loc ctype.h HAVE_CTYPE_EXTERNALS)
 check_cxx_symbol_exists(mallinfo malloc.h HAVE_MALLINFO)
 check_cxx_symbol_exists(malloc_zone_statistics malloc/malloc.h HAVE_MALLOC_ZONE_STATISTICS)
+
+check_include_file(sys/statfs.h HAVE_SYSSTATFS_H)
 
 # FIXME: This is needed by the runtime not KLEE itself so we are testing the wrong
 # compiler.
