@@ -10,7 +10,7 @@
 #include <iostream>
 #include "gtest/gtest.h"
 
-#include "klee/CommandLine.h"
+#include "klee/SolverCmdLine.h"
 #include "klee/Constraints.h"
 #include "klee/Expr.h"
 #include "klee/Solver.h"
