@@ -43,6 +43,7 @@
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
 #include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Internal/Support/FileHandling.h"
 #include "klee/Internal/Support/FloatEvaluation.h"
 #include "klee/Internal/Support/ModuleUtil.h"
 #include "klee/Internal/System/Time.h"
@@ -362,33 +363,20 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       DebugPrintInstructions.isSet(FILE_SRC)) {
     std::string debug_file_name =
         interpreterHandler->getOutputFilename("instructions.txt");
-    std::string ErrorInfo;
+    std::string error;
 #ifdef HAVE_ZLIB_H
     if (!DebugCompressInstructions) {
 #endif
-
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
-    std::error_code ec;
-    debugInstFile = new llvm::raw_fd_ostream(debug_file_name.c_str(), ec,
-                                             llvm::sys::fs::OpenFlags::F_Text);
-    if (ec)
-	    ErrorInfo = ec.message();
-#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
-    debugInstFile = new llvm::raw_fd_ostream(debug_file_name.c_str(), ErrorInfo,
-                                             llvm::sys::fs::OpenFlags::F_Text);
-#else
-    debugInstFile =
-        new llvm::raw_fd_ostream(debug_file_name.c_str(), ErrorInfo);
-#endif
+      debugInstFile = klee_open_output_file(debug_file_name, error);
 #ifdef HAVE_ZLIB_H
     } else {
       debugInstFile = new compressed_fd_ostream(
-          (debug_file_name + ".gz").c_str(), ErrorInfo);
+          (debug_file_name + ".gz").c_str(), error);
     }
 #endif
-    if (ErrorInfo != "") {
+    if (!error.empty()) {
       klee_error("Could not open file %s : %s", debug_file_name.c_str(),
-                 ErrorInfo.c_str());
+                 error.c_str());
     }
   }
 }
