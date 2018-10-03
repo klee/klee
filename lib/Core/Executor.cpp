@@ -75,10 +75,6 @@
 #include "llvm/IR/CallSite.h"
 #endif
 
-#ifdef HAVE_ZLIB_H
-#include "klee/Internal/Support/CompressionStream.h"
-#endif
-
 #include <cassert>
 #include <algorithm>
 #include <iomanip>
@@ -335,7 +331,7 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       coreSolverTimeout(MaxCoreSolverTime != 0 && MaxInstructionTime != 0
                             ? std::min(MaxCoreSolverTime, MaxInstructionTime)
                             : std::max(MaxCoreSolverTime, MaxInstructionTime)),
-      debugInstFile(0), debugLogBuffer(debugBufferString) {
+      debugLogBuffer(debugBufferString) {
 
   if (coreSolverTimeout) UseForkedCoreSolver = true;
   Solver *coreSolver = klee::createCoreSolver(CoreSolverToUse);
@@ -370,11 +366,11 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       debugInstFile = klee_open_output_file(debug_file_name, error);
 #ifdef HAVE_ZLIB_H
     } else {
-      debugInstFile = new compressed_fd_ostream(
-          (debug_file_name + ".gz").c_str(), error);
+      debug_file_name.append(".gz");
+      debugInstFile = klee_open_compressed_output_file(debug_file_name, error);
     }
 #endif
-    if (!error.empty()) {
+    if (!debugInstFile) {
       klee_error("Could not open file %s : %s", debug_file_name.c_str(),
                  error.c_str());
     }
@@ -454,7 +450,6 @@ Executor::~Executor() {
     delete timers.back();
     timers.pop_back();
   }
-  delete debugInstFile;
 }
 
 /***/

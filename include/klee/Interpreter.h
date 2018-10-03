@@ -38,12 +38,12 @@ public:
   virtual llvm::raw_ostream &getInfoStream() const = 0;
 
   virtual std::string getOutputFilename(const std::string &filename) = 0;
-  virtual llvm::raw_fd_ostream *openOutputFile(const std::string &filename) = 0;
+  virtual std::unique_ptr<llvm::raw_fd_ostream> openOutputFile(const std::string &filename) = 0;
 
   virtual void incPathsExplored() = 0;
 
   virtual void processTestCase(const ExecutionState &state,
-                               const char *err, 
+                               const char *err,
                                const char *suffix) = 0;
 };
 
@@ -147,13 +147,13 @@ public:
   virtual unsigned getPathStreamID(const ExecutionState &state) = 0;
 
   virtual unsigned getSymbolicPathStreamID(const ExecutionState &state) = 0;
-  
+
   virtual void getConstraintLog(const ExecutionState &state,
                                 std::string &res,
                                 LogType logFormat = STP) = 0;
 
-  virtual bool getSymbolicSolution(const ExecutionState &state, 
-                                   std::vector< 
+  virtual bool getSymbolicSolution(const ExecutionState &state,
+                                   std::vector<
                                    std::pair<std::string,
                                    std::vector<unsigned char> > >
                                    &res) = 0;

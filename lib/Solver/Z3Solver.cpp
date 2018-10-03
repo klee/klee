@@ -49,7 +49,7 @@ private:
   Z3Builder *builder;
   double timeout;
   SolverRunStatus runStatusCode;
-  llvm::raw_fd_ostream* dumpedQueriesFile;
+  std::unique_ptr<llvm::raw_fd_ostream> dumpedQueriesFile;
   ::Z3_params solverParameters;
   // Parameter symbols
   ::Z3_symbol timeoutParamStrSymbol;
@@ -96,8 +96,7 @@ Z3SolverImpl::Z3SolverImpl()
           /*z3LogInteractionFileArg=*/Z3LogInteractionFile.size() > 0
               ? Z3LogInteractionFile.c_str()
               : NULL)),
-      timeout(0.0), runStatusCode(SOLVER_RUN_STATUS_FAILURE),
-      dumpedQueriesFile(0) {
+      timeout(0.0), runStatusCode(SOLVER_RUN_STATUS_FAILURE) {
   assert(builder && "unable to create Z3Builder");
   solverParameters = Z3_mk_params(builder->ctx);
   Z3_params_inc_ref(builder->ctx, solverParameters);
@@ -107,7 +106,7 @@ Z3SolverImpl::Z3SolverImpl()
   if (!Z3QueryDumpFile.empty()) {
     std::string error;
     dumpedQueriesFile = klee_open_output_file(Z3QueryDumpFile, error);
-    if (!error.empty()) {
+    if (!dumpedQueriesFile) {
       klee_error("Error creating file for dumping Z3 queries: %s",
                  error.c_str());
     }
@@ -127,11 +126,6 @@ Z3SolverImpl::Z3SolverImpl()
 Z3SolverImpl::~Z3SolverImpl() {
   Z3_params_dec_ref(builder->ctx, solverParameters);
   delete builder;
-
-  if (dumpedQueriesFile) {
-    dumpedQueriesFile->close();
-    delete dumpedQueriesFile;
-  }
 }
 
 Z3Solver::Z3Solver() : Solver(new Z3SolverImpl()) {}

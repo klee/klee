@@ -28,6 +28,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <memory>
 #include <set>
 
 struct KTest;
@@ -220,7 +221,7 @@ private:
   ArrayCache arrayCache;
 
   /// File to print executed instructions to
-  llvm::raw_ostream *debugInstFile;
+  std::unique_ptr<llvm::raw_ostream> debugInstFile;
 
   // @brief Buffer used by logBuffer
   std::string debugBufferString;

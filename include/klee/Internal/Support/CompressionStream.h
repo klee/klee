@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef INCLUDE_KLEE_INTERNAL_SUPPORT_COMPRESSIONSTREAM_H_
-#define INCLUDE_KLEE_INTERNAL_SUPPORT_COMPRESSIONSTREAM_H_
+#ifndef KLEE_COMPRESSIONSTREAM_H
+#define KLEE_COMPRESSIONSTREAM_H
 
 #include "llvm/Support/raw_ostream.h"
 #include "zlib.h"
@@ -37,10 +37,10 @@ public:
   /// should be immediately destroyed; the string will be empty if no error
   /// occurred. This allows optional flags to control how the file will be
   /// opened.
-  compressed_fd_ostream(const char *Filename, std::string &ErrorInfo);
+  compressed_fd_ostream(const std::string &Filename, std::string &ErrorInfo);
 
   ~compressed_fd_ostream();
 };
 }
 
-#endif /* INCLUDE_KLEE_INTERNAL_SUPPORT_COMPRESSIONSTREAM_H_ */
+#endif /* KLEE_COMPRESSIONSTREAM_H */

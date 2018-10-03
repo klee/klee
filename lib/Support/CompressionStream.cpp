@@ -23,7 +23,7 @@
 
 namespace klee {
 
-compressed_fd_ostream::compressed_fd_ostream(const char *Filename,
+compressed_fd_ostream::compressed_fd_ostream(const std::string &Filename,
                                              std::string &ErrorInfo)
     : llvm::raw_ostream(), pos(0) {
   ErrorInfo = "";
@@ -38,6 +38,7 @@ compressed_fd_ostream::compressed_fd_ostream(const char *Filename,
   if (EC) {
     ErrorInfo = EC.message();
     FD = -1;
+    return;
   }
   // Initialize the compression library
   strm.zalloc = Z_NULL;
