@@ -116,28 +116,25 @@ void Executor::processTimers(ExecutionState *current,
     if (dumpPTree) {
       char name[32];
       sprintf(name, "ptree%08d.dot", (int) stats::instructions);
-      llvm::raw_ostream *os = interpreterHandler->openOutputFile(name);
+      auto os = interpreterHandler->openOutputFile(name);
       if (os) {
         processTree->dump(*os);
-        delete os;
       }
-      
+
       dumpPTree = 0;
     }
 
     if (dumpStates) {
-      llvm::raw_ostream *os = interpreterHandler->openOutputFile("states.txt");
-      
+      auto os = interpreterHandler->openOutputFile("states.txt");
+
       if (os) {
-        for (std::set<ExecutionState*>::const_iterator it = states.begin(), 
-               ie = states.end(); it != ie; ++it) {
-          ExecutionState *es = *it;
+        for (ExecutionState *es : states) {
           *os << "(" << es << ",";
           *os << "[";
-          ExecutionState::stack_ty::iterator next = es->stack.begin();
+          auto next = es->stack.begin();
           ++next;
-          for (ExecutionState::stack_ty::iterator sfIt = es->stack.begin(),
-                 sf_ie = es->stack.end(); sfIt != sf_ie; ++sfIt) {
+          for (auto sfIt = es->stack.begin(), sf_ie = es->stack.end();
+               sfIt != sf_ie; ++sfIt) {
             *os << "('" << sfIt->kf->function->getName().str() << "',";
             if (next == es->stack.end()) {
               *os << es->prevPC->info->line << "), ";
@@ -167,8 +164,6 @@ void Executor::processTimers(ExecutionState *current,
           *os << "}";
           *os << ")\n";
         }
-        
-        delete os;
       }
 
       dumpStates = 0;

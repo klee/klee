@@ -176,8 +176,6 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
                            bool _updateMinDistToUncovered)
   : executor(_executor),
     objectFilename(_objectFilename),
-    statsFile(0),
-    istatsFile(0),
     startWallTime(util::getWallTime()),
     numBranches(0),
     fullBranches(0),
@@ -243,12 +241,15 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
 
   if (OutputStats) {
     statsFile = executor.interpreterHandler->openOutputFile("run.stats");
-    assert(statsFile && "unable to open statistics trace file");
-    writeStatsHeader();
-    writeStatsLine();
+    if (statsFile) {
+      writeStatsHeader();
+      writeStatsLine();
 
-    if (StatsWriteInterval > 0)
-      executor.addTimer(new WriteStatsTimer(this), StatsWriteInterval);
+      if (StatsWriteInterval > 0)
+        executor.addTimer(new WriteStatsTimer(this), StatsWriteInterval);
+    } else {
+      klee_error("Unable to open statistics trace file (run.stats).");
+    }
   }
 
   // Add timer to calculate uncovered instructions if needed by the solver
@@ -259,16 +260,13 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
 
   if (OutputIStats) {
     istatsFile = executor.interpreterHandler->openOutputFile("run.istats");
-    assert(istatsFile && "unable to open istats file");
-
-    if (IStatsWriteInterval > 0)
-      executor.addTimer(new WriteIStatsTimer(this), IStatsWriteInterval);
+    if (istatsFile) {
+      if (IStatsWriteInterval > 0)
+        executor.addTimer(new WriteIStatsTimer(this), IStatsWriteInterval);
+    } else {
+      klee_error("Unable to open instruction level stats file (run.istats).");
+    }
   }
-}
-
-StatsTracker::~StatsTracker() {  
-  delete statsFile;
-  delete istatsFile;
 }
 
 void StatsTracker::done() {
@@ -278,7 +276,8 @@ void StatsTracker::done() {
   if (OutputIStats) {
     if (updateMinDistToUncovered)
       computeReachableUncovered();
-    writeIStats();
+    if (istatsFile)
+      writeIStats();
   }
 }
 
