@@ -134,6 +134,10 @@ add_custom_target(systemtests
   ${ADD_CUSTOM_COMMAND_USES_TERMINAL_ARG}
 )
 
+if (ENABLE_POSIX_RUNTIME)
+  add_dependencies(systemtests klee-replay)
+endif()
+
 # Tell CMake to remove lit's output directories when
 # running `make clean`.
 file(GLOB_RECURSE
