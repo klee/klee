@@ -26,14 +26,11 @@ set(LLVM_COMPONENTS
   bitwriter
   codegen
   ipo
+  irreader
   linker
   support
 )
 
-if ("${LLVM_PACKAGE_VERSION}" VERSION_EQUAL "3.3" OR
-    "${LLVM_PACKAGE_VERSION}" VERSION_GREATER "3.3")
-  list(APPEND LLVM_COMPONENTS irreader)
-endif()
 klee_get_llvm_libs(LLVM_LIBS ${LLVM_COMPONENTS})
 target_link_libraries(kleeModule PUBLIC ${LLVM_LIBS})
 target_link_libraries(kleeModule PRIVATE
