@@ -607,6 +607,22 @@ else()
 endif()
 
 ################################################################################
+# Sanitizer support
+################################################################################
+message(STATUS "${CMAKE_CXX_FLAGS}")
+set(IS_ASAN_BUILD 0)
+set(IS_UBSAN_BUILD 0)
+string(REPLACE " " ";" _flags ${CMAKE_CXX_FLAGS})
+foreach(arg IN ITEMS ${_flags})
+  if (${arg} STREQUAL -fsanitize=address)
+    set(IS_ASAN_BUILD 1)
+  elseif (${arg} STREQUAL -fsanitize=undefined)
+    set(IS_UBSAN_BUILD 1)
+  endif()
+endforeach()
+unset(_flags)
+
+################################################################################
 # Generate `config.h`
 ################################################################################
 configure_file(${CMAKE_SOURCE_DIR}/include/klee/Config/config.h.cmin
