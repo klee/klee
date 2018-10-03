@@ -34,20 +34,20 @@
 #include "llvm/IR/CallSite.h"
 #endif
 
-#include <setjmp.h>
-#include <signal.h>
+#include <csetjmp>
+#include <csignal>
 
 using namespace llvm;
 using namespace klee;
 
 /***/
 
-static jmp_buf escapeCallJmpBuf;
+static sigjmp_buf escapeCallJmpBuf;
 
 extern "C" {
 
 static void sigsegv_handler(int signal, siginfo_t *info, void *context) {
-  longjmp(escapeCallJmpBuf, 1);
+  siglongjmp(escapeCallJmpBuf, 1);
 }
 }
 
@@ -249,13 +249,14 @@ bool ExternalDispatcherImpl::runProtectedCall(Function *f, uint64_t *args) {
   std::vector<GenericValue> gvArgs;
   gTheArgsP = args;
 
-  segvAction.sa_handler = 0;
-  memset(&segvAction.sa_mask, 0, sizeof(segvAction.sa_mask));
+  segvAction.sa_handler = nullptr;
+  sigemptyset(&(segvAction.sa_mask));
+  sigaddset(&(segvAction.sa_mask), SIGSEGV);
   segvAction.sa_flags = SA_SIGINFO;
   segvAction.sa_sigaction = ::sigsegv_handler;
   sigaction(SIGSEGV, &segvAction, &segvActionOld);
 
-  if (setjmp(escapeCallJmpBuf)) {
+  if (sigsetjmp(escapeCallJmpBuf, 1)) {
     res = false;
   } else {
     errno = lastErrno;
@@ -265,7 +266,7 @@ bool ExternalDispatcherImpl::runProtectedCall(Function *f, uint64_t *args) {
     res = true;
   }
 
-  sigaction(SIGSEGV, &segvActionOld, 0);
+  sigaction(SIGSEGV, &segvActionOld, nullptr);
   return res;
 }
 
