@@ -28,6 +28,15 @@
 /* Define to 1 if you have the `malloc_zone_statistics' function. */
 #cmakedefine HAVE_MALLOC_ZONE_STATISTICS @HAVE_MALLOC_ZONE_STATISTICS@
 
+/* Define to 1 if you have the <pty.h> header file. */
+#cmakedefine HAVE_PTY_H @HAVE_PTY_H@
+
+/* Define to 1 if you have the <util.h> header file. */
+#cmakedefine HAVE_UTIL_H @HAVE_UTIL_H@
+
+/* Define to 1 if you have the <sys/statfs.h> header file. */
+#cmakedefine HAVE_SYSSTATFS_H @HAVE_SYSSTATFS_H@
+
 /* Define to 1 if you have the <selinux/selinux.h> header file. */
 #cmakedefine HAVE_SELINUX_SELINUX_H @HAVE_SELINUX_SELINUX_H@
 

@@ -10,14 +10,29 @@
 #ifndef __EXE_FD__
 #define __EXE_FD__
 
+#include "klee/Config/config.h"
+
 #ifndef _LARGEFILE64_SOURCE
 #error "_LARGEFILE64_SOURCE should be defined"
 #endif
-#include <sys/types.h>
-#include <sys/statfs.h>
-#include <dirent.h>
 
-typedef struct {  
+#include <dirent.h>
+#include <sys/types.h>
+
+#ifdef HAVE_SYSSTATFS_H
+#include <sys/statfs.h>
+#endif
+
+#if defined(__APPLE__)
+#include <sys/dtrace.h>
+#include <sys/mount.h>
+#include <sys/param.h>
+#if !defined(dirent64)
+#define dirent64 dirent
+#endif
+#endif
+
+typedef struct {
   unsigned size;  /* in bytes */
   char* contents;
   struct stat64* stat;
