@@ -1,3 +1,12 @@
+//===-- ArrayExprOptimizer.cpp --------------------------------------------===//
+//
+//                     The KLEE Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 #include "klee/ArrayExprOptimizer.h"
 
 #include "klee/ArrayExprRewriter.h"
@@ -91,7 +100,7 @@ void ExprOptimizer::optimizeExpr(const ref<Expr> &e, ref<Expr> &result,
   if (OptimizeArray == VALUE ||
       (OptimizeArray == ALL && (!result.get() || valueOnly))) {
     std::vector<const ReadExpr *> reads;
-    std::map<const ReadExpr *, std::pair<unsigned, Expr::Width> > readInfo;
+    std::map<const ReadExpr *, std::pair<unsigned, Expr::Width>> readInfo;
     ArrayReadExprVisitor are(reads, readInfo);
     are.visit(e);
     std::reverse(reads.begin(), reads.end());
@@ -147,7 +156,7 @@ bool ExprOptimizer::computeIndexes(array2idx_ty &arrays, const ref<Expr> &e,
     for (size_t aIdx = 0; aIdx < arr->constantValues.size(); aIdx += width) {
       Assignment *a = new Assignment();
       v_arr_ty objects;
-      std::vector<std::vector<unsigned char> > values;
+      std::vector<std::vector<unsigned char>> values;
 
       // For each symbolic index Expr(k) found
       for (auto &index_it : element.second) {
@@ -162,7 +171,7 @@ bool ExprOptimizer::computeIndexes(array2idx_ty &arrays, const ref<Expr> &e,
         ref<Expr> evaluation = a->evaluate(e);
         if (assignmentSuccess && evaluation->isTrue()) {
           if (idx_valIdx.find(idx) == idx_valIdx.end()) {
-            idx_valIdx.insert(std::make_pair(idx, std::vector<ref<Expr> >()));
+            idx_valIdx.insert(std::make_pair(idx, std::vector<ref<Expr>>()));
           }
           idx_valIdx[idx]
               .push_back(ConstantExpr::alloc(aIdx, arr->getDomain()));
@@ -176,14 +185,14 @@ bool ExprOptimizer::computeIndexes(array2idx_ty &arrays, const ref<Expr> &e,
 
 ref<Expr> ExprOptimizer::getSelectOptExpr(
     const ref<Expr> &e, std::vector<const ReadExpr *> &reads,
-    std::map<const ReadExpr *, std::pair<unsigned, Expr::Width> > &readInfo,
+    std::map<const ReadExpr *, std::pair<unsigned, Expr::Width>> &readInfo,
     bool isSymbolic) {
   ref<Expr> notFound;
   ref<Expr> toReturn;
 
   // Array is concrete
   if (!isSymbolic) {
-    std::map<unsigned, ref<Expr> > optimized;
+    std::map<unsigned, ref<Expr>> optimized;
     for (auto &read : reads) {
       auto info = readInfo[read];
       auto cached = cacheReadExprOptimized.find(read->hash());
@@ -249,7 +258,7 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
   // OR
   //       array is symbolic && updatelist contains at least one concrete value
   else {
-    std::map<unsigned, ref<Expr> > optimized;
+    std::map<unsigned, ref<Expr>> optimized;
     for (auto &read : reads) {
       auto info = readInfo[read];
       auto cached = cacheReadExprOptimized.find(read->hash());
@@ -290,7 +299,7 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
         }
       }
 
-      std::vector<std::pair<uint64_t, bool> > arrayValues;
+      std::vector<std::pair<uint64_t, bool>> arrayValues;
       unsigned symByteNum = 0;
       for (unsigned i = 0; i < elementsInArray; i++) {
         uint64_t val = 0;
@@ -316,7 +325,8 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
         }
       }
 
-      if (((double)symByteNum / (double)elementsInArray) <= ArrayValueSymbRatio) {
+      if (((double)symByteNum / (double)elementsInArray) <=
+          ArrayValueSymbRatio) {
         // If the optimization can be applied we apply it
         // Build the dynamic select expression
         ref<Expr> opt =
@@ -337,7 +347,7 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
 ref<Expr> ExprOptimizer::buildConstantSelectExpr(
     const ref<Expr> &index, std::vector<uint64_t> &arrayValues,
     Expr::Width width, unsigned arraySize) const {
-  std::vector<std::pair<uint64_t, uint64_t> > ranges;
+  std::vector<std::pair<uint64_t, uint64_t>> ranges;
   std::vector<uint64_t> values;
   std::set<uint64_t> unique_array_values;
   ExprBuilder *builder = createDefaultExprBuilder();
@@ -373,11 +383,12 @@ ref<Expr> ExprOptimizer::buildConstantSelectExpr(
     }
   }
 
-  if (((double)unique_array_values.size() / (double)(arraySize)) >= ArrayValueRatio) {
+  if (((double)unique_array_values.size() / (double)(arraySize)) >=
+      ArrayValueRatio) {
     return result;
   }
 
-  std::map<uint64_t, std::vector<std::pair<uint64_t, uint64_t> > > exprMap;
+  std::map<uint64_t, std::vector<std::pair<uint64_t, uint64_t>>> exprMap;
   for (size_t i = 0; i < ranges.size(); i++) {
     if (exprMap.find(values[i]) != exprMap.end()) {
       exprMap[values[i]]
@@ -385,7 +396,7 @@ ref<Expr> ExprOptimizer::buildConstantSelectExpr(
     } else {
       if (exprMap.find(values[i]) == exprMap.end()) {
         exprMap.insert(std::make_pair(
-            values[i], std::vector<std::pair<uint64_t, uint64_t> >()));
+            values[i], std::vector<std::pair<uint64_t, uint64_t>>()));
       }
       exprMap.find(values[i])
           ->second.push_back(std::make_pair(ranges[i].first, ranges[i].second));
@@ -476,11 +487,11 @@ ref<Expr> ExprOptimizer::buildConstantSelectExpr(
 }
 
 ref<Expr> ExprOptimizer::buildMixedSelectExpr(
-    const ReadExpr *re, std::vector<std::pair<uint64_t, bool> > &arrayValues,
+    const ReadExpr *re, std::vector<std::pair<uint64_t, bool>> &arrayValues,
     Expr::Width width, unsigned elementsInArray) const {
   ExprBuilder *builder = createDefaultExprBuilder();
   std::vector<uint64_t> values;
-  std::vector<std::pair<uint64_t, uint64_t> > ranges;
+  std::vector<std::pair<uint64_t, uint64_t>> ranges;
   std::vector<uint64_t> holes;
   std::set<uint64_t> unique_array_values;
 
@@ -527,7 +538,8 @@ ref<Expr> ExprOptimizer::buildMixedSelectExpr(
   assert(ranges.size() > 0 && "No ranges");
 
   ref<Expr> result;
-  if (((double)unique_array_values.size() / (double)(arraySize)) <= ArrayValueRatio) {
+  if (((double)unique_array_values.size() / (double)(arraySize)) <=
+      ArrayValueRatio) {
     // The final "else" expression will be the original unoptimized array read
     // expression
     unsigned range_start = 0;

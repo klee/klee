@@ -1,3 +1,12 @@
+//===-- ArrayExprVisitor.cpp ----------------------------------------------===//
+//
+//                     The KLEE Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 #include "klee/util/ArrayExprVisitor.h"
 
 #include "klee/Internal/Support/ErrorHandling.h"
@@ -258,6 +267,7 @@ ExprVisitor::Action IndexCleanerVisitor::visitMul(const MulExpr &e) {
   }
   return Action::doChildren();
 }
+
 ExprVisitor::Action IndexCleanerVisitor::visitRead(const ReadExpr &re) {
   mul = false;
   return Action::doChildren();

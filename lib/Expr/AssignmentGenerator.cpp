@@ -1,3 +1,12 @@
+//===-- AssignmentGenerator.cpp -------------------------------------------===//
+//
+//                     The KLEE Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 #include "klee/AssignmentGenerator.h"
 
 #include "llvm/Support/raw_ostream.h"
@@ -32,7 +41,8 @@ bool AssignmentGenerator::helperGenerateAssignment(const ref<Expr> &e,
     } else {
       return false;
     }
-    if (!ExtractExpr::create(kid_val, kid_val.get()->getWidth() - 1, 1).get()->isZero()) {
+    if (!ExtractExpr::create(kid_val, kid_val.get()->getWidth() - 1,
+                             1).get()->isZero()) {
       // FIXME: really bad hack to support those cases in which KLEE creates
       // Add expressions with negative values
       val = createAddExpr(kid_val, val);

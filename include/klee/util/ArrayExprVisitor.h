@@ -1,3 +1,12 @@
+//===-- ArrayExprVisitor.h ------------------------------------------------===//
+//
+//                     The KLEE Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef KLEE_ARRAYEXPRVISITOR_H_
 #define KLEE_ARRAYEXPRVISITOR_H_
 
@@ -33,7 +42,7 @@ public:
 //--------------------------- INDEX-BASED OPTIMIZATION-----------------------//
 class ConstantArrayExprVisitor : public ExprVisitor {
 private:
-  typedef std::map<const Array *, std::vector<ref<Expr> > > bindings_ty;
+  typedef std::map<const Array *, std::vector<ref<Expr>>> bindings_ty;
   bindings_ty &arrays;
   // Avoids adding the same index twice
   unordered_set<unsigned> addedIndexes;
@@ -91,7 +100,7 @@ public:
 class ArrayReadExprVisitor : public ExprVisitor {
 private:
   std::vector<const ReadExpr *> &reads;
-  std::map<const ReadExpr *, std::pair<unsigned, Expr::Width> > &readInfo;
+  std::map<const ReadExpr *, std::pair<unsigned, Expr::Width>> &readInfo;
   bool symbolic;
   bool incompatible;
 
@@ -104,7 +113,7 @@ protected:
 public:
   ArrayReadExprVisitor(
       std::vector<const ReadExpr *> &_reads,
-      std::map<const ReadExpr *, std::pair<unsigned, Expr::Width> > &_readInfo)
+      std::map<const ReadExpr *, std::pair<unsigned, Expr::Width>> &_readInfo)
       : ExprVisitor(true), reads(_reads), readInfo(_readInfo), symbolic(false),
         incompatible(false) {}
   inline bool isIncompatible() { return incompatible; }
@@ -114,14 +123,14 @@ public:
 class ArrayValueOptReplaceVisitor : public ExprVisitor {
 private:
   unordered_set<unsigned> visited;
-  std::map<unsigned, ref<Expr> > optimized;
+  std::map<unsigned, ref<Expr>> optimized;
 
 protected:
   Action visitConcat(const ConcatExpr &);
   Action visitRead(const ReadExpr &re);
 
 public:
-  ArrayValueOptReplaceVisitor(std::map<unsigned, ref<Expr> > &_optimized,
+  ArrayValueOptReplaceVisitor(std::map<unsigned, ref<Expr>> &_optimized,
                               bool recursive = true)
       : ExprVisitor(recursive), optimized(_optimized) {}
 };
