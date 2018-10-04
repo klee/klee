@@ -1,3 +1,12 @@
+//===-- ArrayExprOptimizer.h ----------------------------------------------===//
+//
+//                     The KLEE Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 #ifndef KLEE_EXPROPTIMIZER_H
 #define KLEE_EXPROPTIMIZER_H
 
@@ -52,39 +61,39 @@ extern llvm::cl::opt<double> ArrayValueSymbRatio;
 
 class Expr;
 template <class T> class ref;
-typedef std::map<const Array *, std::vector<ref<Expr> > > array2idx_ty;
+typedef std::map<const Array *, std::vector<ref<Expr>>> array2idx_ty;
 typedef std::vector<const Array *> v_arr_ty;
-typedef std::map<ref<Expr>, std::vector<ref<Expr> > > mapIndexOptimizedExpr_ty;
+typedef std::map<ref<Expr>, std::vector<ref<Expr>>> mapIndexOptimizedExpr_ty;
 
 class ExprOptimizer {
 private:
-  unordered_map<unsigned, ref<Expr> > cacheExprOptimized;
+  unordered_map<unsigned, ref<Expr>> cacheExprOptimized;
   unordered_set<unsigned> cacheExprUnapplicable;
-  unordered_map<unsigned, ref<Expr> > cacheReadExprOptimized;
+  unordered_map<unsigned, ref<Expr>> cacheReadExprOptimized;
 
 public:
   void optimizeExpr(const ref<Expr> &e, ref<Expr> &result,
                     bool valueOnly = false);
 
 private:
-  bool computeIndexes(array2idx_ty &arrays, const ref<Expr> &e,
-                      std::map<ref<Expr>, std::vector<ref<Expr> > > &idx_valIdx)
-      const;
+  bool
+  computeIndexes(array2idx_ty &arrays, const ref<Expr> &e,
+                 std::map<ref<Expr>, std::vector<ref<Expr>>> &idx_valIdx) const;
 
   ref<Expr> getSelectOptExpr(
       const ref<Expr> &e, std::vector<const ReadExpr *> &reads,
-      std::map<const ReadExpr *, std::pair<unsigned, Expr::Width> > &readInfo,
+      std::map<const ReadExpr *, std::pair<unsigned, Expr::Width>> &readInfo,
       bool isSymbolic);
 
   ref<Expr> buildConstantSelectExpr(const ref<Expr> &index,
-                                   std::vector<uint64_t> &arrayValues,
-                                   Expr::Width width, unsigned elementsInArray) const;
+                                    std::vector<uint64_t> &arrayValues,
+                                    Expr::Width width,
+                                    unsigned elementsInArray) const;
 
   ref<Expr>
   buildMixedSelectExpr(const ReadExpr *re,
-                     std::vector<std::pair<uint64_t, bool> > &arrayValues,
-                     Expr::Width width, unsigned elementsInArray) const;
-
+                       std::vector<std::pair<uint64_t, bool>> &arrayValues,
+                       Expr::Width width, unsigned elementsInArray) const;
 };
 }
 
