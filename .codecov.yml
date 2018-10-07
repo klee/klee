@@ -17,6 +17,7 @@ ignore:
   - "test/"
   - "unittests"
   - "**/test-utils"
+  - include/klee/Internal/ADT/ImmutableTree.h
 comment:
   layout: "header, diff, changes, uncovered, tree"
   behavior: default
