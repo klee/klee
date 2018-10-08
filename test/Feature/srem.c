@@ -1,8 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out -use-cex-cache=1 %t.bc
-// RUN: grep "KLEE: done: explored paths = 5" %t.klee-out/info
-// RUN: grep "KLEE: done: generated tests = 4" %t.klee-out/info
+// RUN: %klee --output-dir=%t.klee-out -use-cex-cache=1 %t.bc 2>&1 | FileCheck %s
 #include <stdio.h>
 #include <assert.h>
 
@@ -15,7 +13,8 @@ int main(int argc, char** argv)
     // Test cases divisor is positive or negative
     if (y >= 0) {
       if (y < 2) {
-        // Two test cases generated taking this path, one for y == 0 and y ==1
+        // Two test cases generated taking this path, one for y == 0 and y == 1
+        // CHECK: srem.c:[[@LINE+1]]: divide by zero
         assert(1 % y == 0);
       } else {
         assert(1 % y == 1);
@@ -28,6 +27,14 @@ int main(int argc, char** argv)
       }
     }
 
+    // should fail for y == 0, succeed for all others
+    // BUT: no new testcase is generated as y = 0 already provoked the first assert to fail
     assert(0 % y == 0);
+
+    // should fail for y == 0 and y == +/-1, but succeed for all others
+    // generates one testcase for either y == 1 or y == -1
+    // CHECK: srem.c:[[@LINE+1]]: ASSERTION FAIL
     assert(-1 % y == -1);
+
+    // CHECK: KLEE: done: completed paths = 5
 }
