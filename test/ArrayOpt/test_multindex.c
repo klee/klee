@@ -1,0 +1,30 @@
+// RUN: %llvmgcc %s -emit-llvm -O0 -c -o %t.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --write-kqueries --output-dir=%t.klee-out --optimize-array=index %t.bc > %t.log 2>&1
+// RUN: not FileCheck %s -input-file=%t.log -check-prefix=CHECK-OPT_I
+
+// CHECK-OPT_I: KLEE: WARNING: OPT_I: successful
+// CHECK-CONST_ARR: const_arr
+
+#include <stdio.h>
+#include "klee/klee.h"
+
+char array[5] = {0,1,2,3,4};
+
+int main() {
+  unsigned k;
+  unsigned x;
+
+  klee_make_symbolic(&k, sizeof(k), "k");
+  klee_assume(k < 5);
+  klee_make_symbolic(&x, sizeof(x), "x");
+  klee_assume(x < 5);
+
+  // CHECK: Yes
+  if ((array[k] + array[x]) - 7 == 0)
+    printf("Yes\n");
+
+  // CHECK: KLEE: done: completed paths = 2
+
+  return 0;
+}
