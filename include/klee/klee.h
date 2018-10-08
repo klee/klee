@@ -100,7 +100,8 @@ extern "C" {
    * and writing tests but can also be used to enable prints in replay
    * mode.
    */
-  unsigned klee_is_symbolic(uintptr_t n);
+  #define klee_is_symbolic(n) _klee_is_symbolic(n, __LINE__)
+  unsigned _klee_is_symbolic(uintptr_t n, int unused);
 
 
   /* The following intrinsics are primarily intended for internal use

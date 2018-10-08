@@ -420,6 +420,10 @@ unsigned klee_is_symbolic(uintptr_t x) {
   return 0;
 }
 
+unsigned _klee_is_symbolic(uintptr_t x) {
+  return 0;
+}
+
 void klee_prefer_cex(void *buffer, uintptr_t condition) {
   ;
 }
