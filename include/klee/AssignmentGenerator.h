@@ -24,8 +24,6 @@
 #include "util/Assignment.h"
 #include "util/Ref.h"
 
-#include "llvm/Support/TimeValue.h"
-#include "klee/Internal/System/Time.h"
 
 namespace klee {
 

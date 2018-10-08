@@ -26,9 +26,9 @@
 #include "util/Ref.h"
 #include "klee/AssignmentGenerator.h"
 #include "klee/ExecutionState.h"
+#include "klee/Config/Version.h"
 
-#include "llvm/Support/TimeValue.h"
-#include "klee/Internal/System/Time.h"
+#include "llvm/Support/CommandLine.h"
 
 #include <ciso646>
 
