@@ -24,6 +24,7 @@
 #include "ExecutorTimerInfo.h"
 
 
+#include "klee/ArrayExprOptimizer.h"
 #include "klee/ExecutionState.h"
 #include "klee/Expr.h"
 #include "klee/Interpreter.h"
@@ -1084,12 +1085,29 @@ ref<Expr> Executor::toUnique(const ExecutionState &state,
   if (!isa<ConstantExpr>(e)) {
     ref<ConstantExpr> value;
     bool isTrue = false;
-
-    solver->setTimeout(coreSolverTimeout);      
-    if (solver->getValue(state, e, value) &&
-        solver->mustBeTrue(state, EqExpr::create(e, value), isTrue) &&
-        isTrue)
-      result = value;
+    if ((OptimizeArray == ALL || OptimizeArray == VALUE) &&
+        !isa<ConstantExpr>(e)) {
+      ref<Expr> res;
+      optimizer.optimizeExpr(e, res, true);
+      if (res.get()) {
+        e = res;
+      }
+    }
+    solver->setTimeout(coreSolverTimeout);
+    if (solver->getValue(state, e, value)) {
+      ref<Expr> cond = EqExpr::create(e, value);
+      if ((OptimizeArray == ALL || OptimizeArray == VALUE ||
+           OptimizeArray == INDEX) &&
+          !isa<ConstantExpr>(cond)) {
+        ref<Expr> res;
+        optimizer.optimizeExpr(cond, res);
+        if (res.get()) {
+          cond = res;
+        }
+      }
+      if (solver->mustBeTrue(state, cond, isTrue) && isTrue)
+        result = value;
+    }
     solver->setTimeout(0);
   }
   
@@ -1136,6 +1154,14 @@ void Executor::executeGetValue(ExecutionState &state,
     seedMap.find(&state);
   if (it==seedMap.end() || isa<ConstantExpr>(e)) {
     ref<ConstantExpr> value;
+    if ((OptimizeArray == ALL || OptimizeArray == VALUE) &&
+        !isa<ConstantExpr>(e)) {
+      ref<Expr> result;
+      optimizer.optimizeExpr(e, result, true);
+      if (result.get()) {
+        e = result;
+      }
+    }
     bool success = solver->getValue(state, e, value);
     assert(success && "FIXME: Unhandled solver failure");
     (void) success;
@@ -1144,9 +1170,17 @@ void Executor::executeGetValue(ExecutionState &state,
     std::set< ref<Expr> > values;
     for (std::vector<SeedInfo>::iterator siit = it->second.begin(), 
            siie = it->second.end(); siit != siie; ++siit) {
+      ref<Expr> cond = siit->assignment.evaluate(e);
+      if ((OptimizeArray == ALL || OptimizeArray == VALUE) &&
+          !isa<ConstantExpr>(cond)) {
+        ref<Expr> result;
+        optimizer.optimizeExpr(cond, result, true);
+        if (result.get()) {
+          cond = result;
+        }
+      }
       ref<ConstantExpr> value;
-      bool success = 
-        solver->getValue(state, siit->assignment.evaluate(e), value);
+      bool success = solver->getValue(state, cond, value);
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
       values.insert(value);
@@ -1573,6 +1607,17 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       assert(bi->getCondition() == bi->getOperand(0) &&
              "Wrong operand index!");
       ref<Expr> cond = eval(ki, 0, state).value;
+
+      if ((OptimizeArray == ALL || OptimizeArray == VALUE ||
+           OptimizeArray == INDEX) &&
+          !isa<ConstantExpr>(cond)) {
+        ref<Expr> result;
+        optimizer.optimizeExpr(cond, result);
+        if (result.get()) {
+          cond = result;
+        }
+      }
+
       Executor::StatePair branches = fork(state, cond, false);
 
       // NOTE: There is a hidden dependency here, markBranchVisited
@@ -1716,6 +1761,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
         // Check if control flow could take this case
         bool result;
+        if ((OptimizeArray == ALL || OptimizeArray == VALUE ||
+             OptimizeArray == INDEX) &&
+            !isa<ConstantExpr>(match)) {
+          ref<Expr> result;
+          optimizer.optimizeExpr(match, result);
+          if (result.get()) {
+            match = result;
+          }
+        }
         bool success = solver->mayBeTrue(state, match, result);
         assert(success && "FIXME: Unhandled solver failure");
         (void) success;
@@ -1742,6 +1796,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       }
 
       // Check if control could take the default case
+      if ((OptimizeArray == ALL || OptimizeArray == VALUE ||
+           OptimizeArray == INDEX) &&
+          !isa<ConstantExpr>(defaultValue)) {
+        ref<Expr> result;
+        optimizer.optimizeExpr(defaultValue, result);
+        if (result.get()) {
+          defaultValue = result;
+        }
+      }
       bool res;
       bool success = solver->mayBeTrue(state, defaultValue, res);
       assert(success && "FIXME: Unhandled solver failure");
@@ -1857,6 +1920,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
          have already got a value. But in the end the caches should
          handle it for us, albeit with some overhead. */
       do {
+        if ((OptimizeArray == ALL || OptimizeArray == VALUE) &&
+            !isa<ConstantExpr>(v)) {
+          ref<Expr> result;
+          optimizer.optimizeExpr(v, result, true);
+          if (result.get()) {
+            v = result;
+          }
+        }
         ref<ConstantExpr> value;
         bool success = solver->getValue(*free, v, value);
         assert(success && "FIXME: Unhandled solver failure");
@@ -3090,6 +3161,14 @@ void Executor::callExternalFunction(ExecutionState &state,
   for (std::vector<ref<Expr> >::iterator ai = arguments.begin(), 
        ae = arguments.end(); ai!=ae; ++ai) {
     if (AllowExternalSymCalls) { // don't bother checking uniqueness
+      if ((OptimizeArray == ALL || OptimizeArray == VALUE) &&
+          !isa<ConstantExpr>(*ai)) {
+        ref<Expr> result;
+        optimizer.optimizeExpr(*ai, result, true);
+        if (result.get()) {
+          *ai = result;
+        }
+      }
       ref<ConstantExpr> ce;
       bool success = solver->getValue(state, *ai, ce);
       assert(success && "FIXME: Unhandled solver failure");
@@ -3276,6 +3355,15 @@ void Executor::executeAlloc(ExecutionState &state,
     // return argument first). This shows up in pcre when llvm
     // collapses the size expression with a select.
 
+    if ((OptimizeArray == ALL || OptimizeArray == VALUE) &&
+        !isa<ConstantExpr>(size)) {
+      ref<Expr> result;
+      optimizer.optimizeExpr(size, result, true);
+      if (result.get()) {
+        size = result;
+      }
+    }
+
     ref<ConstantExpr> example;
     bool success = solver->getValue(state, size, example);
     assert(success && "FIXME: Unhandled solver failure");
@@ -3346,6 +3434,14 @@ void Executor::executeAlloc(ExecutionState &state,
 void Executor::executeFree(ExecutionState &state,
                            ref<Expr> address,
                            KInstruction *target) {
+  if ((OptimizeArray == ALL || OptimizeArray == VALUE) &&
+      !isa<ConstantExpr>(address)) {
+    ref<Expr> result;
+    optimizer.optimizeExpr(address, result, true);
+    if (result.get()) {
+      address = result;
+    }
+  }
   StatePair zeroPointer = fork(state, Expr::createIsZero(address), true);
   if (zeroPointer.first) {
     if (target)
@@ -3377,6 +3473,14 @@ void Executor::resolveExact(ExecutionState &state,
                             ref<Expr> p,
                             ExactResolutionList &results, 
                             const std::string &name) {
+  if ((OptimizeArray == ALL || OptimizeArray == VALUE) &&
+      !isa<ConstantExpr>(p)) {
+    ref<Expr> result;
+    optimizer.optimizeExpr(p, result, true);
+    if (result.get()) {
+      p = result;
+    }
+  }
   // XXX we may want to be capping this?
   ResolutionList rl;
   state.addressSpace.resolve(state, solver, p, rl);
@@ -3418,6 +3522,14 @@ void Executor::executeMemoryOperation(ExecutionState &state,
       value = state.constraints.simplifyExpr(value);
   }
 
+  if ((OptimizeArray == VALUE) && !isa<ConstantExpr>(address)) {
+    ref<Expr> result;
+    optimizer.optimizeExpr(address, result, true);
+    if (result.get()) {
+      address = result;
+    }
+  }
+
   // fast path: single in-bounds resolution
   ObjectPair op;
   bool success;
@@ -3436,12 +3548,19 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     }
     
     ref<Expr> offset = mo->getOffsetExpr(address);
+    ref<Expr> check = mo->getBoundsCheckOffset(offset, bytes);
+    if ((OptimizeArray == ALL || OptimizeArray == VALUE) &&
+        !isa<ConstantExpr>(check)) {
+      ref<Expr> result;
+      optimizer.optimizeExpr(check, result, true);
+      if (result.get()) {
+        check = result;
+      }
+    }
 
     bool inBounds;
     solver->setTimeout(coreSolverTimeout);
-    bool success = solver->mustBeTrue(state, 
-                                      mo->getBoundsCheckOffset(offset, bytes),
-                                      inBounds);
+    bool success = solver->mustBeTrue(state, check, inBounds);
     solver->setTimeout(0);
     if (!success) {
       state.pc = state.prevPC;
@@ -3474,7 +3593,15 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
   // we are on an error path (no resolution, multiple resolution, one
   // resolution with out of bounds)
-  
+
+  if ((OptimizeArray == ALL || OptimizeArray == VALUE) &&
+      !isa<ConstantExpr>(address)) {
+    ref<Expr> result;
+    optimizer.optimizeExpr(address, result, true);
+    if (result.get()) {
+      address = result;
+    }
+  }
   ResolutionList rl;  
   solver->setTimeout(coreSolverTimeout);
   bool incomplete = state.addressSpace.resolve(state, solver, address, rl,
