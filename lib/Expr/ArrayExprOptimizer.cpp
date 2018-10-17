@@ -43,6 +43,10 @@ llvm::cl::opt<double> ArrayValueSymbRatio(
 };
 
 ref<Expr> ExprOptimizer::optimizeExpr(const ref<Expr> &e, bool valueOnly) {
+  // Nothing to optimise for constant expressions
+  if (isa<ConstantExpr>(e))
+    return e;
+
   unsigned hash = e->hash();
   if (cacheExprUnapplicable.find(hash) != cacheExprUnapplicable.end())
     return e;
