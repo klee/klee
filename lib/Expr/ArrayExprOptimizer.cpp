@@ -42,20 +42,17 @@ llvm::cl::opt<double> ArrayValueSymbRatio(
     llvm::cl::init(1.0), llvm::cl::value_desc("Symbolic Values / Array Size"));
 };
 
-void ExprOptimizer::optimizeExpr(const ref<Expr> &e, ref<Expr> &result,
-                                 bool valueOnly) {
+ref<Expr> ExprOptimizer::optimizeExpr(const ref<Expr> &e, bool valueOnly) {
   unsigned hash = e->hash();
-  if (cacheExprUnapplicable.find(hash) != cacheExprUnapplicable.end()) {
-    return;
-  }
+  if (cacheExprUnapplicable.find(hash) != cacheExprUnapplicable.end())
+    return e;
 
   // Find cached expressions
   auto cached = cacheExprOptimized.find(hash);
-  if (cached != cacheExprOptimized.end()) {
-    result = cached->second;
-    return;
-  }
+  if (cached != cacheExprOptimized.end())
+    return cached->second;
 
+  ref<Expr> result;
   // ----------------------- INDEX-BASED OPTIMIZATION -------------------------
   if (!valueOnly && (OptimizeArray == ALL || OptimizeArray == INDEX)) {
     array2idx_ty arrays;
@@ -69,7 +66,7 @@ void ExprOptimizer::optimizeExpr(const ref<Expr> &e, ref<Expr> &result,
       // when we are not combining the optimizations
       if (OptimizeArray == INDEX) {
         cacheExprUnapplicable.insert(hash);
-        return;
+        return e;
       }
     } else {
       mapIndexOptimizedExpr_ty idx_valIdx;
@@ -107,7 +104,7 @@ void ExprOptimizer::optimizeExpr(const ref<Expr> &e, ref<Expr> &result,
 
     if (reads.size() == 0 || are.isIncompatible()) {
       cacheExprUnapplicable.insert(hash);
-      return;
+      return e;
     }
 
     ref<Expr> selectOpt =
@@ -121,6 +118,9 @@ void ExprOptimizer::optimizeExpr(const ref<Expr> &e, ref<Expr> &result,
       cacheExprUnapplicable.insert(hash);
     }
   }
+  if (result.isNull())
+    return e;
+  return result;
 }
 
 bool ExprOptimizer::computeIndexes(array2idx_ty &arrays, const ref<Expr> &e,
