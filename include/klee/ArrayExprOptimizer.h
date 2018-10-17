@@ -72,7 +72,11 @@ private:
   unordered_map<unsigned, ref<Expr>> cacheReadExprOptimized;
 
 public:
-  void optimizeExpr(const ref<Expr> &e, ref<Expr> &result, bool valueOnly);
+  /// Returns the optimised version of e.
+  /// @param e expression to optimise
+  /// @param valueOnly XXX document
+  /// @return optimised expression
+  ref<Expr> optimizeExpr(const ref<Expr> &e, bool valueOnly);
 
 private:
   bool
