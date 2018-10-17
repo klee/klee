@@ -72,8 +72,7 @@ private:
   unordered_map<unsigned, ref<Expr>> cacheReadExprOptimized;
 
 public:
-  void optimizeExpr(const ref<Expr> &e, ref<Expr> &result,
-                    bool valueOnly = false);
+  void optimizeExpr(const ref<Expr> &e, ref<Expr> &result, bool valueOnly);
 
 private:
   bool
