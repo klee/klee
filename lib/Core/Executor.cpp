@@ -1085,16 +1085,14 @@ ref<Expr> Executor::toUnique(const ExecutionState &state,
   if (!isa<ConstantExpr>(e)) {
     ref<ConstantExpr> value;
     bool isTrue = false;
-    if ((OptimizeArray == ALL || OptimizeArray == VALUE) &&
-        !isa<ConstantExpr>(e)) {
+    if (OptimizeArray == ALL || OptimizeArray == VALUE) {
       e = optimizer.optimizeExpr(e, true);
     }
     solver->setTimeout(coreSolverTimeout);
     if (solver->getValue(state, e, value)) {
       ref<Expr> cond = EqExpr::create(e, value);
-      if ((OptimizeArray == ALL || OptimizeArray == VALUE ||
-           OptimizeArray == INDEX) &&
-          !isa<ConstantExpr>(cond)) {
+      if (OptimizeArray == ALL || OptimizeArray == VALUE ||
+           OptimizeArray == INDEX) {
         cond = optimizer.optimizeExpr(cond, false);
       }
       if (solver->mustBeTrue(state, cond, isTrue) && isTrue)
@@ -1146,8 +1144,7 @@ void Executor::executeGetValue(ExecutionState &state,
     seedMap.find(&state);
   if (it==seedMap.end() || isa<ConstantExpr>(e)) {
     ref<ConstantExpr> value;
-    if ((OptimizeArray == ALL || OptimizeArray == VALUE) &&
-        !isa<ConstantExpr>(e)) {
+    if (OptimizeArray == ALL || OptimizeArray == VALUE) {
       e = optimizer.optimizeExpr(e, true);
     }
     bool success = solver->getValue(state, e, value);
@@ -1159,8 +1156,7 @@ void Executor::executeGetValue(ExecutionState &state,
     for (std::vector<SeedInfo>::iterator siit = it->second.begin(), 
            siie = it->second.end(); siit != siie; ++siit) {
       ref<Expr> cond = siit->assignment.evaluate(e);
-      if ((OptimizeArray == ALL || OptimizeArray == VALUE) &&
-          !isa<ConstantExpr>(cond)) {
+      if (OptimizeArray == ALL || OptimizeArray == VALUE) {
         cond = optimizer.optimizeExpr(cond, true);
       }
       ref<ConstantExpr> value;
@@ -1592,9 +1588,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
              "Wrong operand index!");
       ref<Expr> cond = eval(ki, 0, state).value;
 
-      if ((OptimizeArray == ALL || OptimizeArray == VALUE ||
-           OptimizeArray == INDEX) &&
-          !isa<ConstantExpr>(cond)) {
+      if (OptimizeArray == ALL || OptimizeArray == VALUE ||
+           OptimizeArray == INDEX) {
         cond = optimizer.optimizeExpr(cond, false);
       }
 
@@ -1741,9 +1736,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
         // Check if control flow could take this case
         bool result;
-        if ((OptimizeArray == ALL || OptimizeArray == VALUE ||
-             OptimizeArray == INDEX) &&
-            !isa<ConstantExpr>(match)) {
+        if (OptimizeArray == ALL || OptimizeArray == VALUE ||
+             OptimizeArray == INDEX) {
           match = optimizer.optimizeExpr(match, false);
         }
         bool success = solver->mayBeTrue(state, match, result);
@@ -1772,9 +1766,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       }
 
       // Check if control could take the default case
-      if ((OptimizeArray == ALL || OptimizeArray == VALUE ||
-           OptimizeArray == INDEX) &&
-          !isa<ConstantExpr>(defaultValue)) {
+      if (OptimizeArray == ALL || OptimizeArray == VALUE ||
+           OptimizeArray == INDEX) {
         defaultValue = optimizer.optimizeExpr(defaultValue, false);
       }
       bool res;
@@ -1892,8 +1885,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
          have already got a value. But in the end the caches should
          handle it for us, albeit with some overhead. */
       do {
-        if ((OptimizeArray == ALL || OptimizeArray == VALUE) &&
-            !isa<ConstantExpr>(v)) {
+        if (OptimizeArray == ALL || OptimizeArray == VALUE) {
           v = optimizer.optimizeExpr(v, true);
         }
         ref<ConstantExpr> value;
@@ -3129,8 +3121,7 @@ void Executor::callExternalFunction(ExecutionState &state,
   for (std::vector<ref<Expr> >::iterator ai = arguments.begin(), 
        ae = arguments.end(); ai!=ae; ++ai) {
     if (AllowExternalSymCalls) { // don't bother checking uniqueness
-      if ((OptimizeArray == ALL || OptimizeArray == VALUE) &&
-          !isa<ConstantExpr>(*ai)) {
+      if (OptimizeArray == ALL || OptimizeArray == VALUE) {
         *ai = optimizer.optimizeExpr(*ai, true);
       }
       ref<ConstantExpr> ce;
@@ -3319,8 +3310,7 @@ void Executor::executeAlloc(ExecutionState &state,
     // return argument first). This shows up in pcre when llvm
     // collapses the size expression with a select.
 
-    if ((OptimizeArray == ALL || OptimizeArray == VALUE) &&
-        !isa<ConstantExpr>(size)) {
+    if (OptimizeArray == ALL || OptimizeArray == VALUE) {
       size = optimizer.optimizeExpr(size, true);
     }
 
@@ -3394,8 +3384,7 @@ void Executor::executeAlloc(ExecutionState &state,
 void Executor::executeFree(ExecutionState &state,
                            ref<Expr> address,
                            KInstruction *target) {
-  if ((OptimizeArray == ALL || OptimizeArray == VALUE) &&
-      !isa<ConstantExpr>(address)) {
+  if (OptimizeArray == ALL || OptimizeArray == VALUE) {
     address = optimizer.optimizeExpr(address, true);
   }
   StatePair zeroPointer = fork(state, Expr::createIsZero(address), true);
@@ -3429,8 +3418,7 @@ void Executor::resolveExact(ExecutionState &state,
                             ref<Expr> p,
                             ExactResolutionList &results, 
                             const std::string &name) {
-  if ((OptimizeArray == ALL || OptimizeArray == VALUE) &&
-      !isa<ConstantExpr>(p)) {
+  if (OptimizeArray == ALL || OptimizeArray == VALUE) {
     p = optimizer.optimizeExpr(p, true);
   }
   // XXX we may want to be capping this?
@@ -3474,7 +3462,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
       value = state.constraints.simplifyExpr(value);
   }
 
-  if ((OptimizeArray == VALUE) && !isa<ConstantExpr>(address)) {
+  if (OptimizeArray == VALUE) {
     address = optimizer.optimizeExpr(address, true);
   }
 
@@ -3497,8 +3485,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     
     ref<Expr> offset = mo->getOffsetExpr(address);
     ref<Expr> check = mo->getBoundsCheckOffset(offset, bytes);
-    if ((OptimizeArray == ALL || OptimizeArray == VALUE) &&
-        !isa<ConstantExpr>(check)) {
+    if (OptimizeArray == ALL || OptimizeArray == VALUE) {
       check = optimizer.optimizeExpr(check, true);
     }
 
@@ -3538,8 +3525,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   // we are on an error path (no resolution, multiple resolution, one
   // resolution with out of bounds)
 
-  if ((OptimizeArray == ALL || OptimizeArray == VALUE) &&
-      !isa<ConstantExpr>(address)) {
+  if (OptimizeArray == ALL || OptimizeArray == VALUE) {
     address = optimizer.optimizeExpr(address, true);
   }
   ResolutionList rl;  
