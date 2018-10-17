@@ -1100,7 +1100,7 @@ ref<Expr> Executor::toUnique(const ExecutionState &state,
            OptimizeArray == INDEX) &&
           !isa<ConstantExpr>(cond)) {
         ref<Expr> res;
-        optimizer.optimizeExpr(cond, res);
+        optimizer.optimizeExpr(cond, res, false);
         if (res.get()) {
           cond = res;
         }
@@ -1612,7 +1612,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
            OptimizeArray == INDEX) &&
           !isa<ConstantExpr>(cond)) {
         ref<Expr> result;
-        optimizer.optimizeExpr(cond, result);
+        optimizer.optimizeExpr(cond, result, false);
         if (result.get()) {
           cond = result;
         }
@@ -1765,7 +1765,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
              OptimizeArray == INDEX) &&
             !isa<ConstantExpr>(match)) {
           ref<Expr> result;
-          optimizer.optimizeExpr(match, result);
+          optimizer.optimizeExpr(match, result, false);
           if (result.get()) {
             match = result;
           }
@@ -1800,7 +1800,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
            OptimizeArray == INDEX) &&
           !isa<ConstantExpr>(defaultValue)) {
         ref<Expr> result;
-        optimizer.optimizeExpr(defaultValue, result);
+        optimizer.optimizeExpr(defaultValue, result, false);
         if (result.get()) {
           defaultValue = result;
         }
