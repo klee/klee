@@ -47,6 +47,10 @@ ref<Expr> ExprOptimizer::optimizeExpr(const ref<Expr> &e, bool valueOnly) {
   if (isa<ConstantExpr>(e))
     return e;
 
+  // If no is optimization enabled, return early avoid cache lookup
+  if (OptimizeArray == NONE)
+    return e;
+
   unsigned hash = e->hash();
   if (cacheExprUnapplicable.find(hash) != cacheExprUnapplicable.end())
     return e;
