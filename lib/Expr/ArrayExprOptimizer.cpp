@@ -163,9 +163,10 @@ bool ExprOptimizer::computeIndexes(array2idx_ty &arrays, const ref<Expr> &e,
       // skipping all those indexes that are not multiple of such value.
       // In fact, they will be rejected by the MulExpr interpreter since it
       // will not find any integer solution
-      Expr &e = *idxt_v.getMul();
-      auto &ce = static_cast<ConstantExpr &>(e);
-      uint64_t mulVal = (*ce.getAPValue().getRawData());
+      auto e = idxt_v.getMul();
+      auto ce = dyn_cast<ConstantExpr>(e);
+      assert(ce && "Not a constant expression");
+      uint64_t mulVal = (*ce->getAPValue().getRawData());
       // So far we try to limit this optimization, but we may try some more
       // aggressive conditions (i.e. mulVal > width)
       if (width == 1 && mulVal > 1)
@@ -234,10 +235,12 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
              "Expected concrete array, found symbolic array");
       auto arrayConstValues = read->updates.root->constantValues;
       for (const UpdateNode *un = read->updates.head; un; un = un->next) {
-        auto *ce = static_cast<ConstantExpr *>(un->index.get());
+        auto ce = dyn_cast<ConstantExpr>(un->index);
+        assert(ce && "Not a constant expression");
         uint64_t index = ce->getAPValue().getZExtValue();
         assert(index < arrayConstValues.size());
-        auto *arrayValue = static_cast<ConstantExpr *>(un->value.get());
+        auto arrayValue = dyn_cast<ConstantExpr>(un->value);
+        assert(arrayValue && "Not a constant expression");
         arrayConstValues[index] = arrayValue;
       }
       std::vector<uint64_t> arrayValues;
@@ -307,13 +310,16 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
         }
       }
       for (const UpdateNode *un = read->updates.head; un; un = un->next) {
-        auto *ce = static_cast<ConstantExpr *>(un->index.get());
+        auto ce = dyn_cast<ConstantExpr>(un->index);
+        assert(ce && "Not a constant expression");
         uint64_t index = ce->getAPValue().getLimitedValue();
         if (!isa<ConstantExpr>(un->value)) {
           ba.set(index);
         } else {
           ba.unset(index);
-          auto *arrayValue = static_cast<ConstantExpr *>(un->value.get());
+          auto arrayValue =
+              dyn_cast<ConstantExpr>(un->value);
+          assert(arrayValue && "Not a constant expression");
           arrayConstValues[index] = arrayValue;
         }
       }
