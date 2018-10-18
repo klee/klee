@@ -48,9 +48,11 @@ ref<Expr> ExprRewriter::rewrite(const ref<Expr> &e, const array2idx_ty &arrays,
       // skipping all those indexes that are not multiple of such value.
       // In fact, they will be rejected by the MulExpr interpreter since it
       // will not find any integer solution
-      Expr &e = *idxt_v.getMul();
-      auto &ce = static_cast<ConstantExpr &>(e);
-      llvm::APInt val = ce.getAPValue();
+      auto e = idxt_v.getMul();
+      auto ce = dyn_cast<ConstantExpr>(e);
+      assert(ce && "Not a constant expression");
+
+      llvm::APInt val = ce->getAPValue();
       uint64_t mulVal = val.getZExtValue();
       // So far we try to limit this optimization, but we may try some more
       // aggressive conditions (i.e. mulVal > width)
@@ -76,8 +78,8 @@ ref<Expr> ExprRewriter::rewrite(const ref<Expr> &e, const array2idx_ty &arrays,
         unsigned set = 0;
         BitArray ba(arr->size / width);
         for (auto &vals : opt_indexes) {
-          auto &ce = static_cast<ConstantExpr &>(*vals);
-          llvm::APInt v = ce.getAPValue();
+          auto ce = dyn_cast<ConstantExpr>(vals);
+          llvm::APInt v = ce->getAPValue();
           ba.set(v.getZExtValue() / width);
           set++;
         }
