@@ -54,6 +54,47 @@ llvm::cl::opt<double> ArrayValueSymbRatio(
     llvm::cl::init(1.0), llvm::cl::value_desc("Symbolic Values / Array Size"));
 };
 
+ref<Expr> extendRead(const UpdateList &ul, const ref<Expr> index,
+                     Expr::Width w) {
+  switch (w) {
+  default:
+    assert(0 && "invalid width");
+  case Expr::Int8:
+    return ReadExpr::alloc(ul, index);
+  case Expr::Int16:
+    return ConcatExpr::create(
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(1, Expr::Int32), index)),
+        ReadExpr::alloc(ul, index));
+  case Expr::Int32:
+    return ConcatExpr::create4(
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(3, Expr::Int32), index)),
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(2, Expr::Int32), index)),
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(1, Expr::Int32), index)),
+        ReadExpr::alloc(ul, index));
+  case Expr::Int64:
+    return ConcatExpr::create8(
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(7, Expr::Int32), index)),
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(6, Expr::Int32), index)),
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(5, Expr::Int32), index)),
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(4, Expr::Int32), index)),
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(3, Expr::Int32), index)),
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(2, Expr::Int32), index)),
+        ReadExpr::alloc(
+            ul, AddExpr::create(ConstantExpr::create(1, Expr::Int32), index)),
+        ReadExpr::alloc(ul, index));
+  }
+}
+
 ref<Expr> ExprOptimizer::optimizeExpr(const ref<Expr> &e, bool valueOnly) {
   // Nothing to optimise for constant expressions
   if (isa<ConstantExpr>(e))
@@ -574,7 +615,7 @@ ref<Expr> ExprOptimizer::buildMixedSelectExpr(
       ref<Expr> firstIndex = MulExpr::create(
           ConstantExpr::create(holes[0], re->index->getWidth()),
           ConstantExpr::create(width / 8, re->index->getWidth()));
-      result = ReadExpr::extendRead(re->updates, firstIndex, width);
+      result = extendRead(re->updates, firstIndex, width);
       for (size_t i = 1; i < holes.size(); i++) {
         ref<Expr> temp_idx = MulExpr::create(
             ConstantExpr::create(holes[i], re->index->getWidth()),
@@ -582,7 +623,7 @@ ref<Expr> ExprOptimizer::buildMixedSelectExpr(
         ref<Expr> cond = EqExpr::create(
             re->index, ConstantExpr::create(holes[i], re->index->getWidth()));
         ref<Expr> temp = SelectExpr::create(
-            cond, ReadExpr::extendRead(re->updates, temp_idx, width), result);
+            cond, extendRead(re->updates, temp_idx, width), result);
         result = temp;
       }
     }

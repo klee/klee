@@ -579,8 +579,6 @@ public:
   }
   
   static ref<Expr> create(const UpdateList &updates, ref<Expr> i);
-  static ref<Expr> extendRead(const UpdateList &updates, ref<Expr> i,
-                              Expr::Width w);
   
   Width getWidth() const { assert(updates.root); return updates.root->getRange(); }
   Kind getKind() const { return Read; }
