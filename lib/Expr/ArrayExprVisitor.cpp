@@ -30,7 +30,7 @@ ReadExpr *ArrayExprHelper::hasOrderedReads(const ConcatExpr &ce) {
   // right now, all Reads are byte reads but some
   // transformations might change this
   if (!base || base->getWidth() != Expr::Int8)
-    return NULL;
+    return nullptr;
 
   // Get stride expr in proper index width.
   Expr::Width idxWidth = base->index->getWidth();
@@ -43,13 +43,13 @@ ReadExpr *ArrayExprHelper::hasOrderedReads(const ConcatExpr &ce) {
   while (e->getKind() == Expr::Concat) {
     offset = AddExpr::create(offset, strideExpr);
     if (!isReadExprAtOffset(e->getKid(0), base, offset))
-      return NULL;
+      return nullptr;
     e = e->getKid(1);
   }
 
   offset = AddExpr::create(offset, strideExpr);
   if (!isReadExprAtOffset(e, base, offset))
-    return NULL;
+    return nullptr;
 
   return cast<ReadExpr>(e.get());
 }
@@ -268,7 +268,7 @@ ExprVisitor::Action IndexCleanerVisitor::visitMul(const MulExpr &e) {
   return Action::doChildren();
 }
 
-ExprVisitor::Action IndexCleanerVisitor::visitRead(const ReadExpr &re) {
+ExprVisitor::Action IndexCleanerVisitor::visitRead(const ReadExpr &) {
   mul = false;
   return Action::doChildren();
 }

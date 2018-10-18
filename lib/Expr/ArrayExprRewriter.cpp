@@ -43,13 +43,13 @@ ref<Expr> ExprRewriter::rewrite(const ref<Expr> &e, const array2idx_ty &arrays,
            "Read is not aligned");
 
     Expr::Width width = idxt_v.getWidth() / element.first->range;
-    if (idxt_v.getMul().get()) {
+    if (!idxt_v.getMul().isNull()) {
       // If we have a MulExpr in the index, we can optimize our search by
       // skipping all those indexes that are not multiple of such value.
       // In fact, they will be rejected by the MulExpr interpreter since it
       // will not find any integer solution
       Expr &e = *idxt_v.getMul();
-      ConstantExpr &ce = static_cast<ConstantExpr &>(e);
+      auto &ce = static_cast<ConstantExpr &>(e);
       llvm::APInt val = ce.getAPValue();
       uint64_t mulVal = val.getZExtValue();
       // So far we try to limit this optimization, but we may try some more
@@ -64,7 +64,7 @@ ref<Expr> ExprRewriter::rewrite(const ref<Expr> &e, const array2idx_ty &arrays,
         continue;
       }
       auto opt_indexes = idx_valIdx.at((*index_it));
-      if (opt_indexes.size() == 0) {
+      if (opt_indexes.empty()) {
         // We continue with other solutions
         continue;
       } else if (opt_indexes.size() == 1) {
@@ -76,7 +76,7 @@ ref<Expr> ExprRewriter::rewrite(const ref<Expr> &e, const array2idx_ty &arrays,
         unsigned set = 0;
         BitArray ba(arr->size / width);
         for (auto &vals : opt_indexes) {
-          ConstantExpr &ce = static_cast<ConstantExpr &>(*vals);
+          auto &ce = static_cast<ConstantExpr &>(*vals);
           llvm::APInt v = ce.getAPValue();
           ba.set(v.getZExtValue() / width);
           set++;
@@ -120,7 +120,7 @@ ref<Expr> ExprRewriter::rewrite(const ref<Expr> &e, const array2idx_ty &arrays,
       }
     }
   }
-  if (eqExprs.size() == 0) {
+  if (eqExprs.empty()) {
     return notFound;
   } else if (eqExprs.size() == 1) {
     if (isa<AndExpr>(eqExprs[0])) {

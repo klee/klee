@@ -32,35 +32,35 @@ public:
 //--------------------------- INDEX-BASED OPTIMIZATION-----------------------//
 class ConstantArrayExprVisitor : public ExprVisitor {
 private:
-  typedef std::map<const Array *, std::vector<ref<Expr>>> bindings_ty;
+  using bindings_ty = std::map<const Array *, std::vector<ref<Expr>>>;
   bindings_ty &arrays;
   // Avoids adding the same index twice
   std::unordered_set<unsigned> addedIndexes;
   bool incompatible;
 
 protected:
-  Action visitConcat(const ConcatExpr &);
-  Action visitRead(const ReadExpr &);
+  Action visitConcat(const ConcatExpr &) override;
+  Action visitRead(const ReadExpr &) override;
 
 public:
-  ConstantArrayExprVisitor(bindings_ty &_arrays)
+  explicit ConstantArrayExprVisitor(bindings_ty &_arrays)
       : arrays(_arrays), incompatible(false) {}
   inline bool isIncompatible() { return incompatible; }
 };
 
 class IndexCompatibilityExprVisitor : public ExprVisitor {
 private:
-  bool compatible;
-  bool inner;
+  bool compatible{true};
+  bool inner{false};
 
 protected:
-  Action visitRead(const ReadExpr &);
-  Action visitURem(const URemExpr &);
-  Action visitSRem(const SRemExpr &);
-  Action visitOr(const OrExpr &);
+  Action visitRead(const ReadExpr &) override;
+  Action visitURem(const URemExpr &) override;
+  Action visitSRem(const SRemExpr &) override;
+  Action visitOr(const OrExpr &) override;
 
 public:
-  IndexCompatibilityExprVisitor() : compatible(true), inner(false) {}
+  IndexCompatibilityExprVisitor() = default;
 
   inline bool isCompatible() { return compatible; }
   inline bool hasInnerReads() { return inner; }
@@ -73,11 +73,11 @@ private:
   ref<Expr> mul;
 
 protected:
-  Action visitConcat(const ConcatExpr &);
-  Action visitMul(const MulExpr &);
+  Action visitConcat(const ConcatExpr &) override;
+  Action visitMul(const MulExpr &) override;
 
 public:
-  IndexTransformationExprVisitor(const Array *_array)
+  explicit IndexTransformationExprVisitor(const Array *_array)
       : array(_array), width(Expr::InvalidWidth) {}
 
   inline Expr::Width getWidth() {
@@ -97,8 +97,8 @@ private:
   Action inspectRead(unsigned hash, Expr::Width width, const ReadExpr &);
 
 protected:
-  Action visitConcat(const ConcatExpr &);
-  Action visitRead(const ReadExpr &);
+  Action visitConcat(const ConcatExpr &) override;
+  Action visitRead(const ReadExpr &) override;
 
 public:
   ArrayReadExprVisitor(
@@ -116,26 +116,26 @@ private:
   std::map<unsigned, ref<Expr>> optimized;
 
 protected:
-  Action visitConcat(const ConcatExpr &);
-  Action visitRead(const ReadExpr &re);
+  Action visitConcat(const ConcatExpr &) override;
+  Action visitRead(const ReadExpr &re) override;
 
 public:
-  ArrayValueOptReplaceVisitor(std::map<unsigned, ref<Expr>> &_optimized,
-                              bool recursive = true)
+  explicit ArrayValueOptReplaceVisitor(
+      std::map<unsigned, ref<Expr>> &_optimized, bool recursive = true)
       : ExprVisitor(recursive), optimized(_optimized) {}
 };
 
 class IndexCleanerVisitor : public ExprVisitor {
 private:
-  bool mul;
+  bool mul{true};
   ref<Expr> index;
 
 protected:
-  Action visitMul(const MulExpr &);
-  Action visitRead(const ReadExpr &);
+  Action visitMul(const MulExpr &) override;
+  Action visitRead(const ReadExpr &) override;
 
 public:
-  IndexCleanerVisitor() : ExprVisitor(true), mul(true) {}
+  IndexCleanerVisitor() : ExprVisitor(true) {}
   inline ref<Expr> getIndex() { return index; }
 };
 } // namespace klee

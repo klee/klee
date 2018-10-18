@@ -24,8 +24,8 @@ namespace klee {
 
 enum ArrayOptimizationType { NONE, ALL, INDEX, VALUE };
 
-typedef std::map<const Array *, std::vector<ref<Expr>>> array2idx_ty;
-typedef std::map<ref<Expr>, std::vector<ref<Expr>>> mapIndexOptimizedExpr_ty;
+using array2idx_ty = std::map<const Array *, std::vector<ref<Expr>>>;
+using mapIndexOptimizedExpr_ty = std::map<ref<Expr>, std::vector<ref<Expr>>>;
 
 class ExprOptimizer {
 private:

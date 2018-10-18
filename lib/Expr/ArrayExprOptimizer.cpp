@@ -11,11 +11,11 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <llvm/ADT/APInt.h>
 #include <llvm/Support/Casting.h>
 #include <llvm/Support/CommandLine.h>
 #include <set>
-#include <stddef.h>
 
 #include "ArrayExprRewriter.h"
 #include "ArrayExprVisitor.h"
@@ -79,7 +79,7 @@ ref<Expr> ExprOptimizer::optimizeExpr(const ref<Expr> &e, bool valueOnly) {
     ConstantArrayExprVisitor aev(arrays);
     aev.visit(e);
 
-    if (arrays.size() == 0 || aev.isIncompatible()) {
+    if (arrays.empty() || aev.isIncompatible()) {
       // We do not optimize expressions other than those with concrete
       // arrays with a symbolic index
       // If we cannot optimize the expression, we return a failure only
@@ -93,7 +93,7 @@ ref<Expr> ExprOptimizer::optimizeExpr(const ref<Expr> &e, bool valueOnly) {
 
       // Compute those indexes s.t. orig_expr =equisat= (k==i|k==j|..)
       if (computeIndexes(arrays, e, idx_valIdx)) {
-        if (idx_valIdx.size() > 0) {
+        if (!idx_valIdx.empty()) {
           // Create new expression on indexes
           result = ExprRewriter::createOptExpr(e, arrays, idx_valIdx);
         } else {
@@ -122,7 +122,7 @@ ref<Expr> ExprOptimizer::optimizeExpr(const ref<Expr> &e, bool valueOnly) {
     are.visit(e);
     std::reverse(reads.begin(), reads.end());
 
-    if (reads.size() == 0 || are.isIncompatible()) {
+    if (reads.empty() || are.isIncompatible()) {
       cacheExprUnapplicable.insert(hash);
       return e;
     }
@@ -164,7 +164,7 @@ bool ExprOptimizer::computeIndexes(array2idx_ty &arrays, const ref<Expr> &e,
       // In fact, they will be rejected by the MulExpr interpreter since it
       // will not find any integer solution
       Expr &e = *idxt_v.getMul();
-      ConstantExpr &ce = static_cast<ConstantExpr &>(e);
+      auto &ce = static_cast<ConstantExpr &>(e);
       uint64_t mulVal = (*ce.getAPValue().getRawData());
       // So far we try to limit this optimization, but we may try some more
       // aggressive conditions (i.e. mulVal > width)
@@ -174,7 +174,7 @@ bool ExprOptimizer::computeIndexes(array2idx_ty &arrays, const ref<Expr> &e,
 
     // For each concrete value 'i' stored in the array
     for (size_t aIdx = 0; aIdx < arr->constantValues.size(); aIdx += width) {
-      Assignment *a = new Assignment();
+      auto *a = new Assignment();
       std::vector<const Array *> objects;
       std::vector<std::vector<unsigned char>> values;
 
@@ -193,8 +193,8 @@ bool ExprOptimizer::computeIndexes(array2idx_ty &arrays, const ref<Expr> &e,
           if (idx_valIdx.find(idx) == idx_valIdx.end()) {
             idx_valIdx.insert(std::make_pair(idx, std::vector<ref<Expr>>()));
           }
-          idx_valIdx[idx]
-              .push_back(ConstantExpr::alloc(aIdx, arr->getDomain()));
+          idx_valIdx[idx].emplace_back(
+              ConstantExpr::alloc(aIdx, arr->getDomain()));
         }
       }
       delete a;
@@ -234,10 +234,10 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
              "Expected concrete array, found symbolic array");
       auto arrayConstValues = read->updates.root->constantValues;
       for (const UpdateNode *un = read->updates.head; un; un = un->next) {
-        ConstantExpr *ce = static_cast<ConstantExpr *>(un->index.get());
+        auto *ce = static_cast<ConstantExpr *>(un->index.get());
         uint64_t index = ce->getAPValue().getZExtValue();
         assert(index < arrayConstValues.size());
-        ConstantExpr *arrayValue = static_cast<ConstantExpr *>(un->value.get());
+        auto *arrayValue = static_cast<ConstantExpr *>(un->value.get());
         arrayConstValues[index] = arrayValue;
       }
       std::vector<uint64_t> arrayValues;
@@ -307,14 +307,13 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
         }
       }
       for (const UpdateNode *un = read->updates.head; un; un = un->next) {
-        ConstantExpr *ce = static_cast<ConstantExpr *>(un->index.get());
+        auto *ce = static_cast<ConstantExpr *>(un->index.get());
         uint64_t index = ce->getAPValue().getLimitedValue();
         if (!isa<ConstantExpr>(un->value)) {
           ba.set(index);
         } else {
           ba.unset(index);
-          ConstantExpr *arrayValue =
-              static_cast<ConstantExpr *>(un->value.get());
+          auto *arrayValue = static_cast<ConstantExpr *>(un->value.get());
           arrayConstValues[index] = arrayValue;
         }
       }
@@ -338,10 +337,10 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
           }
         }
         if (elementIsConcrete) {
-          arrayValues.push_back(std::make_pair(val, true));
+          arrayValues.emplace_back(val, true);
         } else {
           symByteNum++;
-          arrayValues.push_back(std::make_pair(0, false));
+          arrayValues.emplace_back(0, false);
         }
       }
 
@@ -389,16 +388,16 @@ ref<Expr> ExprOptimizer::buildConstantSelectExpr(
     uint64_t temp = arrayValues[i];
     unique_array_values.insert(curr_val);
     if (temp != curr_val) {
-      ranges.push_back(std::make_pair(curr_idx, i));
+      ranges.emplace_back(curr_idx, i);
       values.push_back(curr_val);
       curr_val = temp;
       curr_idx = i;
       if (i == (arraySize - 1)) {
-        ranges.push_back(std::make_pair(curr_idx, i + 1));
+        ranges.emplace_back(curr_idx, i + 1);
         values.push_back(curr_val);
       }
     } else if (i == (arraySize - 1)) {
-      ranges.push_back(std::make_pair(curr_idx, i + 1));
+      ranges.emplace_back(curr_idx, i + 1);
       values.push_back(curr_val);
     }
   }
@@ -411,15 +410,14 @@ ref<Expr> ExprOptimizer::buildConstantSelectExpr(
   std::map<uint64_t, std::vector<std::pair<uint64_t, uint64_t>>> exprMap;
   for (size_t i = 0; i < ranges.size(); i++) {
     if (exprMap.find(values[i]) != exprMap.end()) {
-      exprMap[values[i]]
-          .push_back(std::make_pair(ranges[i].first, ranges[i].second));
+      exprMap[values[i]].emplace_back(ranges[i].first, ranges[i].second);
     } else {
       if (exprMap.find(values[i]) == exprMap.end()) {
         exprMap.insert(std::make_pair(
             values[i], std::vector<std::pair<uint64_t, uint64_t>>()));
       }
-      exprMap.find(values[i])
-          ->second.push_back(std::make_pair(ranges[i].first, ranges[i].second));
+      exprMap.find(values[i])->second.emplace_back(ranges[i].first,
+                                                   ranges[i].second);
     }
   }
 
@@ -529,23 +527,23 @@ ref<Expr> ExprOptimizer::buildMixedSelectExpr(
       uint64_t temp = arrayValues[i].first;
       unique_array_values.insert(temp);
       if (temp != curr_val) {
-        ranges.push_back(std::make_pair(curr_idx, i));
+        ranges.emplace_back(curr_idx, i);
         values.push_back(curr_val);
         curr_val = temp;
         curr_idx = i;
         if (i == (arraySize - 1)) {
-          ranges.push_back(std::make_pair(curr_idx, curr_idx + 1));
+          ranges.emplace_back(curr_idx, curr_idx + 1);
           values.push_back(curr_val);
         }
       } else if (i == (arraySize - 1)) {
-        ranges.push_back(std::make_pair(curr_idx, i + 1));
+        ranges.emplace_back(curr_idx, i + 1);
         values.push_back(curr_val);
       }
     } else {
       holes.push_back(i);
       // If this is not an empty range
       if (!emptyRange) {
-        ranges.push_back(std::make_pair(curr_idx, i));
+        ranges.emplace_back(curr_idx, i);
         values.push_back(curr_val);
       }
       curr_val = arrayValues[i + 1].first;
@@ -554,8 +552,8 @@ ref<Expr> ExprOptimizer::buildMixedSelectExpr(
     }
   }
 
-  assert(unique_array_values.size() > 0 && "No unique values");
-  assert(ranges.size() > 0 && "No ranges");
+  assert(!unique_array_values.empty() && "No unique values");
+  assert(!ranges.empty() && "No ranges");
 
   ref<Expr> result;
   if (((double)unique_array_values.size() / (double)(arraySize)) <=
@@ -563,7 +561,7 @@ ref<Expr> ExprOptimizer::buildMixedSelectExpr(
     // The final "else" expression will be the original unoptimized array read
     // expression
     unsigned range_start = 0;
-    if (holes.size() == 0) {
+    if (holes.empty()) {
       result = builder->Constant(llvm::APInt(width, values[0], false));
       range_start = 1;
     } else {
