@@ -16,7 +16,6 @@
 #define KLEE_EXECUTOR_H
 
 #include "klee/ExecutionState.h"
-#include "klee/ArrayExprOptimizer.h"
 #include "klee/Interpreter.h"
 #include "klee/Internal/Module/Cell.h"
 #include "klee/Internal/Module/KInstruction.h"
@@ -26,10 +25,11 @@
 
 #include "llvm/ADT/Twine.h"
 
-#include <vector>
-#include <string>
+#include "../Expr/ArrayExprOptimizer.h"
 #include <map>
 #include <set>
+#include <string>
+#include <vector>
 
 struct KTest;
 

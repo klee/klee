@@ -10,9 +10,9 @@
 #ifndef KLEE_ARRAYEXPRVISITOR_H_
 #define KLEE_ARRAYEXPRVISITOR_H_
 
-#include "klee/util/ExprVisitor.h"
-#include "klee/ExprBuilder.h"
 #include "klee/CommandLine.h"
+#include "klee/ExprBuilder.h"
+#include "klee/util/ExprVisitor.h"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -138,6 +138,6 @@ public:
   IndexCleanerVisitor() : ExprVisitor(true), mul(true) {}
   inline ref<Expr> getIndex() { return index; }
 };
-}
+} // namespace klee
 
 #endif

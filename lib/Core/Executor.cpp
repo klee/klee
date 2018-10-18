@@ -24,7 +24,6 @@
 #include "ExecutorTimerInfo.h"
 
 
-#include "klee/ArrayExprOptimizer.h"
 #include "klee/ExecutionState.h"
 #include "klee/Expr.h"
 #include "klee/Interpreter.h"
@@ -50,6 +49,7 @@
 #include "klee/Internal/System/MemoryUsage.h"
 #include "klee/SolverStats.h"
 
+#include "../Expr/ArrayExprOptimizer.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Attributes.h"

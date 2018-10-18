@@ -12,8 +12,8 @@
 
 #include <vector>
 
-#include "Expr.h"
-#include "util/Ref.h"
+#include "klee/Expr.h"
+#include "klee/util/Ref.h"
 
 namespace klee {
 class Assignment;
@@ -54,6 +54,6 @@ private:
   getIndexedValue(const std::vector<unsigned char> &c_val, ConstantExpr &index,
                   const unsigned int size);
 };
-}
+} // namespace klee
 
 #endif

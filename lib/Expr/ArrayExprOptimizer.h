@@ -17,17 +17,12 @@
 #include <utility>
 #include <vector>
 
-#include "Expr.h"
-#include "util/Ref.h"
+#include "klee/Expr.h"
+#include "klee/util/Ref.h"
 
 namespace klee {
 
-enum ArrayOptimizationType {
-  NONE,
-  ALL,
-  INDEX,
-  VALUE
-};
+enum ArrayOptimizationType { NONE, ALL, INDEX, VALUE };
 
 typedef std::map<const Array *, std::vector<ref<Expr>>> array2idx_ty;
 typedef std::map<ref<Expr>, std::vector<ref<Expr>>> mapIndexOptimizedExpr_ty;
@@ -64,6 +59,6 @@ private:
                        std::vector<std::pair<uint64_t, bool>> &arrayValues,
                        Expr::Width width, unsigned elementsInArray) const;
 };
-}
+} // namespace klee
 
 #endif
