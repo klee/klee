@@ -14,18 +14,8 @@
 #include "klee/ExprBuilder.h"
 #include "klee/CommandLine.h"
 
-#include <ciso646>
-#ifdef _LIBCPP_VERSION
 #include <unordered_map>
 #include <unordered_set>
-#define unordered_map std::unordered_map
-#define unordered_set std::unordered_set
-#else
-#include <tr1/unordered_map>
-#include <tr1/unordered_set>
-#define unordered_map std::tr1::unordered_map
-#define unordered_set std::tr1::unordered_set
-#endif
 
 namespace klee {
 
@@ -45,7 +35,7 @@ private:
   typedef std::map<const Array *, std::vector<ref<Expr>>> bindings_ty;
   bindings_ty &arrays;
   // Avoids adding the same index twice
-  unordered_set<unsigned> addedIndexes;
+  std::unordered_set<unsigned> addedIndexes;
   bool incompatible;
 
 protected:
@@ -122,7 +112,7 @@ public:
 
 class ArrayValueOptReplaceVisitor : public ExprVisitor {
 private:
-  unordered_set<unsigned> visited;
+  std::unordered_set<unsigned> visited;
   std::map<unsigned, ref<Expr>> optimized;
 
 protected:
