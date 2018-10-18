@@ -53,12 +53,6 @@ enum ArrayOptimizationType {
   VALUE
 };
 
-extern llvm::cl::opt<ArrayOptimizationType> OptimizeArray;
-
-extern llvm::cl::opt<double> ArrayValueRatio;
-
-extern llvm::cl::opt<double> ArrayValueSymbRatio;
-
 class Expr;
 template <class T> class ref;
 typedef std::map<const Array *, std::vector<ref<Expr>>> array2idx_ty;
