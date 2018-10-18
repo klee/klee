@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/ArrayExprRewriter.h"
+#include "ArrayExprRewriter.h"
 
 #include <cassert>
 #include <cstdint>
@@ -16,7 +16,7 @@
 #include <set>
 #include <utility>
 
-#include "klee/util/ArrayExprVisitor.h"
+#include "ArrayExprVisitor.h"
 #include "klee/util/BitArray.h"
 
 using namespace klee;

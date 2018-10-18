@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../../include/klee/AssignmentGenerator.h"
+#include "AssignmentGenerator.h"
 
 #include <cassert>
 #include <cstdint>

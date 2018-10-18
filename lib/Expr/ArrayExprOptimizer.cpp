@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/ArrayExprOptimizer.h"
+#include "ArrayExprOptimizer.h"
 
 #include <algorithm>
 #include <cassert>
@@ -17,12 +17,12 @@
 #include <set>
 #include <stddef.h>
 
-#include "klee/ArrayExprRewriter.h"
-#include "klee/AssignmentGenerator.h"
+#include "ArrayExprRewriter.h"
+#include "ArrayExprVisitor.h"
+#include "AssignmentGenerator.h"
 #include "klee/Config/Version.h"
 #include "klee/ExprBuilder.h"
 #include "klee/Internal/Support/ErrorHandling.h"
-#include "klee/util/ArrayExprVisitor.h"
 #include "klee/util/Assignment.h"
 #include "klee/util/BitArray.h"
 

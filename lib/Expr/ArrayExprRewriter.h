@@ -14,8 +14,8 @@
 #include <map>
 #include <vector>
 
-#include "Expr.h"
-#include "util/Ref.h"
+#include "klee/Expr.h"
+#include "klee/util/Ref.h"
 
 namespace klee {
 
@@ -42,6 +42,6 @@ private:
                                    const ref<Expr> &valStart,
                                    const ref<Expr> &valEnd);
 };
-}
+} // namespace klee
 
 #endif /* LIB_EXPRREWRITER_H_ */

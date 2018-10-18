@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/util/ArrayExprVisitor.h"
+#include "ArrayExprVisitor.h"
 
 #include "klee/Internal/Support/ErrorHandling.h"
 
