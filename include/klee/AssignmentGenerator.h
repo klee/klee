@@ -10,20 +10,14 @@
 #ifndef KLEE_ASSIGNMENTGENERATOR_H
 #define KLEE_ASSIGNMENTGENERATOR_H
 
-#include <cassert>
-#include <iterator>
-#include <map>
-#include <string>
-#include <utility>
 #include <vector>
 
 #include "Expr.h"
-#include "Constraints.h"
-#include "Internal/Support/ErrorHandling.h"
-#include "util/ArrayExprVisitor.h"
-#include "util/Assignment.h"
 #include "util/Ref.h"
 
+namespace klee {
+class Assignment;
+} /* namespace klee */
 
 namespace klee {
 

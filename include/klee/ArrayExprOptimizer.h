@@ -10,28 +10,15 @@
 #ifndef KLEE_EXPROPTIMIZER_H
 #define KLEE_EXPROPTIMIZER_H
 
-#include <cassert>
-#include <iterator>
+#include <cstdint>
 #include <map>
-#include <string>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include "Expr.h"
-#include "ExprBuilder.h"
-#include "Constraints.h"
-#include "Internal/Support/ErrorHandling.h"
-#include "util/ArrayExprVisitor.h"
-#include "util/Assignment.h"
 #include "util/Ref.h"
-#include "klee/AssignmentGenerator.h"
-#include "klee/ExecutionState.h"
-#include "klee/Config/Version.h"
-
-#include "llvm/Support/CommandLine.h"
-
-#include <unordered_map>
-#include <unordered_set>
 
 namespace klee {
 
@@ -42,10 +29,7 @@ enum ArrayOptimizationType {
   VALUE
 };
 
-class Expr;
-template <class T> class ref;
 typedef std::map<const Array *, std::vector<ref<Expr>>> array2idx_ty;
-typedef std::vector<const Array *> v_arr_ty;
 typedef std::map<ref<Expr>, std::vector<ref<Expr>>> mapIndexOptimizedExpr_ty;
 
 class ExprOptimizer {
@@ -62,9 +46,8 @@ public:
   ref<Expr> optimizeExpr(const ref<Expr> &e, bool valueOnly);
 
 private:
-  bool
-  computeIndexes(array2idx_ty &arrays, const ref<Expr> &e,
-                 std::map<ref<Expr>, std::vector<ref<Expr>>> &idx_valIdx) const;
+  bool computeIndexes(array2idx_ty &arrays, const ref<Expr> &e,
+                      mapIndexOptimizedExpr_ty &idx_valIdx) const;
 
   ref<Expr> getSelectOptExpr(
       const ref<Expr> &e, std::vector<const ReadExpr *> &reads,

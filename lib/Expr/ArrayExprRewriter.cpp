@@ -9,9 +9,15 @@
 
 #include "klee/ArrayExprRewriter.h"
 
-#include "klee/util/BitArray.h"
+#include <cassert>
+#include <cstdint>
+#include <llvm/ADT/APInt.h>
+#include <llvm/Support/Casting.h>
+#include <set>
+#include <utility>
 
-#include "llvm/Support/CommandLine.h"
+#include "klee/util/ArrayExprVisitor.h"
+#include "klee/util/BitArray.h"
 
 using namespace klee;
 

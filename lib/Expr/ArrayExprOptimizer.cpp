@@ -9,10 +9,22 @@
 
 #include "klee/ArrayExprOptimizer.h"
 
-#include "klee/ArrayExprRewriter.h"
-#include "klee/util/BitArray.h"
+#include <algorithm>
+#include <cassert>
+#include <llvm/ADT/APInt.h>
+#include <llvm/Support/Casting.h>
+#include <llvm/Support/CommandLine.h>
+#include <set>
+#include <stddef.h>
 
-#include <iostream>
+#include "klee/ArrayExprRewriter.h"
+#include "klee/AssignmentGenerator.h"
+#include "klee/Config/Version.h"
+#include "klee/ExprBuilder.h"
+#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/util/ArrayExprVisitor.h"
+#include "klee/util/Assignment.h"
+#include "klee/util/BitArray.h"
 
 using namespace klee;
 
@@ -163,7 +175,7 @@ bool ExprOptimizer::computeIndexes(array2idx_ty &arrays, const ref<Expr> &e,
     // For each concrete value 'i' stored in the array
     for (size_t aIdx = 0; aIdx < arr->constantValues.size(); aIdx += width) {
       Assignment *a = new Assignment();
-      v_arr_ty objects;
+      std::vector<const Array *> objects;
       std::vector<std::vector<unsigned char>> values;
 
       // For each symbolic index Expr(k) found

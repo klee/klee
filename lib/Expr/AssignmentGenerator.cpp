@@ -7,9 +7,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/AssignmentGenerator.h"
+#include "../../include/klee/AssignmentGenerator.h"
 
-#include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <cstdint>
+#include <llvm/ADT/APInt.h>
+#include <llvm/Support/Casting.h>
+#include <llvm/Support/raw_ostream.h>
+#include <map>
+#include <set>
+#include <stddef.h>
+#include <string>
+#include <utility>
+
+#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/klee.h"
+#include "klee/util/Assignment.h"
 
 using namespace klee;
 
