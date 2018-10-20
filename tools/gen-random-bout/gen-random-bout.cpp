@@ -41,7 +41,7 @@ static void error_exit(const char *fmt, ...) {
 }
 
 static unsigned get_unsigned(char *i) {
-  if(!i) {
+  if (!i) {
     error_exit("ran out of arguments!\n");
   }
   long int n = strtol(i, NULL, 10);
@@ -71,7 +71,7 @@ static void push_random_obj(KTest *b, const char *name, unsigned non_zero_bytes,
     o->bytes[i] = random() % 255 + 1;
   }
 
-  for(i = non_zero_bytes; i < total_bytes; i++)
+  for (i = non_zero_bytes; i < total_bytes; i++)
     o->bytes[i] = 0;
 }
 
@@ -151,13 +151,14 @@ int main(int argc, char *argv[]) {
   unsigned seed = atoi(argv[1]);
   if (seed)
     srandom(seed);
-  else srandom(time(NULL) * getpid());
+  else
+    srandom(time(NULL) * getpid());
 
-  if ((argv_copy = (char **)malloc((argc - 1) * sizeof(char *))) == NULL) {
+  if ((argv_copy = (char **) malloc((argc - 1) * sizeof(char *))) == NULL) {
     error_exit("%s:%d: malloc() failure\n", __FILE__, __LINE__);
   }
   argv_copy[0] = argv[0];
-  for (i = 2; i < (unsigned) argc; ++i) {
+  for (i = 2; i < (unsigned)argc; ++i) {
     argv_copy[i - 1] = argv[i];
   }
 
@@ -170,7 +171,7 @@ int main(int argc, char *argv[]) {
   b.numObjects = 0;
   b.objects = (KTestObject *)malloc(MAX * sizeof *b.objects);
 
-  for(i = 2; i < (unsigned)argc; i++) {
+  for (i = 2; i < (unsigned)argc; i++) {
     if (strcmp(argv[i], "--sym-arg") == 0 || strcmp(argv[i], "-sym-arg") == 0) {
       unsigned nbytes = get_unsigned(argv[++i]);
 
@@ -191,11 +192,10 @@ int main(int argc, char *argv[]) {
                    "second argument\n");
       }
 
-
       narg = random() % (ub - lb + 1) + lb;
       push_range(&b, "n_args", narg);
 
-      while(narg-- > 0) {
+      while (narg-- > 0) {
         unsigned x = random() % (nbytes + 1);
 
         // A little different than how klee does it but more natural
@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
       unsigned nbytes = get_unsigned(argv[++i]);
 
       total_files = 0;
-      while(nfiles-- > 0) {
+      while (nfiles-- > 0) {
         if (total_files >= MAX_FILE_SIZES) {
           error_exit("%s:%d: Maximum number of file sizes exceeded (%d)\n",
                      __FILE__, __LINE__, MAX_FILE_SIZES);
