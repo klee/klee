@@ -20,7 +20,13 @@
 option(USE_CMAKE_FIND_PACKAGE_LLVM "Use find_package(LLVM CONFIG) to find LLVM" OFF)
 
 if (USE_CMAKE_FIND_PACKAGE_LLVM)
+  # Use find_package() to detect LLVM in the user's environment.
+  # The user can force a particular copy by passing
+  # `-DLLVM_DIR=/path/to/LLVMConfig.cmake` to CMake.
   find_package(LLVM CONFIG REQUIRED)
+
+  list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+  include(AddLLVM)
 
   # Provide function to map LLVM components to libraries.
   function(klee_get_llvm_libs output_var)
@@ -31,9 +37,8 @@ if (USE_CMAKE_FIND_PACKAGE_LLVM)
   set(LLVM_ENABLE_VISIBILITY_INLINES_HIDDEN OFF)
 else()
   # Use the llvm-config binary to get the information needed.
-  # Try to detect it in the user's environment. The user can
-  # force a particular binary by passing `-DLLVM_CONFIG_BINARY=/path/to/llvm-config`
-  # to CMake.
+  # Try to detect it in the user's environment. The user can force a particular
+  # binary by passing `-DLLVM_CONFIG_BINARY=/path/to/llvm-config` to CMake.
   find_program(LLVM_CONFIG_BINARY
     NAMES llvm-config)
   message(STATUS "LLVM_CONFIG_BINARY: ${LLVM_CONFIG_BINARY}")
@@ -141,6 +146,11 @@ else()
   _run_llvm_config(LLVM_LIBRARY_DIRS "--libdir")
   _run_llvm_config(LLVM_TOOLS_BINARY_DIR "--bindir")
   _run_llvm_config(TARGET_TRIPLE "--host-target")
+
+  _run_llvm_config(LLVM_BUILD_MAIN_SRC_DIR "--src-root")
+  if (NOT EXISTS "${LLVM_BUILD_MAIN_SRC_DIR}")
+    set(LLVM_BUILD_MAIN_SRC_DIR "")
+  endif()
 
   # Provide function to map LLVM components to libraries.
   function(klee_get_llvm_libs OUTPUT_VAR)

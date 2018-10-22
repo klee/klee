@@ -61,9 +61,11 @@ cmake -DCMAKE_BUILD_TYPE=Release /path/to/klee/src
 
 * `ENABLE_ZLIB` (BOOLEAN) - Enable zlib support.
 
-* `GTEST_SRC_DIR` (STRING) - Path to GTest source tree.
+* `GTEST_SRC_DIR` (STRING) - Path to Google Test source tree. If it is not
+   specified and `USE_CMAKE_FIND_PACKAGE_LLVM` is used, CMake will try to reuse
+   the version included within the LLVM source tree.
 
-* `GTEST_INCLUDE_DIR` (STRING) - Path to GTest include directory,
+* `GTEST_INCLUDE_DIR` (STRING) - Path to Google Test include directory,
    if it is not under `GTEST_SRC_DIR`.
 
 * `KLEE_ENABLE_TIMESTAMP` (BOOLEAN) - Enable timestamps in KLEE sources.
@@ -81,6 +83,10 @@ cmake -DCMAKE_BUILD_TYPE=Release /path/to/klee/src
    only relevant if `USE_CMAKE_FIND_PACKAGE_LLVM` is `FALSE`. This is used
    to detect the LLVM version and find libraries.
 
+* `LLVM_DIR` (STRING) - Path to `LLVMConfig.cmake`. This is only relevant if
+   `USE_CMAKE_FIND_PACKAGE_LLVM` is `TRUE`. This can be used to tell CMake where
+   it can find LLVM outside of standard directories.
+
 * `MAKE_BINARY` (STRING) - Path to `make` binary used to build KLEE's runtime.
 
 * `metaSMT_DIR` (STRING) - Provides a hint to CMake, where the metaSMT constraint
@@ -94,6 +100,6 @@ cmake -DCMAKE_BUILD_TYPE=Release /path/to/klee/src
   against STP in a build directory or an installed copy.
 
 * `USE_CMAKE_FIND_PACKAGE_LLVM` (BOOLEAN) - Use `find_package(LLVM CONFIG)`
-   to find LLVM.
+   to find LLVM (instead of using `llvm-config` with `LLVM_CONFIG_BINARY`).
 
 * `WARNINGS_AS_ERRORS` (BOOLEAN) - Treat warnings as errors when building KLEE.
