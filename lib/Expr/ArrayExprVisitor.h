@@ -10,8 +10,8 @@
 #ifndef KLEE_ARRAYEXPRVISITOR_H_
 #define KLEE_ARRAYEXPRVISITOR_H_
 
-#include "klee/CommandLine.h"
 #include "klee/ExprBuilder.h"
+#include "klee/SolverCmdLine.h"
 #include "klee/util/ExprVisitor.h"
 
 #include <unordered_map>
