@@ -33,12 +33,10 @@
 #include "llvm/Support/SourceMgr.h"
 
 #if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
-#include "llvm/Analysis/Verifier.h"
 #include "llvm/Assembly/AssemblyAnnotationWriter.h"
 #include "llvm/Linker.h"
 #else
 #include "llvm/IR/AssemblyAnnotationWriter.h"
-#include "llvm/IR/Verifier.h"
 #include "llvm/Linker/Linker.h"
 #endif
 
@@ -598,10 +596,4 @@ std::unique_ptr<llvm::Module> module(ParseIR(Buffer.take(), Err, context));
   }
   modules.push_back(std::move(module));
   return true;
-}
-
-void klee::checkModule(llvm::Module *m) {
-  LegacyLLVMPassManagerTy pm;
-  pm.add(createVerifierPass());
-  pm.run(*m);
 }
