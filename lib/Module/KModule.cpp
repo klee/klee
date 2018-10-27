@@ -41,6 +41,7 @@
 #include "llvm/Support/CallSite.h"
 #else
 #include "llvm/IR/CallSite.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Linker/Linker.h"
 #endif
 
@@ -105,6 +106,12 @@ namespace {
   DebugPrintEscapingFunctions("debug-print-escaping-functions", 
                               cl::desc("Print functions whose address is taken (default=false)"),
 			      cl::cat(ModuleCat));
+
+  // Don't run VerifierPass when checking module
+  cl::opt<bool>
+  DontVerify("disable-verify",
+             cl::desc("Do not verify the module integrity (default=false)"),
+             cl::init(false), cl::cat(klee::ModuleCat));
 }
 
 /***/
@@ -282,19 +289,9 @@ void KModule::optimiseAndPrepare(
   case eSwitchTypeLLVM:  pm3.add(createLowerSwitchPass()); break;
   default: klee_error("invalid --switch-type");
   }
-  InstructionOperandTypeCheckPass *operandTypeCheckPass =
-      new InstructionOperandTypeCheckPass();
   pm3.add(new IntrinsicCleanerPass(*targetData));
   pm3.add(new PhiCleanerPass());
-  pm3.add(operandTypeCheckPass);
   pm3.run(*module);
-
-  // Enforce the operand type invariants that the Executor expects.  This
-  // implicitly depends on the "Scalarizer" pass to be run in order to succeed
-  // in the presence of vector instructions.
-  if (!operandTypeCheckPass->checkPassed()) {
-    klee_error("Unexpected instruction operand types detected");
-  }
 }
 
 void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
@@ -357,6 +354,24 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
       delimiter = ", ";
     }
     llvm::errs() << "]\n";
+  }
+}
+
+void KModule::checkModule() {
+  InstructionOperandTypeCheckPass *operandTypeCheckPass =
+      new InstructionOperandTypeCheckPass();
+
+  LegacyLLVMPassManagerTy pm;
+  if (!DontVerify)
+    pm.add(createVerifierPass());
+  pm.add(operandTypeCheckPass);
+  pm.run(*module);
+
+  // Enforce the operand type invariants that the Executor expects.  This
+  // implicitly depends on the "Scalarizer" pass to be run in order to succeed
+  // in the presence of vector instructions.
+  if (!operandTypeCheckPass->checkPassed()) {
+    klee_error("Unexpected instruction operand types detected");
   }
 }
 

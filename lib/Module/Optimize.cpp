@@ -56,12 +56,6 @@
 
 using namespace llvm;
 
-// Don't verify at the end
-static cl::opt<bool>
-    DontVerify("disable-verify", cl::ReallyHidden,
-               cl::desc("Do not verify the module integrity (default=false)"),
-               cl::init(false), cl::cat(klee::ModuleCat));
-
 static cl::opt<bool>
     DisableInline("disable-inlining",
                   cl::desc("Do not run the inliner pass (default=false)"),
@@ -74,7 +68,7 @@ static cl::opt<bool> DisableInternalize(
 
 static cl::opt<bool> VerifyEach(
     "verify-each",
-    cl::desc("Verify intermediate results of all passes (default=false)"),
+    cl::desc("Verify intermediate results of all optimization passes (default=false)"),
     cl::init(false),
     cl::cat(klee::ModuleCat));
 
@@ -316,10 +310,6 @@ void Optimize(Module *M, llvm::ArrayRef<const char *> preservedFunctions) {
   addPass(Passes, createCFGSimplificationPass());
   addPass(Passes, createAggressiveDCEPass());
   addPass(Passes, createGlobalDCEPass());
-
-  // Make sure everything is still good.
-  if (!DontVerify)
-    Passes.add(createVerifierPass());
 
   // Run our queue of passes all at once now, efficiently.
   Passes.run(*M);
