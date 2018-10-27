@@ -8,6 +8,7 @@
 #===------------------------------------------------------------------------===#
 set(KLEE_MODULE_COMPONENT_SRCS
   Checks.cpp
+  FunctionAlias.cpp
   InstructionInfoTable.cpp
   InstructionOperandTypeCheckPass.cpp
   IntrinsicCleaner.cpp
