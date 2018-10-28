@@ -6,6 +6,7 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out -function-alias=printf:printf_format_only_with_varargs %t.bc 2>&1 | FileCheck --check-prefix=CHECK-VA-SUCCESS %s
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
