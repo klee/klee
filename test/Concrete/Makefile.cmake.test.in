@@ -13,7 +13,7 @@
 LLVMCC := @LLVMCC@
 LLVMAS := @LLVM_AS@
 LLVMLINK := @LLVM_LINK@
-LLVMCC.CFlags := -O0 -Wall
+LLVMCC.CFlags := @OZERO_OPT@ -Wall
 
 # Make sure source files can match the pattern rules
 VPATH := @CMAKE_CURRENT_SOURCE_DIR@
