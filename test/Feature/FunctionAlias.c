@@ -65,7 +65,12 @@ int __attribute__ ((noinline)) twoshorts2int(short a, short b) { return a + b + 
 int __attribute__ ((noinline)) twointsmul(int a, int b) { return a * b + 5; }
 int __attribute__ ((noinline)) somethingwithtwoints(int a, int b) { return 2 * a + 3 * b; }
 
+#ifdef __APPLE__
+// FIXME: __attribute__((weak_import, alias("minusone"))) does not work on Mac OS X 10.12.6
+short shortminusone(short a) { return minusone(a); }
+#else
 extern short shortminusone(short) __attribute__((alias("minusone")));
+#endif
 
 int main() {
   short a = 2;
