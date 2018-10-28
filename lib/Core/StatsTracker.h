@@ -39,10 +39,10 @@ namespace klee {
     std::string objectFilename;
 
     std::unique_ptr<llvm::raw_fd_ostream> istatsFile;
-    sqlite3 *statsFile;
-    sqlite3_stmt *insertStmt;
-    unsigned writeCount;
-    unsigned commitEvery;
+    sqlite3 *statsFile = nullptr;
+    sqlite3_stmt *insertStmt = nullptr;
+    std::uint32_t statsCommitEvery;
+    std::uint32_t statsWriteCount = 0;
     double startWallTime;
 
     unsigned numBranches;

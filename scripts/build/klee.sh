@@ -116,7 +116,15 @@ else
   CMAKE_BUILD_TYPE="Debug"
 fi
 
-python -m pip install --user tabulate
+if [[ "$TRAVIS_OS_NAME" = "linux" ]] ; then
+  apt update -y && apt install -y libsqlite3-dev
+elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
+  brew upgrade python
+else
+  echo "Unhandled TRAVIS_OS_NAME \"${TRAVIS_OS_NAME}\""
+  exit 1
+fi
+python3 -m pip install --user tabulate
 
 # TODO: We should support Ninja too
 # Configure KLEE
