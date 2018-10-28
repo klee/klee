@@ -659,11 +659,19 @@ void Executor::initializeGlobals(ExecutionState &state) {
   }
   
   // link aliases to their definitions (if bound)
-  for (Module::alias_iterator i = m->alias_begin(), ie = m->alias_end(); 
-       i != ie; ++i) {
+  for (auto i = m->alias_begin(), ie = m->alias_end(); i != ie; ++i) {
     // Map the alias to its aliasee's address. This works because we have
-    // addresses for everything, even undefined functions. 
-    globalAddresses.insert(std::make_pair(&*i, evalConstant(i->getAliasee())));
+    // addresses for everything, even undefined functions.
+
+    // Alias may refer to other alias, not necessarily known at this point.
+    // Thus, resolve to real alias directly.
+    const GlobalAlias *alias = &*i;
+    while (const auto *ga = dyn_cast<GlobalAlias>(alias->getAliasee())) {
+      assert(ga != alias && "alias pointing to itself");
+      alias = ga;
+    }
+
+    globalAddresses.insert(std::make_pair(&*i, evalConstant(alias->getAliasee())));
   }
 
   // once all objects are allocated, do the actual initialization
