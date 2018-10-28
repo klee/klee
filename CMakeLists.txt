@@ -416,6 +416,16 @@ else()
 endif()
 
 ################################################################################
+# Detect SQLite3
+################################################################################
+find_package(SQLite3)
+if (SQLITE3_FOUND)
+  include_directories(${SQLITE3_INCLUDE_DIRS})
+else()
+    message( FATAL_ERROR "SQLite3 not found, please install" )
+endif()
+
+################################################################################
 # Detect libcap
 ################################################################################
 check_include_file("sys/capability.h" HAVE_SYS_CAPABILITY_H)
