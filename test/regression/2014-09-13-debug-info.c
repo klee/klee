@@ -8,7 +8,7 @@
 // one with the prefered CEX. We verify this by using ktest-tool to dump the
 // values, and then checking the output.
 //
-// RUN: /bin/sh -c "ktest-tool --write-int %t.klee-out/*.ktest" | sort > %t.data-values
+// RUN: /bin/sh -c "ktest-tool %t.klee-out/*.ktest" | sort > %t.data-values
 // RUN: FileCheck < %t.data-values %s
 
 // CHECK: object 0: data: 0

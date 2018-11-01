@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 # ===-- ktest-tool --------------------------------------------------------===##
 # 
@@ -9,25 +10,33 @@
 # 
 # ===----------------------------------------------------------------------===##
 
+import binascii
+import io
 import os
+import string
 import struct
 import sys
 
-version_no=3
+version_no = 3
+
 
 class KTestError(Exception):
     pass
 
+
 class KTest:
+    valid_chars = string.digits + string.ascii_letters + string.punctuation + ' '
+
     @staticmethod
     def fromfile(path):
-        if not os.path.exists(path):
-            print("ERROR: file %s not found" % (path))
+        try:
+            f = open(path, 'rb')
+        except IOError:
+            print("ERROR: file %s not found" % path)
             sys.exit(1)
-            
-        f = open(path,'rb')
+
         hdr = f.read(5)
-        if len(hdr)!=5 or (hdr!=b'KTEST' and hdr != b"BOUT\n"):
+        if len(hdr) != 5 or (hdr != b'KTEST' and hdr != b"BOUT\n"):
             raise KTestError('unrecognized file')
         version, = struct.unpack('>i', f.read(4))
         if version > version_no:
@@ -37,7 +46,7 @@ class KTest:
         for i in range(numArgs):
             size, = struct.unpack('>i', f.read(4))
             args.append(str(f.read(size).decode(encoding='ascii')))
-            
+
         if version >= 2:
             symArgvs, = struct.unpack('>i', f.read(4))
             symArgvLen, = struct.unpack('>i', f.read(4))
@@ -49,73 +58,83 @@ class KTest:
         objects = []
         for i in range(numObjects):
             size, = struct.unpack('>i', f.read(4))
-            name = f.read(size)
+            name = f.read(size).decode('utf-8')
             size, = struct.unpack('>i', f.read(4))
             bytes = f.read(size)
-            objects.append( (name,bytes) )
+            objects.append((name, bytes))
 
         # Create an instance
-        b = KTest(version, args, symArgvs, symArgvLen, objects)
-        # Augment with extra filename field
-        b.filename = path
+        b = KTest(version, path, args, symArgvs, symArgvLen, objects)
         return b
-    
-    def __init__(self, version, args, symArgvs, symArgvLen, objects):
+
+    def __init__(self, version, path, args, symArgvs, symArgvLen, objects):
         self.version = version
+        self.path = path
         self.symArgvs = symArgvs
         self.symArgvLen = symArgvLen
         self.args = args
         self.objects = objects
 
-        # add a field that represents the name of the program used to
-        # generate this .ktest file:
-        program_full_path = self.args[0]
-        program_name = os.path.basename(program_full_path)
-        # sometimes program names end in .bc, so strip them
-        if program_name.endswith('.bc'):
-          program_name = program_name[:-3]
-        self.programName = program_name
-        
-def trimZeros(str):
-    for i in range(len(str))[::-1]:
-        if str[i] != '\x00':
-            return str[:i+1]
-    return ''
-    
-def main(args):
+    def __format__(self, format_spec):
+        sio = io.StringIO()
+        width = str(len(str(max(1, len(self.objects) - 1))))
+
+        # print ktest info
+        print('ktest file : %r' % self.path, file=sio)
+        print('args       : %r' % self.args, file=sio)
+        print('num objects: %r' % len(self.objects), file=sio)
+
+        # format strings
+        fmt = dict()
+        fmt['name'] = "object {0:" + width + "d}: name: '{1}'"
+        fmt['size'] = "object {0:" + width + "d}: size: {1}"
+        fmt['int' ] = "object {0:" + width + "d}: int : {1}"
+        fmt['uint'] = "object {0:" + width + "d}: uint: {1}"
+        fmt['data'] = "object {0:" + width + "d}: data: {1}"
+        fmt['hex' ] = "object {0:" + width + "d}: hex : 0x{1}"
+        fmt['text'] = "object {0:" + width + "d}: text: {1}"
+
+        # print objects
+        for i, (name, data) in enumerate(self.objects):
+            def p(key, arg): print(fmt[key].format(i, arg), file=sio)
+
+            blob = data.rstrip(b'\x00') if format_spec.endswith('trimzeros') else data
+            txt = ''.join(c if c in self.valid_chars else '.' for c in blob.decode('ascii', errors='replace').replace('�', '.'))
+            size = len(data)
+
+            p('name', name)
+            p('size', size)
+            p('data', blob)
+            p('hex', binascii.hexlify(blob).decode('ascii'))
+            for n, m in [(1, 'b'), (2, 'h'), (4, 'i'), (8, 'q')]:
+                if size == n:
+                    p('int', struct.unpack(m, data)[0])
+                    p('uint', struct.unpack(m.upper(), data)[0])
+                    break
+            p('text', txt)
+
+        return sio.getvalue()
+
+
+def main():
     from optparse import OptionParser
     op = OptionParser("usage: %prog [options] files")
-    op.add_option('','--trim-zeros', dest='trimZeros', action='store_true', 
+    op.add_option('', '--trim-zeros', dest='trimZeros', action='store_true',
                   default=False,
                   help='trim trailing zeros')
-    op.add_option('','--write-ints', dest='writeInts', action='store_true',
-                  default=False,
-                  help='convert 4-byte sequences to integers')
-    
-    opts,args = op.parse_args()
+
+    opts, args = op.parse_args()
     if not args:
         op.error("incorrect number of arguments")
 
     for file in args:
-        b = KTest.fromfile(file)
-        pos = 0
-        print('ktest file : %r' % file)
-        print('args       : %r' % b.args)
-        print('num objects: %r' % len(b.objects))
-        for i,(name,data) in enumerate(b.objects):
-            if opts.trimZeros:
-                str = trimZeros(data)
-            else:
-                str = data
+        ktest = KTest.fromfile(file)
+        fmt = '{:trimzeros}' if opts.trimZeros else '{}'
+        print(fmt.format(ktest), end='')
 
-            print('object %4d: name: %r' % (i, name))
-            print('object %4d: size: %r' % (i, len(data)))
-            if opts.writeInts and len(data) == 4: 
-                print('object %4d: data: %r' % (i, struct.unpack('i',str)[0]))
-            else:
-                print('object %4d: data: %r' % (i, str))
         if file != args[-1]:
             print()
 
+
 if __name__=='__main__':
-    main(sys.argv)
+    main()
