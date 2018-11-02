@@ -1106,7 +1106,7 @@ Executor::toConstant(ExecutionState &state,
      << (*(state.pc)).info->line << ")";
 
   if (AllExternalWarnings)
-    klee_warning(reason, os.str().c_str());
+    klee_warning("%s", os.str().c_str());
   else
     klee_warning_once(reason, "%s", os.str().c_str());
 
