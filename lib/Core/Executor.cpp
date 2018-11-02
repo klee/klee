@@ -103,11 +103,6 @@ namespace {
                    cl::init(true),
 		   cl::desc("Dump test cases for all active states on exit (default=on)"));
   
-  cl::opt<bool>
-  AllowExternalSymCalls("allow-external-sym-calls",
-                        cl::init(false),
-			cl::desc("Allow calls with symbolic arguments to external functions.  This concretizes the symbolic arguments.  (default=off)"));
-
   /// The different query logging solvers that can switched on/off
   enum PrintDebugInstructionsType {
     STDERR_ALL, ///
@@ -185,10 +180,21 @@ namespace {
                 cl::init(false),
                 cl::desc("Generate tests cases for all errors "
                          "(default=off, i.e. one per (error,instruction) pair)"));
-  
-  cl::opt<bool>
-  NoExternals("no-externals", 
-           cl::desc("Do not allow external function calls (default=off)"));
+
+  enum class ExternalCallPolicy {
+    None,     // No external calls allowed
+    Concrete, // Only external calls with concrete arguments allowed
+    All,      // All external calls allowed
+  };
+
+  cl::opt<ExternalCallPolicy>
+  ExternalCalls("external-calls",
+                cl::desc("Specify the external call policy"),
+                cl::values(clEnumValN(ExternalCallPolicy::None, "none", "No external function calls are allowed.  Note that KLEE always allows some external calls with concrete arguments to go through (in particular printf and puts), regardless of this option."),
+                           clEnumValN(ExternalCallPolicy::Concrete, "concrete", "Only external function calls with concrete arguments are allowed (default)"),
+                           clEnumValN(ExternalCallPolicy::All, "all", "All external function calls are allowed.  This concretizes any symbolic arguments in calls to external functions.")
+                           KLEE_LLVM_CL_VAL_END),
+                cl::init(ExternalCallPolicy::Concrete));
 
   cl::opt<bool>
   AlwaysOutputSeeds("always-output-seeds",
@@ -3099,10 +3105,11 @@ void Executor::callExternalFunction(ExecutionState &state,
   if (specialFunctionHandler->handle(state, function, target, arguments))
     return;
   
-  if (NoExternals && !okExternals.count(function->getName())) {
+  if (ExternalCalls == ExternalCallPolicy::None
+      && !okExternals.count(function->getName())) {
     klee_warning("Disallowed call to external function: %s\n",
                function->getName().str().c_str());
-    terminateStateOnError(state, "externals disallowed", User);
+    terminateStateOnError(state, "external calls disallowed", User);
     return;
   }
 
@@ -3115,7 +3122,7 @@ void Executor::callExternalFunction(ExecutionState &state,
   unsigned wordIndex = 2;
   for (std::vector<ref<Expr> >::iterator ai = arguments.begin(), 
        ae = arguments.end(); ai!=ae; ++ai) {
-    if (AllowExternalSymCalls) { // don't bother checking uniqueness
+    if (ExternalCalls == ExternalCallPolicy::All) { // don't bother checking uniqueness
       *ai = optimizer.optimizeExpr(*ai, true);
       ref<ConstantExpr> ce;
       bool success = solver->getValue(state, *ai, ce);
