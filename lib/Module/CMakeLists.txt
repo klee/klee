@@ -6,7 +6,7 @@
 # License. See LICENSE.TXT for details.
 #
 #===------------------------------------------------------------------------===#
-klee_add_component(kleeModule
+set(KLEE_MODULE_COMPONENT_SRCS
   Checks.cpp
   InstructionInfoTable.cpp
   InstructionOperandTypeCheckPass.cpp
@@ -19,6 +19,14 @@ klee_add_component(kleeModule
   PhiCleaner.cpp
   RaiseAsm.cpp
   Scalarizer.cpp
+)
+
+if (USE_WORKAROUND_LLVM_PR39177)
+  list(APPEND KLEE_MODULE_COMPONENT_SRCS WorkaroundLLVMPR39177.cpp)
+endif()
+
+klee_add_component(kleeModule
+  ${KLEE_MODULE_COMPONENT_SRCS}
 )
 
 set(LLVM_COMPONENTS
