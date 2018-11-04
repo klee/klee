@@ -18,6 +18,10 @@
 #include "klee/Config/Version.h"
 #include "klee/Internal/Module/LLVMPassManager.h"
 
+#ifdef USE_WORKAROUND_LLVM_PR39177
+#include "Passes.h"
+#endif
+
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/IR/Module.h"
@@ -179,6 +183,10 @@ void Optimize(Module *M, llvm::ArrayRef<const char *> preservedFunctions) {
   // If we're verifying, start off with a verification pass.
   if (VerifyEach)
     Passes.add(createVerifierPass());
+
+#ifdef USE_WORKAROUND_LLVM_PR39177
+  addPass(Passes, new klee::WorkaroundLLVMPR39177Pass());
+#endif
 
   // Add an appropriate DataLayout instance for this module...
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
