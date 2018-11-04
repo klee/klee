@@ -21,6 +21,8 @@ config.llvmgxx = "@LLVMCXX@"
 config.cc = "@NATIVE_CC@"
 config.cxx = "@NATIVE_CXX@"
 
+# NOTE: any changes to compiler flags also have to be applied to
+#       test/Concrete/CMakeLists.txt
 config.O0opt = "-O0"
 if @LLVM_VERSION_MAJOR@ >= 5:
   config.O0opt += " -Xclang -disable-O0-optnone"
