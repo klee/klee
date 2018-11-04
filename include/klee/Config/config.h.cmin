@@ -80,6 +80,9 @@
 /* Define to the version of this package. */
 #cmakedefine PACKAGE_VERSION @PACKAGE_VERSION@
 
+/* Use Workaround for LLVM PR39177 (affecting LLVM 3.9 - 7.0.0) */
+#cmakedefine USE_WORKAROUND_LLVM_PR39177 @USE_WORKAROUND_LLVM_PR39177@
+
 /* klee-uclibc is supported */
 #cmakedefine SUPPORT_KLEE_UCLIBC @SUPPORT_KLEE_UCLIBC@
 
