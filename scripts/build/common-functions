@@ -112,6 +112,7 @@ done
 # that need to retrieve llvm-specifi variables
 
 LLVM_VERSION_SHORT="${LLVM_VERSION/./}"
+LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
 LLVM_SUFFIX=""
 
 BuildMode=''

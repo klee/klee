@@ -5,8 +5,6 @@ if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
   export DOCKER_BUILD_DEPS_ONLY=1
   "${KLEE_SRC_TRAVIS}/scripts/build/build-docker.sh"
 elif [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
-  brew tap klee/klee
-  brew update
   brew install ccache
   set +e
   brew install python@2
