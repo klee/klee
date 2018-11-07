@@ -291,9 +291,9 @@ endif()
 # C++ version
 ################################################################################
 if ("${CMAKE_VERSION}" VERSION_LESS "3.1")
-  add_global_cxx_flag("-std=c++11" REQUIRED)
+  add_global_cxx_flag("-std=c++14" REQUIRED)
 else ()
-  set(CMAKE_CXX_STANDARD 11)
+  set(CMAKE_CXX_STANDARD 14)
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif ()
 
