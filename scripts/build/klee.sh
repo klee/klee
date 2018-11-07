@@ -26,10 +26,11 @@ if [[ "$TRAVIS_OS_NAME" = "linux" ]] ; then
   KLEE_CC="${LLVM_BIN}/clang"
   KLEE_CXX="${LLVM_BIN}/clang++"
 elif [[ "${TRAVIS_OS_NAME}" == "osx" ]]; then
-  LLVM_CONFIG="/usr/local/bin/llvm-config-${LLVM_VERSION}"
+  LLVM_BIN="/usr/local/opt/llvm@${LLVM_VERSION_MAJOR}/bin"
+  LLVM_CONFIG="${LLVM_BIN}/llvm-config"
   LLVM_BUILD_DIR="$(${LLVM_CONFIG} --src-root)"
-  KLEE_CC="/usr/local/bin/clang-${LLVM_VERSION}"
-  KLEE_CXX="/usr/local/bin/clang++-${LLVM_VERSION}"
+  KLEE_CC="${LLVM_BIN}/clang"
+  KLEE_CXX="${LLVM_BIN}/clang++"
 else
   echo "Unhandled TRAVIS_OS_NAME \"${TRAVIS_OS_NAME}\""
   exit 1
