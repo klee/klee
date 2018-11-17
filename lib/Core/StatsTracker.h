@@ -40,8 +40,10 @@ namespace klee {
     std::string objectFilename;
 
     std::unique_ptr<llvm::raw_fd_ostream> istatsFile;
-    sqlite3 *statsFile = nullptr;
-    sqlite3_stmt *insertStmt = nullptr;
+    ::sqlite3 *statsFile = nullptr;
+    ::sqlite3_stmt *transactionBeginStmt = nullptr;
+    ::sqlite3_stmt *transactionEndStmt = nullptr;
+    ::sqlite3_stmt *insertStmt = nullptr;
     std::uint32_t statsCommitEvery;
     std::uint32_t statsWriteCount = 0;
     time::Point startWallTime;
@@ -67,6 +69,11 @@ namespace klee {
     StatsTracker(Executor &_executor, std::string _objectFilename,
                  bool _updateMinDistToUncovered);
     ~StatsTracker();
+
+    StatsTracker(const StatsTracker &other) = delete;
+    StatsTracker(StatsTracker &&other) noexcept = delete;
+    StatsTracker &operator=(const StatsTracker &other) = delete;
+    StatsTracker &operator=(StatsTracker &&other) noexcept = delete;
 
     // called after a new StackFrame has been pushed (for callpath tracing)
     void framePushed(ExecutionState &es, StackFrame *parentFrame);

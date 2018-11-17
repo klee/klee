@@ -180,6 +180,13 @@ static bool instructionIsCoverable(Instruction *i) {
   return true;
 }
 
+std::string sqlite3ErrToStringAndFree(const std::string& prefix , char* sqlite3ErrMsg) {
+  std::ostringstream sstream;
+  sstream << prefix << sqlite3ErrMsg;
+  sqlite3_free(sqlite3ErrMsg);
+  return sstream.str();
+}
+
 StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
                            bool _updateMinDistToUncovered)
   : executor(_executor),
@@ -207,7 +214,7 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
   if(CommitEvery > 0) {
       statsCommitEvery = CommitEvery;
   } else {
-      statsCommitEvery = StatsWriteInterval > 0 ? 1 : 1000;
+      statsCommitEvery = statsWriteInterval ? 1 : 1000;
   }
 
   if (!sys::path::is_absolute(objectFilename)) {
@@ -247,17 +254,45 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
 
   if (OutputStats) {
     auto db_filename = executor.interpreterHandler->getOutputFilename("run.stats");
-    if(sqlite3_open(db_filename.c_str(), &statsFile) != SQLITE_OK){
-      std::ostringstream errorstream;
-      errorstream << "Can't open database: " << sqlite3_errmsg(statsFile);
-      sqlite3_close(statsFile);
-      klee_error("%s",errorstream.str().c_str());
-    } else {
+    if (sqlite3_open(db_filename.c_str(), &statsFile) == SQLITE_OK) {
+      // prepare statements
+      if(sqlite3_prepare_v2(statsFile, "BEGIN TRANSACTION", -1, &transactionBeginStmt, nullptr) != SQLITE_OK) {
+        klee_error("Cannot create prepared statement: %s", sqlite3_errmsg(statsFile));
+      }
+
+      if(sqlite3_prepare_v2(statsFile, "END TRANSACTION", -1, &transactionEndStmt, nullptr) != SQLITE_OK) {
+        klee_error("Cannot create prepared statement: %s", sqlite3_errmsg(statsFile));
+      }
+
+      // set options
+      char *zErrMsg;
+      if (sqlite3_exec(statsFile, "PRAGMA synchronous = OFF", nullptr, nullptr, &zErrMsg) != SQLITE_OK) {
+        klee_error("%s", sqlite3ErrToStringAndFree("Can't set options for database: ", zErrMsg).c_str());
+      }
+
+      // note: we use TRUNCATE here a) for speed and b) to prevent creation of new file descriptors
+      if (sqlite3_exec(statsFile, "PRAGMA journal_mode = TRUNCATE", nullptr, nullptr, &zErrMsg) != SQLITE_OK) {
+        klee_error("%s", sqlite3ErrToStringAndFree("Can't set options for database: ", zErrMsg).c_str());
+      }
+
+      // begin transaction
+      auto rc = sqlite3_step(transactionBeginStmt);
+      if (rc != SQLITE_DONE) {
+        klee_warning("Can't begin transaction: %s", sqlite3_errmsg(statsFile));
+      }
+      sqlite3_reset(transactionBeginStmt);
+
+      // create table
       writeStatsHeader();
       writeStatsLine();
 
       if (statsWriteInterval)
         executor.addTimer(new WriteStatsTimer(this), statsWriteInterval);
+    } else {
+      std::ostringstream errorstream;
+      errorstream << "Can't open database: " << sqlite3_errmsg(statsFile);
+      sqlite3_close(statsFile);
+      klee_error("%s", errorstream.str().c_str());
     }
   }
 
@@ -278,10 +313,18 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
   }
 }
 
-StatsTracker::~StatsTracker() {
-  sqlite3_exec(statsFile, "END TRANSACTION", nullptr, nullptr, nullptr);
-  sqlite3_finalize(insertStmt);
-  sqlite3_close(statsFile);
+StatsTracker::~StatsTracker() {  
+  if (statsFile) {
+    auto rc = sqlite3_step(transactionEndStmt);
+    if (rc != SQLITE_DONE) {
+      klee_warning("Can't commit transaction: %s", sqlite3_errmsg(statsFile));
+    }
+    sqlite3_reset(transactionEndStmt);
+    sqlite3_finalize(transactionBeginStmt);
+    sqlite3_finalize(transactionEndStmt);
+    sqlite3_finalize(insertStmt);
+    sqlite3_close(statsFile);
+  }
 }
 
 void StatsTracker::done() {
@@ -385,14 +428,7 @@ void StatsTracker::framePopped(ExecutionState &es) {
   // XXX remove me?
 }
 
-std::string sqlite3ErrToStringAndFree(const std::string& prefix , char* sqlite3ErrMsg) {
-  std::ostringstream sstream;
-  sstream << prefix << sqlite3ErrMsg;
-  sqlite3_free(sqlite3ErrMsg);
-  return sstream.str();
-}
-
-void StatsTracker::markBranchVisited(ExecutionState *visitedTrue, 
+void StatsTracker::markBranchVisited(ExecutionState *visitedTrue,
                                      ExecutionState *visitedFalse) {
   if (OutputIStats) {
     unsigned id = theStatisticManager->getIndex();
@@ -443,12 +479,18 @@ void StatsTracker::writeStatsHeader() {
 #endif
              << "QueryCexCacheHits INTEGER"
              << ")";
- char *zErrMsg = nullptr;
- if(sqlite3_exec(statsFile, create.str().c_str(), nullptr, nullptr, &zErrMsg)) {
-   klee_error("%s", sqlite3ErrToStringAndFree("ERROR creating table: ", zErrMsg).c_str());
-   return;
- }
- insert << "INSERT INTO stats ( "
+  char *zErrMsg = nullptr;
+  if(sqlite3_exec(statsFile, create.str().c_str(), nullptr, nullptr, &zErrMsg)) {
+    klee_error("%s", sqlite3ErrToStringAndFree("ERROR creating table: ", zErrMsg).c_str());
+  }
+  /* Sometimes KLEE runs out of file descriptors and hence we try to a) keep important fds open and b) prevent the
+   * creation of temporary files. SQLite3 uses temporary files for statement journals, which help rollbacks when
+   * constraints are violated. We have no constraints in our table so there shouldn't be a constraint violation.
+   * `OR FAIL` will not write to temp files and therefore not rollback but simply fail. As said before this should not
+   * happen, but if it does this statement will fail with SQLITE_CONSTRAINT error. If this happens you should either
+   * remove the constraints or consider using `IGNORE` mode.
+   */
+  insert << "INSERT OR FAIL INTO stats ( "
              << "Instructions ,"
              << "FullBranches ,"
              << "PartialBranches ,"
@@ -497,12 +539,10 @@ void StatsTracker::writeStatsHeader() {
 #endif
              << "? "
              << ")";
+
   if(sqlite3_prepare_v2(statsFile, insert.str().c_str(), -1, &insertStmt, nullptr) != SQLITE_OK) {
-      klee_error("Cannot create prepared statement! %s", sqlite3_errmsg(statsFile));
-      return;
+    klee_error("Cannot create prepared statement: %s", sqlite3_errmsg(statsFile));
   }
-  sqlite3_exec(statsFile, "PRAGMA synchronous = OFF", nullptr, nullptr, nullptr);
-  sqlite3_exec(statsFile, "BEGIN TRANSACTION", nullptr, nullptr, nullptr);
 }
 
 time::Span StatsTracker::elapsed() {
@@ -534,17 +574,20 @@ void StatsTracker::writeStatsLine() {
   sqlite3_bind_int64(insertStmt, 21, stats::arrayHashTime);
 #endif
   int errCode = sqlite3_step(insertStmt);
-  if(errCode != SQLITE_DONE) klee_error("Error %d in sqlite3_step function", errCode);
+  if(errCode != SQLITE_DONE) klee_error("Error writing stats data: %s", sqlite3_errmsg(statsFile));
+  sqlite3_reset(insertStmt);
 
-  errCode = sqlite3_reset(insertStmt);
-  if(errCode != SQLITE_OK) klee_error("Error %d in sqlite3_reset function", errCode);
-
+  statsWriteCount++;
   if(statsWriteCount == statsCommitEvery) {
-    sqlite3_exec(statsFile, "END TRANSACTION", nullptr, nullptr, nullptr);
-    sqlite3_exec(statsFile, "BEGIN TRANSACTION", nullptr, nullptr, nullptr);
+    errCode = sqlite3_step(transactionEndStmt);
+    if (errCode != SQLITE_DONE) klee_warning("Transaction commit error: %s", sqlite3_errmsg(statsFile));
+    sqlite3_reset(transactionEndStmt);
+    errCode = sqlite3_step(transactionBeginStmt);
+    if (errCode != SQLITE_DONE) klee_warning("Transaction begin error: %s", sqlite3_errmsg(statsFile));
+    sqlite3_reset(transactionBeginStmt);
+
     statsWriteCount = 0;
   }
-  statsWriteCount++;
 }
 
 void StatsTracker::updateStateStatistics(uint64_t addend) {
@@ -573,7 +616,7 @@ void StatsTracker::writeIStats() {
   of << "pid: " << getpid() << "\n";
   of << "cmd: " << m->getModuleIdentifier() << "\n\n";
   of << "\n";
-  
+
   StatisticManager &sm = *theStatisticManager;
   unsigned nStats = sm.getNumStatistics();
 
