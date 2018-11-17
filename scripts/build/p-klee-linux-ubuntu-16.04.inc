@@ -10,6 +10,7 @@ install_build_dependencies_klee() {
     python-wheel #for lit
     zlib1g-dev
     python3
+    python3-setuptools
     python3-pip
   )
 
@@ -20,5 +21,5 @@ install_build_dependencies_klee() {
   apt -y --no-install-recommends install "${dependencies[@]}"
 
   pip install lit
-  pip3 install tabulate --user
+  pip3 install tabulate
 }
