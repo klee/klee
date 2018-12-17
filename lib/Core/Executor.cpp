@@ -94,14 +94,34 @@ using namespace llvm;
 using namespace klee;
 
 
-
-
-
 namespace {
+
+  /*** Test generation options ***/
+
+  cl::OptionCategory TestGenCat("Test generation options",
+                                "These options impact test generation.");
+
   cl::opt<bool>
   DumpStatesOnHalt("dump-states-on-halt",
                    cl::init(true),
-		   cl::desc("Dump test cases for all active states on exit (default=on)"));
+		   cl::desc("Dump test cases for all active states on exit (default=on)"),
+                   cl::cat(TestGenCat));
+
+  cl::opt<bool>
+  OnlyOutputStatesCoveringNew("only-output-states-covering-new",
+                              cl::init(false),
+			      cl::desc("Only output test cases covering new code (default=off)."),
+                              cl::cat(TestGenCat));
+
+  cl::opt<bool>
+  EmitAllErrors("emit-all-errors",
+                cl::init(false),
+                cl::desc("Generate tests cases for all errors "
+                         "(default=off, i.e. one per (error,instruction) pair)"),
+                cl::cat(TestGenCat));
+
+
+  /*** Debugging options ***/
   
   /// The different query logging solvers that can switched on/off
   enum PrintDebugInstructionsType {
@@ -170,16 +190,6 @@ namespace {
 		      cl::desc("Issue an warning everytime an external call is made," 
 			       "as opposed to once per function (default=off)"));
 
-  cl::opt<bool>
-  OnlyOutputStatesCoveringNew("only-output-states-covering-new",
-                              cl::init(false),
-			      cl::desc("Only output test cases covering new code (default=off)."));
-
-  cl::opt<bool>
-  EmitAllErrors("emit-all-errors",
-                cl::init(false),
-                cl::desc("Generate tests cases for all errors "
-                         "(default=off, i.e. one per (error,instruction) pair)"));
 
   enum class ExternalCallPolicy {
     None,     // No external calls allowed
@@ -196,39 +206,60 @@ namespace {
                            KLEE_LLVM_CL_VAL_END),
                 cl::init(ExternalCallPolicy::Concrete));
 
+
+
+  /*** Seeding options ***/
+
+  cl::OptionCategory SeedingCat("Seeding options",
+                                "These options are related to the use of seeds to start exploration.");
+
   cl::opt<bool>
   AlwaysOutputSeeds("always-output-seeds",
-		    cl::init(true));
+		    cl::init(true),
+                    cl::desc("(default=true)"),
+                    cl::cat(SeedingCat));
 
   cl::opt<bool>
   OnlyReplaySeeds("only-replay-seeds",
 		  cl::init(false),
-                  cl::desc("Discard states that do not have a seed (default=off)."));
- 
+                  cl::desc("Discard states that do not have a seed (default=off)."),
+                  cl::cat(SeedingCat));
+
   cl::opt<bool>
   OnlySeed("only-seed",
 	   cl::init(false),
-           cl::desc("Stop execution after seeding is done without doing regular search (default=off)."));
+           cl::desc("Stop execution after seeding is done without doing regular search (default=off)."),
+           cl::cat(SeedingCat));
  
   cl::opt<bool>
   AllowSeedExtension("allow-seed-extension",
 		     cl::init(false),
-                     cl::desc("Allow extra (unbound) values to become symbolic during seeding (default=false)."));
+                     cl::desc("Allow extra (unbound) values to become symbolic during seeding (default=false)."),
+                     cl::cat(SeedingCat));
  
   cl::opt<bool>
   ZeroSeedExtension("zero-seed-extension",
 		    cl::init(false),
-		    cl::desc("(default=off)"));
+		    cl::desc("(default=off)"),
+                    cl::cat(SeedingCat));
  
   cl::opt<bool>
   AllowSeedTruncation("allow-seed-truncation",
 		      cl::init(false),
-                      cl::desc("Allow smaller buffers than in seeds (default=off)."));
+                      cl::desc("Allow smaller buffers than in seeds (default=off)."),
+                      cl::cat(SeedingCat));
  
   cl::opt<bool>
   NamedSeedMatching("named-seed-matching",
 		    cl::init(false),
-                    cl::desc("Use names to match symbolic objects to inputs (default=off)."));
+                    cl::desc("Use names to match symbolic objects to inputs (default=off)."),
+                    cl::cat(SeedingCat));
+
+  cl::opt<std::string>
+  SeedTime("seed-time",
+           cl::desc("Amount of time to dedicate to seeds, before normal search (default=0s (off))"),
+           cl::cat(SeedingCat));
+
 
   cl::opt<double>
   MaxStaticForkPct("max-static-fork-pct", 
@@ -253,10 +284,6 @@ namespace {
   cl::opt<std::string>
   MaxInstructionTime("max-instruction-time",
                      cl::desc("Allow a single instruction to take only this much time (default=0s (off)). Enables --use-forked-solver"));
-  
-  cl::opt<std::string>
-  SeedTime("seed-time",
-           cl::desc("Amount of time to dedicate to seeds, before normal search (default=0s (off))"));
   
   cl::list<Executor::TerminateReason>
   ExitOnErrorType("exit-on-error-type",
