@@ -12,7 +12,6 @@
 
 import binascii
 import io
-import os
 import string
 import struct
 import sys
@@ -32,11 +31,11 @@ class KTest:
         try:
             f = open(path, 'rb')
         except IOError:
-            print("ERROR: file %s not found" % path)
+            print('ERROR: file %s not found' % path)
             sys.exit(1)
 
         hdr = f.read(5)
-        if len(hdr) != 5 or (hdr != b'KTEST' and hdr != b"BOUT\n"):
+        if len(hdr) != 5 or (hdr != b'KTEST' and hdr != b'BOUT\n'):
             raise KTestError('unrecognized file')
         version, = struct.unpack('>i', f.read(4))
         if version > version_no:
@@ -117,24 +116,53 @@ class KTest:
 
 
 def main():
-    from optparse import OptionParser
-    op = OptionParser("usage: %prog [options] files")
-    op.add_option('', '--trim-zeros', dest='trimZeros', action='store_true',
-                  default=False,
-                  help='trim trailing zeros')
+    epilog = """
+        output description:
+          A .ktest file comprises a file header and a list of memory objects.
+          Each object holds concrete test data for a symbolic memory object.
+          As no type information is stored, ktest-tool outputs data in
+          different representations.
 
-    opts, args = op.parse_args()
-    if not args:
-        op.error("incorrect number of arguments")
+          ktest file header:
+            ktest file: path to ktest file
+            args: program arguments
+            num objects: number of memory objects
+          memory object:
+            name: object name
+            size: object size
+            data: concrete object data as Python byte string
+            hex: data as hex string
+            int: data as integer if size is 1, 2, 4, 8 bytes
+            uint: data as unsigned integer if size is 1, 2, 4, 8 bytes
+            text: data as ascii text, '.' for non-printable characters
 
-    for file in args:
+        example:
+          > ktest-tool klee-last/test000003.ktest
+          ktest file : 'klee-last/test000003.ktest'
+          args       : ['get_sign.bc']
+          num objects: 1
+          object 0: name: 'a'
+          object 0: size: 4
+          object 0: data: b'\\x00\\x00\\x00\\x80'
+          object 0: hex : 0x00000080
+          object 0: int : -2147483648
+          object 0: uint: 2147483648
+          object 0: text: ....
+    """
+
+    from argparse import ArgumentParser, RawDescriptionHelpFormatter
+    from textwrap import dedent
+
+    ap = ArgumentParser(prog='ktest-tool', formatter_class=RawDescriptionHelpFormatter, epilog=dedent(epilog))
+    ap.add_argument('--trim-zeros', help='trim trailing zeros', action='store_true')
+    ap.add_argument('files', help='a .ktest file', metavar='file', nargs='+')
+    args = ap.parse_args()
+
+    for file in args.files:
         ktest = KTest.fromfile(file)
-        fmt = '{:trimzeros}' if opts.trimZeros else '{}'
+        fmt = '{:trimzeros}' if args.trim_zeros else '{}'
         print(fmt.format(ktest), end='')
 
-        if file != args[-1]:
-            print()
 
-
-if __name__=='__main__':
+if __name__ == '__main__':
     main()
