@@ -321,6 +321,9 @@ namespace {
 
   /*** Debugging options ***/
 
+  cl::OptionCategory DebugCat("Debugging options",
+                              "These are debugging options.");
+
   /// The different query logging solvers that can switched on/off
   enum PrintDebugInstructionsType {
     STDERR_ALL, ///
@@ -352,16 +355,23 @@ namespace {
                      "Log all instructions to file instructions.txt in format "
                      "[inst_id]")
           KLEE_LLVM_CL_VAL_END),
-      llvm::cl::CommaSeparated);
+      llvm::cl::CommaSeparated,
+      cl::cat(DebugCat));
+
 #ifdef HAVE_ZLIB_H
-  cl::opt<bool> DebugCompressInstructions(
-      "debug-compress-instructions", cl::init(false),
-      cl::desc("Compress the logged instructions in gzip format."));
+  cl::opt<bool>
+  DebugCompressInstructions("debug-compress-instructions",
+                            cl::init(false),
+                            cl::desc("Compress the logged instructions in gzip format (default=off)."),
+                            cl::cat(DebugCat));
 #endif
 
   cl::opt<bool>
-  DebugCheckForImpliedValues("debug-check-for-implied-values");
-  
+  DebugCheckForImpliedValues("debug-check-for-implied-values",
+                             cl::init(false),
+                             cl::desc("Debug the implied value optimization"),
+                             cl::cat(DebugCat));
+
 }
 
 
