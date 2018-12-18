@@ -254,10 +254,10 @@ namespace {
                   cl::cat(TerminationCat));
 
   cl::opt<unsigned long long>
-  StopAfterNInstructions("stop-after-n-instructions",
-                         cl::desc("Stop execution after specified number of instructions (default=0 (off))"),
-                         cl::init(0),
-                         cl::cat(TerminationCat));
+  MaxInstructions("max-instructions",
+                  cl::desc("Stop execution after this many instructions (default=0 (off))"),
+                  cl::init(0),
+                  cl::cat(TerminationCat));
   
   cl::opt<unsigned>
   MaxForks("max-forks",
@@ -1270,7 +1270,7 @@ void Executor::stepInstruction(ExecutionState &state) {
   state.prevPC = state.pc;
   ++state.pc;
 
-  if (stats::instructions==StopAfterNInstructions)
+  if (stats::instructions == MaxInstructions)
     haltExecution = true;
 }
 

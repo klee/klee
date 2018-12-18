@@ -1,7 +1,7 @@
 // RUN: %llvmgcc %s -emit-llvm %O0opt -c -o %t2.bc
 // RUN: rm -f %t2.log
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --stop-after-n-instructions=100 --optimize %t2.bc > %t3.log
+// RUN: %klee --output-dir=%t.klee-out --max-instructions=100 --optimize %t2.bc > %t3.log
 // RUN: echo "good" > %t3.good
 // RUN: diff %t3.log %t3.good
 

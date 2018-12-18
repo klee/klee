@@ -1,6 +1,6 @@
 // RUN: %llvmgcc %s -emit-llvm -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --stop-after-n-instructions=500 --search=bfs %t1.bc 2>%t2.log
+// RUN: %klee --output-dir=%t.klee-out --max-instructions=500 --search=bfs %t1.bc 2>%t2.log
 // RUN: FileCheck -input-file=%t2.log %s
 #include "assert.h"
 #include "klee/klee.h"
