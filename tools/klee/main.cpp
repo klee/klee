@@ -72,6 +72,49 @@ namespace {
   cl::opt<std::string>
   InputFile(cl::desc("<input bytecode>"), cl::Positional, cl::init("-"));
 
+
+  /*** Test case options ***/
+
+  cl::OptionCategory TestCaseCat("Test case options",
+                                 "These options select the files to generate for each test case.");
+
+  cl::opt<bool>
+  WriteCVCs("write-cvcs",
+            cl::desc("Write .cvc files for each test case (default=false)"),
+            cl::cat(TestCaseCat));
+
+  cl::opt<bool>
+  WriteKQueries("write-kqueries",
+                cl::desc("Write .kquery files for each test case (default=false)"),
+                cl::cat(TestCaseCat));
+
+  cl::opt<bool>
+  WriteSMT2s("write-smt2s",
+             cl::desc("Write .smt2 (SMT-LIBv2) files for each test case (default=false)"),
+             cl::cat(TestCaseCat));
+
+  cl::opt<bool>
+  WriteCov("write-cov",
+           cl::desc("Write coverage information for each test case (default=false)"),
+           cl::cat(TestCaseCat));
+
+  cl::opt<bool>
+  WriteTestInfo("write-test-info",
+                cl::desc("Write additional test case information (default=false)"),
+                cl::cat(TestCaseCat));
+
+  cl::opt<bool>
+  WritePaths("write-paths",
+             cl::desc("Write .path files for each test case (default=false)"),
+             cl::cat(TestCaseCat));
+
+  cl::opt<bool>
+  WriteSymPaths("write-sym-paths",
+                cl::desc("Write .sym.path files for each test case (default=false)"),
+                cl::cat(TestCaseCat));
+
+
+
   cl::opt<std::string>
   EntryPoint("entry-point",
                cl::desc("Consider the function with the given name as the entrypoint"),
@@ -94,34 +137,6 @@ namespace {
   cl::opt<bool>
   WarnAllExternals("warn-all-externals",
                    cl::desc("Give initial warning for all externals."));
-
-  cl::opt<bool>
-  WriteCVCs("write-cvcs",
-            cl::desc("Write .cvc files for each test case"));
-
-  cl::opt<bool>
-  WriteKQueries("write-kqueries",
-            cl::desc("Write .kquery files for each test case"));
-
-  cl::opt<bool>
-  WriteSMT2s("write-smt2s",
-            cl::desc("Write .smt2 (SMT-LIBv2) files for each test case"));
-
-  cl::opt<bool>
-  WriteCov("write-cov",
-           cl::desc("Write coverage information for each test case"));
-
-  cl::opt<bool>
-  WriteTestInfo("write-test-info",
-                cl::desc("Write additional test case information"));
-
-  cl::opt<bool>
-  WritePaths("write-paths",
-                cl::desc("Write .path files for each test case"));
-
-  cl::opt<bool>
-  WriteSymPaths("write-sym-paths",
-                cl::desc("Write .sym.path files for each test case"));
 
   cl::opt<bool>
   OptExitOnError("exit-on-error",
