@@ -141,6 +141,12 @@ namespace {
           cl::desc("Parse environment from given file (in \"env\" format)"),
           cl::cat(StartCat));
 
+
+  /*** Linking options ***/
+
+  cl::OptionCategory LinkCat("Linking options",
+                             "These options control the libraries being linked.");
+
   enum class LibcType { FreeStandingLibc, KleeLibc, UcLibc };
 
   cl::opt<LibcType>
@@ -156,8 +162,20 @@ namespace {
                   clEnumValN(LibcType::UcLibc, "uclibc",
                              "Link in uclibc (adapted for KLEE)")
                   KLEE_LLVM_CL_VAL_END),
-       cl::init(LibcType::FreeStandingLibc));
+       cl::init(LibcType::FreeStandingLibc),
+       cl::cat(LinkCat));
 
+  cl::list<std::string>
+  LinkLibraries("link-llvm-lib",
+		cl::desc("Link the given library before execution. Can be used multiple times."),
+		cl::value_desc("library file"),
+                cl::cat(LinkCat));
+
+  cl::opt<bool>
+  WithPOSIXRuntime("posix-runtime",
+                   cl::desc("Link with POSIX runtime. Options that can be passed as arguments to the programs are: --sym-arg <max-len>  --sym-args <min-argvs> <max-argvs> <max-len> + file model options"),
+                   cl::init(false),
+                   cl::cat(LinkCat));
 
 
   cl::opt<bool>
@@ -171,11 +189,6 @@ namespace {
   cl::opt<bool>
   OptExitOnError("exit-on-error",
               cl::desc("Exit if errors occur"));
-
-  cl::opt<bool>
-  WithPOSIXRuntime("posix-runtime",
-		cl::desc("Link with POSIX runtime.  Options that can be passed as arguments to the programs are: --sym-arg <max-len>  --sym-args <min-argvs> <max-argvs> <max-len> + file model options"),
-		cl::init(false));
 
   cl::opt<bool>
   OptimizeModule("optimize",
@@ -222,11 +235,6 @@ namespace {
 
   cl::list<std::string>
   SeedOutDir("seed-out-dir");
-
-  cl::list<std::string>
-  LinkLibraries("link-llvm-lib",
-		cl::desc("Link the given libraries before execution"),
-		cl::value_desc("library file"));
 
   cl::opt<unsigned>
   MakeConcreteSymbolic("make-concrete-symbolic",
