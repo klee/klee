@@ -72,6 +72,11 @@ namespace {
   cl::opt<std::string>
   InputFile(cl::desc("<input bytecode>"), cl::Positional, cl::init("-"));
 
+  cl::list<std::string>
+  InputArgv(cl::ConsumeAfter,
+            cl::desc("<program arguments>..."));
+
+
 
   /*** Test case options ***/
 
@@ -115,20 +120,45 @@ namespace {
 
 
 
+  /*** Starting options ***/
+
+  cl::OptionCategory StartCat("Starting options",
+                              "These options affect how execution is started.");
+
   cl::opt<std::string>
   EntryPoint("entry-point",
-               cl::desc("Consider the function with the given name as the entrypoint"),
-               cl::init("main"));
+             cl::desc("Function in which to start execution (default=main)"),
+             cl::init("main"),
+             cl::cat(StartCat));
 
   cl::opt<std::string>
-  RunInDir("run-in", cl::desc("Change to the given directory prior to executing"));
+  RunInDir("run-in-dir",
+           cl::desc("Change to the given directory prior to executing"),
+           cl::cat(StartCat));
 
   cl::opt<std::string>
-  Environ("environ", cl::desc("Parse environ from given file (in \"env\" format)"));
+  Environ("environ",
+          cl::desc("Parse environment from given file (in \"env\" format)"),
+          cl::cat(StartCat));
 
-  cl::list<std::string>
-  InputArgv(cl::ConsumeAfter,
-            cl::desc("<program arguments>..."));
+  enum class LibcType { FreeStandingLibc, KleeLibc, UcLibc };
+
+  cl::opt<LibcType>
+  Libc("libc",
+       cl::desc("Choose libc version (none by default)."),
+       cl::values(
+                  clEnumValN(LibcType::FreeStandingLibc,
+                             "none",
+                             "Don't link in a libc (only provide freestanding environment)"),
+                  clEnumValN(LibcType::KleeLibc,
+                             "klee",
+                             "Link in KLEE's libc"),
+                  clEnumValN(LibcType::UcLibc, "uclibc",
+                             "Link in uclibc (adapted for KLEE)")
+                  KLEE_LLVM_CL_VAL_END),
+       cl::init(LibcType::FreeStandingLibc));
+
+
 
   cl::opt<bool>
   NoOutput("no-output",
@@ -141,19 +171,6 @@ namespace {
   cl::opt<bool>
   OptExitOnError("exit-on-error",
               cl::desc("Exit if errors occur"));
-
-  enum class LibcType { FreeStandingLibc, KleeLibc, UcLibc };
-
-  cl::opt<LibcType> Libc(
-      "libc", cl::desc("Choose libc version (none by default)."),
-      cl::values(
-          clEnumValN(
-              LibcType::FreeStandingLibc, "none",
-              "Don't link in a libc (only provide freestanding environment)"),
-          clEnumValN(LibcType::KleeLibc, "klee", "Link in klee libc"),
-          clEnumValN(LibcType::UcLibc, "uclibc",
-                     "Link in uclibc (adapted for klee)") KLEE_LLVM_CL_VAL_END),
-      cl::init(LibcType::FreeStandingLibc));
 
   cl::opt<bool>
   WithPOSIXRuntime("posix-runtime",
