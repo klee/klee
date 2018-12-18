@@ -77,7 +77,6 @@ namespace {
             cl::desc("<program arguments>..."));
 
 
-
   /*** Test case options ***/
 
   cl::OptionCategory TestCaseCat("Test case options",
@@ -117,7 +116,6 @@ namespace {
   WriteSymPaths("write-sym-paths",
                 cl::desc("Write .sym.path files for each test case (default=false)"),
                 cl::cat(TestCaseCat));
-
 
 
   /*** Starting options ***/
@@ -221,25 +219,37 @@ namespace {
   OptExitOnError("exit-on-error",
               cl::desc("Exit if errors occur"));
 
+
+  /*** Replaying options ***/
+  
+  cl::OptionCategory ReplayCat("Replaying options",
+                               "These options impact replaying of test cases.");
+  
   cl::opt<bool>
   ReplayKeepSymbolic("replay-keep-symbolic",
                      cl::desc("Replay the test cases only by asserting "
-                              "the bytes, not necessarily making them concrete."));
+                              "the bytes, not necessarily making them concrete."),
+                     cl::cat(ReplayCat));
 
   cl::list<std::string>
-      ReplayKTestFile("replay-ktest-file",
-                      cl::desc("Specify a ktest file to use for replay"),
-                      cl::value_desc("ktest file"));
+  ReplayKTestFile("replay-ktest-file",
+                  cl::desc("Specify a ktest file to use for replay"),
+                  cl::value_desc("ktest file"),
+                  cl::cat(ReplayCat));
 
   cl::list<std::string>
-      ReplayKTestDir("replay-ktest-dir",
-                   cl::desc("Specify a directory to replay ktest files from"),
-                   cl::value_desc("output directory"));
+  ReplayKTestDir("replay-ktest-dir",
+                 cl::desc("Specify a directory to replay ktest files from"),
+                 cl::value_desc("output directory"),
+                 cl::cat(ReplayCat));
 
   cl::opt<std::string>
   ReplayPathFile("replay-path",
                  cl::desc("Specify a path file to replay"),
-                 cl::value_desc("path file"));
+                 cl::value_desc("path file"),
+                 cl::cat(ReplayCat));
+
+
 
   cl::list<std::string>
   SeedOutFile("seed-out");
