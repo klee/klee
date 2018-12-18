@@ -265,9 +265,9 @@ namespace {
                        cl::init(0));
 
   cl::opt<unsigned>
-  StopAfterNTests("stop-after-n-tests",
-	     cl::desc("Stop execution after generating the given number of tests.  Extra tests corresponding to partially explored paths will also be dumped."),
-	     cl::init(0));
+  MaxTests("max-tests",
+           cl::desc("Stop execution after generating the given number of tests. Extra tests corresponding to partially explored paths will also be dumped (default=0 (off))."),
+           cl::init(0));
 
   cl::opt<bool>
   Watchdog("watchdog",
@@ -573,7 +573,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       }
     }
 
-    if (m_numGeneratedTests == StopAfterNTests)
+    if (m_numGeneratedTests == MaxTests)
       m_interpreter->setHaltExecution(true);
 
     if (WriteTestInfo) {
