@@ -133,14 +133,26 @@ namespace {
 
   cl::opt<std::string>
   RunInDir("run-in-dir",
-           cl::desc("Change to the given directory prior to executing"),
+           cl::desc("Change to the given directory before starting execution"),
            cl::cat(StartCat));
+  
+  cl::opt<std::string>
+  OutputDir("output-dir",
+            cl::desc("Directory in which to write results (default=klee-out-<N>)"),
+            cl::init(""),
+            cl::cat(StartCat));
 
   cl::opt<std::string>
   Environ("environ",
           cl::desc("Parse environment from given file (in \"env\" format)"),
           cl::cat(StartCat));
 
+  cl::opt<bool>
+  OptimizeModule("optimize",
+                 cl::desc("Optimize the code before execution"),
+		 cl::init(false),
+                 cl::cat(StartCat));
+  
 
   /*** Linking options ***/
 
@@ -178,6 +190,25 @@ namespace {
                    cl::cat(LinkCat));
 
 
+  /*** Checks options ***/
+
+  cl::OptionCategory ChecksCat("Checks options",
+                               "These options control some of the checks being done by KLEE.");
+
+  cl::opt<bool>
+  CheckDivZero("check-div-zero",
+               cl::desc("Inject checks for division-by-zero (default=true)"),
+               cl::init(true),
+               cl::cat(ChecksCat));
+
+  cl::opt<bool>
+  CheckOvershift("check-overshift",
+                 cl::desc("Inject checks for overshift (default=true)"),
+                 cl::init(true),
+                 cl::cat(ChecksCat));
+
+ 
+
   cl::opt<bool>
   NoOutput("no-output",
            cl::desc("Don't generate test files"));
@@ -189,26 +220,6 @@ namespace {
   cl::opt<bool>
   OptExitOnError("exit-on-error",
               cl::desc("Exit if errors occur"));
-
-  cl::opt<bool>
-  OptimizeModule("optimize",
-                 cl::desc("Optimize before execution"),
-		 cl::init(false));
-
-  cl::opt<bool>
-  CheckDivZero("check-div-zero",
-               cl::desc("Inject checks for division-by-zero"),
-               cl::init(true));
-
-  cl::opt<bool>
-  CheckOvershift("check-overshift",
-               cl::desc("Inject checks for overshift"),
-               cl::init(true));
-
-  cl::opt<std::string>
-  OutputDir("output-dir",
-            cl::desc("Directory to write results in (defaults to klee-out-N)"),
-            cl::init(""));
 
   cl::opt<bool>
   ReplayKeepSymbolic("replay-keep-symbolic",
