@@ -182,7 +182,7 @@ namespace {
   cl::opt<bool>
   AlwaysOutputSeeds("always-output-seeds",
 		    cl::init(true),
-                    cl::desc("(default=true)"),
+                    cl::desc("Dump test cases even if they are driven by seeds only (default=true)"),
                     cl::cat(SeedingCat));
 
   cl::opt<bool>
@@ -206,7 +206,7 @@ namespace {
   cl::opt<bool>
   ZeroSeedExtension("zero-seed-extension",
 		    cl::init(false),
-		    cl::desc("(default=off)"),
+		    cl::desc("Use zero-filled objects if matching seed not found (default=off)"),
                     cl::cat(SeedingCat));
  
   cl::opt<bool>
@@ -293,7 +293,31 @@ namespace {
                      cl::desc("Allow a single instruction to take only this much time (default=0s (off)). Enables --use-forked-solver"),
                      cl::cat(TerminationCat));
 
-  
+  cl::opt<double>
+  MaxStaticForkPct("max-static-fork-pct",
+		   cl::init(1.),
+		   cl::desc("Maximum percentage spent by an instruction forking out of the forking of all instructions (default=1.0 (always))"),
+                   cl::cat(TerminationCat));
+
+  cl::opt<double>
+  MaxStaticSolvePct("max-static-solve-pct",
+		    cl::init(1.),
+		    cl::desc("Maximum percentage of solving time that can be spent by a single instruction over total solving time for all instructions (default=1.0 (always))"),
+                    cl::cat(TerminationCat));
+
+  cl::opt<double>
+  MaxStaticCPForkPct("max-static-cpfork-pct", 
+		     cl::init(1.),
+		     cl::desc("Maximum percentage spent by an instruction of a call path forking out of the forking of all instructions in the call path (default=1.0 (always))"),
+                     cl::cat(TerminationCat));
+
+  cl::opt<double>
+  MaxStaticCPSolvePct("max-static-cpsolve-pct",
+		      cl::init(1.),
+		      cl::desc("Maximum percentage of solving time that can be spent by a single instruction of a call path over total solving time for all instructions (default=1.0 (always))"),
+                      cl::cat(TerminationCat));
+
+
 
   /*** Debugging options ***/
 
@@ -337,27 +361,6 @@ namespace {
 
   cl::opt<bool>
   DebugCheckForImpliedValues("debug-check-for-implied-values");
-
-
-  cl::opt<double>
-  MaxStaticForkPct("max-static-fork-pct", 
-		   cl::init(1.),
-		   cl::desc("(default=1.0)"));
-
-  cl::opt<double>
-  MaxStaticSolvePct("max-static-solve-pct",
-		    cl::init(1.),
-		    cl::desc("(default=1.0)"));
-
-  cl::opt<double>
-  MaxStaticCPForkPct("max-static-cpfork-pct", 
-		     cl::init(1.),
-		     cl::desc("(default=1.0)"));
-
-  cl::opt<double>
-  MaxStaticCPSolvePct("max-static-cpsolve-pct",
-		      cl::init(1.),
-		      cl::desc("(default=1.0)"));
   
 }
 
