@@ -131,7 +131,7 @@ namespace {
 
   cl::opt<std::string>
   RunInDir("run-in-dir",
-           cl::desc("Change to the given directory before starting execution"),
+           cl::desc("Change to the given directory before starting execution (default=location of tested file)."),
            cl::cat(StartCat));
   
   cl::opt<std::string>
@@ -147,7 +147,7 @@ namespace {
 
   cl::opt<bool>
   OptimizeModule("optimize",
-                 cl::desc("Optimize the code before execution"),
+                 cl::desc("Optimize the code before execution (default=false)."),
 		 cl::init(false),
                  cl::cat(StartCat));
   
@@ -183,7 +183,7 @@ namespace {
 
   cl::opt<bool>
   WithPOSIXRuntime("posix-runtime",
-                   cl::desc("Link with POSIX runtime. Options that can be passed as arguments to the programs are: --sym-arg <max-len>  --sym-args <min-argvs> <max-argvs> <max-len> + file model options"),
+                   cl::desc("Link with POSIX runtime. Options that can be passed as arguments to the programs are: --sym-arg <max-len>  --sym-args <min-argvs> <max-argvs> <max-len> + file model options (default=false)."),
                    cl::init(false),
                    cl::cat(LinkCat));
 
@@ -209,15 +209,15 @@ namespace {
 
   cl::opt<bool>
   NoOutput("no-output",
-           cl::desc("Don't generate test files"));
+           cl::desc("Don't generate test files (default=false)."));
 
   cl::opt<bool>
   WarnAllExternals("warn-all-externals",
-                   cl::desc("Give initial warning for all externals."));
+                   cl::desc("Give initial warning for all externals (default=false)."));
 
   cl::opt<bool>
   OptExitOnError("exit-on-error",
-              cl::desc("Exit if errors occur"));
+              cl::desc("Exit KLEE if an error in the tested application has been found (default=false)."));
 
 
   /*** Replaying options ***/
