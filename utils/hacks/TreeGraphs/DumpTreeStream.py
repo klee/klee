@@ -32,7 +32,7 @@ def getTreeStream(path):
     return paths
 
 def writeTreeStream(path, output):
-    paths = getTreeSTream(path)
+    paths = getTreeStream(path)
     print 'Writing %d paths'%len(paths)
     for i,data in paths.items():
         if i!=0:
