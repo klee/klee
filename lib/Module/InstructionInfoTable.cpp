@@ -135,11 +135,28 @@ public:
 
   std::unique_ptr<FunctionInfo> getFunctionInfo(const llvm::Function &Func) {
     auto asmLine = lineTable.at(reinterpret_cast<std::uintptr_t>(&Func));
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(6, 0)
+    auto dsub = Func.getSubprogram();
+#else
+    auto dsub = llvm::getDISubprogram(&Func);
+#endif
+    if (dsub == nullptr)
+      return std::unique_ptr<FunctionInfo>(
+          new FunctionInfo(0, getInternedString(""), 0, asmLine));
+    auto path = getFullPath(dsub->getDirectory(), dsub->getFilename());
+    return std::unique_ptr<FunctionInfo>(
+        new FunctionInfo(0, getInternedString(path), dsub->getLine(), asmLine));
 
+#else
     // Acquire function debug information
+#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
     for (auto subIt = DIF.subprogram_begin(), subItE = DIF.subprogram_end();
          subIt != subItE; ++subIt) {
       llvm::DISubprogram SubProgram(*subIt);
+#else
+    for (const auto &SubProgram : DIF.subprograms()) {
+#endif
       if (SubProgram.getFunction() != &Func)
         continue;
 
@@ -152,12 +169,23 @@ public:
 
     return std::unique_ptr<FunctionInfo>(
         new FunctionInfo(0, getInternedString(""), 0, asmLine));
+#endif
   }
 
   std::unique_ptr<InstructionInfo>
   getInstructionInfo(const llvm::Instruction &Inst, const FunctionInfo &f) {
     auto asmLine = lineTable.at(reinterpret_cast<std::uintptr_t>(&Inst));
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
+    auto dl = Inst.getDebugLoc();
+    auto dil = dl.get();
+    if (dil != nullptr) {
+      auto full_path = getFullPath(dil->getDirectory(), dil->getFilename());
+
+      return std::unique_ptr<InstructionInfo>(new InstructionInfo(
+          0, getInternedString(full_path), dl.getLine(), dl.getCol(), asmLine));
+    }
+#else
     llvm::DebugLoc Loc(Inst.getDebugLoc());
     if (!Loc.isUnknown()) {
       llvm::DIScope Scope(Loc.getScope(module.getContext()));
@@ -166,7 +194,7 @@ public:
           new InstructionInfo(0, getInternedString(full_path), Loc.getLine(),
                               Loc.getCol(), asmLine));
     }
-
+#endif
     // If nothing found, use the surrounding function
     return std::unique_ptr<InstructionInfo>(
         new InstructionInfo(0, f.file, f.line, 0, asmLine));
