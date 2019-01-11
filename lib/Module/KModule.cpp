@@ -427,7 +427,8 @@ static int getOperandNum(Value *v,
     return a->getArgNo();
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
     // Metadata is no longer a Value
-  } else if (isa<BasicBlock>(v) || isa<InlineAsm>(v)) {
+  } else if (isa<BasicBlock>(v) || isa<InlineAsm>(v) ||
+             isa<MetadataAsValue>(v)) {
 #else
   } else if (isa<BasicBlock>(v) || isa<InlineAsm>(v) ||
              isa<MDNode>(v)) {

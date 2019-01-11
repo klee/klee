@@ -53,6 +53,9 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
     // increment now since deletion of instructions makes iterator invalid.
     ++i;
     if (ii) {
+      if (isa<DbgInfoIntrinsic>(ii))
+        continue;
+
       switch (ii->getIntrinsicID()) {
       case Intrinsic::vastart:
       case Intrinsic::vaend:

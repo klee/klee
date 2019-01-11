@@ -546,7 +546,7 @@ void StatsTracker::writeIStats() {
       // KCachegrind can create two entries for the function, one with an
       // unnamed file and one without.
       Function *fn = &*fnIt;
-      const InstructionInfo &ii = executor.kmodule->infos->getFunctionInfo(fn);
+      const FunctionInfo &ii = executor.kmodule->infos->getFunctionInfo(*fn);
       if (ii.file != sourceFile) {
         of << "fl=" << ii.file << "\n";
         sourceFile = ii.file;
@@ -558,7 +558,7 @@ void StatsTracker::writeIStats() {
         for (BasicBlock::iterator it = bbIt->begin(), ie = bbIt->end(); 
              it != ie; ++it) {
           Instruction *instr = &*it;
-          const InstructionInfo &ii = executor.kmodule->infos->getInfo(instr);
+          const InstructionInfo &ii = executor.kmodule->infos->getInfo(*instr);
           unsigned index = ii.id;
           if (ii.file!=sourceFile) {
             of << "fl=" << ii.file << "\n";
@@ -575,14 +575,13 @@ void StatsTracker::writeIStats() {
               (isa<CallInst>(instr) || isa<InvokeInst>(instr))) {
             CallSiteSummaryTable::iterator it = callSiteStats.find(instr);
             if (it!=callSiteStats.end()) {
-              for (std::map<llvm::Function*, CallSiteInfo>::iterator
-                     fit = it->second.begin(), fie = it->second.end(); 
+              for (auto fit = it->second.begin(), fie = it->second.end();
                    fit != fie; ++fit) {
-                Function *f = fit->first;
+                const Function *f = fit->first;
                 CallSiteInfo &csi = fit->second;
-                const InstructionInfo &fii = 
-                  executor.kmodule->infos->getFunctionInfo(f);
-  
+                const FunctionInfo &fii =
+                    executor.kmodule->infos->getFunctionInfo(*f);
+
                 if (fii.file!="" && fii.file!=sourceFile)
                   of << "cfl=" << fii.file << "\n";
                 of << "cfn=" << f->getName().str() << "\n";
@@ -746,7 +745,7 @@ void StatsTracker::computeReachableUncovered() {
              it != ie; ++it) {
           Instruction *inst = &*it;
           instructions.push_back(inst);
-          unsigned id = infos.getInfo(inst).id;
+          unsigned id = infos.getInfo(*inst).id;
           sm.setIndexedValue(stats::minDistToReturn, 
                              id, 
                              isa<ReturnInst>(inst)
@@ -761,8 +760,8 @@ void StatsTracker::computeReachableUncovered() {
     bool changed;
     do {
       changed = false;
-      for (std::vector<Instruction*>::iterator it = instructions.begin(),
-             ie = instructions.end(); it != ie; ++it) {
+      for (auto it = instructions.begin(), ie = instructions.end(); it != ie;
+           ++it) {
         Instruction *inst = *it;
         unsigned bestThrough = 0;
 
@@ -782,13 +781,13 @@ void StatsTracker::computeReachableUncovered() {
         }
        
         if (bestThrough) {
-          unsigned id = infos.getInfo(*it).id;
+          unsigned id = infos.getInfo(*(*it)).id;
           uint64_t best, cur = best = sm.getIndexedValue(stats::minDistToReturn, id);
           std::vector<Instruction*> succs = getSuccs(*it);
           for (std::vector<Instruction*>::iterator it2 = succs.begin(),
                  ie = succs.end(); it2 != ie; ++it2) {
             uint64_t dist = sm.getIndexedValue(stats::minDistToReturn,
-                                               infos.getInfo(*it2).id);
+                                               infos.getInfo(*(*it2)).id);
             if (dist) {
               uint64_t val = bestThrough + dist;
               if (best==0 || val<best)
@@ -824,7 +823,7 @@ void StatsTracker::computeReachableUncovered() {
       for (BasicBlock::iterator it = bbIt->begin(), ie = bbIt->end(); 
            it != ie; ++it) {
         Instruction *inst = &*it;
-        unsigned id = infos.getInfo(inst).id;
+        unsigned id = infos.getInfo(*inst).id;
         instructions.push_back(inst);
         sm.setIndexedValue(stats::minDistToUncovered, 
                            id, 
@@ -842,8 +841,8 @@ void StatsTracker::computeReachableUncovered() {
     for (std::vector<Instruction*>::iterator it = instructions.begin(),
            ie = instructions.end(); it != ie; ++it) {
       Instruction *inst = *it;
-      uint64_t best, cur = best = sm.getIndexedValue(stats::minDistToUncovered, 
-                                                     infos.getInfo(inst).id);
+      uint64_t best, cur = best = sm.getIndexedValue(stats::minDistToUncovered,
+                                                     infos.getInfo(*inst).id);
       unsigned bestThrough = 0;
       
       if (isa<CallInst>(inst) || isa<InvokeInst>(inst)) {
@@ -858,8 +857,8 @@ void StatsTracker::computeReachableUncovered() {
           }
 
           if (!(*fnIt)->isDeclaration()) {
-            uint64_t calleeDist = sm.getIndexedValue(stats::minDistToUncovered,
-                                                     infos.getFunctionInfo(*fnIt).id);
+            uint64_t calleeDist = sm.getIndexedValue(
+                stats::minDistToUncovered, infos.getFunctionInfo(*(*fnIt)).id);
             if (calleeDist) {
               calleeDist = 1+calleeDist; // count instruction itself
               if (best==0 || calleeDist<best)
@@ -876,7 +875,7 @@ void StatsTracker::computeReachableUncovered() {
         for (std::vector<Instruction*>::iterator it2 = succs.begin(),
                ie = succs.end(); it2 != ie; ++it2) {
           uint64_t dist = sm.getIndexedValue(stats::minDistToUncovered,
-                                             infos.getInfo(*it2).id);
+                                             infos.getInfo(*(*it2)).id);
           if (dist) {
             uint64_t val = bestThrough + dist;
             if (best==0 || val<best)
@@ -886,8 +885,7 @@ void StatsTracker::computeReachableUncovered() {
       }
 
       if (best != cur) {
-        sm.setIndexedValue(stats::minDistToUncovered, 
-                           infos.getInfo(inst).id, 
+        sm.setIndexedValue(stats::minDistToUncovered, infos.getInfo(*inst).id,
                            best);
         changed = true;
       }
