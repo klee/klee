@@ -72,8 +72,6 @@ private:
   // unsupported, use copy constructor
   ExecutionState &operator=(const ExecutionState &);
 
-  std::map<std::string, std::string> fnAliases;
-
 public:
   // Execution - Control Flow specific
 
@@ -142,8 +140,6 @@ public:
 
   /// @brief Set of used array names for this state.  Used to avoid collisions.
   std::set<std::string> arrayNames;
-
-  std::string getFnAlias(std::string fn);
 
   // The objects handling the klee_open_merge calls this state ran through
   std::vector<ref<MergeHandler> > openMergeStack;
