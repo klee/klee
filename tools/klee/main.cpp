@@ -289,6 +289,22 @@ namespace {
            cl::desc("Link the llvm libc++ library into the bitcode (default=false)"),
            cl::init(false),
            cl::cat(LinkCat));
+
+  cl::OptionCategory TestCompCat("Options specific to Test-Comp",
+                                 "Options specific to test-comp.");
+
+  llvm::cl::opt<bool> WriteXMLTests("write-xml-tests",
+                                    llvm::cl::desc("Write XML-formated tests"),
+                                    llvm::cl::init(false),
+                                    cl::cat(TestCompCat));
+
+  llvm::cl::opt<std::string> TCOrig("tc-orig",
+                                    llvm::cl::desc("Test-Comp original file"),
+                                    llvm::cl::cat(TestCompCat));
+
+  llvm::cl::opt<std::string>
+      TCHash("tc-hash", llvm::cl::desc("Test-Comp hash sum of original file"),
+             llvm::cl::cat(TestCompCat));
 }
 
 namespace klee {
@@ -312,6 +328,17 @@ private:
   // used for writing .ktest files
   int m_argc;
   char **m_argv;
+
+  void writeTestCaseKTest(
+      const std::vector<std::pair<std::string, std::vector<unsigned char>>>
+          &out,
+      unsigned id);
+
+  void writeTestCaseXML(
+      bool isError,
+      const std::vector<std::pair<std::string, std::vector<unsigned char>>>
+          &out,
+      unsigned id);
 
 public:
   KleeHandler(int argc, char **argv);
@@ -469,53 +496,120 @@ KleeHandler::openTestFile(const std::string &suffix, unsigned id) {
   return openOutputFile(getTestFilename(suffix, id));
 }
 
+void KleeHandler::writeTestCaseKTest(
+    const std::vector<std::pair<std::string, std::vector<unsigned char>>> &out,
+    unsigned id) {
+  KTest b;
+  b.numArgs = m_argc;
+  b.args = m_argv;
+  b.symArgvs = 0;
+  b.symArgvLen = 0;
+  b.numObjects = out.size();
+  b.objects = new KTestObject[b.numObjects];
+  assert(b.objects);
+  for (unsigned i = 0; i < b.numObjects; i++) {
+    KTestObject *o = &b.objects[i];
+    o->name = const_cast<char *>(out[i].first.c_str());
+    o->numBytes = out[i].second.size();
+    o->bytes = new unsigned char[o->numBytes];
+    assert(o->bytes);
+    std::copy(out[i].second.begin(), out[i].second.end(), o->bytes);
+  }
+  if (!kTest_toFile(&b,
+                    getOutputFilename(getTestFilename("ktest", id)).c_str())) {
+    klee_warning("unable to write output test case, losing it");
+  } else {
+    ++m_numGeneratedTests;
+  }
+  for (unsigned i = 0; i < b.numObjects; i++)
+    delete[] b.objects[i].bytes;
+  delete[] b.objects;
+}
 
+void KleeHandler::writeTestCaseXML(
+    bool isError,
+    const std::vector<std::pair<std::string, std::vector<unsigned char>>>
+        &assignments,
+    unsigned id) {
+
+  // TODO: This is super specific to test-comp and assumes that the name is the
+  // type information
+  auto file = openTestFile("xml", id);
+  if (!file)
+    return;
+
+  *file << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n";
+  *file << "<!DOCTYPE testcase PUBLIC \"+//IDN sosy-lab.org//DTD test-format "
+           "testcase 1.0//EN\" "
+           "\"https://sosy-lab.org/test-format/testcase-1.0.dtd\">\n";
+  *file << "<testcase";
+  if (isError)
+    *file << " coversError=\"true\"";
+  *file << ">\n";
+  for (auto &item : assignments) {
+    *file << "\t<input variable=\"" << item.first << "\" ";
+    *file << "type =\"";
+    // print type of the input
+    *file << item.first;
+    *file << "\">";
+    // Ignore the type
+    auto type_size_bytes = item.second.size() * 8;
+    llvm::APInt v(type_size_bytes, 0, false);
+    for (auto i = item.second.rbegin(), e = item.second.rend(); i != e; ++i) {
+      v <<= 8;
+      v |= *i;
+    }
+    // print value
+
+    // Check if this is an unsigned type
+    if (item.first.find("u") == 0) {
+      v.print(*file, false);
+    } else if (item.first.rfind("*") != std::string::npos) {
+      // Pointer types
+      v.print(*file, false);
+    } else if (item.first.find("float") == 0) {
+      llvm::APFloat(APFloatBase::IEEEhalf(), v).print(*file);
+    } else if (item.first.find("double") == 0) {
+      llvm::APFloat(APFloatBase::IEEEdouble(), v).print(*file);
+    } else if (item.first.rfind("_t") != std::string::npos) {
+      // arbitrary type, e.g. sector_t
+      v.print(*file, false);
+    } else if (item.first.find("_") == 0) {
+      // _Bool
+      v.print(*file, false);
+    } else {
+      // the rest must be signed
+      v.print(*file, true);
+    }
+    *file << "</input>\n";
+  }
+  *file << "</testcase>\n";
+
+  ++m_numGeneratedTests;
+}
 /* Outputs all files (.ktest, .kquery, .cov etc.) describing a test case */
 void KleeHandler::processTestCase(const ExecutionState &state,
                                   const char *errorMessage,
                                   const char *errorSuffix) {
   if (!WriteNone) {
-    std::vector< std::pair<std::string, std::vector<unsigned char> > > out;
-    bool success = m_interpreter->getSymbolicSolution(state, out);
+    const auto start_time = time::getWallTime();
+    std::vector< std::pair<std::string, std::vector<unsigned char> > > assignments;
+    bool success = m_interpreter->getSymbolicSolution(state, assignments);
 
     if (!success)
       klee_warning("unable to get symbolic solution, losing test case");
 
-    const auto start_time = time::getWallTime();
-
-    unsigned id = ++m_numTotalTests;
+    unsigned test_id = ++m_numTotalTests;
 
     if (success) {
-      KTest b;
-      b.numArgs = m_argc;
-      b.args = m_argv;
-      b.symArgvs = 0;
-      b.symArgvLen = 0;
-      b.numObjects = out.size();
-      b.objects = new KTestObject[b.numObjects];
-      assert(b.objects);
-      for (unsigned i=0; i<b.numObjects; i++) {
-        KTestObject *o = &b.objects[i];
-        o->name = const_cast<char*>(out[i].first.c_str());
-        o->numBytes = out[i].second.size();
-        o->bytes = new unsigned char[o->numBytes];
-        assert(o->bytes);
-        std::copy(out[i].second.begin(), out[i].second.end(), o->bytes);
-      }
-
-      if (!kTest_toFile(&b, getOutputFilename(getTestFilename("ktest", id)).c_str())) {
-        klee_warning("unable to write output test case, losing it");
-      } else {
-        ++m_numGeneratedTests;
-      }
-
-      for (unsigned i=0; i<b.numObjects; i++)
-        delete[] b.objects[i].bytes;
-      delete[] b.objects;
+      if (!WriteXMLTests)
+        writeTestCaseKTest(assignments, test_id);
+      else
+        writeTestCaseXML(errorMessage != nullptr, assignments, test_id);
     }
 
     if (errorMessage) {
-      auto f = openTestFile(errorSuffix, id);
+      auto f = openTestFile(errorSuffix, test_id);
       if (f)
         *f << errorMessage;
     }
@@ -524,7 +618,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       std::vector<unsigned char> concreteBranches;
       m_pathWriter->readStream(m_interpreter->getPathStreamID(state),
                                concreteBranches);
-      auto f = openTestFile("path", id);
+      auto f = openTestFile("path", test_id);
       if (f) {
         for (const auto &branch : concreteBranches) {
           *f << branch << '\n';
@@ -535,7 +629,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     if (errorMessage || WriteKQueries) {
       std::string constraints;
       m_interpreter->getConstraintLog(state, constraints,Interpreter::KQUERY);
-      auto f = openTestFile("kquery", id);
+      auto f = openTestFile("kquery", test_id);
       if (f)
         *f << constraints;
     }
@@ -545,7 +639,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       // SMT-LIBv2 not CVC which is a bit confusing
       std::string constraints;
       m_interpreter->getConstraintLog(state, constraints, Interpreter::STP);
-      auto f = openTestFile("cvc", id);
+      auto f = openTestFile("cvc", test_id);
       if (f)
         *f << constraints;
     }
@@ -553,7 +647,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     if (WriteSMT2s) {
       std::string constraints;
         m_interpreter->getConstraintLog(state, constraints, Interpreter::SMTLIB2);
-        auto f = openTestFile("smt2", id);
+        auto f = openTestFile("smt2", test_id);
         if (f)
           *f << constraints;
     }
@@ -562,7 +656,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       std::vector<unsigned char> symbolicBranches;
       m_symPathWriter->readStream(m_interpreter->getSymbolicPathStreamID(state),
                                   symbolicBranches);
-      auto f = openTestFile("sym.path", id);
+      auto f = openTestFile("sym.path", test_id);
       if (f) {
         for (const auto &branch : symbolicBranches) {
           *f << branch << '\n';
@@ -573,7 +667,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     if (WriteCov) {
       std::map<const std::string*, std::set<unsigned> > cov;
       m_interpreter->getCoveredLines(state, cov);
-      auto f = openTestFile("cov", id);
+      auto f = openTestFile("cov", test_id);
       if (f) {
         for (const auto &entry : cov) {
           for (const auto &line : entry.second) {
@@ -588,7 +682,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
 
     if (WriteTestInfo) {
       time::Span elapsed_time(time::getWallTime() - start_time);
-      auto f = openTestFile("info", id);
+      auto f = openTestFile("info", test_id);
       if (f)
         *f << "Time to generate test case: " << elapsed_time << '\n';
     }
@@ -1376,8 +1470,46 @@ int main(int argc, char **argv, char **envp) {
     interpreter->setReplayPath(&replayPath);
   }
 
-
   auto startTime = std::time(nullptr);
+
+  if (WriteXMLTests) {
+    // Write metadata.xml
+    auto meta_file = handler->openOutputFile("metadata.xml");
+    if (!meta_file)
+      klee_error("Could not write metadata.xml");
+
+    *meta_file
+        << "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n";
+    *meta_file
+        << "<!DOCTYPE test-metadata PUBLIC \"+//IDN sosy-lab.org//DTD "
+           "test-format test-metadata 1.0//EN\" "
+           "\"https://sosy-lab.org/test-format/test-metadata-1.0.dtd\">\n";
+    *meta_file << "<test-metadata>\n";
+    *meta_file << "\t<sourcecodelang>C</sourcecodelang>\n";
+    *meta_file << "\t<producer>" << PACKAGE_STRING << "</producer>\n";
+
+    // Assume with early exit a bug finding mode and otherwise coverage
+    if (OptExitOnError)
+      *meta_file << "\t<specification>COVER( init(main()), FQL(COVER "
+                    "EDGES(@CALL(__VERIFIER_error))) )</specification>\n";
+    else
+      *meta_file << "\t<specification>COVER( init(main()), FQL(COVER "
+                    "EDGES(@DECISIONEDGE)) )</specification>\n";
+
+    // Assume the input file resembles the original source file; just exchange
+    // extension
+    *meta_file << "\t<programfile>" << TCOrig << ".c</programfile>\n";
+    *meta_file << "\t<programhash>" << TCHash << "</programhash>\n";
+    *meta_file << "\t<entryfunction>" << EntryPoint << "</entryfunction>\n";
+    *meta_file << "\t<architecture>"
+               << loadedModules[0]->getDataLayout().getPointerSizeInBits()
+               << "bit</architecture>\n";
+    std::stringstream t;
+    t << std::put_time(std::localtime(&startTime), "%Y-%m-%dT%H:%M:%SZ");
+    *meta_file << "\t<creationtime>" << t.str() << "</creationtime>\n";
+    *meta_file << "</test-metadata>\n";
+  }
+
   { // output clock info and start time
     std::stringstream startInfo;
     startInfo << time::getClockInfo()
