@@ -1125,6 +1125,37 @@ void Executor::updateSeeds(ExecutionState &current,
   }
 }
 
+
+static Solver::Validity seedingFixOneBranch(ExecutionState& current,
+                                            ref<Expr> condition,
+                                            TimingSolver *solver,
+                                            std::vector<SeedInfo>& seeds) {
+  bool trueSeed=false, falseSeed=false;
+  // Is seed extension still ok here?
+  for (auto& seed : seeds) {
+    ref<klee::ConstantExpr> value;
+    bool success =
+      solver->getValue(current, seed.assignment.evaluate(condition), value);
+    assert(success && "FIXME: Unhandled solver failure");
+    (void) success;
+    if (value->isTrue()) {
+      trueSeed = true;
+    } else {
+      falseSeed = true;
+    }
+    if (trueSeed && falseSeed)
+      break;
+  }
+
+  if (!(trueSeed && falseSeed)) {
+    assert(trueSeed || falseSeed);
+    return trueSeed ? Solver::True : Solver::False;
+  }
+
+  return Solver::Unknown;
+}
+
+
 Executor::StatePair
 Executor::seedingFork(ExecutionState &current, ref<Expr> condition,
                       std::vector<SeedInfo>& seeds, bool isInternal) {
@@ -1142,30 +1173,11 @@ Executor::seedingFork(ExecutionState &current, ref<Expr> condition,
   // and false seeds.
   if ((current.forkDisabled || OnlyReplaySeeds) &&
       res == Solver::Unknown) {
-    bool trueSeed=false, falseSeed=false;
-    // Is seed extension still ok here?
-    for (auto& seed : seeds) {
-      ref<ConstantExpr> value;
-      bool success =
-        solver->getValue(current, seed.assignment.evaluate(condition), value);
-      assert(success && "FIXME: Unhandled solver failure");
-      (void) success;
-      if (value->isTrue()) {
-        trueSeed = true;
-      } else {
-        falseSeed = true;
-      }
-      if (trueSeed && falseSeed)
-        break;
-    }
-    if (!(trueSeed && falseSeed)) {
-      assert(trueSeed || falseSeed);
-
-      res = trueSeed ? Solver::True : Solver::False;
-      addConstraint(current, trueSeed ? condition : Expr::createIsZero(condition));
-    }
+      res = seedingFixOneBranch(current, condition, solver, seeds);
+      if (res != Solver::Unknown)
+        addConstraint(current, res == Solver::False ?
+                                Expr::createIsZero(condition) : condition);
   }
-
 
   // only one branch is possible
   if (res != Solver::Unknown)
