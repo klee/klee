@@ -905,7 +905,6 @@ Executor::doBranching(ExecutionState &current, ref<Expr> condition, bool isInter
   return StatePair(trueState, falseState);
 }
 
-
 Executor::StatePair 
 Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   auto it = seedMap.find(&current);
@@ -969,7 +968,6 @@ followOneBranch(ExecutionState &current,
   } else
     abort();
 }
-
 
 static bool solveCondition(ExecutionState& current, ref<Expr> condition,
                            Solver::Validity& result,
@@ -1086,7 +1084,6 @@ Executor::regularFork(ExecutionState &current, ref<Expr> condition, bool isInter
   return doBranching(current, condition, isInternal);
 }
 
-
 void Executor::updateSeeds(ExecutionState &current,
                            ExecutionState *trueState,
                            ExecutionState *falseState,
@@ -1125,7 +1122,6 @@ void Executor::updateSeeds(ExecutionState &current,
   }
 }
 
-
 static Solver::Validity seedingFixOneBranch(ExecutionState& current,
                                             ref<Expr> condition,
                                             TimingSolver *solver,
@@ -1154,7 +1150,6 @@ static Solver::Validity seedingFixOneBranch(ExecutionState& current,
 
   return Solver::Unknown;
 }
-
 
 Executor::StatePair
 Executor::seedingFork(ExecutionState &current, ref<Expr> condition,
