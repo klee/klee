@@ -883,8 +883,7 @@ void Executor::branch(ExecutionState &state,
 Executor::StatePair 
 Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   Solver::Validity res;
-  std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it = 
-    seedMap.find(&current);
+  auto it = seedMap.find(&current);
   bool isSeeding = it != seedMap.end();
 
   if (!isSeeding && !isa<ConstantExpr>(condition) && 
@@ -982,11 +981,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       res == Solver::Unknown) {
     bool trueSeed=false, falseSeed=false;
     // Is seed extension still ok here?
-    for (std::vector<SeedInfo>::iterator siit = it->second.begin(), 
-           siie = it->second.end(); siit != siie; ++siit) {
+    for (auto& seed : it->second) {
       ref<ConstantExpr> res;
       bool success = 
-        solver->getValue(current, siit->assignment.evaluate(condition), res);
+        solver->getValue(current, seed.assignment.evaluate(condition), res);
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
       if (res->isTrue()) {
@@ -1041,19 +1039,18 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     if (it != seedMap.end()) {
       std::vector<SeedInfo> seeds = it->second;
       it->second.clear();
-      std::vector<SeedInfo> &trueSeeds = seedMap[trueState];
-      std::vector<SeedInfo> &falseSeeds = seedMap[falseState];
-      for (std::vector<SeedInfo>::iterator siit = seeds.begin(), 
-             siie = seeds.end(); siit != siie; ++siit) {
+      auto &trueSeeds = seedMap[trueState];
+      auto &falseSeeds = seedMap[falseState];
+      for (auto& seed : seeds) {
         ref<ConstantExpr> res;
         bool success = 
-          solver->getValue(current, siit->assignment.evaluate(condition), res);
+          solver->getValue(current, seed.assignment.evaluate(condition), res);
         assert(success && "FIXME: Unhandled solver failure");
         (void) success;
         if (res->isTrue()) {
-          trueSeeds.push_back(*siit);
+          trueSeeds.push_back(seed);
         } else {
-          falseSeeds.push_back(*siit);
+          falseSeeds.push_back(seed);
         }
       }
       
