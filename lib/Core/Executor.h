@@ -486,6 +486,11 @@ private:
   void dumpStates();
   void dumpPTree();
 
+  void logNewStates(ExecutionState& current,
+                    ExecutionState *trueState,
+                    ExecutionState *falseState,
+                    bool isInternal);
+
 public:
   Executor(llvm::LLVMContext &ctx, const InterpreterOptions &opts,
       InterpreterHandler *ie);
