@@ -347,10 +347,15 @@ private:
               const std::vector< ref<Expr> > &conditions,
               std::vector<ExecutionState*> &result);
 
+  // helper method that calls branch() and returns a StatePair
+  StatePair doBranching(ExecutionState &current, ref<Expr> condition, bool isInternal);
+
   // Fork current and return states in which condition holds / does
   // not hold, respectively. One of the states is necessarily the
   // current state, and one of the states may be null.
   StatePair fork(ExecutionState &current, ref<Expr> condition, bool isInternal);
+
+  // Helper methods that are called by fork() method.
   StatePair regularFork(ExecutionState &current, ref<Expr> condition, bool isInternal);
   StatePair seedingFork(ExecutionState &current, ref<Expr> condition,
                         std::vector<SeedInfo>& seeds, bool isInternal);
