@@ -1036,7 +1036,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     falseState = trueState->branch();
     addedStates.push_back(falseState);
 
-    if (it != seedMap.end()) {
+    if (isSeeding) {
       std::vector<SeedInfo> seeds = it->second;
       it->second.clear();
       auto &trueSeeds = seedMap[trueState];
