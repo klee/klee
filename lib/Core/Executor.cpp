@@ -1044,20 +1044,22 @@ Executor::regularFork(ExecutionState &current, ref<Expr> condition, bool isInter
   } else if (res==Solver::Unknown) {
     assert(!replayKTest && "in replay mode, only one branch can be true.");
 
+    // check whether we may actually branch the state
     if ((MaxMemoryInhibit && atMemoryLimit) ||
         current.forkDisabled ||
         inhibitForking ||
         (MaxForks!=~0u && stats::forks >= MaxForks)) {
 
-  if (MaxMemoryInhibit && atMemoryLimit)
-    klee_warning_once(0, "skipping fork (memory cap exceeded)");
-  else if (current.forkDisabled)
-    klee_warning_once(0, "skipping fork (fork disabled on current path)");
-  else if (inhibitForking)
-    klee_warning_once(0, "skipping fork (fork disabled globally)");
-  else
-    klee_warning_once(0, "skipping fork (max-forks reached)");
+      if (MaxMemoryInhibit && atMemoryLimit)
+        klee_warning_once(0, "skipping fork (memory cap exceeded)");
+      else if (current.forkDisabled)
+        klee_warning_once(0, "skipping fork (fork disabled on current path)");
+      else if (inhibitForking)
+        klee_warning_once(0, "skipping fork (fork disabled globally)");
+      else
+        klee_warning_once(0, "skipping fork (max-forks reached)");
 
+      // we will not fork, but follow at least a random path
       TimerStatIncrementer timer(stats::forkTime);
       if (theRNG.getBool()) {
         addConstraint(current, condition);
