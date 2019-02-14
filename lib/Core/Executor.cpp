@@ -981,6 +981,26 @@ static bool solveCondition(ExecutionState& current, ref<Expr> condition,
   return success;
 }
 
+// return which branch we should follow in the replay mode
+static Solver::Validity getReplayBranch(const std::vector<bool>& replayPath,
+                                        size_t replayPosition,
+                                        Solver::Validity res) {
+  bool branch = replayPath[replayPosition];
+
+  if (res==Solver::True) {
+    assert(branch && "hit invalid branch in replay path mode");
+  } else if (res==Solver::False) {
+    assert(!branch && "hit invalid branch in replay path mode");
+  } else {
+    if(branch) {
+      res = Solver::True;
+    } else  {
+      res = Solver::False;
+    }
+  }
+
+  return res;
+}
 
 Executor::StatePair
 Executor::regularFork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
@@ -1023,22 +1043,11 @@ Executor::regularFork(ExecutionState &current, ref<Expr> condition, bool isInter
   if (replayPath && !isInternal) {
     assert(replayPosition<replayPath->size() &&
            "ran out of branches in replay path mode");
-    bool branch = (*replayPath)[replayPosition++];
-
-    if (res==Solver::True) {
-      assert(branch && "hit invalid branch in replay path mode");
-    } else if (res==Solver::False) {
-      assert(!branch && "hit invalid branch in replay path mode");
-    } else {
-      // add constraints
-      if(branch) {
-        res = Solver::True;
-        addConstraint(current, condition);
-      } else  {
-        res = Solver::False;
-        addConstraint(current, Expr::createIsZero(condition));
-      }
-    }
+    res = getReplayBranch(*replayPath, replayPosition, res);
+    ++replayPosition;
+    addConstraint(current,
+                  res == Solver::False ?
+                    Expr::createIsZero(condition) : condition);
   } else if (res==Solver::Unknown) {
     assert(!replayKTest && "in replay mode, only one branch can be true.");
 
