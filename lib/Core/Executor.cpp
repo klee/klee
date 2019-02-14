@@ -972,6 +972,18 @@ followOneBranch(ExecutionState &current,
     abort();
 }
 
+
+static bool solveCondition(ExecutionState& current, ref<Expr> condition,
+                           Solver::Validity& result,
+                           TimingSolver *solver, time::Span timeout)
+{
+  solver->setTimeout(timeout);
+  bool success = solver->evaluate(current, condition, result);
+  solver->setTimeout(time::Span());
+  return success;
+}
+
+
 Executor::StatePair
 Executor::regularFork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   assert(seedMap.find(&current) == seedMap.end());
@@ -1004,12 +1016,7 @@ Executor::regularFork(ExecutionState &current, ref<Expr> condition, bool isInter
     }
   }
 
-  time::Span timeout = coreSolverTimeout;
-
-  solver->setTimeout(timeout);
-  bool success = solver->evaluate(current, condition, res);
-  solver->setTimeout(time::Span());
-  if (!success) {
+  if (!solveCondition(current, condition, res, solver, coreSolverTimeout)) {
     current.pc = current.prevPC;
     terminateStateEarly(current, "Query timed out (fork).");
     return StatePair(0, 0);
@@ -1076,15 +1083,11 @@ Executor::seedingFork(ExecutionState &current, ref<Expr> condition,
   assert(seedMap.find(&current) != seedMap.end());
   Solver::Validity res;
 
-  time::Span timeout
-    = coreSolverTimeout * static_cast<unsigned>(seeds.size());
-  solver->setTimeout(timeout);
-  bool success = solver->evaluate(current, condition, res);
-  solver->setTimeout(time::Span());
-  if (!success) {
+  if (!solveCondition(current, condition, res, solver,
+                      coreSolverTimeout * static_cast<unsigned>(seeds.size()))) {
     current.pc = current.prevPC;
     terminateStateEarly(current, "Query timed out (fork).");
-    return StatePair(0, 0);
+    return StatePair(0, 0); // solver timeout
   }
 
   // Fix branch in only-replay-seed mode, if we don't have both true
