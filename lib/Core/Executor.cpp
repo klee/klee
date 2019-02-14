@@ -1136,12 +1136,12 @@ Executor::seedingFork(ExecutionState &current, ref<Expr> condition,
     bool trueSeed=false, falseSeed=false;
     // Is seed extension still ok here?
     for (auto& seed : seeds) {
-      ref<ConstantExpr> res;
+      ref<ConstantExpr> value;
       bool success =
-        solver->getValue(current, seed.assignment.evaluate(condition), res);
+        solver->getValue(current, seed.assignment.evaluate(condition), value);
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
-      if (res->isTrue()) {
+      if (value->isTrue()) {
         trueSeed = true;
       } else {
         falseSeed = true;
