@@ -974,6 +974,7 @@ Executor::regularFork(ExecutionState &current, ref<Expr> condition, bool isInter
   }
 
   time::Span timeout = coreSolverTimeout;
+
   solver->setTimeout(timeout);
   bool success = solver->evaluate(current, condition, res);
   solver->setTimeout(time::Span());
@@ -1103,14 +1104,6 @@ Executor::seedingFork(ExecutionState &current, ref<Expr> condition,
     }
   }
 
-
-  // XXX - even if the constraint is provable one way or the other we
-  // can probably benefit by adding this constraint and allowing it to
-  // reduce the other constraints. For example, if we do a binary
-  // search on a particular value, and then see a comparison against
-  // the value it has been fixed at, we should take this as a nice
-  // hint to just use the single constraint instead of all the binary
-  // search ones. If that makes sense.
   if (res==Solver::True) {
     if (!isInternal) {
       if (pathWriter) {
