@@ -941,6 +941,37 @@ void Executor::logNewStates(ExecutionState& current,
   }
 }
 
+
+
+static Executor::StatePair
+followOneBranch(ExecutionState &current,
+                Solver::Validity res,
+                TreeStreamWriter *pathWriter) {
+  assert(res != Solver::Unknown);
+
+  // XXX - even if the constraint is provable one way or the other we
+  // can probably benefit by adding this constraint and allowing it to
+  // reduce the other constraints. For example, if we do a binary
+  // search on a particular value, and then see a comparison against
+  // the value it has been fixed at, we should take this as a nice
+  // hint to just use the single constraint instead of all the binary
+  // search ones. If that makes sense.
+  if (res==Solver::True) {
+    if (pathWriter) {
+      current.pathOS << "1";
+    }
+
+    return Executor::StatePair(&current, 0);
+  } else if (res==Solver::False) {
+    if (pathWriter) {
+      current.pathOS << "0";
+    }
+
+    return Executor::StatePair(0, &current);
+  } else
+    abort();
+}
+
 Executor::StatePair
 Executor::regularFork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   assert(seedMap.find(&current) == seedMap.end());
@@ -1031,31 +1062,11 @@ Executor::regularFork(ExecutionState &current, ref<Expr> condition, bool isInter
     }
   }
 
-  // XXX - even if the constraint is provable one way or the other we
-  // can probably benefit by adding this constraint and allowing it to
-  // reduce the other constraints. For example, if we do a binary
-  // search on a particular value, and then see a comparison against
-  // the value it has been fixed at, we should take this as a nice
-  // hint to just use the single constraint instead of all the binary
-  // search ones. If that makes sense.
-  if (res==Solver::True) {
-    if (!isInternal) {
-      if (pathWriter) {
-        current.pathOS << "1";
-      }
-    }
+  // only one branch is possible
+  if (res != Solver::Unknown)
+    return followOneBranch(current, res, isInternal ? nullptr : pathWriter);
 
-    return StatePair(&current, 0);
-  } else if (res==Solver::False) {
-    if (!isInternal) {
-      if (pathWriter) {
-        current.pathOS << "0";
-      }
-    }
-
-    return StatePair(0, &current);
-  }
-
+  // we can follow both branches
   return doBranching(current, condition, isInternal);
 }
 
@@ -1104,24 +1115,12 @@ Executor::seedingFork(ExecutionState &current, ref<Expr> condition,
     }
   }
 
-  if (res==Solver::True) {
-    if (!isInternal) {
-      if (pathWriter) {
-        current.pathOS << "1";
-      }
-    }
 
-    return StatePair(&current, 0);
-  } else if (res==Solver::False) {
-    if (!isInternal) {
-      if (pathWriter) {
-        current.pathOS << "0";
-      }
-    }
+  // only one branch is possible
+  if (res != Solver::Unknown)
+    return followOneBranch(current, res,  isInternal ? nullptr : pathWriter);
 
-    return StatePair(0, &current);
-  }
-
+  // we can follow both branches
   ExecutionState *falseState, *trueState;
   std::tie(trueState, falseState) = doBranching(current, condition, isInternal);
 
