@@ -1077,6 +1077,45 @@ Executor::regularFork(ExecutionState &current, ref<Expr> condition, bool isInter
   return doBranching(current, condition, isInternal);
 }
 
+
+void Executor::updateSeeds(ExecutionState &current,
+                           ExecutionState *trueState,
+                           ExecutionState *falseState,
+                           ref<Expr> condition,
+                           std::vector<SeedInfo>& seeds) {
+  assert(seedMap.find(&current) != seedMap.end());
+  std::vector<SeedInfo> seedsCopy = seeds;
+  seeds.clear();
+  auto &trueSeeds = seedMap[trueState];
+  auto &falseSeeds = seedMap[falseState];
+  for (auto& seed : seedsCopy) {
+    ref<ConstantExpr> res;
+    bool success =
+      solver->getValue(current, seed.assignment.evaluate(condition), res);
+    assert(success && "FIXME: Unhandled solver failure");
+    (void) success;
+    if (res->isTrue()) {
+      trueSeeds.push_back(seed);
+    } else {
+      falseSeeds.push_back(seed);
+    }
+  }
+
+  bool swapInfo = false;
+  if (trueSeeds.empty()) {
+    if (&current == trueState) swapInfo = true;
+    seedMap.erase(trueState);
+  }
+  if (falseSeeds.empty()) {
+    if (&current == falseState) swapInfo = true;
+    seedMap.erase(falseState);
+  }
+  if (swapInfo) {
+    std::swap(trueState->coveredNew, falseState->coveredNew);
+    std::swap(trueState->coveredLines, falseState->coveredLines);
+  }
+}
+
 Executor::StatePair
 Executor::seedingFork(ExecutionState &current, ref<Expr> condition,
                       std::vector<SeedInfo>& seeds, bool isInternal) {
@@ -1133,55 +1172,7 @@ Executor::seedingFork(ExecutionState &current, ref<Expr> condition,
       return StatePair(nullptr, nullptr);
   }
 
-  processTree->attach(current.ptreeNode, falseState, trueState);
-
-  if (pathWriter) {
-    // Need to update the pathOS.id field of falseState, otherwise the same id
-    // is used for both falseState and trueState.
-    falseState->pathOS = pathWriter->open(current.pathOS);
-    if (!isInternal) {
-      trueState->pathOS << "1";
-      falseState->pathOS << "0";
-    }
-  }
-  if (symPathWriter) {
-    falseState->symPathOS = symPathWriter->open(current.symPathOS);
-    if (!isInternal) {
-      trueState->symPathOS << "1";
-      falseState->symPathOS << "0";
-    }
-  }
-
-  std::vector<SeedInfo> seedsCopy = seeds;
-  seeds.clear();
-  auto &trueSeeds = seedMap[trueState];
-  auto &falseSeeds = seedMap[falseState];
-  for (auto& seed : seedsCopy) {
-    ref<ConstantExpr> res;
-    bool success =
-      solver->getValue(current, seed.assignment.evaluate(condition), res);
-    assert(success && "FIXME: Unhandled solver failure");
-    (void) success;
-    if (res->isTrue()) {
-      trueSeeds.push_back(seed);
-    } else {
-      falseSeeds.push_back(seed);
-    }
-  }
-
-  bool swapInfo = false;
-  if (trueSeeds.empty()) {
-    if (&current == trueState) swapInfo = true;
-    seedMap.erase(trueState);
-  }
-  if (falseSeeds.empty()) {
-    if (&current == falseState) swapInfo = true;
-    seedMap.erase(falseState);
-  }
-  if (swapInfo) {
-    std::swap(trueState->coveredNew, falseState->coveredNew);
-    std::swap(trueState->coveredLines, falseState->coveredLines);
-  }
+  updateSeeds(current, trueState, falseState, condition, seeds);
 
   return StatePair(trueState, falseState);
 }

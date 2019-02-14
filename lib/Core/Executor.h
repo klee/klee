@@ -360,6 +360,12 @@ private:
   StatePair seedingFork(ExecutionState &current, ref<Expr> condition,
                         std::vector<SeedInfo>& seeds, bool isInternal);
 
+  void updateSeeds(ExecutionState &current,
+                   ExecutionState *trueState,
+                   ExecutionState *falseState,
+                   ref<Expr> condition,
+                   std::vector<SeedInfo>& seeds);
+
   /// Add the given (boolean) condition as a constraint on state. This
   /// function is a wrapper around the state's addConstraint function
   /// which also manages propagation of implied values,
