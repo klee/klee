@@ -114,6 +114,17 @@ class KTest:
 
         return sio.getvalue()
 
+    def extract(self, object_names, trim_zeros):
+        for name, data in self.objects:
+            if name not in object_names:
+                continue
+
+            f = open(self.path + '.' + name, 'wb')
+            blob = data.rstrip(b'\x00') if trim_zeros else data
+            f.write(blob)
+            f.close()
+
+
 
 def main():
     epilog = """
@@ -155,13 +166,17 @@ def main():
 
     ap = ArgumentParser(prog='ktest-tool', formatter_class=RawDescriptionHelpFormatter, epilog=dedent(epilog))
     ap.add_argument('--trim-zeros', help='trim trailing zeros', action='store_true')
+    ap.add_argument('--extract', help='write binary value of object into file', metavar='name', nargs=1, action='append')
     ap.add_argument('files', help='a .ktest file', metavar='file', nargs='+')
     args = ap.parse_args()
 
     for file in args.files:
         ktest = KTest.fromfile(file)
-        fmt = '{:trimzeros}' if args.trim_zeros else '{}'
-        print(fmt.format(ktest), end='')
+        if args.extract:
+            ktest.extract({x for xs in args.extract for x in xs}, args.trim_zeros)
+        else:
+            fmt = '{:trimzeros}' if args.trim_zeros else '{}'
+            print(fmt.format(ktest), end='')
 
 
 if __name__ == '__main__':
