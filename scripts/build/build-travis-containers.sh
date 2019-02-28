@@ -3,20 +3,62 @@
 # also build by TravisCI.
 #
 # Every line starting with " - LLVM_VERSION=" is a single setup
+
 set -e
+#set -x
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# Build dependencies only
-export DOCKER_BUILD_DEPS_ONLY=1
-export KLEE_TRAVIS_BUILD="1"
-export REPOSITORY="klee"
-export TRAVIS_OS_NAME="linux"
+trim() {
+    local var="$*"
+    # remove leading whitespace characters
+    var="${var#"${var%%[![:space:]]*}"}"
+    # remove trailing whitespace characters
+    var="${var%"${var##*[![:space:]]}"}"   
+    echo -n "$var"
+}
 
+# Build dependencies only
+isGlobal=0
+isEnv=0
+commons=()
+experiments=()
 while read -r line
 do
-    name=$(echo $line| grep "\- LLVM" | xargs -L 1 | cut -d "-" -f 2)
-    if [[ "x$name" == "x" ]]; then
+    [[ "${line}" == "env:"* ]] && isEnv=1 && continue
+    [[ "${line}" == "#stop"* ]] && isEnv=0 && break
+ 
+    
+    [[ "${isEnv}" -eq 0 ]] && continue
+    
+    line="$(trim "${line}")"
+
+    # Ignore empty lines
+    [[ -z "${line}" ]] && continue
+    [[ "${line}" == "#"* ]] && continue 
+    
+    [[ "${line}" == "global:"* ]] && isGlobal=1 && continue
+    [[ "${line}" == "matrix:"* ]] && isGlobal=0 && continue
+
+    
+    
+    if [[ "${isGlobal}" -eq 1 ]]; then
+      tmp="${line#*-}"
+      IFS=: read -r key value <<< "${tmp}"
+      key=$(trim "${key}")
+      [[ "${key}" == "secure" ]] && continue
+      [[ -z "${key}" ]] && continue
+      commons+=("${key}=$(trim "${value}")")
       continue
     fi
-    /bin/bash -c "$name ./scripts/build/build-docker.sh"
+
+    experiment=$(echo "$line"| grep "\- " | xargs -L 1 | cut -d "-" -f 2)
+    if [[ "x$experiment" == "x" ]]; then
+      continue
+    fi
+    experiments+=("${experiment}")
 done < "${DIR}/../../.travis.yml"
+
+for experiment in "${experiments[@]}"; do
+  [[ -z "${experiment}" ]] && continue
+  /bin/bash -c "${commons[*]} ${experiment} ${DIR}/build.sh klee --docker --push-docker-deps --debug --create-final-image"
+done
