@@ -1,16 +1,7 @@
-dist: trusty
-language: cpp
+#dist: xenial
 services:
     - docker
-compiler:
-    # FIXME: For now, building with Clang is disabled because the STP built with
-    # it hits an assertion failure during some tests. We should sort this out
-    # eventually and file the bug against STP or Clang whichever is appropriate,
-    # but for now it is easier to just reduce the number of configs we test
-    # anyway.
-    # - clang
-
-    - gcc
+language: cpp
 env:
     ###########################################################################
     # Configurations
@@ -32,85 +23,97 @@ env:
     #   ENABLE_OPTIMIZED: {0, 1}
     #   COVERAGE: {0, 1}
     #   USE_TCMALLOC: {0, 1}
-
     # COVERAGE when set indicates that coverage data should be uploaded to the service
 
-    matrix:
-
-    # TODO: Add Doxygen build
-
-    # Check newer LLVMs
-    - LLVM_VERSION=7.0 SOLVERS=STP:Z3 STP_VERSION=2.1.2 Z3_VERSION=4.4.1 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=1
-    - LLVM_VERSION=6.0 SOLVERS=STP:Z3 STP_VERSION=2.1.2 Z3_VERSION=4.4.1 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=1
-    - LLVM_VERSION=5.0 SOLVERS=STP:Z3 STP_VERSION=2.1.2 Z3_VERSION=4.4.1 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=1
-    - LLVM_VERSION=4.0 SOLVERS=STP:Z3 STP_VERSION=2.1.2 Z3_VERSION=4.4.1 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=1
-    - LLVM_VERSION=3.9 SOLVERS=STP:Z3 STP_VERSION=2.1.2 Z3_VERSION=4.4.1 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=1
-    - LLVM_VERSION=3.8 SOLVERS=STP:Z3 STP_VERSION=2.1.2 Z3_VERSION=4.4.1 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=1
-    - LLVM_VERSION=3.7 SOLVERS=STP:Z3 STP_VERSION=2.1.2 Z3_VERSION=4.4.1 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=1
-    - LLVM_VERSION=3.6 SOLVERS=STP:Z3 STP_VERSION=2.1.2 Z3_VERSION=4.4.1 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=1
-    - LLVM_VERSION=3.5 SOLVERS=STP:Z3 STP_VERSION=2.1.2 Z3_VERSION=4.4.1 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=1
-    - LLVM_VERSION=3.4 SOLVERS=STP:Z3 STP_VERSION=2.1.2 Z3_VERSION=4.4.1 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=1
-    - LLVM_VERSION=3.4 SOLVERS=metaSMT METASMT_VERSION=v4.rc1 METASMT_DEFAULT=STP KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=1 REQUIRES_RTTI=1
-
-    # ASan build. Do unoptimized build otherwise the optimizer might remove problematic code
-    - LLVM_VERSION=3.4 SOLVERS=STP STP_VERSION=2.1.2 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=0 COVERAGE=0 USE_TCMALLOC=0 SANITIZER_BUILD=address
-    - LLVM_VERSION=3.4 SOLVERS=STP STP_VERSION=2.1.2 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=0 COVERAGE=0 USE_TCMALLOC=0 SANITIZER_BUILD=undefined
-
-    # Test just using Z3
-    - LLVM_VERSION=3.4 SOLVERS=Z3 Z3_VERSION=4.4.1 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0
-
-    # Test we can build against STP master
-    - LLVM_VERSION=3.4 SOLVERS=STP STP_VERSION=master KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0
-
-    # Check we can build latest klee-uclibc branch
-    - LLVM_VERSION=3.4 SOLVERS=STP STP_VERSION=2.1.2 KLEE_UCLIBC=klee_0_9_29 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0
-
-    # Test metaSMT support
-    - LLVM_VERSION=3.4 SOLVERS=metaSMT METASMT_VERSION=v4.rc1 METASMT_DEFAULT=BTOR KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 REQUIRES_RTTI=1
-
-    # Check at least one build with Asserts disabled.
-    - LLVM_VERSION=3.4 SOLVERS=STP STP_VERSION=2.1.2 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=1 ENABLE_OPTIMIZED=1 COVERAGE=0
-
-    # Check at least one Debug+Asserts build
-    - LLVM_VERSION=3.4 SOLVERS=STP STP_VERSION=2.1.2 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=0 COVERAGE=0
-
-    # Check with TCMALLOC
-    - LLVM_VERSION=3.4 SOLVERS=STP STP_VERSION=2.1.2 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=1
-
-    # Coverage build
-    - LLVM_VERSION=3.4 SOLVERS=STP:Z3 STP_VERSION=2.1.2 Z3_VERSION=4.4.1 KLEE_UCLIBC=klee_uclibc_v1.0.0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=0 COVERAGE=1 USE_TCMALLOC=0
+    # Define default values - they are overwritten by each matrix entry if needed
     global:
     - secure: EF/WAc4BdIRUchF3mjATN3/UwtGWtGaRgb5oIIJHjKhgZFdPsgWsXFgaOB0jaK2hfO/svj/LvlasuRIGxeePVjeaiX8ZlVpuHiX67vdYLY+0kCDRwkusRjm60/GbPU9O/Xjgb/d4aWAEkoq5OnsprVTEvU8iY2JHtAqgwR+wW9I=
     - secure: Hrp1MRSxDUH2GTQg3QR/yUttY/3KmgbFb5e+zyy551dKpHjxJdsNe8bquY9oFoT7KmPQYl0HNNjEv4qWW8RK+HWHOCB55nL1KlGpOG7vAJcUEZg7ScbliGgiovMB6jIQVfeP9FhYngfc13vNZQ5PGlqzfSsHSAbvkwEogBToHVw=
     - secure: DQAEQWJblXvIztN/sgH63OtFncI+Qju6wRy1zIV/iLf5KbAmLs1h3itU7EsE/+3+LgV1MVQ5QNJDBUj17A6VHRKNaQ5qnIllTAcC3o0nPDohQkQoCgDG8HZ+M4wtVfr7q2K6byEPB2UbSH+mEjSMTihJufgBBVfKyyozAfYycjg=
-    - KLEE_TRAVIS_BUILD: 1
+
+    # Default configuration for all Travis-CI jobs. They are overriden by each job.
+    - BASE_IMAGE: ubuntu:xenial-20181005
     - REPOSITORY: klee
 
+    - COVERAGE: 0
+    - DISABLE_ASSERTIONS: 0
+    - ENABLE_OPTIMIZED: 1
+    - ENABLE_DEBUG: 1
+    - GTEST_VERSION: 1.7.0
+    - LLVM_VERSION: 6.0
+    - METASMT_VERSION: v4.rc1
+    - MINISAT_VERSION: "master"
+    - REQUIRES_RTTI: 0
+    - SANITIZER_BUILD:
+    - SOLVERS: STP:Z3
+    - STP_VERSION: 2.3.2
+    - TCMALLOC_VERSION: 2.7
+    - UCLIBC_VERSION: klee_uclibc_v1.0.0
+    - USE_TCMALLOC: 1
+    - Z3_VERSION: 4.8.4
+
+    matrix:
+    # Check supported LLVM versions
+    - LLVM_VERSION=7.0
+    - LLVM_VERSION=6.0
+    - LLVM_VERSION=5.0
+    - LLVM_VERSION=4.0
+    - LLVM_VERSION=3.9
+    - LLVM_VERSION=3.8
+    - LLVM_VERSION=3.7
+    - LLVM_VERSION=3.6
+    - LLVM_VERSION=3.5
+    - LLVM_VERSION=3.4
+
+    # *Sanitizer builds. Do unoptimized build otherwise the optimizer might remove problematic code
+    - SANITIZER_BUILD=address ENABLE_OPTIMIZED=0 USE_TCMALLOC=0
+    - SANITIZER_BUILD=undefined ENABLE_OPTIMIZED=0 USE_TCMALLOC=0
+
+    # Test just using Z3 only
+    - SOLVERS=Z3
+
+    # Test just using metaSMT
+    - SOLVERS=metaSMT METASMT_DEFAULT=STP REQUIRES_RTTI=1
+    - SOLVERS=metaSMT METASMT_DEFAULT=BTOR REQUIRES_RTTI=1
+
+    # Test we can build against STP master
+    - SOLVERS=STP STP_VERSION=master
+
+    # Check we can build latest klee-uclibc branch
+    - UCLIBC_VERSION=klee_0_9_29
+
+    # Check at least one build with Asserts disabled.
+    - SOLVERS=STP DISABLE_ASSERTIONS=1
+
+    # Check without TCMALLOC
+    - USE_TCMALLOC=0
+
+    # Coverage build
+    - ENABLE_OPTIMIZED=0 COVERAGE=1
+
+    # TODO: Add Doxygen build
+
+#stop
 matrix:
   include:
     - os: osx
       osx_image: xcode8.3
-      env: LLVM_VERSION=4.0 SOLVERS=STP:Z3 STP_VERSION=2.1.2 Z3_VERSION=4.4.1 KLEE_UCLIBC=0 DISABLE_ASSERTIONS=0 ENABLE_OPTIMIZED=1 COVERAGE=0 USE_TCMALLOC=0
-
+      env: SOLVERS=STP UCLIBC_VERSION=0 USE_TCMALLOC=0
+addons:
+  apt:
+    packages:
+      - docker-ce
 cache:
   ccache: true
   apt: true
   directories:
     - $HOME/Library/Caches/Homebrew
-
 before_install:
-    ###########################################################################
-    # Set up the locations to get various packages from
-    # We assume the Travis image uses Ubuntu 14.04 LTS
-    ###########################################################################
-    # Update package information
-    - export KLEE_SRC=`pwd`
-    - export KLEE_SRC_TRAVIS=`pwd`
-    - cd ../
-    - export BASE=`pwd`
-    - ${KLEE_SRC_TRAVIS}/scripts/build/build-travis.sh
+   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update; brew install bash ; fi
+
 script:
     # Build KLEE and run tests
-    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export PATH="/usr/local/opt/ccache/libexec:$PATH"; ${KLEE_SRC_TRAVIS}/scripts/build/klee.sh; fi
-    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ${KLEE_SRC_TRAVIS}/scripts/build/build-docker.sh; fi
-    - if [[ "$COVERAGE" == "1" ]]; then ${KLEE_SRC_TRAVIS}/scripts/build/run-coverage.sh; fi
+    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export BASE=/tmp && export PATH="/usr/local/opt/ccache/libexec:/usr/local/bin:$PATH"; scripts/build/build.sh klee --debug --install-system-deps; export DYLD_LIBRARY_PATH=="$(cd ${BASE}/metaSMT-*-deps/stp-git-basic/lib/ && pwd)"; scripts/build/run-tests.sh /tmp/klee_build* --debug; fi
+    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then scripts/build/build.sh klee --docker --debug --push-docker-deps --create-final-image; fi
+    - if [[ "$COVERAGE" == "1" && "$TRAVIS_OS_NAME" == "linux" ]]; then scripts/build/run-tests.sh --coverage --upload-coverage --run-docker --debug; fi
+    - if [[ "$COVERAGE" == "0" && "$TRAVIS_OS_NAME" == "linux" ]]; then scripts/build/run-tests.sh --run-docker --debug; fi
