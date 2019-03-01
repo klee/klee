@@ -46,14 +46,15 @@ extern klee_expr_builder_t klee_expr_builder_create(void);
 /// Destroys a klee_expr_builder_t
 extern void klee_expr_builder_dispose(klee_expr_builder_t builder);
 
-  /// Destroys a  klee_expr_t
+/// Destroys a  klee_expr_t
 extern void klee_expr_dispose(klee_expr_t expr);
 
 /// Builds an array for use in subsequent expressions
 extern klee_array_t klee_array_create(const char *name, uint64_t size,
                                       const klee_expr_t constant_values_begin,
                                       const klee_expr_t constant_values_end,
-                                      klee_expr_width_t Width);
+                                      klee_expr_width_t domain,
+                                      klee_expr_width_t range);
 
 /// Destroys a klee_array_t
 extern void klee_array_dispose(klee_array_t array);
