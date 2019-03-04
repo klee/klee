@@ -118,9 +118,9 @@ namespace {
                 cl::cat(TestCaseCat));
 
 
-  /*** Starting options ***/
+  /*** Startup options ***/
 
-  cl::OptionCategory StartCat("Starting options",
+  cl::OptionCategory StartCat("Startup options",
                               "These options affect how execution is started.");
 
   cl::opt<std::string>
