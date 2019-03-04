@@ -169,7 +169,7 @@ namespace {
   cl::opt<bool>
   AllExternalWarnings("all-external-warnings",
 		      cl::init(false),
-		      cl::desc("Issue a warning everytime an external call is made," 
+		      cl::desc("Issue a warning everytime an external call is made, "
 			       "as opposed to once per function (default=off)"),
                       cl::cat(ExtCallsCat));
 
