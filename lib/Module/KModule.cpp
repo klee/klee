@@ -48,6 +48,9 @@
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Transforms/Scalar.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
+#include "llvm/Transforms/Scalar/Scalarizer.h"
+#endif
 
 #include "llvm/Transforms/Utils/Cloning.h"
 
