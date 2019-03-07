@@ -1,4 +1,4 @@
-// RUN: %llvmgcc %s -emit-llvm -g -c -o %t.bc
+// RUN: %clang %s -emit-llvm -g -c -o %t.bc
 // RUN: rm -rf %t-bfs.klee-out
 // RUN: rm -rf %t-dfs.klee-out
 // RUN: rm -rf %t-bfs-dfs.klee-out

@@ -1,4 +1,4 @@
-// RUN: %llvmgcc %s -emit-llvm -g %O0opt -c -o %t.bc
+// RUN: %clang %s -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out -use-cex-cache=1 %t.bc
 // RUN: grep "KLEE: done: explored paths = 5" %t.klee-out/info

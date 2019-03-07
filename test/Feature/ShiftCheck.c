@@ -3,7 +3,7 @@
 // * optimized code will have this check inlined
 // In both cases, the `ashr` instruction should have been marked with meta-data: klee.check.shift
 //
-// RUN: %llvmgcc %s -emit-llvm -g -c -o %t.bc
+// RUN: %clang %s -emit-llvm -g -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --check-overshift=true %t.bc >%t.shift_enabled.log
 // RUN: FileCheck %s -input-file=%t.klee-out/assembly.ll -check-prefix=SHIFT-ENABLED
@@ -11,7 +11,7 @@
 // RUN: %klee --output-dir=%t.klee-out --check-overshift=true --optimize %t.bc >%t.shift_enabled.log
 // RUN: FileCheck %s -input-file=%t.klee-out/assembly.ll -check-prefix=SHIFT-ENABLED-OPT
 // Same test without debug information
-// RUN: %llvmgcc %s -emit-llvm -c -o %t.bc
+// RUN: %clang %s -emit-llvm -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --check-overshift=true %t.bc >%t.shift_enabled.log
 // RUN: FileCheck %s -input-file=%t.klee-out/assembly.ll -check-prefix=SHIFT-ENABLED

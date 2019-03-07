@@ -1,5 +1,5 @@
 // Tests the functionality of setting and getting file access and modification times
-// RUN: %llvmgcc %s -emit-llvm %O0opt -c -o %t1.bc
+// RUN: %clang %s -emit-llvm %O0opt -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --libc=uclibc --posix-runtime %t1.bc --sym-files 1 1
 

@@ -1,6 +1,6 @@
 // Darwin does not support strong aliases.
 // REQUIRES: not-darwin
-// RUN: %llvmgcc -emit-llvm %O0opt -g -c %s -o %t.bc
+// RUN: %clang -emit-llvm %O0opt -g -c %s -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee -debug-print-escaping-functions --output-dir=%t.klee-out %t.bc 2> %t.log
 // RUN: FileCheck --input-file=%t.log %s

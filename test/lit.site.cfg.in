@@ -14,9 +14,8 @@ config.llvm_version_major = "@LLVM_VERSION_MAJOR@"
 config.llvm_version_minor = "@LLVM_VERSION_MINOR@"
 
 # Compilers
-# FIXME: use llvmcc not llvmgcc
-config.llvmgcc = "@LLVMCC@"
-config.llvmgxx = "@LLVMCXX@"
+config.clang = "@LLVMCC@"
+config.xxclang = "@LLVMCXX@"
 
 config.cc = "@NATIVE_CC@"
 config.cxx = "@NATIVE_CXX@"

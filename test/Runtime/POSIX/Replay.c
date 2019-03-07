@@ -1,4 +1,4 @@
-// RUN: %llvmgcc -DKLEE_EXECUTION %s -emit-llvm %O0opt -c -o %t.bc
+// RUN: %clang -DKLEE_EXECUTION %s -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --posix-runtime %t.bc --sym-files 1 3
 // RUN: %klee-replay --create-files-only %t.klee-out/test000001.ktest

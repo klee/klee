@@ -1,4 +1,4 @@
-// RUN: %llvmgcc %s -emit-llvm -g -c -o %t1.bc
+// RUN: %clang %s -emit-llvm -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out %t1.bc 2> %t.stderr.log
 // RUN: FileCheck %s -check-prefix=CHECK-WRN --input-file=%t.klee-out/warnings.txt

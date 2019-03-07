@@ -2,14 +2,14 @@
 // small and large allocations (large allocations commonly use mmap(), which can
 // follow a separate path in the allocator and statistics reporting).
 
-// RUN: %llvmgcc -emit-llvm -DLITTLE_ALLOC -g -c %s -o %t.little.bc
+// RUN: %clang -emit-llvm -DLITTLE_ALLOC -g -c %s -o %t.little.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --max-memory=20 %t.little.bc > %t.little.log
 // RUN: not grep -q "MALLOC FAILED" %t.little.log
 // RUN: not grep -q "DONE" %t.little.log
 // RUN: grep "WARNING: killing 1 states (over memory cap)" %t.klee-out/warnings.txt
 
-// RUN: %llvmgcc -emit-llvm -g -c %s -o %t.big.bc
+// RUN: %clang -emit-llvm -g -c %s -o %t.big.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --max-memory=20 %t.big.bc > %t.big.log 2> %t.big.err
 // RUN: not grep -q "MALLOC FAILED" %t.big.log

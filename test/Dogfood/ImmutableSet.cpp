@@ -1,4 +1,4 @@
-// RUN: %llvmgxx -I../../../include -g -DMAX_ELEMENTS=4 -fno-exceptions -emit-llvm -c -o %t1.bc %s
+// RUN: %xxclang -I../../../include -g -DMAX_ELEMENTS=4 -fno-exceptions -emit-llvm -c -o %t1.bc %s
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --libc=klee --max-forks=25 --no-output --exit-on-error --optimize --disable-inlining --search=nurs:depth --use-cex-cache %t1.bc
 
