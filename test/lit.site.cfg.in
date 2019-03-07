@@ -15,7 +15,7 @@ config.llvm_version_minor = "@LLVM_VERSION_MINOR@"
 
 # Compilers
 config.clang = "@LLVMCC@"
-config.xxclang = "@LLVMCXX@"
+config.clangxx = "@LLVMCXX@"
 
 config.cc = "@NATIVE_CC@"
 config.cxx = "@NATIVE_CXX@"
