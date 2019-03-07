@@ -1,5 +1,5 @@
 /* Very basic test, as right now SELinux support is extremely basic */
-// RUN: %llvmgcc %s -emit-llvm %O0opt -c -o %t1.bc
+// RUN: %clang %s -emit-llvm %O0opt -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --posix-runtime --exit-on-error %t1.bc --sym-arg 2 > %t.log
 // XFAIL: no-selinux

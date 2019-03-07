@@ -1,4 +1,4 @@
-// RUN: %llvmgcc -emit-llvm -g -c -o %t.bc %s
+// RUN: %clang -emit-llvm -g -c -o %t.bc %s
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out %t.bc > %t.output.log 2>&1
 // RUN: FileCheck -input-file=%t.output.log %s

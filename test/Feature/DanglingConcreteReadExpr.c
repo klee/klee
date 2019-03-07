@@ -1,4 +1,4 @@
-// RUN: %llvmgcc %s -emit-llvm %O0opt -c -o %t1.bc
+// RUN: %clang %s -emit-llvm %O0opt -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --optimize=false --output-dir=%t.klee-out %t1.bc
 // RUN: grep "total queries = 2" %t.klee-out/info

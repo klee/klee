@@ -1,4 +1,4 @@
-// RUN: %llvmgcc %s -emit-llvm %O0opt -c -o %t.bc
+// RUN: %clang %s -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --external-calls=all --exit-on-error --libc=uclibc --posix-runtime %t.bc --sym-stdin 10  2>%t.log | FileCheck %s
 

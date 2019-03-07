@@ -1,4 +1,4 @@
-// RUN: %llvmgcc -m32 %s -emit-llvm %O0opt -c -o %t1.bc
+// RUN: %clang -m32 %s -emit-llvm %O0opt -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --libc=klee --exit-on-error %t1.bc 2 2
 // XFAIL: x86_64

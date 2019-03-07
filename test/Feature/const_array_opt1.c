@@ -1,4 +1,4 @@
-// RUN: %llvmgcc %s -emit-llvm %O0opt -c -o %t.bc
+// RUN: %clang %s -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --const-array-opt --max-time=10 --only-output-states-covering-new %t.bc >%t.log
 // grep -q "Finished successfully!\n"

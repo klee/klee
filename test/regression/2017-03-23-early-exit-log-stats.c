@@ -1,4 +1,4 @@
-// RUN: %llvmgcc %s -emit-llvm -g %O0opt -c -o %t.bc
+// RUN: %clang %s -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // Delay writing instructions so that we ensure on exit that flush happens
 // RUN: not %klee --output-dir=%t.klee-out -exit-on-error -stats-write-interval=0 -stats-write-after-instructions=999999 %t.bc 2> %t.log

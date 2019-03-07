@@ -1,4 +1,4 @@
-// RUN: %llvmgcc %s -emit-llvm -g %O0opt -c -o %t.bc
+// RUN: %clang %s -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out -exit-on-error -solver-optimize-divides=true %t.bc >%t1.log
 // RUN: grep "m is 2" %t1.log

@@ -1,4 +1,4 @@
-// RUN: %llvmgcc -DASSUME_VALUE=1 %s -emit-llvm -g %O0opt -c -o %t.bc
+// RUN: %clang -DASSUME_VALUE=1 %s -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --search=dfs %t.bc
 // RUN: test -f %t.klee-out/test000001.ktest

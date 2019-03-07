@@ -1,4 +1,4 @@
-// RUN: %llvmgcc %s -emit-llvm %O0opt -c -o %t2.bc
+// RUN: %clang %s -emit-llvm %O0opt -c -o %t2.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --libc=klee %t2.bc > %t3.log
 // RUN: echo "good" > %t3.good
