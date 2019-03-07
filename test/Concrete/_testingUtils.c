@@ -1,4 +1,4 @@
-// RUN: %llvmgcc -D_TESTINGUTILS_TEST %s -o %t
+// RUN: %clang -D_TESTINGUTILS_TEST %s -o %t
 // RUN: %t | FileCheck %s
 
 #include <stdint.h>

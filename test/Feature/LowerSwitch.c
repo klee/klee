@@ -1,4 +1,4 @@
-// RUN: %llvmgcc %s -emit-llvm -g -c -o %t.bc
+// RUN: %clang %s -emit-llvm -g -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --exit-on-error --external-calls=all --switch-type=internal %t.bc
 // RUN: not test -f %t.klee-out/test000010.ktest

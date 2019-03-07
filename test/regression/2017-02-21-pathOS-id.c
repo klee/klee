@@ -1,4 +1,4 @@
-// RUN: %llvmgcc %s -emit-llvm -g %O0opt -c -o %t.bc
+// RUN: %clang %s -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out -write-paths %t.bc 2> %t.log
 // RUN: cat %t.klee-out/test000001.path | wc -l | grep -q 1

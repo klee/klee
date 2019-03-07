@@ -1,5 +1,5 @@
 // REQUIRES: geq-llvm-3.7
-// RUN: %llvmgcc %s -emit-llvm -g -c -o %t.bc
+// RUN: %clang %s -emit-llvm -g -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --exit-on-error %t.bc 2>%t.log
 // RUN: cat %t.klee-out/assembly.ll | FileCheck %s

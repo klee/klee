@@ -1,4 +1,4 @@
-// RUN: %llvmgcc %s -emit-llvm -g -c -o %t2.bc
+// RUN: %clang %s -emit-llvm -g -c -o %t2.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --exit-on-error --debug-print-instructions=all:stderr %t2.bc 2>%t3.txt
 // RUN: FileCheck -input-file=%t3.txt -check-prefix=CHECK-FILE-SRC %s

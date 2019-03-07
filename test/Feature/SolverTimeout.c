@@ -1,4 +1,4 @@
-// RUN: %llvmgcc %s -emit-llvm %O0opt -c -o %t1.bc
+// RUN: %clang %s -emit-llvm %O0opt -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --max-solver-time=1 %t1.bc
 // FIXME: This test occasionally fails when using Z3 4.4.1 but

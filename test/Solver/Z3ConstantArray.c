@@ -1,5 +1,5 @@
 // REQUIRES: z3
-// RUN: %llvmgcc %s -emit-llvm %O0opt -c -o %t1.bc
+// RUN: %clang %s -emit-llvm %O0opt -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out -solver-backend=z3 -write-cvcs -write-smt2s -debug-z3-dump-queries=%t.smt2   %t1.bc
 // RUN: cat %t.klee-out/test000001.smt2 | FileCheck --check-prefix=TEST-CASE %s

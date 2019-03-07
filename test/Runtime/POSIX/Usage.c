@@ -1,6 +1,6 @@
 // This test checks for the (in)correct use of --sym-files and --sym-args
 
-// RUN: %llvmgcc %s -emit-llvm %O0opt -c -o %t.bc
+// RUN: %clang %s -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 
 // RUN: not %klee --output-dir=%t.klee-out --exit-on-error --posix-runtime %t.bc --sym-files 1 10 --sym-files 2 10 &> %t1

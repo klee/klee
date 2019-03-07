@@ -1,8 +1,8 @@
 // Run applications with the posix environment but without additional arguments argc, argv for main
-// RUN: %llvmgcc -DMAIN1 %s -emit-llvm %O0opt -c -g -o %t.bc
+// RUN: %clang -DMAIN1 %s -emit-llvm %O0opt -c -g -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --posix-runtime %t.bc | FileCheck %s -check-prefix=CHECK-MAIN1
-// RUN: %llvmgcc -DMAIN2 %s -emit-llvm %O0opt -c -g -o %t.bc
+// RUN: %clang -DMAIN2 %s -emit-llvm %O0opt -c -g -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --posix-runtime %t.bc | FileCheck %s -check-prefix=CHECK-MAIN2
 #ifdef MAIN1
