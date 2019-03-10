@@ -1,3 +1,5 @@
+// REQUIRES: not-msan
+// Requires instrumented C++ library for msan
 // REQUIRES: not-darwin
 // RUN: %clangxx -g -fno-exceptions -emit-llvm %O0opt -c -o %t.bc %s
 // RUN: rm -rf %t.klee-out
