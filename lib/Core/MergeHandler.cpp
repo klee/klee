@@ -133,7 +133,7 @@ bool MergeHandler::hasMergedStates() {
 
 MergeHandler::MergeHandler(Executor *_executor, ExecutionState *es)
     : executor(_executor), openInstruction(es->steppedInstructions),
-      closedStateCount(0), refCount(0) {
+      closedMean(0), closedStateCount(0), refCount(0) {
   executor->mergeGroups.push_back(this);
   addOpenState(es);
 }
