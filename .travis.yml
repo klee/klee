@@ -54,6 +54,7 @@ env:
 
     matrix:
     # Check supported LLVM versions
+    - LLVM_VERSION=8.0
     - LLVM_VERSION=7.0
     - LLVM_VERSION=6.0
     - LLVM_VERSION=5.0
