@@ -69,6 +69,7 @@ env:
     # *Sanitizer builds. Do unoptimized build otherwise the optimizer might remove problematic code
     - SANITIZER_BUILD=address ENABLE_OPTIMIZED=0 USE_TCMALLOC=0
     - SANITIZER_BUILD=undefined ENABLE_OPTIMIZED=0 USE_TCMALLOC=0
+    - SANITIZER_BUILD=memory ENABLE_OPTIMIZED=0 USE_TCMALLOC=0 SOLVERS=STP
 
     # Test just using Z3 only
     - SOLVERS=Z3
