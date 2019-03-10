@@ -1,3 +1,5 @@
+// REQUIRES: not-memsan
+// Memsan adds additional memory that overflows the counter
 // Check that we properly kill states when we exceed our memory bounds, for both
 // small and large allocations (large allocations commonly use mmap(), which can
 // follow a separate path in the allocator and statistics reporting).
