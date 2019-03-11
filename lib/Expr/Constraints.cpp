@@ -24,7 +24,7 @@ namespace {
   llvm::cl::opt<bool>
   RewriteEqualities("rewrite-equalities",
 		    llvm::cl::init(true),
-		    llvm::cl::desc("Rewrite existing constraints when an equality with a constant is added (default=on)"));
+		    llvm::cl::desc("Rewrite existing constraints when an equality with a constant is added (default=true)"));
 }
 
 

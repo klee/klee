@@ -29,7 +29,7 @@ llvm::cl::OptionCategory MemoryCat("Memory management options",
 
 llvm::cl::opt<bool> DeterministicAllocation(
     "allocate-determ",
-    llvm::cl::desc("Allocate memory deterministically (default=off)"),
+    llvm::cl::desc("Allocate memory deterministically (default=false)"),
     llvm::cl::init(false), llvm::cl::cat(MemoryCat));
 
 llvm::cl::opt<unsigned> DeterministicAllocationSize(
@@ -40,7 +40,7 @@ llvm::cl::opt<unsigned> DeterministicAllocationSize(
 
 llvm::cl::opt<bool> NullOnZeroMalloc(
     "return-null-on-zero-malloc",
-    llvm::cl::desc("Returns NULL if malloc(0) is called (default=off)"),
+    llvm::cl::desc("Returns NULL if malloc(0) is called (default=false)"),
     llvm::cl::init(false), llvm::cl::cat(MemoryCat));
 
 llvm::cl::opt<unsigned> RedZoneSpace(

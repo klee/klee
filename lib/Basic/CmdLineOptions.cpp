@@ -39,26 +39,26 @@ cl::OptionCategory SolvingCat("Constraint solving options",
 
 cl::opt<bool> UseFastCexSolver(
     "use-fast-cex-solver", cl::init(false),
-    cl::desc("Enable an experimental range-based solver (default=off)"),
+    cl::desc("Enable an experimental range-based solver (default=false)"),
     cl::cat(SolvingCat));
 
 cl::opt<bool> UseCexCache("use-cex-cache", cl::init(true),
-                          cl::desc("Use counterexample caching (default=on)"),
+                          cl::desc("Use counterexample caching (default=true)"),
                           cl::cat(SolvingCat));
 
 cl::opt<bool> UseCache("use-cache", cl::init(true),
-                       cl::desc("Use validity caching (default=on)"),
+                       cl::desc("Use validity caching (default=true)"),
                        cl::cat(SolvingCat));
 
 cl::opt<bool>
     UseIndependentSolver("use-independent-solver", cl::init(true),
-                         cl::desc("Use constraint independence (default=on)"),
+                         cl::desc("Use constraint independence (default=true)"),
                          cl::cat(SolvingCat));
 
 cl::opt<bool> DebugValidateSolver(
     "debug-validate-solver", cl::init(false),
     cl::desc("Crosscheck the results of the solver chain above the core solver "
-             "with the results of the core solver (default=off)"),
+             "with the results of the core solver (default=false)"),
     cl::cat(SolvingCat));
 
 cl::opt<std::string> MinQueryTimeToLog(
@@ -80,13 +80,13 @@ cl::opt<std::string> MaxCoreSolverTime(
 
 cl::opt<bool> UseForkedCoreSolver(
     "use-forked-solver",
-    cl::desc("Run the core SMT solver in a forked process (default=on)"),
+    cl::desc("Run the core SMT solver in a forked process (default=true)"),
     cl::init(true), cl::cat(SolvingCat));
 
 cl::opt<bool> CoreSolverOptimizeDivides(
     "solver-optimize-divides",
     cl::desc("Optimize constant divides into add/shift/multiplies before "
-             "passing them to the core SMT solver (default=off)"),
+             "passing them to the core SMT solver (default=false)"),
     cl::init(false), cl::cat(SolvingCat));
 
 cl::bits<QueryLoggingSolverType> QueryLoggingOptions(
@@ -109,7 +109,7 @@ cl::bits<QueryLoggingSolverType> QueryLoggingOptions(
 
 cl::opt<bool> UseAssignmentValidatingSolver(
     "debug-assignment-validating-solver", cl::init(false),
-    cl::desc("Debug the correctness of generated assignments (default=off)"),
+    cl::desc("Debug the correctness of generated assignments (default=false)"),
     cl::cat(SolvingCat));
 
 void KCommandLine::HideUnrelatedOptions(cl::OptionCategory &Category) {

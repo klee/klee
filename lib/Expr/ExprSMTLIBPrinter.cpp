@@ -32,7 +32,7 @@ argConstantDisplayMode(
 llvm::cl::opt<bool> humanReadableSMTLIB(
     "smtlib-human-readable",
     llvm::cl::desc(
-        "Enables generated SMT-LIBv2 files to be human readable (default=off)"),
+        "Enables generated SMT-LIBv2 files to be human readable (default=false)"),
     llvm::cl::init(false));
 
 llvm::cl::opt<klee::ExprSMTLIBPrinter::AbbreviationMode> abbreviationMode(

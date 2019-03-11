@@ -103,20 +103,20 @@ namespace {
   cl::opt<bool>
   DumpStatesOnHalt("dump-states-on-halt",
                    cl::init(true),
-		   cl::desc("Dump test cases for all active states on exit (default=on)"),
+		   cl::desc("Dump test cases for all active states on exit (default=true)"),
                    cl::cat(TestGenCat));
 
   cl::opt<bool>
   OnlyOutputStatesCoveringNew("only-output-states-covering-new",
                               cl::init(false),
-			      cl::desc("Only output test cases covering new code (default=off)."),
+			      cl::desc("Only output test cases covering new code (default=false)."),
                               cl::cat(TestGenCat));
 
   cl::opt<bool>
   EmitAllErrors("emit-all-errors",
                 cl::init(false),
                 cl::desc("Generate tests cases for all errors "
-                         "(default=off, i.e. one per (error,instruction) pair)"),
+                         "(default=false, i.e. one per (error,instruction) pair)"),
                 cl::cat(TestGenCat));
 
 
@@ -125,12 +125,12 @@ namespace {
   cl::opt<bool>
   SimplifySymIndices("simplify-sym-indices",
                      cl::init(false),
-		     cl::desc("Simplify symbolic accesses using equalities from other constraints (default=off)"));
+		     cl::desc("Simplify symbolic accesses using equalities from other constraints (default=false)"));
 
   cl::opt<bool>
   EqualitySubstitution("equality-substitution",
 		       cl::init(true),
-		       cl::desc("Simplify equality expressions before querying the solver (default=on)."));
+		       cl::desc("Simplify equality expressions before querying the solver (default=true)."));
 
   cl::opt<unsigned>
   MaxSymArraySize("max-sym-array-size",
@@ -169,7 +169,7 @@ namespace {
   AllExternalWarnings("all-external-warnings",
 		      cl::init(false),
 		      cl::desc("Issue a warning everytime an external call is made, "
-			       "as opposed to once per function (default=off)"),
+			       "as opposed to once per function (default=false)"),
                       cl::cat(ExtCallsCat));
 
 
@@ -187,13 +187,13 @@ namespace {
   cl::opt<bool>
   OnlyReplaySeeds("only-replay-seeds",
 		  cl::init(false),
-                  cl::desc("Discard states that do not have a seed (default=off)."),
+                  cl::desc("Discard states that do not have a seed (default=false)."),
                   cl::cat(SeedingCat));
 
   cl::opt<bool>
   OnlySeed("only-seed",
 	   cl::init(false),
-           cl::desc("Stop execution after seeding is done without doing regular search (default=off)."),
+           cl::desc("Stop execution after seeding is done without doing regular search (default=false)."),
            cl::cat(SeedingCat));
  
   cl::opt<bool>
@@ -205,19 +205,19 @@ namespace {
   cl::opt<bool>
   ZeroSeedExtension("zero-seed-extension",
 		    cl::init(false),
-		    cl::desc("Use zero-filled objects if matching seed not found (default=off)"),
+		    cl::desc("Use zero-filled objects if matching seed not found (default=false)"),
                     cl::cat(SeedingCat));
  
   cl::opt<bool>
   AllowSeedTruncation("allow-seed-truncation",
 		      cl::init(false),
-                      cl::desc("Allow smaller buffers than in seeds (default=off)."),
+                      cl::desc("Allow smaller buffers than in seeds (default=false)."),
                       cl::cat(SeedingCat));
  
   cl::opt<bool>
   NamedSeedMatching("named-seed-matching",
 		    cl::init(false),
-                    cl::desc("Use names to match symbolic objects to inputs (default=off)."),
+                    cl::desc("Use names to match symbolic objects to inputs (default=false)."),
                     cl::cat(SeedingCat));
 
   cl::opt<std::string>
@@ -233,7 +233,7 @@ namespace {
 
   cl::list<Executor::TerminateReason>
   ExitOnErrorType("exit-on-error-type",
-		  cl::desc("Stop execution after reaching a specified condition (default=off)"),
+		  cl::desc("Stop execution after reaching a specified condition (default=false)"),
 		  cl::values(
 		    clEnumValN(Executor::Abort, "Abort", "The program crashed"),
 		    clEnumValN(Executor::Assert, "Assert", "An assertion was hit"),
@@ -278,7 +278,7 @@ namespace {
 
   cl::opt<bool>
   MaxMemoryInhibit("max-memory-inhibit",
-                   cl::desc("Inhibit forking at memory cap (vs. random terminate) (default=on)"),
+                   cl::desc("Inhibit forking at memory cap (vs. random terminate) (default=true)"),
                    cl::init(true),
                    cl::cat(TerminationCat));
 
@@ -361,7 +361,7 @@ namespace {
   cl::opt<bool>
   DebugCompressInstructions("debug-compress-instructions",
                             cl::init(false),
-                            cl::desc("Compress the logged instructions in gzip format (default=off)."),
+                            cl::desc("Compress the logged instructions in gzip format (default=false)."),
                             cl::cat(DebugCat));
 #endif
 

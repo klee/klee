@@ -42,7 +42,7 @@ llvm::cl::opt<ArrayOptimizationType> OptimizeArray(
                          KLEE_LLVM_CL_VAL_END),
     llvm::cl::init(NONE),
     llvm::cl::desc("Optimize accesses to either concrete or concrete/symbolic "
-                   "arrays. (default=off)"),
+                   "arrays. (default=false)"),
     llvm::cl::cat(klee::SolvingCat));
 
 llvm::cl::opt<double> ArrayValueRatio(

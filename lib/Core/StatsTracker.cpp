@@ -58,17 +58,17 @@ namespace {
   cl::opt<bool>
   TrackInstructionTime("track-instruction-time",
                        cl::init(false),
-		       cl::desc("Enable tracking of time for individual instructions (default=off)"));
+		       cl::desc("Enable tracking of time for individual instructions (default=false)"));
 
   cl::opt<bool>
   OutputStats("output-stats",
               cl::init(true),
-	      cl::desc("Write running stats trace file (default=on)"));
+	      cl::desc("Write running stats trace file (default=true)"));
 
   cl::opt<bool>
   OutputIStats("output-istats",
 	       cl::init(true),
-               cl::desc("Write instruction level statistics in callgrind format (default=on)"));
+               cl::desc("Write instruction level statistics in callgrind format (default=true)"));
 
   cl::opt<std::string>
   StatsWriteInterval("stats-write-interval",
@@ -99,7 +99,7 @@ namespace {
   cl::opt<bool>
   UseCallPaths("use-call-paths",
 	       cl::init(true),
-               cl::desc("Enable calltree tracking for instruction level statistics (default=on)"));
+               cl::desc("Enable calltree tracking for instruction level statistics (default=true)"));
   
 }
 
