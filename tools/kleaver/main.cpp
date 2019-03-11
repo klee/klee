@@ -10,19 +10,20 @@
 #include "expr/Lexer.h"
 #include "expr/Parser.h"
 
+#include "klee/Common.h"
 #include "klee/Config/Version.h"
 #include "klee/Constraints.h"
 #include "klee/Expr.h"
 #include "klee/ExprBuilder.h"
+#include "klee/Internal/Support/PrintVersion.h"
+#include "klee/OptionCategories.h"
 #include "klee/Solver.h"
+#include "klee/SolverCmdLine.h"
 #include "klee/SolverImpl.h"
 #include "klee/Statistics.h"
-#include "klee/SolverCmdLine.h"
-#include "klee/Common.h"
 #include "klee/util/ExprPPrinter.h"
-#include "klee/util/ExprVisitor.h"
 #include "klee/util/ExprSMTLIBPrinter.h"
-#include "klee/Internal/Support/PrintVersion.h"
+#include "klee/util/ExprVisitor.h"
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
@@ -46,61 +47,55 @@ using namespace klee;
 using namespace klee::expr;
 
 namespace {
-  llvm::cl::opt<std::string>
-  InputFile(llvm::cl::desc("<input query log>"), llvm::cl::Positional,
-            llvm::cl::init("-"));
+llvm::cl::opt<std::string> InputFile(llvm::cl::desc("<input query log>"),
+                                     llvm::cl::Positional, llvm::cl::init("-"),
+                                     llvm::cl::cat(klee::ExprCat));
 
-  enum ToolActions {
-    PrintTokens,
-    PrintAST,
-    PrintSMTLIBv2,
-    Evaluate
-  };
+enum ToolActions { PrintTokens, PrintAST, PrintSMTLIBv2, Evaluate };
 
-  static llvm::cl::opt<ToolActions> 
-  ToolAction(llvm::cl::desc("Tool actions:"),
-             llvm::cl::init(Evaluate),
-             llvm::cl::values(
-             clEnumValN(PrintTokens, "print-tokens",
-                        "Print tokens from the input file."),
-			clEnumValN(PrintSMTLIBv2, "print-smtlib",
-					   "Print parsed input file as SMT-LIBv2 query."),
-             clEnumValN(PrintAST, "print-ast",
-                        "Print parsed AST nodes from the input file."),
-             clEnumValN(Evaluate, "evaluate",
-                        "Print parsed AST nodes from the input file.")
-             KLEE_LLVM_CL_VAL_END));
+static llvm::cl::opt<ToolActions> ToolAction(
+    llvm::cl::desc("Tool actions:"), llvm::cl::init(Evaluate),
+    llvm::cl::values(clEnumValN(PrintTokens, "print-tokens",
+                                "Print tokens from the input file."),
+                     clEnumValN(PrintSMTLIBv2, "print-smtlib",
+                                "Print parsed input file as SMT-LIBv2 query."),
+                     clEnumValN(PrintAST, "print-ast",
+                                "Print parsed AST nodes from the input file."),
+                     clEnumValN(Evaluate, "evaluate",
+                                "Evaluate parsed AST nodes from the input file.")
+                         KLEE_LLVM_CL_VAL_END),
+    llvm::cl::cat(klee::SolvingCat));
 
+enum BuilderKinds {
+  DefaultBuilder,
+  ConstantFoldingBuilder,
+  SimplifyingBuilder
+};
 
-  enum BuilderKinds {
-    DefaultBuilder,
-    ConstantFoldingBuilder,
-    SimplifyingBuilder
-  };
+static llvm::cl::opt<BuilderKinds> BuilderKind(
+    "builder", llvm::cl::desc("Expression builder:"),
+    llvm::cl::init(DefaultBuilder),
+    llvm::cl::values(clEnumValN(DefaultBuilder, "default",
+                                "Default expression construction."),
+                     clEnumValN(ConstantFoldingBuilder, "constant-folding",
+                                "Fold constant expressions."),
+                     clEnumValN(SimplifyingBuilder, "simplify",
+                                "Fold constants and simplify expressions.")
+                         KLEE_LLVM_CL_VAL_END),
+    llvm::cl::cat(klee::ExprCat));
 
-  static llvm::cl::opt<BuilderKinds> 
-  BuilderKind("builder",
-              llvm::cl::desc("Expression builder:"),
-              llvm::cl::init(DefaultBuilder),
-              llvm::cl::values(
-              clEnumValN(DefaultBuilder, "default",
-                         "Default expression construction."),
-              clEnumValN(ConstantFoldingBuilder, "constant-folding",
-                         "Fold constant expressions."),
-              clEnumValN(SimplifyingBuilder, "simplify",
-                         "Fold constants and simplify expressions.")
-              KLEE_LLVM_CL_VAL_END));
+llvm::cl::opt<std::string> directoryToWriteQueryLogs(
+    "query-log-dir",
+    llvm::cl::desc(
+        "The folder to write query logs to (default=current directory "),
+    llvm::cl::init("."), llvm::cl::cat(klee::ExprCat));
 
-
-  llvm::cl::opt<std::string> directoryToWriteQueryLogs("query-log-dir",llvm::cl::desc("The folder to write query logs to. Defaults is current working directory."),
-		                                               llvm::cl::init("."));
-
-  llvm::cl::opt<bool> ClearArrayAfterQuery(
-      "clear-array-decls-after-query",
-      llvm::cl::desc("We discard the previous array declarations after a query "
-                     "is performed. Default: false"),
-      llvm::cl::init(false));
-}
+llvm::cl::opt<bool> ClearArrayAfterQuery(
+    "clear-array-decls-after-query",
+    llvm::cl::desc("Discard the previous array declarations after a query "
+                   "is performed (default=false)"),
+    llvm::cl::init(false), llvm::cl::cat(klee::ExprCat));
+} // namespace
 
 static std::string getQueryLogPath(const char filename[])
 {
