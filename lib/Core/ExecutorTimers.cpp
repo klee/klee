@@ -169,7 +169,7 @@ void Executor::processTimers(ExecutionState *current,
     if (maxInstTime && current &&
         std::find(removedStates.begin(), removedStates.end(), current) ==
             removedStates.end()) {
-      if (timerTicks*kMilliSecondsPerTick > maxInstTime) {
+      if (timerTicks * kMilliSecondsPerTick > maxInstTime) {
         klee_warning("max-instruction-time exceeded: %.2fs", (timerTicks * kMilliSecondsPerTick).toSeconds());
         terminateStateEarly(*current, "max-instruction-time exceeded");
       }
