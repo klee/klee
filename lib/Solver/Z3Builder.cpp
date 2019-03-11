@@ -24,8 +24,9 @@ using namespace klee;
 namespace {
 llvm::cl::opt<bool> UseConstructHashZ3(
     "use-construct-hash-z3",
-    llvm::cl::desc("Use hash-consing during Z3 query construction."),
-    llvm::cl::init(true));
+    llvm::cl::desc("Use hash-consing during Z3 query construction (default=true)"),
+    llvm::cl::init(true),
+    llvm::cl::cat(klee::ExprCat));
 
 // FIXME: This should be std::atomic<bool>. Need C++11 for that.
 bool Z3InterationLogOpen = false;
