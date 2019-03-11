@@ -23,41 +23,60 @@ using namespace llvm;
 using namespace klee;
 
 namespace {
-  cl::list<Searcher::CoreSearchType>
-  CoreSearch("search", cl::desc("Specify the search heuristic (default=random-path interleaved with nurs:covnew)"),
-	     cl::values(clEnumValN(Searcher::DFS, "dfs", "use Depth First Search (DFS)"),
-			clEnumValN(Searcher::BFS, "bfs", "use Breadth First Search (BFS), where scheduling decisions are taken at the level of (2-way) forks"),
-			clEnumValN(Searcher::RandomState, "random-state", "randomly select a state to explore"),
-			clEnumValN(Searcher::RandomPath, "random-path", "use Random Path Selection (see OSDI'08 paper)"),
-			clEnumValN(Searcher::NURS_CovNew, "nurs:covnew", "use Non Uniform Random Search (NURS) with Coverage-New"),
-			clEnumValN(Searcher::NURS_MD2U, "nurs:md2u", "use NURS with Min-Dist-to-Uncovered"),
-			clEnumValN(Searcher::NURS_Depth, "nurs:depth", "use NURS with 2^depth"),
-			clEnumValN(Searcher::NURS_ICnt, "nurs:icnt", "use NURS with Instr-Count"),
-			clEnumValN(Searcher::NURS_CPICnt, "nurs:cpicnt", "use NURS with CallPath-Instr-Count"),
-			clEnumValN(Searcher::NURS_QC, "nurs:qc", "use NURS with Query-Cost")
-			KLEE_LLVM_CL_VAL_END));
+llvm::cl::OptionCategory
+    SearchCat("Search options", "These options control the search heuristic.");
 
-  cl::opt<bool>
-  UseIterativeDeepeningTimeSearch("use-iterative-deepening-time-search", 
-                                    cl::desc("(experimental)"));
+cl::list<Searcher::CoreSearchType> CoreSearch(
+    "search",
+    cl::desc("Specify the search heuristic (default=random-path interleaved "
+             "with nurs:covnew)"),
+    cl::values(
+        clEnumValN(Searcher::DFS, "dfs", "use Depth First Search (DFS)"),
+        clEnumValN(Searcher::BFS, "bfs",
+                   "use Breadth First Search (BFS), where scheduling decisions "
+                   "are taken at the level of (2-way) forks"),
+        clEnumValN(Searcher::RandomState, "random-state",
+                   "randomly select a state to explore"),
+        clEnumValN(Searcher::RandomPath, "random-path",
+                   "use Random Path Selection (see OSDI'08 paper)"),
+        clEnumValN(Searcher::NURS_CovNew, "nurs:covnew",
+                   "use Non Uniform Random Search (NURS) with Coverage-New"),
+        clEnumValN(Searcher::NURS_MD2U, "nurs:md2u",
+                   "use NURS with Min-Dist-to-Uncovered"),
+        clEnumValN(Searcher::NURS_Depth, "nurs:depth", "use NURS with 2^depth"),
+        clEnumValN(Searcher::NURS_ICnt, "nurs:icnt",
+                   "use NURS with Instr-Count"),
+        clEnumValN(Searcher::NURS_CPICnt, "nurs:cpicnt",
+                   "use NURS with CallPath-Instr-Count"),
+        clEnumValN(Searcher::NURS_QC, "nurs:qc", "use NURS with Query-Cost")
+            KLEE_LLVM_CL_VAL_END),
+    cl::cat(SearchCat));
 
-  cl::opt<bool>
-  UseBatchingSearch("use-batching-search", 
-		    cl::desc("Use batching searcher (keep running selected state for N instructions/time, see --batch-instructions and --batch-time)"),
-		    cl::init(false));
+cl::opt<bool> UseIterativeDeepeningTimeSearch(
+    "use-iterative-deepening-time-search",
+    cl::desc(
+        "Use iterative deepening time search (experimental) (default=off)"),
+    cl::init(false), cl::cat(SearchCat));
 
-  cl::opt<unsigned>
-  BatchInstructions("batch-instructions",
-                    cl::desc("Number of instructions to batch when using --use-batching-search"),
-                    cl::init(10000));
-  
-  cl::opt<std::string>
-  BatchTime("batch-time",
-            cl::desc("Amount of time to batch when using --use-batching-search (default=5s)"),
-            cl::init("5s"));
+cl::opt<bool> UseBatchingSearch(
+    "use-batching-search",
+    cl::desc("Use batching searcher (keep running selected state for N "
+             "instructions/time, see --batch-instructions and --batch-time) "
+             "(default=off)"),
+    cl::init(false), cl::cat(SearchCat));
 
-}
+cl::opt<unsigned>
+    BatchInstructions("batch-instructions",
+                      cl::desc("Number of instructions to batch when using "
+                               "--use-batching-search (default=10000)"),
+                      cl::init(10000), cl::cat(SearchCat));
 
+cl::opt<std::string> BatchTime("batch-time",
+                               cl::desc("Amount of time to batch when using "
+                                        "--use-batching-search (default=5s)"),
+                               cl::init("5s"), cl::cat(SearchCat));
+
+} // namespace
 
 void klee::initializeSearchOptions() {
   // default values
