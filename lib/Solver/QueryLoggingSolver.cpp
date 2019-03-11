@@ -7,23 +7,27 @@
 //
 //===----------------------------------------------------------------------===//
 #include "QueryLoggingSolver.h"
-#include "klee/Statistics.h"
+
 #include "klee/Config/config.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Internal/Support/FileHandling.h"
 #include "klee/Internal/System/Time.h"
+#include "klee/OptionCategories.h"
+#include "klee/Statistics.h"
 
 namespace {
 llvm::cl::opt<bool> DumpPartialQueryiesEarly(
     "log-partial-queries-early", llvm::cl::init(false),
-    llvm::cl::desc("Log queries before calling the solver (default=off)"));
+    llvm::cl::desc("Log queries before calling the solver (default=off)"),
+    llvm::cl::cat(klee::SolvingCat));
 
 #ifdef HAVE_ZLIB_H
 llvm::cl::opt<bool> CreateCompressedQueryLog(
     "compress-query-log", llvm::cl::init(false),
-    llvm::cl::desc("Compress query log files (default=off)"));
+    llvm::cl::desc("Compress query log files (default=off)"),
+    llvm::cl::cat(klee::SolvingCat));
 #endif
-}
+} // namespace
 
 QueryLoggingSolver::QueryLoggingSolver(Solver *_solver, std::string path,
                                        const std::string &commentSign,
