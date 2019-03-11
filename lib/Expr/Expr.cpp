@@ -13,6 +13,7 @@
 // FIXME: We shouldn't need this once fast constant support moves into
 // Core. If we need to do arithmetic, we probably want to use APInt.
 #include "klee/Internal/Support/IntEvaluation.h"
+#include "klee/OptionCategories.h"
 #include "klee/util/ExprPPrinter.h"
 
 #include "llvm/ADT/Hashing.h"
@@ -31,10 +32,11 @@ llvm::cl::OptionCategory
 }
 
 namespace {
-  cl::opt<bool>
-  ConstArrayOpt("const-array-opt",
-	 cl::init(false),
-	 cl::desc("Enable various optimizations involving all-constant arrays."));
+cl::opt<bool> ConstArrayOpt(
+    "const-array-opt", cl::init(false),
+    cl::desc(
+        "Enable an optimization involving all-constant arrays (default=false)"),
+    cl::cat(klee::ExprCat));
 }
 
 /***/
