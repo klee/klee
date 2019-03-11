@@ -23,35 +23,38 @@
 using namespace klee;
 
 namespace {
+
+llvm::cl::OptionCategory MemoryCat("Memory management options",
+                                   "These options control memory management.");
+
 llvm::cl::opt<bool> DeterministicAllocation(
     "allocate-determ",
-    llvm::cl::desc("Allocate memory deterministically(default=off)"),
-    llvm::cl::init(false));
+    llvm::cl::desc("Allocate memory deterministically (default=off)"),
+    llvm::cl::init(false), llvm::cl::cat(MemoryCat));
 
 llvm::cl::opt<unsigned> DeterministicAllocationSize(
     "allocate-determ-size",
     llvm::cl::desc(
         "Preallocated memory for deterministic allocation in MB (default=100)"),
-    llvm::cl::init(100));
+    llvm::cl::init(100), llvm::cl::cat(MemoryCat));
 
-llvm::cl::opt<bool>
-    NullOnZeroMalloc("return-null-on-zero-malloc",
-                     llvm::cl::desc("Returns NULL in case malloc(size) was "
-                                    "called with size 0 (default=off)."),
-                     llvm::cl::init(false));
+llvm::cl::opt<bool> NullOnZeroMalloc(
+    "return-null-on-zero-malloc",
+    llvm::cl::desc("Returns NULL if malloc(0) is called (default=off)"),
+    llvm::cl::init(false), llvm::cl::cat(MemoryCat));
 
 llvm::cl::opt<unsigned> RedZoneSpace(
     "red-zone-space",
     llvm::cl::desc("Set the amount of free space between allocations. This is "
-                   "important to detect out-of-bound accesses (default=10)."),
-    llvm::cl::init(10));
+                   "important to detect out-of-bounds accesses (default=10)"),
+    llvm::cl::init(10), llvm::cl::cat(MemoryCat));
 
 llvm::cl::opt<unsigned long long> DeterministicStartAddress(
     "allocate-determ-start-address",
     llvm::cl::desc("Start address for deterministic allocation. Has to be page "
-                   "aligned (default=0x7ff30000000)."),
-    llvm::cl::init(0x7ff30000000));
-}
+                   "aligned (default=0x7ff30000000)"),
+    llvm::cl::init(0x7ff30000000), llvm::cl::cat(MemoryCat));
+} // namespace
 
 /***/
 MemoryManager::MemoryManager(ArrayCache *_arrayCache)
