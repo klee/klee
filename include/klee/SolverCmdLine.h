@@ -82,12 +82,11 @@ extern llvm::cl::opt<klee::MetaSMTBackendType> MetaSMTBackend;
 
 class KCommandLine {
 public:
+  /// Hide all options in the specified category
+  static void HideOptions(llvm::cl::OptionCategory &Category);
+
   /// Hide all options except the ones in the specified category
   static void HideUnrelatedOptions(llvm::cl::OptionCategory &Category);
-
-  /// Hide all options except the ones in the specified categories
-  static void HideUnrelatedOptions(
-      llvm::ArrayRef<const llvm::cl::OptionCategory *> Categories);
 };
 } // namespace klee
 
