@@ -103,13 +103,13 @@ TEST(TimeTest, TimeArithmeticAndComparisons) {
   ASSERT_LT(sec, sec2);
 
   auto op0 = time::seconds(1);
-  auto op1 = op0 / 1000;
+  auto op1 = op0 / 1000U;
   ASSERT_EQ(op1, ms);
   op0 = time::nanoseconds(3);
-  op1 = op0 * 1000;
-  ASSERT_EQ(op1, 3*us);
+  op1 = op0 * 1000U;
+  ASSERT_EQ(op1, 3U*us);
 
-  op0 = (time::seconds(10) + time::minutes(1) - time::milliseconds(10000)) * 60;
+  op0 = (time::seconds(10) + time::minutes(1) - time::milliseconds(10000)) * 60U;
   ASSERT_EQ(op0, h);
 
   auto p1 = time::getWallTime();
@@ -162,4 +162,24 @@ TEST(TimeTest, TimeConversions) {
   std::ostringstream os;
   os << time::Span("2.5");
   ASSERT_EQ(os.str(), "2.5s");
+}
+
+TEST(TimeTest, ImplicitArithmeticConversions) {
+  auto t1 = time::Span("1000s");
+  t1 *= 2U;
+  auto d = t1.toSeconds();
+  ASSERT_EQ(d, 2000.0);
+
+  auto t2 = t1 * 1.5;
+  d = t2.toSeconds();
+  ASSERT_EQ(d, 3000.0);
+
+  t2 = 2.5 * t1;
+  d = t2.toSeconds();
+  ASSERT_EQ(d, 5000.0);
+
+  t1 = time::Span("1000s");
+  t1 *= 2.2;
+  d = t1.toSeconds();
+  ASSERT_EQ(d, 2200.0);
 }

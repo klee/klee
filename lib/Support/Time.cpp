@@ -106,13 +106,23 @@ error:
 time::Span& time::Span::operator=(const time::Duration &d) { duration = d; return *this; };
 time::Span& time::Span::operator+=(const time::Span &other) { duration += other.duration; return *this; }
 time::Span& time::Span::operator-=(const time::Span &other) { duration -= other.duration; return *this; }
-time::Span& time::Span::operator*=(const time::Duration::rep &rep) { duration *= rep; return *this; }
+time::Span& time::Span::operator*=(unsigned factor) { duration *= factor; return *this; }
+time::Span& time::Span::operator*=(double factor) {
+  duration = std::chrono::microseconds((std::uint64_t)((double)toMicroseconds() * factor));
+  return *this;
+}
 
 time::Span time::operator+(const time::Span &lhs, const time::Span &rhs) { return time::Span(lhs.duration + rhs.duration); }
 time::Span time::operator-(const time::Span &lhs, const time::Span &rhs) { return time::Span(lhs.duration - rhs.duration); }
-time::Span time::operator*(const time::Span &span, const time::Duration::rep &rep) { return time::Span(span.duration * rep); }
-time::Span time::operator*(const time::Duration::rep &rep, const time::Span &span) { return time::Span(span.duration * rep); }
-time::Span time::operator/(const time::Span &span, const time::Duration::rep &rep) { return time::Span(span.duration / rep); }
+time::Span time::operator*(const time::Span &span, double factor) {
+  return time::Span(std::chrono::microseconds((std::uint64_t)((double)span.toMicroseconds() * factor)));
+};
+time::Span time::operator*(double factor, const time::Span &span) {
+  return time::Span(std::chrono::microseconds((std::uint64_t)((double)span.toMicroseconds() * factor)));
+};
+time::Span time::operator*(const time::Span &span, unsigned factor) { return time::Span(span.duration * factor); }
+time::Span time::operator*(unsigned factor, const time::Span &span) { return time::Span(span.duration * factor); }
+time::Span time::operator/(const time::Span &span, unsigned divisor) { return time::Span(span.duration / divisor); }
 bool time::operator==(const time::Span &lhs, const time::Span &rhs) { return lhs.duration == rhs.duration; }
 bool time::operator<=(const time::Span &lhs, const time::Span &rhs) { return lhs.duration <= rhs.duration; }
 bool time::operator>=(const time::Span &lhs, const time::Span &rhs) { return lhs.duration >= rhs.duration; }
