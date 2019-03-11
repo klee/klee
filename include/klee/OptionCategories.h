@@ -18,6 +18,7 @@
 
 namespace klee {
   extern llvm::cl::OptionCategory SolvingCat;
+  extern llvm::cl::OptionCategory MergeCat;
 }
 
 #endif
