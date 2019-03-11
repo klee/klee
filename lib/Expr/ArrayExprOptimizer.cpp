@@ -8,23 +8,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "ArrayExprOptimizer.h"
-
-#include <algorithm>
-#include <cassert>
-#include <cstddef>
-#include <llvm/ADT/APInt.h>
-#include <llvm/Support/Casting.h>
-#include <llvm/Support/CommandLine.h>
-#include <set>
-
 #include "ArrayExprRewriter.h"
 #include "ArrayExprVisitor.h"
 #include "AssignmentGenerator.h"
+
 #include "klee/Config/Version.h"
 #include "klee/ExprBuilder.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/util/Assignment.h"
 #include "klee/util/BitArray.h"
+
+#include <llvm/ADT/APInt.h>
+#include <llvm/Support/Casting.h>
+#include <llvm/Support/CommandLine.h>
+
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <set>
 
 using namespace klee;
 
