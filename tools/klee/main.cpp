@@ -156,6 +156,11 @@ namespace {
                  cl::desc("Optimize the code before execution (default=false)."),
 		 cl::init(false),
                  cl::cat(StartCat));
+
+  cl::opt<bool>
+  WarnAllExternals("warn-all-external-symbols",
+                   cl::desc("Issue a warning on startup for all external symbols (default=false)."),
+                   cl::cat(StartCat));
   
 
   /*** Linking options ***/
@@ -211,9 +216,7 @@ namespace {
                  cl::init(true),
                  cl::cat(ChecksCat));
 
-  cl::opt<bool>
-  WarnAllExternals("warn-all-externals",
-                   cl::desc("Give initial warning for all externals (default=false)."));
+
 
   cl::opt<bool>
   OptExitOnError("exit-on-error",
@@ -794,6 +797,7 @@ static const char *modelledExternals[] = {
   "__ubsan_handle_mul_overflow",
   "__ubsan_handle_divrem_overflow",
 };
+
 // Symbols we aren't going to warn about
 static const char *dontCareExternals[] = {
 #if 0
@@ -842,17 +846,19 @@ static const char *dontCareExternals[] = {
   "__isnan",
   "__signbit",
 };
+
 // Extra symbols we aren't going to warn about with klee-libc
 static const char *dontCareKlee[] = {
   "__ctype_b_loc",
   "__ctype_get_mb_cur_max",
 
-  // io system calls
+  // I/O system calls
   "open",
   "write",
   "read",
   "close",
 };
+
 // Extra symbols we aren't going to warn about with uclibc
 static const char *dontCareUclibc[] = {
   "__dso_handle",
@@ -862,6 +868,7 @@ static const char *dontCareUclibc[] = {
   "printf",
   "vprintf"
 };
+
 // Symbols we consider unsafe
 static const char *unsafeExternals[] = {
   "fork", // oh lord
@@ -870,6 +877,7 @@ static const char *unsafeExternals[] = {
   "raise", // yeah
   "kill", // mmmhmmm
 };
+
 #define NELEMS(array) (sizeof(array)/sizeof(array[0]))
 void externalsAndGlobalsCheck(const llvm::Module *m) {
   std::map<std::string, bool> externals;
@@ -913,6 +921,7 @@ void externalsAndGlobalsCheck(const llvm::Module *m) {
       }
     }
   }
+
   for (Module::const_global_iterator
          it = m->global_begin(), ie = m->global_end();
        it != ie; ++it)
