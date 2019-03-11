@@ -8,21 +8,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Expr.h"
+
 #include "klee/Config/Version.h"
+// FIXME: We shouldn't need this once fast constant support moves into
+// Core. If we need to do arithmetic, we probably want to use APInt.
+#include "klee/Internal/Support/IntEvaluation.h"
+#include "klee/util/ExprPPrinter.h"
 
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-// FIXME: We shouldn't need this once fast constant support moves into
-// Core. If we need to do arithmetic, we probably want to use APInt.
-#include "klee/Internal/Support/IntEvaluation.h"
-
-#include "klee/util/ExprPPrinter.h"
 
 #include <sstream>
 
 using namespace klee;
 using namespace llvm;
+
+namespace klee {
+llvm::cl::OptionCategory
+    ExprCat("Expression building and printing options",
+            "These options impact the way expressions are build and printed.");
+}
 
 namespace {
   cl::opt<bool>
