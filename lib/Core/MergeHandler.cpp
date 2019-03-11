@@ -23,22 +23,22 @@ llvm::cl::OptionCategory MergeCat("Path merging options",
 llvm::cl::opt<bool> UseMerge(
     "use-merge", llvm::cl::init(false),
     llvm::cl::desc("Enable support for path merging via klee_open_merge() and "
-                   "klee_close_merge() (default=off)"),
+                   "klee_close_merge() (default=false)"),
     llvm::cl::cat(klee::MergeCat));
 
 llvm::cl::opt<bool> DebugLogMerge(
     "debug-log-merge", llvm::cl::init(false),
-    llvm::cl::desc("Debug information for path merging (default=off)"),
+    llvm::cl::desc("Debug information for path merging (default=false)"),
     llvm::cl::cat(klee::MergeCat));
 
 llvm::cl::opt<bool> UseIncompleteMerge(
     "use-incomplete-merge", llvm::cl::init(false),
-    llvm::cl::desc("Heuristic-based path merging (default=off)"),
+    llvm::cl::desc("Heuristic-based path merging (default=false)"),
     llvm::cl::cat(klee::MergeCat));
 
 llvm::cl::opt<bool> DebugLogIncompleteMerge(
     "debug-log-incomplete-merge", llvm::cl::init(false),
-    llvm::cl::desc("Debug information for incomplete path merging (default=off)"),
+    llvm::cl::desc("Debug information for incomplete path merging (default=false)"),
     llvm::cl::cat(klee::MergeCat));
 
 double MergeHandler::getMean() {
