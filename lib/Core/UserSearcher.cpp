@@ -55,14 +55,14 @@ cl::list<Searcher::CoreSearchType> CoreSearch(
 cl::opt<bool> UseIterativeDeepeningTimeSearch(
     "use-iterative-deepening-time-search",
     cl::desc(
-        "Use iterative deepening time search (experimental) (default=off)"),
+        "Use iterative deepening time search (experimental) (default=false)"),
     cl::init(false), cl::cat(SearchCat));
 
 cl::opt<bool> UseBatchingSearch(
     "use-batching-search",
     cl::desc("Use batching searcher (keep running selected state for N "
              "instructions/time, see --batch-instructions and --batch-time) "
-             "(default=off)"),
+             "(default=false)"),
     cl::init(false), cl::cat(SearchCat));
 
 cl::opt<unsigned>
