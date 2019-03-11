@@ -1,7 +1,5 @@
-; Unfortunately LLVM 2.9 has a different suffix for the ``llvm.objectsize`` instrinsic
-; so this LLVM IR fails to verify for that version.
-;
 ; LLVM 3.7 requires a type as the first argument to 'load'
+; LLVM 5 added nullunknown parameter to @llvm.objectsize
 ; REQUIRES: geq-llvm-3.7
 ; REQUIRES: lt-llvm-5.0
 ; RUN: %llvmas %s -o=%t.bc
