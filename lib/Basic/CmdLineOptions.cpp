@@ -112,6 +112,22 @@ cl::opt<bool> UseAssignmentValidatingSolver(
     cl::desc("Debug the correctness of generated assignments (default=false)"),
     cl::cat(SolvingCat));
 
+
+void KCommandLine::HideOptions(llvm::cl::OptionCategory &Category) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+  StringMap<cl::Option *> &map = cl::getRegisteredOptions();
+#else
+  StringMap<cl::Option *> map;
+  cl::getRegisteredOptions(map);
+#endif
+
+  for (auto &elem : map) {
+    if (elem.second->Category == &Category) {
+      elem.second->setHiddenFlag(cl::Hidden);
+    }
+  }
+}
+
 void KCommandLine::HideUnrelatedOptions(cl::OptionCategory &Category) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
   StringMap<cl::Option *> &map = cl::getRegisteredOptions();
@@ -125,14 +141,6 @@ void KCommandLine::HideUnrelatedOptions(cl::OptionCategory &Category) {
       i->second->setHiddenFlag(cl::Hidden);
     }
   }
-}
-
-void KCommandLine::HideUnrelatedOptions(
-    ArrayRef<const cl::OptionCategory *> Categories) {
-  for (ArrayRef<const cl::OptionCategory *>::iterator i = Categories.begin(),
-                                                      e = Categories.end();
-       i != e; i++)
-    HideUnrelatedOptions(*i);
 }
 
 #ifdef ENABLE_METASMT
