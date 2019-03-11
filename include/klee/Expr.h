@@ -13,10 +13,11 @@
 #include "klee/util/Bits.h"
 #include "klee/util/Ref.h"
 
-#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <sstream>
@@ -38,6 +39,7 @@ class ObjectState;
 
 template<class T> class ref;
 
+extern llvm::cl::OptionCategory ExprCat;
 
 /// Class representing symbolic expressions.
 /**
