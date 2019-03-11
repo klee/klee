@@ -15,6 +15,7 @@
 #include "klee/Config/Version.h"
 #include "klee/ExprBuilder.h"
 #include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/OptionCategories.h"
 #include "klee/util/Assignment.h"
 #include "klee/util/BitArray.h"
 
@@ -32,28 +33,32 @@ using namespace klee;
 namespace klee {
 llvm::cl::opt<ArrayOptimizationType> OptimizeArray(
     "optimize-array",
-    llvm::cl::values(
-        clEnumValN(ALL, "all", "Combining index and value transformations"),
-        clEnumValN(INDEX, "index", "Index-based transformation"),
-        clEnumValN(VALUE, "value", "Value-based transformation at branch (both "
-                                   "concrete and concrete/symbolic)")
-        KLEE_LLVM_CL_VAL_END),
+    llvm::cl::values(clEnumValN(ALL, "all",
+                                "Combining index and value transformations"),
+                     clEnumValN(INDEX, "index", "Index-based transformation"),
+                     clEnumValN(VALUE, "value",
+                                "Value-based transformation at branch (both "
+                                "concrete and concrete/symbolic)")
+                         KLEE_LLVM_CL_VAL_END),
     llvm::cl::init(NONE),
     llvm::cl::desc("Optimize accesses to either concrete or concrete/symbolic "
-                   "arrays. (default=off)"));
+                   "arrays. (default=off)"),
+    llvm::cl::cat(klee::SolvingCat));
 
 llvm::cl::opt<double> ArrayValueRatio(
     "array-value-ratio",
     llvm::cl::desc("Maximum ratio of unique values to array size for which the "
                    "value-based transformations are applied."),
-    llvm::cl::init(1.0), llvm::cl::value_desc("Unique Values / Array Size"));
+    llvm::cl::init(1.0), llvm::cl::value_desc("Unique Values / Array Size"),
+    llvm::cl::cat(klee::SolvingCat));
 
 llvm::cl::opt<double> ArrayValueSymbRatio(
     "array-value-symb-ratio",
     llvm::cl::desc("Maximum ratio of symbolic values to array size for which "
                    "the mixed value-based transformations are applied."),
-    llvm::cl::init(1.0), llvm::cl::value_desc("Symbolic Values / Array Size"));
-};
+    llvm::cl::init(1.0), llvm::cl::value_desc("Symbolic Values / Array Size"),
+    llvm::cl::cat(klee::SolvingCat));
+}; // namespace klee
 
 ref<Expr> extendRead(const UpdateList &ul, const ref<Expr> index,
                      Expr::Width w) {
