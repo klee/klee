@@ -61,10 +61,6 @@ static cl::opt<bool> DontVerify("disable-verify", cl::ReallyHidden);
 static cl::opt<bool> DisableInline("disable-inlining",
   cl::desc("Do not run the inliner pass"));
 
-static cl::opt<bool>
-DisableOptimizations("disable-opt",
-  cl::desc("Do not run any optimization passes"));
-
 static cl::opt<bool> DisableInternalize("disable-internalize",
   cl::desc("Do not mark all symbols as internal"));
 
@@ -107,8 +103,6 @@ static void AddStandardCompilePasses(klee::LegacyLLVMPassManagerTy &PM) {
   // If the -strip-debug command line option was specified, do it.
   if (StripDebug)
     addPass(PM, createStripSymbolsPass(true));
-
-  if (DisableOptimizations) return;
 
   addPass(PM, createCFGSimplificationPass());    // Clean up disgusting code
   addPass(PM, createPromoteMemoryToRegisterPass());// Kill useless allocas
@@ -204,100 +198,98 @@ void Optimize(Module *M, llvm::ArrayRef<const char *> preservedFunctions) {
   // DWD - Run the opt standard pass list as well.
   AddStandardCompilePasses(Passes);
 
-  if (!DisableOptimizations) {
-    // Now that composite has been compiled, scan through the module, looking
-    // for a main function.  If main is defined, mark all other functions
-    // internal.
-    if (!DisableInternalize) {
+  // Now that composite has been compiled, scan through the module, looking
+  // for a main function.  If main is defined, mark all other functions
+  // internal.
+  if (!DisableInternalize) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
-      auto PreserveFunctions = [=](const GlobalValue &GV) {
-        StringRef GVName = GV.getName();
+    auto PreserveFunctions = [=](const GlobalValue &GV) {
+      StringRef GVName = GV.getName();
 
-        for (const char *fun: preservedFunctions)
-          if (GVName.equals(fun))
-            return true;
+      for (const char *fun : preservedFunctions)
+        if (GVName.equals(fun))
+          return true;
 
-        return false;
-      };
-      ModulePass *pass = createInternalizePass(PreserveFunctions);
+      return false;
+    };
+    ModulePass *pass = createInternalizePass(PreserveFunctions);
 #else
-      ModulePass *pass = createInternalizePass(preservedFunctions);
+    ModulePass *pass = createInternalizePass(preservedFunctions);
 #endif
-      addPass(Passes, pass);
-    }
+    addPass(Passes, pass);
+  }
 
-    // Propagate constants at call sites into the functions they call.  This
-    // opens opportunities for globalopt (and inlining) by substituting function
-    // pointers passed as arguments to direct uses of functions.  
-    addPass(Passes, createIPSCCPPass());
+  // Propagate constants at call sites into the functions they call.  This
+  // opens opportunities for globalopt (and inlining) by substituting function
+  // pointers passed as arguments to direct uses of functions.
+  addPass(Passes, createIPSCCPPass());
 
-    // Now that we internalized some globals, see if we can hack on them!
-    addPass(Passes, createGlobalOptimizerPass());
+  // Now that we internalized some globals, see if we can hack on them!
+  addPass(Passes, createGlobalOptimizerPass());
 
-    // Linking modules together can lead to duplicated global constants, only
-    // keep one copy of each constant...
-    addPass(Passes, createConstantMergePass());
+  // Linking modules together can lead to duplicated global constants, only
+  // keep one copy of each constant...
+  addPass(Passes, createConstantMergePass());
 
-    // Remove unused arguments from functions...
-    addPass(Passes, createDeadArgEliminationPass());
+  // Remove unused arguments from functions...
+  addPass(Passes, createDeadArgEliminationPass());
 
-    // Reduce the code after globalopt and ipsccp.  Both can open up significant
-    // simplification opportunities, and both can propagate functions through
-    // function pointers.  When this happens, we often have to resolve varargs
-    // calls, etc, so let instcombine do this.
-    addPass(Passes, createInstructionCombiningPass());
+  // Reduce the code after globalopt and ipsccp.  Both can open up significant
+  // simplification opportunities, and both can propagate functions through
+  // function pointers.  When this happens, we often have to resolve varargs
+  // calls, etc, so let instcombine do this.
+  addPass(Passes, createInstructionCombiningPass());
 
-    if (!DisableInline)
-      addPass(Passes, createFunctionInliningPass()); // Inline small functions
+  if (!DisableInline)
+    addPass(Passes, createFunctionInliningPass()); // Inline small functions
 
-    addPass(Passes, createPruneEHPass());            // Remove dead EH info
-    addPass(Passes, createGlobalOptimizerPass());    // Optimize globals again.
-    addPass(Passes, createGlobalDCEPass());          // Remove dead functions
+  addPass(Passes, createPruneEHPass());         // Remove dead EH info
+  addPass(Passes, createGlobalOptimizerPass()); // Optimize globals again.
+  addPass(Passes, createGlobalDCEPass());       // Remove dead functions
 
-    // If we didn't decide to inline a function, check to see if we can
-    // transform it to pass arguments by value instead of by reference.
-    addPass(Passes, createArgumentPromotionPass());
+  // If we didn't decide to inline a function, check to see if we can
+  // transform it to pass arguments by value instead of by reference.
+  addPass(Passes, createArgumentPromotionPass());
 
-    // The IPO passes may leave cruft around.  Clean up after them.
-    addPass(Passes, createInstructionCombiningPass());
-    addPass(Passes, createJumpThreadingPass());        // Thread jumps.
+  // The IPO passes may leave cruft around.  Clean up after them.
+  addPass(Passes, createInstructionCombiningPass());
+  addPass(Passes, createJumpThreadingPass()); // Thread jumps.
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
-    addPass(Passes, createSROAPass());                 // Break up allocas
+  addPass(Passes, createSROAPass()); // Break up allocas
 #else
-    addPass(Passes, createScalarReplAggregatesPass()); // Break up allocas
+  addPass(Passes, createScalarReplAggregatesPass()); // Break up allocas
 #endif
 
-    // Run a few AA driven optimizations here and now, to cleanup the code.
+  // Run a few AA driven optimizations here and now, to cleanup the code.
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
-    addPass(Passes, createPostOrderFunctionAttrsLegacyPass());
+  addPass(Passes, createPostOrderFunctionAttrsLegacyPass());
 #else
-    addPass(Passes, createPostOrderFunctionAttrsPass());
+  addPass(Passes, createPostOrderFunctionAttrsPass());
 #endif
-    addPass(Passes, createReversePostOrderFunctionAttrsPass()); // Add nocapture
-    addPass(Passes, createGlobalsAAWrapperPass());   // IP alias analysis
+  addPass(Passes, createReversePostOrderFunctionAttrsPass()); // Add nocapture
+  addPass(Passes, createGlobalsAAWrapperPass()); // IP alias analysis
 #else
-    addPass(Passes, createFunctionAttrsPass());      // Add nocapture
-    addPass(Passes, createGlobalsModRefPass());      // IP alias analysis
+  addPass(Passes, createFunctionAttrsPass());        // Add nocapture
+  addPass(Passes, createGlobalsModRefPass());        // IP alias analysis
 #endif
 
-    addPass(Passes, createLICMPass());               // Hoist loop invariants
-    addPass(Passes, createGVNPass());                // Remove redundancies
-    addPass(Passes, createMemCpyOptPass());          // Remove dead memcpy's
-    addPass(Passes, createDeadStoreEliminationPass()); // Nuke dead stores
+  addPass(Passes, createLICMPass());                 // Hoist loop invariants
+  addPass(Passes, createGVNPass());                  // Remove redundancies
+  addPass(Passes, createMemCpyOptPass());            // Remove dead memcpy's
+  addPass(Passes, createDeadStoreEliminationPass()); // Nuke dead stores
 
-    // Cleanup and simplify the code after the scalar optimizations.
-    addPass(Passes, createInstructionCombiningPass());
+  // Cleanup and simplify the code after the scalar optimizations.
+  addPass(Passes, createInstructionCombiningPass());
 
-    addPass(Passes, createJumpThreadingPass());        // Thread jumps.
-    addPass(Passes, createPromoteMemoryToRegisterPass()); // Cleanup jumpthread.
-    
-    // Delete basic blocks, which optimization passes may have killed...
-    addPass(Passes, createCFGSimplificationPass());
+  addPass(Passes, createJumpThreadingPass());           // Thread jumps.
+  addPass(Passes, createPromoteMemoryToRegisterPass()); // Cleanup jumpthread.
 
-    // Now that we have optimized the program, discard unreachable functions...
-    addPass(Passes, createGlobalDCEPass());
-  }
+  // Delete basic blocks, which optimization passes may have killed...
+  addPass(Passes, createCFGSimplificationPass());
+
+  // Now that we have optimized the program, discard unreachable functions...
+  addPass(Passes, createGlobalDCEPass());
 
   // If the -s or -S command line options were specified, strip the symbols out
   // of the resulting program to make it smaller.  -s and -S are GNU ld options
@@ -305,27 +297,11 @@ void Optimize(Module *M, llvm::ArrayRef<const char *> preservedFunctions) {
   if (Strip || StripDebug)
     addPass(Passes, createStripSymbolsPass(StripDebug && !Strip));
 
-#if 0
-  // Create a new optimization pass for each one specified on the command line
-  std::auto_ptr<TargetMachine> target;
-  for (unsigned i = 0; i < OptimizationList.size(); ++i) {
-    const PassInfo *Opt = OptimizationList[i];
-    if (Opt->getNormalCtor())
-      addPass(Passes, Opt->getNormalCtor()());
-    else
-      llvm::errs() << "llvm-ld: cannot create pass: " << Opt->getPassName()
-                << "\n";
-  }
-#endif
-
-  // The user's passes may leave cruft around. Clean up after them them but
-  // only if we haven't got DisableOptimizations set
-  if (!DisableOptimizations) {
-    addPass(Passes, createInstructionCombiningPass());
-    addPass(Passes, createCFGSimplificationPass());
-    addPass(Passes, createAggressiveDCEPass());
-    addPass(Passes, createGlobalDCEPass());
-  }
+  // The user's passes may leave cruft around; clean up after them.
+  addPass(Passes, createInstructionCombiningPass());
+  addPass(Passes, createCFGSimplificationPass());
+  addPass(Passes, createAggressiveDCEPass());
+  addPass(Passes, createGlobalDCEPass());
 
   // Make sure everything is still good.
   if (!DontVerify)
@@ -334,5 +310,4 @@ void Optimize(Module *M, llvm::ArrayRef<const char *> preservedFunctions) {
   // Run our queue of passes all at once now, efficiently.
   Passes.run(*M);
 }
-
 }

@@ -1,7 +1,7 @@
 // RUN: rm -f %t4.out %t4.err %t4.log
 // RUN: %llvmgcc %s -emit-llvm -O2 -c -o %t1.bc
 // RUN: llvm-as -f ../_utils._ll -o %t2.bc
-// RUN: llvm-ld -disable-opt -link-as-library %t1.bc %t2.bc -o %t3.bc
+// RUN: llvm-ld --optimize=false -link-as-library %t1.bc %t2.bc -o %t3.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --log-file %t4.log --debug-check-for-implied-values %t3.bc > %t4.out 2> %t4.err
 // RUN: ls %t.klee-out | not grep .err
