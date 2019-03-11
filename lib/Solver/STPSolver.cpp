@@ -33,12 +33,12 @@ namespace {
 
 llvm::cl::opt<bool> DebugDumpSTPQueries(
     "debug-dump-stp-queries", llvm::cl::init(false),
-    llvm::cl::desc("Dump every STP query to stderr (default=off)"),
+    llvm::cl::desc("Dump every STP query to stderr (default=false)"),
     llvm::cl::cat(klee::SolvingCat));
 
 llvm::cl::opt<bool> IgnoreSolverFailures(
     "ignore-solver-failures", llvm::cl::init(false),
-    llvm::cl::desc("Ignore any STP solver failures (default=off)"),
+    llvm::cl::desc("Ignore any STP solver failures (default=false)"),
     llvm::cl::cat(klee::SolvingCat));
 }
 
