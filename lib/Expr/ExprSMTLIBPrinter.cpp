@@ -6,34 +6,37 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
+#include "klee/util/ExprSMTLIBPrinter.h"
+
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "klee/util/ExprSMTLIBPrinter.h"
 
 #include <stack>
 
 namespace ExprSMTLIBOptions {
 // Command line options
 llvm::cl::opt<klee::ExprSMTLIBPrinter::ConstantDisplayMode>
-argConstantDisplayMode(
-    "smtlib-display-constants",
-    llvm::cl::desc("Sets how bitvector constants are written in generated "
-                   "SMT-LIBv2 files (default=dec)"),
-    llvm::cl::values(clEnumValN(klee::ExprSMTLIBPrinter::BINARY, "bin",
-                                "Use binary form (e.g. #b00101101)"),
-                     clEnumValN(klee::ExprSMTLIBPrinter::HEX, "hex",
-                                "Use Hexadecimal form (e.g. #x2D)"),
-                     clEnumValN(klee::ExprSMTLIBPrinter::DECIMAL, "dec",
-                                "Use decimal form (e.g. (_ bv45 8) )")
-                     KLEE_LLVM_CL_VAL_END),
-    llvm::cl::init(klee::ExprSMTLIBPrinter::DECIMAL));
+    argConstantDisplayMode(
+        "smtlib-display-constants",
+        llvm::cl::desc("Sets how bitvector constants are written in generated "
+                       "SMT-LIBv2 files (default=dec)"),
+        llvm::cl::values(clEnumValN(klee::ExprSMTLIBPrinter::BINARY, "bin",
+                                    "Use binary form (e.g. #b00101101)"),
+                         clEnumValN(klee::ExprSMTLIBPrinter::HEX, "hex",
+                                    "Use Hexadecimal form (e.g. #x2D)"),
+                         clEnumValN(klee::ExprSMTLIBPrinter::DECIMAL, "dec",
+                                    "Use decimal form (e.g. (_ bv45 8) )")
+                             KLEE_LLVM_CL_VAL_END),
+        llvm::cl::init(klee::ExprSMTLIBPrinter::DECIMAL),
+        llvm::cl::cat(klee::ExprCat));
 
-llvm::cl::opt<bool> humanReadableSMTLIB(
-    "smtlib-human-readable",
-    llvm::cl::desc(
-        "Enables generated SMT-LIBv2 files to be human readable (default=false)"),
-    llvm::cl::init(false));
+llvm::cl::opt<bool>
+    humanReadableSMTLIB("smtlib-human-readable",
+                        llvm::cl::desc("Enables generated SMT-LIBv2 files to "
+                                       "be human readable (default=false)"),
+                        llvm::cl::init(false), llvm::cl::cat(klee::ExprCat));
 
 llvm::cl::opt<klee::ExprSMTLIBPrinter::AbbreviationMode> abbreviationMode(
     "smtlib-abbreviation-mode",
@@ -45,9 +48,10 @@ llvm::cl::opt<klee::ExprSMTLIBPrinter::AbbreviationMode> abbreviationMode(
                                 "Abbreviate with let"),
                      clEnumValN(klee::ExprSMTLIBPrinter::ABBR_NAMED, "named",
                                 "Abbreviate with :named annotations")
-                     KLEE_LLVM_CL_VAL_END),
-    llvm::cl::init(klee::ExprSMTLIBPrinter::ABBR_LET));
-}
+                         KLEE_LLVM_CL_VAL_END),
+    llvm::cl::init(klee::ExprSMTLIBPrinter::ABBR_LET),
+    llvm::cl::cat(klee::ExprCat));
+} // namespace ExprSMTLIBOptions
 
 namespace klee {
 
