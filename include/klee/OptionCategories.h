@@ -11,13 +11,13 @@
  * This header defines the option categories used in KLEE.
  */
 
-#ifndef KLEE_SOLVERCOMMANDLINE_H
-#define KLEE_SOLVERCOMMANDLINE_H
+#ifndef KLEE_OPTIONCATEGORIES_H
+#define KLEE_OPTIONCATEGORIES_H
 
 #include "llvm/Support/CommandLine.h"
 
 namespace klee {
-  extern cl::OptionCategory SolvingCat;
+  extern llvm::cl::OptionCategory SolvingCat;
 }
 
 #endif
