@@ -11,16 +11,15 @@
 
 #include "klee/Constraints.h"
 #include "klee/Expr.h"
+#include "klee/Internal/ADT/MapOfSets.h"
+#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/OptionCategories.h"
 #include "klee/SolverImpl.h"
+#include "klee/SolverStats.h"
 #include "klee/TimerStatIncrementer.h"
 #include "klee/util/Assignment.h"
 #include "klee/util/ExprUtil.h"
 #include "klee/util/ExprVisitor.h"
-#include "klee/Internal/ADT/MapOfSets.h"
-
-#include "klee/SolverStats.h"
-
-#include "klee/Internal/Support/ErrorHandling.h"
 
 #include "llvm/Support/CommandLine.h"
 
@@ -28,23 +27,30 @@ using namespace klee;
 using namespace llvm;
 
 namespace {
-  cl::opt<bool>
-  DebugCexCacheCheckBinding("debug-cex-cache-check-binding");
+cl::opt<bool> DebugCexCacheCheckBinding(
+    "debug-cex-cache-check-binding", cl::init(false),
+    cl::desc("Debug the correctness of the counterexample "
+             "cache assignments (default=off)"),
+    cl::cat(SolvingCat));
 
-  cl::opt<bool>
-  CexCacheTryAll("cex-cache-try-all",
-                 cl::desc("try substituting all counterexamples before asking the SMT solver"),
-                 cl::init(false));
+cl::opt<bool>
+    CexCacheTryAll("cex-cache-try-all", cl::init(false),
+                   cl::desc("Try substituting all counterexamples before "
+                            "asking the SMT solver (default=off)"),
+                   cl::cat(SolvingCat));
 
-  cl::opt<bool>
-  CexCacheSuperSet("cex-cache-superset",
-                 cl::desc("try substituting SAT super-set counterexample before asking the SMT solver (default=false)"),
-                 cl::init(false));
+cl::opt<bool>
+    CexCacheSuperSet("cex-cache-superset", cl::init(false),
+                     cl::desc("Try substituting SAT superset counterexample "
+                              "before asking the SMT solver (default=false)"),
+                     cl::cat(SolvingCat));
 
-  cl::opt<bool>
-  CexCacheExperimental("cex-cache-exp", cl::init(false));
+cl::opt<bool> CexCacheExperimental(
+    "cex-cache-exp", cl::init(false),
+    cl::desc("Optimization for validity queries (default=off)"),
+    cl::cat(SolvingCat));
 
-}
+} // namespace
 
 ///
 
