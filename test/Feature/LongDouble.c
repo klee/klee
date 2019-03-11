@@ -1,6 +1,6 @@
 // RUN: %clang  -g -emit-llvm %O0opt -c -o %t.bc %s
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --libc=klee --no-output --exit-on-error %t.bc > %t.log
+// RUN: %klee --output-dir=%t.klee-out --libc=klee --write-no-tests --exit-on-error %t.bc > %t.log
 // RUN: FileCheck %s --input-file=%t.log
 
 #include "klee/klee.h"
