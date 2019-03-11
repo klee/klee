@@ -394,6 +394,9 @@ static bool printInputAsSMTLIBv2(const char *Filename,
 }
 
 int main(int argc, char **argv) {
+
+  KCommandLine::HideOptions(llvm::cl::GeneralCategory);
+
   bool success = true;
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
