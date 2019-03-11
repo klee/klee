@@ -7,10 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/util/PrintContext.h"
 #include "klee/util/ExprPPrinter.h"
 
 #include "klee/Constraints.h"
+#include "klee/OptionCategories.h"
+#include "klee/util/PrintContext.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
@@ -21,21 +22,38 @@
 using namespace klee;
 
 namespace {
-  llvm::cl::opt<bool>
-  PCWidthAsArg("pc-width-as-arg", llvm::cl::init(true));
 
-  llvm::cl::opt<bool>
-  PCAllWidths("pc-all-widths", llvm::cl::init(false));
+llvm::cl::opt<bool> PCWidthAsArg(
+    "pc-width-as-arg", llvm::cl::init(true),
+    llvm::cl::desc(
+        "Print the width as a separate argument, as opposed to a prefix "
+        "to the operation (default=true)"),
+    llvm::cl::cat(klee::ExprCat));
 
-  llvm::cl::opt<bool>
-  PCPrefixWidth("pc-prefix-width", llvm::cl::init(true));
+llvm::cl::opt<bool>
+    PCAllWidths("pc-all-widths", llvm::cl::init(false),
+                llvm::cl::desc("Print the width of all operations, including "
+                               "booleans (default=false)"),
+                llvm::cl::cat(klee::ExprCat));
 
-  llvm::cl::opt<bool>
-  PCMultibyteReads("pc-multibyte-reads", llvm::cl::init(true));
+llvm::cl::opt<bool>
+    PCPrefixWidth("pc-prefix-width", llvm::cl::init(true),
+                  llvm::cl::desc("Print width with 'w' prefix (default=true)"),
+                  llvm::cl::cat(klee::ExprCat));
 
-  llvm::cl::opt<bool>
-  PCAllConstWidths("pc-all-const-widths",  llvm::cl::init(false));
-}
+llvm::cl::opt<bool>
+    PCMultibyteReads("pc-multibyte-reads", llvm::cl::init(true),
+                     llvm::cl::desc("Print ReadLSB and ReadMSB expressions "
+                                    "when possible (default=true)"),
+                     llvm::cl::cat(klee::ExprCat));
+
+llvm::cl::opt<bool> PCAllConstWidths(
+    "pc-all-const-widths", llvm::cl::init(false),
+    llvm::cl::desc(
+        "Always print the width of constant expressions (default=false)"),
+    llvm::cl::cat(klee::ExprCat));
+
+} // namespace
 
 class PPrinter : public ExprPPrinter {
 public:
