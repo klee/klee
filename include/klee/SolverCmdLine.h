@@ -52,7 +52,7 @@ enum QueryLoggingSolverType {
   SOLVER_SMTLIB  ///< Log queries passed to solver in .smt2 (SMT-LIBv2) format
 };
 
-extern llvm::cl::bits<QueryLoggingSolverType> queryLoggingOptions;
+extern llvm::cl::bits<QueryLoggingSolverType> QueryLoggingOptions;
 
 enum CoreSolverType {
   STP_SOLVER,
