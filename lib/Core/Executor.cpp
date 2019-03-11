@@ -889,7 +889,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
   time::Span timeout = coreSolverTimeout;
   if (isSeeding)
-    timeout *= it->second.size();
+    timeout *= static_cast<unsigned>(it->second.size());
   solver->setTimeout(timeout);
   bool success = solver->evaluate(current, condition, res);
   solver->setTimeout(time::Span());

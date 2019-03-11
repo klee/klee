@@ -76,7 +76,8 @@ namespace klee {
       Span& operator=(const Duration&);
       Span& operator+=(const Span&);
       Span& operator-=(const Span&);
-      Span& operator*=(const Duration::rep&);
+      Span& operator*=(unsigned);
+      Span& operator*=(double);
 
       // conversions
       explicit operator Duration() const;
@@ -90,9 +91,11 @@ namespace klee {
 
     Span operator+(const Span&, const Span&);
     Span operator-(const Span&, const Span&);
-    Span operator*(const Span&, const Duration::rep&);
-    Span operator/(const Span&, const Duration::rep&);
-    Span operator*(const Duration::rep&, const Span&);
+    Span operator*(const Span&, double);
+    Span operator*(double, const Span&);
+    Span operator*(const Span&, unsigned);
+    Span operator*(unsigned, const Span&);
+    Span operator/(const Span&, unsigned);
     bool operator==(const Span&, const Span&);
     bool operator<=(const Span&, const Span&);
     bool operator>=(const Span&, const Span&);

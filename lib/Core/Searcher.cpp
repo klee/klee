@@ -432,7 +432,7 @@ void IterativeDeepeningTimeSearcher::update(
   }
 
   if (baseSearcher->empty()) {
-    time *= 2;
+    time *= 2U;
     klee_message("increased time budget to %f\n", time.toSeconds());
     std::vector<ExecutionState *> ps(pausedStates.begin(), pausedStates.end());
     baseSearcher->update(0, ps, std::vector<ExecutionState *>());
