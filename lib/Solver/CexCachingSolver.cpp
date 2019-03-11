@@ -30,13 +30,13 @@ namespace {
 cl::opt<bool> DebugCexCacheCheckBinding(
     "debug-cex-cache-check-binding", cl::init(false),
     cl::desc("Debug the correctness of the counterexample "
-             "cache assignments (default=off)"),
+             "cache assignments (default=false)"),
     cl::cat(SolvingCat));
 
 cl::opt<bool>
     CexCacheTryAll("cex-cache-try-all", cl::init(false),
                    cl::desc("Try substituting all counterexamples before "
-                            "asking the SMT solver (default=off)"),
+                            "asking the SMT solver (default=false)"),
                    cl::cat(SolvingCat));
 
 cl::opt<bool>
@@ -47,7 +47,7 @@ cl::opt<bool>
 
 cl::opt<bool> CexCacheExperimental(
     "cex-cache-exp", cl::init(false),
-    cl::desc("Optimization for validity queries (default=off)"),
+    cl::desc("Optimization for validity queries (default=false)"),
     cl::cat(SolvingCat));
 
 } // namespace
