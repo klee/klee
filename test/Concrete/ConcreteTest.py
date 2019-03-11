@@ -35,7 +35,7 @@ def testFile(name, klee_path, lli_path):
     klee_out_path = "Output/%s.klee-out" % (baseName,)
     if os.path.exists(klee_out_path):
         shutil.rmtree(klee_out_path)
-    klee_cmd = klee_path.split() + ['--output-dir=' + klee_out_path,  '--no-output', exeFile]
+    klee_cmd = klee_path.split() + ['--output-dir=' + klee_out_path,  '--write-no-tests', exeFile]
     print("EXECUTING: %s" % (klee_cmd,))
     sys.stdout.flush()
 

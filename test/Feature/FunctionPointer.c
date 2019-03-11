@@ -1,6 +1,6 @@
 // RUN: %clang %s -emit-llvm -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --no-output --exit-on-error %t1.bc
+// RUN: %klee --output-dir=%t.klee-out --write-no-tests --exit-on-error %t1.bc
 
 #include <stdio.h>
 

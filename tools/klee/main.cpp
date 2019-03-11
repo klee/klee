@@ -83,6 +83,12 @@ namespace {
                                  "These options select the files to generate for each test case.");
 
   cl::opt<bool>
+  WriteNone("write-no-tests",
+            cl::init(false),
+            cl::desc("Do not generate any test files (default=false)"),
+            cl::cat(TestCaseCat));
+
+  cl::opt<bool>
   WriteCVCs("write-cvcs",
             cl::desc("Write .cvc files for each test case (default=false)"),
             cl::cat(TestCaseCat));
@@ -204,12 +210,6 @@ namespace {
                  cl::desc("Inject checks for overshift (default=true)"),
                  cl::init(true),
                  cl::cat(ChecksCat));
-
- 
-
-  cl::opt<bool>
-  NoOutput("no-output",
-           cl::desc("Don't generate test files (default=false)."));
 
   cl::opt<bool>
   WarnAllExternals("warn-all-externals",
@@ -464,7 +464,7 @@ KleeHandler::openTestFile(const std::string &suffix, unsigned id) {
 void KleeHandler::processTestCase(const ExecutionState &state,
                                   const char *errorMessage,
                                   const char *errorSuffix) {
-  if (!NoOutput) {
+  if (!WriteNone) {
     std::vector< std::pair<std::string, std::vector<unsigned char> > > out;
     bool success = m_interpreter->getSymbolicSolution(state, out);
 
@@ -540,7 +540,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
         *f << constraints;
     }
 
-    if(WriteSMT2s) {
+    if (WriteSMT2s) {
       std::string constraints;
         m_interpreter->getConstraintLog(state, constraints, Interpreter::SMTLIB2);
         auto f = openTestFile("smt2", id);
@@ -582,7 +582,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       if (f)
         *f << "Time to generate test case: " << elapsed_time << '\n';
     }
-  }
+  } // if (!WriteNone)
 
   if (errorMessage && OptExitOnError) {
     m_interpreter->prepareForEarlyExit();
