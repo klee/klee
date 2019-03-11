@@ -14,25 +14,32 @@
 #include "klee/ExecutionState.h"
 
 namespace klee {
-llvm::cl::opt<bool>
-    UseMerge("use-merge",
-        llvm::cl::init(false),
-        llvm::cl::desc("Enable support for klee_open_merge() and klee_close_merge() (experimental)"));
 
-llvm::cl::opt<bool>
-    DebugLogMerge("debug-log-merge",
-        llvm::cl::init(false),
-        llvm::cl::desc("Enhanced verbosity for region based merge operations"));
+/*** Test generation options ***/
 
-llvm::cl::opt<bool>
-    UseIncompleteMerge("use-incomplete-merge",
-        llvm::cl::init(false),
-        llvm::cl::desc("Heuristic based merging"));
+llvm::cl::OptionCategory MergeCat("Path merging options",
+                                  "These options control path merging.");
 
-llvm::cl::opt<bool>
-    DebugLogIncompleteMerge("debug-log-incomplete-merge",
-        llvm::cl::init(false),
-        llvm::cl::desc("Debug info about incomplete merging"));
+llvm::cl::opt<bool> UseMerge(
+    "use-merge", llvm::cl::init(false),
+    llvm::cl::desc("Enable support for path merging via klee_open_merge() and "
+                   "klee_close_merge() (default=off)"),
+    llvm::cl::cat(klee::MergeCat));
+
+llvm::cl::opt<bool> DebugLogMerge(
+    "debug-log-merge", llvm::cl::init(false),
+    llvm::cl::desc("Debug information for path merging (default=off)"),
+    llvm::cl::cat(klee::MergeCat));
+
+llvm::cl::opt<bool> UseIncompleteMerge(
+    "use-incomplete-merge", llvm::cl::init(false),
+    llvm::cl::desc("Heuristic-based path merging (default=off)"),
+    llvm::cl::cat(klee::MergeCat));
+
+llvm::cl::opt<bool> DebugLogIncompleteMerge(
+    "debug-log-incomplete-merge", llvm::cl::init(false),
+    llvm::cl::desc("Debug information for incomplete path merging (default=off)"),
+    llvm::cl::cat(klee::MergeCat));
 
 double MergeHandler::getMean() {
   if (closedStateCount == 0)
