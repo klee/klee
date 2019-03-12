@@ -10,8 +10,8 @@ install_binary_artifact_clang() {
   [[ "${LLVM_VERSION_MAJOR}" -le 6 ]] && version="-${LLVM_VERSION}"
   [[ "${LLVM_VERSION_MAJOR}" -ge 7 ]] && version="-${LLVM_VERSION_MAJOR}"
 
-
-  if [[ "${LLVM_VERSION_MAJOR}" -eq 3 && "${LLVM_VERSION_MINOR}" -gt 7 ]]; then
+  # apt.llvm packages for Trusty clang 5.0 package is broken with atomics. Don't use it.
+  if [[ "${LLVM_VERSION_MAJOR}" -gt 6 ]]; then
     # Add certificate
     apt update -y
     dependencies=(
@@ -34,31 +34,6 @@ install_binary_artifact_clang() {
 
   #Install essential dependencies
   apt -y --no-install-recommends install "${dependencies[@]}"
-}
-
-setup_artifact_variables_clang() {
-  local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
-  local LLVM_VERSION_MINOR="${LLVM_VERSION/*./}"
-  local version=""
-  [[ "${LLVM_VERSION_MAJOR}" -le 6 ]] && version="-${LLVM_VERSION}"
-  [[ "${LLVM_VERSION_MAJOR}" -ge 7 ]] && version="-${LLVM_VERSION_MAJOR}"
-
-  # Only set LLVM_CONFIG if not set yet
-  if [[ -z ${LLVM_CONFIG+x} ]]; then
-    LLVM_CONFIG=$(which "llvm-config${version}")
-  fi
-
-  BITCODE_CC=$(which "clang${version}")
-  BITCODE_CXX=$(which "clang++${version}")
-
-  SANITIZER_C_COMPILER="${BITCODE_CC}"
-  SANITIZER_CXX_COMPILER="${BITCODE_CXX}"
-}
-
-# Check if the binary artifact is installed
-is_installed_clang() {
-    # Check if llvm-config with the right version exists    
-    which "llvm-config-${LLVM_VERSION}"
 }
 
 get_docker_config_id_clang() {
