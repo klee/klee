@@ -84,10 +84,10 @@ static llvm::cl::opt<BuilderKinds> BuilderKind(
                          KLEE_LLVM_CL_VAL_END),
     llvm::cl::cat(klee::ExprCat));
 
-llvm::cl::opt<std::string> directoryToWriteQueryLogs(
+llvm::cl::opt<std::string> DirectoryToWriteQueryLogs(
     "query-log-dir",
     llvm::cl::desc(
-        "The folder to write query logs to (default=current directory "),
+        "The folder to write query logs to (default=current directory)"),
     llvm::cl::init("."), llvm::cl::cat(klee::ExprCat));
 
 llvm::cl::opt<bool> ClearArrayAfterQuery(
@@ -101,10 +101,10 @@ static std::string getQueryLogPath(const char filename[])
 {
 	//check directoryToWriteLogs exists
 	struct stat s;
-	if( !(stat(directoryToWriteQueryLogs.c_str(),&s) == 0 && S_ISDIR(s.st_mode)) )
+	if( !(stat(DirectoryToWriteQueryLogs.c_str(),&s) == 0 && S_ISDIR(s.st_mode)) )
 	{
           llvm::errs() << "Directory to log queries \""
-                       << directoryToWriteQueryLogs << "\" does not exist!"
+                       << DirectoryToWriteQueryLogs << "\" does not exist!"
                        << "\n";
           exit(1);
         }
@@ -116,14 +116,14 @@ static std::string getQueryLogPath(const char filename[])
 	)
 	{
           llvm::errs() << "Directory to log queries \""
-                       << directoryToWriteQueryLogs << "\" is not writable!"
+                       << DirectoryToWriteQueryLogs << "\" is not writable!"
                        << "\n";
           exit(1);
         }
 
-	std::string path=directoryToWriteQueryLogs;
-	path+="/";
-	path+=filename;
+	std::string path = DirectoryToWriteQueryLogs;
+	path += "/";
+	path += filename;
 	return path;
 }
 
