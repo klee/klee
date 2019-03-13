@@ -75,7 +75,7 @@ extern klee_expr_t klee_build_read_expr(const klee_expr_builder_t builder,
 extern klee_expr_t klee_build_select_expr(const klee_expr_builder_t builder,
                                           const klee_expr_t cond,
                                           const klee_expr_t lhs,
-                                          const klee_expr_t lhs);
+                                          const klee_expr_t rhs);
 
 extern klee_expr_t klee_build_concat_expr(const klee_expr_builder_t builder,
                                           const klee_expr_t lhs,
