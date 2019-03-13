@@ -2,11 +2,13 @@
 required_variables_klee=(
   "COVERAGE"
   "USE_TCMALLOC"
+  "USE_LIBCXX"
 )
 
 required_variables_check_klee() {
   check_bool "COVERAGE"
   check_bool "USE_TCMALLOC"
+  check_bool "USE_LIBCXX"
 }
 
 # On which artifacts does KLEE depend on
@@ -16,9 +18,8 @@ artifact_dependency_klee(){
     dependencies+=(uclibc)
   fi
 
-  if [[ "${USE_TCMALLOC}" -eq 1 ]]; then
-    dependencies+=("tcmalloc")
-  fi
+  [[ "${USE_TCMALLOC}" -eq 1 ]] && dependencies+=("tcmalloc")
+  [[ "${USE_LIBCXX}" -eq 1 ]] && dependencies+=("libcxx")
 
   for d in "${dependencies[@]}"; do
     echo "${d}"
@@ -32,9 +33,8 @@ runtime_artifact_dependency_klee(){
   fi
   dependencies+=("llvm" "solvers" "gtest")
 
-  if [[ "${USE_TCMALLOC}" -eq 1 ]]; then
-    dependencies+=("tcmalloc")
-  fi
+  [[ "${USE_TCMALLOC}" -eq 1 ]] && dependencies+=("tcmalloc")
+  [[ "${USE_LIBCXX}" -eq 1 ]] && dependencies+=("libcxx")
 
   for d in "${dependencies[@]}"; do
     echo "${d}"
