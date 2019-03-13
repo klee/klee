@@ -50,14 +50,12 @@ extern void klee_expr_builder_dispose(klee_expr_builder_t builder);
 extern void klee_expr_dispose(klee_expr_t expr);
 
 /// Builds an array for use in subsequent expressions
-extern klee_array_t klee_array_create(const char *name, uint64_t size,
+extern klee_array_t klee_array_create(const klee_expr_builder_t,
+                                      const char *name, uint64_t size,
                                       const klee_expr_t constant_values_begin,
                                       const klee_expr_t constant_values_end,
                                       klee_expr_width_t domain,
                                       klee_expr_width_t range);
-
-/// Destroys a klee_array_t
-extern void klee_array_dispose(klee_array_t array);
 
 /// Builds an update list for use in array based expression
 extern klee_update_list_t klee_update_list_create(const klee_array_t array);

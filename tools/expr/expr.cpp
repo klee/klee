@@ -23,10 +23,21 @@ using namespace klee;
 
 static ArrayCache AC;
 
+namespace {
+// Encapsulate a builder and the associated array cache to tie lifetime of
+// arrays to that of builder.
+struct LibExprBuilder {
+  explicit LibExprBuilder(ExprBuilder *TheBuilder) : Builder(TheBuilder) {}
+  std::unique_ptr<ExprBuilder> Builder;
+  ArrayCache AC;
+};
+
+} // namespace
+
 KLEE_DEFINE_C_WRAPPERS(ref<Expr>, klee_expr_t)
 KLEE_DEFINE_C_WRAPPERS(Array, klee_array_t)
 KLEE_DEFINE_C_WRAPPERS(UpdateList, klee_update_list_t)
-KLEE_DEFINE_C_WRAPPERS(ExprBuilder, klee_expr_builder_t)
+KLEE_DEFINE_C_WRAPPERS(LibExprBuilder, klee_expr_builder_t)
 
 // Conceptually passing ref<Expr> around the ABI boundary is a bit trickier than
 // it looks. Effectively, we cannot pass it out by value, so we have to copy
@@ -43,12 +54,13 @@ static klee_expr_t allocating_wrap(const ref<Expr> &RefExpr) {
 }
 
 klee_expr_builder_t klee_expr_builder_create(void) {
-  ExprBuilder *TheBuilder = createDefaultExprBuilder();
+  ExprBuilder *DefaultBuilder = createDefaultExprBuilder();
+  LibExprBuilder *TheBuilder = new LibExprBuilder(DefaultBuilder);
   return wrap(TheBuilder);
 }
 
 void klee_expr_builder_dispose(klee_expr_builder_t builder) {
-  ExprBuilder *TheBuilder = unwrap(builder);
+  LibExprBuilder *TheBuilder = unwrap(builder);
   delete TheBuilder;
 }
 
@@ -59,23 +71,33 @@ void klee_expr_dispose(klee_expr_t expr) {
   delete TheRefExpr;
 }
 
-klee_array_t klee_array_create(const char *name, uint64_t size,
+klee_array_t klee_array_create(const klee_expr_builder_t builder,
+                               const char *name, uint64_t size,
                                const klee_expr_t constant_values_begin,
                                const klee_expr_t constant_values_end,
                                klee_expr_width_t domain,
                                klee_expr_width_t range) {
+  LibExprBuilder *TheBuilder = unwrap(builder);
+  ArrayCache &AC = TheBuilder->AC;
   std::string TheName(name);
-  ref<Expr> *TheConstantsValuesBegin = unwrap(constant_values_begin);
-  ref<Expr> *TheConstantsValuesEnd = unwrap(constant_values_end);
-  Array *TheArray = AC.CreateArray(TheName, size, TheConstantsValuesBegin,
-                              TheConstantsValuesEnd, domain, range);
+  ref<ConstantExpr> *CVB =
+      llvm::cast<ref<ConstantExpr> *>(unwrap(constant_values_begin));
+  ref<ConstantExpr> *CVE =
+      llvm::cast<ref<ConstantExpr> *>(unwrap(constant_values_end));
+  Array *TheArray = AC.CreateArray(TheName, size, CVB, CVE, domain, range);
+  return wrap(TheArray);
 }
 
-void klee_array_dispose(klee_array_t array);
+klee_update_list_t klee_update_list_create(const klee_array_t array) {
+  Array *TheArray = unwrap(array);
+  UpdateList *TheUpdateList = new UpdateList(TheArray, nullptr);
+  return wrap(TheUpdateList);
+}
 
-klee_update_list_t klee_update_list_create(const klee_array_t array);
-
-void klee_update_list_destroy(klee_update_list_t list);
+void klee_update_list_destroy(klee_update_list_t list) {
+  UpdateList *TheUpdateList = unwrap(list);
+  delete TheUpdateList;
+}
 
 klee_expr_t klee_expr_build_constant(klee_expr_builder_t builder, uint64_t val,
                                      klee_expr_width_t width, bool is_signed);
