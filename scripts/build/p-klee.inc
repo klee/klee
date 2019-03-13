@@ -30,7 +30,6 @@ build_klee() {
 ###############################################################################
 # klee-uclibc
 ###############################################################################
-  local KLEE_UCLIBC_CONFIGURE_OPTION
 
   if [ "${UCLIBC_VERSION}" != "0" ]; then
     CMAKE_ARGUMENTS+=(
@@ -45,6 +44,21 @@ build_klee() {
     )
   fi
 
+###############################################################################
+# libc++
+###############################################################################
+
+if [ "${USE_LIBCXX}" -eq 1 ]; then
+  CMAKE_ARGUMENTS+=(
+    "-DENABLE_KLEE_LIBCXX=TRUE"
+    "-DKLEE_LIBCXX_DIR=${LIBCXX_INSTALL}"
+    "-DKLEE_LIBCXX_INCLUDE_DIR=${LIBCXX_INSTALL}/include/c++/v1"
+  )
+else
+  CMAKE_ARGUMENTS+=(
+    "-DENABLE_KLEE_LIBCXX=FALSE"
+  )
+fi
 
 
 ###############################################################################

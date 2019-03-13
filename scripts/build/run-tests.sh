@@ -57,6 +57,11 @@ run_tests() {
   if [ "${COVERAGE}" -eq 1 ]; then
     coverage_setup "${build_dir}"
   fi
+
+  if [[ -n "${SANITIZER_BUILD+x}" ]]; then
+    for num in {1..10}; do sleep 120; echo 'Keep Travis alive'; done &
+  fi
+
   make systemtests || return 1
   
   # If metaSMT is the only solver, then rerun lit tests with non-default metaSMT backends
