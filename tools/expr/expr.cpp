@@ -118,100 +118,165 @@ void klee_update_list_destroy(klee_update_list_t list) {
 }
 
 klee_expr_t klee_expr_build_constant(klee_expr_builder_t builder, uint64_t val,
-                                     klee_expr_width_t width, bool is_signed);
+                                     klee_expr_width_t width, bool is_signed) {
+  LibExprBuilder *LibBuilder = unwrap(builder);
+  llvm::APInt TheValue(val, width, is_signed);
+  auto Expr = LibBuilder->Builder->Constant(TheValue);
+  return allocating_wrap(Expr);
+}
 
 klee_expr_t klee_build_read_expr(const klee_expr_builder_t builder,
                                  const klee_update_list_t updates,
-                                 const klee_expr_t index);
+                                 const klee_expr_t index) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_select_expr(const klee_expr_builder_t builder,
                                    const klee_expr_t cond,
                                    const klee_expr_t lhs,
-                                   const klee_expr_t lhs);
+                                   const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_concat_expr(const klee_expr_builder_t builder,
                                    const klee_expr_t lhs,
-                                   const klee_expr_t rhs);
+                                   const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_extract_expr(const klee_expr_builder_t builder,
                                     const klee_expr_t lhs, unsigned offset,
-                                    klee_expr_width_t width);
+                                    klee_expr_width_t width) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_zext_expr(const klee_expr_builder_t builder,
                                  const klee_expr_t lhs,
-                                 klee_expr_width_t width);
+                                 klee_expr_width_t width) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_sext_expr(const klee_expr_builder_t builder,
-                                 const klee_expr_t lhs, klee_expr_width_t W);
+                                 const klee_expr_t lhs, klee_expr_width_t W) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_add_expr(const klee_expr_builder_t builder,
-                                const klee_expr_t lhs, const klee_expr_t rhs);
+                                const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_sub_expr(const klee_expr_builder_t builder,
-                                const klee_expr_t lhs, const klee_expr_t rhs);
+                                const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_mul_expr(const klee_expr_builder_t builder,
-                                const klee_expr_t lhs, const klee_expr_t rhs);
+                                const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_udiv_expr(const klee_expr_builder_t builder,
-                                 const klee_expr_t lhs, const klee_expr_t rhs);
+                                 const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_sdiv_expr(const klee_expr_builder_t builder,
-                                 const klee_expr_t lhs, const klee_expr_t rhs);
+                                 const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_urem_expr(const klee_expr_builder_t builder,
-                                 const klee_expr_t lhs, const klee_expr_t rhs);
+                                 const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_srem_expr(const klee_expr_builder_t builder,
-                                 const klee_expr_t lhs, const klee_expr_t rhs);
+                                 const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_not_expr(const klee_expr_builder_t builder,
-                                const klee_expr_t lhs);
+                                const klee_expr_t lhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_and_expr(const klee_expr_builder_t builder,
-                                const klee_expr_t lhs, const klee_expr_t rhs);
+                                const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_or_expr(const klee_expr_builder_t builder,
-                               const klee_expr_t lhs, const klee_expr_t rhs);
+                               const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_xor_expr(const klee_expr_builder_t builder,
-                                const klee_expr_t lhs, const klee_expr_t rhs);
+                                const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_shl_expr(const klee_expr_builder_t builder,
-                                const klee_expr_t lhs, const klee_expr_t rhs);
+                                const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_lshr_expr(const klee_expr_builder_t builder,
-                                 const klee_expr_t lhs, const klee_expr_t rhs);
+                                 const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_ashr_expr(const klee_expr_builder_t builder,
-                                 const klee_expr_t lhs, const klee_expr_t rhs);
+                                 const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_eq_expr(const klee_expr_builder_t builder,
-                               const klee_expr_t lhs, const klee_expr_t rhs);
+                               const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_ne_expr(const klee_expr_builder_t builder,
-                               const klee_expr_t lhs, const klee_expr_t rhs);
+                               const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_ult_expr(const klee_expr_builder_t builder,
-                                const klee_expr_t lhs, const klee_expr_t rhs);
+                                const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_ule_expr(const klee_expr_builder_t builder,
-                                const klee_expr_t lhs, const klee_expr_t rhs);
+                                const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_ugt_expr(const klee_expr_builder_t builder,
-                                const klee_expr_t lhs, const klee_expr_t rhs);
+                                const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_uge_expr(const klee_expr_builder_t builder,
-                                const klee_expr_t lhs, const klee_expr_t rhs);
+                                const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_slt_expr(const klee_expr_builder_t builder,
-                                const klee_expr_t lhs, const klee_expr_t rhs);
+                                const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_sle_expr(const klee_expr_builder_t builder,
-                                const klee_expr_t lhs, const klee_expr_t rhs);
+                                const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_sgt_expr(const klee_expr_builder_t builder,
-                                const klee_expr_t lhs, const klee_expr_t rhs);
+                                const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
 
 klee_expr_t klee_build_sge_expr(const klee_expr_builder_t builder,
-                                const klee_expr_t lhs, const klee_expr_t rhs);
+                                const klee_expr_t lhs, const klee_expr_t rhs) {
+  assert(false && "NYP");
+}
