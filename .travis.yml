@@ -50,6 +50,7 @@ env:
     - TCMALLOC_VERSION: 2.7
     - UCLIBC_VERSION: klee_uclibc_v1.0.0
     - USE_TCMALLOC: 1
+    - USE_LIBCXX: 1
     - Z3_VERSION: 4.8.4
 
     matrix:
@@ -62,14 +63,15 @@ env:
     - LLVM_VERSION=3.9
     - LLVM_VERSION=3.8
     - LLVM_VERSION=3.7
-    - LLVM_VERSION=3.6
-    - LLVM_VERSION=3.5
-    - LLVM_VERSION=3.4
+    - LLVM_VERSION=3.6 USE_LIBCXX=0
+    - LLVM_VERSION=3.5 USE_LIBCXX=0
+    - LLVM_VERSION=3.4 USE_LIBCXX=0
 
     # *Sanitizer builds. Do unoptimized build otherwise the optimizer might remove problematic code
     - SANITIZER_BUILD=address ENABLE_OPTIMIZED=0 USE_TCMALLOC=0
     - SANITIZER_BUILD=undefined ENABLE_OPTIMIZED=0 USE_TCMALLOC=0
-    - SANITIZER_BUILD=memory ENABLE_OPTIMIZED=0 USE_TCMALLOC=0 SOLVERS=STP
+    # Use without libcxx as it is too slow to finish before travis time-out
+    - SANITIZER_BUILD=memory ENABLE_OPTIMIZED=0 USE_TCMALLOC=0 SOLVERS=STP USE_LIBCXX=0
 
     # Test just using Z3 only
     - SOLVERS=Z3
@@ -100,7 +102,7 @@ matrix:
   include:
     - os: osx
       osx_image: xcode8.3
-      env: SOLVERS=STP UCLIBC_VERSION=0 USE_TCMALLOC=0
+      env: SOLVERS=STP UCLIBC_VERSION=0 USE_TCMALLOC=0 USE_LIBCXX=0
 addons:
   apt:
     packages:
