@@ -48,7 +48,7 @@ env:
     - SOLVERS: STP:Z3
     - STP_VERSION: 2.3.2
     - TCMALLOC_VERSION: 2.7
-    - UCLIBC_VERSION: klee_uclibc_v1.0.0
+    - UCLIBC_VERSION: klee_uclibc_v1.2-rc.1
     - USE_TCMALLOC: 1
     - USE_LIBCXX: 1
     - Z3_VERSION: 4.8.4
