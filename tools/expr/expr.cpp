@@ -78,13 +78,31 @@ klee_array_t klee_array_create(const klee_expr_builder_t builder,
                                klee_expr_width_t domain,
                                klee_expr_width_t range) {
   LibExprBuilder *TheBuilder = unwrap(builder);
-  ArrayCache &AC = TheBuilder->AC;
   std::string TheName(name);
+
+  // Raw pointer to the beginning of what should be a contiguous array of
+  // ref<ConstantExpr>
+  ref<Expr> *RawConstantsBegin = unwrap(constant_values_begin);
+  // Check that the first element is indeed a ref<ConstantExpr>
+  if (!llvm::isa<ConstantExpr>(*RawConstantsBegin))
+    assert(false && "Invalid ConstantExpr");
+  // We can safely cast it to to ref<ConstantExpr> * now
   ref<ConstantExpr> *CVB =
-      llvm::cast<ref<ConstantExpr> *>(unwrap(constant_values_begin));
+      reinterpret_cast<ref<ConstantExpr> *>(RawConstantsBegin);
+
+  ref<Expr> *RawConstantsEnd = unwrap(constant_values_end);
   ref<ConstantExpr> *CVE =
-      llvm::cast<ref<ConstantExpr> *>(unwrap(constant_values_end));
-  Array *TheArray = AC.CreateArray(TheName, size, CVB, CVE, domain, range);
+      reinterpret_cast<ref<ConstantExpr> *>(RawConstantsEnd);
+
+  // This is horrible we need to find a way of providing a better API for create Array
+  for (auto It = CVB; It != CVE; It++) {
+    if (!llvm::isa<ConstantExpr>(*It))
+      assert(false && "Invalid ConstantExpr");
+  }
+
+  ArrayCache &AC = TheBuilder->AC;
+  const Array *TheArray =
+      AC.CreateArray(TheName, size, CVB, CVE, domain, range);
   return wrap(TheArray);
 }
 
