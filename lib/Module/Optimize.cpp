@@ -17,6 +17,7 @@
 
 #include "klee/Config/Version.h"
 #include "klee/Internal/Module/LLVMPassManager.h"
+#include "klee/OptionCategories.h"
 
 #ifdef USE_WORKAROUND_LLVM_PR39177
 #include "Passes.h"
@@ -56,32 +57,45 @@
 using namespace llvm;
 
 // Don't verify at the end
-static cl::opt<bool> DontVerify("disable-verify", cl::ReallyHidden);
+static cl::opt<bool>
+    DontVerify("disable-verify", cl::ReallyHidden,
+               cl::desc("Do not verify the module integrity (default=false)"),
+               cl::init(false), cl::cat(klee::ModuleCat));
 
-static cl::opt<bool> DisableInline("disable-inlining",
-  cl::desc("Do not run the inliner pass"));
+static cl::opt<bool>
+    DisableInline("disable-inlining",
+                  cl::desc("Do not run the inliner pass (default=false)"),
+                  cl::init(false), cl::cat(klee::ModuleCat));
 
-static cl::opt<bool> DisableInternalize("disable-internalize",
-  cl::desc("Do not mark all symbols as internal"));
+static cl::opt<bool> DisableInternalize(
+    "disable-internalize",
+    cl::desc("Do not mark all symbols as internal (default=false)"),
+    cl::init(false), cl::cat(klee::ModuleCat));
 
-static cl::opt<bool> VerifyEach("verify-each",
- cl::desc("Verify intermediate results of all passes"));
+static cl::opt<bool> VerifyEach(
+    "verify-each",
+    cl::desc("Verify intermediate results of all passes (default=false)"),
+    cl::init(false),
+    cl::cat(klee::ModuleCat));
 
 static cl::alias ExportDynamic("export-dynamic",
-  cl::aliasopt(DisableInternalize),
-  cl::desc("Alias for -disable-internalize"));
+                               cl::aliasopt(DisableInternalize),
+                               cl::desc("Alias for -disable-internalize"));
 
-static cl::opt<bool> Strip("strip-all", 
-  cl::desc("Strip all symbol info from executable"));
+static cl::opt<bool>
+    Strip("strip-all", cl::desc("Strip all symbol information from executable"),
+          cl::init(false), cl::cat(klee::ModuleCat));
 
-static cl::alias A0("s", cl::desc("Alias for --strip-all"), 
-  cl::aliasopt(Strip));
+static cl::alias A0("s", cl::desc("Alias for --strip-all"),
+                    cl::aliasopt(Strip));
 
-static cl::opt<bool> StripDebug("strip-debug",
-  cl::desc("Strip debugger symbol info from executable"));
+static cl::opt<bool>
+    StripDebug("strip-debug",
+               cl::desc("Strip debugger symbol info from executable"),
+               cl::init(false), cl::cat(klee::ModuleCat));
 
 static cl::alias A1("S", cl::desc("Alias for --strip-debug"),
-  cl::aliasopt(StripDebug));
+                    cl::aliasopt(StripDebug));
 
 // A utility function that adds a pass to the pass manager but will also add
 // a verifier pass after if we're supposed to verify.
