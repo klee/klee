@@ -337,7 +337,7 @@ build_docker() {
   # Build Docker container
   docker build -t "${REPOSITORY}/${target_image}" -f "${temp_dir}"/Dockerfile "${docker_context}" || return 1
   if [[ "${PUSH_DOCKER_DEPS}" -eq 1 && "${is_dependency}" -eq 1 ]]; then
-    docker push "${REPOSITORY}/${target_image}" || /usr/bin/true
+    docker push "${REPOSITORY}/${target_image}" || true
   fi
 
   if [[ "${KEEP_DOCKERFILE}" -eq 0 ]]; then
