@@ -9,33 +9,38 @@
 
 #include "CoreStats.h"
 #include "Executor.h"
+#include "ExecutorTimerInfo.h"
 #include "PTree.h"
 #include "StatsTracker.h"
-#include "ExecutorTimerInfo.h"
 
 #include "klee/ExecutionState.h"
 #include "klee/Internal/Module/InstructionInfoTable.h"
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
-#include "klee/Internal/System/Time.h"
 #include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Internal/System/Time.h"
+#include "klee/OptionCategories.h"
 
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
 
-#include <string>
-#include <unistd.h>
-#include <signal.h>
-#include <sys/time.h>
 #include <math.h>
-
+#include <signal.h>
+#include <string>
+#include <sys/time.h>
+#include <unistd.h>
 
 using namespace llvm;
 using namespace klee;
 
+namespace klee {
 cl::opt<std::string>
-MaxTime("max-time",
-        cl::desc("Halt execution after the specified number of seconds (default=0s (off))"));
+    MaxTime("max-time",
+            cl::desc("Halt execution after the specified number of seconds.  "
+                     "Set to 0s to disable (default=0s)"),
+            cl::init("0s"),
+            cl::cat(TerminationCat));
+}
 
 ///
 
