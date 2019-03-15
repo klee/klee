@@ -21,6 +21,7 @@
 #include "klee/Internal/Support/PrintVersion.h"
 #include "klee/Internal/System/Time.h"
 #include "klee/Interpreter.h"
+#include "klee/OptionCategories.h"
 #include "klee/Statistics.h"
 
 #include "llvm/IR/Constants.h"
@@ -255,10 +256,14 @@ namespace {
 
 
   cl::list<std::string>
-  SeedOutFile("seed-out");
+  SeedOutFile("seed-file",
+              cl::desc(".ktest file to be used as seed"),
+              cl::cat(SeedingCat));
 
   cl::list<std::string>
-  SeedOutDir("seed-out-dir");
+  SeedOutDir("seed-dir",
+             cl::desc("Directory with .ktest files to be used as seeds"),
+             cl::cat(SeedingCat));
 
   cl::opt<unsigned>
   MakeConcreteSymbolic("make-concrete-symbolic",
