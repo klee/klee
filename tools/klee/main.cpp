@@ -22,6 +22,7 @@
 #include "klee/Internal/System/Time.h"
 #include "klee/Interpreter.h"
 #include "klee/OptionCategories.h"
+#include "klee/SolverCmdLine.h"
 #include "klee/Statistics.h"
 
 #include "llvm/IR/Constants.h"
@@ -1138,6 +1139,8 @@ linkWithUclibc(StringRef libDir,
 
 int main(int argc, char **argv, char **envp) {
   atexit(llvm_shutdown);  // Call llvm_shutdown() on exit.
+
+  KCommandLine::HideOptions(llvm::cl::GeneralCategory);
 
   llvm::InitializeNativeTarget();
 
