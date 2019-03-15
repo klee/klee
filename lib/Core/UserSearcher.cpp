@@ -56,25 +56,30 @@ cl::opt<bool> UseIterativeDeepeningTimeSearch(
     "use-iterative-deepening-time-search",
     cl::desc(
         "Use iterative deepening time search (experimental) (default=false)"),
-    cl::init(false), cl::cat(SearchCat));
+    cl::init(false),
+    cl::cat(SearchCat));
 
 cl::opt<bool> UseBatchingSearch(
     "use-batching-search",
     cl::desc("Use batching searcher (keep running selected state for N "
              "instructions/time, see --batch-instructions and --batch-time) "
              "(default=false)"),
-    cl::init(false), cl::cat(SearchCat));
+    cl::init(false),
+    cl::cat(SearchCat));
 
-cl::opt<unsigned>
-    BatchInstructions("batch-instructions",
-                      cl::desc("Number of instructions to batch when using "
-                               "--use-batching-search (default=10000)"),
-                      cl::init(10000), cl::cat(SearchCat));
+cl::opt<unsigned> BatchInstructions(
+    "batch-instructions",
+    cl::desc("Number of instructions to batch when using "
+             "--use-batching-search.  Set to 0 to disable (default=10000)"),
+    cl::init(10000),
+    cl::cat(SearchCat));
 
-cl::opt<std::string> BatchTime("batch-time",
-                               cl::desc("Amount of time to batch when using "
-                                        "--use-batching-search (default=5s)"),
-                               cl::init("5s"), cl::cat(SearchCat));
+cl::opt<std::string> BatchTime(
+    "batch-time",
+    cl::desc("Amount of time to batch when using "
+             "--use-batching-search.  Set to 0s to disable (default=5s)"),
+    cl::init("5s"),
+    cl::cat(SearchCat));
 
 } // namespace
 
