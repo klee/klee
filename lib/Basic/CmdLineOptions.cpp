@@ -43,12 +43,12 @@ cl::opt<bool> UseFastCexSolver(
     cl::cat(SolvingCat));
 
 cl::opt<bool> UseCexCache("use-cex-cache", cl::init(true),
-                          cl::desc("Use counterexample caching (default=true)"),
+                          cl::desc("Use the counterexample cache (default=true)"),
                           cl::cat(SolvingCat));
 
-cl::opt<bool> UseCache("use-cache", cl::init(true),
-                       cl::desc("Use validity caching (default=true)"),
-                       cl::cat(SolvingCat));
+cl::opt<bool> UseBranchCache("use-branch-cache", cl::init(true),
+                             cl::desc("Use the branch cache (default=true)"),
+                             cl::cat(SolvingCat));
 
 cl::opt<bool>
     UseIndependentSolver("use-independent-solver", cl::init(true),
