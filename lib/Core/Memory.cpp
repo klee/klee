@@ -10,19 +10,18 @@
 #include "Memory.h"
 
 #include "Context.h"
-#include "klee/Expr.h"
-#include "klee/Solver.h"
-#include "klee/util/BitArray.h"
-#include "klee/Internal/Support/ErrorHandling.h"
-#include "klee/util/ArrayCache.h"
-
-#include "ObjectHolder.h"
 #include "MemoryManager.h"
+#include "ObjectHolder.h"
+#include "klee/Expr.h"
+#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/OptionCategories.h"
+#include "klee/Solver.h"
+#include "klee/util/ArrayCache.h"
+#include "klee/util/BitArray.h"
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Value.h"
-
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -35,7 +34,9 @@ using namespace klee;
 namespace {
   cl::opt<bool>
   UseConstantArrays("use-constant-arrays",
-                    cl::init(true));
+                    cl::desc("Use constant arrays instead of updates when possible (default=true)\n"),
+                    cl::init(true),
+                    cl::cat(SolvingCat));
 }
 
 /***/
