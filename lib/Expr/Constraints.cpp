@@ -9,9 +9,10 @@
 
 #include "klee/Constraints.h"
 
+#include "klee/Internal/Module/KModule.h"
+#include "klee/OptionCategories.h"
 #include "klee/util/ExprPPrinter.h"
 #include "klee/util/ExprVisitor.h"
-#include "klee/Internal/Module/KModule.h"
 
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
@@ -21,12 +22,13 @@
 using namespace klee;
 
 namespace {
-  llvm::cl::opt<bool>
-  RewriteEqualities("rewrite-equalities",
-		    llvm::cl::init(true),
-		    llvm::cl::desc("Rewrite existing constraints when an equality with a constant is added (default=true)"));
+llvm::cl::opt<bool> RewriteEqualities(
+    "rewrite-equalities",
+    llvm::cl::desc("Rewrite existing constraints when an equality with a "
+                   "constant is added (default=true)"),
+    llvm::cl::init(true),
+    llvm::cl::cat(SolvingCat));
 }
-
 
 class ExprReplaceVisitor : public ExprVisitor {
 private:
