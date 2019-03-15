@@ -26,7 +26,7 @@ extern llvm::cl::opt<bool> UseFastCexSolver;
 
 extern llvm::cl::opt<bool> UseCexCache;
 
-extern llvm::cl::opt<bool> UseCache;
+extern llvm::cl::opt<bool> UseBranchCache;
 
 extern llvm::cl::opt<bool> UseIndependentSolver;
 
