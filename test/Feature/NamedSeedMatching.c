@@ -5,7 +5,7 @@
 // RUN: not test -f %t.klee-out/test000002.ktest
 
 // RUN: rm -rf %t.klee-out-2
-// RUN: %klee --output-dir=%t.klee-out-2 --only-replay-seeds --named-seed-matching --seed-out %t.klee-out/test000001.ktest %t.bc > %t.log
+// RUN: %klee --output-dir=%t.klee-out-2 --only-replay-seeds --named-seed-matching --seed-file %t.klee-out/test000001.ktest %t.bc > %t.log
 // RUN: grep -q "a==3" %t.log
 // RUN: grep -q "b==4" %t.log
 // RUN: grep -q "c==5" %t.log
