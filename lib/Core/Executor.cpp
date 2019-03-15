@@ -92,11 +92,28 @@ using namespace llvm;
 using namespace klee;
 
 namespace klee {
+cl::OptionCategory DebugCat("Debugging options",
+                            "These are debugging options.");
 
-/*** Test generation options ***/
+cl::OptionCategory ExtCallsCat("External call policy options",
+                               "These options impact external calls.");
+
+cl::OptionCategory SeedingCat(
+    "Seeding options",
+    "These options are related to the use of seeds to start exploration.");
+
+cl::OptionCategory
+    TerminationCat("State and overall termination options",
+                   "These options control termination of the overall KLEE "
+                   "execution and of individual states.");
 
 cl::OptionCategory TestGenCat("Test generation options",
                               "These options impact test generation.");
+} // namespace klee
+
+namespace {
+
+/*** Test generation options ***/
 
 cl::opt<bool> DumpStatesOnHalt(
     "dump-states-on-halt",
@@ -140,10 +157,8 @@ cl::opt<bool>
                                   "querying the solver (default=true)"),
                          cl::cat(SolvingCat));
 
-/*** External call policy options ***/
 
-cl::OptionCategory ExtCallsCat("External call policy options",
-                               "These options impact external calls.");
+/*** External call policy options ***/
 
 enum class ExternalCallPolicy {
   None,     // No external calls allowed
@@ -183,11 +198,8 @@ cl::opt<bool> AllExternalWarnings(
              "as opposed to once per function (default=false)"),
     cl::cat(ExtCallsCat));
 
-/*** Seeding options ***/
 
-cl::OptionCategory SeedingCat(
-    "Seeding options",
-    "These options are related to the use of seeds to start exploration.");
+/*** Seeding options ***/
 
 cl::opt<bool> AlwaysOutputSeeds(
     "always-output-seeds",
@@ -242,11 +254,6 @@ cl::opt<std::string>
 
 
 /*** Termination criteria options ***/
-
-cl::OptionCategory
-    TerminationCat("State and overall termination options",
-                   "These options control termination of the overall KLEE "
-                   "execution and of individual states.");
 
 cl::list<Executor::TerminateReason> ExitOnErrorType(
     "exit-on-error-type",
@@ -345,10 +352,8 @@ cl::opt<double> MaxStaticCPSolvePct(
              "instructions (default=1.0 (always))"),
     cl::cat(TerminationCat));
 
-/*** Debugging options ***/
 
-cl::OptionCategory DebugCat("Debugging options",
-                            "These are debugging options.");
+/*** Debugging options ***/
 
 /// The different query logging solvers that can switched on/off
 enum PrintDebugInstructionsType {
