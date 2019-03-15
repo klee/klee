@@ -221,7 +221,9 @@ namespace {
 
   cl::opt<bool>
   OptExitOnError("exit-on-error",
-              cl::desc("Exit KLEE if an error in the tested application has been found (default=false)."));
+                 cl::desc("Exit KLEE if an error in the tested application has been found (default=false)"),
+                 cl::init(false),
+                 cl::cat(TerminationCat));
 
 
   /*** Replaying options ***/
@@ -269,18 +271,21 @@ namespace {
   MakeConcreteSymbolic("make-concrete-symbolic",
                        cl::desc("Probabilistic rate at which to make concrete reads symbolic, "
 				"i.e. approximately 1 in n concrete reads will be made symbolic (0=off, 1=all).  "
-				"Used for testing."),
-                       cl::init(0));
+				"Used for testing (default=0)"),
+                       cl::init(0),
+                       cl::cat(DebugCat));
 
   cl::opt<unsigned>
   MaxTests("max-tests",
-           cl::desc("Stop execution after generating the given number of tests. Extra tests corresponding to partially explored paths will also be dumped (default=0 (off))."),
-           cl::init(0));
+           cl::desc("Stop execution after generating the given number of tests. Extra tests corresponding to partially explored paths will also be dumped.  Set to 0 to disable (default=0)"),
+           cl::init(0),
+           cl::cat(TerminationCat));
 
   cl::opt<bool>
   Watchdog("watchdog",
            cl::desc("Use a watchdog process to enforce --max-time."),
-           cl::init(0));
+           cl::init(0),
+           cl::cat(TerminationCat));
 }
 
 extern cl::opt<std::string> MaxTime;
