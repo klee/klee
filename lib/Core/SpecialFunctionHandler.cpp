@@ -7,26 +7,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Memory.h"
 #include "SpecialFunctionHandler.h"
+
+#include "Executor.h"
+#include "Memory.h"
+#include "MemoryManager.h"
 #include "TimingSolver.h"
 #include "klee/MergeHandler.h"
 
 #include "klee/ExecutionState.h"
-
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
 #include "klee/Internal/Support/Debug.h"
 #include "klee/Internal/Support/ErrorHandling.h"
-
-#include "Executor.h"
-#include "MemoryManager.h"
-
+#include "klee/OptionCategories.h"
 #include "klee/SolverCmdLine.h"
 
-#include "llvm/IR/Module.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Module.h"
 
 #include <errno.h>
 #include <sstream>
@@ -35,27 +34,26 @@ using namespace llvm;
 using namespace klee;
 
 namespace {
-  cl::opt<bool>
-  ReadablePosix("readable-posix-inputs",
-            cl::init(false),
-            cl::desc("Prefer creation of POSIX inputs (command-line arguments, files, etc.) with human readable bytes. "
-                     "Note: option is expensive when creating lots of tests (default=false)"));
+cl::opt<bool>
+    ReadablePosix("readable-posix-inputs", cl::init(false),
+                  cl::desc("Prefer creation of POSIX inputs (command-line "
+                           "arguments, files, etc.) with human readable bytes. "
+                           "Note: option is expensive when creating lots of "
+                           "tests (default=false)"),
+                  cl::cat(TestGenCat));
 
-  cl::opt<bool>
-  SilentKleeAssume("silent-klee-assume",
-                   cl::init(false),
-                   cl::desc("Silently terminate paths with an infeasible "
-                            "condition given to klee_assume() rather than "
-                            "emitting an error (default=false)"));
-}
-
+cl::opt<bool>
+    SilentKleeAssume("silent-klee-assume", cl::init(false),
+                     cl::desc("Silently terminate paths with an infeasible "
+                              "condition given to klee_assume() rather than "
+                              "emitting an error (default=false)"),
+                     cl::cat(TerminationCat));
+} // namespace
 
 /// \todo Almost all of the demands in this file should be replaced
 /// with terminateState calls.
 
 ///
-
-
 
 // FIXME: We are more or less committed to requiring an intrinsic
 // library these days. We can move some of this stuff there,
