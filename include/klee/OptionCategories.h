@@ -23,6 +23,7 @@ namespace klee {
   extern llvm::cl::OptionCategory SeedingCat;
   extern llvm::cl::OptionCategory SolvingCat;
   extern llvm::cl::OptionCategory TerminationCat;
+  extern llvm::cl::OptionCategory TestGenCat;
 }
 
 #endif
