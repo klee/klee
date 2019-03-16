@@ -1,6 +1,9 @@
 // RUN: %clang %s -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out -use-cex-cache=1 %t.bc 2>&1 | FileCheck %s
+// RUN: %klee --output-dir=%t.klee-out --klee-call-optimisation=false %t.bc 2>&1 | FileCheck %s
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --klee-call-optimisation=false --optimize %t.bc 2>&1 | FileCheck %s
+
 #include <stdio.h>
 #include <assert.h>
 

@@ -112,6 +112,12 @@ namespace {
   DontVerify("disable-verify",
              cl::desc("Do not verify the module integrity (default=false)"),
              cl::init(false), cl::cat(klee::ModuleCat));
+
+  cl::opt<bool>
+  OptimiseKLEECall("klee-call-optimisation",
+                             cl::desc("Allow optimization of functions that "
+                                      "contain KLEE calls (default=true)"),
+                             cl::init(true), cl::cat(ModuleCat));
 }
 
 /***/
@@ -262,6 +268,14 @@ void KModule::instrument(const Interpreter::ModuleOptions &opts) {
 void KModule::optimiseAndPrepare(
     const Interpreter::ModuleOptions &opts,
     llvm::ArrayRef<const char *> preservedFunctions) {
+  // Preserve all functions containing klee-related function calls from being
+  // optimised around
+  if (!OptimiseKLEECall) {
+    LegacyLLVMPassManagerTy pm;
+    pm.add(new OptNonePass());
+    pm.run(*module);
+  }
+
   if (opts.Optimize)
     Optimize(module.get(), preservedFunctions);
 
