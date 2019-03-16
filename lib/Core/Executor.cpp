@@ -597,7 +597,11 @@ void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
     for (unsigned i=0, e=cds->getNumElements(); i != e; ++i)
       initializeGlobalObject(state, os, cds->getElementAsConstant(i),
                              offset + i*elementSize);
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
   } else if (!isa<UndefValue>(c) && !isa<MetadataAsValue>(c)) {
+#else
+  } else if (!isa<UndefValue>(c)) {
+#endif
     unsigned StoreBits = targetData->getTypeStoreSizeInBits(c->getType());
     ref<ConstantExpr> C = evalConstant(c);
 
