@@ -92,7 +92,7 @@ extern klee_expr_t klee_build_zext_expr(const klee_expr_builder_t builder,
 
 extern klee_expr_t klee_build_sext_expr(const klee_expr_builder_t builder,
                                         const klee_expr_t lhs,
-                                        klee_expr_width_t W);
+                                        klee_expr_width_t width);
 
 extern klee_expr_t klee_build_add_expr(const klee_expr_builder_t builder,
                                        const klee_expr_t lhs,
