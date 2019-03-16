@@ -16,6 +16,7 @@ set(KLEE_MODULE_COMPONENT_SRCS
   LowerSwitch.cpp
   ModuleUtil.cpp
   Optimize.cpp
+  OptNone.cpp
   PhiCleaner.cpp
   RaiseAsm.cpp
   Scalarizer.cpp
