@@ -185,6 +185,14 @@ public:
   bool runOnModule(llvm::Module &M) override;
 };
 #endif
+
+/// Instruments every function that contains a KLEE function call as nonopt
+class OptNonePass : public llvm::ModulePass {
+public:
+  static char ID;
+  OptNonePass() : llvm::ModulePass(ID) {}
+  bool runOnModule(llvm::Module &M) override;
+};
 } // namespace klee
 
 #endif
