@@ -199,16 +199,6 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         break;
       }
 
-      case Intrinsic::dbg_value:
-      case Intrinsic::dbg_declare: {
-        //        // Remove these regardless of lower intrinsics flag. This can
-        //        // be removed once IntrinsicLowering is fixed to not have bad
-        //        // caches.
-        //        ii->eraseFromParent();
-        //        dirty = true;
-        break;
-      }
-
       case Intrinsic::trap: {
         // Intrinsic instruction "llvm.trap" found. Directly lower it to
         // a call of the abort() function.
