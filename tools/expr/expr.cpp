@@ -71,38 +71,30 @@ void klee_expr_dispose(klee_expr_t expr) {
   delete TheRefExpr;
 }
 
-klee_array_t klee_array_create(const klee_expr_builder_t builder,
-                               const char *name, uint64_t size,
-                               const klee_expr_t constant_values_begin,
-                               const klee_expr_t constant_values_end,
-                               klee_expr_width_t domain,
-                               klee_expr_width_t range) {
+extern klee_array_t klee_array_create(const klee_expr_builder_t builder,
+                                      const char *name, uint64_t size,
+                                      const uint64_t *constants, bool is_signed,
+                                      klee_expr_width_t domain,
+                                      klee_expr_width_t range) {
   LibExprBuilder *TheBuilder = unwrap(builder);
   std::string TheName(name);
+  ArrayCache &AC = TheBuilder->AC;
+  const Array *TheArray = nullptr;
 
-  // Raw pointer to the beginning of what should be a contiguous array of
-  // ref<ConstantExpr>
-  ref<Expr> *RawConstantsBegin = unwrap(constant_values_begin);
-  // Check that the first element is indeed a ref<ConstantExpr>
-  if (!llvm::isa<ConstantExpr>(*RawConstantsBegin))
-    assert(false && "Invalid ConstantExpr");
-  // We can safely cast it to to ref<ConstantExpr> * now
-  ref<ConstantExpr> *CVB =
-      reinterpret_cast<ref<ConstantExpr> *>(RawConstantsBegin);
-
-  ref<Expr> *RawConstantsEnd = unwrap(constant_values_end);
-  ref<ConstantExpr> *CVE =
-      reinterpret_cast<ref<ConstantExpr> *>(RawConstantsEnd);
-
-  // This is horrible we need to find a way of providing a better API for create Array
-  for (auto It = CVB; It != CVE; It++) {
-    if (!llvm::isa<ConstantExpr>(*It))
-      assert(false && "Invalid ConstantExpr");
+  if (!constants) {
+    TheArray = AC.CreateArray(TheName, size, nullptr, nullptr, domain, range);
+  } else {
+    std::vector<ref<ConstantExpr>> Constants;
+    Constants.reserve(size);
+    for (size_t I = 0; I < size; ++I) {
+      llvm::APInt TheValue(constants[I], range, is_signed);
+      ref<ConstantExpr> TheConstant = ConstantExpr::alloc(TheValue);
+      Constants.push_back(std::move(TheConstant));
+      TheArray = AC.CreateArray(TheName, size, &Constants.front(),
+                                &Constants.back(), domain, range);
+    }
   }
 
-  ArrayCache &AC = TheBuilder->AC;
-  const Array *TheArray =
-      AC.CreateArray(TheName, size, CVB, CVE, domain, range);
   return wrap(TheArray);
 }
 
