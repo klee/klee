@@ -15,7 +15,6 @@ add_library(expr SHARED
   ../../lib/Expr/Updates.cpp
 )
 
-target_link_options(expr PUBLIC "LINKER:--no-undefined")
 if (NOT LLVM_ENABLE_RTTI)
   if (ENABLE_SOLVER_METASMT AND metaSMT_REQUIRE_RTTI)
     message(FATAL_ERROR
@@ -26,6 +25,11 @@ if (NOT LLVM_ENABLE_RTTI)
     target_compile_options(expr PUBLIC "-fno-rtti")
   endif()
 endif()
+
+# AFAIK the only linker that does not support this ld64
+if(NOT APPLE)
+  target_link_options(expr PUBLIC "LINKER:--no-undefined")
+endif(NOT APPLE)
 
 set(LLVM_COMPONENTS
   support
