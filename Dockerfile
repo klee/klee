@@ -1,8 +1,8 @@
 FROM klee/llvm:60_O_D_A_ubuntu_xenial-20181005 as llvm_base
 FROM klee/gtest:1.7.0_ubuntu_xenial-20181005 as gtest_base
-FROM klee/uclibc:klee_uclibc_v1.0.0_60_ubuntu_xenial-20181005 as uclibc_base
+FROM klee/uclibc:klee_uclibc_v1.2_60_ubuntu_xenial-20181005 as uclibc_base
 FROM klee/tcmalloc:2.7_ubuntu_xenial-20181005 as tcmalloc_base
-FROM klee/stp:2.3.2_ubuntu_xenial-20181005 as stp_base
+FROM klee/stp:2.3.3_ubuntu_xenial-20181005 as stp_base
 FROM klee/z3:4.8.4_ubuntu_xenial-20181005 as z3_base
 FROM llvm_base as intermediate
 COPY --from=gtest_base /tmp /tmp/
@@ -20,12 +20,12 @@ ENV DISABLE_ASSERTIONS=0
 ENV REQUIRES_RTTI=0
 ENV SOLVERS=STP:Z3
 ENV GTEST_VERSION=1.7.0
-ENV UCLIBC_VERSION=klee_uclibc_v1.0.0
+ENV UCLIBC_VERSION=klee_uclibc_v1.2
 ENV LLVM_VERSION=6.0
 ENV TCMALLOC_VERSION=2.7
 ENV SANITIZER_BUILD=
 ENV LLVM_VERSION=6.0
-ENV STP_VERSION=2.3.2
+ENV STP_VERSION=2.3.3
 ENV MINISAT_VERSION=master
 ENV Z3_VERSION=4.8.4
 COPY . /tmp/klee_src/
