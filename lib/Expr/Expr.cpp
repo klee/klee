@@ -533,9 +533,9 @@ unsigned Array::computeHash() {
 ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index) {
   // rollback update nodes if possible
 
-  // Iterate throught the update list from the most recent to the
-  // least reasent to find a potential written value for a concrete index;
-  // stop, if an update with symbolic has been found as we don't know which
+  // Iterate through the update list from the most recent to the
+  // least recent to find a potential written value for a concrete index;
+  // stop if an update with symbolic has been found as we don't know which
   // array element has been updated
   const UpdateNode *un = ul.head;
   bool updateListHasSymbolicWrites = false;
