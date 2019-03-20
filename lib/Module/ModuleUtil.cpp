@@ -56,8 +56,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Path.h"
 
-#include "klee/Internal/Module/LLVMPassManager.h"
-
 #include <algorithm>
 #include <fstream>
 #include <map>
