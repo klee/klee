@@ -89,16 +89,12 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
           Builder.CreateStore(val, pDst, ii);
 
           auto off = ConstantInt::get(Type::getInt64Ty(ctx), 1);
-          pDst = Builder.CreateGEP(KLEE_LLVM_GEP_TYPE(nullptr) pDst, off,
-                                   std::string());
-          pSrc = Builder.CreateGEP(KLEE_LLVM_GEP_TYPE(nullptr) pSrc, off,
-                                   std::string());
+          pDst = Builder.CreateGEP(nullptr, pDst, off, std::string());
+          pSrc = Builder.CreateGEP(nullptr, pSrc, off, std::string());
           val = Builder.CreateLoad(pSrc, std::string());
           Builder.CreateStore(val, pDst);
-          pDst = Builder.CreateGEP(KLEE_LLVM_GEP_TYPE(nullptr) pDst, off,
-                                   std::string());
-          pSrc = Builder.CreateGEP(KLEE_LLVM_GEP_TYPE(nullptr) pSrc, off,
-                                   std::string());
+          pDst = Builder.CreateGEP(nullptr, pDst, off, std::string());
+          pSrc = Builder.CreateGEP(nullptr, pSrc, off, std::string());
           val = Builder.CreateLoad(pSrc, std::string());
           Builder.CreateStore(val, pDst);
         }
