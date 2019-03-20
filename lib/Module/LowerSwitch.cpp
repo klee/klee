@@ -66,11 +66,7 @@ void LowerSwitchPass::switchConvert(CaseItr begin, CaseItr end,
   // iterate through all the cases, creating a new BasicBlock for each
   for (CaseItr it = begin; it < end; ++it) {
     BasicBlock *newBlock = BasicBlock::Create(F->getContext(), "NodeBlock");
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
     Function::iterator FI = origBlock->getIterator();
-#else
-    Function::iterator FI = origBlock;
-#endif
     F->getBasicBlockList().insert(++FI, newBlock);
     Builder.SetInsertPoint(newBlock);
     auto cmpValue = Builder.CreateICmpEQ(value, it->value, "case.cmp");
@@ -108,11 +104,7 @@ void LowerSwitchPass::processSwitchInst(SwitchInst *SI) {
   BasicBlock* newDefault = BasicBlock::Create(F->getContext(), "newDefault");
   llvm::IRBuilder<> Builder(newDefault);
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
   F->getBasicBlockList().insert(defaultBlock->getIterator(), newDefault);
-#else
-  F->getBasicBlockList().insert(defaultBlock, newDefault);
-#endif
   Builder.CreateBr(defaultBlock);
 
   // If there is an entry in any PHI nodes for the default edge, make sure
@@ -126,11 +118,7 @@ void LowerSwitchPass::processSwitchInst(SwitchInst *SI) {
   
   CaseVector cases;
 
-#if LLVM_VERSION_CODE > LLVM_VERSION(3, 4)
   for (auto i : SI->cases())
-#else
-  for (SwitchInst::CaseIt i = SI->case_begin(), e = SI->case_end(); i != e; ++i)
-#endif
     cases.push_back(SwitchCase(i.getCaseValue(),
                                i.getCaseSuccessor()));
   

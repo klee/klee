@@ -10,15 +10,13 @@
 #include "klee/Config/Version.h"
 #ifdef HAVE_ZLIB_H
 #include "klee/Internal/Support/CompressionStream.h"
-#if (LLVM_VERSION_CODE == LLVM_VERSION(3, 4))
-#include "llvm/Support/system_error.h"
-#else
+
 #include "llvm/Support/FileSystem.h"
+
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#endif
 #include <unistd.h>
 
 namespace klee {
@@ -31,12 +29,9 @@ compressed_fd_ostream::compressed_fd_ostream(const std::string &Filename,
 #if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
   std::error_code EC =
       llvm::sys::fs::openFileForWrite(Filename, FD);
-#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
+#else
   std::error_code EC =
       llvm::sys::fs::openFileForWrite(Filename, FD, llvm::sys::fs::F_None);
-#else
-  llvm::error_code EC =
-      llvm::sys::fs::openFileForWrite(Filename, FD, llvm::sys::fs::F_Binary);
 #endif
   if (EC) {
     ErrorInfo = EC.message();
