@@ -150,13 +150,6 @@ private:
                      llvm::BasicBlock *defaultBlock);
 };
 
-// This is the interface to a back-ported LLVM pass.
-// Therefore this interface is only needed for
-// LLVM 3.4.
-#if LLVM_VERSION_CODE == LLVM_VERSION(3, 4)
-llvm::FunctionPass *createScalarizerPass();
-#endif
-
 /// InstructionOperandTypeCheckPass - Type checks the types of instruction
 /// operands to check that they conform to invariants expected by the Executor.
 ///
