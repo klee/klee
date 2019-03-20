@@ -1,7 +1,3 @@
-; LLVM 3.8 requires a type as the first argument to 'alias'
-; LLVM 3.7 requires a type as the first argument to 'getelementptr'
-; LLVM 3.7 no longer accepts '*' with a 'call'
-; REQUIRES: geq-llvm-3.8
 ; RUN: llvm-as %s -f -o %t1.bc
 ; RUN: rm -rf %t.klee-out
 ; RUN: %klee --output-dir=%t.klee-out --optimize=false -search=nurs:md2u %t1.bc > %t2
