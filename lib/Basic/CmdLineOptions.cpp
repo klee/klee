@@ -114,12 +114,7 @@ cl::opt<bool> UseAssignmentValidatingSolver(
 
 
 void KCommandLine::HideOptions(llvm::cl::OptionCategory &Category) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
   StringMap<cl::Option *> &map = cl::getRegisteredOptions();
-#else
-  StringMap<cl::Option *> map;
-  cl::getRegisteredOptions(map);
-#endif
 
   for (auto &elem : map) {
     if (elem.second->Category == &Category) {
@@ -129,12 +124,7 @@ void KCommandLine::HideOptions(llvm::cl::OptionCategory &Category) {
 }
 
 void KCommandLine::HideUnrelatedOptions(cl::OptionCategory &Category) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
   StringMap<cl::Option *> &map = cl::getRegisteredOptions();
-#else
-  StringMap<cl::Option *> map;
-  cl::getRegisteredOptions(map);
-#endif
   for (StringMap<cl::Option *>::iterator i = map.begin(), e = map.end(); i != e;
        i++) {
     if (i->second->Category != &Category) {

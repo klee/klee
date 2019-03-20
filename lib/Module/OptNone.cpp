@@ -27,7 +27,6 @@ bool OptNonePass::runOnModule(llvm::Module &M) {
   for (auto &F : M) {
     if (!F.hasName() || !F.getName().startswith("klee_"))
       continue;
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
     for (auto *U : F.users()) {
       // skip non-calls and non-invokes
       if (!llvm::isa<llvm::CallInst>(U) && !llvm::isa<llvm::InvokeInst>(U))
@@ -35,13 +34,6 @@ bool OptNonePass::runOnModule(llvm::Module &M) {
       auto *Inst = llvm::cast<llvm::Instruction>(U);
       CallingFunctions.insert(Inst->getParent()->getParent());
     }
-#else
-    for (auto i = F.use_begin(), e = F.use_end(); i != e; ++i) {
-      if (auto Inst = llvm::dyn_cast<llvm::Instruction>(*i)) {
-        CallingFunctions.insert(Inst->getParent()->getParent());
-      }
-    }
-#endif
   }
 
   bool changed = false;

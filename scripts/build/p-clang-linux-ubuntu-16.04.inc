@@ -2,10 +2,6 @@ install_binary_artifact_clang() {
   local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
   local LLVM_VERSION_MINOR="${LLVM_VERSION/*./}"
 
-  # Check versions: no support for LLVM < 3.5
-  [[ "${LLVM_VERSION_MAJOR}" -eq 3 ]] && [[ "${LLVM_VERSION_MINOR}" -lt 5 ]] && return 1
-
-
   local version=""
   [[ "${LLVM_VERSION_MAJOR}" -le 6 ]] && version="-${LLVM_VERSION}"
   [[ "${LLVM_VERSION_MAJOR}" -ge 7 ]] && version="-${LLVM_VERSION_MAJOR}"

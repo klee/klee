@@ -27,6 +27,8 @@
 #include "UserSearcher.h"
 
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CallSite.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -37,14 +39,6 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/FileSystem.h"
-
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
-#include "llvm/Support/CallSite.h"
-#include "llvm/Support/CFG.h"
-#else
-#include "llvm/IR/CallSite.h"
-#include "llvm/IR/CFG.h"
-#endif
 
 #include <fstream>
 #include <unistd.h>
@@ -207,17 +201,8 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
   if (!sys::path::is_absolute(objectFilename)) {
     SmallString<128> current(objectFilename);
     if(sys::fs::make_absolute(current)) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
       Twine current_twine(current.str()); // requires a twine for this
       if (!sys::fs::exists(current_twine)) {
-#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 5)
-      bool exists = false;
-      if (!sys::fs::exists(current.str(), exists)) {
-#else
-      bool exists = false;
-      error_code ec = sys::fs::exists(current.str(), exists);
-      if (ec == errc::success && exists) {
-#endif
         objectFilename = current.c_str();
       }
     }
@@ -643,11 +628,7 @@ static std::vector<Instruction*> getSuccs(Instruction *i) {
     for (succ_iterator it = succ_begin(bb), ie = succ_end(bb); it != ie; ++it)
       res.push_back(&*(it->begin()));
   } else {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 8)
     res.push_back(&*(++(i->getIterator())));
-#else
-    res.push_back(&*(++BasicBlock::iterator(i)));
-#endif
   }
 
   return res;
