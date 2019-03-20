@@ -1,7 +1,3 @@
-; LLVM 3.7 requires a type as the first argument to 'load'
-; LLVM 3.7 requires a type as the first argument to 'getelementptr'
-; LLVM 3.7 no longer accepts '*' with a 'call'
-; REQUIRES: geq-llvm-3.7
 ; RUN: %S/ConcreteTest.py --klee='%klee' --lli=%lli %s
 
 ; casting error messages
