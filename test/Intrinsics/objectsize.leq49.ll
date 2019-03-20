@@ -1,6 +1,3 @@
-; LLVM 3.7 requires a type as the first argument to 'load'
-; LLVM 5 added nullunknown parameter to @llvm.objectsize
-; REQUIRES: geq-llvm-3.7
 ; REQUIRES: lt-llvm-5.0
 ; RUN: %llvmas %s -o=%t.bc
 ; RUN: rm -rf %t.klee-out

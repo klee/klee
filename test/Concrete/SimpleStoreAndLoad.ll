@@ -1,6 +1,3 @@
-; LLVM 3.7 requires a type as the first argument to 'getelementptr'
-; LLVM 3.7 requires a type as the first argument to 'load'
-; REQUIRES: geq-llvm-3.7
 ; RUN: %S/ConcreteTest.py --klee='%klee' --lli=%lli %s
 
 declare void @print_i32(i32)

@@ -1,5 +1,3 @@
-; LLVM 3.7 requires a type as the first argument to 'getelementptr'
-; REQUIRES: geq-llvm-3.7
 ; RUN: %S/ConcreteTest.py --klee='%klee' --lli=%lli %s
 
 ; Most of the test below use the *address* of gInt as part of their computation,
