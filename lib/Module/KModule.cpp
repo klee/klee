@@ -16,7 +16,6 @@
 #include "klee/Internal/Module/InstructionInfoTable.h"
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
-#include "klee/Internal/Module/LLVMPassManager.h"
 #include "klee/Internal/Support/Debug.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Internal/Support/ModuleUtil.h"
@@ -31,6 +30,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ValueSymbolTable.h"
@@ -245,7 +245,7 @@ void KModule::instrument(const Interpreter::ModuleOptions &opts) {
   // invariant transformations that we will end up doing later so that
   // optimize is seeing what is as close as possible to the final
   // module.
-  LegacyLLVMPassManagerTy pm;
+  legacy::PassManager pm;
   pm.add(new RaiseAsmPass());
 
   // This pass will scalarize as much code as possible so that the Executor
@@ -271,7 +271,7 @@ void KModule::optimiseAndPrepare(
   // Preserve all functions containing klee-related function calls from being
   // optimised around
   if (!OptimiseKLEECall) {
-    LegacyLLVMPassManagerTy pm;
+    legacy::PassManager pm;
     pm.add(new OptNonePass());
     pm.run(*module);
   }
@@ -295,7 +295,7 @@ void KModule::optimiseAndPrepare(
   // linked in something with intrinsics but any external calls are
   // going to be unresolved. We really need to handle the intrinsics
   // directly I think?
-  LegacyLLVMPassManagerTy pm3;
+  legacy::PassManager pm3;
   pm3.add(createCFGSimplificationPass());
   switch(SwitchType) {
   case eSwitchTypeInternal: break;
@@ -375,7 +375,7 @@ void KModule::checkModule() {
   InstructionOperandTypeCheckPass *operandTypeCheckPass =
       new InstructionOperandTypeCheckPass();
 
-  LegacyLLVMPassManagerTy pm;
+  legacy::PassManager pm;
   if (!DontVerify)
     pm.add(createVerifierPass());
   pm.add(operandTypeCheckPass);
