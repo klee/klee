@@ -19,7 +19,6 @@ set(KLEE_MODULE_COMPONENT_SRCS
   OptNone.cpp
   PhiCleaner.cpp
   RaiseAsm.cpp
-  Scalarizer.cpp
 )
 
 if (USE_WORKAROUND_LLVM_PR39177)
