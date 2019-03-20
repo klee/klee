@@ -10,29 +10,18 @@
 #include "ExternalDispatcher.h"
 #include "klee/Config/Version.h"
 
+#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
-#include "llvm/ExecutionEngine/MCJIT.h"
-#else
-#include "llvm/ExecutionEngine/JIT.h"
-#endif
-
 #include "llvm/ExecutionEngine/GenericValue.h"
+#include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/raw_ostream.h"
-
 #include "llvm/Support/TargetSelect.h"
-
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
-#include "llvm/Support/CallSite.h"
-#else
-#include "llvm/IR/CallSite.h"
-#endif
 
 #include <csetjmp>
 #include <csignal>
@@ -122,11 +111,6 @@ ExternalDispatcherImpl::ExternalDispatcherImpl(LLVMContext &ctx)
     : ctx(ctx), lastErrno(0) {
   std::string error;
   singleDispatchModule = new Module(getFreshModuleID(), ctx);
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 6)
-  // Use old JIT
-  executionEngine = ExecutionEngine::createJIT(singleDispatchModule, &error);
-#else
-  // Use MCJIT.
   // The MCJIT JITs whole modules at a time rather than individual functions
   // so we will let it manage the modules.
   // Note that we don't do anything with `singleDispatchModule`. This is just
@@ -136,7 +120,6 @@ ExternalDispatcherImpl::ExternalDispatcherImpl(LLVMContext &ctx)
                         .setErrorStr(&error)
                         .setEngineKind(EngineKind::JIT)
                         .create();
-#endif
 
   if (!executionEngine) {
     llvm::errs() << "unable to make jit: " << error << "\n";
@@ -146,10 +129,8 @@ ExternalDispatcherImpl::ExternalDispatcherImpl(LLVMContext &ctx)
   // If we have a native target, initialize it to ensure it is linked in and
   // usable by the JIT.
   llvm::InitializeNativeTarget();
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
   llvm::InitializeNativeTargetAsmParser();
   llvm::InitializeNativeTargetAsmPrinter();
-#endif
 
   // from ExecutionEngine::create
   if (executionEngine) {
@@ -197,21 +178,16 @@ bool ExternalDispatcherImpl::executeCall(Function *f, Instruction *i,
 #endif
 
   Module *dispatchModule = NULL;
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
   // The MCJIT generates whole modules at a time so for every call that we
   // haven't made before we need to create a new Module.
   dispatchModule = new Module(getFreshModuleID(), ctx);
-#else
-  dispatchModule = this->singleDispatchModule;
-#endif
   dispatcher = createDispatcher(f, i, dispatchModule);
   dispatchers.insert(std::make_pair(i, dispatcher));
 
-// Force the JIT execution engine to go ahead and build the function. This
-// ensures that any errors or assertions in the compilation process will
-// trigger crashes instead of being caught as aborts in the external
-// function.
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+  // Force the JIT execution engine to go ahead and build the function. This
+  // ensures that any errors or assertions in the compilation process will
+  // trigger crashes instead of being caught as aborts in the external
+  // function.
   if (dispatcher) {
     // The dispatchModule is now ready so tell MCJIT to generate the code for
     // it.
@@ -228,12 +204,6 @@ bool ExternalDispatcherImpl::executeCall(Function *f, Instruction *i,
     // MCJIT didn't take ownership of the module so delete it.
     delete dispatchModule;
   }
-#else
-  if (dispatcher) {
-    // Old JIT works on a function at a time so compile the function.
-    executionEngine->recompileAndRelinkFunction(dispatcher);
-  }
-#endif
   return runProtectedCall(dispatcher, args);
 }
 

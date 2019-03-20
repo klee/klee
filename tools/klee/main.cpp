@@ -43,10 +43,6 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Signals.h"
 
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
-#include "llvm/Support/system_error.h"
-#endif
-
 #if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
 #include <llvm/Bitcode/BitcodeReader.h>
 #else
@@ -358,12 +354,7 @@ KleeHandler::KleeHandler(int argc, char **argv)
   SmallString<128> directory(dir_given ? OutputDir : InputFile);
 
   if (!dir_given) sys::path::remove_filename(directory);
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
-  error_code ec;
-  if ((ec = sys::fs::make_absolute(directory)) != errc::success) {
-#else
   if (auto ec = sys::fs::make_absolute(directory)) {
-#endif
     klee_error("unable to determine absolute path: %s", ec.message().c_str());
   }
 
@@ -381,10 +372,7 @@ KleeHandler::KleeHandler(int argc, char **argv)
       llvm::sys::path::append(d, "klee-out-");
       raw_svector_ostream ds(d);
       ds << i;
-// SmallString is always up-to-date, no need to flush. See Support/raw_ostream.h
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 8)
-      ds.flush();
-#endif
+      // SmallString is always up-to-date, no need to flush. See Support/raw_ostream.h
 
       // create directory and try to link klee-last
       if (mkdir(d.c_str(), 0775) == 0) {
@@ -630,11 +618,7 @@ void KleeHandler::loadPathFile(std::string name,
 
 void KleeHandler::getKTestFilesInDir(std::string directoryPath,
                                      std::vector<std::string> &results) {
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
-  error_code ec;
-#else
   std::error_code ec;
-#endif
   llvm::sys::fs::directory_iterator i(directoryPath, ec), e;
   for (; i != e && !ec; i.increment(ec)) {
     auto f = i->path();

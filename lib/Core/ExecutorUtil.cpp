@@ -23,14 +23,10 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
-#if LLVM_VERSION_CODE < LLVM_VERSION(3, 5)
-#include "llvm/Support/GetElementPtrTypeIterator.h"
-#else
-#include "llvm/IR/GetElementPtrTypeIterator.h"
-#endif
 #include "llvm/Support/raw_ostream.h"
 
 #include <cassert>

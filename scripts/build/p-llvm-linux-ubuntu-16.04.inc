@@ -44,11 +44,6 @@ install_binary_artifact_llvm() {
 
   # Enable/Disable optimized does not matter
   
-  # Check versions: no support for LLVM < 3.8
-  if [[ "${LLVM_VERSION_MAJOR}" -eq 3 ]]; then
-    [[ "${LLVM_VERSION_MINOR}" -lt 8 ]] && return 1
-  fi
-  
   # Add certificate
   apt update -y
   dependencies=(

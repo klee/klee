@@ -22,12 +22,10 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Target/TargetMachine.h"
-#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
+#else
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
-#else
-#include "llvm/Target/TargetLowering.h"
 #endif
 
 using namespace llvm;
@@ -95,16 +93,9 @@ bool RaiseAsmPass::runOnModule(Module &M) {
     TM = NativeTarget->createTargetMachine(HostTriple, "", "", TargetOptions(),
         None);
     TLI = TM->getSubtargetImpl(*(M.begin()))->getTargetLowering();
-#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 7)
+#else
     TM = NativeTarget->createTargetMachine(HostTriple, "", "", TargetOptions());
     TLI = TM->getSubtargetImpl(*(M.begin()))->getTargetLowering();
-#elif LLVM_VERSION_CODE >= LLVM_VERSION(3, 6)
-    TM = NativeTarget->createTargetMachine(HostTriple, "", "", TargetOptions());
-    TLI = TM->getSubtargetImpl()->getTargetLowering();
-#else
-    TM = NativeTarget->createTargetMachine(HostTriple, "", "",
-                                                          TargetOptions());
-    TLI = TM->getTargetLowering();
 #endif
 
     triple = llvm::Triple(HostTriple);
