@@ -18,8 +18,6 @@
 #include <stdint.h>
 #endif
 
-#include "klee/Internal/Support/CBindingWrapping.h"
-
 #define KLEE_C_EXPR_API_VERSION 1
 
 // Make sure this is kept in sync with klee::Expr::Width
