@@ -8,11 +8,11 @@
 #===------------------------------------------------------------------------===#
 klee_add_shared_component(expr
   expr.cpp
-  ../../lib/Expr/ArrayCache.cpp
-  ../../lib/Expr/ExprBuilder.cpp
-  ../../lib/Expr/ExprPPrinter.cpp
-  ../../lib/Expr/Expr.cpp
-  ../../lib/Expr/Updates.cpp
+  ${CMAKE_SOURCE_DIR}/lib/Expr/ArrayCache.cpp
+  ${CMAKE_SOURCE_DIR}/lib/Expr/ExprBuilder.cpp
+  ${CMAKE_SOURCE_DIR}/lib/Expr/ExprPPrinter.cpp
+  ${CMAKE_SOURCE_DIR}/lib/Expr/Expr.cpp
+  ${CMAKE_SOURCE_DIR}/lib/Expr/Updates.cpp
 )
 
 set(LLVM_COMPONENTS
