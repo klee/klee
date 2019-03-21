@@ -91,7 +91,7 @@ extern klee_array_t klee_array_create(const klee_expr_builder_t builder,
     std::vector<ref<ConstantExpr>> Constants;
     Constants.reserve(size);
     for (size_t I = 0; I < size; ++I) {
-      llvm::APInt TheValue(constants[I], range, is_signed);
+      llvm::APInt TheValue(range, constants[I], is_signed);
       ref<ConstantExpr> TheConstant = ConstantExpr::alloc(TheValue);
       Constants.push_back(std::move(TheConstant));
       TheArray = AC.CreateArray(TheName, size, &Constants.front(),
@@ -116,7 +116,7 @@ void klee_update_list_destroy(klee_update_list_t list) {
 klee_expr_t klee_expr_build_constant(klee_expr_builder_t builder, uint64_t val,
                                      klee_expr_width_t width, bool is_signed) {
   LibExprBuilder *LibBuilder = unwrap(builder);
-  llvm::APInt TheValue(val, width, is_signed);
+  llvm::APInt TheValue(width, val, is_signed);
   ref<Expr> ConstantExpr = LibBuilder->Builder->Constant(TheValue);
   return allocating_wrap(ConstantExpr);
 }
