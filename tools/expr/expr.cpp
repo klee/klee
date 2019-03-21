@@ -21,8 +21,6 @@
 
 using namespace klee;
 
-static ArrayCache AC;
-
 namespace {
 // Encapsulate a builder and the associated array cache to tie lifetime of
 // arrays to that of builder.
