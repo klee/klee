@@ -7,10 +7,10 @@
 #
 #===------------------------------------------------------------------------===#
 
-function(klee_add_component target_name)
+function(klee_add_component_generic target_name type)
   # Components are explicitly STATIC because we don't support building them
   # as shared libraries.
-  add_library(${target_name} STATIC ${ARGN})
+  add_library(${target_name} ${type} ${ARGN})
   # Use of `PUBLIC` means these will propagate to targets that use this component.
   if (("${CMAKE_VERSION}" VERSION_EQUAL "3.3") OR ("${CMAKE_VERSION}" VERSION_GREATER "3.3"))
     # In newer CMakes we can make sure that the flags are only used when compiling C++
@@ -24,4 +24,17 @@ function(klee_add_component target_name)
   target_include_directories(${target_name} PUBLIC ${KLEE_COMPONENT_EXTRA_INCLUDE_DIRS})
   target_compile_definitions(${target_name} PUBLIC ${KLEE_COMPONENT_CXX_DEFINES})
   target_link_libraries(${target_name} PUBLIC ${KLEE_COMPONENT_EXTRA_LIBRARIES})
+endfunction()
+
+function(klee_add_component target_name)
+  klee_add_component_generic(${target_name} STATIC ${ARGN})
+endfunction()
+
+function(klee_add_shared_component target_name)
+  klee_add_component_generic(${target_name} SHARED ${ARGN})
+
+  # Check for undefined symbols in the shared library at link-time
+  if(NOT APPLE)
+    target_link_options(${target_name} PUBLIC "LINKER:--no-undefined")
+  endif(NOT APPLE)
 endfunction()
