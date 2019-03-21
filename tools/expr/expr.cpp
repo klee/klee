@@ -64,6 +64,12 @@ void klee_expr_builder_dispose(klee_expr_builder_t builder) {
   delete TheBuilder;
 }
 
+int klee_expr_compare(klee_expr_t lhs, klee_expr_t rhs) {
+  ref<Expr> *Lhs = unwrap(lhs);
+  ref<Expr> *Rhs = unwrap(rhs);
+  return Lhs->compare(*Rhs);
+}
+
 // Clients need to make sure they call this to ensure Exprs aren't held on
 // forever
 void klee_expr_dispose(klee_expr_t expr) {

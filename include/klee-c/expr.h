@@ -46,14 +46,26 @@ extern klee_expr_builder_t klee_expr_builder_create(void);
 /// Destroys a klee_expr_builder_t
 extern void klee_expr_builder_dispose(klee_expr_builder_t builder);
 
+/// Compares klee_expr_t for structural equivalence
+///
+/// param [lhs] The expression to compare to
+/// param [rhs] The expression to compare against
+///
+/// \return One of the following values:
+///
+/// * -1 iff `lhs` is `<` `rhs`
+/// * 0 iff `lhs` is structurally equivalent to `rhs`
+/// * 1 iff `lhs` is `>` `rhs`
+///
+extern int klee_expr_compare(klee_expr_t lhs, klee_expr_t rhs);
+
 /// Destroys a  klee_expr_t
 extern void klee_expr_dispose(klee_expr_t expr);
 
 /// Builds an array for use in subsequent expressions
 extern klee_array_t klee_array_create(const klee_expr_builder_t builder,
                                       const char *name, uint64_t size,
-                                      const uint64_t *constants,
-                                      bool is_signed,
+                                      const uint64_t *constants, bool is_signed,
                                       klee_expr_width_t domain,
                                       klee_expr_width_t range);
 
