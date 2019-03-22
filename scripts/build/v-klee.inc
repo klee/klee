@@ -13,7 +13,7 @@ required_variables_check_klee() {
 
 # On which artifacts does KLEE depend on
 artifact_dependency_klee(){
-  local dependencies=("llvm" "solvers" "gtest")
+  local dependencies=("llvm" "solvers" "gtest" "sqlite")
   if [[ "${OS}" != "osx" ]]; then
     dependencies+=(uclibc)
   fi
@@ -31,7 +31,7 @@ runtime_artifact_dependency_klee(){
   if [[ "${OS}" != "osx" ]]; then
     echo "uclibc"
   fi
-  dependencies+=("llvm" "solvers" "gtest")
+  dependencies+=("llvm" "solvers" "gtest" "sqlite")
 
   [[ "${USE_TCMALLOC}" -eq 1 ]] && dependencies+=("tcmalloc")
   [[ "${USE_LIBCXX}" -eq 1 ]] && dependencies+=("libcxx")
