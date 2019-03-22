@@ -78,7 +78,7 @@ setup_variables_sanitizer() {
       continue
     fi
 
-    # Undefined Behaviour Sanitizer
+    # Memory Sanitizer
     if [ "${sanitizer}" == "memory" ]; then
       echo "Using Memory Sanitizer"
       SANITIZER_SUFFIX+="_memsan"
