@@ -4,7 +4,6 @@ install_build_dependencies_klee() {
   dependencies=(
     build-essential
     cmake
-    libsqlite3-dev
     python-pip #for lit
     python-setuptools #for lit
     python-wheel #for lit
