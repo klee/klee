@@ -10,5 +10,5 @@ install_build_dependencies_klee() {
   ln -s "${py2path}" /usr/local/bin/python
   ln -s "${pip2path}" /usr/local/bin/pip
   set -e
-  pip install lit
+  pip install lit tabulate
 }

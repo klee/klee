@@ -17,5 +17,5 @@ install_build_dependencies_klee() {
 
   apt -y --no-install-recommends install "${dependencies[@]}"
 
-  pip install lit
+  pip install lit tabulate
 }
