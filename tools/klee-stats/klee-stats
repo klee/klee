@@ -133,7 +133,7 @@ def getRow(record, stats, pr):
     if BTot == 0:
         BFull = BTot = 1
 
-    Ts, Tcex, Tf, Tr = [e / 1000000 for e in [Ts, Tcex, Tf, Tr]] #convert from microseconds
+    Ts, Tcex, Tf, Tr, T, Treal = [e / 1000000 for e in [Ts, Tcex, Tf, Tr, T, Treal]] #convert from microseconds
     Mem = Mem / 1024 / 1024
     AvgQC = int(QCon / max(1, QTot))
 
