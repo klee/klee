@@ -92,7 +92,7 @@ public:
   AddressSpace addressSpace;
 
   /// @brief Constraints collected so far
-  ConstraintManager constraints;
+  ConstraintSet constraints;
 
   /// Statistics and information
 
@@ -171,7 +171,8 @@ public:
   void popFrame();
 
   void addSymbolic(const MemoryObject *mo, const Array *array);
-  void addConstraint(ref<Expr> e) { constraints.addConstraint(std::move(e)); }
+
+  void addConstraint(ref<Expr> e);
 
   bool merge(const ExecutionState &b);
   void dumpStack(llvm::raw_ostream &out) const;

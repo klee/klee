@@ -10,6 +10,7 @@
 #ifndef KLEE_ASSIGNMENT_H
 #define KLEE_ASSIGNMENT_H
 
+#include "klee/Expr/Constraints.h"
 #include "klee/Expr/ExprEvaluator.h"
 
 #include <map>
@@ -44,7 +45,7 @@ namespace klee {
     
     ref<Expr> evaluate(const Array *mo, unsigned index) const;
     ref<Expr> evaluate(ref<Expr> e);
-    void createConstraintsFromAssignment(std::vector<ref<Expr> > &out) const;
+    ConstraintSet createConstraintsFromAssignment() const;
 
     template<typename InputIterator>
     bool satisfies(InputIterator begin, InputIterator end);

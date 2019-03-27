@@ -63,10 +63,7 @@ bool AssignmentValidatingSolver::computeInitialValues(
   // we can't compute a constant and flag this as a problem.
   Assignment assignment(objects, values, /*_allowFreeValues=*/true);
   // Check computed assignment satisfies query
-  for (ConstraintManager::const_iterator it = query.constraints.begin(),
-                                         ie = query.constraints.end();
-       it != ie; ++it) {
-    ref<Expr> constraint = *it;
+  for (const auto &constraint : query.constraints) {
     ref<Expr> constraintEvaluated = assignment.evaluate(constraint);
     ConstantExpr *CE = dyn_cast<ConstantExpr>(constraintEvaluated);
     if (CE == NULL) {
@@ -124,16 +121,13 @@ void AssignmentValidatingSolver::dumpAssignmentQuery(
     const Query &query, const Assignment &assignment) {
   // Create a Query that is augmented with constraints that
   // enforce the given assignment.
-  std::vector<ref<Expr> > constraints;
-  assignment.createConstraintsFromAssignment(constraints);
+  auto constraints = assignment.createConstraintsFromAssignment();
+
   // Add Constraints from `query`
-  for (ConstraintManager::const_iterator it = query.constraints.begin(),
-                                         ie = query.constraints.end();
-       it != ie; ++it) {
-    constraints.push_back(*it);
-  }
-  ConstraintManager augmentedConstraints(constraints);
-  Query augmentedQuery(augmentedConstraints, query.expr);
+  for (const auto &constraint : query.constraints)
+    constraints.push_back(constraint);
+
+  Query augmentedQuery(constraints, query.expr);
 
   // Ask the solver for the log for this query.
   char *logText = solver->getConstraintLog(augmentedQuery);

@@ -25,20 +25,20 @@ void Assignment::dump() {
   }
 }
 
-void Assignment::createConstraintsFromAssignment(
-    std::vector<ref<Expr> > &out) const {
-  assert(out.size() == 0 && "out should be empty");
-  for (bindings_ty::const_iterator it = bindings.begin(), ie = bindings.end();
-       it != ie; ++it) {
-    const Array *array = it->first;
-    const std::vector<unsigned char> &values = it->second;
+ConstraintSet Assignment::createConstraintsFromAssignment() const {
+  ConstraintSet result;
+  for (const auto &binding : bindings) {
+    const auto &array = binding.first;
+    const auto &values = binding.second;
+
     for (unsigned arrayIndex = 0; arrayIndex < array->size; ++arrayIndex) {
       unsigned char value = values[arrayIndex];
-      out.push_back(EqExpr::create(
+      result.push_back(EqExpr::create(
           ReadExpr::create(UpdateList(array, 0),
                            ConstantExpr::alloc(arrayIndex, array->getDomain())),
           ConstantExpr::alloc(value, array->getRange())));
     }
   }
+  return result;
 }
 }

@@ -310,11 +310,12 @@ bool ExecutionState::merge(const ExecutionState &b) {
     }
   }
 
-  constraints = ConstraintManager();
-  for (std::set< ref<Expr> >::iterator it = commonConstraints.begin(), 
-         ie = commonConstraints.end(); it != ie; ++it)
-    constraints.addConstraint(*it);
-  constraints.addConstraint(OrExpr::create(inA, inB));
+  constraints = ConstraintSet();
+
+  ConstraintManager m(constraints);
+  for (const auto &constraint : commonConstraints)
+    m.addConstraint(constraint);
+  m.addConstraint(OrExpr::create(inA, inB));
 
   return true;
 }
@@ -351,4 +352,9 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
     out << "\n";
     target = sf.caller;
   }
+}
+
+void ExecutionState::addConstraint(ref<Expr> e) {
+  ConstraintManager c(constraints);
+  c.addConstraint(e);
 }

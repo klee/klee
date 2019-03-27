@@ -36,7 +36,9 @@ protected:
 };
 
 TEST_F(Z3SolverTest, GetConstraintLog) {
-  ConstraintManager Constraints;
+  ConstraintSet Constraints;
+  ConstraintManager cm(Constraints);
+
   const std::vector<uint64_t> ConstantValues{1, 2, 3, 4};
   std::vector<ref<ConstantExpr>> ConstantExpressions;
 
