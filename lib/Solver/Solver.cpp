@@ -223,10 +223,9 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
 
 void Query::dump() const {
   llvm::errs() << "Constraints [\n";
-  for (ConstraintManager::const_iterator i = constraints.begin();
-      i != constraints.end(); i++) {
-    (*i)->dump();
-  }
+  for (const auto &constraint : constraints)
+    constraint->dump();
+
   llvm::errs() << "]\n";
   llvm::errs() << "Query [\n";
   expr->dump();

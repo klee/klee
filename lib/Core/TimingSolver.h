@@ -10,6 +10,7 @@
 #ifndef KLEE_TIMINGSOLVER_H
 #define KLEE_TIMINGSOLVER_H
 
+#include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Solver/Solver.h"
 #include "klee/System/Time.h"

@@ -17,16 +17,16 @@
 #include <vector>
 
 namespace klee {
-  class ConstraintManager;
+  class ConstraintSet;
   class Expr;
   class SolverImpl;
 
   struct Query {
   public:
-    const ConstraintManager &constraints;
+    const ConstraintSet &constraints;
     ref<Expr> expr;
 
-    Query(const ConstraintManager& _constraints, ref<Expr> _expr)
+    Query(const ConstraintSet& _constraints, ref<Expr> _expr)
       : constraints(_constraints), expr(_expr) {
     }
 
