@@ -33,30 +33,21 @@ public:
   ConstraintManager &operator=(ConstraintManager &&cs) = default;
 
   // create from constraints with no optimization
-  explicit ConstraintManager(const std::vector<ref<Expr>> &_constraints)
-      : constraints(_constraints) {}
+  explicit ConstraintManager(const std::vector<ref<Expr>> &_constraints);
 
-  // given a constraint which is known to be valid, attempt to
-  // simplify the existing constraint set
-  void simplifyForValidConstraint(ref<Expr> e);
+  typedef std::vector< ref<Expr> >::const_iterator constraint_iterator;
 
   ref<Expr> simplifyExpr(ref<Expr> e) const;
 
   void addConstraint(ref<Expr> e);
 
-  bool empty() const noexcept { return constraints.empty(); }
-  ref<Expr> back() const { return constraints.back(); }
-  const_iterator begin() const { return constraints.cbegin(); }
-  const_iterator end() const { return constraints.cend(); }
-  std::size_t size() const noexcept { return constraints.size(); }
+  bool empty() const noexcept ;
+  ref<Expr> back() const;
+  constraint_iterator begin() const;
+  constraint_iterator end() const;
+  size_t size() const noexcept ;
 
-  bool operator==(const ConstraintManager &other) const {
-    return constraints == other.constraints;
-  }
-
-  bool operator!=(const ConstraintManager &other) const {
-    return constraints != other.constraints;
-  }
+  bool operator==(const ConstraintManager &other) const;
 
 private:
   std::vector<ref<Expr>> constraints;

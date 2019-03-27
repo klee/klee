@@ -95,10 +95,6 @@ bool ConstraintManager::rewriteConstraints(ExprVisitor &visitor) {
   return changed;
 }
 
-void ConstraintManager::simplifyForValidConstraint(ref<Expr> e) {
-  // XXX 
-}
-
 ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
   if (isa<ConstantExpr>(e))
     return e;
@@ -167,4 +163,25 @@ void ConstraintManager::addConstraintInternal(ref<Expr> e) {
 void ConstraintManager::addConstraint(ref<Expr> e) {
   e = simplifyExpr(e);
   addConstraintInternal(e);
+}
+
+ConstraintManager::ConstraintManager(const std::vector<ref<Expr>> &_constraints)
+    : constraints(_constraints) {}
+
+bool ConstraintManager::empty() const { return constraints.empty(); }
+
+klee::ref<Expr> ConstraintManager::back() const { return constraints.back(); }
+
+klee::ConstraintManager::constraint_iterator ConstraintManager::begin() const {
+  return constraints.begin();
+}
+
+klee::ConstraintManager::constraint_iterator ConstraintManager::end() const {
+  return constraints.end();
+}
+
+size_t ConstraintManager::size() const { return constraints.size(); }
+
+bool ConstraintManager::operator==(const ConstraintManager &other) const {
+  return constraints == other.constraints;
 }
