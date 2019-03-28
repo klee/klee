@@ -73,6 +73,7 @@ TEST_F(CExprTest, BasicRead) {
 
   klee_expr_dispose(CIndexExpr);
   klee_expr_dispose(CReadExpr);
+  klee_update_list_dispose(CUL);
 }
 
 TEST_F(CExprTest, Read) {
@@ -104,6 +105,8 @@ TEST_F(CExprTest, Read) {
 
   for (auto CRead : CReads)
     klee_expr_dispose(CRead);
+
+  klee_update_list_dispose(CUL);
 }
 
 } // namespace

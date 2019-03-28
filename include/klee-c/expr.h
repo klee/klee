@@ -71,7 +71,7 @@ extern klee_array_t klee_array_create(const klee_expr_builder_t builder,
 extern klee_update_list_t klee_update_list_create(const klee_array_t array);
 
 /// Destroys a klee_update_list
-extern void klee_update_list_destroy(klee_update_list_t list);
+extern void klee_update_list_dispose(klee_update_list_t list);
 
 extern klee_expr_t klee_build_constant_expr(const klee_expr_builder_t builder,
                                             uint64_t val,

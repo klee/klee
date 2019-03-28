@@ -108,7 +108,7 @@ klee_update_list_t klee_update_list_create(const klee_array_t array) {
   return wrap(TheUpdateList);
 }
 
-void klee_update_list_destroy(klee_update_list_t list) {
+void klee_update_list_dispose(klee_update_list_t list) {
   UpdateList *TheUpdateList = unwrap(list);
   delete TheUpdateList;
 }
