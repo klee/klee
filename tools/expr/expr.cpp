@@ -113,7 +113,7 @@ void klee_update_list_destroy(klee_update_list_t list) {
   delete TheUpdateList;
 }
 
-klee_expr_t klee_expr_build_constant(klee_expr_builder_t builder, uint64_t val,
+klee_expr_t klee_build_constant_expr(klee_expr_builder_t builder, uint64_t val,
                                      klee_expr_width_t width, bool is_signed) {
   LibExprBuilder *LibBuilder = unwrap(builder);
   llvm::APInt TheValue(width, val, is_signed);
