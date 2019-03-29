@@ -1201,7 +1201,7 @@ ref<klee::ConstantExpr>
 Executor::toConstant(ExecutionState &state, 
                      ref<Expr> e,
                      const char *reason) {
-  e = state.constraints.simplifyExpr(e);
+  e = ConstraintManager::simplifyExpr(state.constraints, e);
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
     return CE;
 
@@ -1229,7 +1229,7 @@ Executor::toConstant(ExecutionState &state,
 void Executor::executeGetValue(ExecutionState &state,
                                ref<Expr> e,
                                KInstruction *target) {
-  e = state.constraints.simplifyExpr(e);
+  e = ConstraintManager::simplifyExpr(state.constraints, e);
   std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it = 
     seedMap.find(&state);
   if (it==seedMap.end() || isa<ConstantExpr>(e)) {
@@ -3557,9 +3557,9 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
   if (SimplifySymIndices) {
     if (!isa<ConstantExpr>(address))
-      address = state.constraints.simplifyExpr(address);
+      address = ConstraintManager::simplifyExpr(state.constraints, address);
     if (isWrite && !isa<ConstantExpr>(value))
-      value = state.constraints.simplifyExpr(value);
+      value = ConstraintManager::simplifyExpr(state.constraints, value);
   }
 
   address = optimizer.optimizeExpr(address, true);

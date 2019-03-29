@@ -12,50 +12,58 @@
 
 #include "klee/Expr/Expr.h"
 
-// FIXME: Currently we use ConstraintManager for two things: to pass
-// sets of constraints around, and to optimize constraints. We should
-// move the first usage into a separate data structure
-// (ConstraintSet?) which ConstraintManager could embed if it likes.
 namespace klee {
 
-class ExprVisitor;
+/// Resembles a set of constraints that can be passed around
+///
+class ConstraintSet {
+  friend class ConstraintManager;
 
-class ConstraintManager {
 public:
   using constraints_ty = std::vector<ref<Expr>>;
   using iterator = constraints_ty::iterator;
   using const_iterator = constraints_ty::const_iterator;
 
-  ConstraintManager() = default;
-  ConstraintManager(const ConstraintManager &cs) = default;
-  ConstraintManager &operator=(const ConstraintManager &cs) = default;
-  ConstraintManager(ConstraintManager &&cs) = default;
-  ConstraintManager &operator=(ConstraintManager &&cs) = default;
+  typedef const_iterator constraint_iterator;
 
-  // create from constraints with no optimization
-  explicit ConstraintManager(const std::vector<ref<Expr>> &_constraints);
-
-  typedef std::vector< ref<Expr> >::const_iterator constraint_iterator;
-
-  ref<Expr> simplifyExpr(ref<Expr> e) const;
-
-  void addConstraint(ref<Expr> e);
-
-  bool empty() const noexcept ;
-  ref<Expr> back() const;
+  bool empty() const;
   constraint_iterator begin() const;
   constraint_iterator end() const;
   size_t size() const noexcept ;
 
-  bool operator==(const ConstraintManager &other) const;
+  explicit ConstraintSet(constraints_ty cs) : constraints(std::move(cs)) {}
+  ConstraintSet() = default;
+
+  void push_back(const ref<Expr> &e);
+
+  bool operator==(const ConstraintSet &b) const {
+    return constraints == b.constraints;
+  }
 
 private:
-  std::vector<ref<Expr>> constraints;
+  constraints_ty constraints;
+};
+
+class ExprVisitor;
+
+/// Manages constraints, e.g. optimisation
+class ConstraintManager {
+public:
+  // create from constraints with no optimization
+  explicit ConstraintManager(ConstraintSet &constraints);
+
+  static ref<Expr> simplifyExpr(const ConstraintSet &constraints,
+                                const ref<Expr> &e);
+
+  void addConstraint(ref<Expr> e);
 
   // returns true iff the constraints were modified
   bool rewriteConstraints(ExprVisitor &visitor);
 
   void addConstraintInternal(ref<Expr> e);
+
+private:
+  ConstraintSet &constraints;
 };
 
 } // namespace klee

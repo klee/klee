@@ -59,7 +59,7 @@ private:
   const std::map< ref<Expr>, ref<Expr> > &replacements;
 
 public:
-  ExprReplaceVisitor2(const std::map< ref<Expr>, ref<Expr> > &_replacements) 
+  ExprReplaceVisitor2(const std::map< ref<Expr>, ref<Expr> > &_replacements)
     : ExprVisitor(true),
       replacements(_replacements) {}
 
@@ -75,13 +75,11 @@ public:
 };
 
 bool ConstraintManager::rewriteConstraints(ExprVisitor &visitor) {
-  ConstraintManager::constraints_ty old;
+  ConstraintSet old;
   bool changed = false;
 
-  constraints.swap(old);
-  for (ConstraintManager::constraints_ty::iterator 
-         it = old.begin(), ie = old.end(); it != ie; ++it) {
-    ref<Expr> &ce = *it;
+  std::swap(constraints, old);
+  for (auto &ce : old) {
     ref<Expr> e = visitor.visit(ce);
 
     if (e!=ce) {
@@ -95,24 +93,25 @@ bool ConstraintManager::rewriteConstraints(ExprVisitor &visitor) {
   return changed;
 }
 
-ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
+ref<Expr> ConstraintManager::simplifyExpr(const ConstraintSet &constraints,
+                                          const ref<Expr> &e) {
+
   if (isa<ConstantExpr>(e))
     return e;
 
   std::map< ref<Expr>, ref<Expr> > equalities;
-  
-  for (ConstraintManager::constraints_ty::const_iterator 
-         it = constraints.begin(), ie = constraints.end(); it != ie; ++it) {
-    if (const EqExpr *ee = dyn_cast<EqExpr>(*it)) {
+
+  for (auto &constraint: constraints) {
+    if (const EqExpr *ee = dyn_cast<EqExpr>(constraint)) {
       if (isa<ConstantExpr>(ee->left)) {
         equalities.insert(std::make_pair(ee->right,
                                          ee->left));
       } else {
-        equalities.insert(std::make_pair(*it,
+        equalities.insert(std::make_pair(constraint,
                                          ConstantExpr::alloc(1, Expr::Bool)));
       }
     } else {
-      equalities.insert(std::make_pair(*it,
+      equalities.insert(std::make_pair(constraint,
                                        ConstantExpr::alloc(1, Expr::Bool)));
     }
   }
@@ -125,10 +124,10 @@ void ConstraintManager::addConstraintInternal(ref<Expr> e) {
 
   switch (e->getKind()) {
   case Expr::Constant:
-    assert(cast<ConstantExpr>(e)->isTrue() && 
+    assert(cast<ConstantExpr>(e)->isTrue() &&
            "attempt to add invalid (false) constraint");
     break;
-    
+
     // split to enable finer grained independence and other optimizations
   case Expr::And: {
     BinaryExpr *be = cast<BinaryExpr>(e);
@@ -153,7 +152,7 @@ void ConstraintManager::addConstraintInternal(ref<Expr> e) {
     constraints.push_back(e);
     break;
   }
-    
+
   default:
     constraints.push_back(e);
     break;
@@ -161,27 +160,24 @@ void ConstraintManager::addConstraintInternal(ref<Expr> e) {
 }
 
 void ConstraintManager::addConstraint(ref<Expr> e) {
-  e = simplifyExpr(e);
+  e = simplifyExpr(constraints, e);
   addConstraintInternal(e);
 }
 
-ConstraintManager::ConstraintManager(const std::vector<ref<Expr>> &_constraints)
+ConstraintManager::ConstraintManager(ConstraintSet &_constraints)
     : constraints(_constraints) {}
 
-bool ConstraintManager::empty() const { return constraints.empty(); }
 
-klee::ref<Expr> ConstraintManager::back() const { return constraints.back(); }
+bool ConstraintSet::empty() const { return constraints.empty(); }
 
-klee::ConstraintManager::constraint_iterator ConstraintManager::begin() const {
+klee::ConstraintSet::constraint_iterator ConstraintSet::begin() const {
   return constraints.begin();
 }
 
-klee::ConstraintManager::constraint_iterator ConstraintManager::end() const {
+klee::ConstraintSet::constraint_iterator ConstraintSet::end() const {
   return constraints.end();
 }
 
-size_t ConstraintManager::size() const { return constraints.size(); }
+size_t ConstraintSet::size() const { return constraints.size(); }
 
-bool ConstraintManager::operator==(const ConstraintManager &other) const {
-  return constraints == other.constraints;
-}
+void ConstraintSet::push_back(const ref<Expr> &e) { constraints.push_back(e); }
