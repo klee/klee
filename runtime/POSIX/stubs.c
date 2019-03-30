@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifdef __FreeBSD__
+#include "FreeBSD.h"
+#endif
 #include <errno.h>
 #include <limits.h>
 #include <signal.h>
@@ -20,6 +23,7 @@
 #include <sys/mman.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/times.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -184,6 +188,7 @@ clock_t times(struct tms *buf) {
   return 0;
 }
 
+#ifndef __FreeBSD__
 struct utmpx *getutxent(void) __attribute__((weak));
 struct utmpx *getutxent(void) {
   return (struct utmpx*) getutent();
@@ -204,6 +209,7 @@ int utmpxname(const char *file) {
   utmpname(file);
   return 0;
 }
+#endif
 
 int euidaccess(const char *pathname, int mode) __attribute__((weak));
 int euidaccess(const char *pathname, int mode) {
@@ -409,8 +415,14 @@ int umount2(const char *target, int flags) {
   return -1;
 }
 
+#ifndef __FreeBSD__
 int swapon(const char *path, int swapflags) __attribute__((weak));
 int swapon(const char *path, int swapflags) {
+#else
+int swapon(const char *path)__attribute__((weak));
+int swapon(const char *path)
+{
+#endif
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
   return -1;
@@ -429,15 +441,25 @@ int setgid(gid_t gid) {
   return 0;
 }
 
+#ifndef __FreeBSD__
 int setgroups(size_t size, const gid_t *list) __attribute__((weak));
 int setgroups(size_t size, const gid_t *list) {
+#else
+int setgroups(int size, const gid_t *list) __attribute__((weak));
+int setgroups(int size, const gid_t *list) {
+#endif
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
   return -1;
 }
 
+#ifndef __FreeBSD__
 int sethostname(const char *name, size_t len) __attribute__((weak));
 int sethostname(const char *name, size_t len) {
+#else
+int sethostname(const char *name, int len) __attribute__((weak));
+int sethostname(const char *name, int len) {
+#endif
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
   return -1;
@@ -450,8 +472,13 @@ int setpgid(pid_t pid, pid_t pgid) {
   return -1;
 }
 
+#ifndef __FreeBSD__
 int setpgrp(void) __attribute__((weak));
 int setpgrp(void) {
+#else
+int setpgrp(pid_t a, pid_t b) __attribute__((weak));
+int setpgrp(pid_t a, pid_t b) {
+#endif
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
   return -1;

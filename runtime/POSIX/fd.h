@@ -23,8 +23,13 @@
 #include <sys/statfs.h>
 #endif
 
-#if defined(__APPLE__)
+#ifdef __APPLE__
 #include <sys/dtrace.h>
+#endif
+#ifdef __FreeBSD__
+#include "FreeBSD.h"
+#endif
+#if defined(__APPLE__) || defined(__FreeBSD__)
 #include <sys/mount.h>
 #include <sys/param.h>
 #if !defined(dirent64)
