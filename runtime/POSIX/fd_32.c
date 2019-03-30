@@ -29,7 +29,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/time.h>
+#ifndef __FreeBSD__
 #include <sys/vfs.h>
+#endif
 #include <fcntl.h>
 #include <stdarg.h>
 #include <assert.h>
@@ -165,7 +167,11 @@ int statfs(const char *path, struct statfs *buf32) {
 
 /* Based on uclibc version. We use getdents64 and then rewrite the
    results over themselves, as dirent32s. */
+#ifndef __FreeBSD__
 ssize_t getdents(int fd, struct dirent *dirp, size_t nbytes) {
+#else
+int getdents(int fd, char *dirp, int nbytes) {
+#endif
   struct dirent64 *dp64 = (struct dirent64*) dirp;
   ssize_t res = __fd_getdents(fd, dp64, nbytes);
 
@@ -176,7 +182,9 @@ ssize_t getdents(int fd, struct dirent *dirp, size_t nbytes) {
       size_t name_len = (dp64->d_reclen - 
                            (size_t) &((struct dirent64*) 0)->d_name);
       dp->d_ino = dp64->d_ino;
+#ifdef _DIRENT_HAVE_D_OFF
       dp->d_off = dp64->d_off;
+#endif
       dp->d_reclen = dp64->d_reclen;
       dp->d_type = dp64->d_type;
       memmove(dp->d_name, dp64->d_name, name_len);
