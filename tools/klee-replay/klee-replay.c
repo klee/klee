@@ -23,7 +23,7 @@
 
 #include <sys/wait.h>
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__FreeBSD__)
 #include <signal.h>
 #define fgetc_unlocked(x) fgetc (x)
 #define fputc_unlocked(x,y) fputc (x,y)
@@ -185,7 +185,11 @@ static void run_monitored(char *executable, int argc, char **argv) {
      * do this, because later on we might want to kill pid _and_ all processes
      * spawned by it and its descendants.
      */
+#ifndef __FreeBSD__
     setpgrp();
+#else
+    setpgrp(0, 0);
+#endif
 
     if (!rootdir) {
       execv(executable, argv);

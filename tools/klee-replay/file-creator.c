@@ -25,6 +25,8 @@
 #include <pty.h>
 #elif defined(HAVE_UTIL_H)
 #include <util.h>
+#elif defined(HAVE_LIBUTIL_H)
+#include <libutil.h>
 #endif
 
 #if defined(__APPLE__)
@@ -114,7 +116,7 @@ static int create_char_dev(const char *fname, exe_disk_file_t *dfile,
   ts->c_oflag = 5;
   ts->c_cflag = 1215;
   ts->c_lflag = 35287;
-#ifndef __APPLE__
+#ifdef __GLIBC__
   ts->c_line = 0;
 #endif
   ts->c_cc[0] = '\x03';
@@ -168,7 +170,7 @@ static int create_char_dev(const char *fname, exe_disk_file_t *dfile,
         int res = tcgetattr(aslave, &mode);
         assert(!res);
         mode.c_iflag = IGNBRK;
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__FreeBSD__)
         mode.c_oflag &= ~(ONLCR | OCRNL | ONLRET);
 #else
         mode.c_oflag &= ~(OLCUC | ONLCR | OCRNL | ONLRET);
