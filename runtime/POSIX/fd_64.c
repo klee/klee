@@ -31,7 +31,9 @@
 #include <fcntl.h>
 #include <stdarg.h>
 #include <assert.h>
+#ifndef __FreeBSD__
 #include <sys/vfs.h>
+#endif
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/ioctl.h>

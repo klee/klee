@@ -20,7 +20,9 @@
 #include <fcntl.h>
 #include <stdarg.h>
 #include <assert.h>
+#ifndef __FreeBSD__
 #include <sys/vfs.h>
+#endif
 #include <unistd.h>
 #include <dirent.h>
 #include <sys/ioctl.h>
@@ -784,7 +786,9 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
         dirp->d_type = IFTODT(df->stat->st_mode);
         dirp->d_name[0] = 'A' + i;
         dirp->d_name[1] = '\0';
+#ifdef _DIRENT_HAVE_D_OFF
         dirp->d_off = (i+1) * sizeof(*dirp);
+#endif
         bytes += dirp->d_reclen;
         ++dirp;
       }
@@ -795,7 +799,9 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
       dirp->d_reclen = pad - bytes;
       dirp->d_type = DT_UNKNOWN;
       dirp->d_name[0] = '\0';
+#ifdef _DIRENT_HAVE_D_OFF
       dirp->d_off = 4096;
+#endif
       bytes += dirp->d_reclen;
       f->off = pad;
 
@@ -825,7 +831,9 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
         /* Patch offsets */
         while (pos < res) {
           struct dirent64 *dp = (struct dirent64*) ((char*) dirp + pos);
+#ifdef _DIRENT_HAVE_D_OFF
           dp->d_off += 4096;
+#endif
           pos += dp->d_reclen;
         }
       }
@@ -872,7 +880,9 @@ int ioctl(int fd, unsigned long request, ...) {
         ts->c_oflag = 5;
         ts->c_cflag = 1215;
         ts->c_lflag = 35287;
+#ifdef __GLIBC__
         ts->c_line = 0;
+#endif
         ts->c_cc[0] = '\x03';
         ts->c_cc[1] = '\x1c';
         ts->c_cc[2] = '\x7f';
@@ -989,9 +999,12 @@ int fcntl(int fd, int cmd, ...) {
     errno = EBADF;
     return -1;
   }
-  
+#ifdef F_GETSIG
   if (cmd==F_GETFD || cmd==F_GETFL || cmd==F_GETOWN || cmd==F_GETSIG ||
       cmd==F_GETLEASE || cmd==F_NOTIFY) {
+#else
+   if (cmd==F_GETFD || cmd==F_GETFL || cmd==F_GETOWN) {
+#endif
     arg = 0;
   } else {
     va_start(ap, cmd);
