@@ -69,6 +69,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
                                 true, false, false }
   addDNR("__assert_rtn", handleAssertFail),
   addDNR("__assert_fail", handleAssertFail),
+  addDNR("__assert", handleAssertFail),
   addDNR("_assert", handleAssert),
   addDNR("abort", handleAbort),
   addDNR("_exit", handleExit),
