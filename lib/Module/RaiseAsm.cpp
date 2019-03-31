@@ -60,7 +60,8 @@ bool RaiseAsmPass::runOnInstruction(Module &M, Instruction *I) {
 
   if (triple.getArch() == llvm::Triple::x86_64 &&
       (triple.getOS() == llvm::Triple::Linux ||
-       triple.getOS() == llvm::Triple::Darwin)) {
+       triple.getOS() == llvm::Triple::Darwin ||
+       triple.getOS() == llvm::Triple::FreeBSD)) {
 
     if (ia->getAsmString() == "" && ia->hasSideEffects()) {
       IRBuilder<> Builder(I);
