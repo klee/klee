@@ -1,4 +1,6 @@
-// RUN: rm -rf file.bout
+// -- Core testing commands
+// RUN: rm -rf %t.out
+// RUN: mkdir -p %t.out && cd %t.out
 // RUN: echo -n aaaa > %t.aaaa.txt
 // RUN: echo -n bbbb > %t.bbbb.txt
 // RUN: echo -n cccc > %t.cccc.txt
