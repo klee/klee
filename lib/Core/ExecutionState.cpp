@@ -101,7 +101,6 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     depth(state.depth),
     addressSpace(state.addressSpace),
     constraints(state.constraints),
-    queryCost(state.queryCost),
     pathOS(state.pathOS),
     symPathOS(state.symPathOS),
     coveredLines(state.coveredLines),

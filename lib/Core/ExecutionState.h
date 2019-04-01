@@ -17,6 +17,7 @@
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Module/KInstIterator.h"
+#include "klee/Solver/Solver.h"
 #include "klee/System/Time.h"
 
 #include <map>
@@ -96,8 +97,8 @@ public:
 
   /// Statistics and information
 
-  /// @brief Costs for all queries issued for this state, in seconds
-  mutable time::Span queryCost;
+  /// @brief Metadata utilized and collected by solvers for this state
+  mutable SolverQueryMetaData queryMetaData;
 
   /// @brief History of complete path: represents branches taken to
   /// reach/create this state (both concrete and symbolic)
