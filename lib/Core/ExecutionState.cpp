@@ -82,9 +82,6 @@ ExecutionState::ExecutionState(KFunction *kf) :
   setID();
 }
 
-ExecutionState::ExecutionState(const std::vector<ref<Expr>> &assumptions)
-    : constraints(assumptions), ptreeNode(nullptr) {}
-
 ExecutionState::~ExecutionState() {
   for (const auto &cur_mergehandler: openMergeStack){
     cur_mergehandler->removeOpenState(this);
