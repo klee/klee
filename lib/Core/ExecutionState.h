@@ -65,6 +65,14 @@ struct StackFrame {
 
 /// @brief ExecutionState representing a path under exploration
 class ExecutionState {
+#ifdef KLEE_UNITTEST
+public:
+#else
+private:
+#endif
+  // copy ctor
+  ExecutionState(const ExecutionState &state);
+
 public:
   using stack_ty = std::vector<StackFrame>;
 
@@ -152,11 +160,6 @@ public:
   #endif
   // only to create the initial state
   explicit ExecutionState(KFunction *kf);
-  // XXX total hack, just used to make a state so solver can
-  // use on structure
-  explicit ExecutionState(const std::vector<ref<Expr>> &assumptions);
-  // copy ctor
-  ExecutionState(const ExecutionState &state);
   // no copy assignment, use copy constructor
   ExecutionState &operator=(const ExecutionState &) = delete;
   // no move ctor
