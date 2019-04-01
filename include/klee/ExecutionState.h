@@ -70,8 +70,7 @@ public:
   typedef std::vector<StackFrame> stack_ty;
 
 private:
-  // unsupported, use copy constructor
-  ExecutionState &operator=(const ExecutionState &);
+  ExecutionState(const ExecutionState &state);
 
 public:
   // Execution - Control Flow specific
@@ -148,17 +147,7 @@ public:
   // The numbers of times this state has run through Executor::stepInstruction
   std::uint64_t steppedInstructions;
 
-private:
-  ExecutionState() : ptreeNode(0) {}
-
-public:
-  ExecutionState(KFunction *kf);
-
-  // XXX total hack, just used to make a state so solver can
-  // use on structure
-  ExecutionState(const std::vector<ref<Expr> > &assumptions);
-
-  ExecutionState(const ExecutionState &state);
+  explicit ExecutionState(KFunction *kf);
 
   ~ExecutionState();
 
@@ -172,6 +161,9 @@ public:
 
   bool merge(const ExecutionState &b);
   void dumpStack(llvm::raw_ostream &out) const;
+
+  ExecutionState() = delete;
+  ExecutionState &operator=(const ExecutionState &) = delete;
 };
 }
 
