@@ -21,10 +21,11 @@ namespace klee {
   class Expr;
   class SolverImpl;
 
-  /// Collection of meta data used by a solver
-  ///
+  /// Collection of meta data that a solver can have access to. This is
+  /// independent of the actual constraints but can be used as a two-way
+  /// communication between solver and context of query.
   struct SolverQueryMetaData {
-    /// @brief Costs for all queries issued for this state, in seconds
+    /// @brief Costs for all queries issued for this state
     time::Span queryCost;
   };
 
