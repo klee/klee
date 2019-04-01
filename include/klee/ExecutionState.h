@@ -19,6 +19,7 @@
 // FIXME: We do not want to be exposing these? :(
 #include "../../lib/Core/AddressSpace.h"
 #include "klee/Internal/Module/KInstIterator.h"
+#include "klee/Solver.h"
 
 #include <map>
 #include <set>
@@ -99,8 +100,8 @@ public:
 
   /// Statistics and information
 
-  /// @brief Costs for all queries issued for this state, in seconds
-  mutable time::Span queryCost;
+  /// @brief Metadata utilized and collected by solvers for this state
+  mutable SolverQueryMetaData queryMetaData;
 
   /// @brief Weight assigned for importance of this state.  Can be
   /// used for searchers to decide what paths to explore

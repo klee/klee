@@ -26,10 +26,11 @@ namespace llvm {
 
 namespace klee {
 
+class ArrayCache;
 class BitArray;
+class ExecutionState;
 class MemoryManager;
 class Solver;
-class ArrayCache;
 
 class MemoryObject {
   friend class STPBuilder;

@@ -157,7 +157,7 @@ void Executor::processTimers(ExecutionState *current,
           *os << "{";
           *os << "'depth' : " << es->depth << ", ";
           *os << "'weight' : " << es->weight << ", ";
-          *os << "'queryCost' : " << es->queryCost << ", ";
+          *os << "'queryCost' : " << es->queryMetaData.queryCost << ", ";
           *os << "'coveredNew' : " << es->coveredNew << ", ";
           *os << "'instsSinceCovNew' : " << es->instsSinceCovNew << ", ";
           *os << "'md2u' : " << md2u << ", ";

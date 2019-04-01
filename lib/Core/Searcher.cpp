@@ -209,7 +209,9 @@ double WeightedRandomSearcher::getWeight(ExecutionState *es) {
     return inv;
   }
   case QueryCost:
-    return (es->queryCost.toSeconds() < .1) ? 1. : 1./ es->queryCost.toSeconds();
+    return (es->queryMetaData.queryCost.toSeconds() < .1)
+               ? 1.
+               : 1. / es->queryMetaData.queryCost.toSeconds();
   case CoveringNew:
   case MinDistToUncovered: {
     uint64_t md2u = computeMinDistToUncovered(es->pc,
