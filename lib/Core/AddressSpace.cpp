@@ -9,6 +9,7 @@
 
 #include "AddressSpace.h"
 
+#include "ExecutionState.h"
 #include "Memory.h"
 #include "TimingSolver.h"
 
@@ -87,7 +88,7 @@ bool AddressSpace::resolveOne(ExecutionState &state,
     // try cheap search, will succeed for any inbounds pointer
 
     ref<ConstantExpr> cex;
-    if (!solver->getValue(state, address, cex))
+    if (!solver->getValue(state.constraints, address, cex, state.queryMetaData))
       return false;
     uint64_t example = cex->getZExtValue();
     MemoryObject hack(example);
@@ -115,8 +116,9 @@ bool AddressSpace::resolveOne(ExecutionState &state,
       const auto &mo = oi->first;
 
       bool mayBeTrue;
-      if (!solver->mayBeTrue(state, 
-                             mo->getBoundsCheckPointer(address), mayBeTrue))
+      if (!solver->mayBeTrue(state.constraints,
+                             mo->getBoundsCheckPointer(address), mayBeTrue,
+                             state.queryMetaData))
         return false;
       if (mayBeTrue) {
         result.first = oi->first;
@@ -125,9 +127,9 @@ bool AddressSpace::resolveOne(ExecutionState &state,
         return true;
       } else {
         bool mustBeTrue;
-        if (!solver->mustBeTrue(state, 
+        if (!solver->mustBeTrue(state.constraints,
                                 UgeExpr::create(address, mo->getBaseExpr()),
-                                mustBeTrue))
+                                mustBeTrue, state.queryMetaData))
           return false;
         if (mustBeTrue)
           break;
@@ -139,18 +141,18 @@ bool AddressSpace::resolveOne(ExecutionState &state,
       const auto &mo = oi->first;
 
       bool mustBeTrue;
-      if (!solver->mustBeTrue(state, 
+      if (!solver->mustBeTrue(state.constraints,
                               UltExpr::create(address, mo->getBaseExpr()),
-                              mustBeTrue))
+                              mustBeTrue, state.queryMetaData))
         return false;
       if (mustBeTrue) {
         break;
       } else {
         bool mayBeTrue;
 
-        if (!solver->mayBeTrue(state, 
-                               mo->getBoundsCheckPointer(address),
-                               mayBeTrue))
+        if (!solver->mayBeTrue(state.constraints,
+                               mo->getBoundsCheckPointer(address), mayBeTrue,
+                               state.queryMetaData))
           return false;
         if (mayBeTrue) {
           result.first = oi->first;
@@ -176,7 +178,8 @@ int AddressSpace::checkPointerInObject(ExecutionState &state,
   const MemoryObject *mo = op.first;
   ref<Expr> inBounds = mo->getBoundsCheckPointer(p);
   bool mayBeTrue;
-  if (!solver->mayBeTrue(state, inBounds, mayBeTrue)) {
+  if (!solver->mayBeTrue(state.constraints, inBounds, mayBeTrue,
+                         state.queryMetaData)) {
     return 1;
   }
 
@@ -187,7 +190,8 @@ int AddressSpace::checkPointerInObject(ExecutionState &state,
     auto size = rl.size();
     if (size == 1) {
       bool mustBeTrue;
-      if (!solver->mustBeTrue(state, inBounds, mustBeTrue))
+      if (!solver->mustBeTrue(state.constraints, inBounds, mustBeTrue,
+                              state.queryMetaData))
         return 1;
       if (mustBeTrue)
         return 0;
@@ -227,7 +231,7 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
     // just get this by inspection of the expr.
 
     ref<ConstantExpr> cex;
-    if (!solver->getValue(state, p, cex))
+    if (!solver->getValue(state.constraints, p, cex, state.queryMetaData))
       return true;
     uint64_t example = cex->getZExtValue();
     MemoryObject hack(example);
@@ -254,8 +258,9 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
         return incomplete ? true : false;
 
       bool mustBeTrue;
-      if (!solver->mustBeTrue(state, UgeExpr::create(p, mo->getBaseExpr()),
-                              mustBeTrue))
+      if (!solver->mustBeTrue(state.constraints,
+                              UgeExpr::create(p, mo->getBaseExpr()), mustBeTrue,
+                              state.queryMetaData))
         return true;
       if (mustBeTrue)
         break;
@@ -268,8 +273,9 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
         return true;
 
       bool mustBeTrue;
-      if (!solver->mustBeTrue(state, UltExpr::create(p, mo->getBaseExpr()),
-                              mustBeTrue))
+      if (!solver->mustBeTrue(state.constraints,
+                              UltExpr::create(p, mo->getBaseExpr()), mustBeTrue,
+                              state.queryMetaData))
         return true;
       if (mustBeTrue)
         break;

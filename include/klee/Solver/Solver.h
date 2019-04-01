@@ -21,6 +21,13 @@ namespace klee {
   class Expr;
   class SolverImpl;
 
+  /// Collection of meta data used by a solver
+  ///
+  struct SolverQueryMetaData {
+    /// @brief Costs for all queries issued for this state, in seconds
+    time::Span queryCost;
+  };
+
   struct Query {
   public:
     const ConstraintSet &constraints;
