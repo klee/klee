@@ -34,12 +34,17 @@ private:
   
   struct CacheEntry {
     CacheEntry(const ConstraintSet &c, ref<Expr> q)
-      : constraints(c), query(q) {}
+        : constraints(c.begin(), c.end()), query(q) {
+      // Order constraints
+      std::sort(
+          constraints.begin(), constraints.end(),
+          [&](const ref<Expr> &a, const ref<Expr> &b) { return *a < *b; });
+    }
 
     CacheEntry(const CacheEntry &ce)
       : constraints(ce.constraints), query(ce.query) {}
-    
-    ConstraintSet constraints;
+
+    std::vector<ref<Expr>> constraints;
     ref<Expr> query;
 
     bool operator==(const CacheEntry &b) const {
