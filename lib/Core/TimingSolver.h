@@ -15,6 +15,7 @@
 #include "klee/Internal/System/Time.h"
 #include "klee/Solver.h"
 
+#include <memory>
 #include <vector>
 
 namespace klee {
@@ -25,7 +26,7 @@ namespace klee {
   /// tracking the statistics that we care about.
   class TimingSolver {
   public:
-    Solver *solver;
+    std::unique_ptr<Solver> solver;
     bool simplifyExprs;
 
   public:
@@ -36,9 +37,6 @@ namespace klee {
     /// querying.
     TimingSolver(Solver *_solver, bool _simplifyExprs = true) 
       : solver(_solver), simplifyExprs(_simplifyExprs) {}
-    ~TimingSolver() {
-      delete solver;
-    }
 
     void setTimeout(time::Span t) {
       solver->setCoreSolverTimeout(t);

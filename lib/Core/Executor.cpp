@@ -3966,7 +3966,7 @@ void Executor::doImpliedValueConcretization(ExecutionState &state,
   abort(); // FIXME: Broken until we sort out how to do the write back.
 
   if (DebugCheckForImpliedValues)
-    ImpliedValue::checkForImpliedValues(solver->solver, e, value);
+    ImpliedValue::checkForImpliedValues(solver->solver.get(), e, value);
 
   ImpliedValueList results;
   ImpliedValue::getImpliedValues(e, value, results);
