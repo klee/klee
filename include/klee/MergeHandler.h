@@ -69,10 +69,11 @@
 #ifndef KLEE_MERGEHANDLER_H
 #define KLEE_MERGEHANDLER_H
 
-#include <vector>
+#include "klee/util/Ref.h"
+#include "llvm/Support/CommandLine.h"
 #include <map>
 #include <stdint.h>
-#include "llvm/Support/CommandLine.h"
+#include <vector>
 
 namespace llvm {
 class Instruction;
@@ -143,9 +144,8 @@ public:
   // klee_close_merge
   double getMean();
 
-  /// @brief Required by klee::ref objects
-  unsigned refCount;
-
+  /// @brief Required by klee::ref-managed objects
+  class ReferenceCounter _refCount;
 
   MergeHandler(Executor *_executor, ExecutionState *es);
   ~MergeHandler();
