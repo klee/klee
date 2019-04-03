@@ -46,6 +46,32 @@ struct SelfRefExpr {
   ~SelfRefExpr() { finished_counter++; }
 };
 
+struct ParentExpr {
+  /// @brief Required by klee::ref-managed objects
+  class klee::ReferenceCounter _refCount;
+
+  enum ExprKind {
+    EK_Parent,
+    EK_Child,
+  };
+
+  const ExprKind Kind;
+  ExprKind getKind() const { return Kind; }
+
+  ParentExpr(ExprKind K) : Kind(K) {}
+
+  virtual ~ParentExpr() {
+    EXPECT_EQ(finished, 1);
+    finished_counter++;
+  }
+};
+
+struct ChildExpr : public ParentExpr {
+  ChildExpr() : ParentExpr(EK_Child) {}
+
+  static bool classof(const ParentExpr *S) { return S->getKind() == EK_Child; }
+};
+
 TEST(RefTest, SelfAssign) {
   finished = 0;
   finished_counter = 0;
@@ -56,6 +82,72 @@ TEST(RefTest, SelfAssign) {
     EXPECT_EQ(r_e->_refCount.getCount(), 1u);
     r = r;
     EXPECT_EQ(r_e->_refCount.getCount(), 1u);
+    finished = 1;
+  }
+  EXPECT_EQ(1, finished_counter);
+}
+
+TEST(RefTest, SelfMove) {
+  finished = 0;
+  finished_counter = 0;
+  {
+    struct Expr *r_e = new Expr();
+    ref<Expr> r(r_e);
+
+    // Check self move
+    r = std::move(r);
+    finished = 1;
+  }
+  EXPECT_EQ(1, finished_counter);
+}
+
+TEST(RefTest, MoveAssignment) {
+  finished = 0;
+  finished_counter = 0;
+  {
+    struct Expr *r_e = new Expr();
+    ref<Expr> r(r_e);
+
+    struct Expr *q_e = new Expr();
+    ref<Expr> q(q_e);
+
+    finished = 1;
+
+    // Move the object
+    q = std::move(r);
+
+    // Re-assign new object
+    r = new Expr();
+  }
+  EXPECT_EQ(3, finished_counter);
+}
+
+TEST(RefTest, MoveCastingAssignment) {
+  finished = 0;
+  finished_counter = 0;
+  {
+    ref<ParentExpr> r(new ChildExpr());
+
+    struct ChildExpr *child = new ChildExpr();
+    ref<ChildExpr> ce(child);
+
+    finished = 1;
+
+    // Move the object
+    r = std::move(child);
+  }
+  EXPECT_EQ(2, finished_counter);
+}
+
+TEST(RefTest, MoveConstructor) {
+  finished = 0;
+  finished_counter = 0;
+  {
+    struct Expr *r_e = new Expr();
+    ref<Expr> r(r_e);
+
+    ref<Expr> q(std::move(r_e));
+
     finished = 1;
   }
   EXPECT_EQ(1, finished_counter);
