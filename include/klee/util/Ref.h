@@ -74,16 +74,41 @@ public:
    * despite a redundant template. */
   ref<T> &operator= (const ref<T> &r) {
     r.inc();
+    // Create a copy of the pointer as the
+    // referenced object might get destroyed by the following dec(),
+    // like in the following example:
+    // ````````````````````````
+    //    Expr {
+    //        ref<Expr> next;
+    //    }
+    //
+    //    ref<Expr> root;
+    //    root = root->next;
+    // ````````````````````````
+    T *saved_ptr = r.ptr;
     dec();
-    ptr = r.ptr;
+    ptr = saved_ptr;
 
     return *this;
   }
 
   template<class U> ref<T> &operator= (const ref<U> &r) {
     r.inc();
+    // Create a copy of the pointer as the currently
+    // referenced object might get destroyed by the following dec(),
+    // like in the following example:
+    // ````````````````````````
+    //    Expr {
+    //        ref<Expr> next;
+    //    }
+    //
+    //    ref<Expr> root;
+    //    root = root->next;
+    // ````````````````````````
+
+    U *saved_ptr = r.ptr;
     dec();
-    ptr = r.ptr;
+    ptr = saved_ptr;
 
     return *this;
   }

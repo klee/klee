@@ -16,6 +16,7 @@
 using klee::ref;
 
 int finished = 0;
+int finished_counter = 0;
 
 struct Expr
 {
@@ -37,4 +38,33 @@ TEST(RefTest, SelfAssign)
   r = r;
   EXPECT_EQ(r_e->refCount, 1);
   finished = 1;
+}
+struct SelfRefExpr {
+  /// @brief Required by klee::ref-managed objects
+  struct klee::ReferenceCounter __refCount;
+  ref<SelfRefExpr> next_;
+
+  explicit SelfRefExpr(ref<SelfRefExpr> next) : next_(next) {}
+  SelfRefExpr(const SelfRefExpr &) = delete;
+  SelfRefExpr &operator=(const SelfRefExpr &) = delete;
+
+  ~SelfRefExpr() { finished_counter++; }
+};
+TEST(RefTest, SelfRef) {
+  struct SelfRefExpr *e_1 = new SelfRefExpr(nullptr);
+  ref<SelfRefExpr> r_e_1(e_1);
+  EXPECT_EQ(1u, r_e_1->__refCount.refCount);
+  ref<SelfRefExpr> r_root = r_e_1;
+  EXPECT_EQ(2u, r_e_1->__refCount.refCount);
+
+  {
+    ref<SelfRefExpr> r2(new SelfRefExpr(r_e_1));
+    EXPECT_EQ(3u, r_e_1->__refCount.refCount);
+
+    r_root = r2;
+    EXPECT_EQ(2u, r_e_1->__refCount.refCount);
+  }
+
+  r_root = r_root->next_;
+  EXPECT_EQ(2u, r_e_1->__refCount.refCount);
 }
