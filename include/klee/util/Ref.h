@@ -7,6 +7,25 @@
 //
 //===----------------------------------------------------------------------===//
 
+/**
+ * @file Ref.h
+ * @brief Implements smart-pointer ref<> used by KLEE.
+ *
+ * ## Basic usage:
+ *
+ * Add the following to your struct/class to enable ref<> pointer usage
+ * @code{.cpp}
+ *
+ * struct MyStruct{
+ *   ...
+ *   /// @brief Required by klee::ref-managed objects
+ *   class ReferenceCounter _refCount;
+ *   ...
+ * }
+ * @endcode
+ *
+ */
+
 #ifndef KLEE_REF_H
 #define KLEE_REF_H
 
@@ -22,9 +41,48 @@ using llvm::dyn_cast_or_null;
 
 namespace llvm {
   class raw_ostream;
-}
+} // namespace llvm
 
 namespace klee {
+
+template<class T>
+class ref;
+
+/// Reference counter to be used as part of a ref-managed struct or class
+class ReferenceCounter {
+  template<class T>
+  friend class ref;
+
+  /// Count how often the object has been referenced.
+  unsigned refCount = 0;
+
+public:
+  ReferenceCounter() = default;
+  ~ReferenceCounter() = default;
+
+  // Explicitly initialise reference counter with 0 again
+  // As this object is part of another object, the copy-constructor
+  // might be invoked as part of the other one.
+  ReferenceCounter(const ReferenceCounter& ) {}
+
+  /// Returns the number of parallel references of this objects
+  /// \return number of references on this object
+  unsigned getCount() {return refCount;}
+
+  // Copy assignment operator
+  ReferenceCounter &operator=(const ReferenceCounter &a) {
+    if (this == &a)
+      return *this;
+    // The new copy won't be referenced
+    refCount = 0;
+    return *this;
+  }
+
+  // Do not allow move operations for the reference counter
+  // as otherwise, references become incorrect.
+  ReferenceCounter(ReferenceCounter &&r) noexcept = delete;
+  ReferenceCounter &operator=(ReferenceCounter &&other) noexcept = delete;
+};
 
 template<class T>
 class ref {
@@ -32,17 +90,17 @@ class ref {
 
 public:
   // default constructor: create a NULL reference
-  ref() : ptr(0) { }
+  ref() : ptr(nullptr) {}
   ~ref () { dec (); }
 
 private:
   void inc() const {
     if (ptr)
-      ++ptr->refCount;
+      ++ptr->_refCount.refCount;
   }
 
   void dec() const {
-    if (ptr && --ptr->refCount == 0)
+    if (ptr && --ptr->_refCount.refCount == 0)
       delete ptr;
   }
 
@@ -121,7 +179,7 @@ public:
     return ptr;
   }
 
-  bool isNull() const { return ptr == 0; }
+  bool isNull() const { return ptr == nullptr; }
 
   // assumes non-null arguments
   int compare(const ref &rhs) const {
@@ -158,7 +216,7 @@ namespace llvm {
   // isNull semantics, which doesn't seem like a good idea.
 template<typename T>
 struct simplify_type<const ::klee::ref<T> > {
-  typedef T* SimpleType;
+  using SimpleType = T *;
   static SimpleType getSimplifiedValue(const ::klee::ref<T> &Ref) {
     return Ref.get();
   }
@@ -167,6 +225,6 @@ struct simplify_type<const ::klee::ref<T> > {
 template<typename T>
 struct simplify_type< ::klee::ref<T> >
   : public simplify_type<const ::klee::ref<T> > {};
-}
+}  // namespace llvm
 
 #endif /* KLEE_REF_H */

@@ -8,40 +8,35 @@
 //===----------------------------------------------------------------------===//
 
 /* Regression test for a bug caused by assigning a ref to itself.
-   More details at http://keeda.stanford.edu/pipermail/klee-commits/2012-February/000904.html */
+   More details at
+   http://keeda.stanford.edu/pipermail/klee-commits/2012-February/000904.html */
 
+#include "klee/util/Ref.h"
 #include "gtest/gtest.h"
 #include <iostream>
-#include "klee/util/Ref.h"
 using klee::ref;
 
 int finished = 0;
 int finished_counter = 0;
 
-struct Expr
-{
-  int refCount;
-  Expr() : refCount(0) { 
-    //std::cout << "Expr(" << this << ") created\n"; 
-  }
-  ~Expr() { 
-    //std::cout << "Expr(" << this << ") destroyed\n"; 
+struct Expr {
+  /// @brief Required by klee::ref-managed objects
+  class klee::ReferenceCounter _refCount;
+  Expr() = default;
+
+  Expr(const Expr &) = delete;
+  Expr &operator=(const Expr &) = delete;
+
+  ~Expr() {
+    // std::cout << "Expr(" << this << ") destroyed\n";
     EXPECT_EQ(finished, 1);
+    finished_counter++;
   }
 };
 
-TEST(RefTest, SelfAssign) 
-{
-  struct Expr *r_e = new Expr();
-  ref<Expr> r(r_e);
-  EXPECT_EQ(r_e->refCount, 1);
-  r = r;
-  EXPECT_EQ(r_e->refCount, 1);
-  finished = 1;
-}
 struct SelfRefExpr {
   /// @brief Required by klee::ref-managed objects
-  struct klee::ReferenceCounter __refCount;
+  class klee::ReferenceCounter _refCount;
   ref<SelfRefExpr> next_;
 
   explicit SelfRefExpr(ref<SelfRefExpr> next) : next_(next) {}
@@ -50,21 +45,37 @@ struct SelfRefExpr {
 
   ~SelfRefExpr() { finished_counter++; }
 };
+
+TEST(RefTest, SelfAssign) {
+  finished = 0;
+  finished_counter = 0;
+  {
+
+    struct Expr *r_e = new Expr();
+    ref<Expr> r(r_e);
+    EXPECT_EQ(r_e->_refCount.getCount(), 1u);
+    r = r;
+    EXPECT_EQ(r_e->_refCount.getCount(), 1u);
+    finished = 1;
+  }
+  EXPECT_EQ(1, finished_counter);
+}
+
 TEST(RefTest, SelfRef) {
   struct SelfRefExpr *e_1 = new SelfRefExpr(nullptr);
   ref<SelfRefExpr> r_e_1(e_1);
-  EXPECT_EQ(1u, r_e_1->__refCount.refCount);
+  EXPECT_EQ(1u, r_e_1->_refCount.getCount());
   ref<SelfRefExpr> r_root = r_e_1;
-  EXPECT_EQ(2u, r_e_1->__refCount.refCount);
+  EXPECT_EQ(2u, r_e_1->_refCount.getCount());
 
   {
     ref<SelfRefExpr> r2(new SelfRefExpr(r_e_1));
-    EXPECT_EQ(3u, r_e_1->__refCount.refCount);
+    EXPECT_EQ(3u, r_e_1->_refCount.getCount());
 
     r_root = r2;
-    EXPECT_EQ(2u, r_e_1->__refCount.refCount);
+    EXPECT_EQ(2u, r_e_1->_refCount.getCount());
   }
 
   r_root = r_root->next_;
-  EXPECT_EQ(2u, r_e_1->__refCount.refCount);
+  EXPECT_EQ(2u, r_e_1->_refCount.getCount());
 }
