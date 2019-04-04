@@ -20,6 +20,8 @@ install_build_dependencies_metasmt() {
     flex
     unzip
     python
+    autoconf
+    python3
   )
 
   #Install essential dependencies
