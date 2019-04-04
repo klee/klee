@@ -41,7 +41,7 @@ env:
     - ENABLE_DEBUG: 1
     - GTEST_VERSION: 1.7.0
     - LLVM_VERSION: 6.0
-    - METASMT_VERSION: v4.rc1
+    - METASMT_VERSION: qf_abv
     - MINISAT_VERSION: "master"
     - REQUIRES_RTTI: 0
     - SANITIZER_BUILD:
