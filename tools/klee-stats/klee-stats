@@ -22,7 +22,7 @@ try:
 except:
     print('Error: Package "tabulate" required for table formatting. '
           'Please install it using "pip" or your package manager.'
-          'You can still use -grafana and -to-csv without tabulate.',
+          'You can still use --grafana and --to-csv without tabulate.',
           file=sys.stderr)
 
 Legend = [
@@ -229,10 +229,10 @@ def main():
                           choices=['klee'] + list(_table_formats.keys()),
                           dest='tableFormat', default='klee',
                           help='Table format for the summary.')
-    parser.add_argument('-to-csv',
+    parser.add_argument('--to-csv',
                           action='store_true', dest='toCsv',
                           help='Output stats as comma-separated values (CSV)')
-    parser.add_argument('-grafana',
+    parser.add_argument('--grafana',
                           action='store_true', dest='grafana',
                           help='Start a grafana web server')
 
