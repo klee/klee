@@ -6,12 +6,13 @@ setup_build_variables_metasmt() {
 }
 
 download_metasmt() {
+  source "${DIR}/common-functions"
   # Clone
-  git clone --single-branch --depth 1 https://github.com/hoangmle/metaSMT.git "${METASMT_SRC_PATH}"
+  git_clone_or_update https://github.com/hoangmle/metaSMT.git "${METASMT_SRC_PATH}" "${METASMT_VERSION}"
   cd "${METASMT_SRC_PATH}"
   git submodule update --init
   # Bootstrap
-  git clone https://github.com/agra-uni-bremen/dependencies.git
+  git_clone_or_update https://github.com/agra-uni-bremen/dependencies.git "${METASMT_SRC_PATH}/dependencies" "development"
 }
 
 build_metasmt() {
