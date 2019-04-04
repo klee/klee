@@ -15,7 +15,6 @@ artifact_dependency_sanitizer_compiler(){
 setup_variables_sanitizer_compiler() {
   for sanitizer in "${SANITIZERS[@]}"; do
     [[ -z "${sanitizer}" ]] && continue
-    SANITIZER_CMAKE_C_COMPILER=[""]
+    SANITIZER_CMAKE_C_COMPILER=("")
   done
-
 }
