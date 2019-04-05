@@ -99,6 +99,7 @@ matrix:
     - os: osx
       osx_image: xcode8.3
       env: SOLVERS=STP UCLIBC_VERSION=0 USE_TCMALLOC=0 USE_LIBCXX=0
+    - env: BUILD_DOCKER=1
 addons:
   apt:
     packages:
@@ -113,7 +114,8 @@ before_install:
 
 script:
     # Build KLEE and run tests
-    - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export BASE=/tmp && export PATH="/usr/local/opt/ccache/libexec:/usr/local/bin:$PATH"; scripts/build/build.sh klee --debug --install-system-deps; export DYLD_LIBRARY_PATH=="$(cd ${BASE}/metaSMT-*-deps/stp-git-basic/lib/ && pwd)"; scripts/build/run-tests.sh /tmp/klee_build* --debug; fi
-    - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then scripts/build/build.sh klee --docker --debug --push-docker-deps --create-final-image; fi
-    - if [[ "$COVERAGE" == "1" && "$TRAVIS_OS_NAME" == "linux" ]]; then scripts/build/run-tests.sh --coverage --upload-coverage --run-docker --debug; fi
-    - if [[ "$COVERAGE" == "0" && "$TRAVIS_OS_NAME" == "linux" ]]; then scripts/build/run-tests.sh --run-docker --debug; fi
+    - if [[ "${BUILD_DOCKER}" != "1" && "$TRAVIS_OS_NAME" == "osx" ]]; then export BASE=/tmp && export PATH="/usr/local/opt/ccache/libexec:/usr/local/bin:$PATH"; scripts/build/build.sh klee --debug --install-system-deps; export DYLD_LIBRARY_PATH=="$(cd ${BASE}/metaSMT-*-deps/stp-git-basic/lib/ && pwd)"; scripts/build/run-tests.sh /tmp/klee_build* --debug; fi
+    - if [[ "${BUILD_DOCKER}" != "1" && "$TRAVIS_OS_NAME" == "linux" ]]; then scripts/build/build.sh klee --docker --debug --push-docker-deps --create-final-image; fi
+    - if [[ "${BUILD_DOCKER}" != "1" && "$COVERAGE" == "1" && "$TRAVIS_OS_NAME" == "linux" ]]; then scripts/build/run-tests.sh --coverage --upload-coverage --run-docker --debug; fi
+    - if [[ "${BUILD_DOCKER}" != "1" && "$COVERAGE" == "0" && "$TRAVIS_OS_NAME" == "linux" ]]; then scripts/build/run-tests.sh --run-docker --debug; fi
+    - if [[ "${BUILD_DOCKER}" -eq 1 ]]; then docker build .; fi
