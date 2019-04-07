@@ -194,6 +194,8 @@ def grafana(dirs):
         startTime = os.path.getmtime(dr)
         fromTime = frm - startTime if frm - startTime > 0 else 0
         toTime = to - startTime if to - startTime > fromTime else fromTime + 100
+        #convert to microseconds
+        startTime, fromTime, toTime = startTime*1000000, fromTime*1000000, toTime*1000000
         sqlTarget = ",".join(["AVG( {0} )".format(t) for t in targets if t.isalnum()])
 
         conn = sqlite3.connect(dr)
@@ -204,10 +206,11 @@ def grafana(dirs):
             + " GROUP BY WallTime/? LIMIT ?"
         s = s.format(fields=sqlTarget) #can't use prepared staments for this one
 
-        cursor = conn.execute(s, ( startTime, fromTime, toTime, interval/1000, limit))
+        #All times need to be in microseconds, interval is in milliseconds
+        cursor = conn.execute(s, ( startTime, fromTime, toTime, interval*1000, limit))
         result = [ {"target": t, "datapoints": []} for t in targets ]
         for line in cursor:
-            unixtimestamp = int(line[0]) * 1000  #miliseconds
+            unixtimestamp = int(line[0]) / 1000 #Convert from microsecond to miliseconds
             for field, datastream in zip(line[1:], result):
                 datastream["datapoints"].append([field, unixtimestamp])
 
