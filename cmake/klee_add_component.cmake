@@ -12,7 +12,7 @@ function(klee_add_component_generic target_name type)
   # as shared libraries.
   add_library(${target_name} ${type} ${ARGN})
   # Use of `PUBLIC` means these will propagate to targets that use this component.
-  if (("${CMAKE_VERSION}" VERSION_EQUAL "3.3") OR ("${CMAKE_VERSION}" VERSION_GREATER "3.3"))
+  if(("${CMAKE_VERSION}" VERSION_EQUAL "3.3") OR ("${CMAKE_VERSION}" VERSION_GREATER "3.3"))
     # In newer CMakes we can make sure that the flags are only used when compiling C++
     target_compile_options(${target_name} PUBLIC
       $<$<COMPILE_LANGUAGE:CXX>:${KLEE_COMPONENT_CXX_FLAGS}>)
@@ -35,6 +35,11 @@ function(klee_add_shared_component target_name)
 
   # Check for undefined symbols in the shared library at link-time
   if(NOT APPLE)
-    target_link_options(${target_name} PUBLIC "LINKER:--no-undefined")
+    if(("${CMAKE_VERSION}" VERSION_EQUAL "3.13") OR ("${CMAKE_VERSION}" VERSION_GREATER "3.13"))
+      target_link_options(${target_name} PUBLIC "LINKER:--no-undefined")
+    else()
+      set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+         LINK_FLAGS "-Wl,--no-undefined")
+    endif()
   endif(NOT APPLE)
 endfunction()
