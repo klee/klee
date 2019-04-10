@@ -34,12 +34,14 @@ function(klee_add_shared_component target_name)
   klee_add_component_generic(${target_name} SHARED ${ARGN})
 
   # Check for undefined symbols in the shared library at link-time
-  if(NOT APPLE)
-    if(("${CMAKE_VERSION}" VERSION_EQUAL "3.13") OR ("${CMAKE_VERSION}" VERSION_GREATER "3.13"))
-      target_link_options(${target_name} PUBLIC "LINKER:--no-undefined")
-    else()
-      set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-         LINK_FLAGS "-Wl,--no-undefined")
-    endif()
-  endif(NOT APPLE)
+  if (NOT (${IS_ASAN_BUILD} OR ${IS_UBSAN_BUILD} OR ${IS_MSAN_BUILD}))
+    if(NOT APPLE)
+      if(("${CMAKE_VERSION}" VERSION_EQUAL "3.13") OR ("${CMAKE_VERSION}" VERSION_GREATER "3.13"))
+        target_link_options(${target_name} PUBLIC "LINKER:--no-undefined")
+      else()
+        set_property(TARGET ${target_name} APPEND_STRING PROPERTY
+          LINK_FLAGS "-Wl,--no-undefined")
+      endif()
+    endif(NOT APPLE)
+  endif()
 endfunction()
