@@ -16,6 +16,7 @@
 #else
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 #endif
 
 #define KLEE_C_EXPR_API_VERSION 1
