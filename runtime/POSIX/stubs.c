@@ -19,7 +19,9 @@
 #include <time.h>
 #include <unistd.h>
 #include <utime.h>
+#ifndef __FreeBSD__
 #include <utmp.h>
+#endif
 #include <sys/mman.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
@@ -484,8 +486,13 @@ int setpgrp(pid_t a, pid_t b) {
   return -1;
 }
 
+#ifndef __FreeBSD__
 int setpriority(__priority_which_t which, id_t who, int prio) __attribute__((weak));
 int setpriority(__priority_which_t which, id_t who, int prio) {
+#else
+int setpriority(int which, int who, int prio) __attribute__((weak));
+int setpriority(int which, int who, int prio) {
+#endif
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
   return -1;
@@ -505,19 +512,26 @@ int setresuid(uid_t ruid, uid_t euid, uid_t suid) {
   return -1;
 }
 
+#ifndef __FreeBSD__
 int setrlimit(__rlimit_resource_t resource, const struct rlimit *rlim) __attribute__((weak));
 int setrlimit(__rlimit_resource_t resource, const struct rlimit *rlim) {
+#else
+int setrlimit(int resource, const struct rlimit *rlp) __attribute__((weak));
+int setrlimit(int resource, const struct rlimit *rlp) {
+#endif
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
   return -1;
 }
 
+#ifndef __FreeBSD__
 int setrlimit64(__rlimit_resource_t resource, const struct rlimit64 *rlim) __attribute__((weak));
 int setrlimit64(__rlimit_resource_t resource, const struct rlimit64 *rlim) {
   klee_warning("ignoring (EPERM)");
   errno = EPERM;
   return -1;
 }
+#endif
 
 pid_t setsid(void) __attribute__((weak));
 pid_t setsid(void) {
