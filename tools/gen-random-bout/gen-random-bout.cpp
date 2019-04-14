@@ -23,6 +23,7 @@
 
 #if defined(__FreeBSD__) || defined(__minix)
 #define stat64 stat
+#define fstat64 fstat
 #endif
 
 #define SMALL_BUFFER_SIZE 64 // To hold "arg<N>" string, temporary
