@@ -25,8 +25,13 @@ int kill(pid_t pid, int sig) {
   return -1;
 }
 
+#ifndef __FreeBSD__
 int _setjmp (struct __jmp_buf_tag __env[1]) __attribute__((weak));
 int _setjmp (struct __jmp_buf_tag __env[1]) {
+#else
+int _setjmp (jmp_buf env) __returns_twice;
+int _setjmp (jmp_buf env) {
+#endif
   klee_warning_once("ignoring");
   return 0;
 }

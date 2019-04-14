@@ -71,7 +71,7 @@ int open(const char *pathname, int flags, ...) {
     /* get mode */
     va_list ap;
     va_start(ap, flags);
-    mode = va_arg(ap, mode_t);
+    mode = va_arg(ap, int);
     va_end(ap);
   }
 
@@ -85,7 +85,7 @@ int openat(int fd, const char *pathname, int flags, ...) {
     /* get mode */
     va_list ap;
     va_start(ap, flags);
-    mode = va_arg(ap, mode_t);
+    mode = va_arg(ap, int);
     va_end(ap);
   }
 
@@ -170,7 +170,7 @@ int statfs(const char *path, struct statfs *buf32) {
 #ifndef __FreeBSD__
 ssize_t getdents(int fd, struct dirent *dirp, size_t nbytes) {
 #else
-int getdents(int fd, char *dirp, int nbytes) {
+ssize_t getdents(int fd, char *dirp, size_t nbytes) {
 #endif
   struct dirent64 *dp64 = (struct dirent64*) dirp;
   ssize_t res = __fd_getdents(fd, dp64, nbytes);
@@ -179,7 +179,7 @@ int getdents(int fd, char *dirp, int nbytes) {
     struct dirent64 *end = (struct dirent64*) ((char*) dp64 + res);
     while (dp64 < end) {
       struct dirent *dp = (struct dirent *) dp64;
-      size_t name_len = (dp64->d_reclen - 
+      size_t name_len = (dp64->d_reclen -
                            (size_t) &((struct dirent64*) 0)->d_name);
       dp->d_ino = dp64->d_ino;
 #ifdef _DIRENT_HAVE_D_OFF
@@ -206,7 +206,7 @@ __attribute__((weak)) int open64(const char *pathname, int flags, ...) {
     /* get mode */
     va_list ap;
     va_start(ap, flags);
-    mode = va_arg(ap, mode_t);
+    mode = va_arg(ap, int);
     va_end(ap);
   }
 
