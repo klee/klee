@@ -18,17 +18,18 @@
 #include <iostream>
 
 #include "klee-c/expr.h"
-#include "klee/Internal/Support/CBindingWrapping.h"
 
 #include "klee/Expr.h"
 #include "klee/util/ArrayCache.h"
 
+#include "llvm/Support/CBindingWrapping.h"
+
 using namespace klee;
 
 // This needs to be consistent with whatever is in expr.cpp
-KLEE_DEFINE_C_WRAPPERS(ref<Expr>, klee_expr_t)
-KLEE_DEFINE_C_WRAPPERS(Array, klee_array_t)
-KLEE_DEFINE_C_WRAPPERS(UpdateList, klee_update_list_t)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ref<Expr>, klee_expr_t)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(Array, klee_array_t)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(UpdateList, klee_update_list_t)
 
 namespace {
 

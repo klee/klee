@@ -13,11 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee-c/expr.h"
-#include "klee/Internal/Support/CBindingWrapping.h"
 
 #include "klee/Expr.h"
 #include "klee/ExprBuilder.h"
 #include "klee/util/ArrayCache.h"
+
+#include "llvm/Support/CBindingWrapping.h"
 
 using namespace klee;
 
@@ -32,10 +33,10 @@ struct LibExprBuilder {
 
 } // namespace
 
-KLEE_DEFINE_C_WRAPPERS(ref<Expr>, klee_expr_t)
-KLEE_DEFINE_C_WRAPPERS(Array, klee_array_t)
-KLEE_DEFINE_C_WRAPPERS(UpdateList, klee_update_list_t)
-KLEE_DEFINE_C_WRAPPERS(LibExprBuilder, klee_expr_builder_t)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ref<Expr>, klee_expr_t)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(Array, klee_array_t)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(UpdateList, klee_update_list_t)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LibExprBuilder, klee_expr_builder_t)
 
 // Conceptually passing ref<Expr> around the ABI boundary is a bit trickier than
 // it looks. Effectively, we cannot pass it out by value, so we have to copy
