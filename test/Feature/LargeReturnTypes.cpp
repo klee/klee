@@ -1,6 +1,7 @@
 // REQUIRES: not-msan
 // Requires instrumented C++ library for msan
 // REQUIRES: not-darwin
+// REQUIRES: not-freebsd
 // RUN: %clangxx -g -fno-exceptions -emit-llvm %O0opt -c -o %t.bc %s
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --libc=klee --write-no-tests --exit-on-error %t.bc > %t.log
