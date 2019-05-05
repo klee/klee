@@ -170,7 +170,11 @@ int statfs(const char *path, struct statfs *buf32) {
 #ifndef __FreeBSD__
 ssize_t getdents(int fd, struct dirent *dirp, size_t nbytes) {
 #else
+#if __FreeBSD__ > 11
 ssize_t getdents(int fd, char *dirp, size_t nbytes) {
+#else
+int getdents(int fd, char *dirp, int nbytes) {
+#endif
 #endif
   struct dirent64 *dp64 = (struct dirent64*) dirp;
   ssize_t res = __fd_getdents(fd, dp64, nbytes);
