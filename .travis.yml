@@ -15,7 +15,7 @@ env:
     #   LLVM  : {3.8, 3.9, 4.0, 5.0, 6.0, 7}
     #   SOLVERS : {Z3, STP, STP:Z3, metaSMT}
     #   STP_VERSION   : {2.1.2, master}
-    #   METASMT_VERSION : {v4.rc1}
+    #   METASMT_VERSION : {development}
     #   METASMT_DEFAULT : {BTOR, CVC4, STP, YICES2, Z3}
     #   METASMT_BOOST_VERSION : {x.y.z} // e.g. 1.60.0, libboost-dev will be used if unspecified
     #   UCLIBC: {0, klee_uclibc_v1.0.0, klee_0_9_29} // Note ``0`` means disabled
@@ -41,7 +41,7 @@ env:
     - ENABLE_DEBUG: 1
     - GTEST_VERSION: 1.7.0
     - LLVM_VERSION: 6.0
-    - METASMT_VERSION: qf_abv
+    - METASMT_VERSION: development
     - MINISAT_VERSION: "master"
     - REQUIRES_RTTI: 0
     - SANITIZER_BUILD:
