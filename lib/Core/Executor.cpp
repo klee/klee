@@ -1319,6 +1319,28 @@ void Executor::stepInstruction(ExecutionState &state) {
     haltExecution = true;
 }
 
+static inline const llvm::fltSemantics *fpWidthToSemantics(unsigned width) {
+  switch (width) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
+  case Expr::Int32:
+    return &llvm::APFloat::IEEEsingle();
+  case Expr::Int64:
+    return &llvm::APFloat::IEEEdouble();
+  case Expr::Fl80:
+    return &llvm::APFloat::x87DoubleExtended();
+#else
+  case Expr::Int32:
+    return &llvm::APFloat::IEEEsingle;
+  case Expr::Int64:
+    return &llvm::APFloat::IEEEdouble;
+  case Expr::Fl80:
+    return &llvm::APFloat::x87DoubleExtended;
+#endif
+  default:
+    return 0;
+  }
+}
+
 void Executor::executeCall(ExecutionState &state, 
                            KInstruction *ki,
                            Function *f,
@@ -1332,9 +1354,22 @@ void Executor::executeCall(ExecutionState &state,
       // state may be destroyed by this call, cannot touch
       callExternalFunction(state, ki, f, arguments);
       break;
-        
-      // va_arg is handled by caller and intrinsic lowering, see comment for
-      // ExecutionState::varargs
+    case Intrinsic::fabs: {
+      ref<ConstantExpr> arg =
+          toConstant(state, eval(ki, 0, state).value, "floating point");
+      if (!fpWidthToSemantics(arg->getWidth()))
+        return terminateStateOnExecError(
+            state, "Unsupported intrinsic llvm.fabs call");
+
+      llvm::APFloat Res(*fpWidthToSemantics(arg->getWidth()),
+                        arg->getAPValue());
+      Res = llvm::abs(Res);
+
+      bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+      break;
+    }
+    // va_arg is handled by caller and intrinsic lowering, see comment for
+    // ExecutionState::varargs
     case Intrinsic::vastart:  {
       StackFrame &sf = state.stack.back();
 
@@ -1576,28 +1611,6 @@ Function* Executor::getTargetFunction(Value *calledVal, ExecutionState &state) {
         return 0;
     } else
       return 0;
-  }
-}
-
-static inline const llvm::fltSemantics * fpWidthToSemantics(unsigned width) {
-  switch(width) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
-  case Expr::Int32:
-    return &llvm::APFloat::IEEEsingle();
-  case Expr::Int64:
-    return &llvm::APFloat::IEEEdouble();
-  case Expr::Fl80:
-    return &llvm::APFloat::x87DoubleExtended();
-#else
-  case Expr::Int32:
-    return &llvm::APFloat::IEEEsingle;
-  case Expr::Int64:
-    return &llvm::APFloat::IEEEdouble;
-  case Expr::Fl80:
-    return &llvm::APFloat::x87DoubleExtended;
-#endif
-  default:
-    return 0;
   }
 }
 
