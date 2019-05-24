@@ -291,6 +291,7 @@ void KModule::optimiseAndPrepare(
   default: klee_error("invalid --switch-type");
   }
   pm3.add(new IntrinsicCleanerPass(*targetData));
+  pm3.add(createScalarizerPass());
   pm3.add(new PhiCleanerPass());
   pm3.add(new FunctionAliasPass());
   pm3.run(*module);
