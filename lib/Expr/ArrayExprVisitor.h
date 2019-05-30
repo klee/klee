@@ -140,4 +140,4 @@ public:
 };
 } // namespace klee
 
-#endif
+#endif /* KLEE_ARRAYEXPRVISITOR_H */

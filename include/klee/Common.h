@@ -13,6 +13,7 @@
 
 #ifndef KLEE_COMMON_H
 #define KLEE_COMMON_H
+
 #include "klee/Solver.h"
 #include <string>
 
@@ -32,4 +33,3 @@ namespace klee {
 
 
 #endif /* KLEE_COMMON_H */
-

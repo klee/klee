@@ -74,4 +74,4 @@ namespace klee {
 
 }
 
-#endif
+#endif /* KLEE_INSTRUCTIONINFOTABLE_H */

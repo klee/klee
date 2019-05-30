@@ -1171,4 +1171,4 @@ inline bool Expr::isFalse() const {
 
 } // End klee namespace
 
-#endif
+#endif /* KLEE_EXPR_H */

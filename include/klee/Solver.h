@@ -270,4 +270,4 @@ namespace klee {
   Solver *createCoreSolver(CoreSolverType cst);
 }
 
-#endif
+#endif /* KLEE_SOLVER_H */

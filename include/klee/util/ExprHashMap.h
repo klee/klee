@@ -59,4 +59,4 @@ namespace klee {
 #undef unordered_map
 #undef unordered_set
 
-#endif
+#endif /* KLEE_EXPRHASHMAP_H */

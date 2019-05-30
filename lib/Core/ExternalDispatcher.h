@@ -46,4 +46,4 @@ public:
 };
 }
 
-#endif
+#endif /* KLEE_EXTERNALDISPATCHER_H */

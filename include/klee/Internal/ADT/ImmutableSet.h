@@ -98,4 +98,4 @@ namespace klee {
 
 }
 
-#endif
+#endif /* KLEE_IMMUTABLESET_H */

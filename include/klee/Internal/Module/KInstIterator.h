@@ -39,4 +39,4 @@ namespace klee {
   };
 } // End klee namespace
 
-#endif
+#endif /* KLEE_KINSTITERATOR_H */

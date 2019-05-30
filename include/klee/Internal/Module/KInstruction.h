@@ -61,5 +61,4 @@ namespace klee {
   };
 }
 
-#endif
-
+#endif /* KLEE_KINSTRUCTION_H */

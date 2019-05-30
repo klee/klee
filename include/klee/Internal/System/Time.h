@@ -117,4 +117,4 @@ namespace klee {
   } // time
 } // klee
 
-#endif
+#endif /* KLEE_TIME_H */

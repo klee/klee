@@ -73,4 +73,4 @@ namespace klee {
   };
 }
 
-#endif
+#endif /* KLEE_TREESTREAM_H */

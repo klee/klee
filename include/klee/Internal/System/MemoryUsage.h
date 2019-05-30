@@ -18,4 +18,4 @@ namespace klee {
   }
 }
 
-#endif
+#endif /* KLEE_MEMORYUSAGE_H */

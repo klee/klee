@@ -151,4 +151,4 @@ class generic_gep_type_iterator
   }
 } // end namespace klee
 
-#endif
+#endif /* KLEE_GETELEMENTPTRTYPEITERATOR_H */

@@ -61,4 +61,4 @@ private:
 };
 } // namespace klee
 
-#endif
+#endif /* KLEE_ARRAYEXPROPTIMIZER_H */

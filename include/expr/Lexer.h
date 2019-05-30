@@ -118,4 +118,4 @@ namespace expr {
 }
 }
 
-#endif
+#endif /* KLEE_LEXER_H */

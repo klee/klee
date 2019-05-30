@@ -111,4 +111,4 @@ namespace klee {
   }
 } // End klee namespace
 
-#endif
+#endif /* KLEE_BITS_H */

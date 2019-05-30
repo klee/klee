@@ -63,5 +63,4 @@ namespace klee {
   };
 }
 
-#endif
-
+#endif /* KLEE_STATISTIC_H */

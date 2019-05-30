@@ -29,5 +29,4 @@ namespace klee {
   };
 }
 
-#endif
-
+#endif /* KLEE_OBJECTHOLDER_H */

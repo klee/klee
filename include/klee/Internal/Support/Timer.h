@@ -24,5 +24,4 @@ namespace klee {
   };
 }
 
-#endif
-
+#endif /* KLEE_TIMER_H */

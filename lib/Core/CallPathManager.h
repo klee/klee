@@ -83,4 +83,4 @@ namespace klee {
   };
 }
 
-#endif
+#endif /* KLEE_CALLPATHMANAGER_H */

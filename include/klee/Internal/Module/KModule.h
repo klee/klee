@@ -150,4 +150,4 @@ namespace klee {
   };
 } // End klee namespace
 
-#endif
+#endif /* KLEE_KMODULE_H */

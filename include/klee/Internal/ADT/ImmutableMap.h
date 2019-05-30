@@ -101,4 +101,4 @@ namespace klee {
 
 }
 
-#endif
+#endif /* KLEE_IMMUTABLEMAP_H */
