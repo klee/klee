@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef KLEE_DISCRETEPDF_H
+#define KLEE_DISCRETEPDF_H
+
 namespace klee {
   template <class T>
   class DiscretePDF {
@@ -45,3 +48,5 @@ namespace klee {
 }
 
 #include "DiscretePDF.inc"
+
+#endif /* KLEE_DISCRETEPDF_H */
