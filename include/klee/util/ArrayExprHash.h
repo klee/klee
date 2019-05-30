@@ -88,7 +88,7 @@ bool ArrayExprHash<T>::lookupArrayExpr(const Array* array, T& exp) const {
     exp = it->second;
     res = true;
   }  
-  return(res);  
+  return res;
 }
 
 template<class T>
@@ -117,7 +117,7 @@ bool ArrayExprHash<T>::lookupUpdateNodeExpr(const UpdateNode* un, T& exp) const
     exp = it->second;
     res = true;
   }  
-  return(res);   
+  return res;
 }
 
 template<class T>
