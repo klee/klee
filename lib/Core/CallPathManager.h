@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __UTIL_CALLPATHMANAGER_H__
-#define __UTIL_CALLPATHMANAGER_H__
+#ifndef KLEE_CALLPATHMANAGER_H
+#define KLEE_CALLPATHMANAGER_H
 
 #include "klee/Statistics.h"
 

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===*/
 
-#ifndef __KLEE_H__
-#define __KLEE_H__
+#ifndef KLEE_H
+#define KLEE_H
 
 #include "stdint.h"
 #include "stddef.h"
@@ -156,4 +156,4 @@ extern "C" {
 }
 #endif
 
-#endif /* __KLEE_H__ */
+#endif /* KLEE_H */

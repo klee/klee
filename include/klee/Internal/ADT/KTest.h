@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __COMMON_KTEST_H__
-#define __COMMON_KTEST_H__
+#ifndef KLEE_KTEST_H
+#define KLEE_KTEST_H
 
 
 #ifdef __cplusplus

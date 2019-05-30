@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __KLEE_REPLAY_H__
-#define __KLEE_REPLAY_H__
+#ifndef KLEE_REPLAY_H
+#define KLEE_REPLAY_H
 
 #define _LARGEFILE64_SOURCE
 #define _FILE_OFFSET_BITS 64

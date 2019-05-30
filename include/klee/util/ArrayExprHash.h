@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __UTIL_ARRAYEXPRHASH_H__
-#define __UTIL_ARRAYEXPRHASH_H__
+#ifndef KLEE_ARRAYEXPRHASH_H
+#define KLEE_ARRAYEXPRHASH_H
 
 #include "klee/Expr.h"
 #include "klee/TimerStatIncrementer.h"
