@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef KLEE_EXPROPTIMIZER_H
-#define KLEE_EXPROPTIMIZER_H
+#ifndef KLEE_ARRAYEXPROPTIMIZER_H
+#define KLEE_ARRAYEXPROPTIMIZER_H
 
 #include <cstdint>
 #include <map>

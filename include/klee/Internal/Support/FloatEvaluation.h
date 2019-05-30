@@ -9,8 +9,8 @@
 
 // FIXME: Ditch this and use APFloat.
 
-#ifndef KLEE_UTIL_FLOATS_H
-#define KLEE_UTIL_FLOATS_H
+#ifndef KLEE_FLOATEVALUATION_H
+#define KLEE_FLOATEVALUATION_H
 
 #include "klee/util/Bits.h"     //bits64::truncateToNBits
 #include "IntEvaluation.h" //ints::sext
@@ -260,4 +260,4 @@ inline uint64_t SignedIntToFP( uint64_t l, unsigned outWidth, unsigned inWidth )
 } // end namespace ints
 } // end namespace klee
 
-#endif //KLEE_UTIL_FLOATS_H
+#endif /* KLEE_FLOATEVALUATION_H */

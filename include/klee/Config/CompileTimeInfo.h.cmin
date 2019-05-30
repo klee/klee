@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 // @AUTO_GEN_MSG@
-#ifndef KLEE_COMPILE_TIME_INFO_H
-#define KLEE_COMPILE_TIME_INFO_H
+#ifndef KLEE_COMPILETIMEINFO_H
+#define KLEE_COMPILETIMEINFO_H
 
 #define KLEE_BUILD_MODE "@CMAKE_BUILD_TYPE@ (Asserts: @ENABLE_KLEE_ASSERTS@)"
 #define KLEE_BUILD_REVISION "@KLEE_GIT_SHA1HASH@"

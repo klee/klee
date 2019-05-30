@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef KLEE_UTIL_INTEVALUATION_H
-#define KLEE_UTIL_INTEVALUATION_H
+#ifndef KLEE_INTEVALUATION_H
+#define KLEE_INTEVALUATION_H
 
 #include "klee/util/Bits.h"
 

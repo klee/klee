@@ -1,5 +1,5 @@
-#ifndef KLEE_CONFIG_CONFIG_H
-#define KLEE_CONFIG_CONFIG_H
+#ifndef KLEE_CONFIG_H
+#define KLEE_CONFIG_H
 
 /* Enable KLEE DEBUG checks */
 #cmakedefine ENABLE_KLEE_DEBUG @ENABLE_KLEE_DEBUG@

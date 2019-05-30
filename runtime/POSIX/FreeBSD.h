@@ -1,5 +1,5 @@
-#ifndef _FREEBSD_SHIMS_H
-#define _FREEBSD_SHIMS_H
+#ifndef KLEE_FREEBSD_H
+#define KLEE_FREEBSD_H
 
 // termios maps
 #define TCGETS  TIOCGETA
@@ -435,4 +435,4 @@ struct rlimit64;
 #define	__NR_numa_setaffinity	SYS_numa_setaffinity
 #define	__NR_MAXSYSCALL	SYS_MAXSYSCALL
 
-#endif //_FREEBSD_SHIMS_H
+#endif /* KLEE_FREEBSD_H */

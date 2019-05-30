@@ -15,8 +15,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef KLEE_UTIL_GETELEMENTPTRTYPE_H
-#define KLEE_UTIL_GETELEMENTPTRTYPE_H
+#ifndef KLEE_GETELEMENTPTRTYPEITERATOR_H
+#define KLEE_GETELEMENTPTRTYPEITERATOR_H
 
 #include "llvm/IR/User.h"
 #include "llvm/IR/DerivedTypes.h"

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef KLEE_INTERNAL_SUPPORT_DEBUG_H
-#define KLEE_INTERNAL_SUPPORT_DEBUG_H
+#ifndef KLEE_DEBUG_H
+#define KLEE_DEBUG_H
 
 #include "klee/Config/config.h"
 #include "llvm/Support/Debug.h"

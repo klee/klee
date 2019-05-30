@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef KLEE_MODULE_UTIL_H
-#define KLEE_MODULE_UTIL_H
+#ifndef KLEE_MODULEUTIL_H
+#define KLEE_MODULEUTIL_H
 
 #include "klee/Config/Version.h"
 

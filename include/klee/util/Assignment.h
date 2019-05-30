@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef KLEE_UTIL_ASSIGNMENT_H
-#define KLEE_UTIL_ASSIGNMENT_H
+#ifndef KLEE_ASSIGNMENT_H
+#define KLEE_ASSIGNMENT_H
 
 #include <map>
 
@@ -98,4 +98,4 @@ namespace klee {
   }
 }
 
-#endif
+#endif /* KLEE_ASSIGNMENT_H */

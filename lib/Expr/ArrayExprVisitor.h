@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef KLEE_ARRAYEXPRVISITOR_H_
-#define KLEE_ARRAYEXPRVISITOR_H_
+#ifndef KLEE_ARRAYEXPRVISITOR_H
+#define KLEE_ARRAYEXPRVISITOR_H
 
 #include "klee/ExprBuilder.h"
 #include "klee/SolverCmdLine.h"

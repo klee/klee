@@ -12,8 +12,8 @@
  * that are common to both KLEE and Kleaver.
  */
 
-#ifndef KLEE_SOLVERCOMMANDLINE_H
-#define KLEE_SOLVERCOMMANDLINE_H
+#ifndef KLEE_SOLVERCMDLINE_H
+#define KLEE_SOLVERCMDLINE_H
 
 #include "klee/Config/config.h"
 
@@ -90,4 +90,4 @@ public:
 };
 } // namespace klee
 
-#endif /* KLEE_SOLVERCOMMANDLINE_H */
+#endif /* KLEE_SOLVERCMDLINE_H */

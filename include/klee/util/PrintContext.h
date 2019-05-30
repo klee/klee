@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef PRINTCONTEXT_H_
-#define PRINTCONTEXT_H_
+#ifndef KLEE_PRINTCONTEXT_H
+#define KLEE_PRINTCONTEXT_H
 
 #include "klee/Expr.h"
 #include "llvm/Support/raw_ostream.h"
@@ -97,4 +97,4 @@ public:
 };
 
 
-#endif /* PRINTCONTEXT_H_ */
+#endif /* KLEE_PRINTCONTEXT_H */
