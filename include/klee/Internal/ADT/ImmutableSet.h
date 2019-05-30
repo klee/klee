@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __UTIL_IMMUTABLESET_H__
-#define __UTIL_IMMUTABLESET_H__
+#ifndef KLEE_IMMUTABLESET_H
+#define KLEE_IMMUTABLESET_H
 
 #include <functional>
 

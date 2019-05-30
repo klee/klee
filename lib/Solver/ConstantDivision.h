@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __UTIL_CONSTANTDIVISION_H__
-#define __UTIL_CONSTANTDIVISION_H__
+#ifndef KLEE_CONSTANTDIVISION_H
+#define KLEE_CONSTANTDIVISION_H
 
 #include <stdint.h>
 

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __EXE_FD__
-#define __EXE_FD__
+#ifndef KLEE_FD_H
+#define KLEE_FD_H
 
 #include "klee/Config/config.h"
 
@@ -108,4 +108,4 @@ int __fd_ftruncate(int fd, off64_t length);
 int __fd_statfs(const char *path, struct statfs *buf);
 int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count);
 
-#endif /* __EXE_FD__ */
+#endif /* KLEE_FD_H */

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __UTIL_PTREE_H__
-#define __UTIL_PTREE_H__
+#ifndef KLEE_PTREE_H
+#define KLEE_PTREE_H
 
 #include <klee/Expr.h>
 

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __UTIL_Z3BUILDER_H__
-#define __UTIL_Z3BUILDER_H__
+#ifndef KLEE_Z3BUILDER_H
+#define KLEE_Z3BUILDER_H
 
 #include "klee/Config/config.h"
 #include "klee/util/ArrayExprHash.h"

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __UTIL_IMMUTABLETREE_H__
-#define __UTIL_IMMUTABLETREE_H__
+#ifndef KLEE_IMMUTABLETREE_H
+#define KLEE_IMMUTABLETREE_H
 
 #include <cassert>
 #include <vector>

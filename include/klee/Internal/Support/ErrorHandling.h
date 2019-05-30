@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __KLEE_ERROR_HANDLING_H__
-#define __KLEE_ERROR_HANDLING_H__
+#ifndef KLEE_ERROR_HANDLING_H
+#define KLEE_ERROR_HANDLING_H
 
 #ifdef __CYGWIN__
 #ifndef WINDOWS
@@ -48,4 +48,4 @@ void klee_warning_once(const void *id, const char *msg, ...)
     __attribute__((format(printf, 2, 3)));
 }
 
-#endif /* __KLEE_ERROR_HANDLING_H__ */
+#endif /* KLEE_ERROR_HANDLING_H */

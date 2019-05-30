@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __UTIL_MAPOFSETS_H__
-#define __UTIL_MAPOFSETS_H__
+#ifndef KLEE_MAPOFSETS_H
+#define KLEE_MAPOFSETS_H
 
 #include <cassert>
 #include <vector>

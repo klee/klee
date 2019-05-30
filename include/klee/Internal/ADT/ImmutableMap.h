@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __UTIL_IMMUTABLEMAP_H__
-#define __UTIL_IMMUTABLEMAP_H__
+#ifndef KLEE_IMMUTABLEMAP_H
+#define KLEE_IMMUTABLEMAP_H
 
 #include <functional>
 
