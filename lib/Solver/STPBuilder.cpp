@@ -462,7 +462,7 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n, unsigned width
     _arr_hash.hashArrayExpr(root, array_expr);
   }
   
-  return(array_expr); 
+  return array_expr;
 }
 
 ExprHandle STPBuilder::getInitialRead(const Array *root, unsigned index) {
@@ -472,7 +472,7 @@ ExprHandle STPBuilder::getInitialRead(const Array *root, unsigned index) {
 ::VCExpr STPBuilder::getArrayForUpdate(const Array *root, 
                                        const UpdateNode *un) {
   if (!un) {
-      return(getInitialArray(root));
+      return getInitialArray(root);
   }
   else {
       // FIXME: This really needs to be non-recursive.
@@ -488,7 +488,7 @@ ExprHandle STPBuilder::getInitialRead(const Array *root, unsigned index) {
 	_arr_hash.hashUpdateNodeExpr(un, un_expr);
       }
       
-      return(un_expr);
+      return un_expr;
   }
 }
 
