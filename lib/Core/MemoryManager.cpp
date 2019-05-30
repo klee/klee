@@ -17,7 +17,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MathExtras.h"
 
-#include <inttypes.h>
+#include <cstdint>
 #include <sys/mman.h>
 
 using namespace klee;
@@ -113,7 +113,7 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
     return 0;
   }
 
-  uint64_t address = 0;
+  std::uintptr_t address = 0;
   if (DeterministicAllocation) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
     address = llvm::alignTo((uint64_t)nextFreeSlot + alignment - 1, alignment);
