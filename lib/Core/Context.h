@@ -43,4 +43,4 @@ namespace klee {
   
 } // End klee namespace
 
-#endif
+#endif /* KLEE_CONTEXT_H */

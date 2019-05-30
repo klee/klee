@@ -70,4 +70,4 @@ namespace klee {
 
 }
 
-#endif
+#endif /* KLEE_TIMINGSOLVER_H */

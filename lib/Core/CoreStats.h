@@ -50,4 +50,4 @@ namespace stats {
 }
 }
 
-#endif
+#endif /* KLEE_CORESTATS_H */

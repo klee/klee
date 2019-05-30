@@ -246,4 +246,4 @@ private:
   
 } // End klee namespace
 
-#endif
+#endif /* KLEE_MEMORY_H */

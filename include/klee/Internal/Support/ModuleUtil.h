@@ -67,4 +67,4 @@ bool loadFile(const std::string &libraryName, llvm::LLVMContext &context,
               std::string &errorMsg);
 }
 
-#endif
+#endif /* KLEE_MODULEUTIL_H */

@@ -148,4 +148,4 @@ namespace klee {
   };
 } // End klee namespace
 
-#endif
+#endif /* KLEE_ADDRESSSPACE_H */

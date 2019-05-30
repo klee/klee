@@ -206,4 +206,4 @@ public:
 };
 } // namespace klee
 
-#endif
+#endif /* KLEE_PASSES_H */

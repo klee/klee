@@ -10,7 +10,6 @@
 #ifndef KLEE_KTEST_H
 #define KLEE_KTEST_H
 
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -59,4 +58,4 @@ extern "C" {
 }
 #endif
 
-#endif
+#endif /* KLEE_KTEST_H */

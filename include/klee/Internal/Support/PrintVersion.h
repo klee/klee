@@ -22,4 +22,4 @@ namespace klee {
 #endif
 }
 
-#endif
+#endif /* KLEE_PRINTVERSION_H */

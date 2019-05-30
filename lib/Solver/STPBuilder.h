@@ -128,4 +128,4 @@ public:
 
 }
 
-#endif
+#endif /* KLEE_STPBUILDER_H */

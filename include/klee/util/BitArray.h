@@ -39,4 +39,4 @@ public:
 
 } // End klee namespace
 
-#endif
+#endif /* KLEE_BITARRAY_H */

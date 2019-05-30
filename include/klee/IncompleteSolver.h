@@ -108,4 +108,4 @@ public:
 
 }
 
-#endif
+#endif /* KLEE_INCOMPLETESOLVER_H */

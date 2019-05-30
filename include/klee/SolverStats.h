@@ -35,4 +35,4 @@ namespace stats {
 }
 }
 
-#endif
+#endif /* KLEE_SOLVERSTATS_H */

@@ -26,4 +26,4 @@ namespace klee {
   extern llvm::cl::OptionCategory TestGenCat;
 }
 
-#endif
+#endif /* KLEE_OPTIONCATEGORIES_H */

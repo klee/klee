@@ -20,4 +20,4 @@ namespace klee {
   };
 }
 
-#endif
+#endif /* KLEE_CELL_H */

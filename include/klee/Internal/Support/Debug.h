@@ -24,4 +24,4 @@
 #endif
 #define KLEE_DEBUG(X) KLEE_DEBUG_WITH_TYPE(DEBUG_TYPE, X)
 
-#endif
+#endif /* KLEE_DEBUG_H */

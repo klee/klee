@@ -161,4 +161,4 @@ inline uint64_t sge(uint64_t l, uint64_t r, unsigned inWidth) {
 } // end namespace ints
 } // end namespace klee
 
-#endif 
+#endif /* KLEE_INTEVALUATION_H */

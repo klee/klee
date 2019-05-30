@@ -282,4 +282,4 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
 
 }
 
-#endif
+#endif /* KLEE_EXPRRANGEEVALUATOR_H */

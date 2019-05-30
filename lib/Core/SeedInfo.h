@@ -46,4 +46,4 @@ namespace klee {
   };
 }
 
-#endif
+#endif /* KLEE_SEEDINFO_H */

@@ -56,4 +56,4 @@ private:
 };
 } // namespace klee
 
-#endif
+#endif /* KLEE_ASSIGNMENTGENERATOR_H */

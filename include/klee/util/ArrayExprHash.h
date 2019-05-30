@@ -136,4 +136,4 @@ void ArrayExprHash<T>::hashUpdateNodeExpr(const UpdateNode* un, T& exp)
 #undef unordered_map
 #undef unordered_set
 
-#endif
+#endif /* KLEE_ARRAYEXPRHASH_H */

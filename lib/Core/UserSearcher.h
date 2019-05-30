@@ -22,4 +22,4 @@ namespace klee {
   Searcher *constructUserSearcher(Executor &executor);
 }
 
-#endif
+#endif /* KLEE_USERSEARCHER_H */

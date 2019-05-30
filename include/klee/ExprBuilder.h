@@ -88,4 +88,4 @@ namespace klee {
   ExprBuilder *createSimplifyingExprBuilder(ExprBuilder *Base);
 }
 
-#endif
+#endif /* KLEE_EXPRBUILDER_H */

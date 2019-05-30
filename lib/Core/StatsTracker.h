@@ -105,4 +105,4 @@ namespace klee {
 
 }
 
-#endif
+#endif /* KLEE_STATSTRACKER_H */

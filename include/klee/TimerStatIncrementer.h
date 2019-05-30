@@ -30,4 +30,4 @@ namespace klee {
   };
 }
 
-#endif
+#endif /* KLEE_TIMERSTATINCREMENTER_H */

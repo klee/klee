@@ -27,4 +27,4 @@
 #  define KLEE_LLVM_GOIF_TERMINATOR , NULL
 #endif
 
-#endif
+#endif /* KLEE_VERSION_H */

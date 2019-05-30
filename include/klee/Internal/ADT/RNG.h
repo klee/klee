@@ -47,4 +47,4 @@ namespace klee {
   };
 }
 
-#endif
+#endif /* KLEE_RNG_H */
