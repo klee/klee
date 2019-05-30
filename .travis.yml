@@ -14,7 +14,7 @@ env:
     # Check a subset of the matrix of:
     #   LLVM  : {3.8, 3.9, 4.0, 5.0, 6.0, 7}
     #   SOLVERS : {Z3, STP, STP:Z3, metaSMT}
-    #   STP_VERSION   : {2.1.2, master}
+    #   STP_VERSION   : {2.3.3, master}
     #   METASMT_VERSION : {v4.rc1}
     #   METASMT_DEFAULT : {BTOR, CVC4, STP, YICES2, Z3}
     #   METASMT_BOOST_VERSION : {x.y.z} // e.g. 1.60.0, libboost-dev will be used if unspecified
