@@ -14,8 +14,8 @@
  *      Author: hpalikar
  */
 
-#ifndef METASMTBUILDER_H_
-#define METASMTBUILDER_H_
+#ifndef KLEE_METASMTBUILDER_H
+#define KLEE_METASMTBUILDER_H
 
 #include "klee/Config/config.h"
 #include "klee/Expr.h"
@@ -1200,4 +1200,4 @@ MetaSMTBuilder<SolverContext>::constructActual(ref<Expr> e, int *width_out) {
 
 #endif /* ENABLE_METASMT */
 
-#endif /* METASMTBUILDER_H_ */
+#endif /* KLEE_METASMTBUILDER_H */

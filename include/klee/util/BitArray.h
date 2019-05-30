@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef KLEE_UTIL_BITARRAY_H
-#define KLEE_UTIL_BITARRAY_H
+#ifndef KLEE_BITARRAY_H
+#define KLEE_BITARRAY_H
 
 namespace klee {
 

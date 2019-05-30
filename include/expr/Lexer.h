@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef KLEE_EXPR_LEXER_H
-#define KLEE_EXPR_LEXER_H
+#ifndef KLEE_LEXER_H
+#define KLEE_LEXER_H
 
 #include <string>
 

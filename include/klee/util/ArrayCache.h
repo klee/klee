@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef KLEE_ARRAY_CACHE_H
-#define KLEE_ARRAY_CACHE_H
+#ifndef KLEE_ARRAYCACHE_H
+#define KLEE_ARRAYCACHE_H
 
 #include "klee/Expr.h"
 #include "klee/util/ArrayExprHash.h" // For klee::ArrayHashFn
@@ -78,4 +78,4 @@ private:
 
 #undef unordered_set
 
-#endif /* KLEE_ARRAY_CACHE__H */
+#endif /* KLEE_ARRAYCACHE_H */

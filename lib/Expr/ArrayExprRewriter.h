@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIB_EXPRREWRITER_H_
-#define LIB_EXPRREWRITER_H_
+#ifndef KLEE_ARRAYEXPRREWRITER_H
+#define KLEE_ARRAYEXPRREWRITER_H
 
 #include <iterator>
 #include <map>
@@ -44,4 +44,4 @@ private:
 };
 } // namespace klee
 
-#endif /* LIB_EXPRREWRITER_H_ */
+#endif /* KLEE_ARRAYEXPRREWRITER_H */

@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIB_MODULE_KLEEIRMETADATA_H_
-#define LIB_MODULE_KLEEIRMETADATA_H_
+#ifndef KLEE_KLEEIRMETADATA_H
+#define KLEE_KLEEIRMETADATA_H
 
 #include "llvm/IR/MDBuilder.h"
 
@@ -48,4 +48,4 @@ public:
 };
 }
 
-#endif /* LIB_MODULE_KLEEIRMETADATA_H_ */
+#endif /* KLEE_KLEEIRMETADATA_H */
