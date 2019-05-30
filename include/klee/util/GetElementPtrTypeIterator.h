@@ -1,4 +1,4 @@
-//===- klee/util/GetElementPtrTypeIterator.h --------------------*- C++ -*-===//
+//===-- GetElementPtrTypeIterator.h -----------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
