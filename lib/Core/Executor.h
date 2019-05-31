@@ -94,8 +94,8 @@ class Executor : public Interpreter {
 public:
   class Timer {
   public:
-    Timer();
-    virtual ~Timer();
+    Timer() = default;
+    virtual ~Timer() = default;
 
     /// The event callback.
     virtual void run() = 0;
