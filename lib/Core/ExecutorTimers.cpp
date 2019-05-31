@@ -40,6 +40,12 @@ cl::opt<std::string>
                      "Set to 0s to disable (default=0s)"),
             cl::init("0s"),
             cl::cat(TerminationCat));
+
+cl::opt<std::string>
+    TimerInterval("timer-interval",
+                  cl::desc("Minimum interval to check timers (default=1s)"),
+                  cl::init("1s"),
+                  cl::cat(TerminationCat)); // StatsCat?
 }
 
 ///
@@ -59,31 +65,7 @@ public:
 
 ///
 
-static const time::Span kMilliSecondsPerTick(time::milliseconds(100));
-static volatile unsigned timerTicks = 0;
-
-static void onAlarm(int) {
-  ++timerTicks;
-}
-
-// oooogalay
-static void setupHandler() {
-  itimerval t{};
-  timeval tv = static_cast<timeval>(kMilliSecondsPerTick);
-  t.it_interval = t.it_value = tv;
-
-  ::setitimer(ITIMER_REAL, &t, nullptr);
-  ::signal(SIGALRM, onAlarm);
-}
-
 void Executor::initTimers() {
-  static bool first = true;
-
-  if (first) {
-    first = false;
-    setupHandler();
-  }
-
   const time::Span maxTime(MaxTime);
   if (maxTime) {
     addTimer(new HaltTimer(this), maxTime);
@@ -92,50 +74,35 @@ void Executor::initTimers() {
 
 ///
 
-Executor::Timer::Timer() {}
-
-Executor::Timer::~Timer() {}
-
 void Executor::addTimer(Timer *timer, time::Span rate) {
   timers.push_back(new TimerInfo(timer, rate));
 }
 
 void Executor::processTimers(ExecutionState *current,
                              time::Span maxInstTime) {
-  static unsigned callsWithoutCheck = 0;
-  unsigned ticks = timerTicks;
+  const static time::Span minInterval(TimerInterval);
+  static time::Point lastCheckedTime;
+  const auto currentTime = time::getWallTime();
+  const auto duration = currentTime - lastCheckedTime;
 
-  if (!ticks && ++callsWithoutCheck > 1000) {
-    setupHandler();
-    ticks = 1;
+  if (duration < minInterval) return;
+
+  // check max instruction time
+  if (maxInstTime && current &&
+      std::find(removedStates.begin(), removedStates.end(), current) == removedStates.end() &&
+      duration > maxInstTime) {
+    klee_warning("max-instruction-time exceeded: %.2fs", duration.toSeconds());
+    terminateStateEarly(*current, "max-instruction-time exceeded");
   }
 
-  if (ticks) {
-    if (maxInstTime && current &&
-        std::find(removedStates.begin(), removedStates.end(), current) ==
-            removedStates.end()) {
-      if (timerTicks * kMilliSecondsPerTick > maxInstTime) {
-        klee_warning("max-instruction-time exceeded: %.2fs", (timerTicks * kMilliSecondsPerTick).toSeconds());
-        terminateStateEarly(*current, "max-instruction-time exceeded");
-      }
+
+  // check timers
+  for (auto &timerInfo : timers) {
+    if (currentTime >= timerInfo->nextFireTime) {
+      timerInfo->timer->run();
+      timerInfo->nextFireTime = currentTime + timerInfo->rate;
     }
-
-    if (!timers.empty()) {
-      auto time = time::getWallTime();
-
-      for (std::vector<TimerInfo*>::iterator it = timers.begin(),
-             ie = timers.end(); it != ie; ++it) {
-        TimerInfo *ti = *it;
-
-        if (time >= ti->nextFireTime) {
-          ti->timer->run();
-          ti->nextFireTime = time + ti->rate;
-        }
-      }
-    }
-
-    timerTicks = 0;
-    callsWithoutCheck = 0;
   }
+
+  lastCheckedTime = currentTime;
 }
-
