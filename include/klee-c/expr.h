@@ -14,9 +14,9 @@
 #include <cstddef>
 #include <cstdint>
 #else
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdbool.h>
 #endif
 
 #define KLEE_C_EXPR_API_VERSION 1
@@ -45,6 +45,8 @@ extern klee_expr_builder_t klee_expr_builder_create(void);
 /// Destroys a klee_expr_builder_t
 extern void klee_expr_builder_dispose(klee_expr_builder_t builder);
 
+extern klee_expr_width_t klee_expr_get_width(klee_expr_t expr);
+
 /// Compares klee_expr_t for structural equivalence
 ///
 /// param [lhs] The expression to compare to
@@ -70,6 +72,9 @@ extern klee_array_t klee_array_create(const klee_expr_builder_t builder,
 
 /// Builds an update list for use in array based expression
 extern klee_update_list_t klee_update_list_create(const klee_array_t array);
+
+extern void klee_update_list_extend(klee_update_list_t updates, klee_expr_t idx,
+                                    klee_expr_t value);
 
 /// Destroys a klee_update_list
 extern void klee_update_list_dispose(klee_update_list_t list);
