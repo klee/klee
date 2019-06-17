@@ -44,6 +44,7 @@ RUN apt update && apt -y --no-install-recommends install sudo && \
     cp /etc/sudoers /etc/sudoers.bak && \
     echo 'klee  ALL=(root) NOPASSWD: ALL' >> /etc/sudoers
 
+ENV PATH="$PATH:/tmp/llvm-60-install_O_D_A/bin:/home/klee/klee_build/bin"
 ENV BASE=/tmp
 # Copy across source files needed for build
 # Set klee user to be owner
@@ -54,7 +55,7 @@ WORKDIR /home/klee
 ENV LD_LIBRARY_PATH /home/klee/klee_build/lib/
 
 # Add KLEE binary directory to PATH
-RUN /bin/bash -c 'ln -s ${BASE}/klee_src /home/klee/ && ln -s ${BASE}/klee_build* /home/klee/klee_build && echo "export PATH=\"$PATH:$(cd /tmp/llvm-*install*/bin && pwd):/home/klee/klee_build/bin\"" >> /home/klee/.bashrc'
+RUN /bin/bash -c 'ln -s ${BASE}/klee_src /home/klee/ && ln -s ${BASE}/klee_build* /home/klee/klee_build' 
 
 # TODO Remove when STP is fixed
 RUN /bin/bash -c 'echo "export LD_LIBRARY_PATH=$(cd ${BASE}/metaSMT-*-deps/stp-git-basic/lib/ && pwd):$LD_LIBRARY_PATH" >> /home/klee/.bashrc'
