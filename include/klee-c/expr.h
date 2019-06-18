@@ -63,6 +63,8 @@ extern int klee_expr_compare(klee_expr_t lhs, klee_expr_t rhs);
 /// Destroys a  klee_expr_t
 extern void klee_expr_dispose(klee_expr_t expr);
 
+extern void klee_expr_dump(klee_expr_t expr);
+
 /// Builds an array for use in subsequent expressions
 extern klee_array_t klee_array_create(const klee_expr_builder_t builder,
                                       const char *name, uint64_t size,

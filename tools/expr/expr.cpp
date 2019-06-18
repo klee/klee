@@ -81,6 +81,11 @@ void klee_expr_dispose(klee_expr_t expr) {
   delete TheRefExpr;
 }
 
+void klee_expr_dump(klee_expr_t expr) {
+  ref<Expr> *TheRefExpr = unwrap(expr);
+  (*TheRefExpr)->dump();
+}
+
 extern klee_array_t klee_array_create(const klee_expr_builder_t builder,
                                       const char *name, uint64_t size,
                                       const uint64_t *constants, bool is_signed,
