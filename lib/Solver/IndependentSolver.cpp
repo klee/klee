@@ -441,12 +441,13 @@ bool IndependentSolver::computeValue(const Query& query, ref<Expr> &result) {
 // Helper function used only for assertions to make sure point created
 // during computeInitialValues is in fact correct. The ``retMap`` is used
 // in the case ``objects`` doesn't contain all the assignments needed.
-bool assertCreatedPointEvaluatesToTrue(const Query &query,
-                                       const std::vector<const Array*> &objects,
-                                       std::vector< std::vector<unsigned char> > &values,
-                                       std::map<const Array*, std::vector<unsigned char> > &retMap){
-  // _allowFreeValues is set to true so that if there are missing bytes in the assigment
-  // we will end up with a non ConstantExpr after evaluating the assignment and fail
+bool assertCreatedPointEvaluatesToTrue(
+    const Query &query, const std::vector<const Array *> &objects,
+    std::vector<std::vector<unsigned char>> &values,
+    std::map<const Array *, std::vector<unsigned char>> &retMap) {
+  // _allowFreeValues is set to true so that if there are missing bytes in the
+  // assigment we will end up with a non ConstantExpr after evaluating the
+  // assignment and fail
   Assignment assign = Assignment(objects, values, /*_allowFreeValues=*/true);
 
   // Add any additional bindings.
@@ -456,19 +457,20 @@ bool assertCreatedPointEvaluatesToTrue(const Query &query,
   if (retMap.size() > 0)
     assign.bindings.insert(retMap.begin(), retMap.end());
 
-  for(ConstraintManager::constraint_iterator it = query.constraints.begin();
-      it != query.constraints.end(); ++it){
-    ref<Expr> ret = assign.evaluate(*it);
+  for (auto const &constraint : query.constraints) {
+    ref<Expr> ret = assign.evaluate(constraint);
 
-    assert(isa<ConstantExpr>(ret) && "assignment evaluation did not result in constant");
+    assert(isa<ConstantExpr>(ret) &&
+           "assignment evaluation did not result in constant");
     ref<ConstantExpr> evaluatedConstraint = dyn_cast<ConstantExpr>(ret);
-    if(evaluatedConstraint->isFalse()){
+    if (evaluatedConstraint->isFalse()) {
       return false;
     }
   }
   ref<Expr> neg = Expr::createIsZero(query.expr);
   ref<Expr> q = assign.evaluate(neg);
-  assert(isa<ConstantExpr>(q) && "assignment evaluation did not result in constant");
+  assert(isa<ConstantExpr>(q) &&
+         "assignment evaluation did not result in constant");
   return cast<ConstantExpr>(q)->isTrue();
 }
 
