@@ -99,17 +99,22 @@ static uint64_t maxAND(uint64_t a, uint64_t b,
 
 class ValueRange {
 private:
-  uint64_t m_min, m_max;
+  std::uint64_t m_min = 1, m_max = 0;
 
 public:
-  ValueRange() : m_min(1),m_max(0) {}
+  ValueRange() noexcept = default;
   ValueRange(const ref<ConstantExpr> &ce) {
     // FIXME: Support large widths.
     m_min = m_max = ce->getLimitedValue();
   }
-  ValueRange(uint64_t value) : m_min(value), m_max(value) {}
-  ValueRange(uint64_t _min, uint64_t _max) : m_min(_min), m_max(_max) {}
-  ValueRange(const ValueRange &b) : m_min(b.m_min), m_max(b.m_max) {}
+  explicit ValueRange(std::uint64_t value) noexcept
+      : m_min(value), m_max(value) {}
+  ValueRange(std::uint64_t _min, std::uint64_t _max) noexcept
+      : m_min(_min), m_max(_max) {}
+  ValueRange(const ValueRange &other) noexcept = default;
+  ValueRange &operator=(const ValueRange &other) noexcept = default;
+  ValueRange(ValueRange &&other) noexcept = default;
+  ValueRange &operator=(ValueRange &&other) noexcept = default;
 
   void print(llvm::raw_ostream &os) const {
     if (isFixed()) {
@@ -119,40 +124,38 @@ public:
     }
   }
 
-  bool isEmpty() const { 
-    return m_min>m_max; 
-  }
-  bool contains(uint64_t value) const { 
+  bool isEmpty() const noexcept { return m_min > m_max; }
+  bool contains(std::uint64_t value) const {
     return this->intersects(ValueRange(value)); 
   }
   bool intersects(const ValueRange &b) const { 
     return !this->set_intersection(b).isEmpty(); 
   }
 
-  bool isFullRange(unsigned bits) {
-    return m_min==0 && m_max==bits64::maxValueOfNBits(bits);
+  bool isFullRange(unsigned bits) const noexcept {
+    return m_min == 0 && m_max == bits64::maxValueOfNBits(bits);
   }
 
   ValueRange set_intersection(const ValueRange &b) const {
-    return ValueRange(std::max(m_min,b.m_min), std::min(m_max,b.m_max));
+    return ValueRange(std::max(m_min, b.m_min), std::min(m_max, b.m_max));
   }
   ValueRange set_union(const ValueRange &b) const {
-    return ValueRange(std::min(m_min,b.m_min), std::max(m_max,b.m_max));
+    return ValueRange(std::min(m_min, b.m_min), std::max(m_max, b.m_max));
   }
   ValueRange set_difference(const ValueRange &b) const {
     if (b.isEmpty() || b.m_min > m_max || b.m_max < m_min) { // no intersection
       return *this;
     } else if (b.m_min <= m_min && b.m_max >= m_max) { // empty
-      return ValueRange(1,0); 
+      return ValueRange(1, 0);
     } else if (b.m_min <= m_min) { // one range out
       // cannot overflow because b.m_max < m_max
-      return ValueRange(b.m_max+1, m_max);
+      return ValueRange(b.m_max + 1, m_max);
     } else if (b.m_max >= m_max) {
       // cannot overflow because b.min > m_min
-      return ValueRange(m_min, b.m_min-1);
+      return ValueRange(m_min, b.m_min - 1);
     } else {
       // two ranges, take bottom
-      return ValueRange(m_min, b.m_min-1);
+      return ValueRange(m_min, b.m_min - 1);
     }
   }
   ValueRange binaryAnd(const ValueRange &b) const {
@@ -165,7 +168,9 @@ public:
                         maxAND(m_min, m_max, b.m_min, b.m_max));
     }
   }
-  ValueRange binaryAnd(uint64_t b) const { return binaryAnd(ValueRange(b)); }
+  ValueRange binaryAnd(std::uint64_t b) const {
+    return binaryAnd(ValueRange(b));
+  }
   ValueRange binaryOr(ValueRange b) const {
     // XXX
     assert(!isEmpty() && !b.isEmpty() && "XXX");
@@ -176,30 +181,31 @@ public:
                         maxOR(m_min, m_max, b.m_min, b.m_max));
     }
   }
-  ValueRange binaryOr(uint64_t b) const { return binaryOr(ValueRange(b)); }
+  ValueRange binaryOr(std::uint64_t b) const { return binaryOr(ValueRange(b)); }
   ValueRange binaryXor(ValueRange b) const {
     if (isFixed() && b.isFixed()) {
       return ValueRange(m_min ^ b.m_min);
     } else {
-      uint64_t t = m_max | b.m_max;
+      std::uint64_t t = m_max | b.m_max;
       while (!bits64::isPowerOfTwo(t))
         t = bits64::withoutRightmostBit(t);
-      return ValueRange(0, (t<<1)-1);
+      return ValueRange(0, (t << 1) - 1);
     }
   }
 
   ValueRange binaryShiftLeft(unsigned bits) const {
-    return ValueRange(m_min<<bits, m_max<<bits);
+    return ValueRange(m_min << bits, m_max << bits);
   }
   ValueRange binaryShiftRight(unsigned bits) const {
-    return ValueRange(m_min>>bits, m_max>>bits);
+    return ValueRange(m_min >> bits, m_max >> bits);
   }
 
   ValueRange concat(const ValueRange &b, unsigned bits) const {
     return binaryShiftLeft(bits).binaryOr(b);
   }
-  ValueRange extract(uint64_t lowBit, uint64_t maxBit) const {
-    return binaryShiftRight(lowBit).binaryAnd(bits64::maxValueOfNBits(maxBit-lowBit));
+  ValueRange extract(std::uint64_t lowBit, std::uint64_t maxBit) const {
+    return binaryShiftRight(lowBit).binaryAnd(
+        bits64::maxValueOfNBits(maxBit - lowBit));
   }
 
   ValueRange add(const ValueRange &b, unsigned width) const {
@@ -226,40 +232,44 @@ public:
 
   // use min() to get value if true (XXX should we add a method to
   // make code clearer?)
-  bool isFixed() const { return m_min==m_max; }
+  bool isFixed() const noexcept { return m_min == m_max; }
 
-  bool operator==(const ValueRange &b) const { 
-    return m_min==b.m_min && m_max==b.m_max; 
+  bool operator==(const ValueRange &b) const noexcept {
+    return m_min == b.m_min && m_max == b.m_max;
   }
-  bool operator!=(const ValueRange &b) const { return !(*this==b); }
+  bool operator!=(const ValueRange &b) const noexcept { return !(*this == b); }
 
-  bool mustEqual(const uint64_t b) const { return m_min==m_max && m_min==b; }
-  bool mayEqual(const uint64_t b) const { return m_min<=b && m_max>=b; }
+  bool mustEqual(const std::uint64_t b) const noexcept {
+    return m_min == m_max && m_min == b;
+  }
+  bool mayEqual(const std::uint64_t b) const noexcept {
+    return m_min <= b && m_max >= b;
+  }
   
-  bool mustEqual(const ValueRange &b) const { 
-    return isFixed() && b.isFixed() && m_min==b.m_min; 
+  bool mustEqual(const ValueRange &b) const noexcept {
+    return isFixed() && b.isFixed() && m_min == b.m_min;
   }
   bool mayEqual(const ValueRange &b) const { return this->intersects(b); }
 
-  uint64_t min() const { 
+  std::uint64_t min() const noexcept {
     assert(!isEmpty() && "cannot get minimum of empty range");
     return m_min; 
   }
 
-  uint64_t max() const { 
+  std::uint64_t max() const noexcept {
     assert(!isEmpty() && "cannot get maximum of empty range");
     return m_max; 
   }
   
-  int64_t minSigned(unsigned bits) const {
-    assert((m_min>>bits)==0 && (m_max>>bits)==0 &&
+  std::int64_t minSigned(unsigned bits) const {
+    assert((m_min >> bits) == 0 && (m_max >> bits) == 0 &&
            "range is outside given number of bits");
 
     // if max allows sign bit to be set then it can be smallest value,
     // otherwise since the range is not empty, min cannot have a sign
     // bit
 
-    uint64_t smallest = ((uint64_t) 1 << (bits-1));
+    std::uint64_t smallest = (static_cast<std::uint64_t>(1) << (bits - 1));
     if (m_max >= smallest) {
       return ints::sext(smallest, 64, bits);
     } else {
@@ -267,11 +277,11 @@ public:
     }
   }
 
-  int64_t maxSigned(unsigned bits) const {
-    assert((m_min>>bits)==0 && (m_max>>bits)==0 &&
+  std::int64_t maxSigned(unsigned bits) const {
+    assert((m_min >> bits) == 0 && (m_max >> bits) == 0 &&
            "range is outside given number of bits");
 
-    uint64_t smallest = ((uint64_t) 1 << (bits-1));
+    std::uint64_t smallest = (static_cast<std::uint64_t>(1) << (bits - 1));
 
     // if max and min have sign bit then max is max, otherwise if only
     // max has sign bit then max is largest signed integer, otherwise
