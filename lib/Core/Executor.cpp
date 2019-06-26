@@ -1206,9 +1206,14 @@ Executor::toConstant(ExecutionState &state,
     return CE;
 
   ref<ConstantExpr> value;
-  bool success = solver->getValue(state, e, value);
-  assert(success && "FIXME: Unhandled solver failure");
-  (void) success;
+  // concretize to a value dictated by one of the seeds if available
+  if (seedMap.count(&state)) {
+    value = getOneValueFromSeeds(seedMap[&state], e);
+  } else {
+    bool success = solver->getValue(state, e, value);
+    assert(success && "FIXME: Unhandled solver failure");
+    (void) success;
+  }
 
   std::string str;
   llvm::raw_string_ostream os(str);
@@ -1224,6 +1229,14 @@ Executor::toConstant(ExecutionState &state,
   addConstraint(state, EqExpr::create(e, value));
     
   return value;
+}
+
+ref<klee::ConstantExpr> Executor::getOneValueFromSeeds(std::vector<SeedInfo> &seeds, ref<Expr> e) {
+  assert(!seeds.empty());
+  auto value = seeds.back().assignment.evaluate(e);
+  ConstantExpr *CE = dyn_cast<ConstantExpr>(value);
+  assert(CE && "Seed evaluation failed");
+  return CE;
 }
 
 void Executor::executeGetValue(ExecutionState &state,
@@ -3228,9 +3241,14 @@ void Executor::callExternalFunction(ExecutionState &state,
     if (ExternalCalls == ExternalCallPolicy::All) { // don't bother checking uniqueness
       *ai = optimizer.optimizeExpr(*ai, true);
       ref<ConstantExpr> ce;
-      bool success = solver->getValue(state, *ai, ce);
-      assert(success && "FIXME: Unhandled solver failure");
-      (void) success;
+      // concretize each argument to a value dictated by one of the seeds if available
+      if (seedMap.count(&state)) {
+        ce = getOneValueFromSeeds(seedMap[&state], *ai);
+      } else {
+        bool success = solver->getValue(state, *ai, ce);
+        assert(success && "FIXME: Unhandled solver failure");
+        (void) success;
+      }
       ce->toMemory(&args[wordIndex]);
       ObjectPair op;
       // Checking to see if the argument is a pointer to something
@@ -3419,21 +3437,26 @@ void Executor::executeAlloc(ExecutionState &state,
     size = optimizer.optimizeExpr(size, true);
 
     ref<ConstantExpr> example;
-    bool success = solver->getValue(state, size, example);
-    assert(success && "FIXME: Unhandled solver failure");
-    (void) success;
-    
-    // Try and start with a small example.
-    Expr::Width W = example->getWidth();
-    while (example->Ugt(ConstantExpr::alloc(128, W))->isTrue()) {
-      ref<ConstantExpr> tmp = example->LShr(ConstantExpr::alloc(1, W));
-      bool res;
-      bool success = solver->mayBeTrue(state, EqExpr::create(tmp, size), res);
-      assert(success && "FIXME: Unhandled solver failure");      
+    // Check if in seed mode, then try to replicate size from seed values
+    if (seedMap.count(&state)) {
+      example = getOneValueFromSeeds(seedMap[&state], size);
+    } else {
+      bool success = solver->getValue(state, size, example);
+      assert(success && "FIXME: Unhandled solver failure");
       (void) success;
-      if (!res)
-        break;
-      example = tmp;
+
+      // Try and start with a small example.
+      Expr::Width W = example->getWidth();
+      while (example->Ugt(ConstantExpr::alloc(128, W))->isTrue()) {
+        ref<ConstantExpr> tmp = example->LShr(ConstantExpr::alloc(1, W));
+        bool res;
+        bool success = solver->mayBeTrue(state, EqExpr::create(tmp, size), res);
+        assert(success && "FIXME: Unhandled solver failure");
+        (void) success;
+        if (!res)
+          break;
+        example = tmp;
+      }
     }
 
     StatePair fixedSize = fork(state, EqExpr::create(example, size), true);
@@ -3458,7 +3481,7 @@ void Executor::executeAlloc(ExecutionState &state,
         // malloc will fail for it, so lets fork and return 0.
         StatePair hugeSize = 
           fork(*fixedSize.second, 
-               UltExpr::create(ConstantExpr::alloc(1U<<31, W), size),
+               UltExpr::create(ConstantExpr::alloc(1U<<31, example->getWidth()), size),
                true);
         if (hugeSize.first) {
           klee_message("NOTE: found huge malloc, returning 0");
