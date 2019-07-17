@@ -715,9 +715,10 @@ preparePOSIX(std::vector<std::unique_ptr<llvm::Module>> &loadedModules,
   // link against a libc implementation. Preparing for libc linking (i.e.
   // linking with uClibc will expect a main function and rename it to
   // _user_main. We just provide the definition here.
-  if (!libCPrefix.empty())
-    mainFn->getParent()->getOrInsertFunction(EntryPoint,
-                                             mainFn->getFunctionType());
+  if (!libCPrefix.empty() && !mainFn->getParent()->getFunction(EntryPoint))
+    llvm::Function::Create(mainFn->getFunctionType(),
+                           llvm::Function::ExternalLinkage, EntryPoint,
+                           mainFn->getParent());
 
   llvm::Function *wrapper = nullptr;
   for (auto &module : loadedModules) {
@@ -1067,7 +1068,7 @@ createLibCWrapper(std::vector<std::unique_ptr<llvm::Module>> &modules,
   if (!libcMainFn)
     klee_error("Could not add %s wrapper", libcMainFunction.str().c_str());
 
-  auto inModuleRefernce = libcMainFn->getParent()->getOrInsertFunction(
+  auto inModuleReference = libcMainFn->getParent()->getOrInsertFunction(
       userMainFn->getName(), userMainFn->getFunctionType());
 
   const auto ft = libcMainFn->getFunctionType();
@@ -1088,8 +1089,13 @@ createLibCWrapper(std::vector<std::unique_ptr<llvm::Module>> &modules,
   llvm::IRBuilder<> Builder(bb);
 
   std::vector<llvm::Value*> args;
-  args.push_back(
-      llvm::ConstantExpr::getBitCast(inModuleRefernce, ft->getParamType(0)));
+  args.push_back(llvm::ConstantExpr::getBitCast(
+#if LLVM_VERSION_CODE >= LLVM_VERSION(9, 0)
+      cast<llvm::Constant>(inModuleReference.getCallee()),
+#else
+      inModuleReference,
+#endif
+      ft->getParamType(0)));
   args.push_back(&*(stub->arg_begin())); // argc
   auto arg_it = stub->arg_begin();
   args.push_back(&*(++arg_it)); // argv

@@ -140,10 +140,15 @@ static Function *getStubFunctionForCtorList(Module *m,
   if (arr) {
     for (unsigned i=0; i<arr->getNumOperands(); i++) {
       auto cs = cast<ConstantStruct>(arr->getOperand(i));
-      // There is a third *optional* element in global_ctor elements (``i8
-      // @data``).
+      // There is a third element in global_ctor elements (``i8 @data``).
+#if LLVM_VERSION_CODE >= LLVM_VERSION(9, 0)
+      assert(cs->getNumOperands() == 3 &&
+             "unexpected element in ctor initializer list");
+#else
+      // before LLVM 9.0, the third operand was optional
       assert((cs->getNumOperands() == 2 || cs->getNumOperands() == 3) &&
              "unexpected element in ctor initializer list");
+#endif
       auto fp = cs->getOperand(1);
       if (!fp->isNullValue()) {
         if (auto ce = dyn_cast<llvm::ConstantExpr>(fp))
