@@ -118,18 +118,15 @@ void KCommandLine::HideOptions(llvm::cl::OptionCategory &Category) {
   StringMap<cl::Option *> &map = cl::getRegisteredOptions();
 
   for (auto &elem : map) {
-    if (elem.second->Category == &Category) {
-      elem.second->setHiddenFlag(cl::Hidden);
-    }
-  }
-}
-
-void KCommandLine::HideUnrelatedOptions(cl::OptionCategory &Category) {
-  StringMap<cl::Option *> &map = cl::getRegisteredOptions();
-  for (StringMap<cl::Option *>::iterator i = map.begin(), e = map.end(); i != e;
-       i++) {
-    if (i->second->Category != &Category) {
-      i->second->setHiddenFlag(cl::Hidden);
+#if LLVM_VERSION_CODE >= LLVM_VERSION(9, 0)
+    for (auto &cat : elem.second->Categories) {
+#else
+    {
+      auto &cat = elem.second->Category;
+#endif
+      if (cat == &Category) {
+        elem.second->setHiddenFlag(cl::Hidden);
+      }
     }
   }
 }

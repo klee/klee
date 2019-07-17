@@ -264,14 +264,19 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       case Intrinsic::trap: {
         // Intrinsic instruction "llvm.trap" found. Directly lower it to
         // a call of the abort() function.
-        Function *F = cast<Function>(
-            M.getOrInsertFunction("abort", Type::getVoidTy(ctx)
-		    KLEE_LLVM_GOIF_TERMINATOR));
-        F->setDoesNotReturn();
-        F->setDoesNotThrow();
+        auto C = M.getOrInsertFunction("abort", Type::getVoidTy(ctx)
+                                                    KLEE_LLVM_GOIF_TERMINATOR);
+#if LLVM_VERSION_CODE >= LLVM_VERSION(9, 0)
+        if (auto *F = dyn_cast<Function>(C.getCallee())) {
+#else
+        if (auto *F = dyn_cast<Function>(C)) {
+#endif
+          F->setDoesNotReturn();
+          F->setDoesNotThrow();
+        }
 
         llvm::IRBuilder<> Builder(ii);
-        Builder.CreateCall(F);
+        Builder.CreateCall(C);
         Builder.CreateUnreachable();
 
         i = ii->eraseFromParent();
