@@ -54,7 +54,8 @@ static klee_expr_t allocating_wrap(const ref<Expr> &RefExpr) {
 
 klee_expr_builder_t klee_expr_builder_create(void) {
   ExprBuilder *DefaultBuilder = createDefaultExprBuilder();
-  ExprBuilder *ConstantFoldingBuilder = createConstantFoldingExprBuilder(DefaultBuilder);
+  ExprBuilder *ConstantFoldingBuilder =
+      createConstantFoldingExprBuilder(DefaultBuilder);
   LibExprBuilder *TheBuilder = new LibExprBuilder(ConstantFoldingBuilder);
   return wrap(TheBuilder);
 }
@@ -105,10 +106,10 @@ extern klee_array_t klee_array_create(const klee_expr_builder_t builder,
     for (size_t I = 0; I < size; ++I) {
       llvm::APInt TheValue(range, constants[I], is_signed);
       ref<ConstantExpr> TheConstant = ConstantExpr::alloc(TheValue);
-      Constants.push_back(std::move(TheConstant));
-      TheArray = AC.CreateArray(TheName, size, &Constants.front(),
-                                &Constants.back(), domain, range);
+      Constants.push_back(TheConstant);
     }
+    TheArray = AC.CreateArray(TheName, size, &Constants[0],
+                              &Constants[0] + size, domain, range);
   }
 
   return wrap(TheArray);
