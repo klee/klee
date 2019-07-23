@@ -135,8 +135,10 @@ fi
   
   if [ "X${ENABLE_OPTIMIZED}" == "X1" ]; then
     CMAKE_ARGUMENTS+=("-DCMAKE_BUILD_TYPE=RelWithDebInfo")
+    CMAKE_ARGUMENTS+=("-DKLEE_RUNTIME_BUILD_TYPE=Release+Debug")
   else
     CMAKE_ARGUMENTS+=("-DCMAKE_BUILD_TYPE=Debug")
+    CMAKE_ARGUMENTS+=("-DKLEE_RUNTIME_BUILD_TYPE=Debug+Asserts")
   fi
   
 # TODO: We should support Ninja too
