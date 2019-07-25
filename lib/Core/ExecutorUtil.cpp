@@ -11,14 +11,12 @@
 
 #include "Context.h"
 
-#include "klee/Expr.h"
+#include "klee/Config/Version.h"
+#include "klee/Expr/Expr.h"
+#include "klee/Internal/Module/KModule.h"
+#include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Interpreter.h"
 #include "klee/Solver.h"
-
-#include "klee/Config/Version.h"
-#include "klee/Internal/Module/KModule.h"
-
-#include "klee/Internal/Support/ErrorHandling.h"
 
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"

@@ -10,8 +10,8 @@
 #ifndef KLEE_EXPREVALUATOR_H
 #define KLEE_EXPREVALUATOR_H
 
-#include "klee/Expr.h"
-#include "klee/util/ExprVisitor.h"
+#include "klee/Expr/Expr.h"
+#include "klee/Expr/ExprVisitor.h"
 
 namespace klee {
   class ExprEvaluator : public ExprVisitor {

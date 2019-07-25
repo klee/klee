@@ -10,8 +10,8 @@
 #include <iostream>
 #include "gtest/gtest.h"
 
-#include "klee/Expr.h"
-#include "klee/util/ArrayCache.h"
+#include "klee/Expr/ArrayCache.h"
+#include "klee/Expr/Expr.h"
 
 using namespace klee;
 

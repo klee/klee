@@ -7,15 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <iostream>
 #include "gtest/gtest.h"
 
-#include "klee/SolverCmdLine.h"
-#include "klee/Constraints.h"
-#include "klee/Expr.h"
+#include "klee/Expr/ArrayCache.h"
+#include "klee/Expr/Constraints.h"
+#include "klee/Expr/Expr.h"
 #include "klee/Solver.h"
-#include "klee/util/ArrayCache.h"
+#include "klee/SolverCmdLine.h"
+
 #include "llvm/ADT/StringExtras.h"
+
+#include <iostream>
 
 using namespace klee;
 

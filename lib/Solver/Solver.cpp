@@ -8,8 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Solver.h"
+
+#include "klee/Expr/Constraints.h"
 #include "klee/SolverImpl.h"
-#include "klee/Constraints.h"
 
 using namespace klee;
 

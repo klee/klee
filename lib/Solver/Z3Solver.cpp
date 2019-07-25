@@ -6,19 +6,22 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
 #include "klee/Config/config.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Internal/Support/FileHandling.h"
 #include "klee/OptionCategories.h"
 
 #ifdef ENABLE_Z3
+
 #include "Z3Solver.h"
 #include "Z3Builder.h"
-#include "klee/Constraints.h"
+
+#include "klee/Expr/Constraints.h"
+#include "klee/Expr/Assignment.h"
+#include "klee/Expr/ExprUtil.h"
 #include "klee/Solver.h"
 #include "klee/SolverImpl.h"
-#include "klee/util/Assignment.h"
-#include "klee/util/ExprUtil.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 

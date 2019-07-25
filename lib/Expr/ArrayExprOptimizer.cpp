@@ -13,10 +13,10 @@
 #include "AssignmentGenerator.h"
 
 #include "klee/Config/Version.h"
-#include "klee/ExprBuilder.h"
+#include "klee/Expr/Assignment.h"
+#include "klee/Expr/ExprBuilder.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/OptionCategories.h"
-#include "klee/util/Assignment.h"
 #include "klee/util/BitArray.h"
 
 #include <llvm/ADT/APInt.h>

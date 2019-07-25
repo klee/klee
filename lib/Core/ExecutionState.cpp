@@ -11,7 +11,7 @@
 
 #include "klee/ExecutionState.h"
 
-#include "klee/Expr.h"
+#include "klee/Expr/Expr.h"
 #include "klee/Internal/Module/Cell.h"
 #include "klee/Internal/Module/InstructionInfoTable.h"
 #include "klee/Internal/Module/KInstruction.h"

@@ -14,7 +14,7 @@
 #include <map>
 #include <vector>
 
-#include "klee/Expr.h"
+#include "klee/Expr/Expr.h"
 #include "klee/util/Ref.h"
 
 namespace klee {

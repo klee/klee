@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/util/ExprSMTLIBPrinter.h"
+#include "klee/Expr/ExprSMTLIBPrinter.h"
 
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"

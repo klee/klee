@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "expr/Lexer.h"
+#include "klee/Expr/Parser/Lexer.h"
 
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"

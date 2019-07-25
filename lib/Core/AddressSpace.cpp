@@ -12,7 +12,7 @@
 #include "Memory.h"
 #include "TimingSolver.h"
 
-#include "klee/Expr.h"
+#include "klee/Expr/Expr.h"
 #include "klee/TimerStatIncrementer.h"
 
 using namespace klee;

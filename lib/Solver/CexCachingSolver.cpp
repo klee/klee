@@ -9,17 +9,17 @@
 
 #include "klee/Solver.h"
 
-#include "klee/Constraints.h"
-#include "klee/Expr.h"
+#include "klee/Expr/Assignment.h"
+#include "klee/Expr/Constraints.h"
+#include "klee/Expr/Expr.h"
+#include "klee/Expr/ExprUtil.h"
+#include "klee/Expr/ExprVisitor.h"
 #include "klee/Internal/ADT/MapOfSets.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/OptionCategories.h"
 #include "klee/SolverImpl.h"
 #include "klee/SolverStats.h"
 #include "klee/TimerStatIncrementer.h"
-#include "klee/util/Assignment.h"
-#include "klee/util/ExprUtil.h"
-#include "klee/util/ExprVisitor.h"
 
 #include "llvm/Support/CommandLine.h"
 

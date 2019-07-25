@@ -9,23 +9,25 @@
 #include "klee/Config/config.h"
 
 #ifdef ENABLE_STP
+
 #include "STPBuilder.h"
 #include "STPSolver.h"
-#include "klee/Constraints.h"
+
+#include "klee/Expr/Assignment.h"
+#include "klee/Expr/Constraints.h"
+#include "klee/Expr/ExprUtil.h"
+#include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/OptionCategories.h"
 #include "klee/SolverImpl.h"
-#include "klee/Internal/Support/ErrorHandling.h"
-#include "klee/util/Assignment.h"
-#include "klee/util/ExprUtil.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errno.h"
 
 #include <csignal>
-#include <unistd.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/wait.h>
+#include <unistd.h>
 
 namespace {
 

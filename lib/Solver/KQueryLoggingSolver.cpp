@@ -9,13 +9,11 @@
 
 #include "QueryLoggingSolver.h"
 
-#include "klee/Expr.h"
-#include "klee/util/ExprPPrinter.h"
+#include "klee/Expr/Expr.h"
+#include "klee/Expr/ExprPPrinter.h"
 #include "klee/Internal/System/Time.h"
 
 using namespace klee;
-
-///
 
 class KQueryLoggingSolver : public QueryLoggingSolver {
 
