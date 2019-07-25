@@ -10,27 +10,25 @@
 #define DEBUG_TYPE "cex-solver"
 #include "klee/Solver.h"
 
-#include "klee/Constraints.h"
-#include "klee/Expr.h"
+#include "klee/Expr/Constraints.h"
+#include "klee/Expr/Expr.h"
+#include "klee/Expr/ExprEvaluator.h"
+#include "klee/Expr/ExprRangeEvaluator.h"
+#include "klee/Expr/ExprVisitor.h"
 #include "klee/IncompleteSolver.h"
-#include "klee/util/ExprEvaluator.h"
-#include "klee/util/ExprRangeEvaluator.h"
-#include "klee/util/ExprVisitor.h"
-// FIXME: Use APInt.
 #include "klee/Internal/Support/Debug.h"
-#include "klee/Internal/Support/IntEvaluation.h"
+#include "klee/Internal/Support/IntEvaluation.h" // FIXME: Use APInt
 
 #include "llvm/Support/raw_ostream.h"
-#include <sstream>
+
 #include <cassert>
 #include <map>
+#include <sstream>
 #include <vector>
 
 using namespace klee;
 
-/***/
-
-      // Hacker's Delight, pgs 58-63
+// Hacker's Delight, pgs 58-63
 static uint64_t minOR(uint64_t a, uint64_t b,
                       uint64_t c, uint64_t d) {
   uint64_t temp, m = ((uint64_t) 1)<<63;

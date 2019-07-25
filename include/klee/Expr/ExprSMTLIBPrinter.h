@@ -11,13 +11,14 @@
 #ifndef KLEE_EXPRSMTLIBPRINTER_H
 #define KLEE_EXPRSMTLIBPRINTER_H
 
-#include <string>
-#include <set>
-#include <map>
-#include <klee/Constraints.h>
-#include <klee/Expr.h>
-#include <klee/util/PrintContext.h>
+#include <klee/Expr/Constraints.h>
+#include <klee/Expr/Expr.h>
 #include <klee/Solver.h>
+#include <klee/util/PrintContext.h>
+
+#include <map>
+#include <set>
+#include <string>
 
 namespace llvm {
 class raw_ostream;

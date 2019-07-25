@@ -10,10 +10,10 @@
 #ifndef KLEE_ASSIGNMENTGENERATOR_H
 #define KLEE_ASSIGNMENTGENERATOR_H
 
-#include <vector>
-
-#include "klee/Expr.h"
+#include "klee/Expr/Expr.h"
 #include "klee/util/Ref.h"
+
+#include <vector>
 
 namespace klee {
 class Assignment;

@@ -10,7 +10,7 @@
 #ifndef KLEE_SEEDINFO_H
 #define KLEE_SEEDINFO_H
 
-#include "klee/util/Assignment.h"
+#include "klee/Expr/Assignment.h"
 
 extern "C" {
   struct KTest;

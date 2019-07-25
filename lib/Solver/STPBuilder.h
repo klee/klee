@@ -10,9 +10,9 @@
 #ifndef KLEE_STPBUILDER_H
 #define KLEE_STPBUILDER_H
 
-#include "klee/util/ExprHashMap.h"
-#include "klee/util/ArrayExprHash.h"
 #include "klee/Config/config.h"
+#include "klee/Expr/ArrayExprHash.h"
+#include "klee/Expr/ExprHashMap.h"
 
 #include <vector>
 

@@ -8,7 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "QueryLoggingSolver.h"
-#include "klee/util/ExprSMTLIBPrinter.h"
+
+#include "klee/Expr/ExprSMTLIBPrinter.h"
 
 using namespace klee;
 

@@ -12,7 +12,7 @@
 
 #include "ObjectHolder.h"
 
-#include "klee/Expr.h"
+#include "klee/Expr/Expr.h"
 #include "klee/Internal/ADT/ImmutableMap.h"
 #include "klee/Internal/System/Time.h"
 

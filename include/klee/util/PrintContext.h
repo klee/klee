@@ -10,8 +10,10 @@
 #ifndef KLEE_PRINTCONTEXT_H
 #define KLEE_PRINTCONTEXT_H
 
-#include "klee/Expr.h"
+#include "klee/Expr/Expr.h"
+
 #include "llvm/Support/raw_ostream.h"
+
 #include <sstream>
 #include <string>
 #include <stack>

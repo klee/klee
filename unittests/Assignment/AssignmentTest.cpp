@@ -1,6 +1,8 @@
-#include "klee/util/ArrayCache.h"
-#include "klee/util/Assignment.h"
 #include "gtest/gtest.h"
+
+#include "klee/Expr/ArrayCache.h"
+#include "klee/Expr/Assignment.h"
+
 #include <iostream>
 #include <vector>
 

@@ -7,13 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Expr.h"
+#include "klee/Expr/Expr.h"
 
 #include <cassert>
 
 using namespace klee;
-
-///
 
 UpdateNode::UpdateNode(const UpdateNode *_next, 
                        const ref<Expr> &_index, 

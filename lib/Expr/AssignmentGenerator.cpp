@@ -9,20 +9,21 @@
 
 #include "AssignmentGenerator.h"
 
-#include <cassert>
-#include <cstdint>
+#include "klee/Expr/Assignment.h"
+#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/klee.h"
+
 #include <llvm/ADT/APInt.h>
 #include <llvm/Support/Casting.h>
 #include <llvm/Support/raw_ostream.h>
+
+#include <cassert>
+#include <cstdint>
 #include <map>
 #include <set>
 #include <stddef.h>
 #include <string>
 #include <utility>
-
-#include "klee/Internal/Support/ErrorHandling.h"
-#include "klee/klee.h"
-#include "klee/util/Assignment.h"
 
 using namespace klee;
 

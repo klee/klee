@@ -11,8 +11,9 @@
 #define KLEE_Z3BUILDER_H
 
 #include "klee/Config/config.h"
-#include "klee/util/ArrayExprHash.h"
-#include "klee/util/ExprHashMap.h"
+#include "klee/Expr/ArrayExprHash.h"
+#include "klee/Expr/ExprHashMap.h"
+
 #include <unordered_map>
 #include <z3.h>
 

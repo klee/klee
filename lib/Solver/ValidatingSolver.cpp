@@ -6,9 +6,11 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#include "klee/Constraints.h"
+
+#include "klee/Expr/Constraints.h"
 #include "klee/Solver.h"
 #include "klee/SolverImpl.h"
+
 #include <vector>
 
 namespace klee {

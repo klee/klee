@@ -12,11 +12,12 @@
 #include "Context.h"
 #include "MemoryManager.h"
 #include "ObjectHolder.h"
-#include "klee/Expr.h"
+
+#include "klee/Expr/ArrayCache.h"
+#include "klee/Expr/Expr.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/OptionCategories.h"
 #include "klee/Solver.h"
-#include "klee/util/ArrayCache.h"
 #include "klee/util/BitArray.h"
 
 #include "llvm/IR/Function.h"

@@ -10,7 +10,7 @@
 #ifndef KLEE_ARRAYEXPRHASH_H
 #define KLEE_ARRAYEXPRHASH_H
 
-#include "klee/Expr.h"
+#include "klee/Expr/Expr.h"
 #include "klee/TimerStatIncrementer.h"
 #include "klee/SolverStats.h"
 

@@ -10,8 +10,8 @@
 
 #include "klee/Solver.h"
 
-#include "klee/Constraints.h"
-#include "klee/Expr.h"
+#include "klee/Expr/Constraints.h"
+#include "klee/Expr/Expr.h"
 #include "klee/IncompleteSolver.h"
 #include "klee/SolverImpl.h"
 

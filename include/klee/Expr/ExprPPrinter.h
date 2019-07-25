@@ -10,7 +10,7 @@
 #ifndef KLEE_EXPRPPRINTER_H
 #define KLEE_EXPRPPRINTER_H
 
-#include "klee/Expr.h"
+#include "klee/Expr/Expr.h"
 
 namespace llvm {
   class raw_ostream;

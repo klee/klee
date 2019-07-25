@@ -7,16 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 #include "klee/Config/config.h"
-#ifdef ENABLE_METASMT
 
+#ifdef ENABLE_METASMT
 #include "MetaSMTSolver.h"
 #include "MetaSMTBuilder.h"
-#include "klee/Constraints.h"
+
+#include "klee/Expr/Assignment.h"
+#include "klee/Expr/Constraints.h"
+#include "klee/Expr/ExprUtil.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Solver.h"
 #include "klee/SolverImpl.h"
-#include "klee/util/Assignment.h"
-#include "klee/util/ExprUtil.h"
 
 #include "llvm/Support/ErrorHandling.h"
 
@@ -51,11 +52,11 @@
 #endif
 
 #include <errno.h>
-#include <unistd.h>
 #include <signal.h>
-#include <sys/wait.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 static unsigned char *shared_memory_ptr;
 static int shared_memory_id = 0;

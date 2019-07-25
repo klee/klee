@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/util/ExprPPrinter.h"
+#include "klee/Expr/ExprPPrinter.h"
 
-#include "klee/Constraints.h"
+#include "klee/Expr/Constraints.h"
 #include "klee/OptionCategories.h"
 #include "klee/util/PrintContext.h"
 
