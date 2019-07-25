@@ -1,6 +1,7 @@
 # Build information for KLEE
 required_variables_klee=(
   "COVERAGE"
+  "KLEE_RUNTIME_BUILD"
   "USE_TCMALLOC"
   "USE_LIBCXX"
 )

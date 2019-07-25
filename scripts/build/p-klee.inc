@@ -138,6 +138,8 @@ fi
   else
     CMAKE_ARGUMENTS+=("-DCMAKE_BUILD_TYPE=Debug")
   fi
+
+  CMAKE_ARGUMENTS+=("-DKLEE_RUNTIME_BUILD_TYPE=${KLEE_RUNTIME_BUILD}")
   
 # TODO: We should support Ninja too
 # Configure KLEE

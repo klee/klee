@@ -31,6 +31,8 @@ ENV STP_VERSION=2.3.3
 ENV MINISAT_VERSION=master
 ENV Z3_VERSION=4.8.4
 ENV USE_LIBCXX=1
+ENV KLEE_RUNTIME_BUILD="Debug+Asserts"
+
 COPY . /tmp/klee_src/
 RUN /tmp/klee_src//scripts/build/build.sh --debug --install-system-deps klee
 LABEL maintainer="KLEE Developers"

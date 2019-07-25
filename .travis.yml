@@ -40,6 +40,7 @@ env:
     - ENABLE_OPTIMIZED: 1
     - ENABLE_DEBUG: 1
     - GTEST_VERSION: 1.7.0
+    - KLEE_RUNTIME_BUILD: "Debug+Asserts"
     - LLVM_VERSION: 6.0
     - METASMT_VERSION: qf_abv
     - MINISAT_VERSION: "master"
@@ -85,8 +86,8 @@ env:
     # Check at least one build with Asserts disabled.
     - SOLVERS=STP DISABLE_ASSERTIONS=1
 
-    # Check without TCMALLOC
-    - USE_TCMALLOC=0
+    # Check without TCMALLOC and with an optimised runtime library
+    - USE_TCMALLOC=0 KLEE_RUNTIME_BUILD="Release+Debug+Asserts"
 
     # Coverage build
     - ENABLE_OPTIMIZED=0 COVERAGE=1
