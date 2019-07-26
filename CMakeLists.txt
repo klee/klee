@@ -229,6 +229,15 @@ foreach (vname ${NEEDED_LLVM_VARS})
   endif()
 endforeach()
 
+set(OPTIONAL_LLVM_VARS
+  LLVM_BUILD_MAIN_SRC_DIR
+)
+foreach (vname ${OPTIONAL_LLVM_VARS})
+  if (${vname})
+    message(STATUS "${vname}: \"${${vname}}\"")
+  endif()
+endforeach()
+
 if (LLVM_ENABLE_ASSERTIONS)
   # Certain LLVM debugging macros only work when LLVM was built with asserts
   set(ENABLE_KLEE_DEBUG 1) # for config.h
@@ -690,7 +699,7 @@ endif()
 ################################################################################
 # Sanitizer support
 ################################################################################
-message(STATUS "${CMAKE_CXX_FLAGS}")
+message(STATUS "CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
 set(IS_ASAN_BUILD 0)
 set(IS_UBSAN_BUILD 0)
 set(IS_MSAN_BUILD 0)
