@@ -33,8 +33,14 @@ if (USE_CMAKE_FIND_PACKAGE_LLVM)
     llvm_map_components_to_libnames(${output_var} ${ARGN})
     set(${output_var} ${${output_var}} PARENT_SCOPE)
   endfunction()
+
   # HACK: This information is not exported so just pretend its OFF for now.
   set(LLVM_ENABLE_VISIBILITY_INLINES_HIDDEN OFF)
+
+  # make LLVM_DEFINITIONS into proper list
+  set(_new_llvm_definitions "${LLVM_DEFINITIONS}")
+  string(REPLACE " " ";" LLVM_DEFINITIONS "${_new_llvm_definitions}")
+  unset(_new_llvm_definitions)
 else()
   # Use the llvm-config binary to get the information needed.
   # Try to detect it in the user's environment. The user can force a particular
