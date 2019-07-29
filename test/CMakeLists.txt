@@ -17,11 +17,6 @@ set(LLVMCXX "${LLVMCXX} -I${CMAKE_SOURCE_DIR}/include")
 set(NATIVE_CC "${CMAKE_C_COMPILER} ${CMAKE_C_FLAGS} -I ${CMAKE_SOURCE_DIR}/include")
 set(NATIVE_CXX "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_FLAGS} -I ${CMAKE_SOURCE_DIR}/include")
 set(TARGET_TRIPLE "${TARGET_TRIPLE}")
-if (ENABLE_KLEE_UCLIBC)
-  set(ENABLE_UCLIBC 1)
-else()
-  set(ENABLE_UCLIBC 0)
-endif()
 
 # FIXME: Do this to avoid changing the template file that
 # is shared by both build systems.
