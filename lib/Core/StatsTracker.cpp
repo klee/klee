@@ -122,40 +122,6 @@ bool StatsTracker::useIStats() {
   return OutputIStats;
 }
 
-namespace klee {
-  class WriteIStatsTimer : public Executor::Timer {
-    StatsTracker *statsTracker;
-    
-  public:
-    WriteIStatsTimer(StatsTracker *_statsTracker) : statsTracker(_statsTracker) {}
-    ~WriteIStatsTimer() {}
-    
-    void run() { statsTracker->writeIStats(); }
-  };
-  
-  class WriteStatsTimer : public Executor::Timer {
-    StatsTracker *statsTracker;
-    
-  public:
-    WriteStatsTimer(StatsTracker *_statsTracker) : statsTracker(_statsTracker) {}
-    ~WriteStatsTimer() {}
-    
-    void run() { statsTracker->writeStatsLine(); }
-  };
-
-  class UpdateReachableTimer : public Executor::Timer {
-    StatsTracker *statsTracker;
-    
-  public:
-    UpdateReachableTimer(StatsTracker *_statsTracker) : statsTracker(_statsTracker) {}
-    
-    void run() { statsTracker->computeReachableUncovered(); }
-  };
- 
-}
-
-//
-
 /// Check for special cases where we statically know an instruction is
 /// uncoverable. Currently the case is an unreachable instruction
 /// following a noreturn call; the instruction is really only there to
@@ -297,20 +263,26 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
     writeStatsLine();
 
     if (statsWriteInterval)
-      executor.addTimer(new WriteStatsTimer(this), statsWriteInterval);
+      executor.timers.add(std::move(std::make_unique<Timer>(statsWriteInterval, [&]{
+        writeStatsLine();
+      })));
   }
 
   // Add timer to calculate uncovered instructions if needed by the solver
   if (updateMinDistToUncovered) {
     computeReachableUncovered();
-    executor.addTimer(new UpdateReachableTimer(this), time::Span(UncoveredUpdateInterval));
+    executor.timers.add(std::move(std::make_unique<Timer>(time::Span{UncoveredUpdateInterval}, [&]{
+      computeReachableUncovered();
+    })));
   }
 
   if (OutputIStats) {
     istatsFile = executor.interpreterHandler->openOutputFile("run.istats");
     if (istatsFile) {
       if (iStatsWriteInterval)
-        executor.addTimer(new WriteIStatsTimer(this), iStatsWriteInterval);
+        executor.timers.add(std::move(std::make_unique<Timer>(iStatsWriteInterval, [&]{
+          writeIStats();
+        })));
     } else {
       klee_error("Unable to open instruction level stats file (run.istats).");
     }

@@ -92,15 +92,6 @@ class Executor : public Interpreter {
   friend class MergingSearcher;
 
 public:
-  class Timer {
-  public:
-    Timer() = default;
-    virtual ~Timer() = default;
-
-    /// The event callback.
-    virtual void run() = 0;
-  };
-
   typedef std::pair<ExecutionState*,ExecutionState*> StatePair;
 
   enum TerminateReason {
@@ -122,8 +113,6 @@ public:
 private:
   static const char *TerminateReasonNames[];
 
-  class TimerInfo;
-
   std::unique_ptr<KModule> kmodule;
   InterpreterHandler *interpreterHandler;
   Searcher *searcher;
@@ -135,7 +124,7 @@ private:
   StatsTracker *statsTracker;
   TreeStreamWriter *pathWriter, *symPathWriter;
   SpecialFunctionHandler *specialFunctionHandler;
-  std::vector<TimerInfo*> timers;
+  TimerGroup timers;
   std::unique_ptr<PTree> processTree;
 
   /// Keeps track of all currently ongoing merges.
@@ -460,14 +449,6 @@ private:
                                     ref<Expr> e,
                                     ref<ConstantExpr> value);
 
-  /// Add a timer to be executed periodically.
-  ///
-  /// \param timer The timer object to run on firings.
-  /// \param rate The approximate delay (in seconds) between firings.
-  void addTimer(Timer *timer, time::Span rate);
-
-  void initTimers();
-  void processTimers(ExecutionState *current, time::Span maxInstTime);
   void checkMemoryUsage();
   void printDebugInstructions(ExecutionState &state);
   void doDumpStates();

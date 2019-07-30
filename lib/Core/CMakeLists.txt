@@ -14,7 +14,6 @@ klee_add_component(kleeCore
   CoreStats.cpp
   ExecutionState.cpp
   Executor.cpp
-  ExecutorTimers.cpp
   ExecutorUtil.cpp
   ExternalDispatcher.cpp
   ImpliedValue.cpp
