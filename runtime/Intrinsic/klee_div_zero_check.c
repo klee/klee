@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <klee/klee.h>
+#include "klee/klee.h"
 
 void klee_div_zero_check(long long z) {
   if (z == 0)

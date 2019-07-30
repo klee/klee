@@ -7,8 +7,9 @@
 // RUN: %klee --output-dir=%t.klee-out --search=dfs --write-kqueries --rewrite-equalities %t.bc
 // RUN: FileCheck -input-file=%t.klee-out/test000003.kquery %s
 
+#include "klee/klee.h"
+
 #include <stdio.h>
-#include <klee/klee.h>
 
 int run(unsigned char * x, unsigned char * y) {
   y[6] = 15;

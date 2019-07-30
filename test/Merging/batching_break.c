@@ -6,7 +6,7 @@
 // CHECK: close merge:
 // CHECK: KLEE: done: generated tests = 3{{$}}
 
-#include <klee/klee.h>
+#include "klee/klee.h"
 
 int main(int argc, char** args){
 

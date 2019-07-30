@@ -2,7 +2,7 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --use-merge --debug-log-merge --search=dfs  %t.bc 
 
-#include <klee/klee.h>
+#include "klee/klee.h"
 
 int main(int argc, char** args){
 

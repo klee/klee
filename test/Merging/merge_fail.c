@@ -11,7 +11,7 @@
 
 // This test will not merge because we cannot merge states when they allocated memory.
 
-#include <klee/klee.h>
+#include "klee/klee.h"
 
 int main(int argc, char **args) {
 
