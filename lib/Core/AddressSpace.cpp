@@ -237,7 +237,7 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
     while (oi != begin) {
       --oi;
       const MemoryObject *mo = oi->first;
-      if (timeout && timeout < timer.check())
+      if (timeout && timeout < timer.delta())
         return true;
 
       int incomplete =
@@ -256,7 +256,7 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
     // search forwards
     for (oi = start; oi != end; ++oi) {
       const MemoryObject *mo = oi->first;
-      if (timeout && timeout < timer.check())
+      if (timeout && timeout < timer.delta())
         return true;
 
       bool mustBeTrue;

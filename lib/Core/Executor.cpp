@@ -12,7 +12,6 @@
 #include "../Expr/ArrayExprOptimizer.h"
 #include "Context.h"
 #include "CoreStats.h"
-#include "ExecutorTimerInfo.h"
 #include "ExternalDispatcher.h"
 #include "ImpliedValue.h"
 #include "Memory.h"
@@ -104,6 +103,13 @@ cl::OptionCategory
 
 cl::OptionCategory TestGenCat("Test generation options",
                               "These options impact test generation.");
+
+cl::opt<std::string> MaxTime(
+    "max-time",
+    cl::desc("Halt execution after the specified duration.  "
+             "Set to 0s to disable (default=0s)"),
+    cl::init("0s"),
+    cl::cat(TerminationCat));
 } // namespace klee
 
 namespace {
@@ -314,12 +320,6 @@ cl::opt<unsigned> RuntimeMaxStackFrames(
     cl::init(8192),
     cl::cat(TerminationCat));
 
-cl::opt<std::string> MaxInstructionTime(
-    "max-instruction-time",
-    cl::desc("Allow a single instruction to take only this much time.  Enables "
-             "--use-forked-solver.  Set to 0s to disable (default=0s)"),
-    cl::cat(TerminationCat));
-
 cl::opt<double> MaxStaticForkPct(
     "max-static-fork-pct", cl::init(1.),
     cl::desc("Maximum percentage spent by an instruction forking out of the "
@@ -345,6 +345,13 @@ cl::opt<double> MaxStaticCPSolvePct(
     cl::desc("Maximum percentage of solving time that can be spent by a single "
              "instruction of a call path over total solving time for all "
              "instructions (default=1.0 (always))"),
+    cl::cat(TerminationCat));
+
+cl::opt<std::string> TimerInterval(
+    "timer-interval",
+    cl::desc("Minimum interval to check timers. "
+             "Affects -max-time, -istats-write-interval, -stats-write-interval, and -uncovered-update-interval (default=1s)"),
+    cl::init("1s"),
     cl::cat(TerminationCat));
 
 
@@ -425,22 +432,25 @@ const char *Executor::TerminateReasonNames[] = {
   [ Unhandled ] = "xxx",
 };
 
+
 Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
                    InterpreterHandler *ih)
     : Interpreter(opts), interpreterHandler(ih), searcher(0),
       externalDispatcher(new ExternalDispatcher(ctx)), statsTracker(0),
-      pathWriter(0), symPathWriter(0), specialFunctionHandler(0),
+      pathWriter(0), symPathWriter(0), specialFunctionHandler(0), timers{time::Span(TimerInterval)},
       replayKTest(0), replayPath(0), usingSeeds(0),
       atMemoryLimit(false), inhibitForking(false), haltExecution(false),
       ivcEnabled(false), debugLogBuffer(debugBufferString) {
 
 
-  const time::Span maxCoreSolverTime(MaxCoreSolverTime);
-  maxInstructionTime = time::Span(MaxInstructionTime);
-  coreSolverTimeout = maxCoreSolverTime && maxInstructionTime ?
-                      std::min(maxCoreSolverTime, maxInstructionTime)
-                    : std::max(maxCoreSolverTime, maxInstructionTime);
+  const time::Span maxTime{MaxTime};
+  if (maxTime) timers.add(
+      std::move(std::make_unique<Timer>(maxTime, [&]{
+        klee_message("HaltTimer invoked");
+        setHaltExecution(true);
+      })));
 
+  coreSolverTimeout = time::Span{MaxCoreSolverTime};
   if (coreSolverTimeout) UseForkedCoreSolver = true;
   Solver *coreSolver = klee::createCoreSolver(CoreSolverToUse);
   if (!coreSolver) {
@@ -554,10 +564,6 @@ Executor::~Executor() {
   delete specialFunctionHandler;
   delete statsTracker;
   delete solver;
-  while(!timers.empty()) {
-    delete timers.back();
-    timers.pop_back();
-  }
 }
 
 /***/
@@ -2865,9 +2871,8 @@ void Executor::doDumpStates() {
 void Executor::run(ExecutionState &initialState) {
   bindModuleConstants();
 
-  // Delay init till now so that ticks don't accrue during
-  // optimization and such.
-  initTimers();
+  // Delay init till now so that ticks don't accrue during optimization and such.
+  timers.reset();
 
   states.insert(&initialState);
 
@@ -2898,7 +2903,7 @@ void Executor::run(ExecutionState &initialState) {
       stepInstruction(state);
 
       executeInstruction(state, ki);
-      processTimers(&state, maxInstructionTime * numSeeds);
+      timers.invoke();
       if (::dumpStates) dumpStates();
       if (::dumpPTree) dumpPTree();
       updateStates(&state);
@@ -2954,7 +2959,7 @@ void Executor::run(ExecutionState &initialState) {
     stepInstruction(state);
 
     executeInstruction(state, ki);
-    processTimers(&state, maxInstructionTime);
+    timers.invoke();
     if (::dumpStates) dumpStates();
     if (::dumpPTree) dumpPTree();
 
