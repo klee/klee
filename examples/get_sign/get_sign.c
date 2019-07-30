@@ -2,7 +2,7 @@
  * First KLEE tutorial: testing a small function
  */
 
-#include <klee/klee.h>
+#include "klee/klee.h"
 
 int get_sign(int x) {
   if (x == 0)

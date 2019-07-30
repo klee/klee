@@ -2,8 +2,9 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out -exit-on-error-type Assert %t1.bc 2>&1
 
+#include "klee/klee.h"
+
 #include <assert.h>
-#include <klee/klee.h>
 
 int main() {
   assert(klee_int("assert"));

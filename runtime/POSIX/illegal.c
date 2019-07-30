@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <stdio.h>
-#include <errno.h>
-#include <unistd.h>
-#include <signal.h>
-#include <setjmp.h>
-#include <sys/types.h>
+#include "klee/klee.h"
 
-#include <klee/klee.h>
+#include <errno.h>
+#include <setjmp.h>
+#include <signal.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 void klee_warning(const char*);
 void klee_warning_once(const char*);

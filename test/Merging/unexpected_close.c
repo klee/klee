@@ -5,7 +5,7 @@
 // CHECK: ran into a close at
 // CHECK: generated tests = 2{{$}}
 
-#include <klee/klee.h>
+#include "klee/klee.h"
 
 int main(int argc, char **args) {
 

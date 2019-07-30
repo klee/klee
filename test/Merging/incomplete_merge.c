@@ -21,7 +21,7 @@
 // It might occur that the random branch selection completes the heavy branch first,
 // which results in the branches being merged completely.
 
-#include <klee/klee.h>
+#include "klee/klee.h"
 
 int main(int argc, char **args) {
 

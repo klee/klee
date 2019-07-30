@@ -3,10 +3,11 @@
 // RUN: %klee --output-dir=%t.klee-out --use-merge --debug-log-merge --search=nurs:covnew --use-batching-search %t.bc 2>&1 | FileCheck %s
 
 // CHECK: generated tests = 2{{$}}
-#include <stdlib.h>
-#include <stdio.h>
 
-#include <klee/klee.h>
+#include "klee/klee.h"
+
+#include <stdio.h>
+#include <stdlib.h>
 
 int main(int argc, char** argv) {
 

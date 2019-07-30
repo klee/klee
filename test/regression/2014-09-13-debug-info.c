@@ -16,7 +16,7 @@
 // CHECK: object 0: int : 32
 // CHECK: object 0: int : 99
 
-#include <klee/klee.h>
+#include "klee/klee.h"
 
 void f0(void) {}
 void f1(void) {}
