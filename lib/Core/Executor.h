@@ -479,6 +479,10 @@ private:
   void printDebugInstructions(ExecutionState &state);
   void doDumpStates();
 
+  /// Only for debug purposes; enable via debugger or klee-control
+  void dumpStates();
+  void dumpPTree();
+
 public:
   Executor(llvm::LLVMContext &ctx, const InterpreterOptions &opts,
       InterpreterHandler *ie);
