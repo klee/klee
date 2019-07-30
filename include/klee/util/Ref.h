@@ -36,8 +36,8 @@ using llvm::cast_or_null;
 using llvm::dyn_cast;
 using llvm::dyn_cast_or_null;
 
-#include <assert.h>
-#include <iosfwd> // FIXME: Remove this!!!
+#include <cassert>
+#include <iosfwd> // FIXME: Remove this when LLVM 4.0 support is removed!!!
 
 namespace llvm {
   class raw_ostream;
