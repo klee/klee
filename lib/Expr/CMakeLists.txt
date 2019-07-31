@@ -11,7 +11,7 @@ klee_add_component(kleaverExpr
   ArrayExprOptimizer.cpp
   ArrayExprRewriter.cpp
   ArrayExprVisitor.cpp
-  Assigment.cpp
+  Assignment.cpp
   AssignmentGenerator.cpp
   Constraints.cpp
   ExprBuilder.cpp
