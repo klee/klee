@@ -1,12 +1,16 @@
 // -- Core testing commands
 // RUN: rm -rf %t.out
-// RUN: mkdir -p %t.out && cd %t.out
-// RUN: echo -n aaaa > %t.aaaa.txt
-// RUN: echo -n bbbb > %t.bbbb.txt
-// RUN: echo -n cccc > %t.cccc.txt
-// RUN: %gen-bout -o -p -q file1 --sym-stdin %t.aaaa.txt --sym-file %t.bbbb.txt --sym-stdout %t.cccc.txt
+// RUN: rm -f %t.bout
+// RUN: mkdir -p %t.out
+// RUN: echo -n aaaa > %t.out/aaaa.txt
+// RUN: echo -n bbbb > %t.out/bbbb.txt
+// RUN: echo -n cccc > %t.out/cccc.txt
+// RUN: %gen-bout -o -p -q file1 --bout-file %t.bout --sym-stdin %t.out/aaaa.txt --sym-file %t.out/bbbb.txt --sym-stdout %t.out/cccc.txt
 // RUN: %cc %s -O0 -o %t
-// RUN: %klee-replay %t file.bout 2>&1 | grep "klee-replay: EXIT STATUS: NORMAL"
+// RUN: %klee-replay %t %t.bout 2> %t.out/out.txt
+// RUN: FileCheck --input-file=%t.out/out.txt %s
+
+// CHECK: klee-replay: EXIT STATUS: NORMAL
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -41,8 +45,6 @@ int check_file(const char *file_name, const int file_size) {
 }
 
 int main(int argc, char **argv) {
-  int i = 0;
-
   if (argc != 5)
     return 1;
 

@@ -1,15 +1,17 @@
 // -- Core testing commands
-// RUN: rm -rf %t.out
-// RUN: mkdir -p %t.out && cd %t.out
-// RUN: %gen-random-bout 100 -sym-arg 4 -sym-files 2 20 -sym-arg 5 -sym-stdin 8 -sym-stdout -sym-arg 6 -sym-args 1 4 5
+// RUN: rm -f %t.bout
+// RUN: %gen-random-bout 100 -sym-arg 4 -sym-files 2 20 -sym-arg 5 -sym-stdin 8 -sym-stdout -sym-arg 6 -sym-args 1 4 5 -bout-file %t.bout
 // RUN: %cc %s -O0 -o %t
-// RUN: %klee-replay %t file.bout 2>&1 | grep "klee-replay: EXIT STATUS: NORMAL"
+// RUN: %klee-replay %t %t.bout 2> %t.out
+// RUN: FileCheck --input-file=%t.out %s
 //
 // -- Option error handling tests
 // RUN: bash -c '%gen-random-bout || :' 2>&1 | grep "Usage"
 // RUN: bash -c '%gen-random-bout 0 --unexpected-option || :' 2>&1 | grep "Unexpected"
 // RUN: bash -c '%gen-random-bout 100 --sym-args 5 3 || :' 2>&1 | grep "ran out of"
 // RUN: bash -c '%gen-random-bout 100 --sym-args 5 3 10 || :' 2>&1 | grep "should be no more"
+
+// CHECK: klee-replay: EXIT STATUS: NORMAL
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -75,7 +77,7 @@ int main(int argc, char **argv) {
   if (check_fd(1, 1024) < 0)
     return 1;
 
-  printf("All size tests passed\n");
+  puts("All size tests passed");
 
   return 0;
 }
