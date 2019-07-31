@@ -208,6 +208,8 @@ usage: (klee_init_env) [options] [program arguments]\n\
     } else if (__streq(argv[k], "--fd-fail") || __streq(argv[k], "-fd-fail")) {
       fd_fail = 1;
       k++;
+    } else if (__streq(argv[k], "--bout-file") || __streq(argv[k], "-bout-file")) {
+      k += 2;
     } else if (__streq(argv[k], "--max-fail") ||
                __streq(argv[k], "-max-fail")) {
       const char *msg = "--max-fail expects an integer argument <max-failures>";

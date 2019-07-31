@@ -138,13 +138,14 @@ int main(int argc, char *argv[]) {
   unsigned total_files = 0;
   unsigned file_sizes[MAX_FILE_SIZES];
   char **argv_copy;
+  char *bout_file = NULL;
 
   if (argc < 2) {
     error_exit(
         "Usage: %s <random-seed> <argument-types>\n"
         "       If <random-seed> is 0, time(NULL)*getpid() is used as a seed\n"
         "       <argument-types> are the ones accepted by KLEE: --sym-args, "
-        "--sym-files etc.\n"
+        "--sym-files etc. and --bout-file <filename> for the output file (default: random.bout).\n"
         "   Ex: %s 100 --sym-args 0 2 2 --sym-files 1 8\n",
         argv[0], argv[0]);
   }
@@ -226,6 +227,12 @@ int main(int argc, char *argv[]) {
         file_sizes[total_files++] = nbytes;
       }
 
+    } else if (strcmp(argv[i], "--bout-file") == 0 ||
+               strcmp(argv[i], "-bout-file") == 0) {
+      if ((unsigned)argc == ++i)
+        error_exit("Missing file name for --bout-file");
+
+      bout_file = argv[i];
     } else {
       error_exit("Unexpected option <%s>\n", argv[i]);
     }
@@ -273,8 +280,8 @@ int main(int argc, char *argv[]) {
   }
   push_range(&b, "model_version", 1);
 
-  if (!kTest_toFile(&b, "file.bout")) {
-    error_exit("Error in storing data into file.bout\n");
+  if (!kTest_toFile(&b, bout_file ? bout_file : "random.bout")) {
+    error_exit("Error in storing data into random.bout\n");
   }
 
   for (i = 0; i < b.numObjects; ++i) {
