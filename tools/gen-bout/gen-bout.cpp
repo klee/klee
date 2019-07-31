@@ -49,22 +49,23 @@ static void push_range(KTest *b, const char *name, unsigned value) {
 
 void print_usage_and_exit(char *program_name) {
   fprintf(stderr,
-          "%s: Tool for generating ktest file with concrete input, "
-          "e.g., for using a concrete crashing input as a ktest seed.\n",
-          program_name);
-  fprintf(stderr, "Usage: %s <arguments>\n", program_name);
-  fprintf(stderr, "       <arguments> are the command-line arguments of the "
-                  "programs, with the following treated as special:\n");
-  fprintf(stderr, "       --sym-stdin <filename>      - Specifying a file that "
-                  "is the content of the stdin (only once).\n");
-  fprintf(stderr, "       --sym-stdout <filename>     - Specifying a file that "
-                  "is the content of the stdout (only once).\n");
-  fprintf(stderr, "       --sym-file <filename>       - Specifying a file that "
-                  "is the content of a file named A provided for the program "
-                  "(only once).\n");
-  fprintf(stderr, "   Ex: %s -o -p -q file1 --sym-stdin file2 --sym-file file3 "
-                  "--sym-stdout file4\n",
-          program_name);
+          "%s: Tool for generating a ktest file from concrete input, "
+          "e.g., for using a concrete crashing input as a ktest seed.\n"
+          "Usage: %s <arguments>\n"
+          "       <arguments> are the command-line arguments of the "
+          "program, with the following treated as special:\n"
+          "       --bout-file <filename>      - Specifying the output "
+          "file name for the ktest file (default: file.bout).\n"
+          "       --sym-stdin <filename>      - Specifying a file that "
+          "is the content of stdin (only once).\n"
+          "       --sym-stdout <filename>     - Specifying a file that "
+          "is the content of stdout (only once).\n"
+          "       --sym-file <filename>       - Specifying a file that "
+          "is the content of a file named A provided for the program "
+          "(only once).\n"
+          "   Ex: %s -o -p -q file1 --sym-stdin file2 --sym-file file3 "
+          "--sym-stdout file4\n",
+          program_name, program_name, program_name);
   exit(1);
 }
 
@@ -75,6 +76,7 @@ int main(int argc, char *argv[]) {
   char *stdin_content_filename = NULL;
   char *content_filenames_list[1024];
   char **argv_copy;
+  char *bout_file = NULL;
 
   if (argc < 2)
     print_usage_and_exit(argv[0]);
@@ -121,6 +123,12 @@ int main(int argc, char *argv[]) {
         print_usage_and_exit(argv[0]);
 
       content_filenames_list[file_counter++] = argv[i];
+    } else if (strcmp(argv[i], "--bout-file") == 0 ||
+               strcmp(argv[i], "-bout-file") == 0) {
+      if (++i == (unsigned)argc)
+        print_usage_and_exit(argv[0]);
+
+      bout_file = argv[i];
     } else {
       long nbytes = strlen(argv[i]) + 1;
       static int total_args = 0;
@@ -260,7 +268,7 @@ int main(int argc, char *argv[]) {
 
   push_range(&b, "model_version", 1);
 
-  if (!kTest_toFile(&b, "file.bout"))
+  if (!kTest_toFile(&b, bout_file ? bout_file : "file.bout"))
     assert(0);
 
   for (int i = 0; i < (int)b.numObjects; ++i) {
