@@ -24,12 +24,12 @@ public:
   using iterator = constraints_ty::iterator;
   using const_iterator = constraints_ty::const_iterator;
 
-  typedef const_iterator constraint_iterator;
+  using constraint_iterator = const_iterator;
 
   bool empty() const;
   constraint_iterator begin() const;
   constraint_iterator end() const;
-  size_t size() const noexcept ;
+  size_t size() const noexcept;
 
   explicit ConstraintSet(constraints_ty cs) : constraints(std::move(cs)) {}
   ConstraintSet() = default;
@@ -49,20 +49,30 @@ class ExprVisitor;
 /// Manages constraints, e.g. optimisation
 class ConstraintManager {
 public:
-  // create from constraints with no optimization
+  /// Create constraint manager that modifies constraints
+  /// \param constraints
   explicit ConstraintManager(ConstraintSet &constraints);
 
+  /// Simplify expression expr based on constraints
+  /// \param constraints set of constraints used for simplification
+  /// \param expr to simplify
+  /// \return simplified expression
   static ref<Expr> simplifyExpr(const ConstraintSet &constraints,
-                                const ref<Expr> &e);
+                                const ref<Expr> &expr);
 
-  void addConstraint(ref<Expr> e);
-
-  // returns true iff the constraints were modified
-  bool rewriteConstraints(ExprVisitor &visitor);
-
-  void addConstraintInternal(ref<Expr> e);
+  /// Add constraint to the referenced constraint set
+  /// \param constraint
+  void addConstraint(const ref<Expr> &constraint);
 
 private:
+  /// Rewrite set of constraints using the visitor
+  /// \param visitor constraint rewriter
+  /// \return true iff any constraint has been changed
+  bool rewriteConstraints(ExprVisitor &visitor);
+
+  /// Add constraint to the set of constraints
+  void addConstraintInternal(const ref<Expr> &constraint);
+
   ConstraintSet &constraints;
 };
 

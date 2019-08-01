@@ -9,7 +9,6 @@
 
 #include "klee/Expr/Constraints.h"
 
-#include "klee/Expr/ExprPPrinter.h"
 #include "klee/Expr/ExprVisitor.h"
 #include "klee/Internal/Module/KModule.h"
 #include "klee/OptionCategories.h"
@@ -28,29 +27,27 @@ llvm::cl::opt<bool> RewriteEqualities(
                    "constant is added (default=true)"),
     llvm::cl::init(true),
     llvm::cl::cat(SolvingCat));
-}
+} // namespace
 
 class ExprReplaceVisitor : public ExprVisitor {
 private:
   ref<Expr> src, dst;
 
 public:
-  ExprReplaceVisitor(ref<Expr> _src, ref<Expr> _dst) : src(_src), dst(_dst) {}
+  ExprReplaceVisitor(const ref<Expr>& _src, const ref<Expr>& _dst) : src(_src), dst(_dst) {}
 
-  Action visitExpr(const Expr &e) {
-    if (e == *src.get()) {
+  Action visitExpr(const Expr &e) override {
+    if (e == *src) {
       return Action::changeTo(dst);
-    } else {
-      return Action::doChildren();
     }
+    return Action::doChildren();
   }
 
-  Action visitExprPost(const Expr &e) {
-    if (e == *src.get()) {
+  Action visitExprPost(const Expr &e) override {
+    if (e == *src) {
       return Action::changeTo(dst);
-    } else {
-      return Action::doChildren();
     }
+    return Action::doChildren();
   }
 };
 
@@ -59,18 +56,16 @@ private:
   const std::map< ref<Expr>, ref<Expr> > &replacements;
 
 public:
-  ExprReplaceVisitor2(const std::map< ref<Expr>, ref<Expr> > &_replacements)
+  explicit ExprReplaceVisitor2(const std::map< ref<Expr>, ref<Expr> > &_replacements)
     : ExprVisitor(true),
       replacements(_replacements) {}
 
-  Action visitExprPost(const Expr &e) {
-    std::map< ref<Expr>, ref<Expr> >::const_iterator it =
-      replacements.find(ref<Expr>(const_cast<Expr*>(&e)));
+  Action visitExprPost(const Expr &e) override {
+    auto it = replacements.find(ref<Expr>(const_cast<Expr*>(&e)));
     if (it!=replacements.end()) {
       return Action::changeTo(it->second);
-    } else {
-      return Action::doChildren();
     }
+    return Action::doChildren();
   }
 };
 
@@ -119,7 +114,7 @@ ref<Expr> ConstraintManager::simplifyExpr(const ConstraintSet &constraints,
   return ExprReplaceVisitor2(equalities).visit(e);
 }
 
-void ConstraintManager::addConstraintInternal(ref<Expr> e) {
+void ConstraintManager::addConstraintInternal(const ref<Expr> &e) {
   // rewrite any known equalities and split Ands into different conjuncts
 
   switch (e->getKind()) {
@@ -159,9 +154,9 @@ void ConstraintManager::addConstraintInternal(ref<Expr> e) {
   }
 }
 
-void ConstraintManager::addConstraint(ref<Expr> e) {
-  e = simplifyExpr(constraints, e);
-  addConstraintInternal(e);
+void ConstraintManager::addConstraint(const ref<Expr> &e) {
+  ref<Expr> simplified = simplifyExpr(constraints, e);
+  addConstraintInternal(simplified);
 }
 
 ConstraintManager::ConstraintManager(ConstraintSet &_constraints)
