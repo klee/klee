@@ -1795,10 +1795,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // Handle possible different branch targets
 
       // We have the following assumptions:
-      // - each case value is mutual exclusive to all other values including the
-      //   default value
+      // - each case value is mutual exclusive to all other values
       // - order of case branches is based on the order of the expressions of
-      //   the scase values, still default is handled last
+      //   the case values, still default is handled last
       std::vector<BasicBlock *> bbOrder;
       std::map<BasicBlock *, ref<Expr> > branchTargets;
 
@@ -1821,6 +1820,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                itE = expressionOrder.end();
            it != itE; ++it) {
         ref<Expr> match = EqExpr::create(cond, it->first);
+
+        // skip if case has same successor basic block as default case
+        // (should work even with phi nodes as a switch is a single terminating instruction)
+        if (it->second == si->getDefaultDest()) continue;
 
         // Make sure that the default value does not contain this target's value
         defaultValue = AndExpr::create(defaultValue, Expr::createIsZero(match));
