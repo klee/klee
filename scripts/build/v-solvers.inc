@@ -6,7 +6,7 @@ required_variables_solvers=(
 required_variables_check_solvers() {
   local solvers
   IFS=":" read -r -a solvers <<< "${SOLVERS}"
-  [[ -z "${solvers[@]}" ]] && { echo "SOLVERS can't be empty"; exit 1; }
+  [[ -z "${solvers[*]}" ]] && { echo "SOLVERS can't be empty"; exit 1; }
   
   for solver in "${solvers[@]}"; do
     [[ -z "${solver}" ]] && continue
