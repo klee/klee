@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -e
 set -u
+set -o pipefail
 # Build script for different components that are needed
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -642,7 +643,7 @@ install_component() {
   check_list artifact_dependency_"${component}"
   mapfile -t depending_artifact_components <<< "$(get_list artifact_dependency_"${component}")"
 
-  # Make sure an artefact is available for the depending component
+  # Make sure an artifact is available for the depending component
   for v in "${depending_artifact_components[@]}"; do
     [[ -z "${v}" ]] && continue
     install_component "${v}"
@@ -654,7 +655,7 @@ install_component() {
   # Handle dependencies of required artifacts
   gather_dependencies "${component}" "artifact" "setup_variables"
 
-  # Check if the artifact is installed ablready
+  # Check if the artifact is installed already
   execution_action is_installed "${component}" && execution_action setup_artifact_variables "${component}" && validate_required_variables "${component}"  "export_variables" && { echo "Already installed ${component}"; return 0; }
 
   # Install package if available
@@ -700,7 +701,6 @@ install_component() {
 main() {
   local NAME
   NAME=$(basename "${0}")
-  local USAGE="usage: ${NAME} "
   local COMPONENTS=()
   local BUILD_DOCKER=0
   local INSTALL_SYSTEM_DEPS=0

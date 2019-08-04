@@ -132,8 +132,8 @@ build_llvm() {
        cd "${SANITIZER_LLVM_LIBCXX}"
        cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo \
         -DLLVM_USE_SANITIZER=MemoryWithOrigins \
-        "${SANITIZER_CMAKE_C_COMPILER}" \
-        "${SANITIZER_CMAKE_CXX_COMPILER}" \
+        "${SANITIZER_CMAKE_C_COMPILER[@]}" \
+        "${SANITIZER_CMAKE_CXX_COMPILER[@]}" \
         "${LLVM_SRC_BASE}"
        ninja cxx cxxabi
 
@@ -144,8 +144,8 @@ build_llvm() {
        CXX_F="${SANITIZER_CXX_FLAGS[*]}"
        LD_F="${SANITIZER_LD_FLAGS[*]}"
        cmake -GNinja \
-          "${SANITIZER_CMAKE_C_COMPILER[*]}" \
-          "${SANITIZER_CMAKE_CXX_COMPILER[*]}" \
+          "${SANITIZER_CMAKE_C_COMPILER[@]}" \
+          "${SANITIZER_CMAKE_CXX_COMPILER[@]}" \
           -DCMAKE_C_FLAGS="$C_F" \
           -DCMAKE_CXX_FLAGS="${CXX_F}" \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
@@ -171,7 +171,7 @@ build_llvm() {
   # Configure LLVM
   CONFIG=(
      "-DCMAKE_INSTALL_PREFIX=${LLVM_INSTALL}"
-     "-LLVM_BUILD_LLVM_DYLIB=TRUE"
+     "-DLLVM_BUILD_LLVM_DYLIB=TRUE"
   )
   # cmake build
   if [[ "${enable_optimized}" == "1" && "${enable_debug}" != "1" ]]; then
@@ -204,11 +204,11 @@ build_llvm() {
 
   # Remove unneeded targets
   CONFIG+=(
-     -DLLVM_INCLUDE_EXAMPLES=OFF
-#     -DLLVM_INCLUDE_TESTS=OFF
-#     -DCLANG_INCLUDE_TESTS=OFF
-     -DLLVM_INCLUDE_BENCHMARKS=OFF
-     -DBUILD_SHARED_LIBS=ON
+     "-DLLVM_INCLUDE_EXAMPLES=OFF"
+#     "-DLLVM_INCLUDE_TESTS=OFF"
+#     "-DCLANG_INCLUDE_TESTS=OFF"
+     "-DLLVM_INCLUDE_BENCHMARKS=OFF"
+     "-DBUILD_SHARED_LIBS=ON"
   )
 
   local variables=("")

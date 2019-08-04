@@ -17,14 +17,14 @@ build_sqlite() {
 
   # Check if sanitizers should be used to build sqlite
   if [[ "${SANITIZER_SUFFIX}x" != "x" ]]; then
-    CFLAGS="${SANITIZER_C_FLAGS[*]}"
+    CFLAGS=("${SANITIZER_C_FLAGS[@]}")
     COMP="${SANITIZER_C_COMPILER}"
   else
     COMP="${BITCODE_CC}"
     [[ -z "${COMP}" ]] && COMP="$(which gcc)"
   fi
 
-  ${COMP} ${CFLAGS} -fPIC -o libsqlite3.so -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -shared sqlite3.c
+  "${COMP}" "${CFLAGS[@]}" -fPIC -o libsqlite3.so -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -shared sqlite3.c
 }
 
 install_sqlite() {
