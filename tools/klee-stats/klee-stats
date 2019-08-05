@@ -53,6 +53,10 @@ KleeTable = TableFormat(lineabove=Line("-", "-", "-", "-"),
                         padding=0,
                         with_header_hide=None)
 
+def getInfoFile(path):
+    """Return the path to info"""
+    return os.path.join(path, 'info')
+
 def getLogFile(path):
     """Return the path to run.stats."""
     return os.path.join(path, 'run.stats')
@@ -167,6 +171,19 @@ def grafana(dirs):
     import datetime
     app = Flask(__name__)
 
+    import re
+    from dateutil import parser
+    def getKleeStartTime():
+        with open(getInfoFile(dirs[0]), "r") as file:
+            for line in file:
+                m = re.match("Started: (.*)", line)
+                if m:
+                    dateString = m.group(1)
+                    return parser.parse(dateString).timestamp()
+
+        print("Error: Couldn't find klee's start time", file=sys.stderr)
+        sys.exit()
+
     def toEpoch(date_text):
         dt = datetime.datetime.strptime(date_text, "%Y-%m-%dT%H:%M:%S.%fZ")
         epoch = (dt - datetime.datetime(1970, 1, 1)).total_seconds()
@@ -191,7 +208,7 @@ def grafana(dirs):
         frm = toEpoch(jsn["range"]["from"])
         to = toEpoch(jsn["range"]["to"])
         targets = [str(t["target"]) for t in jsn["targets"]]
-        startTime = os.path.getmtime(dr)
+        startTime = getKleeStartTime()
         fromTime = frm - startTime if frm - startTime > 0 else 0
         toTime = to - startTime if to - startTime > fromTime else fromTime + 100
         #convert to microseconds
