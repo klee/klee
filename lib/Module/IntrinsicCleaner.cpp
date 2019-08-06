@@ -205,14 +205,15 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         Builder.CreateCall(F);
         Builder.CreateUnreachable();
 
-        ii->eraseFromParent();
+        i = ii->eraseFromParent();
 
-       	//check if the instruction after the one we just replaced is not the end of the basic block
-        //and if it is not (i.e. it is a valid instruction), delete it and all remaining 
-        //because the cleaner just introduced a terminating instruction (unreachable)
-        //otherwise llvm will assert in Verifier::visitTerminatorInstr
-        while(i != ie){  // i was already incremented above.
-          (i++)->eraseFromParent();
+        // check if the instruction after the one we just replaced is not the
+        // end of the basic block and if it is not (i.e. it is a valid
+        // instruction), delete it and all remaining because the cleaner just
+        // introduced a terminating instruction (unreachable) otherwise llvm will
+        // assert in Verifier::visitTerminatorInstr
+        while (i != ie) { // i was already incremented above.
+          i = i->eraseFromParent();
         }
 
         dirty = true;
