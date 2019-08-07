@@ -253,47 +253,51 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
   }
 
   if (OutputStats) {
+    sqlite3_config(SQLITE_CONFIG_SINGLETHREAD);
+    sqlite3_enable_shared_cache(0);
+
+    // open database
     auto db_filename = executor.interpreterHandler->getOutputFilename("run.stats");
-    if (sqlite3_open(db_filename.c_str(), &statsFile) == SQLITE_OK) {
-      // prepare statements
-      if(sqlite3_prepare_v2(statsFile, "BEGIN TRANSACTION", -1, &transactionBeginStmt, nullptr) != SQLITE_OK) {
-        klee_error("Cannot create prepared statement: %s", sqlite3_errmsg(statsFile));
-      }
-
-      if(sqlite3_prepare_v2(statsFile, "END TRANSACTION", -1, &transactionEndStmt, nullptr) != SQLITE_OK) {
-        klee_error("Cannot create prepared statement: %s", sqlite3_errmsg(statsFile));
-      }
-
-      // set options
-      char *zErrMsg;
-      if (sqlite3_exec(statsFile, "PRAGMA synchronous = OFF", nullptr, nullptr, &zErrMsg) != SQLITE_OK) {
-        klee_error("%s", sqlite3ErrToStringAndFree("Can't set options for database: ", zErrMsg).c_str());
-      }
-
-      // note: we use TRUNCATE here a) for speed and b) to prevent creation of new file descriptors
-      if (sqlite3_exec(statsFile, "PRAGMA journal_mode = TRUNCATE", nullptr, nullptr, &zErrMsg) != SQLITE_OK) {
-        klee_error("%s", sqlite3ErrToStringAndFree("Can't set options for database: ", zErrMsg).c_str());
-      }
-
-      // begin transaction
-      auto rc = sqlite3_step(transactionBeginStmt);
-      if (rc != SQLITE_DONE) {
-        klee_warning("Can't begin transaction: %s", sqlite3_errmsg(statsFile));
-      }
-      sqlite3_reset(transactionBeginStmt);
-
-      // create table
-      writeStatsHeader();
-      writeStatsLine();
-
-      if (statsWriteInterval)
-        executor.addTimer(new WriteStatsTimer(this), statsWriteInterval);
-    } else {
+    if (sqlite3_open(db_filename.c_str(), &statsFile) != SQLITE_OK) {
       std::ostringstream errorstream;
       errorstream << "Can't open database: " << sqlite3_errmsg(statsFile);
       sqlite3_close(statsFile);
       klee_error("%s", errorstream.str().c_str());
     }
+
+    // prepare statements
+    if (sqlite3_prepare_v2(statsFile, "BEGIN TRANSACTION", -1, &transactionBeginStmt, nullptr) != SQLITE_OK) {
+      klee_error("Cannot create prepared statement: %s", sqlite3_errmsg(statsFile));
+    }
+
+    if (sqlite3_prepare_v2(statsFile, "END TRANSACTION", -1, &transactionEndStmt, nullptr) != SQLITE_OK) {
+      klee_error("Cannot create prepared statement: %s", sqlite3_errmsg(statsFile));
+    }
+
+    // set options
+    char *zErrMsg;
+    if (sqlite3_exec(statsFile, "PRAGMA synchronous = OFF", nullptr, nullptr, &zErrMsg) != SQLITE_OK) {
+      klee_error("%s", sqlite3ErrToStringAndFree("Can't set options for database: ", zErrMsg).c_str());
+    }
+
+    // note: we use WAL here a) for speed and b) to prevent creation of new file descriptors (as with TRUNCATE)
+    if (sqlite3_exec(statsFile, "PRAGMA journal_mode = WAL", nullptr, nullptr, &zErrMsg) != SQLITE_OK) {
+      klee_error("%s", sqlite3ErrToStringAndFree("Can't set options for database: ", zErrMsg).c_str());
+    }
+
+    // begin transaction
+    auto rc = sqlite3_step(transactionBeginStmt);
+    if (rc != SQLITE_DONE) {
+      klee_warning("Can't begin transaction: %s", sqlite3_errmsg(statsFile));
+    }
+    sqlite3_reset(transactionBeginStmt);
+
+    // create table
+    writeStatsHeader();
+    writeStatsLine();
+
+    if (statsWriteInterval)
+      executor.addTimer(new WriteStatsTimer(this), statsWriteInterval);
   }
 
   // Add timer to calculate uncovered instructions if needed by the solver
