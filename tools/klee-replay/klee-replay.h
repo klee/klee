@@ -21,6 +21,9 @@
 // temporary directory used for replay
 extern char replay_dir[];
 
+// whether to keep the replay directory or delete it
+extern int keep_temps;
+
 void replay_create_files(exe_file_system_t *exe_fs);
 void replay_delete_files();
 

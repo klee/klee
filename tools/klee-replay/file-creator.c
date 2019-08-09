@@ -478,6 +478,9 @@ int remove_callback(const char *fpath,
 }
 
 void replay_delete_files() {
+  if (keep_temps)
+    return;
+
   fprintf(stderr, "KLEE-REPLAY: NOTE: removing %s\n", replay_dir);
 
   if (nftw(replay_dir, remove_callback, FOPEN_MAX,
