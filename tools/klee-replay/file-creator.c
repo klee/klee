@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <ftw.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -431,18 +432,21 @@ static void create_file(int target_fd,
   }
 }
 
+char replay_dir[] = "/tmp/klee-replay-XXXXXX";
+
 void replay_create_files(exe_file_system_t *exe_fs) {
-  char tmpdir[PATH_MAX];
   unsigned k;
 
-  if (!getcwd(tmpdir, PATH_MAX)) {
-    perror("getcwd");
-    exit(1);
+  // Create a temporary directory to place files involved in replay
+  strcpy(replay_dir, "/tmp/klee-replay-XXXXXX"); // new template for each replayed file
+  char* tmpdir = mkdtemp(replay_dir);
+
+  if (tmpdir == NULL) {
+    perror("mkdtemp: could not create temporary directory");
+    exit(EXIT_FAILURE);
   }
 
-  strcat(tmpdir, ".temps");
-  delete_file(tmpdir, 1);
-  mkdir(tmpdir, 0755);
+  fprintf(stderr, "note: storing KLEE replay files in %s\n", tmpdir);
 
   umask(0);
   for (k=0; k < exe_fs->n_sym_files; k++) {
@@ -465,6 +469,25 @@ void replay_create_files(exe_file_system_t *exe_fs) {
 
   for (k=0; k<exe_fs->n_sym_files; ++k)
     check_file(k, &exe_fs->sym_files[k]);
+}
+
+
+/* Used by nftw() in replay_delete_files() */
+int remove_callback(const char *fpath,
+                __attribute__((unused)) const struct stat *sb,
+                __attribute__((unused)) int typeflag,
+                __attribute__((unused)) struct FTW *ftwbuf) {
+  return remove(fpath);
+}
+
+void replay_delete_files() {
+  fprintf(stderr, "removing %s\n", replay_dir);
+
+  if (nftw(replay_dir, remove_callback, FOPEN_MAX,
+           FTW_DEPTH | FTW_PHYS) == -1) {
+      perror("nftw");
+      exit(EXIT_FAILURE);
+  }
 }
 
 static void check_file(int index, exe_disk_file_t *dfile) {
