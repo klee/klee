@@ -48,6 +48,7 @@ static struct option long_options[] = {
   {"create-files-only", required_argument, 0, 'f'},
   {"chroot-to-dir", required_argument, 0, 'r'},
   {"help", no_argument, 0, 'h'},
+  {"keep-replay-dir", no_argument, 0, 'k'},
   {0, 0, 0, 0},
 };
 
@@ -257,11 +258,15 @@ static void usage(void) {
   fprintf(stderr, "   or: %s --create-files-only <ktest-file>\n", progname);
   fprintf(stderr, "\n");
   fprintf(stderr, "-r, --chroot-to-dir=DIR  use chroot jail, requires CAP_SYS_CHROOT\n");
+  fprintf(stderr, "-k, --keep-replay-dir    do not delete replay directory\n");
   fprintf(stderr, "-h, --help               display this help and exit\n");
   fprintf(stderr, "\n");
   fprintf(stderr, "Use KLEE_REPLAY_TIMEOUT environment variable to set a timeout (in seconds).\n");
   exit(1);
 }
+
+
+int keep_temps = 0;
 
 int main(int argc, char** argv) {
   int prg_argc;
@@ -273,35 +278,38 @@ int main(int argc, char** argv) {
     usage();
 
   int c, opt_index;
-  while ((c = getopt_long(argc, argv, "f:r:", long_options, &opt_index)) != -1) {
+  while ((c = getopt_long(argc, argv, "f:r:k", long_options, &opt_index)) != -1) {
     switch (c) {
-      case 'f': {
-        /* Special case hack for only creating files and not actually executing
-        * the program.
-         */
-        if (argc != 3)
-          usage();
+    case 'f': {
+      /* Special case hack for only creating files and not actually executing
+       * the program. */
+      if (argc != 3)
+        usage();
 
-        char* input_fname = optarg;
+      char *input_fname = optarg;
 
-        input = kTest_fromFile(input_fname);
-        if (!input) {
-          fprintf(stderr, "KLEE-REPLAY: ERROR: input file %s not valid.\n",
-                  input_fname);
-          exit(1);
-        }
-
-        prg_argc = input->numArgs;
-        prg_argv = input->args;
-        prg_argv[0] = argv[1];
-        klee_init_env(&prg_argc, &prg_argv);
-
-        replay_create_files(&__exe_fs);
-        return 0;
+      input = kTest_fromFile(input_fname);
+      if (!input) {
+        fprintf(stderr, "KLEE-REPLAY: ERROR: input file %s not valid.\n", input_fname);
+        exit(1);
       }
-      case 'r':
-        rootdir = optarg;
-        break;
+
+      prg_argc = input->numArgs;
+      prg_argv = input->args;
+      prg_argv[0] = argv[1];
+      klee_init_env(&prg_argc, &prg_argv);
+
+      replay_create_files(&__exe_fs);
+      return 0;
+    }
+
+    case 'r':
+      rootdir = optarg;
+      break;
+
+    case 'k':
+      keep_temps = 1;
+      break;
     }
   }
 
