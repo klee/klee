@@ -10,7 +10,7 @@
 // RUN: %klee-replay %t %t.bout 2> %t.out/out.txt
 // RUN: FileCheck --input-file=%t.out/out.txt %s
 
-// CHECK: klee-replay: EXIT STATUS: NORMAL
+// CHECK: EXIT STATUS: NORMAL
 
 #include <sys/types.h>
 #include <sys/stat.h>
