@@ -11,7 +11,7 @@
 // RUN: bash -c '%gen-random-bout 100 --sym-args 5 3 || :' 2>&1 | grep "ran out of"
 // RUN: bash -c '%gen-random-bout 100 --sym-args 5 3 10 || :' 2>&1 | grep "should be no more"
 
-// CHECK: klee-replay: EXIT STATUS: NORMAL
+// CHECK: KLEE-REPLAY: NOTE: EXIT STATUS: NORMAL
 
 #include <sys/types.h>
 #include <sys/stat.h>
