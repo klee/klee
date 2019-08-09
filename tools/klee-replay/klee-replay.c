@@ -18,10 +18,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
-
-#include <sys/wait.h>
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
 #include <signal.h>
@@ -348,7 +347,6 @@ int main(int argc, char** argv) {
     prg_argv = input->args;
     prg_argv[0] = argv[optind];
     klee_init_env(&prg_argc, &prg_argv);
-
     if (idx > 2)
       fprintf(stderr, "\n");
     fprintf(stderr, "%s: TEST CASE: %s\n", progname, input_fname);
@@ -360,6 +358,9 @@ int main(int argc, char** argv) {
     }
     fprintf(stderr, "\n");
 
+    /* Create the input files, pipes, etc. */
+    replay_create_files(&__exe_fs);
+
     /* Run the test case machinery in a subprocess, eventually this parent
        process should be a script or something which shells out to the actual
        execution tool. */
@@ -368,17 +369,19 @@ int main(int argc, char** argv) {
       perror("fork");
       _exit(66);
     } else if (pid == 0) {
-      /* Create the input files, pipes, etc., and run the process. */
-      replay_create_files(&__exe_fs);
+      /* Run the executable */
       run_monitored(executable, prg_argc, prg_argv);
       _exit(0);
     } else {
-      /* Wait for the test case. */
+      /* Wait for the executable to finish. */
       int res, status;
 
       do {
         res = waitpid(pid, &status, 0);
       } while (res < 0 && errno == EINTR);
+
+      // Delete all files in the replay directory
+      replay_delete_files();
 
       if (res < 0) {
         perror("waitpid");

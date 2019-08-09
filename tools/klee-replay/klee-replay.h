@@ -18,7 +18,11 @@
 #include "../../runtime/POSIX/fd.h"
 #include <sys/time.h>
 
+// temporary directory used for replay
+extern char replay_dir[];
+
 void replay_create_files(exe_file_system_t *exe_fs);
+void replay_delete_files();
 
 void process_status(int status,
 		    time_t elapsed,
@@ -26,4 +30,3 @@ void process_status(int status,
   __attribute__((noreturn));
 
 #endif
-
