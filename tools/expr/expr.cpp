@@ -70,6 +70,11 @@ klee_expr_width_t klee_expr_get_width(klee_expr_t expr) {
   return (*TheExpr)->getWidth();
 }
 
+bool klee_expr_is_constant(klee_expr_t expr) {
+  ref<Expr> *TheExpr = unwrap(expr);
+  return llvm::isa<ConstantExpr>(TheExpr->get());
+}
+
 int klee_expr_compare(klee_expr_t lhs, klee_expr_t rhs) {
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);

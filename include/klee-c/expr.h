@@ -47,6 +47,8 @@ extern void klee_expr_builder_dispose(klee_expr_builder_t builder);
 
 extern klee_expr_width_t klee_expr_get_width(klee_expr_t expr);
 
+  extern bool klee_expr_is_constant(klee_expr_t expr);
+
 /// Compares klee_expr_t for structural equivalence
 ///
 /// param [lhs] The expression to compare to
