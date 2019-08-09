@@ -191,6 +191,11 @@ static void run_monitored(char *executable, int argc, char **argv) {
 #endif
 
     if (!rootdir) {
+      if (chdir(replay_dir) != 0) {
+        perror("chdir");
+        _exit(66);
+      }
+
       execv(executable, argv);
       perror("execv");
       _exit(66);

@@ -295,6 +295,8 @@ static int create_reg_file(const char *fname, exe_disk_file_t *dfile,
   unsigned flen = dfile->size;
   unsigned mode = s->st_mode & 0777;
 
+  fprintf(stderr, "KLEE-REPLAY: NOTE: Creating file %s of length %d\n", fname, flen);
+
   // Open in RDWR just in case we have to end up using this fd.
   if (__exe_env.version == 0 && mode == 0)
     mode = 0644;
@@ -375,12 +377,11 @@ static void create_file(int target_fd,
 
   assert((target_fd == -1) ^ (target_name == NULL));
 
-  if (target_name) {
-    target = target_name;
-  } else {
-    sprintf(tmpname, "%s/fd%d", tmpdir, target_fd);
-    target = tmpname;
-  }
+  if (target_name)
+    sprintf(tmpname, "%s/%s", tmpdir, target_name);
+  else sprintf(tmpname, "%s/fd%d", tmpdir, target_fd);
+
+  target = tmpname;
 
   delete_file(target, 1);
 
@@ -494,6 +495,7 @@ static void check_file(int index, exe_disk_file_t *dfile) {
   struct stat s;
   int res;
   char name[32];
+  char fullname[PATH_MAX];
 
   switch (index) {
   case __STDIN:
@@ -507,7 +509,9 @@ static void check_file(int index, exe_disk_file_t *dfile) {
   default:
     name[0] = 'A' + index;
     name[1] = '\0';
-    res = stat(name, &s);
+    sprintf(fullname, "%s/%s", replay_dir, name);
+    res = stat(fullname, &s);
+
     break;
   }
 
