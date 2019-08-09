@@ -54,9 +54,7 @@ static klee_expr_t allocating_wrap(const ref<Expr> &RefExpr) {
 
 klee_expr_builder_t klee_expr_builder_create(void) {
   ExprBuilder *DefaultBuilder = createDefaultExprBuilder();
-  ExprBuilder *ConstantFoldingBuilder =
-      createConstantFoldingExprBuilder(DefaultBuilder);
-  LibExprBuilder *TheBuilder = new LibExprBuilder(ConstantFoldingBuilder);
+  LibExprBuilder *TheBuilder = new LibExprBuilder(DefaultBuilder);
   return wrap(TheBuilder);
 }
 
