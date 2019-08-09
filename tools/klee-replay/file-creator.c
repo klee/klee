@@ -90,7 +90,7 @@ int wait_for_timeout_or_exit(pid_t pid, const char *name, int *statusp) {
   int timeout = t ? atoi(t) : 5;
   double wait = timeout * .5;
   double start = getTime();
-  fprintf(stderr, "note: %s: waiting %.2fs\n", name, wait);
+  fprintf(stderr, "KLEE-REPLAY: NOTE: %s: waiting %.2fs\n", name, wait);
   while (getTime() - start < wait) {
     struct timespec r = {0, 1000000};
     nanosleep(&r, 0);
@@ -150,7 +150,7 @@ static int create_char_dev(const char *fname, exe_disk_file_t *dfile,
     }
 
     if (symlink(name, fname) == -1) {
-      fprintf(stderr, "unable to create sym link to tty\n");
+      fprintf(stderr, "KLEE-REPLAY: ERROR: unable to create sym link to tty\n");
       perror("symlink");
     }
 
@@ -164,7 +164,7 @@ static int create_char_dev(const char *fname, exe_disk_file_t *dfile,
     } else if (pid == 0) {
       close(amaster);
 
-      fprintf(stderr, "note: pty slave: setting raw mode\n");
+      fprintf(stderr, "KLEE-REPLAY: NOTE: pty slave: setting raw mode\n");
       {
         struct termios mode;
 
@@ -187,19 +187,19 @@ static int create_char_dev(const char *fname, exe_disk_file_t *dfile,
     } else {
       unsigned pos = 0;
       int status;
-      fprintf(stderr, "note: pty master: starting\n");
+      fprintf(stderr, "KLEE-REPLAY: NOTE: pty master: starting\n");
       close(aslave);
 
       while (pos < flen) {
         ssize_t res = write(amaster, &contents[pos], flen - pos);
         if (res<0) {
           if (errno != EINTR) {
-            fprintf(stderr, "note: pty master: write error\n");
+            fprintf(stderr, "KLEE-REPLAY: NOTE: pty master: write error\n");
             perror("errno");
             break;
           }
         } else if (res) {
-          fprintf(stderr, "note: pty master: wrote: %zd (of %d)\n", res, flen);
+          fprintf(stderr, "KLEE-REPLAY: NOTE: pty master: wrote: %zd (of %d)\n", res, flen);
           pos += res;
         }
       }
@@ -207,7 +207,7 @@ static int create_char_dev(const char *fname, exe_disk_file_t *dfile,
       if (wait_for_timeout_or_exit(pid, "pty master", &status))
         goto pty_exit;
 
-      fprintf(stderr, "note: pty master: closing & waiting\n");
+      fprintf(stderr, "KLEE-REPLAY: NOTE: pty master: closing & waiting\n");
       close(amaster);
       while (1) {
         pid_t res = waitpid(pid, &status, 0);
@@ -221,7 +221,7 @@ static int create_char_dev(const char *fname, exe_disk_file_t *dfile,
 
     pty_exit:
       close(amaster);
-      fprintf(stderr, "note: pty master: done\n");
+      fprintf(stderr, "KLEE-REPLAY: NOTE: pty master: done\n");
       process_status(status, 0, "PTY MASTER");
     }
   }
@@ -252,7 +252,7 @@ static int create_pipe(const char *fname, exe_disk_file_t *dfile,
   } else {
     unsigned pos = 0;
     int status;
-    fprintf(stderr, "note: pipe master: starting\n");
+    fprintf(stderr, "KLEE-REPLAY: NOTE: pipe master: starting\n");
     close(fds[0]);
 
     while (pos < flen) {
@@ -268,7 +268,7 @@ static int create_pipe(const char *fname, exe_disk_file_t *dfile,
     if (wait_for_timeout_or_exit(pid, "pipe master", &status))
       goto pipe_exit;
 
-    fprintf(stderr, "note: pipe master: closing & waiting\n");
+    fprintf(stderr, "KLEE-REPLAY: NOTE: pipe master: closing & waiting\n");
     close(fds[1]);
     while (1) {
       pid_t res = waitpid(pid, &status, 0);
@@ -282,7 +282,7 @@ static int create_pipe(const char *fname, exe_disk_file_t *dfile,
 
   pipe_exit:
     close(fds[1]);
-    fprintf(stderr, "note: pipe master: done\n");
+    fprintf(stderr, "KLEE-REPLAY: NOTE: pipe master: done\n");
     process_status(status, 0, "PTY MASTER");
   }
 }
@@ -295,23 +295,20 @@ static int create_reg_file(const char *fname, exe_disk_file_t *dfile,
   unsigned flen = dfile->size;
   unsigned mode = s->st_mode & 0777;
 
-  //fprintf(stderr, "Creating regular file\n");
-
   // Open in RDWR just in case we have to end up using this fd.
-
   if (__exe_env.version == 0 && mode == 0)
     mode = 0644;
 
   int fd = open(fname, O_CREAT | O_RDWR, mode);
   //    int fd = open(fname, O_CREAT | O_WRONLY, s->st_mode&0777);
   if (fd < 0) {
-    fprintf(stderr, "Cannot create file %s\n", fname);
+    fprintf(stderr, "KLEE-REPLAY: ERROR: Cannot create file %s\n", fname);
     exit(1);
   }
 
   ssize_t r = write(fd, contents, flen);
   if (r < 0 || (unsigned) r != flen) {
-    fprintf(stderr, "Cannot write file %s\n", fname);
+    fprintf(stderr, "KLEE-REPLAY: ERROR: Cannot write file %s\n", fname);
     exit(1);
   }
 
@@ -348,7 +345,7 @@ static int delete_dir(const char *path, int recurse) {
   }
 
   if (rmdir(path) == -1) {
-    fprintf(stderr, "Cannot create file %s (exists, is dir, can't remove)\n", path);
+    fprintf(stderr, "KLEE-REPLAY: ERROR: Cannot create file %s (exists, is dir, can't remove)\n", path);
     perror("rmdir");
     return -1;
   }
@@ -361,7 +358,7 @@ static void delete_file(const char *path, int recurse) {
     if (errno == EISDIR) {
       delete_dir(path, 1);
     } else {
-      fprintf(stderr, "Cannot create file %s (already exists)\n", path);
+      fprintf(stderr, "KLEE-REPLAY: ERROR: Cannot create file %s (already exists)\n", path);
       perror("unlink");
     }
   }
@@ -412,7 +409,7 @@ static void create_file(int target_fd,
     if (target_fd != -1) {
       close(target_fd);
       if (dup2(fd, target_fd) < 0) {
-        fprintf(stderr, "note: dup2 failed for target: %d\n", target_fd);
+        fprintf(stderr, "KLEE-REPLAY: ERROR: dup2 failed for target: %d\n", target_fd);
         perror("dup2");
       }
       close(fd);
@@ -446,7 +443,7 @@ void replay_create_files(exe_file_system_t *exe_fs) {
     exit(EXIT_FAILURE);
   }
 
-  fprintf(stderr, "note: storing KLEE replay files in %s\n", tmpdir);
+  fprintf(stderr, "KLEE-REPLAY: NOTE: Storing KLEE replay files in %s\n", tmpdir);
 
   umask(0);
   for (k=0; k < exe_fs->n_sym_files; k++) {
@@ -481,7 +478,7 @@ int remove_callback(const char *fpath,
 }
 
 void replay_delete_files() {
-  fprintf(stderr, "removing %s\n", replay_dir);
+  fprintf(stderr, "KLEE-REPLAY: NOTE: removing %s\n", replay_dir);
 
   if (nftw(replay_dir, remove_callback, FOPEN_MAX,
            FTW_DEPTH | FTW_PHYS) == -1) {
@@ -512,60 +509,60 @@ static void check_file(int index, exe_disk_file_t *dfile) {
   }
 
   if (res < 0) {
-    fprintf(stderr, "warning: check_file %d: stat failure\n", index);
+    fprintf(stderr, "KLEE-REPLAY: WARNING: check_file %d: stat failure\n", index);
     return;
   }
 
   if (s.st_dev != dfile->stat->st_dev) {
-    fprintf(stderr, "warning: check_file %s: dev mismatch: %d vs %d\n",
+    fprintf(stderr, "KLEE-REPLAY: WARNING: check_file %s: dev mismatch: %d vs %d\n",
             name, (int) s.st_dev, (int) dfile->stat->st_dev);
   }
 /*   if (s.st_ino != dfile->stat->st_ino) { */
-/*     fprintf(stderr, "warning: check_file %s: ino mismatch: %d vs %d\n",  */
+/*     fprintf(stderr, "KLEE-REPLAY: WARNING: check_file %s: ino mismatch: %d vs %d\n",  */
 /*             name, (int) s.st_ino, (int) dfile->stat->st_ino);     */
 /*   } */
   if (s.st_mode != dfile->stat->st_mode) {
-    fprintf(stderr, "warning: check_file %s: mode mismatch: %#o vs %#o\n",
+    fprintf(stderr, "KLEE-REPLAY: WARNING: check_file %s: mode mismatch: %#o vs %#o\n",
             name, s.st_mode, dfile->stat->st_mode);
   }
   if (s.st_nlink != dfile->stat->st_nlink) {
-    fprintf(stderr, "warning: check_file %s: nlink mismatch: %d vs %d\n",
+    fprintf(stderr, "KLEE-REPLAY: WARNING: check_file %s: nlink mismatch: %d vs %d\n",
             name, (int) s.st_nlink, (int) dfile->stat->st_nlink);
   }
   if (s.st_uid != dfile->stat->st_uid) {
-    fprintf(stderr, "warning: check_file %s: uid mismatch: %d vs %d\n",
+    fprintf(stderr, "KLEE-REPLAY: WARNING: check_file %s: uid mismatch: %d vs %d\n",
             name, s.st_uid, dfile->stat->st_uid);
   }
   if (s.st_gid != dfile->stat->st_gid) {
-    fprintf(stderr, "warning: check_file %s: gid mismatch: %d vs %d\n",
+    fprintf(stderr, "KLEE-REPLAY: WARNING: check_file %s: gid mismatch: %d vs %d\n",
             name, s.st_gid, dfile->stat->st_gid);
   }
   if (s.st_rdev != dfile->stat->st_rdev) {
-    fprintf(stderr, "warning: check_file %s: rdev mismatch: %d vs %d\n",
+    fprintf(stderr, "KLEE-REPLAY: WARNING: check_file %s: rdev mismatch: %d vs %d\n",
             name, (int) s.st_rdev, (int) dfile->stat->st_rdev);
   }
   if (s.st_size != dfile->stat->st_size) {
-    fprintf(stderr, "warning: check_file %s: size mismatch: %d vs %d\n",
+    fprintf(stderr, "KLEE-REPLAY: WARNING: check_file %s: size mismatch: %d vs %d\n",
             name, (int) s.st_size, (int) dfile->stat->st_size);
   }
   if (s.st_blksize != dfile->stat->st_blksize) {
-    fprintf(stderr, "warning: check_file %s: blksize mismatch: %d vs %d\n",
+    fprintf(stderr, "KLEE-REPLAY: WARNING: check_file %s: blksize mismatch: %d vs %d\n",
             name, (int) s.st_blksize, (int) dfile->stat->st_blksize);
   }
   if (s.st_blocks != dfile->stat->st_blocks) {
-    fprintf(stderr, "warning: check_file %s: blocks mismatch: %d vs %d\n",
+    fprintf(stderr, "KLEE-REPLAY: WARNING: check_file %s: blocks mismatch: %d vs %d\n",
             name, (int) s.st_blocks, (int) dfile->stat->st_blocks);
   }
 /*   if (s.st_atime != dfile->stat->st_atime) { */
-/*     fprintf(stderr, "warning: check_file %s: atime mismatch: %d vs %d\n",  */
+/*     fprintf(stderr, "KLEE-REPLAY: WARNING: check_file %s: atime mismatch: %d vs %d\n",  */
 /*             name, (int) s.st_atime, (int) dfile->stat->st_atime); */
 /*   } */
 /*   if (s.st_mtime != dfile->stat->st_mtime) { */
-/*     fprintf(stderr, "warning: check_file %s: mtime mismatch: %d vs %d\n",  */
+/*     fprintf(stderr, "KLEE-REPLAY: WARNING: check_file %s: mtime mismatch: %d vs %d\n",  */
 /*             name, (int) s.st_mtime, (int) dfile->stat->st_mtime);     */
 /*   } */
 /*   if (s.st_ctime != dfile->stat->st_ctime) { */
-/*     fprintf(stderr, "warning: check_file %s: ctime mismatch: %d vs %d\n",  */
+/*     fprintf(stderr, "KLEE-REPLAY: WARNING: check_file %s: ctime mismatch: %d vs %d\n",  */
 /*             name, (int) s.st_ctime, (int) dfile->stat->st_ctime);     */
 /*   } */
 }
