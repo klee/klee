@@ -53,8 +53,7 @@ static int create_link(const char *fname,
   char buf[64];
   struct stat64 *s = dfile->stat;
 
-  // XXX Broken, we want this path to be somewhere else most likely.
-  sprintf(buf, "%s.lnk", fname);
+  snprintf(buf, sizeof(buf), "%s.lnk", fname);
   s->st_mode = (s->st_mode & ~S_IFMT) | S_IFREG;
   create_file(-1, buf, dfile, tmpdir);
 
@@ -335,9 +334,9 @@ static int delete_dir(const char *path, int recurse) {
 
     if (d) {
       while ((de = readdir(d))) {
-        if (strcmp(de->d_name, ".")!=0 && strcmp(de->d_name, "..")!=0) {
+        if (strcmp(de->d_name, ".") != 0 && strcmp(de->d_name, "..") != 0) {
           char tmp[PATH_MAX];
-          sprintf(tmp, "%s/%s", path, de->d_name);
+          snprintf(tmp, sizeof(tmp), "%s/%s", path, de->d_name);
           delete_file(tmp, 0);
         }
       }
@@ -378,8 +377,8 @@ static void create_file(int target_fd,
   assert((target_fd == -1) ^ (target_name == NULL));
 
   if (target_name)
-    sprintf(tmpname, "%s/%s", tmpdir, target_name);
-  else sprintf(tmpname, "%s/fd%d", tmpdir, target_fd);
+    snprintf(tmpname, sizeof(tmpname), "%s/%s", tmpdir, target_name);
+  else snprintf(tmpname, sizeof(tmpname), "%s/fd%d", tmpdir, target_fd);
 
   target = tmpname;
 
@@ -418,7 +417,7 @@ static void create_file(int target_fd,
       // Only worry about 1 vs !1
       if (s->st_nlink > 1) {
         char tmp2[PATH_MAX];
-        sprintf(tmp2, "%s/%s.link2", tmpdir, target_name);
+        snprintf(tmp2, sizeof(tmp2), "%s/%s.link2", tmpdir, target_name);
         if (link(target_name, tmp2) < 0) {
           perror("link");
           exit(1);
@@ -449,7 +448,7 @@ void replay_create_files(exe_file_system_t *exe_fs) {
   umask(0);
   for (k=0; k < exe_fs->n_sym_files; k++) {
     char name[2];
-    sprintf(name, "%c", 'A' + k);
+    snprintf(name, sizeof(name), "%c", 'A' + k);
     create_file(-1, name, &exe_fs->sym_files[k], tmpdir);
   }
 
@@ -509,7 +508,7 @@ static void check_file(int index, exe_disk_file_t *dfile) {
   default:
     name[0] = 'A' + index;
     name[1] = '\0';
-    sprintf(fullname, "%s/%s", replay_dir, name);
+    snprintf(fullname, sizeof(fullname), "%s/%s", replay_dir, name);
     res = stat(fullname, &s);
 
     break;
