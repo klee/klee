@@ -4,14 +4,24 @@
 // RUN: %cc %s -O0 -o %t
 // RUN: %klee-replay %t %t.bout 2> %t.out
 // RUN: FileCheck --input-file=%t.out %s
+// CHECK: KLEE-REPLAY: NOTE: EXIT STATUS: NORMAL
 //
 // -- Option error handling tests
-// RUN: bash -c '%gen-random-bout || :' 2>&1 | grep "Usage"
-// RUN: bash -c '%gen-random-bout 0 --unexpected-option || :' 2>&1 | grep "Unexpected"
-// RUN: bash -c '%gen-random-bout 100 --sym-args 5 3 || :' 2>&1 | grep "ran out of"
-// RUN: bash -c '%gen-random-bout 100 --sym-args 5 3 10 || :' 2>&1 | grep "should be no more"
-
-// CHECK: KLEE-REPLAY: NOTE: EXIT STATUS: NORMAL
+// RUN: not %gen-random-bout 2> %t1
+// RUN: FileCheck -check-prefix=CHECK-USAGE -input-file=%t1 %s
+// CHECK-USAGE: Usage
+//
+// RUN: not %gen-random-bout 0 --unexpected-option 2> %t2
+// RUN: FileCheck -check-prefix=CHECK-UNEXPECTED -input-file=%t2 %s
+// CHECK-UNEXPECTED: Unexpected
+//
+// RUN: not %gen-random-bout 100 --sym-args 5 3 2> %t3
+// RUN: FileCheck -check-prefix=CHECK-RANOUT -input-file=%t3 %s
+// CHECK-RANOUT: ran out of
+//
+// RUN: not %gen-random-bout 100 --sym-args 5 3 10 2> %t4
+// RUN: FileCheck -check-prefix=CHECK-NOMORE -input-file=%t4 %s
+// CHECK-NOMORE: should be no more
 
 #include <sys/types.h>
 #include <sys/stat.h>
