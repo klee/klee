@@ -41,7 +41,6 @@ static void create_file(int target_fd,
                        exe_disk_file_t *dfile,
                        const char *tmpdir);
 static void check_file(int index, exe_disk_file_t *dfile);
-static void delete_file(const char *path, int recurse);
 
 
 #define __STDIN (-1)
@@ -327,44 +326,6 @@ static int create_reg_file(const char *fname, exe_disk_file_t *dfile,
   return fd;
 }
 
-static int delete_dir(const char *path, int recurse) {
-  if (recurse) {
-    DIR *d = opendir(path);
-    struct dirent *de;
-
-    if (d) {
-      while ((de = readdir(d))) {
-        if (strcmp(de->d_name, ".") != 0 && strcmp(de->d_name, "..") != 0) {
-          char tmp[PATH_MAX];
-          snprintf(tmp, sizeof(tmp), "%s/%s", path, de->d_name);
-          delete_file(tmp, 0);
-        }
-      }
-
-      closedir(d);
-    }
-  }
-
-  if (rmdir(path) == -1) {
-    fprintf(stderr, "KLEE-REPLAY: ERROR: Cannot create file %s (exists, is dir, can't remove)\n", path);
-    perror("rmdir");
-    return -1;
-  }
-
-  return 0;
-}
-
-static void delete_file(const char *path, int recurse) {
-  if (unlink(path) < 0 && errno != ENOENT) {
-    if (errno == EISDIR) {
-      delete_dir(path, 1);
-    } else {
-      fprintf(stderr, "KLEE-REPLAY: ERROR: Cannot create file %s (already exists)\n", path);
-      perror("unlink");
-    }
-  }
-}
-
 static void create_file(int target_fd,
                         const char *target_name,
                         exe_disk_file_t *dfile,
@@ -381,8 +342,6 @@ static void create_file(int target_fd,
   else snprintf(tmpname, sizeof(tmpname), "%s/fd%d", tmpdir, target_fd);
 
   target = tmpname;
-
-  delete_file(target, 1);
 
   // XXX get rid of me once a reasonable solution is found
   s->st_uid = geteuid();
