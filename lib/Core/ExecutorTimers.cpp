@@ -117,7 +117,7 @@ void Executor::processTimers(ExecutionState *current,
   if (ticks || dumpPTree || dumpStates) {
     if (dumpPTree) {
       char name[32];
-      sprintf(name, "ptree%08d.dot", (int) stats::instructions);
+      snprintf(name, sizeof(name), "ptree%08d.dot", (int) stats::instructions);
       auto os = interpreterHandler->openOutputFile(name);
       if (os) {
         processTree->dump(*os);

@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
 
   // Ensure atomic write
   char buf[64];
-  sprintf(buf, "COUNT: %d\n", count);
+  snprintf(buf, sizeof(buf), "COUNT: %d\n", count);
   fputs(buf, stdout);
   assert(hasA == foundA);
 

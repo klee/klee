@@ -134,13 +134,13 @@ int main(int argc, char *argv[]) {
       static int total_args = 0;
 
       char arg[1024];
-      sprintf(arg, "arg%d", total_args++);
+      snprintf(arg, sizeof(arg), "arg%d", total_args++);
       push_obj(&b, (const char *)arg, nbytes, (unsigned char *)argv[i]);
 
       char *buf1 = (char *)malloc(1024);
       char *buf2 = (char *)malloc(1024);
       strcpy(buf1, "-sym-arg");
-      sprintf(buf2, "%ld", nbytes - 1);
+      snprintf(buf2, 1024, "%ld", nbytes - 1);
       argv_copy[argv_copy_idx++] = buf1;
       argv_copy[argv_copy_idx++] = buf2;
     }
@@ -182,9 +182,9 @@ int main(int argc, char *argv[]) {
     char *buf1 = (char *)malloc(1024);
     char *buf2 = (char *)malloc(1024);
     char *buf3 = (char *)malloc(1024);
-    sprintf(buf1, "-sym-files");
-    sprintf(buf2, "1");
-    sprintf(buf3, "%ld", nbytes);
+    snprintf(buf1, 1024, "-sym-files");
+    snprintf(buf2, 1024, "1");
+    snprintf(buf3, 1024, "%ld", nbytes);
     argv_copy[argv_copy_idx++] = buf1;
     argv_copy[argv_copy_idx++] = buf2;
     argv_copy[argv_copy_idx++] = buf3;
@@ -222,8 +222,8 @@ int main(int argc, char *argv[]) {
 
     char *buf1 = (char *)malloc(1024);
     char *buf2 = (char *)malloc(1024);
-    sprintf(buf1, "-sym-stdin");
-    sprintf(buf2, "%ld", file_stat.st_size);
+    snprintf(buf1, 1024, "-sym-stdin");
+    snprintf(buf2, 1024, "%ld", file_stat.st_size);
     argv_copy[argv_copy_idx++] = buf1;
     argv_copy[argv_copy_idx++] = buf2;
   }
@@ -257,7 +257,7 @@ int main(int argc, char *argv[]) {
     push_obj(&b, statname, sizeof(struct stat64), (unsigned char *)&file_stat);
 
     char *buf = (char *)malloc(1024);
-    sprintf(buf, "-sym-stdout");
+    snprintf(buf, 1024, "-sym-stdout");
     argv_copy[argv_copy_idx++] = buf;
   }
 

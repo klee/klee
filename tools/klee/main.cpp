@@ -1005,7 +1005,7 @@ static void interrupt_handle_watchdog() {
 // the state data before going ahead and killing it.
 static void halt_via_gdb(int pid) {
   char buffer[256];
-  sprintf(buffer,
+  snprintf(buffer, sizeof(buffer),
           "gdb --batch --eval-command=\"p halt_execution()\" "
           "--eval-command=detach --pid=%d &> /dev/null",
           pid);

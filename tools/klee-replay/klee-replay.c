@@ -69,7 +69,7 @@ static void stop_monitored(int process) {
       0
     };
     char pids[64];
-    sprintf(pids, "%d", process);
+    snprintf(pids, sizeof(pids), "%d", process);
 
     gdbargs[2] = pids;
     /* Make sure gdb doesn't talk to the user */
@@ -111,6 +111,7 @@ static void int_handler(int signal) {
     _exit(99);
   }
 }
+
 static void timeout_handler(int signal) {
   fprintf(stderr, "KLEE-REPLAY: NOTE: EXIT STATUS: TIMED OUT (%d seconds)\n",
           monitored_timeout);
@@ -139,7 +140,7 @@ void process_status(int status, time_t elapsed, const char *pfx) {
     if (rc == 0) {
       strcpy(msg, "NORMAL");
     } else {
-      sprintf(msg, "ABNORMAL %d", rc);
+      snprintf(msg, sizeof(msg), "ABNORMAL %d", rc);
     }
     fprintf(stderr, "KLEE-REPLAY: NOTE: EXIT STATUS: %s (%d seconds)\n", msg, (int) elapsed);
     _exit(rc);
@@ -406,7 +407,7 @@ int main(int argc, char** argv) {
 }
 
 
-/* Klee functions */
+/* KLEE functions */
 
 int __fputc_unlocked(int c, FILE *f) {
   return fputc_unlocked(c, f);
