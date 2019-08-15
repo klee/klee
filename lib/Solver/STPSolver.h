@@ -11,7 +11,7 @@
 #ifndef KLEE_STPSOLVER_H
 #define KLEE_STPSOLVER_H
 
-#include "klee/Solver.h"
+#include "klee/Solver/Solver.h"
 
 namespace klee {
 /// STPSolver - A complete solver based on STP.

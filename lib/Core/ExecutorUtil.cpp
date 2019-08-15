@@ -16,7 +16,7 @@
 #include "klee/Internal/Module/KModule.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Interpreter.h"
-#include "klee/Solver.h"
+#include "klee/Solver/Solver.h"
 
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"

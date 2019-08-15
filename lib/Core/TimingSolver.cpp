@@ -11,7 +11,7 @@
 
 #include "klee/Config/Version.h"
 #include "klee/ExecutionState.h"
-#include "klee/Solver.h"
+#include "klee/Solver/Solver.h"
 #include "klee/Statistics.h"
 #include "klee/TimerStatIncrementer.h"
 

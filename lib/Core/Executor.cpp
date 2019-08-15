@@ -47,8 +47,8 @@
 #include "klee/Internal/System/Time.h"
 #include "klee/Interpreter.h"
 #include "klee/OptionCategories.h"
-#include "klee/SolverCmdLine.h"
-#include "klee/SolverStats.h"
+#include "klee/Solver/SolverCmdLine.h"
+#include "klee/Solver/SolverStats.h"
 #include "klee/TimerStatIncrementer.h"
 #include "klee/util/GetElementPtrTypeIterator.h"
 

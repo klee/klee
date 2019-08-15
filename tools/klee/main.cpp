@@ -22,7 +22,7 @@
 #include "klee/Internal/System/Time.h"
 #include "klee/Interpreter.h"
 #include "klee/OptionCategories.h"
-#include "klee/SolverCmdLine.h"
+#include "klee/Solver/SolverCmdLine.h"
 #include "klee/Statistics.h"
 
 #include "llvm/IR/Constants.h"

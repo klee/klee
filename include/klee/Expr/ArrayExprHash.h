@@ -11,11 +11,10 @@
 #define KLEE_ARRAYEXPRHASH_H
 
 #include "klee/Expr/Expr.h"
+#include "klee/Solver/SolverStats.h"
 #include "klee/TimerStatIncrementer.h"
-#include "klee/SolverStats.h"
 
 #include <map>
-
 #include <unordered_map>
 
 namespace klee {

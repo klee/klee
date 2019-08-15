@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Solver.h"
-#include "klee/SolverImpl.h"
-#include "klee/SolverStats.h"
+#include "klee/Solver/Solver.h"
+#include "klee/Solver/SolverImpl.h"
+#include "klee/Solver/SolverStats.h"
 
 namespace klee {
 

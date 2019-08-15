@@ -14,7 +14,8 @@
 #ifndef KLEE_COMMON_H
 #define KLEE_COMMON_H
 
-#include "klee/Solver.h"
+#include "klee/Solver/Solver.h"
+
 #include <string>
 
 namespace klee {

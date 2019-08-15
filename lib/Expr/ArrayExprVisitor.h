@@ -12,7 +12,7 @@
 
 #include "klee/Expr/ExprBuilder.h"
 #include "klee/Expr/ExprVisitor.h"
-#include "klee/SolverCmdLine.h"
+#include "klee/Solver/SolverCmdLine.h"
 
 #include <unordered_map>
 #include <unordered_set>

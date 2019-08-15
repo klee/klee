@@ -12,8 +12,9 @@
  * data that are common to both KLEE and Kleaver.
  */
 
+#include "klee/Solver/SolverCmdLine.h"
+
 #include "klee/Config/Version.h"
-#include "klee/SolverCmdLine.h"
 #include "klee/OptionCategories.h"
 
 #include "llvm/ADT/ArrayRef.h"

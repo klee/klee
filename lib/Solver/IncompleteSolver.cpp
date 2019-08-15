@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/IncompleteSolver.h"
+#include "klee/Solver/IncompleteSolver.h"
 
 #include "klee/Expr/Constraints.h"
 

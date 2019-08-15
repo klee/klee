@@ -8,14 +8,14 @@
 //===----------------------------------------------------------------------===//
 
 #define DEBUG_TYPE "independent-solver"
-#include "klee/Solver.h"
+#include "klee/Solver/Solver.h"
 
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Internal/Support/Debug.h"
-#include "klee/SolverImpl.h"
+#include "klee/Solver/SolverImpl.h"
 
 #include "llvm/Support/raw_ostream.h"
 

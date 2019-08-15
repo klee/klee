@@ -13,7 +13,7 @@
 
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
-#include "klee/Solver.h"
+#include "klee/Solver/Solver.h"
 #include "klee/util/PrintContext.h"
 
 #include <map>
