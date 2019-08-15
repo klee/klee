@@ -18,7 +18,7 @@
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/OptionCategories.h"
-#include "klee/SolverImpl.h"
+#include "klee/Solver/SolverImpl.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errno.h"

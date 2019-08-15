@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Solver.h"
+#include "klee/Solver/Solver.h"
 
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/Constraints.h"
@@ -17,8 +17,8 @@
 #include "klee/Internal/ADT/MapOfSets.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/OptionCategories.h"
-#include "klee/SolverImpl.h"
-#include "klee/SolverStats.h"
+#include "klee/Solver/SolverImpl.h"
+#include "klee/Solver/SolverStats.h"
 #include "klee/TimerStatIncrementer.h"
 
 #include "llvm/Support/CommandLine.h"

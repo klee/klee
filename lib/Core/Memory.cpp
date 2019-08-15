@@ -17,7 +17,7 @@
 #include "klee/Expr/Expr.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/OptionCategories.h"
-#include "klee/Solver.h"
+#include "klee/Solver/Solver.h"
 #include "klee/util/BitArray.h"
 
 #include "llvm/IR/Function.h"

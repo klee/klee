@@ -10,10 +10,12 @@
 /*
  * This file groups declarations that are common to both KLEE and Kleaver.
  */
+
 #include "klee/Common.h"
-#include "klee/SolverCmdLine.h"
 #include "klee/Internal/Support/ErrorHandling.h"
 #include "klee/Internal/System/Time.h"
+#include "klee/Solver/SolverCmdLine.h"
+
 #include "llvm/Support/raw_ostream.h"
 
 

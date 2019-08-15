@@ -13,15 +13,15 @@
 #include "Memory.h"
 #include "MemoryManager.h"
 #include "TimingSolver.h"
-#include "klee/MergeHandler.h"
 
 #include "klee/ExecutionState.h"
 #include "klee/Internal/Module/KInstruction.h"
 #include "klee/Internal/Module/KModule.h"
 #include "klee/Internal/Support/Debug.h"
 #include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/MergeHandler.h"
 #include "klee/OptionCategories.h"
-#include "klee/SolverCmdLine.h"
+#include "klee/Solver/SolverCmdLine.h"
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DataLayout.h"

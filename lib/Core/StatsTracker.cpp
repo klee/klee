@@ -18,7 +18,7 @@
 #include "klee/Internal/Support/ModuleUtil.h"
 #include "klee/Internal/System/MemoryUsage.h"
 #include "klee/Internal/Support/ErrorHandling.h"
-#include "klee/SolverStats.h"
+#include "klee/Solver/SolverStats.h"
 
 #include "CallPathManager.h"
 #include "CoreStats.h"

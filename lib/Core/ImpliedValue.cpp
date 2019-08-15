@@ -15,7 +15,7 @@
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Internal/Support/IntEvaluation.h" // FIXME: Use APInt
-#include "klee/Solver.h"
+#include "klee/Solver/Solver.h"
 
 #include <map>
 #include <set>

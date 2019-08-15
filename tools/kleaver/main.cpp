@@ -19,9 +19,9 @@
 #include "klee/Expr/Parser/Parser.h"
 #include "klee/Internal/Support/PrintVersion.h"
 #include "klee/OptionCategories.h"
-#include "klee/Solver.h"
-#include "klee/SolverCmdLine.h"
-#include "klee/SolverImpl.h"
+#include "klee/Solver/Solver.h"
+#include "klee/Solver/SolverCmdLine.h"
+#include "klee/Solver/SolverImpl.h"
 #include "klee/Statistics.h"
 
 #include "llvm/ADT/StringExtras.h"

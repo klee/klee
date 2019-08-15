@@ -14,7 +14,7 @@
 #include "klee/Expr/ExprPPrinter.h"
 #include "klee/Expr/Parser/Lexer.h"
 #include "klee/Expr/Parser/Parser.h"
-#include "klee/Solver.h"
+#include "klee/Solver/Solver.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/MemoryBuffer.h"

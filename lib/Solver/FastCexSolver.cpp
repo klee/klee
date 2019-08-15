@@ -8,14 +8,14 @@
 //===----------------------------------------------------------------------===//
 
 #define DEBUG_TYPE "cex-solver"
-#include "klee/Solver.h"
+#include "klee/Solver/Solver.h"
 
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprEvaluator.h"
 #include "klee/Expr/ExprRangeEvaluator.h"
 #include "klee/Expr/ExprVisitor.h"
-#include "klee/IncompleteSolver.h"
+#include "klee/Solver/IncompleteSolver.h"
 #include "klee/Internal/Support/Debug.h"
 #include "klee/Internal/Support/IntEvaluation.h" // FIXME: Use APInt
 

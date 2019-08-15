@@ -10,8 +10,8 @@
 #ifndef KLEE_INCOMPLETESOLVER_H
 #define KLEE_INCOMPLETESOLVER_H
 
-#include "klee/Solver.h"
-#include "klee/SolverImpl.h"
+#include "klee/Solver/Solver.h"
+#include "klee/Solver/SolverImpl.h"
 
 namespace klee {
 

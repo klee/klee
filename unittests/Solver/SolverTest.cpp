@@ -12,8 +12,8 @@
 #include "klee/Expr/ArrayCache.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
-#include "klee/Solver.h"
-#include "klee/SolverCmdLine.h"
+#include "klee/Solver/Solver.h"
+#include "klee/Solver/SolverCmdLine.h"
 
 #include "llvm/ADT/StringExtras.h"
 

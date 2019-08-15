@@ -11,7 +11,7 @@
 #ifndef KLEE_METASMTSOLVER_H
 #define KLEE_METASMTSOLVER_H
 
-#include "klee/Solver.h"
+#include "klee/Solver/Solver.h"
 
 namespace klee {
 
