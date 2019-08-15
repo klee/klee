@@ -53,10 +53,10 @@ static struct option long_options[] = {
 };
 
 static void stop_monitored(int process) {
-  fprintf(stderr, "KLEE-REPLAY: NOTE: TIMEOUT: ATTEMPTING GDB EXIT\n");
+  fputs("KLEE-REPLAY: NOTE: TIMEOUT: ATTEMPTING GDB EXIT\n", stderr);
   int pid = fork();
   if (pid < 0) {
-    fprintf(stderr, "KLEE-REPLAY: ERROR: gdb_exit: fork failed\n");
+    fputs("KLEE-REPLAY: ERROR: gdb_exit: fork failed\n", stderr);
   } else if (pid == 0) {
     /* Run gdb in a child process. */
     const char *gdbargs[] = {
@@ -75,11 +75,11 @@ static void stop_monitored(int process) {
     /* Make sure gdb doesn't talk to the user */
     close(0);
 
-    fprintf(stderr, "KLEE-REPLAY: NOTE: RUNNING GDB: ");
+    fputs("KLEE-REPLAY: NOTE: RUNNING GDB: ", stderr);
     unsigned i;
     for (i = 0; i != 5; ++i)
       fprintf(stderr, "%s ", gdbargs[i]);
-    fprintf(stderr, "\n");
+    fputc('\n', stderr);
 
     execvp(gdbargs[0], (char * const *) gdbargs);
     perror("execvp");
@@ -252,7 +252,7 @@ void ensure_capsyschroot(const char *executable) {
   cap_get_flag(caps, CAP_SYS_CHROOT, CAP_PERMITTED, &chroot_permitted);
   cap_get_flag(caps, CAP_SYS_CHROOT, CAP_EFFECTIVE, &chroot_effective);
   if (chroot_permitted != CAP_SET || chroot_effective != CAP_SET) {
-    fprintf(stderr, "KLEE-REPLAY: ERROR: chroot: No CAP_SYS_CHROOT capability.\n");
+    fputs("KLEE-REPLAY: ERROR: chroot: No CAP_SYS_CHROOT capability.\n", stderr);
     exit(1);
   }
   cap_free(caps);
@@ -260,14 +260,16 @@ void ensure_capsyschroot(const char *executable) {
 #endif
 
 static void usage(void) {
-  fprintf(stderr, "Usage: %s [option]... <executable> <ktest-file>...\n", progname);
-  fprintf(stderr, "   or: %s --create-files-only <ktest-file>\n", progname);
-  fprintf(stderr, "\n");
-  fprintf(stderr, "-r, --chroot-to-dir=DIR  use chroot jail, requires CAP_SYS_CHROOT\n");
-  fprintf(stderr, "-k, --keep-replay-dir    do not delete replay directory\n");
-  fprintf(stderr, "-h, --help               display this help and exit\n");
-  fprintf(stderr, "\n");
-  fprintf(stderr, "Use KLEE_REPLAY_TIMEOUT environment variable to set a timeout (in seconds).\n");
+  fprintf(stderr,
+    "Usage: %s [option]... <executable> <ktest-file>...\n"
+    "   or: %s --create-files-only <ktest-file>\n"
+    "\n"
+    "-r, --chroot-to-dir=DIR  use chroot jail, requires CAP_SYS_CHROOT\n"
+    "-k, --keep-replay-dir    do not delete replay directory\n"
+    "-h, --help               display this help and exit\n"
+    "\n"
+    "Use KLEE_REPLAY_TIMEOUT environment variable to set a timeout (in seconds).\n",
+    progname, progname);
   exit(1);
 }
 
@@ -331,7 +333,7 @@ int main(int argc, char** argv) {
 
   /* rootdir should be a prefix of executable's path. */
   if (rootdir && strstr(executable, rootdir) != executable) {
-    fprintf(stderr, "KLEE-REPLAY: ERROR: chroot: root dir should be a parent dir of executable.\n");
+    fputs("KLEE-REPLAY: ERROR: chroot: root dir should be a parent dir of executable.\n", stderr);
     exit(1);
   }
 
@@ -361,15 +363,15 @@ int main(int argc, char** argv) {
     prg_argv[0] = argv[optind];
     klee_init_env(&prg_argc, &prg_argv);
     if (idx > 2)
-      fprintf(stderr, "\n");
-    fprintf(stderr, "KLEE-REPLAY: NOTE: Test file: %s\n", input_fname);
-    fprintf(stderr, "KLEE-REPLAY: NOTE: Arguments: ");
+      fputc('\n', stderr);
+    fprintf(stderr, "KLEE-REPLAY: NOTE: Test file: %s\n"
+                    "KLEE-REPLAY: NOTE: Arguments: ", input_fname);
     for (i=0; i != (unsigned) prg_argc; ++i) {
       char *s = prg_argv[i];
       if (s[0]=='A' && s[1] && !s[2]) s[1] = '\0';
       fprintf(stderr, "\"%s\" ", prg_argv[i]);
     }
-    fprintf(stderr, "\n");
+    fputc('\n', stderr);
 
     /* Create the input files, pipes, etc. */
     replay_create_files(&__exe_fs);
@@ -431,7 +433,7 @@ void klee_warning_once(char *name) {
 
 unsigned klee_assume(uintptr_t x) {
   if (!x) {
-    fprintf(stderr, "KLEE-REPLAY: klee_assume(0)!\n");
+    fputs("KLEE-REPLAY: klee_assume(0)!\n", stderr);
   }
   return 0;
 }
@@ -482,7 +484,7 @@ int klee_range(int start, int end, const char* name) {
   int r;
 
   if (start >= end) {
-    fprintf(stderr, "KLEE-REPLAY: ERROR: klee_range: invalid range\n");
+    fputs("KLEE-REPLAY: ERROR: klee_range: invalid range\n", stderr);
     exit(1);
   }
 

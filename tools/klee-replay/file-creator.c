@@ -148,7 +148,7 @@ static int create_char_dev(const char *fname, exe_disk_file_t *dfile,
     }
 
     if (symlink(name, fname) == -1) {
-      fprintf(stderr, "KLEE-REPLAY: ERROR: unable to create sym link to tty\n");
+      fputs("KLEE-REPLAY: ERROR: unable to create sym link to tty\n", stderr);
       perror("symlink");
     }
 
@@ -162,7 +162,7 @@ static int create_char_dev(const char *fname, exe_disk_file_t *dfile,
     } else if (pid == 0) {
       close(amaster);
 
-      fprintf(stderr, "KLEE-REPLAY: NOTE: pty slave: setting raw mode\n");
+      fputs("KLEE-REPLAY: NOTE: pty slave: setting raw mode\n", stderr);
       {
         struct termios mode;
 
@@ -185,14 +185,14 @@ static int create_char_dev(const char *fname, exe_disk_file_t *dfile,
     } else {
       unsigned pos = 0;
       int status;
-      fprintf(stderr, "KLEE-REPLAY: NOTE: pty master: starting\n");
+      fputs("KLEE-REPLAY: NOTE: pty master: starting\n", stderr);
       close(aslave);
 
       while (pos < flen) {
         ssize_t res = write(amaster, &contents[pos], flen - pos);
         if (res<0) {
           if (errno != EINTR) {
-            fprintf(stderr, "KLEE-REPLAY: NOTE: pty master: write error\n");
+            fputs("KLEE-REPLAY: NOTE: pty master: write error\n", stderr);
             perror("errno");
             break;
           }
@@ -205,7 +205,7 @@ static int create_char_dev(const char *fname, exe_disk_file_t *dfile,
       if (wait_for_timeout_or_exit(pid, "pty master", &status))
         goto pty_exit;
 
-      fprintf(stderr, "KLEE-REPLAY: NOTE: pty master: closing & waiting\n");
+      fputs("KLEE-REPLAY: NOTE: pty master: closing & waiting\n", stderr);
       close(amaster);
       while (1) {
         pid_t res = waitpid(pid, &status, 0);
@@ -219,7 +219,7 @@ static int create_char_dev(const char *fname, exe_disk_file_t *dfile,
 
     pty_exit:
       close(amaster);
-      fprintf(stderr, "KLEE-REPLAY: NOTE: pty master: done\n");
+      fputs("KLEE-REPLAY: NOTE: pty master: done\n", stderr);
       process_status(status, 0, "PTY MASTER");
     }
   }
@@ -250,7 +250,7 @@ static int create_pipe(const char *fname, exe_disk_file_t *dfile,
   } else {
     unsigned pos = 0;
     int status;
-    fprintf(stderr, "KLEE-REPLAY: NOTE: pipe master: starting\n");
+    fputs("KLEE-REPLAY: NOTE: pipe master: starting\n", stderr);
     close(fds[0]);
 
     while (pos < flen) {
@@ -266,7 +266,7 @@ static int create_pipe(const char *fname, exe_disk_file_t *dfile,
     if (wait_for_timeout_or_exit(pid, "pipe master", &status))
       goto pipe_exit;
 
-    fprintf(stderr, "KLEE-REPLAY: NOTE: pipe master: closing & waiting\n");
+    fputs("KLEE-REPLAY: NOTE: pipe master: closing & waiting\n", stderr);
     close(fds[1]);
     while (1) {
       pid_t res = waitpid(pid, &status, 0);
@@ -280,7 +280,7 @@ static int create_pipe(const char *fname, exe_disk_file_t *dfile,
 
   pipe_exit:
     close(fds[1]);
-    fprintf(stderr, "KLEE-REPLAY: NOTE: pipe master: done\n");
+    fputs("KLEE-REPLAY: NOTE: pipe master: done\n", stderr);
     process_status(status, 0, "PTY MASTER");
   }
 }
