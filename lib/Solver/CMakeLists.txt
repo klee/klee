@@ -21,6 +21,7 @@ klee_add_component(kleaverSolver
   QueryLoggingSolver.cpp
   SMTLIBLoggingSolver.cpp
   Solver.cpp
+  SolverCmdLine.cpp
   SolverImpl.cpp
   SolverStats.cpp
   STPBuilder.cpp
