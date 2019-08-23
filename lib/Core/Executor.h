@@ -74,6 +74,7 @@ namespace klee {
   class TimingSolver;
   class TreeStreamWriter;
   class MergeHandler;
+  class MergingSearcher;
   template<class T> class ref;
 
 
@@ -89,7 +90,6 @@ class Executor : public Interpreter {
   friend class SpecialFunctionHandler;
   friend class StatsTracker;
   friend class MergeHandler;
-  friend class MergingSearcher;
 
 public:
   typedef std::pair<ExecutionState*,ExecutionState*> StatePair;
@@ -127,16 +127,6 @@ private:
   TimerGroup timers;
   std::unique_ptr<PTree> processTree;
 
-  /// Keeps track of all currently ongoing merges.
-  /// An ongoing merge is a set of states which branched from a single state
-  /// which ran into a klee_open_merge(), and not all states in the set have
-  /// reached the corresponding klee_close_merge() yet.
-  std::vector<MergeHandler *> mergeGroups;
-
-  /// ExecutionStates currently paused from scheduling because they are
-  /// waiting to be merged in a klee_close_merge instruction
-  std::set<ExecutionState *> inCloseMerge;
-
   /// Used to track states that have been added during the current
   /// instructions step. 
   /// \invariant \ref addedStates is a subset of \ref states. 
@@ -147,13 +137,6 @@ private:
   /// \invariant \ref removedStates is a subset of \ref states. 
   /// \invariant \ref addedStates and \ref removedStates are disjoint.
   std::vector<ExecutionState *> removedStates;
-
-  /// Used to track states that are not terminated, but should not
-  /// be scheduled by the searcher.
-  std::vector<ExecutionState *> pausedStates;
-  /// States that were 'paused' from scheduling, that now may be
-  /// scheduled again
-  std::vector<ExecutionState *> continuedStates;
 
   /// When non-empty the Executor is running in "seed" mode. The
   /// states in this map will be executed in an arbitrary order
@@ -226,6 +209,10 @@ private:
 
   /// Optimizes expressions
   ExprOptimizer optimizer;
+
+  /// Points to the merging searcher of the searcher chain,
+  /// `nullptr` if merging is disabled
+  MergingSearcher *mergingSearcher = nullptr;
 
   llvm::Function* getTargetFunction(llvm::Value *calledVal,
                                     ExecutionState &state);
@@ -410,10 +397,6 @@ private:
 
   bool shouldExitOn(enum TerminateReason termReason);
 
-  // remove state from searcher only
-  void pauseState(ExecutionState& state);
-  // add state to searcher only
-  void continueState(ExecutionState& state);
   // remove state from queue and delete
   void terminateState(ExecutionState &state);
   // call exit handler and terminate state
@@ -526,6 +509,9 @@ public:
 
   /// Returns the errno location in memory of the state
   int *getErrnoLocation(const ExecutionState &state) const;
+
+  MergingSearcher *getMergingSearcher() const { return mergingSearcher; };
+  void setMergingSearcher(MergingSearcher *ms) { mergingSearcher = ms; };
 };
   
 } // End klee namespace

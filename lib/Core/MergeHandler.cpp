@@ -11,6 +11,7 @@
 
 #include "CoreStats.h"
 #include "Executor.h"
+#include "Searcher.h"
 #include "klee/ExecutionState.h"
 
 namespace klee {
@@ -54,8 +55,9 @@ unsigned MergeHandler::getInstructionDistance(ExecutionState *es){
 
 ExecutionState *MergeHandler::getPrioritizeState(){
   for (ExecutionState *cur_state : openStates) {
-    bool stateIsClosed = (executor->inCloseMerge.find(cur_state) !=
-                          executor->inCloseMerge.end());
+    bool stateIsClosed =
+        (executor->mergingSearcher->inCloseMerge.find(cur_state) !=
+         executor->mergingSearcher->inCloseMerge.end());
 
     if (!stateIsClosed && (getInstructionDistance(cur_state) < 2 * getMean())) {
       return cur_state;
@@ -95,7 +97,7 @@ void MergeHandler::addClosedState(ExecutionState *es,
   // add a new element to the map
   if (closePoint == reachedCloseMerge.end()) {
     reachedCloseMerge[mp].push_back(es);
-    executor->pauseState(*es);
+    executor->mergingSearcher->pauseState(*es);
   } else {
     // Otherwise try to merge with any state in the map element for this
     // instruction
@@ -105,14 +107,14 @@ void MergeHandler::addClosedState(ExecutionState *es,
     for (auto& mState: cpv) {
       if (mState->merge(*es)) {
         executor->terminateState(*es);
-        executor->inCloseMerge.erase(es);
+        executor->mergingSearcher->inCloseMerge.erase(es);
         mergedSuccessful = true;
         break;
       }
     }
     if (!mergedSuccessful) {
       cpv.push_back(es);
-      executor->pauseState(*es);
+      executor->mergingSearcher->pauseState(*es);
     }
   }
 }
@@ -120,8 +122,8 @@ void MergeHandler::addClosedState(ExecutionState *es,
 void MergeHandler::releaseStates() {
   for (auto& curMergeGroup: reachedCloseMerge) {
     for (auto curState: curMergeGroup.second) {
-      executor->continueState(*curState);
-      executor->inCloseMerge.erase(curState);
+      executor->mergingSearcher->continueState(*curState);
+      executor->mergingSearcher->inCloseMerge.erase(curState);
     }
   }
   reachedCloseMerge.clear();
@@ -134,15 +136,17 @@ bool MergeHandler::hasMergedStates() {
 MergeHandler::MergeHandler(Executor *_executor, ExecutionState *es)
     : executor(_executor), openInstruction(es->steppedInstructions),
       closedMean(0), closedStateCount(0), refCount(0) {
-  executor->mergeGroups.push_back(this);
+  executor->mergingSearcher->mergeGroups.push_back(this);
   addOpenState(es);
 }
 
 MergeHandler::~MergeHandler() {
-  auto it = std::find(executor->mergeGroups.begin(),
-                      executor->mergeGroups.end(), this);
-  std::swap(*it, executor->mergeGroups.back());
-  executor->mergeGroups.pop_back();
+  auto it = std::find(executor->mergingSearcher->mergeGroups.begin(),
+                      executor->mergingSearcher->mergeGroups.end(), this);
+  assert(it != executor->mergingSearcher->mergeGroups.end() &&
+         "All MergeHandlers should be registered in mergeGroups");
+  std::swap(*it, executor->mergingSearcher->mergeGroups.back());
+  executor->mergingSearcher->mergeGroups.pop_back();
 
   releaseStates();
 }

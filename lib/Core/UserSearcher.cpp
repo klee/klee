@@ -125,33 +125,37 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, Executor &executor) {
 Searcher *klee::constructUserSearcher(Executor &executor) {
 
   Searcher *searcher = getNewSearcher(CoreSearch[0], executor);
-  
+
   if (CoreSearch.size() > 1) {
     std::vector<Searcher *> s;
     s.push_back(searcher);
 
-    for (unsigned i=1; i<CoreSearch.size(); i++)
+    for (unsigned i = 1; i < CoreSearch.size(); i++)
       s.push_back(getNewSearcher(CoreSearch[i], executor));
-    
+
     searcher = new InterleavedSearcher(s);
   }
 
-  if (UseMerge) {
-    if (std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::RandomPath) != CoreSearch.end()){
-      klee_error("use-merge currently does not support random-path, please use another search strategy");
-    }
-  }
-
   if (UseBatchingSearch) {
-    searcher = new BatchingSearcher(searcher, time::Span(BatchTime), BatchInstructions);
-  }
-
-  if (UseMerge && UseIncompleteMerge) {
-    searcher = new MergingSearcher(executor, searcher);
+    searcher = new BatchingSearcher(searcher, time::Span(BatchTime),
+                                    BatchInstructions);
   }
 
   if (UseIterativeDeepeningTimeSearch) {
     searcher = new IterativeDeepeningTimeSearcher(searcher);
+  }
+
+  if (UseMerge) {
+    if (std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::RandomPath) !=
+        CoreSearch.end()) {
+      klee_error("use-merge currently does not support random-path, please use "
+                 "another search strategy");
+    }
+
+    auto *ms = new MergingSearcher(searcher);
+    executor.setMergingSearcher(ms);
+
+    searcher = ms;
   }
 
   llvm::raw_ostream &os = executor.getHandler().getInfoStream();
