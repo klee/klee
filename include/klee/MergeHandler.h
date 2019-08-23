@@ -83,8 +83,6 @@ extern llvm::cl::opt<bool> UseMerge;
 
 extern llvm::cl::opt<bool> DebugLogMerge;
 
-extern llvm::cl::opt<bool> UseIncompleteMerge;
-
 extern llvm::cl::opt<bool> DebugLogIncompleteMerge;
 
 class Executor;

@@ -2752,12 +2752,6 @@ void Executor::updateStates(ExecutionState *current) {
     delete es;
   }
   removedStates.clear();
-
-  if (searcher) {
-    searcher->update(nullptr, continuedStates, pausedStates);
-    pausedStates.clear();
-    continuedStates.clear();
-  }
 }
 
 template <typename TypeIt>
@@ -3036,29 +3030,6 @@ std::string Executor::getAddressInfo(ExecutionState &state,
   return info.str();
 }
 
-void Executor::pauseState(ExecutionState &state){
-  auto it = std::find(continuedStates.begin(), continuedStates.end(), &state);
-  // If the state was to be continued, but now gets paused again
-  if (it != continuedStates.end()){
-    // ...just don't continue it
-    std::swap(*it, continuedStates.back());
-    continuedStates.pop_back();
-  } else {
-    pausedStates.push_back(&state);
-  }
-}
-
-void Executor::continueState(ExecutionState &state){
-  auto it = std::find(pausedStates.begin(), pausedStates.end(), &state);
-  // If the state was to be paused, but now gets continued again
-  if (it != pausedStates.end()){
-    // ...don't pause it
-    std::swap(*it, pausedStates.back());
-    pausedStates.pop_back();
-  } else {
-    continuedStates.push_back(&state);
-  }
-}
 
 void Executor::terminateState(ExecutionState &state) {
   if (replayKTest && replayPosition!=replayKTest->numObjects) {
