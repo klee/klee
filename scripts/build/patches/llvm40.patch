@@ -1,5 +1,5 @@
---- ./projects/compiler-rt/lib/sanitizer_common/sanitizer_linux.cc  2018-12-20 22:32:09.636508226 +0000
-+++ ../llvm-40-copy/projects/compiler-rt/lib/sanitizer_common/sanitizer_linux.cc  2018-12-20 22:36:10.752698342 +0000
+--- projects/compiler-rt/lib/sanitizer_common/sanitizer_linux.cc
++++ projects/compiler-rt/lib/sanitizer_common/sanitizer_linux.cc
 @@ -607,8 +607,7 @@ uptr internal_prctl(int option, uptr arg
  }
  #endif
@@ -10,8 +10,8 @@
    return internal_syscall(SYSCALL(sigaltstack), (uptr)ss, (uptr)oss);
  }
 
---- ./projects/compiler-rt/lib/sanitizer_common/sanitizer_linux.h 2018-12-20 22:32:10.020508531 +0000
-+++ ../llvm-40-copy/projects/compiler-rt/lib/sanitizer_common/sanitizer_linux.h 2018-12-20 22:36:10.752698342 +0000
+--- projects/compiler-rt/lib/sanitizer_common/sanitizer_linux.h
++++ projects/compiler-rt/lib/sanitizer_common/sanitizer_linux.h
 @@ -21,7 +21,6 @@
  #include "sanitizer_platform_limits_posix.h"
 
@@ -30,8 +30,8 @@
  uptr internal_sigprocmask(int how, __sanitizer_sigset_t *set,
      __sanitizer_sigset_t *oldset);
 
---- ./projects/compiler-rt/lib/sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc 2018-12-20 22:32:09.456508085 +0000
-+++ ../llvm-40-copy/projects/compiler-rt/lib/sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc 2018-12-20 22:36:10.756698345 +0000
+--- projects/compiler-rt/lib/sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc
++++ projects/compiler-rt/lib/sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc
 @@ -275,7 +275,7 @@ static int TracerThread(void* argument)
 
    // Alternate stack for signal handling.
@@ -41,8 +41,8 @@
    internal_memset(&handler_stack, 0, sizeof(handler_stack));
    handler_stack.ss_sp = handler_stack_memory.data();
    handler_stack.ss_size = kHandlerStackSize;
---- ./projects/compiler-rt/lib/tsan/rtl/tsan_platform_linux.cc  2018-12-20 22:32:15.780513072 +0000
-+++ ../llvm-40-copy/projects/compiler-rt/lib/tsan/rtl/tsan_platform_linux.cc  2018-12-20 22:36:10.756698345 +0000
+--- projects/compiler-rt/lib/tsan/rtl/tsan_platform_linux.cc
++++ projects/compiler-rt/lib/tsan/rtl/tsan_platform_linux.cc
 @@ -289,7 +289,7 @@ void InitializePlatform() {
  int ExtractResolvFDs(void *state, int *fds, int nfd) {
  #if SANITIZER_LINUX && !SANITIZER_ANDROID
@@ -52,9 +52,8 @@
    for (int i = 0; i < MAXNS && cnt < nfd; i++) {
      if (statp->_u._ext.nsaddrs[i] && statp->_u._ext.nssocks[i] != -1)
        fds[cnt++] = statp->_u._ext.nssocks[i];
-diff -rup ./projects/libcxx/include/__locale ../llvm-40-copy/projects/libcxx/include/__locale
---- ./projects/libcxx/include/__locale  2018-12-20 22:33:14.484559356 +0000
-+++ ../llvm-40-copy/projects/libcxx/include/__locale  2018-12-20 22:34:34.432622394 +0000
+--- projects/libcxx/include/__locale
++++ projects/libcxx/include/__locale
 @@ -34,7 +34,7 @@
  # include <support/solaris/xlocale.h>
  #elif defined(_NEWLIB_VERSION)
@@ -64,8 +63,8 @@ diff -rup ./projects/libcxx/include/__locale ../llvm-40-copy/projects/libcxx/inc
      || defined(__EMSCRIPTEN__) || defined(__IBMCPP__))
  # include <xlocale.h>
  #elif defined(_LIBCPP_HAS_MUSL_LIBC)
---- ./projects/compiler-rt/lib/esan/esan_sideline_linux.cpp  2018-12-20 22:32:12.368510380 +0000
-+++ ../llvm-40-copy/projects/compiler-rt/lib/esan/esan_sideline_linux.cpp 2018-12-21 09:15:03.721823179 +0000
+--- projects/compiler-rt/lib/esan/esan_sideline_linux.cpp
++++ projects/compiler-rt/lib/esan/esan_sideline_linux.cpp
 @@ -70,7 +70,7 @@ int SidelineThread::runSideline(void *Ar
 
    // Set up a signal handler on an alternate stack for safety.
@@ -75,3 +74,14 @@ diff -rup ./projects/libcxx/include/__locale ../llvm-40-copy/projects/libcxx/inc
    SigAltStack.ss_sp = StackMap.data();
    SigAltStack.ss_size = SigAltStackSize;
    SigAltStack.ss_flags = 0;
+--- include/llvm/ExecutionEngine/Orc/OrcRemoteTargetClient.h
++++ include/llvm/ExecutionEngine/Orc/OrcRemoteTargetClient.h
+@@ -687,7 +687,7 @@ private:
+ 
+   uint32_t getTrampolineSize() const { return RemoteTrampolineSize; }
+ 
+-  Expected<std::vector<char>> readMem(char *Dst, JITTargetAddress Src,
++  Expected<std::vector<unsigned char>> readMem(char *Dst, JITTargetAddress Src,
+                                       uint64_t Size) {
+     // Check for an 'out-of-band' error, e.g. from an MM destructor.
+     if (ExistingError)
