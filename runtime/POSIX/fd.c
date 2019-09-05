@@ -1352,19 +1352,25 @@ static const char *__concretize_string(const char *s) {
   char *sc = __concretize_ptr(s);
   unsigned i;
 
-  for (i=0; ; ++i) {
+  for (i = 0;; ++i, ++sc) {
     char c = *sc;
+    // Avoid writing read-only memory locations
+    if (!klee_is_symbolic(c)) {
+      if (!c)
+        break;
+      continue;
+    }
     if (!(i&(i-1))) {
       if (!c) {
-        *sc++ = 0;
+        *sc = 0;
         break;
       } else if (c=='/') {
-        *sc++ = '/';
+        *sc = '/';
       } 
     } else {
       char cc = (char) klee_get_valuel((long)c);
       klee_assume(cc == c);
-      *sc++ = cc;
+      *sc = cc;
       if (!cc) break;
     }
   }
