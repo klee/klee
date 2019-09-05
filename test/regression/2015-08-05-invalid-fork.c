@@ -2,6 +2,7 @@
    The test makes sure that the string "Should be printed once" 
    is printed a single time. 
 */
+#include "klee/klee.h"
 
 // RUN: %clang %s -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
