@@ -788,6 +788,9 @@ void Executor::initializeGlobals(ExecutionState &state) {
   }
 
   // once all objects are allocated, do the actual initialization
+  // remember constant objects to initialise their counter part for external
+  // calls
+  std::vector<ObjectState *> constantObjects;
   for (Module::const_global_iterator i = m->global_begin(),
          e = m->global_end();
        i != e; ++i) {
@@ -799,8 +802,19 @@ void Executor::initializeGlobals(ExecutionState &state) {
       ObjectState *wos = state.addressSpace.getWriteable(mo, os);
       
       initializeGlobalObject(state, wos, i->getInitializer(), 0);
-      // if(i->isConstant()) os->setReadOnly(true);
+      if (i->isConstant())
+        constantObjects.emplace_back(wos);
     }
+  }
+
+  // initialise constant memory that is potentially used with external calls
+  if (!constantObjects.empty()) {
+    // initialise the actual memory with constant values
+    state.addressSpace.copyOutConcretes();
+
+    // mark constant objects as read-only
+    for (auto obj : constantObjects)
+      obj->setReadOnly(true);
   }
 }
 
