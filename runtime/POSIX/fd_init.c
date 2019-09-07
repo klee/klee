@@ -50,7 +50,7 @@ static void __create_new_dfile(exe_disk_file_t *dfile, unsigned size,
   char sname[64];
   for (sp=name; *sp; ++sp)
     sname[sp-name] = *sp;
-  memcpy(&sname[sp-name], "-stat", 6);
+  memcpy(&sname[sp-name], "_stat", 6);
 
   assert(size);
 
@@ -111,7 +111,7 @@ void klee_init_fds(unsigned n_files, unsigned file_length,
                    unsigned stdin_length, int sym_stdout_flag,
                    int save_all_writes_flag, unsigned max_failures) {
   unsigned k;
-  char name[7] = "?-data";
+  char name[7] = "?_data";
   struct stat64 s;
 
   stat64(".", &s);
