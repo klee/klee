@@ -9,8 +9,10 @@
 
 #include "PTree.h"
 
+#include "klee/ExecutionState.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprPPrinter.h"
+#include "klee/Internal/Module/KInstruction.h"
 
 #include <vector>
 
@@ -45,6 +47,17 @@ void PTree::remove(Node *n) {
   } while (n && !n->left && !n->right);
 }
 
+void PTree::dumpCSV(Node *parent, llvm::raw_ostream &os) {
+  assert(parent && parent->left && parent->right);
+  auto left = parent->left;
+  auto right = parent->right;
+  os << parent->creationIndex << "," << left->creationIndex << ","
+     << left->data->prevPC->getSourceLocation() << "\n";
+
+  os << parent->creationIndex << "," << right->creationIndex << ","
+     << right->data->prevPC->getSourceLocation() << "\n";
+}
+
 void PTree::dump(llvm::raw_ostream &os) {
   ExprPPrinter *pp = ExprPPrinter::create(os);
   pp->setNewline("\\l");
@@ -77,6 +90,7 @@ void PTree::dump(llvm::raw_ostream &os) {
   delete pp;
 }
 
-PTreeNode::PTreeNode(PTreeNode * parent, ExecutionState * data)
-  : parent{parent}, data{data} {}
+int PTreeNode::nextIndex = 0;
 
+PTreeNode::PTreeNode(PTreeNode *parent, ExecutionState *data)
+    : parent{parent}, data{data}, creationIndex{nextIndex++} {}

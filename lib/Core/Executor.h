@@ -238,9 +238,12 @@ private:
   /// Optimizes expressions
   ExprOptimizer optimizer;
 
+  // Out CSV file to
+  std::unique_ptr<llvm::raw_fd_ostream> os;
+
   llvm::Function* getTargetFunction(llvm::Value *calledVal,
                                     ExecutionState &state);
-  
+
   void executeInstruction(ExecutionState &state, KInstruction *ki);
 
   void printFileLine(ExecutionState &state, KInstruction *ki,
@@ -478,6 +481,11 @@ private:
   void checkMemoryUsage();
   void printDebugInstructions(ExecutionState &state);
   void doDumpStates();
+
+  /// Only for debug purposes; enable via debugger or klee-control
+  void dumpStates();
+  void dumpPTree();
+  void dumpPTreeCSV(PTreeNode *n);
 
 public:
   Executor(llvm::LLVMContext &ctx, const InterpreterOptions &opts,

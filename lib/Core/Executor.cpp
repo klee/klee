@@ -399,11 +399,20 @@ cl::opt<bool> DebugCheckForImpliedValues(
     cl::desc("Debug the implied value optimization"),
     cl::cat(DebugCat));
 
+cl::opt<bool> DumpProcessTree(
+    "output-exec-tree", cl::init(false),
+    cl::desc("Dump execution tree into a csv file for tree visualisation"),
+    cl::cat(DebugCat));
+
 } // namespace
 
 namespace klee {
   RNG theRNG;
 }
+
+// XXX hack
+extern "C" unsigned dumpStates, dumpPTree;
+unsigned dumpStates = 0, dumpPTree = 0;
 
 const char *Executor::TerminateReasonNames[] = {
   [ Abort ] = "abort",
@@ -478,6 +487,13 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       klee_error("Could not open file %s : %s", debug_file_name.c_str(),
                  error.c_str());
     }
+  }
+
+  if (DumpProcessTree) {
+    char name[32];
+    snprintf(name, sizeof(name), "ptree%08d.csv", (int)stats::instructions);
+    os = interpreterHandler->openOutputFile(name);
+    *os << "parent,child,location\n";
   }
 }
 
@@ -824,6 +840,8 @@ void Executor::branch(ExecutionState &state,
       es->ptreeNode->data = 0;
       std::pair<PTree::Node*,PTree::Node*> res = 
         processTree->split(es->ptreeNode, ns, es);
+      if (DumpProcessTree)
+        dumpPTreeCSV(es->ptreeNode);
       ns->ptreeNode = res.first;
       es->ptreeNode = res.second;
     }
@@ -1076,6 +1094,10 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     current.ptreeNode->data = 0;
     std::pair<PTree::Node*, PTree::Node*> res =
       processTree->split(current.ptreeNode, falseState, trueState);
+
+    if (DumpProcessTree)
+      dumpPTreeCSV(current.ptreeNode);
+
     falseState->ptreeNode = res.first;
     trueState->ptreeNode = res.second;
 
@@ -2904,6 +2926,8 @@ void Executor::run(ExecutionState &initialState) {
 
       executeInstruction(state, ki);
       processTimers(&state, maxInstructionTime * numSeeds);
+      if (::dumpStates) dumpStates();
+      if (::dumpPTree) dumpPTree();
       updateStates(&state);
 
       if ((stats::instructions % 1000) == 0) {
@@ -2958,6 +2982,8 @@ void Executor::run(ExecutionState &initialState) {
 
     executeInstruction(state, ki);
     processTimers(&state, maxInstructionTime);
+    if (::dumpStates) dumpStates();
+    if (::dumpPTree) dumpPTree();
 
     checkMemoryUsage();
 
@@ -4080,6 +4106,76 @@ int *Executor::getErrnoLocation(const ExecutionState &state) const {
 #else
   return __error();
 #endif
+}
+
+void Executor::dumpPTreeCSV(PTreeNode *n) {
+  assert(n && n->left && n->right);
+  if (!::DumpProcessTree)
+    return;
+
+  if (os) {
+    processTree->dumpCSV(n, *os);
+  }
+}
+
+void Executor::dumpPTree() {
+  if (!::dumpPTree) return;
+
+  char name[32];
+  snprintf(name, sizeof(name),"ptree%08d.dot", (int) stats::instructions);
+  auto os = interpreterHandler->openOutputFile(name);
+  if (os) {
+    processTree->dump(*os);
+  }
+
+  ::dumpPTree = 0;
+}
+
+void Executor::dumpStates() {
+  if (!::dumpStates) return;
+
+  auto os = interpreterHandler->openOutputFile("states.txt");
+
+  if (os) {
+    for (ExecutionState *es : states) {
+      *os << "(" << es << ",";
+      *os << "[";
+      auto next = es->stack.begin();
+      ++next;
+      for (auto sfIt = es->stack.begin(), sf_ie = es->stack.end();
+           sfIt != sf_ie; ++sfIt) {
+        *os << "('" << sfIt->kf->function->getName().str() << "',";
+        if (next == es->stack.end()) {
+          *os << es->prevPC->info->line << "), ";
+        } else {
+          *os << next->caller->info->line << "), ";
+          ++next;
+        }
+      }
+      *os << "], ";
+
+      StackFrame &sf = es->stack.back();
+      uint64_t md2u = computeMinDistToUncovered(es->pc,
+                                                sf.minDistToUncoveredOnReturn);
+      uint64_t icnt = theStatisticManager->getIndexedValue(stats::instructions,
+                                                           es->pc->info->id);
+      uint64_t cpicnt = sf.callPathNode->statistics.getValue(stats::instructions);
+
+      *os << "{";
+      *os << "'depth' : " << es->depth << ", ";
+      *os << "'weight' : " << es->weight << ", ";
+      *os << "'queryCost' : " << es->queryCost << ", ";
+      *os << "'coveredNew' : " << es->coveredNew << ", ";
+      *os << "'instsSinceCovNew' : " << es->instsSinceCovNew << ", ";
+      *os << "'md2u' : " << md2u << ", ";
+      *os << "'icnt' : " << icnt << ", ";
+      *os << "'CPicnt' : " << cpicnt << ", ";
+      *os << "}";
+      *os << ")\n";
+    }
+  }
+
+  ::dumpStates = 0;
 }
 
 ///

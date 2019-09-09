@@ -12,6 +12,8 @@
 
 #include "klee/Expr/Expr.h"
 
+#include <fstream>
+
 namespace klee {
   class ExecutionState;
 
@@ -31,6 +33,7 @@ namespace klee {
     void remove(Node *n);
 
     void dump(llvm::raw_ostream &os);
+    void dumpCSV(Node *parent, llvm::raw_ostream &os);
   };
 
   class PTreeNode {
@@ -42,6 +45,8 @@ namespace klee {
     ExecutionState *data = nullptr;
 
   private:
+    static int nextIndex;
+    int creationIndex;
     PTreeNode(PTreeNode * parent, ExecutionState * data);
     ~PTreeNode() = default;
   };
