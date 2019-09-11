@@ -18,8 +18,8 @@ namespace klee {
   class PTreeNode {
   public:
     PTreeNode *parent = nullptr;
-    PTreeNode *left = nullptr;
-    PTreeNode *right = nullptr;
+    std::unique_ptr<PTreeNode> left;
+    std::unique_ptr<PTreeNode> right;
     ExecutionState *state = nullptr;
 
     PTreeNode(const PTreeNode&) = delete;
@@ -29,7 +29,7 @@ namespace klee {
 
   class PTree {
   public:
-    PTreeNode * root = nullptr;
+    std::unique_ptr<PTreeNode> root;
     explicit PTree(ExecutionState *initialState);
     ~PTree() = default;
 

@@ -264,19 +264,19 @@ RandomPathSearcher::~RandomPathSearcher() {
 
 ExecutionState &RandomPathSearcher::selectState() {
   unsigned flips=0, bits=0;
-  PTreeNode *n = executor.processTree->root;
+  PTreeNode *n = executor.processTree->root.get();
   while (!n->state) {
     if (!n->left) {
-      n = n->right;
+      n = n->right.get();
     } else if (!n->right) {
-      n = n->left;
+      n = n->left.get();
     } else {
       if (bits==0) {
         flips = theRNG.getInt32();
         bits = 32;
       }
       --bits;
-      n = (flips&(1<<bits)) ? n->left : n->right;
+      n = (flips&(1<<bits)) ? n->left.get() : n->right.get();
     }
   }
 
