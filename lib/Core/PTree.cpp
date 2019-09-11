@@ -18,16 +18,15 @@
 using namespace klee;
 
 PTree::PTree(ExecutionState *initialState) {
-  root = new PTreeNode(nullptr, initialState);
-  initialState->ptreeNode = root;
+  root = std::make_unique<PTreeNode>(nullptr, initialState);
 }
 
 void PTree::attach(PTreeNode *node, ExecutionState *leftState, ExecutionState *rightState) {
   assert(node && !node->left && !node->right);
 
   node->state = nullptr;
-  node->left = new PTreeNode(node, leftState);
-  node->right = new PTreeNode(node, rightState);
+  node->left = std::make_unique<PTreeNode>(node, leftState);
+  node->right = std::make_unique<PTreeNode>(node, rightState);
 }
 
 void PTree::remove(PTreeNode *n) {
@@ -35,14 +34,13 @@ void PTree::remove(PTreeNode *n) {
   do {
     PTreeNode *p = n->parent;
     if (p) {
-      if (n == p->left) {
+      if (n == p->left.get()) {
         p->left = nullptr;
       } else {
-        assert(n == p->right);
+        assert(n == p->right.get());
         p->right = nullptr;
       }
     }
-    delete n;
     n = p;
   } while (n && !n->left && !n->right);
 }
@@ -58,7 +56,7 @@ void PTree::dump(llvm::raw_ostream &os) {
   os << "\tnode [style=\"filled\",width=.1,height=.1,fontname=\"Terminus\"]\n";
   os << "\tedge [arrowsize=.3]\n";
   std::vector<const PTreeNode*> stack;
-  stack.push_back(root);
+  stack.push_back(root.get());
   while (!stack.empty()) {
     const PTreeNode *n = stack.back();
     stack.pop_back();
@@ -67,12 +65,12 @@ void PTree::dump(llvm::raw_ostream &os) {
       os << ",fillcolor=green";
     os << "];\n";
     if (n->left) {
-      os << "\tn" << n << " -> n" << n->left << ";\n";
-      stack.push_back(n->left);
+      os << "\tn" << n << " -> n" << n->left.get() << ";\n";
+      stack.push_back(n->left.get());
     }
     if (n->right) {
-      os << "\tn" << n << " -> n" << n->right << ";\n";
-      stack.push_back(n->right);
+      os << "\tn" << n << " -> n" << n->right.get() << ";\n";
+      stack.push_back(n->right.get());
     }
   }
   os << "}\n";
