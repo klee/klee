@@ -216,7 +216,6 @@ def grafana(dirs):
         sqlTarget = ",".join(["AVG( {0} )".format(t) for t in targets if t.isalnum()])
 
         conn = sqlite3.connect(dr)
-
         s = "SELECT WallTime + ? , {fields} " \
             + " FROM stats" \
             + " WHERE WallTime >= ? AND WallTime <= ?" \
@@ -229,7 +228,12 @@ def grafana(dirs):
         for line in cursor:
             unixtimestamp = int(line[0]) / 1000 #Convert from microsecond to miliseconds
             for field, datastream in zip(line[1:], result):
-                datastream["datapoints"].append([field, unixtimestamp])
+                  if "Time" in datastream["target"] and "Wall" not in datastream["target"]\
+                     and "User" not in datastream["target"]:
+                    val = (field/(line[0]-startTime))*100
+                    datastream["datapoints"].append([val, unixtimestamp])
+                  else:
+                    datastream["datapoints"].append([field, unixtimestamp])
 
         ret = jsonify(result)
         return ret
