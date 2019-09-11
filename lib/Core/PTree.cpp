@@ -9,6 +9,7 @@
 
 #include "PTree.h"
 
+#include "klee/ExecutionState.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprPPrinter.h"
 
@@ -16,22 +17,23 @@
 
 using namespace klee;
 
-PTree::PTree(const data_type &root) : root(new Node(nullptr, root)) {}
-
-std::pair<PTreeNode*, PTreeNode*>
-PTree::split(Node *n, 
-             const data_type &leftData, 
-             const data_type &rightData) {
-  assert(n && !n->left && !n->right);
-  n->left = new Node(n, leftData);
-  n->right = new Node(n, rightData);
-  return std::make_pair(n->left, n->right);
+PTree::PTree(ExecutionState *initialState) {
+  root = new PTreeNode(nullptr, initialState);
+  initialState->ptreeNode = root;
 }
 
-void PTree::remove(Node *n) {
+void PTree::attach(PTreeNode *node, ExecutionState *leftState, ExecutionState *rightState) {
+  assert(node && !node->left && !node->right);
+
+  node->state = nullptr;
+  node->left = new PTreeNode(node, leftState);
+  node->right = new PTreeNode(node, rightState);
+}
+
+void PTree::remove(PTreeNode *n) {
   assert(!n->left && !n->right);
   do {
-    Node *p = n->parent;
+    PTreeNode *p = n->parent;
     if (p) {
       if (n == p->left) {
         p->left = nullptr;
@@ -55,13 +57,13 @@ void PTree::dump(llvm::raw_ostream &os) {
   os << "\tcenter = \"true\";\n";
   os << "\tnode [style=\"filled\",width=.1,height=.1,fontname=\"Terminus\"]\n";
   os << "\tedge [arrowsize=.3]\n";
-  std::vector<PTree::Node*> stack;
+  std::vector<const PTreeNode*> stack;
   stack.push_back(root);
   while (!stack.empty()) {
-    PTree::Node *n = stack.back();
+    const PTreeNode *n = stack.back();
     stack.pop_back();
     os << "\tn" << n << " [shape=diamond";
-    if (n->data)
+    if (n->state)
       os << ",fillcolor=green";
     os << "];\n";
     if (n->left) {
@@ -77,6 +79,7 @@ void PTree::dump(llvm::raw_ostream &os) {
   delete pp;
 }
 
-PTreeNode::PTreeNode(PTreeNode * parent, ExecutionState * data)
-  : parent{parent}, data{data} {}
+PTreeNode::PTreeNode(PTreeNode *parent, ExecutionState *state) : parent{parent}, state{state} {
+  state->ptreeNode = this;
+}
 

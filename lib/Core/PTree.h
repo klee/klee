@@ -15,35 +15,27 @@
 namespace klee {
   class ExecutionState;
 
-  class PTree { 
-    typedef ExecutionState* data_type;
-
-  public:
-    typedef class PTreeNode Node;
-    Node *root;
-
-    explicit PTree(const data_type &_root);
-    ~PTree() = default;
-    
-    std::pair<Node*,Node*> split(Node *n,
-                                 const data_type &leftData,
-                                 const data_type &rightData);
-    void remove(Node *n);
-
-    void dump(llvm::raw_ostream &os);
-  };
-
   class PTreeNode {
-    friend class PTree;
   public:
     PTreeNode *parent = nullptr;
     PTreeNode *left = nullptr;
     PTreeNode *right = nullptr;
-    ExecutionState *data = nullptr;
+    ExecutionState *state = nullptr;
 
-  private:
-    PTreeNode(PTreeNode * parent, ExecutionState * data);
+    PTreeNode(const PTreeNode&) = delete;
+    PTreeNode(PTreeNode *parent, ExecutionState *state);
     ~PTreeNode() = default;
+  };
+
+  class PTree {
+  public:
+    PTreeNode * root = nullptr;
+    explicit PTree(ExecutionState *initialState);
+    ~PTree() = default;
+
+    static void attach(PTreeNode *node, ExecutionState *leftState, ExecutionState *rightState);
+    static void remove(PTreeNode *node);
+    void dump(llvm::raw_ostream &os);
   };
 }
 

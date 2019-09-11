@@ -430,7 +430,7 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
     : Interpreter(opts), interpreterHandler(ih), searcher(0),
       externalDispatcher(new ExternalDispatcher(ctx)), statsTracker(0),
       pathWriter(0), symPathWriter(0), specialFunctionHandler(0),
-      processTree(0), replayKTest(0), replayPath(0), usingSeeds(0),
+      replayKTest(0), replayPath(0), usingSeeds(0),
       atMemoryLimit(false), inhibitForking(false), haltExecution(false),
       ivcEnabled(false), debugLogBuffer(debugBufferString) {
 
@@ -551,7 +551,6 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
 Executor::~Executor() {
   delete memory;
   delete externalDispatcher;
-  delete processTree;
   delete specialFunctionHandler;
   delete statsTracker;
   delete solver;
@@ -825,11 +824,7 @@ void Executor::branch(ExecutionState &state,
       ExecutionState *ns = es->branch();
       addedStates.push_back(ns);
       result.push_back(ns);
-      es->ptreeNode->data = 0;
-      std::pair<PTree::Node*,PTree::Node*> res = 
-        processTree->split(es->ptreeNode, ns, es);
-      ns->ptreeNode = res.first;
-      es->ptreeNode = res.second;
+      processTree->attach(es->ptreeNode, ns, es);
     }
   }
 
@@ -1077,11 +1072,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    current.ptreeNode->data = 0;
-    std::pair<PTree::Node*, PTree::Node*> res =
-      processTree->split(current.ptreeNode, falseState, trueState);
-    falseState->ptreeNode = res.first;
-    trueState->ptreeNode = res.second;
+    processTree->attach(current.ptreeNode, falseState, trueState);
 
     if (pathWriter) {
       // Need to update the pathOS.id field of falseState, otherwise the same id
@@ -3847,11 +3838,9 @@ void Executor::runFunctionAsMain(Function *f,
   
   initializeGlobals(*state);
 
-  processTree = new PTree(state);
-  state->ptreeNode = processTree->root;
+  processTree = std::make_unique<PTree>(state);
   run(*state);
-  delete processTree;
-  processTree = 0;
+  processTree = nullptr;
 
   // hack to clear memory objects
   delete memory;
