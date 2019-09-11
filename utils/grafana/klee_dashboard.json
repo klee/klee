@@ -15,9 +15,91 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 4,
   "links": [],
   "panels": [
+    {
+      "cacheTimeout": null,
+      "colorBackground": true,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "#FF9830",
+        "#d44a3a"
+      ],
+      "format": "none",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 7,
+        "x": 0,
+        "y": 0
+      },
+      "id": 4,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false,
+        "ymax": null,
+        "ymin": null
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "refId": "A",
+          "target": "Instructions",
+          "type": "timeserie"
+        }
+      ],
+      "thresholds": "",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Instructions Processed",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "avg"
+    },
     {
       "aliasColors": {},
       "bars": false,
@@ -28,7 +110,7 @@
       "gridPos": {
         "h": 7,
         "w": 15,
-        "x": 0,
+        "x": 7,
         "y": 0
       },
       "id": 2,
@@ -109,9 +191,10 @@
       "colorValue": false,
       "colors": [
         "#299c46",
-        "#FF9830",
+        "#B877D9",
         "#d44a3a"
       ],
+      "datasource": "Klee Stats",
       "format": "none",
       "gauge": {
         "maxValue": 100,
@@ -123,10 +206,10 @@
       "gridPos": {
         "h": 7,
         "w": 7,
-        "x": 15,
-        "y": 0
+        "x": 0,
+        "y": 7
       },
-      "id": 4,
+      "id": 8,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -167,14 +250,14 @@
       "targets": [
         {
           "refId": "A",
-          "target": "Instructions",
-          "type": "timeserie"
+          "target": "FullBranches",
+          "type": "table"
         }
       ],
       "thresholds": "",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Instructions Count",
+      "title": "Full Branches",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -196,7 +279,7 @@
       "gridPos": {
         "h": 7,
         "w": 15,
-        "x": 0,
+        "x": 7,
         "y": 7
       },
       "id": 6,
@@ -277,7 +360,7 @@
       "colorValue": false,
       "colors": [
         "#299c46",
-        "#B877D9",
+        "#5794F2",
         "#d44a3a"
       ],
       "format": "none",
@@ -289,12 +372,12 @@
         "thresholdMarkers": true
       },
       "gridPos": {
-        "h": 7,
+        "h": 6,
         "w": 7,
-        "x": 15,
-        "y": 7
+        "x": 0,
+        "y": 14
       },
-      "id": 8,
+      "id": 12,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -335,14 +418,14 @@
       "targets": [
         {
           "refId": "A",
-          "target": "FullBranches",
+          "target": "CoveredInstructions",
           "type": "timeserie"
         }
       ],
       "thresholds": "",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Panel Title",
+      "title": "Covered Instructions",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -364,7 +447,7 @@
       "gridPos": {
         "h": 6,
         "w": 15,
-        "x": 0,
+        "x": 7,
         "y": 14
       },
       "id": 10,
@@ -445,10 +528,10 @@
       "colorValue": false,
       "colors": [
         "#299c46",
-        "#5794F2",
+        "#F2495C",
         "#d44a3a"
       ],
-      "format": "none",
+      "format": "bytes",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -457,12 +540,12 @@
         "thresholdMarkers": true
       },
       "gridPos": {
-        "h": 6,
+        "h": 7,
         "w": 7,
-        "x": 15,
-        "y": 14
+        "x": 0,
+        "y": 20
       },
-      "id": 12,
+      "id": 16,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -503,14 +586,14 @@
       "targets": [
         {
           "refId": "A",
-          "target": "CoveredInstructions",
+          "target": "MallocUsage",
           "type": "timeserie"
         }
       ],
       "thresholds": "",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Covered Instructions Count",
+      "title": "Malloc Usage",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -520,7 +603,7 @@
           "value": "null"
         }
       ],
-      "valueName": "avg"
+      "valueName": "current"
     },
     {
       "aliasColors": {},
@@ -532,7 +615,7 @@
       "gridPos": {
         "h": 7,
         "w": 15,
-        "x": 0,
+        "x": 7,
         "y": 20
       },
       "id": 14,
@@ -613,7 +696,7 @@
       "colorValue": false,
       "colors": [
         "#299c46",
-        "#F2495C",
+        "#56A64B",
         "#d44a3a"
       ],
       "format": "none",
@@ -627,10 +710,10 @@
       "gridPos": {
         "h": 7,
         "w": 7,
-        "x": 15,
-        "y": 20
+        "x": 0,
+        "y": 27
       },
-      "id": 16,
+      "id": 20,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -671,14 +754,14 @@
       "targets": [
         {
           "refId": "A",
-          "target": "MallocUsage",
+          "target": "PartialBranches",
           "type": "timeserie"
         }
       ],
       "thresholds": "",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Malloc Usage Count",
+      "title": "Partial Branches ",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -688,7 +771,7 @@
           "value": "null"
         }
       ],
-      "valueName": "max"
+      "valueName": "current"
     },
     {
       "aliasColors": {},
@@ -700,7 +783,7 @@
       "gridPos": {
         "h": 7,
         "w": 15,
-        "x": 0,
+        "x": 7,
         "y": 27
       },
       "id": 18,
@@ -780,9 +863,9 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#299c46",
-        "#56A64B",
-        "#d44a3a"
+        "#FF780A",
+        "#FF780A",
+        "#FF780A"
       ],
       "format": "none",
       "gauge": {
@@ -795,10 +878,10 @@
       "gridPos": {
         "h": 7,
         "w": 7,
-        "x": 15,
-        "y": 27
+        "x": 0,
+        "y": 34
       },
-      "id": 20,
+      "id": 24,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -839,14 +922,14 @@
       "targets": [
         {
           "refId": "A",
-          "target": "PartialBranches",
+          "target": "UncoveredInstructions",
           "type": "timeserie"
         }
       ],
       "thresholds": "",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Partial Branches Count",
+      "title": "Uncovered Instructions ",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -856,7 +939,7 @@
           "value": "null"
         }
       ],
-      "valueName": "avg"
+      "valueName": "current"
     },
     {
       "aliasColors": {},
@@ -868,7 +951,7 @@
       "gridPos": {
         "h": 7,
         "w": 15,
-        "x": 0,
+        "x": 7,
         "y": 34
       },
       "id": 22,
@@ -948,11 +1031,11 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#FF780A",
-        "#FF780A",
-        "#FF780A"
+        "#299c46",
+        "#B877D9",
+        "#d44a3a"
       ],
-      "format": "none",
+      "format": "percent",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -961,12 +1044,12 @@
         "thresholdMarkers": true
       },
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 7,
-        "x": 15,
-        "y": 34
+        "x": 0,
+        "y": 41
       },
-      "id": 24,
+      "id": 28,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -984,6 +1067,7 @@
       "nullPointMode": "connected",
       "nullText": null,
       "options": {},
+      "pluginVersion": "6.2.5",
       "postfix": "",
       "postfixFontSize": "50%",
       "prefix": "",
@@ -1006,15 +1090,15 @@
       "tableColumn": "",
       "targets": [
         {
-          "refId": "A",
-          "target": "UncoveredInstructions",
+          "refId": "B",
+          "target": "SolverTime",
           "type": "timeserie"
         }
       ],
       "thresholds": "",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Uncovered Instructions Count",
+      "title": "Solver Time ",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -1024,7 +1108,7 @@
           "value": "null"
         }
       ],
-      "valueName": "avg"
+      "valueName": "current"
     },
     {
       "aliasColors": {},
@@ -1036,7 +1120,7 @@
       "gridPos": {
         "h": 8,
         "w": 15,
-        "x": 0,
+        "x": 7,
         "y": 41
       },
       "id": 26,
@@ -1090,10 +1174,11 @@
       },
       "yaxes": [
         {
+          "decimals": null,
           "format": "short",
           "label": null,
           "logBase": 1,
-          "max": null,
+          "max": "100",
           "min": null,
           "show": true
         },
@@ -1117,7 +1202,7 @@
       "colorValue": false,
       "colors": [
         "#299c46",
-        "#B877D9",
+        "#5794F2",
         "#d44a3a"
       ],
       "format": "none",
@@ -1129,12 +1214,12 @@
         "thresholdMarkers": true
       },
       "gridPos": {
-        "h": 8,
+        "h": 7,
         "w": 7,
-        "x": 15,
-        "y": 41
+        "x": 0,
+        "y": 49
       },
-      "id": 28,
+      "id": 32,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -1175,14 +1260,14 @@
       "targets": [
         {
           "refId": "A",
-          "target": "SolverTime",
+          "target": "NumBranches",
           "type": "timeserie"
         }
       ],
       "thresholds": "",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Solver Time Count",
+      "title": "Num Branches",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -1204,7 +1289,7 @@
       "gridPos": {
         "h": 7,
         "w": 15,
-        "x": 0,
+        "x": 7,
         "y": 49
       },
       "id": 30,
@@ -1285,7 +1370,7 @@
       "colorValue": false,
       "colors": [
         "#299c46",
-        "#5794F2",
+        "#CA95E5",
         "#d44a3a"
       ],
       "format": "none",
@@ -1299,10 +1384,10 @@
       "gridPos": {
         "h": 7,
         "w": 7,
-        "x": 15,
-        "y": 49
+        "x": 0,
+        "y": 56
       },
-      "id": 32,
+      "id": 38,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -1343,14 +1428,14 @@
       "targets": [
         {
           "refId": "A",
-          "target": "NumBranches",
+          "target": "NumStates",
           "type": "timeserie"
         }
       ],
       "thresholds": "",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Num Branches Count",
+      "title": "Num States",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -1360,7 +1445,7 @@
           "value": "null"
         }
       ],
-      "valueName": "avg"
+      "valueName": "current"
     },
     {
       "aliasColors": {},
@@ -1372,7 +1457,7 @@
       "gridPos": {
         "h": 7,
         "w": 15,
-        "x": 0,
+        "x": 7,
         "y": 56
       },
       "id": 36,
@@ -1453,7 +1538,7 @@
       "colorValue": false,
       "colors": [
         "#299c46",
-        "#CA95E5",
+        "#E02F44",
         "#d44a3a"
       ],
       "format": "none",
@@ -1465,12 +1550,12 @@
         "thresholdMarkers": true
       },
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 7,
-        "x": 15,
-        "y": 56
+        "x": 0,
+        "y": 63
       },
-      "id": 38,
+      "id": 42,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -1511,14 +1596,14 @@
       "targets": [
         {
           "refId": "A",
-          "target": "NumStates",
+          "target": "NumQueries",
           "type": "timeserie"
         }
       ],
       "thresholds": "",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Num States Count",
+      "title": "Num Queries",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -1528,7 +1613,7 @@
           "value": "null"
         }
       ],
-      "valueName": "avg"
+      "valueName": "current"
     },
     {
       "aliasColors": {},
@@ -1540,7 +1625,7 @@
       "gridPos": {
         "h": 8,
         "w": 15,
-        "x": 0,
+        "x": 7,
         "y": 63
       },
       "id": 40,
@@ -1621,7 +1706,7 @@
       "colorValue": false,
       "colors": [
         "#299c46",
-        "#96D98D",
+        "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
       "format": "none",
@@ -1635,10 +1720,10 @@
       "gridPos": {
         "h": 8,
         "w": 7,
-        "x": 15,
-        "y": 63
+        "x": 0,
+        "y": 71
       },
-      "id": 42,
+      "id": 46,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -1679,14 +1764,14 @@
       "targets": [
         {
           "refId": "A",
-          "target": "NumQueries",
+          "target": "NumQueryConstructs",
           "type": "timeserie"
         }
       ],
       "thresholds": "",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Num Queries Count",
+      "title": "NumQueryConstructs",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -1696,7 +1781,7 @@
           "value": "null"
         }
       ],
-      "valueName": "avg"
+      "valueName": "current"
     },
     {
       "aliasColors": {},
@@ -1708,7 +1793,7 @@
       "gridPos": {
         "h": 8,
         "w": 15,
-        "x": 0,
+        "x": 7,
         "y": 71
       },
       "id": 44,
@@ -1789,7 +1874,7 @@
       "colorValue": false,
       "colors": [
         "#299c46",
-        "rgba(237, 129, 40, 0.89)",
+        "#C4162A",
         "#d44a3a"
       ],
       "format": "none",
@@ -1803,10 +1888,10 @@
       "gridPos": {
         "h": 8,
         "w": 7,
-        "x": 15,
-        "y": 71
+        "x": 0,
+        "y": 79
       },
-      "id": 46,
+      "id": 50,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -1847,14 +1932,14 @@
       "targets": [
         {
           "refId": "A",
-          "target": "NumQueryConstructs",
+          "target": "NumObjects",
           "type": "timeserie"
         }
       ],
       "thresholds": "",
       "timeFrom": null,
       "timeShift": null,
-      "title": "NumQueryConstructs Count",
+      "title": "Num Objects ",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -1864,7 +1949,7 @@
           "value": "null"
         }
       ],
-      "valueName": "avg"
+      "valueName": "current"
     },
     {
       "aliasColors": {},
@@ -1876,7 +1961,7 @@
       "gridPos": {
         "h": 8,
         "w": 15,
-        "x": 0,
+        "x": 7,
         "y": 79
       },
       "id": 48,
@@ -1954,10 +2039,11 @@
     {
       "cacheTimeout": null,
       "colorBackground": true,
+      "colorPrefix": false,
       "colorValue": false,
       "colors": [
         "#299c46",
-        "#C4162A",
+        "#3274D9",
         "#d44a3a"
       ],
       "format": "none",
@@ -1971,10 +2057,10 @@
       "gridPos": {
         "h": 8,
         "w": 7,
-        "x": 15,
-        "y": 79
+        "x": 0,
+        "y": 87
       },
-      "id": 50,
+      "id": 64,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -2015,14 +2101,14 @@
       "targets": [
         {
           "refId": "A",
-          "target": "NumObjects",
+          "target": "QueryCexCacheMisses",
           "type": "timeserie"
         }
       ],
       "thresholds": "",
       "timeFrom": null,
       "timeShift": null,
-      "title": "Num Objects Count",
+      "title": "QueryCexCacheMisses Count",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -2032,7 +2118,7 @@
           "value": "null"
         }
       ],
-      "valueName": "avg"
+      "valueName": "current"
     },
     {
       "aliasColors": {},
@@ -2044,7 +2130,7 @@
       "gridPos": {
         "h": 8,
         "w": 15,
-        "x": 0,
+        "x": 7,
         "y": 87
       },
       "id": 62,
@@ -2124,11 +2210,11 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#299c46",
-        "#F2CC0C",
-        "#d44a3a"
+        "#FF9830",
+        "#E0B400",
+        "#F2495C"
       ],
-      "format": "none",
+      "format": "percent",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -2139,10 +2225,10 @@
       "gridPos": {
         "h": 8,
         "w": 7,
-        "x": 15,
-        "y": 87
+        "x": 0,
+        "y": 95
       },
-      "id": 64,
+      "id": 66,
       "interval": null,
       "links": [],
       "mappingType": 1,
@@ -2175,22 +2261,20 @@
         "fillColor": "rgba(31, 118, 189, 0.18)",
         "full": false,
         "lineColor": "rgb(31, 120, 193)",
-        "show": false,
-        "ymax": null,
-        "ymin": null
+        "show": false
       },
       "tableColumn": "",
       "targets": [
         {
           "refId": "A",
-          "target": "QueryCexCacheMisses",
+          "target": "ResolveTime",
           "type": "timeserie"
         }
       ],
       "thresholds": "",
       "timeFrom": null,
       "timeShift": null,
-      "title": "QueryCexCacheMisses Count",
+      "title": "Resolve Time",
       "type": "singlestat",
       "valueFontSize": "80%",
       "valueMaps": [
@@ -2200,7 +2284,7 @@
           "value": "null"
         }
       ],
-      "valueName": "avg"
+      "valueName": "current"
     },
     {
       "aliasColors": {},
@@ -2211,8 +2295,8 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
-        "w": 22,
-        "x": 0,
+        "w": 15,
+        "x": 7,
         "y": 95
       },
       "id": 60,
@@ -2288,6 +2372,87 @@
       }
     },
     {
+      "cacheTimeout": null,
+      "colorBackground": true,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "#FF9830",
+        "#d44a3a"
+      ],
+      "format": "percent",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 7,
+        "x": 0,
+        "y": 103
+      },
+      "id": 68,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "refId": "A",
+          "target": "ForkTime",
+          "type": "timeserie"
+        }
+      ],
+      "thresholds": "",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Fork Time",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -2296,8 +2461,8 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
-        "w": 22,
-        "x": 0,
+        "w": 15,
+        "x": 7,
         "y": 103
       },
       "id": 58,
@@ -2373,6 +2538,87 @@
       }
     },
     {
+      "cacheTimeout": null,
+      "colorBackground": true,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "#3274D9",
+        "#d44a3a"
+      ],
+      "format": "percent",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 7,
+        "x": 0,
+        "y": 111
+      },
+      "id": 70,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "refId": "A",
+          "target": "CexCacheTime",
+          "type": "timeserie"
+        }
+      ],
+      "thresholds": "",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "CexCache Time ",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -2380,9 +2626,9 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
-        "w": 22,
-        "x": 0,
+        "h": 7,
+        "w": 15,
+        "x": 7,
         "y": 111
       },
       "id": 56,
@@ -2436,10 +2682,11 @@
       },
       "yaxes": [
         {
+          "decimals": null,
           "format": "short",
           "label": null,
           "logBase": 1,
-          "max": null,
+          "max": "100",
           "min": null,
           "show": true
         },
@@ -2458,6 +2705,87 @@
       }
     },
     {
+      "cacheTimeout": null,
+      "colorBackground": true,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "#B877D9",
+        "#d44a3a"
+      ],
+      "format": "µs",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 7,
+        "x": 0,
+        "y": 118
+      },
+      "id": 72,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "refId": "A",
+          "target": "WallTime",
+          "type": "timeserie"
+        }
+      ],
+      "thresholds": "",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Wall Time ",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -2466,9 +2794,9 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
-        "w": 22,
-        "x": 0,
-        "y": 119
+        "w": 15,
+        "x": 7,
+        "y": 118
       },
       "id": 52,
       "legend": {
@@ -2521,7 +2849,8 @@
       },
       "yaxes": [
         {
-          "format": "short",
+          "decimals": null,
+          "format": "µs",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -2543,6 +2872,88 @@
       }
     },
     {
+      "cacheTimeout": null,
+      "colorBackground": true,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "#E02F44",
+        "#d44a3a"
+      ],
+      "decimals": null,
+      "format": "percent",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 7,
+        "x": 0,
+        "y": 126
+      },
+      "id": 74,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "refId": "A",
+          "target": "QueryTime",
+          "type": "timeserie"
+        }
+      ],
+      "thresholds": "",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "QueryTime",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -2550,10 +2961,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
-        "w": 22,
-        "x": 0,
-        "y": 127
+        "h": 7,
+        "w": 15,
+        "x": 7,
+        "y": 126
       },
       "id": 54,
       "legend": {
@@ -2609,7 +3020,7 @@
           "format": "short",
           "label": null,
           "logBase": 1,
-          "max": null,
+          "max": "100",
           "min": null,
           "show": true
         },
@@ -2628,6 +3039,87 @@
       }
     },
     {
+      "cacheTimeout": null,
+      "colorBackground": true,
+      "colorValue": false,
+      "colors": [
+        "#299c46",
+        "#8F3BB8",
+        "#d44a3a"
+      ],
+      "format": "µs",
+      "gauge": {
+        "maxValue": 100,
+        "minValue": 0,
+        "show": false,
+        "thresholdLabels": false,
+        "thresholdMarkers": true
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 7,
+        "x": 0,
+        "y": 133
+      },
+      "id": 76,
+      "interval": null,
+      "links": [],
+      "mappingType": 1,
+      "mappingTypes": [
+        {
+          "name": "value to text",
+          "value": 1
+        },
+        {
+          "name": "range to text",
+          "value": 2
+        }
+      ],
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "nullText": null,
+      "options": {},
+      "postfix": "",
+      "postfixFontSize": "50%",
+      "prefix": "",
+      "prefixFontSize": "50%",
+      "rangeMaps": [
+        {
+          "from": "null",
+          "text": "N/A",
+          "to": "null"
+        }
+      ],
+      "sparkline": {
+        "fillColor": "rgba(31, 118, 189, 0.18)",
+        "full": false,
+        "lineColor": "rgb(31, 120, 193)",
+        "show": false
+      },
+      "tableColumn": "",
+      "targets": [
+        {
+          "refId": "A",
+          "target": "UserTime",
+          "type": "timeserie"
+        }
+      ],
+      "thresholds": "",
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "UserTime ",
+      "type": "singlestat",
+      "valueFontSize": "80%",
+      "valueMaps": [
+        {
+          "op": "=",
+          "text": "N/A",
+          "value": "null"
+        }
+      ],
+      "valueName": "current"
+    },
+    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
@@ -2636,9 +3128,9 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 7,
-        "w": 22,
-        "x": 0,
-        "y": 135
+        "w": 15,
+        "x": 7,
+        "y": 133
       },
       "id": 34,
       "legend": {
@@ -2691,7 +3183,7 @@
       },
       "yaxes": [
         {
-          "format": "short",
+          "format": "µs",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -2714,19 +3206,43 @@
     }
   ],
   "refresh": "5s",
-  "schemaVersion": 19,
+  "schemaVersion": 18,
   "style": "dark",
   "tags": [],
   "templating": {
     "list": []
   },
   "time": {
-    "from": "now-5m",
+    "from": "now-15m",
     "to": "now"
   },
-  "timepicker": {},
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ]
+  },
   "timezone": "",
   "title": "KLEE",
   "uid": "oxwz7cvWkh",
-  "version": 9
+  "version": 1
 }
