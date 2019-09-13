@@ -191,6 +191,75 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         dirty = true;
         break;
       }
+#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
+      case Intrinsic::sadd_sat:
+      case Intrinsic::ssub_sat:
+      case Intrinsic::uadd_sat:
+      case Intrinsic::usub_sat: {
+        IRBuilder<> builder(ii);
+
+        Value *op1 = ii->getArgOperand(0);
+        Value *op2 = ii->getArgOperand(1);
+
+        unsigned int bw = op1->getType()->getPrimitiveSizeInBits();
+        assert(bw == op2->getType()->getPrimitiveSizeInBits());
+
+        Value *overflow = nullptr;
+        Value *result = nullptr;
+        Value *saturated = nullptr;
+        switch(ii->getIntrinsicID()) {
+          case Intrinsic::usub_sat:
+            result = builder.CreateSub(op1, op2);
+            overflow = builder.CreateICmpULT(op1, op2); // a < b  =>  a - b < 0
+            saturated = ConstantInt::get(ctx, APInt(bw, 0));
+            break;
+          case Intrinsic::uadd_sat:
+            result = builder.CreateAdd(op1, op2);
+            overflow = builder.CreateICmpULT(result, op1); // a + b < a
+            saturated = ConstantInt::get(ctx, APInt::getMaxValue(bw));
+            break;
+          case Intrinsic::ssub_sat:
+          case Intrinsic::sadd_sat: {
+            if (ii->getIntrinsicID() == Intrinsic::ssub_sat) {
+              result = builder.CreateSub(op1, op2);
+            } else {
+              result = builder.CreateAdd(op1, op2);
+            }
+            ConstantInt *zero = ConstantInt::get(ctx, APInt(bw, 0));
+            ConstantInt *smin = ConstantInt::get(ctx, APInt::getSignedMinValue(bw));
+            ConstantInt *smax = ConstantInt::get(ctx, APInt::getSignedMaxValue(bw));
+
+            Value *sign1 = builder.CreateICmpSLT(op1, zero);
+            Value *sign2 = builder.CreateICmpSLT(op2, zero);
+            Value *signR = builder.CreateICmpSLT(result, zero);
+
+            if (ii->getIntrinsicID() == Intrinsic::ssub_sat) {
+              saturated = builder.CreateSelect(sign2, smax, smin);
+            } else {
+              saturated = builder.CreateSelect(sign2, smin, smax);
+            }
+
+            // The sign of the result differs from the sign of the first operand
+            overflow = builder.CreateXor(sign1, signR);
+            if (ii->getIntrinsicID() == Intrinsic::ssub_sat) {
+              // AND the signs of the operands differ
+              overflow = builder.CreateAnd(overflow, builder.CreateXor(sign1, sign2));
+            } else {
+              // AND the signs of the operands are the same
+              overflow = builder.CreateAnd(overflow, builder.CreateNot(builder.CreateXor(sign1, sign2)));
+            }
+            break;
+          }
+          default: ;
+        }
+
+        result = builder.CreateSelect(overflow, saturated, result);
+        ii->replaceAllUsesWith(result);
+        ii->eraseFromParent();
+        dirty = true;
+        break;
+      }
+#endif
 
       case Intrinsic::trap: {
         // Intrinsic instruction "llvm.trap" found. Directly lower it to
