@@ -1,5 +1,6 @@
-; LLVM 9 added parameter "dynamic" to @llvm.objectsize
-; REQUIRES: geq-llvm-9.0
+; REQUIRES: lt-llvm-9.0
+; LLVM 5 added parameter "nullunknown" to @llvm.objectsize
+; REQUIRES: geq-llvm-5.0
 ; RUN: %llvmas %s -o=%t.bc
 ; RUN: rm -rf %t.klee-out
 ; RUN: %klee -exit-on-error --output-dir=%t.klee-out --optimize=false %t.bc
@@ -11,13 +12,13 @@ define i32 @main() nounwind uwtable {
 entry:
   %a = alloca i8*, align 8
   %0 = load i8*, i8** %a, align 8
-  %1 = call i64 @llvm.objectsize.i64.p0i8(i8* %0, i1 true, i1 false, i1 false)
+  %1 = call i64 @llvm.objectsize.i64.p0i8(i8* %0, i1 true, i1 false)
   %cmp = icmp ne i64 %1, 0
   br i1 %cmp, label %abort.block, label %continue.block
 
 continue.block:
   %2 = load i8*, i8** %a, align 8
-  %3 = call i64 @llvm.objectsize.i64.p0i8(i8* %2, i1 false, i1 false, i1 false)
+  %3 = call i64 @llvm.objectsize.i64.p0i8(i8* %2, i1 false, i1 false)
   %cmp1 = icmp ne i64 %3, -1
   br i1 %cmp1, label %abort.block, label %exit.block
 
@@ -29,6 +30,6 @@ abort.block:
   unreachable
 }
 
-declare i64 @llvm.objectsize.i64.p0i8(i8*, i1, i1, i1) nounwind readnone
+declare i64 @llvm.objectsize.i64.p0i8(i8*, i1, i1) nounwind readnone
 
 declare void @abort() noreturn nounwind
