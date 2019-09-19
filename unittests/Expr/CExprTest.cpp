@@ -28,7 +28,7 @@ using namespace klee;
 
 // This needs to be consistent with whatever is in expr.cpp
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ref<Expr>, klee_expr_t)
-DEFINE_SIMPLE_CONVERSION_FUNCTIONS(Array, klee_array_t)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ref<Array>, klee_array_t)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(UpdateList, klee_update_list_t)
 
 namespace {
@@ -63,7 +63,7 @@ TEST_F(CExprTest, BasicRead) {
   auto CArray = klee_array_create("arr0", 4, NULL, false, 32, 8);
   auto *Array = unwrap(CArray);
 
-  auto ReadExpr = Expr::createTempRead(Array, Expr::Int8);
+  auto ReadExpr = Expr::createTempRead(Array->get(), Expr::Int8);
 
   auto CUL = klee_update_list_create(CArray);
   auto CIndexExpr = klee_build_constant_expr(Builder, 0, 32, false);
@@ -82,7 +82,7 @@ TEST_F(CExprTest, Read) {
   auto CArray = klee_array_create("arr0", 256, NULL, false, 32, 8);
   auto *Array = unwrap(CArray);
 
-  auto ReadExpr = Expr::createTempRead(Array, Expr::Int32);
+  auto ReadExpr = Expr::createTempRead(Array->get(), Expr::Int32);
 
   auto CUL = klee_update_list_create(CArray);
   std::array<klee_expr_t, 4> CReads;

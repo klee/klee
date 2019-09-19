@@ -83,6 +83,12 @@ extern klee_array_t klee_array_create(const char *name, uint64_t size,
                                       klee_expr_width_t domain,
                                       klee_expr_width_t range);
 
+/// Copies the underlying array so that the caller can have a new reference
+/// to the array. The array should be freed by the caller.
+///
+/// param [array] The array to copy
+extern klee_array_t klee_array_copy(klee_array_t array);
+
 /// Destroys a klee_arry_t
 extern void klee_array_dispose(klee_array_t array);
 
@@ -91,6 +97,13 @@ extern klee_update_list_t klee_update_list_create(const klee_array_t array);
 
 extern void klee_update_list_extend(klee_update_list_t updates, klee_expr_t idx,
                                     klee_expr_t value);
+
+
+/// Copies the underlying update list so that the caller can have a new reference
+/// to the update list. The array should be freed by the caller.
+///
+/// param [list] The update list to copy
+extern klee_update_list_t klee_update_list_copy(klee_update_list_t list);
 
 /// Destroys a klee_update_list
 extern void klee_update_list_dispose(klee_update_list_t list);

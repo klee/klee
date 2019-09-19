@@ -497,6 +497,8 @@ public:
   /// the array size.
   const std::vector<ref<ConstantExpr> > constantValues;
 
+  unsigned refCount;
+
 private:
   unsigned hashValue;
 

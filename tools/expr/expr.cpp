@@ -16,7 +16,6 @@
 
 #include "klee/Expr.h"
 #include "klee/ExprBuilder.h"
-#include "klee/util/ArrayCache.h"
 
 #include "llvm/Support/CBindingWrapping.h"
 
@@ -36,7 +35,7 @@ struct LibExprBuilder {
 } // namespace
 
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ref<Expr>, klee_expr_t)
-DEFINE_SIMPLE_CONVERSION_FUNCTIONS(Array, klee_array_t)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(ref<Array>, klee_array_t)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(UpdateList, klee_update_list_t)
 DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LibExprBuilder, klee_expr_builder_t)
 
@@ -110,10 +109,10 @@ klee_array_t klee_array_create(const char *name, uint64_t size,
                                klee_expr_width_t domain,
                                klee_expr_width_t range) {
   std::string TheName(name);
-  const Array *TheArray = nullptr;
+  Array *TheNakedArray = nullptr;
 
   if (!constants) {
-    TheArray = new Array(TheName, size, nullptr, nullptr, domain, range);
+    TheNakedArray = new Array(TheName, size, nullptr, nullptr, domain, range);
   } else {
     std::vector<ref<ConstantExpr>> Constants;
     Constants.reserve(size);
@@ -122,21 +121,30 @@ klee_array_t klee_array_create(const char *name, uint64_t size,
       ref<ConstantExpr> TheConstant = ConstantExpr::alloc(TheValue);
       Constants.push_back(TheConstant);
     }
-    TheArray = new Array (TheName, size, &Constants[0],
+    TheNakedArray = new Array(TheName, size, &Constants[0],
                               &Constants[0] + size, domain, range);
   }
 
+  auto TheArray = new ref<Array>(TheNakedArray);
   return wrap(TheArray);
 }
 
+klee_array_t klee_array_copy(klee_array_t array) {
+  auto *TheArray = unwrap(array);
+  auto *TheCopiedArray = new ref<Array>(*TheArray);
+  return wrap(TheCopiedArray);
+}
+
 void klee_array_dispose(klee_array_t array) {
-  Array *TheArray = unwrap(array);
+  auto *TheArray = unwrap(array);
   delete TheArray;
 }
 
 klee_update_list_t klee_update_list_create(const klee_array_t array) {
-  Array *TheArray = unwrap(array);
-  UpdateList *TheUpdateList = new UpdateList(TheArray, nullptr);
+  auto *TheArray = unwrap(array);
+  // Bump the reference count of the array so that it lives on when disposed of
+  TheArray->get()->refCount++;
+  UpdateList *TheUpdateList = new UpdateList(TheArray->get(), nullptr);
   return wrap(TheUpdateList);
 }
 
@@ -149,8 +157,17 @@ void klee_update_list_extend(klee_update_list_t updates, klee_expr_t idx,
   TheUpdateList->extend(*TheIndex, *TheValue);
 }
 
+klee_update_list_t klee_update_list_copy(klee_update_list_t list) {
+  auto *TheUpdateList = unwrap(list);
+  auto *TheCopiedUpdateList = new UpdateList(*TheUpdateList);
+  return wrap(TheCopiedUpdateList);
+}
+
 void klee_update_list_dispose(klee_update_list_t list) {
   UpdateList *TheUpdateList = unwrap(list);
+  // This should automatically decrement the reference count of the underlying
+  // array and delete it if necessary
+  ref<Array> TheRefArray(const_cast<Array *>(TheUpdateList->root));
   delete TheUpdateList;
 }
 
@@ -176,7 +193,6 @@ klee_expr_t klee_build_select_expr(const klee_expr_builder_t builder,
                                    const klee_expr_t cond,
                                    const klee_expr_t lhs,
                                    const klee_expr_t rhs) {
-
   LibExprBuilder *LibBuilder = unwrap(builder);
   ref<Expr> *Cond = unwrap(cond);
   ref<Expr> *Lhs = unwrap(lhs);
