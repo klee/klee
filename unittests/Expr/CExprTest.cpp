@@ -35,7 +35,7 @@ namespace {
 
 class CExprTest : public ::testing::Test {
 protected:
-  void SetUp() override { Builder = klee_expr_builder_create(); }
+  void SetUp() override { Builder = klee_expr_builder_create(nullptr); }
   void TearDown() override { klee_expr_builder_dispose(Builder); }
 
   klee_expr_builder_t Builder;

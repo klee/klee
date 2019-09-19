@@ -36,18 +36,21 @@ typedef struct OpaqueUpdateList *klee_update_list_t;
 // Opaque wrapping type for ExprBuilder
 typedef struct OpaqueExprBuilder *klee_expr_builder_t;
 
+typedef void (*registration_fn_t)(klee_expr_t);
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 /// Builds an expression builder for use in the client
-extern klee_expr_builder_t klee_expr_builder_create(void);
+extern klee_expr_builder_t
+klee_expr_builder_create(registration_fn_t registration_fn);
 
 /// Destroys a klee_expr_builder_t
 extern void klee_expr_builder_dispose(klee_expr_builder_t builder);
 
 extern klee_expr_width_t klee_expr_get_width(klee_expr_t expr);
 
-  extern bool klee_expr_is_constant(klee_expr_t expr);
+extern bool klee_expr_is_constant(klee_expr_t expr);
 
 /// Compares klee_expr_t for structural equivalence
 ///
@@ -64,6 +67,13 @@ extern int klee_expr_compare(klee_expr_t lhs, klee_expr_t rhs);
 
 /// Destroys a  klee_expr_t
 extern void klee_expr_dispose(klee_expr_t expr);
+
+/// Copies the underlying expression so that the caller can have a new reference
+/// to the expression. This expression will be unregistered, it is the caller's
+/// responisibility to register it manually.
+///
+/// param [expr] The expression to copy
+extern klee_expr_t klee_expr_copy(klee_expr_t expr);
 
 extern void klee_expr_dump(klee_expr_t expr);
 

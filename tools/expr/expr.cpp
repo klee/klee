@@ -26,9 +26,12 @@ namespace {
 // Encapsulate a builder and the associated array cache to tie lifetime of
 // arrays to that of builder.
 struct LibExprBuilder {
-  explicit LibExprBuilder(ExprBuilder *TheBuilder) : Builder(TheBuilder) {}
+  explicit LibExprBuilder(ExprBuilder *TheBuilder,
+                          registration_fn_t TheRegistrationFn)
+      : Builder(TheBuilder), RegistrationFn(TheRegistrationFn) {}
   std::unique_ptr<ExprBuilder> Builder;
   ArrayCache AC;
+  registration_fn_t RegistrationFn;
 };
 
 } // namespace
@@ -47,14 +50,20 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LibExprBuilder, klee_expr_builder_t)
 // newly allocated ref<Expr>.
 // TODO: If this pattern winds up being useful (probably for passing ref<T>
 // around) consider merging this generically into CBindingWrapping.h
-static klee_expr_t allocating_wrap(const ref<Expr> &RefExpr) {
+static klee_expr_t allocating_wrap(const LibExprBuilder *Builder,
+                                   const ref<Expr> &RefExpr) {
   ref<Expr> *TheCopiedRef = new ref<Expr>(RefExpr);
-  return wrap(TheCopiedRef);
+  klee_expr_t TheExpr = wrap(TheCopiedRef);
+  if (Builder->RegistrationFn != nullptr)
+    Builder->RegistrationFn(TheExpr);
+  return TheExpr;
 }
 
-klee_expr_builder_t klee_expr_builder_create(void) {
+klee_expr_builder_t
+klee_expr_builder_create(registration_fn_t registration_fn) {
   ExprBuilder *DefaultBuilder = createDefaultExprBuilder();
-  LibExprBuilder *TheBuilder = new LibExprBuilder(DefaultBuilder);
+  LibExprBuilder *TheBuilder =
+      new LibExprBuilder(DefaultBuilder, registration_fn);
   return wrap(TheBuilder);
 }
 
@@ -84,6 +93,12 @@ int klee_expr_compare(klee_expr_t lhs, klee_expr_t rhs) {
 void klee_expr_dispose(klee_expr_t expr) {
   ref<Expr> *TheRefExpr = unwrap(expr);
   delete TheRefExpr;
+}
+
+klee_expr_t klee_expr_copy(klee_expr_t expr) {
+  ref<Expr> *TheRefExpr = unwrap(expr);
+  ref<Expr> *TheCopiedRef = new ref<Expr>(*TheRefExpr);
+  return wrap(TheCopiedRef);
 }
 
 void klee_expr_dump(klee_expr_t expr) {
@@ -143,7 +158,7 @@ klee_expr_t klee_build_constant_expr(klee_expr_builder_t builder, uint64_t val,
   LibExprBuilder *LibBuilder = unwrap(builder);
   llvm::APInt TheValue(width, val, is_signed);
   ref<Expr> ConstantExpr = LibBuilder->Builder->Constant(TheValue);
-  return allocating_wrap(ConstantExpr);
+  return allocating_wrap(LibBuilder, ConstantExpr);
 }
 
 klee_expr_t klee_build_read_expr(const klee_expr_builder_t builder,
@@ -153,7 +168,7 @@ klee_expr_t klee_build_read_expr(const klee_expr_builder_t builder,
   UpdateList *Updates = unwrap(updates);
   ref<Expr> *Index = unwrap(index);
   ref<Expr> ReadExpr = LibBuilder->Builder->Read(*Updates, *Index);
-  return allocating_wrap(ReadExpr);
+  return allocating_wrap(LibBuilder, ReadExpr);
 }
 
 klee_expr_t klee_build_select_expr(const klee_expr_builder_t builder,
@@ -166,7 +181,7 @@ klee_expr_t klee_build_select_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> SelectExpr = LibBuilder->Builder->Select(*Cond, *Lhs, *Rhs);
-  return allocating_wrap(SelectExpr);
+  return allocating_wrap(LibBuilder, SelectExpr);
 }
 
 klee_expr_t klee_build_concat_expr(const klee_expr_builder_t builder,
@@ -176,7 +191,7 @@ klee_expr_t klee_build_concat_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> ConcatExpr = LibBuilder->Builder->Concat(*Lhs, *Rhs);
-  return allocating_wrap(ConcatExpr);
+  return allocating_wrap(LibBuilder, ConcatExpr);
 }
 
 klee_expr_t klee_build_extract_expr(const klee_expr_builder_t builder,
@@ -185,7 +200,7 @@ klee_expr_t klee_build_extract_expr(const klee_expr_builder_t builder,
   LibExprBuilder *LibBuilder = unwrap(builder);
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> ExtractExpr = LibBuilder->Builder->Extract(*Lhs, offset, width);
-  return allocating_wrap(ExtractExpr);
+  return allocating_wrap(LibBuilder, ExtractExpr);
 }
 
 klee_expr_t klee_build_zext_expr(const klee_expr_builder_t builder,
@@ -194,7 +209,7 @@ klee_expr_t klee_build_zext_expr(const klee_expr_builder_t builder,
   LibExprBuilder *LibBuilder = unwrap(builder);
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> ZExtExpr = LibBuilder->Builder->ZExt(*Lhs, width);
-  return allocating_wrap(ZExtExpr);
+  return allocating_wrap(LibBuilder, ZExtExpr);
 }
 
 klee_expr_t klee_build_sext_expr(const klee_expr_builder_t builder,
@@ -203,7 +218,7 @@ klee_expr_t klee_build_sext_expr(const klee_expr_builder_t builder,
   LibExprBuilder *LibBuilder = unwrap(builder);
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> SExtExpr = LibBuilder->Builder->SExt(*Lhs, width);
-  return allocating_wrap(SExtExpr);
+  return allocating_wrap(LibBuilder, SExtExpr);
 }
 
 klee_expr_t klee_build_add_expr(const klee_expr_builder_t builder,
@@ -212,7 +227,7 @@ klee_expr_t klee_build_add_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> AddExpr = LibBuilder->Builder->Add(*Lhs, *Rhs);
-  return allocating_wrap(AddExpr);
+  return allocating_wrap(LibBuilder, AddExpr);
 }
 
 klee_expr_t klee_build_sub_expr(const klee_expr_builder_t builder,
@@ -221,7 +236,7 @@ klee_expr_t klee_build_sub_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> SubExpr = LibBuilder->Builder->Sub(*Lhs, *Rhs);
-  return allocating_wrap(SubExpr);
+  return allocating_wrap(LibBuilder, SubExpr);
 }
 
 klee_expr_t klee_build_mul_expr(const klee_expr_builder_t builder,
@@ -230,7 +245,7 @@ klee_expr_t klee_build_mul_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> MulExpr = LibBuilder->Builder->Mul(*Lhs, *Rhs);
-  return allocating_wrap(MulExpr);
+  return allocating_wrap(LibBuilder, MulExpr);
 }
 
 klee_expr_t klee_build_udiv_expr(const klee_expr_builder_t builder,
@@ -239,7 +254,7 @@ klee_expr_t klee_build_udiv_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> UDivExpr = LibBuilder->Builder->UDiv(*Lhs, *Rhs);
-  return allocating_wrap(UDivExpr);
+  return allocating_wrap(LibBuilder, UDivExpr);
 }
 
 klee_expr_t klee_build_sdiv_expr(const klee_expr_builder_t builder,
@@ -248,7 +263,7 @@ klee_expr_t klee_build_sdiv_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> SDivExpr = LibBuilder->Builder->SDiv(*Lhs, *Rhs);
-  return allocating_wrap(SDivExpr);
+  return allocating_wrap(LibBuilder, SDivExpr);
 }
 
 klee_expr_t klee_build_urem_expr(const klee_expr_builder_t builder,
@@ -257,7 +272,7 @@ klee_expr_t klee_build_urem_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> URemExpr = LibBuilder->Builder->URem(*Lhs, *Rhs);
-  return allocating_wrap(URemExpr);
+  return allocating_wrap(LibBuilder, URemExpr);
 }
 
 klee_expr_t klee_build_srem_expr(const klee_expr_builder_t builder,
@@ -266,7 +281,7 @@ klee_expr_t klee_build_srem_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> SRemExpr = LibBuilder->Builder->SRem(*Lhs, *Rhs);
-  return allocating_wrap(SRemExpr);
+  return allocating_wrap(LibBuilder, SRemExpr);
 }
 
 klee_expr_t klee_build_not_expr(const klee_expr_builder_t builder,
@@ -274,7 +289,7 @@ klee_expr_t klee_build_not_expr(const klee_expr_builder_t builder,
   LibExprBuilder *LibBuilder = unwrap(builder);
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> NotExpr = LibBuilder->Builder->Not(*Lhs);
-  return allocating_wrap(NotExpr);
+  return allocating_wrap(LibBuilder, NotExpr);
 }
 
 klee_expr_t klee_build_and_expr(const klee_expr_builder_t builder,
@@ -283,7 +298,7 @@ klee_expr_t klee_build_and_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> AndExpr = LibBuilder->Builder->And(*Lhs, *Rhs);
-  return allocating_wrap(AndExpr);
+  return allocating_wrap(LibBuilder, AndExpr);
 }
 
 klee_expr_t klee_build_or_expr(const klee_expr_builder_t builder,
@@ -292,7 +307,7 @@ klee_expr_t klee_build_or_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> OrExpr = LibBuilder->Builder->Or(*Lhs, *Rhs);
-  return allocating_wrap(OrExpr);
+  return allocating_wrap(LibBuilder, OrExpr);
 }
 
 klee_expr_t klee_build_xor_expr(const klee_expr_builder_t builder,
@@ -301,7 +316,7 @@ klee_expr_t klee_build_xor_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> XorExpr = LibBuilder->Builder->Xor(*Lhs, *Rhs);
-  return allocating_wrap(XorExpr);
+  return allocating_wrap(LibBuilder, XorExpr);
 }
 
 klee_expr_t klee_build_shl_expr(const klee_expr_builder_t builder,
@@ -310,7 +325,7 @@ klee_expr_t klee_build_shl_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> ShlExpr = LibBuilder->Builder->Shl(*Lhs, *Rhs);
-  return allocating_wrap(ShlExpr);
+  return allocating_wrap(LibBuilder, ShlExpr);
 }
 
 klee_expr_t klee_build_lshr_expr(const klee_expr_builder_t builder,
@@ -319,7 +334,7 @@ klee_expr_t klee_build_lshr_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> LShrExpr = LibBuilder->Builder->LShr(*Lhs, *Rhs);
-  return allocating_wrap(LShrExpr);
+  return allocating_wrap(LibBuilder, LShrExpr);
 }
 
 klee_expr_t klee_build_ashr_expr(const klee_expr_builder_t builder,
@@ -328,7 +343,7 @@ klee_expr_t klee_build_ashr_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> AShrExpr = LibBuilder->Builder->AShr(*Lhs, *Rhs);
-  return allocating_wrap(AShrExpr);
+  return allocating_wrap(LibBuilder, AShrExpr);
 }
 
 klee_expr_t klee_build_eq_expr(const klee_expr_builder_t builder,
@@ -337,7 +352,7 @@ klee_expr_t klee_build_eq_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> EqExpr = LibBuilder->Builder->Eq(*Lhs, *Rhs);
-  return allocating_wrap(EqExpr);
+  return allocating_wrap(LibBuilder, EqExpr);
 }
 
 klee_expr_t klee_build_ne_expr(const klee_expr_builder_t builder,
@@ -346,7 +361,7 @@ klee_expr_t klee_build_ne_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> NeExpr = LibBuilder->Builder->Ne(*Lhs, *Rhs);
-  return allocating_wrap(NeExpr);
+  return allocating_wrap(LibBuilder, NeExpr);
 }
 
 klee_expr_t klee_build_ult_expr(const klee_expr_builder_t builder,
@@ -355,7 +370,7 @@ klee_expr_t klee_build_ult_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> UltExpr = LibBuilder->Builder->Ult(*Lhs, *Rhs);
-  return allocating_wrap(UltExpr);
+  return allocating_wrap(LibBuilder, UltExpr);
 }
 
 klee_expr_t klee_build_ule_expr(const klee_expr_builder_t builder,
@@ -364,7 +379,7 @@ klee_expr_t klee_build_ule_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> UleExpr = LibBuilder->Builder->Ule(*Lhs, *Rhs);
-  return allocating_wrap(UleExpr);
+  return allocating_wrap(LibBuilder, UleExpr);
 }
 
 klee_expr_t klee_build_ugt_expr(const klee_expr_builder_t builder,
@@ -373,7 +388,7 @@ klee_expr_t klee_build_ugt_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> UgtExpr = LibBuilder->Builder->Ugt(*Lhs, *Rhs);
-  return allocating_wrap(UgtExpr);
+  return allocating_wrap(LibBuilder, UgtExpr);
 }
 
 klee_expr_t klee_build_uge_expr(const klee_expr_builder_t builder,
@@ -382,7 +397,7 @@ klee_expr_t klee_build_uge_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> UgeExpr = LibBuilder->Builder->Uge(*Lhs, *Rhs);
-  return allocating_wrap(UgeExpr);
+  return allocating_wrap(LibBuilder, UgeExpr);
 }
 
 klee_expr_t klee_build_slt_expr(const klee_expr_builder_t builder,
@@ -391,7 +406,7 @@ klee_expr_t klee_build_slt_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> SltExpr = LibBuilder->Builder->Slt(*Lhs, *Rhs);
-  return allocating_wrap(SltExpr);
+  return allocating_wrap(LibBuilder, SltExpr);
 }
 
 klee_expr_t klee_build_sle_expr(const klee_expr_builder_t builder,
@@ -400,7 +415,7 @@ klee_expr_t klee_build_sle_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> SleExpr = LibBuilder->Builder->Sle(*Lhs, *Rhs);
-  return allocating_wrap(SleExpr);
+  return allocating_wrap(LibBuilder, SleExpr);
 }
 
 klee_expr_t klee_build_sgt_expr(const klee_expr_builder_t builder,
@@ -409,7 +424,7 @@ klee_expr_t klee_build_sgt_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> SgtExpr = LibBuilder->Builder->Sgt(*Lhs, *Rhs);
-  return allocating_wrap(SgtExpr);
+  return allocating_wrap(LibBuilder, SgtExpr);
 }
 
 klee_expr_t klee_build_sge_expr(const klee_expr_builder_t builder,
@@ -418,5 +433,5 @@ klee_expr_t klee_build_sge_expr(const klee_expr_builder_t builder,
   ref<Expr> *Lhs = unwrap(lhs);
   ref<Expr> *Rhs = unwrap(rhs);
   ref<Expr> SgeExpr = LibBuilder->Builder->Sge(*Lhs, *Rhs);
-  return allocating_wrap(SgeExpr);
+  return allocating_wrap(LibBuilder, SgeExpr);
 }
