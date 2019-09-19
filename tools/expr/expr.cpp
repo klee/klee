@@ -165,9 +165,13 @@ klee_update_list_t klee_update_list_copy(klee_update_list_t list) {
 
 void klee_update_list_dispose(klee_update_list_t list) {
   UpdateList *TheUpdateList = unwrap(list);
-  // This should automatically decrement the reference count of the underlying
-  // array and delete it if necessary
-  ref<Array> TheRefArray(const_cast<Array *>(TheUpdateList->root));
+  // This should automatically at the end of the scope decrement the reference
+  // count of the underlying array and delete it if necessary
+  // XXX: This is disgusting but we need this to support ref-counted array's here
+  auto *TheDirtyArray = const_cast<Array *>(TheUpdateList->root);
+  ref<Array> TheRefArray(TheDirtyArray);
+  // Decrement once because of the inc from the ref ctor
+  TheDirtyArray->refCount--;
   delete TheUpdateList;
 }
 

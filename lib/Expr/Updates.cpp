@@ -71,6 +71,7 @@ UpdateList::UpdateList(const UpdateList &b)
   : root(b.root),
     head(b.head) {
   if (head) ++head->refCount;
+  root->refCount++;
 }
 
 UpdateList::~UpdateList() {
