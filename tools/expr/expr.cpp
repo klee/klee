@@ -30,7 +30,6 @@ struct LibExprBuilder {
                           registration_fn_t TheRegistrationFn)
       : Builder(TheBuilder), RegistrationFn(TheRegistrationFn) {}
   std::unique_ptr<ExprBuilder> Builder;
-  ArrayCache AC;
   registration_fn_t RegistrationFn;
 };
 
@@ -106,18 +105,15 @@ void klee_expr_dump(klee_expr_t expr) {
   (*TheRefExpr)->dump();
 }
 
-extern klee_array_t klee_array_create(const klee_expr_builder_t builder,
-                                      const char *name, uint64_t size,
-                                      const uint64_t *constants, bool is_signed,
-                                      klee_expr_width_t domain,
-                                      klee_expr_width_t range) {
-  LibExprBuilder *TheBuilder = unwrap(builder);
+klee_array_t klee_array_create(const char *name, uint64_t size,
+                               const uint64_t *constants, bool is_signed,
+                               klee_expr_width_t domain,
+                               klee_expr_width_t range) {
   std::string TheName(name);
-  ArrayCache &AC = TheBuilder->AC;
   const Array *TheArray = nullptr;
 
   if (!constants) {
-    TheArray = AC.CreateArray(TheName, size, nullptr, nullptr, domain, range);
+    TheArray = new Array(TheName, size, nullptr, nullptr, domain, range);
   } else {
     std::vector<ref<ConstantExpr>> Constants;
     Constants.reserve(size);
@@ -126,11 +122,16 @@ extern klee_array_t klee_array_create(const klee_expr_builder_t builder,
       ref<ConstantExpr> TheConstant = ConstantExpr::alloc(TheValue);
       Constants.push_back(TheConstant);
     }
-    TheArray = AC.CreateArray(TheName, size, &Constants[0],
+    TheArray = new Array (TheName, size, &Constants[0],
                               &Constants[0] + size, domain, range);
   }
 
   return wrap(TheArray);
+}
+
+void klee_array_dispose(klee_array_t array) {
+  Array *TheArray = unwrap(array);
+  delete TheArray;
 }
 
 klee_update_list_t klee_update_list_create(const klee_array_t array) {

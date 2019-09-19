@@ -60,7 +60,7 @@ TEST_F(CExprTest, BasicComparison) {
 }
 
 TEST_F(CExprTest, BasicRead) {
-  auto CArray = klee_array_create(Builder, "arr0", 4, NULL, false, 32, 8);
+  auto CArray = klee_array_create("arr0", 4, NULL, false, 32, 8);
   auto *Array = unwrap(CArray);
 
   auto ReadExpr = Expr::createTempRead(Array, Expr::Int8);
@@ -74,11 +74,12 @@ TEST_F(CExprTest, BasicRead) {
 
   klee_expr_dispose(CIndexExpr);
   klee_expr_dispose(CReadExpr);
+  klee_array_dispose(CArray);
   klee_update_list_dispose(CUL);
 }
 
 TEST_F(CExprTest, Read) {
-  auto CArray = klee_array_create(Builder, "arr0", 256, NULL, false, 32, 8);
+  auto CArray = klee_array_create("arr0", 256, NULL, false, 32, 8);
   auto *Array = unwrap(CArray);
 
   auto ReadExpr = Expr::createTempRead(Array, Expr::Int32);
@@ -107,6 +108,7 @@ TEST_F(CExprTest, Read) {
   for (auto CRead : CReads)
     klee_expr_dispose(CRead);
 
+  klee_array_dispose(CArray);
   klee_update_list_dispose(CUL);
 }
 
