@@ -2,4 +2,5 @@
 
 # RUN: grep "Query 0:	VALID" %t.log
 # XFAIL: *
+# see https://github.com/klee/klee/issues/97
 (query [false] false)
