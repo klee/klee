@@ -109,8 +109,8 @@ int statfs(const char *path, struct statfs *buf) {
   return __fd_statfs(path, buf);
 }
 
-int getdents64(unsigned int fd, struct dirent *dirp, unsigned int count) {
+ssize_t getdents64(int fd, void *dirp, size_t count) {
   return __fd_getdents(fd, (struct dirent64*) dirp, count);
 }
-int __getdents64(unsigned int fd, struct dirent *dirp, unsigned int count)
+ssize_t __getdents64(int fd, void *dirp, size_t count)
      __attribute__((alias("getdents64")));
