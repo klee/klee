@@ -8,13 +8,13 @@
 // one with the prefered CEX. We verify this by using ktest-tool to dump the
 // values, and then checking the output.
 //
-// RUN: /bin/sh -c "ktest-tool %t.klee-out/*.ktest" | sort > %t.data-values
+// RUN: /bin/sh -c "ktest-tool %t.klee-out/*.ktest" > %t.data-values
 // RUN: FileCheck < %t.data-values %s
 
-// CHECK: object 0: int : 0
-// CHECK: object 0: int : 17
-// CHECK: object 0: int : 32
-// CHECK: object 0: int : 99
+// CHECK-DAG: object 0: int : 0
+// CHECK-DAG: object 0: int : 17
+// CHECK-DAG: object 0: int : 32
+// CHECK-DAG: object 0: int : 99
 
 #include "klee/klee.h"
 
@@ -24,7 +24,9 @@ void f2(void) {}
 void f3(void) {}
 
 int main() {
-  int x = klee_range(0, 256, "x");
+  int x;
+  klee_make_symbolic(&x, sizeof x, "x");
+  klee_assume((unsigned) x < 256);
 
   if (x == 17) {
     f0();
