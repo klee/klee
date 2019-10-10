@@ -39,7 +39,7 @@ LABEL maintainer="KLEE Developers"
 # TODO remove adding sudo package
 # Create ``klee`` user for container with password ``klee``.
 # and give it password-less sudo access (temporarily so we can use the TravisCI scripts)
-RUN apt update && apt -y --no-install-recommends install sudo emacs vim && \
+RUN apt update && apt -y --no-install-recommends install sudo emacs vim file && \
     rm -rf /var/lib/apt/lists/* && \
     useradd -m klee && \
     echo klee:klee | chpasswd && \
