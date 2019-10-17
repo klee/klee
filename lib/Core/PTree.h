@@ -11,15 +11,20 @@
 #define KLEE_PTREE_H
 
 #include "klee/Expr/Expr.h"
+#include "llvm/ADT/PointerIntPair.h"
 
 namespace klee {
   class ExecutionState;
+  class PTreeNode;
+  using PTreeNodePtr = llvm::PointerIntPair<PTreeNode*,3,uint8_t>;
+
 
   class PTreeNode {
   public:
     PTreeNode *parent = nullptr;
-    PTreeNode *left = nullptr;
-    PTreeNode *right = nullptr;
+
+    PTreeNodePtr left; 
+    PTreeNodePtr right;
     ExecutionState *state = nullptr;
 
     PTreeNode(const PTreeNode&) = delete;
