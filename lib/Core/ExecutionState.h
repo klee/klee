@@ -111,7 +111,8 @@ public:
   std::map<const std::string *, std::set<std::uint32_t>> coveredLines;
 
   /// @brief Pointer to the process tree of the current state
-  PTreeNode *ptreeNode;
+  /// Copies of ExecutionState should not copy ptreeNode
+  PTreeNode *ptreeNode = nullptr;
 
   /// @brief Ordered list of symbolics: used to generate test cases.
   //
@@ -144,6 +145,10 @@ public:
   bool forkDisabled;
 
 public:
+  #ifdef KLEE_UNITTEST
+  // provide this function only in the context of unittests
+  ExecutionState(){}
+  #endif
   // only to create the initial state
   explicit ExecutionState(KFunction *kf);
   // XXX total hack, just used to make a state so solver can

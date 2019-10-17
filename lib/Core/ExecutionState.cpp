@@ -105,7 +105,6 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     pathOS(state.pathOS),
     symPathOS(state.symPathOS),
     coveredLines(state.coveredLines),
-    ptreeNode(state.ptreeNode),
     symbolics(state.symbolics),
     arrayNames(state.arrayNames),
     openMergeStack(state.openMergeStack),

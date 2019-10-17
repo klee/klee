@@ -104,14 +104,15 @@ bool klee::userSearcherRequiresMD2U() {
 	  std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_QC) != CoreSearch.end());
 }
 
-
-Searcher *getNewSearcher(Searcher::CoreSearchType type, Executor &executor) {
+Searcher *getNewSearcher(Searcher::CoreSearchType type, PTree &processTree) {
   Searcher *searcher = NULL;
   switch (type) {
   case Searcher::DFS: searcher = new DFSSearcher(); break;
   case Searcher::BFS: searcher = new BFSSearcher(); break;
   case Searcher::RandomState: searcher = new RandomSearcher(); break;
-  case Searcher::RandomPath: searcher = new RandomPathSearcher(executor); break;
+  case Searcher::RandomPath:
+    searcher = new RandomPathSearcher(processTree);
+    break;
   case Searcher::NURS_CovNew: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::CoveringNew); break;
   case Searcher::NURS_MD2U: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::MinDistToUncovered); break;
   case Searcher::NURS_Depth: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::Depth); break;
@@ -126,14 +127,13 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, Executor &executor) {
 
 Searcher *klee::constructUserSearcher(Executor &executor) {
 
-  Searcher *searcher = getNewSearcher(CoreSearch[0], executor);
-
+  Searcher *searcher = getNewSearcher(CoreSearch[0], *executor.processTree);
   if (CoreSearch.size() > 1) {
     std::vector<Searcher *> s;
     s.push_back(searcher);
 
     for (unsigned i = 1; i < CoreSearch.size(); i++)
-      s.push_back(getNewSearcher(CoreSearch[i], executor));
+      s.push_back(getNewSearcher(CoreSearch[i], *executor.processTree));
 
     searcher = new InterleavedSearcher(s);
   }

@@ -10,6 +10,7 @@
 #ifndef KLEE_SEARCHER_H
 #define KLEE_SEARCHER_H
 
+#include "PTree.h"
 #include "klee/System/Time.h"
 
 #include "llvm/Support/CommandLine.h"
@@ -170,11 +171,32 @@ namespace klee {
     }
   };
 
+  /* RandomPathSearcher performs a random walk of the PTree to
+     select a state. PTree is a global data structure, however
+     a searcher can sometimes only select from a subset of all states
+     (depending on the update calls).
+
+     To support this RandomPathSearcher has a subgraph view of PTree, in that it
+     only
+     walks the PTreeNodes that it "owns". Ownership is stored in the
+     getInt method of PTreeNodePtr class (which hides it in the pointer itself).
+
+     The current implementation of PTreeNodePtr supports only 3 instances of the
+     RandomPathSearcher. This is because current PTreeNodePtr implementation
+     conforms to C++ and only steals the last 3 alligment bits. This restriction
+     could be relaxed  slightly by an architecture specific implementation of
+     PTreeNodePtr, that also steals the top bits of the pointer.
+
+     The ownership bits are maintained in the update method.
+  */
   class RandomPathSearcher : public Searcher {
-    Executor &executor;
+    PTree &processTree;
+
+    // Unique bitmask of this searcher
+    const uint8_t idBitMask;
 
   public:
-    RandomPathSearcher(Executor &_executor);
+    RandomPathSearcher(PTree &processTree);
     ~RandomPathSearcher();
 
     ExecutionState &selectState();

@@ -11,13 +11,19 @@
 #define KLEE_PTREE_H
 
 #include "klee/Expr/Expr.h"
+#include "klee/Support/ErrorHandling.h"
 #include "llvm/ADT/PointerIntPair.h"
 
 namespace klee {
   class ExecutionState;
   class PTreeNode;
-  using PTreeNodePtr = llvm::PointerIntPair<PTreeNode*,3,uint8_t>;
-
+  /* PTreeNodePtr is used by the Random Path Searcher object to efficiently
+  record which PTreeNode belongs to it. PTree is a global structure that
+  captures all  states, whereas a Random Path Searcher might only care about
+  a subset. The integer part of PTreeNodePtr is a bitmask (a "tag") of which
+  Random Path Searchers PTreeNode belongs to. */
+  constexpr int PtrBitCount = 3;
+  using PTreeNodePtr = llvm::PointerIntPair<PTreeNode *, PtrBitCount, uint8_t>;
 
   class PTreeNode {
   public:
@@ -33,14 +39,26 @@ namespace klee {
   };
 
   class PTree {
+    // Number of registered ID
+    int registeredIds = 0;
+
   public:
-    PTreeNode * root = nullptr;
+    PTreeNodePtr root;
     explicit PTree(ExecutionState *initialState);
     ~PTree() = default;
 
-    static void attach(PTreeNode *node, ExecutionState *leftState, ExecutionState *rightState);
+    void attach(PTreeNode *node, ExecutionState *leftState,
+                ExecutionState *rightState);
     static void remove(PTreeNode *node);
     void dump(llvm::raw_ostream &os);
+    std::uint8_t getNextId() {
+      std::uint8_t id = 1 << registeredIds++;
+      if (registeredIds > PtrBitCount) {
+        klee_error("PTree cannot support more than %d RandomPathSearchers",
+                   PtrBitCount);
+      }
+      return id;
+    }
   };
 }
 
