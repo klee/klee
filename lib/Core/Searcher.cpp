@@ -259,21 +259,29 @@ bool WeightedRandomSearcher::empty() {
   return states->empty(); 
 }
 
-///
-RandomPathSearcher::RandomPathSearcher(Executor &_executor)
-  : executor(_executor) {
-}
+RandomPathSearcher::RandomPathSearcher(PTree &_processTree)
+    : processTree(_processTree), idBitMask(_processTree.getNextId()) {}
 
 RandomPathSearcher::~RandomPathSearcher() {
 }
+// Check if n is a valid pointer and a node belonging to us
+#define IS_OUR_NODE_VALID(n)                                                   \
+  (((n).getPointer() != nullptr) && (((n).getInt() & idBitMask) != 0))
 
 ExecutionState &RandomPathSearcher::selectState() {
   unsigned flips=0, bits=0;
-  PTreeNode *n = executor.processTree->root;
+  assert(processTree.root.getInt() & idBitMask &&
+         "Root should belong to the searcher");
+  PTreeNode *n = processTree.root.getPointer();
   while (!n->state) {
-    if (!n->left.getPointer()) {
+    if (!IS_OUR_NODE_VALID(n->left)) {
+      assert(IS_OUR_NODE_VALID(n->right) &&
+             "Both left and right nodes invalid");
+      assert(n != n->right.getPointer());
       n = n->right.getPointer();
-    } else if (!n->right.getPointer()) {
+    } else if (!IS_OUR_NODE_VALID(n->right)) {
+      assert(IS_OUR_NODE_VALID(n->left) && "Both right and left nodes invalid");
+      assert(n != n->left.getPointer());
       n = n->left.getPointer();
     } else {
       if (bits==0) {
@@ -281,7 +289,7 @@ ExecutionState &RandomPathSearcher::selectState() {
         bits = 32;
       }
       --bits;
-      n = (flips&(1<<bits)) ? n->left.getPointer() : n->right.getPointer();
+      n = ((flips & (1 << bits)) ? n->left : n->right).getPointer();
     }
   }
 
@@ -292,10 +300,46 @@ void
 RandomPathSearcher::update(ExecutionState *current,
                            const std::vector<ExecutionState *> &addedStates,
                            const std::vector<ExecutionState *> &removedStates) {
+  for (auto es : addedStates) {
+    PTreeNode *pnode = es->ptreeNode, *parent = pnode->parent;
+    PTreeNodePtr *childPtr;
+
+    childPtr = parent ? ((parent->left.getPointer() == pnode) ? &parent->left
+                                                              : &parent->right)
+                      : &processTree.root;
+    while (pnode && !IS_OUR_NODE_VALID(*childPtr)) {
+      childPtr->setInt(childPtr->getInt() | idBitMask);
+      pnode = parent;
+      if (pnode)
+        parent = pnode->parent;
+
+      childPtr = parent
+                     ? ((parent->left.getPointer() == pnode) ? &parent->left
+                                                             : &parent->right)
+                     : &processTree.root;
+    }
+  }
+
+  for (auto es : removedStates) {
+    PTreeNode *pnode = es->ptreeNode, *parent = pnode->parent;
+
+    while (pnode && !IS_OUR_NODE_VALID(pnode->left) &&
+           !IS_OUR_NODE_VALID(pnode->right)) {
+      auto childPtr =
+          parent ? ((parent->left.getPointer() == pnode) ? &parent->left
+                                                         : &parent->right)
+                 : &processTree.root;
+      assert(IS_OUR_NODE_VALID(*childPtr) && "Removing pTree child not ours");
+      childPtr->setInt(childPtr->getInt() & ~idBitMask);
+      pnode = parent;
+      if (pnode)
+        parent = pnode->parent;
+    }
+  }
 }
 
-bool RandomPathSearcher::empty() { 
-  return executor.states.empty(); 
+bool RandomPathSearcher::empty() {
+  return !IS_OUR_NODE_VALID(processTree.root);
 }
 
 ///

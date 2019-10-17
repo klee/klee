@@ -16,6 +16,7 @@
 #define KLEE_EXECUTOR_H
 
 #include "ExecutionState.h"
+#include "UserSearcher.h"
 
 #include "klee/Core/Interpreter.h"
 #include "klee/Expr/ArrayCache.h"
@@ -84,12 +85,12 @@ namespace klee {
   /// removedStates, and haltExecution, among others.
 
 class Executor : public Interpreter {
-  friend class RandomPathSearcher;
   friend class OwningSearcher;
   friend class WeightedRandomSearcher;
   friend class SpecialFunctionHandler;
   friend class StatsTracker;
   friend class MergeHandler;
+  friend klee::Searcher *klee::constructUserSearcher(Executor &executor);
 
 public:
   typedef std::pair<ExecutionState*,ExecutionState*> StatePair;
