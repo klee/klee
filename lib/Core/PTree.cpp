@@ -24,28 +24,27 @@ PTree::PTree(ExecutionState *initialState) {
 }
 
 void PTree::attach(PTreeNode *node, ExecutionState *leftState, ExecutionState *rightState) {
-  assert(node && !node->left && !node->right);
-
+  assert(node && !node->left.getPointer() && !node->right.getPointer());
   node->state = nullptr;
-  node->left = new PTreeNode(node, leftState);
-  node->right = new PTreeNode(node, rightState);
+  node->left = PTreeNodePtr(new PTreeNode(node, leftState));
+  node->right = PTreeNodePtr(new PTreeNode(node, rightState));
 }
 
 void PTree::remove(PTreeNode *n) {
-  assert(!n->left && !n->right);
+  assert(!n->left.getPointer() && !n->right.getPointer());
   do {
     PTreeNode *p = n->parent;
     if (p) {
-      if (n == p->left) {
-        p->left = nullptr;
+      if (n == p->left.getPointer()) {
+        p->left = PTreeNodePtr(nullptr);
       } else {
-        assert(n == p->right);
-        p->right = nullptr;
+        assert(n == p->right.getPointer());
+        p->right = PTreeNodePtr(nullptr);
       }
     }
     delete n;
     n = p;
-  } while (n && !n->left && !n->right);
+  } while (n && !n->left.getPointer() && !n->right.getPointer());
 }
 
 void PTree::dump(llvm::raw_ostream &os) {
@@ -67,13 +66,13 @@ void PTree::dump(llvm::raw_ostream &os) {
     if (n->state)
       os << ",fillcolor=green";
     os << "];\n";
-    if (n->left) {
-      os << "\tn" << n << " -> n" << n->left << ";\n";
-      stack.push_back(n->left);
+    if (n->left.getPointer()) {
+      os << "\tn" << n << " -> n" << n->left.getPointer() << ";\n";
+      stack.push_back(n->left.getPointer());
     }
-    if (n->right) {
-      os << "\tn" << n << " -> n" << n->right << ";\n";
-      stack.push_back(n->right);
+    if (n->right.getPointer()) {
+      os << "\tn" << n << " -> n" << n->right.getPointer() << ";\n";
+      stack.push_back(n->right.getPointer());
     }
   }
   os << "}\n";
@@ -82,5 +81,6 @@ void PTree::dump(llvm::raw_ostream &os) {
 
 PTreeNode::PTreeNode(PTreeNode *parent, ExecutionState *state) : parent{parent}, state{state} {
   state->ptreeNode = this;
+  left = PTreeNodePtr(nullptr);
+  right = PTreeNodePtr(nullptr);
 }
-

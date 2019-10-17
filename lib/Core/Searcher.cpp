@@ -271,17 +271,17 @@ ExecutionState &RandomPathSearcher::selectState() {
   unsigned flips=0, bits=0;
   PTreeNode *n = executor.processTree->root;
   while (!n->state) {
-    if (!n->left) {
-      n = n->right;
-    } else if (!n->right) {
-      n = n->left;
+    if (!n->left.getPointer()) {
+      n = n->right.getPointer();
+    } else if (!n->right.getPointer()) {
+      n = n->left.getPointer();
     } else {
       if (bits==0) {
         flips = theRNG.getInt32();
         bits = 32;
       }
       --bits;
-      n = (flips&(1<<bits)) ? n->left : n->right;
+      n = (flips&(1<<bits)) ? n->left.getPointer() : n->right.getPointer();
     }
   }
 
