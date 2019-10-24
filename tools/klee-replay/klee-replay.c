@@ -321,9 +321,16 @@ int main(int argc, char** argv) {
     }
   }
 
+  // Executable needs to be converted to an absolute path, as klee-replay calls
+  // chdir just before executing it
+  char executable[PATH_MAX];
+  if (!realpath(argv[optind], executable)) {
+    snprintf(executable, PATH_MAX, "KLEE-REPLAY: ERROR: executable %s:",
+             argv[optind]);
+    perror(executable);
+    exit(1);
+  }
   /* Normal execution path ... */
-
-  char* executable = argv[optind];
 
   /* make sure this process has the CAP_SYS_CHROOT capability, if possible. */
 #ifdef HAVE_SYS_CAPABILITY_H
@@ -336,14 +343,6 @@ int main(int argc, char** argv) {
     fputs("KLEE-REPLAY: ERROR: chroot: root dir should be a parent dir of executable.\n", stderr);
     exit(1);
   }
-
-  /* Verify the executable exists. */
-  FILE *f = fopen(executable, "r");
-  if (!f) {
-    fprintf(stderr, "KLEE-REPLAY: ERROR: executable %s not found.\n", executable);
-    exit(1);
-  }
-  fclose(f);
 
   int idx = 0;
   for (idx = optind + 1; idx != argc; ++idx) {
