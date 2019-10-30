@@ -313,12 +313,9 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
         arrayValues.push_back(val);
       }
 
-      ref<Expr> index = read->index;
-      IndexCleanerVisitor ice;
-      ice.visit(index);
-      if (ice.getIndex().get()) {
-        index = ice.getIndex();
-      }
+      ref<Expr> index = UDivExpr::create(
+          read->index,
+          ConstantExpr::create(bytesPerElement, read->index->getWidth()));
 
       ref<Expr> opt =
           buildConstantSelectExpr(index, arrayValues, width, elementsInArray);
@@ -650,12 +647,8 @@ ref<Expr> ExprOptimizer::buildMixedSelectExpr(
       }
     }
 
-    ref<Expr> new_index = re->index;
-    IndexCleanerVisitor ice;
-    ice.visit(new_index);
-    if (ice.getIndex().get()) {
-      new_index = ice.getIndex();
-    }
+    ref<Expr> new_index = UDivExpr::create(
+        re->index, ConstantExpr::create(width / 8, re->index->getWidth()));
 
     int new_index_width = new_index->getWidth();
     // Iterate through all the ranges

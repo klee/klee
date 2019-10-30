@@ -124,20 +124,6 @@ public:
                                        bool recursive = true)
       : ExprVisitor(recursive), optimized(_optimized) {}
 };
-
-class IndexCleanerVisitor : public ExprVisitor {
-private:
-  bool mul{true};
-  ref<Expr> index;
-
-protected:
-  Action visitMul(const MulExpr &) override;
-  Action visitRead(const ReadExpr &) override;
-
-public:
-  IndexCleanerVisitor() : ExprVisitor(true) {}
-  inline ref<Expr> getIndex() { return index; }
-};
 } // namespace klee
 
 #endif /* KLEE_ARRAYEXPRVISITOR_H */
