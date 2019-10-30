@@ -256,19 +256,3 @@ ExprVisitor::Action ArrayValueOptReplaceVisitor::visitRead(const ReadExpr &re) {
   }
   return Action::doChildren();
 }
-
-ExprVisitor::Action IndexCleanerVisitor::visitMul(const MulExpr &e) {
-  if (mul) {
-    if (!isa<ConstantExpr>(e.getKid(0)))
-      index = e.getKid(0);
-    else if (!isa<ConstantExpr>(e.getKid(1)))
-      index = e.getKid(1);
-    mul = false;
-  }
-  return Action::doChildren();
-}
-
-ExprVisitor::Action IndexCleanerVisitor::visitRead(const ReadExpr &) {
-  mul = false;
-  return Action::doChildren();
-}
