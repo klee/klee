@@ -1913,10 +1913,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Value *fp = cs.getCalledValue();
     Function *f = getTargetFunction(fp, state);
 
-    // Skip debug intrinsics, we can't evaluate their metadata arguments.
-    if (isa<DbgInfoIntrinsic>(i))
-      break;
-
     if (isa<InlineAsm>(fp)) {
       terminateStateOnExecError(state, "inline assembly is unsupported");
       break;
