@@ -15,6 +15,7 @@
 #endif
 #endif
 
+#define INSIDE_FD_64
 #define _LARGEFILE64_SOURCE
 #define _FILE_OFFSET_BITS 64
 #include "fd.h"
