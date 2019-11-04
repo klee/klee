@@ -19,7 +19,14 @@ continue.block:
   %2 = load i8*, i8** %a, align 8
   %3 = call i64 @llvm.objectsize.i64.p0i8(i8* %2, i1 false, i1 false, i1 false)
   %cmp1 = icmp ne i64 %3, -1
-  br i1 %cmp1, label %abort.block, label %exit.block
+  br i1 %cmp1, label %abort.block, label %continue.block2
+
+continue.block2:
+; allocate one byte
+  %b = alloca i8, align 8
+  %4 = call i64 @llvm.objectsize.i64.p0i8(i8* %b, i1 false, i1 false, i1 false)
+  %cmp2 = icmp ne i64 %4, 1
+  br i1 %cmp2, label %abort.block, label %exit.block
 
 exit.block:
   ret i32 0
