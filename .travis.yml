@@ -99,7 +99,6 @@ env:
 matrix:
   include:
     - os: osx
-      osx_image: xcode8.3
       env: SOLVERS=STP UCLIBC_VERSION=0 USE_TCMALLOC=0 USE_LIBCXX=0
     - env: BUILD_DOCKER=1
 addons:
