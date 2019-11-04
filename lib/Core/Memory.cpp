@@ -82,7 +82,6 @@ ObjectState::ObjectState(const MemoryObject *mo)
     updates(0, 0),
     size(mo->size),
     readOnly(false) {
-  mo->refCount++;
   if (!UseConstantArrays) {
     static unsigned id = 0;
     const Array *array =
@@ -103,7 +102,6 @@ ObjectState::ObjectState(const MemoryObject *mo, const Array *array)
     updates(array, 0),
     size(mo->size),
     readOnly(false) {
-  mo->refCount++;
   makeSymbolic();
   memset(concreteStore, 0, size);
 }
@@ -119,9 +117,6 @@ ObjectState::ObjectState(const ObjectState &os)
     size(os.size),
     readOnly(false) {
   assert(!os.readOnly && "no need to copy read only object?");
-  if (object)
-    object->refCount++;
-
   if (os.knownSymbolics) {
     knownSymbolics = new ref<Expr>[size];
     for (unsigned i=0; i<size; i++)
@@ -136,20 +131,10 @@ ObjectState::~ObjectState() {
   delete flushMask;
   delete[] knownSymbolics;
   delete[] concreteStore;
-
-  if (object)
-  {
-    assert(object->refCount > 0);
-    object->refCount--;
-    if (object->refCount == 0)
-    {
-      delete object;
-    }
-  }
 }
 
 ArrayCache *ObjectState::getArrayCache() const {
-  assert(object && "object was NULL");
+  assert(!object.isNull() && "object was NULL");
   return object->parent->getArrayCache();
 }
 

@@ -83,19 +83,9 @@ ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
     : constraints(assumptions), ptreeNode(0) {}
 
 ExecutionState::~ExecutionState() {
-  for (unsigned int i=0; i<symbolics.size(); i++)
-  {
-    const MemoryObject *mo = symbolics[i].first;
-    assert(mo->refCount > 0);
-    mo->refCount--;
-    if (mo->refCount == 0)
-      delete mo;
-  }
-
   for (auto cur_mergehandler: openMergeStack){
     cur_mergehandler->removeOpenState(this);
   }
-
 
   while (!stack.empty()) popFrame();
 }
@@ -123,11 +113,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     symbolics(state.symbolics),
     arrayNames(state.arrayNames),
     openMergeStack(state.openMergeStack),
-    steppedInstructions(state.steppedInstructions)
-{
-  for (unsigned int i=0; i<symbolics.size(); i++)
-    symbolics[i].first->refCount++;
-
+    steppedInstructions(state.steppedInstructions) {
   for (auto cur_mergehandler: openMergeStack)
     cur_mergehandler->addOpenState(this);
 }
@@ -154,9 +140,8 @@ void ExecutionState::popFrame() {
   stack.pop_back();
 }
 
-void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) { 
-  mo->refCount++;
-  symbolics.push_back(std::make_pair(mo, array));
+void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) {
+  symbolics.emplace_back(std::make_pair(ref<const MemoryObject>(mo), array));
 }
 
 /**/
@@ -183,7 +168,8 @@ bool ExecutionState::merge(const ExecutionState &b) {
 
   // XXX is it even possible for these to differ? does it matter? probably
   // implies difference in object states?
-  if (symbolics!=b.symbolics)
+
+  if (symbolics != b.symbolics)
     return false;
 
   {
