@@ -3894,7 +3894,7 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
   // an example) While this process can be very expensive, it can
   // also make understanding individual test cases much easier.
   for (unsigned i = 0; i != state.symbolics.size(); ++i) {
-    const MemoryObject *mo = state.symbolics[i].first;
+    const auto &mo = state.symbolics[i].first;
     std::vector< ref<Expr> >::const_iterator pi = 
       mo->cexPreferences.begin(), pie = mo->cexPreferences.end();
     for (; pi != pie; ++pi) {
