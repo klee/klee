@@ -2910,7 +2910,6 @@ void Executor::run(ExecutionState &initialState) {
       if (it == seedMap.end())
         it = seedMap.begin();
       lastState = it->first;
-      unsigned numSeeds = it->second.size();
       ExecutionState &state = *lastState;
       KInstruction *ki = state.pc;
       stepInstruction(state);
