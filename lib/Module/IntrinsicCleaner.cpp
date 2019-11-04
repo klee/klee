@@ -10,6 +10,7 @@
 #include "Passes.h"
 
 #include "klee/Config/Version.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -294,53 +295,30 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         break;
       }
       case Intrinsic::objectsize: {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
+        // Lower the call to a concrete value
+        auto replacement = llvm::lowerObjectSizeCall(ii, DataLayout, nullptr,
+                                                     /*MustSucceed=*/true);
+#else
         // We don't know the size of an object in general so we replace
         // with 0 or -1 depending on the second argument to the intrinsic.
-#if LLVM_VERSION_CODE >= LLVM_VERSION(9, 0)
-        assert(ii->getNumArgOperands() == 4 && "wrong number of arguments");
-#elif LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
-        assert(ii->getNumArgOperands() == 3 && "wrong number of arguments");
-#else
         assert(ii->getNumArgOperands() == 2 && "wrong number of arguments");
-#endif
-
-        Value *minArg = ii->getArgOperand(1);
-        assert(minArg && "Failed to get second argument");
-        ConstantInt *minArgAsInt = dyn_cast<ConstantInt>(minArg);
-        assert(minArgAsInt && "Second arg is not a ConstantInt");
-        assert(minArgAsInt->getBitWidth() == 1 &&
-               "Second argument is not an i1");
-
-#if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
-        auto nullArg = ii->getArgOperand(2);
-        assert(nullArg && "Failed to get third argument");
-        auto nullArgAsInt = dyn_cast<ConstantInt>(nullArg);
-        assert(nullArgAsInt && "Third arg is not a ConstantInt");
-        assert(nullArgAsInt->getBitWidth() == 1 &&
-               "Third argument is not an i1");
-        // TODO: should we do something with the 3rd argument?
-#endif
-
-#if LLVM_VERSION_CODE >= LLVM_VERSION(9, 0)
-        auto dynamicArg = ii->getArgOperand(3);
-        assert(dynamicArg && "Failed to get fourth argument");
-        auto dynamicArgAsInt = dyn_cast<ConstantInt>(dynamicArg);
-        assert(dynamicArgAsInt && "Fourth arg is not a ConstantInt");
-        assert(dynamicArgAsInt->getBitWidth() == 1 &&
-               "Fourth argument is not an i1");
-        // TODO: should we do something with the 4th argument?
-#endif
-
-        Value *replacement = NULL;
+        auto minArg = dyn_cast_or_null<ConstantInt>(ii->getArgOperand(1));
+        assert(minArg &&
+               "Failed to get second argument or it is not ConstantInt");
+        assert(minArg->getBitWidth() == 1 && "Second argument is not an i1");
+        ConstantInt *replacement = nullptr;
         IntegerType *intType = dyn_cast<IntegerType>(ii->getType());
         assert(intType && "intrinsic does not have integer return type");
-        if (minArgAsInt->isZero()) {
+        if (minArg->isZero()) {
           // min=false
           replacement = ConstantInt::get(intType, -1, /*isSigned=*/true);
         } else {
           // min=true
           replacement = ConstantInt::get(intType, 0, /*isSigned=*/false);
         }
+
+#endif
         ii->replaceAllUsesWith(replacement);
         ii->eraseFromParent();
         dirty = true;
