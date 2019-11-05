@@ -183,16 +183,16 @@ ExprVisitor::Action IndexTransformationExprVisitor::visitMul(const MulExpr &e) {
 ExprVisitor::Action ArrayReadExprVisitor::visitConcat(const ConcatExpr &ce) {
   ReadExpr *base = ArrayExprHelper::hasOrderedReads(ce);
   if (base) {
-    return inspectRead(ce.hash(), ce.getWidth(), *base);
+    return inspectRead(const_cast<ConcatExpr *>(&ce), ce.getWidth(), *base);
   }
   return Action::doChildren();
 }
 ExprVisitor::Action ArrayReadExprVisitor::visitRead(const ReadExpr &re) {
-  return inspectRead(re.hash(), re.getWidth(), re);
+  return inspectRead(const_cast<ReadExpr *>(&re), re.getWidth(), re);
 }
 // This method is a mess because I want to avoid looping over the UpdateList
 // values twice
-ExprVisitor::Action ArrayReadExprVisitor::inspectRead(unsigned hash,
+ExprVisitor::Action ArrayReadExprVisitor::inspectRead(ref<Expr> hash,
                                                       Expr::Width width,
                                                       const ReadExpr &re) {
   // pre(*): index is symbolic
@@ -243,14 +243,14 @@ ExprVisitor::Action ArrayReadExprVisitor::inspectRead(unsigned hash,
 
 ExprVisitor::Action
 ArrayValueOptReplaceVisitor::visitConcat(const ConcatExpr &ce) {
-  auto found = optimized.find(ce.hash());
+  auto found = optimized.find(const_cast<ConcatExpr *>(&ce));
   if (found != optimized.end()) {
     return Action::changeTo((*found).second.get());
   }
   return Action::doChildren();
 }
 ExprVisitor::Action ArrayValueOptReplaceVisitor::visitRead(const ReadExpr &re) {
-  auto found = optimized.find(re.hash());
+  auto found = optimized.find(const_cast<ReadExpr *>(&re));
   if (found != optimized.end()) {
     return Action::changeTo((*found).second.get());
   }
