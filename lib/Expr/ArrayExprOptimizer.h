@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "klee/Expr/Expr.h"
+#include "klee/Expr/ExprHashMap.h"
 #include "klee/util/Ref.h"
 
 namespace klee {
@@ -29,9 +30,9 @@ using mapIndexOptimizedExpr_ty = std::map<ref<Expr>, std::vector<ref<Expr>>>;
 
 class ExprOptimizer {
 private:
-  std::unordered_map<unsigned, ref<Expr>> cacheExprOptimized;
-  std::unordered_set<unsigned> cacheExprUnapplicable;
-  std::unordered_map<unsigned, ref<Expr>> cacheReadExprOptimized;
+  ExprHashMap<ref<Expr>> cacheExprOptimized;
+  ExprHashSet cacheExprUnapplicable;
+  ExprHashMap<ref<Expr>> cacheReadExprOptimized;
 
 public:
   /// Returns the optimised version of e.
@@ -46,7 +47,7 @@ private:
 
   ref<Expr> getSelectOptExpr(
       const ref<Expr> &e, std::vector<const ReadExpr *> &reads,
-      std::map<const ReadExpr *, std::pair<unsigned, Expr::Width>> &readInfo,
+      std::map<const ReadExpr *, std::pair<ref<Expr>, Expr::Width>> &readInfo,
       bool isSymbolic);
 
   ref<Expr> buildConstantSelectExpr(const ref<Expr> &index,
