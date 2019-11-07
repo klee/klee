@@ -280,8 +280,17 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
       // assume that the UpdateNodes contain ConstantExpr indexes and values
       assert(read->updates.root->isConstantArray() &&
              "Expected concrete array, found symbolic array");
+
+      // We need to read updates from lest recent to most recent, therefore
+      // reverse the list
+      std::vector<const UpdateNode *> us;
+      us.reserve(read->updates.getSize());
+      for (const UpdateNode *un = read->updates.head; un; un = un->next)
+        us.push_back(un);
+
       auto arrayConstValues = read->updates.root->constantValues;
-      for (const UpdateNode *un = read->updates.head; un; un = un->next) {
+      for (auto it = us.rbegin(); it != us.rend(); it++) {
+        const UpdateNode *un = *it;
         auto ce = dyn_cast<ConstantExpr>(un->index);
         assert(ce && "Not a constant expression");
         uint64_t index = ce->getAPValue().getZExtValue();
@@ -356,7 +365,16 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
           arrayConstValues.push_back(ConstantExpr::create(0, Expr::Int8));
         }
       }
-      for (const UpdateNode *un = read->updates.head; un; un = un->next) {
+
+      // We need to read updates from lest recent to most recent, therefore
+      // reverse the list
+      std::vector<const UpdateNode *> us;
+      us.reserve(read->updates.getSize());
+      for (const UpdateNode *un = read->updates.head; un; un = un->next)
+        us.push_back(un);
+
+      for (auto it = us.rbegin(); it != us.rend(); it++) {
+        const UpdateNode *un = *it;
         auto ce = dyn_cast<ConstantExpr>(un->index);
         assert(ce && "Not a constant expression");
         uint64_t index = ce->getAPValue().getLimitedValue();
