@@ -12,6 +12,9 @@
 # here.  The main purpose is to make sure ``-DNDEBUG`` is never set by default.
 #
 #===------------------------------------------------------------------------===#
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 
 if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang") OR ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU"))
   # Taken from Modules/Compiler/GNU.cmake but -DNDEBUG is removed
