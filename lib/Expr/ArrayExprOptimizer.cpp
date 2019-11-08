@@ -643,8 +643,7 @@ ref<Expr> ExprOptimizer::buildMixedSelectExpr(
         ref<Expr> temp_idx = MulExpr::create(
             ConstantExpr::create(holes[i], re->index->getWidth()),
             ConstantExpr::create(width / 8, re->index->getWidth()));
-        ref<Expr> cond = EqExpr::create(
-            re->index, ConstantExpr::create(holes[i], re->index->getWidth()));
+        ref<Expr> cond = EqExpr::create(re->index, temp_idx);
         ref<Expr> temp = SelectExpr::create(
             cond, extendRead(re->updates, temp_idx, width), result);
         result = temp;
