@@ -67,7 +67,7 @@ class LazyEvalList:
         # The first line in the records contains headers.
       self.conn = sqlite3.connect(fileName)
       self.c = self.conn.cursor()
-      self.c.execute("SELECT Instructions, FullBranches, PartialBranches, NumBranches, UserTime, NumStates, MallocUsage, NumQueries, NumQueryConstructs, 0, WallTime, CoveredInstructions, UncoveredInstructions, QueryTime, SolverTime, CexCacheTime, ForkTime, ResolveTime, QueryCexCacheMisses, QueryCexCacheHits  FROM stats ORDER BY Instructions DESC LIMIT 1")
+      self.c.execute("SELECT Instructions, FullBranches, PartialBranches, NumBranches, UserTime, NumStates, MallocUsage, Queries, QueriesConstructs, 0, WallTime, CoveredInstructions, UncoveredInstructions, QueryTime, SolverTime, CexCacheTime, ForkTime, ResolveTime, QueryCexCacheMisses, QueryCexCacheHits  FROM stats ORDER BY Instructions DESC LIMIT 1")
       self.line = self.c.fetchone()
 
     def aggregateRecords(self):
@@ -302,7 +302,7 @@ def main():
         import csv
         data = data[0]
         c = data.conn.cursor()
-        sql3_cursor = c.execute("SELECT * FROM stats")
+        sql3_cursor = c.execute("SELECT Instructions, FullBranches, PartialBranches, NumBranches, UserTime, NumStates, MallocUsage, Queries, QueriesConstructs, 0, WallTime, CoveredInstructions, UncoveredInstructions, QueryTime, SolverTime, CexCacheTime, ForkTime, ResolveTime, QueryCexCacheMisses, QueryCexCacheHits  FROM stats")
         csv_out = csv.writer(sys.stdout)
         # write header                        
         csv_out.writerow([d[0] for d in sql3_cursor.description])

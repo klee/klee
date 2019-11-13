@@ -82,3 +82,21 @@ Statistic &Statistic::operator +=(const uint64_t addend) {
 uint64_t Statistic::getValue() const {
   return theStatisticManager->getValue(*this);
 }
+
+std::vector<SQLIntStatistic *> *SQLIntStatistic::sqlStatistics = nullptr;
+
+SQLIntStatistic::SQLIntStatistic(const std::string &_name,
+                                 const std::string &_shortName, uint16_t v)
+    : Statistic(_name, _shortName), verbosityLevel(v) {
+  if (!sqlStatistics) {
+    sqlStatistics = new std::vector<SQLIntStatistic *>();
+  }
+  sqlStatistics->push_back(this);
+}
+
+SQLIntStatistic::~SQLIntStatistic() {
+  if (sqlStatistics) {
+    delete sqlStatistics;
+    sqlStatistics = nullptr;
+  }
+}

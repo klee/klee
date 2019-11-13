@@ -80,6 +80,14 @@ cl::opt<unsigned> StatsWriteAfterInstructions(
         "Write statistics after each n instructions, 0 to disable (default=0)"),
     cl::cat(StatsCat));
 
+cl::opt<unsigned> StatsWriteVerbosity(
+    "stats-write-verbosity", cl::init(0),
+    cl::desc("Verbosity of the stats to write. At 0 writes the stats needed by "
+             "klee-stats, "
+             "higher numbers write more statistics (default=0)"),
+    cl::cat(StatsCat));
+
+
   cl::opt<unsigned> CommitEvery(
       "stats-commit-after", cl::init(0),
       cl::desc("Commit the statistics every N writes. By default commit every "
@@ -430,31 +438,19 @@ void StatsTracker::markBranchVisited(ExecutionState *visitedTrue,
 
 void StatsTracker::writeStatsHeader() {
   std::ostringstream create, insert;
-  create << "CREATE TABLE stats ";
-  create     << "(Instructions INTEGER,"
-             << "FullBranches INTEGER,"
-             << "PartialBranches INTEGER,"
-             << "NumBranches INTEGER,"
-             << "UserTime REAL,"
-             << "NumStates INTEGER,"
-             << "MallocUsage INTEGER,"
-             << "NumQueries INTEGER,"
-             << "NumQueryConstructs INTEGER,"
-             << "NumObjects INTEGER,"
-             << "WallTime REAL,"
-             << "CoveredInstructions INTEGER,"
-             << "UncoveredInstructions INTEGER,"
-             << "QueryTime INTEGER,"
-             << "SolverTime INTEGER,"
-             << "CexCacheTime INTEGER,"
-             << "ForkTime INTEGER,"
-             << "ResolveTime INTEGER,"
-             << "QueryCexCacheMisses INTEGER,"
-#ifdef KLEE_ARRAY_DEBUG
-	           << "ArrayHashTime INTEGER,"
-#endif
-             << "QueryCexCacheHits INTEGER"
-             << ")";
+  create << "CREATE TABLE stats ("
+         << "FullBranches INTEGER,"
+         << "PartialBranches INTEGER,"
+         << "NumBranches INTEGER,"
+         << "UserTime REAL,"
+         << "NumStates INTEGER,"
+         << "MallocUsage INTEGER,"
+         << "WallTime REAL";
+  for (const auto &stat : *SQLIntStatistic::sqlStatistics) {
+    if (stat->verbosityLevel <= StatsWriteVerbosity)
+      create << "," << stat->getName() << " INTEGER";
+  }
+  create << ")";
   char *zErrMsg = nullptr;
   if(sqlite3_exec(statsFile, create.str().c_str(), nullptr, nullptr, &zErrMsg)) {
     klee_error("%s", sqlite3ErrToStringAndFree("ERROR creating table: ", zErrMsg).c_str());
@@ -467,52 +463,31 @@ void StatsTracker::writeStatsHeader() {
    * remove the constraints or consider using `IGNORE` mode.
    */
   insert << "INSERT OR FAIL INTO stats ( "
-             << "Instructions ,"
-             << "FullBranches ,"
-             << "PartialBranches ,"
-             << "NumBranches ,"
-             << "UserTime ,"
-             << "NumStates ,"
-             << "MallocUsage ,"
-             << "NumQueries ,"
-             << "NumQueryConstructs ,"
-             << "WallTime ,"
-             << "CoveredInstructions ,"
-             << "UncoveredInstructions ,"
-             << "QueryTime ,"
-             << "SolverTime ,"
-             << "CexCacheTime ,"
-             << "ForkTime ,"
-             << "ResolveTime ,"
-             << "QueryCexCacheMisses ,"
-#ifdef KLEE_ARRAY_DEBUG
-             << "ArrayHashTime,"
-#endif
-             << "QueryCexCacheHits "
-             << ") VALUES ( "
-             << "?, "
-             << "?, "
-             << "?, "
-             << "?, "
-             << "?, "
-             << "?, "
-             << "?, "
-             << "?, "
-             << "?, "
-             << "?, "
-             << "?, "
-             << "?, "
-             << "?, "
-             << "?, "
-             << "?, "
-             << "?, "
-             << "?, "
-             << "?, "
-#ifdef KLEE_ARRAY_DEBUG
-             << "?, "
-#endif
-             << "? "
-             << ")";
+         << "FullBranches ,"
+         << "PartialBranches ,"
+         << "NumBranches ,"
+         << "UserTime ,"
+         << "NumStates ,"
+         << "MallocUsage ,"
+         << "WallTime";
+
+  for (const auto &stat : *SQLIntStatistic::sqlStatistics) {
+    if (stat->verbosityLevel <= StatsWriteVerbosity)
+      insert << "," << stat->getName();
+  }
+  insert << ") VALUES ( "
+         << "?, "
+         << "?, "
+         << "?, "
+         << "?, "
+         << "?, "
+         << "?, "
+         << "? ";
+  for (const auto &stat : *SQLIntStatistic::sqlStatistics) {
+    if (stat->verbosityLevel <= StatsWriteVerbosity)
+      insert << ",? ";
+  }
+  insert << ")";
 
   if(sqlite3_prepare_v2(statsFile, insert.str().c_str(), -1, &insertStmt, nullptr) != SQLITE_OK) {
     klee_error("Cannot create prepared statement: %s", sqlite3_errmsg(statsFile));
@@ -524,28 +499,21 @@ time::Span StatsTracker::elapsed() {
 }
 
 void StatsTracker::writeStatsLine() {
-  sqlite3_bind_int64(insertStmt, 1, stats::instructions);
-  sqlite3_bind_int64(insertStmt, 2, fullBranches);
-  sqlite3_bind_int64(insertStmt, 3, partialBranches);
-  sqlite3_bind_int64(insertStmt, 4, numBranches);
-  sqlite3_bind_int64(insertStmt, 5, time::getUserTime().toMicroseconds());
-  sqlite3_bind_int64(insertStmt, 6, executor.states.size());
-  sqlite3_bind_int64(insertStmt, 7, util::GetTotalMallocUsage() + executor.memory->getUsedDeterministicSize());
-  sqlite3_bind_int64(insertStmt, 8, stats::queries);
-  sqlite3_bind_int64(insertStmt, 9, stats::queryConstructs);
-  sqlite3_bind_int64(insertStmt, 11, elapsed().toMicroseconds());
-  sqlite3_bind_int64(insertStmt, 12, stats::coveredInstructions);
-  sqlite3_bind_int64(insertStmt, 13, stats::uncoveredInstructions);
-  sqlite3_bind_int64(insertStmt, 14, stats::queryTime);
-  sqlite3_bind_int64(insertStmt, 15, stats::solverTime);
-  sqlite3_bind_int64(insertStmt, 16, stats::cexCacheTime);
-  sqlite3_bind_int64(insertStmt, 17, stats::forkTime);
-  sqlite3_bind_int64(insertStmt, 18, stats::resolveTime);
-  sqlite3_bind_int64(insertStmt, 19, stats::queryCexCacheMisses);
-  sqlite3_bind_int64(insertStmt, 20, stats::queryCexCacheHits);
-#ifdef KLEE_ARRAY_DEBUG
-  sqlite3_bind_int64(insertStmt, 21, stats::arrayHashTime);
-#endif
+
+  sqlite3_bind_int64(insertStmt, 1, fullBranches);
+  sqlite3_bind_int64(insertStmt, 2, partialBranches);
+  sqlite3_bind_int64(insertStmt, 3, numBranches);
+  sqlite3_bind_int64(insertStmt, 4, time::getUserTime().toMicroseconds());
+  sqlite3_bind_int64(insertStmt, 5, executor.states.size());
+  sqlite3_bind_int64(insertStmt, 6, util::GetTotalMallocUsage() + executor.memory->getUsedDeterministicSize());
+  sqlite3_bind_int64(insertStmt, 7, elapsed().toMicroseconds());
+  int idx = 7;
+  for (const auto &stat : *SQLIntStatistic::sqlStatistics) {
+    if (stat->verbosityLevel <= StatsWriteVerbosity) {
+      idx++;
+      sqlite3_bind_int64(insertStmt, idx, *stat);
+    }
+  }
   int errCode = sqlite3_step(insertStmt);
   if(errCode != SQLITE_DONE) klee_error("Error writing stats data: %s", sqlite3_errmsg(statsFile));
   sqlite3_reset(insertStmt);

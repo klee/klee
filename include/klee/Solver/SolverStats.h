@@ -15,21 +15,21 @@
 namespace klee {
 namespace stats {
 
-  extern Statistic cexCacheTime;
-  extern Statistic queries;
-  extern Statistic queriesInvalid;
-  extern Statistic queriesValid;
-  extern Statistic queryCacheHits;
-  extern Statistic queryCacheMisses;
-  extern Statistic queryCexCacheHits;
-  extern Statistic queryCexCacheMisses;
-  extern Statistic queryConstructTime;
-  extern Statistic queryConstructs;
-  extern Statistic queryCounterexamples;
-  extern Statistic queryTime;
-  
+extern SQLIntStatistic cexCacheTime;
+extern SQLIntStatistic queries;
+extern SQLIntStatistic queriesInvalid;
+extern SQLIntStatistic queriesValid;
+extern SQLIntStatistic queryCacheHits;
+extern SQLIntStatistic queryCacheMisses;
+extern SQLIntStatistic queryCexCacheHits;
+extern SQLIntStatistic queryCexCacheMisses;
+extern SQLIntStatistic queryConstructTime;
+extern SQLIntStatistic queryConstructs;
+extern SQLIntStatistic queryCounterexamples;
+extern SQLIntStatistic queryTime;
+
 #ifdef KLEE_ARRAY_DEBUG
-  extern Statistic arrayHashTime;
+extern SQLIntStatistic arrayHashTime;
 #endif
 
 }

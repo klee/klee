@@ -13,9 +13,12 @@
 #include "klee/Config/Version.h"
 #include "llvm/Support/DataTypes.h"
 #include <string>
+#include <vector>
 
 namespace klee {
   class Statistic;
+  class StatsTracker;
+  class SQLIntStatistic;
   class StatisticManager;
   class StatisticRecord;
 
@@ -60,6 +63,16 @@ namespace klee {
 
     /// operator+= - Increment the statistic by \arg addend.
     Statistic &operator +=(const uint64_t addend);
+  };
+
+  class SQLIntStatistic : public Statistic {
+  public:
+    const uint16_t verbosityLevel;
+    static std::vector<SQLIntStatistic *> *sqlStatistics;
+    SQLIntStatistic(const std::string &_name, const std::string &_shortName,
+                    uint16_t verbosityLevel = 0);
+
+    ~SQLIntStatistic();
   };
 }
 

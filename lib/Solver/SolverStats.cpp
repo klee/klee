@@ -11,19 +11,19 @@
 
 using namespace klee;
 
-Statistic stats::cexCacheTime("CexCacheTime", "CCtime");
-Statistic stats::queries("Queries", "Q");
-Statistic stats::queriesInvalid("QueriesInvalid", "Qiv");
-Statistic stats::queriesValid("QueriesValid", "Qv");
-Statistic stats::queryCacheHits("QueryCacheHits", "QChits") ;
-Statistic stats::queryCacheMisses("QueryCacheMisses", "QCmisses");
-Statistic stats::queryCexCacheHits("QueryCexCacheHits", "QCexHits") ;
-Statistic stats::queryCexCacheMisses("QueryCexCacheMisses", "QCexMisses");
-Statistic stats::queryConstructTime("QueryConstructTime", "QBtime") ;
-Statistic stats::queryConstructs("QueriesConstructs", "QB");
-Statistic stats::queryCounterexamples("QueriesCEX", "Qcex");
-Statistic stats::queryTime("QueryTime", "Qtime");
+SQLIntStatistic stats::cexCacheTime("CexCacheTime", "CCtime");
+SQLIntStatistic stats::queries("Queries", "Q");
+SQLIntStatistic stats::queriesInvalid("QueriesInvalid", "Qiv", 1);
+SQLIntStatistic stats::queriesValid("QueriesValid", "Qv", 1);
+SQLIntStatistic stats::queryCacheHits("QueryCacheHits", "QChits", 1);
+SQLIntStatistic stats::queryCacheMisses("QueryCacheMisses", "QCmisses", 1);
+SQLIntStatistic stats::queryCexCacheHits("QueryCexCacheHits", "QCexHits");
+SQLIntStatistic stats::queryCexCacheMisses("QueryCexCacheMisses", "QCexMisses");
+SQLIntStatistic stats::queryConstructTime("QueryConstructTime", "QBtime", 1);
+SQLIntStatistic stats::queryConstructs("QueriesConstructs", "QB");
+SQLIntStatistic stats::queryCounterexamples("QueriesCEX", "Qcex", 1);
+SQLIntStatistic stats::queryTime("QueryTime", "Qtime");
 
 #ifdef KLEE_ARRAY_DEBUG
-Statistic stats::arrayHashTime("ArrayHashTime", "AHtime");
+SQLIntStatistic stats::arrayHashTime("ArrayHashTime", "AHtime");
 #endif
