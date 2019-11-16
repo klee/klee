@@ -35,7 +35,7 @@ namespace klee {
     const std::string shortName;
 
   public:
-    Statistic(const std::string &_name, 
+    Statistic(const std::string &_name,
               const std::string &_shortName);
     ~Statistic();
 

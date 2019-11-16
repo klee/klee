@@ -28,16 +28,16 @@ namespace klee {
     void remove(T item);
     bool inTree(T item);
     weight_type getWeight(T item);
-	
+
     /* pick a tree element according to its
      * weight. p should be in [0,1).
      */
     T choose(double p);
-    
+
   private:
     class Node;
     Node *m_root;
-    
+
     Node **lookup(T item, Node **parent_out);
     void split(Node *node);
     void rotate(Node *node);

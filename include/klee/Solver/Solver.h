@@ -60,7 +60,7 @@ namespace klee {
       False = -1,
       Unknown = 0
     };
-  
+
   public:
     /// validity_to_str - Return the name of given Validity enum value.
     static const char *validity_to_str(Validity v);
@@ -86,9 +86,9 @@ namespace klee {
     ///
     /// \return True on success.
     bool evaluate(const Query&, Validity &result);
-  
+
     /// mustBeTrue - Determine if the expression is provably true.
-    /// 
+    ///
     /// This evaluates the following logical formula:
     ///
     /// \f[ \forall X constraints(X) \to query(X) \f]
@@ -184,7 +184,7 @@ namespace klee {
     // FIXME: This API is lame. We should probably just provide an API which
     // returns an Assignment object, then clients can get out whatever values
     // they want. This also allows us to optimize the representation.
-    bool getInitialValues(const Query&, 
+    bool getInitialValues(const Query&,
                           const std::vector<const Array*> &objects,
                           std::vector< std::vector<unsigned char> > &result);
 
@@ -193,13 +193,13 @@ namespace klee {
     ///
     /// \return - A pair with (min, max) values for the expression.
     ///
-    /// \post(mustBeTrue(min <= e <= max) && 
+    /// \post(mustBeTrue(min <= e <= max) &&
     ///       mayBeTrue(min == e) &&
     ///       mayBeTrue(max == e))
     //
     // FIXME: This should go into a helper class, and should handle failure.
     virtual std::pair< ref<Expr>, ref<Expr> > getRange(const Query&);
-    
+
     virtual char *getConstraintLog(const Query& query);
     virtual void setCoreSolverTimeout(time::Span timeout);
   };
@@ -248,7 +248,7 @@ namespace klee {
   ///
   /// \param s - The underlying solver to use.
   Solver *createIndependentSolver(Solver *s);
-  
+
   /// createKQueryLoggingSolver - Create a solver which will forward all queries
   /// after writing them to the given path in .kquery format.
   Solver *createKQueryLoggingSolver(Solver *s, std::string path,

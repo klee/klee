@@ -24,14 +24,14 @@ namespace klee {
   private:
     uint64_t *data;
 
-  public:    
+  public:
     StatisticRecord();
     StatisticRecord(const StatisticRecord &s);
     ~StatisticRecord() { delete[] data; }
-    
+
     void zero();
 
-    uint64_t getValue(const Statistic &s) const; 
+    uint64_t getValue(const Statistic &s) const;
     void incrementValue(const Statistic &s, uint64_t addend) const;
     StatisticRecord &operator =(const StatisticRecord &s);
     StatisticRecord &operator +=(const StatisticRecord &sr);
@@ -59,11 +59,11 @@ namespace klee {
     unsigned getIndex() { return index; }
     unsigned getNumStatistics() { return stats.size(); }
     Statistic &getStatistic(unsigned i) { return *stats[i]; }
-    
+
     void registerStatistic(Statistic &s);
     void incrementStatistic(Statistic &s, uint64_t addend);
     uint64_t getValue(const Statistic &s) const;
-    void incrementIndexedValue(const Statistic &s, unsigned index, 
+    void incrementIndexedValue(const Statistic &s, unsigned index,
                                uint64_t addend) const;
     uint64_t getIndexedValue(const Statistic &s, unsigned index) const;
     void setIndexedValue(const Statistic &s, unsigned index, uint64_t value);
@@ -73,7 +73,7 @@ namespace klee {
 
   extern StatisticManager *theStatisticManager;
 
-  inline void StatisticManager::incrementStatistic(Statistic &s, 
+  inline void StatisticManager::incrementStatistic(Statistic &s,
                                                    uint64_t addend) {
     if (enabled) {
       globalStats[s.id] += addend;
@@ -96,29 +96,29 @@ namespace klee {
     ::memset(data, 0, sizeof(*data)*theStatisticManager->getNumStatistics());
   }
 
-  inline StatisticRecord::StatisticRecord() 
+  inline StatisticRecord::StatisticRecord()
     : data(new uint64_t[theStatisticManager->getNumStatistics()]) {
     zero();
   }
 
-  inline StatisticRecord::StatisticRecord(const StatisticRecord &s) 
+  inline StatisticRecord::StatisticRecord(const StatisticRecord &s)
     : data(new uint64_t[theStatisticManager->getNumStatistics()]) {
-    ::memcpy(data, s.data, 
+    ::memcpy(data, s.data,
              sizeof(*data)*theStatisticManager->getNumStatistics());
   }
 
   inline StatisticRecord &StatisticRecord::operator=(const StatisticRecord &s) {
-    ::memcpy(data, s.data, 
+    ::memcpy(data, s.data,
              sizeof(*data)*theStatisticManager->getNumStatistics());
     return *this;
   }
 
-  inline void StatisticRecord::incrementValue(const Statistic &s, 
+  inline void StatisticRecord::incrementValue(const Statistic &s,
                                               uint64_t addend) const {
     data[s.id] += addend;
   }
-  inline uint64_t StatisticRecord::getValue(const Statistic &s) const { 
-    return data[s.id]; 
+  inline uint64_t StatisticRecord::getValue(const Statistic &s) const {
+    return data[s.id];
   }
 
   inline StatisticRecord &
@@ -133,18 +133,18 @@ namespace klee {
     return globalStats[s.id];
   }
 
-  inline void StatisticManager::incrementIndexedValue(const Statistic &s, 
+  inline void StatisticManager::incrementIndexedValue(const Statistic &s,
                                                       unsigned index,
                                                       uint64_t addend) const {
     indexedStats[index*stats.size() + s.id] += addend;
   }
 
-  inline uint64_t StatisticManager::getIndexedValue(const Statistic &s, 
+  inline uint64_t StatisticManager::getIndexedValue(const Statistic &s,
                                                     unsigned index) const {
     return indexedStats[index*stats.size() + s.id];
   }
 
-  inline void StatisticManager::setIndexedValue(const Statistic &s, 
+  inline void StatisticManager::setIndexedValue(const Statistic &s,
                                                 unsigned index,
                                                 uint64_t value) {
     indexedStats[index*stats.size() + s.id] = value;

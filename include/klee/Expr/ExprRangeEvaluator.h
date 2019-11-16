@@ -21,10 +21,10 @@ public:
   ValueType(); // empty range
   ValueType(uint64_t value);
   ValueType(uint64_t min, uint64_t max);
-  
+
   bool mustEqual(const uint64_t b);
   bool mustEqual(const ValueType &b);
-  bool mayEqual(const uint64_t b);  
+  bool mayEqual(const uint64_t b);
   bool mayEqual(const ValueType &b);
 
   bool isFullRange(unsigned width);
@@ -82,10 +82,10 @@ T ExprRangeEvaluator<T>::evalRead(const UpdateList &ul,
       res = res.set_union(evaluate(un->value));
       if (res.isFullRange(8)) {
         return res;
-      } 
+      }
     }
   }
-  
+
   return res.set_union(getInitialReadRange(*ul.root, index));
 }
 
@@ -95,7 +95,7 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
   case Expr::Constant:
     return T(cast<ConstantExpr>(e));
 
-  case Expr::NotOptimized: 
+  case Expr::NotOptimized:
     break;
 
   case Expr::Read: {
@@ -110,7 +110,7 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
   case Expr::Select: {
     const SelectExpr *se = cast<SelectExpr>(e);
     T cond = evaluate(se->cond);
-      
+
     if (cond.mustEqual(1)) {
       return evaluate(se->trueExpr);
     } else if (cond.mustEqual(0)) {
@@ -206,7 +206,7 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
     const BinaryExpr *be = cast<BinaryExpr>(e);
     T left = evaluate(be->left);
     T right = evaluate(be->right);
-      
+
     if (left.mustEqual(right)) {
       return T(1);
     } else if (!left.mayEqual(right)) {
@@ -219,7 +219,7 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
     const BinaryExpr *be = cast<BinaryExpr>(e);
     T left = evaluate(be->left);
     T right = evaluate(be->right);
-      
+
     if (left.max() < right.min()) {
       return T(1);
     } else if (left.min() >= right.max()) {
@@ -231,7 +231,7 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
     const BinaryExpr *be = cast<BinaryExpr>(e);
     T left = evaluate(be->left);
     T right = evaluate(be->right);
-      
+
     if (left.max() <= right.min()) {
       return T(1);
     } else if (left.min() > right.max()) {
@@ -257,7 +257,7 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
     T left = evaluate(be->left);
     T right = evaluate(be->right);
     unsigned bits = be->left->getWidth();
-      
+
     if (left.maxSigned(bits) <= right.minSigned(bits)) {
       return T(1);
     } else if (left.minSigned(bits) > right.maxSigned(bits)) {

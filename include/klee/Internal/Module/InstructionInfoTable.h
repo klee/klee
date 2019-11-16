@@ -18,7 +18,7 @@
 namespace llvm {
   class Function;
   class Instruction;
-  class Module; 
+  class Module;
 }
 
 namespace klee {

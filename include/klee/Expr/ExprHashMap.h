@@ -33,23 +33,23 @@ namespace klee {
         return e->hash();
       }
     };
-    
+
     struct ExprCmp {
       bool operator()(const ref<Expr> &a, const ref<Expr> &b) const {
         return a==b;
       }
     };
   }
-  
-  template<class T> 
-  class ExprHashMap : 
+
+  template<class T>
+  class ExprHashMap :
 
     public unordered_map<ref<Expr>,
                          T,
                          klee::util::ExprHash,
                          klee::util::ExprCmp> {
   };
-  
+
   typedef unordered_set<ref<Expr>,
                         klee::util::ExprHash,
                         klee::util::ExprCmp> ExprHashSet;

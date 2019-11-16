@@ -16,7 +16,7 @@
 
 // ASSUMPTION: invalid bits in each uint64_t are 0. the trade-off here is
 // between making trunc/zext/sext fast and making operations that depend
-// on the invalid bits being 0 fast. 
+// on the invalid bits being 0 fast.
 
 namespace klee {
 namespace ints {

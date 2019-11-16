@@ -57,7 +57,7 @@ namespace klee {
       assert(res < 32);
       assert((UINT32_C(1) << res) == x);
       return res;
-    } 
+    }
 
     inline unsigned indexOfRightmostBit(unsigned x) {
       return indexOfSingleBit(isolateRightmostBit(x));
@@ -73,7 +73,7 @@ namespace klee {
         return 0;
       return ((UINT64_C(-1)) >> (64 - N));
     }
-    
+
     // @pre(0 < N <= 64)
     inline uint64_t truncateToNBits(uint64_t x, unsigned N) {
       assert(N > 0 && N <= 64);
@@ -103,7 +103,7 @@ namespace klee {
       assert(res < 64);
       assert((UINT64_C(1) << res) == x);
       return res;
-    } 
+    }
 
     inline uint64_t indexOfRightmostBit(uint64_t x) {
       return indexOfSingleBit(isolateRightmostBit(x));

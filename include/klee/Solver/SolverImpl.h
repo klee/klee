@@ -26,7 +26,7 @@ namespace klee {
     // DO NOT IMPLEMENT.
     SolverImpl(const SolverImpl&);
     void operator=(const SolverImpl&);
-    
+
   public:
     SolverImpl() {}
     virtual ~SolverImpl();
@@ -61,7 +61,7 @@ namespace klee {
     ///
     /// \return True on success
     virtual bool computeValidity(const Query& query, Solver::Validity &result);
-    
+
     /// computeTruth - Determine whether the given query expression is provably true
     /// given the constraints.
     ///
@@ -85,15 +85,15 @@ namespace klee {
     ///
     /// \return True on success
     virtual bool computeValue(const Query& query, ref<Expr> &result) = 0;
-    
+
     /// \sa Solver::getInitialValues()
     virtual bool computeInitialValues(const Query& query,
-                                      const std::vector<const Array*> 
+                                      const std::vector<const Array*>
                                         &objects,
-                                      std::vector< std::vector<unsigned char> > 
+                                      std::vector< std::vector<unsigned char> >
                                         &values,
                                       bool &hasSolution) = 0;
-    
+
     /// getOperationStatusCode - get the status of the last solver operation
     virtual SolverRunStatus getOperationStatusCode() = 0;
 

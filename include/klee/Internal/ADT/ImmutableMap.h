@@ -20,7 +20,7 @@ namespace klee {
     D &operator()(V &a) const { return a.first; }
     const D &operator()(const V &a) const { return a.first; }
   };
-  
+
   template<class K, class D, class CMP=std::less<K> >
   class ImmutableMap {
   public:
@@ -41,59 +41,59 @@ namespace klee {
     ~ImmutableMap() {}
 
     ImmutableMap &operator=(const ImmutableMap &b) { elts = b.elts; return *this; }
-    
-    bool empty() const { 
-      return elts.empty(); 
+
+    bool empty() const {
+      return elts.empty();
     }
-    size_t count(const key_type &key) const { 
-      return elts.count(key); 
+    size_t count(const key_type &key) const {
+      return elts.count(key);
     }
-    const value_type *lookup(const key_type &key) const { 
-      return elts.lookup(key); 
+    const value_type *lookup(const key_type &key) const {
+      return elts.lookup(key);
     }
-    const value_type *lookup_previous(const key_type &key) const { 
-      return elts.lookup_previous(key); 
+    const value_type *lookup_previous(const key_type &key) const {
+      return elts.lookup_previous(key);
     }
-    const value_type &min() const { 
-      return elts.min(); 
+    const value_type &min() const {
+      return elts.min();
     }
-    const value_type &max() const { 
-      return elts.max(); 
+    const value_type &max() const {
+      return elts.max();
     }
-    size_t size() const { 
-      return elts.size(); 
+    size_t size() const {
+      return elts.size();
     }
 
-    ImmutableMap insert(const value_type &value) const { 
-      return elts.insert(value); 
+    ImmutableMap insert(const value_type &value) const {
+      return elts.insert(value);
     }
-    ImmutableMap replace(const value_type &value) const { 
-      return elts.replace(value); 
+    ImmutableMap replace(const value_type &value) const {
+      return elts.replace(value);
     }
-    ImmutableMap remove(const key_type &key) const { 
-      return elts.remove(key); 
+    ImmutableMap remove(const key_type &key) const {
+      return elts.remove(key);
     }
-    ImmutableMap popMin(const value_type &valueOut) const { 
-      return elts.popMin(valueOut); 
+    ImmutableMap popMin(const value_type &valueOut) const {
+      return elts.popMin(valueOut);
     }
-    ImmutableMap popMax(const value_type &valueOut) const { 
-      return elts.popMax(valueOut); 
+    ImmutableMap popMax(const value_type &valueOut) const {
+      return elts.popMax(valueOut);
     }
 
-    iterator begin() const { 
-      return elts.begin(); 
+    iterator begin() const {
+      return elts.begin();
     }
-    iterator end() const { 
-      return elts.end(); 
+    iterator end() const {
+      return elts.end();
     }
-    iterator find(const key_type &key) const { 
-      return elts.find(key); 
+    iterator find(const key_type &key) const {
+      return elts.find(key);
     }
-    iterator lower_bound(const key_type &key) const { 
-      return elts.lower_bound(key); 
+    iterator lower_bound(const key_type &key) const {
+      return elts.lower_bound(key);
     }
-    iterator upper_bound(const key_type &key) const { 
-      return elts.upper_bound(key); 
+    iterator upper_bound(const key_type &key) const {
+      return elts.upper_bound(key);
     }
 
     static size_t getAllocated() { return Tree::allocated; }
