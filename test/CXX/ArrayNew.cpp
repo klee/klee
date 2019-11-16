@@ -28,7 +28,7 @@ int main(int argc) {
   int sum = 0;
   for (i=0; i<4; i++)
     sum += rt[i].getX();
-  
+
   assert(sum==10);
 
   delete[] rt;

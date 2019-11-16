@@ -42,6 +42,6 @@ int main(int argc, char** argv) {
 
   assert(sb.st_atim.tv_sec >= now.tv_sec && sb.st_atim.tv_sec <= someTimeAfter.tv_sec);
   assert(sb.st_mtim.tv_sec >= now.tv_sec && sb.st_mtim.tv_sec <= someTimeAfter.tv_sec);
-  
+
   return 0;
 }

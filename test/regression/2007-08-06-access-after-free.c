@@ -20,10 +20,10 @@ int main() {
     // pulling the state from the parent, where
     // it is not free
     assert(p[0] > 10);
-   
+
     return 0;
   }
-  
+
   assert(p[0] > 10);
 
   return 0;

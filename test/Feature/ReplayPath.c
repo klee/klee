@@ -30,6 +30,6 @@ int main() {
   if (x&2) res *= 7;
   if (!(x&2)) res *= 11;
   printf("res: %d\n", res);
- 
+
   return 0;
 }

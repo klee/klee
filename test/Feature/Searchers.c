@@ -42,7 +42,7 @@ int validate(char *buf, int N) {
       return 0;
     }
   }
-  
+
   return 1;
 }
 
@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
   int N = SYMBOLIC_SIZE;
   unsigned char *buf = malloc(N);
   int i;
-  
+
   klee_make_symbolic(buf, N, "buf");
   if (validate(buf, N))
     return buf[0];

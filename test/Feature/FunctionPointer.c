@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
 
   printf("calling via pass through\n");
   bar(foo);
-        
+
   fp = baz;
   fp("called via fp");
 

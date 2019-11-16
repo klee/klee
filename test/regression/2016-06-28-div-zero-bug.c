@@ -10,8 +10,8 @@ int b, a, g;
 
 int *c = &b, *d = &b, *f = &a;
 
-int safe_div(short p1, int p2) { 
-  return p2 == 0 ? p1 : p2; 
+int safe_div(short p1, int p2) {
+  return p2 == 0 ? p1 : p2;
 }
 
 int main() {

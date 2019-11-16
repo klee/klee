@@ -10,7 +10,7 @@
 
 int main() {
   klee_set_forking(0);
-  
+
   if (klee_range(0, 2, "range")) {
     printf("A\n");
   } else {

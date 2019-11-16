@@ -22,6 +22,6 @@ int main(int argcPtr, char **argvPtr, char** envp) {
   }
   printf("home2 = %s\n", home2);
   assert(strcmp(home1, home2) == 0);
-  
+
   return 0;
 }

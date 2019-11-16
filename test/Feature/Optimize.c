@@ -18,6 +18,6 @@ int main() {
   } else {
     printf("bad\n");
   }
-  
+
   return 0;
 }

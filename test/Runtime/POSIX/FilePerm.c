@@ -1,11 +1,11 @@
 // RUN: %clang %s -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --posix-runtime %t.bc --sym-files 1 10 --sym-stdout 2>%t.log 
+// RUN: %klee --output-dir=%t.klee-out --posix-runtime %t.bc --sym-files 1 10 --sym-stdout 2>%t.log
 // RUN: test -f %t.klee-out/test000001.ktest
 // RUN: test -f %t.klee-out/test000002.ktest
 // RUN: test -f %t.klee-out/test000003.ktest
 
-#include <stdio.h>       
+#include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>

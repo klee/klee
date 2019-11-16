@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
       foundA = 1;
     count++;
   }
-  
+
   closedir(d);
 
   //printf("found A: %d\n", foundA);

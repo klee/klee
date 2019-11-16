@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-int main() {  
+int main() {
   unsigned char x;
 
   klee_make_symbolic(&x, sizeof x, "x");

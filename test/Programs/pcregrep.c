@@ -79,7 +79,7 @@ extern void *__builtin_alloca(unsigned int);
 #define LLVM_ASM(X)
 #endif
 
-#if __GNUC__ < 4 /* Old GCC's, or compilers not GCC */ 
+#if __GNUC__ < 4 /* Old GCC's, or compilers not GCC */
 #define __builtin_stack_save() 0   /* not implemented */
 #define __builtin_stack_restore(X) /* noop */
 #endif

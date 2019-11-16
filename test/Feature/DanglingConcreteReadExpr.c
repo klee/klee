@@ -9,7 +9,7 @@ int main() {
   unsigned char x, y;
 
   klee_make_symbolic(&x, sizeof x, "x");
-  
+
   y = x;
 
   // should be exactly two queries (prove x is/is not 10)

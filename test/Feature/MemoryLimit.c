@@ -23,10 +23,10 @@
 
 int main() {
   int i, j, x=0, malloc_failed = 0;
-  
+
 #ifdef LITTLE_ALLOC
   printf("IN LITTLE ALLOC\n");
-    
+
   // 200 MBs total (in 1k chunks)
   for (i=0; i<100 && !malloc_failed; i++) {
     for (j=0; j<(1<<11); j++){
@@ -36,7 +36,7 @@ int main() {
   }
 #else
   printf("IN BIG ALLOC\n");
-  
+
   // 200 MBs total
   for (i=0; i<100 && !malloc_failed; i++) {
     void *p = malloc(1<<21);

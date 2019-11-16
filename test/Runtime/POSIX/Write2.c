@@ -9,7 +9,7 @@ int main(int argc, char** argv) {
   const char* msg = "This will eventually overflow stdout. ";
   char buf[32];
   int i;
-  
+
   FILE* f = stdout;//fopen("A", "w");
   if (!f)
     klee_silent_exit(0);

@@ -9,7 +9,7 @@ void print_int(uint64_t val);
 
 #define TYPED_PRINT(_name_type, _arg_type)  \
     void print_ ## _name_type(_arg_type val) { print_int(val); }
- 
+
 TYPED_PRINT(i1, uint8_t)
 TYPED_PRINT(i8, uint8_t)
 TYPED_PRINT(i16, uint16_t)
@@ -33,11 +33,11 @@ void print_int(uint64_t val) {
         int digit = val / cur;
 
         printf(char_format_string, digit + '0');
-        
+
         val = val % cur;
         cur /= 10;
     }
-    
+
     printf(char_format_string, '\n');
 }
 

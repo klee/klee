@@ -21,7 +21,7 @@ public:
 // it is also failing.
 int main(int argc) {
   Test *rt = new Test(2);
-  
+
   assert(rt->getX()==2);
 
   delete rt;

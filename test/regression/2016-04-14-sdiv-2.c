@@ -21,6 +21,6 @@ int main(void)
 
   if (m/2 == 2)
     printf("m is 2\n");
-  
+
   return 0;
-} 
+}

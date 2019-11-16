@@ -1,6 +1,6 @@
 // RUN: %clang -emit-llvm -g -c -o %t.bc %s
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --use-merge --debug-log-merge --search=dfs  %t.bc 
+// RUN: %klee --output-dir=%t.klee-out --use-merge --debug-log-merge --search=dfs  %t.bc
 
 #include "klee/klee.h"
 

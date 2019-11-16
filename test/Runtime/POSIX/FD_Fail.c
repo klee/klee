@@ -6,18 +6,18 @@
 #include <assert.h>
 
 int main(int argc, char** argv) {
-  char buf[1024];  
+  char buf[1024];
   FILE* f = fopen("/etc/mtab", "r");
   assert(f);
-    
+
   int r = fread(buf, 1, 100, f);
-  printf("fread(): %s\n", 
+  printf("fread(): %s\n",
          r ? "ok" : "fail");
   // CHECK-DAG: fread(): ok
   // CHECK-DAG: fread(): fail
 
   r = fclose(f);
-  printf("fclose(): %s\n", 
+  printf("fclose(): %s\n",
          r ? "ok" : "fail");
   // CHECK-DAG: fclose(): ok
   // CHECK-DAG: fclose(): fail

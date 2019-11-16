@@ -18,7 +18,7 @@ int main() {
   //
   // to support this we need to have a facility for making
   // state local copies of a freed object.
-  if (sym() == 0) 
+  if (sym() == 0)
     printf("ok\n");
 
   return 0;

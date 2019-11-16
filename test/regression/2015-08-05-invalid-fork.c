@@ -1,6 +1,6 @@
-/* Reported by @kren1 in #262 
-   The test makes sure that the string "Should be printed once" 
-   is printed a single time. 
+/* Reported by @kren1 in #262
+   The test makes sure that the string "Should be printed once"
+   is printed a single time.
 */
 #include "klee/klee.h"
 

@@ -8,7 +8,7 @@
 
 int main() {
   klee_define_fixed_object(ADDRESS, 4);
-  
+
   int *p = ADDRESS;
 
   *p = 10;
