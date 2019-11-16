@@ -1,11 +1,11 @@
-/* 
+/*
  * Simple regular expression matching.
  *
  * From:
  *   The Practice of Programming
  *   Brian W. Kernighan, Rob Pike
  *
- */ 
+ */
 
 #include "klee/klee.h"
 
@@ -51,8 +51,8 @@ int match(char *re, char *text) {
 int main() {
   // The input regular expression.
   char re[SIZE];
-  
-  // Make the input symbolic. 
+
+  // Make the input symbolic.
   klee_make_symbolic(re, sizeof re, "re");
 
   // Try to match against a constant string "hello".
