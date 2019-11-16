@@ -15,13 +15,13 @@ namespace klee {
 
   class ObjectHolder {
     ObjectState *os;
-    
+
   public:
     ObjectHolder() : os(0) {}
     ObjectHolder(ObjectState *_os);
     ObjectHolder(const ObjectHolder &b);
-    ~ObjectHolder(); 
-    
+    ~ObjectHolder();
+
     ObjectHolder &operator=(const ObjectHolder &b);
 
     operator class ObjectState *() { return os; }

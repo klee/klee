@@ -42,7 +42,7 @@ bool TimingSolver::evaluate(const ExecutionState& state, ref<Expr> expr,
   return success;
 }
 
-bool TimingSolver::mustBeTrue(const ExecutionState& state, ref<Expr> expr, 
+bool TimingSolver::mustBeTrue(const ExecutionState& state, ref<Expr> expr,
                               bool &result) {
   // Fast path, to avoid timer and OS overhead.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
@@ -67,7 +67,7 @@ bool TimingSolver::mustBeFalse(const ExecutionState& state, ref<Expr> expr,
   return mustBeTrue(state, Expr::createIsZero(expr), result);
 }
 
-bool TimingSolver::mayBeTrue(const ExecutionState& state, ref<Expr> expr, 
+bool TimingSolver::mayBeTrue(const ExecutionState& state, ref<Expr> expr,
                              bool &result) {
   bool res;
   if (!mustBeFalse(state, expr, res))
@@ -76,7 +76,7 @@ bool TimingSolver::mayBeTrue(const ExecutionState& state, ref<Expr> expr,
   return true;
 }
 
-bool TimingSolver::mayBeFalse(const ExecutionState& state, ref<Expr> expr, 
+bool TimingSolver::mayBeFalse(const ExecutionState& state, ref<Expr> expr,
                               bool &result) {
   bool res;
   if (!mustBeTrue(state, expr, res))
@@ -85,14 +85,14 @@ bool TimingSolver::mayBeFalse(const ExecutionState& state, ref<Expr> expr,
   return true;
 }
 
-bool TimingSolver::getValue(const ExecutionState& state, ref<Expr> expr, 
+bool TimingSolver::getValue(const ExecutionState& state, ref<Expr> expr,
                             ref<ConstantExpr> &result) {
   // Fast path, to avoid timer and OS overhead.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
     result = CE;
     return true;
   }
-  
+
   TimerStatIncrementer timer(stats::solverTime);
 
   if (simplifyExprs)
@@ -105,8 +105,8 @@ bool TimingSolver::getValue(const ExecutionState& state, ref<Expr> expr,
   return success;
 }
 
-bool 
-TimingSolver::getInitialValues(const ExecutionState& state, 
+bool
+TimingSolver::getInitialValues(const ExecutionState& state,
                                const std::vector<const Array*>
                                  &objects,
                                std::vector< std::vector<unsigned char> >
@@ -117,11 +117,11 @@ TimingSolver::getInitialValues(const ExecutionState& state,
   TimerStatIncrementer timer(stats::solverTime);
 
   bool success = solver->getInitialValues(Query(state.constraints,
-                                                ConstantExpr::alloc(0, Expr::Bool)), 
+                                                ConstantExpr::alloc(0, Expr::Bool)),
                                           objects, result);
-  
+
   state.queryCost += timer.delta();
-  
+
   return success;
 }
 

@@ -101,12 +101,12 @@ bool RaiseAsmPass::runOnModule(Module &M) {
 
     triple = llvm::Triple(HostTriple);
   }
-  
+
   for (Module::iterator fi = M.begin(), fe = M.end(); fi != fe; ++fi) {
     for (Function::iterator bi = fi->begin(), be = fi->end(); bi != be; ++bi) {
       for (BasicBlock::iterator ii = bi->begin(), ie = bi->end(); ii != ie;) {
         Instruction *i = &*ii;
-        ++ii;  
+        ++ii;
         changed |= runOnInstruction(M, i);
       }
     }

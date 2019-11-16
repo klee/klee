@@ -16,7 +16,7 @@
 
 namespace klee {
 
-/* Macros and functions which define the basic bit-level operations 
+/* Macros and functions which define the basic bit-level operations
  * needed to implement quick division operations.
  *
  * Based on Hacker's Delight (2003) by Henry S. Warren, Jr.
@@ -79,7 +79,7 @@ static uint32_t exp_base_2(int32_t n) {
 //      below the one we wish to subtract, we simply change that
 //      add to a subtract instead of subtracting the low bit itself.
 // Obviously we must take care when high==64.
-void ComputeMultConstants64(uint64_t multiplicand, 
+void ComputeMultConstants64(uint64_t multiplicand,
                             uint64_t &add, uint64_t &sub) {
   uint64_t x = multiplicand;
   add = sub = 0;
@@ -115,7 +115,7 @@ void ComputeMultConstants64(uint64_t multiplicand,
   assert(multiplicand == add - sub);
 }
 
-void ComputeUDivConstants32(uint32_t d, uint32_t &mprime, uint32_t &sh1, 
+void ComputeUDivConstants32(uint32_t d, uint32_t &mprime, uint32_t &sh1,
                             uint32_t &sh2) {
   int32_t l = LOG2_CEIL( d ); /* signed so l-1 => -1 when l=0 (see sh2) */
   uint32_t mid = exp_base_2(l) - d;
@@ -125,12 +125,12 @@ void ComputeUDivConstants32(uint32_t d, uint32_t &mprime, uint32_t &sh1,
   sh2    = std::max( l-1, 0 );
 }
 
-void ComputeSDivConstants32(int32_t d, int32_t &mprime, int32_t &dsign, 
+void ComputeSDivConstants32(int32_t d, int32_t &mprime, int32_t &dsign,
                             int32_t &shpost ) {
   uint64_t abs_d = ABS( (int64_t)d ); /* use 64-bits in case d is INT32_MIN */
 
   /* LOG2_CEIL works on 32-bits, so we cast abs_d.  The only possible value
-   * outside the 32-bit rep. is 2^31.  This is special cased to save computer 
+   * outside the 32-bit rep. is 2^31.  This is special cased to save computer
    * time since 64-bit routines would be overkill. */
   int32_t l = std::max( 1U, LOG2_CEIL((uint32_t)abs_d) );
   if( abs_d == TWO_TO_THE_31_S64 ) l = 31;

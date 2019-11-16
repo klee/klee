@@ -25,7 +25,7 @@ namespace klee {
   protected:
     Context(bool _IsLittleEndian, Expr::Width _PointerWidth)
       : IsLittleEndian(_IsLittleEndian), PointerWidth(_PointerWidth) {}
-    
+
   public:
     Context() {}
 
@@ -40,7 +40,7 @@ namespace klee {
     /// Returns width of the pointer in bits
     Expr::Width getPointerWidth() const { return PointerWidth; }
   };
-  
+
 } // End klee namespace
 
 #endif /* KLEE_CONTEXT_H */

@@ -22,8 +22,8 @@ const char *Solver::validity_to_str(Validity v) {
   }
 }
 
-Solver::~Solver() { 
-  delete impl; 
+Solver::~Solver() {
+  delete impl;
 }
 
 char *Solver::getConstraintLog(const Query& query) {
@@ -89,12 +89,12 @@ bool Solver::getValue(const Query& query, ref<ConstantExpr> &result) {
   ref<Expr> tmp;
   if (!impl->computeValue(query, tmp))
     return false;
-  
+
   result = cast<ConstantExpr>(tmp);
   return true;
 }
 
-bool 
+bool
 Solver::getInitialValues(const Query& query,
                          const std::vector<const Array*> &objects,
                          std::vector< std::vector<unsigned char> > &values) {
@@ -104,7 +104,7 @@ Solver::getInitialValues(const Query& query,
   // FIXME: Propogate this out.
   if (!hasSolution)
     return false;
-    
+
   return success;
 }
 
@@ -118,9 +118,9 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
     if (!evaluate(query, result))
       assert(0 && "computeValidity failed");
     switch (result) {
-    case Solver::True: 
+    case Solver::True:
       min = max = 1; break;
-    case Solver::False: 
+    case Solver::False:
       min = max = 0; break;
     default:
       min = 0, max = 1; break;
@@ -133,10 +133,10 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
     while (lo<hi) {
       mid = lo + (hi - lo)/2;
       bool res;
-      bool success = 
+      bool success =
         mustBeTrue(query.withExpr(
                      EqExpr::create(LShrExpr::create(e,
-                                                     ConstantExpr::create(mid, 
+                                                     ConstantExpr::create(mid,
                                                                           width)),
                                     ConstantExpr::create(0, width))),
                    res);
@@ -152,18 +152,18 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
 
       bits = lo;
     }
-    
+
     // could binary search for training zeros and offset
     // min max but unlikely to be very useful
 
     // check common case
     bool res = false;
-    bool success = 
-      mayBeTrue(query.withExpr(EqExpr::create(e, ConstantExpr::create(0, 
-                                                                      width))), 
+    bool success =
+      mayBeTrue(query.withExpr(EqExpr::create(e, ConstantExpr::create(0,
+                                                                      width))),
                 res);
 
-    assert(success && "FIXME: Unhandled solver failure");      
+    assert(success && "FIXME: Unhandled solver failure");
     (void) success;
 
     if (res) {
@@ -174,13 +174,13 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
       while (lo<hi) {
         mid = lo + (hi - lo)/2;
         bool res = false;
-        bool success = 
-          mayBeTrue(query.withExpr(UleExpr::create(e, 
-                                                   ConstantExpr::create(mid, 
+        bool success =
+          mayBeTrue(query.withExpr(UleExpr::create(e,
+                                                   ConstantExpr::create(mid,
                                                                         width))),
                     res);
 
-        assert(success && "FIXME: Unhandled solver failure");      
+        assert(success && "FIXME: Unhandled solver failure");
         (void) success;
 
         if (res) {
@@ -198,13 +198,13 @@ std::pair< ref<Expr>, ref<Expr> > Solver::getRange(const Query& query) {
     while (lo<hi) {
       mid = lo + (hi - lo)/2;
       bool res;
-      bool success = 
-        mustBeTrue(query.withExpr(UleExpr::create(e, 
-                                                  ConstantExpr::create(mid, 
+      bool success =
+        mustBeTrue(query.withExpr(UleExpr::create(e,
+                                                  ConstantExpr::create(mid,
                                                                        width))),
                    res);
 
-      assert(success && "FIXME: Unhandled solver failure");      
+      assert(success && "FIXME: Unhandled solver failure");
       (void) success;
 
       if (res) {

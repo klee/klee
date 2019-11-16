@@ -31,7 +31,7 @@ void AddressSpace::unbindObject(const MemoryObject *mo) {
 
 const ObjectState *AddressSpace::findObject(const MemoryObject *mo) const {
   const MemoryMap::value_type *res = objects.lookup(mo);
-  
+
   return res ? res->second : 0;
 }
 
@@ -45,13 +45,13 @@ ObjectState *AddressSpace::getWriteable(const MemoryObject *mo,
     ObjectState *n = new ObjectState(*os);
     n->copyOnWriteOwner = cowKey;
     objects = objects.replace(std::make_pair(mo, n));
-    return n;    
+    return n;
   }
 }
 
-/// 
+///
 
-bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr, 
+bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr,
                               ObjectPair &result) const {
   uint64_t address = addr->getZExtValue();
   MemoryObject hack(address);
@@ -89,7 +89,7 @@ bool AddressSpace::resolveOne(ExecutionState &state,
     uint64_t example = cex->getZExtValue();
     MemoryObject hack(example);
     const MemoryMap::value_type *res = objects.lookup_previous(&hack);
-    
+
     if (res) {
       const MemoryObject *mo = res->first;
       if (example - mo->address < mo->size) {
@@ -100,18 +100,18 @@ bool AddressSpace::resolveOne(ExecutionState &state,
     }
 
     // didn't work, now we have to search
-       
+
     MemoryMap::iterator oi = objects.upper_bound(&hack);
     MemoryMap::iterator begin = objects.begin();
     MemoryMap::iterator end = objects.end();
-      
+
     MemoryMap::iterator start = oi;
     while (oi!=begin) {
       --oi;
       const MemoryObject *mo = oi->first;
-        
+
       bool mayBeTrue;
-      if (!solver->mayBeTrue(state, 
+      if (!solver->mayBeTrue(state,
                              mo->getBoundsCheckPointer(address), mayBeTrue))
         return false;
       if (mayBeTrue) {
@@ -120,7 +120,7 @@ bool AddressSpace::resolveOne(ExecutionState &state,
         return true;
       } else {
         bool mustBeTrue;
-        if (!solver->mustBeTrue(state, 
+        if (!solver->mustBeTrue(state,
                                 UgeExpr::create(address, mo->getBaseExpr()),
                                 mustBeTrue))
           return false;
@@ -134,7 +134,7 @@ bool AddressSpace::resolveOne(ExecutionState &state,
       const MemoryObject *mo = oi->first;
 
       bool mustBeTrue;
-      if (!solver->mustBeTrue(state, 
+      if (!solver->mustBeTrue(state,
                               UltExpr::create(address, mo->getBaseExpr()),
                               mustBeTrue))
         return false;
@@ -143,7 +143,7 @@ bool AddressSpace::resolveOne(ExecutionState &state,
       } else {
         bool mayBeTrue;
 
-        if (!solver->mayBeTrue(state, 
+        if (!solver->mayBeTrue(state,
                                mo->getBoundsCheckPointer(address),
                                mayBeTrue))
           return false;
@@ -283,7 +283,7 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
 // then its concrete cache byte isn't being used) but is just a hack.
 
 void AddressSpace::copyOutConcretes() {
-  for (MemoryMap::iterator it = objects.begin(), ie = objects.end(); 
+  for (MemoryMap::iterator it = objects.begin(), ie = objects.end();
        it != ie; ++it) {
     const MemoryObject *mo = it->first;
 
@@ -298,7 +298,7 @@ void AddressSpace::copyOutConcretes() {
 }
 
 bool AddressSpace::copyInConcretes() {
-  for (MemoryMap::iterator it = objects.begin(), ie = objects.end(); 
+  for (MemoryMap::iterator it = objects.begin(), ie = objects.end();
        it != ie; ++it) {
     const MemoryObject *mo = it->first;
 

@@ -30,7 +30,7 @@ char LowerSwitchPass::ID = 0;
 struct SwitchCaseCmp {
   bool operator () (const LowerSwitchPass::SwitchCase& C1,
                     const LowerSwitchPass::SwitchCase& C2) {
-    
+
     const ConstantInt* CI1 = cast<const ConstantInt>(C1.value);
     const ConstantInt* CI2 = cast<const ConstantInt>(C2.value);
     return CI1->getValue().slt(CI2->getValue());
@@ -81,7 +81,7 @@ void LowerSwitchPass::switchConvert(CaseItr begin, CaseItr end,
       assert(blockIndex != -1 && "Switch didn't go to this successor??");
       PN->setIncomingBlock((unsigned)blockIndex, newBlock);
     }
-    
+
     curHead = newBlock;
   }
 
@@ -115,19 +115,19 @@ void LowerSwitchPass::processSwitchInst(SwitchInst *SI) {
     assert(BlockIdx != -1 && "Switch didn't go to this successor??");
     PN->setIncomingBlock((unsigned)BlockIdx, newDefault);
   }
-  
+
   CaseVector cases;
 
   for (auto i : SI->cases())
     cases.push_back(SwitchCase(i.getCaseValue(),
                                i.getCaseSuccessor()));
-  
+
   // reverse cases, as switchConvert constructs a chain of
   //   basic blocks by appending to the front. if we reverse,
   //   the if comparisons will happen in the same order
   //   as the cases appear in the switch
   std::reverse(cases.begin(), cases.end());
-  
+
   switchConvert(cases.begin(), cases.end(), switchValue, origBlock, newDefault);
 
   // We are now done with the switch instruction, so delete it

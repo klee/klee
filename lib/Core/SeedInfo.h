@@ -28,19 +28,19 @@ namespace klee {
     KTest *input;
     unsigned inputPosition;
     std::set<struct KTestObject*> used;
-    
+
   public:
     explicit
     SeedInfo(KTest *_input) : assignment(true),
                              input(_input),
                              inputPosition(0) {}
-    
+
     KTestObject *getNextInput(const MemoryObject *mo,
                              bool byName);
-    
+
     /// Patch the seed so that condition is satisfied while retaining as
     /// many of the seed values as possible.
-    void patchSeed(const ExecutionState &state, 
+    void patchSeed(const ExecutionState &state,
                    ref<Expr> condition,
                    TimingSolver *solver);
   };

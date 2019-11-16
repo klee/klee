@@ -178,7 +178,7 @@ namespace klee {
          << (ki ? ki->getSourceLocation() : "[unknown]");
       klee_error("%s", os.str().c_str());
 
-    case Instruction::Trunc: 
+    case Instruction::Trunc:
       return op1->Extract(0, getWidthForLLVMType(type));
     case Instruction::ZExt:  return op1->ZExt(getWidthForLLVMType(type));
     case Instruction::SExt:  return op1->SExt(getWidthForLLVMType(type));
@@ -236,7 +236,7 @@ namespace klee {
       }
       return base;
     }
-      
+
     case Instruction::ICmp: {
       switch(ce->getPredicate()) {
       default: assert(0 && "unhandled ICmp predicate");

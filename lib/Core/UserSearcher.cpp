@@ -125,14 +125,14 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, Executor &executor) {
 Searcher *klee::constructUserSearcher(Executor &executor) {
 
   Searcher *searcher = getNewSearcher(CoreSearch[0], executor);
-  
+
   if (CoreSearch.size() > 1) {
     std::vector<Searcher *> s;
     s.push_back(searcher);
 
     for (unsigned i=1; i<CoreSearch.size(); i++)
       s.push_back(getNewSearcher(CoreSearch[i], executor));
-    
+
     searcher = new InterleavedSearcher(s);
   }
 

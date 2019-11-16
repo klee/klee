@@ -46,7 +46,7 @@ public:
   // returns true iff set is changed by addition
   bool add(const DenseSet &b) {
     bool modified = false;
-    for (typename set_ty::const_iterator it = b.s.begin(), ie = b.s.end(); 
+    for (typename set_ty::const_iterator it = b.s.begin(), ie = b.s.end();
          it != ie; ++it) {
       if (modified || !s.count(*it)) {
         modified = true;
@@ -57,7 +57,7 @@ public:
   }
 
   bool intersects(const DenseSet &b) {
-    for (typename set_ty::iterator it = s.begin(), ie = s.end(); 
+    for (typename set_ty::iterator it = s.begin(), ie = s.end();
          it != ie; ++it)
       if (b.s.count(*it))
         return true;
@@ -75,7 +75,7 @@ public:
   void print(llvm::raw_ostream &os) const {
     bool first = true;
     os << "{";
-    for (typename set_ty::iterator it = s.begin(), ie = s.end(); 
+    for (typename set_ty::iterator it = s.begin(), ie = s.end();
          it != ie; ++it) {
       if (first) {
         first = false;
@@ -118,7 +118,7 @@ public:
     for (unsigned i = 0; i != reads.size(); ++i) {
       ReadExpr *re = reads[i].get();
       const Array *array = re->updates.root;
-      
+
       // Reads of a constant array don't alias.
       if (re->updates.root->isConstantArray() &&
           !re->updates.head)
@@ -139,7 +139,7 @@ public:
       }
     }
   }
-  IndependentElementSet(const IndependentElementSet &ies) : 
+  IndependentElementSet(const IndependentElementSet &ies) :
     elements(ies.elements),
     wholeObjects(ies.wholeObjects),
     exprs(ies.exprs) {}
@@ -154,7 +154,7 @@ public:
   void print(llvm::raw_ostream &os) const {
     os << "{";
     bool first = true;
-    for (std::set<const Array*>::iterator it = wholeObjects.begin(), 
+    for (std::set<const Array*>::iterator it = wholeObjects.begin(),
            ie = wholeObjects.end(); it != ie; ++it) {
       const Array *array = *it;
 
@@ -185,10 +185,10 @@ public:
   // more efficient when this is the smaller set
   bool intersects(const IndependentElementSet &b) {
     // If there are any symbolic arrays in our query that b accesses
-    for (std::set<const Array*>::iterator it = wholeObjects.begin(), 
+    for (std::set<const Array*>::iterator it = wholeObjects.begin(),
            ie = wholeObjects.end(); it != ie; ++it) {
       const Array *array = *it;
-      if (b.wholeObjects.count(array) || 
+      if (b.wholeObjects.count(array) ||
           b.elements.find(array) != b.elements.end())
         return true;
     }
@@ -216,7 +216,7 @@ public:
     }
 
     bool modified = false;
-    for (std::set<const Array*>::const_iterator it = b.wholeObjects.begin(), 
+    for (std::set<const Array*>::const_iterator it = b.wholeObjects.begin(),
            ie = b.wholeObjects.end(); it != ie; ++it) {
       const Array *array = *it;
       elements_ty::iterator it2 = elements.find(array);
@@ -231,7 +231,7 @@ public:
         }
       }
     }
-    for (elements_ty::const_iterator it = b.elements.begin(), 
+    for (elements_ty::const_iterator it = b.elements.begin(),
            ie = b.elements.end(); it != ie; ++it) {
       const Array *array = it->first;
       if (!wholeObjects.count(array)) {
@@ -320,13 +320,13 @@ getAllIndependentConstraintsSets(const Query &query) {
   return factors;
 }
 
-static 
+static
 IndependentElementSet getIndependentConstraints(const Query& query,
                                                 std::vector< ref<Expr> > &result) {
   IndependentElementSet eltsClosure(query.expr);
   std::vector< std::pair<ref<Expr>, IndependentElementSet> > worklist;
 
-  for (ConstraintManager::const_iterator it = query.constraints.begin(), 
+  for (ConstraintManager::const_iterator it = query.constraints.begin(),
          ie = query.constraints.end(); it != ie; ++it)
     worklist.push_back(std::make_pair(*it, IndependentElementSet(*it)));
 
@@ -395,7 +395,7 @@ private:
   Solver *solver;
 
 public:
-  IndependentSolver(Solver *_solver) 
+  IndependentSolver(Solver *_solver)
     : solver(_solver) {}
   ~IndependentSolver() { delete solver; }
 
@@ -410,29 +410,29 @@ public:
   char *getConstraintLog(const Query&);
   void setCoreSolverTimeout(time::Span timeout);
 };
-  
+
 bool IndependentSolver::computeValidity(const Query& query,
                                         Solver::Validity &result) {
   std::vector< ref<Expr> > required;
   IndependentElementSet eltsClosure =
     getIndependentConstraints(query, required);
   ConstraintManager tmp(required);
-  return solver->impl->computeValidity(Query(tmp, query.expr), 
+  return solver->impl->computeValidity(Query(tmp, query.expr),
                                        result);
 }
 
 bool IndependentSolver::computeTruth(const Query& query, bool &isValid) {
   std::vector< ref<Expr> > required;
-  IndependentElementSet eltsClosure = 
+  IndependentElementSet eltsClosure =
     getIndependentConstraints(query, required);
   ConstraintManager tmp(required);
-  return solver->impl->computeTruth(Query(tmp, query.expr), 
+  return solver->impl->computeTruth(Query(tmp, query.expr),
                                     isValid);
 }
 
 bool IndependentSolver::computeValue(const Query& query, ref<Expr> &result) {
   std::vector< ref<Expr> > required;
-  IndependentElementSet eltsClosure = 
+  IndependentElementSet eltsClosure =
     getIndependentConstraints(query, required);
   ConstraintManager tmp(required);
   return solver->impl->computeValue(Query(tmp, query.expr), result);
@@ -550,7 +550,7 @@ bool IndependentSolver::computeInitialValues(const Query& query,
 }
 
 SolverImpl::SolverRunStatus IndependentSolver::getOperationStatusCode() {
-  return solver->impl->getOperationStatusCode();      
+  return solver->impl->getOperationStatusCode();
 }
 
 char *IndependentSolver::getConstraintLog(const Query& query) {

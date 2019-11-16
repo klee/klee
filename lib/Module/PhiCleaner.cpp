@@ -17,13 +17,13 @@ char klee::PhiCleanerPass::ID = 0;
 
 bool klee::PhiCleanerPass::runOnFunction(Function &f) {
   bool changed = false;
-  
+
   for (Function::iterator b = f.begin(), be = f.end(); b != be; ++b) {
     BasicBlock::iterator it = b->begin();
 
     if (it->getOpcode() == Instruction::PHI) {
       PHINode *reference = cast<PHINode>(it);
-      
+
       std::set<Value*> phis;
       phis.insert(reference);
 
@@ -63,8 +63,8 @@ bool klee::PhiCleanerPass::runOnFunction(Function &f) {
             // this isn't completely necessary, but in the end this is
             // just a pathological case which does not occur very
             // often.
-            Instruction *tmp = 
-              new BitCastInst(value, 
+            Instruction *tmp =
+              new BitCastInst(value,
                               value->getType(),
                               value->getName() + ".phiclean",
                               pi->getIncomingBlock(i)->getTerminator());
@@ -73,7 +73,7 @@ bool klee::PhiCleanerPass::runOnFunction(Function &f) {
 
           changed = true;
         }
-        
+
         phis.insert(pi);
       }
     }

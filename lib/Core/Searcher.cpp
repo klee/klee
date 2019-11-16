@@ -157,7 +157,7 @@ RandomSearcher::update(ExecutionState *current,
         break;
       }
     }
-    
+
     assert(ok && "invalid state removed");
   }
 }
@@ -168,7 +168,7 @@ WeightedRandomSearcher::WeightedRandomSearcher(WeightType _type)
   : states(new DiscretePDF<ExecutionState*>()),
     type(_type) {
   switch(type) {
-  case Depth: 
+  case Depth:
     updateWeights = false;
     break;
   case InstCount:
@@ -194,7 +194,7 @@ ExecutionState &WeightedRandomSearcher::selectState() {
 double WeightedRandomSearcher::getWeight(ExecutionState *es) {
   switch(type) {
   default:
-  case Depth: 
+  case Depth:
     return es->weight;
   case InstCount: {
     uint64_t count = theStatisticManager->getIndexedValue(stats::instructions,
@@ -250,8 +250,8 @@ void WeightedRandomSearcher::update(
   }
 }
 
-bool WeightedRandomSearcher::empty() { 
-  return states->empty(); 
+bool WeightedRandomSearcher::empty() {
+  return states->empty();
 }
 
 ///
@@ -289,8 +289,8 @@ RandomPathSearcher::update(ExecutionState *current,
                            const std::vector<ExecutionState *> &removedStates) {
 }
 
-bool RandomPathSearcher::empty() { 
-  return executor.states.empty(); 
+bool RandomPathSearcher::empty() {
+  return executor.states.empty();
 }
 
 ///
@@ -333,12 +333,12 @@ ExecutionState& MergingSearcher::selectState() {
 
 BatchingSearcher::BatchingSearcher(Searcher *_baseSearcher,
                                    time::Span _timeBudget,
-                                   unsigned _instructionBudget) 
+                                   unsigned _instructionBudget)
   : baseSearcher(_baseSearcher),
     timeBudget(_timeBudget),
     instructionBudget(_instructionBudget),
     lastState(0) {
-  
+
 }
 
 BatchingSearcher::~BatchingSearcher() {
@@ -414,7 +414,7 @@ void IterativeDeepeningTimeSearcher::update(
         pausedStates.erase(it2);
         alt.erase(std::remove(alt.begin(), alt.end(), es), alt.end());
       }
-    }    
+    }
     baseSearcher->update(current, addedStates, alt);
   } else {
     baseSearcher->update(current, addedStates, removedStates);

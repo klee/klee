@@ -82,18 +82,18 @@ namespace {
 
   cl::opt<SwitchImplType>
   SwitchType("switch-type", cl::desc("Select the implementation of switch (default=internal)"),
-             cl::values(clEnumValN(eSwitchTypeSimple, "simple", 
+             cl::values(clEnumValN(eSwitchTypeSimple, "simple",
                                    "lower to ordered branches"),
-                        clEnumValN(eSwitchTypeLLVM, "llvm", 
+                        clEnumValN(eSwitchTypeLLVM, "llvm",
                                    "lower using LLVM"),
-                        clEnumValN(eSwitchTypeInternal, "internal", 
+                        clEnumValN(eSwitchTypeInternal, "internal",
                                    "execute switch internally")
                         KLEE_LLVM_CL_VAL_END),
              cl::init(eSwitchTypeInternal),
 	     cl::cat(ModuleCat));
-  
+
   cl::opt<bool>
-  DebugPrintEscapingFunctions("debug-print-escaping-functions", 
+  DebugPrintEscapingFunctions("debug-print-escaping-functions",
                               cl::desc("Print functions whose address is taken (default=false)"),
 			      cl::cat(ModuleCat));
 
@@ -118,7 +118,7 @@ extern void Optimize(Module *, llvm::ArrayRef<const char *> preservedFunctions);
 
 // what a hack
 static Function *getStubFunctionForCtorList(Module *m,
-                                            GlobalVariable *gv, 
+                                            GlobalVariable *gv,
                                             std::string name) {
   assert(!gv->isDeclaration() && !gv->hasInternalLinkage() &&
          "do not support old LLVM style constructor/destructor lists");
@@ -127,7 +127,7 @@ static Function *getStubFunctionForCtorList(Module *m,
 
   Function *fn = Function::Create(FunctionType::get(Type::getVoidTy(m->getContext()),
 						    nullary, false),
-				  GlobalVariable::InternalLinkage, 
+				  GlobalVariable::InternalLinkage,
 				  name,
                               m);
   BasicBlock *bb = BasicBlock::Create(m->getContext(), "entry", fn);
@@ -386,7 +386,7 @@ KConstant* KModule::getKConstant(const Constant *c) {
 
 unsigned KModule::getConstantID(Constant *c, KInstruction* ki) {
   if (KConstant *kc = getKConstant(c))
-    return kc->id;  
+    return kc->id;
 
   unsigned id = constants.size();
   auto kc = std::unique_ptr<KConstant>(new KConstant(c, id, ki));
@@ -424,7 +424,7 @@ static int getOperandNum(Value *v,
 }
 
 KFunction::KFunction(llvm::Function *_function,
-                     KModule *km) 
+                     KModule *km)
   : function(_function),
     numArgs(function->arg_size()),
     numInstructions(0),
@@ -441,16 +441,16 @@ KFunction::KFunction(llvm::Function *_function,
 
   // The first arg_size() registers are reserved for formals.
   unsigned rnum = numArgs;
-  for (llvm::Function::iterator bbit = function->begin(), 
+  for (llvm::Function::iterator bbit = function->begin(),
          bbie = function->end(); bbit != bbie; ++bbit) {
     for (llvm::BasicBlock::iterator it = bbit->begin(), ie = bbit->end();
          it != ie; ++it)
       registerMap[&*it] = rnum++;
   }
   numRegisters = rnum;
-  
+
   unsigned i = 0;
-  for (llvm::Function::iterator bbit = function->begin(), 
+  for (llvm::Function::iterator bbit = function->begin(),
          bbie = function->end(); bbit != bbie; ++bbit) {
     for (llvm::BasicBlock::iterator it = bbit->begin(), ie = bbit->end();
          it != ie; ++it) {

@@ -81,7 +81,7 @@ STPBuilder::STPBuilder(::VC _vc, bool _optimizeDivides)
 }
 
 STPBuilder::~STPBuilder() {
-  
+
 }
 
 ///
@@ -183,7 +183,7 @@ ExprHandle STPBuilder::bvLeftShift(ExprHandle expr, unsigned shift) {
   } else {
     // stp shift does "expr @ [0 x s]" which we then have to extract,
     // rolling our own gives slightly smaller exprs
-    return vc_bvConcatExpr(vc, 
+    return vc_bvConcatExpr(vc,
                            bvExtract(expr, width - shift - 1, 0),
                            bvZero(shift));
   }
@@ -315,7 +315,7 @@ ExprHandle STPBuilder::constructMulByConstant(ExprHandle expr, unsigned width, u
     if ((add&bit) || (sub&bit)) {
       assert(!((add&bit) && (sub&bit)) && "invalid mult constants");
       ExprHandle op = bvLeftShift(expr, j);
-      
+
       if (add&bit) {
         if (res) {
           res = vc_bvPlusExpr(vc, width, res, op);
@@ -332,17 +332,17 @@ ExprHandle STPBuilder::constructMulByConstant(ExprHandle expr, unsigned width, u
     }
   }
 
-  if (!res) 
+  if (!res)
     res = bvZero(width);
 
   return res;
 }
 
-/* 
- * Compute the 32-bit unsigned integer division of n by a divisor d based on 
+/*
+ * Compute the 32-bit unsigned integer division of n by a divisor d based on
  * the constants derived from the constant divisor d.
  *
- * Returns n/d without doing explicit division.  The cost is 2 adds, 3 shifts, 
+ * Returns n/d without doing explicit division.  The cost is 2 adds, 3 shifts,
  * and a (64-bit) multiply.
  *
  * @param n      numerator (dividend) as an expression
@@ -375,11 +375,11 @@ ExprHandle STPBuilder::constructUDivByConstant(ExprHandle expr_n, unsigned width
   return res;
 }
 
-/* 
- * Compute the 32-bitnsigned integer division of n by a divisor d based on 
+/*
+ * Compute the 32-bitnsigned integer division of n by a divisor d based on
  * the constants derived from the constant divisor d.
  *
- * Returns n/d without doing explicit division.  The cost is 3 adds, 3 shifts, 
+ * Returns n/d without doing explicit division.  The cost is 3 adds, 3 shifts,
  * a (64-bit) multiply, and an XOR.
  *
  * @param n      numerator (dividend) as an expression
@@ -419,7 +419,7 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n, unsigned width
 
   // q0 = (n_plus_mulsh >> shpost) - XSIGN(n)
   ExprHandle q0           = vc_bvMinusExpr( vc, width, shift_shpost, xsign_of_n );
-  
+
   // n/d = (q0 ^ dsign) - dsign
   ExprHandle q0_xor_dsign = vc_bvXorExpr( vc, q0, expr_dsign );
   ExprHandle res          = vc_bvMinusExpr( vc, width, q0_xor_dsign, expr_dsign );
@@ -428,11 +428,11 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n, unsigned width
 }
 
 ::VCExpr STPBuilder::getInitialArray(const Array *root) {
-  
+
   assert(root);
   ::VCExpr array_expr;
   bool hashed = _arr_hash.lookupArrayExpr(root, array_expr);
-  
+
   if (!hashed) {
     // STP uniques arrays by name, so we make sure the name is unique by
     // using the size of the array hash as a counter.
@@ -458,10 +458,10 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n, unsigned width
 	vc_DeleteExpr(prev);
       }
     }
-    
+
     _arr_hash.hashArrayExpr(root, array_expr);
   }
-  
+
   return array_expr;
 }
 
@@ -469,7 +469,7 @@ ExprHandle STPBuilder::getInitialRead(const Array *root, unsigned index) {
   return vc_readExpr(vc, getInitialArray(root), bvConst32(32, index));
 }
 
-::VCExpr STPBuilder::getArrayForUpdate(const Array *root, 
+::VCExpr STPBuilder::getArrayForUpdate(const Array *root,
                                        const UpdateNode *un) {
   if (!un) {
       return getInitialArray(root);
@@ -478,16 +478,16 @@ ExprHandle STPBuilder::getInitialRead(const Array *root, unsigned index) {
       // FIXME: This really needs to be non-recursive.
       ::VCExpr un_expr;
       bool hashed = _arr_hash.lookupUpdateNodeExpr(un, un_expr);
-      
+
       if (!hashed) {
 	un_expr = vc_writeExpr(vc,
                                getArrayForUpdate(root, un->next),
                                construct(un->index, 0),
                                construct(un->value, 0));
-	
+
 	_arr_hash.hashUpdateNodeExpr(un, un_expr);
       }
-      
+
       return un_expr;
   }
 }
@@ -498,7 +498,7 @@ ExprHandle STPBuilder::construct(ref<Expr> e, int *width_out) {
   if (!UseConstructHash || isa<ConstantExpr>(e)) {
     return constructActual(e, width_out);
   } else {
-    ExprHashMap< std::pair<ExprHandle, unsigned> >::iterator it = 
+    ExprHashMap< std::pair<ExprHandle, unsigned> >::iterator it =
       constructed.find(e);
     if (it!=constructed.end()) {
       if (width_out)
@@ -549,7 +549,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     }
     return Res;
   }
-    
+
   // Special
   case Expr::NotOptimized: {
     NotOptimizedExpr *noe = cast<NotOptimizedExpr>(e);
@@ -564,7 +564,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
                        getArrayForUpdate(re->updates.root, re->updates.head),
                        construct(re->index, 0));
   }
-    
+
   case Expr::Select: {
     SelectExpr *se = cast<SelectExpr>(e);
     ExprHandle cond = construct(se->cond, 0);
@@ -586,7 +586,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
 
   case Expr::Extract: {
     ExtractExpr *ee = cast<ExtractExpr>(e);
-    ExprHandle src = construct(ee->expr, width_out);    
+    ExprHandle src = construct(ee->expr, width_out);
     *width_out = ee->getWidth();
     if (*width_out==1) {
       return bvBoolExtract(src, ee->offset);
@@ -637,7 +637,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     ExprHandle right = construct(se->right, width_out);
     assert(*width_out!=1 && "uncanonicalized sub");
     return vc_bvMinusExpr(vc, *width_out, left, right);
-  } 
+  }
 
   case Expr::Mul: {
     MulExpr *me = cast<MulExpr>(e);
@@ -646,7 +646,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
 
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(me->left))
       if (CE->getWidth() <= 64)
-        return constructMulByConstant(right, *width_out, 
+        return constructMulByConstant(right, *width_out,
                                       CE->getZExtValue());
 
     ExprHandle left = construct(me->left, width_out);
@@ -657,21 +657,21 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     UDivExpr *de = cast<UDivExpr>(e);
     ExprHandle left = construct(de->left, width_out);
     assert(*width_out!=1 && "uncanonicalized udiv");
-    
+
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right)) {
       if (CE->getWidth() <= 64) {
         uint64_t divisor = CE->getZExtValue();
-      
+
         if (bits64::isPowerOfTwo(divisor)) {
           return bvRightShift(left,
                               bits64::indexOfSingleBit(divisor));
         } else if (optimizeDivides) {
           if (*width_out == 32) //only works for 32-bit division
-            return constructUDivByConstant( left, *width_out, 
+            return constructUDivByConstant( left, *width_out,
                                             (uint32_t) divisor);
         }
       }
-    } 
+    }
 
     ExprHandle right = construct(de->right, width_out);
     return vc_bvDivExpr(vc, *width_out, left, right);
@@ -701,7 +701,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     URemExpr *de = cast<URemExpr>(e);
     ExprHandle left = construct(de->left, width_out);
     assert(*width_out!=1 && "uncanonicalized urem");
-    
+
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(de->right)) {
       if (CE->getWidth() <= 64) {
         uint64_t divisor = CE->getZExtValue();
@@ -732,7 +732,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
         }
       }
     }
-    
+
     ExprHandle right = construct(de->right, width_out);
     return vc_bvModExpr(vc, *width_out, left, right);
   }
@@ -773,7 +773,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     } else {
       return vc_bvNotExpr(vc, expr);
     }
-  }    
+  }
 
   case Expr::And: {
     AndExpr *ae = cast<AndExpr>(e);
@@ -801,10 +801,10 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     XorExpr *xe = cast<XorExpr>(e);
     ExprHandle left = construct(xe->left, width_out);
     ExprHandle right = construct(xe->right, width_out);
-    
+
     if (*width_out==1) {
       // XXX check for most efficient?
-      return vc_iteExpr(vc, left, 
+      return vc_iteExpr(vc, left,
                         ExprHandle(vc_notExpr(vc, right)), right);
     } else {
       return vc_bvXorExpr(vc, left, right);
@@ -843,7 +843,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     AShrExpr *ase = cast<AShrExpr>(e);
     ExprHandle left = construct(ase->left, width_out);
     assert(*width_out!=1 && "uncanonicalized ashr");
-    
+
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(ase->right)) {
       unsigned shift = (unsigned) CE->getLimitedValue();
       ExprHandle signedBool = bvBoolExtract(left, *width_out-1);
@@ -920,7 +920,7 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
   case Expr::Sge:
 #endif
 
-  default: 
+  default:
     assert(0 && "unhandled Expr type");
     return vc_trueExpr(vc);
   }
