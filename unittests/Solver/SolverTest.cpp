@@ -47,7 +47,7 @@ void testOperation(Solver &solver,
                    Expr::Width operandWidth,
                    Expr::Width resultWidth) {
   std::vector<Expr::CreateArg> symbolicArgs;
-  
+
   for (unsigned i = 0; i < T::numKids; i++) {
     if (!T::isValidKidWidth(i, operandWidth))
       return;
@@ -55,13 +55,13 @@ void testOperation(Solver &solver,
     unsigned size = Expr::getMinBytesForWidth(operandWidth);
     static uint64_t id = 0;
     const Array *array = ac.CreateArray("arr" + llvm::utostr(++id), size);
-    symbolicArgs.push_back(Expr::CreateArg(Expr::createTempRead(array, 
+    symbolicArgs.push_back(Expr::CreateArg(Expr::createTempRead(array,
                                                                 operandWidth)));
   }
-  
+
   if (T::needsResultType())
     symbolicArgs.push_back(Expr::CreateArg(resultWidth));
-  
+
   ref<Expr> fullySymbolicExpr = Expr::createFromKind(T::kind, symbolicArgs);
 
   // For each kid, replace the kid with a constant value and verify
@@ -71,16 +71,16 @@ void testOperation(Solver &solver,
     std::vector<Expr::CreateArg> partiallyConstantArgs(symbolicArgs);
     partiallyConstantArgs[kid] = getConstant(value, operandWidth);
 
-    ref<Expr> expr = 
+    ref<Expr> expr =
       NotOptimizedExpr::create(EqExpr::create(partiallyConstantArgs[kid].expr,
                                               symbolicArgs[kid].expr));
-    
+
     ref<Expr> partiallyConstantExpr =
       Expr::createFromKind(T::kind, partiallyConstantArgs);
-    
-    ref<Expr> queryExpr = EqExpr::create(fullySymbolicExpr, 
+
+    ref<Expr> queryExpr = EqExpr::create(fullySymbolicExpr,
                                          partiallyConstantExpr);
-    
+
     ConstraintManager constraints;
     constraints.addConstraint(expr);
     bool res;
@@ -88,18 +88,18 @@ void testOperation(Solver &solver,
     EXPECT_EQ(true, success) << "Constraint solving failed";
 
     if (success) {
-      EXPECT_EQ(true, res) << "Evaluation failed!\n" 
-                           << "query " << queryExpr 
+      EXPECT_EQ(true, res) << "Evaluation failed!\n"
+                           << "query " << queryExpr
                            << " with " << expr;
     }
   }
 }
 
 template<class T>
-void testOpcode(Solver &solver, bool tryBool = true, bool tryZero = true, 
+void testOpcode(Solver &solver, bool tryBool = true, bool tryZero = true,
                 unsigned maxWidth = 64) {
   for (unsigned j=0; j<sizeof(g_types)/sizeof(g_types[0]); j++) {
-    Expr::Width type = g_types[j]; 
+    Expr::Width type = g_types[j];
 
     if (type > maxWidth) continue;
 
@@ -115,14 +115,14 @@ void testOpcode(Solver &solver, bool tryBool = true, bool tryZero = true,
 
       for (unsigned k=0; k<sizeof(g_types)/sizeof(g_types[0]); k++) {
         Expr::Width resultType = g_types[k];
-          
+
         // nasty hack to give only Trunc/ZExt/SExt the right types
         if (T::kind == Expr::SExt || T::kind == Expr::ZExt) {
-          if (Expr::getMinBytesForWidth(type) >= 
-              Expr::getMinBytesForWidth(resultType)) 
+          if (Expr::getMinBytesForWidth(type) >=
+              Expr::getMinBytesForWidth(resultType))
             continue;
         }
-            
+
         testOperation<T>(solver, value, type, resultType);
       }
     }
@@ -139,7 +139,7 @@ TEST(SolverTest, Evaluation) {
   testOpcode<SelectExpr>(*solver);
   testOpcode<ZExtExpr>(*solver);
   testOpcode<SExtExpr>(*solver);
-  
+
   testOpcode<AddExpr>(*solver);
   testOpcode<SubExpr>(*solver);
   testOpcode<MulExpr>(*solver, false, true, 8);

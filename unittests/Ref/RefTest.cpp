@@ -20,16 +20,16 @@ int finished = 0;
 struct Expr
 {
   int refCount;
-  Expr() : refCount(0) { 
-    //std::cout << "Expr(" << this << ") created\n"; 
+  Expr() : refCount(0) {
+    //std::cout << "Expr(" << this << ") created\n";
   }
-  ~Expr() { 
-    //std::cout << "Expr(" << this << ") destroyed\n"; 
+  ~Expr() {
+    //std::cout << "Expr(" << this << ") destroyed\n";
     EXPECT_EQ(finished, 1);
   }
 };
 
-TEST(RefTest, SelfAssign) 
+TEST(RefTest, SelfAssign)
 {
   struct Expr *r_e = new Expr();
   ref<Expr> r(r_e);
