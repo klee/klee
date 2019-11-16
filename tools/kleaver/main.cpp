@@ -131,8 +131,8 @@ static std::string escapedString(const char *start, unsigned length) {
     } else if (c == '\n') {
       s << "\\n";
     } else {
-      s << "\\x" 
-        << hexdigit(((unsigned char) c >> 4) & 0xF) 
+      s << "\\x"
+        << hexdigit(((unsigned char) c >> 4) & 0xF)
         << hexdigit((unsigned char) c & 0xF);
     }
   }
@@ -197,7 +197,7 @@ static bool EvaluateInputAST(const char *Filename,
   if (unsigned N = P->GetNumErrors()) {
     llvm::errs() << Filename << ": parse failure: " << N << " errors.\n";
     success = false;
-  }  
+  }
 
   if (!success)
     return false;
@@ -236,14 +236,14 @@ static bool EvaluateInputAST(const char *Filename,
                     << ")";
         }
       } else if (!QC->Values.empty()) {
-        assert(QC->Objects.empty() && 
+        assert(QC->Objects.empty() &&
                "FIXME: Support counterexamples for values and objects!");
         assert(QC->Values.size() == 1 &&
                "FIXME: Support counterexamples for multiple values!");
         assert(QC->Query->isFalse() &&
                "FIXME: Support counterexamples with non-trivial query!");
         ref<ConstantExpr> result;
-        if (S->getValue(Query(ConstraintManager(QC->Constraints), 
+        if (S->getValue(Query(ConstraintManager(QC->Constraints),
                               QC->Values[0]),
                         result)) {
           llvm::outs() << "INVALID\n";
@@ -255,8 +255,8 @@ static bool EvaluateInputAST(const char *Filename,
         }
       } else {
         std::vector< std::vector<unsigned char> > result;
-        
-        if (S->getInitialValues(Query(ConstraintManager(QC->Constraints), 
+
+        if (S->getInitialValues(Query(ConstraintManager(QC->Constraints),
                                       QC->Query),
                                 QC->Objects, result)) {
           llvm::outs() << "INVALID\n";
@@ -280,7 +280,7 @@ static bool EvaluateInputAST(const char *Filename,
             llvm::outs() << " FAIL (reason: "
                       << SolverImpl::getOperationStatusString(retCode)
                       << ")";
-          }           
+          }
           else {
             llvm::outs() << "VALID (counterexample request ignored)";
           }
@@ -303,13 +303,13 @@ static bool EvaluateInputAST(const char *Filename,
     llvm::outs()
       << "--\n"
       << "total queries = " << queries << "\n"
-      << "total queries constructs = " 
+      << "total queries constructs = "
       << *theStatisticManager->getStatisticByName("QueriesConstructs") << "\n"
-      << "valid queries = " 
+      << "valid queries = "
       << *theStatisticManager->getStatisticByName("QueriesValid") << "\n"
-      << "invalid queries = " 
+      << "invalid queries = "
       << *theStatisticManager->getStatisticByName("QueriesInvalid") << "\n"
-      << "query cex = " 
+      << "query cex = "
       << *theStatisticManager->getStatisticByName("QueriesCEX") << "\n";
   }
 
@@ -402,7 +402,7 @@ int main(int argc, char **argv) {
   llvm::cl::ParseCommandLineOptions(argc, argv);
 
   std::string ErrorStr;
-  
+
   auto MBResult = MemoryBuffer::getFileOrSTDIN(InputFile.c_str());
   if (!MBResult) {
     llvm::errs() << argv[0] << ": error: " << MBResult.getError().message()
@@ -410,7 +410,7 @@ int main(int argc, char **argv) {
     return 1;
   }
   std::unique_ptr<MemoryBuffer> &MB = *MBResult;
-  
+
   ExprBuilder *Builder = 0;
   switch (BuilderKind) {
   case DefaultBuilder:
