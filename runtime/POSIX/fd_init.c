@@ -34,16 +34,16 @@ exe_file_system_t __exe_fs;
    mostly care about sym case anyway. */
 
 
-exe_sym_env_t __exe_env = { 
-  {{ 0, eOpen | eReadable, 0, 0}, 
-   { 1, eOpen | eWriteable, 0, 0}, 
+exe_sym_env_t __exe_env = {
+  {{ 0, eOpen | eReadable, 0, 0},
+   { 1, eOpen | eWriteable, 0, 0},
    { 2, eOpen | eWriteable, 0, 0}},
   022,
   0,
   0
 };
 
-static void __create_new_dfile(exe_disk_file_t *dfile, unsigned size, 
+static void __create_new_dfile(exe_disk_file_t *dfile, unsigned size,
                                const char *name, struct stat64 *defaults) {
   struct stat64 *s = malloc(sizeof(*s));
   const char *sp;
@@ -57,14 +57,14 @@ static void __create_new_dfile(exe_disk_file_t *dfile, unsigned size,
   dfile->size = size;
   dfile->contents = malloc(dfile->size);
   klee_make_symbolic(dfile->contents, dfile->size, name);
-  
+
   klee_make_symbolic(s, sizeof(*s), sname);
 
   /* For broken tests */
-  if (!klee_is_symbolic(s->st_ino) && 
+  if (!klee_is_symbolic(s->st_ino) &&
       (s->st_ino & 0x7FFFFFFF) == 0)
     s->st_ino = defaults->st_ino;
-  
+
   /* Important since we copy this out through getdents, and readdir
      will otherwise skip this entry. For same reason need to make sure
      it fits in low bits. */
@@ -103,8 +103,8 @@ static unsigned __sym_uint32(const char *name) {
 /* n_files: number of symbolic input files, excluding stdin
    file_length: size in bytes of each symbolic file, including stdin
    sym_stdout_flag: 1 if stdout should be symbolic, 0 otherwise
-   save_all_writes_flag: 1 if all writes are executed as expected, 0 if 
-                         writes past the initial file size are discarded 
+   save_all_writes_flag: 1 if all writes are executed as expected, 0 if
+                         writes past the initial file size are discarded
 			 (file offset is always incremented)
    max_failures: maximum number of system call failures */
 void klee_init_fds(unsigned n_files, unsigned file_length,
@@ -122,7 +122,7 @@ void klee_init_fds(unsigned n_files, unsigned file_length,
     name[0] = 'A' + k;
     __create_new_dfile(&__exe_fs.sym_files[k], file_length, name, &s);
   }
-  
+
   /* setting symbolic stdin */
   if (stdin_length) {
     __exe_fs.sym_stdin = malloc(sizeof(*__exe_fs.sym_stdin));
@@ -154,7 +154,7 @@ void klee_init_fds(unsigned n_files, unsigned file_length,
     __exe_fs.stdout_writes = 0;
   }
   else __exe_fs.sym_stdout = NULL;
-  
+
   __exe_env.save_all_writes = save_all_writes_flag;
   __exe_env.version = __sym_uint32("model_version");
   klee_assume(__exe_env.version == 1);

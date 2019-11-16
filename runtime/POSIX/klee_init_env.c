@@ -26,7 +26,7 @@ static void __emit_error(const char *msg) {
 
 /* Helper function that converts a string to an integer, and
    terminates the program with an error message is the string is not a
-   proper number */   
+   proper number */
 static long int __str_to_int(char *s, const char *error_msg) {
   long int res = 0;
   char c;
@@ -68,7 +68,7 @@ static char *__get_sym_str(int numChars, char *name) {
 
   for (i=0; i<numChars; i++)
     klee_posix_prefer_cex(s, __isprint(s[i]));
-  
+
   s[numChars] = '\0';
   return s;
 }
@@ -156,7 +156,7 @@ usage: (klee_init_env) [options] [program arguments]\n\
 
       if (sym_arg_num + max_argvs > 99)
         __emit_error("No more than 100 symbolic arguments allowed.");
-      
+
       for (i = 0; i < n_args; i++) {
         sym_arg_name[3] = '0' + sym_arg_num / 10;
         sym_arg_name[4] = '0' + sym_arg_num % 10;

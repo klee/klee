@@ -18,6 +18,6 @@ char *strchr(const char *p, int ch) {
       return 0;
     }
   }
-  /* NOTREACHED */  
+  /* NOTREACHED */
   return 0;
 }

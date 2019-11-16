@@ -46,7 +46,7 @@ int setfscreatecon(KLEE_SELINUX_CTX_CONST char *context) {
   }
 
   /* on my machine, setfscreatecon seems to incorrectly accept one
-     char strings.. Also, make sure mcstrans > 0.2.8 for replay 
+     char strings.. Also, make sure mcstrans > 0.2.8 for replay
      (important bug fixed) */
   if (context[0] != '\0' && context[1] == '\0')
     klee_silent_exit(1);
@@ -59,9 +59,9 @@ int setfscreatecon(KLEE_SELINUX_CTX_CONST char *context) {
 int setfilecon(const char *path, KLEE_SELINUX_CTX_CONST char *con) {
   if (con)
     return 0;
-  
+
   errno = ENOSPC;
-  return -1;  
+  return -1;
 }
 
 int lsetfilecon(const char *path, KLEE_SELINUX_CTX_CONST char *con) {

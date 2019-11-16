@@ -30,7 +30,7 @@ int __cxa_atexit(void (*fn)(void*),
                  void *arg,
                  void *dso_handle) {
   klee_warning_once("FIXME: __cxa_atexit being ignored");
-  
+
   /* Better to just report an error here than return 1 (the defined
    * semantics).
    */
@@ -39,11 +39,11 @@ int __cxa_atexit(void (*fn)(void*),
                       __LINE__,
                       "__cxa_atexit: no room in array!",
                       "exec");
-  
+
   AtExit[NumAtExit].fn = fn;
   AtExit[NumAtExit].arg = arg;
   ++NumAtExit;
-  
+
   return 0;
 }
 
