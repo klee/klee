@@ -69,7 +69,6 @@ ExecutionState::ExecutionState(KFunction *kf) :
     pc(kf->instructions),
     prevPC(pc),
 
-    weight(1),
     depth(0),
 
     instsSinceCovNew(0),
@@ -111,7 +110,6 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     constraints(state.constraints),
 
     queryCost(state.queryCost),
-    weight(state.weight),
     depth(state.depth),
 
     pathOS(state.pathOS),
@@ -140,9 +138,6 @@ ExecutionState *ExecutionState::branch() {
   ExecutionState *falseState = new ExecutionState(*this);
   falseState->coveredNew = false;
   falseState->coveredLines.clear();
-
-  weight *= .5;
-  falseState->weight -= weight;
 
   return falseState;
 }

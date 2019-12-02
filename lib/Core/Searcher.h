@@ -78,6 +78,7 @@ namespace klee {
       NURS_CovNew,
       NURS_MD2U,
       NURS_Depth,
+      NURS_RP,
       NURS_ICnt,
       NURS_CPICnt,
       NURS_QC
@@ -130,6 +131,7 @@ namespace klee {
   public:
     enum WeightType {
       Depth,
+      RP,
       QueryCost,
       InstCount,
       CPInstCount,
@@ -157,6 +159,7 @@ namespace klee {
       os << "WeightedRandomSearcher::";
       switch(type) {
       case Depth              : os << "Depth\n"; return;
+      case RP                 : os << "RandomPath\n"; return;
       case QueryCost          : os << "QueryCost\n"; return;
       case InstCount          : os << "InstCount\n"; return;
       case CPInstCount        : os << "CPInstCount\n"; return;

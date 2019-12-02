@@ -2940,14 +2940,6 @@ void Executor::run(ExecutionState &initialState) {
 
     klee_message("seeding done (%d states remain)", (int) states.size());
 
-    // XXX total hack, just because I like non uniform better but want
-    // seed results to be equally weighted.
-    for (std::set<ExecutionState*>::iterator
-           it = states.begin(), ie = states.end();
-         it != ie; ++it) {
-      (*it)->weight = 1.;
-    }
-
     if (OnlySeed) {
       doDumpStates();
       return;
@@ -4113,7 +4105,6 @@ void Executor::dumpStates() {
 
       *os << "{";
       *os << "'depth' : " << es->depth << ", ";
-      *os << "'weight' : " << es->weight << ", ";
       *os << "'queryCost' : " << es->queryCost << ", ";
       *os << "'coveredNew' : " << es->coveredNew << ", ";
       *os << "'instsSinceCovNew' : " << es->instsSinceCovNew << ", ";

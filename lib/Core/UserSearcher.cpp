@@ -42,7 +42,8 @@ cl::list<Searcher::CoreSearchType> CoreSearch(
                    "use Non Uniform Random Search (NURS) with Coverage-New"),
         clEnumValN(Searcher::NURS_MD2U, "nurs:md2u",
                    "use NURS with Min-Dist-to-Uncovered"),
-        clEnumValN(Searcher::NURS_Depth, "nurs:depth", "use NURS with 2^depth"),
+        clEnumValN(Searcher::NURS_Depth, "nurs:depth", "use NURS with depth"),
+        clEnumValN(Searcher::NURS_RP, "nurs:rp", "use NURS with 1/2^depth"),
         clEnumValN(Searcher::NURS_ICnt, "nurs:icnt",
                    "use NURS with Instr-Count"),
         clEnumValN(Searcher::NURS_CPICnt, "nurs:cpicnt",
@@ -114,6 +115,7 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, Executor &executor) {
   case Searcher::NURS_CovNew: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::CoveringNew); break;
   case Searcher::NURS_MD2U: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::MinDistToUncovered); break;
   case Searcher::NURS_Depth: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::Depth); break;
+  case Searcher::NURS_RP: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::RP); break;
   case Searcher::NURS_ICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::InstCount); break;
   case Searcher::NURS_CPICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::CPInstCount); break;
   case Searcher::NURS_QC: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::QueryCost); break;
