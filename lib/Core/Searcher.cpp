@@ -32,8 +32,9 @@
 #include "llvm/Support/CommandLine.h"
 
 #include <cassert>
-#include <fstream>
 #include <climits>
+#include <cmath>
+#include <fstream>
 
 using namespace klee;
 using namespace llvm;
@@ -168,7 +169,8 @@ WeightedRandomSearcher::WeightedRandomSearcher(WeightType _type)
   : states(new DiscretePDF<ExecutionState*>()),
     type(_type) {
   switch(type) {
-  case Depth: 
+  case Depth:
+  case RP:
     updateWeights = false;
     break;
   case InstCount:
@@ -194,8 +196,10 @@ ExecutionState &WeightedRandomSearcher::selectState() {
 double WeightedRandomSearcher::getWeight(ExecutionState *es) {
   switch(type) {
   default:
-  case Depth: 
-    return es->weight;
+  case Depth:
+    return es->depth;
+  case RP:
+    return std::pow(0.5, es->depth);
   case InstCount: {
     uint64_t count = theStatisticManager->getIndexedValue(stats::instructions,
                                                           es->pc->info->id);
