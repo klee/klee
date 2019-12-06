@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
       static int total_args = 0;
 
       char arg[1024];
-      snprintf(arg, sizeof(arg), "arg%d", total_args++);
+      snprintf(arg, sizeof(arg), "arg%02d", total_args++);
       push_obj(&b, (const char *)arg, nbytes, (unsigned char *)argv[i]);
 
       char *buf1 = (char *)malloc(1024);
