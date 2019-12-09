@@ -10,8 +10,8 @@
 #include <cassert>
 namespace klee {
 
-template <class T>
-class DiscretePDF<T>::Node
+template <class T, class Comparator>
+class DiscretePDF<T, Comparator>::Node
 {
 private:
   bool m_mark;
@@ -41,8 +41,8 @@ public:
 
   ///
 
-template <class T>
-DiscretePDF<T>::Node::Node(T key_, weight_type weight_, Node *parent_) {
+template <class T, class Comparator>
+DiscretePDF<T, Comparator>::Node::Node(T key_, weight_type weight_, Node *parent_) {
   m_mark = false;
 
   key = key_;
@@ -52,31 +52,32 @@ DiscretePDF<T>::Node::Node(T key_, weight_type weight_, Node *parent_) {
   parent = parent_;
 }
 
-template <class T>
-DiscretePDF<T>::Node::~Node() {
+template <class T, class Comparator>
+DiscretePDF<T, Comparator>::Node::~Node() {
   delete left;
   delete right;
 }
 
 //
 
-template <class T>
-DiscretePDF<T>::DiscretePDF() {
+template <class T, class Comparator>
+DiscretePDF<T, Comparator>::DiscretePDF() {
   m_root = 0;
 }
 
-template <class T>
-DiscretePDF<T>::~DiscretePDF() {
+template <class T, class Comparator>
+DiscretePDF<T, Comparator>::~DiscretePDF() {
   delete m_root;
 }
 
-template <class T>
-bool DiscretePDF<T>::empty() const {
+template <class T, class Comparator>
+bool DiscretePDF<T, Comparator>::empty() const {
   return m_root == 0;
 }
 
-template <class T>
-void DiscretePDF<T>::insert(T item, weight_type weight) {
+template <class T, class Comparator>
+void DiscretePDF<T, Comparator>::insert(T item, weight_type weight) {
+  Comparator lessThan;
   Node *p=0, *n=m_root;
 
   while (n) {
@@ -87,7 +88,7 @@ void DiscretePDF<T>::insert(T item, weight_type weight) {
     if (n->key==item) {
       assert(0 && "insert: argument(item) already in tree");
     } else {
-      n = (item<n->key)?n->left:n->right;
+      n = lessThan(item, n->key) ? n->left : n->right;
     }
   }
 
@@ -96,7 +97,7 @@ void DiscretePDF<T>::insert(T item, weight_type weight) {
   if (!p) {
     m_root = n;
   } else {
-    if (item<p->key) {
+    if (lessThan(item, p->key)) {
       p->left = n;
     } else {
       p->right = n;
@@ -105,11 +106,11 @@ void DiscretePDF<T>::insert(T item, weight_type weight) {
     split(n);
   }
 
-  propogateSumsUp(n);
+  propagateSumsUp(n);
 }
 
-template <class T>
-void DiscretePDF<T>::remove(T item) {
+template <class T, class Comparator>
+void DiscretePDF<T, Comparator>::remove(T item) {
   Node **np = lookup(item, 0);
   Node *child, *n = *np;
 
@@ -142,27 +143,27 @@ void DiscretePDF<T>::remove(T item) {
       }
     }
 
-    propogateSumsUp(n->parent);
+    propagateSumsUp(n->parent);
 
     n->left = n->right = 0;
     delete n;
   }
 }
 
-template <class T>
-void DiscretePDF<T>::update(T item, weight_type weight) {
+template <class T, class Comparator>
+void DiscretePDF<T, Comparator>::update(T item, weight_type weight) {
   Node *n = *lookup(item, 0);
 
   if (!n) {
     assert(0 && "update: argument(item) not in tree");
   } else {
     n->weight = weight;
-    propogateSumsUp(n);
+    propagateSumsUp(n);
   }
 }
 
-template <class T>
-T DiscretePDF<T>::choose(double p) {
+template <class T, class Comparator>
+T DiscretePDF<T, Comparator>::choose(double p) {
   assert (!((p < 0.0) || (p >= 1.0)) && "choose: argument(p) outside valid range");
 
   if (!m_root)
@@ -174,10 +175,10 @@ T DiscretePDF<T>::choose(double p) {
   while (1) {
     if (n->left) {
       if (w<n->left->sumWeights) {
-	n = n->left;
-	continue;
+        n = n->left;
+        continue;
       } else {
-	w -= n->left->sumWeights;
+        w -= n->left->sumWeights;
       }
     }
     if (w<n->weight || !n->right) {
@@ -190,15 +191,15 @@ T DiscretePDF<T>::choose(double p) {
   return n->key;
 }
 
-template <class T>
-bool DiscretePDF<T>::inTree(T item) {
+template <class T, class Comparator>
+bool DiscretePDF<T, Comparator>::inTree(T item) {
   Node *n = *lookup(item, 0);
 
   return !!n;
 }
 
-template <class T>
-typename DiscretePDF<T>::weight_type DiscretePDF<T>::getWeight(T item) {
+template <class T, class Comparator>
+typename DiscretePDF<T, Comparator>::weight_type DiscretePDF<T, Comparator>::getWeight(T item) {
   Node *n = *lookup(item, 0);
   assert(n);
   return n->weight;
@@ -206,9 +207,10 @@ typename DiscretePDF<T>::weight_type DiscretePDF<T>::getWeight(T item) {
 
 //
 
-template <class T>
-typename DiscretePDF<T>::Node **
-DiscretePDF<T>::lookup(T item, Node **parent_out) {
+template <class T, class Comparator>
+typename DiscretePDF<T, Comparator>::Node **
+DiscretePDF<T, Comparator>::lookup(T item, Node **parent_out) {
+  Comparator lessThan;
   Node *n, *p=0, **np=&m_root;
 
   while ((n = *np)) {
@@ -216,7 +218,7 @@ DiscretePDF<T>::lookup(T item, Node **parent_out) {
       break;
     } else {
       p = n;
-      if (item<n->key) {
+      if (lessThan(item, n->key)) {
         np = &n->left;
       } else {
         np = &n->right;
@@ -229,8 +231,8 @@ DiscretePDF<T>::lookup(T item, Node **parent_out) {
   return np;
 }
 
-template <class T>
-void DiscretePDF<T>::split(Node *n) {
+template <class T, class Comparator>
+void DiscretePDF<T, Comparator>::split(Node *n) {
   if (n->left) n->left->markBlack();
   if (n->right) n->right->markBlack();
 
@@ -255,8 +257,8 @@ void DiscretePDF<T>::split(Node *n) {
   }
 }
 
-template <class T>
-void DiscretePDF<T>::rotate(Node *n) {
+template <class T, class Comparator>
+void DiscretePDF<T, Comparator>::rotate(Node *n) {
   Node *p=n->parent, *pp=p->parent;
 
   n->parent = pp;
@@ -274,7 +276,7 @@ void DiscretePDF<T>::rotate(Node *n) {
 
   n->setSum();
   p->setSum();
-	
+
   if (!pp) {
     m_root = n;
   } else {
@@ -286,8 +288,8 @@ void DiscretePDF<T>::rotate(Node *n) {
   }
 }
 
-template <class T>
-void DiscretePDF<T>::lengthen(Node *n) {
+template <class T, class Comparator>
+void DiscretePDF<T, Comparator>::lengthen(Node *n) {
   if (!n->isBlack()) {
     n->markBlack();
   } else if (n->parent) {
@@ -337,8 +339,8 @@ void DiscretePDF<T>::lengthen(Node *n) {
   }
 }
 
-template <class T>
-void DiscretePDF<T>::propogateSumsUp(Node *n) {
+template <class T, class Comparator>
+void DiscretePDF<T, Comparator>::propagateSumsUp(Node *n) {
   for (; n; n=n->parent)
     n->setSum();
 }

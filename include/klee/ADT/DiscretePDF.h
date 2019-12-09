@@ -10,8 +10,10 @@
 #ifndef KLEE_DISCRETEPDF_H
 #define KLEE_DISCRETEPDF_H
 
+#include <functional>
+
 namespace klee {
-  template <class T>
+  template <class T, class Comparator = std::less<T>>
   class DiscretePDF {
     // not perfectly parameterized, but float/double/int should work ok,
     // although it would be better to have choose argument range from 0
@@ -28,21 +30,21 @@ namespace klee {
     void remove(T item);
     bool inTree(T item);
     weight_type getWeight(T item);
-	
+
     /* pick a tree element according to its
      * weight. p should be in [0,1).
      */
     T choose(double p);
-    
+
   private:
     class Node;
     Node *m_root;
-    
+
     Node **lookup(T item, Node **parent_out);
     void split(Node *node);
     void rotate(Node *node);
     void lengthen(Node *node);
-    void propogateSumsUp(Node *n);
+    void propagateSumsUp(Node *n);
   };
 
 }

@@ -10,6 +10,7 @@
 #ifndef KLEE_SEARCHER_H
 #define KLEE_SEARCHER_H
 
+#include "ExecutionState.h"
 #include "PTree.h"
 #include "klee/ADT/RNG.h"
 #include "klee/System/Time.h"
@@ -30,7 +31,7 @@ namespace llvm {
 }
 
 namespace klee {
-  template<class T> class DiscretePDF;
+  template<class T, class Comparator> class DiscretePDF;
   class ExecutionState;
   class Executor;
 
@@ -144,7 +145,7 @@ namespace klee {
     };
 
   private:
-    DiscretePDF<ExecutionState*> *states;
+    DiscretePDF<ExecutionState*, ExecutionStateIDCompare> *states;
     RNG &theRNG;
     WeightType type;
     bool updateWeights;

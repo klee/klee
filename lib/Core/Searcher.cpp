@@ -163,7 +163,7 @@ RandomSearcher::update(ExecutionState *current,
 ///
 
 WeightedRandomSearcher::WeightedRandomSearcher(WeightType type, RNG &rng)
-  : states(new DiscretePDF<ExecutionState*>()),
+  : states(new DiscretePDF<ExecutionState*, ExecutionStateIDCompare>()),
     theRNG{rng},
     type(type) {
   switch(type) {
