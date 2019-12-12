@@ -263,26 +263,26 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
     writeStatsLine();
 
     if (statsWriteInterval)
-      executor.timers.add(std::move(std::make_unique<Timer>(statsWriteInterval, [&]{
+      executor.timers.add(std::make_unique<Timer>(statsWriteInterval, [&]{
         writeStatsLine();
-      })));
+      }));
   }
 
   // Add timer to calculate uncovered instructions if needed by the solver
   if (updateMinDistToUncovered) {
     computeReachableUncovered();
-    executor.timers.add(std::move(std::make_unique<Timer>(time::Span{UncoveredUpdateInterval}, [&]{
+    executor.timers.add(std::make_unique<Timer>(time::Span{UncoveredUpdateInterval}, [&]{
       computeReachableUncovered();
-    })));
+    }));
   }
 
   if (OutputIStats) {
     istatsFile = executor.interpreterHandler->openOutputFile("run.istats");
     if (istatsFile) {
       if (iStatsWriteInterval)
-        executor.timers.add(std::move(std::make_unique<Timer>(iStatsWriteInterval, [&]{
+        executor.timers.add(std::make_unique<Timer>(iStatsWriteInterval, [&]{
           writeIStats();
-        })));
+        }));
     } else {
       klee_error("Unable to open instruction level stats file (run.istats).");
     }
