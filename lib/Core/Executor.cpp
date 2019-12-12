@@ -445,10 +445,10 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
 
   const time::Span maxTime{MaxTime};
   if (maxTime) timers.add(
-      std::move(std::make_unique<Timer>(maxTime, [&]{
+        std::make_unique<Timer>(maxTime, [&]{
         klee_message("HaltTimer invoked");
         setHaltExecution(true);
-      })));
+      }));
 
   coreSolverTimeout = time::Span{MaxCoreSolverTime};
   if (coreSolverTimeout) UseForkedCoreSolver = true;
