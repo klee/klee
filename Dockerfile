@@ -32,10 +32,9 @@ ENV MINISAT_VERSION=master
 ENV Z3_VERSION=4.8.4
 ENV USE_LIBCXX=1
 ENV KLEE_RUNTIME_BUILD="Debug+Asserts"
-
-COPY . /tmp/klee_src/
-RUN /tmp/klee_src//scripts/build/build.sh --debug --install-system-deps klee
 LABEL maintainer="KLEE Developers"
+
+
 # TODO remove adding sudo package
 # Create ``klee`` user for container with password ``klee``.
 # and give it password-less sudo access (temporarily so we can use the TravisCI scripts)
@@ -46,11 +45,14 @@ RUN apt update && apt -y --no-install-recommends install sudo emacs vim file && 
     cp /etc/sudoers /etc/sudoers.bak && \
     echo 'klee  ALL=(root) NOPASSWD: ALL' >> /etc/sudoers
 
+# Copy across source files needed for build
+COPY --chown=klee:klee . /tmp/klee_src/
+
+# Build and set klee user to be owner
+RUN /tmp/klee_src/scripts/build/build.sh --debug --install-system-deps klee && chown -R klee:klee /tmp/klee_build*
+
 ENV PATH="$PATH:/tmp/llvm-60-install_O_D_A/bin:/home/klee/klee_build/bin"
 ENV BASE=/tmp
-# Copy across source files needed for build
-# Set klee user to be owner
-ADD --chown=klee:klee / ${BASE}/klee_src
 
 USER klee
 WORKDIR /home/klee

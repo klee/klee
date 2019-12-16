@@ -2,3 +2,4 @@
 autom4te.cache
 **/.*.swp
 Dockerfile
+cmake-*/
