@@ -7,7 +7,7 @@
 // RUN: FileCheck < %t.klee-out/run.istats %s
 
 // CHECK: positions: instr line
-// CHECK: ob={{.*}}/SourceMapping.c{{.*}}/assembly.ll
+// CHECK: ob=assembly.ll
 
 // Assuming the compiler doesn't reorder things, f0 should be first, and it
 // should immediately follow the first file name marker.
