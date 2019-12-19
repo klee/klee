@@ -38,7 +38,7 @@ LABEL maintainer="KLEE Developers"
 # TODO remove adding sudo package
 # Create ``klee`` user for container with password ``klee``.
 # and give it password-less sudo access (temporarily so we can use the TravisCI scripts)
-RUN apt update && apt -y --no-install-recommends install sudo emacs vim file && \
+RUN apt update && apt -y --no-install-recommends install sudo emacs vim file python3-dateutil && \
     rm -rf /var/lib/apt/lists/* && \
     useradd -m klee && \
     echo klee:klee | chpasswd && \
@@ -49,7 +49,7 @@ RUN apt update && apt -y --no-install-recommends install sudo emacs vim file && 
 COPY --chown=klee:klee . /tmp/klee_src/
 
 # Build and set klee user to be owner
-RUN /tmp/klee_src/scripts/build/build.sh --debug --install-system-deps klee && chown -R klee:klee /tmp/klee_build*
+RUN /tmp/klee_src/scripts/build/build.sh --debug --install-system-deps klee && chown -R klee:klee /tmp/klee_build* && pip3 install flask
 
 ENV PATH="$PATH:/tmp/llvm-60-install_O_D_A/bin:/home/klee/klee_build/bin"
 ENV BASE=/tmp
