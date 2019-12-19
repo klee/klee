@@ -639,7 +639,7 @@ void StatsTracker::writeIStats() {
   if (UseCallPaths)
     callPathManager.getSummaryStatistics(callSiteStats);
 
-  of << "ob=" << objectFilename << "\n";
+  of << "ob=" << llvm::sys::path::filename(objectFilename).str() << "\n";
 
   for (Module::iterator fnIt = m->begin(), fn_ie = m->end(); 
        fnIt != fn_ie; ++fnIt) {
