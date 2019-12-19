@@ -26,19 +26,20 @@
 #include "MemoryManager.h"
 #include "UserSearcher.h"
 
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Process.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 
 #include <fstream>
 #include <unistd.h>
@@ -579,7 +580,6 @@ void StatsTracker::updateStateStatistics(uint64_t addend) {
 
 void StatsTracker::writeIStats() {
   const auto m = executor.kmodule->module.get();
-  uint64_t istatsMask = 0;
   llvm::raw_fd_ostream &of = *istatsFile;
   
   // We assume that we didn't move the file pointer
@@ -595,26 +595,26 @@ void StatsTracker::writeIStats() {
 
   StatisticManager &sm = *theStatisticManager;
   unsigned nStats = sm.getNumStatistics();
+  llvm::SmallBitVector istatsMask(nStats);
 
-  // Max is 13, sadly
-  istatsMask |= 1<<sm.getStatisticID("Queries");
-  istatsMask |= 1<<sm.getStatisticID("QueriesValid");
-  istatsMask |= 1<<sm.getStatisticID("QueriesInvalid");
-  istatsMask |= 1<<sm.getStatisticID("QueryTime");
-  istatsMask |= 1<<sm.getStatisticID("ResolveTime");
-  istatsMask |= 1<<sm.getStatisticID("Instructions");
-  istatsMask |= 1<<sm.getStatisticID("InstructionTimes");
-  istatsMask |= 1<<sm.getStatisticID("InstructionRealTimes");
-  istatsMask |= 1<<sm.getStatisticID("Forks");
-  istatsMask |= 1<<sm.getStatisticID("CoveredInstructions");
-  istatsMask |= 1<<sm.getStatisticID("UncoveredInstructions");
-  istatsMask |= 1<<sm.getStatisticID("States");
-  istatsMask |= 1<<sm.getStatisticID("MinDistToUncovered");
+  istatsMask.set(sm.getStatisticID("Queries"));
+  istatsMask.set(sm.getStatisticID("QueriesValid"));
+  istatsMask.set(sm.getStatisticID("QueriesInvalid"));
+  istatsMask.set(sm.getStatisticID("QueryTime"));
+  istatsMask.set(sm.getStatisticID("ResolveTime"));
+  istatsMask.set(sm.getStatisticID("Instructions"));
+  istatsMask.set(sm.getStatisticID("InstructionTimes"));
+  istatsMask.set(sm.getStatisticID("InstructionRealTimes"));
+  istatsMask.set(sm.getStatisticID("Forks"));
+  istatsMask.set(sm.getStatisticID("CoveredInstructions"));
+  istatsMask.set(sm.getStatisticID("UncoveredInstructions"));
+  istatsMask.set(sm.getStatisticID("States"));
+  istatsMask.set(sm.getStatisticID("MinDistToUncovered"));
 
   of << "positions: instr line\n";
 
   for (unsigned i=0; i<nStats; i++) {
-    if (istatsMask & (1<<i)) {
+    if (istatsMask.test(i)) {
       Statistic &s = sm.getStatistic(i);
       of << "event: " << s.getShortName() << " : " 
          << s.getName() << "\n";
@@ -623,14 +623,14 @@ void StatsTracker::writeIStats() {
 
   of << "events: ";
   for (unsigned i=0; i<nStats; i++) {
-    if (istatsMask & (1<<i))
+    if (istatsMask.test(i))
       of << sm.getStatistic(i).getShortName() << " ";
   }
   of << "\n";
   
   // set state counts, decremented after we process so that we don't
   // have to zero all records each time.
-  if (istatsMask & (1<<stats::states.getID()))
+  if (istatsMask.test(stats::states.getID()))
     updateStateStatistics(1);
 
   std::string sourceFile = "";
@@ -669,7 +669,7 @@ void StatsTracker::writeIStats() {
           of << ii.assemblyLine << " ";
           of << ii.line << " ";
           for (unsigned i=0; i<nStats; i++)
-            if (istatsMask&(1<<i))
+            if (istatsMask.test(i))
               of << sm.getIndexedValue(sm.getStatistic(i), index) << " ";
           of << "\n";
 
@@ -694,7 +694,7 @@ void StatsTracker::writeIStats() {
                 of << ii.assemblyLine << " ";
                 of << ii.line << " ";
                 for (unsigned i=0; i<nStats; i++) {
-                  if (istatsMask&(1<<i)) {
+                  if (istatsMask.test(i)) {
                     Statistic &s = sm.getStatistic(i);
                     uint64_t value;
 
@@ -718,7 +718,7 @@ void StatsTracker::writeIStats() {
     }
   }
 
-  if (istatsMask & (1<<stats::states.getID()))
+  if (istatsMask.test(stats::states.getID()))
     updateStateStatistics((uint64_t)-1);
   
   // Clear then end of the file if necessary (no truncate op?).
