@@ -5,7 +5,7 @@ task:
       - image: freebsd-12-0-release-amd64
   deps_script:
     - sed -i.bak -e 's/quarterly/latest/' /etc/pkg/FreeBSD.conf
-    - pkg install -y llvm80 gmake z3 cmake pkgconf google-perftools python3 python36 py36-sqlite3 py36-tabulate
+    - pkg install -y llvm80 gmake z3 cmake pkgconf google-perftools python3 python37 py37-sqlite3 py37-tabulate
   build_script:
     - mkdir build
     - cd build
