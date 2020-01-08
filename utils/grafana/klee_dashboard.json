@@ -22,11 +22,11 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#299c46",
+        "#FF9830",
         "#FF9830",
         "#d44a3a"
       ],
-      "format": "none",
+      "format": "locale",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -91,14 +91,8 @@
       "title": "Instructions Processed",
       "type": "singlestat",
       "valueFontSize": "80%",
-      "valueMaps": [
-        {
-          "op": "=",
-          "text": "N/A",
-          "value": "null"
-        }
-      ],
-      "valueName": "avg"
+      "valueMaps": [],
+      "valueName": "current"
     },
     {
       "aliasColors": {},
@@ -190,12 +184,12 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#299c46",
+        "#B877D9",
         "#B877D9",
         "#d44a3a"
       ],
       "datasource": "Klee Stats",
-      "format": "none",
+      "format": "locale",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -267,7 +261,7 @@
           "value": "null"
         }
       ],
-      "valueName": "avg"
+      "valueName": "current"
     },
     {
       "aliasColors": {},
@@ -359,11 +353,11 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#299c46",
+        "#5794F2",
         "#5794F2",
         "#d44a3a"
       ],
-      "format": "none",
+      "format": "locale",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -435,7 +429,7 @@
           "value": "null"
         }
       ],
-      "valueName": "avg"
+      "valueName": "current"
     },
     {
       "aliasColors": {},
@@ -527,7 +521,7 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#299c46",
+        "#F2495C",
         "#F2495C",
         "#d44a3a"
       ],
@@ -695,11 +689,11 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#299c46",
+        "#56A64B",
         "#56A64B",
         "#d44a3a"
       ],
-      "format": "none",
+      "format": "locale",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -867,7 +861,7 @@
         "#FF780A",
         "#FF780A"
       ],
-      "format": "none",
+      "format": "locale",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -1031,7 +1025,7 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#299c46",
+        "#B877D9",
         "#B877D9",
         "#d44a3a"
       ],
@@ -1201,11 +1195,11 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#299c46",
+        "#5794F2",
         "#5794F2",
         "#d44a3a"
       ],
-      "format": "none",
+      "format": "locale",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -1277,7 +1271,7 @@
           "value": "null"
         }
       ],
-      "valueName": "avg"
+      "valueName": "current"
     },
     {
       "aliasColors": {},
@@ -1369,11 +1363,11 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#299c46",
+        "#CA95E5",
         "#CA95E5",
         "#d44a3a"
       ],
-      "format": "none",
+      "format": "locale",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -1537,11 +1531,11 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#299c46",
+        "#E02F44",
         "#E02F44",
         "#d44a3a"
       ],
-      "format": "none",
+      "format": "locale",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -1705,11 +1699,11 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#299c46",
+        "rgba(237, 129, 40, 0.89)",
         "rgba(237, 129, 40, 0.89)",
         "#d44a3a"
       ],
-      "format": "none",
+      "format": "locale",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -1873,11 +1867,11 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#299c46",
+        "#C4162A",
         "#C4162A",
         "#d44a3a"
       ],
-      "format": "none",
+      "format": "locale",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -2039,14 +2033,13 @@
     {
       "cacheTimeout": null,
       "colorBackground": true,
-      "colorPrefix": false,
       "colorValue": false,
       "colors": [
-        "#299c46",
+        "#3274D9",
         "#3274D9",
         "#d44a3a"
       ],
-      "format": "none",
+      "format": "locale",
       "gauge": {
         "maxValue": 100,
         "minValue": 0,
@@ -2210,7 +2203,7 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#FF9830",
+        "#E0B400",
         "#E0B400",
         "#F2495C"
       ],
@@ -2376,7 +2369,7 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#299c46",
+        "#FF9830",
         "#FF9830",
         "#d44a3a"
       ],
@@ -2542,7 +2535,7 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#299c46",
+        "#3274D9",
         "#3274D9",
         "#d44a3a"
       ],
@@ -2709,7 +2702,7 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#299c46",
+        "#B877D9",
         "#B877D9",
         "#d44a3a"
       ],
@@ -2876,7 +2869,7 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#299c46",
+        "#E02F44",
         "#E02F44",
         "#d44a3a"
       ],
@@ -3043,7 +3036,7 @@
       "colorBackground": true,
       "colorValue": false,
       "colors": [
-        "#299c46",
+        "#8F3BB8",
         "#8F3BB8",
         "#d44a3a"
       ],
