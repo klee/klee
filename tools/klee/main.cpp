@@ -185,10 +185,10 @@ namespace {
        cl::cat(LinkCat));
 
   cl::list<std::string>
-  LinkLibraries("link-llvm-lib",
-		cl::desc("Link the given library before execution. Can be used multiple times."),
-		cl::value_desc("library file"),
-                cl::cat(LinkCat));
+      LinkLibraries("link-llvm-lib",
+                    cl::desc("Link the given bitcode library before execution, "
+                             "e.g. .bca, .bc, .a. Can be used multiple times."),
+                    cl::value_desc("bitcode library file"), cl::cat(LinkCat));
 
   cl::opt<bool>
   WithPOSIXRuntime("posix-runtime",
@@ -1299,8 +1299,8 @@ int main(int argc, char **argv, char **envp) {
   for (const auto &library : LinkLibraries) {
     if (!klee::loadFile(library, mainModule->getContext(), loadedModules,
                         errorMsg))
-      klee_error("error loading free standing support '%s': %s",
-                 library.c_str(), errorMsg.c_str());
+      klee_error("error loading bitcode library '%s': %s", library.c_str(),
+                 errorMsg.c_str());
   }
 
   // FIXME: Change me to std types.
