@@ -16,35 +16,39 @@ This allows klee to output instruction level statistic information which
 kcachegrind can then display by intercepting kcachegrind's calls to objdump
 and returning the LLVM instructions in a format that it can parse.
 """
+from __future__ import print_function
+import os
+import sys
 
-import os, sys
-
-kActualObjdump = os.path.join(os.path.dirname(__file__),'objdump.actual')
+kActualObjdump = os.path.join(os.path.dirname(__file__), 'objdump.actual')
 if not os.path.exists(kActualObjdump):
-    for path in ['/usr/bin','/usr/local/bin']:
-        p = os.path.join(path,'objdump')
+    for path in ['/usr/bin', '/usr/local/bin']:
+        p = os.path.join(path, 'objdump')
         if os.path.exists(p):
             kActualObjdump = p
 
-def fakeObjdumpOutput(file, start, end):
-    print 'Using fake objdump output:\n\n'
-    
+
+def fake_objdump_output(file, start, end):
+    print('Using fake objdump output:\n\n')
+
     lines = open(file).readlines()
-    for i in range(max(0,start-1),min(end-1,len(lines))):
-        print '%x:\t00 00\t%s'%(i+1,lines[i])
-        
+    for i in range(max(0, start - 1), min(end - 1, len(lines))):
+        print('%x:\t00 00\t%s' % (i + 1, lines[i]))
+
+
 def main(args):
     # exact pattern match kcachegrind's calling sequence
-    if   (len(args)>=6 and
-          args[1]=='-C' and
-          args[2]=='-d' and
-          args[3].startswith('--start-address=') and
-          args[4].startswith('--stop-address=') and
-          args[5].endswith('.ll')):
-        fakeObjdumpOutput(args[5], eval(args[3].split('=',1)[1]), eval(args[4].split('=',1)[1]))
+    if (len(args) >= 6 and
+            args[1] == '-C' and
+            args[2] == '-d' and
+            args[3].startswith('--start-address=') and
+            args[4].startswith('--stop-address=') and
+            args[5].endswith('.ll')):
+        fake_objdump_output(args[5], eval(args[3].split('=', 1)[1]), eval(args[4].split('=', 1)[1]))
     else:
         os.execv(kActualObjdump, args)
         raise RuntimeError
-    
-if __name__=='__main__':
+
+
+if __name__ == '__main__':
     main(sys.argv)
