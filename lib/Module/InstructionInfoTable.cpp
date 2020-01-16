@@ -81,14 +81,6 @@ buildInstructionToLineMap(const llvm::Module &m) {
   return mapping;
 }
 
-static std::string getFullPath(llvm::StringRef Directory,
-                               llvm::StringRef FileName) {
-  llvm::SmallString<128> file_pathname(Directory);
-  llvm::sys::path::append(file_pathname, FileName);
-
-  return file_pathname.str();
-}
-
 class DebugInfoExtractor {
   std::vector<std::unique_ptr<std::string>> &internedStrings;
   std::map<uintptr_t, uint64_t> lineTable;
@@ -126,7 +118,7 @@ public:
     auto dsub = llvm::getDISubprogram(&Func);
 #endif
     if (dsub != nullptr) {
-      auto path = getFullPath(dsub->getDirectory(), dsub->getFilename());
+      auto path = dsub->getFilename();
       return std::unique_ptr<FunctionInfo>(new FunctionInfo(
           0, getInternedString(path), dsub->getLine(), asmLine));
     }
