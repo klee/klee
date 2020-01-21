@@ -457,8 +457,12 @@ InterleavedSearcher::~InterleavedSearcher() {
 }
 
 ExecutionState &InterleavedSearcher::selectState() {
-  Searcher *s = searchers[--index];
-  if (index==0) index = searchers.size();
+  assert(!empty());
+  Searcher *s;
+  do {
+    s = searchers[--index];
+    if (index==0) index = searchers.size();
+  } while(s->empty());
   return s->selectState();
 }
 

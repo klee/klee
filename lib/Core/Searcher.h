@@ -314,7 +314,13 @@ namespace klee {
     void update(ExecutionState *current,
                 const std::vector<ExecutionState *> &addedStates,
                 const std::vector<ExecutionState *> &removedStates);
-    bool empty() { return searchers[0]->empty(); }
+    bool empty() {
+      for (searchers_ty::iterator it = searchers.begin(), ie = searchers.end();
+           it != ie; ++it)
+        if(!(*it)->empty())
+          return false;
+      return true;
+    }
     void printName(llvm::raw_ostream &os) {
       os << "<InterleavedSearcher> containing "
          << searchers.size() << " searchers:\n";
