@@ -1,10 +1,10 @@
-FROM klee/llvm:60_O_D_A_ubuntu_xenial-20181005 as llvm_base
-FROM klee/gtest:1.7.0_ubuntu_xenial-20181005 as gtest_base
-FROM klee/uclibc:klee_uclibc_v1.2_60_ubuntu_xenial-20181005 as uclibc_base
-FROM klee/tcmalloc:2.7_ubuntu_xenial-20181005 as tcmalloc_base
-FROM klee/stp:2.3.3_ubuntu_xenial-20181005 as stp_base
-FROM klee/z3:4.8.4_ubuntu_xenial-20181005 as z3_base
-FROM klee/libcxx:60_ubuntu_xenial-20181005 as libcxx_base
+FROM klee/llvm:60_O_D_A_ubuntu_bionic-20200112 as llvm_base
+FROM klee/gtest:1.7.0_ubuntu_bionic-20200112 as gtest_base
+FROM klee/uclibc:klee_uclibc_v1.2_60_ubuntu_bionic-20200112 as uclibc_base
+FROM klee/tcmalloc:2.7_ubuntu_bionic-20200112 as tcmalloc_base
+FROM klee/stp:2.3.3_ubuntu_bionic-20200112 as stp_base
+FROM klee/z3:4.8.4_ubuntu_bionic-20200112 as z3_base
+FROM klee/libcxx:60_ubuntu_bionic-20200112 as libcxx_base
 FROM llvm_base as intermediate
 COPY --from=gtest_base /tmp /tmp/
 COPY --from=uclibc_base /tmp /tmp/
@@ -38,7 +38,7 @@ LABEL maintainer="KLEE Developers"
 # TODO remove adding sudo package
 # Create ``klee`` user for container with password ``klee``.
 # and give it password-less sudo access (temporarily so we can use the TravisCI scripts)
-RUN apt update && apt -y --no-install-recommends install sudo emacs vim file python3-dateutil && \
+RUN apt update && DEBIAN_FRONTEND=noninteractive apt -y --no-install-recommends install sudo emacs-nox vim-nox file python3-dateutil && \
     rm -rf /var/lib/apt/lists/* && \
     useradd -m klee && \
     echo klee:klee | chpasswd && \
@@ -49,7 +49,8 @@ RUN apt update && apt -y --no-install-recommends install sudo emacs vim file pyt
 COPY --chown=klee:klee . /tmp/klee_src/
 
 # Build and set klee user to be owner
-RUN /tmp/klee_src/scripts/build/build.sh --debug --install-system-deps klee && chown -R klee:klee /tmp/klee_build* && pip3 install flask
+RUN /tmp/klee_src/scripts/build/build.sh --debug --install-system-deps klee && chown -R klee:klee /tmp/klee_build* && pip3 install flask wllvm && \
+    rm -rf /var/lib/apt/lists/*
 
 ENV PATH="$PATH:/tmp/llvm-60-install_O_D_A/bin:/home/klee/klee_build/bin"
 ENV BASE=/tmp
