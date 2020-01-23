@@ -3,6 +3,7 @@ install_build_dependencies_llvm() {
   apt update -y
 
   dependencies=(
+    ca-certificates
     build-essential
     autoconf
     automake
@@ -11,7 +12,7 @@ install_build_dependencies_llvm() {
     g++
     python-dev
     make
-    subversion # To check out code
+    git # To check out code
     zlib1g-dev
     cmake
   )
@@ -49,6 +50,8 @@ install_binary_artifact_llvm() {
   dependencies=(
     ca-certificates
     wget
+    lsb-release
+    gnupg
   )
   apt -y --no-install-recommends install "${dependencies[@]}"
   wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key| apt-key add -
@@ -56,10 +59,14 @@ install_binary_artifact_llvm() {
   local version=""
   [[ "${LLVM_VERSION_MAJOR}" -le 6 ]] && version="-${LLVM_VERSION}"
   [[ "${LLVM_VERSION_MAJOR}" -ge 7 ]] && version="-${LLVM_VERSION_MAJOR}"
-  
+
   # Add repository
-  echo "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial${version} main" >> /etc/apt/sources.list
-  apt update -y
+  codename="$(lsb_release --codename --short)"
+  apt_entry="deb http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}${version} main"
+  if [[ ! $(grep -q "${apt_entry}") ]]; then
+    echo  "${apt_entry}" >> /etc/apt/sources.list
+    apt update -y
+  fi
 
   dependencies=(
     "llvm${version}"
@@ -69,7 +76,7 @@ install_binary_artifact_llvm() {
   )
 
   #Install essential dependencies
-  apt -y --no-install-recommends install "${dependencies[@]}"
+  apt -y --no-install-recommends install "${dependencies[@]}" || return 1
 }
 
 # Check if the binary artifact is installed

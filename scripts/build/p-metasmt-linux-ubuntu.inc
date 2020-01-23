@@ -9,7 +9,8 @@ install_build_dependencies_metasmt() {
     # libgmp, gperf (required by yices2)
     gperf
     libgmp-dev
-
+    libbz2-dev
+    libboost-dev
     build-essential
     git
     wget
@@ -22,6 +23,7 @@ install_build_dependencies_metasmt() {
     python
     autoconf
     python3
+    curl
   )
 
   #Install essential dependencies
