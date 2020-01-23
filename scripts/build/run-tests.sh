@@ -58,8 +58,10 @@ run_tests() {
     coverage_setup "${build_dir}"
   fi
 
-  if [[ -n "${SANITIZER_BUILD+x}" ]]; then
-    for num in {1..10}; do sleep 120; echo 'Keep Travis alive'; done &
+  if [[ -n "${SANITIZER_BUILD+x}" ]]; then # Check for existance of variable
+    if [[ -n "${SANITIZER_BUILD}" ]]; then # Check for variable not being empty string
+      for num in {1..10}; do sleep 120; echo 'Keep Travis alive'; done &
+    fi
   fi
 
   make systemtests || return 1
