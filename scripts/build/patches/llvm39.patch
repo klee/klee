@@ -43,7 +43,7 @@
 
 --- a/compiler-rt/lib/sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc
 +++ b/compiler-rt/lib/sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc
-@@ -275,7 +275,7 @@ static int TracerThread(void* argument) {
+@@ -273,7 +273,7 @@ static int TracerThread(void* argument) {
 
    // Alternate stack for signal handling.
    InternalScopedBuffer<char> handler_stack_memory(kHandlerStackSize);
@@ -54,7 +54,7 @@
    handler_stack.ss_size = kHandlerStackSize;
 --- a/compiler-rt/lib/tsan/rtl/tsan_platform_linux.cc
 +++ b/compiler-rt/lib/tsan/rtl/tsan_platform_linux.cc
-@@ -289,7 +289,7 @@ void InitializePlatform() {
+@@ -282,7 +282,7 @@ void InitializePlatform() {
  int ExtractResolvFDs(void *state, int *fds, int nfd) {
  #if SANITIZER_LINUX && !SANITIZER_ANDROID
    int cnt = 0;
@@ -63,41 +63,6 @@
    for (int i = 0; i < MAXNS && cnt < nfd; i++) {
      if (statp->_u._ext.nsaddrs[i] && statp->_u._ext.nssocks[i] != -1)
        fds[cnt++] = statp->_u._ext.nssocks[i];
---- a/libcxx/include/__locale
-+++ b/libcxx/include/__locale
-@@ -34,7 +34,7 @@
- # include <support/solaris/xlocale.h>
- #elif defined(_NEWLIB_VERSION)
- # include <support/newlib/xlocale.h>
--#elif (defined(__GLIBC__) || defined(__APPLE__)      || defined(__FreeBSD__) \
-+#elif (defined(__APPLE__)      || defined(__FreeBSD__) \
-     || defined(__EMSCRIPTEN__) || defined(__IBMCPP__))
- # include <xlocale.h>
- #elif defined(_LIBCPP_HAS_MUSL_LIBC)
---- a/llvm/include/llvm/ExecutionEngine/Orc/OrcRemoteTargetClient.h
-+++ b/llvm/include/llvm/ExecutionEngine/Orc/OrcRemoteTargetClient.h
-@@ -687,7 +687,7 @@ private:
-
-   uint32_t getTrampolineSize() const { return RemoteTrampolineSize; }
-
--  Expected<std::vector<char>> readMem(char *Dst, JITTargetAddress Src,
-+  Expected<std::vector<unsigned char>> readMem(char *Dst, JITTargetAddress Src,
-                                       uint64_t Size) {
-     // Check for an 'out-of-band' error, e.g. from an MM destructor.
-     if (ExistingError)
---- a/llvm/tools/llvm-shlib/CMakeLists.txt
-+++ b/llvm/tools/llvm-shlib/CMakeLists.txt
-@@ -35,8 +35,9 @@ if(LLVM_DYLIB_EXPORTED_SYMBOL_FILE)
- endif()
-
- add_llvm_library(LLVM SHARED DISABLE_LLVM_LINK_LLVM_DYLIB SONAME ${SOURCES})
--
-+if(LIB_NAMES)
- list(REMOVE_DUPLICATES LIB_NAMES)
-+endif()
- if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" OR MINGW) # FIXME: It should be "GNU ld for elf"
-   # GNU ld doesn't resolve symbols in the version script.
-   set(LIB_NAMES -Wl,--whole-archive ${LIB_NAMES} -Wl,--no-whole-archive)
 --- a/libcxx/include/__locale
 +++ b/libcxx/include/__locale
 @@ -34,7 +34,7 @@
