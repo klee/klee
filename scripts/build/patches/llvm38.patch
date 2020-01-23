@@ -1,22 +1,7 @@
---- include/llvm/IR/ValueMap.h
-+++ include/llvm/IR/ValueMap.h
-@@ -99,7 +99,7 @@ public:
-   explicit ValueMap(const ExtraData &Data, unsigned NumInitBuckets = 64)
-       : Map(NumInitBuckets), Data(Data) {}
- 
--  bool hasMD() const { return MDMap; }
-+  bool hasMD() const { return static_cast<bool>(MDMap); }
-   MDMapT &MD() {
-     if (!MDMap)
-       MDMap.reset(new MDMapT);
-
-
-Backport from https://reviews.llvm.org/rC330696 to include the detection of GCC
-versions without second and third component in path, such as
-"/usr/lib/gcc/x86_64-redhat-linux/8/". Support for single digit versions was
-introduced with https://reviews.llvm.org/D14727
---- tools/clang/lib/Driver/ToolChains.cpp
-+++ tools/clang/lib/Driver/ToolChains.cpp
+diff --git a/clang/lib/Driver/ToolChains.cpp b/clang/lib/Driver/ToolChains.cpp
+index 99c7b8e6..f9a57b25 100644
+--- a/clang/lib/Driver/ToolChains.cpp
++++ b/clang/lib/Driver/ToolChains.cpp
 @@ -1241,20 +1241,31 @@ Generic_GCC::GCCVersion Linux::GCCVersion::Parse(StringRef VersionText) {
    if (First.first.getAsInteger(10, GoodVersion.Major) || GoodVersion.Major < 0)
      return BadVersion;
@@ -35,7 +20,7 @@ introduced with https://reviews.llvm.org/D14727
      return BadVersion;
 -  GoodVersion.MinorStr = Second.first.str();
 +  GoodVersion.MinorStr = MinorStr.str();
- 
+
    // First look for a number prefix and parse that if present. Otherwise just
    // stash the entire patch string in the suffix, and leave the number
    // unspecified. This covers versions strings such as:
@@ -52,4 +37,91 @@ introduced with https://reviews.llvm.org/D14727
    if (!PatchText.empty()) {
      if (size_t EndNumber = PatchText.find_first_not_of("0123456789")) {
        // Try to parse the number and any suffix.
+diff --git a/compiler-rt/lib/sanitizer_common/sanitizer_linux.cc b/compiler-rt/lib/sanitizer_common/sanitizer_linux.cc
+index 70799663..b9ca8b9d 100644
+--- a/compiler-rt/lib/sanitizer_common/sanitizer_linux.cc
++++ b/compiler-rt/lib/sanitizer_common/sanitizer_linux.cc
+@@ -565,8 +565,7 @@ uptr internal_prctl(int option, uptr arg2, uptr arg3, uptr arg4, uptr arg5) {
+ }
+ #endif
 
+-uptr internal_sigaltstack(const struct sigaltstack *ss,
+-                         struct sigaltstack *oss) {
++uptr internal_sigaltstack(const void *ss, void *oss) {
+   return internal_syscall(SYSCALL(sigaltstack), (uptr)ss, (uptr)oss);
+ }
+
+diff --git a/compiler-rt/lib/sanitizer_common/sanitizer_linux.h b/compiler-rt/lib/sanitizer_common/sanitizer_linux.h
+index 77bfbd15..5572793e 100644
+--- a/compiler-rt/lib/sanitizer_common/sanitizer_linux.h
++++ b/compiler-rt/lib/sanitizer_common/sanitizer_linux.h
+@@ -21,7 +21,6 @@
+ #include "sanitizer_platform_limits_posix.h"
+
+ struct link_map;  // Opaque type returned by dlopen().
+-struct sigaltstack;
+
+ namespace __sanitizer {
+ // Dirent structure for getdents(). Note that this structure is different from
+@@ -30,8 +29,7 @@ struct linux_dirent;
+
+ // Syscall wrappers.
+ uptr internal_getdents(fd_t fd, struct linux_dirent *dirp, unsigned int count);
+-uptr internal_sigaltstack(const struct sigaltstack* ss,
+-                          struct sigaltstack* oss);
++uptr internal_sigaltstack(const void* ss, void* oss);
+ uptr internal_sigprocmask(int how, __sanitizer_sigset_t *set,
+     __sanitizer_sigset_t *oldset);
+ void internal_sigfillset(__sanitizer_sigset_t *set);
+diff --git a/compiler-rt/lib/sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc b/compiler-rt/lib/sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc
+index d1e2f6ac..2df7be58 100644
+--- a/compiler-rt/lib/sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc
++++ b/compiler-rt/lib/sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cc
+@@ -272,7 +272,7 @@ static int TracerThread(void* argument) {
+
+   // Alternate stack for signal handling.
+   InternalScopedBuffer<char> handler_stack_memory(kHandlerStackSize);
+-  struct sigaltstack handler_stack;
++  stack_t handler_stack;
+   internal_memset(&handler_stack, 0, sizeof(handler_stack));
+   handler_stack.ss_sp = handler_stack_memory.data();
+   handler_stack.ss_size = kHandlerStackSize;
+diff --git a/compiler-rt/lib/tsan/rtl/tsan_platform_linux.cc b/compiler-rt/lib/tsan/rtl/tsan_platform_linux.cc
+index 66025611..98a5b135 100644
+--- a/compiler-rt/lib/tsan/rtl/tsan_platform_linux.cc
++++ b/compiler-rt/lib/tsan/rtl/tsan_platform_linux.cc
+@@ -311,7 +311,7 @@ bool IsGlobalVar(uptr addr) {
+ int ExtractResolvFDs(void *state, int *fds, int nfd) {
+ #if SANITIZER_LINUX && !SANITIZER_ANDROID
+   int cnt = 0;
+-  __res_state *statp = (__res_state*)state;
++  struct __res_state *statp = (struct __res_state*)state;
+   for (int i = 0; i < MAXNS && cnt < nfd; i++) {
+     if (statp->_u._ext.nsaddrs[i] && statp->_u._ext.nssocks[i] != -1)
+       fds[cnt++] = statp->_u._ext.nssocks[i];
+diff --git a/libcxx/include/__locale b/libcxx/include/__locale
+index 7bc701dd..ae0372fe 100644
+--- a/libcxx/include/__locale
++++ b/libcxx/include/__locale
+@@ -34,7 +34,7 @@
+ # include <support/solaris/xlocale.h>
+ #elif defined(_NEWLIB_VERSION)
+ # include <support/newlib/xlocale.h>
+-#elif (defined(__GLIBC__) || defined(__APPLE__)      || defined(__FreeBSD__) \
++#elif (defined(__APPLE__)      || defined(__FreeBSD__) \
+     || defined(__EMSCRIPTEN__) || defined(__IBMCPP__))
+ # include <xlocale.h>
+ #elif defined(_LIBCPP_HAS_MUSL_LIBC)
+diff --git a/llvm/include/llvm/IR/ValueMap.h b/llvm/include/llvm/IR/ValueMap.h
+index ad518ac0..d928f6a2 100644
+--- a/llvm/include/llvm/IR/ValueMap.h
++++ b/llvm/include/llvm/IR/ValueMap.h
+@@ -99,7 +99,7 @@ public:
+   explicit ValueMap(const ExtraData &Data, unsigned NumInitBuckets = 64)
+       : Map(NumInitBuckets), Data(Data) {}
+
+-  bool hasMD() const { return MDMap; }
++  bool hasMD() const { return static_cast<bool>(MDMap); }
+   MDMapT &MD() {
+     if (!MDMap)
+       MDMap.reset(new MDMapT);
