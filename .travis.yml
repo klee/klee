@@ -32,7 +32,7 @@ env:
     - secure: DQAEQWJblXvIztN/sgH63OtFncI+Qju6wRy1zIV/iLf5KbAmLs1h3itU7EsE/+3+LgV1MVQ5QNJDBUj17A6VHRKNaQ5qnIllTAcC3o0nPDohQkQoCgDG8HZ+M4wtVfr7q2K6byEPB2UbSH+mEjSMTihJufgBBVfKyyozAfYycjg=
 
     # Default configuration for all Travis-CI jobs. They are overriden by each job.
-    - BASE_IMAGE: ubuntu:xenial-20181005
+    - BASE_IMAGE: ubuntu:bionic-20200112
     - REPOSITORY: klee
 
     - COVERAGE: 0
