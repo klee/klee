@@ -20,6 +20,6 @@ install_build_dependencies_klee() {
 
   apt -y --no-install-recommends install "${dependencies[@]}"
 
-  pip install lit
+  pip3 install lit
   pip3 install tabulate
 }

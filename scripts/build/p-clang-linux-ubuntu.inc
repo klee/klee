@@ -13,13 +13,20 @@ install_binary_artifact_clang() {
     dependencies=(
       ca-certificates
       wget
+      lsb-release
+      gnupg
     )
 
     apt -y --no-install-recommends install "${dependencies[@]}"
     wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key| apt-key add -
 
     # Add repository
-    echo "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial${version} main" >> /etc/apt/sources.list
+    codename="$(lsb_release --codename --short)"
+    apt_entry="deb http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}${version} main"
+    if [[ ! $(grep -q "${apt_entry}") ]]; then
+      echo "${apt_entry}" >> /etc/apt/sources.list
+      apt update -y
+    fi
   fi
 
   apt update -y
@@ -29,7 +36,7 @@ install_binary_artifact_clang() {
   )
 
   #Install essential dependencies
-  apt -y --no-install-recommends install "${dependencies[@]}"
+  apt -y --no-install-recommends install "${dependencies[@]}" || return 1
 }
 
 get_docker_config_id_clang() {
