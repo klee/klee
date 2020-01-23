@@ -20,9 +20,10 @@ build_metasmt() {
   # Provide a temporary value for this
   export GIT_COMMITTER_EMAIL="foo@bar"
   export GIT_COMMITTER_NAME="foobar"
+  export BOOST_ROOT="/usr/include/"
   cd "${METASMT_SRC_PATH}"
   ./bootstrap.sh -d deps -m RELEASE build -DmetaSMT_ENABLE_TESTS=off \
-    --build stp-git-basic --build boolector-3.0.0 --build minisat-git \
+    --build stp-git-basic --build boolector-git --build minisat-git \
     --build lingeling-bbc-9230380-161217 --build yices-2.6.1 --build Z3-4.8.4 \
     --build cvc4-1.6 \
     --deps "${METASMT_DEPS_PATH}/" \
