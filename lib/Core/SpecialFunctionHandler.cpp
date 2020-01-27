@@ -259,7 +259,7 @@ SpecialFunctionHandler::readStringAtAddress(ExecutionState &state,
   const MemoryObject *mo = op.first;
   const ObjectState *os = op.second;
 
-  char *buf = new char[mo->size];
+  std::ostringstream buf;
 
   unsigned i;
   for (i = 0; i < mo->size - 1; i++) {
@@ -267,13 +267,10 @@ SpecialFunctionHandler::readStringAtAddress(ExecutionState &state,
     cur = executor.toUnique(state, cur);
     assert(isa<ConstantExpr>(cur) && 
            "hit symbolic char while reading concrete string");
-    buf[i] = cast<ConstantExpr>(cur)->getZExtValue(8);
+    buf << static_cast<char>(cast<ConstantExpr>(cur)->getZExtValue(8));
   }
-  buf[i] = 0;
-  
-  std::string result(buf);
-  delete[] buf;
-  return result;
+
+  return buf.str();
 }
 
 /****/
