@@ -539,7 +539,7 @@ get_all_dependencies() {
     mapfile -t deps_list <<< "$(get_all_dependencies_rec "$v" "$type")"
     [[ "${failed}" -eq 1 ]] && continue
 
-    # Make sure items are unique and keep the order of occurence
+    # Make sure items are unique and keep the order of occurrence
     for di in "${deps_list[@]}"; do
       local found=0
       for f in "${final_list[@]}"; do
