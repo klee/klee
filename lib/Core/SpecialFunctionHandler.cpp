@@ -249,25 +249,33 @@ SpecialFunctionHandler::readStringAtAddress(ExecutionState &state,
         Executor::TerminateReason::User);
     return "";
   }
-  bool res __attribute__ ((unused));
-  assert(executor.solver->mustBeTrue(state, 
-                                     EqExpr::create(address, 
-                                                    op.first->getBaseExpr()),
-                                     res) &&
-         res &&
-         "XXX interior pointer unhandled");
+
   const MemoryObject *mo = op.first;
   const ObjectState *os = op.second;
 
-  std::ostringstream buf;
+  auto relativeOffset = mo->getOffsetExpr(address);
+  // the relativeOffset must be concrete as the address is concrete
+  size_t offset = cast<ConstantExpr>(relativeOffset)->getZExtValue();
 
-  unsigned i;
-  for (i = 0; i < mo->size - 1; i++) {
+  std::ostringstream buf;
+  char c = 0;
+  for (size_t i = offset; i < mo->size; ++i) {
     ref<Expr> cur = os->read8(i);
     cur = executor.toUnique(state, cur);
     assert(isa<ConstantExpr>(cur) && 
            "hit symbolic char while reading concrete string");
-    buf << static_cast<char>(cast<ConstantExpr>(cur)->getZExtValue(8));
+    c = cast<ConstantExpr>(cur)->getZExtValue(8);
+    if (c == '\0') {
+      // we read the whole string
+      break;
+    }
+
+    buf << c;
+  }
+
+  if (c != '\0') {
+      klee_warning_once(0, "String not terminated by \\0 passed to "
+                           "one of the klee_ functions");
   }
 
   return buf.str();
