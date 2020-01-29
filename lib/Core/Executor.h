@@ -432,7 +432,13 @@ private:
                                     ref<Expr> e,
                                     ref<ConstantExpr> value);
 
-  void checkMemoryUsage();
+  /// check memory usage and terminate states when over threshold of -max-memory + 100MB
+  /// \return true if below threshold, false otherwise (states were terminated)
+  bool checkMemoryUsage();
+
+  /// check if branching/forking is allowed
+  bool branchingPermitted(const ExecutionState &state) const;
+
   void printDebugInstructions(ExecutionState &state);
   void doDumpStates();
 
