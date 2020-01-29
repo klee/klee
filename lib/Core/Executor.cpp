@@ -307,14 +307,15 @@ cl::opt<unsigned> MaxDepth(
 
 cl::opt<unsigned> MaxMemory("max-memory",
                             cl::desc("Refuse to fork when above this amount of "
-                                     "memory (in MB) (default=2000)"),
+                                     "memory (in MB) (see -max-memory-inhibit) and terminate "
+                                     "states when additional 100MB allocated (default=2000)"),
                             cl::init(2000),
                             cl::cat(TerminationCat));
 
 cl::opt<bool> MaxMemoryInhibit(
     "max-memory-inhibit",
     cl::desc(
-        "Inhibit forking at memory cap (vs. random terminate) (default=true)"),
+        "Inhibit forking when above memory cap (see -max-memory) (default=true)"),
     cl::init(true),
     cl::cat(TerminationCat));
 
@@ -844,6 +845,28 @@ void Executor::initializeGlobalObjects(ExecutionState &state) {
   }
 }
 
+
+bool Executor::branchingPermitted(const ExecutionState &state) const {
+  if ((MaxMemoryInhibit && atMemoryLimit) ||
+      state.forkDisabled ||
+      inhibitForking ||
+      (MaxForks!=~0u && stats::forks >= MaxForks)) {
+
+    if (MaxMemoryInhibit && atMemoryLimit)
+      klee_warning_once(0, "skipping fork (memory cap exceeded)");
+    else if (state.forkDisabled)
+      klee_warning_once(0, "skipping fork (fork disabled on current path)");
+    else if (inhibitForking)
+      klee_warning_once(0, "skipping fork (fork disabled globally)");
+    else
+      klee_warning_once(0, "skipping fork (max-forks reached)");
+
+    return false;
+  }
+
+  return true;
+}
+
 void Executor::branch(ExecutionState &state, 
                       const std::vector< ref<Expr> > &conditions,
                       std::vector<ExecutionState*> &result) {
@@ -851,13 +874,13 @@ void Executor::branch(ExecutionState &state,
   unsigned N = conditions.size();
   assert(N);
 
-  if (MaxForks!=~0u && stats::forks >= MaxForks) {
+  if (!branchingPermitted(state)) {
     unsigned next = theRNG.getInt32() % N;
     for (unsigned i=0; i<N; ++i) {
       if (i == next) {
         result.push_back(&state);
       } else {
-        result.push_back(NULL);
+        result.push_back(nullptr);
       }
     }
   } else {
@@ -995,20 +1018,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     } else if (res==Solver::Unknown) {
       assert(!replayKTest && "in replay mode, only one branch can be true.");
       
-      if ((MaxMemoryInhibit && atMemoryLimit) || 
-          current.forkDisabled ||
-          inhibitForking || 
-          (MaxForks!=~0u && stats::forks >= MaxForks)) {
-
-	if (MaxMemoryInhibit && atMemoryLimit)
-	  klee_warning_once(0, "skipping fork (memory cap exceeded)");
-	else if (current.forkDisabled)
-	  klee_warning_once(0, "skipping fork (fork disabled on current path)");
-	else if (inhibitForking)
-	  klee_warning_once(0, "skipping fork (fork disabled globally)");
-	else 
-	  klee_warning_once(0, "skipping fork (max-forks reached)");
-
+      if (!branchingPermitted(current)) {
         TimerStatIncrementer timer(stats::forkTime);
         if (theRNG.getBool()) {
           addConstraint(current, condition);
@@ -2895,39 +2905,46 @@ void Executor::bindModuleConstants() {
   }
 }
 
-void Executor::checkMemoryUsage() {
-  if (!MaxMemory)
-    return;
-  if ((stats::instructions & 0xFFFF) == 0) {
-    // We need to avoid calling GetTotalMallocUsage() often because it
-    // is O(elts on freelist). This is really bad since we start
-    // to pummel the freelist once we hit the memory cap.
-    unsigned mbs = (util::GetTotalMallocUsage() >> 20) +
-                   (memory->getUsedDeterministicSize() >> 20);
+bool Executor::checkMemoryUsage() {
+  if (!MaxMemory) return true;
 
-    if (mbs > MaxMemory) {
-      if (mbs > MaxMemory + 100) {
-        // just guess at how many to kill
-        unsigned numStates = states.size();
-        unsigned toKill = std::max(1U, numStates - numStates * MaxMemory / mbs);
-        klee_warning("killing %d states (over memory cap)", toKill);
-        std::vector<ExecutionState *> arr(states.begin(), states.end());
-        for (unsigned i = 0, N = arr.size(); N && i < toKill; ++i, --N) {
-          unsigned idx = rand() % N;
-          // Make two pulls to try and not hit a state that
-          // covered new code.
-          if (arr[idx]->coveredNew)
-            idx = rand() % N;
+  // We need to avoid calling GetTotalMallocUsage() often because it
+  // is O(elts on freelist). This is really bad since we start
+  // to pummel the freelist once we hit the memory cap.
+  if ((stats::instructions & 0xFFFFU) != 0) // every 65536 instructions
+    return true;
 
-          std::swap(arr[idx], arr[N - 1]);
-          terminateStateEarly(*arr[N - 1], "Memory limit exceeded.");
-        }
-      }
-      atMemoryLimit = true;
-    } else {
-      atMemoryLimit = false;
-    }
+  // check memory limit
+  const auto mallocUsage = util::GetTotalMallocUsage() >> 20U;
+  const auto mmapUsage = memory->getUsedDeterministicSize() >> 20U;
+  const auto totalUsage = mallocUsage + mmapUsage;
+  atMemoryLimit = totalUsage > MaxMemory; // inhibit forking
+  if (!atMemoryLimit)
+    return true;
+
+  // only terminate states when threshold (+100MB) exceeded
+  if (totalUsage <= MaxMemory + 100)
+    return true;
+
+  // just guess at how many to kill
+  const auto numStates = states.size();
+  auto toKill = std::max(1UL, numStates - numStates * MaxMemory / totalUsage);
+  klee_warning("killing %lu states (over memory cap: %luMB)", toKill, totalUsage);
+
+  // randomly select states for early termination
+  std::vector<ExecutionState *> arr(states.begin(), states.end()); // FIXME: expensive
+  for (unsigned i = 0, N = arr.size(); N && i < toKill; ++i, --N) {
+    unsigned idx = theRNG.getInt32() % N;
+    // Make two pulls to try and not hit a state that
+    // covered new code.
+    if (arr[idx]->coveredNew)
+      idx = theRNG.getInt32() % N;
+
+    std::swap(arr[idx], arr[N - 1]);
+    terminateStateEarly(*arr[N - 1], "Memory limit exceeded.");
   }
+
+  return false;
 }
 
 void Executor::doDumpStates() {
@@ -3016,6 +3033,7 @@ void Executor::run(ExecutionState &initialState) {
   std::vector<ExecutionState *> newStates(states.begin(), states.end());
   searcher->update(0, newStates, std::vector<ExecutionState *>());
 
+  // main interpreter loop
   while (!states.empty() && !haltExecution) {
     ExecutionState &state = searcher->selectState();
     KInstruction *ki = state.pc;
@@ -3026,13 +3044,16 @@ void Executor::run(ExecutionState &initialState) {
     if (::dumpStates) dumpStates();
     if (::dumpPTree) dumpPTree();
 
-    checkMemoryUsage();
-
     updateStates(&state);
+
+    if (!checkMemoryUsage()) {
+      // update searchers when states were terminated early due to memory pressure
+      updateStates(nullptr);
+    }
   }
 
   delete searcher;
-  searcher = 0;
+  searcher = nullptr;
 
   doDumpStates();
 }
