@@ -241,6 +241,20 @@ def grafana(dirs, host_address, port):
     app.run(host=host_address, port=port)
     return 0
 
+
+def write_csv(data):
+    import csv
+    data = data[0]
+    c = data.conn.cursor()
+    sql3_cursor = c.execute("SELECT * FROM stats")
+    csv_out = csv.writer(sys.stdout)
+    # write header
+    csv_out.writerow([d[0] for d in sql3_cursor.description])
+    # write data
+    for result in sql3_cursor:
+        csv_out.writerow(result)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='output statistics logged by klee',
@@ -313,16 +327,7 @@ def main():
     data = [LazyEvalList(d) for d in valid_log_files]
 
     if args.toCsv:
-        import csv
-        data = data[0]
-        c = data.conn.cursor()
-        sql3_cursor = c.execute("SELECT * FROM stats")
-        csv_out = csv.writer(sys.stdout)
-        # write header                        
-        csv_out.writerow([d[0] for d in sql3_cursor.description])
-        # write data                          
-        for result in sql3_cursor:
-          csv_out.writerow(result)
+        write_csv(data)
         return
 
     if len(data) > 1:
@@ -372,6 +377,6 @@ def main():
             stream = '\n'.join(stream)
         print(stream)
 
-   
+
 if __name__ == '__main__':
     main()
