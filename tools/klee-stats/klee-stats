@@ -305,8 +305,12 @@ def main():
     if len(dirs) == 0:
         print('no klee output dir found', file=sys.stderr)
         exit(1)
+
+    # Filter non-existing files, useful for star operations
+    valid_log_files = [getLogFile(f) for f in dirs if os.path.isfile(getLogFile(f))]
+
     # read contents from every run.stats file into LazyEvalList
-    data = [LazyEvalList(getLogFile(d)) for d in dirs]
+    data = [LazyEvalList(d) for d in valid_log_files]
 
     if args.toCsv:
         import csv
