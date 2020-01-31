@@ -255,6 +255,51 @@ def write_csv(data):
         csv_out.writerow(result)
 
 
+def write_table(args, data, dirs, pr):
+    if len(data) > 1:
+        dirs = stripCommonPathPrefix(dirs)
+    # attach the stripped path
+    data = list(zip(dirs, data))
+    labels = getLabels(pr)
+    # build the main body of the table
+    table = []
+    totRecords = []  # accumulated records
+    totStats = []  # accumulated stats
+    for path, records in data:
+        row = [path]
+        stats = records.aggregateRecords()
+        totStats.append(stats)
+        row.extend(getRow(records.getLastRecord(), stats, pr))
+        totRecords.append(records.getLastRecord())
+        table.append(row)
+    # calculate the total
+    totRecords = [sum(e) for e in zip(*totRecords)]
+    totStats = [sum(e) for e in zip(*totStats)]
+    totalRow = ['Total ({0})'.format(len(table))]
+    totalRow.extend(getRow(totRecords, totStats, pr))
+    if len(data) > 1:
+        table.append(totalRow)
+    table.insert(0, labels)
+    if args.tableFormat != 'klee':
+        print(tabulate(
+            table, headers='firstrow',
+            tablefmt=args.tableFormat,
+            floatfmt='.{p}f'.format(p=2),
+            numalign='right', stralign='center'))
+    else:
+        stream = tabulate(
+            table, headers='firstrow',
+            tablefmt=KleeTable,
+            floatfmt='.{p}f'.format(p=2),
+            numalign='right', stralign='center')
+        # add a line separator before the total line
+        if len(data) > 1:
+            stream = stream.splitlines()
+            stream.insert(-2, stream[-1])
+            stream = '\n'.join(stream)
+        print(stream)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='output statistics logged by klee',
@@ -330,52 +375,7 @@ def main():
         write_csv(data)
         return
 
-    if len(data) > 1:
-        dirs = stripCommonPathPrefix(dirs)
-    # attach the stripped path
-    data = list(zip(dirs, data))
-
-    labels = getLabels(pr)
-
-    # build the main body of the table
-    table = []
-    totRecords = []  # accumulated records
-    totStats = []    # accumulated stats
-    for path, records in data:
-        row = [path]
-        stats = records.aggregateRecords()
-        totStats.append(stats)
-        row.extend(getRow(records.getLastRecord(), stats, pr))
-        totRecords.append(records.getLastRecord())
-        table.append(row)
-    # calculate the total
-    totRecords = [sum(e) for e in zip(*totRecords)]
-    totStats = [sum(e) for e in zip(*totStats)]
-    totalRow = ['Total ({0})'.format(len(table))]
-    totalRow.extend(getRow(totRecords, totStats, pr))
-
-    if len(data) > 1:
-        table.append(totalRow)
-    table.insert(0, labels)
-
-    if args.tableFormat != 'klee':
-        print(tabulate(
-            table, headers='firstrow',
-            tablefmt=args.tableFormat,
-            floatfmt='.{p}f'.format(p=2),
-            numalign='right', stralign='center'))
-    else:
-        stream = tabulate(
-            table, headers='firstrow',
-            tablefmt=KleeTable,
-            floatfmt='.{p}f'.format(p=2),
-            numalign='right', stralign='center')
-        # add a line separator before the total line
-        if len(data) > 1:
-            stream = stream.splitlines()
-            stream.insert(-2, stream[-1])
-            stream = '\n'.join(stream)
-        print(stream)
+    write_table(args, data, dirs, pr)
 
 
 if __name__ == '__main__':
