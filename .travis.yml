@@ -12,7 +12,7 @@ env:
     ###########################################################################
 
     # Check a subset of the matrix of:
-    #   LLVM  : {3.8, 3.9, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0}
+    #   LLVM  : {3.8, 3.9, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0}
     #   SOLVERS : {Z3, STP, STP:Z3, metaSMT}
     #   STP_VERSION   : {2.3.3, master}
     #   METASMT_VERSION : {v4.rc1}
@@ -56,6 +56,7 @@ env:
 
     matrix:
     # Check supported LLVM versions
+    - LLVM_VERSION=10.0
     - LLVM_VERSION=9.0
     - LLVM_VERSION=8.0
     - LLVM_VERSION=7.0
