@@ -252,6 +252,9 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
       klee_error("%s", sqlite3ErrToStringAndFree("Can't set options for database: ", zErrMsg).c_str());
     }
 
+    // create table
+    writeStatsHeader();
+
     // begin transaction
     auto rc = sqlite3_step(transactionBeginStmt);
     if (rc != SQLITE_DONE) {
@@ -259,8 +262,6 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
     }
     sqlite3_reset(transactionBeginStmt);
 
-    // create table
-    writeStatsHeader();
     writeStatsLine();
 
     if (statsWriteInterval)
