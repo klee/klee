@@ -101,8 +101,8 @@ download_llvm() {
     branch_name="release/${LLVM_VERSION}.x"
   fi
   git_clone_or_update "https://github.com/llvm/llvm-project.git" "${LLVM_SRC_BASE}" "${branch_name}" || exit 1
-  if [[ "${LLVM_VERSION_MAJOR}" -le 8 ]]; then
-    # Fix the linking for older versions
+  if [[ "${LLVM_VERSION_MAJOR}" -lt 4 ]]; then
+    # Use symlinks for older versions whose build systems do not support the monorepo directory layout
     ln -s "${LLVM_SRC_BASE}/clang" "${LLVM_SRC_BASE}/llvm/tools/"
     ln -s "${LLVM_SRC_BASE}/compiler-rt" "${LLVM_SRC_BASE}/llvm/projects/"
     ln -s "${LLVM_SRC_BASE}/libcxx" "${LLVM_SRC_BASE}/llvm/projects/"
@@ -129,13 +129,16 @@ build_llvm() {
        # Build uninstrumented compiler
        mkdir -p "${SANITIZER_LLVM_UNINSTRUMENTED}"
        cd "${SANITIZER_LLVM_UNINSTRUMENTED}"
-       cmake -GNinja -DCMAKE_BUILD_TYPE=Release "${LLVM_SRC_BASE}/llvm"
+       cmake -GNinja -DCMAKE_BUILD_TYPE=Release \
+        "-DLLVM_ENABLE_PROJECTS=clang;compiler-rt;libcxx;libcxxabi" \
+        "${LLVM_SRC_BASE}/llvm"
        ninja
 
        # Build instrumented libc/libc++
        mkdir -p "${SANITIZER_LLVM_LIBCXX}"
        cd "${SANITIZER_LLVM_LIBCXX}"
        cmake -GNinja -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        "-DLLVM_ENABLE_PROJECTS=clang;compiler-rt;libcxx;libcxxabi" \
         -DLLVM_USE_SANITIZER=MemoryWithOrigins \
         "${SANITIZER_CMAKE_C_COMPILER[@]}" \
         "${SANITIZER_CMAKE_CXX_COMPILER[@]}" \
@@ -154,6 +157,7 @@ build_llvm() {
           -DCMAKE_C_FLAGS="$C_F" \
           -DCMAKE_CXX_FLAGS="${CXX_F}" \
           -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          "-DLLVM_ENABLE_PROJECTS=clang;compiler-rt;libcxx;libcxxabi" \
           -DLLVM_ENABLE_ASSERTIONS=On \
           -DLLVM_USE_SANITIZER=MemoryWithOrigins \
           -DLLVM_ENABLE_LIBCXX=ON \
@@ -177,6 +181,7 @@ build_llvm() {
   CONFIG=(
      "-DCMAKE_INSTALL_PREFIX=${LLVM_INSTALL}"
      "-DLLVM_BUILD_LLVM_DYLIB=TRUE"
+     "-DLLVM_ENABLE_PROJECTS=clang;compiler-rt;libcxx;libcxxabi"
   )
   # cmake build
   if [[ "${enable_optimized}" == "1" && "${enable_debug}" != "1" ]]; then
