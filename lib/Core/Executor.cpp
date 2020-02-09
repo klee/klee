@@ -750,35 +750,9 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
                                         /*alignment=*/globalObjectAlignment);
     if (!mo)
       klee_error("out of memory");
-    ObjectState *os = bindObjectInState(state, mo, false);
     globalObjects.emplace(&v, mo);
     globalAddresses.emplace(&v, mo->getBaseExpr());
-
-    if (v.isDeclaration() && size) {
-      // Program already running -> object already initialized.
-      // Read concrete value and write it to our copy.
-      void *addr;
-      if (v.getName() == "__dso_handle") {
-        addr = &__dso_handle; // wtf ?
-      } else {
-        addr = externalDispatcher->resolveSymbol(v.getName());
-      }
-      if (!addr) {
-        klee_error("Unable to load symbol(%.*s) while initializing globals",
-                    static_cast<int>(v.getName().size()),
-                    v.getName().data()
-        );
-      }
-
-      for (unsigned offset = 0; offset < mo->size; offset++) {
-        os->write8(offset, static_cast<unsigned char*>(addr)[offset]);
-      }
-    } else {
-      if (!v.hasInitializer())
-        os->initializeToRandom();
-    }
   }
-
 }
 
 void Executor::initializeGlobalAliases() {
@@ -808,15 +782,31 @@ void Executor::initializeGlobalObjects(ExecutionState &state) {
   // calls
   std::vector<ObjectState *> constantObjects;
   for (const GlobalVariable &v : m->globals()) {
-    if (v.hasInitializer()) {
-      MemoryObject *mo = globalObjects.find(&v)->second;
-      const ObjectState *os = state.addressSpace.findObject(mo);
-      assert(os);
-      ObjectState *wos = state.addressSpace.getWriteable(mo, os);
+    MemoryObject *mo = globalObjects.find(&v)->second;
+    ObjectState *os = bindObjectInState(state, mo, false);
 
-      initializeGlobalObject(state, wos, v.getInitializer(), 0);
+    if (v.isDeclaration() && mo->size) {
+      // Program already running -> object already initialized.
+      // Read concrete value and write it to our copy.
+      void *addr;
+      if (v.getName() == "__dso_handle") {
+        addr = &__dso_handle; // wtf ?
+      } else {
+        addr = externalDispatcher->resolveSymbol(v.getName());
+      }
+      if (!addr) {
+        klee_error("Unable to load symbol(%.*s) while initializing globals",
+                   static_cast<int>(v.getName().size()), v.getName().data());
+      }
+      for (unsigned offset = 0; offset < mo->size; offset++) {
+        os->write8(offset, static_cast<unsigned char *>(addr)[offset]);
+      }
+    } else if (v.hasInitializer()) {
+      initializeGlobalObject(state, os, v.getInitializer(), 0);
       if (v.isConstant())
-        constantObjects.emplace_back(wos);
+        constantObjects.emplace_back(os);
+    } else {
+      os->initializeToRandom();
     }
   }
 
