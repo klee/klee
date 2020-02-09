@@ -755,23 +755,46 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
   }
 }
 
+void Executor::initializeGlobalAlias(const llvm::Constant *c) {
+  // aliasee may either be a global value or constant expression
+  const auto *ga = dyn_cast<GlobalAlias>(c);
+  if (ga) {
+    if (globalAddresses.count(ga)) {
+      // already resolved by previous invocation
+      return;
+    }
+    const llvm::Constant *aliasee = ga->getAliasee();
+    if (const auto *gv = dyn_cast<GlobalValue>(aliasee)) {
+      // aliasee is global value
+      auto it = globalAddresses.find(gv);
+      // uninitialized only if aliasee is another global alias
+      if (it != globalAddresses.end()) {
+        globalAddresses.emplace(ga, it->second);
+        return;
+      }
+    }
+  }
+
+  // resolve aliases in all sub-expressions
+#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
+  for (const auto *op : c->operand_values()) {
+#else
+  for (auto &it : c->operands()) {
+    const auto *op = &*it;
+#endif
+    initializeGlobalAlias(cast<Constant>(op));
+  }
+
+  if (ga) {
+    // aliasee is constant expression (or global alias)
+    globalAddresses.emplace(ga, evalConstant(ga->getAliasee()));
+  }
+}
+
 void Executor::initializeGlobalAliases() {
   const Module *m = kmodule->module.get();
-
-  // link aliases to their definitions (if bound)
-  for (auto i = m->alias_begin(), ie = m->alias_end(); i != ie; ++i) {
-    // Map the alias to its aliasee's address. This works because we have
-    // addresses for everything, even undefined functions.
-
-    // Alias may refer to other alias, not necessarily known at this point.
-    // Thus, resolve to real alias directly.
-    const GlobalAlias *alias = &*i;
-    while (const auto *ga = dyn_cast<GlobalAlias>(alias->getAliasee())) {
-      assert(ga != alias && "alias pointing to itself");
-      alias = ga;
-    }
-
-    globalAddresses.insert(std::make_pair(&*i, evalConstant(alias->getAliasee())));
+  for (const GlobalAlias &a : m->aliases()) {
+    initializeGlobalAlias(&a);
   }
 }
 
