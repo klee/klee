@@ -636,6 +636,20 @@ MemoryObject * Executor::addExternalObject(ExecutionState &state,
 extern void *__dso_handle __attribute__ ((__weak__));
 
 void Executor::initializeGlobals(ExecutionState &state) {
+  // allocate and initialize globals, done in two passes since we may
+  // need address of a global in order to initialize some other one.
+
+  // allocate memory objects for all globals
+  allocateGlobalObjects(state);
+
+  // initialize aliases first, may be needed for global objects
+  initializeGlobalAliases();
+
+  // finally, do the actual initialization
+  initializeGlobalObjects(state);
+}
+
+void Executor::allocateGlobalObjects(ExecutionState &state) {
   Module *m = kmodule->module.get();
 
   if (m->getModuleInlineAsm() != "")
@@ -696,10 +710,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
 #endif
 #endif
 
-  // allocate and initialize globals, done in two passes since we may
-  // need address of a global in order to initialize some other one.
 
-  // allocate memory objects for all globals
   for (Module::const_global_iterator i = m->global_begin(),
          e = m->global_end();
        i != e; ++i) {
@@ -775,7 +786,11 @@ void Executor::initializeGlobals(ExecutionState &state) {
           os->initializeToRandom();
     }
   }
-  
+}
+
+void Executor::initializeGlobalAliases() {
+  const Module *m = kmodule->module.get();
+
   // link aliases to their definitions (if bound)
   for (auto i = m->alias_begin(), ie = m->alias_end(); i != ie; ++i) {
     // Map the alias to its aliasee's address. This works because we have
@@ -791,8 +806,11 @@ void Executor::initializeGlobals(ExecutionState &state) {
 
     globalAddresses.insert(std::make_pair(&*i, evalConstant(alias->getAliasee())));
   }
+}
 
-  // once all objects are allocated, do the actual initialization
+void Executor::initializeGlobalObjects(ExecutionState &state) {
+  const Module *m = kmodule->module.get();
+
   // remember constant objects to initialise their counter part for external
   // calls
   std::vector<ObjectState *> constantObjects;

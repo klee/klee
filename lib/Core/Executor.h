@@ -230,6 +230,9 @@ private:
 			      const llvm::Constant *c,
 			      unsigned offset);
   void initializeGlobals(ExecutionState &state);
+  void allocateGlobalObjects(ExecutionState &state);
+  void initializeGlobalAliases();
+  void initializeGlobalObjects(ExecutionState &state);
 
   void stepInstruction(ExecutionState &state);
   void updateStates(ExecutionState *current);
