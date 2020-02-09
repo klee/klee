@@ -650,7 +650,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
 }
 
 void Executor::allocateGlobalObjects(ExecutionState &state) {
-  Module *m = kmodule->module.get();
+  const Module *m = kmodule->module.get();
 
   if (m->getModuleInlineAsm() != "")
     klee_warning("executable has module level assembly (ignoring)");
@@ -658,22 +658,21 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
   // object. given that we use malloc to allocate memory in states this also
   // ensures that we won't conflict. we don't need to allocate a memory object
   // since reading/writing via a function pointer is unsupported anyway.
-  for (Module::iterator i = m->begin(), ie = m->end(); i != ie; ++i) {
-    Function *f = &*i;
-    ref<ConstantExpr> addr(0);
+  for (const Function &f : *m) {
+    ref<ConstantExpr> addr;
 
     // If the symbol has external weak linkage then it is implicitly
     // not defined in this module; if it isn't resolvable then it
     // should be null.
-    if (f->hasExternalWeakLinkage() && 
-        !externalDispatcher->resolveSymbol(f->getName())) {
+    if (f.hasExternalWeakLinkage() &&
+        !externalDispatcher->resolveSymbol(f.getName())) {
       addr = Expr::createPointer(0);
     } else {
-      addr = Expr::createPointer(reinterpret_cast<std::uint64_t>(f));
-      legalFunctions.insert(reinterpret_cast<std::uint64_t>(f));
+      addr = Expr::createPointer(reinterpret_cast<std::uint64_t>(&f));
+      legalFunctions.insert(reinterpret_cast<std::uint64_t>(&f));
     }
-    
-    globalAddresses.insert(std::make_pair(f, addr));
+
+    globalAddresses.emplace(&f, addr);
   }
 
 #ifndef WINDOWS
@@ -710,82 +709,76 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
 #endif
 #endif
 
+  for (const GlobalVariable &v : m->globals()) {
+    std::size_t globalObjectAlignment = getAllocationAlignment(&v);
+    Type *ty = v.getType()->getElementType();
+    std::uint64_t size = 0;
+    if (ty->isSized())
+      size = kmodule->targetData->getTypeStoreSize(ty);
 
-  for (Module::const_global_iterator i = m->global_begin(),
-         e = m->global_end();
-       i != e; ++i) {
-    const GlobalVariable *v = &*i;
-    size_t globalObjectAlignment = getAllocationAlignment(v);
-    if (i->isDeclaration()) {
+    if (v.isDeclaration()) {
       // FIXME: We have no general way of handling unknown external
       // symbols. If we really cared about making external stuff work
       // better we could support user definition, or use the EXE style
       // hack where we check the object file information.
 
-      Type *ty = i->getType()->getElementType();
-      uint64_t size = 0;
-      if (ty->isSized()) {
-	size = kmodule->targetData->getTypeStoreSize(ty);
-      } else {
-        klee_warning("Type for %.*s is not sized", (int)i->getName().size(),
-			i->getName().data());
+      if (!ty->isSized()) {
+        klee_warning("Type for %.*s is not sized",
+                     static_cast<int>(v.getName().size()), v.getName().data());
       }
 
       // XXX - DWD - hardcode some things until we decide how to fix.
 #ifndef WINDOWS
-      if (i->getName() == "_ZTVN10__cxxabiv117__class_type_infoE") {
+      if (v.getName() == "_ZTVN10__cxxabiv117__class_type_infoE") {
         size = 0x2C;
-      } else if (i->getName() == "_ZTVN10__cxxabiv120__si_class_type_infoE") {
+      } else if (v.getName() == "_ZTVN10__cxxabiv120__si_class_type_infoE") {
         size = 0x2C;
-      } else if (i->getName() == "_ZTVN10__cxxabiv121__vmi_class_type_infoE") {
+      } else if (v.getName() == "_ZTVN10__cxxabiv121__vmi_class_type_infoE") {
         size = 0x2C;
       }
 #endif
 
       if (size == 0) {
-        klee_warning("Unable to find size for global variable: %.*s (use will result in out of bounds access)",
-			(int)i->getName().size(), i->getName().data());
+        klee_warning("Unable to find size for global variable: %.*s (use will "
+                     "result in out of bounds access)",
+                     static_cast<int>(v.getName().size()), v.getName().data());
+      }
+    }
+
+    MemoryObject *mo = memory->allocate(size, /*isLocal=*/false,
+                                        /*isGlobal=*/true, /*allocSite=*/&v,
+                                        /*alignment=*/globalObjectAlignment);
+    if (!mo)
+      klee_error("out of memory");
+    ObjectState *os = bindObjectInState(state, mo, false);
+    globalObjects.emplace(&v, mo);
+    globalAddresses.emplace(&v, mo->getBaseExpr());
+
+    if (v.isDeclaration() && size) {
+      // Program already running -> object already initialized.
+      // Read concrete value and write it to our copy.
+      void *addr;
+      if (v.getName() == "__dso_handle") {
+        addr = &__dso_handle; // wtf ?
+      } else {
+        addr = externalDispatcher->resolveSymbol(v.getName());
+      }
+      if (!addr) {
+        klee_error("Unable to load symbol(%.*s) while initializing globals",
+                    static_cast<int>(v.getName().size()),
+                    v.getName().data()
+        );
       }
 
-      MemoryObject *mo = memory->allocate(size, /*isLocal=*/false,
-                                          /*isGlobal=*/true, /*allocSite=*/v,
-                                          /*alignment=*/globalObjectAlignment);
-      ObjectState *os = bindObjectInState(state, mo, false);
-      globalObjects.insert(std::make_pair(v, mo));
-      globalAddresses.insert(std::make_pair(v, mo->getBaseExpr()));
-
-      // Program already running = object already initialized.  Read
-      // concrete value and write it to our copy.
-      if (size) {
-        void *addr;
-        if (i->getName() == "__dso_handle") {
-          addr = &__dso_handle; // wtf ?
-        } else {
-          addr = externalDispatcher->resolveSymbol(i->getName());
-        }
-        if (!addr)
-          klee_error("unable to load symbol(%s) while initializing globals.", 
-                     i->getName().data());
-
-        for (unsigned offset=0; offset<mo->size; offset++)
-          os->write8(offset, ((unsigned char*)addr)[offset]);
+      for (unsigned offset = 0; offset < mo->size; offset++) {
+        os->write8(offset, static_cast<unsigned char*>(addr)[offset]);
       }
     } else {
-      Type *ty = i->getType()->getElementType();
-      uint64_t size = kmodule->targetData->getTypeStoreSize(ty);
-      MemoryObject *mo = memory->allocate(size, /*isLocal=*/false,
-                                          /*isGlobal=*/true, /*allocSite=*/v,
-                                          /*alignment=*/globalObjectAlignment);
-      if (!mo)
-        llvm::report_fatal_error("out of memory");
-      ObjectState *os = bindObjectInState(state, mo, false);
-      globalObjects.insert(std::make_pair(v, mo));
-      globalAddresses.insert(std::make_pair(v, mo->getBaseExpr()));
-
-      if (!i->hasInitializer())
-          os->initializeToRandom();
+      if (!v.hasInitializer())
+        os->initializeToRandom();
     }
   }
+
 }
 
 void Executor::initializeGlobalAliases() {
@@ -814,18 +807,15 @@ void Executor::initializeGlobalObjects(ExecutionState &state) {
   // remember constant objects to initialise their counter part for external
   // calls
   std::vector<ObjectState *> constantObjects;
-  for (Module::const_global_iterator i = m->global_begin(),
-         e = m->global_end();
-       i != e; ++i) {
-    if (i->hasInitializer()) {
-      const GlobalVariable *v = &*i;
-      MemoryObject *mo = globalObjects.find(v)->second;
+  for (const GlobalVariable &v : m->globals()) {
+    if (v.hasInitializer()) {
+      MemoryObject *mo = globalObjects.find(&v)->second;
       const ObjectState *os = state.addressSpace.findObject(mo);
       assert(os);
       ObjectState *wos = state.addressSpace.getWriteable(mo, os);
-      
-      initializeGlobalObject(state, wos, i->getInitializer(), 0);
-      if (i->isConstant())
+
+      initializeGlobalObject(state, wos, v.getInitializer(), 0);
+      if (v.isConstant())
         constantObjects.emplace_back(wos);
     }
   }
