@@ -199,6 +199,59 @@ injectStaticConstructorsAndDestructors(Module *m,
   }
 }
 
+/**
+ * UCLIBC's main (and libc mains in general) take an app_init and app_fini
+ * argument to do all of the static construction/destruction. So, rather
+ * than shoving the calls to the constructors and the beginning of main, 
+ * we can just update the arguments to the __uclibc_main call to point to the 
+ * ctor/dtor stubs.
+ */
+static void
+fillUclibcMainInitAndFiniArgs(Module *m, llvm::StringRef entryFunction, 
+                              llvm::StringRef libcMainFunction) {
+  GlobalVariable *ctors = m->getNamedGlobal("llvm.global_ctors");
+  GlobalVariable *dtors = m->getNamedGlobal("llvm.global_dtors");
+
+  if (!ctors && !dtors)
+    return;
+
+  Function *entry = m->getFunction(entryFunction);
+  Function *libcMain = m->getFunction(libcMainFunction);
+  if (!entry) {
+    klee_error("Entry function '%s' not found in module.",
+               entryFunction.str().c_str());
+  }
+  if (!libcMain) {
+    klee_error("Libc main function '%s' not found in module.",
+               libcMainFunction.str().c_str());
+  }
+
+  // Now we find the call instruction associated with the libc main.
+  CallInst *libcCall = nullptr;
+  for (BasicBlock &bb : *entry) {
+    for (Instruction &ii : bb) {
+      if (nullptr != (libcCall = dyn_cast<CallInst>(&ii))
+          && libcCall->getCalledFunction() == libcMain) break;
+    }
+  }
+
+  if (!libcCall) {
+    klee_error("Could not find call to %s in entry function %s.",
+               libcMainFunction.str().c_str(),
+               entryFunction.str().c_str());
+  }
+
+  if (ctors) {
+    libcCall->setArgOperand(3, 
+          getStubFunctionForCtorList(m, ctors, "klee.ctor_stub")); // app_init
+  }
+
+  if (dtors) {
+    libcCall->setArgOperand(4, 
+          getStubFunctionForCtorList(m, dtors, "klee.dtor_stub")); // app_fini
+  }
+}
+
 void KModule::addInternalFunction(const char* functionName){
   Function* internalFunction = module->getFunction(functionName);
   if (!internalFunction) {
@@ -275,7 +328,12 @@ void KModule::optimiseAndPrepare(
 
   // Needs to happen after linking (since ctors/dtors can be modified)
   // and optimization (since global optimization can rewrite lists).
-  injectStaticConstructorsAndDestructors(module.get(), opts.EntryPoint);
+  if (opts.LibcMainFunction.empty()) {
+    injectStaticConstructorsAndDestructors(module.get(), opts.EntryPoint);
+  } else {
+    fillUclibcMainInitAndFiniArgs(module.get(), opts.EntryPoint, opts.LibcMainFunction);
+  }
+  
 
   // Finally, run the passes that maintain invariants we expect during
   // interpretation. We run the intrinsic cleaner just in case we

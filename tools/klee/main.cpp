@@ -1239,7 +1239,9 @@ int main(int argc, char **argv, char **envp) {
   loadedModules.emplace_back(std::move(M));
 
   std::string LibraryDir = KleeHandler::getRunTimeLibraryPath(argv[0]);
+  std::string LibcMainFunction = Libc == LibcType::UcLibc ? "__uClibc_main" : "";
   Interpreter::ModuleOptions Opts(LibraryDir.c_str(), EntryPoint,
+                                  /*LibcMainFunction=*/LibcMainFunction,
                                   /*Optimize=*/OptimizeModule,
                                   /*CheckDivZero=*/CheckDivZero,
                                   /*CheckOvershift=*/CheckOvershift);
