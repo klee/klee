@@ -200,14 +200,13 @@ injectStaticConstructorsAndDestructors(Module *m,
 }
 
 /**
- * UCLIBC's main (and libc mains in general) take an app_init and app_fini
- * argument to do all of the static construction/destruction. So, rather
- * than shoving the calls to the constructors and the beginning of main, 
- * we can just update the arguments to the __uclibc_main call to point to the 
- * ctor/dtor stubs.
+ * libc main functions take an app_init and app_fini argument to do all of the
+ * static construction/destruction. So, rather than shoving the calls to the
+ * constructors and the beginning of main, we can just update the arguments to
+ * the __libc_main call to point to the ctor/dtor stubs.
  */
 static void
-fillUclibcMainInitAndFiniArgs(Module *m, llvm::StringRef entryFunction, 
+fillLibcMainInitAndFiniArgs(Module *m, llvm::StringRef entryFunction, 
                               llvm::StringRef libcMainFunction) {
   GlobalVariable *ctors = m->getNamedGlobal("llvm.global_ctors");
   GlobalVariable *dtors = m->getNamedGlobal("llvm.global_dtors");
@@ -331,7 +330,7 @@ void KModule::optimiseAndPrepare(
   if (opts.LibcMainFunction.empty()) {
     injectStaticConstructorsAndDestructors(module.get(), opts.EntryPoint);
   } else {
-    fillUclibcMainInitAndFiniArgs(module.get(), opts.EntryPoint, opts.LibcMainFunction);
+    fillLibcMainInitAndFiniArgs(module.get(), opts.EntryPoint, opts.LibcMainFunction);
   }
   
 
