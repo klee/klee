@@ -17,14 +17,6 @@ import sys
 import argparse
 import sqlite3
 
-try:
-    from tabulate import TableFormat, Line, DataRow, tabulate, _table_formats
-except:
-    print('Error: Package "tabulate" required for table formatting. '
-          'Please install it using "pip" or your package manager.'
-          'You can still use --grafana and --to-csv without tabulate.',
-          file=sys.stderr)
-
 Legend = [
     ('Instrs', 'number of executed instructions'),
     ('Time', 'total wall time (s)'),
@@ -43,15 +35,6 @@ Legend = [
     ('QCexCMisses', 'Counterexample cache misses'),
     ('QCexCHits', 'Counterexample cache hits'),
 ]
-
-KleeTable = TableFormat(lineabove=Line("-", "-", "-", "-"),
-                        linebelowheader=Line("-", "-", "-", "-"),
-                        linebetweenrows=None,
-                        linebelow=Line("-", "-", "-", "-"),
-                        headerrow=DataRow("|", "|", "|"),
-                        datarow=DataRow("|", "|", "|"),
-                        padding=0,
-                        with_header_hide=None)
 
 def getInfoFile(path):
     """Return the path to info"""
@@ -256,6 +239,17 @@ def write_csv(data):
 
 
 def write_table(args, data, dirs, pr):
+    from tabulate import TableFormat, Line, DataRow, tabulate
+
+    KleeTable = TableFormat(lineabove=Line("-", "-", "-", "-"),
+                            linebelowheader=Line("-", "-", "-", "-"),
+                            linebetweenrows=None,
+                            linebelow=Line("-", "-", "-", "-"),
+                            headerrow=DataRow("|", "|", "|"),
+                            datarow=DataRow("|", "|", "|"),
+                            padding=0,
+                            with_header_hide=None)
+
     if len(data) > 1:
         dirs = stripCommonPathPrefix(dirs)
     # attach the stripped path
@@ -301,17 +295,30 @@ def write_table(args, data, dirs, pr):
 
 
 def main():
+    tabulate_available = False
+    epilog = ""
+
+    try:
+        from tabulate import tabulate, _table_formats
+        epilog = 'LEGEND\n' + tabulate([(f[:2]) for f in Legend])
+
+        tabulate_available = True
+    except:
+        pass
+
     parser = argparse.ArgumentParser(
         description='output statistics logged by klee',
-        epilog='LEGEND\n' + tabulate(Legend),
+        epilog=epilog,
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
     parser.add_argument('dir', nargs='+', help='klee output directory')
 
-    parser.add_argument('--table-format',
-                          choices=['klee'] + list(_table_formats.keys()),
-                          dest='tableFormat', default='klee',
-                          help='Table format for the summary.')
+    if tabulate_available:
+        parser.add_argument('--table-format',
+                              choices=['klee'] + list(_table_formats.keys()),
+                              dest='tableFormat', default='klee',
+                              help='Table format for the summary.')
+
     parser.add_argument('--to-csv',
                           action='store_true', dest='toCsv',
                           help='Output stats as comma-separated values (CSV)')
@@ -375,7 +382,16 @@ def main():
         write_csv(data)
         return
 
-    write_table(args, data, dirs, pr)
+    if tabulate_available:
+        write_table(args, data, dirs, pr)
+        return
+
+    print('Error: Package "tabulate" required for table formatting. '
+          'Please install it using "pip" or your package manager.'
+          'You can still use --grafana and --to-csv without tabulate.',
+          file=sys.stderr)
+    sys.exit(1)
+
 
 
 if __name__ == '__main__':
