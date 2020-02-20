@@ -81,7 +81,7 @@ class LazyEvalList:
 
     def getLastRecord(self):
         try:
-            cursor = self.conn().execute("SELECT * FROM stats ORDER BY Instructions DESC LIMIT 1")
+            cursor = self.conn().execute("SELECT * FROM stats ORDER BY rowid DESC LIMIT 1")
             column_names = [description[0] for description in cursor.description]
             return dict(zip(column_names, cursor.fetchone()))
         except sqlite3.OperationalError as e:
