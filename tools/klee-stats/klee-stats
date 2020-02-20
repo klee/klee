@@ -366,11 +366,12 @@ def main():
         pr = 'more'
 
     dirs = getKleeOutDirs(args.dir)
-    if args.grafana:
-      return grafana(dirs, args.grafana_host, args.grafana_port)
     if len(dirs) == 0:
         print('no klee output dir found', file=sys.stderr)
         exit(1)
+
+    if args.grafana:
+      return grafana(dirs, args.grafana_host, args.grafana_port)
 
     # Filter non-existing files, useful for star operations
     valid_log_files = [getLogFile(f) for f in dirs if os.path.isfile(getLogFile(f))]
