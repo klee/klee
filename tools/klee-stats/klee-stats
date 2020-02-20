@@ -2,12 +2,12 @@
 # -*- encoding: utf-8 -*-
 
 # ===-- klee-stats --------------------------------------------------------===##
-# 
+#
 #                      The KLEE Symbolic Virtual Machine
-# 
+#
 #  This file is distributed under the University of Illinois Open Source
 #  License. See LICENSE.TXT for details.
-# 
+#
 # ===----------------------------------------------------------------------===##
 
 """Output statistics logged by Klee."""
@@ -16,24 +16,35 @@ import os
 import sys
 import argparse
 import sqlite3
+import collections
 
+# Mapping of: (column head, explanation, internal klee name)
+# column head must start with a capital letter
 Legend = [
-    ('Instrs', 'number of executed instructions'),
-    ('Time', 'total wall time (s)'),
-    ('TUser', 'total user time'),
-    ('ICov', 'instruction coverage in the LLVM bitcode (%)'),
-    ('BCov', 'branch coverage in the LLVM bitcode (%)'),
-    ('ICount', 'total static instructions in the LLVM bitcode'),
-    ('TSolver', 'time spent in the constraint solver'),
-    ('States', 'number of currently active states'),
-    ('Mem', 'megabytes of memory currently used'),
-    ('Queries', 'number of queries issued to STP'),
-    ('AvgQC', 'average number of query constructs per query'),
-    ('Tcex', 'time spent in the counterexample caching code'),
-    ('Tfork', 'time spent forking'),
-    ('TResolve', 'time spent in object resolution'),
-    ('QCexCMisses', 'Counterexample cache misses'),
-    ('QCexCHits', 'Counterexample cache hits'),
+    ('Instrs', 'number of executed instructions', "Instructions"),
+    ('Time(s)', 'total wall time (s)', "WallTime"),
+    ('TUser(s)', 'total user time', "UserTime"),
+    ('ICov(%)', 'instruction coverage in the LLVM bitcode (%)', "ICov"),
+    ('BCov(%)', 'branch coverage in the LLVM bitcode (%)', "BCov"),
+    ('ICount', 'total static instructions in the LLVM bitcode', "ICount"),
+    ('TSolver(s)', 'time spent in the constraint solver', "SolverTime"),
+    ('TSolver(%)', 'time spent in the constraint solver', "RelSolverTime"),
+    ('States', 'number of currently active states', "NumStates"),
+    ('MaxStates', 'maximum number of active states', "maxStates"),
+    ('AvgStates', 'average number of active states', "avgStates"),
+    ('Mem(MB)', 'megabytes of memory currently used', "MallocUsage"),
+    ('MaxMem(MB)', 'megabytes of memory currently used', "MaxMem"),
+    ('AvgMem(MB)', 'megabytes of memory currently used', "AvgMem"),
+    ('Queries', 'number of queries issued to STP', "NumQueries"),
+    ('AvgQC', 'average number of query constructs per query', "AvgQC"),
+    ('Tcex(s)', 'time spent in the counterexample caching code', "CexCacheTime"),
+    ('Tcex(%)', 'relative time spent in the counterexample caching code wrt wall time', "CexCacheTime"),
+    ('Tfork(s)', 'time spent forking', "ForkTime"),
+    ('Tfork(%)', 'relative time spent forking wrt wall time', "ForkTime"),
+    ('TResolve(s)', 'time spent in object resolution', "ResolveTime"),
+    ('TResolve(%)', 'time spent in object resolution wrt wall time', "ResolveTime"),
+    ('QCexCMisses', 'Counterexample cache misses', "QueryCexCacheMisses"),
+    ('QCexCHits', 'Counterexample cache hits', "QueryCexCacheHits"),
 ]
 
 def getInfoFile(path):
@@ -48,23 +59,34 @@ class LazyEvalList:
     """Store all the lines in run.stats and eval() when needed."""
     def __init__(self, fileName):
         # The first line in the records contains headers.
-      self.conn = sqlite3.connect(fileName)
-      self.c = self.conn.cursor()
-      self.c.execute("SELECT * FROM stats ORDER BY Instructions DESC LIMIT 1")
-      self.line = self.c.fetchone()
+      self.filename = fileName
+
+    def conn(self):
+        return sqlite3.connect(self.filename)
 
     def aggregateRecords(self):
-      memC = self.conn.cursor()
-      memC.execute("SELECT max(MallocUsage) / 1024 / 1024, avg(MallocUsage) / 1024 / 1024 from stats")
-      maxMem, avgMem = memC.fetchone()
+        try:
+            memC = self.conn().execute("SELECT max(MallocUsage) / 1024 / 1024, avg(MallocUsage) / 1024 / 1024 from stats")
+            maxMem, avgMem = memC.fetchone()
+        except sqlite3.OperationalError as e:
+            maxMem, avgMem = None, None
 
-      stateC = self.conn.cursor()
-      stateC.execute("SELECT max(NumStates), avg(NumStates) from stats")
-      maxStates, avgStates = stateC.fetchone()
-      return (maxMem, avgMem, maxStates, avgStates)
+        try:
+            stateC = self.conn().execute("SELECT max(NumStates), avg(NumStates) from stats")
+            maxStates, avgStates = stateC.fetchone()
+        except sqlite3.OperationalError as e:
+            maxStates, avgStates = None, None
+
+        return {"maxMem":maxMem, "avgMem": avgMem, "maxState": maxStates, "avgStates": avgStates}
 
     def getLastRecord(self):
-      return self.line
+        try:
+            cursor = self.conn().execute("SELECT * FROM stats ORDER BY Instructions DESC LIMIT 1")
+            column_names = [description[0] for description in cursor.description]
+            return dict(zip(column_names, cursor.fetchone()))
+        except sqlite3.OperationalError as e:
+            return None
+
 
 def stripCommonPathPrefix(paths):
     paths = map(os.path.normpath, paths)
@@ -75,6 +97,7 @@ def stripCommonPathPrefix(paths):
         if len(set(elts)) > 1:
             break
     return ['/'.join(p[i:]) for p in paths]
+
 
 def getKleeOutDirs(dirs):
     kleeOutDirs = []
@@ -89,63 +112,70 @@ def getKleeOutDirs(dirs):
                         kleeOutDirs.append(path)
     return kleeOutDirs
 
-def getLabels(pr):
+
+def select_columns(record, pr):
     if pr == 'all':
-        labels = ('Path', 'Instrs', 'Time(s)', 'ICov(%)', 'BCov(%)', 'ICount',
-                  'TSolver(%)', 'States', 'maxStates', 'avgStates', 'Mem(MB)',
-                  'maxMem(MB)', 'avgMem(MB)', 'Queries', 'AvgQC', 'Tcex(%)',
-                  'Tfork(%)', 'TResolve(%)', 'QCexCMisses', 'QCexCHits')
-    elif pr == 'reltime':
-        labels = ('Path', 'Time(s)', 'TUser(%)', 'TSolver(%)',
-                  'Tcex(%)', 'Tfork(%)', 'TResolve(%)')
+        return record
+
+    if pr == 'reltime':
+        s_column = ['Path', 'WallTime', 'RelUserTime', 'RelSolverTime',
+                  'RelCexCacheTime', 'RelForkTime', 'RelResolveTime']
     elif pr == 'abstime':
-        labels = ('Path', 'Time(s)', 'TUser(s)', 'TSolver(s)',
-                  'Tcex(s)', 'Tfork(s)', 'TResolve(s)')
+        s_column = ['Path', 'WallTime', 'UserTime', 'SolverTime',
+                  'CexCacheTime', 'ForkTime', 'ResolveTime']
     elif pr == 'more':
-        labels = ('Path', 'Instrs', 'Time(s)', 'ICov(%)', 'BCov(%)', 'ICount',
-                  'TSolver(%)', 'States', 'maxStates', 'Mem(MB)', 'maxMem(MB)')
+        s_column = ['Path', 'Instructions', 'WallTime', 'ICov', 'BCov', 'ICount',
+                  'RelSolverTime', 'States', 'maxStates', 'MallocUsage', 'maxMem']
     else:
-        labels = ('Path', 'Instrs', 'Time(s)', 'ICov(%)',
-                  'BCov(%)', 'ICount', 'TSolver(%)')
-    return labels
+        s_column = ['Path', 'Instructions', 'WallTime', 'ICov',
+                  'BCov', 'ICount', 'RelSolverTime']
+
+    filtered_record = dict()
+    for column in s_column:
+        if column in record.keys():
+            filtered_record[column] = record[column]
+
+    return filtered_record
 
 
-def getRow(record, stats, pr):
-    """Compose data for the current run into a row."""
-    I, BFull, BPart, BTot, T, St, Mem, QTot, QCon,\
-        _, Treal, SCov, SUnc, _, Ts, Tcex, Tf, Tr, QCexMiss, QCexHits = record
-    maxMem, avgMem, maxStates, avgStates = stats
-
+def add_artificial_columns(record):
     # special case for straight-line code: report 100% branch coverage
-    if BTot == 0:
-        BFull = BTot = 1
+    if "NumBranches" in record and record["NumBranches"] == 0:
+        record["FullBranches"] = 1
+        record["NumBranches"] = 1
 
-    Ts, Tcex, Tf, Tr, T, Treal = [e / 1000000 for e in [Ts, Tcex, Tf, Tr, T, Treal]] #convert from microseconds
-    Mem = Mem / 1024 / 1024
-    AvgQC = int(QCon / max(1, QTot))
+    # Convert recorded times from microseconds to seconds
+    for key in ["UserTime", "WallTime", "QueryTime", "SolverTime", "CexCacheTime", "ForkTime", "ResolveTime"]:
+        if not key in record:
+            continue
+        record[key] /= 1000000
 
-    if pr == 'all':
-        row = (I, Treal, 100 * SCov / (SCov + SUnc),
-               100 * (2 * BFull + BPart) / (2 * BTot), SCov + SUnc,
-               100 * Ts / Treal, St, maxStates, avgStates,
-               Mem, maxMem, avgMem, QTot, AvgQC, 100 * Tcex / Treal,
-               100 * Tf / Treal, 100 * Tr / Treal, QCexMiss, QCexHits)
-    elif pr == 'reltime':
-        row = (Treal, 100 * T / Treal, 100 * Ts / Treal,
-               100 * Tcex / Treal, 100 * Tf / Treal,
-               100 * Tr / Treal)
-    elif pr == 'abstime':
-        row = (Treal, T, Ts, Tcex, Tf, Tr)
-    elif pr == 'more':
-        row = (I, Treal, 100 * SCov / (SCov + SUnc),
-               100 * (2 * BFull + BPart) / (2 * BTot),
-               SCov + SUnc, 100 * Ts / Treal,
-               St, maxStates, Mem, maxMem)
-    else:
-        row = (I, Treal, 100 * SCov / (SCov + SUnc),
-               100 * (2 * BFull + BPart) / (2 * BTot),
-               SCov + SUnc, 100 * Ts / Treal)
-    return row
+    # Convert memory from byte to MiB
+    if "MallocUsage" in record:
+        record["MallocUsage"] /= (1024*1024)
+
+    # Calculate avg. query construct
+    if "NumQueryConstructs" in record and "NumQueries" in record:
+        record["AvgQC"] = int(record["NumQueryConstructs"] / max(1, record["NumQueries"]))
+
+    # Calculate total number of instructions
+    if "CoveredInstructions" in record and "UncoveredInstructions" in record:
+        record["ICount"] = (record["CoveredInstructions"] + record["UncoveredInstructions"])
+
+    # Calculate relative instruction coverage
+    if "CoveredInstructions" in record and "ICount" in record:
+        record["ICov"] = 100 * record["CoveredInstructions"] / record["ICount"]
+
+    # Calculate branch coverage
+    if "FullBranches" in record and "PartialBranches" in record and "NumBranches" in record:
+        record["BCov"] = 100 * ( 2 * record["FullBranches"] + record["PartialBranches"]) / ( 2 * record["NumBranches"])
+
+    # Add relative times
+    for key in ["SolverTime", "CexCacheTime", "ForkTime", "ResolveTime", "UserTime"]:
+        if "WallTime" in record and key in record:
+            record["Rel"+key] = 100 * record[key] / record["WallTime"]
+
+    return record
 
 
 def grafana(dirs, host_address, port):
@@ -228,7 +258,7 @@ def grafana(dirs, host_address, port):
 def write_csv(data):
     import csv
     data = data[0]
-    c = data.conn.cursor()
+    c = data.conn().cursor()
     sql3_cursor = c.execute("SELECT * FROM stats")
     csv_out = csv.writer(sys.stdout)
     # write header
@@ -236,6 +266,23 @@ def write_csv(data):
     # write data
     for result in sql3_cursor:
         csv_out.writerow(result)
+
+
+def rename_columns(row, name_mapping):
+    """
+    Renames the columns in a row based on the mapping.
+    If a column name is not found in the mapping, keep the old name
+    :param row:
+    :param name_mapping:
+    :return: updated row
+    """
+    keys = list(row.keys())
+    for k in keys:
+        new_key = name_mapping.get(k, k)
+        if new_key == k:
+            continue
+        row[new_key] = row.pop(k)
+    return row
 
 
 def write_table(args, data, dirs, pr):
@@ -254,35 +301,94 @@ def write_table(args, data, dirs, pr):
         dirs = stripCommonPathPrefix(dirs)
     # attach the stripped path
     data = list(zip(dirs, data))
-    labels = getLabels(pr)
+
     # build the main body of the table
-    table = []
-    totRecords = []  # accumulated records
-    totStats = []  # accumulated stats
-    for path, records in data:
-        row = [path]
+    table = dict()
+    for i, (path, records) in enumerate(data):
         stats = records.aggregateRecords()
-        totStats.append(stats)
-        row.extend(getRow(records.getLastRecord(), stats, pr))
-        totRecords.append(records.getLastRecord())
-        table.append(row)
-    # calculate the total
-    totRecords = [sum(e) for e in zip(*totRecords)]
-    totStats = [sum(e) for e in zip(*totStats)]
-    totalRow = ['Total ({0})'.format(len(table))]
-    totalRow.extend(getRow(totRecords, totStats, pr))
-    if len(data) > 1:
-        table.append(totalRow)
-    table.insert(0, labels)
+        # Get raw row
+        single_row = records.getLastRecord()
+        if single_row is None:
+            # print("Error reading SQLite file (probably corrupt)")
+            # continue
+            single_row = {}
+        single_row['Path'] = path
+        single_row.update(stats)
+
+        # Extend row with additional entries
+        single_row = add_artificial_columns(single_row)
+        single_row = select_columns(single_row, pr)
+
+        for key in single_row:
+            # Get an existing column or add an empty one
+            column = table.setdefault(key, [])
+
+            # Resize the column if needed
+            missing_entries = i - len(column) - 1
+            if missing_entries > 0:
+                # Append empty entries for this column
+                column.extend([None]* missing_entries)
+
+            # add the value
+            column.append(single_row[key])
+
+    # Add missing entries if needed
+    max_len = len(data)
+    for c_name in table:
+        c_length = len(table[c_name])
+        if  c_length < max_len:
+            table[c_name].extend([None] * (max_len - c_length))
+
+    # Rename columns
+    name_mapping = dict()
+    for entry in Legend:
+        name_mapping[entry[2]] = entry[0]
+    table = rename_columns(table, name_mapping)
+
+    # Add a summary row
+    if max_len > 1:
+        # calculate the total
+        for k in table:
+            if k == "Path": # Skip path
+                continue
+            # TODO: this is a bit bad but ... . In a nutshell, if the name of a column starts or ends with certain
+            #  pattern change the summary function.
+            if k.startswith("Avg") or k.endswith("(%)"):
+                total = sum([e for e in table[k] if e is not None])/max_len
+            elif k.startswith("Max"):
+                total = max([e for e in table[k] if e is not None])
+            else:
+                total = sum([e for e in table[k] if e is not None])
+            table[k].append(total)
+
+        table['Path'].append('Total ({0})'.format(max_len))
+
+    # Prepare the order of the header: start to order entries according to the order in legend and add the unknown entries at the end
+    headers = ["Path"]
+    available_headers = list(table.keys())
+    for entry in Legend:
+        l_name = entry[0]
+        if l_name in available_headers:
+            headers.append(l_name)
+            available_headers.remove(l_name)
+    headers += available_headers
+
+    # Make sure we keep the correct order of the column entries
+    final_table = collections.OrderedDict()
+    for column in headers:
+        final_table[column] = table[column]
+    table = final_table
+
+    # Output table
     if args.tableFormat != 'klee':
         print(tabulate(
-            table, headers='firstrow',
+            table, headers='keys',
             tablefmt=args.tableFormat,
             floatfmt='.{p}f'.format(p=2),
             numalign='right', stralign='center'))
     else:
         stream = tabulate(
-            table, headers='firstrow',
+            table, headers='keys',
             tablefmt=KleeTable,
             floatfmt='.{p}f'.format(p=2),
             numalign='right', stralign='center')
