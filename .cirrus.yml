@@ -1,7 +1,7 @@
 task:
   freebsd_instance:
     matrix:
-      - image: freebsd-11-2-release-amd64
+      - image: freebsd-11-3-stable-amd64-v20190801
       - image: freebsd-12-0-release-amd64
   deps_script:
     - sed -i.bak -e 's/quarterly/latest/' /etc/pkg/FreeBSD.conf
