@@ -209,7 +209,7 @@ def grafana(dirs, host_address, port):
     @app.route('/search', methods=['GET', 'POST'])
     def search():
         conn = sqlite3.connect(dr)
-        cursor = conn.execute('SELECT * FROM stats')
+        cursor = conn.execute('SELECT * FROM stats LIMIT 1')
         names = [description[0] for description in cursor.description]
         return jsonify(names)
 
