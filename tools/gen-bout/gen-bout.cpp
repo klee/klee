@@ -139,44 +139,75 @@ int main(int argc, char *argv[]) {
   }
 
   if (file_counter > 0) {
-    FILE *fp;
-    struct stat64 file_stat;
-    char *content_filename = content_filenames_list[file_counter - 1];
-
-    if ((fp = fopen(content_filename, "r")) == NULL ||
-        stat64(content_filename, &file_stat) < 0) {
-      fprintf(stderr, "Failure opening %s\n", content_filename);
-      print_usage_and_exit(argv[0]);
-    }
-
-    long nbytes = file_stat.st_size;
     char filename[7] = "A-data";
     char statname[12] = "A-data-stat";
+    char sym_file_name = 'A';
+    FILE *fp[file_counter];
+    unsigned char *file_content[file_counter];
+    struct stat64 file_stat[file_counter];
+    long max_file_size = 0;
 
-    unsigned char *file_content, *fptr;
-    if ((file_content = (unsigned char *)malloc(nbytes)) == NULL) {
-      fputs("Memory allocation failure\n", stderr);
-      exit(1);
+    for (unsigned current_file = 0; current_file < file_counter;
+         current_file++) {
+      char *content_filename = content_filenames_list[current_file];
+
+      if ((fp[current_file] = fopen(content_filename, "r")) == NULL ||
+          stat64(content_filename, file_stat + current_file) < 0) {
+        perror("Failed to open");
+        fprintf(stderr, "Failure opening %s %p\n", content_filename,
+                fp[current_file]);
+        print_usage_and_exit(argv[0]);
+      }
+
+      long nbytes = file_stat[current_file].st_size;
+      max_file_size = max_file_size > nbytes ? max_file_size : nbytes;
+
+      if ((file_content[current_file] = (unsigned char *)malloc(nbytes)) ==
+          NULL) {
+        fputs("Memory allocation failure\n", stderr);
+        exit(1);
+      }
+
+      int read_char;
+      unsigned char *fptr;
+      fptr = file_content[current_file];
+      while ((read_char = fgetc(fp[current_file])) != EOF) {
+        *fptr = (unsigned char)read_char;
+        fptr++;
+      }
     }
-
-    int read_char;
-    fptr = file_content;
-    while ((read_char = fgetc(fp)) != EOF) {
-      *fptr = (unsigned char)read_char;
-      fptr++;
+    // We opened all the files, read their content and got the max size of all
+    // files. Now we extend the smaller files to the max size and add them to
+    // ktest files.
+    for (unsigned current_file = 0; current_file < file_counter;
+         current_file++) {
+      long nbytes = file_stat[current_file].st_size;
+      if (nbytes < max_file_size) {
+        file_content[current_file] =
+            (unsigned char *)realloc(file_content[current_file], max_file_size);
+        // Rewrite the tail with EOF and all zeroes
+        file_content[current_file][nbytes] = EOF;
+        for (int i = nbytes; i < max_file_size; i++) {
+          file_content[current_file][i] = '\0';
+        }
+      }
+      // Push obj to ktest file
+      filename[0] = sym_file_name;
+      statname[0] = sym_file_name;
+      push_obj(&b, filename, max_file_size, file_content[current_file]);
+      push_obj(&b, statname, sizeof(struct stat64),
+               (unsigned char *)&file_stat[current_file]);
+      free(file_content[current_file]);
+      file_content[current_file] = NULL;
+      sym_file_name++;
     }
-
-    push_obj(&b, filename, nbytes, file_content);
-    push_obj(&b, statname, sizeof(struct stat64), (unsigned char *)&file_stat);
-
-    free(file_content);
 
     char *buf1 = (char *)malloc(1024);
     char *buf2 = (char *)malloc(1024);
     char *buf3 = (char *)malloc(1024);
     snprintf(buf1, 1024, "-sym-files");
-    snprintf(buf2, 1024, "1");
-    snprintf(buf3, 1024, "%ld", nbytes);
+    snprintf(buf2, 1024, "%d", file_counter);
+    snprintf(buf3, 1024, "%ld", max_file_size);
     argv_copy[argv_copy_idx++] = buf1;
     argv_copy[argv_copy_idx++] = buf2;
     argv_copy[argv_copy_idx++] = buf3;
