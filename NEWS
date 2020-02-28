@@ -1,3 +1,50 @@
+KLEE 2.1, 3 March 2020
+=======================
+Incorporating changes from 20 March 2019 to 3 March 2020.
+Maintainers during this time span: @ccadar and @MartinNowack
+Documentation at http://klee.github.io/releases/docs/v2.1
+
+== Major features ==
+- New container-based architecture for KLEE Web (@Denis-Gavrielov, @andronat)
+- Changed the statistics framework to use SQL and improve klee-stats (@kren1, @251)
+- Added Grafana visualisation to klee-stats (@gdish, @KennyMacheka, @kren1)
+- Brought gen-random-bout up-to-date (@domainexpert)
+- Fixed support for FreeBSD (@arrowd)
+- Replaced signalling with synchronous checks for implementing timers (@251)
+- Improved reference handling (ref<>) (@MartinNowack)
+
+== LLVM support ==
+- Added support for LLVM 9 and 10 (@jbuening)
+- Removed support for LLVM <3.8 (@jbuening)
+- KLEE 2.1 will be the last version with support for LLVM <6
+
+== Options, scripts and KLEE intrinsics added, changed or removed ==
+- Replaced intrinsic klee_alias_function("foo", "bar") with option -function-alias=foo:bar, which supports regular expressions (@jbuening, @SolalPirelli)
+- Removed -max-instruction-time (@251)
+- Added -timer-interval (default 1s) to specify the minimum interval to check timers (@251)
+- Added nurs:rp searcher which uses non-uniform random search with 1/2^depth (@kren1)
+- Replaced the behavior of the nurs:depth searcher to use NURS with depth (@kren1)
+- klee-stats: new --grafana option (see above) 
+- klee-stats: new --to-csv option for converting statistics to the CSV format (@251)
+- klee-stats: removed --sample-interval, --sort-by, --compare-by, --precision.  These can be now simulated by querying the SQL database directly (@kren1)
+- klee-replay: added --keep-replay-dir option to keep the replay directory (@ccadar)
+
+== Other changes ==
+- Added support for llvm.fabs (@futile)
+- Added support for saturated arithmetic intrinsics (@mateon1)
+- Added support for llvm.objectsize (@MartinNowack)
+- Added support for llvm.is.constant (@arrowd)
+- Fixed bugs in --optimize-array (@kren1)
+- Removed statistics limit from istats (@MartinNowack)
+- Refactored PTree (@251)
+- Improved klee-replay and made it safe to run multiple instances in parallel (@ccadar)
+- Check if read-only objects are marked as symbolic (@MartinNowack)
+- Allow main() with 3 arguments (@ccadar)
+- Improved the structure of the codebase (@ccadar)
+- Improved KLEE's CI build scripts (@MartinNowack, @jbuening)
+- Smaller refactorings, fixes and improvements, test cases, maintenance, comments, web version, website, etc. (@251, @arrowd, @benquike, @ccadar, @cyberwookiee, @danielschemmel, @Denis-Gavrielov, @dependabot, @domainexpert, @futile, @gdish, @JasonPap, @jbuening, @jirislaby, @KennyMacheka, @kren1, @MartinNowack, @qurben)
+
+
 KLEE 2.0, 19 March 2019
 ========================
 Incorporating changes from 22 July 2017 to 19 March 2019
