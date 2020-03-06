@@ -18,7 +18,7 @@
 
 #include "klee/Internal/ADT/KTest.h"
 
-#if defined(__FreeBSD__) || defined(__minix)
+#if defined(__FreeBSD__) || defined(__minix) || defined(__APPLE__)
 #define stat64 stat
 #endif
 
