@@ -215,7 +215,7 @@ int main(int argc, char *argv[]) {
     char *buf1 = (char *)malloc(1024);
     char *buf2 = (char *)malloc(1024);
     snprintf(buf1, 1024, "-sym-stdin");
-    snprintf(buf2, 1024, "%ld", file_stat.st_size);
+    snprintf(buf2, 1024, "%lld", (long long int) file_stat.st_size);
     argv_copy[argv_copy_idx++] = buf1;
     argv_copy[argv_copy_idx++] = buf2;
   }
