@@ -38,6 +38,22 @@ static exe_disk_file_t *__get_sym_file(const char *pathname) {
   if (!pathname)
     return NULL;
 
+  // Handle the case where symbolic file is given as an absolute path, ie.
+  // /current/work/dir/A
+  if (pathname[0] == '/') {
+    char cwd[1024] = {0};
+    if (getcwd(cwd, 1024)) {
+      size_t cwd_len = strlen(cwd);
+      // strip trailing / if present
+      if (cwd_len > 0 && cwd[cwd_len - 1] == '/') {
+        cwd[--cwd_len] = '\0';
+      }
+      if (strncmp(pathname, cwd, cwd_len) == 0) {
+        if (pathname[cwd_len] != '\0')
+          pathname += cwd_len + 1;
+      }
+    }
+  }
   char c = pathname[0];
   unsigned i;
 
