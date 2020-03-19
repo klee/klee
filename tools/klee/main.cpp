@@ -1518,7 +1518,7 @@ int main(int argc, char **argv, char **envp) {
   uint64_t queryCounterexamples =
     *theStatisticManager->getStatisticByName("QueriesCEX");
   uint64_t queryConstructs =
-    *theStatisticManager->getStatisticByName("QueriesConstructs");
+    *theStatisticManager->getStatisticByName("QueryConstructs");
   uint64_t instructions =
     *theStatisticManager->getStatisticByName("Instructions");
   uint64_t forks =
