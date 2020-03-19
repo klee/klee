@@ -10,8 +10,6 @@
 #ifndef KLEE_STATISTIC_H
 #define KLEE_STATISTIC_H
 
-#include "klee/Config/Version.h"
-#include "llvm/Support/DataTypes.h"
 #include <string>
 
 namespace klee {
@@ -25,22 +23,21 @@ namespace klee {
   /// not the actual values. Values are managed by the global
   /// StatisticManager to enable transparent support for instruction
   /// level and call path level statistics.
-  class Statistic {
+  class Statistic final {
     friend class StatisticManager;
     friend class StatisticRecord;
 
   private:
-    unsigned id;
+    std::uint32_t id;
     const std::string name;
     const std::string shortName;
 
   public:
-    Statistic(const std::string &_name, 
-              const std::string &_shortName);
-    ~Statistic();
+    Statistic(const std::string &name, const std::string &shortName);
+    ~Statistic() = default;
 
     /// getID - Get the unique statistic ID.
-    unsigned getID() { return id; }
+    std::uint32_t getID() const { return id; }
 
     /// getName - Get the statistic name.
     const std::string &getName() const { return name; }
@@ -50,16 +47,16 @@ namespace klee {
     const std::string &getShortName() const { return shortName; }
 
     /// getValue - Get the current primary statistic value.
-    uint64_t getValue() const;
+    std::uint64_t getValue() const;
 
-    /// operator uint64_t - Get the current primary statistic value.
-    operator uint64_t () const { return getValue(); }
+    /// operator std::uint64_t - Get the current primary statistic value.
+    operator std::uint64_t() const { return getValue(); }
 
     /// operator++ - Increment the statistic by 1.
-    Statistic &operator ++() { return (*this += 1); }
+    Statistic &operator++() { return (*this += 1); }
 
     /// operator+= - Increment the statistic by \arg addend.
-    Statistic &operator +=(const uint64_t addend);
+    Statistic &operator+=(std::uint64_t addend);
   };
 }
 
