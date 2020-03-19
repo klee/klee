@@ -302,15 +302,15 @@ static bool EvaluateInputAST(const char *Filename,
   if (uint64_t queries = *theStatisticManager->getStatisticByName("Queries")) {
     llvm::outs()
       << "--\n"
-      << "total queries = " << queries << "\n"
-      << "total queries constructs = " 
-      << *theStatisticManager->getStatisticByName("QueriesConstructs") << "\n"
+      << "total queries = " << queries << '\n'
+      << "total query constructs = "
+      << *theStatisticManager->getStatisticByName("QueryConstructs") << '\n'
       << "valid queries = " 
-      << *theStatisticManager->getStatisticByName("QueriesValid") << "\n"
+      << *theStatisticManager->getStatisticByName("QueriesValid") << '\n'
       << "invalid queries = " 
-      << *theStatisticManager->getStatisticByName("QueriesInvalid") << "\n"
+      << *theStatisticManager->getStatisticByName("QueriesInvalid") << '\n'
       << "query cex = " 
-      << *theStatisticManager->getStatisticByName("QueriesCEX") << "\n";
+      << *theStatisticManager->getStatisticByName("QueriesCEX") << '\n';
   }
 
   return success;
