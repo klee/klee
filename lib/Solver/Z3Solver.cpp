@@ -172,10 +172,10 @@ char *Z3SolverImpl::getConstraintLog(const Query &query) {
   constant_arrays_in_query.visit(query.expr);
 
   for (auto const &constant_array : constant_arrays_in_query.results) {
-    assert(builder->constant_array_assertions.count(constant_array) == 1 &&
+    assert(temp_builder.constant_array_assertions.count(constant_array) == 1 &&
            "Constant array found in query, but not handled by Z3Builder");
     for (auto const &arrayIndexValueExpr :
-         builder->constant_array_assertions[constant_array]) {
+         temp_builder.constant_array_assertions[constant_array]) {
       assumptions.push_back(arrayIndexValueExpr);
     }
   }
