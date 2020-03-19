@@ -23,7 +23,6 @@ namespace stats {
   extern Statistic queryCacheMisses;
   extern Statistic queryCexCacheHits;
   extern Statistic queryCexCacheMisses;
-  extern Statistic queryConstructTime;
   extern Statistic queryConstructs;
   extern Statistic queryCounterexamples;
   extern Statistic queryTime;
