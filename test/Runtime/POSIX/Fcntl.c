@@ -14,5 +14,12 @@ int main(int argc, char **argv) {
   assert(fcntl(fd, F_SETFD, FD_CLOEXEC, 1) == 0);
   assert((fcntl(fd, F_GETFD) & FD_CLOEXEC) != 0);
 
+  struct flock lck;
+  assert(fcntl(fd, F_GETLK, &lck) == 0);
+  assert(lck.l_type == F_UNLCK);
+  lck.l_type = F_RDLCK;
+  assert(fcntl(fd, F_SETLK, &lck) == 0);
+  lck.l_type = F_UNLCK;
+  assert(fcntl(fd, F_SETLK, &lck) == 0);
   return 0;
 }
