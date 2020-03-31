@@ -1259,7 +1259,7 @@ int main(int argc, char **argv, char **envp) {
 
   if (Libcxx) {
 #ifndef SUPPORT_KLEE_LIBCXX
-    klee_error("Klee was not compiled with libcxx support");
+    klee_error("KLEE was not compiled with Libcxx support");
 #else
     SmallString<128> LibcxxBC(Opts.LibraryDir);
     llvm::sys::path::append(LibcxxBC, KLEE_LIBCXX_BC_NAME);

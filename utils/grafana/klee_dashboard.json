@@ -188,7 +188,7 @@
         "#B877D9",
         "#d44a3a"
       ],
-      "datasource": "Klee Stats",
+      "datasource": "KLEE Stats",
       "format": "locale",
       "gauge": {
         "maxValue": 100,
