@@ -10,7 +10,7 @@
 #
 # ===----------------------------------------------------------------------===##
 
-"""Output statistics logged by Klee."""
+"""Output statistics logged by KLEE."""
 
 import os
 import sys
@@ -417,7 +417,7 @@ def main():
         epilog=epilog,
         formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    parser.add_argument('dir', nargs='+', help='klee output directory')
+    parser.add_argument('dir', nargs='+', help='KLEE output directory')
 
     if tabulate_available:
         parser.add_argument('--table-format',
@@ -473,7 +473,7 @@ def main():
 
     dirs = getKleeOutDirs(args.dir)
     if len(dirs) == 0:
-        print('no klee output dir found', file=sys.stderr)
+        print('No KLEE output directory found', file=sys.stderr)
         exit(1)
 
     if args.grafana:
