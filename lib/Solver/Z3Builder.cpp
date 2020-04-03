@@ -11,7 +11,7 @@
 #include "Z3Builder.h"
 
 #include "klee/Expr/Expr.h"
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Support/ErrorHandling.h"
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverStats.h"
 #include "klee/util/Bits.h"

@@ -11,7 +11,7 @@
 
 #include "klee/Expr/ExprPPrinter.h"
 #include "klee/Expr/ExprVisitor.h"
-#include "klee/Internal/Module/KModule.h"
+#include "klee/Module/KModule.h"
 #include "klee/OptionCategories.h"
 
 #include "llvm/IR/Function.h"

@@ -9,9 +9,9 @@
 #include "QueryLoggingSolver.h"
 
 #include "klee/Config/config.h"
-#include "klee/Internal/Support/ErrorHandling.h"
-#include "klee/Internal/Support/FileHandling.h"
-#include "klee/Internal/System/Time.h"
+#include "klee/Support/ErrorHandling.h"
+#include "klee/Support/FileHandling.h"
+#include "klee/System/Time.h"
 #include "klee/OptionCategories.h"
 #include "klee/Statistics.h"
 

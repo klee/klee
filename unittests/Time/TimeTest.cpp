@@ -1,4 +1,4 @@
-#include "klee/Internal/System/Time.h"
+#include "klee/System/Time.h"
 #include "gtest/gtest.h"
 #include "gtest/gtest-death-test.h"
 

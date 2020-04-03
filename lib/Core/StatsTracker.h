@@ -11,7 +11,7 @@
 #define KLEE_STATSTRACKER_H
 
 #include "CallPathManager.h"
-#include "klee/Internal/System/Time.h"
+#include "klee/System/Time.h"
 
 #include <memory>
 #include <set>

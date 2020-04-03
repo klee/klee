@@ -3,7 +3,7 @@
 // RUN: %klee --output-dir=%t.klee-out --libc=klee --max-forks=25 --write-no-tests --exit-on-error --optimize --disable-inlining --search=nurs:depth --use-cex-cache %t1.bc
 
 #include "klee/klee.h"
-#include "klee/Internal/ADT/ImmutableSet.h"
+#include "klee/ADT/ImmutableSet.h"
 
 using namespace klee;
 

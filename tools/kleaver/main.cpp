@@ -17,7 +17,7 @@
 #include "klee/Expr/ExprVisitor.h"
 #include "klee/Expr/Parser/Lexer.h"
 #include "klee/Expr/Parser/Parser.h"
-#include "klee/Internal/Support/PrintVersion.h"
+#include "klee/Support/PrintVersion.h"
 #include "klee/OptionCategories.h"
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverCmdLine.h"

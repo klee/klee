@@ -14,7 +14,7 @@
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprUtil.h"
-#include "klee/Internal/Support/Debug.h"
+#include "klee/Support/Debug.h"
 #include "klee/Solver/SolverImpl.h"
 
 #include "llvm/Support/raw_ostream.h"

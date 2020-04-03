@@ -13,8 +13,8 @@
 
 #include "klee/Config/Version.h"
 #include "klee/Expr/Expr.h"
-#include "klee/Internal/Module/KModule.h"
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Module/KModule.h"
+#include "klee/Support/ErrorHandling.h"
 #include "klee/Interpreter.h"
 #include "klee/Solver/Solver.h"
 

@@ -6,16 +6,16 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#include "klee/Internal/Support/FileHandling.h"
+#include "klee/Support/FileHandling.h"
 
 #include "klee/Config/Version.h"
 #include "klee/Config/config.h"
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Support/ErrorHandling.h"
 
 #include "llvm/Support/FileSystem.h"
 
 #ifdef HAVE_ZLIB_H
-#include "klee/Internal/Support/CompressionStream.h"
+#include "klee/Support/CompressionStream.h"
 #endif
 
 namespace klee {

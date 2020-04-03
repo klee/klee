@@ -10,7 +10,7 @@
 #ifndef KLEE_SOLVERIMPL_H
 #define KLEE_SOLVERIMPL_H
 
-#include "klee/Internal/System/Time.h"
+#include "klee/System/Time.h"
 #include "Solver.h"
 
 #include <vector>

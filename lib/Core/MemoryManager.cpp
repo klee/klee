@@ -13,7 +13,7 @@
 #include "Memory.h"
 
 #include "klee/Expr/Expr.h"
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Support/ErrorHandling.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MathExtras.h"

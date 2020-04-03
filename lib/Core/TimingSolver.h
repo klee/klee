@@ -12,7 +12,7 @@
 
 #include "klee/Expr/Expr.h"
 #include "klee/Solver/Solver.h"
-#include "klee/Internal/System/Time.h"
+#include "klee/System/Time.h"
 
 #include <vector>
 

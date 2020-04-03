@@ -10,7 +10,7 @@
 #ifndef KLEE_SEARCHER_H
 #define KLEE_SEARCHER_H
 
-#include "klee/Internal/System/Time.h"
+#include "klee/System/Time.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"

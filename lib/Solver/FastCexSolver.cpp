@@ -16,8 +16,8 @@
 #include "klee/Expr/ExprRangeEvaluator.h"
 #include "klee/Expr/ExprVisitor.h"
 #include "klee/Solver/IncompleteSolver.h"
-#include "klee/Internal/Support/Debug.h"
-#include "klee/Internal/Support/IntEvaluation.h" // FIXME: Use APInt
+#include "klee/Support/Debug.h"
+#include "klee/Support/IntEvaluation.h" // FIXME: Use APInt
 
 #include "llvm/Support/raw_ostream.h"
 

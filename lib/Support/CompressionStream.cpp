@@ -9,7 +9,7 @@
 #include "klee/Config/config.h"
 #include "klee/Config/Version.h"
 #ifdef HAVE_ZLIB_H
-#include "klee/Internal/Support/CompressionStream.h"
+#include "klee/Support/CompressionStream.h"
 
 #include "llvm/Support/FileSystem.h"
 

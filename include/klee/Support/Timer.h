@@ -10,7 +10,7 @@
 #ifndef KLEE_TIMER_H
 #define KLEE_TIMER_H
 
-#include "klee/Internal/System/Time.h"
+#include "klee/System/Time.h"
 
 #include "llvm/ADT/SmallVector.h"
 

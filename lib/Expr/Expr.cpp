@@ -13,7 +13,7 @@
 #include "klee/Expr/ExprPPrinter.h"
 // FIXME: We shouldn't need this once fast constant support moves into
 // Core. If we need to do arithmetic, we probably want to use APInt.
-#include "klee/Internal/Support/IntEvaluation.h"
+#include "klee/Support/IntEvaluation.h"
 #include "klee/OptionCategories.h"
 
 #include "llvm/ADT/Hashing.h"

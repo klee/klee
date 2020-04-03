@@ -20,7 +20,7 @@
 
 #include "klee/klee.h"
 
-#include "klee/Internal/ADT/KTest.h"
+#include "klee/ADT/KTest.h"
 
 static KTest *testData = 0;
 static unsigned testPosition = 0;
