@@ -10,10 +10,10 @@
 #ifdef ENABLE_STP
 #include "STPBuilder.h"
 
+#include "klee/ADT/Bits.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverStats.h"
-#include "klee/util/Bits.h"
 
 #include "ConstantDivision.h"
 

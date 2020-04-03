@@ -12,8 +12,9 @@
 #ifndef KLEE_FLOATEVALUATION_H
 #define KLEE_FLOATEVALUATION_H
 
-#include "klee/util/Bits.h"     //bits64::truncateToNBits
-#include "IntEvaluation.h" //ints::sext
+#include "IntEvaluation.h" // ints::sext
+
+#include "klee/ADT/Bits.h" // bits64::truncateToNBits
 
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"

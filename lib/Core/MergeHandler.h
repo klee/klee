@@ -69,8 +69,10 @@
 #ifndef KLEE_MERGEHANDLER_H
 #define KLEE_MERGEHANDLER_H
 
-#include "klee/util/Ref.h"
+#include "klee/ADT/Ref.h"
+
 #include "llvm/Support/CommandLine.h"
+
 #include <map>
 #include <stdint.h>
 #include <vector>

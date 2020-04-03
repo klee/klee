@@ -9,8 +9,8 @@
 
 #include "klee/Expr/ArrayExprRewriter.h"
 
+#include "klee/ADT/BitArray.h"
 #include "klee/Expr/ArrayExprVisitor.h"
-#include "klee/util/BitArray.h"
 
 #include <llvm/ADT/APInt.h>
 #include <llvm/Support/Casting.h>

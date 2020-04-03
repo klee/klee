@@ -11,9 +11,10 @@
    More details at
    http://keeda.stanford.edu/pipermail/klee-commits/2012-February/000904.html */
 
-#include "klee/util/Ref.h"
+#include "klee/ADT/Ref.h"
 #include "gtest/gtest.h"
 #include <iostream>
+
 using klee::ref;
 
 int finished = 0;

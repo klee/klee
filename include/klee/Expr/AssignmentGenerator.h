@@ -10,8 +10,8 @@
 #ifndef KLEE_ASSIGNMENTGENERATOR_H
 #define KLEE_ASSIGNMENTGENERATOR_H
 
+#include "klee/ADT/Ref.h"
 #include "klee/Expr/Expr.h"
-#include "klee/util/Ref.h"
 
 #include <vector>
 

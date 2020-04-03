@@ -10,8 +10,8 @@
 #ifndef KLEE_EXPRRANGEEVALUATOR_H
 #define KLEE_EXPRRANGEEVALUATOR_H
 
+#include "klee/ADT/Bits.h"
 #include "klee/Expr/Expr.h"
-#include "klee/util/Bits.h"
 
 namespace klee {
 

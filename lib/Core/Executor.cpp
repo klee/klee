@@ -13,6 +13,7 @@
 #include "CoreStats.h"
 #include "ExecutionState.h"
 #include "ExternalDispatcher.h"
+#include "GetElementPtrTypeIterator.h"
 #include "ImpliedValue.h"
 #include "Memory.h"
 #include "MemoryManager.h"
@@ -49,7 +50,6 @@
 #include "klee/System/MemoryUsage.h"
 #include "klee/System/Time.h"
 #include "klee/TimerStatIncrementer.h"
-#include "klee/util/GetElementPtrTypeIterator.h"
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"

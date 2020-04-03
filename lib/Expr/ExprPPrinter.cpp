@@ -11,7 +11,7 @@
 
 #include "klee/Expr/Constraints.h"
 #include "klee/OptionCategories.h"
-#include "klee/util/PrintContext.h"
+#include "klee/Support/PrintContext.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
