@@ -15,7 +15,7 @@
 #include "klee/Config/Version.h"
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/ExprBuilder.h"
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Support/ErrorHandling.h"
 #include "klee/OptionCategories.h"
 #include "klee/util/BitArray.h"
 

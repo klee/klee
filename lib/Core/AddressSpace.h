@@ -12,8 +12,8 @@
 
 #include "Memory.h"
 #include "klee/Expr/Expr.h"
-#include "klee/Internal/ADT/ImmutableMap.h"
-#include "klee/Internal/System/Time.h"
+#include "klee/ADT/ImmutableMap.h"
+#include "klee/System/Time.h"
 
 namespace klee {
   class ExecutionState;

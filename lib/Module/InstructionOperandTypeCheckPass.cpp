@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 #include "Passes.h"
 #include "klee/Config/Version.h"
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;

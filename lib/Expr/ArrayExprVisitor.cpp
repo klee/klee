@@ -9,7 +9,7 @@
 
 #include "ArrayExprVisitor.h"
 
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Support/ErrorHandling.h"
 
 #include <algorithm>
 

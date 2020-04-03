@@ -16,7 +16,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "klee/Internal/ADT/KTest.h"
+#include "klee/ADT/KTest.h"
 
 #if defined(__FreeBSD__) || defined(__minix) || defined(__APPLE__)
 #define stat64 stat

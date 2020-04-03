@@ -14,7 +14,7 @@
 
 #include "klee/Expr/ArrayCache.h"
 #include "klee/Expr/Expr.h"
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Support/ErrorHandling.h"
 #include "klee/OptionCategories.h"
 #include "klee/Solver/Solver.h"
 #include "klee/util/BitArray.h"

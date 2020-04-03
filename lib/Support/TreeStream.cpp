@@ -8,9 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #define DEBUG_TYPE "TreeStreamWriter"
-#include "klee/Internal/ADT/TreeStream.h"
+#include "klee/ADT/TreeStream.h"
 
-#include "klee/Internal/Support/Debug.h"
+#include "klee/Support/Debug.h"
 
 #include <cassert>
 #include <iomanip>

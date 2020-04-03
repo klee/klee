@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Internal/Support/ModuleUtil.h"
+#include "klee/Support/ModuleUtil.h"
 
 #include "klee/Config/Version.h"
-#include "klee/Internal/Support/Debug.h"
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Support/Debug.h"
+#include "klee/Support/ErrorHandling.h"
 
 #include "llvm/Analysis/ValueTracking.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)

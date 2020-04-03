@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Passes.h"
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Support/ErrorHandling.h"
 #include "klee/OptionCategories.h"
 
 #include "llvm/IR/GlobalAlias.h"

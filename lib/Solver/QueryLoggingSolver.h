@@ -13,7 +13,7 @@
 
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverImpl.h"
-#include "klee/Internal/System/Time.h"
+#include "klee/System/Time.h"
 
 #include "llvm/Support/raw_ostream.h"
 

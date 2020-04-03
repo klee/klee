@@ -12,13 +12,13 @@
 
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
-#include "klee/Internal/ADT/TreeStream.h"
-#include "klee/Internal/System/Time.h"
+#include "klee/ADT/TreeStream.h"
+#include "klee/System/Time.h"
 #include "klee/MergeHandler.h"
 
 // FIXME: We do not want to be exposing these? :(
 #include "../../lib/Core/AddressSpace.h"
-#include "klee/Internal/Module/KInstIterator.h"
+#include "klee/Module/KInstIterator.h"
 
 #include <map>
 #include <set>

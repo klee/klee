@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Internal/Module/InstructionInfoTable.h"
+#include "klee/Module/InstructionInfoTable.h"
 #include "klee/Config/Version.h"
 
 #include "llvm/Analysis/ValueTracking.h"

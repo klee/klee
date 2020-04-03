@@ -12,10 +12,10 @@
 #include "klee/ExecutionState.h"
 
 #include "klee/Expr/Expr.h"
-#include "klee/Internal/Module/Cell.h"
-#include "klee/Internal/Module/InstructionInfoTable.h"
-#include "klee/Internal/Module/KInstruction.h"
-#include "klee/Internal/Module/KModule.h"
+#include "klee/Module/Cell.h"
+#include "klee/Module/InstructionInfoTable.h"
+#include "klee/Module/KInstruction.h"
+#include "klee/Module/KModule.h"
 #include "klee/OptionCategories.h"
 
 #include "llvm/IR/Function.h"

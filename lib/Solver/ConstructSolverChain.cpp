@@ -12,8 +12,8 @@
  */
 
 #include "klee/Common.h"
-#include "klee/Internal/Support/ErrorHandling.h"
-#include "klee/Internal/System/Time.h"
+#include "klee/Support/ErrorHandling.h"
+#include "klee/System/Time.h"
 #include "klee/Solver/SolverCmdLine.h"
 
 #include "llvm/Support/raw_ostream.h"

@@ -17,10 +17,10 @@
 
 #include "klee/ExecutionState.h"
 #include "klee/Expr/ArrayCache.h"
-#include "klee/Internal/Module/Cell.h"
-#include "klee/Internal/Module/KInstruction.h"
-#include "klee/Internal/Module/KModule.h"
-#include "klee/Internal/System/Time.h"
+#include "klee/Module/Cell.h"
+#include "klee/Module/KInstruction.h"
+#include "klee/Module/KModule.h"
+#include "klee/System/Time.h"
 #include "klee/Interpreter.h"
 
 #include "llvm/ADT/Twine.h"

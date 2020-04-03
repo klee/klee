@@ -19,7 +19,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "klee/Internal/ADT/KTest.h"
+#include "klee/ADT/KTest.h"
 
 #if defined(__FreeBSD__) || defined(__minix)
 #define stat64 stat

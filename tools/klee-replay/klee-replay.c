@@ -9,7 +9,7 @@
 
 #include "klee-replay.h"
 
-#include "klee/Internal/ADT/KTest.h"
+#include "klee/ADT/KTest.h"
 
 #include <assert.h>
 #include <errno.h>

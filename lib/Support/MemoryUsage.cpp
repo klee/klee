@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Internal/System/MemoryUsage.h"
+#include "klee/System/MemoryUsage.h"
 
 #include "klee/Config/config.h"
 

@@ -42,7 +42,7 @@
    email: m-mat @ math.sci.hiroshima-u.ac.jp (remove space)
 */
 
-#include "klee/Internal/ADT/RNG.h"
+#include "klee/ADT/RNG.h"
 
 using namespace klee;
 

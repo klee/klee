@@ -10,7 +10,7 @@
 #include "AssignmentGenerator.h"
 
 #include "klee/Expr/Assignment.h"
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Support/ErrorHandling.h"
 #include "klee/klee.h"
 
 #include <llvm/ADT/APInt.h>

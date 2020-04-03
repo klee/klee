@@ -12,7 +12,7 @@
 // cmake/workaround_llvm_pr39177.cmake
 
 #include "Passes.h"
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Support/ErrorHandling.h"
 
 #include "llvm/Transforms/Utils/Cloning.h"
 
