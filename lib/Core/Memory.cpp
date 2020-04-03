@@ -18,7 +18,6 @@
 #include "klee/OptionCategories.h"
 #include "klee/Solver/Solver.h"
 #include "klee/Support/ErrorHandling.h"
-#include "klee/util/BitArray.h"
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"

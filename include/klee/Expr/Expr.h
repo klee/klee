@@ -10,9 +10,8 @@
 #ifndef KLEE_EXPR_H
 #define KLEE_EXPR_H
 
-#include "klee/util/Bits.h"
-#include "klee/util/Ref.h"
-
+#include "klee/ADT/Bits.h"
+#include "klee/ADT/Ref.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseSet.h"

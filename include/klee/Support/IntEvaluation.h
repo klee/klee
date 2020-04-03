@@ -10,7 +10,7 @@
 #ifndef KLEE_INTEVALUATION_H
 #define KLEE_INTEVALUATION_H
 
-#include "klee/util/Bits.h"
+#include "klee/ADT/Bits.h"
 
 #define MAX_BITS (sizeof(uint64_t) * 8)
 
