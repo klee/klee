@@ -7,17 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ArrayExprRewriter.h"
+#include "klee/Expr/ArrayExprRewriter.h"
+
+#include "klee/Expr/ArrayExprVisitor.h"
+#include "klee/util/BitArray.h"
+
+#include <llvm/ADT/APInt.h>
+#include <llvm/Support/Casting.h>
 
 #include <cassert>
 #include <cstdint>
-#include <llvm/ADT/APInt.h>
-#include <llvm/Support/Casting.h>
 #include <set>
 #include <utility>
-
-#include "ArrayExprVisitor.h"
-#include "klee/util/BitArray.h"
 
 using namespace klee;
 

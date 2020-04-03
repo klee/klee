@@ -9,9 +9,9 @@
 
 #include "Executor.h"
 
-#include "../Expr/ArrayExprOptimizer.h"
 #include "Context.h"
 #include "CoreStats.h"
+#include "ExecutionState.h"
 #include "ExternalDispatcher.h"
 #include "ImpliedValue.h"
 #include "Memory.h"
@@ -26,7 +26,8 @@
 
 #include "klee/Common.h"
 #include "klee/Config/Version.h"
-#include "klee/ExecutionState.h"
+#include "klee/Core/Interpreter.h"
+#include "klee/Expr/ArrayExprOptimizer.h"
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprPPrinter.h"

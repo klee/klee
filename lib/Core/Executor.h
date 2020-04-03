@@ -17,6 +17,7 @@
 
 #include "klee/ExecutionState.h"
 #include "klee/Expr/ArrayCache.h"
+#include "klee/Expr/ArrayExprOptimizer.h"
 #include "klee/Module/Cell.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
@@ -25,8 +26,6 @@
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include "../Expr/ArrayExprOptimizer.h"
 
 #include <map>
 #include <memory>
