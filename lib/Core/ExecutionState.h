@@ -10,15 +10,14 @@
 #ifndef KLEE_EXECUTIONSTATE_H
 #define KLEE_EXECUTIONSTATE_H
 
+#include "AddressSpace.h"
+#include "MergeHandler.h"
+
+#include "klee/ADT/TreeStream.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
-#include "klee/ADT/TreeStream.h"
-#include "klee/System/Time.h"
-#include "klee/MergeHandler.h"
-
-// FIXME: We do not want to be exposing these? :(
-#include "../../lib/Core/AddressSpace.h"
 #include "klee/Module/KInstIterator.h"
+#include "klee/System/Time.h"
 
 #include <map>
 #include <set>

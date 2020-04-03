@@ -12,15 +12,15 @@
 #include "Passes.h"
 
 #include "klee/Config/Version.h"
+#include "klee/Core/Interpreter.h"
 #include "klee/Module/Cell.h"
 #include "klee/Module/InstructionInfoTable.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
+#include "klee/OptionCategories.h"
 #include "klee/Support/Debug.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/ModuleUtil.h"
-#include "klee/Interpreter.h"
-#include "klee/OptionCategories.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
 #include "llvm/Bitcode/BitcodeWriter.h"

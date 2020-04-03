@@ -9,16 +9,18 @@
 
 #include "StatsTracker.h"
 
-#include "klee/ExecutionState.h"
-#include "klee/Statistics.h"
+#include "ExecutionState.h"
+
 #include "klee/Config/Version.h"
+
 #include "klee/Module/InstructionInfoTable.h"
-#include "klee/Module/KModule.h"
 #include "klee/Module/KInstruction.h"
+#include "klee/Module/KModule.h"
+#include "klee/Solver/SolverStats.h"
+#include "klee/Statistics/Statistics.h"
+#include "klee/Support/ErrorHandling.h"
 #include "klee/Support/ModuleUtil.h"
 #include "klee/System/MemoryUsage.h"
-#include "klee/Support/ErrorHandling.h"
-#include "klee/Solver/SolverStats.h"
 
 #include "CallPathManager.h"
 #include "CoreStats.h"

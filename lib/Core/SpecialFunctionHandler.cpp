@@ -9,20 +9,21 @@
 
 #include "SpecialFunctionHandler.h"
 
+#include "ExecutionState.h"
 #include "Executor.h"
 #include "Memory.h"
 #include "MemoryManager.h"
+#include "MergeHandler.h"
 #include "Searcher.h"
 #include "TimingSolver.h"
 
-#include "klee/ExecutionState.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
-#include "klee/Support/Debug.h"
-#include "klee/Support/ErrorHandling.h"
-#include "klee/MergeHandler.h"
 #include "klee/OptionCategories.h"
 #include "klee/Solver/SolverCmdLine.h"
+#include "klee/Support/Debug.h"
+#include "klee/Support/ErrorHandling.h"
+#include "klee/Support/OptionCategories.h"
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DataLayout.h"
