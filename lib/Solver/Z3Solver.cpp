@@ -8,9 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Config/config.h"
+#include "klee/Support/OptionCategories.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/FileHandling.h"
-#include "klee/OptionCategories.h"
 
 #ifdef ENABLE_Z3
 

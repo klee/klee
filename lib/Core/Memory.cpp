@@ -15,7 +15,7 @@
 #include "klee/ADT/BitArray.h"
 #include "klee/Expr/ArrayCache.h"
 #include "klee/Expr/Expr.h"
-#include "klee/OptionCategories.h"
+#include "klee/Support/OptionCategories.h"
 #include "klee/Solver/Solver.h"
 #include "klee/Support/ErrorHandling.h"
 

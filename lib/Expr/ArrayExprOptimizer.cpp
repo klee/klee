@@ -16,7 +16,7 @@
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/AssignmentGenerator.h"
 #include "klee/Expr/ExprBuilder.h"
-#include "klee/OptionCategories.h"
+#include "klee/Support/OptionCategories.h"
 #include "klee/Support/ErrorHandling.h"
 
 #include <llvm/ADT/APInt.h>

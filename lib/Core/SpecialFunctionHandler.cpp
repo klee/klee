@@ -19,7 +19,6 @@
 
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
-#include "klee/OptionCategories.h"
 #include "klee/Solver/SolverCmdLine.h"
 #include "klee/Support/Debug.h"
 #include "klee/Support/ErrorHandling.h"

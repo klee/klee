@@ -15,7 +15,7 @@
 #include "klee/Solver/SolverCmdLine.h"
 
 #include "klee/Config/Version.h"
-#include "klee/OptionCategories.h"
+#include "klee/Support/OptionCategories.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"

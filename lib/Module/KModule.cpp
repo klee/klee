@@ -13,11 +13,11 @@
 
 #include "klee/Config/Version.h"
 #include "klee/Core/Interpreter.h"
+#include "klee/Support/OptionCategories.h"
 #include "klee/Module/Cell.h"
 #include "klee/Module/InstructionInfoTable.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
-#include "klee/OptionCategories.h"
 #include "klee/Support/Debug.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/ModuleUtil.h"

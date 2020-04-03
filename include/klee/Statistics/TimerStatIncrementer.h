@@ -10,7 +10,7 @@
 #ifndef KLEE_TIMERSTATINCREMENTER_H
 #define KLEE_TIMERSTATINCREMENTER_H
 
-#include "klee/Statistics.h"
+#include "klee/Statistics/Statistics.h"
 #include "klee/Support/Timer.h"
 
 namespace klee {

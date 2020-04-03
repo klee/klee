@@ -7,7 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Common.h"
 #include "klee/Config/Version.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
@@ -17,12 +16,13 @@
 #include "klee/Expr/ExprVisitor.h"
 #include "klee/Expr/Parser/Lexer.h"
 #include "klee/Expr/Parser/Parser.h"
-#include "klee/Support/PrintVersion.h"
-#include "klee/OptionCategories.h"
+#include "klee/Solver/Common.h"
+#include "klee/Support/OptionCategories.h"
+#include "klee/Statistics/Statistics.h"
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverCmdLine.h"
 #include "klee/Solver/SolverImpl.h"
-#include "klee/Statistics.h"
+#include "klee/Support/PrintVersion.h"
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"

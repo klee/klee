@@ -10,7 +10,7 @@
 #include "klee/Expr/ExprPPrinter.h"
 
 #include "klee/Expr/Constraints.h"
-#include "klee/OptionCategories.h"
+#include "klee/Support/OptionCategories.h"
 #include "klee/Support/PrintContext.h"
 
 #include "llvm/Support/CommandLine.h"
