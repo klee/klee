@@ -7,16 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Memory.h"
+#include "ExecutionState.h"
 
-#include "klee/ExecutionState.h"
+#include "Memory.h"
 
 #include "klee/Expr/Expr.h"
 #include "klee/Module/Cell.h"
 #include "klee/Module/InstructionInfoTable.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
-#include "klee/OptionCategories.h"
+#include "klee/Support/OptionCategories.h"
 
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"

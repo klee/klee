@@ -7,14 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Memory.h"
 #include "SeedInfo.h"
+
+#include "ExecutionState.h"
+#include "Memory.h"
 #include "TimingSolver.h"
 
-#include "klee/ExecutionState.h"
+
+#include "klee/ADT/KTest.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprUtil.h"
-#include "klee/ADT/KTest.h"
 #include "klee/Support/ErrorHandling.h"
 
 using namespace klee;

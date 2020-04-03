@@ -9,21 +9,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Config/Version.h"
-#include "klee/ExecutionState.h"
-#include "klee/Expr/Expr.h"
 #include "klee/ADT/KTest.h"
 #include "klee/ADT/TreeStream.h"
+#include "klee/Config/Version.h"
+#include "klee/Core/Interpreter.h"
+#include "klee/Expr/Expr.h"
+#include "klee/OptionCategories.h"
+#include "klee/Solver/SolverCmdLine.h"
+#include "klee/Statistics.h"
 #include "klee/Support/Debug.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/FileHandling.h"
 #include "klee/Support/ModuleUtil.h"
 #include "klee/Support/PrintVersion.h"
 #include "klee/System/Time.h"
-#include "klee/Interpreter.h"
-#include "klee/OptionCategories.h"
-#include "klee/Solver/SolverCmdLine.h"
-#include "klee/Statistics.h"
 
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
@@ -293,6 +292,7 @@ namespace {
 
 namespace klee {
 extern cl::opt<std::string> MaxTime;
+class ExecutionState;
 }
 
 /***/

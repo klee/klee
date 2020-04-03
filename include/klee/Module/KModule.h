@@ -11,7 +11,7 @@
 #define KLEE_KMODULE_H
 
 #include "klee/Config/Version.h"
-#include "klee/Interpreter.h"
+#include "klee/Core/Interpreter.h"
 
 #include "llvm/ADT/ArrayRef.h"
 

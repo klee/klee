@@ -7,16 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Context.h"
 #include "Executor.h"
 
-#include "Context.h"
-
 #include "klee/Config/Version.h"
+#include "klee/Core/Interpreter.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Module/KModule.h"
-#include "klee/Support/ErrorHandling.h"
-#include "klee/Interpreter.h"
 #include "klee/Solver/Solver.h"
+#include "klee/Support/ErrorHandling.h"
 
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"

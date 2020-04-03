@@ -9,12 +9,12 @@
 
 #include "UserSearcher.h"
 
-#include "Searcher.h"
 #include "Executor.h"
+#include "MergeHandler.h"
+#include "Searcher.h"
 
-#include "klee/Support/ErrorHandling.h"
-#include "klee/MergeHandler.h"
 #include "klee/Solver/SolverCmdLine.h"
+#include "klee/Support/ErrorHandling.h"
 
 #include "llvm/Support/CommandLine.h"
 

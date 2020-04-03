@@ -9,8 +9,11 @@
 
 #include "TimingSolver.h"
 
+#include "ExecutionState.h"
+
 #include "klee/Config/Version.h"
-#include "klee/ExecutionState.h"
+#include "klee/Statistics/Statistics.h"
+#include "klee/Statistics/TimerStatIncrementer.h"
 #include "klee/Solver/Solver.h"
 #include "klee/Statistics.h"
 #include "klee/TimerStatIncrementer.h"
