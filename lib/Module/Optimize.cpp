@@ -91,14 +91,14 @@ static inline void addPass(legacy::PassManager &PM, Pass *P) {
 
   // If we are verifying all of the intermediate steps, add the verifier...
   if (VerifyEach)
-    PM.add(createVerifierPass());
+    PM.add(createVerifierPass(/* FatalErrors */ false));
 }
 
 namespace llvm {
 
 
 static void AddStandardCompilePasses(legacy::PassManager &PM) {
-  PM.add(createVerifierPass());                  // Verify that input is correct
+  PM.add(createVerifierPass(/* FatalErrors */ false));                  // Verify that input is correct
 
   // If the -strip-debug command line option was specified, do it.
   if (StripDebug)
@@ -172,7 +172,7 @@ void Optimize(Module *M, llvm::ArrayRef<const char *> preservedFunctions) {
 
   // If we're verifying, start off with a verification pass.
   if (VerifyEach)
-    Passes.add(createVerifierPass());
+    Passes.add(createVerifierPass(/* FatalErrors */ false));
 
 #ifdef USE_WORKAROUND_LLVM_PR39177
   addPass(Passes, new klee::WorkaroundLLVMPR39177Pass());

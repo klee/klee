@@ -366,7 +366,7 @@ void KModule::checkModule() {
 
   legacy::PassManager pm;
   if (!DontVerify)
-    pm.add(createVerifierPass());
+    pm.add(createVerifierPass(/* FatalErrors */ false));
   pm.add(operandTypeCheckPass);
   pm.run(*module);
 
