@@ -22,7 +22,6 @@
 #include "klee/Module/InstructionInfoTable.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
-#include "klee/Statistics.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/ModuleUtil.h"
 #include "klee/System/Time.h"

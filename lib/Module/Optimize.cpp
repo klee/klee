@@ -16,7 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Config/Version.h"
-#include "klee/OptionCategories.h"
+#include "klee/Support/OptionCategories.h"
 
 #ifdef USE_WORKAROUND_LLVM_PR39177
 #include "Passes.h"

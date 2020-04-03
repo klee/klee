@@ -11,10 +11,10 @@
 
 #include "klee/Config/Version.h"
 #include "klee/Expr/ExprPPrinter.h"
+#include "klee/Support/OptionCategories.h"
 // FIXME: We shouldn't need this once fast constant support moves into
 // Core. If we need to do arithmetic, we probably want to use APInt.
 #include "klee/Support/IntEvaluation.h"
-#include "klee/OptionCategories.h"
 
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Support/CommandLine.h"

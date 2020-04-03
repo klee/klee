@@ -9,14 +9,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/ADT/KTest.h"
 #include "klee/ADT/TreeStream.h"
 #include "klee/Config/Version.h"
 #include "klee/Core/Interpreter.h"
 #include "klee/Expr/Expr.h"
-#include "klee/OptionCategories.h"
+#include "klee/ADT/KTest.h"
+#include "klee/Support/OptionCategories.h"
+#include "klee/Statistics/Statistics.h"
 #include "klee/Solver/SolverCmdLine.h"
-#include "klee/Statistics.h"
 #include "klee/Support/Debug.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/FileHandling.h"

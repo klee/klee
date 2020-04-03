@@ -10,7 +10,7 @@
 #ifndef KLEE_CALLPATHMANAGER_H
 #define KLEE_CALLPATHMANAGER_H
 
-#include "klee/Statistics.h"
+#include "klee/Statistics/Statistics.h"
 
 #include <map>
 #include <memory>

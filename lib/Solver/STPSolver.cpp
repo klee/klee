@@ -16,9 +16,9 @@
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/ExprUtil.h"
-#include "klee/Support/ErrorHandling.h"
-#include "klee/OptionCategories.h"
+#include "klee/Support/OptionCategories.h"
 #include "klee/Solver/SolverImpl.h"
+#include "klee/Support/ErrorHandling.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errno.h"
