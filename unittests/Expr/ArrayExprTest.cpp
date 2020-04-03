@@ -8,13 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "gtest/gtest.h"
-#include <iostream>
 
-#include "../../lib/Expr/ArrayExprOptimizer.h"
 #include "klee/Expr/ArrayCache.h"
+#include "klee/Expr/ArrayExprOptimizer.h"
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/Expr.h"
+
 #include <llvm/Support/CommandLine.h>
+
+#include <iostream>
 
 using namespace klee;
 namespace klee {
