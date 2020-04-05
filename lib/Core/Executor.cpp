@@ -1356,15 +1356,13 @@ static inline const llvm::fltSemantics *fpWidthToSemantics(unsigned width) {
   }
 }
 
-void Executor::executeCall(ExecutionState &state, 
-                           KInstruction *ki,
-                           Function *f,
-                           std::vector< ref<Expr> > &arguments) {
+void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
+                           std::vector<ref<Expr>> &arguments) {
   Instruction *i = ki->inst;
   if (i && isa<DbgInfoIntrinsic>(i))
     return;
   if (f && f->isDeclaration()) {
-    switch(f->getIntrinsicID()) {
+    switch (f->getIntrinsicID()) {
     case Intrinsic::not_intrinsic:
       // state may be destroyed by this call, cannot touch
       callExternalFunction(state, ki, f, arguments);
@@ -1385,7 +1383,7 @@ void Executor::executeCall(ExecutionState &state,
     }
     // va_arg is handled by caller and intrinsic lowering, see comment for
     // ExecutionState::varargs
-    case Intrinsic::vastart:  {
+    case Intrinsic::vastart: {
       StackFrame &sf = state.stack.back();
 
       // varargs can be zero if no varargs were provided
@@ -1396,7 +1394,7 @@ void Executor::executeCall(ExecutionState &state,
       // size. This happens to work for x86-32 and x86-64, however.
       Expr::Width WordSize = Context::get().getPointerWidth();
       if (WordSize == Expr::Int32) {
-        executeMemoryOperation(state, true, arguments[0], 
+        executeMemoryOperation(state, true, arguments[0],
                                sf.varargs->getBaseExpr(), 0);
       } else {
         assert(WordSize == Expr::Int64 && "Unknown word size!");
@@ -1404,20 +1402,22 @@ void Executor::executeCall(ExecutionState &state,
         // x86-64 has quite complicated calling convention. However,
         // instead of implementing it, we can do a simple hack: just
         // make a function believe that all varargs are on stack.
-        executeMemoryOperation(state, true, arguments[0],
-                               ConstantExpr::create(48, 32), 0); // gp_offset
-        executeMemoryOperation(state, true,
-                               AddExpr::create(arguments[0], 
-                                               ConstantExpr::create(4, 64)),
-                               ConstantExpr::create(304, 32), 0); // fp_offset
-        executeMemoryOperation(state, true,
-                               AddExpr::create(arguments[0], 
-                                               ConstantExpr::create(8, 64)),
-                               sf.varargs->getBaseExpr(), 0); // overflow_arg_area
-        executeMemoryOperation(state, true,
-                               AddExpr::create(arguments[0], 
-                                               ConstantExpr::create(16, 64)),
-                               ConstantExpr::create(0, 64), 0); // reg_save_area
+        executeMemoryOperation(
+            state, true, 
+            arguments[0],
+            ConstantExpr::create(48, 32), 0); // gp_offset
+        executeMemoryOperation(
+            state, true,
+            AddExpr::create(arguments[0], ConstantExpr::create(4, 64)),
+            ConstantExpr::create(304, 32), 0); // fp_offset
+        executeMemoryOperation(
+            state, true,
+            AddExpr::create(arguments[0], ConstantExpr::create(8, 64)),
+            sf.varargs->getBaseExpr(), 0); // overflow_arg_area
+        executeMemoryOperation(
+            state, true,
+            AddExpr::create(arguments[0], ConstantExpr::create(16, 64)),
+            ConstantExpr::create(0, 64), 0); // reg_save_area
       }
       break;
     }
@@ -1427,7 +1427,7 @@ void Executor::executeCall(ExecutionState &state,
       // FIXME: We should validate that the target didn't do something bad
       // with va_end, however (like call it twice).
       break;
-        
+
     case Intrinsic::vacopy:
       // va_copy should have been lowered.
       //
@@ -1458,16 +1458,16 @@ void Executor::executeCall(ExecutionState &state,
     state.pc = kf->instructions;
 
     if (statsTracker)
-      statsTracker->framePushed(state, &state.stack[state.stack.size()-2]);
+      statsTracker->framePushed(state, &state.stack[state.stack.size() - 2]);
 
-     // TODO: support "byval" parameter attribute
-     // TODO: support zeroext, signext, sret attributes
+    // TODO: support "byval" parameter attribute
+    // TODO: support zeroext, signext, sret attributes
 
     unsigned callingArgs = arguments.size();
     unsigned funcArgs = f->arg_size();
     if (!f->isVarArg()) {
       if (callingArgs > funcArgs) {
-        klee_warning_once(f, "calling %s with extra arguments.", 
+        klee_warning_once(f, "calling %s with extra arguments.",
                           f->getName().data());
       } else if (callingArgs < funcArgs) {
         terminateStateOnError(state, "calling function with too few arguments",
@@ -1486,13 +1486,13 @@ void Executor::executeCall(ExecutionState &state,
       StackFrame &sf = state.stack.back();
       unsigned size = 0;
       bool requires16ByteAlignment = false;
-      for (unsigned i = funcArgs; i < callingArgs; i++) {
+      for (unsigned k = funcArgs; k < callingArgs; k++) {
         // FIXME: This is really specific to the architecture, not the pointer
         // size. This happens to work for x86-32 and x86-64, however.
         if (WordSize == Expr::Int32) {
-          size += Expr::getMinBytesForWidth(arguments[i]->getWidth());
+          size += Expr::getMinBytesForWidth(arguments[k]->getWidth());
         } else {
-          Expr::Width argWidth = arguments[i]->getWidth();
+          Expr::Width argWidth = arguments[k]->getWidth();
           // AMD64-ABI 3.5.7p5: Step 7. Align l->overflow_arg_area upwards to a
           // 16 byte boundary if alignment needed by type exceeds 8 byte
           // boundary.
@@ -1500,11 +1500,11 @@ void Executor::executeCall(ExecutionState &state,
           // Alignment requirements for scalar types is the same as their size
           if (argWidth > Expr::Int64) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
-             size = llvm::alignTo(size, 16);
+            size = llvm::alignTo(size, 16);
 #else
-             size = llvm::RoundUpToAlignment(size, 16);
+            size = llvm::RoundUpToAlignment(size, 16);
 #endif
-             requires16ByteAlignment = true;
+            requires16ByteAlignment = true;
           }
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
           size += llvm::alignTo(argWidth, WordSize) / 8;
@@ -1532,16 +1532,16 @@ void Executor::executeCall(ExecutionState &state,
 
         ObjectState *os = bindObjectInState(state, mo, true);
         unsigned offset = 0;
-        for (unsigned i = funcArgs; i < callingArgs; i++) {
+        for (unsigned k = funcArgs; k < callingArgs; k++) {
           // FIXME: This is really specific to the architecture, not the pointer
           // size. This happens to work for x86-32 and x86-64, however.
           if (WordSize == Expr::Int32) {
-            os->write(offset, arguments[i]);
-            offset += Expr::getMinBytesForWidth(arguments[i]->getWidth());
+            os->write(offset, arguments[k]);
+            offset += Expr::getMinBytesForWidth(arguments[k]->getWidth());
           } else {
             assert(WordSize == Expr::Int64 && "Unknown word size!");
 
-            Expr::Width argWidth = arguments[i]->getWidth();
+            Expr::Width argWidth = arguments[k]->getWidth();
             if (argWidth > Expr::Int64) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
               offset = llvm::alignTo(offset, 16);
@@ -1549,7 +1549,7 @@ void Executor::executeCall(ExecutionState &state,
               offset = llvm::RoundUpToAlignment(offset, 16);
 #endif
             }
-            os->write(offset, arguments[i]);
+            os->write(offset, arguments[k]);
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
             offset += llvm::alignTo(argWidth, WordSize) / 8;
 #else
@@ -1561,8 +1561,8 @@ void Executor::executeCall(ExecutionState &state,
     }
 
     unsigned numFormals = f->arg_size();
-    for (unsigned i=0; i<numFormals; ++i) 
-      bindArgument(kf, i, state, arguments[i]);
+    for (unsigned k = 0; k < numFormals; k++)
+      bindArgument(kf, k, state, arguments[k]);
   }
 }
 
