@@ -68,6 +68,11 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(10, 0)
+#include "llvm/Support/TypeSize.h"
+#else
+typedef unsigned TypeSize;
+#endif
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
@@ -1460,7 +1465,6 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
     if (statsTracker)
       statsTracker->framePushed(state, &state.stack[state.stack.size() - 2]);
 
-    // TODO: support "byval" parameter attribute
     // TODO: support zeroext, signext, sret attributes
 
     unsigned callingArgs = arguments.size();
@@ -1475,37 +1479,79 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
         return;
       }
     } else {
-      Expr::Width WordSize = Context::get().getPointerWidth();
-
       if (callingArgs < funcArgs) {
         terminateStateOnError(state, "calling function with too few arguments",
                               User);
         return;
       }
 
-      StackFrame &sf = state.stack.back();
-      unsigned size = 0;
+      // Only x86-32 and x86-64 are supported
+      Expr::Width WordSize = Context::get().getPointerWidth();
+      assert(((WordSize == Expr::Int32) || (WordSize == Expr::Int64)) &&
+             "Unknown word size!");
+
+      uint64_t size = 0; // total size of variadic arguments
       bool requires16ByteAlignment = false;
+
+      uint64_t offsets[callingArgs]; // offsets of variadic arguments
+      uint64_t argWidth;             // width of current variadic argument
+
+      CallSite cs(i);
       for (unsigned k = funcArgs; k < callingArgs; k++) {
-        // FIXME: This is really specific to the architecture, not the pointer
-        // size. This happens to work for x86-32 and x86-64, however.
-        if (WordSize == Expr::Int32) {
-          size += Expr::getMinBytesForWidth(arguments[k]->getWidth());
+        if (cs.isByValArgument(k)) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(9, 0)
+          Type *t = cs.getParamByValType(k);
+#else
+          auto arg = cs.getArgument(k);
+          Type *t = arg->getType();
+          assert(t->isPointerTy());
+          t = t->getPointerElementType();
+#endif
+          argWidth = kmodule->targetData->getTypeSizeInBits(t);
         } else {
-          Expr::Width argWidth = arguments[k]->getWidth();
+          argWidth = arguments[k]->getWidth();
+        }
+
+        if (WordSize == Expr::Int32) {
+          offsets[k] = size;
+          size += Expr::getMinBytesForWidth(argWidth);
+        } else {
+#if LLVM_VERSION_CODE > LLVM_VERSION(4, 0)
+          unsigned alignment = cs.getParamAlignment(k);
+#else
+          // getParamAlignment() is buggy for LLVM <= 4, so we instead
+          // get the attribute in a hacky way by parsing the textual
+          // representation
+          unsigned alignment = 0;
+          std::string str;
+          llvm::raw_string_ostream s(str);
+          s << *cs.getArgument(k);
+          size_t pos = str.find("align ");
+          if (pos != std::string::npos)
+            alignment = std::stoi(str.substr(pos + 6));
+#endif
+
           // AMD64-ABI 3.5.7p5: Step 7. Align l->overflow_arg_area upwards to a
           // 16 byte boundary if alignment needed by type exceeds 8 byte
           // boundary.
-          //
-          // Alignment requirements for scalar types is the same as their size
-          if (argWidth > Expr::Int64) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
-            size = llvm::alignTo(size, 16);
-#else
-            size = llvm::RoundUpToAlignment(size, 16);
-#endif
+          if (!alignment && argWidth > Expr::Int64) {
+            alignment = 16;
             requires16ByteAlignment = true;
           }
+
+          if (!alignment)
+            alignment = 8;
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
+          size = llvm::alignTo(size, alignment);
+#else
+          size = llvm::RoundUpToAlignment(size, alignment);
+#endif
+          offsets[k] = size;
+
+          // AMD64-ABI 3.5.7p5: Step 9. Set l->overflow_arg_area to:
+          // l->overflow_arg_area + sizeof(type)
+          // Step 10. Align l->overflow_arg_area upwards to an 8 byte boundary.
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
           size += llvm::alignTo(argWidth, WordSize) / 8;
 #else
@@ -1514,6 +1560,7 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
         }
       }
 
+      StackFrame &sf = state.stack.back();
       MemoryObject *mo = sf.varargs =
           memory->allocate(size, true, false, state.prevPC->inst,
                            (requires16ByteAlignment ? 16 : 8));
@@ -1531,30 +1578,20 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
         }
 
         ObjectState *os = bindObjectInState(state, mo, true);
-        unsigned offset = 0;
-        for (unsigned k = funcArgs; k < callingArgs; k++) {
-          // FIXME: This is really specific to the architecture, not the pointer
-          // size. This happens to work for x86-32 and x86-64, however.
-          if (WordSize == Expr::Int32) {
-            os->write(offset, arguments[k]);
-            offset += Expr::getMinBytesForWidth(arguments[k]->getWidth());
-          } else {
-            assert(WordSize == Expr::Int64 && "Unknown word size!");
 
-            Expr::Width argWidth = arguments[k]->getWidth();
-            if (argWidth > Expr::Int64) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
-              offset = llvm::alignTo(offset, 16);
-#else
-              offset = llvm::RoundUpToAlignment(offset, 16);
-#endif
-            }
-            os->write(offset, arguments[k]);
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
-            offset += llvm::alignTo(argWidth, WordSize) / 8;
-#else
-            offset += llvm::RoundUpToAlignment(argWidth, WordSize) / 8;
-#endif
+        for (unsigned k = funcArgs; k < callingArgs; k++) {
+          if (!cs.isByValArgument(k)) {
+            os->write(offsets[k], arguments[k]);
+          } else {
+            ConstantExpr *CE = dyn_cast<ConstantExpr>(arguments[k]);
+            assert(CE); // byval argument needs to be a concrete pointer
+
+            ObjectPair op;
+            state.addressSpace.resolveOne(CE, op);
+            const ObjectState *osarg = op.second;
+            assert(osarg);
+            for (unsigned i = 0; i < osarg->size; i++)
+              os->write(offsets[k] + i, osarg->read8(i));
           }
         }
       }
