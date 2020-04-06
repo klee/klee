@@ -491,6 +491,8 @@ set(KLEE_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_FULL_LIBDIR}/klee/runtime")
 # Location where KLEE will look for the built runtimes by default.
 set(KLEE_RUNTIME_DIRECTORY "${CMAKE_BINARY_DIR}/${KLEE_RUNTIME_BUILD_TYPE}/lib")
 
+file(MAKE_DIRECTORY ${KLEE_RUNTIME_DIRECTORY})
+
 ################################################################################
 # KLEE POSIX Runtime Support
 ################################################################################
@@ -532,7 +534,6 @@ if (ENABLE_KLEE_UCLIBC)
 
   # Make a symlink to KLEE_UCLIBC_C_BCA so KLEE can find it where it
   # is expected.
-  file(MAKE_DIRECTORY "${KLEE_RUNTIME_DIRECTORY}")
   execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink
     "${KLEE_UCLIBC_C_BCA}"
     "${KLEE_RUNTIME_DIRECTORY}/${KLEE_UCLIBC_BCA_NAME}"
