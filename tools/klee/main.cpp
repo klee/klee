@@ -195,6 +195,12 @@ namespace {
                    cl::init(false),
                    cl::cat(LinkCat));
 
+  cl::opt<std::string> RuntimeBuild(
+      "runtime-build",
+      cl::desc("Link with versions of the runtime library that were built with "
+               "the provided configuration (default=" RUNTIME_CONFIGURATION
+               ")."),
+      cl::init(RUNTIME_CONFIGURATION), cl::cat(LinkCat));
 
   /*** Checks options ***/
 
@@ -667,8 +673,7 @@ std::string KleeHandler::getRunTimeLibraryPath(const char *argv0) {
     KLEE_DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
                          "Using build directory KLEE library runtime :");
     libDir = KLEE_DIR;
-    llvm::sys::path::append(libDir,RUNTIME_CONFIGURATION);
-    llvm::sys::path::append(libDir,"lib");
+    llvm::sys::path::append(libDir, "runtime/lib");
   }
 
   KLEE_DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
@@ -1239,18 +1244,30 @@ int main(int argc, char **argv, char **envp) {
   }
 
   llvm::Module *mainModule = M.get();
+
+  // Detect architecture
+  std::string opt_suffix = "64"; // Fall back to 64bit
+  if (mainModule->getTargetTriple().find("i686") != std::string::npos ||
+      mainModule->getTargetTriple().find("i586") != std::string::npos ||
+      mainModule->getTargetTriple().find("i486") != std::string::npos ||
+      mainModule->getTargetTriple().find("i386") != std::string::npos)
+    opt_suffix = "32";
+
+  // Add additional user-selected suffix
+  opt_suffix += "_" + RuntimeBuild.getValue();
+
   // Push the module as the first entry
   loadedModules.emplace_back(std::move(M));
 
   std::string LibraryDir = KleeHandler::getRunTimeLibraryPath(argv[0]);
-  Interpreter::ModuleOptions Opts(LibraryDir.c_str(), EntryPoint,
+  Interpreter::ModuleOptions Opts(LibraryDir.c_str(), EntryPoint, opt_suffix,
                                   /*Optimize=*/OptimizeModule,
                                   /*CheckDivZero=*/CheckDivZero,
                                   /*CheckOvershift=*/CheckOvershift);
 
   if (WithPOSIXRuntime) {
     SmallString<128> Path(Opts.LibraryDir);
-    llvm::sys::path::append(Path, "libkleeRuntimePOSIX.bca");
+    llvm::sys::path::append(Path, "libkleeRuntimePOSIX" + opt_suffix + ".bca");
     klee_message("NOTE: Using POSIX model: %s", Path.c_str());
     if (!klee::loadFile(Path.c_str(), mainModule->getContext(), loadedModules,
                         errorMsg))
@@ -1274,7 +1291,7 @@ int main(int argc, char **argv, char **envp) {
     klee_message("NOTE: Using libcxx : %s", LibcxxBC.c_str());
 #ifdef SUPPORT_KLEE_EH_CXX
     SmallString<128> EhCxxPath(Opts.LibraryDir);
-    llvm::sys::path::append(EhCxxPath, "libklee-eh-cxx.bca");
+    llvm::sys::path::append(EhCxxPath, "libkleeeh-cxx" + opt_suffix + ".bca");
     if (!klee::loadFile(EhCxxPath.c_str(), mainModule->getContext(),
                         loadedModules, errorMsg))
       klee_error("error loading libklee-eh-cxx '%s': %s", EhCxxPath.c_str(),
@@ -1287,7 +1304,8 @@ int main(int argc, char **argv, char **envp) {
   case LibcType::KleeLibc: {
     // FIXME: Find a reasonable solution for this.
     SmallString<128> Path(Opts.LibraryDir);
-    llvm::sys::path::append(Path, "libklee-libc.bca");
+    llvm::sys::path::append(Path,
+                            "libkleeRuntimeKLEELibc" + opt_suffix + ".bca");
     if (!klee::loadFile(Path.c_str(), mainModule->getContext(), loadedModules,
                         errorMsg))
       klee_error("error loading klee libc '%s': %s", Path.c_str(),
@@ -1296,7 +1314,8 @@ int main(int argc, char **argv, char **envp) {
   /* Falls through. */
   case LibcType::FreeStandingLibc: {
     SmallString<128> Path(Opts.LibraryDir);
-    llvm::sys::path::append(Path, "libkleeRuntimeFreeStanding.bca");
+    llvm::sys::path::append(Path,
+                            "libkleeRuntimeFreeStanding" + opt_suffix + ".bca");
     if (!klee::loadFile(Path.c_str(), mainModule->getContext(), loadedModules,
                         errorMsg))
       klee_error("error loading free standing support '%s': %s", Path.c_str(),
