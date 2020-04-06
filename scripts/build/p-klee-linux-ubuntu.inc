@@ -3,6 +3,7 @@ install_build_dependencies_klee() {
 
   dependencies=(
     build-essential
+    gcc-multilib # to generate 32bit
     cmake
     python-pip #for lit
     python-setuptools #for lit
