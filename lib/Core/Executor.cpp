@@ -520,7 +520,8 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
 
   // Link with KLEE intrinsics library before running any optimizations
   SmallString<128> LibPath(opts.LibraryDir);
-  llvm::sys::path::append(LibPath, "libkleeRuntimeIntrinsic.bca");
+  llvm::sys::path::append(LibPath,
+                          "libkleeRuntimeIntrinsic" + opts.OptSuffix + ".bca");
   std::string error;
   if (!klee::loadFile(LibPath.str(), modules[0]->getContext(), modules,
                       error)) {

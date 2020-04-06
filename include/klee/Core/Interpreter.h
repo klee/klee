@@ -54,14 +54,16 @@ public:
   struct ModuleOptions {
     std::string LibraryDir;
     std::string EntryPoint;
+    std::string OptSuffix;
     bool Optimize;
     bool CheckDivZero;
     bool CheckOvershift;
 
     ModuleOptions(const std::string &_LibraryDir,
-                  const std::string &_EntryPoint, bool _Optimize,
-                  bool _CheckDivZero, bool _CheckOvershift)
-        : LibraryDir(_LibraryDir), EntryPoint(_EntryPoint), Optimize(_Optimize),
+                  const std::string &_EntryPoint, const std::string &_OptSuffix,
+                  bool _Optimize, bool _CheckDivZero, bool _CheckOvershift)
+        : LibraryDir(_LibraryDir), EntryPoint(_EntryPoint),
+          OptSuffix(_OptSuffix), Optimize(_Optimize),
           CheckDivZero(_CheckDivZero), CheckOvershift(_CheckOvershift) {}
   };
 
