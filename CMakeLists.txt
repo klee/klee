@@ -10,19 +10,9 @@
 ###############################################################################
 # Minimum CMake version and policies
 ###############################################################################
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.5.0)
 if (POLICY CMP0054)
-  # FIXME: This is horrible. With the old behaviour,
-  # quoted strings like "MSVC" in if() conditionals
-  # get implicitly dereferenced. The NEW behaviour
-  # doesn't do this but CMP0054 was only introduced
-  # in CMake 3.1 and we support lower versions as the
-  # minimum. We could set NEW here but it would be very
-  # confusing to use NEW for some builds and OLD for others
-  # which could lead to some subtle bugs. Instead when the
-  # minimum version is 3.1 change this policy to NEW and remove
-  # the hacks in place to work around it.
-  cmake_policy(SET CMP0054 OLD)
+  cmake_policy(SET CMP0054 NEW)
 endif()
 
 if (POLICY CMP0042)
@@ -63,19 +53,9 @@ set(PACKAGE_URL "\"https://klee.github.io\"")
 ################################################################################
 # Set various useful variables depending on CMake version
 ################################################################################
-if (("${CMAKE_VERSION}" VERSION_EQUAL "3.2") OR ("${CMAKE_VERSION}" VERSION_GREATER "3.2"))
-  # In CMake >= 3.2 add_custom_command() supports a ``USES_TERMINAL`` argument
-  set(ADD_CUSTOM_COMMAND_USES_TERMINAL_ARG "USES_TERMINAL")
-else()
-  set(ADD_CUSTOM_COMMAND_USES_TERMINAL_ARG "")
-endif()
+set(ADD_CUSTOM_COMMAND_USES_TERMINAL_ARG "USES_TERMINAL")
 
-if (("${CMAKE_VERSION}" VERSION_EQUAL "3.4") OR ("${CMAKE_VERSION}" VERSION_GREATER "3.4"))
-  # In CMake >= 3.4 ExternalProject_Add_Step() supports a `USES_TERMINAL` argument
-  set(EXTERNAL_PROJECT_ADD_STEP_USES_TERMINAL_ARG "USES_TERMINAL" "1")
-else()
-  set(EXTERNAL_PROJECT_ADD_STEP_USES_TERMINAL_ARG "")
-endif()
+set(EXTERNAL_PROJECT_ADD_STEP_USES_TERMINAL_ARG "USES_TERMINAL" "1")
 
 ################################################################################
 # Sanity check - Disallow building in source.
@@ -302,12 +282,8 @@ endif()
 ################################################################################
 # C++ version
 ################################################################################
-if ("${CMAKE_VERSION}" VERSION_LESS "3.1")
-  add_global_cxx_flag("-std=c++14" REQUIRED)
-else ()
-  set(CMAKE_CXX_STANDARD 14)
-  set(CMAKE_CXX_STANDARD_REQUIRED ON)
-endif ()
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 ################################################################################
 # Warnings
