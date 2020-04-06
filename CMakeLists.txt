@@ -51,13 +51,6 @@ set(PACKAGE_STRING "\"KLEE ${KLEE_VERSION}\"")
 set(PACKAGE_URL "\"https://klee.github.io\"")
 
 ################################################################################
-# Set various useful variables depending on CMake version
-################################################################################
-set(ADD_CUSTOM_COMMAND_USES_TERMINAL_ARG "USES_TERMINAL")
-
-set(EXTERNAL_PROJECT_ADD_STEP_USES_TERMINAL_ARG "USES_TERMINAL" "1")
-
-################################################################################
 # Sanity check - Disallow building in source.
 # Otherwise we would overwrite the Makefiles of the old build system.
 ################################################################################
@@ -65,39 +58,6 @@ if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
   message(FATAL_ERROR "In source builds are not allowed. You should invoke "
           "CMake from a different directory.")
 endif()
-
-################################################################################
-# Sanity Check: Check for in source build of the old build system.
-# Some build files from the old build system could interfere with our build.
-################################################################################
-set(KLEE_OLD_BUILD_SYSTEM_FILES
-  "include/klee/Config/config.h"
-  "test/lit.site.cfg"
-)
-foreach (legacy_file ${KLEE_OLD_BUILD_SYSTEM_FILES})
-  if (EXISTS "${CMAKE_SOURCE_DIR}/${legacy_file}")
-    if (EXISTS "${CMAKE_SOURCE_DIR}/.git")
-      set(CLEAN_SRC_DIR_INSTRUCTIONS
-        "The KLEE source tree apears to be a git repository so you can run"
-        " \"git clean -dxn\" to see what files aren't part of the repo and then"
-        " run \"git clean -fdx\" to remove them."
-      )
-    else()
-      # This is the only reliable way to fix this.
-      set(CLEAN_SRC_DIR_INSTRUCTIONS
-        "The KLEE source tree doesn't appear to be a git repository so you will"
-        " need to download a fresh copy of KLEE's source code."
-      )
-    endif()
-    message(FATAL_ERROR "\"${CMAKE_SOURCE_DIR}/${legacy_file}\""
-      " exists in KLEE's source tree. It is likely that the Autoconf/Makefile"
-      " build system was configured to do an in-source build in KLEE's source"
-      " tree. This could cause problems with the CMake build. "
-      ${CLEAN_SRC_DIR_INSTRUCTIONS}
-      " You can then run cmake again."
-    )
-  endif()
-endforeach()
 
 ################################################################################
 # Build type

@@ -25,7 +25,7 @@ if (ENABLE_DOXYGEN)
     add_custom_target(doc-doxygen
       COMMAND "${DOXYGEN_EXECUTABLE}" "${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg"
       COMMENT "Generating Doxygen documentation"
-      ${ADD_CUSTOM_COMMAND_USES_TERMINAL_ARG}
+      USES_TERMINAL
     )
     add_dependencies(docs doc-doxygen)
 
