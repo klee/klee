@@ -1,9 +1,12 @@
+/* This test needs deterministic allocation with enough spacing
+   between the allocations.  Otherwise, if by coincidence the
+   allocated vararg memory object is directly before another valid
+   memory object, KLEE will be able to resolve the out-of-bounds
+   access with another object and not detect the false access.  This
+   will fail this test case. */
+
 // RUN: %clang %s -emit-llvm %O0opt -c -g -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// This test needs deterministic allocation with enough spacing between the allocations.
-// Otherwise, if by coincidence the allocated vararg memory object is directly before another valid memory object,
-// KLEE will be able to resolve the out-of-bounds access with another object and not detect the false access.
-// This will fail this test case.
 // RUN: %klee --output-dir=%t.klee-out --allocate-determ=true --allocate-determ-start-address=0x0 %t1.bc | FileCheck %s
 // RUN: test -f %t.klee-out/test000001.ptr.err
 
