@@ -55,12 +55,15 @@ RUN /tmp/klee_src/scripts/build/build.sh --debug --install-system-deps klee && c
 ENV PATH="$PATH:/tmp/llvm-60-install_O_D_A/bin:/home/klee/klee_build/bin"
 ENV BASE=/tmp
 
+# Add KLEE header files to standard include folder
+RUN /bin/bash -c 'ln -s ${BASE}/klee_src/include /usr/include/klee'
+
 USER klee
 WORKDIR /home/klee
 ENV LD_LIBRARY_PATH /home/klee/klee_build/lib/
 
 # Add KLEE binary directory to PATH
-RUN /bin/bash -c 'ln -s ${BASE}/klee_src /home/klee/ && ln -s ${BASE}/klee_build* /home/klee/klee_build && ln -s ${BASE}/klee_src/include /usr/include/klee' 
+RUN /bin/bash -c 'ln -s ${BASE}/klee_src /home/klee/ && ln -s ${BASE}/klee_build* /home/klee/klee_build' 
 
 # TODO Remove when STP is fixed
 RUN /bin/bash -c 'echo "export LD_LIBRARY_PATH=$(cd ${BASE}/metaSMT-*-deps/stp-git-basic/lib/ && pwd):$LD_LIBRARY_PATH" >> /home/klee/.bashrc'
