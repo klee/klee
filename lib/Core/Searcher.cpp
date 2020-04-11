@@ -423,7 +423,7 @@ ExecutionState &BatchingSearcher::selectState() {
         (time::getWallTime() - lastStartTime) > timeBudget)) ||
       ((instructionBudget > 0) &&
        (stats::instructions - lastStartInstructions) > instructionBudget)) {
-    if (lastState) {
+    if (lastState && timeBudget.toSeconds() > 0) {
       time::Span delta = time::getWallTime() - lastStartTime;
       auto t = timeBudget;
       t *= 1.1;
