@@ -21,9 +21,8 @@ env:
     #   UCLIBC: {0, klee_uclibc_v1.0.0, klee_0_9_29} // Note ``0`` means disabled
     #   DISABLE_ASSERTIONS: {0, 1}
     #   ENABLE_OPTIMIZED: {0, 1}
-    #   COVERAGE: {0, 1}
+    #   COVERAGE: {0, 1} // when set indicates that coverage data should be uploaded to the service
     #   USE_TCMALLOC: {0, 1}
-    # COVERAGE when set indicates that coverage data should be uploaded to the service
 
     # Define default values - they are overwritten by each matrix entry if needed
     global:
@@ -32,27 +31,27 @@ env:
     - secure: DQAEQWJblXvIztN/sgH63OtFncI+Qju6wRy1zIV/iLf5KbAmLs1h3itU7EsE/+3+LgV1MVQ5QNJDBUj17A6VHRKNaQ5qnIllTAcC3o0nPDohQkQoCgDG8HZ+M4wtVfr7q2K6byEPB2UbSH+mEjSMTihJufgBBVfKyyozAfYycjg=
 
     # Default configuration for all Travis-CI jobs. They are overriden by each job.
-    - BASE_IMAGE: ubuntu:bionic-20200112
-    - REPOSITORY: klee
+    - BASE_IMAGE=ubuntu:bionic-20200112
+    - REPOSITORY=klee
 
-    - COVERAGE: 0
-    - DISABLE_ASSERTIONS: 0
-    - ENABLE_OPTIMIZED: 1
-    - ENABLE_DEBUG: 1
-    - GTEST_VERSION: 1.7.0
-    - KLEE_RUNTIME_BUILD: "Debug+Asserts"
-    - LLVM_VERSION: 6.0
-    - METASMT_VERSION: qf_abv
-    - MINISAT_VERSION: "master"
-    - REQUIRES_RTTI: 0
-    - SANITIZER_BUILD:
-    - SOLVERS: STP:Z3
-    - STP_VERSION: 2.3.3
-    - TCMALLOC_VERSION: 2.7
-    - UCLIBC_VERSION: klee_uclibc_v1.2
-    - USE_TCMALLOC: 1
-    - USE_LIBCXX: 1
-    - Z3_VERSION: 4.8.4
+    - COVERAGE=0
+    - DISABLE_ASSERTIONS=0
+    - ENABLE_OPTIMIZED=1
+    - ENABLE_DEBUG=1
+    - GTEST_VERSION=1.7.0
+    - KLEE_RUNTIME_BUILD="Debug+Asserts"
+    - LLVM_VERSION=6.0
+    - METASMT_VERSION=qf_abv
+    - MINISAT_VERSION="master"
+    - REQUIRES_RTTI=0
+    - SANITIZER_BUILD=
+    - SOLVERS=STP:Z3
+    - STP_VERSION=2.3.3
+    - TCMALLOC_VERSION=2.7
+    - UCLIBC_VERSION=klee_uclibc_v1.2
+    - USE_TCMALLOC=1
+    - USE_LIBCXX=1
+    - Z3_VERSION=4.8.4
 
 jobs:
     include:
