@@ -54,54 +54,88 @@ env:
     - USE_LIBCXX: 1
     - Z3_VERSION: 4.8.4
 
-    matrix:
+jobs:
+    include:
     # Check supported LLVM versions
-    - LLVM_VERSION=10.0
-    - LLVM_VERSION=9.0
-    - LLVM_VERSION=8.0
-    - LLVM_VERSION=7.0
-    - LLVM_VERSION=6.0
-    - LLVM_VERSION=5.0
-    - LLVM_VERSION=4.0
-    - LLVM_VERSION=3.9
-    - LLVM_VERSION=3.8
+    - name: "LLVM 10"
+      env: LLVM_VERSION=10.0
 
-    # *Sanitizer builds. Do unoptimized build otherwise the optimizer might remove problematic code
-    - SANITIZER_BUILD=address ENABLE_OPTIMIZED=0 USE_TCMALLOC=0
-    - SANITIZER_BUILD=undefined ENABLE_OPTIMIZED=0 USE_TCMALLOC=0
+    - name: "LLVM 9"
+      env: LLVM_VERSION=9.0
+
+    - name: "LLVM 8"
+      env: LLVM_VERSION=8.0
+
+    - name: "LLVM 7"
+      env: LLVM_VERSION=7.0
+
+    - name: "LLVM 6"
+      env: LLVM_VERSION=6.0
+
+    - name: "LLVM 5"
+      env: LLVM_VERSION=5.0
+
+    - name: "LLVM 4"
+      env: LLVM_VERSION=4.0
+
+    - name: "LLVM 3.9"
+      env: LLVM_VERSION=3.9
+
+    - name: "LLVM 3.8"
+      env: LLVM_VERSION=3.8
+
+    # Sanitizer builds. Do unoptimized build otherwise the optimizer might remove problematic code
+    - name: "ASan"
+      env: SANITIZER_BUILD=address ENABLE_OPTIMIZED=0 USE_TCMALLOC=0
+
+    - name: "UBSan"
+      env: SANITIZER_BUILD=undefined ENABLE_OPTIMIZED=0 USE_TCMALLOC=0
+    
     # Use without libcxx as it is too slow to finish before travis time-out
-    - SANITIZER_BUILD=memory ENABLE_OPTIMIZED=0 USE_TCMALLOC=0 SOLVERS=STP USE_LIBCXX=0
+    - name: "MSan"
+      env: SANITIZER_BUILD=memory ENABLE_OPTIMIZED=0 USE_TCMALLOC=0 SOLVERS=STP USE_LIBCXX=0
 
     # Test just using Z3 only
-    - SOLVERS=Z3
+    - name: "Z3 only"
+      env: SOLVERS=Z3
 
     # Test just using metaSMT
-    - SOLVERS=metaSMT METASMT_DEFAULT=STP REQUIRES_RTTI=1
-    - SOLVERS=metaSMT METASMT_DEFAULT=BTOR REQUIRES_RTTI=1
+    - name: "metaSMT STP"
+      env: SOLVERS=metaSMT METASMT_DEFAULT=STP REQUIRES_RTTI=1
+
+    - name: "metaSMT Boolector"
+      env: SOLVERS=metaSMT METASMT_DEFAULT=BTOR REQUIRES_RTTI=1
 
     # Test we can build against STP master
-    - SOLVERS=STP STP_VERSION=master
+    - name: "STP master"
+      env: SOLVERS=STP STP_VERSION=master
 
     # Check we can build latest klee-uclibc branch
-    - UCLIBC_VERSION=klee_0_9_29
+    - name: "Latest klee-uclibc"
+      env: UCLIBC_VERSION=klee_0_9_29
 
     # Check at least one build with Asserts disabled.
-    - SOLVERS=STP DISABLE_ASSERTIONS=1
+    - name: "Asserts enabled"
+      env: SOLVERS=STP DISABLE_ASSERTIONS=1
 
     # Check without TCMALLOC and with an optimised runtime library
-    - USE_TCMALLOC=0 KLEE_RUNTIME_BUILD="Release+Debug+Asserts"
+    - name: "No TCMalloc, optimised runtime"
+      env: USE_TCMALLOC=0 KLEE_RUNTIME_BUILD="Release+Debug+Asserts"
 
     # Coverage build
-    - ENABLE_OPTIMIZED=0 COVERAGE=1
+    - name: "Coverage"
+      env: ENABLE_OPTIMIZED=0 COVERAGE=1
+
+    # macOS
+    - name: "macOS"
+      os: osx
+      env: SOLVERS=STP UCLIBC_VERSION=0 USE_TCMALLOC=0 USE_LIBCXX=0
+
+    # Docker
+    - name: "Docker"
+      env: BUILD_DOCKER=1
 
     # TODO: Add Doxygen build
-
-#stop
-matrix:
-  include:
-    - os: osx
-      env: SOLVERS=STP UCLIBC_VERSION=0 USE_TCMALLOC=0 USE_LIBCXX=0
-    - env: BUILD_DOCKER=1
 addons:
   apt:
     packages:
