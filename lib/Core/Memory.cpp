@@ -138,6 +138,11 @@ ArrayCache *ObjectState::getArrayCache() const {
   return object->parent->getArrayCache();
 }
 
+bool ObjectState::isConcreteOnly() const {
+  return concreteMask == nullptr && flushMask == nullptr &&
+         knownSymbolics == nullptr;
+}
+
 /***/
 
 const UpdateList &ObjectState::getUpdates() const {
@@ -454,6 +459,20 @@ ref<Expr> ObjectState::read(const ref<Expr> &_offset, Expr::Width width) const {
 }
 
 ref<Expr> ObjectState::read(unsigned offset, Expr::Width width) const {
+  // Fast-track read if object is fully concrete
+  if (isConcreteOnly()) {
+    // Treat bool specially, it is the only non-byte sized write we allow.
+    if (width == Expr::Bool)
+      return ConstantExpr::alloc(llvm::APInt(1, concreteStore[offset] & 1));
+    if (width == Expr::Int8)
+      return ConstantExpr::create(concreteStore[offset], Expr::Int8);
+
+    if (Context::get().isLittleEndian()) {
+      llvm::APInt value(width, 0);
+      llvm::LoadIntFromMemory(value, concreteStore + offset, width / 8);
+      return ConstantExpr::alloc(value);
+    }
+  }
   // Treat bool specially, it is the only non-byte sized write we allow.
   if (width == Expr::Bool)
     return ExtractExpr::create(read8(offset), 0, Expr::Bool);
@@ -502,6 +521,13 @@ void ObjectState::write(unsigned offset, const ref<Expr> &value) {
   // Check for writes of constant values.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(value)) {
     Expr::Width w = CE->getWidth();
+    // check if object is still fully concrete
+    if (isConcreteOnly() && Context::get().isLittleEndian()) {
+      // Extend bit and write as single byte
+      w = w > 1 ? w : Expr::Int8;
+      llvm::StoreIntToMemory(CE->getAPValue(), concreteStore + offset, w / 8);
+      return;
+    }
     if (w <= 64 && klee::bits64::isPowerOfTwo(w)) {
       uint64_t val = CE->getZExtValue();
       switch (w) {

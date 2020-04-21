@@ -266,6 +266,9 @@ private:
   void markByteUnflushed(unsigned offset);
   void setKnownSymbolic(unsigned offset, Expr *value);
 
+  /// Return true if object is only concrete
+  /// \return
+  bool isConcreteOnly() const;
   ArrayCache *getArrayCache() const;
 };
   
