@@ -24,14 +24,13 @@ namespace klee {
   /// is true then this will including those reachable by traversing
   /// update lists. Note that this may be slow and return a large
   /// number of results.
-  void findReads(ref<Expr> e, 
-                 bool visitUpdates,
-                 std::vector< ref<ReadExpr> > &result);
-  
+  void findReads(const ref<Expr> &e, bool visitUpdates,
+                 std::vector<ref<ReadExpr>> &result);
+
   /// Return a list of all unique symbolic objects referenced by the given
   /// expression.
-  void findSymbolicObjects(ref<Expr> e,
-                           std::vector<const Array*> &results);
+  void findSymbolicObjects(const ref<Expr> &e,
+                           std::vector<const Array *> &results);
 
   /// Return a list of all unique symbolic objects referenced by the
   /// given expression range.

@@ -43,7 +43,7 @@ namespace klee {
     }
     
     ref<Expr> evaluate(const Array *mo, unsigned index) const;
-    ref<Expr> evaluate(ref<Expr> e);
+    ref<Expr> evaluate(const ref<Expr> &e) const;
     void createConstraintsFromAssignment(std::vector<ref<Expr> > &out) const;
 
     template<typename InputIterator>
@@ -81,9 +81,9 @@ namespace klee {
     }
   }
 
-  inline ref<Expr> Assignment::evaluate(ref<Expr> e) { 
+  inline ref<Expr> Assignment::evaluate(const ref<Expr> &e) const {
     AssignmentEvaluator v(*this);
-    return v.visit(e); 
+    return v.visit(e);
   }
 
   template<typename InputIterator>

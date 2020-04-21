@@ -312,11 +312,11 @@ void Expr::printWidth(llvm::raw_ostream &os, Width width) {
   }
 }
 
-ref<Expr> Expr::createImplies(ref<Expr> hyp, ref<Expr> conc) {
+ref<Expr> Expr::createImplies(const ref<Expr> &hyp, const ref<Expr> &conc) {
   return OrExpr::create(Expr::createIsZero(hyp), conc);
 }
 
-ref<Expr> Expr::createIsZero(ref<Expr> e) {
+ref<Expr> Expr::createIsZero(const ref<Expr> &e) {
   return EqExpr::create(e, ConstantExpr::create(0, e->getWidth()));
 }
 
@@ -493,7 +493,7 @@ ref<ConstantExpr> ConstantExpr::Sge(const ref<ConstantExpr> &RHS) {
 
 /***/
 
-ref<Expr>  NotOptimizedExpr::create(ref<Expr> src) {
+ref<Expr> NotOptimizedExpr::create(const ref<Expr> &src) {
   return NotOptimizedExpr::alloc(src);
 }
 
@@ -530,7 +530,7 @@ unsigned Array::computeHash() {
 }
 /***/
 
-ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index) {
+ref<Expr> ReadExpr::create(const UpdateList &ul, const ref<Expr> &index) {
   // rollback update nodes if possible
 
   // Iterate through the update list from the most recent to the
@@ -584,7 +584,8 @@ int ReadExpr::compareContents(const Expr &b) const {
   return updates.compare(static_cast<const ReadExpr&>(b).updates);
 }
 
-ref<Expr> SelectExpr::create(ref<Expr> c, ref<Expr> t, ref<Expr> f) {
+ref<Expr> SelectExpr::create(const ref<Expr> &c, const ref<Expr> &t,
+                             const ref<Expr> &f) {
   Expr::Width kt = t->getWidth();
 
   assert(c->getWidth()==Bool && "type mismatch");
@@ -667,7 +668,7 @@ ref<Expr> ConcatExpr::create8(const ref<Expr> &kid1, const ref<Expr> &kid2,
 
 /***/
 
-ref<Expr> ExtractExpr::create(ref<Expr> expr, unsigned off, Width w) {
+ref<Expr> ExtractExpr::create(const ref<Expr> &expr, unsigned off, Width w) {
   unsigned kw = expr->getWidth();
   assert(w > 0 && off + w <= kw && "invalid extract");
   

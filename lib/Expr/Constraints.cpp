@@ -35,7 +35,8 @@ private:
   ref<Expr> src, dst;
 
 public:
-  ExprReplaceVisitor(ref<Expr> _src, ref<Expr> _dst) : src(_src), dst(_dst) {}
+  ExprReplaceVisitor(ref<Expr> _src, ref<Expr> _dst)
+      : src(std::move(_src)), dst(std::move(_dst)) {}
 
   Action visitExpr(const Expr &e) {
     if (e == *src.get()) {
@@ -95,11 +96,11 @@ bool ConstraintManager::rewriteConstraints(ExprVisitor &visitor) {
   return changed;
 }
 
-void ConstraintManager::simplifyForValidConstraint(ref<Expr> e) {
-  // XXX 
+void ConstraintManager::simplifyForValidConstraint(const ref<Expr> &e) {
+  // XXX
 }
 
-ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
+ref<Expr> ConstraintManager::simplifyExpr(const ref<Expr> &e) const {
   if (isa<ConstantExpr>(e))
     return e;
 
@@ -124,7 +125,7 @@ ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
   return ExprReplaceVisitor2(equalities).visit(e);
 }
 
-void ConstraintManager::addConstraintInternal(ref<Expr> e) {
+void ConstraintManager::addConstraintInternal(const ref<Expr> &e) {
   // rewrite any known equalities and split Ands into different conjuncts
 
   switch (e->getKind()) {
@@ -164,7 +165,6 @@ void ConstraintManager::addConstraintInternal(ref<Expr> e) {
   }
 }
 
-void ConstraintManager::addConstraint(ref<Expr> e) {
-  e = simplifyExpr(e);
-  addConstraintInternal(e);
+void ConstraintManager::addConstraint(const ref<Expr> &e) {
+  addConstraintInternal(simplifyExpr(e));
 }

@@ -218,15 +218,16 @@ bool AssignmentGenerator::helperGenerateAssignment(const ref<Expr> &e,
   }
 }
 
-bool AssignmentGenerator::isReadExprAtOffset(ref<Expr> e, const ReadExpr *base,
-                                             ref<Expr> offset) {
+bool AssignmentGenerator::isReadExprAtOffset(const ref<Expr> &e,
+                                             const ReadExpr *base,
+                                             const ref<Expr> &offset) {
   const ReadExpr *re = dyn_cast<ReadExpr>(e.get());
   if (!re || (re->getWidth() != Expr::Int8))
     return false;
   return SubExpr::create(re->index, base->index) == offset;
 }
 
-ReadExpr *AssignmentGenerator::hasOrderedReads(ref<Expr> e) {
+ReadExpr *AssignmentGenerator::hasOrderedReads(const ref<Expr> &e) {
   assert(e->getKind() == Expr::Concat);
 
   const ReadExpr *base = dyn_cast<ReadExpr>(e->getKid(0));
@@ -241,21 +242,21 @@ ReadExpr *AssignmentGenerator::hasOrderedReads(ref<Expr> e) {
   ref<Expr> strideExpr = ConstantExpr::alloc(-1, idxWidth);
   ref<Expr> offset = ConstantExpr::create(0, idxWidth);
 
-  e = e->getKid(1);
+  ref<Expr> kid1 = e->getKid(1);
 
   // concat chains are unbalanced to the right
-  while (e->getKind() == Expr::Concat) {
+  while (kid1->getKind() == Expr::Concat) {
     offset = AddExpr::create(offset, strideExpr);
-    if (!isReadExprAtOffset(e->getKid(0), base, offset))
+    if (!isReadExprAtOffset(kid1->getKid(0), base, offset))
       return NULL;
-    e = e->getKid(1);
+    kid1 = kid1->getKid(1);
   }
 
   offset = AddExpr::create(offset, strideExpr);
-  if (!isReadExprAtOffset(e, base, offset))
+  if (!isReadExprAtOffset(kid1, base, offset))
     return NULL;
 
-  return cast<ReadExpr>(e.get());
+  return cast<ReadExpr>(kid1.get());
 }
 
 ref<Expr> AssignmentGenerator::createSubExpr(const ref<Expr> &l, ref<Expr> &r) {

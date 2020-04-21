@@ -231,11 +231,11 @@ bool SpecialFunctionHandler::handle(ExecutionState &state,
 /****/
 
 // reads a concrete string from memory
-std::string 
-SpecialFunctionHandler::readStringAtAddress(ExecutionState &state, 
-                                            ref<Expr> addressExpr) {
+std::string
+SpecialFunctionHandler::readStringAtAddress(ExecutionState &state,
+                                            const ref<Expr> &_addressExpr) {
   ObjectPair op;
-  addressExpr = executor.toUnique(state, addressExpr);
+  ref<Expr> addressExpr = executor.toUnique(state, _addressExpr);
   if (!isa<ConstantExpr>(addressExpr)) {
     executor.terminateStateOnError(
         state, "Symbolic string pointer passed to one of the klee_ functions",

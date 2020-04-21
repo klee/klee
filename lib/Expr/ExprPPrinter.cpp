@@ -72,23 +72,22 @@ private:
 
   /// shouldPrintWidth - Predicate for whether this expression should
   /// be printed with its width.
-  bool shouldPrintWidth(ref<Expr> e) {
+  bool shouldPrintWidth(const ref<Expr> &e) const {
     if (PCAllWidths)
       return true;
     return e->getWidth() != Expr::Bool;
   }
 
-  bool isVerySimple(const ref<Expr> &e) { 
+  bool isVerySimple(const ref<Expr> &e) const {
     return isa<ConstantExpr>(e) || bindings.find(e)!=bindings.end();
   }
 
-  bool isVerySimpleUpdate(const UpdateNode *un) {
+  bool isVerySimpleUpdate(const UpdateNode *un) const {
     return !un || updateBindings.find(un)!=updateBindings.end();
   }
 
-
   // document me!
-  bool isSimple(const ref<Expr> &e) { 
+  bool isSimple(const ref<Expr> &e) const {
     if (isVerySimple(e)) {
       return true;
     } else if (const ReadExpr *re = dyn_cast<ReadExpr>(e)) {
@@ -103,13 +102,13 @@ private:
     }
   }
 
-  bool hasSimpleKids(const Expr *ep) {
-      for (unsigned i=0; i<ep->getNumKids(); i++)
-        if (!isSimple(ep->getKid(i)))
-          return false;
-      return true;
+  bool hasSimpleKids(const Expr *ep) const {
+    for (unsigned i = 0; i < ep->getNumKids(); i++)
+      if (!isSimple(ep->getKid(i)))
+        return false;
+    return true;
   }
-  
+
   void scanUpdate(const UpdateNode *un) {
     // FIXME: This needs to be non-recursive.
     if (un) {
@@ -199,7 +198,7 @@ private:
     PC << " @ " << updates.root->name;
   }
 
-  void printWidth(PrintContext &PC, ref<Expr> e) {
+  void printWidth(PrintContext &PC, const ref<Expr> &e) {
     if (!shouldPrintWidth(e))
       return;
 
@@ -212,7 +211,6 @@ private:
     PC << e->getWidth();
   }
 
-  
   bool isReadExprAtOffset(ref<Expr> e, const ReadExpr *base, ref<Expr> offset) {
     const ReadExpr *re = dyn_cast<ReadExpr>(e.get());
       

@@ -1125,7 +1125,8 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   }
 }
 
-void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
+void Executor::addConstraint(ExecutionState &state,
+                             const ref<Expr> &condition) {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(condition)) {
     if (!CE->isTrue())
       llvm::report_fatal_error("attempt to add invalid constraint");
@@ -1188,14 +1189,13 @@ void Executor::bindArgument(KFunction *kf, unsigned index,
   getArgumentCell(state, kf, index).value = value;
 }
 
-ref<Expr> Executor::toUnique(const ExecutionState &state, 
-                             ref<Expr> &e) {
-  ref<Expr> result = e;
+ref<Expr> Executor::toUnique(const ExecutionState &state, const ref<Expr> &_e) {
+  ref<Expr> result = _e;
 
-  if (!isa<ConstantExpr>(e)) {
+  if (!isa<ConstantExpr>(_e)) {
     ref<ConstantExpr> value;
     bool isTrue = false;
-    e = optimizer.optimizeExpr(e, true);
+    ref<Expr> e = optimizer.optimizeExpr(_e, true);
     solver->setTimeout(coreSolverTimeout);
     if (solver->getValue(state, e, value)) {
       ref<Expr> cond = EqExpr::create(e, value);
@@ -1205,18 +1205,16 @@ ref<Expr> Executor::toUnique(const ExecutionState &state,
     }
     solver->setTimeout(time::Span());
   }
-  
+
   return result;
 }
 
-
 /* Concretize the given expression, and return a possible constant value. 
    'reason' is just a documentation string stating the reason for concretization. */
-ref<klee::ConstantExpr> 
-Executor::toConstant(ExecutionState &state, 
-                     ref<Expr> e,
-                     const char *reason) {
-  e = state.constraints.simplifyExpr(e);
+ref<klee::ConstantExpr> Executor::toConstant(ExecutionState &state,
+                                             const ref<Expr> &_e,
+                                             const char *reason) {
+  ref<Expr> e = state.constraints.simplifyExpr(_e);
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
     return CE;
 
@@ -1241,10 +1239,9 @@ Executor::toConstant(ExecutionState &state,
   return value;
 }
 
-void Executor::executeGetValue(ExecutionState &state,
-                               ref<Expr> e,
+void Executor::executeGetValue(ExecutionState &state, const ref<Expr> &_e,
                                KInstruction *target) {
-  e = state.constraints.simplifyExpr(e);
+  ref<Expr> e = state.constraints.simplifyExpr(_e);
   std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it = 
     seedMap.find(&state);
   if (it==seedMap.end() || isa<ConstantExpr>(e)) {
@@ -2972,8 +2969,8 @@ void Executor::run(ExecutionState &initialState) {
   doDumpStates();
 }
 
-std::string Executor::getAddressInfo(ExecutionState &state, 
-                                     ref<Expr> address) const{
+std::string Executor::getAddressInfo(ExecutionState &state,
+                                     const ref<Expr> &address) const {
   std::string Str;
   llvm::raw_string_ostream info(Str);
   info << "\taddress: " << address << "\n";
@@ -3021,7 +3018,6 @@ std::string Executor::getAddressInfo(ExecutionState &state,
 
   return info.str();
 }
-
 
 void Executor::terminateState(ExecutionState &state) {
   if (replayKTest && replayPosition!=replayKTest->numObjects) {
@@ -3304,8 +3300,8 @@ void Executor::callExternalFunction(ExecutionState &state,
 
 /***/
 
-ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state, 
-                                            ref<Expr> e) {
+ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
+                                            const ref<Expr> &e) {
   unsigned n = interpreterOpts.MakeConcreteSymbolic;
   if (!n || replayKTest || replayPath)
     return e;

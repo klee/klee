@@ -16,9 +16,8 @@
 
 using namespace klee;
 
-void klee::findReads(ref<Expr> e, 
-                     bool visitUpdates,
-                     std::vector< ref<ReadExpr> > &results) {
+void klee::findReads(const ref<Expr> &e, bool visitUpdates,
+                     std::vector<ref<ReadExpr>> &results) {
   // Invariant: \forall_{i \in stack} !i.isConstant() && i \in visited 
   std::vector< ref<Expr> > stack;
   ExprHashSet visited;
@@ -129,8 +128,8 @@ void klee::findSymbolicObjects(InputIterator begin,
     of.visit(*begin);
 }
 
-void klee::findSymbolicObjects(ref<Expr> e,
-                               std::vector<const Array*> &results) {
+void klee::findSymbolicObjects(const ref<Expr> &e,
+                               std::vector<const Array *> &results) {
   findSymbolicObjects(&e, &e+1, results);
 }
 

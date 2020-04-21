@@ -38,11 +38,11 @@ public:
 
   // given a constraint which is known to be valid, attempt to
   // simplify the existing constraint set
-  void simplifyForValidConstraint(ref<Expr> e);
+  void simplifyForValidConstraint(const ref<Expr> &e);
 
-  ref<Expr> simplifyExpr(ref<Expr> e) const;
+  ref<Expr> simplifyExpr(const ref<Expr> &e) const;
 
-  void addConstraint(ref<Expr> e);
+  void addConstraint(const ref<Expr> &e);
 
   bool empty() const noexcept { return constraints.empty(); }
   ref<Expr> back() const { return constraints.back(); }
@@ -64,7 +64,7 @@ private:
   // returns true iff the constraints were modified
   bool rewriteConstraints(ExprVisitor &visitor);
 
-  void addConstraintInternal(ref<Expr> e);
+  void addConstraintInternal(const ref<Expr> &e);
 };
 
 } // namespace klee

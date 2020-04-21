@@ -242,8 +242,8 @@ public:
   int compare(const Expr &b) const;
 
   // Given an array of new kids return a copy of the expression
-  // but using those children. 
-  virtual ref<Expr> rebuild(ref<Expr> kids[/* getNumKids() */]) const = 0;
+  // but using those children.
+  virtual ref<Expr> rebuild(const ref<Expr> kids[/* getNumKids() */]) const = 0;
 
   /// isZero - Is this a constant zero.
   bool isZero() const;
@@ -267,10 +267,10 @@ public:
   /* Kind utilities */
 
   /* Utility creation functions */
-  static ref<Expr> createSExtToPointerWidth(ref<Expr> e);
-  static ref<Expr> createZExtToPointerWidth(ref<Expr> e);
-  static ref<Expr> createImplies(ref<Expr> hyp, ref<Expr> conc);
-  static ref<Expr> createIsZero(ref<Expr> e);
+  static ref<Expr> createSExtToPointerWidth(const ref<Expr> &e);
+  static ref<Expr> createZExtToPointerWidth(const ref<Expr> &e);
+  static ref<Expr> createImplies(const ref<Expr> &hyp, const ref<Expr> &conc);
+  static ref<Expr> createIsZero(const ref<Expr> &e);
 
   /// Create a little endian read of the given type at offset 0 of the
   /// given object.
@@ -294,10 +294,10 @@ private:
 struct Expr::CreateArg {
   ref<Expr> expr;
   Width width;
-  
-  CreateArg(Width w = Bool) : expr(0), width(w) {}
-  CreateArg(ref<Expr> e) : expr(e), width(Expr::InvalidWidth) {}
-  
+
+  CreateArg(Width w = Bool) : expr(nullptr), width(w) {}
+  CreateArg(ref<Expr> e) : expr(std::move(e)), width(Expr::InvalidWidth) {}
+
   bool isExpr() { return !isWidth(); }
   bool isWidth() { return width != Expr::InvalidWidth; }
 };
@@ -381,7 +381,8 @@ public:
   }
  
 protected:
-  BinaryExpr(const ref<Expr> &l, const ref<Expr> &r) : left(l), right(r) {}
+  BinaryExpr(ref<Expr> l, ref<Expr> r)
+      : left(std::move(l)), right(std::move(r)) {}
 
 public:
   static bool classof(const Expr *E) {
@@ -395,8 +396,8 @@ public:
 class CmpExpr : public BinaryExpr {
 
 protected:
-  CmpExpr(ref<Expr> l, ref<Expr> r) : BinaryExpr(l,r) {}
-  
+  CmpExpr(const ref<Expr> &l, const ref<Expr> &r) : BinaryExpr(l, r) {}
+
 public:                                                       
   Width getWidth() const { return Bool; }
 
@@ -420,16 +421,18 @@ public:
     r->computeHash();
     return r;
   }
-  
-  static ref<Expr> create(ref<Expr> src);
-  
+
+  static ref<Expr> create(const ref<Expr> &src);
+
   Width getWidth() const { return src->getWidth(); }
   Kind getKind() const { return NotOptimized; }
 
   unsigned getNumKids() const { return 1; }
   ref<Expr> getKid(unsigned i) const { return src; }
 
-  virtual ref<Expr> rebuild(ref<Expr> kids[]) const { return create(kids[0]); }
+  virtual ref<Expr> rebuild(const ref<Expr> kids[]) const {
+    return create(kids[0]);
+  }
 
 private:
   NotOptimizedExpr(const ref<Expr> &_src) : src(_src) {}
@@ -580,9 +583,9 @@ public:
     r->computeHash();
     return r;
   }
-  
-  static ref<Expr> create(const UpdateList &updates, ref<Expr> i);
-  
+
+  static ref<Expr> create(const UpdateList &updates, const ref<Expr> &i);
+
   Width getWidth() const { assert(updates.root); return updates.root->getRange(); }
   Kind getKind() const { return Read; }
   
@@ -591,7 +594,7 @@ public:
   
   int compareContents(const Expr &b) const;
 
-  virtual ref<Expr> rebuild(ref<Expr> kids[]) const {
+  virtual ref<Expr> rebuild(const ref<Expr> kids[]) const {
     return create(updates, kids[0]);
   }
 
@@ -625,8 +628,9 @@ public:
     r->computeHash();
     return r;
   }
-  
-  static ref<Expr> create(ref<Expr> c, ref<Expr> t, ref<Expr> f);
+
+  static ref<Expr> create(const ref<Expr> &c, const ref<Expr> &t,
+                          const ref<Expr> &f);
 
   Width getWidth() const { return trueExpr->getWidth(); }
   Kind getKind() const { return Select; }
@@ -647,8 +651,8 @@ public:
     else
       return true;
   }
-    
-  virtual ref<Expr> rebuild(ref<Expr> kids[]) const { 
+
+  virtual ref<Expr> rebuild(const ref<Expr> kids[]) const {
     return create(kids[0], kids[1], kids[2]);
   }
 
@@ -711,9 +715,11 @@ public:
 			   const ref<Expr> &kid3, const ref<Expr> &kid4,
 			   const ref<Expr> &kid5, const ref<Expr> &kid6,
 			   const ref<Expr> &kid7, const ref<Expr> &kid8);
-  
-  virtual ref<Expr> rebuild(ref<Expr> kids[]) const { return create(kids[0], kids[1]); }
-  
+
+  virtual ref<Expr> rebuild(const ref<Expr> kids[]) const {
+    return create(kids[0], kids[1]);
+  }
+
 private:
   ConcatExpr(const ref<Expr> &l, const ref<Expr> &r) : left(l), right(r) {
     width = l->getWidth() + r->getWidth();
@@ -757,7 +763,7 @@ public:
   }
   
   /// Creates an ExtractExpr with the given bit offset and width
-  static ref<Expr> create(ref<Expr> e, unsigned bitOff, Width w);
+  static ref<Expr> create(const ref<Expr> &e, unsigned bitOff, Width w);
 
   Width getWidth() const { return width; }
   Kind getKind() const { return Extract; }
@@ -772,7 +778,7 @@ public:
     return 0;
   }
 
-  virtual ref<Expr> rebuild(ref<Expr> kids[]) const { 
+  virtual ref<Expr> rebuild(const ref<Expr> kids[]) const {
     return create(kids[0], offset, width);
   }
 
@@ -815,7 +821,7 @@ public:
   unsigned getNumKids() const { return numKids; }
   ref<Expr> getKid(unsigned i) const { return expr; }
 
-  virtual ref<Expr> rebuild(ref<Expr> kids[]) const { 
+  virtual ref<Expr> rebuild(const ref<Expr> kids[]) const {
     return create(kids[0]);
   }
 
@@ -847,7 +853,7 @@ public:
   Width width;
 
 public:
-  CastExpr(const ref<Expr> &e, Width w) : src(e), width(w) {}
+  CastExpr(ref<Expr> e, Width w) : src(std::move(e)), width(w) {}
 
   Width getWidth() const { return width; }
 
@@ -871,31 +877,30 @@ public:
   static bool classof(const CastExpr *) { return true; }
 };
 
-#define CAST_EXPR_CLASS(_class_kind)                             \
-class _class_kind ## Expr : public CastExpr {                    \
-public:                                                          \
-  static const Kind kind = _class_kind;                          \
-  static const unsigned numKids = 1;                             \
-public:                                                          \
-    _class_kind ## Expr(ref<Expr> e, Width w) : CastExpr(e,w) {} \
-    static ref<Expr> alloc(const ref<Expr> &e, Width w) {        \
-      ref<Expr> r(new _class_kind ## Expr(e, w));                \
-      r->computeHash();                                          \
-      return r;                                                  \
-    }                                                            \
-    static ref<Expr> create(const ref<Expr> &e, Width w);        \
-    Kind getKind() const { return _class_kind; }                 \
-    virtual ref<Expr> rebuild(ref<Expr> kids[]) const {          \
-      return create(kids[0], width);                             \
-    }                                                            \
-                                                                 \
-    static bool classof(const Expr *E) {                         \
-      return E->getKind() == Expr::_class_kind;                  \
-    }                                                            \
-    static bool classof(const  _class_kind ## Expr *) {          \
-      return true;                                               \
-    }                                                            \
-};                                                               \
+#define CAST_EXPR_CLASS(_class_kind)                                           \
+  class _class_kind##Expr : public CastExpr {                                  \
+  public:                                                                      \
+    static const Kind kind = _class_kind;                                      \
+    static const unsigned numKids = 1;                                         \
+                                                                               \
+  public:                                                                      \
+    _class_kind##Expr(ref<Expr> e, Width w) : CastExpr(std::move(e), w) {}     \
+    static ref<Expr> alloc(const ref<Expr> &e, Width w) {                      \
+      ref<Expr> r(new _class_kind##Expr(e, w));                                \
+      r->computeHash();                                                        \
+      return r;                                                                \
+    }                                                                          \
+    static ref<Expr> create(const ref<Expr> &e, Width w);                      \
+    Kind getKind() const { return _class_kind; }                               \
+    virtual ref<Expr> rebuild(const ref<Expr> kids[]) const {                  \
+      return create(kids[0], width);                                           \
+    }                                                                          \
+                                                                               \
+    static bool classof(const Expr *E) {                                       \
+      return E->getKind() == Expr::_class_kind;                                \
+    }                                                                          \
+    static bool classof(const _class_kind##Expr *) { return true; }            \
+  };
 
 CAST_EXPR_CLASS(SExt)
 CAST_EXPR_CLASS(ZExt)
@@ -919,7 +924,7 @@ CAST_EXPR_CLASS(ZExt)
     static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r);           \
     Width getWidth() const { return left->getWidth(); }                        \
     Kind getKind() const { return _class_kind; }                               \
-    virtual ref<Expr> rebuild(ref<Expr> kids[]) const {                        \
+    virtual ref<Expr> rebuild(const ref<Expr> kids[]) const {                  \
       return create(kids[0], kids[1]);                                         \
     }                                                                          \
                                                                                \
@@ -967,7 +972,7 @@ ARITHMETIC_EXPR_CLASS(AShr)
     }                                                                          \
     static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r);           \
     Kind getKind() const { return _class_kind; }                               \
-    virtual ref<Expr> rebuild(ref<Expr> kids[]) const {                        \
+    virtual ref<Expr> rebuild(const ref<Expr> kids[]) const {                  \
       return create(kids[0], kids[1]);                                         \
     }                                                                          \
                                                                                \
@@ -1055,7 +1060,7 @@ public:
     return value.ult(cb.value) ? -1 : 1;
   }
 
-  virtual ref<Expr> rebuild(ref<Expr> kids[]) const {
+  virtual ref<Expr> rebuild(const ref<Expr> kids[]) const {
     assert(0 && "rebuild() on ConstantExpr");
     return const_cast<ConstantExpr *>(this);
   }

@@ -26,9 +26,8 @@ namespace klee {
     const ConstraintManager &constraints;
     ref<Expr> expr;
 
-    Query(const ConstraintManager& _constraints, ref<Expr> _expr)
-      : constraints(_constraints), expr(_expr) {
-    }
+    Query(const ConstraintManager &_constraints, ref<Expr> _expr)
+        : constraints(_constraints), expr(std::move(_expr)) {}
 
     /// withExpr - Return a copy of the query with the given expression.
     Query withExpr(ref<Expr> _expr) const {

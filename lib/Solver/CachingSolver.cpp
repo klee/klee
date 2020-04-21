@@ -22,7 +22,7 @@ using namespace klee;
 
 class CachingSolver : public SolverImpl {
 private:
-  ref<Expr> canonicalizeQuery(ref<Expr> originalQuery,
+  ref<Expr> canonicalizeQuery(const ref<Expr> &originalQuery,
                               bool &negationUsed);
 
   void cacheInsert(const Query& query,
@@ -33,7 +33,7 @@ private:
   
   struct CacheEntry {
     CacheEntry(const ConstraintManager &c, ref<Expr> q)
-      : constraints(c), query(q) {}
+        : constraints(c), query(std::move(q)) {}
 
     CacheEntry(const CacheEntry &ce)
       : constraints(ce.constraints), query(ce.query) {}
@@ -91,7 +91,7 @@ public:
 /** @returns the canonical version of the given query.  The reference
     negationUsed is set to true if the original query was negated in
     the canonicalization process. */
-ref<Expr> CachingSolver::canonicalizeQuery(ref<Expr> originalQuery,
+ref<Expr> CachingSolver::canonicalizeQuery(const ref<Expr> &originalQuery,
                                            bool &negationUsed) {
   ref<Expr> negatedQuery = Expr::createIsZero(originalQuery);
 

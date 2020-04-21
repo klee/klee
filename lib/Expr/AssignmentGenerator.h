@@ -34,9 +34,9 @@ private:
                                        Assignment *&a, Expr::Width width,
                                        bool sign);
 
-  static bool isReadExprAtOffset(ref<Expr> e, const ReadExpr *base,
-                                 ref<Expr> offset);
-  static ReadExpr *hasOrderedReads(ref<Expr> e);
+  static bool isReadExprAtOffset(const ref<Expr> &e, const ReadExpr *base,
+                                 const ref<Expr> &offset);
+  static ReadExpr *hasOrderedReads(const ref<Expr> &e);
 
   static ref<Expr> createSubExpr(const ref<Expr> &l, ref<Expr> &r);
   static ref<Expr> createAddExpr(const ref<Expr> &l, ref<Expr> &r);
