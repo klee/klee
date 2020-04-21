@@ -1036,7 +1036,7 @@ public:
   ///
   /// Example: unit8_t byte= (unit8_t) constant->getZExtValue(8);
   uint64_t getZExtValue(unsigned bits = 64) const {
-    assert(getWidth() <= bits && "Value may be out of range!");
+    assert(value.getActiveBits() <= bits && "Value will be out of range!");
     return value.getZExtValue();
   }
 

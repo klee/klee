@@ -476,6 +476,8 @@ ref<Expr> ObjectState::read(unsigned offset, Expr::Width width) const {
   // Treat bool specially, it is the only non-byte sized write we allow.
   if (width == Expr::Bool)
     return ExtractExpr::create(read8(offset), 0, Expr::Bool);
+  if (width == Expr::Int8)
+    return read8(offset);
 
   // Otherwise, follow the slow general case.
   unsigned NumBytes = width / 8;
