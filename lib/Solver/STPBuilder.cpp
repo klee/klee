@@ -436,12 +436,8 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n, unsigned width
   if (!hashed) {
     // STP uniques arrays by name, so we make sure the name is unique by
     // using the size of the array hash as a counter.
-    std::string unique_id = llvm::itostr(_arr_hash._array_hash.size());
-    unsigned const uid_length = unique_id.length();
-    unsigned const space = (root->name.length() > 32 - uid_length)
-                               ? (32 - uid_length)
-                               : root->name.length();
-    std::string unique_name = root->name.substr(0, space) + unique_id;
+    std::string unique_id = llvm::utostr(_arr_hash._array_hash.size());
+    std::string unique_name = root->name + unique_id;
 
     array_expr = buildArray(unique_name.c_str(), root->getDomain(),
                             root->getRange());
