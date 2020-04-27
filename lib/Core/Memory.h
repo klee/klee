@@ -120,6 +120,15 @@ public:
   ref<Expr> getOffsetExpr(const ref<Expr> &pointer) const {
     return SubExpr::create(pointer, getBaseExpr());
   }
+
+  /// Return the offset of the object the pointer is pointing to.
+  /// \param pointer
+  /// \return offset with respect to this object
+  uint64_t getOffset(uint64_t pointer) const {
+    assert(pointer >= address);
+    return pointer - address;
+  }
+
   ref<Expr> getBoundsCheckPointer(const ref<Expr> &pointer) const {
     return getBoundsCheckOffset(getOffsetExpr(pointer));
   }
@@ -144,6 +153,17 @@ public:
                                                  Context::get().getPointerWidth()));
     } else {
       return ConstantExpr::alloc(0, Expr::Bool);
+    }
+  }
+
+  /// Return first invalid offset of this object if a size object should be read
+  /// \param bytes potential bytes-wide access
+  /// \return first invalid offset
+  uint64_t getBoundsCheckOffset(unsigned bytes) const {
+    if (bytes <= size) {
+      return size - bytes + 1;
+    } else {
+      return 0;
     }
   }
 

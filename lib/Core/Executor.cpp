@@ -3555,7 +3555,37 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     if (MaxSymArraySize && mo->size >= MaxSymArraySize) {
       address = toConstant(state, address, "max-sym-array-size");
     }
-    
+    // handle concrete address case first
+    if (auto *c_address = dyn_cast<ConstantExpr>(address)) {
+      auto first_offset = mo->getOffset(c_address->getZExtValue());
+      auto first_out_of_bound = mo->getBoundsCheckOffset(bytes);
+
+      // handle out-of-bounds access
+      if (first_offset >= first_out_of_bound) {
+        terminateStateOnError(state, "memory error: out of bound pointer", Ptr,
+                              NULL, getAddressInfo(state, address));
+        return;
+      }
+      const ObjectState *os = op.second;
+      if (isWrite) {
+        if (os->readOnly) {
+          terminateStateOnError(state, "memory error: object read only",
+                                ReadOnly);
+        } else {
+          ObjectState *wos = state.addressSpace.getWriteable(mo, os);
+          wos->write(first_offset, value);
+        }
+      } else {
+        ref<Expr> result = os->read(first_offset, type);
+
+        if (interpreterOpts.MakeConcreteSymbolic)
+          result = replaceReadWithSymbolic(state, result);
+
+        bindLocal(target, state, result);
+      }
+
+      return;
+    }
     ref<Expr> offset = mo->getOffsetExpr(address);
     ref<Expr> check = mo->getBoundsCheckOffset(offset, bytes);
     check = optimizer.optimizeExpr(check, true);
