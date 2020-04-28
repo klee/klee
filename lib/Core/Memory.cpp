@@ -28,16 +28,72 @@
 #include <cassert>
 #include <sstream>
 
-using namespace llvm;
 using namespace klee;
 
 namespace {
-  cl::opt<bool>
-  UseConstantArrays("use-constant-arrays",
-                    cl::desc("Use constant arrays instead of updates when possible (default=true)\n"),
-                    cl::init(true),
-                    cl::cat(SolvingCat));
+llvm::cl::opt<bool>
+    UseConstantArrays("use-constant-arrays",
+                      llvm::cl::desc("Use constant arrays instead of updates "
+                                     "when possible (default=true)\n"),
+                      llvm::cl::init(true), llvm::cl::cat(SolvingCat));
 }
+
+#if LLVM_VERSION_CODE < LLVM_VERSION(9, 0)
+
+/// StoreIntToMemory - Fills the StoreBytes bytes of memory starting from Dst
+/// with the integer held in IntVal.
+static void StoreIntToMemory(const llvm::APInt &IntVal, uint8_t *Dst,
+                             unsigned StoreBytes) {
+  assert((IntVal.getBitWidth()+7)/8 >= StoreBytes && "Integer too small!");
+  const uint8_t *Src = (const uint8_t *)IntVal.getRawData();
+
+  if (Context::get().isLittleEndian()) {
+    // Little-endian host - the source is ordered from LSB to MSB.  Order the
+    // destination from LSB to MSB: Do a straight copy.
+    memcpy(Dst, Src, StoreBytes);
+  } else {
+    // Big-endian host - the source is an array of 64 bit words ordered from
+    // LSW to MSW.  Each word is ordered from MSB to LSB.  Order the destination
+    // from MSB to LSB: Reverse the word order, but not the bytes in a word.
+    while (StoreBytes > sizeof(uint64_t)) {
+      StoreBytes -= sizeof(uint64_t);
+      // May not be aligned so use memcpy.
+      memcpy(Dst + StoreBytes, Src, sizeof(uint64_t));
+      Src += sizeof(uint64_t);
+    }
+
+    memcpy(Dst, Src + sizeof(uint64_t) - StoreBytes, StoreBytes);
+  }
+}
+
+/// LoadIntFromMemory - Loads the integer stored in the LoadBytes bytes starting
+/// from Src into IntVal, which is assumed to be wide enough and to hold zero.
+static void LoadIntFromMemory(llvm::APInt &IntVal, uint8_t *Src,
+                              unsigned LoadBytes) {
+  assert((IntVal.getBitWidth()+7)/8 >= LoadBytes && "Integer too small!");
+  uint8_t *Dst = reinterpret_cast<uint8_t *>(
+      const_cast<uint64_t *>(IntVal.getRawData()));
+
+  if (Context::get().isLittleEndian())
+    // Little-endian host - the destination must be ordered from LSB to MSB.
+    // The source is ordered from LSB to MSB: Do a straight copy.
+    memcpy(Dst, Src, LoadBytes);
+  else {
+    // Big-endian - the destination is an array of 64 bit words ordered from
+    // LSW to MSW.  Each word must be ordered from MSB to LSB.  The source is
+    // ordered from MSB to LSB: Reverse the word order, but not the bytes in
+    // a word.
+    while (LoadBytes > sizeof(uint64_t)) {
+      LoadBytes -= sizeof(uint64_t);
+      // May not be aligned so use memcpy.
+      memcpy(Dst, Src + LoadBytes, sizeof(uint64_t));
+      Dst += sizeof(uint64_t);
+    }
+
+    memcpy(Dst + sizeof(uint64_t) - LoadBytes, Src, LoadBytes);
+  }
+}
+#endif
 
 /***/
 
@@ -55,10 +111,10 @@ void MemoryObject::getAllocInfo(std::string &result) const {
 
   if (allocSite) {
     info << " allocated at ";
-    if (const Instruction *i = dyn_cast<Instruction>(allocSite)) {
+    if (const auto *i = dyn_cast<llvm::Instruction>(allocSite)) {
       info << i->getParent()->getParent()->getName() << "():";
       info << *i;
-    } else if (const GlobalValue *gv = dyn_cast<GlobalValue>(allocSite)) {
+    } else if (const auto *gv = dyn_cast<llvm::GlobalValue>(allocSite)) {
       info << "global:" << gv->getName();
     } else {
       info << "value:" << *allocSite;
@@ -469,7 +525,11 @@ ref<Expr> ObjectState::read(unsigned offset, Expr::Width width) const {
 
     if (Context::get().isLittleEndian()) {
       llvm::APInt value(width, 0);
+#if LLVM_VERSION_CODE < LLVM_VERSION(9, 0)
+      LoadIntFromMemory(value, concreteStore + offset, width / 8);
+#else
       llvm::LoadIntFromMemory(value, concreteStore + offset, width / 8);
+#endif
       return ConstantExpr::alloc(value);
     }
   }
@@ -527,7 +587,11 @@ void ObjectState::write(unsigned offset, const ref<Expr> &value) {
     if (isConcreteOnly() && Context::get().isLittleEndian()) {
       // Extend bit and write as single byte
       w = w > 1 ? w : Expr::Int8;
+#if LLVM_VERSION_CODE < LLVM_VERSION(9, 0)
+      StoreIntToMemory(CE->getAPValue(), concreteStore + offset, w / 8);
+#else
       llvm::StoreIntToMemory(CE->getAPValue(), concreteStore + offset, w / 8);
+#endif
       return;
     }
     if (w <= 64 && klee::bits64::isPowerOfTwo(w)) {
