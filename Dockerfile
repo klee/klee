@@ -55,6 +55,9 @@ RUN /tmp/klee_src/scripts/build/build.sh --debug --install-system-deps klee && c
 ENV PATH="$PATH:/tmp/llvm-60-install_O_D_A/bin:/home/klee/klee_build/bin"
 ENV BASE=/tmp
 
+# Add KLEE header files to system standard include folder
+RUN /bin/bash -c 'ln -s ${BASE}/klee_src/include/klee /usr/include/'
+
 USER klee
 WORKDIR /home/klee
 ENV LD_LIBRARY_PATH /home/klee/klee_build/lib/
