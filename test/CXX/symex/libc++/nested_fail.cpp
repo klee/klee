@@ -1,22 +1,26 @@
 // REQUIRES: not-msan
 // Disabling msan because it times out on CI
 // REQUIRES: libcxx
-// REQUIRES: uclibc
 // RUN: %clangxx %s -emit-llvm %O0opt -c -std=c++11 -I "%libcxx_include" -g -nostdinc++ -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --libc=uclibc --libcxx %t1.bc 2>&1 | FileCheck %s
 
 #include "klee/klee.h"
-#include <iostream>
+#include <cstdio>
 
 int main(int argc, char **args) {
-  int x = klee_int("x");
-  if (x > 0) {
-    std::cout << "greater: " << x << std::endl;
-    // CHECK-DAG: greater
-  } else {
-    std::cout << "lower: " << x << std::endl;
-    // CHECK-DAG: lower
+  try {
+    try {
+      char *p = new char[8];
+      throw p;
+    } catch (int ex) {
+      printf("Landed in wrong inner catch\n");
+      // CHECK-NOT: Landed in wrong inner catch
+    }
+  } catch (int ex) {
+    printf("Landed in wrong outer catch\n");
+    // CHECK-NOT: Landed in wrong outer catch
   }
   return 0;
 }
+// CHECK: terminating with uncaught exception of type char*

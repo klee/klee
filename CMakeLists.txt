@@ -653,6 +653,12 @@ if (ENABLE_KLEE_LIBCXX)
   endif()
   message(STATUS "Use libc++ include path: \"${KLEE_LIBCXX_INCLUDE_DIR}\"")
 
+  if (NOT IS_DIRECTORY "${KLEE_LIBCXXABI_DIR}")
+    message(FATAL_ERROR
+      "${KLEE_LIBCXXABI_DIR} does not exist. Try passing -DKLEE_LIBCXXABI_DIR=<path>")
+  endif()
+  message(STATUS "Use libc++abi path: \"${KLEE_LIBCXXABI_DIR}\"")
+
   # Find the library bitcode archive
 
   # Check for static first
