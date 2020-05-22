@@ -1,0 +1,13 @@
+include ../Makefile.cmake.bitcode.config
+
+SRC_DIR=$(ROOT_SRC)/klee-eh-cxx
+
+ARCHIVE_FILE=$(ARCHIVE_DEST)/libklee-eh-cxx.bca
+
+all: $(ARCHIVE_FILE)
+
+klee_eh_cxx.bc: $(SRC_DIR)/klee_eh_cxx.cpp
+	$(LLVMCXX) -nostdinc++ -emit-llvm -c -I$(KLEE_INCLUDE_DIR) -I $(KLEE_LIBCXXABI_DIR)/include -I $(KLEE_LIBCXXABI_DIR)/src -I $(KLEE_LIBCXX_INCLUDE_DIR) $(SRC_DIR)/klee_eh_cxx.cpp -o $@
+
+$(ARCHIVE_FILE): klee_eh_cxx.bc
+	$(LLVM_AR) rcs $@ $<

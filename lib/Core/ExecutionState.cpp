@@ -106,6 +106,9 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     openMergeStack(state.openMergeStack),
     steppedInstructions(state.steppedInstructions),
     instsSinceCovNew(state.instsSinceCovNew),
+    unwindingInformation(state.unwindingInformation
+                             ? state.unwindingInformation->cloned()
+                             : nullptr),
     coveredNew(state.coveredNew),
     forkDisabled(state.forkDisabled) {
   for (const auto &cur_mergehandler: openMergeStack)

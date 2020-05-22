@@ -21,6 +21,7 @@
 #include "klee/System/Time.h"
 
 #include <map>
+#include <memory>
 #include <set>
 #include <vector>
 
@@ -61,6 +62,83 @@ struct StackFrame {
   StackFrame(KInstIterator caller, KFunction *kf);
   StackFrame(const StackFrame &s);
   ~StackFrame();
+};
+
+/// Contains information related to unwinding (Itanium ABI/2-Phase unwinding)
+struct UnwindingInformation {
+  enum class Kind {
+    SearchPhase, // first phase
+    CleanupPhase // second phase
+  };
+
+private:
+  const Kind kind;
+
+public:
+  // _Unwind_Exception* of the thrown exception, used in both phases
+  ref<ConstantExpr> exceptionObject;
+
+  Kind getKind() const { return kind; }
+
+  explicit UnwindingInformation(ref<ConstantExpr> exceptionObject, Kind k)
+      : kind(k), exceptionObject(exceptionObject) {}
+  virtual ~UnwindingInformation() = default;
+
+  virtual std::unique_ptr<UnwindingInformation> cloned() const = 0;
+};
+
+struct SearchPhaseUnwindingInformation : public UnwindingInformation {
+  // Keeps track of the stack index we have so far unwound to.
+  std::size_t unwindingProgress;
+
+  // MemoryObject that contains a serialized version of the last executed
+  // landingpad, so we can clean it up after the personality fn returns.
+  MemoryObject *serializedLandingpad = nullptr;
+
+  SearchPhaseUnwindingInformation(ref<ConstantExpr> exceptionObject,
+                                  std::size_t const unwindingProgress)
+      : UnwindingInformation(exceptionObject,
+                             UnwindingInformation::Kind::SearchPhase),
+        unwindingProgress(unwindingProgress) {}
+
+  std::unique_ptr<UnwindingInformation> cloned() const {
+    return std::make_unique<SearchPhaseUnwindingInformation>(*this);
+  }
+
+  static bool classof(const UnwindingInformation *u) {
+    return u->getKind() == UnwindingInformation::Kind::SearchPhase;
+  }
+};
+
+struct CleanupPhaseUnwindingInformation : public UnwindingInformation {
+  // Phase 1 will try to find a catching landingpad.
+  // Phase 2 will unwind up to this landingpad or return from
+  // _Unwind_RaiseException if none was found.
+
+  // The selector value of the catching landingpad that was found
+  // during the search phase.
+  ref<ConstantExpr> selectorValue;
+
+  // Used to know when we have to stop unwinding and to
+  // ensure that unwinding stops at the frame for which
+  // we first found a handler in the search phase.
+  const std::size_t catchingStackIndex;
+
+  CleanupPhaseUnwindingInformation(ref<ConstantExpr> exceptionObject,
+                                   ref<ConstantExpr> selectorValue,
+                                   const std::size_t catchingStackIndex)
+      : UnwindingInformation(exceptionObject,
+                             UnwindingInformation::Kind::CleanupPhase),
+        selectorValue(selectorValue),
+        catchingStackIndex(catchingStackIndex) {}
+
+  std::unique_ptr<UnwindingInformation> cloned() const {
+    return std::make_unique<CleanupPhaseUnwindingInformation>(*this);
+  }
+
+  static bool classof(const UnwindingInformation *u) {
+    return u->getKind() == UnwindingInformation::Kind::CleanupPhase;
+  }
 };
 
 /// @brief ExecutionState representing a path under exploration
@@ -140,6 +218,9 @@ public:
   /// @brief Counts how many instructions were executed since the last new
   /// instruction was covered.
   std::uint32_t instsSinceCovNew;
+
+  /// @brief Keep track of unwinding state while unwinding, otherwise empty
+  std::unique_ptr<UnwindingInformation> unwindingInformation;
 
   /// @brief the global state counter
   static std::uint32_t nextID;

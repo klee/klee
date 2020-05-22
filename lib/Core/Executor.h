@@ -42,6 +42,7 @@ namespace llvm {
   class BasicBlock;
   class BranchInst;
   class CallInst;
+  class LandingPadInst;
   class Constant;
   class ConstantExpr;
   class Function;
@@ -109,7 +110,9 @@ public:
     ReadOnly,
     ReportError,
     User,
-    Unhandled
+    UncaughtException,
+    UnexpectedException,
+    Unhandled,
   };
 
   /// The random number generator.
@@ -219,6 +222,12 @@ private:
   /// `nullptr` if merging is disabled
   MergingSearcher *mergingSearcher = nullptr;
 
+  /// Typeids used during exception handling
+  std::vector<ref<Expr>> eh_typeids;
+
+  /// Return the typeid corresponding to a certain `type_info`
+  ref<ConstantExpr> getEhTypeidFor(ref<Expr> type_info);
+
   llvm::Function* getTargetFunction(llvm::Value *calledVal,
                                     ExecutionState &state);
   
@@ -304,7 +313,17 @@ private:
   void executeFree(ExecutionState &state,
                    ref<Expr> address,
                    KInstruction *target = 0);
-  
+
+  /// Serialize a landingpad instruction so it can be handled by the
+  /// libcxxabi-runtime
+  MemoryObject *serializeLandingpad(ExecutionState &state,
+                                    const llvm::LandingPadInst &lpi,
+                                    bool &stateTerminated);
+
+  /// Unwind the given state until it hits a landingpad. This is used
+  /// for exception handling.
+  void unwindToNextLandingpad(ExecutionState &state);
+
   void executeCall(ExecutionState &state, 
                    KInstruction *ki,
                    llvm::Function *f,

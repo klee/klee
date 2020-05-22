@@ -65,6 +65,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -80,10 +81,12 @@ typedef unsigned TypeSize;
 #include <algorithm>
 #include <cassert>
 #include <cerrno>
+#include <cstring>
 #include <cxxabi.h>
 #include <fstream>
 #include <iomanip>
 #include <iosfwd>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <sys/mman.h>
@@ -284,6 +287,10 @@ cl::list<Executor::TerminateReason> ExitOnErrorType(
         clEnumValN(Executor::ReportError, "ReportError",
                    "klee_report_error called"),
         clEnumValN(Executor::User, "User", "Wrong klee_* functions invocation"),
+        clEnumValN(Executor::UncaughtException, "UncaughtException",
+                   "Exception was not caught"),
+        clEnumValN(Executor::UnexpectedException, "UnexpectedException",
+                   "An unexpected exception was thrown"),
         clEnumValN(Executor::Unhandled, "Unhandled",
                    "Unhandled instruction hit") KLEE_LLVM_CL_VAL_END),
     cl::ZeroOrMore,
@@ -433,6 +440,8 @@ const char *Executor::TerminateReasonNames[] = {
   [ ReadOnly ] = "readonly",
   [ ReportError ] = "reporterror",
   [ User ] = "user",
+  [ UncaughtException ] = "uncaught_exception",
+  [ UnexpectedException ] = "unexpected_exception",
   [ Unhandled ] = "xxx",
 };
 
@@ -1407,6 +1416,235 @@ static inline const llvm::fltSemantics *fpWidthToSemantics(unsigned width) {
   }
 }
 
+MemoryObject *Executor::serializeLandingpad(ExecutionState &state,
+                                            const llvm::LandingPadInst &lpi,
+                                            bool &stateTerminated) {
+  stateTerminated = false;
+
+  std::vector<unsigned char> serialized;
+
+  for (unsigned current_clause_id = 0; current_clause_id < lpi.getNumClauses();
+       ++current_clause_id) {
+    llvm::Constant *current_clause = lpi.getClause(current_clause_id);
+    if (lpi.isCatch(current_clause_id)) {
+      // catch-clause
+      serialized.push_back(0);
+
+      std::uint64_t ti_addr = 0;
+
+      llvm::BitCastOperator *clause_bitcast =
+          dyn_cast<llvm::BitCastOperator>(current_clause);
+      if (clause_bitcast) {
+        llvm::GlobalValue *clause_type =
+            dyn_cast<GlobalValue>(clause_bitcast->getOperand(0));
+
+        ti_addr = globalAddresses[clause_type]->getZExtValue();
+      } else if (current_clause->isNullValue()) {
+        ti_addr = 0;
+      } else {
+        terminateStateOnError(
+            state, "Internal: Clause is not a bitcast or null (catch-all)",
+            Exec);
+        stateTerminated = true;
+        return nullptr;
+      }
+      const std::size_t old_size = serialized.size();
+      serialized.resize(old_size + 8);
+      memcpy(serialized.data() + old_size, &ti_addr, sizeof(ti_addr));
+    } else if (lpi.isFilter(current_clause_id)) {
+      if (current_clause->isNullValue()) {
+        // special handling for a catch-all filter clause, i.e., "[0 x i8*]"
+        // for this case we serialize 1 element..
+        serialized.push_back(1);
+        // which is a 64bit-wide 0.
+        serialized.resize(serialized.size() + 8, 0);
+      } else {
+        llvm::ConstantArray const *ca =
+            cast<llvm::ConstantArray>(current_clause);
+
+        // serialize `num_elements+1` as unsigned char
+        unsigned const num_elements = ca->getNumOperands();
+        unsigned char serialized_num_elements = 0;
+
+        if (num_elements >=
+            std::numeric_limits<decltype(serialized_num_elements)>::max()) {
+          terminateStateOnError(
+              state, "Internal: too many elements in landingpad filter", Exec);
+          stateTerminated = true;
+          return nullptr;
+        }
+
+        serialized_num_elements = num_elements;
+        serialized.push_back(serialized_num_elements + 1);
+
+        // serialize the exception-types occurring in this filter-clause
+        for (llvm::Value const *v : ca->operands()) {
+          llvm::BitCastOperator const *bitcast =
+              dyn_cast<llvm::BitCastOperator>(v);
+          if (!bitcast) {
+            terminateStateOnError(state,
+                                  "Internal: expected value inside a "
+                                  "filter-clause to be a bitcast",
+                                  Exec);
+            stateTerminated = true;
+            return nullptr;
+          }
+
+          llvm::GlobalValue const *clause_value =
+              dyn_cast<GlobalValue>(bitcast->getOperand(0));
+          if (!clause_value) {
+            terminateStateOnError(state,
+                                  "Internal: expected value inside a "
+                                  "filter-clause bitcast to be a GlobalValue",
+                                  Exec);
+            stateTerminated = true;
+            return nullptr;
+          }
+
+          std::uint64_t const ti_addr =
+              globalAddresses[clause_value]->getZExtValue();
+
+          const std::size_t old_size = serialized.size();
+          serialized.resize(old_size + 8);
+          memcpy(serialized.data() + old_size, &ti_addr, sizeof(ti_addr));
+        }
+      }
+    }
+  }
+
+  MemoryObject *mo =
+      memory->allocate(serialized.size(), true, false, nullptr, 1);
+  ObjectState *os = bindObjectInState(state, mo, false);
+  for (unsigned i = 0; i < serialized.size(); i++) {
+    os->write8(i, serialized[i]);
+  }
+
+  return mo;
+}
+
+void Executor::unwindToNextLandingpad(ExecutionState &state) {
+  UnwindingInformation *ui = state.unwindingInformation.get();
+  assert(ui && "unwinding without unwinding information");
+
+  std::size_t startIndex;
+  std::size_t lowestStackIndex;
+  bool popFrames;
+
+  if (auto *sui = dyn_cast<SearchPhaseUnwindingInformation>(ui)) {
+    startIndex = sui->unwindingProgress;
+    lowestStackIndex = 0;
+    popFrames = false;
+  } else if (auto *cui = dyn_cast<CleanupPhaseUnwindingInformation>(ui)) {
+    startIndex = state.stack.size() - 1;
+    lowestStackIndex = cui->catchingStackIndex;
+    popFrames = true;
+  } else {
+    assert(false && "invalid UnwindingInformation subclass");
+  }
+
+  for (std::size_t i = startIndex; i > lowestStackIndex; i--) {
+    auto const &sf = state.stack.at(i);
+
+    Instruction *inst = sf.caller ? sf.caller->inst : nullptr;
+
+    if (popFrames) {
+      state.popFrame();
+      if (statsTracker != nullptr) {
+        statsTracker->framePopped(state);
+      }
+    }
+
+    if (InvokeInst *invoke = dyn_cast<InvokeInst>(inst)) {
+      // we found the next invoke instruction in the call stack, handle it
+      // depending on the current phase.
+      if (auto *sui = dyn_cast<SearchPhaseUnwindingInformation>(ui)) {
+        // in the search phase, run personality function to check if this
+        // landingpad catches the exception
+
+        LandingPadInst *lpi = invoke->getUnwindDest()->getLandingPadInst();
+        assert(lpi && "unwind target of an invoke instruction did not lead to "
+                      "a landingpad");
+
+        // check if this is a pure cleanup landingpad first
+        if (lpi->isCleanup() && lpi->getNumClauses() == 0) {
+          // pure cleanup lpi, this can't be a handler, so skip it
+          continue;
+        }
+
+        bool stateTerminated = false;
+        MemoryObject *clauses_mo =
+            serializeLandingpad(state, *lpi, stateTerminated);
+        assert((stateTerminated != bool(clauses_mo)) &&
+               "illegal serializeLandingpad result");
+
+        if (stateTerminated) {
+          return;
+        }
+
+        assert(sui->serializedLandingpad == nullptr &&
+               "serializedLandingpad should be reset");
+        sui->serializedLandingpad = clauses_mo;
+
+        llvm::Function *personality_fn =
+            kmodule->module->getFunction("_klee_eh_cxx_personality");
+        KFunction *kf = kmodule->functionMap[personality_fn];
+
+        state.pushFrame(state.prevPC, kf);
+        state.pc = kf->instructions;
+        bindArgument(kf, 0, state, sui->exceptionObject);
+        bindArgument(kf, 1, state, clauses_mo->getSizeExpr());
+        bindArgument(kf, 2, state, clauses_mo->getBaseExpr());
+
+        if (statsTracker) {
+          statsTracker->framePushed(state,
+                                    &state.stack[state.stack.size() - 2]);
+        }
+
+        // make sure we remember our search progress afterwards
+        sui->unwindingProgress = i - 1;
+      } else {
+        // in the cleanup phase, redirect control flow
+        transferToBasicBlock(invoke->getUnwindDest(), invoke->getParent(),
+                             state);
+      }
+
+      // we are done, stop search/unwinding here
+      return;
+    }
+  }
+
+  // no further invoke instruction/landingpad found
+  if (isa<SearchPhaseUnwindingInformation>(ui)) {
+    // in phase 1, simply stop unwinding. this will return
+    // control flow back to _Unwind_RaiseException, which will
+    // return the correct error.
+
+    // clean up unwinding state
+    state.unwindingInformation.reset();
+  } else {
+    // in phase 2, this represent a situation that should
+    // not happen, as we only progressed to phase 2 because
+    // we found a handler in phase 1.
+    // therefore terminate the state.
+    terminateStateOnExecError(state,
+                              "Missing landingpad in phase 2 of unwinding");
+  }
+}
+
+ref<klee::ConstantExpr> Executor::getEhTypeidFor(ref<Expr> type_info) {
+  auto eh_type_iterator =
+      std::find(std::begin(eh_typeids), std::end(eh_typeids), type_info);
+  if (eh_type_iterator == std::end(eh_typeids)) {
+    eh_typeids.push_back(type_info);
+    eh_type_iterator = std::prev(std::end(eh_typeids));
+  }
+  // +1 because typeids must always be positive, so they can be distinguished
+  // from 'no landingpad clause matched' which has value 0
+  auto res = ConstantExpr::create(eh_type_iterator - std::begin(eh_typeids) + 1,
+                                  Expr::Int32);
+  return res;
+}
+
 void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
                            std::vector<ref<Expr>> &arguments) {
   Instruction *i = ki->inst;
@@ -1500,6 +1738,12 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       }
       break;
     }
+
+    case Intrinsic::eh_typeid_for: {
+      bindLocal(ki, state, getEhTypeidFor(arguments.at(0)));
+      break;
+    }
+
     case Intrinsic::vaend:
       // va_end is a noop for the interpreter.
       //
@@ -1518,8 +1762,15 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       return;
     }
 
-    if (InvokeInst *ii = dyn_cast<InvokeInst>(i))
-      transferToBasicBlock(ii->getNormalDest(), i->getParent(), state);
+    // __cxa_throw & _rethrow are already handled in their
+    // SpecialFunctionHandlers and have already been redirected to their unwind
+    // destinations, so we must not transfer them to their regular targets.
+    if (InvokeInst *ii = dyn_cast<InvokeInst>(i)) {
+      if (f->getName() != std::string("__cxa_throw") &&
+          f->getName() != std::string("__cxa_rethrow")) {
+        transferToBasicBlock(ii->getNormalDest(), i->getParent(), state);
+      }
+    }
   } else {
     // Check if maximum stack size was reached.
     // We currently only count the number of stack frames
@@ -1747,6 +1998,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Instruction *caller = kcaller ? kcaller->inst : 0;
     bool isVoidReturn = (ri->getNumOperands() == 0);
     ref<Expr> result = ConstantExpr::alloc(0, Expr::Bool);
+    bool isReturnFromPersonalityFn =
+        ri->getFunction()->getName() == "_klee_eh_cxx_personality";
     
     if (!isVoidReturn) {
       result = eval(ki, 0, state).value;
@@ -1766,6 +2019,40 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       } else {
         state.pc = kcaller;
         ++state.pc;
+      }
+
+      if (isReturnFromPersonalityFn) {
+        assert(dyn_cast<ConstantExpr>(result) &&
+               "result from personality fn must be a concrete value");
+
+        auto *sui = dyn_cast_or_null<SearchPhaseUnwindingInformation>(
+            state.unwindingInformation.get());
+        assert(sui && "return from personality function outside of "
+                      "search phase unwinding");
+
+        // unbind the MO we used to pass the serialized landingpad
+        state.addressSpace.unbindObject(sui->serializedLandingpad);
+        sui->serializedLandingpad = nullptr;
+
+        if (result->isZero()) {
+          // this lpi doesn't handle the exception, continue the search
+          unwindToNextLandingpad(state);
+        } else {
+          // a clause (or a catch-all clause or filter clause) matches:
+          // remember the stack index and switch to cleanup phase
+          state.unwindingInformation =
+              std::make_unique<CleanupPhaseUnwindingInformation>(
+                  sui->exceptionObject, cast<ConstantExpr>(result),
+                  sui->unwindingProgress);
+          // this pointer is now invalidated
+          sui = nullptr;
+          // continue the unwinding process (which will now start with the
+          // cleanup phase)
+          unwindToNextLandingpad(state);
+        }
+
+        // never return normally from the personality fn
+        break;
       }
 
       if (!isVoidReturn) {
@@ -2858,6 +3145,79 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // instructions.
     terminateStateOnExecError(state, "Unexpected ShuffleVector instruction");
     break;
+
+  case Instruction::Resume: {
+    auto *cui = dyn_cast_or_null<CleanupPhaseUnwindingInformation>(
+        state.unwindingInformation.get());
+
+    if (!cui) {
+      terminateStateOnExecError(
+          state,
+          "resume-instruction executed outside of cleanup phase unwinding");
+      break;
+    }
+
+    ref<Expr> arg = eval(ki, 0, state).value;
+    ref<Expr> expPtr = ExtractExpr::create(arg, 0, Expr::Int64);
+    ref<Expr> selector = ExtractExpr::create(arg, Expr::Int64, Expr::Int32);
+
+    if (!Expr::createIsZero(selector)->isTrue()) {
+      llvm::errs() << "resume-instruction called with non-0 selector value '"
+                   << selector << "'\n";
+    }
+
+    if (!EqExpr::create(expPtr, cui->exceptionObject)->isTrue()) {
+      terminateStateOnExecError(
+          state, "resume-instruction called with unexpected exception pointer");
+      break;
+    }
+
+    unwindToNextLandingpad(state);
+    break;
+  }
+
+  case Instruction::LandingPad: {
+    auto *cui = dyn_cast_or_null<CleanupPhaseUnwindingInformation>(
+        state.unwindingInformation.get());
+
+    if (!cui) {
+      terminateStateOnExecError(
+          state, "Executing landing pad but not in unwinding phase 2");
+      break;
+    }
+
+    ref<ConstantExpr> exceptionPointer = cui->exceptionObject;
+    ref<ConstantExpr> selectorValue;
+
+    // check on which frame we are currently
+    if (state.stack.size() - 1 == cui->catchingStackIndex) {
+      // we are in the target stack frame, return the selector value
+      // that was returned by the personality fn in phase 1 and stop unwinding.
+      selectorValue = cui->selectorValue;
+
+      // stop unwinding by cleaning up our unwinding information.
+      state.unwindingInformation.reset();
+
+      // this would otherwise now be a dangling pointer
+      cui = nullptr;
+    } else {
+      // we are not yet at the target stack frame. the landingpad might have
+      // a cleanup clause or not, anyway, we give it the selector value "0",
+      // which represents a cleanup, and expect it to handle it.
+      // This is explicitly allowed by LLVM, see
+      // https://llvm.org/docs/ExceptionHandling.html#id18
+      selectorValue = ConstantExpr::create(0, Expr::Int32);
+    }
+
+    // we have to return a {i8*, i32}
+    ref<Expr> result = ConcatExpr::create(
+        ZExtExpr::create(selectorValue, Expr::Int32), exceptionPointer);
+
+    bindLocal(ki, state, result);
+
+    break;
+  }
+
   case Instruction::AtomicRMW:
     terminateStateOnExecError(state, "Unexpected Atomic instruction, should be "
                                      "lowered by LowerAtomicInstructionPass");

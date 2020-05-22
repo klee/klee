@@ -32,6 +32,12 @@ else()
   set(BUILD_POSIX_RUNTIME 0)
 endif()
 
+if (ENABLE_KLEE_LIBCXX)
+  set(BUILD_KLEE_EH_CXX 1)
+else()
+  set(BUILD_KLEE_EH_CXX 0)
+endif()
+
 # Configure the bitcode build system
 configure_file("Makefile.cmake.bitcode.config.in"
   "Makefile.cmake.bitcode.config"
@@ -47,6 +53,9 @@ configure_file("Makefile.cmake.bitcode.rules" "Makefile.cmake.bitcode.rules" COP
 set(BITCODE_LIBRARIES "Intrinsic" "klee-libc" "FreeStanding")
 if (ENABLE_POSIX_RUNTIME)
   list(APPEND BITCODE_LIBRARIES "POSIX")
+endif()
+if (ENABLE_KLEE_LIBCXX)
+  list(APPEND BITCODE_LIBRARIES "klee-eh-cxx")
 endif()
 foreach (bl ${BITCODE_LIBRARIES})
   configure_file("${bl}/Makefile.cmake.bitcode"
@@ -134,6 +143,11 @@ list(APPEND RUNTIME_FILES_TO_INSTALL
 if (ENABLE_POSIX_RUNTIME)
   list(APPEND RUNTIME_FILES_TO_INSTALL
     "${KLEE_RUNTIME_DIRECTORY}/libkleeRuntimePOSIX.bca")
+endif()
+
+if (ENABLE_KLEE_LIBCXX)
+  list(APPEND RUNTIME_FILES_TO_INSTALL
+    "${KLEE_RUNTIME_DIRECTORY}/libklee-eh-cxx.bca")
 endif()
 
 install(FILES

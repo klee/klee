@@ -1,22 +1,29 @@
 // REQUIRES: not-msan
 // Disabling msan because it times out on CI
 // REQUIRES: libcxx
-// REQUIRES: uclibc
 // RUN: %clangxx %s -emit-llvm %O0opt -c -std=c++11 -I "%libcxx_include" -g -nostdinc++ -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --libc=uclibc --libcxx %t1.bc 2>&1 | FileCheck %s
 
 #include "klee/klee.h"
-#include <iostream>
+#include <cstdio>
 
 int main(int argc, char **args) {
-  int x = klee_int("x");
-  if (x > 0) {
-    std::cout << "greater: " << x << std::endl;
-    // CHECK-DAG: greater
-  } else {
-    std::cout << "lower: " << x << std::endl;
-    // CHECK-DAG: lower
+  try {
+    throw klee_int("x");
+  } catch (int ex) {
+    if (ex > 7) {
+      puts("ex > 7");
+      // CHECK-DAG: ex > 7
+    } else if (ex < 2) {
+      puts("ex < 2");
+      // CHECK-DAG: ex < 2
+    } else {
+      puts("2 <= ex <= 7");
+      // CHECK-DAG: 2 <= ex <= 7
+    }
   }
   return 0;
 }
+
+// CHECK-DAG: KLEE: done: completed paths = 3

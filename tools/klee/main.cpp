@@ -782,6 +782,8 @@ static const char *modelledExternals[] = {
   "klee_warning",
   "klee_warning_once",
   "klee_stack_trace",
+  "_klee_eh_Unwind_RaiseException_impl",
+  "klee_eh_typeid_for",
   "llvm.dbg.declare",
   "llvm.dbg.value",
   "llvm.va_start",
@@ -1267,9 +1269,17 @@ int main(int argc, char **argv, char **envp) {
     llvm::sys::path::append(LibcxxBC, KLEE_LIBCXX_BC_NAME);
     if (!klee::loadFile(LibcxxBC.c_str(), mainModule->getContext(), loadedModules,
                         errorMsg))
-      klee_error("error loading free standing support '%s': %s",
-                 LibcxxBC.c_str(), errorMsg.c_str());
+      klee_error("error loading libcxx '%s': %s", LibcxxBC.c_str(),
+                 errorMsg.c_str());
     klee_message("NOTE: Using libcxx : %s", LibcxxBC.c_str());
+
+    SmallString<128> EhCxxPath(Opts.LibraryDir);
+    llvm::sys::path::append(EhCxxPath, "libklee-eh-cxx.bca");
+    if (!klee::loadFile(EhCxxPath.c_str(), mainModule->getContext(),
+                        loadedModules, errorMsg))
+      klee_error("error loading libklee-eh-cxx '%s': %s", EhCxxPath.c_str(),
+                 errorMsg.c_str());
+
 #endif
   }
 
