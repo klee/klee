@@ -461,12 +461,10 @@ void SpecialFunctionHandler::handleEhUnwindRaiseExceptionImpl(
     ExecutionState &state, KInstruction *target,
     std::vector<ref<Expr>> &arguments) {
   if (arguments.size() != 1) {
-    executor.terminateStateOnError(
-        state,
-        "Internal Error: Incorrect number of arguments to "
-        "_klee_eh_Unwind_RaiseException_impl, "
-        "should not happen",
-        Executor::Unhandled);
+    executor.terminateStateOnExecError(
+        state, "Internal Error: Incorrect number of arguments to "
+               "_klee_eh_Unwind_RaiseException_impl, "
+               "should not happen");
     return;
   }
 
@@ -478,12 +476,11 @@ void SpecialFunctionHandler::handleEhUnwindRaiseExceptionImpl(
     return;
   }
 
-  if (isa_and_nonnull<SearchPhaseUnwindingInformation>(
-          state.unwindingInformation)) {
-    executor.terminateStateOnError(
+  if (state.unwindingInformation &&
+      isa<SearchPhaseUnwindingInformation>(state.unwindingInformation)) {
+    executor.terminateStateOnExecError(
         state,
-        "Internal error: Unwinding restarted during an ongoing search phase",
-        Executor::Unhandled);
+        "Internal error: Unwinding restarted during an ongoing search phase");
     return;
   }
 
