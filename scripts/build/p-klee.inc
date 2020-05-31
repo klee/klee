@@ -53,6 +53,7 @@ if [ "${USE_LIBCXX}" -eq 1 ]; then
     "-DENABLE_KLEE_LIBCXX=TRUE"
     "-DKLEE_LIBCXX_DIR=${LIBCXX_INSTALL}"
     "-DKLEE_LIBCXX_INCLUDE_DIR=${LIBCXX_INSTALL}/include/c++/v1"
+    "-DKLEE_LIBCXXABI_SRC_DIR=${LIBCXX_SRC}/libcxxabi"
   )
 else
   CMAKE_ARGUMENTS+=(
