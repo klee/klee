@@ -9,7 +9,17 @@
 #include <klee/klee.h>
 
 // from libcxxabi
-#include <cxa_exception.h>
+#ifdef __has_include
+#  if __has_include(<cxa_exception.h>)
+#    include <cxa_exception.h> // renamed with LLVM 10
+#  elif __has_include(<cxa_exception.hpp>)
+#    include <cxa_exception.hpp>
+#  else
+#    error "missing 'cxa_exception' header from libcxxabi"
+#  endif
+#else
+#  include <cxa_exception.hpp> // assume old name
+#endif
 #include <private_typeinfo.h>
 
 // implemented in the SpecialFunctionHandler
