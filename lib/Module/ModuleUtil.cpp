@@ -263,7 +263,14 @@ Function *klee::getDirectCallTarget(
   // Walk through aliases and bitcasts to try to find
   // the function being called.
   do {
-    if (Function *f = dyn_cast<Function>(v)) {
+    if (isa<llvm::GlobalVariable>(v)) {
+      // We don't care how we got this GlobalVariable
+      viaConstantExpr = false;
+
+      // Global variables won't be a direct call target. Instead, their
+      // value need to be read and is handled as indirect call target.
+      v = nullptr;
+    } else if (Function *f = dyn_cast<Function>(v)) {
       return f;
     } else if (llvm::GlobalAlias *ga = dyn_cast<GlobalAlias>(v)) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
