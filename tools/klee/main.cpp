@@ -948,12 +948,14 @@ void externalsAndGlobalsCheck(const llvm::Module *m) {
     const std::string &ext = it->first;
     if (!modelled.count(ext) && (WarnAllExternals ||
                                  !dontCare.count(ext))) {
-      if (unsafe.count(ext)) {
-        foundUnsafe.insert(*it);
-      } else {
-        klee_warning("undefined reference to %s: %s",
-                     it->second ? "variable" : "function",
-                     ext.c_str());
+      if (ext.compare(0, 5, "llvm.") != 0) { // not an LLVM reserved name
+        if (unsafe.count(ext)) {
+          foundUnsafe.insert(*it);
+        } else {
+          klee_warning("undefined reference to %s: %s",
+                       it->second ? "variable" : "function",
+                       ext.c_str());
+        }
       }
     }
   }

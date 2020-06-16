@@ -62,6 +62,10 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       case Intrinsic::vastart:
       case Intrinsic::vaend:
       case Intrinsic::fabs:
+#if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
+      case Intrinsic::fshr:
+      case Intrinsic::fshl:
+#endif
         break;
 
         // Lower vacopy so that object resolution etc is handled by
