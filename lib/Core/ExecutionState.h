@@ -65,13 +65,8 @@ struct StackFrame {
 /// @brief ExecutionState representing a path under exploration
 class ExecutionState {
 public:
-  typedef std::vector<StackFrame> stack_ty;
+  using stack_ty = std::vector<StackFrame>;
 
-private:
-  // unsupported, use copy constructor
-  ExecutionState &operator=(const ExecutionState &);
-
-public:
   // Execution - Control Flow specific
 
   /// @brief Pointer to instruction to be executed after the current
@@ -86,9 +81,12 @@ public:
 
   /// @brief Remember from which Basic Block control flow arrived
   /// (i.e. to select the right phi values)
-  unsigned incomingBBIndex;
+  std::uint32_t incomingBBIndex;
 
   // Overall state of the state - Data specific
+
+  /// @brief Exploration depth, i.e., number of times KLEE branched for this state
+  std::uint32_t depth;
 
   /// @brief Address space used by this state (e.g. Global and Heap)
   AddressSpace addressSpace;
@@ -101,9 +99,6 @@ public:
   /// @brief Costs for all queries issued for this state, in seconds
   mutable time::Span queryCost;
 
-  /// @brief Exploration depth, i.e., number of times KLEE branched for this state
-  unsigned depth;
-
   /// @brief History of complete path: represents branches taken to
   /// reach/create this state (both concrete and symbolic)
   TreeOStream pathOS;
@@ -112,18 +107,8 @@ public:
   /// taken to reach/create this state
   TreeOStream symPathOS;
 
-  /// @brief Counts how many instructions were executed since the last new
-  /// instruction was covered.
-  unsigned instsSinceCovNew;
-
-  /// @brief Whether a new instruction was covered in this state
-  bool coveredNew;
-
-  /// @brief Disables forking for this state. Set by user code
-  bool forkDisabled;
-
   /// @brief Set containing which lines in which files are covered by this state
-  std::map<const std::string *, std::set<unsigned> > coveredLines;
+  std::map<const std::string *, std::set<std::uint32_t>> coveredLines;
 
   /// @brief Pointer to the process tree of the current state
   PTreeNode *ptreeNode;
@@ -136,24 +121,37 @@ public:
   /// @brief Set of used array names for this state.  Used to avoid collisions.
   std::set<std::string> arrayNames;
 
-  // The objects handling the klee_open_merge calls this state ran through
-  std::vector<ref<MergeHandler> > openMergeStack;
+  /// @brief The objects handling the klee_open_merge calls this state ran through
+  std::vector<ref<MergeHandler>> openMergeStack;
 
-  // The numbers of times this state has run through Executor::stepInstruction
+  /// @brief The numbers of times this state has run through Executor::stepInstruction
   std::uint64_t steppedInstructions;
 
-private:
-  ExecutionState() : ptreeNode(0) {}
+  /// @brief Counts how many instructions were executed since the last new
+  /// instruction was covered.
+  std::uint32_t instsSinceCovNew;
+
+  /// @brief Whether a new instruction was covered in this state
+  bool coveredNew;
+
+  /// @brief Disables forking for this state. Set by user code
+  bool forkDisabled;
 
 public:
-  ExecutionState(KFunction *kf);
-
+  // ctors
+  explicit ExecutionState(KFunction *kf);
   // XXX total hack, just used to make a state so solver can
   // use on structure
-  ExecutionState(const std::vector<ref<Expr> > &assumptions);
-
+  explicit ExecutionState(const std::vector<ref<Expr>> &assumptions);
+  // copy ctor
   ExecutionState(const ExecutionState &state);
-
+  // no copy assignment, use copy constructor
+  ExecutionState &operator=(const ExecutionState &) = delete;
+  // no move ctor
+  ExecutionState(ExecutionState &&) noexcept = delete;
+  // no move assignment
+  ExecutionState& operator=(ExecutionState &&) noexcept = delete;
+  // dtor
   ~ExecutionState();
 
   ExecutionState *branch();
@@ -162,7 +160,7 @@ public:
   void popFrame();
 
   void addSymbolic(const MemoryObject *mo, const Array *array);
-  void addConstraint(ref<Expr> e) { constraints.addConstraint(e); }
+  void addConstraint(ref<Expr> e) { constraints.addConstraint(std::move(e)); }
 
   bool merge(const ExecutionState &b);
   void dumpStack(llvm::raw_ostream &out) const;
