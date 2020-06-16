@@ -41,6 +41,10 @@ cl::opt<bool> DebugLogStateMerge(
 
 /***/
 
+std::uint32_t ExecutionState::nextID = 1;
+
+/***/
+
 StackFrame::StackFrame(KInstIterator _caller, KFunction *_kf)
   : caller(_caller), kf(_kf), callPathNode(0), 
     minDistToUncoveredOnReturn(0), varargs(0) {
@@ -75,6 +79,7 @@ ExecutionState::ExecutionState(KFunction *kf) :
     coveredNew(false),
     forkDisabled(false) {
   pushFrame(nullptr, kf);
+  setID();
 }
 
 ExecutionState::ExecutionState(const std::vector<ref<Expr>> &assumptions)
@@ -116,6 +121,7 @@ ExecutionState *ExecutionState::branch() {
   depth++;
 
   auto *falseState = new ExecutionState(*this);
+  falseState->setID();
   falseState->coveredNew = false;
   falseState->coveredLines.clear();
 
