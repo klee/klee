@@ -68,22 +68,20 @@ StackFrame::~StackFrame() {
 ExecutionState::ExecutionState(KFunction *kf) :
     pc(kf->instructions),
     prevPC(pc),
-
     depth(0),
-
+    ptreeNode(nullptr),
+    steppedInstructions(0),
     instsSinceCovNew(0),
     coveredNew(false),
-    forkDisabled(false),
-    ptreeNode(0),
-    steppedInstructions(0){
-  pushFrame(0, kf);
+    forkDisabled(false) {
+  pushFrame(nullptr, kf);
 }
 
-ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
-    : constraints(assumptions), ptreeNode(0) {}
+ExecutionState::ExecutionState(const std::vector<ref<Expr>> &assumptions)
+    : constraints(assumptions), ptreeNode(nullptr) {}
 
 ExecutionState::~ExecutionState() {
-  for (auto cur_mergehandler: openMergeStack){
+  for (const auto &cur_mergehandler: openMergeStack){
     cur_mergehandler->removeOpenState(this);
   }
 
@@ -95,33 +93,29 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     prevPC(state.prevPC),
     stack(state.stack),
     incomingBBIndex(state.incomingBBIndex),
-
+    depth(state.depth),
     addressSpace(state.addressSpace),
     constraints(state.constraints),
-
     queryCost(state.queryCost),
-    depth(state.depth),
-
     pathOS(state.pathOS),
     symPathOS(state.symPathOS),
-
-    instsSinceCovNew(state.instsSinceCovNew),
-    coveredNew(state.coveredNew),
-    forkDisabled(state.forkDisabled),
     coveredLines(state.coveredLines),
     ptreeNode(state.ptreeNode),
     symbolics(state.symbolics),
     arrayNames(state.arrayNames),
     openMergeStack(state.openMergeStack),
-    steppedInstructions(state.steppedInstructions) {
-  for (auto cur_mergehandler: openMergeStack)
+    steppedInstructions(state.steppedInstructions),
+    instsSinceCovNew(state.instsSinceCovNew),
+    coveredNew(state.coveredNew),
+    forkDisabled(state.forkDisabled) {
+  for (const auto &cur_mergehandler: openMergeStack)
     cur_mergehandler->addOpenState(this);
 }
 
 ExecutionState *ExecutionState::branch() {
   depth++;
 
-  ExecutionState *falseState = new ExecutionState(*this);
+  auto *falseState = new ExecutionState(*this);
   falseState->coveredNew = false;
   falseState->coveredLines.clear();
 
@@ -129,19 +123,18 @@ ExecutionState *ExecutionState::branch() {
 }
 
 void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
-  stack.push_back(StackFrame(caller,kf));
+  stack.emplace_back(StackFrame(caller, kf));
 }
 
 void ExecutionState::popFrame() {
-  StackFrame &sf = stack.back();
-  for (std::vector<const MemoryObject*>::iterator it = sf.allocas.begin(), 
-         ie = sf.allocas.end(); it != ie; ++it)
-    addressSpace.unbindObject(*it);
+  const StackFrame &sf = stack.back();
+  for (const auto * memoryObject : sf.allocas)
+    addressSpace.unbindObject(memoryObject);
   stack.pop_back();
 }
 
 void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) {
-  symbolics.emplace_back(std::make_pair(ref<const MemoryObject>(mo), array));
+  symbolics.emplace_back(ref<const MemoryObject>(mo), array);
 }
 
 /**/
