@@ -131,6 +131,12 @@ public:
   /// instruction was covered.
   std::uint32_t instsSinceCovNew;
 
+  /// @brief the global state counter
+  static std::uint32_t nextID;
+
+  /// @brief the state id
+  std::uint32_t id {0};
+
   /// @brief Whether a new instruction was covered in this state
   bool coveredNew;
 
@@ -138,7 +144,7 @@ public:
   bool forkDisabled;
 
 public:
-  // ctors
+  // only to create the initial state
   explicit ExecutionState(KFunction *kf);
   // XXX total hack, just used to make a state so solver can
   // use on structure
@@ -164,6 +170,15 @@ public:
 
   bool merge(const ExecutionState &b);
   void dumpStack(llvm::raw_ostream &out) const;
+
+  std::uint32_t getID() const { return id; };
+  void setID() { id = nextID++; };
+};
+
+struct ExecutionStateIDCompare {
+  bool operator()(const ExecutionState *a, const ExecutionState *b) const {
+    return a->getID() < b->getID();
+  }
 };
 }
 

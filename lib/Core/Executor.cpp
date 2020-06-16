@@ -3178,11 +3178,12 @@ void Executor::terminateStateOnError(ExecutionState &state,
 
     std::string MsgString;
     llvm::raw_string_ostream msg(MsgString);
-    msg << "Error: " << message << "\n";
+    msg << "Error: " << message << '\n';
     if (ii.file != "") {
-      msg << "File: " << ii.file << "\n";
-      msg << "Line: " << ii.line << "\n";
-      msg << "assembly.ll line: " << ii.assemblyLine << "\n";
+      msg << "File: " << ii.file << '\n'
+          << "Line: " << ii.line << '\n'
+          << "assembly.ll line: " << ii.assemblyLine << '\n'
+          << "State: " << state.getID() << '\n';
     }
     msg << "Stack: \n";
     state.dumpStack(msg);
@@ -3813,7 +3814,7 @@ void Executor::runFunctionAsMain(Function *f,
   }
 
   ExecutionState *state = new ExecutionState(kmodule->functionMap[f]);
-  
+
   if (pathWriter) 
     state->pathOS = pathWriter->open();
   if (symPathWriter) 
