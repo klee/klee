@@ -1424,6 +1424,34 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
       break;
     }
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
+    case Intrinsic::fshr:
+    case Intrinsic::fshl: {
+      ref<Expr> op1 = eval(ki, 1, state).value;
+      ref<Expr> op2 = eval(ki, 2, state).value;
+      ref<Expr> op3 = eval(ki, 3, state).value;
+      unsigned w = op1->getWidth();
+      assert(w == op2->getWidth() && "type mismatch");
+      assert(w == op3->getWidth() && "type mismatch");
+      ref<Expr> c = ConcatExpr::create(op1, op2);
+      // op3 = zeroExtend(op3 % w)
+      op3 = URemExpr::create(op3, ConstantExpr::create(w, w));
+      op3 = ZExtExpr::create(op3, w+w);
+      if (f->getIntrinsicID() == Intrinsic::fshl) {
+        // shift left and take top half
+        ref<Expr> s = ShlExpr::create(c, op3);
+        bindLocal(ki, state, ExtractExpr::create(s, w, w));
+      } else {
+        // shift right and take bottom half
+        // note that LShr and AShr will have same behaviour
+        ref<Expr> s = LShrExpr::create(c, op3);
+        bindLocal(ki, state, ExtractExpr::create(s, 0, w));
+      }
+      break;
+    }
+#endif
+
     // va_arg is handled by caller and intrinsic lowering, see comment for
     // ExecutionState::varargs
     case Intrinsic::vastart: {
