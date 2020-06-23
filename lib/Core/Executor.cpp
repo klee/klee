@@ -1292,11 +1292,12 @@ void Executor::executeGetValue(ExecutionState &state,
 }
 
 void Executor::printDebugInstructions(ExecutionState &state) {
-  // check do not print
+  // print nothing if option unset
   if (DebugPrintInstructions.getBits() == 0)
-	  return;
+    return;
 
-  llvm::raw_ostream *stream = 0;
+  // set output stream (stderr/file)
+  llvm::raw_ostream *stream = nullptr;
   if (DebugPrintInstructions.isSet(STDERR_ALL) ||
       DebugPrintInstructions.isSet(STDERR_SRC) ||
       DebugPrintInstructions.isSet(STDERR_COMPACT))
@@ -1304,18 +1305,24 @@ void Executor::printDebugInstructions(ExecutionState &state) {
   else
     stream = &debugLogBuffer;
 
+  // print:
+  //   [all]     src location:asm line:state ID:instruction
+  //   [compact]              asm line:state ID
+  //   [src]     src location:asm line:state ID
   if (!DebugPrintInstructions.isSet(STDERR_COMPACT) &&
       !DebugPrintInstructions.isSet(FILE_COMPACT)) {
-    (*stream) << "     " << state.pc->getSourceLocation() << ":";
+    (*stream) << "     " << state.pc->getSourceLocation() << ':';
   }
 
-  (*stream) << state.pc->info->assemblyLine;
+  (*stream) << state.pc->info->assemblyLine << ':' << state.getID();
 
   if (DebugPrintInstructions.isSet(STDERR_ALL) ||
       DebugPrintInstructions.isSet(FILE_ALL))
-    (*stream) << ":" << *(state.pc->inst);
-  (*stream) << "\n";
+    (*stream) << ':' << *(state.pc->inst);
 
+  (*stream) << '\n';
+
+  // flush to file
   if (DebugPrintInstructions.isSet(FILE_ALL) ||
       DebugPrintInstructions.isSet(FILE_COMPACT) ||
       DebugPrintInstructions.isSet(FILE_SRC)) {
