@@ -10,9 +10,11 @@
 
 #include "gtest/gtest.h"
 
+#include "klee/ADT/RNG.h"
 #include "Core/ExecutionState.h"
 #include "Core/PTree.h"
 #include "Core/Searcher.h"
+
 #include "llvm/Support/raw_ostream.h"
 
 using namespace klee;
@@ -25,7 +27,8 @@ TEST(SearcherTest, RandomPath) {
   PTree processTree(&es);
   es.ptreeNode = processTree.root.getPointer();
 
-  RandomPathSearcher rp(processTree);
+  RNG rng;
+  RandomPathSearcher rp(processTree, rng);
   EXPECT_TRUE(rp.empty());
 
   rp.update(nullptr, {&es}, {});
@@ -67,8 +70,9 @@ TEST(SearcherTest, TwoRandomPath) {
   ExecutionState es(root);
   processTree.attach(root.ptreeNode, &es, &root);
 
-  RandomPathSearcher rp(processTree);
-  RandomPathSearcher rp1(processTree);
+  RNG rng, rng1;
+  RandomPathSearcher rp(processTree, rng);
+  RandomPathSearcher rp1(processTree, rng1);
   EXPECT_TRUE(rp.empty());
   EXPECT_TRUE(rp1.empty());
 
@@ -127,8 +131,9 @@ TEST(SearcherTest, TwoRandomPathDot) {
   rightLeafPNode = root.ptreeNode;
   esParentPNode = es.ptreeNode;
 
-  RandomPathSearcher rp(processTree);
-  RandomPathSearcher rp1(processTree);
+  RNG rng;
+  RandomPathSearcher rp(processTree, rng);
+  RandomPathSearcher rp1(processTree, rng);
 
   rp.update(nullptr, {&es}, {});
 
@@ -203,9 +208,10 @@ TEST(SearcherDeathTest, TooManyRandomPaths) {
   es.ptreeNode = processTree.root.getPointer();
   processTree.remove(es.ptreeNode); // Need to remove to avoid leaks
 
-  RandomPathSearcher rp(processTree);
-  RandomPathSearcher rp1(processTree);
-  RandomPathSearcher rp2(processTree);
-  ASSERT_DEATH({ RandomPathSearcher rp3(processTree); }, "");
+  RNG rng;
+  RandomPathSearcher rp(processTree, rng);
+  RandomPathSearcher rp1(processTree, rng);
+  RandomPathSearcher rp2(processTree, rng);
+  ASSERT_DEATH({ RandomPathSearcher rp3(processTree, rng); }, "");
 }
 }

@@ -11,6 +11,7 @@
 #define KLEE_SEARCHER_H
 
 #include "PTree.h"
+#include "klee/ADT/RNG.h"
 #include "klee/System/Time.h"
 
 #include "llvm/Support/CommandLine.h"
@@ -116,8 +117,10 @@ namespace klee {
 
   class RandomSearcher : public Searcher {
     std::vector<ExecutionState*> states;
+    RNG &theRNG;
 
   public:
+    explicit RandomSearcher(RNG &rng) : theRNG{rng} {}
     ExecutionState &selectState();
     void update(ExecutionState *current,
                 const std::vector<ExecutionState *> &addedStates,
@@ -142,13 +145,14 @@ namespace klee {
 
   private:
     DiscretePDF<ExecutionState*> *states;
+    RNG &theRNG;
     WeightType type;
     bool updateWeights;
     
     double getWeight(ExecutionState*);
 
   public:
-    WeightedRandomSearcher(WeightType type);
+    WeightedRandomSearcher(WeightType type, RNG &rng);
     ~WeightedRandomSearcher();
 
     ExecutionState &selectState();
@@ -191,12 +195,13 @@ namespace klee {
   */
   class RandomPathSearcher : public Searcher {
     PTree &processTree;
+    RNG &theRNG;
 
     // Unique bitmask of this searcher
     const uint8_t idBitMask;
 
   public:
-    RandomPathSearcher(PTree &processTree);
+    RandomPathSearcher(PTree &processTree, RNG &rng);
     ~RandomPathSearcher();
 
     ExecutionState &selectState();
