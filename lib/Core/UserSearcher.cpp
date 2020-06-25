@@ -104,22 +104,21 @@ bool klee::userSearcherRequiresMD2U() {
 	  std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_QC) != CoreSearch.end());
 }
 
-Searcher *getNewSearcher(Searcher::CoreSearchType type, PTree &processTree) {
-  Searcher *searcher = NULL;
+
+Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng, PTree &processTree) {
+  Searcher *searcher = nullptr;
   switch (type) {
-  case Searcher::DFS: searcher = new DFSSearcher(); break;
-  case Searcher::BFS: searcher = new BFSSearcher(); break;
-  case Searcher::RandomState: searcher = new RandomSearcher(); break;
-  case Searcher::RandomPath:
-    searcher = new RandomPathSearcher(processTree);
-    break;
-  case Searcher::NURS_CovNew: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::CoveringNew); break;
-  case Searcher::NURS_MD2U: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::MinDistToUncovered); break;
-  case Searcher::NURS_Depth: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::Depth); break;
-  case Searcher::NURS_RP: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::RP); break;
-  case Searcher::NURS_ICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::InstCount); break;
-  case Searcher::NURS_CPICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::CPInstCount); break;
-  case Searcher::NURS_QC: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::QueryCost); break;
+    case Searcher::DFS: searcher = new DFSSearcher(); break;
+    case Searcher::BFS: searcher = new BFSSearcher(); break;
+    case Searcher::RandomState: searcher = new RandomSearcher(rng); break;
+    case Searcher::RandomPath: searcher = new RandomPathSearcher(processTree, rng); break;
+    case Searcher::NURS_CovNew: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::CoveringNew, rng); break;
+    case Searcher::NURS_MD2U: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::MinDistToUncovered, rng); break;
+    case Searcher::NURS_Depth: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::Depth, rng); break;
+    case Searcher::NURS_RP: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::RP, rng); break;
+    case Searcher::NURS_ICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::InstCount, rng); break;
+    case Searcher::NURS_CPICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::CPInstCount, rng); break;
+    case Searcher::NURS_QC: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::QueryCost, rng); break;
   }
 
   return searcher;
@@ -127,13 +126,14 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, PTree &processTree) {
 
 Searcher *klee::constructUserSearcher(Executor &executor) {
 
-  Searcher *searcher = getNewSearcher(CoreSearch[0], *executor.processTree);
+  Searcher *searcher = getNewSearcher(CoreSearch[0], executor.theRNG, *executor.processTree);
+
   if (CoreSearch.size() > 1) {
     std::vector<Searcher *> s;
     s.push_back(searcher);
 
     for (unsigned i = 1; i < CoreSearch.size(); i++)
-      s.push_back(getNewSearcher(CoreSearch[i], *executor.processTree));
+      s.push_back(getNewSearcher(CoreSearch[i], executor.theRNG, *executor.processTree));
 
     searcher = new InterleavedSearcher(s);
   }

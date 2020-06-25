@@ -414,10 +414,6 @@ cl::opt<bool> DebugCheckForImpliedValues(
 
 } // namespace
 
-namespace klee {
-  RNG theRNG;
-}
-
 // XXX hack
 extern "C" unsigned dumpStates, dumpPTree;
 unsigned dumpStates = 0, dumpPTree = 0;

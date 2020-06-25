@@ -18,6 +18,7 @@
 #include "ExecutionState.h"
 #include "UserSearcher.h"
 
+#include "klee/ADT/RNG.h"
 #include "klee/Core/Interpreter.h"
 #include "klee/Expr/ArrayCache.h"
 #include "klee/Expr/ArrayExprOptimizer.h"
@@ -110,6 +111,9 @@ public:
     User,
     Unhandled
   };
+
+  /// The random number generator.
+  RNG theRNG;
 
 private:
   static const char *TerminateReasonNames[];
