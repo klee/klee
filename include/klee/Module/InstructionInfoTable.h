@@ -23,32 +23,39 @@ namespace llvm {
 
 namespace klee {
 
-  /* Stores debug information for a KInstruction */
+  /// @brief InstructionInfo stores debug information for a KInstruction.
   struct InstructionInfo {
+    /// @brief The instruction id.
     unsigned id;
-    const std::string &file;
+    /// @brief Line number in source file.
     unsigned line;
+    /// @brief Column number in source file.
     unsigned column;
+    /// @brief Line number in generated assembly.ll.
     unsigned assemblyLine;
+    /// @brief Source file name.
+    const std::string &file;
 
   public:
-    InstructionInfo(unsigned _id, const std::string &_file, unsigned _line,
-                    unsigned _column, unsigned _assemblyLine)
-        : id(_id), file(_file), line(_line), column(_column),
-          assemblyLine(_assemblyLine) {}
+    InstructionInfo(unsigned id, const std::string &file, unsigned line,
+                    unsigned column, unsigned assemblyLine)
+        : id{id}, line{line}, column{column}, assemblyLine{assemblyLine}, file{file} {}
   };
 
-  /* Stores debug information for a KInstruction */
+  /// @brief FunctionInfo stores debug information for a KFunction.
   struct FunctionInfo {
+    /// @brief The function id.
     unsigned id;
-    const std::string &file;
+    /// @brief Line number in source file.
     unsigned line;
+    /// @brief Line number in generated assembly.ll.
     uint64_t assemblyLine;
+    /// @brief Source file name.
+    const std::string &file;
 
   public:
-    FunctionInfo(unsigned _id, const std::string &_file, unsigned _line,
-                 uint64_t _assemblyLine)
-        : id(_id), file(_file), line(_line), assemblyLine(_assemblyLine) {}
+    FunctionInfo(unsigned id, const std::string &file, unsigned line, uint64_t assemblyLine)
+        : id{id}, line{line}, assemblyLine{assemblyLine}, file{file} {}
 
     FunctionInfo(const FunctionInfo &) = delete;
     FunctionInfo &operator=(FunctionInfo const &) = delete;
@@ -65,7 +72,7 @@ namespace klee {
     std::vector<std::unique_ptr<std::string>> internedStrings;
 
   public:
-    InstructionInfoTable(const llvm::Module &m);
+    explicit InstructionInfoTable(const llvm::Module &m);
 
     unsigned getMaxID() const;
     const InstructionInfo &getInfo(const llvm::Instruction &) const;

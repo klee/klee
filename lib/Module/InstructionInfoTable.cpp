@@ -119,13 +119,13 @@ public:
 #endif
     if (dsub != nullptr) {
       auto path = dsub->getFilename();
-      return std::unique_ptr<FunctionInfo>(new FunctionInfo(
+      return std::make_unique<FunctionInfo>(FunctionInfo(
           0, getInternedString(path), dsub->getLine(), asmLine));
     }
 
     // Fallback: Mark as unknown
-    return std::unique_ptr<FunctionInfo>(
-        new FunctionInfo(0, getInternedString(""), 0, asmLine));
+    return std::make_unique<FunctionInfo>(
+        FunctionInfo(0, getInternedString(""), 0, asmLine));
   }
 
   std::unique_ptr<InstructionInfo>
@@ -150,17 +150,17 @@ public:
           column = LexicalBlock->getColumn();
         }
       }
-      return std::unique_ptr<InstructionInfo>(new InstructionInfo(
+      return std::make_unique<InstructionInfo>(InstructionInfo(
           0, getInternedString(full_path), line, column, asmLine));
     }
 
     if (f != nullptr)
       // If nothing found, use the surrounding function
-      return std::unique_ptr<InstructionInfo>(
-          new InstructionInfo(0, f->file, f->line, 0, asmLine));
+      return std::make_unique<InstructionInfo>(
+          InstructionInfo(0, f->file, f->line, 0, asmLine));
     // If nothing found, use the surrounding function
-    return std::unique_ptr<InstructionInfo>(
-        new InstructionInfo(0, getInternedString(""), 0, 0, asmLine));
+    return std::make_unique<InstructionInfo>(
+        InstructionInfo(0, getInternedString(""), 0, 0, asmLine));
   }
 };
 
