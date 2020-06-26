@@ -6,8 +6,8 @@ task:
   deps_script:
     - sed -i.bak -e 's/quarterly/latest/' /etc/pkg/FreeBSD.conf
     - env ASSUME_ALWAYS_YES=yes pkg bootstrap -f
-    - pkg update -f
-    - pkg install -y llvm80 gmake z3 cmake pkgconf google-perftools python3 python37 py37-sqlite3 py37-tabulate
+    - env ASSUME_ALWAYS_YES=yes pkg update -f
+    - env ASSUME_ALWAYS_YES=yes pkg install -y llvm80 gmake z3 cmake pkgconf google-perftools python3 python37 py37-sqlite3 py37-tabulate
   build_script:
     - mkdir build
     - cd build
