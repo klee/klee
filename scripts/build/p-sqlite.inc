@@ -1,5 +1,5 @@
 setup_build_variables_sqlite() {
-  SQLITE_SRC_PATH="${BASE}/sqlite-amalgamation-3270200"
+  SQLITE_SRC_PATH="${BASE}/sqlite-amalgamation-3320300"
   SQLITE_INSTALL_PATH=${SQLITE_SRC_PATH}
   SQLITE_SUFFIX="${SANITIZER_SUFFIX}"
 }
@@ -7,8 +7,8 @@ setup_build_variables_sqlite() {
 download_sqlite() {
   # Get sqlite release
   cd "${BASE}"
-  wget "http://www.sqlite.org/2019/sqlite-amalgamation-3270200.zip"
-  unzip "sqlite-amalgamation-3270200.zip"
+  wget --no-check-certificate "https://www.sqlite.org/2020/sqlite-amalgamation-3320300.zip"
+  unzip "sqlite-amalgamation-3320300.zip"
 }
 
 build_sqlite() { 
