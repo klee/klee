@@ -2,7 +2,7 @@ task:
   freebsd_instance:
     matrix:
       - image_family: freebsd-11-3-snap
-      - image_family: freebsd-13-0-snap
+      - image_family: freebsd-12-1-snap
   deps_script:
     - sed -i.bak -e 's/quarterly/latest/' /etc/pkg/FreeBSD.conf
     - env ASSUME_ALWAYS_YES=yes pkg bootstrap -f
