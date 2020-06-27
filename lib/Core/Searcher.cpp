@@ -293,7 +293,7 @@ void RandomPathSearcher::update(ExecutionState *current,
                                 const std::vector<ExecutionState *> &removedStates) {
   // insert states
   for (auto es : addedStates) {
-    PTreeNode *pnode = es->ptreeNode, *parent = pnode->parent;
+    PTreeNode *pnode = es->ptreeNode, *parent = pnode->parent.getPointer();
     PTreeNodePtr *childPtr;
 
     childPtr = parent ? ((parent->left.getPointer() == pnode) ? &parent->left
@@ -303,7 +303,7 @@ void RandomPathSearcher::update(ExecutionState *current,
       childPtr->setInt(childPtr->getInt() | idBitMask);
       pnode = parent;
       if (pnode)
-        parent = pnode->parent;
+        parent = pnode->parent.getPointer();
 
       childPtr = parent
                      ? ((parent->left.getPointer() == pnode) ? &parent->left
@@ -314,7 +314,7 @@ void RandomPathSearcher::update(ExecutionState *current,
 
   // remove states
   for (auto es : removedStates) {
-    PTreeNode *pnode = es->ptreeNode, *parent = pnode->parent;
+    PTreeNode *pnode = es->ptreeNode, *parent = pnode->parent.getPointer();
 
     while (pnode && !IS_OUR_NODE_VALID(pnode->left) &&
            !IS_OUR_NODE_VALID(pnode->right)) {
@@ -326,7 +326,7 @@ void RandomPathSearcher::update(ExecutionState *current,
       childPtr->setInt(childPtr->getInt() & ~idBitMask);
       pnode = parent;
       if (pnode)
-        parent = pnode->parent;
+        parent = pnode->parent.getPointer();
     }
   }
 }

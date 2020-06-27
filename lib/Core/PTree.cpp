@@ -44,17 +44,17 @@ void PTree::attach(PTreeNode *node, ExecutionState *leftState, ExecutionState *r
   node->left = PTreeNodePtr(new PTreeNode(node, leftState));
   // The current node inherits the tag
   uint8_t currentNodeTag = root.getInt();
-  if (node->parent)
-    currentNodeTag = node->parent->left.getPointer() == node
-                         ? node->parent->left.getInt()
-                         : node->parent->right.getInt();
+  if (node->parent.getPointer())
+    currentNodeTag = node->parent.getPointer()->left.getPointer() == node
+                         ? node->parent.getPointer()->left.getInt()
+                         : node->parent.getPointer()->right.getInt();
   node->right = PTreeNodePtr(new PTreeNode(node, rightState), currentNodeTag);
 }
 
 void PTree::remove(PTreeNode *n) {
   assert(!n->left.getPointer() && !n->right.getPointer());
   do {
-    PTreeNode *p = n->parent;
+    PTreeNode *p = n->parent.getPointer();
     if (p) {
       if (n == p->left.getPointer()) {
         p->left = PTreeNodePtr(nullptr);

@@ -25,9 +25,15 @@ namespace klee {
   constexpr int PtrBitCount = 3;
   using PTreeNodePtr = llvm::PointerIntPair<PTreeNode *, PtrBitCount, uint8_t>;
 
+  /* Used to implement van Embde Boas partitioning of the PTree for good cache effiecency.
+     The integer part stores the number of other PTreeNodes in this chunk of memory. For example
+     2 means there is space for 2 other nodes.
+  */
+  using PTreeParentPtr = PTreeNodePtr;
+
   class PTreeNode {
   public:
-    PTreeNode *parent = nullptr;
+    PTreeParentPtr parent{nullptr, 0};
 
     PTreeNodePtr left; 
     PTreeNodePtr right;
