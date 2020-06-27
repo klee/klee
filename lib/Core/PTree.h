@@ -41,6 +41,7 @@ namespace klee {
 
     PTreeNode(const PTreeNode&) = delete;
     PTreeNode(PTreeNode *parent, ExecutionState *state);
+    PTreeNode(PTreeNode *parent, uint8_t, ExecutionState *state);
     ~PTreeNode() = default;
   };
 

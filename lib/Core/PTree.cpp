@@ -15,6 +15,8 @@
 #include "klee/Expr/ExprPPrinter.h"
 #include "klee/Support/OptionCategories.h"
 
+#include "llvm/Support/CommandLine.h"
+
 #include <bitset>
 #include <vector>
 
@@ -31,8 +33,31 @@ cl::opt<bool>
 
 } // namespace
 
-PTree::PTree(ExecutionState *initialState)
-    : root(PTreeNodePtr(new PTreeNode(nullptr, initialState))) {
+unsigned CHUNK_IDX = 1;
+// Sizes of a full binary tree. We can't index more than 8 in the bit stolen
+// pointers.
+constexpr uint8_t CHUNK_SIZES[8] = {1, 3, 7, 15, 31, 63, 127, 255};
+// constexpr int DEFAULT_CHUNK_IDX = 1;
+#define NUM_SPACES (CHUNK_SIZES[CHUNK_IDX])
+
+/* PTreeNodes are layed out in a cache friendly manner via van Embde Boas layout
+   as described in https://jiahai-feng.github.io/posts/cache-oblivious-algorithms/
+   and http://erikdemaine.org/papers/BRICS2002/paper.pdf (Figure 4).
+
+   The idea is to partion the tree recursivelly into small subtrees and then have
+   the little subtrees allocated togheter.  This is achived in two steps:
+
+   1) PTreeNodes is allocated in a chunk of memory that is capable of holding a full
+      subtree of PTreeNodes. That is 1, 3, 7, 15 ... nodes. CHUNK_SIZES[CHUNK_IDX] 
+      determines this size
+   2) When allocating a new PTreeNode, we check if the parent has any space left in 
+      its chunk and allocate there. Otherwise go to 1).
+   */
+
+PTree::PTree(ExecutionState *initialState) {
+  if(CompressProcessTree) CHUNK_IDX = 0; 
+  uint8_t *chunk = new uint8_t[(NUM_SPACES * sizeof(PTreeNode))];
+  root = PTreeNodePtr(new (chunk) PTreeNode(nullptr, CHUNK_IDX, initialState));
   initialState->ptreeNode = root.getPointer();
 }
 
@@ -40,15 +65,33 @@ void PTree::attach(PTreeNode *node, ExecutionState *leftState, ExecutionState *r
   assert(node && !node->left.getPointer() && !node->right.getPointer());
   assert(node == rightState->ptreeNode &&
          "Attach assumes the right state is the current state");
+
+  uint8_t *left_chunk, *right_chunk;
+  auto space_left_idx = node->parent.getInt();
+  if (space_left_idx > 0) {
+    auto space_left = CHUNK_SIZES[space_left_idx];
+    left_chunk = (uint8_t *)node + sizeof(PTreeNode);
+    right_chunk =
+        (uint8_t *)node + (((space_left / 2) + 1) * sizeof(PTreeNode));
+    space_left_idx--;
+  } else {
+    left_chunk = new uint8_t[(NUM_SPACES * sizeof(PTreeNode))];
+    right_chunk = new uint8_t[(NUM_SPACES * sizeof(PTreeNode))];
+    space_left_idx = CHUNK_IDX;
+  }
+
   node->state = nullptr;
-  node->left = PTreeNodePtr(new PTreeNode(node, leftState));
+  node->left =
+      PTreeNodePtr(new (left_chunk) PTreeNode(node, space_left_idx, leftState));
   // The current node inherits the tag
   uint8_t currentNodeTag = root.getInt();
   if (node->parent.getPointer())
     currentNodeTag = node->parent.getPointer()->left.getPointer() == node
                          ? node->parent.getPointer()->left.getInt()
                          : node->parent.getPointer()->right.getInt();
-  node->right = PTreeNodePtr(new PTreeNode(node, rightState), currentNodeTag);
+  node->right = PTreeNodePtr(new (right_chunk)
+                                 PTreeNode(node, space_left_idx, rightState),
+                             currentNodeTag);
 }
 
 void PTree::remove(PTreeNode *n) {
@@ -63,7 +106,14 @@ void PTree::remove(PTreeNode *n) {
         p->right = PTreeNodePtr(nullptr);
       }
     }
-    delete n;
+    if (n->parent.getInt() == CHUNK_IDX) {
+      // We are at the parent chunk and can free memory
+      n->~PTreeNode();
+      delete[] n;
+    } else { 
+      // We are in the middle of a chunk, can only destruct
+      n->~PTreeNode();
+    }
     n = p;
   } while (n && !n->left.getPointer() && !n->right.getPointer());
 
@@ -72,22 +122,22 @@ void PTree::remove(PTreeNode *n) {
     // other one. Eliminate the node and connect its child to the parent
     // directly (if it's not the root).
     PTreeNodePtr child = n->left.getPointer() ? n->left : n->right;
-    PTreeNode *parent = n->parent;
+    PTreeNodePtr parent = n->parent;
 
     child.getPointer()->parent = parent;
-    if (!parent) {
+    if (!parent.getPointer()) {
       // We're at the root.
       root = child;
     } else {
-      if (n == parent->left.getPointer()) {
-        parent->left = child;
+      if (n == parent.getPointer()->left.getPointer()) {
+        parent.getPointer()->left = child;
       } else {
-        assert(n == parent->right.getPointer());
-        parent->right = child;
+        assert(n == parent.getPointer()->right.getPointer());
+        parent.getPointer()->right = child;
       }
     }
 
-    delete n;
+    delete[] n;
   }
 }
 
@@ -127,6 +177,13 @@ void PTree::dump(llvm::raw_ostream &os) {
   delete pp;
 }
 
+PTreeNode::PTreeNode(PTreeNode *parent, uint8_t numSpaces,
+                     ExecutionState *state)
+    : parent{parent, numSpaces}, state{state} {
+  state->ptreeNode = this;
+  left = PTreeNodePtr(nullptr);
+  right = PTreeNodePtr(nullptr);
+}
 PTreeNode::PTreeNode(PTreeNode *parent, ExecutionState *state) : parent{parent}, state{state} {
   state->ptreeNode = this;
   left = PTreeNodePtr(nullptr);
