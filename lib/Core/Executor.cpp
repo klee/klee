@@ -295,9 +295,14 @@ cl::opt<unsigned long long> MaxInstructions(
 
 cl::opt<unsigned>
     MaxForks("max-forks",
-             cl::desc("Only fork this many times.  Set to -1 to disable (default=-1)"),
+             cl::desc("Only fork this many times.  After reaching limit, push remaining symbolic states to an exit (default=-1 (off))"),
              cl::init(~0u),
              cl::cat(TerminationCat));
+
+cl::opt<unsigned>
+  MaxForksTerminate("max-forks-terminate",
+           cl::desc("Only fork this many times.  After reaching limit, terminate exploration completely (default=-1 (off))"),
+           cl::init(~0u));
 
 cl::opt<unsigned> MaxDepth(
     "max-depth",
@@ -867,6 +872,28 @@ bool Executor::branchingPermitted(const ExecutionState &state) const {
   return true;
 }
 
+/// Helper method to get an Assignment for a state.  This method is called
+/// when we have reached the maximum number of forks allotted for a particular
+/// exploration.
+Assignment * generateAssignmentForDanglingState(std::map<ExecutionState*, Assignment*> &maxForksMap,
+                                                TimingSolver * solver, ExecutionState &current){
+  Assignment *a = maxForksMap[&current];
+  if (!a){
+    std::vector< std::vector<unsigned char> > values;
+    std::vector<const Array*> objects;
+    for (unsigned i = 0; i != current.symbolics.size(); ++i){
+      objects.push_back(current.symbolics[i].second);
+    }
+    ConstraintSet extendedConstraints(current.constraints);
+    bool success = solver->getInitialValues(extendedConstraints, objects, values, current.queryMetaData);
+    assert(success && "We have shown the state is SAT so we "
+           "should be able to generate a solution");
+    a = new Assignment(objects, values);
+    maxForksMap[&current] = a;
+  }
+  return a;
+}
+
 void Executor::branch(ExecutionState &state, 
                       const std::vector< ref<Expr> > &conditions,
                       std::vector<ExecutionState*> &result) {
@@ -874,7 +901,24 @@ void Executor::branch(ExecutionState &state,
   unsigned N = conditions.size();
   assert(N);
 
-  if (!branchingPermitted(state)) {
+  if (MaxForks!=~0u && stats::forks >= MaxForks) {
+    //See if the state has a previously calculated solution
+    Assignment *a =  generateAssignmentForDanglingState(maxForksMap, solver, state);
+    for (unsigned i=0; i<N; ++i) {
+      ref<Expr> r = a->evaluate(conditions[i]);
+      assert(isa<ConstantExpr>(r) && "Must evaluate to t/f");
+      /// Based on whether the solution follows the true or false branch,
+      /// (Note: it must do one of the two) we add that state to the queue
+      /// to be further extended.  Since we don't want to fork, the other
+      /// option is simply dropped.
+      if (cast<ConstantExpr>(r)->isTrue()){
+        result.push_back(&state);
+      } else {
+        result.push_back(nullptr);
+      }
+    }
+  }
+  else if (!branchingPermitted(state)) {
     unsigned next = theRNG.getInt32() % N;
     for (unsigned i=0; i<N; ++i) {
       if (i == next) {
@@ -988,8 +1032,33 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   if (isSeeding)
     timeout *= static_cast<unsigned>(it->second.size());
   solver->setTimeout(timeout);
-  bool success = solver->evaluate(current.constraints, condition, res,
+  bool success;
+  if ((MaxForks!=~0u && stats::forks >= MaxForks)){
+
+    klee_warning_once(0, "skipping fork (max-forks reached)");
+
+    TimerStatIncrementer timer(stats::forkTime);
+    //See if the state has a previously calculated solution
+    Assignment *a =  generateAssignmentForDanglingState(maxForksMap, solver, current);
+    ref<Expr> r = a->evaluate(condition);
+    assert(isa<ConstantExpr>(r) && "Must evaluate to t/f");
+    /// Based on whether the solution follows the true or false branch,
+    /// (Note: it must do one of the two) we add that state to the queue
+    /// to be further extended.  Since we don't want to fork, the other
+    /// option is simply dropped.
+    if (cast<ConstantExpr>(r)->isTrue()){
+      addConstraint(current, condition);
+      res = Solver::True;
+    } else {
+      addConstraint(current, Expr::createIsZero(condition));
+      res = Solver::False;
+    }
+    success = true;
+  } else {
+    success = solver->evaluate(current.constraints, condition, res,
                                   current.queryMetaData);
+  }
+
   solver->setTimeout(time::Span());
   if (!success) {
     current.pc = current.prevPC;
@@ -1383,7 +1452,7 @@ void Executor::stepInstruction(ExecutionState &state) {
   state.prevPC = state.pc;
   ++state.pc;
 
-  if (stats::instructions == MaxInstructions)
+  if (stats::instructions == MaxInstructions || (MaxForksTerminate!=~0u && stats::forks >= MaxForksTerminate))
     haltExecution = true;
 }
 
@@ -1932,6 +2001,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
       std::map<ref<Expr>, BasicBlock *> expressionOrder;
 
+      bool forkingEnabled = !(MaxForks!=~0u && stats::forks >= MaxForks);
+
       // Iterate through all non-default cases and order them by expressions
       for (auto i : si->cases()) {
         ref<Expr> value = evalConstant(i.getCaseValue());
@@ -1958,13 +2029,21 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         defaultValue = AndExpr::create(defaultValue, Expr::createIsZero(match));
 
         // Check if control flow could take this case
-        bool result;
-        match = optimizer.optimizeExpr(match, false);
-        bool success = solver->mayBeTrue(state.constraints, match, result,
-                                         state.queryMetaData);
-        assert(success && "FIXME: Unhandled solver failure");
-        (void) success;
-        if (result) {
+        // If forking is disabled, we can create all of the case statements without
+        // any worry, since only the one that satisfies the cached assignment,
+        // (and therefore necessarily SAT) will be taken.  In addition, this naive
+        // creation allows us to avoid invoking the solver->mayBeTrue() function.
+        bool casePossible = true;
+        if (forkingEnabled){
+          // If, instead, forking is enabled, we want to create each case that can
+          // possibly be SAT.  Therefore, we create a sucessor whenever solver->
+          // mayBeTrue() determines the path is possible.
+          match = optimizer.optimizeExpr(match, false);
+          bool success = solver->mayBeTrue(state.constraints, match, casePossible, state.queryMetaData);
+          assert(success && "FIXME: Unhandled solver failure");
+          (void) success;
+        }
+        if (casePossible) {
           BasicBlock *caseSuccessor = it->second;
 
           // Handle the case that a basic block might be the target of multiple
@@ -1988,12 +2067,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
       // Check if control could take the default case
       defaultValue = optimizer.optimizeExpr(defaultValue, false);
-      bool res;
-      bool success = solver->mayBeTrue(state.constraints, defaultValue, res,
-                                       state.queryMetaData);
-      assert(success && "FIXME: Unhandled solver failure");
-      (void) success;
-      if (res) {
+      bool defaultPathPossible = true;
+      if (forkingEnabled){
+        // If forking is enabled, we want to check whether the default path is
+        // SAT. If it is, we add it to the list of targets to be explored.
+        bool success = solver->mayBeTrue(state.constraints, defaultValue, defaultPathPossible, state.queryMetaData);
+        assert(success && "FIXME: Unhandled solver failure");
+        (void) success;
+      }
+      if (defaultPathPossible) {
         std::pair<std::map<BasicBlock *, ref<Expr> >::iterator, bool> ret =
             branchTargets.insert(
                 std::make_pair(si->getDefaultDest(), defaultValue));
