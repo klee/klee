@@ -103,6 +103,12 @@ extern "C" {
   unsigned klee_is_symbolic(uintptr_t n);
 
 
+  /* Return true if replaying a concrete test case using the libkleeRuntime library
+   * Return false if executing symbolically in KLEE.
+   */
+  unsigned klee_is_replay();
+
+
   /* The following intrinsics are primarily intended for internal use
      and may have peculiar semantics. */
 

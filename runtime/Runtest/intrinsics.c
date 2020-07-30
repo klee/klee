@@ -146,6 +146,10 @@ uintptr_t klee_choose(uintptr_t n) {
   return x;
 }
 
+unsigned klee_is_replay() {
+  return 1;
+}
+
 void klee_assume(uintptr_t x) {
   if (!x) {
     report_internal_error("invalid klee_assume");
