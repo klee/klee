@@ -328,18 +328,22 @@ static void splitByCall(Function *function) {
        bbit != bbie; bbit++, i++) {
     blocks[i] = &*bbit;
   }
-  for (unsigned j = 0; j < n; j ++) {
+  for (unsigned j = 0; j < n; j++) {
     BasicBlock *fbb = blocks[j];
     llvm::BasicBlock::iterator it = fbb->begin();
     llvm::BasicBlock::iterator ie = fbb->end();
+    Instruction *firstInst = &*it;
     while (it != ie) {
       if (it->getOpcode() == Instruction::Call || it->getOpcode() == Instruction::Invoke) {
         Instruction *callInst = &*it++;
         Instruction *afterCallInst = &*it;
-        BasicBlock *nbb = fbb->splitBasicBlock(callInst);
-        fbb = nbb->splitBasicBlock(afterCallInst);
+        printBasicBlock(*fbb);
+        if (callInst != firstInst)
+          fbb = fbb->splitBasicBlock(callInst);
+        fbb = fbb->splitBasicBlock(afterCallInst);
         it = fbb->begin();
         ie = fbb->end();
+        firstInst = &*it;
       }
       else {
         it++;
