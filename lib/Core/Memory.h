@@ -47,6 +47,7 @@ private:
 public:
   unsigned id;
   uint64_t address;
+  ref<Expr> lazyInstantiatedSource;
 
   /// size in bytes
   unsigned size;
@@ -112,6 +113,16 @@ public:
     this->name = name;
   }
 
+  bool isLazyInstantiated() const {
+    return !lazyInstantiatedSource.isNull();
+  }
+  ref<Expr> getLazyInstantiatedSource() const {
+    return this->lazyInstantiatedSource;
+  }
+  void setLazyInstantiatedSource(ref<Expr> source) {
+    this->lazyInstantiatedSource = source;
+  }
+
   ref<ConstantExpr> getBaseExpr() const { 
     return ConstantExpr::create(address, Context::get().getPointerWidth());
   }
@@ -162,6 +173,7 @@ public:
     if (allocSite != b.allocSite)
       return (allocSite < b.allocSite ? -1 : 1);
 
+    assert(lazyInstantiatedSource == b.lazyInstantiatedSource);
     return 0;
   }
 };

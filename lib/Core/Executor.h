@@ -337,8 +337,18 @@ private:
                               ref<Expr> value /* undef if read */,
                               KInstruction *target /* undef if write */);
 
+  ObjectPair lazyInstantiate(ExecutionState &state,
+                             const MemoryObject *mo,
+                             KInstruction *target,
+                             bool isLocal);
+
+  ObjectPair lazyInstantiateVariable(ExecutionState &state,
+                                     ref<Expr> address,
+                                     KInstruction *target,
+                                     uint64_t size);
+
   void executeMakeSymbolic(ExecutionState &state, const MemoryObject *mo,
-                           const std::string &name);
+                           const std::string &name, bool isLocal);
 
   /// Create a new state where each input condition has been added as
   /// a constraint and return the results. The input state is included

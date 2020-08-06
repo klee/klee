@@ -398,18 +398,18 @@ public:
         // or they are (base + offset) and base will get printed with
         // a declaration.
         if (PCMultibyteReads && e->getKind() == Expr::Concat) {
-	  const ReadExpr *base = hasOrderedReads(e, -1);
-	  const bool isLSB = (base != nullptr);
-	  if (!isLSB)
-	    base = hasOrderedReads(e, 1);
-	  if (base) {
-	    PC << "(Read" << (isLSB ? "LSB" : "MSB");
-	    printWidth(PC, e);
-	    PC << ' ';
-	    printRead(base, PC, PC.pos);
-	    PC << ')';
-	    return;
-	  }
+          const ReadExpr *base = hasOrderedReads(e, -1);
+          const bool isLSB = (base != nullptr);
+          if (!isLSB)
+            base = hasOrderedReads(e, 1);
+          if (base) {
+            PC << "(Read" << (isLSB ? "LSB" : "MSB");
+            printWidth(PC, e);
+            PC << ' ';
+            printRead(base, PC, PC.pos);
+            PC << ')';
+            return;
+          }
         }
 
 	PC << '(' << e->getKind();

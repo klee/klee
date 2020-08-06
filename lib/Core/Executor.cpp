@@ -4061,8 +4061,12 @@ void Executor::resolveExact(ExecutionState &state,
   }
 
   if (unbound) {
-    terminateStateOnError(*unbound, "memory error: invalid pointer: " + name,
-                          Ptr, NULL, getAddressInfo(*unbound, p));
+    if (!isa<ConstantExpr>(p)) {
+      terminateStateEarly(*unbound, "insufficient information: symbolic size of object in isolationMode.");
+    } else {
+      terminateStateOnError(*unbound, "memory error: invalid pointer: " + name,
+                            Ptr, NULL, getAddressInfo(*unbound, p));
+    }
   }
 }
 
@@ -4128,7 +4132,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         }          
       } else {
         ref<Expr> result = os->read(offset, type);
-        
+
         if (interpreterOpts.MakeConcreteSymbolic)
           result = replaceReadWithSymbolic(state, result);
         
@@ -4185,6 +4189,22 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   if (unbound) {
     if (incomplete) {
       terminateStateEarly(*unbound, "Query timed out (resolve).");
+    } else if (!isa<ConstantExpr>(address)) {
+      ObjectPair p = lazyInstantiateVariable(*unbound, address, target, bytes);
+      if (!p.first || !p.second)
+      {
+        // TODO: improve error description
+        terminateStateOnError(*unbound, "memory error: out of bound pointer", Ptr,
+                              NULL, getAddressInfo(*unbound, address));
+        return;
+      }
+      if (isWrite) {
+        ObjectState *wos = unbound->addressSpace.getWriteable(p.first, p.second);
+        wos->write(p.first->getOffsetExpr(address), value);
+      } else {
+        ref<Expr> result = p.second->read(p.first->getOffsetExpr(address), type);
+        bindLocal(target, *unbound, result);
+      }
     } else {
       terminateStateOnError(*unbound, "memory error: out of bound pointer", Ptr,
                             NULL, getAddressInfo(*unbound, address));
@@ -4192,9 +4212,40 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   }
 }
 
-void Executor::executeMakeSymbolic(ExecutionState &state, 
+ObjectPair Executor::lazyInstantiate(ExecutionState &state,
+                                     const MemoryObject *mo,
+                                     KInstruction *target,
+                                     bool isLocal) {
+  executeMakeSymbolic(state, mo, "lazy_instantiation", isLocal);
+  ExactResolutionList rl;
+  resolveExact(state, mo->getBaseExpr(), rl, "lazy_instantiation");
+  assert(rl.size() == 1);
+  const ObjectState *os = rl.begin()->first.second;
+  bindLocal(target, state, mo->getBaseExpr());
+  return {mo, os};
+}
+
+ObjectPair Executor::lazyInstantiateVariable(ExecutionState &state, ref<Expr> address, KInstruction *target, uint64_t size) {
+  assert(!isa<ConstantExpr>(address));
+  const llvm::Value *allocSite = target->inst;
+  MemoryObject *mo =
+      memory->allocate(size, false, /*isGlobal=*/false,
+                       allocSite, /*allocationAlignment=*/8);
+  ObjectPair op = lazyInstantiate(state, mo, target, /*isLocal=*/false);
+  ref<Expr> inBounds = EqExpr::create(address, op.first->getBaseExpr());
+  bool mayBeTrue;
+  bool succes = solver->mayBeTrue(state.constraints, inBounds, mayBeTrue, state.queryMetaData);
+  if (!mayBeTrue || !succes) {
+    return {nullptr, nullptr};
+  }
+  addConstraint(state, inBounds);
+  return op;
+}
+
+void Executor::executeMakeSymbolic(ExecutionState &state,
                                    const MemoryObject *mo,
-                                   const std::string &name) {
+                                   const std::string &name,
+                                   bool isLocal) {
   // Create a new object state for the memory object (instead of a copy).
   if (!replayKTest) {
     // Find a unique name for this array.  First try the original name,
@@ -4205,14 +4256,14 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
       uniqueName = name + "_" + llvm::utostr(++id);
     }
     const Array *array = arrayCache.CreateArray(uniqueName, mo->size);
-    bindObjectInState(state, mo, false, array);
+    bindObjectInState(state, mo, isLocal, array);
     state.addSymbolic(mo, array);
-    
-    std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it = 
+
+    std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it =
       seedMap.find(&state);
     if (it!=seedMap.end()) { // In seed mode we need to add this as a
                              // binding.
-      for (std::vector<SeedInfo>::iterator siit = it->second.begin(), 
+      for (std::vector<SeedInfo>::iterator siit = it->second.begin(),
              siie = it->second.end(); siit != siie; ++siit) {
         SeedInfo &si = *siit;
         KTestObject *obj = si.getNextInput(mo, NamedSeedMatching);
@@ -4241,7 +4292,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
             break;
           } else {
             std::vector<unsigned char> &values = si.assignment.bindings[array];
-            values.insert(values.begin(), obj->bytes, 
+            values.insert(values.begin(), obj->bytes,
                           obj->bytes + std::min(obj->numBytes, mo->size));
             if (ZeroSeedExtension) {
               for (unsigned i=obj->numBytes; i<mo->size; ++i)
