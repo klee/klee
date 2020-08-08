@@ -99,16 +99,19 @@ def stripCommonPathPrefix(paths):
     return ['/'.join(p[i:]) for p in paths]
 
 
+def isValidKleeOutDir(dir):
+    return os.path.exists(os.path.join(dir, 'info')) and os.path.exists(os.path.join(dir, 'run.stats'))
+
 def getKleeOutDirs(dirs):
     kleeOutDirs = []
     for dir in dirs:
-        if os.path.exists(os.path.join(dir, 'info')):
+        if isValidKleeOutDir(dir):
             kleeOutDirs.append(dir)
         else:
             for root, subdirs, _ in os.walk(dir):
                 for d in subdirs:
                     path = os.path.join(root, d)
-                    if os.path.exists(os.path.join(path, 'info')):
+                    if isValidKleeOutDir(path):
                         kleeOutDirs.append(path)
     return kleeOutDirs
 
