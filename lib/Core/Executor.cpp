@@ -299,11 +299,6 @@ cl::opt<unsigned>
              cl::init(~0u),
              cl::cat(TerminationCat));
 
-cl::opt<unsigned>
-  MaxForksTerminate("max-forks-terminate",
-           cl::desc("Only fork this many times.  After reaching limit, terminate exploration completely (default=-1 (off))"),
-           cl::init(~0u));
-
 cl::opt<unsigned> MaxDepth(
     "max-depth",
     cl::desc("Only allow this many symbolic branches.  Set to 0 to disable (default=0)"),
@@ -878,7 +873,7 @@ bool Executor::branchingPermitted(const ExecutionState &state) const {
 Assignment * generateAssignmentForDanglingState(std::map<ExecutionState*, Assignment*> &maxForksMap,
                                                 TimingSolver * solver, ExecutionState &current){
   Assignment *a = maxForksMap[&current];
-  if (!a){
+  if (!a && current.symbolics.size() != 0){
     std::vector< std::vector<unsigned char> > values;
     std::vector<const Array*> objects;
     for (unsigned i = 0; i != current.symbolics.size(); ++i){
@@ -1452,7 +1447,7 @@ void Executor::stepInstruction(ExecutionState &state) {
   state.prevPC = state.pc;
   ++state.pc;
 
-  if (stats::instructions == MaxInstructions || (MaxForksTerminate!=~0u && stats::forks >= MaxForksTerminate))
+  if (stats::instructions == MaxInstructions)
     haltExecution = true;
 }
 
