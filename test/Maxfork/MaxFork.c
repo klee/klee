@@ -1,8 +1,6 @@
-// Compile: clang -I ../../include -emit-llvm -c -g -O0 -Xclang -disable-O0-optnone MaxFork.c
-// Run: klee --max-forks=1 MaxFork.bc
-// Output: 5 1
-// if change line 12 to b < 3, it will always output 5 6
-#include <klee/klee.h>
+// RUN: %clang %s -emit-llvm %O0opt -c -o %t1.bc
+// RUN: %klee --max-forks=1 %t1.bc
+
 #include <stdio.h>
 
 int bar(int a, int b, int c) {
