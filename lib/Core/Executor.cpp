@@ -888,7 +888,7 @@ Assignment * generateAssignmentForDanglingState(std::map<ExecutionState*, Assign
   return a;
 }
 
-bool Executor::reachMaxForks() const {
+bool reachMaxForks(){
   if (MaxForks!=~0u && stats::forks >= MaxForks) {
     return true;
   }
