@@ -458,6 +458,14 @@ private:
   void dumpStates();
   void dumpPTree();
 
+  /// Helper method to get an Assignment for a state.  This method is called
+  /// when we have reached the maximum number of forks allotted for a particular
+  /// exploration.
+  Assignment * generateAssignmentForDanglingState(std::map<ExecutionState*, Assignment*> &maxForksMap,
+                                                TimingSolver * solver, ExecutionState &current);
+  bool Executor::reachMaxForks();
+
+
 public:
   Executor(llvm::LLVMContext &ctx, const InterpreterOptions &opts,
       InterpreterHandler *ie);

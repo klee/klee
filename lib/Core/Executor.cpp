@@ -888,6 +888,16 @@ Assignment * generateAssignmentForDanglingState(std::map<ExecutionState*, Assign
   return a;
 }
 
+bool Executor::reachMaxForks() const {
+  if (MaxForks!=~0u && stats::forks >= MaxForks) {
+    return true;
+  }
+  else {
+    return false;
+  }
+  
+}
+
 void Executor::branch(ExecutionState &state, 
                       const std::vector< ref<Expr> > &conditions,
                       std::vector<ExecutionState*> &result) {
@@ -895,7 +905,7 @@ void Executor::branch(ExecutionState &state,
   unsigned N = conditions.size();
   assert(N);
 
-  if (MaxForks!=~0u && stats::forks >= MaxForks) {
+  if (reachMaxForks()) {
     //See if the state has a previously calculated solution
     Assignment *a =  generateAssignmentForDanglingState(maxForksMap, solver, state);
     for (unsigned i=0; i<N; ++i) {
@@ -1027,7 +1037,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     timeout *= static_cast<unsigned>(it->second.size());
   solver->setTimeout(timeout);
   bool success;
-  if ((MaxForks!=~0u && stats::forks >= MaxForks)){
+  if (reachMaxForks()){
 
     klee_warning_once(0, "skipping fork (max-forks reached)");
 
