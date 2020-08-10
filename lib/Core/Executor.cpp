@@ -881,10 +881,6 @@ Assignment * generateAssignmentForDanglingState(std::map<ExecutionState*, Assign
     }
     ConstraintSet extendedConstraints(current.constraints);
     bool success = solver->getInitialValues(extendedConstraints, objects, values, current.queryMetaData);
-    if (!success) {
-      klee_warning("unable to compute initial values (invalid constraints?)!");
-      return a;
-    }
 
     a = new Assignment(objects, values);
     maxForksMap[&current] = a;
@@ -4046,6 +4042,7 @@ void Executor::runFunctionAsMain(Function *f,
 
   globalObjects.clear();
   globalAddresses.clear();
+  maxForksMap.clear();
 
   if (statsTracker)
     statsTracker->done();
