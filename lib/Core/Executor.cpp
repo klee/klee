@@ -882,10 +882,8 @@ Assignment * generateAssignmentForDanglingState(std::map<ExecutionState*, Assign
     ConstraintSet extendedConstraints(current.constraints);
     bool success = solver->getInitialValues(extendedConstraints, objects, values, current.queryMetaData);
     if (!success) {
-    klee_warning("unable to compute initial values (invalid constraints?)!");
-    ExprPPrinter::printQuery(llvm::errs(), current.constraints,
-                             klee::ConstantExpr::alloc(0, Expr::Bool));
-    return a;
+      klee_warning("unable to compute initial values (invalid constraints?)!");
+      return a;
     }
 
     a = new Assignment(objects, values);
