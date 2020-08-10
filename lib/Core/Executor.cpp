@@ -881,8 +881,13 @@ Assignment * generateAssignmentForDanglingState(std::map<ExecutionState*, Assign
     }
     ConstraintSet extendedConstraints(current.constraints);
     bool success = solver->getInitialValues(extendedConstraints, objects, values, current.queryMetaData);
-    assert(success && "We have shown the state is SAT so we "
-           "should be able to generate a solution");
+    if (!success) {
+    klee_warning("unable to compute initial values (invalid constraints?)!");
+    ExprPPrinter::printQuery(llvm::errs(), current.constraints,
+                             klee::ConstantExpr::alloc(0, Expr::Bool));
+    return a;
+    }
+
     a = new Assignment(objects, values);
     maxForksMap[&current] = a;
   }
