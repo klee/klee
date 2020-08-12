@@ -1511,7 +1511,9 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       // FIXME: It would be nice to check for errors in the usage of this as
       // well.
     default:
-      klee_error("unknown intrinsic: %s", f->getName().data());
+      klee_warning("unimplemented intrinsic: %s", f->getName().data());
+      terminateStateOnError(state, "unimplemented intrinsic", Unhandled);
+      return;
     }
 
     if (InvokeInst *ii = dyn_cast<InvokeInst>(i))
