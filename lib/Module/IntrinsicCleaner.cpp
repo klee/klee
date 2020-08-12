@@ -10,6 +10,7 @@
 #include "Passes.h"
 
 #include "klee/Config/Version.h"
+#include "klee/Support/ErrorHandling.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/IR/Constants.h"
@@ -20,6 +21,9 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(10, 0)
+#include "llvm/IR/IntrinsicsX86.h"
+#endif
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
@@ -340,10 +344,69 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         break;
       }
 #endif
-      default:
+
+      // The following intrinsics are currently handled by LowerIntrinsicCall
+      // (Invoking LowerIntrinsicCall with any intrinsics not on this
+      // list throws an exception.)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
+      case Intrinsic::addressofreturnaddress:
+#endif
+      case Intrinsic::annotation:
+      case Intrinsic::assume:
+      case Intrinsic::bswap:
+      case Intrinsic::ceil:
+      case Intrinsic::copysign:
+      case Intrinsic::cos:
+      case Intrinsic::ctlz:
+      case Intrinsic::ctpop:
+      case Intrinsic::cttz:
+      case Intrinsic::dbg_declare:
+#if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
+      case Intrinsic::dbg_label:
+#endif
+      case Intrinsic::eh_typeid_for:
+      case Intrinsic::exp2:
+      case Intrinsic::exp:
+      case Intrinsic::expect:
+      case Intrinsic::floor:
+      case Intrinsic::flt_rounds:
+      case Intrinsic::frameaddress:
+      case Intrinsic::get_dynamic_area_offset:
+      case Intrinsic::invariant_end:
+      case Intrinsic::invariant_start:
+      case Intrinsic::lifetime_end:
+      case Intrinsic::lifetime_start:
+      case Intrinsic::log10:
+      case Intrinsic::log2:
+      case Intrinsic::log:
+      case Intrinsic::memcpy:
+      case Intrinsic::memmove:
+      case Intrinsic::memset:
+      case Intrinsic::not_intrinsic:
+      case Intrinsic::pcmarker:
+      case Intrinsic::pow:
+      case Intrinsic::prefetch:
+      case Intrinsic::ptr_annotation:
+      case Intrinsic::readcyclecounter:
+      case Intrinsic::returnaddress:
+      case Intrinsic::round:
+      case Intrinsic::sin:
+      case Intrinsic::sqrt:
+      case Intrinsic::stackrestore:
+      case Intrinsic::stacksave:
+      case Intrinsic::trunc:
+      case Intrinsic::var_annotation:
         IL->LowerIntrinsicCall(ii);
         dirty = true;
         break;
+
+        // Warn about any unrecognized intrinsics.
+      default: {
+        const Function *Callee = ii->getCalledFunction();
+        llvm::StringRef name = Callee->getName();
+        klee_warning_once((void*)Callee, "unsupported intrinsic %.*s", (int)name.size(), name.data());
+        break;
+      }
       }
     }
   }
