@@ -2,7 +2,7 @@
 // RUN: %klee --max-forks=1 %t1.bc
 
 #include <stdio.h>
-#include <
+#include <assert.h>
 
 int bar(int a, int b, int c) {
   int d = b + c;
