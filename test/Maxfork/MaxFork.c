@@ -32,6 +32,6 @@ int main() {
   klee_make_symbolic(&b, sizeof(b), "b");
   klee_make_symbolic(&c, sizeof(c), "c");
   int d = bar(a, b, c);
-  assert(d==1 || d==5)
+  assert(d==1 || d==5);
   return 0;
 }
