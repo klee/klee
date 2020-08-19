@@ -2,6 +2,7 @@
 // RUN: %klee --max-forks=1 %t1.bc
 
 #include <stdio.h>
+#include <
 
 int bar(int a, int b, int c) {
   int d = b + c;
@@ -31,6 +32,6 @@ int main() {
   klee_make_symbolic(&b, sizeof(b), "b");
   klee_make_symbolic(&c, sizeof(c), "c");
   int d = bar(a, b, c);
-  printf("%d\n", d);
+  assert(d==1 || d==5)
   return 0;
 }

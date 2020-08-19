@@ -4052,7 +4052,13 @@ void Executor::runFunctionAsMain(Function *f,
 
   globalObjects.clear();
   globalAddresses.clear();
-  maxForksMap.clear();
+  std::map<ExecutionState*, Assignment *>::iterator it = maxForksMap.begin();
+  while(it != maxForksMap.end()){
+    delete it->second;
+    it->second = NULL;
+    maxForksMap.erase(it++);
+  }
+
 
   if (statsTracker)
     statsTracker->done();
