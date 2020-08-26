@@ -13,11 +13,23 @@
 
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprPPrinter.h"
+#include "klee/Support/OptionCategories.h"
 
 #include <bitset>
 #include <vector>
 
 using namespace klee;
+using namespace llvm;
+
+namespace {
+
+cl::opt<bool>
+    CompressProcessTree("compress-process-tree",
+                        cl::desc("Remove intermediate nodes in the process "
+                                 "tree whenever possible (default=false)"),
+                        cl::init(false), cl::cat(MiscCat));
+
+} // namespace
 
 PTree::PTree(ExecutionState *initialState)
     : root(PTreeNodePtr(new PTreeNode(nullptr, initialState))) {
@@ -55,7 +67,7 @@ void PTree::remove(PTreeNode *n) {
     n = p;
   } while (n && !n->left.getPointer() && !n->right.getPointer());
 
-  if (n) {
+  if (n && CompressProcessTree) {
     // We're now at a node that has exactly one child; we've just deleted the
     // other one. Eliminate the node and connect its child to the parent
     // directly (if it's not the root).
