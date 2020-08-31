@@ -3920,7 +3920,7 @@ void Executor::executeAlloc(ExecutionState &state,
         os->initializeToRandom();
       }
       bindLocal(target, state, mo->getBaseExpr());
-      
+
       if (reallocFrom) {
         unsigned count = std::min(reallocFrom->size, os->size);
         for (unsigned i=0; i<count; i++)
@@ -4426,10 +4426,7 @@ ExecutionState* Executor::formState(Function *f,
   return state;
 }
 
-void Executor::makeSymbolicAlloca(ExecutionState &state, const MemoryObject *mo, KInstruction *ki) {
-  assert(ki->inst->getOpcode() == Instruction::Alloca);
-  Instruction *i = ki->inst;
-  AllocaInst *ai = cast<AllocaInst>(i);\
+void Executor::makeSymbolicInstructionResult(ExecutionState &state, const MemoryObject *mo, KInstruction *ki) {
   lazyInstantiate(state, mo, ki, true);
 }
 
@@ -4439,7 +4436,37 @@ void Executor::clearGlobal()
   globalAddresses.clear();
 }
 
-void Executor::prepareSymbolicAlloca(ExecutionState &state, KBlock *kallocas) {
+void Executor::prepareSymbolicStack(ExecutionState &state, KFunction *kf) {
+  for (int n = 0; n < kf->numInstructions; n++) {
+    KInstruction *ki = kf->instructions[n];
+    ki->inst->getOpcodeName();
+    if (ki->inst->getType()->isSized()) {
+      unsigned typeWidth;
+      ref<ConstantExpr> size;
+      // It may be redundant
+      if (ki->inst->getOpcode() == Instruction::Alloca) {
+        AllocaInst *ai = cast<AllocaInst>(ki->inst);
+        typeWidth = kmodule->targetData->getTypeStoreSize(ai->getAllocatedType());
+        size = Expr::createPointer(typeWidth);
+        if (ai->isArrayAllocation()) {
+          ref<Expr> count = eval(ki, 0, state).value;
+          count = Expr::createZExtToPointerWidth(count);
+          size = MulExpr::create(size, count);
+        }
+      } else {
+        typeWidth = ki->inst->getType()->getScalarSizeInBits();
+        size = Expr::createPointer(typeWidth);
+      }
+      const llvm::Value *allocSite = ki->inst;
+      MemoryObject *mo =
+          memory->allocate(size->getZExtValue(), true, /*isGlobal=*/false,
+                           allocSite, /*allocationAlignment=*/8);
+      makeSymbolicInstructionResult(state, mo, ki);
+    }
+  }
+}
+
+void Executor::prepareSymbolicAllocas(ExecutionState &state, KBlock *kallocas) {
   for (int n = 0; n < kallocas->numInstructions - 1; n++) {
     KInstruction *ki = kallocas->instructions[n];
     assert(ki->inst->getOpcode() == Instruction::Alloca);
@@ -4460,7 +4487,7 @@ void Executor::prepareSymbolicAlloca(ExecutionState &state, KBlock *kallocas) {
        me = allocas.end(); mi != me; ++mi, n++) {
     const MemoryObject *mo = *mi;
     KInstruction *ki = kallocas->instructions[n];
-    makeSymbolicAlloca(state, mo, ki);
+    makeSymbolicInstructionResult(state, mo, ki);
   }
 }
 
@@ -4549,11 +4576,12 @@ void Executor::runFunctionAsBlockSequence(Function *f,
                char **envp) {
     KFunction *kf = kmodule->functionMap[f];
     Function::iterator bbit = f->begin(), bbie = f->end();
+    std::map<BasicBlock*, ExecutionState*> states;
     if(bbit != bbie)
     {
       KBlock *allocas = kf->kBlocks[&*bbit++];
       ExecutionState *state = formState(f, allocas->instructions, argc, argv, envp);
-      prepareSymbolicAlloca(*state, allocas);
+      prepareSymbolicStack(*state, kf);
       KBlock **blocks = new KBlock*[2];
       bbie--; blocks[1] = kf->kBlocks[&*bbie];
       for (; bbit != bbie; bbit++) {
@@ -4561,6 +4589,7 @@ void Executor::runFunctionAsBlockSequence(Function *f,
         KBlock *kb = new KBlock(f, blocks, kmodule.get(), 2);
         ExecutionState *currState = new ExecutionState(*state, kb->instructions);
         runKBlock(kb, *currState, argc, argv, envp);
+        states[&*bbit] = currState;
       }
       // hack to clear memory objects
       delete memory;

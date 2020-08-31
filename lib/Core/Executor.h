@@ -527,11 +527,13 @@ public:
 
   ExecutionState *formState(llvm::Function *f, KInstruction **instructions, int argc, char **argv, char **envp);
 
-  void makeSymbolicAlloca(ExecutionState &state, const MemoryObject *mo, KInstruction *ki);
+  void makeSymbolicInstructionResult(ExecutionState &state, const MemoryObject *mo, KInstruction *ki);
 
   void clearGlobal();
 
-  void prepareSymbolicAlloca(ExecutionState &state, KBlock *allocas);
+  void prepareSymbolicStack(ExecutionState &state, KFunction *kf);
+
+  void prepareSymbolicAllocas(ExecutionState &state, KBlock *allocas);
 
   void runInstructions(llvm::Function *f, KInstruction **instructions, int argc, char **argv, char **envp);
 
