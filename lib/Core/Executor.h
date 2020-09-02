@@ -146,6 +146,8 @@ private:
   /// \invariant \ref addedStates and \ref removedStates are disjoint.
   std::vector<ExecutionState *> removedStates;
 
+  std::map<llvm::BasicBlock *, ExecutionState *> cfgStates;
+
   /// When non-empty the Executor is running in "seed" mode. The
   /// states in this map will be executed in an arbitrary order
   /// (outside the normal search interface) until they terminate. When

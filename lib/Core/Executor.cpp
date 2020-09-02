@@ -4576,7 +4576,6 @@ void Executor::runFunctionAsBlockSequence(Function *f,
                char **envp) {
     KFunction *kf = kmodule->functionMap[f];
     Function::iterator bbit = f->begin(), bbie = f->end();
-    std::map<BasicBlock*, ExecutionState*> states;
     if(bbit != bbie)
     {
       KBlock *allocas = kf->kBlocks[&*bbit++];
@@ -4589,7 +4588,7 @@ void Executor::runFunctionAsBlockSequence(Function *f,
         KBlock *kb = new KBlock(f, blocks, kmodule.get(), 2);
         ExecutionState *currState = new ExecutionState(*state, kb->instructions);
         runKBlock(kb, *currState, argc, argv, envp);
-        states[&*bbit] = currState;
+        cfgStates[&*bbit] = currState;
       }
       // hack to clear memory objects
       delete memory;
