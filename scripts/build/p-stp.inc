@@ -47,7 +47,7 @@ build_stp() {
 
   local minisat_cmake_args=(
     ${cmake_general_args[@]+"${cmake_general_args[@]}"}
-    "-DCMAKE_INSTALL_PREFIX=${MINISAT_INSTALL_PATH}"
+    "-DSTATICCOMPILE=ON -DCMAKE_INSTALL_PREFIX=${MINISAT_INSTALL_PATH}"
   )
   CFLAGS="${CFLAGS}" CXXFLAGS="${CXXFLAGS}" LDFLAGS="${LDFLAGS}" \
     cmake "${minisat_cmake_args[@]}" "${BASE}/minisat"
