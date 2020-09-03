@@ -190,3 +190,7 @@ void klee_abort() {
 void klee_print_expr(const char *msg, ...) { }
 
 void klee_set_forking(unsigned enable) { }
+
+
+void klee_open_merge() { }
+void klee_close_merge() { }
