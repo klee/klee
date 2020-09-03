@@ -4238,7 +4238,7 @@ ObjectPair Executor::lazyInstantiateVariable(ExecutionState &state, ref<Expr> ad
   const llvm::Value *allocSite = target->inst;
   MemoryObject *mo =
       memory->allocate(size, false, /*isGlobal=*/false,
-                       allocSite, /*allocationAlignment=*/8);
+                       allocSite, /*allocationAlignment=*/8, address);
   ObjectPair op = lazyInstantiate(state, mo, target, /*isLocal=*/false);
   ref<Expr> inBounds = EqExpr::create(address, op.first->getBaseExpr());
   bool mayBeTrue;

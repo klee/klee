@@ -92,7 +92,8 @@ public:
   MemoryObject(uint64_t _address, unsigned _size, 
                bool _isLocal, bool _isGlobal, bool _isFixed,
                const llvm::Value *_allocSite,
-               MemoryManager *_parent)
+               MemoryManager *_parent,
+               ref<Expr> _lazyInstantiatedSource = nullptr)
     : id(counter++),
       address(_address),
       size(_size),
@@ -103,7 +104,7 @@ public:
       isUserSpecified(false),
       parent(_parent), 
       allocSite(_allocSite),
-      lazyInstantiatedSource(nullptr) {
+      lazyInstantiatedSource(_lazyInstantiatedSource) {
   }
 
   ~MemoryObject();
