@@ -141,7 +141,8 @@ addons:
       - docker-ce
   homebrew:
     packages:
-      - bash
+    - bash
+    update: true
 cache:
   ccache: true
   apt: true
