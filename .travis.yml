@@ -145,8 +145,6 @@ addons:
 cache:
   ccache: true
   apt: true
-  directories:
-    - $HOME/Library/Caches/Homebrew
 
 script:
     # Build KLEE and run tests
