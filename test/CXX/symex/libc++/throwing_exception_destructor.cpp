@@ -1,6 +1,7 @@
 // Testcase for proper handling of exception destructors that throw.
 // REQUIRES: uclibc
 // REQUIRES: libcxx
+// REQUIRES: eh-cxx
 // RUN: %clangxx %s -emit-llvm -O0 -std=c++11 -c -I "%libcxx_include" -g -nostdinc++ -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --libcxx --libc=uclibc --exit-on-error  %t.bc

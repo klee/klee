@@ -32,6 +32,7 @@ if @LLVM_VERSION_MAJOR@ >= 5:
 config.enable_uclibc = True if @SUPPORT_KLEE_UCLIBC@ == 1 else False
 config.enable_posix_runtime = True if @ENABLE_POSIX_RUNTIME@ == 1 else False
 config.enable_libcxx = True if @SUPPORT_KLEE_LIBCXX@ == 1 else False
+config.enable_eh_cxx = True if @SUPPORT_KLEE_EH_CXX@ == 1 else False
 config.have_selinux = True if @HAVE_SELINUX@ == 1 else False
 config.enable_stp = True if @ENABLE_STP@ == 1 else False
 config.enable_z3 = True if @ENABLE_Z3@ == 1 else False

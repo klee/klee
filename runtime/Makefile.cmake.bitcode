@@ -17,7 +17,7 @@ ifneq ($(ENABLE_POSIX_RUNTIME),0)
 	DIRS += POSIX
 endif
 
-ifneq ($(BUILD_KLEE_EH_CXX),0)
+ifneq ($(ENABLE_KLEE_EH_CXX),0)
 	DIRS += klee-eh-cxx
 endif
 

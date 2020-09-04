@@ -1272,14 +1272,14 @@ int main(int argc, char **argv, char **envp) {
       klee_error("error loading libcxx '%s': %s", LibcxxBC.c_str(),
                  errorMsg.c_str());
     klee_message("NOTE: Using libcxx : %s", LibcxxBC.c_str());
-
+#ifdef SUPPORT_KLEE_EH_CXX
     SmallString<128> EhCxxPath(Opts.LibraryDir);
     llvm::sys::path::append(EhCxxPath, "libklee-eh-cxx.bca");
     if (!klee::loadFile(EhCxxPath.c_str(), mainModule->getContext(),
                         loadedModules, errorMsg))
       klee_error("error loading libklee-eh-cxx '%s': %s", EhCxxPath.c_str(),
                  errorMsg.c_str());
-
+#endif
 #endif
   }
 
