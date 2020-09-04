@@ -7,6 +7,8 @@
 // RUN: %klee --output-dir=%t.klee-out --use-merge --debug-log-merge --search=dfs --use-batching-search %t.bc 2>&1 | FileCheck %s
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --use-merge --debug-log-merge --search=nurs:covnew %t.bc 2>&1 | FileCheck %s
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --use-merge --debug-log-merge --search=random-path %t.bc 2>&1 | FileCheck %s
 
 // CHECK: open merge:
 // 5 close merges
