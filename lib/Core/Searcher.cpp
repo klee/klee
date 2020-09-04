@@ -23,7 +23,6 @@
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
 #include "klee/Support/ErrorHandling.h"
-#include "klee/Support/ModuleUtil.h"
 #include "klee/System/Time.h"
 
 #include "llvm/IR/Constants.h"
@@ -32,16 +31,11 @@
 #include "llvm/Support/CommandLine.h"
 
 #include <cassert>
-#include <climits>
 #include <cmath>
-#include <fstream>
 
 using namespace klee;
 using namespace llvm;
 
-
-Searcher::~Searcher() {
-}
 
 ///
 
@@ -52,28 +46,25 @@ ExecutionState &DFSSearcher::selectState() {
 void DFSSearcher::update(ExecutionState *current,
                          const std::vector<ExecutionState *> &addedStates,
                          const std::vector<ExecutionState *> &removedStates) {
-  states.insert(states.end(),
-                addedStates.begin(),
-                addedStates.end());
-  for (std::vector<ExecutionState *>::const_iterator it = removedStates.begin(),
-                                                     ie = removedStates.end();
-       it != ie; ++it) {
-    ExecutionState *es = *it;
-    if (es == states.back()) {
+  // insert states
+  states.insert(states.end(), addedStates.begin(), addedStates.end());
+
+  // remove states
+  for (const auto state : removedStates) {
+    if (state == states.back()) {
       states.pop_back();
     } else {
+      __attribute__((unused))
       bool ok = false;
 
-      for (std::vector<ExecutionState*>::iterator it = states.begin(),
-             ie = states.end(); it != ie; ++it) {
-        if (es==*it) {
+      for (auto it = states.begin(), ie = states.end(); it != ie; ++it) {
+        if (state == *it) {
           states.erase(it);
           ok = true;
           break;
         }
       }
 
-      (void) ok;
       assert(ok && "invalid state removed");
     }
   }
@@ -88,6 +79,7 @@ ExecutionState &BFSSearcher::selectState() {
 void BFSSearcher::update(ExecutionState *current,
                          const std::vector<ExecutionState *> &addedStates,
                          const std::vector<ExecutionState *> &removedStates) {
+  // update current state
   // Assumption: If new states were added KLEE forked, therefore states evolved.
   // constraints were added to the current state, it evolved.
   if (!addedStates.empty() && current &&
@@ -99,28 +91,25 @@ void BFSSearcher::update(ExecutionState *current,
     states.push_back(current);
   }
 
-  states.insert(states.end(),
-                addedStates.begin(),
-                addedStates.end());
-  for (std::vector<ExecutionState *>::const_iterator it = removedStates.begin(),
-                                                     ie = removedStates.end();
-       it != ie; ++it) {
-    ExecutionState *es = *it;
-    if (es == states.front()) {
+  // insert states
+  states.insert(states.end(), addedStates.begin(), addedStates.end());
+
+  // remove states
+  for (const auto state : removedStates) {
+    if (state == states.front()) {
       states.pop_front();
     } else {
+      __attribute__((unused))
       bool ok = false;
 
-      for (std::deque<ExecutionState*>::iterator it = states.begin(),
-             ie = states.end(); it != ie; ++it) {
-        if (es==*it) {
+      for (auto it = states.begin(), ie = states.end(); it != ie; ++it) {
+        if (state == *it) {
           states.erase(it);
           ok = true;
           break;
         }
       }
 
-      (void) ok;
       assert(ok && "invalid state removed");
     }
   }
@@ -129,32 +118,28 @@ void BFSSearcher::update(ExecutionState *current,
 ///
 
 ExecutionState &RandomSearcher::selectState() {
-  return *states[theRNG.getInt32()%states.size()];
+  return *states[theRNG.getInt32() % states.size()];
 }
 
-void
-RandomSearcher::update(ExecutionState *current,
-                       const std::vector<ExecutionState *> &addedStates,
-                       const std::vector<ExecutionState *> &removedStates) {
-  states.insert(states.end(),
-                addedStates.begin(),
-                addedStates.end());
-  for (std::vector<ExecutionState *>::const_iterator it = removedStates.begin(),
-                                                     ie = removedStates.end();
-       it != ie; ++it) {
-    ExecutionState *es = *it;
+void RandomSearcher::update(ExecutionState *current,
+                            const std::vector<ExecutionState *> &addedStates,
+                            const std::vector<ExecutionState *> &removedStates) {
+  // insert states
+  states.insert(states.end(), addedStates.begin(), addedStates.end());
+
+  // remove states
+  for (const auto state : removedStates) {
     __attribute__((unused))
     bool ok = false;
 
-    for (std::vector<ExecutionState*>::iterator it = states.begin(),
-           ie = states.end(); it != ie; ++it) {
-      if (es==*it) {
+    for (auto it = states.begin(), ie = states.end(); it != ie; ++it) {
+      if (state == *it) {
         states.erase(it);
         ok = true;
         break;
       }
     }
-    
+
     assert(ok && "invalid state removed");
   }
 }
@@ -162,9 +147,10 @@ RandomSearcher::update(ExecutionState *current,
 ///
 
 WeightedRandomSearcher::WeightedRandomSearcher(WeightType type, RNG &rng)
-  : states(new DiscretePDF<ExecutionState*, ExecutionStateIDCompare>()),
+  : states(std::make_unique<DiscretePDF<ExecutionState*, ExecutionStateIDCompare>>()),
     theRNG{rng},
     type(type) {
+
   switch(type) {
   case Depth:
   case RP:
@@ -180,10 +166,6 @@ WeightedRandomSearcher::WeightedRandomSearcher(WeightType type, RNG &rng)
   default:
     assert(0 && "invalid weight type");
   }
-}
-
-WeightedRandomSearcher::~WeightedRandomSearcher() {
-  delete states;
 }
 
 ExecutionState &WeightedRandomSearcher::selectState() {
@@ -234,36 +216,28 @@ double WeightedRandomSearcher::getWeight(ExecutionState *es) {
 void WeightedRandomSearcher::update(
     ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
     const std::vector<ExecutionState *> &removedStates) {
+
+  // update current
   if (current && updateWeights &&
       std::find(removedStates.begin(), removedStates.end(), current) ==
           removedStates.end())
     states->update(current, getWeight(current));
 
-  for (std::vector<ExecutionState *>::const_iterator it = addedStates.begin(),
-                                                     ie = addedStates.end();
-       it != ie; ++it) {
-    ExecutionState *es = *it;
-    states->insert(es, getWeight(es));
-  }
+  // insert states
+  for (const auto state : addedStates)
+    states->insert(state, getWeight(state));
 
-  for (std::vector<ExecutionState *>::const_iterator it = removedStates.begin(),
-                                                     ie = removedStates.end();
-       it != ie; ++it) {
-    states->remove(*it);
-  }
+  // remove states
+  for (const auto state : removedStates)
+    states->remove(state);
 }
 
-bool WeightedRandomSearcher::empty() { 
-  return states->empty(); 
+bool WeightedRandomSearcher::empty() {
+  return states->empty();
 }
 
 ///
-RandomPathSearcher::RandomPathSearcher(PTree &processTree, RNG &rng)
-  : processTree{processTree}, theRNG{rng}, idBitMask{processTree.getNextId()} {
-}
 
-RandomPathSearcher::~RandomPathSearcher() {
-}
 // Check if n is a valid pointer and a node belonging to us
 #define IS_OUR_NODE_VALID(n)                                                   \
   (((n).getPointer() != nullptr) && (((n).getInt() & idBitMask) != 0))
@@ -289,17 +263,17 @@ ExecutionState &RandomPathSearcher::selectState() {
         bits = 32;
       }
       --bits;
-      n = ((flips & (1 << bits)) ? n->left : n->right).getPointer();
+      n = ((flips & (1U << bits)) ? n->left : n->right).getPointer();
     }
   }
 
   return *n->state;
 }
 
-void
-RandomPathSearcher::update(ExecutionState *current,
-                           const std::vector<ExecutionState *> &addedStates,
-                           const std::vector<ExecutionState *> &removedStates) {
+void RandomPathSearcher::update(ExecutionState *current,
+                                const std::vector<ExecutionState *> &addedStates,
+                                const std::vector<ExecutionState *> &removedStates) {
+  // insert states
   for (auto es : addedStates) {
     PTreeNode *pnode = es->ptreeNode, *parent = pnode->parent;
     PTreeNodePtr *childPtr;
@@ -320,6 +294,7 @@ RandomPathSearcher::update(ExecutionState *current,
     }
   }
 
+  // remove states
   for (auto es : removedStates) {
     PTreeNode *pnode = es->ptreeNode, *parent = pnode->parent;
 
@@ -343,13 +318,6 @@ bool RandomPathSearcher::empty() {
 }
 
 ///
-
-MergingSearcher::MergingSearcher(Searcher *_baseSearcher)
-  : baseSearcher(_baseSearcher){}
-
-MergingSearcher::~MergingSearcher() {
-  delete baseSearcher;
-}
 
 ExecutionState& MergingSearcher::selectState() {
   assert(!baseSearcher->empty() && "base searcher is empty");
@@ -382,20 +350,6 @@ ExecutionState& MergingSearcher::selectState() {
 
 ///
 
-BatchingSearcher::BatchingSearcher(Searcher *_baseSearcher,
-                                   time::Span _timeBudget,
-                                   unsigned _instructionBudget) 
-  : baseSearcher(_baseSearcher),
-    timeBudget(_timeBudget),
-    instructionBudget(_instructionBudget),
-    lastState(0) {
-  
-}
-
-BatchingSearcher::~BatchingSearcher() {
-  delete baseSearcher;
-}
-
 ExecutionState &BatchingSearcher::selectState() {
   if (!lastState ||
       (((timeBudget.toSeconds() > 0) &&
@@ -420,26 +374,18 @@ ExecutionState &BatchingSearcher::selectState() {
   }
 }
 
-void
-BatchingSearcher::update(ExecutionState *current,
-                         const std::vector<ExecutionState *> &addedStates,
-                         const std::vector<ExecutionState *> &removedStates) {
+void BatchingSearcher::update(ExecutionState *current,
+                              const std::vector<ExecutionState *> &addedStates,
+                              const std::vector<ExecutionState *> &removedStates) {
+  // drop memoized state if it is marked for deletion
   if (std::find(removedStates.begin(), removedStates.end(), lastState) !=
       removedStates.end())
-    lastState = 0;
+    lastState = nullptr;
+  // update underlying searcher
   baseSearcher->update(current, addedStates, removedStates);
 }
 
-/***/
-
-IterativeDeepeningTimeSearcher::IterativeDeepeningTimeSearcher(Searcher *_baseSearcher)
-  : baseSearcher(_baseSearcher),
-    time(time::seconds(1)) {
-}
-
-IterativeDeepeningTimeSearcher::~IterativeDeepeningTimeSearcher() {
-  delete baseSearcher;
-}
+///
 
 ExecutionState &IterativeDeepeningTimeSearcher::selectState() {
   ExecutionState &res = baseSearcher->selectState();
@@ -453,17 +399,14 @@ void IterativeDeepeningTimeSearcher::update(
 
   const auto elapsed = time::getWallTime() - startTime;
 
+  // update underlying searcher (filter paused states unknown to underlying searcher)
   if (!removedStates.empty()) {
     std::vector<ExecutionState *> alt = removedStates;
-    for (std::vector<ExecutionState *>::const_iterator
-             it = removedStates.begin(),
-             ie = removedStates.end();
-         it != ie; ++it) {
-      ExecutionState *es = *it;
-      std::set<ExecutionState*>::const_iterator it2 = pausedStates.find(es);
-      if (it2 != pausedStates.end()) {
-        pausedStates.erase(it2);
-        alt.erase(std::remove(alt.begin(), alt.end(), es), alt.end());
+    for (const auto state : removedStates) {
+      auto it = pausedStates.find(state);
+      if (it != pausedStates.end()) {
+        pausedStates.erase(it);
+        alt.erase(std::remove(alt.begin(), alt.end(), state), alt.end());
       }
     }    
     baseSearcher->update(current, addedStates, alt);
@@ -471,6 +414,7 @@ void IterativeDeepeningTimeSearcher::update(
     baseSearcher->update(current, addedStates, removedStates);
   }
 
+  // update current: pause if time exceeded
   if (current &&
       std::find(removedStates.begin(), removedStates.end(), current) ==
           removedStates.end() &&
@@ -479,38 +423,35 @@ void IterativeDeepeningTimeSearcher::update(
     baseSearcher->removeState(current);
   }
 
+  // no states left in underlying searcher: fill with paused states
   if (baseSearcher->empty()) {
     time *= 2U;
     klee_message("increased time budget to %f\n", time.toSeconds());
     std::vector<ExecutionState *> ps(pausedStates.begin(), pausedStates.end());
-    baseSearcher->update(0, ps, std::vector<ExecutionState *>());
+    baseSearcher->update(nullptr, ps, std::vector<ExecutionState *>());
     pausedStates.clear();
   }
 }
 
-/***/
+///
 
-InterleavedSearcher::InterleavedSearcher(const std::vector<Searcher*> &_searchers)
-  : searchers(_searchers),
-    index(1) {
-}
-
-InterleavedSearcher::~InterleavedSearcher() {
-  for (std::vector<Searcher*>::const_iterator it = searchers.begin(),
-         ie = searchers.end(); it != ie; ++it)
-    delete *it;
+InterleavedSearcher::InterleavedSearcher(const std::vector<Searcher*> &_searchers) {
+  searchers.reserve(_searchers.size());
+  for (auto searcher : _searchers)
+    searchers.emplace_back(searcher);
 }
 
 ExecutionState &InterleavedSearcher::selectState() {
-  Searcher *s = searchers[--index];
-  if (index==0) index = searchers.size();
+  Searcher *s = searchers[--index].get();
+  if (index == 0) index = searchers.size();
   return s->selectState();
 }
 
 void InterleavedSearcher::update(
     ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
     const std::vector<ExecutionState *> &removedStates) {
-  for (std::vector<Searcher*>::const_iterator it = searchers.begin(),
-         ie = searchers.end(); it != ie; ++it)
-    (*it)->update(current, addedStates, removedStates);
+
+  // update underlying searchers
+  for (auto &searcher : searchers)
+    searcher->update(current, addedStates, removedStates);
 }
