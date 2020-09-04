@@ -477,7 +477,7 @@ void SpecialFunctionHandler::handleEhUnwindRaiseExceptionImpl(
   }
 
   if (state.unwindingInformation &&
-      isa<SearchPhaseUnwindingInformation>(state.unwindingInformation)) {
+      isa<SearchPhaseUnwindingInformation>(state.unwindingInformation.get())) {
     executor.terminateStateOnExecError(
         state,
         "Internal error: Unwinding restarted during an ongoing search phase");

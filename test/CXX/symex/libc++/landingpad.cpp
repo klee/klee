@@ -3,6 +3,7 @@
 // Based on: https://gcc.gnu.org/wiki/Dwarf2EHNewbiesHowto
 // REQUIRES: uclibc
 // REQUIRES: libcxx
+// REQUIRES: eh-cxx
 // RUN: %clangxx %s -emit-llvm %O0opt -std=c++11 -c -I "%libcxx_include" -g -nostdinc++ -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --exit-on-error --libcxx --libc=uclibc  %t.bc | FileCheck %s

@@ -705,6 +705,28 @@ else()
 endif()
 
 ################################################################################
+# KLEE Exception Handling Support for C++
+################################################################################
+option(ENABLE_KLEE_EH_CXX "Enable support for C++ Exceptions" OFF)
+if (ENABLE_KLEE_EH_CXX)
+  if (NOT ENABLE_KLEE_LIBCXX)
+    message(FATAL_ERROR "C++ Exception support requires klee-libcxx."
+      "Pass `-DENABLE_KLEE_LIBCXX=ON` to enable it.")
+  endif()
+
+  if (${LLVM_VERSION_MAJOR} GREATER 8 OR ${LLVM_VERSION_MAJOR} EQUAL 8)
+    set(SUPPORT_KLEE_EH_CXX 1) # For config.h
+    message(STATUS "Support for C++ Exceptions enabled")
+  else()
+    set(SUPPORT_KLEE_EH_CXX 0) # For config.h
+    message(STATUS "Support for C++ Exceptions (only available for LLVM >= 8.0.0) disabled")
+  endif()
+
+else()
+  set(SUPPORT_KLEE_EH_CXX 0) # For config.h
+endif()
+
+################################################################################
 # Sanitizer support
 ################################################################################
 message(STATUS "CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
