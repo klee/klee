@@ -91,7 +91,7 @@ function upload_coverage() {
   file="$1"
   tags="$2"
   cd /home/klee/klee_src
-  bash <(curl -s https://codecov.io/bash) -X gcov -R /tmp/klee_src/ -y .codecov.yml -f /home/klee/klee_build/coverage_all.info."${file}" -F "$tags"
+  bash <(curl -s https://codecov.io/bash) -X gcov -R /tmp/klee_src/ -f /home/klee/klee_build/coverage_all.info."${file}" -F "$tags"
 }
 
 function run_docker() {
