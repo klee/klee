@@ -26,10 +26,6 @@ env:
 
     # Define default values - they are overwritten by each matrix entry if needed
     global:
-    - secure: EF/WAc4BdIRUchF3mjATN3/UwtGWtGaRgb5oIIJHjKhgZFdPsgWsXFgaOB0jaK2hfO/svj/LvlasuRIGxeePVjeaiX8ZlVpuHiX67vdYLY+0kCDRwkusRjm60/GbPU9O/Xjgb/d4aWAEkoq5OnsprVTEvU8iY2JHtAqgwR+wW9I=
-    - secure: Hrp1MRSxDUH2GTQg3QR/yUttY/3KmgbFb5e+zyy551dKpHjxJdsNe8bquY9oFoT7KmPQYl0HNNjEv4qWW8RK+HWHOCB55nL1KlGpOG7vAJcUEZg7ScbliGgiovMB6jIQVfeP9FhYngfc13vNZQ5PGlqzfSsHSAbvkwEogBToHVw=
-    - secure: DQAEQWJblXvIztN/sgH63OtFncI+Qju6wRy1zIV/iLf5KbAmLs1h3itU7EsE/+3+LgV1MVQ5QNJDBUj17A6VHRKNaQ5qnIllTAcC3o0nPDohQkQoCgDG8HZ+M4wtVfr7q2K6byEPB2UbSH+mEjSMTihJufgBBVfKyyozAfYycjg=
-
     # Default configuration for all Travis-CI jobs. They are overriden by each job.
     - BASE_IMAGE=ubuntu:bionic-20200112
     - REPOSITORY=klee
