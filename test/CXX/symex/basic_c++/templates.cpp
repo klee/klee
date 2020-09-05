@@ -1,7 +1,7 @@
 // REQUIRES: uclibc
 // RUN: %clangxx %s -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --libc=uclibc %t.bc 2>&1
+// RUN: %klee --output-dir=%t.klee-out --exit-on-error --libc=uclibc %t.bc 2>&1
 
 #include <cassert>
 

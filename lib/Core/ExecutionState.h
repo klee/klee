@@ -65,7 +65,8 @@ struct StackFrame {
 };
 
 /// Contains information related to unwinding (Itanium ABI/2-Phase unwinding)
-struct UnwindingInformation {
+class UnwindingInformation {
+public:
   enum class Kind {
     SearchPhase, // first phase
     CleanupPhase // second phase
@@ -84,7 +85,7 @@ public:
       : kind(k), exceptionObject(exceptionObject) {}
   virtual ~UnwindingInformation() = default;
 
-  virtual std::unique_ptr<UnwindingInformation> cloned() const = 0;
+  virtual std::unique_ptr<UnwindingInformation> clone() const = 0;
 };
 
 struct SearchPhaseUnwindingInformation : public UnwindingInformation {
@@ -101,7 +102,7 @@ struct SearchPhaseUnwindingInformation : public UnwindingInformation {
                              UnwindingInformation::Kind::SearchPhase),
         unwindingProgress(unwindingProgress) {}
 
-  std::unique_ptr<UnwindingInformation> cloned() const {
+  std::unique_ptr<UnwindingInformation> clone() const {
     return std::make_unique<SearchPhaseUnwindingInformation>(*this);
   }
 
@@ -132,7 +133,7 @@ struct CleanupPhaseUnwindingInformation : public UnwindingInformation {
         selectorValue(selectorValue),
         catchingStackIndex(catchingStackIndex) {}
 
-  std::unique_ptr<UnwindingInformation> cloned() const {
+  std::unique_ptr<UnwindingInformation> clone() const {
     return std::make_unique<CleanupPhaseUnwindingInformation>(*this);
   }
 

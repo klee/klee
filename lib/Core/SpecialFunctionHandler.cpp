@@ -460,13 +460,8 @@ void SpecialFunctionHandler::handleMemalign(ExecutionState &state,
 void SpecialFunctionHandler::handleEhUnwindRaiseExceptionImpl(
     ExecutionState &state, KInstruction *target,
     std::vector<ref<Expr>> &arguments) {
-  if (arguments.size() != 1) {
-    executor.terminateStateOnExecError(
-        state, "Internal Error: Incorrect number of arguments to "
-               "_klee_eh_Unwind_RaiseException_impl, "
-               "should not happen");
-    return;
-  }
+  assert(arguments.size() == 1 &&
+         "invalid number of arguments to _klee_eh_Unwind_RaiseException_impl");
 
   ref<ConstantExpr> exceptionObject = dyn_cast<ConstantExpr>(arguments[0]);
   if (!exceptionObject.get()) {
