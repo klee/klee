@@ -147,6 +147,15 @@ time::Span::operator time::Duration() const { return duration; }
 
 time::Span::operator bool() const { return duration.count() != 0; }
 
+time::Span::operator timespec() const {
+  timespec ts{};
+  const auto secs = std::chrono::duration_cast<std::chrono::seconds>(duration);
+  const auto nsecs = std::chrono::duration_cast<std::chrono::nanoseconds>(duration - secs);
+  ts.tv_sec = secs.count();
+  ts.tv_nsec = nsecs.count();
+  return ts;
+}
+
 time::Span::operator timeval() const {
   timeval tv{};
   const auto secs = std::chrono::duration_cast<std::chrono::seconds>(duration);

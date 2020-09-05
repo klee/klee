@@ -82,6 +82,7 @@ namespace klee {
       // conversions
       explicit operator Duration() const;
       explicit operator bool() const;
+      explicit operator timespec() const;
       explicit operator timeval() const;
 
       std::uint64_t toMicroseconds() const;
