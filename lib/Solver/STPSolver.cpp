@@ -52,9 +52,9 @@ static int shared_memory_id = 0;
 // in practice users hitting this limit on counterexample sizes probably already
 // are hitting more serious scalability issues.
 #ifdef __APPLE__
-static const unsigned shared_memory_size = 1 << 16;
+static const unsigned shared_memory_size = 1U << 16U;
 #else
-static const unsigned shared_memory_size = 1 << 20;
+static const unsigned shared_memory_size = 1U << 20U;
 #endif
 
 static void stp_error_handler(const char *err_msg) {
@@ -207,8 +207,6 @@ runAndGetCex(::VC vc, STPBuilder *builder, ::VCExpr q,
   return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
 }
 
-static void stpTimeoutHandler(int x) { _exit(52); }
-
 static SolverImpl::SolverRunStatus
 runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
                    const std::vector<const Array *> &objects,
@@ -224,59 +222,95 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
   fflush(stdout);
   fflush(stderr);
 
+  // setup signals
+  sigset_t mask {}, origMask {};
+  sigemptyset(&mask);
+  sigaddset(&mask, SIGCHLD);
+  // - prevent race by blocking SIGCHLD
+  if (sigprocmask(SIG_BLOCK, &mask, &origMask) < 0)
+    klee_error("STP: sigprocmask block");
+  bool gotKilled = false;
+
   // fork solver
   int pid = fork();
   // - error
   if (pid == -1) {
-    klee_warning("fork failed (for STP) - %s", llvm::sys::StrError(errno).c_str());
+    klee_warning("STP: fork failed - %s", llvm::sys::StrError(errno).c_str());
     if (!IgnoreSolverFailures)
       exit(1);
     return SolverImpl::SOLVER_RUN_STATUS_FORK_FAILED;
   }
+
   // - child (solver)
   if (pid == 0) {
-    if (timeout) {
-      ::alarm(0); /* Turn off alarm so we can safely set signal handler */
-      ::signal(SIGALRM, stpTimeoutHandler);
-      ::alarm(std::max(1u, static_cast<unsigned>(timeout.toSeconds())));
-    }
     int res = vc_query(vc, q);
     if (!res) {
       for (const auto object : objects) {
         for (unsigned offset = 0; offset < object->size; offset++) {
           ExprHandle counter =
-              vc_getCounterExample(vc, builder->getInitialRead(object, offset));
+            vc_getCounterExample(vc, builder->getInitialRead(object, offset));
           *pos++ = static_cast<unsigned char>(getBVUnsigned(counter));
         }
       }
     }
-    _exit(res);
+    exit(res);
   // - parent
   } else {
+    if (!timeout) timeout = time::hours(UINT16_MAX); // ~26913 years
+    auto timeout_value = static_cast<timespec>(timeout);
+
+    auto start = time::getWallTime();
+    do {
+      if (::sigtimedwait(&mask, nullptr, &timeout_value) < 0) {
+        if (errno == EINTR) {
+          // we got a different signal (probably SIGALRM), reduce timeout by duration
+          auto now = time::getWallTime();
+          auto duration = now - start;
+          if (duration >= timeout) {
+            gotKilled = true;
+            klee_warning("killing STP (timeout) EINTR");
+            ::kill(pid, SIGKILL);
+          } else {
+            auto rest = timeout - duration;
+            timeout_value = static_cast<timespec>(rest);
+            continue;
+          }
+        } else if (errno == EAGAIN) {
+          gotKilled = true;
+          klee_message("killing STP (timeout) EAGAIN");
+          ::kill(pid, SIGKILL);
+        } else if (errno == EINVAL) {
+          klee_error("STP: illegal time value");
+        } else {
+          klee_error("STP: unknown error during sigtimedwait");
+        }
+      }
+      break;
+    } while (true);
+
+    if (sigprocmask(SIG_SETMASK, &origMask, nullptr) < 0)
+      klee_error("STP: cannot set sigprocmask to original");
+
     int status;
     pid_t res;
-
-    do {
-      res = waitpid(pid, &status, 0);
-    } while (res < 0 && errno == EINTR);
+    res = waitpid(pid, &status, 0);
 
     if (res < 0) {
-      klee_warning("waitpid() for STP failed");
+      klee_warning("STP: waitpid() failed");
       if (!IgnoreSolverFailures)
         exit(1);
       return SolverImpl::SOLVER_RUN_STATUS_WAITPID_FAILED;
     }
 
-    // From timed_run.py: It appears that linux at least will on
-    // "occasion" return a status when the process was terminated by a
-    // signal, so test signal first.
     if (WIFSIGNALED(status) || !WIFEXITED(status)) {
-      klee_warning("STP did not return successfully.  Most likely you forgot "
-                   "to run 'ulimit -s unlimited'");
-      if (!IgnoreSolverFailures) {
-        exit(1);
+      if (gotKilled) {
+        klee_warning("STP did not return successfully (timeout)");
+        return SolverImpl::SOLVER_RUN_STATUS_TIMEOUT;
+      } else {
+        klee_warning("STP did not return successfully. Most likely you forgot "
+                     "to run 'ulimit -s unlimited'");
+        return SolverImpl::SOLVER_RUN_STATUS_INTERRUPTED;
       }
-      return SolverImpl::SOLVER_RUN_STATUS_INTERRUPTED;
     }
 
     int exitcode = WEXITSTATUS(status);
@@ -298,13 +332,6 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
     if (exitcode == 1) {
       hasSolution = false;
       return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE;
-    }
-
-    // timeout
-    if (exitcode == 52) {
-      klee_warning("STP timed out");
-      // mark that a timeout occurred
-      return SolverImpl::SOLVER_RUN_STATUS_TIMEOUT;
     }
 
     // unknown return code
