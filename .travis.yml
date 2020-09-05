@@ -139,13 +139,12 @@ addons:
   apt:
     packages:
       - docker-ce
-  homebrew:
-    packages:
-    - bash
-    update: true
 cache:
   ccache: true
   apt: true
+
+before_install:
+   if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export HOMEBREW_NO_INSTALL_CLEANUP=1 && brew install --verbose --debug bash && brew post-install --verbose --debug bash; fi
 
 script:
     # Build KLEE and run tests
