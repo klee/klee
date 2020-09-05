@@ -1632,6 +1632,8 @@ void Executor::unwindToNextLandingpad(ExecutionState &state) {
 }
 
 ref<klee::ConstantExpr> Executor::getEhTypeidFor(ref<Expr> type_info) {
+  // FIXME: Handling getEhTypeidFor is non-deterministic and depends on the
+  //        order states have been processed and executed.
   auto eh_type_iterator =
       std::find(std::begin(eh_typeids), std::end(eh_typeids), type_info);
   if (eh_type_iterator == std::end(eh_typeids)) {
@@ -1998,8 +2000,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     Instruction *caller = kcaller ? kcaller->inst : 0;
     bool isVoidReturn = (ri->getNumOperands() == 0);
     ref<Expr> result = ConstantExpr::alloc(0, Expr::Bool);
-    bool isReturnFromPersonalityFn =
-        ri->getFunction()->getName() == "_klee_eh_cxx_personality";
     
     if (!isVoidReturn) {
       result = eval(ki, 0, state).value;
@@ -2021,7 +2021,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         ++state.pc;
       }
 
-      if (isReturnFromPersonalityFn) {
+      if (ri->getFunction()->getName() == "_klee_eh_cxx_personality") {
         assert(dyn_cast<ConstantExpr>(result) &&
                "result from personality fn must be a concrete value");
 
@@ -3158,15 +3158,22 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     }
 
     ref<Expr> arg = eval(ki, 0, state).value;
-    ref<Expr> expPtr = ExtractExpr::create(arg, 0, Expr::Int64);
-    ref<Expr> selector = ExtractExpr::create(arg, Expr::Int64, Expr::Int32);
+    ref<Expr> exceptionPointer = ExtractExpr::create(arg, 0, Expr::Int64);
+    ref<Expr> selectorValue =
+        ExtractExpr::create(arg, Expr::Int64, Expr::Int32);
 
-    if (!Expr::createIsZero(selector)->isTrue()) {
-      llvm::errs() << "resume-instruction called with non-0 selector value '"
-                   << selector << "'\n";
+    if (!dyn_cast<ConstantExpr>(exceptionPointer) ||
+        !dyn_cast<ConstantExpr>(selectorValue)) {
+      terminateStateOnExecError(
+          state, "resume-instruction called with non constant expression");
+      break;
     }
 
-    if (!EqExpr::create(expPtr, cui->exceptionObject)->isTrue()) {
+    if (!Expr::createIsZero(selectorValue)->isTrue()) {
+      klee_warning("resume-instruction called with non-0 selector value");
+    }
+
+    if (!EqExpr::create(exceptionPointer, cui->exceptionObject)->isTrue()) {
       terminateStateOnExecError(
           state, "resume-instruction called with unexpected exception pointer");
       break;

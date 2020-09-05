@@ -107,7 +107,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     steppedInstructions(state.steppedInstructions),
     instsSinceCovNew(state.instsSinceCovNew),
     unwindingInformation(state.unwindingInformation
-                             ? state.unwindingInformation->cloned()
+                             ? state.unwindingInformation->clone()
                              : nullptr),
     coveredNew(state.coveredNew),
     forkDisabled(state.forkDisabled) {
