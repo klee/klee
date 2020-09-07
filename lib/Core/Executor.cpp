@@ -412,6 +412,12 @@ cl::opt<bool> DebugCheckForImpliedValues(
     cl::desc("Debug the implied value optimization"),
     cl::cat(DebugCat));
 
+cl::opt<bool> DumpExecutionTree(
+    "print-ptree-dump", cl::init(false), 
+    cl::desc("Show execution tree for symmbolic Execution"),
+    cl::cat(DebugCat)
+);
+
 } // namespace
 
 // XXX hack

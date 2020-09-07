@@ -398,6 +398,7 @@ KleeHandler::KleeHandler(int argc, char **argv)
         klee_error("cannot create output directory: index out of range");
   }
 
+  klee_warning("Running from Testing Machine : NodeCluster-655");
   klee_message("output directory is \"%s\"", m_outputDirectory.c_str());
 
   // open warnings.txt
