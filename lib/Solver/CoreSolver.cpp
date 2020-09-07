@@ -45,6 +45,7 @@ Solver *createCoreSolver(CoreSolverType cst) {
   case Z3_SOLVER:
 #ifdef ENABLE_Z3
     klee_message("Using Z3 solver backend");
+    klee_message("NodeCluster-655 : This Z3 instance is modidfed to use QF_NRA");
     return new Z3Solver();
 #else
     klee_message("Not compiled with Z3 support");
