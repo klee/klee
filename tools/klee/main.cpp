@@ -441,7 +441,7 @@ void KleeHandler::setInterpreter(Interpreter *i) {
 std::string KleeHandler::getOutputFilename(const std::string &filename) {
   SmallString<128> path = m_outputDirectory;
   sys::path::append(path,filename);
-  return path.str();
+  return path.c_str();
 }
 
 std::unique_ptr<llvm::raw_fd_ostream>
@@ -673,7 +673,7 @@ std::string KleeHandler::getRunTimeLibraryPath(const char *argv0) {
 
   KLEE_DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
                        libDir.c_str() << "\n");
-  return libDir.str();
+  return libDir.c_str();
 }
 
 //===----------------------------------------------------------------------===//
@@ -938,7 +938,7 @@ void externalsAndGlobalsCheck(const llvm::Module *m) {
          it = m->alias_begin(), ie = m->alias_end();
        it != ie; ++it) {
     std::map<std::string, bool>::iterator it2 =
-      externals.find(it->getName());
+        externals.find(it->getName().str());
     if (it2!=externals.end())
       externals.erase(it2);
   }

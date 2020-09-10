@@ -524,7 +524,7 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
   llvm::sys::path::append(LibPath,
                           "libkleeRuntimeIntrinsic" + opts.OptSuffix + ".bca");
   std::string error;
-  if (!klee::loadFile(LibPath.str(), modules[0]->getContext(), modules,
+  if (!klee::loadFile(LibPath.c_str(), modules[0]->getContext(), modules,
                       error)) {
     klee_error("Could not load KLEE intrinsic file %s", LibPath.c_str());
   }
@@ -675,7 +675,7 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
     // not defined in this module; if it isn't resolvable then it
     // should be null.
     if (f.hasExternalWeakLinkage() &&
-        !externalDispatcher->resolveSymbol(f.getName())) {
+        !externalDispatcher->resolveSymbol(f.getName().str())) {
       addr = Expr::createPointer(0);
     } else {
       addr = Expr::createPointer(reinterpret_cast<std::uint64_t>(&f));
@@ -825,7 +825,7 @@ void Executor::initializeGlobalObjects(ExecutionState &state) {
       if (v.getName() == "__dso_handle") {
         addr = &__dso_handle; // wtf ?
       } else {
-        addr = externalDispatcher->resolveSymbol(v.getName());
+        addr = externalDispatcher->resolveSymbol(v.getName().str());
       }
       if (!addr) {
         klee_error("Unable to load symbol(%.*s) while initializing globals",
@@ -3716,9 +3716,9 @@ void Executor::callExternalFunction(ExecutionState &state,
   // check if specialFunctionHandler wants it
   if (specialFunctionHandler->handle(state, function, target, arguments))
     return;
-  
-  if (ExternalCalls == ExternalCallPolicy::None
-      && !okExternals.count(function->getName())) {
+
+  if (ExternalCalls == ExternalCallPolicy::None &&
+      !okExternals.count(function->getName().str())) {
     klee_warning("Disallowed call to external function: %s\n",
                function->getName().str().c_str());
     terminateStateOnError(state, "external calls disallowed", User);
