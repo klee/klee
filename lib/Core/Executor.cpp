@@ -3270,6 +3270,25 @@ void Executor::updateStates(ExecutionState *current) {
   removedStates.clear();
 }
 
+template <typename SqType, typename TypeIt>
+void Executor::computeOffsetsSeqTy(KGEPInstruction *kgepi,
+                                   ref<ConstantExpr> &constantOffset,
+                                   uint64_t index, const TypeIt it) {
+  const auto *sq = cast<SqType>(*it);
+  uint64_t elementSize =
+      kmodule->targetData->getTypeStoreSize(sq->getElementType());
+  const Value *operand = it.getOperand();
+  if (const Constant *c = dyn_cast<Constant>(operand)) {
+    ref<ConstantExpr> index =
+        evalConstant(c)->SExt(Context::get().getPointerWidth());
+    ref<ConstantExpr> addend = index->Mul(
+        ConstantExpr::alloc(elementSize, Context::get().getPointerWidth()));
+    constantOffset = constantOffset->Add(addend);
+  } else {
+    kgepi->indices.emplace_back(index, elementSize);
+  }
+}
+
 template <typename TypeIt>
 void Executor::computeOffsets(KGEPInstruction *kgepi, TypeIt ib, TypeIt ie) {
   ref<ConstantExpr> constantOffset =
@@ -3282,33 +3301,16 @@ void Executor::computeOffsets(KGEPInstruction *kgepi, TypeIt ib, TypeIt ie) {
       uint64_t addend = sl->getElementOffset((unsigned) ci->getZExtValue());
       constantOffset = constantOffset->Add(ConstantExpr::alloc(addend,
                                                                Context::get().getPointerWidth()));
-    } else if (const auto set = dyn_cast<SequentialType>(*ii)) {
-      uint64_t elementSize = 
-        kmodule->targetData->getTypeStoreSize(set->getElementType());
-      Value *operand = ii.getOperand();
-      if (Constant *c = dyn_cast<Constant>(operand)) {
-        ref<ConstantExpr> index = 
-          evalConstant(c)->SExt(Context::get().getPointerWidth());
-        ref<ConstantExpr> addend = 
-          index->Mul(ConstantExpr::alloc(elementSize,
-                                         Context::get().getPointerWidth()));
-        constantOffset = constantOffset->Add(addend);
-      } else {
-        kgepi->indices.push_back(std::make_pair(index, elementSize));
-      }
 #if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
-    } else if (const auto ptr = dyn_cast<PointerType>(*ii)) {
-      auto elementSize =
-        kmodule->targetData->getTypeStoreSize(ptr->getElementType());
-      auto operand = ii.getOperand();
-      if (auto c = dyn_cast<Constant>(operand)) {
-        auto index = evalConstant(c)->SExt(Context::get().getPointerWidth());
-        auto addend = index->Mul(ConstantExpr::alloc(elementSize,
-                                         Context::get().getPointerWidth()));
-        constantOffset = constantOffset->Add(addend);
-      } else {
-        kgepi->indices.push_back(std::make_pair(index, elementSize));
-      }
+    } else if (isa<ArrayType>(*ii)) {
+      computeOffsetsSeqTy<ArrayType>(kgepi, constantOffset, index, ii);
+    } else if (isa<VectorType>(*ii)) {
+      computeOffsetsSeqTy<VectorType>(kgepi, constantOffset, index, ii);
+    } else if (isa<PointerType>(*ii)) {
+      computeOffsetsSeqTy<PointerType>(kgepi, constantOffset, index, ii);
+#else
+    } else if (isa<SequentialType>(*ii)) {
+      computeOffsetsSeqTy<SequentialType>(kgepi, constantOffset, index, ii);
 #endif
     } else
       assert("invalid type" && 0);

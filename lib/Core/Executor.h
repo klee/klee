@@ -449,6 +449,11 @@ private:
   /// bindModuleConstants - Initialize the module constant table.
   void bindModuleConstants();
 
+  template <typename SqType, typename TypeIt>
+  void computeOffsetsSeqTy(KGEPInstruction *kgepi,
+                           ref<ConstantExpr> &constantOffset, uint64_t index,
+                           const TypeIt it);
+
   template <typename TypeIt>
   void computeOffsets(KGEPInstruction *kgepi, TypeIt ib, TypeIt ie);
 
