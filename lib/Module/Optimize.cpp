@@ -108,7 +108,11 @@ static void AddStandardCompilePasses(legacy::PassManager &PM) {
   addPass(PM, createPromoteMemoryToRegisterPass());// Kill useless allocas
   addPass(PM, createGlobalOptimizerPass());      // Optimize out global vars
   addPass(PM, createGlobalDCEPass());            // Remove unused fns and globs
+#if LLVM_VERSION_CODE >= LLVM_VERSION(11, 0)
+  addPass(PM, createSCCPPass());                 // Constant prop with SCCP
+#else
   addPass(PM, createIPConstantPropagationPass());// IP Constant Propagation
+#endif
   addPass(PM, createDeadArgEliminationPass());   // Dead argument elimination
   addPass(PM, createInstructionCombiningPass()); // Clean up after IPCP & DAE
   addPass(PM, createCFGSimplificationPass());    // Clean up after IPCP & DAE
