@@ -285,7 +285,11 @@ Function *klee::getDirectCallTarget(
     const CallSite &cs,
 #endif
     bool moduleIsFullyLinked) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
+  Value *v = cs.getCalledOperand();
+#else
   Value *v = cs.getCalledValue();
+#endif
   bool viaConstantExpr = false;
   // Walk through aliases and bitcasts to try to find
   // the function being called.

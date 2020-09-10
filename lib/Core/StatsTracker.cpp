@@ -797,10 +797,11 @@ void StatsTracker::computeReachableUncovered() {
           if (isa<CallInst>(inst) || isa<InvokeInst>(inst)) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
             const CallBase &cs = cast<CallBase>(*inst);
+            if (isa<InlineAsm>(cs.getCalledOperand())) {
 #else
             const CallSite cs(inst);
-#endif
             if (isa<InlineAsm>(cs.getCalledValue())) {
+#endif
               // We can never call through here so assume no targets
               // (which should be correct anyhow).
               callTargets.insert(std::make_pair(inst,
