@@ -2339,12 +2339,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
     const CallBase &cs = cast<CallBase>(*i);
+    Value *fp = cs.getCalledOperand();
 #else
     const CallSite cs(i);
+    Value *fp = cs.getCalledValue();
 #endif
 
     unsigned numArgs = cs.arg_size();
-    Value *fp = cs.getCalledValue();
     Function *f = getTargetFunction(fp, state);
 
     if (isa<InlineAsm>(fp)) {
