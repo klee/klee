@@ -4525,16 +4525,16 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
   size_t alignment = 0;
   llvm::Type *type = NULL;
   std::string allocationSiteName(allocSite->getName().str());
-  if (const GlobalValue *GV = dyn_cast<GlobalValue>(allocSite)) {
-    alignment = GV->getAlignment();
-    if (const GlobalVariable *globalVar = dyn_cast<GlobalVariable>(GV)) {
+  if (const GlobalObject *GO = dyn_cast<GlobalObject>(allocSite)) {
+    alignment = GO->getAlignment();
+    if (const GlobalVariable *globalVar = dyn_cast<GlobalVariable>(GO)) {
       // All GlobalVariables's have pointer type
       llvm::PointerType *ptrType =
           dyn_cast<llvm::PointerType>(globalVar->getType());
       assert(ptrType && "globalVar's type is not a pointer");
       type = ptrType->getElementType();
     } else {
-      type = GV->getType();
+      type = GO->getType();
     }
   } else if (const AllocaInst *AI = dyn_cast<AllocaInst>(allocSite)) {
     alignment = AI->getAlignment();
