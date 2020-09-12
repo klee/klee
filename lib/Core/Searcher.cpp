@@ -26,7 +26,6 @@
 #include "klee/Support/ModuleUtil.h"
 #include "klee/System/Time.h"
 
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
