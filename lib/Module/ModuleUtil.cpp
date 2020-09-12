@@ -251,7 +251,13 @@ klee::linkModules(std::vector<std::unique_ptr<llvm::Module>> &modules,
   return composite;
 }
 
-Function *klee::getDirectCallTarget(CallSite cs, bool moduleIsFullyLinked) {
+Function *klee::getDirectCallTarget(
+#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
+    const CallBase &cs,
+#else
+    const CallSite &cs,
+#endif
+    bool moduleIsFullyLinked) {
   Value *v = cs.getCalledValue();
   bool viaConstantExpr = false;
   // Walk through aliases and bitcasts to try to find
@@ -287,11 +293,16 @@ Function *klee::getDirectCallTarget(CallSite cs, bool moduleIsFullyLinked) {
 
 static bool valueIsOnlyCalled(const Value *v) {
   for (auto user : v->users()) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
+    // Make sure the instruction is a call or invoke.
+    if (const auto *cs_ptr = dyn_cast<CallBase>(user)) {
+      const CallBase &cs = *cs_ptr;
+#else
     if (const auto *instr = dyn_cast<Instruction>(user)) {
       // Make sure the instruction is a call or invoke.
-      CallSite cs(const_cast<Instruction *>(instr));
+      const CallSite cs(const_cast<Instruction *>(instr));
       if (!cs) return false;
-
+#endif
       // Make sure that the value is only the target of this call and
       // not an argument.
       if (cs.hasArgument(v))
