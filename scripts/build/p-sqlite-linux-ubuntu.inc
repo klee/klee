@@ -23,9 +23,13 @@ install_binary_artifact_sqlite() {
 # Check if the binary artifact is installed
 is_installed_sqlite() {
   [[ -f /usr/lib/x86_64-linux-gnu/libsqlite3.so ]] || return 1
-  return 0
+  [[ -f /usr/include/sqlite3.h ]] || return 1
 }
 
 get_docker_config_id_sqlite() {
+  return 0
+}
+
+get_build_artifacts_sqlite() {
   return 0
 }
