@@ -77,7 +77,7 @@ jobs:
       env: LLVM_VERSION=3.9
 
     - name: "LLVM 3.8"
-      env: LLVM_VERSION=3.8
+      env: LLVM_VERSION=3.8 USE_LIBCXX=0
 
     # Sanitizer builds. Do unoptimized build otherwise the optimizer might remove problematic code
     - name: "ASan"
