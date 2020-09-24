@@ -1,6 +1,6 @@
 # Build scripts for libc++
 setup_build_variables_libcxx() {
-  LIBCXX_SRC="${BASE}/libc++-${LLVM_VERSION_SHORT}"
+  LIBCXX_SRC="${BASE}/llvm-${LLVM_VERSION_SHORT}"
   LIBCXX_BUILD="${BASE}/libc++-build-${LLVM_VERSION_SHORT}"
   LIBCXX_INSTALL="${BASE}/libc++-install-${LLVM_VERSION_SHORT}"
 }
@@ -114,7 +114,6 @@ get_docker_config_id_libcxx() {
 get_build_artifacts_libcxx() {
   (
     setup_build_variables_libcxx
-    echo "${LIBCXX_SRC}"
     echo "${LIBCXX_INSTALL}"
   )
 }
