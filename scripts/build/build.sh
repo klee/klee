@@ -79,7 +79,7 @@ check_docker_os() {
   local docker_base=$1
   local os_info=""
   # start docker using the base image, link this directory and get the os information
-  os_info=$(docker run -v "${DIR}:/tmp" "${docker_base}" /tmp/build.sh --check-os) || { echo "Docker execution failed: $os_info"; exit 1;}
+  os_info=$(docker run --rm -v "${DIR}:/tmp" "${docker_base}" /tmp/build.sh --check-os) || { echo "Docker execution failed: $os_info"; exit 1;}
 
   local line
   while read -r line; do
