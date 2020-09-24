@@ -81,10 +81,20 @@ install_binary_artifact_llvm() {
 
 # Check if the binary artifact is installed
 is_installed_llvm() {
+    local version=""
+    local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
+    local LLVM_VERSION_MINOR="${LLVM_VERSION/*./}"
+    [[ "${LLVM_VERSION_MAJOR}" -le 6 ]] && version="${LLVM_VERSION}"
+    [[ "${LLVM_VERSION_MAJOR}" -ge 7 ]] && version="${LLVM_VERSION_MAJOR}"
     local lc=""
-    # Check if llvm-config with the right version exists    
-    lc=$(which "llvm-config-${LLVM_VERSION}")
-    
+
+    # Check for llvm-config without suffix but correct versions number
+    lc=$(which "llvm-config")
+    if [[ -z "${lc}" || $($lc --version) != "${LLVM_VERSION}"* ]]; then
+      # Check if llvm-config with the right version exists
+      lc=$(which "llvm-config-${version}")
+    fi
+
     [[ -z "${lc}" ]] && return 1
 
     local rtti
@@ -97,4 +107,34 @@ is_installed_llvm() {
     # Check requested mode with mode of the found item  
     [[ $(to_bool "${REQUIRES_RTTI}") -eq $(to_bool "${rtti}") ]] || return 1
     [[ $(to_bool "${DISABLE_ASSERTIONS}") -ne $(to_bool "${assertion}") ]] || return 1
+}
+
+setup_artifact_variables_llvm() {
+    # Check for variables set and not empty
+    local version=""
+    local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
+    local LLVM_VERSION_MINOR="${LLVM_VERSION/*./}"
+    [[ "${LLVM_VERSION_MAJOR}" -le 6 ]] && version="${LLVM_VERSION}"
+    [[ "${LLVM_VERSION_MAJOR}" -ge 7 ]] && version="${LLVM_VERSION_MAJOR}"
+    local lc=""
+    # Check for llvm-config without suffix but correct versions number
+    lc=$(which "llvm-config")
+    if [[ -z "${lc}" || $($lc --version) != "${LLVM_VERSION}"* ]]; then
+      # Check if llvm-config with the right version exists
+      lc=$(which "llvm-config-${version}")
+    fi
+
+    [[ -z "${lc}" ]] && return 1
+
+    LLVM_CONFIG="${lc}"
+
+    LLVM_INSTALL="$(${lc} --bindir)"
+    BITCODE_CC="${LLVM_INSTALL}/clang"
+    BITCODE_CXX="${LLVM_INSTALL}/clang++"
+}
+
+get_build_artifacts_llvm() {
+  is_installed_llvm
+  [[ $? -ne 0 ]] && return 1
+  return 0
 }
