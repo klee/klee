@@ -1,6 +1,4 @@
-#!/bin/bash
 # Build scripts for STP
-
 # Variables that any artifact of this package might depend on
 setup_build_variables_stp() {
   STP_SUFFIX="${SANITIZER_SUFFIX}"
