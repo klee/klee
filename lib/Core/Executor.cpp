@@ -579,6 +579,11 @@ Executor::~Executor() {
   delete specialFunctionHandler;
   delete statsTracker;
   delete solver;
+  for (auto fs: cfgStates) {
+    for (auto bs: fs.second) {
+      delete bs.second;
+    }
+  }
 }
 
 /***/
@@ -3246,7 +3251,6 @@ void Executor::updateStates(ExecutionState *current) {
     if (it3 != seedMap.end())
       seedMap.erase(it3);
     processTree->remove(es->ptreeNode);
-    delete es;
   }
   removedStates.clear();
 }
@@ -3481,6 +3485,7 @@ void Executor::run(ExecutionState &initialState) {
   searcher = nullptr;
 
   doDumpStates();
+  haltExecution = false;
 }
 
 std::string Executor::getAddressInfo(ExecutionState &state, 
@@ -4545,7 +4550,7 @@ void Executor::runFunctionAsBlockSequence(Function *f,
                char **argv,
                char **envp) {
   KFunction *kf = kmodule->functionMap[f];
-  std::map<llvm::BasicBlock *, ExecutionState *> currCFG = cfgStates[f];
+  std::map<llvm::BasicBlock *, ExecutionState *> &currCFG = cfgStates[f];
   Function::iterator bbit = f->begin(), bbie = f->end();
   if(bbit != bbie) {
     KBlock *allocas = kf->kBlocks[&*bbit++];
