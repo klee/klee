@@ -342,9 +342,18 @@ private:
                               KInstruction *target /* undef if write */);
 
   ObjectPair lazyInstantiate(ExecutionState &state,
-                             const MemoryObject *mo,
-                             KInstruction *target,
-                             bool isLocal);
+                             bool isLocal,
+                             const MemoryObject *mo);
+
+  ObjectPair lazyInstantiateLocal(ExecutionState &state,
+                                  const MemoryObject *mo,
+                                  KInstruction *target,
+                                  bool isLocal);
+
+  ObjectPair lazyInstantiateArgs(ExecutionState &state,
+                                 KFunction *kf,
+                                 unsigned index,
+                                 const MemoryObject *mo);
 
   ObjectPair lazyInstantiateVariable(ExecutionState &state,
                                      ref<Expr> address,
@@ -535,6 +544,8 @@ public:
 
   void prepareSymbolicStack(ExecutionState &state, KFunction *kf);
 
+  void prepareSymbolicArgs(ExecutionState &state, KFunction *kf);
+
   void prepareSymbolicAllocas(ExecutionState &state, KBlock *allocas);
 
   void runInstructions(llvm::Function *f, KInstruction **instructions, int argc, char **argv, char **envp);
@@ -542,13 +553,12 @@ public:
   void runFunctionAsMain(llvm::Function *f, int argc, char **argv,
                          char **envp) override;
 
-  void runFunctionAsBlockSequence(llvm::Function *f, int argc, char **argv,
-                         char **envp) override;
+  void runFunctionAsBlockSequence(llvm::Function *f, ExecutionState &state) override;
 
   void runMainAsBlockSequence(llvm::Function *f, int argc, char **argv,
                          char **envp) override;
 
-  void runKBlock(KBlock *kb, ExecutionState &state, int argc, char **argv, char **envp);
+  void runKBlock(KBlock *kb, ExecutionState &state);
 
   /*** Runtime options ***/
 

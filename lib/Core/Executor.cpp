@@ -3877,7 +3877,7 @@ void Executor::executeAlloc(ExecutionState &state,
                             size_t allocationAlignment) {
   size = toUnique(state, size);
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(size)) {
-    const llvm::Value *allocSite = state.prevPC->inst;
+    const llvm::Value *allocSite = target->inst;
     if (allocationAlignment == 0) {
       allocationAlignment = getAllocationAlignment(allocSite);
     }
@@ -4195,17 +4195,32 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   }
 }
 
-ObjectPair Executor::lazyInstantiate(ExecutionState &state,
-                                     const MemoryObject *mo,
-                                     KInstruction *target,
-                                     bool isLocal) {
+ObjectPair Executor::lazyInstantiate(ExecutionState &state, bool isLocal, const MemoryObject *mo) {
   executeMakeSymbolic(state, mo, "lazy_instantiation", isLocal);
   ExactResolutionList rl;
   resolveExact(state, mo->getBaseExpr(), rl, "lazy_instantiation");
   assert(rl.size() == 1);
   const ObjectState *os = rl.begin()->first.second;
-  bindLocal(target, state, mo->getBaseExpr());
   return {mo, os};
+}
+
+ObjectPair Executor::lazyInstantiateLocal(ExecutionState &state,
+                                     const MemoryObject *mo,
+                                     KInstruction *target,
+                                     bool isLocal) {
+  ObjectPair op = lazyInstantiate(state, isLocal, mo);
+  bindLocal(target, state, op.first->getBaseExpr());
+  return op;
+}
+
+
+ObjectPair Executor::lazyInstantiateArgs(ExecutionState &state,
+                                         KFunction *kf,
+                                         unsigned index,
+                                         const MemoryObject *mo) {
+  ObjectPair op = lazyInstantiate(state, true, mo);
+  bindArgument(kf, index, state, op.first->getBaseExpr());
+  return op;
 }
 
 ObjectPair Executor::lazyInstantiateVariable(ExecutionState &state, ref<Expr> address, KInstruction *target, uint64_t size) {
@@ -4214,7 +4229,7 @@ ObjectPair Executor::lazyInstantiateVariable(ExecutionState &state, ref<Expr> ad
   MemoryObject *mo =
       memory->allocate(size, false, /*isGlobal=*/false,
                        allocSite, /*allocationAlignment=*/8, address);
-  ObjectPair op = lazyInstantiate(state, mo, target, /*isLocal=*/false);
+  ObjectPair op = lazyInstantiateLocal(state, mo, target, /*isLocal=*/false);
   ref<Expr> inBounds = EqExpr::create(address, op.first->getBaseExpr());
   bool mayBeTrue;
   bool succes = solver->mayBeTrue(state.constraints, inBounds, mayBeTrue, state.queryMetaData);
@@ -4402,7 +4417,7 @@ ExecutionState* Executor::formState(Function *f,
 }
 
 void Executor::makeSymbolicInstructionResult(ExecutionState &state, const MemoryObject *mo, KInstruction *ki) {
-  lazyInstantiate(state, mo, ki, true);
+  lazyInstantiateLocal(state, mo, ki, true);
 }
 
 void Executor::clearGlobal()
@@ -4438,6 +4453,19 @@ void Executor::prepareSymbolicStack(ExecutionState &state, KFunction *kf) {
                            allocSite, /*allocationAlignment=*/8);
       makeSymbolicInstructionResult(state, mo, ki);
     }
+  }
+}
+
+void Executor::prepareSymbolicArgs(ExecutionState &state, KFunction *kf) {
+  int argNum = 0;
+  for (auto ai = kf->function->arg_begin(), ae = kf->function->arg_end(); ai != ae; ai++) {
+    const Argument *arg = *&ai;
+    uint64_t size = arg->getType()->getScalarSizeInBits();
+    MemoryObject *mo =
+        memory->allocate(size, true, /*isGlobal=*/false,
+                         arg, /*allocationAlignment=*/8);
+    lazyInstantiateArgs(state, kf, argNum, mo);
+    argNum++;
   }
 }
 
@@ -4526,10 +4554,7 @@ void Executor::runFunctionAsMain(Function *f,
 }
 
 void Executor::runKBlock(KBlock *kb,
-                         ExecutionState &state,
-                         int argc,
-                         char **argv,
-                         char **envp) {
+                         ExecutionState &state) {
  if (pathWriter)
    state.pathOS = pathWriter->open();
  if (symPathWriter)
@@ -4545,34 +4570,31 @@ void Executor::runKBlock(KBlock *kb,
    statsTracker->done();
 }
 
-void Executor::runFunctionAsBlockSequence(Function *f,
-               int argc,
-               char **argv,
-               char **envp) {
+void Executor::runFunctionAsBlockSequence(Function *f, ExecutionState &state) {
   KFunction *kf = kmodule->functionMap[f];
   std::map<llvm::BasicBlock *, ExecutionState *> &currCFG = cfgStates[f];
   Function::iterator bbit = f->begin(), bbie = f->end();
   if(bbit != bbie) {
     KBlock *allocas = kf->kBlocks[&*bbit++];
-    ExecutionState *state = formState(f, allocas->instructions, argc, argv, envp);
-    ExecutionState *emptyState = new ExecutionState(*state);
+    ExecutionState *emptyState = new ExecutionState(state);
     emptyState->addressSpace.clear();
-    prepareSymbolicStack(*state, kf);
+    prepareSymbolicArgs(*emptyState, kf);
+    prepareSymbolicAllocas(*emptyState, allocas);
     KBlock **blocks = new KBlock*[2];
     bbie--; blocks[1] = kf->kBlocks[&*bbie];
     for (; bbit != bbie; bbit++) {
       blocks[0] = kf->kBlocks[&*bbit];
       KBlock *kb = new KBlock(f, blocks, kmodule.get(), 2);
       if(!blocks[0]->isCallBlock()) {
-        ExecutionState *currState = new ExecutionState(*state, kb->instructions);
-        runKBlock(kb, *currState, argc, argv, envp);
+        ExecutionState *currState = new ExecutionState(*emptyState, kb->instructions);
+        runKBlock(kb, *currState);
         currCFG[&*bbit] = currState;
       } else {
         if(currCFG.count(&*bbit) == 0) {
           currCFG[&*bbit] = nullptr;
           KCallBlock *kcall = (KCallBlock*)blocks[0];
           if(f != kcall->calledFunction) {
-            runFunctionAsBlockSequence(kcall->calledFunction, argc, argv, envp);
+            runFunctionAsBlockSequence(kcall->calledFunction, state);
           }
         }
       }
@@ -4584,7 +4606,8 @@ void Executor::runMainAsBlockSequence(Function *f,
                int argc,
                char **argv,
                char **envp) {
-  runFunctionAsBlockSequence(f, argc, argv, envp);
+  ExecutionState *state = formState(f, nullptr, argc, argv, envp);
+  runFunctionAsBlockSequence(f, *state);
   // hack to clear memory objects
   delete memory;
   memory = new MemoryManager(NULL);

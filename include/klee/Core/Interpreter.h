@@ -136,9 +136,7 @@ public:
                                  char **argv,
                                  char **envp) = 0;
   virtual void runFunctionAsBlockSequence(llvm::Function *f,
-                                 int argc,
-                                 char **argv,
-                                 char **envp) = 0;
+                                 ExecutionState &state) = 0;
   virtual void runMainAsBlockSequence(llvm::Function *f,
                  int argc,
                  char **argv,
