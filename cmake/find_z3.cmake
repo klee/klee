@@ -33,10 +33,18 @@ if (ENABLE_SOLVER_Z3)
 
     # Check the signature of `Z3_get_error_msg()`
     cmake_push_check_state()
+    set(CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES} ${Z3_INCLUDE_DIRS})
     set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} ${Z3_LIBRARIES})
-    check_prototype_definition(Z3_get_error_msg
-      "Z3_string Z3_get_error_msg(Z3_context c, Z3_error_code err)"
-      "NULL" "${Z3_INCLUDE_DIRS}/z3.h" HAVE_Z3_GET_ERROR_MSG_NEEDS_CONTEXT)
+
+    check_cxx_source_compiles("
+    #include <z3.h>
+    void custom_z3_error_handler(Z3_context ctx, Z3_error_code ec) {
+      ::Z3_string errorMsg = Z3_get_error_msg(ctx, ec);
+    }
+    int main(int argc, char** argv) {
+        return 0;
+    }
+    " HAVE_Z3_GET_ERROR_MSG_NEEDS_CONTEXT)
     cmake_pop_check_state()
     if (HAVE_Z3_GET_ERROR_MSG_NEEDS_CONTEXT)
       message(STATUS "Z3_get_error_msg requires context")
