@@ -124,7 +124,7 @@ jobs:
     # macOS
     - name: "macOS"
       os: osx
-      env: SOLVERS=STP UCLIBC_VERSION=0 USE_TCMALLOC=0 USE_LIBCXX=0
+      env: SOLVERS=STP UCLIBC_VERSION=0 USE_TCMALLOC=0 USE_LIBCXX=0 LLVM_VERSION=6.0
 
     # Docker
     - name: "Docker"
