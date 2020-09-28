@@ -1,7 +1,7 @@
 // RUN: %clang %s -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out  %t.bc 2> %t.log
-// RUN: klee-stats --print-more %t.klee-out > %t.stats
+// RUN: %klee-stats --print-more %t.klee-out > %t.stats
 // RUN: FileCheck -check-prefix=CHECK-STATS -input-file=%t.stats %s
 #include "klee/klee.h"
 #include <stdlib.h>
