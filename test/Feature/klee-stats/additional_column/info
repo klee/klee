@@ -1,0 +1,21 @@
+klee run.bc
+PID: 1122888
+Using monotonic steady clock with 1/1000000000s resolution
+Started: 2020-09-25 18:44:34
+BEGIN searcher description
+<InterleavedSearcher> containing 2 searchers:
+RandomPathSearcher
+WeightedRandomSearcher::CoveringNew
+</InterleavedSearcher>
+END searcher description
+Finished: 2020-09-25 18:44:34
+Elapsed: 00:00:00
+KLEE: done: explored paths = 1
+KLEE: done: total queries = 0
+KLEE: done: valid queries = 0
+KLEE: done: invalid queries = 0
+KLEE: done: query cex = 0
+
+KLEE: done: total instructions = 3
+KLEE: done: completed paths = 1
+KLEE: done: generated tests = 1
