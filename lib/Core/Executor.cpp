@@ -1851,7 +1851,10 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
           offsets[k] = size;
           size += Expr::getMinBytesForWidth(argWidth);
         } else {
-#if LLVM_VERSION_CODE > LLVM_VERSION(4, 0)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(11, 0)
+          MaybeAlign ma = cs.getParamAlign(k);
+          unsigned alignment = ma ? ma->value() : 0;
+#elif LLVM_VERSION_CODE > LLVM_VERSION(4, 0)
           unsigned alignment = cs.getParamAlignment(k);
 #else
           // getParamAlignment() is buggy for LLVM <= 4, so we instead
