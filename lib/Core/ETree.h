@@ -36,8 +36,8 @@ namespace klee {
         State(State &&) {}
         ~State() = default;
 
-        State &operator=(const State &) { return *this; }
-        State &operator=(State &&) { return *this; }
+        // State &operator=(const State &) { return *this; }
+        // State &operator=(State &&) { return *this; }
 
         State(std::string data, BigInteger id);
     };
@@ -60,12 +60,12 @@ namespace klee {
         ETreeNode(ETreeNode &&) {}
         ~ETreeNode() = default;
 
-        ETreeNode &operator=(const ETreeNode &) { return *this; }
-        ETreeNode &operator=(ETreeNode &&) { return *this; }
+        // ETreeNode &operator=(const ETreeNode &) { return *this; }
+        // ETreeNode &operator=(ETreeNode &&) { return *this; }
 
         explicit ETreeNode(ETreeNode* parent);
-        ETreeNode(ETreeNode* parent, State state);
-        ETreeNode(ETreeNode* parent, State state, ETreeNode *left, ETreeNode *right);
+        ETreeNode(ETreeNode* parent, State* state);
+        ETreeNode(ETreeNode* parent, State* state, ETreeNode* left, ETreeNode* right);
     };
 
     /**
@@ -74,11 +74,11 @@ namespace klee {
     class ETree {
         public:
         ETreeNodePtr root;
-        explicit ETree(State state);
+        explicit ETree(State *state);
         ~ETree() = default;
 
-        void forkState(ETreeNode *parentNode, State *leftState, State *rightState);
-        void removeNode(ETreeNode *delNode);
+        void forkState(ETreeNode* parentNode, State* leftState, State* rightState);
+        void removeNode(ETreeNode* delNode);
         void dumpETree(llvm::raw_ostream &fileptr);
     };
 
