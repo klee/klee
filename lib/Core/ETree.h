@@ -63,8 +63,9 @@ namespace klee {
         ETreeNode &operator=(const ETreeNode &) { return *this; }
         ETreeNode &operator=(ETreeNode &&) { return *this; }
 
-        explicit ETreeNode(State state);
-        ETreeNode(State state, ETreeNode *left, ETreeNode *right);
+        explicit ETreeNode(ETreeNode* parent);
+        ETreeNode(ETreeNode* parent, State state);
+        ETreeNode(ETreeNode* parent, State state, ETreeNode *left, ETreeNode *right);
     };
 
     /**
