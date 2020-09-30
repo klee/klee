@@ -4215,7 +4215,7 @@ void Executor::dumpPTree() {
   if (!::dumpPTree) return;
 
   char name[32];
-  snprintf(name, sizeof(name),"ptree%08d.dot", (int) stats::instructions);
+  snprintf(name, sizeof(name),"ptree_%08d.dot", (int) stats::instructions);
   auto os = interpreterHandler->openOutputFile(name);
   if (os) {
     processTree->dump(*os);
