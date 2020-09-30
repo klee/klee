@@ -22,20 +22,21 @@ ETreeNode::ETreeNode(ETreeNode* parent)
 ETreeNode::ETreeNode(ETreeNode* parent, State *state) : 
     parent{parent}, 
     state{state} {
-        left = std::make_unique<ETreeNode>(nullptr);
-        right = std::make_unique<ETreeNode>(nullptr);
+        left = ETreeNodePtr(nullptr);
+        right = ETreeNodePtr(nullptr);
     }
 
+// No Forking, this adds extra redundent nodes. 
 ETreeNode::ETreeNode(ETreeNode* parent, State *state, ETreeNode *left, ETreeNode *right) :
     parent{parent}, 
-    left{std::make_unique<ETreeNode>(left)}, 
-    right{std::make_unique<ETreeNode>(right)}, 
+    left{std::make_shared<ETreeNode>(left)}, 
+    right{std::make_shared<ETreeNode>(right)}, 
     state{state} {
 
 }
 
 ETree::ETree(State *state) :
-    root{std::make_unique<ETreeNode>(new ETreeNode(nullptr, state))} {
+    root{std::make_shared<ETreeNode>(new ETreeNode(nullptr, state))} {
 
     }
 
@@ -43,8 +44,8 @@ void ETree::forkState(ETreeNode *parentNode, State *leftState, State *rightState
     // Fork the state, create a left and right side execution nodes. 
     assert(parentNode && !parentNode->left.get() && !parentNode->right.get());
     parentNode->state->data = "Node Forked";
-    parentNode->left = std::make_unique<ETreeNode>(new ETreeNode(nullptr, leftState));
-    parentNode->right = std::make_unique<ETreeNode>(new ETreeNode(nullptr, rightState));
+    parentNode->left = std::make_shared<ETreeNode>(new ETreeNode(parentNode, leftState));
+    parentNode->right = std::make_shared<ETreeNode>(new ETreeNode(parentNode, rightState));
 } 
         
 void ETree::removeNode(ETreeNode *delNode) {
@@ -56,11 +57,11 @@ void ETree::removeNode(ETreeNode *delNode) {
         if (temp) {
             if (delNode == temp->left.get()) {
                 // We are on the left side.
-                temp->left = std::make_unique<ETreeNode>(nullptr);
+                temp->left = std::make_shared<ETreeNode>(nullptr);
             } else {
                 // null it if the assert for right check passes. 
                 assert(delNode == temp->right.get());
-                temp->right = std::make_unique<ETreeNode>(nullptr);
+                temp->right = std::make_shared<ETreeNode>(nullptr);
             }
         }
         delete delNode;

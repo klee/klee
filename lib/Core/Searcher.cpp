@@ -14,6 +14,7 @@
 #include "Executor.h"
 #include "MergeHandler.h"
 #include "PTree.h"
+#include "ETree.h"
 #include "StatsTracker.h"
 
 #include "klee/ADT/DiscretePDF.h"

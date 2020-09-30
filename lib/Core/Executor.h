@@ -68,6 +68,7 @@ namespace klee {
   class MemoryObject;
   class ObjectState;
   class PTree;
+  class ETree;
   class Searcher;
   class SeedInfo;
   class SpecialFunctionHandler;
@@ -131,6 +132,9 @@ private:
   SpecialFunctionHandler *specialFunctionHandler;
   TimerGroup timers;
   std::unique_ptr<PTree> processTree;
+  
+  /// This is a custom dummy Execution Tree. 
+  std::unique_ptr<ETree> executionTree;
 
   /// Used to track states that have been added during the current
   /// instructions step. 
@@ -454,6 +458,9 @@ private:
   /// Only for debug purposes; enable via debugger or klee-control
   void dumpStates();
   void dumpPTree();
+
+  // Print the dummy Execution Tree
+  void printETree();
 
 public:
   Executor(llvm::LLVMContext &ctx, const InterpreterOptions &opts,

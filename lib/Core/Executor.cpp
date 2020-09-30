@@ -4210,6 +4210,14 @@ int *Executor::getErrnoLocation(const ExecutionState &state) const {
 #endif
 }
 
+void Executor::printETree() {
+  char fileName[32];
+  snprintf(fileName, sizeof(fileName),"etree_%08d.dot", (int) stats::instructions);
+  auto os = interpreterHandler->openOutputFile(fileName);
+  if (os) {
+    executionTree->dumpETree(*os);
+  }
+}
 
 void Executor::dumpPTree() {
   if (!::dumpPTree) return;

@@ -8,9 +8,9 @@
 #include <unordered_map>
 
 /**
- * This is a custom tree data structure to store some information during
- * execution Later it can be extended to store path-specific execution state
- * related information.
+ * This is a custom execution Tree to store some information during
+ * execution. Later it can be extended to store path-specific execution state
+ * related information like the PTree implementation. 
  */
 namespace klee {
 
@@ -18,12 +18,13 @@ namespace klee {
     class Etree;
     class State;
 
-    using ETreeNodePtr = std::unique_ptr<ETreeNode>;
+    using ETreeNodePtr = std::shared_ptr<ETreeNode>;
     typedef unsigned long long int BigInteger;
 
     /**
      * Store some custom State data in the 
-     * tree ndoes for ETree.
+     * tree ndoes for ETree. Stores data & id.
+     * BigInteger is ULL. 
     */
     class State {
         public:
@@ -43,8 +44,9 @@ namespace klee {
     };
 
     /**
-     * ETreeNode Class
-     * tree ndoes for ETree.
+     * Class for nodes of ETree.
+     * stores parent, left, right and some state data in each node. 
+     * ETreeNodePtr is std::shared_ptr<ETreeNode>
     */
     class ETreeNode {
         public:
@@ -69,6 +71,7 @@ namespace klee {
     };
 
     /**
+     * Class for ETree definition. Execution Tree.
      * Objective is to print the ETree dump when executing a testcase. 
     */
     class ETree {

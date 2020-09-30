@@ -74,6 +74,8 @@ ExecutionState::ExecutionState(KFunction *kf) :
     prevPC(pc),
     depth(0),
     ptreeNode(nullptr),
+    // dummy Execution tree
+    etreeNode(nullptr),
     steppedInstructions(0),
     instsSinceCovNew(0),
     coveredNew(false),
