@@ -412,11 +412,22 @@ cl::opt<bool> DebugCheckForImpliedValues(
     cl::desc("Debug the implied value optimization"),
     cl::cat(DebugCat));
 
+// TODO :: Check if this is useful. 
+cl::opt<bool> SetPTREEDump(
+    "set-ptree-dump", cl::init(false),
+    cl::desc("Set the dumpPtree option to true (default=false)."),
+    cl::cat(DebugCat));
+
+cl::opt<bool> SetDumpState(
+    "set-state-dump", cl::init(false),
+    cl::desc("Set the dumpStates option to true (default=false)."),
+    cl::cat(DebugCat));
+
 } // namespace
 
 // XXX hack
 extern "C" unsigned dumpStates, dumpPTree;
-unsigned dumpStates = 0, dumpPTree = 0;
+unsigned dumpStates = SetDumpState ? 1 : 0, dumpPTree = SetPTREEDump ? 1 : 0;
 
 const char *Executor::TerminateReasonNames[] = {
   [ Abort ] = "abort",
