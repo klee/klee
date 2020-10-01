@@ -33,7 +33,8 @@ namespace klee {
         // Data Store
         std::string data;
         BigInteger id;
-
+        ETreeNodePtrUnique associatedTreeNode;
+        
         State() = delete;
 
         State(const State &) {}

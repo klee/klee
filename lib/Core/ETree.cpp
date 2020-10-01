@@ -8,12 +8,13 @@
 using namespace klee;
 using namespace llvm;
 
-// State::State(std::string data, BigInteger id, ETreeNode *current) :
-//     data{data},
-//     execTreeNode{ETreeNodePtrUnique(current)},
-//     id{id} {
-//      // Create a new state data entry
-// }
+State::State(std::string data, BigInteger id, ETreeNode *current) :
+    data{data},
+    id{id},
+    associatedTreeNode{ETreeNodePtrUnique(current)}
+{
+     // Create a new state data entry
+}
 
 State::State(std::string data, BigInteger id) :
     data{data},
@@ -53,7 +54,8 @@ ETree::ETree(State *initState) {
         root->right = nullptr;
     }
 
-// Fixme : Assert fails. Bug in Fork or add state.
+// FIXME : Assert fails. Bug in Fork or add state.
+// TODO : Assign the current nodes correctly to the left and right states. 
 void ETree::forkState(ETreeNode *parentNode, State *leftState, State *rightState) {
     // Fork the state, create a left and right side execution nodes. 
     assert(parentNode);
@@ -64,6 +66,7 @@ void ETree::forkState(ETreeNode *parentNode, State *leftState, State *rightState
 } 
         
 // Fixme : Assert fails. Bug in Fork or add state.
+// TODO : Assign the current nodes correctly to states on removal. 
 void ETree::removeNode(ETreeNode *delNode) {
     // Remove a ETreeNode from the ETree
     assert(delNode && !delNode->right.get() && !delNode->left.get());
