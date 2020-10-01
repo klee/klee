@@ -19,6 +19,7 @@ namespace klee {
     class State;
 
     using ETreeNodePtr = std::shared_ptr<ETreeNode>;
+    using ETreeNodePtrUnique = std::unique_ptr<ETreeNode>;
     typedef unsigned long long int BigInteger;
 
     /**
@@ -28,6 +29,8 @@ namespace klee {
     */
     class State {
         public:
+
+        // Data Store
         std::string data;
         BigInteger id;
 
@@ -39,8 +42,9 @@ namespace klee {
 
         // State &operator=(const State &) { return *this; }
         // State &operator=(State &&) { return *this; }
-
+        
         State(std::string data, BigInteger id);
+        State(std::string data, BigInteger id, ETreeNode* current);
     };
 
     /**
@@ -77,6 +81,9 @@ namespace klee {
     class ETree {
         public:
         ETreeNodePtr root;
+        ETreeNodePtr current;
+        
+        ETree() = delete;
         explicit ETree(State *state);
         ~ETree() = default;
 

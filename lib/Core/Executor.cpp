@@ -76,6 +76,12 @@ typedef unsigned TypeSize;
 #endif
 #include "llvm/Support/raw_ostream.h"
 
+// for storing LOCs
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/Config/llvm-config.h"
+#include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cerrno>
@@ -419,9 +425,16 @@ cl::opt<bool> SetPTREEDump(
     cl::desc("Set the dumpPtree option to true (default=false)."),
     cl::cat(DebugCat));
 
+// TODO :: Check if this is useful.
 cl::opt<bool> SetDumpState(
     "set-state-dump", cl::init(false),
     cl::desc("Set the dumpStates option to true (default=false)."),
+    cl::cat(DebugCat));
+
+// TODO :: Test to see if needed as a debug option or not. 
+cl::opt<bool> PrintExecutionTree(
+    "print-exectree", cl::init(false),
+    cl::desc("Print the Execution Tree(ETree). (default=false)."),
     cl::cat(DebugCat));
 
 } // namespace
@@ -902,6 +915,9 @@ void Executor::branch(ExecutionState &state,
       addedStates.push_back(ns);
       result.push_back(ns);
       processTree->attach(es->ptreeNode, ns, es);
+      executionTree->forkState(executionTree->current.get(), 
+                        new State("__left__", i), 
+                        new State("__right__", i));
     }
   }
 
@@ -1141,6 +1157,9 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
 
     processTree->attach(current.ptreeNode, falseState, trueState);
+    executionTree->forkState(executionTree->current.get(), 
+                    new State("__true__", (stats::forks).getValue()), 
+                    new State("__false__", (stats::forks).getValue()));
 
     if (pathWriter) {
       // Need to update the pathOS.id field of falseState, otherwise the same id
@@ -3965,10 +3984,19 @@ void Executor::runFunctionAsMain(Function *f,
   }
   
   initializeGlobals(*state);
+  
+  // Start with a dummy state. 
+  State *initState = new State("__start__", 0);
+  executionTree = std::make_unique<ETree>(initState);
 
   processTree = std::make_unique<PTree>(state);
   run(*state);
   processTree = nullptr;
+
+  printETree();
+
+  initState = nullptr;
+  executionTree = nullptr;
 
   // hack to clear memory objects
   delete memory;
@@ -4212,6 +4240,8 @@ int *Executor::getErrnoLocation(const ExecutionState &state) const {
 }
 
 void Executor::printETree() {
+  if (!PrintExecutionTree) return;
+
   char fileName[32];
   snprintf(fileName, sizeof(fileName),"etree_%08d.dot", (int) stats::instructions);
   auto os = interpreterHandler->openOutputFile(fileName);
