@@ -915,9 +915,12 @@ void Executor::branch(ExecutionState &state,
       addedStates.push_back(ns);
       result.push_back(ns);
       processTree->attach(es->ptreeNode, ns, es);
-      executionTree->forkState(executionTree->current.get(), 
-                        new State("__left__", i), 
-                        new State("__right__", i));
+
+      // FIXME : Update current & flag properly after fork state. 
+      int flag = 0;
+      executionTree->forkState(executionTree->current.get(), flag,
+                        new State("__left__", (int) stats::instructions, nullptr), 
+                        new State("__right__", (int) stats::instructions, nullptr));
     }
   }
 
@@ -1157,9 +1160,12 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     }
 
     processTree->attach(current.ptreeNode, falseState, trueState);
-    executionTree->forkState(executionTree->current.get(), 
-                    new State("__true__", (stats::forks).getValue()), 
-                    new State("__false__", (stats::forks).getValue()));
+    
+    // FIXME : Update current and flag properly after fork state. 
+    int flag = (&current == trueState) ? 1 : 0;
+    executionTree->forkState(executionTree->current.get(), flag,
+                    new State("__true__", (int) stats::instructions, nullptr), 
+                    new State("__false__", (int) stats::instructions, nullptr));
 
     if (pathWriter) {
       // Need to update the pathOS.id field of falseState, otherwise the same id
@@ -3986,7 +3992,7 @@ void Executor::runFunctionAsMain(Function *f,
   initializeGlobals(*state);
   
   // Start with a dummy state. 
-  State *initState = new State("__start__", 0);
+  State *initState = new State("__start__", 0, nullptr);
   executionTree = std::make_unique<ETree>(initState);
 
   processTree = std::make_unique<PTree>(state);

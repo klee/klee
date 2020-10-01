@@ -88,7 +88,7 @@ namespace klee {
         explicit ETree(State *state);
         ~ETree() = default;
 
-        void forkState(ETreeNode* parentNode, State* leftState, State* rightState);
+        void forkState(ETreeNode* parentNode, int flag, State* leftState, State* rightState);
         void removeNode(ETreeNode* delNode);
         void dumpETree(llvm::raw_ostream &fileptr);
     };

@@ -11,14 +11,14 @@ using namespace llvm;
 State::State(std::string data, BigInteger id, ETreeNode *current) :
     data{data},
     id{id},
-    associatedTreeNode{ETreeNodePtrUnique(current)}
-{
+    associatedTreeNode{ETreeNodePtrUnique(current)} {
      // Create a new state data entry
 }
 
 State::State(std::string data, BigInteger id) :
     data{data},
-    id{id} {
+    id{id},
+    associatedTreeNode{nullptr} {
      // Create a new state data entry
 }
 
@@ -56,16 +56,30 @@ ETree::ETree(State *initState) {
 
 // FIXME : Assert fails. Bug in Fork or add state.
 // TODO : Assign the current nodes correctly to the left and right states. 
-void ETree::forkState(ETreeNode *parentNode, State *leftState, State *rightState) {
+void ETree::forkState(ETreeNode *Node, int flag, State *leftState, State *rightState) {
     // Fork the state, create a left and right side execution nodes. 
-    assert(parentNode);
-    // assert(parentNode && !(parentNode->left.get()) && !(parentNode->right.get()));
-    parentNode->state->data = "Node Forked";
-    parentNode->left = ETreeNodePtr(new ETreeNode(parentNode, leftState));
-    parentNode->right = ETreeNodePtr(new ETreeNode(parentNode, rightState));
+    assert(Node && !(Node->left.get()) && !(Node->right.get()));
+    ETreeNode* tempLeft = new ETreeNode(Node, leftState);
+    ETreeNode* tempRight = new ETreeNode(Node, rightState);
+
+    Node->state->data = "Forked";
+    Node->left = ETreeNodePtr(tempLeft);
+    Node->right = ETreeNodePtr(tempRight);
+
+    if (leftState->associatedTreeNode) {
+        leftState->associatedTreeNode = ETreeNodePtrUnique(tempLeft);
+    }
+
+    if (rightState->associatedTreeNode) {
+        rightState->associatedTreeNode = ETreeNodePtrUnique(tempRight);
+    }
+
+    // FIXME : Update this correctly. 
+    // We took a same decision as the PTree.cpp implementation.
+    this->current = flag ? Node->left : Node->right;
 } 
         
-// Fixme : Assert fails. Bug in Fork or add state.
+// FIXME : Assert fails. Bug in Fork or add state.
 // TODO : Assign the current nodes correctly to states on removal. 
 void ETree::removeNode(ETreeNode *delNode) {
     // Remove a ETreeNode from the ETree
@@ -98,7 +112,6 @@ void ETree::dumpETree(llvm::raw_ostream &fileptr) {
     fileptr << "\trotate=90;\n";
     fileptr << "\tcenter = \"true\";\n";
     fileptr << "\tnode [style=\"filled\",width=.1,height=.1,fontname=\"Terminus\"]\n";
-    fileptr << "\tedge [arrowsize=.1]\n";
 
     std::vector<const ETreeNode*> processing_stack;
     processing_stack.emplace_back(root.get());
