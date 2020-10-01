@@ -434,7 +434,13 @@ cl::opt<bool> SetDumpState(
 // TODO :: Test to see if needed as a debug option or not. 
 cl::opt<bool> PrintExecutionTree(
     "print-exectree", cl::init(false),
-    cl::desc("Print the Execution Tree(ETree). (default=false)."),
+    cl::desc("Print the Execution Tree (ETree Structure). (default=false)."),
+    cl::cat(DebugCat));
+  
+// TODO :: Test to see if needed as a debug option or not. 
+cl::opt<bool> setSourceCodeFlow(
+    "set-codeflow", cl::init(false),
+    cl::desc("Print the State Graph of transitions between exec states (default=false)."),
     cl::cat(DebugCat));
 
 } // namespace
@@ -1164,9 +1170,19 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
     // FIXME : Update current and flag properly after fork state. 
     int flag = res==Solver::True ? 1 : 0;
+    
+    Instruction* lastInst;
+    const InstructionInfo &ii = getLastNonKleeInternalInstruction(current, &lastInst);
+
+    if (setSourceCodeFlow) {
+    executionTree->forkState(executionTree->current.get(), flag,
+                    new State("true", ii.line, nullptr), 
+                    new State("false", ii.line, nullptr));
+    } else {
     executionTree->forkState(executionTree->current.get(), flag,
                     new State("true", (int) stats::instructions, nullptr), 
                     new State("false", (int) stats::instructions, nullptr));
+    }
 
     if (pathWriter) {
       // Need to update the pathOS.id field of falseState, otherwise the same id
@@ -4250,7 +4266,9 @@ void Executor::printETree() {
   if (!PrintExecutionTree) return;
 
   char fileName[32];
-  snprintf(fileName, sizeof(fileName),"etree_%08d.dot", (int) stats::instructions);
+  setSourceCodeFlow ? snprintf(fileName, sizeof(fileName),"execgraph_%08d.dot", (int) stats::instructions) :
+                      snprintf(fileName, sizeof(fileName),"etree_%08d.dot", (int) stats::instructions) ;
+
   auto os = interpreterHandler->openOutputFile(fileName);
   if (os) {
     executionTree->dumpETree(*os);
