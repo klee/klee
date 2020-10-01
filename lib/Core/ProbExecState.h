@@ -46,7 +46,7 @@ namespace klee {
         uint32_t codeLine = 0;
 
         // ETree node with this state, probably before a fork. 
-        ETreeNodePtr treeNode = nullptr;
+        ETreeNode* treeNode = nullptr;
         
         ProbExecState() = delete;
 

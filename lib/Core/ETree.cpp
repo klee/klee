@@ -31,7 +31,7 @@ ETreeNode::ETreeNode(ETreeNode* parent, ProbExecState* state, ETreeNode* left, E
 
 }
 
-ETree::ETree(State *initState) {
+ETree::ETree(ProbExecState *initState) {
         ETreeNode* rootNode = new ETreeNode(nullptr, initState);
         // initState->execTreeNode = ETreeNodePtrUnique(rootNode);
         root = ETreeNodePtr(rootNode);
@@ -51,12 +51,12 @@ void ETree::forkState(ETreeNode *Node, bool forkflag, ProbExecState *leftState, 
     Node->left = ETreeNodePtr(tempLeft);
     Node->right = ETreeNodePtr(tempRight);
 
-    if (leftState->associatedTreeNode) {
-        leftState->associatedTreeNode = ETreeNodePtrUnique(tempLeft);
+    if (!leftState->treeNode) {
+        leftState->treeNode = (tempLeft);
     }
 
-    if (rightState->associatedTreeNode) {
-        rightState->associatedTreeNode = ETreeNodePtrUnique(tempRight);
+    if (!rightState->treeNode) {
+        rightState->treeNode = (tempRight);
     }
 
     // FIXME : Update this correctly. 
@@ -121,7 +121,7 @@ void ETree::dumpETree(llvm::raw_ostream &fileptr) {
         }
 
         if (current->right.get()) {
-            fileptr << "\t" << "\"" << current->state->id << ", " << current->state->data << "\"" << " -> ";
+            fileptr << "\t" << "\"" << current->state->stateId << ", " << current->state->data << "\"" << " -> ";
             fileptr << "\"" << current->right.get()->state->stateId;
             fileptr << ", ";
             fileptr << current->right.get()->state->data << "\"";

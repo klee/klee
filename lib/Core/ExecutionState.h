@@ -12,6 +12,7 @@
 
 #include "AddressSpace.h"
 #include "MergeHandler.h"
+#include "ProbExecState.h"
 
 #include "klee/ADT/TreeStream.h"
 #include "klee/Expr/Constraints.h"
@@ -33,6 +34,7 @@ struct KInstruction;
 class MemoryObject;
 class PTreeNode;
 class ETreeNode;
+class ProbExecState;
 struct InstructionInfo;
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const MemoryMap &mm);
@@ -105,7 +107,7 @@ public:
   ConstraintSet constraints;
   
   /// @brief Probabilistic state under exploration. 
-  ProbExecState probStateExplore;
+  ProbExecState *probStateExplore = nullptr;
 
   /// Statistics and information
 

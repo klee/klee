@@ -3,7 +3,10 @@
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprPPrinter.h"
 #include "klee/Support/OptionCategories.h"
+#include <memory.h>
 
+using namespace klee;
+using namespace llvm;
 
 ProbExecState::ProbExecState(std::string data, uint32_t stateId) :
     data{data},
@@ -13,8 +16,8 @@ ProbExecState::ProbExecState(std::string data, uint32_t stateId) :
 
 ProbExecState::ProbExecState(std::string data, uint32_t stateId, ETreeNode* treeNode) :
     data{data},
-    stateId{stateId}, 
-    treeNode{ETreeNodePtr(treeNode)} {
+    stateId{stateId},
+    treeNode{treeNode} {
 
 }
 
@@ -23,7 +26,7 @@ ProbExecState::ProbExecState(bool forkflag, std::string data, uint32_t stateId, 
     data{data}, 
     stateId{stateId}, 
     assemblyLine{assemblyLine}, 
-    codeLine{codeLine}, 
-    treeNode{ETreeNodePtr(treeNode) {
+    codeLine{codeLine},
+    treeNode{treeNode} {
 
 }
