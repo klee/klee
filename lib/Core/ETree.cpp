@@ -8,20 +8,6 @@
 using namespace klee;
 using namespace llvm;
 
-State::State(std::string data, BigInteger id, ETreeNode *current) :
-    data{data},
-    id{id},
-    associatedTreeNode{ETreeNodePtrUnique(current)} {
-     // Create a new state data entry
-}
-
-State::State(std::string data, BigInteger id) :
-    data{data},
-    id{id},
-    associatedTreeNode{nullptr} {
-     // Create a new state data entry
-}
-
 ETreeNode::ETreeNode(ETreeNode* parent)
     : parent{parent} {
         this->left = nullptr;
@@ -29,7 +15,7 @@ ETreeNode::ETreeNode(ETreeNode* parent)
         this->state = nullptr;
     }
 
-ETreeNode::ETreeNode(ETreeNode* parent, State *state) : 
+ETreeNode::ETreeNode(ETreeNode* parent, ProbExecState* state) : 
     parent{parent}, 
     state{state} {
         this->left = nullptr;
@@ -37,7 +23,7 @@ ETreeNode::ETreeNode(ETreeNode* parent, State *state) :
     }
 
 // No Forking, this adds extra redundent nodes. 
-ETreeNode::ETreeNode(ETreeNode* parent, State *state, ETreeNode *left, ETreeNode *right) :
+ETreeNode::ETreeNode(ETreeNode* parent, ProbExecState* state, ETreeNode* left, ETreeNode* right) :
     parent{parent}, 
     left{ETreeNodePtr(left)}, 
     right{ETreeNodePtr(right)}, 
@@ -54,9 +40,8 @@ ETree::ETree(State *initState) {
         root->right = nullptr;
     }
 
-// FIXME : Assert fails. Bug in Fork or add state.
 // TODO : Assign the current nodes correctly to the left and right states. 
-void ETree::forkState(ETreeNode *Node, int flag, State *leftState, State *rightState) {
+void ETree::forkState(ETreeNode *Node, bool forkflag, ProbExecState *leftState, ProbExecState *rightState) {
     // Fork the state, create a left and right side execution nodes. 
     assert(Node && !(Node->left.get()) && !(Node->right.get()));
     ETreeNode* tempLeft = new ETreeNode(Node, leftState);
@@ -76,10 +61,9 @@ void ETree::forkState(ETreeNode *Node, int flag, State *leftState, State *rightS
 
     // FIXME : Update this correctly. 
     // We took a same decision as the PTree.cpp implementation.
-    this->current = flag ? Node->left : Node->right;
+    this->current = forkflag ? Node->left : Node->right;
 } 
         
-// FIXME : Assert fails. Bug in Fork or add state.
 // TODO : Assign the current nodes correctly to states on removal. 
 void ETree::removeNode(ETreeNode *delNode) {
     // Remove a ETreeNode from the ETree
@@ -123,13 +107,13 @@ void ETree::dumpETree(llvm::raw_ostream &fileptr) {
         processing_stack.pop_back();
         fileptr << "\t"; 
         current->state ? 
-                fileptr << "\"" << current->state->id << ", " << current->state->data << "\"" 
+                fileptr << "\"" << current->state->stateId << ", " << current->state->data << "\"" 
             :   fileptr << "no_state";
         fileptr << " [shape=ellipse, color=" << color << "];\n";
         
         if (current->left.get()) {
-            fileptr << "\t" << "\"" << current->state->id << ", " << current->state->data << "\"" << " -> ";
-            fileptr << "\"" << current->left.get()->state->id;
+            fileptr << "\t" << "\"" << current->state->stateId << ", " << current->state->data << "\"" << " -> ";
+            fileptr << "\"" << current->left.get()->state->stateId;
             fileptr << ", ";
             fileptr << current->left.get()->state->data << "\"";
             fileptr << " [label=L, color=green];\n";
@@ -138,7 +122,7 @@ void ETree::dumpETree(llvm::raw_ostream &fileptr) {
 
         if (current->right.get()) {
             fileptr << "\t" << "\"" << current->state->id << ", " << current->state->data << "\"" << " -> ";
-            fileptr << "\"" << current->right.get()->state->id;
+            fileptr << "\"" << current->right.get()->state->stateId;
             fileptr << ", ";
             fileptr << current->right.get()->state->data << "\"";
             fileptr << " [label=R, color=red];\n";

@@ -19,6 +19,7 @@
 #include "MemoryManager.h"
 #include "PTree.h"
 #include "ETree.h"
+#include "ProbExecState.h"
 #include "Searcher.h"
 #include "SeedInfo.h"
 #include "SpecialFunctionHandler.h"
@@ -925,8 +926,8 @@ void Executor::branch(ExecutionState &state,
       // FIXME : Update current & flag properly after fork state. 
       int flag = (&state == result.back()) ? 1 : 0;
       executionTree->forkState(executionTree->current.get(), flag,
-                        new State("left", (int) stats::instructions, nullptr), 
-                        new State("right", (int) stats::instructions, nullptr));
+                        new ProbExecState("left", (int) stats::instructions, nullptr), 
+                        new ProbExecState("right", (int) stats::instructions, nullptr));
     }
   }
 
@@ -1176,12 +1177,12 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
     if (setSourceCodeFlow) {
     executionTree->forkState(executionTree->current.get(), flag,
-                    new State("true", ii.line, nullptr), 
-                    new State("false", ii.line, nullptr));
+                    new ProbExecState("true", ii.line, nullptr), 
+                    new ProbExecState("false", ii.line, nullptr));
     } else {
     executionTree->forkState(executionTree->current.get(), flag,
-                    new State("true", (int) stats::instructions, nullptr), 
-                    new State("false", (int) stats::instructions, nullptr));
+                    new ProbExecState("true", (int) stats::instructions, nullptr), 
+                    new ProbExecState("false", (int) stats::instructions, nullptr));
     }
 
     if (pathWriter) {
@@ -4009,7 +4010,7 @@ void Executor::runFunctionAsMain(Function *f,
   initializeGlobals(*state);
   
   // Start with a dummy state. 
-  State *initState = new State("Start", 0, nullptr);
+  ProbExecState *initState = new ProbExecState("Start", 0, nullptr);
   executionTree = std::make_unique<ETree>(initState);
 
   processTree = std::make_unique<PTree>(state);

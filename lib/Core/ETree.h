@@ -1,11 +1,10 @@
 #ifndef KLEE_ETREE_H
 #define KLEE_ETREE_H
 
+#include "ProbExecState.h"
 #include "klee/Expr/Expr.h"
 
 #include <memory>
-#include <string>
-#include <unordered_map>
 
 /**
  * This is a custom execution Tree to store some information during
@@ -14,39 +13,7 @@
  */
 namespace klee {
 
-    class ETreeNode;
     class Etree;
-    class State;
-
-    using ETreeNodePtr = std::shared_ptr<ETreeNode>;
-    using ETreeNodePtrUnique = std::unique_ptr<ETreeNode>;
-    typedef unsigned long long int BigInteger;
-
-    /**
-     * Store some custom State data in the 
-     * tree ndoes for ETree. Stores data & id.
-     * BigInteger is ULL. 
-    */
-    class State {
-        public:
-
-        // Data Store
-        std::string data = "";
-        BigInteger id = 0;
-        ETreeNodePtrUnique associatedTreeNode = nullptr;
-        
-        State() = delete;
-
-        State(const State &) {}
-        State(State &&) {}
-        ~State() = default;
-
-        // State &operator=(const State &) { return *this; }
-        // State &operator=(State &&) { return *this; }
-        
-        State(std::string data, BigInteger id);
-        State(std::string data, BigInteger id, ETreeNode* current);
-    };
 
     /**
      * Class for nodes of ETree.
@@ -55,11 +22,12 @@ namespace klee {
     */
     class ETreeNode {
         public:
-        ETreeNode *parent = nullptr;
 
+        ETreeNode *parent = nullptr;
         ETreeNodePtr left = nullptr;
         ETreeNodePtr right = nullptr;
-        State *state = nullptr;
+        
+        ProbExecState *state = nullptr;
 
         ETreeNode() = delete;
 
@@ -67,12 +35,9 @@ namespace klee {
         ETreeNode(ETreeNode &&) {}
         ~ETreeNode() = default;
 
-        // ETreeNode &operator=(const ETreeNode &) { return *this; }
-        // ETreeNode &operator=(ETreeNode &&) { return *this; }
-
         explicit ETreeNode(ETreeNode* parent);
-        ETreeNode(ETreeNode* parent, State* state);
-        ETreeNode(ETreeNode* parent, State* state, ETreeNode* left, ETreeNode* right);
+        ETreeNode(ETreeNode* parent, ProbExecState* state);
+        ETreeNode(ETreeNode* parent, ProbExecState* state, ETreeNode* left, ETreeNode* right);
     };
 
     /**
@@ -85,10 +50,10 @@ namespace klee {
         ETreeNodePtr current = nullptr;
         
         ETree() = delete;
-        explicit ETree(State *state);
+        explicit ETree(ProbExecState *state);
         ~ETree() = default;
 
-        void forkState(ETreeNode* parentNode, int flag, State* leftState, State* rightState);
+        void forkState(ETreeNode* parentNode, bool flag, ProbExecState* leftState, ProbExecState* rightState);
         void removeNode(ETreeNode* delNode);
         void dumpETree(llvm::raw_ostream &fileptr);
     };

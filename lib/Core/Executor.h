@@ -57,6 +57,7 @@ namespace klee {
   class Array;
   struct Cell;
   class ExecutionState;
+  class ProbExecState;
   class ExternalDispatcher;
   class Expr;
   class InstructionInfoTable;

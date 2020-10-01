@@ -103,6 +103,9 @@ public:
 
   /// @brief Constraints collected so far
   ConstraintSet constraints;
+  
+  /// @brief Probabilistic state under exploration. 
+  ProbExecState probStateExplore;
 
   /// Statistics and information
 
