@@ -62,7 +62,7 @@ void ETree::forkState(ETreeNode *Node, int flag, State *leftState, State *rightS
     ETreeNode* tempLeft = new ETreeNode(Node, leftState);
     ETreeNode* tempRight = new ETreeNode(Node, rightState);
 
-    Node->state->data = "Forked";
+    Node->state->data = Node->state->data == "Start" ? Node->state->data : "Forked";
     Node->left = ETreeNodePtr(tempLeft);
     Node->right = ETreeNodePtr(tempRight);
 
@@ -111,10 +111,11 @@ void ETree::dumpETree(llvm::raw_ostream &fileptr) {
     fileptr << "\tratio=fill;\n";
     fileptr << "\trotate=90;\n";
     fileptr << "\tcenter = \"true\";\n";
-    fileptr << "\tnode [style=\"filled\",width=.1,height=.1,fontname=\"Terminus\"]\n";
+    fileptr << "\tnode [width=.1, height=.1, fontname=\"Terminus\"]\n";
 
     std::vector<const ETreeNode*> processing_stack;
     processing_stack.emplace_back(root.get());
+    std::string color = "black";
 
     // Process the stack, inorder on the tree. 
     while (!processing_stack.empty()) {
@@ -122,23 +123,23 @@ void ETree::dumpETree(llvm::raw_ostream &fileptr) {
         processing_stack.pop_back();
         fileptr << "\t"; 
         current->state ? 
-                fileptr << "\"" << current->state->id << "," << current->state->data << "\"" 
-            :   fileptr << "__no_state__";
-        fileptr << " [shape=diamond, fillcolor=green];\n";
+                fileptr << "\"" << current->state->id << ", " << current->state->data << "\"" 
+            :   fileptr << "no_state";
+        fileptr << " [shape=ellipse, color=" << color << "];\n";
         
         if (current->left.get()) {
-            fileptr << "\t" << "\"" << current->state->id << "," << current->state->data << "\"" << " -> ";
+            fileptr << "\t" << "\"" << current->state->id << ", " << current->state->data << "\"" << " -> ";
             fileptr << "\"" << current->left.get()->state->id;
-            fileptr << ",";
+            fileptr << ", ";
             fileptr << current->left.get()->state->data << "\"";
             fileptr << " [label=L, color=green];\n";
             processing_stack.emplace_back(current->left.get());
         }
 
         if (current->right.get()) {
-            fileptr << "\t" << "\"" << current->state->id << "," << current->state->data << "\"" << " -> ";
+            fileptr << "\t" << "\"" << current->state->id << ", " << current->state->data << "\"" << " -> ";
             fileptr << "\"" << current->right.get()->state->id;
-            fileptr << ",";
+            fileptr << ", ";
             fileptr << current->right.get()->state->data << "\"";
             fileptr << " [label=R, color=red];\n";
             processing_stack.emplace_back(current->right.get());

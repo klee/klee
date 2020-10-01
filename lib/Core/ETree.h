@@ -31,9 +31,9 @@ namespace klee {
         public:
 
         // Data Store
-        std::string data;
-        BigInteger id;
-        ETreeNodePtrUnique associatedTreeNode;
+        std::string data = "";
+        BigInteger id = 0;
+        ETreeNodePtrUnique associatedTreeNode = nullptr;
         
         State() = delete;
 
@@ -57,8 +57,8 @@ namespace klee {
         public:
         ETreeNode *parent = nullptr;
 
-        ETreeNodePtr left;
-        ETreeNodePtr right;
+        ETreeNodePtr left = nullptr;
+        ETreeNodePtr right = nullptr;
         State *state = nullptr;
 
         ETreeNode() = delete;
@@ -81,8 +81,8 @@ namespace klee {
     */
     class ETree {
         public:
-        ETreeNodePtr root;
-        ETreeNodePtr current;
+        ETreeNodePtr root = nullptr;
+        ETreeNodePtr current = nullptr;
         
         ETree() = delete;
         explicit ETree(State *state);
