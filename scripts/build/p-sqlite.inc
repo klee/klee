@@ -1,5 +1,6 @@
 setup_build_variables_sqlite() {
-  SQLITE_SRC_PATH="${BASE}/sqlite-amalgamation-3320300"
+  SQLITE_VERSION="3320300"
+  SQLITE_SRC_PATH="${BASE}/sqlite-amalgamation-${SQLITE_VERSION}"
   SQLITE_INSTALL_PATH=${SQLITE_SRC_PATH}
   SQLITE_SUFFIX="${SANITIZER_SUFFIX}"
 }
@@ -7,13 +8,12 @@ setup_build_variables_sqlite() {
 download_sqlite() {
   # Get sqlite release
   cd "${BASE}"
-  wget --no-check-certificate "https://www.sqlite.org/2020/sqlite-amalgamation-3320300.zip"
-  unzip "sqlite-amalgamation-3320300.zip"
+  wget --no-check-certificate "https://www.sqlite.org/2020/sqlite-amalgamation-${SQLITE_VERSION}.zip"
+  unzip "sqlite-amalgamation-${SQLITE_VERSION}.zip"
 }
 
-build_sqlite() { 
+build_sqlite() {
   cd "${SQLITE_SRC_PATH}"
-
 
   # Check if sanitizers should be used to build sqlite
   if [[ "${SANITIZER_SUFFIX}x" != "x" ]]; then
@@ -42,10 +42,11 @@ setup_artifact_variables_sqlite() {
   setup_build_variables_sqlite
 }
 
-
 get_docker_config_id_sqlite() {
+  (
     setup_build_variables_sqlite
-    echo "sqlite${SQLITE_SUFFIX}"
+    echo "${SQLITE_SUFFIX}"
+  )
 }
 
 get_build_artifacts_sqlite() {

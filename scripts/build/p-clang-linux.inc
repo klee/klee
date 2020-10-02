@@ -6,7 +6,9 @@ setup_artifact_variables_clang() {
   [[ "${LLVM_VERSION_MAJOR}" -ge 7 ]] && version="-${LLVM_VERSION_MAJOR}"
 
   # Only set LLVM_CONFIG if not set yet
-  [[ -z ${LLVM_CONFIG+x} ]] && LLVM_CONFIG=$(which "llvm-config${version}")
+  if [[ -z "${LLVM_CONFIG-}" ]]; then
+    LLVM_CONFIG=$(which "llvm-config${version}")
+  fi
 
 
   local bin_path=""
@@ -23,6 +25,12 @@ setup_artifact_variables_clang() {
 
 # Check if the binary artifact is installed
 is_installed_clang() {
-    # Check if llvm-config with the right version exists    
-    which "llvm-config-${LLVM_VERSION}"
+  local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
+  local LLVM_VERSION_MINOR="${LLVM_VERSION/*./}"
+  local version=""
+  [[ "${LLVM_VERSION_MAJOR}" -le 6 ]] && version="${LLVM_VERSION}"
+  [[ "${LLVM_VERSION_MAJOR}" -ge 7 ]] && version="${LLVM_VERSION_MAJOR}"
+
+  # Check if clang with the right version exists
+  which "clang-${version}"
 }

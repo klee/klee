@@ -130,9 +130,11 @@ build_llvm() {
        mkdir -p "${SANITIZER_LLVM_UNINSTRUMENTED}"
        cd "${SANITIZER_LLVM_UNINSTRUMENTED}"
        cmake -GNinja -DCMAKE_BUILD_TYPE=Release \
+      "-DLLVM_OPTIMIZED_TABLEGEN=ON" \
         "-DLLVM_ENABLE_PROJECTS=clang;compiler-rt;libcxx;libcxxabi" \
+      "-DLLVM_TARGETS_TO_BUILD=X86" \
         "${LLVM_SRC_BASE}/llvm"
-       ninja
+    ninja compiler-rt cxx cxxabi clang || return 1
 
        # Build instrumented libc/libc++
        mkdir -p "${SANITIZER_LLVM_LIBCXX}"
@@ -142,8 +144,10 @@ build_llvm() {
         -DLLVM_USE_SANITIZER=MemoryWithOrigins \
         "${SANITIZER_CMAKE_C_COMPILER[@]}" \
         "${SANITIZER_CMAKE_CXX_COMPILER[@]}" \
+      "-DLLVM_OPTIMIZED_TABLEGEN=ON" \
+      "-DLLVM_TARGETS_TO_BUILD=X86" \
         "${LLVM_SRC_BASE}/llvm"
-       ninja cxx cxxabi
+    ninja compiler-rt cxx cxxabi|| return 1
 
        # Build instrumented clang
        mkdir -p "${LLVM_BUILD}"
@@ -163,9 +167,12 @@ build_llvm() {
           -DLLVM_ENABLE_LIBCXX=ON \
           -DCMAKE_EXE_LINKER_FLAGS="${LD_F}" \
           -DCMAKE_INSTALL_PREFIX="${LLVM_INSTALL}" \
+      -DBUILD_SHARED_LIBS=ON \
+      -DLLVM_OPTIMIZED_TABLEGEN=ON \
+      -DLLVM_TARGETS_TO_BUILD=X86 \
           "${LLVM_SRC_BASE}/llvm"
       # Build clang as a dependency and install all needed packages
-      ninja clang
+    ninja clang || return 1
       return 0
     fi
 
@@ -176,13 +183,19 @@ build_llvm() {
   # Skip building if already finished
   [[ -e "${LLVM_BUILD}/.build_finished" ]] && return 0
 
-
   # Configure LLVM
   CONFIG=(
      "-DCMAKE_INSTALL_PREFIX=${LLVM_INSTALL}"
      "-DLLVM_BUILD_LLVM_DYLIB=TRUE"
-     "-DLLVM_ENABLE_PROJECTS=clang;compiler-rt;libcxx;libcxxabi"
   )
+
+  # Select components to build
+  if [[ ${LLVM_VERSION_SHORT} -ge 60 ]]; then
+    CONFIG+=("-DLLVM_ENABLE_PROJECTS=clang;compiler-rt;libcxx;libcxxabi")
+  else
+    CONFIG+=("-DLLVM_ENABLE_PROJECTS=clang;compiler-rt")
+  fi
+
   # cmake build
   if [[ "${enable_optimized}" == "1" && "${enable_debug}" != "1" ]]; then
     CONFIG+=("-DCMAKE_BUILD_TYPE=Release")
@@ -216,9 +229,11 @@ build_llvm() {
   CONFIG+=(
      "-DLLVM_INCLUDE_EXAMPLES=OFF"
 #     "-DLLVM_INCLUDE_TESTS=OFF"
-#     "-DCLANG_INCLUDE_TESTS=OFF"
+    "-DCLANG_INCLUDE_TESTS=OFF"
      "-DLLVM_INCLUDE_BENCHMARKS=OFF"
      "-DBUILD_SHARED_LIBS=ON"
+    "-DLLVM_OPTIMIZED_TABLEGEN=ON"
+    "-DLLVM_TARGETS_TO_BUILD=X86"
   )
 
   local variables=("")

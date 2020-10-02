@@ -98,14 +98,3 @@
  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux" OR MINGW) # FIXME: It should be "GNU ld for elf"
    # GNU ld doesn't resolve symbols in the version script.
    set(LIB_NAMES -Wl,--whole-archive ${LIB_NAMES} -Wl,--no-whole-archive)
---- a/libcxx/include/__locale
-+++ b/libcxx/include/__locale
-@@ -34,7 +34,7 @@
- # include <support/solaris/xlocale.h>
- #elif defined(_NEWLIB_VERSION)
- # include <support/newlib/xlocale.h>
--#elif (defined(__GLIBC__) || defined(__APPLE__)      || defined(__FreeBSD__) \
-+#elif (defined(__APPLE__)      || defined(__FreeBSD__) \
-     || defined(__EMSCRIPTEN__) || defined(__IBMCPP__))
- # include <xlocale.h>
- #elif defined(_LIBCPP_HAS_MUSL_LIBC)

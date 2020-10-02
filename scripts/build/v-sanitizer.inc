@@ -73,7 +73,7 @@ setup_variables_sanitizer() {
       flags=("-fsanitize=undefined" "-fno-omit-frame-pointer" "-g" "-fsanitize=integer")
       SANITIZER_CXX_FLAGS+=("${flags[@]}")
       SANITIZER_C_FLAGS+=("${flags[@]}")
-      SANITIZER_LD_FLAGS+=("${flags[@]}" "-lubsan" "-fuse-ld=gold")
+      SANITIZER_LD_FLAGS+=("${flags[@]}")
       SANITIZER_SUFFIX+="_ubsan"
       continue
     fi
