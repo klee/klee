@@ -1,0 +1,4 @@
+RUN: %klee-stats %S/klee-stats/empty | FileCheck %s
+
+CHECK: {{^}}|{{ *}}Path{{ *}}|{{$}}
+CHECK: {{^}}|{{.*}}empty{{ *}}|{{$}}

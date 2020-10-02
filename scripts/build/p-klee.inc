@@ -185,6 +185,8 @@ fi
 
   source "${KLEE_BUILD_DIR}/.build_command"
   make -j$(nproc) || make || return 1
+
+  touch "${KLEE_BUILD_DIR}/.is_installed"
 }
 
 install_klee() {
@@ -212,4 +214,16 @@ get_build_artifacts_klee() {
     setup_build_variables_klee
     echo "${KLEE_BUILD_DIR}"
   )
+}
+
+# Check if the binary artifact is installed
+is_installed_klee() {
+  (
+    setup_build_variables_klee
+    [[ -f "${KLEE_BUILD_DIR}"/.is_installed ]]
+  ) || return 1
+}
+
+setup_artifact_variables_klee() {
+  setup_build_variables_klee
 }
