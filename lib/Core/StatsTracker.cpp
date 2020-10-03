@@ -29,8 +29,10 @@
 
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/CFG.h"
+#if LLVM_VERSION_CODE < LLVM_VERSION(8, 0)
 #include "llvm/IR/CallSite.h"
+#endif
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
@@ -137,8 +139,13 @@ static bool instructionIsCoverable(Instruction *i) {
     } else {
       Instruction *prev = &*(--it);
       if (isa<CallInst>(prev) || isa<InvokeInst>(prev)) {
-        Function *target =
-            getDirectCallTarget(CallSite(prev), /*moduleIsFullyLinked=*/true);
+        Function *target = getDirectCallTarget(
+#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
+            cast<CallBase>(*prev),
+#else
+            CallSite(prev),
+#endif
+            /*moduleIsFullyLinked=*/true);
         if (target && target->doesNotReturn())
           return false;
       }
@@ -788,7 +795,11 @@ void StatsTracker::computeReachableUncovered() {
              it != ie; ++it) {
           Instruction *inst = &*it;
           if (isa<CallInst>(inst) || isa<InvokeInst>(inst)) {
-            CallSite cs(inst);
+#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
+            const CallBase &cs = cast<CallBase>(*inst);
+#else
+            const CallSite cs(inst);
+#endif
             if (isa<InlineAsm>(cs.getCalledValue())) {
               // We can never call through here so assume no targets
               // (which should be correct anyhow).

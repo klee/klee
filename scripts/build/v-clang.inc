@@ -2,7 +2,7 @@ required_variables_clang=(
   "LLVM_VERSION"
 )
 
-artifact_dependency_clang=("sanitizer" "llvm")
+artifact_dependency_clang=("")
 
 setup_variables_clang() {
   LLVM_VERSION_SHORT="${LLVM_VERSION/./}"

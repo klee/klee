@@ -6,11 +6,8 @@
 # License. See LICENSE.TXT for details.
 #
 #===------------------------------------------------------------------------===#
-add_subdirectory(gen-bout)
-add_subdirectory(gen-random-bout)
-add_subdirectory(kleaver)
-add_subdirectory(klee)
-add_subdirectory(klee-replay)
-add_subdirectory(klee-stats)
-add_subdirectory(klee-zesti)
-add_subdirectory(ktest-tool)
+install(PROGRAMS klee-zesti DESTINATION bin)
+
+# Copy into the build directory's binary directory
+# so system tests can find it
+configure_file(klee-zesti "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/klee-zesti" COPYONLY)

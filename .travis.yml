@@ -27,7 +27,7 @@ env:
     # Define default values - they are overwritten by each matrix entry if needed
     global:
     # Default configuration for all Travis-CI jobs. They are overriden by each job.
-    - BASE_IMAGE=ubuntu:bionic-20200112
+    - BASE_IMAGE=ubuntu:bionic-20200807
     - REPOSITORY=klee
 
     - COVERAGE=0
@@ -36,7 +36,7 @@ env:
     - ENABLE_DEBUG=1
     - GTEST_VERSION=1.7.0
     - KLEE_RUNTIME_BUILD="Debug+Asserts"
-    - LLVM_VERSION=6.0
+    - LLVM_VERSION=9.0
     - METASMT_VERSION=qf_abv
     - MINISAT_VERSION="master"
     - REQUIRES_RTTI=0
@@ -77,7 +77,7 @@ jobs:
       env: LLVM_VERSION=3.9
 
     - name: "LLVM 3.8"
-      env: LLVM_VERSION=3.8
+      env: LLVM_VERSION=3.8 USE_LIBCXX=0
 
     # Sanitizer builds. Do unoptimized build otherwise the optimizer might remove problematic code
     - name: "ASan"
@@ -124,7 +124,7 @@ jobs:
     # macOS
     - name: "macOS"
       os: osx
-      env: SOLVERS=STP UCLIBC_VERSION=0 USE_TCMALLOC=0 USE_LIBCXX=0
+      env: SOLVERS=STP UCLIBC_VERSION=0 USE_TCMALLOC=0 USE_LIBCXX=0 LLVM_VERSION=6.0
 
     # Docker
     - name: "Docker"
