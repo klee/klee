@@ -2,7 +2,6 @@
 
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprPPrinter.h"
-#include "klee/Support/OptionCategories.h"
 #include <memory.h>
 
 using namespace klee;

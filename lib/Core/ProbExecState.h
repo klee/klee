@@ -8,9 +8,8 @@
 #include <unordered_map>
 
 /**
- * This is a custom execution Tree to store some information during
- * execution. Later it can be extended to store path-specific execution state
- * related information like the PTree implementation. 
+ * This is a custom execution State to store some information during
+ * execution. It store information for probabilistic execution.  
  */
 namespace klee {
 

@@ -2,7 +2,6 @@
 
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprPPrinter.h"
-#include "klee/Support/OptionCategories.h"
 #include <vector>
 
 using namespace klee;
@@ -33,21 +32,20 @@ ETreeNode::ETreeNode(ETreeNode* parent, ProbExecState* state, ETreeNode* left, E
 
 ETree::ETree(ProbExecState *initState) {
         ETreeNode* rootNode = new ETreeNode(nullptr, initState);
-        // initState->execTreeNode = ETreeNodePtrUnique(rootNode);
         root = ETreeNodePtr(rootNode);
         current = root;
         root->left = nullptr;
         root->right = nullptr;
     }
 
-// TODO : Assign the current nodes correctly to the left and right states. 
 void ETree::forkState(ETreeNode *Node, bool forkflag, ProbExecState *leftState, ProbExecState *rightState) {
     // Fork the state, create a left and right side execution nodes. 
     assert(Node && !(Node->left.get()) && !(Node->right.get()));
     ETreeNode* tempLeft = new ETreeNode(Node, leftState);
     ETreeNode* tempRight = new ETreeNode(Node, rightState);
 
-    Node->state->data = Node->state->data == "Start" ? Node->state->data : "Forked";
+    Node->state->data = Node->state->data == "Start" ? "Start" : "Forked";
+
     Node->left = ETreeNodePtr(tempLeft);
     Node->right = ETreeNodePtr(tempRight);
 
@@ -59,12 +57,11 @@ void ETree::forkState(ETreeNode *Node, bool forkflag, ProbExecState *leftState, 
         rightState->treeNode = (tempRight);
     }
 
-    // FIXME : Update this correctly. 
     // We took a same decision as the PTree.cpp implementation.
+    // Based on the Solver result. (trueNode or falseNode)
     this->current = forkflag ? Node->left : Node->right;
-} 
-        
-// TODO : Assign the current nodes correctly to states on removal. 
+}
+
 void ETree::removeNode(ETreeNode *delNode) {
     // Remove a ETreeNode from the ETree
     assert(delNode && !delNode->right.get() && !delNode->left.get());
@@ -111,6 +108,7 @@ void ETree::dumpETree(llvm::raw_ostream &fileptr) {
             :   fileptr << "no_state";
         fileptr << " [shape=ellipse, color=" << color << "];\n";
         
+        // If node has left, process left. 
         if (current->left.get()) {
             fileptr << "\t" << "\"" << current->state->stateId << ", " << current->state->data << "\"" << " -> ";
             fileptr << "\"" << current->left.get()->state->stateId;
@@ -120,6 +118,7 @@ void ETree::dumpETree(llvm::raw_ostream &fileptr) {
             processing_stack.emplace_back(current->left.get());
         }
 
+        // If node has right side, process right side. 
         if (current->right.get()) {
             fileptr << "\t" << "\"" << current->state->stateId << ", " << current->state->data << "\"" << " -> ";
             fileptr << "\"" << current->right.get()->state->stateId;
