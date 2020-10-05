@@ -78,6 +78,7 @@ namespace klee {
   class TreeStreamWriter;
   class MergeHandler;
   class MergingSearcher;
+  class PendingSearcher;
   template<class T> class ref;
 
 
@@ -92,6 +93,7 @@ class Executor : public Interpreter {
   friend class SpecialFunctionHandler;
   friend class StatsTracker;
   friend class MergeHandler;
+  friend class PendingSearcher;
   friend klee::Searcher *klee::constructUserSearcher(Executor &executor);
 
 public:
@@ -214,6 +216,16 @@ private:
 
   // @brief buffer to store logs before flushing to file
   llvm::raw_string_ostream debugLogBuffer;
+
+  /// If true use pending constraints
+  bool pendingMode = false;
+
+  // A solver without an SMT backend. Used by pending states to revive the
+  // state that is already known to be feasbile.
+  Solver *pendingFastSolver;
+
+  /// Callback called for each memory operation
+  std::function<void(const ExecutionState &, ref<Expr>)> memoryCallback;
 
   /// Optimizes expressions
   ExprOptimizer optimizer;
@@ -355,6 +367,15 @@ private:
   // not hold, respectively. One of the states is necessarily the
   // current state, and one of the states may be null.
   StatePair fork(ExecutionState &current, ref<Expr> condition, bool isInternal);
+
+  // Similar to fork, but does not perform a solver call. Instead it creates pending states
+  // that can be revived (check if pending constraint is feasible) by attemptToRevive function.
+  StatePair pendingFork(ExecutionState &current, ref<Expr> condition,
+                        bool isInternal);
+
+  // Attempts to revive a pending state using the provided Solver. Returns true
+  // only if the given state was pending and succesfully revived.
+  bool attemptToRevive(ExecutionState *current, Solver *fastSolver);
 
   /// Add the given (boolean) condition as a constraint on state. This
   /// function is a wrapper around the state's addConstraint function

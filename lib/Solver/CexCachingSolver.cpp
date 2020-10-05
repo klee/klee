@@ -10,16 +10,18 @@
 #include "klee/Solver/Solver.h"
 
 #include "klee/ADT/MapOfSets.h"
+#include "klee/Expr/ArrayCache.h"
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Expr/ExprVisitor.h"
-#include "klee/Support/OptionCategories.h"
-#include "klee/Statistics/TimerStatIncrementer.h"
 #include "klee/Solver/SolverImpl.h"
 #include "klee/Solver/SolverStats.h"
+#include "klee/Statistics/TimerStatIncrementer.h"
+#include "klee/Support/Debug.h"
 #include "klee/Support/ErrorHandling.h"
+#include "klee/Support/OptionCategories.h"
 
 #include "llvm/Support/CommandLine.h"
 
@@ -67,10 +69,12 @@ class CexCachingSolver : public SolverImpl {
   typedef std::set<Assignment*, AssignmentLessThan> assignmentsTable_ty;
 
   Solver *solver;
-  
-  MapOfSets<ref<Expr>, Assignment*> cache;
+  bool pendingCache = false;
+  std::vector<Assignment *> seedAssigments;
+
+  static MapOfSets<ref<Expr>, Assignment *> cache;
   // memo table
-  assignmentsTable_ty assignmentsTable;
+  static assignmentsTable_ty assignmentsTable;
 
   bool searchForAssignment(KeyType &key, 
                            Assignment *&result);
@@ -86,6 +90,32 @@ class CexCachingSolver : public SolverImpl {
   
 public:
   CexCachingSolver(Solver *_solver) : solver(_solver) {}
+  CexCachingSolver(Solver *_solver, ArrayCache *_cache,
+                   const std::vector<struct KTest *> &usingSeeds)
+      : solver(_solver), pendingCache(true) {
+    int numSeeds = 0;
+    for (KTest *out : usingSeeds) {
+      std::vector<const Array *> objects;
+      std::vector<std::vector<unsigned char>> values;
+      for (unsigned i = 0; i < out->numObjects; i++) {
+        KTestObject &obj = out->objects[i];
+        if (std::strcmp(obj.name, "model_version") == 0)
+          continue;
+        objects.emplace_back(_cache->CreateArray(obj.name, obj.numBytes));
+        values.emplace_back(obj.bytes, obj.bytes + obj.numBytes);
+      }
+      numSeeds++;
+      KeyType key;
+      auto a = new Assignment(objects, values);
+      assignmentsTable.insert(a);
+      if (numSeeds < 2) {
+        // can't put more than 1 seed as a subset of all
+        cache.insert(key, a);
+      } else {
+        seedAssigments.push_back(a);
+      }
+    }
+  }
   ~CexCachingSolver();
   
   bool computeTruth(const Query&, bool &isValid);
@@ -162,6 +192,33 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
       }
     }
   } else {
+    if (pendingCache) {
+      std::vector<std::pair<std::set<ref<Expr>>, Assignment *>> subsets;
+      cache.subsets(key, subsets);
+      KLEE_DEBUG_WITH_TYPE("pending-cex",
+        for(auto& k : key) k->dump();
+      );
+      for (auto setAssigment : subsets) {
+        auto a = setAssigment.second;
+        KLEE_DEBUG_WITH_TYPE("pending-cex", 
+          a->dump();
+          for(auto& k : key) a->evaluate(k)->dump();
+        );
+        if (a && a->satisfies(key.begin(), key.end())) {
+          result = a;
+          KLEE_DEBUG_WITH_TYPE("pending-cex", llvm::errs() << "SUCESS\n";);
+          return true;
+        }
+      }
+      for (auto a : seedAssigments) {
+        if (a && a->satisfies(key.begin(), key.end())) {
+          result = a;
+          return true;
+        }
+      }
+      return false;
+
+    } 
     // FIXME: Which order? one is sure to be better.
 
     // Look for a satisfying assignment for a superset, which is trivially an
@@ -172,10 +229,11 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
 
     // Otherwise, look for a subset which is unsatisfiable -- if the subset is
     // unsatisfiable then no additional constraints can produce a valid
-    // assignment. While searching subsets, we also explicitly the solutions for
+    // assignment. While searching subsets, we also explicitly the solutions
+    // for
     // satisfiable subsets to see if they solve the current query and return
     // them if so. This is cheap and frequently succeeds.
-    if (!lookup) 
+    if (!lookup)
       lookup = cache.findSubset(key, NullOrSatisfyingAssignment(key));
 
     // If either lookup succeeded, then we have a cached solution.
@@ -264,11 +322,14 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
 ///
 
 CexCachingSolver::~CexCachingSolver() {
-  cache.clear();
   delete solver;
-  for (assignmentsTable_ty::iterator it = assignmentsTable.begin(), 
-         ie = assignmentsTable.end(); it != ie; ++it)
+  cache.clear();
+  for (assignmentsTable_ty::iterator it = assignmentsTable.begin(),
+                                     ie = assignmentsTable.end();
+       it != ie; ++it) {
     delete *it;
+  }
+  assignmentsTable.erase(assignmentsTable.begin(), assignmentsTable.end());
 }
 
 bool CexCachingSolver::computeValidity(const Query& query,
@@ -386,3 +447,10 @@ void CexCachingSolver::setCoreSolverTimeout(time::Span timeout) {
 Solver *klee::createCexCachingSolver(Solver *_solver) {
   return new Solver(new CexCachingSolver(_solver));
 }
+Solver *
+klee::createCexCachingSolver(Solver *_solver, ArrayCache *cache,
+                             const std::vector<struct KTest *> &usingSeeds) {
+  return new Solver(new CexCachingSolver(_solver, cache, usingSeeds));
+}
+CexCachingSolver::assignmentsTable_ty CexCachingSolver::assignmentsTable;
+MapOfSets<ref<Expr>, Assignment *> CexCachingSolver::cache;

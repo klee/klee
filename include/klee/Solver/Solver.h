@@ -10,9 +10,10 @@
 #ifndef KLEE_SOLVER_H
 #define KLEE_SOLVER_H
 
+#include "klee/ADT/KTest.h"
 #include "klee/Expr/Expr.h"
-#include "klee/System/Time.h"
 #include "klee/Solver/SolverCmdLine.h"
+#include "klee/System/Time.h"
 
 #include <vector>
 
@@ -242,6 +243,8 @@ namespace klee {
   ///
   /// \param s - The underlying solver to use.
   Solver *createCexCachingSolver(Solver *s);
+  Solver *createCexCachingSolver(Solver *s, ArrayCache *,
+                                 const std::vector<struct KTest *> &);
 
   /// createFastCexSolver - Create a "fast counterexample solver", which tries
   /// to quickly compute a satisfying assignment for a constraint set using

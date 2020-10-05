@@ -67,6 +67,7 @@ bool DFSSearcher::empty() {
 
 void DFSSearcher::printName(llvm::raw_ostream &os) {
   os << "DFSSearcher\n";
+  KLEE_DEBUG_WITH_TYPE("pending-searcher", llvm::errs() << "(DFS: " << states.size() << ")");
 }
 
 
@@ -111,6 +112,7 @@ bool BFSSearcher::empty() {
 
 void BFSSearcher::printName(llvm::raw_ostream &os) {
   os << "BFSSearcher\n";
+  KLEE_DEBUG_WITH_TYPE("pending-searcher", llvm::errs() << "(BFS: " << states.size() << ")");
 }
 
 
@@ -551,4 +553,97 @@ void InterleavedSearcher::printName(llvm::raw_ostream &os) {
   for (const auto &searcher : searchers)
     searcher->printName(os);
   os << "</InterleavedSearcher>\n";
+}
+
+PendingSearcher::PendingSearcher(Searcher *_baseNormalSearcher,
+                                 Searcher *_basePendingSearcher,
+                                 Executor &_exec)
+    : baseNormalSearcher(_baseNormalSearcher),
+      basePendingSearcher(_basePendingSearcher), exec(_exec) {
+  maxReviveTime = exec.coreSolverTimeout;
+  fastSolver = exec.pendingFastSolver;
+}
+
+PendingSearcher::~PendingSearcher() {
+  delete baseNormalSearcher;
+  delete basePendingSearcher;
+  delete fastSolver;
+}
+
+bool PendingSearcher::empty() {
+  if (!baseNormalSearcher->empty())
+    return false;
+
+  exec.solver->setTimeout(maxReviveTime);
+  while (baseNormalSearcher->empty()) {
+    if (basePendingSearcher->empty()) return true;
+    if (exec.haltExecution) return true;
+    KLEE_DEBUG_WITH_TYPE("pending-revive", llvm::errs() << "Reviving pending state: ";);
+    auto &es = basePendingSearcher->selectState();
+    assert(!es.pendingConstraint.isNull() &&
+           "Base pending searcher should only have pending states");
+    if (exec.attemptToRevive(&es, exec.solver->solver.get())) {
+      baseNormalSearcher->update(nullptr, {&es}, {});
+      basePendingSearcher->update(nullptr, {}, {&es});
+      KLEE_DEBUG_WITH_TYPE("pending-revive", llvm::errs() << "success!\n";);
+    } else {
+      KLEE_DEBUG_WITH_TYPE("pending-revive", llvm::errs() << "fail ... killing state!\n";);
+      basePendingSearcher->update(nullptr, {}, {&es});
+      exec.processTree->remove(es.ptreeNode);
+      auto it2 = exec.states.find(&es);
+      assert(it2 != exec.states.end());
+      exec.states.erase(it2);
+      delete &es;
+    }
+  }
+  exec.solver->setTimeout(time::Span());
+
+  return baseNormalSearcher->empty() && basePendingSearcher->empty();
+}
+
+ExecutionState &PendingSearcher::selectState() {
+  return baseNormalSearcher->selectState();
+}
+
+void PendingSearcher::update(
+    ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
+    const std::vector<ExecutionState *> &removedStates) {
+
+  auto is_pending = [](const auto &es) {
+    return !es->pendingConstraint.isNull();
+  };
+  std::vector<ExecutionState *> addedN, addedP, removedN, removedP;
+
+  for (const auto &es : addedStates) {
+    exec.attemptToRevive(es, fastSolver);
+    if (is_pending(es))
+      addedP.push_back(es);
+    else
+      addedN.push_back(es);
+  }
+
+  for (const auto &es : removedStates) {
+    if (is_pending(es))
+      removedP.push_back(es);
+    else
+      removedN.push_back(es);
+  }
+
+  if (current && is_pending(current) &&
+      !exec.attemptToRevive(current, fastSolver)) {
+    removedN.push_back(current);
+    addedP.push_back(current);
+  }
+
+  baseNormalSearcher->update(current, addedN, removedN);
+  basePendingSearcher->update(nullptr, addedP, removedP);
+  KLEE_DEBUG_WITH_TYPE("pending-searcher", 
+    if(addedStates.size() > 0 || removedStates.size() > 0) {
+      llvm::errs() << "=Normal: " ;
+      baseNormalSearcher->printName(llvm::nulls());
+      llvm::errs() << " Pending: " ;
+      basePendingSearcher->printName(llvm::nulls());
+      llvm::errs() << "\n" ;
+   }
+  );
 }

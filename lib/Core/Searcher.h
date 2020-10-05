@@ -13,6 +13,7 @@
 #include "ExecutionState.h"
 #include "PTree.h"
 #include "klee/ADT/RNG.h"
+#include "klee/Support/Debug.h"
 #include "klee/System/Time.h"
 
 #include "llvm/Support/CommandLine.h"
@@ -236,6 +237,44 @@ namespace klee {
 
     bool empty() override;
     void printName(llvm::raw_ostream &os) override;
+  };
+
+
+  // A simple searcher for pending states. It splits the incoming states into
+  // normal and pending states. Pending states are attempted to be revived on
+  // calls to update using the fastSolver. If they are succesfully revived they
+  // are treated as normal states. The PendingSearcher keeps picking normal
+  // states (using baseNormalSearcher) until it can. It then tries to revive
+  // pending states (in the order of basePendingSearcher) until it revives one.
+  class PendingSearcher : public Searcher {
+    // Searcher for normal states
+    Searcher *baseNormalSearcher;
+    // Searcher for pending states
+    Searcher *basePendingSearcher;
+    // Used for reviving and terminating infeasible pending states
+    Executor &exec;
+    // Maximim time spent reviving
+    time::Span maxReviveTime;
+    // A solver that is used to attempt revives in the update() function. It
+    // can be incomplete and should be faster than the normal searcher.
+    Solver *fastSolver;
+
+  public:
+    PendingSearcher(Searcher *baseNormalSearcher, Searcher *basePendingSearcher,
+                    Executor &exec);
+    ~PendingSearcher();
+
+    ExecutionState &selectState();
+    void update(ExecutionState *current,
+                const std::vector<ExecutionState *> &addedStates,
+                const std::vector<ExecutionState *> &removedStates);
+    bool empty() override;
+    void printName(llvm::raw_ostream &os) {
+      os << "<PendingSearcher>\n";
+      baseNormalSearcher->printName(os);
+      basePendingSearcher->printName(os);
+      os << "</PendingSearcher>\n";
+    }
   };
 
   /// BatchingSearcher selects a state from an underlying searcher and returns

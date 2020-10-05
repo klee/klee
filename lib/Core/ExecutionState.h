@@ -216,6 +216,10 @@ public:
   /// @brief The numbers of times this state has run through Executor::stepInstruction
   std::uint64_t steppedInstructions;
 
+  /// @brief If not null indicates a pending state, this constraint is not known
+  /// to be valid yet
+  ref<Expr> pendingConstraint;
+
   /// @brief Counts how many instructions were executed since the last new
   /// instruction was covered.
   std::uint32_t instsSinceCovNew;

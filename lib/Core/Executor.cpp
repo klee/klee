@@ -125,6 +125,10 @@ cl::opt<std::string> MaxTime(
 
 namespace {
 
+cl::opt<bool> PendingConstraints("pending", cl::init(false),
+                                 cl::desc("Use pending constraints"),
+                                 cl::cat(TestGenCat));
+
 /*** Test generation options ***/
 
 cl::opt<bool> DumpStatesOnHalt(
@@ -991,6 +995,81 @@ Executor::StatePair Executor::logStates(Executor::StatePair pair,
   return pair;
 }
 
+bool Executor::attemptToRevive(ExecutionState *current, Solver *fastSolver) {
+  bool solverResult = false;
+  bool status;
+  if (current && !current->pendingConstraint.isNull()) {
+    Query qr(current->constraints, current->pendingConstraint);
+    status = fastSolver->mayBeTrue(qr, solverResult);
+    if (status && solverResult) {
+      addConstraint(*current, current->pendingConstraint);
+      current->pendingConstraint = nullptr;
+      return true;
+    }
+  }
+  return false;
+}
+
+Executor::StatePair Executor::pendingFork(ExecutionState &current,
+                                          ref<Expr> condition,
+                                          bool isInternal) {
+
+  // This is a poor mans solver, that only checks if condition is concrete
+  // already, otherwise returns unknown
+  Solver::Validity res = Solver::Unknown;
+  // This makes expr concrete if it is implied by constraints
+  ref<Expr> expr =
+      ConstraintManager::simplifyExpr(current.constraints, condition);
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
+    res = CE->isTrue() ? Solver::True : Solver::False;
+  }
+
+  if (res == Solver::Unknown && (!replayPath || isInternal) &&
+      !branchingPermitted(current)) {
+
+    current.pendingConstraint = condition;
+    if (attemptToRevive(&current, pendingFastSolver)) {
+      res = Solver::True;
+    } else {
+      current.pendingConstraint = Expr::createIsZero(condition);
+      if (attemptToRevive(&current, pendingFastSolver)) {
+        res = Solver::False;
+      } else {
+        klee_error("Pending state doesn't have a cached solution when "
+                   "inhibiting forking");
+      }
+    }
+  }
+
+  if (res == Solver::True) {
+    return logStates(StatePair(&current, 0), current, isInternal);
+  } else if (res == Solver::False) {
+    return logStates(StatePair(0, &current), current, isInternal);
+  } else {
+    TimerStatIncrementer timer(stats::forkTime);
+    ExecutionState *falseState, *trueState = &current;
+
+    ++stats::forks;
+
+    falseState = trueState->branch();
+    addedStates.push_back(falseState);
+
+    processTree->attach(current.ptreeNode, falseState, trueState);
+
+    trueState->pendingConstraint = condition;
+    falseState->pendingConstraint = Expr::createIsZero(condition);
+
+    // Kinda gross, do we even really still want this option?
+    if (MaxDepth && MaxDepth <= trueState->depth) {
+      logStates(StatePair(trueState, falseState), current, isInternal);
+      terminateStateEarly(*trueState, "max-depth exceeded.");
+      terminateStateEarly(*falseState, "max-depth exceeded.");
+      return StatePair(0, 0);
+    }
+
+    return logStates(StatePair(trueState, falseState), current, isInternal);
+  }
+}
 Executor::StatePair 
 Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   Solver::Validity res;
@@ -2115,7 +2194,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> cond = eval(ki, 0, state).value;
 
       cond = optimizer.optimizeExpr(cond, false);
-      Executor::StatePair branches = fork(state, cond, false);
+      Executor::StatePair branches = PendingConstraints
+                                         ? pendingFork(state, cond, false)
+                                         : fork(state, cond, false);
 
       // NOTE: There is a hidden dependency here, markBranchVisited
       // requires that we still be in the context of the branch
@@ -3411,7 +3492,7 @@ void Executor::run(ExecutionState &initialState) {
 
   states.insert(&initialState);
 
-  if (usingSeeds) {
+  if (usingSeeds && !PendingConstraints) {
     std::vector<SeedInfo> &v = seedMap[&initialState];
     
     for (std::vector<KTest*>::const_iterator it = usingSeeds->begin(), 
@@ -3475,13 +3556,24 @@ void Executor::run(ExecutionState &initialState) {
   }
 
   searcher = constructUserSearcher(*this);
+  if (PendingConstraints) {
+    pendingFastSolver 
+      = createIndependentSolver(
+          createCexCachingSolver(
+            createDummySolver(), 
+            &arrayCache,
+            (usingSeeds ? *usingSeeds : std::vector<struct KTest *>())
+          ));
+    searcher = new PendingSearcher(searcher, new DFSSearcher(), *this);
+  }
 
   std::vector<ExecutionState *> newStates(states.begin(), states.end());
   searcher->update(0, newStates, std::vector<ExecutionState *>());
 
   // main interpreter loop
-  while (!states.empty() && !haltExecution) {
+  while (!searcher->empty() && !states.empty() && !haltExecution) {
     ExecutionState &state = searcher->selectState();
+    assert(state.pendingConstraint.isNull() && "Can't execute a pending state");
     KInstruction *ki = state.pc;
     stepInstruction(state);
 
@@ -4424,6 +4516,11 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
                                    std::vector<unsigned char> > >
                                    &res) {
   solver->setTimeout(coreSolverTimeout);
+  if (!state.pendingConstraint.isNull() &&
+      !attemptToRevive(const_cast<ExecutionState *>(&state),
+                       solver->solver.get())) {
+    return false;
+  }
 
   ConstraintSet extendedConstraints(state.constraints);
   ConstraintManager cm(extendedConstraints);
