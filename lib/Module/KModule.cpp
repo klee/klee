@@ -320,15 +320,12 @@ static void splitLastInstruction(Function *function) {
 }
 
 static void splitByCall(Function *function) {
-  unsigned n = 0;
-  for (llvm::Function::iterator bbit = function->begin(), bbie = function->end();
-       bbit != bbie; bbit++, n++);
+  unsigned n = function->getBasicBlockList().size();
   BasicBlock **blocks = new BasicBlock*[n];
   unsigned i = 0;
   for (llvm::Function::iterator bbit = function->begin(), bbie = function->end();
-       bbit != bbie; bbit++, i++) {
+       bbit != bbie; bbit++, i++)
     blocks[i] = &*bbit;
-  }
   for (unsigned j = 0; j < n; j++) {
     BasicBlock *fbb = blocks[j];
     llvm::BasicBlock::iterator it = fbb->begin();
@@ -344,8 +341,7 @@ static void splitByCall(Function *function) {
         it = fbb->begin();
         ie = fbb->end();
         firstInst = &*it;
-      }
-      else {
+      } else {
         it++;
       }
     }

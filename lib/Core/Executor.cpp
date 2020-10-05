@@ -3875,7 +3875,7 @@ ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
 
 ObjectState *Executor::bindObjectInState(ExecutionState &state, 
                                          const MemoryObject *mo,
-                                         bool isLocal,
+                                         bool isAlloca,
                                          const Array *array) {
   ObjectState *os = array ? new ObjectState(mo, array) : new ObjectState(mo);
   state.addressSpace.bindObject(mo, os);
@@ -3884,7 +3884,7 @@ ObjectState *Executor::bindObjectInState(ExecutionState &state,
   // will put multiple copies on this list, but it doesn't really
   // matter because all we use this list for is to unbind the object
   // on function return.
-  if (isLocal)
+  if (isAlloca)
     state.stack.back().allocas.push_back(mo);
 
   return os;
@@ -4258,8 +4258,8 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   }
 }
 
-ObjectPair Executor::lazyInstantiate(ExecutionState &state, bool isLocal, const MemoryObject *mo) {
-  executeMakeSymbolic(state, mo, "lazy_instantiation", isLocal);
+ObjectPair Executor::lazyInstantiate(ExecutionState &state, bool isAlloca, const MemoryObject *mo) {
+  executeMakeSymbolic(state, mo, "lazy_instantiation", isAlloca);
   ExactResolutionList rl;
   resolveExact(state, mo->getBaseExpr(), rl, "lazy_instantiation");
   assert(rl.size() == 1);
@@ -4279,8 +4279,8 @@ ObjectPair Executor::lazyInstantiateAlloca(ExecutionState &state,
 ObjectPair Executor::lazyInstantiateLocal(ExecutionState &state,
                                      const MemoryObject *mo,
                                      KInstruction *target,
-                                     bool isLocal) {
-  ObjectPair op = lazyInstantiate(state, isLocal, mo);
+                                     bool isAlloca) {
+  ObjectPair op = lazyInstantiate(state, isAlloca, mo);
   executeMemoryOperation(state, Read, op.first->getBaseExpr(), nullptr, target, nullptr);
   return op;
 }
@@ -4289,7 +4289,7 @@ ObjectPair Executor::lazyInstantiateArgs(ExecutionState &state,
                                          KFunction *kf,
                                          Argument *arg,
                                          const MemoryObject *mo) {
-  ObjectPair op = lazyInstantiate(state, true, mo);
+  ObjectPair op = lazyInstantiate(state, false, mo);
   executeMemoryOperation(state, Arg, op.first->getBaseExpr(), nullptr, nullptr, arg);
   return op;
 }
@@ -4314,7 +4314,7 @@ ObjectPair Executor::lazyInstantiateVariable(ExecutionState &state, ref<Expr> ad
 void Executor::executeMakeSymbolic(ExecutionState &state,
                                    const MemoryObject *mo,
                                    const std::string &name,
-                                   bool isLocal) {
+                                   bool isAlloca) {
   // Create a new object state for the memory object (instead of a copy).
   if (!replayKTest) {
     // Find a unique name for this array.  First try the original name,
@@ -4325,7 +4325,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
       uniqueName = name + "_" + llvm::utostr(++id);
     }
     const Array *array = arrayCache.CreateArray(uniqueName, mo->size);
-    bindObjectInState(state, mo, isLocal, array);
+    bindObjectInState(state, mo, isAlloca, array);
     state.addSymbolic(mo, array);
 
     std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it =
@@ -4549,7 +4549,7 @@ void Executor::prepareSymbolicReturn(ExecutionState &state, KInstruction *kcallI
   MemoryObject *mo =
       memory->allocate(size, true, /*isGlobal=*/false,
                        callInst, /*allocationAlignment=*/8);
-  lazyInstantiateLocal(state, mo, kcallInst, true);
+  lazyInstantiateLocal(state, mo, kcallInst, false);
 }
 
 void Executor::prepareSymbolicAllocas(ExecutionState &state, KBlock *kallocas) {
@@ -4629,10 +4629,8 @@ bool Executor::tryPushPreviousStack(Function *f, ExecutionState &state, BasicBlo
   std::map<BasicBlock *, ExecutionState *> currCFG = cfgStates[f];
   BasicBlock *pred = bb->getSinglePredecessor();
   if (pred != nullptr && pred->getSingleSuccessor() != nullptr) {
-    pred->print(errs());
-    errs() << "***";
-    bb->print(errs());
-    state.stack = currCFG[pred]->stack;
+    state.stack.pop_back();
+    state.stack.push_back(StackFrame(currCFG[pred]->stack.back()));
     return true;
   }
   return false;

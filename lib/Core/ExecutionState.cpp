@@ -68,7 +68,7 @@ StackFrame::StackFrame(const StackFrame &s)
 }
 
 StackFrame::~StackFrame() { 
-  delete[] locals; 
+  delete[] locals;
 }
 
 /***/

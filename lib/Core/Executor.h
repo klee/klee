@@ -271,7 +271,7 @@ private:
                             std::vector< ref<Expr> > &arguments);
 
   ObjectState *bindObjectInState(ExecutionState &state, const MemoryObject *mo,
-                                 bool isLocal, const Array *array = 0);
+                                 bool IsAlloca, const Array *array = 0);
 
   /// Resolve a pointer to the memory objects it could point to the
   /// start of, forking execution when necessary and generating errors
@@ -373,7 +373,7 @@ private:
                                      uint64_t size);
 
   void executeMakeSymbolic(ExecutionState &state, const MemoryObject *mo,
-                           const std::string &name, bool isLocal);
+                           const std::string &name, bool isAlloca);
 
   /// Create a new state where each input condition has been added as
   /// a constraint and return the results. The input state is included
