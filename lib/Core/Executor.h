@@ -209,8 +209,6 @@ private:
   /// false, it is buggy (it needs to validate its writes).
   bool ivcEnabled;
 
-  bool isolationMode;
-
   /// The maximum time to allow for a single core solver query.
   /// (e.g. for a single STP query)
   time::Span coreSolverTimeout;
@@ -353,6 +351,11 @@ private:
   ObjectPair lazyInstantiate(ExecutionState &state,
                              bool isLocal,
                              const MemoryObject *mo);
+
+  ObjectPair lazyInstantiateAlloca(ExecutionState &state,
+                                  const MemoryObject *mo,
+                                  KInstruction *target,
+                                  bool isLocal);
 
   ObjectPair lazyInstantiateLocal(ExecutionState &state,
                                   const MemoryObject *mo,
@@ -513,7 +516,7 @@ private:
 
 public:
   Executor(llvm::LLVMContext &ctx, const InterpreterOptions &opts,
-      InterpreterHandler *ie, bool isolationMode);
+      InterpreterHandler *ie);
   virtual ~Executor();
 
   const InterpreterHandler& getHandler() {

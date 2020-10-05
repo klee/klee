@@ -97,6 +97,9 @@ using namespace llvm;
 using namespace klee;
 
 namespace klee {
+cl::OptionCategory ExecCat("Execution option",
+                              "This opntions control kind of execution");
+
 cl::OptionCategory DebugCat("Debugging options",
                             "These are debugging options.");
 
@@ -121,6 +124,13 @@ cl::opt<std::string> MaxTime(
              "Set to 0s to disable (default=0s)"),
     cl::init("0s"),
     cl::cat(TerminationCat));
+
+cl::opt<bool> IsolationMode(
+    "isolation-mode",
+    cl::init(true),
+    cl::desc("Kind of execution mode"),
+    cl::cat(ExecCat));
+
 } // namespace klee
 
 namespace {
@@ -448,13 +458,13 @@ const char *Executor::TerminateReasonNames[] = {
 
 
 Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
-                   InterpreterHandler *ih, bool isolMode)
+                   InterpreterHandler *ih)
     : Interpreter(opts), interpreterHandler(ih), searcher(0),
       externalDispatcher(new ExternalDispatcher(ctx)), statsTracker(0),
       pathWriter(0), symPathWriter(0), specialFunctionHandler(0), timers{time::Span(TimerInterval)},
       replayKTest(0), replayPath(0), usingSeeds(0),
       atMemoryLimit(false), inhibitForking(false), haltExecution(false),
-      ivcEnabled(false),  isolationMode(isolMode), debugLogBuffer(debugBufferString) {
+      ivcEnabled(false), debugLogBuffer(debugBufferString) {
 
 
   const time::Span maxTime{MaxTime};
@@ -1960,7 +1970,7 @@ ExecutionState* Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src,
   // With that done we simply set an index in the state so that PHI
   // instructions know which argument to eval, set the pc, and continue.
 
-  if(!isolationMode) {
+  if(!IsolationMode) {
     // XXX this lookup has to go ?
     KFunction *kf = state.stack.back().kf;
     state.pc = kf->kBlocks[dst]->instructions;
@@ -2430,9 +2440,20 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     }
     break;
   }
+
   case Instruction::PHI: {
-    ref<Expr> result = eval(ki, state.incomingBBIndex, state).value;
-    bindLocal(ki, state, result);
+    if (IsolationMode) {
+      assert(cast<PHINode>(ki->inst));
+      PHINode *phiNode = (PHINode*)ki->inst;
+      uint64_t size = phiNode->getType()->getScalarSizeInBits();
+      MemoryObject *mo =
+          memory->allocate(size, true, /*isGlobal=*/false,
+                           phiNode, /*allocationAlignment=*/8);
+      lazyInstantiateLocal(state, mo, ki, true);
+    } else {
+      ref<Expr> result = eval(ki, state.incomingBBIndex, state).value;
+      bindLocal(ki, state, result);
+    }
     break;
   }
 
@@ -4135,6 +4156,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           result = replaceReadWithSymbolic(state, result);
 
         bindLocal(target, state, result);
+        break;
       case Arg:
         result = os->read(offset, type);
 
@@ -4245,7 +4267,7 @@ ObjectPair Executor::lazyInstantiate(ExecutionState &state, bool isLocal, const 
   return {mo, os};
 }
 
-ObjectPair Executor::lazyInstantiateLocal(ExecutionState &state,
+ObjectPair Executor::lazyInstantiateAlloca(ExecutionState &state,
                                      const MemoryObject *mo,
                                      KInstruction *target,
                                      bool isLocal) {
@@ -4254,6 +4276,14 @@ ObjectPair Executor::lazyInstantiateLocal(ExecutionState &state,
   return op;
 }
 
+ObjectPair Executor::lazyInstantiateLocal(ExecutionState &state,
+                                     const MemoryObject *mo,
+                                     KInstruction *target,
+                                     bool isLocal) {
+  ObjectPair op = lazyInstantiate(state, isLocal, mo);
+  executeMemoryOperation(state, Read, op.first->getBaseExpr(), nullptr, target, nullptr);
+  return op;
+}
 
 ObjectPair Executor::lazyInstantiateArgs(ExecutionState &state,
                                          KFunction *kf,
@@ -4270,7 +4300,7 @@ ObjectPair Executor::lazyInstantiateVariable(ExecutionState &state, ref<Expr> ad
   MemoryObject *mo =
       memory->allocate(size, false, /*isGlobal=*/false,
                        allocSite, /*allocationAlignment=*/8, address);
-  ObjectPair op = lazyInstantiateLocal(state, mo, target, /*isLocal=*/false);
+  ObjectPair op = lazyInstantiateAlloca(state, mo, target, /*isLocal=*/false);
   ref<Expr> inBounds = EqExpr::create(address, op.first->getBaseExpr());
   bool mayBeTrue;
   bool succes = solver->mayBeTrue(state.constraints, inBounds, mayBeTrue, state.queryMetaData);
@@ -4488,7 +4518,7 @@ void Executor::prepareSymbolicStack(ExecutionState &state, KFunction *kf) {
       MemoryObject *mo =
           memory->allocate(size->getZExtValue(), true, /*isGlobal=*/false,
                            allocSite, /*allocationAlignment=*/8);
-      lazyInstantiateLocal(state, mo, ki, true);
+      lazyInstantiateAlloca(state, mo, ki, true);
     }
   }
 }
@@ -4543,7 +4573,7 @@ void Executor::prepareSymbolicAllocas(ExecutionState &state, KBlock *kallocas) {
        me = allocas.end(); mi != me; ++mi, n++) {
     const MemoryObject *mo = *mi;
     KInstruction *ki = kallocas->instructions[n];
-    lazyInstantiateLocal(state, mo, ki, true);
+    lazyInstantiateAlloca(state, mo, ki, true);
   }
 }
 
@@ -4660,7 +4690,8 @@ void Executor::runFunctionAsBlockSequence(Function *f, ExecutionState &state) {
       } else {
         if(currCFG.count(&*bbit) == 0) {
           KCallBlock *kcall = (KCallBlock*)blocks[0];
-          prepareSymbolicReturn(*currState, kcall->kcallInstruction);
+          if (!kcall->calledFunction->getReturnType()->isVoidTy())
+            prepareSymbolicReturn(*currState, kcall->kcallInstruction);
           currCFG[&*bbit] = currState;
           if(f != kcall->calledFunction) {
             runFunctionAsBlockSequence(kcall->calledFunction, state);
@@ -4981,5 +5012,5 @@ void Executor::dumpStates() {
 
 Interpreter *Interpreter::create(LLVMContext &ctx, const InterpreterOptions &opts,
                                  InterpreterHandler *ih) {
-  return new Executor(ctx, opts, ih, true);
+  return new Executor(ctx, opts, ih);
 }
