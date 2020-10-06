@@ -4388,7 +4388,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
 }
 
 /***/
-void Executor::formArg(Function *f, unsigned NumPtrBytes, std::vector<ref<Expr> > arguments, MemoryObject *argvMO, int argc, int envc) {
+void Executor::formArg(Function *f, unsigned NumPtrBytes, std::vector<ref<Expr> > &arguments, MemoryObject *argvMO, int argc, int envc) {
   Function::arg_iterator ai = f->arg_begin(), ae = f->arg_end();
   if (ai!=ae) {
     arguments.push_back(ConstantExpr::alloc(argc, Expr::Int32));
@@ -4415,14 +4415,14 @@ void Executor::formArg(Function *f, unsigned NumPtrBytes, std::vector<ref<Expr> 
   }
 }
 
-void Executor::formArgMemory(ExecutionState *state,
+void Executor::formArgMemory(ExecutionState &state,
                              char **argv,
                              MemoryObject *argvMO,
                              unsigned NumPtrBytes,
                              int envc, char **envp,
                              int argc)
 {
-  ObjectState *argvOS = bindObjectInState(*state, argvMO, false);
+  ObjectState *argvOS = bindObjectInState(state, argvMO, false);
 
   for (int i=0; i<argc+1+envc+1+1; i++) {
     if (i==argc || i>=argc+1+envc) {
@@ -4434,10 +4434,10 @@ void Executor::formArgMemory(ExecutionState *state,
 
       MemoryObject *arg =
           memory->allocate(len + 1, /*isLocal=*/false, /*isGlobal=*/true,
-                           /*allocSite=*/state->pc->inst, /*alignment=*/8);
+                           /*allocSite=*/state.pc->inst, /*alignment=*/8);
       if (!arg)
         klee_error("Could not allocate memory for function arguments");
-      ObjectState *os = bindObjectInState(*state, arg, false);
+      ObjectState *os = bindObjectInState(state, arg, false);
       for (j=0; j<len+1; j++)
         os->write8(j, s[j]);
 
@@ -4480,7 +4480,7 @@ ExecutionState* Executor::formState(Function *f,
     bindArgument(kf, i, *state, arguments[i]);
 
   if (argvMO) {
-    formArgMemory(state, argv, argvMO, NumPtrBytes, envc, envp, argc);
+    formArgMemory(*state, argv, argvMO, NumPtrBytes, envc, envp, argc);
   }
 
   initializeGlobals(*state);
@@ -4526,7 +4526,7 @@ void Executor::prepareSymbolicStack(ExecutionState &state, KFunction *kf) {
 void Executor::prepareSymbolicArgs(ExecutionState &state, KFunction *kf) {
   for (auto ai = kf->function->arg_begin(), ae = kf->function->arg_end(); ai != ae; ai++) {
     Argument *arg = *&ai;
-    uint64_t size = arg->getType()->getScalarSizeInBits();
+    uint64_t size = kmodule->targetData->getTypeSizeInBits(arg->getType());
     MemoryObject *mo =
         memory->allocate(size, true, /*isGlobal=*/false,
                          arg, /*allocationAlignment=*/8);

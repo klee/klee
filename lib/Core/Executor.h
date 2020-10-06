@@ -609,8 +609,8 @@ public:
 
   MergingSearcher *getMergingSearcher() const { return mergingSearcher; };
   void setMergingSearcher(MergingSearcher *ms) { mergingSearcher = ms; };
-  void formArg(llvm::Function *f, unsigned NumPtrBytes, std::vector<ref<Expr> > arguments, MemoryObject *argvMO, int argc, int envc);
-  void formArgMemory(ExecutionState *state, char **argv, MemoryObject *argvMO, unsigned NumPtrBytes, int envc, char **envp, int argc);
+  void formArg(llvm::Function *f, unsigned NumPtrBytes, std::vector<ref<Expr> > &arguments, MemoryObject *argvMO, int argc, int envc);
+  void formArgMemory(ExecutionState &state, char **argv, MemoryObject *argvMO, unsigned NumPtrBytes, int envc, char **envp, int argc);
 };
   
 } // End klee namespace
