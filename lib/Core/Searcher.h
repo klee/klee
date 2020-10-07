@@ -62,16 +62,6 @@ namespace klee {
       os << "<unnamed searcher>\n";
     }
 
-    // utility functions
-
-    void addState(ExecutionState *es, ExecutionState *current = nullptr) {
-      update(current, {es}, std::vector<ExecutionState *>());
-    }
-
-    void removeState(ExecutionState *es, ExecutionState *current = nullptr) {
-      update(current, std::vector<ExecutionState *>(), {es});
-    }
-
     enum CoreSearchType : std::uint8_t {
       DFS,
       BFS,
@@ -259,18 +249,18 @@ namespace klee {
     /// Remove state from the searcher chain, while keeping it in the executor.
     /// This is used here to 'freeze' a state while it is waiting for other
     /// states in its merge group to reach the same instruction.
-    void pauseState(ExecutionState &state){
+    void pauseState(ExecutionState &state) {
       assert(std::find(pausedStates.begin(), pausedStates.end(), &state) == pausedStates.end());
       pausedStates.push_back(&state);
-      baseSearcher->removeState(&state);
+      baseSearcher->update(nullptr, {}, {&state});
     }
 
     /// Continue a paused state
-    void continueState(ExecutionState &state){
+    void continueState(ExecutionState &state) {
       auto it = std::find(pausedStates.begin(), pausedStates.end(), &state);
-      assert( it != pausedStates.end());
+      assert(it != pausedStates.end());
       pausedStates.erase(it);
-      baseSearcher->addState(&state);
+      baseSearcher->update(nullptr, {&state}, {});
     }
 
     ExecutionState &selectState() override;
