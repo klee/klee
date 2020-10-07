@@ -58,9 +58,7 @@ namespace klee {
 
     /// Prints name of searcher as a `klee_message()`.
     // TODO: could probably made prettier or more flexible
-    virtual void printName(llvm::raw_ostream &os) {
-      os << "<unnamed searcher>\n";
-    }
+    virtual void printName(llvm::raw_ostream &os) = 0;
 
     enum CoreSearchType : std::uint8_t {
       DFS,
@@ -87,10 +85,8 @@ namespace klee {
     void update(ExecutionState *current,
                 const std::vector<ExecutionState *> &addedStates,
                 const std::vector<ExecutionState *> &removedStates) override;
-    bool empty() override { return states.empty(); }
-    void printName(llvm::raw_ostream &os) override {
-      os << "DFSSearcher\n";
-    }
+    bool empty() override;
+    void printName(llvm::raw_ostream &os) override;
   };
 
   /// BFSSearcher implements breadth-first exploration. When KLEE branches multiple
@@ -105,10 +101,8 @@ namespace klee {
     void update(ExecutionState *current,
                 const std::vector<ExecutionState *> &addedStates,
                 const std::vector<ExecutionState *> &removedStates) override;
-    bool empty() override { return states.empty(); }
-    void printName(llvm::raw_ostream &os) override {
-      os << "BFSSearcher\n";
-    }
+    bool empty() override;
+    void printName(llvm::raw_ostream &os) override;
   };
 
   /// RandomSearcher picks a state randomly.
@@ -117,15 +111,13 @@ namespace klee {
     RNG &theRNG;
 
   public:
-    explicit RandomSearcher(RNG &rng) : theRNG{rng} {}
+    explicit RandomSearcher(RNG &rng);
     ExecutionState &selectState() override;
     void update(ExecutionState *current,
                 const std::vector<ExecutionState *> &addedStates,
                 const std::vector<ExecutionState *> &removedStates) override;
-    bool empty() override { return states.empty(); }
-    void printName(llvm::raw_ostream &os) override {
-      os << "RandomSearcher\n";
-    }
+    bool empty() override;
+    void printName(llvm::raw_ostream &os) override;
   };
 
   /// The base class for all weighted searchers. Uses DiscretePDF as underlying
@@ -161,19 +153,7 @@ namespace klee {
                 const std::vector<ExecutionState *> &addedStates,
                 const std::vector<ExecutionState *> &removedStates) override;
     bool empty() override;
-    void printName(llvm::raw_ostream &os) override {
-      os << "WeightedRandomSearcher::";
-      switch(type) {
-      case Depth              : os << "Depth\n"; return;
-      case RP                 : os << "RandomPath\n"; return;
-      case QueryCost          : os << "QueryCost\n"; return;
-      case InstCount          : os << "InstCount\n"; return;
-      case CPInstCount        : os << "CPInstCount\n"; return;
-      case MinDistToUncovered : os << "MinDistToUncovered\n"; return;
-      case CoveringNew        : os << "CoveringNew\n"; return;
-      default                 : os << "<unknown type>\n"; return;
-      }
-    }
+    void printName(llvm::raw_ostream &os) override;
   };
 
   /// RandomPathSearcher performs a random walk of the PTree to select a state.
@@ -201,10 +181,7 @@ namespace klee {
   public:
     /// \param processTree The process tree.
     /// \param RNG A random number generator.
-    RandomPathSearcher(PTree &processTree, RNG &rng) :
-                         processTree{processTree},
-                         theRNG{rng},
-                         idBitMask{processTree.getNextId()} {};
+    RandomPathSearcher(PTree &processTree, RNG &rng);
     ~RandomPathSearcher() override = default;
 
     ExecutionState &selectState() override;
@@ -212,9 +189,7 @@ namespace klee {
                 const std::vector<ExecutionState *> &addedStates,
                 const std::vector<ExecutionState *> &removedStates) override;
     bool empty() override;
-    void printName(llvm::raw_ostream &os) override {
-      os << "RandomPathSearcher\n";
-    }
+    void printName(llvm::raw_ostream &os) override;
   };
 
 
@@ -232,7 +207,7 @@ namespace klee {
 
     public:
     /// \param baseSearcher The underlying searcher (takes ownership).
-    explicit MergingSearcher(Searcher *baseSearcher) : baseSearcher{baseSearcher} {};
+    explicit MergingSearcher(Searcher *baseSearcher);
     ~MergingSearcher() override = default;
 
     /// ExecutionStates currently paused from scheduling because they are
@@ -249,37 +224,18 @@ namespace klee {
     /// Remove state from the searcher chain, while keeping it in the executor.
     /// This is used here to 'freeze' a state while it is waiting for other
     /// states in its merge group to reach the same instruction.
-    void pauseState(ExecutionState &state) {
-      assert(std::find(pausedStates.begin(), pausedStates.end(), &state) == pausedStates.end());
-      pausedStates.push_back(&state);
-      baseSearcher->update(nullptr, {}, {&state});
-    }
+    void pauseState(ExecutionState &state);
 
     /// Continue a paused state
-    void continueState(ExecutionState &state) {
-      auto it = std::find(pausedStates.begin(), pausedStates.end(), &state);
-      assert(it != pausedStates.end());
-      pausedStates.erase(it);
-      baseSearcher->update(nullptr, {&state}, {});
-    }
+    void continueState(ExecutionState &state);
 
     ExecutionState &selectState() override;
-
     void update(ExecutionState *current,
                 const std::vector<ExecutionState *> &addedStates,
-                const std::vector<ExecutionState *> &removedStates) override {
-      // We have to check if the current execution state was just deleted, as to
-      // not confuse the nurs searchers
-      if (std::find(pausedStates.begin(), pausedStates.end(), current) ==
-          pausedStates.end()) {
-        baseSearcher->update(current, addedStates, removedStates);
-      }
-    }
+                const std::vector<ExecutionState *> &removedStates) override;
 
-    bool empty() override { return baseSearcher->empty(); }
-    void printName(llvm::raw_ostream &os) override {
-      os << "MergingSearcher\n";
-    }
+    bool empty() override;
+    void printName(llvm::raw_ostream &os) override;
   };
 
   /// BatchingSearcher selects a state from an underlying searcher and returns
@@ -298,24 +254,15 @@ namespace klee {
     /// \param baseSearcher The underlying searcher (takes ownership).
     /// \param timeBudget Time span a state gets selected before choosing a different one.
     /// \param instructionBudget Number of instructions to re-select a state for.
-    BatchingSearcher(Searcher *baseSearcher, time::Span timeBudget, unsigned instructionBudget) :
-                       baseSearcher{baseSearcher},
-                       timeBudget{timeBudget},
-                       instructionBudget{instructionBudget} {};
+    BatchingSearcher(Searcher *baseSearcher, time::Span timeBudget, unsigned instructionBudget);
     ~BatchingSearcher() override = default;
 
     ExecutionState &selectState() override;
     void update(ExecutionState *current,
                 const std::vector<ExecutionState *> &addedStates,
                 const std::vector<ExecutionState *> &removedStates) override;
-    bool empty() override { return baseSearcher->empty(); }
-    void printName(llvm::raw_ostream &os) override {
-      os << "<BatchingSearcher> timeBudget: " << timeBudget
-         << ", instructionBudget: " << instructionBudget
-         << ", baseSearcher:\n";
-      baseSearcher->printName(os);
-      os << "</BatchingSearcher>\n";
-    }
+    bool empty() override;
+    void printName(llvm::raw_ostream &os) override;
   };
 
   /// IterativeDeepeningTimeSearcher implements time-based deepening. States
@@ -331,18 +278,15 @@ namespace klee {
 
   public:
     /// \param baseSearcher The underlying searcher (takes ownership).
-    explicit IterativeDeepeningTimeSearcher(Searcher *baseSearcher) :
-                                              baseSearcher{baseSearcher} {};
+    explicit IterativeDeepeningTimeSearcher(Searcher *baseSearcher);
     ~IterativeDeepeningTimeSearcher() override = default;
 
     ExecutionState &selectState() override;
     void update(ExecutionState *current,
                 const std::vector<ExecutionState *> &addedStates,
                 const std::vector<ExecutionState *> &removedStates) override;
-    bool empty() override { return baseSearcher->empty() && pausedStates.empty(); }
-    void printName(llvm::raw_ostream &os) override {
-      os << "IterativeDeepeningTimeSearcher\n";
-    }
+    bool empty() override;
+    void printName(llvm::raw_ostream &os) override;
   };
 
   /// InterleavedSearcher selects states from a set of searchers in round-robin
@@ -361,14 +305,8 @@ namespace klee {
     void update(ExecutionState *current,
                 const std::vector<ExecutionState *> &addedStates,
                 const std::vector<ExecutionState *> &removedStates) override;
-    bool empty() override { return searchers[0]->empty(); }
-    void printName(llvm::raw_ostream &os) override {
-      os << "<InterleavedSearcher> containing "
-         << searchers.size() << " searchers:\n";
-      for (const auto &searcher : searchers)
-        searcher->printName(os);
-      os << "</InterleavedSearcher>\n";
-    }
+    bool empty() override;
+    void printName(llvm::raw_ostream &os) override;
   };
 
 } // klee namespace
