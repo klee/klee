@@ -420,7 +420,7 @@ void IterativeDeepeningTimeSearcher::update(
           removedStates.end() &&
       elapsed > time) {
     pausedStates.insert(current);
-    baseSearcher->removeState(current);
+    baseSearcher->update(nullptr, {}, {current});
   }
 
   // no states left in underlying searcher: fill with paused states
