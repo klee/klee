@@ -83,8 +83,7 @@ void BFSSearcher::update(ExecutionState *current,
   // Assumption: If new states were added KLEE forked, therefore states evolved.
   // constraints were added to the current state, it evolved.
   if (!addedStates.empty() && current &&
-      std::find(removedStates.begin(), removedStates.end(), current) ==
-          removedStates.end()) {
+      std::find(removedStates.begin(), removedStates.end(), current) == removedStates.end()) {
     auto pos = std::find(states.begin(), states.end(), current);
     assert(pos != states.end());
     states.erase(pos);
@@ -176,53 +175,52 @@ ExecutionState &WeightedRandomSearcher::selectState() {
 
 double WeightedRandomSearcher::getWeight(ExecutionState *es) {
   switch(type) {
-  default:
-  case Depth:
-    return es->depth;
-  case RP:
-    return std::pow(0.5, es->depth);
-  case InstCount: {
-    uint64_t count = theStatisticManager->getIndexedValue(stats::instructions,
-                                                          es->pc->info->id);
-    double inv = 1. / std::max((uint64_t) 1, count);
-    return inv * inv;
-  }
-  case CPInstCount: {
-    StackFrame &sf = es->stack.back();
-    uint64_t count = sf.callPathNode->statistics.getValue(stats::instructions);
-    double inv = 1. / std::max((uint64_t) 1, count);
-    return inv;
-  }
-  case QueryCost:
-    return (es->queryMetaData.queryCost.toSeconds() < .1)
-               ? 1.
-               : 1. / es->queryMetaData.queryCost.toSeconds();
-  case CoveringNew:
-  case MinDistToUncovered: {
-    uint64_t md2u = computeMinDistToUncovered(es->pc,
-                                              es->stack.back().minDistToUncoveredOnReturn);
-
-    double invMD2U = 1. / (md2u ? md2u : 10000);
-    if (type==CoveringNew) {
-      double invCovNew = 0.;
-      if (es->instsSinceCovNew)
-        invCovNew = 1. / std::max(1, (int) es->instsSinceCovNew - 1000);
-      return (invCovNew * invCovNew + invMD2U * invMD2U);
-    } else {
-      return invMD2U * invMD2U;
+    default:
+    case Depth:
+      return es->depth;
+    case RP:
+      return std::pow(0.5, es->depth);
+    case InstCount: {
+      uint64_t count = theStatisticManager->getIndexedValue(stats::instructions,
+                                                            es->pc->info->id);
+      double inv = 1. / std::max((uint64_t) 1, count);
+      return inv * inv;
     }
-  }
+    case CPInstCount: {
+      StackFrame &sf = es->stack.back();
+      uint64_t count = sf.callPathNode->statistics.getValue(stats::instructions);
+      double inv = 1. / std::max((uint64_t) 1, count);
+      return inv;
+    }
+    case QueryCost:
+      return (es->queryMetaData.queryCost.toSeconds() < .1)
+                 ? 1.
+                 : 1. / es->queryMetaData.queryCost.toSeconds();
+    case CoveringNew:
+    case MinDistToUncovered: {
+      uint64_t md2u = computeMinDistToUncovered(es->pc,
+                                                es->stack.back().minDistToUncoveredOnReturn);
+
+      double invMD2U = 1. / (md2u ? md2u : 10000);
+      if (type == CoveringNew) {
+        double invCovNew = 0.;
+        if (es->instsSinceCovNew)
+          invCovNew = 1. / std::max(1, (int) es->instsSinceCovNew - 1000);
+        return (invCovNew * invCovNew + invMD2U * invMD2U);
+      } else {
+        return invMD2U * invMD2U;
+      }
+    }
   }
 }
 
-void WeightedRandomSearcher::update(
-    ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
-    const std::vector<ExecutionState *> &removedStates) {
+void WeightedRandomSearcher::update(ExecutionState *current,
+                                    const std::vector<ExecutionState *> &addedStates,
+                                    const std::vector<ExecutionState *> &removedStates) {
 
   // update current
   if (current && updateWeights &&
-      std::find(removedStates.begin(), removedStates.end(), current) ==
-          removedStates.end())
+      std::find(removedStates.begin(), removedStates.end(), current) == removedStates.end())
     states->update(current, getWeight(current));
 
   // insert states
@@ -266,13 +264,11 @@ RandomPathSearcher::RandomPathSearcher(PTree &processTree, RNG &rng)
 
 ExecutionState &RandomPathSearcher::selectState() {
   unsigned flips=0, bits=0;
-  assert(processTree.root.getInt() & idBitMask &&
-         "Root should belong to the searcher");
+  assert(processTree.root.getInt() & idBitMask && "Root should belong to the searcher");
   PTreeNode *n = processTree.root.getPointer();
   while (!n->state) {
     if (!IS_OUR_NODE_VALID(n->left)) {
-      assert(IS_OUR_NODE_VALID(n->right) &&
-             "Both left and right nodes invalid");
+      assert(IS_OUR_NODE_VALID(n->right) && "Both left and right nodes invalid");
       assert(n != n->right.getPointer());
       n = n->right.getPointer();
     } else if (!IS_OUR_NODE_VALID(n->right)) {
@@ -392,8 +388,8 @@ ExecutionState& MergingSearcher::selectState() {
 }
 
 void MergingSearcher::update(ExecutionState *current,
-            const std::vector<ExecutionState *> &addedStates,
-            const std::vector<ExecutionState *> &removedStates) {
+                             const std::vector<ExecutionState *> &addedStates,
+                             const std::vector<ExecutionState *> &removedStates) {
   // We have to check if the current execution state was just deleted, as to
   // not confuse the nurs searchers
   if (std::find(pausedStates.begin(), pausedStates.end(), current) == pausedStates.end()) {
@@ -445,8 +441,7 @@ void BatchingSearcher::update(ExecutionState *current,
                               const std::vector<ExecutionState *> &addedStates,
                               const std::vector<ExecutionState *> &removedStates) {
   // drop memoized state if it is marked for deletion
-  if (std::find(removedStates.begin(), removedStates.end(), lastState) !=
-      removedStates.end())
+  if (std::find(removedStates.begin(), removedStates.end(), lastState) != removedStates.end())
     lastState = nullptr;
   // update underlying searcher
   baseSearcher->update(current, addedStates, removedStates);
@@ -476,9 +471,9 @@ ExecutionState &IterativeDeepeningTimeSearcher::selectState() {
   return res;
 }
 
-void IterativeDeepeningTimeSearcher::update(
-    ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
-    const std::vector<ExecutionState *> &removedStates) {
+void IterativeDeepeningTimeSearcher::update(ExecutionState *current,
+                                            const std::vector<ExecutionState *> &addedStates,
+                                            const std::vector<ExecutionState *> &removedStates) {
 
   const auto elapsed = time::getWallTime() - startTime;
 
@@ -499,8 +494,7 @@ void IterativeDeepeningTimeSearcher::update(
 
   // update current: pause if time exceeded
   if (current &&
-      std::find(removedStates.begin(), removedStates.end(), current) ==
-          removedStates.end() &&
+      std::find(removedStates.begin(), removedStates.end(), current) == removedStates.end() &&
       elapsed > time) {
     pausedStates.insert(current);
     baseSearcher->update(nullptr, {}, {current});
@@ -539,9 +533,9 @@ ExecutionState &InterleavedSearcher::selectState() {
   return s->selectState();
 }
 
-void InterleavedSearcher::update(
-    ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
-    const std::vector<ExecutionState *> &removedStates) {
+void InterleavedSearcher::update(ExecutionState *current,
+                                 const std::vector<ExecutionState *> &addedStates,
+                                 const std::vector<ExecutionState *> &removedStates) {
 
   // update underlying searchers
   for (auto &searcher : searchers)
