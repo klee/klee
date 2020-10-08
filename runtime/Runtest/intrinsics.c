@@ -134,6 +134,91 @@ void klee_make_symbolic(void *array, size_t nbytes, const char *name) {
   }
 }
 
+void klee_make_pse_symbolic(void *array, size_t nbytes, const char *name) {
+
+  if (!name)
+    name = "unnamed";
+
+  static int rand_init = -1;
+
+  if (rand_init == -1) {
+    if (getenv("KLEE_RANDOM")) {
+      struct timeval tv;
+      gettimeofday(&tv, 0);
+      rand_init = 1;
+      srand(tv.tv_sec ^ tv.tv_usec);
+    } else {
+      rand_init = 0;
+    }
+  }
+
+  if (rand_init) {
+    if (!strcmp(name, "syscall_a0")) {
+      unsigned long long *v = array;
+      assert(nbytes == 8);
+      *v = rand() % 69;
+    } else {
+      char *c = array;
+      size_t i;
+      for (i = 0; i < nbytes; i++)
+        c[i] = rand_byte();
+    }
+    return;
+  }
+
+  if (!testData) {
+    char tmp[256];
+    char *name = getenv("KTEST_FILE");
+
+    if (!name) {
+      fprintf(stdout, "KLEE-RUNTIME: KTEST_FILE not set, please enter .ktest path: ");
+      fflush(stdout);
+      name = tmp;
+      if (!fgets(tmp, sizeof tmp, stdin) || !strlen(tmp)) {
+        fprintf(stderr, "KLEE-RUNTIME: cannot replay, no KTEST_FILE or user input\n");
+        exit(1);
+      }
+      tmp[strlen(tmp) - 1] = '\0'; /* kill newline */
+    }
+    testData = kTest_fromFile(name);
+    if (!testData) {
+      fprintf(stderr, "KLEE-RUNTIME: unable to open .ktest file\n");
+      exit(1);
+    }
+  }
+
+  for (;; ++testPosition) {
+    if (testPosition >= testData->numObjects) {
+      report_internal_error("out of inputs. Will use zero if continuing.");
+      memset(array, 0, nbytes);
+      break;
+    } else {
+      KTestObject *o = &testData->objects[testPosition];
+      if (strcmp("model_version", o->name) == 0 &&
+          strcmp("model_version", name) != 0) {
+        // Skip over this KTestObject because we've hit
+        // `model_version` which is from the POSIX runtime
+        // and the caller didn't ask for it.
+        continue;
+      }
+      if (strcmp(name, o->name) != 0) {
+        report_internal_error(
+            "object name mismatch. Requesting \"%s\" but returning \"%s\"",
+            name, o->name);
+      }
+      memcpy(array, o->bytes, nbytes < o->numBytes ? nbytes : o->numBytes);
+      if (nbytes != o->numBytes) {
+        report_internal_error("object sizes differ. Expected %zu but got %u",
+                              nbytes, o->numBytes);
+        if (o->numBytes < nbytes)
+          memset((char *)array + o->numBytes, 0, nbytes - o->numBytes);
+      }
+      ++testPosition;
+      break;
+    }
+  }
+}
+
 void klee_silent_exit(int x) { exit(x); }
 
 uintptr_t klee_choose(uintptr_t n) {
