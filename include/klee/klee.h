@@ -36,6 +36,17 @@ extern "C" {
    */
   void klee_make_symbolic(void *addr, size_t nbytes, const char *name);
 
+  /* klee_make_pse_symbolic - Make the contents of the object pointer to by \arg
+   * addr as a symbolic variable.
+   *
+   * \arg addr - The start of the object.
+   * \arg nbytes - The number of bytes to make symbolic; currently this *must*
+   * be the entire contents of the object.
+   * \arg name - A name used for identifying the object in messages, output
+   * files, etc. If NULL, object is called "unnamed".
+   */
+  void klee_make_pse_symbolic(void *addr, size_t nbytes, const char *name);
+
   /* klee_range - Construct a symbolic value in the signed interval
    * [begin,end).
    *

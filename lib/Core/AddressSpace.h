@@ -63,7 +63,8 @@ namespace klee {
     ///
     /// \invariant forall o in objects, o->copyOnWriteOwner <= cowKey
     MemoryMap objects;
-
+    MemoryMap pseObjects;
+    
     AddressSpace() : cowKey(1) {}
     AddressSpace(const AddressSpace &b) : cowKey(++b.cowKey), objects(b.objects) { }
     ~AddressSpace() {}

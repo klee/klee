@@ -98,6 +98,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
 #endif
   add("klee_is_symbolic", handleIsSymbolic, true),
   add("klee_make_symbolic", handleMakeSymbolic, false),
+  add("klee_make_pse_symbolic", handleMakeSymbolicPSE, false),
   add("klee_mark_global", handleMarkGlobal, false),
   add("klee_open_merge", handleOpenMerge, false),
   add("klee_close_merge", handleCloseMerge, false),
@@ -827,6 +828,60 @@ void SpecialFunctionHandler::handleMakeSymbolic(ExecutionState &state,
     } else {      
       executor.terminateStateOnError(*s, 
                                      "wrong size given to klee_make_symbolic[_name]", 
+                                     Executor::User);
+    }
+  }
+}
+
+void SpecialFunctionHandler::handleMakeSymbolicPSE(ExecutionState &state,
+                                                KInstruction *target,
+                                                std::vector<ref<Expr> > &arguments) {
+  std::string name;
+
+  if (arguments.size() != 3) {
+    executor.terminateStateOnError(state, "Incorrect number of arguments to klee_make_pse_symbolic(void*, size_t, char*)", Executor::User);
+    return;
+  }
+
+  name = arguments[2]->isZero() ? "" : readStringAtAddress(state, arguments[2]);
+
+  if (name.length() == 0) {
+    name = "unnamed";
+    klee_warning("klee_make_pse_symbolic: renamed empty name to \"unnamed\"");
+  }
+
+  Executor::ExactResolutionList pse_map;
+  executor.resolveExact(state, arguments[0], pse_map, "make_pse_symbolic");
+  
+  for (Executor::ExactResolutionList::iterator it = pse_map.begin(), 
+         ie = pse_map.end(); it != ie; ++it) {
+    const MemoryObject *mo = it->first.first;
+    mo->setName(name);
+    
+    const ObjectState *old = it->first.second;
+    ExecutionState *s = it->second;
+    
+    if (old->readOnly) {
+      executor.terminateStateOnError(*s, "cannot make readonly object a pse symbolic variable.",
+                                     Executor::User);
+      return;
+    } 
+
+    // FIXME: Type coercion should be done consistently somewhere.
+    bool res;
+    bool success __attribute__((unused)) = executor.solver->mustBeTrue(
+        s->constraints,
+        EqExpr::create(
+            ZExtExpr::create(arguments[1], Context::get().getPointerWidth()),
+            mo->getSizeExpr()),
+        res, s->queryMetaData);
+    assert(success && "FIXME: Unhandled solver failure");
+    
+    if (res) {
+      executor.executeMakeProbSymbolic(*s, mo, name);
+    } else {      
+      executor.terminateStateOnError(*s, 
+                                     "wrong size given to klee_make_pse_symbolic[_name]", 
                                      Executor::User);
     }
   }

@@ -3932,6 +3932,82 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
   }
 }
 
+// Implementation for  Make Prob Symbolic Variable.
+void Executor::executeMakeProbSymbolic(ExecutionState &state, 
+                                   const MemoryObject *mo,
+                                   const std::string &name) {
+  // Create a new object state for the memory object (instead of a copy).
+  if (!replayKTest) {
+    // Find a unique name for this array.  First try the original name,
+    // or if that fails try adding a unique identifier.
+    unsigned id = 0;
+    std::string uniqueName = name;
+    while (!state.arrayNames.insert(uniqueName).second) {
+      uniqueName = name + "_pse_" + llvm::utostr(++id);
+    }
+    const Array *array = arrayCache.CreateArray(uniqueName, mo->size);
+    bindObjectInState(state, mo, false, array);
+    state.addSymbolic(mo, array);
+    
+    std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it = 
+      seedMap.find(&state);
+    if (it!=seedMap.end()) { // In seed mode we need to add this as a
+                             // binding.
+      for (std::vector<SeedInfo>::iterator siit = it->second.begin(), 
+             siie = it->second.end(); siit != siie; ++siit) {
+        SeedInfo &si = *siit;
+        KTestObject *obj = si.getNextInput(mo, NamedSeedMatching);
+
+        if (!obj) {
+          if (ZeroSeedExtension) {
+            std::vector<unsigned char> &values = si.assignment.bindings[array];
+            values = std::vector<unsigned char>(mo->size, '\0');
+          } else if (!AllowSeedExtension) {
+            terminateStateOnError(state, "ran out of inputs during seeding",
+                                  User);
+            break;
+          }
+        } else {
+          if (obj->numBytes != mo->size &&
+              ((!(AllowSeedExtension || ZeroSeedExtension)
+                && obj->numBytes < mo->size) ||
+               (!AllowSeedTruncation && obj->numBytes > mo->size))) {
+	    std::stringstream msg;
+	    msg << "replace size mismatch: "
+		<< mo->name << "[" << mo->size << "]"
+		<< " vs " << obj->name << "[" << obj->numBytes << "]"
+		<< " in test\n";
+
+            terminateStateOnError(state, msg.str(), User);
+            break;
+          } else {
+            std::vector<unsigned char> &values = si.assignment.bindings[array];
+            values.insert(values.begin(), obj->bytes, 
+                          obj->bytes + std::min(obj->numBytes, mo->size));
+            if (ZeroSeedExtension) {
+              for (unsigned i=obj->numBytes; i<mo->size; ++i)
+                values.push_back('\0');
+            }
+          }
+        }
+      }
+    }
+  } else {
+    ObjectState *os = bindObjectInState(state, mo, false);
+    if (replayPosition >= replayKTest->numObjects) {
+      terminateStateOnError(state, "replay count mismatch", User);
+    } else {
+      KTestObject *obj = &replayKTest->objects[replayPosition++];
+      if (obj->numBytes != mo->size) {
+        terminateStateOnError(state, "replay size mismatch", User);
+      } else {
+        for (unsigned i=0; i<mo->size; i++)
+          os->write8(i, obj->bytes[i]);
+      }
+    }
+  }
+}
+
 /***/
 
 void Executor::runFunctionAsMain(Function *f,
@@ -3945,6 +4021,7 @@ void Executor::runFunctionAsMain(Function *f,
   srandom(1);
   
   MemoryObject *argvMO = 0;
+  MemoryObject *argvPSEMO = 0;
 
   // In order to make uclibc happy and be closer to what the system is
   // doing we lay out the environments at the end of the argv array

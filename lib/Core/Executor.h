@@ -326,6 +326,10 @@ private:
   void executeMakeSymbolic(ExecutionState &state, const MemoryObject *mo,
                            const std::string &name);
 
+  // Make a symbolic Execution variable for PSE. 
+  void executeMakeProbSymbolic(ExecutionState &state, const MemoryObject *mo,
+                           const std::string &name);
+                           
   /// Create a new state where each input condition has been added as
   /// a constraint and return the results. The input state is included
   /// as one of the results. Note that the output vector may included
