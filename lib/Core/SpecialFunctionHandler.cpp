@@ -839,7 +839,7 @@ void SpecialFunctionHandler::handleMakeSymbolicPSE(ExecutionState &state,
   std::string name;
 
   if (arguments.size() != 3) {
-    executor.terminateStateOnError(state, "Incorrect number of arguments to klee_make_pse_symbolic(void*, size_t, char*)", Executor::User);
+    executor.terminateStateOnError(state, "Incorrect number of arguments to klee_make_pse_symbolic(void*, size_t, char*), 3 required", Executor::User);
     return;
   }
 

@@ -12,6 +12,7 @@
 #include "Context.h"
 #include "ExecutionState.h"
 #include "MemoryManager.h"
+#include "ProbExecState.h"
 
 #include "klee/ADT/BitArray.h"
 #include "klee/Expr/ArrayCache.h"
@@ -81,6 +82,7 @@ ObjectState::ObjectState(const MemoryObject *mo)
     flushMask(0),
     knownSymbolics(0),
     updates(0, 0),
+    prbState(new ProbExecState()),
     size(mo->size),
     readOnly(false) {
   if (!UseConstantArrays) {
@@ -101,6 +103,7 @@ ObjectState::ObjectState(const MemoryObject *mo, const Array *array)
     flushMask(0),
     knownSymbolics(0),
     updates(array, 0),
+    prbState(new ProbExecState()),
     size(mo->size),
     readOnly(false) {
   makeSymbolic();
@@ -115,6 +118,7 @@ ObjectState::ObjectState(const ObjectState &os)
     flushMask(os.flushMask ? new BitArray(*os.flushMask, os.size) : 0),
     knownSymbolics(0),
     updates(os.updates),
+    prbState(new ProbExecState()),
     size(os.size),
     readOnly(false) {
   assert(!os.readOnly && "no need to copy read only object?");
@@ -132,6 +136,7 @@ ObjectState::~ObjectState() {
   delete flushMask;
   delete[] knownSymbolics;
   delete[] concreteStore;
+  delete prbState;
 }
 
 ArrayCache *ObjectState::getArrayCache() const {

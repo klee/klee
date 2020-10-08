@@ -32,6 +32,11 @@ class ExecutionState;
 class MemoryManager;
 class Solver;
 
+// Only for a PSE Variable do e have a ProbExecState 
+// where we intend to define a the values of our distributions. 
+// Uniform Distribution values assumed. 
+class ProbExecState;
+
 class MemoryObject {
   friend class STPBuilder;
   friend class ObjectState;
@@ -170,7 +175,6 @@ class ObjectState {
 private:
   friend class AddressSpace;
   friend class ref<ObjectState>;
-
   unsigned copyOnWriteOwner; // exclusively for AddressSpace
 
   /// @brief Required by klee::ref-managed objects
@@ -190,6 +194,9 @@ private:
 
   // mutable because we may need flush during read of const
   mutable UpdateList updates;
+
+  // Probabilistic Execution State 
+  ProbExecState *prbState;
 
 public:
   unsigned size;

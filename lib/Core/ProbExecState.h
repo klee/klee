@@ -4,6 +4,7 @@
 #include "klee/Expr/Expr.h"
 
 #include <memory>
+#include <vector>
 #include <string>
 #include <unordered_map>
 
@@ -35,6 +36,9 @@ namespace klee {
         // TODO : Symbol table, somewhat
         std::unordered_map<std::string, std::string> symbolMapping;
 
+        // TODO : Store the probability distribution. 
+        std::vector<float> probability_dist = std::vector<float>();
+
         // State ID for unique uuid. 
         uint32_t stateId = 0;
 
@@ -47,7 +51,7 @@ namespace klee {
         // ETree node with this state, probably before a fork. 
         ETreeNode* treeNode = nullptr;
         
-        ProbExecState() = delete;
+        ProbExecState() {}
 
         ProbExecState(const ProbExecState &) {}
         ProbExecState(ProbExecState &&) {}
