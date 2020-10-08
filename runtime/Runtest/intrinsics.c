@@ -27,8 +27,8 @@ static unsigned testPosition = 0;
 
 static unsigned char rand_byte(void) {
   unsigned x = rand();
-  x ^= x>>16;
-  x ^= x>>8;
+  x ^= x >> 16;
+  x ^= x >> 8;
   return x & 0xFF;
 }
 
@@ -68,14 +68,14 @@ void klee_make_symbolic(void *array, size_t nbytes, const char *name) {
   }
 
   if (rand_init) {
-    if (!strcmp(name,"syscall_a0")) {
+    if (!strcmp(name, "syscall_a0")) {
       unsigned long long *v = array;
       assert(nbytes == 8);
       *v = rand() % 69;
     } else {
       char *c = array;
       size_t i;
-      for (i=0; i<nbytes; i++)
+      for (i = 0; i < nbytes; i++)
         c[i] = rand_byte();
     }
     return;
@@ -93,7 +93,7 @@ void klee_make_symbolic(void *array, size_t nbytes, const char *name) {
         fprintf(stderr, "KLEE-RUNTIME: cannot replay, no KTEST_FILE or user input\n");
         exit(1);
       }
-      tmp[strlen(tmp)-1] = '\0'; /* kill newline */
+      tmp[strlen(tmp) - 1] = '\0'; /* kill newline */
     }
     testData = kTest_fromFile(name);
     if (!testData) {
@@ -134,21 +134,17 @@ void klee_make_symbolic(void *array, size_t nbytes, const char *name) {
   }
 }
 
-void klee_silent_exit(int x) {
-  exit(x);
-}
+void klee_silent_exit(int x) { exit(x); }
 
 uintptr_t klee_choose(uintptr_t n) {
   uintptr_t x;
   klee_make_symbolic(&x, sizeof x, "klee_choose");
-  if(x >= n)
+  if (x >= n)
     report_internal_error("klee_choose failure. max = %ld, got = %ld\n", n, x);
   return x;
 }
 
-unsigned klee_is_replay() {
-  return 1;
-}
+unsigned klee_is_replay() { return 1; }
 
 void klee_assume(uintptr_t x) {
   if (!x) {
@@ -156,10 +152,8 @@ void klee_assume(uintptr_t x) {
   }
 }
 
-#define KLEE_GET_VALUE_STUB(suffix, type)	\
-	type klee_get_value##suffix(type x) { \
-		return x; \
-	}
+#define KLEE_GET_VALUE_STUB(suffix, type)                                      \
+  type klee_get_value##suffix(type x) { return x; }
 
 KLEE_GET_VALUE_STUB(f, float)
 KLEE_GET_VALUE_STUB(d, double)
@@ -170,23 +164,23 @@ KLEE_GET_VALUE_STUB(_i64, int64_t)
 
 #undef KLEE_GET_VALUE_STUB
 
-int klee_range(int begin, int end, const char* name) {
+int klee_range(int begin, int end, const char *name) {
   int x;
   klee_make_symbolic(&x, sizeof x, name);
-  if (x<begin || x>=end) {
+  if (x < begin || x >= end) {
     report_internal_error("invalid klee_range(%u,%u,%s) value, got: %u\n",
                           begin, end, name, x);
   }
   return x;
 }
 
-void klee_prefer_cex(void *object, uintptr_t condition) { }
+void klee_prefer_cex(void *object, uintptr_t condition) {}
 
-void klee_abort() {
-  abort();
-}
+void klee_abort() { abort(); }
 
-/* not sure we should even define.  is for debugging. */
-void klee_print_expr(const char *msg, ...) { }
+void klee_print_expr(const char *msg, ...) {}
 
-void klee_set_forking(unsigned enable) { }
+void klee_set_forking(unsigned enable) {}
+
+void klee_open_merge() {}
+void klee_close_merge() {}
