@@ -118,7 +118,8 @@ ObjectState::ObjectState(const ObjectState &os)
     flushMask(os.flushMask ? new BitArray(*os.flushMask, os.size) : 0),
     knownSymbolics(0),
     updates(os.updates),
-    prbState(new ProbExecState()),
+    // Update from ObjectState.
+    prbState(os.prbState), 
     size(os.size),
     readOnly(false) {
   assert(!os.readOnly && "no need to copy read only object?");
