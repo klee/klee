@@ -1214,6 +1214,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       return StatePair(0, 0);
     }
 
+
     return StatePair(trueState, falseState);
   }
 }
@@ -4105,13 +4106,14 @@ void Executor::runFunctionAsMain(Function *f,
   // Start with a dummy state. 
   ProbExecState *initState = new ProbExecState("Start", 0, nullptr);
   executionTree = std::make_unique<ETree>(initState);
-
   processTree = std::make_unique<PTree>(state);
+  
   run(*state);
-  processTree = nullptr;
-
   printETree();
 
+  processTree = nullptr;
+
+  delete initState;
   initState = nullptr;
   executionTree = nullptr;
 
