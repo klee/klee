@@ -38,18 +38,6 @@ ETree::ETree(ProbExecState *initState) {
         root->right = nullptr;
     }
 
-ETreeNode::~ETreeNode() {
-    delete this->state;
-}
-
-// This must delete all the nodes in the tree. 
-void ETree::deleteNodes() {
-    this->removeNode(this->root.get());
-    this->root = nullptr;
-    this->root.reset();
-    delete this->root.get();  
-}
-
 void ETree::forkState(ETreeNode *Node, bool forkflag, ProbExecState *leftState, ProbExecState *rightState) {
     // Fork the state, create a left and right side execution nodes. 
     assert(Node && !(Node->left.get()) && !(Node->right.get()));

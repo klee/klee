@@ -33,7 +33,7 @@ namespace klee {
 
         ETreeNode(const ETreeNode &) {}
         ETreeNode(ETreeNode &&) {}
-        ~ETreeNode();
+        ~ETreeNode() = default;
 
         explicit ETreeNode(ETreeNode* parent);
         ETreeNode(ETreeNode* parent, ProbExecState* state);
@@ -56,7 +56,7 @@ namespace klee {
         void forkState(ETreeNode* parentNode, bool flag, ProbExecState* leftState, ProbExecState* rightState);
         void removeNode(ETreeNode* delNode);
         void dumpETree(llvm::raw_ostream &fileptr);
-        void deleteNodes();
+        // void deleteNodes();
     };
 
 } // namespace klee

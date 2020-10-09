@@ -4113,8 +4113,6 @@ void Executor::runFunctionAsMain(Function *f,
 
   delete initState;
   initState = nullptr;
-
-  executionTree->deleteNodes();
   executionTree = nullptr;
 
   // hack to clear memory objects
