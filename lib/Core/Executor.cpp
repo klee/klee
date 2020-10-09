@@ -4022,8 +4022,6 @@ void Executor::runFunctionAsMain(Function *f,
   srandom(1);
   
   MemoryObject *argvMO = 0;
-  MemoryObject *argvPSEMO = 0;
-
   // In order to make uclibc happy and be closer to what the system is
   // doing we lay out the environments at the end of the argv array
   // (both are terminated by a null). There is also a final terminating
@@ -4115,6 +4113,8 @@ void Executor::runFunctionAsMain(Function *f,
 
   delete initState;
   initState = nullptr;
+
+  executionTree->deleteNodes();
   executionTree = nullptr;
 
   // hack to clear memory objects
