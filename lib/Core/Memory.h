@@ -195,11 +195,11 @@ private:
   // mutable because we may need flush during read of const
   mutable UpdateList updates;
 
-  // Probabilistic Execution State 
-  ProbExecState *prbState;
-
 public:
   unsigned size;
+
+  // Probabilistic Execution State 
+  ProbExecState *prbState;
 
   bool readOnly;
 
