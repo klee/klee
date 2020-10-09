@@ -82,6 +82,7 @@ ObjectState::ObjectState(const MemoryObject *mo)
     flushMask(0),
     knownSymbolics(0),
     updates(0, 0),
+    prbState(nullptr),
     size(mo->size),
     readOnly(false) {
   if (!UseConstantArrays) {
@@ -91,7 +92,6 @@ ObjectState::ObjectState(const MemoryObject *mo)
     updates = UpdateList(array, 0);
   }
   memset(concreteStore, 0, size);
-  this->prbState = new ProbExecState();
 }
 
 
@@ -103,11 +103,11 @@ ObjectState::ObjectState(const MemoryObject *mo, const Array *array)
     flushMask(0),
     knownSymbolics(0),
     updates(array, 0),
+    prbState(nullptr),
     size(mo->size),
     readOnly(false) {
   makeSymbolic();
   memset(concreteStore, 0, size);
-  this->prbState = new ProbExecState();
 }
 
 ObjectState::ObjectState(const ObjectState &os) 
@@ -118,6 +118,7 @@ ObjectState::ObjectState(const ObjectState &os)
     flushMask(os.flushMask ? new BitArray(*os.flushMask, os.size) : 0),
     knownSymbolics(0),
     updates(os.updates),
+    prbState(nullptr),
     size(os.size),
     readOnly(false) {
   assert(!os.readOnly && "no need to copy read only object?");
@@ -128,11 +129,6 @@ ObjectState::ObjectState(const ObjectState &os)
   }
 
   memcpy(concreteStore, os.concreteStore, size*sizeof(*concreteStore));
-  this->prbState = new ProbExecState();
-
-  if (os.prbState != nullptr) {
-    this->prbState = os.prbState;
-  }
 }
 
 ObjectState::~ObjectState() {
