@@ -4,12 +4,14 @@ required_variables_klee=(
   "KLEE_RUNTIME_BUILD"
   "USE_TCMALLOC"
   "USE_LIBCXX"
+  "ENABLE_DOXYGEN"
 )
 
 required_variables_check_klee() {
   check_bool "COVERAGE"
   check_bool "USE_TCMALLOC"
   check_bool "USE_LIBCXX"
+  check_bool "ENABLE_DOXYGEN"
 }
 
 # On which artifacts does KLEE depend on
