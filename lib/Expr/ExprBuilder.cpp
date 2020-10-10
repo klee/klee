@@ -327,7 +327,7 @@ namespace {
                            const ref<Expr> &Index) {
       // Roll back through writes when possible.
       auto UN = Updates.head;
-      while (!UN.isNull() && Eq(Index, UN->index)->isFalse())
+      while (UN && Eq(Index, UN->index)->isFalse())
         UN = UN->next;
 
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(Index))

@@ -13,7 +13,7 @@ using namespace klee;
 
 ExprVisitor::Action ExprEvaluator::evalRead(const UpdateList &ul,
                                             unsigned index) {
-  for (auto un = ul.head; !un.isNull(); un = un->next) {
+  for (auto un = ul.head; un; un = un->next) {
     ref<Expr> ui = visit(un->index);
     
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(ui)) {

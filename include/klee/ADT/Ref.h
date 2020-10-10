@@ -217,6 +217,7 @@ public:
   }
 
   bool isNull() const { return ptr == nullptr; }
+  explicit operator bool() const noexcept { return !isNull(); }
 
   // assumes non-null arguments
   int compare(const ref &rhs) const {
@@ -245,12 +246,12 @@ inline std::stringstream &operator<<(std::stringstream &os, const ref<T> &e) {
 } // end namespace klee
 
 namespace llvm {
-  // simplify_type implementation for ref<>, which allows dyn_cast from on a
-  // ref<> to apply to the wrapper type. Conceptually the result of such a
-  // dyn_cast should probably be a ref of the casted type, but that breaks the
-  // idiom of initializing a variable to the result of a dyn_cast inside an if
-  // condition, or we would have to implement operator(bool) for ref<> with
-  // isNull semantics, which doesn't seem like a good idea.
+// simplify_type implementation for ref<>, which allows dyn_cast on a
+// ref<> to apply to the wrapper type. Conceptually the result of such a
+// dyn_cast should probably be a ref of the casted type, which historically
+// was breaking the idiom of initializing a variable to the result of a dyn_cast
+// inside an if condition, as ref<> did not have an operator bool() with isNull
+// semantics.
 template<typename T>
 struct simplify_type<const ::klee::ref<T> > {
   using SimpleType = T *;
