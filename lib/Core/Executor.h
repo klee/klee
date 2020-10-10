@@ -136,7 +136,8 @@ private:
   
   /// This is a custom dummy Execution Tree. 
   std::unique_ptr<ETree> executionTree;
-
+  std::vector<ProbExecState *> allProbState;
+  
   /// Used to track states that have been added during the current
   /// instructions step. 
   /// \invariant \ref addedStates is a subset of \ref states. 

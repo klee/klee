@@ -926,10 +926,15 @@ void Executor::branch(ExecutionState &state,
       processTree->attach(es->ptreeNode, ns, es);
 
       // FIXME : Update current & flag properly after fork state. 
+      // FIXME : Memleak issue. Delete the state properly on Terminate.
       int flag = (&state == result.back()) ? 1 : 0;
-      executionTree->forkState(executionTree->current.get(), flag,
-                        new ProbExecState("left", (int) stats::instructions, nullptr), 
-                        new ProbExecState("right", (int) stats::instructions, nullptr));
+
+      ProbExecState *leftState = new ProbExecState("branch_left", (int)stats::instructions, nullptr);
+      ProbExecState *rightState = new ProbExecState("branch_right", (int)stats::instructions, nullptr);
+      
+      allProbState.emplace_back(leftState);
+      allProbState.emplace_back(rightState);
+      executionTree->forkState(executionTree->current.get(), flag, leftState, rightState);
     }
   }
 
@@ -1170,7 +1175,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
     processTree->attach(current.ptreeNode, falseState, trueState);
     
-
     // FIXME : Update current and flag properly after fork state. 
     int flag = res==Solver::True ? 1 : 0;
     
@@ -1178,13 +1182,19 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     const InstructionInfo &ii = getLastNonKleeInternalInstruction(current, &lastInst);
 
     if (setSourceCodeFlow) {
-    executionTree->forkState(executionTree->current.get(), flag,
-                    new ProbExecState("true", ii.line, nullptr), 
-                    new ProbExecState("false", ii.line, nullptr));
+      ProbExecState *leftState = new ProbExecState("fork_left_asm", ii.line, nullptr);
+      ProbExecState *rightState = new ProbExecState("fork_right_asm", ii.line, nullptr);
+        
+      allProbState.emplace_back(leftState);
+      allProbState.emplace_back(rightState);
+      executionTree->forkState(executionTree->current.get(), flag, leftState, rightState);
     } else {
-    executionTree->forkState(executionTree->current.get(), flag,
-                    new ProbExecState("true", (int) stats::instructions, nullptr), 
-                    new ProbExecState("false", (int) stats::instructions, nullptr));
+      ProbExecState *leftState = new ProbExecState("fork_left_inst", (int)stats::instructions, nullptr);
+      ProbExecState *rightState = new ProbExecState("fork_right_inst", (int)stats::instructions, nullptr);
+        
+      allProbState.emplace_back(leftState);
+      allProbState.emplace_back(rightState);
+      executionTree->forkState(executionTree->current.get(), flag, leftState, rightState);
     }
 
     if (pathWriter) {
@@ -3234,7 +3244,7 @@ void Executor::terminateState(ExecutionState &state) {
 
   std::vector<ExecutionState *>::iterator it =
       std::find(addedStates.begin(), addedStates.end(), &state);
-  if (it==addedStates.end()) {
+  if (it == addedStates.end()) {
     state.pc = state.prevPC;
 
     removedStates.push_back(&state);
@@ -4103,16 +4113,22 @@ void Executor::runFunctionAsMain(Function *f,
   
   // Start with a dummy state. 
   ProbExecState *initState = new ProbExecState("Start", 0, nullptr);
+
+  allProbState.emplace_back(initState);
   executionTree = std::make_unique<ETree>(initState);
   processTree = std::make_unique<PTree>(state);
   
   run(*state);
   printETree();
 
-  processTree = nullptr;
+  // Delete all the dummy states we made as of now. 
+  // Later it needs to be deleted on removal of ETree Nodes. 
+  for (ProbExecState* x : allProbState) {
+    x = nullptr;
+    delete x;
+  }
 
-  delete initState;
-  initState = nullptr;
+  processTree = nullptr;
   executionTree = nullptr;
 
   // hack to clear memory objects
