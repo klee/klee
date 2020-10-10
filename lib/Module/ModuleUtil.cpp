@@ -263,7 +263,14 @@ Function *klee::getDirectCallTarget(
   // Walk through aliases and bitcasts to try to find
   // the function being called.
   do {
-    if (Function *f = dyn_cast<Function>(v)) {
+    if (isa<llvm::GlobalVariable>(v)) {
+      // We don't care how we got this GlobalVariable
+      viaConstantExpr = false;
+
+      // Global variables won't be a direct call target. Instead, their
+      // value need to be read and is handled as indirect call target.
+      v = nullptr;
+    } else if (Function *f = dyn_cast<Function>(v)) {
       return f;
     } else if (llvm::GlobalAlias *ga = dyn_cast<GlobalAlias>(v)) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
@@ -273,22 +280,22 @@ Function *klee::getDirectCallTarget(
 #endif
         v = ga->getAliasee();
       } else {
-        v = NULL;
+        v = nullptr;
       }
     } else if (llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(v)) {
       viaConstantExpr = true;
       v = ce->getOperand(0)->stripPointerCasts();
     } else {
-      v = NULL;
+      v = nullptr;
     }
-  } while (v != NULL);
+  } while (v != nullptr);
 
   // NOTE: This assert may fire, it isn't necessarily a problem and
   // can be disabled, I just wanted to know when and if it happened.
   (void) viaConstantExpr;
   assert((!viaConstantExpr) &&
          "FIXME: Unresolved direct target for a constant expression");
-  return NULL;
+  return nullptr;
 }
 
 static bool valueIsOnlyCalled(const Value *v) {
