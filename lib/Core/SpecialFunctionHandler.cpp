@@ -464,7 +464,7 @@ void SpecialFunctionHandler::handleEhUnwindRaiseExceptionImpl(
          "invalid number of arguments to _klee_eh_Unwind_RaiseException_impl");
 
   ref<ConstantExpr> exceptionObject = dyn_cast<ConstantExpr>(arguments[0]);
-  if (!exceptionObject.get()) {
+  if (!exceptionObject) {
     executor.terminateStateOnError(state,
                                    "Internal error: Symbolic exception pointer",
                                    Executor::Unhandled);

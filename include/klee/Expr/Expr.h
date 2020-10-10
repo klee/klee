@@ -553,9 +553,7 @@ public:
   UpdateList &operator=(const UpdateList &b) = default;
 
   /// size of this update list
-  unsigned getSize() const {
-    return (head.get() != nullptr ? head->getSize() : 0);
-  }
+  unsigned getSize() const { return head ? head->getSize() : 0; }
 
   void extend(const ref<Expr> &index, const ref<Expr> &value);
 
