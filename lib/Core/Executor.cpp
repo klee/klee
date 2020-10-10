@@ -1420,7 +1420,7 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       break;
     case Intrinsic::fabs: {
       ref<ConstantExpr> arg =
-          toConstant(state, eval(ki, 0, state).value, "floating point");
+          toConstant(state, arguments[0], "floating point");
       if (!fpWidthToSemantics(arg->getWidth()))
         return terminateStateOnExecError(
             state, "Unsupported intrinsic llvm.fabs call");
@@ -2464,6 +2464,20 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
     // Floating point instructions
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
+  case Instruction::FNeg: {
+    ref<ConstantExpr> arg =
+        toConstant(state, eval(ki, 0, state).value, "floating point");
+    if (!fpWidthToSemantics(arg->getWidth()))
+      return terminateStateOnExecError(state, "Unsupported FNeg operation");
+
+    llvm::APFloat Res(*fpWidthToSemantics(arg->getWidth()), arg->getAPValue());
+    Res = llvm::neg(Res);
+    bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+    break;
+  }
+#endif
 
   case Instruction::FAdd: {
     ref<ConstantExpr> left = toConstant(state, eval(ki, 0, state).value,
