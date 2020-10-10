@@ -16,11 +16,11 @@
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/AssignmentGenerator.h"
 #include "klee/Expr/ExprBuilder.h"
-#include "klee/Support/OptionCategories.h"
+#include "klee/Support/Casting.h"
 #include "klee/Support/ErrorHandling.h"
+#include "klee/Support/OptionCategories.h"
 
 #include <llvm/ADT/APInt.h>
-#include <llvm/Support/Casting.h>
 #include <llvm/Support/CommandLine.h>
 
 #include <algorithm>

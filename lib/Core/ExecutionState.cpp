@@ -16,6 +16,7 @@
 #include "klee/Module/InstructionInfoTable.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
+#include "klee/Support/Casting.h"
 #include "klee/Support/OptionCategories.h"
 
 #include "llvm/IR/Function.h"
@@ -342,7 +343,7 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
       out << ai->getName().str();
       // XXX should go through function
       ref<Expr> value = sf.locals[sf.kf->getArgRegister(index++)].value;
-      if (value.get() && isa<ConstantExpr>(value))
+      if (isa_and_nonnull<ConstantExpr>(value))
         out << "=" << value;
     }
     out << ")";

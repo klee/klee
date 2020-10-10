@@ -9,8 +9,9 @@
 
 #include "Passes.h"
 
-#include "klee/Support/OptionCategories.h"
+#include "klee/Support/Casting.h"
 #include "klee/Support/ErrorHandling.h"
+#include "klee/Support/OptionCategories.h"
 
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/Support/CommandLine.h"
@@ -221,13 +222,10 @@ bool FunctionAliasPass::tryToReplace(GlobalValue *match,
 }
 
 bool FunctionAliasPass::isFunctionOrGlobalFunctionAlias(const GlobalValue *gv) {
-  if (gv == nullptr)
-    return false;
-
-  if (isa<Function>(gv))
+  if (isa_and_nonnull<Function>(gv))
     return true;
 
-  if (const auto *ga = dyn_cast<GlobalAlias>(gv)) {
+  if (const auto *ga = dyn_cast_or_null<GlobalAlias>(gv)) {
     const auto *aliasee = dyn_cast<GlobalValue>(ga->getAliasee());
     if (!aliasee) {
       // check if GlobalAlias is alias bitcast
