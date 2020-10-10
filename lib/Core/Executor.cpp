@@ -25,6 +25,7 @@
 #include "TimingSolver.h"
 #include "UserSearcher.h"
 
+#include "klee/ADT/KTest.h"
 #include "klee/ADT/RNG.h"
 #include "klee/Config/Version.h"
 #include "klee/Core/Interpreter.h"
@@ -34,20 +35,20 @@
 #include "klee/Expr/ExprPPrinter.h"
 #include "klee/Expr/ExprSMTLIBPrinter.h"
 #include "klee/Expr/ExprUtil.h"
-#include "klee/Solver/Common.h"
-#include "klee/ADT/KTest.h"
-#include "klee/Support/OptionCategories.h"
-#include "klee/Statistics/TimerStatIncrementer.h"
 #include "klee/Module/Cell.h"
 #include "klee/Module/InstructionInfoTable.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
+#include "klee/Solver/Common.h"
 #include "klee/Solver/SolverCmdLine.h"
 #include "klee/Solver/SolverStats.h"
+#include "klee/Statistics/TimerStatIncrementer.h"
+#include "klee/Support/Casting.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/FileHandling.h"
 #include "klee/Support/FloatEvaluation.h"
 #include "klee/Support/ModuleUtil.h"
+#include "klee/Support/OptionCategories.h"
 #include "klee/System/MemoryUsage.h"
 #include "klee/System/Time.h"
 
@@ -1651,7 +1652,7 @@ ref<klee::ConstantExpr> Executor::getEhTypeidFor(ref<Expr> type_info) {
 void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
                            std::vector<ref<Expr>> &arguments) {
   Instruction *i = ki->inst;
-  if (i && isa<DbgInfoIntrinsic>(i))
+  if (isa_and_nonnull<DbgInfoIntrinsic>(i))
     return;
   if (f && f->isDeclaration()) {
     switch (f->getIntrinsicID()) {

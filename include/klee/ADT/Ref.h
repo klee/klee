@@ -29,12 +29,7 @@
 #ifndef KLEE_REF_H
 #define KLEE_REF_H
 
-#include "llvm/Support/Casting.h"
-using llvm::isa;
-using llvm::cast;
-using llvm::cast_or_null;
-using llvm::dyn_cast;
-using llvm::dyn_cast_or_null;
+#include "klee/Support/Casting.h"
 
 #include <cassert>
 #include <iosfwd> // FIXME: Remove this when LLVM 4.0 support is removed!!!

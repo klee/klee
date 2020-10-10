@@ -21,6 +21,7 @@
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
 #include "klee/Solver/SolverCmdLine.h"
+#include "klee/Support/Casting.h"
 #include "klee/Support/Debug.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/OptionCategories.h"
@@ -471,8 +472,8 @@ void SpecialFunctionHandler::handleEhUnwindRaiseExceptionImpl(
     return;
   }
 
-  if (state.unwindingInformation &&
-      isa<SearchPhaseUnwindingInformation>(state.unwindingInformation.get())) {
+  if (isa_and_nonnull<SearchPhaseUnwindingInformation>(
+          state.unwindingInformation.get())) {
     executor.terminateStateOnExecError(
         state,
         "Internal error: Unwinding restarted during an ongoing search phase");

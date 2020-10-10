@@ -8,8 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Expr/ExprSMTLIBPrinter.h"
+#include "klee/Support/Casting.h"
 
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 

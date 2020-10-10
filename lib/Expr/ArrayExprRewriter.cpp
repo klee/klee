@@ -11,9 +11,9 @@
 
 #include "klee/ADT/BitArray.h"
 #include "klee/Expr/ArrayExprVisitor.h"
+#include "klee/Support/Casting.h"
 
 #include <llvm/ADT/APInt.h>
-#include <llvm/Support/Casting.h>
 
 #include <cassert>
 #include <cstdint>
