@@ -33,7 +33,6 @@ struct KFunction;
 struct KInstruction;
 class MemoryObject;
 class PTreeNode;
-class ETreeNode;
 struct InstructionInfo;
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const MemoryMap &mm);
@@ -203,9 +202,6 @@ public:
   /// Copies of ExecutionState should not copy ptreeNode
   PTreeNode *ptreeNode = nullptr;
 
-  /// @brief Pointer to the current Dummy execution tree. 
-  ETreeNode *etreeNode = nullptr;
-  
   /// @brief Ordered list of symbolics: used to generate test cases.
   //
   // FIXME: Move to a shared list structure (not critical).

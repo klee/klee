@@ -1182,6 +1182,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     processTree->attach(current.ptreeNode, falseState, trueState);
     
     // FIXME : Update current and flag properly after fork state. 
+    // FIXME : Breaks Address Sanitizer Tests. Fix this. Don't create states here. 
     int flag = res==Solver::True ? 1 : 0;
     
     Instruction* lastInst;
