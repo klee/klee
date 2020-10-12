@@ -17,31 +17,30 @@ namespace klee {
 
     /**
      * Class for nodes of ETree.
-     * stores parent, left, right and some state data in each node. 
+     * stores parent, left, right and ProbStatePtr data in each node. 
      * ETreeNodePtr is std::shared_ptr<ETreeNode>
     */
     class ETreeNode {
         public:
 
-        ETreeNode *parent = nullptr;
+        ETreeNodePtr parent = nullptr;
         ETreeNodePtr left = nullptr;
         ETreeNodePtr right = nullptr;
-        
-        ProbExecState *state = nullptr;
+        ProbStatePtr state = nullptr;
 
         ETreeNode() = delete;
-
         ETreeNode(const ETreeNode &) {}
         ETreeNode(ETreeNode &&) {}
         ~ETreeNode() = default;
 
-        explicit ETreeNode(ETreeNode* parent);
-        ETreeNode(ETreeNode* parent, ProbExecState* state);
-        ETreeNode(ETreeNode* parent, ProbExecState* state, ETreeNode* left, ETreeNode* right);
+        explicit ETreeNode(ETreeNodePtr parent);
+        explicit ETreeNode(ProbStatePtr state);
+        ETreeNode(ETreeNodePtr parent, ProbStatePtr state);
+        ETreeNode(ETreeNodePtr parent, ProbStatePtr state, ETreeNodePtr left, ETreeNodePtr right);
     };
 
     /**
-     * Class for ETree definition. Execution Tree.
+     * Class for ETree definition. Prob Execution Tree for forks and branches
      * Objective is to print the ETree dump when executing a testcase. 
     */
     class ETree {
@@ -50,13 +49,12 @@ namespace klee {
         ETreeNodePtr current = nullptr;
         
         ETree() = delete;
-        explicit ETree(ProbExecState *state);
+        explicit ETree(ProbStatePtr state);
         ~ETree() = default;
 
-        void forkState(ETreeNode* parentNode, bool flag, ProbExecState* leftState, ProbExecState* rightState);
-        void removeNode(ETreeNode* delNode);
+        void forkState(ETreeNodePtr parentNode, bool flag, ProbStatePtr leftState, ProbStatePtr rightState);
+        void removeNode(ETreeNodePtr delNode);
         void dumpETree(llvm::raw_ostream &fileptr);
-        // void deleteNodes();
     };
 
 } // namespace klee

@@ -32,11 +32,6 @@ class ExecutionState;
 class MemoryManager;
 class Solver;
 
-// Only for a PSE Variable do e have a ProbExecState 
-// where we intend to define a the values of our distributions. 
-// Uniform Distribution values assumed. 
-class ProbExecState;
-
 class MemoryObject {
   friend class STPBuilder;
   friend class ObjectState;
@@ -197,9 +192,6 @@ private:
 
 public:
   unsigned size;
-
-  // Probabilistic Execution State 
-  ProbExecState *prbState;
 
   bool readOnly;
 

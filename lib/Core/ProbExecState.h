@@ -18,10 +18,12 @@ namespace klee {
     class ETreeNode;
     
     using ETreeNodePtr = std::shared_ptr<ETreeNode>;
+    using ProbStatePtr = std::shared_ptr<ProbExecState>;
 
     /**
-     * Store some custom State data in the 
-     * tree ndoes for ETree. Stores probabilistic data. 
+     * Store probabilistic data (similar to ExecutionState) in the 
+     * tree ndoes for ETree. Will be modified to contain VariableInfo 
+     * per state later on. 
     */
     class ProbExecState {
         public:
@@ -49,7 +51,7 @@ namespace klee {
         uint32_t codeLine = 0;
 
         // ETree node with this state, probably before a fork. 
-        ETreeNode* treeNode = nullptr;
+        ETreeNodePtr treeNode = nullptr;
         
         ProbExecState() {}
 
@@ -58,9 +60,14 @@ namespace klee {
         ~ProbExecState() = default;
        
         ProbExecState(std::string data, uint32_t stateId);
-        ProbExecState(std::string data, uint32_t stateId, ETreeNode* treeNode);
+        ProbExecState(std::string data, uint32_t stateId, ETreeNodePtr treeNode);
 
-        ProbExecState(bool forkflag, std::string data, uint32_t stateId, uint32_t assemblyLine, uint32_t codeLine, ETreeNode* treeNode);
+        ProbExecState(bool forkflag, 
+                    std::string data, 
+                    uint32_t stateId, 
+                    uint32_t assemblyLine, 
+                    uint32_t codeLine, 
+                ETreeNodePtr treeNode);
     };
 
 } // namespace klee

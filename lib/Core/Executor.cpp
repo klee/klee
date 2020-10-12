@@ -929,12 +929,9 @@ void Executor::branch(ExecutionState &state,
       // FIXME : Memleak issue. Delete the state properly on Terminate.
       int flag = (&state == result.back()) ? 1 : 0;
 
-      ProbExecState *leftState = new ProbExecState("branch_left", (int)stats::instructions, nullptr);
-      ProbExecState *rightState = new ProbExecState("branch_right", (int)stats::instructions, nullptr);
-      
-      allProbState.emplace_back(leftState);
-      allProbState.emplace_back(rightState);
-      executionTree->forkState(executionTree->current.get(), flag, leftState, rightState);
+      ProbStatePtr leftState = std::make_shared<ProbExecState>("branch_left", (int)stats::instructions, nullptr);
+      ProbStatePtr rightState = std::make_shared<ProbExecState>("branch_right", (int)stats::instructions, nullptr);      
+      executionTree->forkState(executionTree->current, flag, leftState, rightState);
     }
   }
 
@@ -1182,19 +1179,13 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     const InstructionInfo &ii = getLastNonKleeInternalInstruction(current, &lastInst);
 
     if (setSourceCodeFlow) {
-      ProbExecState *leftState = new ProbExecState("fork_left_asm", ii.line, nullptr);
-      ProbExecState *rightState = new ProbExecState("fork_right_asm", ii.line, nullptr);
-        
-      allProbState.emplace_back(leftState);
-      allProbState.emplace_back(rightState);
-      executionTree->forkState(executionTree->current.get(), flag, leftState, rightState);
+      ProbStatePtr leftState = std::make_shared<ProbExecState>("fork_left_asm", ii.line, nullptr);
+      ProbStatePtr rightState = std::make_shared<ProbExecState>("fork_right_asm", ii.line, nullptr);
+      executionTree->forkState(executionTree->current, flag, leftState, rightState);
     } else {
-      ProbExecState *leftState = new ProbExecState("fork_left_inst", (int)stats::instructions, nullptr);
-      ProbExecState *rightState = new ProbExecState("fork_right_inst", (int)stats::instructions, nullptr);
-        
-      allProbState.emplace_back(leftState);
-      allProbState.emplace_back(rightState);
-      executionTree->forkState(executionTree->current.get(), flag, leftState, rightState);
+      ProbStatePtr leftState = std::make_shared<ProbExecState>("fork_left_inst", (int)stats::instructions, nullptr);
+      ProbStatePtr rightState = std::make_shared<ProbExecState>("fork_right_inst", (int)stats::instructions, nullptr);
+      executionTree->forkState(executionTree->current, flag, leftState, rightState);
     }
 
     if (pathWriter) {
@@ -3961,76 +3952,9 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
 void Executor::executeMakeProbSymbolic(ExecutionState &state, 
                                    const MemoryObject *mo,
                                    const std::string &name) {
-  // Create a new object state for the memory object (instead of a copy).
-  if (!replayKTest) {
-    // Find a unique name for this array.  First try the original name,
-    // or if that fails try adding a unique identifier.
-    unsigned id = 0;
-    std::string uniqueName = name;
-    while (!state.arrayNames.insert(uniqueName).second) {
-      uniqueName = name + "_pse_" + llvm::utostr(++id);
-    }
-    const Array *array = arrayCache.CreateArray(uniqueName, mo->size);
-    bindObjectInState(state, mo, false, array);
-    state.addSymbolic(mo, array);
-    
-    std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it = 
-      seedMap.find(&state);
-    if (it!=seedMap.end()) { // In seed mode we need to add this as a
-                             // binding.
-      for (std::vector<SeedInfo>::iterator siit = it->second.begin(), 
-             siie = it->second.end(); siit != siie; ++siit) {
-        SeedInfo &si = *siit;
-        KTestObject *obj = si.getNextInput(mo, NamedSeedMatching);
-
-        if (!obj) {
-          if (ZeroSeedExtension) {
-            std::vector<unsigned char> &values = si.assignment.bindings[array];
-            values = std::vector<unsigned char>(mo->size, '\0');
-          } else if (!AllowSeedExtension) {
-            terminateStateOnError(state, "ran out of inputs during seeding",
-                                  User);
-            break;
-          }
-        } else {
-          if (obj->numBytes != mo->size &&
-              ((!(AllowSeedExtension || ZeroSeedExtension)
-                && obj->numBytes < mo->size) ||
-               (!AllowSeedTruncation && obj->numBytes > mo->size))) {
-	    std::stringstream msg;
-	    msg << "replace size mismatch: "
-		<< mo->name << "[" << mo->size << "]"
-		<< " vs " << obj->name << "[" << obj->numBytes << "]"
-		<< " in test\n";
-
-            terminateStateOnError(state, msg.str(), User);
-            break;
-          } else {
-            std::vector<unsigned char> &values = si.assignment.bindings[array];
-            values.insert(values.begin(), obj->bytes, 
-                          obj->bytes + std::min(obj->numBytes, mo->size));
-            if (ZeroSeedExtension) {
-              for (unsigned i=obj->numBytes; i<mo->size; ++i)
-                values.push_back('\0');
-            }
-          }
-        }
-      }
-    }
-  } else {
-    ObjectState *os = bindObjectInState(state, mo, false);
-    if (replayPosition >= replayKTest->numObjects) {
-      terminateStateOnError(state, "replay count mismatch", User);
-    } else {
-      KTestObject *obj = &replayKTest->objects[replayPosition++];
-      if (obj->numBytes != mo->size) {
-        terminateStateOnError(state, "replay size mismatch", User);
-      } else {
-        for (unsigned i=0; i<mo->size; i++)
-          os->write8(i, obj->bytes[i]);
-      }
-    }
-  }
+  
+  // TODO : Add to hashmap, update VariableInfo. 
+  executeMakeSymbolic(state, mo, name);
 }
 
 /***/
@@ -4126,24 +4050,16 @@ void Executor::runFunctionAsMain(Function *f,
   initializeGlobals(*state);
   
   // Start with a dummy state. 
-  ProbExecState *initState = new ProbExecState("Start", 0, nullptr);
+  ProbStatePtr initState = std::make_shared<ProbExecState>("Start", 0, nullptr);
 
-  allProbState.emplace_back(initState);
+  // Execution Tree INIT
   executionTree = std::make_unique<ETree>(initState);
   processTree = std::make_unique<PTree>(state);
   
   run(*state);
   printETree();
 
-  // Delete all the dummy states we made as of now. 
-  // Later it needs to be deleted on removal of ETree Nodes. 
-  for (ProbExecState* x : allProbState) {
-    x = nullptr;
-    delete x;
-  }
-
   processTree = nullptr;
-  executionTree = nullptr;
 
   // hack to clear memory objects
   delete memory;

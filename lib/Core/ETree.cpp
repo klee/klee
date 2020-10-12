@@ -7,83 +7,83 @@
 using namespace klee;
 using namespace llvm;
 
-ETreeNode::ETreeNode(ETreeNode* parent)
-    : parent{parent} {
-        this->left = nullptr;
-        this->right = nullptr;
-        this->state = nullptr;
+ETreeNode::ETreeNode(ETreeNodePtr parent)
+    : parent(parent) {
+
     }
 
-ETreeNode::ETreeNode(ETreeNode* parent, ProbExecState* state) : 
-    parent{parent}, 
-    state{state} {
-        this->left = nullptr;
-        this->right = nullptr;
+ETreeNode::ETreeNode(ProbStatePtr state)
+    : state(state) {
+
     }
 
-// No Forking, this adds extra redundent nodes. 
-ETreeNode::ETreeNode(ETreeNode* parent, ProbExecState* state, ETreeNode* left, ETreeNode* right) :
-    parent{parent}, 
-    left{ETreeNodePtr(left)}, 
-    right{ETreeNodePtr(right)}, 
-    state{state} {
+ETreeNode::ETreeNode(ETreeNodePtr parent, ProbStatePtr state) : 
+    parent(parent), 
+    state(state) {
+
+    }
+
+ETreeNode::ETreeNode(ETreeNodePtr parent, ProbStatePtr state, ETreeNodePtr left, ETreeNodePtr right) :
+    parent(parent), 
+    left(left), 
+    right(right), 
+    state(state) {
 
 }
 
-ETree::ETree(ProbExecState *initState) {
-        ETreeNode* rootNode = new ETreeNode(nullptr, initState);
-        root = ETreeNodePtr(rootNode);
+ETree::ETree(ProbStatePtr initState) {
+        root = std::make_shared<ETreeNode>(initState);
         current = root;
         root->left = nullptr;
         root->right = nullptr;
     }
 
-void ETree::forkState(ETreeNode *Node, bool forkflag, ProbExecState *leftState, ProbExecState *rightState) {
+void ETree::forkState(ETreeNodePtr Node, bool forkflag, ProbStatePtr leftState, ProbStatePtr rightState) {
     // Fork the state, create a left and right side execution nodes. 
-    assert(Node && !(Node->left.get()) && !(Node->right.get()));
-    ETreeNode* tempLeft = new ETreeNode(Node, leftState);
-    ETreeNode* tempRight = new ETreeNode(Node, rightState);
+    assert(Node.get() && !(Node.get()->left.get()) && !(Node.get()->right.get()));
 
-    Node->state->data = Node->state->data == "Start" ? "Start" : "Forked";
+    Node.get()->state.get()->data = Node.get()->state.get()->data == "Start" ? "Start" : "Forked";
 
-    Node->left = ETreeNodePtr(tempLeft);
-    Node->right = ETreeNodePtr(tempRight);
+    Node.get()->left = std::make_shared<ETreeNode>(Node, leftState);
+    Node.get()->right = std::make_shared<ETreeNode>(Node, rightState);
 
-    if (!leftState->treeNode) {
-        leftState->treeNode = (tempLeft);
+    if (!leftState.get()->treeNode) {
+        leftState.get()->treeNode = Node.get()->left;
     }
 
-    if (!rightState->treeNode) {
-        rightState->treeNode = (tempRight);
+    if (!rightState.get()->treeNode) {
+        rightState.get()->treeNode = Node.get()->right;
     }
 
     // We took a same decision as the PTree.cpp implementation.
     // Based on the Solver result. (trueNode or falseNode)
-    this->current = forkflag ? Node->left : Node->right;
+    this->current = forkflag ? Node.get()->left : Node.get()->right;
 }
 
-void ETree::removeNode(ETreeNode *delNode) {
-    // Remove a ETreeNode from the ETree
-    if (!delNode) return;
-    // assert(delNode && !(delNode->right.get()) && !(delNode->left.get()));
+void ETree::removeNode(ETreeNodePtr delNode) {
+    // // Remove a ETreeNode from the ETree
+    if (!(delNode.get())) return;
+    assert(delNode.get() && !(delNode.get()->right.get()) && !(delNode.get()->left.get()));
+    
     do {
         // Must update the parent node accordingly. 
-        ETreeNode *temp = delNode->parent;
-        if (temp) {
-            if (delNode == temp->left.get()) {
+        ETreeNodePtr temp = delNode->parent;
+        if (temp.get()) {
+            if (delNode == temp.get()->left) {
                 // We are on the left side.
-                temp->left.reset();
-                temp->left = nullptr;
+                temp.get()->left.reset();
+                temp.get()->left = nullptr;
             } else {
                 // null it if the assert for right check passes. 
-                assert(delNode == temp->right.get());
-                temp->right.reset();
-                temp->right = nullptr;
+                assert(delNode == temp.get()->right);
+                temp.get()->right.reset();
+                temp.get()->right = nullptr;
             }
         }
-        delete delNode;
+
+        delNode.reset();
         delNode = temp;
-    } while (delNode && !delNode->right.get() && !delNode->left.get());
+    } while (delNode.get() && !(delNode.get()->right.get()) && !(delNode.get()->left.get()));
 }
         
 void ETree::dumpETree(llvm::raw_ostream &fileptr) {
@@ -106,27 +106,27 @@ void ETree::dumpETree(llvm::raw_ostream &fileptr) {
         const ETreeNode *current = processing_stack.back();
         processing_stack.pop_back();
         fileptr << "\t"; 
-        current->state ? 
-                fileptr << "\"" << current->state->stateId << ", " << current->state->data << "\"" 
+        current->state.get() ? 
+                fileptr << "\"" << current->state.get()->stateId << ", " << current->state.get()->data << "\"" 
             :   fileptr << "no_state";
         fileptr << " [shape=ellipse, color=" << color << "];\n";
         
         // If node has left, process left. 
         if (current->left.get()) {
-            fileptr << "\t" << "\"" << current->state->stateId << ", " << current->state->data << "\"" << " -> ";
-            fileptr << "\"" << current->left.get()->state->stateId;
+            fileptr << "\t" << "\"" << current->state.get()->stateId << ", " << current->state.get()->data << "\"" << " -> ";
+            fileptr << "\"" << current->left.get()->state.get()->stateId;
             fileptr << ", ";
-            fileptr << current->left.get()->state->data << "\"";
+            fileptr << current->left.get()->state.get()->data << "\"";
             fileptr << " [label=L, color=green];\n";
             processing_stack.emplace_back(current->left.get());
         }
 
         // If node has right side, process right side. 
         if (current->right.get()) {
-            fileptr << "\t" << "\"" << current->state->stateId << ", " << current->state->data << "\"" << " -> ";
-            fileptr << "\"" << current->right.get()->state->stateId;
+            fileptr << "\t" << "\"" << current->state.get()->stateId << ", " << current->state.get()->data << "\"" << " -> ";
+            fileptr << "\"" << current->right.get()->state.get()->stateId;
             fileptr << ", ";
-            fileptr << current->right.get()->state->data << "\"";
+            fileptr << current->right.get()->state.get()->data << "\"";
             fileptr << " [label=R, color=red];\n";
             processing_stack.emplace_back(current->right.get());
         }
