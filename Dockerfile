@@ -16,6 +16,7 @@ ENV COVERAGE=0
 ENV USE_TCMALLOC=1
 ENV BASE=/tmp
 ENV LLVM_VERSION=9.0
+ENV ENABLE_DOXYGEN=1
 ENV ENABLE_OPTIMIZED=1
 ENV ENABLE_DEBUG=1
 ENV DISABLE_ASSERTIONS=0
@@ -36,7 +37,7 @@ LABEL maintainer="KLEE Developers"
 # TODO remove adding sudo package
 # Create ``klee`` user for container with password ``klee``.
 # and give it password-less sudo access (temporarily so we can use the TravisCI scripts)
-RUN apt update && DEBIAN_FRONTEND=noninteractive apt -y --no-install-recommends install sudo emacs-nox vim-nox file python3-dateutil && \
+RUN apt update && DEBIAN_FRONTEND=noninteractive apt -y --no-install-recommends install sudo emacs-nox vim-nox file python3-dateutil doxygen && \
     rm -rf /var/lib/apt/lists/* && \
     useradd -m klee && \
     echo klee:klee | chpasswd && \

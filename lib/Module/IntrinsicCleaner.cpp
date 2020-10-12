@@ -364,7 +364,6 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
       case Intrinsic::dbg_label:
 #endif
-      case Intrinsic::eh_typeid_for:
       case Intrinsic::exp2:
       case Intrinsic::exp:
       case Intrinsic::expect:
@@ -399,6 +398,11 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         IL->LowerIntrinsicCall(ii);
         dirty = true;
         break;
+
+      case Intrinsic::eh_typeid_for: {
+        // Don't lower this, we need it for exception handling
+        break;
+      }
 
         // Warn about any unrecognized intrinsics.
       default: {

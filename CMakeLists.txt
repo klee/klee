@@ -647,11 +647,19 @@ if (ENABLE_KLEE_LIBCXX)
       "${KLEE_LIBCXX_PATH} does not exist. Try passing -DKLEE_LIBCXX_DIR=<path>")
   endif()
 
-  if (NOT IS_DIRECTORY "${KLEE_LIBCXX_INCLUDE_DIR}")
+  set(KLEE_LIBCXX_INCLUDE_DIR "" CACHE PATH "Path to libcxx include directory")
+  if (NOT EXISTS "${KLEE_LIBCXX_INCLUDE_DIR}")
     message(FATAL_ERROR
       "${KLEE_LIBCXX_INCLUDE_DIR} does not exist. Try passing -DKLEE_LIBCXX_INCLUDE_DIR=<path>")
   endif()
   message(STATUS "Use libc++ include path: \"${KLEE_LIBCXX_INCLUDE_DIR}\"")
+
+  set(KLEE_LIBCXXABI_SRC_DIR "" CACHE PATH "Path to libcxxabi source directory")
+  if (NOT EXISTS "${KLEE_LIBCXXABI_SRC_DIR}")
+    message(FATAL_ERROR
+      "${KLEE_LIBCXXABI_SRC_DIR} does not exist. Try passing -DKLEE_LIBCXXABI_SRC_DIR=<path>")
+  endif()
+  message(STATUS "Use libc++abi source path: \"${KLEE_LIBCXXABI_SRC_DIR}\"")
 
   # Find the library bitcode archive
 
@@ -673,7 +681,7 @@ if (ENABLE_KLEE_LIBCXX)
   endif()
   message(STATUS "Found libc++ library: \"${KLEE_LIBCXX_BC_PATH}\"")
 
-  # Make a symlink to KLEE_LIBCXX_EXTERNAL_OBJECT so KLEE can find it where it
+  # Make a symlink to KLEE_LIBCXX_BC_PATH so KLEE can find it where it
   # is expected.
   file(MAKE_DIRECTORY "${KLEE_RUNTIME_DIRECTORY}")
   execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink
@@ -694,6 +702,28 @@ if (ENABLE_KLEE_LIBCXX)
 else()
   message(STATUS "libc++ support disabled")
   set(SUPPORT_KLEE_LIBCXX 0) # For config.h
+endif()
+
+################################################################################
+# KLEE Exception Handling Support for C++
+################################################################################
+option(ENABLE_KLEE_EH_CXX "Enable support for C++ Exceptions" OFF)
+if (ENABLE_KLEE_EH_CXX)
+  if (NOT ENABLE_KLEE_LIBCXX)
+    message(FATAL_ERROR "C++ Exception support requires klee-libcxx."
+      "Pass `-DENABLE_KLEE_LIBCXX=ON` to enable it.")
+  endif()
+
+  if (${LLVM_VERSION_MAJOR} GREATER 8 OR ${LLVM_VERSION_MAJOR} EQUAL 8)
+    set(SUPPORT_KLEE_EH_CXX 1) # For config.h
+    message(STATUS "Support for C++ Exceptions enabled")
+  else()
+    set(SUPPORT_KLEE_EH_CXX 0) # For config.h
+    message(STATUS "Support for C++ Exceptions (only available for LLVM >= 8.0.0) disabled")
+  endif()
+
+else()
+  set(SUPPORT_KLEE_EH_CXX 0) # For config.h
 endif()
 
 ################################################################################

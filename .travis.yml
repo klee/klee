@@ -32,6 +32,7 @@ env:
 
     - COVERAGE=0
     - DISABLE_ASSERTIONS=0
+    - ENABLE_DOXYGEN=0
     - ENABLE_OPTIMIZED=1
     - ENABLE_DEBUG=1
     - GTEST_VERSION=1.7.0
@@ -130,7 +131,6 @@ jobs:
     - name: "Docker"
       env: BUILD_DOCKER=1
 
-    # TODO: Add Doxygen build
 addons:
   apt:
     packages:
