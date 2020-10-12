@@ -13,7 +13,6 @@
 #include "MergeHandler.h"
 #include "Searcher.h"
 
-#include "klee/Solver/SolverCmdLine.h"
 #include "klee/Support/ErrorHandling.h"
 
 #include "llvm/Support/CommandLine.h"
@@ -98,10 +97,10 @@ void klee::initializeSearchOptions() {
 
 bool klee::userSearcherRequiresMD2U() {
   return (std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_MD2U) != CoreSearch.end() ||
-	  std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_CovNew) != CoreSearch.end() ||
-	  std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_ICnt) != CoreSearch.end() ||
-	  std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_CPICnt) != CoreSearch.end() ||
-	  std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_QC) != CoreSearch.end());
+          std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_CovNew) != CoreSearch.end() ||
+          std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_ICnt) != CoreSearch.end() ||
+          std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_CPICnt) != CoreSearch.end() ||
+          std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_QC) != CoreSearch.end());
 }
 
 
@@ -148,12 +147,6 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
   }
 
   if (UseMerge) {
-    if (std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::RandomPath) !=
-        CoreSearch.end()) {
-      klee_error("use-merge currently does not support random-path, please use "
-                 "another search strategy");
-    }
-
     auto *ms = new MergingSearcher(searcher);
     executor.setMergingSearcher(ms);
 

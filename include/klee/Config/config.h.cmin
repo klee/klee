@@ -92,6 +92,9 @@
 /* libcxx is supported */
 #cmakedefine SUPPORT_KLEE_LIBCXX @SUPPORT_KLEE_LIBCXX@
 
+/* exception handling for C++ is supported */
+#cmakedefine SUPPORT_KLEE_EH_CXX @SUPPORT_KLEE_EH_CXX@
+
 /* Configuration type of KLEE's runtime libraries */
 #define RUNTIME_CONFIGURATION "@KLEE_RUNTIME_BUILD_TYPE@"
 

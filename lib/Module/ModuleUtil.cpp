@@ -203,41 +203,69 @@ klee::linkModules(std::vector<std::unique_ptr<llvm::Module>> &modules,
     return nullptr;
   }
 
-  while (true) {
+  auto containsUsedSymbols = [](const llvm::Module *module) {
+    GlobalValue *GV =
+        dyn_cast_or_null<GlobalValue>(module->getNamedValue("llvm.used"));
+    if (!GV)
+      return false;
+    KLEE_DEBUG_WITH_TYPE("klee_linker", dbgs() << "Used attribute in "
+                                               << module->getModuleIdentifier()
+                                               << '\n');
+    return true;
+  };
+
+  for (auto &module : modules) {
+    if (!module || !containsUsedSymbols(module.get()))
+      continue;
+    if (!linkTwoModules(composite.get(), std::move(module), errorMsg)) {
+      // Linking failed
+      errorMsg = "Linking module containing '__attribute__((used))'"
+                 " symbols with composite failed:" +
+                 errorMsg;
+      return nullptr;
+    }
+    module = nullptr;
+  }
+
+  bool symbolsLinked = true;
+  while (symbolsLinked) {
+    symbolsLinked = false;
     std::set<std::string> undefinedSymbols;
     GetAllUndefinedSymbols(composite.get(), undefinedSymbols);
+    auto hasRequiredDefinition = [&undefinedSymbols](
+                                     const llvm::Module *module) {
+      for (auto symbol : undefinedSymbols) {
+        GlobalValue *GV =
+            dyn_cast_or_null<GlobalValue>(module->getNamedValue(symbol));
+        if (GV && !GV->isDeclaration()) {
+          KLEE_DEBUG_WITH_TYPE("klee_linker",
+                               dbgs() << "Found " << GV->getName() << " in "
+                                      << module->getModuleIdentifier() << "\n");
+          return true;
+        }
+      }
+      return false;
+    };
 
     // Stop in nothing is undefined
     if (undefinedSymbols.empty())
       break;
 
-    bool merged = false;
     for (auto &module : modules) {
       if (!module)
         continue;
 
-      for (auto symbol : undefinedSymbols) {
-        GlobalValue *GV =
-            dyn_cast_or_null<GlobalValue>(module->getNamedValue(symbol));
-        if (!GV || GV->isDeclaration())
-          continue;
+      if (!hasRequiredDefinition(module.get()))
+        continue;
 
-        // Found symbol, therefore merge in module
-        KLEE_DEBUG_WITH_TYPE("klee_linker",
-                             dbgs() << "Found " << GV->getName() << " in "
-                                    << module->getModuleIdentifier() << "\n");
-        if (linkTwoModules(composite.get(), std::move(module), errorMsg)) {
-          module = nullptr;
-          merged = true;
-          break;
-        }
+      if (!linkTwoModules(composite.get(), std::move(module), errorMsg)) {
         // Linking failed
         errorMsg = "Linking archive module with composite failed:" + errorMsg;
         return nullptr;
       }
+      module = nullptr;
+      symbolsLinked = true;
     }
-    if (!merged)
-      break;
   }
 
   // Condense the module array
