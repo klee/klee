@@ -458,7 +458,7 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       pathWriter(0), symPathWriter(0), specialFunctionHandler(0), timers{time::Span(TimerInterval)},
       replayKTest(0), replayPath(0), usingSeeds(0),
       atMemoryLimit(false), inhibitForking(false), haltExecution(false),
-      ivcEnabled(false), debugLogBuffer(debugBufferString) {
+      ivcEnabled(false), debugLogBuffer(debugBufferString), pendingMode(PendingConstraints) {
 
 
   const time::Span maxTime{MaxTime};
@@ -2194,7 +2194,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> cond = eval(ki, 0, state).value;
 
       cond = optimizer.optimizeExpr(cond, false);
-      Executor::StatePair branches = PendingConstraints
+      Executor::StatePair branches = pendingMode
                                          ? pendingFork(state, cond, false)
                                          : fork(state, cond, false);
 
@@ -3492,7 +3492,9 @@ void Executor::run(ExecutionState &initialState) {
 
   states.insert(&initialState);
 
-  if (usingSeeds && !PendingConstraints) {
+  auto s = constructUserSearcher(*this);
+
+  if (usingSeeds && !pendingMode) {
     std::vector<SeedInfo> &v = seedMap[&initialState];
     
     for (std::vector<KTest*>::const_iterator it = usingSeeds->begin(), 
@@ -3555,19 +3557,8 @@ void Executor::run(ExecutionState &initialState) {
     }
   }
 
-  searcher = constructUserSearcher(*this);
-  if (PendingConstraints) {
-    pendingFastSolver 
-      = createIndependentSolver(
-          createCexCachingSolver(
-            createDummySolver(), 
-            &arrayCache,
-            (usingSeeds ? *usingSeeds : std::vector<struct KTest *>())
-          ));
-    searcher = new PendingSearcher(searcher, new DFSSearcher(), *this);
-  }
-
   std::vector<ExecutionState *> newStates(states.begin(), states.end());
+	searcher = s;
   searcher->update(0, newStates, std::vector<ExecutionState *>());
 
   // main interpreter loop
@@ -3593,6 +3584,7 @@ void Executor::run(ExecutionState &initialState) {
   delete searcher;
   searcher = nullptr;
 
+  updateStates(nullptr);
   doDumpStates();
 }
 
@@ -4195,6 +4187,9 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     ref<Expr> offset = mo->getOffsetExpr(address);
     ref<Expr> check = mo->getBoundsCheckOffset(offset, bytes);
     check = optimizer.optimizeExpr(check, true);
+
+    if (memoryCallback)
+      memoryCallback(state, check);
 
     bool inBounds;
     solver->setTimeout(coreSolverTimeout);

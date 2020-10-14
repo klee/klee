@@ -22,6 +22,7 @@
 #include <map>
 #include <queue>
 #include <set>
+#include <unordered_map>
 #include <vector>
 
 namespace llvm {
@@ -72,7 +73,8 @@ namespace klee {
       NURS_RP,
       NURS_ICnt,
       NURS_CPICnt,
-      NURS_QC
+      NURS_QC,
+      ZESTI
     };
   };
 
@@ -346,6 +348,137 @@ namespace klee {
                 const std::vector<ExecutionState *> &removedStates) override;
     bool empty() override;
     void printName(llvm::raw_ostream &os) override;
+  };
+
+  /// EmptySearcher is always empty
+  class EmptySearcher : public Searcher {
+  public:
+    ExecutionState &selectState() {
+      assert(0 && "Empty searcher is always empty");
+    }
+    void update(ExecutionState *current,
+                const std::vector<ExecutionState *> &addedStates,
+                const std::vector<ExecutionState *> &removedStates) {}
+    bool empty() { return true; }
+    void printName(llvm::raw_ostream &os) { os << "EmptySearcher\n"; }
+  };
+
+  /// SwappingSearcher has two sub searchers s1 and s2.
+  /// It first delegates to s1 untill s1 is empty, then it switches 
+  /// Delegation to s2. It calls a callback when the switch occurs.
+  /// It delegates the update calls to both searchers at first, but only
+  /// to s2 after the switch.
+  class SwappingSearcher : public Searcher {
+    std::unique_ptr<Searcher> searchers[2];
+    unsigned currentSearcher = 0;
+    std::function<void(void)> swapCallback;
+
+  public:
+    SwappingSearcher(Searcher *s1, Searcher *s2, std::function<void(void)> _cb)
+        : swapCallback(_cb) {
+      searchers[0] = std::unique_ptr<Searcher>(s1);
+      searchers[1] = std::unique_ptr<Searcher>(s2);
+    }
+    virtual ~SwappingSearcher() override = default;
+    ExecutionState &selectState() {
+      return searchers[currentSearcher]->selectState();
+    }
+    void update(ExecutionState *current,
+                const std::vector<ExecutionState *> &addedStates,
+                const std::vector<ExecutionState *> &removedStates) {
+      for (int i = currentSearcher; i < 2; i++)
+        (searchers[i])->update(current, addedStates, removedStates);
+    }
+    bool empty() {
+      auto ret = searchers[currentSearcher]->empty();
+      if (currentSearcher == 0 && ret) {
+        currentSearcher++;
+        swapCallback();
+        return empty();
+      }
+      return ret;
+    }
+    void printName(llvm::raw_ostream &os) {
+      os << "<SwappingSearcher>\n";
+      for (int i = 0; i < 2; i++)
+        (searchers[i])->printName(os);
+      os << "</SwappingSearcher>\n";
+    }
+  };
+
+
+  ///  ZESTIPendingSearcher implements the ZESTI search "around" sensitive
+  ///  instructions using pending states. It assumes a single seed was executed to
+  ///  completion with pending states dangling off possible branch points. This
+  ///  states can be achived by  
+  ///
+  ///  SwappingSearcher( 
+  ///      PendingSearcher(DFS, Empty),
+  ///      ZESTIPendingSearcher())
+  ///
+  /// Where PendingSearcher(DFS, Empty) just does the seeding and is then
+  /// swapped with this searchers. This ZESTI searcher then orders the pending
+  /// states it has in the order of decreasing distance from sensitive
+  /// instructions, which are then revived in that order. When the revival is
+  /// successful, this searcher remebers the depth of that state and starts
+  /// killing normal states after that depth + a bound is reached thus achiving
+  /// limited bounded exploration.
+  class ZESTIPendingSearcher : public Searcher {
+    // Used for reviving and terminating states
+    Executor &exec; 
+
+    /// Holds the searcher for normal states. As we are doing exhaustive
+    /// bounded exploration, this can just be DFS.
+    std::unique_ptr<Searcher> normalSearcher;
+
+    /// Depth of the last revived pending states. This is the base depth from
+    /// which bounded exploration is performed.
+    int currentBaseDepth = -1; 
+
+    /// bound to which we do bounded exploration. States at depth
+    /// currentBaseDepth + bound are killed.
+    int bound = 0; 
+
+    /// Distance to sensitive instruction multiplier.  The bound above is computed
+    /// as ZestiBound * distanceToSensitiveInstruction
+    int ZestiBound = 2;
+
+    /// Marks the point where the exploration mode started and it should not
+    /// accept pending states any more
+    bool hasSelectedState = false;
+
+    /// Maps each (pending) state to the distance to nearest sensitive instruction.
+    /// Computed in computeDistances().
+    std::unordered_map<const ExecutionState *, int> smallestSensitiveDistance;
+
+    /// Sorted list of all the pending states this searcher knows about.  / The
+    /// states are sorted in the order of distance from sensitive instructions by
+    /// the computeDistances function.
+    std::vector<ExecutionState *> pendingStates;
+
+    /// States that need to be deleted next time it is safe (in selectState)
+    std::vector<ExecutionState *> toDelete;
+
+    /// A set of depths where a sensitive instruction occured. Added by
+    /// registerSensitiveDepth.
+    std::set<std::uint32_t> senstiveDepths;
+
+    /// Computes distances between pending states and their nearest sensitive instructions
+    /// and puts in in smallestSensitiveDistance map.
+    void computeDistances();
+
+  public:
+    ZESTIPendingSearcher(Executor &_exec, int ZestiBound);
+
+    /// Register a depth where sensitive instruction is present.
+    void registerSensitiveDepth(std::uint32_t);
+
+    ExecutionState &selectState();
+    void update(ExecutionState *current,
+                const std::vector<ExecutionState *> &addedStates,
+                const std::vector<ExecutionState *> &removedStates);
+    bool empty();
+    void printName(llvm::raw_ostream &os) { os << "<ZESTIPendingSearcher>\n"; }
   };
 
 } // klee namespace

@@ -79,6 +79,7 @@ namespace klee {
   class MergeHandler;
   class MergingSearcher;
   class PendingSearcher;
+  class ZESTIPendingSearcher;
   template<class T> class ref;
 
 
@@ -94,6 +95,7 @@ class Executor : public Interpreter {
   friend class StatsTracker;
   friend class MergeHandler;
   friend class PendingSearcher;
+  friend class ZESTIPendingSearcher;
   friend klee::Searcher *klee::constructUserSearcher(Executor &executor);
 
 public:

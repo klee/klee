@@ -47,6 +47,7 @@ cl::list<Searcher::CoreSearchType> CoreSearch(
                    "use NURS with Instr-Count"),
         clEnumValN(Searcher::NURS_CPICnt, "nurs:cpicnt",
                    "use NURS with CallPath-Instr-Count"),
+        clEnumValN(Searcher::ZESTI, "zesti", "use zesti searcher"),
         clEnumValN(Searcher::NURS_QC, "nurs:qc", "use NURS with Query-Cost")
             KLEE_LLVM_CL_VAL_END),
     cl::cat(SearchCat));
@@ -78,6 +79,12 @@ cl::opt<std::string> BatchTime(
     cl::desc("Amount of time to batch when using "
              "--use-batching-search.  Set to 0s to disable (default=5s)"),
     cl::init("5s"),
+    cl::cat(SearchCat));
+
+cl::opt<int> ZestiBound(
+    "zesti-bound-mul",
+    cl::init(2),
+    cl::desc("Bounds multiplier for zesti (default=2). Set to 0 for simple zesti"),
     cl::cat(SearchCat));
 
 } // namespace
@@ -118,6 +125,9 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng, PTree &process
     case Searcher::NURS_ICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::InstCount, rng); break;
     case Searcher::NURS_CPICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::CPInstCount, rng); break;
     case Searcher::NURS_QC: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::QueryCost, rng); break;
+    case Searcher::ZESTI:
+      assert(0 && "Should be special cased before");
+      break;
   }
 
   return searcher;
@@ -125,32 +135,65 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng, PTree &process
 
 Searcher *klee::constructUserSearcher(Executor &executor) {
 
-  Searcher *searcher = getNewSearcher(CoreSearch[0], executor.theRNG, *executor.processTree);
+  Searcher *searcher;
+  if (CoreSearch[0] == Searcher::ZESTI) {
+    if (CoreSearch.size() > 1)
+      klee_error(
+          "ZESTI searcher can't be used in conjuction with other searchers");
+    if (!executor.usingSeeds || executor.usingSeeds->size() != 1)
+      klee_error("ZESTI searcher needs to be used with exactly 1 seed");
+    executor.pendingMode = true;
+    searcher = new SwappingSearcher(
+        // First we execute the seed
+        new PendingSearcher(new DFSSearcher(), new EmptySearcher(), executor),
+        // Then do the ZESTI exploration around sensitive instructions
+        new ZESTIPendingSearcher(executor, ZestiBound), [&]() {
+          executor.pendingMode = false;
+          klee_message("ZESTI seeding done, starting exploration");
+        });
 
-  if (CoreSearch.size() > 1) {
-    std::vector<Searcher *> s;
-    s.push_back(searcher);
+  } else {
+    searcher =
+        getNewSearcher(CoreSearch[0], executor.theRNG, *executor.processTree);
 
-    for (unsigned i = 1; i < CoreSearch.size(); i++)
-      s.push_back(getNewSearcher(CoreSearch[i], executor.theRNG, *executor.processTree));
+    if (CoreSearch.size() > 1) {
+      std::vector<Searcher *> s;
+      s.push_back(searcher);
 
-    searcher = new InterleavedSearcher(s);
+      for (unsigned i = 1; i < CoreSearch.size(); i++)
+        s.push_back(getNewSearcher(CoreSearch[i], executor.theRNG,
+                                   *executor.processTree));
+
+      searcher = new InterleavedSearcher(s);
+    }
+
+    if (UseBatchingSearch) {
+      searcher = new BatchingSearcher(searcher, time::Span(BatchTime),
+                                      BatchInstructions);
+    }
+
+    if (UseIterativeDeepeningTimeSearch) {
+      searcher = new IterativeDeepeningTimeSearcher(searcher);
+    }
+
+    if (UseMerge) {
+      auto *ms = new MergingSearcher(searcher);
+      executor.setMergingSearcher(ms);
+
+      searcher = ms;
+    }
   }
 
-  if (UseBatchingSearch) {
-    searcher = new BatchingSearcher(searcher, time::Span(BatchTime),
-                                    BatchInstructions);
-  }
+  if (CoreSearch[0] != Searcher::ZESTI && executor.pendingMode) {
+    executor.pendingFastSolver 
+      = createIndependentSolver(
+          createCexCachingSolver(
+            createDummySolver(), 
+            &executor.arrayCache,
+            (executor.usingSeeds ? *executor.usingSeeds : std::vector<struct KTest *>())
+          ));
 
-  if (UseIterativeDeepeningTimeSearch) {
-    searcher = new IterativeDeepeningTimeSearcher(searcher);
-  }
-
-  if (UseMerge) {
-    auto *ms = new MergingSearcher(searcher);
-    executor.setMergingSearcher(ms);
-
-    searcher = ms;
+    searcher = new PendingSearcher(searcher, new DFSSearcher(), executor);
   }
 
   llvm::raw_ostream &os = executor.getHandler().getInfoStream();
