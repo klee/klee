@@ -958,6 +958,39 @@ void Executor::branch(ExecutionState &state,
       addConstraint(*result[i], conditions[i]);
 }
 
+Executor::StatePair Executor::logStates(Executor::StatePair pair,
+                                        ExecutionState &current,
+                                        bool isInternal) {
+  if (!isInternal) {
+    if (pathWriter) {
+      if (pair.second == nullptr && pair.first != nullptr) {
+        pair.first->pathOS << "1";
+      } else if (pair.first == nullptr && pair.second != nullptr) {
+        pair.second->pathOS << "0";
+      }
+    }
+  }
+  if (pair.first != nullptr && pair.second != nullptr) {
+    if (pathWriter) {
+      // Need to update the pathOS.id field of falseState, otherwise the same id
+      // is used for both falseState and trueState.
+      pair.second->pathOS = pathWriter->open(current.pathOS);
+      if (!isInternal) {
+        pair.first->pathOS << "1";
+        pair.second->pathOS << "0";
+      }
+    }
+    if (symPathWriter) {
+      pair.second->symPathOS = symPathWriter->open(current.symPathOS);
+      if (!isInternal) {
+        pair.first->symPathOS << "1";
+        pair.second->symPathOS << "0";
+      }
+    }
+  }
+  return pair;
+}
+
 Executor::StatePair 
 Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   Solver::Validity res;
@@ -1082,21 +1115,9 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   // hint to just use the single constraint instead of all the binary
   // search ones. If that makes sense.
   if (res==Solver::True) {
-    if (!isInternal) {
-      if (pathWriter) {
-        current.pathOS << "1";
-      }
-    }
-
-    return StatePair(&current, 0);
+    return logStates(StatePair(&current, 0), current, isInternal);
   } else if (res==Solver::False) {
-    if (!isInternal) {
-      if (pathWriter) {
-        current.pathOS << "0";
-      }
-    }
-
-    return StatePair(0, &current);
+    return logStates(StatePair(0, &current), current, isInternal);
   } else {
     TimerStatIncrementer timer(stats::forkTime);
     ExecutionState *falseState, *trueState = &current;
@@ -1143,34 +1164,18 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
     processTree->attach(current.ptreeNode, falseState, trueState);
 
-    if (pathWriter) {
-      // Need to update the pathOS.id field of falseState, otherwise the same id
-      // is used for both falseState and trueState.
-      falseState->pathOS = pathWriter->open(current.pathOS);
-      if (!isInternal) {
-        trueState->pathOS << "1";
-        falseState->pathOS << "0";
-      }
-    }
-    if (symPathWriter) {
-      falseState->symPathOS = symPathWriter->open(current.symPathOS);
-      if (!isInternal) {
-        trueState->symPathOS << "1";
-        falseState->symPathOS << "0";
-      }
-    }
-
     addConstraint(*trueState, condition);
     addConstraint(*falseState, Expr::createIsZero(condition));
 
     // Kinda gross, do we even really still want this option?
     if (MaxDepth && MaxDepth<=trueState->depth) {
+      logStates(StatePair(trueState, falseState), current, isInternal);
       terminateStateEarly(*trueState, "max-depth exceeded.");
       terminateStateEarly(*falseState, "max-depth exceeded.");
       return StatePair(0, 0);
     }
 
-    return StatePair(trueState, falseState);
+    return logStates(StatePair(trueState, falseState), current, isInternal);
   }
 }
 

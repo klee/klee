@@ -260,6 +260,9 @@ private:
                             llvm::Function *function,
                             std::vector< ref<Expr> > &arguments);
 
+  /// Identity function that logs the StatePair
+  StatePair logStates(StatePair, ExecutionState &, bool isInternal);
+
   ObjectState *bindObjectInState(ExecutionState &state, const MemoryObject *mo,
                                  bool isLocal, const Array *array = 0);
 
