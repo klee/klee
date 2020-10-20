@@ -9,6 +9,7 @@
 
 #include "SpecialFunctionHandler.h"
 
+#include "AddressSpace.h"
 #include "ExecutionState.h"
 #include "Executor.h"
 #include "Memory.h"
@@ -18,6 +19,7 @@
 #include "StatsTracker.h"
 #include "TimingSolver.h"
 
+#include "klee/Expr/Expr.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
 #include "klee/Solver/SolverCmdLine.h"
@@ -29,6 +31,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Casting.h"
 
 #include <errno.h>
 #include <sstream>
@@ -70,76 +73,82 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
 #define addDNR(name, handler) { name, \
                                 &SpecialFunctionHandler::handler, \
                                 true, false, false }
-  addDNR("__assert_rtn", handleAssertFail),
-  addDNR("__assert_fail", handleAssertFail),
-  addDNR("__assert", handleAssertFail),
-  addDNR("_assert", handleAssert),
-  addDNR("abort", handleAbort),
-  addDNR("_exit", handleExit),
-  { "exit", &SpecialFunctionHandler::handleExit, true, false, true },
-  addDNR("klee_abort", handleAbort),
-  addDNR("klee_silent_exit", handleSilentExit),
-  addDNR("klee_report_error", handleReportError),
-  add("calloc", handleCalloc, true),
-  add("free", handleFree, false),
-  add("klee_assume", handleAssume, false),
-  add("klee_check_memory_access", handleCheckMemoryAccess, false),
-  add("klee_get_valuef", handleGetValue, true),
-  add("klee_get_valued", handleGetValue, true),
-  add("klee_get_valuel", handleGetValue, true),
-  add("klee_get_valuell", handleGetValue, true),
-  add("klee_get_value_i32", handleGetValue, true),
-  add("klee_get_value_i64", handleGetValue, true),
-  add("klee_define_fixed_object", handleDefineFixedObject, false),
-  add("klee_get_obj_size", handleGetObjSize, true),
-  add("klee_get_errno", handleGetErrno, true),
+    addDNR("__assert_rtn", handleAssertFail),
+    addDNR("__assert_fail", handleAssertFail),
+    addDNR("__assert", handleAssertFail),
+    addDNR("_assert", handleAssert),
+    addDNR("abort", handleAbort),
+    addDNR("_exit", handleExit),
+    {"exit", &SpecialFunctionHandler::handleExit, true, false, true},
+    addDNR("klee_abort", handleAbort),
+    addDNR("klee_silent_exit", handleSilentExit),
+    addDNR("klee_report_error", handleReportError),
+    add("calloc", handleCalloc, true),
+    add("free", handleFree, false),
+    add("klee_assume", handleAssume, false),
+    add("klee_check_memory_access", handleCheckMemoryAccess, false),
+    add("klee_get_valuef", handleGetValue, true),
+    add("klee_get_valued", handleGetValue, true),
+    add("klee_get_valuel", handleGetValue, true),
+    add("klee_get_valuell", handleGetValue, true),
+    add("klee_get_value_i32", handleGetValue, true),
+    add("klee_get_value_i64", handleGetValue, true),
+    add("klee_define_fixed_object", handleDefineFixedObject, false),
+    add("klee_get_obj_size", handleGetObjSize, true),
+    add("klee_get_errno", handleGetErrno, true),
 #ifndef __APPLE__
-  add("__errno_location", handleErrnoLocation, true),
+    add("__errno_location", handleErrnoLocation, true),
 #else
-  add("__error", handleErrnoLocation, true),
+    add("__error", handleErrnoLocation, true),
 #endif
-  add("klee_is_symbolic", handleIsSymbolic, true),
-  add("klee_make_symbolic", handleMakeSymbolic, false),
-  add("klee_mark_global", handleMarkGlobal, false),
-  add("klee_open_merge", handleOpenMerge, false),
-  add("klee_close_merge", handleCloseMerge, false),
-  add("klee_prefer_cex", handlePreferCex, false),
-  add("klee_posix_prefer_cex", handlePosixPreferCex, false),
-  add("klee_print_expr", handlePrintExpr, false),
-  add("klee_print_range", handlePrintRange, false),
-  add("klee_set_forking", handleSetForking, false),
-  add("klee_stack_trace", handleStackTrace, false),
-  add("klee_warning", handleWarning, false),
-  add("klee_warning_once", handleWarningOnce, false),
-  add("malloc", handleMalloc, true),
-  add("memalign", handleMemalign, true),
-  add("realloc", handleRealloc, true),
-  add("_klee_eh_Unwind_RaiseException_impl", handleEhUnwindRaiseExceptionImpl, false),
+    add("klee_is_symbolic", handleIsSymbolic, true),
+    add("klee_make_symbolic", handleMakeSymbolic, false),
+    add("klee_mark_global", handleMarkGlobal, false),
+    add("klee_open_merge", handleOpenMerge, false),
+    add("klee_close_merge", handleCloseMerge, false),
+    add("klee_prefer_cex", handlePreferCex, false),
+    add("klee_posix_prefer_cex", handlePosixPreferCex, false),
+    add("klee_print_expr", handlePrintExpr, false),
+    add("klee_print_range", handlePrintRange, false),
+    add("klee_set_forking", handleSetForking, false),
+    add("klee_stack_trace", handleStackTrace, false),
+    add("klee_warning", handleWarning, false),
+    add("klee_warning_once", handleWarningOnce, false),
+    add("malloc", handleMalloc, true),
+    add("memalign", handleMemalign, true),
+    add("realloc", handleRealloc, true),
+    add("_klee_eh_Unwind_RaiseException_impl", handleEhUnwindRaiseExceptionImpl,
+        false),
 
-  // operator delete[](void*)
-  add("_ZdaPv", handleDeleteArray, false),
-  // operator delete(void*)
-  add("_ZdlPv", handleDelete, false),
+    // operator delete[](void*)
+    add("_ZdaPv", handleDeleteArray, false),
+    // operator delete(void*)
+    add("_ZdlPv", handleDelete, false),
 
-  // operator new[](unsigned int)
-  add("_Znaj", handleNewArray, true),
-  // operator new(unsigned int)
-  add("_Znwj", handleNew, true),
+    // operator new[](unsigned int)
+    add("_Znaj", handleNewArray, true),
+    // operator new(unsigned int)
+    add("_Znwj", handleNew, true),
 
-  // FIXME-64: This is wrong for 64-bit long...
+    // FIXME-64: This is wrong for 64-bit long...
 
-  // operator new[](unsigned long)
-  add("_Znam", handleNewArray, true),
-  // operator new(unsigned long)
-  add("_Znwm", handleNew, true),
+    // operator new[](unsigned long)
+    add("_Znam", handleNewArray, true),
+    // operator new(unsigned long)
+    add("_Znwm", handleNew, true),
 
-  // Run clang with -fsanitize=signed-integer-overflow and/or
-  // -fsanitize=unsigned-integer-overflow
-  add("__ubsan_handle_add_overflow", handleAddOverflow, false),
-  add("__ubsan_handle_sub_overflow", handleSubOverflow, false),
-  add("__ubsan_handle_mul_overflow", handleMulOverflow, false),
-  add("__ubsan_handle_divrem_overflow", handleDivRemOverflow, false),
-  add("klee_eh_typeid_for", handleEhTypeid, true),
+    // Fast path for optimizing away solver calls
+    add("__klee_handle_memset", handleMemset, true),
+    add("__klee_handle_memcpy", handleMemcpy, true),
+    add("__klee_handle_memmove", handleMemmove, true),
+
+    // Run clang with -fsanitize=signed-integer-overflow and/or
+    // -fsanitize=unsigned-integer-overflow
+    add("__ubsan_handle_add_overflow", handleAddOverflow, false),
+    add("__ubsan_handle_sub_overflow", handleSubOverflow, false),
+    add("__ubsan_handle_mul_overflow", handleMulOverflow, false),
+    add("__ubsan_handle_divrem_overflow", handleDivRemOverflow, false),
+    add("klee_eh_typeid_for", handleEhTypeid, true),
 
 #undef addDNR
 #undef add
@@ -455,6 +464,229 @@ void SpecialFunctionHandler::handleMemalign(ExecutionState &state,
 
   executor.executeAlloc(state, arguments[1], false, target, false, 0,
                         alignment);
+}
+
+// Return of 0 means good, 1 means failure
+static int resolveAndBoundsCheckConcrete(ExecutionState &state,
+                                         TimingSolver *solver,
+                                         const ref<klee::ConstantExpr> &addr,
+                                         size_t size, ObjectPair &out,
+                                         uint64_t &outOffset) {
+  bool success = false;
+  if (!state.addressSpace.resolveOne(state, solver, addr, out, success))
+    return 1;
+  if (!success)
+    return 1;
+
+  const MemoryObject *mo = out.first;
+  outOffset = addr->getZExtValue() - mo->address;
+  uint64_t lastInBounds = mo->size - size;
+
+  // Check that the entire range is contained within the memory object
+  // This is a more aggresive undefined behaviour optimization than we
+  // have normally done, so we might need to revert
+  if (outOffset > lastInBounds)
+    return 1;
+  return 0;
+}
+
+void SpecialFunctionHandler::handleMemset(ExecutionState &state,
+                                          KInstruction *target,
+                                          std::vector<ref<Expr>> &arguments) {
+  assert(arguments.size() == 3 && "invalid number of arguments to memset");
+  ref<ConstantExpr> destination = dyn_cast<ConstantExpr>(arguments[0]);
+  ref<ConstantExpr> numBytes = dyn_cast<ConstantExpr>(arguments[2]);
+
+  if (!numBytes.isNull() && (numBytes->getZExtValue() == 0)) {
+    executor.bindLocal(target, state, ConstantExpr::create(1, Expr::Int8));
+    return;
+  }
+
+  if (!destination.get() || !numBytes.get()) {
+    executor.bindLocal(target, state, ConstantExpr::create(0, Expr::Int8));
+    return;
+  }
+
+  ObjectPair op;
+  uint64_t sizeVal = numBytes->getZExtValue();
+  uint64_t offset = 0;
+  if (resolveAndBoundsCheckConcrete(state, executor.solver, destination,
+                                    sizeVal, op, offset)) {
+    executor.terminateStateOnError(
+        state,
+        "memset: destination pointer failed to bounds check to a valid object",
+        Executor::Ptr);
+    return;
+  }
+
+  ObjectState *wos = state.addressSpace.getWriteable(op.first, op.second);
+  const ref<Expr> &value = arguments[1];
+  const ref<Expr> extractedByte = ExtractExpr::create(value, 0, Expr::Int8);
+  for (size_t cur = offset, end = offset + sizeVal; cur < end; ++cur)
+    wos->write(cur, extractedByte);
+
+  executor.bindLocal(target, state, ConstantExpr::create(1, Expr::Int8));
+}
+
+static void copyMemory(const ObjectState *sourceState, size_t sourceOffset,
+                       ObjectState *destinationState, size_t destinationOffset,
+                       size_t size, bool forward) {
+  if (forward) {
+    for (size_t i = 0; i < size; ++i) {
+      ref<Expr> byte = sourceState->read8(sourceOffset + i);
+      destinationState->write(destinationOffset + i, byte);
+    }
+  } else {
+    size_t i = size;
+    while (i--) {
+      ref<Expr> byte = sourceState->read8(sourceOffset + i);
+      destinationState->write(destinationOffset + i, byte);
+    }
+  }
+}
+
+void SpecialFunctionHandler::handleMemcpy(ExecutionState &state,
+                                          KInstruction *target,
+                                          std::vector<ref<Expr>> &arguments) {
+  assert(arguments.size() == 3 && "invalid number of arguments to memcpy");
+  const ref<ConstantExpr> destination = dyn_cast<ConstantExpr>(arguments[0]);
+  const ref<ConstantExpr> source = dyn_cast<ConstantExpr>(arguments[1]);
+  const ref<ConstantExpr> size = dyn_cast<ConstantExpr>(arguments[2]);
+
+  // In this scenario there is nothing to copy so exit early
+  if (!size.isNull() && size->getZExtValue() == 0) {
+    executor.bindLocal(target, state, ConstantExpr::create(1, Expr::Int8));
+    return;
+  }
+
+  // The memory ranges have symbolic components, don't know how to handle this
+  // efficiently yet.
+  if (!destination.get() || !source.get() || !size.get()) {
+    executor.bindLocal(target, state, ConstantExpr::create(0, Expr::Int8));
+    return;
+  }
+
+  uint64_t sizeVal = size->getZExtValue();
+  uint64_t sourceVal = source->getZExtValue();
+  uint64_t destinationVal = destination->getZExtValue();
+
+  // In this scenario there is nothing to copy so exit early
+  if (sourceVal == destinationVal) {
+    executor.bindLocal(target, state, ConstantExpr::create(1, Expr::Int8));
+    return;
+  }
+
+  ObjectPair sourcePair;
+  uint64_t sourceOffset = 0;
+  ObjectPair destinationPair;
+  uint64_t destinationOffset = 0;
+
+  if (resolveAndBoundsCheckConcrete(state, executor.solver, source, sizeVal,
+                                    sourcePair, sourceOffset)) {
+    executor.terminateStateOnError(
+        state,
+        "memcpy: source pointer failed to bounds check to a valid object",
+        Executor::Ptr);
+    return;
+  }
+
+  if (resolveAndBoundsCheckConcrete(state, executor.solver, destination,
+                                    sizeVal, destinationPair,
+                                    destinationOffset)) {
+    executor.terminateStateOnError(
+        state,
+        "memcpy: destination pointer failed to bounds check to a valid object",
+        Executor::Ptr);
+    return;
+  }
+
+  uint64_t sourceEndVal = sourceVal + sizeVal;
+  uint64_t destinationEndVal = destinationVal + sizeVal;
+
+  // If there is an overlap then this call to memcpy is undefined behavior
+  if (sourceEndVal > destinationVal && destinationEndVal > sourceVal)
+    executor.terminateStateOnError(state, "memcpy: ranges overlap",
+                                   Executor::Ptr);
+
+  const ObjectState *sourceState = sourcePair.second;
+  ObjectState *destinationState = state.addressSpace.getWriteable(
+      destinationPair.first, destinationPair.second);
+
+  copyMemory(sourceState, sourceOffset, destinationState, destinationOffset,
+             sizeVal, true);
+  executor.bindLocal(target, state, ConstantExpr::create(1, Expr::Int8));
+}
+
+void SpecialFunctionHandler::handleMemmove(ExecutionState &state,
+                                           KInstruction *target,
+                                           std::vector<ref<Expr>> &arguments) {
+  assert(arguments.size() == 3 && "invalid number of arguments to memcpy");
+  const ref<ConstantExpr> destination = dyn_cast<ConstantExpr>(arguments[0]);
+  const ref<ConstantExpr> source = dyn_cast<ConstantExpr>(arguments[1]);
+  const ref<ConstantExpr> size = dyn_cast<ConstantExpr>(arguments[2]);
+
+  // In this scenario there is nothing to copy so exit early
+  if (!size.isNull() && size->getZExtValue() == 0) {
+    executor.bindLocal(target, state, ConstantExpr::create(1, Expr::Int8));
+    return;
+  }
+
+  // The memory ranges have symbolic components, don't know how to handle this
+  // efficiently yet.
+  if (!destination.get() || !source.get() || !size.get()) {
+    executor.bindLocal(target, state, ConstantExpr::create(0, Expr::Int8));
+    return;
+  }
+
+  ObjectPair sourcePair;
+  ObjectPair destinationPair;
+
+  uint64_t sourceVal = source->getZExtValue();
+  uint64_t destinationVal = destination->getZExtValue();
+  uint64_t sizeVal = size->getZExtValue();
+  uint64_t sourceOffset = 0;
+  uint64_t destinationOffset = 0;
+
+  // In this scenario there is nothing to copy so exit early
+  if (sourceVal == destinationVal) {
+    executor.bindLocal(target, state, ConstantExpr::create(1, Expr::Int8));
+    return;
+  }
+
+  if (resolveAndBoundsCheckConcrete(state, executor.solver, source, sizeVal,
+                                    sourcePair, sourceOffset)) {
+    executor.terminateStateOnError(
+        state,
+        "memmove: source pointer failed to bounds check to a valid object",
+        Executor::Ptr);
+    return;
+  }
+
+  if (resolveAndBoundsCheckConcrete(state, executor.solver, destination,
+                                    sizeVal, destinationPair,
+                                    destinationOffset)) {
+    executor.terminateStateOnError(
+        state,
+        "memmove: destination pointer failed to bounds check to a valid object",
+        Executor::Ptr);
+    return;
+  }
+
+  const ObjectState *sourceState = sourcePair.second;
+  ObjectState *destinationState = state.addressSpace.getWriteable(
+      destinationPair.first, destinationPair.second);
+
+  // If the source starts after the destination we can copy forward without
+  // compromising unmoved source values. Otherwise, we have to copy backwards to
+  // avoid overwritting source elements.
+  if (sourceVal > destinationVal)
+    copyMemory(sourceState, sourceOffset, destinationState, destinationOffset,
+               sizeVal, true);
+  else
+    copyMemory(sourceState, sourceOffset, destinationState, destinationOffset,
+               sizeVal, false);
+
+  executor.bindLocal(target, state, ConstantExpr::create(1, Expr::Int8));
 }
 
 void SpecialFunctionHandler::handleEhUnwindRaiseExceptionImpl(

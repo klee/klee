@@ -9,8 +9,13 @@
 
 #include <stdlib.h>
 
+char __klee_handle_memmove(void *, const void *, size_t);
+
 void *memmove(void *dst, const void *src, size_t count) {
-  char *a = dst;
+  if (__klee_handle_memmove(dst, src, count)) {
+    return dst;
+  }
+    char *a = dst;
   const char *b = src;
 
   if (src == dst)

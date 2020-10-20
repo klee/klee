@@ -9,7 +9,11 @@
 
 #include <stdlib.h>
 
+char __klee_handle_memcpy(void *, void const *, size_t);
+
 void *memcpy(void *destaddr, void const *srcaddr, size_t len) {
+  if (__klee_handle_memcpy(destaddr, srcaddr, len))
+    return destaddr;
   char *dest = destaddr;
   char const *src = srcaddr;
 

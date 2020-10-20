@@ -119,6 +119,9 @@ namespace klee {
     HANDLER(handleMakeSymbolic);
     HANDLER(handleMalloc);
     HANDLER(handleMemalign);
+    HANDLER(handleMemset);
+    HANDLER(handleMemcpy);
+    HANDLER(handleMemmove);
     HANDLER(handleEhUnwindRaiseExceptionImpl);
     HANDLER(handleEhTypeid);
     HANDLER(handleMarkGlobal);
