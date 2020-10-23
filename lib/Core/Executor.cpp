@@ -934,13 +934,6 @@ void Executor::branch(ExecutionState &state,
       result.push_back(ns);
       processTree->attach(es->ptreeNode, ns, es);
 
-      // FIXME : Update current & flag properly after fork state. 
-      // FIXME : Memleak issue. Delete the state properly on Terminate.
-      int flag = (&state == result.back()) ? 1 : 0;
-
-      ProbStatePtr leftState = std::make_shared<ProbExecState>("branch_left", (int)stats::instructions, nullptr);
-      ProbStatePtr rightState = std::make_shared<ProbExecState>("branch_right", (int)stats::instructions, nullptr);      
-      executionTree->forkState(executionTree->current, flag, leftState, rightState);
     }
   }
 
@@ -1188,15 +1181,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     Instruction* lastInst;
     const InstructionInfo &ii = getLastNonKleeInternalInstruction(current, &lastInst);
 
-    if (setSourceCodeFlow) {
-      ProbStatePtr leftState = std::make_shared<ProbExecState>("fork_left_asm", ii.line, nullptr);
-      ProbStatePtr rightState = std::make_shared<ProbExecState>("fork_right_asm", ii.line, nullptr);
-      executionTree->forkState(executionTree->current, flag, leftState, rightState);
-    } else {
-      ProbStatePtr leftState = std::make_shared<ProbExecState>("fork_left_inst", (int)stats::instructions, nullptr);
-      ProbStatePtr rightState = std::make_shared<ProbExecState>("fork_right_inst", (int)stats::instructions, nullptr);
-      executionTree->forkState(executionTree->current, flag, leftState, rightState);
-    }
 
     if (pathWriter) {
       // Need to update the pathOS.id field of falseState, otherwise the same id
@@ -4427,6 +4411,7 @@ void Executor::runFunctionAsMain(Function *f,
   run(*state);
   printETree();
 
+  executionTree = nullptr;
   processTree = nullptr;
 
   // hack to clear memory objects
