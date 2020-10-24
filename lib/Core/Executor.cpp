@@ -1174,14 +1174,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
 
     processTree->attach(current.ptreeNode, falseState, trueState);
     
-    // FIXME : Update current and flag properly after fork state. 
-    // FIXME : Breaks Address Sanitizer Tests. Fix this. Don't create states here. 
-    int flag = res==Solver::True ? 1 : 0;
-    
-    Instruction* lastInst;
-    const InstructionInfo &ii = getLastNonKleeInternalInstruction(current, &lastInst);
-
-
     if (pathWriter) {
       // Need to update the pathOS.id field of falseState, otherwise the same id
       // is used for both falseState and trueState.
