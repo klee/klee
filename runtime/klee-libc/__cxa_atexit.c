@@ -22,7 +22,7 @@ static void RunAtExit(void) __attribute__((destructor));
 static void RunAtExit(void) {
   unsigned i;
 
-  for (i=0; i<NumAtExit; ++i)
+  for (i = NumAtExit - 1; i < MAX_ATEXIT; --i)
     AtExit[i].fn(AtExit[i].arg);
 }
 
