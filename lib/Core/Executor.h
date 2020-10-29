@@ -347,7 +347,7 @@ private:
 
   // Make a symbolic Execution variable for PSE. 
   void executeMakeProbSymbolic(ExecutionState &state, const MemoryObject *mo,
-                           const std::string &name);
+                           const std::string &name, float* distribution, float* probabilities);
                            
   /// Create a new state where each input condition has been added as
   /// a constraint and return the results. The input state is included

@@ -37,7 +37,7 @@ extern "C" {
   void klee_make_symbolic(void *addr, size_t nbytes, const char *name);
 
   /* klee_make_pse_symbolic - Make the contents of the object pointer to by \arg
-   * addr as a symbolic variable.
+   * addr as a probabilistic symbolic variable.
    *
    * \arg addr - The start of the object.
    * \arg nbytes - The number of bytes to make symbolic; currently this *must*
@@ -45,7 +45,7 @@ extern "C" {
    * \arg name - A name used for identifying the object in messages, output
    * files, etc. If NULL, object is called "unnamed".
    */
-  void klee_make_pse_symbolic(void *addr, size_t nbytes, const char *name);
+  void klee_make_pse_symbolic(void *addr, size_t nbytes, const char *name, float *distribution, float *probabilities);
 
   /* klee_range - Construct a symbolic value in the signed interval
    * [begin,end).
@@ -129,6 +129,9 @@ extern "C" {
   void klee_prefer_cex(void *object, uintptr_t condition);
   void klee_posix_prefer_cex(void *object, uintptr_t condition);
   void klee_mark_global(void *object);
+
+  /* klee_dump_kquery_var() get KQuery Dump for a specific Variable Object */
+  void klee_dump_kquery_var(void *object);
 
   /* Return a possible constant value for the input expression. This
      allows programs to forcibly concretize values on their own. */

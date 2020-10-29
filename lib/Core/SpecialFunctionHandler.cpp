@@ -32,6 +32,7 @@
 
 #include <errno.h>
 #include <sstream>
+#include <iostream>
 
 using namespace llvm;
 using namespace klee;
@@ -101,6 +102,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("klee_is_symbolic", handleIsSymbolic, true),
   add("klee_make_symbolic", handleMakeSymbolic, false),
   add("klee_make_pse_symbolic", handleMakeSymbolicPSE, false),
+  add("klee_dump_kquery_var", handleGetKQueryExpression, false),
   add("klee_mark_global", handleMarkGlobal, false),
   add("klee_open_merge", handleOpenMerge, false),
   add("klee_close_merge", handleCloseMerge, false),
@@ -878,10 +880,11 @@ void SpecialFunctionHandler::handleMakeSymbolic(ExecutionState &state,
 void SpecialFunctionHandler::handleMakeSymbolicPSE(ExecutionState &state,
                                                 KInstruction *target,
                                                 std::vector<ref<Expr> > &arguments) {
-  std::string name;
+   std::string name;
+   float *distribution, *probabilities;
 
-  if (arguments.size() != 3) {
-    executor.terminateStateOnError(state, "Incorrect number of arguments to klee_make_pse_symbolic(void*, size_t, char*), 3 required", Executor::User);
+  if (arguments.size() < 3) {
+    executor.terminateStateOnError(state, "Incorrect number of arguments to klee_make_symbolic(void*, size_t, char*)", Executor::User);
     return;
   }
 
@@ -889,14 +892,14 @@ void SpecialFunctionHandler::handleMakeSymbolicPSE(ExecutionState &state,
 
   if (name.length() == 0) {
     name = "unnamed";
-    klee_warning("klee_make_pse_symbolic: renamed empty name to \"unnamed\"");
+    klee_warning("klee_make_symbolic: renamed empty name to \"unnamed\"");
   }
 
-  Executor::ExactResolutionList pse_map;
-  executor.resolveExact(state, arguments[0], pse_map, "make_pse_symbolic");
+  Executor::ExactResolutionList rl;
+  executor.resolveExact(state, arguments[0], rl, "make_pse_symbolic");
   
-  for (Executor::ExactResolutionList::iterator it = pse_map.begin(), 
-         ie = pse_map.end(); it != ie; ++it) {
+  for (Executor::ExactResolutionList::iterator it = rl.begin(), 
+         ie = rl.end(); it != ie; ++it) {
     const MemoryObject *mo = it->first.first;
     mo->setName(name);
     
@@ -904,7 +907,7 @@ void SpecialFunctionHandler::handleMakeSymbolicPSE(ExecutionState &state,
     ExecutionState *s = it->second;
     
     if (old->readOnly) {
-      executor.terminateStateOnError(*s, "cannot make readonly object a pse symbolic variable.",
+      executor.terminateStateOnError(*s, "cannot make readonly object symbolic",
                                      Executor::User);
       return;
     } 
@@ -919,14 +922,24 @@ void SpecialFunctionHandler::handleMakeSymbolicPSE(ExecutionState &state,
         res, s->queryMetaData);
     assert(success && "FIXME: Unhandled solver failure");
     
+    // TODO : Process each of the float arrays as per KLEE ref<Expr>.
+    // Convert back to proper values and pass it executeMakeProbSymbolic 
+    // for variableInfo Pair. 
+
     if (res) {
-      executor.executeMakeProbSymbolic(*s, mo, name);
+      executor.executeMakeProbSymbolic(*s, mo, name, distribution, probabilities);
     } else {      
       executor.terminateStateOnError(*s, 
-                                     "wrong size given to klee_make_pse_symbolic[_name]", 
+                                     "wrong size given to klee_make_symbolic[_name]", 
                                      Executor::User);
     }
   }
+}
+
+void SpecialFunctionHandler::handleGetKQueryExpression(ExecutionState &state,
+                                                KInstruction *target,
+                                                std::vector<ref<Expr> > &arguments) {
+  std::cout << "Dumping KQUERY Expressions" << std::endl;
 }
 
 void SpecialFunctionHandler::handleMarkGlobal(ExecutionState &state,

@@ -98,6 +98,7 @@ typedef unsigned TypeSize;
 #include <sstream>
 #include <string>
 #include <sys/mman.h>
+#include <utility> 
 #include <vector>
 
 using namespace llvm;
@@ -4296,9 +4297,13 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
 // Implementation for  Make Prob Symbolic Variable.
 void Executor::executeMakeProbSymbolic(ExecutionState &state, 
                                    const MemoryObject *mo,
-                                   const std::string &name) {
+                                   const std::string &name, 
+                                   float *distribution, 
+                                   float *probabilities) {
   
-  // TODO : Add to hashmap, update VariableInfo. 
+  // TODO : Add to hashmap variableInfo, name by MemoryObject. 
+  std::pair<float*, float*> variableInfo = std::make_pair(distribution, probabilities);
+
   executeMakeSymbolic(state, mo, name);
 }
 
