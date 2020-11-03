@@ -165,23 +165,18 @@ namespace {
   cl::OptionCategory LinkCat("Linking options",
                              "These options control the libraries being linked.");
 
-  enum class LibcType { FreeStandingLibc, KleeLibc, UcLibc };
+  enum class LibcType { FreestandingLibc, KleeLibc, UcLibc };
 
-  cl::opt<LibcType>
-  Libc("libc",
-       cl::desc("Choose libc version (none by default)."),
-       cl::values(
-                  clEnumValN(LibcType::FreeStandingLibc,
-                             "none",
-                             "Don't link in a libc (only provide freestanding environment)"),
-                  clEnumValN(LibcType::KleeLibc,
-                             "klee",
-                             "Link in KLEE's libc"),
-                  clEnumValN(LibcType::UcLibc, "uclibc",
-                             "Link in uclibc (adapted for KLEE)")
-                  KLEE_LLVM_CL_VAL_END),
-       cl::init(LibcType::FreeStandingLibc),
-       cl::cat(LinkCat));
+  cl::opt<LibcType> Libc(
+      "libc", cl::desc("Choose libc version (none by default)."),
+      cl::values(
+          clEnumValN(
+              LibcType::FreestandingLibc, "none",
+              "Don't link in a libc (only provide freestanding environment)"),
+          clEnumValN(LibcType::KleeLibc, "klee", "Link in KLEE's libc"),
+          clEnumValN(LibcType::UcLibc, "uclibc",
+                     "Link in uclibc (adapted for KLEE)") KLEE_LLVM_CL_VAL_END),
+      cl::init(LibcType::FreestandingLibc), cl::cat(LinkCat));
 
   cl::list<std::string>
       LinkLibraries("link-llvm-lib",
@@ -906,7 +901,7 @@ void externalsAndGlobalsCheck(const llvm::Module *m) {
     dontCare.insert(dontCareUclibc,
                     dontCareUclibc+NELEMS(dontCareUclibc));
     break;
-  case LibcType::FreeStandingLibc: /* silence compiler warning */
+  case LibcType::FreestandingLibc: /* silence compiler warning */
     break;
   }
 
@@ -1312,13 +1307,13 @@ int main(int argc, char **argv, char **envp) {
                  errorMsg.c_str());
   }
   /* Falls through. */
-  case LibcType::FreeStandingLibc: {
+  case LibcType::FreestandingLibc: {
     SmallString<128> Path(Opts.LibraryDir);
     llvm::sys::path::append(Path,
-                            "libkleeRuntimeFreeStanding" + opt_suffix + ".bca");
+                            "libkleeRuntimeFreestanding" + opt_suffix + ".bca");
     if (!klee::loadFile(Path.c_str(), mainModule->getContext(), loadedModules,
                         errorMsg))
-      klee_error("error loading free standing support '%s': %s", Path.c_str(),
+      klee_error("error loading freestanding support '%s': %s", Path.c_str(),
                  errorMsg.c_str());
     break;
   }

@@ -85,12 +85,12 @@ foreach (_suffix ${LIB_BC_SUFFIX})
     list(APPEND "LIB_BC_FLAGS_${_suffix}" ${COMMON_CC_FLAGS})
 endforeach ()
 
-add_subdirectory(FreeStanding)
+add_subdirectory(Freestanding)
 add_subdirectory(Intrinsic)
 add_subdirectory(klee-libc)
 
 set(RUNTIME_LIBRARIES
-        RuntimeFreeStanding
+        RuntimeFreestanding
         RuntimeIntrinsic
         RuntimeKLEELibc
         )
