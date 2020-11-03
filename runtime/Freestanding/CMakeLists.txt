@@ -7,7 +7,7 @@
 #
 #===------------------------------------------------------------------------===#
 
-set(LIB_PREFIX "RuntimeFreeStanding")
+set(LIB_PREFIX "RuntimeFreestanding")
 set(SRC_FILES
         memcmp.c
         memcpy.c
