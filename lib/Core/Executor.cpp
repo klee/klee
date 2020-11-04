@@ -4328,6 +4328,26 @@ void Executor::executeMakeProbSymbolic(ExecutionState &state,
   executeMakeSymbolic(state, mo, name);
 }
 
+void Executor::getKQueryForState(std::string LocInfo, ExecutionState *state) {
+  std::string res = "";
+  llvm::raw_string_ostream info(res);
+  ExprPPrinter::printConstraints(info, state->constraints);
+  *kqueryDumpFileptr << "\n" << LocInfo << "\n";
+  *kqueryDumpFileptr << info.str();
+}
+
+void Executor::getSMTLIB2ForState(std::string LocInfo, ExecutionState *state) {
+  std::string Str = "";
+  llvm::raw_string_ostream info(Str);
+  ExprSMTLIBPrinter printer;
+  printer.setOutput(info);
+  Query query(state->constraints, ConstantExpr::alloc(0, Expr::Bool));
+  printer.setQuery(query);
+  printer.generateOutput();
+  *kqueryDumpFileptr << "\n" << LocInfo << "\n";
+  *kqueryDumpFileptr << info.str();
+}
+
 /***/
 void Executor::runFunctionAsMain(Function *f,
 				 int argc,
@@ -4425,7 +4445,8 @@ void Executor::runFunctionAsMain(Function *f,
   // Execution Tree INIT
   executionTree = std::make_unique<ETree>(initState);
   processTree = std::make_unique<PTree>(state);
-  
+  kqueryDumpFileptr = interpreterHandler->openOutputFile("kquey_dump.txt");
+
   run(*state);
   printETree();
 

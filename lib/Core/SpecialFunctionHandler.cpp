@@ -1000,11 +1000,8 @@ void SpecialFunctionHandler::handleMakeSymbolicPSE(ExecutionState &state,
 void SpecialFunctionHandler::handleGetKQueryExpression(ExecutionState &state,
                                                 KInstruction *target,
                                                 std::vector<ref<Expr> > &arguments) {
-  klee_pse_message("Dumping KQUERY for State\n");
-  std::string res;
-  llvm::raw_string_ostream info(res);
-  ExprPPrinter::printConstraints(info, state.constraints);
-  errs() << info.str();
+  executor.getKQueryForState(target->getSourceLocation(), &state);
+  executor.getSMTLIB2ForState(target->getSourceLocation(), &state);
 }
 
 void SpecialFunctionHandler::handleMarkGlobal(ExecutionState &state,
