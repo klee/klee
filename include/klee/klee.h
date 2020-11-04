@@ -130,8 +130,8 @@ extern "C" {
   void klee_posix_prefer_cex(void *object, uintptr_t condition);
   void klee_mark_global(void *object);
 
-  /* klee_dump_kquery_var() get KQuery Dump for a specific Variable Object */
-  void klee_dump_kquery_var(void *object);
+  /* klee_dump_kquery_var() get KQuery Dump for current State */
+  void klee_dump_kquery_var();
 
   /* Return a possible constant value for the input expression. This
      allows programs to forcibly concretize values on their own. */

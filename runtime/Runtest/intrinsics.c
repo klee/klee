@@ -220,7 +220,7 @@ void klee_make_pse_symbolic(void *array, size_t nbytes, const char *name, float 
 }
 
 // HACK : Not needed here. Refactor later 
-void klee_dump_kquery_var(void *object) {
+void klee_dump_kquery_var() {
 
 }
 

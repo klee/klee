@@ -23,16 +23,20 @@
 #include "klee/Solver/SolverCmdLine.h"
 #include "klee/Support/Debug.h"
 #include "klee/Support/ErrorHandling.h"
+#include "klee/Expr/Expr.h"
+#include "klee/Expr/ExprPPrinter.h"
 #include "klee/Support/OptionCategories.h"
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/IR/Module.h"
 
 #include <errno.h>
 #include <sstream>
 #include <iostream>
+#include <string>
 
 using namespace llvm;
 using namespace klee;
@@ -996,7 +1000,11 @@ void SpecialFunctionHandler::handleMakeSymbolicPSE(ExecutionState &state,
 void SpecialFunctionHandler::handleGetKQueryExpression(ExecutionState &state,
                                                 KInstruction *target,
                                                 std::vector<ref<Expr> > &arguments) {
-  std::cout << "Dumping KQUERY Expressions" << std::endl;
+  klee_pse_message("Dumping KQUERY for State\n");
+  std::string res;
+  llvm::raw_string_ostream info(res);
+  ExprPPrinter::printConstraints(info, state.constraints);
+  errs() << info.str();
 }
 
 void SpecialFunctionHandler::handleMarkGlobal(ExecutionState &state,
