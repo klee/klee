@@ -25,7 +25,7 @@ if (ENABLE_DOXYGEN)
     add_custom_target(doc-doxygen
       COMMAND "${DOXYGEN_EXECUTABLE}" "${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg"
       COMMENT "Generating Doxygen documentation"
-      ${ADD_CUSTOM_COMMAND_USES_TERMINAL_ARG}
+      USES_TERMINAL
     )
     add_dependencies(docs doc-doxygen)
 
@@ -33,15 +33,14 @@ if (ENABLE_DOXYGEN)
     # doxygen.cfg
     set(DOXYGEN_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/doxygen")
 
-    # Add rule to clean doxygen documentation
-    add_custom_target(clean_doxygen
-      COMMAND
-        "${CMAKE_COMMAND}"
-        "-E"
-        "remove_directory"
-        "${DOXYGEN_OUTPUT_DIR}"
-    )
-    add_dependencies(clean_all clean_doxygen)
+    if ("${CMAKE_VERSION}" VERSION_LESS "3.15")
+      set_directory_properties(PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
+              "${DOXYGEN_OUTPUT_DIR}")
+    else ()
+      set_directory_properties(PROPERTY ADDITIONAL_CLEAN_FILES
+              "${DOXYGEN_OUTPUT_DIR}")
+    endif ()
+
   else()
     message(WARNING "Doxygen not found. Can't build Doxygen documentation")
     set(ENABLE_DOXYGEN OFF

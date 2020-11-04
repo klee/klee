@@ -188,5 +188,5 @@ add_custom_target(unittests
     "${LIT_TOOL}" ${LIT_ARGS} "${CMAKE_CURRENT_BINARY_DIR}"
     DEPENDS ${UNIT_TEST_DEPENDS}
     COMMENT "Running unittests"
-    ${ADD_CUSTOM_COMMAND_USES_TERMINAL_ARG}
+    USES_TERMINAL
 )

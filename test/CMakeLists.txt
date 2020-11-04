@@ -146,7 +146,7 @@ add_custom_target(systemtests
   COMMAND "${LIT_TOOL}" ${LIT_ARGS} "${CMAKE_CURRENT_BINARY_DIR}"
   DEPENDS klee kleaver klee-replay kleeRuntest gen-bout gen-random-bout
   COMMENT "Running system tests"
-  ${ADD_CUSTOM_COMMAND_USES_TERMINAL_ARG}
+  USES_TERMINAL
 )
 
 # Tell CMake to remove lit's output directories when
