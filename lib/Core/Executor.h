@@ -35,6 +35,8 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <utility>
+#include <unordered_map>
 
 struct KTest;
 
@@ -140,6 +142,9 @@ private:
   /// This is a custom dummy Execution Tree. 
   std::unique_ptr<ETree> executionTree;
   
+  typedef std::pair<std::vector<float>, std::vector<float>> float_dist_pairs;
+  std::unordered_map<const MemoryObject*, float_dist_pairs> globalProbVarsMap;
+
   /// Used to track states that have been added during the current
   /// instructions step. 
   /// \invariant \ref addedStates is a subset of \ref states. 
@@ -347,8 +352,12 @@ private:
 
   // Make a symbolic Execution variable for PSE. 
   void executeMakeProbSymbolic(ExecutionState &state, const MemoryObject *mo,
-                           const std::string &name, float* distribution, float* probabilities);
+                           const std::string &name, std::vector<float> distribution, 
+                           std::vector<float> probabilities);
                            
+  /// Check if the type of a given Variable. 
+  bool getProbVarStatus(const MemoryObject *mo);
+  
   /// Create a new state where each input condition has been added as
   /// a constraint and return the results. The input state is included
   /// as one of the results. Note that the output vector may included

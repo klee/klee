@@ -41,6 +41,10 @@ void klee_message_to_file(const char *msg, ...)
 /// newline on stderr and to warnings.txt.
 void klee_warning(const char *msg, ...) __attribute__((format(printf, 1, 2)));
 
+/// Print "KLEE: PSE Message " followed by the msg in printf format and a
+/// newline on stderr and to warnings.txt.
+void klee_pse_message(const char *msg, ...) __attribute__((format(printf, 1, 2)));
+
 /// Print "KLEE: WARNING: " followed by the msg in printf format and a
 /// newline on stderr and to warnings.txt. However, the warning is only
 /// printed once for each unique (id, msg) pair (as pointers).

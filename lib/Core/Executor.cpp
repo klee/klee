@@ -4294,21 +4294,40 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
   }
 }
 
-// Implementation for  Make Prob Symbolic Variable.
+/// Get PSE Variable Type. 
+/// FIXME : Change to return Type information.  
+bool Executor::getProbVarStatus(const MemoryObject *mo) {
+  auto findMemObj = globalProbVarsMap.find(mo);
+  if (findMemObj == globalProbVarsMap.end()) {
+    // Not a PSE Variable. 
+    klee_pse_message("Not a PSE Variable");
+    return false;
+  } else {
+    auto distPair = findMemObj->second;
+    if (distPair.first.size() > 0 && distPair.second.size() > 0) {
+      klee_pse_message("Probabilistic Variable");
+      return true;
+    } else {
+      klee_pse_message("Non Deterministic Variable");
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Implementation for Make Prob Symbolic Variable 
+/// used by klee_make_pse_symbolic()
 void Executor::executeMakeProbSymbolic(ExecutionState &state, 
                                    const MemoryObject *mo,
                                    const std::string &name, 
-                                   float *distribution, 
-                                   float *probabilities) {
-  
-  // TODO : Add to hashmap variableInfo, name by MemoryObject. 
-  std::pair<float*, float*> variableInfo = std::make_pair(distribution, probabilities);
-
+                                   std::vector<float> distribution, 
+                                   std::vector<float> probabilities) {
+  float_dist_pairs variableInfo = std::make_pair(distribution, probabilities);
+  globalProbVarsMap.insert(std::make_pair(mo, variableInfo));
   executeMakeSymbolic(state, mo, name);
 }
 
 /***/
-
 void Executor::runFunctionAsMain(Function *f,
 				 int argc,
 				 char **argv,

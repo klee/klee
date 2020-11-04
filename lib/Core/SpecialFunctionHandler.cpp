@@ -235,7 +235,53 @@ bool SpecialFunctionHandler::handle(ExecutionState &state,
   }
 }
 
-/****/
+/***
+ * Read data from memory a.k.a concrete Store by ref<Expr>. 
+*/
+std::vector<float> 
+SpecialFunctionHandler::readCustomDataAtAddress(ExecutionState &state, 
+                                                ref<Expr> addressExpr) {
+  
+  ObjectPair op;
+  std::vector<float> float_vector;
+  addressExpr = executor.toUnique(state, addressExpr);
+
+  if (!isa<ConstantExpr>(addressExpr)) {
+    executor.terminateStateOnError(
+        state, "Symbolic string pointer passed to one of the klee_ functions",
+        Executor::TerminateReason::User);
+    return float_vector;
+  }
+  ref<ConstantExpr> address = cast<ConstantExpr>(addressExpr);
+  if (!state.addressSpace.resolveOne(address, op)) {
+    executor.terminateStateOnError(
+        state, "Invalid string pointer passed to one of the klee_ functions",
+        Executor::TerminateReason::User);
+    return float_vector;
+  }
+  const MemoryObject *mo = op.first;
+  const ObjectState *os = op.second;
+
+  auto relativeOffset = mo->getOffsetExpr(address);
+  // the relativeOffset must be concrete as the address is concrete
+  size_t offset = cast<ConstantExpr>(relativeOffset)->getZExtValue();
+
+  float fl = 0.0f;
+  for (size_t i = offset; i < mo->size; i += 4) {
+    ref<Expr> cur = os->read(i, Expr::Int32);
+    cur = executor.toUnique(state, cur);
+    assert(isa<ConstantExpr>(cur) && 
+           "hit symbolic char while reading concrete string");
+    fl = cast<ConstantExpr>(cur)->getZExtValue(32);
+    float_vector.emplace_back(fl);
+  }
+
+  // for (const float a : float_vector) {
+  //   errs() << a << " ";
+  // }
+
+  return float_vector;
+}
 
 // reads a concrete string from memory
 std::string 
@@ -881,18 +927,33 @@ void SpecialFunctionHandler::handleMakeSymbolicPSE(ExecutionState &state,
                                                 KInstruction *target,
                                                 std::vector<ref<Expr> > &arguments) {
    std::string name;
-   float *distribution, *probabilities;
+   std::vector<float> distribution, probabilities;
 
   if (arguments.size() < 3) {
-    executor.terminateStateOnError(state, "Incorrect number of arguments to klee_make_symbolic(void*, size_t, char*)", Executor::User);
+    executor.terminateStateOnError(state, "Incorrect number of arguments to klee_make_pse_symbolic(void*, size_t, char*, float*, float*)", Executor::User);
     return;
+  }
+
+  if (arguments.size() == 3) {
+    klee_pse_message("Created ForAll Variable");
+  }
+
+  if (arguments.size() == 4) {
+    distribution = readCustomDataAtAddress(state, arguments[3]);
+    klee_pse_message("Created Non Deterministic Variable");
+  }
+
+  if (arguments.size() == 5) {
+    distribution = readCustomDataAtAddress(state, arguments[3]);
+    probabilities = readCustomDataAtAddress(state, arguments[4]);
+    klee_pse_message("Created Probabilistic Variable");
   }
 
   name = arguments[2]->isZero() ? "" : readStringAtAddress(state, arguments[2]);
 
   if (name.length() == 0) {
     name = "unnamed";
-    klee_warning("klee_make_symbolic: renamed empty name to \"unnamed\"");
+    klee_warning("klee_make_pse_symbolic: renamed empty name to \"unnamed\"");
   }
 
   Executor::ExactResolutionList rl;
@@ -922,10 +983,6 @@ void SpecialFunctionHandler::handleMakeSymbolicPSE(ExecutionState &state,
         res, s->queryMetaData);
     assert(success && "FIXME: Unhandled solver failure");
     
-    // TODO : Process each of the float arrays as per KLEE ref<Expr>.
-    // Convert back to proper values and pass it executeMakeProbSymbolic 
-    // for variableInfo Pair. 
-
     if (res) {
       executor.executeMakeProbSymbolic(*s, mo, name, distribution, probabilities);
     } else {      

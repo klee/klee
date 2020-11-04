@@ -94,6 +94,7 @@ namespace klee {
     /* Convenience routines */
 
     std::string readStringAtAddress(ExecutionState &state, ref<Expr> address);
+    std::vector<float> readCustomDataAtAddress(ExecutionState &state, ref<Expr> address);
     
     /* Handlers */
 

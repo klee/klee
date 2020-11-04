@@ -136,7 +136,6 @@ void klee_make_symbolic(void *array, size_t nbytes, const char *name) {
 
 void klee_make_pse_symbolic(void *array, size_t nbytes, const char *name, float *distribution, float *probabilities) {
 
-  // TODO : Process and allocate the float* here for futher use. 
   if (!name)
     name = "unnamed";
 
