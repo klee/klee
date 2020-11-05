@@ -3696,8 +3696,10 @@ bool Executor::checkMemoryUsage() {
 }
 
 void Executor::doDumpStates() {
-  if (!DumpStatesOnHalt || states.empty())
+  if (!DumpStatesOnHalt || states.empty()) {
+    interpreterHandler->incPathsExplored(states.size());
     return;
+  }
 
   klee_message("halting execution, dumping remaining states");
   for (const auto &state : states)
@@ -3898,6 +3900,7 @@ void Executor::terminateStateOnExit(ExecutionState &state) {
   if (!OnlyOutputStatesCoveringNew || state.coveredNew || 
       (AlwaysOutputSeeds && seedMap.count(&state)))
     interpreterHandler->processTestCase(state, 0, 0);
+  interpreterHandler->incPathsCompleted();
   terminateState(state);
 }
 

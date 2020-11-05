@@ -40,7 +40,8 @@ public:
   virtual std::string getOutputFilename(const std::string &filename) = 0;
   virtual std::unique_ptr<llvm::raw_fd_ostream> openOutputFile(const std::string &filename) = 0;
 
-  virtual void incPathsExplored() = 0;
+  virtual void incPathsCompleted() = 0;
+  virtual void incPathsExplored(std::uint32_t num = 1) = 0;
 
   virtual void processTestCase(const ExecutionState &state,
                                const char *err,
