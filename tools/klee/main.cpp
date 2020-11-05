@@ -308,7 +308,8 @@ private:
 
   unsigned m_numTotalTests;     // Number of tests received from the interpreter
   unsigned m_numGeneratedTests; // Number of tests successfully generated
-  unsigned m_pathsExplored; // number of paths explored so far
+  unsigned m_pathsCompleted; // number of completed paths
+  unsigned m_pathsExplored; // number of partially explored and completed paths
 
   // used for writing .ktest files
   int m_argc;
@@ -321,8 +322,11 @@ public:
   llvm::raw_ostream &getInfoStream() const { return *m_infoFile; }
   /// Returns the number of test cases successfully generated so far
   unsigned getNumTestCases() { return m_numGeneratedTests; }
+  unsigned getNumPathsCompleted() { return m_pathsCompleted; }
   unsigned getNumPathsExplored() { return m_pathsExplored; }
-  void incPathsExplored() { m_pathsExplored++; }
+  void incPathsCompleted() { ++m_pathsCompleted; }
+  void incPathsExplored(std::uint32_t num = 1) {
+    m_pathsExplored += num; }
 
   void setInterpreter(Interpreter *i);
 
@@ -348,7 +352,7 @@ public:
 KleeHandler::KleeHandler(int argc, char **argv)
     : m_interpreter(0), m_pathWriter(0), m_symPathWriter(0),
       m_outputDirectory(), m_numTotalTests(0), m_numGeneratedTests(0),
-      m_pathsExplored(0), m_argc(argc), m_argv(argv) {
+      m_pathsCompleted(0), m_pathsExplored(0), m_argc(argc), m_argv(argv) {
 
   // create output directory (OutputDir or "klee-out-<i>")
   bool dir_given = OutputDir != "";
@@ -1583,13 +1587,15 @@ int main(int argc, char **argv, char **envp) {
     << "KLEE: done: query cex = " << queryCounterexamples << "\n";
 
   std::stringstream stats;
-  stats << "\n";
-  stats << "KLEE: done: total instructions = "
-        << instructions << "\n";
-  stats << "KLEE: done: completed paths = "
-        << handler->getNumPathsExplored() << "\n";
-  stats << "KLEE: done: generated tests = "
-        << handler->getNumTestCases() << "\n";
+  stats << '\n'
+        << "KLEE: done: total instructions = " << instructions << '\n'
+        << "KLEE: done: completed paths = " << handler->getNumPathsCompleted()
+        << '\n'
+        << "KLEE: done: partially completed paths = "
+        << handler->getNumPathsExplored() - handler->getNumPathsCompleted()
+        << '\n'
+        << "KLEE: done: generated tests = " << handler->getNumTestCases()
+        << '\n';
 
   bool useColors = llvm::errs().is_displayed();
   if (useColors)
