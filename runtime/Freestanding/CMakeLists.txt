@@ -9,6 +9,7 @@
 
 set(LIB_PREFIX "RuntimeFreestanding")
 set(SRC_FILES
+        fortify-fs.c
         memcmp.c
         memcpy.c
         memmove.c
