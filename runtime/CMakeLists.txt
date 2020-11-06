@@ -91,11 +91,13 @@ endforeach ()
 add_subdirectory(Freestanding)
 add_subdirectory(Intrinsic)
 add_subdirectory(klee-libc)
+add_subdirectory(Fortify)
 
 set(RUNTIME_LIBRARIES
         RuntimeFreestanding
         RuntimeIntrinsic
         RuntimeKLEELibc
+        RuntimeFortify
         )
 
 if (ENABLE_KLEE_EH_CXX)

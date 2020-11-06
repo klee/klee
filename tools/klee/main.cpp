@@ -1021,7 +1021,7 @@ static void halt_via_gdb(int pid) {
 
 #ifndef SUPPORT_KLEE_UCLIBC
 static void
-linkWithUclibc(StringRef libDir,
+linkWithUclibc(StringRef libDir, std::string opt_suffix,
                std::vector<std::unique_ptr<llvm::Module>> &modules) {
   klee_error("invalid libc, no uclibc support!\n");
 }
@@ -1112,7 +1112,7 @@ createLibCWrapper(std::vector<std::unique_ptr<llvm::Module>> &modules,
 }
 
 static void
-linkWithUclibc(StringRef libDir,
+linkWithUclibc(StringRef libDir, std::string opt_suffix,
                std::vector<std::unique_ptr<llvm::Module>> &modules) {
   LLVMContext &ctx = modules[0]->getContext();
 
@@ -1133,6 +1133,14 @@ linkWithUclibc(StringRef libDir,
 
   createLibCWrapper(modules, EntryPoint, "__uClibc_main");
   klee_message("NOTE: Using klee-uclibc : %s", uclibcBCA.c_str());
+
+  // Link the fortified library
+  SmallString<128> FortifyPath(libDir);
+  llvm::sys::path::append(FortifyPath,
+                          "libkleeRuntimeFortify" + opt_suffix + ".bca");
+  if (!klee::loadFile(FortifyPath.c_str(), ctx, modules, errorMsg))
+    klee_error("error loading the fortify library '%s': %s",
+               FortifyPath.c_str(), errorMsg.c_str());
 }
 #endif
 
@@ -1318,7 +1326,7 @@ int main(int argc, char **argv, char **envp) {
     break;
   }
   case LibcType::UcLibc:
-    linkWithUclibc(LibraryDir, loadedModules);
+    linkWithUclibc(LibraryDir, opt_suffix, loadedModules);
     break;
   }
 
