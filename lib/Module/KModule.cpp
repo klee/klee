@@ -389,7 +389,6 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
   for (auto &Function : *module) {
     extractInitialAlloca(&Function);
     splitByCall(&Function);
-    splitLastInstruction(&Function);
   }
 
   infos = std::unique_ptr<InstructionInfoTable>(

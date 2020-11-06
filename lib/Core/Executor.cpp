@@ -2087,10 +2087,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
           terminateStateOnExecError(state, "return void when caller expected a result");
         }
       }
-    }      
+    }
     break;
   }
   case Instruction::Br: {
+    if (IsolationMode) {
+      terminateStateOnExit(state);
+      break;
+    }
     BranchInst *bi = cast<BranchInst>(i);
     if (bi->isUnconditional()) {
       transferToBasicBlock(bi->getSuccessor(0), bi->getParent(), state);
@@ -2118,6 +2122,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
   case Instruction::IndirectBr: {
+    if (IsolationMode) {
+      terminateStateOnExit(state);
+      break;
+    }
     // implements indirect branch to a label within the current function
     const auto bi = cast<IndirectBrInst>(i);
     auto address = eval(ki, 0, state).value;
@@ -2193,6 +2201,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
   case Instruction::Switch: {
+    if (IsolationMode) {
+      terminateStateOnExit(state);
+      break;
+    }
     SwitchInst *si = cast<SwitchInst>(i);
     ref<Expr> cond = eval(ki, 0, state).value;
     BasicBlock *bb = si->getParent();
@@ -2324,6 +2336,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::Invoke:
   case Instruction::Call: {
+    if (IsolationMode) {
+      terminateStateOnExit(state);
+      break;
+    }
     // Ignore debug intrinsic calls
     if (isa<DbgInfoIntrinsic>(i))
       break;
@@ -3153,6 +3169,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
 
   case Instruction::Resume: {
+    if (IsolationMode) {
+      terminateStateOnExit(state);
+      break;
+    }
     auto *cui = dyn_cast_or_null<CleanupPhaseUnwindingInformation>(
         state.unwindingInformation.get());
 
@@ -4679,28 +4699,22 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
 
     if(bbit != bbie) {
       StackFrame *stackFrame = new StackFrame(nullptr, kf);
-
       ExecutionState *initialState = state.withStackFrame(stackFrame);
 
       prepareSymbolicArgs(*initialState, kf);
       updateStackFrame(stackFrame, initialState);
 
-      KBlock **blocks = new KBlock*[2];
-      bbie--; blocks[1] = kf->kBlocks[&*bbie]; bbie++;
       for (; bbit != bbie; bbit++) {
-        blocks[0] = kf->kBlocks[&*bbit];
-        KBlock *kb = new KBlock(f, blocks, kmodule.get(), 2);
-
+        KBlock *kb = kf->kBlocks[&*bbit];
         ExecutionState *currState = initialState->withInstructions(kb->instructions);
-
         pushPreviousStack(f, *stackFrame, *currState);
-        switch (blocks[0]->getKBlockType()) {
+        switch (kb->getKBlockType()) {
           case KBlockType::Alloca:
-            prepareSymbolicAllocas(*currState, blocks[0]);
+            prepareSymbolicAllocas(*currState, kb);
             initialState = currState;
             break;
           case KBlockType::Call: {
-            KCallBlock *kcall = (KCallBlock*)blocks[0];
+            KCallBlock *kcall = (KCallBlock*)kb;
             Function *call = kcall->calledFunction;
             if(executedFunction.insert(call).second)
                 functionFonRun.push(call);
