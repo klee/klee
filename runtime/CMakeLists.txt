@@ -64,12 +64,15 @@ set(LIB_BC_FLAGS_32
         )
 
 # Common for all library configurations
-# Setup all compilation flags
+# Since the runtime now contains fortified libc functions, it is
+# important to compile it with -D_FORTIFY_SOURCE=0 to avoid infinite
+# recursion
 set(COMMON_CC_FLAGS
         "-I${CMAKE_SOURCE_DIR}/include"
         "-I${CMAKE_BINARY_DIR}/include"
         -g
         -D_DEBUG
+        -D_FORTIFY_SOURCE=0
         -D_GNU_SOURCE
         -D__STDC_LIMIT_MACROS
         -D__STDC_CONSTANT_MACROS
