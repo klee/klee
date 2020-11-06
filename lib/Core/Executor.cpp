@@ -4672,7 +4672,7 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
   functionFonRun.push(mainFn);
   executedFunction.insert(mainFn);
   while (!functionFonRun.empty()) {
-    Function *f = functionFonRun.back();
+    Function *f = functionFonRun.front();
     ExecutionResult &cfg = cfgStates[f];
     KFunction *kf = kmodule->functionMap[f];
     Function::iterator bbit = f->begin(), bbie = f->end();
@@ -4686,7 +4686,7 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
       updateStackFrame(stackFrame, initialState);
 
       KBlock **blocks = new KBlock*[2];
-      bbie--; blocks[1] = kf->kBlocks[&*bbie];
+      bbie--; blocks[1] = kf->kBlocks[&*bbie]; bbie++;
       for (; bbit != bbie; bbit++) {
         blocks[0] = kf->kBlocks[&*bbit];
         KBlock *kb = new KBlock(f, blocks, kmodule.get(), 2);
@@ -4702,12 +4702,10 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
           case KBlockType::Call: {
             KCallBlock *kcall = (KCallBlock*)blocks[0];
             Function *call = kcall->calledFunction;
-            if(cfgStates.count(call) == 0) {
-              if (!call->getReturnType()->isVoidTy())
-                prepareSymbolicReturn(*currState, kcall->kcallInstruction);
-              if(f != call && executedFunction.insert(call).second)
+            if(executedFunction.insert(call).second)
                 functionFonRun.push(call);
-            }
+            if (!call->getReturnType()->isVoidTy())
+              prepareSymbolicReturn(*currState, kcall->kcallInstruction);
             break;
           }
           case KBlockType::Base:
