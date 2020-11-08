@@ -1000,8 +1000,10 @@ void SpecialFunctionHandler::handleMakeSymbolicPSE(ExecutionState &state,
 void SpecialFunctionHandler::handleGetKQueryExpression(ExecutionState &state,
                                                 KInstruction *target,
                                                 std::vector<ref<Expr> > &arguments) {
-  executor.getKQueryForState(target->getSourceLocation(), &state);
-  executor.getSMTLIB2ForState(target->getSourceLocation(), &state);
+  // TODO : Dump all path constraints and not just path conditions. 
+  std::string result = "";
+  executor.getConstraintLog(state, result, klee::Interpreter::KQUERY);
+  errs() << result << "\n";
 }
 
 void SpecialFunctionHandler::handleMarkGlobal(ExecutionState &state,

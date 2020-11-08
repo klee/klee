@@ -361,12 +361,6 @@ private:
   /// Check if the type of a given Variable. 
   bool getProbVarStatus(const MemoryObject *mo);
   
-  /// Just return the KQuery expression for the state 
-  void getKQueryForState(std::string LocInfo, ExecutionState *state);
-
-  /// Just return the SMTLIB2 expression for the state
-  void getSMTLIB2ForState(std::string LocInfo, ExecutionState *state);
-
   /// Create a new state where each input condition has been added as
   /// a constraint and return the results. The input state is included
   /// as one of the results. Note that the output vector may included
