@@ -1,0 +1,8 @@
+RUN: %klee-stats --table-format=csv %S/klee-stats/run | FileCheck --check-prefix=CHECK-CSV %s
+RUN: %klee-stats --table-format=readable-csv %S/klee-stats/run | FileCheck --check-prefix=CHECK-READABLECSV %s
+
+CHECK-CSV: Path,Instrs,Time(s),ICov(%),BCov(%),ICount,TSolver(%)
+CHECK-CSV: klee-stats/run,3,0.00,100.00,100.00,3,0.00
+
+CHECK-READABLECSV: Path          ,  Instrs,  Time(s),  ICov(%),  BCov(%),  ICount,  TSolver(%)
+CHECK-READABLECSV: klee-stats/run,       3,     0.00,   100.00,   100.00,       3,        0.00
