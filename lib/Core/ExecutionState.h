@@ -130,8 +130,7 @@ struct CleanupPhaseUnwindingInformation : public UnwindingInformation {
                                    const std::size_t catchingStackIndex)
       : UnwindingInformation(exceptionObject,
                              UnwindingInformation::Kind::CleanupPhase),
-        selectorValue(selectorValue),
-        catchingStackIndex(catchingStackIndex) {}
+        selectorValue(selectorValue), catchingStackIndex(catchingStackIndex) {}
 
   std::unique_ptr<UnwindingInformation> clone() const {
     return std::make_unique<CleanupPhaseUnwindingInformation>(*this);
@@ -173,7 +172,8 @@ public:
 
   // Overall state of the state - Data specific
 
-  /// @brief Exploration depth, i.e., number of times KLEE branched for this state
+  /// @brief Exploration depth, i.e., number of times KLEE branched for this
+  /// state
   std::uint32_t depth;
 
   /// @brief Address space used by this state (e.g. Global and Heap)
@@ -181,7 +181,7 @@ public:
 
   /// @brief Constraints collected so far
   ConstraintSet constraints;
-  
+
   /// Statistics and information
 
   /// @brief Metadata utilized and collected by solvers for this state
@@ -210,10 +210,12 @@ public:
   /// @brief Set of used array names for this state.  Used to avoid collisions.
   std::set<std::string> arrayNames;
 
-  /// @brief The objects handling the klee_open_merge calls this state ran through
+  /// @brief The objects handling the klee_open_merge calls this state ran
+  /// through
   std::vector<ref<MergeHandler>> openMergeStack;
 
-  /// @brief The numbers of times this state has run through Executor::stepInstruction
+  /// @brief The numbers of times this state has run through
+  /// Executor::stepInstruction
   std::uint64_t steppedInstructions;
 
   /// @brief Counts how many instructions were executed since the last new
@@ -227,7 +229,7 @@ public:
   static std::uint32_t nextID;
 
   /// @brief the state id
-  std::uint32_t id {0};
+  std::uint32_t id{0};
 
   /// @brief Whether a new instruction was covered in this state
   bool coveredNew;
@@ -236,10 +238,10 @@ public:
   bool forkDisabled;
 
 public:
-  #ifdef KLEE_UNITTEST
+#ifdef KLEE_UNITTEST
   // provide this function only in the context of unittests
-  ExecutionState(){}
-  #endif
+  ExecutionState() {}
+#endif
   // only to create the initial state
   explicit ExecutionState(KFunction *kf);
   // no copy assignment, use copy constructor
@@ -247,7 +249,7 @@ public:
   // no move ctor
   ExecutionState(ExecutionState &&) noexcept = delete;
   // no move assignment
-  ExecutionState& operator=(ExecutionState &&) noexcept = delete;
+  ExecutionState &operator=(ExecutionState &&) noexcept = delete;
   // dtor
   ~ExecutionState();
 
@@ -272,6 +274,6 @@ struct ExecutionStateIDCompare {
     return a->getID() < b->getID();
   }
 };
-}
+} // namespace klee
 
 #endif /* KLEE_EXECUTIONSTATE_H */

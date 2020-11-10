@@ -36,7 +36,8 @@ PTree::PTree(ExecutionState *initialState)
   initialState->ptreeNode = root.getPointer();
 }
 
-void PTree::attach(PTreeNode *node, ExecutionState *leftState, ExecutionState *rightState) {
+void PTree::attach(PTreeNode *node, ExecutionState *leftState,
+                   ExecutionState *rightState) {
   assert(node && !node->left.getPointer() && !node->right.getPointer());
   assert(node == rightState->ptreeNode &&
          "Attach assumes the right state is the current state");
@@ -101,7 +102,7 @@ void PTree::dump(llvm::raw_ostream &os) {
   os << "\tcenter = \"true\";\n";
   os << "\tnode [style=\"filled\",width=.1,height=.1,fontname=\"Terminus\"]\n";
   os << "\tedge [arrowsize=.3]\n";
-  std::vector<const PTreeNode*> stack;
+  std::vector<const PTreeNode *> stack;
   stack.push_back(root.getPointer());
   while (!stack.empty()) {
     const PTreeNode *n = stack.back();
@@ -127,7 +128,8 @@ void PTree::dump(llvm::raw_ostream &os) {
   delete pp;
 }
 
-PTreeNode::PTreeNode(PTreeNode *parent, ExecutionState *state) : parent{parent}, state{state} {
+PTreeNode::PTreeNode(PTreeNode *parent, ExecutionState *state)
+    : parent{parent}, state{state} {
   state->ptreeNode = this;
   left = PTreeNodePtr(nullptr);
   right = PTreeNodePtr(nullptr);

@@ -4,71 +4,67 @@
 #include "klee/Expr/Expr.h"
 
 #include <memory>
-#include <vector>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 /**
  * This is a custom execution State to store some information during
- * execution. It store information for probabilistic execution.  
+ * execution. It store information for probabilistic execution.
  */
 namespace klee {
 
-    class ProbExecState;
-    class ETreeNode;
-    
-    using ETreeNodePtr = std::shared_ptr<ETreeNode>;
-    using ProbStatePtr = std::shared_ptr<ProbExecState>;
+class ProbExecState;
+class ETreeNode;
 
-    /**
-     * Store probabilistic data (similar to ExecutionState) in the 
-     * tree ndoes for ETree. Will be modified to contain VariableInfo 
-     * per state later on. 
-    */
-    class ProbExecState {
-        public:
+using ETreeNodePtr = std::shared_ptr<ETreeNode>;
+using ProbStatePtr = std::shared_ptr<ProbExecState>;
 
-        // Did ETree fork on this state? Yes : No
-        bool forkflag = false;
+/**
+ * Store probabilistic data (similar to ExecutionState) in the
+ * tree ndoes for ETree. Will be modified to contain VariableInfo
+ * per state later on.
+ */
+class ProbExecState {
+public:
+  // Did ETree fork on this state? Yes : No
+  bool forkflag = false;
 
-        // Filling dummy data as of now for sanity checks.
-        // TODO : Replace with proper structure. 
-        std::string data = ""; 
-        
-        // TODO : Symbol table, somewhat
-        std::unordered_map<std::string, std::string> symbolMapping;
+  // Filling dummy data as of now for sanity checks.
+  // TODO : Replace with proper structure.
+  std::string data = "";
 
-        // TODO : Store the probability distribution. 
-        std::vector<float> probability_dist = std::vector<float>();
+  // TODO : Symbol table, somewhat
+  std::unordered_map<std::string, std::string> symbolMapping;
 
-        // State ID for unique uuid. 
-        uint32_t stateId = 0;
+  // TODO : Store the probability distribution.
+  std::vector<float> probability_dist = std::vector<float>();
 
-        // Line number for assembly code. Store the first LOC number. 
-        uint32_t assemblyLine = 0;
+  // State ID for unique uuid.
+  uint32_t stateId = 0;
 
-        // Line number of actual code for assembly code. 
-        uint32_t codeLine = 0;
+  // Line number for assembly code. Store the first LOC number.
+  uint32_t assemblyLine = 0;
 
-        // ETree node with this state, probably before a fork. 
-        ETreeNodePtr treeNode = nullptr;
-        
-        ProbExecState() {}
+  // Line number of actual code for assembly code.
+  uint32_t codeLine = 0;
 
-        ProbExecState(const ProbExecState &) {}
-        ProbExecState(ProbExecState &&) {}
-        ~ProbExecState() = default;
-       
-        ProbExecState(std::string data, uint32_t stateId);
-        ProbExecState(std::string data, uint32_t stateId, ETreeNodePtr treeNode);
+  // ETree node with this state, probably before a fork.
+  ETreeNodePtr treeNode = nullptr;
 
-        ProbExecState(bool forkflag, 
-                    std::string data, 
-                    uint32_t stateId, 
-                    uint32_t assemblyLine, 
-                    uint32_t codeLine, 
+  ProbExecState() {}
+
+  ProbExecState(const ProbExecState &) {}
+  ProbExecState(ProbExecState &&) {}
+  ~ProbExecState() = default;
+
+  ProbExecState(std::string data, uint32_t stateId);
+  ProbExecState(std::string data, uint32_t stateId, ETreeNodePtr treeNode);
+
+  ProbExecState(bool forkflag, std::string data, uint32_t stateId,
+                uint32_t assemblyLine, uint32_t codeLine,
                 ETreeNodePtr treeNode);
-    };
+};
 
 } // namespace klee
 #endif /* KLEE_PROB_STATE_H */
