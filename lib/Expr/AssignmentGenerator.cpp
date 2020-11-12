@@ -10,11 +10,11 @@
 #include "klee/Expr/AssignmentGenerator.h"
 
 #include "klee/Expr/Assignment.h"
+#include "klee/Support/Casting.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/klee.h"
 
 #include <llvm/ADT/APInt.h>
-#include <llvm/Support/Casting.h>
 #include <llvm/Support/raw_ostream.h>
 
 #include <cassert>
