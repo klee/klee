@@ -11,9 +11,9 @@
 
 #include "klee/ADT/BitArray.h"
 #include "klee/Expr/ArrayExprVisitor.h"
+#include "klee/Support/Casting.h"
 
 #include <llvm/ADT/APInt.h>
-#include <llvm/Support/Casting.h>
 
 #include <cassert>
 #include <cstdint>
@@ -44,12 +44,11 @@ ref<Expr> ExprRewriter::rewrite(const ref<Expr> &e, const array2idx_ty &arrays,
            "Read is not aligned");
 
     Expr::Width width = idxt_v.getWidth() / element.first->range;
-    if (!idxt_v.getMul().isNull()) {
+    if (auto e = idxt_v.getMul()) {
       // If we have a MulExpr in the index, we can optimize our search by
       // skipping all those indexes that are not multiple of such value.
       // In fact, they will be rejected by the MulExpr interpreter since it
       // will not find any integer solution
-      auto e = idxt_v.getMul();
       auto ce = dyn_cast<ConstantExpr>(e);
       assert(ce && "Not a constant expression");
 

@@ -372,13 +372,8 @@ def write_table(args, data, dirs, pr):
     table = final_table
 
     # Output table
-    if args.tableFormat != 'klee':
-        print(tabulate(
-            table, headers='keys',
-            tablefmt=args.tableFormat,
-            floatfmt='.{p}f'.format(p=2),
-            numalign='right', stralign='center'))
-    else:
+    # - KLEE standard format
+    if args.tableFormat == 'klee':
         stream = tabulate(
             table, headers='keys',
             tablefmt=KleeTable,
@@ -390,6 +385,27 @@ def write_table(args, data, dirs, pr):
             stream.insert(-2, stream[-1])
             stream = '\n'.join(stream)
         print(stream)
+    # - (readable) csv
+    elif args.tableFormat in ['csv', 'readable-csv']:
+        CsvTable = TableFormat(
+            lineabove = None, linebelowheader = None,
+            linebetweenrows = None, linebelow = None,
+            headerrow = DataRow('', ',', ''),
+            datarow = DataRow('', ',', ''),
+            padding = 0, with_header_hide = None)
+        print(tabulate(
+            table, headers='keys',
+            tablefmt=CsvTable,
+            floatfmt='.{p}f'.format(p=2),
+            numalign='decimal' if args.tableFormat == 'readable-csv' else None,
+            stralign='left' if args.tableFormat == 'readable-csv' else None))
+    # - user-defined
+    else:
+        print(tabulate(
+            table, headers='keys',
+            tablefmt=args.tableFormat,
+            floatfmt='.{p}f'.format(p=2),
+            numalign='right', stralign='center'))
 
 
 def main():
@@ -413,22 +429,22 @@ def main():
 
     if tabulate_available:
         parser.add_argument('--table-format',
-                              choices=['klee'] + list(_table_formats.keys()),
-                              dest='tableFormat', default='klee',
-                              help='Table format for the summary.')
+                            choices=['klee', 'csv', 'readable-csv'] + list(_table_formats.keys()),
+                            dest='tableFormat', default='klee',
+                            help='Table format for the summary.')
 
     parser.add_argument('--to-csv',
-                          action='store_true', dest='toCsv',
-                          help='Output stats as comma-separated values (CSV)')
+                        action='store_true', dest='toCsv',
+                        help='Output run.stats data as comma-separated values (CSV)')
     parser.add_argument('--grafana',
-                          action='store_true', dest='grafana',
-                          help='Start a grafana web server')
+                        action='store_true', dest='grafana',
+                        help='Start a grafana web server')
     parser.add_argument('--grafana-host', dest='grafana_host',
-                          help='IP address grafana web server should listen to',
-                          default="127.0.0.1")
+                        help='IP address grafana web server should listen to',
+                        default="127.0.0.1")
     parser.add_argument('--grafana-port', dest='grafana_port', type=int,
-                          help='Port grafana web server should listen to',
-                          default=5000)
+                        help='Port grafana web server should listen to',
+                        default=5000)
 
     # argument group for controlling output verboseness
     pControl = parser.add_mutually_exclusive_group(required=False)

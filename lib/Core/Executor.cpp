@@ -45,6 +45,7 @@
 #include "klee/Solver/SolverCmdLine.h"
 #include "klee/Solver/SolverStats.h"
 #include "klee/Statistics/TimerStatIncrementer.h"
+#include "klee/Support/Casting.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/FileHandling.h"
 #include "klee/Support/FloatEvaluation.h"
@@ -1652,7 +1653,7 @@ ref<klee::ConstantExpr> Executor::getEhTypeidFor(ref<Expr> type_info) {
 void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
                            std::vector<ref<Expr>> &arguments) {
   Instruction *i = ki->inst;
-  if (i && isa<DbgInfoIntrinsic>(i))
+  if (isa_and_nonnull<DbgInfoIntrinsic>(i))
     return;
   if (f && f->isDeclaration()) {
     switch (f->getIntrinsicID()) {
@@ -3077,11 +3078,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       r = ExtractExpr::create(agg, rOffset, agg->getWidth() - rOffset);
 
     ref<Expr> result;
-    if (!l.isNull() && !r.isNull())
+    if (l && r)
       result = ConcatExpr::create(r, ConcatExpr::create(val, l));
-    else if (!l.isNull())
+    else if (l)
       result = ConcatExpr::create(val, l);
-    else if (!r.isNull())
+    else if (r)
       result = ConcatExpr::create(r, val);
     else
       result = val;

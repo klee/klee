@@ -15,6 +15,7 @@ set(SRC_FILES
         atoi.c
         bcmp.c
         calloc.c
+        fortify-klibc.c
         htonl.c
         memchr.c
         mempcpy.c
