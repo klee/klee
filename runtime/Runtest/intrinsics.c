@@ -227,7 +227,11 @@ void klee_make_pse_symbolic(void *array, size_t nbytes, const char *name,
 // HACK : Not needed here. Refactor later
 void klee_dump_kquery_state() {}
 
+// HACK : Dump Stack. Remove from intrinsics later.
 void klee_dump_state_stack() {}
+
+// HACK : Known Symbolics. Remove from intrinsics later.
+void klee_dump_symbolic_details() {}
 
 void klee_silent_exit(int x) { exit(x); }
 

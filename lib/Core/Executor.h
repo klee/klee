@@ -101,7 +101,8 @@ public:
 
   /// KQuery Dump file pointer.
   /// FIXME : Make Private
-  std::unique_ptr<llvm::raw_fd_ostream> kqueryDumpFileptr, smtlib2DumpFileptr;
+  std::unique_ptr<llvm::raw_fd_ostream> kqueryDumpFileptr, smtlib2DumpFileptr,
+      stackDump;
 
   enum TerminateReason {
     Abort,

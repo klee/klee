@@ -80,5 +80,8 @@ int main() {
   float _probabilities[] = {0.5, 0.5};
 
   klee_make_pse_symbolic(&door_switch, sizeof(door_switch), "door_switch_pse_var_sym", _distribution, _probabilities);
-  return montyhall(door_switch);
+  montyhall(door_switch);
+
+  klee_dump_symbolic_details(&door_switch);
+  return 0;
 }

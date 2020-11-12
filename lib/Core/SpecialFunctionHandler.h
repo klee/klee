@@ -97,6 +97,9 @@ public:
   std::vector<T> readCustomDataAtAddress(ExecutionState &state,
                                          ref<Expr> address, size_t size);
 
+  std::vector<klee::ref<klee::Expr>>
+  SplitRefExpression(ExecutionState &state, ref<Expr> address, size_t size);
+
   /* Handlers */
 
 #define HANDLER(name)                                                          \
@@ -148,6 +151,7 @@ public:
   HANDLER(handleDivRemOverflow);
   HANDLER(handleMakeSymbolicPSE);
   HANDLER(handleStateStackDump);
+  HANDLER(handleGetSymbolicDetails);
   HANDLER(handleGetKQueryExpression);
 #undef HANDLER
 };

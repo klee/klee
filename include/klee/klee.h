@@ -130,6 +130,9 @@ void klee_dump_kquery_state();
 /* klee_dump_state_stack() get the state stack dump*/
 void klee_dump_state_stack();
 
+/* klee_dump_symbolic_details() get the known Symbolics of an expression */
+void klee_dump_symbolic_details(void *addr);
+
 /* Return a possible constant value for the input expression. This
    allows programs to forcibly concretize values on their own. */
 #define KLEE_GET_VALUE_PROTO(suffix, type)                                     \

@@ -105,6 +105,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
     add("klee_make_symbolic", handleMakeSymbolic, false),
     add("klee_make_pse_symbolic", handleMakeSymbolicPSE, false),
     add("klee_dump_kquery_state", handleGetKQueryExpression, false),
+    add("klee_dump_symbolic_details", handleGetSymbolicDetails, false),
     add("klee_dump_state_stack", handleStateStackDump, false),
     add("klee_mark_global", handleMarkGlobal, false),
     add("klee_open_merge", handleOpenMerge, false),
@@ -238,8 +239,10 @@ bool SpecialFunctionHandler::handle(ExecutionState &state, Function *f,
 }
 
 /***
- * Read data from memory a.k.a concrete Store by ref<Expr>.
+ * HACK :
+ * Read data from memory by ref<Expr>.
  * 8-byte aligned data. Need to fix bug on cross-compilation.
+ * FIXME : ConstantExpr to float conversion is wrong.
  */
 
 template <typename T>
@@ -278,6 +281,52 @@ std::vector<T> SpecialFunctionHandler::readCustomDataAtAddress(
            "hit symbolic char while reading concrete string");
     fl = cast<ConstantExpr>(cur)->getZExtValue((1 << 3) * size);
     return_vector.emplace_back(fl);
+  }
+
+  return return_vector;
+}
+
+/***
+ * HACK :
+ * Read data from conncrete memory by ref<Expr> and split it.
+ * 8-byte aligned data. Need to fix bug on cross-compilation.
+ * FIXME : ConstantExpr to float conversion is wrong.
+ */
+
+std::vector<ref<Expr>>
+SpecialFunctionHandler::SplitRefExpression(ExecutionState &state,
+                                           ref<Expr> addressExpr, size_t size) {
+
+  ObjectPair op;
+  std::vector<ref<Expr>> return_vector;
+  addressExpr = executor.toUnique(state, addressExpr);
+
+  if (!isa<ConstantExpr>(addressExpr)) {
+    executor.terminateStateOnError(
+        state, "Symbolic string pointer passed to one of the klee_ functions",
+        Executor::TerminateReason::User);
+    return return_vector;
+  }
+  ref<ConstantExpr> address = cast<ConstantExpr>(addressExpr);
+  if (!state.addressSpace.resolveOne(address, op)) {
+    executor.terminateStateOnError(
+        state, "Invalid string pointer passed to one of the klee_ functions",
+        Executor::TerminateReason::User);
+    return return_vector;
+  }
+  const MemoryObject *mo = op.first;
+  const ObjectState *os = op.second;
+
+  auto relativeOffset = mo->getOffsetExpr(address);
+  // the relativeOffset must be concrete as the address is concrete
+  size_t offset = cast<ConstantExpr>(relativeOffset)->getZExtValue();
+
+  for (size_t i = offset; i < mo->size; i += size) {
+    ref<Expr> cur = os->read(i, Expr::Int32);
+    cur = executor.toUnique(state, cur);
+    assert(isa<ConstantExpr>(cur) &&
+           "hit symbolic char while reading concrete string");
+    return_vector.emplace_back(cur);
   }
 
   return return_vector;
@@ -923,6 +972,23 @@ void SpecialFunctionHandler::handleStateStackDump(
     ExecutionState &state, KInstruction *target,
     std::vector<ref<Expr>> &arguments) {
   // TODO : Dump Current state stack on the fly.
+  state.dumpStack(errs());
+}
+
+void SpecialFunctionHandler::handleGetSymbolicDetails(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr>> &arguments) {
+
+  Executor::ExactResolutionList rl;
+  executor.resolveExact(state, arguments[0], rl, "get_symbolic_details");
+  for (Executor::ExactResolutionList::iterator it = rl.begin(), ie = rl.end();
+       it != ie; ++it) {
+    const MemoryObject *mo = it->first.first;
+    const ObjectState *old = it->first.second;
+    *(executor.kqueryDumpFileptr) << "\nVariable Name : " << mo->name;
+    *(executor.kqueryDumpFileptr) << "\nVariable ID : " << mo->id << "\n";
+    *(executor.kqueryDumpFileptr) << old->printSymbolic();
+  }
 }
 
 /// Store PSE variable as a KLEE Symbolic Variable
@@ -991,6 +1057,10 @@ void SpecialFunctionHandler::handleMakeSymbolicPSE(
         res, s->queryMetaData);
     assert(success && "FIXME: Unhandled solver failure");
 
+    // COMMENT : Add Constraint a --> [1, 2, 3], =>
+    // OrExpr(EqExpr(a, 1), EqExpr(a, 2), EqExpr(a, 3))
+    std::vector<ref<Expr>> dist = SplitRefExpression(state, arguments[3], 4);
+
     if (res) {
       executor.executeMakeProbSymbolic(*s, mo, name, distribution,
                                        probabilities);
@@ -1009,23 +1079,16 @@ void SpecialFunctionHandler::handleGetKQueryExpression(
   std::stringstream KQueryRawStringStream("");
   std::stringstream SMTLIBRawStringStream("");
   std::string result = "";
-  /// ASK : How to maintain state order in path execution?
-  for (auto stateIter : executor.states) {
-    if (stateIter->getID() == state.getID()) {
-      executor.getConstraintLog((*stateIter), result,
-                                klee::Interpreter::KQUERY);
-      KQueryRawStringStream << "\nState Id : " << stateIter->getID();
-      KQueryRawStringStream << ", New Query : at "
-                            << target->getSourceLocation() << " --> \n\n";
-      KQueryRawStringStream << result << "\n";
-      executor.getConstraintLog((*stateIter), result,
-                                klee::Interpreter::SMTLIB2);
-      SMTLIBRawStringStream << "\nState Id : " << stateIter->getID();
-      SMTLIBRawStringStream << ", New Query : at "
-                            << target->getSourceLocation() << " --> \n\n";
-      SMTLIBRawStringStream << result << "\n";
-    }
-  }
+  executor.getConstraintLog((state), result, klee::Interpreter::KQUERY);
+  KQueryRawStringStream << "\nState Id : " << state.getID();
+  KQueryRawStringStream << ", New Query : at " << target->getSourceLocation()
+                        << " --> \n\n";
+  KQueryRawStringStream << result << "\n";
+  executor.getConstraintLog((state), result, klee::Interpreter::SMTLIB2);
+  SMTLIBRawStringStream << "\nState Id : " << state.getID();
+  SMTLIBRawStringStream << ", New Query : at " << target->getSourceLocation()
+                        << " --> \n\n";
+  SMTLIBRawStringStream << result << "\n";
   *(executor.kqueryDumpFileptr) << KQueryRawStringStream.str();
   *(executor.smtlib2DumpFileptr) << SMTLIBRawStringStream.str();
 }

@@ -757,6 +757,7 @@ static const char *modelledExternals[] = {
     "klee_make_symbolic",
     "klee_make_pse_symbolic",
     "klee_dump_kquery_state",
+    "klee_dump_symbolic_details",
     "klee_dump_state_stack"
     "klee_mark_global",
     "klee_open_merge",
