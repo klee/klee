@@ -132,7 +132,7 @@ ExprVisitor::Action ConstantArrayExprVisitor::visitRead(const ReadExpr &re) {
 
 ExprVisitor::Action
 IndexCompatibilityExprVisitor::visitRead(const ReadExpr &re) {
-  if (!re.updates.head.isNull()) {
+  if (re.updates.head) {
     compatible = false;
     return Action::skipChildren();
   } else if (re.updates.root->isConstantArray() &&
@@ -198,10 +198,10 @@ ExprVisitor::Action ArrayReadExprVisitor::inspectRead(ref<Expr> hash,
   // pre(*): index is symbolic
   if (!isa<ConstantExpr>(re.index)) {
     if (readInfo.find(&re) == readInfo.end()) {
-      if (re.updates.root->isSymbolicArray() && re.updates.head.isNull()) {
+      if (re.updates.root->isSymbolicArray() && !re.updates.head) {
         return Action::doChildren();
       }
-      if (!re.updates.head.isNull()) {
+      if (re.updates.head) {
         // Check preconditions on UpdateList nodes
         bool hasConcreteValues = false;
         for (const auto *un = re.updates.head.get(); un; un = un->next.get()) {

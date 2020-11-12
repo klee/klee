@@ -23,6 +23,7 @@
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
 #include "klee/Solver/SolverCmdLine.h"
+#include "klee/Support/Casting.h"
 #include "klee/Support/Debug.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/OptionCategories.h"
@@ -564,15 +565,15 @@ void SpecialFunctionHandler::handleEhUnwindRaiseExceptionImpl(
          "invalid number of arguments to _klee_eh_Unwind_RaiseException_impl");
 
   ref<ConstantExpr> exceptionObject = dyn_cast<ConstantExpr>(arguments[0]);
-  if (!exceptionObject.get()) {
+  if (!exceptionObject) {
     executor.terminateStateOnError(state,
                                    "Internal error: Symbolic exception pointer",
                                    Executor::Unhandled);
     return;
   }
 
-  if (state.unwindingInformation &&
-      isa<SearchPhaseUnwindingInformation>(state.unwindingInformation.get())) {
+  if (isa_and_nonnull<SearchPhaseUnwindingInformation>(
+          state.unwindingInformation.get())) {
     executor.terminateStateOnExecError(
         state,
         "Internal error: Unwinding restarted during an ongoing search phase");

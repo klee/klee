@@ -25,7 +25,7 @@ UpdateNode::UpdateNode(const ref<UpdateNode> &_next, const ref<Expr> &_index,
          "Update value should be 8-bit wide.");
   */
   computeHash();
-  size = next.isNull() ? 1 : 1 + next->size;
+  size = next ? next->size + 1 : 1;
 }
 
 extern "C" void vc_DeleteExpr(void*);
@@ -38,7 +38,7 @@ int UpdateNode::compare(const UpdateNode &b) const {
 
 unsigned UpdateNode::computeHash() {
   hashValue = index->hash() ^ value->hash();
-  if (!next.isNull())
+  if (next)
     hashValue ^= next->hash();
   return hashValue;
 }
@@ -88,7 +88,7 @@ unsigned UpdateList::hash() const {
   unsigned res = 0;
   for (unsigned i = 0, e = root->name.size(); i != e; ++i)
     res = (res * Expr::MAGIC_HASH_CONSTANT) + root->name[i];
-  if (head.get())
+  if (head)
     res ^= head->hash();
   return res;
 }
