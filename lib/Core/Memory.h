@@ -216,7 +216,7 @@ public:
   void print() const;
 
   // HACK : For Symbolic Details.
-  std::string printSymbolic() const;
+  std::string printSymbolic(uint64_t readsize) const;
 
   /*
     Looks at all the symbolic bytes of this object, gets a value for them

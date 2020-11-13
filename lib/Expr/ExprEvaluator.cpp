@@ -15,7 +15,7 @@ ExprVisitor::Action ExprEvaluator::evalRead(const UpdateList &ul,
                                             unsigned index) {
   for (auto un = ul.head; un; un = un->next) {
     ref<Expr> ui = visit(un->index);
-    
+
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(ui)) {
       if (CE->getZExtValue() == index)
         return Action::changeTo(visit(un->value));
@@ -23,13 +23,13 @@ ExprVisitor::Action ExprEvaluator::evalRead(const UpdateList &ul,
       // update index is unknown, so may or may not be index, we
       // cannot guarantee value. we can rewrite to read at this
       // version though (mostly for debugging).
-      
-      return Action::changeTo(ReadExpr::create(UpdateList(ul.root, un), 
-                                               ConstantExpr::alloc(index, 
-                                                                   ul.root->getDomain())));
+
+      return Action::changeTo(
+          ReadExpr::create(UpdateList(ul.root, un),
+                           ConstantExpr::alloc(index, ul.root->getDomain())));
     }
   }
-  
+
   if (ul.root->isConstantArray() && index < ul.root->size)
     return Action::changeTo(ul.root->constantValues[index]);
 
@@ -59,7 +59,7 @@ ExprVisitor::Action ExprEvaluator::visitExpr(const Expr &e) {
 
 ExprVisitor::Action ExprEvaluator::visitRead(const ReadExpr &re) {
   ref<Expr> v = visit(re.index);
-  
+
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(v)) {
     return evalRead(re.updates, CE->getZExtValue());
   } else {
@@ -71,38 +71,37 @@ ExprVisitor::Action ExprEvaluator::visitRead(const ReadExpr &re) {
 // if this occurs then simply ignore the 0 divisor and use the
 // original expression.
 ExprVisitor::Action ExprEvaluator::protectedDivOperation(const BinaryExpr &e) {
-  ref<Expr> kids[2] = { visit(e.left),
-                        visit(e.right) };
+  ref<Expr> kids[2] = {visit(e.left), visit(e.right)};
 
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(kids[1]))
     if (CE->isZero())
       kids[1] = e.right;
 
-  if (kids[0]!=e.left || kids[1]!=e.right) {
+  if (kids[0] != e.left || kids[1] != e.right) {
     return Action::changeTo(e.rebuild(kids));
   } else {
     return Action::skipChildren();
   }
 }
 
-ExprVisitor::Action ExprEvaluator::visitUDiv(const UDivExpr &e) { 
-  return protectedDivOperation(e); 
+ExprVisitor::Action ExprEvaluator::visitUDiv(const UDivExpr &e) {
+  return protectedDivOperation(e);
 }
-ExprVisitor::Action ExprEvaluator::visitSDiv(const SDivExpr &e) { 
-  return protectedDivOperation(e); 
+ExprVisitor::Action ExprEvaluator::visitSDiv(const SDivExpr &e) {
+  return protectedDivOperation(e);
 }
-ExprVisitor::Action ExprEvaluator::visitURem(const URemExpr &e) { 
-  return protectedDivOperation(e); 
+ExprVisitor::Action ExprEvaluator::visitURem(const URemExpr &e) {
+  return protectedDivOperation(e);
 }
-ExprVisitor::Action ExprEvaluator::visitSRem(const SRemExpr &e) { 
-  return protectedDivOperation(e); 
+ExprVisitor::Action ExprEvaluator::visitSRem(const SRemExpr &e) {
+  return protectedDivOperation(e);
 }
 
-ExprVisitor::Action ExprEvaluator::visitExprPost(const Expr& e) {
+ExprVisitor::Action ExprEvaluator::visitExprPost(const Expr &e) {
   // When evaluating an assignment we should fold NotOptimizedExpr
   // nodes so we can fully evaluate.
   if (e.getKind() == Expr::NotOptimized) {
-    return Action::changeTo(static_cast<const NotOptimizedExpr&>(e).src);
+    return Action::changeTo(static_cast<const NotOptimizedExpr &>(e).src);
   }
   return Action::skipChildren();
 }

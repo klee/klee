@@ -131,7 +131,7 @@ void klee_dump_kquery_state();
 void klee_dump_state_stack();
 
 /* klee_dump_symbolic_details() get the known Symbolics of an expression */
-void klee_dump_symbolic_details(void *addr);
+void klee_dump_symbolic_details(void *addr, const char *name);
 
 /* Return a possible constant value for the input expression. This
    allows programs to forcibly concretize values on their own. */

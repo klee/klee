@@ -231,7 +231,7 @@ void klee_dump_kquery_state() {}
 void klee_dump_state_stack() {}
 
 // HACK : Known Symbolics. Remove from intrinsics later.
-void klee_dump_symbolic_details() {}
+void klee_dump_symbolic_details(void *addr, const char *name) {}
 
 void klee_silent_exit(int x) { exit(x); }
 

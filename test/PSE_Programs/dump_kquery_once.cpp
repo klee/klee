@@ -82,6 +82,6 @@ int main() {
   klee_make_pse_symbolic(&door_switch, sizeof(door_switch), "door_switch_pse_var_sym", _distribution, _probabilities);
   montyhall(door_switch);
 
-  klee_dump_symbolic_details(&door_switch);
+  klee_dump_symbolic_details(&door_switch, "door_switch");
   return 0;
 }

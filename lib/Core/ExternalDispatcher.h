@@ -21,7 +21,7 @@ namespace llvm {
 class Instruction;
 class LLVMContext;
 class Function;
-}
+} // namespace llvm
 
 namespace klee {
 class ExternalDispatcherImpl;
@@ -44,6 +44,6 @@ public:
   int getLastErrno();
   void setLastErrno(int newErrno);
 };
-}
+} // namespace klee
 
 #endif /* KLEE_EXTERNALDISPATCHER_H */

@@ -244,6 +244,7 @@ bool SpecialFunctionHandler::handle(ExecutionState &state, Function *f,
  * Read data from memory by ref<Expr>.
  * 8-byte aligned data. Need to fix bug on cross-compilation.
  * FIXME : ConstantExpr to float conversion is wrong.
+ * No casting operator in KLEE.
  */
 
 template <typename T>
@@ -251,6 +252,7 @@ std::vector<T> SpecialFunctionHandler::readCustomDataAtAddress(
     ExecutionState &state, ref<Expr> addressExpr, size_t size) {
 
   ObjectPair op;
+  size_t READ_SIZE = (1 << 3) * size;
   std::vector<T> return_vector;
   addressExpr = executor.toUnique(state, addressExpr);
 
@@ -269,21 +271,19 @@ std::vector<T> SpecialFunctionHandler::readCustomDataAtAddress(
   }
   const MemoryObject *mo = op.first;
   const ObjectState *os = op.second;
-
   auto relativeOffset = mo->getOffsetExpr(address);
+
   // the relativeOffset must be concrete as the address is concrete
   size_t offset = cast<ConstantExpr>(relativeOffset)->getZExtValue();
 
-  T fl;
-  for (size_t i = offset; i < mo->size; i += size) {
-    ref<Expr> cur = os->read(i, Expr::Int32);
+  for (size_t i = offset; i < (mo->size * (1 << 3)); i += READ_SIZE) {
+    ref<Expr> cur = os->read(i, READ_SIZE);
     cur = executor.toUnique(state, cur);
     assert(isa<ConstantExpr>(cur) &&
            "hit symbolic char while reading concrete string");
-    fl = cast<ConstantExpr>(cur)->getZExtValue((1 << 3) * size);
-    return_vector.emplace_back(fl);
+    auto elem = (T)(cast<ConstantExpr>(cur)->getZExtValue(READ_SIZE));
+    return_vector.emplace_back(elem);
   }
-
   return return_vector;
 }
 
@@ -292,6 +292,7 @@ std::vector<T> SpecialFunctionHandler::readCustomDataAtAddress(
  * Read data from conncrete memory by ref<Expr> and split it.
  * 8-byte aligned data. Need to fix bug on cross-compilation.
  * FIXME : ConstantExpr to float conversion is wrong.
+ * No casting operator in KLEE.
  */
 
 std::vector<ref<Expr>>
@@ -299,6 +300,7 @@ SpecialFunctionHandler::SplitRefExpression(ExecutionState &state,
                                            ref<Expr> addressExpr, size_t size) {
 
   ObjectPair op;
+  size_t READ_SIZE = (1 << 3) * size;
   std::vector<ref<Expr>> return_vector;
   addressExpr = executor.toUnique(state, addressExpr);
 
@@ -322,8 +324,8 @@ SpecialFunctionHandler::SplitRefExpression(ExecutionState &state,
   // the relativeOffset must be concrete as the address is concrete
   size_t offset = cast<ConstantExpr>(relativeOffset)->getZExtValue();
 
-  for (size_t i = offset; i < mo->size; i += size) {
-    ref<Expr> cur = os->read(i, Expr::Int32);
+  for (size_t i = offset; i < (mo->size * (1 << 3)); i += READ_SIZE) {
+    ref<Expr> cur = os->read(i, READ_SIZE);
     cur = executor.toUnique(state, cur);
     assert(isa<ConstantExpr>(cur) &&
            "hit symbolic char while reading concrete string");
@@ -969,10 +971,10 @@ void SpecialFunctionHandler::handleMakeSymbolic(
   }
 }
 
+// TODO : Dump Current state stack on the fly.
 void SpecialFunctionHandler::handleStateStackDump(
     ExecutionState &state, KInstruction *target,
     std::vector<ref<Expr>> &arguments) {
-  // TODO : Dump Current state stack on the fly.
   state.dumpStack(errs());
 }
 
@@ -981,18 +983,25 @@ void SpecialFunctionHandler::handleGetSymbolicDetails(
     std::vector<ref<Expr>> &arguments) {
 
   Executor::ExactResolutionList rl;
+  std::string name =
+      arguments[1]->isZero() ? "" : readStringAtAddress(state, arguments[1]);
+
   executor.resolveExact(state, arguments[0], rl, "get_symbolic_details");
   for (Executor::ExactResolutionList::iterator it = rl.begin(), ie = rl.end();
        it != ie; ++it) {
     const MemoryObject *mo = it->first.first;
     const ObjectState *old = it->first.second;
-    *(executor.kqueryDumpFileptr) << "\nVariable Name : " << mo->name;
-    *(executor.kqueryDumpFileptr) << "\nVariable ID : " << mo->id << "\n";
-    *(executor.kqueryDumpFileptr) << old->printSymbolic();
+    auto varName =
+        mo->name == "unnamed" ? "Not Symbolic" : mo->name + " (Symbolic)";
+    *(executor.kqueryDumpFileptr)
+        << "\nLocation : " << target->getSourceLocation();
+    *(executor.kqueryDumpFileptr) << "\nGiven Name : " << name;
+    *(executor.kqueryDumpFileptr) << "\nVariable Type : " << varName;
+    *(executor.kqueryDumpFileptr) << "\n" << old->printSymbolic(1 << 5);
   }
 }
 
-/// Store PSE variable as a KLEE Symbolic Variable
+/// COMMENT : Store PSE variable as a KLEE Symbolic Variable
 // ASK : How do we maintain value constraint?
 void SpecialFunctionHandler::handleMakeSymbolicPSE(
     ExecutionState &state, KInstruction *target,
@@ -1060,7 +1069,6 @@ void SpecialFunctionHandler::handleMakeSymbolicPSE(
 
     // COMMENT : Add Constraint a --> [1, 2, 3], =>
     // OrExpr(EqExpr(a, 1), EqExpr(a, 2), EqExpr(a, 3))
-    std::vector<ref<Expr>> dist = SplitRefExpression(state, arguments[3], 4);
 
     if (res) {
       executor.executeMakeProbSymbolic(*s, mo, name, distribution,
@@ -1073,7 +1081,7 @@ void SpecialFunctionHandler::handleMakeSymbolicPSE(
 }
 
 // TODO : Dump all path constraints and not just state conditions.
-// Need to printed in order of transitions of the ObjectState
+// FIXME : Print it at the leaf of the Execution Tree.
 void SpecialFunctionHandler::handleGetKQueryExpression(
     ExecutionState &state, KInstruction *target,
     std::vector<ref<Expr>> &arguments) {

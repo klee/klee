@@ -573,12 +573,11 @@ void ObjectState::print() const {
   }
 }
 
-std::string ObjectState::printSymbolic() const {
+// FIXME : KQuery Expr is not always 32 bits, may be bigger.
+// COMMENT : We always read 32 bits from ObjectState for KQuery Expr.
+std::string ObjectState::printSymbolic(uint64_t readsize) const {
   std::stringstream ss("");
-  ss << this->knownSymbolics << "\n";
-  for (unsigned i = 0; i < size; i++) {
-    ref<Expr> e = read(i, Expr::Int32);
-    ss << e << "\n";
-  }
+  ref<Expr> e = read(0, readsize);
+  ss << e << "\n";
   return ss.str();
 }
