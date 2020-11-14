@@ -1997,7 +1997,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (!isVoidReturn) {
       result = eval(ki, 0, state).value;
     }
-    
+    if (IsolationMode) {
+      terminateStateOnTerminator(state);
+      break;
+    }
     if (state.stack.size() <= 1) {
       assert(!caller && "caller set on initial stack frame");
       terminateStateOnExit(state);
@@ -2092,7 +2095,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
   case Instruction::Br: {
     if (IsolationMode) {
-      terminateStateOnExit(state);
+      terminateStateOnTerminator(state);
       break;
     }
     BranchInst *bi = cast<BranchInst>(i);
@@ -2123,7 +2126,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
   case Instruction::IndirectBr: {
     if (IsolationMode) {
-      terminateStateOnExit(state);
+      terminateStateOnTerminator(state);
       break;
     }
     // implements indirect branch to a label within the current function
@@ -2202,7 +2205,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
   case Instruction::Switch: {
     if (IsolationMode) {
-      terminateStateOnExit(state);
+      terminateStateOnTerminator(state);
       break;
     }
     SwitchInst *si = cast<SwitchInst>(i);
@@ -2337,7 +2340,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Invoke:
   case Instruction::Call: {
     if (IsolationMode) {
-      terminateStateOnExit(state);
+      terminateStateOnTerminator(state);
       break;
     }
     // Ignore debug intrinsic calls
@@ -3590,7 +3593,6 @@ void Executor::terminateState(ExecutionState &state) {
       std::find(addedStates.begin(), addedStates.end(), &state);
   if (it==addedStates.end()) {
     state.pc = state.prevPC;
-
     removedStates.push_back(&state);
   } else {
     // never reached searcher, just delete immediately
@@ -3617,6 +3619,14 @@ void Executor::terminateStateOnExit(ExecutionState &state) {
   if (!OnlyOutputStatesCoveringNew || state.coveredNew || 
       (AlwaysOutputSeeds && seedMap.count(&state)))
     interpreterHandler->processTestCase(state, 0, 0);
+  terminateState(state);
+}
+
+void Executor::terminateStateOnTerminator(ExecutionState &state) {
+  if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
+      (AlwaysOutputSeeds && seedMap.count(&state)))
+    interpreterHandler->processTestCase(state, 0, 0);
+  bbResultStates.insert(&state);
   terminateState(state);
 }
 
@@ -4654,7 +4664,7 @@ void Executor::updateCFGStates(StackFrame *&sf,
                                BasicBlock *bb,
                                ExecutionState *state,
                                ExecutionResult &cfg) {
-  cfg[bb] = state;
+  cfg[bb].insert(state);
   updateStackFrame(sf, state);
 }
 
@@ -4712,6 +4722,7 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
           case KBlockType::Alloca:
             prepareSymbolicAllocas(*currState, kb);
             initialState = currState;
+            bbResultStates.insert(currState);
             break;
           case KBlockType::Call: {
             KCallBlock *kcall = (KCallBlock*)kb;
@@ -4720,14 +4731,21 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
                 functionFonRun.push(call);
             if (!call->getReturnType()->isVoidTy())
               prepareSymbolicReturn(*currState, kcall->kcallInstruction);
+            bbResultStates.insert(currState);
             break;
           }
           case KBlockType::Base:
+            // BBStates.insert(currState);
+            // updates BBStates
             runKBlock(kb, *currState);
             break;
         }
-        initialState->symbolics = currState->symbolics;
-        updateCFGStates(stackFrame, &*bbit, currState, cfg);
+        // assert(BBStates.find(currState) != BBStates.end());
+        for(auto & it : bbResultStates) {
+          initialState->symbolics = it->symbolics;
+          updateCFGStates(stackFrame, &*bbit, it, cfg);
+        }
+        bbResultStates.clear();
       }
     }
     functionFonRun.pop();

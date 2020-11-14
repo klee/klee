@@ -101,7 +101,7 @@ class Executor : public Interpreter {
 
 public:
   typedef std::pair<ExecutionState*,ExecutionState*> StatePair;
-  typedef std::map<llvm::BasicBlock*,ExecutionState*> ExecutionResult;
+  typedef std::map<llvm::BasicBlock*, std::set<const ExecutionState*> > ExecutionResult;
 
   enum MemoryOperation {
     Read,
@@ -157,6 +157,8 @@ private:
   /// \invariant \ref removedStates is a subset of \ref states. 
   /// \invariant \ref addedStates and \ref removedStates are disjoint.
   std::vector<ExecutionState *> removedStates;
+
+  std::set<ExecutionState*> bbResultStates;
 
   std::map<llvm::Function *, ExecutionResult> cfgStates;
 
@@ -468,6 +470,8 @@ private:
   // call exit handler and terminate state
   void terminateStateOnExit(ExecutionState &state);
   // call error handler and terminate state
+  void terminateStateOnTerminator(ExecutionState &state);
+  // terminate state
   void terminateStateOnError(ExecutionState &state, const llvm::Twine &message,
                              enum TerminateReason termReason,
                              const char *suffix = NULL,
