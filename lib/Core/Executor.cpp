@@ -2456,7 +2456,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (IsolationMode) {
       assert(cast<PHINode>(ki->inst));
       PHINode *phiNode = (PHINode*)ki->inst;
-      uint64_t size = phiNode->getType()->getScalarSizeInBits();
+      uint64_t size = kmodule->targetData->getTypeStoreSize(phiNode->getType());
       MemoryObject *mo =
           memory->allocate(size, true, /*isGlobal=*/false,
                            phiNode, /*allocationAlignment=*/8);
@@ -4541,7 +4541,7 @@ void Executor::prepareSymbolicStack(ExecutionState &state, KFunction *kf) {
 void Executor::prepareSymbolicArgs(ExecutionState &state, KFunction *kf) {
   for (auto ai = kf->function->arg_begin(), ae = kf->function->arg_end(); ai != ae; ai++) {
     Argument *arg = *&ai;
-    uint64_t size = kmodule->targetData->getTypeSizeInBits(arg->getType());
+    uint64_t size = kmodule->targetData->getTypeStoreSize(arg->getType());
     MemoryObject *mo =
         memory->allocate(size, true, /*isGlobal=*/false,
                          arg, /*allocationAlignment=*/8);
@@ -4560,7 +4560,7 @@ void Executor::prepareSymbolicReturn(ExecutionState &state, KInstruction *kcallI
     Value *fp = cs.getCalledValue();
 #endif
   Function *f = getTargetFunction(fp);
-  uint64_t size = kmodule->targetData->getTypeSizeInBits(f->getReturnType());
+  uint64_t size = kmodule->targetData->getTypeStoreSize(f->getReturnType());
   MemoryObject *mo =
       memory->allocate(size, true, /*isGlobal=*/false,
                        callInst, /*allocationAlignment=*/8);
@@ -4726,6 +4726,7 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
             runKBlock(kb, *currState);
             break;
         }
+        initialState->symbolics = currState->symbolics;
         updateCFGStates(stackFrame, &*bbit, currState, cfg);
       }
     }
