@@ -31,7 +31,6 @@ bool montyhall(bool door_switch) {
     */
   if (car_door != 1 && choice != 1) {
     host_door = 1;
-    klee_dump_kquery_state();
   } else if (car_door != 2 && choice != 2) {
     host_door = 2;
   } else {
@@ -58,18 +57,16 @@ bool montyhall(bool door_switch) {
     } else {
       if (choice == 1) {
         choice = 2;
+        klee_dump_symbolic_details(&choice, "choice_branch");
       } else {
         choice = 1;
       }
     }
   }
 
-  klee_dump_kquery_state();
-
   if (choice == car_door) {
     return true;
   } else {
-    klee_dump_kquery_state();
     return false;
   }
 

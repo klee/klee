@@ -1,3 +1,4 @@
+
 // RUN: %clangxx -I../../../include -g -DMAX_ELEMENTS=4 -fno-exceptions -emit-llvm -c -o %t1.bc %s
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --libc=klee --max-forks=25 --write-no-tests --exit-on-error --optimize --disable-inlining --search=nurs:depth --use-cex-cache %t1.bc
@@ -11,11 +12,21 @@ std::default_random_engine generator;
 std::uniform_int_distribution<int> distribution(10, 150);
 
 int weird_func(int a, int b, int c) {
+  int t = 0;
   if (a > b + c) {
-    return a + b + c;
+    t = a + b + c;
     klee_dump_kquery_state();
+    klee_dump_symbolic_details(&a, "a");
+    klee_dump_symbolic_details(&b, "b");
+    klee_dump_symbolic_details(&t, "t");
+    return a + b + c;
   } else {
-    return a - b - c;
+    t = a - b - c;
+    klee_dump_kquery_state();
+    klee_dump_symbolic_details(&a, "a");
+    klee_dump_symbolic_details(&b, "b");
+    klee_dump_symbolic_details(&t, "t");
+    return t;
   }
 }
 
@@ -36,5 +47,7 @@ int main(void) {
   c = distribution(generator); // ForAll Variable
 
   klee_make_symbolic(&c, sizeof(c), "c_sym");
+  klee_dump_symbolic_details(&c, "c");
+  klee_dump_symbolic_details(&a, "a");
   return weird_func(a, b, c);
 }
