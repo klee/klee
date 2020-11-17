@@ -574,13 +574,6 @@ if (ENABLE_KLEE_LIBCXX)
   endif()
   message(STATUS "Use libc++ include path: \"${KLEE_LIBCXX_INCLUDE_DIR}\"")
 
-  set(KLEE_LIBCXXABI_SRC_DIR "" CACHE PATH "Path to libcxxabi source directory")
-  if (NOT EXISTS "${KLEE_LIBCXXABI_SRC_DIR}")
-    message(FATAL_ERROR
-      "${KLEE_LIBCXXABI_SRC_DIR} does not exist. Try passing -DKLEE_LIBCXXABI_SRC_DIR=<path>")
-  endif()
-  message(STATUS "Use libc++abi source path: \"${KLEE_LIBCXXABI_SRC_DIR}\"")
-
   # Find the library bitcode archive
 
   # Check for static first
@@ -633,6 +626,13 @@ if (ENABLE_KLEE_EH_CXX)
     message(FATAL_ERROR "C++ Exception support requires klee-libcxx."
       "Pass `-DENABLE_KLEE_LIBCXX=ON` to enable it.")
   endif()
+
+  set(KLEE_LIBCXXABI_SRC_DIR "" CACHE PATH "Path to libcxxabi source directory")
+  if (NOT EXISTS "${KLEE_LIBCXXABI_SRC_DIR}")
+    message(FATAL_ERROR
+      "${KLEE_LIBCXXABI_SRC_DIR} does not exist. Try passing -DKLEE_LIBCXXABI_SRC_DIR=<path>")
+  endif()
+  message(STATUS "Use libc++abi source path: \"${KLEE_LIBCXXABI_SRC_DIR}\"")
 
   if (${LLVM_VERSION_MAJOR} GREATER 8 OR ${LLVM_VERSION_MAJOR} EQUAL 8)
     set(SUPPORT_KLEE_EH_CXX 1) # For config.h
