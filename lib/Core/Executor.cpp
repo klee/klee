@@ -1234,7 +1234,8 @@ const Cell& Executor::eval(KInstruction *ki, unsigned index,
   } else {
     unsigned index = vnumber;
     StackFrame &sf = state.stack.back();
-    if (!state.inBasicBlockRange(index)) {
+    ref<Expr> reg = sf.locals[index].value;
+    if (!isa<ConstantExpr>(reg) && !state.inBasicBlockRange(index)) {
       prepareSymbolicRegister(state, sf, sf.locals[index].value, index);
     }
     return sf.locals[index];
