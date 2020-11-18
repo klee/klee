@@ -4261,7 +4261,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
       {
         // TODO: improve error description
         terminateStateOnError(*unbound, "memory error: out of bound pointer", Ptr,
-                              NULL, getAddressInfo(*unbound, address));
+                              NULL/*, getAddressInfo(*unbound, address)*/);
         return;
       }
       switch (operation) {
@@ -4282,7 +4282,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
       }
     } else {
       terminateStateOnError(*unbound, "memory error: out of bound pointer", Ptr,
-                            NULL, getAddressInfo(*unbound, address));
+                            NULL/*, getAddressInfo(*unbound, address)*/);
     }
   }
 }
