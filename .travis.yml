@@ -125,6 +125,7 @@ jobs:
     # macOS
     - name: "macOS"
       os: osx
+      osx_image: xcode12.2
       env: SOLVERS=STP UCLIBC_VERSION=0 USE_TCMALLOC=0 USE_LIBCXX=0
 
     # Docker
