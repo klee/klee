@@ -1254,8 +1254,8 @@ const Cell& Executor::symbolicEval(KInstruction *ki, unsigned index,
     unsigned index = vnumber;
     StackFrame &sf = state.stack.back();
     ref<Expr> reg = sf.locals[index].value;
-    if (!isa<ConstantExpr>(reg) && !state.inBasicBlockRange(index, IsolationMode)) {
-      prepareSymbolicRegister(state, sf, sf.locals[index].value, index);
+    if (reg.isNull() || !isa<ConstantExpr>(reg) && !state.inBasicBlockRange(index, IsolationMode)) {
+      prepareSymbolicRegister(state, sf, index);
     }
     return sf.locals[index];
   }
@@ -4308,11 +4308,9 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
 ObjectPair Executor::lazyInstantiate(ExecutionState &state, bool isAlloca, const MemoryObject *mo) {
   executeMakeSymbolic(state, mo, "lazy_instantiation", isAlloca);
-  ExactResolutionList rl;
-  resolveExact(state, mo->getBaseExpr(), rl, "lazy_instantiation");
-  assert(rl.size() == 1);
-  const ObjectState *os = rl.begin()->first.second;
-  return {mo, os};
+  ObjectPair op;
+  state.addressSpace.resolveOne(mo->getBaseExpr().get(), op);
+  return op;
 }
 
 ObjectPair Executor::lazyInstantiateAlloca(ExecutionState &state,
@@ -4571,12 +4569,10 @@ void Executor::prepareSymbolicStack(ExecutionState &state, KFunction *kf) {
   }
 }
 
-void Executor:: prepareSymbolicRegister(ExecutionState &state, StackFrame &sf, ref<Expr> expr, unsigned index) {
-    assert(!expr.isNull());
-    Expr *res = expr.get();
+void Executor:: prepareSymbolicRegister(ExecutionState &state, StackFrame &sf, unsigned index) {
     KInstruction *allocInst = sf.kf->reg2inst[index];
     Instruction *allocSite = allocInst->inst;
-    uint64_t size = Expr::getMinBytesForWidth(res->getWidth());
+    uint64_t size = kmodule->targetData->getTypeStoreSize(allocSite->getType());
     MemoryObject *mo =
         memory->allocate(size, true, /*isGlobal=*/false,
                          allocSite, /*allocationAlignment=*/8);
@@ -4685,22 +4681,11 @@ void Executor::runKBlock(KBlock *kb,
    statsTracker->done();
 }
 
-void Executor::pushPreviousStack(Function *f, StackFrame stackFrame, ExecutionState &state) {
-  state.stack.pop_back();
-  state.stack.push_back(stackFrame);
-}
-
-void Executor::updateStackFrame(StackFrame *&sf, ExecutionState *state) {
-  StackFrame *stackFrame = new StackFrame(state->stack.back());
-  sf = stackFrame;
-}
-
 void Executor::updateCFGStates(StackFrame *&sf,
                                BasicBlock *bb,
                                ExecutionState *state,
                                ExecutionResult &cfg) {
   cfg[bb].insert(state);
-  updateStackFrame(sf, state);
 }
 
 void Executor::runFunctionAsMain(Function *f,
@@ -4745,14 +4730,13 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
     if(bbit != bbie) {
       StackFrame *stackFrame = new StackFrame(nullptr, kf);
       ExecutionState *initialState = state.withStackFrame(stackFrame);
+      initialState->addressSpace.clear();
 
       prepareSymbolicArgs(*initialState, kf);
-      updateStackFrame(stackFrame, initialState);
 
       for (; bbit != bbie; bbit++) {
         KBlock *kb = kf->kBlocks[&*bbit];
         ExecutionState *currState = initialState->withInstructions(kb->instructions);
-        pushPreviousStack(f, *stackFrame, *currState);
         currState->setBlockIndexes(kb);
         switch (kb->getKBlockType()) {
           case KBlockType::Alloca:
@@ -4779,10 +4763,8 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
         }
         // assert(BBStates.find(currState) != BBStates.end());
         for(auto & it : bbResultStates) {
-          initialState->symbolics = it->symbolics;
           updateCFGStates(stackFrame, &*bbit, it, cfg);
         }
-        bbResultStates.clear();
       }
     }
     functionFonRun.pop();

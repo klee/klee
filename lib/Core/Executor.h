@@ -562,7 +562,7 @@ public:
 
   void prepareSymbolicStack(ExecutionState &state, KFunction *kf);
 
-  void prepareSymbolicRegister(ExecutionState &state, StackFrame &sf, ref<Expr> expr, unsigned index);
+  void prepareSymbolicRegister(ExecutionState &state, StackFrame &sf, unsigned index);
 
   void prepareSymbolicArgs(ExecutionState &state, KFunction *kf);
 
@@ -571,10 +571,6 @@ public:
   void prepareSymbolicAllocas(ExecutionState &state, KBlock *allocas);
 
   void runInstructions(llvm::Function *f, KInstruction **instructions, int argc, char **argv, char **envp);
-
-  void pushPreviousStack(llvm::Function *f, StackFrame stackFrame, ExecutionState &state);
-
-  void updateStackFrame(StackFrame *&sf, ExecutionState *state);
 
   void updateCFGStates(StackFrame *&sf,
                        llvm::BasicBlock *bb,
