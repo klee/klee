@@ -1254,7 +1254,8 @@ const Cell& Executor::symbolicEval(KInstruction *ki, unsigned index,
     unsigned index = vnumber;
     StackFrame &sf = state.stack.back();
     ref<Expr> reg = sf.locals[index].value;
-    if (reg.isNull() || !isa<ConstantExpr>(reg) && !state.inBasicBlockRange(index, IsolationMode)) {
+    if (reg.isNull()) {
+      assert(!state.inBasicBlockRange(index, IsolationMode));
       prepareSymbolicRegister(state, sf, index);
     }
     return sf.locals[index];
@@ -2737,8 +2738,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(ki);
     ref<Expr> base = symbolicEval(ki, 0, state).value;
 
-    for (std::vector< std::pair<unsigned, uint64_t> >::iterator 
-           it = kgepi->indices.begin(), ie = kgepi->indices.end(); 
+    for (std::vector< std::pair<unsigned, uint64_t> >::iterator
+           it = kgepi->indices.begin(), ie = kgepi->indices.end();
          it != ie; ++it) {
       uint64_t elementSize = it->second;
       ref<Expr> index = symbolicEval(ki, it->first, state).value;
@@ -3450,8 +3451,6 @@ void Executor::doDumpStates() {
 }
 
 void Executor::run(ExecutionState &initialState) {
-  bindModuleConstants();
-
   // Delay init till now so that ticks don't accrue during optimization and such.
   timers.reset();
 
@@ -4650,6 +4649,7 @@ void Executor::runInstructions(Function *f,
     statsTracker->framePushed(*state, 0);
 
   processTree = std::make_unique<PTree>(state);
+  bindModuleConstants();
   run(*state);
   processTree = nullptr;
 
@@ -4703,6 +4703,7 @@ void Executor::runFunctionAsMain(Function *f,
     statsTracker->framePushed(*state, 0);
 
   processTree = std::make_unique<PTree>(state);
+  bindModuleConstants();
   run(*state);
   processTree = nullptr;
 
@@ -4719,6 +4720,7 @@ void Executor::runFunctionAsMain(Function *f,
 void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &state) {
   std::queue<Function *> functionFonRun;
   std::set<Function *> executedFunction;
+  bindModuleConstants();
   functionFonRun.push(mainFn);
   executedFunction.insert(mainFn);
   while (!functionFonRun.empty()) {
@@ -4748,10 +4750,12 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
           case KBlockType::Call: {
             KCallBlock *kcall = (KCallBlock*)kb;
             Function *call = kcall->calledFunction;
-            if(executedFunction.insert(call).second)
+            if(call) {
+              if(executedFunction.insert(call).second)
                 functionFonRun.push(call);
-            if (!call->getReturnType()->isVoidTy())
-              prepareSymbolicReturn(*currState, kcall->kcallInstruction);
+              if (!call->getReturnType()->isVoidTy())
+                prepareSymbolicReturn(*currState, kcall->kcallInstruction);
+            }
             bbResultStates.insert(currState);
             break;
           }
