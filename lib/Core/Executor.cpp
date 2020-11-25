@@ -2481,13 +2481,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::PHI: {
     if (IsolationMode) {
-      assert(cast<PHINode>(ki->inst));
-      PHINode *phiNode = (PHINode*)ki->inst;
-      uint64_t size = kmodule->targetData->getTypeStoreSize(phiNode->getType());
-      MemoryObject *mo =
-          memory->allocate(size, true, /*isGlobal=*/false,
-                           phiNode, /*allocationAlignment=*/8);
-      lazyInstantiateLocal(state, mo, ki, true);
+      prepareSymbolicValue(state, ki);
     } else {
       ref<Expr> result = symbolicEval(ki, state.incomingBBIndex, state).value;
       bindLocal(ki, state, result);
@@ -4538,13 +4532,17 @@ void Executor::clearGlobal()
   globalAddresses.clear();
 }
 
-void Executor:: prepareSymbolicRegister(ExecutionState &state, StackFrame &sf, unsigned regNum) {
-  KInstruction *allocInst = sf.kf->reg2inst[regNum];
-  Instruction *allocSite = allocInst->inst;
+void Executor:: prepareSymbolicValue(ExecutionState &state, KInstruction *target) {
+  Instruction *allocSite = target->inst;
   uint64_t size = kmodule->targetData->getTypeStoreSize(allocSite->getType());
   uint64_t width = kmodule->targetData->getTypeSizeInBits(allocSite->getType());
   ref<Expr> result = makeSymbolicValue(allocSite, state, size, width);
-  bindLocal(allocInst, state, result);
+  bindLocal(target, state, result);
+}
+
+void Executor:: prepareSymbolicRegister(ExecutionState &state, StackFrame &sf, unsigned regNum) {
+  KInstruction *allocInst = sf.kf->reg2inst[regNum];
+  prepareSymbolicValue(state, allocInst);
 }
 
 void Executor::prepareSymbolicArgs(ExecutionState &state, KFunction *kf) {

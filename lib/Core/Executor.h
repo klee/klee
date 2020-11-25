@@ -560,6 +560,8 @@ public:
 
   void clearGlobal();
 
+  void prepareSymbolicValue(ExecutionState &state, KInstruction *target);
+
   void prepareSymbolicRegister(ExecutionState &state, StackFrame &sf, unsigned index);
 
   void prepareSymbolicArgs(ExecutionState &state, KFunction *kf);

@@ -85,6 +85,15 @@ bool AddressSpace::resolveOne(ExecutionState &state,
   } else {
     TimerStatIncrementer timer(stats::resolveTime);
 
+    MemoryObject symHack(address);
+    auto osi = objects.find(&symHack);
+    if(osi != objects.end()) {
+      result.first = osi->first;
+      result.second = osi->second.get();
+      success = true;
+      return true;
+    }
+
     // try cheap search, will succeed for any inbounds pointer
 
     ref<ConstantExpr> cex;
@@ -215,6 +224,13 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
   } else {
     TimerStatIncrementer timer(stats::resolveTime);
 
+    MemoryObject symHack(p);
+    auto osi = objects.find(&symHack);
+    if(osi != objects.end()) {
+      auto res = std::make_pair<>(osi->first, osi->second.get());
+      rl.push_back(res);
+      return false;
+    }
     // XXX in general this isn't exactly what we want... for
     // a multiple resolution case (or for example, a \in {b,c,0})
     // we want to find the first object, find a cex assuming
@@ -348,6 +364,9 @@ void AddressSpace::clear() {
 /***/
 
 bool MemoryObjectLT::operator()(const MemoryObject *a, const MemoryObject *b) const {
-  return a->address < b->address;
+  bool res = true;
+  if (!a->lazyInstantiatedSource.isNull() && !b->lazyInstantiatedSource.isNull())
+    res = a->lazyInstantiatedSource != b->lazyInstantiatedSource;
+  return res && a->address < b->address;
 }
 

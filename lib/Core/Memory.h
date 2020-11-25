@@ -89,6 +89,16 @@ public:
       lazyInstantiatedSource(nullptr) {
   }
 
+  MemoryObject(ref<Expr> _lazyInstantiatedSource)
+    : id(counter++),
+      address(0),
+      size(0),
+      isFixed(true),
+      parent(NULL),
+      allocSite(0),
+      lazyInstantiatedSource(_lazyInstantiatedSource) {
+  }
+
   MemoryObject(uint64_t _address, unsigned _size, 
                bool _isLocal, bool _isGlobal, bool _isFixed,
                const llvm::Value *_allocSite,
