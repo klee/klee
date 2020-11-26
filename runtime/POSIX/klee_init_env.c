@@ -16,9 +16,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <errno.h>
-#include <sys/syscall.h>
-#include <unistd.h>
 
 static void __emit_error(const char *msg) {
   klee_report_error(__FILE__, __LINE__, msg, "user.err");
@@ -63,12 +60,14 @@ static int __streq(const char *a, const char *b) {
 static char *__get_sym_str(int numChars, char *name) {
   int i;
   char *s = malloc(numChars+1);
+  if (!s)
+    __emit_error("out of memory in klee_init_env");
   klee_mark_global(s);
   klee_make_symbolic(s, numChars+1, name);
 
   for (i=0; i<numChars; i++)
     klee_posix_prefer_cex(s, __isprint(s[i]));
-  
+
   s[numChars] = '\0';
   return s;
 }
@@ -224,6 +223,8 @@ usage: (klee_init_env) [options] [program arguments]\n\
   }
 
   final_argv = (char **)malloc((new_argc + 1) * sizeof(*final_argv));
+  if (!final_argv)
+    __emit_error("out of memory in klee_init_env");
   klee_mark_global(final_argv);
   memcpy(final_argv, new_argv, new_argc * sizeof(*final_argv));
   final_argv[new_argc] = 0;
