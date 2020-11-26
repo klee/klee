@@ -26,18 +26,17 @@ static void __emit_error(const char *msg) {
 
 /* Helper function that converts a string to an integer, and
    terminates the program with an error message is the string is not a
-   proper number */   
+   proper number */
 static long int __str_to_int(char *s, const char *error_msg) {
   long int res = 0;
   char c;
 
-  if (!*s) __emit_error(error_msg);
+  if (!*s)
+    __emit_error(error_msg);
 
   while ((c = *s++)) {
-    if (c == '\0') {
-      break;
-    } else if (c>='0' && c<='9') {
-      res = res*10 + (c - '0');
+    if (c >= '0' && c <= '9') {
+      res = res * 10 + (c - '0');
     } else {
       __emit_error(error_msg);
     }
