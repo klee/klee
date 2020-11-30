@@ -27,16 +27,12 @@ setup_variables_llvm() {
 
   LLVM_VERSION_MAJOR="0"
   LLVM_VERSION_MINOR="0"
-  LLVM_VERSION_PATCH="0"
 
   if [[ "${#v_a[@]}" -ge 1 ]]; then
     LLVM_VERSION_MAJOR="${v_a[0]}"
   fi
   if [[ "${#v_a[@]}" -ge 2 ]]; then
     LLVM_VERSION_MINOR="${v_a[1]}"
-  fi
-  if [[ "${#v_a[@]}" -ge 3 ]]; then
-    LLVM_VERSION_PATCH="${v_a[2]}"
   fi
 
   LLVM_VERSION_SHORT="${LLVM_VERSION_MAJOR}${LLVM_VERSION_MINOR}"

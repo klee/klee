@@ -1,0 +1,185 @@
+name: CI
+
+on:
+  pull_request:
+    branches: master
+  push:
+    branches: master
+
+# Defaults for building KLEE
+env:
+  BASE_IMAGE: ubuntu:bionic-20200807
+  REPOSITORY: klee
+  COVERAGE: 0
+  DISABLE_ASSERTIONS: 0
+  ENABLE_DOXYGEN: 0
+  ENABLE_OPTIMIZED: 1
+  ENABLE_DEBUG: 1
+  GTEST_VERSION: 1.7.0
+  KLEE_RUNTIME_BUILD: "Debug+Asserts"
+  LLVM_VERSION: 9
+  METASMT_VERSION: qf_abv
+  MINISAT_VERSION: "master"
+  REQUIRES_RTTI: 0
+  SANITIZER_BUILD:
+  SOLVERS: STP:Z3
+  STP_VERSION: 2.3.3
+  TCMALLOC_VERSION: 2.7
+  UCLIBC_VERSION: klee_uclibc_v1.2
+  USE_TCMALLOC: 1
+  USE_LIBCXX: 1
+  Z3_VERSION: 4.8.4
+
+jobs:
+  Linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        name: [
+                "LLVM 10",
+                "LLVM 9",
+                "LLVM 8",
+                "LLVM 7",
+                "LLVM 6",
+                "LLVM 5",
+                "LLVM 4",
+                "LLVM 3.9",
+                "LLVM 3.8",
+                "ASan",
+                "UBSan",
+                "MSan",
+                "Z3 only",
+                "metaSMT STP",
+                "metaSMT Boolector",
+                "STP master",
+                "Latest klee-uclibc",
+                "Asserts enabled",
+                "No TCMalloc, optimised runtime",
+            ]
+        include:
+          - name: "LLVM 10"
+            env:
+              LLVM_VERSION: 10
+          - name: "LLVM 9"
+            env:
+              LLVM_VERSION: 9
+          - name: "LLVM 8"
+            env:
+              LLVM_VERSION: 8
+          - name: "LLVM 7"
+            env:
+              LLVM_VERSION: 7
+          - name: "LLVM 6"
+            env:
+              LLVM_VERSION: 6
+          - name: "LLVM 5"
+            env:
+              LLVM_VERSION: 5
+          - name: "LLVM 4"
+            env:
+              LLVM_VERSION: 4
+          - name: "LLVM 3.9"
+            env:
+              LLVM_VERSION: 3.9
+          - name: "LLVM 3.8"
+            env:
+              LLVM_VERSION: 3.8
+              USE_LIBCXX: 0
+          # Sanitizer builds. Do unoptimized build otherwise the optimizer might remove problematic code
+          - name: "ASan"
+            env:
+              SANITIZER_BUILD: address
+              ENABLE_OPTIMIZED: 0
+              USE_TCMALLOC: 0
+          - name: "UBSan"
+            env:
+              SANITIZER_BUILD: undefined
+              ENABLE_OPTIMIZED: 0
+              USE_TCMALLOC: 0
+          - name: "MSan"
+            env:
+              SANITIZER_BUILD: memory
+              ENABLE_OPTIMIZED: 0
+              USE_TCMALLOC: 0
+              SOLVERS: STP
+            # Test just using Z3 only
+          - name: "Z3 only"
+            env:
+              SOLVERS: Z3
+          # Test just using metaSMT
+          - name: "metaSMT STP"
+            env:
+              SOLVERS: metaSMT
+              METASMT_DEFAULT: STP
+              REQUIRES_RTTI: 1
+          - name: "metaSMT Boolector"
+            env:
+              SOLVERS: metaSMT
+              METASMT_DEFAULT: BTOR
+              REQUIRES_RTTI: 1
+          # Test we can build against STP master
+          - name: "STP master"
+            env:
+              SOLVERS: STP
+              STP_VERSION: master
+          # Check we can build latest klee-uclibc branch
+          - name: "Latest klee-uclibc"
+            env:
+              UCLIBC_VERSION: klee_0_9_29
+          # Check at least one build with Asserts disabled.
+          - name: "Asserts enabled"
+            env:
+              SOLVERS: STP
+              DISABLE_ASSERTIONS: 1
+          # Check without TCMALLOC and with an optimised runtime library
+          - name: "No TCMalloc, optimised runtime"
+            env:
+              USE_TCMALLOC: 0
+              KLEE_RUNTIME_BUILD: "Release+Debug+Asserts"
+    steps:
+      - name: Checkout KLEE source code
+        uses: actions/checkout@v2
+      - name: Build KLEE
+        env: ${{ matrix.env }}
+        run: scripts/build/build.sh klee --docker --create-final-image
+      - name: Run tests
+        run: sudo scripts/build/run-tests.sh --run-docker --debug
+
+  macOS:
+    runs-on: macos-latest
+    env:
+      BASE: /tmp
+      SOLVERS: STP
+      UCLIBC_VERSION: 0
+      USE_TCMALLOC: 0
+      USE_LIBCXX: 0
+    steps:
+      - name: Install newer version of Bash
+        run: brew install bash
+      - name: Checkout KLEE source code
+        uses: actions/checkout@v2
+      - name: Build KLEE
+        run: scripts/build/build.sh klee --debug --install-system-deps
+      - name: Run tests
+        run: scripts/build/run-tests.sh /tmp/klee_build* --debug
+
+  Docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout KLEE Code
+        uses: actions/checkout@v2
+      - name: Build Docker image
+        run: docker build .
+
+  Coverage:
+    runs-on: ubuntu-latest
+    env:
+      ENABLE_OPTIMIZED: 0
+      COVERAGE: 1
+    steps:
+      - name: Checkout KLEE source code
+        uses: actions/checkout@v2
+      - name: Build KLEE
+        run: scripts/build/build.sh klee --docker --create-final-image
+      - name: Run tests
+        run: sudo scripts/build/run-tests.sh --coverage --upload-coverage --run-docker --debug
