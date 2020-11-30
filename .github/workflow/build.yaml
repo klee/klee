@@ -1,0 +1,64 @@
+name: Build
+
+on:
+  pull_request:
+    branches: master
+
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-18.04]
+        include:
+          - os: ubuntu-18.04
+            # cmake-args: -G "Unix Makefiles"
+            env:
+              CFLAGS:
+              CXXFLAGS:
+              BASE_IMAGE: ubuntu:bionic-20200112
+              REPOSITORY: klee
+              COVERAGE: 0
+              DISABLE_ASSERTIONS: 0
+              ENABLE_OPTIMIZED: 1
+              ENABLE_DEBUG: 1
+              GTEST_VERSION: 1.7.0
+              KLEE_RUNTIME_BUILD: "Debug+Asserts"
+              LLVM_VERSION: 3.8
+              METASMT_VERSION: qf_abv
+              MINISAT_VERSION: "master"
+              REQUIRES_RTTI: 0
+              SANITIZER_BUILD:
+              SOLVERS: STP:Z3
+              STP_VERSION: 2.3.3
+              TCMALLOC_VERSION: 2.7
+              UCLIBC_VERSION: klee_uclibc_v1.2
+              USE_TCMALLOC: 1
+              USE_LIBCXX: 1
+              Z3_VERSION: 4.8.4
+
+    steps:
+      - name: Checkout KLEE Code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+
+#      - name: Cache Docker layers
+#        uses: actions/cache@v2
+#        with:
+#          path: /tmp/.buildx-cache
+#          key: ${{ runner.os }}-buildx-${{ github.sha }}
+#          restore-keys: |
+#            ${{ runner.os }}-buildx-
+
+      - name: Build in Debug+Asserts mode (docker)
+        env: ${{ matrix.env }}
+        run: |
+          scripts/build/build.sh klee --docker --create-final-image
+
+      - name: Run tests
+        run: |
+          sudo scripts/build/run-tests.sh --run-docker --debug
