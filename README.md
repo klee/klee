@@ -1,5 +1,7 @@
 KLEE Symbolic Virtual Machine
 =============================
+TODO LIST:
+ - Don't forget to add build status
 
 [![Build Status](https://travis-ci.com/klee/klee.svg?branch=master)](https://travis-ci.com/klee/klee)
 [![Build Status](https://api.cirrus-ci.com/github/klee/klee.svg)](https://cirrus-ci.com/github/klee/klee)
