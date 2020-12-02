@@ -91,7 +91,7 @@ public:
 
   MemoryObject(ref<Expr> _lazyInstantiatedSource)
     : id(counter++),
-      address(0),
+      address((uint64_t)0xffffffffffffffff),
       size(0),
       isFixed(true),
       parent(NULL),

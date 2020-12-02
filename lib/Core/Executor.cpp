@@ -92,6 +92,8 @@ typedef unsigned TypeSize;
 #include <string>
 #include <sys/mman.h>
 #include <vector>
+#include <chrono>
+using namespace std::chrono;
 
 using namespace llvm;
 using namespace klee;
@@ -4282,7 +4284,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
         if (res !=Solver::False) {
           unbound->addConstraint(inBounds);
-        } else {=
+        } else {
           ObjectPair p = lazyInstantiateVariable(*unbound, gep->address, target, bytes);
         }
       }
@@ -4706,6 +4708,7 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
     KFunction *kf = kmodule->functionMap[f];
     Function::iterator bbit = f->begin(), bbie = f->end();
 
+    auto start = high_resolution_clock::now();
     if(bbit != bbie) {
       StackFrame *stackFrame = new StackFrame(nullptr, kf);
       ExecutionState *initialState = state.withStackFrame(stackFrame);
@@ -4714,6 +4717,7 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
       prepareSymbolicArgs(*initialState, kf);
 
       for (; bbit != bbie; bbit++) {
+        bbResultStates.clear();
         KBlock *kb = kf->kBlocks[&*bbit];
         ExecutionState *currState = initialState->withInstructions(kb->instructions);
         currState->setBlockIndexes(kb);

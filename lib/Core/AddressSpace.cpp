@@ -371,6 +371,6 @@ bool MemoryObjectLT::operator()(const MemoryObject *a, const MemoryObject *b) co
   bool res = true;
   if (!a->lazyInstantiatedSource.isNull() && !b->lazyInstantiatedSource.isNull())
     res = a->lazyInstantiatedSource != b->lazyInstantiatedSource;
-  return res && a->address < b->address;
+  return res ? a->address < b->address : false;
 }
 
