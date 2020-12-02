@@ -950,6 +950,14 @@ MetaSMTBuilder<SolverContext>::constructActual(ref<Expr> e, int *width_out) {
     break;
   }
 
+  case Expr::GEP: {
+    GEPExpr *gep = cast<GEPExpr>(e);
+    assert(gep);
+
+    res = evaluate(_solver, construct(gep->address, width_out));
+    break;
+  }
+
   case Expr::Not: {
     NotExpr *ne = cast<NotExpr>(e);
     assert(ne);

@@ -82,6 +82,10 @@ namespace {
       return SRemExpr::alloc(LHS, RHS);
     }
 
+    virtual ref<Expr> GEP(const ref<Expr> &LHS, const ref<Expr> &RHS, unsigned size) {
+      return GEPExpr::alloc(LHS, RHS, size);
+    }
+
     virtual ref<Expr> Not(const ref<Expr> &LHS) {
       return NotExpr::alloc(LHS);
     }

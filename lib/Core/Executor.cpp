@@ -2730,21 +2730,26 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::GetElementPtr: {
     KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(ki);
+    GetElementPtrInst *gepInst = static_cast<GetElementPtrInst*>(kgepi->inst);
+    unsigned sourceSize =
+        kmodule->targetData->getTypeStoreSize(gepInst->getSourceElementType());
     ref<Expr> base = symbolicEval(ki, 0, state).value;
-
+    ref<Expr> offset = ConstantExpr::create(0, base->getWidth());
     for (std::vector< std::pair<unsigned, uint64_t> >::iterator
            it = kgepi->indices.begin(), ie = kgepi->indices.end();
          it != ie; ++it) {
       uint64_t elementSize = it->second;
       ref<Expr> index = symbolicEval(ki, it->first, state).value;
-      base = AddExpr::create(base,
+      offset = AddExpr::create(offset,
                              MulExpr::create(Expr::createSExtToPointerWidth(index),
                                              Expr::createPointer(elementSize)));
     }
     if (kgepi->offset)
-      base = AddExpr::create(base,
+      offset = AddExpr::create(offset,
                              Expr::createPointer(kgepi->offset));
-    bindLocal(ki, state, base);
+    ref<Expr> address = AddExpr::create(base, offset);
+    ref<Expr> gep = GEPExpr::create(address, base, sourceSize);
+    bindLocal(ki, state, gep);
     break;
   }
 
@@ -2789,6 +2794,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::BitCast: {
     ref<Expr> result = symbolicEval(ki, 0, state).value;
+    BitCastInst *bc = cast<BitCastInst>(ki->inst);
+    if(auto gep = dyn_cast<GEPExpr>(result)) {
+      unsigned size = bc->getType()->isPointerTy() ?
+            kmodule->targetData->getTypeStoreSize(ki->inst->getType()->getPointerElementType()) :
+            kmodule->targetData->getTypeStoreSize(ki->inst->getType());
+      gep->sourceSize = size;
+    }
     bindLocal(ki, state, result);
     break;
   }
@@ -4217,7 +4229,8 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     const MemoryObject *mo = i->first;
     const ObjectState *os = i->second;
     ref<Expr> inBounds = mo->getBoundsCheckPointer(address, bytes);
-    
+    if (auto gep = dyn_cast<GEPExpr>(address))
+      inBounds = AndExpr::create(inBounds, mo->getBoundsCheckPointer(gep->base, gep->sourceSize));
     StatePair branches = fork(*unbound, inBounds, true);
     ExecutionState *bound = branches.first;
 
@@ -4252,13 +4265,26 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     if (incomplete) {
       terminateStateEarly(*unbound, "Query timed out (resolve).");
     } else if (!isa<ConstantExpr>(address)) {
-      ObjectPair p = lazyInstantiateVariable(*unbound, address, target, bytes);
-      if (!p.first || !p.second)
-      {
-        // TODO: improve error description
-        terminateStateOnError(*unbound, "memory error: out of bound pointer", Ptr,
-                              NULL/*, getAddressInfo(*unbound, address)*/);
-        return;
+      ref<Expr> base = isa<GEPExpr>(address) ? cast<GEPExpr>(address)->base : address;
+      unsigned size = isa<GEPExpr>(address) ? cast<GEPExpr>(address)->sourceSize : bytes;
+      ObjectPair p = lazyInstantiateVariable(*unbound, base, target, size);
+      assert(p.first && p.second);
+      if (auto gep = dyn_cast<GEPExpr>(address)) {
+        const MemoryObject *mo = p.first;
+        const ObjectState *os = p.second;
+        ref<Expr> inBounds = mo->getBoundsCheckPointer(gep->address, bytes);
+
+        Solver::Validity res;
+        time::Span timeout = coreSolverTimeout;
+        solver->setTimeout(timeout);
+        bool success = solver->evaluate(*unbound, inBounds, res);
+        solver->setTimeout(time::Span());
+
+        if (res !=Solver::False) {
+          unbound->addConstraint(inBounds);
+        } else {=
+          ObjectPair p = lazyInstantiateVariable(*unbound, gep->address, target, bytes);
+        }
       }
       switch (operation) {
         case Write: {
@@ -4501,12 +4527,16 @@ void Executor:: prepareSymbolicValue(ExecutionState &state, KInstruction *target
   ref<Expr> result = makeSymbolicValue(allocSite, state, size, width, "symbolic_value");
   bindLocal(target, state, result);
   if (isa<AllocaInst>(allocSite)) {
-    ref<Expr> constr = ConstantExpr::create(true, Expr::Bool);
-    for (auto &reg : state.allocaRegs) {
-      constr = AndExpr::create(constr, Expr::createIsZero(EqExpr::create(result, reg)));
-    }
-    addConstraint(state, constr);
-    state.allocaRegs.push_back(result);
+      AllocaInst *ai = cast<AllocaInst>(allocSite);
+      unsigned elementSize =
+        kmodule->targetData->getTypeStoreSize(ai->getAllocatedType());
+      ref<Expr> size = Expr::createPointer(elementSize);
+      if (ai->isArrayAllocation()) {
+        ref<Expr> count = symbolicEval(target, 0, state).value;
+        count = Expr::createZExtToPointerWidth(count);
+        size = MulExpr::create(size, count);
+      }
+      lazyInstantiateVariable(state, result, target, elementSize);
   }
 }
 
@@ -4525,8 +4555,7 @@ void Executor::prepareSymbolicArgs(ExecutionState &state, KFunction *kf) {
   }
 }
 
-ref<Expr> Executor::makeSymbolicValue(Value *value, ExecutionState &state, uint64_t size, Expr::Width width, const std::string &name)
-{
+ref<Expr> Executor::makeSymbolicValue(Value *value, ExecutionState &state, uint64_t size, Expr::Width width, const std::string &name) {
     MemoryObject *mo =
           memory->allocate(size, true, /*isGlobal=*/false,
                            value, /*allocationAlignment=*/8);
@@ -4714,6 +4743,9 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
       }
     }
     functionFonRun.pop();
+    auto stop = high_resolution_clock::now();
+    auto duration = duration_cast<milliseconds>(stop - start);
+    errs() << "duration," << f->getName() << "," << duration.count() << "\n";
   }
 }
 

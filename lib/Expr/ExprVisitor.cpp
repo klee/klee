@@ -71,6 +71,7 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
     case Expr::SDiv: res = visitSDiv(static_cast<SDivExpr&>(ep)); break;
     case Expr::URem: res = visitURem(static_cast<URemExpr&>(ep)); break;
     case Expr::SRem: res = visitSRem(static_cast<SRemExpr&>(ep)); break;
+    case Expr::GEP: res = visitGEP(static_cast<GEPExpr&>(ep)); break;
     case Expr::Not: res = visitNot(static_cast<NotExpr&>(ep)); break;
     case Expr::And: res = visitAnd(static_cast<AndExpr&>(ep)); break;
     case Expr::Or: res = visitOr(static_cast<OrExpr&>(ep)); break;
@@ -188,6 +189,10 @@ ExprVisitor::Action ExprVisitor::visitURem(const URemExpr&) {
 
 ExprVisitor::Action ExprVisitor::visitSRem(const SRemExpr&) {
   return Action::doChildren(); 
+}
+
+ExprVisitor::Action ExprVisitor::visitGEP(const GEPExpr&) {
+  return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitNot(const NotExpr&) {

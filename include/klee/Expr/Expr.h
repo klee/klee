@@ -124,6 +124,7 @@ public:
     Select,
     Concat,
     Extract,
+    GEP,
 
     // Casting,
     ZExt,
@@ -834,7 +835,51 @@ protected:
   }
 };
 
+class GEPExpr : public NonConstantExpr {
+public:
+  static const Kind kind = GEP;
+  static const unsigned numKids = 2;
 
+  unsigned sourceSize;
+  ref<Expr> address;
+  ref<Expr> base;
+
+public:
+  static ref<Expr> alloc(const ref<Expr> &e, const ref<Expr> &b, unsigned s) {
+    ref<Expr> r(new GEPExpr(e, b, s));
+    r->computeHash();
+    return r;
+  }
+
+  static ref<Expr> create(const ref<Expr> &e, const ref<Expr> &b, unsigned s);
+
+  Width getWidth() const { return address->getWidth(); }
+  Kind getKind() const { return GEP; }
+
+  unsigned getNumKids() const { return numKids; }
+  ref<Expr> getKid(unsigned i) const { return address; }
+
+  virtual ref<Expr> rebuild(ref<Expr> kids[]) const {
+    return create(kids[0], kids[1], sourceSize);
+  }
+
+  virtual unsigned computeHash();
+
+public:
+  static bool classof(const Expr *E) {
+    return E->getKind() == Expr::GEP;
+  }
+  static bool classof(const GEPExpr *) { return true; }
+
+private:
+  GEPExpr(const ref<Expr> &e, const ref<Expr> &b, unsigned s) : address(e), base(b), sourceSize(s) {}
+
+protected:
+  virtual int compareContents(const Expr &b) const {
+    // No attributes to compare.
+    return 0;
+  }
+};
 
 // Casting
 
