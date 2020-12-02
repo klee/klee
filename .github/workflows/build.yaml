@@ -143,7 +143,7 @@ jobs:
         env: ${{ matrix.env }}
         run: scripts/build/build.sh klee --docker --create-final-image
       - name: Run tests
-        run: sudo scripts/build/run-tests.sh --run-docker --debug
+        run: scripts/build/run-tests.sh --run-docker --debug
 
   macOS:
     runs-on: macos-latest
@@ -182,4 +182,4 @@ jobs:
       - name: Build KLEE
         run: scripts/build/build.sh klee --docker --create-final-image
       - name: Run tests
-        run: sudo scripts/build/run-tests.sh --coverage --upload-coverage --run-docker --debug
+        run: scripts/build/run-tests.sh --coverage --upload-coverage --run-docker --debug
