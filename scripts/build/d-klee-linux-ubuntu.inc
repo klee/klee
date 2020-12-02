@@ -1,6 +1,6 @@
 # TODO remove adding sudo package
 # Create ``klee`` user for container with password ``klee``.
-# and give it password-less sudo access (temporarily so we can use the TravisCI scripts)
+# and give it password-less sudo access (temporarily so we can use the CI scripts)
 RUN apt update && DEBIAN_FRONTEND=noninteractive apt -y --no-install-recommends install sudo emacs-nox vim-nox file python3-dateutil && \
     rm -rf /var/lib/apt/lists/* && \
     useradd -m klee && \
