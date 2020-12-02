@@ -6,33 +6,26 @@ import os
 
 (abs_path, _) = os.path.split(os.path.abspath(__file__))
 
-with open(os.path.join(abs_path,"../../.travis.yml"), 'r') as stream:
+with open(os.path.join(abs_path,"../../.github/workflows/build.yaml"), 'r') as stream:
     try:
-        travis_config = yaml.safe_load(stream)
-        global_env = travis_config['env']['global']
-        for job in travis_config['jobs']['include']:
+        ci_config = yaml.safe_load(stream)
+        global_env = ci_config['env']
+        print(ci_config['jobs']['Linux']['strategy']['matrix']['include'])
+        for job in ci_config['jobs']['Linux']['strategy']['matrix']['include']:
             if job['name'] in ["Docker", "macOS"]:
                 print("Skip: {}".format(job['name']))
                 continue
+
             print("Building: {}".format(job['name']))
 
-
-            # Copy current environment
             build_env = os.environ.copy()
 
-            build_vars = {}
-            # Setup global build variables
-            for e in global_env:
-                (k,v) = e.split("=")
-                build_vars[k] = v
+            # Copy current global build configurations
+            build_vars = dict(global_env)
 
             # Override with job specific values
-            for e in job['env'].strip("").split(" "):
-                (k,v) = e.split("=")
+            for k,v in job['env'].items():
                 build_vars[k] = v
-
-            for k,v in build_vars.items():
-                build_env[k] = v
 
             cmd = [os.path.join(abs_path, 'build.sh'),
                   'klee', # build KLEE and all its dependencies
@@ -42,7 +35,7 @@ with open(os.path.join(abs_path,"../../.travis.yml"), 'r') as stream:
                   '--create-final-image', # assume KLEE is the final image
                   ]
 
-            env_str = [k+"="+v for (k,v) in build_vars.items()]
+            env_str = ["{}={}".format(k,v) for k,v in build_vars.items()]
             print("{} {}".format(" ".join(env_str)," ".join(cmd)) )
 
             process = subprocess.Popen(cmd, # Assume KLEE is the final image
