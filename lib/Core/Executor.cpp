@@ -133,6 +133,12 @@ cl::opt<bool> IsolationMode(
     cl::desc("Kind of execution mode"),
     cl::cat(ExecCat));
 
+cl::opt<bool> ExcludeSolver(
+    "isolation-mode",
+    cl::init(true),
+    cl::desc("Kind of execution mode"),
+    cl::cat(ExecCat));
+
 } // namespace klee
 
 namespace {
@@ -3564,7 +3570,9 @@ void Executor::run(ExecutionState &initialState) {
 }
 
 std::string Executor::getAddressInfo(ExecutionState &state, 
-                                     ref<Expr> address) const{
+                                     ref<Expr> address) const {
+  if (ExcludeSolver)
+    return "EXCLUDE_SOLVER";
   std::string Str;
   llvm::raw_string_ostream info(Str);
   info << "\taddress: " << address << "\n";
@@ -3643,23 +3651,23 @@ void Executor::terminateState(ExecutionState &state) {
 
 void Executor::terminateStateEarly(ExecutionState &state, 
                                    const Twine &message) {
-  if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
-      (AlwaysOutputSeeds && seedMap.count(&state)))
+  if (!ExcludeSolver && (!OnlyOutputStatesCoveringNew || state.coveredNew ||
+      (AlwaysOutputSeeds && seedMap.count(&state))))
     interpreterHandler->processTestCase(state, (message + "\n").str().c_str(),
                                         "early");
   terminateState(state);
 }
 
 void Executor::terminateStateOnExit(ExecutionState &state) {
-  if (!OnlyOutputStatesCoveringNew || state.coveredNew || 
-      (AlwaysOutputSeeds && seedMap.count(&state)))
+  if (!ExcludeSolver && (!OnlyOutputStatesCoveringNew || state.coveredNew ||
+      (AlwaysOutputSeeds && seedMap.count(&state))))
     interpreterHandler->processTestCase(state, 0, 0);
   terminateState(state);
 }
 
 void Executor::terminateStateOnTerminator(ExecutionState &state) {
-  if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
-      (AlwaysOutputSeeds && seedMap.count(&state)))
+  if (!ExcludeSolver && (!OnlyOutputStatesCoveringNew || state.coveredNew ||
+      (AlwaysOutputSeeds && seedMap.count(&state))))
     interpreterHandler->processTestCase(state, 0, 0);
   bbResultStates.insert(&state);
   terminateState(state);
@@ -3762,9 +3770,10 @@ void Executor::terminateStateOnError(ExecutionState &state,
       suffix = suffix_buf.c_str();
     }
 
-    interpreterHandler->processTestCase(state, msg.str().c_str(), suffix);
+    if(!ExcludeSolver)
+      interpreterHandler->processTestCase(state, msg.str().c_str(), suffix);
   }
-    
+
   terminateState(state);
 
   if (shouldExitOn(termReason))
