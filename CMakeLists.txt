@@ -486,6 +486,14 @@ set_property(CACHE
   PROPERTY STRINGS ${available_klee_runtime_build_types})
 message(STATUS "KLEE_RUNTIME_BUILD_TYPE: ${KLEE_RUNTIME_BUILD_TYPE}")
 
+# Check availability of 32bit support for platform
+include(CheckCSourceRuns)
+cmake_push_check_state()
+set(CMAKE_REQUIRED_FLAGS "-m32")
+check_c_source_runs("int main(int argc, char** argv){return 0;}" M32_SUPPORTED)
+cmake_pop_check_state()
+message(STATUS "32bit platform supported: ${M32_SUPPORTED}")
+
 set(KLEE_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_FULL_LIBDIR}/klee/runtime")
 
 # Location where KLEE will look for the built runtimes by default.
