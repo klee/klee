@@ -79,8 +79,6 @@ bool AddressSpace::resolveOne(ExecutionState &state,
                               ref<Expr> address,
                               ObjectPair &result,
                               bool &success) const {
-  if (GEPExpr *GEP = dyn_cast<GEPExpr>(address))
-    address = GEP->base;
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(address)) {
     success = resolveOne(CE, result);
     return true;
@@ -218,8 +216,6 @@ int AddressSpace::checkPointerInObject(ExecutionState &state,
 bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
                            ref<Expr> p, ResolutionList &rl,
                            unsigned maxResolutions, time::Span timeout) const {
-  if (GEPExpr *GEP = dyn_cast<GEPExpr>(p))
-    p = GEP->base;
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(p)) {
     ObjectPair res;
     if (resolveOne(CE, res))

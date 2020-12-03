@@ -134,10 +134,17 @@ cl::opt<bool> IsolationMode(
     cl::cat(ExecCat));
 
 cl::opt<bool> ExcludeSolver(
-    "isolation-mode",
+    "exclude-solver",
     cl::init(true),
     cl::desc("Kind of execution mode"),
     cl::cat(ExecCat));
+
+cl::opt<bool> UseGEPExpr(
+    "use-gep-expr",
+    cl::init(false),
+    cl::desc("Kind of execution mode"),
+    cl::cat(ExecCat));
+
 
 } // namespace klee
 
@@ -2756,8 +2763,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       offset = AddExpr::create(offset,
                              Expr::createPointer(kgepi->offset));
     ref<Expr> address = AddExpr::create(base, offset);
-    ref<Expr> gep = GEPExpr::create(address, base, sourceSize);
-    bindLocal(ki, state, gep);
+    address = UseGEPExpr ? GEPExpr::create(address, base, sourceSize) : address;
+    bindLocal(ki, state, address);
     break;
   }
 
@@ -2803,12 +2810,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::BitCast: {
     ref<Expr> result = symbolicEval(ki, 0, state).value;
     BitCastInst *bc = cast<BitCastInst>(ki->inst);
-    if(auto gep = dyn_cast<GEPExpr>(result)) {
+
+    if(UseGEPExpr && isa<GEPExpr>(result)) {
       unsigned size = bc->getType()->isPointerTy() ?
             kmodule->targetData->getTypeStoreSize(ki->inst->getType()->getPointerElementType()) :
             kmodule->targetData->getTypeStoreSize(ki->inst->getType());
-      gep->sourceSize = size;
+      dyn_cast<GEPExpr>(result)->sourceSize = size;
     }
+
     bindLocal(ki, state, result);
     break;
   }
@@ -4173,7 +4182,9 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   ObjectPair op;
   bool success;
   solver->setTimeout(coreSolverTimeout);
-  if (!state.addressSpace.resolveOne(state, solver, address, op, success)) {
+  if (UseGEPExpr && isa<GEPExpr>(address))
+    state.addressSpace.resolveOne(state, solver, dyn_cast<GEPExpr>(address)->base, op, success);
+  else if (!state.addressSpace.resolveOne(state, solver, address, op, success)) {
     address = toConstant(state, address, "resolveOne failure");
     success = state.addressSpace.resolveOne(cast<ConstantExpr>(address), op);
   }
@@ -4234,10 +4245,15 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   address = optimizer.optimizeExpr(address, true);
   ResolutionList rl;  
   solver->setTimeout(coreSolverTimeout);
-  bool incomplete = state.addressSpace.resolve(state, solver, address, rl,
-                                               0, coreSolverTimeout);
+  bool incomplete;
+
+  if (UseGEPExpr && isa<GEPExpr>(address))
+      incomplete = state.addressSpace.resolve(state, solver, dyn_cast<GEPExpr>(address)->base, rl, 0, coreSolverTimeout);
+  else
+      incomplete = state.addressSpace.resolve(state, solver, address, rl, 0, coreSolverTimeout);
+
   solver->setTimeout(time::Span());
-  
+
   // XXX there is some query wasteage here. who cares?
   ExecutionState *unbound = &state;
   
@@ -4245,8 +4261,12 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     const MemoryObject *mo = i->first;
     const ObjectState *os = i->second;
     ref<Expr> inBounds = mo->getBoundsCheckPointer(address, bytes);
-    if (auto gep = dyn_cast<GEPExpr>(address))
+
+    if (UseGEPExpr && isa<GEPExpr>(address)) {
+      auto gep = dyn_cast<GEPExpr>(address);
       inBounds = AndExpr::create(inBounds, mo->getBoundsCheckPointer(gep->base, gep->sourceSize));
+    }
+
     StatePair branches = fork(*unbound, inBounds, true);
     ExecutionState *bound = branches.first;
 
@@ -4281,11 +4301,19 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     if (incomplete) {
       terminateStateEarly(*unbound, "Query timed out (resolve).");
     } else if (!isa<ConstantExpr>(address)) {
-      ref<Expr> base = isa<GEPExpr>(address) ? cast<GEPExpr>(address)->base : address;
-      unsigned size = isa<GEPExpr>(address) ? cast<GEPExpr>(address)->sourceSize : bytes;
+      ref<Expr> base = address;
+      unsigned size = bytes;
+
+      if (UseGEPExpr && isa<GEPExpr>(address)) {
+        base = cast<GEPExpr>(address)->base;
+        size = cast<GEPExpr>(address)->sourceSize;
+      }
+
       ObjectPair p = lazyInstantiateVariable(*unbound, base, target, size);
       assert(p.first && p.second);
-      if (auto gep = dyn_cast<GEPExpr>(address)) {
+
+      if (UseGEPExpr && isa<GEPExpr>(address)) {
+        auto gep = dyn_cast<GEPExpr>(address);
         const MemoryObject *mo = p.first;
         const ObjectState *os = p.second;
         ref<Expr> inBounds = mo->getBoundsCheckPointer(gep->address, bytes);
@@ -4302,6 +4330,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           ObjectPair p = lazyInstantiateVariable(*unbound, gep->address, target, bytes);
         }
       }
+
       switch (operation) {
         case Write: {
           ObjectState *wos = unbound->addressSpace.getWriteable(p.first, p.second);
