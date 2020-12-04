@@ -13,6 +13,11 @@
 
 #include <string.h>
 
+#ifdef __APPLE__
+/* macOS does not provide mempcpy in string.h */
+void *mempcpy(void *destaddr, void const *srcaddr, size_t len);
+#endif
+
 void *__mempcpy_chk(void *dest, const void *src, size_t len, size_t destlen) {
   if (len > destlen)
     klee_report_error(__FILE__, __LINE__, "mempcpy overflow", "ptr.err");
