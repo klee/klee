@@ -141,7 +141,7 @@ cl::opt<bool> ExcludeSolver(
 
 cl::opt<bool> UseGEPExpr(
     "use-gep-expr",
-    cl::init(false),
+    cl::init(true),
     cl::desc("Kind of execution mode"),
     cl::cat(ExecCat));
 
@@ -1124,12 +1124,12 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     return StatePair(0, &current);
   } else {
     TimerStatIncrementer timer(stats::forkTime);
-    ExecutionState *falseState, *trueState = &current;
+    ExecutionState *trueState, *falseState = &current;
 
     ++stats::forks;
 
-    falseState = trueState->branch();
-    addedStates.push_back(falseState);
+    trueState = falseState->branch();
+    addedStates.push_back(trueState);
 
     if (it != seedMap.end()) {
       std::vector<SeedInfo> seeds = it->second;
@@ -3319,10 +3319,23 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 }
 
 void Executor::updateStates(ExecutionState *current) {
+  if (addedStates.size() > 0) {
+    pausedStates.insert(addedStates.begin(), addedStates.end());
+    for (std::vector<ExecutionState *>::iterator it = addedStates.begin(),
+         ie = addedStates.end(); it != ie; ++it) {
+      std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it3 =
+        seedMap.find(*it);
+      if (it3 != seedMap.end())
+        seedMap.erase(it3);
+      processTree->remove((*it)->ptreeNode);
+    }
+    addedStates.clear();
+  }
+
   if (searcher) {
     searcher->update(current, addedStates, removedStates);
   }
-  
+
   states.insert(addedStates.begin(), addedStates.end());
   addedStates.clear();
 
@@ -3340,10 +3353,10 @@ void Executor::updateStates(ExecutionState *current) {
     processTree->remove(es->ptreeNode);
   }
   removedStates.clear();
+
   if (states.size() > 10) {
     pausedStates.insert(states.begin(), states.end());
     states.clear();
-    klee_message("insufficient information, pause execution");
   }
 }
 
@@ -4168,6 +4181,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     break;
   }
   unsigned bytes = Expr::getMinBytesForWidth(type);
+  ref<Expr> unsafeAddress = UseGEPExpr && isa<GEPExpr>(address) ? dyn_cast<GEPExpr>(address)->address : address;
 
   if (SimplifySymIndices) {
     if (!isa<ConstantExpr>(address))
@@ -4182,9 +4196,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   ObjectPair op;
   bool success;
   solver->setTimeout(coreSolverTimeout);
-  if (UseGEPExpr && isa<GEPExpr>(address))
-    state.addressSpace.resolveOne(state, solver, dyn_cast<GEPExpr>(address)->base, op, success);
-  else if (!state.addressSpace.resolveOne(state, solver, address, op, success)) {
+  if (!state.addressSpace.resolveOne(state, solver, unsafeAddress, op, success)) {
     address = toConstant(state, address, "resolveOne failure");
     success = state.addressSpace.resolveOne(cast<ConstantExpr>(address), op);
   }
@@ -4194,10 +4206,10 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     const MemoryObject *mo = op.first;
 
     if (MaxSymArraySize && mo->size >= MaxSymArraySize) {
-      address = toConstant(state, address, "max-sym-array-size");
+      unsafeAddress = toConstant(state, unsafeAddress, "max-sym-array-size");
     }
     
-    ref<Expr> offset = mo->getOffsetExpr(address);
+    ref<Expr> offset = mo->getOffsetExpr(unsafeAddress);
     ref<Expr> check = mo->getBoundsCheckOffset(offset, bytes);
     check = optimizer.optimizeExpr(check, true);
 
@@ -4260,7 +4272,8 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   for (ResolutionList::iterator i = rl.begin(), ie = rl.end(); i != ie; ++i) {
     const MemoryObject *mo = i->first;
     const ObjectState *os = i->second;
-    ref<Expr> inBounds = mo->getBoundsCheckPointer(address, bytes);
+
+    ref<Expr> inBounds = mo->getBoundsCheckPointer(unsafeAddress, bytes);
 
     if (UseGEPExpr && isa<GEPExpr>(address)) {
       auto gep = dyn_cast<GEPExpr>(address);
@@ -4279,12 +4292,12 @@ void Executor::executeMemoryOperation(ExecutionState &state,
                                   ReadOnly);
           } else {
             ObjectState *wos = bound->addressSpace.getWriteable(mo, os);
-            wos->write(mo->getOffsetExpr(address), value);
+            wos->write(mo->getOffsetExpr(unsafeAddress), value);
           }
           break;
         }
         case Read: {
-          ref<Expr> result = os->read(mo->getOffsetExpr(address), type);
+          ref<Expr> result = os->read(mo->getOffsetExpr(unsafeAddress), type);
           bindLocal(target, *bound, result);
           break;
         }
@@ -4313,10 +4326,9 @@ void Executor::executeMemoryOperation(ExecutionState &state,
       assert(p.first && p.second);
 
       if (UseGEPExpr && isa<GEPExpr>(address)) {
-        auto gep = dyn_cast<GEPExpr>(address);
         const MemoryObject *mo = p.first;
         const ObjectState *os = p.second;
-        ref<Expr> inBounds = mo->getBoundsCheckPointer(gep->address, bytes);
+        ref<Expr> inBounds = mo->getBoundsCheckPointer(unsafeAddress, bytes);
 
         Solver::Validity res;
         time::Span timeout = coreSolverTimeout;
@@ -4327,18 +4339,18 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         if (res !=Solver::False) {
           unbound->addConstraint(inBounds);
         } else {
-          ObjectPair p = lazyInstantiateVariable(*unbound, gep->address, target, bytes);
+          ObjectPair p = lazyInstantiateVariable(*unbound, unsafeAddress, target, bytes);
         }
       }
 
       switch (operation) {
         case Write: {
           ObjectState *wos = unbound->addressSpace.getWriteable(p.first, p.second);
-          wos->write(p.first->getOffsetExpr(address), value);
+          wos->write(p.first->getOffsetExpr(unsafeAddress), value);
           break;
         }
         case Read: {
-          ref<Expr> result = p.second->read(p.first->getOffsetExpr(address), type);
+          ref<Expr> result = p.second->read(p.first->getOffsetExpr(unsafeAddress), type);
           bindLocal(target, *unbound, result);
           break;
         }
@@ -4698,6 +4710,7 @@ void Executor::runKBlock(KBlock *kb,
 
  processTree = std::make_unique<PTree>(&state);
  run(state);
+ processTree = nullptr;
 
  if (statsTracker)
    statsTracker->done();

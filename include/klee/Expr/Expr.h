@@ -842,7 +842,7 @@ public:
 
   unsigned sourceSize;
   ref<Expr> address;
-  ref<Expr> base;
+  ref<Expr> base = nullptr;
 
 public:
   static ref<Expr> alloc(const ref<Expr> &e, const ref<Expr> &b, unsigned s) {
