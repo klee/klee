@@ -1166,7 +1166,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    processTree->attach(current.ptreeNode, falseState, trueState);
+    processTree->attach(current.ptreeNode, trueState, falseState);
 
     if (pathWriter) {
       // Need to update the pathOS.id field of falseState, otherwise the same id
@@ -4626,7 +4626,7 @@ ref<Expr> Executor::makeSymbolicValue(Value *value, ExecutionState &state, uint6
 
 void Executor::prepareSymbolicReturn(ExecutionState &state, KInstruction *kcallInst) {
   Instruction *callInst = kcallInst->inst;
-  assert(cast<CallInst>(callInst));
+  assert(isa<CallInst>(callInst) || isa<InvokeInst>(callInst));
 #if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
     const CallBase &cs = cast<CallBase>(*callInst);
     Value *fp = cs.getCalledOperand();
