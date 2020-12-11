@@ -63,7 +63,8 @@ namespace klee {
   public:
     explicit KBlock(llvm::Function*, KBlock**, KModule*, unsigned);
     explicit KBlock(llvm::Function*, llvm::BasicBlock*, KModule*,
-                    std::map<llvm::Instruction*, unsigned>&, unsigned&);
+                    std::map<llvm::Instruction*, unsigned>&, std::map<unsigned, KInstruction*>&,
+                    unsigned&);
     KBlock(const KBlock &) = delete;
     KBlock &operator=(const KBlock &) = delete;
 
@@ -81,14 +82,15 @@ namespace klee {
 
   public:
     explicit KCallBlock(llvm::Function*, llvm::BasicBlock*, KModule*,
-                    std::map<llvm::Instruction*, unsigned>&, unsigned&, llvm::Function*);
+                    std::map<llvm::Instruction*, unsigned>&, std::map<unsigned, KInstruction*>&,
+                    unsigned&, llvm::Function*);
     KBlockType getKBlockType() override { return KBlockType::Call; };
   };
 
   struct KAllocaBlock : KBlock {
   public:
     explicit KAllocaBlock(llvm::Function*, llvm::BasicBlock*, KModule*,
-                    std::map<llvm::Instruction*, unsigned>&, unsigned&);
+                    std::map<llvm::Instruction*, unsigned>&, std::map<unsigned, KInstruction*>&, unsigned&);
     KBlockType getKBlockType() override { return KBlockType::Alloca; };
   };
 
@@ -97,10 +99,12 @@ namespace klee {
 
     unsigned numArgs, numRegisters;
 
+    std::map<unsigned, KInstruction*> reg2inst;
     unsigned numInstructions;
     unsigned numBlocks;
     KInstruction **instructions;
 
+    std::map<llvm::Instruction*, KInstruction*> kInstructions;
     std::map<llvm::BasicBlock*, KBlock*> kBlocks;
 
     /// Whether instructions in this function should count as

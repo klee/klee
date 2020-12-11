@@ -401,8 +401,8 @@ private:
   // Used for testing.
   ref<Expr> replaceReadWithSymbolic(ExecutionState &state, ref<Expr> e);
 
-  const Cell& eval(KInstruction *ki, unsigned index, 
-                   ExecutionState &state) const;
+  const Cell& eval(KInstruction *ki, unsigned index,
+                   ExecutionState &state);
 
   Cell& getArgumentCell(ExecutionState &state,
                         KFunction *kf,
@@ -558,6 +558,8 @@ public:
   void clearGlobal();
 
   void prepareSymbolicStack(ExecutionState &state, KFunction *kf);
+
+  void prepareSymbolicRegister(ExecutionState &state, StackFrame &sf, ref<Expr> expr, unsigned index);
 
   void prepareSymbolicArgs(ExecutionState &state, KFunction *kf);
 

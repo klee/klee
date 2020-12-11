@@ -236,6 +236,12 @@ public:
   /// @brief Disables forking for this state. Set by user code
   bool forkDisabled;
 
+  // The bounds of indexes of registers
+  unsigned minAllocBound = 0;
+  unsigned maxAllocBound = 0;
+  unsigned minBlockBound = 0;
+  unsigned maxBlockBound = 0;
+
 public:
   #ifdef KLEE_UNITTEST
   // provide this function only in the context of unittests
@@ -269,6 +275,9 @@ public:
 
   std::uint32_t getID() const { return id; };
   void setID() { id = nextID++; };
+  void setAllocIndexes(KBlock *kb);
+  void setBlockIndexes(KBlock *kb);
+  bool inBasicBlockRange(unsigned index);
 };
 
 struct ExecutionStateIDCompare {

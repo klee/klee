@@ -574,8 +574,8 @@ KFunction::KFunction(llvm::Function *_function,
   for (auto &BasicBlock : *function) {
     numInstructions += BasicBlock.size();
   }
- instructions = new KInstruction*[numInstructions];
- std::map<Instruction*, unsigned> registerMap;
+  instructions = new KInstruction*[numInstructions];
+  std::map<Instruction*, unsigned> registerMap;
   // Assign unique instruction IDs to each basic block
   unsigned n = 0;
   // The first arg_size() registers are reserved for formals.
@@ -588,13 +588,14 @@ KFunction::KFunction(llvm::Function *_function,
       CallSite cs(it);
       Value *fp = cs.getCalledValue();
       Function *f = getTargetFunction(fp);
-      kb = new KCallBlock(function, &*bbit, km, registerMap, rnum, f);
+      kb = new KCallBlock(function, &*bbit, km, registerMap, reg2inst, rnum, f);
     } else if (it->getOpcode() == Instruction::Alloca)
-      kb = new KAllocaBlock(function, &*bbit, km, registerMap, rnum);
+      kb = new KAllocaBlock(function, &*bbit, km, registerMap, reg2inst, rnum);
     else
-      kb = new KBlock(function, &*bbit, km, registerMap, rnum);
+      kb = new KBlock(function, &*bbit, km, registerMap, reg2inst, rnum);
     for (unsigned i = 0; i < kb->numInstructions; i++, n++) {
       instructions[n] = kb->instructions[i];
+      kInstructions[instructions[n]->inst] = instructions[n];
     }
     kBlocks[&*bbit] = kb;
   }
@@ -632,7 +633,8 @@ KBlock::KBlock(Function *_function, KBlock **basic_blocks, KModule *km, unsigned
 }
 
 KBlock::KBlock(llvm::Function *_function, llvm::BasicBlock *block, KModule *km,
-               std::map<Instruction*, unsigned> &registerMap, unsigned &rnum)
+               std::map<Instruction*, unsigned> &registerMap,
+               std::map<unsigned, KInstruction*> &reg2inst,  unsigned &rnum)
   : function(_function),
     numInstructions(0),
     trackCoverage(true) {
@@ -660,18 +662,21 @@ KBlock::KBlock(llvm::Function *_function, llvm::BasicBlock *block, KModule *km,
     Instruction *inst = &*it;
     handleKInstruction(registerMap, inst, km, ki);
     instructions[i++] = ki;
+    reg2inst[registerMap[&*it]] = ki;
   }
 }
 
 KCallBlock::KCallBlock(llvm::Function *_function, llvm::BasicBlock *block, KModule *km,
-                    std::map<Instruction*, unsigned> &registerMap, unsigned &rnum, llvm::Function *_calledFunction)
-  : KBlock::KBlock(_function, block, km, registerMap, rnum),
+                    std::map<Instruction*, unsigned> &registerMap, std::map<unsigned, KInstruction*> &reg2inst,
+                    unsigned &rnum, llvm::Function *_calledFunction)
+  : KBlock::KBlock(_function, block, km, registerMap, reg2inst, rnum),
     kcallInstruction(this->instructions[0]),
     calledFunction(_calledFunction) {}
 
 KAllocaBlock::KAllocaBlock(llvm::Function *_function, llvm::BasicBlock *block, KModule *km,
-                    std::map<Instruction*, unsigned> &registerMap, unsigned &rnum)
-  : KBlock::KBlock(_function, block, km, registerMap, rnum) {}
+                    std::map<Instruction*, unsigned> &registerMap, std::map<unsigned, KInstruction*> &reg2inst,
+                    unsigned &rnum)
+  : KBlock::KBlock(_function, block, km, registerMap, reg2inst, rnum) {}
 
 KBlock::~KBlock() {
   delete[] instructions;

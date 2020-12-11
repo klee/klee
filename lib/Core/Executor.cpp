@@ -1219,8 +1219,8 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
                                  ConstantExpr::alloc(1, Expr::Bool));
 }
 
-const Cell& Executor::eval(KInstruction *ki, unsigned index, 
-                           ExecutionState &state) const {
+const Cell& Executor::eval(KInstruction *ki, unsigned index,
+                           ExecutionState &state) {
   assert(index < ki->inst->getNumOperands());
   int vnumber = ki->operands[index];
 
@@ -1234,6 +1234,9 @@ const Cell& Executor::eval(KInstruction *ki, unsigned index,
   } else {
     unsigned index = vnumber;
     StackFrame &sf = state.stack.back();
+    if (!state.inBasicBlockRange(index)) {
+      prepareSymbolicRegister(state, sf, sf.locals[index].value, index);
+    }
     return sf.locals[index];
   }
 }
@@ -4548,6 +4551,18 @@ void Executor::prepareSymbolicStack(ExecutionState &state, KFunction *kf) {
   }
 }
 
+void Executor:: prepareSymbolicRegister(ExecutionState &state, StackFrame &sf, ref<Expr> expr, unsigned index) {
+    assert(!expr.isNull());
+    Expr *res = expr.get();
+    KInstruction *allocInst = sf.kf->reg2inst[index];
+    Instruction *allocSite = allocInst->inst;
+    uint64_t size = Expr::getMinBytesForWidth(res->getWidth());
+    MemoryObject *mo =
+        memory->allocate(size, true, /*isGlobal=*/false,
+                         allocSite, /*allocationAlignment=*/8);
+    lazyInstantiateLocal(state, mo, allocInst, false);
+}
+
 void Executor::prepareSymbolicArgs(ExecutionState &state, KFunction *kf) {
   for (auto ai = kf->function->arg_begin(), ae = kf->function->arg_end(); ai != ae; ai++) {
     Argument *arg = *&ai;
@@ -4718,8 +4733,10 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
         KBlock *kb = kf->kBlocks[&*bbit];
         ExecutionState *currState = initialState->withInstructions(kb->instructions);
         pushPreviousStack(f, *stackFrame, *currState);
+        currState->setBlockIndexes(kb);
         switch (kb->getKBlockType()) {
           case KBlockType::Alloca:
+            currState->setAllocIndexes(kb);
             prepareSymbolicAllocas(*currState, kb);
             initialState = currState;
             bbResultStates.insert(currState);

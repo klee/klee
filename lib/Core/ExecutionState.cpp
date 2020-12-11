@@ -73,18 +73,6 @@ StackFrame::~StackFrame() {
 
 /***/
 
-ExecutionState::ExecutionState(KFunction *kf) :
-    pc(nullptr),
-    prevPC(pc),
-    depth(0),
-    instsSinceCovNew(0),
-    coveredNew(false),
-    forkDisabled(false),
-    ptreeNode(0),
-    steppedInstructions(0) {
-  pushFrame(0, kf);
-}
-
 ExecutionState::ExecutionState(KFunction *kf, KInstruction **instructions) :
     pc(instructions),
     prevPC(pc),
@@ -126,7 +114,11 @@ ExecutionState::ExecutionState(const ExecutionState& state):
                              ? state.unwindingInformation->clone()
                              : nullptr),
     coveredNew(state.coveredNew),
-    forkDisabled(state.forkDisabled) {
+    forkDisabled(state.forkDisabled),
+    minAllocBound(state.minAllocBound),
+    maxAllocBound(state.maxAllocBound),
+    minBlockBound(state.minBlockBound),
+    maxBlockBound(state.maxBlockBound) {
   for (const auto &cur_mergehandler: openMergeStack)
     cur_mergehandler->addOpenState(this);
 }
@@ -387,4 +379,18 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
 void ExecutionState::addConstraint(ref<Expr> e) {
   ConstraintManager c(constraints);
   c.addConstraint(e);
+}
+
+void ExecutionState::setAllocIndexes(KBlock *kb) {
+  minAllocBound = 0;
+  maxAllocBound = kb->instructions[kb->numInstructions - 1]->dest;
+}
+
+void ExecutionState::setBlockIndexes(KBlock *kb) {
+  minBlockBound = kb->instructions[0]->dest;
+  maxBlockBound = kb->instructions[kb->numInstructions - 1]->dest;
+}
+
+bool ExecutionState::inBasicBlockRange(unsigned index) {
+  return (index >= minAllocBound && index <= maxAllocBound) || (index >= minBlockBound && index <= maxBlockBound);
 }
