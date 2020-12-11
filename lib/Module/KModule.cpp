@@ -387,7 +387,6 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
   /* Build shadow structures */
 
   for (auto &Function : *module) {
-    extractInitialAlloca(&Function);
     splitByCall(&Function);
   }
 
@@ -589,9 +588,7 @@ KFunction::KFunction(llvm::Function *_function,
       Value *fp = cs.getCalledValue();
       Function *f = getTargetFunction(fp);
       kb = new KCallBlock(function, &*bbit, km, registerMap, reg2inst, rnum, f);
-    } else if (it->getOpcode() == Instruction::Alloca)
-      kb = new KAllocaBlock(function, &*bbit, km, registerMap, reg2inst, rnum);
-    else
+    } else
       kb = new KBlock(function, &*bbit, km, registerMap, reg2inst, rnum);
     for (unsigned i = 0; i < kb->numInstructions; i++, n++) {
       instructions[n] = kb->instructions[i];
@@ -672,11 +669,6 @@ KCallBlock::KCallBlock(llvm::Function *_function, llvm::BasicBlock *block, KModu
   : KBlock::KBlock(_function, block, km, registerMap, reg2inst, rnum),
     kcallInstruction(this->instructions[0]),
     calledFunction(_calledFunction) {}
-
-KAllocaBlock::KAllocaBlock(llvm::Function *_function, llvm::BasicBlock *block, KModule *km,
-                    std::map<Instruction*, unsigned> &registerMap, std::map<unsigned, KInstruction*> &reg2inst,
-                    unsigned &rnum)
-  : KBlock::KBlock(_function, block, km, registerMap, reg2inst, rnum) {}
 
 KBlock::~KBlock() {
   delete[] instructions;

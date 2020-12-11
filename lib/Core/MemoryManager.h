@@ -46,7 +46,7 @@ public:
                          ref<Expr> lazyInstantiatedSource = ref<Expr>());
   MemoryObject *allocateFixed(uint64_t address, uint64_t size,
                               const llvm::Value *allocSite);
-  void deallocate(const MemoryObject *mo);
+  void deallocate(MemoryObject *mo);
   void markFreed(MemoryObject *mo);
   ArrayCache *getArrayCache() const { return arrayCache; }
 

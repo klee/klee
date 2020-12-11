@@ -176,7 +176,7 @@ MemoryObject *MemoryManager::allocateFixed(uint64_t address, uint64_t size,
   return res;
 }
 
-void MemoryManager::deallocate(const MemoryObject *mo) { assert(0); }
+void MemoryManager::deallocate(MemoryObject *mo) { objects.erase(mo); }
 
 void MemoryManager::markFreed(MemoryObject *mo) {
   if (objects.find(mo) != objects.end()) {

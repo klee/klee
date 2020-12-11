@@ -4348,6 +4348,19 @@ ObjectPair Executor::lazyInstantiateVariable(ExecutionState &state, ref<Expr> ad
   return lazyInstantiate(state, /*isLocal=*/false, mo);
 }
 
+const Array * Executor::makeArray(ExecutionState &state,
+                                  const uint64_t size,
+                                  const std::string &name) {
+    unsigned id = 0;
+    std::string uniqueName = name;
+    while (!state.arrayNames.insert(uniqueName).second) {
+      uniqueName = name + "_" + llvm::utostr(++id);
+    }
+    const Array *array = arrayCache.CreateArray(uniqueName, size);
+
+    return array;
+}
+
 void Executor::executeMakeSymbolic(ExecutionState &state,
                                    const MemoryObject *mo,
                                    const std::string &name,
@@ -4356,12 +4369,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
   if (!replayKTest) {
     // Find a unique name for this array.  First try the original name,
     // or if that fails try adding a unique identifier.
-    unsigned id = 0;
-    std::string uniqueName = name;
-    while (!state.arrayNames.insert(uniqueName).second) {
-      uniqueName = name + "_" + llvm::utostr(++id);
-    }
-    const Array *array = arrayCache.CreateArray(uniqueName, mo->size);
+    const Array *array = makeArray(state, mo->size, name);
     bindObjectInState(state, mo, isAlloca, array);
     state.addSymbolic(mo, array);
 
@@ -4530,55 +4538,36 @@ void Executor::clearGlobal()
   globalAddresses.clear();
 }
 
-void Executor::prepareSymbolicStack(ExecutionState &state, KFunction *kf) {
-  for (int n = 0; n < kf->numInstructions; n++) {
-    KInstruction *ki = kf->instructions[n];
-    ki->inst->getOpcodeName();
-    if (ki->inst->getType()->isSized()) {
-      unsigned typeWidth;
-      ref<ConstantExpr> size;
-      // It may be redundant
-      if (ki->inst->getOpcode() == Instruction::Alloca) {
-        AllocaInst *ai = cast<AllocaInst>(ki->inst);
-        typeWidth = kmodule->targetData->getTypeStoreSize(ai->getAllocatedType());
-        size = Expr::createPointer(typeWidth);
-        if (ai->isArrayAllocation()) {
-          ref<Expr> count = symbolicEval(ki, 0, state).value;
-          count = Expr::createZExtToPointerWidth(count);
-          size = MulExpr::create(size, count);
-        }
-      } else {
-        typeWidth = ki->inst->getType()->getScalarSizeInBits();
-        size = Expr::createPointer(typeWidth);
-      }
-      const llvm::Value *allocSite = ki->inst;
-      MemoryObject *mo =
-          memory->allocate(size->getZExtValue(), true, /*isGlobal=*/false,
-                           allocSite, /*allocationAlignment=*/8);
-      lazyInstantiateAlloca(state, mo, ki, true);
-    }
-  }
-}
-
-void Executor:: prepareSymbolicRegister(ExecutionState &state, StackFrame &sf, unsigned index) {
-    KInstruction *allocInst = sf.kf->reg2inst[index];
-    Instruction *allocSite = allocInst->inst;
-    uint64_t size = kmodule->targetData->getTypeStoreSize(allocSite->getType());
-    MemoryObject *mo =
-        memory->allocate(size, true, /*isGlobal=*/false,
-                         allocSite, /*allocationAlignment=*/8);
-    lazyInstantiateLocal(state, mo, allocInst, false);
+void Executor:: prepareSymbolicRegister(ExecutionState &state, StackFrame &sf, unsigned regNum) {
+  KInstruction *allocInst = sf.kf->reg2inst[regNum];
+  Instruction *allocSite = allocInst->inst;
+  uint64_t size = kmodule->targetData->getTypeStoreSize(allocSite->getType());
+  uint64_t width = kmodule->targetData->getTypeSizeInBits(allocSite->getType());
+  ref<Expr> result = makeSymbolicValue(allocSite, state, size, width);
+  bindLocal(allocInst, state, result);
 }
 
 void Executor::prepareSymbolicArgs(ExecutionState &state, KFunction *kf) {
   for (auto ai = kf->function->arg_begin(), ae = kf->function->arg_end(); ai != ae; ai++) {
     Argument *arg = *&ai;
     uint64_t size = kmodule->targetData->getTypeStoreSize(arg->getType());
-    MemoryObject *mo =
-        memory->allocate(size, true, /*isGlobal=*/false,
-                         arg, /*allocationAlignment=*/8);
-    lazyInstantiateArgs(state, kf, arg, mo);
+    uint64_t width = kmodule->targetData->getTypeSizeInBits(arg->getType());
+    ref<Expr> result = makeSymbolicValue(arg, state, size, width);
+    bindArgument(state.stack.back().kf, arg->getArgNo(), state, result);
   }
+}
+
+ref<Expr> Executor::makeSymbolicValue(Value *value, ExecutionState &state, uint64_t size, Expr::Width width)
+{
+    MemoryObject *mo =
+          memory->allocate(size, true, /*isGlobal=*/false,
+                           value, /*allocationAlignment=*/8);
+    memory->deallocate(mo);
+    const Array *array = makeArray(state, size, "lazy_instantiation");
+    state.addSymbolic(mo, array);
+    ObjectState *os = new ObjectState(mo, array);
+    ref<Expr> result = os->read(0, width);
+    return result;
 }
 
 void Executor::prepareSymbolicReturn(ExecutionState &state, KInstruction *kcallInst) {
@@ -4593,10 +4582,9 @@ void Executor::prepareSymbolicReturn(ExecutionState &state, KInstruction *kcallI
 #endif
   Function *f = getTargetFunction(fp);
   uint64_t size = kmodule->targetData->getTypeStoreSize(f->getReturnType());
-  MemoryObject *mo =
-      memory->allocate(size, true, /*isGlobal=*/false,
-                       callInst, /*allocationAlignment=*/8);
-  lazyInstantiateLocal(state, mo, kcallInst, false);
+  uint64_t width = kmodule->targetData->getTypeSizeInBits(f->getReturnType());
+  ref<Expr> result = makeSymbolicValue(callInst, state, size, width);
+  bindLocal(kcallInst, state, result);
 }
 
 void Executor::prepareSymbolicAllocas(ExecutionState &state, KBlock *kallocas) {
@@ -4733,12 +4721,6 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
         ExecutionState *currState = initialState->withInstructions(kb->instructions);
         currState->setBlockIndexes(kb);
         switch (kb->getKBlockType()) {
-          case KBlockType::Alloca:
-            currState->setAllocIndexes(kb);
-            prepareSymbolicAllocas(*currState, kb);
-            initialState = currState;
-            bbResultStates.insert(currState);
-            break;
           case KBlockType::Call: {
             KCallBlock *kcall = (KCallBlock*)kb;
             Function *call = kcall->calledFunction;

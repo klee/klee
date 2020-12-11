@@ -560,8 +560,6 @@ public:
 
   void clearGlobal();
 
-  void prepareSymbolicStack(ExecutionState &state, KFunction *kf);
-
   void prepareSymbolicRegister(ExecutionState &state, StackFrame &sf, unsigned index);
 
   void prepareSymbolicArgs(ExecutionState &state, KFunction *kf);
@@ -569,6 +567,8 @@ public:
   void prepareSymbolicReturn(ExecutionState &state, KInstruction *kcallInst);
 
   void prepareSymbolicAllocas(ExecutionState &state, KBlock *allocas);
+
+  ref<Expr> makeSymbolicValue(llvm::Value *value, ExecutionState &state, uint64_t size, Expr::Width width);
 
   void runInstructions(llvm::Function *f, KInstruction **instructions, int argc, char **argv, char **envp);
 
@@ -624,6 +624,7 @@ public:
   void setMergingSearcher(MergingSearcher *ms) { mergingSearcher = ms; };
   void formArg(llvm::Function *f, unsigned NumPtrBytes, std::vector<ref<Expr> > &arguments, MemoryObject *argvMO, int argc, int envc);
   void formArgMemory(ExecutionState &state, char **argv, MemoryObject *argvMO, unsigned NumPtrBytes, int envc, char **envp, int argc);
+  const Array * makeArray(ExecutionState &state, const uint64_t size, const std::string &name);
 };
   
 } // End klee namespace

@@ -47,7 +47,6 @@ namespace klee {
   enum KBlockType {
     Base,
     Call,
-    Alloca
   };
 
   struct KBlock {
@@ -85,13 +84,6 @@ namespace klee {
                     std::map<llvm::Instruction*, unsigned>&, std::map<unsigned, KInstruction*>&,
                     unsigned&, llvm::Function*);
     KBlockType getKBlockType() override { return KBlockType::Call; };
-  };
-
-  struct KAllocaBlock : KBlock {
-  public:
-    explicit KAllocaBlock(llvm::Function*, llvm::BasicBlock*, KModule*,
-                    std::map<llvm::Instruction*, unsigned>&, std::map<unsigned, KInstruction*>&, unsigned&);
-    KBlockType getKBlockType() override { return KBlockType::Alloca; };
   };
 
   struct KFunction {

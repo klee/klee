@@ -115,8 +115,6 @@ ExecutionState::ExecutionState(const ExecutionState& state):
                              : nullptr),
     coveredNew(state.coveredNew),
     forkDisabled(state.forkDisabled),
-    minAllocBound(state.minAllocBound),
-    maxAllocBound(state.maxAllocBound),
     minBlockBound(state.minBlockBound),
     maxBlockBound(state.maxBlockBound) {
   for (const auto &cur_mergehandler: openMergeStack)
@@ -381,11 +379,6 @@ void ExecutionState::addConstraint(ref<Expr> e) {
   c.addConstraint(e);
 }
 
-void ExecutionState::setAllocIndexes(KBlock *kb) {
-  minAllocBound = 0;
-  maxAllocBound = kb->instructions[kb->numInstructions - 1]->dest;
-}
-
 void ExecutionState::setBlockIndexes(KBlock *kb) {
   minBlockBound = kb->instructions[0]->dest;
   maxBlockBound = kb->instructions[kb->numInstructions - 1]->dest;
@@ -393,7 +386,7 @@ void ExecutionState::setBlockIndexes(KBlock *kb) {
 
 bool ExecutionState::inBasicBlockRange(unsigned index, bool isoMode) {
     if (isoMode) {
-        return (index >= minAllocBound && index <= maxAllocBound) || (index >= minBlockBound && index <= maxBlockBound);
+        return (index >= minBlockBound && index <= maxBlockBound);
     } else {
         return true;
     }
