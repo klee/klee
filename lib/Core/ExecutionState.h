@@ -277,7 +277,7 @@ public:
   void setID() { id = nextID++; };
   void setAllocIndexes(KBlock *kb);
   void setBlockIndexes(KBlock *kb);
-  bool inBasicBlockRange(unsigned index);
+  bool inBasicBlockRange(unsigned index, bool isoMode);
 };
 
 struct ExecutionStateIDCompare {

@@ -391,6 +391,10 @@ void ExecutionState::setBlockIndexes(KBlock *kb) {
   maxBlockBound = kb->instructions[kb->numInstructions - 1]->dest;
 }
 
-bool ExecutionState::inBasicBlockRange(unsigned index) {
-  return (index >= minAllocBound && index <= maxAllocBound) || (index >= minBlockBound && index <= maxBlockBound);
+bool ExecutionState::inBasicBlockRange(unsigned index, bool isoMode) {
+    if (isoMode) {
+        return (index >= minAllocBound && index <= maxAllocBound) || (index >= minBlockBound && index <= maxBlockBound);
+    } else {
+        return true;
+    }
 }
