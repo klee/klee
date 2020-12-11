@@ -105,8 +105,7 @@ public:
 
   enum MemoryOperation {
     Read,
-    Write,
-    Arg
+    Write
   };
 
   enum TerminateReason {
@@ -348,8 +347,7 @@ private:
                               MemoryOperation operation,
                               ref<Expr> address,
                               ref<Expr> value /* def if write*/,
-                              KInstruction *target /* def if read*/,
-                              llvm::Argument *arg /*def if argument*/);
+                              KInstruction *target /* def if read*/);
 
   ObjectPair lazyInstantiate(ExecutionState &state,
                              bool isLocal,
@@ -359,16 +357,6 @@ private:
                                   const MemoryObject *mo,
                                   KInstruction *target,
                                   bool isLocal);
-
-  ObjectPair lazyInstantiateLocal(ExecutionState &state,
-                                  const MemoryObject *mo,
-                                  KInstruction *target,
-                                  bool isLocal);
-
-  ObjectPair lazyInstantiateArgs(ExecutionState &state,
-                                 KFunction *kf,
-                                 llvm::Argument *arg,
-                                 const MemoryObject *mo);
 
   ObjectPair lazyInstantiateVariable(ExecutionState &state,
                                      ref<Expr> address,

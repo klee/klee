@@ -1750,7 +1750,7 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       Expr::Width WordSize = Context::get().getPointerWidth();
       if (WordSize == Expr::Int32) {
         executeMemoryOperation(state, Write, arguments[0],
-                               sf.varargs->getBaseExpr(), nullptr, nullptr);
+                               sf.varargs->getBaseExpr(), nullptr);
       } else {
         assert(WordSize == Expr::Int64 && "Unknown word size!");
 
@@ -1760,19 +1760,19 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
         executeMemoryOperation(
             state, Write,
             arguments[0],
-            ConstantExpr::create(48, 32), nullptr, nullptr); // gp_offset
+            ConstantExpr::create(48, 32), nullptr); // gp_offset
         executeMemoryOperation(
             state, Write,
             AddExpr::create(arguments[0], ConstantExpr::create(4, 64)),
-            ConstantExpr::create(304, 32), nullptr, nullptr); // fp_offset
+            ConstantExpr::create(304, 32), nullptr); // fp_offset
         executeMemoryOperation(
             state, Write,
             AddExpr::create(arguments[0], ConstantExpr::create(8, 64)),
-            sf.varargs->getBaseExpr(), nullptr, nullptr); // overflow_arg_area
+            sf.varargs->getBaseExpr(), nullptr); // overflow_arg_area
         executeMemoryOperation(
             state, Write,
             AddExpr::create(arguments[0], ConstantExpr::create(16, 64)),
-            ConstantExpr::create(0, 64), nullptr, nullptr); // reg_save_area
+            ConstantExpr::create(0, 64), nullptr); // reg_save_area
       }
       break;
     }
@@ -2717,14 +2717,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::Load: {
     ref<Expr> base = symbolicEval(ki, 0, state).value;
-    executeMemoryOperation(state, Read, base, nullptr, ki, nullptr);
+    executeMemoryOperation(state, Read, base, nullptr, ki);
     break;
   }
 
   case Instruction::Store: {
     ref<Expr> base = symbolicEval(ki, 1, state).value;
     ref<Expr> value = symbolicEval(ki, 0, state).value;
-    executeMemoryOperation(state, Write, base, value, ki, nullptr);
+    executeMemoryOperation(state, Write, base, value, ki);
     break;
   }
 
@@ -4120,8 +4120,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
                                       MemoryOperation operation,
                                       ref<Expr> address,
                                       ref<Expr> value /* def if write*/,
-                                      KInstruction *target /* def if read*/,
-                                      Argument *arg /*def if argument*/) {
+                                      KInstruction *target /* def if read*/) {
   Expr::Width type;
   switch (operation) {
   case Write:
@@ -4129,9 +4128,6 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     break;
   case Read:
     type = getWidthForLLVMType(target->inst->getType());
-    break;
-  case Arg:
-    type = getWidthForLLVMType(arg->getType());
     break;
   }
   unsigned bytes = Expr::getMinBytesForWidth(type);
@@ -4198,14 +4194,6 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
         bindLocal(target, state, result);
         break;
-      case Arg:
-        result = os->read(offset, type);
-
-        if (interpreterOpts.MakeConcreteSymbolic)
-          result = replaceReadWithSymbolic(state, result);
-
-        bindArgument(state.stack.back().kf, arg->getArgNo(), state, result);
-        break;
       }
 
       return;
@@ -4251,10 +4239,6 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           bindLocal(target, *bound, result);
           break;
         }
-        case Arg: {
-          assert(false);
-          break;
-        }
       }
     }
 
@@ -4287,10 +4271,6 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           bindLocal(target, *unbound, result);
           break;
         }
-        case Arg: {
-          assert(false);
-          break;
-        }
       }
     } else {
       terminateStateOnError(*unbound, "memory error: out of bound pointer", Ptr,
@@ -4312,24 +4292,6 @@ ObjectPair Executor::lazyInstantiateAlloca(ExecutionState &state,
                                      bool isLocal) {
   ObjectPair op = lazyInstantiate(state, isLocal, mo);
   bindLocal(target, state, op.first->getBaseExpr());
-  return op;
-}
-
-ObjectPair Executor::lazyInstantiateLocal(ExecutionState &state,
-                                     const MemoryObject *mo,
-                                     KInstruction *target,
-                                     bool isAlloca) {
-  ObjectPair op = lazyInstantiate(state, isAlloca, mo);
-  executeMemoryOperation(state, Read, op.first->getBaseExpr(), nullptr, target, nullptr);
-  return op;
-}
-
-ObjectPair Executor::lazyInstantiateArgs(ExecutionState &state,
-                                         KFunction *kf,
-                                         Argument *arg,
-                                         const MemoryObject *mo) {
-  ObjectPair op = lazyInstantiate(state, false, mo);
-  executeMemoryOperation(state, Arg, op.first->getBaseExpr(), nullptr, nullptr, arg);
   return op;
 }
 
