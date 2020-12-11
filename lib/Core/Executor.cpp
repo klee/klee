@@ -4498,8 +4498,16 @@ void Executor:: prepareSymbolicValue(ExecutionState &state, KInstruction *target
   Instruction *allocSite = target->inst;
   uint64_t size = kmodule->targetData->getTypeStoreSize(allocSite->getType());
   uint64_t width = kmodule->targetData->getTypeSizeInBits(allocSite->getType());
-  ref<Expr> result = makeSymbolicValue(allocSite, state, size, width);
+  ref<Expr> result = makeSymbolicValue(allocSite, state, size, width, "symbolic_value");
   bindLocal(target, state, result);
+  if (isa<AllocaInst>(allocSite)) {
+    ref<Expr> constr = ConstantExpr::create(true, Expr::Bool);
+    for (auto &reg : state.allocaRegs) {
+      constr = AndExpr::create(constr, Expr::createIsZero(EqExpr::create(result, reg)));
+    }
+    addConstraint(state, constr);
+    state.allocaRegs.push_back(result);
+  }
 }
 
 void Executor:: prepareSymbolicRegister(ExecutionState &state, StackFrame &sf, unsigned regNum) {
@@ -4512,18 +4520,18 @@ void Executor::prepareSymbolicArgs(ExecutionState &state, KFunction *kf) {
     Argument *arg = *&ai;
     uint64_t size = kmodule->targetData->getTypeStoreSize(arg->getType());
     uint64_t width = kmodule->targetData->getTypeSizeInBits(arg->getType());
-    ref<Expr> result = makeSymbolicValue(arg, state, size, width);
+    ref<Expr> result = makeSymbolicValue(arg, state, size, width, "symbolic_arg");
     bindArgument(state.stack.back().kf, arg->getArgNo(), state, result);
   }
 }
 
-ref<Expr> Executor::makeSymbolicValue(Value *value, ExecutionState &state, uint64_t size, Expr::Width width)
+ref<Expr> Executor::makeSymbolicValue(Value *value, ExecutionState &state, uint64_t size, Expr::Width width, const std::string &name)
 {
     MemoryObject *mo =
           memory->allocate(size, true, /*isGlobal=*/false,
                            value, /*allocationAlignment=*/8);
     memory->deallocate(mo);
-    const Array *array = makeArray(state, size, "lazy_instantiation");
+    const Array *array = makeArray(state, size, name);
     state.addSymbolic(mo, array);
     ObjectState *os = new ObjectState(mo, array);
     ref<Expr> result = os->read(0, width);
@@ -4543,7 +4551,7 @@ void Executor::prepareSymbolicReturn(ExecutionState &state, KInstruction *kcallI
   Function *f = getTargetFunction(fp);
   uint64_t size = kmodule->targetData->getTypeStoreSize(f->getReturnType());
   uint64_t width = kmodule->targetData->getTypeSizeInBits(f->getReturnType());
-  ref<Expr> result = makeSymbolicValue(callInst, state, size, width);
+  ref<Expr> result = makeSymbolicValue(callInst, state, size, width, "symbolic_ret");
   bindLocal(kcallInst, state, result);
 }
 

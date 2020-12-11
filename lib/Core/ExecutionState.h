@@ -240,6 +240,8 @@ public:
   unsigned minBlockBound = 0;
   unsigned maxBlockBound = 0;
 
+  std::vector<ref<Expr>> allocaRegs;
+
 public:
   #ifdef KLEE_UNITTEST
   // provide this function only in the context of unittests

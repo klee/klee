@@ -548,7 +548,7 @@ public:
 
   void clearGlobal();
 
-  void prepareSymbolicValue(ExecutionState &state, KInstruction *target);
+  void prepareSymbolicValue(ExecutionState &state, KInstruction *targetW);
 
   void prepareSymbolicRegister(ExecutionState &state, StackFrame &sf, unsigned index);
 
@@ -558,7 +558,7 @@ public:
 
   void prepareSymbolicAllocas(ExecutionState &state, KBlock *allocas);
 
-  ref<Expr> makeSymbolicValue(llvm::Value *value, ExecutionState &state, uint64_t size, Expr::Width width);
+  ref<Expr> makeSymbolicValue(llvm::Value *value, ExecutionState &state, uint64_t size, Expr::Width width, const std::string &name);
 
   void runInstructions(llvm::Function *f, KInstruction **instructions, int argc, char **argv, char **envp);
 
