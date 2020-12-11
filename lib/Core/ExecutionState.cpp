@@ -73,6 +73,18 @@ StackFrame::~StackFrame() {
 
 /***/
 
+ExecutionState::ExecutionState(KFunction *kf) :
+    pc(nullptr),
+    prevPC(pc),
+    depth(0),
+    instsSinceCovNew(0),
+    coveredNew(false),
+    forkDisabled(false),
+    ptreeNode(0),
+    steppedInstructions(0) {
+  pushFrame(0, kf);
+}
+
 ExecutionState::ExecutionState(KFunction *kf, KInstruction **instructions) :
     pc(instructions),
     prevPC(pc),
@@ -113,6 +125,28 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     unwindingInformation(state.unwindingInformation
                              ? state.unwindingInformation->clone()
                              : nullptr),
+    coveredNew(state.coveredNew),
+    forkDisabled(state.forkDisabled) {
+  for (const auto &cur_mergehandler: openMergeStack)
+    cur_mergehandler->addOpenState(this);
+}
+
+ExecutionState::ExecutionState(const ExecutionState& state, KInstruction **instructions):
+    pc(instructions),
+    prevPC(pc),
+    stack(state.stack),
+    incomingBBIndex(state.incomingBBIndex),
+    depth(state.depth),
+    addressSpace(state.addressSpace),
+    constraints(state.constraints),
+    pathOS(state.pathOS),
+    symPathOS(state.symPathOS),
+    coveredLines(state.coveredLines),
+    symbolics(state.symbolics),
+    arrayNames(state.arrayNames),
+    openMergeStack(state.openMergeStack),
+    steppedInstructions(state.steppedInstructions),
+    instsSinceCovNew(state.instsSinceCovNew),
     coveredNew(state.coveredNew),
     forkDisabled(state.forkDisabled) {
   for (const auto &cur_mergehandler: openMergeStack)

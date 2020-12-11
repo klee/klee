@@ -4137,7 +4137,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         } else {
           ObjectState *wos = state.addressSpace.getWriteable(mo, os);
           wos->write(offset, value);
-        }          
+        }
       } else {
         ref<Expr> result = os->read(offset, type);
 
@@ -4327,31 +4327,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
 }
 
 /***/
-
-void Executor::runInstructions(Function *f,
-                 KInstruction **instructions,
-                 int argc,
-                 char **argv,
-                 char **envp) {
-  std::vector<ref<Expr> > arguments;
-
-  // force deterministic initialization of memory objects
-  srand(1);
-  srandom(1);
-
-  MemoryObject *argvMO = 0;
-
-  // In order to make uclibc happy and be closer to what the system is
-  // doing we lay out the environments at the end of the argv array
-  // (both are terminated by a null). There is also a final terminating
-  // null that uclibc seems to expect, possibly the ELF header?
-
-  int envc;
-  for (envc=0; envp[envc]; ++envc) ;
-
-  unsigned NumPtrBytes = Context::get().getPointerWidth() / 8;
-  KFunction *kf = kmodule->functionMap[f];
-  assert(kf);
+void Executor::formArg(Function *f, unsigned NumPtrBytes, std::vector<ref<Expr> > arguments, MemoryObject *argvMO, int argc, int envc) {
   Function::arg_iterator ai = f->arg_begin(), ae = f->arg_end();
   if (ai!=ae) {
     arguments.push_back(ConstantExpr::alloc(argc, Expr::Int32));
@@ -4376,49 +4352,133 @@ void Executor::runInstructions(Function *f,
       }
     }
   }
+}
+
+void Executor::formArgMemory(ExecutionState *state,
+                             char **argv,
+                             MemoryObject *argvMO,
+                             unsigned NumPtrBytes,
+                             int envc, char **envp,
+                             int argc)
+{
+  ObjectState *argvOS = bindObjectInState(*state, argvMO, false);
+
+  for (int i=0; i<argc+1+envc+1+1; i++) {
+    if (i==argc || i>=argc+1+envc) {
+      // Write NULL pointer
+      argvOS->write(i * NumPtrBytes, Expr::createPointer(0));
+    } else {
+      char *s = i<argc ? argv[i] : envp[i-(argc+1)];
+      int j, len = strlen(s);
+
+      MemoryObject *arg =
+          memory->allocate(len + 1, /*isLocal=*/false, /*isGlobal=*/true,
+                           /*allocSite=*/state->pc->inst, /*alignment=*/8);
+      if (!arg)
+        klee_error("Could not allocate memory for function arguments");
+      ObjectState *os = bindObjectInState(*state, arg, false);
+      for (j=0; j<len+1; j++)
+        os->write8(j, s[j]);
+
+      // Write pointer to newly allocated and initialised argv/envp c-string
+      argvOS->write(i * NumPtrBytes, arg->getBaseExpr());
+    }
+  }
+}
+
+ExecutionState* Executor::formState(Function *f,
+                                    KInstruction **instructions,
+                                    int argc,
+                                    char **argv,
+                                    char **envp) {
+  std::vector<ref<Expr> > arguments;
+
+  // force deterministic initialization of memory objects
+  srand(1);
+  srandom(1);
+
+  MemoryObject *argvMO = 0;
+
+  // In order to make uclibc happy and be closer to what the system is
+  // doing we lay out the environments at the end of the argv array
+  // (both are terminated by a null). There is also a final terminating
+  // null that uclibc seems to expect, possibly the ELF header?
+
+  int envc;
+  for (envc=0; envp[envc]; ++envc) ;
+
+  unsigned NumPtrBytes = Context::get().getPointerWidth() / 8;
+  KFunction *kf = kmodule->functionMap[f];
+  assert(kf);
+  formArg(f, NumPtrBytes, arguments, argvMO, argc, envc);
 
   ExecutionState *state = new ExecutionState(kmodule->functionMap[f], instructions);
-
-  if (pathWriter)
-    state->pathOS = pathWriter->open();
-  if (symPathWriter)
-    state->symPathOS = symPathWriter->open();
-
-
-  if (statsTracker)
-    statsTracker->framePushed(*state, 0);
 
   assert(arguments.size() == f->arg_size() && "wrong number of arguments");
   for (unsigned i = 0, e = f->arg_size(); i != e; ++i)
     bindArgument(kf, i, *state, arguments[i]);
 
   if (argvMO) {
-    ObjectState *argvOS = bindObjectInState(*state, argvMO, false);
-
-    for (int i=0; i<argc+1+envc+1+1; i++) {
-      if (i==argc || i>=argc+1+envc) {
-        // Write NULL pointer
-        argvOS->write(i * NumPtrBytes, Expr::createPointer(0));
-      } else {
-        char *s = i<argc ? argv[i] : envp[i-(argc+1)];
-        int j, len = strlen(s);
-
-        MemoryObject *arg =
-            memory->allocate(len + 1, /*isLocal=*/false, /*isGlobal=*/true,
-                             /*allocSite=*/state->pc->inst, /*alignment=*/8);
-        if (!arg)
-          klee_error("Could not allocate memory for function arguments");
-        ObjectState *os = bindObjectInState(*state, arg, false);
-        for (j=0; j<len+1; j++)
-          os->write8(j, s[j]);
-
-        // Write pointer to newly allocated and initialised argv/envp c-string
-        argvOS->write(i * NumPtrBytes, arg->getBaseExpr());
-      }
-    }
+    formArgMemory(state, argv, argvMO, NumPtrBytes, envc, envp, argc);
   }
 
   initializeGlobals(*state);
+  return state;
+}
+
+void Executor::makeSymbolicAlloca(ExecutionState &state, const MemoryObject *mo, KInstruction *ki) {
+  assert(ki->inst->getOpcode() == Instruction::Alloca);
+  Instruction *i = ki->inst;
+  AllocaInst *ai = cast<AllocaInst>(i);\
+  lazyInstantiate(state, mo, ki, true);
+}
+
+void Executor::clearGlobal()
+{
+  globalObjects.clear();
+  globalAddresses.clear();
+}
+
+void Executor::prepareSymbolicAlloca(ExecutionState &state, KBlock *kallocas) {
+  for (int n = 0; n < kallocas->numInstructions - 1; n++) {
+    KInstruction *ki = kallocas->instructions[n];
+    assert(ki->inst->getOpcode() == Instruction::Alloca);
+    AllocaInst *ai = cast<AllocaInst>(ki->inst);
+    unsigned elementSize =
+      kmodule->targetData->getTypeStoreSize(ai->getAllocatedType());
+    ref<Expr> size = Expr::createPointer(elementSize);
+    if (ai->isArrayAllocation()) {
+      ref<Expr> count = eval(ki, 0, state).value;
+      count = Expr::createZExtToPointerWidth(count);
+      size = MulExpr::create(size, count);
+    }
+    executeAlloc(state, size, true, ki);
+  }
+  std::vector<const MemoryObject *> allocas = state.stack.back().allocas;
+  int n = 0;
+  for (std::vector<const MemoryObject *>::iterator mi = allocas.begin(),
+       me = allocas.end(); mi != me; ++mi, n++) {
+    const MemoryObject *mo = *mi;
+    KInstruction *ki = kallocas->instructions[n];
+    makeSymbolicAlloca(state, mo, ki);
+  }
+}
+
+void Executor::runInstructions(Function *f,
+                               KInstruction **instructions,
+                               int argc,
+                               char **argv,
+                               char **envp) {
+
+  ExecutionState *state = formState(f, instructions, argc, argv, envp);
+
+  if (pathWriter)
+    state->pathOS = pathWriter->open();
+  if (symPathWriter)
+    state->symPathOS = symPathWriter->open();
+
+  if (statsTracker)
+    statsTracker->framePushed(*state, 0);
 
   processTree = std::make_unique<PTree>(state);
   run(*state);
@@ -4436,35 +4496,76 @@ void Executor::runInstructions(Function *f,
 }
 
 void Executor::runFunctionAsMain(Function *f,
-				 int argc,
-				 char **argv,
-				 char **envp) {
-  runInstructions(f, kmodule->functionMap[f]->instructions, argc, argv, envp);
-}
-
-void Executor::runKBlock(KBlock *kb,
                int argc,
                char **argv,
                char **envp) {
-   Function *f = kb->function;
-   runInstructions(f, kb->instructions, argc, argv, envp);
+  ExecutionState *state = formState(f, kmodule->functionMap[f]->instructions, argc, argv, envp);
+
+  if (pathWriter)
+    state->pathOS = pathWriter->open();
+  if (symPathWriter)
+    state->symPathOS = symPathWriter->open();
+
+  if (statsTracker)
+    statsTracker->framePushed(*state, 0);
+
+  processTree = std::make_unique<PTree>(state);
+  run(*state);
+  processTree = nullptr;
+
+  // hack to clear memory objects
+  delete memory;
+  memory = new MemoryManager(NULL);
+
+  clearGlobal();
+
+  if (statsTracker)
+    statsTracker->done();
+}
+
+void Executor::runKBlock(KBlock *kb,
+                         ExecutionState &state,
+                         int argc,
+                         char **argv,
+                         char **envp) {
+   if (pathWriter)
+     state.pathOS = pathWriter->open();
+   if (symPathWriter)
+     state.symPathOS = symPathWriter->open();
+
+   if (statsTracker)
+     statsTracker->framePushed(state, 0);
+
+   processTree = std::make_unique<PTree>(&state);
+   run(state);
+
+   if (statsTracker)
+     statsTracker->done();
 }
 
 void Executor::runFunctionAsBlockSequence(Function *f,
-                 int argc,
-                 char **argv,
-                 char **envp) {
+               int argc,
+               char **argv,
+               char **envp) {
     KFunction *kf = kmodule->functionMap[f];
     Function::iterator bbit = f->begin(), bbie = f->end();
     if(bbit != bbie)
     {
-      KBlock **blocks = new KBlock*[3];
-      blocks[0] = kf->kBlocks[&*bbit++]; bbie--; blocks[2] = kf->kBlocks[&*bbie++];      
+      KBlock *allocas = kf->kBlocks[&*bbit++];
+      ExecutionState *state = formState(f, allocas->instructions, argc, argv, envp);
+      prepareSymbolicAlloca(*state, allocas);
+      KBlock **blocks = new KBlock*[2];
+      bbie--; blocks[1] = kf->kBlocks[&*bbie];
       for (; bbit != bbie; bbit++) {
-        blocks[1] = kf->kBlocks[&*bbit];
-        KBlock *kb = new KBlock(f, blocks, kmodule.get(), 3);
-        runKBlock(kb, argc, argv, envp);
+        blocks[0] = kf->kBlocks[&*bbit];
+        KBlock *kb = new KBlock(f, blocks, kmodule.get(), 2);
+        ExecutionState *currState = new ExecutionState(*state, kb->instructions);
+        runKBlock(kb, *currState, argc, argv, envp);
       }
+      // hack to clear memory objects
+      delete memory;
+      memory = new MemoryManager(NULL);
+      clearGlobal();
     }
 }
 

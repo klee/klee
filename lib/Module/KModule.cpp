@@ -337,7 +337,6 @@ static void splitByCall(Function *function) {
       if (it->getOpcode() == Instruction::Call || it->getOpcode() == Instruction::Invoke) {
         Instruction *callInst = &*it++;
         Instruction *afterCallInst = &*it;
-        printBasicBlock(*fbb);
         if (callInst != firstInst)
           fbb = fbb->splitBasicBlock(callInst);
         fbb = fbb->splitBasicBlock(afterCallInst);
@@ -558,13 +557,7 @@ KBlock::KBlock(Function *_function, KBlock **basic_blocks, KModule *km, unsigned
   : function(_function),
     numInstructions(0),
     trackCoverage(true) {
-  std::map<Instruction*, unsigned> registerMap;
-  unsigned rnum = _function->arg_size();
   for (unsigned n = 0; n < bb_size; n++) {
-    for (unsigned i = 0; i < basic_blocks[n]->numInstructions - 1; i++) {
-        Instruction *it = basic_blocks[n]->instructions[i]->inst;
-        registerMap[it] = rnum++;
-    }
     numInstructions += basic_blocks[n]->numInstructions - 1;
   }
   numInstructions++;
@@ -577,16 +570,7 @@ KBlock::KBlock(Function *_function, KBlock **basic_blocks, KModule *km, unsigned
     unsigned bound = kb->numInstructions - 1;
     for (unsigned j = 0; j < bound; j++) {
       Instruction *it = kb->instructions[j]->inst;
-      switch(it->getOpcode()) {
-      case Instruction::GetElementPtr:
-      case Instruction::InsertValue:
-      case Instruction::ExtractValue:
-        ki = new KGEPInstruction(*(KGEPInstruction*)(kb->instructions[j])); break;
-      default:
-        ki = new KInstruction(*kb->instructions[j]); break;
-      }
-      handleKInstruction(registerMap, kb->instructions[j]->inst, km, ki);
-      instructions[i++] = ki;
+      instructions[i++] = kb->instructions[j];
     }
   }
   KBlock *kb = basic_blocks[bb_size - 1];

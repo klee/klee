@@ -154,6 +154,9 @@ private:
   ExecutionState(const ExecutionState &state);
 
 public:
+  // copy ctor
+  ExecutionState(const ExecutionState &state, KInstruction **instructions);
+
   using stack_ty = std::vector<StackFrame>;
 
   // Execution - Control Flow specific
@@ -242,6 +245,7 @@ public:
   ExecutionState(){}
   #endif
   // only to create the initial state
+  explicit ExecutionState(KFunction *kf);
   explicit ExecutionState(KFunction *kf, KInstruction **instructions);
   // no copy assignment, use copy constructor
   ExecutionState &operator=(const ExecutionState &) = delete;

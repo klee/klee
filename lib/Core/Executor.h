@@ -525,6 +525,14 @@ public:
     usingSeeds = seeds;
   }
 
+  ExecutionState *formState(llvm::Function *f, KInstruction **instructions, int argc, char **argv, char **envp);
+
+  void makeSymbolicAlloca(ExecutionState &state, const MemoryObject *mo, KInstruction *ki);
+
+  void clearGlobal();
+
+  void prepareSymbolicAlloca(ExecutionState &state, KBlock *allocas);
+
   void runInstructions(llvm::Function *f, KInstruction **instructions, int argc, char **argv, char **envp);
 
   void runFunctionAsMain(llvm::Function *f, int argc, char **argv,
@@ -533,7 +541,7 @@ public:
   void runFunctionAsBlockSequence(llvm::Function *f, int argc, char **argv,
                          char **envp) override;
 
-  void runKBlock(KBlock *kb, int argc, char **argv, char **envp);
+  void runKBlock(KBlock *kb, ExecutionState &state, int argc, char **argv, char **envp);
 
   /*** Runtime options ***/
 
@@ -570,6 +578,8 @@ public:
 
   MergingSearcher *getMergingSearcher() const { return mergingSearcher; };
   void setMergingSearcher(MergingSearcher *ms) { mergingSearcher = ms; };
+  void formArg(llvm::Function *f, unsigned NumPtrBytes, std::vector<ref<Expr> > arguments, MemoryObject *argvMO, int argc, int envc);
+  void formArgMemory(ExecutionState *state, char **argv, MemoryObject *argvMO, unsigned NumPtrBytes, int envc, char **envp, int argc);
 };
   
 } // End klee namespace

@@ -85,7 +85,8 @@ public:
       size(0),
       isFixed(true),
       parent(NULL),
-      allocSite(0) {
+      allocSite(0),
+      lazyInstantiatedSource(nullptr) {
   }
 
   MemoryObject(uint64_t _address, unsigned _size, 
@@ -101,7 +102,8 @@ public:
       isFixed(_isFixed),
       isUserSpecified(false),
       parent(_parent), 
-      allocSite(_allocSite) {
+      allocSite(_allocSite),
+      lazyInstantiatedSource(nullptr) {
   }
 
   ~MemoryObject();
