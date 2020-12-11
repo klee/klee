@@ -589,11 +589,6 @@ Executor::~Executor() {
   delete specialFunctionHandler;
   delete statsTracker;
   delete solver;
-  for (auto fs: cfgStates) {
-    for (auto bs: fs.second) {
-      delete bs.second;
-    }
-  }
 }
 
 /***/
@@ -4625,15 +4620,22 @@ void Executor::runKBlock(KBlock *kb,
    statsTracker->done();
 }
 
-bool Executor::tryPushPreviousStack(Function *f, ExecutionState &state, BasicBlock *bb) {
-  std::map<BasicBlock *, ExecutionState *> currCFG = cfgStates[f];
-  BasicBlock *pred = bb->getSinglePredecessor();
-  if (pred != nullptr && pred->getSingleSuccessor() != nullptr) {
-    state.stack.pop_back();
-    state.stack.push_back(StackFrame(currCFG[pred]->stack.back()));
-    return true;
-  }
-  return false;
+void Executor::pushPreviousStack(Function *f, StackFrame stackFrame, ExecutionState &state) {
+  state.stack.pop_back();
+  state.stack.push_back(stackFrame);
+}
+
+void Executor::updateStackFrame(StackFrame *&sf, ExecutionState *state) {
+  StackFrame *stackFrame = new StackFrame(state->stack.back());
+  sf = stackFrame;
+}
+
+void Executor::updateCFGStates(StackFrame *&sf,
+                               BasicBlock *bb,
+                               ExecutionState *state,
+                               ExecutionResult &cfg) {
+  cfg[bb] = state;
+  updateStackFrame(sf, state);
 }
 
 void Executor::runFunctionAsMain(Function *f,
@@ -4664,39 +4666,58 @@ void Executor::runFunctionAsMain(Function *f,
     statsTracker->done();
 }
 
-void Executor::runFunctionAsBlockSequence(Function *f, ExecutionState &state) {
-  KFunction *kf = kmodule->functionMap[f];
-  std::map<llvm::BasicBlock *, ExecutionState *> &currCFG = cfgStates[f];
-  Function::iterator bbit = f->begin(), bbie = f->end();
-  if(bbit != bbie) {
-    KBlock *allocas = kf->kBlocks[&*bbit];
-    ExecutionState *emptyState = new ExecutionState(state, kf);
-    emptyState->addressSpace.clear();
-    prepareSymbolicArgs(*emptyState, kf);
-    prepareSymbolicAllocas(*emptyState, allocas);
-    currCFG[&*bbit++] = emptyState;
-    KBlock **blocks = new KBlock*[2];
-    bbie--; blocks[1] = kf->kBlocks[&*bbie];
-    for (; bbit != bbie; bbit++) {
-      blocks[0] = kf->kBlocks[&*bbit];
-      KBlock *kb = new KBlock(f, blocks, kmodule.get(), 2);
-      ExecutionState *currState = new ExecutionState(*emptyState, kb->instructions);
-      tryPushPreviousStack(f, *currState, &*bbit);
-      if(!blocks[0]->isCallBlock()) {
-        runKBlock(kb, *currState);
-        currCFG[&*bbit] = currState;
-      } else {
-        if(currCFG.count(&*bbit) == 0) {
-          KCallBlock *kcall = (KCallBlock*)blocks[0];
-          if (!kcall->calledFunction->getReturnType()->isVoidTy())
-            prepareSymbolicReturn(*currState, kcall->kcallInstruction);
-          currCFG[&*bbit] = currState;
-          if(f != kcall->calledFunction) {
-            runFunctionAsBlockSequence(kcall->calledFunction, state);
+void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &state) {
+  std::queue<Function *> functionFonRun;
+  std::set<Function *> executedFunction;
+  functionFonRun.push(mainFn);
+  executedFunction.insert(mainFn);
+  while (!functionFonRun.empty()) {
+    Function *f = functionFonRun.back();
+    ExecutionResult &cfg = cfgStates[f];
+    KFunction *kf = kmodule->functionMap[f];
+    Function::iterator bbit = f->begin(), bbie = f->end();
+
+    if(bbit != bbie) {
+      StackFrame *stackFrame = new StackFrame(nullptr, kf);
+
+      ExecutionState *initialState = state.withStackFrame(stackFrame);
+
+      prepareSymbolicArgs(*initialState, kf);
+      updateStackFrame(stackFrame, initialState);
+
+      KBlock **blocks = new KBlock*[2];
+      bbie--; blocks[1] = kf->kBlocks[&*bbie];
+      for (; bbit != bbie; bbit++) {
+        blocks[0] = kf->kBlocks[&*bbit];
+        KBlock *kb = new KBlock(f, blocks, kmodule.get(), 2);
+
+        ExecutionState *currState = initialState->withInstructions(kb->instructions);
+
+        pushPreviousStack(f, *stackFrame, *currState);
+        switch (blocks[0]->getKBlockType()) {
+          case KBlockType::Alloca:
+            prepareSymbolicAllocas(*currState, blocks[0]);
+            initialState = currState;
+            break;
+          case KBlockType::Call: {
+            KCallBlock *kcall = (KCallBlock*)blocks[0];
+            Function *call = kcall->calledFunction;
+            if(cfgStates.count(call) == 0) {
+              if (!call->getReturnType()->isVoidTy())
+                prepareSymbolicReturn(*currState, kcall->kcallInstruction);
+              if(f != call && executedFunction.insert(call).second)
+                functionFonRun.push(call);
+            }
+            break;
           }
+          case KBlockType::Base:
+            runKBlock(kb, *currState);
+            break;
         }
+        updateCFGStates(stackFrame, &*bbit, currState, cfg);
       }
     }
+    functionFonRun.pop();
   }
 }
 

@@ -157,8 +157,6 @@ public:
 
   // copy ctor
   ExecutionState(const ExecutionState &state);
-  ExecutionState(const ExecutionState &state, KInstruction **instructions);
-  ExecutionState(const ExecutionState &state, KFunction *kf);
 
   /// @brief Pointer to instruction to be executed after the current
   /// instruction
@@ -256,6 +254,8 @@ public:
   ~ExecutionState();
 
   ExecutionState *branch();
+  ExecutionState *withInstructions(KInstruction **instructions);
+  ExecutionState *withStackFrame(StackFrame *stackFrame);
 
   void pushFrame(KInstIterator caller, KFunction *kf);
   void popFrame();

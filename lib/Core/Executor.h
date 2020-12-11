@@ -101,6 +101,7 @@ class Executor : public Interpreter {
 
 public:
   typedef std::pair<ExecutionState*,ExecutionState*> StatePair;
+  typedef std::map<llvm::BasicBlock*,ExecutionState*> ExecutionResult;
 
   enum MemoryOperation {
     Read,
@@ -157,7 +158,7 @@ private:
   /// \invariant \ref addedStates and \ref removedStates are disjoint.
   std::vector<ExecutionState *> removedStates;
 
-  std::map<llvm::Function *, std::map<llvm::BasicBlock *, ExecutionState *>> cfgStates;
+  std::map<llvm::Function *, ExecutionResult> cfgStates;
 
   /// When non-empty the Executor is running in "seed" mode. The
   /// states in this map will be executed in an arbitrary order
@@ -562,7 +563,14 @@ public:
 
   void runInstructions(llvm::Function *f, KInstruction **instructions, int argc, char **argv, char **envp);
 
-  bool tryPushPreviousStack(llvm::Function *f, ExecutionState &state, llvm::BasicBlock *bb);
+  void pushPreviousStack(llvm::Function *f, StackFrame stackFrame, ExecutionState &state);
+
+  void updateStackFrame(StackFrame *&sf, ExecutionState *state);
+
+  void updateCFGStates(StackFrame *&sf,
+                       llvm::BasicBlock *bb,
+                       ExecutionState *state,
+                       ExecutionResult &cfg);
 
   void runFunctionAsMain(llvm::Function *f, int argc, char **argv,
                          char **envp) override;

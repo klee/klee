@@ -44,6 +44,12 @@ namespace klee {
   class KModule;
   template<class T> class ref;
 
+  enum KBlockType {
+    Base,
+    Call,
+    Alloca
+  };
+
   struct KBlock {
     llvm::Function *function;
 
@@ -66,7 +72,7 @@ namespace klee {
     unsigned getArgRegister(unsigned index) { return index; }
     void handleKInstruction(std::map<llvm::Instruction*, unsigned> &registerMap,
                             llvm::Instruction *inst, KModule *km, KInstruction *ki);
-    virtual bool isCallBlock() { return false; };
+    virtual KBlockType getKBlockType() { return KBlockType::Base; };
   };
 
   struct KCallBlock : KBlock {
@@ -76,7 +82,14 @@ namespace klee {
   public:
     explicit KCallBlock(llvm::Function*, llvm::BasicBlock*, KModule*,
                     std::map<llvm::Instruction*, unsigned>&, unsigned&, llvm::Function*);
-    bool isCallBlock() override { return true; };
+    KBlockType getKBlockType() override { return KBlockType::Call; };
+  };
+
+  struct KAllocaBlock : KBlock {
+  public:
+    explicit KAllocaBlock(llvm::Function*, llvm::BasicBlock*, KModule*,
+                    std::map<llvm::Instruction*, unsigned>&, unsigned&);
+    KBlockType getKBlockType() override { return KBlockType::Alloca; };
   };
 
   struct KFunction {

@@ -131,19 +131,6 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     cur_mergehandler->addOpenState(this);
 }
 
-ExecutionState::ExecutionState(const ExecutionState& state, KInstruction **instructions):
-  ExecutionState(state) {
-  pc = instructions;
-  prevPC = pc;
-}
-
-ExecutionState::ExecutionState(const ExecutionState& state, KFunction *kf):
-  ExecutionState(state) {
-  stack.pop_back();
-  stack.push_back(StackFrame(nullptr, kf));
-}
-
-
 ExecutionState *ExecutionState::branch() {
   depth++;
 
@@ -153,6 +140,21 @@ ExecutionState *ExecutionState::branch() {
   falseState->coveredLines.clear();
 
   return falseState;
+}
+
+ExecutionState *ExecutionState::withInstructions(KInstruction **instructions) {
+  ExecutionState *newState = new ExecutionState(*this);
+  newState->pc = instructions;
+  newState->prevPC = newState->pc;
+  return newState;
+}
+
+ExecutionState *ExecutionState::withStackFrame(StackFrame *stackFrame) {
+  ExecutionState *newState = new ExecutionState(*this);
+  ExecutionState::stack_ty empty_stack;
+  newState->stack = empty_stack;
+  newState->stack.push_back(*stackFrame);
+  return newState;
 }
 
 void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {

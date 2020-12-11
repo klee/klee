@@ -186,8 +186,16 @@ injectStaticConstructorsAndDestructors(Module *m,
                entryFunction.str().c_str());
 
   if (ctors) {
-    llvm::IRBuilder<> Builder(&*mainFn->begin()->begin());
-    Builder.CreateCall(getStubFunctionForCtorList(m, ctors, "klee.ctor_stub"));
+    if (mainFn->begin()->begin()->getOpcode() == Instruction::Alloca) {
+      llvm::BasicBlock::iterator it = mainFn->begin()->begin();
+      llvm::BasicBlock::iterator ie = mainFn->begin()->end();
+      for (; it != ie && it->getOpcode() == Instruction::Alloca; it++);
+      llvm::IRBuilder<> Builder(&*it);
+      Builder.CreateCall(getStubFunctionForCtorList(m, ctors, "klee.ctor_stub"));
+    } else {
+      llvm::IRBuilder<> Builder(&*mainFn->begin()->begin());
+      Builder.CreateCall(getStubFunctionForCtorList(m, ctors, "klee.ctor_stub"));
+    }
   }
 
   if (dtors) {
@@ -306,6 +314,14 @@ static void extractInitialAlloca(Function *function) {
     BasicBlock *fbb = &*(function->begin());
     llvm::BasicBlock::iterator it = fbb->begin();
     llvm::BasicBlock::iterator ie = fbb->end();
+    for (; it != ie && it->getOpcode() != Instruction::Alloca; it++);
+    if (it == ie) {
+      return;
+    } else if (fbb->begin() != it) {
+      fbb = fbb->splitBasicBlock(&*it);
+      it = fbb->begin();
+      ie = fbb->end();
+    }
     for (; it != ie && it->getOpcode() == Instruction::Alloca; it++);
     fbb->splitBasicBlock(&*it);
   }
@@ -341,6 +357,10 @@ static void splitByCall(Function *function) {
         it = fbb->begin();
         ie = fbb->end();
         firstInst = &*it;
+      } else if (it->getOpcode() == Instruction::Invoke) {
+        Instruction *invokeInst = &*it++;
+        if (invokeInst != firstInst)
+          fbb = fbb->splitBasicBlock(invokeInst);
       } else {
         it++;
       }
@@ -570,7 +590,8 @@ KFunction::KFunction(llvm::Function *_function,
       Value *fp = cs.getCalledValue();
       Function *f = getTargetFunction(fp);
       kb = new KCallBlock(function, &*bbit, km, registerMap, rnum, f);
-    }
+    } else if (it->getOpcode() == Instruction::Alloca)
+      kb = new KAllocaBlock(function, &*bbit, km, registerMap, rnum);
     else
       kb = new KBlock(function, &*bbit, km, registerMap, rnum);
     for (unsigned i = 0; i < kb->numInstructions; i++, n++) {
@@ -648,6 +669,10 @@ KCallBlock::KCallBlock(llvm::Function *_function, llvm::BasicBlock *block, KModu
   : KBlock::KBlock(_function, block, km, registerMap, rnum),
     kcallInstruction(this->instructions[0]),
     calledFunction(_calledFunction) {}
+
+KAllocaBlock::KAllocaBlock(llvm::Function *_function, llvm::BasicBlock *block, KModule *km,
+                    std::map<Instruction*, unsigned> &registerMap, unsigned &rnum)
+  : KBlock::KBlock(_function, block, km, registerMap, rnum) {}
 
 KBlock::~KBlock() {
   delete[] instructions;
