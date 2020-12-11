@@ -332,7 +332,7 @@ static void splitByCall(Function *function) {
     llvm::BasicBlock::iterator ie = fbb->end();
     Instruction *firstInst = &*it;
     while (it != ie) {
-      if (it->getOpcode() == Instruction::Call || it->getOpcode() == Instruction::Invoke) {
+      if (it->getOpcode() == Instruction::Call) {
         Instruction *callInst = &*it++;
         Instruction *afterCallInst = &*it;
         if (callInst != firstInst)

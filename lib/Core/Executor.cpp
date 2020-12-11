@@ -4545,7 +4545,7 @@ void Executor::prepareSymbolicReturn(ExecutionState &state, KInstruction *kcallI
     Value *fp = cs.getCalledValue();
 #endif
   Function *f = getTargetFunction(fp);
-  uint64_t size = f->getReturnType()->getScalarSizeInBits();
+  uint64_t size = kmodule->targetData->getTypeSizeInBits(f->getReturnType());
   MemoryObject *mo =
       memory->allocate(size, true, /*isGlobal=*/false,
                        callInst, /*allocationAlignment=*/8);
@@ -4670,7 +4670,7 @@ void Executor::runFunctionAsBlockSequence(Function *f, ExecutionState &state) {
   Function::iterator bbit = f->begin(), bbie = f->end();
   if(bbit != bbie) {
     KBlock *allocas = kf->kBlocks[&*bbit];
-    ExecutionState *emptyState = new ExecutionState(state);
+    ExecutionState *emptyState = new ExecutionState(state, kf);
     emptyState->addressSpace.clear();
     prepareSymbolicArgs(*emptyState, kf);
     prepareSymbolicAllocas(*emptyState, allocas);

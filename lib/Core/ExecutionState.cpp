@@ -132,26 +132,17 @@ ExecutionState::ExecutionState(const ExecutionState& state):
 }
 
 ExecutionState::ExecutionState(const ExecutionState& state, KInstruction **instructions):
-    pc(instructions),
-    prevPC(pc),
-    stack(state.stack),
-    incomingBBIndex(state.incomingBBIndex),
-    depth(state.depth),
-    addressSpace(state.addressSpace),
-    constraints(state.constraints),
-    pathOS(state.pathOS),
-    symPathOS(state.symPathOS),
-    coveredLines(state.coveredLines),
-    symbolics(state.symbolics),
-    arrayNames(state.arrayNames),
-    openMergeStack(state.openMergeStack),
-    steppedInstructions(state.steppedInstructions),
-    instsSinceCovNew(state.instsSinceCovNew),
-    coveredNew(state.coveredNew),
-    forkDisabled(state.forkDisabled) {
-  for (const auto &cur_mergehandler: openMergeStack)
-    cur_mergehandler->addOpenState(this);
+  ExecutionState(state) {
+  pc = instructions;
+  prevPC = pc;
 }
+
+ExecutionState::ExecutionState(const ExecutionState& state, KFunction *kf):
+  ExecutionState(state) {
+  stack.pop_back();
+  stack.push_back(StackFrame(nullptr, kf));
+}
+
 
 ExecutionState *ExecutionState::branch() {
   depth++;

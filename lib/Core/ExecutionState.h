@@ -151,13 +151,14 @@ public:
 private:
 #endif
 public:
-  // copy ctor
-  ExecutionState(const ExecutionState &state);
-  ExecutionState(const ExecutionState &state, KInstruction **instructions);
-
   using stack_ty = std::vector<StackFrame>;
 
   // Execution - Control Flow specific
+
+  // copy ctor
+  ExecutionState(const ExecutionState &state);
+  ExecutionState(const ExecutionState &state, KInstruction **instructions);
+  ExecutionState(const ExecutionState &state, KFunction *kf);
 
   /// @brief Pointer to instruction to be executed after the current
   /// instruction
