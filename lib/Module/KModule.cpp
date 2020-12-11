@@ -314,7 +314,7 @@ static void extractInitialAlloca(Function *function) {
 static void splitLastInstruction(Function *function) {
   if (function->begin() != function->end()) {
     BasicBlock *bb = &*(--(function->end()));
-    Instruction *inst = &*(--(bb->end()));
+    Instruction *inst = bb->getTerminator();
     bb->splitBasicBlock(inst);
   }
 }
@@ -650,6 +650,7 @@ KBlock::KBlock(llvm::Function *_function, llvm::BasicBlock *block, KModule *km,
 KCallBlock::KCallBlock(llvm::Function *_function, llvm::BasicBlock *block, KModule *km,
                     std::map<Instruction*, unsigned> &registerMap, unsigned &rnum, llvm::Function *_calledFunction)
   : KBlock::KBlock(_function, block, km, registerMap, rnum),
+    kcallInstruction(this->instructions[0]),
     calledFunction(_calledFunction) {}
 
 KBlock::~KBlock() {

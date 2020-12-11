@@ -27,6 +27,8 @@
 #include "klee/Module/KModule.h"
 #include "klee/System/Time.h"
 
+#include "llvm/IR/Argument.h"
+
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -99,6 +101,12 @@ class Executor : public Interpreter {
 
 public:
   typedef std::pair<ExecutionState*,ExecutionState*> StatePair;
+
+  enum MemoryOperation {
+    Read,
+    Write,
+    Arg
+  };
 
   enum TerminateReason {
     Abort,
@@ -336,10 +344,11 @@ private:
   // do address resolution / object binding / out of bounds checking
   // and perform the operation
   void executeMemoryOperation(ExecutionState &state,
-                              bool isWrite,
+                              MemoryOperation operation,
                               ref<Expr> address,
-                              ref<Expr> value /* undef if read */,
-                              KInstruction *target /* undef if write */);
+                              ref<Expr> value /* def if write*/,
+                              KInstruction *target /* def if read*/,
+                              llvm::Argument *arg /*def if argument*/);
 
   ObjectPair lazyInstantiate(ExecutionState &state,
                              bool isLocal,
@@ -352,7 +361,7 @@ private:
 
   ObjectPair lazyInstantiateArgs(ExecutionState &state,
                                  KFunction *kf,
-                                 unsigned index,
+                                 llvm::Argument *arg,
                                  const MemoryObject *mo);
 
   ObjectPair lazyInstantiateVariable(ExecutionState &state,
@@ -538,17 +547,19 @@ public:
 
   ExecutionState *formState(llvm::Function *f, KInstruction **instructions, int argc, char **argv, char **envp);
 
-  void makeSymbolicInstructionResult(ExecutionState &state, const MemoryObject *mo, KInstruction *ki);
-
   void clearGlobal();
 
   void prepareSymbolicStack(ExecutionState &state, KFunction *kf);
 
   void prepareSymbolicArgs(ExecutionState &state, KFunction *kf);
 
+  void prepareSymbolicReturn(ExecutionState &state, KInstruction *kcallInst);
+
   void prepareSymbolicAllocas(ExecutionState &state, KBlock *allocas);
 
   void runInstructions(llvm::Function *f, KInstruction **instructions, int argc, char **argv, char **envp);
+
+  bool tryPushPreviousStack(llvm::Function *f, ExecutionState &state, llvm::BasicBlock *bb);
 
   void runFunctionAsMain(llvm::Function *f, int argc, char **argv,
                          char **envp) override;

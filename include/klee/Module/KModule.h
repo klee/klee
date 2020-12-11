@@ -70,6 +70,7 @@ namespace klee {
   };
 
   struct KCallBlock : KBlock {
+    KInstruction *kcallInstruction;
     llvm::Function *calledFunction;
 
   public:

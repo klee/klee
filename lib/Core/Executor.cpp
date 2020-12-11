@@ -1720,8 +1720,8 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       // size. This happens to work for x86-32 and x86-64, however.
       Expr::Width WordSize = Context::get().getPointerWidth();
       if (WordSize == Expr::Int32) {
-        executeMemoryOperation(state, true, arguments[0],
-                               sf.varargs->getBaseExpr(), 0);
+        executeMemoryOperation(state, Write, arguments[0],
+                               sf.varargs->getBaseExpr(), nullptr, nullptr);
       } else {
         assert(WordSize == Expr::Int64 && "Unknown word size!");
 
@@ -1729,21 +1729,21 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
         // instead of implementing it, we can do a simple hack: just
         // make a function believe that all varargs are on stack.
         executeMemoryOperation(
-            state, true, 
+            state, Write,
             arguments[0],
-            ConstantExpr::create(48, 32), 0); // gp_offset
+            ConstantExpr::create(48, 32), nullptr, nullptr); // gp_offset
         executeMemoryOperation(
-            state, true,
+            state, Write,
             AddExpr::create(arguments[0], ConstantExpr::create(4, 64)),
-            ConstantExpr::create(304, 32), 0); // fp_offset
+            ConstantExpr::create(304, 32), nullptr, nullptr); // fp_offset
         executeMemoryOperation(
-            state, true,
+            state, Write,
             AddExpr::create(arguments[0], ConstantExpr::create(8, 64)),
-            sf.varargs->getBaseExpr(), 0); // overflow_arg_area
+            sf.varargs->getBaseExpr(), nullptr, nullptr); // overflow_arg_area
         executeMemoryOperation(
-            state, true,
+            state, Write,
             AddExpr::create(arguments[0], ConstantExpr::create(16, 64)),
-            ConstantExpr::create(0, 64), 0); // reg_save_area
+            ConstantExpr::create(0, 64), nullptr, nullptr); // reg_save_area
       }
       break;
     }
@@ -2664,13 +2664,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::Load: {
     ref<Expr> base = eval(ki, 0, state).value;
-    executeMemoryOperation(state, false, base, 0, ki);
+    executeMemoryOperation(state, Read, base, nullptr, ki, nullptr);
     break;
   }
+
   case Instruction::Store: {
     ref<Expr> base = eval(ki, 1, state).value;
     ref<Expr> value = eval(ki, 0, state).value;
-    executeMemoryOperation(state, true, base, value, ki);
+    executeMemoryOperation(state, Write, base, value, ki, nullptr);
     break;
   }
 
@@ -4054,18 +4055,29 @@ void Executor::resolveExact(ExecutionState &state,
 }
 
 void Executor::executeMemoryOperation(ExecutionState &state,
-                                      bool isWrite,
+                                      MemoryOperation operation,
                                       ref<Expr> address,
-                                      ref<Expr> value /* undef if read */,
-                                      KInstruction *target /* undef if write */) {
-  Expr::Width type = (isWrite ? value->getWidth() : 
-                     getWidthForLLVMType(target->inst->getType()));
+                                      ref<Expr> value /* def if write*/,
+                                      KInstruction *target /* def if read*/,
+                                      Argument *arg /*def if argument*/) {
+  Expr::Width type;
+  switch (operation) {
+  case Write:
+    type = value->getWidth();
+    break;
+  case Read:
+    type = getWidthForLLVMType(target->inst->getType());
+    break;
+  case Arg:
+    type = getWidthForLLVMType(arg->getType());
+    break;
+  }
   unsigned bytes = Expr::getMinBytesForWidth(type);
 
   if (SimplifySymIndices) {
     if (!isa<ConstantExpr>(address))
       address = ConstraintManager::simplifyExpr(state.constraints, address);
-    if (isWrite && !isa<ConstantExpr>(value))
+    if (operation == Write && !isa<ConstantExpr>(value))
       value = ConstraintManager::simplifyExpr(state.constraints, value);
   }
 
@@ -4104,8 +4116,10 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     }
 
     if (inBounds) {
+      ref<Expr> result;
       const ObjectState *os = op.second;
-      if (isWrite) {
+      switch (operation) {
+      case Write:
         if (os->readOnly) {
           terminateStateOnError(state, "memory error: object read only",
                                 ReadOnly);
@@ -4113,13 +4127,22 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           ObjectState *wos = state.addressSpace.getWriteable(mo, os);
           wos->write(offset, value);
         }
-      } else {
-        ref<Expr> result = os->read(offset, type);
+        break;
+      case Read:
+        result = os->read(offset, type);
 
         if (interpreterOpts.MakeConcreteSymbolic)
           result = replaceReadWithSymbolic(state, result);
-        
+
         bindLocal(target, state, result);
+      case Arg:
+        result = os->read(offset, type);
+
+        if (interpreterOpts.MakeConcreteSymbolic)
+          result = replaceReadWithSymbolic(state, result);
+
+        bindArgument(state.stack.back().kf, arg->getArgNo(), state, result);
+        break;
       }
 
       return;
@@ -4149,17 +4172,26 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
     // bound can be 0 on failure or overlapped 
     if (bound) {
-      if (isWrite) {
-        if (os->readOnly) {
-          terminateStateOnError(*bound, "memory error: object read only",
-                                ReadOnly);
-        } else {
-          ObjectState *wos = bound->addressSpace.getWriteable(mo, os);
-          wos->write(mo->getOffsetExpr(address), value);
+      switch (operation) {
+        case Write: {
+          if (os->readOnly) {
+            terminateStateOnError(*bound, "memory error: object read only",
+                                  ReadOnly);
+          } else {
+            ObjectState *wos = bound->addressSpace.getWriteable(mo, os);
+            wos->write(mo->getOffsetExpr(address), value);
+          }
+          break;
         }
-      } else {
-        ref<Expr> result = os->read(mo->getOffsetExpr(address), type);
-        bindLocal(target, *bound, result);
+        case Read: {
+          ref<Expr> result = os->read(mo->getOffsetExpr(address), type);
+          bindLocal(target, *bound, result);
+          break;
+        }
+        case Arg: {
+          assert(false);
+          break;
+        }
       }
     }
 
@@ -4181,12 +4213,21 @@ void Executor::executeMemoryOperation(ExecutionState &state,
                               NULL, getAddressInfo(*unbound, address));
         return;
       }
-      if (isWrite) {
-        ObjectState *wos = unbound->addressSpace.getWriteable(p.first, p.second);
-        wos->write(p.first->getOffsetExpr(address), value);
-      } else {
-        ref<Expr> result = p.second->read(p.first->getOffsetExpr(address), type);
-        bindLocal(target, *unbound, result);
+      switch (operation) {
+        case Write: {
+          ObjectState *wos = unbound->addressSpace.getWriteable(p.first, p.second);
+          wos->write(p.first->getOffsetExpr(address), value);
+          break;
+        }
+        case Read: {
+          ref<Expr> result = p.second->read(p.first->getOffsetExpr(address), type);
+          bindLocal(target, *unbound, result);
+          break;
+        }
+        case Arg: {
+          assert(false);
+          break;
+        }
       }
     } else {
       terminateStateOnError(*unbound, "memory error: out of bound pointer", Ptr,
@@ -4216,10 +4257,10 @@ ObjectPair Executor::lazyInstantiateLocal(ExecutionState &state,
 
 ObjectPair Executor::lazyInstantiateArgs(ExecutionState &state,
                                          KFunction *kf,
-                                         unsigned index,
+                                         Argument *arg,
                                          const MemoryObject *mo) {
   ObjectPair op = lazyInstantiate(state, true, mo);
-  bindArgument(kf, index, state, op.first->getBaseExpr());
+  executeMemoryOperation(state, Arg, op.first->getBaseExpr(), nullptr, nullptr, arg);
   return op;
 }
 
@@ -4416,10 +4457,6 @@ ExecutionState* Executor::formState(Function *f,
   return state;
 }
 
-void Executor::makeSymbolicInstructionResult(ExecutionState &state, const MemoryObject *mo, KInstruction *ki) {
-  lazyInstantiateLocal(state, mo, ki, true);
-}
-
 void Executor::clearGlobal()
 {
   globalObjects.clear();
@@ -4451,22 +4488,38 @@ void Executor::prepareSymbolicStack(ExecutionState &state, KFunction *kf) {
       MemoryObject *mo =
           memory->allocate(size->getZExtValue(), true, /*isGlobal=*/false,
                            allocSite, /*allocationAlignment=*/8);
-      makeSymbolicInstructionResult(state, mo, ki);
+      lazyInstantiateLocal(state, mo, ki, true);
     }
   }
 }
 
 void Executor::prepareSymbolicArgs(ExecutionState &state, KFunction *kf) {
-  int argNum = 0;
   for (auto ai = kf->function->arg_begin(), ae = kf->function->arg_end(); ai != ae; ai++) {
-    const Argument *arg = *&ai;
+    Argument *arg = *&ai;
     uint64_t size = arg->getType()->getScalarSizeInBits();
     MemoryObject *mo =
         memory->allocate(size, true, /*isGlobal=*/false,
                          arg, /*allocationAlignment=*/8);
-    lazyInstantiateArgs(state, kf, argNum, mo);
-    argNum++;
+    lazyInstantiateArgs(state, kf, arg, mo);
   }
+}
+
+void Executor::prepareSymbolicReturn(ExecutionState &state, KInstruction *kcallInst) {
+  Instruction *callInst = kcallInst->inst;
+  assert(cast<CallInst>(callInst));
+#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
+    const CallBase &cs = cast<CallBase>(*callInst);
+    Value *fp = cs.getCalledOperand();
+#else
+    const CallSite cs(callInst);
+    Value *fp = cs.getCalledValue();
+#endif
+  Function *f = getTargetFunction(fp);
+  uint64_t size = f->getReturnType()->getScalarSizeInBits();
+  MemoryObject *mo =
+      memory->allocate(size, true, /*isGlobal=*/false,
+                       callInst, /*allocationAlignment=*/8);
+  lazyInstantiateLocal(state, mo, kcallInst, true);
 }
 
 void Executor::prepareSymbolicAllocas(ExecutionState &state, KBlock *kallocas) {
@@ -4490,7 +4543,7 @@ void Executor::prepareSymbolicAllocas(ExecutionState &state, KBlock *kallocas) {
        me = allocas.end(); mi != me; ++mi, n++) {
     const MemoryObject *mo = *mi;
     KInstruction *ki = kallocas->instructions[n];
-    makeSymbolicInstructionResult(state, mo, ki);
+    lazyInstantiateLocal(state, mo, ki, true);
   }
 }
 
@@ -4525,6 +4578,36 @@ void Executor::runInstructions(Function *f,
     statsTracker->done();
 }
 
+void Executor::runKBlock(KBlock *kb,
+                         ExecutionState &state) {
+ if (pathWriter)
+   state.pathOS = pathWriter->open();
+ if (symPathWriter)
+   state.symPathOS = symPathWriter->open();
+
+ if (statsTracker)
+   statsTracker->framePushed(state, 0);
+
+ processTree = std::make_unique<PTree>(&state);
+ run(state);
+
+ if (statsTracker)
+   statsTracker->done();
+}
+
+bool Executor::tryPushPreviousStack(Function *f, ExecutionState &state, BasicBlock *bb) {
+  std::map<BasicBlock *, ExecutionState *> currCFG = cfgStates[f];
+  BasicBlock *pred = bb->getSinglePredecessor();
+  if (pred != nullptr && pred->getSingleSuccessor() != nullptr) {
+    pred->print(errs());
+    errs() << "***";
+    bb->print(errs());
+    state.stack = currCFG[pred]->stack;
+    return true;
+  }
+  return false;
+}
+
 void Executor::runFunctionAsMain(Function *f,
                int argc,
                char **argv,
@@ -4553,46 +4636,32 @@ void Executor::runFunctionAsMain(Function *f,
     statsTracker->done();
 }
 
-void Executor::runKBlock(KBlock *kb,
-                         ExecutionState &state) {
- if (pathWriter)
-   state.pathOS = pathWriter->open();
- if (symPathWriter)
-   state.symPathOS = symPathWriter->open();
-
- if (statsTracker)
-   statsTracker->framePushed(state, 0);
-
- processTree = std::make_unique<PTree>(&state);
- run(state);
-
- if (statsTracker)
-   statsTracker->done();
-}
-
 void Executor::runFunctionAsBlockSequence(Function *f, ExecutionState &state) {
   KFunction *kf = kmodule->functionMap[f];
   std::map<llvm::BasicBlock *, ExecutionState *> &currCFG = cfgStates[f];
   Function::iterator bbit = f->begin(), bbie = f->end();
   if(bbit != bbie) {
-    KBlock *allocas = kf->kBlocks[&*bbit++];
+    KBlock *allocas = kf->kBlocks[&*bbit];
     ExecutionState *emptyState = new ExecutionState(state);
     emptyState->addressSpace.clear();
     prepareSymbolicArgs(*emptyState, kf);
     prepareSymbolicAllocas(*emptyState, allocas);
+    currCFG[&*bbit++] = emptyState;
     KBlock **blocks = new KBlock*[2];
     bbie--; blocks[1] = kf->kBlocks[&*bbie];
     for (; bbit != bbie; bbit++) {
       blocks[0] = kf->kBlocks[&*bbit];
       KBlock *kb = new KBlock(f, blocks, kmodule.get(), 2);
+      ExecutionState *currState = new ExecutionState(*emptyState, kb->instructions);
+      tryPushPreviousStack(f, *currState, &*bbit);
       if(!blocks[0]->isCallBlock()) {
-        ExecutionState *currState = new ExecutionState(*emptyState, kb->instructions);
         runKBlock(kb, *currState);
         currCFG[&*bbit] = currState;
       } else {
         if(currCFG.count(&*bbit) == 0) {
-          currCFG[&*bbit] = nullptr;
           KCallBlock *kcall = (KCallBlock*)blocks[0];
+          prepareSymbolicReturn(*currState, kcall->kcallInstruction);
+          currCFG[&*bbit] = currState;
           if(f != kcall->calledFunction) {
             runFunctionAsBlockSequence(kcall->calledFunction, state);
           }
