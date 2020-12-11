@@ -4308,7 +4308,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 ObjectPair Executor::lazyInstantiate(ExecutionState &state, bool isAlloca, const MemoryObject *mo) {
   executeMakeSymbolic(state, mo, "lazy_instantiation", isAlloca);
   ObjectPair op;
-  state.addressSpace.resolveOne(mo->getBaseExpr().get(), op);
+  state.addressSpace.resolveOne(mo->getBaseConstantExpr().get(), op);
   return op;
 }
 
@@ -4345,15 +4345,7 @@ ObjectPair Executor::lazyInstantiateVariable(ExecutionState &state, ref<Expr> ad
   MemoryObject *mo =
       memory->allocate(size, false, /*isGlobal=*/false,
                        allocSite, /*allocationAlignment=*/8, address);
-  ObjectPair op = lazyInstantiateAlloca(state, mo, target, /*isLocal=*/false);
-  ref<Expr> inBounds = EqExpr::create(address, op.first->getBaseExpr());
-  bool mayBeTrue;
-  bool succes = solver->mayBeTrue(state.constraints, inBounds, mayBeTrue, state.queryMetaData);
-  if (!mayBeTrue || !succes) {
-    return {nullptr, nullptr};
-  }
-  addConstraint(state, inBounds);
-  return op;
+  return lazyInstantiate(state, /*isLocal=*/false, mo);
 }
 
 void Executor::executeMakeSymbolic(ExecutionState &state,

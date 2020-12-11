@@ -125,9 +125,14 @@ public:
   void setLazyInstantiatedSource(ref<Expr> source) {
     this->lazyInstantiatedSource = source;
   }
-
-  ref<ConstantExpr> getBaseExpr() const { 
+  ref<ConstantExpr> getBaseConstantExpr() const {
     return ConstantExpr::create(address, Context::get().getPointerWidth());
+  }
+  ref<Expr> getBaseExpr() const {
+    if(lazyInstantiatedSource.isNull())
+        return getBaseConstantExpr();
+    else
+        return lazyInstantiatedSource;
   }
   ref<ConstantExpr> getSizeExpr() const { 
     return ConstantExpr::create(size, Context::get().getPointerWidth());
