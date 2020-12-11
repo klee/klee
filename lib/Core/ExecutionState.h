@@ -30,6 +30,7 @@ class Array;
 class CallPathNode;
 struct Cell;
 struct KFunction;
+struct KBlock;
 struct KInstruction;
 class MemoryObject;
 class PTreeNode;
@@ -242,6 +243,7 @@ public:
   #endif
   // only to create the initial state
   explicit ExecutionState(KFunction *kf);
+  explicit ExecutionState(KFunction *kf, KBlock *kb);
   // no copy assignment, use copy constructor
   ExecutionState &operator=(const ExecutionState &) = delete;
   // no move ctor

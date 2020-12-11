@@ -196,6 +196,8 @@ private:
   /// false, it is buggy (it needs to validate its writes).
   bool ivcEnabled;
 
+  bool isolationMode;
+
   /// The maximum time to allow for a single core solver query.
   /// (e.g. for a single STP query)
   time::Span coreSolverTimeout;
@@ -251,7 +253,7 @@ private:
 
   void stepInstruction(ExecutionState &state);
   void updateStates(ExecutionState *current);
-  void transferToBasicBlock(llvm::BasicBlock *dst, 
+  ExecutionState *transferToBasicBlock(llvm::BasicBlock *dst,
 			    llvm::BasicBlock *src,
 			    ExecutionState &state);
 
@@ -491,7 +493,7 @@ private:
 
 public:
   Executor(llvm::LLVMContext &ctx, const InterpreterOptions &opts,
-      InterpreterHandler *ie);
+      InterpreterHandler *ie, bool isolationMode);
   virtual ~Executor();
 
   const InterpreterHandler& getHandler() {
@@ -525,6 +527,11 @@ public:
 
   void runFunctionAsMain(llvm::Function *f, int argc, char **argv,
                          char **envp) override;
+
+  void runFunctionAsBlockSequence(llvm::Function *f, int argc, char **argv,
+                         char **envp) override;
+
+  void runKBlock(KBlock *kb, int argc, char **argv, char **envp);
 
   /*** Runtime options ***/
 

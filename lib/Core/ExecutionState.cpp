@@ -30,6 +30,9 @@
 #include <sstream>
 #include <stdarg.h>
 
+#include <fstream>
+#include <string>
+
 using namespace llvm;
 using namespace klee;
 
@@ -72,6 +75,19 @@ StackFrame::~StackFrame() {
 
 ExecutionState::ExecutionState(KFunction *kf) :
     pc(kf->instructions),
+    prevPC(pc),
+    depth(0),
+    ptreeNode(nullptr),
+    steppedInstructions(0),
+    instsSinceCovNew(0),
+    coveredNew(false),
+    forkDisabled(false) {
+  pushFrame(nullptr, kf);
+  setID();
+}
+
+ExecutionState::ExecutionState(KFunction *kf, KBlock *kb) :
+    pc(kb->instructions),
     prevPC(pc),
     depth(0),
     ptreeNode(nullptr),

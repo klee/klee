@@ -36,6 +36,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Linker/Linker.h"
@@ -299,6 +300,54 @@ void KModule::optimiseAndPrepare(
   pm3.run(*module);
 }
 
+static void extractInitialAlloca(Function *function) {
+  if (function->begin() != function->end()) {
+    BasicBlock *fbb = &*(function->begin());
+    llvm::BasicBlock::iterator it = fbb->begin();
+    llvm::BasicBlock::iterator ie = fbb->end();
+    for (; it != ie && it->getOpcode() == Instruction::Alloca; it++);
+    fbb->splitBasicBlock(&*it);
+  }
+}
+
+static void splitLastInstruction(Function *function) {
+  if (function->begin() != function->end()) {
+    BasicBlock *bb = &*(--(function->end()));
+    Instruction *inst = &*(--(bb->end()));
+    bb->splitBasicBlock(inst);
+  }
+}
+
+static void splitByCall(Function *function) {
+  unsigned n = 0;
+  for (llvm::Function::iterator bbit = function->begin(), bbie = function->end();
+       bbit != bbie; bbit++, n++);
+  BasicBlock **blocks = new BasicBlock*[n];
+  unsigned i = 0;
+  for (llvm::Function::iterator bbit = function->begin(), bbie = function->end();
+       bbit != bbie; bbit++, i++) {
+    blocks[i] = &*bbit;
+  }
+  for (unsigned j = 0; j < n; j ++) {
+    BasicBlock *fbb = blocks[j];
+    llvm::BasicBlock::iterator it = fbb->begin();
+    llvm::BasicBlock::iterator ie = fbb->end();
+    while (it != ie) {
+      if (it->getOpcode() == Instruction::Call || it->getOpcode() == Instruction::Invoke) {
+        Instruction *callInst = &*it++;
+        Instruction *afterCallInst = &*it;
+        BasicBlock *nbb = fbb->splitBasicBlock(callInst);
+        fbb = nbb->splitBasicBlock(afterCallInst);
+        it = fbb->begin();
+        ie = fbb->end();
+      }
+      else {
+        it++;
+      }
+    }
+  }
+}
+
 void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
   if (OutputSource || forceSourceOutput) {
     std::unique_ptr<llvm::raw_fd_ostream> os(ih->openOutputFile("assembly.ll"));
@@ -317,6 +366,12 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
 
   /* Build shadow structures */
 
+  for (auto &Function : *module) {
+    extractInitialAlloca(&Function);
+    splitByCall(&Function);
+    splitLastInstruction(&Function);
+  }
+
   infos = std::unique_ptr<InstructionInfoTable>(
       new InstructionInfoTable(*module.get()));
 
@@ -330,9 +385,14 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
 
     auto kf = std::unique_ptr<KFunction>(new KFunction(&Function, this));
 
-    for (unsigned i=0; i<kf->numInstructions; ++i) {
-      KInstruction *ki = kf->instructions[i];
-      ki->info = &infos->getInfo(*ki->inst);
+    llvm::Function *function = &Function;
+    for (auto &BasicBlock : *function) {
+        unsigned numInstructions = kf->kBlocks[&BasicBlock]->numInstructions;
+        KBlock *kb = kf->kBlocks[&BasicBlock];
+        for (unsigned i=0; i<numInstructions; ++i) {
+          KInstruction *ki = kb->instructions[i];
+          ki->info = &infos->getInfo(*ki->inst);
+        }
     }
 
     functionMap.insert(std::make_pair(&Function, kf.get()));
@@ -427,82 +487,118 @@ static int getOperandNum(Value *v,
 }
 
 KFunction::KFunction(llvm::Function *_function,
-                     KModule *km) 
+                     KModule *km)
   : function(_function),
     numArgs(function->arg_size()),
     numInstructions(0),
     trackCoverage(true) {
-  // Assign unique instruction IDs to each basic block
   for (auto &BasicBlock : *function) {
-    basicBlockEntry[&BasicBlock] = numInstructions;
     numInstructions += BasicBlock.size();
   }
-
-  instructions = new KInstruction*[numInstructions];
-
-  std::map<Instruction*, unsigned> registerMap;
-
+ instructions = new KInstruction*[numInstructions];
+ std::map<Instruction*, unsigned> registerMap;
+  // Assign unique instruction IDs to each basic block
+  unsigned n = 0;
   // The first arg_size() registers are reserved for formals.
   unsigned rnum = numArgs;
-  for (llvm::Function::iterator bbit = function->begin(), 
+  for (llvm::Function::iterator bbit = function->begin(),
          bbie = function->end(); bbit != bbie; ++bbit) {
-    for (llvm::BasicBlock::iterator it = bbit->begin(), ie = bbit->end();
-         it != ie; ++it)
-      registerMap[&*it] = rnum++;
+    KBlock *kb = new KBlock(function, &*bbit, km, registerMap, rnum);
+    for (unsigned i = 0; i < kb->numInstructions; i++, n++) {
+      instructions[n] = kb->instructions[i];
+    }
+    kBlocks[&*bbit] = kb;
   }
   numRegisters = rnum;
-  
-  unsigned i = 0;
-  for (llvm::Function::iterator bbit = function->begin(), 
-         bbie = function->end(); bbit != bbie; ++bbit) {
-    for (llvm::BasicBlock::iterator it = bbit->begin(), ie = bbit->end();
-         it != ie; ++it) {
-      KInstruction *ki;
-
-      switch(it->getOpcode()) {
-      case Instruction::GetElementPtr:
-      case Instruction::InsertValue:
-      case Instruction::ExtractValue:
-        ki = new KGEPInstruction(); break;
-      default:
-        ki = new KInstruction(); break;
-      }
-
-      Instruction *inst = &*it;
-      ki->inst = inst;
-      ki->dest = registerMap[inst];
-
-      if (isa<CallInst>(it) || isa<InvokeInst>(it)) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
-        const CallBase &cs = cast<CallBase>(*inst);
-        Value *val = cs.getCalledOperand();
-#else
-        const CallSite cs(inst);
-        Value *val = cs.getCalledValue();
-#endif
-        unsigned numArgs = cs.arg_size();
-        ki->operands = new int[numArgs+1];
-        ki->operands[0] = getOperandNum(val, registerMap, km, ki);
-        for (unsigned j=0; j<numArgs; j++) {
-          Value *v = cs.getArgOperand(j);
-          ki->operands[j+1] = getOperandNum(v, registerMap, km, ki);
-        }
-      } else {
-        unsigned numOperands = it->getNumOperands();
-        ki->operands = new int[numOperands];
-        for (unsigned j=0; j<numOperands; j++) {
-          Value *v = it->getOperand(j);
-          ki->operands[j] = getOperandNum(v, registerMap, km, ki);
-        }
-      }
-
-      instructions[i++] = ki;
-    }
-  }
 }
 
 KFunction::~KFunction() {
-  for (unsigned i=0; i<numInstructions; ++i)
+for (unsigned i=0; i<numInstructions; ++i)
     delete instructions[i];
   delete[] instructions;
 }
+
+KBlock::KBlock(Function *_function, KBlock **basic_blocks, KModule *km, unsigned bb_size)
+  : function(_function),
+    numInstructions(0),
+    trackCoverage(true) {
+  for (unsigned n = 0; n < bb_size; n++) {
+    numInstructions += basic_blocks[n]->numInstructions - 1;
+  }
+  numInstructions++;
+  instructions = new KInstruction*[numInstructions];
+
+  KFunction *kf = km->functionMap[function];
+  unsigned i = 0;
+  for (unsigned n = 0; n < bb_size; n++) {
+    KBlock *kb = basic_blocks[n];
+    unsigned bound = kb->numInstructions - 1;
+    for (unsigned j = 0; j < bound; j++) {
+      instructions[i++] = kb->instructions[j];
+    }
+  }
+  KBlock *kb = basic_blocks[bb_size - 1];
+  instructions[i] = kb->instructions[kb->numInstructions - 1];
+}
+
+KBlock::KBlock(llvm::Function *_function, llvm::BasicBlock *block, KModule *km,
+               std::map<Instruction*, unsigned> &registerMap, unsigned &rnum)
+  : function(_function),
+    numInstructions(0),
+    trackCoverage(true) {
+  numInstructions += block->size();
+  instructions = new KInstruction*[numInstructions];
+  for (llvm::BasicBlock::iterator it = block->begin(), ie = block->end();
+     it != ie; ++it) {
+    registerMap[&*it] = rnum++;
+  }
+
+  unsigned i = 0;
+  for (llvm::BasicBlock::iterator it = block->begin(), ie = block->end();
+     it != ie; ++it) {
+    KInstruction *ki;
+
+    switch(it->getOpcode()) {
+    case Instruction::GetElementPtr:
+    case Instruction::InsertValue:
+    case Instruction::ExtractValue:
+      ki = new KGEPInstruction(); break;
+    default:
+      ki = new KInstruction(); break;
+    }
+
+    Instruction *inst = &*it;
+    ki->inst = inst;
+    ki->dest = registerMap[inst];
+
+    if (isa<CallInst>(it) || isa<InvokeInst>(it)) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
+      const CallBase &cs = cast<CallBase>(*inst);
+      Value *val = cs.getCalledOperand();
+#else
+      const CallSite cs(inst);
+      Value *val = cs.getCalledValue();
+#endif
+      unsigned numArgs = cs.arg_size();
+      ki->operands = new int[numArgs+1];
+      ki->operands[0] = getOperandNum(val, registerMap, km, ki);
+      for (unsigned j=0; j<numArgs; j++) {
+        Value *v = cs.getArgOperand(j);
+        ki->operands[j+1] = getOperandNum(v, registerMap, km, ki);
+      }
+    } else {
+      unsigned numOperands = it->getNumOperands();
+      ki->operands = new int[numOperands];
+      for (unsigned j=0; j<numOperands; j++) {
+        Value *v = it->getOperand(j);
+        ki->operands[j] = getOperandNum(v, registerMap, km, ki);
+      }
+    }
+    instructions[i++] = ki;
+  }
+}
+
+KBlock::~KBlock() {
+  delete[] instructions;
+}
+

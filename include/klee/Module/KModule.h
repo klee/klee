@@ -39,15 +39,38 @@ namespace klee {
   class KModule;
   template<class T> class ref;
 
+  struct KBlock {
+    llvm::Function *function;
+
+    unsigned numInstructions;
+    KInstruction **instructions;
+
+    /// Whether instructions in this function should count as
+    /// "coverable" for statistics and search heuristics.
+    bool trackCoverage;
+
+  public:
+    explicit KBlock(llvm::Function*, KBlock**, KModule*, unsigned);
+    explicit KBlock(llvm::Function*, llvm::BasicBlock*, KModule*,
+                    std::map<llvm::Instruction*, unsigned>&, unsigned&);
+    KBlock(const KBlock &) = delete;
+    KBlock &operator=(const KBlock &) = delete;
+
+    ~KBlock();
+
+    unsigned getArgRegister(unsigned index) { return index; }
+  };
+
   struct KFunction {
     llvm::Function *function;
 
     unsigned numArgs, numRegisters;
 
     unsigned numInstructions;
+    unsigned numBlocks;
     KInstruction **instructions;
 
-    std::map<llvm::BasicBlock*, unsigned> basicBlockEntry;
+    std::map<llvm::BasicBlock*, KBlock*> kBlocks;
 
     /// Whether instructions in this function should count as
     /// "coverable" for statistics and search heuristics.

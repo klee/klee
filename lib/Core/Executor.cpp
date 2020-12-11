@@ -448,13 +448,13 @@ const char *Executor::TerminateReasonNames[] = {
 
 
 Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
-                   InterpreterHandler *ih)
+                   InterpreterHandler *ih, bool isolMode)
     : Interpreter(opts), interpreterHandler(ih), searcher(0),
       externalDispatcher(new ExternalDispatcher(ctx)), statsTracker(0),
       pathWriter(0), symPathWriter(0), specialFunctionHandler(0), timers{time::Span(TimerInterval)},
       replayKTest(0), replayPath(0), usingSeeds(0),
       atMemoryLimit(false), inhibitForking(false), haltExecution(false),
-      ivcEnabled(false), debugLogBuffer(debugBufferString) {
+      ivcEnabled(false),  isolationMode(isolMode), debugLogBuffer(debugBufferString) {
 
 
   const time::Span maxTime{MaxTime};
@@ -1941,7 +1941,7 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
   }
 }
 
-void Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src, 
+ExecutionState* Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src,
                                     ExecutionState &state) {
   // Note that in general phi nodes can reuse phi values from the same
   // block but the incoming value is the eval() result *before* the
@@ -1954,14 +1954,22 @@ void Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src,
   //
   // With that done we simply set an index in the state so that PHI
   // instructions know which argument to eval, set the pc, and continue.
-  
-  // XXX this lookup has to go ?
-  KFunction *kf = state.stack.back().kf;
-  unsigned entry = kf->basicBlockEntry[dst];
-  state.pc = &kf->instructions[entry];
-  if (state.pc->inst->getOpcode() == Instruction::PHI) {
-    PHINode *first = static_cast<PHINode*>(state.pc->inst);
-    state.incomingBBIndex = first->getBasicBlockIndex(src);
+
+  if(!isolationMode) {
+    // XXX this lookup has to go ?
+    KFunction *kf = state.stack.back().kf;
+    state.pc = kf->kBlocks[dst]->instructions;
+    if (state.pc->inst->getOpcode() == Instruction::PHI) {
+      PHINode *first = static_cast<PHINode*>(state.pc->inst);
+      state.incomingBBIndex = first->getBasicBlockIndex(src);
+    }
+    return &state;
+  }
+  else {
+    KFunction* kf = state.stack.back().kf;
+    KBlock* kb = kf->kBlocks[dst];
+    ExecutionState* newState = new ExecutionState(kf, kb);
+    return newState;
   }
 }
 
@@ -4426,6 +4434,131 @@ void Executor::runFunctionAsMain(Function *f,
     statsTracker->done();
 }
 
+void Executor::runKBlock(KBlock *kb,
+               int argc,
+               char **argv,
+               char **envp) {
+    std::vector<ref<Expr> > arguments;
+
+    // force deterministic initialization of memory objects
+    srand(1);
+    srandom(1);
+
+    MemoryObject *argvMO = 0;
+
+    // In order to make uclibc happy and be closer to what the system is
+    // doing we lay out the environments at the end of the argv array
+    // (both are terminated by a null). There is also a final terminating
+    // null that uclibc seems to expect, possibly the ELF header?
+
+    int envc;
+    for (envc=0; envp[envc]; ++envc) ;
+
+    unsigned NumPtrBytes = Context::get().getPointerWidth() / 8;
+    Function *f = kb->function;
+    KFunction *kf = kmodule->functionMap[f];
+    assert(kf);
+    Function::arg_iterator ai = f->arg_begin(), ae = f->arg_end();
+    if (ai!=ae) {
+      arguments.push_back(ConstantExpr::alloc(argc, Expr::Int32));
+      if (++ai!=ae) {
+        Instruction *first = &*(f->begin()->begin());
+        argvMO =
+            memory->allocate((argc + 1 + envc + 1 + 1) * NumPtrBytes,
+                             /*isLocal=*/false, /*isGlobal=*/true,
+                             /*allocSite=*/first, /*alignment=*/8);
+
+        if (!argvMO)
+          klee_error("Could not allocate memory for function arguments");
+
+        arguments.push_back(argvMO->getBaseExpr());
+
+        if (++ai!=ae) {
+          uint64_t envp_start = argvMO->address + (argc+1)*NumPtrBytes;
+          arguments.push_back(Expr::createPointer(envp_start));
+
+          if (++ai!=ae)
+            klee_error("invalid main function (expect 0-3 arguments)");
+        }
+      }
+    }
+
+    ExecutionState *state = new ExecutionState(kmodule->functionMap[f], kb);
+
+    if (pathWriter)
+      state->pathOS = pathWriter->open();
+    if (symPathWriter)
+      state->symPathOS = symPathWriter->open();
+
+
+    if (statsTracker)
+      statsTracker->framePushed(*state, 0);
+
+    assert(arguments.size() == f->arg_size() && "wrong number of arguments");
+    for (unsigned i = 0, e = f->arg_size(); i != e; ++i)
+      bindArgument(kf, i, *state, arguments[i]);
+
+    if (argvMO) {
+      ObjectState *argvOS = bindObjectInState(*state, argvMO, false);
+
+      for (int i=0; i<argc+1+envc+1+1; i++) {
+        if (i==argc || i>=argc+1+envc) {
+          // Write NULL pointer
+          argvOS->write(i * NumPtrBytes, Expr::createPointer(0));
+        } else {
+          char *s = i<argc ? argv[i] : envp[i-(argc+1)];
+          int j, len = strlen(s);
+
+          MemoryObject *arg =
+              memory->allocate(len + 1, /*isLocal=*/false, /*isGlobal=*/true,
+                               /*allocSite=*/state->pc->inst, /*alignment=*/8);
+          if (!arg)
+            klee_error("Could not allocate memory for function arguments");
+          ObjectState *os = bindObjectInState(*state, arg, false);
+          for (j=0; j<len+1; j++)
+            os->write8(j, s[j]);
+
+          // Write pointer to newly allocated and initialised argv/envp c-string
+          argvOS->write(i * NumPtrBytes, arg->getBaseExpr());
+        }
+      }
+    }
+
+    initializeGlobals(*state);
+
+    processTree = std::make_unique<PTree>(state);
+    run(*state);
+    processTree = nullptr;
+
+    // hack to clear memory objects
+    delete memory;
+    memory = new MemoryManager(NULL);
+
+    globalObjects.clear();
+    globalAddresses.clear();
+
+    if (statsTracker)
+      statsTracker->done();
+}
+
+void Executor::runFunctionAsBlockSequence(Function *f,
+                 int argc,
+                 char **argv,
+                 char **envp) {
+    KFunction *kf = kmodule->functionMap[f];
+    Function::iterator bbit = f->begin(), bbie = f->end();
+    if(bbit != bbie)
+    {
+      KBlock **blocks = new KBlock*[3];
+      blocks[0] = kf->kBlocks[&*bbit++]; bbie--; blocks[2] = kf->kBlocks[&*bbie++];      
+      for (; bbit != bbie; bbit++) {
+        blocks[1] = kf->kBlocks[&*bbit];
+        KBlock *kb = new KBlock(f, blocks, kmodule.get(), 3);
+        runKBlock(kb, argc, argv, envp);
+      }
+    }
+}
+
 unsigned Executor::getPathStreamID(const ExecutionState &state) {
   assert(pathWriter);
   return state.pathOS.getID();
@@ -4724,5 +4857,5 @@ void Executor::dumpStates() {
 
 Interpreter *Interpreter::create(LLVMContext &ctx, const InterpreterOptions &opts,
                                  InterpreterHandler *ih) {
-  return new Executor(ctx, opts, ih);
+  return new Executor(ctx, opts, ih, true);
 }
