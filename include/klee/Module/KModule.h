@@ -24,9 +24,14 @@ namespace llvm {
   class BasicBlock;
   class Constant;
   class Function;
+  class Value;
   class Instruction;
   class Module;
   class DataLayout;
+
+  /// Compute the true target of a function call, resolving LLVM aliases
+  /// and bitcasts.
+  llvm::Function* getTargetFunction(llvm::Value *calledVal);
 }
 
 namespace klee {
@@ -61,6 +66,16 @@ namespace klee {
     unsigned getArgRegister(unsigned index) { return index; }
     void handleKInstruction(std::map<llvm::Instruction*, unsigned> &registerMap,
                             llvm::Instruction *inst, KModule *km, KInstruction *ki);
+    virtual bool isCallBlock() { return false; };
+  };
+
+  struct KCallBlock : KBlock {
+    llvm::Function *calledFunction;
+
+  public:
+    explicit KCallBlock(llvm::Function*, llvm::BasicBlock*, KModule*,
+                    std::map<llvm::Instruction*, unsigned>&, unsigned&, llvm::Function*);
+    bool isCallBlock() override { return true; };
   };
 
   struct KFunction {

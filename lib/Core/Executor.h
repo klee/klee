@@ -146,7 +146,7 @@ private:
   /// \invariant \ref addedStates and \ref removedStates are disjoint.
   std::vector<ExecutionState *> removedStates;
 
-  std::map<llvm::BasicBlock *, ExecutionState *> cfgStates;
+  std::map<llvm::Function *, std::map<llvm::BasicBlock *, ExecutionState *>> cfgStates;
 
   /// When non-empty the Executor is running in "seed" mode. The
   /// states in this map will be executed in an arbitrary order
@@ -232,9 +232,6 @@ private:
   /// Return the typeid corresponding to a certain `type_info`
   ref<ConstantExpr> getEhTypeidFor(ref<Expr> type_info);
 
-  llvm::Function* getTargetFunction(llvm::Value *calledVal,
-                                    ExecutionState &state);
-  
   void executeInstruction(ExecutionState &state, KInstruction *ki);
 
   void run(ExecutionState &initialState);
@@ -544,6 +541,9 @@ public:
 
   void runFunctionAsBlockSequence(llvm::Function *f, int argc, char **argv,
                          char **envp) override;
+
+  void runMainAsBlockSequence(llvm::Function *f, int argc, char **argv,
+                         char **envp);
 
   void runKBlock(KBlock *kb, ExecutionState &state, int argc, char **argv, char **envp);
 

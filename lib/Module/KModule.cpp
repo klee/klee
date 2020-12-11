@@ -443,6 +443,34 @@ void KModule::checkModule() {
   }
 }
 
+Function* llvm::getTargetFunction(Value *calledVal) {
+  SmallPtrSet<const GlobalValue*, 3> Visited;
+
+  Constant *c = dyn_cast<Constant>(calledVal);
+  if (!c)
+    return 0;
+
+  while (true) {
+    if (GlobalValue *gv = dyn_cast<GlobalValue>(c)) {
+      if (!Visited.insert(gv).second)
+        return 0;
+
+      if (Function *f = dyn_cast<Function>(gv))
+        return f;
+      else if (GlobalAlias *ga = dyn_cast<GlobalAlias>(gv))
+        c = ga->getAliasee();
+      else
+        return 0;
+    } else if (llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(c)) {
+      if (ce->getOpcode()==Instruction::BitCast)
+        c = ce->getOperand(0);
+      else
+        return 0;
+    } else
+      return 0;
+  }
+}
+
 KConstant* KModule::getKConstant(const Constant *c) {
   auto it = constantMap.find(c);
   if (it != constantMap.end())
@@ -538,7 +566,16 @@ KFunction::KFunction(llvm::Function *_function,
   unsigned rnum = numArgs;
   for (llvm::Function::iterator bbit = function->begin(),
          bbie = function->end(); bbit != bbie; ++bbit) {
-    KBlock *kb = new KBlock(function, &*bbit, km, registerMap, rnum);
+    KBlock *kb;
+    Instruction *it = &*(*bbit).begin();
+    if (it->getOpcode() == Instruction::Call || it->getOpcode() == Instruction::Invoke) {
+      CallSite cs(it);
+      Value *fp = cs.getCalledValue();
+      Function *f = getTargetFunction(fp);
+      kb = new KCallBlock(function, &*bbit, km, registerMap, rnum, f);
+    }
+    else
+      kb = new KBlock(function, &*bbit, km, registerMap, rnum);
     for (unsigned i = 0; i < kb->numInstructions; i++, n++) {
       instructions[n] = kb->instructions[i];
     }
@@ -609,7 +646,11 @@ KBlock::KBlock(llvm::Function *_function, llvm::BasicBlock *block, KModule *km,
   }
 }
 
+KCallBlock::KCallBlock(llvm::Function *_function, llvm::BasicBlock *block, KModule *km,
+                    std::map<Instruction*, unsigned> &registerMap, unsigned &rnum, llvm::Function *_calledFunction)
+  : KBlock::KBlock(_function, block, km, registerMap, rnum),
+    calledFunction(_calledFunction) {}
+
 KBlock::~KBlock() {
   delete[] instructions;
 }
-

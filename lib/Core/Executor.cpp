@@ -1973,36 +1973,6 @@ ExecutionState* Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src,
   }
 }
 
-/// Compute the true target of a function call, resolving LLVM aliases
-/// and bitcasts.
-Function* Executor::getTargetFunction(Value *calledVal, ExecutionState &state) {
-  SmallPtrSet<const GlobalValue*, 3> Visited;
-
-  Constant *c = dyn_cast<Constant>(calledVal);
-  if (!c)
-    return 0;
-
-  while (true) {
-    if (GlobalValue *gv = dyn_cast<GlobalValue>(c)) {
-      if (!Visited.insert(gv).second)
-        return 0;
-
-      if (Function *f = dyn_cast<Function>(gv))
-        return f;
-      else if (GlobalAlias *ga = dyn_cast<GlobalAlias>(gv))
-        c = ga->getAliasee();
-      else
-        return 0;
-    } else if (llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(c)) {
-      if (ce->getOpcode()==Instruction::BitCast)
-        c = ce->getOperand(0);
-      else
-        return 0;
-    } else
-      return 0;
-  }
-}
-
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
   switch (i->getOpcode()) {
@@ -2357,7 +2327,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
 
     unsigned numArgs = cs.arg_size();
-    Function *f = getTargetFunction(fp, state);
+    Function *f = getTargetFunction(fp);
 
     if (isa<InlineAsm>(fp)) {
       terminateStateOnExecError(state, "inline assembly is unsupported");
@@ -4555,46 +4525,60 @@ void Executor::runKBlock(KBlock *kb,
                          int argc,
                          char **argv,
                          char **envp) {
-   if (pathWriter)
-     state.pathOS = pathWriter->open();
-   if (symPathWriter)
-     state.symPathOS = symPathWriter->open();
+ if (pathWriter)
+   state.pathOS = pathWriter->open();
+ if (symPathWriter)
+   state.symPathOS = symPathWriter->open();
 
-   if (statsTracker)
-     statsTracker->framePushed(state, 0);
+ if (statsTracker)
+   statsTracker->framePushed(state, 0);
 
-   processTree = std::make_unique<PTree>(&state);
-   run(state);
+ processTree = std::make_unique<PTree>(&state);
+ run(state);
 
-   if (statsTracker)
-     statsTracker->done();
+ if (statsTracker)
+   statsTracker->done();
 }
 
 void Executor::runFunctionAsBlockSequence(Function *f,
                int argc,
                char **argv,
                char **envp) {
-    KFunction *kf = kmodule->functionMap[f];
-    Function::iterator bbit = f->begin(), bbie = f->end();
-    if(bbit != bbie)
-    {
-      KBlock *allocas = kf->kBlocks[&*bbit++];
-      ExecutionState *state = formState(f, allocas->instructions, argc, argv, envp);
-      prepareSymbolicStack(*state, kf);
-      KBlock **blocks = new KBlock*[2];
-      bbie--; blocks[1] = kf->kBlocks[&*bbie];
-      for (; bbit != bbie; bbit++) {
-        blocks[0] = kf->kBlocks[&*bbit];
-        KBlock *kb = new KBlock(f, blocks, kmodule.get(), 2);
+  KFunction *kf = kmodule->functionMap[f];
+  std::map<llvm::BasicBlock *, ExecutionState *> currCFG = cfgStates[f];
+  Function::iterator bbit = f->begin(), bbie = f->end();
+  if(bbit != bbie) {
+    KBlock *allocas = kf->kBlocks[&*bbit++];
+    ExecutionState *state = formState(f, allocas->instructions, argc, argv, envp);
+    prepareSymbolicStack(*state, kf);
+    KBlock **blocks = new KBlock*[2];
+    bbie--; blocks[1] = kf->kBlocks[&*bbie];
+    for (; bbit != bbie; bbit++) {
+      blocks[0] = kf->kBlocks[&*bbit];
+      KBlock *kb = new KBlock(f, blocks, kmodule.get(), 2);
+      if(!blocks[0]->isCallBlock()) {
         ExecutionState *currState = new ExecutionState(*state, kb->instructions);
         runKBlock(kb, *currState, argc, argv, envp);
-        cfgStates[&*bbit] = currState;
+        currCFG[&*bbit] = currState;
+      } else {
+        if(currCFG.count(&*bbit) == 0) {
+          currCFG[&*bbit] = nullptr;
+          runFunctionAsBlockSequence(((KCallBlock*)kb)->calledFunction, argc, argv, envp);
+        }
       }
-      // hack to clear memory objects
-      delete memory;
-      memory = new MemoryManager(NULL);
-      clearGlobal();
     }
+  }
+}
+
+void Executor::runMainAsBlockSequence(Function *f,
+               int argc,
+               char **argv,
+               char **envp) {
+  runFunctionAsBlockSequence(f, argc, argv, envp);
+  // hack to clear memory objects
+  delete memory;
+  memory = new MemoryManager(NULL);
+  clearGlobal();
 }
 
 unsigned Executor::getPathStreamID(const ExecutionState &state) {
