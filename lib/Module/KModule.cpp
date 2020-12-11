@@ -486,6 +486,38 @@ static int getOperandNum(Value *v,
   }
 }
 
+void KBlock::handleKInstruction(
+        std::map<Instruction*, unsigned> &registerMap,
+        llvm::Instruction *inst,
+        KModule *km, KInstruction *ki)
+{
+  ki->inst = inst;
+  ki->dest = registerMap[inst];
+  if (isa<CallInst>(inst) || isa<InvokeInst>(inst)) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
+    const CallBase &cs = cast<CallBase>(*inst);
+    Value *val = cs.getCalledOperand();
+#else
+      const CallSite cs(inst);
+      Value *val = cs.getCalledValue();
+#endif
+    unsigned numArgs = cs.arg_size();
+    ki->operands = new int[numArgs+1];
+    ki->operands[0] = getOperandNum(val, registerMap, km, ki);
+    for (unsigned j=0; j<numArgs; j++) {
+      Value *v = cs.getArgOperand(j);
+      ki->operands[j+1] = getOperandNum(v, registerMap, km, ki);
+    }
+  } else {
+    unsigned numOperands = inst->getNumOperands();
+    ki->operands = new int[numOperands];
+    for (unsigned j=0; j<numOperands; j++) {
+      Value *v = inst->getOperand(j);
+      ki->operands[j] = getOperandNum(v, registerMap, km, ki);
+    }
+  }
+}
+
 KFunction::KFunction(llvm::Function *_function,
                      KModule *km)
   : function(_function),
@@ -522,19 +554,35 @@ KBlock::KBlock(Function *_function, KBlock **basic_blocks, KModule *km, unsigned
   : function(_function),
     numInstructions(0),
     trackCoverage(true) {
+  std::map<Instruction*, unsigned> registerMap;
+  unsigned rnum = _function->arg_size();
   for (unsigned n = 0; n < bb_size; n++) {
+    for (unsigned i = 0; i < basic_blocks[n]->numInstructions - 1; i++) {
+        Instruction *it = basic_blocks[n]->instructions[i]->inst;
+        registerMap[it] = rnum++;
+    }
     numInstructions += basic_blocks[n]->numInstructions - 1;
   }
   numInstructions++;
   instructions = new KInstruction*[numInstructions];
 
-  KFunction *kf = km->functionMap[function];
+  KInstruction *ki;
   unsigned i = 0;
   for (unsigned n = 0; n < bb_size; n++) {
     KBlock *kb = basic_blocks[n];
     unsigned bound = kb->numInstructions - 1;
     for (unsigned j = 0; j < bound; j++) {
-      instructions[i++] = kb->instructions[j];
+      Instruction *it = kb->instructions[j]->inst;
+      switch(it->getOpcode()) {
+      case Instruction::GetElementPtr:
+      case Instruction::InsertValue:
+      case Instruction::ExtractValue:
+        ki = new KGEPInstruction(*(KGEPInstruction*)(kb->instructions[j])); break;
+      default:
+        ki = new KInstruction(*kb->instructions[j]); break;
+      }
+      handleKInstruction(registerMap, kb->instructions[j]->inst, km, ki);
+      instructions[i++] = ki;
     }
   }
   KBlock *kb = basic_blocks[bb_size - 1];
@@ -568,32 +616,7 @@ KBlock::KBlock(llvm::Function *_function, llvm::BasicBlock *block, KModule *km,
     }
 
     Instruction *inst = &*it;
-    ki->inst = inst;
-    ki->dest = registerMap[inst];
-
-    if (isa<CallInst>(it) || isa<InvokeInst>(it)) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
-      const CallBase &cs = cast<CallBase>(*inst);
-      Value *val = cs.getCalledOperand();
-#else
-      const CallSite cs(inst);
-      Value *val = cs.getCalledValue();
-#endif
-      unsigned numArgs = cs.arg_size();
-      ki->operands = new int[numArgs+1];
-      ki->operands[0] = getOperandNum(val, registerMap, km, ki);
-      for (unsigned j=0; j<numArgs; j++) {
-        Value *v = cs.getArgOperand(j);
-        ki->operands[j+1] = getOperandNum(v, registerMap, km, ki);
-      }
-    } else {
-      unsigned numOperands = it->getNumOperands();
-      ki->operands = new int[numOperands];
-      for (unsigned j=0; j<numOperands; j++) {
-        Value *v = it->getOperand(j);
-        ki->operands[j] = getOperandNum(v, registerMap, km, ki);
-      }
-    }
+    handleKInstruction(registerMap, inst, km, ki);
     instructions[i++] = ki;
   }
 }

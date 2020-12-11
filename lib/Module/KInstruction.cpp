@@ -15,9 +15,20 @@ using namespace klee;
 
 /***/
 
+KInstruction::KInstruction(const KInstruction& ki):
+  inst(ki.inst),
+  info(ki.info),
+  operands(ki.operands),
+  dest(ki.dest) {}
+
 KInstruction::~KInstruction() {
   delete[] operands;
 }
+
+KGEPInstruction::KGEPInstruction(const KGEPInstruction& ki):
+  KInstruction(ki),
+  indices(ki.indices),
+  offset(ki.offset) {}
 
 std::string KInstruction::getSourceLocation() const {
   if (!info->file.empty())

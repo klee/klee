@@ -86,19 +86,6 @@ ExecutionState::ExecutionState(KFunction *kf, KInstruction **instructions) :
   setID();
 }
 
-ExecutionState::ExecutionState(KFunction *kf, KBlock *kb) :
-    pc(kb->instructions),
-    prevPC(pc),
-    depth(0),
-    ptreeNode(nullptr),
-    steppedInstructions(0),
-    instsSinceCovNew(0),
-    coveredNew(false),
-    forkDisabled(false) {
-  pushFrame(nullptr, kf);
-  setID();
-}
-
 ExecutionState::~ExecutionState() {
   for (const auto &cur_mergehandler: openMergeStack){
     cur_mergehandler->removeOpenState(this);

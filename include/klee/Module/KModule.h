@@ -59,6 +59,8 @@ namespace klee {
     ~KBlock();
 
     unsigned getArgRegister(unsigned index) { return index; }
+    void handleKInstruction(std::map<llvm::Instruction*, unsigned> &registerMap,
+                            llvm::Instruction *inst, KModule *km, KInstruction *ki);
   };
 
   struct KFunction {
