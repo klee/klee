@@ -45,6 +45,9 @@ namespace klee {
     bool empty() const { 
       return elts.empty(); 
     }
+    void clear() {
+      elts.clear();
+    }
     size_t count(const key_type &key) const { 
       return elts.count(key); 
     }

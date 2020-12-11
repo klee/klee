@@ -341,6 +341,10 @@ bool AddressSpace::copyInConcrete(const MemoryObject *mo, const ObjectState *os,
   return true;
 }
 
+void AddressSpace::clear() {
+  objects.clear();
+}
+
 /***/
 
 bool MemoryObjectLT::operator()(const MemoryObject *a, const MemoryObject *b) const {

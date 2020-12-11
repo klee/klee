@@ -4550,6 +4550,8 @@ void Executor::runFunctionAsBlockSequence(Function *f,
   if(bbit != bbie) {
     KBlock *allocas = kf->kBlocks[&*bbit++];
     ExecutionState *state = formState(f, allocas->instructions, argc, argv, envp);
+    ExecutionState *emptyState = new ExecutionState(*state);
+    emptyState->addressSpace.clear();
     prepareSymbolicStack(*state, kf);
     KBlock **blocks = new KBlock*[2];
     bbie--; blocks[1] = kf->kBlocks[&*bbie];
@@ -4563,7 +4565,10 @@ void Executor::runFunctionAsBlockSequence(Function *f,
       } else {
         if(currCFG.count(&*bbit) == 0) {
           currCFG[&*bbit] = nullptr;
-          runFunctionAsBlockSequence(((KCallBlock*)kb)->calledFunction, argc, argv, envp);
+          KCallBlock *kcall = (KCallBlock*)blocks[0];
+          if(f != kcall->calledFunction) {
+            runFunctionAsBlockSequence(kcall->calledFunction, argc, argv, envp);
+          }
         }
       }
     }

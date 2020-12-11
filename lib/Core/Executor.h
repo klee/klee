@@ -52,6 +52,9 @@ namespace llvm {
   class DataLayout;
   class Twine;
   class Value;
+
+  llvm::Function* getTargetFunction(llvm::Value *calledVal,
+                                    klee::ExecutionState &state);
 }
 
 namespace klee {  
@@ -543,7 +546,7 @@ public:
                          char **envp) override;
 
   void runMainAsBlockSequence(llvm::Function *f, int argc, char **argv,
-                         char **envp);
+                         char **envp) override;
 
   void runKBlock(KBlock *kb, ExecutionState &state, int argc, char **argv, char **envp);
 
