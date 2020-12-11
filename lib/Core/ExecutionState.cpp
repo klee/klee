@@ -73,8 +73,8 @@ StackFrame::~StackFrame() {
 
 /***/
 
-ExecutionState::ExecutionState(KFunction *kf) :
-    pc(kf->instructions),
+ExecutionState::ExecutionState(KFunction *kf, KInstruction **instructions) :
+    pc(instructions),
     prevPC(pc),
     depth(0),
     ptreeNode(nullptr),

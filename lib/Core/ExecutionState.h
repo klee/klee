@@ -242,8 +242,7 @@ public:
   ExecutionState(){}
   #endif
   // only to create the initial state
-  explicit ExecutionState(KFunction *kf);
-  explicit ExecutionState(KFunction *kf, KBlock *kb);
+  explicit ExecutionState(KFunction *kf, KInstruction **instructions);
   // no copy assignment, use copy constructor
   ExecutionState &operator=(const ExecutionState &) = delete;
   // no move ctor

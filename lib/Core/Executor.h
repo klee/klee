@@ -525,6 +525,8 @@ public:
     usingSeeds = seeds;
   }
 
+  void runInstructions(llvm::Function *f, KInstruction **instructions, int argc, char **argv, char **envp);
+
   void runFunctionAsMain(llvm::Function *f, int argc, char **argv,
                          char **envp) override;
 
