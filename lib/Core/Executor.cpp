@@ -3325,6 +3325,11 @@ void Executor::updateStates(ExecutionState *current) {
     processTree->remove(es->ptreeNode);
   }
   removedStates.clear();
+  if (states.size() > 10) {
+    pausedStates.insert(states.begin(), states.end());
+    states.clear();
+    klee_message("insufficient information, pause execution");
+  }
 }
 
 template <typename SqType, typename TypeIt>
@@ -4279,7 +4284,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         Solver::Validity res;
         time::Span timeout = coreSolverTimeout;
         solver->setTimeout(timeout);
-        bool success = solver->evaluate(*unbound, inBounds, res);
+        bool success = solver->evaluate(unbound->constraints, inBounds, res, unbound->queryMetaData);
         solver->setTimeout(time::Span());
 
         if (res !=Solver::False) {
@@ -4705,6 +4710,7 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
   while (!functionFonRun.empty()) {
     Function *f = functionFonRun.front();
     ExecutionResult &cfg = cfgStates[f];
+    ExecutionResult &pausedCfg = cfgPausedStates[f];
     KFunction *kf = kmodule->functionMap[f];
     Function::iterator bbit = f->begin(), bbie = f->end();
 
@@ -4718,6 +4724,7 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
 
       for (; bbit != bbie; bbit++) {
         bbResultStates.clear();
+        pausedStates.clear();
         KBlock *kb = kf->kBlocks[&*bbit];
         ExecutionState *currState = initialState->withInstructions(kb->instructions);
         currState->setBlockIndexes(kb);
@@ -4742,7 +4749,10 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
         }
         // assert(BBStates.find(currState) != BBStates.end());
         for(auto & it : bbResultStates) {
-          updateCFGStates(stackFrame, &*bbit, it, cfg);
+          cfg[&*bbit].insert(it);
+        }
+        for(auto & it : pausedStates) {
+          pausedCfg[&*bbit].insert(it);
         }
       }
     }

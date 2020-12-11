@@ -140,6 +140,7 @@ private:
   TimingSolver *solver;
   MemoryManager *memory;
   std::set<ExecutionState*, ExecutionStateIDCompare> states;
+  std::set<ExecutionState*, ExecutionStateIDCompare> pausedStates;
   StatsTracker *statsTracker;
   TreeStreamWriter *pathWriter, *symPathWriter;
   SpecialFunctionHandler *specialFunctionHandler;
@@ -160,6 +161,7 @@ private:
   std::set<ExecutionState*> bbResultStates;
 
   std::map<llvm::Function *, ExecutionResult> cfgStates;
+  std::map<llvm::Function *, ExecutionResult> cfgPausedStates;
 
   /// When non-empty the Executor is running in "seed" mode. The
   /// states in this map will be executed in an arbitrary order
