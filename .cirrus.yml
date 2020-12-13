@@ -2,17 +2,17 @@ task:
   freebsd_instance:
     matrix:
       - image_family: freebsd-11-4-snap
-      - image_family: freebsd-12-1-snap
+      - image_family: freebsd-12-2-snap
   deps_script:
     - sed -i.bak -e 's/quarterly/latest/' /etc/pkg/FreeBSD.conf
     - env ASSUME_ALWAYS_YES=yes pkg update -f
-    - env ASSUME_ALWAYS_YES=yes pkg install -y llvm80 gmake z3 cmake pkgconf google-perftools python3 python37 py37-sqlite3 py37-tabulate
+    - env ASSUME_ALWAYS_YES=yes pkg install -y llvm90 gmake z3 cmake pkgconf google-perftools python3 python37 py37-sqlite3 py37-tabulate
   build_script:
     - mkdir build
     - cd build
-    - cmake -DLLVM_CONFIG_BINARY=/usr/local/bin/llvm-config80 -DMAKE_BINARY=/usr/local/bin/gmake -DENABLE_TCMALLOC:BOOL=true -DENABLE_POSIX_RUNTIME:BOOL=ON -DENABLE_SOLVER_Z3:BOOL=true -DENABLE_SYSTEM_TESTS:BOOL=ON ..
+    - cmake -DLLVM_CONFIG_BINARY=/usr/local/bin/llvm-config90 -DMAKE_BINARY=/usr/local/bin/gmake -DENABLE_TCMALLOC:BOOL=true -DENABLE_POSIX_RUNTIME:BOOL=ON -DENABLE_SOLVER_Z3:BOOL=true -DENABLE_SYSTEM_TESTS:BOOL=ON ..
     - gmake
   test_script:
-    - sed -i.bak -e 's/lit\./lit80\./' test/lit.cfg
+    - sed -i.bak -e 's/lit\./lit90\./' test/lit.cfg
     - cd build
     - gmake check
