@@ -4184,21 +4184,21 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   ref<Expr> unsafeAddress = UseGEPExpr && isa<GEPExpr>(address) ? dyn_cast<GEPExpr>(address)->address : address;
 
   if (SimplifySymIndices) {
-    if (!isa<ConstantExpr>(address))
+    if (!isa<ConstantExpr>(unsafeAddress))
       address = ConstraintManager::simplifyExpr(state.constraints, address);
     if (operation == Write && !isa<ConstantExpr>(value))
       value = ConstraintManager::simplifyExpr(state.constraints, value);
   }
 
-  address = optimizer.optimizeExpr(address, true);
+  unsafeAddress = optimizer.optimizeExpr(unsafeAddress, true);
 
   // fast path: single in-bounds resolution
   ObjectPair op;
   bool success;
   solver->setTimeout(coreSolverTimeout);
   if (!state.addressSpace.resolveOne(state, solver, unsafeAddress, op, success)) {
-    address = toConstant(state, address, "resolveOne failure");
-    success = state.addressSpace.resolveOne(cast<ConstantExpr>(address), op);
+    unsafeAddress = toConstant(state, unsafeAddress, "resolveOne failure");
+    success = state.addressSpace.resolveOne(cast<ConstantExpr>(unsafeAddress), op);
   }
   solver->setTimeout(time::Span());
 
@@ -4254,7 +4254,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   // we are on an error path (no resolution, multiple resolution, one
   // resolution with out of bounds)
 
-  address = optimizer.optimizeExpr(address, true);
+  unsafeAddress = optimizer.optimizeExpr(unsafeAddress, true);
   ResolutionList rl;  
   solver->setTimeout(coreSolverTimeout);
   bool incomplete;
@@ -4262,7 +4262,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   if (UseGEPExpr && isa<GEPExpr>(address))
       incomplete = state.addressSpace.resolve(state, solver, dyn_cast<GEPExpr>(address)->base, rl, 0, coreSolverTimeout);
   else
-      incomplete = state.addressSpace.resolve(state, solver, address, rl, 0, coreSolverTimeout);
+      incomplete = state.addressSpace.resolve(state, solver, unsafeAddress, rl, 0, coreSolverTimeout);
 
   solver->setTimeout(time::Span());
 
@@ -4314,7 +4314,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     if (incomplete) {
       terminateStateEarly(*unbound, "Query timed out (resolve).");
     } else if (!isa<ConstantExpr>(address)) {
-      ref<Expr> base = address;
+      ref<Expr> base = unsafeAddress;
       unsigned size = bytes;
 
       if (UseGEPExpr && isa<GEPExpr>(address)) {
@@ -4339,7 +4339,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         if (res !=Solver::False) {
           unbound->addConstraint(inBounds);
         } else {
-          ObjectPair p = lazyInstantiateVariable(*unbound, unsafeAddress, target, bytes);
+          p = lazyInstantiateVariable(*unbound, unsafeAddress, target, bytes);
         }
       }
 
