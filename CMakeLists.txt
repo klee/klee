@@ -39,7 +39,7 @@ include(CheckLibraryExists)
 # Project version
 ###############################################################################
 set(KLEE_VERSION_MAJOR 2)
-set(KLEE_VERSION_MINOR 2-pre)
+set(KLEE_VERSION_MINOR 3-pre)
 set(KLEE_VERSION "${KLEE_VERSION_MAJOR}.${KLEE_VERSION_MINOR}")
 
 # If a patch is needed, we can add KLEE_VERSION_PATCH
@@ -486,6 +486,14 @@ set_property(CACHE
   PROPERTY STRINGS ${available_klee_runtime_build_types})
 message(STATUS "KLEE_RUNTIME_BUILD_TYPE: ${KLEE_RUNTIME_BUILD_TYPE}")
 
+# Check availability of 32bit support for platform
+include(CheckCSourceRuns)
+cmake_push_check_state()
+set(CMAKE_REQUIRED_FLAGS "-m32")
+check_c_source_runs("int main(int argc, char** argv){return 0;}" M32_SUPPORTED)
+cmake_pop_check_state()
+message(STATUS "32bit platform supported: ${M32_SUPPORTED}")
+
 set(KLEE_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_FULL_LIBDIR}/klee/runtime")
 
 # Location where KLEE will look for the built runtimes by default.
@@ -557,29 +565,26 @@ endif()
 ################################################################################
 # KLEE libcxx support
 ################################################################################
-option(ENABLE_KLEE_LIBCXX "Enable libcxx for klee" OFF)
+option(ENABLE_KLEE_LIBCXX "Enable libc++ for klee" OFF)
 if (ENABLE_KLEE_LIBCXX)
-  message(STATUS "klee-libcxx support enabled")
+  message(STATUS "klee-libc++ support enabled")
   set(SUPPORT_KLEE_LIBCXX 1) # For config.h
-  set(KLEE_LIBCXX_DIR "" CACHE PATH "Path to root directory with libcxx shared object")
+  set(KLEE_LIBCXX_DIR "" CACHE PATH "Path to directory containing libc++ shared object (bitcode)")
   if (NOT EXISTS "${KLEE_LIBCXX_DIR}")
     message(FATAL_ERROR
-      "${KLEE_LIBCXX_PATH} does not exist. Try passing -DKLEE_LIBCXX_DIR=<path>")
+      "KLEE_LIBCXX_DIR (\"${KLEE_LIBCXX_DIR}\") does not exist.\n"
+      "Try passing -DKLEE_LIBCXX_DIR=<path> to CMake where <path> is the path"
+      "to the directory containing the libc++ shared object file (as bitcode).")
   endif()
 
-  set(KLEE_LIBCXX_INCLUDE_DIR "" CACHE PATH "Path to libcxx include directory")
+  set(KLEE_LIBCXX_INCLUDE_DIR "" CACHE PATH "Path to libc++ include directory")
   if (NOT EXISTS "${KLEE_LIBCXX_INCLUDE_DIR}")
     message(FATAL_ERROR
-      "${KLEE_LIBCXX_INCLUDE_DIR} does not exist. Try passing -DKLEE_LIBCXX_INCLUDE_DIR=<path>")
+      "KLEE_LIBCXX_INCLUDE_DIR (\"${KLEE_LIBCXX_INCLUDE_DIR}\") does not exist.\n"
+      "Try passing -DKLEE_LIBCXX_INCLUDE_DIR=<path> to CMake where <path> is the"
+      "libc++ include directory.")
   endif()
   message(STATUS "Use libc++ include path: \"${KLEE_LIBCXX_INCLUDE_DIR}\"")
-
-  set(KLEE_LIBCXXABI_SRC_DIR "" CACHE PATH "Path to libcxxabi source directory")
-  if (NOT EXISTS "${KLEE_LIBCXXABI_SRC_DIR}")
-    message(FATAL_ERROR
-      "${KLEE_LIBCXXABI_SRC_DIR} does not exist. Try passing -DKLEE_LIBCXXABI_SRC_DIR=<path>")
-  endif()
-  message(STATUS "Use libc++abi source path: \"${KLEE_LIBCXXABI_SRC_DIR}\"")
 
   # Find the library bitcode archive
 
@@ -611,7 +616,7 @@ if (ENABLE_KLEE_LIBCXX)
   list(APPEND KLEE_COMPONENT_CXX_DEFINES
     -DKLEE_LIBCXX_BC_NAME=\"${KLEE_LIBCXX_BC_NAME}\")
 
-  # Add libcxx to the install target. We install the original
+  # Add libc++ to the install target. We install the original
   # file rather than the symlink because CMake would just copy the symlink
   # rather than the file.
   install(FILES "${KLEE_LIBCXX_BC_PATH}"
@@ -630,9 +635,18 @@ endif()
 option(ENABLE_KLEE_EH_CXX "Enable support for C++ Exceptions" OFF)
 if (ENABLE_KLEE_EH_CXX)
   if (NOT ENABLE_KLEE_LIBCXX)
-    message(FATAL_ERROR "C++ Exception support requires klee-libcxx."
-      "Pass `-DENABLE_KLEE_LIBCXX=ON` to enable it.")
+    message(FATAL_ERROR "C++ Exception support requires klee-libc++."
+      "Pass -DENABLE_KLEE_LIBCXX=ON to CMake to enable it.")
   endif()
+
+  set(KLEE_LIBCXXABI_SRC_DIR "" CACHE PATH "Path to libc++abi source directory")
+  if (NOT EXISTS "${KLEE_LIBCXXABI_SRC_DIR}")
+    message(FATAL_ERROR
+      "KLEE_LIBCXXABI_SRC_DIR (\"${KLEE_LIBCXXABI_SRC_DIR}\") does not exist.\n"
+      "Try passing -DKLEE_LIBCXXABI_SRC_DIR=<path> to CMake where <path> is the"
+      "libc++abi source directory.")
+  endif()
+  message(STATUS "Use libc++abi source path: \"${KLEE_LIBCXXABI_SRC_DIR}\"")
 
   if (${LLVM_VERSION_MAJOR} GREATER 8 OR ${LLVM_VERSION_MAJOR} EQUAL 8)
     set(SUPPORT_KLEE_EH_CXX 1) # For config.h

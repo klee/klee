@@ -82,11 +82,11 @@ GetAllUndefinedSymbols(Module *M, std::set<std::string> &UndefinedSymbols) {
   for (auto const &Function : *M) {
     if (Function.hasName()) {
       if (Function.isDeclaration())
-        UndefinedSymbols.insert(Function.getName());
+        UndefinedSymbols.insert(Function.getName().str());
       else if (!Function.hasLocalLinkage()) {
         assert(!Function.hasDLLImportStorageClass() &&
                "Found dllimported non-external symbol!");
-        DefinedSymbols.insert(Function.getName());
+        DefinedSymbols.insert(Function.getName().str());
       }
     }
   }
@@ -95,18 +95,17 @@ GetAllUndefinedSymbols(Module *M, std::set<std::string> &UndefinedSymbols) {
        I != E; ++I)
     if (I->hasName()) {
       if (I->isDeclaration())
-        UndefinedSymbols.insert(I->getName());
+        UndefinedSymbols.insert(I->getName().str());
       else if (!I->hasLocalLinkage()) {
         assert(!I->hasDLLImportStorageClass() && "Found dllimported non-external symbol!");
-        DefinedSymbols.insert(I->getName());
+        DefinedSymbols.insert(I->getName().str());
       }
     }
 
   for (Module::const_alias_iterator I = M->alias_begin(), E = M->alias_end();
        I != E; ++I)
     if (I->hasName())
-      DefinedSymbols.insert(I->getName());
-
+      DefinedSymbols.insert(I->getName().str());
 
   // Prune out any defined symbols from the undefined symbols set
   // and other symbols we don't want to treat as an undefined symbol
@@ -286,7 +285,11 @@ Function *klee::getDirectCallTarget(
     const CallSite &cs,
 #endif
     bool moduleIsFullyLinked) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
+  Value *v = cs.getCalledOperand();
+#else
   Value *v = cs.getCalledValue();
+#endif
   bool viaConstantExpr = false;
   // Walk through aliases and bitcasts to try to find
   // the function being called.

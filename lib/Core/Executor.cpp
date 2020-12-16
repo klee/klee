@@ -531,7 +531,7 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
   llvm::sys::path::append(LibPath,
                           "libkleeRuntimeIntrinsic" + opts.OptSuffix + ".bca");
   std::string error;
-  if (!klee::loadFile(LibPath.str(), modules[0]->getContext(), modules,
+  if (!klee::loadFile(LibPath.c_str(), modules[0]->getContext(), modules,
                       error)) {
     klee_error("Could not load KLEE intrinsic file %s", LibPath.c_str());
   }
@@ -677,7 +677,7 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
     // not defined in this module; if it isn't resolvable then it
     // should be null.
     if (f.hasExternalWeakLinkage() &&
-        !externalDispatcher->resolveSymbol(f.getName())) {
+        !externalDispatcher->resolveSymbol(f.getName().str())) {
       addr = Expr::createPointer(0);
     } else {
       addr = Expr::createPointer(reinterpret_cast<std::uint64_t>(&f));
@@ -827,7 +827,7 @@ void Executor::initializeGlobalObjects(ExecutionState &state) {
       if (v.getName() == "__dso_handle") {
         addr = &__dso_handle; // wtf ?
       } else {
-        addr = externalDispatcher->resolveSymbol(v.getName());
+        addr = externalDispatcher->resolveSymbol(v.getName().str());
       }
       if (!addr) {
         klee_error("Unable to load symbol(%.*s) while initializing globals",
@@ -1849,7 +1849,10 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
           offsets[k] = size;
           size += Expr::getMinBytesForWidth(argWidth);
         } else {
-#if LLVM_VERSION_CODE > LLVM_VERSION(4, 0)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(11, 0)
+          MaybeAlign ma = cs.getParamAlign(k);
+          unsigned alignment = ma ? ma->value() : 0;
+#elif LLVM_VERSION_CODE > LLVM_VERSION(4, 0)
           unsigned alignment = cs.getParamAlignment(k);
 #else
           // getParamAlignment() is buggy for LLVM <= 4, so we instead
@@ -2345,12 +2348,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
     const CallBase &cs = cast<CallBase>(*i);
+    Value *fp = cs.getCalledOperand();
 #else
     const CallSite cs(i);
+    Value *fp = cs.getCalledValue();
 #endif
 
     unsigned numArgs = cs.arg_size();
-    Value *fp = cs.getCalledValue();
     Function *f = getTargetFunction(fp, state);
 
     if (isa<InlineAsm>(fp)) {
@@ -3299,6 +3303,25 @@ void Executor::updateStates(ExecutionState *current) {
   removedStates.clear();
 }
 
+template <typename SqType, typename TypeIt>
+void Executor::computeOffsetsSeqTy(KGEPInstruction *kgepi,
+                                   ref<ConstantExpr> &constantOffset,
+                                   uint64_t index, const TypeIt it) {
+  const auto *sq = cast<SqType>(*it);
+  uint64_t elementSize =
+      kmodule->targetData->getTypeStoreSize(sq->getElementType());
+  const Value *operand = it.getOperand();
+  if (const Constant *c = dyn_cast<Constant>(operand)) {
+    ref<ConstantExpr> index =
+        evalConstant(c)->SExt(Context::get().getPointerWidth());
+    ref<ConstantExpr> addend = index->Mul(
+        ConstantExpr::alloc(elementSize, Context::get().getPointerWidth()));
+    constantOffset = constantOffset->Add(addend);
+  } else {
+    kgepi->indices.emplace_back(index, elementSize);
+  }
+}
+
 template <typename TypeIt>
 void Executor::computeOffsets(KGEPInstruction *kgepi, TypeIt ib, TypeIt ie) {
   ref<ConstantExpr> constantOffset =
@@ -3308,35 +3331,19 @@ void Executor::computeOffsets(KGEPInstruction *kgepi, TypeIt ib, TypeIt ie) {
     if (StructType *st = dyn_cast<StructType>(*ii)) {
       const StructLayout *sl = kmodule->targetData->getStructLayout(st);
       const ConstantInt *ci = cast<ConstantInt>(ii.getOperand());
-      uint64_t addend = sl->getElementOffset((unsigned)ci->getZExtValue());
-      constantOffset = constantOffset->Add(
-          ConstantExpr::alloc(addend, Context::get().getPointerWidth()));
-    } else if (const auto set = dyn_cast<SequentialType>(*ii)) {
-      uint64_t elementSize =
-          kmodule->targetData->getTypeStoreSize(set->getElementType());
-      Value *operand = ii.getOperand();
-      if (Constant *c = dyn_cast<Constant>(operand)) {
-        ref<ConstantExpr> index =
-            evalConstant(c)->SExt(Context::get().getPointerWidth());
-        ref<ConstantExpr> addend = index->Mul(
-            ConstantExpr::alloc(elementSize, Context::get().getPointerWidth()));
-        constantOffset = constantOffset->Add(addend);
-      } else {
-        kgepi->indices.push_back(std::make_pair(index, elementSize));
-      }
+      uint64_t addend = sl->getElementOffset((unsigned) ci->getZExtValue());
+      constantOffset = constantOffset->Add(ConstantExpr::alloc(addend,
+                                                               Context::get().getPointerWidth()));
 #if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
-    } else if (const auto ptr = dyn_cast<PointerType>(*ii)) {
-      auto elementSize =
-          kmodule->targetData->getTypeStoreSize(ptr->getElementType());
-      auto operand = ii.getOperand();
-      if (auto c = dyn_cast<Constant>(operand)) {
-        auto index = evalConstant(c)->SExt(Context::get().getPointerWidth());
-        auto addend = index->Mul(
-            ConstantExpr::alloc(elementSize, Context::get().getPointerWidth()));
-        constantOffset = constantOffset->Add(addend);
-      } else {
-        kgepi->indices.push_back(std::make_pair(index, elementSize));
-      }
+    } else if (isa<ArrayType>(*ii)) {
+      computeOffsetsSeqTy<ArrayType>(kgepi, constantOffset, index, ii);
+    } else if (isa<VectorType>(*ii)) {
+      computeOffsetsSeqTy<VectorType>(kgepi, constantOffset, index, ii);
+    } else if (isa<PointerType>(*ii)) {
+      computeOffsetsSeqTy<PointerType>(kgepi, constantOffset, index, ii);
+#else
+    } else if (isa<SequentialType>(*ii)) {
+      computeOffsetsSeqTy<SequentialType>(kgepi, constantOffset, index, ii);
 #endif
     } else
       assert("invalid type" && 0);
@@ -3755,7 +3762,7 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
     return;
 
   if (ExternalCalls == ExternalCallPolicy::None &&
-      !okExternals.count(function->getName())) {
+      !okExternals.count(function->getName().str())) {
     klee_warning("Disallowed call to external function: %s\n",
                  function->getName().str().c_str());
     terminateStateOnError(state, "external calls disallowed", User);
@@ -4596,16 +4603,16 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
   size_t alignment = 0;
   llvm::Type *type = NULL;
   std::string allocationSiteName(allocSite->getName().str());
-  if (const GlobalValue *GV = dyn_cast<GlobalValue>(allocSite)) {
-    alignment = GV->getAlignment();
-    if (const GlobalVariable *globalVar = dyn_cast<GlobalVariable>(GV)) {
+  if (const GlobalObject *GO = dyn_cast<GlobalObject>(allocSite)) {
+    alignment = GO->getAlignment();
+    if (const GlobalVariable *globalVar = dyn_cast<GlobalVariable>(GO)) {
       // All GlobalVariables's have pointer type
       llvm::PointerType *ptrType =
           dyn_cast<llvm::PointerType>(globalVar->getType());
       assert(ptrType && "globalVar's type is not a pointer");
       type = ptrType->getElementType();
     } else {
-      type = GV->getType();
+      type = GO->getType();
     }
   } else if (const AllocaInst *AI = dyn_cast<AllocaInst>(allocSite)) {
     alignment = AI->getAlignment();

@@ -198,7 +198,7 @@ bool ExternalDispatcherImpl::executeCall(Function *f, Instruction *i,
         std::move(dispatchModuleUniq)); // MCJIT takes ownership
     // Force code generation
     uint64_t fnAddr =
-        executionEngine->getFunctionAddress(dispatcher->getName());
+        executionEngine->getFunctionAddress(dispatcher->getName().str());
     executionEngine->finalizeObject();
     assert(fnAddr && "failed to get function address");
     (void)fnAddr;
@@ -255,7 +255,7 @@ bool ExternalDispatcherImpl::runProtectedCall(Function *f, uint64_t *args) {
 Function *ExternalDispatcherImpl::createDispatcher(Function *target,
                                                    Instruction *inst,
                                                    Module *module) {
-  if (!resolveSymbol(target->getName()))
+  if (!resolveSymbol(target->getName().str()))
     return 0;
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
