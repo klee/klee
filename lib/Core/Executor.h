@@ -558,16 +558,9 @@ public:
 
   void prepareSymbolicReturn(ExecutionState &state, KInstruction *kcallInst);
 
-  void prepareSymbolicAllocas(ExecutionState &state, KBlock *allocas);
-
   ref<Expr> makeSymbolicValue(llvm::Value *value, ExecutionState &state, uint64_t size, Expr::Width width, const std::string &name);
 
   void runInstructions(llvm::Function *f, KInstruction **instructions, int argc, char **argv, char **envp);
-
-  void updateCFGStates(StackFrame *&sf,
-                       llvm::BasicBlock *bb,
-                       ExecutionState *state,
-                       ExecutionResult &cfg);
 
   void runFunctionAsMain(llvm::Function *f, int argc, char **argv,
                          char **envp) override;

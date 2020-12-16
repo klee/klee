@@ -4641,31 +4641,6 @@ void Executor::prepareSymbolicReturn(ExecutionState &state, KInstruction *kcallI
   bindLocal(kcallInst, state, result);
 }
 
-void Executor::prepareSymbolicAllocas(ExecutionState &state, KBlock *kallocas) {
-  for (int n = 0; n < kallocas->numInstructions - 1; n++) {
-    KInstruction *ki = kallocas->instructions[n];
-    assert(ki->inst->getOpcode() == Instruction::Alloca);
-    AllocaInst *ai = cast<AllocaInst>(ki->inst);
-    unsigned elementSize =
-      kmodule->targetData->getTypeStoreSize(ai->getAllocatedType());
-    ref<Expr> size = Expr::createPointer(elementSize);
-    if (ai->isArrayAllocation()) {
-      ref<Expr> count = symbolicEval(ki, 0, state).value;
-      count = Expr::createZExtToPointerWidth(count);
-      size = MulExpr::create(size, count);
-    }
-    executeAlloc(state, size, true, ki);
-  }
-  std::vector<const MemoryObject *> allocas = state.stack.back().allocas;
-  int n = 0;
-  for (std::vector<const MemoryObject *>::iterator mi = allocas.begin(),
-       me = allocas.end(); mi != me; ++mi, n++) {
-    const MemoryObject *mo = *mi;
-    KInstruction *ki = kallocas->instructions[n];
-    lazyInstantiateAlloca(state, mo, ki, true);
-  }
-}
-
 void Executor::runInstructions(Function *f,
                                KInstruction **instructions,
                                int argc,
@@ -4714,13 +4689,6 @@ void Executor::runKBlock(KBlock *kb,
 
  if (statsTracker)
    statsTracker->done();
-}
-
-void Executor::updateCFGStates(StackFrame *&sf,
-                               BasicBlock *bb,
-                               ExecutionState *state,
-                               ExecutionResult &cfg) {
-  cfg[bb].insert(state);
 }
 
 void Executor::runFunctionAsMain(Function *f,
@@ -4793,12 +4761,9 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
             break;
           }
           case KBlockType::Base:
-            // BBStates.insert(currState);
-            // updates BBStates
             runKBlock(kb, *currState);
             break;
         }
-        // assert(BBStates.find(currState) != BBStates.end());
         for(auto & it : bbResultStates) {
           cfg[&*bbit].insert(it);
         }
