@@ -1,3 +1,66 @@
+KLEE 2.2, 7 December 2020
+=========================
+
+Incorporating changes from 4 March 2020 to 7 December 2020.
+Maintainers during this time span: @ccadar and @MartinNowack
+Documentation at http://klee.github.io/releases/docs/v2.2
+
+== Major features ==
+- Added support for C++ exceptions (@corrodedHash, @futile, @jbuening)
+- Correctly copy variadic arguments with byval attribute (@ccadar)
+- Modified the random path searcher to work on a subset of states (@kren1)
+- Added state IDs to improve determinism (@251)
+- Overhauled the (Travis CI) build scripts (@MartinNowack)
+- Restructured header files (@ccadar)
+
+== LLVM support ==
+- Current recommended version is LLVM 9
+- Added support for LLVM 11 (@lzaoral)
+- We have decided to extend support for LLVM 3.8 to 5, but KLEE 2.2 will be the last version with support for LLVM <6
+
+== Options, scripts and KLEE intrinsics added, changed or removed ==
+- Changed --debug-print-instructions to also print state IDs (@251)
+- Added -rng-initial-seed to set the seed for KLEE's random number generator (@251)
+- Added klee_is_replay intrinsic which returns whether the code is being executed symbolically or in replay mode (@alastairreid)
+- Added --compress-process-tree to remove intermediate nodes in the process tree when possible (@sebastianpoeplau)
+- Added klee-zesti, a ZESTI-like wrapper (@kren1)
+- Added --table-format=readable-csv/csv to klee-stats (@251)
+
+== Other changes ==
+- Fixed GlobalAlias initialization (@jbuening)
+- Enforced fork/branch limits in branch() and fix double termination (@251)
+- Enhanced POSIX runtime in the case where a symbolic file is given as an absolute path, i.e. /current/work/dir/A (@kren1)
+- Named jobs in Travis CI for better visualization of results (@ccadar)
+- Fixes and improvements in the statistics code including klee-stats (@251)
+- Added a simple model for GET/SET_LK (@kren1)
+- Fixed bug in the handling of vectorized code (@Warfley)
+- Fixed bug in the handling of STP array names (@MartinNowack)
+- Fixed bug in Z3Solver::getConstraintLog (@daniel-grumberg)
+- Added support for reading strings from the middle of objects in readStringAtAddress (@mchalupa)
+- Disabled asm lifting for memory fences with return values (@MartinNowack)
+- Fixed bug when the search requires MD2U (@adrianherrera)
+- Added support for fshr/fshl intrinsics (@alastairreid)
+- Refactored the constraint manager (@MartinNowack)
+- Changed DiscretePDF to use IDs instead of pointers to remove nondeterminism (@251)
+- Added a more robust handling of unknown intrinsics: if an unknown intrinsic is encountered on a path, that path is terminated but the others can proceed (@alastairreid)
+- Fixed PTree::remove to clean the tree properly (@sebastianpoeplau)
+- Added support for multiple symbolic files to gen-bout (@kren1)
+- Added a PR template, with a checklist documenting the most frequent issues we have encountered (@ccadar)
+- Fixed the behaviour of klee-stats for broken or empty DBs (@251)
+- Added support for klee_open_merge and klee_close_merge in replay (@ccadar)
+- Fixed the handling of global variables while validating direct call targets (@MartinNowack)
+- Fixed the handling of the fabs intrinsic (@dlaprell)
+- Added support for the fneg instruction (@jbuening)
+- Removed incompatibility between merging and the random path search (@251)
+- Fixed the behaviour of klee-libc to call the functions in __cxa_atexit in reverse order (@tomsik68)
+- Fixed the behaviour of bcmp in klee-libc (@alastairreid)
+- Added support for multi-version bitcode libraries (@MartinNowack)
+- Added support for several fortified functions, -D_FORTIFY_SOURCE (@ccadar)
+- Modernize ref<> and isa<> nullptr checks (@jbuening)
+- Switched CI from Travis CI to GitHub Actions (@MartinNowack, with thanks to @jordr)
+- Smaller refactorings, fixes and improvements, test cases, maintenance, comments, web version, website, etc. (@251, @adrianherrera, @alastairreid, @andrewvaughanj, @andronat, @arrowd, @ccadar, @dependabot, @i-ky, @jbuening, @jiseongg, @jordr, @kren1, @lahiri-phdworks, @MartinNowack, @yxliang01)
+
+
 KLEE 2.1, 3 March 2020
 =======================
 Incorporating changes from 20 March 2019 to 3 March 2020.

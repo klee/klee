@@ -22,6 +22,7 @@ int main() {
   klee_print_expr("f after write to [2]", f);
   f[3] = 19;
   klee_print_expr("f after write to [3]", f);
+
   // CHECK-STDOUT: f[0]=255
   printf("f[0]=%u\n", f[0]);
   // CHECK-STDOUT: f[1]=128
@@ -39,7 +40,5 @@ int main() {
   // CHECK-STDERR-NOT: insert_element.c:[[@LINE+1]]: ASSERTION FAIL
   assert(f[3] == 19);
 
-  // CHECK-STDERR: insert_element.c:[[@LINE+1]]: Out of bounds write when inserting element
-  f[4] = 255; // Out of bounds write
   return 0;
 }

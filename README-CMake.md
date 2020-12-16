@@ -47,7 +47,7 @@ cmake -DCMAKE_BUILD_TYPE=Release /path/to/klee/src
 
 * `ENABLE_KLEE_EH_CXX` (BOOLEAN) - Enable support for C++ Exceptions.
 
-* `ENABLE_KLEE_LIBCXX` (BOOLEAN) - Enable libcxx for klee.
+* `ENABLE_KLEE_LIBCXX` (BOOLEAN) - Enable libc++ for klee.
 
 * `ENABLE_KLEE_UCLIBC` (BOOLEAN) - Enable support for klee-uclibc.
 
@@ -74,11 +74,11 @@ cmake -DCMAKE_BUILD_TYPE=Release /path/to/klee/src
 
 * `KLEE_ENABLE_TIMESTAMP` (BOOLEAN) - Enable timestamps in KLEE sources.
 
-* `KLEE_LIBCXX_DIR` (STRING) - Path to root directory with libcxx shared object.
+* `KLEE_LIBCXX_DIR` (STRING) - Path to directory containing libc++ shared object (bitcode).
 
-* `KLEE_LIBCXX_INCLUDE_DIR` (STRING) - Path to libcxx include directory.
+* `KLEE_LIBCXX_INCLUDE_DIR` (STRING) - Path to libc++ include directory.
 
-* `KLEE_LIBCXXABI_SRC_DIR` (STRING) - Path to libcxxabi source directory.
+* `KLEE_LIBCXXABI_SRC_DIR` (STRING) - Path to libc++abi source directory.
 
 * `KLEE_UCLIBC_PATH` (STRING) - Path to klee-uclibc root directory.
 
