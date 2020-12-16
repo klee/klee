@@ -30,6 +30,7 @@ static const char *warningPrefix = "WARNING";
 static const char *warningOncePrefix = "WARNING ONCE";
 static const char *errorPrefix = "ERROR";
 static const char *notePrefix = "NOTE";
+static const char *psePrefix = "PSE Message";
 
 namespace klee {
 cl::OptionCategory MiscCat("Miscellaneous options", "");
@@ -88,6 +89,12 @@ static void klee_vfmessage(FILE *fp, const char *pfx, const char *msg,
       fdos.changeColor(llvm::raw_ostream::WHITE,
                        /*bold=*/true,
                        /*bg=*/false);
+    
+    // PSE Message
+    if (shouldSetColor(pfx, msg, psePrefix))
+      fdos.changeColor(llvm::raw_ostream::GREEN,
+                       /*bold=*/true,
+                       /*bg=*/false);
   }
 
   fdos << "KLEE: ";
@@ -134,11 +141,18 @@ void klee::klee_message(const char *msg, ...) {
   va_end(ap);
 }
 
+void klee::klee_pse_message(const char *msg, ...) {
+  va_list ap;
+  va_start(ap, msg);
+  klee_vmessage(psePrefix, false, msg, ap);
+  va_end(ap);
+}
+
 /* Message to be written only to file */
 void klee::klee_message_to_file(const char *msg, ...) {
   va_list ap;
   va_start(ap, msg);
-  klee_vmessage(NULL, true, msg, ap);
+  klee_vmessage(psePrefix, true, msg, ap);
   va_end(ap);
 }
 

@@ -13,17 +13,17 @@
 #if LLVM_VERSION_CODE < LLVM_VERSION(8, 0)
 #include "llvm/IR/CallSite.h"
 #endif
+#include "llvm/ExecutionEngine/GenericValue.h"
+#include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/ExecutionEngine/GenericValue.h"
-#include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/Support/DynamicLibrary.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <csetjmp>
 #include <csignal>
@@ -301,9 +301,8 @@ Function *ExternalDispatcherImpl::createDispatcher(Function *target,
     // functions.
     auto argTy =
         (i < FTy->getNumParams() ? FTy->getParamType(i) : (*ai)->getType());
-    auto argI64p =
-        Builder.CreateGEP(nullptr, argI64s,
-                          ConstantInt::get(Type::getInt32Ty(ctx), idx));
+    auto argI64p = Builder.CreateGEP(
+        nullptr, argI64s, ConstantInt::get(Type::getInt32Ty(ctx), idx));
 
     auto argp = Builder.CreateBitCast(argI64p, PointerType::getUnqual(argTy));
     args[i] = Builder.CreateLoad(argp);
@@ -352,4 +351,4 @@ int ExternalDispatcher::getLastErrno() { return impl->getLastErrno(); }
 void ExternalDispatcher::setLastErrno(int newErrno) {
   impl->setLastErrno(newErrno);
 }
-}
+} // namespace klee

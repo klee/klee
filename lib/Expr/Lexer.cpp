@@ -24,37 +24,60 @@ using namespace klee::expr;
 const char *Token::getKindName() const {
   switch (kind) {
   default:
-  case Unknown:    return "Unknown";
-  case Arrow:      return "Arrow";
-  case At:         return "At";
-  case Colon:      return "Colon";
-  case Comma:      return "Comma";
-  case Comment:    return "Comment";
-  case EndOfFile:  return "EndOfFile";
-  case Equals:     return "Equals";
-  case Identifier: return "Identifier";
-  case KWArray:    return "KWArray";
-  case KWFalse:    return "KWFalse";
-  case KWQuery:    return "KWQuery";
-  case KWReserved: return "KWReserved";
-  case KWSymbolic: return "KWSymbolic";
-  case KWTrue:     return "KWTrue";
-  case KWWidth:    return "KWWidth";
-  case LBrace:     return "LBrace";
-  case LParen:     return "LParen";
-  case LSquare:    return "LSquare";
-  case Number:     return "Number";
-  case RBrace:     return "RBrace";
-  case RParen:     return "RParen";
-  case RSquare:    return "RSquare";
-  case Semicolon:  return "Semicolon";
+  case Unknown:
+    return "Unknown";
+  case Arrow:
+    return "Arrow";
+  case At:
+    return "At";
+  case Colon:
+    return "Colon";
+  case Comma:
+    return "Comma";
+  case Comment:
+    return "Comment";
+  case EndOfFile:
+    return "EndOfFile";
+  case Equals:
+    return "Equals";
+  case Identifier:
+    return "Identifier";
+  case KWArray:
+    return "KWArray";
+  case KWFalse:
+    return "KWFalse";
+  case KWQuery:
+    return "KWQuery";
+  case KWReserved:
+    return "KWReserved";
+  case KWSymbolic:
+    return "KWSymbolic";
+  case KWTrue:
+    return "KWTrue";
+  case KWWidth:
+    return "KWWidth";
+  case LBrace:
+    return "LBrace";
+  case LParen:
+    return "LParen";
+  case LSquare:
+    return "LSquare";
+  case Number:
+    return "Number";
+  case RBrace:
+    return "RBrace";
+  case RParen:
+    return "RParen";
+  case RSquare:
+    return "RSquare";
+  case Semicolon:
+    return "Semicolon";
   }
 }
 
 void Token::dump() {
-  llvm::errs() << "(Token \"" << getKindName() << "\" "
-               << (const void*) start << " " << length << " "
-               << line << " " << column << ")";
+  llvm::errs() << "(Token \"" << getKindName() << "\" " << (const void *)start
+               << " " << length << " " << line << " " << column << ")";
 }
 
 ///
@@ -63,13 +86,11 @@ static inline bool isInternalIdentifierChar(int Char) {
   return isalnum(Char) || Char == '_' || Char == '.' || Char == '-';
 }
 
-Lexer::Lexer(const llvm::MemoryBuffer *MB) 
-  : BufferPos(MB->getBufferStart()), BufferEnd(MB->getBufferEnd()), 
-    LineNumber(1), ColumnNumber(0) {
-}
+Lexer::Lexer(const llvm::MemoryBuffer *MB)
+    : BufferPos(MB->getBufferStart()), BufferEnd(MB->getBufferEnd()),
+      LineNumber(1), ColumnNumber(0) {}
 
-Lexer::~Lexer() {
-}
+Lexer::~Lexer() {}
 
 int Lexer::PeekNextChar() {
   if (BufferPos == BufferEnd)
@@ -107,32 +128,32 @@ Token &Lexer::SetTokenKind(Token &Result, Token::Kind k) {
 }
 
 static bool isReservedKW(const char *Str, unsigned N) {
-    unsigned i;
+  unsigned i;
 
   // Check for i[0-9]+
-  if (N>1 && Str[0] == 'i') {
-    for (i=1; i<N; ++i)
+  if (N > 1 && Str[0] == 'i') {
+    for (i = 1; i < N; ++i)
       if (!isdigit(Str[i]))
         break;
-    if (i==N)
+    if (i == N)
       return true;
   }
 
   // Check for fp[0-9]+([.].*)?$
-  if (N>3 && Str[0]=='f' && Str[1]=='p' && isdigit(Str[2])) {
-    for (i=3; i<N; ++i)
+  if (N > 3 && Str[0] == 'f' && Str[1] == 'p' && isdigit(Str[2])) {
+    for (i = 3; i < N; ++i)
       if (!isdigit(Str[i]))
         break;
-    if (i==N || Str[i]=='.')
+    if (i == N || Str[i] == '.')
       return true;
   }
-  
+
   return false;
 }
 static bool isWidthKW(const char *Str, unsigned N) {
-  if (N<2 || Str[0] != 'w')
+  if (N < 2 || Str[0] != 'w')
     return false;
-  for (unsigned i=1; i<N; ++i)
+  for (unsigned i = 1; i < N; ++i)
     if (!isdigit(Str[i]))
       return false;
   return true;
@@ -159,8 +180,8 @@ Token &Lexer::SetIdentifierTokenKind(Token &Result) {
       return SetTokenKind(Result, Token::KWFalse);
     if (memcmp("query", Result.start, 5) == 0)
       return SetTokenKind(Result, Token::KWQuery);
-    break;      
-    
+    break;
+
   case 6:
     if (memcmp("define", Result.start, 6) == 0)
       return SetTokenKind(Result, Token::KWReserved);
@@ -188,13 +209,13 @@ Token &Lexer::SetIdentifierTokenKind(Token &Result) {
 void Lexer::SkipToEndOfLine() {
   for (;;) {
     int Char = GetNextChar();
-    if (Char == -1 || Char =='\n')
+    if (Char == -1 || Char == '\n')
       break;
   }
 }
 
 Token &Lexer::LexNumber(Token &Result) {
-  while (isalnum(PeekNextChar()) || PeekNextChar()=='_')
+  while (isalnum(PeekNextChar()) || PeekNextChar() == '_')
     GetNextChar();
   return SetTokenKind(Result, Token::Number);
 }
@@ -211,7 +232,7 @@ Token &Lexer::Lex(Token &Result) {
   Result.kind = Token::Unknown;
   Result.length = 0;
   Result.start = BufferPos;
-  
+
   // Skip whitespace.
   while (isspace(PeekNextChar()))
     GetNextChar();
@@ -221,19 +242,31 @@ Token &Lexer::Lex(Token &Result) {
   Result.column = ColumnNumber;
   int Char = GetNextChar();
   switch (Char) {
-  case -1:  return SetTokenKind(Result, Token::EndOfFile);
-    
-  case '(': return SetTokenKind(Result, Token::LParen);
-  case ')': return SetTokenKind(Result, Token::RParen);
-  case ',': return SetTokenKind(Result, Token::Comma);
-  case ':': return SetTokenKind(Result, Token::Colon);
-  case ';': return SetTokenKind(Result, Token::Semicolon);
-  case '=': return SetTokenKind(Result, Token::Equals);
-  case '@': return SetTokenKind(Result, Token::At);
-  case '[': return SetTokenKind(Result, Token::LSquare);
-  case ']': return SetTokenKind(Result, Token::RSquare);
-  case '{': return SetTokenKind(Result, Token::LBrace);
-  case '}': return SetTokenKind(Result, Token::RBrace);
+  case -1:
+    return SetTokenKind(Result, Token::EndOfFile);
+
+  case '(':
+    return SetTokenKind(Result, Token::LParen);
+  case ')':
+    return SetTokenKind(Result, Token::RParen);
+  case ',':
+    return SetTokenKind(Result, Token::Comma);
+  case ':':
+    return SetTokenKind(Result, Token::Colon);
+  case ';':
+    return SetTokenKind(Result, Token::Semicolon);
+  case '=':
+    return SetTokenKind(Result, Token::Equals);
+  case '@':
+    return SetTokenKind(Result, Token::At);
+  case '[':
+    return SetTokenKind(Result, Token::LSquare);
+  case ']':
+    return SetTokenKind(Result, Token::RSquare);
+  case '{':
+    return SetTokenKind(Result, Token::LBrace);
+  case '}':
+    return SetTokenKind(Result, Token::RBrace);
 
   case '#':
     SkipToEndOfLine();

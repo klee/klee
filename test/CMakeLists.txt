@@ -129,6 +129,7 @@ endif()
 # Concrete tests build system
 ###############################################################################
 add_subdirectory(Concrete)
+add_subdirectory(PSE_Programs)
 
 ###############################################################################
 # Configure lit test suite

@@ -33,8 +33,8 @@ void CallPathNode::print() {
   if (parent && parent->callSite) {
     llvm::errs() << ";\n";
     parent->print();
-  }
-  else llvm::errs() << "\n";
+  } else
+    llvm::errs() << "\n";
 }
 
 ///
@@ -61,8 +61,8 @@ void CallPathManager::getSummaryStatistics(CallSiteSummaryTable &results) {
 CallPathNode *CallPathManager::computeCallPath(CallPathNode *parent,
                                                const llvm::Instruction *cs,
                                                const llvm::Function *f) {
-  for (CallPathNode *p=parent; p; p=p->parent)
-    if (cs==p->callSite && f==p->function)
+  for (CallPathNode *p = parent; p; p = p->parent)
+    if (cs == p->callSite && f == p->function)
       return p;
 
   auto cp = std::unique_ptr<CallPathNode>(new CallPathNode(parent, cs, f));
@@ -79,7 +79,7 @@ CallPathNode *CallPathManager::getCallPath(CallPathNode *parent,
     parent = &root;
 
   auto it = parent->children.find(key);
-  if (it==parent->children.end()) {
+  if (it == parent->children.end()) {
     auto cp = computeCallPath(parent, cs, f);
     parent->children.insert(std::make_pair(key, cp));
     return cp;
@@ -87,4 +87,3 @@ CallPathNode *CallPathManager::getCallPath(CallPathNode *parent,
     return it->second;
   }
 }
-

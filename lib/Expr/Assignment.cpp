@@ -41,4 +41,4 @@ ConstraintSet Assignment::createConstraintsFromAssignment() const {
   }
   return result;
 }
-}
+} // namespace klee
