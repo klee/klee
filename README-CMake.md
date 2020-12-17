@@ -97,8 +97,6 @@ cmake -DCMAKE_BUILD_TYPE=Release /path/to/klee/src
    `USE_CMAKE_FIND_PACKAGE_LLVM` is `TRUE`. This can be used to tell CMake where
    it can find LLVM outside of standard directories.
 
-* `MAKE_BINARY` (STRING) - Path to `make` binary used to build KLEE's runtime.
-
 * `metaSMT_DIR` (STRING) - Provides a hint to CMake, where the metaSMT constraint
   solver can be found.  This should be an absolute path to a directory
   containing the file `metaSMTConfig.cmake`.
