@@ -51,6 +51,7 @@ namespace klee {
 
   struct KBlock {
     llvm::Function *function;
+    llvm::BasicBlock *basicBlock;
 
     unsigned numInstructions;
     KInstruction **instructions;
@@ -60,7 +61,6 @@ namespace klee {
     bool trackCoverage;
 
   public:
-    explicit KBlock(llvm::Function*, KBlock**, KModule*, unsigned);
     explicit KBlock(llvm::Function*, llvm::BasicBlock*, KModule*,
                     std::map<llvm::Instruction*, unsigned>&, std::map<unsigned, KInstruction*>&,
                     unsigned&);

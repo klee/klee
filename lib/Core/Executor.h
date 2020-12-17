@@ -37,6 +37,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <deque>
 
 struct KTest;
 
@@ -101,7 +102,13 @@ class Executor : public Interpreter {
 
 public:
   typedef std::pair<ExecutionState*,ExecutionState*> StatePair;
-  typedef std::map<llvm::BasicBlock*, std::set<const ExecutionState*> > ExecutionResult;
+  typedef std::map<llvm::BasicBlock*, std::set<const ExecutionState*> > FunctionCFA;
+
+  struct ExecutionResult {
+    std::map<llvm::Function *, FunctionCFA> cfaStates;
+    std::map<llvm::Function *, FunctionCFA> cfaPausedStates;
+    std::map<llvm::Function *, FunctionCFA> cfaErroneousStates;
+  };
 
   enum MemoryOperation {
     Read,
@@ -140,7 +147,10 @@ private:
   TimingSolver *solver;
   MemoryManager *memory;
   std::set<ExecutionState*, ExecutionStateIDCompare> states;
+
+  std::set<ExecutionState*, ExecutionStateIDCompare> completedStates;
   std::set<ExecutionState*, ExecutionStateIDCompare> pausedStates;
+  std::set<ExecutionState*, ExecutionStateIDCompare> erroneousStates;
   StatsTracker *statsTracker;
   TreeStreamWriter *pathWriter, *symPathWriter;
   SpecialFunctionHandler *specialFunctionHandler;
@@ -157,11 +167,6 @@ private:
   /// \invariant \ref removedStates is a subset of \ref states. 
   /// \invariant \ref addedStates and \ref removedStates are disjoint.
   std::vector<ExecutionState *> removedStates;
-
-  std::set<ExecutionState*> bbResultStates;
-
-  std::map<llvm::Function *, ExecutionResult> cfgStates;
-  std::map<llvm::Function *, ExecutionResult> cfgPausedStates;
 
   /// When non-empty the Executor is running in "seed" mode. The
   /// states in this map will be executed in an arbitrary order
@@ -245,6 +250,8 @@ private:
   /// Return the typeid corresponding to a certain `type_info`
   ref<ConstantExpr> getEhTypeidFor(ref<Expr> type_info);
 
+  void executeTargetedTerminator(ExecutionState &state, KInstruction *ki, KBlock *target);
+
   void executeInstruction(ExecutionState &state, KInstruction *ki);
 
   void run(ExecutionState &initialState);
@@ -265,7 +272,7 @@ private:
 
   void stepInstruction(ExecutionState &state);
   void updateStates(ExecutionState *current);
-  ExecutionState *transferToBasicBlock(llvm::BasicBlock *dst,
+  void transferToBasicBlock(llvm::BasicBlock *dst,
 			    llvm::BasicBlock *src,
 			    ExecutionState &state);
 
@@ -571,6 +578,7 @@ public:
                          char **envp) override;
 
   void runKBlock(KBlock *kb, ExecutionState &state);
+  void runKBlocks(std::deque<KBlock*> kbs, ExecutionState &state);
 
   /*** Runtime options ***/
 

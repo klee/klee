@@ -605,34 +605,11 @@ for (unsigned i=0; i<numInstructions; ++i)
   delete[] instructions;
 }
 
-KBlock::KBlock(Function *_function, KBlock **basic_blocks, KModule *km, unsigned bb_size)
-  : function(_function),
-    numInstructions(0),
-    trackCoverage(true) {
-  for (unsigned n = 0; n < bb_size; n++) {
-    numInstructions += basic_blocks[n]->numInstructions - 1;
-  }
-  numInstructions++;
-  instructions = new KInstruction*[numInstructions];
-
-  KInstruction *ki;
-  unsigned i = 0;
-  for (unsigned n = 0; n < bb_size; n++) {
-    KBlock *kb = basic_blocks[n];
-    unsigned bound = kb->numInstructions - 1;
-    for (unsigned j = 0; j < bound; j++) {
-      Instruction *it = kb->instructions[j]->inst;
-      instructions[i++] = kb->instructions[j];
-    }
-  }
-  KBlock *kb = basic_blocks[bb_size - 1];
-  instructions[i] = kb->instructions[kb->numInstructions - 1];
-}
-
 KBlock::KBlock(llvm::Function *_function, llvm::BasicBlock *block, KModule *km,
                std::map<Instruction*, unsigned> &registerMap,
                std::map<unsigned, KInstruction*> &reg2inst,  unsigned &rnum)
   : function(_function),
+    basicBlock(block),
     numInstructions(0),
     trackCoverage(true) {
   numInstructions += block->size();

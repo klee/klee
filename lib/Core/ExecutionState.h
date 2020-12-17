@@ -243,10 +243,7 @@ public:
   std::vector<ref<Expr>> allocaRegs;
 
 public:
-  #ifdef KLEE_UNITTEST
-  // provide this function only in the context of unittests
-  ExecutionState(){}
-  #endif
+  ExecutionState() {}
   // only to create the initial state
   explicit ExecutionState(KFunction *kf);
   explicit ExecutionState(KFunction *kf, KInstruction **instructions);
@@ -261,7 +258,9 @@ public:
 
   ExecutionState *branch();
   ExecutionState *withInstructions(KInstruction **instructions);
+  ExecutionState *dropStackFrame();
   ExecutionState *withStackFrame(StackFrame *stackFrame);
+  ExecutionState *empty();
 
   void pushFrame(KInstIterator caller, KFunction *kf);
   void popFrame();

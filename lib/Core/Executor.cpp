@@ -1990,7 +1990,7 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
   }
 }
 
-ExecutionState* Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src,
+void Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src,
                                     ExecutionState &state) {
   // Note that in general phi nodes can reuse phi values from the same
   // block but the incoming value is the eval() result *before* the
@@ -2004,21 +2004,401 @@ ExecutionState* Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src,
   // With that done we simply set an index in the state so that PHI
   // instructions know which argument to eval, set the pc, and continue.
 
-  if(!IsolationMode) {
-    // XXX this lookup has to go ?
-    KFunction *kf = state.stack.back().kf;
-    state.pc = kf->kBlocks[dst]->instructions;
-    if (state.pc->inst->getOpcode() == Instruction::PHI) {
-      PHINode *first = static_cast<PHINode*>(state.pc->inst);
-      state.incomingBBIndex = first->getBasicBlockIndex(src);
-    }
-    return &state;
+  // XXX this lookup has to go ?
+  KFunction *kf = state.stack.back().kf;
+  state.pc = kf->kBlocks[dst]->instructions;
+  if (state.pc->inst->getOpcode() == Instruction::PHI) {
+    PHINode *first = static_cast<PHINode*>(state.pc->inst);
+    state.incomingBBIndex = first->getBasicBlockIndex(src);
   }
-  else {
-    KFunction* kf = state.stack.back().kf;
-    KBlock* kb = kf->kBlocks[dst];
-    ExecutionState* newState = new ExecutionState(kf, kb->instructions);
-    return newState;
+}
+
+void Executor::executeTargetedTerminator(ExecutionState &state, KInstruction *ki, KBlock *target) {
+  assert(IsolationMode);
+  llvm::Instruction *i = ki->inst;
+  switch (i->getOpcode()) {
+    case Instruction::Ret: {
+      ReturnInst *ri = cast<ReturnInst>(i);
+      KInstIterator kcaller = state.stack.back().caller;
+      Instruction *caller = kcaller ? kcaller->inst : 0;
+      bool isVoidReturn = (ri->getNumOperands() == 0);
+      ref<Expr> result = ConstantExpr::alloc(0, Expr::Bool);
+
+      if (!isVoidReturn) {
+        result = symbolicEval(ki, 0, state).value;
+      }
+      if (state.stack.size() <= 1) {
+        assert(!caller && "caller set on initial stack frame");
+        terminateStateOnExit(state);
+      } else {
+        state.popFrame();
+
+        if (statsTracker)
+          statsTracker->framePopped(state);
+
+        if (InvokeInst *ii = dyn_cast<InvokeInst>(caller)) {
+          assert(ii->getNormalDest() == target->basicBlock);
+          transferToBasicBlock(ii->getNormalDest(), caller->getParent(), state);
+        } else {
+          state.pc = kcaller;
+          ++state.pc;
+          assert(state.pc == target->instructions[0]);
+        }
+
+        if (ri->getFunction()->getName() == "_klee_eh_cxx_personality") {
+          assert(dyn_cast<ConstantExpr>(result) &&
+                 "result from personality fn must be a concrete value");
+
+          auto *sui = dyn_cast_or_null<SearchPhaseUnwindingInformation>(
+              state.unwindingInformation.get());
+          assert(sui && "return from personality function outside of "
+                        "search phase unwinding");
+
+          // unbind the MO we used to pass the serialized landingpad
+          state.addressSpace.unbindObject(sui->serializedLandingpad);
+          sui->serializedLandingpad = nullptr;
+
+          if (result->isZero()) {
+            // this lpi doesn't handle the exception, continue the search
+            unwindToNextLandingpad(state);
+          } else {
+            // a clause (or a catch-all clause or filter clause) matches:
+            // remember the stack index and switch to cleanup phase
+            state.unwindingInformation =
+                std::make_unique<CleanupPhaseUnwindingInformation>(
+                    sui->exceptionObject, cast<ConstantExpr>(result),
+                    sui->unwindingProgress);
+            // this pointer is now invalidated
+            sui = nullptr;
+            // continue the unwinding process (which will now start with the
+            // cleanup phase)
+            unwindToNextLandingpad(state);
+          }
+
+          // never return normally from the personality fn
+          break;
+        }
+
+        if (!isVoidReturn) {
+          Type *t = caller->getType();
+          if (t != Type::getVoidTy(i->getContext())) {
+            // may need to do coercion due to bitcasts
+            Expr::Width from = result->getWidth();
+            Expr::Width to = getWidthForLLVMType(t);
+
+            if (from != to) {
+  #if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
+              const CallBase &cs = cast<CallBase>(*caller);
+  #else
+              const CallSite cs(isa<InvokeInst>(caller)
+                                    ? CallSite(cast<InvokeInst>(caller))
+                                    : CallSite(cast<CallInst>(caller)));
+  #endif
+
+              // XXX need to check other param attrs ?
+  #if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
+              bool isSExt = cs.hasRetAttr(llvm::Attribute::SExt);
+  #else
+              bool isSExt = cs.paramHasAttr(0, llvm::Attribute::SExt);
+  #endif
+              if (isSExt) {
+                result = SExtExpr::create(result, to);
+              } else {
+                result = ZExtExpr::create(result, to);
+              }
+            }
+
+            bindLocal(kcaller, state, result);
+          }
+        } else {
+          // We check that the return value has no users instead of
+          // checking the type, since C defaults to returning int for
+          // undeclared functions.
+          if (!caller->use_empty()) {
+            terminateStateOnExecError(state, "return void when caller expected a result");
+          }
+        }
+      }
+      break;
+    }
+    case Instruction::Br: {
+      BranchInst *bi = cast<BranchInst>(i);
+      if (bi->isUnconditional()) {
+        assert(bi->getSuccessor(0) == target->basicBlock);
+        transferToBasicBlock(bi->getSuccessor(0), bi->getParent(), state);
+      } else {
+        // FIXME: Find a way that we don't have this hidden dependency.
+        assert(bi->getCondition() == bi->getOperand(0) &&
+               "Wrong operand index!");
+        ref<Expr> cond = symbolicEval(ki, 0, state).value;
+
+        cond = optimizer.optimizeExpr(cond, false);
+
+        Solver::Validity res;
+        time::Span timeout = coreSolverTimeout;
+        solver->setTimeout(timeout);
+        bool success = solver->evaluate(state.constraints, cond, res,
+                                        state.queryMetaData);
+        solver->setTimeout(time::Span());
+
+        if (bi->getSuccessor(0) == target->basicBlock && res != Solver::False) {
+          addConstraint(state, cond);
+          transferToBasicBlock(bi->getSuccessor(0), bi->getParent(), state);
+        } else if (bi->getSuccessor(1) == target->basicBlock && res != Solver::True) {
+          addConstraint(state, Expr::createIsZero(cond));
+          transferToBasicBlock(bi->getSuccessor(1), bi->getParent(), state);
+        } else {
+          terminateStateOnExecError(state, "illegal target");
+        }
+        break;
+      }
+    }
+    case Instruction::IndirectBr: {
+      // implements indirect branch to a label within the current function
+      const auto bi = cast<IndirectBrInst>(i);
+      auto address = symbolicEval(ki, 0, state).value;
+
+      // concrete address
+      if (const auto CE = dyn_cast<ConstantExpr>(address.get())) {
+        const auto bb_address = (BasicBlock *) CE->getZExtValue(Context::get().getPointerWidth());
+        assert(bb_address == target->basicBlock);
+        transferToBasicBlock(bb_address, bi->getParent(), state);
+        break;
+      }
+
+      // create address expression
+      const auto PE = Expr::createPointer(reinterpret_cast<std::uint64_t>(target->basicBlock));
+      ref<Expr> e = EqExpr::create(address, PE);
+      bool result;
+      bool success __attribute__((unused)) =
+          solver->mayBeTrue(state.constraints, e, result, state.queryMetaData);
+      assert(success && "FIXME: Unhandled solver failure");
+      if (result) {
+        addConstraint(state, e);
+        transferToBasicBlock(target->basicBlock, bi->getParent(), state);
+      } else {
+        terminateStateOnExecError(state, "illegal target");
+      }
+      break;
+    }
+    case Instruction::Switch: {
+      SwitchInst *si = cast<SwitchInst>(i);
+      ref<Expr> cond = symbolicEval(ki, 0, state).value;
+      BasicBlock *bb = si->getParent();
+
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(cond)) {
+        // Somewhat gross to create these all the time, but fine till we
+        // switch to an internal rep.
+        llvm::IntegerType *Ty = cast<IntegerType>(si->getCondition()->getType());
+        ConstantInt *ci = ConstantInt::get(Ty, CE->getZExtValue());
+  #if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
+        unsigned index = si->findCaseValue(ci)->getSuccessorIndex();
+  #else
+        unsigned index = si->findCaseValue(ci).getSuccessorIndex();
+  #endif
+        assert(si->getSuccessor(index) == target->basicBlock);
+        transferToBasicBlock(si->getSuccessor(index), si->getParent(), state);
+      } else {
+
+        std::map<BasicBlock *, ref<Expr> > branchTargets;
+
+        std::map<ref<Expr>, BasicBlock *> expressionOrder;
+        std::pair<ref<Expr>, BasicBlock *> valueBlockPair;
+
+        // Iterate through all non-default cases and order them by expressions
+        ref<Expr> defaultValue = ConstantExpr::alloc(1, Expr::Bool);
+        for (auto i : si->cases()) {
+          ref<Expr> value = evalConstant(i.getCaseValue());
+          ref<Expr> match = EqExpr::create(cond, value);
+          if (i.getCaseSuccessor() == target->basicBlock) {
+            BasicBlock *caseSuccessor = i.getCaseSuccessor();
+            valueBlockPair = std::make_pair(match, caseSuccessor);
+            break;
+          } else {
+            defaultValue = AndExpr::create(defaultValue, Expr::createIsZero(match));
+          }
+        }
+        if (valueBlockPair.first.isNull()) {
+          assert(si->getDefaultDest() == target->basicBlock);
+          valueBlockPair = std::make_pair(defaultValue, si->getDefaultDest());
+        }
+        bool result;
+        ref<Expr> match = optimizer.optimizeExpr(valueBlockPair.first, false);
+        bool success = solver->mayBeTrue(state.constraints, match, result,
+                                         state.queryMetaData);
+        assert(success && "FIXME: Unhandled solver failure");
+        if (result) {
+          addConstraint(state, match);
+          transferToBasicBlock(valueBlockPair.second, bb, state);
+        } else {
+          terminateStateOnExecError(state, "illegal target");
+        }
+      }
+      break;
+    }
+    case Instruction::Unreachable:
+      // Note that this is not necessarily an internal bug, llvm will
+      // generate unreachable instructions in cases where it knows the
+      // program will crash. So it is effectively a SEGV or internal
+      // error.
+      terminateStateOnExecError(state, "reached \"unreachable\" instruction");
+      break;
+
+    case Instruction::Invoke:
+    case Instruction::Call: {
+      // Ignore debug intrinsic calls
+      if (isa<DbgInfoIntrinsic>(i))
+        break;
+
+  #if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
+      const CallBase &cs = cast<CallBase>(*i);
+      Value *fp = cs.getCalledOperand();
+  #else
+      const CallSite cs(i);
+      Value *fp = cs.getCalledValue();
+  #endif
+
+      unsigned numArgs = cs.arg_size();
+      Function *f = getTargetFunction(fp);
+
+      if (isa<InlineAsm>(fp)) {
+        terminateStateOnExecError(state, "inline assembly is unsupported");
+        break;
+      }
+      // evaluate arguments
+      std::vector< ref<Expr> > arguments;
+      arguments.reserve(numArgs);
+
+      for (unsigned j=0; j<numArgs; ++j)
+        arguments.push_back(symbolicEval(ki, j+1, state).value);
+
+      if (f) {
+        const FunctionType *fType =
+          dyn_cast<FunctionType>(cast<PointerType>(f->getType())->getElementType());
+        const FunctionType *fpType =
+          dyn_cast<FunctionType>(cast<PointerType>(fp->getType())->getElementType());
+
+        // special case the call with a bitcast case
+        if (fType != fpType) {
+          assert(fType && fpType && "unable to get function type");
+
+          // XXX check result coercion
+
+          // XXX this really needs thought and validation
+          unsigned i=0;
+          for (std::vector< ref<Expr> >::iterator
+                 ai = arguments.begin(), ie = arguments.end();
+               ai != ie; ++ai) {
+            Expr::Width to, from = (*ai)->getWidth();
+
+            if (i<fType->getNumParams()) {
+              to = getWidthForLLVMType(fType->getParamType(i));
+
+              if (from != to) {
+                // XXX need to check other param attrs ?
+  #if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
+                bool isSExt = cs.paramHasAttr(i, llvm::Attribute::SExt);
+  #else
+                bool isSExt = cs.paramHasAttr(i+1, llvm::Attribute::SExt);
+  #endif
+                if (isSExt) {
+                  arguments[i] = SExtExpr::create(arguments[i], to);
+                } else {
+                  arguments[i] = ZExtExpr::create(arguments[i], to);
+                }
+              }
+            }
+
+            i++;
+          }
+        }
+
+        executeCall(state, ki, f, arguments);
+        assert(state.pc == target->instructions[0]);
+      } else {
+        ref<Expr> v = symbolicEval(ki, 0, state).value;
+
+        ExecutionState *free = &state;
+        bool hasInvalid = false, first = true;
+
+        /* XXX This is wasteful, no need to do a full evaluate since we
+           have already got a value. But in the end the caches should
+           handle it for us, albeit with some overhead. */
+        do {
+          v = optimizer.optimizeExpr(v, true);
+          ref<ConstantExpr> value;
+          bool success =
+              solver->getValue(free->constraints, v, value, free->queryMetaData);
+          assert(success && "FIXME: Unhandled solver failure");
+          (void) success;
+          StatePair res = fork(*free, EqExpr::create(v, value), true);
+          if (res.first) {
+            uint64_t addr = value->getZExtValue();
+            if (legalFunctions.count(addr)) {
+              f = (Function*) addr;
+
+              // Don't give warning on unique resolution
+              if (res.second || !first)
+                klee_warning_once(reinterpret_cast<void*>(addr),
+                                  "resolved symbolic function pointer to: %s",
+                                  f->getName().data());
+
+              executeCall(*res.first, ki, f, arguments);
+              assert(state.pc == target->instructions[0]);
+            } else {
+              if (!hasInvalid) {
+                terminateStateOnExecError(state, "invalid function pointer");
+                hasInvalid = true;
+              }
+            }
+          }
+
+          first = false;
+          free = res.second;
+        } while (free);
+      }
+      break;
+    }
+    case Instruction::Resume: {
+      auto *cui = dyn_cast_or_null<CleanupPhaseUnwindingInformation>(
+          state.unwindingInformation.get());
+
+      if (!cui) {
+        terminateStateOnExecError(
+            state,
+            "resume-instruction executed outside of cleanup phase unwinding");
+        break;
+      }
+
+      ref<Expr> arg = eval(ki, 0, state).value;
+      ref<Expr> exceptionPointer = ExtractExpr::create(arg, 0, Expr::Int64);
+      ref<Expr> selectorValue =
+          ExtractExpr::create(arg, Expr::Int64, Expr::Int32);
+
+      if (!dyn_cast<ConstantExpr>(exceptionPointer) ||
+          !dyn_cast<ConstantExpr>(selectorValue)) {
+        terminateStateOnExecError(
+            state, "resume-instruction called with non constant expression");
+        break;
+      }
+
+      if (!Expr::createIsZero(selectorValue)->isTrue()) {
+        klee_warning("resume-instruction called with non-0 selector value");
+      }
+
+      if (!EqExpr::create(exceptionPointer, cui->exceptionObject)->isTrue()) {
+        terminateStateOnExecError(
+            state, "resume-instruction called with unexpected exception pointer");
+        break;
+      }
+
+      unwindToNextLandingpad(state);
+      assert(state.pc == target->instructions[0]);
+      break;
+    }
+    default:
+      terminateStateOnExecError(state, "illegal instruction");
+      break;
   }
 }
 
@@ -3691,7 +4071,7 @@ void Executor::terminateStateOnTerminator(ExecutionState &state) {
   if (!ExcludeSolver && (!OnlyOutputStatesCoveringNew || state.coveredNew ||
       (AlwaysOutputSeeds && seedMap.count(&state))))
     interpreterHandler->processTestCase(state, 0, 0);
-  bbResultStates.insert(&state);
+  completedStates.insert(&state);
   terminateState(state);
 }
 
@@ -4691,6 +5071,17 @@ void Executor::runKBlock(KBlock *kb,
    statsTracker->done();
 }
 
+void Executor::runKBlocks(std::deque<KBlock*> kbs,
+                         ExecutionState &state) {
+  KBlock *predKB = kbs.front();
+  runKBlock(predKB, state);
+  kbs.pop_front();
+  for (auto kb : kbs) {
+    runKBlock(kb, state);
+    predKB = kb;
+  }
+}
+
 void Executor::runFunctionAsMain(Function *f,
                int argc,
                char **argv,
@@ -4726,24 +5117,23 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
   bindModuleConstants();
   functionFonRun.push(mainFn);
   executedFunction.insert(mainFn);
+  ExecutionResult result;
   while (!functionFonRun.empty()) {
     Function *f = functionFonRun.front();
-    ExecutionResult &cfg = cfgStates[f];
-    ExecutionResult &pausedCfg = cfgPausedStates[f];
+    FunctionCFA &cfa = result.cfaStates[f];
+    FunctionCFA &pausedCfa = result.cfaPausedStates[f];
     KFunction *kf = kmodule->functionMap[f];
     Function::iterator bbit = f->begin(), bbie = f->end();
 
     auto start = high_resolution_clock::now();
     if(bbit != bbie) {
       StackFrame *stackFrame = new StackFrame(nullptr, kf);
-      ExecutionState *initialState = state.withStackFrame(stackFrame);
+      ExecutionState *initialState = state.dropStackFrame()->withStackFrame(stackFrame);
       initialState->addressSpace.clear();
 
       prepareSymbolicArgs(*initialState, kf);
 
       for (; bbit != bbie; bbit++) {
-        bbResultStates.clear();
-        pausedStates.clear();
         KBlock *kb = kf->kBlocks[&*bbit];
         ExecutionState *currState = initialState->withInstructions(kb->instructions);
         currState->setBlockIndexes(kb);
@@ -4757,19 +5147,21 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
               if (!call->getReturnType()->isVoidTy())
                 prepareSymbolicReturn(*currState, kcall->kcallInstruction);
             }
-            bbResultStates.insert(currState);
+            completedStates.insert(currState);
             break;
           }
           case KBlockType::Base:
             runKBlock(kb, *currState);
             break;
         }
-        for(auto & it : bbResultStates) {
-          cfg[&*bbit].insert(it);
+        for(auto & it : completedStates) {
+          cfa[&*bbit].insert(it);
         }
+        completedStates.clear();
         for(auto & it : pausedStates) {
-          pausedCfg[&*bbit].insert(it);
+          pausedCfa[&*bbit].insert(it);
         }
+        pausedStates.clear();
       }
     }
     functionFonRun.pop();

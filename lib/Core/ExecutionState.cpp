@@ -139,11 +139,31 @@ ExecutionState *ExecutionState::withInstructions(KInstruction **instructions) {
   return newState;
 }
 
+ExecutionState *ExecutionState::dropStackFrame() {
+  ExecutionState *newState = new ExecutionState(*this);
+  newState->stack.pop_back();
+  return newState;
+}
+
 ExecutionState *ExecutionState::withStackFrame(StackFrame *stackFrame) {
   ExecutionState *newState = new ExecutionState(*this);
   ExecutionState::stack_ty empty_stack;
   newState->stack = empty_stack;
   newState->stack.push_back(*stackFrame);
+  return newState;
+}
+
+ExecutionState *ExecutionState::empty() {
+  ExecutionState* newState = new ExecutionState();
+  newState->pc = nullptr;
+  newState->prevPC = nullptr;
+  newState->depth = 0;
+  newState->ptreeNode = nullptr;
+  newState->steppedInstructions = 0;
+  newState->instsSinceCovNew = 0;
+  newState->coveredNew = false;
+  newState->forkDisabled = false;
+  newState->setID();
   return newState;
 }
 
@@ -384,8 +404,8 @@ void ExecutionState::setBlockIndexes(KBlock *kb) {
   maxBlockBound = kb->instructions[kb->numInstructions - 1]->dest;
 }
 
-bool ExecutionState::inBasicBlockRange(unsigned index, bool isoMode) {
-    if (isoMode) {
+bool ExecutionState::inBasicBlockRange(unsigned index, bool check) {
+    if (check) {
         return (index >= minBlockBound && index <= maxBlockBound);
     } else {
         return true;
