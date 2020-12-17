@@ -782,8 +782,10 @@ static const char *modelledExternals[] = {
   "klee_warning",
   "klee_warning_once",
   "klee_stack_trace",
+#ifdef SUPPORT_KLEE_EH_CXX
   "_klee_eh_Unwind_RaiseException_impl",
   "klee_eh_typeid_for",
+#endif
   "llvm.dbg.declare",
   "llvm.dbg.value",
   "llvm.va_start",

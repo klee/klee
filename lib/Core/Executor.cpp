@@ -288,10 +288,12 @@ cl::list<Executor::TerminateReason> ExitOnErrorType(
         clEnumValN(Executor::ReportError, "ReportError",
                    "klee_report_error called"),
         clEnumValN(Executor::User, "User", "Wrong klee_* functions invocation"),
+#ifdef SUPPORT_KLEE_EH_CXX
         clEnumValN(Executor::UncaughtException, "UncaughtException",
                    "Exception was not caught"),
         clEnumValN(Executor::UnexpectedException, "UnexpectedException",
                    "An unexpected exception was thrown"),
+#endif
         clEnumValN(Executor::Unhandled, "Unhandled",
                    "Unhandled instruction hit") KLEE_LLVM_CL_VAL_END),
     cl::ZeroOrMore,
@@ -441,8 +443,10 @@ const char *Executor::TerminateReasonNames[] = {
   [ ReadOnly ] = "readonly",
   [ ReportError ] = "reporterror",
   [ User ] = "user",
+#ifdef SUPPORT_KLEE_EH_CXX
   [ UncaughtException ] = "uncaught_exception",
   [ UnexpectedException ] = "unexpected_exception",
+#endif
   [ Unhandled ] = "xxx",
 };
 
@@ -1743,10 +1747,12 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       break;
     }
 
+#ifdef SUPPORT_KLEE_EH_CXX
     case Intrinsic::eh_typeid_for: {
       bindLocal(ki, state, getEhTypeidFor(arguments.at(0)));
       break;
     }
+#endif
 
     case Intrinsic::vaend:
       // va_end is a noop for the interpreter.
@@ -2026,6 +2032,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         ++state.pc;
       }
 
+#ifdef SUPPORT_KLEE_EH_CXX
       if (ri->getFunction()->getName() == "_klee_eh_cxx_personality") {
         assert(dyn_cast<ConstantExpr>(result) &&
                "result from personality fn must be a concrete value");
@@ -2059,6 +2066,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         // never return normally from the personality fn
         break;
       }
+#endif // SUPPORT_KLEE_EH_CXX
 
       if (!isVoidReturn) {
         Type *t = caller->getType();
@@ -3152,6 +3160,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     terminateStateOnExecError(state, "Unexpected ShuffleVector instruction");
     break;
 
+#ifdef SUPPORT_KLEE_EH_CXX
   case Instruction::Resume: {
     auto *cui = dyn_cast_or_null<CleanupPhaseUnwindingInformation>(
         state.unwindingInformation.get());
@@ -3230,6 +3239,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     break;
   }
+#endif // SUPPORT_KLEE_EH_CXX
 
   case Instruction::AtomicRMW:
     terminateStateOnExecError(state, "Unexpected Atomic instruction, should be "
