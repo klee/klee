@@ -111,8 +111,10 @@ public:
     ReadOnly,
     ReportError,
     User,
+#ifdef SUPPORT_KLEE_EH_CXX
     UncaughtException,
     UnexpectedException,
+#endif
     Unhandled,
   };
 
