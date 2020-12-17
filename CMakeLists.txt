@@ -52,7 +52,6 @@ set(PACKAGE_URL "\"https://klee.github.io\"")
 
 ################################################################################
 # Sanity check - Disallow building in source.
-# Otherwise we would overwrite the Makefiles of the old build system.
 ################################################################################
 if ("${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_BINARY_DIR}")
   message(FATAL_ERROR "In source builds are not allowed. You should invoke "
@@ -745,16 +744,6 @@ add_subdirectory(tools)
 ################################################################################
 option(ENABLE_UNIT_TESTS "Enable unit tests" OFF)
 option(ENABLE_SYSTEM_TESTS "Enable system tests" ON)
-
-# This provides a migration path for older build directories that have this
-# variable set in their cache. Leaving it behind could lead to confusion so
-# removing it is probably a good idea.
-# TODO: Remove this eventually (probably next release or something).
-if (DEFINED ENABLE_TESTS)
-  message(WARNING "You have the \"ENABLE_TESTS\" variable is your CMake cache."
-    "This variable no longer has any meaning so removing it from your cache")
-  unset(ENABLE_TESTS CACHE)
-endif()
 
 if (ENABLE_UNIT_TESTS OR ENABLE_SYSTEM_TESTS)
   message(STATUS "Testing is enabled")
