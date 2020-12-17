@@ -10,6 +10,8 @@
 #ifndef KLEE_SPECIALFUNCTIONHANDLER_H
 #define KLEE_SPECIALFUNCTIONHANDLER_H
 
+#include "klee/Config/config.h"
+
 #include <iterator>
 #include <map>
 #include <vector>
@@ -109,8 +111,12 @@ namespace klee {
     HANDLER(handleDefineFixedObject);
     HANDLER(handleDelete);    
     HANDLER(handleDeleteArray);
-    HANDLER(handleExit);
+#ifdef SUPPORT_KLEE_EH_CXX
+    HANDLER(handleEhUnwindRaiseExceptionImpl);
+    HANDLER(handleEhTypeid);
+#endif
     HANDLER(handleErrnoLocation);
+    HANDLER(handleExit);
     HANDLER(handleFree);
     HANDLER(handleGetErrno);
     HANDLER(handleGetObjSize);
@@ -119,8 +125,6 @@ namespace klee {
     HANDLER(handleMakeSymbolic);
     HANDLER(handleMalloc);
     HANDLER(handleMemalign);
-    HANDLER(handleEhUnwindRaiseExceptionImpl);
-    HANDLER(handleEhTypeid);
     HANDLER(handleMarkGlobal);
     HANDLER(handleOpenMerge);
     HANDLER(handleCloseMerge);
