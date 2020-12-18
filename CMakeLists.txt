@@ -562,7 +562,7 @@ else()
 endif()
 
 ################################################################################
-# KLEE libcxx support
+# KLEE libc++ support
 ################################################################################
 option(ENABLE_KLEE_LIBCXX "Enable libc++ for klee" OFF)
 if (ENABLE_KLEE_LIBCXX)
