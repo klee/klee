@@ -1305,6 +1305,9 @@ int main(int argc, char **argv, char **envp) {
                         loadedModules, errorMsg))
       klee_error("error loading libklee-eh-cxx '%s': %s", EhCxxPath.c_str(),
                  errorMsg.c_str());
+    klee_message("NOTE: Enabled runtime support for C++ exceptions");
+#else
+    klee_message("NOTE: KLEE was not compiled with support for C++ exceptions");
 #endif
 #endif
   }
