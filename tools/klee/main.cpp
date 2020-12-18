@@ -190,18 +190,18 @@ namespace {
                              cl::init(false),
                              cl::cat(LinkCat));
 
-    cl::opt<bool>
-            WithFPRuntime("fp-runtime",
-                        cl::desc("Link with floating-point KLEE library."),
-                        cl::init(false),
-                            cl::cat(LinkCat));
+  cl::opt<bool>
+          WithFPRuntime("fp-runtime",
+                      cl::desc("Link with floating-point KLEE library."),
+                      cl::init(false),
+                          cl::cat(LinkCat));
 
-    cl::opt<std::string> RuntimeBuild(
-            "runtime-build",
-            cl::desc("Link with versions of the runtime library that were built with "
-                     "the provided configuration (default=" RUNTIME_CONFIGURATION
-                     ")."),
-            cl::init(RUNTIME_CONFIGURATION), cl::cat(LinkCat));
+  cl::opt<std::string> RuntimeBuild(
+          "runtime-build",
+          cl::desc("Link with versions of the runtime library that were built with "
+                   "the provided configuration (default=" RUNTIME_CONFIGURATION
+                   ")."),
+          cl::init(RUNTIME_CONFIGURATION), cl::cat(LinkCat));
 
     /*** Checks options ***/
 
@@ -1330,15 +1330,15 @@ int main(int argc, char **argv, char **envp) {
 
     if (Libcxx) {
 #ifndef SUPPORT_KLEE_LIBCXX
-        klee_error("KLEE was not compiled with Libcxx support");
+        klee_error("KLEE was not compiled with libc++ support");
 #else
         SmallString<128> LibcxxBC(Opts.LibraryDir);
     llvm::sys::path::append(LibcxxBC, KLEE_LIBCXX_BC_NAME);
     if (!klee::loadFile(LibcxxBC.c_str(), mainModule->getContext(), loadedModules,
                         errorMsg))
-      klee_error("error loading libcxx '%s': %s", LibcxxBC.c_str(),
+      klee_error("error loading libc++ '%s': %s", LibcxxBC.c_str(),
                  errorMsg.c_str());
-    klee_message("NOTE: Using libcxx : %s", LibcxxBC.c_str());
+    klee_message("NOTE: Using libc++ : %s", LibcxxBC.c_str());
 #ifdef SUPPORT_KLEE_EH_CXX
     SmallString<128> EhCxxPath(Opts.LibraryDir);
     llvm::sys::path::append(EhCxxPath, "libkleeeh-cxx" + opt_suffix + ".bca");
