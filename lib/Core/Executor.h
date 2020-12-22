@@ -355,6 +355,10 @@ private:
   // current state, and one of the states may be null.
   StatePair fork(ExecutionState &current, ref<Expr> condition, bool isInternal);
 
+  // If the MaxStatic*Pct limits have been reached, concretize the condition and
+  // return it. Otherwise, return the unmodified condition.
+  ref<Expr> maxStaticPctChecks(ExecutionState &current, ref<Expr> condition);
+
   /// Add the given (boolean) condition as a constraint on state. This
   /// function is a wrapper around the state's addConstraint function
   /// which also manages propagation of implied values,

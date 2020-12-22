@@ -962,6 +962,43 @@ void Executor::branch(ExecutionState &state,
       addConstraint(*result[i], conditions[i]);
 }
 
+ref<Expr> Executor::maxStaticPctChecks(ExecutionState &current,
+                                       ref<Expr> condition) {
+  if (isa<klee::ConstantExpr>(condition))
+    return condition;
+
+  if (MaxStaticForkPct == 1. && MaxStaticSolvePct == 1. &&
+      MaxStaticCPForkPct == 1. && MaxStaticCPSolvePct == 1.)
+    return condition;
+
+  if (statsTracker->elapsed() <= time::seconds(60))
+    return condition;
+
+  StatisticManager &sm = *theStatisticManager;
+  CallPathNode *cpn = current.stack.back().callPathNode;
+  if ((MaxStaticForkPct < 1. &&
+       sm.getIndexedValue(stats::forks, sm.getIndex()) >
+           stats::forks * MaxStaticForkPct) ||
+      (MaxStaticCPForkPct < 1. && cpn &&
+       (cpn->statistics.getValue(stats::forks) >
+        stats::forks * MaxStaticCPForkPct)) ||
+      (MaxStaticSolvePct < 1 &&
+       sm.getIndexedValue(stats::solverTime, sm.getIndex()) >
+           stats::solverTime * MaxStaticSolvePct) ||
+      (MaxStaticCPForkPct < 1. && cpn &&
+       (cpn->statistics.getValue(stats::solverTime) >
+        stats::solverTime * MaxStaticCPSolvePct))) {
+    ref<klee::ConstantExpr> value;
+    bool success = solver->getValue(current.constraints, condition, value,
+                                    current.queryMetaData);
+    assert(success && "FIXME: Unhandled solver failure");
+    (void)success;
+    addConstraint(current, EqExpr::create(value, condition));
+    condition = value;
+  }
+  return condition;
+}
+
 Executor::StatePair 
 Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   Solver::Validity res;
@@ -969,33 +1006,8 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     seedMap.find(&current);
   bool isSeeding = it != seedMap.end();
 
-  if (!isSeeding && !isa<ConstantExpr>(condition) && 
-      (MaxStaticForkPct!=1. || MaxStaticSolvePct != 1. ||
-       MaxStaticCPForkPct!=1. || MaxStaticCPSolvePct != 1.) &&
-      statsTracker->elapsed() > time::seconds(60)) {
-    StatisticManager &sm = *theStatisticManager;
-    CallPathNode *cpn = current.stack.back().callPathNode;
-    if ((MaxStaticForkPct<1. &&
-         sm.getIndexedValue(stats::forks, sm.getIndex()) > 
-         stats::forks*MaxStaticForkPct) ||
-        (MaxStaticCPForkPct<1. &&
-         cpn && (cpn->statistics.getValue(stats::forks) > 
-                 stats::forks*MaxStaticCPForkPct)) ||
-        (MaxStaticSolvePct<1 &&
-         sm.getIndexedValue(stats::solverTime, sm.getIndex()) > 
-         stats::solverTime*MaxStaticSolvePct) ||
-        (MaxStaticCPForkPct<1. &&
-         cpn && (cpn->statistics.getValue(stats::solverTime) > 
-                 stats::solverTime*MaxStaticCPSolvePct))) {
-      ref<ConstantExpr> value;
-      bool success = solver->getValue(current.constraints, condition, value,
-                                      current.queryMetaData);
-      assert(success && "FIXME: Unhandled solver failure");
-      (void) success;
-      addConstraint(current, EqExpr::create(value, condition));
-      condition = value;
-    }
-  }
+  if (!isSeeding)
+    condition = maxStaticPctChecks(current, condition);
 
   time::Span timeout = coreSolverTimeout;
   if (isSeeding)
