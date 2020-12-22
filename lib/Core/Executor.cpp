@@ -363,6 +363,12 @@ cl::opt<double> MaxStaticCPSolvePct(
              "instructions (default=1.0 (always))"),
     cl::cat(TerminationCat));
 
+cl::opt<std::string> MaxStaticPctCheckDelay(
+    "max-static-pct-check-delay",
+    cl::desc("Time after which the --max-static-*-pct checks are enforced (default=60s)"),
+    cl::init("60s"),
+    cl::cat(TerminationCat));
+
 cl::opt<std::string> TimerInterval(
     "timer-interval",
     cl::desc("Minimum interval to check timers. "
@@ -480,6 +486,8 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
 
   this->solver = new TimingSolver(solver, EqualitySubstitution);
   memory = new MemoryManager(&arrayCache);
+
+  maxStaticPctCheckDelay = time::Span{MaxStaticPctCheckDelay};
 
   initializeSearchOptions();
 
@@ -967,7 +975,9 @@ ref<Expr> Executor::maxStaticPctChecks(ExecutionState &current,
       MaxStaticCPForkPct == 1. && MaxStaticCPSolvePct == 1.)
     return condition;
 
-  if (statsTracker->elapsed() <= time::seconds(60))
+  // these checks are performed only after MaxStaticPctCheckDelay time has
+  // passed since execution started
+  if (statsTracker->elapsed() <= maxStaticPctCheckDelay)
     return condition;
 
   StatisticManager &sm = *theStatisticManager;
