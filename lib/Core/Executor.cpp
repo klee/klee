@@ -1003,6 +1003,13 @@ ref<Expr> Executor::maxStaticPctChecks(ExecutionState &current,
                                     current.queryMetaData);
     assert(success && "FIXME: Unhandled solver failure");
     (void)success;
+
+    std::string msg("skipping fork and concretizing condition (MaxStatic*Pct "
+                    "limit reached) at ");
+    llvm::raw_string_ostream os(msg);
+    os << current.prevPC->getSourceLocation();
+    klee_warning_once(0, "%s", os.str().c_str());
+
     addConstraint(current, EqExpr::create(value, condition));
     condition = value;
   }
