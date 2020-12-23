@@ -73,8 +73,23 @@ StackFrame::~StackFrame() {
 
 /***/
 
-ExecutionState::ExecutionState(KFunction *kf, KInstruction **instructions) :
-    pc(instructions),
+ExecutionState::ExecutionState(KFunction *kf) :
+    currentKBlock(nullptr),
+    pc(nullptr),
+    prevPC(nullptr),
+    depth(0),
+    ptreeNode(nullptr),
+    steppedInstructions(0),
+    instsSinceCovNew(0),
+    coveredNew(false),
+    forkDisabled(false) {
+  pushFrame(nullptr, kf);
+  setID();
+}
+
+ExecutionState::ExecutionState(KFunction *kf, KBlock *kb) :
+    currentKBlock(kb),
+    pc(currentKBlock->instructions),
     prevPC(pc),
     depth(0),
     ptreeNode(nullptr),
@@ -95,11 +110,13 @@ ExecutionState::~ExecutionState() {
 }
 
 ExecutionState::ExecutionState(const ExecutionState& state):
+    currentKBlock(state.currentKBlock),
     pc(state.pc),
     prevPC(state.prevPC),
     stack(state.stack),
     incomingBBIndex(state.incomingBBIndex),
     depth(state.depth),
+    level(state.level),
     addressSpace(state.addressSpace),
     constraints(state.constraints),
     pathOS(state.pathOS),
@@ -145,12 +162,18 @@ ExecutionState *ExecutionState::dropStackFrame() {
   return newState;
 }
 
-ExecutionState *ExecutionState::withStackFrame(StackFrame *stackFrame) {
+ExecutionState *ExecutionState::withStackFrame(KFunction *kf) {
   ExecutionState *newState = new ExecutionState(*this);
-  ExecutionState::stack_ty empty_stack;
-  newState->stack = empty_stack;
-  newState->stack.push_back(*stackFrame);
+  newState->pushFrame(nullptr, kf);;
   return newState;
+}
+
+ExecutionState *ExecutionState::withKBlock(KBlock *kb) {
+    ExecutionState *newState = new ExecutionState(*this);
+    newState->currentKBlock = kb;
+    newState->pc = kb->instructions;
+    newState->prevPC = newState->pc;
+    return newState;
 }
 
 ExecutionState *ExecutionState::empty() {

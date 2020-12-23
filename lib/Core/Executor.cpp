@@ -328,6 +328,12 @@ cl::opt<unsigned long long> MaxInstructions(
     cl::init(0),
     cl::cat(TerminationCat));
 
+cl::opt<unsigned long long> MaxBound(
+    "max-bound",
+    cl::desc("stop execution after 'MaxBound' block visits (default=1)"),
+    cl::init(1),
+    cl::cat(TerminationCat));
+
 cl::opt<unsigned>
     MaxForks("max-forks",
              cl::desc("Only fork this many times.  Set to -1 to disable (default=-1)"),
@@ -1840,7 +1846,7 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
     KFunction *kf = kmodule->functionMap[f];
 
     state.pushFrame(state.prevPC, kf);
-    state.pc = kf->instructions;
+    transferToBasicBlock(&*kf->function->begin(), state.currentKBlock->basicBlock, state);
 
     if (statsTracker)
       statsTracker->framePushed(state, &state.stack[state.stack.size() - 2]);
@@ -2007,6 +2013,7 @@ void Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src,
   // XXX this lookup has to go ?
   KFunction *kf = state.stack.back().kf;
   state.pc = kf->kBlocks[dst]->instructions;
+  state.currentKBlock = kf->kBlocks[dst];
   if (state.pc->inst->getOpcode() == Instruction::PHI) {
     PHINode *first = static_cast<PHINode*>(state.pc->inst);
     state.incomingBBIndex = first->getBasicBlockIndex(src);
@@ -2416,10 +2423,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (!isVoidReturn) {
       result = symbolicEval(ki, 0, state).value;
     }
-    if (IsolationMode) {
-      terminateStateOnTerminator(state);
-      break;
-    }
     if (state.stack.size() <= 1) {
       assert(!caller && "caller set on initial stack frame");
       terminateStateOnExit(state);
@@ -2432,6 +2435,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       if (InvokeInst *ii = dyn_cast<InvokeInst>(caller)) {
         transferToBasicBlock(ii->getNormalDest(), caller->getParent(), state);
       } else {
+        state.currentKBlock = kmodule->functionMap[caller->getParent()->getParent()]->kBlocks[caller->getParent()];
         state.pc = kcaller;
         ++state.pc;
       }
@@ -2513,10 +2517,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
   case Instruction::Br: {
-    if (IsolationMode) {
-      terminateStateOnTerminator(state);
-      break;
-    }
     BranchInst *bi = cast<BranchInst>(i);
     if (bi->isUnconditional()) {
       transferToBasicBlock(bi->getSuccessor(0), bi->getParent(), state);
@@ -2544,10 +2544,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
   case Instruction::IndirectBr: {
-    if (IsolationMode) {
-      terminateStateOnTerminator(state);
-      break;
-    }
     // implements indirect branch to a label within the current function
     const auto bi = cast<IndirectBrInst>(i);
     auto address = symbolicEval(ki, 0, state).value;
@@ -2623,10 +2619,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
   case Instruction::Switch: {
-    if (IsolationMode) {
-      terminateStateOnTerminator(state);
-      break;
-    }
     SwitchInst *si = cast<SwitchInst>(i);
     ref<Expr> cond = symbolicEval(ki, 0, state).value;
     BasicBlock *bb = si->getParent();
@@ -2758,10 +2750,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::Invoke:
   case Instruction::Call: {
-    if (IsolationMode) {
-      terminateStateOnTerminator(state);
-      break;
-    }
     // Ignore debug intrinsic calls
     if (isa<DbgInfoIntrinsic>(i))
       break;
@@ -2875,12 +2863,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 
   case Instruction::PHI: {
-    if (IsolationMode) {
-      prepareSymbolicValue(state, ki);
-    } else {
-      ref<Expr> result = symbolicEval(ki, state.incomingBBIndex, state).value;
-      bindLocal(ki, state, result);
-    }
+    ref<Expr> result = symbolicEval(ki, state.incomingBBIndex, state).value;
+    bindLocal(ki, state, result);
     break;
   }
 
@@ -3599,10 +3583,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
 
   case Instruction::Resume: {
-    if (IsolationMode) {
-      terminateStateOnExit(state);
-      break;
-    }
     auto *cui = dyn_cast_or_null<CleanupPhaseUnwindingInformation>(
         state.unwindingInformation.get());
 
@@ -3698,7 +3678,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 }
 
-void Executor::updateStates(ExecutionState *current) {
+void Executor::updateAndPauseStates(ExecutionState *current) {
   if (addedStates.size() > 0) {
     pausedStates.insert(addedStates.begin(), addedStates.end());
     for (std::vector<ExecutionState *>::iterator it = addedStates.begin(),
@@ -3712,6 +3692,10 @@ void Executor::updateStates(ExecutionState *current) {
     addedStates.clear();
   }
 
+  updateStates(current);
+}
+
+void Executor::updateStates(ExecutionState *current) {
   if (searcher) {
     searcher->update(current, addedStates, removedStates);
   }
@@ -3733,11 +3717,6 @@ void Executor::updateStates(ExecutionState *current) {
     processTree->remove(es->ptreeNode);
   }
   removedStates.clear();
-
-  if (states.size() > 10) {
-    pausedStates.insert(states.begin(), states.end());
-    states.clear();
-  }
 }
 
 template <typename SqType, typename TypeIt>
@@ -3971,6 +3950,85 @@ void Executor::run(ExecutionState &initialState) {
   haltExecution = false;
 }
 
+void Executor::runKBlock(KBlock *kb, ExecutionState &state) {
+ if (pathWriter)
+   state.pathOS = pathWriter->open();
+ if (symPathWriter)
+   state.symPathOS = symPathWriter->open();
+
+ if (statsTracker)
+   statsTracker->framePushed(state, 0);
+
+ processTree = std::make_unique<PTree>(&state);
+ executeKBlock(kb, state, true);
+ processTree = nullptr;
+
+ if (statsTracker)
+   statsTracker->done();
+}
+
+void Executor::applyKBlock(KBlock *kb, ExecutionState &state) {
+ if (pathWriter)
+   state.pathOS = pathWriter->open();
+ if (symPathWriter)
+   state.symPathOS = symPathWriter->open();
+
+ if (statsTracker)
+   statsTracker->framePushed(state, 0);
+
+ processTree = std::make_unique<PTree>(&state);
+ executeKBlock(kb, state, false);
+ processTree = nullptr;
+
+ if (statsTracker)
+   statsTracker->done();
+}
+
+void Executor::executeKBlock(KBlock *kb, ExecutionState &initialState, bool isoMode) {
+  // Delay init till now so that ticks don't accrue during optimization and such.
+  timers.reset();
+
+  states.insert(&initialState);
+
+  searcher = constructUserSearcher(*this);
+
+  std::vector<ExecutionState *> newStates(states.begin(), states.end());
+  searcher->update(0, newStates, std::vector<ExecutionState *>());
+  // main interpreter loop
+  KInstruction *terminator = kb->instructions[kb->numInstructions - 1];
+  while (!states.empty() && !haltExecution) {
+    ExecutionState &state = searcher->selectState();
+    KInstruction *ki = state.pc;
+    stepInstruction(state);
+    if (isoMode && ki->inst->getOpcode() == Instruction::PHI) {
+      prepareSymbolicValue(state, ki);
+    } else
+      executeInstruction(state, ki);
+
+    timers.invoke();
+    if (::dumpStates) dumpStates();
+    if (::dumpPTree) dumpPTree();
+
+    if (ki == terminator || state.currentKBlock != kb) {
+      updateStates(&state);
+      completedStates.insert(states.begin(), states.end());
+      states.clear();
+    } else
+      updateAndPauseStates(&state);
+
+    if (!checkMemoryUsage()) {
+      // update searchers when states were terminated early due to memory pressure
+      updateAndPauseStates(nullptr);
+    }
+  }
+
+  delete searcher;
+  searcher = nullptr;
+
+  doDumpStates();
+  haltExecution = false;
+}
+
 std::string Executor::getAddressInfo(ExecutionState &state, 
                                      ref<Expr> address) const {
   if (ExcludeSolver)
@@ -4032,11 +4090,19 @@ void Executor::terminateState(ExecutionState &state) {
                       "replay did not consume all objects in test input.");
   }
 
+  std::vector<ExecutionState *>::iterator itr =
+      std::find(removedStates.begin(), removedStates.end(), &state);
+
+  if (itr != removedStates.end()) {
+      klee_warning("remove state twice");
+      return;
+  }
+
   interpreterHandler->incPathsExplored();
 
-  std::vector<ExecutionState *>::iterator it =
+  std::vector<ExecutionState *>::iterator ita =
       std::find(addedStates.begin(), addedStates.end(), &state);
-  if (it==addedStates.end()) {
+  if (ita==addedStates.end()) {
     state.pc = state.prevPC;
     removedStates.push_back(&state);
   } else {
@@ -4045,7 +4111,7 @@ void Executor::terminateState(ExecutionState &state) {
       seedMap.find(&state);
     if (it3 != seedMap.end())
       seedMap.erase(it3);
-    addedStates.erase(it);
+    addedStates.erase(ita);
     processTree->remove(state.ptreeNode);
     delete &state;
   }
@@ -4254,8 +4320,14 @@ void Executor::callExternalFunction(ExecutionState &state,
   ObjectPair result;
   bool resolved = state.addressSpace.resolveOne(
       ConstantExpr::create((uint64_t)errno_addr, Expr::Int64), result);
-  if (!resolved)
-    klee_error("Could not resolve memory object for errno");
+  if (!resolved) {
+    terminateStateOnExecError(state,
+                                "could not resolve memory object for errno: " +
+                                    function->getName());
+    return;
+//    klee_error("Could not resolve memory object for errno");
+  }
+
   ref<Expr> errValueExpr = result.second->read(0, sizeof(*errno_addr) * 8);
   ConstantExpr *errnoValue = dyn_cast<ConstantExpr>(errValueExpr);
   if (!errnoValue) {
@@ -4912,7 +4984,6 @@ void Executor::formArgMemory(ExecutionState &state,
 }
 
 ExecutionState* Executor::formState(Function *f,
-                                    KInstruction **instructions,
                                     int argc,
                                     char **argv,
                                     char **envp) {
@@ -4937,7 +5008,7 @@ ExecutionState* Executor::formState(Function *f,
   assert(kf);
   formArg(f, NumPtrBytes, arguments, argvMO, argc, envc);
 
-  ExecutionState *state = new ExecutionState(kmodule->functionMap[f], instructions);
+  ExecutionState *state = new ExecutionState(kmodule->functionMap[f], kmodule->functionMap[f]->kBlocks[&*f->begin()]);
 
   assert(arguments.size() == f->arg_size() && "wrong number of arguments");
   for (unsigned i = 0, e = f->arg_size(); i != e; ++i)
@@ -5021,40 +5092,7 @@ void Executor::prepareSymbolicReturn(ExecutionState &state, KInstruction *kcallI
   bindLocal(kcallInst, state, result);
 }
 
-void Executor::runInstructions(Function *f,
-                               KInstruction **instructions,
-                               int argc,
-                               char **argv,
-                               char **envp) {
-
-  ExecutionState *state = formState(f, instructions, argc, argv, envp);
-
-  if (pathWriter)
-    state->pathOS = pathWriter->open();
-  if (symPathWriter)
-    state->symPathOS = symPathWriter->open();
-
-  if (statsTracker)
-    statsTracker->framePushed(*state, 0);
-
-  processTree = std::make_unique<PTree>(state);
-  bindModuleConstants();
-  run(*state);
-  processTree = nullptr;
-
-  // hack to clear memory objects
-  delete memory;
-  memory = new MemoryManager(NULL);
-
-  globalObjects.clear();
-  globalAddresses.clear();
-
-  if (statsTracker)
-    statsTracker->done();
-}
-
-void Executor::runKBlock(KBlock *kb,
-                         ExecutionState &state) {
+void Executor::runWithStats(ExecutionState &state) {
  if (pathWriter)
    state.pathOS = pathWriter->open();
  if (symPathWriter)
@@ -5071,22 +5109,11 @@ void Executor::runKBlock(KBlock *kb,
    statsTracker->done();
 }
 
-void Executor::runKBlocks(std::deque<KBlock*> kbs,
-                         ExecutionState &state) {
-  KBlock *predKB = kbs.front();
-  runKBlock(predKB, state);
-  kbs.pop_front();
-  for (auto kb : kbs) {
-    runKBlock(kb, state);
-    predKB = kb;
-  }
-}
-
 void Executor::runFunctionAsMain(Function *f,
                int argc,
                char **argv,
                char **envp) {
-  ExecutionState *state = formState(f, kmodule->functionMap[f]->instructions, argc, argv, envp);
+  ExecutionState *state = formState(f, argc, argv, envp);
 
   if (pathWriter)
     state->pathOS = pathWriter->open();
@@ -5111,12 +5138,11 @@ void Executor::runFunctionAsMain(Function *f,
     statsTracker->done();
 }
 
-void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &state) {
+Executor::ExecutionResult Executor::getCFA(Function *fn, ExecutionState &state) {
   std::queue<Function *> functionFonRun;
   std::set<Function *> executedFunction;
-  bindModuleConstants();
-  functionFonRun.push(mainFn);
-  executedFunction.insert(mainFn);
+  functionFonRun.push(fn);
+  executedFunction.insert(fn);
   ExecutionResult result;
   while (!functionFonRun.empty()) {
     Function *f = functionFonRun.front();
@@ -5126,11 +5152,9 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
     Function::iterator bbit = f->begin(), bbie = f->end();
 
     auto start = high_resolution_clock::now();
-    if(bbit != bbie) {
-      StackFrame *stackFrame = new StackFrame(nullptr, kf);
-      ExecutionState *initialState = state.dropStackFrame()->withStackFrame(stackFrame);
-      initialState->addressSpace.clear();
 
+    if(bbit != bbie) {
+      ExecutionState *initialState = state.withStackFrame(kf);
       prepareSymbolicArgs(*initialState, kf);
 
       for (; bbit != bbie; bbit++) {
@@ -5154,29 +5178,101 @@ void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &stat
             runKBlock(kb, *currState);
             break;
         }
-        for(auto & it : completedStates) {
-          cfa[&*bbit].insert(it);
-        }
+        cfa[&*bbit].insert(completedStates.begin(), completedStates.end());
         completedStates.clear();
-        for(auto & it : pausedStates) {
-          pausedCfa[&*bbit].insert(it);
-        }
+        pausedCfa[&*bbit].insert(pausedStates.begin(), pausedStates.end());
         pausedStates.clear();
       }
     }
     functionFonRun.pop();
+
     auto stop = high_resolution_clock::now();
     auto duration = duration_cast<milliseconds>(stop - start);
     errs() << "duration," << f->getName() << "," << duration.count() << "\n";
   }
+  return result;
 }
 
-void Executor::runMainAsBlockSequence(Function *f,
+Executor::ExecutionResult Executor::getCumulativeCFA(Function *fn, ExecutionState &state, unsigned bound) {
+  std::deque<ExecutionState *> statesFonRun;
+  KBlock *kb = kmodule->functionMap[fn]->kBlocks[&*fn->begin()];
+  KFunction *kf = kmodule->functionMap[fn];
+  ExecutionState *initialState = state.withStackFrame(kf)->withKBlock(kb);
+  prepareSymbolicArgs(*initialState, kf);
+  statesFonRun.push_back(initialState);
+  ExecutionResult result;
+  auto start = high_resolution_clock::now();
+  while (!statesFonRun.empty()) {
+    ExecutionState *currState = statesFonRun.front();
+    kf = currState->stack.back().kf;
+    kb = currState->currentKBlock;
+    FunctionCFA &cfa = result.cfaStates[kf->function];
+    FunctionCFA &pausedCfa = result.cfaPausedStates[kf->function];
+
+    if (currState->level.count(kb->basicBlock) > bound) {
+      pausedCfa[kb->basicBlock].insert(currState);
+      statesFonRun.pop_back();
+      continue;
+    }
+
+    applyKBlock(kb, *currState);
+    if (kb->getKBlockType() == KBlockType::Base)
+      currState->level.insert(kb->basicBlock);
+    cfa[kb->basicBlock].insert(completedStates.begin(), completedStates.end());
+    for(auto & it : completedStates) {
+      ExecutionState *newState = new ExecutionState(*it);
+      statesFonRun.push_back(newState);
+    }
+    completedStates.clear();
+    pausedCfa[kb->basicBlock].insert(pausedStates.begin(), pausedStates.end());
+    pausedStates.clear();
+    statesFonRun.pop_front();
+  }
+
+  auto stop = high_resolution_clock::now();
+  auto duration = duration_cast<milliseconds>(stop - start);
+  errs() << "duration," << fn->getName() << "," << duration.count() << "\n";
+
+  return result;
+}
+
+void Executor::runFunctionAsIsolatedBlocks(Function *mainFn) {
+  bindModuleConstants();
+  ExecutionState *state = new ExecutionState(kmodule->functionMap[mainFn]);
+  initializeGlobals(*state);
+  state->popFrame();
+  state->addressSpace.clear();
+  ExecutionResult res = getCFA(mainFn, *state);
+}
+
+void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &state) {
+  ExecutionResult res = getCumulativeCFA(mainFn, state, MaxBound);
+}
+
+void Executor::runMainAsBlockSequence(Function *mainFn,
                int argc,
                char **argv,
                char **envp) {
-  ExecutionState *state = formState(f, nullptr, argc, argv, envp);
-  runFunctionAsBlockSequence(f, *state);
+  ExecutionState *state = formState(mainFn, argc, argv, envp);
+  state->popFrame();
+  runFunctionAsBlockSequence(mainFn, *state);
+  // hack to clear memory objects
+  delete memory;
+  memory = new MemoryManager(NULL);
+  clearGlobal();
+}
+
+void Executor::runAllFunctionsAsBlockSequence(llvm::Function *mainFn,
+                                              int argc,
+                                              char **argv,
+                                              char **envp) {
+  ExecutionState *state = formState(mainFn, argc, argv, envp);
+  state->popFrame();
+  state->addressSpace.clear();
+  bindModuleConstants();
+  for (auto &kfp : kmodule->functions) {
+    runFunctionAsBlockSequence(kfp->function, *state);
+  }
   // hack to clear memory objects
   delete memory;
   memory = new MemoryManager(NULL);

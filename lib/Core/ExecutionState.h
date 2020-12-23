@@ -20,6 +20,8 @@
 #include "klee/Solver/Solver.h"
 #include "klee/System/Time.h"
 
+#include "llvm/IR/Function.h"
+
 #include <map>
 #include <memory>
 #include <set>
@@ -158,6 +160,8 @@ public:
   // copy ctor
   ExecutionState(const ExecutionState &state);
 
+  KBlock *currentKBlock = nullptr;
+
   /// @brief Pointer to instruction to be executed after the current
   /// instruction
   KInstIterator pc;
@@ -176,6 +180,9 @@ public:
 
   /// @brief Exploration depth, i.e., number of times KLEE branched for this state
   std::uint32_t depth;
+
+  /// @brief Exploration level, i.e., number of cycles of BB
+  std::multiset<llvm::BasicBlock *> level;
 
   /// @brief Address space used by this state (e.g. Global and Heap)
   AddressSpace addressSpace;
@@ -246,7 +253,7 @@ public:
   ExecutionState() {}
   // only to create the initial state
   explicit ExecutionState(KFunction *kf);
-  explicit ExecutionState(KFunction *kf, KInstruction **instructions);
+  explicit ExecutionState(KFunction *kf, KBlock *kb);
   // no copy assignment, use copy constructor
   ExecutionState &operator=(const ExecutionState &) = delete;
   // no move ctor
@@ -259,7 +266,8 @@ public:
   ExecutionState *branch();
   ExecutionState *withInstructions(KInstruction **instructions);
   ExecutionState *dropStackFrame();
-  ExecutionState *withStackFrame(StackFrame *stackFrame);
+  ExecutionState *withStackFrame(KFunction *kf);
+  ExecutionState *withKBlock(KBlock *kb);
   ExecutionState *empty();
 
   void pushFrame(KInstIterator caller, KFunction *kf);

@@ -253,8 +253,11 @@ private:
   void executeTargetedTerminator(ExecutionState &state, KInstruction *ki, KBlock *target);
 
   void executeInstruction(ExecutionState &state, KInstruction *ki);
+  void executeKBlock(KBlock *kb, ExecutionState &initialState, bool isoMode);
 
   void run(ExecutionState &initialState);
+  void runKBlock(KBlock *kb, ExecutionState &state);
+  void applyKBlock(KBlock *kb, ExecutionState &stat);
 
   // Given a concrete object in our [klee's] address space, add it to 
   // objects checked code can reference.
@@ -272,6 +275,7 @@ private:
 
   void stepInstruction(ExecutionState &state);
   void updateStates(ExecutionState *current);
+  void updateAndPauseStates(ExecutionState *current);
   void transferToBasicBlock(llvm::BasicBlock *dst,
 			    llvm::BasicBlock *src,
 			    ExecutionState &state);
@@ -553,7 +557,7 @@ public:
     usingSeeds = seeds;
   }
 
-  ExecutionState *formState(llvm::Function *f, KInstruction **instructions, int argc, char **argv, char **envp);
+  ExecutionState *formState(llvm::Function *f, int argc, char **argv, char **envp);
 
   void clearGlobal();
 
@@ -567,18 +571,20 @@ public:
 
   ref<Expr> makeSymbolicValue(llvm::Value *value, ExecutionState &state, uint64_t size, Expr::Width width, const std::string &name);
 
-  void runInstructions(llvm::Function *f, KInstruction **instructions, int argc, char **argv, char **envp);
-
   void runFunctionAsMain(llvm::Function *f, int argc, char **argv,
                          char **envp) override;
 
-  void runFunctionAsBlockSequence(llvm::Function *f, ExecutionState &state) override;
+  ExecutionResult getCFA(llvm::Function *fn, ExecutionState &state);
+  ExecutionResult getCumulativeCFA(llvm::Function *fn, ExecutionState &state, unsigned bound);
 
+  void runFunctionAsIsolatedBlocks(llvm::Function *f) override;
+  void runFunctionAsBlockSequence(llvm::Function *f, ExecutionState &state) override;
+  void runAllFunctionsAsBlockSequence(llvm::Function *f, int argc, char **argv,
+                                      char **envp) override;
   void runMainAsBlockSequence(llvm::Function *f, int argc, char **argv,
                          char **envp) override;
 
-  void runKBlock(KBlock *kb, ExecutionState &state);
-  void runKBlocks(std::deque<KBlock*> kbs, ExecutionState &state);
+  void runWithStats(ExecutionState &state);
 
   /*** Runtime options ***/
 
