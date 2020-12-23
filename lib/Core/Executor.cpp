@@ -1873,14 +1873,8 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       return;
     }
 
-    // __cxa_throw & _rethrow are already handled in their
-    // SpecialFunctionHandlers and have already been redirected to their unwind
-    // destinations, so we must not transfer them to their regular targets.
     if (InvokeInst *ii = dyn_cast<InvokeInst>(i)) {
-      if (f->getName() != std::string("__cxa_throw") &&
-          f->getName() != std::string("__cxa_rethrow")) {
-        transferToBasicBlock(ii->getNormalDest(), i->getParent(), state);
-      }
+      transferToBasicBlock(ii->getNormalDest(), i->getParent(), state);
     }
   } else {
     // Check if maximum stack size was reached.
