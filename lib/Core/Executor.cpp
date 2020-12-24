@@ -330,8 +330,8 @@ cl::opt<unsigned long long> MaxInstructions(
 
 cl::opt<unsigned long long> MaxBound(
     "max-bound",
-    cl::desc("stop execution after 'MaxBound' block visits (default=1)"),
-    cl::init(1),
+    cl::desc("stop execution after 'MaxBound' block visits (default=0)"),
+    cl::init(0),
     cl::cat(TerminationCat));
 
 cl::opt<unsigned>
@@ -4242,6 +4242,7 @@ void Executor::terminateStateOnError(ExecutionState &state,
       interpreterHandler->processTestCase(state, msg.str().c_str(), suffix);
   }
 
+  erroneousStates.insert(&state);
   terminateState(state);
 
   if (shouldExitOn(termReason))
@@ -5148,6 +5149,7 @@ Executor::ExecutionResult Executor::getCFA(Function *fn, ExecutionState &state) 
     Function *f = functionFonRun.front();
     FunctionCFA &cfa = result.cfaStates[f];
     FunctionCFA &pausedCfa = result.cfaPausedStates[f];
+    FunctionCFA &erroneousCfa = result.cfaErroneousStates[f];
     KFunction *kf = kmodule->functionMap[f];
     Function::iterator bbit = f->begin(), bbie = f->end();
 
@@ -5182,6 +5184,8 @@ Executor::ExecutionResult Executor::getCFA(Function *fn, ExecutionState &state) 
         completedStates.clear();
         pausedCfa[&*bbit].insert(pausedStates.begin(), pausedStates.end());
         pausedStates.clear();
+        erroneousCfa[&*bbit].insert(erroneousStates.begin(), erroneousStates.end());
+        erroneousStates.clear();
       }
     }
     functionFonRun.pop();
@@ -5203,11 +5207,13 @@ Executor::ExecutionResult Executor::getCumulativeCFA(Function *fn, ExecutionStat
   ExecutionResult result;
   auto start = high_resolution_clock::now();
   while (!statesFonRun.empty()) {
-    ExecutionState *currState = statesFonRun.front();
+    ExecutionState *currState = statesFonRun.back();
+    statesFonRun.pop_back();
     kf = currState->stack.back().kf;
     kb = currState->currentKBlock;
     FunctionCFA &cfa = result.cfaStates[kf->function];
     FunctionCFA &pausedCfa = result.cfaPausedStates[kf->function];
+    FunctionCFA &erroneousCfa = result.cfaErroneousStates[kf->function];
 
     if (currState->level.count(kb->basicBlock) > bound) {
       pausedCfa[kb->basicBlock].insert(currState);
@@ -5226,7 +5232,8 @@ Executor::ExecutionResult Executor::getCumulativeCFA(Function *fn, ExecutionStat
     completedStates.clear();
     pausedCfa[kb->basicBlock].insert(pausedStates.begin(), pausedStates.end());
     pausedStates.clear();
-    statesFonRun.pop_front();
+    erroneousCfa[kb->basicBlock].insert(erroneousStates.begin(), erroneousStates.end());
+    erroneousStates.clear();
   }
 
   auto stop = high_resolution_clock::now();
@@ -5268,7 +5275,6 @@ void Executor::runAllFunctionsAsBlockSequence(llvm::Function *mainFn,
                                               char **envp) {
   ExecutionState *state = formState(mainFn, argc, argv, envp);
   state->popFrame();
-  state->addressSpace.clear();
   bindModuleConstants();
   for (auto &kfp : kmodule->functions) {
     runFunctionAsBlockSequence(kfp->function, *state);

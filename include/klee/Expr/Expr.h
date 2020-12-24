@@ -840,9 +840,9 @@ public:
   static const Kind kind = GEP;
   static const unsigned numKids = 2;
 
-  unsigned sourceSize;
   ref<Expr> address;
-  ref<Expr> base = nullptr;
+  ref<Expr> base;
+  unsigned sourceSize;
 
 public:
   static ref<Expr> alloc(const ref<Expr> &e, const ref<Expr> &b, unsigned s) {
