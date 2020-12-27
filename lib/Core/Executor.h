@@ -578,7 +578,6 @@ public:
   ExecutionResult getCumulativeCFA(llvm::Function *fn, ExecutionState &state, unsigned bound);
 
   void runFunctionAsIsolatedBlocks(llvm::Function *f) override;
-  void runFunctionAsBlockSequence(llvm::Function *f, ExecutionState &state) override;
   void runAllFunctionsAsBlockSequence(llvm::Function *f, int argc, char **argv,
                                       char **envp) override;
   void runMainAsBlockSequence(llvm::Function *f, int argc, char **argv,

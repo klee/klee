@@ -5252,17 +5252,14 @@ void Executor::runFunctionAsIsolatedBlocks(Function *mainFn) {
   ExecutionResult res = getCFA(mainFn, *state);
 }
 
-void Executor::runFunctionAsBlockSequence(Function *mainFn, ExecutionState &state) {
-  ExecutionResult res = getCumulativeCFA(mainFn, state, MaxBound);
-}
-
 void Executor::runMainAsBlockSequence(Function *mainFn,
                int argc,
                char **argv,
                char **envp) {
   ExecutionState *state = formState(mainFn, argc, argv, envp);
   state->popFrame();
-  runFunctionAsBlockSequence(mainFn, *state);
+  bindModuleConstants();
+  ExecutionResult res = getCumulativeCFA(mainFn, *state, MaxBound);
   // hack to clear memory objects
   delete memory;
   memory = new MemoryManager(NULL);
@@ -5277,7 +5274,7 @@ void Executor::runAllFunctionsAsBlockSequence(llvm::Function *mainFn,
   state->popFrame();
   bindModuleConstants();
   for (auto &kfp : kmodule->functions) {
-    runFunctionAsBlockSequence(kfp->function, *state);
+    getCumulativeCFA(kfp->function, *state, MaxBound);
   }
   // hack to clear memory objects
   delete memory;
