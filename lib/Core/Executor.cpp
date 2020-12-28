@@ -4130,6 +4130,7 @@ void Executor::terminateStateOnExit(ExecutionState &state) {
   if (!ExcludeSolver && (!OnlyOutputStatesCoveringNew || state.coveredNew ||
       (AlwaysOutputSeeds && seedMap.count(&state))))
     interpreterHandler->processTestCase(state, 0, 0);
+  exitStates.insert(&state);
   terminateState(state);
 }
 
@@ -5161,7 +5162,7 @@ Executor::ExecutionResult Executor::getCFA(Function *fn, ExecutionState &state) 
 
       for (; bbit != bbie; bbit++) {
         KBlock *kb = kf->kBlocks[&*bbit];
-        ExecutionState *currState = initialState->withInstructions(kb->instructions);
+        ExecutionState *currState = initialState->withKBlock(kb);
         currState->setBlockIndexes(kb);
         switch (kb->getKBlockType()) {
           case KBlockType::Call: {
@@ -5180,6 +5181,8 @@ Executor::ExecutionResult Executor::getCFA(Function *fn, ExecutionState &state) 
             runKBlock(kb, *currState);
             break;
         }
+        cfa[&*bbit].insert(exitStates.begin(), exitStates.end());
+        exitStates.clear();
         cfa[&*bbit].insert(completedStates.begin(), completedStates.end());
         completedStates.clear();
         pausedCfa[&*bbit].insert(pausedStates.begin(), pausedStates.end());
@@ -5224,6 +5227,8 @@ Executor::ExecutionResult Executor::getCumulativeCFA(Function *fn, ExecutionStat
     applyKBlock(kb, *currState);
     if (kb->getKBlockType() == KBlockType::Base)
       currState->level.insert(kb->basicBlock);
+    cfa[kb->basicBlock].insert(exitStates.begin(), exitStates.end());
+    exitStates.clear();
     cfa[kb->basicBlock].insert(completedStates.begin(), completedStates.end());
     for(auto & it : completedStates) {
       ExecutionState *newState = new ExecutionState(*it);
@@ -5244,9 +5249,7 @@ Executor::ExecutionResult Executor::getCumulativeCFA(Function *fn, ExecutionStat
 }
 
 void Executor::runFunctionAsIsolatedBlocks(Function *mainFn) {
-  bindModuleConstants();
   ExecutionState *state = new ExecutionState(kmodule->functionMap[mainFn]);
-  initializeGlobals(*state);
   state->popFrame();
   state->addressSpace.clear();
   ExecutionResult res = getCFA(mainFn, *state);

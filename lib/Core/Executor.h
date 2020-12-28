@@ -147,7 +147,7 @@ private:
   TimingSolver *solver;
   MemoryManager *memory;
   std::set<ExecutionState*, ExecutionStateIDCompare> states;
-
+  std::set<ExecutionState*, ExecutionStateIDCompare> exitStates;
   std::set<ExecutionState*, ExecutionStateIDCompare> completedStates;
   std::set<ExecutionState*, ExecutionStateIDCompare> pausedStates;
   std::set<ExecutionState*, ExecutionStateIDCompare> erroneousStates;
