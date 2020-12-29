@@ -17,6 +17,15 @@
 extern "C" {
 #endif
 
+/* klee_dump_kquery_state() get KQuery Dump for current State */
+void klee_dump_kquery_state();
+
+/* klee_dump_state_stack() get the state stack dump*/
+void klee_dump_state_stack();
+
+/* klee_dump_symbolic_details() get the known Symbolics of an expression */
+void klee_dump_symbolic_details(void *addr, const char *name);
+
 /* Add an accesible memory object at a user specified location. It
  * is the users responsibility to make sure that these memory
  * objects do not overlap. These memory objects will also
@@ -35,18 +44,6 @@ void klee_define_fixed_object(void *addr, size_t nbytes);
  * files, etc. If NULL, object is called "unnamed".
  */
 void klee_make_symbolic(void *addr, size_t nbytes, const char *name);
-
-/* klee_make_pse_symbolic - Make the contents of the object pointer to by \arg
- * addr as a probabilistic symbolic variable.
- *
- * \arg addr - The start of the object.
- * \arg nbytes - The number of bytes to make symbolic; currently this *must*
- * be the entire contents of the object.
- * \arg name - A name used for identifying the object in messages, output
- * files, etc. If NULL, object is called "unnamed".
- */
-void klee_make_pse_symbolic(void *addr, size_t nbytes, const char *name,
-                            float *distribution, float *probabilities);
 
 /* klee_range - Construct a symbolic value in the signed interval
  * [begin,end).
@@ -112,7 +109,7 @@ unsigned klee_is_symbolic(uintptr_t n);
 /* Return true if replaying a concrete test case using the libkleeRuntime
  * library Return false if executing symbolically in KLEE.
  */
-unsigned klee_is_replay();
+unsigned klee_is_replay(void);
 
 /* The following intrinsics are primarily intended for internal use
    and may have peculiar semantics. */
@@ -123,15 +120,6 @@ void klee_warning_once(const char *message);
 void klee_prefer_cex(void *object, uintptr_t condition);
 void klee_posix_prefer_cex(void *object, uintptr_t condition);
 void klee_mark_global(void *object);
-
-/* klee_dump_kquery_state() get KQuery Dump for current State */
-void klee_dump_kquery_state();
-
-/* klee_dump_state_stack() get the state stack dump*/
-void klee_dump_state_stack();
-
-/* klee_dump_symbolic_details() get the known Symbolics of an expression */
-void klee_dump_symbolic_details(void *addr, const char *name);
 
 /* Return a possible constant value for the input expression. This
    allows programs to forcibly concretize values on their own. */
@@ -166,10 +154,10 @@ void klee_stack_trace(void);
 void klee_print_range(const char *name, int arg);
 
 /* Open a merge */
-void klee_open_merge();
+void klee_open_merge(void);
 
 /* Merge all paths of the state that went through klee_open_merge */
-void klee_close_merge();
+void klee_close_merge(void);
 
 /* Get errno value of the current state */
 int klee_get_errno(void);
