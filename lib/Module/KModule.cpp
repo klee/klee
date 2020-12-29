@@ -584,8 +584,13 @@ KFunction::KFunction(llvm::Function *_function,
     KBlock *kb;
     Instruction *it = &*(*bbit).begin();
     if (it->getOpcode() == Instruction::Call || it->getOpcode() == Instruction::Invoke) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
+      const CallBase &cs = cast<CallBase>(*it);
+      Value *fp = cs.getCalledOperand();
+#else
       CallSite cs(it);
       Value *fp = cs.getCalledValue();
+#endif
       Function *f = getTargetFunction(fp);
       kb = new KCallBlock(function, &*bbit, km, registerMap, reg2inst, rnum, f);
     } else
