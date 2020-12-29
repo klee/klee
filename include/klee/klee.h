@@ -17,15 +17,6 @@
 extern "C" {
 #endif
 
-/* klee_dump_kquery_state() get KQuery Dump for current State */
-void klee_dump_kquery_state();
-
-/* klee_dump_state_stack() get the state stack dump*/
-void klee_dump_state_stack();
-
-/* klee_dump_symbolic_details() get the known Symbolics of an expression */
-void klee_dump_symbolic_details(void *addr, const char *name);
-
 /* Add an accesible memory object at a user specified location. It
  * is the users responsibility to make sure that these memory
  * objects do not overlap. These memory objects will also
