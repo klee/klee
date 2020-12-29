@@ -40,6 +40,14 @@ public:
     return constraints == b.constraints;
   }
 
+  // REVISIT
+  inline void printConstraintSetTY(std::stringstream &sso) {
+    sso << "Constraints Set :: " << "\n";
+    for (const auto &conds : constraints) {
+      sso << conds << "\n";
+    }
+  }
+
 private:
   constraints_ty constraints;
 };

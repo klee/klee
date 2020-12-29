@@ -882,6 +882,12 @@ void Executor::branch(ExecutionState &state,
   unsigned N = conditions.size();
   assert(N);
 
+  *conditionsDump << "Executor Branch ::"
+                  << "\n";
+  for (const auto &conds : conditions) {
+    *conditionsDump << conds << "\n";
+  }
+
   if (!branchingPermitted(state)) {
     unsigned next = theRNG.getInt32() % N;
     for (unsigned i = 0; i < N; ++i) {
@@ -964,6 +970,10 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
   std::map<ExecutionState *, std::vector<SeedInfo>>::iterator it =
       seedMap.find(&current);
   bool isSeeding = it != seedMap.end();
+
+  // REVISIT
+  *conditionsDump << "Fork :: " << current.getID() << "\n";
+  *conditionsDump << condition << "\n";
 
   if (!isSeeding && !isa<ConstantExpr>(condition) &&
       (MaxStaticForkPct != 1. || MaxStaticSolvePct != 1. ||
@@ -1208,6 +1218,10 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
   }
 
   state.addConstraint(condition);
+  *conditionsDump << "Constraints :: "
+                  << "\n";
+  *conditionsDump << condition << "\n";
+
   if (ivcEnabled)
     doImpliedValueConcretization(state, condition,
                                  ConstantExpr::alloc(1, Expr::Bool));
@@ -2108,8 +2122,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     } else {
       // FIXME: Find a way that we don't have this hidden dependency.
       assert(bi->getCondition() == bi->getOperand(0) && "Wrong operand index!");
-      ref<Expr> cond = eval(ki, 0, state).value;
 
+      // REVISIT
+      ref<Expr> cond = eval(ki, 0, state).value;
+      *conditionsDump << ki->getSourceLocation() << "\n";
       cond = optimizer.optimizeExpr(cond, false);
       Executor::StatePair branches = fork(state, cond, false);
 
@@ -3331,9 +3347,9 @@ void Executor::computeOffsets(KGEPInstruction *kgepi, TypeIt ib, TypeIt ie) {
     if (StructType *st = dyn_cast<StructType>(*ii)) {
       const StructLayout *sl = kmodule->targetData->getStructLayout(st);
       const ConstantInt *ci = cast<ConstantInt>(ii.getOperand());
-      uint64_t addend = sl->getElementOffset((unsigned) ci->getZExtValue());
-      constantOffset = constantOffset->Add(ConstantExpr::alloc(addend,
-                                                               Context::get().getPointerWidth()));
+      uint64_t addend = sl->getElementOffset((unsigned)ci->getZExtValue());
+      constantOffset = constantOffset->Add(
+          ConstantExpr::alloc(addend, Context::get().getPointerWidth()));
 #if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
     } else if (isa<ArrayType>(*ii)) {
       computeOffsetsSeqTy<ArrayType>(kgepi, constantOffset, index, ii);
@@ -4430,8 +4446,9 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
   executionTree = std::make_unique<ETree>(initState);
   processTree = std::make_unique<PTree>(state);
 
-  kqueryDumpFileptr = interpreterHandler->openOutputFile("kquey_dump.txt");
+  kqueryDumpFileptr = interpreterHandler->openOutputFile("kquery_dump.txt");
   smtlib2DumpFileptr = interpreterHandler->openOutputFile("smtlib2_dump.txt");
+  conditionsDump = interpreterHandler->openOutputFile("conds_dump.txt");
 
   run(*state);
   printETree();

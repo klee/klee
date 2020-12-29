@@ -99,10 +99,8 @@ class Executor : public Interpreter {
 public:
   typedef std::pair<ExecutionState *, ExecutionState *> StatePair;
 
-  /// KQuery Dump file pointer.
-  /// FIXME : Make Private
   std::unique_ptr<llvm::raw_fd_ostream> kqueryDumpFileptr, smtlib2DumpFileptr,
-      stackDump;
+      conditionsDump, stackDump;
 
   enum TerminateReason {
     Abort,
