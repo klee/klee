@@ -1351,9 +1351,15 @@ char *getcwd(char *buf, size_t size) {
   }
 
   if (!buf) {
-    if (!size)
-      size = 1024;
+    size = 1024; // typically PATH_MAX
     buf = malloc(size);
+    if (!buf) {
+      errno = ENOMEM;
+      return NULL;
+    }
+  } else if (!size) {
+    errno = EINVAL;
+    return NULL;
   }
   
   buf = __concretize_ptr(buf);
