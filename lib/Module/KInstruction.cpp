@@ -15,13 +15,22 @@ using namespace klee;
 
 /***/
 
-KInstruction::~KInstruction() {
-  delete[] operands;
-}
+KInstruction::~KInstruction() { delete[] operands; }
 
 std::string KInstruction::getSourceLocation() const {
   if (!info->file.empty())
     return info->file + ":" + std::to_string(info->line) + " " +
            std::to_string(info->column);
-  else return "[no debug info]";
+  else
+    return "[no debug info]";
+}
+
+std::vector<std::string> KInstruction::getLocationInfo() const {
+  std::vector<std::string> results;
+  if (!info->file.empty()) {
+    results.emplace_back(info->file);
+    results.emplace_back(std::to_string(info->line));
+    results.emplace_back(std::to_string(info->column));
+  }
+  return results;
 }

@@ -198,6 +198,9 @@ private:
   /// Disables forking, set by client. \see setInhibitForking()
   bool inhibitForking;
 
+  /// FIXME : Print a KLEE S-Expr condition to dump file or not
+  bool printSExpr{false};
+
   /// Signals the executor to halt execution at the next instruction
   /// step.
   bool haltExecution;

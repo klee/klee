@@ -882,12 +882,6 @@ void Executor::branch(ExecutionState &state,
   unsigned N = conditions.size();
   assert(N);
 
-  *conditionsDump << "Executor Branch :: State ID " << state.getID() << "\n";
-
-  for (const auto &conds : conditions) {
-    *conditionsDump << conds << "\n";
-  }
-
   if (!branchingPermitted(state)) {
     unsigned next = theRNG.getInt32() % N;
     for (unsigned i = 0; i < N; ++i) {
@@ -971,8 +965,15 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       seedMap.find(&current);
   bool isSeeding = it != seedMap.end();
 
-  *conditionsDump << "Fork State Id :: " << current.getID() << "\n";
-  *conditionsDump << condition << "\n";
+  if (printSExpr) {
+    *conditionsDump << "State Id [Fork] : " << current.getID() << "\n";
+    *conditionsDump << ":::True ==> "
+                    << "\n";
+    *conditionsDump << condition << "\n";
+    *conditionsDump << ":::False ==> "
+                    << "\n";
+    *conditionsDump << Expr::createIsZero(condition) << "\n";
+  }
 
   if (!isSeeding && !isa<ConstantExpr>(condition) &&
       (MaxStaticForkPct != 1. || MaxStaticSolvePct != 1. ||
@@ -2118,9 +2119,20 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // FIXME: Find a way that we don't have this hidden dependency.
       assert(bi->getCondition() == bi->getOperand(0) && "Wrong operand index!");
 
-      // REVISIT
       ref<Expr> cond = eval(ki, 0, state).value;
-      *conditionsDump << ki->getSourceLocation() << "\n";
+      std::vector<std::string> InstructionInfo = ki->getLocationInfo();
+
+      // REVISIT: Do linked files always have "/" in path? May need a fix later.
+      if (InstructionInfo.size() > 0 &&
+          InstructionInfo[0].find("/") == std::string::npos) {
+        printSExpr = true;
+        *conditionsDump << "\nFile : " << InstructionInfo[0]
+                        << ", Line : " << InstructionInfo[1]
+                        << ", Predicate Start [Index] : " << InstructionInfo[2]
+                        << ", ";
+      } else {
+        printSExpr = false;
+      }
       cond = optimizer.optimizeExpr(cond, false);
       Executor::StatePair branches = fork(state, cond, false);
 
