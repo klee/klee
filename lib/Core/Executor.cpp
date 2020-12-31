@@ -882,8 +882,8 @@ void Executor::branch(ExecutionState &state,
   unsigned N = conditions.size();
   assert(N);
 
-  *conditionsDump << "Executor Branch ::"
-                  << "\n";
+  *conditionsDump << "Executor Branch :: State ID " << state.getID() << "\n";
+
   for (const auto &conds : conditions) {
     *conditionsDump << conds << "\n";
   }
@@ -971,8 +971,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       seedMap.find(&current);
   bool isSeeding = it != seedMap.end();
 
-  // REVISIT
-  *conditionsDump << "Fork :: " << current.getID() << "\n";
+  *conditionsDump << "Fork State Id :: " << current.getID() << "\n";
   *conditionsDump << condition << "\n";
 
   if (!isSeeding && !isa<ConstantExpr>(condition) &&
@@ -1218,10 +1217,6 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
   }
 
   state.addConstraint(condition);
-  *conditionsDump << "Constraints :: "
-                  << "\n";
-  *conditionsDump << condition << "\n";
-
   if (ivcEnabled)
     doImpliedValueConcretization(state, condition,
                                  ConstantExpr::alloc(1, Expr::Bool));
@@ -4099,7 +4094,6 @@ void Executor::resolveExact(ExecutionState &state, ref<Expr> p,
   for (ResolutionList::iterator it = rl.begin(), ie = rl.end(); it != ie;
        ++it) {
     ref<Expr> inBounds = EqExpr::create(p, it->first->getBaseExpr());
-
     StatePair branches = fork(*unbound, inBounds, true);
 
     if (branches.first)
@@ -4205,7 +4199,6 @@ void Executor::executeMemoryOperation(
     const MemoryObject *mo = i->first;
     const ObjectState *os = i->second;
     ref<Expr> inBounds = mo->getBoundsCheckPointer(address, bytes);
-
     StatePair branches = fork(*unbound, inBounds, true);
     ExecutionState *bound = branches.first;
 
