@@ -965,16 +965,6 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       seedMap.find(&current);
   bool isSeeding = it != seedMap.end();
 
-  if (printSExpr) {
-    *conditionsDump << "State Id [Fork] : " << current.getID() << "\n";
-    *conditionsDump << ":::True ==> "
-                    << "\n";
-    *conditionsDump << condition << "\n";
-    *conditionsDump << ":::False ==> "
-                    << "\n";
-    *conditionsDump << Expr::createIsZero(condition) << "\n";
-  }
-
   if (!isSeeding && !isa<ConstantExpr>(condition) &&
       (MaxStaticForkPct != 1. || MaxStaticSolvePct != 1. ||
        MaxStaticCPForkPct != 1. || MaxStaticCPSolvePct != 1.) &&
@@ -1183,6 +1173,18 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       return StatePair(0, 0);
     }
 
+    // COMMENT
+    if (printSExpr) {
+      std::stringstream sso("");
+      *conditionsDump
+          << "\nCurrent State Id [Fork] : " << current.getID() << "\n"
+          << "True State Id [Fork] : " << trueState->getID() << "\n"
+          << (trueState->constraints.printConstraintSetTY(sso)).str() << "\n";
+      sso.str(std::string());
+      *conditionsDump
+          << "False State Id [Fork] : " << falseState->getID() << "\n"
+          << (falseState->constraints.printConstraintSetTY(sso)).str() << "\n";
+    }
     return StatePair(trueState, falseState);
   }
 }
@@ -2122,14 +2124,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> cond = eval(ki, 0, state).value;
       std::vector<std::string> InstructionInfo = ki->getLocationInfo();
 
-      // REVISIT: Do linked files always have "/" in path? May need a fix later.
+      // COMMENT: Do linked files always have "/" in path? May need a fix later.
       if (InstructionInfo.size() > 0 &&
           InstructionInfo[0].find("/") == std::string::npos) {
         printSExpr = true;
         *conditionsDump << "\nFile : " << InstructionInfo[0]
-                        << ", Line : " << InstructionInfo[1]
-                        << ", Predicate Start [Index] : " << InstructionInfo[2]
-                        << ", ";
+                        << " Line : " << InstructionInfo[1]
+                        << "\nPredicate [Index] : " << InstructionInfo[2];
       } else {
         printSExpr = false;
       }

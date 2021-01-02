@@ -40,12 +40,12 @@ public:
     return constraints == b.constraints;
   }
 
-  // REVISIT
-  inline void printConstraintSetTY(std::stringstream &sso) {
-    sso << "Constraints Set :: " << "\n";
-    for (const auto &conds : constraints) {
+  // COMMENT
+  inline std::stringstream &printConstraintSetTY(std::stringstream &sso) {
+    for (const ref<Expr> &conds : constraints) {
       sso << conds << "\n";
     }
+    return sso;
   }
 
 private:
