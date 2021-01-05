@@ -239,14 +239,7 @@ bool SpecialFunctionHandler::handle(ExecutionState &state, Function *f,
   }
 }
 
-/***
- * HACK :
- * Read data from memory by ref<Expr>.
- * 8-byte aligned data. Need to fix bug on cross-compilation.
- * FIXME : ConstantExpr to float conversion is wrong.
- * No casting operator in KLEE.
- */
-
+/// COMMENT : Read data from memory by ref<Expr>
 template <typename T>
 std::vector<T> SpecialFunctionHandler::readCustomDataAtAddress(
     ExecutionState &state, ref<Expr> addressExpr, size_t size) {
@@ -273,7 +266,7 @@ std::vector<T> SpecialFunctionHandler::readCustomDataAtAddress(
   const ObjectState *os = op.second;
   auto relativeOffset = mo->getOffsetExpr(address);
 
-  // the relativeOffset must be concrete as the address is concrete
+  // COMMENT the relativeOffset must be concrete as the address is concrete
   size_t offset = cast<ConstantExpr>(relativeOffset)->getZExtValue();
 
   for (size_t i = offset; i < (mo->size * (1 << 3)); i += READ_SIZE) {
@@ -971,13 +964,14 @@ void SpecialFunctionHandler::handleMakeSymbolic(
   }
 }
 
-// TODO : Dump Current state stack on the fly.
+// COMMENT : Dump Current state stack on the fly.
 void SpecialFunctionHandler::handleStateStackDump(
     ExecutionState &state, KInstruction *target,
     std::vector<ref<Expr>> &arguments) {
   state.dumpStack(errs());
 }
 
+// COMMENT : KQUERY Symbolic Details of a PSE Variable.
 void SpecialFunctionHandler::handleGetSymbolicDetails(
     ExecutionState &state, KInstruction *target,
     std::vector<ref<Expr>> &arguments) {
@@ -1001,8 +995,7 @@ void SpecialFunctionHandler::handleGetSymbolicDetails(
   }
 }
 
-/// COMMENT : Store PSE variable as a KLEE Symbolic Variable
-// ASK : How do we maintain value constraint?
+// COMMENT : Store PSE variable as a KLEE Symbolic Variable
 void SpecialFunctionHandler::handleMakeSymbolicPSE(
     ExecutionState &state, KInstruction *target,
     std::vector<ref<Expr>> &arguments) {
@@ -1023,11 +1016,31 @@ void SpecialFunctionHandler::handleMakeSymbolicPSE(
   }
 
   if (arguments.size() == 4) {
+    Executor::ExactResolutionList rl;
+    executor.resolveExact(state, arguments[3], rl, "get_distribution_values");
+    for (Executor::ExactResolutionList::iterator it = rl.begin(), ie = rl.end();
+         it != ie; ++it) {
+      const ObjectState *old = it->first.second;
+      old->print();
+    }
     distribution = readCustomDataAtAddress<float>(state, arguments[3], 4);
     klee_pse_message("Created Non Deterministic Variable");
   }
 
   if (arguments.size() == 5) {
+    Executor::ExactResolutionList rl;
+    executor.resolveExact(state, arguments[3], rl, "get_distribution_values");
+    for (Executor::ExactResolutionList::iterator it = rl.begin(), ie = rl.end();
+         it != ie; ++it) {
+      const ObjectState *old = it->first.second;
+      old->print();
+    }
+    executor.resolveExact(state, arguments[3], rl, "get_prob_values");
+    for (Executor::ExactResolutionList::iterator it = rl.begin(), ie = rl.end();
+         it != ie; ++it) {
+      const ObjectState *old = it->first.second;
+      old->print();
+    }
     distribution = readCustomDataAtAddress<float>(state, arguments[3], 4);
     probabilities = readCustomDataAtAddress<float>(state, arguments[4], 4);
     klee_pse_message("Created Probabilistic Variable");
@@ -1080,8 +1093,7 @@ void SpecialFunctionHandler::handleMakeSymbolicPSE(
   }
 }
 
-// TODO : Dump all path constraints and not just state conditions.
-// FIXME : Print it at the leaf of the Execution Tree.
+/// COMMENT : Dump all path constraints and not just state conditions.
 void SpecialFunctionHandler::handleGetKQueryExpression(
     ExecutionState &state, KInstruction *target,
     std::vector<ref<Expr>> &arguments) {

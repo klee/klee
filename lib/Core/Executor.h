@@ -99,8 +99,9 @@ class Executor : public Interpreter {
 public:
   typedef std::pair<ExecutionState *, ExecutionState *> StatePair;
 
+  /// COMMENT : File Pointers for dumping internal KLEE Data.
   std::unique_ptr<llvm::raw_fd_ostream> kqueryDumpFileptr, smtlib2DumpFileptr,
-      conditionsDump, stackDump;
+      tempDump, conditionsDump, stackDump;
 
   enum TerminateReason {
     Abort,
@@ -182,6 +183,13 @@ private:
 
   /// When non-null a list of branch decisions to be used for replay.
   const std::vector<bool> *replayPath;
+
+  /// COMMENT : Predicates Map :
+  std::unordered_map<unsigned long, std::vector<ref<Expr>>> predicatesMap;
+
+  /// COMMENT : Get New State ID for true & false state.
+  /// No state re-use/caching.
+  unsigned long long stateExecutionStackID{1};
 
   /// The index into the current \ref replayKTest or \ref replayPath
   /// object.

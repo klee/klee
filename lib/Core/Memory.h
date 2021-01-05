@@ -215,7 +215,7 @@ public:
   void write64(unsigned offset, uint64_t value);
   void print() const;
 
-  // HACK : For Symbolic Details.
+  /// COMMENT : For Symbolic Details.
   std::string printSymbolic(uint64_t readsize) const;
 
   /*

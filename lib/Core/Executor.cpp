@@ -403,25 +403,25 @@ cl::opt<bool> DebugCheckForImpliedValues(
     "debug-check-for-implied-values", cl::init(false),
     cl::desc("Debug the implied value optimization"), cl::cat(DebugCat));
 
-// TODO :: Check if this is useful.
+// REVISIT :: Check if this is useful.
 cl::opt<bool>
     SetPTREEDump("set-ptree-dump", cl::init(false),
                  cl::desc("Set the dumpPtree option to true (default=false)."),
                  cl::cat(DebugCat));
 
-// TODO :: Check if this is useful.
+// REVISIT :: Check if this is useful.
 cl::opt<bool>
     SetDumpState("set-state-dump", cl::init(false),
                  cl::desc("Set the dumpStates option to true (default=false)."),
                  cl::cat(DebugCat));
 
-// TODO :: Test to see if needed as a debug option or not.
+// REVISIT :: Test to see if needed as a debug option or not.
 cl::opt<bool> PrintExecutionTree(
     "print-exectree", cl::init(false),
     cl::desc("Print the Execution Tree (ETree Structure). (default=false)."),
     cl::cat(DebugCat));
 
-// TODO :: Test to see if needed as a debug option or not.
+// REVISIT :: Test to see if needed as a debug option or not.
 cl::opt<bool>
     setSourceCodeFlow("set-codeflow", cl::init(false),
                       cl::desc("Print the State Graph of transitions between "
@@ -432,6 +432,8 @@ cl::opt<bool>
 
 // XXX hack
 extern "C" unsigned dumpStates, dumpPTree;
+
+/// COMMENT
 unsigned dumpStates = SetDumpState ? 1 : 0, dumpPTree = SetPTREEDump ? 1 : 0;
 
 const char *Executor::TerminateReasonNames[] = {
@@ -902,6 +904,7 @@ void Executor::branch(ExecutionState &state,
       addedStates.push_back(ns);
       result.push_back(ns);
       processTree->attach(es->ptreeNode, ns, es);
+      dumpPTree();
     }
   }
 
@@ -1145,6 +1148,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
     }
 
     processTree->attach(current.ptreeNode, falseState, trueState);
+    dumpPTree();
 
     if (pathWriter) {
       // Need to update the pathOS.id field of falseState, otherwise the same id
@@ -1173,17 +1177,23 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       return StatePair(0, 0);
     }
 
-    // COMMENT
+    // COMMENT : Print the State level constraints.
     if (printSExpr) {
       std::stringstream sso("");
       *conditionsDump
-          << "\nCurrent State Id [Fork] : " << current.getID() << "\n"
-          << "True State Id [Fork] : " << trueState->getID() << "\n"
-          << (trueState->constraints.printConstraintSetTY(sso)).str() << "\n";
+          << "\tCurrent State Id : " << current.getID()
+          << ",\n\tTrue KLEE Id : " << trueState->getID()
+          << ",\n\tTrue Generate ID : " << stateExecutionStackID++
+          << ",\n\ttrueQuery : \n\t\t[\n"
+          << (trueState->constraints.printConstraintSetTY(sso)).str()
+          << "\t\t],\n";
       sso.str(std::string());
       *conditionsDump
-          << "False State Id [Fork] : " << falseState->getID() << "\n"
-          << (falseState->constraints.printConstraintSetTY(sso)).str() << "\n";
+          << "\tFalse KLEE Id : " << falseState->getID()
+          << ",\n\tFalse Generate ID : " << stateExecutionStackID++
+          << ",\n\tfalseQuery : \n\t\t[\n"
+          << (falseState->constraints.printConstraintSetTY(sso)).str()
+          << "\t\t]\n}\n";
     }
     return StatePair(trueState, falseState);
   }
@@ -2128,9 +2138,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       if (InstructionInfo.size() > 0 &&
           InstructionInfo[0].find("/") == std::string::npos) {
         printSExpr = true;
-        *conditionsDump << "\nFile : " << InstructionInfo[0]
-                        << " Line : " << InstructionInfo[1]
-                        << "\nPredicate [Index] : " << InstructionInfo[2];
+        *conditionsDump << "{\n\tFile : " << InstructionInfo[0]
+                        << ",\n\tLine : " << InstructionInfo[1]
+                        << ",\n\tPredicate : " << InstructionInfo[2]
+                        << ",\n\tBranch Predicate : " << cond << ",\n";
       } else {
         printSExpr = false;
       }
@@ -4324,7 +4335,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
 }
 
 /// Get PSE Variable Type.
-/// FIXME : Change to return Type information.
+/// COMMENT : Change to return Type information instead of bool
 bool Executor::getProbVarStatus(const MemoryObject *mo) {
   auto findMemObj = globalProbVarsMap.find(mo);
   if (findMemObj == globalProbVarsMap.end()) {
@@ -4344,9 +4355,8 @@ bool Executor::getProbVarStatus(const MemoryObject *mo) {
   return false;
 }
 
-/// Implementation for Make Prob Symbolic Variable
-/// used by klee_make_pse_symbolic()
-// ASK : Linking to Independence Map Implementation
+/// klee_make_pse_symbolic()
+/// COMMENT : Implementation for Make Prob Symbolic Variable
 void Executor::executeMakeProbSymbolic(ExecutionState &state,
                                        const MemoryObject *mo,
                                        const std::string &name,
@@ -4455,9 +4465,11 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
   kqueryDumpFileptr = interpreterHandler->openOutputFile("kquery_dump.txt");
   smtlib2DumpFileptr = interpreterHandler->openOutputFile("smtlib2_dump.txt");
   conditionsDump = interpreterHandler->openOutputFile("conds_dump.txt");
+  tempDump = interpreterHandler->openOutputFile("temp_dump.txt");
 
   run(*state);
   printETree();
+  dumpPTree();
 
   executionTree = nullptr;
   processTree = nullptr;
@@ -4710,9 +4722,6 @@ int *Executor::getErrnoLocation(const ExecutionState &state) const {
 }
 
 void Executor::printETree() {
-  if (!PrintExecutionTree)
-    return;
-
   char fileName[32];
   setSourceCodeFlow ? snprintf(fileName, sizeof(fileName), "execgraph_%08d.dot",
                                (int)stats::instructions)
@@ -4726,17 +4735,12 @@ void Executor::printETree() {
 }
 
 void Executor::dumpPTree() {
-  if (!::dumpPTree)
-    return;
-
   char name[32];
   snprintf(name, sizeof(name), "ptree_%08d.dot", (int)stats::instructions);
   auto os = interpreterHandler->openOutputFile(name);
   if (os) {
     processTree->dump(*os);
   }
-
-  ::dumpPTree = 0;
 }
 
 void Executor::dumpStates() {

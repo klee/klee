@@ -136,6 +136,17 @@ void klee_make_symbolic(void *array, size_t nbytes, const char *name) {
   }
 }
 
+/// COMMENT : KQuery Expr for State. Remove from intrinsics later.
+void klee_dump_kquery_state() {}
+
+/// COMMENT : Dump Execution Stack. Remove from intrinsics later.
+void klee_dump_state_stack() {}
+
+/// COMMENT : Known Symbolics. Remove from intrinsics later.
+void klee_dump_symbolic_details(void *addr, const char *name) {}
+
+/// COMMENT : klee_make_pse_symbolic() function implementation.
+/// This is one of the first files to get compiled.
 void klee_make_pse_symbolic(void *array, size_t nbytes, const char *name,
                             float *distribution, float *probabilities) {
 
@@ -223,15 +234,6 @@ void klee_make_pse_symbolic(void *array, size_t nbytes, const char *name,
     }
   }
 }
-
-// HACK : Not needed here. Refactor later
-void klee_dump_kquery_state() {}
-
-// HACK : Dump Stack. Remove from intrinsics later.
-void klee_dump_state_stack() {}
-
-// HACK : Known Symbolics. Remove from intrinsics later.
-void klee_dump_symbolic_details(void *addr, const char *name) {}
 
 void klee_silent_exit(int x) { exit(x); }
 

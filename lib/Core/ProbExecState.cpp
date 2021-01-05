@@ -17,5 +17,4 @@ ProbExecState::ProbExecState(std::string data, uint32_t stateId,
 ProbExecState::ProbExecState(bool forkflag, std::string data, uint32_t stateId,
                              uint32_t assemblyLine, uint32_t codeLine,
                              ETreeNodePtr treeNode)
-    : forkflag{forkflag}, data{data}, stateId{stateId},
-      assemblyLine{assemblyLine}, codeLine{codeLine}, treeNode{treeNode} {}
+    : forkflag{forkflag}, data{data}, stateId{stateId}, treeNode{treeNode} {}

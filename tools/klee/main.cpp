@@ -429,7 +429,7 @@ void KleeHandler::setInterpreter(Interpreter *i) {
 
 std::string KleeHandler::getOutputFilename(const std::string &filename) {
   SmallString<128> path = m_outputDirectory;
-  sys::path::append(path,filename);
+  sys::path::append(path, filename);
   return path.c_str();
 }
 
@@ -659,8 +659,7 @@ std::string KleeHandler::getRunTimeLibraryPath(const char *argv0) {
     llvm::sys::path::append(libDir, "runtime/lib");
   }
 
-  KLEE_DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
-                       libDir.c_str() << "\n");
+  KLEE_DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() << libDir.c_str() << "\n");
   return libDir.c_str();
 }
 
@@ -873,6 +872,7 @@ static const char *unsafeExternals[] = {
 };
 
 #define NELEMS(array) (sizeof(array) / sizeof(array[0]))
+
 void externalsAndGlobalsCheck(const llvm::Module *m) {
   std::map<std::string, bool> externals;
   std::set<std::string> modelled(modelledExternals,
@@ -910,8 +910,7 @@ void externalsAndGlobalsCheck(const llvm::Module *m) {
 #else
           if (isa<InlineAsm>(ci->getCalledValue())) {
 #endif
-            klee_warning_once(&*fnIt,
-                              "function \"%s\" has inline asm",
+            klee_warning_once(&*fnIt, "function \"%s\" has inline asm",
                               fnIt->getName().data());
           }
         }
@@ -930,7 +929,7 @@ void externalsAndGlobalsCheck(const llvm::Module *m) {
        it != ie; ++it) {
     std::map<std::string, bool>::iterator it2 =
         externals.find(it->getName().str());
-    if (it2!=externals.end())
+    if (it2 != externals.end())
       externals.erase(it2);
   }
 

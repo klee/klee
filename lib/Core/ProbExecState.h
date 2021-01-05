@@ -31,23 +31,10 @@ public:
   bool forkflag = false;
 
   // Filling dummy data as of now for sanity checks.
-  // TODO : Replace with proper structure.
   std::string data = "";
-
-  // TODO : Symbol table, somewhat
-  std::unordered_map<std::string, std::string> symbolMapping;
-
-  // TODO : Store the probability distribution.
-  std::vector<float> probability_dist = std::vector<float>();
 
   // State ID for unique uuid.
   uint32_t stateId = 0;
-
-  // Line number for assembly code. Store the first LOC number.
-  uint32_t assemblyLine = 0;
-
-  // Line number of actual code for assembly code.
-  uint32_t codeLine = 0;
 
   // ETree node with this state, probably before a fork.
   ETreeNodePtr treeNode = nullptr;

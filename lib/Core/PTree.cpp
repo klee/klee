@@ -113,13 +113,13 @@ void PTree::dump(llvm::raw_ostream &os) {
     os << "];\n";
     if (n->left.getPointer()) {
       os << "\tn" << n << " -> n" << n->left.getPointer();
-      os << " [label=0b"
-         << std::bitset<PtrBitCount>(n->left.getInt()).to_string() << "];\n";
+      os << " [label=" << std::bitset<PtrBitCount>(n->left.getInt()).to_string()
+         << "];\n";
       stack.push_back(n->left.getPointer());
     }
     if (n->right.getPointer()) {
       os << "\tn" << n << " -> n" << n->right.getPointer();
-      os << " [label=0b"
+      os << " [label="
          << std::bitset<PtrBitCount>(n->right.getInt()).to_string() << "];\n";
       stack.push_back(n->right.getPointer());
     }
