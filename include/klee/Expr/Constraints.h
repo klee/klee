@@ -43,8 +43,8 @@ public:
   // REVISIT
   inline std::stringstream &printConstraintSetTY(std::stringstream &sso) {
     for (const ref<Expr> &conditions : constraints) {
-      sso << "\t\t";
-      sso << conditions << "\n";
+      sso << "->";
+      sso << conditions;
     }
     return sso;
   }

@@ -1148,7 +1148,6 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
     }
 
     processTree->attach(current.ptreeNode, falseState, trueState);
-    dumpPTree();
 
     if (pathWriter) {
       // Need to update the pathOS.id field of falseState, otherwise the same id
@@ -1179,21 +1178,21 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
 
     // COMMENT : Print the State level constraints.
     if (printSExpr) {
+      dumpPTree();
       std::stringstream sso("");
       *conditionsDump
           << "\tCurrent State Id : " << current.getID()
           << ",\n\tTrue KLEE Id : " << trueState->getID()
           << ",\n\tTrue Generate ID : " << stateExecutionStackID++
           << ",\n\ttrueQuery : \n\t\t[\n"
-          << (trueState->constraints.printConstraintSetTY(sso)).str()
-          << "\t\t],\n";
+          << (trueState->constraints.printConstraintSetTY(sso)).str() << "],\n";
       sso.str(std::string());
       *conditionsDump
           << "\tFalse KLEE Id : " << falseState->getID()
           << ",\n\tFalse Generate ID : " << stateExecutionStackID++
           << ",\n\tfalseQuery : \n\t\t[\n"
           << (falseState->constraints.printConstraintSetTY(sso)).str()
-          << "\t\t]\n}\n";
+          << "]\n}\n";
     }
     return StatePair(trueState, falseState);
   }
