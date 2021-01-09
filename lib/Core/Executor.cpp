@@ -5211,7 +5211,6 @@ Executor::ExecutionResult Executor::getCumulativeCFA(Function *fn, ExecutionStat
   auto start = high_resolution_clock::now();
   while (!statesFonRun.empty()) {
     ExecutionState *currState = statesFonRun.back();
-    statesFonRun.pop_back();
     kf = currState->stack.back().kf;
     kb = currState->currentKBlock;
     FunctionCFA &cfa = result.cfaStates[kf->function];
@@ -5223,6 +5222,8 @@ Executor::ExecutionResult Executor::getCumulativeCFA(Function *fn, ExecutionStat
       statesFonRun.pop_back();
       continue;
     }
+
+    statesFonRun.pop_back();
 
     applyKBlock(kb, *currState);
     if (kb->getKBlockType() == KBlockType::Base)
