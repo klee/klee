@@ -40,10 +40,15 @@ public:
     return constraints == b.constraints;
   }
 
-  // REVISIT
-  inline std::stringstream &printConstraintSetTY(std::stringstream &sso) {
+  /// COMMENT : Stream the Constraint Set to stringstream.
+  std::stringstream &printConstraintSetTY(std::stringstream &sso) {
+
+    if (constraints.size() <= 0) {
+      return sso;
+    }
+
     for (const ref<Expr> &conditions : constraints) {
-      sso << "->";
+      sso << " > ";
       sso << conditions;
     }
     return sso;

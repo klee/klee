@@ -1017,30 +1017,12 @@ void SpecialFunctionHandler::handleMakeSymbolicPSE(
 
   if (arguments.size() == 4) {
     Executor::ExactResolutionList rl;
-    executor.resolveExact(state, arguments[3], rl, "get_distribution_values");
-    for (Executor::ExactResolutionList::iterator it = rl.begin(), ie = rl.end();
-         it != ie; ++it) {
-      const ObjectState *old = it->first.second;
-      old->print();
-    }
     distribution = readCustomDataAtAddress<float>(state, arguments[3], 4);
     klee_pse_message("Created Non Deterministic Variable");
   }
 
   if (arguments.size() == 5) {
     Executor::ExactResolutionList rl;
-    executor.resolveExact(state, arguments[3], rl, "get_distribution_values");
-    for (Executor::ExactResolutionList::iterator it = rl.begin(), ie = rl.end();
-         it != ie; ++it) {
-      const ObjectState *old = it->first.second;
-      old->print();
-    }
-    executor.resolveExact(state, arguments[3], rl, "get_prob_values");
-    for (Executor::ExactResolutionList::iterator it = rl.begin(), ie = rl.end();
-         it != ie; ++it) {
-      const ObjectState *old = it->first.second;
-      old->print();
-    }
     distribution = readCustomDataAtAddress<float>(state, arguments[3], 4);
     probabilities = readCustomDataAtAddress<float>(state, arguments[4], 4);
     klee_pse_message("Created Probabilistic Variable");

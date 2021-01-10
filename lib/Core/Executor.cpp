@@ -1006,6 +1006,8 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
   if (!success) {
     current.pc = current.prevPC;
     terminateStateEarly(current, "Query timed out (fork).");
+    if (printSExpr)
+      *conditionsDump << "}\n";
     return StatePair(0, 0);
   }
 
@@ -1090,7 +1092,8 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
         current.pathOS << "1";
       }
     }
-
+    if (printSExpr)
+      *conditionsDump << "}\n";
     return StatePair(&current, 0);
   } else if (res == Solver::False) {
     if (!isInternal) {
@@ -1098,7 +1101,8 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
         current.pathOS << "0";
       }
     }
-
+    if (printSExpr)
+      *conditionsDump << "}\n";
     return StatePair(0, &current);
   } else {
     TimerStatIncrementer timer(stats::forkTime);
@@ -1173,6 +1177,8 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
     if (MaxDepth && MaxDepth <= trueState->depth) {
       terminateStateEarly(*trueState, "max-depth exceeded.");
       terminateStateEarly(*falseState, "max-depth exceeded.");
+      if (printSExpr)
+        *conditionsDump << "}\n";
       return StatePair(0, 0);
     }
 
@@ -1181,15 +1187,18 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       dumpPTree();
       std::stringstream sso("");
       *conditionsDump
-          << "\tCurrent State Id : " << current.getID()
-          << ",\n\tTrue KLEE Id : " << trueState->getID()
-          << ",\n\tTrue Generate ID : " << stateExecutionStackID++
+          << "\tCurrent State Id : "
+          << (current.getID() > 0 ? current.getID() : -1)
+          << ",\n\tTrue KLEE Id : "
+          << (trueState->getID() > 0 ? trueState->getID() : -1)
+          << ",\n\tTrue Generate ID : " << ++stateExecutionStackID
           << ",\n\ttrueQuery : \n\t\t[\n"
           << (trueState->constraints.printConstraintSetTY(sso)).str() << "],\n";
       sso.str(std::string());
       *conditionsDump
-          << "\tFalse KLEE Id : " << falseState->getID()
-          << ",\n\tFalse Generate ID : " << stateExecutionStackID++
+          << "\tFalse KLEE Id : "
+          << (falseState->getID() > 0 ? falseState->getID() : -1)
+          << ",\n\tFalse Generate ID : " << ++stateExecutionStackID
           << ",\n\tfalseQuery : \n\t\t[\n"
           << (falseState->constraints.printConstraintSetTY(sso)).str()
           << "]\n}\n";
@@ -2140,7 +2149,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         *conditionsDump << "{\n\tFile : " << InstructionInfo[0]
                         << ",\n\tLine : " << InstructionInfo[1]
                         << ",\n\tPredicate : " << InstructionInfo[2]
-                        << ",\n\tBranch Predicate : " << cond << ",\n";
+                        << ",\n\tBranch Predicate : " << cond
+                        << ",\n\tNegate Predicate : "
+                        << Expr::createIsZero(cond) << ",\n";
       } else {
         printSExpr = false;
       }
