@@ -23,31 +23,18 @@ namespace klee {
 bool WorkaroundLLVMPR39177Pass::runOnModule(Module &M) {
   bool modified = false;
 
-  const char *libfunctions[] = {
-    "strlen",
-    "strchr",
-    "strncmp",
-    "strcpy",
-    "strncpy",
-    "__memcpy_chk",
-    "memchr",
-    "memcmp",
-    "putchar",
-    "puts",
-    "fputc",
-    "fputc_unlocked",
-    "fputs",
-    "fputs_unlocked",
-    "fwrite",
-    "malloc",
-    "calloc",
-    "fwrite_unlocked",
-    "fgetc_unlocked",
-    "fgets_unlocked",
-    "fread_unlocked",
-    "memset_pattern16",
-    "fopen"
-  };
+  const char *libfunctions[] = {"strlen",         "strchr",
+                                "strncmp",        "strcpy",
+                                "strncpy",        "__memcpy_chk",
+                                "memchr",         "memcmp",
+                                "putchar",        "puts",
+                                "fputc",          "fputc_unlocked",
+                                "fputs",          "fputs_unlocked",
+                                "fwrite",         "malloc",
+                                "calloc",         "fwrite_unlocked",
+                                "fgetc_unlocked", "fgets_unlocked",
+                                "fread_unlocked", "memset_pattern16",
+                                "fopen"};
 
   for (auto *funcname : libfunctions) {
     if (M.getFunction(funcname) != nullptr)

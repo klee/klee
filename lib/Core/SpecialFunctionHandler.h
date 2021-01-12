@@ -93,13 +93,6 @@ public:
 
   std::string readStringAtAddress(ExecutionState &state, ref<Expr> address);
 
-  template <typename T>
-  std::vector<T> readCustomDataAtAddress(ExecutionState &state,
-                                         ref<Expr> address, size_t size);
-
-  std::vector<klee::ref<klee::Expr>>
-  SplitRefExpression(ExecutionState &state, ref<Expr> address, size_t size);
-
   /* Handlers */
 
 #define HANDLER(name)                                                          \
@@ -149,7 +142,6 @@ public:
   HANDLER(handleMulOverflow);
   HANDLER(handleSubOverflow);
   HANDLER(handleDivRemOverflow);
-  HANDLER(handleMakeSymbolicPSE);
   HANDLER(handleStateStackDump);
   HANDLER(handleGetSymbolicDetails);
   HANDLER(handleGetKQueryExpression);

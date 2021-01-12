@@ -29,19 +29,6 @@ void klee_dump_state_stack();
  */
 void klee_dump_symbolic_details(void *addr, const char *name);
 
-/* klee_make_pse_symbolic - Make the contents of the object pointer to by \arg
- * addr as a probabilistic symbolic variable.
- * \arg addr - The start of the object.
- * \arg nbytes - The number of bytes to make symbolic; currently this *must*
- * be the entire contents of the object.
- * \arg name - A name used for identifying the object in messages, output
- * files, etc. If NULL, object is called "unnamed".
- */
-/* COMMENT klee_make_pse_symbolic() store a PSE Variable.
- */
-void klee_make_pse_symbolic(void *addr, size_t nbytes, const char *name,
-                            float *distribution, float *probabilities);
-
 /* Add an accesible memory object at a user specified location. It
  * is the users responsibility to make sure that these memory
  * objects do not overlap. These memory objects will also

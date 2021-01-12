@@ -184,9 +184,6 @@ private:
   /// When non-null a list of branch decisions to be used for replay.
   const std::vector<bool> *replayPath;
 
-  /// COMMENT : Predicates Map :
-  std::unordered_map<unsigned long, std::vector<ref<Expr>>> predicatesMap;
-
   /// COMMENT : Get New State ID for true & false state.
   /// No state re-use/caching.
   unsigned long long stateExecutionStackID{1};
@@ -206,7 +203,7 @@ private:
   /// Disables forking, set by client. \see setInhibitForking()
   bool inhibitForking;
 
-  /// FIXME : Print a KLEE S-Expr condition to dump file or not
+  /// COMMENT : Print a KLEE S-Expr condition to dump file or not
   bool printSExpr{false};
 
   /// Signals the executor to halt execution at the next instruction
@@ -349,15 +346,6 @@ private:
 
   void executeMakeSymbolic(ExecutionState &state, const MemoryObject *mo,
                            const std::string &name);
-
-  // Make a symbolic Execution variable for PSE.
-  void executeMakeProbSymbolic(ExecutionState &state, const MemoryObject *mo,
-                               const std::string &name,
-                               std::vector<float> distribution,
-                               std::vector<float> probabilities);
-
-  /// Check if the type of a given Variable.
-  bool getProbVarStatus(const MemoryObject *mo);
 
   /// Create a new state where each input condition has been added as
   /// a constraint and return the results. The input state is included

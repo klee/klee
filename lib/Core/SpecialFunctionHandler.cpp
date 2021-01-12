@@ -38,6 +38,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <type_traits>
 
 using namespace llvm;
 using namespace klee;
@@ -104,7 +105,6 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
 #endif
     add("klee_is_symbolic", handleIsSymbolic, true),
     add("klee_make_symbolic", handleMakeSymbolic, false),
-    add("klee_make_pse_symbolic", handleMakeSymbolicPSE, false),
     add("klee_dump_kquery_state", handleGetKQueryExpression, false),
     add("klee_dump_symbolic_details", handleGetSymbolicDetails, false),
     add("klee_dump_state_stack", handleStateStackDump, false),
@@ -237,95 +237,6 @@ bool SpecialFunctionHandler::handle(ExecutionState &state, Function *f,
   } else {
     return false;
   }
-}
-
-/// COMMENT : Read data from memory by ref<Expr>
-template <typename T>
-std::vector<T> SpecialFunctionHandler::readCustomDataAtAddress(
-    ExecutionState &state, ref<Expr> addressExpr, size_t size) {
-
-  ObjectPair op;
-  size_t READ_SIZE = (1 << 3) * size;
-  std::vector<T> return_vector;
-  addressExpr = executor.toUnique(state, addressExpr);
-
-  if (!isa<ConstantExpr>(addressExpr)) {
-    executor.terminateStateOnError(
-        state, "Symbolic string pointer passed to one of the klee_ functions",
-        Executor::TerminateReason::User);
-    return return_vector;
-  }
-  ref<ConstantExpr> address = cast<ConstantExpr>(addressExpr);
-  if (!state.addressSpace.resolveOne(address, op)) {
-    executor.terminateStateOnError(
-        state, "Invalid string pointer passed to one of the klee_ functions",
-        Executor::TerminateReason::User);
-    return return_vector;
-  }
-  const MemoryObject *mo = op.first;
-  const ObjectState *os = op.second;
-  auto relativeOffset = mo->getOffsetExpr(address);
-
-  // COMMENT the relativeOffset must be concrete as the address is concrete
-  size_t offset = cast<ConstantExpr>(relativeOffset)->getZExtValue();
-
-  for (size_t i = offset; i < (mo->size * (1 << 3)); i += READ_SIZE) {
-    ref<Expr> cur = os->read(i, READ_SIZE);
-    cur = executor.toUnique(state, cur);
-    assert(isa<ConstantExpr>(cur) &&
-           "hit symbolic char while reading concrete string");
-    auto elem = (T)(cast<ConstantExpr>(cur)->getZExtValue(READ_SIZE));
-    return_vector.emplace_back(elem);
-  }
-  return return_vector;
-}
-
-/***
- * HACK :
- * Read data from conncrete memory by ref<Expr> and split it.
- * 8-byte aligned data. Need to fix bug on cross-compilation.
- * FIXME : ConstantExpr to float conversion is wrong.
- * No casting operator in KLEE.
- */
-
-std::vector<ref<Expr>>
-SpecialFunctionHandler::SplitRefExpression(ExecutionState &state,
-                                           ref<Expr> addressExpr, size_t size) {
-
-  ObjectPair op;
-  size_t READ_SIZE = (1 << 3) * size;
-  std::vector<ref<Expr>> return_vector;
-  addressExpr = executor.toUnique(state, addressExpr);
-
-  if (!isa<ConstantExpr>(addressExpr)) {
-    executor.terminateStateOnError(
-        state, "Symbolic string pointer passed to one of the klee_ functions",
-        Executor::TerminateReason::User);
-    return return_vector;
-  }
-  ref<ConstantExpr> address = cast<ConstantExpr>(addressExpr);
-  if (!state.addressSpace.resolveOne(address, op)) {
-    executor.terminateStateOnError(
-        state, "Invalid string pointer passed to one of the klee_ functions",
-        Executor::TerminateReason::User);
-    return return_vector;
-  }
-  const MemoryObject *mo = op.first;
-  const ObjectState *os = op.second;
-
-  auto relativeOffset = mo->getOffsetExpr(address);
-  // the relativeOffset must be concrete as the address is concrete
-  size_t offset = cast<ConstantExpr>(relativeOffset)->getZExtValue();
-
-  for (size_t i = offset; i < (mo->size * (1 << 3)); i += READ_SIZE) {
-    ref<Expr> cur = os->read(i, READ_SIZE);
-    cur = executor.toUnique(state, cur);
-    assert(isa<ConstantExpr>(cur) &&
-           "hit symbolic char while reading concrete string");
-    return_vector.emplace_back(cur);
-  }
-
-  return return_vector;
 }
 
 // reads a concrete string from memory
@@ -992,86 +903,6 @@ void SpecialFunctionHandler::handleGetSymbolicDetails(
     *(executor.kqueryDumpFileptr) << "\nGiven Name : " << name;
     *(executor.kqueryDumpFileptr) << "\nVariable Type : " << varName;
     *(executor.kqueryDumpFileptr) << "\n" << old->printSymbolic(1 << 5);
-  }
-}
-
-// COMMENT : Store PSE variable as a KLEE Symbolic Variable
-void SpecialFunctionHandler::handleMakeSymbolicPSE(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  std::string name;
-  std::vector<float> distribution, probabilities;
-
-  if (arguments.size() < 3) {
-    executor.terminateStateOnError(
-        state,
-        "Incorrect number of arguments to klee_make_pse_symbolic(void*, "
-        "size_t, char*, float*, float*)",
-        Executor::User);
-    return;
-  }
-
-  if (arguments.size() == 3) {
-    klee_pse_message("Created ForAll Variable");
-  }
-
-  if (arguments.size() == 4) {
-    Executor::ExactResolutionList rl;
-    distribution = readCustomDataAtAddress<float>(state, arguments[3], 4);
-    klee_pse_message("Created Non Deterministic Variable");
-  }
-
-  if (arguments.size() == 5) {
-    Executor::ExactResolutionList rl;
-    distribution = readCustomDataAtAddress<float>(state, arguments[3], 4);
-    probabilities = readCustomDataAtAddress<float>(state, arguments[4], 4);
-    klee_pse_message("Created Probabilistic Variable");
-  }
-
-  name = arguments[2]->isZero() ? "" : readStringAtAddress(state, arguments[2]);
-
-  if (name.length() == 0) {
-    name = "unnamed";
-    klee_warning("klee_make_pse_symbolic: renamed empty name to \"unnamed\"");
-  }
-
-  Executor::ExactResolutionList rl;
-  executor.resolveExact(state, arguments[0], rl, "make_pse_symbolic");
-
-  for (Executor::ExactResolutionList::iterator it = rl.begin(), ie = rl.end();
-       it != ie; ++it) {
-    const MemoryObject *mo = it->first.first;
-    mo->setName(name);
-
-    const ObjectState *old = it->first.second;
-    ExecutionState *s = it->second;
-
-    if (old->readOnly) {
-      executor.terminateStateOnError(*s, "cannot make readonly object symbolic",
-                                     Executor::User);
-      return;
-    }
-
-    // FIXME: Type coercion should be done consistently somewhere.
-    bool res;
-    bool success __attribute__((unused)) = executor.solver->mustBeTrue(
-        s->constraints,
-        EqExpr::create(
-            ZExtExpr::create(arguments[1], Context::get().getPointerWidth()),
-            mo->getSizeExpr()),
-        res, s->queryMetaData);
-    assert(success && "FIXME: Unhandled solver failure");
-
-    // COMMENT : Add Constraint a --> [1, 2, 3], =>
-    // OrExpr(EqExpr(a, 1), EqExpr(a, 2), EqExpr(a, 3))
-
-    if (res) {
-      executor.executeMakeProbSymbolic(*s, mo, name, distribution,
-                                       probabilities);
-    } else {
-      executor.terminateStateOnError(
-          *s, "wrong size given to klee_make_symbolic[_name]", Executor::User);
-    }
   }
 }
 

@@ -4344,39 +4344,6 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
   }
 }
 
-/// Get PSE Variable Type.
-/// COMMENT : Change to return Type information instead of bool
-bool Executor::getProbVarStatus(const MemoryObject *mo) {
-  auto findMemObj = globalProbVarsMap.find(mo);
-  if (findMemObj == globalProbVarsMap.end()) {
-    // Not a PSE Variable.
-    klee_pse_message("Not a PSE Variable");
-    return false;
-  } else {
-    auto distPair = findMemObj->second;
-    if (distPair.first.size() > 0 && distPair.second.size() > 0) {
-      klee_pse_message("Probabilistic Variable");
-      return true;
-    } else {
-      klee_pse_message("Non Deterministic Variable");
-      return true;
-    }
-  }
-  return false;
-}
-
-/// klee_make_pse_symbolic()
-/// COMMENT : Implementation for Make Prob Symbolic Variable
-void Executor::executeMakeProbSymbolic(ExecutionState &state,
-                                       const MemoryObject *mo,
-                                       const std::string &name,
-                                       std::vector<float> distribution,
-                                       std::vector<float> probabilities) {
-  float_dist_pairs variableInfo = std::make_pair(distribution, probabilities);
-  globalProbVarsMap.insert(std::make_pair(mo, variableInfo));
-  executeMakeSymbolic(state, mo, name);
-}
-
 /***/
 void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
                                  char **envp) {
