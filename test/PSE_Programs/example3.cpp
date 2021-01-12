@@ -2,46 +2,97 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --libc=klee --max-forks=25 --write-no-tests --exit-on-error --optimize --disable-inlining --search=nurs:depth --use-cex-cache %t1.bc
 
-#include <assert.h>
+#include <algorithm>
 #include <klee/klee.h>
-#include <random>
 #include <stdio.h>
+#include <string>
+#include <vector>
 
-std::default_random_engine generator;
-std::uniform_int_distribution<int> distribution(0, 10);
+template <class T>
+std::string tostring(std::vector<T> &vec) {
+  std::string str("");
+  for (const auto &elems : vec) {
+    str.append(std::to_string(elems));
+    str.append(",");
+  }
+  str.pop_back();
+  return str;
+}
 
-int main(void) {
-  int a, b, c, t;
+template <class T>
+void make_pse_symbolic(void *addr, size_t bytes, const char *name, std::vector<T> dist) {
+  klee_make_symbolic(addr, bytes, name);
+  klee_assume(*(T *)addr >= *std::min_element(dist.begin(), dist.end()));
+  klee_assume(*(T *)addr <= *std::max_element(dist.begin(), dist.end()));
+}
 
-  float _distribution1[] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
-  float _probabilities1[] = {1 / 10, 0.1, 0.2, 0.3, 0.1, 0.2};
+/**
+ * switch => door_switch
+*/
+bool montyhall(bool door_switch) {
 
-  float _distribution2[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  float _probabilities2[] = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
+  std::vector<int> car_door_dist = {0, 1, 2, 3};
+  std::vector<int> choice_dist = {0, 1, 2, 3};
 
-  klee_make_pse_symbolic(&a, sizeof(a), "a_pse_sym", _distribution1, _probabilities1); // PSE Variable
-  klee_make_pse_symbolic(&b, sizeof(b), "b_pse_sym", _distribution2, _probabilities2); // PSE Variable
-  klee_make_symbolic(&c, sizeof(c), "c_sym");                                          // ForAll Variable
+  int host_door = 0;
+  int car_door, choice;
 
-  if ((a > b + c) && (b > c - a)) {
-    t = a + b;
-    a = b + c;
-    b = a - c;
-    klee_dump_symbolic_details(&t, "t");
-    klee_dump_symbolic_details(&a, "a");
-    klee_dump_symbolic_details(&b, "b");
-    klee_dump_kquery_state();
-  } else if (b > a + c) {
-    a = b - c;
-    b = a + c;
-    int m = a + b;
-    klee_dump_symbolic_details(&b, "b");
-    klee_dump_symbolic_details(&a, "a");
-    klee_dump_symbolic_details(&m, "local_m");
+  make_pse_symbolic(&choice, sizeof(choice), "choice_pse_var_sym", choice_dist);
+  make_pse_symbolic(&car_door, sizeof(car_door), "car_door_sym", car_door_dist);
+  klee_make_symbolic(&host_door, sizeof(host_door), "host_door_sym");
+
+  /**
+     * Based on car door and choice, choose a host door. 
+    */
+  if (car_door != 1 && choice != 1) {
+    host_door = 1;
+  } else if (car_door != 2 && choice != 2) {
+    host_door = 2;
   } else {
-    assert(1);
-    klee_dump_kquery_state();
+    host_door = 3;
   }
 
-  return 0;
+  /**
+     * Based door_switch and host_door, change choices. 
+    */
+  if (door_switch) {
+    klee_dump_kquery_state();
+    if (host_door == 1) {
+      if (choice == 2) {
+        choice = 3;
+      } else {
+        choice = 2;
+      }
+    } else if (host_door == 2) {
+      if (choice == 1) {
+        choice = 3;
+      } else {
+        choice = 1;
+      }
+    } else {
+      if (choice == 1) {
+        choice = 2;
+        klee_dump_symbolic_details(&choice, "choice_branch");
+      } else {
+        choice = 1;
+      }
+    }
+  }
+
+  if (choice == car_door) {
+    return true;
+  } else {
+    return false;
+  }
+
+  return true;
+}
+
+int main() {
+  int choice = 0;
+  int door_switch = 0;
+  std::vector<int> door_switch_dist = {0, 1};
+
+  make_pse_symbolic(&door_switch, sizeof(door_switch), "door_switch_pse_var_sym", door_switch_dist);
+  return montyhall(door_switch);
 }

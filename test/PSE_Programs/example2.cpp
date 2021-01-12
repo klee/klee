@@ -2,43 +2,46 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --libc=klee --max-forks=25 --write-no-tests --exit-on-error --optimize --disable-inlining --search=nurs:depth --use-cex-cache %t1.bc
 
-#include <assert.h>
+#include <algorithm>
 #include <klee/klee.h>
-#include <random>
 #include <stdio.h>
+#include <string>
+#include <vector>
 
-std::default_random_engine generator;
-std::uniform_int_distribution<int> distribution(0, 10);
+template <class T>
+std::string tostring(std::vector<T> &vec) {
+  std::string str("");
+  for (const auto &elems : vec) {
+    str.append(std::to_string(elems));
+    str.append(",");
+  }
+  str.pop_back();
+  return str;
+}
+
+template <class T>
+void make_pse_symbolic(void *addr, size_t bytes, const char *name, std::vector<T> dist) {
+  klee_make_symbolic(addr, bytes, name);
+  klee_assume(*(T *)addr >= *std::min_element(dist.begin(), dist.end()));
+  klee_assume(*(T *)addr <= *std::max_element(dist.begin(), dist.end()));
+}
 
 int main(void) {
-  int a, b, c, t;
+  int c, a, b, d;
 
-  float _distribution1[] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
-  float _probabilities1[] = {1 / 10, 0.1, 0.2, 0.3, 0.1, 0.2};
+  klee_make_symbolic(&a, sizeof(a), "a_sym");
+  klee_make_symbolic(&b, sizeof(b), "b_sym");
+  klee_make_symbolic(&c, sizeof(c), "c_sym");
 
-  float _distribution2[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  float _probabilities2[] = {0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1};
-
-  klee_make_pse_symbolic(&a, sizeof(a), "a_pse_sym", _distribution1, _probabilities1); // PSE Variable
-  klee_make_pse_symbolic(&b, sizeof(b), "b_pse_sym", _distribution2, _probabilities2); // PSE Variable
-  klee_make_symbolic(&c, sizeof(c), "c_sym");                                          // ForAll Variable
-
-  if ((a > b + c) && a >= 90) {
-    t = a + b;
-    a = b + c;
-    b = a - c;
-    klee_dump_symbolic_details(&t, "t");
-    klee_dump_symbolic_details(&a, "a");
-    klee_dump_symbolic_details(&b, "b");
-    klee_dump_kquery_state();
-  } else if (b > a + c) {
-    a = b - c;
-    b = a + c;
-    klee_dump_symbolic_details(&b, "b");
-    klee_dump_symbolic_details(&t, "t");
+  if (a > 0 && c > 0 && c < d && d > a && d > b) {
+    c = a * b;
   } else {
-    assert(1);
-    klee_dump_kquery_state();
+    d = a + b;
+  }
+
+  if (c > d) {
+    a = 0;
+    b = 0;
   }
 
   return 0;
