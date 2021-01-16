@@ -848,3 +848,19 @@ endif()
 # Miscellaneous install
 ################################################################################
 install(FILES include/klee/klee.h DESTINATION include/klee)
+
+################################################################################
+# Uninstall rule
+################################################################################
+configure_file(
+  "${PROJECT_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
+  "${CMAKE_BINARY_DIR}/cmake_uninstall.cmake"
+	@ONLY
+)
+
+add_custom_target(uninstall
+  COMMAND
+  "${CMAKE_COMMAND}" -P "${CMAKE_BINARY_DIR}/cmake_uninstall.cmake"
+  COMMENT "Uninstalling..."
+  VERBATIM
+)
