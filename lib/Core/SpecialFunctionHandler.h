@@ -34,7 +34,7 @@ namespace klee {
                                                     KInstruction *target, 
                                                     std::vector<ref<Expr> > 
                                                       &arguments);
-    typedef std::map<const llvm::Function*, 
+    typedef std::map<const llvm::Function*,
                      std::pair<Handler,bool> > handlers_ty;
 
     handlers_ty handlers;
@@ -144,10 +144,6 @@ namespace klee {
     HANDLER(handleUnderConstrained);
     HANDLER(handleWarning);
     HANDLER(handleWarningOnce);
-    HANDLER(handleAddOverflow);
-    HANDLER(handleMulOverflow);
-    HANDLER(handleSubOverflow);
-    HANDLER(handleDivRemOverflow);
 #undef HANDLER
   };
 } // End klee namespace

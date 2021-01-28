@@ -32,7 +32,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 
-#include <errno.h>
+#include <cerrno>
 #include <sstream>
 
 using namespace llvm;
@@ -138,13 +138,6 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   add("_Znam", handleNewArray, true),
   // operator new(unsigned long)
   add("_Znwm", handleNew, true),
-
-  // Run clang with -fsanitize=signed-integer-overflow and/or
-  // -fsanitize=unsigned-integer-overflow
-  add("__ubsan_handle_add_overflow", handleAddOverflow, false),
-  add("__ubsan_handle_sub_overflow", handleSubOverflow, false),
-  add("__ubsan_handle_mul_overflow", handleMulOverflow, false),
-  add("__ubsan_handle_divrem_overflow", handleDivRemOverflow, false),
 
 #undef addDNR
 #undef add
@@ -877,32 +870,4 @@ void SpecialFunctionHandler::handleMarkGlobal(ExecutionState &state,
     assert(!mo->isLocal);
     mo->isGlobal = true;
   }
-}
-
-void SpecialFunctionHandler::handleAddOverflow(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(state, "overflow on addition",
-                                 StateTerminationType::Overflow);
-}
-
-void SpecialFunctionHandler::handleSubOverflow(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(state, "overflow on subtraction",
-                                 StateTerminationType::Overflow);
-}
-
-void SpecialFunctionHandler::handleMulOverflow(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(state, "overflow on multiplication",
-                                 StateTerminationType::Overflow);
-}
-
-void SpecialFunctionHandler::handleDivRemOverflow(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(state, "overflow on division or remainder",
-                                 StateTerminationType::Overflow);
 }
