@@ -3309,7 +3309,6 @@ void Executor::pauseStates(ExecutionState *current) {
         seedMap.find(*it);
       if (it3 != seedMap.end())
         seedMap.erase(it3);
-      processTree->remove((*it)->ptreeNode);
     }
     addedStates.clear();
   }
@@ -3317,10 +3316,10 @@ void Executor::pauseStates(ExecutionState *current) {
 
 void Executor::updateStates(ExecutionState *current) {
   if (searcher) {
-    searcher->update(current, addedStates, removedStates);
-  }
-  if (searcher->empty()) {
-    haltExecution = true;
+    if (!searcher->empty())
+      searcher->update(current, addedStates, removedStates);
+    if (searcher->empty())
+      haltExecution = true;
   }
 
   states.insert(addedStates.begin(), addedStates.end());
@@ -3337,7 +3336,8 @@ void Executor::updateStates(ExecutionState *current) {
       seedMap.find(es);
     if (it3 != seedMap.end())
       seedMap.erase(it3);
-    processTree->remove(es->ptreeNode);
+    if (results[es->getInitPCBlock()].pausedStates[es->getPrevPCBlock()].count(es) == 0)
+      processTree->remove(es->ptreeNode);
   }
   removedStates.clear();
 }
@@ -3598,6 +3598,25 @@ Executor::ExecutionResult Executor::runKFunctionWithTarget(ExecutionState &state
   return result;
 }
 
+Executor::ExecutionResult Executor::runKFunctionGuided(ExecutionState &state, KFunction *kf) {
+ if (pathWriter)
+   state.pathOS = pathWriter->open();
+ if (symPathWriter)
+   state.symPathOS = symPathWriter->open();
+
+ if (statsTracker)
+   statsTracker->framePushed(state, 0);
+
+ processTree = std::make_unique<PTree>(&state);
+ ExecutionResult result = guidedRun(state);
+ processTree = nullptr;
+
+ if (statsTracker)
+   statsTracker->done();
+
+ return result;
+}
+
 Executor::ExecutionResult Executor::runBlock(ExecutionState &state, unsigned bound, KBlock *kb) {
  if (pathWriter)
    state.pathOS = pathWriter->open();
@@ -3640,12 +3659,13 @@ void Executor::executeStep(ExecutionState &state, bool withPause) {
 void Executor::boundedExecuteStep(ExecutionState &state, unsigned bound) {
   KInstruction *prevKI = state.prevPC;
 
-  if ((prevKI->inst->isTerminator() || isa<CallInst>(prevKI->inst)) &&
-      state.level.count(state.getPCBlock()) > bound) {
-    results[state.getInitPCBlock()].pausedStates[state.getPCBlock()].insert(&state);
-    pauseState(state);
-    updateStates(&state);
-    return;
+  if ((prevKI->inst->isTerminator() || isa<CallInst>(prevKI->inst))) {
+    results[state.getInitPCBlock()].completedStates[state.getPrevPCBlock()].insert(state.copy());
+    if (state.level.count(state.getPCBlock()) > bound) {
+      pauseState(state);
+      updateStates(&state);
+      return;
+    }
   }
 
   executeStep(state, true);
@@ -3708,10 +3728,82 @@ Executor::ExecutionResult Executor::targetedRun(ExecutionState &initialState, KB
   }
 
   if (!states.empty()) {
-    klee_message("'states' doesn't empty");
-    for (auto &state : states)
-      results[initialState.getInitPCBlock()].pausedStates[state->getPrevPCBlock()].insert(state);
-    states.clear();
+      for (auto &state : states)
+        terminateStateEarly(*state, "excess state");
+      updateStates(nullptr);
+  }
+
+  delete searcher;
+  searcher = nullptr;
+
+  doDumpStates();
+  haltExecution = false;
+
+  return results;
+}
+
+Executor::ExecutionResult Executor::guidedRun(ExecutionState &initialState) {
+  // Delay init till now so that ticks don't accrue during optimization and such.
+  timers.reset();
+
+  states.insert(&initialState);
+
+  GuidedSearcher *gs = new GuidedSearcher();
+  searcher = gs;
+
+  std::vector<ExecutionState *> newStates(states.begin(), states.end());
+  searcher->update(0, newStates, std::vector<ExecutionState *>());
+  // main interpreter loop
+  while (!states.empty() && !haltExecution) {
+    while (!states.empty() && !haltExecution) {
+      ExecutionState &state = searcher->selectState();
+      boundedExecuteStep(state, MaxBound);
+    }
+
+    ExecutedBlock &pausedStates = results[initialState.getInitPCBlock()].pausedStates;
+    std::map<KBlock*, std::vector<ExecutionState*>> targetedStates;
+    for (auto blockstate : pausedStates) {
+      llvm::BasicBlock *bb = blockstate.first;
+      KFunction *kf = kmodule->functionMap[bb->getParent()];
+      KBlock *kb = kf->blockMap[bb];
+      std::set<ExecutionState *, ExecutionStateIDCompare> &ess = blockstate.second;
+      std::vector<KBlock *> reachableBlocks;
+
+      KBlock *nearestBlock = nullptr;
+      unsigned int minDistance = -1;
+      for (auto &kbp : kf->blocks) {
+        KBlock *target = kbp.get();
+        if (kf->backwardDistance[target].count(kb) > 0 &&
+            results[initialState.getInitPCBlock()].completedStates.count(target->basicBlock) == 0 &&
+            kf->backwardDistance[target][kb] > 0 &&
+            kf->backwardDistance[target][kb] < minDistance) {
+          nearestBlock = kb;
+          minDistance = kf->backwardDistance[target][kb];
+        }
+      }
+      if (nearestBlock != nullptr)
+        targetedStates[nearestBlock].insert(
+                    targetedStates[nearestBlock].begin(),
+                    ess.begin(),
+                    ess.end());
+    }
+
+    for (auto &blockstate : targetedStates) {
+      KBlock *bb = blockstate.first;
+      std::vector<ExecutionState *> &ess = blockstate.second;
+      for (auto &es : ess)
+        es->level.clear();
+      gs->pushTarget(bb);
+      unpauseStates(ess);
+    }
+
+    if (!searcher->empty()) haltExecution = false;
+  }
+
+  if (!states.empty()) {
+      for (auto &state : states)
+        terminateStateEarly(*state, "excess state");
+      updateStates(nullptr);
   }
 
   delete searcher;
@@ -3749,10 +3841,9 @@ Executor::ExecutionResult Executor::executeBlock(ExecutionState &initialState, u
   }
 
   if (!states.empty()) {
-    klee_message("'states' doesn't empty");
-    for (auto &state : states)
-      results[initialState.getInitPCBlock()].pausedStates[state->getPrevPCBlock()].insert(state);
-    states.clear();
+      for (auto &state : states)
+        terminateStateEarly(*state, "excess state");
+      updateStates(nullptr);
   }
 
   delete searcher;
@@ -3861,11 +3952,14 @@ void Executor::terminateStateEarly(ExecutionState &state,
 }
 
 void Executor::pauseState(ExecutionState &state) {
-  if (!ExcludeSolver && (!OnlyOutputStatesCoveringNew || state.coveredNew ||
-      (AlwaysOutputSeeds && seedMap.count(&state))))
-    interpreterHandler->processTestCase(state, 0, 0);
-  results[state.getInitPCBlock()].pausedStates[state.getPrevPCBlock()].insert(&state);
-  terminateState(state);
+  results[state.getInitPCBlock()].pausedStates[state.getPCBlock()].insert(&state);
+  searcher->update(nullptr, {}, {&state});
+}
+
+void Executor::unpauseStates(std::vector<ExecutionState *> &states) {
+  for (auto &state : states)
+      results[state->getInitPCBlock()].pausedStates[state->getPCBlock()].erase(state);
+  searcher->update(nullptr, states, {});
 }
 
 void Executor::terminateStateOnExit(ExecutionState &state) {
@@ -4901,7 +4995,7 @@ Executor::ExecutionResult Executor::getCFA(Function *fn, ExecutionState &state) 
       prepareSymbolicArgs(*initialState, kf);
 
       for (; bbit != bbie; bbit++) {
-        KBlock *kb = kf->kBlocks[&*bbit];
+        KBlock *kb = kf->blockMap[&*bbit];
         ExecutionState *currState = initialState->withKBlock(kb);
         currState->setBlockIndexes(kb);
         switch (kb->getKBlockType()) {
@@ -4987,7 +5081,8 @@ Executor::ExecutionResult Executor::getExecutionResult(llvm::Function *fn, Execu
   ExecutionState *initialState = state.withKFunction(kf);
   prepareSymbolicArgs(*initialState, kf);
   auto start = high_resolution_clock::now();
-  ExecutionResult result = runKFunction(*initialState, kf);
+  ExecutionResult result = runKFunctionGuided(*initialState, kf);
+//  ExecutionResult result = runKFunction(*initialState, kf);
   auto stop = high_resolution_clock::now();
   auto duration = duration_cast<milliseconds>(stop - start);
   errs() << "duration," << fn->getName() << "," << duration.count() << "\n";

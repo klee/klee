@@ -182,7 +182,7 @@ public:
   /// @brief Exploration depth, i.e., number of times KLEE branched for this state
   std::uint32_t depth;
 
-  /// @brief Exploration level, i.e., number of cycles of BB
+  /// @brief Exploration level, i.e., number of times KLEE cycled for this state
   std::multiset<llvm::BasicBlock *> level;
 
   /// @brief Address space used by this state (e.g. Global and Heap)
@@ -272,6 +272,7 @@ public:
   ExecutionState *withStackFrame(KFunction *kf);
   ExecutionState *withKBlock(KBlock *kb);
   ExecutionState *empty();
+  ExecutionState *copy();
 
   void pushFrame(KInstIterator caller, KFunction *kf);
   void popFrame();

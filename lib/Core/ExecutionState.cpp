@@ -197,6 +197,12 @@ ExecutionState *ExecutionState::empty() {
   return newState;
 }
 
+ExecutionState *ExecutionState::copy() {
+  ExecutionState* newState = new ExecutionState(*this);
+  newState->setID();
+  return newState;
+}
+
 void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
   stack.emplace_back(StackFrame(caller, kf));
 }

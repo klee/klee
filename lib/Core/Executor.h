@@ -103,7 +103,7 @@ class Executor : public Interpreter {
 public:
   typedef std::pair<ExecutionState*,ExecutionState*> StatePair;
   typedef std::pair<llvm::BasicBlock*,llvm::BasicBlock*> BasicBlockPair;
-  typedef std::map<llvm::BasicBlock*, std::set<const ExecutionState*, ExecutionStateIDCompare> > ExecutedBlock;
+  typedef std::map<llvm::BasicBlock*, std::set<ExecutionState*, ExecutionStateIDCompare> > ExecutedBlock;
   struct ExecutionBlockResult {
     ExecutedBlock completedStates;
     // states with insufficient information
@@ -212,7 +212,7 @@ private:
 
   /// Signals the executor to halt execution at the next instruction
   /// step.
-  bool haltExecution;  
+  bool haltExecution;
 
   /// Whether implied-value concretization is enabled. Currently
   /// false, it is buggy (it needs to validate its writes).
@@ -256,6 +256,7 @@ private:
   void boundedExecuteStep(ExecutionState &state, unsigned bound);
   ExecutionResult executeBlock(ExecutionState &initialState, unsigned bound, KBlock *kb);
   ExecutionResult targetedRun(ExecutionState &initialState, KBlock *target);
+  ExecutionResult guidedRun(ExecutionState &initialState);
   ExecutionResult boundedRun(ExecutionState &initialState, unsigned bound);
   ExecutionResult runBlock(ExecutionState &state, unsigned bound, KBlock *kb);
 
@@ -263,6 +264,7 @@ private:
   void runKBlock(ExecutionState &state, KBlock *kb);
   ExecutionResult runKFunction(ExecutionState &state, KFunction *kf);
   ExecutionResult runKFunctionWithTarget(ExecutionState &state, KFunction *kf, KBlock *target);
+  ExecutionResult runKFunctionGuided(ExecutionState &state, KFunction *kf);
 
   // Given a concrete object in our [klee's] address space, add it to 
   // objects checked code can reference.
@@ -478,6 +480,8 @@ private:
   void terminateStateEarly(ExecutionState &state, const llvm::Twine &message);
   // pause state
   void pauseState(ExecutionState &state);
+  // unpause state
+  void unpauseStates(std::vector<ExecutionState *> &states);
   // call exit handler and terminate state
   void terminateStateOnExit(ExecutionState &state);
   // call error handler and terminate state

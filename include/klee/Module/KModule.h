@@ -121,10 +121,10 @@ namespace klee {
       distance[bb] = 0;
       while(!nodes.empty()) {
         KBlock *currBB = nodes.front();
-        for (auto it = pred_begin(currBB->basicBlock), et = pred_end(currBB->basicBlock); it != et; ++it) {
-          if (distance.count(blockMap[*it]) == 0) {
-            distance[blockMap[*it]] = distance[currBB] + 1;
-            nodes.push_back(blockMap[*it]);
+        for (auto const &pred : predecessors(currBB->basicBlock)) {
+          if (distance.count(blockMap[pred]) == 0) {
+            distance[blockMap[pred]] = distance[currBB] + 1;
+            nodes.push_back(blockMap[pred]);
           }
         }
         nodes.pop_front();
@@ -194,7 +194,7 @@ namespace klee {
       backwardDistance[kf][kf] = 0;
       while(!nodes.empty()) {
         KFunction *currKF = nodes.front();
-        for (auto callBlock : currKF->kCallBlocks) {
+        for (auto &callBlock : currKF->kCallBlocks) {
           if (callBlock->calledFunction->isDeclaration()) continue;
           KFunction *callKF = functionMap[callBlock->calledFunction];
           if (backwardDistance[callKF].count(kf) == 0) {
