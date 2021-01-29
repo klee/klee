@@ -232,6 +232,7 @@ void TargetedSearcher::update(ExecutionState *current,
       states->update(current, weight);
       break;
     case Done:
+      current->level.clear();
       reachedStates.push_back(current);
       states->remove(current);
       break;
@@ -248,6 +249,7 @@ void TargetedSearcher::update(ExecutionState *current,
       states->insert(state, weight);
       break;
     case Done:
+      current->level.clear();
       reachedStates.push_back(state);
       break;
     case Miss:
@@ -258,6 +260,15 @@ void TargetedSearcher::update(ExecutionState *current,
   // remove states
   for (const auto state : removedStates)
     states->remove(state);
+
+  if (reachedStates.size() > 0) {
+    while (!states->empty()) {
+        ExecutionState *es = states->choose(0);
+        es->level.clear();
+        reachedStates.push_back(es);
+        states->remove(es);
+    }
+  }
 }
 
 bool TargetedSearcher::empty() {
@@ -291,10 +302,11 @@ void GuidedSearcher::update(ExecutionState *current,
   if (!targetedSearchers.empty()) {
     targetedSearchers.back()->update(current, addedStates, removedStates);
     if (targetedSearchers.back()->empty()) {
+      baseSearcher->update(nullptr, targetedSearchers.back()->reachedStates, std::vector<ExecutionState *>());
       targetedSearchers.pop_back();
     }
-  }
-  baseSearcher->update(current, addedStates, removedStates);
+  } else
+    baseSearcher->update(current, addedStates, removedStates);
 }
 
 bool GuidedSearcher::empty() {

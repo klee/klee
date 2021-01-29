@@ -170,6 +170,7 @@ namespace klee {
     void printName(llvm::raw_ostream &os) override;
     void pushTarget(KBlock *target);
     KBlock *getCurrentTarget();
+    bool targetedMode() { return !targetedSearchers.empty(); };
   };
 
   /// The base class for all weighted searchers. Uses DiscretePDF as underlying

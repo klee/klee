@@ -3316,10 +3316,7 @@ void Executor::pauseStates(ExecutionState *current) {
 
 void Executor::updateStates(ExecutionState *current) {
   if (searcher) {
-    if (!searcher->empty())
-      searcher->update(current, addedStates, removedStates);
-    if (searcher->empty())
-      haltExecution = true;
+    searcher->update(current, addedStates, removedStates);
   }
 
   states.insert(addedStates.begin(), addedStates.end());
@@ -3660,7 +3657,7 @@ void Executor::boundedExecuteStep(ExecutionState &state, unsigned bound) {
   KInstruction *prevKI = state.prevPC;
 
   if ((prevKI->inst->isTerminator() || isa<CallInst>(prevKI->inst))) {
-    results[state.getInitPCBlock()].completedStates[state.getPrevPCBlock()].insert(state.copy());
+    results[state.getInitPCBlock()].completedStates[state.getPCBlock()].insert(state.copy());
     if (state.level.count(state.getPCBlock()) > bound) {
       pauseState(state);
       updateStates(&state);
@@ -3755,9 +3752,12 @@ Executor::ExecutionResult Executor::guidedRun(ExecutionState &initialState) {
   searcher->update(0, newStates, std::vector<ExecutionState *>());
   // main interpreter loop
   while (!states.empty() && !haltExecution) {
-    while (!states.empty() && !haltExecution) {
+    while (!searcher->empty() && !haltExecution) {
       ExecutionState &state = searcher->selectState();
-      boundedExecuteStep(state, MaxBound);
+      if (gs->targetedMode())
+        executeStep(state, true);
+      else
+        boundedExecuteStep(state, MaxBound);
     }
 
     ExecutedBlock &pausedStates = results[initialState.getInitPCBlock()].pausedStates;
@@ -3777,7 +3777,7 @@ Executor::ExecutionResult Executor::guidedRun(ExecutionState &initialState) {
             results[initialState.getInitPCBlock()].completedStates.count(target->basicBlock) == 0 &&
             kf->backwardDistance[target][kb] > 0 &&
             kf->backwardDistance[target][kb] < minDistance) {
-          nearestBlock = kb;
+          nearestBlock = target;
           minDistance = kf->backwardDistance[target][kb];
         }
       }
@@ -3791,23 +3791,22 @@ Executor::ExecutionResult Executor::guidedRun(ExecutionState &initialState) {
     for (auto &blockstate : targetedStates) {
       KBlock *bb = blockstate.first;
       std::vector<ExecutionState *> &ess = blockstate.second;
-      for (auto &es : ess)
-        es->level.clear();
       gs->pushTarget(bb);
       unpauseStates(ess);
     }
+    pausedStates.clear();
 
-    if (!searcher->empty()) haltExecution = false;
+    if (searcher->empty()) haltExecution = true;
   }
+
+  delete searcher;
+  searcher = nullptr;
 
   if (!states.empty()) {
       for (auto &state : states)
         terminateStateEarly(*state, "excess state");
       updateStates(nullptr);
   }
-
-  delete searcher;
-  searcher = nullptr;
 
   doDumpStates();
   haltExecution = false;
@@ -5023,56 +5022,6 @@ Executor::ExecutionResult Executor::getCFA(Function *fn, ExecutionState &state) 
     auto duration = duration_cast<milliseconds>(stop - start);
     errs() << "duration," << f->getName() << "," << duration.count() << "\n";
   }
-  return result;
-}
-
-Executor::ExecutionResult Executor::getCumulativeCFA(Function *fn, ExecutionState &state, unsigned bound) {
-  std::deque<ExecutionState *> statesFonRun;
-  KBlock *initkb = kmodule->functionMap[fn]->kBlocks[&*fn->begin()];
-  KBlock *kb = initkb;
-  KFunction *kf = kmodule->functionMap[fn];
-  ExecutionState *initialState = state.withKFunction(kf);
-  prepareSymbolicArgs(*initialState, kf);
-  statesFonRun.push_back(initialState);
-  ExecutionResult &result = results;
-  ExecutedBlock &completedBlocks = result[initkb->basicBlock].completedStates;
-  ExecutedBlock &pausedBlocks = result[initkb->basicBlock].pausedStates;
-  ExecutedBlock &erroneousBlocks = result[initkb->basicBlock].completedStates;
-  auto start = high_resolution_clock::now();
-  while (!statesFonRun.empty()) {
-    ExecutionState *currState = statesFonRun.back();
-    kf = currState->stack.back().kf;
-    kb = kmodule->getKBlock(currState->getPCBlock());
-
-    if (currState->level.count(kb->basicBlock) > bound) {
-      pausedBlocks[kb->basicBlock].insert(currState);
-      statesFonRun.pop_back();
-      continue;
-    }
-
-    statesFonRun.pop_back();
-
-    applyKBlock(kb, *currState);
-    if (kb->getKBlockType() == KBlockType::Base)
-      currState->level.insert(kb->basicBlock);
-    cfa[kb->basicBlock].insert(exitStates.begin(), exitStates.end());
-    exitStates.clear();
-    completedBlocks[kb->basicBlock].insert(completedStates.begin(), completedStates.end());
-    for(auto & it : completedStates) {
-      ExecutionState *newState = new ExecutionState(*it);
-      statesFonRun.push_back(newState);
-    }
-    completedStates.clear();
-    pausedBlocks[kb->basicBlock].insert(pausedStates.begin(), pausedStates.end());
-    pausedStates.clear();
-    erroneousBlocks[kb->basicBlock].insert(erroneousStates.begin(), erroneousStates.end());
-    erroneousStates.clear();
-  }
-
-  auto stop = high_resolution_clock::now();
-  auto duration = duration_cast<milliseconds>(stop - start);
-  errs() << "duration," << fn->getName() << "," << duration.count() << "\n";
-
   return result;
 }
 

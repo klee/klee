@@ -195,7 +195,7 @@ namespace klee {
       while(!nodes.empty()) {
         KFunction *currKF = nodes.front();
         for (auto &callBlock : currKF->kCallBlocks) {
-          if (callBlock->calledFunction->isDeclaration()) continue;
+          if (!callBlock->calledFunction || callBlock->calledFunction->isDeclaration()) continue;
           KFunction *callKF = functionMap[callBlock->calledFunction];
           if (backwardDistance[callKF].count(kf) == 0) {
             backwardDistance[callKF][kf] = backwardDistance[currKF][kf] + 1;
