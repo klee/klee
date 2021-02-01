@@ -458,6 +458,10 @@ void KModule::checkModule() {
   }
 }
 
+KBlock* KModule::getKBlock(llvm::BasicBlock *bb) {
+  return functionMap[bb->getParent()]->kBlocks[bb];
+}
+
 Function* llvm::getTargetFunction(Value *calledVal) {
   SmallPtrSet<const GlobalValue*, 3> Visited;
 

@@ -1464,8 +1464,10 @@ int main(int argc, char **argv, char **envp) {
                    << " bytes)"
                    << " (" << ++i << "/" << kTestFiles.size() << ")\n";
       // XXX should put envp in .ktest ?
-//      interpreter->runMainAsBlockSequence(mainFn, out->numArgs, out->args, pEnvp);
-      interpreter->runAllFunctionsAsBlockSequence(mainFn, out->numArgs, out->args, pEnvp);
+      interpreter->runMainAsBlockSequence(mainFn, out->numArgs, out->args, pEnvp);
+//      interpreter->runAllFunctionsAsBlockSequence(mainFn, out->numArgs, out->args, pEnvp);
+//      interpreter->runFunctionAsIsolatedBlocks(mainFn, out->numArgs, out->args, pEnvp);
+
       if (interrupted) break;
     }
     interpreter->setReplayKTest(0);
@@ -1514,8 +1516,9 @@ int main(int argc, char **argv, char **envp) {
                    sys::StrError(errno).c_str());
       }
     }
-//    interpreter->runMainAsBlockSequence(mainFn, pArgc, pArgv, pEnvp);
-    interpreter->runAllFunctionsAsBlockSequence(mainFn, pArgc, pArgv, pEnvp);
+    interpreter->runMainAsBlockSequence(mainFn, pArgc, pArgv, pEnvp);
+//    interpreter->runAllFunctionsAsBlockSequence(mainFn, pArgc, pArgv, pEnvp);
+//    interpreter->runFunctionAsIsolatedBlocks(mainFn, pArgc, pArgv, pEnvp);
 
     while (!seeds.empty()) {
       kTest_free(seeds.back());

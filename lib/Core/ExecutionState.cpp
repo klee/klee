@@ -74,9 +74,9 @@ StackFrame::~StackFrame() {
 /***/
 
 ExecutionState::ExecutionState(KFunction *kf) :
-    currentKBlock(nullptr),
     pc(nullptr),
     prevPC(nullptr),
+    incomingBBIndex(-1),
     depth(0),
     ptreeNode(nullptr),
     steppedInstructions(0),
@@ -88,9 +88,9 @@ ExecutionState::ExecutionState(KFunction *kf) :
 }
 
 ExecutionState::ExecutionState(KFunction *kf, KBlock *kb) :
-    currentKBlock(kb),
-    pc(currentKBlock->instructions),
+    pc(kb->instructions),
     prevPC(pc),
+    incomingBBIndex(-1),
     depth(0),
     ptreeNode(nullptr),
     steppedInstructions(0),
@@ -110,7 +110,6 @@ ExecutionState::~ExecutionState() {
 }
 
 ExecutionState::ExecutionState(const ExecutionState& state):
-    currentKBlock(state.currentKBlock),
     pc(state.pc),
     prevPC(state.prevPC),
     stack(state.stack),
@@ -136,6 +135,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     maxBlockBound(state.maxBlockBound) {
   for (const auto &cur_mergehandler: openMergeStack)
     cur_mergehandler->addOpenState(this);
+  setID();
 }
 
 ExecutionState *ExecutionState::branch() {
@@ -162,6 +162,14 @@ ExecutionState *ExecutionState::dropStackFrame() {
   return newState;
 }
 
+ExecutionState *ExecutionState::withKFunction(KFunction *kf) {
+  ExecutionState *newState = new ExecutionState(*this);
+  newState->pushFrame(nullptr, kf);
+  newState->pc = kf->kBlocks[&*kf->function->begin()]->instructions;
+  newState->prevPC = newState->pc;
+  return newState;
+}
+
 ExecutionState *ExecutionState::withStackFrame(KFunction *kf) {
   ExecutionState *newState = new ExecutionState(*this);
   newState->pushFrame(nullptr, kf);;
@@ -169,17 +177,17 @@ ExecutionState *ExecutionState::withStackFrame(KFunction *kf) {
 }
 
 ExecutionState *ExecutionState::withKBlock(KBlock *kb) {
-    ExecutionState *newState = new ExecutionState(*this);
-    newState->currentKBlock = kb;
-    newState->pc = kb->instructions;
-    newState->prevPC = newState->pc;
-    return newState;
+  ExecutionState *newState = new ExecutionState(*this);
+  newState->pc = kb->instructions;
+  newState->prevPC = newState->pc;
+  return newState;
 }
 
 ExecutionState *ExecutionState::empty() {
   ExecutionState* newState = new ExecutionState();
   newState->pc = nullptr;
   newState->prevPC = nullptr;
+  newState->incomingBBIndex = -1;
   newState->depth = 0;
   newState->ptreeNode = nullptr;
   newState->steppedInstructions = 0;
@@ -433,4 +441,12 @@ bool ExecutionState::inBasicBlockRange(unsigned index, bool check) {
     } else {
         return true;
     }
+}
+
+BasicBlock *ExecutionState::getPrevPCBlock() {
+  return prevPC->inst->getParent();
+}
+
+BasicBlock *ExecutionState::getPCBlock() {
+  return pc->inst->getParent();
 }

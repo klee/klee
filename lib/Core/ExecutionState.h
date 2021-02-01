@@ -160,8 +160,6 @@ public:
   // copy ctor
   ExecutionState(const ExecutionState &state);
 
-  KBlock *currentKBlock = nullptr;
-
   /// @brief Pointer to instruction to be executed after the current
   /// instruction
   KInstIterator pc;
@@ -174,7 +172,7 @@ public:
 
   /// @brief Remember from which Basic Block control flow arrived
   /// (i.e. to select the right phi values)
-  std::uint32_t incomingBBIndex;
+  std::int32_t incomingBBIndex;
 
   // Overall state of the state - Data specific
 
@@ -266,6 +264,7 @@ public:
   ExecutionState *branch();
   ExecutionState *withInstructions(KInstruction **instructions);
   ExecutionState *dropStackFrame();
+  ExecutionState *withKFunction(KFunction *kf);
   ExecutionState *withStackFrame(KFunction *kf);
   ExecutionState *withKBlock(KBlock *kb);
   ExecutionState *empty();
@@ -284,6 +283,9 @@ public:
   void setID() { id = nextID++; };
   void setBlockIndexes(KBlock *kb);
   bool inBasicBlockRange(unsigned index, bool isoMode);
+  llvm::BasicBlock *getPrevPCBlock();
+  llvm::BasicBlock *getPCBlock();
+
 };
 
 struct ExecutionStateIDCompare {

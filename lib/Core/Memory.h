@@ -82,21 +82,21 @@ public:
   MemoryObject(uint64_t _address) 
     : id(counter++),
       address(_address),
+      lazyInstantiatedSource(nullptr),
       size(0),
       isFixed(true),
       parent(NULL),
-      allocSite(0),
-      lazyInstantiatedSource(nullptr) {
+      allocSite(0) {
   }
 
   MemoryObject(ref<Expr> _lazyInstantiatedSource)
     : id(counter++),
       address((uint64_t)0xffffffffffffffff),
+      lazyInstantiatedSource(_lazyInstantiatedSource),
       size(0),
       isFixed(true),
       parent(NULL),
-      allocSite(0),
-      lazyInstantiatedSource(_lazyInstantiatedSource) {
+      allocSite(0) {
   }
 
   MemoryObject(uint64_t _address, unsigned _size, 
@@ -106,6 +106,7 @@ public:
                ref<Expr> _lazyInstantiatedSource = nullptr)
     : id(counter++),
       address(_address),
+      lazyInstantiatedSource(_lazyInstantiatedSource),
       size(_size),
       name("unnamed"),
       isLocal(_isLocal),
@@ -113,8 +114,7 @@ public:
       isFixed(_isFixed),
       isUserSpecified(false),
       parent(_parent), 
-      allocSite(_allocSite),
-      lazyInstantiatedSource(_lazyInstantiatedSource) {
+      allocSite(_allocSite) {
   }
 
   ~MemoryObject();

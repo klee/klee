@@ -102,13 +102,14 @@ class Executor : public Interpreter {
 
 public:
   typedef std::pair<ExecutionState*,ExecutionState*> StatePair;
-  typedef std::map<llvm::BasicBlock*, std::set<const ExecutionState*> > FunctionCFA;
-
-  struct ExecutionResult {
-    std::map<llvm::Function *, FunctionCFA> cfaStates;
-    std::map<llvm::Function *, FunctionCFA> cfaPausedStates;
-    std::map<llvm::Function *, FunctionCFA> cfaErroneousStates;
+  typedef std::pair<llvm::BasicBlock*,llvm::BasicBlock*> BasicBlockPair;
+  typedef std::map<llvm::BasicBlock*, std::set<const ExecutionState*, ExecutionStateIDCompare> > ExecutedBlock;
+  struct ExecutionBlockResult {
+    ExecutedBlock completedStates;
+    ExecutedBlock pausedStates;
+    ExecutedBlock erroneousStates;
   };
+  typedef std::map<llvm::BasicBlock*, ExecutionBlockResult> ExecutionResult;
 
   enum MemoryOperation {
     Read,
@@ -151,6 +152,7 @@ private:
   std::set<ExecutionState*, ExecutionStateIDCompare> completedStates;
   std::set<ExecutionState*, ExecutionStateIDCompare> pausedStates;
   std::set<ExecutionState*, ExecutionStateIDCompare> erroneousStates;
+  ExecutionResult results;
   StatsTracker *statsTracker;
   TreeStreamWriter *pathWriter, *symPathWriter;
   SpecialFunctionHandler *specialFunctionHandler;
@@ -253,11 +255,13 @@ private:
   void executeTargetedTerminator(ExecutionState &state, KInstruction *ki, KBlock *target);
 
   void executeInstruction(ExecutionState &state, KInstruction *ki);
-  void executeKBlock(KBlock *kb, ExecutionState &initialState, bool isoMode);
+  void executeKBlock(ExecutionState &initialState, KBlock *kb);
+  ExecutionResult executeSegment(ExecutionState &initialState, unsigned bound, KBlock *init, KBlock *end = nullptr);
+  ExecutionResult runSegment(ExecutionState &state, unsigned bound, KBlock *init, KBlock *end = nullptr);
 
   void run(ExecutionState &initialState);
-  void runKBlock(KBlock *kb, ExecutionState &state);
-  void applyKBlock(KBlock *kb, ExecutionState &stat);
+  void runKBlock(ExecutionState &state, KBlock *kb);
+  ExecutionResult runKFunction(ExecutionState &state, KFunction *kf);
 
   // Given a concrete object in our [klee's] address space, add it to 
   // objects checked code can reference.
@@ -471,6 +475,8 @@ private:
   void terminateState(ExecutionState &state);
   // call exit handler and terminate state
   void terminateStateEarly(ExecutionState &state, const llvm::Twine &message);
+  // pause state
+  void pauseState(ExecutionState &state);
   // call exit handler and terminate state
   void terminateStateOnExit(ExecutionState &state);
   // call error handler and terminate state
@@ -576,12 +582,14 @@ public:
 
   ExecutionResult getCFA(llvm::Function *fn, ExecutionState &state);
   ExecutionResult getCumulativeCFA(llvm::Function *fn, ExecutionState &state, unsigned bound);
+  ExecutionResult getExecutionResult(llvm::Function *fn, ExecutionState &state, unsigned bound);
 
-  void runFunctionAsIsolatedBlocks(llvm::Function *f) override;
+  void runFunctionAsIsolatedBlocks(llvm::Function *f, int argc, char **argv,
+                                   char **envp) override;
   void runAllFunctionsAsBlockSequence(llvm::Function *f, int argc, char **argv,
                                       char **envp) override;
   void runMainAsBlockSequence(llvm::Function *f, int argc, char **argv,
-                         char **envp) override;
+                              char **envp) override;
 
   void runWithStats(ExecutionState &state);
 

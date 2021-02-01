@@ -197,6 +197,8 @@ namespace klee {
     /// Run passes that check if module is valid LLVM IR and if invariants
     /// expected by KLEE's Executor hold.
     void checkModule();
+
+    KBlock *getKBlock(llvm::BasicBlock *bb);
   };
 } // End klee namespace
 
