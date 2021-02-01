@@ -14,11 +14,13 @@
 #include "klee/Core/Interpreter.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/IR/CFG.h"
 
 #include <map>
 #include <memory>
 #include <set>
 #include <vector>
+#include <deque>
 
 namespace llvm {
   class BasicBlock;
@@ -42,6 +44,7 @@ namespace klee {
   class InstructionInfoTable;
   struct KInstruction;
   class KModule;
+  struct KFunction;
   template<class T> class ref;
 
   enum KBlockType {
@@ -50,7 +53,7 @@ namespace klee {
   };
 
   struct KBlock {
-    llvm::Function *function;
+    KFunction *parent;
     llvm::BasicBlock *basicBlock;
 
     unsigned numInstructions;
@@ -61,7 +64,7 @@ namespace klee {
     bool trackCoverage;
 
   public:
-    explicit KBlock(llvm::Function*, llvm::BasicBlock*, KModule*,
+    explicit KBlock(KFunction*, llvm::BasicBlock*, KModule*,
                     std::map<llvm::Instruction*, unsigned>&, std::map<unsigned, KInstruction*>&,
                     unsigned&);
     KBlock(const KBlock &) = delete;
@@ -80,13 +83,14 @@ namespace klee {
     llvm::Function *calledFunction;
 
   public:
-    explicit KCallBlock(llvm::Function*, llvm::BasicBlock*, KModule*,
+    explicit KCallBlock(KFunction*, llvm::BasicBlock*, KModule*,
                     std::map<llvm::Instruction*, unsigned>&, std::map<unsigned, KInstruction*>&,
                     unsigned&, llvm::Function*);
     KBlockType getKBlockType() override { return KBlockType::Call; };
   };
 
   struct KFunction {
+    KModule *parent;
     llvm::Function *function;
 
     unsigned numArgs, numRegisters;
@@ -96,12 +100,36 @@ namespace klee {
     unsigned numBlocks;
     KInstruction **instructions;
 
-    std::map<llvm::Instruction*, KInstruction*> kInstructions;
-    std::map<llvm::BasicBlock*, KBlock*> kBlocks;
+    std::map<llvm::Instruction*, KInstruction*> instructionMap;
+    std::vector<std::unique_ptr<KBlock>> blocks;
+    std::map<llvm::BasicBlock*, KBlock*> blockMap;
+    KBlock *entryKBlock;
+    std::vector<KBlock*> finalKBlocks;
+    std::vector<KCallBlock*> kCallBlocks;
+    std::map<KBlock*, std::map<KBlock*, unsigned int>> backwardDistance;
 
     /// Whether instructions in this function should count as
     /// "coverable" for statistics and search heuristics.
     bool trackCoverage;
+
+  private:
+    // BFS algorithm
+    void calculateDistance(KBlock *bb) {
+      std::map<KBlock*, unsigned int> &distance = backwardDistance[bb];
+      std::deque<KBlock*> nodes;
+      nodes.push_back(bb);
+      distance[bb] = 0;
+      while(!nodes.empty()) {
+        KBlock *currBB = nodes.front();
+        for (auto it = pred_begin(currBB->basicBlock), et = pred_end(currBB->basicBlock); it != et; ++it) {
+          if (distance.count(blockMap[*it]) == 0) {
+            distance[blockMap[*it]] = distance[currBB] + 1;
+            nodes.push_back(blockMap[*it]);
+          }
+        }
+        nodes.pop_front();
+      }
+    }
 
   public:
     explicit KFunction(llvm::Function*, KModule *);
@@ -138,6 +166,7 @@ namespace klee {
     // Our shadow versions of LLVM structures.
     std::vector<std::unique_ptr<KFunction>> functions;
     std::map<llvm::Function*, KFunction*> functionMap;
+    std::map<KFunction*, std::map<KFunction*, unsigned int>> backwardDistance;
 
     // Functions which escape (may be called indirectly)
     // XXX change to KFunction
@@ -157,6 +186,25 @@ namespace klee {
   private:
     // Mark function with functionName as part of the KLEE runtime
     void addInternalFunction(const char* functionName);
+
+    // BFS algorithm
+    void calculateDistance(KFunction *kf) {
+      std::deque<KFunction*> nodes;
+      nodes.push_back(kf);
+      backwardDistance[kf][kf] = 0;
+      while(!nodes.empty()) {
+        KFunction *currKF = nodes.front();
+        for (auto callBlock : currKF->kCallBlocks) {
+          if (callBlock->calledFunction->isDeclaration()) continue;
+          KFunction *callKF = functionMap[callBlock->calledFunction];
+          if (backwardDistance[callKF].count(kf) == 0) {
+            backwardDistance[callKF][kf] = backwardDistance[currKF][kf] + 1;
+            nodes.push_back(callKF);
+          }
+        }
+        nodes.pop_front();
+      }
+    }
 
   public:
     KModule() = default;

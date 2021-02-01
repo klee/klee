@@ -74,12 +74,14 @@ StackFrame::~StackFrame() {
 /***/
 
 ExecutionState::ExecutionState(KFunction *kf) :
+    initPC(nullptr),
     pc(nullptr),
     prevPC(nullptr),
     incomingBBIndex(-1),
     depth(0),
     ptreeNode(nullptr),
     steppedInstructions(0),
+    steppedMemoryInstructions(0),
     instsSinceCovNew(0),
     coveredNew(false),
     forkDisabled(false) {
@@ -88,12 +90,14 @@ ExecutionState::ExecutionState(KFunction *kf) :
 }
 
 ExecutionState::ExecutionState(KFunction *kf, KBlock *kb) :
-    pc(kb->instructions),
+    initPC(kb->instructions),
+    pc(initPC),
     prevPC(pc),
     incomingBBIndex(-1),
     depth(0),
     ptreeNode(nullptr),
     steppedInstructions(0),
+    steppedMemoryInstructions(0),
     instsSinceCovNew(0),
     coveredNew(false),
     forkDisabled(false) {
@@ -110,6 +114,7 @@ ExecutionState::~ExecutionState() {
 }
 
 ExecutionState::ExecutionState(const ExecutionState& state):
+    initPC(state.initPC),
     pc(state.pc),
     prevPC(state.prevPC),
     stack(state.stack),
@@ -125,6 +130,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     arrayNames(state.arrayNames),
     openMergeStack(state.openMergeStack),
     steppedInstructions(state.steppedInstructions),
+    steppedMemoryInstructions(state.steppedMemoryInstructions),
     instsSinceCovNew(state.instsSinceCovNew),
     unwindingInformation(state.unwindingInformation
                              ? state.unwindingInformation->clone()
@@ -135,7 +141,6 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     maxBlockBound(state.maxBlockBound) {
   for (const auto &cur_mergehandler: openMergeStack)
     cur_mergehandler->addOpenState(this);
-  setID();
 }
 
 ExecutionState *ExecutionState::branch() {
@@ -149,48 +154,42 @@ ExecutionState *ExecutionState::branch() {
   return falseState;
 }
 
-ExecutionState *ExecutionState::withInstructions(KInstruction **instructions) {
-  ExecutionState *newState = new ExecutionState(*this);
-  newState->pc = instructions;
-  newState->prevPC = newState->pc;
-  return newState;
-}
-
-ExecutionState *ExecutionState::dropStackFrame() {
-  ExecutionState *newState = new ExecutionState(*this);
-  newState->stack.pop_back();
-  return newState;
-}
-
 ExecutionState *ExecutionState::withKFunction(KFunction *kf) {
   ExecutionState *newState = new ExecutionState(*this);
+  newState->setID();
   newState->pushFrame(nullptr, kf);
-  newState->pc = kf->kBlocks[&*kf->function->begin()]->instructions;
+  newState->initPC = kf->blockMap[&*kf->function->begin()]->instructions;
+  newState->pc = newState->initPC;
   newState->prevPC = newState->pc;
   return newState;
 }
 
 ExecutionState *ExecutionState::withStackFrame(KFunction *kf) {
   ExecutionState *newState = new ExecutionState(*this);
-  newState->pushFrame(nullptr, kf);;
+  newState->setID();
+  newState->pushFrame(nullptr, kf);
   return newState;
 }
 
 ExecutionState *ExecutionState::withKBlock(KBlock *kb) {
   ExecutionState *newState = new ExecutionState(*this);
-  newState->pc = kb->instructions;
+  newState->setID();
+  newState->initPC = kb->instructions;
+  newState->pc = newState->initPC;
   newState->prevPC = newState->pc;
   return newState;
 }
 
 ExecutionState *ExecutionState::empty() {
   ExecutionState* newState = new ExecutionState();
+  newState->initPC = nullptr;
   newState->pc = nullptr;
   newState->prevPC = nullptr;
   newState->incomingBBIndex = -1;
   newState->depth = 0;
   newState->ptreeNode = nullptr;
   newState->steppedInstructions = 0;
+  newState->steppedMemoryInstructions = 0;
   newState->instsSinceCovNew = 0;
   newState->coveredNew = false;
   newState->forkDisabled = false;
@@ -441,6 +440,10 @@ bool ExecutionState::inBasicBlockRange(unsigned index, bool check) {
     } else {
         return true;
     }
+}
+
+BasicBlock *ExecutionState::getInitPCBlock() {
+  return initPC->inst->getParent();
 }
 
 BasicBlock *ExecutionState::getPrevPCBlock() {

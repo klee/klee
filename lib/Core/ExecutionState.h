@@ -160,6 +160,9 @@ public:
   // copy ctor
   ExecutionState(const ExecutionState &state);
 
+  /// @brief Pointer to initial instruction
+  KInstIterator initPC;
+
   /// @brief Pointer to instruction to be executed after the current
   /// instruction
   KInstIterator pc;
@@ -222,6 +225,9 @@ public:
   /// @brief The numbers of times this state has run through Executor::stepInstruction
   std::uint64_t steppedInstructions;
 
+  /// @brief The numbers of times this state has run through Executor::stepInstruction with executeMemoryOperation
+  std::uint64_t steppedMemoryInstructions;
+
   /// @brief Counts how many instructions were executed since the last new
   /// instruction was covered.
   std::uint32_t instsSinceCovNew;
@@ -262,8 +268,6 @@ public:
   ~ExecutionState();
 
   ExecutionState *branch();
-  ExecutionState *withInstructions(KInstruction **instructions);
-  ExecutionState *dropStackFrame();
   ExecutionState *withKFunction(KFunction *kf);
   ExecutionState *withStackFrame(KFunction *kf);
   ExecutionState *withKBlock(KBlock *kb);
@@ -283,9 +287,9 @@ public:
   void setID() { id = nextID++; };
   void setBlockIndexes(KBlock *kb);
   bool inBasicBlockRange(unsigned index, bool isoMode);
+  llvm::BasicBlock *getInitPCBlock();
   llvm::BasicBlock *getPrevPCBlock();
   llvm::BasicBlock *getPCBlock();
-
 };
 
 struct ExecutionStateIDCompare {

@@ -120,6 +120,33 @@ namespace klee {
     void printName(llvm::raw_ostream &os) override;
   };
 
+  /// TargetedSearcher picks a state /*COMMENT*/.
+  class TargetedSearcher final : public Searcher {
+
+  private:
+    std::unique_ptr<DiscretePDF<ExecutionState*, ExecutionStateIDCompare>> states;
+    std::vector<ExecutionState*> offTargetStates;
+    KBlock *target;
+    const std::map<KFunction*, unsigned int> &distanceToTargetFunction;
+
+    bool tryGetLocalWeight(ExecutionState *es, double &weight, const std::vector<KBlock*> &localTargets);
+    bool tryGetPretargetWeight(ExecutionState *es, double &weight);
+    bool tryGetTargetWeight(ExecutionState *es, double &weight);
+    bool tryGetPosttargetWeight(ExecutionState *es, double &weight);
+    bool tryGetWeight(ExecutionState* es, double &weight);
+
+  public:
+    TargetedSearcher(KBlock *targetBB);
+    ~TargetedSearcher() override = default;
+    ExecutionState &selectState() override;
+    void update(ExecutionState *current,
+                const std::vector<ExecutionState *> &addedStates,
+                const std::vector<ExecutionState *> &removedStates) override;
+    bool empty() override;
+    void printName(llvm::raw_ostream &os) override;
+  private:
+  };
+
   /// The base class for all weighted searchers. Uses DiscretePDF as underlying
   /// data structure.
   class WeightedRandomSearcher final : public Searcher {

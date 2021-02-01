@@ -106,6 +106,8 @@ public:
   typedef std::map<llvm::BasicBlock*, std::set<const ExecutionState*, ExecutionStateIDCompare> > ExecutedBlock;
   struct ExecutionBlockResult {
     ExecutedBlock completedStates;
+    // states with insufficient information
+    ExecutedBlock iiStates;
     ExecutedBlock pausedStates;
     ExecutedBlock erroneousStates;
   };
@@ -148,10 +150,6 @@ private:
   TimingSolver *solver;
   MemoryManager *memory;
   std::set<ExecutionState*, ExecutionStateIDCompare> states;
-  std::set<ExecutionState*, ExecutionStateIDCompare> exitStates;
-  std::set<ExecutionState*, ExecutionStateIDCompare> completedStates;
-  std::set<ExecutionState*, ExecutionStateIDCompare> pausedStates;
-  std::set<ExecutionState*, ExecutionStateIDCompare> erroneousStates;
   ExecutionResult results;
   StatsTracker *statsTracker;
   TreeStreamWriter *pathWriter, *symPathWriter;
@@ -255,13 +253,16 @@ private:
   void executeTargetedTerminator(ExecutionState &state, KInstruction *ki, KBlock *target);
 
   void executeInstruction(ExecutionState &state, KInstruction *ki);
-  void executeKBlock(ExecutionState &initialState, KBlock *kb);
-  ExecutionResult executeSegment(ExecutionState &initialState, unsigned bound, KBlock *init, KBlock *end = nullptr);
-  ExecutionResult runSegment(ExecutionState &state, unsigned bound, KBlock *init, KBlock *end = nullptr);
+  void boundedExecuteStep(ExecutionState &state, unsigned bound);
+  ExecutionResult executeBlock(ExecutionState &initialState, unsigned bound, KBlock *kb);
+  ExecutionResult targetedRun(ExecutionState &initialState, KBlock *target);
+  ExecutionResult boundedRun(ExecutionState &initialState, unsigned bound);
+  ExecutionResult runBlock(ExecutionState &state, unsigned bound, KBlock *kb);
 
   void run(ExecutionState &initialState);
   void runKBlock(ExecutionState &state, KBlock *kb);
   ExecutionResult runKFunction(ExecutionState &state, KFunction *kf);
+  ExecutionResult runKFunctionWithTarget(ExecutionState &state, KFunction *kf, KBlock *target);
 
   // Given a concrete object in our [klee's] address space, add it to 
   // objects checked code can reference.
@@ -279,7 +280,7 @@ private:
 
   void stepInstruction(ExecutionState &state);
   void updateStates(ExecutionState *current);
-  void updateAndPauseStates(ExecutionState *current);
+  void pauseStates(ExecutionState *current);
   void transferToBasicBlock(llvm::BasicBlock *dst,
 			    llvm::BasicBlock *src,
 			    ExecutionState &state);
@@ -581,7 +582,6 @@ public:
                          char **envp) override;
 
   ExecutionResult getCFA(llvm::Function *fn, ExecutionState &state);
-  ExecutionResult getCumulativeCFA(llvm::Function *fn, ExecutionState &state, unsigned bound);
   ExecutionResult getExecutionResult(llvm::Function *fn, ExecutionState &state, unsigned bound);
 
   void runFunctionAsIsolatedBlocks(llvm::Function *f, int argc, char **argv,
@@ -631,6 +631,7 @@ public:
   void formArg(llvm::Function *f, unsigned NumPtrBytes, std::vector<ref<Expr> > &arguments, MemoryObject *argvMO, int argc, int envc);
   void formArgMemory(ExecutionState &state, char **argv, MemoryObject *argvMO, unsigned NumPtrBytes, int envc, char **envp, int argc);
   const Array * makeArray(ExecutionState &state, const uint64_t size, const std::string &name);
+  void executeStep(ExecutionState &state, bool withPause);
 };
   
 } // End klee namespace

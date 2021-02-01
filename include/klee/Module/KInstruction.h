@@ -26,6 +26,7 @@ namespace klee {
   class Executor;
   struct InstructionInfo;
   class KModule;
+  class KBlock;
 
 
   /// KInstruction - Intermediate instruction representation used
@@ -41,6 +42,7 @@ namespace klee {
     int *operands;
     /// Destination register index.
     unsigned dest;
+    const KBlock *kblock;
 
   public:
     KInstruction() = default;

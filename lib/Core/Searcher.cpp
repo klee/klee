@@ -144,6 +144,115 @@ void RandomSearcher::printName(llvm::raw_ostream &os) {
   os << "RandomSearcher\n";
 }
 
+TargetedSearcher::TargetedSearcher(KBlock *targetBB)
+  : states(std::make_unique<DiscretePDF<ExecutionState*, ExecutionStateIDCompare>>()),
+    target(targetBB),
+    distanceToTargetFunction(target->parent->parent->backwardDistance[target->parent]) {}
+
+ExecutionState &TargetedSearcher::selectState() {
+  return *states->choose(0);
+}
+
+bool TargetedSearcher::tryGetLocalWeight(ExecutionState *es, double &weight, const std::vector<KBlock*> &localTargets) {
+  unsigned int intWeight = es->steppedMemoryInstructions;
+  KFunction *currentKF = es->stack.back().kf;
+  KBlock *currentKB = currentKF->blockMap[es->getPCBlock()];
+  std::vector<unsigned int> localDistance;
+  for (auto end : localTargets) {
+    if (currentKF->backwardDistance[end].count(currentKB) > 0) {
+      unsigned int w = currentKF->backwardDistance[end][currentKB];
+      localDistance.push_back(w);
+    }
+  }
+
+  if (localDistance.empty()) return false;
+
+  intWeight += *std::min_element(localDistance.begin(), localDistance.end());
+  weight = intWeight*(1.0/(3.0 * 4294967296.0)); //number on [0,0.3)-real-interval
+  return true;
+}
+
+bool TargetedSearcher::tryGetPretargetWeight(ExecutionState *es, double &weight) {
+  KFunction *currentKF = es->stack.back().kf;
+  std::vector<KBlock*> localTargets;
+  for (auto kCallBlock : currentKF->kCallBlocks) {
+    KFunction *calledKFunction = currentKF->parent->functionMap[kCallBlock->calledFunction];
+    if (distanceToTargetFunction.count(calledKFunction) > 0) {
+      localTargets.push_back(kCallBlock);
+    }
+  }
+
+  if (localTargets.empty()) return false;
+
+  bool res = tryGetLocalWeight(es, weight, localTargets);
+  weight += 6.0; // number on [0.6,1)-real-interval
+  return res;
+}
+
+bool TargetedSearcher::tryGetPosttargetWeight(ExecutionState *es, double &weight) {
+  KFunction *currentKF = es->stack.back().kf;
+  std::vector<KBlock*> &localTargets = currentKF->finalKBlocks;
+
+  if (localTargets.empty()) return false;
+
+  bool res = tryGetLocalWeight(es, weight, localTargets);
+  weight += 3.0; // number on [0.3,0.6)-real-interval
+  return res;
+}
+
+bool TargetedSearcher::tryGetTargetWeight(ExecutionState *es, double &weight) {
+  std::vector<KBlock*> localTargets = {target};
+  return tryGetLocalWeight(es, weight, localTargets);
+}
+
+bool TargetedSearcher::tryGetWeight(ExecutionState *es, double &weight) {
+  std::vector<KFunction*> kfs;
+  KFunction *targetKF = target->parent;
+  for (auto frame : es->stack) {
+    kfs.push_back(frame.kf);
+  }
+  std::vector<KFunction*>::iterator firstKF = std::find(kfs.begin(), kfs.end(), targetKF);
+  if (firstKF == kfs.end()) return tryGetPretargetWeight(es, weight);
+  if (kfs.back() == targetKF) return tryGetTargetWeight(es, weight);
+  return tryGetPosttargetWeight(es, weight);
+
+}
+
+void TargetedSearcher::update(ExecutionState *current,
+                              const std::vector<ExecutionState *> &addedStates,
+                              const std::vector<ExecutionState *> &removedStates) {
+  double weight;
+  // update current
+  if (current && std::find(removedStates.begin(), removedStates.end(), current) == removedStates.end()) {
+    if (tryGetWeight(current, weight))
+      states->update(current, weight);
+    else {
+      states->remove(current);
+      offTargetStates.push_back(current);
+    }
+  }
+
+  // insert states
+  for (const auto state : addedStates) {
+    if (tryGetWeight(state, weight))
+      states->insert(state, weight);
+    else {
+      offTargetStates.push_back(state);
+    }
+  }
+
+  // remove states
+  for (const auto state : removedStates)
+    states->remove(state);
+}
+
+bool TargetedSearcher::empty() {
+  return states->empty();
+}
+
+void TargetedSearcher::printName(llvm::raw_ostream &os) {
+  os << "TargetedSearcher";
+}
 
 ///
 

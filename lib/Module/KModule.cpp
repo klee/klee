@@ -309,32 +309,6 @@ void KModule::optimiseAndPrepare(
   pm3.run(*module);
 }
 
-static void extractInitialAlloca(Function *function) {
-  if (function->begin() != function->end()) {
-    BasicBlock *fbb = &*(function->begin());
-    llvm::BasicBlock::iterator it = fbb->begin();
-    llvm::BasicBlock::iterator ie = fbb->end();
-    for (; it != ie && it->getOpcode() != Instruction::Alloca; it++);
-    if (it == ie) {
-      return;
-    } else if (fbb->begin() != it) {
-      fbb = fbb->splitBasicBlock(&*it);
-      it = fbb->begin();
-      ie = fbb->end();
-    }
-    for (; it != ie && it->getOpcode() == Instruction::Alloca; it++);
-    fbb->splitBasicBlock(&*it);
-  }
-}
-
-static void splitLastInstruction(Function *function) {
-  if (function->begin() != function->end()) {
-    BasicBlock *bb = &*(--(function->end()));
-    Instruction *inst = bb->getTerminator();
-    bb->splitBasicBlock(inst);
-  }
-}
-
 static void splitByCall(Function *function) {
   unsigned n = function->getBasicBlockList().size();
   BasicBlock **blocks = new BasicBlock*[n];
@@ -405,8 +379,8 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
 
     llvm::Function *function = &Function;
     for (auto &BasicBlock : *function) {
-        unsigned numInstructions = kf->kBlocks[&BasicBlock]->numInstructions;
-        KBlock *kb = kf->kBlocks[&BasicBlock];
+        unsigned numInstructions = kf->blockMap[&BasicBlock]->numInstructions;
+        KBlock *kb = kf->blockMap[&BasicBlock];
         for (unsigned i=0; i<numInstructions; ++i) {
           KInstruction *ki = kb->instructions[i];
           ki->info = &infos->getInfo(*ki->inst);
@@ -427,6 +401,10 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
   for (auto &declaration : declarations) {
     if (functionEscapes(declaration))
       escapingFunctions.insert(declaration);
+  }
+
+  for (auto &kfp : functions) {
+    calculateDistance(kfp.get());
   }
 
   if (DebugPrintEscapingFunctions && !escapingFunctions.empty()) {
@@ -459,7 +437,7 @@ void KModule::checkModule() {
 }
 
 KBlock* KModule::getKBlock(llvm::BasicBlock *bb) {
-  return functionMap[bb->getParent()]->kBlocks[bb];
+  return functionMap[bb->getParent()]->blockMap[bb];
 }
 
 Function* llvm::getTargetFunction(Value *calledVal) {
@@ -541,6 +519,7 @@ void KBlock::handleKInstruction(
         llvm::Instruction *inst,
         KModule *km, KInstruction *ki)
 {
+  ki->kblock = this;
   ki->inst = inst;
   ki->dest = registerMap[inst];
   if (isa<CallInst>(inst) || isa<InvokeInst>(inst)) {
@@ -569,8 +548,9 @@ void KBlock::handleKInstruction(
 }
 
 KFunction::KFunction(llvm::Function *_function,
-                     KModule *km)
-  : function(_function),
+                     KModule *_km)
+  : parent(_km),
+    function(_function),
     numArgs(function->arg_size()),
     numInstructions(0),
     trackCoverage(true) {
@@ -596,15 +576,26 @@ KFunction::KFunction(llvm::Function *_function,
       Value *fp = cs.getCalledValue();
 #endif
       Function *f = getTargetFunction(fp);
-      kb = new KCallBlock(function, &*bbit, km, registerMap, reg2inst, rnum, f);
+      KCallBlock *ckb = new KCallBlock(this, &*bbit, parent, registerMap, reg2inst, rnum, f);
+      kCallBlocks.push_back(ckb);
+      kb = ckb;
     } else
-      kb = new KBlock(function, &*bbit, km, registerMap, reg2inst, rnum);
+      kb = new KBlock(this, &*bbit, parent, registerMap, reg2inst, rnum);
     for (unsigned i = 0; i < kb->numInstructions; i++, n++) {
       instructions[n] = kb->instructions[i];
-      kInstructions[instructions[n]->inst] = instructions[n];
+      instructionMap[instructions[n]->inst] = instructions[n];
     }
-    kBlocks[&*bbit] = kb;
+    blockMap[&*bbit] = kb;
+    blocks.push_back(std::move(std::unique_ptr<KBlock>(kb)));
+    if (isa<ReturnInst>(kb->instructions[kb->numInstructions - 1]->inst))
+      finalKBlocks.push_back(kb);
   }
+
+  for (auto &kbp : blocks) {
+    calculateDistance(kbp.get());
+  }
+
+  entryKBlock = blockMap[&*function->begin()];
   numRegisters = rnum;
 }
 
@@ -614,10 +605,10 @@ for (unsigned i=0; i<numInstructions; ++i)
   delete[] instructions;
 }
 
-KBlock::KBlock(llvm::Function *_function, llvm::BasicBlock *block, KModule *km,
+KBlock::KBlock(KFunction *_kfunction, llvm::BasicBlock *block, KModule *km,
                std::map<Instruction*, unsigned> &registerMap,
                std::map<unsigned, KInstruction*> &reg2inst,  unsigned &rnum)
-  : function(_function),
+  : parent(_kfunction),
     basicBlock(block),
     numInstructions(0),
     trackCoverage(true) {
@@ -649,10 +640,10 @@ KBlock::KBlock(llvm::Function *_function, llvm::BasicBlock *block, KModule *km,
   }
 }
 
-KCallBlock::KCallBlock(llvm::Function *_function, llvm::BasicBlock *block, KModule *km,
+KCallBlock::KCallBlock(KFunction *_kfunction, llvm::BasicBlock *block, KModule *km,
                     std::map<Instruction*, unsigned> &registerMap, std::map<unsigned, KInstruction*> &reg2inst,
                     unsigned &rnum, llvm::Function *_calledFunction)
-  : KBlock::KBlock(_function, block, km, registerMap, reg2inst, rnum),
+  : KBlock::KBlock(_kfunction, block, km, registerMap, reg2inst, rnum),
     kcallInstruction(this->instructions[0]),
     calledFunction(_calledFunction) {}
 

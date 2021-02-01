@@ -1444,6 +1444,8 @@ void Executor::stepInstruction(ExecutionState &state) {
 
   ++stats::instructions;
   ++state.steppedInstructions;
+  if (isa<LoadInst>(state.pc->inst) || isa<StoreInst>(state.pc->inst))
+    ++state.steppedMemoryInstructions;
   state.prevPC = state.pc;
   ++state.pc;
 
@@ -2015,7 +2017,7 @@ void Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src,
 
   state.level.insert(state.getPrevPCBlock());
   KFunction *kf = state.stack.back().kf;
-  state.pc = kf->kBlocks[dst]->instructions;
+  state.pc = kf->blockMap[dst]->instructions;
   if (state.pc->inst->getOpcode() == Instruction::PHI) {
     PHINode *first = static_cast<PHINode*>(state.pc->inst);
     state.incomingBBIndex = first->getBasicBlockIndex(src);
@@ -3297,9 +3299,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 }
 
-void Executor::updateAndPauseStates(ExecutionState *current) {
+void Executor::pauseStates(ExecutionState *current) {
   if (!current->prevPC->inst->isTerminator() && addedStates.size() > 0) {
-    pausedStates.insert(addedStates.begin(), addedStates.end());
+    results[current->getInitPCBlock()].iiStates[
+        current->getPrevPCBlock()].insert(addedStates.begin(), addedStates.end());
     for (std::vector<ExecutionState *>::iterator it = addedStates.begin(),
          ie = addedStates.end(); it != ie; ++it) {
       std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it3 =
@@ -3310,13 +3313,14 @@ void Executor::updateAndPauseStates(ExecutionState *current) {
     }
     addedStates.clear();
   }
-
-  updateStates(current);
 }
 
 void Executor::updateStates(ExecutionState *current) {
   if (searcher) {
     searcher->update(current, addedStates, removedStates);
+  }
+  if (searcher->empty()) {
+    haltExecution = true;
   }
 
   states.insert(addedStates.begin(), addedStates.end());
@@ -3546,81 +3550,7 @@ void Executor::run(ExecutionState &initialState) {
   // main interpreter loop
   while (!states.empty() && !haltExecution) {
     ExecutionState &state = searcher->selectState();
-    KInstruction *ki = state.pc;
-    stepInstruction(state);
-
-    executeInstruction(state, ki);
-    timers.invoke();
-    if (::dumpStates) dumpStates();
-    if (::dumpPTree) dumpPTree();
-
-    updateStates(&state);
-
-    if (!checkMemoryUsage()) {
-      // update searchers when states were terminated early due to memory pressure
-      updateStates(nullptr);
-    }
-  }
-
-  delete searcher;
-  searcher = nullptr;
-
-  doDumpStates();
-  haltExecution = false;
-}
-
-void Executor::runKBlock(ExecutionState &state, KBlock *kb) {
- if (pathWriter)
-   state.pathOS = pathWriter->open();
- if (symPathWriter)
-   state.symPathOS = symPathWriter->open();
-
- if (statsTracker)
-   statsTracker->framePushed(state, 0);
-
- processTree = std::make_unique<PTree>(&state);
- executeKBlock(state, kb);
- processTree = nullptr;
-
- if (statsTracker)
-   statsTracker->done();
-}
-
-void Executor::executeKBlock(ExecutionState &initialState, KBlock *kb) {
-  // Delay init till now so that ticks don't accrue during optimization and such.
-  timers.reset();
-
-  states.insert(&initialState);
-
-  searcher = constructUserSearcher(*this);
-
-  std::vector<ExecutionState *> newStates(states.begin(), states.end());
-  searcher->update(0, newStates, std::vector<ExecutionState *>());
-  // main interpreter loop
-  KInstruction *terminator = kb->instructions[kb->numInstructions - 1];
-  while (!states.empty() && !haltExecution) {
-    ExecutionState &state = searcher->selectState();
-    KInstruction *ki = state.pc;
-
-    stepInstruction(state);
-
-    executeInstruction(state, ki);
-
-    timers.invoke();
-    if (::dumpStates) dumpStates();
-    if (::dumpPTree) dumpPTree();
-
-    if (ki == terminator || state.getPCBlock() != kb->basicBlock) {
-      updateStates(&state);
-      completedStates.insert(states.begin(), states.end());
-      states.clear();
-    } else
-      updateAndPauseStates(&state);
-
-    if (!checkMemoryUsage()) {
-      // update searchers when states were terminated early due to memory pressure
-      updateAndPauseStates(nullptr);
-    }
+    executeStep(state, false);
   }
 
   delete searcher;
@@ -3640,7 +3570,7 @@ Executor::ExecutionResult Executor::runKFunction(ExecutionState &state, KFunctio
    statsTracker->framePushed(state, 0);
 
  processTree = std::make_unique<PTree>(&state);
- ExecutionResult result = executeSegment(state, MaxBound, kf->kBlocks[&*kf->function->begin()]);
+ ExecutionResult result = boundedRun(state, MaxBound);
  processTree = nullptr;
 
  if (statsTracker)
@@ -3649,7 +3579,26 @@ Executor::ExecutionResult Executor::runKFunction(ExecutionState &state, KFunctio
  return result;
 }
 
-Executor::ExecutionResult Executor::runSegment(ExecutionState &state, unsigned bound, KBlock *init, KBlock *end) {
+Executor::ExecutionResult Executor::runKFunctionWithTarget(ExecutionState &state, KFunction *kf, KBlock *target) {
+  if (pathWriter)
+    state.pathOS = pathWriter->open();
+  if (symPathWriter)
+    state.symPathOS = symPathWriter->open();
+
+  if (statsTracker)
+    statsTracker->framePushed(state, 0);
+
+  processTree = std::make_unique<PTree>(&state);
+  ExecutionResult result = targetedRun(state, target);
+  processTree = nullptr;
+
+  if (statsTracker)
+    statsTracker->done();
+
+  return result;
+}
+
+Executor::ExecutionResult Executor::runBlock(ExecutionState &state, unsigned bound, KBlock *kb) {
  if (pathWriter)
    state.pathOS = pathWriter->open();
  if (symPathWriter)
@@ -3659,7 +3608,7 @@ Executor::ExecutionResult Executor::runSegment(ExecutionState &state, unsigned b
    statsTracker->framePushed(state, 0);
 
  processTree = std::make_unique<PTree>(&state);
- ExecutionResult result = executeSegment(state, MaxBound, init, end);
+ ExecutionResult result = executeBlock(state, MaxBound, kb);
  processTree = nullptr;
 
  if (statsTracker)
@@ -3668,12 +3617,41 @@ Executor::ExecutionResult Executor::runSegment(ExecutionState &state, unsigned b
  return result;
 }
 
-Executor::ExecutionResult Executor::executeSegment(ExecutionState &initialState, unsigned bound, KBlock *init, KBlock *end) {
-  ExecutionResult &result = results;
-  ExecutedBlock &blockStates = result[init->basicBlock].completedStates;
-  ExecutedBlock &pausedBlockStates = result[init->basicBlock].pausedStates;
-  ExecutedBlock &erroneousBlockStates = result[init->basicBlock].erroneousStates;
+void Executor::executeStep(ExecutionState &state, bool withPause) {
+  KInstruction *ki = state.pc;
 
+  stepInstruction(state);
+
+  executeInstruction(state, ki);
+
+  timers.invoke();
+  if (::dumpStates) dumpStates();
+  if (::dumpPTree) dumpPTree();
+
+  if (withPause) pauseStates(&state);
+  updateStates(&state);
+
+  if (!checkMemoryUsage()) {
+    // update searchers when states were terminated early due to memory pressure
+    updateStates(nullptr);
+  }
+}
+
+void Executor::boundedExecuteStep(ExecutionState &state, unsigned bound) {
+  KInstruction *prevKI = state.prevPC;
+
+  if ((prevKI->inst->isTerminator() || isa<CallInst>(prevKI->inst)) &&
+      state.level.count(state.getPCBlock()) > bound) {
+    results[state.getInitPCBlock()].pausedStates[state.getPCBlock()].insert(&state);
+    pauseState(state);
+    updateStates(&state);
+    return;
+  }
+
+  executeStep(state, true);
+}
+
+Executor::ExecutionResult Executor::boundedRun(ExecutionState &initialState, unsigned bound) {
   // Delay init till now so that ticks don't accrue during optimization and such.
   timers.reset();
 
@@ -3684,18 +3662,39 @@ Executor::ExecutionResult Executor::executeSegment(ExecutionState &initialState,
   std::vector<ExecutionState *> newStates(states.begin(), states.end());
   searcher->update(0, newStates, std::vector<ExecutionState *>());
   // main interpreter loop
-  KInstruction *terminator = end != nullptr ? end->instructions[end->numInstructions - 1] : nullptr;
   while (!states.empty() && !haltExecution) {
     ExecutionState &state = searcher->selectState();
-    KInstruction *prevKI = state.prevPC;
+    boundedExecuteStep(state, bound);
+  }
 
-    if ((prevKI->inst->isTerminator() || isa<CallInst>(prevKI->inst)) &&
-        state.level.count(state.getPCBlock()) > bound) {
-      pausedBlockStates[state.getPCBlock()].insert(&state);
-      pauseState(state);
-      updateStates(&state);
-      continue;
-    }
+  if (!states.empty()) {
+    klee_message("States doesn't empty");
+    states.clear();
+  }
+
+  delete searcher;
+  searcher = nullptr;
+
+  doDumpStates();
+  haltExecution = false;
+
+  return results;
+}
+
+Executor::ExecutionResult Executor::targetedRun(ExecutionState &initialState, KBlock *target) {
+  // Delay init till now so that ticks don't accrue during optimization and such.
+  timers.reset();
+
+  states.insert(&initialState);
+
+  searcher = new TargetedSearcher(target);
+
+  std::vector<ExecutionState *> newStates(states.begin(), states.end());
+  searcher->update(0, newStates, std::vector<ExecutionState *>());
+  // main interpreter loop
+  KInstruction *terminator = target != nullptr ? target->instructions[target->numInstructions - 1] : nullptr;
+  while (!states.empty() && !haltExecution) {
+    ExecutionState &state = searcher->selectState();
 
     KInstruction *ki = state.pc;
 
@@ -3705,45 +3704,64 @@ Executor::ExecutionResult Executor::executeSegment(ExecutionState &initialState,
       continue;
     }
 
-    stepInstruction(state);
-
-    executeInstruction(state, ki);
-
-    timers.invoke();
-    if (::dumpStates) dumpStates();
-    if (::dumpPTree) dumpPTree();
-
-    updateAndPauseStates(&state);
-
-    if (!checkMemoryUsage()) {
-      // update searchers when states were terminated early due to memory pressure
-      updateAndPauseStates(nullptr);
-    }
+    executeStep(state, true);
   }
 
-  for (auto &st : completedStates) {
-    blockStates[st->getPrevPCBlock()].insert(st);
+  if (!states.empty()) {
+    klee_message("'states' doesn't empty");
+    for (auto &state : states)
+      results[initialState.getInitPCBlock()].pausedStates[state->getPrevPCBlock()].insert(state);
+    states.clear();
   }
-  completedStates.clear();
-  for (auto &st : exitStates) {
-    blockStates[st->getPrevPCBlock()].insert(st);
-  }
-  exitStates.clear();
-  for (auto &st : pausedStates) {
-    pausedBlockStates[st->getPrevPCBlock()].insert(st);
-  }
-  pausedStates.clear();
-  for (auto &st : erroneousStates) {
-    erroneousBlockStates[st->getPrevPCBlock()].insert(st);
-  }
-  erroneousStates.clear();
+
   delete searcher;
   searcher = nullptr;
 
   doDumpStates();
   haltExecution = false;
 
-  return result;
+  return results;
+}
+
+Executor::ExecutionResult Executor::executeBlock(ExecutionState &initialState, unsigned bound, KBlock *kb) {
+  // Delay init till now so that ticks don't accrue during optimization and such.
+  timers.reset();
+
+  states.insert(&initialState);
+
+  searcher = constructUserSearcher(*this);
+
+  std::vector<ExecutionState *> newStates(states.begin(), states.end());
+  searcher->update(0, newStates, std::vector<ExecutionState *>());
+  // main interpreter loop
+  KInstruction *terminator = kb != nullptr ? kb->instructions[kb->numInstructions - 1] : nullptr;
+  while (!states.empty() && !haltExecution) {
+    ExecutionState &state = searcher->selectState();
+    KInstruction *ki = state.pc;
+
+    if (ki == terminator) {
+      terminateStateOnTerminator(state);
+      updateStates(&state);
+      continue;
+    }
+
+    boundedExecuteStep(state, bound);
+  }
+
+  if (!states.empty()) {
+    klee_message("'states' doesn't empty");
+    for (auto &state : states)
+      results[initialState.getInitPCBlock()].pausedStates[state->getPrevPCBlock()].insert(state);
+    states.clear();
+  }
+
+  delete searcher;
+  searcher = nullptr;
+
+  doDumpStates();
+  haltExecution = false;
+
+  return results;
 }
 
 std::string Executor::getAddressInfo(ExecutionState &state, 
@@ -3846,7 +3864,7 @@ void Executor::pauseState(ExecutionState &state) {
   if (!ExcludeSolver && (!OnlyOutputStatesCoveringNew || state.coveredNew ||
       (AlwaysOutputSeeds && seedMap.count(&state))))
     interpreterHandler->processTestCase(state, 0, 0);
-  pausedStates.insert(&state);
+  results[state.getInitPCBlock()].pausedStates[state.getPrevPCBlock()].insert(&state);
   terminateState(state);
 }
 
@@ -3854,7 +3872,7 @@ void Executor::terminateStateOnExit(ExecutionState &state) {
   if (!ExcludeSolver && (!OnlyOutputStatesCoveringNew || state.coveredNew ||
       (AlwaysOutputSeeds && seedMap.count(&state))))
     interpreterHandler->processTestCase(state, 0, 0);
-  exitStates.insert(&state);
+  results[state.getInitPCBlock()].completedStates[state.getPrevPCBlock()].insert(&state);
   terminateState(state);
 }
 
@@ -3862,7 +3880,7 @@ void Executor::terminateStateOnTerminator(ExecutionState &state) {
   if (!ExcludeSolver && (!OnlyOutputStatesCoveringNew || state.coveredNew ||
       (AlwaysOutputSeeds && seedMap.count(&state))))
     interpreterHandler->processTestCase(state, 0, 0);
-  completedStates.insert(&state);
+  results[state.getInitPCBlock()].completedStates[state.getPrevPCBlock()].insert(&state);
   terminateState(state);
 }
 
@@ -3967,7 +3985,7 @@ void Executor::terminateStateOnError(ExecutionState &state,
       interpreterHandler->processTestCase(state, msg.str().c_str(), suffix);
   }
 
-  erroneousStates.insert(&state);
+  results[state.getInitPCBlock()].erroneousStates[state.getPrevPCBlock()].insert(&state);
   terminateState(state);
 
   if (shouldExitOn(termReason))
@@ -4507,13 +4525,12 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
       if (UseGEPExpr && isa<GEPExpr>(address)) {
         const MemoryObject *mo = p.first;
-        const ObjectState *os = p.second;
         ref<Expr> inBounds = mo->getBoundsCheckPointer(unsafeAddress, bytes);
 
         Solver::Validity res;
         time::Span timeout = coreSolverTimeout;
         solver->setTimeout(timeout);
-        bool success = solver->evaluate(unbound->constraints, inBounds, res, unbound->queryMetaData);
+        solver->evaluate(unbound->constraints, inBounds, res, unbound->queryMetaData);
         solver->setTimeout(time::Span());
 
         if (res !=Solver::False) {
@@ -4736,7 +4753,7 @@ ExecutionState* Executor::formState(Function *f,
   assert(kf);
   formArg(f, NumPtrBytes, arguments, argvMO, argc, envc);
 
-  ExecutionState *state = new ExecutionState(kmodule->functionMap[f], kmodule->functionMap[f]->kBlocks[&*f->begin()]);
+  ExecutionState *state = new ExecutionState(kmodule->functionMap[f], kmodule->functionMap[f]->blockMap[&*f->begin()]);
 
   assert(arguments.size() == f->arg_size() && "wrong number of arguments");
   for (unsigned i = 0, e = f->arg_size(); i != e; ++i)
@@ -4901,7 +4918,7 @@ Executor::ExecutionResult Executor::getCFA(Function *fn, ExecutionState &state) 
             break;
           }
           case KBlockType::Base:
-            runSegment(*currState, 0, kb, kb);
+            runBlock(*currState, 0, kb);
             break;
         }
       }
@@ -4967,7 +4984,6 @@ Executor::ExecutionResult Executor::getCumulativeCFA(Function *fn, ExecutionStat
 
 Executor::ExecutionResult Executor::getExecutionResult(llvm::Function *fn, ExecutionState &state, unsigned bound) {
   KFunction *kf = kmodule->functionMap[fn];
-  KBlock *kb = kf->kBlocks[&*fn->begin()];
   ExecutionState *initialState = state.withKFunction(kf);
   prepareSymbolicArgs(*initialState, kf);
   auto start = high_resolution_clock::now();
