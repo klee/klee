@@ -133,6 +133,8 @@ namespace klee {
     std::unique_ptr<DiscretePDF<ExecutionState*, ExecutionStateIDCompare>> states;
     KBlock *target;
     const std::map<KFunction*, unsigned int> &distanceToTargetFunction;
+    std::vector<ExecutionState*> reachedStates;
+    std::vector<ExecutionState*> dropoutStates;
 
     WeightResult tryGetLocalWeight(ExecutionState *es, double &weight, const std::vector<KBlock*> &localTargets);
     WeightResult tryGetPreTargetWeight(ExecutionState *es, double &weight);
@@ -150,7 +152,6 @@ namespace klee {
     bool empty() override;
     void printName(llvm::raw_ostream &os) override;
     KBlock *getTarget();
-    std::vector<ExecutionState*> reachedStates;
   };
 
   class GuidedSearcher final : public Searcher {
@@ -158,6 +159,7 @@ namespace klee {
   private:
     std::unique_ptr<DFSSearcher> baseSearcher;
     std::vector<std::unique_ptr<TargetedSearcher>> targetedSearchers;
+    std::vector<ExecutionState*> pausedStates;
 
   public:
     GuidedSearcher();
@@ -168,6 +170,8 @@ namespace klee {
                 const std::vector<ExecutionState *> &removedStates) override;
     bool empty() override;
     void printName(llvm::raw_ostream &os) override;
+    void pauseState(ExecutionState &state);
+    void continueState(ExecutionState &state);
     void pushTarget(KBlock *target);
     KBlock *getCurrentTarget();
     bool targetedMode() { return !targetedSearchers.empty(); };

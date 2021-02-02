@@ -3333,7 +3333,7 @@ void Executor::updateStates(ExecutionState *current) {
       seedMap.find(es);
     if (it3 != seedMap.end())
       seedMap.erase(it3);
-    if (results[es->getInitPCBlock()].pausedStates[es->getPrevPCBlock()].count(es) == 0)
+    if (results[es->getInitPCBlock()].pausedStates[es->getPCBlock()].count(es) == 0)
       processTree->remove(es->ptreeNode);
   }
   removedStates.clear();
@@ -3684,11 +3684,6 @@ Executor::ExecutionResult Executor::boundedRun(ExecutionState &initialState, uns
     boundedExecuteStep(state, bound);
   }
 
-  if (!states.empty()) {
-    klee_message("States doesn't empty");
-    states.clear();
-  }
-
   delete searcher;
   searcher = nullptr;
 
@@ -3722,12 +3717,6 @@ Executor::ExecutionResult Executor::targetedRun(ExecutionState &initialState, KB
     }
 
     executeStep(state, true);
-  }
-
-  if (!states.empty()) {
-      for (auto &state : states)
-        terminateStateEarly(*state, "excess state");
-      updateStates(nullptr);
   }
 
   delete searcher;
@@ -3794,6 +3783,9 @@ Executor::ExecutionResult Executor::guidedRun(ExecutionState &initialState) {
       gs->pushTarget(bb);
       unpauseStates(ess);
     }
+    for (auto blockstate : pausedStates)
+      for (auto &state : blockstate.second)
+        processTree->remove(state->ptreeNode);
     pausedStates.clear();
 
     if (searcher->empty()) haltExecution = true;
@@ -3801,12 +3793,6 @@ Executor::ExecutionResult Executor::guidedRun(ExecutionState &initialState) {
 
   delete searcher;
   searcher = nullptr;
-
-  if (!states.empty()) {
-      for (auto &state : states)
-        terminateStateEarly(*state, "excess state");
-      updateStates(nullptr);
-  }
 
   doDumpStates();
   haltExecution = false;
@@ -3952,12 +3938,15 @@ void Executor::terminateStateEarly(ExecutionState &state,
 
 void Executor::pauseState(ExecutionState &state) {
   results[state.getInitPCBlock()].pausedStates[state.getPCBlock()].insert(&state);
+  states.erase(&state);
   searcher->update(nullptr, {}, {&state});
 }
 
 void Executor::unpauseStates(std::vector<ExecutionState *> &states) {
-  for (auto &state : states)
+  for (auto &state : states) {
       results[state->getInitPCBlock()].pausedStates[state->getPCBlock()].erase(state);
+      this->states.insert(state);
+  }
   searcher->update(nullptr, states, {});
 }
 

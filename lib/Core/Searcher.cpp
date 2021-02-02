@@ -237,6 +237,7 @@ void TargetedSearcher::update(ExecutionState *current,
       states->remove(current);
       break;
     case Miss:
+      dropoutStates.push_back(current);
       states->remove(current);
       break;
     }
@@ -253,6 +254,7 @@ void TargetedSearcher::update(ExecutionState *current,
       reachedStates.push_back(state);
       break;
     case Miss:
+      dropoutStates.push_back(current);
       break;
     }
   }
@@ -302,11 +304,10 @@ void GuidedSearcher::update(ExecutionState *current,
   if (!targetedSearchers.empty()) {
     targetedSearchers.back()->update(current, addedStates, removedStates);
     if (targetedSearchers.back()->empty()) {
-      baseSearcher->update(nullptr, targetedSearchers.back()->reachedStates, std::vector<ExecutionState *>());
       targetedSearchers.pop_back();
     }
-  } else
-    baseSearcher->update(current, addedStates, removedStates);
+  }
+  baseSearcher->update(current, addedStates, removedStates);
 }
 
 bool GuidedSearcher::empty() {
