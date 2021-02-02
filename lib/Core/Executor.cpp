@@ -422,6 +422,12 @@ cl::opt<bool> DebugCheckForImpliedValues(
     cl::desc("Debug the implied value optimization"),
     cl::cat(DebugCat));
 
+/*** Misc options ***/
+cl::opt<bool> SingleObjectResolution(
+    "single-object-resolution",
+    cl::desc("Try to resolve memory reads/writes to single objects "
+             "when offsets are symbolic (default=false)"),
+    cl::init(false), cl::cat(MiscCat));
 } // namespace
 
 // XXX hack
@@ -1095,7 +1101,6 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
         current.pathOS << "0";
       }
     }
-
     return StatePair(0, &current);
   } else {
     TimerStatIncrementer timer(stats::forkTime);
@@ -2695,18 +2700,56 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(ki);
     ref<Expr> base = eval(ki, 0, state).value;
 
+    bool const_base = isa<ConstantExpr>(base);
+    bool update = false;
+    ref<ConstantExpr> original_base = 0;
+    ref<Expr> key = 0;
+    ref<ConstantExpr> value = 0;
+
+    if (SingleObjectResolution) {
+      ExecutionState::base_addrs_t::iterator base_it;
+      if (!const_base) {
+        base_it = state.base_addrs.find(base);
+        if (base_it != state.base_addrs.end()) {
+          update = true;
+          key = base_it->first;
+          value = base_it->second;
+        }
+      } else {
+        original_base = dyn_cast<ConstantExpr>(base);
+      }
+    }
+
     for (std::vector< std::pair<unsigned, uint64_t> >::iterator 
            it = kgepi->indices.begin(), ie = kgepi->indices.end(); 
          it != ie; ++it) {
       uint64_t elementSize = it->second;
       ref<Expr> index = eval(ki, it->first, state).value;
+
       base = AddExpr::create(base,
                              MulExpr::create(Expr::createSExtToPointerWidth(index),
                                              Expr::createPointer(elementSize)));
     }
+
     if (kgepi->offset)
       base = AddExpr::create(base,
                              Expr::createPointer(kgepi->offset));
+
+    if (SingleObjectResolution) {
+      if (const_base && !isa<ConstantExpr>(base)) {
+        // the initial base address was a constant expression, the final is not:
+        // store the mapping between constant address and the non-const
+        // reference in the state
+        state.base_addrs[base] = original_base;
+      }
+
+      if (update) {
+        // we need to update the current entry with a new value
+        state.base_addrs[base] = value;
+        state.base_addrs.erase(key);
+      }
+    }
+
     bindLocal(ki, state, base);
     break;
   }
@@ -4084,71 +4127,108 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
   address = optimizer.optimizeExpr(address, true);
 
-  // fast path: single in-bounds resolution
   ObjectPair op;
   bool success;
   solver->setTimeout(coreSolverTimeout);
-  if (!state.addressSpace.resolveOne(state, solver, address, op, success)) {
-    address = toConstant(state, address, "resolveOne failure");
-    success = state.addressSpace.resolveOne(cast<ConstantExpr>(address), op);
-  }
-  solver->setTimeout(time::Span());
 
-  if (success) {
-    const MemoryObject *mo = op.first;
+  bool resolveSingleObject = SingleObjectResolution;
 
-    if (MaxSymArraySize && mo->size >= MaxSymArraySize) {
-      address = toConstant(state, address, "max-sym-array-size");
-    }
-    
-    ref<Expr> offset = mo->getOffsetExpr(address);
-    ref<Expr> check = mo->getBoundsCheckOffset(offset, bytes);
-    check = optimizer.optimizeExpr(check, true);
+  if (resolveSingleObject && !isa<ConstantExpr>(address)) {
+    // Address is symbolic"
 
-    bool inBounds;
-    solver->setTimeout(coreSolverTimeout);
-    bool success = solver->mustBeTrue(state.constraints, check, inBounds,
-                                      state.queryMetaData);
-    solver->setTimeout(time::Span());
-    if (!success) {
-      state.pc = state.prevPC;
-      terminateStateEarly(state, "Query timed out (bounds check).");
-      return;
-    }
-
-    if (inBounds) {
-      const ObjectState *os = op.second;
-      if (isWrite) {
-        if (os->readOnly) {
-          terminateStateOnError(state, "memory error: object read only",
-                                ReadOnly);
-        } else {
-          ObjectState *wos = state.addressSpace.getWriteable(mo, os);
-          wos->write(offset, value);
-        }          
+    resolveSingleObject = false;
+    ExecutionState::base_addrs_t::iterator base_it =
+        state.base_addrs.find(address);
+    if (base_it != state.base_addrs.end()) {
+      // Concrete address found in the map, now find the associated memory
+      // object
+      if (!state.addressSpace.resolveOne(state, solver, base_it->second, op,
+                                         success) ||
+          !success) {
+        klee_warning("Failed to resolve concrete address from the base_addrs "
+                     "map to a memory object");
       } else {
-        ref<Expr> result = os->read(offset, type);
-        
-        if (interpreterOpts.MakeConcreteSymbolic)
-          result = replaceReadWithSymbolic(state, result);
-        
-        bindLocal(target, state, result);
+        // We have resolved the stored concrete address to a memory object.
+        // Now let's see if we can prove an overflow - we are only interested in
+        // two cases: either we overflow and it's a bug or we don't and we carry
+        // on; in this mode we are not interested in trying out other memory
+        // objects
+        resolveSingleObject = true;
+      }
+    }
+  } else {
+    resolveSingleObject = false;
+  }
+
+  if (!resolveSingleObject) {
+    if (!state.addressSpace.resolveOne(state, solver, address, op, success)) {
+      address = toConstant(state, address, "resolveOne failure");
+      success = state.addressSpace.resolveOne(cast<ConstantExpr>(address), op);
+    }
+
+    // fast path: single in-bounds resolution
+
+    if (success) {
+      const MemoryObject *mo = op.first;
+
+      if (MaxSymArraySize && mo->size >= MaxSymArraySize) {
+        address = toConstant(state, address, "max-sym-array-size");
       }
 
-      return;
+      ref<Expr> offset = mo->getOffsetExpr(address);
+      ref<Expr> check = mo->getBoundsCheckOffset(offset, bytes);
+      check = optimizer.optimizeExpr(check, true);
+
+      bool inBounds;
+      solver->setTimeout(coreSolverTimeout);
+      bool success = solver->mustBeTrue(state.constraints, check, inBounds,
+                                        state.queryMetaData);
+      solver->setTimeout(time::Span());
+      if (!success) {
+        state.pc = state.prevPC;
+        terminateStateEarly(state, "Query timed out (bounds check).");
+        return;
+      }
+
+      if (inBounds) {
+        const ObjectState *os = op.second;
+        if (isWrite) {
+          if (os->readOnly) {
+            terminateStateOnError(state, "memory error: object read only",
+                                  ReadOnly);
+          } else {
+            ObjectState *wos = state.addressSpace.getWriteable(mo, os);
+            wos->write(offset, value);
+          }
+        } else {
+          ref<Expr> result = os->read(offset, type);
+
+          if (interpreterOpts.MakeConcreteSymbolic)
+            result = replaceReadWithSymbolic(state, result);
+
+          bindLocal(target, state, result);
+        }
+
+        return;
+      }
     }
-  } 
+  }
 
   // we are on an error path (no resolution, multiple resolution, one
-  // resolution with out of bounds)
+  // resolution with out of bounds), or we do a single object resolution
 
   address = optimizer.optimizeExpr(address, true);
-  ResolutionList rl;  
-  solver->setTimeout(coreSolverTimeout);
-  bool incomplete = state.addressSpace.resolve(state, solver, address, rl,
-                                               0, coreSolverTimeout);
-  solver->setTimeout(time::Span());
-  
+  ResolutionList rl;
+  bool incomplete = false;
+
+  if (!resolveSingleObject) {
+    solver->setTimeout(coreSolverTimeout);
+    incomplete = state.addressSpace.resolve(state, solver, address, rl, 0,
+                                            coreSolverTimeout);
+    solver->setTimeout(time::Span());
+  } else {
+    rl.push_back(op); // we already have the object pair, no need to look for it
+  }
   // XXX there is some query wasteage here. who cares?
   ExecutionState *unbound = &state;
   
@@ -4180,7 +4260,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     if (!unbound)
       break;
   }
-  
+
   // XXX should we distinguish out of bounds and overlapped cases?
   if (unbound) {
     if (incomplete) {
