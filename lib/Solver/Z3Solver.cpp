@@ -8,9 +8,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Config/config.h"
-#include "klee/Support/OptionCategories.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/FileHandling.h"
+#include "klee/Support/OptionCategories.h"
+
+#include <csignal>
+
 #ifdef ENABLE_Z3
 
 #include "Z3Solver.h"
@@ -362,6 +365,9 @@ bool Z3SolverImpl::internalRunSolver(
       ++stats::queriesValid;
     }
     return true; // success
+  }
+  if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_INTERRUPTED) {
+    raise(SIGINT);
   }
   return false; // failed
 }
