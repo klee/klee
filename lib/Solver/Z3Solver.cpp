@@ -8,9 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Config/config.h"
-#include "klee/Support/OptionCategories.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/FileHandling.h"
+#include "klee/Support/OptionCategories.h"
+
+#include <csignal>
 
 #ifdef ENABLE_Z3
 
@@ -322,6 +324,9 @@ bool Z3SolverImpl::internalRunSolver(
     }
     return true; // success
   }
+  if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_INTERRUPTED) {
+    raise(SIGINT);
+  }
   return false; // failed
 }
 
@@ -399,6 +404,9 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
     }
     if (strcmp(reason, "unknown") == 0) {
       return SolverImpl::SOLVER_RUN_STATUS_FAILURE;
+    }
+    if (strcmp(reason, "interrupted from keyboard") == 0) {
+      return SolverImpl::SOLVER_RUN_STATUS_INTERRUPTED;
     }
     klee_warning("Unexpected solver failure. Reason is \"%s,\"\n", reason);
     abort();
