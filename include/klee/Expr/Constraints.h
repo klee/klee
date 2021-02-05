@@ -48,8 +48,8 @@ public:
     }
 
     for (const ref<Expr> &conditions : constraints) {
-      sso << " > ";
       sso << conditions;
+      sso << "|";
     }
     return sso;
   }
