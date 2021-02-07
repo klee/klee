@@ -155,12 +155,12 @@ namespace klee {
   class GuidedSearcher final : public Searcher {
 
   private:
-    std::unique_ptr<DFSSearcher> baseSearcher;
+    std::unique_ptr<Searcher> baseSearcher;
     std::map<KBlock*,std::unique_ptr<TargetedSearcher>> targetedSearchers;
     void addTarget(KBlock *target);
 
   public:
-    GuidedSearcher();
+    GuidedSearcher(Searcher *baseSearcher);
     ~GuidedSearcher() override = default;
     ExecutionState &selectState() override;
     void update(ExecutionState *current,

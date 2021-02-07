@@ -282,7 +282,7 @@ void TargetedSearcher::printName(llvm::raw_ostream &os) {
   os << "TargetedSearcher";
 }
 
-GuidedSearcher::GuidedSearcher() : baseSearcher(new DFSSearcher()) {}
+GuidedSearcher::GuidedSearcher(Searcher *_baseSearcher) : baseSearcher(_baseSearcher) {}
 
 ExecutionState &GuidedSearcher::selectState() {
   while (!targetedSearchers.empty()) {

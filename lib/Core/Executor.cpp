@@ -3751,7 +3751,7 @@ void Executor::guidedRun(ExecutionState &initialState) {
 
   states.insert(&initialState);
 
-  searcher = new GuidedSearcher();;
+  searcher = new GuidedSearcher(constructUserSearcher(*this));
 
   std::vector<ExecutionState *> newStates(states.begin(), states.end());
   searcher->update(0, newStates, std::vector<ExecutionState *>());
