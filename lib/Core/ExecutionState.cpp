@@ -122,7 +122,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     stack(state.stack),
     incomingBBIndex(state.incomingBBIndex),
     depth(state.depth),
-    multilevel(state.multilevel),
+    level(state.level),
     addressSpace(state.addressSpace),
     constraints(state.constraints),
     pathOS(state.pathOS),
@@ -426,12 +426,8 @@ void ExecutionState::setBlockIndexes(KBlock *kb) {
   maxBlockBound = kb->instructions[kb->numInstructions - 1]->dest;
 }
 
-bool ExecutionState::inBasicBlockRange(unsigned index, bool check) {
-    if (check) {
-        return (index >= minBlockBound && index <= maxBlockBound);
-    } else {
-        return true;
-    }
+bool ExecutionState::inBasicBlockRange(unsigned index) {
+  return (index >= minBlockBound && index <= maxBlockBound);
 }
 
 BasicBlock *ExecutionState::getInitPCBlock() {
@@ -447,5 +443,5 @@ BasicBlock *ExecutionState::getPCBlock() {
 }
 
 void ExecutionState::addLevel(BasicBlock *bb) {
-  multilevel.insert(bb);
+  level.insert(bb);
 }

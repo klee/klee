@@ -517,8 +517,7 @@ static int getOperandNum(Value *v,
 void KBlock::handleKInstruction(
         std::map<Instruction*, unsigned> &registerMap,
         llvm::Instruction *inst,
-        KModule *km, KInstruction *ki)
-{
+        KModule *km, KInstruction *ki) {
   ki->parent = this;
   ki->inst = inst;
   ki->dest = registerMap[inst];

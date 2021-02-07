@@ -254,17 +254,17 @@ private:
 
   void executeInstruction(ExecutionState &state, KInstruction *ki);
   void boundedExecuteStep(ExecutionState &state, unsigned bound);
-  ExecutionResult executeBlock(ExecutionState &initialState, unsigned bound, KBlock *kb);
-  ExecutionResult targetedRun(ExecutionState &initialState, KBlock *target);
-  ExecutionResult guidedRun(ExecutionState &initialState);
-  ExecutionResult boundedRun(ExecutionState &initialState, unsigned bound);
-  ExecutionResult runBlock(ExecutionState &state, unsigned bound, KBlock *kb);
+  void executeBlock(ExecutionState &initialState, unsigned bound, KBlock *kb);
+  void targetedRun(ExecutionState &initialState, KBlock *target);
+  void guidedRun(ExecutionState &initialState);
+  void boundedRun(ExecutionState &initialState, unsigned bound);
 
   void run(ExecutionState &initialState);
   void runKBlock(ExecutionState &state, KBlock *kb);
-  ExecutionResult runKFunction(ExecutionState &state, KFunction *kf);
-  ExecutionResult runKFunctionWithTarget(ExecutionState &state, KFunction *kf, KBlock *target);
-  ExecutionResult runKFunctionGuided(ExecutionState &state, KFunction *kf);
+  void runKFunction(ExecutionState &state, KFunction *kf);
+  void runKFunctionWithTarget(ExecutionState &state, KFunction *kf, KBlock *target);
+  void runKFunctionGuided(ExecutionState &state, KFunction *kf);
+  void runBlock(ExecutionState &state, unsigned bound, KBlock *kb);
 
   // Given a concrete object in our [klee's] address space, add it to 
   // objects checked code can reference.
@@ -578,24 +578,13 @@ public:
 
   void prepareSymbolicArgs(ExecutionState &state, KFunction *kf);
 
-  void prepareSymbolicReturn(ExecutionState &state, KInstruction *kcallInst);
-
   ref<Expr> makeSymbolicValue(llvm::Value *value, ExecutionState &state, uint64_t size, Expr::Width width, const std::string &name);
 
   void runFunctionAsMain(llvm::Function *f, int argc, char **argv,
                          char **envp) override;
-
-  ExecutionResult getCFA(llvm::Function *fn, ExecutionState &state);
-  ExecutionResult getExecutionResult(llvm::Function *fn, ExecutionState &state, unsigned bound);
-
-  void runFunctionAsIsolatedBlocks(llvm::Function *f, int argc, char **argv,
-                                   char **envp) override;
-  void runAllFunctionsAsBlockSequence(llvm::Function *f, int argc, char **argv,
-                                      char **envp) override;
+  void runFunctionAsBlockSequence(llvm::Function *fn, int argc, char **argv, char **envp);
   void runMainAsBlockSequence(llvm::Function *f, int argc, char **argv,
                               char **envp) override;
-
-  void runWithStats(ExecutionState &state);
 
   /*** Runtime options ***/
 

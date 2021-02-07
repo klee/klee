@@ -183,7 +183,7 @@ public:
   std::uint32_t depth;
 
   /// @brief Exploration level, i.e., number of times KLEE cycled for this state
-  std::multiset<llvm::BasicBlock *> multilevel;
+  std::multiset<llvm::BasicBlock *> level;
 
   /// @brief Address space used by this state (e.g. Global and Heap)
   AddressSpace addressSpace;
@@ -247,8 +247,10 @@ public:
   /// @brief Disables forking for this state. Set by user code
   bool forkDisabled;
 
-  /// @brief The bounds of indexes of registers
+  /// @brief The lower bound of indexes of registers
   unsigned minBlockBound = 0;
+
+  /// @brief The upper bound of indexes of registers
   unsigned maxBlockBound = 0;
 
   /// @brief The target basic block that the state must achieve
@@ -288,7 +290,7 @@ public:
   std::uint32_t getID() const { return id; };
   void setID() { id = nextID++; };
   void setBlockIndexes(KBlock *kb);
-  bool inBasicBlockRange(unsigned index, bool isoMode);
+  bool inBasicBlockRange(unsigned index);
   llvm::BasicBlock *getInitPCBlock();
   llvm::BasicBlock *getPrevPCBlock();
   llvm::BasicBlock *getPCBlock();
