@@ -4736,7 +4736,29 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
 }
 
 /***/
-void Executor::formArg(Function *f, unsigned NumPtrBytes, std::vector<ref<Expr> > &arguments, MemoryObject *argvMO, int argc, int envc) {
+ExecutionState* Executor::formState(Function *f,
+                                    int argc,
+                                    char **argv,
+                                    char **envp) {
+  std::vector<ref<Expr> > arguments;
+
+  // force deterministic initialization of memory objects
+  srand(1);
+  srandom(1);
+
+  MemoryObject *argvMO = 0;
+
+  // In order to make uclibc happy and be closer to what the system is
+  // doing we lay out the environments at the end of the argv array
+  // (both are terminated by a null). There is also a final terminating
+  // null that uclibc seems to expect, possibly the ELF header?
+
+  int envc;
+  for (envc=0; envp[envc]; ++envc) ;
+
+  unsigned NumPtrBytes = Context::get().getPointerWidth() / 8;
+  KFunction *kf = kmodule->functionMap[f];
+  assert(kf);
   Function::arg_iterator ai = f->arg_begin(), ae = f->arg_end();
   if (ai!=ae) {
     arguments.push_back(ConstantExpr::alloc(argc, Expr::Int32));
@@ -4761,64 +4783,6 @@ void Executor::formArg(Function *f, unsigned NumPtrBytes, std::vector<ref<Expr> 
       }
     }
   }
-}
-
-void Executor::formArgMemory(ExecutionState &state,
-                             char **argv,
-                             MemoryObject *argvMO,
-                             unsigned NumPtrBytes,
-                             int envc, char **envp,
-                             int argc)
-{
-  ObjectState *argvOS = bindObjectInState(state, argvMO, false);
-
-  for (int i=0; i<argc+1+envc+1+1; i++) {
-    if (i==argc || i>=argc+1+envc) {
-      // Write NULL pointer
-      argvOS->write(i * NumPtrBytes, Expr::createPointer(0));
-    } else {
-      char *s = i<argc ? argv[i] : envp[i-(argc+1)];
-      int j, len = strlen(s);
-
-      MemoryObject *arg =
-          memory->allocate(len + 1, /*isLocal=*/false, /*isGlobal=*/true,
-                           /*allocSite=*/state.pc->inst, /*alignment=*/8);
-      if (!arg)
-        klee_error("Could not allocate memory for function arguments");
-      ObjectState *os = bindObjectInState(state, arg, false);
-      for (j=0; j<len+1; j++)
-        os->write8(j, s[j]);
-
-      // Write pointer to newly allocated and initialised argv/envp c-string
-      argvOS->write(i * NumPtrBytes, arg->getBaseExpr());
-    }
-  }
-}
-
-ExecutionState* Executor::formState(Function *f,
-                                    int argc,
-                                    char **argv,
-                                    char **envp) {
-  std::vector<ref<Expr> > arguments;
-
-  // force deterministic initialization of memory objects
-  srand(1);
-  srandom(1);
-
-  MemoryObject *argvMO = 0;
-
-  // In order to make uclibc happy and be closer to what the system is
-  // doing we lay out the environments at the end of the argv array
-  // (both are terminated by a null). There is also a final terminating
-  // null that uclibc seems to expect, possibly the ELF header?
-
-  int envc;
-  for (envc=0; envp[envc]; ++envc) ;
-
-  unsigned NumPtrBytes = Context::get().getPointerWidth() / 8;
-  KFunction *kf = kmodule->functionMap[f];
-  assert(kf);
-  formArg(f, NumPtrBytes, arguments, argvMO, argc, envc);
 
   ExecutionState *state = new ExecutionState(kmodule->functionMap[f], kmodule->functionMap[f]->blockMap[&*f->begin()]);
 
@@ -4827,7 +4791,29 @@ ExecutionState* Executor::formState(Function *f,
     bindArgument(kf, i, *state, arguments[i]);
 
   if (argvMO) {
-    formArgMemory(*state, argv, argvMO, NumPtrBytes, envc, envp, argc);
+    ObjectState *argvOS = bindObjectInState(*state, argvMO, false);
+
+    for (int i=0; i<argc+1+envc+1+1; i++) {
+      if (i==argc || i>=argc+1+envc) {
+        // Write NULL pointer
+        argvOS->write(i * NumPtrBytes, Expr::createPointer(0));
+      } else {
+        char *s = i<argc ? argv[i] : envp[i-(argc+1)];
+        int j, len = strlen(s);
+
+        MemoryObject *arg =
+            memory->allocate(len + 1, /*isLocal=*/false, /*isGlobal=*/true,
+                             /*allocSite=*/state->pc->inst, /*alignment=*/8);
+        if (!arg)
+          klee_error("Could not allocate memory for function arguments");
+        ObjectState *os = bindObjectInState(*state, arg, false);
+        for (j=0; j<len+1; j++)
+          os->write8(j, s[j]);
+
+        // Write pointer to newly allocated and initialised argv/envp c-string
+        argvOS->write(i * NumPtrBytes, arg->getBaseExpr());
+      }
+    }
   }
 
   initializeGlobals(*state);
