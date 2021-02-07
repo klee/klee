@@ -183,7 +183,7 @@ public:
   std::uint32_t depth;
 
   /// @brief Exploration level, i.e., number of times KLEE cycled for this state
-  std::multiset<llvm::BasicBlock *> level;
+  std::multiset<llvm::BasicBlock *> multilevel;
 
   /// @brief Address space used by this state (e.g. Global and Heap)
   AddressSpace addressSpace;
@@ -247,11 +247,12 @@ public:
   /// @brief Disables forking for this state. Set by user code
   bool forkDisabled;
 
-  // The bounds of indexes of registers
+  /// @brief The bounds of indexes of registers
   unsigned minBlockBound = 0;
   unsigned maxBlockBound = 0;
 
-  std::vector<ref<Expr>> allocaRegs;
+  /// @brief The target basic block that the state must achieve
+  KBlock *target;
 
 public:
   ExecutionState() {}
@@ -291,6 +292,7 @@ public:
   llvm::BasicBlock *getInitPCBlock();
   llvm::BasicBlock *getPrevPCBlock();
   llvm::BasicBlock *getPCBlock();
+  void addLevel(llvm::BasicBlock *bb);
 };
 
 struct ExecutionStateIDCompare {

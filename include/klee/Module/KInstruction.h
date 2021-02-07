@@ -42,7 +42,7 @@ namespace klee {
     int *operands;
     /// Destination register index.
     unsigned dest;
-    const KBlock *kblock;
+    KBlock *parent;
 
   public:
     KInstruction() = default;

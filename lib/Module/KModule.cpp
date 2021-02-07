@@ -519,7 +519,7 @@ void KBlock::handleKInstruction(
         llvm::Instruction *inst,
         KModule *km, KInstruction *ki)
 {
-  ki->kblock = this;
+  ki->parent = this;
   ki->inst = inst;
   ki->dest = registerMap[inst];
   if (isa<CallInst>(inst) || isa<InvokeInst>(inst)) {

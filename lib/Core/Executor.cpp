@@ -1648,7 +1648,7 @@ void Executor::unwindToNextLandingpad(ExecutionState &state) {
             kmodule->module->getFunction("_klee_eh_cxx_personality");
         KFunction *kf = kmodule->functionMap[personality_fn];
 
-        state.level.insert(state.getPrevPCBlock());
+        state.addLevel(state.getPrevPCBlock());
         state.pushFrame(state.prevPC, kf);
         state.pc = kf->instructions;
         bindArgument(kf, 0, state, sui->exceptionObject);
@@ -2015,7 +2015,7 @@ void Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src,
 
   // XXX this lookup has to go ?
 
-  state.level.insert(state.getPrevPCBlock());
+  state.addLevel(state.getPrevPCBlock());
   KFunction *kf = state.stack.back().kf;
   state.pc = kf->blockMap[dst]->instructions;
   if (state.pc->inst->getOpcode() == Instruction::PHI) {
@@ -2040,7 +2040,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     }
     if (state.stack.size() <= 1) {
       assert(!caller && "caller set on initial stack frame");
-      state.level.insert(state.getPrevPCBlock());
+      state.addLevel(state.getPrevPCBlock());
       terminateStateOnExit(state);
     } else {
       state.popFrame();
@@ -2051,7 +2051,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       if (InvokeInst *ii = dyn_cast<InvokeInst>(caller)) {
         transferToBasicBlock(ii->getNormalDest(), caller->getParent(), state);
       } else {
-        state.level.insert(state.getPrevPCBlock());
+        state.addLevel(state.getPrevPCBlock());
         state.pc = kcaller;
         ++state.pc;
       }
@@ -3333,7 +3333,8 @@ void Executor::updateStates(ExecutionState *current) {
       seedMap.find(es);
     if (it3 != seedMap.end())
       seedMap.erase(it3);
-    if (results[es->getInitPCBlock()].pausedStates[es->getPCBlock()].count(es) == 0)
+    if (results[es->getInitPCBlock()].pausedStates.count(es->getPCBlock()) == 0 ||
+        results[es->getInitPCBlock()].pausedStates[es->getPCBlock()].count(es) == 0)
       processTree->remove(es->ptreeNode);
   }
   removedStates.clear();
@@ -3657,10 +3658,9 @@ void Executor::boundedExecuteStep(ExecutionState &state, unsigned bound) {
   KInstruction *prevKI = state.prevPC;
 
   if ((prevKI->inst->isTerminator() || isa<CallInst>(prevKI->inst))) {
-    results[state.getInitPCBlock()].completedStates[state.getPCBlock()].insert(state.copy());
-    if (state.level.count(state.getPCBlock()) > bound) {
+    results[state.getInitPCBlock()].completedStates[state.getPrevPCBlock()].insert(state.copy());
+    if (state.multilevel.count(state.getPCBlock()) > bound) {
       pauseState(state);
-      updateStates(&state);
       return;
     }
   }
@@ -3728,14 +3728,54 @@ Executor::ExecutionResult Executor::targetedRun(ExecutionState &initialState, KB
   return results;
 }
 
+void Executor::calculateTargetedStates(ExecutionState &initialState,
+                                       ExecutedBlock &pausedStates,
+                                       std::map<KBlock*, std::vector<ExecutionState*>> &targetedStates) {
+  ExecutedBlock &completedStates = results[initialState.getInitPCBlock()].completedStates;
+  for (auto blockstate : pausedStates) {
+    llvm::BasicBlock *bb = blockstate.first;
+    KFunction *kf = kmodule->functionMap[bb->getParent()];
+    KBlock *kb = kf->blockMap[bb];
+    std::set<ExecutionState *, ExecutionStateIDCompare> &ess = blockstate.second;
+
+    for (auto &state : ess) {
+      KBlock *nearestBlock = nullptr;
+      unsigned int minDistance = -1;
+      for (auto sfi = state->stack.rbegin(), sfe = state->stack.rend(); sfi != sfe; sfi++) {
+        kf = sfi->kf;
+
+        for (auto &kbp : kf->blocks) {
+          KBlock *target = kbp.get();
+          if (kf->backwardDistance[target].count(kb) != 0 &&
+              kf->backwardDistance[target][kb] > 0 &&
+              kf->backwardDistance[target][kb] < minDistance &&
+              completedStates.count(target->basicBlock) == 0) {
+
+            nearestBlock = target;
+            minDistance = kf->backwardDistance[target][kb];
+          }
+        }
+        if (nearestBlock) {
+          targetedStates[nearestBlock].push_back(state);
+          break;
+        }
+
+        if (sfi->caller) {
+          kb = sfi->caller->parent;
+          bb = kb->basicBlock;
+        }
+      }
+    }
+  }
+}
+
 Executor::ExecutionResult Executor::guidedRun(ExecutionState &initialState) {
   // Delay init till now so that ticks don't accrue during optimization and such.
   timers.reset();
 
   states.insert(&initialState);
 
-  GuidedSearcher *gs = new GuidedSearcher();
-  searcher = gs;
+  searcher = new GuidedSearcher();;
 
   std::vector<ExecutionState *> newStates(states.begin(), states.end());
   searcher->update(0, newStates, std::vector<ExecutionState *>());
@@ -3743,7 +3783,7 @@ Executor::ExecutionResult Executor::guidedRun(ExecutionState &initialState) {
   while (!states.empty() && !haltExecution) {
     while (!searcher->empty() && !haltExecution) {
       ExecutionState &state = searcher->selectState();
-      if (gs->targetedMode())
+      if (state.target)
         executeStep(state, true);
       else
         boundedExecuteStep(state, MaxBound);
@@ -3751,43 +3791,15 @@ Executor::ExecutionResult Executor::guidedRun(ExecutionState &initialState) {
 
     ExecutedBlock &pausedStates = results[initialState.getInitPCBlock()].pausedStates;
     std::map<KBlock*, std::vector<ExecutionState*>> targetedStates;
-    for (auto blockstate : pausedStates) {
-      llvm::BasicBlock *bb = blockstate.first;
-      KFunction *kf = kmodule->functionMap[bb->getParent()];
-      KBlock *kb = kf->blockMap[bb];
-      std::set<ExecutionState *, ExecutionStateIDCompare> &ess = blockstate.second;
-      std::vector<KBlock *> reachableBlocks;
-
-      KBlock *nearestBlock = nullptr;
-      unsigned int minDistance = -1;
-      for (auto &kbp : kf->blocks) {
-        KBlock *target = kbp.get();
-        if (kf->backwardDistance[target].count(kb) > 0 &&
-            results[initialState.getInitPCBlock()].completedStates.count(target->basicBlock) == 0 &&
-            kf->backwardDistance[target][kb] > 0 &&
-            kf->backwardDistance[target][kb] < minDistance) {
-          nearestBlock = target;
-          minDistance = kf->backwardDistance[target][kb];
-        }
-      }
-      if (nearestBlock != nullptr)
-        targetedStates[nearestBlock].insert(
-                    targetedStates[nearestBlock].begin(),
-                    ess.begin(),
-                    ess.end());
-    }
+    calculateTargetedStates(initialState, pausedStates, targetedStates);
 
     for (auto &blockstate : targetedStates) {
       KBlock *bb = blockstate.first;
       std::vector<ExecutionState *> &ess = blockstate.second;
-      gs->pushTarget(bb);
+      for (auto &es : ess)
+        es->target = bb;
       unpauseStates(ess);
     }
-    for (auto blockstate : pausedStates)
-      for (auto &state : blockstate.second)
-        processTree->remove(state->ptreeNode);
-    pausedStates.clear();
-
     if (searcher->empty()) haltExecution = true;
   }
 
@@ -3944,8 +3956,12 @@ void Executor::pauseState(ExecutionState &state) {
 
 void Executor::unpauseStates(std::vector<ExecutionState *> &states) {
   for (auto &state : states) {
-      results[state->getInitPCBlock()].pausedStates[state->getPCBlock()].erase(state);
-      this->states.insert(state);
+    ExecutedBlock &pausedStates = results[state->getInitPCBlock()].pausedStates;
+
+    pausedStates[state->getPCBlock()].erase(state);
+    if (pausedStates[state->getPCBlock()].empty())
+      pausedStates.erase(state->getPCBlock());
+    this->states.insert(state);
   }
   searcher->update(nullptr, states, {});
 }
@@ -5020,7 +5036,6 @@ Executor::ExecutionResult Executor::getExecutionResult(llvm::Function *fn, Execu
   prepareSymbolicArgs(*initialState, kf);
   auto start = high_resolution_clock::now();
   ExecutionResult result = runKFunctionGuided(*initialState, kf);
-//  ExecutionResult result = runKFunction(*initialState, kf);
   auto stop = high_resolution_clock::now();
   auto duration = duration_cast<milliseconds>(stop - start);
   errs() << "duration," << fn->getName() << "," << duration.count() << "\n";

@@ -189,7 +189,7 @@ TargetedSearcher::WeightResult TargetedSearcher::tryGetPreTargetWeight(Execution
 
   WeightResult res = tryGetLocalWeight(es, weight, localTargets);
   weight += 6.0; // number on [0.6,1)-real-interval
-  return res;
+  return res == Done ? During : res;
 }
 
 TargetedSearcher::WeightResult TargetedSearcher::tryGetPostTargetWeight(ExecutionState *es, double &weight) {
@@ -200,7 +200,7 @@ TargetedSearcher::WeightResult TargetedSearcher::tryGetPostTargetWeight(Executio
 
   WeightResult res = tryGetLocalWeight(es, weight, localTargets);
   weight += 3.0; // number on [0.3,0.6)-real-interval
-  return res;
+  return res == Done ? During : res;
 }
 
 TargetedSearcher::WeightResult TargetedSearcher::tryGetTargetWeight(ExecutionState *es, double &weight) {
@@ -232,12 +232,12 @@ void TargetedSearcher::update(ExecutionState *current,
       states->update(current, weight);
       break;
     case Done:
-      current->level.clear();
-      reachedStates.push_back(current);
+      current->target = nullptr;
+      targetAchived = true;
       states->remove(current);
       break;
     case Miss:
-      dropoutStates.push_back(current);
+      current->target = nullptr;
       states->remove(current);
       break;
     }
@@ -250,25 +250,26 @@ void TargetedSearcher::update(ExecutionState *current,
       states->insert(state, weight);
       break;
     case Done:
-      current->level.clear();
-      reachedStates.push_back(state);
+      state->target = nullptr;
+      targetAchived = true;
       break;
     case Miss:
-      dropoutStates.push_back(current);
+      state->target = nullptr;
       break;
     }
   }
 
   // remove states
-  for (const auto state : removedStates)
+  for (const auto state : removedStates) {
+    state->target = nullptr;
     states->remove(state);
+  }
 
-  if (reachedStates.size() > 0) {
+  if (targetAchived) {
     while (!states->empty()) {
-        ExecutionState *es = states->choose(0);
-        es->level.clear();
-        reachedStates.push_back(es);
-        states->remove(es);
+        ExecutionState *state = states->choose(0);
+        state->target = nullptr;
+        states->remove(state);
     }
   }
 }
@@ -281,19 +282,17 @@ void TargetedSearcher::printName(llvm::raw_ostream &os) {
   os << "TargetedSearcher";
 }
 
-KBlock *TargetedSearcher::getTarget() {
-  return target;
-}
-
 GuidedSearcher::GuidedSearcher() : baseSearcher(new DFSSearcher()) {}
 
 ExecutionState &GuidedSearcher::selectState() {
   while (!targetedSearchers.empty()) {
-    if (targetedSearchers.back()->empty()) {
-        targetedSearchers.pop_back();
+    KBlock *target = targetedSearchers.begin()->first;
+    assert(targetedSearchers.count(target) > 0);
+    if (targetedSearchers[target]->empty()) {
+        targetedSearchers.erase(target);
         continue;
     } else
-        return targetedSearchers.back()->selectState();
+        return targetedSearchers[target]->selectState();
   }
   return baseSearcher->selectState();
 }
@@ -301,12 +300,32 @@ ExecutionState &GuidedSearcher::selectState() {
 void GuidedSearcher::update(ExecutionState *current,
                               const std::vector<ExecutionState *> &addedStates,
                               const std::vector<ExecutionState *> &removedStates) {
-  if (!targetedSearchers.empty()) {
-    targetedSearchers.back()->update(current, addedStates, removedStates);
-    if (targetedSearchers.back()->empty()) {
-      targetedSearchers.pop_back();
+  std::map<KBlock*, std::vector<ExecutionState *>> addedTStates;
+  std::map<KBlock*, std::vector<ExecutionState *>> removedTStates;
+  std::set<KBlock*> targets;
+  for (const auto state : addedStates) {
+    if (state->target) {
+      targets.insert(state->target);
+      addedTStates[state->target].push_back(state);
     }
   }
+  for (const auto state : removedStates) {
+  if (state->target) {
+    targets.insert(state->target);
+     removedTStates[state->target].push_back(state);
+   }
+  }
+  KBlock *currTarget = current ? current->target : nullptr;
+  if (currTarget)
+    targets.insert(currTarget);
+
+  for (auto target : targets) {
+    ExecutionState *currTState = currTarget == target ? current : nullptr;
+    if (targetedSearchers.count(target) == 0)
+      addTarget(target);
+    targetedSearchers[target]->update(currTState, addedTStates[target], removedTStates[target]);
+  }
+
   baseSearcher->update(current, addedStates, removedStates);
 }
 
@@ -318,12 +337,8 @@ void GuidedSearcher::printName(llvm::raw_ostream &os) {
   os << "GuidedSearcher";
 }
 
-void GuidedSearcher::pushTarget(KBlock *target) {
-  targetedSearchers.push_back(std::make_unique<TargetedSearcher>(target));
-}
-
-KBlock *GuidedSearcher::getCurrentTarget() {
-  return targetedSearchers.empty() ? nullptr : targetedSearchers.back()->getTarget();
+void GuidedSearcher::addTarget(KBlock *target) {
+  targetedSearchers[target] = std::make_unique<TargetedSearcher>(target);
 }
 
 ///

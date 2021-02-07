@@ -84,7 +84,8 @@ ExecutionState::ExecutionState(KFunction *kf) :
     steppedMemoryInstructions(0),
     instsSinceCovNew(0),
     coveredNew(false),
-    forkDisabled(false) {
+    forkDisabled(false),
+    target(nullptr) {
   pushFrame(nullptr, kf);
   setID();
 }
@@ -100,7 +101,8 @@ ExecutionState::ExecutionState(KFunction *kf, KBlock *kb) :
     steppedMemoryInstructions(0),
     instsSinceCovNew(0),
     coveredNew(false),
-    forkDisabled(false) {
+    forkDisabled(false),
+    target(nullptr) {
   pushFrame(nullptr, kf);
   setID();
 }
@@ -120,7 +122,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     stack(state.stack),
     incomingBBIndex(state.incomingBBIndex),
     depth(state.depth),
-    level(state.level),
+    multilevel(state.multilevel),
     addressSpace(state.addressSpace),
     constraints(state.constraints),
     pathOS(state.pathOS),
@@ -138,7 +140,8 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     coveredNew(state.coveredNew),
     forkDisabled(state.forkDisabled),
     minBlockBound(state.minBlockBound),
-    maxBlockBound(state.maxBlockBound) {
+    maxBlockBound(state.maxBlockBound),
+    target(state.target) {
   for (const auto &cur_mergehandler: openMergeStack)
     cur_mergehandler->addOpenState(this);
 }
@@ -177,23 +180,6 @@ ExecutionState *ExecutionState::withKBlock(KBlock *kb) {
   newState->initPC = kb->instructions;
   newState->pc = newState->initPC;
   newState->prevPC = newState->pc;
-  return newState;
-}
-
-ExecutionState *ExecutionState::empty() {
-  ExecutionState* newState = new ExecutionState();
-  newState->initPC = nullptr;
-  newState->pc = nullptr;
-  newState->prevPC = nullptr;
-  newState->incomingBBIndex = -1;
-  newState->depth = 0;
-  newState->ptreeNode = nullptr;
-  newState->steppedInstructions = 0;
-  newState->steppedMemoryInstructions = 0;
-  newState->instsSinceCovNew = 0;
-  newState->coveredNew = false;
-  newState->forkDisabled = false;
-  newState->setID();
   return newState;
 }
 
@@ -458,4 +444,8 @@ BasicBlock *ExecutionState::getPrevPCBlock() {
 
 BasicBlock *ExecutionState::getPCBlock() {
   return pc->inst->getParent();
+}
+
+void ExecutionState::addLevel(BasicBlock *bb) {
+  multilevel.insert(bb);
 }
