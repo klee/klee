@@ -561,7 +561,15 @@ KFunction::KFunction(llvm::Function *_function,
   // Assign unique instruction IDs to each basic block
   unsigned n = 0;
   // The first arg_size() registers are reserved for formals.
-  unsigned rnum = numArgs;
+
+  for (llvm::Function::iterator bbit = function->begin(),
+         bbie = function->end(); bbit != bbie; ++bbit) {
+    for (llvm::BasicBlock::iterator it = bbit->begin(), ie = bbit->end();
+         it != ie; ++it)
+      registerMap[&*it] = rnum++;
+  }
+  numRegisters = rnum;
+
   for (llvm::Function::iterator bbit = function->begin(),
          bbie = function->end(); bbit != bbie; ++bbit) {
     KBlock *kb;
@@ -575,11 +583,11 @@ KFunction::KFunction(llvm::Function *_function,
       Value *fp = cs.getCalledValue();
 #endif
       Function *f = getTargetFunction(fp);
-      KCallBlock *ckb = new KCallBlock(this, &*bbit, parent, registerMap, reg2inst, rnum, f);
+      KCallBlock *ckb = new KCallBlock(this, &*bbit, parent, registerMap, reg2inst, f);
       kCallBlocks.push_back(ckb);
       kb = ckb;
     } else
-      kb = new KBlock(this, &*bbit, parent, registerMap, reg2inst, rnum);
+      kb = new KBlock(this, &*bbit, parent, registerMap, reg2inst);
     for (unsigned i = 0; i < kb->numInstructions; i++, n++) {
       instructions[n] = kb->instructions[i];
       instructionMap[instructions[n]->inst] = instructions[n];
@@ -606,17 +614,13 @@ for (unsigned i=0; i<numInstructions; ++i)
 
 KBlock::KBlock(KFunction *_kfunction, llvm::BasicBlock *block, KModule *km,
                std::map<Instruction*, unsigned> &registerMap,
-               std::map<unsigned, KInstruction*> &reg2inst,  unsigned &rnum)
+               std::map<unsigned, KInstruction*> &reg2inst)
   : parent(_kfunction),
     basicBlock(block),
     numInstructions(0),
     trackCoverage(true) {
   numInstructions += block->size();
   instructions = new KInstruction*[numInstructions];
-  for (llvm::BasicBlock::iterator it = block->begin(), ie = block->end();
-     it != ie; ++it) {
-    registerMap[&*it] = rnum++;
-  }
 
   unsigned i = 0;
   for (llvm::BasicBlock::iterator it = block->begin(), ie = block->end();
@@ -641,8 +645,8 @@ KBlock::KBlock(KFunction *_kfunction, llvm::BasicBlock *block, KModule *km,
 
 KCallBlock::KCallBlock(KFunction *_kfunction, llvm::BasicBlock *block, KModule *km,
                     std::map<Instruction*, unsigned> &registerMap, std::map<unsigned, KInstruction*> &reg2inst,
-                    unsigned &rnum, llvm::Function *_calledFunction)
-  : KBlock::KBlock(_kfunction, block, km, registerMap, reg2inst, rnum),
+                    llvm::Function *_calledFunction)
+  : KBlock::KBlock(_kfunction, block, km, registerMap, reg2inst),
     kcallInstruction(this->instructions[0]),
     calledFunction(_calledFunction) {}
 
