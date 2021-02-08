@@ -214,9 +214,9 @@ TargetedSearcher::WeightResult TargetedSearcher::tryGetWeight(ExecutionState *es
   for (auto &frame : es->stack) {
     kfs.push_back(frame.kf);
   }
-  std::vector<KFunction*>::iterator firstKF = std::find(kfs.begin(), kfs.end(), targetKF);
-  if (firstKF == kfs.end()) return tryGetPreTargetWeight(es, weight);
-  if (kfs.back() == targetKF) return tryGetTargetWeight(es, weight);
+  int nKF = std::count(kfs.begin(), kfs.end(), targetKF);
+  if (nKF == 0) return tryGetPreTargetWeight(es, weight);
+  if (kfs.back() == targetKF && nKF == 1) return tryGetTargetWeight(es, weight);
   return tryGetPostTargetWeight(es, weight);
 
 }
