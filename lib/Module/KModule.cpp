@@ -526,8 +526,8 @@ void KBlock::handleKInstruction(
     const CallBase &cs = cast<CallBase>(*inst);
     Value *val = cs.getCalledOperand();
 #else
-      const CallSite cs(inst);
-      Value *val = cs.getCalledValue();
+    const CallSite cs(inst);
+    Value *val = cs.getCalledValue();
 #endif
     unsigned numArgs = cs.arg_size();
     ki->operands = new int[numArgs+1];
@@ -561,6 +561,7 @@ KFunction::KFunction(llvm::Function *_function,
   // Assign unique instruction IDs to each basic block
   unsigned n = 0;
   // The first arg_size() registers are reserved for formals.
+  unsigned rnum = numArgs;
 
   for (llvm::Function::iterator bbit = function->begin(),
          bbie = function->end(); bbit != bbie; ++bbit) {
@@ -603,7 +604,6 @@ KFunction::KFunction(llvm::Function *_function,
   }
 
   entryKBlock = blockMap[&*function->begin()];
-  numRegisters = rnum;
 }
 
 KFunction::~KFunction() {

@@ -3726,7 +3726,6 @@ void Executor::calculateTargetedStates(ExecutionState &initialState,
               kf->backwardDistance[target][kb] > 0 &&
               kf->backwardDistance[target][kb] < minDistance &&
               completedStates.count(target->basicBlock) == 0) {
-
             nearestBlock = target;
             minDistance = kf->backwardDistance[target][kb];
           }
@@ -4015,7 +4014,7 @@ void Executor::terminateStateOnError(ExecutionState &state,
   static std::set< std::pair<Instruction*, std::string> > emittedErrors;
   Instruction * lastInst;
   const InstructionInfo &ii = getLastNonKleeInternalInstruction(state, &lastInst);
-  
+
   if (EmitAllErrors ||
       emittedErrors.insert(std::make_pair(lastInst, message)).second) {
     if (ii.file != "") {
@@ -4578,7 +4577,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   if (unbound) {
     if (incomplete) {
       terminateStateEarly(*unbound, "Query timed out (resolve).");
-    } else if (!isa<ConstantExpr>(address)) {
+    } else if (isa<ReadExpr>(address) || isa<ConcatExpr>(address) || isa<GEPExpr>(address)) {
       ref<Expr> base = unsafeAddress;
       unsigned size = bytes;
 
@@ -4621,7 +4620,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
       }
     } else {
       terminateStateOnError(*unbound, "memory error: out of bound pointer", Ptr,
-                            NULL/*, getAddressInfo(*unbound, address)*/);
+                            NULL, getAddressInfo(*unbound, address));
     }
   }
 }
@@ -4820,8 +4819,7 @@ ExecutionState* Executor::formState(Function *f,
   return state;
 }
 
-void Executor::clearGlobal()
-{
+void Executor::clearGlobal() {
   globalObjects.clear();
   globalAddresses.clear();
 }
