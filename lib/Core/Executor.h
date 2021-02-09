@@ -282,7 +282,6 @@ private:
 
   void stepInstruction(ExecutionState &state);
   void updateStates(ExecutionState *current);
-  void pauseStates(ExecutionState *current);
   void transferToBasicBlock(llvm::BasicBlock *dst,
 			    llvm::BasicBlock *src,
 			    ExecutionState &state);
@@ -622,7 +621,7 @@ public:
   MergingSearcher *getMergingSearcher() const { return mergingSearcher; };
   void setMergingSearcher(MergingSearcher *ms) { mergingSearcher = ms; };
   const Array * makeArray(ExecutionState &state, const uint64_t size, const std::string &name);
-  void executeStep(ExecutionState &state, bool withPause);
+  void executeStep(ExecutionState &state);
   void calculateTargetedStates(ExecutionState &initialState,
                                ExecutedBlock &pausedStates,
                                std::map<KBlock*, std::vector<ExecutionState*>> &targetedStates);
