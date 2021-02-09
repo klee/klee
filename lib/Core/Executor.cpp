@@ -1118,12 +1118,13 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     return StatePair(0, &current);
   } else {
     TimerStatIncrementer timer(stats::forkTime);
-    ExecutionState *trueState, *falseState = &current;
+    ExecutionState *falseState, *trueState = &current;
 
     ++stats::forks;
 
-    trueState = falseState->branch();
-    addedStates.push_back(trueState);
+    falseState = trueState->branch();
+    addedStates.push_back(falseState);
+
 
     if (it != seedMap.end()) {
       std::vector<SeedInfo> seeds = it->second;
@@ -1160,7 +1161,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    processTree->attach(current.ptreeNode, trueState, falseState);
+    processTree->attach(current.ptreeNode, falseState, trueState);
 
     if (pathWriter) {
       // Need to update the pathOS.id field of falseState, otherwise the same id
