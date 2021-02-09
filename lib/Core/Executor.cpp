@@ -4394,7 +4394,7 @@ void Executor::resolveExact(ExecutionState &state,
     ref<Expr> inBounds = EqExpr::create(p, it->first->getBaseExpr());
     
     StatePair branches = fork(*unbound, inBounds, true);
-    
+
     if (branches.first)
       results.push_back(std::make_pair(*it, branches.first));
 
@@ -4404,7 +4404,7 @@ void Executor::resolveExact(ExecutionState &state,
   }
 
   if (unbound) {
-    if (!isa<ConstantExpr>(p)) {
+    if (UseGEPExpr && isa<GEPExpr>(p)) {
       terminateStateEarly(*unbound, "insufficient information: symbolic size of object in isolationMode.");
     } else {
       terminateStateOnError(*unbound, "memory error: invalid pointer: " + name,
@@ -4562,45 +4562,39 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   if (unbound) {
     if (incomplete) {
       terminateStateEarly(*unbound, "Query timed out (resolve).");
-    } else if (isa<ReadExpr>(address) || isa<ConcatExpr>(address) || isa<GEPExpr>(address)) {
-      ref<Expr> base = unsafeAddress;
-      unsigned size = bytes;
-
-      if (UseGEPExpr && isa<GEPExpr>(address)) {
-        base = cast<GEPExpr>(address)->base;
-        size = cast<GEPExpr>(address)->sourceSize;
-      }
+    } else if (UseGEPExpr && isa<GEPExpr>(address)) {
+      ref<Expr> base = cast<GEPExpr>(address)->base;
+      unsigned size = cast<GEPExpr>(address)->sourceSize;
 
       ObjectPair p = lazyInstantiateVariable(*unbound, base, target, size);
       assert(p.first && p.second);
 
-      if (UseGEPExpr && isa<GEPExpr>(address)) {
-        const MemoryObject *mo = p.first;
-        ref<Expr> inBounds = mo->getBoundsCheckPointer(unsafeAddress, bytes);
+      const MemoryObject *mo = p.first;
+      ref<Expr> inBounds = mo->getBoundsCheckPointer(unsafeAddress, bytes);
 
-        Solver::Validity res;
-        time::Span timeout = coreSolverTimeout;
-        solver->setTimeout(timeout);
-        solver->evaluate(unbound->constraints, inBounds, res, unbound->queryMetaData);
-        solver->setTimeout(time::Span());
+      Solver::Validity res;
+      time::Span timeout = coreSolverTimeout;
+      solver->setTimeout(timeout);
+      solver->evaluate(unbound->constraints, inBounds, res, unbound->queryMetaData);
+      solver->setTimeout(time::Span());
 
-        if (res !=Solver::False) {
-          unbound->addConstraint(inBounds);
-        } else {
-          p = lazyInstantiateVariable(*unbound, unsafeAddress, target, bytes);
-        }
-      }
+      unbound->addConstraint(inBounds);
 
-      switch (operation) {
-        case Write: {
-          ObjectState *wos = unbound->addressSpace.getWriteable(p.first, p.second);
-          wos->write(p.first->getOffsetExpr(unsafeAddress), value);
-          break;
-        }
-        case Read: {
-          ref<Expr> result = p.second->read(p.first->getOffsetExpr(unsafeAddress), type);
-          bindLocal(target, *unbound, result);
-          break;
+      if (res ==Solver::False) {
+        terminateStateOnError(*unbound, "memory error: out of bound pointer", Ptr,
+                              NULL, getAddressInfo(*unbound, address));
+      } else {
+        switch (operation) {
+          case Write: {
+            ObjectState *wos = unbound->addressSpace.getWriteable(p.first, p.second);
+            wos->write(p.first->getOffsetExpr(unsafeAddress), value);
+            break;
+          }
+          case Read: {
+            ref<Expr> result = p.second->read(p.first->getOffsetExpr(unsafeAddress), type);
+            bindLocal(target, *unbound, result);
+            break;
+          }
         }
       }
     } else {

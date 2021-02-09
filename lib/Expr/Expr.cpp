@@ -717,10 +717,6 @@ ref<Expr>
 GEPExpr::create(const ref<Expr> &e, const ref<Expr> &b, unsigned s) {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
     return CE;
-  if (ReadExpr *RE = dyn_cast<ReadExpr>(e))
-    return RE;
-  if (ConcatExpr *CE = dyn_cast<ConcatExpr>(e))
-    return CE;
   if (!isa<ReadExpr>(b) && !isa<ConcatExpr>(b))
     return e;
   return GEPExpr::alloc(e, b, s);
