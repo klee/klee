@@ -3308,8 +3308,10 @@ void Executor::updateStates(ExecutionState *current) {
     if (it3 != seedMap.end())
       seedMap.erase(it3);
     if (results[es->getInitPCBlock()].pausedStates.count(es->getPCBlock()) == 0 ||
-        results[es->getInitPCBlock()].pausedStates[es->getPCBlock()].count(es) == 0)
+        results[es->getInitPCBlock()].pausedStates[es->getPCBlock()].count(es) == 0) {
       processTree->remove(es->ptreeNode);
+      delete es;
+    }
   }
   removedStates.clear();
 }
