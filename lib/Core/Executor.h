@@ -622,7 +622,7 @@ public:
   void setMergingSearcher(MergingSearcher *ms) { mergingSearcher = ms; };
   const Array * makeArray(ExecutionState &state, const uint64_t size, const std::string &name);
   void executeStep(ExecutionState &state);
-  void calculateTargetedStates(ExecutionState &initialState,
+  void calculateTargetedStates(llvm::BasicBlock *initialBlock,
                                ExecutedBlock &pausedStates,
                                std::map<KBlock*, std::vector<ExecutionState*>> &targetedStates);
 };

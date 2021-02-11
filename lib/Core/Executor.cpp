@@ -2004,7 +2004,8 @@ void Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src,
 
   // XXX this lookup has to go ?
 
-  state.addLevel(state.getPrevPCBlock());
+  if (state.prevPC->inst->isTerminator())
+    state.addLevel(state.getPrevPCBlock());
   KFunction *kf = state.stack.back().kf;
   state.pc = kf->blockMap[dst]->instructions;
   if (state.pc->inst->getOpcode() == Instruction::PHI) {
@@ -3624,7 +3625,7 @@ void Executor::executeStep(ExecutionState &state) {
 void Executor::boundedExecuteStep(ExecutionState &state, unsigned bound) {
   KInstruction *prevKI = state.prevPC;
 
-  if ((prevKI->inst->isTerminator() || isa<CallInst>(prevKI->inst))) {
+  if (prevKI->inst->isTerminator()) {
     results[state.getInitPCBlock()].completedStates[state.getPrevPCBlock()].insert(state.copy());
     if (state.level.count(state.getPCBlock()) > bound) {
       pauseState(state);
@@ -3691,10 +3692,10 @@ void Executor::targetedRun(ExecutionState &initialState, KBlock *target) {
   haltExecution = false;
 }
 
-void Executor::calculateTargetedStates(ExecutionState &initialState,
+void Executor::calculateTargetedStates(BasicBlock *initialBlock,
                                        ExecutedBlock &pausedStates,
                                        std::map<KBlock*, std::vector<ExecutionState*>> &targetedStates) {
-  ExecutedBlock &completedStates = results[initialState.getInitPCBlock()].completedStates;
+  ExecutedBlock &completedStates = results[initialBlock].completedStates;
   for (auto blockstate : pausedStates) {
     llvm::BasicBlock *bb = blockstate.first;
     KFunction *kf = kmodule->functionMap[bb->getParent()];
@@ -3735,6 +3736,7 @@ void Executor::guidedRun(ExecutionState &initialState) {
   // Delay init till now so that ticks don't accrue during optimization and such.
   timers.reset();
 
+  BasicBlock *initialBlock = initialState.getInitPCBlock();
   states.insert(&initialState);
 
   searcher = new GuidedSearcher(constructUserSearcher(*this));
@@ -3751,9 +3753,9 @@ void Executor::guidedRun(ExecutionState &initialState) {
         boundedExecuteStep(state, MaxCycles);
     }
 
-    ExecutedBlock &pausedStates = results[initialState.getInitPCBlock()].pausedStates;
+    ExecutedBlock &pausedStates = results[initialBlock].pausedStates;
     std::map<KBlock*, std::vector<ExecutionState*>> targetedStates;
-    calculateTargetedStates(initialState, pausedStates, targetedStates);
+    calculateTargetedStates(initialBlock, pausedStates, targetedStates);
 
     for (auto &blockstate : targetedStates) {
       KBlock *bb = blockstate.first;
