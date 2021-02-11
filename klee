@@ -1,0 +1,213 @@
+#!/usr/bin/env python3
+import argparse
+import os
+import subprocess
+import sys
+import shutil
+import tempfile
+import hashlib
+from functools import partial
+
+class KLEE(object):
+    """
+    Wrapper to run KLEE within BenchExec
+    Compiles source and executes KLEE
+    """
+
+    def __init__(self, source = None, is32 = False, f_cov = False, f_err = False, max_memory = 0, max_time = 0):
+        self.source = source
+        self.is32 = is32
+        self.tempdir = None
+        self.compiled_file = None
+        self.f_cov = f_cov
+        self.f_err = f_err
+        self.max_memory = max_memory/1024/1024 # Convert to MB
+        self.max_time = max_time
+        # This file is inside the bin directory - use the root as base
+        self.base_directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.')
+        self.klee_path = os.path.join(self.base_directory, "build/bin/klee")
+        # self.compiler_path = os.path.join(self.base_directory, "compiler/clang")
+        self.compiler_path = os.path.join(self.base_directory, "../llvm11/bin/clang")
+        # self.linker_path = os.path.join(self.base_directory, "compiler/llvm-link")
+        self.linker_path = os.path.join(self.base_directory, "../llvm11/bin/llvm-link")
+        # self.library_path = os.path.join(self.base_directory, "libraries")
+        # self.runtime_library_path = os.path.join(self.base_directory,  "klee_build/Debug+Asserts/lib")
+        self.test_results_path = os.path.join(os.getcwd(), "test-suite")
+        # if not os.path.exists(self.test_results_path):
+        #     os.makedirs(self.test_results_path)
+
+        self.callEnv = os.environ.copy()
+        # self.callEnv['LD_LIBRARY_PATH'] = self.library_path
+        # self.callEnv['KLEE_RUNTIME_LIBRARY_PATH'] = self.runtime_library_path
+
+    def compile(self):
+        self.tempdir = tempfile.mkdtemp()
+
+        # Compile file for testing
+        self.compiled_file =  os.path.join(self.tempdir, os.path.basename(self.source)+".bc")
+        # -Wno-everything: do not print any error statements - we are not allowed to change the code
+        compiler_options = []
+        compiler_options += ["-O0", "-Xclang", "-disable-O0-optnone"]
+        compiler_options += ["-fbracket-depth=1024"]
+        compiler_options += ["-Dfloat=int", "-Ddouble=int"]
+        cmd = [self.compiler_path, "-c", "-Wno-everything",  "-g", "-emit-llvm", "-o", self.compiled_file, self.source] + compiler_options
+        if self.is32:
+            cmd += ['-m32']
+#        p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+#        p.communicate()
+#        print(p.returncode)
+        subprocess.check_call(cmd)
+
+        # Compile library
+        compiled_library =  os.path.join(self.tempdir, "library.bc")
+        include_path=os.path.join(self.base_directory, "include/klee-test-comp.c")
+        cmd = [self.compiler_path, "-c", "-g", "-emit-llvm", "-o", compiled_library, include_path] + compiler_options
+        if self.is32:
+            cmd += ['-m32']
+        subprocess.check_call(cmd)
+#        p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+#        p.communicate()
+
+        # Link both together to final
+        cmd = [self.linker_path, "-o", self.compiled_file, compiled_library, self.compiled_file]
+        subprocess.check_call(cmd)
+#        p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+#        p.communicate()
+
+    def run(self):
+        test_output_dir = os.path.join(self.test_results_path, os.path.basename(self.source))
+        test_output_dir = os.path.join(self.test_results_path)
+        # Clean-up from previous runs if needed
+        shutil.rmtree(test_output_dir, ignore_errors=True)
+
+        # Calculate hashsum of original source file
+        with open(self.source, mode='rb') as f:
+            h = hashlib.sha256()
+            for buf in iter(partial(f.read, 128), b''):
+                h.update(buf)
+        # Add different options for KLEE
+        cmd = ["ulimit -s unlimited", "&&", self.klee_path]
+
+        # Add common arguments
+        cmd += ["--use-forked-solver=false"]
+        cmd += ["-max-memory="+str(int(self.max_memory*0.90))] # Just use half of the memory in case we have to fork
+        cmd += ["--optimize"]
+        cmd += ["-output-dir=" + test_output_dir] # Output files into specific directory
+        cmd += ["-output-source=false"] # Do not output assembly.ll - it can be too large
+        cmd += ["-istats-write-interval=90s"] # Istats file can be large as well
+        cmd += ["-write-xml-tests"] # Write tests in XML format
+        cmd += ["-tc-orig="+os.path.basename(self.source)] # Provide the name of the original source file
+        cmd += ["-tc-hash="+h.hexdigest()] # Provide sha256 hash of source file
+        # cmd += ["--dump-all-states=false"]
+        cmd += ["--search=dfs","--search=random-path","--search=nurs:covnew"]
+        cmd += ["-const-array-opt"]
+
+        if self.is32:
+            cmd += ["--allocate-determ"]
+            cmd += ["--allocate-determ-size="+str(min(int(self.max_memory*0.60), 3*1024))]
+            cmd += ["--allocate-determ-start-address=0x00030000000"]
+
+        if self.f_err:
+            cmd += ["--tc-type=bug"]
+            cmd += ["--dump-states-on-halt=false"] # Explicitly do not dump states
+            cmd += ["-exit-on-error-type=Assert"] # Only generate test cases of type assert
+            cmd += ["-dump-test-case-type=Assert"] # Only dump test cases of type assert
+            if self.max_time:
+                cmd += ["-max-time="+str(int(self.max_time) )] # Use the whole time
+
+        if self.f_cov:
+            cmd += ["--tc-type=cov"]
+            cmd += ["-output-states-covering-new"] # Don't generate all test cases
+            cmd += ["-dump-states-on-halt=true"] # Check in case we missed some oncovered instructions
+            cmd += ["-coverage-on-the-fly"]
+            if self.max_time:
+                cmd += ["-max-time="+str(int(self.max_time) )] # execute one minute less
+
+        cmd += [self.compiled_file] # Finally add the file to be tested
+
+        p = subprocess.Popen(" ".join(cmd), stdout=subprocess.PIPE, shell = True, env = self.callEnv)
+        s_out, s_err = p.communicate()
+        try:
+            for l in s_out.decode('utf-8').splitlines():
+                print(l)
+        except:
+            pass
+        try:
+            for l in s_err.decode('utf-8').splitlines():
+                print(l)
+        except:
+            pass
+
+    def version(self):
+        cmd = [self.klee_path, "--version"]
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, env = self.callEnv)
+        s_out, s_err = p.communicate()
+        for l in s_out.decode('utf-8').splitlines():
+            print(l)
+
+
+def main():
+    # Initialize argparse
+    parser = argparse.ArgumentParser(
+        description='Outputs a list of patched functions and the corresponding source code lines.')
+    parser.add_argument("source", help="klee-out directory to parse", nargs = "?", default = None)
+    parser.add_argument("--version", help="print version of klee", action='store_true')
+    parser.add_argument("--32", help="Compile 32bit binaries", action='store_true')
+    parser.add_argument("--64", help="Compile 64bit binaries", action='store_true')
+    parser.add_argument("--error-only", help="Focus on searching errors", action='store_true')
+    parser.add_argument("--coverage-only", help="Focus on coverage", action='store_true')
+    parser.add_argument("--max-memory", help="Maximum memory in byte ", type=int, default=2000)
+    parser.add_argument("--max-time", help="Maximum time in s", type=int, default=0)
+    parser.add_argument("--max-walltime", help="Maximum walltime in s", type=int, default=0)
+    parser.add_argument("--max-cputime-soft", help="Maximum cputime in s (soft)", type=int, default=0)
+    parser.add_argument("--max-cputime-hard", help="Maximum cputime in s (hard)", type=int, default=0)
+    parser.add_argument("--property-file", help="Property file for test goal description", type=str, default=None)
+    args = parser.parse_args()
+
+    if args.version:
+        wrapper = KLEE()
+        wrapper.version()
+        return
+
+    # Validation of arguments
+    if not args.source or not os.path.isfile(args.source):
+        print("File does not exist", args.source)
+        sys.exit(1)
+
+    if args.property_file:
+        with open(args.property_file, 'r') as f:
+           for line in f:
+               if "@DECISIONEDGE" in line:
+                   args.coverage_only = True
+               if "@CALL(__VERIFIER_error)" in line:
+                   args.error_only = True
+    # Generate wrapper
+    time = 0
+    if args.max_cputime_soft: # Use soft timeout if available
+        time = args.max_cputime_soft
+    elif args.max_cputime_hard:
+        time = args.max_cputime_hard
+    elif args.max_walltime:
+        time = args.max_walltime
+    elif args.max_time:
+        time = args.max_time
+    
+    is32 = None
+    if vars(args).get('32'):
+        is32 = True
+    if vars(args).get('64'):
+        if is32:
+            print("Cannot set --64 and --32 simultanously")
+            sys.exit(1)
+        is32 = False
+
+    if is32 is None:
+        print("No architecture set. Assume 64bit")
+        is32 = False
+    wrapper = KLEE(source = args.source, is32 = is32, f_cov = args.coverage_only, f_err = args.error_only, max_memory = args.max_memory, max_time = time)
+    wrapper.compile()
+    wrapper.run()
+
+
+if __name__ == '__main__':
+    main()
