@@ -604,10 +604,10 @@ Executor::~Executor() {
 
 
 void Executor::addCompletedResult(ExecutionState &state) {
-  results[state.getInitPCBlock()].completedStates[state.getPrevPCBlock()].insert(state.copy());
+  results[state.getInitPCBlock()].completedStates[state.getPrevPCBlock()].insert(&state);
 }
 void Executor::addErroneousResult(ExecutionState &state) {
-  results[state.getInitPCBlock()].erroneousStates[state.getPrevPCBlock()].insert(state.copy());
+  results[state.getInitPCBlock()].erroneousStates[state.getPrevPCBlock()].insert(&state);
 }
 void Executor::addHistoryResult(ExecutionState &state) {
   results[state.getInitPCBlock()].history[state.getPrevPCBlock()].insert(state.level.begin(), state.level.end());
