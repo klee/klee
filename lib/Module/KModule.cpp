@@ -345,6 +345,11 @@ static void splitByCall(Function *function) {
 }
 
 void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
+
+  for (auto &Function : *module) {
+    splitByCall(&Function);
+  }
+
   if (OutputSource || forceSourceOutput) {
     std::unique_ptr<llvm::raw_fd_ostream> os(ih->openOutputFile("assembly.ll"));
     assert(os && !os->has_error() && "unable to open source output");
@@ -361,10 +366,6 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
   }
 
   /* Build shadow structures */
-
-  for (auto &Function : *module) {
-    splitByCall(&Function);
-  }
 
   infos = std::unique_ptr<InstructionInfoTable>(
       new InstructionInfoTable(*module.get()));
@@ -557,6 +558,7 @@ KFunction::KFunction(llvm::Function *_function,
     trackCoverage(true) {
   for (auto &BasicBlock : *function) {
     numInstructions += BasicBlock.size();
+    numBlocks++;
   }
   instructions = new KInstruction*[numInstructions];
   std::map<Instruction*, unsigned> registerMap;

@@ -183,7 +183,8 @@ public:
   std::uint32_t depth;
 
   /// @brief Exploration level, i.e., number of times KLEE cycled for this state
-  std::multiset<llvm::BasicBlock *> level;
+  std::multiset<llvm::BasicBlock *> multilevel;
+  std::set<llvm::BasicBlock *> level;
 
   /// @brief Address space used by this state (e.g. Global and Heap)
   AddressSpace addressSpace;

@@ -232,9 +232,8 @@ void TargetedSearcher::update(ExecutionState *current,
       states->update(current, weight);
       break;
     case Done:
-      current->target = nullptr;
       targetAchived = true;
-      states->remove(current);
+      current->multilevel.clear();
       break;
     case Miss:
       current->target = nullptr;
@@ -250,7 +249,8 @@ void TargetedSearcher::update(ExecutionState *current,
       states->insert(state, weight);
       break;
     case Done:
-      state->target = nullptr;
+      states->insert(state, weight);
+      state->multilevel.clear();
       targetAchived = true;
       break;
     case Miss:

@@ -122,6 +122,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     stack(state.stack),
     incomingBBIndex(state.incomingBBIndex),
     depth(state.depth),
+    multilevel(state.multilevel),
     level(state.level),
     addressSpace(state.addressSpace),
     constraints(state.constraints),
@@ -443,5 +444,6 @@ BasicBlock *ExecutionState::getPCBlock() {
 }
 
 void ExecutionState::addLevel(BasicBlock *bb) {
+  multilevel.insert(bb);
   level.insert(bb);
 }

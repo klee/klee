@@ -104,12 +104,12 @@ public:
   typedef std::pair<ExecutionState*,ExecutionState*> StatePair;
   typedef std::pair<llvm::BasicBlock*,llvm::BasicBlock*> BasicBlockPair;
   typedef std::map<llvm::BasicBlock*, std::set<ExecutionState*, ExecutionStateIDCompare> > ExecutedBlock;
+  typedef std::map<llvm::BasicBlock*, std::set<llvm::BasicBlock*> > VisitedBlock;
   struct ExecutionBlockResult {
     ExecutedBlock completedStates;
-    // states with insufficient information
-    ExecutedBlock iiStates;
     ExecutedBlock pausedStates;
     ExecutedBlock erroneousStates;
+    VisitedBlock history;
   };
   typedef std::map<llvm::BasicBlock*, ExecutionBlockResult> ExecutionResult;
 
@@ -150,7 +150,6 @@ private:
   TimingSolver *solver;
   MemoryManager *memory;
   std::set<ExecutionState*, ExecutionStateIDCompare> states;
-  ExecutionResult results;
   StatsTracker *statsTracker;
   TreeStreamWriter *pathWriter, *symPathWriter;
   SpecialFunctionHandler *specialFunctionHandler;
@@ -250,7 +249,11 @@ private:
   /// Return the typeid corresponding to a certain `type_info`
   ref<ConstantExpr> getEhTypeidFor(ref<Expr> type_info);
 
-  void executeTargetedTerminator(ExecutionState &state, KInstruction *ki, KBlock *target);
+  ExecutionResult results;
+
+  void addCompletedResult(ExecutionState &state);
+  void addErroneousResult(ExecutionState &state);
+  void addHistoryResult(ExecutionState &state);
 
   void executeInstruction(ExecutionState &state, KInstruction *ki);
   void boundedExecuteStep(ExecutionState &state, unsigned bound);

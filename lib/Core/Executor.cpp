@@ -602,6 +602,17 @@ Executor::~Executor() {
 
 /***/
 
+
+void Executor::addCompletedResult(ExecutionState &state) {
+  results[state.getInitPCBlock()].completedStates[state.getPrevPCBlock()].insert(state.copy());
+}
+void Executor::addErroneousResult(ExecutionState &state) {
+  results[state.getInitPCBlock()].erroneousStates[state.getPrevPCBlock()].insert(state.copy());
+}
+void Executor::addHistoryResult(ExecutionState &state) {
+  results[state.getInitPCBlock()].history[state.getPrevPCBlock()].insert(state.level.begin(), state.level.end());
+}
+
 void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
                                       const Constant *c, 
                                       unsigned offset) {
@@ -3626,8 +3637,9 @@ void Executor::boundedExecuteStep(ExecutionState &state, unsigned bound) {
   KInstruction *prevKI = state.prevPC;
 
   if (prevKI->inst->isTerminator()) {
-    results[state.getInitPCBlock()].completedStates[state.getPrevPCBlock()].insert(state.copy());
-    if (state.level.count(state.getPCBlock()) > bound) {
+    addCompletedResult(state);
+    addHistoryResult(state);
+    if (state.multilevel.count(state.getPCBlock()) > bound) {
       pauseState(state);
       return;
     }
@@ -3695,7 +3707,8 @@ void Executor::targetedRun(ExecutionState &initialState, KBlock *target) {
 void Executor::calculateTargetedStates(BasicBlock *initialBlock,
                                        ExecutedBlock &pausedStates,
                                        std::map<KBlock*, std::vector<ExecutionState*>> &targetedStates) {
-  ExecutedBlock &completedStates = results[initialBlock].completedStates;
+  VisitedBlock &history = results[initialBlock].history;
+
   for (auto blockstate : pausedStates) {
     llvm::BasicBlock *bb = blockstate.first;
     KFunction *kf = kmodule->functionMap[bb->getParent()];
@@ -3711,9 +3724,17 @@ void Executor::calculateTargetedStates(BasicBlock *initialBlock,
         for (auto &kbp : kf->blocks) {
           KBlock *target = kbp.get();
           if (kf->backwardDistance[target].count(kb) != 0 &&
-              kf->backwardDistance[target][kb] > 0 &&
-              kf->backwardDistance[target][kb] < minDistance &&
-              completedStates.count(target->basicBlock) == 0) {
+              target != state->prevPC->parent &&
+              kf->backwardDistance[target][kb] < minDistance) {
+            if (history[target->basicBlock].size() != 0) {
+              std::vector<BasicBlock*> diff;
+              std::set_difference(state->level.begin(), state->level.end(),
+                                  history[target->basicBlock].begin(), history[target->basicBlock].end(),
+                                  std::inserter(diff, diff.begin()));
+              if (diff.empty()) {
+                continue;
+              }
+            }
             nearestBlock = target;
             minDistance = kf->backwardDistance[target][kb];
           }
@@ -3764,7 +3785,8 @@ void Executor::guidedRun(ExecutionState &initialState) {
         es->target = bb;
       unpauseStates(ess);
     }
-    if (searcher->empty()) haltExecution = true;
+    if (searcher->empty())
+      haltExecution = true;
   }
 
   delete searcher;
@@ -3928,7 +3950,8 @@ void Executor::terminateStateOnExit(ExecutionState &state) {
   if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
       (AlwaysOutputSeeds && seedMap.count(&state)))
     interpreterHandler->processTestCase(state, 0, 0);
-  results[state.getInitPCBlock()].completedStates[state.getPrevPCBlock()].insert(&state);
+  addCompletedResult(state);
+  addHistoryResult(state);
   terminateState(state);
 }
 
@@ -3936,7 +3959,8 @@ void Executor::terminateStateOnTerminator(ExecutionState &state) {
   if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
       (AlwaysOutputSeeds && seedMap.count(&state)))
     interpreterHandler->processTestCase(state, 0, 0);
-  results[state.getInitPCBlock()].completedStates[state.getPrevPCBlock()].insert(&state);
+  addCompletedResult(state);
+  addHistoryResult(state);
   terminateState(state);
 }
 
@@ -4040,7 +4064,8 @@ void Executor::terminateStateOnError(ExecutionState &state,
     interpreterHandler->processTestCase(state, msg.str().c_str(), suffix);
   }
 
-  results[state.getInitPCBlock()].erroneousStates[state.getPrevPCBlock()].insert(&state);
+  addErroneousResult(state);
+  addHistoryResult(state);
   terminateState(state);
 
   if (shouldExitOn(termReason))
