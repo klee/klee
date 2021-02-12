@@ -7,6 +7,7 @@
 #
 #===------------------------------------------------------------------------===#
 klee_add_component(kleaverExpr
+  APFloatEval.cpp
   ArrayCache.cpp
   ArrayExprOptimizer.cpp
   ArrayExprRewriter.cpp

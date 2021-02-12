@@ -107,6 +107,9 @@ namespace klee {
   private:
     // Mark function with functionName as part of the KLEE runtime
     void addInternalFunction(const char* functionName);
+    // Replace std functions with KLEE intrinsics
+    void replaceFunction(const std::unique_ptr<llvm::Module> &m, const char *original,
+                           const char *replacement);
 
   public:
     KModule() = default;

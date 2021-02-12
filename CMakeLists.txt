@@ -516,6 +516,40 @@ else()
 endif()
 
 ################################################################################
+# KLEE floating point support
+################################################################################
+option(ENABLE_FLOATING_POINT "Enable KLEE's floating point extension" OFF)
+if (ENABLE_FLOATING_POINT)
+  if (NOT ${ENABLE_Z3})
+    message (FATAL_ERROR "Floating point extension is availible only when using Z3 backend."
+            "You should enable Z3 by passing the following option to cmake:\n"
+            "\"-DENABLE_SOLVER_Z3=ON\"\n")
+  else()
+    set(ENABLE_FP 1) # For config.h
+    message(STATUS "Floating point extension enabled")
+  endif()
+else()
+  set(ENABLE_FP 0) # For config.h
+  message(STATUS "Floating point extension disabled")
+endif()
+
+################################################################################
+# KLEE floating point runtime
+################################################################################
+option(ENABLE_FP_RUNTIME "Enable KLEE's floating point runtime" OFF)
+if (ENABLE_FP_RUNTIME)
+  if (NOT ENABLE_FLOATING_POINT)
+    message (FATAL_ERROR "Floating point runtime is availible only when using KLEE fp extension."
+            "You should enable it by passing the following option to cmake:\n"
+            "\"-DENABLE_FLOATING_POINT=ON\"\n")
+  else()
+    message(STATUS "Floating point runtime enabled")
+  endif()
+else()
+  message(STATUS "Floating point runtime disabled")
+endif()
+
+################################################################################
 # KLEE uclibc support
 ################################################################################
 option(ENABLE_KLEE_UCLIBC "Enable support for klee-uclibc" OFF)

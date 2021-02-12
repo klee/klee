@@ -64,6 +64,24 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
     case Expr::Extract: res = visitExtract(static_cast<ExtractExpr&>(ep)); break;
     case Expr::ZExt: res = visitZExt(static_cast<ZExtExpr&>(ep)); break;
     case Expr::SExt: res = visitSExt(static_cast<SExtExpr&>(ep)); break;
+    case Expr::FPExt:
+        res = visitFPExt(static_cast<FPExtExpr &>(ep));
+        break;
+    case Expr::FPTrunc:
+        res = visitFPTrunc(static_cast<FPTruncExpr &>(ep));
+        break;
+    case Expr::FPToUI:
+        res = visitFPToUI(static_cast<FPToUIExpr &>(ep));
+        break;
+    case Expr::FPToSI:
+        res = visitFPToSI(static_cast<FPToSIExpr &>(ep));
+        break;
+    case Expr::UIToFP:
+        res = visitUIToFP(static_cast<UIToFPExpr &>(ep));
+        break;
+    case Expr::SIToFP:
+        res = visitSIToFP(static_cast<SIToFPExpr &>(ep));
+        break;
     case Expr::Add: res = visitAdd(static_cast<AddExpr&>(ep)); break;
     case Expr::Sub: res = visitSub(static_cast<SubExpr&>(ep)); break;
     case Expr::Mul: res = visitMul(static_cast<MulExpr&>(ep)); break;
@@ -88,6 +106,26 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
     case Expr::Sle: res = visitSle(static_cast<SleExpr&>(ep)); break;
     case Expr::Sgt: res = visitSgt(static_cast<SgtExpr&>(ep)); break;
     case Expr::Sge: res = visitSge(static_cast<SgeExpr&>(ep)); break;
+    case Expr::FOEq: res = visitFOEq(static_cast<FOEqExpr &>(ep)); break;
+    case Expr::FOLt: res = visitFOLt(static_cast<FOLtExpr &>(ep)); break;
+    case Expr::FOLe: res = visitFOLe(static_cast<FOLeExpr &>(ep)); break;
+    case Expr::FOGt: res = visitFOGt(static_cast<FOGtExpr &>(ep)); break;
+    case Expr::FOGe: res = visitFOGe(static_cast<FOGeExpr &>(ep)); break;
+    case Expr::IsNaN: res = visitIsNaN(static_cast<IsNaNExpr &>(ep)); break;
+    case Expr::IsInfinite: res = visitIsInfinite(static_cast<IsInfiniteExpr &>(ep)); break;
+    case Expr::IsNormal: res = visitIsNormal(static_cast<IsNormalExpr &>(ep)); break;
+    case Expr::IsSubnormal: res = visitIsSubnormal(static_cast<IsSubnormalExpr &>(ep)); break;
+    case Expr::FAdd: res = visitFAdd(static_cast<FAddExpr&>(ep)); break;
+    case Expr::FSub: res = visitFSub(static_cast<FSubExpr&>(ep)); break;
+    case Expr::FMul: res = visitFMul(static_cast<FMulExpr &>(ep)); break;
+    case Expr::FDiv: res = visitFDiv(static_cast<FDivExpr &>(ep)); break;
+    case Expr::FRem: res = visitFRem(static_cast<FRemExpr &>(ep)); break;
+    case Expr::FMax: res = visitFMax(static_cast<FMaxExpr &>(ep)); break;
+    case Expr::FMin: res = visitFMin(static_cast<FMinExpr &>(ep)); break;
+    case Expr::FSqrt: res = visitFSqrt(static_cast<FSqrtExpr &>(ep)); break;
+    case Expr::FRint: res = visitFRint(static_cast<FRintExpr &>(ep)); break;
+    case Expr::FAbs: res = visitFAbs(static_cast<FAbsExpr &>(ep)); break;
+    case Expr::FNeg: res = visitFNeg(static_cast<FNegExpr &>(ep)); break;
     case Expr::Constant:
     default:
       assert(0 && "invalid expression kind");
@@ -160,6 +198,46 @@ ExprVisitor::Action ExprVisitor::visitZExt(const ZExtExpr&) {
 
 ExprVisitor::Action ExprVisitor::visitSExt(const SExtExpr&) {
   return Action::doChildren(); 
+}
+
+ExprVisitor::Action ExprVisitor::visitFPExt(const FPExtExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFPTrunc(const FPTruncExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFPToUI(const FPToUIExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFPToSI(const FPToSIExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitUIToFP(const UIToFPExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitSIToFP(const SIToFPExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFSqrt(const FSqrtExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFRint(const FRintExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFAbs(const FAbsExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFNeg(const FNegExpr &) {
+    return Action::doChildren();
 }
 
 ExprVisitor::Action ExprVisitor::visitAdd(const AddExpr&) {
@@ -258,3 +336,66 @@ ExprVisitor::Action ExprVisitor::visitSge(const SgeExpr&) {
   return Action::doChildren(); 
 }
 
+ExprVisitor::Action ExprVisitor::visitFOEq(const FOEqExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFOLt(const FOLtExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFOLe(const FOLeExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFOGt(const FOGtExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFOGe(const FOGeExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitIsNaN(const IsNaNExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitIsInfinite(const IsInfiniteExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitIsNormal(const IsNormalExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitIsSubnormal(const IsSubnormalExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFAdd(const FAddExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFSub(const FSubExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFMul(const FMulExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFDiv(const FDivExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFRem(const FRemExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFMax(const FMaxExpr &) {
+    return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitFMin(const FMinExpr &) {
+    return Action::doChildren();
+}
