@@ -285,14 +285,10 @@ void TargetedSearcher::printName(llvm::raw_ostream &os) {
 GuidedSearcher::GuidedSearcher(Searcher *_baseSearcher) : baseSearcher(_baseSearcher) {}
 
 ExecutionState &GuidedSearcher::selectState() {
-  while (!targetedSearchers.empty()) {
+  if (!targetedSearchers.empty()) {
     KBlock *target = targetedSearchers.begin()->first;
-    assert(targetedSearchers.count(target) > 0);
-    if (targetedSearchers[target]->empty()) {
-        targetedSearchers.erase(target);
-        continue;
-    } else
-        return targetedSearchers[target]->selectState();
+    assert(targetedSearchers.count(target) > 0 && !targetedSearchers[target]->empty());
+    return targetedSearchers[target]->selectState();
   }
   return baseSearcher->selectState();
 }
@@ -324,13 +320,15 @@ void GuidedSearcher::update(ExecutionState *current,
     if (targetedSearchers.count(target) == 0)
       addTarget(target);
     targetedSearchers[target]->update(currTState, addedTStates[target], removedTStates[target]);
+    if (targetedSearchers[target]->empty())
+      targetedSearchers.erase(target);
   }
 
   baseSearcher->update(current, addedStates, removedStates);
 }
 
 bool GuidedSearcher::empty() {
-  return targetedSearchers.empty() && baseSearcher->empty();
+  return baseSearcher->empty();
 }
 
 void GuidedSearcher::printName(llvm::raw_ostream &os) {
