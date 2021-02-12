@@ -158,6 +158,21 @@ namespace {
   WarnAllExternals("warn-all-external-symbols",
                    cl::desc("Issue a warning on startup for all external symbols (default=false)."),
                    cl::cat(StartCat));
+
+  enum class ExecutionKind {
+    Default, // Defualt symbolic execution
+    Guided,  // Use GuidedSearcher and guidedRun
+  };
+
+  cl::opt<ExecutionKind> ExecutionMode(
+      "execution-mode",
+      cl::values(
+          clEnumValN(ExecutionKind::Default, "default", "use defualt symbolic execution"),
+          clEnumValN(ExecutionKind::Guided, "guided", "use GuidedSearcher and guidedRun")
+              KLEE_LLVM_CL_VAL_END),
+      cl::init(ExecutionKind::Guided),
+      cl::desc("Kind of execution mode"),
+      cl::cat(StartCat));
   
 
   /*** Linking options ***/
@@ -1605,7 +1620,14 @@ int main(int argc, char **argv, char **envp) {
                    << " bytes)"
                    << " (" << ++i << "/" << kTestFiles.size() << ")\n";
       // XXX should put envp in .ktest ?
-      interpreter->runMainAsBlockSequence(mainFn, out->numArgs, out->args, pEnvp);
+      switch (ExecutionMode) {
+      case ExecutionKind::Default:
+        interpreter->runFunctionAsMain(mainFn, out->numArgs, out->args, pEnvp);
+        break;
+      case ExecutionKind::Guided:
+        interpreter->runMainAsBlockSequence(mainFn, out->numArgs, out->args, pEnvp);
+        break;
+      }
       if (interrupted) break;
     }
     interpreter->setReplayKTest(0);
@@ -1654,7 +1676,14 @@ int main(int argc, char **argv, char **envp) {
                    sys::StrError(errno).c_str());
       }
     }
-    interpreter->runMainAsBlockSequence(mainFn, pArgc, pArgv, pEnvp);
+    switch (ExecutionMode) {
+    case ExecutionKind::Default:
+      interpreter->runFunctionAsMain(mainFn, pArgc, pArgv, pEnvp);
+      break;
+    case ExecutionKind::Guided:
+      interpreter->runMainAsBlockSequence(mainFn, pArgc, pArgv, pEnvp);
+      break;
+    }
     while (!seeds.empty()) {
       kTest_free(seeds.back());
       seeds.pop_back();
