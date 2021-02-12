@@ -24,7 +24,7 @@ class KLEE(object):
         self.max_memory = max_memory/1024/1024 # Convert to MB
         self.max_time = max_time
         # This file is inside the bin directory - use the root as base
-        self.base_directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.')
+        self.base_directory = os.path.join(os.path.dirname(os.path.abspath(__file__)))
         self.klee_path = os.path.join(self.base_directory, "build/bin/klee")
         # self.compiler_path = os.path.join(self.base_directory, "compiler/clang")
         self.compiler_path = os.path.join(self.base_directory, "../llvm11/bin/clang")
@@ -194,7 +194,7 @@ def main():
     
     is32 = None
     if vars(args).get('32'):
-        is32 = True
+        is32 = False
     if vars(args).get('64'):
         if is32:
             print("Cannot set --64 and --32 simultanously")
