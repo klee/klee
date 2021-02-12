@@ -3718,23 +3718,27 @@ void Executor::calculateTargetedStates(BasicBlock *initialBlock,
     for (auto &state : ess) {
       KBlock *nearestBlock = nullptr;
       unsigned int minDistance = -1;
-      for (auto sfi = state->stack.rbegin(), sfe = state->stack.rend(); sfi != sfe; sfi++) {
+      unsigned int sfNum = 0;
+      bool newCov = false;
+      for (auto sfi = state->stack.rbegin(), sfe = state->stack.rend(); sfi != sfe; sfi++, sfNum++) {
         kf = sfi->kf;
 
         for (auto &kbp : kf->blocks) {
           KBlock *target = kbp.get();
           if (kf->backwardDistance[target].count(kb) != 0 &&
-              target != state->prevPC->parent &&
+              (sfNum > 0 || kf->backwardDistance[target][kb] > 0) &&
               kf->backwardDistance[target][kb] < minDistance) {
             if (history[target->basicBlock].size() != 0) {
               std::vector<BasicBlock*> diff;
-              std::set_difference(state->level.begin(), state->level.end(),
-                                  history[target->basicBlock].begin(), history[target->basicBlock].end(),
-                                  std::inserter(diff, diff.begin()));
+              if (!newCov)
+                std::set_difference(state->level.begin(), state->level.end(),
+                                    history[target->basicBlock].begin(), history[target->basicBlock].end(),
+                                    std::inserter(diff, diff.begin()));
               if (diff.empty()) {
                 continue;
               }
-            }
+            } else
+              newCov = true;
             nearestBlock = target;
             minDistance = kf->backwardDistance[target][kb];
           }
