@@ -188,7 +188,7 @@ TargetedSearcher::WeightResult TargetedSearcher::tryGetPreTargetWeight(Execution
   if (localTargets.empty()) return Miss;
 
   WeightResult res = tryGetLocalWeight(es, weight, localTargets);
-  weight += 6.0; // number on [0.6,1)-real-interval
+  weight += 0.6; // number on [0.6,1)-real-interval
   return res == Done ? During : res;
 }
 
@@ -199,7 +199,7 @@ TargetedSearcher::WeightResult TargetedSearcher::tryGetPostTargetWeight(Executio
   if (localTargets.empty()) return Miss;
 
   WeightResult res = tryGetLocalWeight(es, weight, localTargets);
-  weight += 3.0; // number on [0.3,0.6)-real-interval
+  weight += 0.3; // number on [0.3,0.6)-real-interval
   return res == Done ? During : res;
 }
 
