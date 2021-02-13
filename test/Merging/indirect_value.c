@@ -1,6 +1,6 @@
 // RUN: %clang -emit-llvm -g -c -o %t.bc %s
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --use-merge --debug-log-merge --search=nurs:covnew --use-batching-search %t.bc 2>&1 | FileCheck %s
+// RUN: %klee --output-dir=%t.klee-out --execution-mode=default --use-merge --debug-log-merge --search=nurs:covnew --use-batching-search %t.bc 2>&1 | FileCheck %s
 
 // CHECK: generated tests = 2{{$}}
 
