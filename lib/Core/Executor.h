@@ -256,18 +256,14 @@ private:
   void addHistoryResult(ExecutionState &state);
 
   void executeInstruction(ExecutionState &state, KInstruction *ki);
-  void boundedExecuteStep(ExecutionState &state, unsigned bound);
-  void executeBlock(ExecutionState &initialState, unsigned bound, KBlock *kb);
   void targetedRun(ExecutionState &initialState, KBlock *target);
   void guidedRun(ExecutionState &initialState);
   void boundedRun(ExecutionState &initialState, unsigned bound);
 
+  void seed(ExecutionState &initialState);
   void run(ExecutionState &initialState);
-  void runKBlock(ExecutionState &state, KBlock *kb);
-  void runKFunction(ExecutionState &state, KFunction *kf);
-  void runKFunctionWithTarget(ExecutionState &state, KFunction *kf, KBlock *target);
-  void runKFunctionGuided(ExecutionState &state, KFunction *kf);
-  void runBlock(ExecutionState &state, unsigned bound, KBlock *kb);
+  void runWithTarget(ExecutionState &state, KFunction *kf, KBlock *target);
+  void runGuided(ExecutionState &state, KFunction *kf);
 
   // Given a concrete object in our [klee's] address space, add it to 
   // objects checked code can reference.
@@ -625,6 +621,7 @@ public:
   void setMergingSearcher(MergingSearcher *ms) { mergingSearcher = ms; };
   const Array * makeArray(ExecutionState &state, const uint64_t size, const std::string &name);
   void executeStep(ExecutionState &state);
+  void boundedExecuteStep(ExecutionState &state, unsigned bound);
   void calculateTargetedStates(llvm::BasicBlock *initialBlock,
                                ExecutedBlock &pausedStates,
                                std::map<KBlock*, std::vector<ExecutionState*>> &targetedStates);

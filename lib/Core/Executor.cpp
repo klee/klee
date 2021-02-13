@@ -3458,6 +3458,69 @@ void Executor::doDumpStates() {
   updateStates(nullptr);
 }
 
+void Executor::seed(ExecutionState &initialState) {
+  std::vector<SeedInfo> &v = seedMap[&initialState];
+
+  for (std::vector<KTest*>::const_iterator it = usingSeeds->begin(),
+         ie = usingSeeds->end(); it != ie; ++it)
+    v.push_back(SeedInfo(*it));
+
+  int lastNumSeeds = usingSeeds->size()+10;
+  time::Point lastTime, startTime = lastTime = time::getWallTime();
+  ExecutionState *lastState = 0;
+  while (!seedMap.empty()) {
+    if (haltExecution) {
+      doDumpStates();
+      return;
+    }
+
+    std::map<ExecutionState*, std::vector<SeedInfo> >::iterator it =
+      seedMap.upper_bound(lastState);
+    if (it == seedMap.end())
+      it = seedMap.begin();
+    lastState = it->first;
+    ExecutionState &state = *lastState;
+    KInstruction *ki = state.pc;
+    stepInstruction(state);
+
+    executeInstruction(state, ki);
+    timers.invoke();
+    if (::dumpStates) dumpStates();
+    if (::dumpPTree) dumpPTree();
+    updateStates(&state);
+
+    if ((stats::instructions % 1000) == 0) {
+      int numSeeds = 0, numStates = 0;
+      for (std::map<ExecutionState*, std::vector<SeedInfo> >::iterator
+             it = seedMap.begin(), ie = seedMap.end();
+           it != ie; ++it) {
+        numSeeds += it->second.size();
+        numStates++;
+      }
+      const auto time = time::getWallTime();
+      const time::Span seedTime(SeedTime);
+      if (seedTime && time > startTime + seedTime) {
+        klee_warning("seed time expired, %d seeds remain over %d states",
+                     numSeeds, numStates);
+        break;
+      } else if (numSeeds<=lastNumSeeds-10 ||
+                 time - lastTime >= time::seconds(10)) {
+        lastTime = time;
+        lastNumSeeds = numSeeds;
+        klee_message("%d seeds remaining over: %d states",
+                     numSeeds, numStates);
+      }
+    }
+  }
+
+  klee_message("seeding done (%d states remain)", (int) states.size());
+
+  if (OnlySeed) {
+    doDumpStates();
+    return;
+  }
+}
+
 void Executor::run(ExecutionState &initialState) {
   // Delay init till now so that ticks don't accrue during optimization and such.
   timers.reset();
@@ -3465,66 +3528,7 @@ void Executor::run(ExecutionState &initialState) {
   states.insert(&initialState);
 
   if (usingSeeds) {
-    std::vector<SeedInfo> &v = seedMap[&initialState];
-    
-    for (std::vector<KTest*>::const_iterator it = usingSeeds->begin(), 
-           ie = usingSeeds->end(); it != ie; ++it)
-      v.push_back(SeedInfo(*it));
-
-    int lastNumSeeds = usingSeeds->size()+10;
-    time::Point lastTime, startTime = lastTime = time::getWallTime();
-    ExecutionState *lastState = 0;
-    while (!seedMap.empty()) {
-      if (haltExecution) {
-        doDumpStates();
-        return;
-      }
-
-      std::map<ExecutionState*, std::vector<SeedInfo> >::iterator it = 
-        seedMap.upper_bound(lastState);
-      if (it == seedMap.end())
-        it = seedMap.begin();
-      lastState = it->first;
-      ExecutionState &state = *lastState;
-      KInstruction *ki = state.pc;
-      stepInstruction(state);
-
-      executeInstruction(state, ki);
-      timers.invoke();
-      if (::dumpStates) dumpStates();
-      if (::dumpPTree) dumpPTree();
-      updateStates(&state);
-
-      if ((stats::instructions % 1000) == 0) {
-        int numSeeds = 0, numStates = 0;
-        for (std::map<ExecutionState*, std::vector<SeedInfo> >::iterator
-               it = seedMap.begin(), ie = seedMap.end();
-             it != ie; ++it) {
-          numSeeds += it->second.size();
-          numStates++;
-        }
-        const auto time = time::getWallTime();
-        const time::Span seedTime(SeedTime);
-        if (seedTime && time > startTime + seedTime) {
-          klee_warning("seed time expired, %d seeds remain over %d states",
-                       numSeeds, numStates);
-          break;
-        } else if (numSeeds<=lastNumSeeds-10 ||
-                   time - lastTime >= time::seconds(10)) {
-          lastTime = time;
-          lastNumSeeds = numSeeds;          
-          klee_message("%d seeds remaining over: %d states", 
-                       numSeeds, numStates);
-        }
-      }
-    }
-
-    klee_message("seeding done (%d states remain)", (int) states.size());
-
-    if (OnlySeed) {
-      doDumpStates();
-      return;
-    }
+    seed(initialState);
   }
 
   searcher = constructUserSearcher(*this);
@@ -3545,24 +3549,7 @@ void Executor::run(ExecutionState &initialState) {
   haltExecution = false;
 }
 
-void Executor::runKFunction(ExecutionState &state, KFunction *kf) {
-  if (pathWriter)
-    state.pathOS = pathWriter->open();
-  if (symPathWriter)
-    state.symPathOS = symPathWriter->open();
-
-  if (statsTracker)
-    statsTracker->framePushed(state, 0);
-
- processTree = std::make_unique<PTree>(&state);
- boundedRun(state, MaxCycles);
- processTree = nullptr;
-
- if (statsTracker)
-   statsTracker->done();
-}
-
-void Executor::runKFunctionWithTarget(ExecutionState &state, KFunction *kf, KBlock *target) {
+void Executor::runWithTarget(ExecutionState &state, KFunction *kf, KBlock *target) {
   if (pathWriter)
     state.pathOS = pathWriter->open();
   if (symPathWriter)
@@ -3579,10 +3566,10 @@ void Executor::runKFunctionWithTarget(ExecutionState &state, KFunction *kf, KBlo
     statsTracker->done();
 }
 
-void Executor::runKFunctionGuided(ExecutionState &state, KFunction *kf) {
- if (pathWriter)
-   state.pathOS = pathWriter->open();
- if (symPathWriter)
+void Executor::runGuided(ExecutionState &state, KFunction *kf) {
+  if (pathWriter)
+    state.pathOS = pathWriter->open();
+  if (symPathWriter)
     state.symPathOS = symPathWriter->open();
 
  if (statsTracker)
@@ -3594,23 +3581,6 @@ void Executor::runKFunctionGuided(ExecutionState &state, KFunction *kf) {
 
   if (statsTracker)
     statsTracker->done();
-}
-
-void Executor::runBlock(ExecutionState &state, unsigned bound, KBlock *kb) {
- if (pathWriter)
-   state.pathOS = pathWriter->open();
- if (symPathWriter)
-   state.symPathOS = symPathWriter->open();
-
- if (statsTracker)
-   statsTracker->framePushed(state, 0);
-
- processTree = std::make_unique<PTree>(&state);
- executeBlock(state, MaxCycles, kb);
- processTree = nullptr;
-
- if (statsTracker)
-   statsTracker->done();
 }
 
 void Executor::executeStep(ExecutionState &state) {
@@ -3652,6 +3622,10 @@ void Executor::boundedRun(ExecutionState &initialState, unsigned bound) {
   timers.reset();
 
   states.insert(&initialState);
+
+  if (usingSeeds) {
+    seed(initialState);
+  }
 
   searcher = constructUserSearcher(*this);
 
@@ -3763,6 +3737,10 @@ void Executor::guidedRun(ExecutionState &initialState) {
   BasicBlock *initialBlock = initialState.getInitPCBlock();
   states.insert(&initialState);
 
+  if (usingSeeds) {
+    seed(initialState);
+  }
+
   searcher = new GuidedSearcher(constructUserSearcher(*this));
 
   std::vector<ExecutionState *> newStates(states.begin(), states.end());
@@ -3790,44 +3768,6 @@ void Executor::guidedRun(ExecutionState &initialState) {
     }
     if (searcher->empty())
       haltExecution = true;
-  }
-
-  delete searcher;
-  searcher = nullptr;
-
-  doDumpStates();
-  haltExecution = false;
-}
-
-void Executor::executeBlock(ExecutionState &initialState, unsigned bound, KBlock *kb) {
-  // Delay init till now so that ticks don't accrue during optimization and such.
-  timers.reset();
-
-  states.insert(&initialState);
-
-  searcher = constructUserSearcher(*this);
-
-  std::vector<ExecutionState *> newStates(states.begin(), states.end());
-  searcher->update(0, newStates, std::vector<ExecutionState *>());
-  // main interpreter loop
-  KInstruction *terminator = kb != nullptr ? kb->instructions[kb->numInstructions - 1] : nullptr;
-  while (!states.empty() && !haltExecution) {
-    ExecutionState &state = searcher->selectState();
-    KInstruction *ki = state.pc;
-
-    if (ki == terminator) {
-      terminateStateOnTerminator(state);
-      updateStates(&state);
-      continue;
-    }
-
-    boundedExecuteStep(state, bound);
-  }
-
-  if (!states.empty()) {
-      for (auto &state : states)
-        terminateStateEarly(*state, "excess state");
-      updateStates(nullptr);
   }
 
   delete searcher;
@@ -4921,7 +4861,7 @@ void Executor::runFunctionGuided(Function *fn,
   KFunction *kf = kmodule->functionMap[fn];
   ExecutionState *initialState = state->withKFunction(kf);
   prepareSymbolicArgs(*initialState, kf);
-  runKFunctionGuided(*initialState, kf);
+  runGuided(*initialState, kf);
   // hack to clear memory objects
   delete memory;
   memory = new MemoryManager(NULL);
@@ -4935,7 +4875,7 @@ void Executor::runMainAsGuided(Function *mainFn,
   ExecutionState *state = formState(mainFn, argc, argv, envp);
   bindModuleConstants();
   KFunction *kf = kmodule->functionMap[mainFn];
-  runKFunctionGuided(*state, kf);
+  runGuided(*state, kf);
   // hack to clear memory objects
   delete memory;
   memory = new MemoryManager(NULL);
