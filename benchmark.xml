@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<!DOCTYPE benchmark PUBLIC "+//IDN sosy-lab.org//DTD BenchExec benchmark 1.18//EN" "https://www.sosy-lab.org/benchexec/benchmark-1.18.dtd">
+<benchmark tool="klee" displayName="KLEE" timelimit="15 s" memlimit="15 GB" cpuCores="8">
+
+  <resultfiles>**test-suite/*</resultfiles>
+
+  <rundefinition name="Test-Comp21_coverage-error-call">
+    <propertyfile>properties/coverage-error-call.prp</propertyfile>
+  </rundefinition>
+
+  <rundefinition name="Test-Comp21_coverage-branches">
+    <propertyfile>properties/coverage-branches.prp</propertyfile>
+  </rundefinition>
+
+  <tasks name="ReachSafety-Arrays">
+    <includesfile>ReachSafety-Arrays.set</includesfile>
+  </tasks>
+  <tasks name="ReachSafety-BitVectors">
+    <includesfile>ReachSafety-BitVectors.set</includesfile>
+  </tasks>
+  <tasks name="ReachSafety-ControlFlow">
+    <includesfile>ReachSafety-ControlFlow.set</includesfile>
+  </tasks>
+  <tasks name="ReachSafety-Floats">
+    <includesfile>ReachSafety-Floats.set</includesfile>
+  </tasks>
+  <tasks name="ReachSafety-Heap">
+    <includesfile>ReachSafety-Heap.set</includesfile>
+  </tasks>
+  <tasks name="ReachSafety-Loops">
+    <includesfile>ReachSafety-Loops.set</includesfile>
+  </tasks>
+  <tasks name="ReachSafety-Recursive">
+    <includesfile>ReachSafety-Recursive.set</includesfile>
+  </tasks>
+  <tasks name="ReachSafety-Sequentialized">
+    <includesfile>ReachSafety-Sequentialized.set</includesfile>
+  </tasks>
+  <tasks name="ReachSafety-XCSP">
+    <includesfile>ReachSafety-XCSP.set</includesfile>
+  </tasks>
+  <tasks name="ReachSafety-Combinations">
+    <includesfile>ReachSafety-Combinations.set</includesfile>
+  </tasks>
+
+  <tasks name="SoftwareSystems-BusyBox-MemSafety">
+    <includesfile>SoftwareSystems-BusyBox-MemSafety.set</includesfile>
+  </tasks>
+
+  <tasks name="SoftwareSystems-DeviceDriversLinux64-ReachSafety">
+    <includesfile>SoftwareSystems-DeviceDriversLinux64-ReachSafety.set</includesfile>
+    <excludesfile>SoftwareSystems-DeviceDriversLinux64Large-ReachSafety.set</excludesfile>
+  </tasks>
+
+  <tasks name="SoftwareSystems-SQLite-MemSafety">
+    <includesfile>SoftwareSystems-SQLite-MemSafety.set</includesfile>
+  </tasks>
+
+  <tasks name="Termination-MainHeap">
+    <includesfile>Termination-MainHeap.set</includesfile>
+  </tasks>
+
+</benchmark>
