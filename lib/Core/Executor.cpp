@@ -3546,13 +3546,13 @@ void Executor::run(ExecutionState &initialState) {
 }
 
 void Executor::runKFunction(ExecutionState &state, KFunction *kf) {
- if (pathWriter)
-   state.pathOS = pathWriter->open();
- if (symPathWriter)
-   state.symPathOS = symPathWriter->open();
+  if (pathWriter)
+    state.pathOS = pathWriter->open();
+  if (symPathWriter)
+    state.symPathOS = symPathWriter->open();
 
- if (statsTracker)
-   statsTracker->framePushed(state, 0);
+  if (statsTracker)
+    statsTracker->framePushed(state, 0);
 
  processTree = std::make_unique<PTree>(&state);
  boundedRun(state, MaxCycles);
@@ -3583,17 +3583,17 @@ void Executor::runKFunctionGuided(ExecutionState &state, KFunction *kf) {
  if (pathWriter)
    state.pathOS = pathWriter->open();
  if (symPathWriter)
-   state.symPathOS = symPathWriter->open();
+    state.symPathOS = symPathWriter->open();
 
  if (statsTracker)
    statsTracker->framePushed(state, 0);
 
- processTree = std::make_unique<PTree>(&state);
- guidedRun(state);
- processTree = nullptr;
+  processTree = std::make_unique<PTree>(&state);
+  guidedRun(state);
+  processTree = nullptr;
 
- if (statsTracker)
-   statsTracker->done();
+  if (statsTracker)
+    statsTracker->done();
 }
 
 void Executor::runBlock(ExecutionState &state, unsigned bound, KBlock *kb) {
