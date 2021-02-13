@@ -135,11 +135,11 @@ public:
                                  int argc,
                                  char **argv,
                                  char **envp) = 0;
-  virtual void runFunctionAsBlockSequence(llvm::Function *fn,
+  virtual void runFunctionGuided(llvm::Function *fn,
                                           int argc,
                                           char **argv,
                                           char **envp) = 0;
-  virtual void runMainAsBlockSequence(llvm::Function *f,
+  virtual void runMainAsGuided(llvm::Function *f,
                                       int argc,
                                       char **argv,
                                       char **envp) = 0;

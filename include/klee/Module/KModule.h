@@ -71,10 +71,10 @@ namespace klee {
 
     ~KBlock();
 
-    unsigned getArgRegister(unsigned index) { return index; }
+    unsigned getArgRegister(unsigned index) const { return index; }
     void handleKInstruction(std::map<llvm::Instruction*, unsigned> &registerMap,
                             llvm::Instruction *inst, KModule *km, KInstruction *ki);
-    virtual KBlockType getKBlockType() { return KBlockType::Base; };
+    virtual KBlockType getKBlockType() const { return KBlockType::Base; };
   };
 
   struct KCallBlock : KBlock {
@@ -85,7 +85,7 @@ namespace klee {
     explicit KCallBlock(KFunction*, llvm::BasicBlock*, KModule*,
                     std::map<llvm::Instruction*, unsigned>&, std::map<unsigned, KInstruction*>&,
                     llvm::Function*);
-    KBlockType getKBlockType() override { return KBlockType::Call; };
+    KBlockType getKBlockType() const override { return KBlockType::Call; };
   };
 
   struct KFunction {
@@ -113,22 +113,7 @@ namespace klee {
 
   private:
     // BFS algorithm
-    void calculateDistance(KBlock *bb) {
-      std::map<KBlock*, unsigned int> &distance = backwardDistance[bb];
-      std::deque<KBlock*> nodes;
-      nodes.push_back(bb);
-      distance[bb] = 0;
-      while(!nodes.empty()) {
-        KBlock *currBB = nodes.front();
-        for (auto const &pred : predecessors(currBB->basicBlock)) {
-          if (distance.count(blockMap[pred]) == 0) {
-            distance[blockMap[pred]] = distance[currBB] + 1;
-            nodes.push_back(blockMap[pred]);
-          }
-        }
-        nodes.pop_front();
-      }
-    }
+    void calculateDistance(KBlock *bb);
 
   public:
     explicit KFunction(llvm::Function*, KModule *);
@@ -137,7 +122,7 @@ namespace klee {
 
     ~KFunction();
 
-    unsigned getArgRegister(unsigned index) { return index; }
+    unsigned getArgRegister(unsigned index) const { return index; }
   };
 
 
@@ -187,23 +172,7 @@ namespace klee {
     void addInternalFunction(const char* functionName);
 
     // BFS algorithm
-    void calculateDistance(KFunction *kf) {
-      std::deque<KFunction*> nodes;
-      nodes.push_back(kf);
-      backwardDistance[kf][kf] = 0;
-      while(!nodes.empty()) {
-        KFunction *currKF = nodes.front();
-        for (auto &callBlock : currKF->kCallBlocks) {
-          if (!callBlock->calledFunction || callBlock->calledFunction->isDeclaration()) continue;
-          KFunction *callKF = functionMap[callBlock->calledFunction];
-          if (backwardDistance[callKF].count(kf) == 0) {
-            backwardDistance[callKF][kf] = backwardDistance[currKF][kf] + 1;
-            nodes.push_back(callKF);
-          }
-        }
-        nodes.pop_front();
-      }
-    }
+    void calculateDistance(KFunction *kf);
 
   public:
     KModule() = default;

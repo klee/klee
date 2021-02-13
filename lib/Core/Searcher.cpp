@@ -157,22 +157,20 @@ TargetedSearcher::WeightResult TargetedSearcher::tryGetLocalWeight(ExecutionStat
   unsigned int intWeight = es->steppedMemoryInstructions;
   KFunction *currentKF = es->stack.back().kf;
   KBlock *currentKB = currentKF->blockMap[es->getPCBlock()];
-  std::vector<unsigned int> localDistance;
+  unsigned int localWeight = UINT_MAX;
   for (auto &end : localTargets) {
     if (currentKF->backwardDistance[end].count(currentKB) > 0) {
       unsigned int w = currentKF->backwardDistance[end][currentKB];
-      localDistance.push_back(w);
+      localWeight = std::min(w, localWeight);
     }
   }
 
-  if (localDistance.empty()) return Miss;
-
-  unsigned int localWeight = *std::min_element(localDistance.begin(), localDistance.end());
+  if (localWeight == UINT_MAX) return Miss;
   if (localWeight == 0) return Done;
 
   intWeight += localWeight;
   weight = intWeight*(1.0/(3.0 * 4294967296.0)); //number on [0,0.3)-real-interval
-  return During;
+  return Continue;
 }
 
 TargetedSearcher::WeightResult TargetedSearcher::tryGetPreTargetWeight(ExecutionState *es, double &weight) {
@@ -189,7 +187,7 @@ TargetedSearcher::WeightResult TargetedSearcher::tryGetPreTargetWeight(Execution
 
   WeightResult res = tryGetLocalWeight(es, weight, localTargets);
   weight += 0.6; // number on [0.6,1)-real-interval
-  return res == Done ? During : res;
+  return res == Done ? Continue : res;
 }
 
 TargetedSearcher::WeightResult TargetedSearcher::tryGetPostTargetWeight(ExecutionState *es, double &weight) {
@@ -200,7 +198,7 @@ TargetedSearcher::WeightResult TargetedSearcher::tryGetPostTargetWeight(Executio
 
   WeightResult res = tryGetLocalWeight(es, weight, localTargets);
   weight += 0.3; // number on [0.3,0.6)-real-interval
-  return res == Done ? During : res;
+  return res == Done ? Continue : res;
 }
 
 TargetedSearcher::WeightResult TargetedSearcher::tryGetTargetWeight(ExecutionState *es, double &weight) {
@@ -228,7 +226,7 @@ void TargetedSearcher::update(ExecutionState *current,
   // update current
   if (current && std::find(removedStates.begin(), removedStates.end(), current) == removedStates.end()) {
     switch (tryGetWeight(current, weight)) {
-    case During:
+    case Continue:
       states->update(current, weight);
       break;
     case Done:
@@ -245,7 +243,7 @@ void TargetedSearcher::update(ExecutionState *current,
   // insert states
   for (const auto state : addedStates) {
     switch (tryGetWeight(state, weight)) {
-    case During:
+    case Continue:
       states->insert(state, weight);
       break;
     case Done:

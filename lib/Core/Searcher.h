@@ -124,7 +124,7 @@ namespace klee {
   class TargetedSearcher final : public Searcher {
   public:
     enum WeightResult : std::uint8_t {
-      During,
+      Continue,
       Done,
       Miss,
     };

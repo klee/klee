@@ -835,6 +835,9 @@ protected:
   }
 };
 
+/** This class stores the base {\tt base} and the result {\tt address} of calculating
+    the getelementptr instruction, as well as the size {\tt sourceSize} of the object at the base address.
+ */
 class GEPExpr : public NonConstantExpr {
 public:
   static const Kind kind = GEP;

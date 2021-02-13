@@ -1276,7 +1276,6 @@ const Cell& Executor::symbolicEval(KInstruction *ki, unsigned index,
     StackFrame &sf = state.stack.back();
     ref<Expr> reg = sf.locals[index].value;
     if (reg.isNull()) {
-      assert(!state.inBasicBlockRange(index));
       prepareSymbolicRegister(state, sf, index);
     }
     return sf.locals[index];
@@ -4912,7 +4911,7 @@ void Executor::runFunctionAsMain(Function *f,
     statsTracker->done();
 }
 
-void Executor::runFunctionAsBlockSequence(Function *fn,
+void Executor::runFunctionGuided(Function *fn,
                                           int argc,
                                           char **argv,
                                           char **envp) {
@@ -4929,7 +4928,7 @@ void Executor::runFunctionAsBlockSequence(Function *fn,
   clearGlobal();
 }
 
-void Executor::runMainAsBlockSequence(Function *mainFn,
+void Executor::runMainAsGuided(Function *mainFn,
                                       int argc,
                                       char **argv,
                                       char **envp) {

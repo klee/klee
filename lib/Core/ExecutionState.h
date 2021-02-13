@@ -152,13 +152,13 @@ public:
 #else
 private:
 #endif
+  // copy ctor
+  ExecutionState(const ExecutionState &state);
+
 public:
   using stack_ty = std::vector<StackFrame>;
 
   // Execution - Control Flow specific
-
-  // copy ctor
-  ExecutionState(const ExecutionState &state);
 
   /// @brief Pointer to initial instruction
   KInstIterator initPC;
@@ -248,17 +248,14 @@ public:
   /// @brief Disables forking for this state. Set by user code
   bool forkDisabled;
 
-  /// @brief The lower bound of indexes of registers
-  unsigned minBlockBound = 0;
-
-  /// @brief The upper bound of indexes of registers
-  unsigned maxBlockBound = 0;
-
   /// @brief The target basic block that the state must achieve
   KBlock *target;
 
 public:
-  ExecutionState() {}
+  #ifdef KLEE_UNITTEST
+  // provide this function only in the context of unittests
+  ExecutionState(){}
+  #endif
   // only to create the initial state
   explicit ExecutionState(KFunction *kf);
   explicit ExecutionState(KFunction *kf, KBlock *kb);
@@ -290,8 +287,6 @@ public:
 
   std::uint32_t getID() const { return id; };
   void setID() { id = nextID++; };
-  void setBlockIndexes(KBlock *kb);
-  bool inBasicBlockRange(unsigned index);
   llvm::BasicBlock *getInitPCBlock();
   llvm::BasicBlock *getPrevPCBlock();
   llvm::BasicBlock *getPCBlock();

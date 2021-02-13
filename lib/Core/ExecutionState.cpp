@@ -140,8 +140,6 @@ ExecutionState::ExecutionState(const ExecutionState& state):
                              : nullptr),
     coveredNew(state.coveredNew),
     forkDisabled(state.forkDisabled),
-    minBlockBound(state.minBlockBound),
-    maxBlockBound(state.maxBlockBound),
     target(state.target) {
   for (const auto &cur_mergehandler: openMergeStack)
     cur_mergehandler->addOpenState(this);
@@ -420,15 +418,6 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
 void ExecutionState::addConstraint(ref<Expr> e) {
   ConstraintManager c(constraints);
   c.addConstraint(e);
-}
-
-void ExecutionState::setBlockIndexes(KBlock *kb) {
-  minBlockBound = kb->instructions[0]->dest;
-  maxBlockBound = kb->instructions[kb->numInstructions - 1]->dest;
-}
-
-bool ExecutionState::inBasicBlockRange(unsigned index) {
-  return (index >= minBlockBound && index <= maxBlockBound);
 }
 
 BasicBlock *ExecutionState::getInitPCBlock() {

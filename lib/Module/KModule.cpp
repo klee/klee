@@ -221,6 +221,24 @@ void KModule::addInternalFunction(const char* functionName){
   internalFunctions.insert(internalFunction);
 }
 
+void KModule::calculateDistance(KFunction *kf) {
+  std::deque<KFunction*> nodes;
+  nodes.push_back(kf);
+  backwardDistance[kf][kf] = 0;
+  while(!nodes.empty()) {
+    KFunction *currKF = nodes.front();
+    for (auto &callBlock : currKF->kCallBlocks) {
+      if (!callBlock->calledFunction || callBlock->calledFunction->isDeclaration()) continue;
+      KFunction *callKF = functionMap[callBlock->calledFunction];
+      if (backwardDistance[callKF].count(kf) == 0) {
+        backwardDistance[callKF][kf] = backwardDistance[currKF][kf] + 1;
+        nodes.push_back(callKF);
+      }
+    }
+    nodes.pop_front();
+  }
+}
+
 bool KModule::link(std::vector<std::unique_ptr<llvm::Module>> &modules,
                    const std::string &entryPoint) {
   auto numRemainingModules = modules.size();
@@ -614,6 +632,23 @@ KFunction::~KFunction() {
 for (unsigned i=0; i<numInstructions; ++i)
     delete instructions[i];
   delete[] instructions;
+}
+
+void KFunction::calculateDistance(KBlock *bb) {
+  std::map<KBlock*, unsigned int> &distance = backwardDistance[bb];
+  std::deque<KBlock*> nodes;
+  nodes.push_back(bb);
+  distance[bb] = 0;
+  while(!nodes.empty()) {
+    KBlock *currBB = nodes.front();
+    for (auto const &pred : predecessors(currBB->basicBlock)) {
+      if (distance.count(blockMap[pred]) == 0) {
+        distance[blockMap[pred]] = distance[currBB] + 1;
+        nodes.push_back(blockMap[pred]);
+      }
+    }
+    nodes.pop_front();
+  }
 }
 
 KBlock::KBlock(KFunction *_kfunction, llvm::BasicBlock *block, KModule *km,

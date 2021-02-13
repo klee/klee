@@ -10,10 +10,11 @@
 #ifndef KLEE_MEMORYMANAGER_H
 #define KLEE_MEMORYMANAGER_H
 
+#include "klee/Expr/Expr.h"
+
 #include <cstddef>
 #include <set>
 #include <cstdint>
-#include "klee/Expr/Expr.h"
 
 namespace llvm {
 class Value;

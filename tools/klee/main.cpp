@@ -1625,7 +1625,7 @@ int main(int argc, char **argv, char **envp) {
         interpreter->runFunctionAsMain(mainFn, out->numArgs, out->args, pEnvp);
         break;
       case ExecutionKind::Guided:
-        interpreter->runMainAsBlockSequence(mainFn, out->numArgs, out->args, pEnvp);
+        interpreter->runMainAsGuided(mainFn, out->numArgs, out->args, pEnvp);
         break;
       }
       if (interrupted) break;
@@ -1681,7 +1681,7 @@ int main(int argc, char **argv, char **envp) {
       interpreter->runFunctionAsMain(mainFn, pArgc, pArgv, pEnvp);
       break;
     case ExecutionKind::Guided:
-      interpreter->runMainAsBlockSequence(mainFn, pArgc, pArgv, pEnvp);
+      interpreter->runMainAsGuided(mainFn, pArgc, pArgv, pEnvp);
       break;
     }
     while (!seeds.empty()) {

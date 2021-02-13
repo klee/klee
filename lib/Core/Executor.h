@@ -584,8 +584,8 @@ public:
 
   void runFunctionAsMain(llvm::Function *f, int argc, char **argv,
                          char **envp) override;
-  void runFunctionAsBlockSequence(llvm::Function *fn, int argc, char **argv, char **envp);
-  void runMainAsBlockSequence(llvm::Function *f, int argc, char **argv,
+  void runFunctionGuided(llvm::Function *fn, int argc, char **argv, char **envp);
+  void runMainAsGuided(llvm::Function *f, int argc, char **argv,
                               char **envp) override;
 
   /*** Runtime options ***/
