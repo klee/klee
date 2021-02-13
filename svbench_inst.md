@@ -9,7 +9,7 @@
 
 ## 1. Запуск `benchexec` на `KLEE`.
 В репозитории имеется для этого два файла:
-  * `/klee` - так называемый *tool-info module* для `benchexec`.
+  * `/klee` - оболочка над `KLEE` для `benchexec`.
   * `/benchmark.xml` - спецификация необходимых тестов из `sv-benchmarks`.
 `benchmark.xml`, в текущей конфигурации, должна лежать в `sv_benchmarks/c/`.
 Запуск `benchexec` производится следующей командой в директории `sv_benchmarks/c/`: `PATH=../../states_and_lemmas:$PATH benchexec benchmark.xml`, где `../../states_and_lemmas` - путь до нашего репозитория (в `states_and_lemmas/build` подразумевается наличие собранного `KLEE`).
