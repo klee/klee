@@ -133,7 +133,6 @@ namespace klee {
     std::unique_ptr<DiscretePDF<ExecutionState*, ExecutionStateIDCompare>> states;
     KBlock *target;
     const std::map<KFunction*, unsigned int> &distanceToTargetFunction;
-    bool targetAchived = false;
 
     WeightResult tryGetLocalWeight(ExecutionState *es, double &weight, const std::vector<KBlock*> &localTargets);
     WeightResult tryGetPreTargetWeight(ExecutionState *es, double &weight);
@@ -142,6 +141,7 @@ namespace klee {
     WeightResult tryGetWeight(ExecutionState* es, double &weight);
 
   public:
+    ExecutionState *result = nullptr;
     TargetedSearcher(KBlock *targetBB);
     ~TargetedSearcher() override = default;
     ExecutionState &selectState() override;

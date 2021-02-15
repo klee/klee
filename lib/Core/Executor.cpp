@@ -3650,24 +3650,38 @@ void Executor::targetedRun(ExecutionState &initialState, KBlock *target) {
 
   states.insert(&initialState);
 
-  searcher = new TargetedSearcher(target);
+  TargetedSearcher *targetedSearcher = new TargetedSearcher(target);
+  searcher = targetedSearcher;
 
   std::vector<ExecutionState *> newStates(states.begin(), states.end());
   searcher->update(0, newStates, std::vector<ExecutionState *>());
   // main interpreter loop
   KInstruction *terminator = target != nullptr ? target->instructions[target->numInstructions - 1] : nullptr;
   while (!states.empty() && !haltExecution) {
-    ExecutionState &state = searcher->selectState();
+    if (!searcher->empty() && !haltExecution) {
+      ExecutionState &state = searcher->selectState();
 
-    KInstruction *ki = state.pc;
+      KInstruction *ki = state.pc;
 
-    if (ki == terminator) {
-      terminateStateOnTerminator(state);
-      updateStates(&state);
-      continue;
+      if (ki == terminator) {
+        terminateStateOnTerminator(state);
+        updateStates(&state);
+        continue;
+      }
+
+      executeStep(state);
     }
 
-    executeStep(state);
+    if (targetedSearcher) {
+      newStates.clear();
+      newStates.push_back(targetedSearcher->result);
+      delete searcher;
+      targetedSearcher = nullptr;
+      searcher = constructUserSearcher(*this);
+      searcher->update(0, newStates, std::vector<ExecutionState *>());
+    } else {
+      break;
+    }
   }
 
   delete searcher;
@@ -3676,6 +3690,7 @@ void Executor::targetedRun(ExecutionState &initialState, KBlock *target) {
   doDumpStates();
   haltExecution = false;
 }
+
 
 void Executor::calculateTargetedStates(BasicBlock *initialBlock,
                                        ExecutedBlock &pausedStates,
