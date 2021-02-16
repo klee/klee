@@ -19,6 +19,7 @@ struct KTest;
 
 namespace llvm {
 class Function;
+class BasicBlock;
 class LLVMContext;
 class Module;
 class raw_ostream;
@@ -143,6 +144,11 @@ public:
                                       int argc,
                                       char **argv,
                                       char **envp) = 0;
+  virtual void runMainWithTarget(llvm::Function *mainFn,
+                                 llvm::BasicBlock *target,
+                                 int argc,
+                                 char **argv,
+                                 char **envp) = 0;
   /*** Runtime options ***/
 
   virtual void setHaltExecution(bool value) = 0;

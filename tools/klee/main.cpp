@@ -167,8 +167,10 @@ namespace {
   cl::opt<ExecutionKind> ExecutionMode(
       "execution-mode",
       cl::values(
-          clEnumValN(ExecutionKind::Default, "default", "use defualt symbolic execution"),
-          clEnumValN(ExecutionKind::Guided, "guided", "use GuidedSearcher and guidedRun")
+          clEnumValN(ExecutionKind::Default, "default", "Use basic klee symbolic execution"),
+          clEnumValN(ExecutionKind::Guided, "guided", "Takes place in two steps. First, all acyclic paths are executed, "
+                                                      "then the execution is guided to sections of the program not yet covered. "
+                                                      "These steps are repeated until all blocks of the program are covered")
               KLEE_LLVM_CL_VAL_END),
       cl::init(ExecutionKind::Guided),
       cl::desc("Kind of execution mode"),

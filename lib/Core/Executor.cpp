@@ -318,8 +318,8 @@ cl::opt<unsigned long long> MaxInstructions(
 
 cl::opt<unsigned long long> MaxCycles(
     "max-cycles",
-    cl::desc("stop execution after 'MaxBound' block visits (default=0)"),
-    cl::init(0),
+    cl::desc("stop execution after visiting some basic block this amount of times (default=1)."),
+    cl::init(1),
     cl::cat(TerminationCat));
 
 cl::opt<unsigned>
@@ -3767,7 +3767,7 @@ void Executor::guidedRun(ExecutionState &initialState) {
       if (state.target)
         executeStep(state);
       else
-        boundedExecuteStep(state, MaxCycles);
+        boundedExecuteStep(state, MaxCycles - 1);
     }
 
     ExecutedBlock &pausedStates = results[initialBlock].pausedStates;
@@ -4891,6 +4891,22 @@ void Executor::runMainAsGuided(Function *mainFn,
   bindModuleConstants();
   KFunction *kf = kmodule->functionMap[mainFn];
   runGuided(*state, kf);
+  // hack to clear memory objects
+  delete memory;
+  memory = new MemoryManager(NULL);
+  clearGlobal();
+}
+
+void Executor::runMainWithTarget(Function *mainFn,
+                                 BasicBlock *target,
+                                 int argc,
+                                 char **argv,
+                                 char **envp) {
+  ExecutionState *state = formState(mainFn, argc, argv, envp);
+  bindModuleConstants();
+  KFunction *kf = kmodule->functionMap[mainFn];
+  KBlock *kb = kmodule->functionMap[target->getParent()]->blockMap[target];
+  runWithTarget(*state, kf, kb);
   // hack to clear memory objects
   delete memory;
   memory = new MemoryManager(NULL);

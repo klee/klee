@@ -583,6 +583,8 @@ public:
   void runFunctionGuided(llvm::Function *fn, int argc, char **argv, char **envp);
   void runMainAsGuided(llvm::Function *f, int argc, char **argv,
                               char **envp) override;
+  void runMainWithTarget(llvm::Function *mainFn, llvm::BasicBlock *target,
+                         int argc, char **argv, char **envp) override;
 
   /*** Runtime options ***/
 
