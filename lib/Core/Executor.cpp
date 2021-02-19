@@ -4549,9 +4549,9 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   if (unbound) {
     if (incomplete) {
       terminateStateEarly(*unbound, "Query timed out (resolve).");
-    } else if (UseGEPExpr && isa<GEPExpr>(address)) {
-      ref<Expr> base = cast<GEPExpr>(address)->base;
-      unsigned size = cast<GEPExpr>(address)->sourceSize;
+    } else if (isa<ReadExpr>(address) || isa<ConcatExpr>(address) || (UseGEPExpr && isa<GEPExpr>(address))) {
+      ref<Expr> base = UseGEPExpr && isa<GEPExpr>(address) ? cast<GEPExpr>(address)->base : unsafeAddress;
+      unsigned size = UseGEPExpr && isa<GEPExpr>(address) ? cast<GEPExpr>(address)->sourceSize : bytes;
 
       ObjectPair p = lazyInstantiateVariable(*unbound, base, target, size);
       assert(p.first && p.second);
@@ -4565,12 +4565,11 @@ void Executor::executeMemoryOperation(ExecutionState &state,
       solver->evaluate(unbound->constraints, inBounds, res, unbound->queryMetaData);
       solver->setTimeout(time::Span());
 
-      unbound->addConstraint(inBounds);
-
       if (res ==Solver::False) {
         terminateStateOnError(*unbound, "memory error: out of bound pointer", Ptr,
                               NULL, getAddressInfo(*unbound, address));
       } else {
+        unbound->addConstraint(inBounds);
         switch (operation) {
           case Write: {
             ObjectState *wos = unbound->addressSpace.getWriteable(p.first, p.second);
