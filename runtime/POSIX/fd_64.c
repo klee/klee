@@ -73,6 +73,16 @@ int openat(int fd, const char *pathname, int flags, ...) {
   return __fd_openat(fd, pathname, flags, mode);
 }
 
+/* removed in glibc 2.33 */
+#ifdef __REDIRECT_NTH
+extern int __REDIRECT_NTH(__fxstat, (int __ver, int __fildes,
+                          struct stat *__stat_buf), __fxstat64);
+extern int __REDIRECT_NTH(__xstat, (int __ver, const char *__filename,
+                          struct stat *__stat_buf), __xstat64);
+extern int __REDIRECT_NTH(__lxstat, (int __ver, const char *__filename,
+                          struct stat *__stat_buf), __lxstat64);
+#endif
+
 off64_t lseek(int fd, off64_t offset, int whence) {
   return __fd_lseek(fd, offset, whence);
 }
