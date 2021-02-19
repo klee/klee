@@ -230,7 +230,7 @@ void KModule::calculateDistance(KFunction *kf) {
     for (auto &callBlock : currKF->kCallBlocks) {
       if (!callBlock->calledFunction || callBlock->calledFunction->isDeclaration()) continue;
       KFunction *callKF = functionMap[callBlock->calledFunction];
-      if (backwardDistance[callKF].count(kf) == 0) {
+      if (backwardDistance[callKF].find(kf) == backwardDistance[callKF].end()) {
         backwardDistance[callKF][kf] = backwardDistance[currKF][kf] + 1;
         nodes.push_back(callKF);
       }
@@ -424,10 +424,6 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
       escapingFunctions.insert(declaration);
   }
 
-  for (auto &kfp : functions) {
-    calculateDistance(kfp.get());
-  }
-
   if (DebugPrintEscapingFunctions && !escapingFunctions.empty()) {
     llvm::errs() << "KLEE: escaping functions: [";
     std::string delimiter = "";
@@ -459,6 +455,12 @@ void KModule::checkModule() {
 
 KBlock* KModule::getKBlock(llvm::BasicBlock *bb) {
   return functionMap[bb->getParent()]->blockMap[bb];
+}
+
+std::map<KFunction*, unsigned int>& KModule::getBackwardDistance(KFunction *kf) {
+  if (backwardDistance.find(kf) == backwardDistance.end())
+    calculateDistance(kf);
+  return backwardDistance[kf];
 }
 
 Function* llvm::getTargetFunction(Value *calledVal) {
@@ -621,10 +623,6 @@ KFunction::KFunction(llvm::Function *_function,
       finalKBlocks.push_back(kb);
   }
 
-  for (auto &kbp : blocks) {
-    calculateDistance(kbp.get());
-  }
-
   entryKBlock = blockMap[&*function->begin()];
 }
 
@@ -642,13 +640,19 @@ void KFunction::calculateDistance(KBlock *bb) {
   while(!nodes.empty()) {
     KBlock *currBB = nodes.front();
     for (auto const &pred : predecessors(currBB->basicBlock)) {
-      if (distance.count(blockMap[pred]) == 0) {
+      if (distance.find(blockMap[pred]) == distance.end()) {
         distance[blockMap[pred]] = distance[currBB] + 1;
         nodes.push_back(blockMap[pred]);
       }
     }
     nodes.pop_front();
   }
+}
+
+std::map<KBlock*, unsigned int>& KFunction::getBackwardDistance(KBlock *kb) {
+  if (backwardDistance.find(kb) == backwardDistance.end())
+    calculateDistance(kb);
+  return backwardDistance[kb];
 }
 
 KBlock::KBlock(KFunction *_kfunction, llvm::BasicBlock *block, KModule *km,

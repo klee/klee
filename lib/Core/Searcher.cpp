@@ -147,7 +147,7 @@ void RandomSearcher::printName(llvm::raw_ostream &os) {
 TargetedSearcher::TargetedSearcher(KBlock *targetBB)
   : states(std::make_unique<DiscretePDF<ExecutionState*, ExecutionStateIDCompare>>()),
     target(targetBB),
-    distanceToTargetFunction(target->parent->parent->backwardDistance[target->parent]) {}
+    distanceToTargetFunction(target->parent->parent->getBackwardDistance(target->parent)) {}
 
 ExecutionState &TargetedSearcher::selectState() {
   return *states->choose(0);
@@ -159,8 +159,8 @@ TargetedSearcher::WeightResult TargetedSearcher::tryGetLocalWeight(ExecutionStat
   KBlock *currentKB = currentKF->blockMap[es->getPCBlock()];
   unsigned int localWeight = UINT_MAX;
   for (auto &end : localTargets) {
-    if (currentKF->backwardDistance[end].count(currentKB) > 0) {
-      unsigned int w = currentKF->backwardDistance[end][currentKB];
+    if (currentKF->getBackwardDistance(end).count(currentKB) > 0) {
+      unsigned int w = currentKF->getBackwardDistance(end)[currentKB];
       localWeight = std::min(w, localWeight);
     }
   }
@@ -230,8 +230,8 @@ void TargetedSearcher::update(ExecutionState *current,
       states->update(current, weight);
       break;
     case Done:
-      result = current;
       current->multilevel.clear();
+      result = current;
       break;
     case Miss:
       current->target = nullptr;
