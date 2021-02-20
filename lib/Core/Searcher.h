@@ -157,6 +157,7 @@ namespace klee {
   private:
     std::unique_ptr<Searcher> baseSearcher;
     std::map<KBlock*, std::unique_ptr<TargetedSearcher>> targetedSearchers;
+    unsigned index {1};
     void addTarget(KBlock *target);
 
   public:

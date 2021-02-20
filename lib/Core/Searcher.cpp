@@ -169,7 +169,7 @@ TargetedSearcher::WeightResult TargetedSearcher::tryGetLocalWeight(ExecutionStat
   if (localWeight == 0) return Done;
 
   intWeight += localWeight;
-  weight = intWeight*(1.0/(3.0 * 4294967296.0)); //number on [0,0.3)-real-interval
+  weight = intWeight*(1.0/(3.0 * 4294967296.0)); //number on [0,0.(3))-real-interval
   return Continue;
 }
 
@@ -186,7 +186,7 @@ TargetedSearcher::WeightResult TargetedSearcher::tryGetPreTargetWeight(Execution
   if (localTargets.empty()) return Miss;
 
   WeightResult res = tryGetLocalWeight(es, weight, localTargets);
-  weight += 0.6; // number on [0.6,1)-real-interval
+  weight += 1.0/3.0; // number on [0.(6),1)-real-interval
   return res == Done ? Continue : res;
 }
 
@@ -197,7 +197,7 @@ TargetedSearcher::WeightResult TargetedSearcher::tryGetPostTargetWeight(Executio
   if (localTargets.empty()) return Miss;
 
   WeightResult res = tryGetLocalWeight(es, weight, localTargets);
-  weight += 0.3; // number on [0.3,0.6)-real-interval
+  weight += 2.0/3.0; // number on [0.(3),0.(6))-real-interval
   return res == Done ? Continue : res;
 }
 
@@ -213,10 +213,15 @@ TargetedSearcher::WeightResult TargetedSearcher::tryGetWeight(ExecutionState *es
     kfs.push_back(frame.kf);
   }
   int nKF = std::count(kfs.begin(), kfs.end(), targetKF);
-  if (nKF == 0) return tryGetPreTargetWeight(es, weight);
-  if (kfs.back() == targetKF && nKF == 1) return tryGetTargetWeight(es, weight);
-  return tryGetPostTargetWeight(es, weight);
+  WeightResult res = Miss;
+  if (kfs.back() == targetKF)
+    res = tryGetTargetWeight(es, weight);
+  if (nKF > 0 && res == Miss)
+    res = tryGetPostTargetWeight(es, weight);
+  if (res == Miss)
+    res = tryGetPreTargetWeight(es, weight);
 
+  return res;
 }
 
 void TargetedSearcher::update(ExecutionState *current,
@@ -283,12 +288,17 @@ void TargetedSearcher::printName(llvm::raw_ostream &os) {
 GuidedSearcher::GuidedSearcher(Searcher *_baseSearcher) : baseSearcher(_baseSearcher) {}
 
 ExecutionState &GuidedSearcher::selectState() {
-  if (!targetedSearchers.empty()) {
-    KBlock *target = targetedSearchers.begin()->first;
-    assert(targetedSearchers.count(target) > 0 && !targetedSearchers[target]->empty());
+  unsigned size = targetedSearchers.size();
+  index = (index + 1) % (size + 1);
+  if (index == size)
+    return baseSearcher->selectState();
+  else {
+    auto it = targetedSearchers.begin();
+    std::advance(it, index);
+    KBlock *target = it->first;
+    assert(targetedSearchers.find(target) != targetedSearchers.end() && !targetedSearchers[target]->empty());
     return targetedSearchers[target]->selectState();
   }
-  return baseSearcher->selectState();
 }
 
 void GuidedSearcher::update(ExecutionState *current,
