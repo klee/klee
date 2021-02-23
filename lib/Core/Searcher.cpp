@@ -157,10 +157,11 @@ TargetedSearcher::WeightResult TargetedSearcher::tryGetLocalWeight(ExecutionStat
   unsigned int intWeight = es->steppedMemoryInstructions;
   KFunction *currentKF = es->stack.back().kf;
   KBlock *currentKB = currentKF->blockMap[es->getPCBlock()];
+  std::map<KBlock*, unsigned> &dist = currentKF->getDistance(currentKB);
   unsigned int localWeight = UINT_MAX;
   for (auto &end : localTargets) {
-    if (currentKF->getBackwardDistance(end).count(currentKB) > 0) {
-      unsigned int w = currentKF->getBackwardDistance(end)[currentKB];
+    if (dist.count(end) > 0) {
+      unsigned int w = dist[end];
       localWeight = std::min(w, localWeight);
     }
   }
@@ -169,7 +170,7 @@ TargetedSearcher::WeightResult TargetedSearcher::tryGetLocalWeight(ExecutionStat
   if (localWeight == 0) return Done;
 
   intWeight += localWeight;
-  weight = intWeight*(1.0/(3.0 * 4294967296.0)); //number on [0,0.(3))-real-interval
+  weight = intWeight / 4294967296.0; //number on [0,1)-real-interval
   return Continue;
 }
 
@@ -186,7 +187,7 @@ TargetedSearcher::WeightResult TargetedSearcher::tryGetPreTargetWeight(Execution
   if (localTargets.empty()) return Miss;
 
   WeightResult res = tryGetLocalWeight(es, weight, localTargets);
-  weight += 1.0/3.0; // number on [0.(6),1)-real-interval
+  weight = 1.0/2.0 + weight / 2.0; // number on [0.5,1)-real-interval
   return res == Done ? Continue : res;
 }
 
@@ -197,13 +198,15 @@ TargetedSearcher::WeightResult TargetedSearcher::tryGetPostTargetWeight(Executio
   if (localTargets.empty()) return Miss;
 
   WeightResult res = tryGetLocalWeight(es, weight, localTargets);
-  weight += 2.0/3.0; // number on [0.(3),0.(6))-real-interval
+  weight = 1.0/2.0 + weight / 2.0; // number on [0.5,1)-real-interval
   return res == Done ? Continue : res;
 }
 
 TargetedSearcher::WeightResult TargetedSearcher::tryGetTargetWeight(ExecutionState *es, double &weight) {
   std::vector<KBlock*> localTargets = {target};
-  return tryGetLocalWeight(es, weight, localTargets);
+  WeightResult res = tryGetLocalWeight(es, weight, localTargets);
+  weight = weight / 2.0; // number on [0,0.5)-real-interval
+  return res;
 }
 
 TargetedSearcher::WeightResult TargetedSearcher::tryGetWeight(ExecutionState *es, double &weight) {
@@ -216,7 +219,7 @@ TargetedSearcher::WeightResult TargetedSearcher::tryGetWeight(ExecutionState *es
   WeightResult res = Miss;
   if (kfs.back() == targetKF)
     res = tryGetTargetWeight(es, weight);
-  if (nKF > 0 && res == Miss)
+  if (nKF > 0 && (nKF != 1 || kfs.back() != targetKF) && res == Miss)
     res = tryGetPostTargetWeight(es, weight);
   if (res == Miss)
     res = tryGetPreTargetWeight(es, weight);

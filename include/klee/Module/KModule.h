@@ -111,9 +111,11 @@ namespace klee {
     bool trackCoverage;
 
   private:
+    std::map<KBlock*, std::map<KBlock*, unsigned int>> distance;
     std::map<KBlock*, std::map<KBlock*, unsigned int>> backwardDistance;
     // BFS algorithm
     void calculateDistance(KBlock *bb);
+    void calculateBackwardDistance(KBlock *bb);
 
   public:
     explicit KFunction(llvm::Function*, KModule *);
@@ -123,6 +125,7 @@ namespace klee {
     ~KFunction();
 
     unsigned getArgRegister(unsigned index) const { return index; }
+    std::map<KBlock*, unsigned int>& getDistance(KBlock *kb);
     std::map<KBlock*, unsigned int>& getBackwardDistance(KBlock *kb);
   };
 
@@ -151,6 +154,7 @@ namespace klee {
     // Our shadow versions of LLVM structures.
     std::vector<std::unique_ptr<KFunction>> functions;
     std::map<llvm::Function*, KFunction*> functionMap;
+    std::map<llvm::Function*, std::set<llvm::Function*>> callMap;
 
     // Functions which escape (may be called indirectly)
     // XXX change to KFunction
@@ -168,6 +172,7 @@ namespace klee {
     std::set<const llvm::Function*> internalFunctions;
 
   private:
+    std::map<KFunction*, std::map<KFunction*, unsigned int>> distance;
     std::map<KFunction*, std::map<KFunction*, unsigned int>> backwardDistance;
 
     // Mark function with functionName as part of the KLEE runtime
@@ -175,6 +180,7 @@ namespace klee {
 
     // BFS algorithm
     void calculateDistance(KFunction *kf);
+    void calculateBackwardDistance(KFunction *kf);
 
   public:
     KModule() = default;
@@ -218,6 +224,7 @@ namespace klee {
 
     KBlock *getKBlock(llvm::BasicBlock *bb);
     std::map<KFunction*, unsigned int>& getBackwardDistance(KFunction *kf);
+    std::map<KFunction*, unsigned int>& getDistance(KFunction *kf);
   };
 } // End klee namespace
 

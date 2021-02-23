@@ -3698,12 +3698,11 @@ void Executor::calculateTargetedStates(BasicBlock *initialBlock,
   VisitedBlock &history = results[initialBlock].history;
 
   for (auto blockstate : pausedStates) {
-    llvm::BasicBlock *bb = blockstate.first;
-    KFunction *kf = kmodule->functionMap[bb->getParent()];
-    KBlock *kb = kf->blockMap[bb];
     std::set<ExecutionState *, ExecutionStateIDCompare> &ess = blockstate.second;
-
     for (auto &state : ess) {
+      llvm::BasicBlock *bb = state->getPCBlock();
+      KFunction *kf = kmodule->functionMap[bb->getParent()];
+      KBlock *kb = kf->blockMap[bb];
       KBlock *nearestBlock = nullptr;
       unsigned int minDistance = -1;
       unsigned int sfNum = 0;
@@ -3711,11 +3710,10 @@ void Executor::calculateTargetedStates(BasicBlock *initialBlock,
       for (auto sfi = state->stack.rbegin(), sfe = state->stack.rend(); sfi != sfe; sfi++, sfNum++) {
         kf = sfi->kf;
 
-        for (auto &kbp : kf->blocks) {
-          KBlock *target = kbp.get();
-          if (kf->getBackwardDistance(target).find(kb) != kf->getBackwardDistance(target).end() &&
-              (sfNum > 0 || kf->getBackwardDistance(target)[kb] > 0) &&
-              kf->getBackwardDistance(target)[kb] < minDistance) {
+        for (auto &kbd : kf->getDistance(kb)) {
+          KBlock *target = kbd.first;
+          unsigned distance = kbd.second;
+          if ((sfNum > 0 || distance > 0) && distance < minDistance) {
             if (history[target->basicBlock].size() != 0) {
               std::vector<BasicBlock*> diff;
               if (!newCov)
@@ -3728,7 +3726,7 @@ void Executor::calculateTargetedStates(BasicBlock *initialBlock,
             } else
               newCov = true;
             nearestBlock = target;
-            minDistance = kf->getBackwardDistance(target)[kb];
+            minDistance = distance;
           }
         }
         if (nearestBlock) {
