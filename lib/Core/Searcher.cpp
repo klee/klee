@@ -153,6 +153,27 @@ ExecutionState &TargetedSearcher::selectState() {
   return *states->choose(0);
 }
 
+bool TargetedSearcher::distanceInCallGraph(KFunction *kf, KBlock *kb, unsigned int &distance) {
+  distance = UINT_MAX;
+  std::map<KBlock*, unsigned> &dist = kf->getDistance(kb);
+
+  if (kf == target->parent && dist.find(target) != dist.end()) {
+    distance = 0;
+    return true;
+  }
+
+  for (auto &kCallBlock : kf->kCallBlocks) {
+    if (dist.find(kCallBlock) != dist.end()) {
+      KFunction *calledKFunction = kf->parent->functionMap[kCallBlock->calledFunction];
+      if (distanceToTargetFunction.find(calledKFunction) != distanceToTargetFunction.end() &&
+          distance > distanceToTargetFunction[calledKFunction] + 1) {
+        distance = distanceToTargetFunction[calledKFunction] + 1;
+      }
+    }
+  }
+  return distance != UINT_MAX;
+}
+
 TargetedSearcher::WeightResult TargetedSearcher::tryGetLocalWeight(ExecutionState *es, double &weight, const std::vector<KBlock*> &localTargets) {
   unsigned int intWeight = es->steppedMemoryInstructions;
   KFunction *currentKF = es->stack.back().kf;
@@ -210,20 +231,34 @@ TargetedSearcher::WeightResult TargetedSearcher::tryGetTargetWeight(ExecutionSta
 }
 
 TargetedSearcher::WeightResult TargetedSearcher::tryGetWeight(ExecutionState *es, double &weight) {
-  std::vector<KFunction*> kfs;
-  KFunction *targetKF = target->parent;
-  for (auto &frame : es->stack) {
-    kfs.push_back(frame.kf);
-  }
-  int nKF = std::count(kfs.begin(), kfs.end(), targetKF);
-  WeightResult res = Miss;
-  if (kfs.back() == targetKF)
-    res = tryGetTargetWeight(es, weight);
-  if (nKF > 0 && (nKF != 1 || kfs.back() != targetKF) && res == Miss)
-    res = tryGetPostTargetWeight(es, weight);
-  if (res == Miss)
-    res = tryGetPreTargetWeight(es, weight);
+  BasicBlock *bb = es->getPCBlock();
+  KBlock *kb = es->stack.back().kf->blockMap[bb];
+  unsigned int minCallWeight = UINT_MAX, minSfNum = UINT_MAX, sfNum = 0;
+  for (auto sfi = es->stack.rbegin(), sfe = es->stack.rend(); sfi != sfe; sfi++) {
+     unsigned callWeight;
+     if (distanceInCallGraph(sfi->kf, kb, callWeight)) {
+       callWeight *= 2;
+       callWeight += sfNum;
+       if (callWeight < minCallWeight) {
+         minCallWeight = callWeight;
+         minSfNum = sfNum;
+       }
+     }
 
+     if (sfi->caller) {
+       kb = sfi->caller->parent;
+       bb = kb->basicBlock;
+     }
+     sfNum++;
+  }
+
+  WeightResult res = Miss;
+  if (minCallWeight == 0)
+    res = tryGetTargetWeight(es, weight);
+  else if (minSfNum == 0)
+    res = tryGetPreTargetWeight(es, weight);
+  else if (minSfNum != UINT_MAX)
+    res = tryGetPostTargetWeight(es, weight);
   return res;
 }
 

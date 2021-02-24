@@ -132,8 +132,9 @@ namespace klee {
   private:
     std::unique_ptr<DiscretePDF<ExecutionState*, ExecutionStateIDCompare>> states;
     KBlock *target;
-    const std::map<KFunction*, unsigned int> &distanceToTargetFunction;
+    std::map<KFunction*, unsigned int> &distanceToTargetFunction;
 
+    bool distanceInCallGraph(KFunction *kf, KBlock *kb, unsigned int &distance);
     WeightResult tryGetLocalWeight(ExecutionState *es, double &weight, const std::vector<KBlock*> &localTargets);
     WeightResult tryGetPreTargetWeight(ExecutionState *es, double &weight);
     WeightResult tryGetTargetWeight(ExecutionState *es, double &weight);
