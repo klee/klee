@@ -479,6 +479,7 @@ private:
   // pause state
   void pauseState(ExecutionState &state);
   // unpause state
+  void unpauseState(ExecutionState &state);
   void unpauseStates(std::vector<ExecutionState *> &states);
   // call exit handler and terminate state
   void terminateStateOnExit(ExecutionState &state);
@@ -623,7 +624,8 @@ public:
   void setMergingSearcher(MergingSearcher *ms) { mergingSearcher = ms; };
   const Array * makeArray(ExecutionState &state, const uint64_t size, const std::string &name);
   void executeStep(ExecutionState &state);
-  void boundedExecuteStep(ExecutionState &state, unsigned bound);
+  bool tryBoundedExecuteStep(ExecutionState &state, unsigned bound);
+  KBlock* calculateTarget(ExecutionState &state);
   void calculateTargetedStates(llvm::BasicBlock *initialBlock,
                                ExecutedBlock &pausedStates,
                                std::map<KBlock*, std::vector<ExecutionState*>> &targetedStates);
