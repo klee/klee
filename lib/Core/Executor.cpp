@@ -3606,7 +3606,6 @@ bool Executor::tryBoundedExecuteStep(ExecutionState &state, unsigned bound) {
   KInstruction *prevKI = state.prevPC;
 
   if (prevKI->inst->isTerminator()) {
-    addCompletedResult(state);
     addHistoryResult(state);
     if (state.multilevel.count(state.getPCBlock()) > bound) {
       pauseState(state);
