@@ -3137,7 +3137,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       return;
     }
     uint64_t iIdx = cIdx->getZExtValue();
+#if LLVM_VERSION_MAJOR >= 11
+    const auto *vt = cast<llvm::FixedVectorType>(iei->getType());
+#else
     const llvm::VectorType *vt = iei->getType();
+#endif
     unsigned EltBits = getWidthForLLVMType(vt->getElementType());
 
     if (iIdx >= vt->getNumElements()) {
@@ -3175,7 +3179,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       return;
     }
     uint64_t iIdx = cIdx->getZExtValue();
+#if LLVM_VERSION_MAJOR >= 11
+    const auto *vt = cast<llvm::FixedVectorType>(eei->getVectorOperandType());
+#else
     const llvm::VectorType *vt = eei->getVectorOperandType();
+#endif
     unsigned EltBits = getWidthForLLVMType(vt->getElementType());
 
     if (iIdx >= vt->getNumElements()) {
