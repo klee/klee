@@ -34,6 +34,7 @@ jobs:
   Linux:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         name: [
                 "LLVM 11",
