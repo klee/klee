@@ -208,9 +208,6 @@ private:
   /// Maximum time to allow for a single instruction.
   time::Span maxInstructionTime;
 
-  /// Time after which the --max-static-*-pct checks are enforced
-  time::Span maxStaticPctCheckDelay;
-
   /// Assumes ownership of the created array objects
   ArrayCache arrayCache;
 
