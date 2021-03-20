@@ -986,18 +986,28 @@ ref<Expr> Executor::maxStaticPctChecks(ExecutionState &current,
 
   StatisticManager &sm = *theStatisticManager;
   CallPathNode *cpn = current.stack.back().callPathNode;
-  if ((MaxStaticForkPct < 1. &&
-       sm.getIndexedValue(stats::forks, sm.getIndex()) >
-           stats::forks * MaxStaticForkPct) ||
-      (MaxStaticCPForkPct < 1. && cpn &&
-       (cpn->statistics.getValue(stats::forks) >
-        stats::forks * MaxStaticCPForkPct)) ||
+
+  bool reached_max_fork_limit =
+      (MaxStaticForkPct < 1. &&
+       (sm.getIndexedValue(stats::forks, sm.getIndex()) >
+        stats::forks * MaxStaticForkPct));
+
+  bool reached_max_cp_fork_limit = (MaxStaticCPForkPct < 1. && cpn &&
+                                    (cpn->statistics.getValue(stats::forks) >
+                                     stats::forks * MaxStaticCPForkPct));
+
+  bool reached_max_solver_limit =
       (MaxStaticSolvePct < 1 &&
-       sm.getIndexedValue(stats::solverTime, sm.getIndex()) >
-           stats::solverTime * MaxStaticSolvePct) ||
+       (sm.getIndexedValue(stats::solverTime, sm.getIndex()) >
+        stats::solverTime * MaxStaticSolvePct));
+
+  bool reached_max_cp_solver_limit =
       (MaxStaticCPForkPct < 1. && cpn &&
        (cpn->statistics.getValue(stats::solverTime) >
-        stats::solverTime * MaxStaticCPSolvePct))) {
+        stats::solverTime * MaxStaticCPSolvePct));
+
+  if (reached_max_fork_limit || reached_max_cp_fork_limit ||
+      reached_max_solver_limit || reached_max_cp_solver_limit) {
     ref<klee::ConstantExpr> value;
     bool success = solver->getValue(current.constraints, condition, value,
                                     current.queryMetaData);
