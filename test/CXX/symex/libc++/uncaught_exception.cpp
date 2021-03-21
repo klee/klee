@@ -11,4 +11,5 @@ int main() {
 }
 
 // CHECK: KLEE: ERROR:
-// CHECK: KLEE: done: completed paths = 1
+// CHECK: KLEE: done: completed paths = 0
+// CHECK: KLEE: done: partially completed paths = 1
