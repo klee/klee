@@ -135,21 +135,17 @@ add_subdirectory(Concrete)
 ###############################################################################
 
 # Find path to libkleeRuntest target for `lit.site.cfg`.
-# FIXME: This is not the right way to get the location of the target we have to
-# set CMP0026 to old.
-# This will likely break if using a multi-configuration generator.
-if (POLICY CMP0026)
-  # HACK: Allow reading `LOCATION` property.
-  cmake_policy(SET CMP0026 OLD)
-endif()
-get_property(LIB_KLEE_RUN_TEST_PATH
-  TARGET kleeRuntest
-  PROPERTY LOCATION
-)
+set(LIB_KLEE_RUN_TEST_PATH $<TARGET_FILE:kleeRuntest>)
 
 configure_file(lit.site.cfg.in
-  ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
+  ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.imd
   @ONLY
+)
+
+# Evaluate all generator expressions inserted during the configure step.
+file(GENERATE
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg
+  INPUT  ${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.imd
 )
 
 add_custom_target(systemtests
