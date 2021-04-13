@@ -90,6 +90,9 @@ if (NOT EXISTS "${LLVM_TOOLS_BINARY_DIR}/not")
   set(DOWNLOAD_NOT_SOURCE TRUE)
 endif()
 
+# Do not build FileCheck and not to ${KLEE_TOOLS_DIR} as it will not be in lit's PATH.
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${KLEE_TOOLS_DIR}/testtools)
+
 if (DOWNLOAD_FILECHECK_SOURCE)
   if (${LLVM_VERSION_MAJOR} GREATER 3)
     set(FILECHECK_SRC_URL "https://raw.githubusercontent.com/llvm/llvm-project/release/${LLVM_VERSION_MAJOR}.x/llvm/utils/FileCheck/FileCheck.cpp")
