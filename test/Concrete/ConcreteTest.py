@@ -1,6 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-from __future__ import print_function
 import argparse
 import os
 import platform
@@ -33,7 +32,6 @@ def testFile(name, klee_path, lli_path):
     lli_cmd = [lli_path, '-force-interpreter=true', exeFile]
     print("EXECUTING: %s" % (lli_cmd,))
 
-    # Decode is for python 3.x
     lliOut = subprocess.check_output(lli_cmd).decode()
     print('-- lli output --\n%s--\n' % (lliOut,))
 
@@ -45,7 +43,6 @@ def testFile(name, klee_path, lli_path):
     print("EXECUTING: %s" % (klee_cmd,))
     sys.stdout.flush()
 
-    # Decode is for python 3.x
     kleeOut = subprocess.check_output(klee_cmd).decode()
     print('-- klee output --\n%s--\n' % (kleeOut,))
         
