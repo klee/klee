@@ -24,8 +24,8 @@
 
 #include <map>
 #include <memory>
-#include <set>
 #include <vector>
+#include <unordered_set>
 
 namespace klee {
 class Array;
@@ -183,8 +183,8 @@ public:
   std::uint32_t depth;
 
   /// @brief Exploration level, i.e., number of times KLEE cycled for this state
-  std::multiset<llvm::BasicBlock *> multilevel;
-  std::set<llvm::BasicBlock *> level;
+  std::unordered_multiset<llvm::BasicBlock *> multilevel;
+  std::unordered_set<llvm::BasicBlock *> level;
 
   /// @brief Address space used by this state (e.g. Global and Heap)
   AddressSpace addressSpace;

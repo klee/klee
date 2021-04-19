@@ -104,7 +104,7 @@ public:
   typedef std::pair<ExecutionState*,ExecutionState*> StatePair;
   typedef std::pair<llvm::BasicBlock*,llvm::BasicBlock*> BasicBlockPair;
   typedef std::map<llvm::BasicBlock*, std::set<ExecutionState*, ExecutionStateIDCompare> > ExecutedBlock;
-  typedef std::map<llvm::BasicBlock*, std::set<llvm::BasicBlock*> > VisitedBlock;
+  typedef std::map<llvm::BasicBlock*, std::unordered_set<llvm::BasicBlock*> > VisitedBlock;
   struct ExecutionBlockResult {
     ExecutedBlock completedStates;
     ExecutedBlock pausedStates;
