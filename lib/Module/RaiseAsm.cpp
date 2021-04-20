@@ -63,10 +63,9 @@ bool RaiseAsmPass::runOnInstruction(Module &M, Instruction *I) {
   if (TLI->ExpandInlineAsm(ci))
     return true;
 
-  if (triple.getArch() == llvm::Triple::x86_64 &&
-      (triple.getOS() == llvm::Triple::Linux ||
-       triple.getOS() == llvm::Triple::Darwin ||
-       triple.getOS() == llvm::Triple::FreeBSD)) {
+  if ((triple.getArch() == llvm::Triple::x86 ||
+       triple.getArch() == llvm::Triple::x86_64) &&
+      (triple.isOSLinux() || triple.isMacOSX() || triple.isOSFreeBSD())) {
 
     if (ia->getAsmString() == "" && ia->hasSideEffects() &&
         ia->getFunctionType()->getReturnType()->isVoidTy()) {
