@@ -897,16 +897,18 @@ void SpecialFunctionHandler::handleGetSymbolicDetails(
     const MemoryObject *mo = it->first.first;
     const ObjectState *old = it->first.second;
     auto varName =
-        mo->name == "unnamed" ? "Not Symbolic" : mo->name + " (Symbolic)";
+        mo->name == "unnamed" ? "(Not Symbolic)" : mo->name + " (Symbolic)";
     *(executor.kqueryDumpFileptr)
         << "\nLocation : " << target->getSourceLocation();
     *(executor.kqueryDumpFileptr) << "\nGiven Name : " << name;
     *(executor.kqueryDumpFileptr) << "\nVariable Type : " << varName;
-    *(executor.kqueryDumpFileptr) << "\n" << old->printSymbolic(1 << 5);
+    *(executor.kqueryDumpFileptr)
+        << "\nValue : [[\n"
+        << old->printSymbolic(1 << 5) << "]]\n---$---\n";
   }
 }
 
-/// COMMENT : Dump all path constraints and not just state conditions.
+// COMMENT : Dump all path constraints and not just state conditions.
 void SpecialFunctionHandler::handleGetKQueryExpression(
     ExecutionState &state, KInstruction *target,
     std::vector<ref<Expr>> &arguments) {
