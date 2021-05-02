@@ -1,4 +1,4 @@
-# RUN: kleaver --print-ast %s
+# RUN: %kleaver --print-ast %s
 
 array arr1[8] : w32 -> w8 = symbolic
 (query [(Eq 0

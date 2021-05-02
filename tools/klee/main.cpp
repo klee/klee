@@ -782,8 +782,10 @@ static const char *modelledExternals[] = {
   "klee_warning",
   "klee_warning_once",
   "klee_stack_trace",
+#ifdef SUPPORT_KLEE_EH_CXX
   "_klee_eh_Unwind_RaiseException_impl",
   "klee_eh_typeid_for",
+#endif
   "llvm.dbg.declare",
   "llvm.dbg.value",
   "llvm.va_start",
@@ -1287,15 +1289,15 @@ int main(int argc, char **argv, char **envp) {
 
   if (Libcxx) {
 #ifndef SUPPORT_KLEE_LIBCXX
-    klee_error("KLEE was not compiled with Libcxx support");
+    klee_error("KLEE was not compiled with libc++ support");
 #else
     SmallString<128> LibcxxBC(Opts.LibraryDir);
     llvm::sys::path::append(LibcxxBC, KLEE_LIBCXX_BC_NAME);
     if (!klee::loadFile(LibcxxBC.c_str(), mainModule->getContext(), loadedModules,
                         errorMsg))
-      klee_error("error loading libcxx '%s': %s", LibcxxBC.c_str(),
+      klee_error("error loading libc++ '%s': %s", LibcxxBC.c_str(),
                  errorMsg.c_str());
-    klee_message("NOTE: Using libcxx : %s", LibcxxBC.c_str());
+    klee_message("NOTE: Using libc++ : %s", LibcxxBC.c_str());
 #ifdef SUPPORT_KLEE_EH_CXX
     SmallString<128> EhCxxPath(Opts.LibraryDir);
     llvm::sys::path::append(EhCxxPath, "libkleeeh-cxx" + opt_suffix + ".bca");
@@ -1303,6 +1305,9 @@ int main(int argc, char **argv, char **envp) {
                         loadedModules, errorMsg))
       klee_error("error loading libklee-eh-cxx '%s': %s", EhCxxPath.c_str(),
                  errorMsg.c_str());
+    klee_message("NOTE: Enabled runtime support for C++ exceptions");
+#else
+    klee_message("NOTE: KLEE was not compiled with support for C++ exceptions");
 #endif
 #endif
   }

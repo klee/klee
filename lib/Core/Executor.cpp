@@ -288,10 +288,12 @@ cl::list<Executor::TerminateReason> ExitOnErrorType(
         clEnumValN(Executor::ReportError, "ReportError",
                    "klee_report_error called"),
         clEnumValN(Executor::User, "User", "Wrong klee_* functions invocation"),
+#ifdef SUPPORT_KLEE_EH_CXX
         clEnumValN(Executor::UncaughtException, "UncaughtException",
                    "Exception was not caught"),
         clEnumValN(Executor::UnexpectedException, "UnexpectedException",
                    "An unexpected exception was thrown"),
+#endif
         clEnumValN(Executor::Unhandled, "Unhandled",
                    "Unhandled instruction hit") KLEE_LLVM_CL_VAL_END),
     cl::ZeroOrMore,
@@ -361,6 +363,12 @@ cl::opt<double> MaxStaticCPSolvePct(
     cl::desc("Maximum percentage of solving time that can be spent by a single "
              "instruction of a call path over total solving time for all "
              "instructions (default=1.0 (always))"),
+    cl::cat(TerminationCat));
+
+cl::opt<unsigned> MaxStaticPctCheckDelay(
+    "max-static-pct-check-delay",
+    cl::desc("Number of forks after which the --max-static-*-pct checks are enforced (default=1000)"),
+    cl::init(1000),
     cl::cat(TerminationCat));
 
 cl::opt<std::string> TimerInterval(
@@ -441,8 +449,10 @@ const char *Executor::TerminateReasonNames[] = {
   [ ReadOnly ] = "readonly",
   [ ReportError ] = "reporterror",
   [ User ] = "user",
+#ifdef SUPPORT_KLEE_EH_CXX
   [ UncaughtException ] = "uncaught_exception",
   [ UnexpectedException ] = "unexpected_exception",
+#endif
   [ Unhandled ] = "xxx",
 };
 
@@ -958,6 +968,62 @@ void Executor::branch(ExecutionState &state,
       addConstraint(*result[i], conditions[i]);
 }
 
+ref<Expr> Executor::maxStaticPctChecks(ExecutionState &current,
+                                       ref<Expr> condition) {
+  if (isa<klee::ConstantExpr>(condition))
+    return condition;
+
+  if (MaxStaticForkPct == 1. && MaxStaticSolvePct == 1. &&
+      MaxStaticCPForkPct == 1. && MaxStaticCPSolvePct == 1.)
+    return condition;
+
+  // These checks are performed only after at least MaxStaticPctCheckDelay forks
+  // have been performed since execution started
+  if (stats::forks < MaxStaticPctCheckDelay)
+    return condition;
+
+  StatisticManager &sm = *theStatisticManager;
+  CallPathNode *cpn = current.stack.back().callPathNode;
+
+  bool reached_max_fork_limit =
+      (MaxStaticForkPct < 1. &&
+       (sm.getIndexedValue(stats::forks, sm.getIndex()) >
+        stats::forks * MaxStaticForkPct));
+
+  bool reached_max_cp_fork_limit = (MaxStaticCPForkPct < 1. && cpn &&
+                                    (cpn->statistics.getValue(stats::forks) >
+                                     stats::forks * MaxStaticCPForkPct));
+
+  bool reached_max_solver_limit =
+      (MaxStaticSolvePct < 1 &&
+       (sm.getIndexedValue(stats::solverTime, sm.getIndex()) >
+        stats::solverTime * MaxStaticSolvePct));
+
+  bool reached_max_cp_solver_limit =
+      (MaxStaticCPForkPct < 1. && cpn &&
+       (cpn->statistics.getValue(stats::solverTime) >
+        stats::solverTime * MaxStaticCPSolvePct));
+
+  if (reached_max_fork_limit || reached_max_cp_fork_limit ||
+      reached_max_solver_limit || reached_max_cp_solver_limit) {
+    ref<klee::ConstantExpr> value;
+    bool success = solver->getValue(current.constraints, condition, value,
+                                    current.queryMetaData);
+    assert(success && "FIXME: Unhandled solver failure");
+    (void)success;
+
+    std::string msg("skipping fork and concretizing condition (MaxStatic*Pct "
+                    "limit reached) at ");
+    llvm::raw_string_ostream os(msg);
+    os << current.prevPC->getSourceLocation();
+    klee_warning_once(0, "%s", os.str().c_str());
+
+    addConstraint(current, EqExpr::create(value, condition));
+    condition = value;
+  }
+  return condition;
+}
+
 Executor::StatePair 
 Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   Solver::Validity res;
@@ -965,33 +1031,8 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     seedMap.find(&current);
   bool isSeeding = it != seedMap.end();
 
-  if (!isSeeding && !isa<ConstantExpr>(condition) && 
-      (MaxStaticForkPct!=1. || MaxStaticSolvePct != 1. ||
-       MaxStaticCPForkPct!=1. || MaxStaticCPSolvePct != 1.) &&
-      statsTracker->elapsed() > time::seconds(60)) {
-    StatisticManager &sm = *theStatisticManager;
-    CallPathNode *cpn = current.stack.back().callPathNode;
-    if ((MaxStaticForkPct<1. &&
-         sm.getIndexedValue(stats::forks, sm.getIndex()) > 
-         stats::forks*MaxStaticForkPct) ||
-        (MaxStaticCPForkPct<1. &&
-         cpn && (cpn->statistics.getValue(stats::forks) > 
-                 stats::forks*MaxStaticCPForkPct)) ||
-        (MaxStaticSolvePct<1 &&
-         sm.getIndexedValue(stats::solverTime, sm.getIndex()) > 
-         stats::solverTime*MaxStaticSolvePct) ||
-        (MaxStaticCPForkPct<1. &&
-         cpn && (cpn->statistics.getValue(stats::solverTime) > 
-                 stats::solverTime*MaxStaticCPSolvePct))) {
-      ref<ConstantExpr> value;
-      bool success = solver->getValue(current.constraints, condition, value,
-                                      current.queryMetaData);
-      assert(success && "FIXME: Unhandled solver failure");
-      (void) success;
-      addConstraint(current, EqExpr::create(value, condition));
-      condition = value;
-    }
-  }
+  if (!isSeeding)
+    condition = maxStaticPctChecks(current, condition);
 
   time::Span timeout = coreSolverTimeout;
   if (isSeeding)
@@ -1743,10 +1784,12 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       break;
     }
 
+#ifdef SUPPORT_KLEE_EH_CXX
     case Intrinsic::eh_typeid_for: {
       bindLocal(ki, state, getEhTypeidFor(arguments.at(0)));
       break;
     }
+#endif
 
     case Intrinsic::vaend:
       // va_end is a noop for the interpreter.
@@ -1766,14 +1809,8 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       return;
     }
 
-    // __cxa_throw & _rethrow are already handled in their
-    // SpecialFunctionHandlers and have already been redirected to their unwind
-    // destinations, so we must not transfer them to their regular targets.
     if (InvokeInst *ii = dyn_cast<InvokeInst>(i)) {
-      if (f->getName() != std::string("__cxa_throw") &&
-          f->getName() != std::string("__cxa_rethrow")) {
-        transferToBasicBlock(ii->getNormalDest(), i->getParent(), state);
-      }
+      transferToBasicBlock(ii->getNormalDest(), i->getParent(), state);
     }
   } else {
     // Check if maximum stack size was reached.
@@ -2026,6 +2063,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         ++state.pc;
       }
 
+#ifdef SUPPORT_KLEE_EH_CXX
       if (ri->getFunction()->getName() == "_klee_eh_cxx_personality") {
         assert(dyn_cast<ConstantExpr>(result) &&
                "result from personality fn must be a concrete value");
@@ -2059,6 +2097,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         // never return normally from the personality fn
         break;
       }
+#endif // SUPPORT_KLEE_EH_CXX
 
       if (!isVoidReturn) {
         Type *t = caller->getType();
@@ -3152,6 +3191,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     terminateStateOnExecError(state, "Unexpected ShuffleVector instruction");
     break;
 
+#ifdef SUPPORT_KLEE_EH_CXX
   case Instruction::Resume: {
     auto *cui = dyn_cast_or_null<CleanupPhaseUnwindingInformation>(
         state.unwindingInformation.get());
@@ -3230,6 +3270,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     break;
   }
+#endif // SUPPORT_KLEE_EH_CXX
 
   case Instruction::AtomicRMW:
     terminateStateOnExecError(state, "Unexpected Atomic instruction, should be "
