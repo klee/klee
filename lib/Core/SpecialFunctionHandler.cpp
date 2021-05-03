@@ -903,8 +903,7 @@ void SpecialFunctionHandler::handleGetSymbolicDetails(
     *(executor.kqueryDumpFileptr) << "\nGiven Name : " << name;
     *(executor.kqueryDumpFileptr) << "\nVariable Type : " << varName;
     *(executor.kqueryDumpFileptr)
-        << "\nValue : [[\n"
-        << old->printSymbolic(1 << 5) << "]]\n---$---\n";
+        << "\nValue : [[ " << old->printSymbolic(1 << 5) << " ]]\n---$---\n";
   }
 }
 

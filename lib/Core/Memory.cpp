@@ -578,6 +578,6 @@ void ObjectState::print() const {
 std::string ObjectState::printSymbolic(uint64_t readsize) const {
   std::stringstream ss("");
   ref<Expr> e = read(0, readsize);
-  ss << e << "\n";
+  ss << e;
   return ss.str();
 }
