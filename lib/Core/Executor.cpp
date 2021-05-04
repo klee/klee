@@ -2506,12 +2506,29 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // Special instructions
   case Instruction::Select: {
-    // COMMENT : Ternary Operator
+    // COMMENT : Ternary Operator (No fork Happens)
     // NOTE: It is not required that operands 1 and 2 be of scalar type.
     ref<Expr> cond = eval(ki, 0, state).value;
     ref<Expr> tExpr = eval(ki, 1, state).value;
     ref<Expr> fExpr = eval(ki, 2, state).value;
     ref<Expr> result = SelectExpr::create(cond, tExpr, fExpr);
+    std::vector<std::string> InstructionInfo = ki->getLocationInfo();
+
+    // COMMENT: Do linked files always have "/" in path? May need a fix later.
+    if (InstructionInfo.size() > 0 &&
+        InstructionInfo[0].find("/") == std::string::npos) {
+      printSExpr = true;
+      *conditionsDump << "{\n\tFile : " << InstructionInfo[0]
+                      << ",\n\tLine : " << InstructionInfo[1]
+                      << ",\n\tPredicate : " << InstructionInfo[2]
+                      << ",\n\tBranch Predicate : " << cond
+                      << ",\n\tNegate Predicate : " << Expr::createIsZero(cond)
+                      << ",\n\tExpression : "
+                      << "ite (" << cond << " (" << tExpr << ")(" << fExpr
+                      << ")),\n";
+    } else {
+      printSExpr = false;
+    }
     bindLocal(ki, state, result);
     break;
   }
