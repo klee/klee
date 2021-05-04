@@ -1184,10 +1184,10 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
 
     // COMMENT : Print the State level constraints.
     if (printSExpr) {
-      dumpPTree();
+      // dumpPTree();
       std::stringstream sso("");
       *conditionsDump
-          << "\tCurrent State Id : "
+          << "\tFork : True,\n\tCurrent State Id : "
           << (current.getID() > 0 ? current.getID() : -1)
           << ",\n\tTrue KLEE Id : "
           << (trueState->getID() > 0 ? trueState->getID() : -1)
