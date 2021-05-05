@@ -2521,11 +2521,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       *conditionsDump << "{\n\tFile : " << InstructionInfo[0]
                       << ",\n\tLine : " << InstructionInfo[1]
                       << ",\n\tPredicate : " << InstructionInfo[2]
-                      << ",\n\tBranch Predicate : " << cond
-                      << ",\n\tNegate Predicate : " << Expr::createIsZero(cond)
                       << ",\n\tExpression : "
                       << "ite (" << cond << " (" << tExpr << ")(" << fExpr
-                      << ")),\n";
+                      << ")),\n}";
     } else {
       printSExpr = false;
     }

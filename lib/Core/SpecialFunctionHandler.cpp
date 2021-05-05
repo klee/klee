@@ -525,6 +525,12 @@ void SpecialFunctionHandler::handleAssume(ExecutionState &state,
     }
   } else {
     executor.addConstraint(state, e);
+    std::stringstream KQueryRawStringStream("");
+    KQueryRawStringStream << "\nState Id : " << state.getID();
+    KQueryRawStringStream << "\nklee_assume : " << target->getSourceLocation()
+                          << "\n";
+    KQueryRawStringStream << arguments[0] << "\n";
+    *(executor.kqueryDumpFileptr) << KQueryRawStringStream.str();
   }
 }
 
@@ -916,13 +922,13 @@ void SpecialFunctionHandler::handleGetKQueryExpression(
   std::string result = "";
   executor.getConstraintLog((state), result, klee::Interpreter::KQUERY);
   KQueryRawStringStream << "\nState Id : " << state.getID();
-  KQueryRawStringStream << ", New Query : at " << target->getSourceLocation()
-                        << " --> \n\n";
+  KQueryRawStringStream << "\nNew Query : " << target->getSourceLocation()
+                        << "\n";
   KQueryRawStringStream << result << "\n";
   executor.getConstraintLog((state), result, klee::Interpreter::SMTLIB2);
   SMTLIBRawStringStream << "\nState Id : " << state.getID();
-  SMTLIBRawStringStream << ", New Query : at " << target->getSourceLocation()
-                        << " --> \n\n";
+  SMTLIBRawStringStream << "\nNew Query : " << target->getSourceLocation()
+                        << "\n";
   SMTLIBRawStringStream << result << "\n";
   *(executor.kqueryDumpFileptr) << KQueryRawStringStream.str();
   *(executor.smtlib2DumpFileptr) << SMTLIBRawStringStream.str();
