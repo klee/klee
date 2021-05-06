@@ -34,6 +34,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <vector>
 #include <llvm/IR/Intrinsics.h>
 
@@ -167,9 +168,9 @@ private:
   /// globals that have no representative object (i.e. functions).
   std::map<const llvm::GlobalValue*, ref<ConstantExpr> > globalAddresses;
 
-  /// The set of legal function addresses, used to validate function
-  /// pointers. We use the actual Function* address as the function address.
-  std::set<uint64_t> legalFunctions;
+  /// Map of legal function addresses to the corresponding Function.
+  /// Used to validate and dereference function pointers.
+  std::unordered_map<std::uint64_t, llvm::Function*> legalFunctions;
 
   /// When non-null the bindings that will be used for calls to
   /// klee_make_symbolic in order replay.
