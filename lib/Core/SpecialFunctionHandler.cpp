@@ -527,9 +527,11 @@ void SpecialFunctionHandler::handleAssume(ExecutionState &state,
     executor.addConstraint(state, e);
     std::stringstream KQueryRawStringStream("");
     KQueryRawStringStream << "\nState Id : " << state.getID();
-    KQueryRawStringStream << "\nklee_assume : " << target->getSourceLocation()
-                          << "\n";
-    KQueryRawStringStream << arguments[0] << "\n";
+    KQueryRawStringStream
+        << "\nLocation : " << target->getSourceLocation() << "\nState : "
+        << state.constraints.printConstraintSetTY(KQueryRawStringStream).str()
+        << "\nklee_assume() : ";
+    KQueryRawStringStream << e << "\n\n";
     *(executor.kqueryDumpFileptr) << KQueryRawStringStream.str();
   }
 }
