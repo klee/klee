@@ -4553,6 +4553,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     const MemoryObject *mo = i->first;
     const ObjectState *os = i->second;
 
+    if (mo->isGlobal) break;
     ref<Expr> inBounds;
     if (UseGEPExpr && isa<GEPExpr>(address))
       inBounds = mo->getBoundsCheckPointer(dyn_cast<GEPExpr>(address)->base, 1);
