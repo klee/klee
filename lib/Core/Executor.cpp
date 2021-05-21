@@ -3710,10 +3710,13 @@ KBlock* Executor::calculateTarget(ExecutionState &state) {
       if ((sfNum >0 || distance > 0) && distance < minDistance) {
         if (history[target->basicBlock].size() != 0) {
           std::vector<BasicBlock*> diff;
-          if (!newCov)
-            std::set_difference(state.level.begin(), state.level.end(),
-                                history[target->basicBlock].begin(), history[target->basicBlock].end(),
+          if (!newCov) {
+            std::set<BasicBlock*> left(state.level.begin(), state.level.end());
+            std::set<BasicBlock*> right(history[target->basicBlock].begin(), history[target->basicBlock].end());
+            std::set_difference(left.begin(), left.end(),
+                                right.begin(), right.end(),
                                 std::inserter(diff, diff.begin()));
+          }
           if (diff.empty()) {
             continue;
           }
