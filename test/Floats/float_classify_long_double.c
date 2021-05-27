@@ -12,7 +12,7 @@
 int main() {
   long double x, y, z;
   klee_make_symbolic(&x, sizeof(long double), "x");
-  switch (fpclassify(x)) {
+  switch (__fpclassifyl(x)) {
   case FP_NAN:
     printf("nan\n");
     assert(isnan(x));

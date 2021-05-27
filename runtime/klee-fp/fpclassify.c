@@ -27,86 +27,37 @@ int klee_internal_isnanl(long double d) {
   return klee_is_nan_long_double(d);
 }
 
-/*
- * These are now implemented in klee_internal_is_inf.ll
-// __isinff
-// returns 1 if +inf, 0 is not infinite, -1 if -inf
-int klee_internal_isinff(float f) {
-  _Bool isinf = klee_is_infinite_float(f);
-  return isinf ? (f > 0 ? 1 : -1) : 0;
-}
-
-// __isinf
-// returns 1 if +inf, 0 is not infinite, -1 if -inf
-int klee_internal_isinf(double d) {
-  _Bool isinf = klee_is_infinite_double(d);
-  return isinf ? (d > 0 ? 1 : -1) : 0;
-}
-
-// __isinfl
-// returns 1 if +inf, 0 is not infinite, -1 if -inf
-int klee_internal_isinfl(long double d) {
-  _Bool isinf = klee_is_infinite_long_double(d);
-  return isinf ? (d > 0 ? 1 : -1) : 0;
-}
-*/
-
-
-// HACK: Taken from ``math.h``. I don't want
-// include all of ``math.h`` just for this enum
-// so just make a copy here for now
-enum {
-  FP_NAN = 0,
-  FP_INFINITE = 1,
-  FP_ZERO = 2,
-  FP_SUBNORMAL = 3,
-  FP_NORMAL = 4
-};
-
 // __fpclassifyf
 int klee_internal_fpclassifyf(float f) {
-  // Do we want a version of this that doesn't fork?
-  if (klee_is_nan_float(f)) {
-    return FP_NAN;
-  } else if (klee_is_infinite_float(f)) {
-    return FP_INFINITE;
-  } else if (f == 0.0f) {
-    return FP_ZERO;
-  } else if (klee_is_normal_float(f)) {
-    return FP_NORMAL;
-  }
-  return FP_SUBNORMAL;
+/*
+ * This version acts like a switch case which returns correct
+ * float type from the enum, but itself does not fork
+*/
+  int b = klee_is_infinite_float(f);
+  int c = (f == 0.0f);
+  int d = klee_is_subnormal_float(f);
+  int x = klee_is_normal_float(f);
+  return ((x << 2) | ((c | d) << 1) | (b | d));
+
 }
 
 // __fpclassify
 int klee_internal_fpclassify(double f) {
-  // Do we want a version of this that doesn't fork?
-  if (klee_is_nan_double(f)) {
-    return FP_NAN;
-  } else if (klee_is_infinite_double(f)) {
-    return FP_INFINITE;
-  } else if (f == 0.0) {
-    return FP_ZERO;
-  } else if (klee_is_normal_double(f)) {
-    return FP_NORMAL;
-  }
-  return FP_SUBNORMAL;
+  int b = klee_is_infinite_double(f);
+  int c = (f == 0.0f);
+  int d = klee_is_subnormal_double(f);
+  int x = klee_is_normal_double(f);
+  return ((x << 2) | ((c | d) << 1) | (b | d));
 }
 
 // __fpclassifyl
 #if defined(__x86_64__) || defined(__i386__)
-int klee_internal_fpclassifyl(long double ld) {
-  // Do we want a version of this that doesn't fork?
-  if (klee_is_nan_long_double(ld)) {
-    return FP_NAN;
-  } else if (klee_is_infinite_long_double(ld)) {
-    return FP_INFINITE;
-  } else if (ld == 0.0l) {
-    return FP_ZERO;
-  } else if (klee_is_normal_long_double(ld)) {
-    return FP_NORMAL;
-  }
-  return FP_SUBNORMAL;
+int klee_internal_fpclassifyl(long double f) {
+  int b = klee_is_infinite_long_double(f);
+  int c = (f == 0.0f);
+  int d = klee_is_subnormal_long_double(f);
+  int x = klee_is_normal_long_double(f);
+  return ((x << 2) | ((c | d) << 1) | (b | d));
 }
 #endif
 

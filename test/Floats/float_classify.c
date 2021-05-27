@@ -11,7 +11,7 @@
 int main() {
   float x, y, z;
   klee_make_symbolic(&x, sizeof(float), "x");
-  switch (fpclassify(x)) {
+  switch (__fpclassifyf(x)) {
   case FP_NAN:
     printf("nan\n");
     assert(isnan(x));
