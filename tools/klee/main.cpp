@@ -190,18 +190,18 @@ namespace {
                              cl::init(false),
                              cl::cat(LinkCat));
 
-  cl::opt<bool>
-          WithFPRuntime("fp-runtime",
-                      cl::desc("Link with floating-point KLEE library."),
-                      cl::init(false),
-                          cl::cat(LinkCat));
+    cl::opt<bool>
+            WithFPRuntime("fp-runtime",
+                        cl::desc("Link with floating-point KLEE library."),
+                        cl::init(false),
+                            cl::cat(LinkCat));
 
-  cl::opt<std::string> RuntimeBuild(
-          "runtime-build",
-          cl::desc("Link with versions of the runtime library that were built with "
-                   "the provided configuration (default=" RUNTIME_CONFIGURATION
-                   ")."),
-          cl::init(RUNTIME_CONFIGURATION), cl::cat(LinkCat));
+    cl::opt<std::string> RuntimeBuild(
+            "runtime-build",
+            cl::desc("Link with versions of the runtime library that were built with "
+                     "the provided configuration (default=" RUNTIME_CONFIGURATION
+                     ")."),
+            cl::init(RUNTIME_CONFIGURATION), cl::cat(LinkCat));
 
     /*** Checks options ***/
 
@@ -792,10 +792,8 @@ static const char *modelledExternals[] = {
         "klee_warning",
         "klee_warning_once",
         "klee_stack_trace",
-      #ifdef SUPPORT_KLEE_EH_CXX
-  "_klee_eh_Unwind_RaiseException_impl",
-  "klee_eh_typeid_for",
-#endif
+      #ifdef SUPPORT_KLEE_EH_CXX  "_klee_eh_Unwind_RaiseException_impl",
+        "klee_eh_typeid_for",#endif
         "llvm.dbg.declare",
         "llvm.dbg.value",
         "llvm.va_start",
@@ -1307,7 +1305,7 @@ int main(int argc, char **argv, char **envp) {
             /*Optimize=*/OptimizeModule,
             /*CheckDivZero=*/CheckDivZero,
             /*CheckOvershift=*/CheckOvershift,
-            /*WithFPRuntime=*/WithFPRuntime);
+                                  /*WithFPRuntime=*/WithFPRuntime);
 
     if (WithPOSIXRuntime) {
         SmallString<128> Path(Opts.LibraryDir);
@@ -1631,14 +1629,14 @@ int main(int argc, char **argv, char **envp) {
 
     std::stringstream stats;
     stats << '\n'
-        << "KLEE: done: total instructions = " << instructions << '\n'
+     << "KLEE: done: total instructions = " << instructions << '\n'
           << "KLEE: done: completed paths = " << handler->getNumPathsCompleted()
         << '\n'
-        << "KLEE: done: partially completed paths = "
-        << handler->getNumPathsExplored() - handler->getNumPathsCompleted()
+     << "KLEE: done: partiallycompleted paths = "
+          << handler->getNumPathsExplored() - handler->getNumPathsCompleted()
         << '\n'
-        << "KLEE: done: generated tests = " << handler->getNumTestCases()
-        << '\n';
+     << "KLEE: done: generated tests = "
+          << handler->getNumTestCases() << '\n';
 
     bool useColors = llvm::errs().is_displayed();
     if (useColors)
