@@ -1720,6 +1720,35 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       break;
     }
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(12, 0)
+    case Intrinsic::smax:
+    case Intrinsic::smin:
+    case Intrinsic::umax:
+    case Intrinsic::umin: {
+      if (isa<VectorType>(i->getOperand(0)->getType()) ||
+          isa<VectorType>(i->getOperand(1)->getType()))
+        return terminateStateOnExecError(
+            state, "llvm.{s,u}{max,min} with vectors is not supported");
+
+      ref<Expr> op1 = eval(ki, 1, state).value;
+      ref<Expr> op2 = eval(ki, 2, state).value;
+
+      ref<Expr> cond = nullptr;
+      if (f->getIntrinsicID() == Intrinsic::smax)
+        cond = SgtExpr::create(op1, op2);
+      else if (f->getIntrinsicID() == Intrinsic::smin)
+        cond = SltExpr::create(op1, op2);
+      else if (f->getIntrinsicID() == Intrinsic::umax)
+        cond = UgtExpr::create(op1, op2);
+      else // (f->getIntrinsicID() == Intrinsic::umin)
+        cond = UltExpr::create(op1, op2);
+
+      ref<Expr> result = SelectExpr::create(cond, op1, op2);
+      bindLocal(ki, state, result);
+      break;
+    }
+#endif
+
 #if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
     case Intrinsic::fshr:
     case Intrinsic::fshl: {
