@@ -398,6 +398,9 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       case Intrinsic::readcyclecounter:
       case Intrinsic::returnaddress:
       case Intrinsic::round:
+#if LLVM_VERSION_CODE >= LLVM_VERSION(11, 0)
+      case Intrinsic::roundeven:
+#endif
       case Intrinsic::sin:
       case Intrinsic::sqrt:
       case Intrinsic::stackrestore:
