@@ -792,8 +792,10 @@ static const char *modelledExternals[] = {
         "klee_warning",
         "klee_warning_once",
         "klee_stack_trace",
-      #ifdef SUPPORT_KLEE_EH_CXX  "_klee_eh_Unwind_RaiseException_impl",
-        "klee_eh_typeid_for",#endif
+      #ifdef SUPPORT_KLEE_EH_CXX
+        "_klee_eh_Unwind_RaiseException_impl",
+        "klee_eh_typeid_for",
+      #endif
         "llvm.dbg.declare",
         "llvm.dbg.value",
         "llvm.va_start",
@@ -1632,7 +1634,7 @@ int main(int argc, char **argv, char **envp) {
      << "KLEE: done: total instructions = " << instructions << '\n'
           << "KLEE: done: completed paths = " << handler->getNumPathsCompleted()
         << '\n'
-     << "KLEE: done: partiallycompleted paths = "
+     << "KLEE: done: partially completed paths = "
           << handler->getNumPathsExplored() - handler->getNumPathsCompleted()
         << '\n'
      << "KLEE: done: generated tests = "

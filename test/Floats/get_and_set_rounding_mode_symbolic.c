@@ -43,4 +43,5 @@ int main() {
 // CHECK-DAG: KLEE_FP_RD
 // CHECK-DAG: KLEE_FP_RZ
 
-// CHECK-DAG: KLEE: done: completed paths = 6
+// CHECK-DAG: KLEE: done: completed paths = 5
+// CHECK-DAG: KLEE: done: partially completed paths = 1

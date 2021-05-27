@@ -48,4 +48,5 @@ int main() {
 // CHECK-DAG: FE_DOWNWARD
 // CHECK-DAG: FE_TOWARDZERO
 
-// CHECK-DAG: KLEE: done: completed paths = 5
+// CHECK-DAG: KLEE: done: completed paths = 4
+// CHECK-DAG: KLEE: done: partially completed paths = 1
