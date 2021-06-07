@@ -37,6 +37,12 @@ run_tests() {
   # TODO change to pinpoint specific directory
   cd "${build_dir}"
 
+  # Remove klee from PATH
+  export PATH=${PATH%":/home/klee/klee_build/bin"}
+  if which klee; then
+    return 1 # should not happen
+  fi
+
   ###############################################################################
   # Unit tests
   ###############################################################################

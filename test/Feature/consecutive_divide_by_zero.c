@@ -25,7 +25,8 @@ int main() {
   // CHECK: consecutive_divide_by_zero.c:[[@LINE+1]]: divide by zero
   unsigned int result2 = b / d2;
 
-  // CHECK: completed paths = 3
+  // CHECK: completed paths = 1
+  // CHECK: partially completed paths = 2
   // CHECK: generated tests = 3
   return 0;
 }

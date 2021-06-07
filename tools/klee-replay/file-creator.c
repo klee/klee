@@ -49,10 +49,15 @@ static void check_file(int index, exe_disk_file_t *dfile);
 static int create_link(const char *fname,
                        exe_disk_file_t *dfile,
                        const char *tmpdir) {
-  char buf[64];
+  char buf[PATH_MAX];
   struct stat64 *s = dfile->stat;
 
-  snprintf(buf, sizeof(buf), "%s.lnk", fname);
+  // make sure that the .lnk suffix is not truncated
+  if (snprintf(buf, sizeof buf, "%s.lnk", fname) >= PATH_MAX) {
+    fputs("create_link: fname is too long for additional .lnk suffix", stderr);
+    return -1;
+  }
+
   s->st_mode = (s->st_mode & ~S_IFMT) | S_IFREG;
   create_file(-1, buf, dfile, tmpdir);
 

@@ -291,7 +291,8 @@ private:
 
   unsigned m_numTotalTests;     // Number of tests received from the interpreter
   unsigned m_numGeneratedTests; // Number of tests successfully generated
-  unsigned m_pathsExplored;     // number of paths explored so far
+  unsigned m_pathsCompleted; // number of completed paths
+  unsigned m_pathsExplored; // number of partially explored and completed paths
 
   // used for writing .ktest files
   int m_argc;
@@ -304,8 +305,11 @@ public:
   llvm::raw_ostream &getInfoStream() const { return *m_infoFile; }
   /// Returns the number of test cases successfully generated so far
   unsigned getNumTestCases() { return m_numGeneratedTests; }
+  unsigned getNumPathsCompleted() { return m_pathsCompleted; }
   unsigned getNumPathsExplored() { return m_pathsExplored; }
-  void incPathsExplored() { m_pathsExplored++; }
+  void incPathsCompleted() { ++m_pathsCompleted; }
+  void incPathsExplored(std::uint32_t num = 1) {
+    m_pathsExplored += num; }
 
   void setInterpreter(Interpreter *i);
 
@@ -331,7 +335,7 @@ public:
 KleeHandler::KleeHandler(int argc, char **argv)
     : m_interpreter(0), m_pathWriter(0), m_symPathWriter(0),
       m_outputDirectory(), m_numTotalTests(0), m_numGeneratedTests(0),
-      m_pathsExplored(0), m_argc(argc), m_argv(argv) {
+      m_pathsCompleted(0), m_pathsExplored(0), m_argc(argc), m_argv(argv) {
 
   // create output directory (OutputDir or "klee-out-<i>")
   bool dir_given = OutputDir != "";
@@ -730,67 +734,65 @@ static const char *modelledExternals[] = {
     "_ZTVN10__cxxabiv120__si_class_type_infoE",
     "_ZTVN10__cxxabiv121__vmi_class_type_infoE",
 
-    // special functions
-    "_assert",
-    "__assert_fail",
-    "__assert_rtn",
-    "__errno_location",
-    "__error",
-    "calloc",
-    "_exit",
-    "exit",
-    "free",
-    "abort",
-    "klee_abort",
-    "klee_assume",
-    "klee_check_memory_access",
-    "klee_define_fixed_object",
-    "klee_get_errno",
-    "klee_get_valuef",
-    "klee_get_valued",
-    "klee_get_valuel",
-    "klee_get_valuell",
-    "klee_get_value_i32",
-    "klee_get_value_i64",
-    "klee_get_obj_size",
-    "klee_is_symbolic",
-    "klee_make_symbolic",
-    "klee_make_pse_symbolic",
-    "klee_dump_kquery_state",
-    "klee_dump_symbolic_details",
-    "klee_dump_state_stack"
-    "klee_mark_global",
-    "klee_open_merge",
-    "klee_close_merge",
-    "klee_prefer_cex",
-    "klee_posix_prefer_cex",
-    "klee_print_expr",
-    "klee_print_range",
-    "klee_report_error",
-    "klee_set_forking",
-    "klee_silent_exit",
-    "klee_warning",
-    "klee_warning_once",
-    "klee_stack_trace",
-    "_klee_eh_Unwind_RaiseException_impl",
-    "klee_eh_typeid_for",
-    "llvm.dbg.declare",
-    "llvm.dbg.value",
-    "llvm.va_start",
-    "llvm.va_end",
-    "malloc",
-    "realloc",
-    "memalign",
-    "_ZdaPv",
-    "_ZdlPv",
-    "_Znaj",
-    "_Znwj",
-    "_Znam",
-    "_Znwm",
-    "__ubsan_handle_add_overflow",
-    "__ubsan_handle_sub_overflow",
-    "__ubsan_handle_mul_overflow",
-    "__ubsan_handle_divrem_overflow",
+  // special functions
+  "_assert",
+  "__assert_fail",
+  "__assert_rtn",
+  "__errno_location",
+  "__error",
+  "calloc",
+  "_exit",
+  "exit",
+  "free",
+  "abort",
+  "klee_abort",
+  "klee_assume",
+  "klee_check_memory_access",
+  "klee_define_fixed_object",
+  "klee_get_errno",
+  "klee_get_valuef",
+  "klee_get_valued",
+  "klee_get_valuel",
+  "klee_get_valuell",
+  "klee_get_value_i32",
+  "klee_get_value_i64",
+  "klee_get_obj_size",
+  "klee_is_symbolic",
+  "klee_make_symbolic",
+  "klee_mark_global",
+  "klee_open_merge",
+  "klee_close_merge",
+  "klee_prefer_cex",
+  "klee_posix_prefer_cex",
+  "klee_print_expr",
+  "klee_print_range",
+  "klee_report_error",
+  "klee_set_forking",
+  "klee_silent_exit",
+  "klee_warning",
+  "klee_warning_once",
+  "klee_stack_trace",
+#ifdef SUPPORT_KLEE_EH_CXX
+  "_klee_eh_Unwind_RaiseException_impl",
+  "klee_eh_typeid_for",
+#endif
+  "llvm.dbg.declare",
+  "llvm.dbg.value",
+  "llvm.va_start",
+  "llvm.va_end",
+  "malloc",
+  "realloc",
+  "memalign",
+  "_ZdaPv",
+  "_ZdlPv",
+  "_Znaj",
+  "_Znwj",
+  "_Znam",
+  "_Znwm",
+  "__ubsan_handle_add_overflow",
+  "__ubsan_handle_sub_overflow",
+  "__ubsan_handle_mul_overflow",
+  "__ubsan_handle_divrem_overflow",
 };
 
 // Symbols we aren't going to warn about
@@ -1263,15 +1265,15 @@ int main(int argc, char **argv, char **envp) {
 
   if (Libcxx) {
 #ifndef SUPPORT_KLEE_LIBCXX
-    klee_error("KLEE was not compiled with Libcxx support");
+    klee_error("KLEE was not compiled with libc++ support");
 #else
     SmallString<128> LibcxxBC(Opts.LibraryDir);
     llvm::sys::path::append(LibcxxBC, KLEE_LIBCXX_BC_NAME);
-    if (!klee::loadFile(LibcxxBC.c_str(), mainModule->getContext(),
-                        loadedModules, errorMsg))
-      klee_error("error loading libcxx '%s': %s", LibcxxBC.c_str(),
+    if (!klee::loadFile(LibcxxBC.c_str(), mainModule->getContext(), loadedModules,
+                        errorMsg))
+      klee_error("error loading libc++ '%s': %s", LibcxxBC.c_str(),
                  errorMsg.c_str());
-    klee_message("NOTE: Using libcxx : %s", LibcxxBC.c_str());
+    klee_message("NOTE: Using libc++ : %s", LibcxxBC.c_str());
 #ifdef SUPPORT_KLEE_EH_CXX
     SmallString<128> EhCxxPath(Opts.LibraryDir);
     llvm::sys::path::append(EhCxxPath, "libkleeeh-cxx" + opt_suffix + ".bca");
@@ -1279,6 +1281,9 @@ int main(int argc, char **argv, char **envp) {
                         loadedModules, errorMsg))
       klee_error("error loading libklee-eh-cxx '%s': %s", EhCxxPath.c_str(),
                  errorMsg.c_str());
+    klee_message("NOTE: Enabled runtime support for C++ exceptions");
+#else
+    klee_message("NOTE: KLEE was not compiled with support for C++ exceptions");
 #endif
 #endif
   }
@@ -1549,12 +1554,15 @@ int main(int argc, char **argv, char **envp) {
                            << "\n";
 
   std::stringstream stats;
-  stats << "\n";
-  stats << "KLEE: done: total instructions = " << instructions << "\n";
-  stats << "KLEE: done: completed paths = " << handler->getNumPathsExplored()
-        << "\n";
-  stats << "KLEE: done: generated tests = " << handler->getNumTestCases()
-        << "\n";
+  stats << '\n'
+        << "KLEE: done: total instructions = " << instructions << '\n'
+        << "KLEE: done: completed paths = " << handler->getNumPathsCompleted()
+        << '\n'
+        << "KLEE: done: partially completed paths = "
+        << handler->getNumPathsExplored() - handler->getNumPathsCompleted()
+        << '\n'
+        << "KLEE: done: generated tests = " << handler->getNumTestCases()
+        << '\n';
 
   bool useColors = llvm::errs().is_displayed();
   if (useColors)

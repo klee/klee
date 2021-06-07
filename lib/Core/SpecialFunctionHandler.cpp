@@ -18,8 +18,7 @@
 #include "StatsTracker.h"
 #include "TimingSolver.h"
 
-#include "klee/Expr/Expr.h"
-#include "klee/Expr/ExprPPrinter.h"
+#include "klee/Config/config.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
 #include "klee/Solver/SolverCmdLine.h"
@@ -103,27 +102,27 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
 #else
     add("__error", handleErrnoLocation, true),
 #endif
-    add("klee_is_symbolic", handleIsSymbolic, true),
-    add("klee_make_symbolic", handleMakeSymbolic, false),
-    add("klee_dump_kquery_state", handleGetKQueryExpression, false),
-    add("klee_dump_symbolic_details", handleGetSymbolicDetails, false),
-    add("klee_dump_state_stack", handleStateStackDump, false),
-    add("klee_mark_global", handleMarkGlobal, false),
-    add("klee_open_merge", handleOpenMerge, false),
-    add("klee_close_merge", handleCloseMerge, false),
-    add("klee_prefer_cex", handlePreferCex, false),
-    add("klee_posix_prefer_cex", handlePosixPreferCex, false),
-    add("klee_print_expr", handlePrintExpr, false),
-    add("klee_print_range", handlePrintRange, false),
-    add("klee_set_forking", handleSetForking, false),
-    add("klee_stack_trace", handleStackTrace, false),
-    add("klee_warning", handleWarning, false),
-    add("klee_warning_once", handleWarningOnce, false),
-    add("malloc", handleMalloc, true),
-    add("memalign", handleMemalign, true),
-    add("realloc", handleRealloc, true),
-    add("_klee_eh_Unwind_RaiseException_impl", handleEhUnwindRaiseExceptionImpl,
-        false),
+  add("klee_is_symbolic", handleIsSymbolic, true),
+  add("klee_make_symbolic", handleMakeSymbolic, false),
+  add("klee_mark_global", handleMarkGlobal, false),
+  add("klee_open_merge", handleOpenMerge, false),
+  add("klee_close_merge", handleCloseMerge, false),
+  add("klee_prefer_cex", handlePreferCex, false),
+  add("klee_posix_prefer_cex", handlePosixPreferCex, false),
+  add("klee_print_expr", handlePrintExpr, false),
+  add("klee_print_range", handlePrintRange, false),
+  add("klee_set_forking", handleSetForking, false),
+  add("klee_stack_trace", handleStackTrace, false),
+  add("klee_warning", handleWarning, false),
+  add("klee_warning_once", handleWarningOnce, false),
+  add("malloc", handleMalloc, true),
+  add("memalign", handleMemalign, true),
+  add("realloc", handleRealloc, true),
+
+#ifdef SUPPORT_KLEE_EH_CXX
+  add("_klee_eh_Unwind_RaiseException_impl", handleEhUnwindRaiseExceptionImpl, false),
+  add("klee_eh_typeid_for", handleEhTypeid, true),
+#endif
 
     // operator delete[](void*)
     add("_ZdaPv", handleDeleteArray, false),
@@ -142,13 +141,12 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
     // operator new(unsigned long)
     add("_Znwm", handleNew, true),
 
-    // Run clang with -fsanitize=signed-integer-overflow and/or
-    // -fsanitize=unsigned-integer-overflow
-    add("__ubsan_handle_add_overflow", handleAddOverflow, false),
-    add("__ubsan_handle_sub_overflow", handleSubOverflow, false),
-    add("__ubsan_handle_mul_overflow", handleMulOverflow, false),
-    add("__ubsan_handle_divrem_overflow", handleDivRemOverflow, false),
-    add("klee_eh_typeid_for", handleEhTypeid, true),
+  // Run clang with -fsanitize=signed-integer-overflow and/or
+  // -fsanitize=unsigned-integer-overflow
+  add("__ubsan_handle_add_overflow", handleAddOverflow, false),
+  add("__ubsan_handle_sub_overflow", handleSubOverflow, false),
+  add("__ubsan_handle_mul_overflow", handleMulOverflow, false),
+  add("__ubsan_handle_divrem_overflow", handleDivRemOverflow, false),
 
 #undef addDNR
 #undef add
@@ -464,6 +462,7 @@ void SpecialFunctionHandler::handleMemalign(ExecutionState &state,
                         alignment);
 }
 
+#ifdef SUPPORT_KLEE_EH_CXX
 void SpecialFunctionHandler::handleEhUnwindRaiseExceptionImpl(
     ExecutionState &state, KInstruction *target,
     std::vector<ref<Expr>> &arguments) {
@@ -501,6 +500,7 @@ void SpecialFunctionHandler::handleEhTypeid(ExecutionState &state,
 
   executor.bindLocal(target, state, executor.getEhTypeidFor(arguments[0]));
 }
+#endif // SUPPORT_KLEE_EH_CXX
 
 void SpecialFunctionHandler::handleAssume(ExecutionState &state,
                                           KInstruction *target,

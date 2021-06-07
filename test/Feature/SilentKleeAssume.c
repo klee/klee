@@ -26,5 +26,6 @@ int main() {
 
 // CHECK-SILENT-KLEE-ASSUME: KLEE: output directory is "{{.+}}"
 // CHECK-SILENT-KLEE-ASSUME: KLEE: done: total instructions = {{[0-9]+}}
-// CHECK-SILENT-KLEE-ASSUME: KLEE: done: completed paths = 2
+// CHECK-SILENT-KLEE-ASSUME: KLEE: done: completed paths = 1
+// CHECK-SILENT-KLEE-ASSUME: KLEE: done: partially completed paths = 1
 // CHECK-SILENT-KLEE-ASSUME: KLEE: done: generated tests = 1

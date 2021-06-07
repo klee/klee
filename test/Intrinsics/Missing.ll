@@ -11,7 +11,8 @@
 ; CHECK: KLEE: WARNING: unimplemented intrinsic: llvm.minnum.f32
 
 ; Check that Executor explores all paths
-; CHECK: KLEE: done: completed paths = 3
+; CHECK: KLEE: done: completed paths = 1
+; CHECK: KLEE: done: partially completed paths = 2
 ; CHECK: KLEE: done: generated tests = 2
 
 

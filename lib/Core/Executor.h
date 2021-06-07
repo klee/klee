@@ -116,8 +116,10 @@ public:
     ReadOnly,
     ReportError,
     User,
+#ifdef SUPPORT_KLEE_EH_CXX
     UncaughtException,
     UnexpectedException,
+#endif
     Unhandled,
   };
 
@@ -173,9 +175,9 @@ private:
   /// globals that have no representative object (i.e. functions).
   std::map<const llvm::GlobalValue *, ref<ConstantExpr>> globalAddresses;
 
-  /// The set of legal function addresses, used to validate function
-  /// pointers. We use the actual Function* address as the function address.
-  std::set<uint64_t> legalFunctions;
+  /// Map of legal function addresses to the corresponding Function.
+  /// Used to validate and dereference function pointers.
+  std::unordered_map<std::uint64_t, llvm::Function*> legalFunctions;
 
   /// When non-null the bindings that will be used for calls to
   /// klee_make_symbolic in order replay.
@@ -358,6 +360,10 @@ private:
   // not hold, respectively. One of the states is necessarily the
   // current state, and one of the states may be null.
   StatePair fork(ExecutionState &current, ref<Expr> condition, bool isInternal);
+
+  // If the MaxStatic*Pct limits have been reached, concretize the condition and
+  // return it. Otherwise, return the unmodified condition.
+  ref<Expr> maxStaticPctChecks(ExecutionState &current, ref<Expr> condition);
 
   /// Add the given (boolean) condition as a constraint on state. This
   /// function is a wrapper around the state's addConstraint function

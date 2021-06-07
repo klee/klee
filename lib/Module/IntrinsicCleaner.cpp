@@ -364,6 +364,9 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
       case Intrinsic::dbg_label:
 #endif
+#ifndef SUPPORT_KLEE_EH_CXX
+      case Intrinsic::eh_typeid_for:
+#endif
       case Intrinsic::exp2:
       case Intrinsic::exp:
       case Intrinsic::expect:
@@ -399,10 +402,12 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         dirty = true;
         break;
 
+#ifdef SUPPORT_KLEE_EH_CXX
       case Intrinsic::eh_typeid_for: {
         // Don't lower this, we need it for exception handling
         break;
       }
+#endif
 
         // Warn about any unrecognized intrinsics.
       default: {
