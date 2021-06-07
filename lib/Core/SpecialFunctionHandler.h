@@ -10,8 +10,6 @@
 #ifndef KLEE_SPECIALFUNCTIONHANDLER_H
 #define KLEE_SPECIALFUNCTIONHANDLER_H
 
-#include "klee/Config/config.h"
-
 #include <iterator>
 #include <map>
 #include <string>
@@ -95,55 +93,58 @@ public:
 
   std::string readStringAtAddress(ExecutionState &state, ref<Expr> address);
 
-#define HANDLER(name) void name(ExecutionState &state, \
-                                KInstruction *target, \
-                                std::vector< ref<Expr> > &arguments)
-    HANDLER(handleAbort);
-    HANDLER(handleAssert);
-    HANDLER(handleAssertFail);
-    HANDLER(handleAssume);
-    HANDLER(handleCalloc);
-    HANDLER(handleCheckMemoryAccess);
-    HANDLER(handleDefineFixedObject);
-    HANDLER(handleDelete);    
-    HANDLER(handleDeleteArray);
-#ifdef SUPPORT_KLEE_EH_CXX
-    HANDLER(handleEhUnwindRaiseExceptionImpl);
-    HANDLER(handleEhTypeid);
-#endif
-    HANDLER(handleErrnoLocation);
-    HANDLER(handleExit);
-    HANDLER(handleFree);
-    HANDLER(handleGetErrno);
-    HANDLER(handleGetObjSize);
-    HANDLER(handleGetValue);
-    HANDLER(handleIsSymbolic);
-    HANDLER(handleMakeSymbolic);
-    HANDLER(handleMalloc);
-    HANDLER(handleMemalign);
-    HANDLER(handleMarkGlobal);
-    HANDLER(handleOpenMerge);
-    HANDLER(handleCloseMerge);
-    HANDLER(handleNew);
-    HANDLER(handleNewArray);
-    HANDLER(handlePreferCex);
-    HANDLER(handlePosixPreferCex);
-    HANDLER(handlePrintExpr);
-    HANDLER(handlePrintRange);
-    HANDLER(handleRange);
-    HANDLER(handleRealloc);
-    HANDLER(handleReportError);
-    HANDLER(handleRevirtObjects);
-    HANDLER(handleSetForking);
-    HANDLER(handleSilentExit);
-    HANDLER(handleStackTrace);
-    HANDLER(handleUnderConstrained);
-    HANDLER(handleWarning);
-    HANDLER(handleWarningOnce);
-    HANDLER(handleAddOverflow);
-    HANDLER(handleMulOverflow);
-    HANDLER(handleSubOverflow);
-    HANDLER(handleDivRemOverflow);
+  /* Handlers */
+
+#define HANDLER(name)                                                          \
+  void name(ExecutionState &state, KInstruction *target,                       \
+            std::vector<ref<Expr>> &arguments)
+  HANDLER(handleAbort);
+  HANDLER(handleAssert);
+  HANDLER(handleAssertFail);
+  HANDLER(handleAssume);
+  HANDLER(handleCalloc);
+  HANDLER(handleCheckMemoryAccess);
+  HANDLER(handleDefineFixedObject);
+  HANDLER(handleDelete);
+  HANDLER(handleDeleteArray);
+  HANDLER(handleExit);
+  HANDLER(handleErrnoLocation);
+  HANDLER(handleFree);
+  HANDLER(handleGetErrno);
+  HANDLER(handleGetObjSize);
+  HANDLER(handleGetValue);
+  HANDLER(handleIsSymbolic);
+  HANDLER(handleMakeSymbolic);
+  HANDLER(handleMalloc);
+  HANDLER(handleMemalign);
+  HANDLER(handleEhUnwindRaiseExceptionImpl);
+  HANDLER(handleEhTypeid);
+  HANDLER(handleMarkGlobal);
+  HANDLER(handleOpenMerge);
+  HANDLER(handleCloseMerge);
+  HANDLER(handleNew);
+  HANDLER(handleNewArray);
+  HANDLER(handlePreferCex);
+  HANDLER(handlePosixPreferCex);
+  HANDLER(handlePrintExpr);
+  HANDLER(handlePrintRange);
+  HANDLER(handleRange);
+  HANDLER(handleRealloc);
+  HANDLER(handleReportError);
+  HANDLER(handleRevirtObjects);
+  HANDLER(handleSetForking);
+  HANDLER(handleSilentExit);
+  HANDLER(handleStackTrace);
+  HANDLER(handleUnderConstrained);
+  HANDLER(handleWarning);
+  HANDLER(handleWarningOnce);
+  HANDLER(handleAddOverflow);
+  HANDLER(handleMulOverflow);
+  HANDLER(handleSubOverflow);
+  HANDLER(handleDivRemOverflow);
+  HANDLER(handleStateStackDump);
+  HANDLER(handleGetSymbolicDetails);
+  HANDLER(handleGetKQueryExpression);
 #undef HANDLER
 };
 } // namespace klee
