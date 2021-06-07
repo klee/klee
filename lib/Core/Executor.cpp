@@ -670,7 +670,7 @@ void Executor::initializeGlobals(ExecutionState &state) {
 }
 
 void Executor::allocateGlobalObjects(ExecutionState &state) {
-  const Module *m = kmodule->module.get();
+  Module *m = kmodule->module.get();
 
   if (m->getModuleInlineAsm() != "")
     klee_warning("executable has module level assembly (ignoring)");
@@ -678,7 +678,7 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
   // object. given that we use malloc to allocate memory in states this also
   // ensures that we won't conflict. we don't need to allocate a memory object
   // since reading/writing via a function pointer is unsupported anyway.
-  for (const Function &f : *m) {
+  for (Function &f : *m) {
     ref<ConstantExpr> addr;
 
     // If the symbol has external weak linkage then it is implicitly
@@ -688,8 +688,12 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
         !externalDispatcher->resolveSymbol(f.getName().str())) {
       addr = Expr::createPointer(0);
     } else {
-      addr = Expr::createPointer(reinterpret_cast<std::uint64_t>(&f));
-      legalFunctions.insert(reinterpret_cast<std::uint64_t>(&f));
+      // We allocate an object to represent each function,
+      // its address can be used for function pointers.
+      // TODO: Check whether the object is accessed?
+      auto mo = memory->allocate(8, false, true, &f, 8);
+      addr = Expr::createPointer(mo->address);
+      legalFunctions.emplace(mo->address, &f);
     }
 
     globalAddresses.emplace(&f, addr);
@@ -2462,8 +2466,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         StatePair res = fork(*free, EqExpr::create(v, value), true);
         if (res.first) {
           uint64_t addr = value->getZExtValue();
-          if (legalFunctions.count(addr)) {
-            f = (Function*) addr;
+          auto it = legalFunctions.find(addr);
+          if (it != legalFunctions.end()) {
+            f = it->second;
 
             // Don't give warning on unique resolution
             if (res.second || !first)
@@ -3436,8 +3441,10 @@ bool Executor::checkMemoryUsage() {
 }
 
 void Executor::doDumpStates() {
-  if (!DumpStatesOnHalt || states.empty())
+  if (!DumpStatesOnHalt || states.empty()) {
+    interpreterHandler->incPathsExplored(states.size());
     return;
+  }
 
   klee_message("halting execution, dumping remaining states");
   for (const auto &state : states)
@@ -3638,6 +3645,7 @@ void Executor::terminateStateOnExit(ExecutionState &state) {
   if (!OnlyOutputStatesCoveringNew || state.coveredNew || 
       (AlwaysOutputSeeds && seedMap.count(&state)))
     interpreterHandler->processTestCase(state, 0, 0);
+  interpreterHandler->incPathsCompleted();
   terminateState(state);
 }
 

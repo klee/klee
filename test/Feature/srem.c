@@ -39,5 +39,6 @@ int main(int argc, char** argv)
     // CHECK: srem.c:[[@LINE+1]]: ASSERTION FAIL
     assert(-1 % y == -1);
 
-    // CHECK: KLEE: done: completed paths = 5
+    // CHECK: KLEE: done: completed paths = 2
+    // CHECK: KLEE: done: partially completed paths = 3
 }
