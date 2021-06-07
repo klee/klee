@@ -199,7 +199,7 @@ const UpdateList &ObjectState::getUpdates() const {
 void ObjectState::flushToConcreteStore(TimingSolver *solver,
                                        const ExecutionState &state) const {
   for (unsigned i = 0; i < size; i++) {
-    if (isByteKnownSymbolic(i)) {
+    if (!isByteConcrete(i)) {
       ref<ConstantExpr> ce;
       bool success = solver->getValue(state.constraints, read8(i), ce,
                                       state.queryMetaData);
