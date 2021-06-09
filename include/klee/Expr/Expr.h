@@ -35,6 +35,7 @@ class Array;
 class ArrayCache;
 class ConstantExpr;
 class ObjectState;
+class MemoryObject;
 
 template<class T> class ref;
 
@@ -497,6 +498,9 @@ public:
   /// a symbolic array. If non-empty, this size of this array is equivalent to
   /// the array size.
   const std::vector<ref<ConstantExpr> > constantValues;
+
+  /// a binding to a symbolic object
+  const MemoryObject * binding = nullptr;
 
 private:
   unsigned hashValue;

@@ -23,6 +23,8 @@
 #include "klee/Support/ModuleUtil.h"
 #include "klee/Support/PrintVersion.h"
 #include "klee/System/Time.h"
+#include "klee/ADT/TestCaseUtils.h"
+
 
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
@@ -61,6 +63,8 @@
 #include <iterator>
 #include <sstream>
 
+#include <klee/Misc/json.hpp>
+using json = nlohmann::json;
 
 using namespace llvm;
 using namespace klee;
@@ -119,6 +123,18 @@ namespace {
   WriteSymPaths("write-sym-paths",
                 cl::desc("Write .sym.path files for each test case (default=false)"),
                 cl::cat(TestCaseCat));
+
+  cl::opt<bool>
+  WriteKTestFiles("write-ktest-files",
+		  cl::init(true),
+		  cl::desc("Write KTest files alongside json-formatted TestCase (default=true)"),
+		  cl::cat(TestCaseCat));
+
+  cl::opt<bool>
+  WriteStates("write-states",
+	      cl::init(false),
+	      cl::desc("Write state info for debug (default=false)"),
+	      cl::cat(TestCaseCat));
 
 
   /*** Startup options ***/
@@ -346,20 +362,21 @@ private:
   unsigned m_numTotalTests;     // Number of tests received from the interpreter
   unsigned m_numGeneratedTests; // Number of tests successfully generated
   unsigned m_pathsExplored; // number of paths explored so far
+  unsigned m_statesTerminated;
 
   // used for writing .ktest files
   int m_argc;
   char **m_argv;
-  void writeTestCaseKTest(
-      const std::vector<std::pair<std::string, std::vector<unsigned char>>>
-          &out,
-      unsigned id);
+
+  void writeTestCaseKTest(const TestCase &tc, unsigned id);
 
   void writeTestCaseXML(
       bool isError,
       const std::vector<std::pair<std::string, std::vector<unsigned char>>>
           &out,
       unsigned id);
+
+  void writeTestCasePlain(const TestCase &tc, unsigned id);
 
 public:
   KleeHandler(int argc, char **argv);
@@ -373,9 +390,10 @@ public:
 
   void setInterpreter(Interpreter *i);
 
-  void processTestCase(const ExecutionState  &state,
+  void processTestCase(ExecutionState  &state,
                        const char *errorMessage,
                        const char *errorSuffix);
+
 
   std::string getOutputFilename(const std::string &filename);
   std::unique_ptr<llvm::raw_fd_ostream> openOutputFile(const std::string &filename);
@@ -517,24 +535,24 @@ KleeHandler::openTestFile(const std::string &suffix, unsigned id) {
   return openOutputFile(getTestFilename(suffix, id));
 }
 
-void KleeHandler::writeTestCaseKTest(
-    const std::vector<std::pair<std::string, std::vector<unsigned char>>> &out,
-    unsigned id) {
+void KleeHandler::writeTestCaseKTest(const TestCase &tc, unsigned id) {
   KTest b;
   b.numArgs = m_argc;
   b.args = m_argv;
   b.symArgvs = 0;
   b.symArgvLen = 0;
-  b.numObjects = out.size();
+  b.numObjects = tc.n_objects;
   b.objects = new KTestObject[b.numObjects];
   assert(b.objects);
   for (unsigned i = 0; i < b.numObjects; i++) {
     KTestObject *o = &b.objects[i];
-    o->name = const_cast<char *>(out[i].first.c_str());
-    o->numBytes = out[i].second.size();
+    o->name = const_cast<char *>(tc.objects[i].name);
+    o->numBytes = tc.objects[i].size;
     o->bytes = new unsigned char[o->numBytes];
     assert(o->bytes);
-    std::copy(out[i].second.begin(), out[i].second.end(), o->bytes);
+    for(unsigned j = 0; j < o->numBytes; j++) {
+      o->bytes[j] = tc.objects[i].values[j];
+    }
   }
   if (!kTest_toFile(&b,
                     getOutputFilename(getTestFilename("ktest", id)).c_str())) {
@@ -609,28 +627,83 @@ void KleeHandler::writeTestCaseXML(
   ++m_numGeneratedTests;
 }
 
+void KleeHandler::writeTestCasePlain(const TestCase &tc, unsigned id) {
+  // _-_ Test and correct
+  json out;
+  
+  out["n_objects"] = tc.n_objects;
+  out["numArgs"] = tc.numArgs;
+  for(size_t i = 0; i<tc.numArgs; i++) {
+    out["args"].push_back(std::string(tc.args[i]));
+  }
+  out["symArgvs"] = tc.symArgvs;
+  out["symArgvLen"] = tc.symArgvLen;
+  
+  for(unsigned i = 0; i < tc.n_objects; i++) {
+    json out_obj;
+    out_obj["name"] = std::string(tc.objects[i].name);
+    out_obj["values"] = std::vector<unsigned char>(tc.objects[i].values,
+			tc.objects[i].values + tc.objects[i].size);
+    out_obj["size"] = tc.objects[i].size;
+    out_obj["n_offsets"] = tc.objects[i].n_offsets;
+    for(unsigned j = 0; j<tc.objects[i].n_offsets; j++) {
+      json offset_obj;
+      offset_obj["offset"] = tc.objects[i].offsets[j].offset;
+      offset_obj["index"] = tc.objects[i].offsets[j].index;
+      out_obj["offsets"].push_back(offset_obj);
+    }
+    out["objects"].push_back(out_obj);
+  }
+  auto file = openTestFile("ktestjson", id);
+  *file << out.dump(4);
+  ++m_numGeneratedTests;
+}
 
 
-/* Outputs all files (.ktest, .kquery, .cov etc.) describing a test case */
-void KleeHandler::processTestCase(const ExecutionState &state,
+// _-_ Temporarily dropped the const qualifier of ExecutionState &state
+/* Outputs all files (.ktest, .kquery, .cov etc.) describing a test case + XML */
+void KleeHandler::processTestCase(ExecutionState &state,
                                   const char *errorMessage,
                                   const char *errorSuffix) {
+
+  unsigned state_id = ++m_statesTerminated;
+
   if (!WriteNone) {
     const auto start_time = time::getWallTime();
-    std::vector< std::pair<std::string, std::vector<unsigned char> > > assignments;
-    bool success = m_interpreter->getSymbolicSolution(state, assignments);
+    TestCase assignments{};
+    assignments.numArgs = m_argc;
+    assignments.args = m_argv;
+    assignments.symArgvs = 0;
+    assignments.symArgvLen = 0;
     
+    bool success = m_interpreter->getSymbolicSolution(state, assignments);
+
+    // _-_ Should it be done before or after getSymbolicSolution?
+    int lazy_instantiation_resolved = m_interpreter->resolveLazyInstantiation(state);
+    if(lazy_instantiation_resolved == 1) {
+      m_interpreter->setInstantiationGraph(state, assignments);
+    }
+
     if (!success)
       klee_warning("unable to get symbolic solution, losing test case");
 
     unsigned test_id = ++m_numTotalTests;
     
-    if (success) {
-      if(!WriteXMLTests) {
-	writeTestCaseKTest(assignments, test_id);
-      } else {
-	writeTestCaseXML(errorMessage != nullptr, assignments, test_id);
+    if (WriteKTestFiles && success && lazy_instantiation_resolved == 0) {
+      writeTestCaseKTest(assignments, test_id);
+    }
+    
+    if (success && lazy_instantiation_resolved != -1) {
+      writeTestCasePlain(assignments, test_id);
+      if(WriteStates) {
+	auto f = openTestFile("state", test_id);
+	m_interpreter->logState(state,test_id,f);
       }
+    }
+
+    if (WriteStates && lazy_instantiation_resolved == -1) {
+      auto f_s = openTestFile("state_li_unresolved", test_id);
+      m_interpreter->logState(state, state_id, f_s);
     }
 
     if (errorMessage) {

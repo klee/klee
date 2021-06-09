@@ -158,6 +158,8 @@ private:
 public:
   using stack_ty = std::vector<StackFrame>;
 
+  std::map<ref<Expr>,std::pair<const MemoryObject*,ref<Expr>>> pointers;
+
   // Execution - Control Flow specific
 
   /// @brief Pointer to initial instruction

@@ -605,10 +605,14 @@ public:
                         Interpreter::LogType logFormat =
                             Interpreter::STP) override;
 
-  bool getSymbolicSolution(
-      const ExecutionState &state,
-      std::vector<std::pair<std::string, std::vector<unsigned char>>> &res)
-      override;
+  int resolveLazyInstantiation(ExecutionState& state) override;
+
+  void setInstantiationGraph(ExecutionState& state, TestCase& tc) override;
+
+  void logState(ExecutionState& state, int id,
+		std::unique_ptr<llvm::raw_fd_ostream>& f) override;
+
+  bool getSymbolicSolution(const ExecutionState &state, TestCase &res) override;
 
   void getCoveredLines(const ExecutionState &state,
                        std::map<const std::string *, std::set<unsigned>> &res)

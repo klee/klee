@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Executor.h"
-
+#include <iostream>
 #include "Context.h"
 #include "CoreStats.h"
 #include "ExecutionState.h"
@@ -51,6 +51,8 @@
 #include "klee/Support/OptionCategories.h"
 #include "klee/System/MemoryUsage.h"
 #include "klee/System/Time.h"
+#include "klee/ADT/TestCaseUtils.h"
+#include "klee/Expr/ArrayExprVisitor.h"
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
@@ -133,6 +135,11 @@ cl::opt<bool> UseGEPExpr(
     cl::desc("Kind of execution mode"),
     cl::cat(ExecCat));
 
+cl::opt<bool> LazyInstantiation(
+    "lazyinstantiation",
+     cl::init(true),
+     cl::desc("Enable lazy instantiation (default=true)"),
+     cl::cat(ExecCat));
 
 } // namespace klee
 
@@ -4611,9 +4618,22 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   if (unbound) {
     if (incomplete) {
       terminateStateEarly(*unbound, "Query timed out (resolve).");
-    } else if (isa<ReadExpr>(address) || isa<ConcatExpr>(address) || (UseGEPExpr && isa<GEPExpr>(address))) {
+    } else if (LazyInstantiation && (isa<ReadExpr>(address) || isa<ConcatExpr>(address) || (UseGEPExpr && isa<GEPExpr>(address)))) {
       ref<Expr> base = UseGEPExpr && isa<GEPExpr>(address) ? cast<GEPExpr>(address)->base : unsafeAddress;
       unsigned size = UseGEPExpr && isa<GEPExpr>(address) ? cast<GEPExpr>(address)->sourceSize : bytes;
+
+      if (base->getKind() == Expr::Read || base->getKind() == Expr::Concat) {
+        ref<ReadExpr> base_b;
+        if (base->getKind() == Expr::Concat)
+          base_b =
+              ArrayExprHelper::hasOrderedReads(*dyn_cast<ConcatExpr>(base));
+        else
+          base_b = dyn_cast<ReadExpr>(base);
+        if (base_b->updates.root->isConstantArray()) {
+          terminateStateEarly(*unbound, "Weird Inst Source");
+          return;
+        }
+      }
 
       ObjectPair p = lazyInstantiateVariable(*unbound, base, target, size);
       assert(p.first && p.second);
@@ -4699,6 +4719,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
     // Find a unique name for this array.  First try the original name,
     // or if that fails try adding a unique identifier.
     const Array *array = makeArray(state, mo->size, name);
+    const_cast<Array*>(array)->binding = mo;
     bindObjectInState(state, mo, isAlloca, array);
     state.addSymbolic(mo, array);
 
@@ -4892,6 +4913,7 @@ ref<Expr> Executor::makeSymbolicValue(Value *value, ExecutionState &state, uint6
                            value, /*allocationAlignment=*/8);
     memory->deallocate(mo);
     const Array *array = makeArray(state, size, name);
+    const_cast<Array*>(array)->binding = mo;
     state.addSymbolic(mo, array);
     ObjectState *os = new ObjectState(mo, array);
     ref<Expr> result = os->read(0, width);
@@ -5018,11 +5040,102 @@ void Executor::getConstraintLog(const ExecutionState &state, std::string &res,
   }
 }
 
+void Executor::logState(ExecutionState& state, int id,
+			std::unique_ptr<llvm::raw_fd_ostream>& f) {
+  *f << "State number " << state.id << ". Test number: " << id << "\n\n";
+  *f << state.symbolics.size() << " symbolics total. " << "Symbolics:\n";
+  size_t sc = 0;
+  for(auto i : state.symbolics) {
+    *f << "Symbolic number " << sc++ << "\n";
+    *f << "Associated memory object: " << i.first.get()->id << "\n";
+    *f << "Memory object size: " << i.first.get()->size << "\n";
+    if(!i.first->isLazyInstantiated()) {
+      *f << "<Not instantiated lazily>" << "\n";
+      continue;
+    }
+    auto lisource = i.first->lazyInstantiatedSource;
+    *f << "Lazy Instantiation Source: ";
+    lisource->print(*f);
+    *f << "\n";
+  }
+  *f << "\n";
+  *f << "State constraints:\n";
+  for(auto i : state.constraints) {
+    i->print(*f);
+    *f << "\n";
+  }
+}
+
+int Executor::resolveLazyInstantiation(ExecutionState &state) {
+  int status = 0;
+  for (auto i : state.symbolics) {
+    if (!i.first->isLazyInstantiated()) {
+      continue;
+    }
+    status = 1;
+    auto lisource = i.first->lazyInstantiatedSource;
+    switch(lisource->getKind()) {
+    case Expr::Read: {
+      ref<ReadExpr> base = dyn_cast<ReadExpr>(lisource);
+      auto parent = base->updates.root->binding;
+      if(!parent) {
+	return -1;
+      }
+      state.pointers[lisource] = std::make_pair(parent, base->index);
+      break;
+    } 
+    case Expr::Concat: {
+      ref<ReadExpr> base = ArrayExprHelper::hasOrderedReads(*dyn_cast<ConcatExpr>(lisource));
+      auto parent = base->updates.root->binding;
+      if (!parent) {
+        return -1;
+      }
+      state.pointers[lisource] = std::make_pair(parent, base->index);
+      break;
+    }
+    default:
+      return -1;
+    }
+  }
+  return status;
+}
+
+void Executor::setInstantiationGraph(ExecutionState &state, TestCase &tc) {
+  // Ugly hotfix
+  std::map<size_t, std::vector<Offset>> ofst;
+  for(size_t i = 0; i < state.symbolics.size(); i++) {
+    if(!state.symbolics[i].first->isLazyInstantiated()) continue;
+    auto parent = state.pointers[state.symbolics[i].first->lazyInstantiatedSource];
+    // Resolve offset (parent.second)
+    ref<ConstantExpr> offset;
+    bool success = solver->getValue(state.constraints, parent.second, offset, state.queryMetaData);
+    if(!success) klee_error("Offset resolution failure (setInstantiationGraph)");
+    // Resolve indices of i and parent.first
+    size_t index_parent;
+    for(size_t j = 0; j < state.symbolics.size(); j++) {
+      if(state.symbolics[j].first == parent.first) {
+	index_parent = j;
+	break;
+      }
+    }
+    // Put data in TestCase tc, indices coincide
+    Offset o;
+    o.offset = offset->getZExtValue();
+    o.index = i;
+    ofst[index_parent].push_back(o);
+  }
+  for(auto i : ofst) {
+    tc.objects[i.first].n_offsets = i.second.size();
+    tc.objects[i.first].offsets = new Offset[i.second.size()];
+    for(size_t j = 0; j<i.second.size(); j++) {
+      tc.objects[i.first].offsets[j] = i.second[j];
+    }
+  }
+  return;
+}
+
 bool Executor::getSymbolicSolution(const ExecutionState &state,
-                                   std::vector< 
-                                   std::pair<std::string,
-                                   std::vector<unsigned char> > >
-                                   &res) {
+                                   TestCase &res) {
   solver->setTimeout(coreSolverTimeout);
 
   ConstraintSet extendedConstraints(state.constraints);
@@ -5072,10 +5185,19 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
     return false;
   }
   
-  for (unsigned i = 0; i != state.symbolics.size(); ++i)
-    res.push_back(std::make_pair(state.symbolics[i].first->name, values[i]));
+  res.objects = (ConcretizedObject*)malloc(sizeof(ConcretizedObject)*state.symbolics.size());
+  res.n_objects = state.symbolics.size();
+  
+  for (unsigned i = 0; i != state.symbolics.size(); ++i) {
+    auto mo = state.symbolics[i].first;
+    res.objects[i] = createConcretizedObject(mo->name.c_str(), values[i]);
+  }
+
+  /* _-_ TODO: Access graph */
+
   return true;
 }
+
 
 void Executor::getCoveredLines(const ExecutionState &state,
                                std::map<const std::string*, std::set<unsigned> > &res) {
