@@ -1,3 +1,5 @@
+// REQUIRES: not-wsl-1
+// Disabling WSL 1 because futimesat syscall may be not implemented
 // RUN: %clang %s -emit-llvm %O0opt -g -c -DTDIR=%T -o %t2.bc
 // RUN: touch %T/futimesat-dummy
 // RUN: rm -rf %t.klee-out
