@@ -63,6 +63,34 @@ bool DFSSearcher::empty() { return states.empty(); }
 
 void DFSSearcher::printName(llvm::raw_ostream &os) { os << "DFSSearcher\n"; }
 
+// TODO : Complete this implementation
+// Searcher will choose the states as per the best forall setting.
+ExecutionState &ProbabilisticSearcher::selectState() { return *states.back(); }
+
+void ProbabilisticSearcher::update(
+    ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
+    const std::vector<ExecutionState *> &removedStates) {
+  // insert states
+  states.insert(states.end(), addedStates.begin(), addedStates.end());
+
+  // remove states
+  for (const auto state : removedStates) {
+    if (state == states.back()) {
+      states.pop_back();
+    } else {
+      auto it = std::find(states.begin(), states.end(), state);
+      assert(it != states.end() && "invalid state removed");
+      states.erase(it);
+    }
+  }
+}
+
+bool ProbabilisticSearcher::empty() { return states.empty(); }
+
+void ProbabilisticSearcher::printName(llvm::raw_ostream &os) {
+  os << "ProbabilisticSearcher\n";
+}
+
 ///
 
 ExecutionState &BFSSearcher::selectState() { return *states.front(); }

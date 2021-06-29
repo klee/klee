@@ -89,6 +89,22 @@ public:
   void printName(llvm::raw_ostream &os) override;
 };
 
+/// Probabilistic Searcher will choose the states as per the best setting
+/// of the ForAll Variable that can lead to a Probabilisitc Assert Failure
+/// quicker. The insertion order is governed by this and execution stack update
+/// happens accordingly.
+class ProbabilisticSearcher final : public Searcher {
+  std::vector<ExecutionState *> states;
+
+public:
+  ExecutionState &selectState() override;
+  void update(ExecutionState *current,
+              const std::vector<ExecutionState *> &addedStates,
+              const std::vector<ExecutionState *> &removedStates) override;
+  bool empty() override;
+  void printName(llvm::raw_ostream &os) override;
+};
+
 /// BFSSearcher implements breadth-first exploration. When KLEE branches
 /// multiple times for a single instruction, all new states have the same depth.
 /// Keep in mind that the process tree (PTree) is a binary tree and hence the
