@@ -640,13 +640,12 @@ KFunction::KFunction(llvm::Function *_function,
       Value *fp = cs.getCalledValue();
 #endif
       Function *f = getTargetFunction(fp);
-      KCallBlock *ckb = new KCallBlock(this, &*bbit, parent, registerMap, reg2inst, f);
+      KCallBlock *ckb = new KCallBlock(this, &*bbit, parent, registerMap, reg2inst, f, &instructions[n]);
       kCallBlocks.push_back(ckb);
       kb = ckb;
     } else
-      kb = new KBlock(this, &*bbit, parent, registerMap, reg2inst);
+      kb = new KBlock(this, &*bbit, parent, registerMap, reg2inst, &instructions[n]);
     for (unsigned i = 0; i < kb->numInstructions; i++, n++) {
-      instructions[n] = kb->instructions[i];
       instructionMap[instructions[n]->inst] = instructions[n];
     }
     blockMap[&*bbit] = kb;
@@ -712,13 +711,14 @@ std::map<KBlock*, unsigned int>& KFunction::getBackwardDistance(KBlock *kb) {
 
 KBlock::KBlock(KFunction *_kfunction, llvm::BasicBlock *block, KModule *km,
                std::map<Instruction*, unsigned> &registerMap,
-               std::map<unsigned, KInstruction*> &reg2inst)
+               std::map<unsigned, KInstruction*> &reg2inst,
+               KInstruction **instructionsKF)
   : parent(_kfunction),
     basicBlock(block),
     numInstructions(0),
     trackCoverage(true) {
   numInstructions += block->size();
-  instructions = new KInstruction*[numInstructions];
+  instructions = instructionsKF;
 
   unsigned i = 0;
   for (llvm::BasicBlock::iterator it = block->begin(), ie = block->end();
@@ -743,11 +743,9 @@ KBlock::KBlock(KFunction *_kfunction, llvm::BasicBlock *block, KModule *km,
 
 KCallBlock::KCallBlock(KFunction *_kfunction, llvm::BasicBlock *block, KModule *km,
                     std::map<Instruction*, unsigned> &registerMap, std::map<unsigned, KInstruction*> &reg2inst,
-                    llvm::Function *_calledFunction)
-  : KBlock::KBlock(_kfunction, block, km, registerMap, reg2inst),
+                    llvm::Function *_calledFunction, KInstruction **instructionsKF)
+  : KBlock::KBlock(_kfunction, block, km, registerMap, reg2inst, instructionsKF),
     kcallInstruction(this->instructions[0]),
     calledFunction(_calledFunction) {}
 
-KBlock::~KBlock() {
-  delete[] instructions;
-}
+KBlock::~KBlock() {}

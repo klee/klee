@@ -65,7 +65,9 @@ namespace klee {
 
   public:
     explicit KBlock(KFunction*, llvm::BasicBlock*, KModule*,
-                    std::map<llvm::Instruction*, unsigned>&, std::map<unsigned, KInstruction*>&);
+                    std::map<llvm::Instruction*, unsigned>&,
+                    std::map<unsigned, KInstruction*>&,
+                    KInstruction **);
     KBlock(const KBlock &) = delete;
     KBlock &operator=(const KBlock &) = delete;
 
@@ -84,7 +86,7 @@ namespace klee {
   public:
     explicit KCallBlock(KFunction*, llvm::BasicBlock*, KModule*,
                     std::map<llvm::Instruction*, unsigned>&, std::map<unsigned, KInstruction*>&,
-                    llvm::Function*);
+                    llvm::Function*, KInstruction **);
     KBlockType getKBlockType() const override { return KBlockType::Call; };
   };
 
