@@ -71,6 +71,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       case Intrinsic::fshl:
 #endif
 #if LLVM_VERSION_CODE >= LLVM_VERSION(12, 0)
+      case Intrinsic::abs:
       case Intrinsic::smax:
       case Intrinsic::smin:
       case Intrinsic::umax:
