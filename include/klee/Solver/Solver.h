@@ -206,7 +206,7 @@ namespace klee {
     ///       mayBeTrue(max == e))
     //
     // FIXME: This should go into a helper class, and should handle failure.
-    virtual std::pair< ref<Expr>, ref<Expr> > getRange(const Query&);
+    virtual std::pair< ref<Expr>, ref<Expr> > getRange(const Query&, time::Span timeout = time::Span());
     
     virtual char *getConstraintLog(const Query& query);
     virtual void setCoreSolverTimeout(time::Span timeout);

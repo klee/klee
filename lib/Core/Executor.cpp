@@ -4131,7 +4131,7 @@ std::string Executor::getAddressInfo(ExecutionState &state,
     example = value->getZExtValue();
     info << "\texample: " << example << "\n";
     std::pair<ref<Expr>, ref<Expr>> res =
-        solver->getRange(state.constraints, address, state.queryMetaData);
+            solver->getRange(state.constraints, address, state.queryMetaData);
     info << "\trange: [" << res.first << ", " << res.second <<"]\n";
   }
   

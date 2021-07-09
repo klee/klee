@@ -49,7 +49,7 @@ namespace klee {
     time::Point startWallTime;
 
     unsigned numBranches;
-    unsigned fullBranches, partialBranches;
+    unsigned fullBranches, partialBranches, totalBranches;
 
     CallPathManager callPathManager;
 
