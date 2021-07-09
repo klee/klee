@@ -242,5 +242,7 @@ int __klee_posix_wrapped_main(int argc, char **argv, char **envp);
 /* This wrapper gets called instead of main if POSIX setup is used */
 int __klee_posix_wrapper(int argcPtr, char **argvPtr, char** envp) {
   klee_init_env(&argcPtr, &argvPtr);
-  return __klee_posix_wrapped_main(argcPtr, argvPtr, envp);
+  int res = __klee_posix_wrapped_main(argcPtr, argvPtr, envp);
+  klee_assume(__exe_env.stdin_off == __exe_env.max_off);
+  return res;
 }

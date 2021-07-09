@@ -40,6 +40,8 @@ exe_sym_env_t __exe_env = {
    { 2, eOpen | eWriteable, 0, 0}},
   022,
   0,
+  0,
+  0,
   0
 };
 
@@ -127,7 +129,16 @@ void klee_init_fds(unsigned n_files, unsigned file_length,
   if (stdin_length) {
     __exe_fs.sym_stdin = malloc(sizeof(*__exe_fs.sym_stdin));
     __create_new_dfile(__exe_fs.sym_stdin, stdin_length, "stdin", &s);
+    unsigned int i;
+    for (i = 0; i < stdin_length; i++) {
+      klee_prefer_cex(__exe_fs.sym_stdin, 32 <= __exe_fs.sym_stdin->contents[i] & __exe_fs.sym_stdin->contents[i] <= 126);
+    }
     __exe_env.fds[0].dfile = __exe_fs.sym_stdin;
+    off64_t *ptr = malloc(sizeof(off64_t));
+    klee_make_symbolic(ptr, sizeof(off64_t), "stdin-read");
+    mempcpy(&__exe_env.stdin_off, ptr, sizeof(off64_t));
+    free(ptr);
+    __exe_env.max_off = 0;
   }
   else __exe_fs.sym_stdin = NULL;
 

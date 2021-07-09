@@ -85,7 +85,9 @@ typedef struct {
   /* If set, writes execute as expected.  Otherwise, writes extending
      the file size only change the contents up to the initial
      size. The file offset is always incremented correctly. */
-  int save_all_writes; 
+  int save_all_writes;
+  off64_t stdin_off;
+  off64_t max_off;
 } exe_sym_env_t;
 
 extern exe_file_system_t __exe_fs;
