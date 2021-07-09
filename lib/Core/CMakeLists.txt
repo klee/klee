@@ -39,8 +39,8 @@ set(LLVM_COMPONENTS
 )
 
 klee_get_llvm_libs(LLVM_LIBS ${LLVM_COMPONENTS})
-target_link_libraries(kleeCore PUBLIC ${LLVM_LIBS} ${SQLITE3_LIBRARIES})
-target_link_libraries(kleeCore PRIVATE
+target_link_libraries(kleeCore PRIVATE ${LLVM_LIBS} ${SQLITE3_LIBRARIES})
+target_link_libraries(kleeCore PUBLIC
   kleeADT
   kleeBasic
   kleeModule
@@ -48,3 +48,8 @@ target_link_libraries(kleeCore PRIVATE
   kleaverExpr
   kleeSupport
 )
+
+install(TARGETS kleeCore
+        EXPORT run_klee
+        DESTINATION "${RUN_KLEE_LIB_DEST}"
+        )

@@ -15,4 +15,9 @@ set(LLVM_COMPONENTS
 )
 
 klee_get_llvm_libs(LLVM_LIBS ${LLVM_COMPONENTS})
-target_link_libraries(kleeBasic PUBLIC ${LLVM_LIBS})
+target_link_libraries(kleeBasic PRIVATE ${LLVM_LIBS})
+
+install(TARGETS kleeBasic
+        EXPORT run_klee
+        DESTINATION "${RUN_KLEE_LIB_DEST}"
+        )
