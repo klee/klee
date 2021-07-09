@@ -1002,9 +1002,18 @@ static const char *modelledExternals[] = {
         "_Znwj",
         "_Znam",
         "_Znwm",
+  "__ubsan_handle_type_mismatch_v1",
+  "__ubsan_handle_type_mismatch_v1_abort",
+  "__ubsan_handle_alignment_assumption",
+  "__ubsan_handle_alignment_assumption_abort",
         "__ubsan_handle_add_overflow",
+  "__ubsan_handle_add_overflow_abort",
         "__ubsan_handle_sub_overflow",
+  "__ubsan_handle_sub_overflow_abort",
         "__ubsan_handle_mul_overflow",
+  "__ubsan_handle_mul_overflow_abort",
+  "__ubsan_handle_negate_overflow",
+  "__ubsan_handle_negate_overflow_abort",
         "__ubsan_handle_divrem_overflow",
         // Floating point intrinstics
         "klee_rintf",
@@ -1030,6 +1039,37 @@ static const char *modelledExternals[] = {
         "klee_abs_float",
         "klee_abs_double",
         "klee_abs_long_double"
+  "__ubsan_handle_divrem_overflow_abort",
+  "__ubsan_handle_shift_out_of_bounds",
+  "__ubsan_handle_shift_out_of_bounds_abort",
+  "__ubsan_handle_out_of_bounds",
+  "__ubsan_handle_out_of_bounds_abort",
+  "__ubsan_handle_builtin_unreachable",
+  "__ubsan_handle_missing_return",
+  "__ubsan_handle_vla_bound_not_positive",
+  "__ubsan_handle_vla_bound_not_positive_abort",
+  "__ubsan_handle_float_cast_overflow",
+  "__ubsan_handle_float_cast_overflow_abort",
+  "__ubsan_handle_load_invalid_value",
+  "__ubsan_handle_load_invalid_value_abort",
+  "__ubsan_handle_implicit_conversion",
+  "__ubsan_handle_implicit_conversion_abort",
+  "__ubsan_handle_invalid_builtin",
+  "__ubsan_handle_invalid_builtin_abort",
+  "__ubsan_handle_nonnull_return_v1",
+  "__ubsan_handle_nonnull_return_v1_abort",
+  "__ubsan_handle_nullability_return_v1",
+  "__ubsan_handle_nullability_return_v1_abort",
+  "__ubsan_handle_nonnull_arg",
+  "__ubsan_handle_nonnull_arg_abort",
+  "__ubsan_handle_nullability_arg",
+  "__ubsan_handle_nullability_arg_abort",
+  "__ubsan_handle_pointer_overflow",
+  "__ubsan_handle_pointer_overflow_abort",
+
+  // also there are some handlers in
+  // llvm-project/compiler-rt/lib/ubsan/ubsan_handlers_cxx.cpp that
+  // could not reasonably be implemented
 };
 
 // Symbols we aren't going to warn about

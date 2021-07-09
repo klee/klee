@@ -12,13 +12,13 @@ int main() {
   klee_make_symbolic(&x, sizeof(x), "x");
   klee_make_symbolic(&y, sizeof(y), "y");
 
-  // CHECK: ubsan_signed_overflow.c:[[@LINE+1]]: overflow on addition
+  // CHECK: ubsan_signed_integer_overflow.c:[[@LINE+1]]: overflow on addition
   result = x + y;
 
-  // CHECK: ubsan_signed_overflow.c:[[@LINE+1]]: overflow on subtraction
+  // CHECK: ubsan_signed_integer_overflow.c:[[@LINE+1]]: overflow on subtraction
   result = x - y;
 
-  // CHECK: ubsan_signed_overflow.c:[[@LINE+1]]: overflow on multiplication
+  // CHECK: ubsan_signed_integer_overflow.c:[[@LINE+1]]: overflow on multiplication
   result = x * y;
 
   return 0;
