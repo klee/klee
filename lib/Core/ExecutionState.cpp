@@ -100,6 +100,7 @@ ExecutionState::ExecutionState(KFunction *kf, KBlock *kb) :
     steppedInstructions(0),
     steppedMemoryInstructions(0),
     instsSinceCovNew(0),
+    roundingMode(llvm::APFloat::rmNearestTiesToEven),
     coveredNew(false),
     forkDisabled(false),
     target(nullptr) {
@@ -135,6 +136,7 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     steppedInstructions(state.steppedInstructions),
     steppedMemoryInstructions(state.steppedMemoryInstructions),
     instsSinceCovNew(state.instsSinceCovNew),
+    roundingMode(state.roundingMode),
     unwindingInformation(state.unwindingInformation
                              ? state.unwindingInformation->clone()
                              : nullptr),

@@ -37,6 +37,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <llvm/IR/Intrinsics.h>
 #include <deque>
 
 struct KTest;
@@ -142,7 +143,9 @@ public:
 
 private:
   static const char *TerminateReasonNames[];
-
+  /* Set of Intrinsic::ID. Plain type is used here to avoid including llvm in the header */
+  static const std::unordered_set <llvm::Intrinsic::ID> supportedFPIntrinsics;
+  static const std::unordered_set <llvm::Intrinsic::ID> modelledFPIntrinsics;
   std::unique_ptr<KModule> kmodule;
   InterpreterHandler *interpreterHandler;
   Searcher *searcher;
@@ -272,13 +275,13 @@ private:
   MemoryObject *addExternalObject(ExecutionState &state, void *addr, 
                                   unsigned size, bool isReadOnly);
 
-  void initializeGlobalAlias(const llvm::Constant *c);
+  void initializeGlobalAlias(const llvm::Constant *c, ExecutionState &state);
   void initializeGlobalObject(ExecutionState &state, ObjectState *os, 
 			      const llvm::Constant *c,
 			      unsigned offset);
   void initializeGlobals(ExecutionState &state);
   void allocateGlobalObjects(ExecutionState &state);
-  void initializeGlobalAliases();
+  void initializeGlobalAliases(ExecutionState &state);
   void initializeGlobalObjects(ExecutionState &state);
 
   void stepInstruction(ExecutionState &state);
@@ -439,12 +442,18 @@ private:
   /// is the instruction where this constant was encountered, or NULL
   /// if not applicable/unavailable.
   ref<klee::ConstantExpr> evalConstantExpr(const llvm::ConstantExpr *c,
+                       llvm::APFloat::roundingMode rm,
 					   const KInstruction *ki = NULL);
+
+  /// Evaluates an LLVM float comparison. the operands are two float
+  /// expressions.
+  ref<klee::Expr> evaluateFCmp(unsigned int predicate, ref<klee::Expr> left,
+                       ref<klee::Expr> right) const;
 
   /// Evaluates an LLVM constant.  The optional argument ki is the
   /// instruction where this constant was encountered, or NULL if
   /// not applicable/unavailable.
-  ref<klee::ConstantExpr> evalConstant(const llvm::Constant *c,
+  ref<klee::ConstantExpr> evalConstant(const llvm::Constant *c, llvm::APFloat::roundingMode rm,
 				       const KInstruction *ki = NULL);
 
   /// Return a unique constant value for the given expression in the
@@ -504,7 +513,7 @@ private:
   }
 
   /// bindModuleConstants - Initialize the module constant table.
-  void bindModuleConstants();
+  void bindModuleConstants(ExecutionState &state);
 
   template <typename SqType, typename TypeIt>
   void computeOffsetsSeqTy(KGEPInstruction *kgepi,

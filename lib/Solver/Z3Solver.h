@@ -14,11 +14,16 @@
 #include "klee/Solver/Solver.h"
 
 namespace klee {
+enum Z3BuilderType {
+    KLEE_CORE,
+    KLEE_BITVECTOR
+};
+
 /// Z3Solver - A complete solver based on Z3
 class Z3Solver : public Solver {
 public:
   /// Z3Solver - Construct a new Z3Solver.
-  Z3Solver();
+  Z3Solver(Z3BuilderType type);
 
   /// Get the query in SMT-LIBv2 format.
   /// \return A C-style string. The caller is responsible for freeing this.

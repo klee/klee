@@ -32,7 +32,7 @@ using namespace llvm;
 
 namespace klee {
 
-  ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c,
+  ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c, llvm::APFloat::roundingMode rm,
                                                  const KInstruction *ki) {
     if (!ki) {
       KConstant* kc = kmodule->getKConstant(c);
@@ -41,12 +41,12 @@ namespace klee {
     }
 
     if (const llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(c)) {
-      return evalConstantExpr(ce, ki);
+      return evalConstantExpr(ce, rm, ki);
     } else {
       if (const ConstantInt *ci = dyn_cast<ConstantInt>(c)) {
         return ConstantExpr::alloc(ci->getValue());
       } else if (const ConstantFP *cf = dyn_cast<ConstantFP>(c)) {
-        return ConstantExpr::alloc(cf->getValueAPF().bitcastToAPInt());
+        return ConstantExpr::alloc(cf->getValueAPF());
       } else if (const GlobalValue *gv = dyn_cast<GlobalValue>(c)) {
         auto it = globalAddresses.find(gv);
         assert(it != globalAddresses.end());
@@ -67,7 +67,7 @@ namespace klee {
         // the last element the highest
         std::vector<ref<Expr> > kids;
         for (unsigned i = cds->getNumElements(); i != 0; --i) {
-          ref<Expr> kid = evalConstant(cds->getElementAsConstant(i - 1), ki);
+          ref<Expr> kid = evalConstant(cds->getElementAsConstant(i - 1), rm, ki);
           kids.push_back(kid);
         }
         assert(Context::get().isLittleEndian() &&
@@ -79,7 +79,7 @@ namespace klee {
         llvm::SmallVector<ref<Expr>, 4> kids;
         for (unsigned i = cs->getNumOperands(); i != 0; --i) {
           unsigned op = i-1;
-          ref<Expr> kid = evalConstant(cs->getOperand(op), ki);
+          ref<Expr> kid = evalConstant(cs->getOperand(op), rm, ki);
 
           uint64_t thisOffset = sl->getElementOffsetInBits(op),
             nextOffset = (op == cs->getNumOperands() - 1)
@@ -100,7 +100,7 @@ namespace klee {
         llvm::SmallVector<ref<Expr>, 4> kids;
         for (unsigned i = ca->getNumOperands(); i != 0; --i) {
           unsigned op = i-1;
-          ref<Expr> kid = evalConstant(ca->getOperand(op), ki);
+          ref<Expr> kid = evalConstant(ca->getOperand(op), rm, ki);
           kids.push_back(kid);
         }
         assert(Context::get().isLittleEndian() &&
@@ -112,7 +112,7 @@ namespace klee {
         const size_t numOperands = cv->getNumOperands();
         kids.reserve(numOperands);
         for (unsigned i = numOperands; i != 0; --i) {
-          kids.push_back(evalConstant(cv->getOperand(i - 1), ki));
+          kids.push_back(evalConstant(cv->getOperand(i - 1), rm, ki));
         }
         assert(Context::get().isLittleEndian() &&
                "FIXME:Broken for big endian");
@@ -135,16 +135,112 @@ namespace klee {
     }
   }
 
-  ref<ConstantExpr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce,
+    ref<klee::Expr> Executor::evaluateFCmp(unsigned int predicate,
+                                     ref<klee::Expr> left, ref<klee::Expr> right) const {
+        ref<klee::Expr> result = 0;
+        switch (predicate) {
+            case FCmpInst::FCMP_FALSE: {
+                result = ConstantExpr::alloc(0, klee::Expr::Bool);
+                break;
+            }
+            case FCmpInst::FCMP_OEQ: {
+                result = FOEqExpr::create(left, right);
+                break;
+            }
+            case FCmpInst::FCMP_OGT: {
+                result = FOGtExpr::create(left, right);
+                break;
+            }
+            case FCmpInst::FCMP_OGE: {
+                result = FOGeExpr::create(left, right);
+                break;
+            }
+            case FCmpInst::FCMP_OLT: {
+                result = FOLtExpr::create(left, right);
+                break;
+            }
+            case FCmpInst::FCMP_OLE: {
+                result = FOLeExpr::create(left, right);
+                break;
+            }
+            case FCmpInst::FCMP_ONE: {
+                // This isn't NotExpr(FOEqExpr(arg))
+                // because it is an ordered comparision and
+                // should return false if either operand is NaN.
+                //
+                // ¬(isnan(l) ∨ isnan(r)) ∧ ¬(foeq(l, r))
+                //
+                //  ===
+                //
+                // ¬( (isnan(l) ∨ isnan(r)) ∨ foeq(l,r))
+                result = NotExpr::create(OrExpr::create(IsNaNExpr::either(left, right),
+                                                        FOEqExpr::create(left, right)));
+                break;
+            }
+            case FCmpInst::FCMP_ORD: {
+                result = NotExpr::create(IsNaNExpr::either(left, right));
+                break;
+            }
+            case FCmpInst::FCMP_UNO: {
+                result = IsNaNExpr::either(left, right);
+                break;
+            }
+            case FCmpInst::FCMP_UEQ: {
+                result = OrExpr::create(IsNaNExpr::either(left, right),
+                                        FOEqExpr::create(left, right));
+                break;
+            }
+            case FCmpInst::FCMP_UGT: {
+                result = OrExpr::create(IsNaNExpr::either(left, right),
+                                        FOGtExpr::create(left, right));
+                break;
+            }
+            case FCmpInst::FCMP_UGE: {
+                result = OrExpr::create(IsNaNExpr::either(left, right),
+                                        FOGeExpr::create(left, right));
+                break;
+            }
+            case FCmpInst::FCMP_ULT: {
+                result = OrExpr::create(IsNaNExpr::either(left, right),
+                                        FOLtExpr::create(left, right));
+                break;
+            }
+            case FCmpInst::FCMP_ULE: {
+                result = OrExpr::create(IsNaNExpr::either(left, right),
+                                        FOLeExpr::create(left, right));
+                break;
+            }
+            case FCmpInst::FCMP_UNE: {
+                // Unordered comparision so should
+                // return true if either arg is NaN.
+                // If either arg to ``FOEqExpr::create()``
+                // is a NaN then the result is false which gets
+                // negated giving us true when either arg to the instruction
+                // is a NaN.
+                result = NotExpr::create(FOEqExpr::create(left, right));
+                break;
+            }
+            case FCmpInst::FCMP_TRUE: {
+                result = ConstantExpr::alloc(1, Expr::Bool);
+                break;
+            }
+            default:
+                llvm_unreachable("Unhandled FCmp predicate");
+        }
+        return result;
+    }
+
+
+    ref<ConstantExpr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce, llvm::APFloat::roundingMode rm,
                                                const KInstruction *ki) {
     llvm::Type *type = ce->getType();
 
     ref<ConstantExpr> op1(0), op2(0), op3(0);
     int numOperands = ce->getNumOperands();
 
-    if (numOperands > 0) op1 = evalConstant(ce->getOperand(0), ki);
-    if (numOperands > 1) op2 = evalConstant(ce->getOperand(1), ki);
-    if (numOperands > 2) op3 = evalConstant(ce->getOperand(2), ki);
+    if (numOperands > 0) op1 = evalConstant(ce->getOperand(0), rm, ki);
+    if (numOperands > 1) op2 = evalConstant(ce->getOperand(1), rm, ki);
+    if (numOperands > 2) op3 = evalConstant(ce->getOperand(2), rm, ki);
 
     /* Checking for possible errors during constant folding */
     switch (ce->getOpcode()) {
@@ -209,7 +305,7 @@ namespace klee {
       for (gep_type_iterator ii = gep_type_begin(ce), ie = gep_type_end(ce);
            ii != ie; ++ii) {
         ref<ConstantExpr> indexOp =
-            evalConstant(cast<Constant>(ii.getOperand()), ki);
+            evalConstant(cast<Constant>(ii.getOperand()), rm, ki);
         if (indexOp->isZero())
           continue;
 
@@ -258,17 +354,47 @@ namespace klee {
       return op1->isTrue() ? op2 : op3;
 
     case Instruction::FAdd:
+        return op1->FAdd(op2, rm);
     case Instruction::FSub:
+        return op1->FSub(op2, rm);
     case Instruction::FMul:
+        return op1->FMul(op2, rm);
     case Instruction::FDiv:
-    case Instruction::FRem:
-    case Instruction::FPTrunc:
-    case Instruction::FPExt:
-    case Instruction::UIToFP:
-    case Instruction::SIToFP:
-    case Instruction::FPToUI:
-    case Instruction::FPToSI:
-    case Instruction::FCmp:
+        return op1->FDiv(op2, rm);
+    case Instruction::FRem: {
+        return op1->FRem(op2, rm);
+    }
+
+    case Instruction::FPTrunc: {
+        Expr::Width width = getWidthForLLVMType(ce->getType());
+        return op1->FPTrunc(width, rm);
+    }
+    case Instruction::FPExt: {
+        Expr::Width width = getWidthForLLVMType(ce->getType());
+        return op1->FPExt(width);
+    }
+    case Instruction::UIToFP: {
+        Expr::Width width = getWidthForLLVMType(ce->getType());
+        return op1->UIToFP(width, rm);
+    }
+    case Instruction::SIToFP: {
+        Expr::Width width = getWidthForLLVMType(ce->getType());
+        return op1->SIToFP(width, rm);
+    }
+    case Instruction::FPToUI: {
+        Expr::Width width = getWidthForLLVMType(ce->getType());
+        return op1->FPToUI(width, rm);
+    }
+    case Instruction::FPToSI: {
+        Expr::Width width = getWidthForLLVMType(ce->getType());
+        return op1->FPToSI(width, rm);
+    }
+    case Instruction::FCmp: {
+        ref<Expr> result = evaluateFCmp(ce->getPredicate(), op1, op2);
+        if (ConstantExpr *CE = dyn_cast<ConstantExpr>(result)) {
+            return ref<ConstantExpr>(CE);
+        }
+    }
       assert(0 && "floating point ConstantExprs unsupported");
     }
     llvm_unreachable("Unsupported expression in evalConstantExpr");

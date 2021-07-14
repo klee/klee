@@ -27,6 +27,7 @@
 
 #include <csetjmp>
 #include <csignal>
+#include <cfenv>
 
 using namespace llvm;
 using namespace klee;
@@ -63,7 +64,7 @@ public:
   ExternalDispatcherImpl(llvm::LLVMContext &ctx);
   ~ExternalDispatcherImpl();
   bool executeCall(llvm::Function *function, llvm::Instruction *i,
-                   uint64_t *args);
+                   uint64_t *args, int roundingMode);
   void *resolveSymbol(const std::string &name);
   int getLastErrno();
   void setLastErrno(int newErrno);
@@ -157,56 +158,72 @@ ExternalDispatcherImpl::~ExternalDispatcherImpl() {
 }
 
 bool ExternalDispatcherImpl::executeCall(Function *f, Instruction *i,
-                                         uint64_t *args) {
+                                         uint64_t *args, int roundingMode) {
   dispatchers_ty::iterator it = dispatchers.find(i);
+    // Save current rounding mode used by KLEE internally and set the
+    // rounding mode needed during the external call.
+  int oldRoundingMode = fegetround();
+  bool success = !fesetround(roundingMode);
+  if (!success) {
+    llvm::errs() << "Failed to set rounding mode during external call\n";
+    abort();
+  }
+  bool result;
   if (it != dispatchers.end()) {
     // Code already JIT'ed for this
-    return runProtectedCall(it->second, args);
-  }
-
-  // Code for this not JIT'ed. Do this now.
-  Function *dispatcher;
+    result = runProtectedCall(it->second, args);
+  } else {
+      // Code for this not JIT'ed. Do this now.
+      Function *dispatcher;
 #ifdef WINDOWS
-  std::map<std::string, void *>::iterator it2 =
-      preboundFunctions.find(f->getName());
+      std::map<std::string, void *>::iterator it2 =
+          preboundFunctions.find(f->getName());
 
-  if (it2 != preboundFunctions.end()) {
-    // only bind once
-    if (it2->second) {
-      executionEngine->addGlobalMapping(f, it2->second);
-      it2->second = 0;
-    }
-  }
+      if (it2 != preboundFunctions.end()) {
+        // only bind once
+        if (it2->second) {
+          executionEngine->addGlobalMapping(f, it2->second);
+          it2->second = 0;
+        }
+      }
 #endif
 
-  Module *dispatchModule = NULL;
-  // The MCJIT generates whole modules at a time so for every call that we
-  // haven't made before we need to create a new Module.
-  dispatchModule = new Module(getFreshModuleID(), ctx);
-  dispatcher = createDispatcher(f, i, dispatchModule);
-  dispatchers.insert(std::make_pair(i, dispatcher));
+      Module *dispatchModule = NULL;
+      // The MCJIT generates whole modules at a time so for every call that we
+      // haven't made before we need to create a new Module.
+      dispatchModule = new Module(getFreshModuleID(), ctx);
+      dispatcher = createDispatcher(f, i, dispatchModule);
+      dispatchers.insert(std::make_pair(i, dispatcher));
 
-  // Force the JIT execution engine to go ahead and build the function. This
-  // ensures that any errors or assertions in the compilation process will
-  // trigger crashes instead of being caught as aborts in the external
-  // function.
-  if (dispatcher) {
-    // The dispatchModule is now ready so tell MCJIT to generate the code for
-    // it.
-    auto dispatchModuleUniq = std::unique_ptr<Module>(dispatchModule);
-    executionEngine->addModule(
-        std::move(dispatchModuleUniq)); // MCJIT takes ownership
-    // Force code generation
-    uint64_t fnAddr =
-        executionEngine->getFunctionAddress(dispatcher->getName().str());
-    executionEngine->finalizeObject();
-    assert(fnAddr && "failed to get function address");
-    (void)fnAddr;
-  } else {
-    // MCJIT didn't take ownership of the module so delete it.
-    delete dispatchModule;
-  }
-  return runProtectedCall(dispatcher, args);
+      // Force the JIT execution engine to go ahead and build the function. This
+      // ensures that any errors or assertions in the compilation process will
+      // trigger crashes instead of being caught as aborts in the external
+      // function.
+      if (dispatcher) {
+          // The dispatchModule is now ready so tell MCJIT to generate the code for
+          // it.
+          auto dispatchModuleUniq = std::unique_ptr<Module>(dispatchModule);
+          executionEngine->addModule(
+                  std::move(dispatchModuleUniq)); // MCJIT takes ownership
+          // Force code generation
+          uint64_t fnAddr =
+                  executionEngine->getFunctionAddress(dispatcher->getName().str());
+          executionEngine->finalizeObject();
+          assert(fnAddr && "failed to get function address");
+          (void) fnAddr;
+      } else {
+          // MCJIT didn't take ownership of the module so delete it.
+          delete dispatchModule;
+      }
+      result = runProtectedCall(dispatcher, args);
+    }
+    // Restore rounding mode.
+    success =!fesetround(oldRoundingMode);
+    if (!success) {
+      llvm::errs() << "Failed to restore rounding mode after externall call\n";
+      abort();
+    }
+    return result;
 }
 
 // FIXME: This is not reentrant.
@@ -340,8 +357,8 @@ ExternalDispatcher::ExternalDispatcher(llvm::LLVMContext &ctx)
 ExternalDispatcher::~ExternalDispatcher() { delete impl; }
 
 bool ExternalDispatcher::executeCall(llvm::Function *function,
-                                     llvm::Instruction *i, uint64_t *args) {
-  return impl->executeCall(function, i, args);
+                                     llvm::Instruction *i, uint64_t *args, int roundingMode) {
+  return impl->executeCall(function, i, args, roundingMode);
 }
 
 void *ExternalDispatcher::resolveSymbol(const std::string &name) {

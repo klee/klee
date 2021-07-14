@@ -227,24 +227,37 @@ klee::linkModules(std::vector<std::unique_ptr<llvm::Module>> &modules,
   }
 
   bool symbolsLinked = true;
+
   while (symbolsLinked) {
     symbolsLinked = false;
     std::set<std::string> undefinedSymbols;
     GetAllUndefinedSymbols(composite.get(), undefinedSymbols);
     auto hasRequiredDefinition = [&undefinedSymbols](
-                                     const llvm::Module *module) {
-      for (auto symbol : undefinedSymbols) {
-        GlobalValue *GV =
-            dyn_cast_or_null<GlobalValue>(module->getNamedValue(symbol));
-        if (GV && !GV->isDeclaration()) {
-          KLEE_DEBUG_WITH_TYPE("klee_linker",
-                               dbgs() << "Found " << GV->getName() << " in "
-                                      << module->getModuleIdentifier() << "\n");
-          return true;
+            const llvm::Module *module) {
+        for (auto symbol : undefinedSymbols) {
+            GlobalValue *GV =
+                    dyn_cast_or_null<GlobalValue>(module->getNamedValue(symbol));
+            if (GV && !GV->isDeclaration()) {
+                KLEE_DEBUG_WITH_TYPE("klee_linker",
+                                     dbgs() << "Found " << GV->getName() << " in "
+                                            << module->getModuleIdentifier() << "\n");
+                return true;
+            }
         }
-      }
-      return false;
+        return false;
     };
+
+    //replace std functions with KLEE internals
+    for (const auto& p : floatReplacements) {
+        if (composite->getFunction(p.first)) {
+            undefinedSymbols.insert(p.second);
+        }
+    }
+    for (const auto& p : feRoundReplacements) {
+        if (composite->getFunction(p.first)) {
+            undefinedSymbols.insert(p.second);
+        }
+    }
 
     // Stop in nothing is undefined
     if (undefinedSymbols.empty())
