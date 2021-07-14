@@ -1203,7 +1203,7 @@ int unlink(const char *pathname) {
     }
   }
 
-  klee_warning("ignoring (  klee_report_error(__FILE__, __LINE__, \"Ignoring external call: symex safety\", \".xxx\");)");
+  klee_report_error(__FILE__, __LINE__, "Ignoring external call: symex safety", ".xxx");
   errno = EPERM;
   return -1;
 }

@@ -19,6 +19,7 @@ set(SRC_FILES
     klee_internal_isinf.ll
     klee_rint.c
     klee_set_rounding_mode.c
+    klee_signbit.ll
     log.c
     round.c
     sqrt.c

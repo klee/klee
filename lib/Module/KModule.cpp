@@ -104,6 +104,10 @@ namespace {
             "float-internals",
             cl::desc("Use KLEE internal functions for floating-point"),
             cl::init(true));
+  cl::opt<bool> UseKleeFERoundInternals(
+          "feround-internals",
+                cl::desc("USE KLEE internal functions for passing rounding mode to external calls"),
+            cl::init(true));
     // Don't run VerifierPass when checking module
   cl::opt<bool>
   DontVerify("disable-verify",

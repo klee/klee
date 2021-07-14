@@ -13,6 +13,7 @@
 #include "klee/Expr/Expr.h"
 
 namespace klee {
+  extern bool ContextInitialized;
 
   /// Context - Helper class for storing global information about a KLEE run.
   class Context {

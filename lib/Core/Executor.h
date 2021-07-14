@@ -37,7 +37,6 @@
 #include <set>
 #include <string>
 #include <vector>
-#include <llvm/IR/Intrinsics.h>
 #include <deque>
 
 struct KTest;
@@ -417,7 +416,7 @@ private:
   const Cell& eval(KInstruction *ki, unsigned index,
                              ExecutionState &state) const;
 
-  const Cell& symbolicEval(KInstruction *ki, unsigned index,
+  const Cell& eval(KInstruction *ki, unsigned index,
                    ExecutionState &state);
 
   Cell& getArgumentCell(ExecutionState &state,
@@ -514,7 +513,7 @@ private:
   }
 
   /// bindModuleConstants - Initialize the module constant table.
-  void bindModuleConstants(ExecutionState &state);
+  void bindModuleConstants(const llvm::APFloat::roundingMode rm);
 
   template <typename SqType, typename TypeIt>
   void computeOffsetsSeqTy(KGEPInstruction *kgepi,
@@ -594,7 +593,7 @@ public:
 
   void runFunctionAsMain(llvm::Function *f, int argc, char **argv,
                          char **envp) override;
-  void runFunctionGuided(llvm::Function *fn, int argc, char **argv, char **envp);
+  void runFunctionGuided(llvm::Function *fn, int argc, char **argv, char **envp) override;
   void runMainAsGuided(llvm::Function *f, int argc, char **argv,
                               char **envp) override;
   void runMainWithTarget(llvm::Function *mainFn, llvm::BasicBlock *target,

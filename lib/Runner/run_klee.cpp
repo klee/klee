@@ -45,6 +45,7 @@
 
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Signals.h"
+#include "../Core/Context.h"
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
 #include <llvm/Bitcode/BitcodeReader.h>
@@ -393,7 +394,7 @@ public:
     llvm::raw_ostream &getInfoStream() const { return *m_infoFile; }
     /// Returns the number of test cases successfully generated so far
     unsigned getNumTestCases() { return m_numGeneratedTests; }
-    unsigned getNumPathsCompleted() { return m_pathsExplored; }
+    unsigned getNumPathsExplored() { return m_pathsExplored; }
     void incPathsExplored() { m_pathsExplored++; }
 
     void setInterpreter(Interpreter *i);
@@ -1119,8 +1120,6 @@ static const char *dontCareExternals[] = {
         // fp stuff we just don't worry about yet
         "frexp",
         "ldexp",
-        "__isnan",
-        "__signbit",
 };
 
 // Extra symbols we aren't going to warn about with klee-libc
@@ -1420,6 +1419,15 @@ linkWithUclibc(StringRef libDir, std::string opt_suffix,
 #endif
 
 int run_klee(int argc, char **argv, char **envp) {
+  if (theInterpreter) {
+    theInterpreter = nullptr;
+  }
+  interrupted = false;
+
+  klee::klee_warning_file = nullptr;
+  klee::klee_message_file = nullptr;
+  klee::ContextInitialized = false;
+
     atexit(llvm_shutdown);  // Call llvm_shutdown() on exit.
 
     KCommandLine::HideOptions(llvm::cl::GeneralCategory);
@@ -1427,11 +1435,16 @@ int run_klee(int argc, char **argv, char **envp) {
     llvm::InitializeNativeTarget();
 
     parseArguments(argc, argv);
+
+  static bool registeredOnErrorHandler = false;
+  if (!registeredOnErrorHandler) {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
     sys::PrintStackTraceOnErrorSignal(argv[0]);
 #else
     sys::PrintStackTraceOnErrorSignal();
 #endif
+    registeredOnErrorHandler = true;
+  }
 
     if (Watchdog) {
         if (MaxTime.empty()) {
@@ -1920,7 +1933,7 @@ int run_klee(int argc, char **argv, char **envp) {
     stats << '\n' << "KLEE: done: total instructions = "
           << instructions << '\n'
           << "KLEE: done: completed paths = "
-          << handler->getNumPathsCompleted() << '\n'
+          << handler->getNumPathsExplored() << '\n'
           << "KLEE: done: generated tests = "
           << handler->getNumTestCases() << '\n';
 

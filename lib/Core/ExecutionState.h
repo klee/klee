@@ -24,6 +24,7 @@
 
 #include <map>
 #include <memory>
+#include <set>
 #include <vector>
 #include <unordered_set>
 
