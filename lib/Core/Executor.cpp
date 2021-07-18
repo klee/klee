@@ -2755,7 +2755,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       offset = AddExpr::create(offset,
                              Expr::createPointer(kgepi->offset));
     ref<Expr> address = AddExpr::create(base, offset);
-    address = UseGEPExpr ? GEPExpr::create(address, base, sourceSize) : address;
+    if (UseGEPExpr && !isa<ConstantExpr>(address))
+      gepExprBases[address] = {base, sourceSize};
     bindLocal(ki, state, address);
     break;
   }
@@ -2803,11 +2804,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = symbolicEval(ki, 0, state).value;
     BitCastInst *bc = cast<BitCastInst>(ki->inst);
 
-    if(UseGEPExpr && isa<GEPExpr>(result)) {
+    if(UseGEPExpr && isGEPExpr(result)) {
       unsigned size = bc->getType()->isPointerTy() ?
             kmodule->targetData->getTypeStoreSize(ki->inst->getType()->getPointerElementType()) :
             kmodule->targetData->getTypeStoreSize(ki->inst->getType());
-      dyn_cast<GEPExpr>(result)->sourceSize = size;
+      gepExprBases[result] = {gepExprBases[result].first, size};
     }
 
     bindLocal(ki, state, result);
@@ -4459,7 +4460,7 @@ void Executor::resolveExact(ExecutionState &state,
   }
 
   if (unbound) {
-    if (UseGEPExpr && isa<GEPExpr>(p)) {
+    if (isReadFromSymbolicArray(p)) {
       terminateStateEarly(*unbound, "insufficient information: symbolic size of object in isolationMode.");
     } else {
       terminateStateOnError(*unbound, "memory error: invalid pointer: " + name,
@@ -4485,24 +4486,27 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     klee_error("unexpected type of memory operation");
   }
   unsigned bytes = Expr::getMinBytesForWidth(type);
-  ref<Expr> unsafeAddress = UseGEPExpr && isa<GEPExpr>(address) ? dyn_cast<GEPExpr>(address)->address : address;
+
+  ref<Expr> base = UseGEPExpr && isGEPExpr(address) ? gepExprBases[address].first : address;
+  unsigned size = UseGEPExpr && isGEPExpr(address) ? gepExprBases[address].second : bytes;
 
   if (SimplifySymIndices) {
-    if (!isa<ConstantExpr>(unsafeAddress))
-      unsafeAddress = ConstraintManager::simplifyExpr(state.constraints, address);
+    if (!isa<ConstantExpr>(address))
+      address = ConstraintManager::simplifyExpr(state.constraints, address);
     if (operation == Write && !isa<ConstantExpr>(value))
       value = ConstraintManager::simplifyExpr(state.constraints, value);
   }
 
-  unsafeAddress = optimizer.optimizeExpr(unsafeAddress, true);
+  address = optimizer.optimizeExpr(address, true);
 
   // fast path: single in-bounds resolution
   ObjectPair op;
   bool success;
   solver->setTimeout(coreSolverTimeout);
-  if (!state.addressSpace.resolveOne(state, solver, unsafeAddress, op, success)) {
-    unsafeAddress = toConstant(state, unsafeAddress, "resolveOne failure");
-    success = state.addressSpace.resolveOne(cast<ConstantExpr>(unsafeAddress), op);
+
+  if (!state.addressSpace.resolveOne(state, solver, address, op, success)) {
+    address = toConstant(state, address, "resolveOne failure");
+    success = state.addressSpace.resolveOne(cast<ConstantExpr>(address), op);
   }
   solver->setTimeout(time::Span());
 
@@ -4510,10 +4514,10 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     const MemoryObject *mo = op.first;
 
     if (MaxSymArraySize && mo->size >= MaxSymArraySize) {
-      unsafeAddress = toConstant(state, unsafeAddress, "max-sym-array-size");
+      address = toConstant(state, address, "max-sym-array-size");
     }
     
-    ref<Expr> offset = mo->getOffsetExpr(unsafeAddress);
+    ref<Expr> offset = mo->getOffsetExpr(address);
     ref<Expr> check = mo->getBoundsCheckOffset(offset, bytes);
     check = optimizer.optimizeExpr(check, true);
 
@@ -4558,15 +4562,15 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   // we are on an error path (no resolution, multiple resolution, one
   // resolution with out of bounds)
 
-  unsafeAddress = optimizer.optimizeExpr(unsafeAddress, true);
-  ResolutionList rl;  
+  address = optimizer.optimizeExpr(address, true);
+  ResolutionList rl;
   solver->setTimeout(coreSolverTimeout);
   bool incomplete;
 
-  if (UseGEPExpr && isa<GEPExpr>(address))
-      incomplete = state.addressSpace.resolve(state, solver, dyn_cast<GEPExpr>(address)->base, rl, 0, coreSolverTimeout);
+  if (UseGEPExpr && isGEPExpr(address))
+      incomplete = state.addressSpace.resolve(state, solver, base, rl, 0, coreSolverTimeout);
   else
-      incomplete = state.addressSpace.resolve(state, solver, unsafeAddress, rl, 0, coreSolverTimeout);
+      incomplete = state.addressSpace.resolve(state, solver, address, rl, 0, coreSolverTimeout);
 
   solver->setTimeout(time::Span());
 
@@ -4578,10 +4582,11 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     const ObjectState *os = i->second;
 
     ref<Expr> inBounds;
-    if (UseGEPExpr && isa<GEPExpr>(address))
-      inBounds = mo->getBoundsCheckPointer(dyn_cast<GEPExpr>(address)->base, 1);
+
+    if (UseGEPExpr && isGEPExpr(address))
+      inBounds = mo->getBoundsCheckPointer(base, 1);
     else
-      inBounds = mo->getBoundsCheckPointer(unsafeAddress, 1);
+      inBounds = mo->getBoundsCheckPointer(address, 1);
 
     StatePair branches = fork(*unbound, inBounds, true);
     ExecutionState *bound = branches.first;
@@ -4589,11 +4594,10 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 
     // bound can be 0 on failure or overlapped 
     if (bound) {
-      ref<Expr> inBounds = mo->getBoundsCheckPointer(unsafeAddress, bytes);
-      if (UseGEPExpr && isa<GEPExpr>(address)) {
-        auto gep = dyn_cast<GEPExpr>(address);
+      ref<Expr> inBounds = mo->getBoundsCheckPointer(address, bytes);
+      if (UseGEPExpr && isGEPExpr(address)) {
         inBounds = AndExpr::create(
-            inBounds, mo->getBoundsCheckPointer(gep->base, gep->sourceSize));
+            inBounds, mo->getBoundsCheckPointer(base, size));
       }
       StatePair branches_inner = fork(*bound, inBounds, true);
       ExecutionState *bound_inner = branches_inner.first;
@@ -4606,12 +4610,12 @@ void Executor::executeMemoryOperation(ExecutionState &state,
                                     ReadOnly);
             } else {
               ObjectState *wos = bound_inner->addressSpace.getWriteable(mo, os);
-              wos->write(mo->getOffsetExpr(unsafeAddress), value);
+              wos->write(mo->getOffsetExpr(address), value);
             }
             break;
           }
           case Read: {
-            ref<Expr> result = os->read(mo->getOffsetExpr(unsafeAddress), type);
+            ref<Expr> result = os->read(mo->getOffsetExpr(address), type);
             bindLocal(target, *bound_inner, result);
             break;
           }
@@ -4632,28 +4636,18 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   if (unbound) {
     if (incomplete) {
       terminateStateEarly(*unbound, "Query timed out (resolve).");
-    } else if (LazyInstantiation && (isa<ReadExpr>(address) || isa<ConcatExpr>(address) || (UseGEPExpr && isa<GEPExpr>(address)))) {
-      ref<Expr> base = UseGEPExpr && isa<GEPExpr>(address) ? cast<GEPExpr>(address)->base : unsafeAddress;
-      unsigned size = UseGEPExpr && isa<GEPExpr>(address) ? cast<GEPExpr>(address)->sourceSize : bytes;
+    } else if (LazyInstantiation && (isa<ReadExpr>(address) || isa<ConcatExpr>(address) || (UseGEPExpr && isGEPExpr(address)))) {
 
-      if (base->getKind() == Expr::Read || base->getKind() == Expr::Concat) {
-        ref<ReadExpr> base_b;
-        if (base->getKind() == Expr::Concat)
-          base_b =
-              ArrayExprHelper::hasOrderedReads(*dyn_cast<ConcatExpr>(base));
-        else
-          base_b = dyn_cast<ReadExpr>(base);
-        if (base_b->updates.root->isConstantArray()) {
-          terminateStateEarly(*unbound, "Weird Inst Source");
-          return;
-        }
+      if (!isReadFromSymbolicArray(base)) {
+        terminateStateEarly(*unbound, "Weird Inst Source");
+        return;
       }
 
       ObjectPair p = lazyInstantiateVariable(*unbound, base, target, size);
       assert(p.first && p.second);
 
       const MemoryObject *mo = p.first;
-      ref<Expr> inBounds = mo->getBoundsCheckPointer(unsafeAddress, bytes);
+      ref<Expr> inBounds = mo->getBoundsCheckPointer(address, bytes);
 
       Solver::Validity res;
       time::Span timeout = coreSolverTimeout;
@@ -4665,15 +4659,15 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         terminateStateOnError(*unbound, "memory error: out of bound pointer", Ptr,
                               NULL, getAddressInfo(*unbound, address));
       } else {
-        unbound->addConstraint(inBounds);
+        addConstraint(*unbound, inBounds);
         switch (operation) {
           case Write: {
             ObjectState *wos = unbound->addressSpace.getWriteable(p.first, p.second);
-            wos->write(p.first->getOffsetExpr(unsafeAddress), value);
+            wos->write(p.first->getOffsetExpr(address), value);
             break;
           }
           case Read: {
-            ref<Expr> result = p.second->read(p.first->getOffsetExpr(unsafeAddress), type);
+            ref<Expr> result = p.second->read(p.first->getOffsetExpr(address), type);
             bindLocal(target, *unbound, result);
             break;
           }
@@ -4704,7 +4698,7 @@ ObjectPair Executor::lazyInstantiateAlloca(ExecutionState &state,
 
 ObjectPair Executor::lazyInstantiateVariable(ExecutionState &state, ref<Expr> address, KInstruction *target, uint64_t size) {
   assert(!isa<ConstantExpr>(address));
-  const llvm::Value *allocSite = target->inst;
+  const llvm::Value *allocSite = target ? target->inst : nullptr;
   MemoryObject *mo =
       memory->allocate(size, false, /*isGlobal=*/false,
                        allocSite, /*allocationAlignment=*/8, address);
@@ -5401,6 +5395,10 @@ void Executor::dumpStates() {
   }
 
   ::dumpStates = 0;
+}
+
+bool Executor::isGEPExpr(ref<Expr> expr) {
+  return gepExprBases.find(expr) != gepExprBases.end();
 }
 
 ///

@@ -40,6 +40,8 @@ namespace klee {
                            InputIterator end,
                            std::vector<const Array*> &results);
 
+  bool isReadFromSymbolicArray(ref<Expr> e);
+
   class ConstantArrayFinder : public ExprVisitor {
   protected:
     ExprVisitor::Action visitRead(const ReadExpr &re);

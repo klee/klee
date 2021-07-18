@@ -758,12 +758,6 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     return vc_sbvRemExpr(vc, *width_out, left, right);
   }
 
-  case Expr::GEP: {
-    GEPExpr *gep = cast<GEPExpr>(e);
-    ExprHandle expr = construct(gep->address, width_out);
-    return expr;
-  }
-
     // Bitwise
 
   case Expr::Not: {

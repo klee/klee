@@ -156,6 +156,7 @@ private:
   SpecialFunctionHandler *specialFunctionHandler;
   TimerGroup timers;
   std::unique_ptr<PTree> processTree;
+  std::map<ref<Expr>, std::pair<ref<Expr>, unsigned>> gepExprBases;
 
   /// Used to track states that have been added during the current
   /// instructions step. 
@@ -635,6 +636,7 @@ public:
   void calculateTargetedStates(llvm::BasicBlock *initialBlock,
                                ExecutedBlock &pausedStates,
                                std::map<KBlock*, std::vector<ExecutionState*>> &targetedStates);
+  bool isGEPExpr(ref<Expr> expr);
 };
   
 } // End klee namespace

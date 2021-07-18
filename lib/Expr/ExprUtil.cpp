@@ -9,6 +9,7 @@
 
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Expr/Expr.h"
+#include "klee/Expr/ArrayExprVisitor.h"
 #include "klee/Expr/ExprHashMap.h"
 #include "klee/Expr/ExprVisitor.h"
 
@@ -139,3 +140,17 @@ template void klee::findSymbolicObjects<A>(A, A, std::vector<const Array*> &);
 
 typedef std::set< ref<Expr> >::iterator B;
 template void klee::findSymbolicObjects<B>(B, B, std::vector<const Array*> &);
+
+bool klee::isReadFromSymbolicArray(ref<Expr> e) {
+  if (isa<ReadExpr>(e) || isa<ConcatExpr>(e)) {
+    ref<ReadExpr> base;
+    if (isa<ConcatExpr>(e))
+      base = ArrayExprHelper::hasOrderedReads(*dyn_cast<ConcatExpr>(e));
+    else
+      base = dyn_cast<ReadExpr>(e);
+    if (base->updates.root->isSymbolicArray()) {
+      return true;
+    }
+  }
+  return false;
+}

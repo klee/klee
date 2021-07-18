@@ -138,7 +138,6 @@ void Expr::printKind(llvm::raw_ostream &os, Kind k) {
     X(Select);
     X(Concat);
     X(Extract);
-    X(GEP);
     X(ZExt);
     X(SExt);
     X(Add);
@@ -225,11 +224,6 @@ unsigned NotExpr::computeHash() {
   return hashValue;
 }
 
-unsigned GEPExpr::computeHash() {
-  hashValue = address->hash() * Expr::MAGIC_HASH_CONSTANT * Expr::GEP;
-  return hashValue;
-}
-
 ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
   unsigned numArgs = args.size();
   (void) numArgs;
@@ -238,7 +232,6 @@ ref<Expr> Expr::createFromKind(Kind k, std::vector<CreateArg> args) {
     case Constant:
     case Extract:
     case Read:
-    case GEP:
     default:
       assert(0 && "invalid kind");
 
@@ -711,16 +704,6 @@ ref<Expr> NotExpr::create(const ref<Expr> &e) {
   return NotExpr::alloc(e);
 }
 
-/***/
-
-ref<Expr>
-GEPExpr::create(const ref<Expr> &e, const ref<Expr> &b, unsigned s) {
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
-    return CE;
-  if (!isa<ReadExpr>(b) && !isa<ConcatExpr>(b))
-    return e;
-  return GEPExpr::alloc(e, b, s);
-}
 
 /***/
 

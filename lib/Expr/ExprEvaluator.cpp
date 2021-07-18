@@ -104,8 +104,5 @@ ExprVisitor::Action ExprEvaluator::visitExprPost(const Expr& e) {
   if (e.getKind() == Expr::NotOptimized) {
     return Action::changeTo(static_cast<const NotOptimizedExpr&>(e).src);
   }
-  if (e.getKind() == Expr::GEP) {
-    return Action::changeTo(static_cast<const GEPExpr&>(e).address);
-  }
   return Action::skipChildren();
 }
