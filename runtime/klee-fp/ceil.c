@@ -1,3 +1,16 @@
+/*
+ * This source file has been modified by Huawei. Copyright (c) 2021
+ */
+
+/*===-- ceil.c ------------------------------------------------------------===//
+//
+//                     The KLEE Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===*/
+
 #include "klee_rint.h"
 #include "klee_floor.h"
 #include "float.h"

@@ -1,5 +1,8 @@
-//===-- Z3CoreBuilder.cpp ------------------------------------------*- C++
-//-*-====//
+/*
+ * This source file has been modified by Huawei. Copyright (c) 2021
+ */
+
+//===-- Z3CoreBuilder.cpp --------------------------------------*- C++ -*-====//
 //
 //                     The KLEE Symbolic Virtual Machine
 //

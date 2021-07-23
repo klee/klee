@@ -1,3 +1,15 @@
+/*
+ * This source file has been modified by Huawei. Copyright (c) 2021
+ */
+
+/*===-- klee_floor.h ------------------------------------------------------===//
+//
+//                     The KLEE Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===*/
 #ifndef KLEE_FLOOR_H
 #define KLEE_FLOOR_H
 

@@ -1,5 +1,8 @@
-//===-- Z3BitvectorBuilder.h --------------------------------------------*- C++
-//-*-====//
+/*
+ * This source file has been modified by Huawei. Copyright (c) 2021
+ */
+
+//===-- Z3BitvectorBuilder.h -----------------------------------*- C++ -*-====//
 //
 //                     The KLEE Symbolic Virtual Machine
 //

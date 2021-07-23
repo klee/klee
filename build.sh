@@ -1,4 +1,8 @@
 #!/bin/bash
+#
+# This source file has been modified by Huawei. Copyright (c) 2021
+#
+
 set -e
 set -o pipefail
 mkdir -p build

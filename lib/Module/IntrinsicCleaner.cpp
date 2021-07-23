@@ -1,3 +1,7 @@
+/*
+ * This source file has been modified by Huawei. Copyright (c) 2021
+ */
+
 //===-- IntrinsicCleaner.cpp ----------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine

@@ -1,3 +1,15 @@
+/*
+ * This source file has been modified by Huawei. Copyright (c) 2021
+ */
+
+/*===-- exp.c -------------------------------------------------------------===//
+//
+//                     The KLEE Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===*/
 #include "math.h"
 
 #define EXP_CORNER_CASE(suffix, type, isnan_function) int exp_corner_case_##suffix(type *x) { \

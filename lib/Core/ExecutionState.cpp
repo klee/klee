@@ -1,3 +1,7 @@
+/*
+ * This source file has been modified by Huawei. Copyright (c) 2021
+ */
+
 //===-- ExecutionState.cpp ------------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine

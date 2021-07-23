@@ -1,3 +1,15 @@
+/*
+ * This source file has been modified by Huawei. Copyright (c) 2021
+ */
+
+/*===-- log.c -------------------------------------------------------------===//
+//
+//                     The KLEE Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===*/
 #include "math.h"
 #include "klee_fenv.h"
 #include "fenv.h"

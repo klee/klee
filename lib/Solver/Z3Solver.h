@@ -1,5 +1,8 @@
-//===-- Z3Solver.h
-//---------------------------------------------------===//
+/*
+ * This source file has been modified by Huawei. Copyright (c) 2021
+ */
+
+//===-- Z3Solver.h ---------------------------------------------*- C++ -*-====//
 //
 //                     The KLEE Symbolic Virtual Machine
 //

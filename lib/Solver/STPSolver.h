@@ -1,5 +1,8 @@
-//===-- STPSolver.h
-//---------------------------------------------------===//
+/*
+ * This source file has been modified by Huawei. Copyright (c) 2021
+ */
+
+//===-- STPSolver.h -------------------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
