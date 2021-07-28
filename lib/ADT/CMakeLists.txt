@@ -22,3 +22,8 @@ target_link_libraries(kleeADT PRIVATE
   kleaverExpr
   kleeSupport
 )
+
+install(TARGETS kleeADT
+        EXPORT run_klee
+        DESTINATION "${RUN_KLEE_LIB_DEST}"
+        )

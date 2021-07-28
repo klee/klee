@@ -5220,7 +5220,7 @@ void Executor::runFunctionAsMain(Function *f,
     statsTracker->framePushed(*state, 0);
 
   processTree = std::make_unique<PTree>(state);
-  bindModuleConstants(llvm::APFloat::rmNearestTiesToEven);
+  bindModuleConstants(*state);
   run(*state);
   processTree = nullptr;
 
@@ -5240,7 +5240,7 @@ void Executor::runFunctionGuided(Function *fn,
                                           char **envp) {
   ExecutionState *state = formState(fn, argc, argv, envp);
   state->popFrame();
-  bindModuleConstants(llvm::APFloat::rmNearestTiesToEven);
+  bindModuleConstants(*state);
   KFunction *kf = kmodule->functionMap[fn];
   ExecutionState *initialState = state->withKFunction(kf);
   prepareSymbolicArgs(*initialState, kf);
@@ -5256,7 +5256,7 @@ void Executor::runMainAsGuided(Function *mainFn,
                                       char **argv,
                                       char **envp) {
   ExecutionState *state = formState(mainFn, argc, argv, envp);
-  bindModuleConstants(llvm::APFloat::rmNearestTiesToEven);
+  bindModuleConstants(*state);
   KFunction *kf = kmodule->functionMap[mainFn];
   runGuided(*state, kf);
   // hack to clear memory objects
@@ -5271,7 +5271,7 @@ void Executor::runMainWithTarget(Function *mainFn,
                                  char **argv,
                                  char **envp) {
   ExecutionState *state = formState(mainFn, argc, argv, envp);
-  bindModuleConstants(llvm::APFloat::rmNearestTiesToEven);
+  bindModuleConstants(*state);
   KFunction *kf = kmodule->functionMap[mainFn];
   KBlock *kb = kmodule->functionMap[target->getParent()]->blockMap[target];
   runWithTarget(*state, kf, kb);
