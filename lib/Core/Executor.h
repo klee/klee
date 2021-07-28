@@ -106,6 +106,7 @@ public:
   typedef std::map<llvm::BasicBlock*, std::set<ExecutionState*, ExecutionStateIDCompare> > ExecutedBlock;
   typedef std::map<llvm::BasicBlock*, std::unordered_set<llvm::BasicBlock*> > VisitedBlock;
   struct ExecutionBlockResult {
+    ExecutedBlock redundantStates;
     ExecutedBlock completedStates;
     ExecutedBlock pausedStates;
     ExecutedBlock erroneousStates;
@@ -281,6 +282,7 @@ private:
 
   void stepInstruction(ExecutionState &state);
   void updateStates(ExecutionState *current);
+  void filterStates(ExecutionState *current);
   void transferToBasicBlock(llvm::BasicBlock *dst,
 			    llvm::BasicBlock *src,
 			    ExecutionState &state);

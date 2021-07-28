@@ -1,7 +1,7 @@
 // RUN: %clang %s -g -emit-llvm %O0opt -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --execution-mode=default --emit-all-errors %t1.bc 2>&1 | FileCheck %s
-// RUN: ls %t.klee-out/ | grep .ktest | wc -l | grep 4
+// RUN: ls %t.klee-out/ | grep .ktest$ | wc -l | grep 4
 // RUN: ls %t.klee-out/ | grep .err | wc -l | grep 3
 
 #include <stdio.h>

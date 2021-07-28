@@ -13,7 +13,7 @@ Offset createOffset(unsigned offset, unsigned index) {
 ConcretizedObject createConcretizedObject(char *name, unsigned char *values,
                                           unsigned size, Offset *offsets, unsigned n_offsets) {
   ConcretizedObject ret;
-  ret.name = new char[strlen(name)];
+  ret.name = new char[strlen(name)+1];
   strcpy(ret.name, name);
   
   ret.values = new unsigned char[size];
@@ -31,7 +31,7 @@ ConcretizedObject createConcretizedObject(char *name, unsigned char *values,
 ConcretizedObject
 createConcretizedObject(const char *name, std::vector<unsigned char> &values) {
   ConcretizedObject ret;
-  ret.name = new char[strlen(name)];
+  ret.name = new char[strlen(name)+1];
   strcpy(ret.name, name);
   ret.size = values.size();
   ret.values = new unsigned char[values.size()];

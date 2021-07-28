@@ -1341,9 +1341,9 @@ Executor::toConstant(ExecutionState &state,
 
   std::string str;
   llvm::raw_string_ostream os(str);
-  os << "silently concretizing (reason: " << reason << ") expression " << e
-     << " to value " << value << " (" << (*(state.pc)).info->file << ":"
-     << (*(state.pc)).info->line << ")";
+  // os << "silently concretizing (reason: " << reason << ") expression " << e
+  //    << " to value " << value << " (" << (*(state.pc)).info->file << ":"
+  //    << (*(state.pc)).info->line << ")"; _-_
 
   if (AllExternalWarnings)
     klee_warning("%s", os.str().c_str());
@@ -3306,6 +3306,21 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   }
 }
 
+void Executor::filterStates(ExecutionState *current) {
+  if (!current->prevPC->inst->isTerminator() && addedStates.size() > 0) {
+    results[current->getInitPCBlock()].redundantStates[
+        current->getPrevPCBlock()].insert(addedStates.begin(), addedStates.end());
+    for (std::vector<ExecutionState *>::iterator it = addedStates.begin(),
+         ie = addedStates.end(); it != ie; ++it) {
+      std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it3 =
+        seedMap.find(*it);
+      if (it3 != seedMap.end())
+        seedMap.erase(it3);
+    }
+    addedStates.clear();
+  }
+}
+
 void Executor::updateStates(ExecutionState *current) {
   if (searcher) {
     searcher->update(current, addedStates, removedStates);
@@ -3971,7 +3986,6 @@ void Executor::terminateStateOnTerminator(ExecutionState &state) {
   if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
       (AlwaysOutputSeeds && seedMap.count(&state)))
     interpreterHandler->processTestCase(state, 0, 0);
-  addCompletedResult(state);
   addHistoryResult(state);
   terminateState(state);
 }
@@ -4563,7 +4577,6 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     const MemoryObject *mo = i->first;
     const ObjectState *os = i->second;
 
-    if (mo->isGlobal) break;
     ref<Expr> inBounds;
     if (UseGEPExpr && isa<GEPExpr>(address))
       inBounds = mo->getBoundsCheckPointer(dyn_cast<GEPExpr>(address)->base, 1);
@@ -4573,9 +4586,9 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     StatePair branches = fork(*unbound, inBounds, true);
     ExecutionState *bound = branches.first;
 
+
     // bound can be 0 on failure or overlapped 
     if (bound) {
-      if (unbound)
       ref<Expr> inBounds = mo->getBoundsCheckPointer(unsafeAddress, bytes);
       if (UseGEPExpr && isa<GEPExpr>(address)) {
         auto gep = dyn_cast<GEPExpr>(address);
@@ -4605,7 +4618,8 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         }
       }
       if(unbound_inner) {
-        terminateState(*unbound_inner);
+	    terminateStateOnError(*unbound_inner, "memory error: out of bound pointer", Ptr,
+                              NULL, getAddressInfo(*unbound, address));
       }
     }
 
@@ -4700,7 +4714,8 @@ ObjectPair Executor::lazyInstantiateVariable(ExecutionState &state, ref<Expr> ad
 const Array * Executor::makeArray(ExecutionState &state,
                                   const uint64_t size,
                                   const std::string &name) {
-    unsigned id = 0;
+    static uint64_t id = 0;
+    // std::string uniqueName = name + "#" + std::to_string(id++);
     std::string uniqueName = name;
     while (!state.arrayNames.insert(uniqueName).second) {
       uniqueName = name + "_" + llvm::utostr(++id);
@@ -5192,8 +5207,6 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
     auto mo = state.symbolics[i].first;
     res.objects[i] = createConcretizedObject(mo->name.c_str(), values[i]);
   }
-
-  /* _-_ TODO: Access graph */
 
   return true;
 }
