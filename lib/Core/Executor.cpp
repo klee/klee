@@ -4618,8 +4618,8 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         }
       }
       if(unbound_inner) {
-	    terminateStateOnError(*unbound_inner, "memory error: out of bound pointer", Ptr,
-                              NULL, getAddressInfo(*unbound, address));
+        terminateStateOnError(*unbound_inner, "memory error: out of bound pointer", Ptr,
+                                NULL, getAddressInfo(*unbound, address));
       }
     }
 
@@ -5200,7 +5200,7 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
     return false;
   }
   
-  res.objects = (ConcretizedObject*)malloc(sizeof(ConcretizedObject)*state.symbolics.size());
+  res.objects = new ConcretizedObject[state.symbolics.size()];
   res.n_objects = state.symbolics.size();
   
   for (unsigned i = 0; i != state.symbolics.size(); ++i) {

@@ -21,7 +21,7 @@ ConcretizedObject createConcretizedObject(char *name, unsigned char *values,
     ret.values[i] = values[i];
   }
   
-  ret.offsets = (Offset*)malloc(sizeof(Offset)*n_offsets);
+  ret.offsets = new Offset[n_offsets];
   for(size_t i = 0; i<n_offsets; i++) {
     ret.offsets[i] = offsets[i];
   }
@@ -39,6 +39,6 @@ createConcretizedObject(const char *name, std::vector<unsigned char> &values) {
     ret.values[i] = values[i];
   }
   ret.n_offsets = 0;
-
+  ret.offsets = nullptr;
   return ret;
 }

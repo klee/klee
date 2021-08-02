@@ -42,3 +42,20 @@ TestCase* TC_fromFile(const char* path) {
   }
   return ret;
 }
+
+void ConcretizedObject_free(ConcretizedObject* obj) {
+  if(obj->offsets != nullptr) {
+    delete [] obj->offsets;
+  }
+  delete [] obj->values;
+  delete [] obj->name;
+  return;
+}
+
+void TestCase_free(TestCase* tc) {
+  for(size_t i = 0; i < tc->n_objects; i++) {
+    ConcretizedObject_free(&tc->objects[i]);
+  }
+  delete [] tc->objects;
+  return;
+}

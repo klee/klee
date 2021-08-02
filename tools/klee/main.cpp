@@ -701,6 +701,8 @@ void KleeHandler::processTestCase(ExecutionState &state,
       }
     }
 
+    TestCase_free(&assignments);
+    
     if (WriteStates && lazy_instantiation_resolved == -1) {
       auto f_s = openTestFile("state_li_unresolved", test_id);
       m_interpreter->logState(state, state_id, f_s);

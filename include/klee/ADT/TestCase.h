@@ -37,6 +37,8 @@ struct TestCase {
 };
 
 TestCase* TC_fromFile(const char *path);
+void ConcretizedObject_free(ConcretizedObject*);
+void TestCase_free(TestCase*);
   
 #ifdef __cplusplus
 }
