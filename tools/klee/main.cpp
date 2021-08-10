@@ -672,7 +672,11 @@ void KleeHandler::processTestCase(ExecutionState &state,
     const auto start_time = time::getWallTime();
     TestCase assignments{};
     assignments.numArgs = m_argc;
-    assignments.args = m_argv;
+    assignments.args = new char*[m_argc];
+    for(int i = 0; i<m_argc; i++) {
+      assignments.args[i] = new char[std::strlen(m_argv[i])+1];
+      std::strcpy(assignments.args[i], m_argv[i]);
+    }
     assignments.symArgvs = 0;
     assignments.symArgvLen = 0;
     
