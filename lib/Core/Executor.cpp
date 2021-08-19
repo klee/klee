@@ -5205,7 +5205,7 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
   
   for (unsigned i = 0; i != state.symbolics.size(); ++i) {
     auto mo = state.symbolics[i].first;
-    res.objects[i] = createConcretizedObject(mo->name.c_str(), values[i]);
+    res.objects[i] = createConcretizedObject(mo->name.c_str(), values[i], mo->address);
   }
 
   return true;

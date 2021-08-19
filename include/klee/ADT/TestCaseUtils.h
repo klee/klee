@@ -9,7 +9,7 @@ Offset createOffset(unsigned offset, unsigned index);
 
 ConcretizedObject createConcretizedObject(char *name, unsigned char *values,
                                           unsigned size, Offset *offsets,
-                                          unsigned n_offsets);
+                                          unsigned n_offsets, uint64_t address);
 
 ConcretizedObject
-createConcretizedObject(const char *name, std::vector<unsigned char> &values);
+createConcretizedObject(const char *name, std::vector<unsigned char> &values, uint64_t address);

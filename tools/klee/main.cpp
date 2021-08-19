@@ -645,6 +645,7 @@ void KleeHandler::writeTestCasePlain(const TestCase &tc, unsigned id) {
     out_obj["values"] = std::vector<unsigned char>(tc.objects[i].values,
 			tc.objects[i].values + tc.objects[i].size);
     out_obj["size"] = tc.objects[i].size;
+    out_obj["address"] = tc.objects[i].address;
     out_obj["n_offsets"] = tc.objects[i].n_offsets;
     for(unsigned j = 0; j<tc.objects[i].n_offsets; j++) {
       json offset_obj;

@@ -25,6 +25,7 @@ TestCase* TC_fromFile(const char* path) {
     strcpy(ret->objects[i].name, js.at("objects").at(i).at("name").get<std::string>().c_str());
     
     ret->objects[i].size = js.at("objects").at(i).at("size").get<unsigned>();
+    ret->objects[i].address = js.at("objects").at(i).at("address").get<uint64_t>();
     
     ret->objects[i].values = new unsigned char[ret->objects[i].size];
     

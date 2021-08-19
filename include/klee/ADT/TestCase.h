@@ -23,6 +23,7 @@ struct ConcretizedObject {
   /* offset - child id */
   Offset* offsets;
   size_t n_offsets;
+  uint64_t address;
 };
 
 typedef struct TestCase TestCase;
