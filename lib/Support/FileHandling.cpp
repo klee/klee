@@ -22,10 +22,10 @@ namespace klee {
 
 std::unique_ptr<llvm::raw_fd_ostream>
 klee_open_output_file(const std::string &path, std::string &error) {
-  error = "";
-  std::unique_ptr<llvm::raw_fd_ostream> f;
+  error.clear();
   std::error_code ec;
-  f = std::unique_ptr<llvm::raw_fd_ostream>(new llvm::raw_fd_ostream(path.c_str(), ec, llvm::sys::fs::F_None)); // FIXME C++14
+  auto f = std::make_unique<llvm::raw_fd_ostream>(path.c_str(), ec,
+                                                  llvm::sys::fs::F_None);
   if (ec)
     error = ec.message();
   if (!error.empty()) {
@@ -37,8 +37,8 @@ klee_open_output_file(const std::string &path, std::string &error) {
 #ifdef HAVE_ZLIB_H
 std::unique_ptr<llvm::raw_ostream>
 klee_open_compressed_output_file(const std::string &path, std::string &error) {
-  error = "";
-  std::unique_ptr<llvm::raw_ostream> f(new compressed_fd_ostream(path, error));
+  error.clear();
+  auto f = std::make_unique<compressed_fd_ostream>(path, error);
   if (!error.empty()) {
     f.reset(nullptr);
   }
