@@ -303,7 +303,7 @@ Function *ExternalDispatcherImpl::createDispatcher(Function *target,
     auto argTy =
         (i < FTy->getNumParams() ? FTy->getParamType(i) : (*ai)->getType());
     auto argI64p =
-        Builder.CreateGEP(nullptr, argI64s,
+        Builder.CreateGEP(argI64s->getType()->getPointerElementType(), argI64s,
                           ConstantInt::get(Type::getInt32Ty(ctx), idx));
 
     auto argp = Builder.CreateBitCast(argI64p, PointerType::getUnqual(argTy));

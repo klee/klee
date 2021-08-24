@@ -106,19 +106,20 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
           auto pDst = Builder.CreatePointerCast(dst, i64p, "vacopy.cast.dst");
           auto pSrc = Builder.CreatePointerCast(src, i64p, "vacopy.cast.src");
 
-          auto pType = pSrc->getType()->getPointerElementType();
+          auto pSrcType = pSrc->getType()->getPointerElementType();
+          auto pDstType = pDst->getType()->getPointerElementType();
 
-          auto val = Builder.CreateLoad(pType, pSrc);
+          auto val = Builder.CreateLoad(pSrcType, pSrc);
           Builder.CreateStore(val, pDst, ii);
 
           auto off = ConstantInt::get(Type::getInt64Ty(ctx), 1);
-          pDst = Builder.CreateGEP(nullptr, pDst, off, std::string());
-          pSrc = Builder.CreateGEP(nullptr, pSrc, off, std::string());
-          val = Builder.CreateLoad(pType, pSrc);
+          pDst = Builder.CreateGEP(pDstType, pDst, off);
+          pSrc = Builder.CreateGEP(pSrcType, pSrc, off);
+          val = Builder.CreateLoad(pSrcType, pSrc);
           Builder.CreateStore(val, pDst);
-          pDst = Builder.CreateGEP(nullptr, pDst, off, std::string());
-          pSrc = Builder.CreateGEP(nullptr, pSrc, off, std::string());
-          val = Builder.CreateLoad(pType, pSrc);
+          pDst = Builder.CreateGEP(pDstType, pDst, off);
+          pSrc = Builder.CreateGEP(pSrcType, pSrc, off);
+          val = Builder.CreateLoad(pSrcType, pSrc);
           Builder.CreateStore(val, pDst);
         }
         ii->eraseFromParent();
