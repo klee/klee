@@ -287,7 +287,8 @@ Function *ExternalDispatcherImpl::createDispatcher(Function *target,
       ConstantInt::get(Type::getInt64Ty(ctx), (uintptr_t)(void *)&gTheArgsP),
       PointerType::getUnqual(PointerType::getUnqual(Type::getInt64Ty(ctx))),
       "argsp");
-  auto argI64s = Builder.CreateLoad(argI64sp, "args");
+  auto argI64s = Builder.CreateLoad(
+      argI64sp->getType()->getPointerElementType(), argI64sp, "args");
 
   // Get the target function type.
   FunctionType *FTy = cast<FunctionType>(
@@ -306,7 +307,8 @@ Function *ExternalDispatcherImpl::createDispatcher(Function *target,
                           ConstantInt::get(Type::getInt32Ty(ctx), idx));
 
     auto argp = Builder.CreateBitCast(argI64p, PointerType::getUnqual(argTy));
-    args[i] = Builder.CreateLoad(argp);
+    args[i] =
+        Builder.CreateLoad(argp->getType()->getPointerElementType(), argp);
 
     unsigned argSize = argTy->getPrimitiveSizeInBits();
     idx += ((!!argSize ? argSize : 64) + 63) / 64;
