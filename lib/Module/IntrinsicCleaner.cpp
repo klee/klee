@@ -96,24 +96,29 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
               Builder.CreatePointerCast(dst, i8pp, "vacopy.cast.dst");
           auto castedSrc =
               Builder.CreatePointerCast(src, i8pp, "vacopy.cast.src");
-          auto load = Builder.CreateLoad(castedSrc, "vacopy.read");
+          auto load =
+              Builder.CreateLoad(castedSrc->getType()->getPointerElementType(),
+                                 castedSrc, "vacopy.read");
           Builder.CreateStore(load, castedDst, false /* isVolatile */);
         } else {
           assert(WordSize == 8 && "Invalid word size!");
           Type *i64p = PointerType::getUnqual(Type::getInt64Ty(ctx));
           auto pDst = Builder.CreatePointerCast(dst, i64p, "vacopy.cast.dst");
           auto pSrc = Builder.CreatePointerCast(src, i64p, "vacopy.cast.src");
-          auto val = Builder.CreateLoad(pSrc, std::string());
+
+          auto pType = pSrc->getType()->getPointerElementType();
+
+          auto val = Builder.CreateLoad(pType, pSrc);
           Builder.CreateStore(val, pDst, ii);
 
           auto off = ConstantInt::get(Type::getInt64Ty(ctx), 1);
           pDst = Builder.CreateGEP(nullptr, pDst, off, std::string());
           pSrc = Builder.CreateGEP(nullptr, pSrc, off, std::string());
-          val = Builder.CreateLoad(pSrc, std::string());
+          val = Builder.CreateLoad(pType, pSrc);
           Builder.CreateStore(val, pDst);
           pDst = Builder.CreateGEP(nullptr, pDst, off, std::string());
           pSrc = Builder.CreateGEP(nullptr, pSrc, off, std::string());
-          val = Builder.CreateLoad(pSrc, std::string());
+          val = Builder.CreateLoad(pType, pSrc);
           Builder.CreateStore(val, pDst);
         }
         ii->eraseFromParent();
