@@ -329,6 +329,114 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
   return false;
 }
 
+bool AddressSpace::fastResolve(ExecutionState &state, TimingSolver *solver,
+                               ref<Expr> p, ResolutionList &rl,
+                               unsigned maxResolutions, time::Span timeout) const {
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(p)) {
+    ObjectPair res;
+    if (resolveOne(CE, res))
+      rl.push_back(res);
+    return false;
+  } else {
+    TimerStatIncrementer timer(stats::resolveTime);
+
+    MemoryObject *symHack = nullptr;
+    for (auto &moa : state.symbolics) {
+      if (moa.first->isLazyInstantiated() && moa.first->getLazyInstantiatedSource() == p) {
+        symHack = const_cast<MemoryObject *>(moa.first.get());
+        break;
+      }
+    }
+
+    if (symHack) {
+      auto osi = objects.find(symHack);
+      if(osi != objects.end()) {
+        auto res = std::make_pair<>(osi->first, osi->second.get());
+        rl.push_back(res);
+        return false;
+      }
+    }
+    // XXX in general this isn't exactly what we want... for
+    // a multiple resolution case (or for example, a \in {b,c,0})
+    // we want to find the first object, find a cex assuming
+    // not the first, find a cex assuming not the second...
+    // etc.
+
+    // XXX how do we smartly amortize the cost of checking to
+    // see if we need to keep searching up/down, in bad cases?
+    // maybe we don't care?
+
+    // XXX we really just need a smart place to start (although
+    // if its a known solution then the code below is guaranteed
+    // to hit the fast path with exactly 2 queries). we could also
+    // just get this by inspection of the expr.
+
+    ref<ConstantExpr> cex;
+    if (!solver->getValue(state.constraints, p, cex, state.queryMetaData))
+      return true;
+    uint64_t example = cex->getZExtValue();
+    MemoryObject hack(example);
+
+    MemoryMap::iterator oi = objects.upper_bound(&hack);
+    MemoryMap::iterator begin = objects.begin();
+    MemoryMap::iterator end = objects.end();
+
+    MemoryMap::iterator start = oi;
+    // search backwards, start with one minus because this
+    // is the object that p *should* be within, which means we
+    // get write off the end with 4 queries
+
+    while (oi != begin) {
+      --oi;
+      const MemoryObject *mo = oi->first;
+      if (mo == nullptr || !mo->isLazyInstantiated() || !mo->isKleeMakeSymbolic) continue;
+
+      if (timeout && timeout < timer.delta())
+        return true;
+
+      auto op = std::make_pair<>(mo, oi->second.get());
+
+      int incomplete =
+          checkPointerInObject(state, solver, p, op, rl, maxResolutions);
+      if (incomplete != 2)
+        return incomplete ? true : false;
+
+      bool mustBeTrue;
+      if (!solver->mustBeTrue(state.constraints,
+                              UgeExpr::create(p, mo->getBaseExpr()), mustBeTrue,
+                              state.queryMetaData))
+        return true;
+      if (mustBeTrue)
+        break;
+    }
+
+    // search forwards
+    for (oi = start; oi != end; ++oi) {
+      const MemoryObject *mo = oi->first;
+      if (mo == nullptr || !mo->isLazyInstantiated() || !mo->isKleeMakeSymbolic) continue;
+
+      if (timeout && timeout < timer.delta())
+        return true;
+
+      bool mustBeTrue;
+      if (!solver->mustBeTrue(state.constraints,
+                              UltExpr::create(p, mo->getBaseExpr()), mustBeTrue,
+                              state.queryMetaData))
+        return true;
+      if (mustBeTrue)
+        break;
+      auto op = std::make_pair<>(mo, oi->second.get());
+
+      int incomplete =
+          checkPointerInObject(state, solver, p, op, rl, maxResolutions);
+      if (incomplete != 2)
+        return incomplete ? true : false;
+    }
+  }
+
+  return false;
+}
+
 // These two are pretty big hack so we can sort of pass memory back
 // and forth to externals. They work by abusing the concrete cache
 // store inside of the object states, which allows them to

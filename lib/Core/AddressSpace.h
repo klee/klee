@@ -105,6 +105,14 @@ namespace klee {
                  unsigned maxResolutions=0,
                  time::Span timeout=time::Span()) const;
 
+    /// Resolve as above, but only to MakeSymbolic and LazyInstantiated variables
+    bool fastResolve(ExecutionState &state,
+                     TimingSolver *solver,
+                     ref<Expr> p,
+                     ResolutionList &rl,
+                     unsigned maxResolutions=0,
+                     time::Span timeout=time::Span()) const;
+
     /***/
 
     /// Add a binding to the address space.

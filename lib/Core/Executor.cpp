@@ -171,6 +171,11 @@ cl::opt<bool> EmitAllErrors(
              "(default=false, i.e. one per (error,instruction) pair)"),
     cl::cat(TestGenCat));
 
+cl::opt<bool> SkipNotLazyAndSymbolicPointers(
+    "skip-not-lazy-and-symbolic-pointers",
+    cl::init(false),
+    cl::desc("Set pointers only on lazy and make_symbolic variables (default=false)"),
+    cl::cat(TestGenCat));
 
 /* Constraint solving options */
 
@@ -4843,16 +4848,29 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   solver->setTimeout(coreSolverTimeout);
   bool incomplete;
 
-  if (UseGEPExpr && isGEPExpr(address))
-      incomplete = state.addressSpace.resolve(state, solver, base, rl, 0, coreSolverTimeout);
-  else
-      incomplete = state.addressSpace.resolve(state, solver, address, rl, 0, coreSolverTimeout);
+  if (SkipNotLazyAndSymbolicPointers) {
+    if (UseGEPExpr && isa<GEPExpr>(address))
+      incomplete = state.addressSpace.fastResolve(
+          state, solver, dyn_cast<GEPExpr>(address)->base, rl, 0,
+          coreSolverTimeout);
+    else
+      incomplete = state.addressSpace.fastResolve(state, solver, unsafeAddress,
+                                                  rl, 0, coreSolverTimeout);
+  } else {
+    if (UseGEPExpr && isGEPExpr(address))
+      incomplete = state.addressSpace.resolve(
+          state, solver, base, rl, 0,
+          coreSolverTimeout);
+    else
+      incomplete = state.addressSpace.resolve(state, solver, address,
+                                                  rl, 0, coreSolverTimeout);
+  }
 
   solver->setTimeout(time::Span());
 
   // XXX there is some query wasteage here. who cares?
   ExecutionState *unbound = &state;
-  
+
   for (ResolutionList::iterator i = rl.begin(), ie = rl.end(); i != ie; ++i) {
     const MemoryObject *mo = i->first;
     const ObjectState *os = i->second;
@@ -5005,6 +5023,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
     // or if that fails try adding a unique identifier.
     const Array *array = makeArray(state, mo->size, name);
     const_cast<Array*>(array)->binding = mo;
+    const_cast<MemoryObject *>(mo)->isKleeMakeSymbolic = true;
     bindObjectInState(state, mo, isAlloca, array);
     state.addSymbolic(mo, array);
 

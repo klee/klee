@@ -39,7 +39,7 @@ include(CheckLibraryExists)
 # Project version
 ###############################################################################
 set(KLEE_VERSION_MAJOR 2)
-set(KLEE_VERSION_MINOR 2-utbot)
+set(KLEE_VERSION_MINOR 2-utbot_lazy_initialization)
 set(KLEE_VERSION "${KLEE_VERSION_MAJOR}.${KLEE_VERSION_MINOR}")
 
 # If a patch is needed, we can add KLEE_VERSION_PATCH
@@ -863,7 +863,7 @@ endif()
 ################################################################################
 # Miscellaneous install
 ################################################################################
-install(FILES include/klee/klee.h include/klee/ADT/KTest.h DESTINATION include/klee)
+install(FILES include/klee/klee.h include/klee/ADT/KTest.h include/klee/ADT/TestCase.h DESTINATION include/klee)
 INSTALL(FILES lib/Core/Executor.h DESTINATION include/klee/Core)
 INSTALL(DIRECTORY include/klee/Expr DESTINATION include/klee)
 INSTALL(DIRECTORY include/klee/Module DESTINATION include/klee)
