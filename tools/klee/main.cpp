@@ -34,6 +34,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -1258,12 +1259,20 @@ int main(int argc, char **argv, char **envp) {
 
   llvm::Module *mainModule = M.get();
 
+  const std::string &module_triple = mainModule->getTargetTriple();
+  std::string host_triple = llvm::sys::getDefaultTargetTriple();
+
+  if (module_triple != host_triple)
+    klee_warning("Module and host target triples do not match: '%s' != '%s'\n"
+                 "This may cause unexpected crashes or assertion violations.",
+                 module_triple.c_str(), host_triple.c_str());
+
   // Detect architecture
   std::string opt_suffix = "64"; // Fall back to 64bit
-  if (mainModule->getTargetTriple().find("i686") != std::string::npos ||
-      mainModule->getTargetTriple().find("i586") != std::string::npos ||
-      mainModule->getTargetTriple().find("i486") != std::string::npos ||
-      mainModule->getTargetTriple().find("i386") != std::string::npos)
+  if (module_triple.find("i686") != std::string::npos ||
+      module_triple.find("i586") != std::string::npos ||
+      module_triple.find("i486") != std::string::npos ||
+      module_triple.find("i386") != std::string::npos)
     opt_suffix = "32";
 
   // Add additional user-selected suffix
