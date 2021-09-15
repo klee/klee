@@ -35,7 +35,7 @@ install_build_dependencies_klee() {
   )
 
   if [[ $(to_bool "${COVERAGE}") -eq 1 ]]; then
-    dependencies+=(lcov curl)
+    dependencies+=(lcov curl git)
   fi
 
   apt -y --no-install-recommends install "${dependencies[@]}"
