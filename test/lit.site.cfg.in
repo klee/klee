@@ -44,6 +44,7 @@ config.enable_zlib = bool(@HAVE_ZLIB_H@)
 config.have_asan = bool(@IS_ASAN_BUILD@)
 config.have_ubsan = bool(@IS_UBSAN_BUILD@)
 config.have_msan = bool(@IS_MSAN_BUILD@)
+config.have_m32 = bool(@M32_SUPPORTED@)
 
 # Add sanitizer list
 config.environment['LSAN_OPTIONS'] = "suppressions=@KLEE_UTILS_DIR@/sanitizers/lsan.txt"
