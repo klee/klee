@@ -70,6 +70,13 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       case Intrinsic::fshr:
       case Intrinsic::fshl:
 #endif
+#if LLVM_VERSION_CODE >= LLVM_VERSION(12, 0)
+      case Intrinsic::abs:
+      case Intrinsic::smax:
+      case Intrinsic::smin:
+      case Intrinsic::umax:
+      case Intrinsic::umin:
+#endif
         break;
 
         // Lower vacopy so that object resolution etc is handled by
@@ -392,6 +399,9 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       case Intrinsic::readcyclecounter:
       case Intrinsic::returnaddress:
       case Intrinsic::round:
+#if LLVM_VERSION_CODE >= LLVM_VERSION(11, 0)
+      case Intrinsic::roundeven:
+#endif
       case Intrinsic::sin:
       case Intrinsic::sqrt:
       case Intrinsic::stackrestore:
