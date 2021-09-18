@@ -1750,6 +1750,73 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       break;
     }
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(12, 0)
+    case Intrinsic::abs: {
+      if (isa<VectorType>(i->getOperand(0)->getType()))
+        return terminateStateOnExecError(
+            state, "llvm.abs with vectors is not supported");
+
+      ref<Expr> op = eval(ki, 1, state).value;
+      ref<Expr> poison = eval(ki, 2, state).value;
+
+      assert(poison->getWidth() == 1 && "Second argument is not an i1");
+      unsigned bw = op->getWidth();
+
+      uint64_t moneVal = APInt(bw, -1, true).getZExtValue();
+      uint64_t sminVal = APInt::getSignedMinValue(bw).getZExtValue();
+
+      ref<ConstantExpr> zero = ConstantExpr::create(0, bw);
+      ref<ConstantExpr> mone = ConstantExpr::create(moneVal, bw);
+      ref<ConstantExpr> smin = ConstantExpr::create(sminVal, bw);
+
+      if (poison->isTrue()) {
+        ref<Expr> issmin = EqExpr::create(op, smin);
+        if (issmin->isTrue())
+          return terminateStateOnExecError(
+              state, "llvm.abs called with poison and INT_MIN");
+      }
+
+      // conditions to flip the sign: INT_MIN < op < 0
+      ref<Expr> negative = SltExpr::create(op, zero);
+      ref<Expr> notsmin = NeExpr::create(op, smin);
+      ref<Expr> cond = AndExpr::create(negative, notsmin);
+
+      // flip and select the result
+      ref<Expr> flip = MulExpr::create(op, mone);
+      ref<Expr> result = SelectExpr::create(cond, flip, op);
+
+      bindLocal(ki, state, result);
+      break;
+    }
+
+    case Intrinsic::smax:
+    case Intrinsic::smin:
+    case Intrinsic::umax:
+    case Intrinsic::umin: {
+      if (isa<VectorType>(i->getOperand(0)->getType()) ||
+          isa<VectorType>(i->getOperand(1)->getType()))
+        return terminateStateOnExecError(
+            state, "llvm.{s,u}{max,min} with vectors is not supported");
+
+      ref<Expr> op1 = eval(ki, 1, state).value;
+      ref<Expr> op2 = eval(ki, 2, state).value;
+
+      ref<Expr> cond = nullptr;
+      if (f->getIntrinsicID() == Intrinsic::smax)
+        cond = SgtExpr::create(op1, op2);
+      else if (f->getIntrinsicID() == Intrinsic::smin)
+        cond = SltExpr::create(op1, op2);
+      else if (f->getIntrinsicID() == Intrinsic::umax)
+        cond = UgtExpr::create(op1, op2);
+      else // (f->getIntrinsicID() == Intrinsic::umin)
+        cond = UltExpr::create(op1, op2);
+
+      ref<Expr> result = SelectExpr::create(cond, op1, op2);
+      bindLocal(ki, state, result);
+      break;
+    }
+#endif
+
 #if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
     case Intrinsic::fshr:
     case Intrinsic::fshl: {
@@ -3228,7 +3295,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       return;
     }
     uint64_t iIdx = cIdx->getZExtValue();
+#if LLVM_VERSION_MAJOR >= 11
+    const auto *vt = cast<llvm::FixedVectorType>(iei->getType());
+#else
     const llvm::VectorType *vt = iei->getType();
+#endif
     unsigned EltBits = getWidthForLLVMType(vt->getElementType());
 
     if (iIdx >= vt->getNumElements()) {
@@ -3266,7 +3337,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       return;
     }
     uint64_t iIdx = cIdx->getZExtValue();
+#if LLVM_VERSION_MAJOR >= 11
+    const auto *vt = cast<llvm::FixedVectorType>(eei->getVectorOperandType());
+#else
     const llvm::VectorType *vt = eei->getVectorOperandType();
+#endif
     unsigned EltBits = getWidthForLLVMType(vt->getElementType());
 
     if (iIdx >= vt->getNumElements()) {
