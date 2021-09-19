@@ -350,9 +350,9 @@ cl::opt<double> MaxStaticCPSolvePct(
 
 cl::opt<unsigned> MaxStaticPctCheckDelay(
     "max-static-pct-check-delay",
-    cl::desc("Number of forks after which the --max-static-*-pct checks are enforced (default=1000)"),
-    cl::init(1000),
-    cl::cat(TerminationCat));
+    cl::desc("Number of forks after which the --max-static-*-pct checks are "
+             "enforced (default=1000)"),
+    cl::init(1000), cl::cat(TerminationCat));
 
 cl::opt<std::string> TimerInterval(
     "timer-interval",
@@ -445,23 +445,23 @@ extern "C" unsigned dumpStates, dumpPTree;
 unsigned dumpStates = SetDumpState ? 1 : 0, dumpPTree = SetPTREEDump ? 1 : 0;
 
 const char *Executor::TerminateReasonNames[] = {
-  [ Abort ] = "abort",
-  [ Assert ] = "assert",
-  [ BadVectorAccess ] = "bad_vector_access",
-  [ Exec ] = "exec",
-  [ External ] = "external",
-  [ Free ] = "free",
-  [ Model ] = "model",
-  [ Overflow ] = "overflow",
-  [ Ptr ] = "ptr",
-  [ ReadOnly ] = "readonly",
-  [ ReportError ] = "reporterror",
-  [ User ] = "user",
+    [Abort] = "abort",
+    [Assert] = "assert",
+    [BadVectorAccess] = "bad_vector_access",
+    [Exec] = "exec",
+    [External] = "external",
+    [Free] = "free",
+    [Model] = "model",
+    [Overflow] = "overflow",
+    [Ptr] = "ptr",
+    [ReadOnly] = "readonly",
+    [ReportError] = "reporterror",
+    [User] = "user",
 #ifdef SUPPORT_KLEE_EH_CXX
-  [ UncaughtException ] = "uncaught_exception",
-  [ UnexpectedException ] = "unexpected_exception",
+    [UncaughtException] = "uncaught_exception",
+    [UnexpectedException] = "unexpected_exception",
 #endif
-  [ Unhandled ] = "xxx",
+    [Unhandled] = "xxx",
 };
 
 Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
@@ -1031,8 +1031,8 @@ ref<Expr> Executor::maxStaticPctChecks(ExecutionState &current,
   return condition;
 }
 
-Executor::StatePair 
-Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
+Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
+                                   bool isInternal) {
   Solver::Validity res;
   std::map<ExecutionState *, std::vector<SeedInfo>>::iterator it =
       seedMap.find(&current);
@@ -1230,6 +1230,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     // COMMENT : Print the State level constraints.
     if (printSExpr) {
       // dumpPTree();
+      klee_message("NOTE: \tKLEE State Forking.");
       std::stringstream sso("");
       *conditionsDump
           << "\tFork : True,\n\tCurrent State Id : "
@@ -2253,8 +2254,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       std::vector<std::string> InstructionInfo = ki->getLocationInfo();
 
       // COMMENT: Do linked files always have "/" in path? May need a fix later.
-      if (InstructionInfo.size() > 0 &&
-          InstructionInfo[0].find("/") == std::string::npos) {
+      if (InstructionInfo.size() > 0) {
+        klee_message("NOTE: Branch Conditions Dumping.");
         printSExpr = true;
         *conditionsDump << "{\n\tFile : " << InstructionInfo[0]
                         << ",\n\tLine : " << InstructionInfo[1]
@@ -2625,9 +2626,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = SelectExpr::create(cond, tExpr, fExpr);
     std::vector<std::string> InstructionInfo = ki->getLocationInfo();
 
+    // InstructionInfo[0].find("/") == std::string::npos
     // COMMENT: Do linked files always have "/" in path? May need a fix later.
-    if (InstructionInfo.size() > 0 &&
-        InstructionInfo[0].find("/") == std::string::npos) {
+    if (InstructionInfo.size() > 0) {
       printSExpr = true;
       *conditionsDump << "{\n\tFile : " << InstructionInfo[0]
                       << ",\n\tLine : " << InstructionInfo[1]
