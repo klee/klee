@@ -4849,12 +4849,12 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   bool incomplete;
 
   if (SkipNotLazyAndSymbolicPointers) {
-    if (UseGEPExpr && isa<GEPExpr>(address))
+    if (UseGEPExpr && isGEPExpr(address))
       incomplete = state.addressSpace.fastResolve(
-          state, solver, dyn_cast<GEPExpr>(address)->base, rl, 0,
+          state, solver, base, rl, 0,
           coreSolverTimeout);
     else
-      incomplete = state.addressSpace.fastResolve(state, solver, unsafeAddress,
+      incomplete = state.addressSpace.fastResolve(state, solver, address,
                                                   rl, 0, coreSolverTimeout);
   } else {
     if (UseGEPExpr && isGEPExpr(address))
@@ -4917,7 +4917,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
       }
       if(unbound_inner) {
         terminateStateOnError(*unbound_inner, "memory error: out of bound pointer", Ptr,
-                                NULL, getAddressInfo(*unbound, address));
+                                NULL);
       }
     }
 
@@ -4969,7 +4969,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
       }
     } else {
       terminateStateOnError(*unbound, "memory error: out of bound pointer", Ptr,
-                            NULL, getAddressInfo(*unbound, address));
+                            NULL);
     }
   }
 }

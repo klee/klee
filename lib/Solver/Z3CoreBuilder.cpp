@@ -434,12 +434,6 @@ Z3ASTHandle Z3CoreBuilder::constructActual(ref<Expr> e, int *width_out) {
     }
   }
 
-  case Expr::GEP: {
-      GEPExpr *gep = cast<GEPExpr>(e);
-      Z3ASTHandle expr = construct(gep->address, width_out);
-      return expr;
-  }
-
   case Expr::And: {
     AndExpr *ae = cast<AndExpr>(e);
     Z3ASTHandle left = construct(ae->left, width_out);

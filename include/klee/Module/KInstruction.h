@@ -30,7 +30,7 @@ namespace klee {
   class Executor;
   struct InstructionInfo;
   class KModule;
-  class KBlock;
+  struct KBlock;
 
 
   /// KInstruction - Intermediate instruction representation used
