@@ -1230,7 +1230,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
     // COMMENT : Print the State level constraints.
     if (printSExpr) {
       // dumpPTree();
-      klee_message("NOTE: \tKLEE State Forking.");
+      klee_message("NOTE: \tKLEE State Forking. ");
       std::stringstream sso("");
       *conditionsDump
           << "\tFork : True,\n\tCurrent State Id : "
@@ -2255,7 +2255,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
       // COMMENT: Do linked files always have "/" in path? May need a fix later.
       if (InstructionInfo.size() > 0) {
-        klee_message("NOTE: Branch Conditions Dumping.");
+        // klee_message("NOTE: Branch Conditions Dumping.");
         printSExpr = true;
         *conditionsDump << "{\n\tFile : " << InstructionInfo[0]
                         << ",\n\tLine : " << InstructionInfo[1]
@@ -2266,9 +2266,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       } else {
         printSExpr = false;
       }
+      
       cond = optimizer.optimizeExpr(cond, false);
       Executor::StatePair branches = fork(state, cond, false);
-
+      
       // NOTE: There is a hidden dependency here, markBranchVisited
       // requires that we still be in the context of the branch
       // instruction (it reuses its statistic id). Should be cleaned
