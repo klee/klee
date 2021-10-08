@@ -101,7 +101,7 @@ public:
 
   /// COMMENT : File Pointers for dumping internal KLEE Data.
   std::unique_ptr<llvm::raw_fd_ostream> kqueryDumpFileptr, smtlib2DumpFileptr,
-      tempDump, conditionsDump, stackDump;
+      tempDump, conditionsDump, stackDump, writeableStream;
 
   enum TerminateReason {
     Abort,

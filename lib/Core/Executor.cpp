@@ -1231,6 +1231,11 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
     if (printSExpr) {
       // dumpPTree();
       klee_message("NOTE: \tKLEE State Forking. ");
+      *writeableStream << "\nCond : \n";
+      *writeableStream << condition;
+      *writeableStream << "\nNegate : \n";
+      *writeableStream << Expr::createIsZero(condition);
+      *writeableStream << "\n ---- \n";
       std::stringstream sso("");
       *conditionsDump
           << "\tFork : True,\n\tCurrent State Id : "
@@ -4584,7 +4589,7 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
   kqueryDumpFileptr = interpreterHandler->openOutputFile("kquery_dump.txt");
   smtlib2DumpFileptr = interpreterHandler->openOutputFile("smtlib2_dump.txt");
   conditionsDump = interpreterHandler->openOutputFile("conds_dump.txt");
-  tempDump = interpreterHandler->openOutputFile("temp_dump.txt");
+  writeableStream = interpreterHandler->openOutputFile("temp_dump.txt");
 
   run(*state);
   printETree();
