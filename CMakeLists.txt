@@ -539,22 +539,13 @@ if (ENABLE_KLEE_UCLIBC)
   endif()
   message(STATUS "Found klee-uclibc library: \"${KLEE_UCLIBC_C_BCA}\"")
 
-  # Make a symlink to KLEE_UCLIBC_C_BCA so KLEE can find it where it
-  # is expected.
-  execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink
+  # Copy KLEE_UCLIBC_C_BCA so KLEE can find it where it is expected.
+  execute_process(COMMAND ${CMAKE_COMMAND} -E copy
     "${KLEE_UCLIBC_C_BCA}"
     "${KLEE_RUNTIME_DIRECTORY}/${KLEE_UCLIBC_BCA_NAME}"
   )
   list(APPEND KLEE_COMPONENT_CXX_DEFINES
     -DKLEE_UCLIBC_BCA_NAME=\"${KLEE_UCLIBC_BCA_NAME}\")
-
-  # Add klee-uclibc to the install target. We install the original
-  # file rather than the symlink because CMake would just copy the symlink
-  # rather than the file.
-  install(FILES "${KLEE_UCLIBC_C_BCA}"
-    DESTINATION "${KLEE_INSTALL_RUNTIME_DIR}"
-    RENAME "${KLEE_UCLIBC_BCA_NAME}"
-    )
 
 else()
   message(STATUS "klee-uclibc support disabled")
@@ -605,23 +596,14 @@ if (ENABLE_KLEE_LIBCXX)
   endif()
   message(STATUS "Found libc++ library: \"${KLEE_LIBCXX_BC_PATH}\"")
 
-  # Make a symlink to KLEE_LIBCXX_BC_PATH so KLEE can find it where it
-  # is expected.
+  # Copy KLEE_LIBCXX_BC_PATH so KLEE can find it where it is expected.
   file(MAKE_DIRECTORY "${KLEE_RUNTIME_DIRECTORY}")
-  execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink
+  execute_process(COMMAND ${CMAKE_COMMAND} -E copy
     "${KLEE_LIBCXX_BC_PATH}"
     "${KLEE_RUNTIME_DIRECTORY}/${KLEE_LIBCXX_BC_NAME}"
   )
   list(APPEND KLEE_COMPONENT_CXX_DEFINES
     -DKLEE_LIBCXX_BC_NAME=\"${KLEE_LIBCXX_BC_NAME}\")
-
-  # Add libc++ to the install target. We install the original
-  # file rather than the symlink because CMake would just copy the symlink
-  # rather than the file.
-  install(FILES "${KLEE_LIBCXX_BC_PATH}"
-    DESTINATION "${KLEE_INSTALL_RUNTIME_DIR}"
-    RENAME "${KLEE_LIBCXX_BC_NAME}"
-    )
 
 else()
   message(STATUS "libc++ support disabled")
