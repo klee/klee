@@ -12,6 +12,10 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --posix-runtime --exit-on-error %t2.bc --sym-files 1 10
 
+// According to https://man7.org/linux/man-pages/man2/futimesat.2.html
+// _GNU_SOURCE should be defined for glibc.
+#define _GNU_SOURCE
+
 #include <assert.h>
 #include <fcntl.h>
 #include <sys/stat.h>
