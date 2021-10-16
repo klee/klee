@@ -53,6 +53,9 @@ env:
 jobs:
     include:
     # Check supported LLVM versions
+    - name: "LLVM 13"
+      env: LLVM_VERSION=13.0
+
     - name: "LLVM 12"
       env: LLVM_VERSION=12.0
 
