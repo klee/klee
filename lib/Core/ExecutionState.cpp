@@ -311,11 +311,9 @@ bool ExecutionState::merge(const ExecutionState &b) {
   }
 
   constraints = ConstraintSet();
-
-  ConstraintManager m(constraints);
   for (const auto &constraint : commonConstraints)
-    m.addConstraint(constraint);
-  m.addConstraint(OrExpr::create(inA, inB));
+    addConstraint(constraint);
+  addConstraint(OrExpr::create(inA, inB));
 
   return true;
 }
