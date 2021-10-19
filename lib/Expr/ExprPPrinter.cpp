@@ -13,6 +13,7 @@
 #include "klee/Support/OptionCategories.h"
 #include "klee/Support/PrintContext.h"
 
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -367,7 +368,7 @@ public:
       if (e->getWidth() <= 64) {
         PC << e->getZExtValue();
       } else {
-        std::string S;
+        llvm::SmallString<16> S;
         e->toString(S);
         PC << S;
       }

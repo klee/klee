@@ -365,8 +365,8 @@ void ConstantExpr::toMemory(void *address) {
   }
 }
 
-void ConstantExpr::toString(std::string &Res, unsigned radix) const {
-  Res = value.toString(radix, false);
+void ConstantExpr::toString(SmallVectorImpl<char> &Res, unsigned radix) const {
+  value.toString(Res, radix, false);
 }
 
 ref<ConstantExpr> ConstantExpr::Concat(const ref<ConstantExpr> &RHS) {

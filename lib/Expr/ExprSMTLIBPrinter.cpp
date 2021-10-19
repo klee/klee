@@ -10,6 +10,7 @@
 #include "klee/Expr/ExprSMTLIBPrinter.h"
 #include "klee/Support/Casting.h"
 
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -123,7 +124,7 @@ void ExprSMTLIBPrinter::printConstant(const ref<ConstantExpr> &e) {
 
   /* Handle bitvector constants */
 
-  std::string value;
+  llvm::SmallString<16> value;
 
   /* SMTLIBv2 deduces the bit-width (should be 8-bits in our case)
    * from the length of the string (e.g. zero is #b00000000). LLVM
@@ -137,7 +138,7 @@ void ExprSMTLIBPrinter::printConstant(const ref<ConstantExpr> &e) {
     e->toString(value, 2);
     *p << "#b";
 
-    zeroPad = e->getWidth() - value.length();
+    zeroPad = e->getWidth() - value.size();
 
     for (unsigned int count = 0; count < zeroPad; count++)
       *p << "0";
@@ -149,7 +150,7 @@ void ExprSMTLIBPrinter::printConstant(const ref<ConstantExpr> &e) {
     e->toString(value, 16);
     *p << "#x";
 
-    zeroPad = (e->getWidth() / 4) - value.length();
+    zeroPad = (e->getWidth() / 4) - value.size();
     for (unsigned int count = 0; count < zeroPad; count++)
       *p << "0";
 
