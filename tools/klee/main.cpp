@@ -1157,7 +1157,11 @@ linkWithUclibc(StringRef libDir, std::string opt_suffix,
 int main(int argc, char **argv, char **envp) {
   atexit(llvm_shutdown);  // Call llvm_shutdown() on exit.
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(13, 0)
+  KCommandLine::HideOptions(llvm::cl::getGeneralCategory());
+#else
   KCommandLine::HideOptions(llvm::cl::GeneralCategory);
+#endif
 
   llvm::InitializeNativeTarget();
 
