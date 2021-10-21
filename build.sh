@@ -1,7 +1,9 @@
 #!/bin/bash
 #
-# This source file has been modified by Huawei. Copyright (c) 2021
+# Copyright (c) Huawei Technologies Co., Ltd. 2012-2021. All rights reserved.
 #
+
+# This script is used to build KLEE as UTBot backend
 
 set -e
 set -o pipefail
@@ -16,11 +18,11 @@ $UTBOT_CMAKE_BINARY -G Ninja \
   -DENABLE_FLOATING_POINT=ON \
   -DENABLE_FP_RUNTIME=ON \
   -DLLVM_CONFIG_BINARY=$UTBOT_INSTALL_DIR/bin/llvm-config \
-  -DENABLE_UNIT_TESTS=ON \
+  -DENABLE_UNIT_TESTS=OFF \
+  -DENABLE_SYSTEM_TESTS=OFF \
   -DGTEST_SRC_DIR=$UTBOT_ALL/gtest \
   -DGTEST_INCLUDE_DIR=$UTBOT_ALL/gtest/googletest/include \
   -DCMAKE_INSTALL_PREFIX=$UTBOT_ALL/klee/ \
     ..
 $UTBOT_CMAKE_BINARY --build .
-ninja check
 $UTBOT_CMAKE_BINARY --install .
