@@ -1230,7 +1230,19 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
     // COMMENT : Print the State level constraints.
     if (printSExpr) {
       // dumpPTree();
-      klee_message("NOTE: \tKLEE State Forking. ");
+      klee_message("NOTE: \n\tKLEE State Forked. ");
+
+      // \XXX COMMENT : Worst thing ever.
+      std::stringstream ss;
+      ss << condition;
+      std::string str = ss.str();
+      auto isPse = str.find("pse");
+      if (isPse != std::string::npos) {
+        klee_warning("\033[1;33mCond is PSE State.\033[0m");
+      }
+      str.erase(std::remove(str.begin(), str.end(), '\n'), str.end());
+      str.erase(std::remove(str.begin(), str.end(), '\t'), str.end());
+      errs() << "   Cond : " << str << "\n";
       *writeableStream << "\nCond : \n";
       *writeableStream << condition;
       *writeableStream << "\nNegate : \n";
@@ -2271,10 +2283,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       } else {
         printSExpr = false;
       }
-      
+
       cond = optimizer.optimizeExpr(cond, false);
       Executor::StatePair branches = fork(state, cond, false);
-      
+
       // NOTE: There is a hidden dependency here, markBranchVisited
       // requires that we still be in the context of the branch
       // instruction (it reuses its statistic id). Should be cleaned
