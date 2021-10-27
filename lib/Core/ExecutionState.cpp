@@ -265,13 +265,12 @@ bool ExecutionState::merge(const ExecutionState &b) {
 
   ref<Expr> inA = ConstantExpr::alloc(1, Expr::Bool);
   ref<Expr> inB = ConstantExpr::alloc(1, Expr::Bool);
-  for (std::set< ref<Expr> >::iterator it = aSuffix.begin(), 
-         ie = aSuffix.end(); it != ie; ++it)
-    inA = AndExpr::create(inA, *it);
-  for (std::set< ref<Expr> >::iterator it = bSuffix.begin(), 
-         ie = bSuffix.end(); it != ie; ++it)
-    inB = AndExpr::create(inB, *it);
-
+  for (ref<Expr> constraint : constraints)
+    if (aSuffix.find(constraint) != aSuffix.end())
+      inA = AndExpr::create(inA, constraint);
+  for (ref<Expr> constraint : b.constraints)
+    if (bSuffix.find(constraint) != bSuffix.end())
+      inB = AndExpr::create(inB, constraint);
   // XXX should we have a preference as to which predicate to use?
   // it seems like it can make a difference, even though logically
   // they must contradict each other and so inA => !inB
@@ -313,8 +312,9 @@ bool ExecutionState::merge(const ExecutionState &b) {
   constraints = ConstraintSet();
 
   ConstraintManager m(constraints);
-  for (const auto &constraint : commonConstraints)
-    m.addConstraint(constraint);
+  for (ref<Expr> constraint : b.constraints)
+    if (commonConstraints.find(constraint) != commonConstraints.end())
+      m.addConstraint(constraint);
   m.addConstraint(OrExpr::create(inA, inB));
 
   return true;
