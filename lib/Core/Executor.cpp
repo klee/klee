@@ -1048,7 +1048,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
   if (!success) {
     current.pc = current.prevPC;
     terminateStateEarly(current, "Query timed out (fork).");
-    return StatePair(0, 0);
+    return StatePair(nullptr, nullptr);
   }
 
   if (!isSeeding) {
@@ -1133,7 +1133,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    return StatePair(&current, 0);
+    return StatePair(&current, nullptr);
   } else if (res==Solver::False) {
     if (!isInternal) {
       if (pathWriter) {
@@ -1141,7 +1141,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
       }
     }
 
-    return StatePair(0, &current);
+    return StatePair(nullptr, &current);
   } else {
     TimerStatIncrementer timer(stats::forkTime);
     ExecutionState *falseState, *trueState = &current;
@@ -1212,7 +1212,7 @@ Executor::fork(ExecutionState &current, ref<Expr> condition, bool isInternal) {
     if (MaxDepth && MaxDepth<=trueState->depth) {
       terminateStateEarly(*trueState, "max-depth exceeded.");
       terminateStateEarly(*falseState, "max-depth exceeded.");
-      return StatePair(0, 0);
+      return StatePair(nullptr, nullptr);
     }
 
     return StatePair(trueState, falseState);
@@ -2110,7 +2110,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Ret: {
     ReturnInst *ri = cast<ReturnInst>(i);
     KInstIterator kcaller = state.stack.back().caller;
-    Instruction *caller = kcaller ? kcaller->inst : 0;
+    Instruction *caller = kcaller ? kcaller->inst : nullptr;
     bool isVoidReturn = (ri->getNumOperands() == 0);
     ref<Expr> result = ConstantExpr::alloc(0, Expr::Bool);
     
