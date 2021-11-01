@@ -38,6 +38,8 @@
 
 // CHECK-TYPE-MISMATCH: KLEE: WARNING: function-alias: @{{[a-z0-9]+}} could not be replaced with @{{[a-z0-9]+}}
 
+// CHECK-UNKNOWN: KLEE: ERROR: function-alias: replacement function @unknownfunction could not be found
+
 // CHECK-SUCCESS: KLEE: function-alias: replaced @twoints with @twointsmul
 
 // CHECK-REGEX-NO-MATCH: KLEE: ERROR: function-alias: no (replacable) match for 'xxx.*' found

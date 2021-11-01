@@ -63,10 +63,9 @@ bool RaiseAsmPass::runOnInstruction(Module &M, Instruction *I) {
   if (TLI->ExpandInlineAsm(ci))
     return true;
 
-  if (triple.getArch() == llvm::Triple::x86_64 &&
-      (triple.getOS() == llvm::Triple::Linux ||
-       triple.getOS() == llvm::Triple::Darwin ||
-       triple.getOS() == llvm::Triple::FreeBSD)) {
+  if ((triple.getArch() == llvm::Triple::x86 ||
+       triple.getArch() == llvm::Triple::x86_64) &&
+      (triple.isOSLinux() || triple.isMacOSX() || triple.isOSFreeBSD())) {
 
     if (ia->getAsmString() == "" && ia->hasSideEffects() &&
         ia->getFunctionType()->getReturnType()->isVoidTy()) {
@@ -86,28 +85,31 @@ bool RaiseAsmPass::runOnInstruction(Module &M, Instruction *I) {
 
 bool RaiseAsmPass::runOnModule(Module &M) {
   bool changed = false;
-
   std::string Err;
-  std::string HostTriple = llvm::sys::getDefaultTargetTriple();
-  const Target *NativeTarget = TargetRegistry::lookupTarget(HostTriple, Err);
+
+  // Use target triple from the module if possible.
+  std::string TargetTriple = M.getTargetTriple();
+  if (TargetTriple.empty())
+    TargetTriple = llvm::sys::getDefaultTargetTriple();
+  const Target *Target = TargetRegistry::lookupTarget(TargetTriple, Err);
 
   TargetMachine * TM = 0;
-  if (NativeTarget == 0) {
-    klee_warning("Warning: unable to select native target: %s", Err.c_str());
+  if (Target == 0) {
+    klee_warning("Warning: unable to select target: %s", Err.c_str());
     TLI = 0;
   } else {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
-    TM = NativeTarget->createTargetMachine(HostTriple, "", "", TargetOptions(),
-        None);
+    TM = Target->createTargetMachine(TargetTriple, "", "", TargetOptions(),
+                                     None);
     TLI = TM->getSubtargetImpl(*(M.begin()))->getTargetLowering();
 #else
-    TM = NativeTarget->createTargetMachine(HostTriple, "", "", TargetOptions());
+    TM = Target->createTargetMachine(TargetTriple, "", "", TargetOptions());
     TLI = TM->getSubtargetImpl(*(M.begin()))->getTargetLowering();
 #endif
 
-    triple = llvm::Triple(HostTriple);
+    triple = llvm::Triple(TargetTriple);
   }
-  
+
   for (Module::iterator fi = M.begin(), fe = M.end(); fi != fe; ++fi) {
     for (Function::iterator bi = fi->begin(), be = fi->end(); bi != be; ++bi) {
       for (BasicBlock::iterator ii = bi->begin(), ie = bi->end(); ii != ie;) {
