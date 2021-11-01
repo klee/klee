@@ -363,6 +363,7 @@ def write_table(args, data, dirs, pr):
         if l_name in available_headers:
             headers.append(l_name)
             available_headers.remove(l_name)
+    available_headers.sort()
     headers += available_headers
 
     # Make sure we keep the correct order of the column entries
