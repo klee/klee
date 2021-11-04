@@ -4560,27 +4560,19 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
   // the preferred constraints.  See test/Features/PreferCex.c for
   // an example) While this process can be very expensive, it can
   // also make understanding individual test cases much easier.
-  for (unsigned i = 0; i != state.symbolics.size(); ++i) {
-    const auto &mo = state.symbolics[i].first;
-    std::vector< ref<Expr> >::const_iterator pi = 
-      mo->cexPreferences.begin(), pie = mo->cexPreferences.end();
-    for (; pi != pie; ++pi) {
-      bool mustBeTrue;
-      // Attempt to bound byte to constraints held in cexPreferences
-      bool success =
-          solver->mustBeTrue(extendedConstraints, Expr::createIsZero(*pi),
-                             mustBeTrue, state.queryMetaData);
-      // If it isn't possible to constrain this particular byte in the desired
-      // way (normally this would mean that the byte can't be constrained to
-      // be between 0 and 127 without making the entire constraint list UNSAT)
-      // then just continue on to the next byte.
-      if (!success) break;
-      // If the particular constraint operated on in this iteration through
-      // the loop isn't implied then add it to the list of constraints.
-      if (!mustBeTrue)
-        cm.addConstraint(*pi);
-    }
-    if (pi!=pie) break;
+  for (auto& pi: state.cexPreferences) {
+    bool mustBeTrue;
+    // Attempt to bound byte to constraints held in cexPreferences
+    bool success =
+      solver->mustBeTrue(extendedConstraints, Expr::createIsZero(pi),
+        mustBeTrue, state.queryMetaData);
+    // If it isn't possible to add the condition without making the entire list
+    // UNSAT, then just continue to the next condition
+    if (!success) break;
+    // If the particular constraint operated on in this iteration through
+    // the loop isn't implied then add it to the list of constraints.
+    if (!mustBeTrue)
+      cm.addConstraint(pi);
   }
 
   std::vector< std::vector<unsigned char> > values;

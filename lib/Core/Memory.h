@@ -64,12 +64,6 @@ public:
   /// should be either the allocating instruction or the global object
   /// it was allocated for (or whatever else makes sense).
   const llvm::Value *allocSite;
-  
-  /// A list of boolean expressions the user has requested be true of
-  /// a counterexample. Mutable since we play a little fast and loose
-  /// with allowing it to be added to during execution (although
-  /// should sensibly be only at creation time).
-  mutable std::vector< ref<Expr> > cexPreferences;
 
   // DO NOT IMPLEMENT
   MemoryObject(const MemoryObject &b);

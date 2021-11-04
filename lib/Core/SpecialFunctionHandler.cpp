@@ -549,13 +549,7 @@ void SpecialFunctionHandler::handlePreferCex(ExecutionState &state,
   if (cond->getWidth() != Expr::Bool)
     cond = NeExpr::create(cond, ConstantExpr::alloc(0, cond->getWidth()));
 
-  Executor::ExactResolutionList rl;
-  executor.resolveExact(state, arguments[0], rl, "prefex_cex");
-  
-  assert(rl.size() == 1 &&
-         "prefer_cex target must resolve to precisely one object");
-
-  rl[0].first.first->cexPreferences.push_back(cond);
+  state.addCexPreference(cond);
 }
 
 void SpecialFunctionHandler::handlePosixPreferCex(ExecutionState &state,

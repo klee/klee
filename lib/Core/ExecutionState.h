@@ -13,6 +13,7 @@
 #include "AddressSpace.h"
 #include "MergeHandler.h"
 
+#include "klee/ADT/ImmutableSet.h"
 #include "klee/ADT/TreeStream.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
@@ -207,6 +208,10 @@ public:
   // FIXME: Move to a shared list structure (not critical).
   std::vector<std::pair<ref<const MemoryObject>, const Array *>> symbolics;
 
+  /// @brief A set of boolean expressions
+  /// the user has requested be true of a counterexample.
+  ImmutableSet<ref<Expr>> cexPreferences;
+
   /// @brief Set of used array names for this state.  Used to avoid collisions.
   std::set<std::string> arrayNames;
 
@@ -259,6 +264,7 @@ public:
   void addSymbolic(const MemoryObject *mo, const Array *array);
 
   void addConstraint(ref<Expr> e);
+  void addCexPreference(const ref<Expr> &cond);
 
   bool merge(const ExecutionState &b);
   void dumpStack(llvm::raw_ostream &out) const;
