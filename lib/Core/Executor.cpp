@@ -419,6 +419,12 @@ cl::opt<bool>
 
 // REVISIT :: Check if this is useful.
 cl::opt<bool>
+    ShowForkCond("show-cond", cl::init(false),
+                 cl::desc("Show Condition while forking (default=false)."),
+                 cl::cat(DebugCat));
+
+// REVISIT :: Check if this is useful.
+cl::opt<bool>
     SetDumpState("set-state-dump", cl::init(false),
                  cl::desc("Set the dumpStates option to true (default=false)."),
                  cl::cat(DebugCat));
@@ -1240,31 +1246,42 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       if (isPse != std::string::npos) {
         klee_warning("\033[1;33mCond is PSE State.\033[0m");
       }
-      str.erase(std::remove(str.begin(), str.end(), '\n'), str.end());
-      str.erase(std::remove(str.begin(), str.end(), '\t'), str.end());
-      errs() << "   Cond : " << str << "\n";
-      *writeableStream << "\nCond : \n";
+      if (ShowForkCond) {
+        str.erase(std::remove(str.begin(), str.end(), '\n'), str.end());
+        str.erase(std::remove(str.begin(), str.end(), '\t'), str.end());
+        errs() << "Cond : " << str << "\n";
+      }
+      *writeableStream << "\nCond --> \n";
       *writeableStream << condition;
-      *writeableStream << "\nNegate : \n";
+      *writeableStream << "\nNegate --> \n";
       *writeableStream << Expr::createIsZero(condition);
       *writeableStream << "\n ---- \n";
       std::stringstream sso("");
-      *conditionsDump
-          << "\tFork : True,\n\tCurrent State Id : "
-          << (current.getID() > 0 ? current.getID() : -1)
-          << ",\n\tTrue KLEE Id : "
-          << (trueState->getID() > 0 ? trueState->getID() : -1)
-          << ",\n\tTrue Generate ID : " << ++stateExecutionStackID
-          << ",\n\ttrueQuery : \n\t\t[\n"
-          << (trueState->constraints.printConstraintSetTY(sso)).str() << "],\n";
-      sso.str(std::string());
-      *conditionsDump
-          << "\tFalse KLEE Id : "
-          << (falseState->getID() > 0 ? falseState->getID() : -1)
-          << ",\n\tFalse Generate ID : " << ++stateExecutionStackID
-          << ",\n\tfalseQuery : \n\t\t[\n"
-          << (falseState->constraints.printConstraintSetTY(sso)).str()
-          << "]\n}\n";
+
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(condition)) {
+        if (!CE->isTrue())
+          llvm::report_fatal_error("attempt to add invalid constraint");
+      } else {
+        *conditionsDump
+            << "\tFork --> True;\n\tCurrent State Id --> "
+            << (current.getID() > 0 ? current.getID() : -1)
+            << ";\n\tTrue KLEE Id --> "
+            << (trueState->getID() > 0 ? trueState->getID() : -1)
+            << ";\n\tTrue Generate ID --> " << ++stateExecutionStackID
+            << ";\n\ttrueQuery --> \n\t\t[\n"
+            << (trueState->constraints.printConstraintSetTY(sso)).str()
+            << "];\n";
+        trueState->emphemeralStateId = stateExecutionStackID;
+        sso.str(std::string());
+        *conditionsDump
+            << "\tFalse KLEE Id --> "
+            << (falseState->getID() > 0 ? falseState->getID() : -1)
+            << ";\n\tFalse Generate ID --> " << ++stateExecutionStackID
+            << ";\n\tfalseQuery --> \n\t\t[\n"
+            << (falseState->constraints.printConstraintSetTY(sso)).str()
+            << "]\n}\n";
+        falseState->emphemeralStateId = stateExecutionStackID;
+      }
     }
     return StatePair(trueState, falseState);
   }
@@ -1938,10 +1955,10 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       return;
     }
 
-    // FIXME: I'm not really happy about this reliance on prevPC but it is ok, I
-    // guess. This just done to avoid having to pass KInstIterator everywhere
-    // instead of the actual instruction, since we can't make a KInstIterator
-    // from just an instruction (unlike LLVM).
+    // FIXME: I'm not really happy about this reliance on prevPC but it is ok,
+    // I guess. This just done to avoid having to pass KInstIterator
+    // everywhere instead of the actual instruction, since we can't make a
+    // KInstIterator from just an instruction (unlike LLVM).
     KFunction *kf = kmodule->functionMap[f];
 
     state.pushFrame(state.prevPC, kf);
@@ -2023,8 +2040,8 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
             alignment = std::stoi(str.substr(pos + 6));
 #endif
 
-          // AMD64-ABI 3.5.7p5: Step 7. Align l->overflow_arg_area upwards to a
-          // 16 byte boundary if alignment needed by type exceeds 8 byte
+          // AMD64-ABI 3.5.7p5: Step 7. Align l->overflow_arg_area upwards to
+          // a 16 byte boundary if alignment needed by type exceeds 8 byte
           // boundary.
           if (!alignment && argWidth > Expr::Int64) {
             alignment = 16;
@@ -2043,7 +2060,8 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
 
           // AMD64-ABI 3.5.7p5: Step 9. Set l->overflow_arg_area to:
           // l->overflow_arg_area + sizeof(type)
-          // Step 10. Align l->overflow_arg_area upwards to an 8 byte boundary.
+          // Step 10. Align l->overflow_arg_area upwards to an 8 byte
+          // boundary.
 #if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
           size += llvm::alignTo(argWidth, WordSize) / 8;
 #else
@@ -2270,16 +2288,17 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> cond = eval(ki, 0, state).value;
       std::vector<std::string> InstructionInfo = ki->getLocationInfo();
 
-      // COMMENT: Do linked files always have "/" in path? May need a fix later.
+      // COMMENT: Do linked files always have "/" in path? May need a fix
+      // later.
       if (InstructionInfo.size() > 0) {
         // klee_message("NOTE: Branch Conditions Dumping.");
         printSExpr = true;
-        *conditionsDump << "{\n\tFile : " << InstructionInfo[0]
-                        << ",\n\tLine : " << InstructionInfo[1]
-                        << ",\n\tPredicate : " << InstructionInfo[2]
-                        << ",\n\tBranch Predicate : " << cond
-                        << ",\n\tNegate Predicate : "
-                        << Expr::createIsZero(cond) << ",\n";
+        *conditionsDump << "{\n\tFile --> " << InstructionInfo[0]
+                        << ";\n\tLine --> " << InstructionInfo[1]
+                        << ";\n\tPredicate --> " << InstructionInfo[2]
+                        << ";\n\tBranch Predicate --> " << cond
+                        << ";\n\tNegate Predicate --> "
+                        << Expr::createIsZero(cond) << ";\n";
       } else {
         printSExpr = false;
       }
@@ -2430,12 +2449,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         ref<Expr> match = EqExpr::create(cond, it->first);
 
         // skip if case has same successor basic block as default case
-        // (should work even with phi nodes as a switch is a single terminating
-        // instruction)
+        // (should work even with phi nodes as a switch is a single
+        // terminating instruction)
         if (it->second == si->getDefaultDest())
           continue;
 
-        // Make sure that the default value does not contain this target's value
+        // Make sure that the default value does not contain this target's
+        // value
         defaultValue = AndExpr::create(defaultValue, Expr::createIsZero(match));
 
         // Check if control flow could take this case
@@ -2448,11 +2468,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         if (result) {
           BasicBlock *caseSuccessor = it->second;
 
-          // Handle the case that a basic block might be the target of multiple
-          // switch cases.
-          // Currently we generate an expression containing all switch-case
-          // values for the same target basic block. We spare us forking too
-          // many times but we generate more complex condition expressions
+          // Handle the case that a basic block might be the target of
+          // multiple switch cases. Currently we generate an expression
+          // containing all switch-case values for the same target basic
+          // block. We spare us forking too many times but we generate more
+          // complex condition expressions
           // TODO Add option to allow to choose between those behaviors
           std::pair<std::map<BasicBlock *, ref<Expr>>::iterator, bool> res =
               branchTargets.insert(std::make_pair(
@@ -2648,12 +2668,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // COMMENT: Do linked files always have "/" in path? May need a fix later.
     if (InstructionInfo.size() > 0) {
       printSExpr = true;
-      *conditionsDump << "{\n\tFile : " << InstructionInfo[0]
-                      << ",\n\tLine : " << InstructionInfo[1]
-                      << ",\n\tPredicate : " << InstructionInfo[2]
-                      << ",\n\tExpression : "
-                      << "ite (" << cond << " (" << tExpr << ")(" << fExpr
-                      << ")),\n}";
+      *conditionsDump << "{\n\tFile --> " << InstructionInfo[0]
+                      << ";\n\tLine --> " << InstructionInfo[1]
+                      << ";\n\tPredicate --> " << InstructionInfo[2]
+                      << ";\n\tExpression --> "
+                      << "(ite (" << cond << "(" << tExpr << ")(" << fExpr
+                      << "))),\n}";
     } else {
       printSExpr = false;
     }
@@ -3178,7 +3198,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     bool Result = false;
     switch (fi->getPredicate()) {
-      // Predicates which only care about whether or not the operands are NaNs.
+      // Predicates which only care about whether or not the operands are
+      // NaNs.
     case FCmpInst::FCMP_ORD:
       Result = (CmpRes != APFloat::cmpUnordered);
       break;
@@ -3435,7 +3456,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // check on which frame we are currently
     if (state.stack.size() - 1 == cui->catchingStackIndex) {
       // we are in the target stack frame, return the selector value
-      // that was returned by the personality fn in phase 1 and stop unwinding.
+      // that was returned by the personality fn in phase 1 and stop
+      // unwinding.
       selectorValue = cui->selectorValue;
 
       // stop unwinding by cleaning up our unwinding information.
@@ -3821,6 +3843,7 @@ void Executor::terminateState(ExecutionState &state) {
       seedMap.erase(it3);
     addedStates.erase(it);
     processTree->remove(state.ptreeNode);
+
     delete &state;
   }
 }
@@ -3946,6 +3969,12 @@ void Executor::terminateStateOnError(ExecutionState &state,
     interpreterHandler->processTestCase(state, msg.str().c_str(), suffix);
   }
 
+  llvm::errs() << "\033[1;34m\tState Errored : " << state.getID()
+               << "\033[0m\n";
+  llvm::errs() << "\033[1;34m\tEmphemeral Id : " << state.emphemeralStateId
+               << "\033[0m\n";
+  *writeableStream << "[Error] State Removed : (" << state.getID() << ", "
+                   << state.emphemeralStateId << ")\n";
   terminateState(state);
 
   if (shouldExitOn(termReason))

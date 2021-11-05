@@ -231,6 +231,9 @@ public:
   /// @brief the state id
   std::uint32_t id{0};
 
+  /// @brief Temporary Id to mark for printing.
+  std::uint32_t emphemeralStateId{0};
+
   /// @brief Whether a new instruction was covered in this state
   bool coveredNew;
 
