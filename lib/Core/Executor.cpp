@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Executor.h"
+#include "klee/json.hpp"
+
 
 #include "Context.h"
 #include "CoreStats.h"
@@ -99,8 +101,12 @@ typedef unsigned TypeSize;
 #include <sstream>
 #include <string>
 #include <sys/mman.h>
+#include <fstream>
 #include <utility>
 #include <vector>
+
+using json = nlohmann::json;
+json summaryObj;
 
 using namespace llvm;
 using namespace klee;
@@ -1262,23 +1268,25 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
         if (!CE->isTrue())
           llvm::report_fatal_error("attempt to add invalid constraint");
       } else {
+        stateExecutionStackID += 1;
         *conditionsDump
             << "\tFork --> True;\n\tCurrent State Id --> "
             << (current.getID() > 0 ? current.getID() : -1)
             << ";\n\tTrue KLEE Id --> "
             << (trueState->getID() > 0 ? trueState->getID() : -1)
-            << ";\n\tTrue Generate ID --> " << ++stateExecutionStackID
+            << ";\n\tTrue Generate ID --> " << stateExecutionStackID
             << ";\n\ttrueQuery --> \n\t\t[\n"
-            << (trueState->constraints.printConstraintSetTY(sso)).str()
+            << (trueState->constraints.printConstraintSetTY(sso, &summaryObj, stateExecutionStackID)).str()
             << "];\n";
         trueState->emphemeralStateId = stateExecutionStackID;
         sso.str(std::string());
+        stateExecutionStackID += 1;
         *conditionsDump
             << "\tFalse KLEE Id --> "
             << (falseState->getID() > 0 ? falseState->getID() : -1)
-            << ";\n\tFalse Generate ID --> " << ++stateExecutionStackID
+            << ";\n\tFalse Generate ID --> " << stateExecutionStackID
             << ";\n\tfalseQuery --> \n\t\t[\n"
-            << (falseState->constraints.printConstraintSetTY(sso)).str()
+            << (falseState->constraints.printConstraintSetTY(sso, &summaryObj, stateExecutionStackID)).str()
             << "]\n}\n";
         falseState->emphemeralStateId = stateExecutionStackID;
       }
@@ -4636,6 +4644,12 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
   printETree();
   dumpPTree();
 
+  /* COMMENT : Check to as to how the dump is. */
+  std::fstream constraintsJson;
+  constraintsJson.open("constraints.json", std::fstream::out);
+  constraintsJson << std::setw(4) << summaryObj << "\n";
+  constraintsJson.close();
+  
   executionTree = nullptr;
   processTree = nullptr;
 

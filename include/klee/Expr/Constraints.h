@@ -11,6 +11,10 @@
 #define KLEE_CONSTRAINTS_H
 
 #include "klee/Expr/Expr.h"
+#include "klee/json.hpp"
+#include <string.h>
+
+using json = nlohmann::json;
 
 namespace klee {
 
@@ -41,16 +45,24 @@ public:
   }
 
   /// COMMENT : Stream the Constraint Set to stringstream.
-  std::stringstream &printConstraintSetTY(std::stringstream &sso) {
+  // Extra Function. Just to dirty print the constraints in an ExecutionState.
+  std::stringstream &printConstraintSetTY(std::stringstream &sso, json *obj, unsigned long long stateId) {
 
     if (constraints.size() <= 0) {
       return sso;
     }
 
+    int counter = 0;
+    std::stringstream temp;
     for (const ref<Expr> &conditions : constraints) {
+      counter++;
+      temp.str(std::string());
+      temp << conditions;
+      (*obj)["state_" + std::to_string(stateId)]["cond_" + std::to_string(counter)] = temp.str();
       sso << conditions;
-      sso << "|";
+      sso << "\n|\n";
     }
+
     return sso;
   }
 
