@@ -10,7 +10,6 @@
 #include "Executor.h"
 #include "klee/json.hpp"
 
-
 #include "Context.h"
 #include "CoreStats.h"
 #include "ETree.h"
@@ -101,7 +100,6 @@ typedef unsigned TypeSize;
 #include <sstream>
 #include <string>
 #include <sys/mman.h>
-#include <fstream>
 #include <utility>
 #include <vector>
 
@@ -448,6 +446,12 @@ cl::opt<bool>
                                "exec states (default=false)."),
                       cl::cat(DebugCat));
 
+// REVISIT :: Pass the file name as input to KLEE. (Optional)
+cl::opt<std::string> fileNameActual(
+    "filename-act", cl::init("default.cpp"),
+    cl::desc("Pass the source code/*.bc actual file name "
+             "smaller logging footprint. (default=default.cpp)."),
+    cl::cat(DebugCat));
 } // namespace
 
 // XXX hack
@@ -1257,37 +1261,34 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
         str.erase(std::remove(str.begin(), str.end(), '\t'), str.end());
         errs() << "Cond : " << str << "\n";
       }
-      *writeableStream << "\nCond --> \n";
-      *writeableStream << condition;
-      *writeableStream << "\nNegate --> \n";
-      *writeableStream << Expr::createIsZero(condition);
-      *writeableStream << "\n ---- \n";
       std::stringstream sso("");
-
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(condition)) {
         if (!CE->isTrue())
           llvm::report_fatal_error("attempt to add invalid constraint");
       } else {
         stateExecutionStackID += 1;
-        *conditionsDump
-            << "\tFork --> True;\n\tCurrent State Id --> "
-            << (current.getID() > 0 ? current.getID() : -1)
-            << ";\n\tTrue KLEE Id --> "
-            << (trueState->getID() > 0 ? trueState->getID() : -1)
-            << ";\n\tTrue Generate ID --> " << stateExecutionStackID
-            << ";\n\ttrueQuery --> \n\t\t[\n"
-            << (trueState->constraints.printConstraintSetTY(sso, &summaryObj, stateExecutionStackID)).str()
-            << "];\n";
+        *conditionsDump << "\tFork --> True;\n\tCurrent State Id --> "
+                        << (current.getID() > 0 ? current.getID() : -1)
+                        << ";\n\tTrue KLEE Id --> "
+                        << (trueState->getID() > 0 ? trueState->getID() : -1)
+                        << ";\n\tTrue Generate ID --> " << stateExecutionStackID
+                        << ";\n\ttrueQuery --> \n\t\t[\n"
+                        << (trueState->constraints.printConstraintSetTY(
+                                sso, &summaryObj, stateExecutionStackID))
+                               .str()
+                        << "];\n";
         trueState->emphemeralStateId = stateExecutionStackID;
         sso.str(std::string());
         stateExecutionStackID += 1;
-        *conditionsDump
-            << "\tFalse KLEE Id --> "
-            << (falseState->getID() > 0 ? falseState->getID() : -1)
-            << ";\n\tFalse Generate ID --> " << stateExecutionStackID
-            << ";\n\tfalseQuery --> \n\t\t[\n"
-            << (falseState->constraints.printConstraintSetTY(sso, &summaryObj, stateExecutionStackID)).str()
-            << "]\n}\n";
+        *conditionsDump << "\tFalse KLEE Id --> "
+                        << (falseState->getID() > 0 ? falseState->getID() : -1)
+                        << ";\n\tFalse Generate ID --> "
+                        << stateExecutionStackID
+                        << ";\n\tfalseQuery --> \n\t\t[\n"
+                        << (falseState->constraints.printConstraintSetTY(
+                                sso, &summaryObj, stateExecutionStackID))
+                               .str()
+                        << "]\n}\n";
         falseState->emphemeralStateId = stateExecutionStackID;
       }
     }
@@ -2296,17 +2297,18 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> cond = eval(ki, 0, state).value;
       std::vector<std::string> InstructionInfo = ki->getLocationInfo();
 
-      // COMMENT: Do linked files always have "/" in path? May need a fix
-      // later.
-      if (InstructionInfo.size() > 0) {
-        // klee_message("NOTE: Branch Conditions Dumping.");
+      // COMMENT : Dumping Branch Condition Forks starts here.
+      if (InstructionInfo.size() > 0 &&
+          InstructionInfo[0].find(fileNameActual) != std::string::npos) {
         printSExpr = true;
+        // klee_message("NOTE: Branch Conditions Dumping.");
         *conditionsDump << "{\n\tFile --> " << InstructionInfo[0]
                         << ";\n\tLine --> " << InstructionInfo[1]
                         << ";\n\tPredicate --> " << InstructionInfo[2]
                         << ";\n\tBranch Predicate --> " << cond
                         << ";\n\tNegate Predicate --> "
                         << Expr::createIsZero(cond) << ";\n";
+
       } else {
         printSExpr = false;
       }
@@ -2672,19 +2674,20 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> result = SelectExpr::create(cond, tExpr, fExpr);
     std::vector<std::string> InstructionInfo = ki->getLocationInfo();
 
-    // InstructionInfo[0].find("/") == std::string::npos
-    // COMMENT: Do linked files always have "/" in path? May need a fix later.
-    if (InstructionInfo.size() > 0) {
+    // COMMENT: Dumping of ITE like conditions here.
+    if (InstructionInfo.size() > 0 &&
+        InstructionInfo[0].find(fileNameActual) != std::string::npos) {
       printSExpr = true;
       *conditionsDump << "{\n\tFile --> " << InstructionInfo[0]
                       << ";\n\tLine --> " << InstructionInfo[1]
                       << ";\n\tPredicate --> " << InstructionInfo[2]
-                      << ";\n\tExpression --> "
-                      << "(ite (" << cond << "(" << tExpr << ")(" << fExpr
+                      << ";\n\tifElseExpr --> "
+                      << "(ite \n(" << cond << "(" << tExpr << ")(" << fExpr
                       << "))),\n}";
     } else {
       printSExpr = false;
     }
+
     bindLocal(ki, state, result);
     break;
   }
@@ -3981,8 +3984,8 @@ void Executor::terminateStateOnError(ExecutionState &state,
                << "\033[0m\n";
   llvm::errs() << "\033[1;34m\tEmphemeral Id : " << state.emphemeralStateId
                << "\033[0m\n";
-  *writeableStream << "[Error] State Removed : (" << state.getID() << ", "
-                   << state.emphemeralStateId << ")\n";
+  *conditionsDump << "\n[Error] State Removed : (" << state.getID() << ", "
+                  << state.emphemeralStateId << ")\n";
   terminateState(state);
 
   if (shouldExitOn(termReason))
@@ -4629,28 +4632,22 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
   initializeGlobals(*state);
 
   // Start with a dummy state.
-  ProbStatePtr initState = std::make_shared<ProbExecState>("Start", 0, nullptr);
-
-  // Execution Tree INIT
-  executionTree = std::make_unique<ETree>(initState);
+  // ProbStatePtr initState = std::make_shared<ProbExecState>("Start", 0,
+  // nullptr); Execution Tree INIT executionTree =
+  // std::make_unique<ETree>(initState);
   processTree = std::make_unique<PTree>(state);
 
   kqueryDumpFileptr = interpreterHandler->openOutputFile("kquery_dump.txt");
-  smtlib2DumpFileptr = interpreterHandler->openOutputFile("smtlib2_dump.txt");
   conditionsDump = interpreterHandler->openOutputFile("conds_dump.txt");
-  writeableStream = interpreterHandler->openOutputFile("temp_dump.txt");
-
   run(*state);
-  printETree();
-  dumpPTree();
 
   /* COMMENT : Check to as to how the dump is. */
   std::fstream constraintsJson;
   constraintsJson.open("constraints.json", std::fstream::out);
-  constraintsJson << std::setw(4) << summaryObj << "\n";
+  constraintsJson << std::setw(6) << summaryObj << "\n";
   constraintsJson.close();
-  
-  executionTree = nullptr;
+
+  // executionTree = nullptr;
   processTree = nullptr;
 
   // hack to clear memory objects

@@ -932,7 +932,6 @@ void SpecialFunctionHandler::handleGetKQueryExpression(
                         << "\n";
   SMTLIBRawStringStream << result << "\n";
   *(executor.kqueryDumpFileptr) << KQueryRawStringStream.str();
-  *(executor.smtlib2DumpFileptr) << SMTLIBRawStringStream.str();
 }
 
 void SpecialFunctionHandler::handleMarkGlobal(

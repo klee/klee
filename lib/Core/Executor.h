@@ -99,9 +99,9 @@ class Executor : public Interpreter {
 public:
   typedef std::pair<ExecutionState *, ExecutionState *> StatePair;
 
-  /// COMMENT : File Pointers for dumping internal KLEE Data.
-  std::unique_ptr<llvm::raw_fd_ostream> kqueryDumpFileptr, smtlib2DumpFileptr,
-      tempDump, conditionsDump, stackDump, writeableStream;
+  /// COMMENT : File Pointers for dumping internal KLEE State
+  /// Constraints and Objects.
+  std::unique_ptr<llvm::raw_fd_ostream> kqueryDumpFileptr, conditionsDump;
 
   enum TerminateReason {
     Abort,
@@ -177,7 +177,7 @@ private:
 
   /// Map of legal function addresses to the corresponding Function.
   /// Used to validate and dereference function pointers.
-  std::unordered_map<std::uint64_t, llvm::Function*> legalFunctions;
+  std::unordered_map<std::uint64_t, llvm::Function *> legalFunctions;
 
   /// When non-null the bindings that will be used for calls to
   /// klee_make_symbolic in order replay.
