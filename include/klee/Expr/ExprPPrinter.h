@@ -13,66 +13,64 @@
 #include "klee/Expr/Expr.h"
 
 namespace llvm {
-  class raw_ostream;
+class raw_ostream;
 }
 namespace klee {
-  class ConstraintSet;
+class ConstraintSet;
 
-  class ExprPPrinter {
-  protected:
-    ExprPPrinter() {}
-    
-  public:
-    static ExprPPrinter *create(llvm::raw_ostream &os);
+class ExprPPrinter {
+protected:
+  ExprPPrinter() {}
 
-    virtual ~ExprPPrinter() {}
+public:
+  static ExprPPrinter *create(llvm::raw_ostream &os);
 
-    virtual void setNewline(const std::string &newline) = 0;
-    virtual void setForceNoLineBreaks(bool forceNoLineBreaks) = 0;
-    virtual void reset() = 0;
-    virtual void scan(const ref<Expr> &e) = 0;
-    virtual void print(const ref<Expr> &e, unsigned indent=0) = 0;
+  virtual ~ExprPPrinter() {}
 
-    // utility methods
+  virtual void setNewline(const std::string &newline) = 0;
+  virtual void setForceNoLineBreaks(bool forceNoLineBreaks) = 0;
+  virtual void reset() = 0;
+  virtual void scan(const ref<Expr> &e) = 0;
+  virtual void print(const ref<Expr> &e, unsigned indent = 0) = 0;
 
-    template<class Container>
-    void scan(Container c) {
-      scan(c.begin(), c.end());
-    }
+  // utility methods
 
-    template<class InputIterator>
-    void scan(InputIterator it, InputIterator end) {
-      for (; it!=end; ++it)
-        scan(*it);
-    }
+  template <class Container> void scan(Container c) {
+    scan(c.begin(), c.end());
+  }
 
-    /// printOne - Pretty print a single expression prefixed by a
-    /// message and followed by a line break.
-    static void printOne(llvm::raw_ostream &os, const char *message,
-                         const ref<Expr> &e);
+  template <class InputIterator>
+  void scan(InputIterator it, InputIterator end) {
+    for (; it != end; ++it)
+      scan(*it);
+  }
 
-    /// printSingleExpr - Pretty print a single expression.
-    ///
-    /// The expression will not be followed by a line break.
-    ///
-    /// Note that if the output stream is not positioned at the
-    /// beginning of a line then printing will not resume at the
-    /// correct position following any output line breaks.
-    static void printSingleExpr(llvm::raw_ostream &os, const ref<Expr> &e);
+  /// printOne - Pretty print a single expression prefixed by a
+  /// message and followed by a line break.
+  static void printOne(llvm::raw_ostream &os, const char *message,
+                       const ref<Expr> &e);
 
-    static void printConstraints(llvm::raw_ostream &os,
-                                 const ConstraintSet &constraints);
+  /// printSingleExpr - Pretty print a single expression.
+  ///
+  /// The expression will not be followed by a line break.
+  ///
+  /// Note that if the output stream is not positioned at the
+  /// beginning of a line then printing will not resume at the
+  /// correct position following any output line breaks.
+  static void printSingleExpr(llvm::raw_ostream &os, const ref<Expr> &e);
 
-    static void printQuery(llvm::raw_ostream &os,
-                           const ConstraintSet &constraints,
-                           const ref<Expr> &q,
-                           const ref<Expr> *evalExprsBegin = 0,
-                           const ref<Expr> *evalExprsEnd = 0,
-                           const Array * const* evalArraysBegin = 0,
-                           const Array * const* evalArraysEnd = 0,
-                           bool printArrayDecls = true);
-  };
+  static void printConstraints(llvm::raw_ostream &os,
+                               const ConstraintSet &constraints);
 
-}
+  static void printQuery(llvm::raw_ostream &os,
+                         const ConstraintSet &constraints, const ref<Expr> &q,
+                         const ref<Expr> *evalExprsBegin = 0,
+                         const ref<Expr> *evalExprsEnd = 0,
+                         const Array *const *evalArraysBegin = 0,
+                         const Array *const *evalArraysEnd = 0,
+                         bool printArrayDecls = true);
+};
+
+} // namespace klee
 
 #endif /* KLEE_EXPRPPRINTER_H */

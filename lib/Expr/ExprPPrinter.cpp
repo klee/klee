@@ -384,6 +384,8 @@ public:
       } else {
         if (!hasScan || shouldPrint.count(e)) {
           PC << 'N' << counter << ':';
+          /* COMMENT : Print Bindings. */
+          // llvm::errs() << "N" << counter + 1 << ":" << e << "\n";
           bindings.insert(std::make_pair(e, counter++));
         }
 

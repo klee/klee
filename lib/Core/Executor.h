@@ -42,6 +42,8 @@
 #include <vector>
 
 using json = nlohmann::json;
+using ordered_json = nlohmann::ordered_json;
+
 struct KTest;
 
 namespace llvm {
@@ -109,7 +111,7 @@ public:
 
   /// COMMENT : Log the State Constraints and the KLEE internal
   /// Symbolic Execution Tree.
-  json executionTreeJSON;
+  ordered_json executionTreeJSON;
 
   enum TerminateReason {
     Abort,

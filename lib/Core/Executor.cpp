@@ -12,6 +12,10 @@
 /* COMMENT : Thanks to Nholmann for providing this. */
 #include "klee/json.hpp"
 
+/// COMMENT : EXTRAS
+#include <algorithm>
+#include <cctype>
+
 #include "Context.h"
 #include "CoreStats.h"
 #include "ETree.h"
@@ -1247,7 +1251,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       // dumpPTree();
       klee_message("NOTE: \n\tKLEE State Forked. ");
 
-      // \XXX COMMENT : Worst thing ever.
+      // COMMENT : Worst thing ever.
       std::stringstream ss;
       ss << condition;
       std::string str = ss.str();
@@ -1283,9 +1287,20 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
         negCondss << Expr::createIsZero(condition);
         nullcond = negCondss.str();
 
+        /* COMMENT : Remove extra spaces and '\n' character. */
         cond.erase(std::remove(cond.begin(), cond.end(), '\n'), cond.end());
+        cond.erase(std::unique(std::begin(cond), std::end(cond),
+                               [](unsigned char a, unsigned char b) {
+                                 return std::isspace(a) && std::isspace(b);
+                               }),
+                   std::end(cond));
         nullcond.erase(std::remove(nullcond.begin(), nullcond.end(), '\n'),
                        nullcond.end());
+        nullcond.erase(std::unique(std::begin(nullcond), std::end(nullcond),
+                                   [](unsigned char a, unsigned char b) {
+                                     return std::isspace(a) && std::isspace(b);
+                                   }),
+                       std::end(nullcond));
 
         executionTreeJSON[std::to_string(currentStateId)] = {
             {"isLeaf", "False"},
@@ -1295,35 +1310,45 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
             {"True KLEE Id",
              (trueState->getID() > 0 ? trueState->getID() : -1)},
             {"True Generate ID", trueState->emphemeralStateId},
-            {"trueQuery", 0},
+            {"trueQuery", std::vector<std::string>()},
             {"False KLEE Id",
              (falseState->getID() > 0 ? falseState->getID() : -1)},
             {"False Generate ID", falseState->emphemeralStateId},
-            {"falseQuery", 1},
+            {"falseQuery", std::vector<std::string>()},
             {"Branch Predicate", cond},
             {"Negate Predicate", nullcond}};
+
+        /* Create TrueNode for reuse later. */
         executionTreeJSON[std::to_string(trueState->emphemeralStateId)] = {
             {"isLeaf", "True"},
-            {"Branch Predicate", "null"},
-            {"Negate Predicate", "null"},
+            {"Branch Predicate", "(Eq true (ReadLSB w32 0 leaf_sym))"},
+            {"Negate Predicate", "(Eq true (ReadLSB w32 0 leaf_sym))"},
             {"state_id", trueState->emphemeralStateId},
-            {"trueQuery", 0},
-            {"falseQuery", 1},
+            {"trueQuery", std::vector<std::string>()},
+            {"falseQuery", std::vector<std::string>()},
             {"Fork", "True"}};
+
+        /* Create FalseNode for reuse later. */
         executionTreeJSON[std::to_string(falseState->emphemeralStateId)] = {
             {"isLeaf", "True"},
-            {"Negate Predicate", "null"},
-            {"Branch Predicate", "null"},
-            {"trueQuery", 0},
-            {"falseQuery", 1},
+            {"Negate Predicate", "(Eq true (ReadLSB w32 0 leaf_sym))"},
+            {"Branch Predicate", "(Eq true (ReadLSB w32 0 leaf_sym))"},
+            {"trueQuery", std::vector<std::string>()},
+            {"falseQuery", std::vector<std::string>()},
             {"state_id", falseState->emphemeralStateId},
             {"Fork", "True"}};
       };
 
-      // trueState->constraints.printConstraintSetTY(&executionTreeJSON,
-      //                                             trueState->emphemeralStateId);
-      // falseState->constraints.printConstraintSetTY(
-      //     &executionTreeJSON, falseState->emphemeralStateId);
+      std::vector<std::string> trueConstrs =
+          trueState->constraints.printConstraintSetTY();
+
+      std::vector<std::string> falseConstrs =
+          falseState->constraints.printConstraintSetTY();
+
+      executionTreeJSON[std::to_string(currentStateId)]["trueQuery"] =
+          trueConstrs;
+      executionTreeJSON[std::to_string(currentStateId)]["falseQuery"] =
+          falseConstrs;
 
       llvm::errs() << "\033[1;37m\tFork : (" << currentStateId << ", "
                    << trueState->emphemeralStateId << ", "
@@ -2711,10 +2736,20 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       std::string constraint;
       sso << result;
       constraint = sso.str();
+
+      /* COMMENT : Remove extra spaces and '\n' character. */
       constraint.erase(std::remove(constraint.begin(), constraint.end(), '\n'),
                        constraint.end());
+      constraint.erase(std::unique(std::begin(constraint), std::end(constraint),
+                                   [](unsigned char a, unsigned char b) {
+                                     return std::isspace(a) && std::isspace(b);
+                                   }),
+                       std::end(constraint));
+
       executionTreeJSON[std::to_string(state.emphemeralStateId)] = {
-          {"Select Expression", constraint}, {"Fork", "False"}};
+          {"Select Expression", constraint},
+          {"Fork", "False"},
+          {"isLeaf", "True"}};
     } else {
       printSExpr = false;
     }
@@ -3791,6 +3826,9 @@ void Executor::run(ExecutionState &initialState) {
     KInstruction *ki = state.pc;
     stepInstruction(state);
 
+    executionTreeJSON[std::to_string(state.emphemeralStateId)]["wasQueued"] =
+        "True";
+
     executeInstruction(state, ki);
     timers.invoke();
     if (::dumpStates)
@@ -3805,11 +3843,20 @@ void Executor::run(ExecutionState &initialState) {
       // pressure
       updateStates(nullptr);
     }
+    /* TODO : Dump JSON and process path so that, probability can computed. */
+    // if (executionTreeJSON[std::to_string(state.emphemeralStateId)]["isLeaf"]
+    // ==
+    //         "True" &&
+    //     executionTreeJSON[std::to_string(state.emphemeralStateId)]
+    //                      ["wasQueued"] == "True") {
+    //   std::string log = std::to_string(state.emphemeralStateId);
+    //   klee_message(std::to_string(state.emphemeralStateId).c_str(),
+    //                "Reached Leaf : %s", log.c_str());
+    // }
   }
 
   delete searcher;
   searcher = nullptr;
-
   doDumpStates();
 }
 
@@ -3903,6 +3950,9 @@ void Executor::terminateStateOnExit(ExecutionState &state) {
   if (!OnlyOutputStatesCoveringNew || state.coveredNew ||
       (AlwaysOutputSeeds && seedMap.count(&state)))
     interpreterHandler->processTestCase(state, 0, 0);
+
+  /* COMMENT : See if the states reaching here are leaf states. */
+  llvm::errs() << std::to_string(state.emphemeralStateId) << "\n";
   interpreterHandler->incPathsCompleted();
   terminateState(state);
 }
@@ -4667,7 +4717,7 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
 
   /* COMMENT : Check to as to how the dump is. */
   std::fstream constraintsJson;
-  constraintsJson.open("symbEx_tree.json", std::fstream::out);
+  constraintsJson.open(fileNameActual + "_summary.json", std::fstream::out);
   summaryObj["symbolic_execution_tree"] = executionTreeJSON;
   constraintsJson << std::setw(4) << summaryObj << "\n";
   constraintsJson.close();

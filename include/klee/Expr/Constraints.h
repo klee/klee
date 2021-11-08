@@ -13,6 +13,7 @@
 #include "klee/Expr/Expr.h"
 #include "klee/json.hpp"
 #include <string.h>
+#include <vector>
 
 using json = nlohmann::json;
 
@@ -46,10 +47,12 @@ public:
 
   /// COMMENT : Stream the Constraint Set to stringstream.
   // Extra Function. Just to dirty print the constraints in an ExecutionState.
-  void printConstraintSetTY(json *obj, unsigned long long int stateId) {
+  std::vector<std::string> printConstraintSetTY() {
+
+    std::vector<std::string> constraints_mix;
 
     if (constraints.size() <= 0) {
-      return;
+      return constraints_mix;
     }
 
     int counter = 0;
@@ -60,12 +63,18 @@ public:
       temp << conditions;
       std::string cond;
       cond = temp.str();
+
+      /* COMMENT : Remove extra spaces and '\n' character. */
       cond.erase(std::remove(cond.begin(), cond.end(), '\n'), cond.end());
-      (*obj)[std::to_string(stateId)]["constraint_" + std::to_string(counter)] =
-          cond;
+      cond.erase(std::unique(std::begin(cond), std::end(cond),
+                             [](unsigned char a, unsigned char b) {
+                               return std::isspace(a) && std::isspace(b);
+                             }),
+                 std::end(cond));
+      constraints_mix.emplace_back(cond);
     }
 
-    return;
+    return constraints_mix;
   }
 
 private:
