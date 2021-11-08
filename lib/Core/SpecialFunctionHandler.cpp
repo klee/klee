@@ -106,6 +106,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
     add("klee_is_symbolic", handleIsSymbolic, true),
     add("klee_make_symbolic", handleMakeSymbolic, false),
     add("klee_dump_kquery_state", handleGetKQueryExpression, false),
+    add("mark_state_winning", handleStateAnnotateWin, false),
     add("klee_dump_symbolic_details", handleGetSymbolicDetails, false),
     add("klee_dump_state_stack", handleStateStackDump, false),
     add("klee_mark_global", handleMarkGlobal, false),
@@ -527,9 +528,8 @@ void SpecialFunctionHandler::handleAssume(ExecutionState &state,
     executor.addConstraint(state, e);
     std::stringstream KQueryRawStringStream("");
     KQueryRawStringStream << "\nState Id : " << state.getID();
-    KQueryRawStringStream
-        << "\nLocation : " << target->getSourceLocation()
-        << "\nklee_assume() : ";
+    KQueryRawStringStream << "\nLocation : " << target->getSourceLocation()
+                          << "\nklee_assume() : ";
     KQueryRawStringStream << e << "\n\n";
     *(executor.kqueryDumpFileptr) << KQueryRawStringStream.str();
   }
@@ -919,19 +919,22 @@ void SpecialFunctionHandler::handleGetKQueryExpression(
     ExecutionState &state, KInstruction *target,
     std::vector<ref<Expr>> &arguments) {
   std::stringstream KQueryRawStringStream("");
-  std::stringstream SMTLIBRawStringStream("");
   std::string result = "";
   executor.getConstraintLog((state), result, klee::Interpreter::KQUERY);
   KQueryRawStringStream << "\nState Id : " << state.getID();
   KQueryRawStringStream << "\nNew Query : " << target->getSourceLocation()
                         << "\n";
   KQueryRawStringStream << result << "\n";
-  executor.getConstraintLog((state), result, klee::Interpreter::SMTLIB2);
-  SMTLIBRawStringStream << "\nState Id : " << state.getID();
-  SMTLIBRawStringStream << "\nNew Query : " << target->getSourceLocation()
-                        << "\n";
-  SMTLIBRawStringStream << result << "\n";
   *(executor.kqueryDumpFileptr) << KQueryRawStringStream.str();
+}
+
+// COMMENT : Dump all path constraints and not just state conditions.
+void SpecialFunctionHandler::handleStateAnnotateWin(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr>> &arguments) {
+  executor.executionTreeJSON["win_states"]
+                            [std::to_string(state.emphemeralStateId)] = {
+      {"stateId", state.getID()}, {"EmphId", state.emphemeralStateId}};
 }
 
 void SpecialFunctionHandler::handleMarkGlobal(

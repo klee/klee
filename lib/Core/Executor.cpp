@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "Executor.h"
+
+/* COMMENT : Thanks to Nholmann for providing this. */
 #include "klee/json.hpp"
 
 #include "Context.h"
@@ -1049,6 +1051,11 @@ ref<Expr> Executor::maxStaticPctChecks(ExecutionState &current,
 
 Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
                                    bool isInternal) {
+
+  /* COMMENT : Capture before KLEE re-use at Fork. */
+  // Current State Id.
+  int currentStateId = current.emphemeralStateId;
+
   Solver::Validity res;
   std::map<ExecutionState *, std::vector<SeedInfo>>::iterator it =
       seedMap.find(&current);
@@ -1067,8 +1074,6 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
   if (!success) {
     current.pc = current.prevPC;
     terminateStateEarly(current, "Query timed out (fork).");
-    if (printSExpr)
-      *conditionsDump << "}\n";
     return StatePair(0, 0);
   }
 
@@ -1153,8 +1158,6 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
         current.pathOS << "1";
       }
     }
-    if (printSExpr)
-      *conditionsDump << "}\n";
     return StatePair(&current, 0);
   } else if (res == Solver::False) {
     if (!isInternal) {
@@ -1162,8 +1165,6 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
         current.pathOS << "0";
       }
     }
-    if (printSExpr)
-      *conditionsDump << "}\n";
     return StatePair(0, &current);
   } else {
     TimerStatIncrementer timer(stats::forkTime);
@@ -1238,8 +1239,6 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
     if (MaxDepth && MaxDepth <= trueState->depth) {
       terminateStateEarly(*trueState, "max-depth exceeded.");
       terminateStateEarly(*falseState, "max-depth exceeded.");
-      if (printSExpr)
-        *conditionsDump << "}\n";
       return StatePair(0, 0);
     }
 
@@ -1255,42 +1254,80 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       auto isPse = str.find("pse");
       if (isPse != std::string::npos) {
         klee_warning("\033[1;33mCond is PSE State.\033[0m");
+        executionTreeJSON[std::to_string(currentStateId)] = {"isPSEType",
+                                                             "True"};
+      } else {
+        executionTreeJSON[std::to_string(currentStateId)] = {"isPSEType",
+                                                             "False"};
       }
       if (ShowForkCond) {
         str.erase(std::remove(str.begin(), str.end(), '\n'), str.end());
         str.erase(std::remove(str.begin(), str.end(), '\t'), str.end());
         errs() << "Cond : " << str << "\n";
       }
-      std::stringstream sso("");
+
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(condition)) {
         if (!CE->isTrue())
           llvm::report_fatal_error("attempt to add invalid constraint");
       } else {
-        stateExecutionStackID += 1;
-        *conditionsDump << "\tFork --> True;\n\tCurrent State Id --> "
-                        << (current.getID() > 0 ? current.getID() : -1)
-                        << ";\n\tTrue KLEE Id --> "
-                        << (trueState->getID() > 0 ? trueState->getID() : -1)
-                        << ";\n\tTrue Generate ID --> " << stateExecutionStackID
-                        << ";\n\ttrueQuery --> \n\t\t[\n"
-                        << (trueState->constraints.printConstraintSetTY(
-                                sso, &summaryObj, stateExecutionStackID))
-                               .str()
-                        << "];\n";
+        ++stateExecutionStackID;
         trueState->emphemeralStateId = stateExecutionStackID;
-        sso.str(std::string());
-        stateExecutionStackID += 1;
-        *conditionsDump << "\tFalse KLEE Id --> "
-                        << (falseState->getID() > 0 ? falseState->getID() : -1)
-                        << ";\n\tFalse Generate ID --> "
-                        << stateExecutionStackID
-                        << ";\n\tfalseQuery --> \n\t\t[\n"
-                        << (falseState->constraints.printConstraintSetTY(
-                                sso, &summaryObj, stateExecutionStackID))
-                               .str()
-                        << "]\n}\n";
+        ++stateExecutionStackID;
         falseState->emphemeralStateId = stateExecutionStackID;
-      }
+
+        /* COMMENT : Execution Tree forks and grows here. Log it. */
+        std::stringstream condss, negCondss;
+        std::string cond, nullcond;
+        condss << condition;
+        cond = condss.str();
+        negCondss << Expr::createIsZero(condition);
+        nullcond = negCondss.str();
+
+        cond.erase(std::remove(cond.begin(), cond.end(), '\n'), cond.end());
+        nullcond.erase(std::remove(nullcond.begin(), nullcond.end(), '\n'),
+                       nullcond.end());
+
+        executionTreeJSON[std::to_string(currentStateId)] = {
+            {"isLeaf", "False"},
+            {"state_id", currentStateId},
+            {"Fork", "True"},
+            {"Current State Id", (current.getID() > 0 ? current.getID() : -1)},
+            {"True KLEE Id",
+             (trueState->getID() > 0 ? trueState->getID() : -1)},
+            {"True Generate ID", trueState->emphemeralStateId},
+            {"trueQuery", 0},
+            {"False KLEE Id",
+             (falseState->getID() > 0 ? falseState->getID() : -1)},
+            {"False Generate ID", falseState->emphemeralStateId},
+            {"falseQuery", 1},
+            {"Branch Predicate", cond},
+            {"Negate Predicate", nullcond}};
+        executionTreeJSON[std::to_string(trueState->emphemeralStateId)] = {
+            {"isLeaf", "True"},
+            {"Branch Predicate", "null"},
+            {"Negate Predicate", "null"},
+            {"state_id", trueState->emphemeralStateId},
+            {"trueQuery", 0},
+            {"falseQuery", 1},
+            {"Fork", "True"}};
+        executionTreeJSON[std::to_string(falseState->emphemeralStateId)] = {
+            {"isLeaf", "True"},
+            {"Negate Predicate", "null"},
+            {"Branch Predicate", "null"},
+            {"trueQuery", 0},
+            {"falseQuery", 1},
+            {"state_id", falseState->emphemeralStateId},
+            {"Fork", "True"}};
+      };
+
+      // trueState->constraints.printConstraintSetTY(&executionTreeJSON,
+      //                                             trueState->emphemeralStateId);
+      // falseState->constraints.printConstraintSetTY(
+      //     &executionTreeJSON, falseState->emphemeralStateId);
+
+      llvm::errs() << "\033[1;37m\tFork : (" << currentStateId << ", "
+                   << trueState->emphemeralStateId << ", "
+                   << falseState->emphemeralStateId << ")\033[0m\n";
     }
     return StatePair(trueState, falseState);
   }
@@ -2301,14 +2338,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       if (InstructionInfo.size() > 0 &&
           InstructionInfo[0].find(fileNameActual) != std::string::npos) {
         printSExpr = true;
-        // klee_message("NOTE: Branch Conditions Dumping.");
-        *conditionsDump << "{\n\tFile --> " << InstructionInfo[0]
-                        << ";\n\tLine --> " << InstructionInfo[1]
-                        << ";\n\tPredicate --> " << InstructionInfo[2]
-                        << ";\n\tBranch Predicate --> " << cond
-                        << ";\n\tNegate Predicate --> "
-                        << Expr::createIsZero(cond) << ";\n";
-
       } else {
         printSExpr = false;
       }
@@ -2678,12 +2707,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (InstructionInfo.size() > 0 &&
         InstructionInfo[0].find(fileNameActual) != std::string::npos) {
       printSExpr = true;
-      *conditionsDump << "{\n\tFile --> " << InstructionInfo[0]
-                      << ";\n\tLine --> " << InstructionInfo[1]
-                      << ";\n\tPredicate --> " << InstructionInfo[2]
-                      << ";\n\tifElseExpr --> "
-                      << "(ite \n(" << cond << "(" << tExpr << ")(" << fExpr
-                      << "))),\n}";
+      std::stringstream sso;
+      std::string constraint;
+      sso << result;
+      constraint = sso.str();
+      constraint.erase(std::remove(constraint.begin(), constraint.end(), '\n'),
+                       constraint.end());
+      executionTreeJSON[std::to_string(state.emphemeralStateId)] = {
+          {"Select Expression", constraint}, {"Fork", "False"}};
     } else {
       printSExpr = false;
     }
@@ -3984,8 +4015,8 @@ void Executor::terminateStateOnError(ExecutionState &state,
                << "\033[0m\n";
   llvm::errs() << "\033[1;34m\tEmphemeral Id : " << state.emphemeralStateId
                << "\033[0m\n";
-  *conditionsDump << "\n[Error] State Removed : (" << state.getID() << ", "
-                  << state.emphemeralStateId << ")\n";
+  summaryObj["RemovedState"][std::to_string(state.getID())] = {
+      {"Id", state.getID()}, {"EmphId", state.emphemeralStateId}};
   terminateState(state);
 
   if (shouldExitOn(termReason))
@@ -4630,21 +4661,15 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
   }
 
   initializeGlobals(*state);
-
-  // Start with a dummy state.
-  // ProbStatePtr initState = std::make_shared<ProbExecState>("Start", 0,
-  // nullptr); Execution Tree INIT executionTree =
-  // std::make_unique<ETree>(initState);
   processTree = std::make_unique<PTree>(state);
-
   kqueryDumpFileptr = interpreterHandler->openOutputFile("kquery_dump.txt");
-  conditionsDump = interpreterHandler->openOutputFile("conds_dump.txt");
   run(*state);
 
   /* COMMENT : Check to as to how the dump is. */
   std::fstream constraintsJson;
-  constraintsJson.open("constraints.json", std::fstream::out);
-  constraintsJson << std::setw(6) << summaryObj << "\n";
+  constraintsJson.open("symbEx_tree.json", std::fstream::out);
+  summaryObj["symbolic_execution_tree"] = executionTreeJSON;
+  constraintsJson << std::setw(4) << summaryObj << "\n";
   constraintsJson.close();
 
   // executionTree = nullptr;

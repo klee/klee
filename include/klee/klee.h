@@ -29,6 +29,10 @@ void klee_dump_state_stack();
  */
 void klee_dump_symbolic_details(void *addr, const char *name);
 
+/* COMMENT Mark/Dump State ID of Winning Query State.
+ */
+void mark_state_winning();
+
 /* Add an accesible memory object at a user specified location. It
  * is the users responsibility to make sure that these memory
  * objects do not overlap. These memory objects will also

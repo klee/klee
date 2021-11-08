@@ -46,10 +46,10 @@ public:
 
   /// COMMENT : Stream the Constraint Set to stringstream.
   // Extra Function. Just to dirty print the constraints in an ExecutionState.
-  std::stringstream &printConstraintSetTY(std::stringstream &sso, json *obj, unsigned long long stateId) {
+  void printConstraintSetTY(json *obj, unsigned long long int stateId) {
 
     if (constraints.size() <= 0) {
-      return sso;
+      return;
     }
 
     int counter = 0;
@@ -58,12 +58,14 @@ public:
       counter++;
       temp.str(std::string());
       temp << conditions;
-      (*obj)["state_" + std::to_string(stateId)]["cond_" + std::to_string(counter)] = temp.str();
-      sso << conditions;
-      sso << "\n|\n";
+      std::string cond;
+      cond = temp.str();
+      cond.erase(std::remove(cond.begin(), cond.end(), '\n'), cond.end());
+      (*obj)[std::to_string(stateId)]["constraint_" + std::to_string(counter)] =
+          cond;
     }
 
-    return sso;
+    return;
   }
 
 private:

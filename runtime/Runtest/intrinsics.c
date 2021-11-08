@@ -145,6 +145,9 @@ void klee_dump_state_stack() {}
 /// COMMENT : Known Symbolics. Remove from intrinsics later.
 void klee_dump_symbolic_details(void *addr, const char *name) {}
 
+/// COMMENT : Mark as a State as winning query state.
+void mark_state_winning() {}
+
 void klee_silent_exit(int x) { exit(x); }
 
 uintptr_t klee_choose(uintptr_t n) {

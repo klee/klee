@@ -143,6 +143,7 @@ public:
   HANDLER(handleSubOverflow);
   HANDLER(handleDivRemOverflow);
   HANDLER(handleStateStackDump);
+  HANDLER(handleStateAnnotateWin);
   HANDLER(handleGetSymbolicDetails);
   HANDLER(handleGetKQueryExpression);
 #undef HANDLER

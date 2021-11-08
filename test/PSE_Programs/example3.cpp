@@ -28,7 +28,7 @@ void make_pse_symbolic(void *addr, size_t bytes, const char *name, std::vector<T
 
 /**
  * switch => door_switch
-*/
+ */
 bool montyhall(bool door_switch) {
 
   std::vector<int> car_door_dist = {0, 1, 2, 3};
@@ -42,8 +42,8 @@ bool montyhall(bool door_switch) {
   klee_make_symbolic(&host_door, sizeof(host_door), "host_door_sym");
 
   /**
-     * Based on car door and choice, choose a host door. 
-    */
+   * Based on car door and choice, choose a host door.
+   */
   if (car_door != 1 && choice != 1) {
     host_door = 1;
   } else if (car_door != 2 && choice != 2) {
@@ -53,8 +53,8 @@ bool montyhall(bool door_switch) {
   }
 
   /**
-     * Based door_switch and host_door, change choices. 
-    */
+   * Based door_switch and host_door, change choices.
+   */
   if (door_switch) {
     klee_dump_kquery_state();
     if (host_door == 1) {

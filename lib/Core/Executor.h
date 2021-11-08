@@ -27,6 +27,9 @@
 #include "klee/Module/KModule.h"
 #include "klee/System/Time.h"
 
+/* COMMENT : Thanks to Nholmann for providing this. */
+#include "klee/json.hpp"
+
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -38,6 +41,7 @@
 #include <utility>
 #include <vector>
 
+using json = nlohmann::json;
 struct KTest;
 
 namespace llvm {
@@ -101,7 +105,11 @@ public:
 
   /// COMMENT : File Pointers for dumping internal KLEE State
   /// Constraints and Objects.
-  std::unique_ptr<llvm::raw_fd_ostream> kqueryDumpFileptr, conditionsDump;
+  std::unique_ptr<llvm::raw_fd_ostream> kqueryDumpFileptr;
+
+  /// COMMENT : Log the State Constraints and the KLEE internal
+  /// Symbolic Execution Tree.
+  json executionTreeJSON;
 
   enum TerminateReason {
     Abort,
