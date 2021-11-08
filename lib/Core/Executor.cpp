@@ -452,6 +452,13 @@ cl::opt<bool>
                                "exec states (default=false)."),
                       cl::cat(DebugCat));
 
+// REVISIT :: Test to see if needed as a debug option or not.
+cl::opt<bool>
+    dumpAllLogs("dump-logs", cl::init(false),
+                cl::desc("Print the State Graph of transitions between "
+                         "exec states (default=false)."),
+                cl::cat(DebugCat));
+
 // REVISIT :: Pass the file name as input to KLEE. (Optional)
 cl::opt<std::string> fileNameActual(
     "filename-act", cl::init("default.cpp"),
@@ -1247,7 +1254,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
     }
 
     // COMMENT : Print the State level constraints.
-    if (printSExpr) {
+    if (printSExpr && dumpAllLogs) {
       // dumpPTree();
       klee_message("NOTE: \n\tKLEE State Forked. ");
 
@@ -1256,14 +1263,22 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       ss << condition;
       std::string str = ss.str();
       auto isPse = str.find("pse");
+
+      /* COMMENT : Given condition is a PSE State condition on which forking
+       * happended. warn the user of this. */
       if (isPse != std::string::npos) {
         klee_warning("\033[1;33mCond is PSE State.\033[0m");
-        executionTreeJSON[std::to_string(currentStateId)] = {"isPSEType",
-                                                             "True"};
+        if (dumpAllLogs)
+          executionTreeJSON[std::to_string(currentStateId)] = {"isPSEType",
+                                                               "True"};
       } else {
-        executionTreeJSON[std::to_string(currentStateId)] = {"isPSEType",
-                                                             "False"};
+        if (dumpAllLogs)
+          executionTreeJSON[std::to_string(currentStateId)] = {"isPSEType",
+                                                               "False"};
       }
+
+      /* COMMENT : Print Fork Condition to terminal/llvm::errs() during
+       * execution. */
       if (ShowForkCond) {
         str.erase(std::remove(str.begin(), str.end(), '\n'), str.end());
         str.erase(std::remove(str.begin(), str.end(), '\t'), str.end());
@@ -1274,85 +1289,90 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
         if (!CE->isTrue())
           llvm::report_fatal_error("attempt to add invalid constraint");
       } else {
-        ++stateExecutionStackID;
-        trueState->emphemeralStateId = stateExecutionStackID;
-        ++stateExecutionStackID;
-        falseState->emphemeralStateId = stateExecutionStackID;
+        if (dumpAllLogs) {
+          ++stateExecutionStackID;
+          trueState->emphemeralStateId = stateExecutionStackID;
+          ++stateExecutionStackID;
+          falseState->emphemeralStateId = stateExecutionStackID;
 
-        /* COMMENT : Execution Tree forks and grows here. Log it. */
-        std::stringstream condss, negCondss;
-        std::string cond, nullcond;
-        condss << condition;
-        cond = condss.str();
-        negCondss << Expr::createIsZero(condition);
-        nullcond = negCondss.str();
+          /* COMMENT : Execution Tree forks and grows here. Log it. */
+          std::stringstream condss, negCondss;
+          std::string cond, nullcond;
+          condss << condition;
+          cond = condss.str();
+          negCondss << Expr::createIsZero(condition);
+          nullcond = negCondss.str();
 
-        /* COMMENT : Remove extra spaces and '\n' character. */
-        cond.erase(std::remove(cond.begin(), cond.end(), '\n'), cond.end());
-        cond.erase(std::unique(std::begin(cond), std::end(cond),
-                               [](unsigned char a, unsigned char b) {
-                                 return std::isspace(a) && std::isspace(b);
-                               }),
-                   std::end(cond));
-        nullcond.erase(std::remove(nullcond.begin(), nullcond.end(), '\n'),
-                       nullcond.end());
-        nullcond.erase(std::unique(std::begin(nullcond), std::end(nullcond),
-                                   [](unsigned char a, unsigned char b) {
-                                     return std::isspace(a) && std::isspace(b);
-                                   }),
-                       std::end(nullcond));
+          /* COMMENT : Remove extra spaces and '\n' character. */
+          cond.erase(std::remove(cond.begin(), cond.end(), '\n'), cond.end());
+          cond.erase(std::unique(std::begin(cond), std::end(cond),
+                                 [](unsigned char a, unsigned char b) {
+                                   return std::isspace(a) && std::isspace(b);
+                                 }),
+                     std::end(cond));
+          nullcond.erase(std::remove(nullcond.begin(), nullcond.end(), '\n'),
+                         nullcond.end());
+          nullcond.erase(std::unique(std::begin(nullcond), std::end(nullcond),
+                                     [](unsigned char a, unsigned char b) {
+                                       return std::isspace(a) &&
+                                              std::isspace(b);
+                                     }),
+                         std::end(nullcond));
 
-        executionTreeJSON[std::to_string(currentStateId)] = {
-            {"isLeaf", "False"},
-            {"state_id", currentStateId},
-            {"Fork", "True"},
-            {"Current State Id", (current.getID() > 0 ? current.getID() : -1)},
-            {"True KLEE Id",
-             (trueState->getID() > 0 ? trueState->getID() : -1)},
-            {"True Generate ID", trueState->emphemeralStateId},
-            {"trueQuery", std::vector<std::string>()},
-            {"False KLEE Id",
-             (falseState->getID() > 0 ? falseState->getID() : -1)},
-            {"False Generate ID", falseState->emphemeralStateId},
-            {"falseQuery", std::vector<std::string>()},
-            {"Branch Predicate", cond},
-            {"Negate Predicate", nullcond}};
+          /* Complete Dumping of stats for the current state. */
+          executionTreeJSON[std::to_string(currentStateId)] = {
+              {"isLeaf", "False"},
+              {"state_id", currentStateId},
+              {"Fork", "True"},
+              {"Current State Id",
+               (current.getID() > 0 ? current.getID() : -1)},
+              {"True KLEE Id",
+               (trueState->getID() > 0 ? trueState->getID() : -1)},
+              {"True Generate ID", trueState->emphemeralStateId},
+              {"trueQuery", std::vector<std::string>()},
+              {"False KLEE Id",
+               (falseState->getID() > 0 ? falseState->getID() : -1)},
+              {"False Generate ID", falseState->emphemeralStateId},
+              {"falseQuery", std::vector<std::string>()},
+              {"Branch Predicate", cond},
+              {"Negate Predicate", nullcond}};
 
-        /* Create TrueNode for reuse later. */
-        executionTreeJSON[std::to_string(trueState->emphemeralStateId)] = {
-            {"isLeaf", "True"},
-            {"Branch Predicate", "(Eq true (ReadLSB w32 0 leaf_sym))"},
-            {"Negate Predicate", "(Eq true (ReadLSB w32 0 leaf_sym))"},
-            {"state_id", trueState->emphemeralStateId},
-            {"trueQuery", std::vector<std::string>()},
-            {"falseQuery", std::vector<std::string>()},
-            {"Fork", "True"}};
+          /* Create TrueNode for reuse later. */
+          executionTreeJSON[std::to_string(trueState->emphemeralStateId)] = {
+              {"isLeaf", "True"},
+              {"Branch Predicate", "(Eq true (ReadLSB w32 0 leaf_sym))"},
+              {"Negate Predicate", "(Eq true (ReadLSB w32 0 leaf_sym))"},
+              {"state_id", trueState->emphemeralStateId},
+              {"trueQuery", std::vector<std::string>()},
+              {"falseQuery", std::vector<std::string>()},
+              {"Fork", "True"}};
 
-        /* Create FalseNode for reuse later. */
-        executionTreeJSON[std::to_string(falseState->emphemeralStateId)] = {
-            {"isLeaf", "True"},
-            {"Negate Predicate", "(Eq true (ReadLSB w32 0 leaf_sym))"},
-            {"Branch Predicate", "(Eq true (ReadLSB w32 0 leaf_sym))"},
-            {"trueQuery", std::vector<std::string>()},
-            {"falseQuery", std::vector<std::string>()},
-            {"state_id", falseState->emphemeralStateId},
-            {"Fork", "True"}};
-      };
+          /* Create FalseNode for reuse later. */
+          executionTreeJSON[std::to_string(falseState->emphemeralStateId)] = {
+              {"isLeaf", "True"},
+              {"Negate Predicate", "(Eq true (ReadLSB w32 0 leaf_sym))"},
+              {"Branch Predicate", "(Eq true (ReadLSB w32 0 leaf_sym))"},
+              {"trueQuery", std::vector<std::string>()},
+              {"falseQuery", std::vector<std::string>()},
+              {"state_id", falseState->emphemeralStateId},
+              {"Fork", "True"}};
+        };
 
-      std::vector<std::string> trueConstrs =
-          trueState->constraints.printConstraintSetTY();
+        std::vector<std::string> trueConstrs =
+            trueState->constraints.printConstraintSetTY();
 
-      std::vector<std::string> falseConstrs =
-          falseState->constraints.printConstraintSetTY();
+        std::vector<std::string> falseConstrs =
+            falseState->constraints.printConstraintSetTY();
 
-      executionTreeJSON[std::to_string(currentStateId)]["trueQuery"] =
-          trueConstrs;
-      executionTreeJSON[std::to_string(currentStateId)]["falseQuery"] =
-          falseConstrs;
+        executionTreeJSON[std::to_string(currentStateId)]["trueQuery"] =
+            trueConstrs;
+        executionTreeJSON[std::to_string(currentStateId)]["falseQuery"] =
+            falseConstrs;
 
-      llvm::errs() << "\033[1;37m\tFork : (" << currentStateId << ", "
-                   << trueState->emphemeralStateId << ", "
-                   << falseState->emphemeralStateId << ")\033[0m\n";
+        llvm::errs() << "\033[1;37m\tFork : (" << currentStateId << ", "
+                     << trueState->emphemeralStateId << ", "
+                     << falseState->emphemeralStateId << ")\033[0m\n";
+      }
     }
     return StatePair(trueState, falseState);
   }
@@ -2745,11 +2765,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                                      return std::isspace(a) && std::isspace(b);
                                    }),
                        std::end(constraint));
-
-      executionTreeJSON[std::to_string(state.emphemeralStateId)] = {
-          {"Select Expression", constraint},
-          {"Fork", "False"},
-          {"isLeaf", "True"}};
+      if (dumpAllLogs)
+        executionTreeJSON[std::to_string(state.emphemeralStateId)] = {
+            {"Select Expression", constraint},
+            {"Fork", "False"},
+            {"isLeaf", "True"}};
     } else {
       printSExpr = false;
     }
@@ -3952,7 +3972,9 @@ void Executor::terminateStateOnExit(ExecutionState &state) {
     interpreterHandler->processTestCase(state, 0, 0);
 
   /* COMMENT : See if the states reaching here are leaf states. */
-  llvm::errs() << std::to_string(state.emphemeralStateId) << "\n";
+  if (dumpAllLogs)
+    llvm::errs() << "Terminated : " << std::to_string(state.emphemeralStateId)
+                 << "\n";
   interpreterHandler->incPathsCompleted();
   terminateState(state);
 }
@@ -4061,12 +4083,15 @@ void Executor::terminateStateOnError(ExecutionState &state,
     interpreterHandler->processTestCase(state, msg.str().c_str(), suffix);
   }
 
-  llvm::errs() << "\033[1;34m\tState Errored : " << state.getID()
-               << "\033[0m\n";
-  llvm::errs() << "\033[1;34m\tEmphemeral Id : " << state.emphemeralStateId
-               << "\033[0m\n";
-  summaryObj["RemovedState"][std::to_string(state.getID())] = {
-      {"Id", state.getID()}, {"EmphId", state.emphemeralStateId}};
+  if (dumpAllLogs) {
+    llvm::errs() << "\033[1;34m\tState Errored : " << state.getID()
+                 << "\033[0m\n";
+    llvm::errs() << "\033[1;34m\tEmphemeral Id : " << state.emphemeralStateId
+                 << "\033[0m\n";
+    summaryObj["RemovedState"][std::to_string(state.getID())] = {
+        {"Id", state.getID()}, {"EmphId", state.emphemeralStateId}};
+  }
+
   terminateState(state);
 
   if (shouldExitOn(termReason))
@@ -4716,11 +4741,13 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
   run(*state);
 
   /* COMMENT : Check to as to how the dump is. */
-  std::fstream constraintsJson;
-  constraintsJson.open(fileNameActual + "_summary.json", std::fstream::out);
-  summaryObj["symbolic_execution_tree"] = executionTreeJSON;
-  constraintsJson << std::setw(4) << summaryObj << "\n";
-  constraintsJson.close();
+  if (dumpAllLogs) {
+    std::fstream constraintsJson;
+    constraintsJson.open(fileNameActual + "_summary.json", std::fstream::out);
+    summaryObj["symbolic_execution_tree"] = executionTreeJSON;
+    constraintsJson << std::setw(4) << summaryObj << "\n";
+    constraintsJson.close();
+  }
 
   // executionTree = nullptr;
   processTree = nullptr;
