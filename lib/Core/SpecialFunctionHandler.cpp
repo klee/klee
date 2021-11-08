@@ -115,6 +115,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
     add("klee_prefer_cex", handlePreferCex, false),
     add("klee_posix_prefer_cex", handlePosixPreferCex, false),
     add("klee_print_expr", handlePrintExpr, false),
+    add("expected_value", handleAddExpectation, false),
     add("klee_print_range", handlePrintRange, false),
     add("klee_set_forking", handleSetForking, false),
     add("klee_stack_trace", handleStackTrace, false),
@@ -580,6 +581,31 @@ void SpecialFunctionHandler::handlePrintExpr(
 
   std::string msg_str = readStringAtAddress(state, arguments[0]);
   llvm::errs() << msg_str << ":" << arguments[1] << "\n";
+}
+
+void SpecialFunctionHandler::handleAddExpectation(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr>> &arguments) {
+  assert(arguments.size() == 2 &&
+         "invalid number of arguments to expected_value");
+
+  std::string msg_str = readStringAtAddress(state, arguments[0]), cond = "";
+  std::stringstream sso;
+  sso << arguments[1];
+  cond = sso.str();
+  cond.erase(std::remove(cond.begin(), cond.end(), '\n'), cond.end());
+  cond.erase(std::unique(std::begin(cond), std::end(cond),
+                         [](unsigned char a, unsigned char b) {
+                           return std::isspace(a) && std::isspace(b);
+                         }),
+             std::end(cond));
+
+  executor.executionTreeJSON["exp_val_map"][std::to_string(
+      state.emphemeralStateId)] = {msg_str, cond};
+  executor.executionTreeJSON[std::to_string(state.emphemeralStateId)]
+                            ["exp_val"] = {msg_str, cond};
+
+  llvm::errs() << "Expected Value : " << msg_str << ":" << cond << "\n";
 }
 
 void SpecialFunctionHandler::handleSetForking(
