@@ -39,9 +39,12 @@
 #include <sstream>
 #include <string>
 #include <type_traits>
+#include <unordered_set>
 
 using namespace llvm;
 using namespace klee;
+
+std::unordered_set<std::string> pseVarsSet;
 
 namespace {
 cl::opt<bool>
@@ -105,6 +108,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
 #endif
     add("klee_is_symbolic", handleIsSymbolic, true),
     add("klee_make_symbolic", handleMakeSymbolic, false),
+    add("mark_pse_symbolic", handleMarkPSESymbolic, false),
     add("klee_dump_kquery_state", handleGetKQueryExpression, false),
     add("mark_state_winning", handleStateAnnotateWin, false),
     add("klee_dump_symbolic_details", handleGetSymbolicDetails, false),
@@ -906,6 +910,35 @@ void SpecialFunctionHandler::handleMakeSymbolic(
           *s, "wrong size given to klee_make_symbolic[_name]", Executor::User);
     }
   }
+}
+
+void SpecialFunctionHandler::handleMarkPSESymbolic(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr>> &arguments) {
+  std::string name;
+
+  if (arguments.size() != 5) {
+    executor.terminateStateOnError(state,
+                                   "Incorrect number of arguments to "
+                                   "mark_pse_symbolic(void*, size_t, char*)",
+                                   Executor::User);
+    return;
+  }
+
+  name = arguments[2]->isZero() ? "" : readStringAtAddress(state, arguments[2]);
+
+  if (name.length() == 0) {
+    name = "new_pse_var";
+    klee_warning("mark_pse_symbolic: renamed empty name to \"new_pse_var\"");
+  }
+
+  // COMMENT : Print to *_dists.txt file.
+  if (pseVarsSet.find(name) == pseVarsSet.end())
+    *(executor.writeDistFileptr)
+        << name << " ~ UniformInt(" << arguments[3] << "," << arguments[4]
+        << ") :: w" << arguments[1] << "\n";
+
+  pseVarsSet.insert(name);
 }
 
 // COMMENT : Dump Current state stack on the fly.

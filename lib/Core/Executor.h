@@ -109,6 +109,9 @@ public:
   /// Constraints and Objects.
   std::unique_ptr<llvm::raw_fd_ostream> kqueryDumpFileptr;
 
+  /// COMMENT : Write the PSE variables with UNIF distributions.
+  std::unique_ptr<llvm::raw_fd_ostream> writeDistFileptr;
+
   /// COMMENT : Log the State Constraints and the KLEE internal
   /// Symbolic Execution Tree.
   ordered_json executionTreeJSON;

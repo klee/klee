@@ -151,6 +151,10 @@ void mark_state_winning() {}
 /// COMMENT : Mark as a State as winning query state.
 void expected_value(const char *msg, ...) {}
 
+/// COMMENT : mark_pse_symbolic
+void mark_pse_symbolic(void *array, size_t nbytes, const char *name, size_t min,
+                       size_t max) {}
+
 void klee_silent_exit(int x) { exit(x); }
 
 uintptr_t klee_choose(uintptr_t n) {

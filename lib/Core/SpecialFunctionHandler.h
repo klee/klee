@@ -147,6 +147,7 @@ public:
   HANDLER(handleGetSymbolicDetails);
   HANDLER(handleGetKQueryExpression);
   HANDLER(handleAddExpectation);
+  HANDLER(handleMarkPSESymbolic);
 #undef HANDLER
 };
 } // namespace klee

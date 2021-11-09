@@ -4738,6 +4738,8 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
   initializeGlobals(*state);
   processTree = std::make_unique<PTree>(state);
   kqueryDumpFileptr = interpreterHandler->openOutputFile("kquery_dump.txt");
+  writeDistFileptr = interpreterHandler->openOutputFile("results_dists.txt");
+
   run(*state);
 
   /* COMMENT : Check to as to how the dump is. */
