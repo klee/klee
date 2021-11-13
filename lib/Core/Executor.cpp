@@ -1066,6 +1066,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
   /* COMMENT : Capture before KLEE re-use at Fork. */
   // Current State Id.
   int currentStateId = current.emphemeralStateId;
+  std::vector<std::string> fileLocInfo = current.fileLocation;
 
   Solver::Validity res;
   std::map<ExecutionState *, std::vector<SeedInfo>>::iterator it =
@@ -1257,6 +1258,8 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
     if (printSExpr && dumpAllLogs) {
       // dumpPTree();
       klee_message("NOTE: \n\tKLEE State Forked. ");
+      llvm::errs() << "\033[1;33m\t Line : " << fileLocInfo[0] << ", "
+                   << fileLocInfo[1] << ", " << fileLocInfo[2] << "\033[0m\n";
 
       // COMMENT : Worst thing ever.
       std::stringstream ss;
@@ -1324,6 +1327,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
               {"isLeaf", "False"},
               {"state_id", currentStateId},
               {"Fork", "True"},
+              {"hasChildren", "False"},
               {"Current State Id",
                (current.getID() > 0 ? current.getID() : -1)},
               {"True KLEE Id",
@@ -1340,8 +1344,10 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
           /* Create TrueNode for reuse later. */
           executionTreeJSON[std::to_string(trueState->emphemeralStateId)] = {
               {"isLeaf", "True"},
-              {"Branch Predicate", "(Eq true (ReadLSB w32 0 leaf_sym))"},
-              {"Negate Predicate", "(Eq true (ReadLSB w32 0 leaf_sym))"},
+              {"hasChildren", "False"},
+              {"ParentId", currentStateId},
+              {"Branch Predicate", "(Eq 0 (ReadLSB w32 0 leaf_sym))"},
+              {"Negate Predicate", "(Eq 0 (ReadLSB w32 0 leaf_sym))"},
               {"state_id", trueState->emphemeralStateId},
               {"trueQuery", std::vector<std::string>()},
               {"falseQuery", std::vector<std::string>()},
@@ -1350,8 +1356,10 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
           /* Create FalseNode for reuse later. */
           executionTreeJSON[std::to_string(falseState->emphemeralStateId)] = {
               {"isLeaf", "True"},
-              {"Negate Predicate", "(Eq true (ReadLSB w32 0 leaf_sym))"},
-              {"Branch Predicate", "(Eq true (ReadLSB w32 0 leaf_sym))"},
+              {"hasChildren", "False"},
+              {"ParentId", currentStateId},
+              {"Negate Predicate", "(Eq 0 (ReadLSB w32 0 leaf_sym))"},
+              {"Branch Predicate", "(Eq 0 (ReadLSB w32 0 leaf_sym))"},
               {"trueQuery", std::vector<std::string>()},
               {"falseQuery", std::vector<std::string>()},
               {"state_id", falseState->emphemeralStateId},
@@ -2382,7 +2390,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // COMMENT : Dumping Branch Condition Forks starts here.
       if (InstructionInfo.size() > 0 &&
           InstructionInfo[0].find(fileNameActual) != std::string::npos) {
+        state.fileLocation = InstructionInfo;
         printSExpr = true;
+
       } else {
         printSExpr = false;
       }
@@ -2752,6 +2762,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (InstructionInfo.size() > 0 &&
         InstructionInfo[0].find(fileNameActual) != std::string::npos) {
       printSExpr = true;
+      state.fileLocation = InstructionInfo;
       std::stringstream sso;
       std::string constraint;
       sso << result;
@@ -2769,7 +2780,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         executionTreeJSON[std::to_string(state.emphemeralStateId)] = {
             {"Select Expression", constraint},
             {"Fork", "False"},
-            {"isLeaf", "True"}};
+            {"isLeaf", "True"},
+            {"hasChildren", "False"},
+        };
+
     } else {
       printSExpr = false;
     }

@@ -533,6 +533,7 @@ void SpecialFunctionHandler::handleAssume(ExecutionState &state,
     executor.addConstraint(state, e);
     std::stringstream KQueryRawStringStream("");
     KQueryRawStringStream << "\nState Id : " << state.getID();
+    KQueryRawStringStream << "\nEmph Id : " << state.emphemeralStateId;
     KQueryRawStringStream << "\nLocation : " << target->getSourceLocation()
                           << "\nklee_assume() : ";
     KQueryRawStringStream << e << "\n\n";
@@ -609,7 +610,7 @@ void SpecialFunctionHandler::handleAddExpectation(
   executor.executionTreeJSON[std::to_string(state.emphemeralStateId)]
                             ["exp_val"] = {msg_str, cond};
 
-  llvm::errs() << "Expected Value : " << msg_str << ":" << cond << "\n";
+  // llvm::errs() << "Expected Value : " << msg_str << ":" << cond << "\n";
 }
 
 void SpecialFunctionHandler::handleSetForking(
