@@ -1247,13 +1247,6 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
     addConstraint(*trueState, condition);
     addConstraint(*falseState, Expr::createIsZero(condition));
 
-    // Kinda gross, do we even really still want this option?
-    if (MaxDepth && MaxDepth <= trueState->depth) {
-      terminateStateEarly(*trueState, "max-depth exceeded.");
-      terminateStateEarly(*falseState, "max-depth exceeded.");
-      return StatePair(0, 0);
-    }
-
     // COMMENT : Print the State level constraints.
     if (printSExpr && dumpAllLogs) {
       // dumpPTree();
@@ -1261,14 +1254,31 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       llvm::errs() << "\033[1;33m\t Line : " << fileLocInfo[0] << ", "
                    << fileLocInfo[1] << ", " << fileLocInfo[2] << "\033[0m\n";
 
-      // COMMENT : Worst thing ever.
-      std::stringstream ss;
-      ss << condition;
-      std::string str = ss.str();
-      auto isPse = str.find("pse");
+      std::stringstream condss, negCondss;
+      std::string cond, nullcond;
+      condss << condition;
+      cond = condss.str();
+      negCondss << Expr::createIsZero(condition);
+      nullcond = negCondss.str();
+
+      /* COMMENT : Remove extra spaces and '\n' character. */
+      cond.erase(std::remove(cond.begin(), cond.end(), '\n'), cond.end());
+      cond.erase(std::unique(std::begin(cond), std::end(cond),
+                             [](unsigned char a, unsigned char b) {
+                               return std::isspace(a) && std::isspace(b);
+                             }),
+                 std::end(cond));
+      nullcond.erase(std::remove(nullcond.begin(), nullcond.end(), '\n'),
+                     nullcond.end());
+      nullcond.erase(std::unique(std::begin(nullcond), std::end(nullcond),
+                                 [](unsigned char a, unsigned char b) {
+                                   return std::isspace(a) && std::isspace(b);
+                                 }),
+                     std::end(nullcond));
 
       /* COMMENT : Given condition is a PSE State condition on which forking
        * happended. warn the user of this. */
+      auto isPse = cond.find("pse");
       if (isPse != std::string::npos) {
         klee_warning("\033[1;33mCond is PSE State.\033[0m");
         if (dumpAllLogs)
@@ -1283,9 +1293,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       /* COMMENT : Print Fork Condition to terminal/llvm::errs() during
        * execution. */
       if (ShowForkCond) {
-        str.erase(std::remove(str.begin(), str.end(), '\n'), str.end());
-        str.erase(std::remove(str.begin(), str.end(), '\t'), str.end());
-        errs() << "Cond : " << str << "\n";
+        errs() << "\n\tCond : " << cond << "\n\n";
       }
 
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(condition)) {
@@ -1299,29 +1307,6 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
           falseState->emphemeralStateId = stateExecutionStackID;
 
           /* COMMENT : Execution Tree forks and grows here. Log it. */
-          std::stringstream condss, negCondss;
-          std::string cond, nullcond;
-          condss << condition;
-          cond = condss.str();
-          negCondss << Expr::createIsZero(condition);
-          nullcond = negCondss.str();
-
-          /* COMMENT : Remove extra spaces and '\n' character. */
-          cond.erase(std::remove(cond.begin(), cond.end(), '\n'), cond.end());
-          cond.erase(std::unique(std::begin(cond), std::end(cond),
-                                 [](unsigned char a, unsigned char b) {
-                                   return std::isspace(a) && std::isspace(b);
-                                 }),
-                     std::end(cond));
-          nullcond.erase(std::remove(nullcond.begin(), nullcond.end(), '\n'),
-                         nullcond.end());
-          nullcond.erase(std::unique(std::begin(nullcond), std::end(nullcond),
-                                     [](unsigned char a, unsigned char b) {
-                                       return std::isspace(a) &&
-                                              std::isspace(b);
-                                     }),
-                         std::end(nullcond));
-
           /* Complete Dumping of stats for the current state. */
           executionTreeJSON[std::to_string(currentStateId)] = {
               {"isLeaf", "False"},
@@ -1382,6 +1367,14 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
                      << falseState->emphemeralStateId << ")\033[0m\n";
       }
     }
+
+    // Kinda gross, do we even really still want this option?
+    if (MaxDepth && MaxDepth <= trueState->depth) {
+      terminateStateEarly(*trueState, "max-depth exceeded.");
+      terminateStateEarly(*falseState, "max-depth exceeded.");
+      return StatePair(0, 0);
+    }
+
     return StatePair(trueState, falseState);
   }
 }
