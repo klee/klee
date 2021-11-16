@@ -1250,8 +1250,8 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
     // COMMENT : Print the State level constraints.
     if (printSExpr && dumpAllLogs) {
       // dumpPTree();
-      klee_message("NOTE: \n\tKLEE State Forked. ");
-      llvm::errs() << "\033[1;33m\t Line : " << fileLocInfo[0] << ", "
+      klee_message("NOTE: State Forked. ");
+      llvm::errs() << "\033[1;33m\t@Line : " << fileLocInfo[0] << ", "
                    << fileLocInfo[1] << ", " << fileLocInfo[2] << "\033[0m\n";
 
       std::stringstream condss, negCondss;
@@ -1362,9 +1362,9 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
         executionTreeJSON[std::to_string(currentStateId)]["falseQuery"] =
             falseConstrs;
 
-        llvm::errs() << "\033[1;37m\tFork : (" << currentStateId << ", "
-                     << trueState->emphemeralStateId << ", "
-                     << falseState->emphemeralStateId << ")\033[0m\n";
+        llvm::errs() << "\033[1;37m\tStates : (P:" << currentStateId
+                     << ", L:" << trueState->emphemeralStateId
+                     << ", R:" << falseState->emphemeralStateId << ")\033[0m\n";
       }
     }
 
