@@ -44,10 +44,6 @@ jobs:
                 "LLVM 8",
                 "LLVM 7",
                 "LLVM 6",
-                "LLVM 5",
-                "LLVM 4",
-                "LLVM 3.9",
-                "LLVM 3.8",
                 "ASan",
                 "UBSan",
                 "MSan",
@@ -84,19 +80,6 @@ jobs:
           - name: "LLVM 6"
             env:
               LLVM_VERSION: 6
-          - name: "LLVM 5"
-            env:
-              LLVM_VERSION: 5
-          - name: "LLVM 4"
-            env:
-              LLVM_VERSION: 4
-          - name: "LLVM 3.9"
-            env:
-              LLVM_VERSION: 3.9
-          - name: "LLVM 3.8"
-            env:
-              LLVM_VERSION: 3.8
-              USE_LIBCXX: 0
           # Sanitizer builds. Do unoptimized build otherwise the optimizer might remove problematic code
           - name: "ASan"
             env:

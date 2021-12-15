@@ -10,11 +10,7 @@ download_libcxx() {
   [[ -f "${LIBCXX_SRC}/.src_checked_out" ]] && return 0
 
   local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
-
-  local version=""
-  [[ "${LLVM_VERSION_MAJOR}" -le 3 ]] && version="release/${LLVM_VERSION}.x"
-  [[ "${LLVM_VERSION_MAJOR}" -ge 4 ]] && version="release/${LLVM_VERSION_MAJOR}.x"
-
+  local version="release/${LLVM_VERSION_MAJOR}.x"
 
   git clone --single-branch --branch "${version}" --depth 1 "https://github.com/llvm/llvm-project.git" "${LIBCXX_SRC}"
 
@@ -85,7 +81,7 @@ install_libcxx() {
     fi
 
     local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
-    [[ "${LLVM_VERSION_MAJOR}" -ge 6 ]] && libraries+=("${LIBCXX_INSTALL}"/lib/lib*.a)
+    libraries+=("${LIBCXX_INSTALL}"/lib/lib*.a)
 
 
     for p in "${libraries[@]}" ; do
