@@ -11,6 +11,8 @@
 #include "klee/Config/Version.h"
 #include "klee/Support/ErrorHandling.h"
 
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
@@ -18,16 +20,8 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/TargetRegistry.h"
-#include "llvm/Support/raw_ostream.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(6, 0)
-#include "llvm/CodeGen/TargetLowering.h"
-#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Target/TargetMachine.h"
-#else
-#include "llvm/Target/TargetLowering.h"
-#include "llvm/Target/TargetMachine.h"
-#include "llvm/Target/TargetSubtargetInfo.h"
-#endif
+
 
 using namespace llvm;
 using namespace klee;
@@ -70,11 +64,7 @@ bool RaiseAsmPass::runOnInstruction(Module &M, Instruction *I) {
     if (ia->getAsmString() == "" && ia->hasSideEffects() &&
         ia->getFunctionType()->getReturnType()->isVoidTy()) {
       IRBuilder<> Builder(I);
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
       Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent);
-#else
-      Builder.CreateFence(llvm::SequentiallyConsistent);
-#endif
       I->eraseFromParent();
       return true;
     }
@@ -98,14 +88,9 @@ bool RaiseAsmPass::runOnModule(Module &M) {
     klee_warning("Warning: unable to select target: %s", Err.c_str());
     TLI = 0;
   } else {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
     TM = Target->createTargetMachine(TargetTriple, "", "", TargetOptions(),
                                      None);
     TLI = TM->getSubtargetImpl(*(M.begin()))->getTargetLowering();
-#else
-    TM = Target->createTargetMachine(TargetTriple, "", "", TargetOptions());
-    TLI = TM->getSubtargetImpl(*(M.begin()))->getTargetLowering();
-#endif
 
     triple = llvm::Triple(TargetTriple);
   }

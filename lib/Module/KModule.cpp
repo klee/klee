@@ -22,11 +22,7 @@
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/ModuleUtil.h"
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
 #include "llvm/Bitcode/BitcodeWriter.h"
-#else
-#include "llvm/Bitcode/ReaderWriter.h"
-#endif
 #if LLVM_VERSION_CODE < LLVM_VERSION(8, 0)
 #include "llvm/IR/CallSite.h"
 #endif
