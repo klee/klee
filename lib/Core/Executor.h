@@ -20,6 +20,7 @@
 
 #include "klee/ADT/RNG.h"
 #include "klee/Core/Interpreter.h"
+#include "klee/Core/TerminationTypes.h"
 #include "klee/Expr/ArrayCache.h"
 #include "klee/Expr/ArrayExprOptimizer.h"
 #include "klee/Module/Cell.h"
@@ -98,32 +99,10 @@ class Executor : public Interpreter {
 public:
   typedef std::pair<ExecutionState*,ExecutionState*> StatePair;
 
-  enum TerminateReason {
-    Abort,
-    Assert,
-    BadVectorAccess,
-    Exec,
-    External,
-    Free,
-    Model,
-    Overflow,
-    Ptr,
-    ReadOnly,
-    ReportError,
-    User,
-#ifdef SUPPORT_KLEE_EH_CXX
-    UncaughtException,
-    UnexpectedException,
-#endif
-    Unhandled,
-  };
-
   /// The random number generator.
   RNG theRNG;
 
 private:
-  static const char *TerminateReasonNames[];
-
   std::unique_ptr<KModule> kmodule;
   InterpreterHandler *interpreterHandler;
   Searcher *searcher;
@@ -430,28 +409,41 @@ private:
   const InstructionInfo & getLastNonKleeInternalInstruction(const ExecutionState &state,
       llvm::Instruction** lastInstruction);
 
-  bool shouldExitOn(enum TerminateReason termReason);
-
-  // remove state from queue and delete
+  /// Remove state from queue and delete state
   void terminateState(ExecutionState &state);
-  // call exit handler and terminate state
-  void terminateStateEarly(ExecutionState &state, const llvm::Twine &message);
-  // call exit handler and terminate state
-  void terminateStateOnExit(ExecutionState &state);
-  // call error handler and terminate state
-  void terminateStateOnError(ExecutionState &state, const llvm::Twine &message,
-                             enum TerminateReason termReason,
-                             const char *suffix = NULL,
-                             const llvm::Twine &longMessage = "");
 
-  // call error handler and terminate state, for execution errors
-  // (things that should not be possible, like illegal instruction or
-  // unlowered instrinsic, or are unsupported, like inline assembly)
-  void terminateStateOnExecError(ExecutionState &state, 
+  /// Call exit handler and terminate state normally
+  /// (end of execution path)
+  void terminateStateOnExit(ExecutionState &state);
+
+  /// Call exit handler and terminate state early
+  /// (e.g. due to state merging or memory pressure)
+  void terminateStateEarly(ExecutionState &state, const llvm::Twine &message,
+                           StateTerminationType terminationType);
+
+  /// Call error handler and terminate state in case of program errors
+  /// (e.g. free()ing globals, out-of-bound accesses)
+  void terminateStateOnError(ExecutionState &state, const llvm::Twine &message,
+                             StateTerminationType terminationType,
+                             const llvm::Twine &longMessage = "",
+                             const char *suffix = nullptr);
+
+  /// Call error handler and terminate state in case of execution errors
+  /// (things that should not be possible, like illegal instruction or
+  /// unlowered intrinsic, or unsupported intrinsics, like inline assembly)
+  void terminateStateOnExecError(ExecutionState &state,
                                  const llvm::Twine &message,
-                                 const llvm::Twine &info="") {
-    terminateStateOnError(state, message, Exec, NULL, info);
-  }
+                                 const llvm::Twine &info = "");
+
+  /// Call error handler and terminate state in case of solver errors
+  /// (solver error or timeout)
+  void terminateStateOnSolverError(ExecutionState &state,
+                                   const llvm::Twine &message);
+
+  /// Call error handler and terminate state for user errors
+  /// (e.g. wrong usage of klee.h API)
+  void terminateStateOnUserError(ExecutionState &state,
+                                 const llvm::Twine &message);
 
   /// bindModuleConstants - Initialize the module constant table.
   void bindModuleConstants();
