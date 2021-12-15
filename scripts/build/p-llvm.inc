@@ -97,17 +97,7 @@ download_llvm() {
   local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
 
   branch_name="release/${LLVM_VERSION_MAJOR}.x"
-  if [[ "${LLVM_VERSION_MAJOR}" -le 3 ]]; then
-    branch_name="release/${LLVM_VERSION}.x"
-  fi
   git_clone_or_update "https://github.com/llvm/llvm-project.git" "${LLVM_SRC_BASE}" "${branch_name}" || exit 1
-  if [[ "${LLVM_VERSION_MAJOR}" -lt 4 ]]; then
-    # Use symlinks for older versions whose build systems do not support the monorepo directory layout
-    ln -s "${LLVM_SRC_BASE}/clang" "${LLVM_SRC_BASE}/llvm/tools/"
-    ln -s "${LLVM_SRC_BASE}/compiler-rt" "${LLVM_SRC_BASE}/llvm/projects/"
-    ln -s "${LLVM_SRC_BASE}/libcxx" "${LLVM_SRC_BASE}/llvm/projects/"
-    ln -s "${LLVM_SRC_BASE}/libcxxabi" "${LLVM_SRC_BASE}/llvm/projects/"
-  fi
 
   # Apply existing patches if needed
   if [ -f "${DIR}/patches/llvm${LLVM_VERSION_SHORT}.patch" ]; then
@@ -190,11 +180,7 @@ build_llvm() {
   )
 
   # Select components to build
-  if [[ ${LLVM_VERSION_SHORT} -ge 60 ]]; then
-    CONFIG+=("-DLLVM_ENABLE_PROJECTS=clang;compiler-rt;libcxx;libcxxabi")
-  else
-    CONFIG+=("-DLLVM_ENABLE_PROJECTS=clang;compiler-rt")
-  fi
+  CONFIG+=("-DLLVM_ENABLE_PROJECTS=clang;compiler-rt;libcxx;libcxxabi")
 
   # cmake build
   if [[ "${enable_optimized}" == "1" && "${enable_debug}" != "1" ]]; then
@@ -279,13 +265,8 @@ install_llvm() {
       install-clang install-llvm-config install-llvm-objdump
       install-llvm-link install-llvm-ar install-llvm-nm install-llvm-dis
       install-clang-headers install-llvm-as
-      install-llvm-symbolizer install-LLVMSupport install-lli not FileCheck )
-  
-    if [[ ${LLVM_VERSION_SHORT} -eq 38 ]]; then
-      LLVM_PACKAGES=("${LLVM_PACKAGES[@]}" installhdrs)
-    else
-      LLVM_PACKAGES=("${LLVM_PACKAGES[@]}" install-llvm-headers)
-    fi
+      install-llvm-symbolizer install-LLVMSupport install-lli not FileCheck
+      install-llvm-headers )
   
     ninja "${LLVM_PACKAGES[@]}"
 

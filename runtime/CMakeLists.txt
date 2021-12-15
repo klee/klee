@@ -79,11 +79,9 @@ set(COMMON_CC_FLAGS
         -D__STDC_CONSTANT_MACROS
         -Wall
         -Wwrite-strings
+        -Xclang
+        -disable-O0-optnone
         )
-
-if (${LLVM_VERSION_MAJOR} GREATER 4)
-    list(APPEND COMMON_CC_FLAGS "-Xclang" "-disable-O0-optnone")
-endif ()
 
 foreach (_suffix ${LIB_BC_SUFFIX})
     list(APPEND "LIB_BC_FLAGS_${_suffix}" ${COMMON_CC_FLAGS})
