@@ -1422,21 +1422,12 @@ void Executor::stepInstruction(ExecutionState &state) {
 
 static inline const llvm::fltSemantics *fpWidthToSemantics(unsigned width) {
   switch (width) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
   case Expr::Int32:
     return &llvm::APFloat::IEEEsingle();
   case Expr::Int64:
     return &llvm::APFloat::IEEEdouble();
   case Expr::Fl80:
     return &llvm::APFloat::x87DoubleExtended();
-#else
-  case Expr::Int32:
-    return &llvm::APFloat::IEEEsingle;
-  case Expr::Int64:
-    return &llvm::APFloat::IEEEdouble;
-  case Expr::Fl80:
-    return &llvm::APFloat::x87DoubleExtended;
-#endif
   default:
     return 0;
   }
@@ -1936,19 +1927,8 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
 #if LLVM_VERSION_CODE >= LLVM_VERSION(11, 0)
           MaybeAlign ma = cs.getParamAlign(k);
           unsigned alignment = ma ? ma->value() : 0;
-#elif LLVM_VERSION_CODE > LLVM_VERSION(4, 0)
-          unsigned alignment = cs.getParamAlignment(k);
 #else
-          // getParamAlignment() is buggy for LLVM <= 4, so we instead
-          // get the attribute in a hacky way by parsing the textual
-          // representation
-          unsigned alignment = 0;
-          std::string str;
-          llvm::raw_string_ostream s(str);
-          s << *cs.getArgument(k);
-          size_t pos = str.find("align ");
-          if (pos != std::string::npos)
-            alignment = std::stoi(str.substr(pos + 6));
+          unsigned alignment = cs.getParamAlignment(k);
 #endif
 
           // AMD64-ABI 3.5.7p5: Step 7. Align l->overflow_arg_area upwards to a
@@ -1962,21 +1942,13 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
           if (!alignment)
             alignment = 8;
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
           size = llvm::alignTo(size, alignment);
-#else
-          size = llvm::RoundUpToAlignment(size, alignment);
-#endif
           offsets[k] = size;
 
           // AMD64-ABI 3.5.7p5: Step 9. Set l->overflow_arg_area to:
           // l->overflow_arg_area + sizeof(type)
           // Step 10. Align l->overflow_arg_area upwards to an 8 byte boundary.
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
           size += llvm::alignTo(argWidth, WordSize) / 8;
-#else
-          size += llvm::RoundUpToAlignment(argWidth, WordSize) / 8;
-#endif
         }
       }
 
@@ -2161,11 +2133,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
 
             // XXX need to check other param attrs ?
-#if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
             bool isSExt = cs.hasRetAttr(llvm::Attribute::SExt);
-#else
-            bool isSExt = cs.paramHasAttr(0, llvm::Attribute::SExt);
-#endif
             if (isSExt) {
               result = SExtExpr::create(result, to);
             } else {
@@ -2299,11 +2267,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // switch to an internal rep.
       llvm::IntegerType *Ty = cast<IntegerType>(si->getCondition()->getType());
       ConstantInt *ci = ConstantInt::get(Ty, CE->getZExtValue());
-#if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
       unsigned index = si->findCaseValue(ci)->getSuccessorIndex();
-#else
-      unsigned index = si->findCaseValue(ci).getSuccessorIndex();
-#endif
       transferToBasicBlock(si->getSuccessor(index), si->getParent(), state);
     } else {
       // Handle possible different branch targets
@@ -2470,11 +2434,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
             if (from != to) {
               // XXX need to check other param attrs ?
-#if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
               bool isSExt = cs.paramHasAttr(i, llvm::Attribute::SExt);
-#else
-              bool isSExt = cs.paramHasAttr(i+1, llvm::Attribute::SExt);
-#endif
               if (isSExt) {
                 arguments[i] = SExtExpr::create(arguments[i], to);
               } else {
@@ -2975,11 +2935,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Arg(*fpWidthToSemantics(arg->getWidth()), arg->getAPValue());
     uint64_t value = 0;
     bool isExact = true;
-#if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
     auto valueRef = makeMutableArrayRef(value);
-#else
-    uint64_t *valueRef = &value;
-#endif
     Arg.convertToInteger(valueRef, resultType, false,
                          llvm::APFloat::rmTowardZero, &isExact);
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
@@ -2997,11 +2953,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     uint64_t value = 0;
     bool isExact = true;
-#if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
     auto valueRef = makeMutableArrayRef(value);
-#else
-    uint64_t *valueRef = &value;
-#endif
     Arg.convertToInteger(valueRef, resultType, true,
                          llvm::APFloat::rmTowardZero, &isExact);
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
@@ -3397,17 +3349,12 @@ void Executor::computeOffsets(KGEPInstruction *kgepi, TypeIt ib, TypeIt ie) {
       uint64_t addend = sl->getElementOffset((unsigned) ci->getZExtValue());
       constantOffset = constantOffset->Add(ConstantExpr::alloc(addend,
                                                                Context::get().getPointerWidth()));
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
     } else if (isa<ArrayType>(*ii)) {
       computeOffsetsSeqTy<ArrayType>(kgepi, constantOffset, index, ii);
     } else if (isa<VectorType>(*ii)) {
       computeOffsetsSeqTy<VectorType>(kgepi, constantOffset, index, ii);
     } else if (isa<PointerType>(*ii)) {
       computeOffsetsSeqTy<PointerType>(kgepi, constantOffset, index, ii);
-#else
-    } else if (isa<SequentialType>(*ii)) {
-      computeOffsetsSeqTy<SequentialType>(kgepi, constantOffset, index, ii);
-#endif
     } else
       assert("invalid type" && 0);
     index++;

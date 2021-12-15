@@ -36,9 +36,7 @@ namespace klee {
 bool FunctionAliasPass::runOnModule(Module &M) {
   bool modified = false;
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
   assert((M.ifunc_size() == 0) && "Unexpected ifunc");
-#endif
 
   for (const auto &pair : FunctionAlias) {
     bool matchFound = false;
@@ -93,28 +91,7 @@ bool FunctionAliasPass::runOnModule(Module &M) {
     std::vector<GlobalValue *> matches;
 
     // find matches for regex
-#if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
     for (GlobalValue &global : M.global_values()) {
-#else
-    // chain iterators of alias list and function list
-    auto firstIt = M.getAliasList().begin();
-    auto firstIe = M.getAliasList().end();
-    auto secondIt = M.getFunctionList().begin();
-    auto secondIe = M.getFunctionList().end();
-    for (bool firstList = true;;
-         (firstList && (++firstIt != firstIe)) || (++secondIt != secondIe)) {
-      GlobalValue *gv = nullptr;
-      if (firstIt == firstIe)
-        firstList = false;
-      if (firstList) {
-        gv = cast<GlobalValue>(&*firstIt);
-      } else {
-        if (secondIt == secondIe)
-          break;
-        gv = cast<GlobalValue>(&*secondIt);
-      }
-      GlobalValue &global = *gv;
-#endif
       if (!global.hasName())
         continue;
 

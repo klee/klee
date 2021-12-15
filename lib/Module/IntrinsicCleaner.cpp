@@ -317,30 +317,9 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         break;
       }
       case Intrinsic::objectsize: {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
         // Lower the call to a concrete value
         auto replacement = llvm::lowerObjectSizeCall(ii, DataLayout, nullptr,
                                                      /*MustSucceed=*/true);
-#else
-        // We don't know the size of an object in general so we replace
-        // with 0 or -1 depending on the second argument to the intrinsic.
-        assert(ii->getNumArgOperands() == 2 && "wrong number of arguments");
-        auto minArg = dyn_cast_or_null<ConstantInt>(ii->getArgOperand(1));
-        assert(minArg &&
-               "Failed to get second argument or it is not ConstantInt");
-        assert(minArg->getBitWidth() == 1 && "Second argument is not an i1");
-        ConstantInt *replacement = nullptr;
-        IntegerType *intType = dyn_cast<IntegerType>(ii->getType());
-        assert(intType && "intrinsic does not have integer return type");
-        if (minArg->isZero()) {
-          // min=false
-          replacement = ConstantInt::get(intType, -1, /*isSigned=*/true);
-        } else {
-          // min=true
-          replacement = ConstantInt::get(intType, 0, /*isSigned=*/false);
-        }
-
-#endif
         ii->replaceAllUsesWith(replacement);
         ii->eraseFromParent();
         dirty = true;
@@ -361,9 +340,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       // The following intrinsics are currently handled by LowerIntrinsicCall
       // (Invoking LowerIntrinsicCall with any intrinsics not on this
       // list throws an exception.)
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
       case Intrinsic::addressofreturnaddress:
-#endif
       case Intrinsic::annotation:
       case Intrinsic::assume:
       case Intrinsic::bswap:
