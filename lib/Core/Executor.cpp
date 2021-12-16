@@ -2874,8 +2874,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       offset = AddExpr::create(offset,
                              Expr::createPointer(kgepi->offset));
     ref<Expr> address = AddExpr::create(base, offset);
-    if (UseGEPExpr && !isa<ConstantExpr>(address))
-      gepExprBases[address] = {base, sourceSize};
+    if (UseGEPExpr && !isa<ConstantExpr>(address)) {
+      if (isGEPExpr(base))
+        gepExprBases[address] = gepExprBases[base];
+      else
+        gepExprBases[address] = {base, sourceSize};
+    }
     bindLocal(ki, state, address);
     break;
   }
@@ -4741,12 +4745,8 @@ void Executor::resolveExact(ExecutionState &state,
   }
 
   if (unbound) {
-    if (isReadFromSymbolicArray(p)) {
-      terminateStateEarly(*unbound, "insufficient information: symbolic size of object in isolationMode.");
-    } else {
-      terminateStateOnError(*unbound, "memory error: invalid pointer: " + name,
-                            Ptr, NULL, getAddressInfo(*unbound, p));
-    }
+    terminateStateOnError(*unbound, "memory error: invalid pointer: " + name,
+                          Ptr, NULL, getAddressInfo(*unbound, p));
   }
 }
 
@@ -4933,7 +4933,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     } else if (LazyInstantiation && (isa<ReadExpr>(address) || isa<ConcatExpr>(address) || (UseGEPExpr && isGEPExpr(address)))) {
 
       if (!isReadFromSymbolicArray(base)) {
-        terminateStateEarly(*unbound, "Weird Inst Source");
+        terminateStateEarly(*unbound, "Instantiation source contains read from concrete array");
         return;
       }
 
@@ -5383,7 +5383,7 @@ int Executor::resolveLazyInstantiation(ExecutionState &state) {
       ref<ReadExpr> base = dyn_cast<ReadExpr>(lisource);
       auto parent = base->updates.root->binding;
       if(!parent) {
-	return -1;
+        return -1;
       }
       state.pointers[lisource] = std::make_pair(parent, base->index);
       break;
@@ -5418,8 +5418,8 @@ void Executor::setInstantiationGraph(ExecutionState &state, TestCase &tc) {
     size_t index_parent;
     for(size_t j = 0; j < state.symbolics.size(); j++) {
       if(state.symbolics[j].first == parent.first) {
-	index_parent = j;
-	break;
+        index_parent = j;
+        break;
       }
     }
     // Put data in TestCase tc, indices coincide
