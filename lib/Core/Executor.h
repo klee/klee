@@ -19,6 +19,7 @@
 #include "UserSearcher.h"
 
 #include "klee/ADT/RNG.h"
+#include "klee/Core/BranchTypes.h"
 #include "klee/Core/Interpreter.h"
 #include "klee/Core/TerminationTypes.h"
 #include "klee/Expr/ArrayCache.h"
@@ -324,16 +325,16 @@ private:
 
   /// Create a new state where each input condition has been added as
   /// a constraint and return the results. The input state is included
-  /// as one of the results. Note that the output vector may included
+  /// as one of the results. Note that the output vector may include
   /// NULL pointers for states which were unable to be created.
-  void branch(ExecutionState &state, 
-              const std::vector< ref<Expr> > &conditions,
-              std::vector<ExecutionState*> &result);
+  void branch(ExecutionState &state, const std::vector<ref<Expr>> &conditions,
+              std::vector<ExecutionState *> &result, BranchType reason);
 
-  // Fork current and return states in which condition holds / does
-  // not hold, respectively. One of the states is necessarily the
-  // current state, and one of the states may be null.
-  StatePair fork(ExecutionState &current, ref<Expr> condition, bool isInternal);
+  /// Fork current and return states in which condition holds / does
+  /// not hold, respectively. One of the states is necessarily the
+  /// current state, and one of the states may be null.
+  StatePair fork(ExecutionState &current, ref<Expr> condition, bool isInternal,
+                 BranchType reason);
 
   // If the MaxStatic*Pct limits have been reached, concretize the condition and
   // return it. Otherwise, return the unmodified condition.
