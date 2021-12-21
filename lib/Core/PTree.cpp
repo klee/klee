@@ -36,7 +36,8 @@ PTree::PTree(ExecutionState *initialState)
   initialState->ptreeNode = root.getPointer();
 }
 
-void PTree::attach(PTreeNode *node, ExecutionState *leftState, ExecutionState *rightState) {
+void PTree::attach(PTreeNode *node, ExecutionState *leftState,
+                   ExecutionState *rightState, BranchType reason) {
   assert(node && !node->left.getPointer() && !node->right.getPointer());
   assert(node == rightState->ptreeNode &&
          "Attach assumes the right state is the current state");

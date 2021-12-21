@@ -10,6 +10,7 @@
 #ifndef KLEE_PTREE_H
 #define KLEE_PTREE_H
 
+#include "klee/Core/BranchTypes.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Support/ErrorHandling.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -48,7 +49,7 @@ namespace klee {
     ~PTree() = default;
 
     void attach(PTreeNode *node, ExecutionState *leftState,
-                ExecutionState *rightState);
+                ExecutionState *rightState, BranchType reason);
     void remove(PTreeNode *node);
     void dump(llvm::raw_ostream &os);
     std::uint8_t getNextId() {
