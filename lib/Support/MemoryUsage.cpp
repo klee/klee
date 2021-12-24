@@ -10,6 +10,7 @@
 #include "klee/System/MemoryUsage.h"
 
 #include "klee/Config/config.h"
+#include "klee/Support/ErrorHandling.h"
 
 #ifdef HAVE_GPERFTOOLS_MALLOC_EXTENSION_H
 #include "gperftools/malloc_extension.h"
@@ -108,10 +109,22 @@ size_t util::GetTotalMallocUsage() {
 
 #elif defined(HAVE_MALLOC_ZONE_STATISTICS)
 
-  // Support memory usage on Darwin.
-  malloc_statistics_t Stats;
-  malloc_zone_statistics(malloc_default_zone(), &Stats);
-  return Stats.size_in_use;
+  // Memory usage on macOS
+
+  malloc_statistics_t stats;
+  malloc_zone_t **zones;
+  unsigned int num_zones;
+
+  if (malloc_get_all_zones(0, nullptr, (vm_address_t **)&zones, &num_zones) !=
+      KERN_SUCCESS)
+    klee_error("malloc_get_all_zones failed.");
+
+  int total = 0;
+  for (unsigned i = 0; i < num_zones; i++) {
+    malloc_zone_statistics(zones[i], &stats);
+    total += stats.size_in_use;
+  }
+  return total;
 
 #else // HAVE_MALLINFO
 
