@@ -432,7 +432,7 @@ int swapon(const char *path) {
 #ifndef __FreeBSD__
 int swapoff(const char *path) __attribute__((weak));
 int swapoff(const char *path) {
-#elif __FreeBSD__ < 13
+#elif __FreeBSD_version < 1300523
 int swapoff(const char *path) __attribute__((weak));
 int swapoff(const char *path) {
 #else
