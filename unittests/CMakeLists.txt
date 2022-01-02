@@ -117,7 +117,7 @@ else()
 
     # Prevent Google Test from adding to our install target.
     # Required for >= 1.8.0, but can only be disabled starting with 1.8.1
-    set(GTEST_INSTALL OFF CACHE BOOL "disable installing Google Test" FORCE)
+    set(INSTALL_GTEST OFF CACHE BOOL "disable installing Google Test" FORCE)
 
     # Build Google Test as part of our project
     add_subdirectory(${GTEST_SRC_DIR} "${CMAKE_CURRENT_BINARY_DIR}/gtest_build")
