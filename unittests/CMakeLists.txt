@@ -96,6 +96,7 @@ else()
 
       HINTS
       "${GTEST_SRC_DIR}/include"
+      "${GTEST_SRC_DIR}/googletest/include"
 
       NO_DEFAULT_PATH
 
