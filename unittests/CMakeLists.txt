@@ -7,6 +7,42 @@
 #
 #===------------------------------------------------------------------------===#
 
+function(add_vanilla_googletest_subdirectory directory)
+  if (POLICY CMP0077)
+    # Prevent Google Test from adding to our install target (Google Test 1.8.0+)
+    # However, this can only be disabled starting with 1.8.1 (a.k.a. 1.9.0)
+    set(INSTALL_GTEST OFF)
+
+    # Google Mock is currently not used by our tests
+    set(BUILD_GMOCK OFF)
+
+    # (only) Google Test 1.8.0 with BUILD_GMOCK=OFF needs BUILD_GTEST=ON
+    set(BUILD_GTEST ON)
+
+    # Make option() in subdirectory respect normal variables (as set above).
+    # NOTE: The enclosing function limits the scope of this policy setting.
+    # FIXME: Remove once all supported Google Test versions require CMake 3.13+
+    #        (or set policy CMP0077 to NEW by themselves)
+    set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+  else()
+    # FIXME: Remove with CMake minimum version 3.13+
+    # Use cache variable workaround as option() ignores normal variables
+
+    # Prevent Google Test from adding to our install target (Google Test 1.8.0+)
+    # However, this can only be disabled starting with 1.8.1 (a.k.a. 1.9.0)
+    set(INSTALL_GTEST OFF CACHE BOOL "disable installing Google Test" FORCE)
+
+    # Google Mock is currently not used by our tests
+    set(BUILD_GMOCK OFF CACHE BOOL "disable building Google Mock" FORCE)
+
+    # (only) Google Test 1.8.0 with BUILD_GMOCK=OFF needs BUILD_GTEST=ON
+    set(BUILD_GTEST ON CACHE BOOL "enable building Google Test" FORCE)
+  endif()
+
+  # include Google Test's CMakeLists.txt
+  add_subdirectory(${directory} "${CMAKE_CURRENT_BINARY_DIR}/gtest_build")
+endfunction()
+
 if (TARGET gtest AND TARGET gtest_main)
   # try to reuse LLVM's targets
 
@@ -115,12 +151,7 @@ else()
     message(STATUS "Google Test: Building from source.")
     message(STATUS "GTEST_SRC_DIR: ${GTEST_SRC_DIR}")
 
-    # Prevent Google Test from adding to our install target.
-    # Required for >= 1.8.0, but can only be disabled starting with 1.8.1
-    set(INSTALL_GTEST OFF CACHE BOOL "disable installing Google Test" FORCE)
-
-    # Build Google Test as part of our project
-    add_subdirectory(${GTEST_SRC_DIR} "${CMAKE_CURRENT_BINARY_DIR}/gtest_build")
+    add_vanilla_googletest_subdirectory(${GTEST_SRC_DIR})
   endif()
 
   # build Google Test with KLEE's defines and compile flags
