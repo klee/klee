@@ -174,11 +174,21 @@ message(STATUS "GTEST_INCLUDE_DIR: ${GTEST_INCLUDE_DIR}")
 
 add_library(unittest_main)
 target_sources(unittest_main PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/TestMain.cpp")
-target_link_libraries(unittest_main PUBLIC gtest)
+klee_get_llvm_libs(UNITTEST_MAIN_LIBS Support)
+target_link_libraries(unittest_main
+  PUBLIC
+  gtest
+
+  PRIVATE
+  ${UNITTEST_MAIN_LIBS}
+)
 target_include_directories(unittest_main
   PUBLIC
   ${GTEST_INCLUDE_DIR}
   ${KLEE_COMPONENT_EXTRA_INCLUDE_DIRS}
+
+  PRIVATE
+  ${LLVM_INCLUDE_DIRS}
 )
 target_compile_definitions(unittest_main PUBLIC ${KLEE_COMPONENT_CXX_DEFINES})
 target_compile_options(unittest_main PUBLIC ${KLEE_COMPONENT_CXX_FLAGS})
