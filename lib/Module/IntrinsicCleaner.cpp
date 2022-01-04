@@ -39,10 +39,8 @@ char IntrinsicCleanerPass::ID;
 bool IntrinsicCleanerPass::runOnModule(Module &M) {
   bool dirty = false;
   for (Module::iterator f = M.begin(), fe = M.end(); f != fe; ++f)
-    for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b){
-      std::string name = f->getName();
+    for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
       dirty |= runOnBasicBlock(*b, M);
-    }
     
   if (Function *Declare = M.getFunction("llvm.trap")) {
     Declare->eraseFromParent();
@@ -294,13 +292,11 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
             result = builder.CreateSub(op1, op2);
             overflow = builder.CreateICmpULT(op1, op2); // a < b  =>  a - b < 0
             saturated = createConstantVector(ctx,op1,0);
-            //saturated = ConstantInt::get(ctx, APInt(bw, 0));
             break;
           case Intrinsic::uadd_sat:
             result = builder.CreateAdd(op1, op2);
             overflow = builder.CreateICmpULT(result, op1); // a + b < a
             saturated = createConstantVector(ctx,op1,1);
-            //saturated = ConstantInt::get(ctx, APInt::getMaxValue(bw));
             break;
           case Intrinsic::ssub_sat:
           case Intrinsic::sadd_sat: {
@@ -322,21 +318,6 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
             } else { 
               saturated = builder.CreateSelect(sign2, pConstantMin, pConstantMax);
             } 
-/*          
-            ConstantInt *zero = ConstantInt::get(ctx, APInt(bw, 0));
-            ConstantInt *smin = ConstantInt::get(ctx, APInt::getSignedMinValue(bw));
-            ConstantInt *smax = ConstantInt::get(ctx, APInt::getSignedMaxValue(bw));
-
-            Value *sign1 = builder.CreateICmpSLT(op1, zero);
-            Value *sign2 = builder.CreateICmpSLT(op2, zero);
-            Value *signR = builder.CreateICmpSLT(result, zero);
-
-            if (ii->getIntrinsicID() == Intrinsic::ssub_sat) {
-              saturated = builder.CreateSelect(sign2, smax, smin);
-            } else {
-              saturated = builder.CreateSelect(sign2, smin, smax);
-            }
-*/
             // The sign of the result differs from the sign of the first operand
             overflow = builder.CreateXor(sign1, signR);
             if (ii->getIntrinsicID() == Intrinsic::ssub_sat) {
