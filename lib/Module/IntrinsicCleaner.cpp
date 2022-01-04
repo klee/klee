@@ -41,7 +41,7 @@ bool IntrinsicCleanerPass::runOnModule(Module &M) {
   for (Module::iterator f = M.begin(), fe = M.end(); f != fe; ++f)
     for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
       dirty |= runOnBasicBlock(*b, M);
-    
+  
   if (Function *Declare = M.getFunction("llvm.trap")) {
     Declare->eraseFromParent();
     dirty = true;
@@ -265,10 +265,6 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         ii->eraseFromParent();
         dirty = true;
         break;
-
-        //Value *op1;
-        //Type * type = op1->getType()->getVectorElementType();
-
       }
 #if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
       case Intrinsic::sadd_sat:
@@ -276,17 +272,13 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       case Intrinsic::uadd_sat:
       case Intrinsic::usub_sat: {
         IRBuilder<> builder(ii);
-
         Value *op1 = ii->getArgOperand(0);
         Value *op2 = ii->getArgOperand(1);
-
         unsigned int bw = op1->getType()->getPrimitiveSizeInBits();
         assert(bw == op2->getType()->getPrimitiveSizeInBits());
-        
         Value *overflow = nullptr;
         Value *result = nullptr;
         Value *saturated = nullptr;
-
         switch(ii->getIntrinsicID()) {
           case Intrinsic::usub_sat:
             result = builder.CreateSub(op1, op2);
