@@ -41,13 +41,65 @@ bool IntrinsicCleanerPass::runOnModule(Module &M) {
   for (Module::iterator f = M.begin(), fe = M.end(); f != fe; ++f)
     for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
       dirty |= runOnBasicBlock(*b, M);
-
+    
   if (Function *Declare = M.getFunction("llvm.trap")) {
     Declare->eraseFromParent();
     dirty = true;
   }
   return dirty;
 }
+
+llvm::Constant* IntrinsicCleanerPass::createConstantVector(llvm::LLVMContext& ctx, 
+  llvm::Value* pConstantVector, unsigned mode) { 
+  llvm::Constant* pConstant = NULL;
+  llvm::ConstantInt* pCInt = NULL;
+  Type* pType = NULL;
+  Type* elementType = NULL;
+  unsigned elementNum = 0;
+  unsigned elementBw = 0;
+  SmallVector<llvm::Constant*, 8> CEltsZero;
+
+  if (!pConstantVector) { 
+    return NULL;
+  } 
+  if (mode < 0 || mode >= 5) { 
+    return NULL;
+  } 
+  
+  pType = pConstantVector->getType();
+  if (!pType) { 
+    return NULL;
+  }
+  elementType = pType->getVectorElementType();
+  if (!elementType) { 
+    return NULL;
+  }
+  elementNum = pType->getVectorNumElements();
+  elementBw = elementType->getPrimitiveSizeInBits();
+  if (!elementNum || !elementBw) { 
+    return NULL;
+  } 
+  if (mode == 0) { 
+    pCInt = llvm::ConstantInt::get(ctx, APInt(elementBw, 0));
+  } 
+  else if (mode == 1) { 
+    pCInt = llvm::ConstantInt::get(ctx, APInt::getMaxValue(elementBw));
+  } 
+  else if (mode == 2) { 
+    pCInt = llvm::ConstantInt::get(ctx, APInt::getMinValue(elementBw));
+  } 
+  else if (mode == 3) { 
+    pCInt = llvm::ConstantInt::get(ctx, APInt::getSignedMaxValue(elementBw));
+  } 
+  else if (mode == 4) { 
+    pCInt = llvm::ConstantInt::get(ctx, APInt::getSignedMinValue(elementBw));
+  } 
+  for (unsigned i = 0; i < elementNum; ++i){
+    CEltsZero.push_back(pCInt);
+  }
+  pConstant = ConstantVector::get(CEltsZero);
+  return pConstant;
+} 
 
 bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
   bool dirty = false;
@@ -213,6 +265,10 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         ii->eraseFromParent();
         dirty = true;
         break;
+
+        //Value *op1;
+        //Type * type = op1->getType()->getVectorElementType();
+
       }
 #if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
       case Intrinsic::sadd_sat:
@@ -226,20 +282,21 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
 
         unsigned int bw = op1->getType()->getPrimitiveSizeInBits();
         assert(bw == op2->getType()->getPrimitiveSizeInBits());
-
+        
         Value *overflow = nullptr;
         Value *result = nullptr;
         Value *saturated = nullptr;
+
         switch(ii->getIntrinsicID()) {
           case Intrinsic::usub_sat:
             result = builder.CreateSub(op1, op2);
             overflow = builder.CreateICmpULT(op1, op2); // a < b  =>  a - b < 0
-            saturated = ConstantInt::get(ctx, APInt(bw, 0));
+            saturated = createConstantVector(ctx,op1,0);
             break;
           case Intrinsic::uadd_sat:
             result = builder.CreateAdd(op1, op2);
             overflow = builder.CreateICmpULT(result, op1); // a + b < a
-            saturated = ConstantInt::get(ctx, APInt::getMaxValue(bw));
+            saturated = createConstantVector(ctx,op1,1);
             break;
           case Intrinsic::ssub_sat:
           case Intrinsic::sadd_sat: {
@@ -248,20 +305,19 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
             } else {
               result = builder.CreateAdd(op1, op2);
             }
-            ConstantInt *zero = ConstantInt::get(ctx, APInt(bw, 0));
-            ConstantInt *smin = ConstantInt::get(ctx, APInt::getSignedMinValue(bw));
-            ConstantInt *smax = ConstantInt::get(ctx, APInt::getSignedMaxValue(bw));
+            llvm::Constant* pConstantZero = createConstantVector(ctx,op1,0);
+            llvm::Constant* pConstantMax = createConstantVector(ctx,op1,3);
+            llvm::Constant* pConstantMin = createConstantVector(ctx,op1,4);
 
-            Value *sign1 = builder.CreateICmpSLT(op1, zero);
-            Value *sign2 = builder.CreateICmpSLT(op2, zero);
-            Value *signR = builder.CreateICmpSLT(result, zero);
+            Value *sign1 = builder.CreateICmpSLT(op1, pConstantZero);
+            Value *sign2 = builder.CreateICmpSLT(op2, pConstantZero);
+            Value *signR = builder.CreateICmpSLT(result, pConstantZero);
 
-            if (ii->getIntrinsicID() == Intrinsic::ssub_sat) {
-              saturated = builder.CreateSelect(sign2, smax, smin);
-            } else {
-              saturated = builder.CreateSelect(sign2, smin, smax);
-            }
-
+            if (ii->getIntrinsicID() == Intrinsic::ssub_sat) { 
+              saturated = builder.CreateSelect(sign2, pConstantMax, pConstantMin);
+            } else { 
+              saturated = builder.CreateSelect(sign2, pConstantMin, pConstantMax);
+            } 
             // The sign of the result differs from the sign of the first operand
             overflow = builder.CreateXor(sign1, signR);
             if (ii->getIntrinsicID() == Intrinsic::ssub_sat) {
