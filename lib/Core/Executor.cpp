@@ -778,12 +778,7 @@ void Executor::initializeGlobalAlias(const llvm::Constant *c) {
   }
 
   // resolve aliases in all sub-expressions
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
   for (const auto *op : c->operand_values()) {
-#else
-  for (auto &it : c->operands()) {
-    const auto *op = &*it;
-#endif
     initializeGlobalAlias(cast<Constant>(op));
   }
 

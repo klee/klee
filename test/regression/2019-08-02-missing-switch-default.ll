@@ -1,4 +1,3 @@
-; REQUIRES: geq-llvm-3.8
 ; RUN: rm -rf %t.klee-out
 ; RUN: llvm-as -f %s -o %t.bc
 ; RUN: %klee --switch-type=internal --output-dir=%t.klee-out %t.bc
