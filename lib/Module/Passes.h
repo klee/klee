@@ -59,9 +59,10 @@ class IntrinsicCleanerPass : public llvm::ModulePass {
   static char ID;
   const llvm::DataLayout &DataLayout;
   llvm::IntrinsicLowering *IL;
+  enum opMode { zeroValue = 0, maxValue, minValue , signedMaxValue, signedMinValue};
 
   bool runOnBasicBlock(llvm::BasicBlock &b, llvm::Module &M);
-  llvm::Constant* createConstantVector(llvm::LLVMContext& ctx, llvm::Value* pConstantVector, unsigned mode);
+  llvm::Constant* createConstantVector(llvm::LLVMContext& ctx, llvm::Value& pConstantVector, opMode mode);
 public:
   IntrinsicCleanerPass(const llvm::DataLayout &TD)
       : llvm::ModulePass(ID), DataLayout(TD),
