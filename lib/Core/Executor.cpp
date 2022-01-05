@@ -192,8 +192,7 @@ cl::opt<ExternalCallPolicy> ExternalCalls(
                    "allowed (default)"),
         clEnumValN(ExternalCallPolicy::All, "all",
                    "All external function calls are allowed.  This concretizes "
-                   "any symbolic arguments in calls to external functions.")
-            KLEE_LLVM_CL_VAL_END),
+                   "any symbolic arguments in calls to external functions.")),
     cl::init(ExternalCallPolicy::Concrete),
     cl::cat(ExtCallsCat));
 
@@ -293,8 +292,7 @@ cl::list<StateTerminationType> ExitOnErrorType(
         clEnumValN(StateTerminationType::ReportError, "ReportError",
                    "klee_report_error called"),
         clEnumValN(StateTerminationType::User, "User",
-                   "Wrong klee_* functions invocation")
-        KLEE_LLVM_CL_VAL_END),
+                   "Wrong klee_* functions invocation")),
     cl::ZeroOrMore,
     cl::cat(TerminationCat));
 
@@ -412,7 +410,7 @@ llvm::cl::bits<PrintDebugInstructionsType> DebugPrintInstructions(
                    "inst_id]"),
         clEnumValN(FILE_COMPACT, "compact:file",
                    "Log all instructions to file instructions.txt in format "
-                   "[inst_id]") KLEE_LLVM_CL_VAL_END),
+                   "[inst_id]")),
     llvm::cl::CommaSeparated,
     cl::cat(DebugCat));
 

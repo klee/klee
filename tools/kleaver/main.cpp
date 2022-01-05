@@ -56,8 +56,7 @@ static llvm::cl::opt<ToolActions> ToolAction(
                      clEnumValN(PrintAST, "print-ast",
                                 "Print parsed AST nodes from the input file."),
                      clEnumValN(Evaluate, "evaluate",
-                                "Evaluate parsed AST nodes from the input file.")
-                         KLEE_LLVM_CL_VAL_END),
+                                "Evaluate parsed AST nodes from the input file.")),
     llvm::cl::cat(klee::SolvingCat));
 
 enum BuilderKinds {
@@ -74,8 +73,7 @@ static llvm::cl::opt<BuilderKinds> BuilderKind(
                      clEnumValN(ConstantFoldingBuilder, "constant-folding",
                                 "Fold constant expressions."),
                      clEnumValN(SimplifyingBuilder, "simplify",
-                                "Fold constants and simplify expressions.")
-                         KLEE_LLVM_CL_VAL_END),
+                                "Fold constants and simplify expressions.")),
     llvm::cl::cat(klee::ExprCat));
 
 llvm::cl::opt<std::string> DirectoryToWriteQueryLogs(

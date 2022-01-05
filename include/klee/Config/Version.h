@@ -14,7 +14,5 @@
 
 #define LLVM_VERSION(major, minor) (((major) << 8) | (minor))
 #define LLVM_VERSION_CODE LLVM_VERSION(LLVM_VERSION_MAJOR, LLVM_VERSION_MINOR)
-#define KLEE_LLVM_CL_VAL_END
-#define KLEE_LLVM_GOIF_TERMINATOR
 
 #endif /* KLEE_VERSION_H */
