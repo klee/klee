@@ -172,7 +172,7 @@ namespace {
               "Don't link in a libc (only provide freestanding environment)"),
           clEnumValN(LibcType::KleeLibc, "klee", "Link in KLEE's libc"),
           clEnumValN(LibcType::UcLibc, "uclibc",
-                     "Link in uclibc (adapted for KLEE)") KLEE_LLVM_CL_VAL_END),
+                     "Link in uclibc (adapted for KLEE)")),
       cl::init(LibcType::FreestandingLibc), cl::cat(LinkCat));
 
   cl::list<std::string>
