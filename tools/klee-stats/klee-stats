@@ -350,6 +350,25 @@ def write_table(args, data, dirs, pr):
         name_mapping[entry[2]] = entry[0]
     table = rename_columns(table, name_mapping)
 
+    # Apply column filter provided by user
+    user_columns = []
+    if args.columns is not None:
+        user_columns = [c for c in map(lambda v: v.strip(), args.columns.split(',')) if c]
+        column_names = list(table.keys())
+        # error when user-provided column does not exist
+        diff = set(user_columns) - set(column_names)
+        if diff:
+            print('Column(s) not found:', ', '.join(diff), file=sys.stderr)
+            sys.exit(1)
+        # error when no name given
+        if not user_columns:
+            print('No column name specified for --print-columns.', file=sys.stderr)
+            sys.exit(1)
+        # filter
+        for k in column_names:
+            if k not in user_columns:
+                table.pop(k)
+
     # Add a summary row
     max_len = len(data)
     if max_len > 1 and args.tableFormat not in ['csv', 'readable-csv']:
@@ -370,15 +389,17 @@ def write_table(args, data, dirs, pr):
         table['Path'].append('Total ({0})'.format(max_len))
 
     # Prepare the order of the header: start to order entries according to the order in legend and add the unknown entries at the end
-    headers = ["Path"]
-    available_headers = list(table.keys())
-    for entry in Legend:
-        l_name = entry[0]
-        if l_name in available_headers:
-            headers.append(l_name)
-            available_headers.remove(l_name)
-    available_headers.sort()
-    headers += available_headers
+    headers = user_columns
+    if not headers:
+        headers = ["Path"]
+        available_headers = list(table.keys())
+        for entry in Legend:
+            l_name = entry[0]
+            if l_name in available_headers:
+                headers.append(l_name)
+                available_headers.remove(l_name)
+        available_headers.sort()
+        headers += available_headers
 
     # Make sure we keep the correct order of the column entries
     final_table = collections.OrderedDict()
@@ -479,13 +500,15 @@ def main():
                           action='store_true', dest='pMore',
                           help='Print extra information (needed when '
                           'monitoring an ongoing run).')
+    pControl.add_argument('--print-columns', type=str, dest='columns', default=None,
+                          help='Comma-separated list of table columns, e.g \'Path,Time(s),ICov(%%)\'.')
 
     args = parser.parse_args()
 
 
     # get print controls
     pr = 'NONE'
-    if args.pAll:
+    if args.pAll or args.columns:
         pr = 'all'
     elif args.pRelTimes:
         pr = 'reltime'
