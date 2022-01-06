@@ -155,11 +155,6 @@ def select_columns(record, pr):
 
 
 def add_artificial_columns(record):
-    # special case for straight-line code: report 100% branch coverage
-    if "NumBranches" in record and record["NumBranches"] == 0:
-        record["FullBranches"] = 1
-        record["NumBranches"] = 1
-
     # Convert recorded times from microseconds to seconds
     for key in ["UserTime", "WallTime", "QueryTime", "SolverTime", "CexCacheTime", "ForkTime", "ResolveTime"]:
         if not key in record:
@@ -184,7 +179,9 @@ def add_artificial_columns(record):
 
     # Calculate branch coverage
     if "FullBranches" in record and "PartialBranches" in record and "NumBranches" in record:
-        record["BCov"] = 100 * ( 2 * record["FullBranches"] + record["PartialBranches"]) / ( 2 * record["NumBranches"])
+        record["BCov"] = 100.0
+        if record["NumBranches"] != 0:
+            record["BCov"] *= (2 * record["FullBranches"] + record["PartialBranches"]) / (2 * record["NumBranches"])
 
     # Add relative times
     for key in ["SolverTime", "CexCacheTime", "ForkTime", "ResolveTime", "UserTime"]:
