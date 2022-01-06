@@ -145,7 +145,7 @@ def select_columns(record, pr):
                   'CexCacheTime', 'ForkTime', 'ResolveTime']
     elif pr == 'more':
         s_column = ['Path', 'Instructions', 'WallTime', 'ICov', 'BCov', 'ICount',
-                  'RelSolverTime', 'States', 'maxStates', 'MallocUsage', 'maxMem']
+                  'RelSolverTime', 'NumStates', 'MaxStates', 'MallocUsage', 'MaxMem']
     else:
         s_column = ['Path', 'Instructions', 'WallTime', 'ICov',
                   'BCov', 'ICount', 'RelSolverTime']
