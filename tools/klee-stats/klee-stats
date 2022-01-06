@@ -21,30 +21,47 @@ import collections
 # Mapping of: (column head, explanation, internal klee name)
 # column head must start with a capital letter
 Legend = [
+    # core stats
     ('Instrs', 'number of executed instructions', "Instructions"),
-    ('Time(s)', 'total wall time (s)', "WallTime"),
-    ('TUser(s)', 'total user time', "UserTime"),
-    ('ICov(%)', 'instruction coverage in the LLVM bitcode (%)', "ICov"),
-    ('BCov(%)', 'branch coverage in the LLVM bitcode (%)', "BCov"),
+    ('Time(s)', 'total wall time', "WallTime"),
+    ('ICov(%)', 'instruction coverage in the LLVM bitcode', "ICov"),
+    ('BCov(%)', 'conditional branch (br) coverage in the LLVM bitcode', "BCov"),
     ('ICount', 'total static instructions in the LLVM bitcode', "ICount"),
-    ('TSolver(s)', 'time spent in the constraint solver', "SolverTime"),
-    ('TSolver(%)', 'time spent in the constraint solver', "RelSolverTime"),
-    ('States', 'number of currently active states', "NumStates"),
-    ('MaxStates', 'maximum number of active states', "maxStates"),
-    ('AvgStates', 'average number of active states', "avgStates"),
-    ('Mem(MB)', 'megabytes of memory currently used', "MallocUsage"),
-    ('MaxMem(MB)', 'megabytes of memory currently used', "MaxMem"),
-    ('AvgMem(MB)', 'megabytes of memory currently used', "AvgMem"),
-    ('Queries', 'number of queries issued to STP', "NumQueries"),
-    ('AvgQC', 'average number of query constructs per query', "AvgQC"),
-    ('Tcex(s)', 'time spent in the counterexample caching code', "CexCacheTime"),
-    ('Tcex(%)', 'relative time spent in the counterexample caching code wrt wall time', "RelCexCacheTime"),
-    ('Tfork(s)', 'time spent forking', "ForkTime"),
-    ('Tfork(%)', 'relative time spent forking wrt wall time', "RelForkTime"),
+    ('TSolver(%)', 'relative time spent in the solver chain wrt wall time (incl. caches and constraint solver)', "RelSolverTime"),
+    # extended stats
+    # - code and coverage
+    ('ICovered', 'total covered instructions in the LLVM bitcode', "CoveredInstructions"),
+    ('IUncovered', 'total uncovered instructions in the LLVM bitcode', "UncoveredInstructions"),
+    ('Branches', 'number of conditional branch (br) instructions in the LLVM bitcode', 'NumBranches'),
+    ('FullBranches', 'number of fully-explored conditional branch (br) instructions in the LLVM bitcode', 'FullBranches'),
+    ('PartialBranches', 'number of partially-explored conditional branch (br) instructions in the LLVM bitcode', 'PartialBranches'),
+    # - time
+    ('TUser(s)', 'total user time', "UserTime"),
     ('TResolve(s)', 'time spent in object resolution', "ResolveTime"),
-    ('TResolve(%)', 'time spent in object resolution wrt wall time', "RelResolveTime"),
+    ('TResolve(%)', 'relative time spent in object resolution wrt wall time', "RelResolveTime"),
+    ('TCex(s)', 'time spent in the counterexample caching code (incl. constraint solver)', "CexCacheTime"),
+    ('TCex(%)', 'relative time spent in the counterexample caching code wrt wall time (incl. constraint solver)', "RelCexCacheTime"),
+    ('TQuery(s)', 'time spent in the constraint solver', "QueryTime"),
+    ('TSolver(s)', 'time spent in the solver chain (incl. caches and constraint solver)', "SolverTime"),
+    # - states
+    ('ActiveStates', 'number of currently active states (0 after successful termination)', "NumStates"),
+    ('MaxActiveStates', 'maximum number of active states', "MaxStates"),
+    ('AvgActiveStates', 'average number of active states', "AvgStates"),
+    # - constraint caching/solving
+    ('Queries', 'number of queries issued to the constraint solver', "NumQueries"),
+    ('QueryConstructs', 'number of query constructs for all queries send to the constraint solver', "NumQueryConstructs"),
+    ('AvgSolverQuerySize', 'average number of query constructs per query issued to the constraint solver', "AvgQC"),
     ('QCexCMisses', 'Counterexample cache misses', "QueryCexCacheMisses"),
     ('QCexCHits', 'Counterexample cache hits', "QueryCexCacheHits"),
+    # - memory
+    ('Mem(MiB)', 'mebibytes of memory currently used', "MallocUsage"),
+    ('MaxMem(MiB)', 'maximum memory usage', "MaxMem"),
+    ('AvgMem(MiB)', 'average memory usage', "AvgMem"),
+    # - debugging
+    ('TArrayHash(s)', 'time spent hashing arrays (if KLEE_ARRAY_DEBUG enabled, otherwise -1)', "ArrayHashTime"),
+    ('TFork(s)', 'time spent forking states', "ForkTime"),
+    ('TFork(%)', 'relative time spent forking states wrt wall time', "RelForkTime"),
+    ('TUser(%)', 'relative user time wrt wall time', "RelUserTime"),
 ]
 
 def getInfoFile(path):
@@ -66,7 +83,7 @@ class LazyEvalList:
 
     def aggregateRecords(self):
         try:
-            memC = self.conn().execute("SELECT max(MallocUsage) / 1024 / 1024, avg(MallocUsage) / 1024 / 1024 from stats")
+            memC = self.conn().execute("SELECT max(MallocUsage)*1.0 / 1024 / 1024, avg(MallocUsage) / 1024 / 1024 from stats")
             maxMem, avgMem = memC.fetchone()
         except sqlite3.OperationalError as e:
             maxMem, avgMem = None, None
@@ -77,7 +94,7 @@ class LazyEvalList:
         except sqlite3.OperationalError as e:
             maxStates, avgStates = None, None
 
-        return {"maxMem":maxMem, "avgMem": avgMem, "maxState": maxStates, "avgStates": avgStates}
+        return {"MaxMem":maxMem, "AvgMem": avgMem, "MaxStates": maxStates, "AvgStates": avgStates}
 
     def getLastRecord(self):
         try:
@@ -151,7 +168,7 @@ def add_artificial_columns(record):
 
     # Convert memory from byte to MiB
     if "MallocUsage" in record:
-        record["MallocUsage"] /= (1024*1024)
+        record["MallocUsage"] /= 1024 * 1024
 
     # Calculate avg. query construct
     if "NumQueryConstructs" in record and "NumQueries" in record:
