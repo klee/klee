@@ -352,7 +352,7 @@ def write_table(args, data, dirs, pr):
 
     # Add a summary row
     max_len = len(data)
-    if max_len > 1:
+    if max_len > 1 and args.tableFormat not in ['csv', 'readable-csv']:
         # calculate the total
         for k in table:
             if k == "Path": # Skip path
