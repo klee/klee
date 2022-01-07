@@ -59,6 +59,7 @@ Legend = [
     ('QCexCacheMisses', 'Counterexample cache misses', "QueryCexCacheMisses"),
     ('QCexCacheHits', 'Counterexample cache hits', "QueryCexCacheHits"),
     # - memory
+    ('Allocations', 'number of allocated heap objects of the program under test', "Allocations"),
     ('Mem(MiB)', 'mebibytes of memory currently used', "MallocUsage"),
     ('MaxMem(MiB)', 'maximum memory usage', "MaxMem"),
     ('AvgMem(MiB)', 'average memory usage', "AvgMem"),
