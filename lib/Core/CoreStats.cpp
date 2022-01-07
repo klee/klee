@@ -16,6 +16,7 @@ Statistic stats::coveredInstructions("CoveredInstructions", "Icov");
 Statistic stats::falseBranches("FalseBranches", "Bf");
 Statistic stats::forkTime("ForkTime", "Ftime");
 Statistic stats::forks("Forks", "Forks");
+Statistic stats::inhibitedForks("InhibitedForks", "InhibForks");
 Statistic stats::instructionRealTime("InstructionRealTimes", "Ireal");
 Statistic stats::instructionTime("InstructionTimes", "Itime");
 Statistic stats::instructions("Instructions", "I");
