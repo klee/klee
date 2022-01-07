@@ -281,6 +281,7 @@ public:
 
   std::uint32_t getID() const { return id; };
   void setID() { id = nextID++; };
+  static std::uint32_t getLastID() { return nextID - 1; };
 };
 
 struct ExecutionStateIDCompare {
