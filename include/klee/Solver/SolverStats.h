@@ -16,6 +16,7 @@ namespace klee {
 namespace stats {
 
   extern Statistic cexCacheTime;
+  extern Statistic solverQueries;
   extern Statistic queries;
   extern Statistic queriesInvalid;
   extern Statistic queriesValid;

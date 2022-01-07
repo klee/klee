@@ -15,6 +15,7 @@
 #include "klee/Statistics/Statistics.h"
 #include "klee/Statistics/TimerStatIncrementer.h"
 #include "klee/Solver/Solver.h"
+#include "klee/Solver/SolverStats.h"
 
 #include "CoreStats.h"
 
@@ -26,6 +27,7 @@ using namespace llvm;
 bool TimingSolver::evaluate(const ConstraintSet &constraints, ref<Expr> expr,
                             Solver::Validity &result,
                             SolverQueryMetaData &metaData) {
+  ++stats::queries;
   // Fast path, to avoid timer and OS overhead.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
     result = CE->isTrue() ? Solver::True : Solver::False;
@@ -46,6 +48,7 @@ bool TimingSolver::evaluate(const ConstraintSet &constraints, ref<Expr> expr,
 
 bool TimingSolver::mustBeTrue(const ConstraintSet &constraints, ref<Expr> expr,
                               bool &result, SolverQueryMetaData &metaData) {
+  ++stats::queries;
   // Fast path, to avoid timer and OS overhead.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
     result = CE->isTrue() ? true : false;
@@ -90,6 +93,7 @@ bool TimingSolver::mayBeFalse(const ConstraintSet &constraints, ref<Expr> expr,
 bool TimingSolver::getValue(const ConstraintSet &constraints, ref<Expr> expr,
                             ref<ConstantExpr> &result,
                             SolverQueryMetaData &metaData) {
+  ++stats::queries;
   // Fast path, to avoid timer and OS overhead.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
     result = CE;
@@ -112,6 +116,7 @@ bool TimingSolver::getInitialValues(
     const ConstraintSet &constraints, const std::vector<const Array *> &objects,
     std::vector<std::vector<unsigned char>> &result,
     SolverQueryMetaData &metaData) {
+  ++stats::queries;
   if (objects.empty())
     return true;
 
@@ -128,6 +133,7 @@ bool TimingSolver::getInitialValues(
 std::pair<ref<Expr>, ref<Expr>>
 TimingSolver::getRange(const ConstraintSet &constraints, ref<Expr> expr,
                        SolverQueryMetaData &metaData) {
+  ++stats::queries;
   TimerStatIncrementer timer(stats::solverTime);
   auto result = solver->getRange(Query(constraints, expr));
   metaData.queryCost += timer.delta();

@@ -296,7 +296,7 @@ static bool EvaluateInputAST(const char *Filename,
 
   delete S;
 
-  if (uint64_t queries = *theStatisticManager->getStatisticByName("Queries")) {
+  if (uint64_t queries = *theStatisticManager->getStatisticByName("SolverQueries")) {
     llvm::outs()
       << "--\n"
       << "total queries = " << queries << '\n'

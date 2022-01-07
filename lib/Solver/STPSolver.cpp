@@ -387,7 +387,7 @@ bool STPSolverImpl::computeInitialValues(
   for (const auto &constraint : query.constraints)
     vc_assertFormula(vc, builder->construct(constraint));
 
-  ++stats::queries;
+  ++stats::solverQueries;
   ++stats::queryCounterexamples;
 
   ExprHandle stp_e = builder->construct(query.expr);
