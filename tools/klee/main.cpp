@@ -1547,7 +1547,7 @@ int main(int argc, char **argv, char **envp) {
   delete interpreter;
 
   uint64_t queries =
-    *theStatisticManager->getStatisticByName("Queries");
+    *theStatisticManager->getStatisticByName("SolverQueries");
   uint64_t queriesValid =
     *theStatisticManager->getStatisticByName("QueriesValid");
   uint64_t queriesInvalid =

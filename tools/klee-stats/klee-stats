@@ -50,8 +50,9 @@ Legend = [
     ('AvgActiveStates', 'average number of active states', "AvgStates"),
     ('InhibitedForks', 'number of inhibited state forks due to e.g. memory pressure', "InhibitedForks"),
     # - constraint caching/solving
-    ('Queries', 'number of queries issued to the constraint solver', "NumQueries"),
-    ('QueryConstructs', 'number of query constructs for all queries send to the constraint solver', "NumQueryConstructs"),
+    ('Queries', 'number of queries issued to the solver chain', "Queries"),
+    ('SolverQueries', 'number of queries issued to the constraint solver', "SolverQueries"),
+    ('SolverQueryConstructs', 'number of query constructs for all queries send to the constraint solver', "NumQueryConstructs"),
     ('AvgSolverQuerySize', 'average number of query constructs per query issued to the constraint solver', "AvgQC"),
     ('QCacheMisses', 'Query cache misses', "QueryCacheMisses"),
     ('QCacheHits', 'Query cache hits', "QueryCacheHits"),

@@ -30,19 +30,19 @@ public:
 DummySolverImpl::DummySolverImpl() {}
 
 bool DummySolverImpl::computeValidity(const Query &, Solver::Validity &result) {
-  ++stats::queries;
+  ++stats::solverQueries;
   // FIXME: We should have stats::queriesFail;
   return false;
 }
 
 bool DummySolverImpl::computeTruth(const Query &, bool &isValid) {
-  ++stats::queries;
+  ++stats::solverQueries;
   // FIXME: We should have stats::queriesFail;
   return false;
 }
 
 bool DummySolverImpl::computeValue(const Query &, ref<Expr> &result) {
-  ++stats::queries;
+  ++stats::solverQueries;
   ++stats::queryCounterexamples;
   return false;
 }
@@ -50,7 +50,7 @@ bool DummySolverImpl::computeValue(const Query &, ref<Expr> &result) {
 bool DummySolverImpl::computeInitialValues(
     const Query &, const std::vector<const Array *> &objects,
     std::vector<std::vector<unsigned char> > &values, bool &hasSolution) {
-  ++stats::queries;
+  ++stats::solverQueries;
   ++stats::queryCounterexamples;
   return false;
 }
