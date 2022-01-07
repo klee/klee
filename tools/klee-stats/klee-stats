@@ -45,6 +45,7 @@ Legend = [
     ('TQuery(s)', 'time spent in the constraint solver', "QueryTime"),
     ('TSolver(s)', 'time spent in the solver chain (incl. caches and constraint solver)', "SolverTime"),
     # - states
+    ('States', 'number of created states', "States"),
     ('ActiveStates', 'number of currently active states (0 after successful termination)', "NumStates"),
     ('MaxActiveStates', 'maximum number of active states', "MaxStates"),
     ('AvgActiveStates', 'average number of active states', "AvgStates"),
