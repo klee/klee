@@ -10,6 +10,7 @@
 #ifndef KLEE_CORESTATS_H
 #define KLEE_CORESTATS_H
 
+#include "klee/Core/BranchTypes.h"
 #include "klee/Statistics/Statistic.h"
 
 namespace klee {
@@ -49,6 +50,13 @@ namespace stats {
   /// distance to a function return.
   extern Statistic minDistToReturn;
 
+  /// Count branch types in execution tree. Inhibited branches are ignored.
+  #undef BTYPE
+  #define BTYPE(Name,I) extern Statistic branches ## Name;
+  BRANCH_TYPES
+
+  /// Increase a branch statistic for the given reason by value.
+  void incBranchStat(BranchType reason, std::uint32_t value);
 }
 }
 

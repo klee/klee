@@ -64,6 +64,17 @@ Legend = [
     ('Mem(MiB)', 'mebibytes of memory currently used', "MallocUsage"),
     ('MaxMem(MiB)', 'maximum memory usage', "MaxMem"),
     ('AvgMem(MiB)', 'average memory usage', "AvgMem"),
+    # - branch types
+    ('BrConditional', 'number of forks caused by symbolic branch conditions (br)', "BranchesConditional"),
+    ('BrIndirect', 'number of forks caused by indirect branches (indirectbr) with symbolic address', "BranchesIndirect"),
+    ('BrSwitch', 'number of forks caused by switch with symbolic value', "BranchesSwitch"),
+    ('BrCall', 'number of forks caused by symbolic function pointers', "BranchesCall"),
+    ('BrMemOp', 'number of forks caused by memory operation with symbolic address', "BranchesMemOp"),
+    ('BrResolvePointer', 'number of forks caused by symbolic pointers', "BranchesResolvePointer"),
+    ('BrAlloc', 'number of forks caused by symbolic allocation size', "BranchesAlloc"),
+    ('BrRealloc', 'number of forks caused by symbolic reallocation size', "BranchesRealloc"),
+    ('BrFree', 'number of forks caused by freeing a symbolic pointer', "BranchesFree"),
+    ('BrGetVal', 'number of forks caused by user-invoked concretization while seeding', "BranchesGetVal"),
     # - debugging
     ('TArrayHash(s)', 'time spent hashing arrays (if KLEE_ARRAY_DEBUG enabled, otherwise -1)', "ArrayHashTime"),
     ('TFork(s)', 'time spent forking states', "ForkTime"),

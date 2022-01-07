@@ -901,6 +901,7 @@ void Executor::branch(ExecutionState &state,
     stats::inhibitedForks += N - 1;
   } else {
     stats::forks += N-1;
+    stats::incBranchStat(reason, N-1);
 
     // XXX do proper balance or keep random?
     result.push_back(&state);
@@ -1181,6 +1182,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
     }
 
     processTree->attach(current.ptreeNode, falseState, trueState, reason);
+    stats::incBranchStat(reason, 1);
 
     if (pathWriter) {
       // Need to update the pathOS.id field of falseState, otherwise the same id
@@ -2197,7 +2199,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> cond = eval(ki, 0, state).value;
 
       cond = optimizer.optimizeExpr(cond, false);
-      Executor::StatePair branches = fork(state, cond, false, BranchType::ConditionalBranch);
+      Executor::StatePair branches = fork(state, cond, false, BranchType::Conditional);
 
       // NOTE: There is a hidden dependency here, markBranchVisited
       // requires that we still be in the context of the branch
@@ -2270,7 +2272,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // fork states
     std::vector<ExecutionState *> branches;
-    branch(state, expressions, branches, BranchType::IndirectBranch);
+    branch(state, expressions, branches, BranchType::Indirect);
 
     // terminate error state
     if (result) {
