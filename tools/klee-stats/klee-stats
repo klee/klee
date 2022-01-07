@@ -52,8 +52,10 @@ Legend = [
     ('Queries', 'number of queries issued to the constraint solver', "NumQueries"),
     ('QueryConstructs', 'number of query constructs for all queries send to the constraint solver', "NumQueryConstructs"),
     ('AvgSolverQuerySize', 'average number of query constructs per query issued to the constraint solver', "AvgQC"),
-    ('QCexCMisses', 'Counterexample cache misses', "QueryCexCacheMisses"),
-    ('QCexCHits', 'Counterexample cache hits', "QueryCexCacheHits"),
+    ('QCacheMisses', 'Query cache misses', "QueryCacheMisses"),
+    ('QCacheHits', 'Query cache hits', "QueryCacheHits"),
+    ('QCexCacheMisses', 'Counterexample cache misses', "QueryCexCacheMisses"),
+    ('QCexCacheHits', 'Counterexample cache hits', "QueryCexCacheHits"),
     # - memory
     ('Mem(MiB)', 'mebibytes of memory currently used', "MallocUsage"),
     ('MaxMem(MiB)', 'maximum memory usage', "MaxMem"),
