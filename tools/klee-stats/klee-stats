@@ -35,6 +35,7 @@ Legend = [
     ('Branches', 'number of conditional branch (br) instructions in the LLVM bitcode', 'NumBranches'),
     ('FullBranches', 'number of fully-explored conditional branch (br) instructions in the LLVM bitcode', 'FullBranches'),
     ('PartialBranches', 'number of partially-explored conditional branch (br) instructions in the LLVM bitcode', 'PartialBranches'),
+    ('ExternalCalls', 'number of external calls', 'ExternalCalls'),
     # - time
     ('TUser(s)', 'total user time', "UserTime"),
     ('TResolve(s)', 'time spent in object resolution', "ResolveTime"),

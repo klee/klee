@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "ExternalDispatcher.h"
+
+#include "CoreStats.h"
 #include "klee/Config/Version.h"
 #include "klee/Module/KCallable.h"
 #include "klee/Module/KModule.h"
@@ -158,6 +160,7 @@ ExternalDispatcherImpl::~ExternalDispatcherImpl() {
 
 bool ExternalDispatcherImpl::executeCall(KCallable *callable, Instruction *i,
                                          uint64_t *args) {
+  ++stats::externalCalls;
   dispatchers_ty::iterator it = dispatchers.find(i);
   if (it != dispatchers.end()) {
     // Code already JIT'ed for this
