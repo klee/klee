@@ -449,6 +449,8 @@ void StatsTracker::writeStatsHeader() {
              << "CexCacheTime INTEGER,"
              << "ForkTime INTEGER,"
              << "ResolveTime INTEGER,"
+             << "QueryCacheMisses INTEGER,"
+             << "QueryCacheHits INTEGER,"
              << "QueryCexCacheMisses INTEGER,"
              << "QueryCexCacheHits INTEGER,"
              << "InhibitedForks INTEGER,"
@@ -483,11 +485,15 @@ void StatsTracker::writeStatsHeader() {
              << "CexCacheTime,"
              << "ForkTime,"
              << "ResolveTime,"
+             << "QueryCacheMisses,"
+             << "QueryCacheHits,"
              << "QueryCexCacheMisses,"
              << "QueryCexCacheHits,"
              << "InhibitedForks,"
              << "ArrayHashTime"
          << ") VALUES ("
+             << "?,"
+             << "?,"
              << "?,"
              << "?,"
              << "?,"
@@ -538,13 +544,15 @@ void StatsTracker::writeStatsLine() {
   sqlite3_bind_int64(insertStmt, 15, stats::cexCacheTime);
   sqlite3_bind_int64(insertStmt, 16, stats::forkTime);
   sqlite3_bind_int64(insertStmt, 17, stats::resolveTime);
-  sqlite3_bind_int64(insertStmt, 18, stats::queryCexCacheMisses);
-  sqlite3_bind_int64(insertStmt, 19, stats::queryCexCacheHits);
-  sqlite3_bind_int64(insertStmt, 20, stats::inhibitedForks);
+  sqlite3_bind_int64(insertStmt, 18, stats::queryCacheMisses);
+  sqlite3_bind_int64(insertStmt, 19, stats::queryCacheHits);
+  sqlite3_bind_int64(insertStmt, 20, stats::queryCexCacheMisses);
+  sqlite3_bind_int64(insertStmt, 21, stats::queryCexCacheHits);
+  sqlite3_bind_int64(insertStmt, 22, stats::inhibitedForks);
 #ifdef KLEE_ARRAY_DEBUG
-  sqlite3_bind_int64(insertStmt, 21, stats::arrayHashTime);
+  sqlite3_bind_int64(insertStmt, 23, stats::arrayHashTime);
 #else
-  sqlite3_bind_int64(insertStmt, 21, -1LL);
+  sqlite3_bind_int64(insertStmt, 23, -1LL);
 #endif
   int errCode = sqlite3_step(insertStmt);
   if(errCode != SQLITE_DONE) klee_error("Error writing stats data: %s", sqlite3_errmsg(statsFile));
