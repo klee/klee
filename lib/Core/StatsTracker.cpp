@@ -451,6 +451,7 @@ void StatsTracker::writeStatsHeader() {
              << "ResolveTime INTEGER,"
              << "QueryCexCacheMisses INTEGER,"
              << "QueryCexCacheHits INTEGER,"
+             << "InhibitedForks INTEGER,"
              << "ArrayHashTime INTEGER"
          << ')';
   char *zErrMsg = nullptr;
@@ -484,8 +485,10 @@ void StatsTracker::writeStatsHeader() {
              << "ResolveTime,"
              << "QueryCexCacheMisses,"
              << "QueryCexCacheHits,"
+             << "InhibitedForks,"
              << "ArrayHashTime"
          << ") VALUES ("
+             << "?,"
              << "?,"
              << "?,"
              << "?,"
@@ -537,10 +540,11 @@ void StatsTracker::writeStatsLine() {
   sqlite3_bind_int64(insertStmt, 17, stats::resolveTime);
   sqlite3_bind_int64(insertStmt, 18, stats::queryCexCacheMisses);
   sqlite3_bind_int64(insertStmt, 19, stats::queryCexCacheHits);
+  sqlite3_bind_int64(insertStmt, 20, stats::inhibitedForks);
 #ifdef KLEE_ARRAY_DEBUG
-  sqlite3_bind_int64(insertStmt, 20, stats::arrayHashTime);
+  sqlite3_bind_int64(insertStmt, 21, stats::arrayHashTime);
 #else
-  sqlite3_bind_int64(insertStmt, 20, -1LL);
+  sqlite3_bind_int64(insertStmt, 21, -1LL);
 #endif
   int errCode = sqlite3_step(insertStmt);
   if(errCode != SQLITE_DONE) klee_error("Error writing stats data: %s", sqlite3_errmsg(statsFile));

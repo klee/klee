@@ -47,6 +47,7 @@ Legend = [
     ('ActiveStates', 'number of currently active states (0 after successful termination)', "NumStates"),
     ('MaxActiveStates', 'maximum number of active states', "MaxStates"),
     ('AvgActiveStates', 'average number of active states', "AvgStates"),
+    ('InhibitedForks', 'number of inhibited state forks due to e.g. memory pressure', "InhibitedForks"),
     # - constraint caching/solving
     ('Queries', 'number of queries issued to the constraint solver', "NumQueries"),
     ('QueryConstructs', 'number of query constructs for all queries send to the constraint solver', "NumQueryConstructs"),

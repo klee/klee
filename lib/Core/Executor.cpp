@@ -897,6 +897,7 @@ void Executor::branch(ExecutionState &state,
         result.push_back(nullptr);
       }
     }
+    stats::inhibitedForks += N - 1;
   } else {
     stats::forks += N-1;
 
@@ -1074,6 +1075,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
           addConstraint(current, Expr::createIsZero(condition));
           res = Solver::False;
         }
+        ++stats::inhibitedForks;
       }
     }
   }

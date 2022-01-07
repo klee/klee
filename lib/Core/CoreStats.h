@@ -30,6 +30,9 @@ namespace stats {
   /// The number of process forks.
   extern Statistic forks;
 
+  /// Number of inhibited forks.
+  extern Statistic inhibitedForks;
+
   /// Number of states, this is a "fake" statistic used by istats, it
   /// isn't normally up-to-date.
   extern Statistic states;
