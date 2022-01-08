@@ -2,6 +2,7 @@
 ; RUN: llvm-as %s -f -o %t1.bc
 ; RUN: rm -rf %t.klee-out
 ; RUN: %klee --output-dir=%t.klee-out --optimize=false %t1.bc 
+; RUN: cat %t.klee-out/assembly.ll | FileCheck --check-prefix=CHECK %s
 
 ; Function Attrs: noinline nounwind uwtable
 define dso_local void @usub16x8_sat() #0 {
@@ -21,6 +22,8 @@ define dso_local void @usub16x8_sat() #0 {
   %12 = call <16 x i8> @llvm.usub.sat.v16i8(<16 x i8> %9, <16 x i8> %11) #3
   %13 = bitcast <16 x i8> %12 to <2 x i64>
   store <2 x i64> %13, <2 x i64>* %3, align 16
+  ; CHECK: @llvm.usub.sat.v16i8
+  
   ret void
 }
 
