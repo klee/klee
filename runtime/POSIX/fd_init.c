@@ -47,13 +47,21 @@ static void __create_new_dfile(exe_disk_file_t *dfile, unsigned size,
     klee_report_error(__FILE__, __LINE__, "out of memory in klee_init_env", "user.err");
 
   const char *sp;
-  char sname[64];
-  for (sp=name; *sp; ++sp)
-    sname[sp-name] = *sp;
-  memcpy(&sname[sp-name], "-stat", 6);
+  char sname[256] = { 0 };
+
+  int len = strlen(name);
+  if (len >= 256) { 
+    klee_report_error(__FILE__, __LINE__, "The file path is too long, the maximum length of the path is 256.", "user.err");
+  } 
+  strcpy(sname,name);
+  if (256-len <= 6) { 
+    klee_report_error(__FILE__, __LINE__, "The file path is too long, 6 bytes must be reserved to store stat.", "user.err");
+  } 
+  strcpy(sname,"-stat");
 
   assert(size);
-
+  printf("创建文件 : %s\n",name);
+  strcpy(dfile->file_name, name);
   dfile->size = size;
   dfile->contents = malloc(dfile->size);
   if (!dfile->contents)
@@ -102,6 +110,18 @@ static unsigned __sym_uint32(const char *name) {
   return x;
 }
 
+exe_disk_file_t* gey_sym_file(char* fname) { 
+  for (int i=0; i<__exe_fs.n_sym_files; ++i) { 
+    if (!__exe_fs.sym_files[i].file_name || !__exe_fs.sym_files[i].contents) { 
+      continue;
+    } 
+    if (!strcmp(fname, __exe_fs.sym_files[i].file_name)) { 
+      return &__exe_fs.sym_files[i];
+    } 
+  } 
+  return NULL;
+} 
+
 /* n_files: number of symbolic input files, excluding stdin
    file_length: size in bytes of each symbolic file, including stdin
    sym_stdout_flag: 1 if stdout should be symbolic, 0 otherwise
@@ -109,24 +129,46 @@ static unsigned __sym_uint32(const char *name) {
                          writes past the initial file size are discarded 
 			 (file offset is always incremented)
    max_failures: maximum number of system call failures */
-void klee_init_fds(unsigned n_files, unsigned file_length,
+void klee_init_fds(fsym_info* fsym, unsigned nfsym, unsigned n_files, unsigned file_length,
                    unsigned stdin_length, int sym_stdout_flag,
                    int save_all_writes_flag, unsigned max_failures) {
   unsigned k;
   char name[7] = "?-data";
+  char fname[256] = { 0 };
   struct stat64 s;
-
+  exe_disk_file_t* df = 0;
+  int fsym_idx = 0;
   stat64(".", &s);
 
-  __exe_fs.n_sym_files = n_files;
-  __exe_fs.sym_files = malloc(sizeof(*__exe_fs.sym_files) * n_files);
-  if (n_files && !__exe_fs.sym_files)
+  *__exe_fs.fsymArray = *fsym;
+  __exe_fs.nfsym = nfsym;
+
+  __exe_fs.n_sym_files = nfsym + n_files;
+  __exe_fs.sym_files = malloc(sizeof(*__exe_fs.sym_files) * __exe_fs.n_sym_files);
+  if (__exe_fs.n_sym_files && !__exe_fs.sym_files)
     klee_report_error(__FILE__, __LINE__, "out of memory in klee_init_env", "user.err");
 
-  for (k=0; k < n_files; k++) {
+  //__exe_fs.sym_files memory initialization 
+  memset(__exe_fs.sym_files, 0, sizeof(*__exe_fs.sym_files) * __exe_fs.n_sym_files);
+
+  for (size_t i = 0; i < nfsym; i++) {  
+    if (df = gey_sym_file(fsym[i].pfile_name)) {
+      klee_warning("Two symbolic files with the same name cannot exist at the same time.");
+      continue;
+    } 
+    __create_new_dfile(&__exe_fs.sym_files[fsym_idx], fsym[i].file_len, fsym[i].pfile_name, &s);
+    fsym_idx++;
+  } 
+
+  for (k=0; k < n_files; k++) { 
     name[0] = 'A' + k;
-    __create_new_dfile(&__exe_fs.sym_files[k], file_length, name, &s);
-  }
+    if (df = gey_sym_file(name)) {
+      klee_warning("Two symbolic files with the same name cannot exist at the same time.");
+      continue;
+    } 
+    __create_new_dfile(&__exe_fs.sym_files[fsym_idx], file_length, name, &s);
+    fsym_idx++;
+  } 
   
   /* setting symbolic stdin */
   if (stdin_length) {

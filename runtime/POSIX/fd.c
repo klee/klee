@@ -37,17 +37,18 @@
 static exe_disk_file_t *__get_sym_file(const char *pathname) {
   if (!pathname)
     return NULL;
-
   // Handle the case where symbolic file is given as an absolute path, ie.
   // /current/work/dir/A
   if (pathname[0] == '/') {
     char cwd[1024] = {0};
     if (getcwd(cwd, 1024)) {
       size_t cwd_len = strlen(cwd);
+
       // strip trailing / if present
       if (cwd_len > 0 && cwd[cwd_len - 1] == '/') {
         cwd[--cwd_len] = '\0';
       }
+
       if (strncmp(pathname, cwd, cwd_len) == 0) {
         if (pathname[cwd_len] != '\0')
           pathname += cwd_len + 1;
@@ -56,19 +57,33 @@ static exe_disk_file_t *__get_sym_file(const char *pathname) {
   }
   char c = pathname[0];
   unsigned i;
-
-  if (c == 0 || pathname[1] != 0)
+  exe_disk_file_t *df = NULL;
+  if (c == 0)
     return NULL;
 
-  for (i=0; i<__exe_fs.n_sym_files; ++i) {
-    if (c == 'A' + (char) i) {
-      exe_disk_file_t *df = &__exe_fs.sym_files[i];
-      if (df->stat->st_ino == 0)
-        return NULL;
-      return df;
-    }
+  if (pathname[1] != 0) { 
+    for (i=0; i<__exe_fs.n_sym_files; ++i) { 
+      if (!strcmp(pathname, __exe_fs.sym_files[i].file_name)) { 
+        df = &__exe_fs.sym_files[i];
+        if (df->stat->st_ino == 0)
+          return NULL;
+        return df;
+      } 
+    } 
   }
-  
+  else {
+    for (i=0; i<__exe_fs.n_sym_files; ++i) { 
+      if (strcmp(&__exe_fs.sym_files[i].file_name[1],"-data")) { 
+        continue;
+      } 
+      if (c == __exe_fs.sym_files[i].file_name[0]) { 
+        df = &__exe_fs.sym_files[i];
+        if (df->stat->st_ino == 0)
+          return NULL;
+        return df;
+      } 
+    } 
+  } 
   return NULL;
 }
 
@@ -801,8 +816,7 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
         dirp->d_ino = df->stat->st_ino;
         dirp->d_reclen = sizeof(*dirp);
         dirp->d_type = IFTODT(df->stat->st_mode);
-        dirp->d_name[0] = 'A' + i;
-        dirp->d_name[1] = '\0';
+        strcpy(dirp->d_name, df->file_name);
 #ifdef _DIRENT_HAVE_D_OFF
         dirp->d_off = (i+1) * sizeof(*dirp);
 #endif

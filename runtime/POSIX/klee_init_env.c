@@ -96,6 +96,8 @@ void klee_init_env(int *argcPtr, char ***argvPtr) {
   char sym_arg_name[6] = "arg";
   unsigned sym_arg_num = 0;
   int k = 0, i;
+  fsym_info fsym[fsym_fd_max] = { 0 };
+  unsigned nfsym = 0;
 
   sym_arg_name[5] = '\0';
 
@@ -108,6 +110,9 @@ usage: (klee_init_env) [options] [program arguments]\n\
                               MAX arguments, each with maximum length N\n\
   -sym-files <NUM> <N>      - Make NUM symbolic files ('A', 'B', 'C', etc.),\n\
                               each with size N\n\
+  -fsym <name> <lenght>     - Make a symbolic file The name parameter\n\
+                              specifies the file name and the lenght parameter specifies the file length\n\
+                              It supports symbolizing up to 10 files.\n\
   -sym-stdin <N>            - Make stdin symbolic with size N.\n\
   -sym-stdout               - Make stdout symbolic.\n\
   -save-all-writes          - Allow write operations to execute as expected\n\
@@ -186,7 +191,21 @@ usage: (klee_init_env) [options] [program arguments]\n\
         __emit_error("The second argument to --sym-files (file size) "
                      "cannot be 0\n");
 
-    } else if (__streq(argv[k], "--sym-stdin") ||
+    } else if (__streq(argv[k], "--fsym") ||
+               __streq(argv[k], "-fsym")) { 
+
+      const char *msg = "-fsym expects two integer arguments "
+                        "<file-name> <file-len>";
+      if (k + 2 >= argc)
+        __emit_error(msg);
+      k++;
+      char* pfile_name = argv[k++];
+      int file_len = __str_to_int(argv[k++], msg);
+      fsym[nfsym].pfile_name = pfile_name;
+      fsym[nfsym].file_len = file_len;
+      nfsym++;
+      
+    }else if (__streq(argv[k], "--sym-stdin") ||
                __streq(argv[k], "-sym-stdin")) {
       const char *msg =
           "--sym-stdin expects one integer argument <sym-stdin-len>";
@@ -231,7 +250,7 @@ usage: (klee_init_env) [options] [program arguments]\n\
   *argcPtr = new_argc;
   *argvPtr = final_argv;
 
-  klee_init_fds(sym_files, sym_file_len, sym_stdin_len, sym_stdout_flag,
+  klee_init_fds(fsym, nfsym, sym_files, sym_file_len, sym_stdin_len, sym_stdout_flag,
                 save_all_writes_flag, fd_fail);
 }
 
