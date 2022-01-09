@@ -227,11 +227,6 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         unsigned int bw = op1->getType()->getPrimitiveSizeInBits();
         assert(bw == op2->getType()->getPrimitiveSizeInBits());
 
-        if(op1->getType()->isVectorTy()) { 
-          klee_warning("Unsupported parameter type.");
-          break;
-        }
-        
         Value *overflow = nullptr;
         Value *result = nullptr;
         Value *saturated = nullptr;
