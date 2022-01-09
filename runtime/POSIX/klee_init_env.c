@@ -112,7 +112,7 @@ usage: (klee_init_env) [options] [program arguments]\n\
                               each with size N\n\
   -fsym <name> <lenght>     - Make a symbolic file The name parameter\n\
                               specifies the file name and the lenght parameter specifies the file length\n\
-                              It supports symbolizing up to 10 files.\n\
+                              It supports symbolizing up to 32 files.\n\
   -sym-stdin <N>            - Make stdin symbolic with size N.\n\
   -sym-stdout               - Make stdout symbolic.\n\
   -save-all-writes          - Allow write operations to execute as expected\n\
