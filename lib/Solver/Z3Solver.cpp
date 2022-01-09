@@ -277,8 +277,9 @@ bool Z3SolverImpl::internalRunSolver(
   constant_arrays_in_query.visit(query.expr);
 
   for (auto const &constant_array : constant_arrays_in_query.results) {
-    assert(builder->constant_array_assertions.count(constant_array) == 1 &&
-           "Constant array found in query, but not handled by Z3Builder");
+    if (builder->constant_array_assertions.count(constant_array) == 0) {
+      return false;
+    }
     for (auto const &arrayIndexValueExpr :
          builder->constant_array_assertions[constant_array]) {
       Z3_solver_assert(builder->ctx, theSolver, arrayIndexValueExpr);
