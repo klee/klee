@@ -60,7 +60,6 @@ static void __create_new_dfile(exe_disk_file_t *dfile, unsigned size,
   strcpy(sname,"-stat");
 
   assert(size);
-  printf("创建文件 : %s\n",name);
   strcpy(dfile->file_name, name);
   dfile->size = size;
   dfile->contents = malloc(dfile->size);
