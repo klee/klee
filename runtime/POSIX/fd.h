@@ -43,6 +43,7 @@
 
 typedef struct {
   char file_name[fsym_name_max];
+  unsigned name_len;
   unsigned size;  /* in bytes */
   char* contents;
   struct stat64* stat;

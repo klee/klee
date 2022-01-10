@@ -61,6 +61,7 @@ static void __create_new_dfile(exe_disk_file_t *dfile, unsigned size,
 
   assert(size);
   strcpy(dfile->file_name, name);
+  dfile->name_len = len;
   dfile->size = size;
   dfile->contents = malloc(dfile->size);
   if (!dfile->contents)

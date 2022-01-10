@@ -411,8 +411,8 @@ void replay_create_files(exe_file_system_t *exe_fs) {
 
   umask(0);
   for (k=0; k < exe_fs->n_sym_files; k++) {
-    char name[256];
-    snprintf(name, sizeof(name), "%s", exe_fs->sym_files[k].file_name);
+    char name[2];
+    snprintf(name, sizeof(name), "%c", 'A' + k);
     create_file(-1, name, &exe_fs->sym_files[k], tmpdir);
   }
 
