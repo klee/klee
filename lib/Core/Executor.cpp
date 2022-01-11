@@ -436,6 +436,7 @@ llvm::cl::bits<PrintDebugInstructionsType> DebugPrintInstructions(
                    "Log all instructions to file "
                    "instructions.txt in format [src, "
                    "inst_id]"),
+
         clEnumValN(FILE_COMPACT, "compact:file",
                    "Log all instructions to file instructions.txt in format "
                    "[inst_id]")),
@@ -953,7 +954,7 @@ void Executor::branch(ExecutionState &state,
     if (OnlyReplaySeeds) {
       for (unsigned i=0; i<N; ++i) {
         if (result[i] && !seedMap.count(result[i])) {
-          terminateStateEarly(*result[i], "Unseeded path during replay", StateTerminationType::Replay);
+          terminateStateEarlyAlgorithm(*result[i], "Unseeded path during replay", StateTerminationType::Replay);
           result[i] = nullptr;
         }
       }
@@ -3167,8 +3168,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     if (iIdx >= vt->getNumElements()) {
       // Out of bounds write
-      terminateStateOnError(state, "Out of bounds write when inserting element",
-                            StateTerminationType::BadVectorAccess);
+      terminateStateOnProgramError(state,
+                                   "Out of bounds write when inserting element",
+                                   StateTerminationType::BadVectorAccess);
       return;
     }
 
@@ -3208,8 +3210,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     if (iIdx >= vt->getNumElements()) {
       // Out of bounds read
-      terminateStateOnError(state, "Out of bounds read when extracting element",
-                            StateTerminationType::BadVectorAccess);
+      terminateStateOnProgramError(state,
+                                   "Out of bounds read when extracting element",
+                                   StateTerminationType::BadVectorAccess);
       return;
     }
 
@@ -3658,17 +3661,18 @@ static bool shouldWriteTest(const ExecutionState &state) {
 
 static std::string terminationTypeFileExtension(StateTerminationType type) {
   std::string ret;
-#define TTYPE(N,I,S) case StateTerminationType::N: ret = (S); break;
-#define MARK(N,I)
+  #undef TTYPE
+  #undef TTMARK
+  #define TTYPE(N,I,S) case StateTerminationType::N: ret = (S); break;
+  #define TTMARK(N,I)
   switch (type) {
-  TERMINATION_TYPES
+    TERMINATION_TYPES
   }
-#undef TTYPE
-#undef MARK
   return ret;
 };
 
 void Executor::terminateStateOnExit(ExecutionState &state) {
+  ++stats::terminationExit;
   if (shouldWriteTest(state) || (AlwaysOutputSeeds && seedMap.count(&state)))
     interpreterHandler->processTestCase(
         state, nullptr,
@@ -3679,20 +3683,35 @@ void Executor::terminateStateOnExit(ExecutionState &state) {
 }
 
 void Executor::terminateStateEarly(ExecutionState &state, const Twine &message,
-                                   StateTerminationType terminationType) {
-  if ((terminationType <= StateTerminationType::EXECERR &&
-       shouldWriteTest(state)) ||
+                                   StateTerminationType reason) {
+  if (reason <= StateTerminationType::EARLY) {
+    assert(reason > StateTerminationType::EXIT);
+    ++stats::terminationEarly;
+  }
+
+  if ((reason <= StateTerminationType::EARLY && shouldWriteTest(state)) ||
       (AlwaysOutputSeeds && seedMap.count(&state))) {
     interpreterHandler->processTestCase(
         state, (message + "\n").str().c_str(),
-        terminationTypeFileExtension(terminationType).c_str());
+        terminationTypeFileExtension(reason).c_str());
   }
 
   terminateState(state);
 }
 
-void Executor::terminateStateOnUserError(ExecutionState &state, const llvm::Twine &message) {
-  terminateStateOnError(state, message, StateTerminationType::User, "");
+void Executor::terminateStateEarlyAlgorithm(ExecutionState &state,
+                                            const llvm::Twine &message,
+                                            StateTerminationType reason) {
+  assert(reason > StateTerminationType::EXECERR &&
+         reason <= StateTerminationType::EARLYALGORITHM);
+  ++stats::terminationEarlyAlgorithm;
+  terminateStateEarly(state, message, reason);
+}
+
+void Executor::terminateStateEarlyUser(ExecutionState &state,
+                                       const llvm::Twine &message) {
+  ++stats::terminationEarlyUser;
+  terminateStateEarly(state, message, StateTerminationType::SilentExit);
 }
 
 const InstructionInfo & Executor::getLastNonKleeInternalInstruction(const ExecutionState &state,
@@ -3793,13 +3812,34 @@ void Executor::terminateStateOnError(ExecutionState &state,
 
 void Executor::terminateStateOnExecError(ExecutionState &state,
                                          const llvm::Twine &message,
-                                         const llvm::Twine &info) {
-  terminateStateOnError(state, message, StateTerminationType::Execution, info);
+                                         StateTerminationType reason) {
+  assert(reason > StateTerminationType::USERERR &&
+         reason <= StateTerminationType::EXECERR);
+  ++stats::terminationExecutionError;
+  terminateStateOnError(state, message, reason, "");
+}
+
+void Executor::terminateStateOnProgramError(ExecutionState &state,
+                                            const llvm::Twine &message,
+                                            StateTerminationType reason,
+                                            const llvm::Twine &info,
+                                            const char *suffix) {
+  assert(reason > StateTerminationType::SOLVERERR &&
+         reason <= StateTerminationType::PROGERR);
+  ++stats::terminationProgramError;
+  terminateStateOnError(state, message, reason, info, suffix);
 }
 
 void Executor::terminateStateOnSolverError(ExecutionState &state,
                                            const llvm::Twine &message) {
+  ++stats::terminationSolverError;
   terminateStateOnError(state, message, StateTerminationType::Solver, "");
+}
+
+void Executor::terminateStateOnUserError(ExecutionState &state,
+                                         const llvm::Twine &message) {
+  ++stats::terminationUserError;
+  terminateStateOnError(state, message, StateTerminationType::User, "");
 }
 
 // XXX shoot me
@@ -3945,14 +3985,15 @@ void Executor::callExternalFunction(ExecutionState &state,
 
   bool success = externalDispatcher->executeCall(callable, target->inst, args);
   if (!success) {
-    terminateStateOnError(state, "failed external call: " + callable->getName(),
-                          StateTerminationType::External);
+    terminateStateOnExecError(state,
+                              "failed external call: " + callable->getName(),
+                              StateTerminationType::External);
     return;
   }
 
   if (!state.addressSpace.copyInConcretes()) {
-    terminateStateOnError(state, "external modified read-only object",
-                          StateTerminationType::External);
+    terminateStateOnExecError(state, "external modified read-only object",
+                              StateTerminationType::External);
     return;
   }
 
@@ -4135,8 +4176,9 @@ void Executor::executeAlloc(ExecutionState &state,
           ExprPPrinter::printOne(info, "  size expr", size);
           info << "  concretization : " << example << "\n";
           info << "  unbound example: " << tmp << "\n";
-          terminateStateOnError(*hugeSize.second, "concretized symbolic size",
-                                StateTerminationType::Model, info.str());
+          terminateStateOnProgramError(*hugeSize.second,
+                                       "concretized symbolic size",
+                                       StateTerminationType::Model, info.str());
         }
       }
     }
@@ -4165,13 +4207,13 @@ void Executor::executeFree(ExecutionState &state,
            ie = rl.end(); it != ie; ++it) {
       const MemoryObject *mo = it->first.first;
       if (mo->isLocal) {
-        terminateStateOnError(*it->second, "free of alloca",
-                              StateTerminationType::Free,
-                              getAddressInfo(*it->second, address));
+        terminateStateOnProgramError(*it->second, "free of alloca",
+                                     StateTerminationType::Free,
+                                     getAddressInfo(*it->second, address));
       } else if (mo->isGlobal) {
-        terminateStateOnError(*it->second, "free of global",
-                              StateTerminationType::Free,
-                              getAddressInfo(*it->second, address));
+        terminateStateOnProgramError(*it->second, "free of global",
+                                     StateTerminationType::Free,
+                                     getAddressInfo(*it->second, address));
       } else {
         it->second->deallocate(mo);
         it->second->addressSpace.unbindObject(mo);
@@ -4215,14 +4257,15 @@ void Executor::resolveExact(ExecutionState &state,
       auto locinfo = unbound->heapAllocator.location_info(ptr, 1);
       if (locinfo == LocationInfo::LI_AllocatedOrQuarantined &&
           locinfo.getBaseAddress() == ptr && name == "free") {
-        terminateStateOnError(*unbound, "memory error: double free",
-                              StateTerminationType::Ptr,
-                              getAddressInfo(*unbound, p));
+        terminateStateOnProgramError(*unbound, "memory error: double free",
+                                     StateTerminationType::Ptr,
+                                     getAddressInfo(*unbound, p));
         return;
       }
     }
-    terminateStateOnError(*unbound, "memory error: invalid pointer: " + name,
-                          StateTerminationType::Ptr, getAddressInfo(*unbound, p));
+    terminateStateOnProgramError(
+        *unbound, "memory error: invalid pointer: " + name,
+        StateTerminationType::Ptr, getAddressInfo(*unbound, p));
   }
 }
 
@@ -4280,8 +4323,8 @@ void Executor::executeMemoryOperation(ExecutionState &state,
       const ObjectState *os = op.second;
       if (isWrite) {
         if (os->readOnly) {
-          terminateStateOnError(state, "memory error: object read only",
-                                StateTerminationType::ReadOnly);
+          terminateStateOnProgramError(state, "memory error: object read only",
+                                       StateTerminationType::ReadOnly);
         } else {
           ObjectState *wos = state.addressSpace.getWriteable(mo, os);
           wos->write(offset, value);
@@ -4324,8 +4367,8 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     if (bound) {
       if (isWrite) {
         if (os->readOnly) {
-          terminateStateOnError(*bound, "memory error: object read only",
-                                StateTerminationType::ReadOnly);
+          terminateStateOnProgramError(*bound, "memory error: object read only",
+                                       StateTerminationType::ReadOnly);
         } else {
           ObjectState *wos = bound->addressSpace.getWriteable(mo, os);
           wos->write(mo->getOffsetExpr(address), value);
@@ -4350,9 +4393,9 @@ void Executor::executeMemoryOperation(ExecutionState &state,
         std::uintptr_t ptrval = CE->getZExtValue();
         auto ptr = reinterpret_cast<void *>(ptrval);
         if (ptrval < MemoryManager::pageSize) {
-          terminateStateOnError(*unbound, "memory error: null page access",
-                                StateTerminationType::Ptr,
-                                getAddressInfo(*unbound, address));
+          terminateStateOnProgramError(
+              *unbound, "memory error: null page access",
+              StateTerminationType::Ptr, getAddressInfo(*unbound, address));
           return;
         } else if (MemoryManager::isDeterministic) {
           using kdalloc::LocationInfo;
@@ -4364,17 +4407,17 @@ void Executor::executeMemoryOperation(ExecutionState &state,
             auto baseExpr = Expr::createPointer(base);
             ObjectPair op;
             if (!unbound->addressSpace.resolveOne(baseExpr, op)) {
-              terminateStateOnError(*unbound, "memory error: use after free",
-                                    StateTerminationType::Ptr,
-                                    getAddressInfo(*unbound, address));
+              terminateStateOnProgramError(
+                  *unbound, "memory error: use after free",
+                  StateTerminationType::Ptr, getAddressInfo(*unbound, address));
               return;
             }
           }
         }
       }
-      terminateStateOnError(*unbound, "memory error: out of bound pointer",
-                            StateTerminationType::Ptr,
-                            getAddressInfo(*unbound, address));
+      terminateStateOnProgramError(
+          *unbound, "memory error: out of bound pointer",
+          StateTerminationType::Ptr, getAddressInfo(*unbound, address));
     }
   }
 }

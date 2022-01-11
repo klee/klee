@@ -75,6 +75,15 @@ Legend = [
     ('BrRealloc', 'number of forks caused by symbolic reallocation size', "BranchesRealloc"),
     ('BrFree', 'number of forks caused by freeing a symbolic pointer', "BranchesFree"),
     ('BrGetVal', 'number of forks caused by user-invoked concretization while seeding', "BranchesGetVal"),
+    # - termination classes
+    ('TermExit', 'number of states that reached end of execution path', "TerminationExit"),
+    ('TermEarly', 'number of early terminated states (e.g. due to memory pressure, state limt)', "TerminationEarly"),
+    ('TermSolverErr', 'number of states terminated due to solver errors', "TerminationSolverError"),
+    ('TermProgrErr', 'number of states terminated due to program errors (e.g. division by zero)', "TerminationProgramError"),
+    ('TermUserErr', 'number of states terminated due to user errors (e.g. misuse of KLEE API)', "TerminationUserError"),
+    ('TermExecErr', 'number of states terminated due to execution errors (e.g. unsupported intrinsics)', "TerminationExecutionError"),
+    ('TermEarlyAlgo', 'number of state terminations required by algorithm (e.g. state merging or replaying)', "TerminationEarlyAlgorithm"),
+    ('TermEarlyUser', 'number of states terminated via klee_silent_exit()', "TerminationEarlyUser"),
     # - debugging
     ('TArrayHash(s)', 'time spent hashing arrays (if KLEE_ARRAY_DEBUG enabled, otherwise -1)', "ArrayHashTime"),
     ('TFork(s)', 'time spent forking states', "ForkTime"),

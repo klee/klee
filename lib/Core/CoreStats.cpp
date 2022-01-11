@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CoreStats.h"
-
 #include "klee/Support/ErrorHandling.h"
 
 
@@ -49,3 +48,10 @@ void stats::incBranchStat(BranchType reason, std::uint32_t value) {
                static_cast<std::uint8_t>(reason));
   }
 }
+
+
+// termination types
+
+#undef TCLASS
+#define TCLASS(Name,I) Statistic stats::termination ## Name("Termination"#Name, "Trm"#Name);
+TERMINATION_CLASSES
