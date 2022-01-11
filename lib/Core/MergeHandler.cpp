@@ -106,7 +106,7 @@ void MergeHandler::addClosedState(ExecutionState *es,
 
     for (auto& mState: cpv) {
       if (mState->merge(*es)) {
-        executor->terminateStateEarly(*es, "merged state.", StateTerminationType::Merge);
+        executor->terminateStateEarlyAlgorithm(*es, "merged state.", StateTerminationType::Merge);
         executor->mergingSearcher->inCloseMerge.erase(es);
         mergedSuccessful = true;
         break;

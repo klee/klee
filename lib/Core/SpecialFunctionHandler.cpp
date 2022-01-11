@@ -286,8 +286,8 @@ void SpecialFunctionHandler::handleAbort(ExecutionState &state,
                                          KInstruction *target,
                                          std::vector<ref<Expr>> &arguments) {
   assert(arguments.size() == 0 && "invalid number of arguments to abort");
-  executor.terminateStateOnError(state, "abort failure",
-                                 StateTerminationType::Abort);
+  executor.terminateStateOnProgramError(state, "abort failure",
+                                        StateTerminationType::Abort);
 }
 
 void SpecialFunctionHandler::handleExit(ExecutionState &state,
@@ -301,14 +301,14 @@ void SpecialFunctionHandler::handleSilentExit(
     ExecutionState &state, KInstruction *target,
     std::vector<ref<Expr>> &arguments) {
   assert(arguments.size() == 1 && "invalid number of arguments to exit");
-  executor.terminateStateEarly(state, "", StateTerminationType::SilentExit);
+  executor.terminateStateEarlyUser(state, "");
 }
 
 void SpecialFunctionHandler::handleAssert(ExecutionState &state,
                                           KInstruction *target,
                                           std::vector<ref<Expr>> &arguments) {
   assert(arguments.size() == 3 && "invalid number of arguments to _assert");
-  executor.terminateStateOnError(
+  executor.terminateStateOnProgramError(
       state, "ASSERTION FAIL: " + readStringAtAddress(state, arguments[0]),
       StateTerminationType::Assert);
 }
@@ -318,7 +318,7 @@ void SpecialFunctionHandler::handleAssertFail(
     std::vector<ref<Expr>> &arguments) {
   assert(arguments.size() == 4 &&
          "invalid number of arguments to __assert_fail");
-  executor.terminateStateOnError(
+  executor.terminateStateOnProgramError(
       state, "ASSERTION FAIL: " + readStringAtAddress(state, arguments[0]),
       StateTerminationType::Assert);
 }
@@ -330,7 +330,7 @@ void SpecialFunctionHandler::handleReportError(
          "invalid number of arguments to klee_report_error");
 
   // arguments[0,1,2,3] are file, line, message, suffix
-  executor.terminateStateOnError(
+  executor.terminateStateOnProgramError(
       state, readStringAtAddress(state, arguments[2]),
       StateTerminationType::ReportError, "",
       readStringAtAddress(state, arguments[3]).c_str());
@@ -759,19 +759,17 @@ void SpecialFunctionHandler::handleCheckMemoryAccess(ExecutionState &state,
     ObjectPair op;
 
     if (!state.addressSpace.resolveOne(cast<ConstantExpr>(address), op)) {
-      executor.terminateStateOnError(state,
-                                     "check_memory_access: memory error",
-                                     StateTerminationType::Ptr,
-                                     executor.getAddressInfo(state, address));
+      executor.terminateStateOnProgramError(
+          state, "check_memory_access: memory error", StateTerminationType::Ptr,
+          executor.getAddressInfo(state, address));
     } else {
       ref<Expr> chk = 
         op.first->getBoundsCheckPointer(address, 
                                         cast<ConstantExpr>(size)->getZExtValue());
       if (!chk->isTrue()) {
-        executor.terminateStateOnError(state,
-                                       "check_memory_access: memory error",
-                                       StateTerminationType::Ptr,
-                                       executor.getAddressInfo(state, address));
+        executor.terminateStateOnProgramError(
+            state, "check_memory_access: memory error",
+            StateTerminationType::Ptr, executor.getAddressInfo(state, address));
       }
     }
   }
