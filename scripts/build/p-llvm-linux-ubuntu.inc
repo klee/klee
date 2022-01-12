@@ -81,7 +81,7 @@ install_binary_artifact_llvm() {
   # Add repository
   codename="$(lsb_release --codename --short)"
   apt_entry="deb http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}${version} main"
-  if [[ ! $(grep -q "${apt_entry}") ]]; then
+  if [[ ! $(grep -rq "${apt_entry}" /etc/apt) ]]; then
     echo  "${apt_entry}" >> /etc/apt/sources.list
     apt update -y
   fi
