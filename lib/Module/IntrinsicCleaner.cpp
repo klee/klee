@@ -49,6 +49,58 @@ bool IntrinsicCleanerPass::runOnModule(Module &M) {
   return dirty;
 }
 
+llvm::Constant* IntrinsicCleanerPass::createConstantVector(llvm::LLVMContext& ctx, 
+  llvm::Value* pConstantVector, unsigned mode) { 
+  llvm::Constant* pConstant = NULL;
+  llvm::ConstantInt* pCInt = NULL;
+  Type* pType = NULL;
+  Type* elementType = NULL;
+  unsigned elementNum = 0;
+  unsigned elementBw = 0;
+  SmallVector<llvm::Constant*, 8> CEltsZero;
+
+  if (!pConstantVector) { 
+    return NULL;
+  } 
+  if (mode < 0 || mode >= 5) { 
+    return NULL;
+  } 
+  
+  pType = pConstantVector->getType();
+  if (!pType) { 
+    return NULL;
+  }
+  elementType = pType->getVectorElementType();
+  if (!elementType) { 
+    return NULL;
+  }
+  elementNum = pType->getVectorNumElements();
+  elementBw = elementType->getPrimitiveSizeInBits();
+  if (!elementNum || !elementBw) { 
+    return NULL;
+  } 
+  if (mode == 0) { 
+    pCInt = llvm::ConstantInt::get(ctx, APInt(elementBw, 0));
+  } 
+  else if (mode == 1) { 
+    pCInt = llvm::ConstantInt::get(ctx, APInt::getMaxValue(elementBw));
+  } 
+  else if (mode == 2) { 
+    pCInt = llvm::ConstantInt::get(ctx, APInt::getMinValue(elementBw));
+  } 
+  else if (mode == 3) { 
+    pCInt = llvm::ConstantInt::get(ctx, APInt::getSignedMaxValue(elementBw));
+  } 
+  else if (mode == 4) { 
+    pCInt = llvm::ConstantInt::get(ctx, APInt::getSignedMinValue(elementBw));
+  } 
+  for (unsigned i = 0; i < elementNum; ++i){
+    CEltsZero.push_back(pCInt);
+  }
+  pConstant = ConstantVector::get(CEltsZero);
+  return pConstant;
+} 
+
 bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
   bool dirty = false;
   LLVMContext &ctx = M.getContext();
