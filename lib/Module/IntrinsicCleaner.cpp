@@ -58,39 +58,41 @@ llvm::Constant* IntrinsicCleanerPass::createConstantVector(llvm::LLVMContext& ct
   unsigned elementNum = 0;
   unsigned elementBw = 0;
   SmallVector<llvm::Constant*, 8> CElts;
+  bool isVectorTy;
 
   pType = constantVector.getType();
-  if (!pType) { 
-    return nullptr;
-  }
+  assert(pType && "Couldn't resolve type");
+
+  isVectorTy = pType->isVectorTy();
+  assert(isVectorTy && "Must be of type vector");
+
   elementType = pType->getVectorElementType();
-  if (!elementType) { 
-    return nullptr;
-  }
+  assert(elementType && "Couldn't resolve elementType");
+
   elementNum = pType->getVectorNumElements();
   elementBw = elementType->getPrimitiveSizeInBits();
-  if (!elementNum || !elementBw) { 
-    return nullptr;
-  } 
-  if (mode == opMode::zeroValue) { 
+
+  switch (mode) { 
+  case opMode::zeroValue:
     pCInt = llvm::ConstantInt::get(ctx, APInt(elementBw, 0));
-  } 
-  else if (mode == opMode::maxValue) { 
+    break;
+  case opMode::maxValue:
     pCInt = llvm::ConstantInt::get(ctx, APInt::getMaxValue(elementBw));
-  } 
-  else if (mode == opMode::minValue) { 
+    break;
+  case opMode::minValue:
     pCInt = llvm::ConstantInt::get(ctx, APInt::getMinValue(elementBw));
-  } 
-  else if (mode == opMode::signedMaxValue) { 
+    break;
+  case opMode::signedMaxValue:
     pCInt = llvm::ConstantInt::get(ctx, APInt::getSignedMaxValue(elementBw));
-  } 
-  else if (mode == opMode::signedMinValue) { 
+    break;
+  case opMode::signedMinValue:
     pCInt = llvm::ConstantInt::get(ctx, APInt::getSignedMinValue(elementBw));
-  } 
-  else{
-    return nullptr;
-  } 
-  for (unsigned i = 0; i < elementNum; ++i){
+    break;
+  default:
+    assert (!"The default case was reached.");
+    break;
+  }
+  for (unsigned i = 0; i < elementNum; ++i) { 
     CElts.push_back(pCInt);
   }
   pConstant = llvm::ConstantVector::get(CElts);

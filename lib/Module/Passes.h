@@ -61,7 +61,7 @@ class IntrinsicCleanerPass : public llvm::ModulePass {
   llvm::IntrinsicLowering *IL;
 
   enum class opMode { 
-    zeroValue = 0, 
+    zeroValue, 
     maxValue, 
     minValue , 
     signedMaxValue, 
