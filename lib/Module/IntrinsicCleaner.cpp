@@ -50,54 +50,50 @@ bool IntrinsicCleanerPass::runOnModule(Module &M) {
 }
 
 llvm::Constant* IntrinsicCleanerPass::createConstantVector(llvm::LLVMContext& ctx, 
-  llvm::Value* pConstantVector, unsigned mode) { 
-  llvm::Constant* pConstant = NULL;
-  llvm::ConstantInt* pCInt = NULL;
-  Type* pType = NULL;
-  Type* elementType = NULL;
+  llvm::Value& constantVector, opMode mode) { 
+  llvm::Constant* pConstant = nullptr;
+  llvm::ConstantInt* pCInt = nullptr;
+  Type* pType = nullptr;
+  Type* elementType = nullptr;
   unsigned elementNum = 0;
   unsigned elementBw = 0;
-  SmallVector<llvm::Constant*, 8> CEltsZero;
+  SmallVector<llvm::Constant*, 8> CElts;
 
-  if (!pConstantVector) { 
-    return NULL;
-  } 
-  if (mode < 0 || mode >= 5) { 
-    return NULL;
-  } 
-  
-  pType = pConstantVector->getType();
+  pType = constantVector.getType();
   if (!pType) { 
-    return NULL;
+    return nullptr;
   }
   elementType = pType->getVectorElementType();
   if (!elementType) { 
-    return NULL;
+    return nullptr;
   }
   elementNum = pType->getVectorNumElements();
   elementBw = elementType->getPrimitiveSizeInBits();
   if (!elementNum || !elementBw) { 
-    return NULL;
+    return nullptr;
   } 
-  if (mode == 0) { 
+  if (mode == opMode::zeroValue) { 
     pCInt = llvm::ConstantInt::get(ctx, APInt(elementBw, 0));
   } 
-  else if (mode == 1) { 
+  else if (mode == opMode::maxValue) { 
     pCInt = llvm::ConstantInt::get(ctx, APInt::getMaxValue(elementBw));
   } 
-  else if (mode == 2) { 
+  else if (mode == opMode::minValue) { 
     pCInt = llvm::ConstantInt::get(ctx, APInt::getMinValue(elementBw));
   } 
-  else if (mode == 3) { 
+  else if (mode == opMode::signedMaxValue) { 
     pCInt = llvm::ConstantInt::get(ctx, APInt::getSignedMaxValue(elementBw));
   } 
-  else if (mode == 4) { 
+  else if (mode == opMode::signedMinValue) { 
     pCInt = llvm::ConstantInt::get(ctx, APInt::getSignedMinValue(elementBw));
   } 
+  else{
+    return nullptr;
+  } 
   for (unsigned i = 0; i < elementNum; ++i){
-    CEltsZero.push_back(pCInt);
+    CElts.push_back(pCInt);
   }
-  pConstant = ConstantVector::get(CEltsZero);
+  pConstant = llvm::ConstantVector::get(CElts);
   return pConstant;
 } 
 
