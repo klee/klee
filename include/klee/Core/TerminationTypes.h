@@ -32,7 +32,10 @@
   TTYPE(Ptr, 16U, "ptr.err")                                                   \
   TTYPE(ReadOnly, 17U, "read_only.err")                                        \
   TTYPE(ReportError, 18U, "report_error.err")                                  \
-  MARK(PROGERR, 18U)                                                           \
+  TTYPE(ImplicitConversion, 19U, "implicit_conversion.err")                    \
+  TTYPE(NullableAttribute, 20U, "nullable_attribute.err")                      \
+  TTYPE(UndefinedBehavior, 21U, "undefined_behavior.err")                      \
+  MARK(PROGERR, 21U)                                                           \
   TTYPE(User, 23U, "user.err")                                                 \
   MARK(USERERR, 23U)                                                           \
   TTYPE(Execution, 25U, "exec.err")                                            \
