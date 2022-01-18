@@ -30,13 +30,101 @@ static const char *ConvertTypeToString(ErrorType Type) {
   //  UNREACHABLE("unknown ErrorType!");
 }
 
-__attribute__((noreturn)) void
-report_error(const char *msg, const char *suffix = "undefined_behavior.err") {
+__attribute__((noreturn)) void report_error(const char *msg,
+                                            const char *suffix) {
   klee_report_error(__FILE__, __LINE__, msg, suffix);
 }
 
+const char *get_suffix(ErrorType ET) {
+  switch (ET) {
+  case GenericUB:
+    return "undefined_behavior.err";
+  case NullPointerUse:
+#if LLVM_VERSION_MAJOR >= 11
+  case NullPointerUseWithNullability:
+#endif
+#if LLVM_VERSION_MAJOR >= 10
+  case NullptrWithOffset:
+  case NullptrWithNonZeroOffset:
+  case NullptrAfterNonZeroOffset:
+#endif
+#if LLVM_VERSION_MAJOR >= 5
+  case PointerOverflow:
+#endif
+  case MisalignedPointerUse:
+#if LLVM_VERSION_MAJOR >= 8
+  case AlignmentAssumption:
+#endif
+    return "ptr.err";
+  case InsufficientObjectSize:
+    return "undefined_behavior.err";
+  case SignedIntegerOverflow:
+  case UnsignedIntegerOverflow:
+    return "overflow.err";
+  case IntegerDivideByZero:
+  case FloatDivideByZero:
+    return "div.err";
+#if LLVM_VERSION_MAJOR >= 6
+  case InvalidBuiltin:
+    return "undefined_behavior.err";
+#endif
+#if LLVM_VERSION_MAJOR >= 11
+  case InvalidObjCCast:
+    return "undefined_behavior.err";
+#endif
+#if LLVM_VERSION_MAJOR >= 8
+  case ImplicitUnsignedIntegerTruncation:
+  case ImplicitSignedIntegerTruncation:
+    return "implicit_conversion.err";
+#elif LLVM_VERSION_MAJOR >= 7
+  case ImplicitIntegerTruncation:
+    return "implicit_conversion.err";
+#endif
+#if LLVM_VERSION_MAJOR >= 8
+  case ImplicitIntegerSignChange:
+  case ImplicitSignedIntegerTruncationOrSignChange:
+    return "implicit_conversion.err";
+#endif
+  case InvalidShiftBase:
+  case InvalidShiftExponent:
+    return "overflow.err";
+  case OutOfBoundsIndex:
+    return "ptr.err";
+  case UnreachableCall:
+    return "undefined_behavior.err";
+  case MissingReturn:
+    return "undefined_behavior.err";
+  case NonPositiveVLAIndex:
+    return "ptr.err";
+  case FloatCastOverflow:
+    return "overflow.err";
+  case InvalidBoolLoad:
+    return "undefined_behavior.err";
+  case InvalidEnumLoad:
+    return "undefined_behavior.err";
+  case FunctionTypeMismatch:
+    // This check is unsupported
+    return "exec.err";
+  case InvalidNullReturn:
+#if LLVM_VERSION_MAJOR >= 11
+  case InvalidNullReturnWithNullability:
+#endif
+  case InvalidNullArgument:
+#if LLVM_VERSION_MAJOR >= 11
+  case InvalidNullArgumentWithNullability:
+#endif
+    return "nullable_attribute.err";
+  case DynamicTypeMismatch:
+  case CFIBadType:
+    // These checks are unsupported
+    return "exec.err";
+  default:
+    // In case something is not modelled
+    return "exec.err";
+  }
+}
 __attribute__((noreturn)) void report_error_type(ErrorType ET) {
-  report_error(ConvertTypeToString(ET));
+  report_error(ConvertTypeToString(ET), get_suffix(ET));
 }
 
 /// Situations in which we might emit a check for the suitability of a
@@ -195,7 +283,7 @@ static void handleDivremOverflowImpl(OverflowData *Data, ValueHandle /*LHS*/,
                                      ValueHandle /*RHS*/) {
   ErrorType ET;
   if (Data->Type.isIntegerTy())
-    report_error("integer division overflow");
+    report_error("integer division overflow", "overflow.err");
   else
     ET = ErrorType::FloatDivideByZero;
   report_error_type(ET);
@@ -216,7 +304,7 @@ extern "C" void __ubsan_handle_divrem_overflow_abort(OverflowData *Data,
 static void handleShiftOutOfBoundsImpl(ShiftOutOfBoundsData * /*Data*/,
                                        ValueHandle /*LHS*/,
                                        ValueHandle /*RHS*/) {
-  report_error("shift out of bounds");
+  report_error("shift out of bounds", "overflow.err");
 }
 
 extern "C" void __ubsan_handle_shift_out_of_bounds(ShiftOutOfBoundsData *Data,
@@ -298,7 +386,7 @@ extern "C" void __ubsan_handle_float_cast_overflow_abort(void *Data,
 
 static void handleLoadInvalidValue(InvalidValueData * /*Data*/,
                                    ValueHandle /*Val*/) {
-  report_error("load invalid value");
+  report_error("load invalid value", "undefined_behavior.err");
 }
 
 extern "C" void __ubsan_handle_load_invalid_value(InvalidValueData *Data,

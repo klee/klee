@@ -292,6 +292,12 @@ cl::list<StateTerminationType> ExitOnErrorType(
                    "Write to read-only memory"),
         clEnumValN(StateTerminationType::ReportError, "ReportError",
                    "klee_report_error called"),
+        clEnumValN(StateTerminationType::ImplicitConversion, "ImplicitConversion",
+                   "Undefined implicit conversion detected"),
+        clEnumValN(StateTerminationType::NullableAttribute, "NullableAttribute",
+                   "Violation of nullable attribute detected"),
+        clEnumValN(StateTerminationType::UndefinedBehavior, "UndefinedBehavior",
+                   "Undefined behavior detected"),
         clEnumValN(StateTerminationType::User, "User",
                    "Wrong klee_* functions invocation")
         KLEE_LLVM_CL_VAL_END),
