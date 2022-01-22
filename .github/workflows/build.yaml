@@ -28,7 +28,7 @@ env:
   UCLIBC_VERSION: klee_uclibc_v1.2
   USE_TCMALLOC: 1
   USE_LIBCXX: 1
-  Z3_VERSION: 4.8.4
+  Z3_VERSION: 4.8.14
 
 jobs:
   Linux:
