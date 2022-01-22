@@ -43,7 +43,7 @@ config.have_msan = True if @IS_MSAN_BUILD@ == 1 else False
 
 # Add sanitizer list
 config.environment['LSAN_OPTIONS'] = "suppressions=@KLEE_UTILS_DIR@/sanitizers/lsan.txt"
-config.environment['UBSAN_OPTIONS'] = "suppressions=@KLEE_UTILS_DIR@/sanitizers/ubsan.txt"
+config.environment['UBSAN_OPTIONS'] = "print_stacktrace=1,suppressions=@KLEE_UTILS_DIR@/sanitizers/ubsan.txt"
 
 # Current target
 config.target_triple = "@TARGET_TRIPLE@"
