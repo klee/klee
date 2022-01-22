@@ -3881,6 +3881,10 @@ void Executor::callExternalFunction(ExecutionState &state,
     } else {
       ref<Expr> arg = toUnique(state, *ai);
       if (ConstantExpr *ce = dyn_cast<ConstantExpr>(arg)) {
+        // fp80 must be aligned to 16 according to the System V AMD 64 ABI
+        if (ce->getWidth() == Expr::Fl80 && wordIndex & 0x01)
+          wordIndex++;
+
         // XXX kick toMemory functions from here
         ce->toMemory(&args[wordIndex]);
         wordIndex += (ce->getWidth()+63)/64;
