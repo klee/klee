@@ -70,7 +70,8 @@ setup_variables_sanitizer() {
     # Undefined Behaviour Sanitizer
     if [ "${sanitizer}" == "undefined" ]; then
       echo "Using UBSan"
-      flags=("-fsanitize=undefined" "-fno-omit-frame-pointer" "-g")
+      flags=("-fsanitize=undefined" "-fno-omit-frame-pointer" "-g"
+             "-fno-sanitize-recover=undefined")
       SANITIZER_CXX_FLAGS+=("${flags[@]}")
       SANITIZER_C_FLAGS+=("${flags[@]}")
       SANITIZER_LD_FLAGS+=("${flags[@]}")
