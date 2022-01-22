@@ -302,6 +302,11 @@ Function *ExternalDispatcherImpl::createDispatcher(Function *target,
     // functions.
     auto argTy =
         (i < FTy->getNumParams() ? FTy->getParamType(i) : (*ai)->getType());
+
+    // fp80 must be aligned to 16 according to the System V AMD 64 ABI
+    if (argTy->isX86_FP80Ty() && idx & 0x01)
+      idx++;
+
     auto argI64p =
         Builder.CreateGEP(argI64s->getType()->getPointerElementType(), argI64s,
                           ConstantInt::get(Type::getInt32Ty(ctx), idx));
