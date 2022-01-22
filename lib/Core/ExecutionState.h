@@ -175,7 +175,7 @@ public:
   // Overall state of the state - Data specific
 
   /// @brief Exploration depth, i.e., number of times KLEE branched for this state
-  std::uint32_t depth;
+  std::uint32_t depth = 0;
 
   /// @brief Address space used by this state (e.g. Global and Heap)
   AddressSpace addressSpace;
@@ -219,11 +219,11 @@ public:
   std::vector<ref<MergeHandler>> openMergeStack;
 
   /// @brief The numbers of times this state has run through Executor::stepInstruction
-  std::uint64_t steppedInstructions;
+  std::uint64_t steppedInstructions = 0;
 
   /// @brief Counts how many instructions were executed since the last new
   /// instruction was covered.
-  std::uint32_t instsSinceCovNew;
+  std::uint32_t instsSinceCovNew = 0;
 
   /// @brief Keep track of unwinding state while unwinding, otherwise empty
   std::unique_ptr<UnwindingInformation> unwindingInformation;
@@ -232,19 +232,19 @@ public:
   static std::uint32_t nextID;
 
   /// @brief the state id
-  std::uint32_t id {0};
+  std::uint32_t id = 0;
 
   /// @brief Whether a new instruction was covered in this state
-  bool coveredNew;
+  bool coveredNew = false;
 
   /// @brief Disables forking for this state. Set by user code
-  bool forkDisabled;
+  bool forkDisabled = false;
 
 public:
-  #ifdef KLEE_UNITTEST
+#ifdef KLEE_UNITTEST
   // provide this function only in the context of unittests
-  ExecutionState(){}
-  #endif
+  ExecutionState() = default;
+#endif
   // only to create the initial state
   explicit ExecutionState(KFunction *kf);
   // no copy assignment, use copy constructor
