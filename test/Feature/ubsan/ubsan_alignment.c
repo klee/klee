@@ -1,12 +1,12 @@
 // RUN: %clang %s -fsanitize=alignment -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out %t.bc 2>&1 | FileCheck %s
+// RUN: %klee --output-dir=%t.klee-out %t.bc 2>&1 | FileCheck %s %c_prefixes_8
 
 #include "klee/klee.h"
 #include <stdlib.h>
 
 char *passthrough(__attribute__((align_value(0x8000))) char *x) {
-  // CHECK: ubsan_alignment.c:[[@LINE+1]]: assumption of 32768 byte alignment failed
+  // CHECK-8: ubsan_alignment.c:[[@LINE+1]]: assumption of 32768 byte alignment failed
   return x;
 }
 

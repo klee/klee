@@ -25,6 +25,11 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 
+#ifdef __APPLE__
+/* macOS does not provide mempcpy in string.h */
+void *mempcpy(void *destaddr, void const *srcaddr, size_t len);
+#endif
+
 exe_file_system_t __exe_fs;
 
 /* NOTE: It is important that these are statically initialized

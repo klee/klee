@@ -12,7 +12,7 @@ env:
     ###########################################################################
 
     # Check a subset of the matrix of:
-    #   LLVM  : {3.8, 3.9, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0}
+    #   LLVM  : {5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0}
     #   SOLVERS : {Z3, STP, STP:Z3, metaSMT}
     #   STP_VERSION   : {2.3.3, master}
     #   METASMT_VERSION : {v4.rc1}
@@ -73,15 +73,6 @@ jobs:
 
     - name: "LLVM 5"
       env: LLVM_VERSION=5.0
-
-    - name: "LLVM 4"
-      env: LLVM_VERSION=4.0
-
-    - name: "LLVM 3.9"
-      env: LLVM_VERSION=3.9
-
-    - name: "LLVM 3.8"
-      env: LLVM_VERSION=3.8 USE_LIBCXX=0
 
     # Sanitizer builds. Do unoptimized build otherwise the optimizer might remove problematic code
     - name: "ASan"

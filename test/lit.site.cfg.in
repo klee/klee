@@ -11,9 +11,32 @@ config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
 
 config.libcxx_include_dir = "@KLEE_LIBCXX_INCLUDE_DIR@"
 
+config.undefined_sanitizer = ""
+if @IS_UBSAN_BUILD@:
+  config.undefined_sanitizer = "-lubsan -fsanitize-link-c++-runtime -lstdc++"
+
 # Needed to check if a hack needs to be applied
 config.llvm_version_major = "@LLVM_VERSION_MAJOR@"
 config.llvm_version_minor = "@LLVM_VERSION_MINOR@"
+if @LLVM_VERSION_MAJOR@ >= 10:
+  config.c_prefixes_10 = "--check-prefixes=CHECK-C-10,CHECK-10"
+else:
+  config.c_prefixes_10 = "--check-prefixes=CHECK"
+
+if @LLVM_VERSION_MAJOR@ >= 10:
+  config.cpp_prefixes_10 = "--check-prefixes=CHECK-10"
+else:
+  config.cpp_prefixes_10 = "--check-prefixes=CHECK"
+
+if @LLVM_VERSION_MAJOR@ >= 8:
+  config.c_prefixes_8 = "--check-prefixes=CHECK,CHECK-8"
+else:
+  config.c_prefixes_8 = "--check-prefixes=CHECK"
+
+if @LLVM_VERSION_MAJOR@ >= 6:
+  config.c_prefixes_6 = "--check-prefixes=CHECK-6"
+else:
+  config.c_prefixes_6 = "--check-prefixes=CHECK"
 
 # Compilers
 config.clang = "@LLVMCC@"

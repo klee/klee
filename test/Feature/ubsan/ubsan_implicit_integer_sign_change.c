@@ -1,3 +1,4 @@
+// REQUIRES: geq-llvm-8.0
 // RUN: %clang %s -fsanitize=implicit-integer-sign-change -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out %t.bc 2>&1 | FileCheck %s

@@ -1045,7 +1045,7 @@ static const char *modelledExternals[] = {
         "klee_sqrt_long_double",
         "klee_abs_float",
         "klee_abs_double",
-        "klee_abs_long_double"
+        "klee_abs_long_double",
   "__ubsan_handle_divrem_overflow_abort",
   "__ubsan_handle_shift_out_of_bounds",
   "__ubsan_handle_shift_out_of_bounds_abort",

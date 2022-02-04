@@ -1,10 +1,10 @@
 // RUN: %clang %s -fsanitize=pointer-overflow -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out %t.bc 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-C
+// RUN: %klee --output-dir=%t.klee-out %t.bc 2>&1 | FileCheck %s %c_prefixes_10
 
 // RUN: %clangxx %s -std=c++11 -fsanitize=pointer-overflow -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out %t.bc 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-CPP
+// RUN: %klee --output-dir=%t.klee-out %t.bc 2>&1 | FileCheck %s %cpp_prefixes_10
 
 #include "klee/klee.h"
 #include <stdio.h>
@@ -21,17 +21,19 @@ int main() {
   char *base3_ptr = (char *)base3;
   volatile char *result_ptr;
 
-  // CHECK-C: ubsan_pointer_overflow.c:[[@LINE+1]]: applying zero offset to null pointer
+  // CHECK-C-10: ubsan_pointer_overflow.c:[[@LINE+1]]: applying zero offset to null pointer
   result_ptr = base1_ptr + 0;
 
-  // CHECK: ubsan_pointer_overflow.c:[[@LINE+1]]: applying non-zero offset 1 to null pointer
+  // CHECK-10: ubsan_pointer_overflow.c:[[@LINE+2]]: applying non-zero offset 1 to null pointer
+  // CHECK: ubsan_pointer_overflow.c:[[@LINE+1]]: applying non-zero offset to non-null pointer 0x{{.*}} produced null pointer
   result_ptr = base2_ptr + 1;
 
-  // CHECK: ubsan_pointer_overflow.c:[[@LINE+1]]: applying non-zero offset to non-null pointer 0x{{.*}} produced null pointer
+  // CHECK-10: ubsan_pointer_overflow.c:[[@LINE+1]]: applying non-zero offset to non-null pointer 0x{{.*}} produced null pointer
   result_ptr = base3_ptr - 1;
 
   char c;
   unsigned long long offset = -1;
+  // CHECK-10: ubsan_pointer_overflow.c:[[@LINE+2]]: pointer arithmetic with base 0x{{.*}} overflowed to 0x{{.*}}
   // CHECK: ubsan_pointer_overflow.c:[[@LINE+1]]: pointer arithmetic with base 0x{{.*}} overflowed to 0x{{.*}}
   result_ptr = &c + offset;
 

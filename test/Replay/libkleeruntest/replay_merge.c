@@ -5,7 +5,7 @@
 // CHECK: generated tests = 2{{$}}
 
 // Now try to replay with libkleeRuntest
-// RUN: %cc %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner
+// RUN: %cc %undefined_sanitizer %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner
 // RUN: env KTEST_FILE=%t.klee-out/test000001.ktest %t_runner > %t.txt
 // RUN: env KTEST_FILE=%t.klee-out/test000002.ktest %t_runner >> %t.txt
 // RUN: FileCheck --check-prefix=REPLAY --input-file %t.txt %s

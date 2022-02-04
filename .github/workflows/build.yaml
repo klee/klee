@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: master
+    branches: utbot-main
   push:
-    branches: master
+    branches: utbot-main
 
 # Defaults for building KLEE
 env:
@@ -43,12 +43,9 @@ jobs:
                 "LLVM 7",
                 "LLVM 6",
                 "LLVM 5",
-                "LLVM 4",
-                "LLVM 3.9",
-                "LLVM 3.8",
-                "ASan",
+                #"ASan",
                 "UBSan",
-                "MSan",
+                #"MSan",
                 "Z3 only",
                 "metaSMT STP",
                 "metaSMT Boolector",
@@ -56,7 +53,7 @@ jobs:
                 "Latest klee-uclibc",
                 "Asserts enabled",
                 "No TCMalloc, optimised runtime",
-            ]
+              ]
         include:
           - name: "LLVM 11"
             env:
@@ -79,33 +76,23 @@ jobs:
           - name: "LLVM 5"
             env:
               LLVM_VERSION: 5
-          - name: "LLVM 4"
-            env:
-              LLVM_VERSION: 4
-          - name: "LLVM 3.9"
-            env:
-              LLVM_VERSION: 3.9
-          - name: "LLVM 3.8"
-            env:
-              LLVM_VERSION: 3.8
-              USE_LIBCXX: 0
           # Sanitizer builds. Do unoptimized build otherwise the optimizer might remove problematic code
-          - name: "ASan"
-            env:
-              SANITIZER_BUILD: address
-              ENABLE_OPTIMIZED: 0
-              USE_TCMALLOC: 0
+#          - name: "ASan"
+#            env:
+#              SANITIZER_BUILD: address
+#              ENABLE_OPTIMIZED: 0
+#              USE_TCMALLOC: 0
           - name: "UBSan"
             env:
               SANITIZER_BUILD: undefined
               ENABLE_OPTIMIZED: 0
               USE_TCMALLOC: 0
-          - name: "MSan"
-            env:
-              SANITIZER_BUILD: memory
-              ENABLE_OPTIMIZED: 0
-              USE_TCMALLOC: 0
-              SOLVERS: STP
+#          - name: "MSan"
+#            env:
+#              SANITIZER_BUILD: memory
+#              ENABLE_OPTIMIZED: 0
+#              USE_TCMALLOC: 0
+#              SOLVERS: STP
             # Test just using Z3 only
           - name: "Z3 only"
             env:
