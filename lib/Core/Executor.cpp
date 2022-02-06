@@ -1172,7 +1172,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
     }
 
     return StatePair(&current, nullptr);
-  } else if (res==Solver::False) {
+  } else if (res == Solver::False) {
     if (!isInternal) {
       if (pathWriter) {
         current.pathOS << "0";
@@ -2387,7 +2387,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
           InstructionInfo[0].find(fileNameActual) != std::string::npos) {
         state.fileLocation = InstructionInfo;
         printSExpr = true;
-
+        klee_message("\tBranch Hit\n");
       } else {
         printSExpr = false;
       }
