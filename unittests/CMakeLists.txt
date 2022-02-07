@@ -105,6 +105,8 @@ else()
 
       # add includes for LLVM's modifications
       target_include_directories(gtest BEFORE PRIVATE ${LLVM_INCLUDE_DIRS})
+      # we cannot disable gtest_main, but will not use it later
+      target_include_directories(gtest_main BEFORE PRIVATE ${LLVM_INCLUDE_DIRS})
     else()
       # try to find Google Test, as GTEST_SRC_DIR is not manually specified
       find_path(GTEST_SRC_DIR
