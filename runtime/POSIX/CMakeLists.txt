@@ -17,6 +17,7 @@ set(SRC_FILES
         klee_init_env.c
         misc.c
         selinux.c
+        stubs.c
         )
 
 # Build it

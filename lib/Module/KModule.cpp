@@ -388,8 +388,10 @@ static void splitByCall(Function *function) {
   BasicBlock **blocks = new BasicBlock*[n];
   unsigned i = 0;
   for (llvm::Function::iterator bbit = function->begin(), bbie = function->end();
-       bbit != bbie; bbit++, i++)
+       bbit != bbie; bbit++, i++) {
     blocks[i] = &*bbit;
+  }
+
   for (unsigned j = 0; j < n; j++) {
     BasicBlock *fbb = blocks[j];
     llvm::BasicBlock::iterator it = fbb->begin();
@@ -416,6 +418,8 @@ static void splitByCall(Function *function) {
       }
     }
   }
+
+  delete [] blocks;
 }
 
 void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
@@ -685,7 +689,7 @@ KFunction::KFunction(llvm::Function *_function,
       instructionMap[instructions[n]->inst] = instructions[n];
     }
     blockMap[&*bbit] = kb;
-    blocks.push_back(std::move(std::unique_ptr<KBlock>(kb)));
+    blocks.push_back(std::unique_ptr<KBlock>(kb));
     if (isa<ReturnInst>(kb->instructions[kb->numInstructions - 1]->inst))
       finalKBlocks.push_back(kb);
   }
@@ -783,5 +787,3 @@ KCallBlock::KCallBlock(KFunction *_kfunction, llvm::BasicBlock *block, KModule *
   : KBlock::KBlock(_kfunction, block, km, registerMap, reg2inst, instructionsKF),
     kcallInstruction(this->instructions[0]),
     calledFunction(_calledFunction) {}
-
-KBlock::~KBlock() {}

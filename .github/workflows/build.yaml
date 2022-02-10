@@ -43,7 +43,7 @@ jobs:
                 "LLVM 7",
                 "LLVM 6",
                 "LLVM 5",
-                #"ASan",
+                "ASan",
                 "UBSan",
                 #"MSan",
                 "Z3 only",
@@ -77,11 +77,11 @@ jobs:
             env:
               LLVM_VERSION: 5
           # Sanitizer builds. Do unoptimized build otherwise the optimizer might remove problematic code
-#          - name: "ASan"
-#            env:
-#              SANITIZER_BUILD: address
-#              ENABLE_OPTIMIZED: 0
-#              USE_TCMALLOC: 0
+          - name: "ASan"
+            env:
+              SANITIZER_BUILD: address
+              ENABLE_OPTIMIZED: 0
+              USE_TCMALLOC: 0
           - name: "UBSan"
             env:
               SANITIZER_BUILD: undefined

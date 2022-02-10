@@ -105,15 +105,10 @@ class Executor : public Interpreter {
   friend klee::Searcher *klee::constructUserSearcher(Executor &executor);
 
 public:
-  typedef std::pair<ExecutionState*,ExecutionState*> StatePair;
-  typedef std::pair<llvm::BasicBlock*,llvm::BasicBlock*> BasicBlockPair;
+  typedef std::pair<ExecutionState * ,ExecutionState *> StatePair;
   typedef std::map<llvm::BasicBlock*, std::set<ExecutionState*, ExecutionStateIDCompare> > ExecutedBlock;
   typedef std::map<llvm::BasicBlock*, std::unordered_set<llvm::BasicBlock*> > VisitedBlock;
   struct ExecutionBlockResult {
-    ExecutedBlock redundantStates;
-    ExecutedBlock completedStates;
-    ExecutedBlock pausedStates;
-    ExecutedBlock erroneousStates;
     VisitedBlock history;
   };
   typedef std::map<llvm::BasicBlock*, ExecutionBlockResult> ExecutionResult;
@@ -158,6 +153,7 @@ private:
   TimingSolver *solver;
   MemoryManager *memory;
   std::set<ExecutionState*, ExecutionStateIDCompare> states;
+  std::set<ExecutionState*, ExecutionStateIDCompare> pausedStates;
   StatsTracker *statsTracker;
   TreeStreamWriter *pathWriter, *symPathWriter;
   SpecialFunctionHandler *specialFunctionHandler;
@@ -260,14 +256,11 @@ private:
 
   ExecutionResult results;
 
-  void addCompletedResult(ExecutionState &state);
-  void addErroneousResult(ExecutionState &state);
   void addHistoryResult(ExecutionState &state);
 
   void executeInstruction(ExecutionState &state, KInstruction *ki);
   void targetedRun(ExecutionState &initialState, KBlock *target);
   void guidedRun(ExecutionState &initialState);
-  void boundedRun(ExecutionState &initialState, unsigned bound);
 
   void seed(ExecutionState &initialState);
   void run(ExecutionState &initialState);
@@ -496,7 +489,6 @@ private:
   void pauseState(ExecutionState &state);
   // unpause state
   void unpauseState(ExecutionState &state);
-  void unpauseStates(std::vector<ExecutionState *> &states);
   // call exit handler and terminate state
   void terminateStateOnExit(ExecutionState &state);
   // call error handler and terminate state
@@ -646,9 +638,6 @@ public:
   void executeStep(ExecutionState &state);
   bool tryBoundedExecuteStep(ExecutionState &state, unsigned bound);
   KBlock* calculateTarget(ExecutionState &state);
-  void calculateTargetedStates(llvm::BasicBlock *initialBlock,
-                               ExecutedBlock &pausedStates,
-                               std::map<KBlock*, std::vector<ExecutionState*>> &targetedStates);
   bool isGEPExpr(ref<Expr> expr);
 };
   
