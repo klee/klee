@@ -45,7 +45,7 @@ jobs:
                 "LLVM 5",
                 "ASan",
                 "UBSan",
-                #"MSan",
+                "MSan",
                 "Z3 only",
                 "metaSMT STP",
                 "metaSMT Boolector",
@@ -53,7 +53,7 @@ jobs:
                 "Latest klee-uclibc",
                 "Asserts enabled",
                 "No TCMalloc, optimised runtime",
-              ]
+            ]
         include:
           - name: "LLVM 11"
             env:
@@ -87,12 +87,12 @@ jobs:
               SANITIZER_BUILD: undefined
               ENABLE_OPTIMIZED: 0
               USE_TCMALLOC: 0
-#          - name: "MSan"
-#            env:
-#              SANITIZER_BUILD: memory
-#              ENABLE_OPTIMIZED: 0
-#              USE_TCMALLOC: 0
-#              SOLVERS: STP
+          - name: "MSan"
+            env:
+              SANITIZER_BUILD: memory
+              ENABLE_OPTIMIZED: 0
+              USE_TCMALLOC: 0
+              SOLVERS: STP
             # Test just using Z3 only
           - name: "Z3 only"
             env:
