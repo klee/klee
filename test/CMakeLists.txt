@@ -28,10 +28,16 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   set(NATIVE_CXX "${NATIVE_CXX} -isysroot ${MAC_OS_SDK_PATH}")
 endif()
 
+if (NOT KLEE_UCLIBC_PATH STREQUAL "")
+  set(SUPPORT_KLEE_UCLIBC 1)
+else()
+  set(SUPPORT_KLEE_UCLIBC 0)
+endif()
+
 # FIXME: Do this to avoid changing the template file that
 # is shared by both build systems.
 if (ENABLE_POSIX_RUNTIME)
-  if (ENABLE_KLEE_UCLIBC)
+  if (NOT KLEE_UCLIBC_PATH STREQUAL "")
     set(ENABLE_POSIX_RUNTIME 1)
   else()
     message(AUTHOR_WARNING

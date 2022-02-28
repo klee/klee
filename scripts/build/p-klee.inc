@@ -34,13 +34,11 @@ build_klee() {
 
   if [ "${UCLIBC_VERSION}" != "0" ]; then
     CMAKE_ARGUMENTS+=(
-      "-DENABLE_KLEE_UCLIBC=TRUE"
       "-DKLEE_UCLIBC_PATH=${BASE}/klee-uclibc-${LLVM_VERSION_SHORT}"
       "-DENABLE_POSIX_RUNTIME=TRUE"
     )
   else
     CMAKE_ARGUMENTS+=(
-      "-DENABLE_KLEE_UCLIBC=FALSE"
       "-DENABLE_POSIX_RUNTIME=FALSE"
     )
   fi
