@@ -507,11 +507,6 @@ file(MAKE_DIRECTORY ${KLEE_RUNTIME_DIRECTORY})
 option(ENABLE_POSIX_RUNTIME "Enable KLEE's POSIX runtime" OFF)
 if (ENABLE_POSIX_RUNTIME)
   message(STATUS "POSIX runtime enabled")
-  if (NOT ENABLE_KLEE_UCLIBC)
-    message(WARNING "Enabling POSIX runtime without klee-uclibc support."
-      "The runtime might not work without it. Pass `-DENABLE_KLEE_UCLIBC=ON`"
-      " to enable klee-uclibc support.")
-  endif()
 else()
   message(STATUS "POSIX runtime disabled")
 endif()
@@ -519,38 +514,25 @@ endif()
 ################################################################################
 # KLEE uclibc support
 ################################################################################
-option(ENABLE_KLEE_UCLIBC "Enable support for klee-uclibc" OFF)
-if (ENABLE_KLEE_UCLIBC)
-  message(STATUS "klee-uclibc support enabled")
-  set(SUPPORT_KLEE_UCLIBC 1) # For config.h
-  set(KLEE_UCLIBC_PATH "" CACHE PATH "Path to klee-uclibc root directory")
-  if (NOT IS_DIRECTORY "${KLEE_UCLIBC_PATH}")
-    message(FATAL_ERROR
-      "KLEE_UCLIBC_PATH (\"${KLEE_UCLIBC_PATH}\") is not a valid directory.\n"
-      "Try passing -DKLEE_UCLIBC_PATH=<path> to cmake where <path> is the path"
-      " to the root of the klee-uclibc directory.")
-  endif()
-
+set(KLEE_UCLIBC_PATH "" CACHE PATH "Path to klee-uclibc root directory")
+set(KLEE_UCLIBC_BCA_NAME "klee-uclibc.bca")
+list(APPEND KLEE_COMPONENT_CXX_DEFINES
+    -DKLEE_UCLIBC_BCA_NAME=\"${KLEE_UCLIBC_BCA_NAME}\")
+if (NOT KLEE_UCLIBC_PATH STREQUAL "")
   # Find the C library bitcode archive
-  set(KLEE_UCLIBC_BCA_NAME "klee-uclibc.bca")
   set(KLEE_UCLIBC_C_BCA "${KLEE_UCLIBC_PATH}/lib/libc.a")
   if (NOT EXISTS "${KLEE_UCLIBC_C_BCA}")
     message(FATAL_ERROR
-      "klee-uclibc library not found at \"${KLEE_UCLIBC_C_BCA}\"")
+      "klee-uclibc library not found at \"${KLEE_UCLIBC_C_BCA}\". Set KLEE_UCLIBC_PATH to klee-uclibc root directory or empty string.")
   endif()
   message(STATUS "Found klee-uclibc library: \"${KLEE_UCLIBC_C_BCA}\"")
-
   # Copy KLEE_UCLIBC_C_BCA so KLEE can find it where it is expected.
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy
     "${KLEE_UCLIBC_C_BCA}"
     "${KLEE_RUNTIME_DIRECTORY}/${KLEE_UCLIBC_BCA_NAME}"
   )
-  list(APPEND KLEE_COMPONENT_CXX_DEFINES
-    -DKLEE_UCLIBC_BCA_NAME=\"${KLEE_UCLIBC_BCA_NAME}\")
-
 else()
-  message(STATUS "klee-uclibc support disabled")
-  set(SUPPORT_KLEE_UCLIBC 0) # For config.h
+  message(STATUS "Skipping copying of klee-uclibc runtime")
 endif()
 
 ################################################################################

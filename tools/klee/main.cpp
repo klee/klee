@@ -1026,13 +1026,6 @@ static void halt_via_gdb(int pid) {
     perror("system");
 }
 
-#ifndef SUPPORT_KLEE_UCLIBC
-static void
-linkWithUclibc(StringRef libDir, std::string opt_suffix,
-               std::vector<std::unique_ptr<llvm::Module>> &modules) {
-  klee_error("invalid libc, no uclibc support!\n");
-}
-#else
 static void replaceOrRenameFunction(llvm::Module *module,
 		const char *old_name, const char *new_name)
 {
@@ -1149,7 +1142,6 @@ linkWithUclibc(StringRef libDir, std::string opt_suffix,
     klee_error("error loading the fortify library '%s': %s",
                FortifyPath.c_str(), errorMsg.c_str());
 }
-#endif
 
 int main(int argc, char **argv, char **envp) {
   atexit(llvm_shutdown);  // Call llvm_shutdown() on exit.
