@@ -740,7 +740,7 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
 
   for (const GlobalVariable &v : m->globals()) {
     std::size_t globalObjectAlignment = getAllocationAlignment(&v);
-    Type *ty = v.getType()->getElementType();
+    Type *ty = v.getValueType();
     std::uint64_t size = 0;
     if (ty->isSized())
       size = kmodule->targetData->getTypeStoreSize(ty);
@@ -2441,10 +2441,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     }
 
     if (f) {
-      const FunctionType *fType = 
-        dyn_cast<FunctionType>(cast<PointerType>(f->getType())->getElementType());
+      const FunctionType *fType = f->getFunctionType();
       const FunctionType *fpType =
-        dyn_cast<FunctionType>(cast<PointerType>(fp->getType())->getElementType());
+          dyn_cast<FunctionType>(fp->getType()->getPointerElementType());
 
       // special case the call with a bitcast case
       if (fType != fpType) {
@@ -3345,13 +3344,14 @@ void Executor::updateStates(ExecutionState *current) {
   removedStates.clear();
 }
 
-template <typename SqType, typename TypeIt>
+template <typename TypeIt>
 void Executor::computeOffsetsSeqTy(KGEPInstruction *kgepi,
                                    ref<ConstantExpr> &constantOffset,
                                    uint64_t index, const TypeIt it) {
-  const auto *sq = cast<SqType>(*it);
+  assert(it->getNumContainedTypes() == 1 &&
+         "Sequential type must contain one subtype");
   uint64_t elementSize =
-      kmodule->targetData->getTypeStoreSize(sq->getElementType());
+      kmodule->targetData->getTypeStoreSize(it->getContainedType(0));
   const Value *operand = it.getOperand();
   if (const Constant *c = dyn_cast<Constant>(operand)) {
     ref<ConstantExpr> index =
@@ -3376,12 +3376,8 @@ void Executor::computeOffsets(KGEPInstruction *kgepi, TypeIt ib, TypeIt ie) {
       uint64_t addend = sl->getElementOffset((unsigned) ci->getZExtValue());
       constantOffset = constantOffset->Add(ConstantExpr::alloc(addend,
                                                                Context::get().getPointerWidth()));
-    } else if (isa<ArrayType>(*ii)) {
-      computeOffsetsSeqTy<ArrayType>(kgepi, constantOffset, index, ii);
-    } else if (isa<VectorType>(*ii)) {
-      computeOffsetsSeqTy<VectorType>(kgepi, constantOffset, index, ii);
-    } else if (isa<PointerType>(*ii)) {
-      computeOffsetsSeqTy<PointerType>(kgepi, constantOffset, index, ii);
+    } else if (ii->isArrayTy() || ii->isVectorTy() || ii->isPointerTy()) {
+      computeOffsetsSeqTy(kgepi, constantOffset, index, ii);
     } else
       assert("invalid type" && 0);
     index++;
@@ -4712,10 +4708,9 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
     alignment = GO->getAlignment();
     if (const GlobalVariable *globalVar = dyn_cast<GlobalVariable>(GO)) {
       // All GlobalVariables's have pointer type
-      llvm::PointerType *ptrType =
-          dyn_cast<llvm::PointerType>(globalVar->getType());
-      assert(ptrType && "globalVar's type is not a pointer");
-      type = ptrType->getElementType();
+      assert(globalVar->getType()->isPointerTy() &&
+             "globalVar's type is not a pointer");
+      type = globalVar->getValueType();
     } else {
       type = GO->getType();
     }
