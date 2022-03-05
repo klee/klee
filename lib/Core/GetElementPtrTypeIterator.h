@@ -88,8 +88,8 @@ class generic_gep_type_iterator
       if (llvm::CompositeType *CT = dyn_cast<llvm::CompositeType>(CurTy)) {
         CurTy = CT->getTypeAtIndex(getOperand());
 #endif
-      } else if (auto ptr = dyn_cast<llvm::PointerType>(CurTy)) {
-        CurTy = ptr->getElementType();
+      } else if (CurTy->isPointerTy()) {
+        CurTy = CurTy->getPointerElementType();
       } else {
         CurTy = 0;
       }

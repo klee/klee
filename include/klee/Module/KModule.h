@@ -64,7 +64,9 @@ namespace klee {
 
     llvm::StringRef getName() const override { return function->getName(); }
 
-    llvm::PointerType *getType() const override { return function->getType(); }
+    llvm::FunctionType *getFunctionType() const override {
+      return function->getFunctionType();
+    }
 
     llvm::Value *getValue() override { return function; }
 
