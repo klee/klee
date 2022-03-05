@@ -36,6 +36,7 @@ jobs:
     strategy:
       matrix:
         name: [
+          "LLVM 14",
           "LLVM 13",
           "LLVM 12",
           "LLVM 11, Doxygen",
@@ -52,6 +53,9 @@ jobs:
           "No TCMalloc, optimised runtime",
         ]
         include:
+          - name: "LLVM 14"
+            env:
+              LLVM_VERSION: 14
           - name: "LLVM 13"
             env:
               LLVM_VERSION: 13
