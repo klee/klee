@@ -1,3 +1,5 @@
+// REQUIRES: not-msan
+// Disabling msan because it times out on CI
 // REQUIRES: uclibc
 // REQUIRES: libcxx
 // REQUIRES: eh-cxx

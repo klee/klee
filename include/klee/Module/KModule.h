@@ -75,8 +75,6 @@ namespace klee {
     KBlock(const KBlock &) = delete;
     KBlock &operator=(const KBlock &) = delete;
 
-    ~KBlock();
-
     unsigned getArgRegister(unsigned index) const { return index; }
     void handleKInstruction(std::map<llvm::Instruction*, unsigned> &registerMap,
                             llvm::Instruction *inst, KModule *km, KInstruction *ki);
@@ -105,11 +103,11 @@ namespace klee {
     unsigned numBlocks;
     KInstruction **instructions;
 
-    std::map<llvm::Instruction*, KInstruction*> instructionMap;
+    std::map<llvm::Instruction *, KInstruction *> instructionMap;
     std::vector<std::unique_ptr<KBlock>> blocks;
     std::map<llvm::BasicBlock*, KBlock*> blockMap;
     KBlock *entryKBlock;
-    std::vector<KBlock*> finalKBlocks;
+    std::vector<KBlock *> finalKBlocks;
     std::vector<KCallBlock*> kCallBlocks;
 
     /// Whether instructions in this function should count as

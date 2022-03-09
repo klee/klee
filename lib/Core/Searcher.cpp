@@ -269,7 +269,7 @@ TargetedSearcher::WeightResult TargetedSearcher::tryGetWeight(ExecutionState *es
 void TargetedSearcher::update(ExecutionState *current,
                               const std::vector<ExecutionState *> &addedStates,
                               const std::vector<ExecutionState *> &removedStates) {
-  double weight;
+  double weight = 0;
   // update current
   if (current && std::find(removedStates.begin(), removedStates.end(), current) == removedStates.end()) {
     switch (tryGetWeight(current, weight)) {
