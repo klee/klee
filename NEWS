@@ -1,3 +1,40 @@
+KLEE 2.3, 4 April 2022
+======================
+
+Incorporating changes from 8 December 2020 to March 2022.
+Maintainers during this time span: @ccadar and @MartinNowack
+Documentation at http://klee.github.io/releases/docs/v2.3
+
+== LLVM support ==
+- Current recommended version is LLVM 11
+- Added support for LLVM 12 and 13 (@lzaoral)
+- Removed support for LLVM <6
+- KLEE 2.3 will be the last version with support for LLVM <9
+
+== Options, scripts and KLEE intrinsics added, changed or removed ==
+- Added --max-static-pct-check-delay to specify the number of forks after which the --max-static-*-pct checks are enforced (@ccadar)
+- In klee-stats, added --print-columns to print user-defined columns, e.g. --print-columns 'Path,Instrs,Time(s)' (@251)
+- Disabled Doxygen generation by default; it can be enabled via CMake option ENABLE_DOXYGEN=ON
+
+== Other changes ==
+- Introduced termination categories and branch types (@251)
+- Added support for more recent versions of Google Test (@jbuening)
+- Fixed --prefer-cex, which was crashing in some cases (@TarasBereznyak)
+- Added support for executing 32bit code, with some limitations (@lzaoral)
+- Improved exception handling (@jbuening)
+- Various improvements to klee-stats (@251)
+- Fixed UBSan reporting in the CI and fixed several errors reported by UBSan (@lzaoral)
+- Fixed path statistics with -dump-states-on-halt=false (@251)
+- Differentiate between partial and completed paths in the summary printed at the end (@251)
+- Improved determinism (@jbuening)
+- Added support for LLVM abs (except for the vector variants), llvm.roundeven and llvm.{s,u}{max,min} intrinsics (@lzaoral)
+- Fixed and improved model for getcwd (@251)
+- Fixed a silent concretization case in Executor::fork (@ccadar)
+- Added a large number of KLEE-related publications to the website (@251)
+- Fixed the memory usage computation on macOS (@ccadar)
+- Removed or updated obsolete Doxygen options and added Doxygen generation to the CI (@ccadar)
+- Smaller refactorings, fixes and improvements, test cases, maintenance, comments, web version, website, etc. (@251, @aesophor, @arrowd, @bathooman,  @ccadar, @carlocab, @davidtr1037, @dependabot, @futile, @iangneal, @jbuening, @jirislaby, @jiseongg, @jordr, @lzaoral, @MartinNowack, @numinit, @operasfantom, @prncoprs)
+
 KLEE 2.2, 7 December 2020
 =========================
 
