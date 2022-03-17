@@ -225,12 +225,6 @@ namespace {
   cl::OptionCategory ReplayCat("Replaying options",
                                "These options impact replaying of test cases.");
   
-  cl::opt<bool>
-  ReplayKeepSymbolic("replay-keep-symbolic",
-                     cl::desc("Replay the test cases only by asserting "
-                              "the bytes, not necessarily making them concrete."),
-                     cl::cat(ReplayCat));
-
   cl::list<std::string>
   ReplayKTestFile("replay-ktest-file",
                   cl::desc("Specify a ktest file to use for replay"),
@@ -277,8 +271,8 @@ namespace {
 
   cl::opt<bool>
   Watchdog("watchdog",
-           cl::desc("Use a watchdog process to enforce --max-time."),
-           cl::init(0),
+           cl::desc("Use a watchdog process to enforce --max-time (default=false)"),
+           cl::init(false),
            cl::cat(TerminationCat));
 
   cl::opt<bool>
