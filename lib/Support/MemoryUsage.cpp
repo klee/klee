@@ -119,7 +119,7 @@ size_t util::GetTotalMallocUsage() {
       KERN_SUCCESS)
     klee_error("malloc_get_all_zones failed.");
 
-  int total = 0;
+  size_t total = 0;
   for (unsigned i = 0; i < num_zones; i++) {
     malloc_zone_statistics(zones[i], &stats);
     total += stats.size_in_use;
