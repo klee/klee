@@ -74,7 +74,7 @@ namespace {
 
   cl::opt<bool>
   OutputModule("output-module",
-               cl::desc("Write the bitcode for the final transformed module"),
+               cl::desc("Write the bitcode for the final transformed module (default=false)"),
                cl::init(false),
 	       cl::cat(ModuleCat));
 
