@@ -36,7 +36,7 @@ install_binary_artifact_clang() {
   )
 
   #Install essential dependencies
-  apt -y --no-install-recommends install "${dependencies[@]}" || return 1
+  apt -y install "${dependencies[@]}" || return 1
 }
 
 get_docker_config_id_clang() {
