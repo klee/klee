@@ -21,11 +21,7 @@ using namespace __ubsan;
 struct TypeMismatchData {
   SourceLocation Loc;
   const TypeDescriptor &Type;
-#if LLVM_VERSION_MAJOR >= 4
   unsigned char LogAlignment;
-#else
-  uptr Alignment;
-#endif
   unsigned char TypeCheckKind;
 };
 
@@ -89,12 +85,10 @@ struct ImplicitConversionData {
 };
 #endif
 
-#if LLVM_VERSION_MAJOR >= 6
 struct InvalidBuiltinData {
   SourceLocation Loc;
   unsigned char Kind;
 };
-#endif
 
 struct NonNullReturnData {
   SourceLocation AttrLoc;
@@ -106,10 +100,8 @@ struct NonNullArgData {
   int ArgIndex;
 };
 
-#if LLVM_VERSION_MAJOR >= 5
 struct PointerOverflowData {
   SourceLocation Loc;
 };
-#endif
 
 #endif // UBSAN_HANDLERS_H
