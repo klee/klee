@@ -568,15 +568,20 @@ int fstatat(int fd, const char *path, struct stat *buf, int flags) {
     return 0;
   } 
 
-#if (defined __NR_newfstatat) && (__NR_newfstatat != 0)
-  return syscall(__NR_newfstatat, (long)fd,
-                 (path ? __concretize_string(path) : NULL), buf, (long)flags);
+#ifdef FSTATAT_PATH_ACCEPTS_NULL
+  #define PATHPARAM (path ? __concretize_string(path) : NULL)
 #else
-  return syscall(__NR_fstatat64, (long)fd,
-                 (path ? __concretize_string(path) : NULL), buf, (long)flags);
+  assert(path);
+  #define PATHPARAM (__concretize_string(path))
 #endif
-}
 
+#if (defined __NR_newfstatat) && (__NR_newfstatat != 0)
+  return syscall(__NR_newfstatat, (long)fd, PATHPARAM, buf, (long)flags);
+#else
+  return syscall(__NR_fstatat64, (long)fd, PATHPARAM, buf, (long)flags);
+#endif
+#undef PATHPARAM
+}
 
 int __fd_lstat(const char *path, struct stat64 *buf) {
   exe_disk_file_t *dfile = __get_sym_file(path);
