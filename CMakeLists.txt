@@ -409,6 +409,7 @@ endif (HAVE_PTY_H OR HAVE_UTIL_H OR HAVE_LIBUTIL_H)
 ################################################################################
 check_cxx_symbol_exists(__ctype_b_loc ctype.h HAVE_CTYPE_EXTERNALS)
 check_cxx_symbol_exists(mallinfo malloc.h HAVE_MALLINFO)
+check_cxx_symbol_exists(mallinfo2 malloc.h HAVE_MALLINFO2)
 check_cxx_symbol_exists(malloc_zone_statistics malloc/malloc.h HAVE_MALLOC_ZONE_STATISTICS)
 
 check_include_file(sys/statfs.h HAVE_SYSSTATFS_H)
