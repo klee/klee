@@ -10,7 +10,7 @@
 ###############################################################################
 # Minimum CMake version and policies
 ###############################################################################
-cmake_minimum_required(VERSION 3.5.0)
+cmake_minimum_required(VERSION 3.9.0)
 if (POLICY CMP0054)
   cmake_policy(SET CMP0054 NEW)
 endif()
