@@ -37,85 +37,81 @@ __attribute__((noreturn)) static void report_error(const char *msg,
 
 static const char *get_suffix(ErrorType ET) {
   switch (ET) {
-  case GenericUB:
+  case ErrorType::GenericUB:
     return "undefined_behavior.err";
-  case NullPointerUse:
+  case ErrorType::NullPointerUse:
 #if LLVM_VERSION_MAJOR >= 11
-  case NullPointerUseWithNullability:
+  case ErrorType::NullPointerUseWithNullability:
 #endif
 #if LLVM_VERSION_MAJOR >= 10
-  case NullptrWithOffset:
-  case NullptrWithNonZeroOffset:
-  case NullptrAfterNonZeroOffset:
+  case ErrorType::NullptrWithOffset:
+  case ErrorType::NullptrWithNonZeroOffset:
+  case ErrorType::NullptrAfterNonZeroOffset:
 #endif
-#if LLVM_VERSION_MAJOR >= 5
-  case PointerOverflow:
-#endif
-  case MisalignedPointerUse:
+  case ErrorType::PointerOverflow:
+  case ErrorType::MisalignedPointerUse:
 #if LLVM_VERSION_MAJOR >= 8
-  case AlignmentAssumption:
+  case ErrorType::AlignmentAssumption:
 #endif
     return "ptr.err";
-  case InsufficientObjectSize:
+  case ErrorType::InsufficientObjectSize:
     return "undefined_behavior.err";
-  case SignedIntegerOverflow:
-  case UnsignedIntegerOverflow:
+  case ErrorType::SignedIntegerOverflow:
+  case ErrorType::UnsignedIntegerOverflow:
     return "overflow.err";
-  case IntegerDivideByZero:
-  case FloatDivideByZero:
+  case ErrorType::IntegerDivideByZero:
+  case ErrorType::FloatDivideByZero:
     return "div.err";
-#if LLVM_VERSION_MAJOR >= 6
-  case InvalidBuiltin:
+  case ErrorType::InvalidBuiltin:
     return "undefined_behavior.err";
-#endif
 #if LLVM_VERSION_MAJOR >= 11
-  case InvalidObjCCast:
+  case ErrorType::InvalidObjCCast:
     return "undefined_behavior.err";
 #endif
 #if LLVM_VERSION_MAJOR >= 8
-  case ImplicitUnsignedIntegerTruncation:
-  case ImplicitSignedIntegerTruncation:
+  case ErrorType::ImplicitUnsignedIntegerTruncation:
+  case ErrorType::ImplicitSignedIntegerTruncation:
     return "implicit_conversion.err";
 #elif LLVM_VERSION_MAJOR >= 7
-  case ImplicitIntegerTruncation:
+  case ErrorType::ImplicitIntegerTruncation:
     return "implicit_conversion.err";
 #endif
 #if LLVM_VERSION_MAJOR >= 8
-  case ImplicitIntegerSignChange:
-  case ImplicitSignedIntegerTruncationOrSignChange:
+  case ErrorType::ImplicitIntegerSignChange:
+  case ErrorType::ImplicitSignedIntegerTruncationOrSignChange:
     return "implicit_conversion.err";
 #endif
-  case InvalidShiftBase:
-  case InvalidShiftExponent:
+  case ErrorType::InvalidShiftBase:
+  case ErrorType::InvalidShiftExponent:
     return "overflow.err";
-  case OutOfBoundsIndex:
+  case ErrorType::OutOfBoundsIndex:
     return "ptr.err";
-  case UnreachableCall:
+  case ErrorType::UnreachableCall:
     return "undefined_behavior.err";
-  case MissingReturn:
+  case ErrorType::MissingReturn:
     return "undefined_behavior.err";
-  case NonPositiveVLAIndex:
+  case ErrorType::NonPositiveVLAIndex:
     return "ptr.err";
-  case FloatCastOverflow:
+  case ErrorType::FloatCastOverflow:
     return "overflow.err";
-  case InvalidBoolLoad:
+  case ErrorType::InvalidBoolLoad:
     return "undefined_behavior.err";
-  case InvalidEnumLoad:
+  case ErrorType::InvalidEnumLoad:
     return "undefined_behavior.err";
-  case FunctionTypeMismatch:
+  case ErrorType::FunctionTypeMismatch:
     // This check is unsupported
     return "exec.err";
-  case InvalidNullReturn:
+  case ErrorType::InvalidNullReturn:
 #if LLVM_VERSION_MAJOR >= 11
-  case InvalidNullReturnWithNullability:
+  case ErrorType::InvalidNullReturnWithNullability:
 #endif
-  case InvalidNullArgument:
+  case ErrorType::InvalidNullArgument:
 #if LLVM_VERSION_MAJOR >= 11
-  case InvalidNullArgumentWithNullability:
+  case ErrorType::InvalidNullArgumentWithNullability:
 #endif
     return "nullable_attribute.err";
-  case DynamicTypeMismatch:
-  case CFIBadType:
+  case ErrorType::DynamicTypeMismatch:
+  case ErrorType::CFIBadType:
     // These checks are unsupported
     return "exec.err";
   default:
@@ -168,9 +164,7 @@ enum TypeCheckKind {
 
 static void handleTypeMismatchImpl(TypeMismatchData *Data,
                                    ValueHandle Pointer) {
-#if LLVM_VERSION_MAJOR >= 4
   uptr Alignment = (uptr)1 << Data->LogAlignment;
-#endif
   ErrorType ET;
   if (!Pointer)
 #if LLVM_VERSION_MAJOR >= 11
@@ -180,11 +174,7 @@ static void handleTypeMismatchImpl(TypeMismatchData *Data,
 #else
     ET = ErrorType::NullPointerUse;
 #endif
-#if LLVM_VERSION_MAJOR >= 4
   else if (Pointer & (Alignment - 1))
-#else
-  else if (Data->Alignment && (Pointer & (Data->Alignment - 1)))
-#endif
     ET = ErrorType::MisalignedPointerUse;
   else
     ET = ErrorType::InsufficientObjectSize;
@@ -192,7 +182,6 @@ static void handleTypeMismatchImpl(TypeMismatchData *Data,
   report_error_type(ET);
 }
 
-#if LLVM_VERSION_MAJOR >= 4
 extern "C" void __ubsan_handle_type_mismatch_v1(TypeMismatchData *Data,
                                                 ValueHandle Pointer) {
 
@@ -204,17 +193,6 @@ extern "C" void __ubsan_handle_type_mismatch_v1_abort(TypeMismatchData *Data,
 
   handleTypeMismatchImpl(Data, Pointer);
 }
-#else
-extern "C" void __ubsan_handle_type_mismatch(TypeMismatchData *Data,
-                                             ValueHandle Pointer) {
-  handleTypeMismatchImpl(Data, Pointer);
-}
-
-extern "C" void __ubsan_handle_type_mismatch_abort(TypeMismatchData *Data,
-                                                   ValueHandle Pointer) {
-  handleTypeMismatchImpl(Data, Pointer);
-}
-#endif
 
 #if LLVM_VERSION_MAJOR >= 8
 static void handleAlignmentAssumptionImpl(AlignmentAssumptionData * /*Data*/,
@@ -458,7 +436,6 @@ __ubsan_handle_implicit_conversion_abort(ImplicitConversionData *Data,
 }
 #endif
 
-#if LLVM_VERSION_MAJOR >= 6
 static void handleInvalidBuiltin(InvalidBuiltinData * /*Data*/) {
   ErrorType ET = ErrorType::InvalidBuiltin;
   report_error_type(ET);
@@ -471,9 +448,7 @@ extern "C" void __ubsan_handle_invalid_builtin(InvalidBuiltinData *Data) {
 extern "C" void __ubsan_handle_invalid_builtin_abort(InvalidBuiltinData *Data) {
   handleInvalidBuiltin(Data);
 }
-#endif
 
-#if LLVM_VERSION_MAJOR >= 5
 static void handleNonNullReturn(NonNullReturnData * /*Data*/,
                                 SourceLocation * /*LocPtr*/, bool IsAttr) {
 #if LLVM_VERSION_MAJOR >= 11
@@ -494,22 +469,7 @@ extern "C" void __ubsan_handle_nonnull_return_v1_abort(NonNullReturnData *Data,
                                                        SourceLocation *LocPtr) {
   handleNonNullReturn(Data, LocPtr, true);
 }
-#else
-static void handleNonNullReturn(NonNullReturnData * /*Data*/) {
-  ErrorType ET = ErrorType::InvalidNullReturn;
-  report_error_type(ET);
-}
 
-extern "C" void __ubsan_handle_nonnull_return(NonNullReturnData *Data) {
-  handleNonNullReturn(Data);
-}
-
-extern "C" void __ubsan_handle_nonnull_return_abort(NonNullReturnData *Data) {
-  handleNonNullReturn(Data);
-}
-#endif
-
-#if LLVM_VERSION_MAJOR >= 5
 extern "C" void __ubsan_handle_nullability_return_v1(NonNullReturnData *Data,
                                                      SourceLocation *LocPtr) {
   handleNonNullReturn(Data, LocPtr, false);
@@ -520,7 +480,6 @@ __ubsan_handle_nullability_return_v1_abort(NonNullReturnData *Data,
                                            SourceLocation *LocPtr) {
   handleNonNullReturn(Data, LocPtr, false);
 }
-#endif
 
 static void handleNonNullArg(NonNullArgData * /*Data*/, bool IsAttr) {
 #if LLVM_VERSION_MAJOR >= 11
@@ -540,7 +499,6 @@ extern "C" void __ubsan_handle_nonnull_arg_abort(NonNullArgData *Data) {
   handleNonNullArg(Data, true);
 }
 
-#if LLVM_VERSION_MAJOR >= 5
 extern "C" void __ubsan_handle_nullability_arg(NonNullArgData *Data) {
   handleNonNullArg(Data, false);
 }
@@ -549,9 +507,7 @@ extern "C" void __ubsan_handle_nullability_arg_abort(NonNullArgData *Data) {
 
   handleNonNullArg(Data, false);
 }
-#endif
 
-#if LLVM_VERSION_MAJOR >= 5
 static void handlePointerOverflowImpl(PointerOverflowData * /*Data*/,
                                       ValueHandle Base, ValueHandle Result) {
 #if LLVM_VERSION_MAJOR >= 10
@@ -583,6 +539,5 @@ extern "C" void __ubsan_handle_pointer_overflow_abort(PointerOverflowData *Data,
 
   handlePointerOverflowImpl(Data, Base, Result);
 }
-#endif
 
 } // namespace __ubsan

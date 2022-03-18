@@ -32,9 +32,7 @@ UBSAN_CHECK(NullptrWithNonZeroOffset, "nullptr-with-nonzero-offset",
 UBSAN_CHECK(NullptrAfterNonZeroOffset, "nullptr-after-nonzero-offset",
             "pointer-overflow")
 #endif
-#if LLVM_VERSION_MAJOR >= 5
 UBSAN_CHECK(PointerOverflow, "pointer-overflow", "pointer-overflow")
-#endif
 UBSAN_CHECK(MisalignedPointerUse, "misaligned-pointer-use", "alignment")
 #if LLVM_VERSION_MAJOR >= 8
 UBSAN_CHECK(AlignmentAssumption, "alignment-assumption", "alignment")
@@ -47,9 +45,7 @@ UBSAN_CHECK(UnsignedIntegerOverflow, "unsigned-integer-overflow",
 UBSAN_CHECK(IntegerDivideByZero, "integer-divide-by-zero",
             "integer-divide-by-zero")
 UBSAN_CHECK(FloatDivideByZero, "float-divide-by-zero", "float-divide-by-zero")
-#if LLVM_VERSION_MAJOR >= 6
 UBSAN_CHECK(InvalidBuiltin, "invalid-builtin-use", "invalid-builtin-use")
-#endif
 #if LLVM_VERSION_MAJOR >= 11
 UBSAN_CHECK(InvalidObjCCast, "invalid-objc-cast", "invalid-objc-cast")
 #endif

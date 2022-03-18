@@ -1,4 +1,3 @@
-// REQUIRES: geq-llvm-5.0
 // REQUIRES: lt-llvm-10.0
 
 // RUN: %clang %s -fsanitize=pointer-overflow -emit-llvm -g %O0opt -c -o %t.bc

@@ -25,7 +25,7 @@ public:
   const char *getName() const { return Name; }
 };
 
-enum /*class*/ ErrorType {
+enum class ErrorType {
 #define UBSAN_CHECK(Name, SummaryKind, FSanitizeFlagName) Name,
 #include "ubsan_checks.inc"
 #undef UBSAN_CHECK
