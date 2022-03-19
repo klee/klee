@@ -74,6 +74,7 @@ const std::vector<std::pair<std::string, std::string>> floatReplacements = {
     addFunctionReplacement(rint, klee_internal_rint),
     addFunctionReplacement(round, klee_internal_rint),
     addFunctionReplacement(__signbit, klee_internal_signbit),
+    addIntrinsicReplacement(sqrt, klee_internal_sqrt),
     addIntrinsicReplacement(rint, klee_internal_rint),
     addIntrinsicReplacement(round, klee_internal_rint),
     addIntrinsicReplacement(nearbyint, nearbyint),
