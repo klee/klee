@@ -10,7 +10,7 @@
 # Top level target for building all documentation
 add_custom_target(docs)
 
-option(ENABLE_DOXYGEN "Enable building doxygen documentation" ON)
+option(ENABLE_DOXYGEN "Enable building doxygen documentation" OFF)
 if (ENABLE_DOXYGEN)
   find_package(Doxygen)
   if (DOXYGEN_FOUND)
