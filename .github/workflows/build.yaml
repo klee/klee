@@ -38,7 +38,7 @@ jobs:
         name: [
                 "LLVM 13",
                 "LLVM 12",
-                "LLVM 11",
+                "LLVM 11, Doxygen",
                 "LLVM 10",
                 "LLVM 9",
                 "LLVM 8",
@@ -62,9 +62,10 @@ jobs:
           - name: "LLVM 12"
             env:
               LLVM_VERSION: 12
-          - name: "LLVM 11"
+          - name: "LLVM 11, Doxygen"
             env:
               LLVM_VERSION: 11
+              ENABLE_DOXYGEN: 1
           - name: "LLVM 10"
             env:
               LLVM_VERSION: 10
