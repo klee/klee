@@ -53,7 +53,7 @@ build_libcxx() {
     export LLVM_COMPILER_PATH="$(dirname "${BITCODE_CC}")"
 
     cmake "${cmake_flags[@]}" "${LIBCXX_SRC}/llvm"
-    make cxx
+    make cxx -j$(nproc) || make cxx
   )
 }
 
