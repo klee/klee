@@ -68,6 +68,8 @@ run_tests() {
   
   # If metaSMT is the only solver, then rerun lit tests with non-default metaSMT backends
   if [ "X${SOLVERS}" == "XmetaSMT" ]; then
+    base_path="$(python3 -m site --user-base)"
+    export PATH="$PATH:${base_path}/bin"
     available_metasmt_backends="btor stp z3 yices2 cvc4"
     for backend in $available_metasmt_backends; do
       if [ "X${METASMT_DEFAULT}" != "X$backend" ]; then

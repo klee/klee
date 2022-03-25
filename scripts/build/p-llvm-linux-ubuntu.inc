@@ -40,7 +40,7 @@ install_build_dependencies_llvm() {
   fi
 
   #Install essential dependencies
-  apt -y --no-install-recommends install "${dependencies[@]}"
+  with_sudo apt -y --no-install-recommends install "${dependencies[@]}"
 }
 
 install_binary_artifact_llvm() {
@@ -62,17 +62,18 @@ install_binary_artifact_llvm() {
   [[ "${requires_rtti}" -eq 0 ]] && return 1
 
   # Enable/Disable optimized does not matter
-  
+  source "${DIR}/common-functions"
+
   # Add certificate
-  apt update -y
+  with_sudo apt update -y
   dependencies=(
     ca-certificates
     wget
     lsb-release
     gnupg
   )
-  apt -y --no-install-recommends install "${dependencies[@]}"
-  wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key| apt-key add -
+  with_sudo apt -y --no-install-recommends install "${dependencies[@]}"
+  wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key| with_sudo apt-key add -
   
   local version=""
   [[ "${LLVM_VERSION_MAJOR}" -le 6 ]] && version="-${LLVM_VERSION}"
@@ -94,7 +95,7 @@ install_binary_artifact_llvm() {
   )
 
   #Install essential dependencies
-  apt -y --no-install-recommends install "${dependencies[@]}" || return 1
+  with_sudo apt -y --no-install-recommends install "${dependencies[@]}" || return 1
 }
 
 # Check if the binary artifact is installed
