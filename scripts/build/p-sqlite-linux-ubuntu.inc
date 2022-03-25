@@ -1,5 +1,6 @@
 install_build_dependencies_sqlite() { 
-  apt update -y
+  source "${DIR}/common-functions"
+  with_sudo apt update -y
 
   dependencies=(
   build-essential
@@ -8,16 +9,17 @@ install_build_dependencies_sqlite() {
     wget
   )
 
-  apt -y --no-install-recommends install "${dependencies[@]}"
+  with_sudo apt -y --no-install-recommends install "${dependencies[@]}"
 }
 install_binary_artifact_sqlite() {
   [[ "${SANITIZER_SUFFIX}x" == "x" ]] || return 1
 
-  apt update -y
+  source "${DIR}/common-functions"
+  with_sudo apt update -y
   dependencies=(
     libsqlite3-dev
   )
-  apt -y --no-install-recommends install "${dependencies[@]}"
+  with_sudo apt -y --no-install-recommends install "${dependencies[@]}"
 }
 
 # Check if the binary artifact is installed

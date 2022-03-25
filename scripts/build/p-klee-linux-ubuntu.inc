@@ -1,5 +1,5 @@
 install_build_dependencies_klee() {
-  apt update -y
+  source "${DIR}/common-functions"
 
   # Add Kitware's certificate for CMake
   dependencies=(
@@ -42,8 +42,10 @@ install_build_dependencies_klee() {
     dependencies+=(doxygen graphviz)
   fi
 
-  apt -y --no-install-recommends install "${dependencies[@]}"
+  with_sudo apt -y --no-install-recommends install "${dependencies[@]}"
 
-  pip3 install lit
-  pip3 install tabulate
+  pip3 install --user lit
+  pip3 install --user tabulate
+  base_path="$(python3 -m site --user-base)"
+  export PATH="$PATH:${base_path}/bin"
 }

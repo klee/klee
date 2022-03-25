@@ -31,3 +31,12 @@ function get_git_hash() {
     echo "${commit_id:0:7}"
   fi
 }
+
+function with_sudo() {
+    echo "Checking sudo $@"
+    if [[ $(whoami) != "root" ]]; then
+        sudo "$@"
+    else
+        "$@"
+    fi
+}
