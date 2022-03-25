@@ -16,11 +16,6 @@ setup_artifact_variables_clang() {
 
   BITCODE_CC="${bin_path}/clang"
   BITCODE_CXX="${bin_path}/clang++"
-
-  #[[ -z ${SANITIZER_C_COMPILER+x} ]] && 
-  SANITIZER_C_COMPILER="${BITCODE_CC}"
-  #[[ -z ${SANITIZER_CXX_COMPILER+x} ]] && 
-  SANITIZER_CXX_COMPILER="${BITCODE_CXX}"
 }
 
 # Check if the binary artifact is installed

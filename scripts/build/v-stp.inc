@@ -5,4 +5,4 @@ required_variables_stp=(
 )
 
 # On which artifacts does STP depend on
-artifact_dependency_stp=("sanitizer_compiler")
+artifact_dependency_stp=("sanitizer")

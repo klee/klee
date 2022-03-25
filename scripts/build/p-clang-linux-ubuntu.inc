@@ -16,17 +16,20 @@ install_binary_artifact_clang() {
     lsb-release
     gnupg
   )
-
   with_sudo apt -y --no-install-recommends install "${dependencies[@]}"
-  wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key| with_sudo apt-key add -
 
-  # Add repository
+  # Add LLVM upstream repository if available
   codename="$(lsb_release --codename --short)"
-  apt_entry="deb http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}${version} main"
-  if [[ ! $(grep -rq "${apt_entry}" /etc/apt) ]]; then
-    echo "${apt_entry}" | with_sudo tee -a /etc/apt/sources.list
-    with_sudo apt update -y
+  if wget -q "https://apt.llvm.org/${codename}/dists/llvm-toolchain-${codename}${version}/"; then
+    wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key| with_sudo apt-key add -
+
+    apt_entry="deb http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}${version} main"
+    if ! grep -rq "${apt_entry}" /etc/apt; then
+      echo "${apt_entry}" | with_sudo tee -a /etc/apt/sources.list
+      with_sudo apt update -y
+    fi
   fi
+
 
   with_sudo apt update -y
   dependencies=(
