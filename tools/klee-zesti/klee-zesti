@@ -14,23 +14,23 @@ WARNING this script is not equivalent to ZESTI in ICSE 2012. It just provides a 
 
 
 KLEE="klee"
-GEN_BOUT="gen-bout"
+KTEST_GEN="ktest-gen"
 
 def find_klee_bin_dir():
   global KLEE
-  global GEN_BOUT
+  global KTEST_GEN
   bin_dir = os.path.dirname(os.path.realpath(__file__))
   KLEE = bin_dir + "/klee"
-  GEN_BOUT = bin_dir + "/gen-bout"
+  KTEST_GEN = bin_dir + "/ktest-gen"
   if not os.path.isfile(KLEE):
       print("WARNING can't find klee at " + KLEE)
       KLEE= shutil.which("klee")
       print("Using klee in PATH", KLEE)
-  if not os.path.isfile(GEN_BOUT):
-      print("WARNING can't find gen-bout at " + GEN_BOUT)
-      GEN_BOUT= shutil.which("gen-bout")
-      print("Using gen-bout in PATH", GEN_BOUT)
-  if GEN_BOUT is None or KLEE is None:
+  if not os.path.isfile(KTEST_GEN):
+      print("WARNING can't find ktest-gen at " + KTEST_GEN)
+      KTEST_GEN= shutil.which("ktest-gen")
+      print("Using ktest-gen in PATH", KTEST_GEN)
+  if KTEST_GEN is None or KLEE is None:
       print("Failed to find KLEE at this script location or in PATH. Quitting ...")
       sys.exit(1)
   print("Using", KLEE)
@@ -94,7 +94,7 @@ def prog_args_to_posix(prog_args):
 
 def create_ktest_file(gen_out_args, tmpdir):
   out_file=tmpdir + "/test.ktest"
-  subprocess.run([GEN_BOUT, "--bout-file", out_file] + gen_out_args, check=True)
+  subprocess.run([KTEST_GEN, "--bout-file", out_file] + gen_out_args, check=True)
   return out_file
 
 
