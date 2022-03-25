@@ -1,15 +1,20 @@
-#!/bin/bash
 # Variables for sanitizer handling
-
-required_variables_sanitizer=(
-  "SANITIZER_BUILD"
-)
+required_variables_sanitizer(){
+ if [[ -z ${SANITIZER_BUILD:-} ]]; then
+   return 0
+ fi
+ echo "SANITIZER_BUILD"
+ echo "SANITIZER_LLVM_VERSION"
+}
 
 artifact_dependency_sanitizer=("")
 
 required_variables_check_sanitizer() {
-  # Allowe empty sanitizer builds
-  [[ -z "${SANITIZER_BUILD}" ]] && return 0
+  # Allow empty sanitizer builds
+  if [[ -z ${SANITIZER_BUILD:-} ]]; then
+    SANITIZER_BUILD=""
+    return 0
+  fi
   
   local sanitizers
   IFS=":" read -r -a sanitizers <<< "${SANITIZER_BUILD}"
@@ -25,7 +30,7 @@ required_variables_check_sanitizer() {
 }
 
 setup_variables_sanitizer() {
-  if [[ -z "${SANITIZER_BUILD}" ]]; then
+  if [[ -z "${SANITIZER_BUILD:-}" ]]; then
     SANITIZERS=("")
     SANITIZER_SUFFIX=""
     return 0
@@ -89,4 +94,4 @@ setup_variables_sanitizer() {
     echo "Unknown sanitizer: $sanitizer"
     exit 1
   done
-  }
+}
