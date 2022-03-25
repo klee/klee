@@ -1,6 +1,8 @@
 // RUN: %clang %s -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out -function-alias=exit:end %t.bc 2>&1 | FileCheck %s
+// RUN: %klee --search=bfs --output-dir=%t.klee-out -function-alias=exit:end %t.bc 2>&1 | FileCheck %s
+
+#include "klee/klee.h"
 
 #include <stdio.h>
 #include <stdlib.h>
