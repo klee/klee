@@ -229,7 +229,6 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
 
   if (OutputStats) {
     sqlite3_config(SQLITE_CONFIG_SINGLETHREAD);
-    sqlite3_enable_shared_cache(0);
 
     // open database
     auto db_filename = executor.interpreterHandler->getOutputFilename("run.stats");
