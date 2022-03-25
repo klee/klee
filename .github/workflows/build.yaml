@@ -21,7 +21,6 @@ env:
   METASMT_VERSION: qf_abv
   MINISAT_VERSION: "master"
   REQUIRES_RTTI: 0
-  SANITIZER_BUILD:
   SOLVERS: STP:Z3
   STP_VERSION: 2.3.3
   TCMALLOC_VERSION: 2.7
@@ -80,24 +79,27 @@ jobs:
               LLVM_VERSION: 7
           - name: "LLVM 6"
             env:
-              LLVM_VERSION: 6
+              LLVM_VERSION: "6.0"
           # Sanitizer builds. Do unoptimized build otherwise the optimizer might remove problematic code
           - name: "ASan"
             env:
               SANITIZER_BUILD: address
               ENABLE_OPTIMIZED: 0
               USE_TCMALLOC: 0
+              SANITIZER_LLVM_VERSION: 11
           - name: "UBSan"
             env:
               SANITIZER_BUILD: undefined
               ENABLE_OPTIMIZED: 0
               USE_TCMALLOC: 0
+              SANITIZER_LLVM_VERSION: 11
           - name: "MSan"
             env:
               SANITIZER_BUILD: memory
               ENABLE_OPTIMIZED: 0
               USE_TCMALLOC: 0
               SOLVERS: STP
+              SANITIZER_LLVM_VERSION: 11
             # Test just using Z3 only
           - name: "Z3 only"
             env:
