@@ -7,7 +7,7 @@
 #
 #===------------------------------------------------------------------------===#
 add_subdirectory(ktest-gen)
-add_subdirectory(gen-random-bout)
+add_subdirectory(ktest-randgen)
 add_subdirectory(kleaver)
 add_subdirectory(klee)
 add_subdirectory(klee-replay)
