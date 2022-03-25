@@ -1,4 +1,4 @@
-//===-- gen-random-bout.cpp -------------------------------------*- C++ -*-===//
+//===-- ktest-randgen.cpp ---------------------------------------*- C++ -*-===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -94,7 +94,7 @@ static void push_range(KTest *b, const char *name, unsigned value) {
 }
 
 void create_stat(size_t size, struct stat *s) {
-  char filename_template[] = "/tmp/klee-gen-random-bout-XXXXXX";
+  char filename_template[] = "/tmp/ktest-randgen-XXXXXX";
   char *filename;
   int fd;
   unsigned char *buf;

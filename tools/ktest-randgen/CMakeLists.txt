@@ -6,12 +6,12 @@
 # License. See LICENSE.TXT for details.
 #
 #===------------------------------------------------------------------------===#
-add_executable(gen-random-bout
-  gen-random-bout.cpp
+add_executable(ktest-randgen
+  ktest-randgen.cpp
 )
 
 set(KLEE_LIBS kleeBasic)
 
-target_link_libraries(gen-random-bout ${KLEE_LIBS})
+target_link_libraries(ktest-randgen ${KLEE_LIBS})
 
-install(TARGETS gen-random-bout RUNTIME DESTINATION bin)
+install(TARGETS ktest-randgen RUNTIME DESTINATION bin)
