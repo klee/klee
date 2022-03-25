@@ -6,7 +6,7 @@ setup_artifact_variables_clang() {
   [[ "${LLVM_VERSION_MAJOR}" -ge 7 ]] && version="-${LLVM_VERSION_MAJOR}"
 
   # Only set LLVM_CONFIG if not set yet
-  if [[ -z "${LLVM_CONFIG-}" ]]; then
+  if [[ -z "${LLVM_CONFIG:-}" ]]; then
     LLVM_CONFIG=$(which "llvm-config${version}")
   fi
 

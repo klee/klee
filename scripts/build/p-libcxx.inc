@@ -20,10 +20,6 @@ download_libcxx() {
      patch -p1 --follow-symlinks -i "${DIR}/patches/libcxx${LLVM_VERSION_SHORT}.patch" || return 1
   fi
 
-  # Prepare LLVM subprojects for older LLVM versions
-  cd "${LIBCXX_SRC}/llvm/projects"
-  ln -s ../../libcxx .
-  ln -s ../../libcxxabi .
 
   touch "${LIBCXX_SRC}/.src_checked_out" 
 }
