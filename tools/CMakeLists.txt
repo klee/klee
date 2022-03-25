@@ -6,7 +6,7 @@
 # License. See LICENSE.TXT for details.
 #
 #===------------------------------------------------------------------------===#
-add_subdirectory(gen-bout)
+add_subdirectory(ktest-gen)
 add_subdirectory(gen-random-bout)
 add_subdirectory(kleaver)
 add_subdirectory(klee)
