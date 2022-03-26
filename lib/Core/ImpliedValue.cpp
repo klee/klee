@@ -134,7 +134,7 @@ void ImpliedValue::getImpliedValues(ref<Expr> e,
         getImpliedValues(be->right, value, results);
       }
     } else {
-      // FIXME; We can propogate a mask here where we know "some bits". May or
+      // FIXME; We can propagate a mask here where we know "some bits". May or
       // may not be useful.
     }
     break;
