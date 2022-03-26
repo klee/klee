@@ -56,8 +56,8 @@ TEST(ArrayExprTest, HashCollisions) {
 
   std::vector<unsigned char> value = {6, 0, 0, 0};
   std::vector<std::vector<unsigned char>> values = {value};
-  std::vector<const Array *> assigmentArrays = {symArray};
-  auto a = std::make_unique<Assignment>(assigmentArrays, values,
+  std::vector<const Array *> assignmentArrays = {symArray};
+  auto a = std::make_unique<Assignment>(assignmentArrays, values,
                                         /*_allowFreeValues=*/true);
 
   EXPECT_NE(a->evaluate(updatedRead), a->evaluate(firstRead));
