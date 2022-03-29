@@ -16,6 +16,7 @@
 // Core. If we need to do arithmetic, we probably want to use APInt.
 #include "klee/Support/IntEvaluation.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Hashing.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(13, 0)
 #include "llvm/ADT/StringExtras.h"
@@ -311,6 +312,9 @@ void Expr::printWidth(llvm::raw_ostream &os, Width width) {
   case Expr::Int32: os << "Expr::Int32"; break;
   case Expr::Int64: os << "Expr::Int64"; break;
   case Expr::Fl80: os << "Expr::Fl80"; break;
+  case Expr::Int128: os << "Expr::Int128"; break;
+  case Expr::Int256: os << "Expr::Int256"; break;
+  case Expr::Int512: os << "Expr::Int512"; break;
   default: os << "<invalid type: " << (unsigned) width << ">";
   }
 }
@@ -336,23 +340,32 @@ void Expr::dump() const {
 
 ref<Expr> ConstantExpr::fromMemory(void *address, Width width) {
   switch (width) {
+  default: assert(0 && "invalid width");
   case  Expr::Bool: return ConstantExpr::create(*(( uint8_t*) address), width);
   case  Expr::Int8: return ConstantExpr::create(*(( uint8_t*) address), width);
   case Expr::Int16: return ConstantExpr::create(*((uint16_t*) address), width);
   case Expr::Int32: return ConstantExpr::create(*((uint32_t*) address), width);
   case Expr::Int64: return ConstantExpr::create(*((uint64_t*) address), width);
   // FIXME: what about machines without x87 support?
-  default:
-    return ConstantExpr::alloc(
-        llvm::APInt(width,
-                    (width + llvm::APFloatBase::integerPartWidth - 1) /
-                        llvm::APFloatBase::integerPartWidth,
-                    (const uint64_t *)address));
+  case Expr::Fl80: {
+    size_t numWords = (width + llvm::APFloatBase::integerPartWidth - 1) /
+                    llvm::APFloatBase::integerPartWidth;
+    return ConstantExpr::alloc(llvm::APInt(
+        width, llvm::ArrayRef<uint64_t>((const uint64_t *)address, numWords)));
+  }
+  case Expr::Int128:
+  case Expr::Int256:
+  case Expr::Int512: {
+    size_t numWords = width / APInt::APINT_BITS_PER_WORD;
+    return ConstantExpr::alloc(llvm::APInt(
+        width, llvm::ArrayRef<uint64_t>((const uint64_t *)address, numWords)));
+  }
   }
 }
 
 void ConstantExpr::toMemory(void *address) {
-  switch (getWidth()) {
+  auto width = getWidth();
+  switch (width) {
   default: assert(0 && "invalid type");
   case  Expr::Bool: *(( uint8_t*) address) = getZExtValue(1); break;
   case  Expr::Int8: *(( uint8_t*) address) = getZExtValue(8); break;
@@ -363,6 +376,10 @@ void ConstantExpr::toMemory(void *address) {
   case Expr::Fl80:
     *((long double*) address) = *(const long double*) value.getRawData();
     break;
+  case Expr::Int128:
+  case Expr::Int256:
+  case Expr::Int512:
+      memcpy(address, value.getRawData(), width / 8);
   }
 }
 
