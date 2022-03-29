@@ -3810,11 +3810,13 @@ void Executor::callExternalFunction(ExecutionState &state,
   }
 
   // normal external function handling path
-  // allocate 128 bits for each argument (+return value) to support fp80's;
+  // allocate 512 bits for each argument (+return value) to support
+  // fp80's and SIMD vectors as parameters for external calls;
   // we could iterate through all the arguments first and determine the exact
   // size we need, but this is faster, and the memory usage isn't significant.
-  uint64_t *args = (uint64_t*) alloca(2*sizeof(*args) * (arguments.size() + 1));
-  memset(args, 0, 2 * sizeof(*args) * (arguments.size() + 1));
+  size_t allocatedBytes = Expr::MaxWidth / 8 * (arguments.size() + 1);
+  uint64_t *args = (uint64_t*) alloca(allocatedBytes);
+  memset(args, 0, allocatedBytes);
   unsigned wordIndex = 2;
   for (std::vector<ref<Expr> >::iterator ai = arguments.begin(), 
        ae = arguments.end(); ai!=ae; ++ai) {

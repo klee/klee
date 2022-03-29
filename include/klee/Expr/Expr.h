@@ -95,7 +95,9 @@ public:
 
   /// The type of an expression is simply its width, in bits. 
   typedef unsigned Width; 
-  
+
+  // NOTE: The prefix "Int" in no way implies the integer type of expression.
+  // For example, Int64 can indicate i64, double or <2 * i32> in different cases.
   static const Width InvalidWidth = 0;
   static const Width Bool = 1;
   static const Width Int8 = 8;
@@ -103,6 +105,10 @@ public:
   static const Width Int32 = 32;
   static const Width Int64 = 64;
   static const Width Fl80 = 80;
+  static const Width Int128 = 128;
+  static const Width Int256 = 256;
+  static const Width Int512 = 512;
+  static const Width MaxWidth = Int512;
   
 
   enum Kind {
