@@ -1,4 +1,4 @@
-FROM klee/llvm:90_O_D_A_ubuntu_bionic-20200807 as llvm_base
+FROM klee/llvm:110_O_D_A_ubuntu_bionic-20200807 as llvm_base
 FROM klee/gtest:1.11.0_ubuntu_bionic-20200807 as gtest_base
 FROM klee/uclibc:klee_uclibc_v1.2_90_ubuntu_bionic-20200807 as uclibc_base
 FROM klee/tcmalloc:2.7_ubuntu_bionic-20200807 as tcmalloc_base
@@ -15,7 +15,7 @@ COPY --from=libcxx_base /tmp /tmp/
 ENV COVERAGE=0
 ENV USE_TCMALLOC=1
 ENV BASE=/tmp
-ENV LLVM_VERSION=9.0
+ENV LLVM_VERSION=11.0
 ENV ENABLE_DOXYGEN=1
 ENV ENABLE_OPTIMIZED=1
 ENV ENABLE_DEBUG=1
@@ -23,12 +23,12 @@ ENV DISABLE_ASSERTIONS=0
 ENV REQUIRES_RTTI=0
 ENV SOLVERS=STP:Z3
 ENV GTEST_VERSION=1.11.0
-ENV UCLIBC_VERSION=klee_uclibc_v1.2
-ENV TCMALLOC_VERSION=2.7
+ENV UCLIBC_VERSION=klee_0_9_29
+ENV TCMALLOC_VERSION=2.9.1
 ENV SANITIZER_BUILD=
 ENV STP_VERSION=2.3.3
 ENV MINISAT_VERSION=master
-ENV Z3_VERSION=4.8.4
+ENV Z3_VERSION=4.8.15
 ENV USE_LIBCXX=1
 ENV KLEE_RUNTIME_BUILD="Debug+Asserts"
 LABEL maintainer="KLEE Developers"
