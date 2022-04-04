@@ -38,8 +38,8 @@ include(CheckLibraryExists)
 ###############################################################################
 # Project version
 ###############################################################################
-set(KLEE_VERSION_MAJOR 2)
-set(KLEE_VERSION_MINOR 3)
+set(KLEE_VERSION_MAJOR 3)
+set(KLEE_VERSION_MINOR 0-pre)
 set(KLEE_VERSION "${KLEE_VERSION_MAJOR}.${KLEE_VERSION_MINOR}")
 
 # If a patch is needed, we can add KLEE_VERSION_PATCH
