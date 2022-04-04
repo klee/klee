@@ -25,14 +25,8 @@ klee_open_output_file(const std::string &path, std::string &error) {
   error.clear();
   std::error_code ec;
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
   auto f = std::make_unique<llvm::raw_fd_ostream>(path.c_str(), ec,
                                                   llvm::sys::fs::OF_None);
-#else
-  auto f = std::make_unique<llvm::raw_fd_ostream>(path.c_str(), ec,
-                                                  llvm::sys::fs::F_None);
-#endif
-
   if (ec)
     error = ec.message();
   if (!error.empty()) {

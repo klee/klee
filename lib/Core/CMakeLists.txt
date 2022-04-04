@@ -6,8 +6,8 @@
 # License. See LICENSE.TXT for details.
 #
 #===------------------------------------------------------------------------===#
-klee_add_component(kleeCore
-  AddressManager.cpp  
+add_library(kleeCore
+  AddressManager.cpp
   AddressSpace.cpp
   CallPathManager.cpp
   Context.cpp
@@ -35,19 +35,7 @@ klee_add_component(kleeCore
   UserSearcher.cpp
 )
 
-# TODO: Work out what the correct LLVM components are for
-# kleeCore.
-set(LLVM_COMPONENTS
-  core
-  executionengine
-  mcjit
-  native
-  support
-)
-
-klee_get_llvm_libs(LLVM_LIBS ${LLVM_COMPONENTS})
-target_link_libraries(kleeCore PRIVATE ${LLVM_LIBS} ${SQLITE3_LIBRARIES})
-target_link_libraries(kleeCore PUBLIC
+target_link_libraries(kleeCore PRIVATE
   kleeBasic
   kleeModule
   kleaverSolver
@@ -55,7 +43,8 @@ target_link_libraries(kleeCore PUBLIC
   kleeSupport
 )
 
-install(TARGETS kleeCore
-        EXPORT run_klee
-        DESTINATION "${RUN_KLEE_LIB_DEST}"
-        )
+llvm_config(kleeCore "${USE_LLVM_SHARED}" core executionengine mcjit native support)
+target_link_libraries(kleeCore PRIVATE ${SQLite3_LIBRARIES})
+target_include_directories(kleeCore PRIVATE ${KLEE_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS} ${SQLite3_INCLUDE_DIRS})
+target_compile_options(kleeCore PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
+target_compile_definitions(kleeCore PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})

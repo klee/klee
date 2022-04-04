@@ -1,5 +1,5 @@
 ; RUN: rm -rf %t.klee-out
-; RUN: llvm-as -f %s -o %t.bc
+; RUN: %llvmas -f %s -o %t.bc
 ; RUN: %klee --switch-type=internal --output-dir=%t.klee-out %t.bc
 ; RUN: FileCheck --input-file=%t.klee-out/info %s
 ; CHECK: KLEE: done: completed paths = 3

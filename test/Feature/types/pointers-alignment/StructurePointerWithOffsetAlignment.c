@@ -1,6 +1,6 @@
 // RUN: %clang %s -emit-llvm -g -c -fsanitize=alignment,null -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --type-system=CXX --use-tbaa --use-lazy-initialization=all --align-symbolic-pointers=true --use-gep-opt %t.bc 2>&1 | FileCheck %s
+// RUN: %klee --output-dir=%t.klee-out --ubsan-runtime --type-system=CXX --use-tbaa --use-lazy-initialization=all --align-symbolic-pointers=true --use-gep-opt %t.bc 2>&1 | FileCheck %s
 
 #include "klee/klee.h"
 #include <stdio.h>
@@ -18,10 +18,10 @@ void foo(struct Node *head, int n) {
   if ((n & (sizeof(int) - 1)) == 0) {
     // CHECK-DAG: x
     printf("x\n");
-    // CHECK-NOT: StructurePointerWithOffsetAlignment.c:[[@LINE+1]]: either misaligned address for 0x{{.*}} or invalid usage of address 0x{{.*}} with insufficient space
+    // CHECK-DAG: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:{{[0-9]+}}: null-pointer-use
     head->x = 100;
   } else {
-    // CHECK: StructurePointerWithOffsetAlignment.c:[[@LINE+1]]: either misaligned address for 0x{{.*}} or invalid usage of address 0x{{.*}} with insufficient space
+    // CHECK-DAG: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:{{[0-9]+}}: misaligned-pointer-use
     head->x = 100;
   }
 }

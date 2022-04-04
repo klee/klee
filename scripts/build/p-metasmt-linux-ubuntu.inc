@@ -1,7 +1,3 @@
-setup_build_variables_metasmt() {
-  return 0
-}
-
 install_build_dependencies_metasmt() {
   source "${DIR}/common-functions"
   with_sudo apt update -y
@@ -21,10 +17,14 @@ install_build_dependencies_metasmt() {
     bison
     flex
     unzip
-    python
     autoconf
     python3
     curl
+    python-is-python3 # Need for old Z3
+    python3-distutils
+    python3-pip
+    python3-toml
+    default-jre # Needed for ANTLR
   )
 
   #Install essential dependencies

@@ -12,12 +12,12 @@
 
 #include "klee/Config/Version.h"
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/InstrTypes.h"
-#else
-#include "llvm/IR/CallSite.h"
-#endif
 #include "llvm/IR/Module.h"
+DISABLE_WARNING_POP
 
 #include <memory>
 #include <string>
@@ -94,17 +94,11 @@ const std::vector<std::pair<std::string, std::string>> feRoundReplacements{
 /// calls, although complicated constant expressions might be
 /// another possibility).
 ///
-/// If `moduleIsFullyLinked` is set to true it will be assumed that the
-///  module containing the `llvm::CallSite` (`llvm::CallBase` on LLVM 8+)
-///  is fully linked. This assumption allows resolution of functions
-///  that are marked as overridable.
-llvm::Function *getDirectCallTarget(
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
-    const llvm::CallBase &cb,
-#else
-    const llvm::CallSite &cs,
-#endif
-    bool moduleIsFullyLinked);
+/// If `moduleIsFullyLinked` is set to true it will be assumed that the module
+/// containing the `llvm::CallBase` is fully linked. This assumption allows
+/// resolution of functions that are marked as overridable.
+llvm::Function *getDirectCallTarget(const llvm::CallBase &cb,
+                                    bool moduleIsFullyLinked);
 
 /// Return true iff the given Function value is used in something
 /// other than a direct call (or a constant expression that

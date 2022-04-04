@@ -38,7 +38,7 @@ run_tests() {
   cd "${build_dir}"
 
   # Remove klee from PATH
-  export PATH=${PATH%":/home/klee/klee_build/bin"}
+  export PATH=${PATH/":/home/klee/klee_build/bin"/}
   if which klee; then
     return 1 # should not happen
   fi
@@ -94,7 +94,7 @@ function upload_coverage() {
 }
 
 function run_docker() {
- docker_arguments=(docker run -u root --cap-add SYS_PTRACE -t)
+ docker_arguments=(docker run -u root --cap-add SYS_PTRACE -t -e SOLVERS -e METASMT_DEFAULT)
  script_arguments=("--debug" '"/tmp/klee_build"*')
  if [[ "${COVERAGE}" -eq 1 ]]; then
    script_arguments+=("--coverage")

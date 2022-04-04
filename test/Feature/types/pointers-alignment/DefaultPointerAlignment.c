@@ -1,6 +1,6 @@
 // RUN: %clang %s -emit-llvm -g -c -fsanitize=alignment,null -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --type-system=CXX --use-tbaa --use-lazy-initialization=none --align-symbolic-pointers=true --skip-local=false --use-gep-opt %t.bc 2>&1 | FileCheck %s
+// RUN: %klee --output-dir=%t.klee-out --ubsan-runtime --type-system=CXX --use-tbaa --use-lazy-initialization=none --align-symbolic-pointers=true --skip-local=false --use-gep-opt %t.bc 2>&1 | FileCheck %s
 
 #include "klee/klee.h"
 #include <stdio.h>
@@ -11,13 +11,13 @@ int main() {
   float *ptr;
   klee_make_symbolic(&ptr, sizeof(ptr), "ptr");
 
-  // CHECK-NOT: DefaultPointerAlignment.c:[[@LINE+1]]: either misaligned address for 0x{{.*}} or invalid usage of address 0x{{.*}} with insufficient space
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:{{[0-9]+}}: null-pointer-use
   *ptr = 10;
 
   int n = klee_range(1, 4, "n");
   ptr = (float *)(((char *)ptr) + n);
 
-  // CHECK: DefaultPointerAlignment.c:[[@LINE+1]]: either misaligned address for 0x{{.*}} or invalid usage of address 0x{{.*}} with insufficient space
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:{{[0-9]+}}: misaligned-pointer-use
   *ptr = 20;
 
   return 0;

@@ -14,7 +14,9 @@
 #include "klee/Solver/SolverImpl.h"
 #include "klee/Solver/SolverStats.h"
 
+#include <memory>
 #include <unordered_map>
+#include <utility>
 
 using namespace klee;
 
@@ -65,16 +67,12 @@ private:
   typedef std::unordered_map<CacheEntry, ValidityCore, CacheEntryHash>
       validity_core_cache_map;
 
-  Solver *solver;
+  std::unique_ptr<Solver> solver;
   cache_map cache;
   validity_core_cache_map validityCoreCache;
 
 public:
-  CachingSolver(Solver *s) : solver(s) {}
-  ~CachingSolver() {
-    cache.clear();
-    delete solver;
-  }
+  CachingSolver(std::unique_ptr<Solver> solver) : solver(std::move(solver)) {}
 
   bool computeValidity(const Query &, PartialValidity &result);
   bool computeTruth(const Query &, bool &isValid);
@@ -392,6 +390,8 @@ void CachingSolver::setCoreSolverTimeout(time::Span timeout) {
 
 ///
 
-Solver *klee::createCachingSolver(Solver *_solver) {
-  return new Solver(new CachingSolver(_solver));
+std::unique_ptr<Solver>
+klee::createCachingSolver(std::unique_ptr<Solver> solver) {
+  return std::make_unique<Solver>(
+      std::make_unique<CachingSolver>(std::move(solver)));
 }

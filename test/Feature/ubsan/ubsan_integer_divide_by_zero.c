@@ -1,17 +1,18 @@
 // RUN: %clang %s -fsanitize=integer-divide-by-zero -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out %t.bc 2>&1 | FileCheck %s
+// RUN: %klee --output-dir=%t.klee-out --emit-all-errors --ubsan-runtime --check-div-zero=false %t.bc 2>&1 | FileCheck %s
+// RUN: ls %t.klee-out/ | grep .ktest | wc -l | grep 1
+// RUN: ls %t.klee-out/ | grep .overflow.err | wc -l | grep 1
 
-#if defined(__SIZEOF_INT128__) && !defined(_WIN32)
-typedef __int128 intmax;
-#else
-typedef long long intmax;
-#endif
+#include "klee/klee.h"
 
 int main() {
-  intmax DIVIDEND;
-  klee_make_symbolic(&DIVIDEND, sizeof DIVIDEND, "DIVIDEND");
-  // CHECK: ubsan_integer_divide_by_zero.c:[[@LINE+1]]: overflow on division or remainder
-  intmax result = DIVIDEND / 0;
+  int x;
+  volatile int result;
+
+  klee_make_symbolic(&x, sizeof(x), "x");
+
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:{{[0-9]+}}: integer division overflow
+  result = x / 0;
   return 0;
 }

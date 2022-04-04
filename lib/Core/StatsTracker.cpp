@@ -12,6 +12,7 @@
 #include "ExecutionState.h"
 
 #include "klee/Config/Version.h"
+#include "klee/Core/TerminationTypes.h"
 #include "klee/Module/InstructionInfoTable.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
@@ -27,11 +28,11 @@
 #include "MemoryManager.h"
 #include "UserSearcher.h"
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/IR/BasicBlock.h"
-#if LLVM_VERSION_CODE < LLVM_VERSION(8, 0)
-#include "llvm/IR/CallSite.h"
-#endif
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
@@ -43,6 +44,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+DISABLE_WARNING_POP
 
 #include <fstream>
 #include <unistd.h>
@@ -170,13 +172,8 @@ static bool instructionIsCoverable(Instruction *i) {
     } else {
       Instruction *prev = &*(--it);
       if (isa<CallInst>(prev) || isa<InvokeInst>(prev)) {
-        Function *target = getDirectCallTarget(
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
-            cast<CallBase>(*prev),
-#else
-            CallSite(prev),
-#endif
-            /*moduleIsFullyLinked=*/true);
+        Function *target = getDirectCallTarget(cast<CallBase>(*prev),
+                                               /*moduleIsFullyLinked=*/true);
         if (target && target->doesNotReturn())
           return false;
       }
@@ -504,6 +501,10 @@ void StatsTracker::markBranchVisited(ExecutionState *visitedTrue,
 }
 
 void StatsTracker::writeStatsHeader() {
+#undef BTYPE
+#define BTYPE(Name, I) << "Branches" #Name " INTEGER,"
+#undef TCLASS
+#define TCLASS(Name, I) << "Termination" #Name " INTEGER,"
   std::ostringstream create, insert;
   create << "CREATE TABLE stats ("
          << "Instructions INTEGER,"
@@ -513,7 +514,8 @@ void StatsTracker::writeStatsHeader() {
          << "UserTime REAL,"
          << "NumStates INTEGER,"
          << "MallocUsage INTEGER,"
-         << "NumQueries INTEGER,"
+         << "Queries INTEGER,"
+         << "SolverQueries INTEGER,"
          << "NumQueryConstructs INTEGER,"
          << "WallTime REAL,"
          << "CoveredInstructions INTEGER,"
@@ -523,8 +525,14 @@ void StatsTracker::writeStatsHeader() {
          << "CexCacheTime INTEGER,"
          << "ForkTime INTEGER,"
          << "ResolveTime INTEGER,"
+         << "QueryCacheMisses INTEGER,"
+         << "QueryCacheHits INTEGER,"
          << "QueryCexCacheMisses INTEGER,"
          << "QueryCexCacheHits INTEGER,"
+         << "InhibitedForks INTEGER,"
+         << "ExternalCalls INTEGER,"
+         << "Allocations INTEGER,"
+         << "States INTEGER," BRANCH_TYPES TERMINATION_CLASSES
          << "ArrayHashTime INTEGER" << ')';
   char *zErrMsg = nullptr;
   if (sqlite3_exec(statsFile, create.str().c_str(), nullptr, nullptr,
@@ -533,16 +541,20 @@ void StatsTracker::writeStatsHeader() {
         "%s",
         sqlite3ErrToStringAndFree("ERROR creating table: ", zErrMsg).c_str());
   }
-  /* Sometimes KLEE runs out of file descriptors and hence we try to a) keep
-   * important fds open and b) prevent the creation of temporary files. SQLite3
-   * uses temporary files for statement journals, which help rollbacks when
-   * constraints are violated. We have no constraints in our table so there
-   * shouldn't be a constraint violation. `OR FAIL` will not write to temp files
-   * and therefore not rollback but simply fail. As said before this should not
-   * happen, but if it does this statement will fail with SQLITE_CONSTRAINT
-   * error. If this happens you should either remove the constraints or consider
-   * using `IGNORE` mode.
-   */
+/* Sometimes KLEE runs out of file descriptors and hence we try to a) keep
+ * important fds open and b) prevent the creation of temporary files. SQLite3
+ * uses temporary files for statement journals, which help rollbacks when
+ * constraints are violated. We have no constraints in our table so there
+ * shouldn't be a constraint violation. `OR FAIL` will not write to temp files
+ * and therefore not rollback but simply fail. As said before this should not
+ * happen, but if it does this statement will fail with SQLITE_CONSTRAINT
+ * error. If this happens you should either remove the constraints or consider
+ * using `IGNORE` mode.
+ */
+#undef BTYPE
+#define BTYPE(Name, I) << "Branches" #Name ","
+#undef TCLASS
+#define TCLASS(Name, I) << "Termination" #Name ","
   insert << "INSERT OR FAIL INTO stats ("
          << "Instructions,"
          << "FullBranches,"
@@ -551,7 +563,8 @@ void StatsTracker::writeStatsHeader() {
          << "UserTime,"
          << "NumStates,"
          << "MallocUsage,"
-         << "NumQueries,"
+         << "Queries,"
+         << "SolverQueries,"
          << "NumQueryConstructs,"
          << "WallTime,"
          << "CoveredInstructions,"
@@ -561,10 +574,20 @@ void StatsTracker::writeStatsHeader() {
          << "CexCacheTime,"
          << "ForkTime,"
          << "ResolveTime,"
+         << "QueryCacheMisses,"
+         << "QueryCacheHits,"
          << "QueryCexCacheMisses,"
          << "QueryCexCacheHits,"
-         << "ArrayHashTime"
-         << ") VALUES ("
+         << "InhibitedForks,"
+         << "ExternalCalls,"
+         << "Allocations,"
+         << "States," BRANCH_TYPES TERMINATION_CLASSES << "ArrayHashTime"
+         << ')';
+#undef BTYPE
+#define BTYPE(Name, I) << "?,"
+#undef TCLASS
+#define TCLASS(Name, I) << "?,"
+  insert << " VALUES ("
          << "?,"
          << "?,"
          << "?,"
@@ -584,7 +607,13 @@ void StatsTracker::writeStatsHeader() {
          << "?,"
          << "?,"
          << "?,"
-         << "? " << ')';
+         << "?,"
+         << "?,"
+         << "?,"
+         << "?,"
+         << "?,"
+         << "?,"
+         << "?," BRANCH_TYPES TERMINATION_CLASSES << "? " << ')';
 
   if (sqlite3_prepare_v2(statsFile, insert.str().c_str(), -1, &insertStmt,
                          nullptr) != SQLITE_OK) {
@@ -598,31 +627,48 @@ time::Span StatsTracker::elapsed() {
 }
 
 void StatsTracker::writeStatsLine() {
-  sqlite3_bind_int64(insertStmt, 1, stats::instructions);
-  sqlite3_bind_int64(insertStmt, 2, fullBranches);
-  sqlite3_bind_int64(insertStmt, 3, partialBranches);
-  sqlite3_bind_int64(insertStmt, 4, numBranches);
-  sqlite3_bind_int64(insertStmt, 5, time::getUserTime().toMicroseconds());
-  sqlite3_bind_int64(insertStmt, 6, executor.states.size());
-  sqlite3_bind_int64(insertStmt, 7,
-                     util::GetTotalMallocUsage() +
-                         executor.memory->getUsedDeterministicSize());
-  sqlite3_bind_int64(insertStmt, 8, stats::queries);
-  sqlite3_bind_int64(insertStmt, 9, stats::queryConstructs);
-  sqlite3_bind_int64(insertStmt, 10, elapsed().toMicroseconds());
-  sqlite3_bind_int64(insertStmt, 11, stats::coveredInstructions);
-  sqlite3_bind_int64(insertStmt, 12, stats::uncoveredInstructions);
-  sqlite3_bind_int64(insertStmt, 13, stats::queryTime);
-  sqlite3_bind_int64(insertStmt, 14, stats::solverTime);
-  sqlite3_bind_int64(insertStmt, 15, stats::cexCacheTime);
-  sqlite3_bind_int64(insertStmt, 16, stats::forkTime);
-  sqlite3_bind_int64(insertStmt, 17, stats::resolveTime);
-  sqlite3_bind_int64(insertStmt, 18, stats::queryCexCacheMisses);
-  sqlite3_bind_int64(insertStmt, 19, stats::queryCexCacheHits);
+#undef BTYPE
+#define BTYPE(Name, I)                                                         \
+  sqlite3_bind_int64(insertStmt, arg++, stats::branches##Name);
+#undef TCLASS
+#define TCLASS(Name, I)                                                        \
+  sqlite3_bind_int64(insertStmt, arg++, stats::termination##Name);
+  int arg = 1;
+  sqlite3_bind_int64(insertStmt, arg++, stats::instructions);
+  sqlite3_bind_int64(insertStmt, arg++, fullBranches);
+  sqlite3_bind_int64(insertStmt, arg++, partialBranches);
+  sqlite3_bind_int64(insertStmt, arg++, numBranches);
+  sqlite3_bind_int64(insertStmt, arg++, time::getUserTime().toMicroseconds());
+  sqlite3_bind_int64(insertStmt, arg++, executor.states.size());
+  sqlite3_bind_int64(
+      insertStmt, arg++,
+      util::GetTotalMallocUsage() +
+          (executor.memory ? executor.memory->getUsedDeterministicSize() : 0));
+  sqlite3_bind_int64(insertStmt, arg++, stats::queries);
+  sqlite3_bind_int64(insertStmt, arg++, stats::solverQueries);
+  sqlite3_bind_int64(insertStmt, arg++, stats::queryConstructs);
+  sqlite3_bind_int64(insertStmt, arg++, elapsed().toMicroseconds());
+  sqlite3_bind_int64(insertStmt, arg++, stats::coveredInstructions);
+  sqlite3_bind_int64(insertStmt, arg++, stats::uncoveredInstructions);
+  sqlite3_bind_int64(insertStmt, arg++, stats::queryTime);
+  sqlite3_bind_int64(insertStmt, arg++, stats::solverTime);
+  sqlite3_bind_int64(insertStmt, arg++, stats::cexCacheTime);
+  sqlite3_bind_int64(insertStmt, arg++, stats::forkTime);
+  sqlite3_bind_int64(insertStmt, arg++, stats::resolveTime);
+  sqlite3_bind_int64(insertStmt, arg++, stats::queryCacheMisses);
+  sqlite3_bind_int64(insertStmt, arg++, stats::queryCacheHits);
+  sqlite3_bind_int64(insertStmt, arg++, stats::queryCexCacheMisses);
+  sqlite3_bind_int64(insertStmt, arg++, stats::queryCexCacheHits);
+  sqlite3_bind_int64(insertStmt, arg++, stats::inhibitedForks);
+  sqlite3_bind_int64(insertStmt, arg++, stats::externalCalls);
+  sqlite3_bind_int64(insertStmt, arg++, stats::allocations);
+  sqlite3_bind_int64(insertStmt, arg++, ExecutionState::getLastID());
+  BRANCH_TYPES
+  TERMINATION_CLASSES
 #ifdef KLEE_ARRAY_DEBUG
-  sqlite3_bind_int64(insertStmt, 20, stats::arrayHashTime);
+  sqlite3_bind_int64(insertStmt, arg++, stats::arrayHashTime);
 #else
-  sqlite3_bind_int64(insertStmt, 20, -1LL);
+  sqlite3_bind_int64(insertStmt, arg++, -1LL);
 #endif
   int errCode = sqlite3_step(insertStmt);
   if (errCode != SQLITE_DONE)
@@ -879,19 +925,14 @@ void StatsTracker::computeReachableUncovered() {
              it != ie; ++it) {
           Instruction *inst = &*it;
           if (isa<CallInst>(inst) || isa<InvokeInst>(inst)) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
-            const CallBase &cs = cast<CallBase>(*inst);
-            if (isa<InlineAsm>(cs.getCalledOperand())) {
-#else
-            const CallSite cs(inst);
-            if (isa<InlineAsm>(cs.getCalledValue())) {
-#endif
+            const CallBase &cb = cast<CallBase>(*inst);
+            if (isa<InlineAsm>(cb.getCalledOperand())) {
               // We can never call through here so assume no targets
               // (which should be correct anyhow).
               callTargets.insert(
                   std::make_pair(inst, std::vector<Function *>()));
             } else if (Function *target = getDirectCallTarget(
-                           cs, /*moduleIsFullyLinked=*/true)) {
+                           cb, /*moduleIsFullyLinked=*/true)) {
               callTargets[inst].push_back(target);
             } else {
               callTargets[inst] = std::vector<Function *>(

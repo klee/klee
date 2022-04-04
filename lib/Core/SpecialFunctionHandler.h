@@ -49,8 +49,13 @@ public:
 
   // const_iterator to iterate over stored HandlerInfo
   // FIXME: Implement >, >=, <=, < operators
-  class const_iterator
-      : public std::iterator<std::random_access_iterator_tag, HandlerInfo> {
+  class const_iterator {
+    using iterator_category = std::random_access_iterator_tag;
+    using value_type = HandlerInfo;
+    using difference_type = ptrdiff_t;
+    using pointer = void;
+    using reference = void;
+
   private:
     value_type *base;
     int index;

@@ -14,6 +14,7 @@
 #include "klee/Config/Version.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Solver/Solver.h"
+#include "klee/Solver/SolverStats.h"
 #include "klee/Solver/SolverUtil.h"
 #include "klee/Statistics/Statistics.h"
 #include "klee/Statistics/TimerStatIncrementer.h"
@@ -29,6 +30,7 @@ bool TimingSolver::evaluate(const ConstraintSet &constraints, ref<Expr> expr,
                             PartialValidity &result,
                             SolverQueryMetaData &metaData,
                             bool produceValidityCore) {
+  ++stats::queries;
   // Fast path, to avoid timer and OS overhead.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
     result = CE->isTrue() ? PValidity::MustBeTrue : PValidity::MustBeFalse;
@@ -80,6 +82,7 @@ bool TimingSolver::evaluate(const ConstraintSet &constraints, ref<Expr> expr,
 bool TimingSolver::tryGetUnique(const ConstraintSet &constraints, ref<Expr> e,
                                 ref<Expr> &result,
                                 SolverQueryMetaData &metaData) {
+  ++stats::queries;
   result = e;
   if (!isa<ConstantExpr>(result)) {
     ref<ConstantExpr> value;
@@ -109,6 +112,7 @@ bool TimingSolver::tryGetUnique(const ConstraintSet &constraints, ref<Expr> e,
 bool TimingSolver::mustBeTrue(const ConstraintSet &constraints, ref<Expr> expr,
                               bool &result, SolverQueryMetaData &metaData,
                               bool produceValidityCore) {
+  ++stats::queries;
   // Fast path, to avoid timer and OS overhead.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
     result = CE->isTrue() ? true : false;
@@ -162,6 +166,7 @@ bool TimingSolver::mayBeFalse(const ConstraintSet &constraints, ref<Expr> expr,
 bool TimingSolver::getValue(const ConstraintSet &constraints, ref<Expr> expr,
                             ref<ConstantExpr> &result,
                             SolverQueryMetaData &metaData) {
+  ++stats::queries;
   // Fast path, to avoid timer and OS overhead.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
     result = CE;
@@ -184,6 +189,7 @@ bool TimingSolver::getMinimalUnsignedValue(const ConstraintSet &constraints,
                                            ref<Expr> expr,
                                            ref<ConstantExpr> &result,
                                            SolverQueryMetaData &metaData) {
+  ++stats::queries;
   // Fast path, to avoid timer and OS overhead.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
     result = CE;
@@ -207,6 +213,7 @@ bool TimingSolver::getInitialValues(
     const ConstraintSet &constraints, const std::vector<const Array *> &objects,
     std::vector<SparseStorage<unsigned char>> &result,
     SolverQueryMetaData &metaData, bool produceValidityCore) {
+  ++stats::queries;
   if (objects.empty())
     return true;
 
@@ -236,6 +243,7 @@ bool TimingSolver::evaluate(const ConstraintSet &constraints, ref<Expr> expr,
                             ref<SolverResponse> &queryResult,
                             ref<SolverResponse> &negatedQueryResult,
                             SolverQueryMetaData &metaData) {
+  ++stats::queries;
   TimerStatIncrementer timer(stats::solverTime);
 
   if (simplifyExprs) {
@@ -269,6 +277,7 @@ bool TimingSolver::getValidityCore(const ConstraintSet &constraints,
                                    ref<Expr> expr, ValidityCore &validityCore,
                                    bool &result,
                                    SolverQueryMetaData &metaData) {
+  ++stats::queries;
   // Fast path, to avoid timer and OS overhead.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
     result = CE->isTrue() ? true : false;
@@ -302,6 +311,7 @@ bool TimingSolver::getValidityCore(const ConstraintSet &constraints,
 bool TimingSolver::getResponse(const ConstraintSet &constraints, ref<Expr> expr,
                                ref<SolverResponse> &queryResult,
                                SolverQueryMetaData &metaData) {
+  ++stats::queries;
   // Fast path, to avoid timer and OS overhead.
   if (expr->isTrue()) {
     queryResult = new ValidResponse(ValidityCore());
@@ -334,6 +344,7 @@ bool TimingSolver::getResponse(const ConstraintSet &constraints, ref<Expr> expr,
 std::pair<ref<Expr>, ref<Expr>>
 TimingSolver::getRange(const ConstraintSet &constraints, ref<Expr> expr,
                        SolverQueryMetaData &metaData, time::Span timeout) {
+  ++stats::queries;
   TimerStatIncrementer timer(stats::solverTime);
   auto query = Query(constraints, expr);
   auto result = solver->getRange(query, timeout);

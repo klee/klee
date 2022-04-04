@@ -113,6 +113,9 @@ if (ENABLE_FP_RUNTIME)
     add_subdirectory(klee-fp)
 endif ()
 
+list(APPEND RUNTIME_LIBRARIES UBSan)
+add_subdirectory(Sanitizer)
+
 add_custom_target(BuildKLEERuntimes
         DEPENDS "${RUNTIME_LIBRARIES}"
         )

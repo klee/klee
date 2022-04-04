@@ -4,6 +4,8 @@
 
 // test bcmp for sizes including zero
 
+#include "klee/klee.h"
+
 #include <assert.h>
 #include <stdlib.h>
 #include <strings.h>

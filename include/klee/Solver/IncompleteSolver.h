@@ -13,6 +13,8 @@
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverImpl.h"
 
+#include <memory>
+
 namespace klee {
 
 /// IncompleteSolver - Base class for incomplete solver
@@ -58,12 +60,12 @@ public:
 /// solver.
 class StagedSolverImpl : public SolverImpl {
 private:
-  IncompleteSolver *primary;
-  Solver *secondary;
+  std::unique_ptr<IncompleteSolver> primary;
+  std::unique_ptr<Solver> secondary;
 
 public:
-  StagedSolverImpl(IncompleteSolver *_primary, Solver *_secondary);
-  ~StagedSolverImpl();
+  StagedSolverImpl(std::unique_ptr<IncompleteSolver> primary,
+                   std::unique_ptr<Solver> secondary);
 
   bool computeTruth(const Query &, bool &isValid);
   bool computeValidity(const Query &, PartialValidity &result);

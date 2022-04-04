@@ -388,6 +388,7 @@ public:
   bool isGEPExpr(ref<Expr> expr) const;
 
   bool reachedTarget(Target target) const;
+  static std::uint32_t getLastID() { return nextID - 1; };
 };
 
 struct ExecutionStateIDCompare {

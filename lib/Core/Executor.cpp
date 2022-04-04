@@ -10,8 +10,8 @@
 #include "Executor.h"
 
 #include "AddressManager.h"
+#include "AddressSpace.h"
 #include "CXXTypeSystem/CXXTypeManager.h"
-#include "Context.h"
 #include "CoreStats.h"
 #include "DistanceCalculator.h"
 #include "ExecutionState.h"
@@ -31,6 +31,7 @@
 #include "TimingSolver.h"
 #include "TypeManager.h"
 #include "UserSearcher.h"
+#include "klee/Core/Context.h"
 
 #include "klee/ADT/KTest.h"
 #include "klee/ADT/RNG.h"
@@ -62,7 +63,6 @@
 #include "klee/Support/Casting.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/FileHandling.h"
-#include "klee/Support/FloatEvaluation.h"
 #include "klee/Support/ModuleUtil.h"
 #include "klee/Support/OptionCategories.h"
 #include "klee/Support/RoundingModeUtil.h"
@@ -73,10 +73,6 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
-#include <llvm/Support/Casting.h>
-#if LLVM_VERSION_CODE < LLVM_VERSION(8, 0)
-#include "llvm/IR/CallSite.h"
-#endif
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
@@ -102,6 +98,7 @@ typedef unsigned TypeSize;
 #include <algorithm>
 #include <cassert>
 #include <cerrno>
+#include <cstdint>
 #include <cstring>
 #include <cxxabi.h>
 #include <fstream>
@@ -113,6 +110,7 @@ typedef unsigned TypeSize;
 #include <sstream>
 #include <string>
 #include <sys/mman.h>
+#include <sys/resource.h>
 #include <utility>
 #include <vector>
 
@@ -440,10 +438,11 @@ unsigned dumpStates = 0, dumpPForest = 0;
 bool Interpreter::hasTargetForest() const { return false; }
 
 const std::unordered_set<Intrinsic::ID> Executor::supportedFPIntrinsics = {
-    // Intrinsic::fabs, //handled individually because of its presence in
+    // Intrinsic::fabs and Intrinsic::fma handled individually because of thier
+    // presence in
     // mainline KLEE
-    Intrinsic::sqrt, Intrinsic::maxnum, Intrinsic::minnum,
-    Intrinsic::fma,  Intrinsic::trunc,  Intrinsic::rint};
+    Intrinsic::sqrt, Intrinsic::maxnum, Intrinsic::minnum, Intrinsic::trunc,
+    Intrinsic::rint};
 
 const std::unordered_set<Intrinsic::ID> Executor::modelledFPIntrinsics = {
     Intrinsic::ceil, Intrinsic::copysign, Intrinsic::cos,   Intrinsic::exp2,
@@ -476,25 +475,26 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
   coreSolverTimeout = time::Span{MaxCoreSolverTime};
   if (coreSolverTimeout)
     UseForkedCoreSolver = true;
-  Solver *coreSolver = klee::createCoreSolver(CoreSolverToUse);
+  std::unique_ptr<Solver> coreSolver = klee::createCoreSolver(CoreSolverToUse);
   if (!coreSolver) {
     klee_error("Failed to create core solver\n");
   }
 
-  memory = new MemoryManager(&arrayCache);
-  addressManager.reset(new AddressManager(memory, MaxSymbolicAllocationSize));
+  memory = std::make_unique<MemoryManager>(&arrayCache);
+  addressManager.reset(
+      new AddressManager(memory.get(), MaxSymbolicAllocationSize));
   memory->am = addressManager.get();
 
-  Solver *solver = constructSolverChain(
-      coreSolver,
+  std::unique_ptr<Solver> solver = constructSolverChain(
+      std::move(coreSolver),
       interpreterHandler->getOutputFilename(ALL_QUERIES_SMT2_FILE_NAME),
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_SMT2_FILE_NAME),
       interpreterHandler->getOutputFilename(ALL_QUERIES_KQUERY_FILE_NAME),
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_KQUERY_FILE_NAME),
       concretizationManager.get(), addressManager.get());
 
-  this->solver = new TimingSolver(solver, optimizer, EqualitySubstitution);
-
+  this->solver = std::make_unique<TimingSolver>(std::move(solver), optimizer,
+                                                EqualitySubstitution);
   initializeSearchOptions();
 
   if (OnlyOutputStatesCoveringNew && !StatsTracker::useIStats())
@@ -610,12 +610,10 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &userModules,
 }
 
 Executor::~Executor() {
-  delete memory;
   delete typeSystemManager;
   delete externalDispatcher;
   delete specialFunctionHandler;
   delete statsTracker;
-  delete solver;
 }
 
 /***/
@@ -783,7 +781,7 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
 
   for (const GlobalVariable &v : m->globals()) {
     std::size_t globalObjectAlignment = getAllocationAlignment(&v);
-    Type *ty = v.getType()->getElementType();
+    Type *ty = v.getValueType();
     std::uint64_t size = 0;
     if (ty->isSized()) {
       // size includes padding
@@ -873,9 +871,6 @@ void Executor::initializeGlobalAliases(ExecutionState &state) {
 void Executor::initializeGlobalObjects(ExecutionState &state) {
   const Module *m = kmodule->module.get();
 
-  // remember constant objects to initialise their counter part for external
-  // calls
-  std::vector<ObjectState *> constantObjects;
   for (const GlobalVariable &v : m->globals()) {
     MemoryObject *mo = globalObjects.find(&v)->second;
     ObjectState *os = bindObjectInState(
@@ -904,28 +899,21 @@ void Executor::initializeGlobalObjects(ExecutionState &state) {
       }
     } else if (v.hasInitializer()) {
       if (!v.isConstant() && kmodule->inMainModule(v) &&
-          MockMutableGlobals == MockMutableGlobalsPolicy::All)
+          MockMutableGlobals == MockMutableGlobalsPolicy::All) {
         executeMakeSymbolic(
             state, mo, typeSystemManager->getWrappedType(v.getType()),
             SourceBuilder::irreproducible("mockMutableGlobalObject"), false);
-      else {
+      } else {
         initializeGlobalObject(state, os, v.getInitializer(), 0);
-        if (v.isConstant())
-          constantObjects.emplace_back(os);
+        if (v.isConstant()) {
+          os->setReadOnly(true);
+          // initialise constant memory that may be used with external calls
+          state.addressSpace.copyOutConcrete(mo, os);
+        }
       }
     } else {
       os->initializeToRandom();
     }
-  }
-
-  // initialise constant memory that is potentially used with external calls
-  if (!constantObjects.empty()) {
-    // initialise the actual memory with constant values
-    state.addressSpace.copyOutConcretes();
-
-    // mark constant objects as read-only
-    for (auto obj : constantObjects)
-      obj->setReadOnly(true);
   }
 }
 
@@ -971,8 +959,10 @@ void Executor::branch(ExecutionState &state,
         result.push_back(nullptr);
       }
     }
+    stats::inhibitedForks += N - 1;
   } else {
     stats::forks += N - 1;
+    stats::incBranchStat(reason, N - 1);
 
     // XXX do proper balance or keep random?
     result.push_back(&state);
@@ -1026,8 +1016,9 @@ void Executor::branch(ExecutionState &state,
     if (OnlyReplaySeeds) {
       for (unsigned i = 0; i < N; ++i) {
         if (result[i] && !seedMap.count(result[i])) {
-          terminateStateEarly(*result[i], "Unseeded path during replay",
-                              StateTerminationType::Replay);
+          terminateStateEarlyAlgorithm(*result[i],
+                                       "Unseeded path during replay",
+                                       StateTerminationType::Replay);
           result[i] = nullptr;
         }
       }
@@ -1048,8 +1039,8 @@ ref<Expr> Executor::maxStaticPctChecks(ExecutionState &current,
       MaxStaticCPForkPct == 1. && MaxStaticCPSolvePct == 1.)
     return condition;
 
-  // These checks are performed only after at least MaxStaticPctCheckDelay forks
-  // have been performed since execution started
+  // These checks are performed only after at least MaxStaticPctCheckDelay
+  // forks have been performed since execution started
   if (stats::forks < MaxStaticPctCheckDelay)
     return condition;
 
@@ -1157,8 +1148,8 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
   }
   if (terminateEverything) {
     current.pc = current.prevPC;
-    terminateStateEarly(current, "State missed all it's targets.",
-                        StateTerminationType::MissedAllTargets);
+    terminateStateEarlyAlgorithm(current, "State missed all it's targets.",
+                                 StateTerminationType::MissedAllTargets);
     return StatePair(nullptr, nullptr);
   }
   if (res != PartialValidity::None)
@@ -1203,6 +1194,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
         } else {
           res = PValidity::MayBeFalse;
         }
+        ++stats::inhibitedForks;
       }
     }
   }
@@ -1320,10 +1312,11 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
     }
 
     processForest->attach(current.ptreeNode, falseState, trueState, reason);
+    stats::incBranchStat(reason, 1);
 
     if (pathWriter) {
-      // Need to update the pathOS.id field of falseState, otherwise the same id
-      // is used for both falseState and trueState.
+      // Need to update the pathOS.id field of falseState, otherwise the same
+      // id is used for both falseState and trueState.
       falseState->pathOS = pathWriter->open(current.pathOS);
       if (!isInternal) {
         trueState->pathOS << "1";
@@ -1386,7 +1379,7 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
       assert(success && "FIXME: Unhandled solver failure");
       (void)success;
       if (res) {
-        siit->patchSeed(state, condition, solver);
+        siit->patchSeed(state, condition, solver.get());
         warn = true;
       }
     }
@@ -1881,8 +1874,8 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
           "You may enable this intrinsic by passing the following options"
           " to cmake:\n"
           "\"-DENABLE_FLOATING_POINT=ON\"\n");
-      terminateStateOnError(state, "unimplemented intrinsic",
-                            StateTerminationType::Execution);
+      terminateStateOnExecError(state, "unimplemented intrinsic",
+                                StateTerminationType::Execution);
       return;
     }
     if (modelledFPIntrinsics.find(id) != modelledFPIntrinsics.end()) {
@@ -1892,8 +1885,8 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
           " to cmake:\n"
           "\"-DENABLE_FLOATING_POINT=ON\"\n"
           "\"-DENABLE_FP_RUNTIME=ON\"\n");
-      terminateStateOnError(state, "unimplemented intrinsic",
-                            StateTerminationType::Execution);
+      terminateStateOnExecError(state, "unimplemented intrinsic",
+                                StateTerminationType::Execution);
       return;
     }
 #endif
@@ -1943,18 +1936,6 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       bindLocal(ki, state, result);
       break;
     }
-    case Intrinsic::fma: {
-      ref<Expr> op1 = eval(ki, 1, state).value;
-      ref<Expr> op2 = eval(ki, 2, state).value;
-      ref<Expr> op3 = eval(ki, 3, state).value;
-      assert(op1->getWidth() == op2->getWidth() &&
-             op2->getWidth() == op3->getWidth() && "type mismatch");
-      ref<Expr> result =
-          FAddExpr::create(FMulExpr::create(op1, op2, state.roundingMode), op3,
-                           state.roundingMode);
-      bindLocal(ki, state, result);
-      break;
-    }
     case Intrinsic::trunc: {
       FPTruncInst *fi = cast<FPTruncInst>(i);
       Expr::Width resultType = getWidthForLLVMType(fi->getType());
@@ -1975,6 +1956,54 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       ref<Expr> result = FRintExpr::create(arg, state.roundingMode);
       bindLocal(ki, state, result);
       break;
+    }
+
+    case Intrinsic::fma:
+    case Intrinsic::fmuladd: {
+#ifndef ENABLE_FP
+      // Both fma and fmuladd support float, double and fp80.  Note, that fp80
+      // is not mentioned in the documentation of fmuladd, nevertheless, it is
+      // still supported.  For details see
+      // https://github.com/klee/klee/pull/1507/files#r894993332
+
+      if (isa<VectorType>(i->getOperand(0)->getType()))
+        return terminateStateOnExecError(
+            state, f->getName() + " with vectors is not supported");
+
+      ref<ConstantExpr> op1 =
+          toConstant(state, eval(ki, 1, state).value, "floating point");
+      ref<ConstantExpr> op2 =
+          toConstant(state, eval(ki, 2, state).value, "floating point");
+      ref<ConstantExpr> op3 =
+          toConstant(state, eval(ki, 3, state).value, "floating point");
+
+      if (!fpWidthToSemantics(op1->getWidth()) ||
+          !fpWidthToSemantics(op2->getWidth()) ||
+          !fpWidthToSemantics(op3->getWidth()))
+        return terminateStateOnExecError(state, "Unsupported " + f->getName() +
+                                                    " call");
+
+      // (op1 * op2) + op3
+      APFloat Res(*fpWidthToSemantics(op1->getWidth()), op1->getAPValue());
+      Res.fusedMultiplyAdd(
+          APFloat(*fpWidthToSemantics(op2->getWidth()), op2->getAPValue()),
+          APFloat(*fpWidthToSemantics(op3->getWidth()), op3->getAPValue()),
+          APFloat::rmNearestTiesToEven);
+
+      bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+      break;
+#else
+      ref<Expr> op1 = eval(ki, 1, state).value;
+      ref<Expr> op2 = eval(ki, 2, state).value;
+      ref<Expr> op3 = eval(ki, 3, state).value;
+      assert(op1->getWidth() == op2->getWidth() &&
+             op2->getWidth() == op3->getWidth() && "type mismatch");
+      ref<Expr> result =
+          FAddExpr::create(FMulExpr::create(op1, op2, state.roundingMode), op3,
+                           state.roundingMode);
+      bindLocal(ki, state, result);
+      break;
+#endif
     }
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(12, 0)
@@ -2044,7 +2073,6 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
     }
 #endif
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
     case Intrinsic::fshr:
     case Intrinsic::fshl: {
       ref<Expr> op1 = eval(ki, 1, state).value;
@@ -2069,7 +2097,6 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       }
       break;
     }
-#endif
 
     // va_arg is handled by caller and intrinsic lowering, see comment for
     // ExecutionState::varargs
@@ -2149,10 +2176,10 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       return;
     }
 
-    // FIXME: I'm not really happy about this reliance on prevPC but it is ok, I
-    // guess. This just done to avoid having to pass KInstIterator everywhere
-    // instead of the actual instruction, since we can't make a KInstIterator
-    // from just an instruction (unlike LLVM).
+    // FIXME: I'm not really happy about this reliance on prevPC but it is ok,
+    // I guess. This just done to avoid having to pass KInstIterator
+    // everywhere instead of the actual instruction, since we can't make a
+    // KInstIterator from just an instruction (unlike LLVM).
     KFunction *kf = kmodule->functionMap[f];
 
     state.pushFrame(state.prevPC, kf);
@@ -2193,39 +2220,27 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       uint64_t offsets[callingArgs]; // offsets of variadic arguments
       uint64_t argWidth;             // width of current variadic argument
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
-      const CallBase &cs = cast<CallBase>(*i);
-#else
-      const CallSite cs(i);
-#endif
+      const CallBase &cb = cast<CallBase>(*i);
       for (unsigned k = funcArgs; k < callingArgs; k++) {
-        if (cs.isByValArgument(k)) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(9, 0)
-          Type *t = cs.getParamByValType(k);
-#else
-          auto arg = cs.getArgOperand(k);
-          Type *t = arg->getType();
-          assert(t->isPointerTy());
-          t = t->getPointerElementType();
-#endif
+        if (cb.isByValArgument(k)) {
+          Type *t = cb.getParamByValType(k);
           argWidth = kmodule->targetData->getTypeSizeInBits(t);
         } else {
           argWidth = arguments[k]->getWidth();
         }
 
-        if (WordSize == Expr::Int32) {
-          offsets[k] = size;
-          size += Expr::getMinBytesForWidth(argWidth);
-        } else {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(11, 0)
-          MaybeAlign ma = cs.getParamAlign(k);
-          unsigned alignment = ma ? ma->value() : 0;
+        MaybeAlign ma = cb.getParamAlign(k);
+        unsigned alignment = ma ? ma->value() : 0;
 #else
-          unsigned alignment = cs.getParamAlignment(k);
+        unsigned alignment = cb.getParamAlignment(k);
 #endif
 
-          // AMD64-ABI 3.5.7p5: Step 7. Align l->overflow_arg_area upwards to a
-          // 16 byte boundary if alignment needed by type exceeds 8 byte
+        if (WordSize == Expr::Int32 && !alignment)
+          alignment = 4;
+        else {
+          // AMD64-ABI 3.5.7p5: Step 7. Align l->overflow_arg_area upwards to
+          // a 16 byte boundary if alignment needed by type exceeds 8 byte
           // boundary.
           if (!alignment && argWidth > Expr::Int64) {
             alignment = 16;
@@ -2234,13 +2249,18 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
 
           if (!alignment)
             alignment = 8;
+        }
 
-          size = llvm::alignTo(size, alignment);
-          offsets[k] = size;
+        size = llvm::alignTo(size, alignment);
+        offsets[k] = size;
 
+        if (WordSize == Expr::Int32)
+          size += Expr::getMinBytesForWidth(argWidth);
+        else {
           // AMD64-ABI 3.5.7p5: Step 9. Set l->overflow_arg_area to:
           // l->overflow_arg_area + sizeof(type)
-          // Step 10. Align l->overflow_arg_area upwards to an 8 byte boundary.
+          // Step 10. Align l->overflow_arg_area upwards to an 8 byte
+          // boundary.
           size += llvm::alignTo(argWidth, WordSize) / 8;
         }
       }
@@ -2269,7 +2289,7 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
         llvm::Type *argType = (ati == f->arg_end()) ? nullptr : ati->getType();
 
         for (unsigned k = funcArgs; k < callingArgs; k++) {
-          if (!cs.isByValArgument(k)) {
+          if (!cb.isByValArgument(k)) {
             os->write(offsets[k], arguments[k]);
           } else {
             ConstantExpr *CE = dyn_cast<ConstantExpr>(arguments[k]);
@@ -2461,16 +2481,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
           Expr::Width to = getWidthForLLVMType(t);
 
           if (from != to) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
-            const CallBase &cs = cast<CallBase>(*caller);
-#else
-            const CallSite cs(isa<InvokeInst>(caller)
-                                  ? CallSite(cast<InvokeInst>(caller))
-                                  : CallSite(cast<CallInst>(caller)));
-#endif
+            const CallBase &cb = cast<CallBase>(*caller);
 
             // XXX need to check other param attrs ?
-            bool isSExt = cs.hasRetAttr(llvm::Attribute::SExt);
+            bool isSExt = cb.hasRetAttr(llvm::Attribute::SExt);
             if (isSExt) {
               result = SExtExpr::create(result, to);
             } else {
@@ -2512,8 +2526,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       auto ifTrueBlock = kf->blockMap[bi->getSuccessor(0)];
       auto ifFalseBlock = kf->blockMap[bi->getSuccessor(1)];
       Executor::StatePair branches =
-          fork(state, cond, ifTrueBlock, ifFalseBlock,
-               BranchType::ConditionalBranch);
+          fork(state, cond, ifTrueBlock, ifFalseBlock, BranchType::Conditional);
 
       // NOTE: There is a hidden dependency here, markBranchVisited
       // requires that we still be in the context of the branch
@@ -2597,7 +2610,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // fork states
     std::vector<ExecutionState *> branches;
-    branch(state, expressions, branches, BranchType::IndirectBranch);
+    branch(state, expressions, branches, BranchType::Indirect);
 
     // terminate error state
     if (result) {
@@ -2664,12 +2677,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         BasicBlock *caseSuccessor = it->second;
 
         // skip if case has same successor basic block as default case
-        // (should work even with phi nodes as a switch is a single terminating
-        // instruction)
+        // (should work even with phi nodes as a switch is a single
+        // terminating instruction)
         if (it->second == si->getDefaultDest())
           continue;
 
-        // Make sure that the default value does not contain this target's value
+        // Make sure that the default value does not contain this target's
+        // value
         defaultValue = AndExpr::create(defaultValue, Expr::createIsZero(match));
 
         if (!canReachSomeTargetFromBlock(state, kf->blockMap[caseSuccessor]))
@@ -2683,11 +2697,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         assert(success && "FIXME: Unhandled solver failure");
         (void)success;
         if (result) {
-          // Handle the case that a basic block might be the target of multiple
-          // switch cases.
-          // Currently we generate an expression containing all switch-case
-          // values for the same target basic block. We spare us forking too
-          // many times but we generate more complex condition expressions
+          // Handle the case that a basic block might be the target of
+          // multiple switch cases. Currently we generate an expression
+          // containing all switch-case values for the same target basic
+          // block. We spare us forking too many times but we generate more
+          // complex condition expressions
           // TODO Add option to allow to choose between those behaviors
           std::pair<std::map<BasicBlock *, ref<Expr>>::iterator, bool> res =
               branchTargets.insert(std::make_pair(
@@ -2757,15 +2771,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (isa<DbgInfoIntrinsic>(i))
       break;
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
-    const CallBase &cs = cast<CallBase>(*i);
-    Value *fp = cs.getCalledOperand();
-#else
-    const CallSite cs(i);
-    Value *fp = cs.getCalledValue();
-#endif
-
-    unsigned numArgs = cs.arg_size();
+    const CallBase &cb = cast<CallBase>(*i);
+    Value *fp = cb.getCalledOperand();
+    unsigned numArgs = cb.arg_size();
     Function *f = getTargetFunction(fp);
 
     // evaluate arguments
@@ -2788,10 +2796,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     }
 
     if (f) {
-      const FunctionType *fType = dyn_cast<FunctionType>(
-          cast<PointerType>(f->getType())->getElementType());
-      const FunctionType *fpType = dyn_cast<FunctionType>(
-          cast<PointerType>(fp->getType())->getElementType());
+      const FunctionType *fType = f->getFunctionType();
+      const FunctionType *fpType =
+          dyn_cast<FunctionType>(fp->getType()->getPointerElementType());
 
       // special case the call with a bitcast case
       if (fType != fpType) {
@@ -2811,7 +2818,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
             if (from != to) {
               // XXX need to check other param attrs ?
-              bool isSExt = cs.paramHasAttr(i, llvm::Attribute::SExt);
+              bool isSExt = cb.paramHasAttr(i, llvm::Attribute::SExt);
               if (isSExt) {
                 arguments[i] = SExtExpr::create(arguments[i], to);
               } else {
@@ -3231,7 +3238,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   // Floating point instructions
 #ifndef ENABLE_FP
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
   case Instruction::FNeg: {
     ref<ConstantExpr> arg =
         toConstant(state, eval(ki, 0, state).value, "floating point");
@@ -3243,7 +3249,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
     break;
   }
-#endif
 
   case Instruction::FAdd: {
     ref<ConstantExpr> left =
@@ -3447,7 +3452,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     bool Result = false;
     switch (fi->getPredicate()) {
-      // Predicates which only care about whether or not the operands are NaNs.
+      // Predicates which only care about whether or not the operands are
+      // NaNs.
     case FCmpInst::FCMP_ORD:
       Result = (CmpRes != APFloat::cmpUnordered);
       break;
@@ -3571,13 +3577,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
   case Instruction::FNeg: {
     ref<Expr> expr = eval(ki, 0, state).value;
     bindLocal(ki, state, FNegExpr::create(expr));
     break;
   }
-#endif
 
   case Instruction::FRem: {
     ref<Expr> left = eval(ki, 0, state).value;
@@ -3744,8 +3748,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     if (iIdx >= vt->getNumElements()) {
       // Out of bounds write
-      terminateStateOnError(state, "Out of bounds write when inserting element",
-                            StateTerminationType::BadVectorAccess);
+      terminateStateOnProgramError(state,
+                                   "Out of bounds write when inserting element",
+                                   StateTerminationType::BadVectorAccess);
       return;
     }
 
@@ -3785,8 +3790,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     if (iIdx >= vt->getNumElements()) {
       // Out of bounds read
-      terminateStateOnError(state, "Out of bounds read when extracting element",
-                            StateTerminationType::BadVectorAccess);
+      terminateStateOnProgramError(state,
+                                   "Out of bounds read when extracting element",
+                                   StateTerminationType::BadVectorAccess);
       return;
     }
 
@@ -3855,7 +3861,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // check on which frame we are currently
     if (state.stack.size() - 1 == cui->catchingStackIndex) {
       // we are in the target stack frame, return the selector value
-      // that was returned by the personality fn in phase 1 and stop unwinding.
+      // that was returned by the personality fn in phase 1 and stop
+      // unwinding.
       selectorValue = cui->selectorValue;
 
       // stop unwinding by cleaning up our unwinding information.
@@ -3924,13 +3931,14 @@ void Executor::updateStates(ExecutionState *current) {
   removedStates.clear();
 }
 
-template <typename SqType, typename TypeIt>
+template <typename TypeIt>
 void Executor::computeOffsetsSeqTy(KGEPInstruction *kgepi,
                                    ref<ConstantExpr> &constantOffset,
                                    uint64_t index, const TypeIt it) {
-  const auto *sq = cast<SqType>(*it);
+  assert(it->getNumContainedTypes() == 1 &&
+         "Sequential type must contain one subtype");
   uint64_t elementSize =
-      kmodule->targetData->getTypeStoreSize(sq->getElementType());
+      kmodule->targetData->getTypeStoreSize(it->getContainedType(0));
   const Value *operand = it.getOperand();
   if (const Constant *c = dyn_cast<Constant>(operand)) {
     ref<ConstantExpr> index =
@@ -3956,12 +3964,8 @@ void Executor::computeOffsets(KGEPInstruction *kgepi, TypeIt ib, TypeIt ie) {
       uint64_t addend = sl->getElementOffset((unsigned)ci->getZExtValue());
       constantOffset = constantOffset->Add(
           ConstantExpr::alloc(addend, Context::get().getPointerWidth()));
-    } else if (isa<ArrayType>(*ii)) {
-      computeOffsetsSeqTy<ArrayType>(kgepi, constantOffset, index, ii);
-    } else if (isa<VectorType>(*ii)) {
-      computeOffsetsSeqTy<VectorType>(kgepi, constantOffset, index, ii);
-    } else if (isa<PointerType>(*ii)) {
-      computeOffsetsSeqTy<PointerType>(kgepi, constantOffset, index, ii);
+    } else if (ii->isArrayTy() || ii->isVectorTy() || ii->isPointerTy()) {
+      computeOffsetsSeqTy(kgepi, constantOffset, index, ii);
     } else
       assert("invalid type" && 0);
     index++;
@@ -4315,7 +4319,8 @@ void Executor::executeStep(ExecutionState &state) {
   updateStates(&state);
 
   if (!checkMemoryUsage()) {
-    // update searchers when states were terminated early due to memory pressure
+    // update searchers when states were terminated early due to memory
+    // pressure
     updateStates(nullptr);
   }
 }
@@ -4345,7 +4350,7 @@ void Executor::targetedRun(ExecutionState &initialState, KBlock *target,
 
     if (ki == terminator) {
       *resultState = state.copy();
-      terminateStateOnTerminator(state);
+      terminateStateEarly(state, "", StateTerminationType::SilentExit);
       updateStates(&state);
       haltExecution = HaltExecution::ReachedTarget;
       break;
@@ -4456,6 +4461,7 @@ void Executor::terminateState(ExecutionState &state,
   }
 
   interpreterHandler->incPathsExplored();
+  targetCalculator->update(state);
 
   state.pc = state.prevPC;
   removedStates.push_back(&state);
@@ -4467,51 +4473,57 @@ static bool shouldWriteTest(const ExecutionState &state) {
 
 static std::string terminationTypeFileExtension(StateTerminationType type) {
   std::string ret;
+#undef TTYPE
+#undef TTMARK
 #define TTYPE(N, I, S)                                                         \
   case StateTerminationType::N:                                                \
     ret = (S);                                                                 \
     break;
-#define MARK(N, I)
+#define TTMARK(N, I)
   switch (type) { TERMINATION_TYPES }
-#undef TTYPE
-#undef MARK
   return ret;
 };
 
 void Executor::terminateStateOnExit(ExecutionState &state) {
   auto terminationType = StateTerminationType::Exit;
+  ++stats::terminationExit;
   if (shouldWriteTest(state) || (AlwaysOutputSeeds && seedMap.count(&state)))
     interpreterHandler->processTestCase(
         state, nullptr, terminationTypeFileExtension(terminationType).c_str());
 
   interpreterHandler->incPathsCompleted();
-  targetCalculator->update(state);
   terminateState(state, terminationType);
 }
 
 void Executor::terminateStateEarly(ExecutionState &state, const Twine &message,
-                                   StateTerminationType terminationType) {
-  if ((terminationType <= StateTerminationType::EXECERR &&
-       shouldWriteTest(state)) ||
+                                   StateTerminationType reason) {
+  if (reason <= StateTerminationType::EARLY) {
+    assert(reason > StateTerminationType::EXIT);
+    ++stats::terminationEarly;
+  }
+
+  if ((reason <= StateTerminationType::EARLY && shouldWriteTest(state)) ||
       (AlwaysOutputSeeds && seedMap.count(&state))) {
     interpreterHandler->processTestCase(
         state, (message + "\n").str().c_str(),
-        terminationTypeFileExtension(terminationType).c_str());
+        terminationTypeFileExtension(reason).c_str());
   }
-  terminateState(state, terminationType);
+  terminateState(state, reason);
 }
 
-void Executor::terminateStateOnTerminator(ExecutionState &state) {
-  if (shouldWriteTest(state) || (AlwaysOutputSeeds && seedMap.count(&state))) {
-    interpreterHandler->processTestCase(state, nullptr, nullptr);
-  }
-  targetCalculator->update(state);
-  terminateState(state, StateTerminationType::SilentExit);
+void Executor::terminateStateEarlyAlgorithm(ExecutionState &state,
+                                            const llvm::Twine &message,
+                                            StateTerminationType reason) {
+  assert(reason > StateTerminationType::EXECERR &&
+         reason <= StateTerminationType::EARLYALGORITHM);
+  ++stats::terminationEarlyAlgorithm;
+  terminateStateEarly(state, message, reason);
 }
 
-void Executor::terminateStateOnUserError(ExecutionState &state,
-                                         const llvm::Twine &message) {
-  terminateStateOnError(state, message, StateTerminationType::User, "");
+void Executor::terminateStateEarlyUser(ExecutionState &state,
+                                       const llvm::Twine &message) {
+  ++stats::terminationEarlyUser;
+  terminateStateEarly(state, message, StateTerminationType::SilentExit);
 }
 
 const InstructionInfo &
@@ -4596,24 +4608,16 @@ void Executor::terminateStateOnTargetError(ExecutionState &state,
     messaget = "use after free error";
     terminationType = StateTerminationType::Ptr;
     break;
-  case ReachWithError::NullCheckAfterDerefException:
-    messaget = "null check after deref";
-    terminationType = StateTerminationType::Exit;
-    break;
   case ReachWithError::Reachable:
     messaget = "";
-    terminationType = StateTerminationType::Exit;
+    terminationType = StateTerminationType::Reachable;
     break;
   case ReachWithError::None:
   default:
     messaget = "unspecified error";
     terminationType = StateTerminationType::User;
   }
-  if (error == ReachWithError::Reachable) {
-    terminateStateEarly(state, messaget, terminationType);
-  } else {
-    terminateStateOnError(state, messaget, terminationType);
-  }
+  terminateStateOnProgramError(state, messaget, terminationType);
 }
 
 void Executor::terminateStateOnError(ExecutionState &state,
@@ -4670,15 +4674,36 @@ void Executor::terminateStateOnError(ExecutionState &state,
 
 void Executor::terminateStateOnExecError(ExecutionState &state,
                                          const llvm::Twine &message,
-                                         const llvm::Twine &info) {
-  terminateStateOnError(state, message, StateTerminationType::Execution, info);
+                                         StateTerminationType reason) {
+  assert(reason > StateTerminationType::USERERR &&
+         reason <= StateTerminationType::EXECERR);
+  ++stats::terminationExecutionError;
+  terminateStateOnError(state, message, reason, "");
+}
+
+void Executor::terminateStateOnProgramError(ExecutionState &state,
+                                            const llvm::Twine &message,
+                                            StateTerminationType reason,
+                                            const llvm::Twine &info,
+                                            const char *suffix) {
+  assert(reason > StateTerminationType::SOLVERERR &&
+         reason <= StateTerminationType::PROGERR);
+  ++stats::terminationProgramError;
+  terminateStateOnError(state, message, reason, info, suffix);
 }
 
 void Executor::terminateStateOnSolverError(ExecutionState &state,
                                            const llvm::Twine &message) {
+  ++stats::terminationSolverError;
   terminateStateOnError(state, message, StateTerminationType::Solver, "");
   SetOfStates states = {&state};
   decreaseConfidenceFromStoppedStates(states, HaltExecution::MaxSolverTime);
+}
+
+void Executor::terminateStateOnUserError(ExecutionState &state,
+                                         const llvm::Twine &message) {
+  ++stats::terminationUserError;
+  terminateStateOnError(state, message, StateTerminationType::User, "");
 }
 
 // XXX shoot me
@@ -4728,12 +4753,13 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
   }
 
   // normal external function handling path
-  // allocate 128 bits for each argument (+return value) to support fp80's;
+  // allocate 512 bits for each argument (+return value) to support
+  // fp80's and SIMD vectors as parameters for external calls;
   // we could iterate through all the arguments first and determine the exact
   // size we need, but this is faster, and the memory usage isn't significant.
-  uint64_t *args =
-      (uint64_t *)alloca(2 * sizeof(*args) * (arguments.size() + 1));
-  memset(args, 0, 2 * sizeof(*args) * (arguments.size() + 1));
+  size_t allocatedBytes = Expr::MaxWidth / 8 * (arguments.size() + 1);
+  uint64_t *args = (uint64_t *)alloca(allocatedBytes);
+  memset(args, 0, allocatedBytes);
   unsigned wordIndex = 2;
 
   /* To check types we iterate over types of parameteres in function
@@ -4765,7 +4791,7 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
           state.addressSpace.resolveOne(
               ce, typeSystemManager->getWrappedType(argumentType), result)) {
         state.addressSpace.findObject(result).second->flushToConcreteStore(
-            solver, state);
+            solver.get(), state);
       }
       wordIndex += (ce->getWidth() + 63) / 64;
     } else {
@@ -4844,7 +4870,7 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
   if (roundingMode == -1) {
     std::string msg("Cannot set rounding mode for external call to ");
     msg += LLVMRoundingModeToString(state.roundingMode);
-    terminateStateOnError(state, msg, StateTerminationType::External);
+    terminateStateOnExecError(state, msg, StateTerminationType::External);
     return;
   }
 
@@ -4857,16 +4883,16 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
         prepareMockValue(state, "mockExternResult", target);
       }
     } else {
-      terminateStateOnError(state,
-                            "failed external call: " + callable->getName(),
-                            StateTerminationType::External);
+      terminateStateOnExecError(state,
+                                "failed external call: " + callable->getName(),
+                                StateTerminationType::External);
     }
     return;
   }
 
   if (!state.addressSpace.copyInConcretes()) {
-    terminateStateOnError(state, "external modified read-only object",
-                          StateTerminationType::External);
+    terminateStateOnExecError(state, "external modified read-only object",
+                              StateTerminationType::External);
     return;
   }
 
@@ -4959,7 +4985,9 @@ void Executor::executeAlloc(ExecutionState &state, ref<Expr> size, bool isLocal,
   }
 
   if (!isa<ConstantExpr>(size) && !UseSymbolicSizeAllocation) {
-    size = toConstant(state, size, "symbolic size allocation");
+    concretizeSize(state, size, isLocal, target, type, zeroMemory, reallocFrom,
+                   allocationAlignment, checkOutOfMemory);
+    return;
   }
 
   ref<Expr> upperBoundSizeConstraint = Expr::createTrue();
@@ -5049,13 +5077,13 @@ void Executor::executeFree(ExecutionState &state, ref<Expr> address,
           zeroPointer.second->addressSpace.findObject(it->first).first;
 
       if (mo->isLocal) {
-        terminateStateOnError(*it->second, "free of alloca",
-                              StateTerminationType::Free,
-                              getAddressInfo(*it->second, address));
+        terminateStateOnProgramError(*it->second, "free of alloca",
+                                     StateTerminationType::Free,
+                                     getAddressInfo(*it->second, address));
       } else if (mo->isGlobal) {
-        terminateStateOnError(*it->second, "free of global",
-                              StateTerminationType::Free,
-                              getAddressInfo(*it->second, address));
+        terminateStateOnProgramError(*it->second, "free of global",
+                                     StateTerminationType::Free,
+                                     getAddressInfo(*it->second, address));
       } else {
         it->second->removePointerResolutions(mo);
         it->second->addressSpace.unbindObject(mo);
@@ -5146,12 +5174,102 @@ bool Executor::resolveExact(ExecutionState &estate, ref<Expr> address,
     if (incomplete) {
       terminateStateOnSolverError(*unbound, "Query timed out (resolve).");
     } else {
-      terminateStateOnError(*unbound, "memory error: invalid pointer: " + name,
-                            StateTerminationType::Ptr,
-                            getAddressInfo(*unbound, address));
+      terminateStateOnProgramError(
+          *unbound, "memory error: invalid pointer: " + name,
+          StateTerminationType::Ptr, getAddressInfo(*unbound, address));
     }
   }
   return true;
+}
+
+void Executor::concretizeSize(ExecutionState &state, ref<Expr> size,
+                              bool isLocal, KInstruction *target, KType *type,
+                              bool zeroMemory, const ObjectState *reallocFrom,
+                              size_t allocationAlignment,
+                              bool checkOutOfMemory) {
+
+  // XXX For now we just pick a size. Ideally we would support
+  // symbolic sizes fully but even if we don't it would be better to
+  // "smartly" pick a value, for example we could fork and pick the
+  // min and max values and perhaps some intermediate (reasonable
+  // value).
+  //
+  // It would also be nice to recognize the case when size has
+  // exactly two values and just fork (but we need to get rid of
+  // return argument first). This shows up in pcre when llvm
+  // collapses the size expression with a select.
+
+  size = optimizer.optimizeExpr(size, true);
+
+  ref<ConstantExpr> example;
+  bool success = solver->getValue(state.constraints.cs(), size, example,
+                                  state.queryMetaData);
+  assert(success && "FIXME: Unhandled solver failure");
+  (void)success;
+
+  // Try and start with a small example.
+  Expr::Width W = example->getWidth();
+  while (example->Ugt(ConstantExpr::alloc(128, W))->isTrue()) {
+    ref<ConstantExpr> tmp = example->LShr(ConstantExpr::alloc(1, W));
+    bool res;
+    bool success =
+        solver->mayBeTrue(state.constraints.cs(), EqExpr::create(tmp, size),
+                          res, state.queryMetaData);
+    assert(success && "FIXME: Unhandled solver failure");
+    (void)success;
+    if (!res)
+      break;
+    example = tmp;
+  }
+
+  StatePair fixedSize =
+      forkInternal(state, EqExpr::create(example, size), BranchType::Alloc);
+
+  if (fixedSize.second) {
+    // Check for exactly two values
+    ref<ConstantExpr> tmp;
+    bool success = solver->getValue(fixedSize.second->constraints.cs(), size,
+                                    tmp, fixedSize.second->queryMetaData);
+    assert(success && "FIXME: Unhandled solver failure");
+    (void)success;
+    bool res;
+    success = solver->mustBeTrue(fixedSize.second->constraints.cs(),
+                                 EqExpr::create(tmp, size), res,
+                                 fixedSize.second->queryMetaData);
+    assert(success && "FIXME: Unhandled solver failure");
+    (void)success;
+    if (res) {
+      executeAlloc(*fixedSize.second, tmp, isLocal, target, type, zeroMemory,
+                   reallocFrom);
+    } else {
+      // See if a *really* big value is possible. If so assume
+      // malloc will fail for it, so lets fork and return 0.
+      StatePair hugeSize =
+          forkInternal(*fixedSize.second,
+                       UltExpr::create(ConstantExpr::alloc(1U << 31, W), size),
+                       BranchType::Alloc);
+      if (hugeSize.first) {
+        klee_message("NOTE: found huge malloc, returning 0");
+        bindLocal(target, *hugeSize.first,
+                  ConstantExpr::alloc(0, Context::get().getPointerWidth()));
+      }
+
+      if (hugeSize.second) {
+        std::string Str;
+        llvm::raw_string_ostream info(Str);
+        ExprPPrinter::printOne(info, "  size expr", size);
+        info << "  concretization : " << example << "\n";
+        info << "  unbound example: " << tmp << "\n";
+        terminateStateOnProgramError(*hugeSize.second,
+                                     "concretized symbolic size",
+                                     StateTerminationType::Model, info.str());
+      }
+    }
+  }
+
+  if (fixedSize.first) // can be zero when fork fails
+    executeAlloc(*fixedSize.first, example, isLocal, target, type, zeroMemory,
+                 reallocFrom, allocationAlignment, checkOutOfMemory);
 }
 
 bool Executor::computeSizes(ExecutionState &state, ref<Expr> size,
@@ -5379,8 +5497,8 @@ bool Executor::resolveMemoryObjects(
 
       solver->setTimeout(coreSolverTimeout);
       incomplete =
-          state.addressSpace.resolve(state, solver, address, targetType, rl,
-                                     rlSkipped, 0, coreSolverTimeout);
+          state.addressSpace.resolve(state, solver.get(), address, targetType,
+                                     rl, rlSkipped, 0, coreSolverTimeout);
       solver->setTimeout(time::Span());
 
       for (ResolutionList::iterator i = rl.begin(), ie = rl.end(); i != ie;
@@ -5771,8 +5889,9 @@ void Executor::executeMemoryOperation(
   } else {
     solver->setTimeout(coreSolverTimeout);
 
-    if (!state->addressSpace.resolveOne(*state, solver, address, targetType,
-                                        idFastResult, success, haltExecution)) {
+    if (!state->addressSpace.resolveOne(*state, solver.get(), address,
+                                        targetType, idFastResult, success,
+                                        haltExecution)) {
       address = toConstant(*state, address, "resolveOne failure");
       success = state->addressSpace.resolveOne(cast<ConstantExpr>(address),
                                                targetType, idFastResult);
@@ -5832,8 +5951,8 @@ void Executor::executeMemoryOperation(
             targetType, mo->getOffsetExpr(address),
             ConstantExpr::alloc(size, Context::get().getPointerWidth()), true);
         if (wos->readOnly) {
-          terminateStateOnError(*state, "memory error: object read only",
-                                StateTerminationType::ReadOnly);
+          terminateStateOnProgramError(*state, "memory error: object read only",
+                                       StateTerminationType::ReadOnly);
         } else {
           wos->write(mo->getOffsetExpr(address), value);
         }
@@ -5860,7 +5979,7 @@ void Executor::executeMemoryOperation(
              allLeafsAreConstant(address)) {
 
     solver->setTimeout(coreSolverTimeout);
-    state->addressSpace.resolveOne(*state, solver, base, baseTargetType,
+    state->addressSpace.resolveOne(*state, solver.get(), base, baseTargetType,
                                    idFastResult, success, haltExecution);
     solver->setTimeout(time::Span());
 
@@ -5948,9 +6067,9 @@ void Executor::executeMemoryOperation(
                 forkInternal(*state, Expr::createIsZero(unboundConditions[i]),
                              BranchType::MemOp);
             assert(branches.first);
-            terminateStateOnError(*branches.first,
-                                  "memory error: object read only",
-                                  StateTerminationType::ReadOnly);
+            terminateStateOnProgramError(*branches.first,
+                                         "memory error: object read only",
+                                         StateTerminationType::ReadOnly);
             state = branches.second;
           } else {
             ref<Expr> result = SelectExpr::create(
@@ -6016,8 +6135,8 @@ void Executor::executeMemoryOperation(
             targetType, mo->getOffsetExpr(address),
             ConstantExpr::alloc(size, Context::get().getPointerWidth()), true);
         if (wos->readOnly) {
-          terminateStateOnError(*bound, "memory error: object read only",
-                                StateTerminationType::ReadOnly);
+          terminateStateOnProgramError(*bound, "memory error: object read only",
+                                       StateTerminationType::ReadOnly);
         } else {
           wos->write(mo->getOffsetExpr(address), value);
         }
@@ -6048,9 +6167,9 @@ void Executor::executeMemoryOperation(
     }
 
     assert(mayBeOutOfBound && "must be true since unbound is not null");
-    terminateStateOnError(*unbound, "memory error: out of bound pointer",
-                          StateTerminationType::Ptr,
-                          getAddressInfo(*unbound, address, bytes));
+    terminateStateOnProgramError(*unbound, "memory error: out of bound pointer",
+                                 StateTerminationType::Ptr,
+                                 getAddressInfo(*unbound, address));
   }
 }
 
@@ -6173,7 +6292,8 @@ IDType Executor::lazyInitializeLocalObject(ExecutionState &state,
 
 void Executor::updateStateWithSymcretes(ExecutionState &state,
                                         const Assignment &assignment) {
-  /* Try to update memory objects in this state with the bindings from recevied
+  /* Try to update memory objects in this state with the bindings from
+   * recevied
    * assign. We want to update only objects, whose size were changed. */
 
   std::vector<ref<SizeSymcrete>> updatedSizeSymcretes;
@@ -6210,7 +6330,8 @@ void Executor::updateStateWithSymcretes(ExecutionState &state,
     if (!oldOS) {
       continue;
     }
-    /* Create a new ObjectState with the new size and new owning memory object.
+    /* Create a new ObjectState with the new size and new owning memory
+     * object.
      */
 
     /* Order of operations critical here. */
@@ -6421,8 +6542,7 @@ void Executor::clearGlobal() {
 
 void Executor::clearMemory() {
   // hack to clear memory objects
-  delete memory;
-  memory = new MemoryManager(NULL);
+  memory = nullptr;
 }
 
 void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
@@ -6842,8 +6962,8 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
     bool success =
         solver->mustBeTrue(extendedConstraints.cs(), Expr::createIsZero(pi),
                            mustBeTrue, state.queryMetaData);
-    // If it isn't possible to add the condition without making the entire list
-    // UNSAT, then just continue to the next condition
+    // If it isn't possible to add the condition without making the entire
+    // list UNSAT, then just continue to the next condition
     if (!success)
       break;
     // If the particular constraint operated on in this iteration through
@@ -6957,10 +7077,9 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
     alignment = GO->getAlignment();
     if (const GlobalVariable *globalVar = dyn_cast<GlobalVariable>(GO)) {
       // All GlobalVariables's have pointer type
-      llvm::PointerType *ptrType =
-          dyn_cast<llvm::PointerType>(globalVar->getType());
-      assert(ptrType && "globalVar's type is not a pointer");
-      type = ptrType->getElementType();
+      assert(globalVar->getType()->isPointerTy() &&
+             "globalVar's type is not a pointer");
+      type = globalVar->getValueType();
     } else {
       type = GO->getType();
     }
@@ -6969,16 +7088,9 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
     type = AI->getAllocatedType();
   } else if (isa<InvokeInst>(allocSite) || isa<CallInst>(allocSite)) {
     // FIXME: Model the semantics of the call to use the right alignment
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
-    const CallBase &cs = cast<CallBase>(*allocSite);
-#else
-    llvm::Value *allocSiteNonConst = const_cast<llvm::Value *>(allocSite);
-    const CallSite cs(isa<InvokeInst>(allocSiteNonConst)
-                          ? CallSite(cast<InvokeInst>(allocSiteNonConst))
-                          : CallSite(cast<CallInst>(allocSiteNonConst)));
-#endif
+    const CallBase &cb = cast<CallBase>(*allocSite);
     llvm::Function *fn =
-        klee::getDirectCallTarget(cs, /*moduleIsFullyLinked=*/true);
+        klee::getDirectCallTarget(cb, /*moduleIsFullyLinked=*/true);
     if (fn)
       allocationSiteName = fn->getName().str();
 

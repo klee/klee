@@ -157,11 +157,7 @@ void CXXTypeManager::onFinishInitModule() {
         continue;
       }
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(9, 0)
       llvm::DIType *type = variable->getType();
-#else
-      llvm::DIType *type = variable->getType().resolve();
-#endif
 
       if (!type) {
         continue;

@@ -21,14 +21,7 @@ using llvm::cast_or_null;
 using llvm::dyn_cast;
 using llvm::dyn_cast_or_null;
 using llvm::isa;
-#if LLVM_VERSION_CODE >= LLVM_VERSION(9, 0)
 using llvm::isa_and_nonnull;
-#else
-template <typename... X, typename Y>
-inline bool isa_and_nonnull(const Y &value) {
-  return value && isa<X...>(value);
-}
-#endif
 
 } // namespace klee
 

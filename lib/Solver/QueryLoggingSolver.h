@@ -17,6 +17,8 @@
 
 #include "llvm/Support/raw_ostream.h"
 
+#include <memory>
+
 using namespace klee;
 
 /// This abstract class represents a solver that is capable of logging
@@ -26,7 +28,7 @@ using namespace klee;
 class QueryLoggingSolver : public SolverImpl {
 
 protected:
-  Solver *solver;
+  std::unique_ptr<Solver> solver;
   std::unique_ptr<llvm::raw_ostream> os;
   // @brief Buffer used by logBuffer
   std::string BufferString;
@@ -57,11 +59,9 @@ protected:
   void flushBufferConditionally(bool writeToFile);
 
 public:
-  QueryLoggingSolver(Solver *_solver, std::string path,
+  QueryLoggingSolver(std::unique_ptr<Solver> solver, std::string path,
                      const std::string &commentSign, time::Span queryTimeToLog,
                      bool logTimedOut);
-
-  virtual ~QueryLoggingSolver();
 
   /// implementation of the SolverImpl interface
   bool computeTruth(const Query &query, bool &isValid);

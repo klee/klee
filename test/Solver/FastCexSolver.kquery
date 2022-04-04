@@ -4,7 +4,7 @@
 makeSymbolic0 : (array (w64 4) (makeSymbolic arr1 0))
 (query [] (Not (Eq 4096 (ReadLSB w32 0 makeSymbolic0))))
 
-makeSymbolic1 : (array (w64 2) (makeSymbolic A-data 0))
+makeSymbolic1 : (array (w64 2) (makeSymbolic A_data 0))
 (query [(Ule (Add w8 208 N0:(Read w8 0 makeSymbolic1))
              9)]
        (Eq 52 N0))

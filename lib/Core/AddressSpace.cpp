@@ -365,18 +365,19 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
 // then its concrete cache byte isn't being used) but is just a hack.
 
 void AddressSpace::copyOutConcretes() {
-  for (MemoryMap::iterator it = objects.begin(), ie = objects.end(); it != ie;
-       ++it) {
-    const MemoryObject *mo = it->first;
-
-    if (!mo->isUserSpecified) {
-      const auto &os = it->second;
-      auto address = reinterpret_cast<std::uint8_t *>(mo->address);
-
-      if (!os->readOnly)
-        memcpy(address, os->concreteStore, mo->size);
+  for (const auto &object : objects) {
+    auto &mo = object.first;
+    auto &os = object.second;
+    if (!mo->isUserSpecified && !os->readOnly && os->size != 0) {
+      copyOutConcrete(mo, os.get());
     }
   }
+}
+
+void AddressSpace::copyOutConcrete(const MemoryObject *mo,
+                                   const ObjectState *os) const {
+  auto address = reinterpret_cast<std::uint8_t *>(mo->address);
+  std::memcpy(address, os->concreteStore, mo->size);
 }
 
 bool AddressSpace::copyInConcretes() {

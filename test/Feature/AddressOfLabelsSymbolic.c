@@ -4,6 +4,8 @@
 // RUN: FileCheck %s -check-prefix=CHECK-MSG --input-file=%t.log
 // RUN: FileCheck %s -check-prefix=CHECK-ERR --input-file=%t.stderr.log
 
+#include "klee/klee.h"
+
 #include <stdio.h>
 
 int main(void) {

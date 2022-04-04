@@ -1,7 +1,49 @@
+KLEE 3.0, 7 June 2023
+=====================
+
+Incorporating changes from 8 April 2022 to 7 June 2023.
+Maintainers during this time span: @ccadar, @MartinNowack, @251.
+(@251 joined as a new maintainer during 2022).
+Documentation at http://klee.github.io/releases/docs/v3.0
+
+== Major features ==
+- Added support for the KDAlloc memory allocator, which enables KLEE to more robustly detect use-after-free errors, improves the detection of buffer overflows, and provides deterministic memory allocation (@danielschemmel, based on https://srg.doc.ic.ac.uk/publications/22-kdalloc-ecoop.html)
+- Enabled KLEE to support UBSan-added checks (@operasfantom)
+- Added support for concrete inline assembly, which is now handled as an external call (@mishok2503)
+
+== LLVM support ==
+- Current recommended version is LLVM 13
+- Added support for LLVM 14 (@lzaoral)
+- Removed support for LLVM <9
+- KLEE 3.0 will be the last version with support for LLVM <11
+
+== Options, scripts and KLEE intrinsics added, changed or removed ==
+- Renamed gen-bout to ktest-gen, and gen-random-bout to ktest-randgen (@ccadar)
+- Added option --stp-sat-solver for selecting the SAT solver used by STP (@251)
+- Added many more runtime statistics that can be inspected with klee-stats, and renamed several of them (@251)
+- Removed unused model_version from the tests generated when the POSIX runtime is enabled (@ccadar)
+- Removed unused option --replay-keep-symbolic (@251)
+- Added support for the @llvm.f{ma,muladd}.f* intrinsics (@lzaoral)
+- Allow UcLibc to support a runtime option rather than a compile-time one (@arrowd)
+- Added support for llvm.experimental.noalias.scope.decl (@operasfantom)
+- Modified names of SMT variables to use underscores instead of dashes, e.g., A_data instead of A-data (@ccadar)
+
+== Other changes ==
+- Overhaul of KLEE's CI and build scripts (@MartinNowack, @jbuening)
+- Introduce separate categories for different kinds of undefined behavior (@operasfantom)
+- Support arguments of width 128, 256 and 512 bits for external calls (@operasfantom)
+- Added check for nonnull path APIs in fstatat (@251, @jbuening)
+- Fixed a bug in KLEE libc's implementation of strcmp, where characters were not compared as unsigned (@ccadar)
+- Added support for Differential ShellCheck (@jamacku)
+- Fixed a bug triggered when --entry-point and --libc=uclibc are used together (@ccadar)
+- Fixed a bug with --use-batching-search ignoring disabled time budget (@jbuening)
+- Smaller refactorings, fixes and improvements, test cases, maintenance, comments, web version, website, etc. (@251, @andronat, @arrowd, @ccadar, @danielschemmel, @dependabot, @fwc, @jamesjer, @jbuening, @jryans, @kt218, @lzaoral, @m-davis, @MartinNowack, @McSinyx, @mishok2503, @operasfantom, @prncoprs, @rriley, @rshariffdeen, @sava-cska, @ZHYfeng)
+
+
 KLEE 2.3, 4 April 2022
 ======================
 
-Incorporating changes from 8 December 2020 to March 2022.
+Incorporating changes from 8 December 2020 to 4 April 2022.
 Maintainers during this time span: @ccadar and @MartinNowack
 Documentation at http://klee.github.io/releases/docs/v2.3
 
@@ -34,6 +76,7 @@ Documentation at http://klee.github.io/releases/docs/v2.3
 - Fixed the memory usage computation on macOS (@ccadar)
 - Removed or updated obsolete Doxygen options and added Doxygen generation to the CI (@ccadar)
 - Smaller refactorings, fixes and improvements, test cases, maintenance, comments, web version, website, etc. (@251, @aesophor, @arrowd, @bathooman,  @ccadar, @carlocab, @davidtr1037, @dependabot, @futile, @iangneal, @jbuening, @jirislaby, @jiseongg, @jordr, @lzaoral, @MartinNowack, @numinit, @operasfantom, @prncoprs)
+
 
 KLEE 2.2, 7 December 2020
 =========================

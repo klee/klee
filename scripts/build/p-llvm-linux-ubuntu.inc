@@ -12,12 +12,12 @@ install_build_dependencies_llvm() {
     groff
     gcc
     g++
-    python-dev
     python3-distutils
     make
     git # To check out code
     zlib1g-dev
     git
+    ninja-build
   )
   
   if [[ "${SANITIZERS[*]}" == "memory" ]]; then
@@ -31,11 +31,15 @@ install_build_dependencies_llvm() {
 install_binary_artifact_llvm() {
   # No need to check for optimised, we can build against LLVM with optimised and non-optimised versions
   #  local enable_optimized=$(to_bool "${ENABLE_OPTIMIZED}")
-  local enable_debug=$(to_bool "${ENABLE_DEBUG}")
-  local disable_assertions=$(to_bool "${DISABLE_ASSERTIONS}")
-  local requires_rtti=$(to_bool "${REQUIRES_RTTI}")
+  local enable_debug
+  enable_debug=$(to_bool "${ENABLE_DEBUG}")
+  local disable_assertions
+  disable_assertions=$(to_bool "${DISABLE_ASSERTIONS}")
+  local requires_rtti
+  requires_rtti=$(to_bool "${REQUIRES_RTTI}")
   local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
-  local LLVM_VERSION_MINOR="${LLVM_VERSION/*./}"
+  local version="${LLVM_VERSION_MAJOR}"
+
 
 
   # No support for LLVM packages with debug information, incompatible if requested otherwise
@@ -50,41 +54,42 @@ install_binary_artifact_llvm() {
   # Enable/Disable optimized does not matter
   source "${DIR}/common-functions"
 
-  # Add certificate
-  with_sudo apt update -y
-  dependencies=(
-    ca-certificates
-    wget
-    lsb-release
-    gnupg
-  )
-  with_sudo apt -y --no-install-recommends install "${dependencies[@]}"
+  # Check if package in standard repository otherwise use upstream
+  with_sudo apt-get update -y
+  if ! apt-cache show "llvm-${version}"; then
+    if [[ -z "$(which wget)" ]]; then
+      # Add certificate
+      with_sudo apt-get update -y
+      dependencies=(
+        ca-certificates
+        wget
+        lsb-release
+        gnupg
+      )
+      with_sudo apt-get -y --no-install-recommends install "${dependencies[@]}"
+    fi
 
-  local version=""
-  [[ "${LLVM_VERSION_MAJOR}" -le 6 ]] && version="-${LLVM_VERSION}"
-  [[ "${LLVM_VERSION_MAJOR}" -ge 7 ]] && version="-${LLVM_VERSION_MAJOR}"
-
-  # Add LLVM upstream repository if available
-  codename="$(lsb_release --codename --short)"
-  if wget -q "https://apt.llvm.org/${codename}/dists/llvm-toolchain-${codename}${version}/"; then
-    wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key| with_sudo apt-key add -
-
-    apt_entry="deb http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}${version} main"
-    if ! grep -rq "${apt_entry}" /etc/apt; then
-      echo "${apt_entry}" | with_sudo tee -a /etc/apt/sources.list
-      with_sudo apt update -y
+    # Add LLVM upstream repository if available
+    codename="$(lsb_release --codename --short)"
+    if wget -q "https://apt.llvm.org/${codename}/dists/llvm-toolchain-${codename}${version}/"; then
+      apt_entry="deb http://apt.llvm.org/${codename}/ llvm-toolchain-${codename}${version} main"
+      if ! grep -rq "${apt_entry}" /etc/apt; then
+        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key| with_sudo apt-key add -
+        echo "${apt_entry}" | with_sudo tee -a /etc/apt/sources.list
+        with_sudo apt-get update -y
+      fi
     fi
   fi
 
   dependencies=(
-    "llvm${version}"
-    "llvm${version}-dev"
-    "llvm${version}-runtime"
-    "clang${version}"
+    "llvm-${version}"
+    "llvm-${version}-dev"
+    "llvm-${version}-runtime"
+    "clang-${version}"
   )
 
   #Install essential dependencies
-  with_sudo apt -y --no-install-recommends install "${dependencies[@]}" || return 1
+  with_sudo apt-get -y --no-install-recommends install "${dependencies[@]}" || return 1
 }
 
 check_llvm_config_version() {
@@ -94,7 +99,7 @@ check_llvm_config_version() {
     lc="$2" # path to llvm-config
 
     # If not set return error
-    [[ -z "${lc}" ]] && return 1
+    [[ -n "${lc}" ]] || return 1
 
     # First check, if the provided llvm-config is a full path
     if [[ ! -f "${lc}" ]]; then
@@ -105,12 +110,8 @@ check_llvm_config_version() {
       [[ -z "${lc}" ]] && return 1
     fi
 
-    local version=""
     local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
-    local LLVM_VERSION_MINOR="${LLVM_VERSION/*./}"
-    [[ "${LLVM_VERSION_MAJOR}" -le 6 ]] && version="${LLVM_VERSION}"
-    [[ "${LLVM_VERSION_MAJOR}" -ge 7 ]] && version="${LLVM_VERSION_MAJOR}"
-
+    local version="${LLVM_VERSION_MAJOR}"
 
     # Check for llvm-config without suffix but correct version number
     [[ $($lc --version) == "${LLVM_VERSION}"* ]] || return 1
@@ -136,11 +137,8 @@ check_llvm_config_version() {
 # Check if the binary artifact is installed
 is_installed_llvm() {
   # Check for variables set and not empty
-  local version=""
   local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
-  local LLVM_VERSION_MINOR="${LLVM_VERSION/*./}"
-  [[ "${LLVM_VERSION_MAJOR}" -le 6 ]] && version="${LLVM_VERSION}"
-  [[ "${LLVM_VERSION_MAJOR}" -ge 7 ]] && version="${LLVM_VERSION_MAJOR}"
+  local version="${LLVM_VERSION_MAJOR}"
 
   # Check for llvm-config without suffix but correct version number
   local lc
@@ -149,40 +147,34 @@ is_installed_llvm() {
   lc=$(which "llvm-config-${LLVM_VERSION_MAJOR}")
   check_llvm_config_version 1 "${lc}" && return 0
 
-  # As alternative, try the version-less number
-  lc=$(which "llvm-config")
-  check_llvm_config_version 1 "${lc}" && return 0
 
   return 1
 }
 
 setup_artifact_variables_llvm() {
     # Check for variables set and not empty
-    local version=""
     local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
-    local LLVM_VERSION_MINOR="${LLVM_VERSION/*./}"
-    [[ "${LLVM_VERSION_MAJOR}" -le 6 ]] && version="${LLVM_VERSION}"
-    [[ "${LLVM_VERSION_MAJOR}" -ge 7 ]] && version="${LLVM_VERSION_MAJOR}"
+    local version="${LLVM_VERSION_MAJOR}"
 
     local lc=""
     # Check for llvm-config without suffix but correct version number
     lc=$(which "llvm-config")
-    local is_ins=$(check_llvm_config_version 1 "${lc}")
+    local is_ins
+    is_ins=$(check_llvm_config_version 1 "${lc}")
     if [[ ! "${is_ins}" ]]; then
       # Check if llvm-config with the right version exists
-      lc=$(which "llvm-config-${version}")
+      lc=$(which "llvm-config-${version}") || return 1
       is_ins=$(check_llvm_config_version 1 "${lc}") || return 1
     fi
 
     LLVM_CONFIG="${lc}"
-    LLVM_INSTALL="$(${lc} --bindir)"
-    BITCODE_CC="${LLVM_INSTALL}/clang"
-    BITCODE_CXX="${LLVM_INSTALL}/clang++"
-    LLVM_BIN="${LLVM_INSTALL}/bin"
+    LLVM_INSTALL="$(${lc} --prefix)"
+    LLVM_BIN="$(${lc} --bindir)"
+    BITCODE_CC="${LLVM_BIN}/clang"
+    BITCODE_CXX="${LLVM_BIN}/clang++"
 }
 
 get_build_artifacts_llvm() {
-  is_installed_llvm
-  [[ $? -ne 0 ]] && return 1
+  is_installed_llvm || return 1
   return 0
 }

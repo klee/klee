@@ -8,7 +8,7 @@
 /*
 This tests checks ensures that only relevant updates are present when doing
 concrete reads. If they are not, there can be situations where ReadExpr are
-in inconcistent state and depend on ordering of other operations.
+in inconsistent state and depend on ordering of other operations.
 
 See
 https://github.com/klee/klee/issues/921

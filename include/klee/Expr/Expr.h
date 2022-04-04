@@ -13,7 +13,10 @@
 #include "klee/ADT/Bits.h"
 #include "klee/ADT/Ref.h"
 #include "klee/Expr/SymbolicSource.h"
+#include "klee/Support/CompilerWarning.h"
 
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
@@ -21,6 +24,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
+DISABLE_WARNING_POP
 
 #include <memory>
 #include <set>
@@ -134,6 +138,9 @@ public:
   /// The type of an expression is simply its width, in bits.
   typedef unsigned Width;
 
+  // NOTE: The prefix "Int" in no way implies the integer type of expression.
+  // For example, Int64 can indicate i64, double or <2 * i32> in different
+  // cases.
   static const Width InvalidWidth = 0;
   static const Width Bool = 1;
   static const Width Int8 = 8;
@@ -141,6 +148,10 @@ public:
   static const Width Int32 = 32;
   static const Width Int64 = 64;
   static const Width Int128 = 128;
+  static const Width Int256 = 256;
+  static const Width Int512 = 512;
+  static const Width MaxWidth = Int512;
+
   static const Width Fl80 = 80;
 
   enum States { Undefined, True, False };

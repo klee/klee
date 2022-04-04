@@ -11,8 +11,14 @@
 #define KLEE_BITS_H
 
 #include "klee/Config/Version.h"
+
 #include "llvm/Support/DataTypes.h"
-#include <assert.h>
+
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <type_traits>
 
 namespace klee {
 namespace bits32 {
@@ -60,10 +66,6 @@ inline unsigned indexOfSingleBit(unsigned x) {
   assert((UINT32_C(1) << res) == x);
   return res;
 }
-
-inline unsigned indexOfRightmostBit(unsigned x) {
-  return indexOfSingleBit(isolateRightmostBit(x));
-}
 } // namespace bits32
 
 namespace bits64 {
@@ -108,6 +110,85 @@ inline uint64_t indexOfRightmostBit(uint64_t x) {
   return indexOfSingleBit(isolateRightmostBit(x));
 }
 } // namespace bits64
+
+template <typename T>
+[[nodiscard]] static constexpr inline auto countLeadingZeroes(T &&x) noexcept
+    -> std::enable_if_t<!std::numeric_limits<std::decay_t<T>>::is_signed &&
+                            std::numeric_limits<std::decay_t<T>>::digits ==
+                                std::numeric_limits<unsigned>::digits,
+                        int> {
+  assert(x > 0);
+  return __builtin_clz(static_cast<unsigned>(x));
+}
+
+template <typename T>
+[[nodiscard]] static constexpr inline auto countLeadingZeroes(T &&x) noexcept
+    -> std::enable_if_t<!std::numeric_limits<std::decay_t<T>>::is_signed &&
+                            std::numeric_limits<std::decay_t<T>>::digits ==
+                                std::numeric_limits<unsigned long>::digits &&
+                            std::numeric_limits<unsigned>::digits !=
+                                std::numeric_limits<unsigned long>::digits,
+                        int> {
+  assert(x > 0);
+  return __builtin_clzl(static_cast<unsigned long>(x));
+}
+
+template <typename T>
+[[nodiscard]] static constexpr inline auto countLeadingZeroes(T &&x) noexcept
+    -> std::enable_if_t<
+        !std::numeric_limits<std::decay_t<T>>::is_signed &&
+            std::numeric_limits<std::decay_t<T>>::digits ==
+                std::numeric_limits<unsigned long long>::digits &&
+            std::numeric_limits<unsigned>::digits !=
+                std::numeric_limits<unsigned long long>::digits &&
+            std::numeric_limits<unsigned long>::digits !=
+                std::numeric_limits<unsigned long long>::digits,
+        int> {
+  assert(x > 0);
+  return __builtin_clzll(static_cast<unsigned long long>(x));
+}
+
+template <typename T>
+[[nodiscard]] static constexpr inline auto countTrailingZeroes(T &&x) noexcept
+    -> std::enable_if_t<!std::numeric_limits<std::decay_t<T>>::is_signed &&
+                            std::numeric_limits<std::decay_t<T>>::digits ==
+                                std::numeric_limits<unsigned>::digits,
+                        int> {
+  assert(x > 0);
+  return __builtin_ctz(static_cast<unsigned>(x));
+}
+
+template <typename T>
+[[nodiscard]] static constexpr inline auto countTrailingZeroes(T &&x) noexcept
+    -> std::enable_if_t<!std::numeric_limits<std::decay_t<T>>::is_signed &&
+                            std::numeric_limits<std::decay_t<T>>::digits ==
+                                std::numeric_limits<unsigned long>::digits &&
+                            std::numeric_limits<unsigned>::digits !=
+                                std::numeric_limits<unsigned long>::digits,
+                        int> {
+  assert(x > 0);
+  return __builtin_ctzl(static_cast<unsigned long>(x));
+}
+
+template <typename T>
+[[nodiscard]] static constexpr inline auto countTrailingZeroes(T &&x) noexcept
+    -> std::enable_if_t<
+        !std::numeric_limits<std::decay_t<T>>::is_signed &&
+            std::numeric_limits<std::decay_t<T>>::digits ==
+                std::numeric_limits<unsigned long long>::digits &&
+            std::numeric_limits<unsigned>::digits !=
+                std::numeric_limits<unsigned long long>::digits &&
+            std::numeric_limits<unsigned long>::digits !=
+                std::numeric_limits<unsigned long long>::digits,
+        int> {
+  assert(x > 0);
+  return __builtin_ctzll(static_cast<unsigned long long>(x));
+}
+
+[[nodiscard]] static constexpr inline std::size_t
+roundUpToMultipleOf4096(std::size_t const x) {
+  return ((x - 1) | static_cast<std::size_t>(4096 - 1)) + 1;
+}
 } // namespace klee
 
 #endif /* KLEE_BITS_H */

@@ -8,13 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "ExternalDispatcher.h"
+
+#include "CoreStats.h"
 #include "klee/Config/Version.h"
 #include "klee/Module/KCallable.h"
 #include "klee/Module/KModule.h"
 
-#if LLVM_VERSION_CODE < LLVM_VERSION(8, 0)
-#include "llvm/IR/CallSite.h"
-#endif
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/IR/Constants.h"
@@ -27,6 +29,7 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+DISABLE_WARNING_POP
 
 #include <cfenv>
 #include <csetjmp>
@@ -162,6 +165,7 @@ ExternalDispatcherImpl::~ExternalDispatcherImpl() {
 
 bool ExternalDispatcherImpl::executeCall(KCallable *callable, Instruction *i,
                                          uint64_t *args, int roundingMode) {
+  ++stats::externalCalls;
   dispatchers_ty::iterator it = dispatchers.find(i);
   // Save current rounding mode used by KLEE internally and set the
   // rounding mode needed during the external call.
@@ -286,15 +290,8 @@ Function *ExternalDispatcherImpl::createDispatcher(KCallable *target,
   if (isa<KFunction>(target) && !resolveSymbol(target->getName().str()))
     return 0;
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
-  const CallBase &cs = cast<CallBase>(*inst);
-#else
-  const CallSite cs(inst->getOpcode() == Instruction::Call
-                        ? CallSite(cast<CallInst>(inst))
-                        : CallSite(cast<InvokeInst>(inst)));
-#endif
-
-  Value **args = new Value *[cs.arg_size()];
+  const CallBase &cb = cast<CallBase>(*inst);
+  Value **args = new Value *[cb.arg_size()];
 
   std::vector<Type *> nullary;
 
@@ -323,7 +320,7 @@ Function *ExternalDispatcherImpl::createDispatcher(KCallable *target,
 
   // Each argument will be passed by writing it into gTheArgsP[i].
   unsigned i = 0, idx = 2;
-  for (auto ai = cs.arg_begin(), ae = cs.arg_end(); ai != ae; ++ai, ++i) {
+  for (auto ai = cb.arg_begin(), ae = cb.arg_end(); ai != ae; ++ai, ++i) {
     // Determine the type the argument will be passed as. This accommodates for
     // the corresponding code in Executor.cpp for handling calls to bitcasted
     // functions.

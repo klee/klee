@@ -133,6 +133,14 @@ public:
   ObjectPair findObject(const MemoryObject *mo) const;
   ObjectPair findObject(IDType id) const;
 
+  /// Copy the concrete values of all managed ObjectStates into the
+  /// actual system memory location they were allocated at.
+  /// Returns the (hypothetical) number of pages needed provided each written
+  /// object occupies (at least) a single page.
+  void copyOutConcretes();
+
+  void copyOutConcrete(const MemoryObject *mo, const ObjectState *os) const;
+
   /// \brief Obtain an ObjectState suitable for writing.
   ///
   /// This returns a writeable object state, creating a new copy of
@@ -144,10 +152,6 @@ public:
   /// \param os The current binding of the MemoryObject.
   /// \return A writeable ObjectState (\a os or a copy).
   ObjectState *getWriteable(const MemoryObject *mo, const ObjectState *os);
-
-  /// Copy the concrete values of all managed ObjectStates into the
-  /// actual system memory location they were allocated at.
-  void copyOutConcretes();
 
   /// Copy the concrete values of all managed ObjectStates back from
   /// the actual system memory location they were allocated

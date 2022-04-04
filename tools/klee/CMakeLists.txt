@@ -7,9 +7,18 @@
 #
 #===------------------------------------------------------------------------===#
 add_executable(klee
-  klee.cpp
+  main.cpp
 )
-target_link_libraries(klee PUBLIC kleeRunner)
+
+set(KLEE_LIBS
+  kleeCore
+)
+
+target_link_libraries(klee ${KLEE_LIBS})
+target_include_directories(klee PRIVATE ${KLEE_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})
+target_compile_options(klee PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
+target_compile_definitions(klee PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})
+
 
 install(TARGETS klee RUNTIME DESTINATION bin)
 

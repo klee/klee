@@ -9,13 +9,12 @@
 
 #include "ImpliedValue.h"
 
-#include "Context.h"
+#include "klee/Core/Context.h"
 
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Solver/Solver.h"
-#include "klee/Support/IntEvaluation.h" // FIXME: Use APInt
 
 #include <map>
 #include <set>
@@ -132,7 +131,7 @@ void ImpliedValue::getImpliedValues(ref<Expr> e, ref<ConstantExpr> value,
         getImpliedValues(be->right, value, results);
       }
     } else {
-      // FIXME; We can propogate a mask here where we know "some bits". May or
+      // FIXME; We can propagate a mask here where we know "some bits". May or
       // may not be useful.
     }
     break;

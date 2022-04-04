@@ -24,12 +24,12 @@ struct Query;
 
 /// SolverImpl - Abstract base clase for solver implementations.
 class SolverImpl {
-  // DO NOT IMPLEMENT.
-  SolverImpl(const SolverImpl &);
-  void operator=(const SolverImpl &);
-
 public:
-  SolverImpl() {}
+  SolverImpl() = default;
+
+  SolverImpl(const SolverImpl &) = delete;
+  SolverImpl &operator=(const SolverImpl &) = delete;
+
   virtual ~SolverImpl();
 
   enum SolverRunStatus {

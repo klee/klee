@@ -1,5 +1,9 @@
-RUN: %klee-stats --table-format=csv %S/klee-stats/run | FileCheck --check-prefix=CHECK-CSV %s
-RUN: %klee-stats --table-format=readable-csv %S/klee-stats/run | FileCheck --check-prefix=CHECK-READABLECSV %s
+// sqlite databases must be opened with write permissions, so we copy the test cases to the output dir
+RUN: rm -rf %t.klee-stats
+RUN: mkdir %t.klee-stats
+RUN: cp -r %S/klee-stats/run %t.klee-stats/
+RUN: %klee-stats --table-format=csv %t.klee-stats/run | FileCheck --check-prefix=CHECK-CSV %s
+RUN: %klee-stats --table-format=readable-csv %t.klee-stats/run | FileCheck --check-prefix=CHECK-READABLECSV %s
 
 CHECK-CSV: Path,Instrs,Time(s),ICov(%),BCov(%),ICount,TSolver(%)
 CHECK-CSV: klee-stats/run,3,0.00,100.00,100.00,3,0.00

@@ -8,9 +8,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Support/ErrorHandling.h"
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/raw_ostream.h"
+DISABLE_WARNING_POP
 
 #include <assert.h>
 #include <stdarg.h>

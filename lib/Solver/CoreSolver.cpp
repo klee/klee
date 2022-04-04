@@ -18,11 +18,12 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <memory>
 #include <string>
 
 namespace klee {
 
-Solver *createCoreSolver(CoreSolverType cst) {
+std::unique_ptr<Solver> createCoreSolver(CoreSolverType cst) {
   switch (cst) {
   case STP_SOLVER:
 #ifdef ENABLE_STP
@@ -32,7 +33,8 @@ Solver *createCoreSolver(CoreSolverType cst) {
       klee_message(
           "Unsat cores are only supported by Z3, disabling unsat cores.");
     }
-    return new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+    return std::make_unique<STPSolver>(UseForkedCoreSolver,
+                                       CoreSolverOptimizeDivides);
 #else
     klee_message("Not compiled with STP support");
     return NULL;
@@ -58,10 +60,10 @@ Solver *createCoreSolver(CoreSolverType cst) {
     klee_message("Using Z3 solver backend");
 #ifdef ENABLE_FP
     klee_message("Using Z3 bitvector builder");
-    return new Z3Solver(KLEE_BITVECTOR);
+    return std::make_unique<Z3Solver>(KLEE_BITVECTOR);
 #else
     klee_message("Using Z3 core builder");
-    return new Z3Solver(KLEE_CORE);
+    return std::make_unique<Z3Solver>(KLEE_CORE);
 #endif
 #else
     klee_message("Not compiled with Z3 support");

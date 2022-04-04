@@ -18,19 +18,25 @@
 #ifndef KLEE_GETELEMENTPTRTYPEITERATOR_H
 #define KLEE_GETELEMENTPTRTYPEITERATOR_H
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/User.h"
+DISABLE_WARNING_POP
 
 #include "klee/Config/Version.h"
 
 namespace klee {
 template <typename ItTy = llvm::User::const_op_iterator>
-class generic_gep_type_iterator
-    : public std::iterator<std::forward_iterator_tag, llvm::Type *, ptrdiff_t> {
-  typedef std::iterator<std::forward_iterator_tag, llvm::Type *, ptrdiff_t>
-      super;
+class generic_gep_type_iterator {
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = llvm::Type *;
+  using difference_type = ptrdiff_t;
+  using pointer = void;
+  using reference = void;
 
   ItTy OpIt;
   llvm::Type *CurTy;
@@ -88,8 +94,8 @@ public:
     if (llvm::CompositeType *CT = dyn_cast<llvm::CompositeType>(CurTy)) {
       CurTy = CT->getTypeAtIndex(getOperand());
 #endif
-    } else if (auto ptr = dyn_cast<llvm::PointerType>(CurTy)) {
-      CurTy = ptr->getElementType();
+    } else if (CurTy->isPointerTy()) {
+      CurTy = CurTy->getPointerElementType();
     } else {
       CurTy = 0;
     }

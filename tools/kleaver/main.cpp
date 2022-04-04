@@ -30,12 +30,12 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <sys/stat.h>
 #include <unistd.h>
-
-#include "llvm/Support/Signals.h"
+#include <utility>
 
 using namespace klee;
 using namespace klee::expr;
@@ -195,7 +195,7 @@ static bool EvaluateInputAST(const char *Filename, const llvm::MemoryBuffer *MB,
   if (!success)
     return false;
 
-  Solver *coreSolver = klee::createCoreSolver(CoreSolverToUse);
+  std::unique_ptr<Solver> coreSolver = klee::createCoreSolver(CoreSolverToUse);
 
   if (CoreSolverToUse != DUMMY_SOLVER) {
     const time::Span maxCoreSolverTime(MaxCoreSolverTime);
@@ -204,8 +204,8 @@ static bool EvaluateInputAST(const char *Filename, const llvm::MemoryBuffer *MB,
     }
   }
 
-  Solver *S = constructSolverChain(
-      coreSolver, getQueryLogPath(ALL_QUERIES_SMT2_FILE_NAME),
+  std::unique_ptr<Solver> S = constructSolverChain(
+      std::move(coreSolver), getQueryLogPath(ALL_QUERIES_SMT2_FILE_NAME),
       getQueryLogPath(SOLVER_QUERIES_SMT2_FILE_NAME),
       getQueryLogPath(ALL_QUERIES_KQUERY_FILE_NAME),
       getQueryLogPath(SOLVER_QUERIES_KQUERY_FILE_NAME), nullptr, nullptr);
@@ -309,9 +309,8 @@ static bool EvaluateInputAST(const char *Filename, const llvm::MemoryBuffer *MB,
     delete *it;
   delete P;
 
-  delete S;
-
-  if (uint64_t queries = *theStatisticManager->getStatisticByName("Queries")) {
+  if (uint64_t queries =
+          *theStatisticManager->getStatisticByName("SolverQueries")) {
     llvm::outs() << "--\n"
                  << "total queries = " << queries << '\n'
                  << "total query constructs = "

@@ -1,8 +1,8 @@
 # RUN: %kleaver %s 2>&1 | FileCheck %s
 makeSymbolic0 : (array (w64 4) (makeSymbolic n_args 0))
 makeSymbolic1 : (array (w64 4) (makeSymbolic n_args_1 0))
-makeSymbolic2 : (array (w64 144) (makeSymbolic A-data-stat 0))
-makeSymbolic3 : (array (w64 144) (makeSymbolic stdin-stat 0))
+makeSymbolic2 : (array (w64 144) (makeSymbolic A_data_stat 0))
+makeSymbolic3 : (array (w64 144) (makeSymbolic stdin_stat 0))
 
 (query [(Ult N0:(ReadLSB w32 0 makeSymbolic0) 2)
 (Slt 0 N0)

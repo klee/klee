@@ -129,9 +129,9 @@ private:
   Searcher *searcher;
 
   ExternalDispatcher *externalDispatcher;
-  TimingSolver *solver;
+  std::unique_ptr<TimingSolver> solver;
   std::unique_ptr<AddressManager> addressManager;
-  MemoryManager *memory;
+  std::unique_ptr<MemoryManager> memory;
   TypeManager *typeSystemManager;
 
   SetOfStates states;
@@ -294,6 +294,11 @@ private:
   typedef std::vector<std::pair<IDType, ExecutionState *>> ExactResolutionList;
   bool resolveExact(ExecutionState &state, ref<Expr> p, KType *type,
                     ExactResolutionList &results, const std::string &name);
+
+  void concretizeSize(ExecutionState &state, ref<Expr> size, bool isLocal,
+                      KInstruction *target, KType *type, bool zeroMemory,
+                      const ObjectState *reallocFrom,
+                      size_t allocationAlignment, bool checkOutOfMemory);
 
   bool computeSizes(ExecutionState &state, ref<Expr> size,
                     ref<Expr> symbolicSizesSum,
@@ -567,7 +572,27 @@ private:
   /// Call exit handler and terminate state early
   /// (e.g. due to state merging or memory pressure)
   void terminateStateEarly(ExecutionState &state, const llvm::Twine &message,
-                           StateTerminationType terminationType);
+                           StateTerminationType reason);
+
+  /// Call exit handler and terminate state early
+  /// (e.g. caused by the applied algorithm as in state merging or replaying)
+  void terminateStateEarlyAlgorithm(ExecutionState &state,
+                                    const llvm::Twine &message,
+                                    StateTerminationType reason);
+
+  /// Call exit handler and terminate state early
+  /// (e.g. due to klee_silent_exit issued by user)
+  void terminateStateEarlyUser(ExecutionState &state,
+                               const llvm::Twine &message);
+
+  /// Call error handler and terminate state in case of errors.
+  /// The underlying function of all error-handling termination functions
+  /// below. This function should only be used in the termination functions
+  /// below.
+  void terminateStateOnError(ExecutionState &state, const llvm::Twine &message,
+                             StateTerminationType reason,
+                             const llvm::Twine &longMessage = "",
+                             const char *suffix = nullptr);
 
   void reportStateOnTargetError(ExecutionState &state, ReachWithError error);
 
@@ -577,19 +602,20 @@ private:
 
   /// Call error handler and terminate state in case of program errors
   /// (e.g. free()ing globals, out-of-bound accesses)
-  void terminateStateOnError(ExecutionState &state, const llvm::Twine &message,
-                             StateTerminationType terminationType,
-                             const llvm::Twine &longMessage = "",
-                             const char *suffix = nullptr);
+  void terminateStateOnProgramError(ExecutionState &state,
+                                    const llvm::Twine &message,
+                                    StateTerminationType reason,
+                                    const llvm::Twine &longMessage = "",
+                                    const char *suffix = nullptr);
 
   void terminateStateOnTerminator(ExecutionState &state);
 
   /// Call error handler and terminate state in case of execution errors
   /// (things that should not be possible, like illegal instruction or
   /// unlowered intrinsic, or unsupported intrinsics, like inline assembly)
-  void terminateStateOnExecError(ExecutionState &state,
-                                 const llvm::Twine &message,
-                                 const llvm::Twine &info = "");
+  void terminateStateOnExecError(
+      ExecutionState &state, const llvm::Twine &message,
+      StateTerminationType = StateTerminationType::Execution);
 
   /// Call error handler and terminate state in case of solver errors
   /// (solver error or timeout)
@@ -627,7 +653,7 @@ private:
   void checkNullCheckAfterDeref(ref<Expr> cond, ExecutionState &state,
                                 ExecutionState *fstate, ExecutionState *sstate);
 
-  template <typename SqType, typename TypeIt>
+  template <typename TypeIt>
   void computeOffsetsSeqTy(KGEPInstruction *kgepi,
                            ref<ConstantExpr> &constantOffset, uint64_t index,
                            const TypeIt it);

@@ -1,3 +1,4 @@
+---
 name: CI
 
 on:
@@ -8,8 +9,8 @@ on:
 
 # Defaults for building KLEE
 env:
-  BASE_IMAGE: ubuntu:bionic-20200807
-  REPOSITORY: klee
+  BASE_IMAGE: ubuntu:jammy-20230126
+  REPOSITORY: ghcr.io/klee
   COVERAGE: 0
   DISABLE_ASSERTIONS: 0
   ENABLE_DOXYGEN: 0
@@ -17,16 +18,17 @@ env:
   ENABLE_DEBUG: 1
   GTEST_VERSION: 1.11.0
   KLEE_RUNTIME_BUILD: "Debug+Asserts"
-  LLVM_VERSION: 9
-  METASMT_VERSION: qf_abv
+  LLVM_VERSION: 11
   MINISAT_VERSION: "master"
   REQUIRES_RTTI: 0
+  SOLVERS: STP:Z3
   STP_VERSION: 2.3.3
-  TCMALLOC_VERSION: 2.7
-  UCLIBC_VERSION: klee_uclibc_v1.2
+  TCMALLOC_VERSION: 2.9.1
+  UCLIBC_VERSION: klee_uclibc_v1.3
   USE_TCMALLOC: 1
   USE_LIBCXX: 1
-  Z3_VERSION: 4.8.14
+  Z3_VERSION: 4.8.15
+  SQLITE_VERSION: 3400100
 
 jobs:
   Linux:
@@ -34,95 +36,73 @@ jobs:
     strategy:
       matrix:
         name: [
-                "LLVM 13",
-                "LLVM 12",
-                "LLVM 11, Doxygen",
-                "LLVM 10",
-                "LLVM 9",
-                "LLVM 8",
-                "LLVM 7",
-                "LLVM 6",
-                "ASan",
-                "UBSan",
-                "MSan",
-                "Z3 only",
-                "metaSMT STP",
-                "metaSMT Boolector",
-                "STP master",
-                "Latest klee-uclibc",
-                "Asserts enabled",
-                "No TCMalloc, optimised runtime",
-              ]
+          "LLVM 14",
+          "LLVM 13",
+          "LLVM 12",
+          "LLVM 11, Doxygen",
+          "LLVM 10",
+          "LLVM 9",
+          "ASan",
+          "UBSan",
+          "MSan",
+          "Z3 only",
+          "metaSMT",
+          "STP master",
+          "Latest klee-uclibc",
+          "Asserts disabled",
+          "No TCMalloc, optimised runtime",
+        ]
         include:
+          - name: "LLVM 14"
+            env:
+              LLVM_VERSION: 14
           - name: "LLVM 13"
             env:
               LLVM_VERSION: 13
-              SOLVERS: Z3
           - name: "LLVM 12"
             env:
               LLVM_VERSION: 12
-              SOLVERS: Z3
           - name: "LLVM 11, Doxygen"
             env:
               LLVM_VERSION: 11
               ENABLE_DOXYGEN: 1
-              SOLVERS: Z3
           - name: "LLVM 10"
             env:
               LLVM_VERSION: 10
-              SOLVERS: Z3
           - name: "LLVM 9"
             env:
               LLVM_VERSION: 9
-              SOLVERS: Z3
-          - name: "LLVM 8"
-            env:
-              LLVM_VERSION: 8
-              SOLVERS: Z3
-          - name: "LLVM 7"
-            env:
-              LLVM_VERSION: 7
-              SOLVERS: Z3
-          - name: "LLVM 6"
-            env:
-              LLVM_VERSION: "6.0"
-              SOLVERS: Z3
-          # Sanitizer builds. Do unoptimized build otherwise the optimizer might remove problematic code
+          # Sanitizer builds. Do unoptimized build otherwise the optimizer
+          # might remove problematic code
           - name: "ASan"
             env:
               SANITIZER_BUILD: address
               ENABLE_OPTIMIZED: 0
               USE_TCMALLOC: 0
-              SOLVERS: STP
-              SANITIZER_LLVM_VERSION: 11
+              SANITIZER_LLVM_VERSION: 12
           - name: "UBSan"
             env:
               SANITIZER_BUILD: undefined
               ENABLE_OPTIMIZED: 0
               USE_TCMALLOC: 0
-              SOLVERS: STP
-              SANITIZER_LLVM_VERSION: 11
+              SANITIZER_LLVM_VERSION: 12
           - name: "MSan"
             env:
               SANITIZER_BUILD: memory
               ENABLE_OPTIMIZED: 0
               USE_TCMALLOC: 0
               SOLVERS: STP
-              SANITIZER_LLVM_VERSION: 11
-            # Test just using Z3 only
+              SANITIZER_LLVM_VERSION: 14
+          # Test just using Z3 only
           - name: "Z3 only"
             env:
               SOLVERS: Z3
           # Test just using metaSMT
-          - name: "metaSMT STP"
+          - name: "metaSMT"
             env:
+              METASMT_VERSION: qf_abv
               SOLVERS: metaSMT
               METASMT_DEFAULT: STP
-              REQUIRES_RTTI: 1
-          - name: "metaSMT Boolector"
-            env:
-              SOLVERS: metaSMT
-              METASMT_DEFAULT: BTOR
               REQUIRES_RTTI: 1
           # Test we can build against STP master
           - name: "STP master"
@@ -132,22 +112,20 @@ jobs:
           # Check we can build latest klee-uclibc branch
           - name: "Latest klee-uclibc"
             env:
-              SOLVERS: Z3
               UCLIBC_VERSION: klee_0_9_29
           # Check at least one build with Asserts disabled.
-          - name: "Asserts enabled"
+          - name: "Asserts disabled"
             env:
               SOLVERS: STP
               DISABLE_ASSERTIONS: 1
           # Check without TCMALLOC and with an optimised runtime library
           - name: "No TCMalloc, optimised runtime"
             env:
-              SOLVERS: STP
               USE_TCMALLOC: 0
               KLEE_RUNTIME_BUILD: "Release+Debug+Asserts"
     steps:
       - name: Checkout KLEE source code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           submodules: recursive
       - name: Build KLEE
@@ -168,7 +146,7 @@ jobs:
       - name: Install newer version of Bash
         run: brew install bash
       - name: Checkout KLEE source code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           submodules: recursive
       - name: Build KLEE
@@ -180,7 +158,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout KLEE Code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           submodules: recursive
       - name: Build Docker image
@@ -188,19 +166,37 @@ jobs:
 
   Coverage:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        name: [
+          "STP",
+          "Z3",
+        ]
+        include:
+          - name: "STP"
+            env:
+              SOLVERS: STP:Z3
+          - name: "Z3"
+            env:
+              SOLVERS: Z3
     env:
       ENABLE_OPTIMIZED: 0
       COVERAGE: 1
-      SOLVERS: Z3
     steps:
       - name: Checkout KLEE source code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
+          # Codecov may run into "Issue detecting commit SHA. Please run
+          # actions/checkout with fetch-depth > 1 or set to 0" when uploading.
+          # See also https://github.com/codecov/codecov-action/issues/190
+          fetch-depth: 2
           submodules: recursive
       - name: Build KLEE
+        env: ${{ matrix.env }}
         run: scripts/build/build.sh klee --docker --create-final-image
       - name: Run tests
         run: scripts/build/run-tests.sh --coverage --upload-coverage --run-docker --debug
+
   clang-format:
     runs-on: ubuntu-latest
     steps:

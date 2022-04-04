@@ -10,9 +10,9 @@
 #ifndef KLEE_MEMORY_H
 #define KLEE_MEMORY_H
 
-#include "Context.h"
 #include "MemoryManager.h"
 #include "TimingSolver.h"
+#include "klee/Core/Context.h"
 
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/Expr.h"

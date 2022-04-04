@@ -1,8 +1,7 @@
 setup_build_variables_sqlite() {
-  SQLITE_VERSION="3370200"
   SQLITE_SRC_PATH="${BASE}/sqlite-amalgamation-${SQLITE_VERSION}"
-  SQLITE_INSTALL_PATH=${SQLITE_SRC_PATH}
   SQLITE_SUFFIX="${SANITIZER_SUFFIX}"
+  SQLITE_INSTALL_PATH="${SQLITE_SRC_PATH}${SANITIZER_SUFFIX}"
 }
 
 download_sqlite() {
@@ -20,11 +19,14 @@ build_sqlite() {
     CFLAGS=("${SANITIZER_C_FLAGS[@]}")
     COMP="${SANITIZER_C_COMPILER}"
   else
-    COMP="${BITCODE_CC}"
-    [[ -z "${COMP}" ]] && COMP="$(which gcc)"
+    [[ -z "${COMP:-}" ]] && COMP="$(which gcc)"
   fi
 
-  "${COMP}" "${CFLAGS[@]}" -fPIC -o libsqlite3.so -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -shared sqlite3.c
+  mkdir -p "${SQLITE_INSTALL_PATH}"
+  "${COMP}" "${CFLAGS[@]}" -fPIC -o "${SQLITE_INSTALL_PATH}"/libsqlite3.so -DSQLITE_THREADSAFE=0 -DSQLITE_OMIT_LOAD_EXTENSION -shared sqlite3.c
+  if [[ -n "${SANITIZER_SUFFIX:-}" ]]; then
+    cp "${SQLITE_SRC_PATH}/"sqlite3.h "${SQLITE_INSTALL_PATH}/"
+  fi
 }
 
 install_sqlite() {
@@ -45,7 +47,7 @@ setup_artifact_variables_sqlite() {
 get_docker_config_id_sqlite() {
   (
     setup_build_variables_sqlite
-    echo "${SQLITE_SUFFIX}"
+    echo "${SQLITE_VERSION}${SQLITE_SUFFIX}"
   )
 }
 
@@ -53,5 +55,6 @@ get_build_artifacts_sqlite() {
   (
     setup_build_variables_sqlite
     echo "${SQLITE_SRC_PATH}"
+    echo "${SQLITE_INSTALL_PATH}"
   )
 }

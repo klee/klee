@@ -12,6 +12,7 @@
 using namespace klee;
 
 Statistic stats::cexCacheTime("CexCacheTime", "CCtime");
+Statistic stats::solverQueries("SolverQueries", "SQ");
 Statistic stats::queries("Queries", "Q");
 Statistic stats::queriesInvalid("QueriesInvalid", "Qiv");
 Statistic stats::queriesValid("QueriesValid", "Qv");

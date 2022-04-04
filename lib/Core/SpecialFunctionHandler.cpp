@@ -28,15 +28,18 @@
 #include "klee/Support/OptionCategories.h"
 #include "klee/klee.h"
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Format.h"
+DISABLE_WARNING_POP
 
 #include <cerrno>
 #include <sstream>
-#include <time.h>
 
 using namespace llvm;
 using namespace klee;
@@ -147,59 +150,6 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
     // operator new(unsigned long)
     add("_Znwm", handleNew, true),
 
-    // Run clang with -fsanitize=undefined or any its subset of checks
-    // https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#available-checks
-    add("__ubsan_handle_type_mismatch_v1", handleTypeMismatchV1, false),
-    add("__ubsan_handle_type_mismatch_v1_abort", handleTypeMismatchV1, false),
-    add("__ubsan_handle_alignment_assumption", handleAlignmentAssumption,
-        false),
-    add("__ubsan_handle_alignment_assumption_abort", handleAlignmentAssumption,
-        false),
-    add("__ubsan_handle_add_overflow", handleAddOverflow, false),
-    add("__ubsan_handle_add_overflow_abort", handleAddOverflow, false),
-    add("__ubsan_handle_sub_overflow", handleSubOverflow, false),
-    add("__ubsan_handle_sub_overflow_abort", handleSubOverflow, false),
-    add("__ubsan_handle_mul_overflow", handleMulOverflow, false),
-    add("__ubsan_handle_mul_overflow_abort", handleMulOverflow, false),
-    add("__ubsan_handle_negate_overflow", handleNegateOverflow, false),
-    add("__ubsan_handle_negate_overflow_abort", handleNegateOverflow, false),
-    add("__ubsan_handle_divrem_overflow", handleDivRemOverflow, false),
-    add("__ubsan_handle_divrem_overflow_abort", handleDivRemOverflow, false),
-    add("__ubsan_handle_shift_out_of_bounds", handleShiftOutOfBounds, false),
-    add("__ubsan_handle_shift_out_of_bounds_abort", handleShiftOutOfBounds,
-        false),
-    add("__ubsan_handle_out_of_bounds", handleOutOfBounds, false),
-    add("__ubsan_handle_out_of_bounds_abort", handleOutOfBounds, false),
-    add("__ubsan_handle_builtin_unreachable", handleBuiltinUnreachable, false),
-    add("__ubsan_handle_missing_return", handleMissingReturn, false),
-    add("__ubsan_handle_vla_bound_not_positive", handleVlaBoundNotPositive,
-        false),
-    add("__ubsan_handle_vla_bound_not_positive_abort",
-        handleVlaBoundNotPositive, false),
-    add("__ubsan_handle_float_cast_overflow", handleFloatCastOverflow, false),
-    add("__ubsan_handle_float_cast_overflow_abort", handleFloatCastOverflow,
-        false),
-    add("__ubsan_handle_load_invalid_value", handleLoadInvalidValue, false),
-    add("__ubsan_handle_load_invalid_value_abort", handleLoadInvalidValue,
-        false),
-    add("__ubsan_handle_implicit_conversion", handleImplicitConversion, false),
-    add("__ubsan_handle_implicit_conversion_abort", handleImplicitConversion,
-        false),
-    add("__ubsan_handle_invalid_builtin", handleInvalidBuiltin, false),
-    add("__ubsan_handle_invalid_builtin_abort", handleInvalidBuiltin, false),
-    add("__ubsan_handle_nonnull_return_v1", handleNonnullReturnV1, false),
-    add("__ubsan_handle_nonnull_return_v1_abort", handleNonnullReturnV1, false),
-    add("__ubsan_handle_nullability_return_v1", handleNullabilityReturnV1,
-        false),
-    add("__ubsan_handle_nullability_return_v1_abort", handleNullabilityReturnV1,
-        false),
-    add("__ubsan_handle_nonnull_arg", handleNonnullArg, false),
-    add("__ubsan_handle_nonnull_arg_abort", handleNonnullArg, false),
-    add("__ubsan_handle_nullability_arg", handleNullabilityArg, false),
-    add("__ubsan_handle_nullability_arg_abort", handleNullabilityArg, false),
-    add("__ubsan_handle_pointer_overflow", handlePointerOverflow, false),
-    add("__ubsan_handle_pointer_overflow_abort", handlePointerOverflow, false),
-
     // float classification instrinsics
     add("klee_is_nan_float", handleIsNaN, true),
     add("klee_is_nan_double", handleIsNaN, true),
@@ -295,7 +245,7 @@ void SpecialFunctionHandler::prepare(
 }
 
 void SpecialFunctionHandler::bind() {
-  unsigned N = sizeof(handlerInfo) / sizeof(handlerInfo[0]);
+  unsigned N = size();
 
   for (unsigned i = 0; i < N; ++i) {
     HandlerInfo &hi = handlerInfo[i];
@@ -389,8 +339,8 @@ void SpecialFunctionHandler::handleAbort(ExecutionState &state,
                                          KInstruction *target,
                                          std::vector<ref<Expr>> &arguments) {
   assert(arguments.size() == 0 && "invalid number of arguments to abort");
-  executor.terminateStateOnError(state, "abort failure",
-                                 StateTerminationType::Abort);
+  executor.terminateStateOnProgramError(state, "abort failure",
+                                        StateTerminationType::Abort);
 }
 
 void SpecialFunctionHandler::handleExit(ExecutionState &state,
@@ -404,14 +354,14 @@ void SpecialFunctionHandler::handleSilentExit(
     ExecutionState &state, KInstruction *target,
     std::vector<ref<Expr>> &arguments) {
   assert(arguments.size() == 1 && "invalid number of arguments to exit");
-  executor.terminateStateEarly(state, "", StateTerminationType::SilentExit);
+  executor.terminateStateEarlyUser(state, "");
 }
 
 void SpecialFunctionHandler::handleAssert(ExecutionState &state,
                                           KInstruction *target,
                                           std::vector<ref<Expr>> &arguments) {
   assert(arguments.size() == 3 && "invalid number of arguments to _assert");
-  executor.terminateStateOnError(
+  executor.terminateStateOnProgramError(
       state, "ASSERTION FAIL: " + readStringAtAddress(state, arguments[0]),
       StateTerminationType::Assert);
 }
@@ -421,7 +371,7 @@ void SpecialFunctionHandler::handleAssertFail(
     std::vector<ref<Expr>> &arguments) {
   assert(arguments.size() == 4 &&
          "invalid number of arguments to __assert_fail");
-  executor.terminateStateOnError(
+  executor.terminateStateOnProgramError(
       state, "ASSERTION FAIL: " + readStringAtAddress(state, arguments[0]),
       StateTerminationType::Assert);
 }
@@ -433,7 +383,7 @@ void SpecialFunctionHandler::handleReportError(
          "invalid number of arguments to klee_report_error");
 
   // arguments[0,1,2,3] are file, line, message, suffix
-  executor.terminateStateOnError(
+  executor.terminateStateOnProgramError(
       state, readStringAtAddress(state, arguments[2]),
       StateTerminationType::ReportError, "",
       readStringAtAddress(state, arguments[3]).c_str());
@@ -873,15 +823,15 @@ void SpecialFunctionHandler::handleCheckMemoryAccess(
     if (!state.addressSpace.resolveOne(
             cast<ConstantExpr>(address),
             executor.typeSystemManager->getUnknownType(), idObject)) {
-      executor.terminateStateOnError(state, "check_memory_access: memory error",
-                                     StateTerminationType::Ptr,
-                                     executor.getAddressInfo(state, address));
+      executor.terminateStateOnProgramError(
+          state, "check_memory_access: memory error", StateTerminationType::Ptr,
+          executor.getAddressInfo(state, address));
     } else {
       const MemoryObject *mo = state.addressSpace.findObject(idObject).first;
       ref<Expr> chk = mo->getBoundsCheckPointer(
           address, cast<ConstantExpr>(size)->getZExtValue());
       if (!chk->isTrue()) {
-        executor.terminateStateOnError(
+        executor.terminateStateOnProgramError(
             state, "check_memory_access: memory error",
             StateTerminationType::Ptr, executor.getAddressInfo(state, address));
       }
@@ -1001,238 +951,6 @@ void SpecialFunctionHandler::handleMarkGlobal(
         it->second->addressSpace.findObject(it->first).first;
     assert(!mo->isLocal);
     mo->isGlobal = true;
-  }
-}
-
-template <typename... Ts>
-inline std::string formattedMessage(const char *Fmt, const Ts &...Vals) {
-  std::string message;
-  llvm::raw_string_ostream ostream{message};
-  ostream << llvm::format(Fmt, Vals...);
-  return message;
-}
-
-void SpecialFunctionHandler::handleTypeMismatchV1(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  auto pointerExpr = arguments[1].get();
-  auto pointer =
-      executor.toConstant(state, pointerExpr, "handleTypeMismatchV1");
-  if (pointer->isZero()) {
-    executor.terminateStateOnError(state, "invalid usage of null pointer",
-                                   StateTerminationType::UndefinedBehavior);
-    return;
-  } else {
-    auto pointerAddress = pointer->getAPValue().getZExtValue();
-    std::string message = formattedMessage(
-        "either misaligned address for %p or invalid usage of address %p with "
-        "insufficient space",
-        pointerAddress, pointerAddress);
-    executor.terminateStateOnError(state, message,
-                                   StateTerminationType::UndefinedBehavior);
-  }
-}
-
-void SpecialFunctionHandler::handleAlignmentAssumption(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  auto alignmentExpr = arguments[2].get();
-  auto alignment =
-      executor.toConstant(state, alignmentExpr, "handleAlignmentAssumption");
-  auto alignmentValue = alignment->getZExtValue();
-  auto offsetExpr = arguments[3].get();
-  auto offset =
-      executor.toConstant(state, offsetExpr, "handleAlignmentAssumption");
-  auto offsetValue = offset->getZExtValue();
-  if (offset->isZero()) {
-    auto message = formattedMessage("assumption of %llu byte alignment failed",
-                                    alignmentValue);
-    executor.terminateStateOnError(state, message,
-                                   StateTerminationType::UndefinedBehavior);
-  } else {
-    auto message = formattedMessage("assumption of %llu byte alignment (with "
-                                    "offset of %llu byte) for pointer "
-                                    "failed",
-                                    alignmentValue, offsetValue);
-    executor.terminateStateOnError(state, message,
-                                   StateTerminationType::UndefinedBehavior);
-  }
-}
-
-void SpecialFunctionHandler::handleAddOverflow(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(state, "overflow on addition",
-                                 StateTerminationType::Overflow);
-}
-
-void SpecialFunctionHandler::handleSubOverflow(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(state, "overflow on subtraction",
-                                 StateTerminationType::Overflow);
-}
-
-void SpecialFunctionHandler::handleMulOverflow(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(state, "overflow on multiplication",
-                                 StateTerminationType::Overflow);
-}
-
-void SpecialFunctionHandler::handleNegateOverflow(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(state, "negation cannot be represented",
-                                 StateTerminationType::Overflow);
-}
-
-void SpecialFunctionHandler::handleDivRemOverflow(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(state, "overflow on division or remainder",
-                                 StateTerminationType::Overflow);
-}
-
-void SpecialFunctionHandler::handleShiftOutOfBounds(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(state, "shifted value is invalid",
-                                 StateTerminationType::UndefinedBehavior);
-}
-
-void SpecialFunctionHandler::handleOutOfBounds(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(state, "index out of bounds",
-                                 StateTerminationType::UndefinedBehavior);
-}
-
-void SpecialFunctionHandler::handleBuiltinUnreachable(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(
-      state, "execution reached an unreachable program point",
-      StateTerminationType::UndefinedBehavior);
-}
-
-void SpecialFunctionHandler::handleMissingReturn(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(
-      state,
-      "execution reached the end of a value-returning function "
-      "without returning a value",
-      StateTerminationType::UndefinedBehavior);
-}
-
-void SpecialFunctionHandler::handleVlaBoundNotPositive(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(state,
-                                 "variable length array bound evaluates to "
-                                 "non-positive value",
-                                 StateTerminationType::UndefinedBehavior);
-}
-
-void SpecialFunctionHandler::handleFloatCastOverflow(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(
-      state,
-      "floating point value is outside the range of representable values",
-      StateTerminationType::UndefinedBehavior);
-}
-
-void SpecialFunctionHandler::handleLoadInvalidValue(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(state, "load invalid value",
-                                 StateTerminationType::UndefinedBehavior);
-}
-
-void SpecialFunctionHandler::handleImplicitConversion(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(state, "invalid implicit conversion",
-                                 StateTerminationType::UndefinedBehavior);
-}
-
-void SpecialFunctionHandler::handleInvalidBuiltin(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(
-      state,
-      "passing zero to either ctz() or clz(), which is not a valid argument",
-      StateTerminationType::UndefinedBehavior);
-}
-
-void SpecialFunctionHandler::handleNonnullReturnV1(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(
-      state,
-      "null pointer returned from function declared to never return null",
-      StateTerminationType::UndefinedBehavior);
-}
-
-void SpecialFunctionHandler::handleNullabilityReturnV1(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(
-      state,
-      "null pointer returned from function declared to never return null",
-      StateTerminationType::UndefinedBehavior);
-}
-
-void SpecialFunctionHandler::handleNonnullArg(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(
-      state,
-      "null pointer passed as argument, which is declared to never be null",
-      StateTerminationType::UndefinedBehavior);
-}
-
-void SpecialFunctionHandler::handleNullabilityArg(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  executor.terminateStateOnError(
-      state,
-      "null pointer passed as argument, which is declared to never be null",
-      StateTerminationType::UndefinedBehavior);
-}
-
-void SpecialFunctionHandler::handlePointerOverflow(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  auto baseExpr = arguments[1].get();
-  auto base = executor.toConstant(state, baseExpr, "handlePointerOverflow");
-  auto baseValue = base->getZExtValue();
-  auto resultExpr = arguments[2].get();
-  auto result = executor.toConstant(state, resultExpr, "handlePointerOverflow");
-  auto resultValue = result->getZExtValue();
-  if (base->isZero() && result->isZero()) {
-    executor.terminateStateOnError(state,
-                                   "applying zero offset to null pointer",
-                                   StateTerminationType::UndefinedBehavior);
-  } else if (base->isZero() && !result->isZero()) {
-    auto message = formattedMessage(
-        "applying non-zero offset %llu to null pointer", resultValue);
-    executor.terminateStateOnError(state, message,
-                                   StateTerminationType::UndefinedBehavior);
-  } else if (!base->isZero() && result->isZero()) {
-    auto message = formattedMessage(
-        "applying non-zero offset to non-null pointer %p produced null pointer",
-        baseValue);
-    executor.terminateStateOnError(state, message,
-                                   StateTerminationType::UndefinedBehavior);
-  } else {
-    auto message =
-        formattedMessage("pointer arithmetic with base %p overflowed to %p",
-                         baseValue, resultValue);
-    executor.terminateStateOnError(state, message,
-                                   StateTerminationType::UndefinedBehavior);
   }
 }
 

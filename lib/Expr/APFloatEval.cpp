@@ -81,11 +81,7 @@ llvm::APFloat evalSqrt(const llvm::APFloat &v, llvm::APFloat::roundingMode rm) {
     llvm::errs() << "Failed to store fenv\n";
     abort();
   }
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
 #define LLVMFltSemantics(str) llvm::APFloat::str()
-#else
-#define LLVMFltSemantics(str) llvm::APFloat::str
-#endif
   const llvm::fltSemantics *sem = &(v.getSemantics());
   llvm::APFloat resultAPF = llvm::APFloat::getZero(*sem);
   if (sem == &(LLVMFltSemantics(IEEEsingle))) {

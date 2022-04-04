@@ -357,7 +357,7 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
                 << ii.assemblyLine.getValue();
       out << AssStream.str();
     }
-    out << " in " << f->getName().str() << " (";
+    out << " in " << f->getName().str() << "(";
     // Yawn, we could go up and print varargs if we wanted to.
     unsigned index = 0;
     for (Function::arg_iterator ai = f->arg_begin(), ae = f->arg_end();
@@ -365,11 +365,15 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
       if (ai != f->arg_begin())
         out << ", ";
 
-      out << ai->getName().str();
-      // XXX should go through function
+      if (ai->hasName())
+        out << ai->getName().str() << "=";
+
       ref<Expr> value = sf.locals[sf.kf->getArgRegister(index++)].value;
-      if (isa_and_nonnull<ConstantExpr>(value))
-        out << "=" << value;
+      if (isa_and_nonnull<ConstantExpr>(value)) {
+        out << value;
+      } else {
+        out << "symbolic";
+      }
     }
     out << ")";
     if (ii.file != "")
@@ -419,7 +423,7 @@ bool ExecutionState::isGEPExpr(ref<Expr> expr) const {
 }
 
 bool ExecutionState::visited(KBlock *block) const {
-  return level.find(block->basicBlock) != level.end();
+  return level.count(block->basicBlock) != 0;
 }
 
 bool ExecutionState::reachedTarget(Target target) const {

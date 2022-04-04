@@ -13,18 +13,20 @@
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverImpl.h"
 
+#include <memory>
+#include <utility>
 #include <vector>
 
 namespace klee {
 
 class AssignmentValidatingSolver : public SolverImpl {
 private:
-  Solver *solver;
+  std::unique_ptr<Solver> solver;
   void dumpAssignmentQuery(const Query &query, const Assignment &assignment);
 
 public:
-  AssignmentValidatingSolver(Solver *_solver) : solver(_solver) {}
-  ~AssignmentValidatingSolver() { delete solver; }
+  AssignmentValidatingSolver(std::unique_ptr<Solver> solver)
+      : solver(std::move(solver)) {}
 
   bool computeValidity(const Query &, PartialValidity &result);
   bool computeTruth(const Query &, bool &isValid);
@@ -196,7 +198,9 @@ void AssignmentValidatingSolver::setCoreSolverTimeout(time::Span timeout) {
   return solver->impl->setCoreSolverTimeout(timeout);
 }
 
-Solver *createAssignmentValidatingSolver(Solver *s) {
-  return new Solver(new AssignmentValidatingSolver(s));
+std::unique_ptr<Solver>
+createAssignmentValidatingSolver(std::unique_ptr<Solver> s) {
+  return std::make_unique<Solver>(
+      std::make_unique<AssignmentValidatingSolver>(std::move(s)));
 }
 } // namespace klee

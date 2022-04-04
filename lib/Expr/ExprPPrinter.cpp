@@ -509,6 +509,19 @@ ExprPPrinter *klee::ExprPPrinter::create(llvm::raw_ostream &os) {
   return new PPrinter(os);
 }
 
+void ExprPPrinter::printOne(llvm::raw_ostream &os, const char *message,
+                            const ref<Expr> &e) {
+  PPrinter p(os);
+  p.scan(e);
+
+  // FIXME: Need to figure out what to do here. Probably print as a
+  // "forward declaration" with whatever syntax we pick for that.
+  PrintContext PC(os);
+  PC << message << ": ";
+  p.print(e, PC);
+  PC.breakLine();
+}
+
 void ExprPPrinter::printSingleExpr(llvm::raw_ostream &os, const ref<Expr> &e) {
   PPrinter p(os);
   p.printArrayDecls = true;

@@ -12,46 +12,75 @@
 
 #include <cstdint>
 
+#define TERMINATION_CLASSES                                                    \
+  TCLASS(Exit, 1U)                                                             \
+  TCLASS(Early, 2U)                                                            \
+  TCLASS(SolverError, 3U)                                                      \
+  TCLASS(ProgramError, 4U)                                                     \
+  TCLASS(UserError, 5U)                                                        \
+  TCLASS(ExecutionError, 6U)                                                   \
+  TCLASS(EarlyAlgorithm, 7U)                                                   \
+  TCLASS(EarlyUser, 8U)
+
+///@brief Termination classes categorize termination types
+enum class StateTerminationClass : std::uint8_t {
+/// \cond DO_NOT_DOCUMENT
+#define TCLASS(N, I) N = (I),
+  TERMINATION_CLASSES
+  /// \endcond
+};
+
+// (Name, ID, file suffix)
 #define TERMINATION_TYPES                                                      \
   TTYPE(RUNNING, 0U, "")                                                       \
   TTYPE(Exit, 1U, "")                                                          \
-  MARK(NORMAL, 1U)                                                             \
-  TTYPE(Interrupted, 2U, "early")                                              \
-  TTYPE(MaxDepth, 3U, "early")                                                 \
-  TTYPE(OutOfMemory, 4U, "early")                                              \
-  TTYPE(OutOfStackMemory, 5U, "early")                                         \
-  MARK(EARLY, 5U)                                                              \
-  TTYPE(Solver, 8U, "solver.err")                                              \
-  MARK(SOLVERERR, 8U)                                                          \
-  TTYPE(Abort, 10U, "abort.err")                                               \
-  TTYPE(Assert, 11U, "assert.err")                                             \
-  TTYPE(BadVectorAccess, 12U, "bad_vector_access.err")                         \
-  TTYPE(Free, 13U, "free.err")                                                 \
-  TTYPE(Model, 14U, "model.err")                                               \
-  TTYPE(Overflow, 15U, "overflow.err")                                         \
-  TTYPE(Ptr, 16U, "ptr.err")                                                   \
-  TTYPE(ReadOnly, 17U, "read_only.err")                                        \
-  TTYPE(ReportError, 18U, "report_error.err")                                  \
-  TTYPE(UndefinedBehavior, 19U, "undefined_behavior.err")                      \
-  TTYPE(InternalOutOfMemory, 20U, "out_of_memory.err")                         \
-  TTYPE(MissedAllTargets, 21U, "miss_all_targets.err")                         \
-  MARK(PROGERR, 21U)                                                           \
-  TTYPE(User, 23U, "user.err")                                                 \
-  MARK(USERERR, 23U)                                                           \
-  TTYPE(Execution, 25U, "exec.err")                                            \
-  TTYPE(External, 26U, "external.err")                                         \
-  MARK(EXECERR, 26U)                                                           \
-  TTYPE(Replay, 27U, "")                                                       \
-  TTYPE(SilentExit, 28U, "")                                                   \
-  MARK(END, 28U)
+  TTMARK(EXIT, 1U)                                                             \
+  TTYPE(Interrupted, 10U, "early")                                             \
+  TTYPE(MaxDepth, 11U, "early")                                                \
+  TTYPE(OutOfMemory, 12U, "early")                                             \
+  TTYPE(OutOfStackMemory, 13U, "early")                                        \
+  TTMARK(EARLY, 13U)                                                           \
+  TTYPE(Solver, 20U, "solver.err")                                             \
+  TTMARK(SOLVERERR, 20U)                                                       \
+  TTYPE(Abort, 30U, "abort.err")                                               \
+  TTYPE(Assert, 31U, "assert.err")                                             \
+  TTYPE(BadVectorAccess, 32U, "bad_vector_access.err")                         \
+  TTYPE(Free, 33U, "free.err")                                                 \
+  TTYPE(Model, 34U, "model.err")                                               \
+  TTYPE(Overflow, 35U, "overflow.err")                                         \
+  TTYPE(Ptr, 36U, "ptr.err")                                                   \
+  TTYPE(ReadOnly, 37U, "read_only.err")                                        \
+  TTYPE(ReportError, 38U, "report_error.err")                                  \
+  TTYPE(InvalidBuiltin, 39U, "invalid_builtin_use.err")                        \
+  TTYPE(ImplicitTruncation, 40U, "implicit_truncation.err")                    \
+  TTYPE(ImplicitConversion, 41U, "implicit_conversion.err")                    \
+  TTYPE(UnreachableCall, 42U, "unreachable_call.err")                          \
+  TTYPE(MissingReturn, 43U, "missing_return.err")                              \
+  TTYPE(InvalidLoad, 44U, "invalid_load.err")                                  \
+  TTYPE(NullableAttribute, 45U, "nullable_attribute.err")                      \
+  TTYPE(UndefinedBehavior, 46U, "undefined_behavior.err")                      \
+  TTYPE(InternalOutOfMemory, 47U, "out_of_memory.err")                         \
+  TTYPE(Reachable, 48U, "reachable.err")                                       \
+  TTMARK(PROGERR, 48U)                                                         \
+  TTYPE(User, 50U, "user.err")                                                 \
+  TTMARK(USERERR, 50U)                                                         \
+  TTYPE(Execution, 60U, "exec.err")                                            \
+  TTYPE(External, 61U, "external.err")                                         \
+  TTMARK(EXECERR, 61U)                                                         \
+  TTYPE(Replay, 70U, "")                                                       \
+  TTYPE(MissedAllTargets, 71U, "")                                             \
+  TTMARK(EARLYALGORITHM, 71U)                                                  \
+  TTYPE(SilentExit, 80U, "")                                                   \
+  TTMARK(EARLYUSER, 80U)                                                       \
+  TTMARK(END, 80U)
 
 ///@brief Reason an ExecutionState got terminated.
 enum class StateTerminationType : std::uint8_t {
+/// \cond DO_NOT_DOCUMENT
 #define TTYPE(N, I, S) N = (I),
-#define MARK(N, I) N = (I),
+#define TTMARK(N, I) N = (I),
   TERMINATION_TYPES
-#undef TTYPE
-#undef MARK
+  /// \endcond
 };
 
 namespace HaltExecution {
@@ -74,5 +103,14 @@ enum Reason {
   Unspecified
 };
 };
+
+// reset definitions
+
+#undef TCLASS
+#undef TTYPE
+#undef TTMARK
+#define TCLASS(N, I)
+#define TTYPE(N, I, S)
+#define TTMARK(N, I)
 
 #endif

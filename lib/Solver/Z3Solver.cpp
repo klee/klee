@@ -30,6 +30,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <memory>
 #include <unordered_map>
 
 namespace {
@@ -64,7 +65,7 @@ namespace klee {
 
 class Z3SolverImpl : public SolverImpl {
 private:
-  Z3Builder *builder;
+  std::unique_ptr<Z3Builder> builder;
   Z3BuilderType builderType;
   time::Span timeout;
   SolverRunStatus runStatusCode;
@@ -126,18 +127,18 @@ Z3SolverImpl::Z3SolverImpl(Z3BuilderType type)
     : builderType(type), runStatusCode(SOLVER_RUN_STATUS_FAILURE) {
   switch (type) {
   case KLEE_CORE:
-    builder = new Z3CoreBuilder(
+    builder = std::unique_ptr<Z3Builder>(new Z3CoreBuilder(
         /*autoClearConstructCache=*/false,
         /*z3LogInteractionFile=*/!Z3LogInteractionFile.empty()
             ? Z3LogInteractionFile.c_str()
-            : nullptr);
+            : nullptr));
     break;
   case KLEE_BITVECTOR:
-    builder = new Z3BitvectorBuilder(
+    builder = std::unique_ptr<Z3Builder>(new Z3BitvectorBuilder(
         /*autoClearConstructCache=*/false,
         /*z3LogInteractionFile=*/!Z3LogInteractionFile.empty()
             ? Z3LogInteractionFile.c_str()
-            : nullptr);
+            : nullptr));
     break;
   }
   assert(builder && "unable to create Z3Builder");
@@ -180,10 +181,10 @@ Z3SolverImpl::Z3SolverImpl(Z3BuilderType type)
 
 Z3SolverImpl::~Z3SolverImpl() {
   Z3_params_dec_ref(builder->ctx, solverParameters);
-  delete builder;
 }
 
-Z3Solver::Z3Solver(Z3BuilderType type) : Solver(new Z3SolverImpl(type)) {}
+Z3Solver::Z3Solver(Z3BuilderType type)
+    : Solver(std::make_unique<Z3SolverImpl>(type)) {}
 
 char *Z3Solver::getConstraintLog(const Query &query) {
   return impl->getConstraintLog(query);
@@ -395,7 +396,7 @@ bool Z3SolverImpl::internalRunSolver(
 
     constant_arrays_in_query.visit(constraint);
   }
-  ++stats::queries;
+  ++stats::solverQueries;
   if (objects)
     ++stats::queryCounterexamples;
 
@@ -697,7 +698,7 @@ bool Z3SolverImpl::validateZ3Model(::Z3_solver &theSolver,
     ::Z3_ast rawEvaluatedExpr;
     __attribute__((unused)) bool successfulEval =
         Z3_model_eval(builder->ctx, theModel, constraint,
-                      /*model_completion=*/Z3_TRUE, &rawEvaluatedExpr);
+                      /*model_completion=*/true, &rawEvaluatedExpr);
     assert(successfulEval && "Failed to evaluate model");
 
     // Use handle to do ref-counting.

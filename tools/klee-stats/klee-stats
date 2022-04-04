@@ -35,6 +35,7 @@ Legend = [
     ('Branches', 'number of conditional branch (br) instructions in the LLVM bitcode', 'NumBranches'),
     ('FullBranches', 'number of fully-explored conditional branch (br) instructions in the LLVM bitcode', 'FullBranches'),
     ('PartialBranches', 'number of partially-explored conditional branch (br) instructions in the LLVM bitcode', 'PartialBranches'),
+    ('ExternalCalls', 'number of external calls', 'ExternalCalls'),
     # - time
     ('TUser(s)', 'total user time', "UserTime"),
     ('TResolve(s)', 'time spent in object resolution', "ResolveTime"),
@@ -44,19 +45,45 @@ Legend = [
     ('TQuery(s)', 'time spent in the constraint solver', "QueryTime"),
     ('TSolver(s)', 'time spent in the solver chain (incl. caches and constraint solver)', "SolverTime"),
     # - states
+    ('States', 'number of created states', "States"),
     ('ActiveStates', 'number of currently active states (0 after successful termination)', "NumStates"),
     ('MaxActiveStates', 'maximum number of active states', "MaxStates"),
     ('AvgActiveStates', 'average number of active states', "AvgStates"),
+    ('InhibitedForks', 'number of inhibited state forks due to e.g. memory pressure', "InhibitedForks"),
     # - constraint caching/solving
-    ('Queries', 'number of queries issued to the constraint solver', "NumQueries"),
-    ('QueryConstructs', 'number of query constructs for all queries send to the constraint solver', "NumQueryConstructs"),
+    ('Queries', 'number of queries issued to the solver chain', "Queries"),
+    ('SolverQueries', 'number of queries issued to the constraint solver', "SolverQueries"),
+    ('SolverQueryConstructs', 'number of query constructs for all queries send to the constraint solver', "NumQueryConstructs"),
     ('AvgSolverQuerySize', 'average number of query constructs per query issued to the constraint solver', "AvgQC"),
-    ('QCexCMisses', 'Counterexample cache misses', "QueryCexCacheMisses"),
-    ('QCexCHits', 'Counterexample cache hits', "QueryCexCacheHits"),
+    ('QCacheMisses', 'Query cache misses', "QueryCacheMisses"),
+    ('QCacheHits', 'Query cache hits', "QueryCacheHits"),
+    ('QCexCacheMisses', 'Counterexample cache misses', "QueryCexCacheMisses"),
+    ('QCexCacheHits', 'Counterexample cache hits', "QueryCexCacheHits"),
     # - memory
+    ('Allocations', 'number of allocated heap objects of the program under test', "Allocations"),
     ('Mem(MiB)', 'mebibytes of memory currently used', "MallocUsage"),
     ('MaxMem(MiB)', 'maximum memory usage', "MaxMem"),
     ('AvgMem(MiB)', 'average memory usage', "AvgMem"),
+    # - branch types
+    ('BrConditional', 'number of forks caused by symbolic branch conditions (br)', "BranchesConditional"),
+    ('BrIndirect', 'number of forks caused by indirect branches (indirectbr) with symbolic address', "BranchesIndirect"),
+    ('BrSwitch', 'number of forks caused by switch with symbolic value', "BranchesSwitch"),
+    ('BrCall', 'number of forks caused by symbolic function pointers', "BranchesCall"),
+    ('BrMemOp', 'number of forks caused by memory operation with symbolic address', "BranchesMemOp"),
+    ('BrResolvePointer', 'number of forks caused by symbolic pointers', "BranchesResolvePointer"),
+    ('BrAlloc', 'number of forks caused by symbolic allocation size', "BranchesAlloc"),
+    ('BrRealloc', 'number of forks caused by symbolic reallocation size', "BranchesRealloc"),
+    ('BrFree', 'number of forks caused by freeing a symbolic pointer', "BranchesFree"),
+    ('BrGetVal', 'number of forks caused by user-invoked concretization while seeding', "BranchesGetVal"),
+    # - termination classes
+    ('TermExit', 'number of states that reached end of execution path', "TerminationExit"),
+    ('TermEarly', 'number of early terminated states (e.g. due to memory pressure, state limt)', "TerminationEarly"),
+    ('TermSolverErr', 'number of states terminated due to solver errors', "TerminationSolverError"),
+    ('TermProgrErr', 'number of states terminated due to program errors (e.g. division by zero)', "TerminationProgramError"),
+    ('TermUserErr', 'number of states terminated due to user errors (e.g. misuse of KLEE API)', "TerminationUserError"),
+    ('TermExecErr', 'number of states terminated due to execution errors (e.g. unsupported intrinsics)', "TerminationExecutionError"),
+    ('TermEarlyAlgo', 'number of state terminations required by algorithm (e.g. state merging or replaying)', "TerminationEarlyAlgorithm"),
+    ('TermEarlyUser', 'number of states terminated via klee_silent_exit()', "TerminationEarlyUser"),
     # - debugging
     ('TArrayHash(s)', 'time spent hashing arrays (if KLEE_ARRAY_DEBUG enabled, otherwise -1)', "ArrayHashTime"),
     ('TFork(s)', 'time spent forking states', "ForkTime"),
@@ -468,10 +495,16 @@ def main():
     parser.add_argument('dir', nargs='+', help='KLEE output directory')
 
     if tabulate_available:
-        parser.add_argument('--table-format',
-                            choices=['klee', 'csv', 'readable-csv'] + list(_table_formats.keys()),
-                            dest='tableFormat', default='klee',
-                            help='Table format for the summary.')
+        tf_choices = ['klee', 'csv', 'readable-csv'] + list(_table_formats.keys())
+        tf_help = 'Table format for the summary.'
+        tf_default = 'klee'
+    else:
+        tf_choices = []
+        tf_help = '(not available due to missing "tabulate" package)'
+        tf_default = None
+    parser.add_argument('--table-format',
+                        choices=tf_choices, dest='tableFormat', default=tf_default,
+                        help=tf_help)
 
     parser.add_argument('--to-csv',
                         action='store_true', dest='toCsv',
@@ -514,6 +547,13 @@ def main():
     args = parser.parse_args()
 
 
+    if not tabulate_available and not (args.grafana or args.toCsv):
+        print('Error: Package "tabulate" required for table formatting. '
+              'Please install it using "pip" or your package manager. '
+              'You can still use --grafana and --to-csv without tabulate.',
+              file=sys.stderr)
+        sys.exit(1)
+
     # get print controls
     pr = 'NONE'
     if args.pAll or args.columns:
@@ -549,16 +589,7 @@ def main():
         write_csv(data)
         return
 
-    if tabulate_available:
-        write_table(args, data, dirs, pr)
-        return
-
-    print('Error: Package "tabulate" required for table formatting. '
-          'Please install it using "pip" or your package manager.'
-          'You can still use --grafana and --to-csv without tabulate.',
-          file=sys.stderr)
-    sys.exit(1)
-
+    write_table(args, data, dirs, pr)
 
 
 if __name__ == '__main__':

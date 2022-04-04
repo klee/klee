@@ -16,7 +16,7 @@
 #include "gperftools/malloc_extension.h"
 #endif
 
-#ifdef HAVE_MALLINFO
+#if defined(HAVE_MALLINFO) || defined(HAVE_MALLINFO2)
 #include <malloc.h>
 #endif
 #ifdef HAVE_MALLOC_ZONE_STATISTICS
@@ -96,6 +96,10 @@ size_t util::GetTotalMallocUsage() {
   MallocExtension::instance()->GetNumericProperty(
       "generic.current_allocated_bytes", &value);
   return value;
+#elif defined(HAVE_MALLINFO2)
+  // niy in tcmalloc
+  struct mallinfo2 mi = ::mallinfo2();
+  return mi.uordblks + mi.hblkhd;
 #elif defined(HAVE_MALLINFO)
   struct mallinfo mi = ::mallinfo();
   // The malloc implementation in glibc (pmalloc2)

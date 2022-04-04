@@ -9,11 +9,9 @@
 
 #ifndef KLEE_REPLAY_H
 #define KLEE_REPLAY_H
-
 #define _LARGEFILE64_SOURCE
 #define _FILE_OFFSET_BITS 64
 
-#include "klee/Config/config.h"
 // FIXME: This is a hack.
 #include "../../runtime/POSIX/fd.h"
 #include <sys/time.h>

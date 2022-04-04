@@ -75,8 +75,8 @@ setup_variables_sanitizer() {
     # Undefined Behaviour Sanitizer
     if [ "${sanitizer}" == "undefined" ]; then
       echo "Using UBSan"
-      flags=("-fsanitize=undefined" "-fno-omit-frame-pointer" "-g"
-             "-fno-sanitize-recover=undefined")
+      # Allow to recover from any undefined behaviour
+      flags=("-fsanitize=undefined" "-fno-omit-frame-pointer" "-g" "-fsanitize-recover=signed-integer-overflow,alignment,vptr")
       SANITIZER_CXX_FLAGS+=("${flags[@]}")
       SANITIZER_C_FLAGS+=("${flags[@]}")
       SANITIZER_LD_FLAGS+=("${flags[@]}")
@@ -87,6 +87,30 @@ setup_variables_sanitizer() {
     # Memory Sanitizer
     if [ "${sanitizer}" == "memory" ]; then
       echo "Using Memory Sanitizer"
+      # Generate full sanitizer ignore file.
+      cat "${DIR}/sanitizer/"*.txt > "${BASE}/sanitizer_ignore.txt"
+      flags=("-fsanitize=memory" "-fno-omit-frame-pointer" "-g" "-fsanitize-memory-track-origins" "-fsanitize-ignorelist=${BASE}/sanitizer_ignore.txt")
+
+      if [[ -n "${LLVM_VERSION:-}" ]]; then
+        # Workaround as we have to pull in MemSan-instrumented libcxx
+        local LLVM_BUILD_LIBCXX="${BASE}/llvm-${LLVM_VERSION}0-install_NO_D_A_memsan-libcxx"
+        if [[ -d "${LLVM_BUILD_LIBCXX}" ]]; then
+          SANITIZER_CXX_FLAGS+=(
+            "-nostdinc++"
+            "-isystem ${LLVM_BUILD_LIBCXX}/include"
+            "-isystem ${LLVM_BUILD_LIBCXX}/include/c++/v1"
+          )
+          SANITIZER_LD_FLAGS+=(
+            "-lc++abi"
+            "-Wl,--rpath=${LLVM_BUILD_LIBCXX}/lib"
+            "-L${LLVM_BUILD_LIBCXX}/lib"
+            "-stdlib=libc++"
+          )
+        fi
+      fi
+      SANITIZER_CXX_FLAGS+=("${flags[@]}")
+      SANITIZER_C_FLAGS+=("${flags[@]}")
+      SANITIZER_LD_FLAGS+=("${flags[@]}")
       SANITIZER_SUFFIX+="_memsan"
       continue
     fi

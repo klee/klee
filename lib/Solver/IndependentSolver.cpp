@@ -26,7 +26,9 @@
 
 #include <list>
 #include <map>
+#include <memory>
 #include <ostream>
+#include <utility>
 #include <vector>
 
 using namespace klee;
@@ -34,11 +36,11 @@ using namespace llvm;
 
 class IndependentSolver : public SolverImpl {
 private:
-  Solver *solver;
+  std::unique_ptr<Solver> solver;
 
 public:
-  IndependentSolver(Solver *_solver) : solver(_solver) {}
-  ~IndependentSolver() { delete solver; }
+  IndependentSolver(std::unique_ptr<Solver> solver)
+      : solver(std::move(solver)) {}
 
   bool computeTruth(const Query &, bool &isValid);
   bool computeValidity(const Query &, PartialValidity &result);
@@ -94,7 +96,7 @@ bool assertCreatedPointEvaluatesToTrue(
     std::vector<SparseStorage<unsigned char>> &values,
     std::map<const Array *, SparseStorage<unsigned char>> &retMap) {
   // _allowFreeValues is set to true so that if there are missing bytes in the
-  // assigment we will end up with a non ConstantExpr after evaluating the
+  // assignment we will end up with a non ConstantExpr after evaluating the
   // assignment and fail
   Assignment assign = Assignment(objects, values, /*_allowFreeValues=*/true);
 
@@ -332,6 +334,8 @@ void IndependentSolver::setCoreSolverTimeout(time::Span timeout) {
   solver->impl->setCoreSolverTimeout(timeout);
 }
 
-Solver *klee::createIndependentSolver(Solver *s) {
-  return new Solver(new IndependentSolver(s));
+std::unique_ptr<Solver>
+klee::createIndependentSolver(std::unique_ptr<Solver> s) {
+  return std::make_unique<Solver>(
+      std::make_unique<IndependentSolver>(std::move(s)));
 }

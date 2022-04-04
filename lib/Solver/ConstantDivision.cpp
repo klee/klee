@@ -87,7 +87,7 @@ void ComputeMultConstants64(uint64_t multiplicand, uint64_t &add,
 
   while (x) {
     // Determine rightmost contiguous region of 1s.
-    unsigned low = bits64::indexOfRightmostBit(x);
+    unsigned low = countTrailingZeroes(x);
     uint64_t lowbit = 1LL << low;
     uint64_t p = x + lowbit;
     uint64_t q = bits64::isolateRightmostBit(p);

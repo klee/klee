@@ -576,13 +576,19 @@ int fstatat(int fd, const char *path, struct stat *buf, int flags) {
     return 0;
   }
 
-#if (defined __NR_newfstatat) && (__NR_newfstatat != 0)
-  return syscall(__NR_newfstatat, (long)fd,
-                 (path ? __concretize_string(path) : NULL), buf, (long)flags);
+#ifdef FSTATAT_PATH_ACCEPTS_NULL
+#define PATHPARAM (path ? __concretize_string(path) : NULL)
 #else
-  return syscall(__NR_fstatat64, (long)fd,
-                 (path ? __concretize_string(path) : NULL), buf, (long)flags);
+  assert(path);
+#define PATHPARAM (__concretize_string(path))
 #endif
+
+#if (defined __NR_newfstatat) && (__NR_newfstatat != 0)
+  return syscall(__NR_newfstatat, (long)fd, PATHPARAM, buf, (long)flags);
+#else
+  return syscall(__NR_fstatat64, (long)fd, PATHPARAM, buf, (long)flags);
+#endif
+#undef PATHPARAM
 }
 
 int __fd_lstat(const char *path, struct stat64 *buf) {
@@ -831,8 +837,6 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
       return bytes;
     } else {
       off64_t os_pos = f->off - 4096;
-      int res;
-      off64_t s = 0;
 
       /* For reasons which I really don't understand, if I don't
          memset this then sometimes the kernel returns d_ino==0 for
@@ -842,9 +846,10 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
          Even more bizarre, interchanging the memset and the seek also
          case strange behavior. Really should be debugged properly. */
       memset(dirp, 0, count);
-      s = syscall(__NR_lseek, f->fd, os_pos, SEEK_SET);
+      off64_t s = syscall(__NR_lseek, f->fd, os_pos, SEEK_SET);
+      (void)s;
       assert(s != (off64_t)-1);
-      res = syscall(__NR_getdents64, f->fd, dirp, count);
+      int res = syscall(__NR_getdents64, f->fd, dirp, count);
       if (res > -1) {
         int pos = 0;
         f->off = syscall(__NR_lseek, f->fd, 0, SEEK_CUR);

@@ -6,6 +6,8 @@
 // See https://github.com/klee/klee/issues/308
 // and https://github.com/stp/stp/issues/206
 
+#include "klee/klee.h"
+
 int b, a, g;
 
 int *c = &b, *d = &b, *f = &a;

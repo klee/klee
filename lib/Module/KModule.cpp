@@ -22,10 +22,10 @@
 #include "klee/Support/ModuleUtil.h"
 #include "klee/Support/OptionCategories.h"
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Bitcode/BitcodeWriter.h"
-#if LLVM_VERSION_CODE < LLVM_VERSION(8, 0)
-#include "llvm/IR/CallSite.h"
-#endif
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -41,13 +41,10 @@
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
 #include "llvm/Transforms/Scalar/Scalarizer.h"
-#endif
-#include "llvm/Transforms/Utils/Cloning.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
 #include "llvm/Transforms/Utils.h"
-#endif
+#include "llvm/Transforms/Utils/Cloning.h"
+DISABLE_WARNING_POP
 
 #include <sstream>
 
@@ -150,14 +147,8 @@ static Function *getStubFunctionForCtorList(Module *m, GlobalVariable *gv,
     for (unsigned i = 0; i < arr->getNumOperands(); i++) {
       auto cs = cast<ConstantStruct>(arr->getOperand(i));
       // There is a third element in global_ctor elements (``i8 @data``).
-#if LLVM_VERSION_CODE >= LLVM_VERSION(9, 0)
       assert(cs->getNumOperands() == 3 &&
              "unexpected element in ctor initializer list");
-#else
-      // before LLVM 9.0, the third operand was optional
-      assert((cs->getNumOperands() == 2 || cs->getNumOperands() == 3) &&
-             "unexpected element in ctor initializer list");
-#endif
       auto fp = cs->getOperand(1);
       if (!fp->isNullValue()) {
         if (auto ce = dyn_cast<llvm::ConstantExpr>(fp))
@@ -352,11 +343,7 @@ void KModule::manifest(InterpreterHandler *ih,
 
   if (OutputModule) {
     std::unique_ptr<llvm::raw_fd_ostream> f(ih->openOutputFile("final.bc"));
-#if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
     WriteBitcodeToFile(*module, *f);
-#else
-    WriteBitcodeToFile(module.get(), *f);
-#endif
   }
 
   {
@@ -412,13 +399,8 @@ void KModule::manifest(InterpreterHandler *ih,
   for (auto &kfp : functions) {
     for (auto kcb : kfp.get()->kCallBlocks) {
       bool isInlineAsm = false;
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
       const CallBase &cs = cast<CallBase>(*kcb->kcallInstruction->inst);
       if (isa<InlineAsm>(cs.getCalledOperand())) {
-#else
-      const CallSite cs(kcb->kcallInstruction->inst);
-      if (isa<InlineAsm>(cs.getCalledValue())) {
-#endif
         isInlineAsm = true;
       }
       if (kcb->calledFunctions.empty() && !isInlineAsm &&
@@ -554,13 +536,8 @@ void KBlock::handleKInstruction(
   ki->inst = inst;
   ki->dest = instructionToRegisterMap[inst];
   if (isa<CallInst>(inst) || isa<InvokeInst>(inst)) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
     const CallBase &cs = cast<CallBase>(*inst);
     Value *val = cs.getCalledOperand();
-#else
-    const CallSite cs(inst);
-    Value *val = cs.getCalledValue();
-#endif
     unsigned numArgs = cs.arg_size();
     ki->operands = new int[numArgs + 1];
     ki->operands[0] = getOperandNum(val, instructionToRegisterMap, km, ki);
@@ -609,13 +586,8 @@ KFunction::KFunction(llvm::Function *_function, KModule *_km)
     Instruction *fit = &bbit->front();
     Instruction *lit = &bbit->back();
     if (SplitCalls && (isa<CallInst>(fit) || isa<InvokeInst>(fit))) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
       const CallBase &cs = cast<CallBase>(*fit);
       Value *fp = cs.getCalledOperand();
-#else
-      CallSite cs(fit);
-      Value *fp = cs.getCalledValue();
-#endif
       Function *f = getTargetFunction(fp);
       std::set<llvm::Function *> calledFunctions;
       if (f) {

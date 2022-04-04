@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Context.h"
+#include "klee/Core/Context.h"
 
 #include "klee/Expr/Expr.h"
 #include "llvm/IR/Type.h"

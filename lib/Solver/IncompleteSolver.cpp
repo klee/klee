@@ -12,6 +12,8 @@
 #include "klee/Expr/Constraints.h"
 #include "klee/Solver/SolverUtil.h"
 
+#include <utility>
+
 using namespace klee;
 using namespace llvm;
 
@@ -46,14 +48,9 @@ PartialValidity IncompleteSolver::computeValidity(const Query &query) {
 
 /***/
 
-StagedSolverImpl::StagedSolverImpl(IncompleteSolver *_primary,
-                                   Solver *_secondary)
-    : primary(_primary), secondary(_secondary) {}
-
-StagedSolverImpl::~StagedSolverImpl() {
-  delete primary;
-  delete secondary;
-}
+StagedSolverImpl::StagedSolverImpl(std::unique_ptr<IncompleteSolver> primary,
+                                   std::unique_ptr<Solver> secondary)
+    : primary(std::move(primary)), secondary(std::move(secondary)) {}
 
 bool StagedSolverImpl::computeTruth(const Query &query, bool &isValid) {
   PartialValidity trueResult = primary->computeTruth(query);

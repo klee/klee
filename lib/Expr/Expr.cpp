@@ -17,10 +17,8 @@
 #include "klee/Support/OptionCategories.h"
 #include "klee/Support/RoundingModeUtil.h"
 #include "klee/util/APFloatEval.h"
-// FIXME: We shouldn't need this once fast constant support moves into
-// Core. If we need to do arithmetic, we probably want to use APInt.
-#include "klee/Support/IntEvaluation.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Hashing.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(13, 0)
 #include "llvm/ADT/StringExtras.h"
@@ -473,11 +471,17 @@ void Expr::printWidth(llvm::raw_ostream &os, Width width) {
   case Expr::Int64:
     os << "Expr::Int64";
     break;
+  case Expr::Int128:
+    os << "Expr::Int128";
+    break;
+  case Expr::Int256:
+    os << "Expr::Int256";
+    break;
+  case Expr::Int512:
+    os << "Expr::Int512";
+    break;
   case Expr::Fl80:
     os << "Expr::Fl80";
-    break;
-  case Expr::Int128:
-    os << "Expr::128";
     break;
   default:
     os << "<invalid type: " << (unsigned)width << ">";
@@ -556,6 +560,19 @@ ref<Expr> ConstantExpr::fromMemory(void *address, Width width) {
   case Expr::Int64:
     return ConstantExpr::create(*((uint64_t *)address), width);
   // FIXME: what about machines without x87 support?
+  case Expr::Fl80: {
+    size_t numWords = (width + llvm::APFloatBase::integerPartWidth - 1) /
+                      llvm::APFloatBase::integerPartWidth;
+    return ConstantExpr::alloc(llvm::APInt(
+        width, llvm::ArrayRef<uint64_t>((const uint64_t *)address, numWords)));
+  }
+  case Expr::Int128:
+  case Expr::Int256:
+  case Expr::Int512: {
+    size_t numWords = width / APInt::APINT_BITS_PER_WORD;
+    return ConstantExpr::alloc(llvm::APInt(
+        width, llvm::ArrayRef<uint64_t>((const uint64_t *)address, numWords)));
+  }
   default:
     // Fl80 branch should also be evaluated as APFloat and not as long double
     return ConstantExpr::alloc(
@@ -567,7 +584,8 @@ ref<Expr> ConstantExpr::fromMemory(void *address, Width width) {
 }
 
 void ConstantExpr::toMemory(void *address) {
-  switch (getWidth()) {
+  auto width = getWidth();
+  switch (width) {
   default:
     assert(0 && "invalid type");
   case Expr::Bool:
@@ -585,6 +603,10 @@ void ConstantExpr::toMemory(void *address) {
   case Expr::Int64:
     *((uint64_t *)address) = getZExtValue(64);
     break;
+  case Expr::Int128:
+  case Expr::Int256:
+  case Expr::Int512:
+    memcpy(address, value.getRawData(), width / 8);
   // FIXME: what about machines without x87 support?
   case Expr::Fl80:
     *((long double *)address) = *(const long double *)value.getRawData();
@@ -649,7 +671,6 @@ ConstantExpr::ConstantExpr(const llvm::APFloat &v)
 }
 
 const llvm::fltSemantics &ConstantExpr::widthToFloatSemantics(Width width) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
   switch (width) {
   case Expr::Int16:
     return llvm::APFloat::IEEEhalf();
@@ -664,22 +685,6 @@ const llvm::fltSemantics &ConstantExpr::widthToFloatSemantics(Width width) {
   default:
     return llvm::APFloat::Bogus();
   }
-#else
-  switch (width) {
-  case Expr::Int16:
-    return llvm::APFloat::IEEEhalf;
-  case Expr::Int32:
-    return llvm::APFloat::IEEEsingle;
-  case Expr::Int64:
-    return llvm::APFloat::IEEEdouble;
-  case Expr::Fl80:
-    return llvm::APFloat::x87DoubleExtended;
-  case 128:
-    return llvm::APFloat::IEEEquad;
-  default:
-    return llvm::APFloat::Bogus;
-  }
-#endif
 }
 
 const llvm::fltSemantics &ConstantExpr::getFloatSemantics() const {
@@ -688,11 +693,7 @@ const llvm::fltSemantics &ConstantExpr::getFloatSemantics() const {
 
 llvm::APFloat ConstantExpr::getAPFloatValue() const {
   const llvm::fltSemantics &fs = getFloatSemantics();
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
   assert(&fs != &(llvm::APFloat::Bogus()) && "Invalid float semantics");
-#else
-  assert(&fs != &(llvm::APFloat::Bogus) && "Invalid float semantics");
-#endif
   return llvm::APFloat(fs, getAPValue());
 }
 
@@ -1101,11 +1102,7 @@ ref<ConstantExpr> ConstantExpr::Sge(const ref<ConstantExpr> &RHS) {
 // Floating point
 
 ref<ConstantExpr> ConstantExpr::GetNaN(Expr::Width w) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
 #define LLVMFltSemantics(str) llvm::APFloat::str()
-#else
-#define LLVMFltSemantics(str) llvm::APFloat::str
-#endif
   // These values have been chosen to be consistent with Z3 when
   // rewriter.hi_fp_unspecified=false
   llvm::APInt apint;

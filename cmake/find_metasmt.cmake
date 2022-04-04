@@ -34,13 +34,12 @@ if (ENABLE_SOLVER_METASMT)
       " `/path` is the directory containing `metaSMTConfig.cmake`")
   endif()
   message(STATUS "metaSMT_DIR: ${metaSMT_DIR}")
-  list(APPEND KLEE_COMPONENT_EXTRA_INCLUDE_DIRS
-    "${metaSMT_INCLUDE_DIR}" ${metaSMT_INCLUDE_DIRS})
+  list(APPEND KLEE_SOLVER_INCLUDE_DIRS "${metaSMT_INCLUDE_DIR}" ${metaSMT_INCLUDE_DIRS})
   # FIXME: We should test linking
   list(APPEND KLEE_SOLVER_LIBRARIES ${metaSMT_LIBRARIES})
 
   # Separate flags and defines from ${metaSMT_CXXFLAGS}
-  string_to_list("${metaSMT_CXXFLAGS}" _metaSMT_CXXFLAGS_list)
+  string(REPLACE " " ";" _metaSMT_CXXFLAGS_list "${metaSMT_CXXFLAGS}")
   set(_metasmt_flags "")
   set(_metasmt_defines "")
   foreach (flag ${_metaSMT_CXXFLAGS_list})
@@ -59,12 +58,12 @@ if (ENABLE_SOLVER_METASMT)
   message(STATUS "metaSMT flags: ${_metasmt_flags}")
   foreach (f ${_metasmt_flags})
     # Test the flag and fail if it can't be used
-    klee_component_add_cxx_flag(${f} REQUIRED)
+    list(APPEND KLEE_COMPONENT_CXX_FLAGS "${f}")
   endforeach()
 
   # Check if metaSMT provides an useable backend
   if (NOT metaSMT_AVAILABLE_QF_ABV_SOLVERS)
-    message(FATAL_ERROR "metaSMT does not provide an useable backend.")
+    message(FATAL_ERROR "metaSMT does not provide an usable backend.")
   endif()
 
   message(STATUS "metaSMT has the following backend(s): ${metaSMT_AVAILABLE_QF_ABV_SOLVERS}.")
@@ -72,7 +71,7 @@ if (ENABLE_SOLVER_METASMT)
   set(METASMT_DEFAULT_BACKEND "STP"
     CACHE
     STRING
-    "Default metaSMT backend. Availabe options ${available_metasmt_backends}")
+    "Default metaSMT backend. Available options ${available_metasmt_backends}")
   # Provide drop down menu options in cmake-gui
   set_property(CACHE METASMT_DEFAULT_BACKEND
     PROPERTY STRINGS ${available_metasmt_backends})
@@ -91,6 +90,9 @@ if (ENABLE_SOLVER_METASMT)
   foreach(backend ${available_metasmt_backends})
     list(APPEND KLEE_COMPONENT_CXX_DEFINES -DMETASMT_HAVE_${backend})
   endforeach()
+
+  # Support newer CVC4 versions
+  list(APPEND KLEE_COMPONENT_CXX_DEFINES CVC4_WITHOUT_KIND_IFF)
 else()
   message(STATUS "metaSMT solver support disabled")
   set(ENABLE_METASMT 0) # For config.h

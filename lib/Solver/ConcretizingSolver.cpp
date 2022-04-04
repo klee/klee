@@ -23,16 +23,17 @@ namespace klee {
 
 class ConcretizingSolver : public SolverImpl {
 private:
-  Solver *solver;
+  std::unique_ptr<Solver> solver;
   ConcretizationManager *concretizationManager;
   AddressGenerator *addressGenerator;
 
 public:
-  ConcretizingSolver(Solver *_solver, ConcretizationManager *_cm,
-                     AddressGenerator *_ag)
-      : solver(_solver), concretizationManager(_cm), addressGenerator(_ag) {}
+  ConcretizingSolver(std::unique_ptr<Solver> _solver,
+                     ConcretizationManager *_cm, AddressGenerator *_ag)
+      : solver(std::move(_solver)), concretizationManager(_cm),
+        addressGenerator(_ag) {}
 
-  ~ConcretizingSolver() { delete solver; }
+  ~ConcretizingSolver() = default;
 
   bool computeTruth(const Query &, bool &isValid);
   bool computeValidity(const Query &, PartialValidity &result);
@@ -636,10 +637,11 @@ void ConcretizingSolver::setCoreSolverTimeout(time::Span timeout) {
   solver->setCoreSolverTimeout(timeout);
 }
 
-Solver *createConcretizingSolver(Solver *s,
-                                 ConcretizationManager *concretizationManager,
-                                 AddressGenerator *addressGenerator) {
-  return new Solver(
-      new ConcretizingSolver(s, concretizationManager, addressGenerator));
+std::unique_ptr<Solver>
+createConcretizingSolver(std::unique_ptr<Solver> s,
+                         ConcretizationManager *concretizationManager,
+                         AddressGenerator *addressGenerator) {
+  return std::make_unique<Solver>(std::make_unique<ConcretizingSolver>(
+      std::move(s), concretizationManager, addressGenerator));
 }
 } // namespace klee

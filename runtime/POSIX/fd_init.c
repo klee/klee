@@ -18,11 +18,6 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#ifdef __APPLE__
-/* macOS does not provide mempcpy in string.h */
-void *mempcpy(void *destaddr, void const *srcaddr, size_t len);
-#endif
-
 exe_file_system_t __exe_fs;
 
 /* NOTE: It is important that these are statically initialized
@@ -41,7 +36,6 @@ exe_sym_env_t __exe_env = {{{0, eOpen | eReadable, 0, 0},
                            022,
                            0,
                            0,
-                           0,
                            0};
 
 static void __create_new_dfile(exe_disk_file_t *dfile, unsigned size,
@@ -56,7 +50,7 @@ static void __create_new_dfile(exe_disk_file_t *dfile, unsigned size,
   char sname[64];
   for (sp = name; *sp; ++sp)
     sname[sp - name] = *sp;
-  memcpy(&sname[sp - name], "-stat", 6);
+  memcpy(&sname[sp - name], "_stat", 6);
 
   assert(size);
 
@@ -70,8 +64,8 @@ static void __create_new_dfile(exe_disk_file_t *dfile, unsigned size,
       read_bytes_name[sp - name] = *sp;
       write_bytes_name[sp - name] = *sp;
     }
-    memcpy(&read_bytes_name[sp - name], "-read", 6);
-    memcpy(&write_bytes_name[sp - name], "-write", 7);
+    memcpy(&read_bytes_name[sp - name], "_read", 6);
+    memcpy(&write_bytes_name[sp - name], "_write", 7);
 
     unsigned *ptr_read = malloc(sizeof(unsigned));
     unsigned *ptr_write = malloc(sizeof(unsigned));
@@ -142,7 +136,7 @@ void klee_init_fds(unsigned n_files, unsigned file_length,
                    unsigned stdin_length, int sym_stdout_flag,
                    int save_all_writes_flag, unsigned max_failures) {
   unsigned k;
-  char name[7] = "?-data";
+  char name[7] = "?_data";
   struct stat64 s;
 
   stat64(".", &s);
@@ -173,7 +167,7 @@ void klee_init_fds(unsigned n_files, unsigned file_length,
     }
     __exe_env.fds[0].dfile = __exe_fs.sym_stdin;
     off64_t *ptr = malloc(sizeof(off64_t));
-    klee_make_symbolic(ptr, sizeof(off64_t), "stdin-read");
+    klee_make_symbolic(ptr, sizeof(off64_t), "stdin_read");
     mempcpy(&__exe_env.stdin_off, ptr, sizeof(off64_t));
     free(ptr);
     __exe_env.max_off = 0;
@@ -217,6 +211,4 @@ void klee_init_fds(unsigned n_files, unsigned file_length,
     __exe_fs.sym_stdout = NULL;
 
   __exe_env.save_all_writes = save_all_writes_flag;
-  __exe_env.version = __sym_uint32("model_version");
-  klee_assume(__exe_env.version == 1);
 }
