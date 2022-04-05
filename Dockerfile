@@ -1,6 +1,6 @@
 FROM klee/llvm:110_O_D_A_ubuntu_bionic-20200807 as llvm_base
 FROM klee/gtest:1.11.0_ubuntu_bionic-20200807 as gtest_base
-FROM klee/uclibc:klee_uclibc_v1.2_90_ubuntu_bionic-20200807 as uclibc_base
+FROM klee/uclibc:klee_uclibc_v1.3_110_ubuntu_bionic-20200807 as uclibc_base
 FROM klee/tcmalloc:2.9.1_ubuntu_bionic-20200807 as tcmalloc_base
 FROM klee/stp:2.3.3_ubuntu_bionic-20200807 as stp_base
 FROM klee/z3:4.8.15_ubuntu_bionic-20200807 as z3_base
@@ -23,7 +23,7 @@ ENV DISABLE_ASSERTIONS=0
 ENV REQUIRES_RTTI=0
 ENV SOLVERS=STP:Z3
 ENV GTEST_VERSION=1.11.0
-ENV UCLIBC_VERSION=klee_0_9_29
+ENV UCLIBC_VERSION=klee_uclibc_v1.3
 ENV TCMALLOC_VERSION=2.9.1
 ENV SANITIZER_BUILD=
 ENV STP_VERSION=2.3.3
