@@ -42,6 +42,7 @@ TestCase* TC_fromFile(const char* path) {
         js.at("objects").at(i).at("offsets").at(j).at("offset");
     }
   }
+  fclose(f);
   return ret;
 }
 
