@@ -73,18 +73,16 @@ ExprVisitor::Action ConstantArrayExprVisitor::visitRead(const ReadExpr &re) {
     }
     IndexCompatibilityExprVisitor compatible;
     compatible.visit(re.index);
-    if (compatible.isCompatible() &&
-        addedIndexes.find(re.index.get()->hash()) == addedIndexes.end()) {
-      if (arrays.find(re.updates.root) == arrays.end()) {
-        arrays.insert(
-            std::make_pair(re.updates.root, std::vector<ref<Expr> >()));
-      } else {
-        // Another possible index to resolve, currently unsupported
-        incompatible = true;
-        return Action::skipChildren();
+    if (compatible.isCompatible()) {
+      if (arrays.count(re.updates.root) > 0) {
+        const auto &indices = arrays[re.updates.root];
+        if (!indices.empty() && indices.front() != re.index) {
+          // Another possible index to resolve, currently unsupported
+          incompatible = true;
+          return Action::skipChildren();
+        }
       }
-      arrays.find(re.updates.root)->second.push_back(re.index);
-      addedIndexes.insert(re.index.get()->hash());
+      arrays[re.updates.root].push_back(re.index);
     } else if (compatible.hasInnerReads()) {
       // This Read has an inner Read, we want to optimize the inner one
       // to create a cascading effect during assignment evaluation

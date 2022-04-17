@@ -35,8 +35,6 @@ class ConstantArrayExprVisitor : public ExprVisitor {
 private:
   using bindings_ty = std::map<const Array *, std::vector<ref<Expr>>>;
   bindings_ty &arrays;
-  // Avoids adding the same index twice
-  std::unordered_set<unsigned> addedIndexes;
   bool incompatible;
 
 protected:
