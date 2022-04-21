@@ -107,6 +107,12 @@ else()
       target_include_directories(gtest BEFORE PRIVATE ${LLVM_INCLUDE_DIRS})
       # we cannot disable gtest_main, but will not use it later
       target_include_directories(gtest_main BEFORE PRIVATE ${LLVM_INCLUDE_DIRS})
+    endif()
+
+    # try using system installation of GTest instead
+    find_package(GTest QUIET)
+    if (GTest_FOUND)
+      message(STATUS "Found GTest ${GTest_VERSION}")
     else()
       # try to find Google Test, as GTEST_SRC_DIR is not manually specified
       find_path(GTEST_SRC_DIR
@@ -124,7 +130,7 @@ else()
     endif()
   endif()
 
-  if (NOT TARGET gtest)
+  if (NOT TARGET gtest AND NOT GTest_FOUND)
     # building from GTEST_SRC_DIR, not from LLVM's utils directory
     find_path(GTEST_INCLUDE_DIR
       "gtest/gtest.h"
@@ -153,9 +159,11 @@ else()
     add_vanilla_googletest_subdirectory(${GTEST_SRC_DIR})
   endif()
 
-  # build Google Test with KLEE's defines and compile flags
-  target_compile_definitions(gtest PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})
-  target_compile_options(gtest PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
+  if (NOT GTest_FOUND)
+    # build Google Test with KLEE's defines and compile flags
+    target_compile_definitions(gtest PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})
+    target_compile_options(gtest PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
+  endif()
 endif()
 
 
@@ -168,18 +176,33 @@ define_property(GLOBAL
   FULL_DOCS "KLEE unit tests"
 )
 
-if (NOT IS_DIRECTORY "${GTEST_INCLUDE_DIR}")
-  message(FATAL_ERROR
-    "Cannot find Google Test include directory \"${GTEST_INCLUDE_DIR}\"")
+if (NOT GTest_FOUND)
+  # GTEST_INCLUDE_DIR is defined only when we build from sources.
+  if (NOT IS_DIRECTORY "${GTEST_INCLUDE_DIR}")
+    message(FATAL_ERROR
+      "Cannot find Google Test include directory \"${GTEST_INCLUDE_DIR}\"")
+  endif()
+  message(STATUS "GTEST_INCLUDE_DIR: ${GTEST_INCLUDE_DIR}")
 endif()
-message(STATUS "GTEST_INCLUDE_DIR: ${GTEST_INCLUDE_DIR}")
+
+if (TARGET gtest)
+  set(GTEST_TARGET_NAME gtest)
+elseif (TARGET GTest::gtest)
+  set(GTEST_TARGET_NAME GTest::gtest)
+elseif (TARGET GTest::GTest)
+  set(GTEST_TARGET_NAME GTest::GTest)
+else()
+  message(FATAL_ERROR
+    "Cannot determine name of the Google Test CMake target (tried 'gtest', \
+    'GTest::gtest' and 'GTest::GTest')")
+endif()
 
 add_library(unittest_main)
 target_sources(unittest_main PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/TestMain.cpp")
 klee_get_llvm_libs(UNITTEST_MAIN_LIBS Support)
 target_link_libraries(unittest_main
   PUBLIC
-  gtest
+  ${GTEST_TARGET_NAME}
 
   PRIVATE
   ${UNITTEST_MAIN_LIBS}
