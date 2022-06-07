@@ -1,7 +1,4 @@
 <?xml version="1.0"?>
-<!--
-  ~ This source file has been modified by Huawei. Copyright (c) 2021
-  -->
 
 <!DOCTYPE benchmark PUBLIC "+//IDN sosy-lab.org//DTD BenchExec benchmark 1.18//EN" "https://www.sosy-lab.org/benchexec/benchmark-1.18.dtd">
 <benchmark tool="klee" displayName="KLEE" timelimit="15 s" memlimit="15 GB" cpuCores="8">

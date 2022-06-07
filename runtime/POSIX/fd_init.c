@@ -1,7 +1,3 @@
-/*
- * This source file has been modified by Huawei. Copyright (c) 2021
- */
-
 //===-- fd_init.c ---------------------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine

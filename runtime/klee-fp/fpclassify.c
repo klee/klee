@@ -1,7 +1,3 @@
-/*
- * This source file has been modified by Huawei. Copyright (c) 2021
- */
-
 /*===-- fpclassify.c ------------------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine

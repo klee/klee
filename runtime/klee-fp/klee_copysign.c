@@ -1,7 +1,3 @@
-/*
- * This source file has been modified by Huawei. Copyright (c) 2021
- */
-
 /*===-- klee_copysign.c ---------------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine

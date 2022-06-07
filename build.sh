@@ -1,8 +1,4 @@
 #!/bin/bash
-#
-# Copyright (c) Huawei Technologies Co., Ltd. 2012-2021. All rights reserved.
-#
-
 # This script is used to build KLEE as UTBot backend
 
 set -e

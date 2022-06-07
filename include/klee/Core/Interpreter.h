@@ -1,7 +1,3 @@
-/*
- * This source file has been modified by Huawei. Copyright (c) 2021
- */
-
 //===-- Interpreter.h - Abstract Execution Engine Interface -----*- C++ -*-===//
 //
 //                     The KLEE Symbolic Virtual Machine

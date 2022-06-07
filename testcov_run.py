@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 
-#  This source file has been modified by Huawei. Copyright (c) 2021
-
 import os
 import glob
 import re
