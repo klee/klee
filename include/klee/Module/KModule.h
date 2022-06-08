@@ -12,6 +12,7 @@
 
 #include "klee/Config/Version.h"
 #include "klee/Core/Interpreter.h"
+#include "klee/Module/KCallable.h"
 
 #include "llvm/ADT/ArrayRef.h"
 
@@ -39,7 +40,7 @@ namespace klee {
   class KModule;
   template<class T> class ref;
 
-  struct KFunction {
+  struct KFunction : public KCallable {
     llvm::Function *function;
 
     unsigned numArgs, numRegisters;
@@ -53,14 +54,23 @@ namespace klee {
     /// "coverable" for statistics and search heuristics.
     bool trackCoverage;
 
-  public:
-    explicit KFunction(llvm::Function*, KModule *);
+    explicit KFunction(llvm::Function*, KModule*);
     KFunction(const KFunction &) = delete;
     KFunction &operator=(const KFunction &) = delete;
 
     ~KFunction();
 
     unsigned getArgRegister(unsigned index) { return index; }
+
+    llvm::StringRef getName() const override { return function->getName(); }
+
+    llvm::PointerType *getType() const override { return function->getType(); }
+
+    llvm::Value *getValue() override { return function; }
+
+    static bool classof(const KCallable *callable) {
+      return callable->getKind() == CK_Function;
+    }
   };
 
 

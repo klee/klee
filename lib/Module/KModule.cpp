@@ -303,7 +303,6 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
   for (auto &Function : *module) {
     if (Function.isDeclaration()) {
       declarations.push_back(&Function);
-      continue;
     }
 
     auto kf = std::unique_ptr<KFunction>(new KFunction(&Function, this));
@@ -406,7 +405,8 @@ static int getOperandNum(Value *v,
 
 KFunction::KFunction(llvm::Function *_function,
                      KModule *km) 
-  : function(_function),
+  : KCallable(CK_Function),
+    function(_function),
     numArgs(function->arg_size()),
     numInstructions(0),
     trackCoverage(true) {
