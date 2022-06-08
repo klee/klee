@@ -20,11 +20,11 @@
 namespace llvm {
 class Instruction;
 class LLVMContext;
-class Function;
 } // namespace llvm
 
 namespace klee {
 class ExternalDispatcherImpl;
+class KCallable;
 class ExternalDispatcher {
 private:
   ExternalDispatcherImpl *impl;
@@ -37,8 +37,8 @@ public:
    * ci with arguments in args[1], args[2], ... and writing the result
    * into args[0].
    */
-  bool executeCall(llvm::Function *function, llvm::Instruction *i,
-                   uint64_t *args, int roundingMode);
+  bool executeCall(KCallable *callable, llvm::Instruction *i, uint64_t *args,
+                   int roundingMode);
   void *resolveSymbol(const std::string &name);
 
   int getLastErrno();

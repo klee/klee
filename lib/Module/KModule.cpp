@@ -372,7 +372,6 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
   for (auto &Function : *module) {
     if (Function.isDeclaration()) {
       declarations.push_back(&Function);
-      continue;
     }
 
     auto kf = std::unique_ptr<KFunction>(new KFunction(&Function, this));
@@ -555,8 +554,8 @@ void KBlock::handleKInstruction(
 }
 
 KFunction::KFunction(llvm::Function *_function, KModule *_km)
-    : parent(_km), function(_function), numArgs(function->arg_size()),
-      numInstructions(0), trackCoverage(true) {
+    : KCallable(CK_Function), parent(_km), function(_function),
+      numArgs(function->arg_size()), numInstructions(0), trackCoverage(true) {
   for (auto &BasicBlock : *function) {
     numInstructions += BasicBlock.size();
     numBlocks++;

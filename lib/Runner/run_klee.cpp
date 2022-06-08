@@ -968,22 +968,6 @@ void externalsAndGlobalsCheck(const llvm::Module *m) {
        fnIt != fn_ie; ++fnIt) {
     if (fnIt->isDeclaration() && !fnIt->use_empty())
       externals.insert(std::make_pair(fnIt->getName(), false));
-    for (Function::const_iterator bbIt = fnIt->begin(), bb_ie = fnIt->end();
-         bbIt != bb_ie; ++bbIt) {
-      for (BasicBlock::const_iterator it = bbIt->begin(), ie = bbIt->end();
-           it != ie; ++it) {
-        if (const CallInst *ci = dyn_cast<CallInst>(it)) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
-          if (isa<InlineAsm>(ci->getCalledOperand())) {
-#else
-          if (isa<InlineAsm>(ci->getCalledValue())) {
-#endif
-            klee_warning_once(&*fnIt, "function \"%s\" has inline asm",
-                              fnIt->getName().data());
-          }
-        }
-      }
-    }
   }
 
   for (Module::const_global_iterator it = m->global_begin(),

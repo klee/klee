@@ -12,6 +12,7 @@
 
 #include "klee/Config/Version.h"
 #include "klee/Core/Interpreter.h"
+#include "klee/Module/KCallable.h"
 
 #include "llvm/ADT/ArrayRef.h"
 
@@ -114,7 +115,7 @@ public:
   KBlockType getKBlockType() const override { return KBlockType::Return; };
 };
 
-struct KFunction {
+struct KFunction : public KCallable {
   KModule *parent;
   llvm::Function *function;
 
@@ -142,7 +143,19 @@ struct KFunction {
 
   ~KFunction();
 
-  unsigned getArgRegister(unsigned index) { return index; }
+  unsigned getArgRegister(unsigned index) const { return index; }
+
+  llvm::StringRef getName() const override { return function->getName(); }
+
+  llvm::FunctionType *getFunctionType() const override {
+    return function->getFunctionType();
+  }
+
+  llvm::Value *getValue() override { return function; }
+
+  static bool classof(const KCallable *callable) {
+    return callable->getKind() == CK_Function;
+  }
 };
 
 class KConstant {
