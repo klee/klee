@@ -475,6 +475,8 @@ private:
   void printDebugInstructions(ExecutionState &state);
   void doDumpStates();
 
+  void cleanUpStates();
+
   /// Only for debug purposes; enable via debugger or klee-control
   void dumpStates();
   void dumpPTree();

@@ -3439,6 +3439,12 @@ void Executor::doDumpStates() {
   updateStates(nullptr);
 }
 
+void Executor::cleanUpStates() {
+  for (const auto &state : states) {
+    delete state;
+  }
+}
+
 void Executor::run(ExecutionState &initialState) {
   bindModuleConstants();
 
@@ -3538,6 +3544,7 @@ void Executor::run(ExecutionState &initialState) {
   searcher = nullptr;
 
   doDumpStates();
+  cleanUpStates();
 }
 
 std::string Executor::getAddressInfo(ExecutionState &state, 

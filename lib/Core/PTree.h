@@ -46,7 +46,7 @@ namespace klee {
   public:
     PTreeNodePtr root;
     explicit PTree(ExecutionState *initialState);
-    ~PTree() = default;
+    ~PTree();
 
     void attach(PTreeNode *node, ExecutionState *leftState,
                 ExecutionState *rightState, BranchType reason);
