@@ -3544,7 +3544,9 @@ void Executor::run(ExecutionState &initialState) {
   searcher = nullptr;
 
   doDumpStates();
-  cleanUpStates();
+  if(haltExecution) {
+    cleanUpStates();
+  }
 }
 
 std::string Executor::getAddressInfo(ExecutionState &state, 
