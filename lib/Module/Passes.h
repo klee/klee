@@ -185,18 +185,6 @@ private:
 
 };
 
-#ifdef USE_WORKAROUND_LLVM_PR39177
-/// WorkaroundLLVMPR39177Pass - Workaround for LLVM PR39177 within KLEE repo.
-/// For more information on this, please refer to the comments in
-/// cmake/workaround_llvm_pr39177.cmake
-class WorkaroundLLVMPR39177Pass : public llvm::ModulePass {
-public:
-  static char ID;
-  WorkaroundLLVMPR39177Pass() : llvm::ModulePass(ID) {}
-  bool runOnModule(llvm::Module &M) override;
-};
-#endif
-
 /// Instruments every function that contains a KLEE function call as nonopt
 class OptNonePass : public llvm::ModulePass {
 public:

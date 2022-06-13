@@ -455,11 +455,6 @@ else()
 endif()
 
 ################################################################################
-# Workarounds
-################################################################################
-include(${CMAKE_SOURCE_DIR}/cmake/workaround_llvm_pr39177.cmake)
-
-################################################################################
 # KLEE runtime support
 ################################################################################
 # This is set here and not in `runtime` because `config.h` needs to be generated.
@@ -612,13 +607,8 @@ if (ENABLE_KLEE_EH_CXX)
   endif()
   message(STATUS "Use libc++abi source path: \"${KLEE_LIBCXXABI_SRC_DIR}\"")
 
-  if (${LLVM_VERSION_MAJOR} GREATER 8 OR ${LLVM_VERSION_MAJOR} EQUAL 8)
-    set(SUPPORT_KLEE_EH_CXX 1) # For config.h
-    message(STATUS "Support for C++ Exceptions enabled")
-  else()
-    set(SUPPORT_KLEE_EH_CXX 0) # For config.h
-    message(STATUS "Support for C++ Exceptions (only available for LLVM >= 8.0.0) disabled")
-  endif()
+  set(SUPPORT_KLEE_EH_CXX 1) # For config.h
+  message(STATUS "Support for C++ Exceptions enabled")
 
 else()
   set(SUPPORT_KLEE_EH_CXX 0) # For config.h

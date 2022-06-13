@@ -40,9 +40,6 @@ jobs:
                 "LLVM 11, Doxygen",
                 "LLVM 10",
                 "LLVM 9",
-                "LLVM 8",
-                "LLVM 7",
-                "LLVM 6",
                 "ASan",
                 "UBSan",
                 "MSan",
@@ -70,15 +67,6 @@ jobs:
           - name: "LLVM 9"
             env:
               LLVM_VERSION: 9
-          - name: "LLVM 8"
-            env:
-              LLVM_VERSION: 8
-          - name: "LLVM 7"
-            env:
-              LLVM_VERSION: 7
-          - name: "LLVM 6"
-            env:
-              LLVM_VERSION: "6.0"
           # Sanitizer builds. Do unoptimized build otherwise the optimizer might remove problematic code
           - name: "ASan"
             env:

@@ -22,10 +22,6 @@ set(KLEE_MODULE_COMPONENT_SRCS
   RaiseAsm.cpp
 )
 
-if (USE_WORKAROUND_LLVM_PR39177)
-  list(APPEND KLEE_MODULE_COMPONENT_SRCS WorkaroundLLVMPR39177.cpp)
-endif()
-
 klee_add_component(kleeModule
   ${KLEE_MODULE_COMPONENT_SRCS}
 )

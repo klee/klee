@@ -1,9 +1,7 @@
 setup_artifact_variables_sanitizer() {
   local SANITIZER_LLVM_VERSION_MAJOR="${SANITIZER_LLVM_VERSION/.*/}"
   local SANITIZER_LLVM_VERSION_MINOR="${SANITIZER_LLVM_VERSION/*./}"
-  local version=""
-  [[ "${SANITIZER_LLVM_VERSION_MAJOR}" -le 6 ]] && version="-${SANITIZER_LLVM_VERSION}"
-  [[ "${SANITIZER_LLVM_VERSION_MAJOR}" -ge 7 ]] && version="-${SANITIZER_LLVM_VERSION_MAJOR}"
+  local version="-${SANITIZER_LLVM_VERSION_MAJOR}"
 
   # Only set LLVM_CONFIG if not set yet
   if [[ -z "${SANITIZER_LLVM_CONFIG-}" ]]; then
@@ -33,9 +31,7 @@ is_installed_sanitizer() {
   fi
   local SANITIZER_LLVM_VERSION_MAJOR="${SANITIZER_LLVM_VERSION/.*/}"
   local SANITIZER_LLVM_VERSION_MINOR="${SANITIZER_LLVM_VERSION/*./}"
-  local version=""
-  [[ "${SANITIZER_LLVM_VERSION_MAJOR}" -le 6 ]] && version="${SANITIZER_LLVM_VERSION}"
-  [[ "${SANITIZER_LLVM_VERSION_MAJOR}" -ge 7 ]] && version="${SANITIZER_LLVM_VERSION_MAJOR}"
+  local version=="${SANITIZER_LLVM_VERSION_MAJOR}"
 
   # Check if clang with the right version exists
   which "clang-${version}"

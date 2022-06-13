@@ -23,9 +23,6 @@
 #include "klee/Support/ModuleUtil.h"
 
 #include "llvm/Bitcode/BitcodeWriter.h"
-#if LLVM_VERSION_CODE < LLVM_VERSION(8, 0)
-#include "llvm/IR/CallSite.h"
-#endif
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -40,13 +37,9 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Transforms/Scalar.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
 #include "llvm/Transforms/Scalar/Scalarizer.h"
-#endif
 #include "llvm/Transforms/Utils/Cloning.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
 #include "llvm/Transforms/Utils.h"
-#endif
 
 #include <sstream>
 
@@ -138,14 +131,8 @@ static Function *getStubFunctionForCtorList(Module *m,
     for (unsigned i=0; i<arr->getNumOperands(); i++) {
       auto cs = cast<ConstantStruct>(arr->getOperand(i));
       // There is a third element in global_ctor elements (``i8 @data``).
-#if LLVM_VERSION_CODE >= LLVM_VERSION(9, 0)
       assert(cs->getNumOperands() == 3 &&
              "unexpected element in ctor initializer list");
-#else
-      // before LLVM 9.0, the third operand was optional
-      assert((cs->getNumOperands() == 2 || cs->getNumOperands() == 3) &&
-             "unexpected element in ctor initializer list");
-#endif
       auto fp = cs->getOperand(1);
       if (!fp->isNullValue()) {
         if (auto ce = dyn_cast<llvm::ConstantExpr>(fp))
@@ -303,11 +290,7 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
 
   if (OutputModule) {
     std::unique_ptr<llvm::raw_fd_ostream> f(ih->openOutputFile("final.bc"));
-#if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
     WriteBitcodeToFile(*module, *f);
-#else
-    WriteBitcodeToFile(module.get(), *f);
-#endif
   }
 
   /* Build shadow structures */
@@ -468,13 +451,8 @@ KFunction::KFunction(llvm::Function *_function,
       ki->dest = registerMap[inst];
 
       if (isa<CallInst>(it) || isa<InvokeInst>(it)) {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
         const CallBase &cs = cast<CallBase>(*inst);
         Value *val = cs.getCalledOperand();
-#else
-        const CallSite cs(inst);
-        Value *val = cs.getCalledValue();
-#endif
         unsigned numArgs = cs.arg_size();
         ki->operands = new int[numArgs+1];
         ki->operands[0] = getOperandNum(val, registerMap, km, ki);

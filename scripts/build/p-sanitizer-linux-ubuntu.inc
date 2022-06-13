@@ -5,11 +5,7 @@ install_binary_artifact_sanitizer() {
 
   source "${DIR}/common-functions"
   local SANITIZER_LLVM_VERSION_MAJOR="${SANITIZER_LLVM_VERSION/.*/}"
-  local SANITIZER_LLVM_VERSION_MINOR="${SANITIZER_LLVM_VERSION/*./}"
-
-  local version=""
-  [[ "${SANITIZER_LLVM_VERSION_MAJOR}" -le 6 ]] && version="-${SANITIZER_LLVM_VERSION}"
-  [[ "${SANITIZER_LLVM_VERSION_MAJOR}" -ge 7 ]] && version="-${SANITIZER_LLVM_VERSION_MAJOR}"
+  local version="-${SANITIZER_LLVM_VERSION_MAJOR}"
 
   # Add certificate
   with_sudo apt update -y

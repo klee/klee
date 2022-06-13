@@ -14,7 +14,6 @@
 ; where the constants a, b, c and r are copied from the constants
 ; used in the LLVM testfile llvm/test/Analysis/ConstantFolding/funnel-shift.ll
 
-; REQUIRES: geq-llvm-7.0
 ; RUN: %llvmas %s -o=%t.bc
 ; RUN: rm -rf %t.klee-out
 ; RUN: %klee -exit-on-error --output-dir=%t.klee-out --optimize=false %t.bc

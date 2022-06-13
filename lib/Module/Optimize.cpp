@@ -18,10 +18,6 @@
 #include "klee/Config/Version.h"
 #include "klee/Support/OptionCategories.h"
 
-#ifdef USE_WORKAROUND_LLVM_PR39177
-#include "Passes.h"
-#endif
-
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -33,15 +29,13 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
-
-#if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
 #include "llvm/Transforms/Utils.h"
-#include "llvm/Transforms/InstCombine/InstCombine.h"
-#endif
+
 
 using namespace llvm;
 
@@ -166,10 +160,6 @@ void Optimize(Module *M, llvm::ArrayRef<const char *> preservedFunctions) {
   // If we're verifying, start off with a verification pass.
   if (VerifyEach)
     Passes.add(createVerifierPass());
-
-#ifdef USE_WORKAROUND_LLVM_PR39177
-  addPass(Passes, new klee::WorkaroundLLVMPR39177Pass());
-#endif
 
   // DWD - Run the opt standard pass list as well.
   AddStandardCompilePasses(Passes);
