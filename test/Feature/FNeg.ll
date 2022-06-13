@@ -1,4 +1,3 @@
-; REQUIRES: geq-llvm-8.0
 ; RUN: %llvmas %s -o %t.bc
 ; RUN: rm -rf %t.klee-out
 ; RUN: %klee -exit-on-error -output-dir=%t.klee-out -optimize=false %t.bc

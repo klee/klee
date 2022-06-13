@@ -10,9 +10,6 @@
 #include "ExternalDispatcher.h"
 #include "klee/Config/Version.h"
 
-#if LLVM_VERSION_CODE < LLVM_VERSION(8, 0)
-#include "llvm/IR/CallSite.h"
-#endif
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -258,14 +255,7 @@ Function *ExternalDispatcherImpl::createDispatcher(Function *target,
   if (!resolveSymbol(target->getName().str()))
     return 0;
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
   const CallBase &cs = cast<CallBase>(*inst);
-#else
-  const CallSite cs(inst->getOpcode() == Instruction::Call
-                        ? CallSite(cast<CallInst>(inst))
-                        : CallSite(cast<InvokeInst>(inst)));
-#endif
-
   Value **args = new Value *[cs.arg_size()];
 
   std::vector<Type *> nullary;

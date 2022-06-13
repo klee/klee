@@ -42,11 +42,7 @@ bool RaiseAsmPass::runOnInstruction(Module &M, Instruction *I) {
   if (!ci)
     return false;
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
   InlineAsm *ia = dyn_cast<InlineAsm>(ci->getCalledOperand());
-#else
-  InlineAsm *ia = dyn_cast<InlineAsm>(ci->getCalledValue());
-#endif
   if (!ia)
     return false;
 

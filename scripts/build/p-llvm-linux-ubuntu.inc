@@ -60,9 +60,7 @@ install_binary_artifact_llvm() {
   )
   with_sudo apt -y --no-install-recommends install "${dependencies[@]}"
 
-  local version=""
-  [[ "${LLVM_VERSION_MAJOR}" -le 6 ]] && version="-${LLVM_VERSION}"
-  [[ "${LLVM_VERSION_MAJOR}" -ge 7 ]] && version="-${LLVM_VERSION_MAJOR}"
+  local version="-${LLVM_VERSION_MAJOR}"
 
   # Add LLVM upstream repository if available
   codename="$(lsb_release --codename --short)"
@@ -105,12 +103,8 @@ check_llvm_config_version() {
       [[ -z "${lc}" ]] && return 1
     fi
 
-    local version=""
     local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
-    local LLVM_VERSION_MINOR="${LLVM_VERSION/*./}"
-    [[ "${LLVM_VERSION_MAJOR}" -le 6 ]] && version="${LLVM_VERSION}"
-    [[ "${LLVM_VERSION_MAJOR}" -ge 7 ]] && version="${LLVM_VERSION_MAJOR}"
-
+    local version="${LLVM_VERSION_MAJOR}"
 
     # Check for llvm-config without suffix but correct version number
     [[ $($lc --version) == "${LLVM_VERSION}"* ]] || return 1
@@ -136,11 +130,8 @@ check_llvm_config_version() {
 # Check if the binary artifact is installed
 is_installed_llvm() {
   # Check for variables set and not empty
-  local version=""
   local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
-  local LLVM_VERSION_MINOR="${LLVM_VERSION/*./}"
-  [[ "${LLVM_VERSION_MAJOR}" -le 6 ]] && version="${LLVM_VERSION}"
-  [[ "${LLVM_VERSION_MAJOR}" -ge 7 ]] && version="${LLVM_VERSION_MAJOR}"
+  local version="${LLVM_VERSION_MAJOR}"
 
   # Check for llvm-config without suffix but correct version number
   local lc
@@ -158,11 +149,8 @@ is_installed_llvm() {
 
 setup_artifact_variables_llvm() {
     # Check for variables set and not empty
-    local version=""
     local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
-    local LLVM_VERSION_MINOR="${LLVM_VERSION/*./}"
-    [[ "${LLVM_VERSION_MAJOR}" -le 6 ]] && version="${LLVM_VERSION}"
-    [[ "${LLVM_VERSION_MAJOR}" -ge 7 ]] && version="${LLVM_VERSION_MAJOR}"
+    local version="${LLVM_VERSION_MAJOR}"
 
     local lc=""
     # Check for llvm-config without suffix but correct version number
