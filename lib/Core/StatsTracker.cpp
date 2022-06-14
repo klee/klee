@@ -786,14 +786,14 @@ void StatsTracker::computeReachableUncovered() {
              it != ie; ++it) {
           Instruction *inst = &*it;
           if (isa<CallInst>(inst) || isa<InvokeInst>(inst)) {
-            const CallBase &cs = cast<CallBase>(*inst);
-            if (isa<InlineAsm>(cs.getCalledOperand())) {
+            const CallBase &cb = cast<CallBase>(*inst);
+            if (isa<InlineAsm>(cb.getCalledOperand())) {
               // We can never call through here so assume no targets
               // (which should be correct anyhow).
               callTargets.insert(std::make_pair(inst,
                                                 std::vector<Function*>()));
             } else if (Function *target = getDirectCallTarget(
-                           cs, /*moduleIsFullyLinked=*/true)) {
+                           cb, /*moduleIsFullyLinked=*/true)) {
               callTargets[inst].push_back(target);
             } else {
               callTargets[inst] =

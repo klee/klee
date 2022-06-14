@@ -451,13 +451,13 @@ KFunction::KFunction(llvm::Function *_function,
       ki->dest = registerMap[inst];
 
       if (isa<CallInst>(it) || isa<InvokeInst>(it)) {
-        const CallBase &cs = cast<CallBase>(*inst);
-        Value *val = cs.getCalledOperand();
-        unsigned numArgs = cs.arg_size();
+        const CallBase &cb = cast<CallBase>(*inst);
+        Value *val = cb.getCalledOperand();
+        unsigned numArgs = cb.arg_size();
         ki->operands = new int[numArgs+1];
         ki->operands[0] = getOperandNum(val, registerMap, km, ki);
         for (unsigned j=0; j<numArgs; j++) {
-          Value *v = cs.getArgOperand(j);
+          Value *v = cb.getArgOperand(j);
           ki->operands[j+1] = getOperandNum(v, registerMap, km, ki);
         }
       } else {
