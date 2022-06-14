@@ -270,9 +270,9 @@ klee::linkModules(std::vector<std::unique_ptr<llvm::Module>> &modules,
 }
 
 Function *klee::getDirectCallTarget(
-    const CallBase &cs,
+    const CallBase &cb,
     bool moduleIsFullyLinked) {
-  Value *v = cs.getCalledOperand();
+  Value *v = cb.getCalledOperand();
   bool viaConstantExpr = false;
   // Walk through aliases and bitcasts to try to find
   // the function being called.
@@ -311,12 +311,12 @@ Function *klee::getDirectCallTarget(
 static bool valueIsOnlyCalled(const Value *v) {
   for (auto user : v->users()) {
     // Make sure the instruction is a call or invoke.
-    if (const auto *cs_ptr = dyn_cast<CallBase>(user)) {
-      const CallBase &cs = *cs_ptr;
+    if (const auto *cb_ptr = dyn_cast<CallBase>(user)) {
+      const CallBase &cb = *cb_ptr;
 
       // Make sure that the value is only the target of this call and
       // not an argument.
-      if (cs.hasArgument(v))
+      if (cb.hasArgument(v))
         return false;
     } else if (const auto *ce = dyn_cast<ConstantExpr>(user)) {
       if (ce->getOpcode() == Instruction::BitCast)

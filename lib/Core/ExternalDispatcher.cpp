@@ -255,8 +255,8 @@ Function *ExternalDispatcherImpl::createDispatcher(Function *target,
   if (!resolveSymbol(target->getName().str()))
     return 0;
 
-  const CallBase &cs = cast<CallBase>(*inst);
-  Value **args = new Value *[cs.arg_size()];
+  const CallBase &cb = cast<CallBase>(*inst);
+  Value **args = new Value *[cb.arg_size()];
 
   std::vector<Type *> nullary;
 
@@ -286,7 +286,7 @@ Function *ExternalDispatcherImpl::createDispatcher(Function *target,
 
   // Each argument will be passed by writing it into gTheArgsP[i].
   unsigned i = 0, idx = 2;
-  for (auto ai = cs.arg_begin(), ae = cs.arg_end(); ai != ae; ++ai, ++i) {
+  for (auto ai = cb.arg_begin(), ae = cb.arg_end(); ai != ae; ++ai, ++i) {
     // Determine the type the argument will be passed as. This accommodates for
     // the corresponding code in Executor.cpp for handling calls to bitcasted
     // functions.

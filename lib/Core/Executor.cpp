@@ -1923,10 +1923,10 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       uint64_t offsets[callingArgs]; // offsets of variadic arguments
       uint64_t argWidth;             // width of current variadic argument
 
-      const CallBase &cs = cast<CallBase>(*i);
+      const CallBase &cb = cast<CallBase>(*i);
       for (unsigned k = funcArgs; k < callingArgs; k++) {
-        if (cs.isByValArgument(k)) {
-          Type *t = cs.getParamByValType(k);
+        if (cb.isByValArgument(k)) {
+          Type *t = cb.getParamByValType(k);
           argWidth = kmodule->targetData->getTypeSizeInBits(t);
         } else {
           argWidth = arguments[k]->getWidth();
@@ -1937,10 +1937,10 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
           size += Expr::getMinBytesForWidth(argWidth);
         } else {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(11, 0)
-          MaybeAlign ma = cs.getParamAlign(k);
+          MaybeAlign ma = cb.getParamAlign(k);
           unsigned alignment = ma ? ma->value() : 0;
 #else
-          unsigned alignment = cs.getParamAlignment(k);
+          unsigned alignment = cb.getParamAlignment(k);
 #endif
 
           // AMD64-ABI 3.5.7p5: Step 7. Align l->overflow_arg_area upwards to a
@@ -1984,7 +1984,7 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
         ObjectState *os = bindObjectInState(state, mo, true);
 
         for (unsigned k = funcArgs; k < callingArgs; k++) {
-          if (!cs.isByValArgument(k)) {
+          if (!cb.isByValArgument(k)) {
             os->write(offsets[k], arguments[k]);
           } else {
             ConstantExpr *CE = dyn_cast<ConstantExpr>(arguments[k]);
@@ -2136,10 +2136,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
           Expr::Width to = getWidthForLLVMType(t);
             
           if (from != to) {
-            const CallBase &cs = cast<CallBase>(*caller);
+            const CallBase &cb = cast<CallBase>(*caller);
 
             // XXX need to check other param attrs ?
-            bool isSExt = cs.hasRetAttr(llvm::Attribute::SExt);
+            bool isSExt = cb.hasRetAttr(llvm::Attribute::SExt);
             if (isSExt) {
               result = SExtExpr::create(result, to);
             } else {
@@ -2394,9 +2394,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (isa<DbgInfoIntrinsic>(i))
       break;
 
-    const CallBase &cs = cast<CallBase>(*i);
-    Value *fp = cs.getCalledOperand();
-    unsigned numArgs = cs.arg_size();
+    const CallBase &cb = cast<CallBase>(*i);
+    Value *fp = cb.getCalledOperand();
+    unsigned numArgs = cb.arg_size();
     Function *f = getTargetFunction(fp, state);
 
     if (isa<InlineAsm>(fp)) {
@@ -2434,7 +2434,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
             if (from != to) {
               // XXX need to check other param attrs ?
-              bool isSExt = cs.paramHasAttr(i, llvm::Attribute::SExt);
+              bool isSExt = cb.paramHasAttr(i, llvm::Attribute::SExt);
               if (isSExt) {
                 arguments[i] = SExtExpr::create(arguments[i], to);
               } else {
@@ -4612,9 +4612,9 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
     type = AI->getAllocatedType();
   } else if (isa<InvokeInst>(allocSite) || isa<CallInst>(allocSite)) {
     // FIXME: Model the semantics of the call to use the right alignment
-    const CallBase &cs = cast<CallBase>(*allocSite);
+    const CallBase &cb = cast<CallBase>(*allocSite);
     llvm::Function *fn =
-        klee::getDirectCallTarget(cs, /*moduleIsFullyLinked=*/true);
+        klee::getDirectCallTarget(cb, /*moduleIsFullyLinked=*/true);
     if (fn)
       allocationSiteName = fn->getName().str();
 
