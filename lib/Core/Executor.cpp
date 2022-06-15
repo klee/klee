@@ -1680,6 +1680,41 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       break;
     }
 
+    case Intrinsic::fma:
+    case Intrinsic::fmuladd: {
+      // Both fma and fmuladd support float, double and fp80.  Note, that fp80
+      // is not mentioned in the documentation of fmuladd, nevertheless, it is
+      // still supported.  For details see
+      // https://github.com/klee/klee/pull/1507/files#r894993332
+
+      if (isa<VectorType>(i->getOperand(0)->getType()))
+        return terminateStateOnExecError(
+            state, f->getName() + " with vectors is not supported");
+
+      ref<ConstantExpr> op1 =
+          toConstant(state, eval(ki, 1, state).value, "floating point");
+      ref<ConstantExpr> op2 =
+          toConstant(state, eval(ki, 2, state).value, "floating point");
+      ref<ConstantExpr> op3 =
+          toConstant(state, eval(ki, 3, state).value, "floating point");
+
+      if (!fpWidthToSemantics(op1->getWidth()) ||
+          !fpWidthToSemantics(op2->getWidth()) ||
+          !fpWidthToSemantics(op3->getWidth()))
+        return terminateStateOnExecError(
+            state, "Unsupported " + f->getName() + " call");
+
+      // (op1 * op2) + op3
+      APFloat Res(*fpWidthToSemantics(op1->getWidth()), op1->getAPValue());
+      Res.fusedMultiplyAdd(
+          APFloat(*fpWidthToSemantics(op2->getWidth()), op2->getAPValue()),
+          APFloat(*fpWidthToSemantics(op3->getWidth()), op3->getAPValue()),
+          APFloat::rmNearestTiesToEven);
+
+      bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+      break;
+    }
+
 #if LLVM_VERSION_CODE >= LLVM_VERSION(12, 0)
     case Intrinsic::abs: {
       if (isa<VectorType>(i->getOperand(0)->getType()))

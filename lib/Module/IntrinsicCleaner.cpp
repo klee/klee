@@ -66,6 +66,8 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       case Intrinsic::vastart:
       case Intrinsic::vaend:
       case Intrinsic::fabs:
+      case Intrinsic::fma:
+      case Intrinsic::fmuladd:
 #if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
       case Intrinsic::fshr:
       case Intrinsic::fshl:
