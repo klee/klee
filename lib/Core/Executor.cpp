@@ -3811,6 +3811,7 @@ void Executor::callExternalFunction(ExecutionState &state,
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
       ce->toMemory(&args[wordIndex]);
+      addConstraint(state, EqExpr::create(ce, *ai));
       ObjectPair op;
       // Checking to see if the argument is a pointer to something
       if (ce->getWidth() == Context::get().getPointerWidth() &&
