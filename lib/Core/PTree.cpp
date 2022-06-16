@@ -36,9 +36,7 @@ PTree::PTree(ExecutionState *initialState)
   initialState->ptreeNode = root.getPointer();
 }
 
-PTree::~PTree() {
-  delete root.getPointer();
-}
+PTree::~PTree() { delete root.getPointer(); }
 
 void PTree::attach(PTreeNode *node, ExecutionState *leftState,
                    ExecutionState *rightState, BranchType reason) {
