@@ -51,6 +51,9 @@ COPY --chown=klee:klee . /tmp/klee_src/
 RUN /tmp/klee_src/scripts/build/build.sh --debug --install-system-deps klee && chown -R klee:klee /tmp/klee_build* && pip3 install flask wllvm && \
     rm -rf /var/lib/apt/lists/*
 
+# Install tabulate for klee-stats
+RUN pip3 install tabulate
+
 ENV PATH="$PATH:/tmp/llvm-110-install_O_D_A/bin:/home/klee/klee_build/bin"
 ENV BASE=/tmp
 
