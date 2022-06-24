@@ -20,6 +20,7 @@
 
 #ifdef ENABLE_METASMT
 
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/CommandLine.h"
 
 #include <metaSMT/frontend/Logic.hpp>
@@ -172,22 +173,32 @@ template <typename SolverContext>
 typename SolverContext::result_type
 MetaSMTBuilder<SolverContext>::getArrayForUpdate(const Array *root,
                                                  const UpdateNode *un) {
-
-  if (!un) {
-    return (getInitialArray(root));
-  } else {
-    typename SolverContext::result_type un_expr;
-    bool hashed = _arr_hash.lookupUpdateNodeExpr(un, un_expr);
-
-    if (!hashed) {
-      un_expr = evaluate(_solver,
-                         metaSMT::logic::Array::store(
-                             getArrayForUpdate(root, un->next.get()),
-                             construct(un->index, 0), construct(un->value, 0)));
-      _arr_hash.hashUpdateNodeExpr(un, un_expr);
-    }
-    return (un_expr);
+  // Iterate over the update nodes, until we find a cached version of the node,
+  // or no more update nodes remain
+  typename SolverContext::result_type un_expr;
+  std::vector<const UpdateNode *> update_nodes;
+  for (; un && !_arr_hash.lookupUpdateNodeExpr(un, un_expr);
+       un = un->next.get()) {
+    update_nodes.push_back(un);
   }
+  if (!un) {
+    un_expr = getInitialArray(root);
+  }
+  // `un_expr` now holds an expression for the array - either from cache or by
+  // virtue of being the initial array expression
+
+  // Create and cache solver expressions based on the update nodes starting from
+  // the oldest
+  for (const auto &un :
+       llvm::make_range(update_nodes.crbegin(), update_nodes.crend())) {
+    un_expr = evaluate(
+        _solver, metaSMT::logic::Array::store(un_expr, construct(un->index, 0),
+                                              construct(un->value, 0)));
+
+    _arr_hash.hashUpdateNodeExpr(un, un_expr);
+  }
+
+  return un_expr;
 }
 
 template <typename SolverContext>

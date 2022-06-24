@@ -17,6 +17,7 @@
 #include "klee/Support/ErrorHandling.h"
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace klee;
@@ -427,22 +428,31 @@ Z3ASTHandle Z3Builder::getInitialRead(const Array *root, unsigned index) {
 
 Z3ASTHandle Z3Builder::getArrayForUpdate(const Array *root,
                                          const UpdateNode *un) {
-  if (!un) {
-    return (getInitialArray(root));
-  } else {
-    // FIXME: This really needs to be non-recursive.
-    Z3ASTHandle un_expr;
-    bool hashed = _arr_hash.lookupUpdateNodeExpr(un, un_expr);
-
-    if (!hashed) {
-      un_expr = writeExpr(getArrayForUpdate(root, un->next.get()),
-                          construct(un->index, 0), construct(un->value, 0));
-
-      _arr_hash.hashUpdateNodeExpr(un, un_expr);
-    }
-
-    return (un_expr);
+  // Iterate over the update nodes, until we find a cached version of the node,
+  // or no more update nodes remain
+  Z3ASTHandle un_expr;
+  std::vector<const UpdateNode *> update_nodes;
+  for (; un && !_arr_hash.lookupUpdateNodeExpr(un, un_expr);
+       un = un->next.get()) {
+    update_nodes.push_back(un);
   }
+  if (!un) {
+    un_expr = getInitialArray(root);
+  }
+  // `un_expr` now holds an expression for the array - either from cache or by
+  // virtue of being the initial array expression
+
+  // Create and cache solver expressions based on the update nodes starting from
+  // the oldest
+  for (const auto &un :
+       llvm::make_range(update_nodes.crbegin(), update_nodes.crend())) {
+    un_expr =
+        writeExpr(un_expr, construct(un->index, 0), construct(un->value, 0));
+
+    _arr_hash.hashUpdateNodeExpr(un, un_expr);
+  }
+
+  return un_expr;
 }
 
 /** if *width_out!=1 then result is a bitvector,
