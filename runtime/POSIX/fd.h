@@ -23,7 +23,12 @@
 #include <sys/statfs.h>
 #endif
 
+#include <sys/stat.h>
+
 #ifdef __APPLE__
+#ifndef stat64
+#define stat64 stat
+#endif
 #include <sys/dtrace.h>
 #endif
 #ifdef __FreeBSD__
