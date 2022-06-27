@@ -28,6 +28,7 @@ env:
   USE_TCMALLOC: 1
   USE_LIBCXX: 1
   Z3_VERSION: 4.8.14
+  ADDITIONAL_TEST_ARGS: ""
 
 jobs:
   Linux:
@@ -110,11 +111,13 @@ jobs:
               SOLVERS: metaSMT
               METASMT_DEFAULT: STP
               REQUIRES_RTTI: 1
+              ADDITIONAL_TEST_ARGS: "--solvers=metasmt --metasmt-backends=btor:z3:yices2:cvc4"
           - name: "metaSMT Boolector"
             env:
               SOLVERS: metaSMT
               METASMT_DEFAULT: BTOR
               REQUIRES_RTTI: 1
+              ADDITIONAL_TEST_ARGS: "--solvers=metasmt --metasmt-backends=stp:z3:yices2:cvc4"
           # Test we can build against STP master
           - name: "STP master"
             env:
@@ -141,7 +144,7 @@ jobs:
         env: ${{ matrix.env }}
         run: scripts/build/build.sh klee --docker --create-final-image
       - name: Run tests
-        run: scripts/build/run-tests.sh --run-docker --debug
+        run: scripts/build/run-tests.sh --run-docker --debug ${ADDITIONAL_TEST_ARGS}
 
   macOS:
     runs-on: macos-latest
@@ -174,10 +177,11 @@ jobs:
     env:
       ENABLE_OPTIMIZED: 0
       COVERAGE: 1
+      SOLVERS: STP:Z3
     steps:
       - name: Checkout KLEE source code
         uses: actions/checkout@v2
       - name: Build KLEE
         run: scripts/build/build.sh klee --docker --create-final-image
       - name: Run tests
-        run: scripts/build/run-tests.sh --coverage --upload-coverage --run-docker --debug
+        run: scripts/build/run-tests.sh --coverage --upload-coverage --run-docker --debug --solvers=STP:Z3

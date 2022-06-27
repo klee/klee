@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -e
 set -u
 DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -13,6 +13,7 @@ coverage_setup() {
   lcov -q --rc lcov_branch_coverage=1 --remove coverage_base.info 'test/*' --output-file coverage_base.info
   lcov -q --rc lcov_branch_coverage=1 --remove coverage_base.info 'unittests/*' --output-file coverage_base.info
 }
+
 
 coverage_update() {
   tags="$2"
@@ -29,6 +30,7 @@ coverage_update() {
   # Debug info
   lcov -q --rc lcov_branch_coverage=1 --list coverage_all.info."${codecov_suffix}"
 }
+
 
 run_tests() {
   build_dir="$1"
@@ -65,25 +67,35 @@ run_tests() {
   fi
 
   make systemtests || return 1
-  
-  # If metaSMT is the only solver, then rerun lit tests with non-default metaSMT backends
-  if [ "X${SOLVERS}" == "XmetaSMT" ]; then
-    base_path="$(python3 -m site --user-base)"
-    export PATH="$PATH:${base_path}/bin"
-    available_metasmt_backends="btor stp z3 yices2 cvc4"
-    for backend in $available_metasmt_backends; do
-      if [ "X${METASMT_DEFAULT}" != "X$backend" ]; then
-        lit -v --param klee_opts=-metasmt-backend="$backend" --param kleaver_opts=-metasmt-backend="$backend" test/
-      fi
-    done
-  fi
+
+  metasmt_backends="btor stp z3 yices2 cvc4"
+  base_path="$(python3 -m site --user-base)"
+  export PATH="$PATH:${base_path}/bin"
+  for s in "${SOLVERS[@]}"; do
+    case $(tr '[:upper:]' '[:lower:]' <<< "$s") in
+      stp)
+        lit -v --param klee_opts=-solver-backend=stp --param kleaver_opts=-solver-backend=stp test/ || return 1
+      ;;
+      z3)
+        lit -v --param klee_opts=-solver-backend=z3 --param kleaver_opts=-solver-backend=z3 test/ || return 1
+      ;;
+      metasmt)
+        lit -v --param klee_opts=-solver-backend=metasmt --param kleaver_opts=-solver-backend=metasmt test/ || return 1
+        for backend in "${METASMT_BACKENDS[@]}" ; do
+          lit -v --param klee_opts="-solver-backend=metasmt -metasmt-backend=$backend" --param kleaver_opts="-solver-backend=metasmt -metasmt-backend=$backend" test/ || return 1
+        done
+      ;;
+      *)
+        echo "Unknown smt solver: $s" >2
+        exit 2
+    esac
+  done
   
   # Generate and upload coverage if COVERAGE is set
   if [ "${COVERAGE}" -eq 1 ]; then
     coverage_update "${build_dir}" "systemtests"
   fi
 }
-
 
 
 function upload_coverage() {
@@ -94,20 +106,30 @@ function upload_coverage() {
 }
 
 function run_docker() {
- docker_arguments=(docker run -u root --cap-add SYS_PTRACE -t)
- script_arguments=("--debug" '"/tmp/klee_build"*')
- if [[ "${COVERAGE}" -eq 1 ]]; then
-   script_arguments+=("--coverage")
- fi
- 
- if [[ "${UPLOAD_COVERAGE}" -eq 1 ]]; then
-   docker_arguments+=($(bash <(curl -s https://codecov.io/env)))
-   script_arguments+=("--upload-coverage")
- fi
+  docker_arguments=(docker run -u root --cap-add SYS_PTRACE -t)
+  script_arguments=("--debug" '"/tmp/klee_build"*')
 
- # Run the image that was build last with extended capabilities to allow tracing tests
- "${docker_arguments[@]}" "$(docker images -q | head -n 1)" /bin/bash -i -c "ulimit -s 16384; source /home/klee/.bashrc; export; /tmp/klee_src/scripts/build/run-tests.sh ${script_arguments[*]}"
+  if [[ ${#SOLVERS[@]} -gt 0 ]]; then
+    script_arguments+=("--solvers=$(IFS=':' && echo "${SOLVERS[*]}")")
+  fi
+
+  if [[ ${#METASMT_BACKENDS[@]} -gt 0 ]]; then
+    script_arguments+=("--metasmt-backends=$(IFS=':' && echo "${METASMT_BACKENDS[*]}")")
+  fi
+
+  if [[ "${COVERAGE}" -eq 1 ]]; then
+    script_arguments+=("--coverage")
+  fi
+
+  if [[ "${UPLOAD_COVERAGE}" -eq 1 ]]; then
+    docker_arguments+=($(bash <(curl -s https://codecov.io/env)))
+    script_arguments+=("--upload-coverage")
+  fi
+
+  # Run the image that was build last with extended capabilities to allow tracing tests
+  "${docker_arguments[@]}" "$(docker images -q | head -n 1)" /bin/bash -i -c "ulimit -s 16384; source /home/klee/.bashrc; export; /tmp/klee_src/scripts/build/run-tests.sh ${script_arguments[*]}"
 }
+
 
 main() {
   local NAME
@@ -116,29 +138,37 @@ main() {
   local COVERAGE=0
   local UPLOAD_COVERAGE=0
   local directory=""
+  local SOLVERS=()
+  local METASMT_BACKENDS=()
 
-  for i in "$@" ;do
-  case $i in
-    --debug)
-      set -x
-    ;;
-    --run-docker)
-    RUN_DOCKER=1
-    ;;
-    --coverage)
-    COVERAGE=1
-    ;;
-    --upload-coverage)
-    UPLOAD_COVERAGE=1
-    ;;
-    -*)
-      echo "${NAME}: unknown argument: $i"
-      exit 1
-    ;;
-    *)
-    directory="${i}"
-    ;;
-  esac
+  for i in "$@" ; do
+    case $i in
+      --debug)
+        set -x
+      ;;
+      --run-docker)
+        RUN_DOCKER=1
+      ;;
+      --coverage)
+        COVERAGE=1
+      ;;
+      --upload-coverage)
+        UPLOAD_COVERAGE=1
+      ;;
+      --solvers=*)
+        readarray -d ':' -t SOLVERS <<< "${i#*=}"
+      ;;
+      --metasmt-backends=*)
+        readarray -d ':' -t METASMT_BACKENDS <<< "${i#*=}"
+      ;;
+      -*)
+        echo "${NAME}: unknown argument: $i"
+        exit 1
+      ;;
+      *)
+        directory="${i}"
+      ;;
+    esac
   done
 
 
@@ -154,6 +184,7 @@ main() {
     upload_coverage systemtests systemtests_unittests
     upload_coverage unittests systemtests_unittests
   fi
- }
+}
+
 
 main "$@"
