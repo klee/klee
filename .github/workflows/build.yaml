@@ -47,8 +47,7 @@ jobs:
                 "UBSan",
                 "MSan",
                 "Z3 only",
-                "metaSMT STP",
-                "metaSMT Boolector",
+                "metaSMT",
                 "STP master",
                 "Latest klee-uclibc",
                 "Asserts enabled",
@@ -105,15 +104,10 @@ jobs:
             env:
               SOLVERS: Z3
           # Test just using metaSMT
-          - name: "metaSMT STP"
+          - name: "metaSMT"
             env:
               SOLVERS: metaSMT
               METASMT_DEFAULT: STP
-              REQUIRES_RTTI: 1
-          - name: "metaSMT Boolector"
-            env:
-              SOLVERS: metaSMT
-              METASMT_DEFAULT: BTOR
               REQUIRES_RTTI: 1
           # Test we can build against STP master
           - name: "STP master"
