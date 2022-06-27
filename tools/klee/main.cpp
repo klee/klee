@@ -1151,6 +1151,10 @@ int main(int argc, char **argv, char **envp) {
   parseArguments(argc, argv);
   sys::PrintStackTraceOnErrorSignal(argv[0]);
 
+  if (EntryPoint.empty()) {
+    klee_error("entry-point cannot be empty");
+  }
+
   if (Watchdog) {
     if (MaxTime.empty()) {
       klee_error("--watchdog used without --max-time");
