@@ -1,7 +1,7 @@
-#!/bin/bash
 # Build dependencies
 install_build_dependencies_uclibc() { 
-  apt update -y
+  source "${DIR}/common-functions"
+  with_sudo apt update -y
 
   dependencies=(
     build-essential
@@ -13,5 +13,5 @@ install_build_dependencies_uclibc() {
   )
 
   #Install essential dependencies
-  apt -y --no-install-recommends install "${dependencies[@]}"
+  with_sudo apt -y --no-install-recommends install "${dependencies[@]}"
 }

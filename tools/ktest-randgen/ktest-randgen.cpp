@@ -1,4 +1,4 @@
-//===-- gen-random-bout.cpp -------------------------------------*- C++ -*-===//
+//===-- ktest-randgen.cpp ---------------------------------------*- C++ -*-===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -6,6 +6,8 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+
+#define _FILE_OFFSET_BITS 64
 
 #include <assert.h>
 #include <fcntl.h>
@@ -21,10 +23,6 @@
 
 #include "klee/ADT/KTest.h"
 
-#if defined(__FreeBSD__) || defined(__minix)
-#define stat64 stat
-#define fstat64 fstat
-#endif
 
 #define SMALL_BUFFER_SIZE 64 // To hold "arg<N>" string, temporary
                              // filename, etc.
@@ -95,8 +93,8 @@ static void push_range(KTest *b, const char *name, unsigned value) {
   push_obj(b, name, 4, (unsigned char *)&value);
 }
 
-void create_stat(size_t size, struct stat64 *s) {
-  char filename_template[] = "/tmp/klee-gen-random-bout-XXXXXX";
+void create_stat(size_t size, struct stat *s) {
+  char filename_template[] = "/tmp/ktest-randgen-XXXXXX";
   char *filename;
   int fd;
   unsigned char *buf;
@@ -120,7 +118,7 @@ void create_stat(size_t size, struct stat64 *s) {
     error_exit("%s:%d: Error writing %s\n", __FILE__, __LINE__, filename);
   }
 
-  fstat64(fd, s);
+  fstat(fd, s);
 
   close(fd);
 
@@ -242,7 +240,7 @@ int main(int argc, char *argv[]) {
     char filename[] = "A-data";
     char file_stat[] = "A-data-stat";
     unsigned nbytes;
-    struct stat64 s;
+    struct stat s;
 
     if (i >= MAX_FILE_SIZES) {
       fprintf(stderr, "%s:%d: Maximum number of file sizes exceeded (%d)\n",
@@ -257,26 +255,26 @@ int main(int argc, char *argv[]) {
     create_stat(nbytes, &s);
 
     push_random_obj(&b, filename, nbytes, nbytes);
-    push_obj(&b, file_stat, sizeof(struct stat64), (unsigned char *)&s);
+    push_obj(&b, file_stat, sizeof(struct stat), (unsigned char *)&s);
   }
 
   if (stdin_size) {
-    struct stat64 s;
+    struct stat s;
 
     // Using disk file works well with klee-replay.
     create_stat(stdin_size, &s);
 
     push_random_obj(&b, "stdin", stdin_size, stdin_size);
-    push_obj(&b, "stdin-stat", sizeof(struct stat64), (unsigned char *)&s);
+    push_obj(&b, "stdin-stat", sizeof(struct stat), (unsigned char *)&s);
   }
   if (sym_stdout) {
-    struct stat64 s;
+    struct stat s;
 
     // Using disk file works well with klee-replay.
     create_stat(1024, &s);
 
     push_random_obj(&b, "stdout", 1024, 1024);
-    push_obj(&b, "stdout-stat", sizeof(struct stat64), (unsigned char *)&s);
+    push_obj(&b, "stdout-stat", sizeof(struct stat), (unsigned char *)&s);
   }
   push_range(&b, "model_version", 1);
 

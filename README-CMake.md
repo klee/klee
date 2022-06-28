@@ -49,8 +49,6 @@ cmake -DCMAKE_BUILD_TYPE=Release /path/to/klee/src
 
 * `ENABLE_KLEE_LIBCXX` (BOOLEAN) - Enable libc++ for klee.
 
-* `ENABLE_KLEE_UCLIBC` (BOOLEAN) - Enable support for klee-uclibc.
-
 * `ENABLE_POSIX_RUNTIME` (BOOLEAN) - Enable POSIX runtime.
 
 * `ENABLE_SOLVER_METASMT` (BOOLEAN) - Enable MetaSMT solver support.

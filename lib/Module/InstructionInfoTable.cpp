@@ -112,11 +112,8 @@ public:
 
   std::unique_ptr<FunctionInfo> getFunctionInfo(const llvm::Function &Func) {
     auto asmLine = lineTable.at(reinterpret_cast<std::uintptr_t>(&Func));
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
     auto dsub = Func.getSubprogram();
-#else
-    auto dsub = llvm::getDISubprogram(&Func);
-#endif
+
     if (dsub != nullptr) {
       auto path = dsub->getFilename();
       return std::make_unique<FunctionInfo>(FunctionInfo(

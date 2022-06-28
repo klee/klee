@@ -66,6 +66,8 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       case Intrinsic::vastart:
       case Intrinsic::vaend:
       case Intrinsic::fabs:
+      case Intrinsic::fma:
+      case Intrinsic::fmuladd:
 #if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
       case Intrinsic::fshr:
       case Intrinsic::fshl:
@@ -96,24 +98,30 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
               Builder.CreatePointerCast(dst, i8pp, "vacopy.cast.dst");
           auto castedSrc =
               Builder.CreatePointerCast(src, i8pp, "vacopy.cast.src");
-          auto load = Builder.CreateLoad(castedSrc, "vacopy.read");
+          auto load =
+              Builder.CreateLoad(castedSrc->getType()->getPointerElementType(),
+                                 castedSrc, "vacopy.read");
           Builder.CreateStore(load, castedDst, false /* isVolatile */);
         } else {
           assert(WordSize == 8 && "Invalid word size!");
           Type *i64p = PointerType::getUnqual(Type::getInt64Ty(ctx));
           auto pDst = Builder.CreatePointerCast(dst, i64p, "vacopy.cast.dst");
           auto pSrc = Builder.CreatePointerCast(src, i64p, "vacopy.cast.src");
-          auto val = Builder.CreateLoad(pSrc, std::string());
+
+          auto pSrcType = pSrc->getType()->getPointerElementType();
+          auto pDstType = pDst->getType()->getPointerElementType();
+
+          auto val = Builder.CreateLoad(pSrcType, pSrc);
           Builder.CreateStore(val, pDst, ii);
 
           auto off = ConstantInt::get(Type::getInt64Ty(ctx), 1);
-          pDst = Builder.CreateGEP(nullptr, pDst, off, std::string());
-          pSrc = Builder.CreateGEP(nullptr, pSrc, off, std::string());
-          val = Builder.CreateLoad(pSrc, std::string());
+          pDst = Builder.CreateGEP(pDstType, pDst, off);
+          pSrc = Builder.CreateGEP(pSrcType, pSrc, off);
+          val = Builder.CreateLoad(pSrcType, pSrc);
           Builder.CreateStore(val, pDst);
-          pDst = Builder.CreateGEP(nullptr, pDst, off, std::string());
-          pSrc = Builder.CreateGEP(nullptr, pSrc, off, std::string());
-          val = Builder.CreateLoad(pSrc, std::string());
+          pDst = Builder.CreateGEP(pDstType, pDst, off);
+          pSrc = Builder.CreateGEP(pSrcType, pSrc, off);
+          val = Builder.CreateLoad(pSrcType, pSrc);
           Builder.CreateStore(val, pDst);
         }
         ii->eraseFromParent();
@@ -281,8 +289,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       case Intrinsic::trap: {
         // Intrinsic instruction "llvm.trap" found. Directly lower it to
         // a call of the abort() function.
-        auto C = M.getOrInsertFunction("abort", Type::getVoidTy(ctx)
-                                                    KLEE_LLVM_GOIF_TERMINATOR);
+        auto C = M.getOrInsertFunction("abort", Type::getVoidTy(ctx));
 #if LLVM_VERSION_CODE >= LLVM_VERSION(9, 0)
         if (auto *F = dyn_cast<Function>(C.getCallee())) {
 #else
@@ -311,30 +318,9 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         break;
       }
       case Intrinsic::objectsize: {
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
         // Lower the call to a concrete value
         auto replacement = llvm::lowerObjectSizeCall(ii, DataLayout, nullptr,
                                                      /*MustSucceed=*/true);
-#else
-        // We don't know the size of an object in general so we replace
-        // with 0 or -1 depending on the second argument to the intrinsic.
-        assert(ii->getNumArgOperands() == 2 && "wrong number of arguments");
-        auto minArg = dyn_cast_or_null<ConstantInt>(ii->getArgOperand(1));
-        assert(minArg &&
-               "Failed to get second argument or it is not ConstantInt");
-        assert(minArg->getBitWidth() == 1 && "Second argument is not an i1");
-        ConstantInt *replacement = nullptr;
-        IntegerType *intType = dyn_cast<IntegerType>(ii->getType());
-        assert(intType && "intrinsic does not have integer return type");
-        if (minArg->isZero()) {
-          // min=false
-          replacement = ConstantInt::get(intType, -1, /*isSigned=*/true);
-        } else {
-          // min=true
-          replacement = ConstantInt::get(intType, 0, /*isSigned=*/false);
-        }
-
-#endif
         ii->replaceAllUsesWith(replacement);
         ii->eraseFromParent();
         dirty = true;
@@ -355,9 +341,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       // The following intrinsics are currently handled by LowerIntrinsicCall
       // (Invoking LowerIntrinsicCall with any intrinsics not on this
       // list throws an exception.)
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
       case Intrinsic::addressofreturnaddress:
-#endif
       case Intrinsic::annotation:
       case Intrinsic::assume:
       case Intrinsic::bswap:

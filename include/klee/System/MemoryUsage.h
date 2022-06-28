@@ -14,6 +14,7 @@
 
 namespace klee {
   namespace util {
+    /// Get total malloc usage in bytes
     size_t GetTotalMallocUsage();
   }
 }

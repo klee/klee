@@ -10,11 +10,7 @@ download_libcxx() {
   [[ -f "${LIBCXX_SRC}/.src_checked_out" ]] && return 0
 
   local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
-
-  local version=""
-  [[ "${LLVM_VERSION_MAJOR}" -le 3 ]] && version="release/${LLVM_VERSION}.x"
-  [[ "${LLVM_VERSION_MAJOR}" -ge 4 ]] && version="release/${LLVM_VERSION_MAJOR}.x"
-
+  local version="release/${LLVM_VERSION_MAJOR}.x"
 
   git clone --single-branch --branch "${version}" --depth 1 "https://github.com/llvm/llvm-project.git" "${LIBCXX_SRC}"
 
@@ -24,10 +20,6 @@ download_libcxx() {
      patch -p1 --follow-symlinks -i "${DIR}/patches/libcxx${LLVM_VERSION_SHORT}.patch" || return 1
   fi
 
-  # Prepare LLVM subprojects for older LLVM versions
-  cd "${LIBCXX_SRC}/llvm/projects"
-  ln -s ../../libcxx .
-  ln -s ../../libcxxabi .
 
   touch "${LIBCXX_SRC}/.src_checked_out" 
 }
@@ -61,7 +53,7 @@ build_libcxx() {
     export LLVM_COMPILER_PATH="$(dirname "${BITCODE_CC}")"
 
     cmake "${cmake_flags[@]}" "${LIBCXX_SRC}/llvm"
-    make cxx
+    make cxx -j$(nproc) || make cxx
   )
 }
 
@@ -85,7 +77,7 @@ install_libcxx() {
     fi
 
     local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
-    [[ "${LLVM_VERSION_MAJOR}" -ge 6 ]] && libraries+=("${LIBCXX_INSTALL}"/lib/lib*.a)
+    libraries+=("${LIBCXX_INSTALL}"/lib/lib*.a)
 
 
     for p in "${libraries[@]}" ; do

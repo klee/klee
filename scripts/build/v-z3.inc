@@ -4,4 +4,4 @@ required_variables_z3=(
 )
 
 # Artifacts Z3 depends on
-artifact_dependency_z3=("sanitizer_compiler")
+artifact_dependency_z3=("sanitizer")

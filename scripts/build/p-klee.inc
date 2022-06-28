@@ -3,6 +3,7 @@ validate_build_config_klee() {
 }
 
 setup_build_variables_klee() {
+  source "${DIR}/common-functions"
   KLEE_SUFFIX="${LLVM_VERSION_SHORT}${SOLVER_SUFFIX}${SANITIZER_SUFFIX}"
   KLEE_BUILD_DIR="${BASE}/klee_build${KLEE_SUFFIX}"
   KLEE_SRC="$DIR/../../"
@@ -33,13 +34,11 @@ build_klee() {
 
   if [ "${UCLIBC_VERSION}" != "0" ]; then
     CMAKE_ARGUMENTS+=(
-      "-DENABLE_KLEE_UCLIBC=TRUE"
       "-DKLEE_UCLIBC_PATH=${BASE}/klee-uclibc-${LLVM_VERSION_SHORT}"
       "-DENABLE_POSIX_RUNTIME=TRUE"
     )
   else
     CMAKE_ARGUMENTS+=(
-      "-DENABLE_KLEE_UCLIBC=FALSE"
       "-DENABLE_POSIX_RUNTIME=FALSE"
     )
   fi

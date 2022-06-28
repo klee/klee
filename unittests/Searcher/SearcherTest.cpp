@@ -37,7 +37,7 @@ TEST(SearcherTest, RandomPath) {
 
   // Two states
   ExecutionState es1(es);
-  processTree.attach(es.ptreeNode, &es1, &es);
+  processTree.attach(es.ptreeNode, &es1, &es, BranchType::NONE);
   rp.update(&es, {&es1}, {});
 
   // Random path seed dependant
@@ -68,7 +68,7 @@ TEST(SearcherTest, TwoRandomPath) {
   root.ptreeNode = processTree.root.getPointer();
 
   ExecutionState es(root);
-  processTree.attach(root.ptreeNode, &es, &root);
+  processTree.attach(root.ptreeNode, &es, &root, BranchType::NONE);
 
   RNG rng, rng1;
   RandomPathSearcher rp(processTree, rng);
@@ -83,7 +83,7 @@ TEST(SearcherTest, TwoRandomPath) {
 
   // Two states
   ExecutionState es1(es);
-  processTree.attach(es.ptreeNode, &es1, &es);
+  processTree.attach(es.ptreeNode, &es1, &es, BranchType::NONE);
 
   rp.update(&es, {}, {});
   rp1.update(nullptr, {&es1}, {});
@@ -127,7 +127,7 @@ TEST(SearcherTest, TwoRandomPathDot) {
   rootPNode = root.ptreeNode;
 
   ExecutionState es(root);
-  processTree.attach(root.ptreeNode, &es, &root);
+  processTree.attach(root.ptreeNode, &es, &root, BranchType::NONE);
   rightLeafPNode = root.ptreeNode;
   esParentPNode = es.ptreeNode;
 
@@ -138,7 +138,7 @@ TEST(SearcherTest, TwoRandomPathDot) {
   rp.update(nullptr, {&es}, {});
 
   ExecutionState es1(es);
-  processTree.attach(es.ptreeNode, &es1, &es);
+  processTree.attach(es.ptreeNode, &es1, &es, BranchType::NONE);
   esLeafPNode = es.ptreeNode;
   es1LeafPNode = es1.ptreeNode;
 

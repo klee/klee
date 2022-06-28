@@ -2,7 +2,7 @@ required_variables_clang=(
   "LLVM_VERSION"
 )
 
-artifact_dependency_clang=("")
+artifact_dependency_clang=("cmake")
 
 setup_variables_clang() {
   local v_a

@@ -67,9 +67,7 @@ StackFrame::~StackFrame() { delete[] locals; }
 /***/
 
 ExecutionState::ExecutionState(KFunction *kf)
-    : pc(kf->instructions), prevPC(pc), depth(0), ptreeNode(nullptr),
-      steppedInstructions(0), instsSinceCovNew(0), coveredNew(false),
-      forkDisabled(false) {
+    : pc(kf->instructions), prevPC(pc) {
   pushFrame(nullptr, kf);
   setID();
 }
@@ -83,20 +81,29 @@ ExecutionState::~ExecutionState() {
     popFrame();
 }
 
-ExecutionState::ExecutionState(const ExecutionState &state)
-    : pc(state.pc), prevPC(state.prevPC), stack(state.stack),
-      incomingBBIndex(state.incomingBBIndex), depth(state.depth),
-      addressSpace(state.addressSpace), constraints(state.constraints),
-      pathOS(state.pathOS), symPathOS(state.symPathOS),
-      coveredLines(state.coveredLines), symbolics(state.symbolics),
-      arrayNames(state.arrayNames), openMergeStack(state.openMergeStack),
-      steppedInstructions(state.steppedInstructions),
-      instsSinceCovNew(state.instsSinceCovNew),
-      unwindingInformation(state.unwindingInformation
-                               ? state.unwindingInformation->clone()
-                               : nullptr),
-      coveredNew(state.coveredNew), forkDisabled(state.forkDisabled) {
-  for (const auto &cur_mergehandler : openMergeStack)
+ExecutionState::ExecutionState(const ExecutionState& state):
+    pc(state.pc),
+    prevPC(state.prevPC),
+    stack(state.stack),
+    incomingBBIndex(state.incomingBBIndex),
+    depth(state.depth),
+    addressSpace(state.addressSpace),
+    constraints(state.constraints),
+    pathOS(state.pathOS),
+    symPathOS(state.symPathOS),
+    coveredLines(state.coveredLines),
+    symbolics(state.symbolics),
+    cexPreferences(state.cexPreferences),
+    arrayNames(state.arrayNames),
+    openMergeStack(state.openMergeStack),
+    steppedInstructions(state.steppedInstructions),
+    instsSinceCovNew(state.instsSinceCovNew),
+    unwindingInformation(state.unwindingInformation
+                             ? state.unwindingInformation->clone()
+                             : nullptr),
+    coveredNew(state.coveredNew),
+    forkDisabled(state.forkDisabled) {
+  for (const auto &cur_mergehandler: openMergeStack)
     cur_mergehandler->addOpenState(this);
 }
 
@@ -317,7 +324,7 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
     std::stringstream AssStream;
     AssStream << std::setw(8) << std::setfill('0') << ii.assemblyLine;
     out << AssStream.str();
-    out << " in " << f->getName().str() << " (";
+    out << " in " << f->getName().str() << "(";
     // Yawn, we could go up and print varargs if we wanted to.
     unsigned index = 0;
     for (Function::arg_iterator ai = f->arg_begin(), ae = f->arg_end();
@@ -325,11 +332,15 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
       if (ai != f->arg_begin())
         out << ", ";
 
-      out << ai->getName().str();
-      // XXX should go through function
+      if (ai->hasName())
+        out << ai->getName().str() << "=";
+
       ref<Expr> value = sf.locals[sf.kf->getArgRegister(index++)].value;
-      if (isa_and_nonnull<ConstantExpr>(value))
-        out << "=" << value;
+      if (isa_and_nonnull<ConstantExpr>(value)) {
+        out << value;
+      } else {
+        out << "symbolic";
+      }
     }
     out << ")";
     if (ii.file != "")
@@ -342,4 +353,8 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
 void ExecutionState::addConstraint(ref<Expr> e) {
   ConstraintManager c(constraints);
   c.addConstraint(e);
+}
+
+void ExecutionState::addCexPreference(const ref<Expr> &cond) {
+  cexPreferences = cexPreferences.insert(cond);
 }

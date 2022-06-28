@@ -17,6 +17,9 @@
 #include "klee/Support/IntEvaluation.h"
 
 #include "llvm/ADT/Hashing.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(13, 0)
+#include "llvm/ADT/StringExtras.h"
+#endif
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -348,13 +351,8 @@ ref<Expr> ConstantExpr::fromMemory(void *address, Width width) {
   default:
     return ConstantExpr::alloc(
         llvm::APInt(width,
-#if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
                     (width + llvm::APFloatBase::integerPartWidth - 1) /
                         llvm::APFloatBase::integerPartWidth,
-#else
-                    (width + llvm::integerPartWidth - 1) /
-                        llvm::integerPartWidth,
-#endif
                     (const uint64_t *)address));
   }
 }
@@ -386,7 +384,11 @@ void ConstantExpr::toMemory(void *address) {
 }
 
 void ConstantExpr::toString(std::string &Res, unsigned radix) const {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(13, 0)
+  Res = llvm::toString(value, radix, false);
+#else
   Res = value.toString(radix, false);
+#endif
 }
 
 ref<ConstantExpr> ConstantExpr::Concat(const ref<ConstantExpr> &RHS) {

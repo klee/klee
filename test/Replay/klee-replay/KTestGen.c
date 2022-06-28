@@ -5,7 +5,7 @@
 // RUN: echo -n aaaa > %t.out/aaaa.txt
 // RUN: echo -n bbbb > %t.out/bbbb.txt
 // RUN: echo -n cccc > %t.out/cccc.txt
-// RUN: %gen-bout -o -p -q file1 --bout-file %t.bout --sym-stdin %t.out/aaaa.txt --sym-file %t.out/bbbb.txt --sym-stdout %t.out/cccc.txt
+// RUN: %ktest-gen -o -p -q file1 --bout-file %t.bout --sym-stdin %t.out/aaaa.txt --sym-file %t.out/bbbb.txt --sym-stdout %t.out/cccc.txt
 // RUN: %cc %s -O0 -o %t
 // RUN: %klee-replay %t %t.bout 2> %t.out/out.txt
 // RUN: FileCheck --input-file=%t.out/out.txt %s

@@ -28,10 +28,16 @@ if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   set(NATIVE_CXX "${NATIVE_CXX} -isysroot ${MAC_OS_SDK_PATH}")
 endif()
 
+if (NOT KLEE_UCLIBC_PATH STREQUAL "")
+  set(SUPPORT_KLEE_UCLIBC 1)
+else()
+  set(SUPPORT_KLEE_UCLIBC 0)
+endif()
+
 # FIXME: Do this to avoid changing the template file that
 # is shared by both build systems.
 if (ENABLE_POSIX_RUNTIME)
-  if (ENABLE_KLEE_UCLIBC)
+  if (NOT KLEE_UCLIBC_PATH STREQUAL "")
     set(ENABLE_POSIX_RUNTIME 1)
   else()
     message(AUTHOR_WARNING
@@ -75,11 +81,7 @@ endif()
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${KLEE_TOOLS_DIR}/testtools)
 
 if (DOWNLOAD_FILECHECK_SOURCE)
-  if (${LLVM_VERSION_MAJOR} GREATER 3)
-    set(FILECHECK_SRC_URL "https://raw.githubusercontent.com/llvm/llvm-project/release/${LLVM_VERSION_MAJOR}.x/llvm/utils/FileCheck/FileCheck.cpp")
-  else()
-    set(FILECHECK_SRC_URL "https://raw.githubusercontent.com/llvm/llvm-project/release/${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.x/llvm/utils/FileCheck/FileCheck.cpp")
-  endif()
+  set(FILECHECK_SRC_URL "https://raw.githubusercontent.com/llvm/llvm-project/release/${LLVM_VERSION_MAJOR}.x/llvm/utils/FileCheck/FileCheck.cpp")
   set(FILECHECK_SRC_FILE "${CMAKE_CURRENT_BINARY_DIR}/FileCheck.cpp")
   if (NOT EXISTS "${FILECHECK_SRC_FILE}")
     message(STATUS "Downloading LLVM FileCheck source")
@@ -102,11 +104,7 @@ if (DOWNLOAD_FILECHECK_SOURCE)
 endif()
 
 if (DOWNLOAD_NOT_SOURCE)
-  if (${LLVM_VERSION_MAJOR} GREATER 3)
-    set(NOT_SRC_URL "https://raw.githubusercontent.com/llvm/llvm-project/release/${LLVM_VERSION_MAJOR}.x/llvm/utils/not/not.cpp")
-  else()
-    set(NOT_SRC_URL "https://raw.githubusercontent.com/llvm/llvm-project/release/${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.x/llvm/utils/not/not.cpp")
-  endif()
+  set(NOT_SRC_URL "https://raw.githubusercontent.com/llvm/llvm-project/release/${LLVM_VERSION_MAJOR}.x/llvm/utils/not/not.cpp")
   set(NOT_SRC_FILE "${CMAKE_CURRENT_BINARY_DIR}/not.cpp")
   if (NOT EXISTS "${NOT_SRC_FILE}")
     message(STATUS "Downloading LLVM not source")
@@ -154,7 +152,7 @@ file(GENERATE
 
 add_custom_target(systemtests
   COMMAND "${LIT_TOOL}" ${LIT_ARGS} "${CMAKE_CURRENT_BINARY_DIR}"
-  DEPENDS klee kleaver klee-replay kleeRuntest gen-bout gen-random-bout
+  DEPENDS klee kleaver klee-replay kleeRuntest ktest-gen ktest-randgen
   COMMENT "Running system tests"
   USES_TERMINAL
 )

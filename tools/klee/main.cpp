@@ -24,6 +24,7 @@
 #include "klee/Support/PrintVersion.h"
 #include "klee/System/Time.h"
 
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
@@ -43,11 +44,6 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
-#include <llvm/Bitcode/BitcodeReader.h>
-#else
-#include <llvm/Bitcode/ReaderWriter.h>
-#endif
 
 #include <dirent.h>
 #include <signal.h>
@@ -135,145 +131,158 @@ cl::opt<std::string>
                       "(default=location of tested file)."),
              cl::cat(StartCat));
 
-cl::opt<std::string> OutputDir(
-    "output-dir",
-    cl::desc("Directory in which to write results (default=klee-out-<N>)"),
-    cl::init(""), cl::cat(StartCat));
+  cl::opt<std::string>
+  RunInDir("run-in-dir",
+           cl::desc("Change to the given directory before starting execution (default=location of tested file)."),
+           cl::cat(StartCat));
+  
+  cl::opt<std::string>
+  OutputDir("output-dir",
+            cl::desc("Directory in which to write results (default=klee-out-<N>)"),
+            cl::init(""),
+            cl::cat(StartCat));
 
-cl::opt<std::string> Environ(
-    "env-file",
-    cl::desc("Parse environment from the given file (in \"env\" format)"),
-    cl::cat(StartCat));
+  cl::opt<std::string>
+  Environ("env-file",
+          cl::desc("Parse environment from the given file (in \"env\" format)"),
+          cl::cat(StartCat));
 
-cl::opt<bool> OptimizeModule(
-    "optimize", cl::desc("Optimize the code before execution (default=false)."),
-    cl::init(false), cl::cat(StartCat));
+  cl::opt<bool>
+  OptimizeModule("optimize",
+                 cl::desc("Optimize the code before execution (default=false)."),
+		 cl::init(false),
+                 cl::cat(StartCat));
 
-cl::opt<bool> WarnAllExternals(
-    "warn-all-external-symbols",
-    cl::desc(
-        "Issue a warning on startup for all external symbols (default=false)."),
-    cl::cat(StartCat));
+  cl::opt<bool>
+  WarnAllExternals("warn-all-external-symbols",
+                   cl::desc("Issue a warning on startup for all external symbols (default=false)."),
+                   cl::cat(StartCat));
+  
 
-/*** Linking options ***/
+  /*** Linking options ***/
 
-cl::OptionCategory LinkCat("Linking options",
-                           "These options control the libraries being linked.");
+  cl::OptionCategory LinkCat("Linking options",
+                             "These options control the libraries being linked.");
 
-enum class LibcType { FreestandingLibc, KleeLibc, UcLibc };
+  enum class LibcType { FreestandingLibc, KleeLibc, UcLibc };
 
-cl::opt<LibcType> Libc(
-    "libc", cl::desc("Choose libc version (none by default)."),
-    cl::values(
-        clEnumValN(
-            LibcType::FreestandingLibc, "none",
-            "Don't link in a libc (only provide freestanding environment)"),
-        clEnumValN(LibcType::KleeLibc, "klee", "Link in KLEE's libc"),
-        clEnumValN(LibcType::UcLibc, "uclibc",
-                   "Link in uclibc (adapted for KLEE)") KLEE_LLVM_CL_VAL_END),
-    cl::init(LibcType::FreestandingLibc), cl::cat(LinkCat));
+  cl::opt<LibcType> Libc(
+      "libc", cl::desc("Choose libc version (none by default)."),
+      cl::values(
+          clEnumValN(
+              LibcType::FreestandingLibc, "none",
+              "Don't link in a libc (only provide freestanding environment)"),
+          clEnumValN(LibcType::KleeLibc, "klee", "Link in KLEE's libc"),
+          clEnumValN(LibcType::UcLibc, "uclibc",
+                     "Link in uclibc (adapted for KLEE)")),
+      cl::init(LibcType::FreestandingLibc), cl::cat(LinkCat));
 
-cl::list<std::string>
-    LinkLibraries("link-llvm-lib",
-                  cl::desc("Link the given bitcode library before execution, "
-                           "e.g. .bca, .bc, .a. Can be used multiple times."),
-                  cl::value_desc("bitcode library file"), cl::cat(LinkCat));
+  cl::list<std::string>
+      LinkLibraries("link-llvm-lib",
+                    cl::desc("Link the given bitcode library before execution, "
+                             "e.g. .bca, .bc, .a. Can be used multiple times."),
+                    cl::value_desc("bitcode library file"), cl::cat(LinkCat));
 
-cl::opt<bool> WithPOSIXRuntime(
-    "posix-runtime",
-    cl::desc("Link with POSIX runtime. Options that can be passed as arguments "
-             "to the programs are: --sym-arg <max-len>  --sym-args <min-argvs> "
-             "<max-argvs> <max-len> + file model options (default=false)."),
-    cl::init(false), cl::cat(LinkCat));
+  cl::opt<bool>
+  WithPOSIXRuntime("posix-runtime",
+                   cl::desc("Link with POSIX runtime. Options that can be passed as arguments to the programs are: --sym-arg <max-len>  --sym-args <min-argvs> <max-argvs> <max-len> + file model options (default=false)."),
+                   cl::init(false),
+                   cl::cat(LinkCat));
 
-cl::opt<std::string> RuntimeBuild(
-    "runtime-build",
-    cl::desc("Link with versions of the runtime library that were built with "
-             "the provided configuration (default=" RUNTIME_CONFIGURATION ")."),
-    cl::init(RUNTIME_CONFIGURATION), cl::cat(LinkCat));
+  cl::opt<std::string> RuntimeBuild(
+      "runtime-build",
+      cl::desc("Link with versions of the runtime library that were built with "
+               "the provided configuration (default=" RUNTIME_CONFIGURATION
+               ")."),
+      cl::init(RUNTIME_CONFIGURATION), cl::cat(LinkCat));
 
-/*** Checks options ***/
+  /*** Checks options ***/
 
-cl::OptionCategory
-    ChecksCat("Checks options",
-              "These options control some of the checks being done by KLEE.");
+  cl::OptionCategory ChecksCat("Checks options",
+                               "These options control some of the checks being done by KLEE.");
 
-cl::opt<bool>
-    CheckDivZero("check-div-zero",
-                 cl::desc("Inject checks for division-by-zero (default=true)"),
-                 cl::init(true), cl::cat(ChecksCat));
+  cl::opt<bool>
+  CheckDivZero("check-div-zero",
+               cl::desc("Inject checks for division-by-zero (default=true)"),
+               cl::init(true),
+               cl::cat(ChecksCat));
 
-cl::opt<bool>
-    CheckOvershift("check-overshift",
-                   cl::desc("Inject checks for overshift (default=true)"),
-                   cl::init(true), cl::cat(ChecksCat));
+  cl::opt<bool>
+  CheckOvershift("check-overshift",
+                 cl::desc("Inject checks for overshift (default=true)"),
+                 cl::init(true),
+                 cl::cat(ChecksCat));
 
-cl::opt<bool>
-    OptExitOnError("exit-on-error",
-                   cl::desc("Exit KLEE if an error in the tested application "
-                            "has been found (default=false)"),
-                   cl::init(false), cl::cat(TerminationCat));
 
-/*** Replaying options ***/
 
-cl::OptionCategory ReplayCat("Replaying options",
-                             "These options impact replaying of test cases.");
+  cl::opt<bool>
+  OptExitOnError("exit-on-error",
+                 cl::desc("Exit KLEE if an error in the tested application has been found (default=false)"),
+                 cl::init(false),
+                 cl::cat(TerminationCat));
 
-cl::opt<bool> ReplayKeepSymbolic(
-    "replay-keep-symbolic",
-    cl::desc("Replay the test cases only by asserting "
-             "the bytes, not necessarily making them concrete."),
-    cl::cat(ReplayCat));
 
-cl::list<std::string>
-    ReplayKTestFile("replay-ktest-file",
-                    cl::desc("Specify a ktest file to use for replay"),
-                    cl::value_desc("ktest file"), cl::cat(ReplayCat));
+  /*** Replaying options ***/
+  
+  cl::OptionCategory ReplayCat("Replaying options",
+                               "These options impact replaying of test cases.");
+  
+  cl::list<std::string>
+  ReplayKTestFile("replay-ktest-file",
+                  cl::desc("Specify a ktest file to use for replay"),
+                  cl::value_desc("ktest file"),
+                  cl::cat(ReplayCat));
 
-cl::list<std::string>
-    ReplayKTestDir("replay-ktest-dir",
-                   cl::desc("Specify a directory to replay ktest files from"),
-                   cl::value_desc("output directory"), cl::cat(ReplayCat));
+  cl::list<std::string>
+  ReplayKTestDir("replay-ktest-dir",
+                 cl::desc("Specify a directory to replay ktest files from"),
+                 cl::value_desc("output directory"),
+                 cl::cat(ReplayCat));
 
-cl::opt<std::string> ReplayPathFile("replay-path",
-                                    cl::desc("Specify a path file to replay"),
-                                    cl::value_desc("path file"),
-                                    cl::cat(ReplayCat));
+  cl::opt<std::string>
+  ReplayPathFile("replay-path",
+                 cl::desc("Specify a path file to replay"),
+                 cl::value_desc("path file"),
+                 cl::cat(ReplayCat));
 
-cl::list<std::string> SeedOutFile("seed-file",
-                                  cl::desc(".ktest file to be used as seed"),
-                                  cl::cat(SeedingCat));
 
-cl::list<std::string>
-    SeedOutDir("seed-dir",
-               cl::desc("Directory with .ktest files to be used as seeds"),
-               cl::cat(SeedingCat));
 
-cl::opt<unsigned> MakeConcreteSymbolic(
-    "make-concrete-symbolic",
-    cl::desc("Probabilistic rate at which to make concrete reads symbolic, "
-             "i.e. approximately 1 in n concrete reads will be made symbolic "
-             "(0=off, 1=all).  "
-             "Used for testing (default=0)"),
-    cl::init(0), cl::cat(DebugCat));
+  cl::list<std::string>
+  SeedOutFile("seed-file",
+              cl::desc(".ktest file to be used as seed"),
+              cl::cat(SeedingCat));
 
-cl::opt<unsigned> MaxTests(
-    "max-tests",
-    cl::desc("Stop execution after generating the given number of tests. Extra "
-             "tests corresponding to partially explored paths will also be "
-             "dumped.  Set to 0 to disable (default=0)"),
-    cl::init(0), cl::cat(TerminationCat));
+  cl::list<std::string>
+  SeedOutDir("seed-dir",
+             cl::desc("Directory with .ktest files to be used as seeds"),
+             cl::cat(SeedingCat));
 
-cl::opt<bool>
-    Watchdog("watchdog",
-             cl::desc("Use a watchdog process to enforce --max-time."),
-             cl::init(0), cl::cat(TerminationCat));
+  cl::opt<unsigned>
+  MakeConcreteSymbolic("make-concrete-symbolic",
+                       cl::desc("Probabilistic rate at which to make concrete reads symbolic, "
+				"i.e. approximately 1 in n concrete reads will be made symbolic (0=off, 1=all).  "
+				"Used for testing (default=0)"),
+                       cl::init(0),
+                       cl::cat(DebugCat));
 
-cl::opt<bool> Libcxx(
-    "libcxx",
-    cl::desc("Link the llvm libc++ library into the bitcode (default=false)"),
-    cl::init(false), cl::cat(LinkCat));
-} // namespace
+  cl::opt<unsigned>
+  MaxTests("max-tests",
+           cl::desc("Stop execution after generating the given number of tests. Extra tests corresponding to partially explored paths will also be dumped.  Set to 0 to disable (default=0)"),
+           cl::init(0),
+           cl::cat(TerminationCat));
+
+  cl::opt<bool>
+  Watchdog("watchdog",
+           cl::desc("Use a watchdog process to enforce --max-time (default=false)"),
+           cl::init(false),
+           cl::cat(TerminationCat));
+
+  cl::opt<bool>
+  Libcxx("libcxx",
+           cl::desc("Link the llvm libc++ library into the bitcode (default=false)"),
+           cl::init(false),
+           cl::cat(LinkCat));
+}
 
 namespace klee {
 extern cl::opt<std::string> MaxTime;
@@ -1008,15 +1017,9 @@ static void halt_via_gdb(int pid) {
     perror("system");
 }
 
-#ifndef SUPPORT_KLEE_UCLIBC
-static void
-linkWithUclibc(StringRef libDir, std::string opt_suffix,
-               std::vector<std::unique_ptr<llvm::Module>> &modules) {
-  klee_error("invalid libc, no uclibc support!\n");
-}
-#else
-static void replaceOrRenameFunction(llvm::Module *module, const char *old_name,
-                                    const char *new_name) {
+static void replaceOrRenameFunction(llvm::Module *module,
+		const char *old_name, const char *new_name)
+{
   Function *new_function, *old_function;
   new_function = module->getFunction(new_name);
   old_function = module->getFunction(old_name);
@@ -1130,21 +1133,24 @@ linkWithUclibc(StringRef libDir, std::string opt_suffix,
     klee_error("error loading the fortify library '%s': %s",
                FortifyPath.c_str(), errorMsg.c_str());
 }
-#endif
 
 int main(int argc, char **argv, char **envp) {
   atexit(llvm_shutdown); // Call llvm_shutdown() on exit.
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(13, 0)
+  KCommandLine::HideOptions(llvm::cl::getGeneralCategory());
+#else
   KCommandLine::HideOptions(llvm::cl::GeneralCategory);
+#endif
 
   llvm::InitializeNativeTarget();
 
   parseArguments(argc, argv);
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
   sys::PrintStackTraceOnErrorSignal(argv[0]);
-#else
-  sys::PrintStackTraceOnErrorSignal();
-#endif
+
+  if (EntryPoint.empty()) {
+    klee_error("entry-point cannot be empty");
+  }
 
   if (Watchdog) {
     if (MaxTime.empty()) {

@@ -19,7 +19,10 @@ export_variables_llvm=(
   "BITCODE_CXX"
 )
 
-artifact_dependency_llvm=("sanitizer")
+artifact_dependency_llvm=(
+"sanitizer"
+"cmake"
+)
 
 setup_variables_llvm() {
   local v_a

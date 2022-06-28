@@ -38,8 +38,7 @@ llvm::cl::opt<ArrayOptimizationType> OptimizeArray(
                      clEnumValN(INDEX, "index", "Index-based transformation"),
                      clEnumValN(VALUE, "value",
                                 "Value-based transformation at branch (both "
-                                "concrete and concrete/symbolic)")
-                         KLEE_LLVM_CL_VAL_END),
+                                "concrete and concrete/symbolic)")),
     llvm::cl::init(NONE),
     llvm::cl::desc("Optimize accesses to either concrete or concrete/symbolic "
                    "arrays. (default=false)"),

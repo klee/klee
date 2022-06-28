@@ -13,6 +13,7 @@
 #include "AddressSpace.h"
 #include "MergeHandler.h"
 
+#include "klee/ADT/ImmutableSet.h"
 #include "klee/ADT/TreeStream.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
@@ -172,9 +173,8 @@ public:
 
   // Overall state of the state - Data specific
 
-  /// @brief Exploration depth, i.e., number of times KLEE branched for this
-  /// state
-  std::uint32_t depth;
+  /// @brief Exploration depth, i.e., number of times KLEE branched for this state
+  std::uint32_t depth = 0;
 
   /// @brief Address space used by this state (e.g. Global and Heap)
   AddressSpace addressSpace;
@@ -207,6 +207,10 @@ public:
   // FIXME: Move to a shared list structure (not critical).
   std::vector<std::pair<ref<const MemoryObject>, const Array *>> symbolics;
 
+  /// @brief A set of boolean expressions
+  /// the user has requested be true of a counterexample.
+  ImmutableSet<ref<Expr>> cexPreferences;
+
   /// @brief Set of used array names for this state.  Used to avoid collisions.
   std::set<std::string> arrayNames;
 
@@ -214,13 +218,12 @@ public:
   /// through
   std::vector<ref<MergeHandler>> openMergeStack;
 
-  /// @brief The numbers of times this state has run through
-  /// Executor::stepInstruction
-  std::uint64_t steppedInstructions;
+  /// @brief The numbers of times this state has run through Executor::stepInstruction
+  std::uint64_t steppedInstructions = 0;
 
   /// @brief Counts how many instructions were executed since the last new
   /// instruction was covered.
-  std::uint32_t instsSinceCovNew;
+  std::uint32_t instsSinceCovNew = 0;
 
   /// @brief Keep track of unwinding state while unwinding, otherwise empty
   std::unique_ptr<UnwindingInformation> unwindingInformation;
@@ -229,24 +232,18 @@ public:
   static std::uint32_t nextID;
 
   /// @brief the state id
-  std::uint32_t id{0};
-
-  /// @brief Temporary Id to mark for printing.
-  std::uint32_t emphemeralStateId{0};
-
-  /// @brief Capture the file line location.
-  std::vector<std::string> fileLocation;
+  std::uint32_t id = 0;
 
   /// @brief Whether a new instruction was covered in this state
-  bool coveredNew;
+  bool coveredNew = false;
 
   /// @brief Disables forking for this state. Set by user code
-  bool forkDisabled;
+  bool forkDisabled = false;
 
 public:
 #ifdef KLEE_UNITTEST
   // provide this function only in the context of unittests
-  ExecutionState() {}
+  ExecutionState() = default;
 #endif
   // only to create the initial state
   explicit ExecutionState(KFunction *kf);
@@ -267,6 +264,7 @@ public:
   void addSymbolic(const MemoryObject *mo, const Array *array);
 
   void addConstraint(ref<Expr> e);
+  void addCexPreference(const ref<Expr> &cond);
 
   bool merge(const ExecutionState &b);
   void dumpStack(llvm::raw_ostream &out) const;
