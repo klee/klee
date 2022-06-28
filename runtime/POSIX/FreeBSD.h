@@ -1,6 +1,8 @@
 #ifndef KLEE_FREEBSD_H
 #define KLEE_FREEBSD_H
 
+#include <sys/param.h>
+
 // termios maps
 #define TCGETS  TIOCGETA
 #define TCSETS  TIOCSETA

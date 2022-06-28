@@ -287,7 +287,8 @@ Function *ExternalDispatcherImpl::createDispatcher(Function *target,
       ConstantInt::get(Type::getInt64Ty(ctx), (uintptr_t)(void *)&gTheArgsP),
       PointerType::getUnqual(PointerType::getUnqual(Type::getInt64Ty(ctx))),
       "argsp");
-  auto argI64s = Builder.CreateLoad(argI64sp, "args");
+  auto argI64s = Builder.CreateLoad(
+      argI64sp->getType()->getPointerElementType(), argI64sp, "args");
 
   // Get the target function type.
   FunctionType *FTy = cast<FunctionType>(
@@ -301,11 +302,18 @@ Function *ExternalDispatcherImpl::createDispatcher(Function *target,
     // functions.
     auto argTy =
         (i < FTy->getNumParams() ? FTy->getParamType(i) : (*ai)->getType());
-    auto argI64p = Builder.CreateGEP(
-        nullptr, argI64s, ConstantInt::get(Type::getInt32Ty(ctx), idx));
+
+    // fp80 must be aligned to 16 according to the System V AMD 64 ABI
+    if (argTy->isX86_FP80Ty() && idx & 0x01)
+      idx++;
+
+    auto argI64p =
+        Builder.CreateGEP(argI64s->getType()->getPointerElementType(), argI64s,
+                          ConstantInt::get(Type::getInt32Ty(ctx), idx));
 
     auto argp = Builder.CreateBitCast(argI64p, PointerType::getUnqual(argTy));
-    args[i] = Builder.CreateLoad(argp);
+    args[i] =
+        Builder.CreateLoad(argp->getType()->getPointerElementType(), argp);
 
     unsigned argSize = argTy->getPrimitiveSizeInBits();
     idx += ((!!argSize ? argSize : 64) + 63) / 64;

@@ -234,17 +234,22 @@ ref<ConstantExpr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce,
         continue;
 
         // Handle a struct index, which adds its field offset to the pointer.
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
-      if (auto STy = ii.getStructTypeOrNull()) {
-#else
-      if (StructType *STy = dyn_cast<StructType>(*ii)) {
-#endif
-        unsigned ElementIdx = indexOp->getZExtValue();
-        const StructLayout *SL = kmodule->targetData->getStructLayout(STy);
-        base = base->Add(
-            ConstantExpr::alloc(APInt(Context::get().getPointerWidth(),
-                                      SL->getElementOffset(ElementIdx))));
-        continue;
+        if (auto STy = ii.getStructTypeOrNull()) {
+          unsigned ElementIdx = indexOp->getZExtValue();
+          const StructLayout *SL = kmodule->targetData->getStructLayout(STy);
+          base = base->Add(
+              ConstantExpr::alloc(APInt(Context::get().getPointerWidth(),
+                                        SL->getElementOffset(ElementIdx))));
+          continue;
+        }
+
+        // For array or vector indices, scale the index by the size of the type.
+        // Indices can be negative
+        base = base->Add(indexOp->SExt(Context::get().getPointerWidth())
+                             ->Mul(ConstantExpr::alloc(
+                                 APInt(Context::get().getPointerWidth(),
+                                       kmodule->targetData->getTypeAllocSize(
+                                           ii.getIndexedType())))));
       }
 
       // For array or vector indices, scale the index by the size of the type.

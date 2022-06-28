@@ -442,7 +442,7 @@ bool assertCreatedPointEvaluatesToTrue(
     std::vector<std::vector<unsigned char>> &values,
     std::map<const Array *, std::vector<unsigned char>> &retMap) {
   // _allowFreeValues is set to true so that if there are missing bytes in the
-  // assigment we will end up with a non ConstantExpr after evaluating the
+  // assignment we will end up with a non ConstantExpr after evaluating the
   // assignment and fail
   Assignment assign = Assignment(objects, values, /*_allowFreeValues=*/true);
 

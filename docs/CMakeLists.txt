@@ -10,11 +10,11 @@
 # Top level target for building all documentation
 add_custom_target(docs)
 
-option(ENABLE_DOXYGEN "Enable building doxygen documentation" ON)
+option(ENABLE_DOXYGEN "Enable building doxygen documentation" OFF)
 if (ENABLE_DOXYGEN)
-  find_package(Doxygen)
-  if (DOXYGEN_FOUND)
-    message(STATUS "Doxygen found")
+  find_package(Doxygen OPTIONAL_COMPONENTS dot)
+  if (DOXYGEN_FOUND AND TARGET Doxygen::dot)
+    message(STATUS "Doxygen and dot found")
     set(abs_top_srcdir "${CMAKE_SOURCE_DIR}")
     set(abs_top_builddir "${CMAKE_BINARY_DIR}")
 
@@ -23,7 +23,7 @@ if (ENABLE_DOXYGEN)
 
     # Add rule to build doxygen documentation
     add_custom_target(doc-doxygen
-      COMMAND "${DOXYGEN_EXECUTABLE}" "${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg"
+      COMMAND Doxygen::doxygen "${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg"
       COMMENT "Generating Doxygen documentation"
       USES_TERMINAL
     )
@@ -42,7 +42,12 @@ if (ENABLE_DOXYGEN)
     endif ()
 
   else()
-    message(WARNING "Doxygen not found. Can't build Doxygen documentation")
+    if (NOT DOXYGEN_FOUND)
+      message(WARNING "Doxygen not found. Can't build Doxygen documentation")
+    endif ()
+    if (NOT TARGET Doxygen::dot)
+      message(WARNING "dot (graphviz) not found. Can't build Doxygen documentation")
+    endif ()
     set(ENABLE_DOXYGEN OFF
       CACHE
       BOOL

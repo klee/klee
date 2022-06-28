@@ -6,12 +6,12 @@
 # License. See LICENSE.TXT for details.
 #
 #===------------------------------------------------------------------------===#
-add_executable(gen-bout
-  gen-bout.cpp
+add_executable(ktest-gen
+  ktest-gen.cpp
 )
 
 set(KLEE_LIBS kleeBasic)
 
-target_link_libraries(gen-bout ${KLEE_LIBS})
+target_link_libraries(ktest-gen ${KLEE_LIBS})
 
-install(TARGETS gen-bout RUNTIME DESTINATION bin)
+install(TARGETS ktest-gen RUNTIME DESTINATION bin)

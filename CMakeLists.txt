@@ -10,7 +10,7 @@
 ###############################################################################
 # Minimum CMake version and policies
 ###############################################################################
-cmake_minimum_required(VERSION 3.5.0)
+cmake_minimum_required(VERSION 3.9.0)
 if (POLICY CMP0054)
   cmake_policy(SET CMP0054 NEW)
 endif()
@@ -38,8 +38,8 @@ include(CheckLibraryExists)
 ###############################################################################
 # Project version
 ###############################################################################
-set(KLEE_VERSION_MAJOR 2)
-set(KLEE_VERSION_MINOR 3-pre)
+set(KLEE_VERSION_MAJOR 3)
+set(KLEE_VERSION_MINOR 0-pre)
 set(KLEE_VERSION "${KLEE_VERSION_MAJOR}.${KLEE_VERSION_MINOR}")
 
 # If a patch is needed, we can add KLEE_VERSION_PATCH
@@ -409,6 +409,7 @@ endif (HAVE_PTY_H OR HAVE_UTIL_H OR HAVE_LIBUTIL_H)
 ################################################################################
 check_cxx_symbol_exists(__ctype_b_loc ctype.h HAVE_CTYPE_EXTERNALS)
 check_cxx_symbol_exists(mallinfo malloc.h HAVE_MALLINFO)
+check_cxx_symbol_exists(mallinfo2 malloc.h HAVE_MALLINFO2)
 check_cxx_symbol_exists(malloc_zone_statistics malloc/malloc.h HAVE_MALLOC_ZONE_STATISTICS)
 
 check_include_file(sys/statfs.h HAVE_SYSSTATFS_H)
@@ -506,11 +507,6 @@ file(MAKE_DIRECTORY ${KLEE_RUNTIME_DIRECTORY})
 option(ENABLE_POSIX_RUNTIME "Enable KLEE's POSIX runtime" OFF)
 if (ENABLE_POSIX_RUNTIME)
   message(STATUS "POSIX runtime enabled")
-  if (NOT ENABLE_KLEE_UCLIBC)
-    message(WARNING "Enabling POSIX runtime without klee-uclibc support."
-      "The runtime might not work without it. Pass `-DENABLE_KLEE_UCLIBC=ON`"
-      " to enable klee-uclibc support.")
-  endif()
 else()
   message(STATUS "POSIX runtime disabled")
 endif()
@@ -518,47 +514,25 @@ endif()
 ################################################################################
 # KLEE uclibc support
 ################################################################################
-option(ENABLE_KLEE_UCLIBC "Enable support for klee-uclibc" OFF)
-if (ENABLE_KLEE_UCLIBC)
-  message(STATUS "klee-uclibc support enabled")
-  set(SUPPORT_KLEE_UCLIBC 1) # For config.h
-  set(KLEE_UCLIBC_PATH "" CACHE PATH "Path to klee-uclibc root directory")
-  if (NOT IS_DIRECTORY "${KLEE_UCLIBC_PATH}")
-    message(FATAL_ERROR
-      "KLEE_UCLIBC_PATH (\"${KLEE_UCLIBC_PATH}\") is not a valid directory.\n"
-      "Try passing -DKLEE_UCLIBC_PATH=<path> to cmake where <path> is the path"
-      " to the root of the klee-uclibc directory.")
-  endif()
-
+set(KLEE_UCLIBC_PATH "" CACHE PATH "Path to klee-uclibc root directory")
+set(KLEE_UCLIBC_BCA_NAME "klee-uclibc.bca")
+list(APPEND KLEE_COMPONENT_CXX_DEFINES
+    -DKLEE_UCLIBC_BCA_NAME=\"${KLEE_UCLIBC_BCA_NAME}\")
+if (NOT KLEE_UCLIBC_PATH STREQUAL "")
   # Find the C library bitcode archive
-  set(KLEE_UCLIBC_BCA_NAME "klee-uclibc.bca")
   set(KLEE_UCLIBC_C_BCA "${KLEE_UCLIBC_PATH}/lib/libc.a")
   if (NOT EXISTS "${KLEE_UCLIBC_C_BCA}")
     message(FATAL_ERROR
-      "klee-uclibc library not found at \"${KLEE_UCLIBC_C_BCA}\"")
+      "klee-uclibc library not found at \"${KLEE_UCLIBC_C_BCA}\". Set KLEE_UCLIBC_PATH to klee-uclibc root directory or empty string.")
   endif()
   message(STATUS "Found klee-uclibc library: \"${KLEE_UCLIBC_C_BCA}\"")
-
-  # Make a symlink to KLEE_UCLIBC_C_BCA so KLEE can find it where it
-  # is expected.
-  execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink
+  # Copy KLEE_UCLIBC_C_BCA so KLEE can find it where it is expected.
+  execute_process(COMMAND ${CMAKE_COMMAND} -E copy
     "${KLEE_UCLIBC_C_BCA}"
     "${KLEE_RUNTIME_DIRECTORY}/${KLEE_UCLIBC_BCA_NAME}"
   )
-  list(APPEND KLEE_COMPONENT_CXX_DEFINES
-    -DKLEE_UCLIBC_BCA_NAME=\"${KLEE_UCLIBC_BCA_NAME}\")
-
-  # Add klee-uclibc to the install target. We install the original
-  # file rather than the symlink because CMake would just copy the symlink
-  # rather than the file.
-  install(FILES "${KLEE_UCLIBC_C_BCA}"
-    DESTINATION "${KLEE_INSTALL_RUNTIME_DIR}"
-    RENAME "${KLEE_UCLIBC_BCA_NAME}"
-    )
-
 else()
-  message(STATUS "klee-uclibc support disabled")
-  set(SUPPORT_KLEE_UCLIBC 0) # For config.h
+  message(STATUS "Skipping copying of klee-uclibc runtime")
 endif()
 
 ################################################################################
@@ -605,23 +579,14 @@ if (ENABLE_KLEE_LIBCXX)
   endif()
   message(STATUS "Found libc++ library: \"${KLEE_LIBCXX_BC_PATH}\"")
 
-  # Make a symlink to KLEE_LIBCXX_BC_PATH so KLEE can find it where it
-  # is expected.
+  # Copy KLEE_LIBCXX_BC_PATH so KLEE can find it where it is expected.
   file(MAKE_DIRECTORY "${KLEE_RUNTIME_DIRECTORY}")
-  execute_process(COMMAND ${CMAKE_COMMAND} -E create_symlink
+  execute_process(COMMAND ${CMAKE_COMMAND} -E copy
     "${KLEE_LIBCXX_BC_PATH}"
     "${KLEE_RUNTIME_DIRECTORY}/${KLEE_LIBCXX_BC_NAME}"
   )
   list(APPEND KLEE_COMPONENT_CXX_DEFINES
     -DKLEE_LIBCXX_BC_NAME=\"${KLEE_LIBCXX_BC_NAME}\")
-
-  # Add libc++ to the install target. We install the original
-  # file rather than the symlink because CMake would just copy the symlink
-  # rather than the file.
-  install(FILES "${KLEE_LIBCXX_BC_PATH}"
-    DESTINATION "${KLEE_INSTALL_RUNTIME_DIR}"
-    RENAME "${KLEE_LIBCXX_BC_NAME}"
-    )
 
 else()
   message(STATUS "libc++ support disabled")

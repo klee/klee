@@ -22,11 +22,7 @@
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/ModuleUtil.h"
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
 #include "llvm/Bitcode/BitcodeWriter.h"
-#else
-#include "llvm/Bitcode/ReaderWriter.h"
-#endif
 #if LLVM_VERSION_CODE < LLVM_VERSION(8, 0)
 #include "llvm/IR/CallSite.h"
 #endif
@@ -78,7 +74,7 @@ namespace {
 
   cl::opt<bool>
   OutputModule("output-module",
-               cl::desc("Write the bitcode for the final transformed module"),
+               cl::desc("Write the bitcode for the final transformed module (default=false)"),
                cl::init(false),
 	       cl::cat(ModuleCat));
 
@@ -89,8 +85,7 @@ namespace {
                         clEnumValN(eSwitchTypeLLVM, "llvm", 
                                    "lower using LLVM"),
                         clEnumValN(eSwitchTypeInternal, "internal", 
-                                   "execute switch internally")
-                        KLEE_LLVM_CL_VAL_END),
+                                   "execute switch internally")),
              cl::init(eSwitchTypeInternal),
 	     cl::cat(ModuleCat));
   

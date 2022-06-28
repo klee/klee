@@ -86,7 +86,7 @@ int main(int argc, char **argv) {
   }
 
   // File sizes get increased to the highest among files, so even B has file size 4.
-  // This is due to the limitaiton of posix-runtime API
+  // This is due to the limitation of posix-runtime API
   if (check_file(argv[5], 4, "ccc") == 0) {
     // CHECK-DAG: Got B file size
     printf("Got B file size\n");

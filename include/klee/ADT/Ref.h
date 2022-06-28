@@ -32,7 +32,6 @@
 #include "klee/Support/Casting.h"
 
 #include <cassert>
-#include <iosfwd> // FIXME: Remove this when LLVM 4.0 support is removed!!!
 
 namespace llvm {
   class raw_ostream;

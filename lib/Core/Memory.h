@@ -66,12 +66,6 @@ public:
   /// it was allocated for (or whatever else makes sense).
   const llvm::Value *allocSite;
 
-  /// A list of boolean expressions the user has requested be true of
-  /// a counterexample. Mutable since we play a little fast and loose
-  /// with allowing it to be added to during execution (although
-  /// should sensibly be only at creation time).
-  mutable std::vector<ref<Expr>> cexPreferences;
-
   // DO NOT IMPLEMENT
   MemoryObject(const MemoryObject &b);
   MemoryObject &operator=(const MemoryObject &b);
@@ -161,15 +155,19 @@ private:
 
   ref<const MemoryObject> object;
 
+  /// @brief Holds all known concrete bytes
   uint8_t *concreteStore;
 
-  // XXX cleanup name of flushMask (its backwards or something)
+  /// @brief concreteMask[byte] is set if byte is known to be concrete
   BitArray *concreteMask;
 
-  // mutable because may need flushed during read of const
-  mutable BitArray *flushMask;
-
+  /// knownSymbolics[byte] holds the symbolic expression for byte,
+  /// if byte is known to be symbolic
   ref<Expr> *knownSymbolics;
+
+  /// unflushedMask[byte] is set if byte is unflushed
+  /// mutable because may need flushed during read of const
+  mutable BitArray *unflushedMask;
 
   // mutable because we may need flush during read of const
   mutable UpdateList updates;
@@ -196,16 +194,16 @@ public:
 
   void setReadOnly(bool ro) { readOnly = ro; }
 
-  // make contents all concrete and zero
+  /// Make contents all concrete and zero
   void initializeToZero();
-  // make contents all concrete and random
+
+  /// Make contents all concrete and random
   void initializeToRandom();
 
   ref<Expr> read(ref<Expr> offset, Expr::Width width) const;
   ref<Expr> read(unsigned offset, Expr::Width width) const;
   ref<Expr> read8(unsigned offset) const;
 
-  // return bytes written.
   void write(unsigned offset, ref<Expr> value);
   void write(ref<Expr> offset, ref<Expr> value);
 
@@ -241,9 +239,14 @@ private:
   void flushRangeForRead(unsigned rangeBase, unsigned rangeSize) const;
   void flushRangeForWrite(unsigned rangeBase, unsigned rangeSize);
 
+  /// isByteConcrete ==> !isByteKnownSymbolic
   bool isByteConcrete(unsigned offset) const;
-  bool isByteFlushed(unsigned offset) const;
+
+  /// isByteKnownSymbolic ==> !isByteConcrete
   bool isByteKnownSymbolic(unsigned offset) const;
+
+  /// isByteUnflushed(i) => (isByteConcrete(i) || isByteKnownSymbolic(i))
+  bool isByteUnflushed(unsigned offset) const;
 
   void markByteConcrete(unsigned offset);
   void markByteSymbolic(unsigned offset);

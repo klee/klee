@@ -1,4 +1,4 @@
-; RUN: llvm-as %s -f -o %t1.bc
+; RUN: %llvmas %s -f -o %t1.bc
 ; RUN: rm -rf %t.klee-out
 ; Run KLEE and expect it to error out but not crash
 ; RUN: not %klee --output-dir=%t.klee-out --optimize=false %t1.bc 2> %t2

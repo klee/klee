@@ -1,6 +1,4 @@
 ; REQUIRES: lt-llvm-9.0
-; LLVM 5 added parameter "nullunknown" to @llvm.objectsize
-; REQUIRES: geq-llvm-5.0
 ; RUN: %llvmas %s -o=%t.bc
 ; RUN: rm -rf %t.klee-out
 ; RUN: %klee -exit-on-error --output-dir=%t.klee-out --optimize=false %t.bc

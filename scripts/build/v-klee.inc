@@ -16,7 +16,7 @@ required_variables_check_klee() {
 
 # On which artifacts does KLEE depend on
 artifact_dependency_klee(){
-  local dependencies=("llvm" "solvers" "gtest" "sqlite")
+  local dependencies=("llvm" "solvers" "gtest" "sqlite" "cmake")
   if [[ "${OS}" != "osx" ]]; then
     dependencies+=(uclibc)
   fi

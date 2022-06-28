@@ -73,7 +73,7 @@ bool DivCheckPass::runOnModule(Module &M) {
   KleeIRMetaData md(ctx);
   auto divZeroCheckFunction =
       M.getOrInsertFunction("klee_div_zero_check", Type::getVoidTy(ctx),
-                            Type::getInt64Ty(ctx) KLEE_LLVM_GOIF_TERMINATOR);
+                            Type::getInt64Ty(ctx));
 
   for (auto &divInst : divInstruction) {
     llvm::IRBuilder<> Builder(divInst /* Inserts before divInst*/);
@@ -132,7 +132,7 @@ bool OvershiftCheckPass::runOnModule(Module &M) {
   KleeIRMetaData md(ctx);
   auto overshiftCheckFunction = M.getOrInsertFunction(
       "klee_overshift_check", Type::getVoidTy(ctx), Type::getInt64Ty(ctx),
-      Type::getInt64Ty(ctx) KLEE_LLVM_GOIF_TERMINATOR);
+      Type::getInt64Ty(ctx));
 
   for (auto &shiftInst : shiftInstructions) {
     llvm::IRBuilder<> Builder(shiftInst);

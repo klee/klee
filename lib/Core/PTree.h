@@ -10,6 +10,7 @@
 #ifndef KLEE_PTREE_H
 #define KLEE_PTREE_H
 
+#include "klee/Core/BranchTypes.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Support/ErrorHandling.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -47,15 +48,17 @@ public:
   explicit PTree(ExecutionState *initialState);
   ~PTree() = default;
 
-  void attach(PTreeNode *node, ExecutionState *leftState,
-              ExecutionState *rightState);
-  void remove(PTreeNode *node);
-  void dump(llvm::raw_ostream &os);
-  std::uint8_t getNextId() {
-    std::uint8_t id = 1 << registeredIds++;
-    if (registeredIds > PtrBitCount) {
-      klee_error("PTree cannot support more than %d RandomPathSearchers",
-                 PtrBitCount);
+    void attach(PTreeNode *node, ExecutionState *leftState,
+                ExecutionState *rightState, BranchType reason);
+    void remove(PTreeNode *node);
+    void dump(llvm::raw_ostream &os);
+    std::uint8_t getNextId() {
+      std::uint8_t id = 1 << registeredIds++;
+      if (registeredIds > PtrBitCount) {
+        klee_error("PTree cannot support more than %d RandomPathSearchers",
+                   PtrBitCount);
+      }
+      return id;
     }
     return id;
   }

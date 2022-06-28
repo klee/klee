@@ -88,12 +88,17 @@ public:
       if (llvm::CompositeType *CT = dyn_cast<llvm::CompositeType>(CurTy)) {
         CurTy = CT->getTypeAtIndex(getOperand());
 #endif
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
-    } else if (auto ptr = dyn_cast<llvm::PointerType>(CurTy)) {
-      CurTy = ptr->getElementType();
-#endif
-    } else {
-      CurTy = 0;
+      } else if (auto ptr = dyn_cast<llvm::PointerType>(CurTy)) {
+        CurTy = ptr->getElementType();
+      } else {
+        CurTy = 0;
+      }
+      ++OpIt;
+      return *this;
+    }
+
+    generic_gep_type_iterator operator++(int) { // Postincrement
+      generic_gep_type_iterator tmp = *this; ++*this; return tmp;
     }
     ++OpIt;
     return *this;

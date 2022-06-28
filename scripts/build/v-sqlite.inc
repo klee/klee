@@ -1,3 +1,3 @@
-artifact_dependency_sqlite=("sanitizer_compiler")
+artifact_dependency_sqlite=("sanitizer")
 
 required_variables_sqlite=("")
