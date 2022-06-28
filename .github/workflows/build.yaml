@@ -165,6 +165,19 @@ jobs:
 
   Coverage:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        name: [
+                "STP",
+                "Z3",
+            ]
+        include:
+          - name: "STP"
+            env:
+              SOLVERS: STP
+          - name: "Z3"
+            env:
+              SOLVERS: Z3
     env:
       ENABLE_OPTIMIZED: 0
       COVERAGE: 1
@@ -172,6 +185,7 @@ jobs:
       - name: Checkout KLEE source code
         uses: actions/checkout@v2
       - name: Build KLEE
+        env: ${{ matrix.env }}
         run: scripts/build/build.sh klee --docker --create-final-image
       - name: Run tests
         run: scripts/build/run-tests.sh --coverage --upload-coverage --run-docker --debug
