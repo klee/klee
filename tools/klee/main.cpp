@@ -130,11 +130,6 @@ cl::opt<std::string>
              cl::desc("Change to the given directory before starting execution "
                       "(default=location of tested file)."),
              cl::cat(StartCat));
-
-  cl::opt<std::string>
-  RunInDir("run-in-dir",
-           cl::desc("Change to the given directory before starting execution (default=location of tested file)."),
-           cl::cat(StartCat));
   
   cl::opt<std::string>
   OutputDir("output-dir",

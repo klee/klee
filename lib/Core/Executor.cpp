@@ -1037,6 +1037,12 @@ ref<Expr> Executor::maxStaticPctChecks(ExecutionState &current,
 
 Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
                                    bool isInternal, BranchType reason) {
+  
+  /* COMMENT : Capture before KLEE re-use at Fork. */
+  // Current State Id.
+  int currentStateId = current.emphemeralStateId;
+  std::vector<std::string> fileLocInfo = current.fileLocation;
+
   Solver::Validity res;
   std::map<ExecutionState *, std::vector<SeedInfo>>::iterator it =
       seedMap.find(&current);

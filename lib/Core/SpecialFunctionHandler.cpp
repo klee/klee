@@ -906,7 +906,7 @@ void SpecialFunctionHandler::handleMarkPSESymbolic(
     executor.terminateStateOnError(state,
                                    "Incorrect number of arguments to "
                                    "mark_pse_symbolic(void*, size_t, char*)",
-                                   Executor::User);
+                                   StateTerminationType::Exit);
     return;
   }
 
