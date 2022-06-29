@@ -162,7 +162,7 @@ jobs:
         include:
           - name: "STP"
             env:
-              SOLVERS: STP
+              SOLVERS: STP:Z3
           - name: "Z3"
             env:
               SOLVERS: Z3
