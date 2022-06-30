@@ -23,6 +23,7 @@
 #include <map>
 #include <ostream>
 #include <vector>
+#include <utility>
 
 using namespace klee;
 using namespace llvm;
@@ -255,20 +256,19 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
   return os;
 }
 
-// Breaks down a constraint into all of it's individual pieces, returning a
-// list of IndependentElementSets or the independent factors.
-//
-// Caller takes ownership of returned std::list.
-static std::list<IndependentElementSet>*
+/// Breaks down a constraint into all of it's individual pieces, returning a
+/// list of IndependentElementSets or the independent factors.
+static std::list<IndependentElementSet>
 getAllIndependentConstraintsSets(const Query &query) {
-  std::list<IndependentElementSet> *factors = new std::list<IndependentElementSet>();
+  std::list<IndependentElementSet> factors;
   ConstantExpr *CE = dyn_cast<ConstantExpr>(query.expr);
   if (CE) {
-    assert(CE && CE->isFalse() && "the expr should always be false and "
-                                  "therefore not included in factors");
+    assert(CE && CE->isFalse() &&
+           "the expr should always be false and "
+           "therefore not included in factors");
   } else {
     ref<Expr> neg = Expr::createIsZero(query.expr);
-    factors->push_back(IndependentElementSet(neg));
+    factors.emplace_back(std::move(neg));
   }
 
   for (const auto &constraint : query.constraints) {
@@ -277,25 +277,23 @@ getAllIndependentConstraintsSets(const Query &query) {
     // evaluated.  If the queue property isn't maintained, then the exprs
     // could be returned in an order different from how they came it, negatively
     // affecting later stages.
-    factors->push_back(IndependentElementSet(constraint));
+    factors.emplace_back(constraint);
   }
 
   bool doneLoop = false;
   do {
     doneLoop = true;
-    std::list<IndependentElementSet> *done =
-        new std::list<IndependentElementSet>;
-    while (factors->size() > 0) {
-      IndependentElementSet current = factors->front();
-      factors->pop_front();
+    std::list<IndependentElementSet> done;
+    while (factors.size() > 0) {
+      IndependentElementSet current = std::move(factors.front());
+      factors.pop_front();
       // This list represents the set of factors that are separate from current.
       // Those that are not inserted into this list (queue) intersect with
       // current.
-      std::list<IndependentElementSet> *keep =
-          new std::list<IndependentElementSet>;
-      while (factors->size() > 0) {
-        IndependentElementSet compare = factors->front();
-        factors->pop_front();
+      std::list<IndependentElementSet> keep;
+      while (factors.size() > 0) {
+        IndependentElementSet compare = std::move(factors.front());
+        factors.pop_front();
         if (current.intersects(compare)) {
           if (current.add(compare)) {
             // Means that we have added (z=y)added to (x=y)
@@ -303,15 +301,13 @@ getAllIndependentConstraintsSets(const Query &query) {
             doneLoop = false;
           }
         } else {
-          keep->push_back(compare);
+          keep.push_back(std::move(compare));
         }
       }
-      done->push_back(current);
-      delete factors;
-      factors = keep;
+      done.push_back(std::move(current));
+      factors = std::move(keep);
     }
-    delete factors;
-    factors = done;
+    factors = std::move(done);
   } while (!doneLoop);
 
   return factors;
@@ -470,55 +466,48 @@ bool assertCreatedPointEvaluatesToTrue(
   return cast<ConstantExpr>(q)->isTrue();
 }
 
-bool IndependentSolver::computeInitialValues(const Query& query,
-                                             const std::vector<const Array*> &objects,
-                                             std::vector< std::vector<unsigned char> > &values,
-                                             bool &hasSolution){
+bool IndependentSolver::computeInitialValues(
+    const Query &query, const std::vector<const Array *> &objects,
+    std::vector<std::vector<unsigned char>> &values, bool &hasSolution) {
   // We assume the query has a solution except proven differently
   // This is important in case we don't have any constraints but
   // we need initial values for requested array objects.
   hasSolution = true;
-  // FIXME: When we switch to C++11 this should be a std::unique_ptr so we don't need
-  // to remember to manually call delete
-  std::list<IndependentElementSet> *factors = getAllIndependentConstraintsSets(query);
 
-  //Used to rearrange all of the answers into the correct order
-  std::map<const Array*, std::vector<unsigned char> > retMap;
-  for (std::list<IndependentElementSet>::iterator it = factors->begin();
-       it != factors->end(); ++it) {
-    std::vector<const Array*> arraysInFactor;
-    calculateArrayReferences(*it, arraysInFactor);
-    // Going to use this as the "fresh" expression for the Query() invocation below
-    assert(it->exprs.size() >= 1 && "No null/empty factors");
-    if (arraysInFactor.size() == 0){
+  // Used to rearrange all of the answers into the correct order
+  std::map<const Array *, std::vector<unsigned char>> retMap;
+  for (auto &ics : getAllIndependentConstraintsSets(query)) {
+    std::vector<const Array *> arraysInFactor;
+    calculateArrayReferences(ics, arraysInFactor);
+    // Going to use this as the "fresh" expression for the Query() invocation
+    // below
+    assert(ics.exprs.size() >= 1 && "No null/empty factors");
+    if (arraysInFactor.empty()) {
       continue;
     }
-    ConstraintSet tmp(it->exprs);
-    std::vector<std::vector<unsigned char> > tempValues;
-    if (!solver->impl->computeInitialValues(Query(tmp, ConstantExpr::alloc(0, Expr::Bool)),
-                                            arraysInFactor, tempValues, hasSolution)){
+    ConstraintSet tmp(std::move(ics.exprs));
+    std::vector<std::vector<unsigned char>> tempValues;
+    if (!solver->impl->computeInitialValues(
+            Query(tmp, ConstantExpr::alloc(0, Expr::Bool)), arraysInFactor,
+            tempValues, hasSolution)) {
       values.clear();
-      delete factors;
       return false;
-    } else if (!hasSolution){
+    } else if (!hasSolution) {
       values.clear();
-      delete factors;
       return true;
     } else {
       assert(tempValues.size() == arraysInFactor.size() &&
              "Should be equal number arrays and answers");
-      for (unsigned i = 0; i < tempValues.size(); i++){
-        if (retMap.count(arraysInFactor[i])){
+      for (unsigned i = 0; i < tempValues.size(); i++) {
+        if (retMap.count(arraysInFactor[i])) {
           // We already have an array with some partially correct answers,
           // so we need to place the answers to the new query into the right
           // spot while avoiding the undetermined values also in the array
-          std::vector<unsigned char> * tempPtr = &retMap[arraysInFactor[i]];
+          std::vector<unsigned char> *tempPtr = &retMap[arraysInFactor[i]];
           assert(tempPtr->size() == tempValues[i].size() &&
                  "we're talking about the same array here");
-          ::DenseSet<unsigned> * ds = &(it->elements[arraysInFactor[i]]);
-          for (std::set<unsigned>::iterator it2 = ds->begin(); it2 != ds->end(); it2++){
-            unsigned index = * it2;
-            (* tempPtr)[index] = tempValues[i][index];
+          for (const auto index : ics.elements[arraysInFactor[i]]) {
+            (*tempPtr)[index] = tempValues[i][index];
           }
         } else {
           // Dump all the new values into the array
@@ -527,21 +516,22 @@ bool IndependentSolver::computeInitialValues(const Query& query,
       }
     }
   }
-  for (std::vector<const Array *>::const_iterator it = objects.begin();
-       it != objects.end(); it++){
-    const Array * arr = * it;
-    if (!retMap.count(arr)){
+
+  for (const Array *arr : objects) {
+    auto it = retMap.find(arr);
+    if (it != retMap.end()) {
+      values.push_back(std::move(it->second));
+    } else {
       // this means we have an array that is somehow related to the
       // constraint, but whose values aren't actually required to
       // satisfy the query.
       std::vector<unsigned char> ret(arr->size);
-      values.push_back(ret);
-    } else {
-      values.push_back(retMap[arr]);
+      values.emplace_back(std::move(ret));
     }
   }
-  assert(assertCreatedPointEvaluatesToTrue(query, objects, values, retMap) && "should satisfy the equation");
-  delete factors;
+
+  assert(assertCreatedPointEvaluatesToTrue(query, objects, values, retMap) &&
+         "should satisfy the equation");
   return true;
 }
 

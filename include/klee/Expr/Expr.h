@@ -19,10 +19,11 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <sstream>
-#include <set>
-#include <vector>
 #include <map>
+#include <set>
+#include <sstream>
+#include <utility>
+#include <vector>
 
 namespace llvm {
   class Type;
@@ -293,10 +294,10 @@ private:
 struct Expr::CreateArg {
   ref<Expr> expr;
   Width width;
-  
-  CreateArg(Width w = Bool) : expr(0), width(w) {}
-  CreateArg(ref<Expr> e) : expr(e), width(Expr::InvalidWidth) {}
-  
+
+  CreateArg(Width w = Bool) : width(w) {}
+  CreateArg(ref<Expr> e) : expr(std::move(e)), width(Expr::InvalidWidth) {}
+
   bool isExpr() { return !isWidth(); }
   bool isWidth() { return width != Expr::InvalidWidth; }
 };
@@ -371,14 +372,14 @@ public:
 
 public:
   unsigned getNumKids() const { return 2; }
-  ref<Expr> getKid(unsigned i) const { 
-    if(i == 0)
+  ref<Expr> getKid(unsigned i) const {
+    if (i == 0)
       return left;
-    if(i == 1)
+    if (i == 1)
       return right;
-    return 0;
+    return nullptr;
   }
- 
+
 protected:
   BinaryExpr(const ref<Expr> &l, const ref<Expr> &r) : left(l), right(r) {}
 
@@ -500,11 +501,8 @@ public:
 private:
   unsigned hashValue;
 
-  // FIXME: Make =delete when we switch to C++11
-  Array(const Array& array);
-
-  // FIXME: Make =delete when we switch to C++11
-  Array& operator =(const Array& array);
+  Array(const Array &array) = delete;
+  Array &operator=(const Array &array) = delete;
 
   ~Array();
 
@@ -516,8 +514,8 @@ private:
   /// not parse correctly since two arrays with the same name cannot be
   /// distinguished once printed.
   Array(const std::string &_name, uint64_t _size,
-        const ref<ConstantExpr> *constantValuesBegin = 0,
-        const ref<ConstantExpr> *constantValuesEnd = 0,
+        const ref<ConstantExpr> *constantValuesBegin = nullptr,
+        const ref<ConstantExpr> *constantValuesEnd = nullptr,
         Expr::Width _domain = Expr::Int32, Expr::Width _range = Expr::Int8);
 
 public:
@@ -584,8 +582,8 @@ public:
   Kind getKind() const { return Read; }
   
   unsigned getNumKids() const { return numKids; }
-  ref<Expr> getKid(unsigned i) const { return !i ? index : 0; }
-  
+  ref<Expr> getKid(unsigned i) const { return !i ? index : nullptr; }
+
   int compareContents(const Expr &b) const;
 
   virtual ref<Expr> rebuild(ref<Expr> kids[]) const {
@@ -629,14 +627,18 @@ public:
   Kind getKind() const { return Select; }
 
   unsigned getNumKids() const { return numKids; }
-  ref<Expr> getKid(unsigned i) const { 
-        switch(i) {
-        case 0: return cond;
-        case 1: return trueExpr;
-        case 2: return falseExpr;
-        default: return 0;
-        }
-   }
+  ref<Expr> getKid(unsigned i) const {
+    switch (i) {
+    case 0:
+      return cond;
+    case 1:
+      return trueExpr;
+    case 2:
+      return falseExpr;
+    default:
+      return nullptr;
+    }
+  }
 
   static bool isValidKidWidth(unsigned kid, Width w) {
     if (kid == 0)
@@ -694,10 +696,13 @@ public:
   ref<Expr> getRight() const { return right; }
 
   unsigned getNumKids() const { return numKids; }
-  ref<Expr> getKid(unsigned i) const { 
-    if (i == 0) return left; 
-    else if (i == 1) return right;
-    else return NULL;
+  ref<Expr> getKid(unsigned i) const {
+    if (i == 0)
+      return left;
+    else if (i == 1)
+      return right;
+    else
+      return nullptr;
   }
 
   /// Shortcuts to create larger concats.  The chain returned is unbalanced to the right
@@ -849,8 +854,8 @@ public:
   Width getWidth() const { return width; }
 
   unsigned getNumKids() const { return 1; }
-  ref<Expr> getKid(unsigned i) const { return (i==0) ? src : 0; }
-  
+  ref<Expr> getKid(unsigned i) const { return i == 0 ? src : nullptr; }
+
   static bool needsResultType() { return true; }
   
   int compareContents(const Expr &b) const {
@@ -1010,7 +1015,7 @@ public:
   Kind getKind() const { return Constant; }
 
   unsigned getNumKids() const { return 0; }
-  ref<Expr> getKid(unsigned i) const { return 0; }
+  ref<Expr> getKid(unsigned i) const { return nullptr; }
 
   /// getAPValue - Return the arbitrary precision value directly.
   ///
