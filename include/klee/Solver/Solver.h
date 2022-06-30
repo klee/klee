@@ -221,7 +221,7 @@ namespace klee {
   ///
   /// \param s - The primary underlying solver to use.
   /// \param oracle - The solver to check query results against.
-  Solver *createValidatingSolver(Solver *s, Solver *oracle);
+  Solver *createValidatingSolver(Solver *s, Solver *oracle, bool ownsOracle = false);
 
   /// createAssignmentValidatingSolver - Create a solver that when requested
   /// for an assignment will check that the computed assignment satisfies
