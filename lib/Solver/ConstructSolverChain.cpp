@@ -71,7 +71,7 @@ Solver *constructSolverChain(Solver *coreSolver,
   }
   if (DebugCrossCheckCoreSolverWith != NO_SOLVER) {
     Solver *oracleSolver = createCoreSolver(DebugCrossCheckCoreSolverWith);
-    solver = createValidatingSolver(/*s=*/solver, /*oracle=*/oracleSolver);
+    solver = createValidatingSolver(solver, oracleSolver, true);
   }
 
   return solver;

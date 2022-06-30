@@ -18,18 +18,24 @@ namespace klee {
 class ValidatingSolver : public SolverImpl {
 private:
   Solver *solver, *oracle;
+  bool ownsOracle;
 
 public:
-  ValidatingSolver(Solver *_solver, Solver *_oracle)
-      : solver(_solver), oracle(_oracle) {}
-  ~ValidatingSolver() { delete solver; }
+  ValidatingSolver(Solver *solver, Solver *oracle, bool ownsOracle = false)
+      : solver(solver), oracle(oracle), ownsOracle(ownsOracle) {}
+  ~ValidatingSolver() {
+    delete solver;
+    if (ownsOracle) {
+      delete oracle;
+    }
+  }
 
   bool computeValidity(const Query &, Solver::Validity &result);
   bool computeTruth(const Query &, bool &isValid);
   bool computeValue(const Query &, ref<Expr> &result);
   bool computeInitialValues(const Query &,
                             const std::vector<const Array *> &objects,
-                            std::vector<std::vector<unsigned char> > &values,
+                            std::vector<std::vector<unsigned char>> &values,
                             bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query &);
@@ -136,7 +142,7 @@ void ValidatingSolver::setCoreSolverTimeout(time::Span timeout) {
   solver->impl->setCoreSolverTimeout(timeout);
 }
 
-Solver *createValidatingSolver(Solver *s, Solver *oracle) {
-  return new Solver(new ValidatingSolver(s, oracle));
+Solver *createValidatingSolver(Solver *s, Solver *oracle, bool ownsOracle) {
+  return new Solver(new ValidatingSolver(s, oracle, ownsOracle));
 }
 }
