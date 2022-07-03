@@ -34,9 +34,7 @@ UBSAN_CHECK(NullptrAfterNonZeroOffset, "nullptr-after-nonzero-offset",
 #endif
 UBSAN_CHECK(PointerOverflow, "pointer-overflow", "pointer-overflow")
 UBSAN_CHECK(MisalignedPointerUse, "misaligned-pointer-use", "alignment")
-#if LLVM_VERSION_MAJOR >= 8
 UBSAN_CHECK(AlignmentAssumption, "alignment-assumption", "alignment")
-#endif
 UBSAN_CHECK(InsufficientObjectSize, "insufficient-object-size", "object-size")
 UBSAN_CHECK(SignedIntegerOverflow, "signed-integer-overflow",
             "signed-integer-overflow")
@@ -49,25 +47,18 @@ UBSAN_CHECK(InvalidBuiltin, "invalid-builtin-use", "invalid-builtin-use")
 #if LLVM_VERSION_MAJOR >= 11
 UBSAN_CHECK(InvalidObjCCast, "invalid-objc-cast", "invalid-objc-cast")
 #endif
-#if LLVM_VERSION_MAJOR >= 8
 UBSAN_CHECK(ImplicitUnsignedIntegerTruncation,
             "implicit-unsigned-integer-truncation",
             "implicit-unsigned-integer-truncation")
 UBSAN_CHECK(ImplicitSignedIntegerTruncation,
             "implicit-signed-integer-truncation",
             "implicit-signed-integer-truncation")
-#elif LLVM_VERSION_MAJOR >= 7
-UBSAN_CHECK(ImplicitIntegerTruncation, "implicit-integer-truncation",
-            "implicit-integer-truncation")
-#endif
-#if LLVM_VERSION_MAJOR >= 8
 UBSAN_CHECK(ImplicitIntegerSignChange,
             "implicit-integer-sign-change",
             "implicit-integer-sign-change")
 UBSAN_CHECK(ImplicitSignedIntegerTruncationOrSignChange,
             "implicit-signed-integer-truncation-or-sign-change",
             "implicit-signed-integer-truncation,implicit-integer-sign-change")
-#endif
 UBSAN_CHECK(InvalidShiftBase, "invalid-shift-base", "shift-base")
 UBSAN_CHECK(InvalidShiftExponent, "invalid-shift-exponent", "shift-exponent")
 UBSAN_CHECK(OutOfBoundsIndex, "out-of-bounds-index", "bounds")
