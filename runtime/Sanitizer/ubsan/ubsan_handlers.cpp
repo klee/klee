@@ -50,9 +50,7 @@ static const char *get_suffix(ErrorType ET) {
 #endif
   case ErrorType::PointerOverflow:
   case ErrorType::MisalignedPointerUse:
-#if LLVM_VERSION_MAJOR >= 8
   case ErrorType::AlignmentAssumption:
-#endif
     return "ptr.err";
   case ErrorType::InsufficientObjectSize:
     return "undefined_behavior.err";
@@ -68,19 +66,12 @@ static const char *get_suffix(ErrorType ET) {
   case ErrorType::InvalidObjCCast:
     return "undefined_behavior.err";
 #endif
-#if LLVM_VERSION_MAJOR >= 8
   case ErrorType::ImplicitUnsignedIntegerTruncation:
   case ErrorType::ImplicitSignedIntegerTruncation:
     return "implicit_conversion.err";
-#elif LLVM_VERSION_MAJOR >= 7
-  case ErrorType::ImplicitIntegerTruncation:
-    return "implicit_conversion.err";
-#endif
-#if LLVM_VERSION_MAJOR >= 8
   case ErrorType::ImplicitIntegerSignChange:
   case ErrorType::ImplicitSignedIntegerTruncationOrSignChange:
     return "implicit_conversion.err";
-#endif
   case ErrorType::InvalidShiftBase:
   case ErrorType::InvalidShiftExponent:
     return "overflow.err";
@@ -194,7 +185,6 @@ extern "C" void __ubsan_handle_type_mismatch_v1_abort(TypeMismatchData *Data,
   handleTypeMismatchImpl(Data, Pointer);
 }
 
-#if LLVM_VERSION_MAJOR >= 8
 static void handleAlignmentAssumptionImpl(AlignmentAssumptionData * /*Data*/,
                                           ValueHandle /*Pointer*/,
                                           ValueHandle /*Alignment*/,
@@ -215,7 +205,6 @@ extern "C" void __ubsan_handle_alignment_assumption_abort(
     ValueHandle Offset) {
   handleAlignmentAssumptionImpl(Data, Pointer, Alignment, Offset);
 }
-#endif
 
 /// \brief Common diagnostic emission for various forms of integer overflow.
 static void handleIntegerOverflowImpl(OverflowData *Data, ValueHandle /*LHS*/,
@@ -376,12 +365,10 @@ extern "C" void __ubsan_handle_load_invalid_value_abort(InvalidValueData *Data,
   handleLoadInvalidValue(Data, Val);
 }
 
-#if LLVM_VERSION_MAJOR >= 7
 static void handleImplicitConversion(ImplicitConversionData *Data,
                                      ValueHandle /*Src*/, ValueHandle /*Dst*/) {
   ErrorType ET = ErrorType::GenericUB;
 
-#if LLVM_VERSION_MAJOR >= 8
   const TypeDescriptor &SrcTy = Data->FromType;
   const TypeDescriptor &DstTy = Data->ToType;
 
@@ -413,13 +400,6 @@ static void handleImplicitConversion(ImplicitConversionData *Data,
     ET = ErrorType::ImplicitSignedIntegerTruncationOrSignChange;
     break;
   }
-#else
-  switch (Data->Kind) {
-  case ICCK_IntegerTruncation:
-    ET = ErrorType::ImplicitIntegerTruncation;
-    break;
-  }
-#endif
   report_error_type(ET);
 }
 
@@ -434,7 +414,6 @@ __ubsan_handle_implicit_conversion_abort(ImplicitConversionData *Data,
                                          ValueHandle Src, ValueHandle Dst) {
   handleImplicitConversion(Data, Src, Dst);
 }
-#endif
 
 static void handleInvalidBuiltin(InvalidBuiltinData * /*Data*/) {
   ErrorType ET = ErrorType::InvalidBuiltin;

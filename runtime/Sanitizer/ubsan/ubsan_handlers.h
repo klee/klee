@@ -25,13 +25,11 @@ struct TypeMismatchData {
   unsigned char TypeCheckKind;
 };
 
-#if LLVM_VERSION_MAJOR >= 8
 struct AlignmentAssumptionData {
   SourceLocation Loc;
   SourceLocation AssumptionLoc;
   const TypeDescriptor &Type;
 };
-#endif
 
 struct OverflowData {
   SourceLocation Loc;
@@ -64,7 +62,6 @@ struct InvalidValueData {
   const TypeDescriptor &Type;
 };
 
-#if LLVM_VERSION_MAJOR >= 7
 /// Known implicit conversion check kinds.
 /// Keep in sync with the enum of the same name in CGExprScalar.cpp
 enum ImplicitConversionCheckKind : unsigned char {
@@ -74,16 +71,13 @@ enum ImplicitConversionCheckKind : unsigned char {
   ICCK_IntegerSignChange = 3,
   ICCK_SignedIntegerTruncationOrSignChange = 4,
 };
-#endif
 
-#if LLVM_VERSION_MAJOR >= 7
 struct ImplicitConversionData {
   SourceLocation Loc;
   const TypeDescriptor &FromType;
   const TypeDescriptor &ToType;
   /* ImplicitConversionCheckKind */ unsigned char Kind;
 };
-#endif
 
 struct InvalidBuiltinData {
   SourceLocation Loc;
