@@ -290,12 +290,24 @@ cl::list<StateTerminationType> ExitOnErrorType(
                    "Write to read-only memory"),
         clEnumValN(StateTerminationType::ReportError, "ReportError",
                    "klee_report_error called"),
+        clEnumValN(StateTerminationType::InvalidBuiltin, "InvalidBuiltin",
+                   "Passing invalid value to compiler builtin"),
+        clEnumValN(StateTerminationType::ImplicitTruncation, "ImplicitTruncation",
+                   "Implicit conversion from integer of larger bit width to "
+                   "smaller bit width that results in data loss"),
         clEnumValN(StateTerminationType::ImplicitConversion, "ImplicitConversion",
-                   "Undefined implicit conversion detected"),
+                   "Implicit conversion between integer types that changes the "
+                   "sign of the value"),
+        clEnumValN(StateTerminationType::UnreachableCall, "UnreachableCall",
+                   "Control flow reached an unreachable program point"),
+        clEnumValN(StateTerminationType::MissingReturn, "MissingReturn",
+                   "Reaching the end of a value-returning function without "
+                   "returning a value"),
+        clEnumValN(StateTerminationType::InvalidLoad, "InvalidLoad",
+                   "Load of a value which is not in the range of representable "
+                   "values for that type"),
         clEnumValN(StateTerminationType::NullableAttribute, "NullableAttribute",
                    "Violation of nullable attribute detected"),
-        clEnumValN(StateTerminationType::UndefinedBehavior, "UndefinedBehavior",
-                   "Undefined behavior detected"),
         clEnumValN(StateTerminationType::User, "User",
                    "Wrong klee_* functions invocation")),
     cl::ZeroOrMore,
