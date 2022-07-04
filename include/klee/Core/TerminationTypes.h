@@ -32,19 +32,23 @@
   TTYPE(Ptr, 16U, "ptr.err")                                                   \
   TTYPE(ReadOnly, 17U, "read_only.err")                                        \
   TTYPE(ReportError, 18U, "report_error.err")                                  \
-  TTYPE(ImplicitConversion, 19U, "implicit_conversion.err")                    \
-  TTYPE(NullableAttribute, 20U, "nullable_attribute.err")                      \
-  TTYPE(UndefinedBehavior, 21U, "undefined_behavior.err")                      \
-  MARK(PROGERR, 21U)                                                           \
-  TTYPE(User, 23U, "user.err")                                                 \
-  MARK(USERERR, 23U)                                                           \
-  TTYPE(Execution, 25U, "exec.err")                                            \
-  TTYPE(External, 26U, "external.err")                                         \
-  MARK(EXECERR, 26U)                                                           \
-  TTYPE(Replay, 27U, "")                                                       \
-  TTYPE(Merge, 28U, "")                                                        \
-  TTYPE(SilentExit, 29U, "")                                                   \
-  MARK(END, 29U)
+  TTYPE(InvalidBuiltin, 19U, "invalid_builtin_use.err")                        \
+  TTYPE(ImplicitTruncation, 20U, "implicit_truncation.err")                    \
+  TTYPE(ImplicitConversion, 21U, "implicit_conversion.err")                    \
+  TTYPE(UnreachableCall, 22U, "unreachable_call.err")                          \
+  TTYPE(MissingReturn, 23U, "missing_return.err")                              \
+  TTYPE(InvalidLoad, 24U, "invalid_load.err")                                  \
+  TTYPE(NullableAttribute, 25U, "nullable_attribute.err")                      \
+  MARK(PROGERR, 25U)                                                           \
+  TTYPE(User, 33U, "user.err")                                                 \
+  MARK(USERERR, 33U)                                                           \
+  TTYPE(Execution, 35U, "exec.err")                                            \
+  TTYPE(External, 36U, "external.err")                                         \
+  MARK(EXECERR, 36U)                                                           \
+  TTYPE(Replay, 37U, "")                                                       \
+  TTYPE(Merge, 38U, "")                                                        \
+  TTYPE(SilentExit, 39U, "")                                                   \
+  MARK(END, 39U)
 
 ///@brief Reason an ExecutionState got terminated.
 enum class StateTerminationType : std::uint8_t {

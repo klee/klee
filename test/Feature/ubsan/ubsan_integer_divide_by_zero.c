@@ -6,15 +6,9 @@
 
 #include "klee/klee.h"
 
-#if defined(__SIZEOF_INT128__) && !defined(_WIN32)
-typedef __int128 intmax;
-#else
-typedef long long intmax;
-#endif
-
 int main() {
-  intmax x;
-  volatile intmax result;
+  int x;
+  volatile int result;
 
   klee_make_symbolic(&x, sizeof(x), "x");
 

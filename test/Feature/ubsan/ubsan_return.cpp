@@ -2,7 +2,7 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --emit-all-errors --ubsan-runtime %t.bc 2>&1 | FileCheck %s
 // RUN: ls %t.klee-out/ | grep .ktest | wc -l | grep 1
-// RUN: ls %t.klee-out/ | grep .undefined_behavior.err | wc -l | grep 1
+// RUN: ls %t.klee-out/ | grep .missing_return.err | wc -l | grep 1
 
 #include "klee/klee.h"
 

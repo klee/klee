@@ -27,18 +27,20 @@ static const char *ConvertTypeToString(ErrorType Type) {
 #include "ubsan_checks.inc"
 #undef UBSAN_CHECK
   }
-  //  UNREACHABLE("unknown ErrorType!");
 }
 
 __attribute__((noreturn)) static void report_error(const char *msg,
                                                    const char *suffix) {
-    klee_report_error(__FILE__, __LINE__, msg, suffix);
+  klee_report_error(__FILE__, __LINE__, msg, suffix);
 }
 
 static const char *get_suffix(ErrorType ET) {
   switch (ET) {
   case ErrorType::GenericUB:
-    return "undefined_behavior.err";
+    // This ErrorType is only used in actual LLVM runtime
+    // when `report_error_type` environment option is set to false.
+    // It should never happen in KLEE runtime.
+    return "exec.err";
   case ErrorType::NullPointerUse:
 #if LLVM_VERSION_MAJOR >= 11
   case ErrorType::NullPointerUseWithNullability:
@@ -53,7 +55,9 @@ static const char *get_suffix(ErrorType ET) {
   case ErrorType::AlignmentAssumption:
     return "ptr.err";
   case ErrorType::InsufficientObjectSize:
-    return "undefined_behavior.err";
+    // Convenient test has not been found in LLVM sources and therefore not been
+    // added.
+    return "ptr.err";
   case ErrorType::SignedIntegerOverflow:
   case ErrorType::UnsignedIntegerOverflow:
     return "overflow.err";
@@ -61,14 +65,16 @@ static const char *get_suffix(ErrorType ET) {
   case ErrorType::FloatDivideByZero:
     return "div.err";
   case ErrorType::InvalidBuiltin:
-    return "undefined_behavior.err";
+    return "invalid_builtin_use.err";
 #if LLVM_VERSION_MAJOR >= 11
   case ErrorType::InvalidObjCCast:
-    return "undefined_behavior.err";
+    // Option `fsanitize=objc-cast` is not supported due to the requirement for
+    // Darwin system.
+    return "exec.err";
 #endif
   case ErrorType::ImplicitUnsignedIntegerTruncation:
   case ErrorType::ImplicitSignedIntegerTruncation:
-    return "implicit_conversion.err";
+    return "implicit_truncation.err";
   case ErrorType::ImplicitIntegerSignChange:
   case ErrorType::ImplicitSignedIntegerTruncationOrSignChange:
     return "implicit_conversion.err";
@@ -78,17 +84,16 @@ static const char *get_suffix(ErrorType ET) {
   case ErrorType::OutOfBoundsIndex:
     return "ptr.err";
   case ErrorType::UnreachableCall:
-    return "undefined_behavior.err";
+    return "unreachable_call.err";
   case ErrorType::MissingReturn:
-    return "undefined_behavior.err";
+    return "missing_return.err";
   case ErrorType::NonPositiveVLAIndex:
     return "ptr.err";
   case ErrorType::FloatCastOverflow:
     return "overflow.err";
   case ErrorType::InvalidBoolLoad:
-    return "undefined_behavior.err";
   case ErrorType::InvalidEnumLoad:
-    return "undefined_behavior.err";
+    return "invalid_load.err";
   case ErrorType::FunctionTypeMismatch:
     // This check is unsupported
     return "exec.err";
@@ -114,6 +119,7 @@ __attribute__((noreturn)) static void report_error_type(ErrorType ET) {
   report_error(ConvertTypeToString(ET), get_suffix(ET));
 }
 
+#if LLVM_VERSION_MAJOR >= 11
 /// Situations in which we might emit a check for the suitability of a
 /// pointer or glvalue. Needs to be kept in sync with CodeGenFunction.h in
 /// clang.
@@ -152,6 +158,7 @@ enum TypeCheckKind {
   /// null or an object within its lifetime.
   TCK_DynamicOperation
 };
+#endif
 
 static void handleTypeMismatchImpl(TypeMismatchData *Data,
                                    ValueHandle Pointer) {
@@ -248,12 +255,12 @@ extern "C" void __ubsan_handle_negate_overflow_abort(OverflowData *Data,
 
 static void handleDivremOverflowImpl(OverflowData *Data, ValueHandle /*LHS*/,
                                      ValueHandle /*RHS*/) {
-  ErrorType ET;
   if (Data->Type.isIntegerTy())
     report_error("integer division overflow", "overflow.err");
-  else
-    ET = ErrorType::FloatDivideByZero;
-  report_error_type(ET);
+  else {
+    ErrorType ET = ErrorType::FloatDivideByZero;
+    report_error_type(ET);
+  }
 }
 
 extern "C" void __ubsan_handle_divrem_overflow(OverflowData *Data,
@@ -353,7 +360,7 @@ extern "C" void __ubsan_handle_float_cast_overflow_abort(void *Data,
 
 static void handleLoadInvalidValue(InvalidValueData * /*Data*/,
                                    ValueHandle /*Val*/) {
-  report_error("load invalid value", "undefined_behavior.err");
+  report_error("load invalid value", "invalid_load.err");
 }
 
 extern "C" void __ubsan_handle_load_invalid_value(InvalidValueData *Data,
