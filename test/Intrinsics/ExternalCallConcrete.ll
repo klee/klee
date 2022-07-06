@@ -42,19 +42,10 @@
 ; the last path it explores.
 
 declare float @llvm.minnum.f32(float, float)
-declare void @abort() noreturn nounwind
 
 define void @dead() {
   %x = call float @llvm.minnum.f32(float 1.0, float 2.0)
-  %c = fcmp oeq float %x, 1.000000e+00
-  br i1 %c, label %exit.block, label %abort.block
-
-  exit.block:
-    ret void
-
-  abort.block:
-    call void @abort()
-    unreachable
+  ret void
 }
 
 declare void @klee_make_symbolic(i8*, i64, i8*)
