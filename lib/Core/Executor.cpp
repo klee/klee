@@ -1909,9 +1909,15 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       // FIXME: It would be nice to check for errors in the usage of this as
       // well.
     default:
-      klee_warning("unimplemented intrinsic: %s", f->getName().data());
-      terminateStateOnExecError(state, "unimplemented intrinsic");
-      return;
+      if (ExternalCalls != ExternalCallPolicy::None) {
+        KIntrinsic callable(f);
+        callExternalFunction(state, ki, &callable, arguments);
+        return;
+      } else {
+        klee_warning("unimplemented intrinsic: %s", f->getName().data());
+        terminateStateOnExecError(state, "unimplemented intrinsic");
+        return;
+      }
     }
 
     if (InvokeInst *ii = dyn_cast<InvokeInst>(i)) {

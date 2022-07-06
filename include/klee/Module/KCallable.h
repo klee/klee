@@ -25,7 +25,7 @@ namespace klee {
 /// Wrapper for callable objects passed in callExternalFunction
 class KCallable {
 public:
-  enum CallableKind { CK_Function, CK_InlineAsm };
+  enum CallableKind { CK_Function, CK_InlineAsm, CK_Intrinsic };
 
 private:
   const CallableKind Kind;
@@ -37,7 +37,7 @@ public:
 
   virtual llvm::StringRef getName() const = 0;
   virtual llvm::FunctionType *getFunctionType() const = 0;
-  virtual llvm::Value *getValue() = 0;
+  virtual llvm::Value *getValue() const = 0;
 
   virtual ~KCallable() = default;
 };
@@ -63,13 +63,33 @@ public:
     return value->getFunctionType();
   }
 
-  llvm::Value *getValue() override { return value; }
+  llvm::Value *getValue() const override { return value; }
 
   static bool classof(const KCallable *callable) {
     return callable->getKind() == CK_InlineAsm;
   }
 
   llvm::InlineAsm *getInlineAsm() { return value; }
+};
+
+class KIntrinsic : public KCallable {
+  llvm::Function *value;
+
+public:
+  explicit KIntrinsic(llvm::Function *value)
+      : KCallable(CK_Intrinsic), value(value) {}
+
+  llvm::StringRef getName() const override { return value->getName(); }
+
+  llvm::PointerType *getType() const override { return value->getType(); }
+
+  llvm::Value *getValue() const override { return value; }
+
+  static bool classof(const KCallable *callable) {
+    return callable->getKind() == CK_Intrinsic;
+  }
+
+  llvm::Function *getFunction() { return value; }
 };
 
 } // namespace klee

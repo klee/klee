@@ -68,7 +68,7 @@ namespace klee {
       return function->getFunctionType();
     }
 
-    llvm::Value *getValue() override { return function; }
+    llvm::Value *getValue() const override { return function; }
 
     static bool classof(const KCallable *callable) {
       return callable->getKind() == CK_Function;
