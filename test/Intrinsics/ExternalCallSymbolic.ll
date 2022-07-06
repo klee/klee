@@ -1,8 +1,9 @@
-; RUN: %llvmas %s -o=%t.bc
+; RUN: %llvmas %s -o=%t1.bc
+; RUN: %llvmas %s -o=%t2.bc
 ; RUN: rm -rf %t1.klee-out
 ; RUN: rm -rf %t2.klee-out
-; RUN: %klee --external-calls=concrete --output-dir=%t1.klee-out --optimize=false %t.bc 2>&1 | FileCheck %s -check-prefix=CHECK-EXTERNAL-CONCRETE --check-prefix=CHECK
-; RUN: %klee --external-calls=all -exit-on-error --output-dir=%t2.klee-out --optimize=false %t.bc 2>&1 | FileCheck %s -check-prefix=CHECK-EXTERNAL-ALL --check-prefix=CHECK
+; RUN: %klee --external-calls=concrete --output-dir=%t1.klee-out --optimize=false %t1.bc 2>&1 | FileCheck %s -check-prefix=CHECK-EXTERNAL-CONCRETE --check-prefix=CHECK
+; RUN: %klee --external-calls=all -exit-on-error --output-dir=%t2.klee-out --optimize=false %t2.bc 2>&1 | FileCheck %s -check-prefix=CHECK-EXTERNAL-ALL --check-prefix=CHECK
 
 ; Check that IntrinsicCleaner notices missing intrinsic
 ; CHECK: KLEE: WARNING ONCE: unsupported intrinsic llvm.minnum.f32
