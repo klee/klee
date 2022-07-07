@@ -15,11 +15,12 @@
 ; Check that Executor doesn't calls missing intrinsic as external
 ; when only external function calls with concrete arguments are allowed
 ; CHECK-EXTERNAL-CONCRETE: KLEE: ERROR: (location information missing) external call with symbolic argument: llvm.minnum.f32
+; CHECK-EXTERNAL-CONCRETE: KLEE: ERROR: (location information missing) external call with symbolic argument: llvm.minnum.f32
 
 ; Check that Executor explores all paths
 ; CHECK-EXTERNAL-CONCRETE: KLEE: done: completed paths = 1
 ; CHECK-EXTERNAL-CONCRETE: KLEE: done: partially completed paths = 2
-; CHECK-EXTERNAL-CONCRETE: KLEE: done: generated tests = 2
+; CHECK-EXTERNAL-CONCRETE: KLEE: done: generated tests = 3
 
 
 ; Check that Executor calls missing intrinsic as external

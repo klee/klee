@@ -73,13 +73,22 @@ public:
 };
 
 class KIntrinsic : public KCallable {
+private:
+  static unsigned getFreshIntrinsicId() {
+    static unsigned globalId = 0;
+    return globalId++;
+  }
+
   llvm::Function *value;
+  std::string name;
 
 public:
   explicit KIntrinsic(llvm::Function *value)
-      : KCallable(CK_Intrinsic), value(value) {}
+      : KCallable(CK_Intrinsic), value(value),
+        name(value->getName().str() + "_" +
+             llvm::Twine(getFreshIntrinsicId()).str()) {}
 
-  llvm::StringRef getName() const override { return value->getName(); }
+  llvm::StringRef getName() const override { return name; }
 
   llvm::PointerType *getType() const override { return value->getType(); }
 
