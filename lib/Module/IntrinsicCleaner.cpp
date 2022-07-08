@@ -349,6 +349,9 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       case Intrinsic::exp2:
       case Intrinsic::exp:
       case Intrinsic::expect:
+#if LLVM_VERSION_CODE >= LLVM_VERSION(12, 0)
+      case Intrinsic::experimental_noalias_scope_decl:
+#endif
       case Intrinsic::floor:
       case Intrinsic::flt_rounds:
       case Intrinsic::frameaddress:
