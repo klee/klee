@@ -7,7 +7,7 @@
 #include "klee/klee.h"
 
 __attribute__((returns_nonnull)) char *foo(char *a) {
-  // CHECK: runtime/Sanitizer/ubsan/ubsan_handlers.cpp:35: invalid-null-return
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: invalid-null-return
   return a;
 }
 

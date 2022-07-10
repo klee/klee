@@ -12,7 +12,7 @@ int main() {
 
   klee_make_symbolic(&x, sizeof(x), "x");
 
-  // CHECK: runtime/Sanitizer/ubsan/ubsan_handlers.cpp:35: integer division overflow
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: integer division overflow
   result = x / 0;
   return 0;
 }

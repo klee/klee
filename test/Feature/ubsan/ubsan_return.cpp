@@ -7,7 +7,7 @@
 #include "klee/klee.h"
 
 int no_return() {
-  // CHECK: runtime/Sanitizer/ubsan/ubsan_handlers.cpp:35: missing-return
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: missing-return
 }
 
 int main() {

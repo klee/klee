@@ -15,7 +15,7 @@ int main() {
   int local = 0;
   int *arg = null ? 0x0 : &local;
 
-  // CHECK: runtime/Sanitizer/ubsan/ubsan_handlers.cpp:35: null-pointer-use
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: null-pointer-use
   result = *arg;
   return 0;
 }

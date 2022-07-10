@@ -13,7 +13,7 @@
 #include "klee/klee.h"
 
 int lsh_overflow(signed int a, signed int b) {
-  // CHECK: runtime/Sanitizer/ubsan/ubsan_handlers.cpp:35: shift out of bounds
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: shift out of bounds
   return a << b;
 }
 

@@ -14,7 +14,7 @@ int main() {
   char c[] __attribute__((aligned(8))) = {0, 0, 0, 0, 1, 2, 3, 4, 5};
   int *p = (int *)&c[x];
 
-  // CHECK: runtime/Sanitizer/ubsan/ubsan_handlers.cpp:35: misaligned-pointer-use
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: misaligned-pointer-use
   result = *p;
   return 0;
 }

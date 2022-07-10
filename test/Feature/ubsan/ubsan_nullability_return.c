@@ -7,7 +7,7 @@
 #include "klee/klee.h"
 
 int *_Nonnull nonnull_retval(int *p) {
-  // CHECK: runtime/Sanitizer/ubsan/ubsan_handlers.cpp:35: invalid-null-return
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: invalid-null-return
   return p;
 }
 

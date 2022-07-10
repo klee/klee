@@ -18,7 +18,7 @@ int main() {
 
   char *ptr = (char *)address;
 
-  // CHECK: runtime/Sanitizer/ubsan/ubsan_handlers.cpp:35: nullptr-with-offset
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: nullptr-with-offset
   result = ptr + 0;
   return 0;
 }

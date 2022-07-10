@@ -14,16 +14,16 @@ int main() {
   klee_make_symbolic(&x, sizeof(x), "x");
   klee_make_symbolic(&y, sizeof(y), "y");
 
-  // CHECK: runtime/Sanitizer/ubsan/ubsan_handlers.cpp:35: unsigned-integer-overflow
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: unsigned-integer-overflow
   result = x + y;
 
-  // CHECK: runtime/Sanitizer/ubsan/ubsan_handlers.cpp:35: unsigned-integer-overflow
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: unsigned-integer-overflow
   result = x - y;
 
-  // CHECK: runtime/Sanitizer/ubsan/ubsan_handlers.cpp:35: unsigned-integer-overflow
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: unsigned-integer-overflow
   result = x * y;
 
-  // CHECK: runtime/Sanitizer/ubsan/ubsan_handlers.cpp:35: unsigned-integer-overflow
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: unsigned-integer-overflow
   result = -x;
 
   return 0;
