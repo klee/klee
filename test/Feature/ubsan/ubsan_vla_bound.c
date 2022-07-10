@@ -13,7 +13,7 @@ int main() {
 
   x = klee_range(-10, 10, "x");
 
-  // CHECK: runtime/Sanitizer/ubsan/ubsan_handlers.cpp:35: non-positive-vla-index
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: non-positive-vla-index
   int arr[x];
   result = arr[0];
   return 0;
