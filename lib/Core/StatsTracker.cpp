@@ -103,6 +103,13 @@ cl::opt<unsigned> IStatsWriteAfterInstructions(
         "Write istats after each n instructions, 0 to disable (default=0)"),
     cl::cat(StatsCat));
 
+cl::opt<std::string> BCovCheckInterval(
+    "bcov-check-interval",
+    cl::desc("Check klee for branch coverage progress. "
+             "Halt if none was made in the last time interval. "
+             "Set to 0s to disable (default=0s)"),
+    cl::init("0s"), cl::cat(StatsCat));
+
 // XXX I really would like to have dynamic rate control for something like this.
 cl::opt<std::string> UncoveredUpdateInterval(
     "uncovered-update-interval", cl::init("30s"),
@@ -163,7 +170,8 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
                            bool _updateMinDistToUncovered)
     : executor(_executor), objectFilename(_objectFilename),
       startWallTime(time::getWallTime()), numBranches(0), fullBranches(0),
-      partialBranches(0), updateMinDistToUncovered(_updateMinDistToUncovered) {
+      partialBranches(0), totalBranches(0),
+      updateMinDistToUncovered(_updateMinDistToUncovered) {
 
   const time::Span statsWriteInterval(StatsWriteInterval);
   if (StatsWriteAfterInstructions > 0 && statsWriteInterval)
@@ -177,6 +185,8 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
         "Both options --istats-write-interval and "
         "--istats-write-after-instructions cannot be enabled at the same "
         "time.");
+
+  const time::Span bCovCheckInterval{BCovCheckInterval};
 
   KModule *km = executor.kmodule.get();
   if (CommitEvery > 0) {
@@ -287,6 +297,18 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
     executor.timers.add(
         std::make_unique<Timer>(time::Span{UncoveredUpdateInterval},
                                 [&] { computeReachableUncovered(); }));
+  }
+
+  if (bCovCheckInterval) {
+    executor.timers.add(std::make_unique<Timer>(bCovCheckInterval, [&] {
+      if ((2 * fullBranches + partialBranches) > totalBranches) {
+        totalBranches = 2 * fullBranches + partialBranches;
+      } else {
+        klee_message(
+            "HaltTimer invoked due to absense of progress in branch coverage");
+        executor.setHaltExecution(true);
+      }
+    }));
   }
 
   if (OutputIStats) {

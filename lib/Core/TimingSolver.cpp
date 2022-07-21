@@ -263,9 +263,10 @@ bool TimingSolver::getValidityCore(const ConstraintSet &constraints,
 
 std::pair<ref<Expr>, ref<Expr>>
 TimingSolver::getRange(const ConstraintSet &constraints, ref<Expr> expr,
-                       SolverQueryMetaData &metaData) {
+                       SolverQueryMetaData &metaData, time::Span timeout) {
   TimerStatIncrementer timer(stats::solverTime);
-  auto result = solver->getRange(Query(constraints, expr));
+  auto query = Query(constraints, expr);
+  auto result = solver->getRange(query, timeout);
   metaData.queryCost += timer.delta();
   return result;
 }
