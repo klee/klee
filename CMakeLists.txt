@@ -733,6 +733,11 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(KLEE_UTILS_DIR ${CMAKE_SOURCE_DIR}/utils)
 
+################################################################################
+# Set install destination paths for targets
+################################################################################
+set(RUN_KLEE_MAIN_LIB_DEST "lib/run_klee")
+set(RUN_KLEE_LIB_DEST "${RUN_KLEE_MAIN_LIB_DEST}/${CMAKE_BUILD_TYPE}")
 
 ################################################################################
 # Report the value of various variables to aid debugging
@@ -829,7 +834,20 @@ endif()
 ################################################################################
 # Miscellaneous install
 ################################################################################
-install(FILES include/klee/klee.h DESTINATION include/klee)
+install(FILES include/klee/klee.h include/klee/ADT/KTest.h DESTINATION include/klee)
+INSTALL(FILES lib/Core/Executor.h DESTINATION include/klee/Core)
+INSTALL(DIRECTORY include/klee/Expr DESTINATION include/klee)
+INSTALL(DIRECTORY include/klee/Module DESTINATION include/klee)
+INSTALL(DIRECTORY include/klee/Statistics DESTINATION include/klee)
+INSTALL(DIRECTORY include/klee/Support DESTINATION include/klee)
+
+install(EXPORT run_klee
+        DESTINATION "${RUN_KLEE_LIB_DEST}"
+        )
+
+install(FILES cmake/run_klee-config.cmake
+        DESTINATION "${RUN_KLEE_MAIN_LIB_DEST}"
+        )
 
 ################################################################################
 # Uninstall rule

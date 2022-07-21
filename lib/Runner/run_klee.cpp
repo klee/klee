@@ -1,3 +1,5 @@
+#include "klee/Runner/run_klee.h"
+
 /* -*- mode: c++; c-basic-offset: 2; -*- */
 
 //===-- main.cpp ------------------------------------------------*- C++ -*-===//
@@ -1124,7 +1126,7 @@ linkWithUclibc(StringRef libDir, std::string opt_suffix,
 }
 #endif
 
-int main(int argc, char **argv, char **envp) {
+int run_klee(int argc, char **argv, char **envp) {
   atexit(llvm_shutdown); // Call llvm_shutdown() on exit.
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(13, 0)

@@ -19,10 +19,15 @@ klee_add_component(kleeSupport
   TreeStream.cpp
 )
 
-target_link_libraries(kleeSupport PRIVATE ${ZLIB_LIBRARIES})
+target_link_libraries(kleeSupport PUBLIC ${ZLIB_LIBRARIES})
 
 set(LLVM_COMPONENTS
   support
 )
 klee_get_llvm_libs(LLVM_LIBS ${LLVM_COMPONENTS})
-target_link_libraries(kleeSupport PUBLIC ${LLVM_LIBS})
+target_link_libraries(kleeSupport PRIVATE ${LLVM_LIBS})
+
+install(TARGETS kleeSupport
+        EXPORT run_klee
+        DESTINATION "${RUN_KLEE_LIB_DEST}"
+        )

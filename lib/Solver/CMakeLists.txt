@@ -41,11 +41,15 @@ set(LLVM_COMPONENTS
   support
 )
 klee_get_llvm_libs(LLVM_LIBS ${LLVM_COMPONENTS})
-target_link_libraries(kleaverSolver PUBLIC ${LLVM_LIBS})
+target_link_libraries(kleaverSolver PRIVATE ${LLVM_LIBS})
 
-target_link_libraries(kleaverSolver PRIVATE
+target_link_libraries(kleaverSolver PUBLIC
   kleeBasic
   kleaverExpr
   kleeSupport
   ${KLEE_SOLVER_LIBRARIES})
 
+install(TARGETS kleaverSolver
+        EXPORT run_klee
+        DESTINATION "${RUN_KLEE_LIB_DEST}"
+        )

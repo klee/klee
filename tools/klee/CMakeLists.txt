@@ -7,14 +7,9 @@
 #
 #===------------------------------------------------------------------------===#
 add_executable(klee
-  main.cpp
+  klee.cpp
 )
-
-set(KLEE_LIBS
-  kleeCore
-)
-
-target_link_libraries(klee ${KLEE_LIBS})
+target_link_libraries(klee PUBLIC kleeRunner)
 
 install(TARGETS klee RUNTIME DESTINATION bin)
 
