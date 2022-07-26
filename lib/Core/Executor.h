@@ -478,7 +478,7 @@ private:
                                  const llvm::Twine &message);
 
   /// bindModuleConstants - Initialize the module constant table.
-  void bindModuleConstants(ExecutionState &state);
+  void bindModuleConstants(const llvm::APFloat::roundingMode &rm);
 
   const Array *makeArray(ExecutionState &state, ref<Expr> size,
                          const std::string &name,

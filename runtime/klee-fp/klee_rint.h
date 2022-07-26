@@ -1,3 +1,12 @@
+/*===-- klee_rint.h -------------------------------------------------------===//
+//
+//                     The KLEE Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===*/
+
 #ifndef KLEE_RINT_H
 #define KLEE_RINT_H
 

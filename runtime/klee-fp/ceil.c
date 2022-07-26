@@ -1,3 +1,12 @@
+/*===-- ceil.c ------------------------------------------------------------===//
+//
+//                     The KLEE Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===*/
+
 #include "float.h"
 #include "klee_floor.h"
 #include "klee_rint.h"

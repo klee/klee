@@ -1,4 +1,4 @@
-//===-- Z3BitvectorBuilder.h --------------------------------------------*- C++
+//===-- Z3BitvectorBuilder.h -----------------------------------*- C++ -*-====//
 //-*-====//
 //
 //                     The KLEE Symbolic Virtual Machine

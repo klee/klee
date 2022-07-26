@@ -100,6 +100,12 @@ cl::opt<bool>
                cl::desc("Do not verify the module integrity (default=false)"),
                cl::init(false), cl::cat(klee::ModuleCat));
 
+cl::opt<bool> UseKleeFERoundInternals(
+    "feround-internals",
+    cl::desc("USE KLEE internal functions for passing rounding mode to "
+             "external calls"),
+    cl::init(true));
+
 cl::opt<bool> OptimiseKLEECall("klee-call-optimisation",
                                cl::desc("Allow optimization of functions that "
                                         "contain KLEE calls (default=true)"),

@@ -1,3 +1,12 @@
+/*===-- round.c -----------------------------------------------------------===//
+//
+//                     The KLEE Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===*/
+
 #include "klee/klee.h"
 
 long lroundf(float x) { return klee_rintf(x); }

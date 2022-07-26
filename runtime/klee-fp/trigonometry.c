@@ -1,3 +1,12 @@
+/*===-- trigonometry.c ----------------------------------------------------===//
+//
+//                     The KLEE Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===*/
+
 double const eps = 1e-8;
 
 double sin(double x) {

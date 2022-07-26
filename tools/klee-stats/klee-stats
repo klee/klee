@@ -146,6 +146,10 @@ def select_columns(record, pr):
     elif pr == 'more':
         s_column = ['Path', 'Instructions', 'WallTime', 'ICov', 'BCov', 'ICount',
                   'RelSolverTime', 'NumStates', 'MaxStates', 'MallocUsage', 'MaxMem']
+    elif pr == 'utbot':
+        s_column = ['Path', 'WallTime', 'UserTime', 'SolverTime', 'MaxStates',
+                    'MaxMem', 'NumQueries', 'ResolveTime', 'CexCacheTime',
+                    'QueryCexCacheMisses', 'QueryCexCacheHits']
     else:
         s_column = ['Path', 'Instructions', 'WallTime', 'ICov',
                   'BCov', 'ICount', 'RelSolverTime']
@@ -502,6 +506,10 @@ def main():
                           'monitoring an ongoing run).')
     pControl.add_argument('--print-columns', type=str, dest='columns', default=None,
                           help='Comma-separated list of table columns, e.g \'Path,Time(s),ICov(%%)\'.')
+    pControl.add_argument('--utbot-config',
+                      action='store_true', dest='pUtbot',
+                      help='Print information relevant for '
+                      'UnitTestBot usage.')
 
     args = parser.parse_args()
 
@@ -516,6 +524,8 @@ def main():
         pr = 'abstime'
     elif args.pMore:
         pr = 'more'
+    elif args.pUtbot:
+        pr = 'utbot'
 
     dirs = getKleeOutDirs(args.dir)
     if len(dirs) == 0:
