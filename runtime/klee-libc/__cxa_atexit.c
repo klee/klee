@@ -38,7 +38,7 @@ int __cxa_atexit(void (*fn)(void*),
     klee_report_error(__FILE__,
                       __LINE__,
                       "__cxa_atexit: no room in array!",
-                      "exec");
+                      "exec.err");
   
   AtExit[NumAtExit].fn = fn;
   AtExit[NumAtExit].arg = arg;
