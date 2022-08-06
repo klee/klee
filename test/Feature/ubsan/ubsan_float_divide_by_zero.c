@@ -14,6 +14,6 @@ int main() {
   //  klee_make_symbolic(&x, sizeof(x), "x");
   //  klee_assume(x != 0.0);
 
-  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: float-divide-by-zero
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:{{[0-9]+}}: float-divide-by-zero
   volatile float result = x / 0;
 }

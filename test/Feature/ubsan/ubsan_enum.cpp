@@ -17,7 +17,7 @@ int main() {
   for (unsigned char *p = (unsigned char *)&e; p != (unsigned char *)(&e + 1); ++p)
     *p = x;
 
-  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: load invalid value
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:{{[0-9]+}}: load invalid value
   result = (int)e != -1;
 
   return 0;

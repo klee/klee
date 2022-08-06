@@ -7,7 +7,7 @@
 #include "klee/klee.h"
 
 unsigned char convert_unsigned_int_to_unsigned_char(unsigned int x) {
-  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: implicit-unsigned-integer-truncation
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:{{[0-9]+}}: implicit-unsigned-integer-truncation
   return x;
 }
 

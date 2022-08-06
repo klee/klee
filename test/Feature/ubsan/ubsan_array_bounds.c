@@ -9,7 +9,7 @@
 unsigned int array_index(unsigned int n) {
   unsigned int a[4] = {0};
 
-  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: out-of-bounds-index
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:{{[0-9]+}}: out-of-bounds-index
   return a[n];
 }
 

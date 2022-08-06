@@ -7,7 +7,7 @@
 #include "klee/klee.h"
 
 int rsh_inbounds(signed int a, signed int b) {
-  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: shift out of bounds
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:{{[0-9]+}}: shift out of bounds
   return a >> b;
 }
 
