@@ -8,7 +8,7 @@
 
 void nonnull_assign(int *p) {
   volatile int *_Nonnull local;
-  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: null-pointer-use
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:{{[0-9]+}}: null-pointer-use
   local = p;
 }
 

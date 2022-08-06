@@ -9,7 +9,7 @@
 #include "klee/klee.h"
 
 int lsh_overflow(unsigned int a, unsigned int b) {
-  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: shift out of bounds
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:{{[0-9]+}}: shift out of bounds
   return a << b;
 }
 

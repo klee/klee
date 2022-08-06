@@ -7,7 +7,7 @@
 #include "klee/klee.h"
 
 void _Noreturn f() {
-  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: unreachable-call
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:{{[0-9]+}}: unreachable-call
   __builtin_unreachable();
 }
 

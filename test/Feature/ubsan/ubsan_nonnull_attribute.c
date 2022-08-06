@@ -17,7 +17,7 @@ int main() {
   int local = 0;
   int *arg = null ? 0x0 : &local;
 
-  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: invalid-null-argument
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:{{[0-9]+}}: invalid-null-argument
   result = func(arg);
   return 0;
 }

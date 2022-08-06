@@ -18,7 +18,7 @@ int main() {
 
   char *ptr = (char *)address;
 
-  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:34: pointer-overflow
+  // CHECK: KLEE: ERROR: {{.*}}runtime/Sanitizer/ubsan/ubsan_handlers.cpp:{{[0-9]+}}: pointer-overflow
   result = ptr + 1;
   return 0;
 }
