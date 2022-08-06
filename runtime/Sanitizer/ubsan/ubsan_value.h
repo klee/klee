@@ -10,6 +10,12 @@
 // the ubsan runtime.
 //
 //===----------------------------------------------------------------------===//
+
+// NOTE: Needs to be kept in sync with compiler-rt/lib/ubsan/ubsan_value.h
+// from LLVM project.
+// But in fact, only subset of TypeDescriptor was used and SourceLocation left
+// for later work on specifying location in ubsan_handlers.cpp, so how it is.
+
 #ifndef UBSAN_VALUE_H
 #define UBSAN_VALUE_H
 

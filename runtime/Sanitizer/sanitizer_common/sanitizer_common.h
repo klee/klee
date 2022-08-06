@@ -12,6 +12,12 @@
 // Implementation of some functions are provided in sanitizer_common, while
 // others must be defined by run-time library itself.
 //===----------------------------------------------------------------------===//
+
+// NOTE: Needs to be kept in sync with
+// compiler-rt/lib/sanitizer_common/sanitizer_common.h from LLVM project.
+// But in fact, nothing was used form that header, so leave it as a wrapper for
+// used internal headers.
+
 #ifndef SANITIZER_COMMON_H
 #define SANITIZER_COMMON_H
 
