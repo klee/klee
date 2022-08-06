@@ -9,6 +9,10 @@
 // Common platform macros.
 //===----------------------------------------------------------------------===//
 
+// NOTE: Needs to be kept in sync with
+// compiler-rt/lib/sanitizer_common/sanitizer_platform.h from LLVM project.
+// But in fact, only SANITIZER_WORDSIZE macro was used, so how it is.
+
 #ifndef SANITIZER_PLATFORM_H
 #define SANITIZER_PLATFORM_H
 

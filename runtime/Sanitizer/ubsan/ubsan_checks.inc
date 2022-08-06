@@ -10,6 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// NOTE: Needs to be kept in sync with compiler-rt/lib/ubsan/ubsan_checks.inc
+// from LLVM project.
+// Especially new ErrorType to `get_suffix` function from ubsan_handlers.cpp and
+// corresponding tests to test\Feature\ubsan directory should be added.
+
 #include "klee/Config/Version.h"
 
 #ifndef UBSAN_CHECK

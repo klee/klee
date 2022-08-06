@@ -9,6 +9,10 @@
 // Entry points to the runtime library for Clang's undefined behavior sanitizer.
 //
 //===----------------------------------------------------------------------===//
+
+// NOTE: Needs to be kept in sync with compiler-rt/lib/ubsan/ubsan_handlers.h
+// from LLVM project.
+
 #ifndef UBSAN_HANDLERS_H
 #define UBSAN_HANDLERS_H
 

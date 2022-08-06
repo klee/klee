@@ -10,6 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// NOTE: Needs to be kept in sync with compiler-rt/lib/ubsan/ubsan_handlers.cpp
+// from LLVM project.
+
 #include "ubsan_handlers.h"
 #include "ubsan_diag.h"
 

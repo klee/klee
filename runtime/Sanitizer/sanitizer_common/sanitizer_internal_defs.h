@@ -9,6 +9,11 @@
 // This file is shared between AddressSanitizer and ThreadSanitizer.
 // It contains macro used in run-time libraries code.
 //===----------------------------------------------------------------------===//
+
+// NOTE: Needs to be kept in sync with
+// compiler-rt/lib/sanitizer_common/sanitizer_internal_defs.h from LLVM project.
+// But in fact, only typedefs for basic types were used, this is how it is.
+
 #ifndef SANITIZER_DEFS_H
 #define SANITIZER_DEFS_H
 
