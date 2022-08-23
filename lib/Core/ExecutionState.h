@@ -270,7 +270,7 @@ public:
   /// @brief The targets that the state must achieve
   std::set<Target> targets;
 
-  ExprHashMap<std::pair<ref<Expr>, unsigned>> gepExprBases;
+  ExprHashMap<std::pair<ref<Expr>, llvm::Type *>> gepExprBases;
   ExprHashMap<ref<Expr>> gepExprOffsets;
 
 public:

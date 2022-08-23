@@ -14,6 +14,7 @@
 #include "TimingSolver.h"
 
 #include "klee/Expr/Expr.h"
+#include "klee/Module/KType.h"
 #include "klee/Statistics/TimerStatIncrementer.h"
 
 #include "CoreStats.h"
@@ -70,8 +71,6 @@ ObjectPair AddressSpace::findObject(IDType id) const {
 
 ObjectState *AddressSpace::getWriteable(const MemoryObject *mo,
                                         const ObjectState *os) {
-  assert(!os->readOnly);
-
   // If this address space owns they object, return it
   if (cowKey == os->copyOnWriteOwner)
     return const_cast<ObjectState *>(os);
@@ -86,7 +85,7 @@ ObjectState *AddressSpace::getWriteable(const MemoryObject *mo,
 
 ///
 
-bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr,
+bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr, KType *objectType,
                               IDType &result) const {
   uint64_t address = addr->getZExtValue();
   MemoryObject hack(address);
@@ -106,10 +105,11 @@ bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr,
 }
 
 bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
-                              ref<Expr> address, IDType &result,
-                              MOPredicate predicate, bool &success) const {
+                              ref<Expr> address, KType *objectType,
+                              IDType &result, MOPredicate predicate,
+                              bool &success) const {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(address)) {
-    success = resolveOne(CE, result);
+    success = resolveOne(CE, objectType, result);
     return true;
   } else {
     TimerStatIncrementer timer(stats::resolveTime);
@@ -126,9 +126,11 @@ bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
     if (res) {
       const MemoryObject *mo = res->first;
       if (example - mo->address < mo->size) {
-        result = mo->id;
-        success = true;
-        return true;
+        if (res->second->isAccessableFrom(objectType)) {
+          result = mo->id;
+          success = true;
+          return true;
+        }
       }
     }
 
@@ -144,6 +146,10 @@ bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
       const auto &mo = oi->first;
       if (!predicate(mo))
         continue;
+
+      if (!oi->second->isAccessableFrom(objectType)) {
+        continue;
+      }
 
       bool mayBeTrue;
       if (!solver->mayBeTrue(state.constraints,
@@ -170,6 +176,10 @@ bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
       const auto &mo = oi->first;
       if (!predicate(mo))
         continue;
+
+      if (!oi->second->isAccessableFrom(objectType)) {
+        continue;
+      }
 
       bool mustBeTrue;
       if (!solver->mustBeTrue(state.constraints,
@@ -199,8 +209,8 @@ bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
 }
 
 bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
-                              ref<Expr> address, IDType &result,
-                              bool &success) const {
+                              ref<Expr> address, KType *objectType,
+                              IDType &result, bool &success) const {
   MOPredicate predicate([](const MemoryObject *mo) { return true; });
   if (UseTimestamps) {
     ref<Expr> base =
@@ -227,7 +237,8 @@ bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
     };
   }
 
-  return resolveOne(state, solver, address, result, predicate, success);
+  return resolveOne(state, solver, address, objectType, result, predicate,
+                    success);
 }
 
 int AddressSpace::checkPointerInObject(ExecutionState &state,
@@ -265,12 +276,12 @@ int AddressSpace::checkPointerInObject(ExecutionState &state,
 }
 
 bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
-                           ref<Expr> p, ResolutionList &rl,
-                           MOPredicate predicate, unsigned maxResolutions,
-                           time::Span timeout) const {
+                           ref<Expr> p, KType *objectType, ResolutionList &rl,
+                           ResolutionList &rlSkipped, MOPredicate predicate,
+                           unsigned maxResolutions, time::Span timeout) const {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(p)) {
     IDType res;
-    if (resolveOne(CE, res))
+    if (resolveOne(CE, objectType, res))
       rl.push_back(res);
     return false;
   } else {
@@ -310,6 +321,11 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
       const MemoryObject *mo = oi->first;
       if (!predicate(mo))
         continue;
+      if (!oi->second->isAccessableFrom(objectType)) {
+        rlSkipped.push_back(mo->id);
+        continue;
+      }
+
       if (timeout && timeout < timer.delta())
         return true;
 
@@ -334,6 +350,11 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
       const MemoryObject *mo = oi->first;
       if (!predicate(mo))
         continue;
+      if (!oi->second->isAccessableFrom(objectType)) {
+        rlSkipped.push_back(mo->id);
+        continue;
+      }
+
       if (timeout && timeout < timer.delta())
         return true;
 
@@ -357,8 +378,9 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
 }
 
 bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
-                           ref<Expr> p, ResolutionList &rl,
-                           unsigned maxResolutions, time::Span timeout) const {
+                           ref<Expr> p, KType *objectType, ResolutionList &rl,
+                           ResolutionList &rlSkipped, unsigned maxResolutions,
+                           time::Span timeout) const {
   MOPredicate predicate([](const MemoryObject *mo) { return true; });
   if (UseTimestamps) {
     ref<Expr> base = state.isGEPExpr(p) ? state.gepExprBases[p].first : p;
@@ -384,7 +406,8 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
     };
   }
 
-  return resolve(state, solver, p, rl, predicate, maxResolutions, timeout);
+  return resolve(state, solver, p, objectType, rl, rlSkipped, predicate,
+                 maxResolutions, timeout);
 }
 
 // These two are pretty big hack so we can sort of pass memory back
