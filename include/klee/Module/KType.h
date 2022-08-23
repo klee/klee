@@ -17,7 +17,7 @@ class TypeManager;
 
 template <class> class ref;
 
-enum TypeSystemKind { LLVM };
+enum TypeSystemKind { LLVM, CXX };
 class KType {
   friend TypeManager;
 
