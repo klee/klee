@@ -555,7 +555,8 @@ void KBlock::handleKInstruction(
 
 KFunction::KFunction(llvm::Function *_function, KModule *_km)
     : KCallable(CK_Function), parent(_km), function(_function),
-      numArgs(function->arg_size()), numInstructions(0), trackCoverage(true) {
+      numArgs(function->arg_size()), numInstructions(0), numBlocks(0),
+      entryKBlock(nullptr), trackCoverage(true) {
   for (auto &BasicBlock : *function) {
     numInstructions += BasicBlock.size();
     numBlocks++;
@@ -609,7 +610,10 @@ KFunction::KFunction(llvm::Function *_function, KModule *_km)
     blocks.push_back(std::unique_ptr<KBlock>(kb));
   }
 
-  entryKBlock = blockMap[&*function->begin()];
+  if (numBlocks > 0) {
+    assert(function->begin() != function->end());
+    entryKBlock = blockMap[&*function->begin()];
+  }
 }
 
 KFunction::~KFunction() {
