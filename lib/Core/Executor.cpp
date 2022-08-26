@@ -721,7 +721,7 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
   const uint16_t **addr = __ctype_b_loc();
 
   llvm::Type *pointerAddr = llvm::PointerType::get(
-      llvm::IntegerType::get(m->getContext(), sizeof(*addr) * CHAR_BIT),
+      llvm::IntegerType::get(m->getContext(), sizeof(**addr) * CHAR_BIT),
       adressSpaceNum);
   addExternalObject(state, const_cast<uint16_t *>(*addr - 128),
                     typeSystemManager->getWrappedType(pointerAddr),
@@ -731,7 +731,7 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
 
   const int32_t **lowerAddr = __ctype_tolower_loc();
   llvm::Type *pointerLowerAddr = llvm::PointerType::get(
-      llvm::IntegerType::get(m->getContext(), sizeof(*lowerAddr) * CHAR_BIT),
+      llvm::IntegerType::get(m->getContext(), sizeof(**lowerAddr) * CHAR_BIT),
       adressSpaceNum);
   addExternalObject(state, const_cast<int32_t *>(*lowerAddr - 128),
                     typeSystemManager->getWrappedType(pointerLowerAddr),
@@ -742,7 +742,7 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
 
   const int32_t **upper_addr = __ctype_toupper_loc();
   llvm::Type *pointerUpperAddr = llvm::PointerType::get(
-      llvm::IntegerType::get(m->getContext(), sizeof(*upper_addr) * CHAR_BIT),
+      llvm::IntegerType::get(m->getContext(), sizeof(**upper_addr) * CHAR_BIT),
       0);
   addExternalObject(state, const_cast<int32_t *>(*upper_addr - 128),
                     typeSystemManager->getWrappedType(pointerUpperAddr),
@@ -4557,40 +4557,6 @@ void Executor::executeMemoryOperation(
 
   // XXX should we distinguish out of bounds and overlapped cases?
   if (unbound) {
-    if (!rlSkipped.empty()) {
-      /* Now we will prepare constrains for skipped objects in order
-      to be sure, that lazy initialization will not allocate object
-      in one of the objects */
-      ref<Expr> addressInSkippedObjects = ConstantExpr::alloc(0, Expr::Bool);
-      for (auto &opSkipped : rlSkipped) {
-        const MemoryObject *mo = state.addressSpace.findObject(opSkipped).first;
-        addressInSkippedObjects = OrExpr::create(
-            addressInSkippedObjects, mo->getBoundsCheckPointer(address));
-      }
-
-      /* We can use bound state to get interesting test case for objects, that
-      we've skipped later. */
-      bool boundResult = false;
-      if (!solver->mayBeTrue(unbound->constraints,
-                             NotExpr::create(addressInSkippedObjects),
-                             boundResult, unbound->queryMetaData)) {
-        terminateStateOnSolverError(*unbound, "Query timed out");
-        return;
-      }
-
-      if (!boundResult) {
-        unbound->addConstraint(addressInSkippedObjects);
-        terminateStateOnError(*unbound, "memory error: out of bound pointer",
-                              StateTerminationType::Ptr);
-        return;
-      }
-
-      unbound->addConstraint(NotExpr::create(addressInSkippedObjects));
-    }
-
-    Assignment symcreteSolution =
-        concretizationManager->get(unbound->constraints);
-
     if (incomplete) {
       terminateStateOnSolverError(*unbound, "Query timed out (resolve).");
     } else if (LazyInitialization &&
