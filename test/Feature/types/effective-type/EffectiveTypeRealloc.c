@@ -25,7 +25,7 @@ int main() {
   klee_make_symbolic(&ptr_int, sizeof(ptr_int), "ptr_int");
   *ptr_int = 100;
 
-  // CHECK: x
+  // CHECK-DAG: x
   if ((void *)ptr_int == area) {
     printf("x\n");
     return 0;
@@ -34,7 +34,7 @@ int main() {
   float *ptr_float;
   klee_make_symbolic(&ptr_float, sizeof(ptr_float), "ptr_float");
   *ptr_float = 100.0;
-  // CHECK: y
+  // CHECK-DAG: y
   if ((void *)ptr_float >= area + 4) {
     printf("y\n");
     return 0;

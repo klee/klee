@@ -55,6 +55,10 @@ KType *CXXTypeManager::getWrappedType(llvm::Type *type) {
       case (llvm::Type::IntegerTyID):
         kt = new cxxtypes::KCXXIntegerType(unwrappedRawType, this);
         break;
+      case (llvm::Type::PPC_FP128TyID):
+      case (llvm::Type::FP128TyID):
+      case (llvm::Type::X86_FP80TyID):
+      case (llvm::Type::DoubleTyID):
       case (llvm::Type::FloatTyID):
         kt = new cxxtypes::KCXXFloatingPointType(unwrappedRawType, this);
         break;
@@ -173,6 +177,43 @@ void CXXTypeManager::onFinishInitModule() {
   }
 }
 
+/**
+ * Util method to create constraints for pointers
+ * for complex structures that can have many types located
+ * by different offsets.
+ */
+static ref<Expr> getComplexPointerRestrictions(
+    ref<Expr> object,
+    const std::vector<std::pair<size_t, KType *>> &offsetsToTypes) {
+  ConstraintSet restrictions;
+  ConstraintManager cm(restrictions);
+  ref<Expr> resultCondition;
+  for (auto &offsetToTypePair : offsetsToTypes) {
+    size_t offset = offsetToTypePair.first;
+    KType *extractedType = offsetToTypePair.second;
+
+    ref<Expr> extractedOffset = ExtractExpr::create(
+        object, offset * CHAR_BIT, extractedType->getSize() * CHAR_BIT);
+    ref<Expr> innerAlignmentRequirement =
+        llvm::cast<cxxtypes::KCXXType>(extractedType)
+            ->getPointersRestrictions(extractedOffset);
+    if (innerAlignmentRequirement.isNull()) {
+      continue;
+    }
+
+    cm.addConstraint(innerAlignmentRequirement);
+  }
+
+  for (auto restriction : restrictions) {
+    if (resultCondition.isNull()) {
+      resultCondition = restriction;
+    } else {
+      resultCondition = AndExpr::create(resultCondition, restriction);
+    }
+  }
+  return resultCondition;
+}
+
 /* C++ KType base class */
 cxxtypes::KCXXType::KCXXType(llvm::Type *type, TypeManager *parent)
     : KType(type, parent) {
@@ -192,6 +233,19 @@ bool cxxtypes::KCXXType::isAccessableFrom(KType *accessingType) const {
            isAccessableFrom(accessingCXXType);
   }
   assert(false && "Attempted to compare raw llvm type with C++ type!");
+}
+
+ref<Expr> cxxtypes::KCXXType::getContentRestrictions(ref<Expr> object) const {
+  if (type == nullptr) {
+    return nullptr;
+  }
+  llvm::Type *elementType = type->getPointerElementType();
+  return llvm::cast<cxxtypes::KCXXType>(parent->getWrappedType(elementType))
+      ->getPointersRestrictions(object);
+}
+
+ref<Expr> cxxtypes::KCXXType::getPointersRestrictions(ref<Expr>) const {
+  return nullptr;
 }
 
 bool cxxtypes::KCXXType::isAccessingFromChar(KCXXType *accessingType) {
@@ -230,6 +284,19 @@ cxxtypes::KCXXCompositeType::KCXXCompositeType(KType *type, TypeManager *parent,
     containsSymbolic = true;
   }
   insertedTypes.emplace(type);
+}
+
+ref<Expr>
+cxxtypes::KCXXCompositeType::getPointersRestrictions(ref<Expr> object) const {
+  if (containsSymbolic) {
+    return nullptr;
+  }
+  std::vector<std::pair<size_t, KType *>> offsetToTypes;
+  for (auto &offsetToTypePair : typesLocations) {
+    offsetToTypes.emplace_back(offsetToTypePair.first,
+                               offsetToTypePair.second.first);
+  }
+  return getComplexPointerRestrictions(object, offsetToTypes);
 }
 
 void cxxtypes::KCXXCompositeType::handleMemoryAccess(KType *type,
@@ -412,6 +479,21 @@ cxxtypes::KCXXStructType::KCXXStructType(llvm::Type *type, TypeManager *parent)
   }
 }
 
+ref<Expr>
+cxxtypes::KCXXStructType::getPointersRestrictions(ref<Expr> object) const {
+  std::vector<std::pair<size_t, KType *>> offsetsToTypes;
+  for (auto &innerTypeToOffsets : innerTypes) {
+    KType *innerType = innerTypeToOffsets.first;
+    if (!llvm::isa<KCXXPointerType>(innerType)) {
+      continue;
+    }
+    for (auto &offset : innerTypeToOffsets.second) {
+      offsetsToTypes.emplace_back(offset, innerType);
+    }
+  }
+  return getComplexPointerRestrictions(object, offsetsToTypes);
+}
+
 bool cxxtypes::KCXXStructType::isAccessableFrom(KCXXType *accessingType) const {
   /* FIXME: this is a temporary hack for vtables in C++. Ideally, we
    * should demangle global variables to get additional info, at least
@@ -459,6 +541,15 @@ cxxtypes::KCXXArrayType::KCXXArrayType(llvm::Type *type, TypeManager *parent)
          "Type manager returned non CXX type for array element");
   elementType = cast<KCXXType>(elementKType);
   arrayElementsCount = rawArrayType->getArrayNumElements();
+}
+
+ref<Expr>
+cxxtypes::KCXXArrayType::getPointersRestrictions(ref<Expr> object) const {
+  std::vector<std::pair<size_t, KType *>> offsetsToTypes;
+  for (unsigned idx = 0; idx < arrayElementsCount; ++idx) {
+    offsetsToTypes.emplace_back(idx * elementType->getSize(), elementType);
+  }
+  return getComplexPointerRestrictions(object, offsetsToTypes);
 }
 
 bool cxxtypes::KCXXArrayType::isAccessableFrom(KCXXType *accessingType) const {
@@ -574,6 +665,26 @@ bool cxxtypes::KCXXPointerType::isAccessableFrom(
 bool cxxtypes::KCXXPointerType::innerIsAccessableFrom(
     KCXXType *accessingType) const {
   return accessingType->getRawType() == nullptr;
+}
+
+ref<Expr>
+cxxtypes::KCXXPointerType::getPointersRestrictions(ref<Expr> object) const {
+  /**
+   * We assume that alignment is always a power of 2 and has
+   * a bit representation as 00...010...00. By subtracting 1
+   * we are getting 00...011...1. Then we apply this mask to
+   * address and require, that bitwise AND should give 0 (i.e.
+   * non of the last bits is 1).
+   */
+  ref<Expr> appliedAlignmentMask = AndExpr::create(
+      Expr::createPointer(elementType->getAlignment() - 1), object);
+
+  ref<Expr> sizeExpr = Expr::createPointer(elementType->getSize() - 1);
+
+  ref<Expr> objectUpperBound = AddExpr::create(object, sizeExpr);
+
+  return AndExpr::create(Expr::createIsZero(appliedAlignmentMask),
+                         UgeExpr::create(objectUpperBound, sizeExpr));
 }
 
 bool cxxtypes::KCXXPointerType::innerIsAccessableFrom(

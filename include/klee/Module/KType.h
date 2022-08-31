@@ -40,6 +40,16 @@ protected:
   TypeManager *parent;
 
   /**
+   * Alignment in bytes for this type.
+   */
+  size_t alignment = 1;
+
+  /**
+   * Size of type.
+   */
+  size_t typeStoreSize = 0;
+
+  /**
    * Innner types. Maps type to their offsets in current
    * type. Should contain type itself and
    * all types, that can be found in that object.
@@ -75,6 +85,23 @@ public:
    * Returns the stored raw llvm type.
    */
   llvm::Type *getRawType() const;
+
+  /**
+   * Getter for the size.
+   */
+  size_t getSize() const;
+
+  /**
+   * Getter for the alignment.
+   */
+  size_t getAlignment() const;
+
+  /**
+   * Return alignment requirements for that object and
+   * it subobjects. If no such restrictions can be applied
+   * returns ref to null expression.
+   */
+  virtual ref<Expr> getContentRestrictions(ref<Expr>) const;
 
   TypeSystemKind getTypeSystemKind() const;
 

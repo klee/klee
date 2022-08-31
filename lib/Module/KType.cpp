@@ -28,6 +28,12 @@ TypeSystemKind KType::getTypeSystemKind() const { return typeSystemKind; }
 
 void KType::handleMemoryAccess(KType *, ref<Expr>, ref<Expr>, bool isWrite) {}
 
+size_t KType::getSize() const { return typeStoreSize; }
+
+size_t KType::getAlignment() const { return alignment; }
+
+ref<Expr> KType::getContentRestrictions(ref<Expr>) const { return nullptr; }
+
 void KType::print(llvm::raw_ostream &os) const {
   if (type == nullptr) {
     os << "nullptr";

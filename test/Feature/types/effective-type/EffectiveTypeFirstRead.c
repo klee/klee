@@ -19,11 +19,11 @@ int main() {
   klee_make_symbolic(&pointer, sizeof(pointer), "pointer");
   *pointer = 1;
 
-  // CHECK: x
+  // CHECK-DAG: x
   if ((void *)pointer == (void *)area) {
     printf("x\n");
     // CHECK-NOT: ASSERTION FAIL
-    assert(area[3] == 1);
+    assert((area[0] == 1) ^ (area[3] == 1));
   }
 
   return 0;

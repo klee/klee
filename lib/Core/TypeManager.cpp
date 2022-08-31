@@ -160,6 +160,16 @@ void TypeManager::initTypesFromInstructions() {
   }
 }
 
+void TypeManager::initTypeInfo() {
+  for (auto &type : types) {
+    llvm::Type *rawType = type->getRawType();
+    if (rawType && rawType->isSized()) {
+      type->alignment = parent->targetData->getABITypeAlignment(rawType);
+      type->typeStoreSize = parent->targetData->getTypeStoreSize(rawType);
+    }
+  }
+}
+
 void TypeManager::onFinishInitModule() {}
 
 /**
@@ -174,5 +184,6 @@ void TypeManager::initModule() {
   initTypesFromGlobals();
   initTypesFromInstructions();
   initTypesFromStructs();
+  initTypeInfo();
   onFinishInitModule();
 }

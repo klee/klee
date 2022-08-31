@@ -30,6 +30,7 @@ private:
   void initTypesFromGlobals();
   void initTypesFromStructs();
   void initTypesFromInstructions();
+  void initTypeInfo();
 
 protected:
   KModule *parent;

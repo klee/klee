@@ -155,6 +155,12 @@ cl::opt<bool>
             cl::desc("Turns on restrictions based on types compatibility for "
                      "symbolic pointers (default=false)"),
             cl::init(false));
+
+cl::opt<bool>
+    AlignSymbolicPointers("align-symbolic-pointers",
+                          cl::desc("Makes symbolic pointers aligned according"
+                                   "to the used type system (default=true)"),
+                          cl::init(true));
 } // namespace klee
 
 namespace {
@@ -4732,7 +4738,14 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
   // Create a new object state for the memory object (instead of a copy).
   if (!replayKTest) {
     const Array *array = makeArray(state, mo->size, name, source);
-    bindObjectInState(state, mo, type, false, array);
+    ObjectState *os = bindObjectInState(state, mo, type, false, array);
+
+    if (AlignSymbolicPointers) {
+      if (ref<Expr> alignmentRestrictions =
+              type->getContentRestrictions(os->read(0, os->size * CHAR_BIT))) {
+        addConstraint(state, alignmentRestrictions);
+      }
+    }
     state.addSymbolic(mo, array);
 
     std::map<ExecutionState *, std::vector<SeedInfo>>::iterator it =

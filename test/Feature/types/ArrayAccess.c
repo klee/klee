@@ -17,7 +17,7 @@ int main() {
   // CHECK-NOT: ASSERTION FAIL
   assert((void *)ptr != (void *)array_float);
 
-  // CHECK: x
+  // CHECK-DAG: x
   if ((void *)ptr == (void *)array_int) {
     printf("x\n");
     return 0;
@@ -30,7 +30,7 @@ int main() {
   // CHECK-NOT: ASSERTION FAIL
   assert((void *)ptr_array_float != (void *)&array_int);
 
-  // CHECK: y
+  // CHECK-DAG: y
   if (ptr_array_float == &array_float) {
     printf("y\n");
     return 2;

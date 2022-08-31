@@ -91,6 +91,9 @@ public:
   virtual bool isAccessableFrom(KType *) const final override;
   virtual bool isAccessableFrom(KCXXType *) const;
 
+  virtual ref<Expr> getContentRestrictions(ref<Expr>) const override;
+  virtual ref<Expr> getPointersRestrictions(ref<Expr>) const;
+
   CXXTypeKind getTypeKind() const;
 
   static bool classof(const KType *);
@@ -115,6 +118,7 @@ protected:
   KCXXCompositeType(KType *, TypeManager *, ref<Expr>);
 
 public:
+  virtual ref<Expr> getPointersRestrictions(ref<Expr>) const override;
   virtual void handleMemoryAccess(KType *, ref<Expr>, ref<Expr> size,
                                   bool isWrite) override;
   virtual bool isAccessableFrom(KCXXType *) const override;
@@ -137,6 +141,7 @@ protected:
   KCXXStructType(llvm::Type *, TypeManager *);
 
 public:
+  virtual ref<Expr> getPointersRestrictions(ref<Expr>) const override;
   virtual bool isAccessableFrom(KCXXType *) const override;
 
   static bool classof(const KType *);
@@ -224,6 +229,7 @@ protected:
   KCXXArrayType(llvm::Type *, TypeManager *);
 
 public:
+  virtual ref<Expr> getPointersRestrictions(ref<Expr>) const override;
   virtual bool isAccessableFrom(KCXXType *) const override;
 
   static bool classof(const KType *);
@@ -245,7 +251,9 @@ protected:
   KCXXPointerType(llvm::Type *, TypeManager *);
 
 public:
+  virtual ref<Expr> getPointersRestrictions(ref<Expr>) const override;
   virtual bool isAccessableFrom(KCXXType *) const override;
+
   bool isPointerToChar() const;
   bool isPointerToFunction() const;
 
