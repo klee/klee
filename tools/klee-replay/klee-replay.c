@@ -311,10 +311,12 @@ int main(int argc, char** argv) {
 
       prg_argc = input->numArgs;
       prg_argv = input->args;
-      prg_argv[0] = argv[1];
+      free(prg_argv[0]);
+      prg_argv[0] = strdup(argv[1]);
       klee_init_env(&prg_argc, &prg_argv);
 
       replay_create_files(&__exe_fs);
+      kTest_free(input);
       return 0;
     }
 
@@ -366,8 +368,11 @@ int main(int argc, char** argv) {
     obj_index = 0;
     prg_argc = input->numArgs;
     prg_argv = input->args;
-    prg_argv[0] = argv[optind];
+    free(prg_argv[0]);
+    prg_argv[0] = strdup(argv[optind]);
+
     klee_init_env(&prg_argc, &prg_argv);
+
     if (idx > 2)
       fputc('\n', stderr);
     fprintf(stderr, "KLEE-REPLAY: NOTE: Test file: %s\n"
@@ -385,6 +390,7 @@ int main(int argc, char** argv) {
     /* Run the test case machinery in a subprocess, eventually this parent
        process should be a script or something which shells out to the actual
        execution tool. */
+
     int pid = fork();
     if (pid < 0) {
       perror("fork");
@@ -408,6 +414,9 @@ int main(int argc, char** argv) {
         perror("waitpid");
         _exit(66);
       }
+
+      free(prg_argv);
+      kTest_free(input);
     }
   }
 
