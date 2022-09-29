@@ -50,10 +50,13 @@ class StatsTracker {
 
   unsigned numBranches;
   unsigned fullBranches, partialBranches, totalBranches;
+  unsigned totalInstructions, localInstructionCount;
+  unsigned covCheckAfterInstructions;
 
   CallPathManager callPathManager;
 
   bool updateMinDistToUncovered;
+  bool releaseStates;
 
 public:
   static bool useStatistics();
@@ -98,6 +101,8 @@ public:
   time::Span elapsed();
 
   void computeReachableUncovered();
+
+  void checkCoverage();
 };
 
 uint64_t computeMinDistToUncovered(const KInstruction *ki,

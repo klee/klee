@@ -103,12 +103,40 @@ cl::opt<unsigned> IStatsWriteAfterInstructions(
         "Write istats after each n instructions, 0 to disable (default=0)"),
     cl::cat(StatsCat));
 
-cl::opt<std::string> BCovCheckInterval(
-    "bcov-check-interval",
-    cl::desc("Check klee for branch coverage progress. "
-             "Halt if none was made in the last time interval. "
-             "Set to 0s to disable (default=0s)"),
-    cl::init("0s"), cl::cat(StatsCat));
+enum CoverageCheckType { None, TimerBased, InstructionBased };
+
+cl::opt<CoverageCheckType> UseCovCheck(
+    "use-cov-check",
+    cl::desc("Check klee for coverage progress. "
+             "Check progress against your chosen metric"
+             "Set to None to disable (default=none)"),
+    cl::values(
+        clEnumValN(CoverageCheckType::None, "none", "Don't check progress"),
+        clEnumValN(CoverageCheckType::TimerBased, "timer-based",
+                   "Check progress every time interval"),
+        clEnumValN(CoverageCheckType::InstructionBased, "instruction-based",
+                   "Check progress every time after a certain number of "
+                   "instructions")),
+    cl::init(CoverageCheckType::None), cl::cat(StatsCat));
+
+cl::opt<std::string>
+    CovCheckInterval("cov-check-interval",
+                     cl::desc("Time interval for use-cov-check option. "
+                              "Set to 0s to disable (default=0s)"),
+                     cl::init("0s"), cl::cat(StatsCat));
+
+enum CoverageCheckPoliciy { Halting, Release, HaltAfterRelease };
+
+cl::opt<CoverageCheckPoliciy> CovCheckPolicy(
+    "cov-check-policy",
+    cl::desc("Do the selected action after a failed coverage check"),
+    cl::values(
+        clEnumValN(CoverageCheckPoliciy::Halting, "halting", "Only halt"),
+        clEnumValN(CoverageCheckPoliciy::Release, "release",
+                   "Only release states"),
+        clEnumValN(CoverageCheckPoliciy::HaltAfterRelease, "halt-after-release",
+                   "Release states first, then halt")),
+    cl::init(CoverageCheckPoliciy::Halting), cl::cat(StatsCat));
 
 // XXX I really would like to have dynamic rate control for something like this.
 cl::opt<std::string> UncoveredUpdateInterval(
@@ -170,8 +198,10 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
                            bool _updateMinDistToUncovered)
     : executor(_executor), objectFilename(_objectFilename),
       startWallTime(time::getWallTime()), numBranches(0), fullBranches(0),
-      partialBranches(0), totalBranches(0),
-      updateMinDistToUncovered(_updateMinDistToUncovered) {
+      partialBranches(0), totalBranches(0), totalInstructions(0),
+      localInstructionCount(0),
+      updateMinDistToUncovered(_updateMinDistToUncovered),
+      releaseStates(false) {
 
   const time::Span statsWriteInterval(StatsWriteInterval);
   if (StatsWriteAfterInstructions > 0 && statsWriteInterval)
@@ -186,7 +216,7 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
         "--istats-write-after-instructions cannot be enabled at the same "
         "time.");
 
-  const time::Span bCovCheckInterval{BCovCheckInterval};
+  const time::Span covCheckInterval{CovCheckInterval};
 
   KModule *km = executor.kmodule.get();
   if (CommitEvery > 0) {
@@ -299,16 +329,12 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
                                 [&] { computeReachableUncovered(); }));
   }
 
-  if (bCovCheckInterval) {
-    executor.timers.add(std::make_unique<Timer>(bCovCheckInterval, [&] {
-      if ((2 * fullBranches + partialBranches) > totalBranches) {
-        totalBranches = 2 * fullBranches + partialBranches;
-      } else {
-        klee_message(
-            "HaltTimer invoked due to absense of progress in branch coverage");
-        executor.setHaltExecution(true);
-      }
-    }));
+  covCheckAfterInstructions =
+      numBranches * (stats::coveredInstructions + stats::uncoveredInstructions);
+
+  if (UseCovCheck == CoverageCheckType::TimerBased && covCheckInterval) {
+    executor.timers.add(
+        std::make_unique<Timer>(covCheckInterval, [&] { checkCoverage(); }));
   }
 
   if (OutputIStats) {
@@ -403,6 +429,13 @@ void StatsTracker::stepInstruction(ExecutionState &es) {
   if (istatsFile && IStatsWriteAfterInstructions &&
       stats::instructions % IStatsWriteAfterInstructions.getValue() == 0)
     writeIStats();
+
+  ++localInstructionCount;
+
+  if (UseCovCheck == CoverageCheckType::InstructionBased &&
+      localInstructionCount >= covCheckAfterInstructions) {
+    checkCoverage();
+  }
 }
 
 ///
@@ -1064,6 +1097,43 @@ void StatsTracker::computeReachableUncovered() {
       sfIt->minDistToUncoveredOnReturn = currentFrameMinDist;
 
       currentFrameMinDist = computeMinDistToUncovered(kii, currentFrameMinDist);
+    }
+  }
+}
+
+void StatsTracker::checkCoverage() {
+  if ((2 * fullBranches + partialBranches) > totalBranches ||
+      stats::coveredInstructions > totalInstructions) {
+    totalBranches = 2 * fullBranches + partialBranches;
+    totalInstructions = stats::coveredInstructions;
+    localInstructionCount = 0;
+  } else {
+    switch (CovCheckPolicy) {
+    case CoverageCheckPoliciy::Halting:
+      klee_message("HaltTimer invoked due to absense of progress in branch "
+                   "coverage");
+      executor.setHaltExecution(true);
+      break;
+    case CoverageCheckPoliciy::Release:
+      if (!releaseStates) {
+        klee_message("InhibitForking enabled due to absense of progress in "
+                     "branch coverage");
+        releaseStates = true;
+        executor.setInhibitForking(true);
+      }
+      break;
+    default:
+      if (!releaseStates) {
+        klee_message("InhibitForking enabled due to absense of progress in "
+                     "branch coverage");
+        releaseStates = true;
+        executor.setInhibitForking(true);
+      } else {
+        klee_message("HaltTimer invoked due to absense of progress in branch "
+                     "coverage");
+        executor.setHaltExecution(true);
+      }
+      break;
     }
   }
 }
