@@ -235,6 +235,7 @@ endfunction()
 # Unit Tests
 add_subdirectory(Assignment)
 add_subdirectory(Expr)
+add_subdirectory(KDAlloc)
 add_subdirectory(Ref)
 add_subdirectory(Solver)
 add_subdirectory(Searcher)
