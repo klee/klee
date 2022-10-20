@@ -24,6 +24,9 @@ public:
                             const std::vector<const Array *> &objects,
                             std::vector<std::vector<unsigned char>> &values,
                             bool &hasSolution);
+  bool check(const Query &query, ref<SolverResponse> &result);
+  bool computeValidityCore(const Query &query, ValidityCore &validityCore,
+                           bool &isValid);
   SolverRunStatus getOperationStatusCode();
 };
 
@@ -52,6 +55,21 @@ bool DummySolverImpl::computeInitialValues(
     std::vector<std::vector<unsigned char>> &values, bool &hasSolution) {
   ++stats::queries;
   ++stats::queryCounterexamples;
+  return false;
+}
+
+bool DummySolverImpl::check(const Query &query, ref<SolverResponse> &result) {
+  ++stats::queries;
+  ++stats::queryCounterexamples;
+  ++stats::queryValidityCores;
+  return false;
+}
+
+bool DummySolverImpl::computeValidityCore(const Query &query,
+                                          ValidityCore &validityCore,
+                                          bool &isValid) {
+  ++stats::queries;
+  ++stats::queryValidityCores;
   return false;
 }
 

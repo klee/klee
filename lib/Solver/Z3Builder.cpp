@@ -39,9 +39,15 @@ template <> void Z3NodeHandle<Z3_sort>::dump() {
   llvm::errs() << "Z3SortHandle:\n"
                << ::Z3_sort_to_string(context, node) << "\n";
 }
+template <> unsigned Z3NodeHandle<Z3_sort>::hash() {
+  return Z3_get_ast_hash(context, as_ast());
+}
 template <> void Z3NodeHandle<Z3_ast>::dump() {
   llvm::errs() << "Z3ASTHandle:\n"
                << ::Z3_ast_to_string(context, as_ast()) << "\n";
+}
+template <> unsigned Z3NodeHandle<Z3_ast>::hash() {
+  return Z3_get_ast_hash(context, as_ast());
 }
 
 void custom_z3_error_handler(Z3_context ctx, Z3_error_code ec) {
@@ -113,6 +119,11 @@ Z3Builder::~Z3Builder() {
   }
 }
 
+Z3SortHandle Z3Builder::getBoolSort() {
+  // FIXME: cache these
+  return Z3SortHandle(Z3_mk_bool_sort(ctx), ctx);
+}
+
 Z3SortHandle Z3Builder::getBvSort(unsigned width) {
   // FIXME: cache these
   return Z3SortHandle(Z3_mk_bv_sort(ctx, width), ctx);
@@ -122,6 +133,11 @@ Z3SortHandle Z3Builder::getArraySort(Z3SortHandle domainSort,
                                      Z3SortHandle rangeSort) {
   // FIXME: cache these
   return Z3SortHandle(Z3_mk_array_sort(ctx, domainSort, rangeSort), ctx);
+}
+
+Z3ASTHandle Z3Builder::buildFreshBoolConst(const char *name) {
+  Z3SortHandle boolSort = getBoolSort();
+  return Z3ASTHandle(Z3_mk_fresh_const(ctx, name, boolSort), ctx);
 }
 
 Z3ASTHandle Z3Builder::buildArray(const char *name, unsigned indexWidth,

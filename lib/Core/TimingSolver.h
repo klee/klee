@@ -45,19 +45,29 @@ public:
   }
 
   bool evaluate(const ConstraintSet &, ref<Expr>, Solver::Validity &result,
+                SolverQueryMetaData &metaData,
+                bool produceValidityCore = false);
+
+  bool evaluate(const ConstraintSet &, ref<Expr>,
+                ref<SolverResponse> &queryResult,
+                ref<SolverResponse> &negateQueryResult,
                 SolverQueryMetaData &metaData);
 
   bool mustBeTrue(const ConstraintSet &, ref<Expr>, bool &result,
-                  SolverQueryMetaData &metaData);
+                  SolverQueryMetaData &metaData,
+                  bool produceValidityCore = false);
 
   bool mustBeFalse(const ConstraintSet &, ref<Expr>, bool &result,
-                   SolverQueryMetaData &metaData);
+                   SolverQueryMetaData &metaData,
+                   bool produceValidityCore = false);
 
   bool mayBeTrue(const ConstraintSet &, ref<Expr>, bool &result,
-                 SolverQueryMetaData &metaData);
+                 SolverQueryMetaData &metaData,
+                 bool produceValidityCore = false);
 
   bool mayBeFalse(const ConstraintSet &, ref<Expr>, bool &result,
-                  SolverQueryMetaData &metaData);
+                  SolverQueryMetaData &metaData,
+                  bool produceValidityCore = false);
 
   bool getValue(const ConstraintSet &, ref<Expr> expr,
                 ref<ConstantExpr> &result, SolverQueryMetaData &metaData);
@@ -65,7 +75,12 @@ public:
   bool getInitialValues(const ConstraintSet &,
                         const std::vector<const Array *> &objects,
                         std::vector<std::vector<unsigned char>> &result,
-                        SolverQueryMetaData &metaData);
+                        SolverQueryMetaData &metaData,
+                        bool produceValidityCore = false);
+
+  bool getValidityCore(const ConstraintSet &, ref<Expr>,
+                       ValidityCore &validityCore, bool &result,
+                       SolverQueryMetaData &metaData);
 
   std::pair<ref<Expr>, ref<Expr>> getRange(const ConstraintSet &,
                                            ref<Expr> query,

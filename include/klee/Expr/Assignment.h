@@ -28,6 +28,8 @@ public:
 public:
   Assignment(bool _allowFreeValues = false)
       : allowFreeValues(_allowFreeValues) {}
+  Assignment(bindings_ty &_bindings, bool _allowFreeValues = false)
+      : allowFreeValues(_allowFreeValues), bindings(_bindings) {}
   Assignment(const std::vector<const Array *> &objects,
              std::vector<std::vector<unsigned char>> &values,
              bool _allowFreeValues = false)

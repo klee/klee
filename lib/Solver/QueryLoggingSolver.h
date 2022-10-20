@@ -71,6 +71,9 @@ public:
                             const std::vector<const Array *> &objects,
                             std::vector<std::vector<unsigned char>> &values,
                             bool &hasSolution);
+  bool check(const Query &query, ref<SolverResponse> &result);
+  bool computeValidityCore(const Query &query, ValidityCore &validityCore,
+                           bool &isValid);
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query &);
   void setCoreSolverTimeout(time::Span timeout);

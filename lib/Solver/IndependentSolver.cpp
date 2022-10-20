@@ -400,6 +400,9 @@ public:
                             const std::vector<const Array *> &objects,
                             std::vector<std::vector<unsigned char>> &values,
                             bool &hasSolution);
+  bool check(const Query &query, ref<SolverResponse> &result);
+  bool computeValidityCore(const Query &query, ValidityCore &validityCore,
+                           bool &isValid);
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query &);
   void setCoreSolverTimeout(time::Span timeout);
@@ -411,7 +414,7 @@ bool IndependentSolver::computeValidity(const Query &query,
   IndependentElementSet eltsClosure =
       getIndependentConstraints(query, required);
   ConstraintSet tmp(required);
-  return solver->impl->computeValidity(Query(tmp, query.expr), result);
+  return solver->impl->computeValidity(query.withConstraints(tmp), result);
 }
 
 bool IndependentSolver::computeTruth(const Query &query, bool &isValid) {
@@ -419,7 +422,7 @@ bool IndependentSolver::computeTruth(const Query &query, bool &isValid) {
   IndependentElementSet eltsClosure =
       getIndependentConstraints(query, required);
   ConstraintSet tmp(required);
-  return solver->impl->computeTruth(Query(tmp, query.expr), isValid);
+  return solver->impl->computeTruth(query.withConstraints(tmp), isValid);
 }
 
 bool IndependentSolver::computeValue(const Query &query, ref<Expr> &result) {
@@ -427,7 +430,7 @@ bool IndependentSolver::computeValue(const Query &query, ref<Expr> &result) {
   IndependentElementSet eltsClosure =
       getIndependentConstraints(query, required);
   ConstraintSet tmp(required);
-  return solver->impl->computeValue(Query(tmp, query.expr), result);
+  return solver->impl->computeValue(query.withConstraints(tmp), result);
 }
 
 // Helper function used only for assertions to make sure point created
@@ -464,6 +467,21 @@ bool assertCreatedPointEvaluatesToTrue(
   assert(isa<ConstantExpr>(q) &&
          "assignment evaluation did not result in constant");
   return cast<ConstantExpr>(q)->isTrue();
+}
+
+bool assertCreatedPointEvaluatesToTrue(
+    const Query &query,
+    std::map<const Array *, std::vector<unsigned char>> &bindings,
+    std::map<const Array *, std::vector<unsigned char>> &retMap) {
+  std::vector<const Array *> objects;
+  std::vector<std::vector<unsigned char>> values;
+  objects.reserve(bindings.size());
+  values.reserve(bindings.size());
+  for (auto &ovp : bindings) {
+    objects.push_back(ovp.first);
+    values.push_back(ovp.second);
+  }
+  return assertCreatedPointEvaluatesToTrue(query, objects, values, retMap);
 }
 
 bool IndependentSolver::computeInitialValues(
@@ -543,6 +561,85 @@ bool IndependentSolver::computeInitialValues(
          "should satisfy the equation");
   delete factors;
   return true;
+}
+
+bool IndependentSolver::check(const Query &query, ref<SolverResponse> &result) {
+  // We assume the query has a solution except proven differently
+  // This is important in case we don't have any constraints but
+  // we need initial values for requested array objects.
+
+  // FIXME: When we switch to C++11 this should be a std::unique_ptr so we don't
+  // need to remember to manually call delete
+  std::list<IndependentElementSet> *factors =
+      getAllIndependentConstraintsSets(query);
+
+  // Used to rearrange all of the answers into the correct order
+  std::map<const Array *, std::vector<unsigned char>> retMap;
+  for (std::list<IndependentElementSet>::iterator it = factors->begin();
+       it != factors->end(); ++it) {
+    std::vector<const Array *> arraysInFactor;
+    calculateArrayReferences(*it, arraysInFactor);
+    // Going to use this as the "fresh" expression for the Query() invocation
+    // below
+    assert(it->exprs.size() >= 1 && "No null/empty factors");
+    if (arraysInFactor.size() == 0) {
+      continue;
+    }
+    ConstraintSet tmp(it->exprs);
+    ref<SolverResponse> tempResult;
+    std::vector<std::vector<unsigned char>> tempValues;
+    if (!solver->impl->check(Query(tmp, ConstantExpr::alloc(0, Expr::Bool)),
+                             tempResult)) {
+      delete factors;
+      return false;
+    } else if (isa<ValidResponse>(tempResult)) {
+      delete factors;
+      result = tempResult;
+      return true;
+    } else {
+      assert(tempResult->getInitialValuesFor(arraysInFactor, tempValues) &&
+             "Can not get initial values (Independent solver)!");
+      assert(tempValues.size() == arraysInFactor.size() &&
+             "Should be equal number arrays and answers");
+      for (unsigned i = 0; i < tempValues.size(); i++) {
+        if (retMap.count(arraysInFactor[i])) {
+          // We already have an array with some partially correct answers,
+          // so we need to place the answers to the new query into the right
+          // spot while avoiding the undetermined values also in the array
+          std::vector<unsigned char> *tempPtr = &retMap[arraysInFactor[i]];
+          assert(tempPtr->size() == tempValues[i].size() &&
+                 "we're talking about the same array here");
+          ::DenseSet<unsigned> *ds = &(it->elements[arraysInFactor[i]]);
+          for (std::set<unsigned>::iterator it2 = ds->begin(); it2 != ds->end();
+               it2++) {
+            unsigned index = *it2;
+            (*tempPtr)[index] = tempValues[i][index];
+          }
+        } else {
+          // Dump all the new values into the array
+          retMap[arraysInFactor[i]] = tempValues[i];
+        }
+      }
+    }
+  }
+  result = new InvalidResponse(retMap);
+  std::map<const Array *, std::vector<unsigned char>> bindings;
+  result->getInitialValues(bindings);
+  assert(assertCreatedPointEvaluatesToTrue(query, bindings, retMap) &&
+         "should satisfy the equation");
+  delete factors;
+  return true;
+}
+
+bool IndependentSolver::computeValidityCore(const Query &query,
+                                            ValidityCore &validityCore,
+                                            bool &isValid) {
+  std::vector<ref<Expr>> required;
+  IndependentElementSet eltsClosure =
+      getIndependentConstraints(query, required);
+  ConstraintSet tmp(required);
+  return solver->impl->computeValidityCore(query.withConstraints(tmp),
+                                           validityCore, isValid);
 }
 
 SolverImpl::SolverRunStatus IndependentSolver::getOperationStatusCode() {

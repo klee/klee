@@ -25,7 +25,8 @@ using namespace llvm;
 
 bool TimingSolver::evaluate(const ConstraintSet &constraints, ref<Expr> expr,
                             Solver::Validity &result,
-                            SolverQueryMetaData &metaData) {
+                            SolverQueryMetaData &metaData,
+                            bool produceValidityCore) {
   // Fast path, to avoid timer and OS overhead.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
     result = CE->isTrue() ? Solver::True : Solver::False;
@@ -37,7 +38,28 @@ bool TimingSolver::evaluate(const ConstraintSet &constraints, ref<Expr> expr,
   if (simplifyExprs)
     expr = ConstraintManager::simplifyExpr(constraints, expr);
 
-  bool success = solver->evaluate(Query(constraints, expr), result);
+  ref<SolverResponse> queryResult;
+  ref<SolverResponse> negatedQueryResult;
+
+  bool success = produceValidityCore
+                     ? solver->evaluate(Query(constraints, expr), queryResult,
+                                        negatedQueryResult)
+                     : solver->evaluate(Query(constraints, expr), result);
+
+  if (success && produceValidityCore) {
+    if (isa<ValidResponse>(queryResult) &&
+        isa<InvalidResponse>(negatedQueryResult)) {
+      result = Solver::True;
+    } else if (isa<InvalidResponse>(queryResult) &&
+               isa<ValidResponse>(negatedQueryResult)) {
+      result = Solver::False;
+    } else if (isa<InvalidResponse>(queryResult) &&
+               isa<InvalidResponse>(negatedQueryResult)) {
+      result = Solver::Unknown;
+    } else {
+      assert(0 && "unreachable");
+    }
+  }
 
   metaData.queryCost += timer.delta();
 
@@ -45,7 +67,8 @@ bool TimingSolver::evaluate(const ConstraintSet &constraints, ref<Expr> expr,
 }
 
 bool TimingSolver::mustBeTrue(const ConstraintSet &constraints, ref<Expr> expr,
-                              bool &result, SolverQueryMetaData &metaData) {
+                              bool &result, SolverQueryMetaData &metaData,
+                              bool produceValidityCore) {
   // Fast path, to avoid timer and OS overhead.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
     result = CE->isTrue() ? true : false;
@@ -57,7 +80,12 @@ bool TimingSolver::mustBeTrue(const ConstraintSet &constraints, ref<Expr> expr,
   if (simplifyExprs)
     expr = ConstraintManager::simplifyExpr(constraints, expr);
 
-  bool success = solver->mustBeTrue(Query(constraints, expr), result);
+  ValidityCore validityCore;
+
+  bool success = produceValidityCore
+                     ? solver->getValidityCore(Query(constraints, expr),
+                                               validityCore, result)
+                     : solver->mustBeTrue(Query(constraints, expr), result);
 
   metaData.queryCost += timer.delta();
 
@@ -65,23 +93,27 @@ bool TimingSolver::mustBeTrue(const ConstraintSet &constraints, ref<Expr> expr,
 }
 
 bool TimingSolver::mustBeFalse(const ConstraintSet &constraints, ref<Expr> expr,
-                               bool &result, SolverQueryMetaData &metaData) {
-  return mustBeTrue(constraints, Expr::createIsZero(expr), result, metaData);
+                               bool &result, SolverQueryMetaData &metaData,
+                               bool produceValidityCore) {
+  return mustBeTrue(constraints, Expr::createIsZero(expr), result, metaData,
+                    produceValidityCore);
 }
 
 bool TimingSolver::mayBeTrue(const ConstraintSet &constraints, ref<Expr> expr,
-                             bool &result, SolverQueryMetaData &metaData) {
+                             bool &result, SolverQueryMetaData &metaData,
+                             bool produceValidityCore) {
   bool res;
-  if (!mustBeFalse(constraints, expr, res, metaData))
+  if (!mustBeFalse(constraints, expr, res, metaData, produceValidityCore))
     return false;
   result = !res;
   return true;
 }
 
 bool TimingSolver::mayBeFalse(const ConstraintSet &constraints, ref<Expr> expr,
-                              bool &result, SolverQueryMetaData &metaData) {
+                              bool &result, SolverQueryMetaData &metaData,
+                              bool produceValidityCore) {
   bool res;
-  if (!mustBeTrue(constraints, expr, res, metaData))
+  if (!mustBeTrue(constraints, expr, res, metaData, produceValidityCore))
     return false;
   result = !res;
   return true;
@@ -111,14 +143,67 @@ bool TimingSolver::getValue(const ConstraintSet &constraints, ref<Expr> expr,
 bool TimingSolver::getInitialValues(
     const ConstraintSet &constraints, const std::vector<const Array *> &objects,
     std::vector<std::vector<unsigned char>> &result,
-    SolverQueryMetaData &metaData) {
+    SolverQueryMetaData &metaData, bool produceValidityCore) {
   if (objects.empty())
     return true;
 
   TimerStatIncrementer timer(stats::solverTime);
 
-  bool success = solver->getInitialValues(
-      Query(constraints, ConstantExpr::alloc(0, Expr::Bool)), objects, result);
+  ref<SolverResponse> queryResult;
+
+  bool success =
+      produceValidityCore
+          ? solver->check(
+                Query(constraints, ConstantExpr::alloc(0, Expr::Bool)),
+                queryResult)
+          : solver->getInitialValues(
+                Query(constraints, ConstantExpr::alloc(0, Expr::Bool)), objects,
+                result);
+
+  if (success && produceValidityCore && isa<InvalidResponse>(queryResult)) {
+    success = cast<InvalidResponse>(queryResult)
+                  ->getInitialValuesFor(objects, result);
+  }
+
+  metaData.queryCost += timer.delta();
+
+  return success;
+}
+
+bool TimingSolver::evaluate(const ConstraintSet &constraints, ref<Expr> expr,
+                            ref<SolverResponse> &queryResult,
+                            ref<SolverResponse> &negatedQueryResult,
+                            SolverQueryMetaData &metaData) {
+  TimerStatIncrementer timer(stats::solverTime);
+
+  if (simplifyExprs)
+    expr = ConstraintManager::simplifyExpr(constraints, expr);
+
+  bool success = solver->evaluate(Query(constraints, expr), queryResult,
+                                  negatedQueryResult);
+
+  metaData.queryCost += timer.delta();
+
+  return success;
+}
+
+bool TimingSolver::getValidityCore(const ConstraintSet &constraints,
+                                   ref<Expr> expr, ValidityCore &validityCore,
+                                   bool &result,
+                                   SolverQueryMetaData &metaData) {
+  // Fast path, to avoid timer and OS overhead.
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
+    result = CE->isTrue() ? true : false;
+    return true;
+  }
+
+  TimerStatIncrementer timer(stats::solverTime);
+
+  if (simplifyExprs)
+    expr = ConstraintManager::simplifyExpr(constraints, expr);
+
+  bool success =
+      solver->getValidityCore(Query(constraints, expr), validityCore, result);
 
   metaData.queryCost += timer.delta();
 

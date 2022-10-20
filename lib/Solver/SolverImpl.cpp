@@ -9,6 +9,7 @@
 
 #include "klee/Solver/SolverImpl.h"
 #include "klee/Solver/Solver.h"
+#include "klee/Support/ErrorHandling.h"
 
 using namespace klee;
 
@@ -26,6 +27,30 @@ bool SolverImpl::computeValidity(const Query &query, Solver::Validity &result) {
     result = isFalse ? Solver::False : Solver::Unknown;
   }
   return true;
+}
+
+bool SolverImpl::computeValidity(const Query &query,
+                                 ref<SolverResponse> &queryResult,
+                                 ref<SolverResponse> &negatedQueryResult) {
+  if (!check(query, queryResult))
+    return false;
+  if (!check(query.negateExpr(), negatedQueryResult))
+    return false;
+  return true;
+}
+
+bool SolverImpl::check(const Query &query, ref<SolverResponse> &result) {
+  if (ProduceUnsatCore)
+    klee_error("check is not implemented");
+  return false;
+}
+
+bool SolverImpl::computeValidityCore(const Query &query,
+                                     ValidityCore &validityCore,
+                                     bool &isValid) {
+  if (ProduceUnsatCore)
+    klee_error("computeTruthCore is not implemented");
+  return false;
 }
 
 const char *SolverImpl::getOperationStatusString(SolverRunStatus statusCode) {

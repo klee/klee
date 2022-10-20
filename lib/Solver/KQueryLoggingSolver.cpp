@@ -46,6 +46,10 @@ private:
                         evalExprsEnd, evalArraysBegin, evalArraysEnd);
   }
 
+  virtual void printConstraints(const ConstraintSet &constraints) {
+    printer->printConstraints(logBuffer, constraints);
+  }
+
 public:
   KQueryLoggingSolver(Solver *_solver, std::string path,
                       time::Span queryTimeToLog, bool logTimedOut)

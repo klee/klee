@@ -9,6 +9,7 @@
 #include "QueryLoggingSolver.h"
 
 #include "klee/Config/config.h"
+#include "klee/Expr/Constraints.h"
 #include "klee/Statistics/Statistics.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/FileHandling.h"
@@ -197,6 +198,85 @@ bool QueryLoggingSolver::computeInitialValues(
       }
     }
   }
+  logBuffer << "\n";
+
+  flushBuffer();
+
+  return success;
+}
+
+bool QueryLoggingSolver::check(const Query &query,
+                               ref<SolverResponse> &result) {
+  startQuery(query, "Check");
+
+  bool success = solver->impl->check(query, result);
+
+  finishQuery(success);
+
+  bool hasSolution = isa<InvalidResponse>(result);
+
+  if (success) {
+    logBuffer << queryCommentSign
+              << "   Solvable: " << (hasSolution ? "true" : "false") << "\n";
+    if (hasSolution) {
+      std::map<const Array *, std::vector<unsigned char>> initialValues;
+      result->getInitialValues(initialValues);
+
+      for (std::map<const Array *, std::vector<unsigned char>>::const_iterator
+               i = initialValues.begin(),
+               e = initialValues.end();
+           i != e; ++i) {
+        const Array *array = i->first;
+        const std::vector<unsigned char> &data = i->second;
+        logBuffer << queryCommentSign << "     " << array->name << " = [";
+
+        for (unsigned j = 0; j < array->size; j++) {
+          logBuffer << (int)data[j];
+
+          if (j + 1 < array->size) {
+            logBuffer << ",";
+          }
+        }
+        logBuffer << "]\n";
+      }
+    } else {
+      ValidityCore validityCore;
+      result->getValidityCore(validityCore);
+      logBuffer << queryCommentSign << "   ValidityCore:\n";
+
+      printQuery(
+          Query(ConstraintSet(validityCore.constraints), validityCore.expr));
+    }
+  }
+  logBuffer << "\n";
+
+  flushBuffer();
+
+  return success;
+}
+
+bool QueryLoggingSolver::computeValidityCore(const Query &query,
+                                             ValidityCore &validityCore,
+                                             bool &isValid) {
+  startQuery(query, "ValidityCore");
+
+  bool success =
+      solver->impl->computeValidityCore(query, validityCore, isValid);
+
+  finishQuery(success);
+
+  if (success) {
+    logBuffer << queryCommentSign
+              << "   Is Valid: " << (isValid ? "true" : "false") << "\n";
+  }
+
+  if (isValid) {
+    logBuffer << queryCommentSign << "   ValidityCore:\n";
+
+    printQuery(
+        Query(ConstraintSet(validityCore.constraints), validityCore.expr));
+  }
+
   logBuffer << "\n";
 
   flushBuffer();

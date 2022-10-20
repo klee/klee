@@ -9,6 +9,7 @@
 
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/Constraints.h"
+#include "klee/Expr/ExprUtil.h"
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverImpl.h"
 
@@ -32,6 +33,12 @@ public:
                             const std::vector<const Array *> &objects,
                             std::vector<std::vector<unsigned char>> &values,
                             bool &hasSolution);
+  bool check(const Query &query, ref<SolverResponse> &result);
+  bool computeValidityCore(const Query &query, ValidityCore &validityCore,
+                           bool &isValid);
+  void validateAssigment(const Query &query,
+                         const std::vector<const Array *> &objects,
+                         std::vector<std::vector<unsigned char>> &values);
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query &);
   void setCoreSolverTimeout(time::Span timeout);
@@ -51,14 +58,9 @@ bool AssignmentValidatingSolver::computeValue(const Query &query,
   return solver->impl->computeValue(query, result);
 }
 
-bool AssignmentValidatingSolver::computeInitialValues(
+void AssignmentValidatingSolver::validateAssigment(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<std::vector<unsigned char>> &values, bool &hasSolution) {
-  bool success =
-      solver->impl->computeInitialValues(query, objects, values, hasSolution);
-  if (!hasSolution)
-    return success;
-
+    std::vector<std::vector<unsigned char>> &values) {
   // Use `_allowFreeValues` so that if we are missing an assignment
   // we can't compute a constant and flag this as a problem.
   Assignment assignment(objects, values, /*_allowFreeValues=*/true);
@@ -113,8 +115,50 @@ bool AssignmentValidatingSolver::computeInitialValues(
     dumpAssignmentQuery(query, assignment);
     abort();
   }
+}
+
+bool AssignmentValidatingSolver::computeInitialValues(
+    const Query &query, const std::vector<const Array *> &objects,
+    std::vector<std::vector<unsigned char>> &values, bool &hasSolution) {
+  bool success =
+      solver->impl->computeInitialValues(query, objects, values, hasSolution);
+  if (!hasSolution)
+    return success;
+
+  validateAssigment(query, objects, values);
 
   return success;
+}
+
+bool AssignmentValidatingSolver::check(const Query &query,
+                                       ref<SolverResponse> &result) {
+  if (!solver->impl->check(query, result)) {
+    return false;
+  }
+  if (isa<ValidResponse>(result)) {
+    return true;
+  }
+
+  ExprHashSet expressions;
+  expressions.insert(query.constraints.begin(), query.constraints.end());
+  expressions.insert(query.expr);
+
+  std::vector<const Array *> objects;
+  findSymbolicObjects(expressions.begin(), expressions.end(), objects);
+  std::vector<std::vector<unsigned char>> values;
+
+  assert(isa<InvalidResponse>(result));
+  cast<InvalidResponse>(result)->getInitialValuesFor(objects, values);
+
+  validateAssigment(query, objects, values);
+
+  return true;
+}
+
+bool AssignmentValidatingSolver::computeValidityCore(const Query &query,
+                                                     ValidityCore &validityCore,
+                                                     bool &isValid) {
+  return solver->impl->computeValidityCore(query, validityCore, isValid);
 }
 
 void AssignmentValidatingSolver::dumpAssignmentQuery(

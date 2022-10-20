@@ -95,6 +95,40 @@ bool Solver::getValue(const Query &query, ref<ConstantExpr> &result) {
   return true;
 }
 
+bool Solver::evaluate(const Query &query, ref<SolverResponse> &queryResult,
+                      ref<SolverResponse> &negateQueryResult) {
+  assert(query.expr->getWidth() == Expr::Bool && "Invalid expression type!");
+
+  // Maintain invariants implementations expect.
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(query.expr)) {
+    if (CE->isTrue()) {
+      queryResult = new ValidResponse(ValidityCore());
+      return impl->check(query.negateExpr(), negateQueryResult);
+    } else {
+      negateQueryResult = new ValidResponse(ValidityCore());
+      return impl->check(query, queryResult);
+    }
+  }
+
+  return impl->computeValidity(query, queryResult, negateQueryResult);
+}
+
+bool Solver::getValidityCore(const Query &query, ValidityCore &validityCore,
+                             bool &result) {
+  assert(query.expr->getWidth() == Expr::Bool && "Invalid expression type!");
+
+  // Maintain invariants implementations expect.
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(query.expr)) {
+    result = CE->isTrue() ? true : false;
+    if (result) {
+      validityCore = ValidityCore();
+    }
+    return true;
+  }
+
+  return impl->computeValidityCore(query, validityCore, result);
+}
+
 bool Solver::getInitialValues(const Query &query,
                               const std::vector<const Array *> &objects,
                               std::vector<std::vector<unsigned char>> &values) {
@@ -106,6 +140,10 @@ bool Solver::getInitialValues(const Query &query,
     return false;
 
   return success;
+}
+
+bool Solver::check(const Query &query, ref<SolverResponse> &queryResult) {
+  return impl->check(query, queryResult);
 }
 
 std::pair<ref<Expr>, ref<Expr>> Solver::getRange(const Query &query) {
@@ -230,6 +268,17 @@ std::pair<ref<Expr>, ref<Expr>> Solver::getRange(const Query &query) {
 }
 
 void Query::dump() const {
+  llvm::errs() << "Constraints [\n";
+  for (const auto &constraint : constraints)
+    constraint->dump();
+
+  llvm::errs() << "]\n";
+  llvm::errs() << "Query [\n";
+  expr->dump();
+  llvm::errs() << "]\n";
+}
+
+void ValidityCore::dump() const {
   llvm::errs() << "Constraints [\n";
   for (const auto &constraint : constraints)
     constraint->dump();

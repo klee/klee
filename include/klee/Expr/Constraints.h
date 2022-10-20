@@ -11,6 +11,7 @@
 #define KLEE_CONSTRAINTS_H
 
 #include "klee/Expr/Expr.h"
+#include "klee/Expr/ExprHashMap.h"
 
 namespace klee {
 
@@ -32,6 +33,9 @@ public:
   size_t size() const noexcept;
 
   explicit ConstraintSet(constraints_ty cs) : constraints(std::move(cs)) {}
+  explicit ConstraintSet(ExprHashSet cs) : constraints() {
+    constraints.insert(constraints.end(), cs.begin(), cs.end());
+  }
   ConstraintSet() = default;
 
   void push_back(const ref<Expr> &e);
