@@ -77,7 +77,8 @@ void MemoryObject::getAllocInfo(std::string &result) const {
 ObjectState::ObjectState(const MemoryObject *mo)
     : copyOnWriteOwner(0), object(mo), concreteStore(new uint8_t[mo->size]),
       concreteMask(nullptr), knownSymbolics(nullptr), unflushedMask(nullptr),
-      updates(nullptr, nullptr), size(mo->size), readOnly(false) {
+      updates(nullptr, nullptr), lastUpdate(nullptr), size(mo->size),
+      readOnly(false) {
   if (!UseConstantArrays) {
     static unsigned id = 0;
     const Array *array =
@@ -90,7 +91,8 @@ ObjectState::ObjectState(const MemoryObject *mo)
 ObjectState::ObjectState(const MemoryObject *mo, const Array *array)
     : copyOnWriteOwner(0), object(mo), concreteStore(new uint8_t[mo->size]),
       concreteMask(nullptr), knownSymbolics(nullptr), unflushedMask(nullptr),
-      updates(array, nullptr), size(mo->size), readOnly(false) {
+      updates(array, nullptr), lastUpdate(nullptr), size(mo->size),
+      readOnly(false) {
   makeSymbolic();
   memset(concreteStore, 0, size);
 }
@@ -103,7 +105,8 @@ ObjectState::ObjectState(const ObjectState &os)
       knownSymbolics(nullptr),
       unflushedMask(os.unflushedMask ? new BitArray(*os.unflushedMask, os.size)
                                      : nullptr),
-      updates(os.updates), size(os.size), readOnly(false) {
+      updates(os.updates), lastUpdate(os.lastUpdate), size(os.size),
+      readOnly(false) {
   assert(!os.readOnly && "no need to copy read only object?");
   if (os.knownSymbolics) {
     knownSymbolics = new ref<Expr>[size];
@@ -431,6 +434,10 @@ ref<Expr> ObjectState::read(ref<Expr> offset, Expr::Width width) const {
   if (width == Expr::Bool)
     return ExtractExpr::create(read8(offset), 0, Expr::Bool);
 
+  if (lastUpdate && lastUpdate->index == offset &&
+      lastUpdate->value->getWidth() == width)
+    return lastUpdate->value;
+
   // Otherwise, follow the slow general case.
   unsigned NumBytes = width / 8;
   assert(width == NumBytes * 8 && "Invalid read size!");
@@ -488,6 +495,7 @@ void ObjectState::write(ref<Expr> offset, ref<Expr> value) {
     write8(AddExpr::create(offset, ConstantExpr::create(idx, Expr::Int32)),
            ExtractExpr::create(value, 8 * i, Expr::Int8));
   }
+  lastUpdate = new UpdateNode(nullptr, offset, value);
 }
 
 void ObjectState::write(unsigned offset, ref<Expr> value) {
