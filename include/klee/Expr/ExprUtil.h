@@ -37,6 +37,12 @@ template <typename InputIterator>
 void findSymbolicObjects(InputIterator begin, InputIterator end,
                          std::vector<const Array *> &results);
 
+template <typename InputIterator>
+void findObjects(InputIterator begin, InputIterator end,
+                 std::vector<const Array *> &results);
+
+void findObjects(ref<Expr> e, std::vector<const Array *> &results);
+
 bool isReadFromSymbolicArray(ref<Expr> e);
 
 class ConstantArrayFinder : public ExprVisitor {
