@@ -107,6 +107,8 @@ public:
   static const Width Int64 = 64;
   static const Width Fl80 = 80;
 
+  enum States { Undefined, True, False };
+
   enum Kind {
     InvalidKind = -1,
 

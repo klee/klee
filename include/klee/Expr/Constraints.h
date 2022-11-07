@@ -74,6 +74,10 @@ public:
   /// \param expr to simplify
   /// \return simplified expression
   static ref<Expr> simplifyExpr(const ConstraintSet &constraints,
+                                const ref<Expr> &expr,
+                                ExprHashSet &conflictExpressions,
+                                Expr::States &result);
+  static ref<Expr> simplifyExpr(const ConstraintSet &constraints,
                                 const ref<Expr> &expr);
 
   /// Add constraint to the referenced constraint set
