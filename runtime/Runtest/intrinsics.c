@@ -24,6 +24,7 @@
 
 static KTest *testData = 0;
 static unsigned testPosition = 0;
+static uintptr_t *addresses;
 
 static unsigned char rand_byte(void) {
   unsigned x = rand();
@@ -47,6 +48,28 @@ static void report_internal_error(const char *msg, ...) {
   } else {
     exit(1);
   }
+}
+
+void recursively_allocate(KTestObject *obj, size_t index, void *addr,
+                          int lazy) {
+  if (!lazy) {
+    memcpy(addr, obj->bytes, obj->numBytes);
+    addresses[index] = (uintptr_t)addr;
+  } else {
+    void *address = malloc(obj->numBytes);
+    memcpy(address, obj->bytes, obj->numBytes);
+    addresses[index] = (uintptr_t)address;
+  }
+  for (size_t i = 0; i < obj->numPointers; i++) {
+    if (!addresses[obj->pointers[i].index]) {
+      recursively_allocate(&testData->objects[obj->pointers[i].index],
+                           obj->pointers[i].index, 0, 1);
+    }
+    void *offset_addr = (void *)(addresses[index] + (obj->pointers[i].offset));
+    memcpy(offset_addr, &addresses[obj->pointers[i].index], sizeof(void *));
+    *((char *)offset_addr) += obj->pointers[i].indexOffset;
+  }
+  return;
 }
 
 void klee_make_symbolic(void *array, size_t nbytes, const char *name) {
@@ -102,9 +125,13 @@ void klee_make_symbolic(void *array, size_t nbytes, const char *name) {
       fprintf(stderr, "KLEE-RUNTIME: unable to open .ktest file\n");
       exit(1);
     }
+    addresses = calloc(testData->numObjects, sizeof(uintptr_t));
   }
 
   for (;; ++testPosition) {
+    while (testPosition < testData->numObjects && addresses[testPosition]) {
+      testPosition++;
+    }
     if (testPosition >= testData->numObjects) {
       report_internal_error("out of inputs. Will use zero if continuing.");
       memset(array, 0, nbytes);
@@ -123,13 +150,11 @@ void klee_make_symbolic(void *array, size_t nbytes, const char *name) {
             "object name mismatch. Requesting \"%s\" but returning \"%s\"",
             name, o->name);
       }
-      memcpy(array, o->bytes, nbytes < o->numBytes ? nbytes : o->numBytes);
       if (nbytes != o->numBytes) {
         report_internal_error("object sizes differ. Expected %zu but got %u",
                               nbytes, o->numBytes);
-        if (o->numBytes < nbytes)
-          memset((char *)array + o->numBytes, 0, nbytes - o->numBytes);
       }
+      recursively_allocate(o, testPosition, array, 0);
       ++testPosition;
       break;
     }

@@ -16,7 +16,7 @@ import string
 import struct
 import sys
 
-version_no = 3
+version_no = 4
 
 
 class KTestError(Exception):
@@ -60,7 +60,16 @@ class KTest:
             name = f.read(size).decode('utf-8')
             size, = struct.unpack('>i', f.read(4))
             bytes = f.read(size)
-            objects.append((name, bytes))
+            pointers = []
+            if version >= 4:
+                numPointers, = struct.unpack('>i', f.read(4))
+                for _ in range(numPointers):
+                    offset, = struct.unpack('>i', f.read(4))
+                    index, = struct.unpack('>i', f.read(4))
+                    indexOffset, = struct.unpack('>i', f.read(4))
+                    pointers.append((offset, index, indexOffset))
+            objects.append((name, bytes, pointers))
+
 
         # Create an instance
         b = KTest(version, path, args, symArgvs, symArgvLen, objects)
@@ -92,9 +101,10 @@ class KTest:
         fmt['data'] = "object {0:" + width + "d}: data: {1}"
         fmt['hex' ] = "object {0:" + width + "d}: hex : 0x{1}"
         fmt['text'] = "object {0:" + width + "d}: text: {1}"
+        fmt['pointers'] = "object {0:" + width + "d}: pointers: {1}"
 
         # print objects
-        for i, (name, data) in enumerate(self.objects):
+        for i, (name, data, pointers) in enumerate(self.objects):
             def p(key, arg): print(fmt[key].format(i, arg), file=sio)
 
             blob = data.rstrip(b'\x00') if format_spec.endswith('trimzeros') else data
@@ -111,6 +121,8 @@ class KTest:
                     p('uint', struct.unpack(m.upper(), data)[0])
                     break
             p('text', txt)
+            if pointers:
+                p('pointers', pointers)
 
         return sio.getvalue()
 
