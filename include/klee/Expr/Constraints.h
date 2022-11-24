@@ -40,6 +40,8 @@ public:
     return constraints == b.constraints;
   }
 
+  void dump() const;
+
 private:
   constraints_ty constraints;
 };
