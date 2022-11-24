@@ -30,3 +30,7 @@ lit.site.cfg
 autoconf/aclocal.m4
 autoconf/autom4te.cache/
 autom4te.cache/
+
+.vscode/launch.json
+.vscode/settings.json
+.cache/
