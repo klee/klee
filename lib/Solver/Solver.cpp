@@ -190,26 +190,39 @@ std::pair<ref<Expr>, ref<Expr>> Solver::getRange(const Query &query) {
       min = lo;
     }
 
-    // binary search for max
-    lo = min, hi = bits64::maxValueOfNBits(bits);
-    while (lo < hi) {
-      mid = lo + (hi - lo) / 2;
-      bool res;
-      bool success = mustBeTrue(
-          query.withExpr(UleExpr::create(e, ConstantExpr::create(mid, width))),
-          res);
+    res = false;
+    success = mayBeTrue(
+        query.withExpr(EqExpr::create(
+            e, ConstantExpr::create(bits64::maxValueOfNBits(bits), width))),
+        res);
 
-      assert(success && "FIXME: Unhandled solver failure");
-      (void)success;
+    assert(success && "FIXME: Unhandled solver failure");
+    (void)success;
 
-      if (res) {
-        hi = mid;
-      } else {
-        lo = mid + 1;
+    if (res) {
+      max = bits64::maxValueOfNBits(bits);
+    } else {
+      // binary search for max
+      lo = min, hi = bits64::maxValueOfNBits(bits);
+      while (lo < hi) {
+        mid = lo + (hi - lo) / 2;
+        bool res;
+        bool success = mustBeTrue(query.withExpr(UleExpr::create(
+                                      e, ConstantExpr::create(mid, width))),
+                                  res);
+
+        assert(success && "FIXME: Unhandled solver failure");
+        (void)success;
+
+        if (res) {
+          hi = mid;
+        } else {
+          lo = mid + 1;
+        }
       }
-    }
 
-    max = lo;
+      max = lo;
+    }
   }
 
   return std::make_pair(ConstantExpr::create(min, width),
