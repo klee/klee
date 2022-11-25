@@ -148,9 +148,7 @@ public:
   virtual void getConstraintLog(const ExecutionState &state, std::string &res,
                                 LogType logFormat = STP) = 0;
 
-  virtual bool getSymbolicSolution(
-      const ExecutionState &state,
-      std::vector<std::pair<std::string, std::vector<unsigned char>>> &res) = 0;
+  virtual bool getSymbolicSolution(const ExecutionState &state, KTest &res) = 0;
 
   virtual void
   getCoveredLines(const ExecutionState &state,

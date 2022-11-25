@@ -465,8 +465,13 @@ void KleeHandler::processTestCase(const ExecutionState &state,
                                   const char *errorMessage,
                                   const char *errorSuffix) {
   if (!WriteNone) {
-    std::vector<std::pair<std::string, std::vector<unsigned char>>> out;
-    bool success = m_interpreter->getSymbolicSolution(state, out);
+    KTest ktest;
+    ktest.numArgs = m_argc;
+    ktest.args = m_argv;
+    ktest.symArgvs = 0;
+    ktest.symArgvLen = 0;
+
+    bool success = m_interpreter->getSymbolicSolution(state, ktest);
 
     if (!success)
       klee_warning("unable to get symbolic solution, losing test case");
@@ -476,34 +481,19 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     unsigned id = ++m_numTotalTests;
 
     if (success) {
-      KTest b;
-      b.numArgs = m_argc;
-      b.args = m_argv;
-      b.symArgvs = 0;
-      b.symArgvLen = 0;
-      b.numObjects = out.size();
-      b.objects = new KTestObject[b.numObjects];
-      assert(b.objects);
-      for (unsigned i = 0; i < b.numObjects; i++) {
-        KTestObject *o = &b.objects[i];
-        o->name = const_cast<char *>(out[i].first.c_str());
-        o->numBytes = out[i].second.size();
-        o->bytes = new unsigned char[o->numBytes];
-        assert(o->bytes);
-        std::copy(out[i].second.begin(), out[i].second.end(), o->bytes);
-      }
-
       if (!kTest_toFile(
-              &b, getOutputFilename(getTestFilename("ktest", id)).c_str())) {
+              &ktest,
+              getOutputFilename(getTestFilename("ktest", id)).c_str())) {
         klee_warning("unable to write output test case, losing it");
       } else {
         ++m_numGeneratedTests;
       }
-
-      for (unsigned i = 0; i < b.numObjects; i++)
-        delete[] b.objects[i].bytes;
-      delete[] b.objects;
     }
+
+    for (unsigned i = 0; i < ktest.numObjects; i++) {
+      delete[] ktest.objects[i].bytes;
+    }
+    delete[] ktest.objects;
 
     if (errorMessage) {
       auto f = openTestFile(errorSuffix, id);

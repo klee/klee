@@ -4504,9 +4504,7 @@ void Executor::getConstraintLog(const ExecutionState &state, std::string &res,
   }
 }
 
-bool Executor::getSymbolicSolution(
-    const ExecutionState &state,
-    std::vector<std::pair<std::string, std::vector<unsigned char>>> &res) {
+bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
   solver->setTimeout(coreSolverTimeout);
 
   ConstraintSet extendedConstraints(state.constraints);
@@ -4549,8 +4547,20 @@ bool Executor::getSymbolicSolution(
     return false;
   }
 
-  for (unsigned i = 0; i != state.symbolics.size(); ++i)
-    res.push_back(std::make_pair(state.symbolics[i].first->name, values[i]));
+  res.objects = new KTestObject[state.symbolics.size()];
+  res.numObjects = state.symbolics.size();
+
+  for (unsigned i = 0; i != state.symbolics.size(); ++i) {
+    auto mo = state.symbolics[i].first;
+    KTestObject *o = &res.objects[i];
+    o->name = const_cast<char *>(mo->name.c_str());
+    o->numBytes = values[i].size();
+    o->bytes = new unsigned char[o->numBytes];
+    std::copy(values[i].begin(), values[i].end(), o->bytes);
+    o->numPointers = 0;
+    o->pointers = nullptr;
+  }
+
   return true;
 }
 
