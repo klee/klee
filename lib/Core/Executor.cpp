@@ -4688,6 +4688,34 @@ void Executor::getConstraintLog(const ExecutionState &state, std::string &res,
   }
 }
 
+void Executor::logState(const ExecutionState &state, int id,
+                        std::unique_ptr<llvm::raw_fd_ostream> &f) {
+  *f << "State number " << state.id << ". Test number: " << id << "\n\n";
+  *f << state.symbolics.size() << " symbolics total. "
+     << "Symbolics:\n";
+  size_t sc = 0;
+  for (auto i : state.symbolics) {
+    *f << "Symbolic number " << sc++ << "\n";
+    *f << "Associated memory object: " << i.first.get()->id << "\n";
+    *f << "Memory object size: " << i.first.get()->size << "\n";
+    if (!i.first->isLazyInitialized()) {
+      *f << "<Not initialized lazily>"
+         << "\n";
+      continue;
+    }
+    auto lisource = i.first->lazyInitializationSource;
+    *f << "Lazy Initializaion Source: ";
+    lisource->print(*f);
+    *f << "\n";
+  }
+  *f << "\n";
+  *f << "State constraints:\n";
+  for (auto i : state.constraints) {
+    i->print(*f);
+    *f << "\n";
+  }
+}
+
 void Executor::setInitializationGraph(const ExecutionState &state,
                                       KTest &ktest) {
   std::map<size_t, std::vector<Pointer>> pointers;
