@@ -36,6 +36,7 @@
 #include "klee/Expr/ExprSMTLIBPrinter.h"
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Module/Cell.h"
+#include "klee/Module/CodeGraphDistance.h"
 #include "klee/Module/InstructionInfoTable.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
@@ -421,8 +422,9 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       externalDispatcher(new ExternalDispatcher(ctx)), statsTracker(0),
       pathWriter(0), symPathWriter(0),
       specialFunctionHandler(0), timers{time::Span(TimerInterval)},
-      replayKTest(0), replayPath(0), usingSeeds(0), atMemoryLimit(false),
-      inhibitForking(false), haltExecution(false), ivcEnabled(false),
+      codeGraphDistance(new CodeGraphDistance()), replayKTest(0), replayPath(0),
+      usingSeeds(0), atMemoryLimit(false), inhibitForking(false),
+      haltExecution(false), ivcEnabled(false),
       debugLogBuffer(debugBufferString) {
 
   const time::Span maxTime{MaxTime};
@@ -481,7 +483,8 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
 
 llvm::Module *
 Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
-                    const ModuleOptions &opts) {
+                    const ModuleOptions &opts,
+                    const std::vector<std::string> &mainModuleFunctions) {
   assert(!kmodule && !modules.empty() &&
          "can only register one module"); // XXX gross
 
@@ -525,6 +528,9 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
 
   // 4.) Manifest the module
   kmodule->manifest(interpreterHandler, StatsTracker::useStatistics());
+  kmodule->mainModuleFunctions.insert(kmodule->mainModuleFunctions.end(),
+                                      mainModuleFunctions.begin(),
+                                      mainModuleFunctions.end());
 
   specialFunctionHandler->bind();
 
@@ -539,6 +545,9 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
   Context::initialize(TD->isLittleEndian(),
                       (Expr::Width)TD->getPointerSizeInBits());
 
+  targetCalculator =
+      new TargetCalculator(*kmodule.get(), *codeGraphDistance.get());
+
   return kmodule->module.get();
 }
 
@@ -548,6 +557,7 @@ Executor::~Executor() {
   delete specialFunctionHandler;
   delete statsTracker;
   delete solver;
+  delete targetCalculator;
 }
 
 /***/
@@ -1387,6 +1397,9 @@ void Executor::stepInstruction(ExecutionState &state) {
 
   ++stats::instructions;
   ++state.steppedInstructions;
+  if (isa<LoadInst>(state.pc->inst) || isa<StoreInst>(state.pc->inst)) {
+    ++state.steppedMemoryInstructions;
+  }
   state.prevPC = state.pc;
   ++state.pc;
 
@@ -1579,6 +1592,7 @@ void Executor::unwindToNextLandingpad(ExecutionState &state) {
 
         state.pushFrame(state.prevPC, kf);
         state.pc = kf->instructions;
+        state.increaseLevel();
         bindArgument(kf, 0, state, sui->exceptionObject);
         bindArgument(kf, 1, state, clauses_mo->getSizeExpr());
         bindArgument(kf, 2, state, clauses_mo->getBaseExpr());
@@ -1838,7 +1852,8 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
     KFunction *kf = kmodule->functionMap[f];
 
     state.pushFrame(state.prevPC, kf);
-    state.pc = kf->instructions;
+    transferToBasicBlock(&*kf->function->begin(), state.getPrevPCBlock(),
+                         state);
 
     if (statsTracker)
       statsTracker->framePushed(state, &state.stack[state.stack.size() - 2]);
@@ -1985,41 +2000,11 @@ void Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src,
 
   // XXX this lookup has to go ?
   KFunction *kf = state.stack.back().kf;
-  unsigned entry = kf->basicBlockEntry[dst];
-  state.pc = &kf->instructions[entry];
+  state.pc = kf->blockMap[dst]->instructions;
+  state.increaseLevel();
   if (state.pc->inst->getOpcode() == Instruction::PHI) {
     PHINode *first = static_cast<PHINode *>(state.pc->inst);
     state.incomingBBIndex = first->getBasicBlockIndex(src);
-  }
-}
-
-/// Compute the true target of a function call, resolving LLVM aliases
-/// and bitcasts.
-Function *Executor::getTargetFunction(Value *calledVal, ExecutionState &state) {
-  SmallPtrSet<const GlobalValue *, 3> Visited;
-
-  Constant *c = dyn_cast<Constant>(calledVal);
-  if (!c)
-    return 0;
-
-  while (true) {
-    if (GlobalValue *gv = dyn_cast<GlobalValue>(c)) {
-      if (!Visited.insert(gv).second)
-        return 0;
-
-      if (Function *f = dyn_cast<Function>(gv))
-        return f;
-      else if (GlobalAlias *ga = dyn_cast<GlobalAlias>(gv))
-        c = ga->getAliasee();
-      else
-        return 0;
-    } else if (llvm::ConstantExpr *ce = dyn_cast<llvm::ConstantExpr>(c)) {
-      if (ce->getOpcode() == Instruction::BitCast)
-        c = ce->getOperand(0);
-      else
-        return 0;
-    } else
-      return 0;
   }
 }
 
@@ -2040,6 +2025,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     if (state.stack.size() <= 1) {
       assert(!caller && "caller set on initial stack frame");
+      state.pc = state.prevPC;
+      state.increaseLevel();
       terminateStateOnExit(state);
     } else {
       state.popFrame();
@@ -2051,6 +2038,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         transferToBasicBlock(ii->getNormalDest(), caller->getParent(), state);
       } else {
         state.pc = kcaller;
+        state.increaseLevel();
         ++state.pc;
       }
 
@@ -2381,7 +2369,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 #endif
 
     unsigned numArgs = cs.arg_size();
-    Function *f = getTargetFunction(fp, state);
+    Function *f = getTargetFunction(fp);
 
     if (isa<InlineAsm>(fp)) {
       terminateStateOnExecError(state, "inline assembly is unsupported");
@@ -3481,6 +3469,10 @@ void Executor::doDumpStates() {
   }
 
   klee_message("halting execution, dumping remaining states");
+  for (const auto &state : pausedStates)
+    terminateStateEarly(*state, "Execution halting (paused state).",
+                        StateTerminationType::Interrupted);
+  updateStates(nullptr);
   for (const auto &state : states)
     terminateStateEarly(*state, "Execution halting.",
                         StateTerminationType::Interrupted);
@@ -3488,8 +3480,6 @@ void Executor::doDumpStates() {
 }
 
 void Executor::run(ExecutionState &initialState) {
-  bindModuleConstants();
-
   // Delay init till now so that ticks don't accrue during optimization and
   // such.
   timers.reset();
@@ -3570,30 +3560,46 @@ void Executor::run(ExecutionState &initialState) {
 
   // main interpreter loop
   while (!states.empty() && !haltExecution) {
-    ExecutionState &state = searcher->selectState();
-    KInstruction *ki = state.pc;
-    stepInstruction(state);
+    while (!searcher->empty() && !haltExecution) {
+      ExecutionState &state = searcher->selectState();
+      KInstruction *prevKI = state.prevPC;
+      KFunction *kf = prevKI->parent->parent;
 
-    executeInstruction(state, ki);
-    timers.invoke();
-    if (::dumpStates)
-      dumpStates();
-    if (::dumpPTree)
-      dumpPTree();
+      if (prevKI->inst->isTerminator() && kmodule->inMainModule(kf->function)) {
+        targetCalculator->update(state);
+      }
 
-    updateStates(&state);
-
-    if (!checkMemoryUsage()) {
-      // update searchers when states were terminated early due to memory
-      // pressure
-      updateStates(nullptr);
+      executeStep(state);
     }
+
+    if (searcher->empty())
+      haltExecution = true;
   }
 
   delete searcher;
   searcher = nullptr;
 
   doDumpStates();
+  haltExecution = false;
+}
+
+void Executor::executeStep(ExecutionState &state) {
+  KInstruction *ki = state.pc;
+  stepInstruction(state);
+
+  executeInstruction(state, ki);
+  timers.invoke();
+  if (::dumpStates)
+    dumpStates();
+  if (::dumpPTree)
+    dumpPTree();
+
+  updateStates(&state);
+
+  if (!checkMemoryUsage()) {
+    // update searchers when states were terminated early due to memory pressure
+    updateStates(nullptr);
+  }
 }
 
 std::string Executor::getAddressInfo(ExecutionState &state, ref<Expr> address,
@@ -3655,6 +3661,14 @@ void Executor::terminateState(ExecutionState &state) {
                       "replay did not consume all objects in test input.");
   }
 
+  std::vector<ExecutionState *>::iterator itr =
+      std::find(removedStates.begin(), removedStates.end(), &state);
+
+  if (itr != removedStates.end()) {
+    klee_warning("remove state twice");
+    return;
+  }
+
   interpreterHandler->incPathsExplored();
 
   std::vector<ExecutionState *>::iterator it =
@@ -3692,6 +3706,16 @@ static std::string terminationTypeFileExtension(StateTerminationType type) {
   return ret;
 };
 
+void Executor::pauseState(ExecutionState &state) {
+  pausedStates.insert(&state);
+  searcher->update(nullptr, {}, {&state});
+}
+
+void Executor::unpauseState(ExecutionState &state) {
+  pausedStates.erase(&state);
+  searcher->update(nullptr, {&state}, {});
+}
+
 void Executor::terminateStateOnExit(ExecutionState &state) {
   if (shouldWriteTest(state) || (AlwaysOutputSeeds && seedMap.count(&state)))
     interpreterHandler->processTestCase(
@@ -3699,6 +3723,7 @@ void Executor::terminateStateOnExit(ExecutionState &state) {
         terminationTypeFileExtension(StateTerminationType::Exit).c_str());
 
   interpreterHandler->incPathsCompleted();
+  targetCalculator->update(state);
   terminateState(state);
 }
 
@@ -3814,6 +3839,7 @@ void Executor::terminateStateOnError(ExecutionState &state,
     interpreterHandler->processTestCase(state, msg.str().c_str(), file_suffix);
   }
 
+  targetCalculator->update(state);
   terminateState(state);
 
   if (shouldExitOn(terminationType))
@@ -4562,14 +4588,6 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
 
   ExecutionState *state = new ExecutionState(kmodule->functionMap[f]);
 
-  if (pathWriter)
-    state->pathOS = pathWriter->open();
-  if (symPathWriter)
-    state->symPathOS = symPathWriter->open();
-
-  if (statsTracker)
-    statsTracker->framePushed(*state, 0);
-
   assert(arguments.size() == f->arg_size() && "wrong number of arguments");
   for (unsigned i = 0, e = f->arg_size(); i != e; ++i)
     bindArgument(kf, i, *state, arguments[i]);
@@ -4602,7 +4620,16 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
 
   initializeGlobals(*state);
 
+  if (pathWriter)
+    state->pathOS = pathWriter->open();
+  if (symPathWriter)
+    state->symPathOS = symPathWriter->open();
+
+  if (statsTracker)
+    statsTracker->framePushed(*state, 0);
+
   processTree = std::make_unique<PTree>(state);
+  bindModuleConstants();
   run(*state);
   processTree = nullptr;
 

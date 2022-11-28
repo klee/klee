@@ -1,6 +1,6 @@
 // RUN: %clang %s -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee -write-kqueries --output-dir=%t.klee-out --skip-not-symbolic-objects --use-timestamps=false %t.bc > %t.log
+// RUN: %klee -write-kqueries --output-dir=%t.klee-out --skip-not-symbolic-objects --use-timestamps=false --use-guided-search=false %t.bc > %t.log
 // RUN: FileCheck %s -input-file=%t.log
 
 struct Node {

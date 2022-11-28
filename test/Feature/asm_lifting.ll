@@ -1,6 +1,6 @@
 ; RUN: llvm-as %s -f -o %t1.bc
 ; RUN: rm -rf %t.klee-out
-; RUN: %klee --output-dir=%t.klee-out --optimize=false %t1.bc
+; RUN: %klee --output-dir=%t.klee-out --optimize=false --split-calls=false %t1.bc
 ; RUN: FileCheck %s --input-file=%t.klee-out/assembly.ll
 
 define i32 @asm_free() nounwind {

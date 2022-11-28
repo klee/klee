@@ -12,6 +12,7 @@
 
 #include "AddressSpace.h"
 #include "MergeHandler.h"
+#include "Target.h"
 
 #include "klee/ADT/ImmutableSet.h"
 #include "klee/ADT/TreeStream.h"
@@ -22,9 +23,12 @@
 #include "klee/Solver/Solver.h"
 #include "klee/System/Time.h"
 
+#include "llvm/IR/Function.h"
+
 #include <map>
 #include <memory>
 #include <set>
+#include <utility>
 #include <vector>
 
 namespace klee {
@@ -33,6 +37,7 @@ class CallPathNode;
 struct Cell;
 template <class T> class ExprHashMap;
 struct KFunction;
+struct KBlock;
 struct KInstruction;
 class MemoryObject;
 class PTreeNode;
@@ -144,6 +149,9 @@ struct CleanupPhaseUnwindingInformation : public UnwindingInformation {
   }
 };
 
+typedef std::pair<ref<const MemoryObject>, const Array *> Symbolic;
+typedef std::pair<llvm::BasicBlock *, llvm::BasicBlock *> Transition;
+
 /// @brief ExecutionState representing a path under exploration
 class ExecutionState {
 #ifdef KLEE_UNITTEST
@@ -158,6 +166,9 @@ public:
   using stack_ty = std::vector<StackFrame>;
 
   // Execution - Control Flow specific
+
+  /// @brief Pointer to initial instruction
+  KInstIterator initPC;
 
   /// @brief Pointer to instruction to be executed after the current
   /// instruction
@@ -178,6 +189,11 @@ public:
   /// @brief Exploration depth, i.e., number of times KLEE branched for this
   /// state
   std::uint32_t depth = 0;
+
+  /// @brief Exploration level, i.e., number of times KLEE cycled for this state
+  std::unordered_multiset<llvm::BasicBlock *> multilevel;
+  std::unordered_set<llvm::BasicBlock *> level;
+  std::unordered_set<Transition, TransitionHash> transitionLevel;
 
   /// @brief Address space used by this state (e.g. Global and Heap)
   AddressSpace addressSpace;
@@ -208,7 +224,8 @@ public:
   /// @brief Ordered list of symbolics: used to generate test cases.
   //
   // FIXME: Move to a shared list structure (not critical).
-  std::vector<std::pair<ref<const MemoryObject>, const Array *>> symbolics;
+  std::vector<Symbolic> symbolics;
+
   /// @brief map from memory accesses to accessed objects and access offsets.
   ExprHashMap<std::pair<const MemoryObject *, ref<Expr>>> resolvedPointers;
 
@@ -226,6 +243,10 @@ public:
   /// @brief The numbers of times this state has run through
   /// Executor::stepInstruction
   std::uint64_t steppedInstructions = 0;
+
+  /// @brief The numbers of times this state has run through
+  /// Executor::stepInstruction with executeMemoryOperation
+  std::uint64_t steppedMemoryInstructions = 0;
 
   /// @brief Counts how many instructions were executed since the last new
   /// instruction was covered.
@@ -245,6 +266,9 @@ public:
 
   /// @brief Disables forking for this state. Set by user code
   bool forkDisabled = false;
+
+  /// @brief The targets that the state must achieve
+  std::set<Target> targets;
 
   ExprHashMap<std::pair<ref<Expr>, unsigned>> gepExprBases;
   ExprHashMap<ref<Expr>> gepExprOffsets;
@@ -291,6 +315,10 @@ public:
 
   std::uint32_t getID() const { return id; };
   void setID() { id = nextID++; };
+  llvm::BasicBlock *getInitPCBlock() const;
+  llvm::BasicBlock *getPrevPCBlock() const;
+  llvm::BasicBlock *getPCBlock() const;
+  void increaseLevel();
   bool isGEPExpr(ref<Expr> expr) const;
 };
 

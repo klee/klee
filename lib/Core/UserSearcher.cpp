@@ -14,6 +14,7 @@
 #include "Searcher.h"
 
 #include "klee/Support/ErrorHandling.h"
+#include "klee/Support/OptionCategories.h"
 
 #include "llvm/Support/CommandLine.h"
 
@@ -63,6 +64,15 @@ cl::opt<bool> UseBatchingSearch(
              "(default=false)"),
     cl::init(false), cl::cat(SearchCat));
 
+cl::opt<bool> UseGuidedSearch(
+    "use-guided-search",
+    cl::desc("Takes place in two steps. First, all acyclic paths are executed, "
+             "then the execution is guided to sections of the program not yet "
+             "covered. These steps are repeated until all blocks of the "
+             "program are covered"
+             "(default=true)"),
+    cl::init(true), cl::cat(SearchCat));
+
 cl::opt<unsigned> BatchInstructions(
     "batch-instructions",
     cl::desc("Number of instructions to batch when using "
@@ -75,6 +85,11 @@ cl::opt<std::string> BatchTime(
              "--use-batching-search.  Set to 0s to disable (default=5s)"),
     cl::init("5s"), cl::cat(SearchCat));
 
+cl::opt<unsigned long long>
+    MaxCycles("max-cycles",
+              cl::desc("stop execution after visiting some basic block this "
+                       "amount of times (default=1)."),
+              cl::init(1), cl::cat(TerminationCat));
 } // namespace
 
 void klee::initializeSearchOptions() {
@@ -181,6 +196,12 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
     executor.setMergingSearcher(ms);
 
     searcher = ms;
+  }
+
+  if (UseGuidedSearch) {
+    searcher = new GuidedSearcher(
+        searcher, *executor.codeGraphDistance.get(), *executor.targetCalculator,
+        executor.pausedStates, MaxCycles - 1, executor.theRNG);
   }
 
   llvm::raw_ostream &os = executor.getHandler().getInfoStream();

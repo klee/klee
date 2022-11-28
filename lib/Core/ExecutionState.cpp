@@ -74,7 +74,7 @@ StackFrame::~StackFrame() { delete[] locals; }
 /***/
 
 ExecutionState::ExecutionState(KFunction *kf)
-    : pc(kf->instructions), prevPC(pc) {
+    : initPC(kf->instructions), pc(initPC), prevPC(pc) {
   pushFrame(nullptr, kf);
   setID();
 }
@@ -89,8 +89,9 @@ ExecutionState::~ExecutionState() {
 }
 
 ExecutionState::ExecutionState(const ExecutionState &state)
-    : pc(state.pc), prevPC(state.prevPC), stack(state.stack),
-      incomingBBIndex(state.incomingBBIndex), depth(state.depth),
+    : initPC(state.initPC), pc(state.pc), prevPC(state.prevPC),
+      stack(state.stack), incomingBBIndex(state.incomingBBIndex),
+      depth(state.depth), multilevel(state.multilevel), level(state.level),
       addressSpace(state.addressSpace), constraints(state.constraints),
       pathOS(state.pathOS), symPathOS(state.symPathOS),
       coveredLines(state.coveredLines), symbolics(state.symbolics),
@@ -98,12 +99,14 @@ ExecutionState::ExecutionState(const ExecutionState &state)
       cexPreferences(state.cexPreferences), arrayNames(state.arrayNames),
       openMergeStack(state.openMergeStack),
       steppedInstructions(state.steppedInstructions),
+      steppedMemoryInstructions(state.steppedMemoryInstructions),
       instsSinceCovNew(state.instsSinceCovNew),
       unwindingInformation(state.unwindingInformation
                                ? state.unwindingInformation->clone()
                                : nullptr),
       coveredNew(state.coveredNew), forkDisabled(state.forkDisabled),
-      gepExprBases(state.gepExprBases), gepExprOffsets(state.gepExprOffsets) {
+      targets(state.targets), gepExprBases(state.gepExprBases),
+      gepExprOffsets(state.gepExprOffsets) {
   for (const auto &cur_mergehandler : openMergeStack)
     cur_mergehandler->addOpenState(this);
 }
@@ -441,6 +444,30 @@ void ExecutionState::addConstraint(ref<Expr> e) {
 void ExecutionState::addCexPreference(const ref<Expr> &cond) {
   cexPreferences = cexPreferences.insert(cond);
 }
+
+BasicBlock *ExecutionState::getInitPCBlock() const {
+  return initPC->inst->getParent();
+}
+
+BasicBlock *ExecutionState::getPrevPCBlock() const {
+  return prevPC->inst->getParent();
+}
+
+BasicBlock *ExecutionState::getPCBlock() const { return pc->inst->getParent(); }
+
+void ExecutionState::increaseLevel() {
+  llvm::BasicBlock *srcbb = getPrevPCBlock();
+  llvm::BasicBlock *dstbb = getPCBlock();
+  KFunction *kf = prevPC->parent->parent;
+  KModule *kmodule = kf->parent;
+
+  if (prevPC->inst->isTerminator() && kmodule->inMainModule(kf->function)) {
+    multilevel.insert(srcbb);
+    level.insert(srcbb);
+  }
+  transitionLevel.insert(std::make_pair(srcbb, dstbb));
+}
+
 bool ExecutionState::isGEPExpr(ref<Expr> expr) const {
   return UseGEPOptimization && gepExprBases.find(expr) != gepExprBases.end();
 }

@@ -205,6 +205,20 @@ public:
   OptNonePass() : llvm::ModulePass(ID) {}
   bool runOnModule(llvm::Module &M) override;
 };
+
+class CallSplitter : public llvm::FunctionPass {
+public:
+  static char ID;
+  CallSplitter() : llvm::FunctionPass(ID) {}
+  bool runOnFunction(llvm::Function &F) override;
+};
+
+class ReturnSplitter : public llvm::FunctionPass {
+public:
+  static char ID;
+  ReturnSplitter() : llvm::FunctionPass(ID) {}
+  bool runOnFunction(llvm::Function &F) override;
+};
 } // namespace klee
 
 #endif /* KLEE_PASSES_H */

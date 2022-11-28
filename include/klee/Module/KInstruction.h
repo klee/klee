@@ -26,6 +26,7 @@ namespace klee {
 class Executor;
 struct InstructionInfo;
 class KModule;
+struct KBlock;
 
 /// KInstruction - Intermediate instruction representation used
 /// during execution.
@@ -40,8 +41,11 @@ struct KInstruction {
   int *operands;
   /// Destination register index.
   unsigned dest;
+  KBlock *parent;
 
 public:
+  KInstruction() = default;
+  explicit KInstruction(const KInstruction &ki);
   virtual ~KInstruction();
   std::string getSourceLocation() const;
 };
@@ -56,6 +60,10 @@ struct KGEPInstruction : KInstruction {
   /// offset - A constant offset to add to the pointer operand to execute the
   /// instruction.
   uint64_t offset;
+
+public:
+  KGEPInstruction() = default;
+  explicit KGEPInstruction(const KGEPInstruction &ki);
 };
 } // namespace klee
 

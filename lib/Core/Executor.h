@@ -60,6 +60,7 @@ class Value;
 namespace klee {
 class Array;
 struct Cell;
+class CodeGraphDistance;
 class ExecutionState;
 class ExternalDispatcher;
 class Expr;
@@ -77,6 +78,7 @@ class Searcher;
 class SeedInfo;
 class SpecialFunctionHandler;
 struct StackFrame;
+class TargetCalculator;
 class StatsTracker;
 class TimingSolver;
 class TreeStreamWriter;
@@ -111,11 +113,14 @@ private:
   TimingSolver *solver;
   MemoryManager *memory;
   std::set<ExecutionState *, ExecutionStateIDCompare> states;
+  std::set<ExecutionState *, ExecutionStateIDCompare> pausedStates;
   StatsTracker *statsTracker;
   TreeStreamWriter *pathWriter, *symPathWriter;
   SpecialFunctionHandler *specialFunctionHandler;
   TimerGroup timers;
   std::unique_ptr<PTree> processTree;
+  std::unique_ptr<CodeGraphDistance> codeGraphDistance;
+  TargetCalculator *targetCalculator;
 
   /// Used to track states that have been added during the current
   /// instructions step.
@@ -210,8 +215,7 @@ private:
   /// Return the typeid corresponding to a certain `type_info`
   ref<ConstantExpr> getEhTypeidFor(ref<Expr> type_info);
 
-  llvm::Function *getTargetFunction(llvm::Value *calledVal,
-                                    ExecutionState &state);
+  void addHistoryResult(ExecutionState &state);
 
   void executeInstruction(ExecutionState &state, KInstruction *ki);
 
@@ -399,6 +403,12 @@ private:
   /// Remove state from queue and delete state
   void terminateState(ExecutionState &state);
 
+  // pause state
+  void pauseState(ExecutionState &state);
+
+  // unpause state
+  void unpauseState(ExecutionState &state);
+
   /// Call exit handler and terminate state normally
   /// (end of execution path)
   void terminateStateOnExit(ExecutionState &state);
@@ -490,8 +500,10 @@ public:
     replayPosition = 0;
   }
 
-  llvm::Module *setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
-                          const ModuleOptions &opts) override;
+  llvm::Module *
+  setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
+            const ModuleOptions &opts,
+            const std::vector<std::string> &mainModuleFunctions) override;
 
   void useSeeds(const std::vector<struct KTest *> *seeds) override {
     usingSeeds = seeds;
@@ -534,6 +546,7 @@ public:
 
   MergingSearcher *getMergingSearcher() const { return mergingSearcher; };
   void setMergingSearcher(MergingSearcher *ms) { mergingSearcher = ms; };
+  void executeStep(ExecutionState &state);
 };
 
 } // namespace klee
