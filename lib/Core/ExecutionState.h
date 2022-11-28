@@ -17,6 +17,7 @@
 #include "klee/ADT/TreeStream.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
+#include "klee/Expr/ExprHashMap.h"
 #include "klee/Module/KInstIterator.h"
 #include "klee/Solver/Solver.h"
 #include "klee/System/Time.h"
@@ -30,6 +31,7 @@ namespace klee {
 class Array;
 class CallPathNode;
 struct Cell;
+template <class T> class ExprHashMap;
 struct KFunction;
 struct KInstruction;
 class MemoryObject;
@@ -207,6 +209,8 @@ public:
   //
   // FIXME: Move to a shared list structure (not critical).
   std::vector<std::pair<ref<const MemoryObject>, const Array *>> symbolics;
+  /// @brief map from memory accesses to accessed objects and access offsets.
+  ExprHashMap<std::pair<const MemoryObject *, ref<Expr>>> resolvedPointers;
 
   /// @brief A set of boolean expressions
   /// the user has requested be true of a counterexample.
@@ -242,6 +246,9 @@ public:
   /// @brief Disables forking for this state. Set by user code
   bool forkDisabled = false;
 
+  ExprHashMap<std::pair<ref<Expr>, unsigned>> gepExprBases;
+  ExprHashMap<ref<Expr>> gepExprOffsets;
+
 public:
 #ifdef KLEE_UNITTEST
   // provide this function only in the context of unittests
@@ -260,10 +267,21 @@ public:
 
   ExecutionState *branch();
 
+  bool inSymbolics(const MemoryObject *mo) const;
+
   void pushFrame(KInstIterator caller, KFunction *kf);
   void popFrame();
 
   void addSymbolic(const MemoryObject *mo, const Array *array);
+
+  ref<const MemoryObject> findMemoryObject(const Array *array) const;
+
+  bool getBase(ref<Expr> expr,
+               std::pair<ref<const MemoryObject>, ref<Expr>> &resolution) const;
+
+  void removePointerResolutions(const MemoryObject *mo);
+  void addPointerResolution(ref<Expr> address, ref<Expr> base,
+                            const MemoryObject *mo);
 
   void addConstraint(ref<Expr> e);
   void addCexPreference(const ref<Expr> &cond);
@@ -273,6 +291,7 @@ public:
 
   std::uint32_t getID() const { return id; };
   void setID() { id = nextID++; };
+  bool isGEPExpr(ref<Expr> expr) const;
 };
 
 struct ExecutionStateIDCompare {

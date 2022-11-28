@@ -96,10 +96,9 @@ MemoryManager::~MemoryManager() {
     munmap(deterministicSpace, spaceSize);
 }
 
-MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
-                                      bool isGlobal,
-                                      const llvm::Value *allocSite,
-                                      size_t alignment) {
+MemoryObject *MemoryManager::allocate(
+    uint64_t size, bool isLocal, bool isGlobal, const llvm::Value *allocSite,
+    size_t alignment, ref<Expr> lazyInitializationSource, unsigned timestamp) {
   if (size > 10 * 1024 * 1024)
     klee_warning_once(
         0, "Large alloc: %" PRIu64 " bytes.  KLEE may run out of memory.",
@@ -147,8 +146,9 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
     return 0;
 
   ++stats::allocations;
-  MemoryObject *res = new MemoryObject(address, size, isLocal, isGlobal, false,
-                                       allocSite, this);
+  MemoryObject *res =
+      new MemoryObject(address, size, isLocal, isGlobal, false, allocSite, this,
+                       lazyInitializationSource, timestamp);
   objects.insert(res);
   return res;
 }

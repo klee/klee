@@ -150,6 +150,8 @@ public:
 
   virtual bool getSymbolicSolution(const ExecutionState &state, KTest &res) = 0;
 
+  virtual void setInitializationGraph(const ExecutionState &state,
+                                      KTest &tc) = 0;
   virtual void
   getCoveredLines(const ExecutionState &state,
                   std::map<const std::string *, std::set<unsigned>> &res) = 0;

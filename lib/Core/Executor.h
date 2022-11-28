@@ -63,6 +63,7 @@ struct Cell;
 class ExecutionState;
 class ExternalDispatcher;
 class Expr;
+template <class T> class ExprHashMap;
 class InstructionInfoTable;
 struct KFunction;
 struct KInstruction;
@@ -307,8 +308,10 @@ private:
                               ref<Expr> value /* undef if read */,
                               KInstruction *target /* undef if write */);
 
+  ObjectPair lazyInitializeObject(ExecutionState &state, ref<Expr> address,
+                                  KInstruction *target, uint64_t size);
   void executeMakeSymbolic(ExecutionState &state, const MemoryObject *mo,
-                           const std::string &name);
+                           const std::string &name, bool isLocal);
 
   /// Create a new state where each input condition has been added as
   /// a constraint and return the results. The input state is included
@@ -384,7 +387,8 @@ private:
                        KInstruction *target);
 
   /// Get textual information regarding a memory address.
-  std::string getAddressInfo(ExecutionState &state, ref<Expr> address) const;
+  std::string getAddressInfo(ExecutionState &state, ref<Expr> address,
+                             const MemoryObject *mo = nullptr) const;
 
   // Determines the \param lastInstruction of the \param state which is not KLEE
   // internal and returns its InstructionInfo
@@ -513,6 +517,8 @@ public:
   void
   getConstraintLog(const ExecutionState &state, std::string &res,
                    Interpreter::LogType logFormat = Interpreter::STP) override;
+
+  void setInitializationGraph(const ExecutionState &state, KTest &tc) override;
 
   bool getSymbolicSolution(const ExecutionState &state, KTest &res) override;
 

@@ -18,6 +18,7 @@
 
 namespace klee {
 extern llvm::cl::OptionCategory DebugCat;
+extern llvm::cl::OptionCategory ExecCat;
 extern llvm::cl::OptionCategory MergeCat;
 extern llvm::cl::OptionCategory MiscCat;
 extern llvm::cl::OptionCategory ModuleCat;

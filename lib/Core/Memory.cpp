@@ -43,6 +43,7 @@ cl::opt<bool>
 /***/
 
 int MemoryObject::counter = 0;
+int MemoryObject::time = 0;
 
 MemoryObject::~MemoryObject() {
   if (parent)

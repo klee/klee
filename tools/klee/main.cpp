@@ -472,6 +472,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     ktest.symArgvLen = 0;
 
     bool success = m_interpreter->getSymbolicSolution(state, ktest);
+    m_interpreter->setInitializationGraph(state, ktest);
 
     if (!success)
       klee_warning("unable to get symbolic solution, losing test case");
@@ -492,6 +493,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
 
     for (unsigned i = 0; i < ktest.numObjects; i++) {
       delete[] ktest.objects[i].bytes;
+      delete[] ktest.objects[i].pointers;
     }
     delete[] ktest.objects;
 

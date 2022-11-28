@@ -18,6 +18,24 @@
 
 #include "CoreStats.h"
 
+namespace klee {
+llvm::cl::OptionCategory
+    PointerResolvingCat("Pointer resolving options",
+                        "These options impact pointer resolving.");
+
+llvm::cl::opt<bool> SkipNotSymbolicObjects(
+    "skip-not-symbolic-objects", llvm::cl::init(false),
+    llvm::cl::desc("Set pointers only on symbolic objects, "
+                   "use only with timestamps (default=false)"),
+    llvm::cl::cat(PointerResolvingCat));
+
+llvm::cl::opt<bool> UseTimestamps(
+    "use-timestamps", llvm::cl::init(true),
+    llvm::cl::desc("Set symbolic pointers only to objects created before those "
+                   "pointers were created (default=true)"),
+    llvm::cl::cat(PointerResolvingCat));
+} // namespace klee
+
 using namespace klee;
 
 ///
@@ -76,12 +94,33 @@ bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr,
 
 bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
                               ref<Expr> address, ObjectPair &result,
-                              bool &success) const {
+                              MOPredicate predicate, bool &success) const {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(address)) {
     success = resolveOne(CE, result);
     return true;
   } else {
     TimerStatIncrementer timer(stats::resolveTime);
+
+    ref<Expr> base =
+        state.isGEPExpr(address) ? state.gepExprBases[address].first : address;
+    MemoryObject *symHack = nullptr;
+    for (auto &moa : state.symbolics) {
+      if (moa.first->isLazyInitialized() &&
+          moa.first->getLazyInitializationSource() == base) {
+        symHack = const_cast<MemoryObject *>(moa.first.get());
+        break;
+      }
+    }
+
+    if (symHack) {
+      auto osi = objects.find(symHack);
+      if (osi != objects.end()) {
+        result.first = osi->first;
+        result.second = osi->second.get();
+        success = true;
+        return true;
+      }
+    }
 
     // try cheap search, will succeed for any inbounds pointer
 
@@ -112,6 +151,8 @@ bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
     while (oi != begin) {
       --oi;
       const auto &mo = oi->first;
+      if (!predicate(mo))
+        continue;
 
       bool mayBeTrue;
       if (!solver->mayBeTrue(state.constraints,
@@ -137,6 +178,8 @@ bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
     // search forwards
     for (oi = start; oi != end; ++oi) {
       const auto &mo = oi->first;
+      if (!predicate(mo))
+        continue;
 
       bool mustBeTrue;
       if (!solver->mustBeTrue(state.constraints,
@@ -164,6 +207,33 @@ bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
     success = false;
     return true;
   }
+}
+
+bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
+                              ref<Expr> address, ObjectPair &result,
+                              bool &success) const {
+  MOPredicate predicate([](const MemoryObject *mo) { return true; });
+  if (UseTimestamps) {
+    ref<Expr> base =
+        state.isGEPExpr(address) ? state.gepExprBases[address].first : address;
+    unsigned timestamp = UINT_MAX;
+    if (!isa<ConstantExpr>(address)) {
+      std::pair<ref<const MemoryObject>, ref<Expr>> moBasePair;
+      if (state.getBase(base, moBasePair)) {
+        timestamp = moBasePair.first->timestamp;
+      }
+    }
+    predicate = [timestamp, predicate](const MemoryObject *mo) {
+      return predicate(mo) && mo->timestamp <= timestamp;
+    };
+  }
+  if (SkipNotSymbolicObjects) {
+    predicate = [&state, predicate](const MemoryObject *mo) {
+      return predicate(mo) && state.inSymbolics(mo);
+    };
+  }
+
+  return resolveOne(state, solver, address, result, predicate, success);
 }
 
 int AddressSpace::checkPointerInObject(ExecutionState &state,
@@ -202,7 +272,8 @@ int AddressSpace::checkPointerInObject(ExecutionState &state,
 
 bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
                            ref<Expr> p, ResolutionList &rl,
-                           unsigned maxResolutions, time::Span timeout) const {
+                           MOPredicate predicate, unsigned maxResolutions,
+                           time::Span timeout) const {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(p)) {
     ObjectPair res;
     if (resolveOne(CE, res))
@@ -211,6 +282,24 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
   } else {
     TimerStatIncrementer timer(stats::resolveTime);
 
+    ref<Expr> base = state.isGEPExpr(p) ? state.gepExprBases[p].first : p;
+    MemoryObject *symHack = nullptr;
+    for (auto &moa : state.symbolics) {
+      if (moa.first->isLazyInitialized() &&
+          moa.first->getLazyInitializationSource() == base) {
+        symHack = const_cast<MemoryObject *>(moa.first.get());
+        break;
+      }
+    }
+
+    if (symHack) {
+      auto osi = objects.find(symHack);
+      if (osi != objects.end()) {
+        auto res = std::make_pair(osi->first, osi->second.get());
+        rl.push_back(res);
+        return false;
+      }
+    }
     // XXX in general this isn't exactly what we want... for
     // a multiple resolution case (or for example, a \in {b,c,0})
     // we want to find the first object, find a cex assuming
@@ -243,6 +332,8 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
     while (oi != begin) {
       --oi;
       const MemoryObject *mo = oi->first;
+      if (!predicate(mo))
+        continue;
       if (timeout && timeout < timer.delta())
         return true;
 
@@ -265,6 +356,8 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
     // search forwards
     for (oi = start; oi != end; ++oi) {
       const MemoryObject *mo = oi->first;
+      if (!predicate(mo))
+        continue;
       if (timeout && timeout < timer.delta())
         return true;
 
@@ -285,6 +378,32 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
   }
 
   return false;
+}
+
+bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
+                           ref<Expr> p, ResolutionList &rl,
+                           unsigned maxResolutions, time::Span timeout) const {
+  MOPredicate predicate([](const MemoryObject *mo) { return true; });
+  if (UseTimestamps) {
+    ref<Expr> base = state.isGEPExpr(p) ? state.gepExprBases[p].first : p;
+    unsigned timestamp = UINT_MAX;
+    if (!isa<ConstantExpr>(p)) {
+      std::pair<ref<const MemoryObject>, ref<Expr>> moBasePair;
+      if (state.getBase(base, moBasePair)) {
+        timestamp = moBasePair.first->timestamp;
+      }
+    }
+    predicate = [timestamp, predicate](const MemoryObject *mo) {
+      return predicate(mo) && mo->timestamp <= timestamp;
+    };
+  }
+  if (SkipNotSymbolicObjects) {
+    predicate = [&state, predicate](const MemoryObject *mo) {
+      return predicate(mo) && state.inSymbolics(mo);
+    };
+  }
+
+  return resolve(state, solver, p, rl, predicate, maxResolutions, timeout);
 }
 
 // These two are pretty big hack so we can sort of pass memory back
@@ -341,5 +460,9 @@ bool AddressSpace::copyInConcrete(const MemoryObject *mo, const ObjectState *os,
 
 bool MemoryObjectLT::operator()(const MemoryObject *a,
                                 const MemoryObject *b) const {
-  return a->address < b->address;
+  bool res = true;
+  if (a->lazyInitializationSource && b->lazyInitializationSource) {
+    res = a->lazyInitializationSource != b->lazyInitializationSource;
+  }
+  return res ? a->address < b->address : false;
 }

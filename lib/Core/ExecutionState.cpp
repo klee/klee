@@ -11,6 +11,7 @@
 
 #include "Memory.h"
 
+#include "klee/Expr/ArrayExprVisitor.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Module/Cell.h"
 #include "klee/Module/InstructionInfoTable.h"
@@ -38,7 +39,13 @@ cl::opt<bool> DebugLogStateMerge(
     "debug-log-state-merge", cl::init(false),
     cl::desc("Debug information for underlying state merging (default=false)"),
     cl::cat(MergeCat));
-}
+
+cl::opt<bool> UseGEPOptimization(
+    "use-gep-opt", cl::init(true),
+    cl::desc("Lazily initialize whole objects referenced by gep expressions "
+             "instead of only the referenced parts (default=true)"),
+    cl::cat(ExecCat));
+} // namespace
 
 /***/
 
@@ -87,6 +94,7 @@ ExecutionState::ExecutionState(const ExecutionState &state)
       addressSpace(state.addressSpace), constraints(state.constraints),
       pathOS(state.pathOS), symPathOS(state.symPathOS),
       coveredLines(state.coveredLines), symbolics(state.symbolics),
+      resolvedPointers(state.resolvedPointers),
       cexPreferences(state.cexPreferences), arrayNames(state.arrayNames),
       openMergeStack(state.openMergeStack),
       steppedInstructions(state.steppedInstructions),
@@ -94,7 +102,8 @@ ExecutionState::ExecutionState(const ExecutionState &state)
       unwindingInformation(state.unwindingInformation
                                ? state.unwindingInformation->clone()
                                : nullptr),
-      coveredNew(state.coveredNew), forkDisabled(state.forkDisabled) {
+      coveredNew(state.coveredNew), forkDisabled(state.forkDisabled),
+      gepExprBases(state.gepExprBases), gepExprOffsets(state.gepExprOffsets) {
   for (const auto &cur_mergehandler : openMergeStack)
     cur_mergehandler->addOpenState(this);
 }
@@ -110,19 +119,105 @@ ExecutionState *ExecutionState::branch() {
   return falseState;
 }
 
+bool ExecutionState::inSymbolics(const MemoryObject *mo) const {
+  for (auto i : symbolics) {
+    if (mo == i.first.get()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
   stack.emplace_back(StackFrame(caller, kf));
 }
 
 void ExecutionState::popFrame() {
   const StackFrame &sf = stack.back();
-  for (const auto *memoryObject : sf.allocas)
+  for (const auto *memoryObject : sf.allocas) {
+    removePointerResolutions(memoryObject);
     addressSpace.unbindObject(memoryObject);
+  }
   stack.pop_back();
 }
 
 void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) {
   symbolics.emplace_back(ref<const MemoryObject>(mo), array);
+}
+
+ref<const MemoryObject>
+ExecutionState::findMemoryObject(const Array *array) const {
+  for (unsigned i = 0; i != symbolics.size(); ++i) {
+    const auto &symbolic = symbolics[i];
+    if (array == symbolic.second) {
+      return symbolic.first;
+    }
+  }
+  return nullptr;
+}
+
+bool ExecutionState::getBase(
+    ref<Expr> expr,
+    std::pair<ref<const MemoryObject>, ref<Expr>> &resolution) const {
+  switch (expr->getKind()) {
+  case Expr::Read: {
+    ref<ReadExpr> base = dyn_cast<ReadExpr>(expr);
+    auto parent = findMemoryObject(base->updates.root);
+    if (!parent) {
+      return false;
+    }
+    resolution = std::make_pair(parent, base->index);
+    return true;
+  }
+  case Expr::Concat: {
+    ref<ReadExpr> base =
+        ArrayExprHelper::hasOrderedReads(*dyn_cast<ConcatExpr>(expr));
+    auto parent = findMemoryObject(base->updates.root);
+    if (!parent) {
+      return false;
+    }
+    resolution = std::make_pair(parent, base->index);
+    return true;
+  }
+  default: {
+    if (isGEPExpr(expr)) {
+      ref<Expr> gepBase = gepExprBases.at(expr).first;
+      std::pair<ref<const MemoryObject>, ref<Expr>> gepResolved;
+      if (expr != gepBase && getBase(gepBase, gepResolved)) {
+        auto parent = gepResolved.first;
+        auto index = gepResolved.second;
+        resolution = std::make_pair(parent, index);
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  }
+  }
+}
+
+void ExecutionState::removePointerResolutions(const MemoryObject *mo) {
+  for (auto i = resolvedPointers.begin(), last = resolvedPointers.end();
+       i != last;) {
+    if (i->second.first == mo) {
+      i = resolvedPointers.erase(i);
+    } else {
+      ++i;
+    }
+  }
+}
+
+// base address mo and ignore non pure reads in setinitializationgraph
+void ExecutionState::addPointerResolution(ref<Expr> address, ref<Expr> base,
+                                          const MemoryObject *mo) {
+  if (!isa<ConstantExpr>(address)) {
+    resolvedPointers[address] = std::make_pair(mo, mo->getOffsetExpr(address));
+  }
+  if (base != address && !isa<ConstantExpr>(base)) {
+    resolvedPointers[base] = std::make_pair(mo, mo->getOffsetExpr(base));
+  }
 }
 
 /**/
@@ -345,4 +440,7 @@ void ExecutionState::addConstraint(ref<Expr> e) {
 
 void ExecutionState::addCexPreference(const ref<Expr> &cond) {
   cexPreferences = cexPreferences.insert(cond);
+}
+bool ExecutionState::isGEPExpr(ref<Expr> expr) const {
+  return UseGEPOptimization && gepExprBases.find(expr) != gepExprBases.end();
 }

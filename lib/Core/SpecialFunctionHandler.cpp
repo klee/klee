@@ -836,6 +836,7 @@ void SpecialFunctionHandler::handleMakeSymbolic(
        it != ie; ++it) {
     const MemoryObject *mo = it->first.first;
     mo->setName(name);
+    mo->updateTimestamp();
 
     const ObjectState *old = it->first.second;
     ExecutionState *s = it->second;
@@ -857,7 +858,7 @@ void SpecialFunctionHandler::handleMakeSymbolic(
     assert(success && "FIXME: Unhandled solver failure");
 
     if (res) {
-      executor.executeMakeSymbolic(*s, mo, name);
+      executor.executeMakeSymbolic(*s, mo, name, false);
     } else {
       executor.terminateStateOnUserError(
           *s, "Wrong size given to klee_make_symbolic");

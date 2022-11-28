@@ -135,3 +135,18 @@ template void klee::findSymbolicObjects<A>(A, A, std::vector<const Array *> &);
 
 typedef std::set<ref<Expr>>::iterator B;
 template void klee::findSymbolicObjects<B>(B, B, std::vector<const Array *> &);
+
+bool klee::isReadFromSymbolicArray(ref<Expr> e) {
+  if (auto read = dyn_cast<ReadExpr>(e)) {
+    return !read->updates.root->isConstantArray();
+  }
+  if (auto concat = dyn_cast<ConcatExpr>(e)) {
+    for (size_t i = 0; i < concat->getNumKids(); i++) {
+      if (!isReadFromSymbolicArray(concat->getKid(i))) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return false;
+}
