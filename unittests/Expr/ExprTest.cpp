@@ -12,6 +12,7 @@
 
 #include "klee/Expr/ArrayCache.h"
 #include "klee/Expr/Expr.h"
+#include "klee/Expr/SourceBuilder.h"
 
 using namespace klee;
 
@@ -31,9 +32,11 @@ TEST(ExprTest, BasicConstruction) {
 
 TEST(ExprTest, ConcatExtract) {
   ArrayCache ac;
-  const Array *array = ac.CreateArray("arr0", 256);
+  const Array *array =
+      ac.CreateArray("arr0", 256, SourceBuilder::makeSymbolic());
   ref<Expr> read8 = Expr::createTempRead(array, 8);
-  const Array *array2 = ac.CreateArray("arr1", 256);
+  const Array *array2 =
+      ac.CreateArray("arr1", 256, SourceBuilder::makeSymbolic());
   ref<Expr> read8_2 = Expr::createTempRead(array2, 8);
   ref<Expr> c100 = getConstant(100, 8);
 
@@ -86,10 +89,12 @@ TEST(ExprTest, ConcatExtract) {
 
 TEST(ExprTest, ExtractConcat) {
   ArrayCache ac;
-  const Array *array = ac.CreateArray("arr2", 256);
+  const Array *array =
+      ac.CreateArray("arr2", 256, SourceBuilder::makeSymbolic());
   ref<Expr> read64 = Expr::createTempRead(array, 64);
 
-  const Array *array2 = ac.CreateArray("arr3", 256);
+  const Array *array2 =
+      ac.CreateArray("arr3", 256, SourceBuilder::makeSymbolic());
   ref<Expr> read8_2 = Expr::createTempRead(array2, 8);
 
   ref<Expr> extract1 = ExtractExpr::create(read64, 36, 4);
@@ -122,8 +127,9 @@ TEST(ExprTest, ReadExprFoldingBasic) {
   for (unsigned i = 0; i < size; ++i)
     Contents[i] = ConstantExpr::create(i + 1, Expr::Int8);
   ArrayCache ac;
-  const Array *array =
-      ac.CreateArray("arr", size, &Contents[0], &Contents[0] + size);
+
+  const Array *array = ac.CreateArray("arr", size, SourceBuilder::constant(),
+                                      &Contents[0], &Contents[0] + size);
 
   // Basic constant folding rule
   UpdateList ul(array, 0);
@@ -148,8 +154,9 @@ TEST(ExprTest, ReadExprFoldingIndexOutOfBound) {
   for (unsigned i = 0; i < size; ++i)
     Contents[i] = ConstantExpr::create(i + 1, Expr::Int8);
   ArrayCache ac;
-  const Array *array =
-      ac.CreateArray("arr", size, &Contents[0], &Contents[0] + size);
+
+  const Array *array = ac.CreateArray("arr", size, SourceBuilder::constant(),
+                                      &Contents[0], &Contents[0] + size);
 
   // Constant folding rule with index-out-of-bound
   // Constant index (128)
@@ -169,8 +176,9 @@ TEST(ExprTest, ReadExprFoldingConstantUpdate) {
   for (unsigned i = 0; i < size; ++i)
     Contents[i] = ConstantExpr::create(i + 1, Expr::Int8);
   ArrayCache ac;
-  const Array *array =
-      ac.CreateArray("arr", size, &Contents[0], &Contents[0] + size);
+
+  const Array *array = ac.CreateArray("arr", size, SourceBuilder::constant(),
+                                      &Contents[0], &Contents[0] + size);
 
   // Constant folding rule with constant update
   // Constant index (0)
@@ -194,8 +202,9 @@ TEST(ExprTest, ReadExprFoldingConstantMultipleUpdate) {
   for (unsigned i = 0; i < size; ++i)
     Contents[i] = ConstantExpr::create(i + 1, Expr::Int8);
   ArrayCache ac;
-  const Array *array =
-      ac.CreateArray("arr", size, &Contents[0], &Contents[0] + size);
+
+  const Array *array = ac.CreateArray("arr", size, SourceBuilder::constant(),
+                                      &Contents[0], &Contents[0] + size);
 
   // Constant folding rule with constant update
   // Constant index (0)
@@ -221,14 +230,16 @@ TEST(ExprTest, ReadExprFoldingSymbolicValueUpdate) {
   for (unsigned i = 0; i < size; ++i)
     Contents[i] = ConstantExpr::create(i + 1, Expr::Int8);
   ArrayCache ac;
-  const Array *array =
-      ac.CreateArray("arr", size, &Contents[0], &Contents[0] + size);
+
+  const Array *array = ac.CreateArray("arr", size, SourceBuilder::constant(),
+                                      &Contents[0], &Contents[0] + size);
 
   // Constant folding rule with symbolic update (value)
   // Constant index (0)
   ref<Expr> index = ConstantExpr::create(0, Expr::Int32);
   UpdateList ul(array, 0);
-  const Array *array2 = ac.CreateArray("arr2", 256);
+  const Array *array2 =
+      ac.CreateArray("arr2", 256, SourceBuilder::makeSymbolic());
   ref<Expr> updateValue = ReadExpr::createTempRead(array2, Expr::Int8);
   ul.extend(index, updateValue);
   ref<Expr> read = ReadExpr::create(ul, index);
@@ -246,12 +257,14 @@ TEST(ExprTest, ReadExprFoldingSymbolicIndexUpdate) {
   for (unsigned i = 0; i < size; ++i)
     Contents[i] = ConstantExpr::create(i + 1, Expr::Int8);
   ArrayCache ac;
-  const Array *array =
-      ac.CreateArray("arr", size, &Contents[0], &Contents[0] + size);
+
+  const Array *array = ac.CreateArray("arr", size, SourceBuilder::constant(),
+                                      &Contents[0], &Contents[0] + size);
 
   // Constant folding rule with symbolic update (index)
   UpdateList ul(array, 0);
-  const Array *array2 = ac.CreateArray("arr2", 256);
+  const Array *array2 =
+      ac.CreateArray("arr2", 256, SourceBuilder::makeSymbolic());
   ref<Expr> updateIndex = ReadExpr::createTempRead(array2, Expr::Int32);
   ref<Expr> updateValue = ConstantExpr::create(12, Expr::Int8);
   ul.extend(updateIndex, updateValue);

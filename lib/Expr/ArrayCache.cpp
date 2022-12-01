@@ -18,11 +18,12 @@ ArrayCache::~ArrayCache() {
 
 const Array *
 ArrayCache::CreateArray(const std::string &_name, uint64_t _size,
+                        const ref<SymbolicSource> _source,
                         const ref<ConstantExpr> *constantValuesBegin,
                         const ref<ConstantExpr> *constantValuesEnd,
                         Expr::Width _domain, Expr::Width _range) {
 
-  const Array *array = new Array(_name, _size, constantValuesBegin,
+  const Array *array = new Array(_name, _size, _source, constantValuesBegin,
                                  constantValuesEnd, _domain, _range);
   if (array->isSymbolicArray()) {
     std::pair<ArrayHashMap::const_iterator, bool> success =

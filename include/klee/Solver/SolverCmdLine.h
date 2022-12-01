@@ -28,6 +28,8 @@ extern llvm::cl::opt<bool> UseCexCache;
 
 extern llvm::cl::opt<bool> UseBranchCache;
 
+extern llvm::cl::opt<bool> UseConcretizingSolver;
+
 extern llvm::cl::opt<bool> UseIndependentSolver;
 
 extern llvm::cl::opt<bool> DebugValidateSolver;

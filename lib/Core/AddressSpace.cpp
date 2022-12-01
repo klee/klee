@@ -44,15 +44,22 @@ void AddressSpace::bindObject(const MemoryObject *mo, ObjectState *os) {
   assert(os->copyOnWriteOwner == 0 && "object already has owner");
   os->copyOnWriteOwner = cowKey;
   objects = objects.replace(std::make_pair(mo, os));
+  idToObjects = idToObjects.replace(std::make_pair(mo->id, mo));
 }
 
 void AddressSpace::unbindObject(const MemoryObject *mo) {
+  idToObjects = idToObjects.remove(mo->id);
   objects = objects.remove(mo);
 }
 
-const ObjectState *AddressSpace::findObject(const MemoryObject *mo) const {
+ObjectPair AddressSpace::findObject(const MemoryObject *mo) const {
   const auto res = objects.lookup(mo);
-  return res ? res->second.get() : nullptr;
+  return res ? ObjectPair(mo, res->second.get()) : ObjectPair(mo, nullptr);
+}
+
+ObjectPair AddressSpace::findObject(IDType id) const {
+  const auto mo = idToObjects.lookup(id)->second;
+  return mo ? findObject(mo) : ObjectPair(nullptr, nullptr);
 }
 
 ObjectState *AddressSpace::getWriteable(const MemoryObject *mo,
@@ -67,13 +74,14 @@ ObjectState *AddressSpace::getWriteable(const MemoryObject *mo,
   ref<ObjectState> newObjectState(new ObjectState(*os));
   newObjectState->copyOnWriteOwner = cowKey;
   objects = objects.replace(std::make_pair(mo, newObjectState));
+  idToObjects = idToObjects.replace(std::make_pair(mo->id, mo));
   return newObjectState.get();
 }
 
 ///
 
 bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr,
-                              ObjectPair &result) const {
+                              IDType &result) const {
   uint64_t address = addr->getZExtValue();
   MemoryObject hack(address);
 
@@ -83,8 +91,7 @@ bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr,
     // [mo->address, mo->address + mo->size) or the object is a 0-sized object.
     if ((mo->size == 0 && address == mo->address) ||
         (address - mo->address < mo->size)) {
-      result.first = res->first;
-      result.second = res->second.get();
+      result = mo->id;
       return true;
     }
   }
@@ -93,34 +100,13 @@ bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr,
 }
 
 bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
-                              ref<Expr> address, ObjectPair &result,
+                              ref<Expr> address, IDType &result,
                               MOPredicate predicate, bool &success) const {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(address)) {
     success = resolveOne(CE, result);
     return true;
   } else {
     TimerStatIncrementer timer(stats::resolveTime);
-
-    ref<Expr> base =
-        state.isGEPExpr(address) ? state.gepExprBases[address].first : address;
-    MemoryObject *symHack = nullptr;
-    for (auto &moa : state.symbolics) {
-      if (moa.first->isLazyInitialized() &&
-          moa.first->getLazyInitializationSource() == base) {
-        symHack = const_cast<MemoryObject *>(moa.first.get());
-        break;
-      }
-    }
-
-    if (symHack) {
-      auto osi = objects.find(symHack);
-      if (osi != objects.end()) {
-        result.first = osi->first;
-        result.second = osi->second.get();
-        success = true;
-        return true;
-      }
-    }
 
     // try cheap search, will succeed for any inbounds pointer
 
@@ -134,8 +120,7 @@ bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
     if (res) {
       const MemoryObject *mo = res->first;
       if (example - mo->address < mo->size) {
-        result.first = res->first;
-        result.second = res->second.get();
+        result = mo->id;
         success = true;
         return true;
       }
@@ -160,8 +145,7 @@ bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
                              state.queryMetaData))
         return false;
       if (mayBeTrue) {
-        result.first = oi->first;
-        result.second = oi->second.get();
+        result = oi->first->id;
         success = true;
         return true;
       } else {
@@ -196,8 +180,7 @@ bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
                                state.queryMetaData))
           return false;
         if (mayBeTrue) {
-          result.first = oi->first;
-          result.second = oi->second.get();
+          result = oi->first->id;
           success = true;
           return true;
         }
@@ -210,7 +193,7 @@ bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
 }
 
 bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
-                              ref<Expr> address, ObjectPair &result,
+                              ref<Expr> address, IDType &result,
                               bool &success) const {
   MOPredicate predicate([](const MemoryObject *mo) { return true; });
   if (UseTimestamps) {
@@ -252,7 +235,7 @@ int AddressSpace::checkPointerInObject(ExecutionState &state,
   }
 
   if (mayBeTrue) {
-    rl.push_back(op);
+    rl.push_back(mo->id);
 
     // fast path check
     auto size = rl.size();
@@ -275,31 +258,13 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
                            MOPredicate predicate, unsigned maxResolutions,
                            time::Span timeout) const {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(p)) {
-    ObjectPair res;
+    IDType res;
     if (resolveOne(CE, res))
       rl.push_back(res);
     return false;
   } else {
     TimerStatIncrementer timer(stats::resolveTime);
 
-    ref<Expr> base = state.isGEPExpr(p) ? state.gepExprBases[p].first : p;
-    MemoryObject *symHack = nullptr;
-    for (auto &moa : state.symbolics) {
-      if (moa.first->isLazyInitialized() &&
-          moa.first->getLazyInitializationSource() == base) {
-        symHack = const_cast<MemoryObject *>(moa.first.get());
-        break;
-      }
-    }
-
-    if (symHack) {
-      auto osi = objects.find(symHack);
-      if (osi != objects.end()) {
-        auto res = std::make_pair(osi->first, osi->second.get());
-        rl.push_back(res);
-        return false;
-      }
-    }
     // XXX in general this isn't exactly what we want... for
     // a multiple resolution case (or for example, a \in {b,c,0})
     // we want to find the first object, find a cex assuming

@@ -31,14 +31,31 @@ ConstraintSet Assignment::createConstraintsFromAssignment() const {
     const auto &array = binding.first;
     const auto &values = binding.second;
 
-    for (unsigned arrayIndex = 0; arrayIndex < array->size; ++arrayIndex) {
-      unsigned char value = values[arrayIndex];
-      result.push_back(EqExpr::create(
-          ReadExpr::create(UpdateList(array, 0),
-                           ConstantExpr::alloc(arrayIndex, array->getDomain())),
-          ConstantExpr::alloc(value, array->getRange())));
+    if (array->getSize() <= 8 && array->getRange() == Expr::Int8) {
+      ref<Expr> e =
+          Expr::createTempRead(array, array->getSize() * array->getRange());
+      result.push_back(EqExpr::create(e, evaluate(e)));
+    } else {
+      for (unsigned arrayIndex = 0; arrayIndex < array->size; ++arrayIndex) {
+        unsigned char value = values[arrayIndex];
+        result.push_back(EqExpr::create(
+            ReadExpr::create(
+                UpdateList(array, 0),
+                ConstantExpr::alloc(arrayIndex, array->getDomain())),
+            ConstantExpr::alloc(value, array->getRange())));
+      }
     }
   }
   return result;
 }
+
+std::vector<const Array *> Assignment::getArrays() {
+  std::vector<const Array *> arrays;
+  arrays.reserve(bindings.size());
+  for (auto i : bindings) {
+    arrays.push_back(i.first);
+  }
+  return arrays;
+}
+
 } // namespace klee

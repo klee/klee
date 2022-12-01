@@ -24,9 +24,12 @@
 #include "klee/Core/TerminationTypes.h"
 #include "klee/Expr/ArrayCache.h"
 #include "klee/Expr/ArrayExprOptimizer.h"
+#include "klee/Expr/SourceBuilder.h"
+#include "klee/Expr/SymbolicSource.h"
 #include "klee/Module/Cell.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
+#include "klee/Solver/ConcretizationManager.h"
 #include "klee/System/Time.h"
 
 #include "llvm/ADT/Twine.h"
@@ -78,6 +81,7 @@ class Searcher;
 class SeedInfo;
 class SpecialFunctionHandler;
 struct StackFrame;
+class SymbolicSource;
 class TargetCalculator;
 class StatsTracker;
 class TimingSolver;
@@ -118,9 +122,10 @@ private:
   TreeStreamWriter *pathWriter, *symPathWriter;
   SpecialFunctionHandler *specialFunctionHandler;
   TimerGroup timers;
+  std::unique_ptr<ConcretizationManager> concretizationManager;
   std::unique_ptr<PTree> processTree;
   std::unique_ptr<CodeGraphDistance> codeGraphDistance;
-  TargetCalculator *targetCalculator;
+  std::unique_ptr<TargetCalculator> targetCalculator;
 
   /// Used to track states that have been added during the current
   /// instructions step.
@@ -254,9 +259,7 @@ private:
   /// \param results[out] A list of ((MemoryObject,ObjectState),
   /// state) pairs for each object the given address can point to the
   /// beginning of.
-  typedef std::vector<std::pair<
-      std::pair<const MemoryObject *, const ObjectState *>, ExecutionState *>>
-      ExactResolutionList;
+  typedef std::vector<std::pair<IDType, ExecutionState *>> ExactResolutionList;
   void resolveExact(ExecutionState &state, ref<Expr> p,
                     ExactResolutionList &results, const std::string &name);
 
@@ -312,10 +315,11 @@ private:
                               ref<Expr> value /* undef if read */,
                               KInstruction *target /* undef if write */);
 
-  ObjectPair lazyInitializeObject(ExecutionState &state, ref<Expr> address,
-                                  KInstruction *target, uint64_t size);
+  IDType lazyInitializeObject(ExecutionState &state, ref<Expr> address,
+                              KInstruction *target, uint64_t size);
   void executeMakeSymbolic(ExecutionState &state, const MemoryObject *mo,
-                           const std::string &name, bool isLocal);
+                           const std::string &name,
+                           const ref<SymbolicSource> source, bool isLocal);
 
   /// Create a new state where each input condition has been added as
   /// a constraint and return the results. The input state is included
@@ -445,8 +449,9 @@ private:
   /// bindModuleConstants - Initialize the module constant table.
   void bindModuleConstants();
 
-  const Array *makeArray(ExecutionState &state, const uint64_t size,
-                         const std::string &name);
+  const Array *makeArray(ExecutionState &state, uint64_t size,
+                         const std::string &name,
+                         const ref<SymbolicSource> source);
 
   template <typename SqType, typename TypeIt>
   void computeOffsetsSeqTy(KGEPInstruction *kgepi,

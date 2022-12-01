@@ -11,6 +11,7 @@
 
 #include "klee/Config/Version.h"
 #include "klee/Expr/ExprPPrinter.h"
+#include "klee/Expr/SymbolicSource.h"
 #include "klee/Support/OptionCategories.h"
 // FIXME: We shouldn't need this once fast constant support moves into
 // Core. If we need to do arithmetic, we probably want to use APInt.
@@ -527,10 +528,11 @@ ref<Expr> NotOptimizedExpr::create(ref<Expr> src) {
 /***/
 
 Array::Array(const std::string &_name, uint64_t _size,
+             const ref<SymbolicSource> _source,
              const ref<ConstantExpr> *constantValuesBegin,
              const ref<ConstantExpr> *constantValuesEnd, Expr::Width _domain,
              Expr::Width _range)
-    : name(_name), size(_size), domain(_domain), range(_range),
+    : name(_name), size(_size), source(_source), domain(_domain), range(_range),
       constantValues(constantValuesBegin, constantValuesEnd) {
 
   assert((isSymbolicArray() || constantValues.size() == size) &&

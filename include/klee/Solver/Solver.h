@@ -12,6 +12,7 @@
 
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprHashMap.h"
+#include "klee/Solver/ConcretizationManager.h"
 #include "klee/Solver/SolverCmdLine.h"
 #include "klee/System/Time.h"
 
@@ -32,7 +33,7 @@ struct SolverQueryMetaData {
 
 struct Query {
 public:
-  const ConstraintSet &constraints;
+  const ConstraintSet constraints;
   ref<Expr> expr;
 
   Query(const ConstraintSet &_constraints, ref<Expr> _expr)
@@ -54,6 +55,14 @@ public:
 
   Query withConstraints(const ConstraintSet &_constraints) const {
     return Query(_constraints, expr);
+  }
+  /// Get all arrays that figure in the query
+  std::vector<const Array *> gatherArrays() const;
+
+  bool containsSymcretes() const;
+
+  friend bool operator<(const Query &lhs, const Query &rhs) {
+    return lhs.constraints < rhs.constraints || lhs.expr < rhs.expr;
   }
 
   /// Dump query
@@ -438,6 +447,8 @@ Solver *createDummySolver();
 
 // Create a solver based on the supplied ``CoreSolverType``.
 Solver *createCoreSolver(CoreSolverType cst);
+
+Solver *createConcretizingSolver(Solver *s, ConcretizationManager *cm);
 } // namespace klee
 
 #endif /* KLEE_SOLVER_H */

@@ -15,6 +15,8 @@
 
 namespace klee {
 
+class MemoryObject;
+
 /// Resembles a set of constraints that can be passed around
 ///
 class ConstraintSet {
@@ -40,8 +42,16 @@ public:
 
   void push_back(const ref<Expr> &e);
 
+  std::vector<const Array *> gatherArrays() const;
+
+  std::set<ref<Expr>> asSet() const;
+
   bool operator==(const ConstraintSet &b) const {
     return constraints == b.constraints;
+  }
+
+  bool operator<(const ConstraintSet &b) const {
+    return constraints < b.constraints;
   }
 
   void dump() const;

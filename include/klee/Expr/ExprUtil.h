@@ -10,8 +10,10 @@
 #ifndef KLEE_EXPRUTIL_H
 #define KLEE_EXPRUTIL_H
 
+#include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprVisitor.h"
 
+#include <unordered_set>
 #include <vector>
 
 namespace klee {

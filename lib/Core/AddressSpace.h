@@ -25,7 +25,7 @@ class TimingSolver;
 template <class T> class ref;
 
 typedef std::pair<const MemoryObject *, const ObjectState *> ObjectPair;
-typedef std::vector<ObjectPair> ResolutionList;
+typedef std::vector<IDType> ResolutionList;
 
 typedef std::function<bool(const MemoryObject *)> MOPredicate;
 
@@ -36,6 +36,7 @@ struct MemoryObjectLT {
 
 typedef ImmutableMap<const MemoryObject *, ref<ObjectState>, MemoryObjectLT>
     MemoryMap;
+typedef ImmutableMap<IDType, const MemoryObject *> IDMap;
 
 class AddressSpace {
 private:
@@ -66,14 +67,20 @@ public:
   /// \invariant forall o in objects, o->copyOnWriteOwner <= cowKey
   MemoryMap objects;
 
+  /// The ID -> MemoryObject map.
+  //
+  // The mapping from ids to objects to safely update the underlying objects
+  // if required (e.g. useful for symbolic sizes).
+  IDMap idToObjects;
+
   AddressSpace() : cowKey(1) {}
   AddressSpace(const AddressSpace &b)
-      : cowKey(++b.cowKey), objects(b.objects) {}
+      : cowKey(++b.cowKey), objects(b.objects), idToObjects(b.idToObjects) {}
   ~AddressSpace() {}
 
   /// Resolve address to an ObjectPair in result.
   /// \return true iff an object was found.
-  bool resolveOne(const ref<ConstantExpr> &address, ObjectPair &result) const;
+  bool resolveOne(const ref<ConstantExpr> &address, IDType &result) const;
 
   /// Resolve address to an ObjectPair in result.
   ///
@@ -85,9 +92,9 @@ public:
   ///               (when returning true).
   /// \return true iff an object was found at \a address.
   bool resolveOne(ExecutionState &state, TimingSolver *solver,
-                  ref<Expr> address, ObjectPair &result, bool &success) const;
+                  ref<Expr> address, IDType &result, bool &success) const;
   bool resolveOne(ExecutionState &state, TimingSolver *solver,
-                  ref<Expr> address, ObjectPair &result, MOPredicate predicate,
+                  ref<Expr> address, IDType &result, MOPredicate predicate,
                   bool &success) const;
 
   /// Resolve pointer `p` to a list of `ObjectPairs` it can point
@@ -113,7 +120,8 @@ public:
   void unbindObject(const MemoryObject *mo);
 
   /// Lookup a binding from a MemoryObject.
-  const ObjectState *findObject(const MemoryObject *mo) const;
+  ObjectPair findObject(const MemoryObject *mo) const;
+  ObjectPair findObject(IDType id) const;
 
   /// \brief Obtain an ObjectState suitable for writing.
   ///

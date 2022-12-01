@@ -13,7 +13,9 @@
 #include "Context.h"
 #include "TimingSolver.h"
 
+#include "klee/Expr/Assignment.h"
 #include "klee/Expr/Expr.h"
+#include "klee/Expr/SourceBuilder.h"
 
 #include "llvm/ADT/StringExtras.h"
 
@@ -32,6 +34,8 @@ class ExecutionState;
 class MemoryManager;
 class Solver;
 
+typedef uint64_t IDType;
+
 class MemoryObject {
   friend class STPBuilder;
   friend class ObjectState;
@@ -40,15 +44,19 @@ class MemoryObject {
   friend class ref<const MemoryObject>;
 
 private:
-  static int counter;
+  // Counter is using for id's of MemoryObjects.
+  //
+  // Value 0 is reserved for erroneous objects.
+  static IDType counter;
   static int time;
   /// @brief Required by klee::ref-managed objects
   mutable class ReferenceCounter _refCount;
 
 public:
-  unsigned id;
+  const IDType id;
   mutable unsigned timestamp;
   uint64_t address;
+  ref<Expr> addressExpr;
   ref<Expr> lazyInitializationSource;
 
   /// size in bytes
@@ -76,15 +84,17 @@ public:
   // XXX this is just a temp hack, should be removed
   explicit MemoryObject(uint64_t _address)
       : id(counter++), timestamp(time++), address(_address),
-        lazyInitializationSource(nullptr), size(0), isFixed(true), parent(NULL),
-        allocSite(0) {}
+        addressExpr(nullptr), lazyInitializationSource(nullptr), size(0),
+        isFixed(true), parent(NULL), allocSite(0) {}
 
   MemoryObject(
       uint64_t _address, unsigned _size, bool _isLocal, bool _isGlobal,
       bool _isFixed, const llvm::Value *_allocSite, MemoryManager *_parent,
+      ref<Expr> _addressExpr = nullptr,
       ref<Expr> _lazyInitializationSource = nullptr,
       unsigned _timestamp = 0 /* unused if _lazyInstantiatedSource is null*/)
       : id(counter++), timestamp(_timestamp), address(_address),
+        addressExpr(_addressExpr),
         lazyInitializationSource(_lazyInitializationSource), size(_size),
         name("unnamed"), isLocal(_isLocal), isGlobal(_isGlobal),
         isFixed(_isFixed), isUserSpecified(false), parent(_parent),
@@ -116,11 +126,10 @@ public:
     return ConstantExpr::create(address, Context::get().getPointerWidth());
   }
   ref<Expr> getBaseExpr() const {
-    if (!lazyInitializationSource) {
-      return getBaseConstantExpr();
-    } else {
-      return lazyInitializationSource;
+    if (addressExpr) {
+      return addressExpr;
     }
+    return getBaseConstantExpr();
   }
   ref<ConstantExpr> getSizeExpr() const {
     return ConstantExpr::create(size, Context::get().getPointerWidth());

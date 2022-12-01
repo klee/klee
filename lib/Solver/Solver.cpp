@@ -10,6 +10,8 @@
 #include "klee/Solver/Solver.h"
 
 #include "klee/Expr/Constraints.h"
+#include "klee/Expr/ExprUtil.h"
+#include "klee/Expr/SymbolicSource.h"
 #include "klee/Solver/SolverImpl.h"
 
 using namespace klee;
@@ -267,6 +269,12 @@ std::pair<ref<Expr>, ref<Expr>> Solver::getRange(const Query &query) {
                         ConstantExpr::create(max, width));
 }
 
+std::vector<const Array *> Query::gatherArrays() const {
+  std::vector<const Array *> arrays = constraints.gatherArrays();
+  findObjects(expr, arrays);
+  return arrays;
+}
+
 void Query::dump() const {
   llvm::errs() << "Constraints [\n";
   for (const auto &constraint : constraints)
@@ -276,6 +284,15 @@ void Query::dump() const {
   llvm::errs() << "Query [\n";
   expr->dump();
   llvm::errs() << "]\n";
+}
+
+bool Query::containsSymcretes() const {
+  for (const auto array : gatherArrays()) {
+    if (array->source->getKind() == SymbolicSource::Kind::SymbolicAddress) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void ValidityCore::dump() const {

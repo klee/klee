@@ -9,6 +9,7 @@
 
 #include "klee/Expr/Constraints.h"
 
+#include "klee/Expr/ExprUtil.h"
 #include "klee/Expr/ExprVisitor.h"
 #include "klee/Module/KModule.h"
 #include "klee/Support/OptionCategories.h"
@@ -181,4 +182,18 @@ void ConstraintSet::dump() const {
     constraint->dump();
 
   llvm::errs() << "]\n";
+}
+
+std::vector<const Array *> ConstraintSet::gatherArrays() const {
+  std::vector<const Array *> arrays;
+  findObjects(constraints.begin(), constraints.end(), arrays);
+  return arrays;
+}
+
+std::set<ref<Expr>> ConstraintSet::asSet() const {
+  std::set<ref<Expr>> ret;
+  for (auto i : constraints) {
+    ret.insert(i);
+  }
+  return ret;
 }

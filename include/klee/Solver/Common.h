@@ -14,6 +14,7 @@
 #ifndef KLEE_COMMON_H
 #define KLEE_COMMON_H
 
+#include "klee/Solver/ConcretizationManager.h"
 #include "klee/Solver/Solver.h"
 
 #include <string>
@@ -27,7 +28,8 @@ const char SOLVER_QUERIES_KQUERY_FILE_NAME[] = "solver-queries.kquery";
 Solver *constructSolverChain(Solver *coreSolver, std::string querySMT2LogPath,
                              std::string baseSolverQuerySMT2LogPath,
                              std::string queryKQueryLogPath,
-                             std::string baseSolverQueryKQueryLogPath);
+                             std::string baseSolverQueryKQueryLogPath,
+                             ConcretizationManager *concretizationManager);
 } // namespace klee
 
 #endif /* KLEE_COMMON_H */

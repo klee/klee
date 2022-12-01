@@ -21,6 +21,9 @@ klee_add_component(kleaverExpr
   ExprSMTLIBPrinter.cpp
   ExprUtil.cpp
   ExprVisitor.cpp
+  IndependentSet.cpp
+  SourceBuilder.cpp
+  SymbolicSource.cpp
   Lexer.cpp
   Parser.cpp
   Updates.cpp

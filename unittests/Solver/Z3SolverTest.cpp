@@ -17,6 +17,7 @@
 #include "klee/Expr/ArrayCache.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
+#include "klee/Expr/SourceBuilder.h"
 #include "klee/Solver/Solver.h"
 
 using namespace klee;
@@ -49,9 +50,9 @@ TEST_F(Z3SolverTest, GetConstraintLog) {
         return ConstantExpr;
       });
 
-  const Array *ConstantArray =
-      AC.CreateArray("const_array", 4, ConstantExpressions.data(),
-                     ConstantExpressions.data() + ConstantExpressions.size());
+  const Array *ConstantArray = AC.CreateArray(
+      "const_array", 4, SourceBuilder::constant(), ConstantExpressions.data(),
+      ConstantExpressions.data() + ConstantExpressions.size());
 
   const UpdateList ConstantArrayUL(ConstantArray, nullptr);
   const ref<Expr> Index = ConstantExpr::alloc(1, Expr::Int32);

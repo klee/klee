@@ -20,6 +20,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <map>
+#include <memory>
 #include <set>
 #include <sstream>
 #include <vector>
@@ -35,6 +36,7 @@ class Array;
 class ArrayCache;
 class ConstantExpr;
 class ObjectState;
+class SymbolicSource;
 
 template <class T> class ref;
 
@@ -486,6 +488,10 @@ public:
   // FIXME: Not 64-bit clean.
   const unsigned size;
 
+  /// This represents the reason why this array was created as well as some
+  /// additional info.
+  const ref<SymbolicSource> source;
+
   /// Domain is how many bits can be used to access the array [32 bits]
   /// Range is the size (in bits) of the number stored there (array of bytes ->
   /// 8)
@@ -515,6 +521,7 @@ private:
   /// not parse correctly since two arrays with the same name cannot be
   /// distinguished once printed.
   Array(const std::string &_name, uint64_t _size,
+        const ref<SymbolicSource> source,
         const ref<ConstantExpr> *constantValuesBegin = 0,
         const ref<ConstantExpr> *constantValuesEnd = 0,
         Expr::Width _domain = Expr::Int32, Expr::Width _range = Expr::Int8);
@@ -546,6 +553,7 @@ public:
   ref<UpdateNode> head;
 
 public:
+  UpdateList() = default;
   UpdateList(const Array *_root, const ref<UpdateNode> &_head);
   UpdateList(const UpdateList &b) = default;
   ~UpdateList() = default;
@@ -558,6 +566,9 @@ public:
   void extend(const ref<Expr> &index, const ref<Expr> &value);
 
   int compare(const UpdateList &b) const;
+
+  bool operator<(const UpdateList &rhs) const { return compare(rhs) < 0; }
+
   unsigned hash() const;
 };
 
