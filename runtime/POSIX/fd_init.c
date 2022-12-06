@@ -18,6 +18,11 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#ifdef __APPLE__
+/* macOS does not provide mempcpy in string.h */
+void *mempcpy(void *destaddr, void const *srcaddr, size_t len);
+#endif
+
 exe_file_system_t __exe_fs;
 
 /* NOTE: It is important that these are statically initialized
@@ -34,6 +39,8 @@ exe_sym_env_t __exe_env = {{{0, eOpen | eReadable, 0, 0},
                             {1, eOpen | eWriteable, 0, 0},
                             {2, eOpen | eWriteable, 0, 0}},
                            022,
+                           0,
+                           0,
                            0,
                            0};
 
@@ -134,7 +141,18 @@ void klee_init_fds(unsigned n_files, unsigned file_length,
       klee_report_error(__FILE__, __LINE__, "out of memory in klee_init_env",
                         "user.err");
     __create_new_dfile(__exe_fs.sym_stdin, stdin_length, "stdin", &s);
+    unsigned int i;
+    for (i = 0; i < stdin_length; i++) {
+      klee_prefer_cex(__exe_fs.sym_stdin,
+                      32 <= __exe_fs.sym_stdin->contents[i] &
+                          __exe_fs.sym_stdin->contents[i] <= 126);
+    }
     __exe_env.fds[0].dfile = __exe_fs.sym_stdin;
+    off64_t *ptr = malloc(sizeof(off64_t));
+    klee_make_symbolic(ptr, sizeof(off64_t), "stdin-read");
+    mempcpy(&__exe_env.stdin_off, ptr, sizeof(off64_t));
+    free(ptr);
+    __exe_env.max_off = 0;
   } else
     __exe_fs.sym_stdin = NULL;
 
