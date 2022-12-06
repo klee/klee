@@ -73,21 +73,22 @@ ref<Expr> ExprRewriter::rewrite(const ref<Expr> &e, const array2idx_ty &arrays,
         // We treat this case as a special one, and we create an EqExpr (e.g.
         // k==i)
         eqExprs.push_back(createEqExpr((*index_it), opt_indexes[0]));
-      } else {
+      } else if (ref<ConstantExpr> constantArraySize =
+                     dyn_cast<ConstantExpr>(arr->size)) {
         Expr::Width idxWidth = (*index_it).get()->getWidth();
         unsigned set = 0;
-        BitArray ba(arr->size / width);
+        uint64_t size = constantArraySize->getZExtValue();
+        BitArray ba(size / width);
         for (auto &vals : opt_indexes) {
           auto ce = dyn_cast<ConstantExpr>(vals);
           llvm::APInt v = ce->getAPValue();
           ba.set(v.getZExtValue() / width);
           set++;
         }
-        if (set > 0 && set < arr->size / width)
-          invert =
-              ((float)set / (float)(arr->size / width)) > 0.5 ? true : false;
+        if (set > 0 && set < size / width)
+          invert = ((float)set / (float)(size / width)) > 0.5 ? true : false;
         int start = -1;
-        for (unsigned i = 0; i < arr->size / width; ++i) {
+        for (unsigned i = 0; i < size / width; ++i) {
           if ((!invert && ba.get(i)) || (invert && !ba.get(i))) {
             if (start < 0)
               start = i;
@@ -108,14 +109,14 @@ ref<Expr> ExprRewriter::rewrite(const ref<Expr> &e, const array2idx_ty &arrays,
           }
         }
         if (start >= 0) {
-          if ((arr->size / width) - start == 1) {
+          if ((size / width) - start == 1) {
             eqExprs.push_back(createEqExpr(
                 (*index_it), ConstantExpr::create(start * width, idxWidth)));
           } else {
             // create range expr
             ref<Expr> s = ConstantExpr::create(start * width, idxWidth);
-            ref<Expr> e = ConstantExpr::create(
-                ((arr->size / width) - 1) * width, idxWidth);
+            ref<Expr> e =
+                ConstantExpr::create(((size / width) - 1) * width, idxWidth);
             eqExprs.push_back(createRangeExpr((*index_it), s, e));
           }
         }

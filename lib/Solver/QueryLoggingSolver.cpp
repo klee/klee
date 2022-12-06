@@ -165,7 +165,7 @@ bool QueryLoggingSolver::computeValue(const Query &query, ref<Expr> &result) {
 
 bool QueryLoggingSolver::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<std::vector<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
   startQuery(query, "InitialValues", 0, &objects);
 
   bool success =
@@ -177,20 +177,25 @@ bool QueryLoggingSolver::computeInitialValues(
     logBuffer << queryCommentSign
               << "   Solvable: " << (hasSolution ? "true" : "false") << "\n";
     if (hasSolution) {
-      std::vector<std::vector<unsigned char>>::iterator values_it =
+      std::vector<SparseStorage<unsigned char>>::iterator values_it =
           values.begin();
 
+      Assignment solutionAssignment(objects, values, true);
       for (std::vector<const Array *>::const_iterator i = objects.begin(),
                                                       e = objects.end();
            i != e; ++i, ++values_it) {
         const Array *array = *i;
-        std::vector<unsigned char> &data = *values_it;
+        SparseStorage<unsigned char> &data = *values_it;
         logBuffer << queryCommentSign << "     " << array->name << " = [";
+        ref<ConstantExpr> arrayConstantSize =
+            dyn_cast<ConstantExpr>(solutionAssignment.evaluate(array->size));
+        assert(arrayConstantSize &&
+               "Array of symbolic size had not receive value for size!");
 
-        for (unsigned j = 0; j < array->size; j++) {
-          logBuffer << (int)data[j];
+        for (unsigned j = 0; j < arrayConstantSize->getZExtValue(); j++) {
+          logBuffer << (int)data.load(j);
 
-          if (j + 1 < array->size) {
+          if (j + 1 < arrayConstantSize->getZExtValue()) {
             logBuffer << ",";
           }
         }
@@ -213,27 +218,30 @@ bool QueryLoggingSolver::check(const Query &query,
 
   finishQuery(success);
 
-  bool hasSolution = isa<InvalidResponse>(result);
-
   if (success) {
+    bool hasSolution = isa<InvalidResponse>(result);
     logBuffer << queryCommentSign
               << "   Solvable: " << (hasSolution ? "true" : "false") << "\n";
     if (hasSolution) {
-      std::map<const Array *, std::vector<unsigned char>> initialValues;
-      result->getInitialValues(initialValues);
+      std::map<const Array *, SparseStorage<unsigned char>> initialValues;
+      result->tryGetInitialValues(initialValues);
+      Assignment solutionAssignment(initialValues, true);
 
-      for (std::map<const Array *, std::vector<unsigned char>>::const_iterator
+      for (std::map<const Array *, SparseStorage<unsigned char>>::const_iterator
                i = initialValues.begin(),
                e = initialValues.end();
            i != e; ++i) {
         const Array *array = i->first;
-        const std::vector<unsigned char> &data = i->second;
+        const SparseStorage<unsigned char> &data = i->second;
         logBuffer << queryCommentSign << "     " << array->name << " = [";
+        ref<ConstantExpr> arrayConstantSize =
+            dyn_cast<ConstantExpr>(solutionAssignment.evaluate(array->size));
+        assert(arrayConstantSize &&
+               "Array of symbolic size had not receive value for size!");
+        for (unsigned j = 0; j < arrayConstantSize->getZExtValue(); j++) {
+          logBuffer << (int)data.load(j);
 
-        for (unsigned j = 0; j < array->size; j++) {
-          logBuffer << (int)data[j];
-
-          if (j + 1 < array->size) {
+          if (j + 1 < arrayConstantSize->getZExtValue()) {
             logBuffer << ",";
           }
         }
@@ -241,7 +249,7 @@ bool QueryLoggingSolver::check(const Query &query,
       }
     } else {
       ValidityCore validityCore;
-      result->getValidityCore(validityCore);
+      result->tryGetValidityCore(validityCore);
       logBuffer << queryCommentSign << "   ValidityCore:\n";
 
       printQuery(

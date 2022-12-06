@@ -66,6 +66,35 @@ bool TimingSolver::evaluate(const ConstraintSet &constraints, ref<Expr> expr,
   return success;
 }
 
+bool TimingSolver::tryGetUnique(const ConstraintSet &constraints, ref<Expr> e,
+                                ref<Expr> &result,
+                                SolverQueryMetaData &metaData) {
+  result = e;
+  if (!isa<ConstantExpr>(result)) {
+    ref<ConstantExpr> value;
+    bool isTrue = false;
+
+    e = optimizer.optimizeExpr(e, true);
+    TimerStatIncrementer timer(stats::solverTime);
+
+    if (!solver->getValue(Query(constraints, e), value)) {
+      return false;
+    }
+    ref<Expr> cond = EqExpr::create(e, value);
+    cond = optimizer.optimizeExpr(cond, false);
+    if (!solver->mustBeTrue(Query(constraints, cond), isTrue)) {
+      return false;
+    }
+    if (isTrue) {
+      result = value;
+    }
+
+    metaData.queryCost += timer.delta();
+  }
+
+  return true;
+}
+
 bool TimingSolver::mustBeTrue(const ConstraintSet &constraints, ref<Expr> expr,
                               bool &result, SolverQueryMetaData &metaData,
                               bool produceValidityCore) {
@@ -140,9 +169,32 @@ bool TimingSolver::getValue(const ConstraintSet &constraints, ref<Expr> expr,
   return success;
 }
 
+bool TimingSolver::getMinimalUnsignedValue(const ConstraintSet &constraints,
+                                           ref<Expr> expr,
+                                           ref<ConstantExpr> &result,
+                                           SolverQueryMetaData &metaData) {
+  // Fast path, to avoid timer and OS overhead.
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
+    result = CE;
+    return true;
+  }
+
+  TimerStatIncrementer timer(stats::solverTime);
+
+  if (simplifyExprs)
+    expr = ConstraintManager::simplifyExpr(constraints, expr);
+
+  bool success =
+      solver->getMinimalUnsignedValue(Query(constraints, expr), result);
+
+  metaData.queryCost += timer.delta();
+
+  return success;
+}
+
 bool TimingSolver::getInitialValues(
     const ConstraintSet &constraints, const std::vector<const Array *> &objects,
-    std::vector<std::vector<unsigned char>> &result,
+    std::vector<SparseStorage<unsigned char>> &result,
     SolverQueryMetaData &metaData, bool produceValidityCore) {
   if (objects.empty())
     return true;
@@ -161,8 +213,7 @@ bool TimingSolver::getInitialValues(
                 result);
 
   if (success && produceValidityCore && isa<InvalidResponse>(queryResult)) {
-    success = cast<InvalidResponse>(queryResult)
-                  ->getInitialValuesFor(objects, result);
+    success = queryResult->tryGetInitialValuesFor(objects, result);
   }
 
   metaData.queryCost += timer.delta();

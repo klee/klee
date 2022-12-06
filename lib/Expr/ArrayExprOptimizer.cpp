@@ -269,7 +269,12 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
       if (info.second > width) {
         width = info.second;
       }
-      unsigned size = read->updates.root->getSize();
+      ref<ConstantExpr> constantArraySize =
+          dyn_cast<ConstantExpr>(read->updates.root->getSize());
+      if (!constantArraySize) {
+        continue;
+      }
+      unsigned size = constantArraySize->getZExtValue();
       unsigned bytesPerElement = width / 8;
       unsigned elementsInArray = size / bytesPerElement;
 
@@ -343,7 +348,12 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
       if (info.second > width) {
         width = info.second;
       }
-      unsigned size = read->updates.root->getSize();
+      ref<ConstantExpr> constantArraySize =
+          dyn_cast<ConstantExpr>(read->updates.root->getSize());
+      if (!constantArraySize) {
+        continue;
+      }
+      unsigned size = constantArraySize->getZExtValue();
       unsigned bytesPerElement = width / 8;
       unsigned elementsInArray = size / bytesPerElement;
       bool symbArray = read->updates.root->isSymbolicArray();

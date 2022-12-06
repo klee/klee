@@ -689,7 +689,7 @@ void SpecialFunctionHandler::handleGetErrno(ExecutionState &state,
       executor.kmodule->targetData->getAllocaAddrSpace());
 
   bool resolved = state.addressSpace.resolveOne(
-      ConstantExpr::create((uint64_t)errno_addr, Expr::Int64),
+      ConstantExpr::createPointer((uint64_t)errno_addr),
       executor.typeSystemManager->getWrappedType(pointerErrnoAddr),
       idErrnoObject);
   if (!resolved)

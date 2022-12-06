@@ -13,10 +13,10 @@ klee_add_component(kleaverSolver
   ConstantDivision.cpp
   ConstructSolverChain.cpp
   ConcretizationManager.cpp
+  ConcretizingSolver.cpp
   CoreSolver.cpp
   DummySolver.cpp
   FastCexSolver.cpp
-  ConcretizingSolver.cpp
   IncompleteSolver.cpp
   IndependentSolver.cpp
   MetaSMTSolver.cpp

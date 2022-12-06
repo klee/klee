@@ -194,13 +194,22 @@ bool AssignmentGenerator::helperGenerateAssignment(const ref<Expr> &e,
     if (isa<ConstantExpr>(re.index)) {
       if (re.updates.root->isSymbolicArray()) {
         ConstantExpr &index = static_cast<ConstantExpr &>(*re.index.get());
-        std::vector<unsigned char> c_value =
-            getIndexedValue(getByteValue(val), index, re.updates.root->size);
+        ref<ConstantExpr> arrayConstantSize =
+            dyn_cast<ConstantExpr>(re.updates.root->size);
+        if (!arrayConstantSize) {
+          klee_warning(
+              "Optimization for array of symbolic size is not supported");
+          return false;
+        }
+
+        std::vector<unsigned char> c_value = getIndexedValue(
+            getByteValue(val), index, arrayConstantSize->getZExtValue());
         if (c_value.size() == 0) {
           return false;
         }
         if (a->bindings.find(re.updates.root) == a->bindings.end()) {
-          a->bindings.insert(std::make_pair(re.updates.root, c_value));
+          a->bindings.insert(std::make_pair(
+              re.updates.root, SparseStorage<unsigned char>(c_value, 0)));
         } else {
           return false;
         }

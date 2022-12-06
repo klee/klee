@@ -9,6 +9,7 @@
 
 #include "gtest/gtest.h"
 
+#include "klee/ADT/SparseStorage.h"
 #include "klee/Expr/ArrayCache.h"
 #include "klee/Expr/ArrayExprOptimizer.h"
 #include "klee/Expr/Assignment.h"
@@ -39,10 +40,12 @@ TEST(ArrayExprTest, HashCollisions) {
   std::vector<ref<ConstantExpr>> constVals(256,
                                            ConstantExpr::create(5, Expr::Int8));
   const Array *array = ac.CreateArray(
-      "arr0", 256, SourceBuilder::constant(), constVals.data(),
+      "arr0", ConstantExpr::create(256, sizeof(uint64_t) * CHAR_BIT),
+      SourceBuilder::constant(), constVals.data(),
       constVals.data() + constVals.size(), Expr::Int32, Expr::Int8);
-  const Array *symArray =
-      ac.CreateArray("symIdx", 4, SourceBuilder::makeSymbolic());
+  const Array *symArray = ac.CreateArray(
+      "symIdx", ConstantExpr::create(4, sizeof(uint64_t) * CHAR_BIT),
+      SourceBuilder::makeSymbolic());
   ref<Expr> symIdx = Expr::createTempRead(symArray, Expr::Int32);
   UpdateList ul(array, 0);
   ul.extend(getConstant(3, Expr::Int32), getConstant(11, Expr::Int8));
@@ -56,8 +59,8 @@ TEST(ArrayExprTest, HashCollisions) {
   ASSERT_NE(updatedRead, firstRead);
   ASSERT_EQ(updatedRead->hash(), firstRead->hash());
 
-  std::vector<unsigned char> value = {6, 0, 0, 0};
-  std::vector<std::vector<unsigned char>> values = {value};
+  SparseStorage<unsigned char> value({6, 0, 0, 0});
+  std::vector<SparseStorage<unsigned char>> values = {value};
   std::vector<const Array *> assigmentArrays = {symArray};
   auto a = std::make_unique<Assignment>(assigmentArrays, values,
                                         /*_allowFreeValues=*/true);

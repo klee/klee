@@ -51,7 +51,8 @@ TEST_F(Z3SolverTest, GetConstraintLog) {
       });
 
   const Array *ConstantArray = AC.CreateArray(
-      "const_array", 4, SourceBuilder::constant(), ConstantExpressions.data(),
+      "const_array", ConstantExpr::create(4, sizeof(uint64_t) * CHAR_BIT),
+      SourceBuilder::constant(), ConstantExpressions.data(),
       ConstantExpressions.data() + ConstantExpressions.size());
 
   const UpdateList ConstantArrayUL(ConstantArray, nullptr);

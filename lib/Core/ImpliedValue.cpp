@@ -216,9 +216,7 @@ void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e,
   for (std::vector<ref<ReadExpr>>::iterator i = reads.begin(), ie = reads.end();
        i != ie; ++i) {
     ReadExpr *re = i->get();
-    assumption.push_back(UltExpr::create(
-        re->index, ConstantExpr::alloc(re->updates.root->size,
-                                       Context::get().getPointerWidth())));
+    assumption.push_back(UltExpr::create(re->index, re->updates.root->size));
   }
 
   for (const auto &var : reads) {

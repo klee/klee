@@ -12,6 +12,7 @@
 
 #include "klee/ADT/Bits.h"
 #include "klee/Expr/Expr.h"
+#include "klee/Expr/SymbolicSource.h"
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverStats.h"
 #include "klee/Support/ErrorHandling.h"
@@ -147,6 +148,13 @@ Z3ASTHandle Z3Builder::buildArray(const char *name, unsigned indexWidth,
   Z3SortHandle t = getArraySort(domainSort, rangeSort);
   Z3_symbol s = Z3_mk_string_symbol(ctx, const_cast<char *>(name));
   return Z3ASTHandle(Z3_mk_const(ctx, s, t), ctx);
+}
+
+Z3ASTHandle Z3Builder::buildConstantArray(const char *name, unsigned indexWidth,
+                                          unsigned valueWidth, unsigned value) {
+  Z3SortHandle domainSort = getBvSort(indexWidth);
+  Z3ASTHandle defaultValue = bvZExtConst(valueWidth, value);
+  return Z3ASTHandle(Z3_mk_const_array(ctx, domainSort, defaultValue), ctx);
 }
 
 Z3ASTHandle Z3Builder::getTrue() { return Z3ASTHandle(Z3_mk_true(ctx), ctx); }
@@ -414,13 +422,19 @@ Z3ASTHandle Z3Builder::getInitialArray(const Array *root) {
     // using the size of the array hash as a counter.
     std::string unique_id = llvm::utostr(_arr_hash._array_hash.size());
     std::string unique_name = root->name + unique_id;
-
-    array_expr =
-        buildArray(unique_name.c_str(), root->getDomain(), root->getRange());
+    if (ref<ConstantWithSymbolicSizeSource> constantWithSymbolicSizeSource =
+            dyn_cast<ConstantWithSymbolicSizeSource>(root->source)) {
+      array_expr = buildConstantArray(
+          unique_name.c_str(), root->getDomain(), root->getRange(),
+          constantWithSymbolicSizeSource->defaultValue);
+    } else {
+      array_expr =
+          buildArray(unique_name.c_str(), root->getDomain(), root->getRange());
+    }
 
     if (root->isConstantArray() && constant_array_assertions.count(root) == 0) {
       std::vector<Z3ASTHandle> array_assertions;
-      for (unsigned i = 0, e = root->size; i != e; ++i) {
+      for (unsigned i = 0, e = root->constantValues.size(); i != e; ++i) {
         // construct(= (select i root) root->value[i]) to be asserted in
         // Z3Solver.cpp
         int width_out;

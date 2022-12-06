@@ -69,7 +69,7 @@ public:
   bool computeValue(const Query &query, ref<Expr> &result);
   bool computeInitialValues(const Query &query,
                             const std::vector<const Array *> &objects,
-                            std::vector<std::vector<unsigned char>> &values,
+                            std::vector<SparseStorage<unsigned char>> &values,
                             bool &hasSolution);
   bool check(const Query &query, ref<SolverResponse> &result);
   bool computeValidityCore(const Query &query, ValidityCore &validityCore,

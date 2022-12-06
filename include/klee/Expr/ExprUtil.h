@@ -13,6 +13,7 @@
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprVisitor.h"
 
+#include <set>
 #include <unordered_set>
 #include <vector>
 
@@ -46,6 +47,8 @@ void findObjects(InputIterator begin, InputIterator end,
 void findObjects(ref<Expr> e, std::vector<const Array *> &results);
 
 bool isReadFromSymbolicArray(ref<Expr> e);
+
+ref<Expr> createNonOverflowingSumExpr(const std::vector<ref<Expr>> &terms);
 
 class ConstantArrayFinder : public ExprVisitor {
 protected:

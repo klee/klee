@@ -29,7 +29,7 @@ public:
   bool computeValue(const Query &, ref<Expr> &result);
   bool computeInitialValues(const Query &,
                             const std::vector<const Array *> &objects,
-                            std::vector<std::vector<unsigned char>> &values,
+                            std::vector<SparseStorage<unsigned char>> &values,
                             bool &hasSolution);
   bool check(const Query &query, ref<SolverResponse> &result);
   bool computeValidityCore(const Query &query, ValidityCore &validityCore,
@@ -87,7 +87,7 @@ bool ValidatingSolver::computeValue(const Query &query, ref<Expr> &result) {
 
 bool ValidatingSolver::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<std::vector<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
   bool answer;
 
   if (!solver->impl->computeInitialValues(query, objects, values, hasSolution))
@@ -97,11 +97,18 @@ bool ValidatingSolver::computeInitialValues(
     // Assert the bindings as constraints, and verify that the
     // conjunction of the actual constraints is satisfiable.
     ConstraintSet bindings;
+    Assignment solutionAssignment(objects, values, true);
+
     for (unsigned i = 0; i != values.size(); ++i) {
       const Array *array = objects[i];
       assert(array);
-      for (unsigned j = 0; j < array->size; j++) {
-        unsigned char value = values[i][j];
+      ref<ConstantExpr> arrayConstantSize =
+          dyn_cast<ConstantExpr>(solutionAssignment.evaluate(array->size));
+      assert(arrayConstantSize &&
+             "Array of symbolic size had not receive value for size!");
+
+      for (unsigned j = 0; j < arrayConstantSize->getZExtValue(); j++) {
+        unsigned char value = values[i].load(j);
         bindings.push_back(EqExpr::create(
             ReadExpr::create(UpdateList(array, 0),
                              ConstantExpr::alloc(j, array->getDomain())),
@@ -144,13 +151,19 @@ bool ValidatingSolver::check(const Query &query, ref<SolverResponse> &result) {
     // conjunction of the actual constraints is satisfiable.
 
     ConstraintSet bindings;
-    std::map<const Array *, std::vector<unsigned char>> initialValues;
-    cast<InvalidResponse>(result)->getInitialValues(initialValues);
+    std::map<const Array *, SparseStorage<unsigned char>> initialValues;
+    cast<InvalidResponse>(result)->tryGetInitialValues(initialValues);
+    Assignment solutionAssignment(initialValues);
     for (auto &arrayValues : initialValues) {
       const Array *array = arrayValues.first;
       assert(array);
-      for (unsigned j = 0; j < array->size; j++) {
-        unsigned char value = arrayValues.second[j];
+      ref<ConstantExpr> arrayConstantSize =
+          dyn_cast<ConstantExpr>(solutionAssignment.evaluate(array->size));
+      assert(arrayConstantSize &&
+             "Array of symbolic size had not receive value for size!");
+
+      for (unsigned j = 0; j < arrayConstantSize->getZExtValue(); j++) {
+        unsigned char value = arrayValues.second.load(j);
         bindings.push_back(EqExpr::create(
             ReadExpr::create(UpdateList(array, 0),
                              ConstantExpr::alloc(j, array->getDomain())),

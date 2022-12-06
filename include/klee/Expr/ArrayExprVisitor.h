@@ -15,6 +15,7 @@
 #include "klee/Expr/ExprVisitor.h"
 #include "klee/Solver/SolverCmdLine.h"
 
+#include <map>
 #include <unordered_map>
 #include <unordered_set>
 

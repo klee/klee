@@ -13,6 +13,9 @@
 
 #include "klee/Solver/Solver.h"
 
+#define Z3_TRUE true
+#define Z3_FALSE false
+
 namespace klee {
 /// Z3Solver - A complete solver based on Z3
 class Z3Solver : public Solver {

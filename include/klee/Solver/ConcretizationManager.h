@@ -46,7 +46,11 @@ private:
       concretizations_map;
   concretizations_map concretizations;
 
+  bool simplifyExprs;
+
 public:
+  ConcretizationManager(bool simplifyExprs) : simplifyExprs(simplifyExprs) {}
+
   Assignment get(const ConstraintSet &set, ref<Expr> query);
   bool contains(const ConstraintSet &set, ref<Expr> query);
   void add(const Query &q, const Assignment &assign);

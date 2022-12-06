@@ -87,7 +87,7 @@ public:
   }
   bool computeInitialValues(const Query &query,
                             const std::vector<const Array *> &objects,
-                            std::vector<std::vector<unsigned char>> &values,
+                            std::vector<SparseStorage<unsigned char>> &values,
                             bool &hasSolution);
   bool check(const Query &query, ref<SolverResponse> &result);
   bool computeValidityCore(const Query &, ValidityCore &validityCore,
@@ -331,7 +331,7 @@ bool CachingSolver::computeValidityCore(const Query &query,
 
 bool CachingSolver::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<std::vector<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
   ++stats::queryCacheMisses;
   return solver->impl->computeInitialValues(query, objects, values,
                                             hasSolution);

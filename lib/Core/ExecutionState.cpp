@@ -95,6 +95,7 @@ ExecutionState::ExecutionState(const ExecutionState &state)
       addressSpace(state.addressSpace), constraints(state.constraints),
       pathOS(state.pathOS), symPathOS(state.symPathOS),
       coveredLines(state.coveredLines), symbolics(state.symbolics),
+      symbolicSizes(state.symbolicSizes),
       resolvedPointers(state.resolvedPointers),
       cexPreferences(state.cexPreferences), arrayNames(state.arrayNames),
       openMergeStack(state.openMergeStack),
@@ -124,7 +125,7 @@ ExecutionState *ExecutionState::branch() {
 
 bool ExecutionState::inSymbolics(const MemoryObject *mo) const {
   for (auto i : symbolics) {
-    if (mo == i.memoryObject.get()) {
+    if (mo->id == i.memoryObject->id) {
       return true;
     }
   }
@@ -137,7 +138,9 @@ void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
 
 void ExecutionState::popFrame() {
   const StackFrame &sf = stack.back();
-  for (const auto *memoryObject : sf.allocas) {
+  for (const auto id : sf.allocas) {
+    const MemoryObject *memoryObject = addressSpace.findObject(id).first;
+    assert(memoryObject);
     removePointerResolutions(memoryObject);
     addressSpace.unbindObject(memoryObject);
   }
@@ -205,7 +208,7 @@ bool ExecutionState::getBase(
 void ExecutionState::removePointerResolutions(const MemoryObject *mo) {
   for (auto i = resolvedPointers.begin(), last = resolvedPointers.end();
        i != last;) {
-    if (i->second.first == mo) {
+    if (i->second.first == mo->id) {
       i = resolvedPointers.erase(i);
     } else {
       ++i;
@@ -217,24 +220,27 @@ void ExecutionState::removePointerResolutions(const MemoryObject *mo) {
 void ExecutionState::addPointerResolution(ref<Expr> address, ref<Expr> base,
                                           const MemoryObject *mo) {
   if (!isa<ConstantExpr>(address)) {
-    resolvedPointers[address] = std::make_pair(mo, mo->getOffsetExpr(address));
+    resolvedPointers[address] =
+        std::make_pair(mo->id, mo->getOffsetExpr(address));
   }
   if (base != address && !isa<ConstantExpr>(base)) {
-    resolvedPointers[base] = std::make_pair(mo, mo->getOffsetExpr(base));
+    resolvedPointers[base] = std::make_pair(mo->id, mo->getOffsetExpr(base));
   }
 }
 
 bool ExecutionState::resolveOnSymbolics(const ref<ConstantExpr> &addr,
-                                        ref<const MemoryObject> &result) const {
+                                        IDType &result) const {
   uint64_t address = addr->getZExtValue();
 
   for (const auto &res : symbolics) {
     const auto &mo = res.memoryObject;
     // Check if the provided address is between start and end of the object
     // [mo->address, mo->address + mo->size) or the object is a 0-sized object.
-    if ((mo->size == 0 && address == mo->address) ||
-        (address - mo->address < mo->size)) {
-      result = mo;
+    ref<ConstantExpr> size = cast<ConstantExpr>(
+        constraints.getConcretization().evaluate(mo->getSizeExpr()));
+    if ((size->getZExtValue() == 0 && address == mo->address) ||
+        (address - mo->address < size->getZExtValue())) {
+      result = mo->id;
       return true;
     }
   }

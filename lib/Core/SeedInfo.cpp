@@ -18,6 +18,8 @@
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Support/ErrorHandling.h"
 
+#include <set>
+
 using namespace klee;
 
 KTestObject *SeedInfo::getNextInput(const MemoryObject *mo, bool byName) {
@@ -93,8 +95,8 @@ void SeedInfo::patchSeed(const ExecutionState &state, ref<Expr> condition,
     // If not in bindings then this can't be a violation?
     Assignment::bindings_ty::iterator it2 = assignment.bindings.find(array);
     if (it2 != assignment.bindings.end()) {
-      ref<Expr> isSeed =
-          EqExpr::create(read, ConstantExpr::alloc(it2->second[i], Expr::Int8));
+      ref<Expr> isSeed = EqExpr::create(
+          read, ConstantExpr::alloc(it2->second.load(i), Expr::Int8));
       bool res;
       bool success =
           solver->mustBeFalse(required, isSeed, res, state.queryMetaData);
@@ -106,9 +108,9 @@ void SeedInfo::patchSeed(const ExecutionState &state, ref<Expr> condition,
             solver->getValue(required, read, value, state.queryMetaData);
         assert(success && "FIXME: Unhandled solver failure");
         (void)success;
-        it2->second[i] = value->getZExtValue(8);
+        it2->second.store(i, value->getZExtValue(8));
         cm.addConstraint(EqExpr::create(
-            read, ConstantExpr::alloc(it2->second[i], Expr::Int8)));
+            read, ConstantExpr::alloc(it2->second.load(i), Expr::Int8)));
       } else {
         cm.addConstraint(isSeed);
       }
@@ -130,11 +132,13 @@ void SeedInfo::patchSeed(const ExecutionState &state, ref<Expr> condition,
                                          ie = assignment.bindings.end();
        it != ie; ++it) {
     const Array *array = it->first;
-    for (unsigned i = 0; i < array->size; ++i) {
+    ref<ConstantExpr> arrayConstantSize = cast<ConstantExpr>(
+        state.constraints.getConcretization().evaluate(array->size));
+    for (unsigned i = 0; i < arrayConstantSize->getZExtValue(); ++i) {
       ref<Expr> read = ReadExpr::create(UpdateList(array, 0),
                                         ConstantExpr::alloc(i, Expr::Int32));
-      ref<Expr> isSeed =
-          EqExpr::create(read, ConstantExpr::alloc(it->second[i], Expr::Int8));
+      ref<Expr> isSeed = EqExpr::create(
+          read, ConstantExpr::alloc(it->second.load(i), Expr::Int8));
       bool res;
       bool success =
           solver->mustBeFalse(required, isSeed, res, state.queryMetaData);
@@ -146,9 +150,9 @@ void SeedInfo::patchSeed(const ExecutionState &state, ref<Expr> condition,
             solver->getValue(required, read, value, state.queryMetaData);
         assert(success && "FIXME: Unhandled solver failure");
         (void)success;
-        it->second[i] = value->getZExtValue(8);
+        it->second.store(i, value->getZExtValue(8));
         cm.addConstraint(EqExpr::create(
-            read, ConstantExpr::alloc(it->second[i], Expr::Int8)));
+            read, ConstantExpr::alloc(it->second.load(i), Expr::Int8)));
       } else {
         cm.addConstraint(isSeed);
       }

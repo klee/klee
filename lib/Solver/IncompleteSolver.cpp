@@ -125,7 +125,7 @@ bool StagedSolverImpl::computeValue(const Query &query, ref<Expr> &result) {
 
 bool StagedSolverImpl::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<std::vector<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
   if (primary->computeInitialValues(query, objects, values, hasSolution))
     return true;
 

@@ -35,6 +35,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <set>
 
 using namespace klee;
 using namespace llvm;

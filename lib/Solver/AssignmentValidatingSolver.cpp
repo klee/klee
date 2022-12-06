@@ -31,14 +31,14 @@ public:
   bool computeValue(const Query &, ref<Expr> &result);
   bool computeInitialValues(const Query &,
                             const std::vector<const Array *> &objects,
-                            std::vector<std::vector<unsigned char>> &values,
+                            std::vector<SparseStorage<unsigned char>> &values,
                             bool &hasSolution);
   bool check(const Query &query, ref<SolverResponse> &result);
   bool computeValidityCore(const Query &query, ValidityCore &validityCore,
                            bool &isValid);
   void validateAssigment(const Query &query,
                          const std::vector<const Array *> &objects,
-                         std::vector<std::vector<unsigned char>> &values);
+                         std::vector<SparseStorage<unsigned char>> &values);
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query &);
   void setCoreSolverTimeout(time::Span timeout);
@@ -60,7 +60,7 @@ bool AssignmentValidatingSolver::computeValue(const Query &query,
 
 void AssignmentValidatingSolver::validateAssigment(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<std::vector<unsigned char>> &values) {
+    std::vector<SparseStorage<unsigned char>> &values) {
   // Use `_allowFreeValues` so that if we are missing an assignment
   // we can't compute a constant and flag this as a problem.
   Assignment assignment(objects, values, /*_allowFreeValues=*/true);
@@ -119,7 +119,7 @@ void AssignmentValidatingSolver::validateAssigment(
 
 bool AssignmentValidatingSolver::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<std::vector<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
   bool success =
       solver->impl->computeInitialValues(query, objects, values, hasSolution);
   if (!hasSolution)
@@ -145,10 +145,10 @@ bool AssignmentValidatingSolver::check(const Query &query,
 
   std::vector<const Array *> objects;
   findSymbolicObjects(expressions.begin(), expressions.end(), objects);
-  std::vector<std::vector<unsigned char>> values;
+  std::vector<SparseStorage<unsigned char>> values;
 
   assert(isa<InvalidResponse>(result));
-  cast<InvalidResponse>(result)->getInitialValuesFor(objects, values);
+  cast<InvalidResponse>(result)->tryGetInitialValuesFor(objects, values);
 
   validateAssigment(query, objects, values);
 

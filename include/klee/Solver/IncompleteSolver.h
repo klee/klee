@@ -76,7 +76,7 @@ public:
   /// is not found, then the values array must be unmodified.
   virtual bool
   computeInitialValues(const Query &, const std::vector<const Array *> &objects,
-                       std::vector<std::vector<unsigned char>> &values,
+                       std::vector<SparseStorage<unsigned char>> &values,
                        bool &hasSolution) = 0;
 };
 
@@ -97,7 +97,7 @@ public:
   bool computeValue(const Query &, ref<Expr> &result);
   bool computeInitialValues(const Query &,
                             const std::vector<const Array *> &objects,
-                            std::vector<std::vector<unsigned char>> &values,
+                            std::vector<SparseStorage<unsigned char>> &values,
                             bool &hasSolution);
   bool check(const Query &query, ref<SolverResponse> &result);
   bool computeValidityCore(const Query &query, ValidityCore &validityCore,

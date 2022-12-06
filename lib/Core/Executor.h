@@ -61,6 +61,7 @@ class Value;
 } // namespace llvm
 
 namespace klee {
+class AddressManager;
 class Array;
 struct Cell;
 class CodeGraphDistance;
@@ -116,6 +117,7 @@ private:
 
   ExternalDispatcher *externalDispatcher;
   TimingSolver *solver;
+  std::unique_ptr<AddressManager> addressManager;
   MemoryManager *memory;
   TypeManager *typeSystemManager;
 
@@ -269,6 +271,12 @@ private:
   void resolveExact(ExecutionState &state, ref<Expr> p, KType *type,
                     ExactResolutionList &results, const std::string &name);
 
+  MemoryObject *allocate(ExecutionState &state, ref<Expr> size, bool isLocal,
+                         bool isGlobal, const llvm::Value *allocSite,
+                         size_t allocationAlignment,
+                         ref<Expr> lazyInitializationSource = ref<Expr>(),
+                         unsigned timestamp = 0);
+
   /// Allocate and bind a new object in a particular state. NOTE: This
   /// function may fork.
   ///
@@ -327,6 +335,8 @@ private:
   void executeMakeSymbolic(ExecutionState &state, const MemoryObject *mo,
                            KType *type, const std::string &name,
                            const ref<SymbolicSource> source, bool isLocal);
+  void updateStateWithSymcretes(ExecutionState &state,
+                                const Assignment &assignment);
 
   /// Create a new state where each input condition has been added as
   /// a constraint and return the results. The input state is included
@@ -456,7 +466,7 @@ private:
   /// bindModuleConstants - Initialize the module constant table.
   void bindModuleConstants();
 
-  const Array *makeArray(ExecutionState &state, uint64_t size,
+  const Array *makeArray(ExecutionState &state, ref<Expr> size,
                          const std::string &name,
                          const ref<SymbolicSource> source);
 

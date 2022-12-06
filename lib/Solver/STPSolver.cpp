@@ -25,6 +25,7 @@
 
 #include <csignal>
 #include <sys/ipc.h>
+#include <sys/mman.h>
 #include <sys/shm.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -85,7 +86,7 @@ public:
   bool computeValue(const Query &, ref<Expr> &result) override;
   bool computeInitialValues(const Query &,
                             const std::vector<const Array *> &objects,
-                            std::vector<std::vector<unsigned char>> &values,
+                            std::vector<SparseStorage<unsigned char>> &values,
                             bool &hasSolution) override;
   SolverRunStatus getOperationStatusCode() override;
 };
@@ -153,7 +154,7 @@ char *STPSolverImpl::getConstraintLog(const Query &query) {
 
 bool STPSolverImpl::computeTruth(const Query &query, bool &isValid) {
   std::vector<const Array *> objects;
-  std::vector<std::vector<unsigned char>> values;
+  std::vector<SparseStorage<unsigned char>> values;
   bool hasSolution;
 
   if (!computeInitialValues(query, objects, values, hasSolution))
@@ -165,7 +166,7 @@ bool STPSolverImpl::computeTruth(const Query &query, bool &isValid) {
 
 bool STPSolverImpl::computeValue(const Query &query, ref<Expr> &result) {
   std::vector<const Array *> objects;
-  std::vector<std::vector<unsigned char>> values;
+  std::vector<SparseStorage<unsigned char>> values;
   bool hasSolution;
 
   // Find the object used in the expression, and compute an assignment
@@ -185,7 +186,7 @@ bool STPSolverImpl::computeValue(const Query &query, ref<Expr> &result) {
 static SolverImpl::SolverRunStatus
 runAndGetCex(::VC vc, STPBuilder *builder, ::VCExpr q,
              const std::vector<const Array *> &objects,
-             std::vector<std::vector<unsigned char>> &values,
+             std::vector<SparseStorage<unsigned char>> &values,
              bool &hasSolution) {
   // XXX I want to be able to timeout here, safely
   hasSolution = !vc_query(vc, q);
@@ -196,12 +197,21 @@ runAndGetCex(::VC vc, STPBuilder *builder, ::VCExpr q,
   values.reserve(objects.size());
   unsigned i = 0; // FIXME C++17: use reference from emplace_back()
   for (const auto object : objects) {
-    values.emplace_back(object->size);
+    uint64_t objectSize = 0;
+    if (ref<ConstantExpr> sizeExpr = dyn_cast<ConstantExpr>(object->size)) {
+      objectSize = sizeExpr->getZExtValue();
+    } else {
+      ExprHandle sizeHandle = builder->construct(object->size);
+      objectSize = getBVUnsignedLongLong(sizeHandle);
+    }
 
-    for (unsigned offset = 0; offset < object->size; offset++) {
+    values.emplace_back(objectSize);
+
+    for (unsigned offset = 0; offset < objectSize; offset++) {
       ExprHandle counter =
           vc_getCounterExample(vc, builder->getInitialRead(object, offset));
-      values[i][offset] = static_cast<unsigned char>(getBVUnsigned(counter));
+      values[i].store(offset,
+                      static_cast<unsigned char>(getBVUnsigned(counter)));
     }
     ++i;
   }
@@ -214,17 +224,23 @@ static void stpTimeoutHandler(int x) { _exit(52); }
 static SolverImpl::SolverRunStatus
 runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
                    const std::vector<const Array *> &objects,
-                   std::vector<std::vector<unsigned char>> &values,
+                   std::vector<SparseStorage<unsigned char>> &values,
                    bool &hasSolution, time::Span timeout) {
   unsigned char *pos = shared_memory_ptr;
-  unsigned sum = 0;
-  for (const auto object : objects)
-    sum += object->size;
-  if (sum >= shared_memory_size)
-    llvm::report_fatal_error("not enough shared memory for counterexample");
+  // unsigned sum = 0;
+  // for (const auto object : objects)
+  //   sum += object->size;
+  // if (sum >= shared_memory_size)
+  //   llvm::report_fatal_error("not enough shared memory for counterexample");
 
   fflush(stdout);
   fflush(stderr);
+
+  // We will allocate additional buffer for shared memory
+  size_t memory_object_size = objects.size() * sizeof(uint64_t);
+  uint64_t *shared_memory_object_sizes = static_cast<uint64_t *>(
+      mmap(NULL, memory_object_size, PROT_READ | PROT_WRITE,
+           MAP_SHARED | MAP_ANONYMOUS, -1, 0));
 
   // fork solver
   int pid = fork();
@@ -234,6 +250,7 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
                  llvm::sys::StrError(errno).c_str());
     if (!IgnoreSolverFailures)
       exit(1);
+    munmap(shared_memory_object_sizes, memory_object_size);
     return SolverImpl::SOLVER_RUN_STATUS_FORK_FAILED;
   }
   // - child (solver)
@@ -245,8 +262,23 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
     }
     int res = vc_query(vc, q);
     if (!res) {
-      for (const auto object : objects) {
-        for (unsigned offset = 0; offset < object->size; offset++) {
+      for (unsigned idx = 0; idx < objects.size(); ++idx) {
+        const Array *object = objects[idx];
+
+        /* Receive size for array */
+        unsigned int sizeConstant = 0;
+        if (ref<ConstantExpr> sizeExpr = dyn_cast<ConstantExpr>(object->size)) {
+          sizeConstant = sizeExpr->getZExtValue();
+        } else {
+          ExprHandle sizeHandle = builder->construct(object->size);
+          sizeConstant =
+              getBVUnsignedLongLong(vc_getCounterExample(vc, sizeHandle));
+        }
+        shared_memory_object_sizes[idx] = sizeConstant;
+
+        /* Then fill required bytes */
+        for (unsigned offset = 0; offset < shared_memory_object_sizes[idx];
+             offset++) {
           ExprHandle counter =
               vc_getCounterExample(vc, builder->getInitialRead(object, offset));
           *pos++ = static_cast<unsigned char>(getBVUnsigned(counter));
@@ -265,6 +297,7 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
 
     if (res < 0) {
       klee_warning("waitpid() for STP failed");
+      munmap(shared_memory_object_sizes, memory_object_size);
       if (!IgnoreSolverFailures)
         exit(1);
       return SolverImpl::SOLVER_RUN_STATUS_WAITPID_FAILED;
@@ -276,6 +309,7 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
     if (WIFSIGNALED(status) || !WIFEXITED(status)) {
       klee_warning("STP did not return successfully.  Most likely you forgot "
                    "to run 'ulimit -s unlimited'");
+      munmap(shared_memory_object_sizes, memory_object_size);
       if (!IgnoreSolverFailures) {
         exit(1);
       }
@@ -289,14 +323,18 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
       hasSolution = true;
 
       values.reserve(objects.size());
-      for (const auto object : objects) {
-        values.emplace_back(pos, pos + object->size);
-        pos += object->size;
+      for (unsigned idx = 0; idx < objects.size(); ++idx) {
+        uint64_t objectSize = shared_memory_object_sizes[idx];
+        values.emplace_back(objectSize, 0);
+        values.back().store(0, pos, pos + objectSize);
+        pos += objectSize;
       }
 
+      munmap(shared_memory_object_sizes, memory_object_size);
       return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
     }
 
+    munmap(shared_memory_object_sizes, memory_object_size);
     // unsolvable
     if (exitcode == 1) {
       hasSolution = false;
@@ -320,7 +358,7 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
 
 bool STPSolverImpl::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<std::vector<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
   runStatusCode = SOLVER_RUN_STATUS_FAILURE;
   TimerStatIncrementer t(stats::queryTime);
 

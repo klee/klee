@@ -9,11 +9,13 @@
 
 #include "klee/Expr/ExprSMTLIBPrinter.h"
 #include "klee/Support/Casting.h"
+#include "klee/Support/ErrorHandling.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #include <stack>
+#include <string>
 
 namespace ExprSMTLIBOptions {
 // Command line options
@@ -588,14 +590,15 @@ void ExprSMTLIBPrinter::printArrayDeclarations() {
     for (std::vector<const Array *>::iterator it = sortedArrays.begin();
          it != sortedArrays.end(); it++) {
       array = *it;
-      int byteIndex = 0;
       if (array->isConstantArray()) {
         /*loop over elements in the array and generate an assert statement
           for each one
          */
-        for (std::vector<ref<ConstantExpr>>::const_iterator ce =
-                 array->constantValues.begin();
-             ce != array->constantValues.end(); ce++, byteIndex++) {
+        uint64_t size =
+            cast<ConstantExpr>(
+                query->constraints.getConcretization().evaluate(array->size))
+                ->getZExtValue();
+        for (uint64_t byteIndex = 0; byteIndex < size; ++byteIndex) {
           *p << "(assert (";
           p->pushIndent();
           *p << "= ";
@@ -605,7 +608,16 @@ void ExprSMTLIBPrinter::printArrayDeclarations() {
           *p << "(select " << array->name << " (_ bv" << byteIndex << " "
              << array->getDomain() << ") )";
           printSeperator();
-          printConstant((*ce));
+
+          if (ref<ConstantWithSymbolicSizeSource>
+                  constantWithSymbolicSizeSource =
+                      dyn_cast<ConstantWithSymbolicSizeSource>(array->source)) {
+            printConstant(ConstantExpr::create(
+                constantWithSymbolicSizeSource->defaultValue,
+                array->getRange()));
+          } else {
+            printConstant(array->constantValues[byteIndex]);
+          }
 
           p->popIndent();
           printSeperator();
@@ -681,7 +693,16 @@ void ExprSMTLIBPrinter::printAction() {
          it != arraysToCallGetValueOn->end(); it++) {
       theArray = *it;
       // Loop over the array indices
-      for (unsigned int index = 0; index < theArray->size; ++index) {
+      ref<ConstantExpr> arrayConstantSize = dyn_cast<ConstantExpr>(
+          query->constraints.getConcretization().evaluate(theArray->size));
+      if (!arrayConstantSize) {
+        klee_warning("Query for %s can not be printed as it has non-conretized "
+                     "symbolic size!",
+                     theArray->getName().c_str());
+        continue;
+      }
+      for (unsigned int index = 0; index < arrayConstantSize->getZExtValue();
+           ++index) {
         *o << "(get-value ( (select " << (**it).name << " (_ bv" << index << " "
            << theArray->getDomain() << ") ) ) )\n";
       }

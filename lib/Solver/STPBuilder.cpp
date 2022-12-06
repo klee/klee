@@ -430,6 +430,12 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n,
     std::string unique_id = llvm::utostr(_arr_hash._array_hash.size());
     std::string unique_name = root->name + unique_id;
 
+    if (isa<ConstantWithSymbolicSizeSource>(root->source)) {
+      llvm::report_fatal_error(
+          "STP does not support constant arrays or quantifiers to instantiate "
+          "constant array of symbolic size!");
+    }
+
     array_expr =
         buildArray(unique_name.c_str(), root->getDomain(), root->getRange());
 
@@ -437,7 +443,9 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n,
       // FIXME: Flush the concrete values into STP. Ideally we would do this
       // using assertions, which is much faster, but we need to fix the caching
       // to work correctly in that case.
-      for (unsigned i = 0, e = root->size; i != e; ++i) {
+
+      // TODO: usage of `constantValues.size()` seems unconvinient.
+      for (unsigned i = 0, e = root->constantValues.size(); i != e; ++i) {
         ::VCExpr prev = array_expr;
         array_expr = vc_writeExpr(
             vc, prev, construct(ConstantExpr::alloc(i, root->getDomain()), 0),

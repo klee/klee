@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "klee/ADT/SparseStorage.h"
 #include "klee/Config/Version.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
@@ -207,7 +208,7 @@ static bool EvaluateInputAST(const char *Filename, const MemoryBuffer *MB,
       coreSolver, getQueryLogPath(ALL_QUERIES_SMT2_FILE_NAME),
       getQueryLogPath(SOLVER_QUERIES_SMT2_FILE_NAME),
       getQueryLogPath(ALL_QUERIES_KQUERY_FILE_NAME),
-      getQueryLogPath(SOLVER_QUERIES_KQUERY_FILE_NAME), nullptr);
+      getQueryLogPath(SOLVER_QUERIES_KQUERY_FILE_NAME), nullptr, nullptr);
 
   unsigned Index = 0;
   for (std::vector<Decl *>::iterator it = Decls.begin(), ie = Decls.end();
@@ -247,19 +248,23 @@ static bool EvaluateInputAST(const char *Filename, const MemoryBuffer *MB,
                        << ")";
         }
       } else {
-        std::vector<std::vector<unsigned char>> result;
+        std::vector<SparseStorage<unsigned char>> result;
 
         if (S->getInitialValues(
                 Query(ConstraintSet(QC->Constraints), QC->Query), QC->Objects,
                 result)) {
           llvm::outs() << "INVALID\n";
-
+          Assignment solutionAssugnment(QC->Objects, result);
           for (unsigned i = 0, e = result.size(); i != e; ++i) {
             llvm::outs() << "\tArray " << i << ":\t" << QC->Objects[i]->name
                          << "[";
-            for (unsigned j = 0; j != QC->Objects[i]->size; ++j) {
-              llvm::outs() << (unsigned)result[i][j];
-              if (j + 1 != QC->Objects[i]->size)
+            ref<ConstantExpr> arrayConstantSize = dyn_cast<ConstantExpr>(
+                solutionAssugnment.evaluate(QC->Objects[i]->size));
+            assert(arrayConstantSize &&
+                   "Array of symbolic size had not receive value for size!");
+            for (unsigned j = 0; j != arrayConstantSize->getZExtValue(); ++j) {
+              llvm::outs() << (unsigned)result[i].load(j);
+              if (j + 1 != arrayConstantSize->getZExtValue())
                 llvm::outs() << ", ";
             }
             llvm::outs() << "]";

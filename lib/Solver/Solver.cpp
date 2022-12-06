@@ -97,6 +97,16 @@ bool Solver::getValue(const Query &query, ref<ConstantExpr> &result) {
   return true;
 }
 
+bool Solver::getMinimalUnsignedValue(const Query &query,
+                                     ref<ConstantExpr> &result) {
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(query.expr)) {
+    result = CE;
+    return true;
+  }
+
+  return impl->computeMinimalUnsignedValue(query, result);
+}
+
 bool Solver::evaluate(const Query &query, ref<SolverResponse> &queryResult,
                       ref<SolverResponse> &negateQueryResult) {
   assert(query.expr->getWidth() == Expr::Bool && "Invalid expression type!");
@@ -131,9 +141,9 @@ bool Solver::getValidityCore(const Query &query, ValidityCore &validityCore,
   return impl->computeValidityCore(query, validityCore, result);
 }
 
-bool Solver::getInitialValues(const Query &query,
-                              const std::vector<const Array *> &objects,
-                              std::vector<std::vector<unsigned char>> &values) {
+bool Solver::getInitialValues(
+    const Query &query, const std::vector<const Array *> &objects,
+    std::vector<SparseStorage<unsigned char>> &values) {
   bool hasSolution;
   bool success =
       impl->computeInitialValues(query, objects, values, hasSolution);
@@ -275,6 +285,22 @@ std::vector<const Array *> Query::gatherArrays() const {
   return arrays;
 }
 
+std::vector<const Array *> Query::gatherSymcreteArrays() const {
+  std::unordered_set<const Array *> arrays;
+  for (const Array *array :
+       ConstraintSet(std::vector<ref<Expr>>{expr}).gatherSymcreteArrays()) {
+    arrays.insert(array);
+  }
+  for (const Array *array : constraints.gatherSymcreteArrays()) {
+    arrays.insert(array);
+  }
+  return std::vector<const Array *>(arrays.begin(), arrays.end());
+}
+
+bool Query::containsSymcretes() const {
+  return !gatherSymcreteArrays().empty();
+}
+
 void Query::dump() const {
   llvm::errs() << "Constraints [\n";
   for (const auto &constraint : constraints)
@@ -286,22 +312,6 @@ void Query::dump() const {
   llvm::errs() << "]\n";
 }
 
-bool Query::containsSymcretes() const {
-  for (const auto array : gatherArrays()) {
-    if (array->source->getKind() == SymbolicSource::Kind::SymbolicAddress) {
-      return true;
-    }
-  }
-  return false;
-}
-
 void ValidityCore::dump() const {
-  llvm::errs() << "Constraints [\n";
-  for (const auto &constraint : constraints)
-    constraint->dump();
-
-  llvm::errs() << "]\n";
-  llvm::errs() << "Query [\n";
-  expr->dump();
-  llvm::errs() << "]\n";
+  Query(ConstraintSet(constraints), expr).dump();
 }

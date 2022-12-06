@@ -11,8 +11,8 @@ int main() {
   assert(p);
   p[1] = 52;
 
-  // CHECK: KLEE: WARNING ONCE: Large alloc
   int *p2 = realloc(p, 1 << 30);
+  // CHECK-NOT: ASSERTION FAIL
   assert(!p2 || p2[1] == 52);
 
   return 0;

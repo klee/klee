@@ -510,12 +510,15 @@ exit:
   const Identifier *Label = GetOrCreateIdentifier(Name);
   const Array *Root;
   if (!Values.empty())
-    Root = TheArrayCache.CreateArray(Label->Name, Size.get(),
-                                     SourceBuilder::constant(), &Values[0],
-                                     &Values[0] + Values.size());
+    Root = TheArrayCache.CreateArray(
+        Label->Name,
+        ConstantExpr::create(Size.get(), sizeof(uint64_t) * CHAR_BIT),
+        SourceBuilder::constant(), &Values[0], &Values[0] + Values.size());
   else
-    Root = TheArrayCache.CreateArray(Label->Name, Size.get(),
-                                     SourceBuilder::makeSymbolic());
+    Root = TheArrayCache.CreateArray(
+        Label->Name,
+        ConstantExpr::create(Size.get(), sizeof(uint64_t) * CHAR_BIT),
+        SourceBuilder::makeSymbolic());
   ArrayDecl *AD =
       new ArrayDecl(Label, Size.get(), DomainType.get(), RangeType.get(), Root);
 
@@ -1618,7 +1621,7 @@ void ArrayDecl::dump() {
     llvm::outs() << "symbolic\n";
   } else {
     llvm::outs() << '[';
-    for (unsigned i = 0, e = Root->size; i != e; ++i) {
+    for (unsigned i = 0, e = Root->constantValues.size(); i != e; ++i) {
       if (i)
         llvm::outs() << " ";
       llvm::outs() << Root->constantValues[i];

@@ -12,6 +12,8 @@
 
 #include "klee/ADT/Bits.h"
 #include "klee/ADT/Ref.h"
+#include "klee/Expr/SymbolicSource.h"
+
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseSet.h"
@@ -19,9 +21,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <map>
 #include <memory>
-#include <set>
 #include <sstream>
 #include <unordered_set>
 #include <vector>
@@ -38,7 +38,6 @@ class ArrayCache;
 class ConstantExpr;
 class Expr;
 class ObjectState;
-class SymbolicSource;
 
 template <class T> class ref;
 
@@ -526,8 +525,7 @@ public:
   // Name of the array
   const std::string name;
 
-  // FIXME: Not 64-bit clean.
-  const unsigned size;
+  ref<Expr> size;
 
   /// This represents the reason why this array was created as well as some
   /// additional info.
@@ -561,18 +559,21 @@ private:
   /// when printing expressions. When expressions are printed the output will
   /// not parse correctly since two arrays with the same name cannot be
   /// distinguished once printed.
-  Array(const std::string &_name, uint64_t _size,
+  Array(const std::string &_name, ref<Expr> _size,
         const ref<SymbolicSource> source,
         const ref<ConstantExpr> *constantValuesBegin = 0,
         const ref<ConstantExpr> *constantValuesEnd = 0,
         Expr::Width _domain = Expr::Int32, Expr::Width _range = Expr::Int8);
 
 public:
-  bool isSymbolicArray() const { return constantValues.empty(); }
-  bool isConstantArray() const { return !isSymbolicArray(); }
+  bool isSymbolicArray() const { return !isConstantArray(); }
+  bool isConstantArray() const {
+    return isa<ConstantSource>(source) ||
+           isa<ConstantWithSymbolicSizeSource>(source);
+  }
 
   const std::string getName() const { return name; }
-  unsigned getSize() const { return size; }
+  ref<Expr> getSize() const { return size; }
   Expr::Width getDomain() const { return domain; }
   Expr::Width getRange() const { return range; }
 
@@ -588,7 +589,7 @@ class UpdateList {
   friend class ReadExpr; // for default constructor
 
 public:
-  const Array *root;
+  const Array *root = nullptr;
 
   /// pointer to the most recent update node
   ref<UpdateNode> head;

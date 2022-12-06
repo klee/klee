@@ -1,6 +1,7 @@
+// REQUIRES: z3
 // RUN: %clang %s -emit-llvm -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --skip-not-symbolic-objects %t1.bc 2>&1 | FileCheck %s
+// RUN: %klee --output-dir=%t.klee-out -solver-backend=z3 --skip-not-symbolic-objects %t1.bc 2>&1 | FileCheck %s
 
 #include "klee/klee.h"
 #include <assert.h>
@@ -24,5 +25,5 @@ int main() {
   }
 }
 
-// CHECK: KLEE: done: completed paths = 0
-// CHECK: KLEE: done: generated tests = 2
+// CHECK: KLEE: done: completed paths = 1
+// CHECK: KLEE: done: generated tests = 3

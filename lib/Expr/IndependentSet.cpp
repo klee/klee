@@ -31,6 +31,12 @@ IndependentElementSet::IndependentElementSet(ref<Expr> e) {
       continue;
 
     if (!wholeObjects.count(array)) {
+      if (ref<SymbolicAllocationSource> allocSource =
+              dyn_cast_or_null<SymbolicAllocationSource>(array->source)) {
+        wholeObjects.insert(array);
+        wholeObjects.insert(allocSource->linkedArray);
+      }
+
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(re->index)) {
         // if index constant, then add to set of constraints operating
         // on that array (actually, don't add constraint, just set index)

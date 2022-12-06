@@ -92,7 +92,7 @@ public:
   bool computeValue(const Query &, ref<Expr> &result);
   bool computeInitialValues(const Query &,
                             const std::vector<const Array *> &objects,
-                            std::vector<std::vector<unsigned char>> &values,
+                            std::vector<SparseStorage<unsigned char>> &values,
                             bool &hasSolution);
   bool check(const Query &query, ref<SolverResponse> &result);
   bool computeValidityCore(const Query &, ValidityCore &validityCore,
@@ -231,7 +231,7 @@ bool CexCachingSolver::getAssignment(const Query &query, Assignment *&result,
   std::vector<const Array *> objects;
   findSymbolicObjects(key.begin(), key.end(), objects);
 
-  std::vector<std::vector<unsigned char>> values;
+  std::vector<SparseStorage<unsigned char>> values;
   ref<SolverResponse> queryResult;
   bool hasSolution;
   if (validityCore) {
@@ -248,7 +248,7 @@ bool CexCachingSolver::getAssignment(const Query &query, Assignment *&result,
   if (hasSolution) {
     if (validityCore) {
       Assignment::bindings_ty bindings;
-      queryResult->getInitialValues(bindings);
+      queryResult->tryGetInitialValues(bindings);
       binding = new Assignment(bindings);
     } else {
       binding = new Assignment(objects, values);
@@ -270,7 +270,7 @@ bool CexCachingSolver::getAssignment(const Query &query, Assignment *&result,
       }
   } else {
     if (validityCore)
-      queryResult->getValidityCore(*validityCore);
+      queryResult->tryGetValidityCore(*validityCore);
     binding = (Assignment *)0;
   }
 
@@ -364,7 +364,7 @@ bool CexCachingSolver::computeValue(const Query &query, ref<Expr> &result) {
 
 bool CexCachingSolver::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<std::vector<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
   TimerStatIncrementer t(stats::cexCacheTime);
   Assignment *a;
   if (!getAssignment(query, a))
@@ -376,13 +376,17 @@ bool CexCachingSolver::computeInitialValues(
 
   // FIXME: We should use smarter assignment for result so we don't
   // need redundant copy.
-  values = std::vector<std::vector<unsigned char>>(objects.size());
+  values = std::vector<SparseStorage<unsigned char>>(objects.size());
   for (unsigned i = 0; i < objects.size(); ++i) {
     const Array *os = objects[i];
     Assignment::bindings_ty::iterator it = a->bindings.find(os);
 
     if (it == a->bindings.end()) {
-      values[i] = std::vector<unsigned char>(os->size, 0);
+      ref<ConstantExpr> arrayConstantSize = a->evaluate(os->size);
+      assert(arrayConstantSize &&
+             "Array of symbolic size had not receive value for size!");
+      values[i] =
+          SparseStorage<unsigned char>(arrayConstantSize->getZExtValue(), 0);
     } else {
       values[i] = it->second;
     }
@@ -412,9 +416,12 @@ bool CexCachingSolver::check(const Query &query, ref<SolverResponse> &result) {
   for (unsigned i = 0; i < objects.size(); ++i) {
     const Array *os = objects[i];
     Assignment::bindings_ty::iterator it = a->bindings.find(os);
-
+    ref<ConstantExpr> arrayConstantSize = a->evaluate(os->size);
+    assert(arrayConstantSize &&
+           "Array of symbolic size had not receive value for size!");
     if (it == a->bindings.end()) {
-      a->bindings[os] = std::vector<unsigned char>(os->size, 0);
+      a->bindings[os] =
+          SparseStorage<unsigned char>(arrayConstantSize->getZExtValue(), 0);
     }
   }
 

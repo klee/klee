@@ -30,8 +30,17 @@ ExprVisitor::Action ExprEvaluator::evalRead(const UpdateList &ul,
     }
   }
 
-  if (ul.root->isConstantArray() && index < ul.root->size)
-    return Action::changeTo(ul.root->constantValues[index]);
+  if (ul.root->isConstantArray()) {
+    if (index < ul.root->constantValues.size()) {
+      return Action::changeTo(ul.root->constantValues[index]);
+    } else if (ref<ConstantWithSymbolicSizeSource>
+                   constantWithSymbolciSizeSource =
+                       dyn_cast<ConstantWithSymbolicSizeSource>(
+                           ul.root->source)) {
+      return Action::changeTo(ConstantExpr::create(
+          constantWithSymbolciSizeSource->defaultValue, ul.root->getRange()));
+    }
+  }
 
   return Action::changeTo(getInitialValue(*ul.root, index));
 }

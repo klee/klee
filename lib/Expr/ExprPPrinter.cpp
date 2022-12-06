@@ -513,11 +513,20 @@ void ExprPPrinter::printQuery(
       if (A->isSymbolicArray()) {
         PC << "symbolic";
       } else {
+        ref<ConstantExpr> sizeConstantExpr = cast<ConstantExpr>(
+            constraints.getConcretization().evaluate(A->size));
         PC << "[";
-        for (unsigned i = 0, e = A->size; i != e; ++i) {
+        for (unsigned i = 0, e = sizeConstantExpr->getZExtValue(); i != e;
+             ++i) {
           if (i)
             PC << " ";
-          PC << A->constantValues[i];
+          if (ref<ConstantWithSymbolicSizeSource>
+                  constantWithSymbolicSizeSource =
+                      dyn_cast<ConstantWithSymbolicSizeSource>(A->source)) {
+            PC << constantWithSymbolicSizeSource->defaultValue;
+          } else {
+            PC << A->constantValues[i];
+          }
         }
         PC << "]";
       }

@@ -10,6 +10,7 @@
 #ifndef KLEE_TIMINGSOLVER_H
 #define KLEE_TIMINGSOLVER_H
 
+#include "klee/Expr/ArrayExprOptimizer.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Solver/Solver.h"
@@ -27,6 +28,7 @@ class Solver;
 class TimingSolver {
 public:
   std::unique_ptr<Solver> solver;
+  ExprOptimizer optimizer;
   bool simplifyExprs;
 
 public:
@@ -35,8 +37,9 @@ public:
   /// \param _simplifyExprs - Whether expressions should be
   /// simplified (via the constraint manager interface) prior to
   /// querying.
-  TimingSolver(Solver *_solver, bool _simplifyExprs = true)
-      : solver(_solver), simplifyExprs(_simplifyExprs) {}
+  TimingSolver(Solver *_solver, ExprOptimizer optimizer,
+               bool _simplifyExprs = true)
+      : solver(_solver), optimizer(optimizer), simplifyExprs(_simplifyExprs) {}
 
   void setTimeout(time::Span t) { solver->setCoreSolverTimeout(t); }
 
@@ -52,6 +55,12 @@ public:
                 ref<SolverResponse> &queryResult,
                 ref<SolverResponse> &negateQueryResult,
                 SolverQueryMetaData &metaData);
+
+  /// Writes a unique constant value for the given expression in the
+  /// given state, if it has one (i.e. it provably only has a single
+  /// value) in the result. Otherwise writes the original expression.
+  bool tryGetUnique(const ConstraintSet &, ref<Expr>, ref<Expr> &result,
+                    SolverQueryMetaData &metaData);
 
   bool mustBeTrue(const ConstraintSet &, ref<Expr>, bool &result,
                   SolverQueryMetaData &metaData,
@@ -72,9 +81,13 @@ public:
   bool getValue(const ConstraintSet &, ref<Expr> expr,
                 ref<ConstantExpr> &result, SolverQueryMetaData &metaData);
 
+  bool getMinimalUnsignedValue(const ConstraintSet &, ref<Expr> expr,
+                               ref<ConstantExpr> &result,
+                               SolverQueryMetaData &metaData);
+
   bool getInitialValues(const ConstraintSet &,
                         const std::vector<const Array *> &objects,
-                        std::vector<std::vector<unsigned char>> &result,
+                        std::vector<SparseStorage<unsigned char>> &result,
                         SolverQueryMetaData &metaData,
                         bool produceValidityCore = false);
 

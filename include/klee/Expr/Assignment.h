@@ -10,6 +10,7 @@
 #ifndef KLEE_ASSIGNMENT_H
 #define KLEE_ASSIGNMENT_H
 
+#include "klee/ADT/SparseStorage.h"
 #include "klee/Expr/ExprEvaluator.h"
 
 #include <map>
@@ -20,7 +21,7 @@ class ConstraintSet;
 
 class Assignment {
 public:
-  typedef std::map<const Array *, std::vector<unsigned char>> bindings_ty;
+  typedef std::map<const Array *, SparseStorage<unsigned char>> bindings_ty;
 
   bool allowFreeValues;
   bindings_ty bindings;
@@ -32,18 +33,18 @@ public:
 public:
   Assignment(bool _allowFreeValues = false)
       : allowFreeValues(_allowFreeValues) {}
-  Assignment(bindings_ty &_bindings, bool _allowFreeValues = false)
+  Assignment(const bindings_ty &_bindings, bool _allowFreeValues = false)
       : allowFreeValues(_allowFreeValues), bindings(_bindings) {}
   Assignment(const std::vector<const Array *> &objects,
-             std::vector<std::vector<unsigned char>> &values,
+             std::vector<SparseStorage<unsigned char>> &values,
              bool _allowFreeValues = false)
       : allowFreeValues(_allowFreeValues) {
-    std::vector<std::vector<unsigned char>>::iterator valIt = values.begin();
+    std::vector<SparseStorage<unsigned char>>::iterator valIt = values.begin();
     for (std::vector<const Array *>::const_iterator it = objects.begin(),
                                                     ie = objects.end();
          it != ie; ++it) {
       const Array *os = *it;
-      std::vector<unsigned char> &arr = *valIt;
+      SparseStorage<unsigned char> &arr = *valIt;
       bindings.insert(std::make_pair(os, arr));
       ++valIt;
     }
@@ -55,9 +56,15 @@ public:
 
   template <typename InputIterator>
   bool satisfies(InputIterator begin, InputIterator end);
-  void dump();
+  void dump() const;
 
-  std::vector<const Array *> getArrays();
+  Assignment diffWith(const Assignment &other) const;
+
+  bindings_ty::const_iterator begin() const { return bindings.begin(); }
+  bindings_ty::const_iterator end() const { return bindings.end(); }
+
+  std::vector<const Array *> keys() const;
+  std::vector<SparseStorage<unsigned char>> values() const;
 };
 
 class AssignmentEvaluator : public ExprEvaluator {
@@ -79,7 +86,7 @@ inline ref<Expr> Assignment::evaluate(const Array *array,
   assert(array);
   bindings_ty::const_iterator it = bindings.find(array);
   if (it != bindings.end() && index < it->second.size()) {
-    return ConstantExpr::alloc(it->second[index], array->getRange());
+    return ConstantExpr::alloc(it->second.load(index), array->getRange());
   } else {
     if (allowFreeValues) {
       return ReadExpr::create(UpdateList(array, ref<UpdateNode>(nullptr)),

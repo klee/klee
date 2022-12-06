@@ -11,6 +11,7 @@
 #define KLEE_MEMORY_H
 
 #include "Context.h"
+#include "MemoryManager.h"
 #include "TimingSolver.h"
 
 #include "klee/Expr/Assignment.h"
@@ -19,6 +20,7 @@
 
 #include "llvm/ADT/StringExtras.h"
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -56,14 +58,19 @@ private:
   mutable class ReferenceCounter _refCount;
 
 public:
-  const IDType id;
+  IDType id;
   mutable unsigned timestamp;
+
   uint64_t address;
   ref<Expr> addressExpr;
   ref<Expr> lazyInitializationSource;
 
   /// size in bytes
   unsigned size;
+  ref<Expr> sizeExpr;
+
+  uint64_t alignment;
+
   mutable std::string name;
 
   bool isLocal;
@@ -88,20 +95,22 @@ public:
   explicit MemoryObject(uint64_t _address)
       : id(counter++), timestamp(time++), address(_address),
         addressExpr(nullptr), lazyInitializationSource(nullptr), size(0),
-        isFixed(true), parent(NULL), allocSite(0) {}
+        sizeExpr(nullptr), alignment(0), isFixed(true), parent(NULL),
+        allocSite(0) {}
 
   MemoryObject(
-      uint64_t _address, unsigned _size, bool _isLocal, bool _isGlobal,
-      bool _isFixed, const llvm::Value *_allocSite, MemoryManager *_parent,
-      ref<Expr> _addressExpr = nullptr,
+      uint64_t _address, unsigned _size, uint64_t alignment, bool _isLocal,
+      bool _isGlobal, bool _isFixed, const llvm::Value *_allocSite,
+      MemoryManager *_parent, ref<Expr> _addressExpr = nullptr,
+      ref<Expr> _sizeExpr = nullptr,
       ref<Expr> _lazyInitializationSource = nullptr,
       unsigned _timestamp = 0 /* unused if _lazyInstantiatedSource is null*/)
       : id(counter++), timestamp(_timestamp), address(_address),
         addressExpr(_addressExpr),
         lazyInitializationSource(_lazyInitializationSource), size(_size),
-        name("unnamed"), isLocal(_isLocal), isGlobal(_isGlobal),
-        isFixed(_isFixed), isUserSpecified(false), parent(_parent),
-        allocSite(_allocSite) {
+        sizeExpr(_sizeExpr), alignment(alignment), name("unnamed"),
+        isLocal(_isLocal), isGlobal(_isGlobal), isFixed(_isFixed),
+        isUserSpecified(false), parent(_parent), allocSite(_allocSite) {
     if (lazyInitializationSource) {
       timestamp = _timestamp;
     } else {
@@ -125,6 +134,7 @@ public:
   void setlazyInitializationSource(ref<Expr> source) {
     lazyInitializationSource = source;
   }
+  bool hasSymbolicSize() const { return !isa<ConstantExpr>(getSizeExpr()); }
   ref<ConstantExpr> getBaseConstantExpr() const {
     return ConstantExpr::create(address, Context::get().getPointerWidth());
   }
@@ -134,8 +144,11 @@ public:
     }
     return getBaseConstantExpr();
   }
-  ref<ConstantExpr> getSizeExpr() const {
-    return ConstantExpr::create(size, Context::get().getPointerWidth());
+  ref<Expr> getSizeExpr() const {
+    if (sizeExpr) {
+      return sizeExpr;
+    }
+    return Expr::createPointer(size);
   }
   ref<Expr> getOffsetExpr(ref<Expr> pointer) const {
     return SubExpr::create(pointer, getBaseExpr());
@@ -144,29 +157,27 @@ public:
     return getBoundsCheckOffset(getOffsetExpr(pointer));
   }
   ref<Expr> getBoundsCheckPointer(ref<Expr> pointer, unsigned bytes) const {
-    if (bytes == size) {
-      return EqExpr::create(pointer, getBaseExpr());
-    } else {
-      return getBoundsCheckOffset(getOffsetExpr(pointer), bytes);
-    }
+    return SelectExpr::create(
+        EqExpr::create(getSizeExpr(), Expr::createPointer(bytes)),
+        EqExpr::create(pointer, getBaseExpr()),
+        getBoundsCheckOffset(getOffsetExpr(pointer), bytes));
   }
 
   ref<Expr> getBoundsCheckOffset(ref<Expr> offset) const {
-    if (size == 0) {
-      return EqExpr::create(
-          offset, ConstantExpr::alloc(0, Context::get().getPointerWidth()));
-    } else {
-      return UltExpr::create(offset, getSizeExpr());
-    }
+    ref<Expr> isZeroSizeExpr =
+        EqExpr::create(Expr::createPointer(0), getSizeExpr());
+    ref<Expr> isZeroOffsetExpr = EqExpr::create(Expr::createPointer(0), offset);
+    /* Check for zero size with zero offset. Useful for free of malloc(0) */
+    ref<Expr> andZeroExpr = AndExpr::create(isZeroSizeExpr, isZeroOffsetExpr);
+    return OrExpr::create(UltExpr::create(offset, getSizeExpr()), andZeroExpr);
   }
+
   ref<Expr> getBoundsCheckOffset(ref<Expr> offset, unsigned bytes) const {
-    if (bytes <= size) {
-      return UltExpr::create(
-          offset, ConstantExpr::alloc(size - bytes + 1,
-                                      Context::get().getPointerWidth()));
-    } else {
-      return ConstantExpr::alloc(0, Expr::Bool);
-    }
+    ref<Expr> offsetSizeCheck =
+        UleExpr::create(Expr::createPointer(bytes), getSizeExpr());
+    ref<Expr> writeInSizeCheck = UleExpr::create(
+        offset, SubExpr::create(getSizeExpr(), Expr::createPointer(bytes)));
+    return AndExpr::create(offsetSizeCheck, writeInSizeCheck);
   }
 
   /// Compare this object with memory object b.
@@ -221,6 +232,8 @@ private:
   // mutable because we may need flush during read of const
   mutable UpdateList updates;
 
+  bool wasZeroInitialized = true;
+
   ref<UpdateNode> lastUpdate;
 
   KType *dynamicType;
@@ -239,6 +252,7 @@ public:
   /// Create a new object state for the given memory object with symbolic
   /// contents.
   ObjectState(const MemoryObject *mo, const Array *array, KType *dt);
+  ObjectState(const MemoryObject *mo, const ObjectState &os);
 
   ObjectState(const ObjectState &os);
   ~ObjectState();

@@ -40,6 +40,11 @@ void klee::findReads(ref<Expr> e, bool visitUpdates,
       if (!isa<ConstantExpr>(re->index) && visited.insert(re->index).second)
         stack.push_back(re->index);
 
+      if (re->updates.root->getSize() &&
+          visited.insert(re->updates.root->getSize()).second) {
+        stack.push_back(re->updates.root->getSize());
+      }
+
       if (visitUpdates) {
         // XXX this is probably suboptimal. We want to avoid a potential
         // explosion traversing update lists which can be quite
@@ -81,6 +86,7 @@ protected:
   Action visitRead(const ReadExpr &re) {
     const UpdateList &ul = re.updates;
 
+    visit(ul.root->getSize());
     // XXX should we memo better than what ExprVisitor is doing for us?
     for (const auto *un = ul.head.get(); un; un = un->next.get()) {
       visit(un->index);
@@ -112,6 +118,7 @@ public:
 ExprVisitor::Action ConstantArrayFinder::visitRead(const ReadExpr &re) {
   const UpdateList &ul = re.updates;
 
+  visit(ul.root->getSize());
   // FIXME should we memo better than what ExprVisitor is doing for us?
   for (const auto *un = ul.head.get(); un; un = un->next.get()) {
     visit(un->index);
@@ -185,4 +192,23 @@ bool klee::isReadFromSymbolicArray(ref<Expr> e) {
     return true;
   }
   return false;
+}
+
+ref<Expr>
+klee::createNonOverflowingSumExpr(const std::vector<ref<Expr>> &terms) {
+  if (terms.empty()) {
+    return ConstantExpr::create(0, Expr::Bool);
+  }
+
+  Expr::Width termWidth = terms.front()->getWidth();
+  uint64_t overflowBits = sizeof(unsigned long long) * CHAR_BIT - 1 -
+                          __builtin_clzll(terms.size() + 1);
+
+  ref<Expr> sum = ConstantExpr::create(0, termWidth + overflowBits);
+  for (const ref<Expr> &expr : terms) {
+    assert(termWidth == expr->getWidth());
+    sum =
+        AddExpr::create(sum, ZExtExpr::create(expr, termWidth + overflowBits));
+  }
+  return sum;
 }

@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 
+#include "klee/ADT/SparseStorage.h"
 #include "klee/Expr/ArrayCache.h"
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/SourceBuilder.h"
@@ -13,14 +14,17 @@ using namespace klee;
 
 TEST(AssignmentTest, FoldNotOptimized) {
   ArrayCache ac;
-  const Array *array =
-      ac.CreateArray("simple_array", /*size=*/1, SourceBuilder::makeSymbolic());
+  const Array *array = ac.CreateArray(
+      "simple_array",
+      /*size=*/ConstantExpr::create(1, sizeof(uint64_t) * CHAR_BIT),
+      SourceBuilder::makeSymbolic());
   // Create a simple assignment
   std::vector<const Array *> objects;
-  std::vector<unsigned char> value;
-  std::vector<std::vector<unsigned char>> values;
+  SparseStorage<unsigned char> value(1);
+  std::vector<SparseStorage<unsigned char>> values;
+
   objects.push_back(array);
-  value.push_back(128);
+  value.store(0, 128);
   values.push_back(value);
   // We want to simplify to a constant so allow free values so
   // if the assignment is incomplete we don't get back a constant.

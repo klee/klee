@@ -181,6 +181,8 @@ private:
 
   Z3ASTHandle buildArray(const char *name, unsigned indexWidth,
                          unsigned valueWidth);
+  Z3ASTHandle buildConstantArray(const char *name, unsigned indexWidth,
+                                 unsigned valueWidth, unsigned value);
 
   Z3SortHandle getBoolSort();
   Z3SortHandle getBvSort(unsigned width);

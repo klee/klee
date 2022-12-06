@@ -94,12 +94,15 @@ public:
   /// \sa Solver::getInitialValues()
   virtual bool computeInitialValues(
       const Query &query, const std::vector<const Array *> &objects,
-      std::vector<std::vector<unsigned char>> &values, bool &hasSolution) = 0;
+      std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) = 0;
 
   virtual bool check(const Query &query, ref<SolverResponse> &result);
 
   virtual bool computeValidityCore(const Query &query,
                                    ValidityCore &validityCore, bool &isValid);
+
+  virtual bool computeMinimalUnsignedValue(const Query &query,
+                                           ref<ConstantExpr> &result);
 
   /// getOperationStatusCode - get the status of the last solver operation
   virtual SolverRunStatus getOperationStatusCode() = 0;

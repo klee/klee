@@ -12,6 +12,8 @@
 
 #include "klee/Expr/Assignment.h"
 
+#include <set>
+
 extern "C" {
 struct KTest;
 struct KTestObject;
