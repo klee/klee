@@ -89,6 +89,11 @@ cl::opt<bool> DebugPrintEscapingFunctions(
     cl::desc("Print functions whose address is taken (default=false)"),
     cl::cat(ModuleCat));
 
+// For testing rounding mode only
+cl::opt<bool> UseKleeFloatInternals(
+    "float-internals",
+    cl::desc("Use KLEE internal functions for floating-point"), cl::init(true));
+
 // Don't run VerifierPass when checking module
 cl::opt<bool>
     DontVerify("disable-verify",
@@ -226,6 +231,19 @@ bool KModule::link(std::vector<std::unique_ptr<llvm::Module>> &modules,
   return modules.size() != numRemainingModules;
 }
 
+void KModule::replaceFunction(const std::unique_ptr<llvm::Module> &m,
+                              const char *original, const char *replacement) {
+  llvm::Function *originalFunc = m->getFunction(original);
+  llvm::Function *replacementFunc = m->getFunction(replacement);
+  if (!originalFunc)
+    return;
+  klee_message("Replacing function \"%s\" with \"%s\"", original, replacement);
+  assert(replacementFunc && "Replacement function not found");
+  assert(!(replacementFunc->isDeclaration()) && "replacement must have body");
+  originalFunc->replaceAllUsesWith(replacementFunc);
+  originalFunc->eraseFromParent();
+}
+
 void KModule::instrument(const Interpreter::ModuleOptions &opts) {
   // Inject checks prior to optimization... we also perform the
   // invariant transformations that we will end up doing later so that
@@ -249,7 +267,7 @@ void KModule::instrument(const Interpreter::ModuleOptions &opts) {
   if (opts.CheckOvershift)
     pm.add(new OvershiftCheckPass());
 
-  pm.add(new IntrinsicCleanerPass(*targetData));
+  pm.add(new IntrinsicCleanerPass(*targetData, opts.WithFPRuntime));
   pm.run(*module);
 }
 
@@ -274,6 +292,18 @@ void KModule::optimiseAndPrepare(
   if (opts.CheckOvershift)
     addInternalFunction("klee_overshift_check");
 
+  // Use KLEE's internal float classification functions if requested.
+  if (opts.WithFPRuntime) {
+    if (UseKleeFloatInternals) {
+      for (const auto &p : klee::floatReplacements) {
+        replaceFunction(module, p.first.c_str(), p.second.c_str());
+      }
+    }
+    for (const auto &p : klee::feRoundReplacements) {
+      replaceFunction(module, p.first.c_str(), p.second.c_str());
+    }
+  }
+
   // Needs to happen after linking (since ctors/dtors can be modified)
   // and optimization (since global optimization can rewrite lists).
   injectStaticConstructorsAndDestructors(module.get(), opts.EntryPoint);
@@ -297,7 +327,7 @@ void KModule::optimiseAndPrepare(
   default:
     klee_error("invalid --switch-type");
   }
-  pm3.add(new IntrinsicCleanerPass(*targetData));
+  pm3.add(new IntrinsicCleanerPass(*targetData, opts.WithFPRuntime));
   pm3.add(createScalarizerPass());
   pm3.add(new PhiCleanerPass());
   pm3.add(new FunctionAliasPass());

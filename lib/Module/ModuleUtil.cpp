@@ -237,6 +237,18 @@ klee::linkModules(std::vector<std::unique_ptr<llvm::Module>> &modules,
       return false;
     };
 
+    // replace std functions with KLEE internals
+    for (const auto &p : floatReplacements) {
+      if (composite->getFunction(p.first)) {
+        undefinedSymbols.insert(p.second);
+      }
+    }
+    for (const auto &p : feRoundReplacements) {
+      if (composite->getFunction(p.first)) {
+        undefinedSymbols.insert(p.second);
+      }
+    }
+
     // Stop in nothing is undefined
     if (undefinedSymbols.empty())
       break;

@@ -59,13 +59,16 @@ public:
     bool Optimize;
     bool CheckDivZero;
     bool CheckOvershift;
+    bool WithFPRuntime;
 
     ModuleOptions(const std::string &_LibraryDir,
                   const std::string &_EntryPoint, const std::string &_OptSuffix,
-                  bool _Optimize, bool _CheckDivZero, bool _CheckOvershift)
+                  bool _Optimize, bool _CheckDivZero, bool _CheckOvershift,
+                  bool _WithFPRuntime)
         : LibraryDir(_LibraryDir), EntryPoint(_EntryPoint),
           OptSuffix(_OptSuffix), Optimize(_Optimize),
-          CheckDivZero(_CheckDivZero), CheckOvershift(_CheckOvershift) {}
+          CheckDivZero(_CheckDivZero), CheckOvershift(_CheckOvershift),
+          WithFPRuntime(_WithFPRuntime) {}
   };
 
   enum LogType {

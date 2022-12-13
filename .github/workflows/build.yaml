@@ -21,7 +21,6 @@ env:
   METASMT_VERSION: qf_abv
   MINISAT_VERSION: "master"
   REQUIRES_RTTI: 0
-  SOLVERS: STP:Z3
   STP_VERSION: 2.3.3
   TCMALLOC_VERSION: 2.7
   UCLIBC_VERSION: klee_uclibc_v1.2
@@ -58,40 +57,50 @@ jobs:
           - name: "LLVM 13"
             env:
               LLVM_VERSION: 13
+              SOLVERS: Z3
           - name: "LLVM 12"
             env:
               LLVM_VERSION: 12
+              SOLVERS: Z3
           - name: "LLVM 11, Doxygen"
             env:
               LLVM_VERSION: 11
               ENABLE_DOXYGEN: 1
+              SOLVERS: Z3
           - name: "LLVM 10"
             env:
               LLVM_VERSION: 10
+              SOLVERS: Z3
           - name: "LLVM 9"
             env:
               LLVM_VERSION: 9
+              SOLVERS: Z3
           - name: "LLVM 8"
             env:
               LLVM_VERSION: 8
+              SOLVERS: Z3
           - name: "LLVM 7"
             env:
               LLVM_VERSION: 7
+              SOLVERS: Z3
           - name: "LLVM 6"
             env:
               LLVM_VERSION: "6.0"
+              SOLVERS: Z3
           # Sanitizer builds. Do unoptimized build otherwise the optimizer might remove problematic code
           - name: "ASan"
             env:
               SANITIZER_BUILD: address
               ENABLE_OPTIMIZED: 0
               USE_TCMALLOC: 0
+              SOLVERS: STP
               SANITIZER_LLVM_VERSION: 11
           - name: "UBSan"
             env:
               SANITIZER_BUILD: undefined
               ENABLE_OPTIMIZED: 0
               USE_TCMALLOC: 0
+              SOLVERS: STP
               SANITIZER_LLVM_VERSION: 11
           - name: "MSan"
             env:
@@ -123,6 +132,7 @@ jobs:
           # Check we can build latest klee-uclibc branch
           - name: "Latest klee-uclibc"
             env:
+              SOLVERS: Z3
               UCLIBC_VERSION: klee_0_9_29
           # Check at least one build with Asserts disabled.
           - name: "Asserts enabled"
@@ -132,6 +142,7 @@ jobs:
           # Check without TCMALLOC and with an optimised runtime library
           - name: "No TCMalloc, optimised runtime"
             env:
+              SOLVERS: STP
               USE_TCMALLOC: 0
               KLEE_RUNTIME_BUILD: "Release+Debug+Asserts"
     steps:
@@ -174,6 +185,7 @@ jobs:
     env:
       ENABLE_OPTIMIZED: 0
       COVERAGE: 1
+      SOLVERS: Z3
     steps:
       - name: Checkout KLEE source code
         uses: actions/checkout@v2

@@ -1,14 +1,15 @@
+; REQUIRES: geq-llvm-8.0
 ; RUN: %llvmas %s -o=%t.bc
 ; RUN: rm -rf %t.klee-out
 ; RUN: %klee --output-dir=%t.klee-out --optimize=false %t.bc 2>&1 | FileCheck %s
 
 ; Check that IntrinsicCleaner notices missing intrinsic
-; CHECK: KLEE: WARNING ONCE: unsupported intrinsic llvm.minnum.f32
+; CHECK: KLEE: WARNING ONCE: unsupported intrinsic llvm.minimum.f32
 
 ; Check that Executor notices missing intrinsic
-; CHECK: KLEE: WARNING: unimplemented intrinsic: llvm.minnum.f32
+; CHECK: KLEE: WARNING: unimplemented intrinsic: llvm.minimum.f32
 ; CHECK: KLEE: ERROR: (location information missing) unimplemented intrinsic
-; CHECK: KLEE: WARNING: unimplemented intrinsic: llvm.minnum.f32
+; CHECK: KLEE: WARNING: unimplemented intrinsic: llvm.minimum.f32
 
 ; Check that Executor explores all paths
 ; CHECK: KLEE: done: completed paths = 1
@@ -28,10 +29,10 @@
 ; KLEE executing both paths successfully and KLEE aborting on
 ; the last path it explores.
 
-declare float @llvm.minnum.f32(float, float)
+declare float @llvm.minimum.f32(float, float)
 
 define void @dead() {
-  %x = call float @llvm.minnum.f32(float 1.0, float 2.0)
+  %x = call float @llvm.minimum.f32(float 1.0, float 2.0)
   ret void
 }
 

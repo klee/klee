@@ -27,6 +27,7 @@
 #include "klee/Support/Debug.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/OptionCategories.h"
+#include "klee/klee.h"
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DataLayout.h"
@@ -146,6 +147,43 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
     add("__ubsan_handle_mul_overflow", handleMulOverflow, false),
     add("__ubsan_handle_divrem_overflow", handleDivRemOverflow, false),
 
+    // float classification instrinsics
+    add("klee_is_nan_float", handleIsNaN, true),
+    add("klee_is_nan_double", handleIsNaN, true),
+    add("klee_is_nan_long_double", handleIsNaN, true),
+    add("klee_is_infinite_float", handleIsInfinite, true),
+    add("klee_is_infinite_double", handleIsInfinite, true),
+    add("klee_is_infinite_long_double", handleIsInfinite, true),
+    add("klee_is_normal_float", handleIsNormal, true),
+    add("klee_is_normal_double", handleIsNormal, true),
+    add("klee_is_normal_long_double", handleIsNormal, true),
+    add("klee_is_subnormal_float", handleIsSubnormal, true),
+    add("klee_is_subnormal_double", handleIsSubnormal, true),
+    add("klee_is_subnormal_long_double", handleIsSubnormal, true),
+
+    // Rounding mode intrinsics
+    add("klee_get_rounding_mode", handleGetRoundingMode, true),
+    add("klee_set_rounding_mode_internal", handleSetConcreteRoundingMode,
+        false),
+
+    // square root
+    add("klee_sqrt_float", handleSqrt, true),
+    add("klee_sqrt_double", handleSqrt, true),
+#if defined(__x86_64__) || defined(__i386__)
+    add("klee_sqrt_long_double", handleSqrt, true),
+#endif
+
+    // floating point absolute
+    add("klee_abs_float", handleFAbs, true),
+    add("klee_abs_double", handleFAbs, true),
+#if defined(__x86_64__) || defined(__i386__)
+    add("klee_abs_long_double", handleFAbs, true),
+#endif
+    add("klee_rint", handleRint, true),
+    add("klee_rintf", handleRint, true),
+#if defined(__x86_64__) || defined(__i386__)
+    add("klee_rintl", handleRint, true),
+#endif
 #undef addDNR
 #undef add
 };
@@ -947,4 +985,130 @@ void SpecialFunctionHandler::handleDivRemOverflow(
     std::vector<ref<Expr>> &arguments) {
   executor.terminateStateOnError(state, "overflow on division or remainder",
                                  StateTerminationType::Overflow);
+}
+
+void SpecialFunctionHandler::handleIsNaN(ExecutionState &state,
+                                         KInstruction *target,
+                                         std::vector<ref<Expr>> &arguments) {
+  assert(arguments.size() == 1 && "invalid number of arguments to IsNaN");
+  ref<Expr> result = IsNaNExpr::create(arguments[0]);
+  executor.bindLocal(target, state, result);
+}
+
+void SpecialFunctionHandler::handleIsInfinite(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr>> &arguments) {
+  assert(arguments.size() == 1 && "invalid number of arguments to IsInfinite");
+  ref<Expr> result = IsInfiniteExpr::create(arguments[0]);
+  executor.bindLocal(target, state, result);
+}
+
+void SpecialFunctionHandler::handleIsNormal(ExecutionState &state,
+                                            KInstruction *target,
+                                            std::vector<ref<Expr>> &arguments) {
+  assert(arguments.size() == 1 && "invalid number of arguments to IsNormal");
+  ref<Expr> result = IsNormalExpr::create(arguments[0]);
+  executor.bindLocal(target, state, result);
+}
+
+void SpecialFunctionHandler::handleIsSubnormal(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr>> &arguments) {
+  assert(arguments.size() == 1 && "invalid number of arguments to IsSubnormal");
+  ref<Expr> result = IsSubnormalExpr::create(arguments[0]);
+  executor.bindLocal(target, state, result);
+}
+
+void SpecialFunctionHandler::handleGetRoundingMode(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr>> &arguments) {
+  assert(arguments.size() == 0 &&
+         "invalid number of arguments to GetRoundingMode");
+  unsigned returnValue = 0;
+  switch (state.roundingMode) {
+  case llvm::APFloat::rmNearestTiesToEven:
+    returnValue = KLEE_FP_RNE;
+    break;
+  case llvm::APFloat::rmNearestTiesToAway:
+    returnValue = KLEE_FP_RNA;
+    break;
+  case llvm::APFloat::rmTowardPositive:
+    returnValue = KLEE_FP_RU;
+    break;
+  case llvm::APFloat::rmTowardNegative:
+    returnValue = KLEE_FP_RD;
+    break;
+  case llvm::APFloat::rmTowardZero:
+    returnValue = KLEE_FP_RZ;
+    break;
+  default:
+    klee_warning_once(nullptr, "Unknown llvm::APFloat rounding mode");
+    returnValue = KLEE_FP_UNKNOWN;
+  }
+  // FIXME: The width is fragile. It's dependent on what the compiler
+  // choose to be the width of the enum.
+  ref<Expr> result = ConstantExpr::create(returnValue, Expr::Int32);
+  executor.bindLocal(target, state, result);
+}
+
+void SpecialFunctionHandler::handleSetConcreteRoundingMode(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr>> &arguments) {
+  assert(arguments.size() == 1 &&
+         "invalid number of arguments to SetRoundingMode");
+  llvm::APFloat::roundingMode newRoundingMode =
+      llvm::APFloat::rmNearestTiesToEven;
+  ref<Expr> roundingModeArg = arguments[0];
+  if (!isa<ConstantExpr>(roundingModeArg)) {
+    executor.terminateStateOnError(state, "argument should be concrete",
+                                   StateTerminationType::User);
+    return;
+  }
+  const ConstantExpr *CE = dyn_cast<ConstantExpr>(roundingModeArg);
+  switch (CE->getZExtValue()) {
+  case KLEE_FP_RNE:
+    newRoundingMode = llvm::APFloat::rmNearestTiesToEven;
+    break;
+  case KLEE_FP_RNA:
+    newRoundingMode = llvm::APFloat::rmNearestTiesToAway;
+    break;
+  case KLEE_FP_RU:
+    newRoundingMode = llvm::APFloat::rmTowardPositive;
+    break;
+  case KLEE_FP_RD:
+    newRoundingMode = llvm::APFloat::rmTowardNegative;
+    break;
+  case KLEE_FP_RZ:
+    newRoundingMode = llvm::APFloat::rmTowardZero;
+    break;
+  default:
+    executor.terminateStateOnError(state, "Invalid rounding mode",
+                                   StateTerminationType::User);
+    return;
+  }
+  state.roundingMode = newRoundingMode;
+}
+
+void SpecialFunctionHandler::handleSqrt(ExecutionState &state,
+                                        KInstruction *target,
+                                        std::vector<ref<Expr>> &arguments) {
+  assert(arguments.size() == 1 && "invalid number of arguments to sqrt");
+  ref<Expr> result = FSqrtExpr::create(arguments[0], state.roundingMode);
+  executor.bindLocal(target, state, result);
+}
+
+void SpecialFunctionHandler::handleRint(ExecutionState &state,
+                                        KInstruction *target,
+                                        std::vector<ref<Expr>> &arguments) {
+  assert(arguments.size() == 1 && "invalid number of arguments to rint");
+  ref<Expr> result = FRintExpr::create(arguments[0], state.roundingMode);
+  executor.bindLocal(target, state, result);
+}
+
+void SpecialFunctionHandler::handleFAbs(ExecutionState &state,
+                                        KInstruction *target,
+                                        std::vector<ref<Expr>> &arguments) {
+  assert(arguments.size() == 1 && "invalid number of arguments to fabs");
+  ref<Expr> result = FAbsExpr::create(arguments[0]);
+  executor.bindLocal(target, state, result);
 }

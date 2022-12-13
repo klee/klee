@@ -74,6 +74,10 @@ fi
   local KLEE_Z3_CONFIGURE_OPTION=("-DENABLE_SOLVER_Z3=OFF")
   local KLEE_STP_CONFIGURE_OPTION=("-DENABLE_SOLVER_STP=OFF")
   local KLEE_METASMT_CONFIGURE_OPTION=("-DENABLE_SOLVER_METASMT=OFF")
+  KLEE_FLOATING_POINT=(
+    "-DENABLE_FLOATING_POINT=FALSE"
+    "-DENABLE_FP_RUNTIME=FALSE"
+  )
   
   
   for solver in "${SELECTED_SOLVERS[@]}"; do
@@ -92,6 +96,10 @@ fi
         "-DENABLE_SOLVER_Z3=TRUE"
         "-DZ3_INCLUDE_DIRS=${Z3_INSTALL_PATH}/include"
         "-DZ3_LIBRARIES=${Z3_INSTALL_PATH}/lib/libz3.so"
+      )
+      KLEE_FLOATING_POINT=(
+        "-DENABLE_FLOATING_POINT=TRUE"
+        "-DENABLE_FP_RUNTIME=TRUE"
       )
       ;;
     metasmt)
@@ -115,6 +123,7 @@ fi
     "${KLEE_Z3_CONFIGURE_OPTION[@]}"
     "${KLEE_STP_CONFIGURE_OPTION[@]}"
     "${KLEE_METASMT_CONFIGURE_OPTION[@]}"
+    "${KLEE_FLOATING_POINT[@]}"
   )
 
 ###############################################################################

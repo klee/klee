@@ -269,6 +269,9 @@ public:
   /// instruction was covered.
   std::uint32_t instsSinceCovNew = 0;
 
+  ///@brief State cfenv rounding mode
+  llvm::APFloat::roundingMode roundingMode = llvm::APFloat::rmNearestTiesToEven;
+
   /// @brief Keep track of unwinding state while unwinding, otherwise empty
   std::unique_ptr<UnwindingInformation> unwindingInformation;
 

@@ -22,17 +22,6 @@
 
 using namespace klee;
 
-namespace {
-llvm::cl::opt<bool> UseConstructHashZ3(
-    "use-construct-hash-z3",
-    llvm::cl::desc(
-        "Use hash-consing during Z3 query construction (default=true)"),
-    llvm::cl::init(true), llvm::cl::cat(klee::ExprCat));
-
-// FIXME: This should be std::atomic<bool>. Need C++11 for that.
-bool Z3InterationLogOpen = false;
-} // namespace
-
 namespace klee {
 
 // Declared here rather than `Z3Builder.h` so they can be called in gdb.
@@ -81,6 +70,8 @@ void Z3ArrayExprHash::clear() {
   _array_hash.clear();
 }
 
+void Z3ArrayExprHash::clearUpdates() { _update_node_hash.clear(); }
+
 Z3Builder::Z3Builder(bool autoClearConstructCache,
                      const char *z3LogInteractionFileArg)
     : autoClearConstructCache(autoClearConstructCache),
@@ -90,10 +81,10 @@ Z3Builder::Z3Builder(bool autoClearConstructCache,
   if (z3LogInteractionFile.length() > 0) {
     klee_message("Logging Z3 API interaction to \"%s\"",
                  z3LogInteractionFile.c_str());
-    assert(!Z3InterationLogOpen &&
+    assert(!Z3HashConfig::Z3InteractionLogOpen &&
            "interaction log should not already be open");
     Z3_open_log(z3LogInteractionFile.c_str());
-    Z3InterationLogOpen = true;
+    Z3HashConfig::Z3InteractionLogOpen = true;
   }
   // FIXME: Should probably let the client pass in a Z3_config instead
   Z3_config cfg = Z3_mk_config();
@@ -116,7 +107,7 @@ Z3Builder::~Z3Builder() {
   Z3_del_context(ctx);
   if (z3LogInteractionFile.length() > 0) {
     Z3_close_log();
-    Z3InterationLogOpen = false;
+    Z3HashConfig::Z3InteractionLogOpen = false;
   }
 }
 
@@ -208,115 +199,8 @@ Z3ASTHandle Z3Builder::bvBoolExtract(Z3ASTHandle expr, int bit) {
   return Z3ASTHandle(Z3_mk_eq(ctx, bvExtract(expr, bit, bit), bvOne(1)), ctx);
 }
 
-Z3ASTHandle Z3Builder::bvExtract(Z3ASTHandle expr, unsigned top,
-                                 unsigned bottom) {
-  return Z3ASTHandle(Z3_mk_extract(ctx, top, bottom, expr), ctx);
-}
-
-Z3ASTHandle Z3Builder::eqExpr(Z3ASTHandle a, Z3ASTHandle b) {
-  return Z3ASTHandle(Z3_mk_eq(ctx, a, b), ctx);
-}
-
-// logical right shift
-Z3ASTHandle Z3Builder::bvRightShift(Z3ASTHandle expr, unsigned shift) {
-  unsigned width = getBVLength(expr);
-
-  if (shift == 0) {
-    return expr;
-  } else if (shift >= width) {
-    return bvZero(width); // Overshift to zero
-  } else {
-    return Z3ASTHandle(
-        Z3_mk_concat(ctx, bvZero(shift), bvExtract(expr, width - 1, shift)),
-        ctx);
-  }
-}
-
-// logical left shift
-Z3ASTHandle Z3Builder::bvLeftShift(Z3ASTHandle expr, unsigned shift) {
-  unsigned width = getBVLength(expr);
-
-  if (shift == 0) {
-    return expr;
-  } else if (shift >= width) {
-    return bvZero(width); // Overshift to zero
-  } else {
-    return Z3ASTHandle(
-        Z3_mk_concat(ctx, bvExtract(expr, width - shift - 1, 0), bvZero(shift)),
-        ctx);
-  }
-}
-
-// left shift by a variable amount on an expression of the specified width
-Z3ASTHandle Z3Builder::bvVarLeftShift(Z3ASTHandle expr, Z3ASTHandle shift) {
-  unsigned width = getBVLength(expr);
-  Z3ASTHandle res = bvZero(width);
-
-  // construct a big if-then-elif-elif-... with one case per possible shift
-  // amount
-  for (int i = width - 1; i >= 0; i--) {
-    res =
-        iteExpr(eqExpr(shift, bvConst32(width, i)), bvLeftShift(expr, i), res);
-  }
-
-  // If overshifting, shift to zero
-  Z3ASTHandle ex = bvLtExpr(shift, bvConst32(getBVLength(shift), width));
-  res = iteExpr(ex, res, bvZero(width));
-  return res;
-}
-
-// logical right shift by a variable amount on an expression of the specified
-// width
-Z3ASTHandle Z3Builder::bvVarRightShift(Z3ASTHandle expr, Z3ASTHandle shift) {
-  unsigned width = getBVLength(expr);
-  Z3ASTHandle res = bvZero(width);
-
-  // construct a big if-then-elif-elif-... with one case per possible shift
-  // amount
-  for (int i = width - 1; i >= 0; i--) {
-    res =
-        iteExpr(eqExpr(shift, bvConst32(width, i)), bvRightShift(expr, i), res);
-  }
-
-  // If overshifting, shift to zero
-  Z3ASTHandle ex = bvLtExpr(shift, bvConst32(getBVLength(shift), width));
-  res = iteExpr(ex, res, bvZero(width));
-  return res;
-}
-
-// arithmetic right shift by a variable amount on an expression of the specified
-// width
-Z3ASTHandle Z3Builder::bvVarArithRightShift(Z3ASTHandle expr,
-                                            Z3ASTHandle shift) {
-  unsigned width = getBVLength(expr);
-
-  // get the sign bit to fill with
-  Z3ASTHandle signedBool = bvBoolExtract(expr, width - 1);
-
-  // start with the result if shifting by width-1
-  Z3ASTHandle res = constructAShrByConstant(expr, width - 1, signedBool);
-
-  // construct a big if-then-elif-elif-... with one case per possible shift
-  // amount
-  // XXX more efficient to move the ite on the sign outside all exprs?
-  // XXX more efficient to sign extend, right shift, then extract lower bits?
-  for (int i = width - 2; i >= 0; i--) {
-    res = iteExpr(eqExpr(shift, bvConst32(width, i)),
-                  constructAShrByConstant(expr, i, signedBool), res);
-  }
-
-  // If overshifting, shift to zero
-  Z3ASTHandle ex = bvLtExpr(shift, bvConst32(getBVLength(shift), width));
-  res = iteExpr(ex, res, bvZero(width));
-  return res;
-}
-
 Z3ASTHandle Z3Builder::notExpr(Z3ASTHandle expr) {
   return Z3ASTHandle(Z3_mk_not(ctx, expr), ctx);
-}
-
-Z3ASTHandle Z3Builder::bvNotExpr(Z3ASTHandle expr) {
-  return Z3ASTHandle(Z3_mk_bvnot(ctx, expr), ctx);
 }
 
 Z3ASTHandle Z3Builder::andExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
@@ -324,17 +208,9 @@ Z3ASTHandle Z3Builder::andExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
   return Z3ASTHandle(Z3_mk_and(ctx, 2, args), ctx);
 }
 
-Z3ASTHandle Z3Builder::bvAndExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
-  return Z3ASTHandle(Z3_mk_bvand(ctx, lhs, rhs), ctx);
-}
-
 Z3ASTHandle Z3Builder::orExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
   ::Z3_ast args[2] = {lhs, rhs};
   return Z3ASTHandle(Z3_mk_or(ctx, 2, args), ctx);
-}
-
-Z3ASTHandle Z3Builder::bvOrExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
-  return Z3ASTHandle(Z3_mk_bvor(ctx, lhs, rhs), ctx);
 }
 
 Z3ASTHandle Z3Builder::iffExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
@@ -347,18 +223,6 @@ Z3ASTHandle Z3Builder::iffExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
   return Z3ASTHandle(Z3_mk_iff(ctx, lhs, rhs), ctx);
 }
 
-Z3ASTHandle Z3Builder::bvXorExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
-  return Z3ASTHandle(Z3_mk_bvxor(ctx, lhs, rhs), ctx);
-}
-
-Z3ASTHandle Z3Builder::bvSignExtend(Z3ASTHandle src, unsigned width) {
-  unsigned src_width =
-      Z3_get_bv_sort_size(ctx, Z3SortHandle(Z3_get_sort(ctx, src), ctx));
-  assert(src_width <= width && "attempted to extend longer data");
-
-  return Z3ASTHandle(Z3_mk_sign_ext(ctx, width - src_width, src), ctx);
-}
-
 Z3ASTHandle Z3Builder::writeExpr(Z3ASTHandle array, Z3ASTHandle index,
                                  Z3ASTHandle value) {
   return Z3ASTHandle(Z3_mk_store(ctx, array, index, value), ctx);
@@ -368,47 +232,8 @@ Z3ASTHandle Z3Builder::readExpr(Z3ASTHandle array, Z3ASTHandle index) {
   return Z3ASTHandle(Z3_mk_select(ctx, array, index), ctx);
 }
 
-Z3ASTHandle Z3Builder::iteExpr(Z3ASTHandle condition, Z3ASTHandle whenTrue,
-                               Z3ASTHandle whenFalse) {
-  return Z3ASTHandle(Z3_mk_ite(ctx, condition, whenTrue, whenFalse), ctx);
-}
-
 unsigned Z3Builder::getBVLength(Z3ASTHandle expr) {
   return Z3_get_bv_sort_size(ctx, Z3SortHandle(Z3_get_sort(ctx, expr), ctx));
-}
-
-Z3ASTHandle Z3Builder::bvLtExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
-  return Z3ASTHandle(Z3_mk_bvult(ctx, lhs, rhs), ctx);
-}
-
-Z3ASTHandle Z3Builder::bvLeExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
-  return Z3ASTHandle(Z3_mk_bvule(ctx, lhs, rhs), ctx);
-}
-
-Z3ASTHandle Z3Builder::sbvLtExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
-  return Z3ASTHandle(Z3_mk_bvslt(ctx, lhs, rhs), ctx);
-}
-
-Z3ASTHandle Z3Builder::sbvLeExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
-  return Z3ASTHandle(Z3_mk_bvsle(ctx, lhs, rhs), ctx);
-}
-
-Z3ASTHandle Z3Builder::constructAShrByConstant(Z3ASTHandle expr, unsigned shift,
-                                               Z3ASTHandle isSigned) {
-  unsigned width = getBVLength(expr);
-
-  if (shift == 0) {
-    return expr;
-  } else if (shift >= width) {
-    return bvZero(width); // Overshift to zero
-  } else {
-    // FIXME: Is this really the best way to interact with Z3?
-    return iteExpr(isSigned,
-                   Z3ASTHandle(Z3_mk_concat(ctx, bvMinusOne(shift),
-                                            bvExtract(expr, width - 1, shift)),
-                               ctx),
-                   bvRightShift(expr, shift));
-  }
 }
 
 Z3ASTHandle Z3Builder::getInitialArray(const Array *root) {
@@ -479,12 +304,10 @@ Z3ASTHandle Z3Builder::getArrayForUpdate(const Array *root,
   }
 }
 
-/** if *width_out!=1 then result is a bitvector,
-    otherwise it is a bool */
 Z3ASTHandle Z3Builder::construct(ref<Expr> e, int *width_out) {
   // TODO: We could potentially use Z3_simplify() here
   // to store simpler expressions.
-  if (!UseConstructHashZ3 || isa<ConstantExpr>(e)) {
+  if (!Z3HashConfig::UseConstructHashZ3 || isa<ConstantExpr>(e)) {
     return constructActual(e, width_out);
   } else {
     ExprHashMap<std::pair<Z3ASTHandle, unsigned>>::iterator it =

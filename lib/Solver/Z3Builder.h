@@ -10,6 +10,7 @@
 #ifndef KLEE_Z3BUILDER_H
 #define KLEE_Z3BUILDER_H
 
+#include "Z3HashConfig.h"
 #include "klee/Config/config.h"
 #include "klee/Expr/ArrayExprHash.h"
 #include "klee/Expr/ExprHashMap.h"
@@ -117,13 +118,11 @@ public:
   Z3ArrayExprHash(){};
   virtual ~Z3ArrayExprHash();
   void clear();
+  void clearUpdates();
 };
 
 class Z3Builder {
-  ExprHashMap<std::pair<Z3ASTHandle, unsigned>> constructed;
-  Z3ArrayExprHash _arr_hash;
-
-private:
+protected:
   Z3ASTHandle bvOne(unsigned width);
   Z3ASTHandle bvZero(unsigned width);
   Z3ASTHandle bvMinusOne(unsigned width);
@@ -132,25 +131,28 @@ private:
   Z3ASTHandle bvZExtConst(unsigned width, uint64_t value);
   Z3ASTHandle bvSExtConst(unsigned width, uint64_t value);
   Z3ASTHandle bvBoolExtract(Z3ASTHandle expr, int bit);
-  Z3ASTHandle bvExtract(Z3ASTHandle expr, unsigned top, unsigned bottom);
-  Z3ASTHandle eqExpr(Z3ASTHandle a, Z3ASTHandle b);
+  virtual Z3ASTHandle bvExtract(Z3ASTHandle expr, unsigned top,
+                                unsigned bottom) = 0;
+  virtual Z3ASTHandle eqExpr(Z3ASTHandle a, Z3ASTHandle b) = 0;
 
   // logical left and right shift (not arithmetic)
-  Z3ASTHandle bvLeftShift(Z3ASTHandle expr, unsigned shift);
-  Z3ASTHandle bvRightShift(Z3ASTHandle expr, unsigned shift);
-  Z3ASTHandle bvVarLeftShift(Z3ASTHandle expr, Z3ASTHandle shift);
-  Z3ASTHandle bvVarRightShift(Z3ASTHandle expr, Z3ASTHandle shift);
-  Z3ASTHandle bvVarArithRightShift(Z3ASTHandle expr, Z3ASTHandle shift);
+  virtual Z3ASTHandle bvLeftShift(Z3ASTHandle expr, unsigned shift) = 0;
+  virtual Z3ASTHandle bvRightShift(Z3ASTHandle expr, unsigned shift) = 0;
+  virtual Z3ASTHandle bvVarLeftShift(Z3ASTHandle expr, Z3ASTHandle shift) = 0;
+  virtual Z3ASTHandle bvVarRightShift(Z3ASTHandle expr, Z3ASTHandle shift) = 0;
+  virtual Z3ASTHandle bvVarArithRightShift(Z3ASTHandle expr,
+                                           Z3ASTHandle shift) = 0;
 
   Z3ASTHandle notExpr(Z3ASTHandle expr);
-  Z3ASTHandle bvNotExpr(Z3ASTHandle expr);
   Z3ASTHandle andExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
-  Z3ASTHandle bvAndExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
   Z3ASTHandle orExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
-  Z3ASTHandle bvOrExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
   Z3ASTHandle iffExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
-  Z3ASTHandle bvXorExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
-  Z3ASTHandle bvSignExtend(Z3ASTHandle src, unsigned width);
+
+  virtual Z3ASTHandle bvNotExpr(Z3ASTHandle expr) = 0;
+  virtual Z3ASTHandle bvAndExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) = 0;
+  virtual Z3ASTHandle bvOrExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) = 0;
+  virtual Z3ASTHandle bvXorExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) = 0;
+  virtual Z3ASTHandle bvSignExtend(Z3ASTHandle src, unsigned width) = 0;
 
   // Array operations
   Z3ASTHandle writeExpr(Z3ASTHandle array, Z3ASTHandle index,
@@ -158,27 +160,26 @@ private:
   Z3ASTHandle readExpr(Z3ASTHandle array, Z3ASTHandle index);
 
   // ITE-expression constructor
-  Z3ASTHandle iteExpr(Z3ASTHandle condition, Z3ASTHandle whenTrue,
-                      Z3ASTHandle whenFalse);
+  virtual Z3ASTHandle iteExpr(Z3ASTHandle condition, Z3ASTHandle whenTrue,
+                              Z3ASTHandle whenFalse) = 0;
 
   // Bitvector length
   unsigned getBVLength(Z3ASTHandle expr);
 
   // Bitvector comparison
-  Z3ASTHandle bvLtExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
-  Z3ASTHandle bvLeExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
-  Z3ASTHandle sbvLtExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
-  Z3ASTHandle sbvLeExpr(Z3ASTHandle lhs, Z3ASTHandle rhs);
+  virtual Z3ASTHandle bvLtExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) = 0;
+  virtual Z3ASTHandle bvLeExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) = 0;
+  virtual Z3ASTHandle sbvLtExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) = 0;
+  virtual Z3ASTHandle sbvLeExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) = 0;
 
-  Z3ASTHandle constructAShrByConstant(Z3ASTHandle expr, unsigned shift,
-                                      Z3ASTHandle isSigned);
+  virtual Z3ASTHandle constructAShrByConstant(Z3ASTHandle expr, unsigned shift,
+                                              Z3ASTHandle isSigned) = 0;
 
   Z3ASTHandle getInitialArray(const Array *os);
   Z3ASTHandle getArrayForUpdate(const Array *root, const UpdateNode *un);
 
-  Z3ASTHandle constructActual(ref<Expr> e, int *width_out);
-  Z3ASTHandle construct(ref<Expr> e, int *width_out);
-
+  virtual Z3ASTHandle constructActual(ref<Expr> e, int *width_out) = 0;
+  virtual Z3ASTHandle construct(ref<Expr> e, int *width_out);
   Z3ASTHandle buildArray(const char *name, unsigned indexWidth,
                          unsigned valueWidth);
   Z3ASTHandle buildConstantArray(const char *name, unsigned indexWidth,
@@ -187,6 +188,9 @@ private:
   Z3SortHandle getBoolSort();
   Z3SortHandle getBvSort(unsigned width);
   Z3SortHandle getArraySort(Z3SortHandle domainSort, Z3SortHandle rangeSort);
+
+  ExprHashMap<std::pair<Z3ASTHandle, unsigned>> constructed;
+  Z3ArrayExprHash _arr_hash;
   bool autoClearConstructCache;
   std::string z3LogInteractionFile;
 
@@ -194,8 +198,13 @@ public:
   Z3_context ctx;
   std::unordered_map<const Array *, std::vector<Z3ASTHandle>>
       constant_array_assertions;
+  // These are additional constraints that are generated during the
+  // translation to Z3's constraint language. Clients should assert
+  // these.
+  std::vector<Z3ASTHandle> sideConstraints;
+
   Z3Builder(bool autoClearConstructCache, const char *z3LogInteractionFile);
-  ~Z3Builder();
+  virtual ~Z3Builder();
 
   Z3ASTHandle getTrue();
   Z3ASTHandle getFalse();
@@ -203,13 +212,13 @@ public:
   Z3ASTHandle getInitialRead(const Array *os, unsigned index);
 
   Z3ASTHandle construct(ref<Expr> e) {
-    Z3ASTHandle res = construct(e, 0);
+    Z3ASTHandle res = construct(std::move(e), nullptr);
     if (autoClearConstructCache)
       clearConstructCache();
     return res;
   }
-
   void clearConstructCache() { constructed.clear(); }
+  void clearSideConstraints() { sideConstraints.clear(); }
 };
 } // namespace klee
 

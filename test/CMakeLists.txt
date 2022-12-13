@@ -43,6 +43,24 @@ else()
   set(ENABLE_POSIX_RUNTIME 0)
 endif()
 
+if (ENABLE_FLOATING_POINT)
+  set(ENABLE_FLOATING_POINT 1)
+else()
+  set(ENABLE_FLOATING_POINT 0)
+endif()
+
+if (ENABLE_FP_RUNTIME)
+  if (ENABLE_FLOATING_POINT)
+    set(ENABLE_FP_RUNTIME 1)
+  else()
+    message(AUTHOR_WARNING
+            "Disabling FP runtime tests because they depend on floating point extension"
+            "\nFIXME!")
+  endif()
+else()
+  set(ENABLE_FP_RUNTIME 0)
+endif()
+
 ###############################################################################
 # Find LLVM testing tools
 ###############################################################################

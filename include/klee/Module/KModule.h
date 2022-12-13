@@ -189,6 +189,9 @@ public:
   std::set<const llvm::Function *> internalFunctions;
 
   void addInternalFunction(const char *functionName);
+  // Replace std functions with KLEE intrinsics
+  void replaceFunction(const std::unique_ptr<llvm::Module> &m,
+                       const char *original, const char *replacement);
 
   KModule() = default;
 

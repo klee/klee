@@ -186,6 +186,10 @@ cl::opt<bool> WithPOSIXRuntime(
              "<max-argvs> <max-len> + file model options (default=false)."),
     cl::init(false), cl::cat(LinkCat));
 
+cl::opt<bool> WithFPRuntime("fp-runtime",
+                            cl::desc("Link with floating-point KLEE library."),
+                            cl::init(false), cl::cat(LinkCat));
+
 cl::opt<std::string> RuntimeBuild(
     "runtime-build",
     cl::desc("Link with versions of the runtime library that were built with "
@@ -731,65 +735,34 @@ static const char *modelledExternals[] = {
     "_ZTVN10__cxxabiv121__vmi_class_type_infoE",
 
     // special functions
-    "_assert",
-    "__assert_fail",
-    "__assert_rtn",
-    "__errno_location",
-    "__error",
-    "calloc",
-    "_exit",
-    "exit",
-    "free",
-    "abort",
-    "klee_abort",
-    "klee_assume",
-    "klee_check_memory_access",
-    "klee_define_fixed_object",
-    "klee_get_errno",
-    "klee_get_valuef",
-    "klee_get_valued",
-    "klee_get_valuel",
-    "klee_get_valuell",
-    "klee_get_value_i32",
-    "klee_get_value_i64",
-    "klee_get_obj_size",
-    "klee_is_symbolic",
-    "klee_make_symbolic",
-    "klee_mark_global",
-    "klee_open_merge",
-    "klee_close_merge",
-    "klee_prefer_cex",
-    "klee_posix_prefer_cex",
-    "klee_print_expr",
-    "klee_print_range",
-    "klee_report_error",
-    "klee_set_forking",
-    "klee_silent_exit",
-    "klee_warning",
-    "klee_warning_once",
-    "klee_stack_trace",
+    "_assert", "__assert_fail", "__assert_rtn", "__errno_location", "__error",
+    "calloc", "_exit", "exit", "free", "abort", "klee_abort", "klee_assume",
+    "klee_check_memory_access", "klee_define_fixed_object", "klee_get_errno",
+    "klee_get_valuef", "klee_get_valued", "klee_get_valuel", "klee_get_valuell",
+    "klee_get_value_i32", "klee_get_value_i64", "klee_get_obj_size",
+    "klee_is_symbolic", "klee_make_symbolic", "klee_mark_global",
+    "klee_open_merge", "klee_close_merge", "klee_prefer_cex",
+    "klee_posix_prefer_cex", "klee_print_expr", "klee_print_range",
+    "klee_report_error", "klee_set_forking", "klee_silent_exit", "klee_warning",
+    "klee_warning_once", "klee_stack_trace",
 #ifdef SUPPORT_KLEE_EH_CXX
-    "_klee_eh_Unwind_RaiseException_impl",
-    "klee_eh_typeid_for",
+    "_klee_eh_Unwind_RaiseException_impl", "klee_eh_typeid_for",
 #endif
-    "llvm.dbg.declare",
-    "llvm.dbg.value",
-    "llvm.va_start",
-    "llvm.va_end",
-    "malloc",
-    "realloc",
-    "memalign",
-    "_ZdaPv",
-    "_ZdlPv",
-    "_Znaj",
-    "_Znwj",
-    "_Znam",
-    "_Znwm",
-    "__ubsan_handle_add_overflow",
-    "__ubsan_handle_sub_overflow",
-    "__ubsan_handle_mul_overflow",
+    "llvm.dbg.declare", "llvm.dbg.value", "llvm.va_start", "llvm.va_end",
+    "malloc", "realloc", "memalign", "_ZdaPv", "_ZdlPv", "_Znaj", "_Znwj",
+    "_Znam", "_Znwm", "__ubsan_handle_add_overflow",
+    "__ubsan_handle_sub_overflow", "__ubsan_handle_mul_overflow",
     "__ubsan_handle_divrem_overflow",
-};
+    // Floating point intrinstics
+    "klee_rintf", "klee_rint", "klee_rintl", "klee_is_nan_float",
+    "klee_is_nan_double", "klee_is_nan_long_double", "klee_is_infinite_float",
+    "klee_is_infinite_double", "klee_is_infinite_long_double",
+    "klee_is_normal_float", "klee_is_normal_double",
+    "klee_is_normal_long_double", "klee_is_subnormal_float",
+    "klee_is_subnormal_double", "klee_is_subnormal_long_double",
+    "klee_get_rounding_mode", "klee_set_rounding_mode_internal",
+    "klee_sqrt_float", "klee_sqrt_double", "klee_sqrt_long_double",
+    "klee_abs_float", "klee_abs_double", "klee_abs_long_double"};
 
 // Symbols we aren't going to warn about
 static const char *dontCareExternals[] = {
@@ -1258,7 +1231,8 @@ int main(int argc, char **argv, char **envp) {
   Interpreter::ModuleOptions Opts(LibraryDir.c_str(), EntryPoint, opt_suffix,
                                   /*Optimize=*/OptimizeModule,
                                   /*CheckDivZero=*/CheckDivZero,
-                                  /*CheckOvershift=*/CheckOvershift);
+                                  /*CheckOvershift=*/CheckOvershift,
+                                  /*WithFPRuntime=*/WithFPRuntime);
 
   if (WithPOSIXRuntime) {
     SmallString<128> Path(Opts.LibraryDir);
@@ -1271,6 +1245,20 @@ int main(int argc, char **argv, char **envp) {
 
     std::string libcPrefix = (Libc == LibcType::UcLibc ? "__user_" : "");
     preparePOSIX(loadedModules, libcPrefix);
+  }
+
+  if (WithFPRuntime) {
+#if ENABLE_FP
+    SmallString<128> Path(Opts.LibraryDir);
+    llvm::sys::path::append(Path, "libkleeRuntimeFp" + opt_suffix + ".bca");
+    if (!klee::loadFile(Path.c_str(), mainModule->getContext(), loadedModules,
+                        errorMsg))
+      klee_error("error loading klee FP runtime '%s': %s", Path.c_str(),
+                 errorMsg.c_str());
+#else
+    klee_error("unable to link with klee FP runtime without "
+               "-DENABLE_FLOATING_POINT=ON");
+#endif
   }
 
   if (Libcxx) {

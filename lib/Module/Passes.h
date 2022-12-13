@@ -59,13 +59,14 @@ class IntrinsicCleanerPass : public llvm::ModulePass {
   static char ID;
   const llvm::DataLayout &DataLayout;
   llvm::IntrinsicLowering *IL;
+  bool WithFPRuntime;
 
   bool runOnBasicBlock(llvm::BasicBlock &b, llvm::Module &M);
 
 public:
-  IntrinsicCleanerPass(const llvm::DataLayout &TD)
+  IntrinsicCleanerPass(const llvm::DataLayout &TD, bool _WithFPRuntime)
       : llvm::ModulePass(ID), DataLayout(TD),
-        IL(new llvm::IntrinsicLowering(TD)) {}
+        IL(new llvm::IntrinsicLowering(TD)), WithFPRuntime(_WithFPRuntime) {}
   ~IntrinsicCleanerPass() { delete IL; }
 
   bool runOnModule(llvm::Module &M) override;

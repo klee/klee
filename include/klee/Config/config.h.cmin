@@ -13,6 +13,9 @@
 /* Using Z3 Solver backend */
 #cmakedefine ENABLE_Z3 @ENABLE_Z3@
 
+/* Enable KLEE floating point extension */
+#cmakedefine ENABLE_FP @ENABLE_FP@
+
 /* Does the platform use __ctype_b_loc, etc. */
 #cmakedefine HAVE_CTYPE_EXTERNALS @HAVE_CTYPE_EXTERNALS@
 

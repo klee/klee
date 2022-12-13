@@ -25,6 +25,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <cfenv>
 #include <csetjmp>
 #include <csignal>
 
@@ -63,7 +64,7 @@ public:
   ExternalDispatcherImpl(llvm::LLVMContext &ctx);
   ~ExternalDispatcherImpl();
   bool executeCall(llvm::Function *function, llvm::Instruction *i,
-                   uint64_t *args);
+                   uint64_t *args, int roundingMode);
   void *resolveSymbol(const std::string &name);
   int getLastErrno();
   void setLastErrno(int newErrno);
@@ -157,11 +158,27 @@ ExternalDispatcherImpl::~ExternalDispatcherImpl() {
 }
 
 bool ExternalDispatcherImpl::executeCall(Function *f, Instruction *i,
-                                         uint64_t *args) {
+                                         uint64_t *args, int roundingMode) {
   dispatchers_ty::iterator it = dispatchers.find(i);
+  // Save current rounding mode used by KLEE internally and set the
+  // rounding mode needed during the external call.
+  int oldRoundingMode = fegetround();
+  bool success = !fesetround(roundingMode);
+  if (!success) {
+    llvm::errs() << "Failed to set rounding mode during external call\n";
+    abort();
+  }
+
   if (it != dispatchers.end()) {
     // Code already JIT'ed for this
-    return runProtectedCall(it->second, args);
+    bool result = runProtectedCall(it->second, args);
+    // Restore rounding mode.
+    success = !fesetround(oldRoundingMode);
+    if (!success) {
+      llvm::errs() << "Failed to restore rounding mode after externall call\n";
+      abort();
+    }
+    return result;
   }
 
   // Code for this not JIT'ed. Do this now.
@@ -206,7 +223,15 @@ bool ExternalDispatcherImpl::executeCall(Function *f, Instruction *i,
     // MCJIT didn't take ownership of the module so delete it.
     delete dispatchModule;
   }
-  return runProtectedCall(dispatcher, args);
+  bool result = runProtectedCall(dispatcher, args);
+
+  // Restore rounding mode.
+  success = !fesetround(oldRoundingMode);
+  if (!success) {
+    llvm::errs() << "Failed to restore rounding mode after externall call\n";
+    abort();
+  }
+  return result;
 }
 
 // FIXME: This is not reentrant.
@@ -347,8 +372,9 @@ ExternalDispatcher::ExternalDispatcher(llvm::LLVMContext &ctx)
 ExternalDispatcher::~ExternalDispatcher() { delete impl; }
 
 bool ExternalDispatcher::executeCall(llvm::Function *function,
-                                     llvm::Instruction *i, uint64_t *args) {
-  return impl->executeCall(function, i, args);
+                                     llvm::Instruction *i, uint64_t *args,
+                                     int roundingMode) {
+  return impl->executeCall(function, i, args, roundingMode);
 }
 
 void *ExternalDispatcher::resolveSymbol(const std::string &name) {
