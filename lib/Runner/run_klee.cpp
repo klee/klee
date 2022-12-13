@@ -49,6 +49,7 @@
 #include <signal.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
+#include <thread>
 #include <unistd.h>
 
 #include <cerrno>
@@ -132,6 +133,10 @@ cl::opt<std::string>
 cl::opt<bool> InteractiveMode("interactive",
                               cl::desc("Launch klee in interactive mode."),
                               cl::init(false), cl::cat(StartCat));
+
+cl::opt<int> TimeoutPerFunction("timeout-per-function",
+                                cl::desc("Timeout per function in klee."),
+                                cl::init(0), cl::cat(StartCat));
 
 cl::opt<std::string>
     EntryPointsFile("entrypoints-file",
@@ -1324,6 +1329,46 @@ static int run_klee_on_function(
   return 0;
 }
 
+void kill_child(pid_t child_pid) {
+  if (kill(child_pid, 0) != 0) {
+    return;
+  }
+  [[maybe_unused]] int statusSIGTERM = kill(child_pid, SIGTERM);
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  if (kill(child_pid, 0) == 0) {
+    int statusSIGKILL = kill(child_pid, SIGKILL);
+    if (statusSIGKILL != 0) {
+      klee_error("Kill with signal SIGKILL return nonzero code.");
+    }
+  }
+}
+
+void wait_until_any_child_dies(
+    const std::vector<
+        std::pair<pid_t, std::chrono::time_point<std::chrono::steady_clock>>>
+        &child_processes) {
+  while (true) {
+    bool something_dead = false;
+    for (const auto &child_process : child_processes) {
+      if (kill(child_process.first, 0) != 0) {
+        something_dead = true;
+      }
+      auto current_time = std::chrono::steady_clock::now();
+      auto duration_function = std::chrono::duration_cast<std::chrono::seconds>(
+                                   current_time - child_process.second)
+                                   .count();
+      if (duration_function > TimeoutPerFunction) {
+        kill_child(child_process.first);
+        something_dead = true;
+      }
+    }
+    if (something_dead) {
+      break;
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  }
+}
+
 int run_klee(int argc, char **argv, char **envp) {
   if (theInterpreter) {
     theInterpreter = nullptr;
@@ -1644,29 +1689,36 @@ int run_klee(int argc, char **argv, char **envp) {
 
     SmallString<128> outputDirectory = handler->getOutputDirectory();
     const size_t PROCESS = ProcessNumber;
-    std::vector<pid_t> child_process;
+    using time_point = std::chrono::time_point<std::chrono::steady_clock>;
+    std::vector<std::pair<pid_t, time_point>> child_processes;
+    signal(SIGCHLD, SIG_IGN);
     while (true) {
       std::string entrypoint;
       if (!(entrypoints >> entrypoint)) {
         break;
       }
 
-      if (child_process.size() == PROCESS) {
-        wait(NULL);
-      }
-
-      std::vector<pid_t> alive_child;
-      for (const pid_t child_id : child_process) {
-        if (kill(child_id, 0) == 0) {
-          alive_child.push_back(child_id);
+      if (child_processes.size() == PROCESS) {
+        if (TimeoutPerFunction != 0) {
+          wait_until_any_child_dies(child_processes);
+        } else {
+          wait(NULL);
         }
       }
-      child_process = alive_child;
+
+      std::vector<std::pair<pid_t, time_point>> alive_child;
+      for (const auto &child_process : child_processes) {
+        if (kill(child_process.first, 0) == 0) {
+          alive_child.push_back(child_process);
+        }
+      }
+      child_processes = alive_child;
 
       pid_t pid = fork();
       if (pid < 0) {
         klee_error("%s", "Cannot create child process.");
       } else if (pid == 0) {
+        signal(SIGCHLD, SIG_DFL);
         EntryPoint = entrypoint;
         SmallString<128> newOutputDirectory = outputDirectory;
         sys::path::append(newOutputDirectory, entrypoint);
@@ -1675,11 +1727,24 @@ int run_klee(int argc, char **argv, char **envp) {
                              finalModule, replayPath, loadedModules);
         exit(0);
       } else {
-        child_process.push_back(pid);
+        child_processes.emplace_back(pid, std::chrono::steady_clock::now());
       }
     }
-    while (wait(NULL) > 0)
-      ;
+    if (TimeoutPerFunction != 0) {
+      while (!child_processes.empty()) {
+        wait_until_any_child_dies(child_processes);
+        std::vector<std::pair<pid_t, time_point>> alive_child;
+        for (const auto &child_process : child_processes) {
+          if (kill(child_process.first, 0) == 0) {
+            alive_child.push_back(child_process);
+          }
+        }
+        child_processes = alive_child;
+      }
+    } else {
+      while (wait(NULL) > 0)
+        ;
+    }
   } else {
     run_klee_on_function(pArgc, pArgv, pEnvp, handler, interpreter, finalModule,
                          replayPath, loadedModules);
