@@ -1,0 +1,25 @@
+name: Build in UTBot base_env
+
+on:
+  pull_request:
+    branches: [utbot-main]
+  push:
+    branches: [utbot-main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/unittestbot/utbotcpp/base_env:02-02-2022
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Run build.sh
+        run: |
+          ./build.sh
+      - name: Run tests
+        run: |
+          cd build && ninja check
