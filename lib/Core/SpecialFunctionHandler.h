@@ -142,9 +142,12 @@ public:
   HANDLER(handleUnderConstrained);
   HANDLER(handleWarning);
   HANDLER(handleWarningOnce);
+  HANDLER(handleTypeMismatchV1);
+  HANDLER(handleAlignmentAssumption);
   HANDLER(handleAddOverflow);
   HANDLER(handleMulOverflow);
   HANDLER(handleSubOverflow);
+  HANDLER(handleNegateOverflow);
   HANDLER(handleDivRemOverflow);
   HANDLER(handleIsNaN);
   HANDLER(handleIsInfinite);
@@ -155,6 +158,20 @@ public:
   HANDLER(handleSqrt);
   HANDLER(handleFAbs);
   HANDLER(handleRint);
+  HANDLER(handleShiftOutOfBounds);
+  HANDLER(handleOutOfBounds);
+  HANDLER(handleBuiltinUnreachable);
+  HANDLER(handleMissingReturn);
+  HANDLER(handleVlaBoundNotPositive);
+  HANDLER(handleFloatCastOverflow);
+  HANDLER(handleLoadInvalidValue);
+  HANDLER(handleImplicitConversion);
+  HANDLER(handleInvalidBuiltin);
+  HANDLER(handleNonnullReturnV1);
+  HANDLER(handleNullabilityReturnV1);
+  HANDLER(handleNonnullArg);
+  HANDLER(handleNullabilityArg);
+  HANDLER(handlePointerOverflow);
 #undef HANDLER
 };
 } // namespace klee
