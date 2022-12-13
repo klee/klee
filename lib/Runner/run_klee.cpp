@@ -130,6 +130,9 @@ cl::opt<std::string>
                cl::desc("Function in which to start execution (default=main)"),
                cl::init("main"), cl::cat(StartCat));
 
+cl::opt<bool> UTBotMode("utbot", cl::desc("Klee was launched by utbot"),
+                        cl::init(false), cl::cat(StartCat));
+
 cl::opt<bool> InteractiveMode("interactive",
                               cl::desc("Launch klee in interactive mode."),
                               cl::init(false), cl::cat(StartCat));
@@ -1532,8 +1535,22 @@ int run_klee(int argc, char **argv, char **envp) {
       klee_error("error loading POSIX support '%s': %s", Path.c_str(),
                  errorMsg.c_str());
 
-    std::string libcPrefix = (Libc == LibcType::UcLibc ? "__user_" : "");
-    preparePOSIX(loadedModules, libcPrefix);
+    if (Libc != LibcType::UcLibc) {
+      SmallString<128> Path_io(Opts.LibraryDir);
+      llvm::sys::path::append(Path_io,
+                              "libkleeRuntimeIO_C" + opt_suffix + ".bca");
+      klee_message("NOTE: using klee versions of input/output functions: %s",
+                   Path_io.c_str());
+      if (!klee::loadFile(Path_io.c_str(), mainModule->getContext(),
+                          loadedModules, errorMsg))
+        klee_error("error loading POSIX_IO support '%s': %s", Path_io.c_str(),
+                   errorMsg.c_str());
+    }
+
+    if (!UTBotMode) {
+      std::string libcPrefix = (Libc == LibcType::UcLibc ? "__user_" : "");
+      preparePOSIX(loadedModules, libcPrefix);
+    }
   }
 
   if (WithFPRuntime) {

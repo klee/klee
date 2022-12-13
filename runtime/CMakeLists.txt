@@ -104,7 +104,7 @@ if (ENABLE_KLEE_EH_CXX)
 endif ()
 
 if (ENABLE_POSIX_RUNTIME)
-    list(APPEND RUNTIME_LIBRARIES RuntimePOSIX)
+    list(APPEND RUNTIME_LIBRARIES "RuntimePOSIX;RuntimeIO_C")
     add_subdirectory(POSIX)
 endif ()
 

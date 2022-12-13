@@ -240,10 +240,14 @@ usage: (klee_init_env) [options] [program arguments]\n\
  * and is renamed during POSIX setup */
 int __klee_posix_wrapped_main(int argc, char **argv, char **envp);
 
+void check_stdin_read() {
+  klee_assume(__exe_env.stdin_off == __exe_env.max_off);
+}
+
 /* This wrapper gets called instead of main if POSIX setup is used */
 int __klee_posix_wrapper(int argcPtr, char **argvPtr, char **envp) {
   klee_init_env(&argcPtr, &argvPtr);
   int res = __klee_posix_wrapped_main(argcPtr, argvPtr, envp);
-  klee_assume(__exe_env.stdin_off == __exe_env.max_off);
+  check_stdin_read();
   return res;
 }
