@@ -41,6 +41,12 @@ typedef struct {
   unsigned size; /* in bytes */
   char *contents;
   struct stat64 *stat;
+
+  unsigned read_bytes_symbolic; /* bytes that were read from file */
+  unsigned read_bytes_real;
+
+  unsigned write_bytes_symbolic; /* bytes that were written to file */
+  unsigned write_bytes_real;
 } exe_disk_file_t;
 
 typedef enum {

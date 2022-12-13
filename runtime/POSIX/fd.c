@@ -398,7 +398,7 @@ ssize_t read(int fd, void *buf, size_t count) {
 
     memcpy(buf, f->dfile->contents + f->off, count);
     f->off += count;
-
+    f->dfile->read_bytes_real += count;
     if (fd == 0 && __exe_env.max_off < f->off) {
       __exe_env.max_off = f->off;
     }
@@ -471,6 +471,7 @@ ssize_t write(int fd, const void *buf, size_t count) {
       __exe_fs.stdout_writes += actual_count;
 
     f->off += count;
+    f->dfile->write_bytes_real += count;
     if (fd == 0 && __exe_env.max_off < f->off) {
       __exe_env.max_off = f->off;
     }
