@@ -36,6 +36,8 @@ int UpdateNode::compare(const UpdateNode &b) const {
   return value.compare(b.value);
 }
 
+bool UpdateNode::equals(const UpdateNode &b) const { return compare(b) == 0; }
+
 unsigned UpdateNode::computeHash() {
   hashValue = index->hash() ^ value->hash();
   if (next)

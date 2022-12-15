@@ -87,6 +87,8 @@ int Expr::compare(const Expr &b) const {
   return r;
 }
 
+bool Expr::equals(const Expr &b) const { return compare(b) == 0; }
+
 // returns 0 if b is structurally equal to *this
 int Expr::compare(const Expr &b, ExprEquivSet &equivs) const {
   if (this == &b)

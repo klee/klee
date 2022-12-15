@@ -241,6 +241,7 @@ public:
   ///
   /// `<` and `>` are binary relations that express the total order.
   int compare(const Expr &b) const;
+  bool equals(const Expr &b) const;
 
   // Given an array of new kids return a copy of the expression
   // but using those children.
@@ -468,6 +469,7 @@ public:
   unsigned getSize() const { return size; }
 
   int compare(const UpdateNode &b) const;
+  bool equals(const UpdateNode &b) const;
   unsigned hash() const { return hashValue; }
 
   UpdateNode() = delete;

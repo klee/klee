@@ -172,6 +172,8 @@ public:
     assert(lazyInitializationSource == b.lazyInitializationSource);
     return 0;
   }
+
+  bool equals(const MemoryObject &b) const { return compare(b) == 0; }
 };
 
 class ObjectState {

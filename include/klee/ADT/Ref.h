@@ -204,9 +204,15 @@ public:
   }
 
   // assumes non-null arguments
+  bool equals(const ref &rhs) const {
+    assert(!isNull() && !rhs.isNull() && "Invalid call to compare()");
+    return get()->equals(*rhs.get());
+  }
+
+  // assumes non-null arguments
   bool operator<(const ref &rhs) const { return compare(rhs) < 0; }
-  bool operator==(const ref &rhs) const { return compare(rhs) == 0; }
-  bool operator!=(const ref &rhs) const { return compare(rhs) != 0; }
+  bool operator==(const ref &rhs) const { return equals(rhs); }
+  bool operator!=(const ref &rhs) const { return !equals(rhs); }
 };
 
 template <class T>
