@@ -4462,19 +4462,25 @@ ObjectPair Executor::lazyInitializeObject(ExecutionState &state,
   return op;
 }
 
+const Array *Executor::makeArray(ExecutionState &state, const uint64_t size,
+                                 const std::string &name) {
+  static uint64_t id = 0;
+  // std::string uniqueName = name + "#" + std::to_string(id++);
+  std::string uniqueName = name;
+  while (!state.arrayNames.insert(uniqueName).second) {
+    uniqueName = name + "_" + llvm::utostr(++id);
+  }
+  const Array *array = arrayCache.CreateArray(uniqueName, size);
+
+  return array;
+}
+
 void Executor::executeMakeSymbolic(ExecutionState &state,
                                    const MemoryObject *mo,
                                    const std::string &name, bool isLocal) {
   // Create a new object state for the memory object (instead of a copy).
   if (!replayKTest) {
-    // Find a unique name for this array.  First try the original name,
-    // or if that fails try adding a unique identifier.
-    unsigned id = 0;
-    std::string uniqueName = name;
-    while (!state.arrayNames.insert(uniqueName).second) {
-      uniqueName = name + "_" + llvm::utostr(++id);
-    }
-    const Array *array = arrayCache.CreateArray(uniqueName, mo->size);
+    const Array *array = makeArray(state, mo->size, name);
     bindObjectInState(state, mo, false, array);
     state.addSymbolic(mo, array);
 
