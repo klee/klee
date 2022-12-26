@@ -59,6 +59,7 @@ static void push_random_obj(KTest *b, const char *name, unsigned non_zero_bytes,
 
   o->numPointers = 0;
   o->pointers = nullptr;
+  o->address = 0;
 
   if ((o->name = strdup(name)) == NULL) {
     error_exit("%s:%d: strdup() failure\n", __FILE__, __LINE__);
@@ -84,6 +85,7 @@ static void push_obj(KTest *b, const char *name, unsigned total_bytes,
 
   o->numPointers = 0;
   o->pointers = nullptr;
+  o->address = 0;
 
   if ((o->name = strdup(name)) == NULL) {
     error_exit("%s:%d: strdup() failure\n", __FILE__, __LINE__);
