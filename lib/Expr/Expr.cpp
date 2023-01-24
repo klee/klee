@@ -93,14 +93,16 @@ ref<Expr> Expr::createTempRead(const Array *array, Expr::Width w,
   case Expr::Fl80: {
     ref<Expr> bytes[10];
     for (int i = 0; i < 10; ++i) {
-      bytes[i] = ReadExpr::create(ul, ConstantExpr::alloc(9 - i, Expr::Int32));
+      bytes[i] =
+          ReadExpr::create(ul, ConstantExpr::alloc(off + 9 - i, Expr::Int32));
     }
     return ConcatExpr::createN(10, bytes);
   }
   case Expr::Int128: {
     ref<Expr> bytes[16];
     for (int i = 0; i < 16; ++i) {
-      bytes[i] = ReadExpr::create(ul, ConstantExpr::alloc(15 - i, Expr::Int32));
+      bytes[i] =
+          ReadExpr::create(ul, ConstantExpr::alloc(off + 15 - i, Expr::Int32));
     }
     return ConcatExpr::createN(16, bytes);
   }

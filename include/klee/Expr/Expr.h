@@ -1010,7 +1010,7 @@ CAST_EXPR_CLASS(FPExt)
                            llvm::APFloat::roundingMode rm) {                   \
       ref<Expr> r(new _class_kind##Expr(e, w, rm));                            \
       r->computeHash();                                                        \
-      return r;                                                                \
+      return createCachedExpr(r);                                              \
     }                                                                          \
     static ref<Expr> create(const ref<Expr> &e, Width w,                       \
                             llvm::APFloat::roundingMode rm);                   \
@@ -1106,7 +1106,7 @@ ARITHMETIC_EXPR_CLASS(AShr)
                            const llvm::APFloat::roundingMode rm) {             \
       ref<Expr> res(new _class_kind##Expr(l, r, rm));                          \
       res->computeHash();                                                      \
-      return res;                                                              \
+      return createCachedExpr(res);                                            \
     }                                                                          \
     static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r,            \
                             llvm::APFloat::roundingMode rm);                   \
@@ -1198,7 +1198,7 @@ COMPARISON_EXPR_CLASS(FOGe)
     static ref<Expr> alloc(const ref<Expr> &e) {                               \
       ref<Expr> r(new _class_kind##Expr(e));                                   \
       r->computeHash();                                                        \
-      return r;                                                                \
+      return createCachedExpr(r);                                              \
     }                                                                          \
     static ref<Expr> create(const ref<Expr> &e);                               \
                                                                                \
@@ -1243,7 +1243,7 @@ FP_PRED_EXPR_CLASS(IsSubnormal)
                            const llvm::APFloat::roundingMode rm) {             \
       ref<Expr> r(new _class_kind##Expr(e, rm));                               \
       r->computeHash();                                                        \
-      return r;                                                                \
+      return createCachedExpr(r);                                              \
     }                                                                          \
     static ref<Expr> create(const ref<Expr> &e,                                \
                             const llvm::APFloat::roundingMode rm);             \
@@ -1289,7 +1289,7 @@ public:
   static ref<Expr> alloc(const ref<Expr> &e) {
     ref<Expr> r(new FAbsExpr(e));
     r->computeHash();
-    return r;
+    return createCachedExpr(r);
   }
   static ref<Expr> create(const ref<Expr> &e);
 
@@ -1321,7 +1321,7 @@ public:
   static ref<Expr> alloc(const ref<Expr> &e) {
     ref<Expr> r(new FNegExpr(e));
     r->computeHash();
-    return r;
+    return createCachedExpr(r);
   }
   static ref<Expr> create(const ref<Expr> &e);
 
@@ -1433,7 +1433,7 @@ public:
   static ref<ConstantExpr> alloc(const llvm::APFloat &f) {
     ref<ConstantExpr> r(new ConstantExpr(f));
     r->computeHash();
-    return r;
+    return createCachedExpr(r);
   }
 
   static ref<ConstantExpr> alloc(uint64_t v, Width w) {
