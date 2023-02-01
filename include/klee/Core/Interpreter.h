@@ -151,9 +151,6 @@ public:
 
   virtual bool getSymbolicSolution(const ExecutionState &state, KTest &res) = 0;
 
-  virtual void setInitializationGraph(const ExecutionState &state,
-                                      KTest &tc) = 0;
-
   virtual void logState(const ExecutionState &state, int id,
                         std::unique_ptr<llvm::raw_fd_ostream> &f) = 0;
 

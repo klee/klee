@@ -47,7 +47,8 @@ cl::opt<bool> ConstArrayOpt(
 
 unsigned Expr::count = 0;
 
-ref<Expr> Expr::createTempRead(const Array *array, Expr::Width w) {
+ref<Expr> Expr::createTempRead(const Array *array, Expr::Width w,
+                               unsigned off) {
   UpdateList ul(array, 0);
 
   switch (w) {
@@ -55,29 +56,30 @@ ref<Expr> Expr::createTempRead(const Array *array, Expr::Width w) {
     assert(0 && "invalid width");
   case Expr::Bool:
     return ZExtExpr::create(
-        ReadExpr::create(ul, ConstantExpr::alloc(0, Expr::Int32)), Expr::Bool);
+        ReadExpr::create(ul, ConstantExpr::alloc(off, Expr::Int32)),
+        Expr::Bool);
   case Expr::Int8:
     return ReadExpr::create(ul, ConstantExpr::alloc(0, Expr::Int32));
   case Expr::Int16:
     return ConcatExpr::create(
-        ReadExpr::create(ul, ConstantExpr::alloc(1, Expr::Int32)),
-        ReadExpr::create(ul, ConstantExpr::alloc(0, Expr::Int32)));
+        ReadExpr::create(ul, ConstantExpr::alloc(off + 1, Expr::Int32)),
+        ReadExpr::create(ul, ConstantExpr::alloc(off, Expr::Int32)));
   case Expr::Int32:
     return ConcatExpr::create4(
-        ReadExpr::create(ul, ConstantExpr::alloc(3, Expr::Int32)),
-        ReadExpr::create(ul, ConstantExpr::alloc(2, Expr::Int32)),
-        ReadExpr::create(ul, ConstantExpr::alloc(1, Expr::Int32)),
-        ReadExpr::create(ul, ConstantExpr::alloc(0, Expr::Int32)));
+        ReadExpr::create(ul, ConstantExpr::alloc(off + 3, Expr::Int32)),
+        ReadExpr::create(ul, ConstantExpr::alloc(off + 2, Expr::Int32)),
+        ReadExpr::create(ul, ConstantExpr::alloc(off + 1, Expr::Int32)),
+        ReadExpr::create(ul, ConstantExpr::alloc(off, Expr::Int32)));
   case Expr::Int64:
     return ConcatExpr::create8(
-        ReadExpr::create(ul, ConstantExpr::alloc(7, Expr::Int32)),
-        ReadExpr::create(ul, ConstantExpr::alloc(6, Expr::Int32)),
-        ReadExpr::create(ul, ConstantExpr::alloc(5, Expr::Int32)),
-        ReadExpr::create(ul, ConstantExpr::alloc(4, Expr::Int32)),
-        ReadExpr::create(ul, ConstantExpr::alloc(3, Expr::Int32)),
-        ReadExpr::create(ul, ConstantExpr::alloc(2, Expr::Int32)),
-        ReadExpr::create(ul, ConstantExpr::alloc(1, Expr::Int32)),
-        ReadExpr::create(ul, ConstantExpr::alloc(0, Expr::Int32)));
+        ReadExpr::create(ul, ConstantExpr::alloc(off + 7, Expr::Int32)),
+        ReadExpr::create(ul, ConstantExpr::alloc(off + 6, Expr::Int32)),
+        ReadExpr::create(ul, ConstantExpr::alloc(off + 5, Expr::Int32)),
+        ReadExpr::create(ul, ConstantExpr::alloc(off + 4, Expr::Int32)),
+        ReadExpr::create(ul, ConstantExpr::alloc(off + 3, Expr::Int32)),
+        ReadExpr::create(ul, ConstantExpr::alloc(off + 2, Expr::Int32)),
+        ReadExpr::create(ul, ConstantExpr::alloc(off + 1, Expr::Int32)),
+        ReadExpr::create(ul, ConstantExpr::alloc(off, Expr::Int32)));
   }
 }
 

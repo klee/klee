@@ -103,19 +103,18 @@ void TypeManager::initTypesFromStructs() {
     for (unsigned idx = 0; idx < structType->getNumElements(); ++idx) {
       uint64_t offset = structLayout->getElementOffset(idx);
       llvm::Type *rawElementType = structType->getElementType(idx);
-      typesMap[structType]->innerTypes[typesMap[rawElementType]].push_back(
-          offset);
+      typesMap[structType]->innerTypes[typesMap[rawElementType]].insert(offset);
 
       /* Provide initialization from types in inner class */
       for (auto &innerStructMemberTypesToOffsets :
            typesMap[rawElementType]->innerTypes) {
         KType *innerStructMemberType = innerStructMemberTypesToOffsets.first;
-        const std::vector<uint64_t> &innerTypeOffsets =
+        const std::set<uint64_t> &innerTypeOffsets =
             innerStructMemberTypesToOffsets.second;
 
         /* Add offsets from inner class */
         for (uint64_t innerTypeOffset : innerTypeOffsets) {
-          typesMap[structType]->innerTypes[innerStructMemberType].emplace_back(
+          typesMap[structType]->innerTypes[innerStructMemberType].insert(
               offset + innerTypeOffset);
         }
       }

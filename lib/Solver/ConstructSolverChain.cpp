@@ -54,11 +54,11 @@ Solver *constructSolverChain(Solver *coreSolver, std::string querySMT2LogPath,
   if (UseBranchCache)
     solver = createCachingSolver(solver);
 
-  if (UseConcretizingSolver)
-    solver = createConcretizingSolver(solver, concretizationManager);
-
   if (UseIndependentSolver)
     solver = createIndependentSolver(solver);
+
+  if (UseConcretizingSolver && concretizationManager)
+    solver = createConcretizingSolver(solver, concretizationManager);
 
   if (DebugValidateSolver)
     solver = createValidatingSolver(solver, coreSolver);

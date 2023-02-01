@@ -27,6 +27,8 @@ public:
 
   bool computeTruth(const Query &, bool &isValid);
   bool computeValidity(const Query &, Solver::Validity &result);
+  bool computeValidity(const Query &query, ref<SolverResponse> &queryResult,
+                       ref<SolverResponse> &negatedQueryResult);
   bool computeValue(const Query &, ref<Expr> &result);
   bool computeInitialValues(const Query &query,
                             const std::vector<const Array *> &objects,
@@ -60,11 +62,64 @@ bool ConcretizingSolver::computeValidity(const Query &query,
     return solver->impl->computeValidity(query, result);
   }
 
-  auto assign = concretizationManager->get(query.constraints);
-  auto concretizedQuery = concretizationManager->getConcretizedQuery(query);
+  auto assign = query.constraints.getConcretization();
+  auto concretizedQuery = constructConcretizedQuery(query, assign);
 
   if (!solver->impl->computeValidity(concretizedQuery, result)) {
     return false;
+  }
+
+  switch (result) {
+  case Solver::True: {
+    concretizationManager->add(query, assign);
+    break;
+  }
+
+  case Solver::False: {
+    concretizationManager->add(query.negateExpr(), assign);
+    break;
+  }
+
+  case Solver::Unknown: {
+    concretizationManager->add(query, assign);
+    concretizationManager->add(query.negateExpr(), assign);
+    break;
+  }
+
+  default:
+    assert(0 && "unreachable");
+  }
+
+  return true;
+}
+
+bool ConcretizingSolver::computeValidity(
+    const Query &query, ref<SolverResponse> &queryResult,
+    ref<SolverResponse> &negatedQueryResult) {
+  if (!query.containsSymcretes()) {
+    return solver->impl->computeValidity(query, queryResult,
+                                         negatedQueryResult);
+  }
+  auto assign = query.constraints.getConcretization();
+  auto concretizedQuery = constructConcretizedQuery(query, assign);
+
+  if (!solver->impl->computeValidity(concretizedQuery, queryResult,
+                                     negatedQueryResult)) {
+    return false;
+  }
+
+  Solver::Validity result;
+  if (isa<ValidResponse>(queryResult) &&
+      isa<InvalidResponse>(negatedQueryResult)) {
+    result = Solver::True;
+  } else if (isa<InvalidResponse>(queryResult) &&
+             isa<ValidResponse>(negatedQueryResult)) {
+    result = Solver::False;
+  } else if (isa<InvalidResponse>(queryResult) &&
+             isa<InvalidResponse>(negatedQueryResult)) {
+    result = Solver::Unknown;
+  } else {
+    assert(0 && "unreachable");
   }
 
   switch (result) {
@@ -100,8 +155,8 @@ bool ConcretizingSolver::computeTruth(const Query &query, bool &isValid) {
     return solver->impl->computeTruth(query, isValid);
   }
 
-  auto assign = concretizationManager->get(query.constraints);
-  auto concretizedQuery = concretizationManager->getConcretizedQuery(query);
+  auto assign = query.constraints.getConcretization();
+  auto concretizedQuery = constructConcretizedQuery(query, assign);
 
   if (!solver->impl->computeTruth(concretizedQuery, isValid)) {
     return false;
@@ -113,6 +168,8 @@ bool ConcretizingSolver::computeTruth(const Query &query, bool &isValid) {
 
   if (!isValid) {
     concretizationManager->add(query.negateExpr(), assign);
+  } else {
+    concretizationManager->add(query, assign);
   }
 
   return true;
@@ -123,9 +180,9 @@ bool ConcretizingSolver::computeValue(const Query &query, ref<Expr> &result) {
     return solver->impl->computeValue(query, result);
   }
 
-  Assignment assign = concretizationManager->get(query.constraints);
+  auto assign = query.constraints.getConcretization();
+  auto concretizedQuery = constructConcretizedQuery(query, assign);
 
-  auto concretizedQuery = concretizationManager->getConcretizedQuery(query);
   if (ref<ConstantExpr> expr =
           dyn_cast<ConstantExpr>(ConstraintManager::simplifyExpr(
               concretizedQuery.constraints, concretizedQuery.expr))) {
@@ -143,11 +200,21 @@ bool ConcretizingSolver::computeInitialValues(
                                               hasSolution);
   }
 
-  Assignment assign = concretizationManager->get(query.constraints);
+  auto assign = query.constraints.getConcretization();
+  auto concretizedQuery = constructConcretizedQuery(query, assign);
 
-  auto concretizedQuery = concretizationManager->getConcretizedQuery(query);
-  return solver->impl->computeInitialValues(concretizedQuery, objects, values,
-                                            hasSolution);
+  if (!solver->impl->computeInitialValues(concretizedQuery, objects, values,
+                                          hasSolution)) {
+    return false;
+  }
+
+  if (hasSolution) {
+    concretizationManager->add(query.negateExpr(), assign);
+  } else {
+    concretizationManager->add(query, assign);
+  }
+
+  return true;
 }
 
 // Redo later

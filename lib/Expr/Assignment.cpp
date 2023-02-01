@@ -9,6 +9,8 @@
 
 #include "klee/Expr/Assignment.h"
 
+#include "klee/Expr/Constraints.h"
+
 namespace klee {
 
 void Assignment::dump() {

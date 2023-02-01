@@ -14,6 +14,8 @@
 #include "Executor.h"
 #include "Searcher.h"
 
+#include "klee/Expr/Constraints.h"
+
 namespace klee {
 
 /*** Test generation options ***/
@@ -104,7 +106,10 @@ void MergeHandler::addClosedState(ExecutionState *es, llvm::Instruction *mp) {
     bool mergedSuccessful = false;
 
     for (auto &mState : cpv) {
+      ConstraintSet oldConstraints = mState->constraints;
       if (mState->merge(*es)) {
+        mState->constraints.updateConcretization(
+            oldConstraints.getConcretization());
         executor->terminateStateEarly(*es, "merged state.",
                                       StateTerminationType::Merge);
         executor->mergingSearcher->inCloseMerge.erase(es);

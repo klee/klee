@@ -124,7 +124,7 @@ ExecutionState *ExecutionState::branch() {
 
 bool ExecutionState::inSymbolics(const MemoryObject *mo) const {
   for (auto i : symbolics) {
-    if (mo == i.first.get()) {
+    if (mo == i.memoryObject.get()) {
       return true;
     }
   }
@@ -144,16 +144,17 @@ void ExecutionState::popFrame() {
   stack.pop_back();
 }
 
-void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) {
-  symbolics.emplace_back(ref<const MemoryObject>(mo), array);
+void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array,
+                                 KType *type) {
+  symbolics.emplace_back(ref<const MemoryObject>(mo), array, type);
 }
 
 ref<const MemoryObject>
 ExecutionState::findMemoryObject(const Array *array) const {
   for (unsigned i = 0; i != symbolics.size(); ++i) {
     const auto &symbolic = symbolics[i];
-    if (array == symbolic.second) {
-      return symbolic.first;
+    if (array == symbolic.array) {
+      return symbolic.memoryObject;
     }
   }
   return nullptr;
@@ -221,6 +222,24 @@ void ExecutionState::addPointerResolution(ref<Expr> address, ref<Expr> base,
   if (base != address && !isa<ConstantExpr>(base)) {
     resolvedPointers[base] = std::make_pair(mo, mo->getOffsetExpr(base));
   }
+}
+
+bool ExecutionState::resolveOnSymbolics(const ref<ConstantExpr> &addr,
+                                        ref<const MemoryObject> &result) const {
+  uint64_t address = addr->getZExtValue();
+
+  for (const auto &res : symbolics) {
+    const auto &mo = res.memoryObject;
+    // Check if the provided address is between start and end of the object
+    // [mo->address, mo->address + mo->size) or the object is a 0-sized object.
+    if ((mo->size == 0 && address == mo->address) ||
+        (address - mo->address < mo->size)) {
+      result = mo;
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**/
@@ -437,8 +456,13 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
 }
 
 void ExecutionState::addConstraint(ref<Expr> e) {
-  ConstraintManager c(constraints);
-  c.addConstraint(e);
+  ConstraintManager cm(constraints);
+  cm.addConstraint(e);
+}
+
+void ExecutionState::addConstraint(ref<Expr> e, const Assignment &c) {
+  ConstraintManager cm(constraints);
+  cm.addConstraint(e, c);
 }
 
 void ExecutionState::addCexPreference(const ref<Expr> &cond) {

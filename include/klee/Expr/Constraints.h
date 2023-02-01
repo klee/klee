@@ -10,6 +10,7 @@
 #ifndef KLEE_CONSTRAINTS_H
 #define KLEE_CONSTRAINTS_H
 
+#include "klee/Expr/Assignment.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprHashMap.h"
 
@@ -34,17 +35,17 @@ public:
   constraint_iterator end() const;
   size_t size() const noexcept;
 
-  explicit ConstraintSet(constraints_ty cs) : constraints(std::move(cs)) {}
-  explicit ConstraintSet(ExprHashSet cs) : constraints() {
-    constraints.insert(constraints.end(), cs.begin(), cs.end());
-  }
-  ConstraintSet() = default;
+  explicit ConstraintSet(constraints_ty cs);
+  explicit ConstraintSet(ExprHashSet cs);
+  ConstraintSet();
 
   void push_back(const ref<Expr> &e);
+  void updateConcretization(const Assignment &symcretes);
 
   std::vector<const Array *> gatherArrays() const;
 
   std::set<ref<Expr>> asSet() const;
+  const Assignment &getConcretization() const;
 
   bool operator==(const ConstraintSet &b) const {
     return constraints == b.constraints;
@@ -58,6 +59,7 @@ public:
 
 private:
   constraints_ty constraints;
+  Assignment concretization;
 };
 
 class ExprVisitor;
@@ -83,6 +85,7 @@ public:
   /// Add constraint to the referenced constraint set
   /// \param constraint
   void addConstraint(const ref<Expr> &constraint);
+  void addConstraint(const ref<Expr> &constraint, const Assignment &symcretes);
 
 private:
   /// Rewrite set of constraints using the visitor

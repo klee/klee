@@ -149,7 +149,21 @@ struct CleanupPhaseUnwindingInformation : public UnwindingInformation {
   }
 };
 
-typedef std::pair<ref<const MemoryObject>, const Array *> Symbolic;
+struct Symbolic {
+  ref<const MemoryObject> memoryObject;
+  const Array *array;
+  KType *type;
+  Symbolic(ref<const MemoryObject> mo, const Array *a, KType *t)
+      : memoryObject(mo), array(a), type(t) {}
+  Symbolic &operator=(const Symbolic &other) = default;
+
+  friend bool operator==(const Symbolic &lhs, const Symbolic &rhs) {
+    return lhs.memoryObject == rhs.memoryObject && lhs.array == rhs.array &&
+           lhs.type == rhs.type;
+  }
+};
+
+// typedef std::pair<ref<const MemoryObject>, const Array *> Symbolic;
 typedef std::pair<llvm::BasicBlock *, llvm::BasicBlock *> Transition;
 
 /// @brief ExecutionState representing a path under exploration
@@ -227,7 +241,7 @@ public:
   std::vector<Symbolic> symbolics;
 
   /// @brief map from memory accesses to accessed objects and access offsets.
-  ExprHashMap<std::pair<const MemoryObject *, ref<Expr>>> resolvedPointers;
+  ExprHashMap<std::pair<ref<const MemoryObject>, ref<Expr>>> resolvedPointers;
 
   /// @brief A set of boolean expressions
   /// the user has requested be true of a counterexample.
@@ -296,7 +310,8 @@ public:
   void pushFrame(KInstIterator caller, KFunction *kf);
   void popFrame();
 
-  void addSymbolic(const MemoryObject *mo, const Array *array);
+  void addSymbolic(const MemoryObject *mo, const Array *array,
+                   KType *type = nullptr);
 
   ref<const MemoryObject> findMemoryObject(const Array *array) const;
 
@@ -306,8 +321,11 @@ public:
   void removePointerResolutions(const MemoryObject *mo);
   void addPointerResolution(ref<Expr> address, ref<Expr> base,
                             const MemoryObject *mo);
+  bool resolveOnSymbolics(const ref<ConstantExpr> &addr,
+                          ref<const MemoryObject> &result) const;
 
   void addConstraint(ref<Expr> e);
+  void addConstraint(ref<Expr> e, const Assignment &c);
   void addCexPreference(const ref<Expr> &cond);
 
   bool merge(const ExecutionState &b);

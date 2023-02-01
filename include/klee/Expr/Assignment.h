@@ -10,13 +10,13 @@
 #ifndef KLEE_ASSIGNMENT_H
 #define KLEE_ASSIGNMENT_H
 
-#include "klee/Expr/Constraints.h"
 #include "klee/Expr/ExprEvaluator.h"
 
 #include <map>
 
 namespace klee {
 class Array;
+class ConstraintSet;
 
 class Assignment {
 public:
