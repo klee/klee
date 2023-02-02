@@ -89,7 +89,11 @@ class generic_gep_type_iterator
         CurTy = CT->getTypeAtIndex(getOperand());
 #endif
       } else if (auto ptr = dyn_cast<llvm::PointerType>(CurTy)) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(14, 0)
+        CurTy = ptr->getPointerElementType();
+#else
         CurTy = ptr->getElementType();
+#endif
       } else {
         CurTy = 0;
       }

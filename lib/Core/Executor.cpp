@@ -728,7 +728,11 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
 
   for (const GlobalVariable &v : m->globals()) {
     std::size_t globalObjectAlignment = getAllocationAlignment(&v);
+#if LLVM_VERSION_CODE >= LLVM_VERSION(14, 0)
+    Type *ty = v.getType()->getPointerElementType();
+#else
     Type *ty = v.getType()->getElementType();
+#endif
     std::uint64_t size = 0;
     if (ty->isSized())
       size = kmodule->targetData->getTypeStoreSize(ty);
@@ -2438,10 +2442,17 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     }
 
     if (f) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(14, 0)
+      const FunctionType *fType = 
+        dyn_cast<FunctionType>(cast<PointerType>(f->getType())->getPointerElementType());
+      const FunctionType *fpType =
+        dyn_cast<FunctionType>(cast<PointerType>(fp->getType())->getPointerElementType());
+#else
       const FunctionType *fType = 
         dyn_cast<FunctionType>(cast<PointerType>(f->getType())->getElementType());
       const FunctionType *fpType =
         dyn_cast<FunctionType>(cast<PointerType>(fp->getType())->getElementType());
+#endif
 
       // special case the call with a bitcast case
       if (fType != fpType) {
@@ -3347,8 +3358,13 @@ void Executor::computeOffsetsSeqTy(KGEPInstruction *kgepi,
                                    ref<ConstantExpr> &constantOffset,
                                    uint64_t index, const TypeIt it) {
   const auto *sq = cast<SqType>(*it);
+#if LLVM_VERSION_CODE >= LLVM_VERSION(14, 0)
+  uint64_t elementSize =
+      kmodule->targetData->getTypeStoreSize(sq->getPointerElementType());
+#else
   uint64_t elementSize =
       kmodule->targetData->getTypeStoreSize(sq->getElementType());
+#endif
   const Value *operand = it.getOperand();
   if (const Constant *c = dyn_cast<Constant>(operand)) {
     ref<ConstantExpr> index =
@@ -4634,7 +4650,11 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
       llvm::PointerType *ptrType =
           dyn_cast<llvm::PointerType>(globalVar->getType());
       assert(ptrType && "globalVar's type is not a pointer");
+#if LLVM_VERSION_CODE >= LLVM_VERSION(14, 0)
+      type = ptrType->getPointerElementType();
+#else
       type = ptrType->getElementType();
+#endif
     } else {
       type = GO->getType();
     }

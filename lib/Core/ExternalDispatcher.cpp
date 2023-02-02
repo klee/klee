@@ -284,8 +284,13 @@ Function *ExternalDispatcherImpl::createDispatcher(KCallable *target,
       argI64sp->getType()->getPointerElementType(), argI64sp, "args");
 
   // Get the target function type.
-  FunctionType *FTy = cast<FunctionType>(
+#if LLVM_VERSION_CODE >= LLVM_VERSION(14, 0)
+    FunctionType *FTy = cast<FunctionType>(
+      cast<PointerType>(target->getType())->getPointerElementType());
+#else
+    FunctionType *FTy = cast<FunctionType>(
       cast<PointerType>(target->getType())->getElementType());
+#endif
 
   // Each argument will be passed by writing it into gTheArgsP[i].
   unsigned i = 0, idx = 2;

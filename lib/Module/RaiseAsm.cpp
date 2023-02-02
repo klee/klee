@@ -19,7 +19,11 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/Host.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(14, 0)
+#include "llvm/MC/TargetRegistry.h"
+#else
 #include "llvm/Support/TargetRegistry.h"
+#endif
 #include "llvm/Target/TargetMachine.h"
 
 

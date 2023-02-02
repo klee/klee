@@ -137,7 +137,11 @@ const FunctionType *FunctionAliasPass::getFunctionType(const GlobalValue *gv) {
   const Type *type = gv->getType();
   while (type->isPointerTy()) {
     const PointerType *ptr = cast<PointerType>(type);
+#if LLVM_VERSION_CODE >= LLVM_VERSION(14, 0)
+    type = ptr->getPointerElementType();
+#else
     type = ptr->getElementType();
+#endif
   }
   return cast<FunctionType>(type);
 }
