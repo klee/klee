@@ -9,6 +9,9 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out %t2.bc
 
+// RUN: FileCheck --check-prefix=CHECK-BC --input-file %t.klee-out/assembly.ll %s
+// CHECK-BC: @__memcpy_chk
+
 // RUN: test -f %t.klee-out/test000001.ptr.err
 // RUN: FileCheck --input-file %t.klee-out/test000001.ptr.err %s
 // CHECK: memcpy overflow
