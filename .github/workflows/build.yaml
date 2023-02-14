@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: utbot-main
+    branches: [main, utbot-main]
   push:
-    branches: utbot-main
+    branches: [main, utbot-main]
 
 # Defaults for building KLEE
 env:
