@@ -367,7 +367,7 @@ KleeHandler::KleeHandler(int argc, char **argv)
   } else {
     // "klee-out-<i>"
     int i = 0;
-    for (; i <= INT_MAX; ++i) {
+    for (; i < INT_MAX; ++i) {
       SmallString<128> d(directory);
       llvm::sys::path::append(d, "klee-out-");
       raw_svector_ostream ds(d);
