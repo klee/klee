@@ -381,9 +381,15 @@ KleeHandler::KleeHandler(int argc, char **argv)
         SmallString<128> klee_last(directory);
         llvm::sys::path::append(klee_last, "klee-last");
 
-        if (((unlink(klee_last.c_str()) < 0) && (errno != ENOENT)) ||
-            symlink(m_outputDirectory.c_str(), klee_last.c_str()) < 0) {
+        if ((unlink(klee_last.c_str()) < 0) && (errno != ENOENT)) {
+          klee_warning("cannot remove existing klee-last symlink: %s",
+                       strerror(errno));
+        }
 
+        size_t offset = m_outputDirectory.size() -
+                        llvm::sys::path::filename(m_outputDirectory).size();
+        if (symlink(m_outputDirectory.c_str() + offset, klee_last.c_str()) <
+            0) {
           klee_warning("cannot create klee-last symlink: %s", strerror(errno));
         }
 
