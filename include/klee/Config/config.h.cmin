@@ -95,6 +95,12 @@
 /* Configuration type of KLEE's runtime libraries */
 #define RUNTIME_CONFIGURATION "@KLEE_RUNTIME_BUILD_TYPE@"
 
+/* Configure name of KLEE's uClibc library */
+#cmakedefine KLEE_UCLIBC_BCA_NAME "@KLEE_UCLIBC_BCA_NAME@"
+
+/* Configure name of the libCXX bitcode library */
+#cmakedefine KLEE_LIBCXX_BC_NAME "@KLEE_LIBCXX_BC_NAME@"
+
 /* FIXME: This is a stupid name. Also this is only used for figuring out where
 the runtime directory is in the build tree. Instead we should just define a
 macro for that. That would simplify the C++ code.  */
