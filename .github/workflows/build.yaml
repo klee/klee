@@ -1,3 +1,4 @@
+---
 name: CI
 
 on:
@@ -8,7 +9,7 @@ on:
 
 # Defaults for building KLEE
 env:
-  BASE_IMAGE: ubuntu:bionic-20200807
+  BASE_IMAGE: ubuntu:jammy-20230126
   REPOSITORY: klee
   COVERAGE: 0
   DISABLE_ASSERTIONS: 0
@@ -17,17 +18,17 @@ env:
   ENABLE_DEBUG: 1
   GTEST_VERSION: 1.11.0
   KLEE_RUNTIME_BUILD: "Debug+Asserts"
-  LLVM_VERSION: 9
-  METASMT_VERSION: qf_abv
+  LLVM_VERSION: 11
   MINISAT_VERSION: "master"
   REQUIRES_RTTI: 0
   SOLVERS: STP:Z3
   STP_VERSION: 2.3.3
-  TCMALLOC_VERSION: 2.7
+  TCMALLOC_VERSION: 2.9.1
   UCLIBC_VERSION: klee_uclibc_v1.3
   USE_TCMALLOC: 1
   USE_LIBCXX: 1
-  Z3_VERSION: 4.8.14
+  Z3_VERSION: 4.8.15
+  SQLITE_VERSION: 3400100
 
 jobs:
   Linux:
@@ -35,21 +36,21 @@ jobs:
     strategy:
       matrix:
         name: [
-                "LLVM 13",
-                "LLVM 12",
-                "LLVM 11, Doxygen",
-                "LLVM 10",
-                "LLVM 9",
-                "ASan",
-                "UBSan",
-                "MSan",
-                "Z3 only",
-                "metaSMT",
-                "STP master",
-                "Latest klee-uclibc",
-                "Asserts enabled",
-                "No TCMalloc, optimised runtime",
-            ]
+          "LLVM 13",
+          "LLVM 12",
+          "LLVM 11, Doxygen",
+          "LLVM 10",
+          "LLVM 9",
+          "ASan",
+          "UBSan",
+          "MSan",
+          "Z3 only",
+          "metaSMT",
+          "STP master",
+          "Latest klee-uclibc",
+          "Asserts disabled",
+          "No TCMalloc, optimised runtime",
+        ]
         include:
           - name: "LLVM 13"
             env:
@@ -67,33 +68,35 @@ jobs:
           - name: "LLVM 9"
             env:
               LLVM_VERSION: 9
-          # Sanitizer builds. Do unoptimized build otherwise the optimizer might remove problematic code
+          # Sanitizer builds. Do unoptimized build otherwise the optimizer
+          # might remove problematic code
           - name: "ASan"
             env:
               SANITIZER_BUILD: address
               ENABLE_OPTIMIZED: 0
               USE_TCMALLOC: 0
-              SANITIZER_LLVM_VERSION: 11
+              SANITIZER_LLVM_VERSION: 12
           - name: "UBSan"
             env:
               SANITIZER_BUILD: undefined
               ENABLE_OPTIMIZED: 0
               USE_TCMALLOC: 0
-              SANITIZER_LLVM_VERSION: 11
+              SANITIZER_LLVM_VERSION: 12
           - name: "MSan"
             env:
               SANITIZER_BUILD: memory
               ENABLE_OPTIMIZED: 0
               USE_TCMALLOC: 0
               SOLVERS: STP
-              SANITIZER_LLVM_VERSION: 11
-            # Test just using Z3 only
+              SANITIZER_LLVM_VERSION: 14
+          # Test just using Z3 only
           - name: "Z3 only"
             env:
               SOLVERS: Z3
           # Test just using metaSMT
           - name: "metaSMT"
             env:
+              METASMT_VERSION: qf_abv
               SOLVERS: metaSMT
               METASMT_DEFAULT: STP
               REQUIRES_RTTI: 1
@@ -107,7 +110,7 @@ jobs:
             env:
               UCLIBC_VERSION: klee_0_9_29
           # Check at least one build with Asserts disabled.
-          - name: "Asserts enabled"
+          - name: "Asserts disabled"
             env:
               SOLVERS: STP
               DISABLE_ASSERTIONS: 1
@@ -156,9 +159,9 @@ jobs:
     strategy:
       matrix:
         name: [
-                "STP",
-                "Z3",
-            ]
+          "STP",
+          "Z3",
+        ]
         include:
           - name: "STP"
             env:
