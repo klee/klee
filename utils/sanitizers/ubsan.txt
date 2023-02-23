@@ -1,3 +1,9 @@
 # Runtime suppression of undefined behavior
 #
 vptr_check:Module.h
+vptr:gtest.cc
+vptr:gtest.h
+vptr:gtest-death-test.cc
+vptr:gtest-matchers.h
+vptr:shared_ptr_base.h
+shift-base:constantbv.cpp
