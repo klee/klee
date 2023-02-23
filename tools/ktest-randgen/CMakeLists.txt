@@ -13,5 +13,6 @@ add_executable(ktest-randgen
 set(KLEE_LIBS kleeBasic)
 
 target_link_libraries(ktest-randgen ${KLEE_LIBS})
+target_include_directories(ktest-randgen PRIVATE ${KLEE_INCLUDE_DIRS})
 
 install(TARGETS ktest-randgen RUNTIME DESTINATION bin)

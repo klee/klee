@@ -26,6 +26,8 @@ option(ENABLE_SOLVER_Z3 "Enable Z3 solver support" ${ENABLE_SOLVER_Z3_DEFAULT})
 if (ENABLE_SOLVER_Z3)
   message(STATUS "Z3 solver support enabled")
   if (Z3_FOUND)
+    include(CheckCXXSourceCompiles)
+
     message(STATUS "Found Z3")
     set(ENABLE_Z3 1) # For config.h
     list(APPEND KLEE_COMPONENT_EXTRA_INCLUDE_DIRS ${Z3_INCLUDE_DIRS})
@@ -51,6 +53,10 @@ if (ENABLE_SOLVER_Z3)
     else()
       message(STATUS "Z3_get_error_msg does not require context")
     endif()
+
+    list(APPEND KLEE_SOLVER_INCLUDE_DIRS ${Z3_INCLUDE_DIRS})
+    list(APPEND KLEE_SOLVER_LIBRARY_DIRS ${Z3_LIBRARIES})
+
   else()
     message(FATAL_ERROR "Z3 not found.")
   endif()

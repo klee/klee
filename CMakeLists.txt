@@ -11,29 +11,7 @@
 # Minimum CMake version and policies
 ###############################################################################
 cmake_minimum_required(VERSION 3.9.0)
-if (POLICY CMP0054)
-  cmake_policy(SET CMP0054 NEW)
-endif()
-
-if (POLICY CMP0042)
-  # Enable `MACOSX_RPATH` by default.
-  cmake_policy(SET CMP0042 NEW)
-endif()
-
-if (POLICY CMP0037)
-  # Disallow reserved target names
-  cmake_policy(SET CMP0037 NEW)
-endif()
-
-# This overrides the default flags for the different CMAKE_BUILD_TYPEs
-set(CMAKE_USER_MAKE_RULES_OVERRIDE_C
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/c_flags_override.cmake")
-set(CMAKE_USER_MAKE_RULES_OVERRIDE_CXX
-  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/cxx_flags_override.cmake")
 project(KLEE CXX C)
-
-include(CheckFunctionExists)
-include(CheckLibraryExists)
 
 ###############################################################################
 # Project version
@@ -88,9 +66,10 @@ else()
   endif()
 endif()
 
-
 # Reference specific library paths used during linking for install
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+# use, i.e. don't skip the full RPATH for the build tree
+set(CMAKE_SKIP_BUILD_RPATH FALSE)
 
 ################################################################################
 # Add our CMake module directory to the list of module search directories
@@ -103,11 +82,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 # directly modifying CMAKE_CXX_FLAGS so that other code can be easily built with
 # different flags.
 ################################################################################
-set(KLEE_COMPONENT_EXTRA_INCLUDE_DIRS "")
-set(KLEE_COMPONENT_CXX_DEFINES "")
-set(KLEE_COMPONENT_CXX_FLAGS "")
-set(KLEE_SOLVER_LIBRARIES "")
-set(KLEE_COMPONENT_EXTRA_LIBRARIES "")
 
 
 ################################################################################
@@ -116,7 +90,8 @@ set(KLEE_COMPONENT_EXTRA_LIBRARIES "")
 option(ENABLE_KLEE_ASSERTS "Enable KLEE assertions" ON)
 if (ENABLE_KLEE_ASSERTS)
   message(STATUS "KLEE assertions enabled")
-  # Assume that -DNDEBUG isn't set.
+  # We have to add the undefine to the flags, otherwise "-D-UDNDEBUG" will be added
+  list(APPEND KLEE_COMPONENT_CXX_FLAGS "-UDNDEBUG")
 else()
   message(STATUS "KLEE assertions disabled")
   list(APPEND KLEE_COMPONENT_CXX_DEFINES "-DNDEBUG")
@@ -136,46 +111,24 @@ include(CheckIncludeFile)
 include(CheckIncludeFileCXX)
 include(CheckPrototypeDefinition)
 include(CMakePushCheckState)
-include("${CMAKE_SOURCE_DIR}/cmake/string_to_list.cmake")
-include("${CMAKE_SOURCE_DIR}/cmake/klee_component_add_cxx_flag.cmake")
-include("${CMAKE_SOURCE_DIR}/cmake/add_global_flag.cmake")
-
+include(CheckFunctionExists)
+include(CheckLibraryExists)
 
 ################################################################################
 # Find LLVM
 ################################################################################
-include(${CMAKE_SOURCE_DIR}/cmake/find_llvm.cmake)
-set(NEEDED_LLVM_VARS
-  LLVM_PACKAGE_VERSION
-  LLVM_VERSION_MAJOR
-  LLVM_VERSION_MINOR
-  LLVM_VERSION_PATCH
-  LLVM_DEFINITIONS
-  LLVM_ENABLE_ASSERTIONS
-  LLVM_ENABLE_EH
-  LLVM_ENABLE_RTTI
-  LLVM_INCLUDE_DIRS
-  LLVM_LIBRARY_DIRS
-  LLVM_TOOLS_BINARY_DIR
-  LLVM_ENABLE_VISIBILITY_INLINES_HIDDEN
-  TARGET_TRIPLE
+find_package(LLVM REQUIRED CONFIG HINTS "${LLVM_DIR}")
+message(STATUS "LLVM directory ${LLVM_DIR}")
+set(LLVMCC "${LLVM_TOOLS_BINARY_DIR}/clang"
+  CACHE
+  PATH
+  "Path to C bitcode compiler"
+  )
+set(LLVMCXX "${LLVM_TOOLS_BINARY_DIR}/clang++"
+  CACHE
+  PATH
+  "Path to C++ bitcode compiler"
 )
-
-foreach (vname ${NEEDED_LLVM_VARS})
-  message(STATUS "${vname}: \"${${vname}}\"")
-  if (NOT (DEFINED "${vname}"))
-    message(FATAL_ERROR "${vname} was not defined")
-  endif()
-endforeach()
-
-set(OPTIONAL_LLVM_VARS
-  LLVM_BUILD_MAIN_SRC_DIR
-)
-foreach (vname ${OPTIONAL_LLVM_VARS})
-  if (${vname})
-    message(STATUS "${vname}: \"${${vname}}\"")
-  endif()
-endforeach()
 
 if (LLVM_ENABLE_ASSERTIONS)
   # Certain LLVM debugging macros only work when LLVM was built with asserts
@@ -199,43 +152,37 @@ elseif ((NOT LLVM_ENABLE_ASSERTIONS) AND ENABLE_KLEE_ASSERTS)
   )
 endif()
 
-if (LLVM_ENABLE_VISIBILITY_INLINES_HIDDEN)
-  list(APPEND KLEE_COMPONENT_CXX_FLAGS "-fvisibility-inlines-hidden")
-endif()
-
-
 list(APPEND KLEE_COMPONENT_CXX_DEFINES ${LLVM_DEFINITIONS})
 list(APPEND KLEE_COMPONENT_EXTRA_INCLUDE_DIRS ${LLVM_INCLUDE_DIRS})
 
 # Find llvm-link
-set(LLVM_LINK "${LLVM_TOOLS_BINARY_DIR}/llvm-link")
+set(LLVM_LINK "${LLVM_TOOLS_BINARY_DIR}/llvm-link"
+  CACHE
+  PATH
+  "Path to bitcode linker"
+  )
 if (NOT EXISTS "${LLVM_LINK}")
   message(FATAL_ERROR "Failed to find llvm-link at \"${LLVM_LINK}\"")
 endif()
 
 # Find llvm-ar
-set(LLVM_AR "${LLVM_TOOLS_BINARY_DIR}/llvm-ar")
+set(LLVM_AR "${LLVM_TOOLS_BINARY_DIR}/llvm-ar"
+  CACHE
+  PATH
+  "Path to bitcode archive tool"
+  )
 if (NOT EXISTS "${LLVM_AR}")
   message(FATAL_ERROR "Failed to find llvm-ar at \"${LLVM_AR}\"")
 endif()
 
 # Find llvm-as
-set(LLVM_AS "${LLVM_TOOLS_BINARY_DIR}/llvm-as")
+set(LLVM_AS "${LLVM_TOOLS_BINARY_DIR}/llvm-as"
+  CACHE
+  PATH
+  "Path to bitcode assembly tool"
+  )
 if (NOT EXISTS "${LLVM_AS}")
   message(FATAL_ERROR "Failed to find llvm-as at \"${LLVM_AS}\"")
-endif()
-
-################################################################################
-# Find bitcode compiler
-################################################################################
-include("${CMAKE_SOURCE_DIR}/cmake/find_bitcode_compiler.cmake")
-message(STATUS "LLVMCC: ${LLVMCC}")
-if (NOT EXISTS "${LLVMCC}")
-  message(FATAL_ERROR "Cannot find C bitcode compiler \"${LLVMCC}\"")
-endif()
-message(STATUS "LLVMCXX: ${LLVMCXX}")
-if (NOT EXISTS "${LLVMCXX}")
-  message(FATAL_ERROR "Cannot find C++ bitcode compiler \"${LLVMCXX}\"")
 endif()
 
 ################################################################################
@@ -275,7 +222,7 @@ if (NOT LLVM_ENABLE_EH)
   if (ENABLE_SOLVER_METASMT)
     message(WARNING "Not disabling exceptions because metaSMT uses them")
   else()
-    klee_component_add_cxx_flag("-fno-exceptions" REQUIRED)
+    list(APPEND KLEE_COMPONENT_CXX_FLAGS "-fno-exceptions")
   endif()
 endif()
 
@@ -289,7 +236,7 @@ if (NOT LLVM_ENABLE_RTTI)
       "This build configuration is not supported and will likely not work."
       "You should recompile LLVM with RTTI enabled.")
   else()
-    klee_component_add_cxx_flag("-fno-rtti" REQUIRED)
+    list(APPEND KLEE_COMPONENT_CXX_FLAGS "-fno-rtti")
   endif()
 endif()
 
@@ -325,14 +272,19 @@ OPTION(ENABLE_TCMALLOC "Enable TCMalloc support" ON)
 if (ENABLE_TCMALLOC)
   message(STATUS "TCMalloc support enabled")
   set(TCMALLOC_HEADER "gperftools/malloc_extension.h")
-  find_path(TCMALLOC_INCLUDE_DIR "${TCMALLOC_HEADER}")
+  find_path(TCMALLOC_INCLUDE_DIR
+    "${TCMALLOC_HEADER}"
+    HINTS "${TCMALLOC_DIR}/include"
+    )
   cmake_push_check_state()
-  set(CMAKE_REQUIRED_INCLUDES "${TCMALLOC_INCLUDE_DIR}")
-  check_include_file_cxx("${TCMALLOC_HEADER}" HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
+  list(APPEND CMAKE_REQUIRED_INCLUDES ${TCMALLOC_INCLUDE_DIR})
+  check_include_file_CXX("${TCMALLOC_HEADER}" HAVE_GPERFTOOLS_MALLOC_EXTENSION_H)
   cmake_pop_check_state()
+
   if (${HAVE_GPERFTOOLS_MALLOC_EXTENSION_H})
     find_library(TCMALLOC_LIBRARIES
       NAMES tcmalloc tcmalloc_minimal
+      HINTS "${TCMALLOC_DIR}/lib"
       DOC "TCMalloc libraries"
     )
     if (NOT TCMALLOC_LIBRARIES)
@@ -341,15 +293,10 @@ if (ENABLE_TCMALLOC)
     endif()
     list(APPEND KLEE_COMPONENT_EXTRA_LIBRARIES ${TCMALLOC_LIBRARIES})
     list(APPEND KLEE_COMPONENT_EXTRA_INCLUDE_DIRS ${TCMALLOC_INCLUDE_DIR})
-    if (("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang") OR ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU"))
-      # TCMalloc's documentation says its safest to pass these flags when
-      # building with gcc because gcc can optimize assuming its using its own
-      # malloc.
-      klee_component_add_cxx_flag(-fno-builtin-malloc REQUIRED)
-      klee_component_add_cxx_flag(-fno-builtin-calloc REQUIRED)
-      klee_component_add_cxx_flag(-fno-builtin-realloc REQUIRED)
-      klee_component_add_cxx_flag(-fno-builtin-free REQUIRED)
-    endif()
+    # TCMalloc's documentation says its safest to pass these flags when
+    # building with gcc because gcc can optimize assuming its using its own
+    # malloc.
+    list(APPEND KLEE_COMPONENT_CXX_FLAGS "-fno-builtin-malloc" "-fno-builtin-calloc" "-fno-builtin-realloc" "-fno-builtin-free")
   else()
     message(FATAL_ERROR "Can't find \"${TCMALLOC_HEADER}\"")
   endif()
@@ -363,10 +310,8 @@ endif()
 # Detect SQLite3
 ################################################################################
 find_package(SQLite3)
-if (SQLITE3_FOUND)
-  include_directories(${SQLITE3_INCLUDE_DIRS})
-else()
-    message( FATAL_ERROR "SQLite3 not found, please install" )
+if (NOT SQLITE3_FOUND)
+  message( FATAL_ERROR "SQLite3 not found, please install" )
 endif()
 
 ################################################################################
@@ -511,8 +456,6 @@ endif()
 ################################################################################
 set(KLEE_UCLIBC_PATH "" CACHE PATH "Path to klee-uclibc root directory")
 set(KLEE_UCLIBC_BCA_NAME "klee-uclibc.bca")
-list(APPEND KLEE_COMPONENT_CXX_DEFINES
-    -DKLEE_UCLIBC_BCA_NAME=\"${KLEE_UCLIBC_BCA_NAME}\")
 if (NOT KLEE_UCLIBC_PATH STREQUAL "")
   # Find the C library bitcode archive
   set(KLEE_UCLIBC_C_BCA "${KLEE_UCLIBC_PATH}/lib/libc.a")
@@ -621,7 +564,7 @@ message(STATUS "CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
 set(IS_ASAN_BUILD 0)
 set(IS_UBSAN_BUILD 0)
 set(IS_MSAN_BUILD 0)
-string(REPLACE " " ";" _flags ${CMAKE_CXX_FLAGS})
+string(REPLACE " " ";" _flags "${CMAKE_CXX_FLAGS}")
 foreach(arg IN ITEMS ${_flags})
   if (${arg} STREQUAL -fsanitize=address)
     set(IS_ASAN_BUILD 1)
@@ -659,10 +602,10 @@ configure_file(${CMAKE_SOURCE_DIR}/include/klee/Config/CompileTimeInfo.h.cmin
 )
 
 ################################################################################
-# Global include directories
+# Set KLEE-specific include files
 ################################################################################
-include_directories("${CMAKE_BINARY_DIR}/include")
-include_directories("${CMAKE_SOURCE_DIR}/include")
+
+set(KLEE_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include)
 
 ################################################################################
 # Set default location for targets in the build directory
@@ -685,7 +628,6 @@ message(STATUS "KLEE_SOLVER_LIBRARIES: '${KLEE_SOLVER_LIBRARIES}'")
 ################################################################################
 # KLEE components
 ################################################################################
-include("${CMAKE_SOURCE_DIR}/cmake/klee_add_component.cmake")
 add_subdirectory(lib)
 add_subdirectory(runtime)
 
