@@ -117,6 +117,11 @@ void create_stat(size_t size, struct stat *s) {
     free(filename);
     error_exit("%s:%d: Error writing %s\n", __FILE__, __LINE__, filename);
   }
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+  memset(s, 0, sizeof(struct stat));
+#endif
+#endif
 
   fstat(fd, s);
 
