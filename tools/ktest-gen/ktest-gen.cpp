@@ -151,6 +151,11 @@ int main(int argc, char *argv[]) {
          current_file++) {
       char *content_filename = content_filenames_list[current_file];
 
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+      memset(&file_stat[current_file], 0, sizeof(struct stat64));
+#endif
+#endif
       if ((fp[current_file] = fopen(content_filename, "r")) == NULL ||
           stat64(content_filename, file_stat + current_file) < 0) {
         perror("Failed to open");
@@ -218,7 +223,11 @@ int main(int argc, char *argv[]) {
     struct stat64 file_stat;
     char filename[6] = "stdin";
     char statname[11] = "stdin-stat";
-
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+    memset(&file_stat, 0, sizeof(struct stat64));
+#endif
+#endif
     if ((fp = fopen(stdin_content_filename, "r")) == NULL ||
         stat64(stdin_content_filename, &file_stat) < 0) {
       fprintf(stderr, "Failure opening %s\n", stdin_content_filename);
@@ -258,6 +267,11 @@ int main(int argc, char *argv[]) {
     char filename[7] = "stdout";
     char statname[12] = "stdout-stat";
 
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+    memset(&file_stat, 0, sizeof(struct stat64));
+#endif
+#endif
     if ((fp = fopen(stdout_content_filename, "r")) == NULL ||
         stat64(stdout_content_filename, &file_stat) < 0) {
       fprintf(stderr, "Failure opening %s\n", stdout_content_filename);

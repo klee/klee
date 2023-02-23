@@ -463,16 +463,31 @@ static void check_file(int index, exe_disk_file_t *dfile) {
   switch (index) {
   case __STDIN:
     strcpy(name, "stdin");
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+    memset(&s, 0, sizeof(struct stat));
+#endif
+#endif
     res = fstat(0, &s);
     break;
   case __STDOUT:
     strcpy(name, "stdout");
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+    memset(&s, 0, sizeof(struct stat));
+#endif
+#endif
     res = fstat(1, &s);
     break;
   default:
     name[0] = 'A' + index;
     name[1] = '\0';
     snprintf(fullname, sizeof(fullname), "%s/%s", replay_dir, name);
+#if defined(__has_feature)
+#if __has_feature(memory_sanitizer)
+    memset(&s, 0, sizeof(struct stat));
+#endif
+#endif
     res = stat(fullname, &s);
 
     break;
