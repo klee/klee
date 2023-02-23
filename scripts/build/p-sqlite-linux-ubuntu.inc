@@ -13,6 +13,7 @@ install_build_dependencies_sqlite() {
 }
 install_binary_artifact_sqlite() {
   [[ "${SANITIZER_SUFFIX}x" == "x" ]] || return 1
+  [[ "${SQLITE_VERSION}" == "322" ]] || return 1
 
   source "${DIR}/common-functions"
   with_sudo apt update -y
@@ -24,14 +25,7 @@ install_binary_artifact_sqlite() {
 
 # Check if the binary artifact is installed
 is_installed_sqlite() {
+  [[ -z "${SANITIZER_SUFFIX:-}" ]] || return 1
   [[ -f /usr/lib/x86_64-linux-gnu/libsqlite3.so ]] || return 1
   [[ -f /usr/include/sqlite3.h ]] || return 1
-}
-
-get_docker_config_id_sqlite() {
-  return 0
-}
-
-get_build_artifacts_sqlite() {
-  return 0
 }

@@ -5,7 +5,7 @@ install_build_dependencies_z3() {
 
   dependencies=(
     build-essential
-    python
+    python3
     git
     wget
     ca-certificates

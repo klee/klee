@@ -21,8 +21,8 @@ artifact_dependency_klee(){
     dependencies+=(uclibc)
   fi
 
-  [[ "${USE_TCMALLOC}" -eq 1 ]] && dependencies+=("tcmalloc")
-  [[ "${USE_LIBCXX}" -eq 1 ]] && dependencies+=("libcxx")
+  [[ "${USE_TCMALLOC:-}" -eq 1 ]] && dependencies+=("tcmalloc")
+  [[ "${USE_LIBCXX:-}" -eq 1 ]] && dependencies+=("libcxx")
 
   for d in "${dependencies[@]}"; do
     echo "${d}"
@@ -36,8 +36,8 @@ runtime_artifact_dependency_klee(){
   fi
   dependencies+=("llvm" "solvers" "gtest" "sqlite")
 
-  [[ "${USE_TCMALLOC}" -eq 1 ]] && dependencies+=("tcmalloc")
-  [[ "${USE_LIBCXX}" -eq 1 ]] && dependencies+=("libcxx")
+  [[ "${USE_TCMALLOC:-}" -eq 1 ]] && dependencies+=("tcmalloc")
+  [[ "${USE_LIBCXX:-}" -eq 1 ]] && dependencies+=("libcxx")
 
   for d in "${dependencies[@]}"; do
     echo "${d}"

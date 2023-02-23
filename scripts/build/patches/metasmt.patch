@@ -1,0 +1,72 @@
+--- /dev/null
++++ b/Z3-4.8.6/setup.sh
+@@ -0,0 +1,8 @@
++#!/bin/sh
++
++version=4.8.6
++branch=z3-4.8.6
++
++cmake_files_dir=$base_dir/Z3-git
++
++source $base_dir/Z3-git/shared.sh
+--- a/cvc4-1.5/shared.sh
++++ b/cvc4-1.5/shared.sh
+@@ -9,10 +9,10 @@ if [ -z "$package_dir" ] ; then
+   exit 1
+ fi
+
+-package=cvc4
++package=CVC4
+ source="$package-$version.tar.gz"
+ build_dir=$build/$package-$version
+-url="http://cvc4.cs.stanford.edu/downloads/builds/src/$source"
++url="https://github.com/CVC4/CVC4-archived/archive/refs/tags/$version.tar.gz"
+
+ if [ -z "$BOOST_ROOT" ]; then
+   dependencies="$DEPS_BOOST"
+@@ -24,7 +24,7 @@ fi
+ unpack() {
+   cd $cache &&
+   tar -xf $source &&
+-  mv -f $package-$version $build_dir
++  mv -f $package-archived-$version $build_dir
+   cd $build_dir
+ }
+
+@@ -39,7 +39,8 @@ build_install() {
+   contrib/get-antlr-3.4
+   # build CVC4 with --bsd to allow usage under the terms of
+   # the modified BSD license.
+-  ./configure --prefix="$target" --bsd --with-antlr-dir=$build_dir/antlr-3.4 --with-boost=$boost_path ANTLR=$build_dir/antlr-3.4/bin/antlr3 &&
++  ./configure.sh --prefix="$target" --antlr-dir=$build_dir/antlr-3.4 &&
++  cd build &&
+   make -j $num_threads &&
+   make install &&
+   cp -f "$package_dir/CVC4Config.cmake" "$target/CVC4Config.cmake"
+--- /dev/null
++++ b/cvc4-1.8/CVC4Config.cmake
+@@ -0,0 +1,5 @@
++get_filename_component(CVC4_DIR ${CMAKE_CURRENT_LIST_FILE} PATH)
++set(CVC4_BIN_DIRS     ${CVC4_DIR}/bin )
++set(CVC4_INCLUDE_DIRS ${CVC4_DIR}/include )
++set(CVC4_INCLUDE_DIR  ${CVC4_INCLUDE_DIRS} )
++set(CVC4_LIBRARIES    ${CVC4_DIR}/lib/libcvc4.so )
+--- /dev/null
++++ b/cvc4-1.8/setup.sh
+@@ -0,0 +1,5 @@
++#!/bin/sh
++
++version="1.8"
++source $base_dir/cvc4-1.5/shared.sh
++
+--- /dev/null
++++ b/yices-2.6.2/setup.sh
+@@ -0,0 +1,8 @@
++#!/bin/sh
++
++version=2.6.2
++branch=Yices-2.6.2
++
++config_files_dir=$base_dir/yices-git
++
++source $base_dir/yices-git/shared.sh
