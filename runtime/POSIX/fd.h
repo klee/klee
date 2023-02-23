@@ -16,6 +16,13 @@
 #error "_LARGEFILE64_SOURCE should be defined"
 #endif
 
+#if defined(__APPLE__) || defined(__FreeBSD__)
+#else
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#endif
+
 #include <dirent.h>
 #include <sys/types.h>
 

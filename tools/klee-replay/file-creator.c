@@ -290,7 +290,7 @@ static int create_pipe(const char *fname, exe_disk_file_t *dfile,
   }
 }
 
-
+int futimes(int fd, const struct timeval tv[2]);
 static int create_reg_file(const char *fname, exe_disk_file_t *dfile,
                            const char *tmpdir) {
   struct stat64 *s = dfile->stat;
@@ -395,6 +395,7 @@ static void create_file(int target_fd,
 
 char replay_dir[] = "/tmp/klee-replay-XXXXXX";
 
+char *mkdtemp(char *template);
 void replay_create_files(exe_file_system_t *exe_fs) {
   unsigned k;
 
