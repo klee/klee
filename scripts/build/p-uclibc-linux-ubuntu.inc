@@ -7,7 +7,7 @@ install_build_dependencies_uclibc() {
     build-essential
     ca-certificates
     git
-    python
+    python3
     libncurses5-dev
     wget
   )

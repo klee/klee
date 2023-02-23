@@ -38,7 +38,7 @@ run_tests() {
   cd "${build_dir}"
 
   # Remove klee from PATH
-  export PATH=${PATH%":/home/klee/klee_build/bin"}
+  export PATH=${PATH/":/home/klee/klee_build/bin"/}
   if which klee; then
     return 1 # should not happen
   fi

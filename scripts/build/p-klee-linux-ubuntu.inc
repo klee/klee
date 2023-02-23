@@ -12,6 +12,12 @@ install_build_dependencies_klee() {
     python3-wheel
   )
 
+  if [[ "${SOLVERS:-}" == "metaSMT" ]]; then
+    dependencies+=(
+      libboost-dev
+      libgmp-dev
+    )
+  fi
   if [[ $(to_bool "${COVERAGE}") -eq 1 ]]; then
     dependencies+=(lcov curl git)
   fi
@@ -20,7 +26,7 @@ install_build_dependencies_klee() {
     dependencies+=(doxygen graphviz)
   fi
 
-  with_sudo apt -y --no-install-recommends install "${dependencies[@]}"
+  with_sudo apt-get -y --no-install-recommends install "${dependencies[@]}"
 
   pip3 install --user lit
   pip3 install --user tabulate

@@ -6,3 +6,10 @@ required_variables_stp=(
 
 # On which artifacts does STP depend on
 artifact_dependency_stp=("sanitizer")
+
+artifact_dependency_stp() {
+  echo "sanitizer"
+  if [[ "${SANITIZER_BUILD:-}" == "memory" ]]; then
+    echo "llvm"
+  fi
+}

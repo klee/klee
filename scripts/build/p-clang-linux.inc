@@ -7,9 +7,12 @@ setup_artifact_variables_clang() {
     LLVM_CONFIG=$(which "llvm-config${version}")
   fi
 
-
   local bin_path=""
-  bin_path="$(dirname "$(readlink -f "$(which "clang${version}")")")"
+  bin_path=$(which "clang${version}")
+  [[ -z "${bin_path}" ]] && return 1
+
+  bin_path="$(dirname "$(readlink -f "${bin_path}")")"
+  [[ -z "${bin_path}" ]] && return 1
 
   BITCODE_CC="${bin_path}/clang"
   BITCODE_CXX="${bin_path}/clang++"

@@ -7,6 +7,6 @@ required_variables_check_libcxx() {
 }
 
 artifact_dependency_libcxx(){
-  echo "clang"
+  echo "llvm"
   echo "cmake"
 }

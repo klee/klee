@@ -107,6 +107,7 @@ get_build_artifacts_libcxx() {
   (
     setup_build_variables_libcxx
     echo "${LIBCXX_INSTALL}"
+    echo "${LIBCXX_SRC}"
   )
 }
 
