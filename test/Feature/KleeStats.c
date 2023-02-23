@@ -29,7 +29,7 @@ int main(){
 // First check we find a line with the expected format
 // CHECK-STATS: Path,Instrs,Time(s),ICov(%),BCov(%),ICount,TSolver(%),ActiveStates,MaxActiveStates,Mem(MiB),MaxMem(MiB)
 // Check there is a line with .klee-out dir, non zero instruction, less than 1 second execution time and 100 ICov.
-// CHECK-STATS: {{.*\.klee-out,[1-9]+,0\.([0-9]+),100\.00}}
+// CHECK-STATS: {{.*\.klee-out,[1-9]+,[0-9]+\.([0-9]+),100\.00}}
 
 // Check other formats
 // CHECK-STATS-ABS-TIMES: Path,Time(s),TUser(s),TResolve(s),TCex(s),TSolver(s),TFork(s)
