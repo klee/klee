@@ -46,9 +46,9 @@ endfunction()
 if (TARGET gtest)
   # try to reuse LLVM's 'gtest' target
 
-  message(WARNING "LLVM exports its 'gtest' CMake target (for Google Test), so"
-    "KLEE cannot create its own. Thus, KLEE will reuse the existing one. This"
-    "is, however, only recommended if LLVM and KLEE were built using the same"
+  message(WARNING "LLVM exports its 'gtest' CMake target (for Google Test), so "
+    "KLEE cannot create its own. Thus, KLEE will reuse the existing one. This "
+    "is, however, only recommended if LLVM and KLEE were built using the same "
     "compiler and linker flags (to prevent compatibility issues).\n"
     "To prevent CMake from reusing the target or to use a different version "
     "of Google Test, try either of the following:\n"
@@ -166,6 +166,8 @@ else()
   endif()
 endif()
 
+enable_testing()
+
 
 # This keeps track of all the unit test
 # targets so we can ensure they are built
@@ -199,7 +201,8 @@ endif()
 
 add_library(unittest_main)
 target_sources(unittest_main PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/TestMain.cpp")
-klee_get_llvm_libs(UNITTEST_MAIN_LIBS Support)
+llvm_map_components_to_libnames(UNITTEST_MAIN_LIBS support)
+
 target_link_libraries(unittest_main
   PUBLIC
   ${GTEST_TARGET_NAME}

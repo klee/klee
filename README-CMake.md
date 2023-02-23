@@ -87,13 +87,7 @@ cmake -DCMAKE_BUILD_TYPE=Release /path/to/klee/src
 
 * `LIT_ARGS` (STRING) - Semi-colon separated list of lit options.
 
-* `LLVM_CONFIG_BINARY` (STRING) - Path to `llvm-config` binary. This is
-   only relevant if `USE_CMAKE_FIND_PACKAGE_LLVM` is `FALSE`. This is used
-   to detect the LLVM version and find libraries.
-
-* `LLVM_DIR` (STRING) - Path to `LLVMConfig.cmake`. This is only relevant if
-   `USE_CMAKE_FIND_PACKAGE_LLVM` is `TRUE`. This can be used to tell CMake where
-   it can find LLVM outside of standard directories.
+* `LLVM_DIR` (STRING) - Path to the target LLVM install directory
 
 * `metaSMT_DIR` (STRING) - Provides a hint to CMake, where the metaSMT constraint
   solver can be found.  This should be an absolute path to a directory
@@ -104,8 +98,5 @@ cmake -DCMAKE_BUILD_TYPE=Release /path/to/klee/src
   containing the file `STPConfig.cmake`. This file is installed by STP
   but also exists in its build directory. This allows KLEE to link
   against STP in a build directory or an installed copy.
-
-* `USE_CMAKE_FIND_PACKAGE_LLVM` (BOOLEAN) - Use `find_package(LLVM CONFIG)`
-   to find LLVM (instead of using `llvm-config` with `LLVM_CONFIG_BINARY`).
 
 * `WARNINGS_AS_ERRORS` (BOOLEAN) - Treat warnings as errors when building KLEE.

@@ -44,7 +44,7 @@ if (ENABLE_SOLVER_STP)
       message(STATUS "Using STP shared library")
       list(APPEND KLEE_SOLVER_LIBRARIES "${STP_SHARED_LIBRARY}")
     endif()
-    list(APPEND KLEE_COMPONENT_EXTRA_INCLUDE_DIRS "${STP_INCLUDE_DIRS}")
+    list(APPEND KLEE_SOLVER_INCLUDE_DIRS ${STP_INCLUDE_DIRS})
     message(STATUS "STP_DIR: ${STP_DIR}")
     set(ENABLE_STP 1) # For config.h
   else()
