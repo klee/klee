@@ -328,6 +328,11 @@ build_docker() {
     for f in "${DIR}/patches/${v}"*.patch; do
       cp -r "$f" "${temp_dir}/patches/"
     done
+
+    mkdir -p "${temp_dir}/sanitizer"
+    for f in "${DIR}/sanitizer/${v}"*.txt; do
+      cp -r "$f" "${temp_dir}/sanitizer/"
+    done
   done
   shopt -u nullglob # disallow nullglobing
 
