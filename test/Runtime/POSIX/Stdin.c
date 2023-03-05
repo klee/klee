@@ -10,10 +10,10 @@
 // RUN: grep "read:sym:yes" %t.log
 // RUN: grep "read:sym:no" %t.log
 
-#include <stdio.h>
-#include <fcntl.h>
-#include <sys/stat.h>
 #include <assert.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <sys/stat.h>
 
 int main(int argc, char **argv) {
   struct stat stats;
@@ -37,13 +37,13 @@ int main(int argc, char **argv) {
     printf("unknown mode\n");
   }
 
-  assert(stats.st_size==4);
+  assert(stats.st_size == 4);
 
   if (S_ISREG(stats.st_mode)) {
     char buf[10];
     int n = read(0, buf, 5);
     assert(n == 4);
-    
+
     if (strcmp(buf, "HI!")) {
       printf("read:sym:yes\n");
     } else {

@@ -21,10 +21,10 @@ public:
   ValueType(); // empty range
   ValueType(uint64_t value);
   ValueType(uint64_t min, uint64_t max);
-  
+
   bool mustEqual(const uint64_t b);
   bool mustEqual(const ValueType &b);
-  bool mayEqual(const uint64_t b);  
+  bool mayEqual(const uint64_t b);
   bool mayEqual(const ValueType &b);
 
   bool isFullRange(unsigned width);
@@ -52,8 +52,7 @@ public:
 }
 */
 
-template<class T>
-class ExprRangeEvaluator {
+template <class T> class ExprRangeEvaluator {
 protected:
   /// getInitialReadRange - Return a range for the initial value of the given
   /// array (which may be constant), for the given range of indices.
@@ -68,9 +67,8 @@ public:
   T evaluate(const ref<Expr> &e);
 };
 
-template<class T>
-T ExprRangeEvaluator<T>::evalRead(const UpdateList &ul,
-                                  T index) {
+template <class T>
+T ExprRangeEvaluator<T>::evalRead(const UpdateList &ul, T index) {
   T res;
 
   for (const UpdateNode *un = ul.head.get(); un; un = un->next.get()) {
@@ -82,27 +80,27 @@ T ExprRangeEvaluator<T>::evalRead(const UpdateList &ul,
       res = res.set_union(evaluate(un->value));
       if (res.isFullRange(8)) {
         return res;
-      } 
+      }
     }
   }
 
   return res.set_union(getInitialReadRange(*ul.root, index));
 }
 
-template<class T>
-T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
+template <class T> T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
   switch (e->getKind()) {
   case Expr::Constant:
     return T(cast<ConstantExpr>(e));
 
-  case Expr::NotOptimized: 
+  case Expr::NotOptimized:
     break;
 
   case Expr::Read: {
     const ReadExpr *re = cast<ReadExpr>(e);
     T index = evaluate(re->index);
 
-    assert(re->updates.root && re->getWidth() == re->updates.root->range && "unexpected multibyte read");
+    assert(re->updates.root && re->getWidth() == re->updates.root->range &&
+           "unexpected multibyte read");
 
     return evalRead(re->updates, index);
   }
@@ -110,7 +108,7 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
   case Expr::Select: {
     const SelectExpr *se = cast<SelectExpr>(e);
     T cond = evaluate(se->cond);
-      
+
     if (cond.mustEqual(1)) {
       return evaluate(se->trueExpr);
     } else if (cond.mustEqual(0)) {
@@ -124,8 +122,8 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
   case Expr::Concat: {
     const Expr *ep = e.get();
     T res(0);
-    for (unsigned i=0; i<ep->getNumKids(); i++)
-      res = res.concat(evaluate(ep->getKid(i)),8);
+    for (unsigned i = 0; i < ep->getNumKids(); i++)
+      res = res.concat(evaluate(ep->getKid(i)), 8);
     return res;
   }
 
@@ -206,7 +204,7 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
     const BinaryExpr *be = cast<BinaryExpr>(e);
     T left = evaluate(be->left);
     T right = evaluate(be->right);
-      
+
     if (left.mustEqual(right)) {
       return T(1);
     } else if (!left.mayEqual(right)) {
@@ -219,7 +217,7 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
     const BinaryExpr *be = cast<BinaryExpr>(e);
     T left = evaluate(be->left);
     T right = evaluate(be->right);
-      
+
     if (left.max() < right.min()) {
       return T(1);
     } else if (left.min() >= right.max()) {
@@ -231,7 +229,7 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
     const BinaryExpr *be = cast<BinaryExpr>(e);
     T left = evaluate(be->left);
     T right = evaluate(be->right);
-      
+
     if (left.max() <= right.min()) {
       return T(1);
     } else if (left.min() > right.max()) {
@@ -257,7 +255,7 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
     T left = evaluate(be->left);
     T right = evaluate(be->right);
     unsigned bits = be->left->getWidth();
-      
+
     if (left.maxSigned(bits) <= right.minSigned(bits)) {
       return T(1);
     } else if (left.minSigned(bits) > right.maxSigned(bits)) {
@@ -280,6 +278,6 @@ T ExprRangeEvaluator<T>::evaluate(const ref<Expr> &e) {
   return T(0, bits64::maxValueOfNBits(e->getWidth()));
 }
 
-}
+} // namespace klee
 
 #endif /* KLEE_EXPRRANGEEVALUATOR_H */

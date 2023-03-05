@@ -74,4 +74,4 @@ TEST(ArrayExprTest, HashCollisions) {
   EXPECT_EQ(a->evaluate(oUpdatedRead), getConstant(42, Expr::Int8));
   EXPECT_EQ(a->evaluate(oFirstRead), getConstant(5, Expr::Int8));
 }
-}
+} // namespace

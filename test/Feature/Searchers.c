@@ -26,7 +26,6 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --use-iterative-deepening-time-search --use-batching-search --search=nurs:qc %t2.bc
 
-
 /* this test is basically just for coverage and doesn't really do any
    correctness check (aside from testing that the various combinations
    don't crash) */
@@ -37,12 +36,12 @@ int validate(char *buf, int N) {
 
   int i;
 
-  for (i=0; i<N; i++) {
-    if (buf[i]==0) {
+  for (i = 0; i < N; i++) {
+    if (buf[i] == 0) {
       return 0;
     }
   }
-  
+
   return 1;
 }
 
@@ -53,7 +52,7 @@ int main(int argc, char **argv) {
   int N = SYMBOLIC_SIZE;
   unsigned char *buf = malloc(N);
   int i;
-  
+
   klee_make_symbolic(buf, N, "buf");
   if (validate(buf, N))
     return buf[0];

@@ -7,7 +7,7 @@ uint32_t util_make_and_i1(uint32_t a, uint32_t b);
 uint32_t util_make_or_i1(uint32_t a, uint32_t b);
 
 uint16_t util_make_concat2(uint8_t a, uint8_t b);
-uint32_t util_make_concat4(uint8_t a, uint8_t b, 
+uint32_t util_make_concat4(uint8_t a, uint8_t b,
                            uint8_t c, uint8_t d);
 uint64_t util_make_concat8(uint8_t a, uint8_t b,
                            uint8_t c, uint8_t d,

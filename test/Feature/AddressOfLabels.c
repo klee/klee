@@ -5,34 +5,35 @@
 
 #include <stdio.h>
 
-int main(int argc, char * argv[]) {
-	// prevent CFGSimplificationPass optimisation
-	void * dummy = &&one;
-	switch(argc) {
-		case 1: break;
-		case 2:
-			dummy = &&three;
-			goto *dummy;
-		default:
-			goto *dummy;
-	}
+int main(int argc, char *argv[]) {
+  // prevent CFGSimplificationPass optimisation
+  void *dummy = &&one;
+  switch (argc) {
+  case 1:
+    break;
+  case 2:
+    dummy = &&three;
+    goto *dummy;
+  default:
+    goto *dummy;
+  }
 
-	// the real test
-	void * lptr = &&two;
-	goto *lptr;
+  // the real test
+  void *lptr = &&two;
+  goto *lptr;
 
 one:
-	puts("Label one");
-// CHECK-NOT: Label one
-	return 1;
+  puts("Label one");
+  // CHECK-NOT: Label one
+  return 1;
 
 two:
-	puts("Label two");
-// CHECK: Label two
-	return 0;
+  puts("Label two");
+  // CHECK: Label two
+  return 0;
 
 three:
-	puts("Label three");
-// CHECK-NOT: Label three
-	return 1;
+  puts("Label three");
+  // CHECK-NOT: Label three
+  return 1;
 }

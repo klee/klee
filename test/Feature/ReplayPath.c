@@ -7,8 +7,8 @@
 // RUN: %klee --output-dir=%t.klee-out-2 --replay-path %t.klee-out/test000001.path %t2.bc > %t3.log
 // RUN: diff %t3.log %t3.good
 
-#include <unistd.h>
 #include <stdio.h>
+#include <unistd.h>
 
 void cond_exit() {
 #ifdef COND_EXIT
@@ -22,14 +22,25 @@ int main() {
 
   klee_make_symbolic(&x, sizeof x, "x");
 
-  if (x&1) res *= 2; else cond_exit();
-  if (x&2) res *= 3; else cond_exit();
-  if (x&4) res *= 5; else cond_exit();
+  if (x & 1)
+    res *= 2;
+  else
+    cond_exit();
+  if (x & 2)
+    res *= 3;
+  else
+    cond_exit();
+  if (x & 4)
+    res *= 5;
+  else
+    cond_exit();
 
   // get forced branch coverage
-  if (x&2) res *= 7;
-  if (!(x&2)) res *= 11;
+  if (x & 2)
+    res *= 7;
+  if (!(x & 2))
+    res *= 11;
   printf("res: %d\n", res);
- 
+
   return 0;
 }

@@ -18,10 +18,8 @@
 
 #include "llvm/Support/raw_ostream.h"
 
-
 namespace klee {
-Solver *constructSolverChain(Solver *coreSolver,
-                             std::string querySMT2LogPath,
+Solver *constructSolverChain(Solver *coreSolver, std::string querySMT2LogPath,
                              std::string baseSolverQuerySMT2LogPath,
                              std::string queryKQueryLogPath,
                              std::string baseSolverQueryKQueryLogPath) {
@@ -29,13 +27,15 @@ Solver *constructSolverChain(Solver *coreSolver,
   const time::Span minQueryTimeToLog(MinQueryTimeToLog);
 
   if (QueryLoggingOptions.isSet(SOLVER_KQUERY)) {
-    solver = createKQueryLoggingSolver(solver, baseSolverQueryKQueryLogPath, minQueryTimeToLog, LogTimedOutQueries);
+    solver = createKQueryLoggingSolver(solver, baseSolverQueryKQueryLogPath,
+                                       minQueryTimeToLog, LogTimedOutQueries);
     klee_message("Logging queries that reach solver in .kquery format to %s\n",
                  baseSolverQueryKQueryLogPath.c_str());
   }
 
   if (QueryLoggingOptions.isSet(SOLVER_SMTLIB)) {
-    solver = createSMTLIBLoggingSolver(solver, baseSolverQuerySMT2LogPath, minQueryTimeToLog, LogTimedOutQueries);
+    solver = createSMTLIBLoggingSolver(solver, baseSolverQuerySMT2LogPath,
+                                       minQueryTimeToLog, LogTimedOutQueries);
     klee_message("Logging queries that reach solver in .smt2 format to %s\n",
                  baseSolverQuerySMT2LogPath.c_str());
   }
@@ -59,13 +59,15 @@ Solver *constructSolverChain(Solver *coreSolver,
     solver = createValidatingSolver(solver, coreSolver);
 
   if (QueryLoggingOptions.isSet(ALL_KQUERY)) {
-    solver = createKQueryLoggingSolver(solver, queryKQueryLogPath, minQueryTimeToLog, LogTimedOutQueries);
+    solver = createKQueryLoggingSolver(solver, queryKQueryLogPath,
+                                       minQueryTimeToLog, LogTimedOutQueries);
     klee_message("Logging all queries in .kquery format to %s\n",
                  queryKQueryLogPath.c_str());
   }
 
   if (QueryLoggingOptions.isSet(ALL_SMTLIB)) {
-    solver = createSMTLIBLoggingSolver(solver, querySMT2LogPath, minQueryTimeToLog, LogTimedOutQueries);
+    solver = createSMTLIBLoggingSolver(solver, querySMT2LogPath,
+                                       minQueryTimeToLog, LogTimedOutQueries);
     klee_message("Logging all queries in .smt2 format to %s\n",
                  querySMT2LogPath.c_str());
   }
@@ -76,4 +78,4 @@ Solver *constructSolverChain(Solver *coreSolver,
 
   return solver;
 }
-}
+} // namespace klee

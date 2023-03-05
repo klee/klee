@@ -13,41 +13,40 @@
 #include <functional>
 
 namespace klee {
-  template <class T, class Comparator = std::less<T>>
-  class DiscretePDF {
-    // not perfectly parameterized, but float/double/int should work ok,
-    // although it would be better to have choose argument range from 0
-    // to queryable max.
-    typedef double weight_type;
+template <class T, class Comparator = std::less<T>> class DiscretePDF {
+  // not perfectly parameterized, but float/double/int should work ok,
+  // although it would be better to have choose argument range from 0
+  // to queryable max.
+  typedef double weight_type;
 
-  public:
-    DiscretePDF();
-    ~DiscretePDF();
+public:
+  DiscretePDF();
+  ~DiscretePDF();
 
-    bool empty() const;
-    void insert(T item, weight_type weight);
-    void update(T item, weight_type newWeight);
-    void remove(T item);
-    bool inTree(T item);
-    weight_type getWeight(T item);
+  bool empty() const;
+  void insert(T item, weight_type weight);
+  void update(T item, weight_type newWeight);
+  void remove(T item);
+  bool inTree(T item);
+  weight_type getWeight(T item);
 
-    /* pick a tree element according to its
-     * weight. p should be in [0,1).
-     */
-    T choose(double p);
+  /* pick a tree element according to its
+   * weight. p should be in [0,1).
+   */
+  T choose(double p);
 
-  private:
-    class Node;
-    Node *m_root;
+private:
+  class Node;
+  Node *m_root;
 
-    Node **lookup(T item, Node **parent_out);
-    void split(Node *node);
-    void rotate(Node *node);
-    void lengthen(Node *node);
-    void propagateSumsUp(Node *n);
-  };
+  Node **lookup(T item, Node **parent_out);
+  void split(Node *node);
+  void rotate(Node *node);
+  void lengthen(Node *node);
+  void propagateSumsUp(Node *n);
+};
 
-}
+} // namespace klee
 
 #include "DiscretePDF.inc"
 

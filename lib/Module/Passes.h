@@ -179,10 +179,11 @@ public:
 
 private:
   static const llvm::FunctionType *getFunctionType(const llvm::GlobalValue *gv);
-  static bool checkType(const llvm::GlobalValue *match, const llvm::GlobalValue *replacement);
-  static bool tryToReplace(llvm::GlobalValue *match, llvm::GlobalValue *replacement);
+  static bool checkType(const llvm::GlobalValue *match,
+                        const llvm::GlobalValue *replacement);
+  static bool tryToReplace(llvm::GlobalValue *match,
+                           llvm::GlobalValue *replacement);
   static bool isFunctionOrGlobalFunctionAlias(const llvm::GlobalValue *gv);
-
 };
 
 #ifdef USE_WORKAROUND_LLVM_PR39177

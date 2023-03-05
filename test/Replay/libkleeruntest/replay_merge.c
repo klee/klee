@@ -13,12 +13,11 @@
 // REPLAY-DAG: 0
 // REPLAY-DAG: 1
 
-
 #include "klee/klee.h"
 
 #include <stdio.h>
 
-int main(int argc, char** args){
+int main(int argc, char **args) {
 
   int x;
   int a;
@@ -27,7 +26,7 @@ int main(int argc, char** args){
   klee_make_symbolic(&x, sizeof(x), "x");
   klee_make_symbolic(&a, sizeof(a), "a");
 
-  if (a == 0){
+  if (a == 0) {
     klee_open_merge();
 
     if (x == 1) {
@@ -44,6 +43,6 @@ int main(int argc, char** args){
   if (foo > 0)
     foo = 1;
   printf("foo = %d\n", foo);
-  
+
   return 0;
 }

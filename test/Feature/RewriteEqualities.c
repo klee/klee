@@ -11,22 +11,22 @@
 
 #include <stdio.h>
 
-int run(unsigned char * x, unsigned char * y) {
+int run(unsigned char *x, unsigned char *y) {
   y[6] = 15;
 
-  if(x[2] >= 10){
+  if (x[2] >= 10) {
     return 1;
   }
 
-  if(y[x[2]] < 11){
-    if(x[2] == 8){
+  if (y[x[2]] < 11) {
+    if (x[2] == 8) {
       // CHECK:      (query [(Eq 8 (Read w8 2 x))]
       // CHECK-NEXT: false)
       return 2;
-    } else{
+    } else {
       return 3;
     }
-  } else{
+  } else {
     return 4;
   }
 }

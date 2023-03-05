@@ -7,32 +7,32 @@
 #include <stdio.h>
 
 int main(void) {
-	void * lptr = &&one;
-	lptr = &&two;
-	lptr = &&three;
+  void *lptr = &&one;
+  lptr = &&two;
+  lptr = &&three;
 
-	klee_make_symbolic(&lptr, sizeof(lptr), "lptr");
-// CHECK-ERR: KLEE: ERROR: {{.*}} indirectbr: illegal label address
-	goto *lptr;
+  klee_make_symbolic(&lptr, sizeof(lptr), "lptr");
+  // CHECK-ERR: KLEE: ERROR: {{.*}} indirectbr: illegal label address
+  goto *lptr;
 
 one:
-	puts("Label one");
-// CHECK-MSG-DAG: Label one
-	return 0;
+  puts("Label one");
+  // CHECK-MSG-DAG: Label one
+  return 0;
 
 two:
-	puts("Label two");
-// CHECK-MSG-DAG: Label two
-	return 0;
+  puts("Label two");
+  // CHECK-MSG-DAG: Label two
+  return 0;
 
 three:
-	puts("Label three");
-// CHECK-MSG-DAG: Label three
-	return 0;
+  puts("Label three");
+  // CHECK-MSG-DAG: Label three
+  return 0;
 
 // LLVM should infer only {one, two, three} as valid targets
 four:
-	puts("Label four");
-// CHECK-MSG-NOT: Label four
-	return 0;
+  puts("Label four");
+  // CHECK-MSG-NOT: Label four
+  return 0;
 }

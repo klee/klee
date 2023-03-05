@@ -1,4 +1,5 @@
-//===-- SearcherTest.cpp ----------------------------------------------------===//
+//===-- SearcherTest.cpp
+//----------------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -10,10 +11,10 @@
 
 #include "gtest/gtest.h"
 
-#include "klee/ADT/RNG.h"
 #include "Core/ExecutionState.h"
 #include "Core/PTree.h"
 #include "Core/Searcher.h"
+#include "klee/ADT/RNG.h"
 
 #include "llvm/Support/raw_ostream.h"
 
@@ -214,4 +215,4 @@ TEST(SearcherDeathTest, TooManyRandomPaths) {
   RandomPathSearcher rp2(processTree, rng);
   ASSERT_DEATH({ RandomPathSearcher rp3(processTree, rng); }, "");
 }
-}
+} // namespace

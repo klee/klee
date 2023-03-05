@@ -38,13 +38,12 @@ int main() {
     assert(f[1] == 2);
     assert(f[2] == 3);
     assert(f[3] == 4);
-  }
-  else {
+  } else {
     f[k] = 255; // Symbolic out-of-bounds write
     assert(f[0] == 1);
     assert(f[1] == 2);
     assert(f[2] == 3);
-    assert(f[3] == 4); 
+    assert(f[3] == 4);
   }
 
   return 0;

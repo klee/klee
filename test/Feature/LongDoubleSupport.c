@@ -2,9 +2,9 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --optimize=0 --exit-on-error %t1.bc > %t2.out
 
-#include <stdio.h>
-#include <float.h>
 #include <assert.h>
+#include <float.h>
+#include <stdio.h>
 
 // FIXME: This doesn't really work at all, it just doesn't
 // crash. Until we have wide constant support, that is all we care

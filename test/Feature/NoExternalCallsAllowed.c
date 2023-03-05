@@ -5,7 +5,7 @@
 
 #include <stdio.h>
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   // CHECK: Disallowed call to external function: abs
   int x = abs(argc);
   printf("%d\n", argc);

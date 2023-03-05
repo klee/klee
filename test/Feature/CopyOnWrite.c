@@ -9,11 +9,11 @@
 unsigned branches = 0;
 
 void explode(int *ap, int i, int *result) {
-  if (i<N) {
+  if (i < N) {
     (*result)++;
     if (ap[i]) // just cause a fork
-      branches++; 
-    return explode(ap, i+1, result);
+      branches++;
+    return explode(ap, i + 1, result);
   }
 }
 
@@ -21,7 +21,7 @@ int main() {
   int result = 0;
   int a[N];
   klee_make_symbolic(a, sizeof a, "a");
-  explode(a,0,&result);
-  assert(result==N);
+  explode(a, 0, &result);
+  assert(result == N);
   return 0;
 }

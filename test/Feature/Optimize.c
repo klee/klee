@@ -10,14 +10,14 @@
 int main() {
   int i, res = 0;
 
-  for (i=1; i<=1000; i++)
+  for (i = 1; i <= 1000; i++)
     res += i;
 
-  if (res == (1000*1001)/2) {
+  if (res == (1000 * 1001) / 2) {
     printf("good\n");
   } else {
     printf("bad\n");
   }
-  
+
   return 0;
 }

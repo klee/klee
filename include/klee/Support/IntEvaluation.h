@@ -16,7 +16,7 @@
 
 // ASSUMPTION: invalid bits in each uint64_t are 0. the trade-off here is
 // between making trunc/zext/sext fast and making operations that depend
-// on the invalid bits being 0 fast. 
+// on the invalid bits being 0 fast.
 
 namespace klee {
 namespace ints {
@@ -49,7 +49,8 @@ inline uint64_t zext(uint64_t l, unsigned outWidth, unsigned inWidth) {
 // sign-extension of l from inWidth to outWidth bits
 inline uint64_t sext(uint64_t l, unsigned outWidth, unsigned inWidth) {
   uint32_t numInvalidBits = MAX_BITS - inWidth;
-  return bits64::truncateToNBits(((int64_t)(l << numInvalidBits)) >> numInvalidBits, outWidth);
+  return bits64::truncateToNBits(
+      ((int64_t)(l << numInvalidBits)) >> numInvalidBits, outWidth);
 }
 
 // unsigned divide of l by r
@@ -95,44 +96,26 @@ inline uint64_t shl(uint64_t l, uint64_t shift, unsigned inWidth) {
 }
 
 // logical AND of l and r
-inline uint64_t land(uint64_t l, uint64_t r, unsigned inWidth) {
-  return l & r;
-}
+inline uint64_t land(uint64_t l, uint64_t r, unsigned inWidth) { return l & r; }
 
 // logical OR of l and r
-inline uint64_t lor(uint64_t l, uint64_t r, unsigned inWidth) {
-  return l | r;
-}
+inline uint64_t lor(uint64_t l, uint64_t r, unsigned inWidth) { return l | r; }
 
 // logical XOR of l and r
-inline uint64_t lxor(uint64_t l, uint64_t r, unsigned inWidth) {
-  return l ^ r;
-}
+inline uint64_t lxor(uint64_t l, uint64_t r, unsigned inWidth) { return l ^ r; }
 
 // comparison operations
-inline uint64_t eq(uint64_t l, uint64_t r, unsigned inWidth) {
-  return l == r;
-}
+inline uint64_t eq(uint64_t l, uint64_t r, unsigned inWidth) { return l == r; }
 
-inline uint64_t ne(uint64_t l, uint64_t r, unsigned inWidth) {
-  return l != r;
-}
+inline uint64_t ne(uint64_t l, uint64_t r, unsigned inWidth) { return l != r; }
 
-inline uint64_t ult(uint64_t l, uint64_t r, unsigned inWidth) {
-  return l < r;
-}
+inline uint64_t ult(uint64_t l, uint64_t r, unsigned inWidth) { return l < r; }
 
-inline uint64_t ule(uint64_t l, uint64_t r, unsigned inWidth) {
-  return l <= r;
-}
+inline uint64_t ule(uint64_t l, uint64_t r, unsigned inWidth) { return l <= r; }
 
-inline uint64_t ugt(uint64_t l, uint64_t r, unsigned inWidth) {
-  return l > r;
-}
+inline uint64_t ugt(uint64_t l, uint64_t r, unsigned inWidth) { return l > r; }
 
-inline uint64_t uge(uint64_t l, uint64_t r, unsigned inWidth) {
-  return l >= r;
-}
+inline uint64_t uge(uint64_t l, uint64_t r, unsigned inWidth) { return l >= r; }
 
 inline uint64_t slt(uint64_t l, uint64_t r, unsigned inWidth) {
   int64_t sl = sext(l, MAX_BITS, inWidth);

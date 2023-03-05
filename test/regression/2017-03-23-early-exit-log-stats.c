@@ -7,9 +7,9 @@
 // RUN: FileCheck -check-prefix=CHECK-STATS -input-file=%t.stats.csv %s
 #include "klee/klee.h"
 #include <stdlib.h>
-int main(){
+int main() {
   int a;
-  klee_make_symbolic (&a, sizeof(int), "a");
+  klee_make_symbolic(&a, sizeof(int), "a");
   if (a) {
     // CHECK-KLEE: EXITING ON ERROR
     // CHECK-KLEE-NEXT: Error: abort failure

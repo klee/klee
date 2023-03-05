@@ -8,9 +8,11 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-int main(int argc, char * argv[]) {
+int main(int argc, char *argv[]) {
   char cwd[PATH_MAX] = {0};
 
-  if (!getcwd(cwd, PATH_MAX)) exit(EXIT_FAILURE);
-  if (!canonicalize_file_name(cwd)) exit(EXIT_FAILURE);
+  if (!getcwd(cwd, PATH_MAX))
+    exit(EXIT_FAILURE);
+  if (!canonicalize_file_name(cwd))
+    exit(EXIT_FAILURE);
 }

@@ -11,8 +11,8 @@
 
 #include "klee/Expr/Expr.h"
 
-#include "llvm/IR/Type.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Type.h"
 
 #include <cassert>
 

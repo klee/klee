@@ -12,7 +12,7 @@
 #define MAX_ATEXIT 128
 
 static struct {
-  void (*fn)(void*);
+  void (*fn)(void *);
   void *arg;
   void *dso_handle;
 } AtExit[MAX_ATEXIT];
@@ -26,29 +26,25 @@ static void RunAtExit(void) {
     AtExit[i].fn(AtExit[i].arg);
 }
 
-int __cxa_atexit(void (*fn)(void*),
-                 void *arg,
-                 void *dso_handle) {
+int __cxa_atexit(void (*fn)(void *), void *arg, void *dso_handle) {
   klee_warning_once("FIXME: __cxa_atexit being ignored");
-  
+
   /* Better to just report an error here than return 1 (the defined
    * semantics).
    */
   if (NumAtExit == MAX_ATEXIT)
-    klee_report_error(__FILE__,
-                      __LINE__,
-                      "__cxa_atexit: no room in array!",
+    klee_report_error(__FILE__, __LINE__, "__cxa_atexit: no room in array!",
                       "exec");
-  
+
   AtExit[NumAtExit].fn = fn;
   AtExit[NumAtExit].arg = arg;
   ++NumAtExit;
-  
+
   return 0;
 }
 
 // This variant is part of more recent glibc versions and
 // is required by the Rust standard library
-int __cxa_thread_atexit_impl(void (*fn)(void*), void *arg, void *dso_handle) {
+int __cxa_thread_atexit_impl(void (*fn)(void *), void *arg, void *dso_handle) {
   return __cxa_atexit(fn, arg, dso_handle);
 }

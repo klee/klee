@@ -5,7 +5,7 @@
 #include <assert.h>
 
 typedef unsigned short uint16;
-typedef unsigned int   uint32;
+typedef unsigned int uint32;
 
 uint16 byteswap_uint16(uint16 x) {
   return (x << 8) | (x >> 8);
@@ -17,7 +17,10 @@ uint32 byteswap_uint32(uint32 x) {
 
 uint16 byteswap_uint16_asm(uint16 x) {
   uint16 res;
-  __asm__("rorw $8, %w0" : "=r" (res) : "0" (x) : "cc");
+  __asm__("rorw $8, %w0"
+          : "=r"(res)
+          : "0"(x)
+          : "cc");
   return res;
 }
 
@@ -25,7 +28,10 @@ uint32 byteswap_uint32_asm(uint32 x) {
   uint32 res;
   __asm__("rorw $8, %w0;"
           "rorl $16, %0;"
-          "rorw $8, %w0" : "=r" (res) : "0" (x) : "cc");
+          "rorw $8, %w0"
+          : "=r"(res)
+          : "0"(x)
+          : "cc");
   return res;
 }
 
@@ -36,7 +42,10 @@ int main() {
   assert(ui16 == byteswap_uint16(byteswap_uint16_asm(ui16)));
   assert(ui32 == byteswap_uint32(byteswap_uint32_asm(ui32)));
 
-  __asm__ __volatile__("" : : : "memory");
+  __asm__ __volatile__(""
+                       :
+                       :
+                       : "memory");
 
   return 0;
 }

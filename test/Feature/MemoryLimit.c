@@ -49,12 +49,12 @@ int main() {
   }
 #endif
 
-// CHECK-WRN: WARNING: killing 1 states (over memory cap
+  // CHECK-WRN: WARNING: killing 1 states (over memory cap
 
   if (malloc_failed)
     printf("MALLOC FAILED\n");
-    // CHECK-LITTLE-NOT: MALLOC FAILED
-    // CHECK-BIG-NOT: MALLOC FAILED
+  // CHECK-LITTLE-NOT: MALLOC FAILED
+  // CHECK-BIG-NOT: MALLOC FAILED
   printf("DONE!\n");
   // CHECK-LITTLE-NOT: DONE!
   // CHECK-BIG-NOT: DONE!

@@ -29,7 +29,7 @@ public:
   bool computeValue(const Query &, ref<Expr> &result);
   bool computeInitialValues(const Query &,
                             const std::vector<const Array *> &objects,
-                            std::vector<std::vector<unsigned char> > &values,
+                            std::vector<std::vector<unsigned char>> &values,
                             bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query &);
@@ -84,7 +84,7 @@ bool ValidatingSolver::computeValue(const Query &query, ref<Expr> &result) {
 
 bool ValidatingSolver::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<std::vector<unsigned char> > &values, bool &hasSolution) {
+    std::vector<std::vector<unsigned char>> &values, bool &hasSolution) {
   bool answer;
 
   if (!solver->impl->computeInitialValues(query, objects, values, hasSolution))
@@ -139,4 +139,4 @@ void ValidatingSolver::setCoreSolverTimeout(time::Span timeout) {
 Solver *createValidatingSolver(Solver *s, Solver *oracle) {
   return new Solver(new ValidatingSolver(s, oracle));
 }
-}
+} // namespace klee

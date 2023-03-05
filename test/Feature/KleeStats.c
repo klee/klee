@@ -17,9 +17,9 @@
 // RUN: not %klee-stats --print-columns '' --table-format=csv %t.klee-out
 #include "klee/klee.h"
 #include <stdlib.h>
-int main(){
+int main() {
   int a;
-  klee_make_symbolic (&a, sizeof(int), "a");
+  klee_make_symbolic(&a, sizeof(int), "a");
   if (a) {
     abort();
   }

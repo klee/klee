@@ -12,7 +12,8 @@
 unsigned klee_urange(unsigned start, unsigned end) {
   unsigned x;
   klee_make_symbolic(&x, sizeof x, "x");
-  if (x-start>=end-start) klee_silent_exit(0);
+  if (x - start >= end - start)
+    klee_silent_exit(0);
   return x;
 }
 
@@ -24,17 +25,17 @@ int *make_int(int i) {
 
 int main() {
   int *buf[4];
-  int i,s,t;
+  int i, s, t;
 
-  for (i=0; i<4; i++)
-    buf[i] = make_int((i+1)*2);
+  for (i = 0; i < 4; i++)
+    buf[i] = make_int((i + 1) * 2);
 
-  s = klee_urange(0,4);
+  s = klee_urange(0, 4);
 
   *buf[s] = 5;
 
   if ((*buf[0] + *buf[1] + *buf[2] + *buf[3]) == 17)
-    if (s!=3)
+    if (s != 3)
       abort();
 
   printf("x\n");

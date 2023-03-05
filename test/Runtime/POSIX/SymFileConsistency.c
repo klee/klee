@@ -3,7 +3,7 @@
 // RUN: rm -rf %t.klee-out-tmp
 // RUN: %klee --output-dir=%t.klee-out-tmp --libc=uclibc --posix-runtime --exit-on-error %t.bc --sym-files 1 1 > %t1.log
 
-// This test checks that symbolic files can be resolved both with a relatve path 
+// This test checks that symbolic files can be resolved both with a relatve path
 // ie. 'A' or by its full path ie. '/full/path/to/cwd/A'
 
 #include "klee/klee.h"

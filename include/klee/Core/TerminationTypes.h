@@ -45,8 +45,8 @@
 
 ///@brief Reason an ExecutionState got terminated.
 enum class StateTerminationType : std::uint8_t {
-#define TTYPE(N,I,S) N = (I),
-#define MARK(N,I) N = (I),
+#define TTYPE(N, I, S) N = (I),
+#define MARK(N, I) N = (I),
   TERMINATION_TYPES
 #undef TTYPE
 #undef MARK

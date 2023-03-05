@@ -10,9 +10,9 @@ int main(int argc, char **argv, char **envp) {
   printf("argc: %d, argv: %p, envp: %p\n", argc, argv, envp);
   printf("--environ--\n");
   int haspwd = 0;
-  for (i=0; envp[i]; i++) {
+  for (i = 0; envp[i]; i++) {
     printf("%d: %s\n", i, envp[i]);
-    haspwd |= strncmp(envp[i], "PWD=", 4)==0;
+    haspwd |= strncmp(envp[i], "PWD=", 4) == 0;
   }
   assert(haspwd);
   return 0;

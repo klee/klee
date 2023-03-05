@@ -2,8 +2,8 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --exit-on-error %t1.bc
 
-#include <stdio.h>
 #include <assert.h>
+#include <stdio.h>
 
 int main() {
   int x = klee_int("x");

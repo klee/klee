@@ -23,21 +23,21 @@
 // CHECK-OPT_V: KLEE: WARNING: OPT_V: successful
 // CHECK-CONST_ARR: const_arr
 
-#include <stdio.h>
 #include "klee/klee.h"
+#include <stdio.h>
 
-int array[10] = {1,2,3,-4,5,6,7,8,9,10};
+int array[10] = {1, 2, 3, -4, 5, 6, 7, 8, 9, 10};
 
 int main() {
   char k;
 
   klee_make_symbolic(&k, sizeof(k), "k");
   klee_assume(k < 4);
-  klee_assume(k >=0);
+  klee_assume(k >= 0);
 
   // CHECK: Yes
   // CHECK-NEXT: No
-  if (array[k*3] < 0)
+  if (array[k * 3] < 0)
     printf("Yes\n");
   else
     printf("No\n");

@@ -13,9 +13,9 @@
 #endif
 #include "fd.h"
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 static void __emit_error(const char *msg) {
   klee_report_error(__FILE__, __LINE__, msg, "user.err");
@@ -58,13 +58,13 @@ static int __streq(const char *a, const char *b) {
 
 static char *__get_sym_str(int numChars, char *name) {
   int i;
-  char *s = malloc(numChars+1);
+  char *s = malloc(numChars + 1);
   if (!s)
     __emit_error("out of memory in klee_init_env");
   klee_mark_global(s);
-  klee_make_symbolic(s, numChars+1, name);
+  klee_make_symbolic(s, numChars + 1, name);
 
-  for (i=0; i<numChars; i++)
+  for (i = 0; i < numChars; i++)
     klee_posix_prefer_cex(s, __isprint(s[i]));
 
   s[numChars] = '\0';
@@ -72,7 +72,7 @@ static char *__get_sym_str(int numChars, char *name) {
 }
 
 static void __add_arg(int *argc, char **argv, char *arg, int argcMax) {
-  if (*argc==argcMax) {
+  if (*argc == argcMax) {
     __emit_error("too many arguments for klee_init_env");
   } else {
     argv[*argc] = arg;
@@ -154,7 +154,7 @@ usage: (klee_init_env) [options] [program arguments]\n\
 
       if (sym_arg_num + max_argvs > 99)
         __emit_error("No more than 100 symbolic arguments allowed.");
-      
+
       for (i = 0; i < n_args; i++) {
         sym_arg_name[3] = '0' + sym_arg_num / 10;
         sym_arg_name[4] = '0' + sym_arg_num % 10;
@@ -206,7 +206,8 @@ usage: (klee_init_env) [options] [program arguments]\n\
     } else if (__streq(argv[k], "--fd-fail") || __streq(argv[k], "-fd-fail")) {
       fd_fail = 1;
       k++;
-    } else if (__streq(argv[k], "--bout-file") || __streq(argv[k], "-bout-file")) {
+    } else if (__streq(argv[k], "--bout-file") ||
+               __streq(argv[k], "-bout-file")) {
       k += 2;
     } else if (__streq(argv[k], "--max-fail") ||
                __streq(argv[k], "-max-fail")) {
@@ -240,7 +241,7 @@ usage: (klee_init_env) [options] [program arguments]\n\
 int __klee_posix_wrapped_main(int argc, char **argv, char **envp);
 
 /* This wrapper gets called instead of main if POSIX setup is used */
-int __klee_posix_wrapper(int argcPtr, char **argvPtr, char** envp) {
+int __klee_posix_wrapper(int argcPtr, char **argvPtr, char **envp) {
   klee_init_env(&argcPtr, &argvPtr);
   return __klee_posix_wrapped_main(argcPtr, argvPtr, envp);
 }

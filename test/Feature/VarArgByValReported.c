@@ -6,8 +6,8 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --exit-on-error --output-dir=%t.klee-out %t1.bc | FileCheck %s
 
-#include <stdarg.h>
 #include <assert.h>
+#include <stdarg.h>
 #include <stdio.h>
 
 struct triple {
@@ -28,14 +28,14 @@ int test(int x, ...) {
   struct triple p = va_arg(ap, struct triple);
   struct mix m = va_arg(ap, struct mix);
   printf("types: (%d, %d, %d, (%d,%d,%d), (%lld,%d))\n",
-          i1, i2, i3, p.first, p.second, p.third, m.first, m.second);
+         i1, i2, i3, p.first, p.second, p.third, m.first, m.second);
   // CHECK: types: (1, 2, 3, (9,12,15), (7,8))
   va_end(ap);
 }
 
 int main() {
-  struct triple p = { 9, 12, 15 };
-  struct mix m = { 7, 8 };
+  struct triple p = {9, 12, 15};
+  struct mix m = {7, 8};
   test(-1, 1, 2, 3, p, m);
 
   return 0;

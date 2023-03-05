@@ -19,7 +19,7 @@
 
 #include "klee/klee.h"
 
-int main(int argc, char** args){
+int main(int argc, char **args) {
 
   int x;
   int i;
@@ -28,8 +28,8 @@ int main(int argc, char** args){
   x = x % 20;
 
   klee_open_merge();
-  for (i = 0; i < x; ++i){
-    if (x % 3 == 0){
+  for (i = 0; i < x; ++i) {
+    if (x % 3 == 0) {
       klee_close_merge();
       return 1;
     }

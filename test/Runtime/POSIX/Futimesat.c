@@ -31,9 +31,9 @@ int main(int argc, char **argv) {
   struct stat buf;
   struct timeval times[2];
 
-  times[0].tv_sec = time(NULL)-3600;
+  times[0].tv_sec = time(NULL) - 3600;
   times[0].tv_usec = 0;
-  times[1].tv_sec = time(NULL)-3600;
+  times[1].tv_sec = time(NULL) - 3600;
   times[1].tv_usec = 0;
 
   r = futimesat(AT_FDCWD, "A", times);
@@ -45,7 +45,7 @@ int main(int argc, char **argv) {
          buf.st_mtime == times[1].tv_sec);
 
   /* assumes TDIR exists and is writeable */
-  int fd = open( xstr(TDIR) , O_RDONLY);
+  int fd = open(xstr(TDIR), O_RDONLY);
   assert(fd > 0);
   r = futimesat(fd, "futimesat-dummy", times);
   assert(r != -1);

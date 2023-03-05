@@ -215,7 +215,7 @@ protected:
   std::set<const Array *> usedArrays;
 
   /// Set of expressions seen during scan.
-  std::set<ref<Expr> > seenExprs;
+  std::set<ref<Expr>> seenExprs;
 
   typedef std::map<const ref<Expr>, int> BindingMap;
 
@@ -319,12 +319,11 @@ protected:
   void printCastExpr(const ref<CastExpr> &e);
   void printNotEqualExpr(const ref<NeExpr> &e);
   void printSelectExpr(const ref<SelectExpr> &e,
-                               ExprSMTLIBPrinter::SMTLIB_SORT s);
+                       ExprSMTLIBPrinter::SMTLIB_SORT s);
   void printAShrExpr(const ref<AShrExpr> &e);
 
   // For the set of operators that take sort "s" arguments
-  void printSortArgsExpr(const ref<Expr> &e,
-                                 ExprSMTLIBPrinter::SMTLIB_SORT s);
+  void printSortArgsExpr(const ref<Expr> &e, ExprSMTLIBPrinter::SMTLIB_SORT s);
 
   /// For the set of operators that come in two sorts (e.g. (and () ()) (bvand
   /// () ()) )
@@ -332,7 +331,7 @@ protected:
   /// \param e the Expression to print
   /// \param s the sort of the expression we want
   void printLogicalOrBitVectorExpr(const ref<Expr> &e,
-                                           ExprSMTLIBPrinter::SMTLIB_SORT s);
+                                   ExprSMTLIBPrinter::SMTLIB_SORT s);
 
   /// Recursively prints updatesNodes
   void printUpdatesAndArray(const UpdateNode *un, const Array *root);
@@ -382,6 +381,6 @@ private:
   ConstantDisplayMode cdm;
   AbbreviationMode abbrMode;
 };
-}
+} // namespace klee
 
 #endif /* KLEE_EXPRSMTLIBPRINTER_H */

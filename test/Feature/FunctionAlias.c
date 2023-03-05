@@ -59,13 +59,13 @@
 
 // CHECK-BITCAST-ALIAS: function-alias: replaced @oneshort with @shortminusone
 
-int __attribute__ ((noinline)) oneint(int a) { return a; }
-short __attribute__ ((noinline)) oneshort(short a) { return a + 1; }
-int __attribute__ ((noinline)) minusone(int a) { return a - 1; }
-int __attribute__ ((noinline)) twoints(int a, int b) { return a + b; }
-int __attribute__ ((noinline)) twoshorts2int(short a, short b) { return a + b + 2; }
-int __attribute__ ((noinline)) twointsmul(int a, int b) { return a * b + 5; }
-int __attribute__ ((noinline)) somethingwithtwoints(int a, int b) { return 2 * a + 3 * b; }
+int __attribute__((noinline)) oneint(int a) { return a; }
+short __attribute__((noinline)) oneshort(short a) { return a + 1; }
+int __attribute__((noinline)) minusone(int a) { return a - 1; }
+int __attribute__((noinline)) twoints(int a, int b) { return a + b; }
+int __attribute__((noinline)) twoshorts2int(short a, short b) { return a + b + 2; }
+int __attribute__((noinline)) twointsmul(int a, int b) { return a * b + 5; }
+int __attribute__((noinline)) somethingwithtwoints(int a, int b) { return 2 * a + 3 * b; }
 
 #ifdef __APPLE__
 // FIXME: __attribute__((weak_import, alias("minusone"))) does not work on Mac OS X 10.12.6

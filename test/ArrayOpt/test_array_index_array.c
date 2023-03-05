@@ -25,11 +25,11 @@
 // CHECK-OPT_V: KLEE: WARNING: OPT_V: successful
 // CHECK-CONST_ARR: const_arr
 
-#include <stdio.h>
 #include "klee/klee.h"
+#include <stdio.h>
 
-char array[5] = {1,2,7,-4,5};
-char array2[5] = {0,3,4,1,2};
+char array[5] = {1, 2, 7, -4, 5};
+char array2[5] = {0, 3, 4, 1, 2};
 
 int main() {
   unsigned char k;

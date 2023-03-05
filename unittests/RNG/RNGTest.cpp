@@ -20,7 +20,6 @@ TEST(RNG, InitialSeedEquality) {
   ASSERT_EQ(noseed.getFloatLR(), seed.getFloatLR());
 }
 
-
 /* test inequality with default seed */
 TEST(RNG, InitialSeedInEquality) {
   RNG noseed;
@@ -29,7 +28,6 @@ TEST(RNG, InitialSeedInEquality) {
   ASSERT_NE(noseed.getInt32(), seed.getInt32());
 }
 
-
 /* test inequality with zero seed */
 TEST(RNG, InitialSeedZeroInEquality) {
   RNG noseed;
@@ -37,7 +35,6 @@ TEST(RNG, InitialSeedZeroInEquality) {
 
   ASSERT_NE(noseed.getInt32(), seed.getInt32());
 }
-
 
 /* test equality with seed provided by ctor and seed() */
 TEST(RNG, SeedEquality) {

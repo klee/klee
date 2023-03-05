@@ -4,11 +4,11 @@
 // RUN: %klee --output-dir=%t.klee-out --posix-runtime --exit-on-error %t1.bc --sym-arg 2 > %t.log
 // XFAIL: no-selinux
 
+#include <assert.h>
 #include <selinux/selinux.h>
 #include <stdio.h>
-#include <assert.h>
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
 
   security_context_t con;
 
@@ -16,14 +16,16 @@ int main(int argc, char** argv) {
 
   int selinux = is_selinux_enabled();
   printf("selinux enabled = %d\n", selinux);
-  
+
   if (setfscreatecon(argv[1]) < 0)
     printf("Error: set\n");
-  else printf("Success: set\n");
-  
+  else
+    printf("Success: set\n");
+
   if (getfscreatecon(&con) < 0)
     printf("Error: get\n");
-  else printf("Success: get\n");
+  else
+    printf("Success: get\n");
 
   printf("create_con = %s\n", con);
 

@@ -101,9 +101,9 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
                                       const llvm::Value *allocSite,
                                       size_t alignment) {
   if (size > 10 * 1024 * 1024)
-    klee_warning_once(0, "Large alloc: %" PRIu64
-                         " bytes.  KLEE may run out of memory.",
-                      size);
+    klee_warning_once(
+        0, "Large alloc: %" PRIu64 " bytes.  KLEE may run out of memory.",
+        size);
 
   // Return NULL if size is zero, this is equal to error during allocation
   if (NullOnZeroMalloc && size == 0)
@@ -124,8 +124,9 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
     if ((char *)address + alloc_size < deterministicSpace + spaceSize) {
       nextFreeSlot = (char *)address + alloc_size + RedzoneSize;
     } else {
-      klee_warning_once(0, "Couldn't allocate %" PRIu64
-                           " bytes. Not enough deterministic space left.",
+      klee_warning_once(0,
+                        "Couldn't allocate %" PRIu64
+                        " bytes. Not enough deterministic space left.",
                         size);
       address = 0;
     }

@@ -31,28 +31,35 @@
 /** @enum BranchType
  *  @brief Reason an ExecutionState forked
  *
- *  | Value                           | Description                                                                                        |
+ *  | Value                           | Description |
  *  |---------------------------------|----------------------------------------------------------------------------------------------------|
- *  | `BranchType::NONE`              | default value (no branch)                                                                          |
- *  | `BranchType::ConditionalBranch` | branch caused by `br` instruction with symbolic condition                                          |
- *  | `BranchType::IndirectBranch`    | branch caused by `indirectbr` instruction with symbolic address                                    |
- *  | `BranchType::Switch`            | branch caused by `switch` instruction with symbolic value                                          |
- *  | `BranchType::Call`              | branch caused by `call` with symbolic function pointer                                             |
- *  | `BranchType::MemOp`             | branch caused by memory operation with symbolic address (e.g. multiple resolutions, out-of-bounds) |
- *  | `BranchType::ResolvePointer`    | branch caused by symbolic pointer                                                                  |
- *  | `BranchType::Alloc`             | branch caused by symbolic `alloc`ation size                                                        |
- *  | `BranchType::Realloc`           | branch caused by symbolic `realloc`ation size                                                      |
- *  | `BranchType::Free`              | branch caused by `free`ing symbolic pointer                                                        |
- *  | `BranchType::GetVal`            | branch caused by user-invoked concretization while seeding                                         |
+ *  | `BranchType::NONE`              | default value (no branch) | |
+ * `BranchType::ConditionalBranch` | branch caused by `br` instruction with
+ * symbolic condition                                          | |
+ * `BranchType::IndirectBranch`    | branch caused by `indirectbr` instruction
+ * with symbolic address                                    | |
+ * `BranchType::Switch`            | branch caused by `switch` instruction with
+ * symbolic value                                          | |
+ * `BranchType::Call`              | branch caused by `call` with symbolic
+ * function pointer                                             | |
+ * `BranchType::MemOp`             | branch caused by memory operation with
+ * symbolic address (e.g. multiple resolutions, out-of-bounds) | |
+ * `BranchType::ResolvePointer`    | branch caused by symbolic pointer | |
+ * `BranchType::Alloc`             | branch caused by symbolic `alloc`ation size
+ * | | `BranchType::Realloc`           | branch caused by symbolic
+ * `realloc`ation size                                                      | |
+ * `BranchType::Free`              | branch caused by `free`ing symbolic pointer
+ * | | `BranchType::GetVal`            | branch caused by user-invoked
+ * concretization while seeding                                         |
  */
 enum class BranchType : std::uint8_t {
 /// \cond DO_NOT_DOCUMENT
-#define BTYPE(N,I) N = (I),
-#define MARK(N,I) N = (I),
+#define BTYPE(N, I) N = (I),
+#define MARK(N, I) N = (I),
   BRANCH_TYPES
 #undef BTYPE
 #undef MARK
-/// \endcond
+  /// \endcond
 };
 
 #endif

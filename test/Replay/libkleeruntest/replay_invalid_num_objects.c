@@ -18,7 +18,7 @@
 #include "klee/klee.h"
 #include <stdio.h>
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   int x = 0;
   klee_make_symbolic(&x, sizeof(x), "x");
 
@@ -36,4 +36,3 @@ int main(int argc, char** argv) {
 
 // CHECK_FATAL: KLEE_RUN_TEST_ERROR: out of inputs
 // CHECK_FATAL-NOT: y is "0"
-

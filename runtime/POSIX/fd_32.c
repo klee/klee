@@ -21,22 +21,22 @@
 #define _LARGEFILE64_SOURCE
 #include "fd.h"
 
-#include <string.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <errno.h>
-#include <sys/syscall.h>
+#include <string.h>
 #include <sys/stat.h>
-#include <sys/types.h>
+#include <sys/syscall.h>
 #include <sys/time.h>
+#include <sys/types.h>
 #ifndef __FreeBSD__
 #include <sys/vfs.h>
 #endif
+#include <assert.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include <stdarg.h>
-#include <assert.h>
 #include <unistd.h>
-#include <dirent.h>
 
 /***/
 
@@ -59,7 +59,6 @@ static void __stat64_to_stat(struct stat64 *a, struct stat *b) {
   b->st_mtim.tv_nsec = a->st_mtim.tv_nsec;
   b->st_ctim.tv_nsec = a->st_ctim.tv_nsec;
 #endif
-
 }
 
 /***/
@@ -93,7 +92,7 @@ int openat(int fd, const char *pathname, int flags, ...) {
 }
 
 off_t lseek(int fd, off_t off, int whence) {
-  return (off_t) __fd_lseek(fd, off, whence);
+  return (off_t)__fd_lseek(fd, off, whence);
 }
 
 int __xstat(int vers, const char *path, struct stat *buf) {
@@ -138,9 +137,7 @@ int fstat(int fd, struct stat *buf) {
   return res;
 }
 
-int ftruncate(int fd, off_t length) {
-  return __fd_ftruncate(fd, length);
-}
+int ftruncate(int fd, off_t length) { return __fd_ftruncate(fd, length); }
 
 int statfs(const char *path, struct statfs *buf32) {
 #if 0
@@ -161,7 +158,7 @@ int statfs(const char *path, struct statfs *buf32) {
 
     return 0;
 #else
-    return __fd_statfs(path, buf32);
+  return __fd_statfs(path, buf32);
 #endif
 }
 
@@ -176,15 +173,15 @@ ssize_t getdents(int fd, char *dirp, size_t nbytes) {
 int getdents(int fd, char *dirp, int nbytes) {
 #endif
 #endif
-  struct dirent64 *dp64 = (struct dirent64*) dirp;
+  struct dirent64 *dp64 = (struct dirent64 *)dirp;
   ssize_t res = __fd_getdents(fd, dp64, nbytes);
 
-  if (res>0) {
-    struct dirent64 *end = (struct dirent64*) ((char*) dp64 + res);
+  if (res > 0) {
+    struct dirent64 *end = (struct dirent64 *)((char *)dp64 + res);
     while (dp64 < end) {
-      struct dirent *dp = (struct dirent *) dp64;
-      size_t name_len = (dp64->d_reclen -
-                           (size_t) &((struct dirent64*) 0)->d_name);
+      struct dirent *dp = (struct dirent *)dp64;
+      size_t name_len =
+          (dp64->d_reclen - (size_t) & ((struct dirent64 *)0)->d_name);
       dp->d_ino = dp64->d_ino;
 #ifdef _DIRENT_HAVE_D_OFF
       dp->d_off = dp64->d_off;
@@ -192,14 +189,14 @@ int getdents(int fd, char *dirp, int nbytes) {
       dp->d_reclen = dp64->d_reclen;
       dp->d_type = dp64->d_type;
       memmove(dp->d_name, dp64->d_name, name_len);
-      dp64 = (struct dirent64*) ((char*) dp64 + dp->d_reclen);
+      dp64 = (struct dirent64 *)((char *)dp64 + dp->d_reclen);
     }
   }
 
   return res;
 }
 int __getdents(unsigned int fd, struct dirent *dirp, unsigned int count)
-     __attribute__((alias("getdents")));
+    __attribute__((alias("getdents")));
 
 /* Forward to 64 versions (uclibc expects versions w/o asm specifier) */
 

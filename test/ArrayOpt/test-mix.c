@@ -86,12 +86,12 @@
 // CHECK-OPT_V: KLEE: WARNING: OPT_V: successful
 // CHECK-CONST_ARR: const_arr
 
-#include <stdio.h>
 #include "klee/klee.h"
+#include <stdio.h>
 
-char array[5] = {1,2,3,4,5};
+char array[5] = {1, 2, 3, 4, 5};
 char arrayconc[4];
-char arraychar[3] = {'a','b','c'};
+char arraychar[3] = {'a', 'b', 'c'};
 
 int main() {
   char k, x;

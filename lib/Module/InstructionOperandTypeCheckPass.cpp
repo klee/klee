@@ -160,7 +160,7 @@ bool checkInstruction(const Instruction *i) {
     return true;
   }
 }
-}
+} // namespace
 
 namespace klee {
 
@@ -180,4 +180,4 @@ bool InstructionOperandTypeCheckPass::runOnModule(Module &M) {
 
   return false;
 }
-}
+} // namespace klee

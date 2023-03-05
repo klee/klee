@@ -12,9 +12,9 @@
 #include "ExecutionState.h"
 
 #include "klee/Config/Version.h"
+#include "klee/Solver/Solver.h"
 #include "klee/Statistics/Statistics.h"
 #include "klee/Statistics/TimerStatIncrementer.h"
-#include "klee/Solver/Solver.h"
 
 #include "CoreStats.h"
 
@@ -95,7 +95,7 @@ bool TimingSolver::getValue(const ConstraintSet &constraints, ref<Expr> expr,
     result = CE;
     return true;
   }
-  
+
   TimerStatIncrementer timer(stats::solverTime);
 
   if (simplifyExprs)

@@ -5,8 +5,8 @@
 // RUN: not grep -q "bad" %t.log
 
 #include <assert.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 int main() {
   char buf[4];

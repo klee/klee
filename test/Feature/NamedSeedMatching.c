@@ -11,13 +11,13 @@
 // RUN: grep -q "c==5" %t.log
 // RUN: grep -q "x==6" %t.log
 
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
 
 int main(int argc, char **argv) {
   int a, b, c, x;
 
-  if (argc==2 && strcmp(argv[1], "initial") == 0) {
+  if (argc == 2 && strcmp(argv[1], "initial") == 0) {
     klee_make_symbolic(&a, sizeof a, "a");
     klee_make_symbolic(&b, sizeof b, "b");
     klee_make_symbolic(&c, sizeof c, "c");
@@ -34,10 +34,14 @@ int main(int argc, char **argv) {
     klee_make_symbolic(&x, sizeof x, "a");
   }
 
-  if (a==3) printf("a==3\n");
-  if (b==4) printf("b==4\n");
-  if (c==5) printf("c==5\n");
-  if (x==6) printf("x==6\n");
+  if (a == 3)
+    printf("a==3\n");
+  if (b == 4)
+    printf("b==4\n");
+  if (c == 5)
+    printf("c==5\n");
+  if (x == 6)
+    printf("x==6\n");
 
   return 0;
 }

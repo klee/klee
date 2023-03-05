@@ -13,6 +13,6 @@ int a() {
 
 int main(int argc, char **args) {
   printf("test::a() == %d\n", test::a());
-  //CHECK: test::a() == 2
+  // CHECK: test::a() == 2
   return 0;
 }

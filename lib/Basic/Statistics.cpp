@@ -14,19 +14,15 @@
 using namespace klee;
 
 StatisticManager::StatisticManager()
-  : enabled(true),
-    globalStats(0),
-    indexedStats(0),
-    contextStats(0),
-    index(0) {
-}
+    : enabled(true), globalStats(0), indexedStats(0), contextStats(0),
+      index(0) {}
 
 StatisticManager::~StatisticManager() {
   delete[] globalStats;
   delete[] indexedStats;
 }
 
-void StatisticManager::useIndexedStats(unsigned totalIndices) {  
+void StatisticManager::useIndexedStats(unsigned totalIndices) {
   delete[] indexedStats;
   indexedStats = new uint64_t[totalIndices * stats.size()];
   memset(indexedStats, 0, sizeof(*indexedStats) * totalIndices * stats.size());
@@ -37,18 +33,18 @@ void StatisticManager::registerStatistic(Statistic &s) {
   s.id = stats.size();
   stats.push_back(&s);
   globalStats = new uint64_t[stats.size()];
-  memset(globalStats, 0, sizeof(*globalStats)*stats.size());
+  memset(globalStats, 0, sizeof(*globalStats) * stats.size());
 }
 
 int StatisticManager::getStatisticID(const std::string &name) const {
-  for (unsigned i=0; i<stats.size(); i++)
+  for (unsigned i = 0; i < stats.size(); i++)
     if (stats[i]->getName() == name)
       return i;
   return -1;
 }
 
 Statistic *StatisticManager::getStatisticByName(const std::string &name) const {
-  for (unsigned i=0; i<stats.size(); i++)
+  for (unsigned i = 0; i < stats.size(); i++)
     if (stats[i]->getName() == name)
       return stats[i];
   return 0;
@@ -65,7 +61,7 @@ static StatisticManager &getStatisticManager() {
 /* *** */
 
 Statistic::Statistic(const std::string &name, const std::string &shortName)
-  : name{name}, shortName{shortName} {
+    : name{name}, shortName{shortName} {
   getStatisticManager().registerStatistic(*this);
 }
 

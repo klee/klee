@@ -13,9 +13,10 @@ int main(int argc, char **argv) {
   }
 
   g = getenv("HELLO");
-  if (!g || strcmp(g, "nice")==0) {
+  if (!g || strcmp(g, "nice") == 0) {
     printf("getenv(\"HELLO\") = %p\n", g);
-    if (g) assert(strcmp(getenv("HELLO"),"nice") == 0);
+    if (g)
+      assert(strcmp(getenv("HELLO"), "nice") == 0);
   }
 
   return 0;

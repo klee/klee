@@ -22,7 +22,7 @@ public:
   bool computeValue(const Query &, ref<Expr> &result);
   bool computeInitialValues(const Query &,
                             const std::vector<const Array *> &objects,
-                            std::vector<std::vector<unsigned char> > &values,
+                            std::vector<std::vector<unsigned char>> &values,
                             bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
 };
@@ -49,7 +49,7 @@ bool DummySolverImpl::computeValue(const Query &, ref<Expr> &result) {
 
 bool DummySolverImpl::computeInitialValues(
     const Query &, const std::vector<const Array *> &objects,
-    std::vector<std::vector<unsigned char> > &values, bool &hasSolution) {
+    std::vector<std::vector<unsigned char>> &values, bool &hasSolution) {
   ++stats::queries;
   ++stats::queryCounterexamples;
   return false;
@@ -60,4 +60,4 @@ SolverImpl::SolverRunStatus DummySolverImpl::getOperationStatusCode() {
 }
 
 Solver *createDummySolver() { return new Solver(new DummySolverImpl()); }
-}
+} // namespace klee

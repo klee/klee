@@ -8,23 +8,23 @@
 // CHECK-OPT_I: KLEE: WARNING: OPT_I: successful
 // CHECK-CONST_ARR: const_arr
 
-#include <stdio.h>
 #include "klee/klee.h"
+#include <stdio.h>
 
-char array[10] = {1,2,2,4,5,3,1,3,2,2};
+char array[10] = {1, 2, 2, 4, 5, 3, 1, 3, 2, 2};
 
 int main() {
   unsigned char k;
-  
+
   klee_make_symbolic(&k, sizeof(k), "k");
   klee_assume(k < 10);
-  
+
   // CHECK: Yes
   // CHECK-NEXT: No
   if (array[k] >= 1)
     printf("Yes\n");
 
   // CHECK: KLEE: done: completed paths = 1
-  
+
   return 0;
 }

@@ -11,32 +11,32 @@
 typedef int32_t v4si __attribute__((vector_size(16)));
 
 #define ASSERT_EL(C, OP, A, B, INDEX) assert(C[INDEX] == (A[INDEX] OP B[INDEX]))
-#define ASSERT_ELV4(C, OP, A, B)                                               \
-  do {                                                                         \
-    ASSERT_EL(C, OP, A, B, 0);                                                 \
-    ASSERT_EL(C, OP, A, B, 1);                                                 \
-    ASSERT_EL(C, OP, A, B, 2);                                                 \
-    ASSERT_EL(C, OP, A, B, 3);                                                 \
+#define ASSERT_ELV4(C, OP, A, B) \
+  do {                           \
+    ASSERT_EL(C, OP, A, B, 0);   \
+    ASSERT_EL(C, OP, A, B, 1);   \
+    ASSERT_EL(C, OP, A, B, 2);   \
+    ASSERT_EL(C, OP, A, B, 3);   \
   } while (0);
 
-#define ASSERT_EL_TRUTH(C, OP, A, B, INDEX)                                    \
+#define ASSERT_EL_TRUTH(C, OP, A, B, INDEX) \
   assert(C[INDEX] ? (A[INDEX] OP B[INDEX]) : (!(A[INDEX] OP B[INDEX])))
-#define ASSERT_EL_TRUTH_V4(C, OP, A, B)                                        \
-  do {                                                                         \
-    ASSERT_EL_TRUTH(C, OP, A, B, 0);                                           \
-    ASSERT_EL_TRUTH(C, OP, A, B, 1);                                           \
-    ASSERT_EL_TRUTH(C, OP, A, B, 2);                                           \
-    ASSERT_EL_TRUTH(C, OP, A, B, 3);                                           \
+#define ASSERT_EL_TRUTH_V4(C, OP, A, B) \
+  do {                                  \
+    ASSERT_EL_TRUTH(C, OP, A, B, 0);    \
+    ASSERT_EL_TRUTH(C, OP, A, B, 1);    \
+    ASSERT_EL_TRUTH(C, OP, A, B, 2);    \
+    ASSERT_EL_TRUTH(C, OP, A, B, 3);    \
   } while (0);
 
-#define ASSERT_EL_TERNARY_SCALAR_CONDITION(C, CONDITION, A, B, INDEX)          \
+#define ASSERT_EL_TERNARY_SCALAR_CONDITION(C, CONDITION, A, B, INDEX) \
   assert(C[INDEX] == (CONDITION ? A[INDEX] : B[INDEX]))
-#define ASSERT_EL_TERNARY_SCALAR_CONDITION_V4(C, CONDITION, A, B)              \
-  do {                                                                         \
-    ASSERT_EL_TERNARY_SCALAR_CONDITION(C, CONDITION, A, B, 0);                 \
-    ASSERT_EL_TERNARY_SCALAR_CONDITION(C, CONDITION, A, B, 1);                 \
-    ASSERT_EL_TERNARY_SCALAR_CONDITION(C, CONDITION, A, B, 2);                 \
-    ASSERT_EL_TERNARY_SCALAR_CONDITION(C, CONDITION, A, B, 3);                 \
+#define ASSERT_EL_TERNARY_SCALAR_CONDITION_V4(C, CONDITION, A, B) \
+  do {                                                            \
+    ASSERT_EL_TERNARY_SCALAR_CONDITION(C, CONDITION, A, B, 0);    \
+    ASSERT_EL_TERNARY_SCALAR_CONDITION(C, CONDITION, A, B, 1);    \
+    ASSERT_EL_TERNARY_SCALAR_CONDITION(C, CONDITION, A, B, 2);    \
+    ASSERT_EL_TERNARY_SCALAR_CONDITION(C, CONDITION, A, B, 3);    \
   } while (0);
 
 int main() {

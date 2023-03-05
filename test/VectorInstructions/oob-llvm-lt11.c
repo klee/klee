@@ -32,8 +32,7 @@ int main() {
     // For now this is an expected limitation.
     // CHECK-DAG: [[@LINE+1]]: ExtractElement, support for symbolic index not implemented
     uint32_t readValue = f[k];
-  }
-  else {
+  } else {
     // Performing write should be InsertElement instructions.
     // For now this is an expected limitation.
     // CHECK-DAG: [[@LINE+1]]: InsertElement, support for symbolic index not implemented

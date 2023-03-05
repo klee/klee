@@ -15,7 +15,7 @@
 #include "klee/Config/Version.h"
 
 namespace klee {
-  void printVersion(llvm::raw_ostream &OS);
+void printVersion(llvm::raw_ostream &OS);
 }
 
 #endif /* KLEE_PRINTVERSION_H */

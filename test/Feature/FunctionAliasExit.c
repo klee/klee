@@ -16,7 +16,7 @@ void start(int x) {
     exit(1);
 }
 
-void __attribute__ ((noinline)) end(int status) {
+void __attribute__((noinline)) end(int status) {
   printf("END: status = %d\n", status);
   klee_silent_exit(status);
 }

@@ -24,8 +24,8 @@ struct v2 {
 int alias_function(struct v1 *, struct v1 *, int)
     __attribute__((weak, alias("__real_function")));
 
-int main(int argc, char** argv) {
-  struct v2 local = { .e= 0, .f=0 };
+int main(int argc, char **argv) {
+  struct v2 local = {.e = 0, .f = 0};
   int number = 0;
 
   // Call via a bitcasted alias.

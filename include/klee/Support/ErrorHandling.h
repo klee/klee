@@ -46,6 +46,6 @@ void klee_warning(const char *msg, ...) __attribute__((format(printf, 1, 2)));
 /// printed once for each unique (id, msg) pair (as pointers).
 void klee_warning_once(const void *id, const char *msg, ...)
     __attribute__((format(printf, 2, 3)));
-}
+} // namespace klee
 
 #endif /* KLEE_ERRORHANDLING_H */

@@ -27,9 +27,7 @@ extern int keep_temps;
 void replay_create_files(exe_file_system_t *exe_fs);
 void replay_delete_files();
 
-void process_status(int status,
-		    time_t elapsed,
-		    const char *pfx)
-  __attribute__((noreturn));
+void process_status(int status, time_t elapsed, const char *pfx)
+    __attribute__((noreturn));
 
 #endif

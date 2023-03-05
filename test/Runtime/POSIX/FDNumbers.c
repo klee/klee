@@ -3,8 +3,8 @@
 // RUN: %klee --output-dir=%t.klee-out --posix-runtime --exit-on-error %t2.bc --sym-files 1 10
 
 #include <assert.h>
-#include <fcntl.h>
 #include <errno.h>
+#include <fcntl.h>
 
 int main(int argc, char **argv) {
   int fd = open("A", O_TRUNC);
@@ -13,13 +13,13 @@ int main(int argc, char **argv) {
   assert(!close(1));
   assert(close(0) == -1);
   assert(close(1) == -1);
-  assert(open("A", O_TRUNC) == 0);  
+  assert(open("A", O_TRUNC) == 0);
   assert(dup(0) == 1);
   assert(open("A", O_TRUNC) == 4);
   assert(!close(1));
   assert(open("A", O_TRUNC) == 1);
   assert(dup(0) != 1);
-  assert(dup2(0,1) == 1);
-  
+  assert(dup2(0, 1) == 1);
+
   return 0;
 }

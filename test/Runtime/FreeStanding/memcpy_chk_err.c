@@ -21,7 +21,7 @@
 
 int main() {
   char d[5];
-  char* s = "1234567890";
+  char *s = "1234567890";
 
   memcpy(d, s, 10);
 }

@@ -23,8 +23,7 @@
 #error BOUND_VALUE must be defined
 #endif
 
-
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   int x = klee_range(0, BOUND_VALUE, "x");
 #ifdef FORCE_VALUE
   klee_assume(x == FORCE_VALUE);
@@ -42,4 +41,3 @@ int main(int argc, char** argv) {
 
 // CHECK_FATAL: KLEE_RUN_TEST_ERROR: invalid klee_range(0,2,x) value, got: 20
 // CHECK_FATAL-NOT: x=20
-

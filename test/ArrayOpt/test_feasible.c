@@ -25,10 +25,10 @@
 // CHECK-OPT_V: KLEE: WARNING: OPT_V: successful
 // CHECK-CONST_ARR: const_arr
 
-#include <stdio.h>
 #include "klee/klee.h"
+#include <stdio.h>
 
-char array[5] = {0,1,0,1,0};
+char array[5] = {0, 1, 0, 1, 0};
 
 int main() {
   unsigned k;
@@ -41,7 +41,7 @@ int main() {
   // CHECK-NOT: Wrong!
   if (array[k] == 0) {
     printf("zero\n");
-    if (k==0|k==2|k==4) {
+    if (k == 0 | k == 2 | k == 4) {
       printf("Correct!\n");
     } else {
       printf("Wrong!\n");

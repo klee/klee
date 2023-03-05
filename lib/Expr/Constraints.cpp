@@ -25,8 +25,7 @@ llvm::cl::opt<bool> RewriteEqualities(
     "rewrite-equalities",
     llvm::cl::desc("Rewrite existing constraints when an equality with a "
                    "constant is added (default=true)"),
-    llvm::cl::init(true),
-    llvm::cl::cat(SolvingCat));
+    llvm::cl::init(true), llvm::cl::cat(SolvingCat));
 } // namespace
 
 class ExprReplaceVisitor : public ExprVisitor {
@@ -54,7 +53,7 @@ public:
 
 class ExprReplaceVisitor2 : public ExprVisitor {
 private:
-  const std::map< ref<Expr>, ref<Expr> > &replacements;
+  const std::map<ref<Expr>, ref<Expr>> &replacements;
 
 public:
   explicit ExprReplaceVisitor2(
@@ -63,7 +62,7 @@ public:
 
   Action visitExprPost(const Expr &e) override {
     auto it = replacements.find(ref<Expr>(const_cast<Expr *>(&e)));
-    if (it!=replacements.end()) {
+    if (it != replacements.end()) {
       return Action::changeTo(it->second);
     }
     return Action::doChildren();
@@ -78,7 +77,7 @@ bool ConstraintManager::rewriteConstraints(ExprVisitor &visitor) {
   for (auto &ce : old) {
     ref<Expr> e = visitor.visit(ce);
 
-    if (e!=ce) {
+    if (e != ce) {
       addConstraintInternal(e); // enable further reductions
       changed = true;
     } else {
@@ -95,13 +94,12 @@ ref<Expr> ConstraintManager::simplifyExpr(const ConstraintSet &constraints,
   if (isa<ConstantExpr>(e))
     return e;
 
-  std::map< ref<Expr>, ref<Expr> > equalities;
+  std::map<ref<Expr>, ref<Expr>> equalities;
 
   for (auto &constraint : constraints) {
     if (const EqExpr *ee = dyn_cast<EqExpr>(constraint)) {
       if (isa<ConstantExpr>(ee->left)) {
-        equalities.insert(std::make_pair(ee->right,
-                                         ee->left));
+        equalities.insert(std::make_pair(ee->right, ee->left));
       } else {
         equalities.insert(
             std::make_pair(constraint, ConstantExpr::alloc(1, Expr::Bool)));
@@ -141,8 +139,8 @@ void ConstraintManager::addConstraintInternal(const ref<Expr> &e) {
       // (byte-constant comparison).
       BinaryExpr *be = cast<BinaryExpr>(e);
       if (isa<ConstantExpr>(be->left)) {
-	ExprReplaceVisitor visitor(be->right, be->left);
-	rewriteConstraints(visitor);
+        ExprReplaceVisitor visitor(be->right, be->left);
+        rewriteConstraints(visitor);
       }
     }
     constraints.push_back(e);

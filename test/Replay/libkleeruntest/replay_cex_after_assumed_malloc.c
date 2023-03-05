@@ -11,15 +11,18 @@ int main() {
   klee_make_symbolic(&i, sizeof(i), "i");
   klee_make_symbolic(&p, sizeof(p), "p");
 
-  if (i) {}
+  if (i) {
+  }
 
-  q = malloc(sizeof (char));
+  q = malloc(sizeof(char));
   klee_assume(p == q);
-  klee_make_symbolic(p, sizeof (char), "p[0]");
+  klee_make_symbolic(p, sizeof(char), "p[0]");
 
   char condition = (*p);
-  if (*p) condition = 1;
+  if (*p)
+    condition = 1;
   klee_prefer_cex(&i, condition);
-  if (i+5) {}
+  if (i + 5) {
+  }
   return 0;
 }

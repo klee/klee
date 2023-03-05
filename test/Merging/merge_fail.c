@@ -17,17 +17,17 @@
 
 int main(int argc, char **args) {
 
-  int* arr = 0;
+  int *arr = 0;
   int a = 0;
 
   klee_make_symbolic(&a, sizeof(a), "a");
 
   klee_open_merge();
   if (a == 0) {
-    arr = (int*) malloc(7 * sizeof(int));
+    arr = (int *)malloc(7 * sizeof(int));
     arr[0] = 7;
   } else {
-    arr = (int*) malloc(8 * sizeof(int));
+    arr = (int *)malloc(8 * sizeof(int));
     arr[0] = 8;
   }
   klee_close_merge();

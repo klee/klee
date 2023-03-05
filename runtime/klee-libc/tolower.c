@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===*/
 
 int tolower(int ch) {
-  if ( (unsigned int)(ch - 'A') < 26u )
+  if ((unsigned int)(ch - 'A') < 26u)
     ch -= 'A' - 'a';
   return ch;
 }

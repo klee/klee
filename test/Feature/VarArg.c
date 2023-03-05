@@ -10,8 +10,8 @@
 // RUN: %klee --output-dir=%t.klee-out --allocate-determ=true --allocate-determ-start-address=0x0 %t1.bc | FileCheck %s
 // RUN: test -f %t.klee-out/test000001.ptr.err
 
-#include <stdarg.h>
 #include <assert.h>
+#include <stdarg.h>
 #include <stdio.h>
 
 struct triple {
@@ -31,15 +31,15 @@ void test1(int x, ...) {
 
 int sum(int N, ...) {
   int i, res = 0;
-  va_list ap,ap2;
-  
+  va_list ap, ap2;
+
   va_start(ap, N);
-  for (i=0; i<N; i++) {
-    if (i==1)
+  for (i = 0; i < N; i++) {
+    if (i == 1)
       va_copy(ap2, ap);
     res += va_arg(ap, int);
   }
-  for (i=0; i<N-1; i++)
+  for (i = 0; i < N - 1; i++)
     res += va_arg(ap2, int);
   va_end(ap);
 
@@ -53,35 +53,35 @@ int va_array(int N, ...) {
   unsigned i;
   unsigned sum1 = 0, sum2 = 0;
 
-  for (i=0; i<2; i++)
+  for (i = 0; i < 2; i++)
     va_start(aps[i], N);
-  
-  for (i=0; i<N; i++) {
+
+  for (i = 0; i < N; i++) {
     unsigned cmd = va_arg(aps[0], int);
 
-    if (cmd==0) {
-      sum1 += va_arg(aps[0],int);
-    } else if (cmd==1) {
-      sum2 += va_arg(aps[1],int);
-    } else if (cmd==2) {
+    if (cmd == 0) {
+      sum1 += va_arg(aps[0], int);
+    } else if (cmd == 1) {
+      sum2 += va_arg(aps[1], int);
+    } else if (cmd == 2) {
       va_copy(aps[1], aps[0]);
     }
   }
 
-  for (i=0; i<2; i++)
+  for (i = 0; i < 2; i++)
     va_end(aps[i]);
 
-  return 3*sum1 + 5*sum2;
+  return 3 * sum1 + 5 * sum2;
 }
 
 int main() {
-  struct triple p = { 9, 12, 15 };
+  struct triple p = {9, 12, 15};
   test1(-1, 52, 37ll, 2.0, p);
   // CHECK: types: (52, 37, 2.00, (9,12,15))
 
   assert(sum(2, 3, 4) == 11);
   assert(sum(0) == 0);
-  assert(va_array(5, 0, 5, 1, 1, 2, 1)==45); // 15 + 30
+  assert(va_array(5, 0, 5, 1, 1, 2, 1) == 45); // 15 + 30
 
   // should give memory error
   test1(-1, 52, 2.0, p);

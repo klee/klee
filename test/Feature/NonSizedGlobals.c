@@ -6,7 +6,6 @@ struct X;
 extern struct X Y;
 void *ptr = &Y;
 
-int main()
-{
-	return 0;
+int main() {
+  return 0;
 }

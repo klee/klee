@@ -15,9 +15,9 @@
 
 #include "klee/klee.h"
 
+#include <errno.h>
 #include <selinux/selinux.h>
 #include <stdlib.h>
-#include <errno.h>
 
 /* for now, assume we run on an SELinux machine */
 int exe_selinux = 1;
@@ -25,11 +25,7 @@ int exe_selinux = 1;
 /* NULL is the default policy behavior */
 KLEE_SELINUX_CTX_CONST char *create_con = NULL;
 
-
-int is_selinux_enabled() {
-  return exe_selinux;
-}
-
+int is_selinux_enabled() { return exe_selinux; }
 
 /***/
 
@@ -38,7 +34,6 @@ int getfscreatecon(char **context) {
   return 0;
 }
 
-
 int setfscreatecon(KLEE_SELINUX_CTX_CONST char *context) {
   if (context == NULL) {
     create_con = context;
@@ -46,7 +41,7 @@ int setfscreatecon(KLEE_SELINUX_CTX_CONST char *context) {
   }
 
   /* on my machine, setfscreatecon seems to incorrectly accept one
-     char strings.. Also, make sure mcstrans > 0.2.8 for replay 
+     char strings.. Also, make sure mcstrans > 0.2.8 for replay
      (important bug fixed) */
   if (context[0] != '\0' && context[1] == '\0')
     klee_silent_exit(1);
@@ -59,9 +54,9 @@ int setfscreatecon(KLEE_SELINUX_CTX_CONST char *context) {
 int setfilecon(const char *path, KLEE_SELINUX_CTX_CONST char *con) {
   if (con)
     return 0;
-  
+
   errno = ENOSPC;
-  return -1;  
+  return -1;
 }
 
 int lsetfilecon(const char *path, KLEE_SELINUX_CTX_CONST char *con) {

@@ -21,7 +21,7 @@
 #include <vector>
 
 namespace llvm {
-  class Value;
+class Value;
 }
 
 namespace klee {
@@ -71,45 +71,28 @@ public:
 
 public:
   // XXX this is just a temp hack, should be removed
-  explicit
-  MemoryObject(uint64_t _address) 
-    : id(counter++),
-      address(_address),
-      size(0),
-      isFixed(true),
-      parent(NULL),
-      allocSite(0) {
-  }
+  explicit MemoryObject(uint64_t _address)
+      : id(counter++), address(_address), size(0), isFixed(true), parent(NULL),
+        allocSite(0) {}
 
-  MemoryObject(uint64_t _address, unsigned _size, 
-               bool _isLocal, bool _isGlobal, bool _isFixed,
-               const llvm::Value *_allocSite,
+  MemoryObject(uint64_t _address, unsigned _size, bool _isLocal, bool _isGlobal,
+               bool _isFixed, const llvm::Value *_allocSite,
                MemoryManager *_parent)
-    : id(counter++),
-      address(_address),
-      size(_size),
-      name("unnamed"),
-      isLocal(_isLocal),
-      isGlobal(_isGlobal),
-      isFixed(_isFixed),
-      isUserSpecified(false),
-      parent(_parent), 
-      allocSite(_allocSite) {
-  }
+      : id(counter++), address(_address), size(_size), name("unnamed"),
+        isLocal(_isLocal), isGlobal(_isGlobal), isFixed(_isFixed),
+        isUserSpecified(false), parent(_parent), allocSite(_allocSite) {}
 
   ~MemoryObject();
 
   /// Get an identifying string for this allocation.
   void getAllocInfo(std::string &result) const;
 
-  void setName(std::string name) const {
-    this->name = name;
-  }
+  void setName(std::string name) const { this->name = name; }
 
-  ref<ConstantExpr> getBaseExpr() const { 
+  ref<ConstantExpr> getBaseExpr() const {
     return ConstantExpr::create(address, Context::get().getPointerWidth());
   }
-  ref<ConstantExpr> getSizeExpr() const { 
+  ref<ConstantExpr> getSizeExpr() const {
     return ConstantExpr::create(size, Context::get().getPointerWidth());
   }
   ref<Expr> getOffsetExpr(ref<Expr> pointer) const {
@@ -123,18 +106,18 @@ public:
   }
 
   ref<Expr> getBoundsCheckOffset(ref<Expr> offset) const {
-    if (size==0) {
-      return EqExpr::create(offset, 
-                            ConstantExpr::alloc(0, Context::get().getPointerWidth()));
+    if (size == 0) {
+      return EqExpr::create(
+          offset, ConstantExpr::alloc(0, Context::get().getPointerWidth()));
     } else {
       return UltExpr::create(offset, getSizeExpr());
     }
   }
   ref<Expr> getBoundsCheckOffset(ref<Expr> offset, unsigned bytes) const {
-    if (bytes<=size) {
-      return UltExpr::create(offset, 
-                             ConstantExpr::alloc(size - bytes + 1, 
-                                                 Context::get().getPointerWidth()));
+    if (bytes <= size) {
+      return UltExpr::create(
+          offset, ConstantExpr::alloc(size - bytes + 1,
+                                      Context::get().getPointerWidth()));
     } else {
       return ConstantExpr::alloc(0, Expr::Bool);
     }
@@ -248,7 +231,7 @@ private:
   void write8(unsigned offset, ref<Expr> value);
   void write8(ref<Expr> offset, ref<Expr> value);
 
-  void fastRangeCheckOffset(ref<Expr> offset, unsigned *base_r, 
+  void fastRangeCheckOffset(ref<Expr> offset, unsigned *base_r,
                             unsigned *size_r) const;
   void flushRangeForRead(unsigned rangeBase, unsigned rangeSize) const;
   void flushRangeForWrite(unsigned rangeBase, unsigned rangeSize);
@@ -270,7 +253,7 @@ private:
 
   ArrayCache *getArrayCache() const;
 };
-  
-} // End klee namespace
+
+} // namespace klee
 
 #endif /* KLEE_MEMORY_H */

@@ -16,7 +16,7 @@ int main(int argc, char **argv) {
   klee_assume(buf[2] == '\n');
   klee_assume(buf[3] == '\0');
   fwrite(buf, 1, 4, stdout);
-  //CHECK: a{{[b-y]}}
+  // CHECK: a{{[b-y]}}
 
   return 0;
 }

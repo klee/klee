@@ -61,7 +61,7 @@ buildInstructionToLineMap(const llvm::Module &m) {
   const char *s;
 
   unsigned line = 1;
-  for (s=str.c_str(); *s; s++) {
+  for (s = str.c_str(); *s; s++) {
     if (*s != '\n')
       continue;
 

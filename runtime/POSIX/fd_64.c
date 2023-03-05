@@ -75,12 +75,17 @@ int openat(int fd, const char *pathname, int flags, ...) {
 
 /* removed in glibc 2.33 */
 #ifdef __REDIRECT_NTH
-extern int __REDIRECT_NTH(__fxstat, (int __ver, int __fildes,
-                          struct stat *__stat_buf), __fxstat64);
-extern int __REDIRECT_NTH(__xstat, (int __ver, const char *__filename,
-                          struct stat *__stat_buf), __xstat64);
-extern int __REDIRECT_NTH(__lxstat, (int __ver, const char *__filename,
-                          struct stat *__stat_buf), __lxstat64);
+extern int __REDIRECT_NTH(__fxstat,
+                          (int __ver, int __fildes, struct stat *__stat_buf),
+                          __fxstat64);
+extern int __REDIRECT_NTH(__xstat,
+                          (int __ver, const char *__filename,
+                           struct stat *__stat_buf),
+                          __xstat64);
+extern int __REDIRECT_NTH(__lxstat,
+                          (int __ver, const char *__filename,
+                           struct stat *__stat_buf),
+                          __lxstat64);
 #endif
 
 off64_t lseek(int fd, off64_t offset, int whence) {
@@ -88,32 +93,30 @@ off64_t lseek(int fd, off64_t offset, int whence) {
 }
 
 int __xstat(int vers, const char *path, struct stat *buf) {
-  return __fd_stat(path, (struct stat64*) buf);
+  return __fd_stat(path, (struct stat64 *)buf);
 }
 
 int stat(const char *path, struct stat *buf) {
-  return __fd_stat(path, (struct stat64*) buf);
+  return __fd_stat(path, (struct stat64 *)buf);
 }
 
 int __lxstat(int vers, const char *path, struct stat *buf) {
-  return __fd_lstat(path, (struct stat64*) buf);
+  return __fd_lstat(path, (struct stat64 *)buf);
 }
 
 int lstat(const char *path, struct stat *buf) {
-  return __fd_lstat(path, (struct stat64*) buf);
+  return __fd_lstat(path, (struct stat64 *)buf);
 }
 
 int __fxstat(int vers, int fd, struct stat *buf) {
-  return __fd_fstat(fd, (struct stat64*) buf);
+  return __fd_fstat(fd, (struct stat64 *)buf);
 }
 
 int fstat(int fd, struct stat *buf) {
-  return __fd_fstat(fd, (struct stat64*) buf);
+  return __fd_fstat(fd, (struct stat64 *)buf);
 }
 
-int ftruncate64(int fd, off64_t length) {
-  return __fd_ftruncate(fd, length);
-}
+int ftruncate64(int fd, off64_t length) { return __fd_ftruncate(fd, length); }
 
 int statfs(const char *path, struct statfs *buf) __attribute__((weak));
 int statfs(const char *path, struct statfs *buf) {
@@ -121,7 +124,7 @@ int statfs(const char *path, struct statfs *buf) {
 }
 
 ssize_t getdents64(int fd, void *dirp, size_t count) {
-  return __fd_getdents(fd, (struct dirent64*) dirp, count);
+  return __fd_getdents(fd, (struct dirent64 *)dirp, count);
 }
 ssize_t __getdents64(int fd, void *dirp, size_t count)
-     __attribute__((alias("getdents64")));
+    __attribute__((alias("getdents64")));

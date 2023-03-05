@@ -75,7 +75,7 @@ ConstantArrayExprVisitor::visitConcat(const ConcatExpr &ce) {
           addedIndexes.find(base->index.get()->hash()) == addedIndexes.end()) {
         if (arrays.find(base->updates.root) == arrays.end()) {
           arrays.insert(
-              std::make_pair(base->updates.root, std::vector<ref<Expr> >()));
+              std::make_pair(base->updates.root, std::vector<ref<Expr>>()));
         } else {
           // Another possible index to resolve, currently unsupported
           incompatible = true;
@@ -109,7 +109,7 @@ ExprVisitor::Action ConstantArrayExprVisitor::visitRead(const ReadExpr &re) {
         addedIndexes.find(re.index.get()->hash()) == addedIndexes.end()) {
       if (arrays.find(re.updates.root) == arrays.end()) {
         arrays.insert(
-            std::make_pair(re.updates.root, std::vector<ref<Expr> >()));
+            std::make_pair(re.updates.root, std::vector<ref<Expr>>()));
       } else {
         // Another possible index to resolve, currently unsupported
         incompatible = true;

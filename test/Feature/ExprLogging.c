@@ -13,13 +13,11 @@
 
 #include <assert.h>
 
-int constantArr[16 ] = {
-  1 <<  0, 1 <<  1, 1 <<  2, 1 <<  3,
-  1 <<  4, 1 <<  5, 1 <<  6, 1 <<  7,
-  1 <<  8, 1 <<  9, 1 << 10, 1 << 11,
-  1 << 12, 1 << 13, 1 << 14, 1 << 15
-};
-
+int constantArr[16] = {
+    1 << 0, 1 << 1, 1 << 2, 1 << 3,
+    1 << 4, 1 << 5, 1 << 6, 1 << 7,
+    1 << 8, 1 << 9, 1 << 10, 1 << 11,
+    1 << 12, 1 << 13, 1 << 14, 1 << 15};
 
 int main() {
   char buf[4];
@@ -30,14 +28,14 @@ int main() {
   constantArr[klee_range(0, 16, "idx.0")] = buf[0];
 
   // Use this to trigger an interior update list usage.
-  int y = constantArr[klee_range(0, 16, "idx.1")];  
+  int y = constantArr[klee_range(0, 16, "idx.1")];
 
   constantArr[klee_range(0, 16, "idx.2")] = buf[3];
-  
+
   buf[klee_range(0, 4, "idx.3")] = 0;
   klee_assume(buf[0] == 'h');
-  
-  int x = *((int*) buf);
+
+  int x = *((int *)buf);
   klee_assume(x > 2);
   klee_assume(x == constantArr[12]);
 

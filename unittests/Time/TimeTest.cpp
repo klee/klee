@@ -1,15 +1,13 @@
 #include "klee/System/Time.h"
-#include "gtest/gtest.h"
 #include "gtest/gtest-death-test.h"
+#include "gtest/gtest.h"
 
 #include <cerrno>
 #include <sstream>
 
-
 int finished = 0;
 
 using namespace klee;
-
 
 TEST(TimeTest, TimingFunctions) {
   auto t = time::getClockInfo();
@@ -23,7 +21,6 @@ TEST(TimeTest, TimingFunctions) {
 
   time::getUserTime();
 }
-
 
 TEST(TimeTest, TimeParserNewFormat) {
   // valid
@@ -44,12 +41,15 @@ TEST(TimeTest, TimeParserNewFormat) {
   ASSERT_EQ(s0, time::minutes(2));
 
   // invalid
-  ASSERT_EXIT(time::Span("h"), ::testing::ExitedWithCode(1), "Illegal number format: h");
-  ASSERT_EXIT(time::Span("-5min"), ::testing::ExitedWithCode(1), "Illegal number format: -5min");
-  ASSERT_EXIT(time::Span("3.5h"), ::testing::ExitedWithCode(1), "Illegal number format: 3.5h");
-  ASSERT_EXIT(time::Span("3mi"), ::testing::ExitedWithCode(1), "Illegal number format: 3mi");
+  ASSERT_EXIT(time::Span("h"), ::testing::ExitedWithCode(1),
+              "Illegal number format: h");
+  ASSERT_EXIT(time::Span("-5min"), ::testing::ExitedWithCode(1),
+              "Illegal number format: -5min");
+  ASSERT_EXIT(time::Span("3.5h"), ::testing::ExitedWithCode(1),
+              "Illegal number format: 3.5h");
+  ASSERT_EXIT(time::Span("3mi"), ::testing::ExitedWithCode(1),
+              "Illegal number format: 3mi");
 }
-
 
 TEST(TimeTest, TimeParserOldFormat) {
   // valid
@@ -67,20 +67,23 @@ TEST(TimeTest, TimeParserOldFormat) {
   ASSERT_EQ(errno, 0);
 
   // invalid
-  ASSERT_EXIT(time::Span("-3.5"), ::testing::ExitedWithCode(1), "Illegal number format: -3.5");
-  ASSERT_EXIT(time::Span("NAN"), ::testing::ExitedWithCode(1), "Illegal number format: NAN");
-  ASSERT_EXIT(time::Span("INF"), ::testing::ExitedWithCode(1), "Illegal number format: INF");
-  ASSERT_EXIT(time::Span("foo"), ::testing::ExitedWithCode(1), "Illegal number format: foo");
+  ASSERT_EXIT(time::Span("-3.5"), ::testing::ExitedWithCode(1),
+              "Illegal number format: -3.5");
+  ASSERT_EXIT(time::Span("NAN"), ::testing::ExitedWithCode(1),
+              "Illegal number format: NAN");
+  ASSERT_EXIT(time::Span("INF"), ::testing::ExitedWithCode(1),
+              "Illegal number format: INF");
+  ASSERT_EXIT(time::Span("foo"), ::testing::ExitedWithCode(1),
+              "Illegal number format: foo");
 }
 
-
 TEST(TimeTest, TimeArithmeticAndComparisons) {
-  auto h   = time::hours(1);
+  auto h = time::hours(1);
   auto min = time::minutes(1);
   auto sec = time::seconds(1);
-  auto ms  = time::milliseconds(1);
-  auto us  = time::microseconds(1);
-  auto ns  = time::nanoseconds(1);
+  auto ms = time::milliseconds(1);
+  auto us = time::microseconds(1);
+  auto ns = time::nanoseconds(1);
 
   ASSERT_GT(h, min);
   ASSERT_GT(min, sec);
@@ -107,9 +110,10 @@ TEST(TimeTest, TimeArithmeticAndComparisons) {
   ASSERT_EQ(op1, ms);
   op0 = time::nanoseconds(3);
   op1 = op0 * 1000U;
-  ASSERT_EQ(op1, 3U*us);
+  ASSERT_EQ(op1, 3U * us);
 
-  op0 = (time::seconds(10) + time::minutes(1) - time::milliseconds(10000)) * 60U;
+  op0 =
+      (time::seconds(10) + time::minutes(1) - time::milliseconds(10000)) * 60U;
   ASSERT_EQ(op0, h);
 
   auto p1 = time::getWallTime();
@@ -129,7 +133,6 @@ TEST(TimeTest, TimeArithmeticAndComparisons) {
   s -= time::minutes(4);
   ASSERT_EQ(s, time::seconds(60));
 }
-
 
 TEST(TimeTest, TimeConversions) {
   auto t = time::Span("3h14min1s");

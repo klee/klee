@@ -7,7 +7,7 @@
 #include <fcntl.h>
 
 int main(int argc, char **argv) {
-  int fd = openat(AT_FDCWD, "A", O_RDWR|O_TRUNC);
+  int fd = openat(AT_FDCWD, "A", O_RDWR | O_TRUNC);
   if (fd != -1) {
     char buf[10];
     assert(read(fd, buf, 10) == 10);

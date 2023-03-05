@@ -16,20 +16,26 @@ using namespace llvm;
 
 /***/
 
-IncompleteSolver::PartialValidity 
+IncompleteSolver::PartialValidity
 IncompleteSolver::negatePartialValidity(PartialValidity pv) {
-  switch(pv) {
-  default: assert(0 && "invalid partial validity");  
-  case MustBeTrue:  return MustBeFalse;
-  case MustBeFalse: return MustBeTrue;
-  case MayBeTrue:   return MayBeFalse;
-  case MayBeFalse:  return MayBeTrue;
-  case TrueOrFalse: return TrueOrFalse;
+  switch (pv) {
+  default:
+    assert(0 && "invalid partial validity");
+  case MustBeTrue:
+    return MustBeFalse;
+  case MustBeFalse:
+    return MustBeTrue;
+  case MayBeTrue:
+    return MayBeFalse;
+  case MayBeFalse:
+    return MayBeTrue;
+  case TrueOrFalse:
+    return TrueOrFalse;
   }
 }
 
-IncompleteSolver::PartialValidity 
-IncompleteSolver::computeValidity(const Query& query) {
+IncompleteSolver::PartialValidity
+IncompleteSolver::computeValidity(const Query &query) {
   PartialValidity trueResult = computeTruth(query);
 
   if (trueResult == MustBeTrue) {
@@ -40,9 +46,8 @@ IncompleteSolver::computeValidity(const Query& query) {
     if (falseResult == MustBeTrue) {
       return MustBeFalse;
     } else {
-      bool trueCorrect = trueResult != None,
-        falseCorrect = falseResult != None;
-      
+      bool trueCorrect = trueResult != None, falseCorrect = falseResult != None;
+
       if (trueCorrect && falseCorrect) {
         return TrueOrFalse;
       } else if (trueCorrect) { // ==> trueResult == MayBeFalse
@@ -58,40 +63,38 @@ IncompleteSolver::computeValidity(const Query& query) {
 
 /***/
 
-StagedSolverImpl::StagedSolverImpl(IncompleteSolver *_primary, 
-                                   Solver *_secondary) 
-  : primary(_primary),
-    secondary(_secondary) {
-}
+StagedSolverImpl::StagedSolverImpl(IncompleteSolver *_primary,
+                                   Solver *_secondary)
+    : primary(_primary), secondary(_secondary) {}
 
 StagedSolverImpl::~StagedSolverImpl() {
   delete primary;
   delete secondary;
 }
 
-bool StagedSolverImpl::computeTruth(const Query& query, bool &isValid) {
-  IncompleteSolver::PartialValidity trueResult = primary->computeTruth(query); 
-  
+bool StagedSolverImpl::computeTruth(const Query &query, bool &isValid) {
+  IncompleteSolver::PartialValidity trueResult = primary->computeTruth(query);
+
   if (trueResult != IncompleteSolver::None) {
     isValid = (trueResult == IncompleteSolver::MustBeTrue);
     return true;
-  } 
+  }
 
   return secondary->impl->computeTruth(query, isValid);
 }
 
-bool StagedSolverImpl::computeValidity(const Query& query,
+bool StagedSolverImpl::computeValidity(const Query &query,
                                        Solver::Validity &result) {
   bool tmp;
 
-  switch(primary->computeValidity(query)) {
-  case IncompleteSolver::MustBeTrue: 
+  switch (primary->computeValidity(query)) {
+  case IncompleteSolver::MustBeTrue:
     result = Solver::True;
     break;
-  case IncompleteSolver::MustBeFalse: 
+  case IncompleteSolver::MustBeFalse:
     result = Solver::False;
     break;
-  case IncompleteSolver::TrueOrFalse: 
+  case IncompleteSolver::TrueOrFalse:
     result = Solver::Unknown;
     break;
   case IncompleteSolver::MayBeTrue:
@@ -113,24 +116,19 @@ bool StagedSolverImpl::computeValidity(const Query& query,
   return true;
 }
 
-bool StagedSolverImpl::computeValue(const Query& query,
-                                    ref<Expr> &result) {
+bool StagedSolverImpl::computeValue(const Query &query, ref<Expr> &result) {
   if (primary->computeValue(query, result))
     return true;
 
   return secondary->impl->computeValue(query, result);
 }
 
-bool 
-StagedSolverImpl::computeInitialValues(const Query& query,
-                                       const std::vector<const Array*> 
-                                         &objects,
-                                       std::vector< std::vector<unsigned char> >
-                                         &values,
-                                       bool &hasSolution) {
+bool StagedSolverImpl::computeInitialValues(
+    const Query &query, const std::vector<const Array *> &objects,
+    std::vector<std::vector<unsigned char>> &values, bool &hasSolution) {
   if (primary->computeInitialValues(query, objects, values, hasSolution))
     return true;
-  
+
   return secondary->impl->computeInitialValues(query, objects, values,
                                                hasSolution);
 }
@@ -139,11 +137,10 @@ SolverImpl::SolverRunStatus StagedSolverImpl::getOperationStatusCode() {
   return secondary->impl->getOperationStatusCode();
 }
 
-char *StagedSolverImpl::getConstraintLog(const Query& query) {
+char *StagedSolverImpl::getConstraintLog(const Query &query) {
   return secondary->impl->getConstraintLog(query);
 }
 
 void StagedSolverImpl::setCoreSolverTimeout(time::Span timeout) {
   secondary->impl->setCoreSolverTimeout(timeout);
 }
-

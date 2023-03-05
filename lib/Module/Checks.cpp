@@ -71,9 +71,8 @@ bool DivCheckPass::runOnModule(Module &M) {
 
   LLVMContext &ctx = M.getContext();
   KleeIRMetaData md(ctx);
-  auto divZeroCheckFunction =
-      M.getOrInsertFunction("klee_div_zero_check", Type::getVoidTy(ctx),
-                            Type::getInt64Ty(ctx));
+  auto divZeroCheckFunction = M.getOrInsertFunction(
+      "klee_div_zero_check", Type::getVoidTy(ctx), Type::getInt64Ty(ctx));
 
   for (auto &divInst : divInstruction) {
     llvm::IRBuilder<> Builder(divInst /* Inserts before divInst*/);
@@ -130,9 +129,9 @@ bool OvershiftCheckPass::runOnModule(Module &M) {
   // Retrieve the checker function
   auto &ctx = M.getContext();
   KleeIRMetaData md(ctx);
-  auto overshiftCheckFunction = M.getOrInsertFunction(
-      "klee_overshift_check", Type::getVoidTy(ctx), Type::getInt64Ty(ctx),
-      Type::getInt64Ty(ctx));
+  auto overshiftCheckFunction =
+      M.getOrInsertFunction("klee_overshift_check", Type::getVoidTy(ctx),
+                            Type::getInt64Ty(ctx), Type::getInt64Ty(ctx));
 
   for (auto &shiftInst : shiftInstructions) {
     llvm::IRBuilder<> Builder(shiftInst);
@@ -140,7 +139,8 @@ bool OvershiftCheckPass::runOnModule(Module &M) {
     std::vector<llvm::Value *> args;
 
     // Determine bit width of first operand
-    uint64_t bitWidth = shiftInst->getOperand(0)->getType()->getScalarSizeInBits();
+    uint64_t bitWidth =
+        shiftInst->getOperand(0)->getType()->getScalarSizeInBits();
     auto bitWidthC = ConstantInt::get(Type::getInt64Ty(ctx), bitWidth, false);
     args.push_back(bitWidthC);
 

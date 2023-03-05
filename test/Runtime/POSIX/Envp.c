@@ -4,17 +4,17 @@
 
 /* This test checks that main() with 3 arguments is supported, and that the data in envp for $HOME is consistent with getenv("HOME") */
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-int main(int argcPtr, char **argvPtr, char** envp) {
+int main(int argcPtr, char **argvPtr, char **envp) {
 
-  char* home1 = getenv("HOME");
+  char *home1 = getenv("HOME");
   printf("home1 = %s\n", home1);
 
-  char* home2 = "invalid$home";
+  char *home2 = "invalid$home";
   while (*envp) {
     if (strncmp(*envp, "HOME", 4) == 0)
       home2 = *envp + 5;
@@ -22,6 +22,6 @@ int main(int argcPtr, char **argvPtr, char** envp) {
   }
   printf("home2 = %s\n", home2);
   assert(strcmp(home1, home2) == 0);
-  
+
   return 0;
 }

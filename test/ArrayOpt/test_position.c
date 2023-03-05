@@ -23,10 +23,10 @@
 // CHECK-OPT_V: KLEE: WARNING: OPT_V: successful
 // CHECK-CONST_ARR: const_arr
 
-#include <stdio.h>
 #include "klee/klee.h"
+#include <stdio.h>
 
-short array[5] = {1,2,3,-4,5};
+short array[5] = {1, 2, 3, -4, 5};
 
 int main() {
   unsigned k;

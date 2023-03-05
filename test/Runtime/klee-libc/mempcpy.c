@@ -28,9 +28,12 @@ int main() {
   int *pos = (int *)mempcpy(arr2, arr1, sizeof(int) * 5);
 
   assert(pos == &arr2[5]);
-  for (int i = 0; i < 10; ++i) assert(arr1[i] == i);
-  for (int i = 0; i <  5; ++i) assert(arr2[i] == i);
-  for (int i = 5; i < 10; ++i) assert(arr2[i] == -1);
+  for (int i = 0; i < 10; ++i)
+    assert(arr1[i] == i);
+  for (int i = 0; i < 5; ++i)
+    assert(arr2[i] == i);
+  for (int i = 5; i < 10; ++i)
+    assert(arr2[i] == -1);
 
   // symbolic int arrays
   int sarr1[10];

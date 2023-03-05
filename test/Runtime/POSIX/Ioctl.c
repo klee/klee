@@ -3,11 +3,11 @@
 // RUN: %klee --output-dir=%t.klee-out --posix-runtime --exit-on-error %t.bc --sym-stdin 4
 
 #include <assert.h>
-#include <sys/stat.h>
-#include <sys/ioctl.h>
-#include <termios.h>
 #include <errno.h>
 #include <stdio.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <termios.h>
 
 int main() {
   struct stat s;

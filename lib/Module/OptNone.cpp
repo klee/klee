@@ -23,7 +23,7 @@ char OptNonePass::ID;
 bool OptNonePass::runOnModule(llvm::Module &M) {
   // Find list of functions that start with `klee_`
   // and mark all functions that contain such call or invoke as optnone
-  llvm::SmallPtrSet<llvm::Function *,16> CallingFunctions;
+  llvm::SmallPtrSet<llvm::Function *, 16> CallingFunctions;
   for (auto &F : M) {
     if (!F.hasName() || !F.getName().startswith("klee_"))
       continue;

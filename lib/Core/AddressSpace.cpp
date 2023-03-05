@@ -23,7 +23,7 @@ using namespace klee;
 ///
 
 void AddressSpace::bindObject(const MemoryObject *mo, ObjectState *os) {
-  assert(os->copyOnWriteOwner==0 && "object already has owner");
+  assert(os->copyOnWriteOwner == 0 && "object already has owner");
   os->copyOnWriteOwner = cowKey;
   objects = objects.replace(std::make_pair(mo, os));
 }
@@ -43,7 +43,7 @@ ObjectState *AddressSpace::getWriteable(const MemoryObject *mo,
 
   // If this address space owns they object, return it
   if (cowKey == os->copyOnWriteOwner)
-    return const_cast<ObjectState*>(os);
+    return const_cast<ObjectState *>(os);
 
   // Add a copy of this object state that can be updated
   ref<ObjectState> newObjectState(new ObjectState(*os));
@@ -52,9 +52,9 @@ ObjectState *AddressSpace::getWriteable(const MemoryObject *mo,
   return newObjectState.get();
 }
 
-/// 
+///
 
-bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr, 
+bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr,
                               ObjectPair &result) const {
   uint64_t address = addr->getZExtValue();
   MemoryObject hack(address);
@@ -63,7 +63,7 @@ bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr,
     const auto &mo = res->first;
     // Check if the provided address is between start and end of the object
     // [mo->address, mo->address + mo->size) or the object is a 0-sized object.
-    if ((mo->size==0 && address==mo->address) ||
+    if ((mo->size == 0 && address == mo->address) ||
         (address - mo->address < mo->size)) {
       result.first = res->first;
       result.second = res->second.get();
@@ -74,10 +74,8 @@ bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr,
   return false;
 }
 
-bool AddressSpace::resolveOne(ExecutionState &state,
-                              TimingSolver *solver,
-                              ref<Expr> address,
-                              ObjectPair &result,
+bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
+                              ref<Expr> address, ObjectPair &result,
                               bool &success) const {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(address)) {
     success = resolveOne(CE, result);
@@ -105,13 +103,13 @@ bool AddressSpace::resolveOne(ExecutionState &state,
     }
 
     // didn't work, now we have to search
-       
+
     MemoryMap::iterator oi = objects.upper_bound(&hack);
     MemoryMap::iterator begin = objects.begin();
     MemoryMap::iterator end = objects.end();
-      
+
     MemoryMap::iterator start = oi;
-    while (oi!=begin) {
+    while (oi != begin) {
       --oi;
       const auto &mo = oi->first;
 
@@ -137,7 +135,7 @@ bool AddressSpace::resolveOne(ExecutionState &state,
     }
 
     // search forwards
-    for (oi=start; oi!=end; ++oi) {
+    for (oi = start; oi != end; ++oi) {
       const auto &mo = oi->first;
 
       bool mustBeTrue;
@@ -195,10 +193,8 @@ int AddressSpace::checkPointerInObject(ExecutionState &state,
         return 1;
       if (mustBeTrue)
         return 0;
-    }
-    else
-      if (size == maxResolutions)
-        return 1;
+    } else if (size == maxResolutions)
+      return 1;
   }
 
   return 2;
@@ -298,13 +294,13 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
 // then its concrete cache byte isn't being used) but is just a hack.
 
 void AddressSpace::copyOutConcretes() {
-  for (MemoryMap::iterator it = objects.begin(), ie = objects.end(); 
-       it != ie; ++it) {
+  for (MemoryMap::iterator it = objects.begin(), ie = objects.end(); it != ie;
+       ++it) {
     const MemoryObject *mo = it->first;
 
     if (!mo->isUserSpecified) {
       const auto &os = it->second;
-      auto address = reinterpret_cast<std::uint8_t*>(mo->address);
+      auto address = reinterpret_cast<std::uint8_t *>(mo->address);
 
       if (!os->readOnly)
         memcpy(address, os->concreteStore, mo->size);
@@ -329,7 +325,7 @@ bool AddressSpace::copyInConcretes() {
 
 bool AddressSpace::copyInConcrete(const MemoryObject *mo, const ObjectState *os,
                                   uint64_t src_address) {
-  auto address = reinterpret_cast<std::uint8_t*>(src_address);
+  auto address = reinterpret_cast<std::uint8_t *>(src_address);
   if (memcmp(address, os->concreteStore, mo->size) != 0) {
     if (os->readOnly) {
       return false;
@@ -343,7 +339,7 @@ bool AddressSpace::copyInConcrete(const MemoryObject *mo, const ObjectState *os,
 
 /***/
 
-bool MemoryObjectLT::operator()(const MemoryObject *a, const MemoryObject *b) const {
+bool MemoryObjectLT::operator()(const MemoryObject *a,
+                                const MemoryObject *b) const {
   return a->address < b->address;
 }
-

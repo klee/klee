@@ -65,7 +65,8 @@ TEST_F(Z3SolverTest, GetConstraintLog) {
   // If the bug is still present this fail due to an internal assertion
   char *ConstraintsString = Z3Solver_->getConstraintLog(TheQuery);
   const char *ExpectedArraySelection = "(= (select const_array0";
-  const char *Occurence = std::strstr(ConstraintsString, ExpectedArraySelection);
+  const char *Occurence =
+      std::strstr(ConstraintsString, ExpectedArraySelection);
   ASSERT_STRNE(Occurence, nullptr);
   free(ConstraintsString);
 }

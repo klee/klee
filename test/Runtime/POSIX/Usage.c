@@ -27,6 +27,6 @@
 // RUN: grep "No more than 100 symbolic arguments allowed." %t6
 // RUN: rm -rf %t.klee-out
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   return 0;
 }

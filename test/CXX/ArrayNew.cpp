@@ -11,7 +11,7 @@ class Test {
 
 public:
   Test() {}
-  Test(int _x) : x(_x) { }
+  Test(int _x) : x(_x) {}
   ~Test() { decon += x; }
 
   int getX() { return x; }
@@ -22,18 +22,18 @@ int main(int argc) {
   Test *rt = new Test[4];
   int i;
 
-  for (i=0; i<4; i++)
-    rt[i].setX(i+1);
+  for (i = 0; i < 4; i++)
+    rt[i].setX(i + 1);
 
   int sum = 0;
-  for (i=0; i<4; i++)
+  for (i = 0; i < 4; i++)
     sum += rt[i].getX();
-  
-  assert(sum==10);
+
+  assert(sum == 10);
 
   delete[] rt;
 
-  assert(decon==10);
+  assert(decon == 10);
 
   return 0;
 }

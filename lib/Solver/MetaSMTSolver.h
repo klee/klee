@@ -27,6 +27,6 @@ public:
 /// createMetaSMTSolver - Create a solver using the metaSMT backend set by
 /// the option MetaSMTBackend.
 Solver *createMetaSMTSolver();
-}
+} // namespace klee
 
 #endif /* KLEE_METASMTSOLVER_H */

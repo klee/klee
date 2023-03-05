@@ -9,15 +9,15 @@
 #include "klee/Config/config.h"
 
 #ifdef ENABLE_METASMT
-#include "MetaSMTSolver.h"
 #include "MetaSMTBuilder.h"
+#include "MetaSMTSolver.h"
 
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/ExprUtil.h"
-#include "klee/Support/ErrorHandling.h"
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverImpl.h"
+#include "klee/Support/ErrorHandling.h"
 
 #include "llvm/Support/ErrorHandling.h"
 
@@ -95,18 +95,18 @@ public:
 
   bool computeInitialValues(const Query &query,
                             const std::vector<const Array *> &objects,
-                            std::vector<std::vector<unsigned char> > &values,
+                            std::vector<std::vector<unsigned char>> &values,
                             bool &hasSolution);
 
   SolverImpl::SolverRunStatus
   runAndGetCex(const Query &query, const std::vector<const Array *> &objects,
-               std::vector<std::vector<unsigned char> > &values,
+               std::vector<std::vector<unsigned char>> &values,
                bool &hasSolution);
 
   SolverImpl::SolverRunStatus
   runAndGetCexForked(const Query &query,
                      const std::vector<const Array *> &objects,
-                     std::vector<std::vector<unsigned char> > &values,
+                     std::vector<std::vector<unsigned char>> &values,
                      bool &hasSolution, time::Span timeout);
 
   SolverRunStatus getOperationStatusCode();
@@ -150,7 +150,7 @@ bool MetaSMTSolverImpl<SolverContext>::computeTruth(const Query &query,
 
   bool success = false;
   std::vector<const Array *> objects;
-  std::vector<std::vector<unsigned char> > values;
+  std::vector<std::vector<unsigned char>> values;
   bool hasSolution;
 
   if (computeInitialValues(query, objects, values, hasSolution)) {
@@ -168,7 +168,7 @@ bool MetaSMTSolverImpl<SolverContext>::computeValue(const Query &query,
 
   bool success = false;
   std::vector<const Array *> objects;
-  std::vector<std::vector<unsigned char> > values;
+  std::vector<std::vector<unsigned char>> values;
   bool hasSolution;
 
   // Find the object used in the expression, and compute an assignment for them.
@@ -187,7 +187,7 @@ bool MetaSMTSolverImpl<SolverContext>::computeValue(const Query &query,
 template <typename SolverContext>
 bool MetaSMTSolverImpl<SolverContext>::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<std::vector<unsigned char> > &values, bool &hasSolution) {
+    std::vector<std::vector<unsigned char>> &values, bool &hasSolution) {
 
   _runStatusCode = SOLVER_RUN_STATUS_FAILURE;
 
@@ -222,7 +222,7 @@ bool MetaSMTSolverImpl<SolverContext>::computeInitialValues(
 template <typename SolverContext>
 SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCex(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<std::vector<unsigned char> > &values, bool &hasSolution) {
+    std::vector<std::vector<unsigned char>> &values, bool &hasSolution) {
 
   // assume the constraints of the query
   for (auto &constraint : query.constraints)
@@ -271,7 +271,7 @@ template <typename SolverContext>
 SolverImpl::SolverRunStatus
 MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<std::vector<unsigned char> > &values, bool &hasSolution,
+    std::vector<std::vector<unsigned char>> &values, bool &hasSolution,
     time::Span timeout) {
   unsigned char *pos = shared_memory_ptr;
   unsigned sum = 0;
@@ -373,7 +373,7 @@ MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
     }
 
     if (hasSolution) {
-      values = std::vector<std::vector<unsigned char> >(objects.size());
+      values = std::vector<std::vector<unsigned char>>(objects.size());
       unsigned i = 0;
       for (std::vector<const Array *>::const_iterator it = objects.begin(),
                                                       ie = objects.end();
@@ -429,35 +429,35 @@ Solver *createMetaSMTSolver() {
 #ifdef METASMT_HAVE_STP
   case METASMT_BACKEND_STP:
     backend = "STP";
-    coreSolver = new MetaSMTSolver<DirectSolver_Context<solver::STP_Backend> >(
+    coreSolver = new MetaSMTSolver<DirectSolver_Context<solver::STP_Backend>>(
         UseForkedCoreSolver, CoreSolverOptimizeDivides);
     break;
 #endif
 #ifdef METASMT_HAVE_Z3
   case METASMT_BACKEND_Z3:
     backend = "Z3";
-    coreSolver = new MetaSMTSolver<DirectSolver_Context<solver::Z3_Backend> >(
+    coreSolver = new MetaSMTSolver<DirectSolver_Context<solver::Z3_Backend>>(
         UseForkedCoreSolver, CoreSolverOptimizeDivides);
     break;
 #endif
 #ifdef METASMT_HAVE_BTOR
   case METASMT_BACKEND_BOOLECTOR:
     backend = "Boolector";
-    coreSolver = new MetaSMTSolver<DirectSolver_Context<solver::Boolector> >(
+    coreSolver = new MetaSMTSolver<DirectSolver_Context<solver::Boolector>>(
         UseForkedCoreSolver, CoreSolverOptimizeDivides);
     break;
 #endif
 #ifdef METASMT_HAVE_CVC4
   case METASMT_BACKEND_CVC4:
     backend = "CVC4";
-    coreSolver = new MetaSMTSolver<DirectSolver_Context<solver::CVC4> >(
+    coreSolver = new MetaSMTSolver<DirectSolver_Context<solver::CVC4>>(
         UseForkedCoreSolver, CoreSolverOptimizeDivides);
     break;
 #endif
 #ifdef METASMT_HAVE_YICES2
   case METASMT_BACKEND_YICES2:
     backend = "Yices2";
-    coreSolver = new MetaSMTSolver<DirectSolver_Context<solver::Yices2> >(
+    coreSolver = new MetaSMTSolver<DirectSolver_Context<solver::Yices2>>(
         UseForkedCoreSolver, CoreSolverOptimizeDivides);
     break;
 #endif
@@ -469,5 +469,5 @@ Solver *createMetaSMTSolver() {
   return coreSolver;
 }
 
-}
+} // namespace klee
 #endif // ENABLE_METASMT
