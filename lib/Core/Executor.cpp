@@ -514,8 +514,6 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
 
   initializeSearchOptions();
 
-  Expr::enableCache();
-
   if (OnlyOutputStatesCoveringNew && !StatsTracker::useIStats())
     klee_error("To use --only-output-states-covering-new, you need to enable "
                "--output-istats.");

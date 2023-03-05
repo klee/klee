@@ -133,7 +133,7 @@ int Expr::compare(const Expr &b, ExprEquivSet &equivs) const {
   if (hashValue != b.hashValue)
     return (hashValue < b.hashValue) ? -1 : 1;
 
-  if (isCached() && b.isCached())
+  if (isCached && b.isCached)
     return (this < &b) ? -1 : 1;
 
   const Expr *ap, *bp;
@@ -501,30 +501,28 @@ std::string Expr::toString() const {
 
 /***/
 
-std::unique_ptr<Expr::ExprCacheSet> Expr::cachedExpressions;
+Expr::ExprCacheSet Expr::cachedExpressions;
 
 Expr::~Expr() {
   Expr::count--;
-  toBeCleared = true;
-  if (cachedExpressions) {
-    cachedExpressions->cache.erase(this);
+  if (isCached) {
+    toBeCleared = true;
+    cachedExpressions.cache.erase(this);
   }
 }
 
 ref<Expr> Expr::createCachedExpr(const ref<Expr> &e) {
-  if (cachedExpressions) {
-    std::pair<ExprCacheSet::CacheType::const_iterator, bool> success =
-        cachedExpressions->cache.insert(e.get());
 
-    if (success.second) {
-      // Cache miss
-      e->cached = true;
-      return e;
-    }
-    // Cache hit
-    return (ref<Expr>)*(success.first);
+  std::pair<CacheType::const_iterator, bool> success =
+      cachedExpressions.cache.insert(e.get());
+
+  if (success.second) {
+    // Cache miss
+    e->isCached = true;
+    return e;
   }
-  return e;
+  // Cache hit
+  return (ref<Expr>)*(success.first);
 }
 /***/
 
