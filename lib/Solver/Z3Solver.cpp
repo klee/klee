@@ -425,8 +425,17 @@ bool Z3SolverImpl::internalRunSolver(
     exprs.insert(sideConstraint);
   }
 
+  std::vector<const Array *> arrays = query.gatherArrays();
+  bool forceTactic = true;
+  for (const Array *array : arrays) {
+    if (isa<ConstantWithSymbolicSizeSource>(array->source)) {
+      forceTactic = false;
+      break;
+    }
+  }
+
   Z3_solver theSolver;
-  if (Z3_probe_apply(builder->ctx, probe, goal)) {
+  if (forceTactic && Z3_probe_apply(builder->ctx, probe, goal)) {
     theSolver = Z3_mk_solver_for_logic(
         builder->ctx, Z3_mk_string_symbol(builder->ctx, "QF_AUFBV"));
   } else {
