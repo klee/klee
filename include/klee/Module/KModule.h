@@ -15,10 +15,13 @@
 #include "klee/Module/KCallable.h"
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/IR/CFG.h"
 
+#include <deque>
 #include <map>
 #include <memory>
 #include <set>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -145,7 +148,9 @@ struct KFunction : public KCallable {
 
   unsigned getArgRegister(unsigned index) const { return index; }
 
-  llvm::StringRef getName() const override { return function->getName(); }
+  llvm::StringRef getName() const override {
+    return function ? function->getName() : "";
+  }
 
   llvm::FunctionType *getFunctionType() const override {
     return function->getFunctionType();
@@ -174,6 +179,9 @@ public:
 };
 
 class KModule {
+private:
+  bool withPosixRuntime;
+
 public:
   std::unique_ptr<llvm::Module> module;
   std::unique_ptr<llvm::DataLayout> targetData;
@@ -201,6 +209,7 @@ public:
   // Functions which are part of KLEE runtime
   std::set<const llvm::Function *> internalFunctions;
 
+  // Mark function with functionName as part of the KLEE runtime
   void addInternalFunction(const char *functionName);
   // Replace std functions with KLEE intrinsics
   void replaceFunction(const std::unique_ptr<llvm::Module> &m,
@@ -248,6 +257,8 @@ public:
   KBlock *getKBlock(llvm::BasicBlock *bb);
 
   bool inMainModule(llvm::Function *f);
+
+  bool WithPOSIXRuntime() { return withPosixRuntime; }
 };
 } // namespace klee
 

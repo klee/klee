@@ -42,7 +42,8 @@
   TTYPE(Replay, 27U, "")                                                       \
   TTYPE(Merge, 28U, "")                                                        \
   TTYPE(SilentExit, 29U, "")                                                   \
-  MARK(END, 29U)
+  TTYPE(Paused, 30U, "")                                                       \
+  MARK(END, 30U)
 
 ///@brief Reason an ExecutionState got terminated.
 enum class StateTerminationType : std::uint8_t {
@@ -51,6 +52,25 @@ enum class StateTerminationType : std::uint8_t {
   TERMINATION_TYPES
 #undef TTYPE
 #undef MARK
+};
+
+namespace HaltExecution {
+enum Reason {
+  NotHalt = 0,
+  MaxTests,
+  MaxInstructions,
+  MaxSteppedInstructions,
+  MaxTime,
+  CovCheck,
+  NoMoreStates,
+  ReachedTarget,
+  ErrorOnWhichShouldExit,
+  Interrupt,
+  MaxDepth,
+  MaxStackFrames,
+  MaxSolverTime,
+  Unspecified
+};
 };
 
 #endif

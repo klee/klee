@@ -10,7 +10,10 @@ class SourceBuilder {
 private:
   static ref<SymbolicSource> constantSource;
   static ref<SymbolicSource> makeSymbolicSource;
-  static ref<SymbolicSource> lazyInitializationMakeSymbolicSource;
+  static ref<SymbolicSource> symbolicAddressSource;
+  static ref<SymbolicSource> lazyInitializationSymbolicSource;
+  static ref<SymbolicSource> irreproducibleSource;
+  static ref<SymbolicSource> symbolicValueSource;
 
 public:
   SourceBuilder() = delete;
@@ -20,7 +23,9 @@ public:
   static ref<SymbolicSource> makeSymbolic();
   static ref<SymbolicSource> symbolicAddress();
   static ref<SymbolicSource> symbolicSize();
-  static ref<SymbolicSource> lazyInitializationMakeSymbolic();
+  static ref<SymbolicSource> lazyInitializationSymbolic();
+  static ref<SymbolicSource> irreproducible();
+  static ref<SymbolicSource> symbolicValue();
 };
 
 }; // namespace klee

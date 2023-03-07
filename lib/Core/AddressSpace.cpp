@@ -145,7 +145,8 @@ bool AddressSpace::resolveOneIfUnique(ExecutionState &state,
 bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
                               ref<Expr> address, KType *objectType,
                               IDType &result, MOPredicate predicate,
-                              bool &success) const {
+                              bool &success,
+                              const std::atomic_bool &haltExecution) const {
   if (ref<ConstantExpr> CE = dyn_cast<ConstantExpr>(address)) {
     if (resolveOne(CE, objectType, result)) {
       success = true;
@@ -197,6 +198,10 @@ bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
       continue;
     }
 
+    if (haltExecution) {
+      break;
+    }
+
     bool mayBeTrue;
     if (!solver->mayBeTrue(state.constraints,
                            mo->getBoundsCheckPointer(address), mayBeTrue,
@@ -215,7 +220,8 @@ bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
 
 bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
                               ref<Expr> address, KType *objectType,
-                              IDType &result, bool &success) const {
+                              IDType &result, bool &success,
+                              const std::atomic_bool &haltExecution) const {
   MOPredicate predicate([](const MemoryObject *mo) { return true; });
   if (UseTimestamps) {
     ref<Expr> base =
@@ -243,7 +249,7 @@ bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
   }
 
   return resolveOne(state, solver, address, objectType, result, predicate,
-                    success);
+                    success, haltExecution);
 }
 
 int AddressSpace::checkPointerInObject(ExecutionState &state,

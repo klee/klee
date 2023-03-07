@@ -10,6 +10,8 @@
 #ifndef KLEE_USERSEARCHER_H
 #define KLEE_USERSEARCHER_H
 
+#include "llvm/Support/CommandLine.h"
+
 namespace klee {
 class Executor;
 class Searcher;

@@ -13,6 +13,7 @@
 #include "MergeHandler.h"
 #include "Searcher.h"
 
+#include "klee/Core/Interpreter.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/OptionCategories.h"
 
@@ -64,15 +65,6 @@ cl::opt<bool> UseBatchingSearch(
              "(default=false)"),
     cl::init(false), cl::cat(SearchCat));
 
-cl::opt<bool> UseGuidedSearch(
-    "use-guided-search",
-    cl::desc("Takes place in two steps. First, all acyclic paths are executed, "
-             "then the execution is guided to sections of the program not yet "
-             "covered. These steps are repeated until all blocks of the "
-             "program are covered"
-             "(default=true)"),
-    cl::init(true), cl::cat(SearchCat));
-
 cl::opt<unsigned> BatchInstructions(
     "batch-instructions",
     cl::desc("Number of instructions to batch when using "
@@ -120,7 +112,7 @@ bool klee::userSearcherRequiresMD2U() {
 }
 
 Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng,
-                         PTree &processTree) {
+                         PForest &processForest) {
   Searcher *searcher = nullptr;
   switch (type) {
   case Searcher::DFS:
@@ -133,7 +125,7 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng,
     searcher = new RandomSearcher(rng);
     break;
   case Searcher::RandomPath:
-    searcher = new RandomPathSearcher(processTree, rng);
+    searcher = new RandomPathSearcher(processForest, rng);
     break;
   case Searcher::NURS_CovNew:
     searcher =
@@ -169,7 +161,7 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng,
 Searcher *klee::constructUserSearcher(Executor &executor) {
 
   Searcher *searcher =
-      getNewSearcher(CoreSearch[0], executor.theRNG, *executor.processTree);
+      getNewSearcher(CoreSearch[0], executor.theRNG, *executor.processForest);
 
   if (CoreSearch.size() > 1) {
     std::vector<Searcher *> s;
@@ -177,7 +169,7 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
 
     for (unsigned i = 1; i < CoreSearch.size(); i++)
       s.push_back(getNewSearcher(CoreSearch[i], executor.theRNG,
-                                 *executor.processTree));
+                                 *executor.processForest));
 
     searcher = new InterleavedSearcher(s);
   }
@@ -198,10 +190,17 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
     searcher = ms;
   }
 
-  if (UseGuidedSearch) {
+  if (executor.guidanceKind == Interpreter::GuidanceKind::CoverageGuidance) {
     searcher = new GuidedSearcher(
         searcher, *executor.codeGraphDistance.get(), *executor.targetCalculator,
         executor.pausedStates, MaxCycles - 1, executor.theRNG);
+  }
+
+  if (executor.guidanceKind == Interpreter::GuidanceKind::ErrorGuidance) {
+    delete searcher;
+    searcher = new GuidedSearcher(*executor.codeGraphDistance.get(),
+                                  executor.pausedStates, MaxCycles - 1,
+                                  executor.theRNG);
   }
 
   llvm::raw_ostream &os = executor.getHandler().getInfoStream();

@@ -1120,7 +1120,7 @@ void StatsTracker::checkCoverage() {
     case CoverageCheckPoliciy::Halting:
       klee_message("HaltTimer invoked due to absense of progress in branch "
                    "coverage");
-      executor.setHaltExecution(true);
+      executor.setHaltExecution(HaltExecution::CovCheck);
       break;
     case CoverageCheckPoliciy::Release:
       if (!releaseStates) {
@@ -1139,7 +1139,7 @@ void StatsTracker::checkCoverage() {
       } else {
         klee_message("HaltTimer invoked due to absense of progress in branch "
                      "coverage");
-        executor.setHaltExecution(true);
+        executor.setHaltExecution(HaltExecution::CovCheck);
       }
       break;
     }

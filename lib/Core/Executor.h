@@ -37,6 +37,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <deque>
 #include <map>
 #include <memory>
 #include <set>
@@ -80,7 +81,7 @@ class KModule;
 class MemoryManager;
 class MemoryObject;
 class ObjectState;
-class PTree;
+class PForest;
 class Searcher;
 class SeedInfo;
 class SpecialFunctionHandler;
@@ -114,6 +115,7 @@ public:
   RNG theRNG;
 
 private:
+  using SetOfStates = std::set<ExecutionState *, ExecutionStateIDCompare>;
   /* Set of Intrinsic::ID. Plain type is used here to avoid including llvm in
    * the header */
   static const std::unordered_set<llvm::Intrinsic::ID> supportedFPIntrinsics;
@@ -129,14 +131,14 @@ private:
   MemoryManager *memory;
   TypeManager *typeSystemManager;
 
-  std::set<ExecutionState *, ExecutionStateIDCompare> states;
-  std::set<ExecutionState *, ExecutionStateIDCompare> pausedStates;
+  SetOfStates states;
+  SetOfStates pausedStates;
   StatsTracker *statsTracker;
   TreeStreamWriter *pathWriter, *symPathWriter;
   SpecialFunctionHandler *specialFunctionHandler;
   TimerGroup timers;
   std::unique_ptr<ConcretizationManager> concretizationManager;
-  std::unique_ptr<PTree> processTree;
+  std::unique_ptr<PForest> processForest;
   std::unique_ptr<CodeGraphDistance> codeGraphDistance;
   std::unique_ptr<TargetCalculator> targetCalculator;
 
@@ -195,7 +197,7 @@ private:
 
   /// Signals the executor to halt execution at the next instruction
   /// step.
-  std::atomic_bool haltExecution;
+  HaltExecution::Reason haltExecution = HaltExecution::NotHalt;
 
   /// Whether implied-value concretization is enabled. Currently
   /// false, it is buggy (it needs to validate its writes).
@@ -230,6 +232,8 @@ private:
   /// Typeids used during exception handling
   std::vector<ref<Expr>> eh_typeids;
 
+  GuidanceKind guidanceKind;
+
   /// Return the typeid corresponding to a certain `type_info`
   ref<ConstantExpr> getEhTypeidFor(ref<Expr> type_info);
 
@@ -237,7 +241,12 @@ private:
 
   void executeInstruction(ExecutionState &state, KInstruction *ki);
 
-  void run(ExecutionState &initialState);
+  void targetedRun(ExecutionState &initialState, KBlock *target,
+                   ExecutionState **resultState = nullptr);
+
+  void seed(ExecutionState &initialState);
+  void run(std::vector<ExecutionState *> initialStates);
+  void runWithTarget(ExecutionState &state, KFunction *kf, KBlock *target);
 
   void initializeTypeManager();
 
@@ -258,6 +267,8 @@ private:
   void updateStates(ExecutionState *current);
   void transferToBasicBlock(llvm::BasicBlock *dst, llvm::BasicBlock *src,
                             ExecutionState &state);
+  void transferToBasicBlock(KBlock *dst, llvm::BasicBlock *src,
+                            ExecutionState &state);
 
   void callExternalFunction(ExecutionState &state, KInstruction *target,
                             KCallable *callable,
@@ -276,7 +287,7 @@ private:
   /// state) pairs for each object the given address can point to the
   /// beginning of.
   typedef std::vector<std::pair<IDType, ExecutionState *>> ExactResolutionList;
-  void resolveExact(ExecutionState &state, ref<Expr> p, KType *type,
+  bool resolveExact(ExecutionState &state, ref<Expr> p, KType *type,
                     ExactResolutionList &results, const std::string &name);
 
   MemoryObject *allocate(ExecutionState &state, ref<Expr> size, bool isLocal,
@@ -373,8 +384,8 @@ private:
   // Used for testing.
   ref<Expr> replaceReadWithSymbolic(ExecutionState &state, ref<Expr> e);
 
-  const Cell &eval(KInstruction *ki, unsigned index,
-                   ExecutionState &state) const;
+  const Cell &eval(KInstruction *ki, unsigned index, ExecutionState &state,
+                   bool isSymbolic = true);
 
   Cell &getArgumentCell(ExecutionState &state, KFunction *kf, unsigned index) {
     return state.stack.back().locals[kf->getArgRegister(index)];
@@ -437,7 +448,8 @@ private:
                                     llvm::Instruction **lastInstruction);
 
   /// Remove state from queue and delete state
-  void terminateState(ExecutionState &state);
+  void terminateState(ExecutionState &state,
+                      StateTerminationType terminationType);
 
   // pause state
   void pauseState(ExecutionState &state);
@@ -454,12 +466,18 @@ private:
   void terminateStateEarly(ExecutionState &state, const llvm::Twine &message,
                            StateTerminationType terminationType);
 
+  /// Save extra information in targeted mode
+  /// Then just call `terminateStateOnError`
+  void terminateStateOnTargetError(ExecutionState &state, ReachWithError error);
+
   /// Call error handler and terminate state in case of program errors
   /// (e.g. free()ing globals, out-of-bound accesses)
   void terminateStateOnError(ExecutionState &state, const llvm::Twine &message,
                              StateTerminationType terminationType,
                              const llvm::Twine &longMessage = "",
                              const char *suffix = nullptr);
+
+  void terminateStateOnTerminator(ExecutionState &state);
 
   /// Call error handler and terminate state in case of execution errors
   /// (things that should not be possible, like illegal instruction or
@@ -484,6 +502,12 @@ private:
   const Array *makeArray(ExecutionState &state, ref<Expr> size,
                          const std::string &name,
                          const ref<SymbolicSource> source);
+
+  ExecutionState *prepareStateForPOSIX(KInstIterator &caller,
+                                       ExecutionState *state);
+
+  void prepareTargetedExecution(ExecutionState *initialState,
+                                TargetForest whitelist);
 
   template <typename SqType, typename TypeIt>
   void computeOffsetsSeqTy(KGEPInstruction *kgepi,
@@ -513,7 +537,7 @@ private:
 
   /// Only for debug purposes; enable via debugger or klee-control
   void dumpStates();
-  void dumpPTree();
+  void dumpPForest();
 
 public:
   Executor(llvm::LLVMContext &ctx, const InterpreterOptions &opts,
@@ -550,12 +574,33 @@ public:
     usingSeeds = seeds;
   }
 
+  ExecutionState *formState(llvm::Function *f);
+  ExecutionState *formState(llvm::Function *f, int argc, char **argv,
+                            char **envp);
+
+  void clearGlobal();
+
+  void clearMemory();
+
+  void prepareSymbolicValue(ExecutionState &state, KInstruction *targetW);
+
+  void prepareSymbolicRegister(ExecutionState &state, StackFrame &sf,
+                               unsigned index);
+
+  void prepareSymbolicArgs(ExecutionState &state, KFunction *kf);
+
+  ref<Expr> makeSymbolicValue(llvm::Value *value, ExecutionState &state,
+                              uint64_t size, Expr::Width width,
+                              const std::string &name);
+
   void runFunctionAsMain(llvm::Function *f, int argc, char **argv,
                          char **envp) override;
 
   /*** Runtime options ***/
 
-  void setHaltExecution(bool value) override { haltExecution = value; }
+  void setHaltExecution(HaltExecution::Reason value) override {
+    haltExecution = value;
+  }
 
   void setInhibitForking(bool value) override { inhibitForking = value; }
 

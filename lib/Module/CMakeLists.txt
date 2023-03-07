@@ -25,6 +25,9 @@ set(KLEE_MODULE_COMPONENT_SRCS
   RaiseAsm.cpp
   ReturnSplitter.cpp
   StreamWithLine.cpp
+  Target.cpp
+  TargetHash.cpp
+  TargetForest.cpp
 )
 
 if (USE_WORKAROUND_LLVM_PR39177)

@@ -12,14 +12,18 @@
 
 #include "AddressSpace.h"
 #include "MergeHandler.h"
-#include "Target.h"
 
 #include "klee/ADT/ImmutableSet.h"
 #include "klee/ADT/TreeStream.h"
+#include "klee/Core/TerminationTypes.h"
+#include "klee/Expr/Assignment.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprHashMap.h"
 #include "klee/Module/KInstIterator.h"
+#include "klee/Module/Target.h"
+#include "klee/Module/TargetForest.h"
+#include "klee/Module/TargetHash.h"
 #include "klee/Solver/Solver.h"
 #include "klee/System/Time.h"
 
@@ -28,6 +32,7 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -42,6 +47,8 @@ struct KInstruction;
 class MemoryObject;
 class PTreeNode;
 struct InstructionInfo;
+struct Target;
+struct TranstionHash;
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const MemoryMap &mm);
 
@@ -163,9 +170,6 @@ struct Symbolic {
   }
 };
 
-// typedef std::pair<ref<const MemoryObject>, const Array *> Symbolic;
-typedef std::pair<llvm::BasicBlock *, llvm::BasicBlock *> Transition;
-
 /// @brief ExecutionState representing a path under exploration
 class ExecutionState {
 #ifdef KLEE_UNITTEST
@@ -196,7 +200,7 @@ public:
 
   /// @brief Remember from which Basic Block control flow arrived
   /// (i.e. to select the right phi values)
-  std::uint32_t incomingBBIndex;
+  std::int32_t incomingBBIndex;
 
   // Overall state of the state - Data specific
 
@@ -214,6 +218,9 @@ public:
 
   /// @brief Constraints collected so far
   ConstraintSet constraints;
+
+  /// @brief Key points which should be visited through execution
+  TargetForest targetForest;
 
   /// Statistics and information
 
@@ -287,19 +294,18 @@ public:
   /// @brief Disables forking for this state. Set by user code
   bool forkDisabled = false;
 
-  /// @brief The targets that the state must achieve
-  std::set<Target> targets;
-
   ExprHashMap<std::pair<ref<Expr>, llvm::Type *>> gepExprBases;
   ExprHashMap<ref<Expr>> gepExprOffsets;
 
+  ReachWithError error = ReachWithError::None;
+  std::atomic<HaltExecution::Reason> terminationReasonType{
+      HaltExecution::NotHalt};
+
 public:
-#ifdef KLEE_UNITTEST
-  // provide this function only in the context of unittests
-  ExecutionState() = default;
-#endif
   // only to create the initial state
+  explicit ExecutionState();
   explicit ExecutionState(KFunction *kf);
+  explicit ExecutionState(KFunction *kf, KBlock *kb);
   // no copy assignment, use copy constructor
   ExecutionState &operator=(const ExecutionState &) = delete;
   // no move ctor
@@ -310,6 +316,11 @@ public:
   ~ExecutionState();
 
   ExecutionState *branch();
+  ExecutionState *withKFunction(KFunction *kf);
+  ExecutionState *withStackFrame(KInstIterator caller, KFunction *kf);
+  ExecutionState *withKBlock(KBlock *kb);
+  ExecutionState *empty();
+  ExecutionState *copy();
 
   bool inSymbolics(const MemoryObject *mo) const;
 
@@ -336,12 +347,15 @@ public:
   bool merge(const ExecutionState &b);
   void dumpStack(llvm::raw_ostream &out) const;
 
+  bool visited(KBlock *block) const;
+
   std::uint32_t getID() const { return id; };
   void setID() { id = nextID++; };
   llvm::BasicBlock *getInitPCBlock() const;
   llvm::BasicBlock *getPrevPCBlock() const;
   llvm::BasicBlock *getPCBlock() const;
   void increaseLevel();
+  bool isTransfered();
   bool isGEPExpr(ref<Expr> expr) const;
 };
 

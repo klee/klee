@@ -17,6 +17,7 @@
 #include "llvm/Support/CommandLine.h"
 
 namespace klee {
+extern llvm::cl::OptionCategory ExecCat;
 extern llvm::cl::OptionCategory DebugCat;
 extern llvm::cl::OptionCategory ExecCat;
 extern llvm::cl::OptionCategory MergeCat;

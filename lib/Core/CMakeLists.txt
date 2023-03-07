@@ -21,12 +21,13 @@ klee_add_component(kleeCore
   ImpliedValue.cpp
   Memory.cpp
   MemoryManager.cpp
+  PForest.cpp
   PTree.cpp
   Searcher.cpp
   SeedInfo.cpp
   SpecialFunctionHandler.cpp
   StatsTracker.cpp
-  Target.cpp
+  TargetCalculator.cpp
   TimingSolver.cpp
   TypeManager.cpp
   UserSearcher.cpp

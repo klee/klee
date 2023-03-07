@@ -8,8 +8,12 @@ ref<SymbolicSource> SourceBuilder::constantSource =
     ref<SymbolicSource>(new ConstantSource());
 ref<SymbolicSource> SourceBuilder::makeSymbolicSource =
     ref<SymbolicSource>(new MakeSymbolicSource());
-ref<SymbolicSource> SourceBuilder::lazyInitializationMakeSymbolicSource =
+ref<SymbolicSource> SourceBuilder::lazyInitializationSymbolicSource =
     ref<SymbolicSource>(new LazyInitializationSymbolicSource());
+ref<SymbolicSource> SourceBuilder::irreproducibleSource =
+    ref<SymbolicSource>(new IrreproducibleSource());
+ref<SymbolicSource> SourceBuilder::symbolicValueSource =
+    ref<SymbolicSource>(new SymbolicValueSource());
 
 ref<SymbolicSource> SourceBuilder::constant() {
   return SourceBuilder::constantSource;
@@ -32,6 +36,14 @@ ref<SymbolicSource> SourceBuilder::symbolicSize() {
   return new SymbolicSizeSource();
 }
 
-ref<SymbolicSource> SourceBuilder::lazyInitializationMakeSymbolic() {
-  return SourceBuilder::lazyInitializationMakeSymbolicSource;
+ref<SymbolicSource> SourceBuilder::lazyInitializationSymbolic() {
+  return SourceBuilder::lazyInitializationSymbolicSource;
+}
+
+ref<SymbolicSource> SourceBuilder::irreproducible() {
+  return SourceBuilder::irreproducibleSource;
+}
+
+ref<SymbolicSource> SourceBuilder::symbolicValue() {
+  return SourceBuilder::symbolicValueSource;
 }

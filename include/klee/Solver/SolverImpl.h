@@ -68,6 +68,8 @@ public:
                                ref<SolverResponse> &queryResult,
                                ref<SolverResponse> &negatedQueryResult);
 
+  virtual Solver::PartialValidity computePartialValidity(const Query &query);
+
   /// computeTruth - Determine whether the given query expression is provably
   /// true given the constraints.
   ///
@@ -115,6 +117,19 @@ public:
   virtual char *getConstraintLog(const Query &query) {
     // dummy
     return nullptr;
+  }
+
+  virtual Solver::PartialValidity validityToPartial(Solver::Validity v) {
+    switch (v) {
+    case Solver::Validity::True:
+      return Solver::PartialValidity::MustBeTrue;
+    case Solver::Validity::False:
+      return Solver::PartialValidity::MustBeFalse;
+    case Solver::Validity::Unknown:
+      return Solver::PartialValidity::TrueOrFalse;
+    default: // Silence compiler warning
+      return Solver::PartialValidity::None;
+    }
   }
 
   virtual void setCoreSolverTimeout(time::Span timeout){};

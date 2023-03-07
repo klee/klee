@@ -19,7 +19,9 @@ public:
     LazyInitializationSymbolic,
     MakeSymbolic,
     SymbolicAddress,
-    SymbolicSize
+    SymbolicSize,
+    Irreproducible,
+    SymbolicValue
   };
 
 public:
@@ -120,13 +122,37 @@ class LazyInitializationSymbolicSource : public SymbolicSource {
 public:
   Kind getKind() const override { return Kind::LazyInitializationSymbolic; }
   virtual std::string getName() const override {
-    return "lazyInitializationMakeSymbolic";
+    return "lazyInitializationSymbolic";
   }
   virtual bool isSymcrete() const override { return false; }
 
   static bool classof(const SymbolicSource *S) {
     return S->getKind() == Kind::LazyInitializationSymbolic;
   }
+};
+
+class IrreproducibleSource : public SymbolicSource {
+public:
+  Kind getKind() const override { return Kind::Irreproducible; }
+  virtual std::string getName() const override { return "irreproducible"; }
+  virtual bool isSymcrete() const override { return false; }
+
+  static bool classof(const SymbolicSource *S) {
+    return S->getKind() == Kind::Irreproducible;
+  }
+  static bool classof(const IrreproducibleSource *) { return true; }
+};
+
+class SymbolicValueSource : public SymbolicSource {
+public:
+  Kind getKind() const override { return Kind::SymbolicValue; }
+  virtual std::string getName() const override { return "symbolicValue"; }
+  virtual bool isSymcrete() const override { return false; }
+
+  static bool classof(const SymbolicSource *S) {
+    return S->getKind() == Kind::SymbolicValue;
+  }
+  static bool classof(const SymbolicValueSource *) { return true; }
 };
 
 } // namespace klee

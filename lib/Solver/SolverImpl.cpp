@@ -217,6 +217,29 @@ bool SolverImpl::computeMinimalUnsignedValue(const Query &query,
   return true;
 }
 
+Solver::PartialValidity SolverImpl::computePartialValidity(const Query &query) {
+  bool isTrue, isFalse;
+  bool trueSuccess, falseSuccess;
+  trueSuccess = computeTruth(query, isTrue);
+  if (trueSuccess && isTrue) {
+    return Solver::PartialValidity::MustBeTrue;
+  }
+  falseSuccess = computeTruth(query.negateExpr(), isFalse);
+  if (falseSuccess && isFalse) {
+    return Solver::PartialValidity::MustBeFalse;
+  }
+  if (trueSuccess && falseSuccess) {
+    return Solver::PartialValidity::TrueOrFalse;
+  }
+  if (trueSuccess && !falseSuccess) {
+    return Solver::PartialValidity::MayBeFalse;
+  }
+  if (!trueSuccess && falseSuccess) {
+    return Solver::PartialValidity::MayBeTrue;
+  }
+  return Solver::PartialValidity::None;
+}
+
 const char *SolverImpl::getOperationStatusString(SolverRunStatus statusCode) {
   switch (statusCode) {
   case SOLVER_RUN_STATUS_SUCCESS_SOLVABLE:

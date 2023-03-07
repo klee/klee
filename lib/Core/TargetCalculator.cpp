@@ -1,4 +1,4 @@
-//===-- Target.cpp --------------------------------------------------------===//
+//===-- TargetCalculator.cpp ---------- -----------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -7,11 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Target.h"
+#include "TargetCalculator.h"
+
 #include "ExecutionState.h"
 
 #include "klee/Module/CodeGraphDistance.h"
 #include "klee/Module/KInstruction.h"
+#include "klee/Module/Target.h"
+#include "klee/Module/TargetHash.h"
 
 #include <set>
 #include <vector>
@@ -33,15 +36,6 @@ llvm::cl::opt<TargetCalculateBy> TargetCalculatorMode(
                    "history.")),
     cl::init(TargetCalculateBy::Default), cl::cat(ExecCat));
 } // namespace klee
-
-std::string Target::toString() const {
-  std::string repr = "Target: ";
-  repr += block->getAssemblyLocation();
-  if (atReturn()) {
-    repr += " (at the end)";
-  }
-  return repr;
-}
 
 void TargetCalculator::update(const ExecutionState &state) {
   switch (TargetCalculatorMode) {
@@ -91,7 +85,7 @@ bool TargetCalculator::differenceIsEmpty(
   return diff.empty();
 }
 
-Target TargetCalculator::calculate(ExecutionState &state) {
+ref<Target> TargetCalculator::calculate(ExecutionState &state) {
   BasicBlock *initialBlock = state.getInitPCBlock();
   std::unordered_map<llvm::BasicBlock *, VisitedBlocks> &history =
       blocksHistory[initialBlock];
@@ -100,7 +94,7 @@ Target TargetCalculator::calculate(ExecutionState &state) {
   BasicBlock *bb = state.getPCBlock();
   KFunction *kf = module.functionMap.at(bb->getParent());
   KBlock *kb = kf->blockMap[bb];
-  KBlock *nearestBlock = nullptr;
+  ref<Target> nearestBlock;
   unsigned int minDistance = UINT_MAX;
   unsigned int sfNum = 0;
   bool newCov = false;
@@ -135,13 +129,13 @@ Target TargetCalculator::calculate(ExecutionState &state) {
         } else {
           newCov = true;
         }
-        nearestBlock = target;
+        nearestBlock = Target::create(target);
         minDistance = distance;
       }
     }
 
     if (nearestBlock) {
-      return Target(nearestBlock);
+      return nearestBlock;
     }
 
     if (sfi->caller) {
@@ -149,5 +143,5 @@ Target TargetCalculator::calculate(ExecutionState &state) {
     }
   }
 
-  return Target(nearestBlock);
+  return nearestBlock;
 }

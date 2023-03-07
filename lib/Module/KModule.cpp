@@ -184,7 +184,7 @@ injectStaticConstructorsAndDestructors(Module *m,
   GlobalVariable *ctors = m->getNamedGlobal("llvm.global_ctors");
   GlobalVariable *dtors = m->getNamedGlobal("llvm.global_dtors");
 
-  if (!ctors && !dtors)
+  if ((!ctors && !dtors) || entryFunction.empty())
     return;
 
   Function *mainFn = m->getFunction(entryFunction);
@@ -273,6 +273,7 @@ void KModule::instrument(const Interpreter::ModuleOptions &opts) {
 
   pm.add(new IntrinsicCleanerPass(*targetData, opts.WithFPRuntime));
   pm.run(*module);
+  withPosixRuntime = opts.WithPOSIXRuntime;
 }
 
 void KModule::optimiseAndPrepare(
@@ -318,7 +319,8 @@ void KModule::optimiseAndPrepare(
   // going to be unresolved. We really need to handle the intrinsics
   // directly I think?
   legacy::PassManager pm3;
-  pm3.add(createCFGSimplificationPass());
+  if (opts.Simplify)
+    pm3.add(createCFGSimplificationPass());
   switch (SwitchType) {
   case eSwitchTypeInternal:
     break;
@@ -423,7 +425,7 @@ void KModule::checkModule() {
 
   legacy::PassManager pm;
   if (!DontVerify)
-    pm.add(createVerifierPass());
+    pm.add(createVerifierPass(false));
   pm.add(operandTypeCheckPass);
   pm.run(*module);
 

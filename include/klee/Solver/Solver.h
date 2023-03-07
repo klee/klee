@@ -280,6 +280,28 @@ class Solver {
 public:
   enum Validity { True = 1, False = -1, Unknown = 0 };
 
+  enum PartialValidity {
+    /// The query is provably true.
+    MustBeTrue = 1,
+
+    /// The query is provably false.
+    MustBeFalse = -1,
+
+    /// The query is not provably false (a true assignment is known to
+    /// exist).
+    MayBeTrue = 2,
+
+    /// The query is not provably true (a false assignment is known to
+    /// exist).
+    MayBeFalse = -2,
+
+    /// The query is known to have both true and false assignments.
+    TrueOrFalse = 0,
+
+    /// The validity of the query is unknown.
+    None = 3
+  };
+
 public:
   /// validity_to_str - Return the name of given Validity enum value.
   static const char *validity_to_str(Validity v);
@@ -307,6 +329,8 @@ public:
   bool evaluate(const Query &, Validity &result);
   bool evaluate(const Query &, ref<SolverResponse> &queryResult,
                 ref<SolverResponse> &negateQueryResult);
+
+  Solver::PartialValidity evaluate(const Query &query);
 
   /// mustBeTrue - Determine if the expression is provably true.
   ///

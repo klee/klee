@@ -1,12 +1,12 @@
 // RUN: %clang %s -emit-llvm %O0opt -c -g -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee -max-static-fork-pct=0.2 --use-guided-search=false -max-static-pct-check-delay=1 --output-dir=%t.klee-out %t1.bc 2>&1 | FileCheck --check-prefix=CHECK-pt2 %s
+// RUN: %klee -max-static-fork-pct=0.2 --use-guided-search=none -max-static-pct-check-delay=1 --output-dir=%t.klee-out %t1.bc 2>&1 | FileCheck --check-prefix=CHECK-pt2 %s
 // RUN: rm -rf %t.klee-out
-// RUN: %klee -max-static-fork-pct=0.5 --use-guided-search=false -max-static-pct-check-delay=1 --output-dir=%t.klee-out %t1.bc 2>&1 | FileCheck --check-prefix=CHECK-pt5 %s
+// RUN: %klee -max-static-fork-pct=0.5 --use-guided-search=none -max-static-pct-check-delay=1 --output-dir=%t.klee-out %t1.bc 2>&1 | FileCheck --check-prefix=CHECK-pt5 %s
 // RUN: rm -rf %t.klee-out
-// RUN: %klee -max-static-fork-pct=0.8 --use-guided-search=false -max-static-pct-check-delay=1 --output-dir=%t.klee-out %t1.bc 2>&1 | FileCheck --check-prefix=CHECK-pt8 %s
+// RUN: %klee -max-static-fork-pct=0.8 --use-guided-search=none -max-static-pct-check-delay=1 --output-dir=%t.klee-out %t1.bc 2>&1 | FileCheck --check-prefix=CHECK-pt8 %s
 // RUN: rm -rf %t.klee-out
-// RUN: %klee -max-static-cpfork-pct=0.5 --use-guided-search=false -max-static-pct-check-delay=1 --output-dir=%t.klee-out %t1.bc 2>&1 | FileCheck --check-prefix=CHECK-cppt5 %s
+// RUN: %klee -max-static-cpfork-pct=0.5 --use-guided-search=none -max-static-pct-check-delay=1 --output-dir=%t.klee-out %t1.bc 2>&1 | FileCheck --check-prefix=CHECK-cppt5 %s
 
 #include "klee/klee.h"
 #include <stdio.h>

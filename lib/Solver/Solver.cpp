@@ -49,6 +49,17 @@ bool Solver::evaluate(const Query &query, Validity &result) {
   return impl->computeValidity(query, result);
 }
 
+Solver::PartialValidity Solver::evaluate(const Query &query) {
+  assert(query.expr->getWidth() == Expr::Bool && "Invalid expression type!");
+
+  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(query.expr)) {
+    return CE->isTrue() ? PartialValidity::MustBeTrue
+                        : PartialValidity::MustBeFalse;
+  }
+
+  return impl->computePartialValidity(query);
+}
+
 bool Solver::mustBeTrue(const Query &query, bool &result) {
   assert(query.expr->getWidth() == Expr::Bool && "Invalid expression type!");
 

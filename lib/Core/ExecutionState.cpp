@@ -25,11 +25,13 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
+#include <fstream>
 #include <iomanip>
 #include <map>
 #include <set>
 #include <sstream>
 #include <stdarg.h>
+#include <string>
 
 using namespace llvm;
 using namespace klee;
@@ -72,10 +74,27 @@ StackFrame::StackFrame(const StackFrame &s)
 StackFrame::~StackFrame() { delete[] locals; }
 
 /***/
+ExecutionState::ExecutionState()
+    : initPC(nullptr), pc(nullptr), prevPC(nullptr), incomingBBIndex(-1),
+      depth(0), ptreeNode(nullptr), steppedInstructions(0),
+      steppedMemoryInstructions(0), instsSinceCovNew(0),
+      roundingMode(llvm::APFloat::rmNearestTiesToEven), coveredNew(false),
+      forkDisabled(false) {
+  setID();
+}
 
 ExecutionState::ExecutionState(KFunction *kf)
     : initPC(kf->instructions), pc(initPC), prevPC(pc),
       roundingMode(llvm::APFloat::rmNearestTiesToEven) {
+  pushFrame(nullptr, kf);
+}
+
+ExecutionState::ExecutionState(KFunction *kf, KBlock *kb)
+    : initPC(kb->instructions), pc(initPC), prevPC(pc), incomingBBIndex(-1),
+      depth(0), ptreeNode(nullptr), steppedInstructions(0),
+      steppedMemoryInstructions(0), instsSinceCovNew(0),
+      roundingMode(llvm::APFloat::rmNearestTiesToEven), coveredNew(false),
+      forkDisabled(false) {
   pushFrame(nullptr, kf);
   setID();
 }
@@ -94,9 +113,9 @@ ExecutionState::ExecutionState(const ExecutionState &state)
       stack(state.stack), incomingBBIndex(state.incomingBBIndex),
       depth(state.depth), multilevel(state.multilevel), level(state.level),
       addressSpace(state.addressSpace), constraints(state.constraints),
-      pathOS(state.pathOS), symPathOS(state.symPathOS),
-      coveredLines(state.coveredLines), symbolics(state.symbolics),
-      symbolicSizes(state.symbolicSizes),
+      targetForest(state.targetForest), pathOS(state.pathOS),
+      symPathOS(state.symPathOS), coveredLines(state.coveredLines),
+      symbolics(state.symbolics), symbolicSizes(state.symbolicSizes),
       resolvedPointers(state.resolvedPointers),
       cexPreferences(state.cexPreferences), arrayNames(state.arrayNames),
       openMergeStack(state.openMergeStack),
@@ -108,8 +127,7 @@ ExecutionState::ExecutionState(const ExecutionState &state)
                                ? state.unwindingInformation->clone()
                                : nullptr),
       coveredNew(state.coveredNew), forkDisabled(state.forkDisabled),
-      targets(state.targets), gepExprBases(state.gepExprBases),
-      gepExprOffsets(state.gepExprOffsets) {
+      gepExprBases(state.gepExprBases), gepExprOffsets(state.gepExprOffsets) {
   for (const auto &cur_mergehandler : openMergeStack)
     cur_mergehandler->addOpenState(this);
 }
@@ -132,6 +150,36 @@ bool ExecutionState::inSymbolics(const MemoryObject *mo) const {
     }
   }
   return false;
+}
+
+ExecutionState *ExecutionState::withStackFrame(KInstIterator caller,
+                                               KFunction *kf) {
+  ExecutionState *newState = new ExecutionState(*this);
+  newState->setID();
+  newState->pushFrame(caller, kf);
+  newState->initPC = kf->blockMap[&*kf->function->begin()]->instructions;
+  newState->pc = newState->initPC;
+  newState->prevPC = newState->pc;
+  return newState;
+}
+
+ExecutionState *ExecutionState::withKFunction(KFunction *kf) {
+  return withStackFrame(nullptr, kf);
+}
+
+ExecutionState *ExecutionState::withKBlock(KBlock *kb) {
+  ExecutionState *newState = new ExecutionState(*this);
+  newState->setID();
+  newState->initPC = kb->instructions;
+  newState->pc = newState->initPC;
+  newState->prevPC = newState->pc;
+  return newState;
+}
+
+ExecutionState *ExecutionState::copy() {
+  ExecutionState *newState = new ExecutionState(*this);
+  newState->setID();
+  return newState;
 }
 
 void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
@@ -503,6 +551,12 @@ void ExecutionState::increaseLevel() {
   transitionLevel.insert(std::make_pair(srcbb, dstbb));
 }
 
+bool ExecutionState::isTransfered() { return getPrevPCBlock() != getPCBlock(); }
+
 bool ExecutionState::isGEPExpr(ref<Expr> expr) const {
   return UseGEPOptimization && gepExprBases.find(expr) != gepExprBases.end();
+}
+
+bool ExecutionState::visited(KBlock *block) const {
+  return level.find(block->basicBlock) != level.end();
 }

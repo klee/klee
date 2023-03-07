@@ -128,6 +128,7 @@ public:
   HANDLER(handleCloseMerge);
   HANDLER(handleNew);
   HANDLER(handleNewArray);
+  HANDLER(handleNewNothrowArray);
   HANDLER(handlePreferCex);
   HANDLER(handlePosixPreferCex);
   HANDLER(handlePrintExpr);

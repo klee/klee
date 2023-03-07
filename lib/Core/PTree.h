@@ -34,32 +34,31 @@ public:
   PTreeNodePtr right;
   ExecutionState *state = nullptr;
 
+  std::uint32_t treeID;
+
   PTreeNode(const PTreeNode &) = delete;
-  PTreeNode(PTreeNode *parent, ExecutionState *state);
+  PTreeNode(PTreeNode *parent, ExecutionState *state, std::uint32_t id);
   ~PTreeNode() = default;
+
+  std::uint32_t getTreeID() const { return treeID; };
 };
 
 class PTree {
-  // Number of registered ID
-  int registeredIds = 0;
+private:
+  // The tree id
+  uint32_t id;
 
 public:
   PTreeNodePtr root;
-  explicit PTree(ExecutionState *initialState);
+  PTree(ExecutionState *initialState, uint32_t id);
+  explicit PTree(ExecutionState *initialState) : PTree(initialState, 0) {}
   ~PTree() = default;
 
   void attach(PTreeNode *node, ExecutionState *leftState,
               ExecutionState *rightState, BranchType reason);
   void remove(PTreeNode *node);
   void dump(llvm::raw_ostream &os);
-  std::uint8_t getNextId() {
-    std::uint8_t id = 1 << registeredIds++;
-    if (registeredIds > PtrBitCount) {
-      klee_error("PTree cannot support more than %d RandomPathSearchers",
-                 PtrBitCount);
-    }
-    return id;
-  }
+  std::uint32_t getID() const { return id; };
 };
 } // namespace klee
 

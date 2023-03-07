@@ -9,15 +9,19 @@
 #ifndef KLEE_INTERPRETER_H
 #define KLEE_INTERPRETER_H
 
+#include "TerminationTypes.h"
+
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 struct KTest;
 
 namespace llvm {
+class BasicBlock;
 class Function;
 class LLVMContext;
 class Module;
@@ -29,6 +33,7 @@ namespace klee {
 class ExecutionState;
 class Interpreter;
 class TreeStreamWriter;
+class TargetForest;
 
 class InterpreterHandler {
 public:
@@ -50,6 +55,14 @@ public:
 
 class Interpreter {
 public:
+  enum class GuidanceKind {
+    NoGuidance,       // Default symbolic execution
+    CoverageGuidance, // Use GuidedSearcher and guidedRun to maximize full code
+                      // coverage
+    ErrorGuidance     // Use GuidedSearcher and guidedRun to maximize specified
+                      // targets coverage
+  };
+
   /// ModuleOptions - Module level options which can be set when
   /// registering a module with the interpreter.
   struct ModuleOptions {
@@ -57,18 +70,21 @@ public:
     std::string EntryPoint;
     std::string OptSuffix;
     bool Optimize;
+    bool Simplify;
     bool CheckDivZero;
     bool CheckOvershift;
     bool WithFPRuntime;
+    bool WithPOSIXRuntime;
 
     ModuleOptions(const std::string &_LibraryDir,
                   const std::string &_EntryPoint, const std::string &_OptSuffix,
-                  bool _Optimize, bool _CheckDivZero, bool _CheckOvershift,
-                  bool _WithFPRuntime)
+                  bool _Optimize, bool _Simplify, bool _CheckDivZero,
+                  bool _CheckOvershift, bool _WithFPRuntime,
+                  bool _WithPOSIXRuntime)
         : LibraryDir(_LibraryDir), EntryPoint(_EntryPoint),
-          OptSuffix(_OptSuffix), Optimize(_Optimize),
+          OptSuffix(_OptSuffix), Optimize(_Optimize), Simplify(_Simplify),
           CheckDivZero(_CheckDivZero), CheckOvershift(_CheckOvershift),
-          WithFPRuntime(_WithFPRuntime) {}
+          WithFPRuntime(_WithFPRuntime), WithPOSIXRuntime(_WithPOSIXRuntime) {}
   };
 
   enum LogType {
@@ -84,12 +100,17 @@ public:
     /// symbolic values. This is used to test the correctness of the
     /// symbolic execution on concrete programs.
     unsigned MakeConcreteSymbolic;
+    GuidanceKind Guidance;
+    std::unordered_map<llvm::Function *, TargetForest> &Targets;
 
-    InterpreterOptions() : MakeConcreteSymbolic(false) {}
+    InterpreterOptions(
+        std::unordered_map<llvm::Function *, TargetForest> &Targets)
+        : MakeConcreteSymbolic(false), Guidance(GuidanceKind::NoGuidance),
+          Targets(Targets) {}
   };
 
 protected:
-  const InterpreterOptions interpreterOpts;
+  const InterpreterOptions &interpreterOpts;
 
   Interpreter(const InterpreterOptions &_interpreterOpts)
       : interpreterOpts(_interpreterOpts) {}
@@ -140,7 +161,7 @@ public:
 
   /*** Runtime options ***/
 
-  virtual void setHaltExecution(bool value) = 0;
+  virtual void setHaltExecution(HaltExecution::Reason value) = 0;
 
   virtual void setInhibitForking(bool value) = 0;
 

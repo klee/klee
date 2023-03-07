@@ -12,6 +12,7 @@
 #include "gtest/gtest.h"
 
 #include "Core/ExecutionState.h"
+#include "Core/PForest.h"
 #include "Core/PTree.h"
 #include "Core/Searcher.h"
 #include "klee/ADT/RNG.h"
@@ -25,11 +26,14 @@ namespace {
 TEST(SearcherTest, RandomPath) {
   // First state
   ExecutionState es;
-  PTree processTree(&es);
-  es.ptreeNode = processTree.root.getPointer();
+  PForest processForest = PForest();
+  processForest.addRoot(&es);
+  es.ptreeNode = processForest.getPTrees()
+                     .at(es.ptreeNode->getTreeID())
+                     ->root.getPointer();
 
   RNG rng;
-  RandomPathSearcher rp(processTree, rng);
+  RandomPathSearcher rp(processForest, rng);
   EXPECT_TRUE(rp.empty());
 
   rp.update(nullptr, {&es}, {});
@@ -38,7 +42,7 @@ TEST(SearcherTest, RandomPath) {
 
   // Two states
   ExecutionState es1(es);
-  processTree.attach(es.ptreeNode, &es1, &es, BranchType::NONE);
+  processForest.attach(es.ptreeNode, &es1, &es, BranchType::NONE);
   rp.update(&es, {&es1}, {});
 
   // Random path seed dependant
@@ -52,28 +56,31 @@ TEST(SearcherTest, RandomPath) {
   }
 
   rp.update(&es, {&es1}, {&es});
-  processTree.remove(es.ptreeNode);
+  processForest.remove(es.ptreeNode);
   for (int i = 0; i < 100; i++) {
     EXPECT_EQ(&rp.selectState(), &es1);
   }
 
   rp.update(&es1, {}, {&es1});
-  processTree.remove(es1.ptreeNode);
+  processForest.remove(es1.ptreeNode);
   EXPECT_TRUE(rp.empty());
 }
 
 TEST(SearcherTest, TwoRandomPath) {
   // Root state
   ExecutionState root;
-  PTree processTree(&root);
-  root.ptreeNode = processTree.root.getPointer();
+  PForest processForest = PForest();
+  processForest.addRoot(&root);
+  root.ptreeNode = processForest.getPTrees()
+                       .at(root.ptreeNode->getTreeID())
+                       ->root.getPointer();
 
   ExecutionState es(root);
-  processTree.attach(root.ptreeNode, &es, &root, BranchType::NONE);
+  processForest.attach(root.ptreeNode, &es, &root, BranchType::NONE);
 
   RNG rng, rng1;
-  RandomPathSearcher rp(processTree, rng);
-  RandomPathSearcher rp1(processTree, rng1);
+  RandomPathSearcher rp(processForest, rng);
+  RandomPathSearcher rp1(processForest, rng1);
   EXPECT_TRUE(rp.empty());
   EXPECT_TRUE(rp1.empty());
 
@@ -84,7 +91,7 @@ TEST(SearcherTest, TwoRandomPath) {
 
   // Two states
   ExecutionState es1(es);
-  processTree.attach(es.ptreeNode, &es1, &es, BranchType::NONE);
+  processForest.attach(es.ptreeNode, &es1, &es, BranchType::NONE);
 
   rp.update(&es, {}, {});
   rp1.update(nullptr, {&es1}, {});
@@ -104,16 +111,16 @@ TEST(SearcherTest, TwoRandomPath) {
   }
 
   rp1.update(&es, {}, {&es});
-  processTree.remove(es.ptreeNode);
+  processForest.remove(es.ptreeNode);
   EXPECT_TRUE(rp1.empty());
   EXPECT_EQ(&rp.selectState(), &es1);
 
   rp.update(&es1, {}, {&es1});
-  processTree.remove(es1.ptreeNode);
+  processForest.remove(es1.ptreeNode);
   EXPECT_TRUE(rp.empty());
   EXPECT_TRUE(rp1.empty());
 
-  processTree.remove(root.ptreeNode);
+  processForest.remove(root.ptreeNode);
 }
 
 TEST(SearcherTest, TwoRandomPathDot) {
@@ -123,23 +130,26 @@ TEST(SearcherTest, TwoRandomPathDot) {
 
   // Root state
   ExecutionState root;
-  PTree processTree(&root);
-  root.ptreeNode = processTree.root.getPointer();
+  PForest processForest = PForest();
+  processForest.addRoot(&root);
+  root.ptreeNode = processForest.getPTrees()
+                       .at(root.ptreeNode->getTreeID())
+                       ->root.getPointer();
   rootPNode = root.ptreeNode;
 
   ExecutionState es(root);
-  processTree.attach(root.ptreeNode, &es, &root, BranchType::NONE);
+  processForest.attach(root.ptreeNode, &es, &root, BranchType::NONE);
   rightLeafPNode = root.ptreeNode;
   esParentPNode = es.ptreeNode;
 
   RNG rng;
-  RandomPathSearcher rp(processTree, rng);
-  RandomPathSearcher rp1(processTree, rng);
+  RandomPathSearcher rp(processForest, rng);
+  RandomPathSearcher rp1(processForest, rng);
 
   rp.update(nullptr, {&es}, {});
 
   ExecutionState es1(es);
-  processTree.attach(es.ptreeNode, &es1, &es, BranchType::NONE);
+  processForest.attach(es.ptreeNode, &es1, &es, BranchType::NONE);
   esLeafPNode = es.ptreeNode;
   es1LeafPNode = es1.ptreeNode;
 
@@ -168,14 +178,14 @@ TEST(SearcherTest, TwoRandomPathDot) {
       << "}\n";
   std::string pTreeDot;
   llvm::raw_string_ostream pTreeDotStream(pTreeDot);
-  processTree.dump(pTreeDotStream);
+  processForest.dump(pTreeDotStream);
   EXPECT_EQ(modelPTreeDot.str(), pTreeDotStream.str());
 
   rp.update(&es, {&es1}, {&es});
   rp1.update(nullptr, {&es}, {&es1});
 
   rp1.update(&es, {}, {&es});
-  processTree.remove(es.ptreeNode);
+  processForest.remove(es.ptreeNode);
 
   modelPTreeDot.str("");
   modelPTreeDot
@@ -197,22 +207,25 @@ TEST(SearcherTest, TwoRandomPathDot) {
       << "}\n";
 
   pTreeDot = "";
-  processTree.dump(pTreeDotStream);
+  processForest.dump(pTreeDotStream);
   EXPECT_EQ(modelPTreeDot.str(), pTreeDotStream.str());
-  processTree.remove(es1.ptreeNode);
-  processTree.remove(root.ptreeNode);
+  processForest.remove(es1.ptreeNode);
+  processForest.remove(root.ptreeNode);
 }
 TEST(SearcherDeathTest, TooManyRandomPaths) {
   // First state
   ExecutionState es;
-  PTree processTree(&es);
-  es.ptreeNode = processTree.root.getPointer();
-  processTree.remove(es.ptreeNode); // Need to remove to avoid leaks
+  PForest processForest = PForest();
+  processForest.addRoot(&es);
+  es.ptreeNode = processForest.getPTrees()
+                     .at(es.ptreeNode->getTreeID())
+                     ->root.getPointer();
+  processForest.remove(es.ptreeNode); // Need to remove to avoid leaks
 
   RNG rng;
-  RandomPathSearcher rp(processTree, rng);
-  RandomPathSearcher rp1(processTree, rng);
-  RandomPathSearcher rp2(processTree, rng);
-  ASSERT_DEATH({ RandomPathSearcher rp3(processTree, rng); }, "");
+  RandomPathSearcher rp(processForest, rng);
+  RandomPathSearcher rp1(processForest, rng);
+  RandomPathSearcher rp2(processForest, rng);
+  ASSERT_DEATH({ RandomPathSearcher rp3(processForest, rng); }, "");
 }
 } // namespace

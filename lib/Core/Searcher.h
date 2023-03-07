@@ -11,6 +11,7 @@
 #define KLEE_SEARCHER_H
 
 #include "ExecutionState.h"
+#include "PForest.h"
 #include "PTree.h"
 #include "klee/ADT/RNG.h"
 #include "klee/Module/KModule.h"
@@ -22,6 +23,7 @@
 #include <map>
 #include <queue>
 #include <set>
+#include <unordered_map>
 #include <vector>
 
 namespace llvm {
@@ -37,6 +39,8 @@ template <class T, class Comparator> class DiscretePDF;
 template <class T, class Comparator> class WeightedQueue;
 class ExecutionState;
 class Executor;
+class TargetCalculator;
+class TargetForest;
 
 /// A Searcher implements an exploration strategy for the Executor by selecting
 /// states for further exploration using different strategies or heuristics.
@@ -137,10 +141,10 @@ private:
 
   std::unique_ptr<WeightedQueue<ExecutionState *, ExecutionStateIDCompare>>
       states;
-  Target target;
+  ref<Target> target;
   CodeGraphDistance &codeGraphDistance;
   const std::unordered_map<KFunction *, unsigned int> &distanceToTargetFunction;
-  std::vector<ExecutionState *> reachedOnLastUpdate;
+  std::set<ExecutionState *> reachedOnLastUpdate;
 
   bool distanceInCallGraph(KFunction *kf, KBlock *kb, unsigned int &distance);
   WeightResult tryGetLocalWeight(ExecutionState *es, weight_type &weight,
@@ -151,7 +155,7 @@ private:
   WeightResult tryGetWeight(ExecutionState *es, weight_type &weight);
 
 public:
-  TargetedSearcher(Target target, CodeGraphDistance &distance);
+  TargetedSearcher(ref<Target> target, CodeGraphDistance &distance);
   ~TargetedSearcher() override;
 
   ExecutionState &selectState() override;
@@ -160,57 +164,97 @@ public:
               const std::vector<ExecutionState *> &removedStates) override;
   bool empty() override;
   void printName(llvm::raw_ostream &os) override;
-  std::vector<ExecutionState *> reached();
+  std::set<ExecutionState *> reached();
   void removeReached();
 };
 
 class GuidedSearcher final : public Searcher {
-
 private:
+  template <class T>
+  class TargetHashMap
+      : public std::unordered_map<ref<Target>, T, RefTargetHash, RefTargetCmp> {
+  };
+  using TargetToSearcherMap = TargetHashMap<std::unique_ptr<TargetedSearcher>>;
+  using TargetToStateSetMap =
+      TargetHashMap<std::set<ExecutionState *, ExecutionStateIDCompare>>;
+  using TargetToStateVectorMap = TargetHashMap<std::vector<ExecutionState *>>;
+
+  template <class T>
+  class TargetForestHistoryHashMap
+      : public std::unordered_map<ref<TargetForest::History>, T,
+                                  RefTargetsHistoryHash, RefTargetsHistoryCmp> {
+  };
+  template <class T>
+  class TargetForestHistoryTargetsHashMap
+      : public TargetForestHistoryHashMap<TargetHashMap<T>> {};
+
+  using TargetForestHistoryToSearcherMap =
+      TargetForestHistoryTargetsHashMap<std::unique_ptr<TargetedSearcher>>;
+  using TargetForestHistoryToStateSetMap =
+      TargetForestHistoryTargetsHashMap<std::set<ExecutionState *>>;
+  using TargetForestHisoryToStateVectorMap =
+      TargetForestHistoryTargetsHashMap<std::vector<ExecutionState *>>;
+  using TargetForestHisoryToTargetSet = TargetForestHistoryHashMap<
+      std::unordered_set<ref<Target>, RefTargetHash, RefTargetCmp>>;
+  using TargetForestHisoryToTargetVector =
+      TargetForestHistoryHashMap<std::vector<ref<Target>>>;
+  using TargetForestHisoryTargetVector =
+      std::vector<std::pair<ref<TargetForest::History>, ref<Target>>>;
+
+  enum Guidance { CoverageGuidance, ErrorGuidance };
+
+  Guidance guidance;
   std::unique_ptr<Searcher> baseSearcher;
-  std::map<Target, std::unique_ptr<TargetedSearcher>> targetedSearchers;
+  TargetForestHistoryToSearcherMap targetedSearchers;
   CodeGraphDistance &codeGraphDistance;
-  TargetCalculator &stateHistory;
+  TargetCalculator *stateHistory;
+  TargetForestHisoryToTargetSet reachedTargets;
   std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates;
   std::size_t bound;
   RNG &theRNG;
   unsigned index{1};
-  bool stopAfterReachingTarget;
 
   std::vector<ExecutionState *> baseAddedStates;
   std::vector<ExecutionState *> baseRemovedStates;
-  std::map<Target, std::vector<ExecutionState *>> addedTStates;
-  std::map<Target, std::vector<ExecutionState *>> removedTStates;
+  std::vector<ExecutionState *> targetedAddedStates;
   std::vector<ExecutionState *> targetlessStates;
-  std::vector<Target> targets;
+  TargetForestHisoryTargetVector historiesAndTargets;
 
-  void addTarget(Target target);
-  void removeTarget(Target target);
+  bool tryAddTarget(ref<TargetForest::History> history, ref<Target> target);
+  TargetForestHisoryTargetVector::iterator
+  removeTarget(ref<TargetForest::History> history, ref<Target> target);
   bool isStuck(ExecutionState &state);
   void innerUpdate(ExecutionState *current,
                    const std::vector<ExecutionState *> &addedStates,
                    const std::vector<ExecutionState *> &removedStates);
+  void updateTargetedSearcher(ref<TargetForest::History> history,
+                              ref<Target> target, ExecutionState *current,
+                              std::vector<ExecutionState *> &addedStates,
+                              std::vector<ExecutionState *> &removedStates);
 
-  void clearReached();
-  void collectReached(
-      std::map<Target, std::unordered_set<ExecutionState *>> &reachedStates);
+  void clearReached(const std::vector<ExecutionState *> &removedStates);
+  void collectReached(TargetToStateSetMap &reachedStates);
+  bool isReached(ref<TargetForest::History> history, ref<Target> target);
 
 public:
   GuidedSearcher(
       Searcher *baseSearcher, CodeGraphDistance &codeGraphDistance,
       TargetCalculator &stateHistory,
       std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates,
-      std::size_t bound, RNG &rng, bool stopAfterReachingTarget = true);
+      std::size_t bound, RNG &rng);
+  GuidedSearcher(
+      CodeGraphDistance &codeGraphDistance,
+      std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates,
+      std::size_t bound, RNG &rng);
   ~GuidedSearcher() override = default;
   ExecutionState &selectState() override;
   void update(ExecutionState *current,
               const std::vector<ExecutionState *> &addedStates,
               const std::vector<ExecutionState *> &removedStates) override;
-  void
-  update(ExecutionState *current,
-         const std::vector<ExecutionState *> &addedStates,
-         const std::vector<ExecutionState *> &removedStates,
-         std::map<Target, std::unordered_set<ExecutionState *>> &reachedStates);
+  void update(ExecutionState *current,
+              const std::vector<ExecutionState *> &addedStates,
+              const std::vector<ExecutionState *> &removedStates,
+              TargetToStateSetMap &reachedStates);
 
   bool empty() override;
   void printName(llvm::raw_ostream &os) override;
@@ -270,7 +314,7 @@ public:
 ///
 /// The ownership bits are maintained in the update method.
 class RandomPathSearcher final : public Searcher {
-  PTree &processTree;
+  PForest &processForest;
   RNG &theRNG;
 
   // Unique bitmask of this searcher
@@ -279,7 +323,7 @@ class RandomPathSearcher final : public Searcher {
 public:
   /// \param processTree The process tree.
   /// \param RNG A random number generator.
-  RandomPathSearcher(PTree &processTree, RNG &rng);
+  RandomPathSearcher(PForest &processForest, RNG &rng);
   ~RandomPathSearcher() override = default;
 
   ExecutionState &selectState() override;

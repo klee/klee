@@ -62,6 +62,9 @@ public:
   bool tryGetUnique(const ConstraintSet &, ref<Expr>, ref<Expr> &result,
                     SolverQueryMetaData &metaData);
 
+  Solver::PartialValidity evaluate(const ConstraintSet &, ref<Expr>,
+                                   SolverQueryMetaData &metaData);
+
   bool mustBeTrue(const ConstraintSet &, ref<Expr>, bool &result,
                   SolverQueryMetaData &metaData,
                   bool produceValidityCore = false);

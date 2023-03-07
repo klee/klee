@@ -37,6 +37,7 @@
 
 #include <cerrno>
 #include <sstream>
+#include <time.h>
 
 using namespace llvm;
 using namespace klee;
@@ -138,6 +139,8 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
 
     // operator new[](unsigned long)
     add("_Znam", handleNewArray, true),
+    // operator new[](unsigned long, std::nothrow_t const&)
+    add("_ZnamRKSt9nothrow_t", handleNewNothrowArray, true),
     // operator new(unsigned long)
     add("_Znwm", handleNew, true),
 
@@ -499,6 +502,17 @@ void SpecialFunctionHandler::handleNewArray(ExecutionState &state,
                         executor.typeSystemManager->handleAlloc(arguments[0]));
 }
 
+void SpecialFunctionHandler::handleNewNothrowArray(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr>> &arguments) {
+  // XXX should type check args
+  assert(arguments.size() == 2 &&
+         "invalid number of arguments to new[](unsigned long, std::nothrow_t "
+         "const&)");
+  executor.executeAlloc(state, arguments[0], false, target,
+                        executor.typeSystemManager->handleAlloc(arguments[0]));
+}
+
 void SpecialFunctionHandler::handleDeleteArray(
     ExecutionState &state, KInstruction *target,
     std::vector<ref<Expr>> &arguments) {
@@ -606,7 +620,7 @@ void SpecialFunctionHandler::handleAssume(ExecutionState &state,
   assert(success && "FIXME: Unhandled solver failure");
   if (res) {
     if (SilentKleeAssume) {
-      executor.terminateState(state);
+      executor.terminateState(state, StateTerminationType::SilentExit);
     } else {
       executor.terminateStateOnUserError(
           state, "invalid klee_assume call (provably false)");
