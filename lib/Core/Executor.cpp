@@ -2422,6 +2422,29 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       if (branches.second)
         transferToBasicBlock(bi->getSuccessor(1), bi->getParent(),
                              *branches.second);
+
+      if (guidanceKind == GuidanceKind::ErrorGuidance) {
+        ref<EqExpr> eqPointerCheck = nullptr;
+        if (isa<EqExpr>(cond) && cast<EqExpr>(cond)->left->getWidth() ==
+                                     Context::get().getPointerWidth()) {
+          eqPointerCheck = cast<EqExpr>(cond);
+        }
+        if (isa<EqExpr>(Expr::createIsZero(cond)) &&
+            cast<EqExpr>(Expr::createIsZero(cond))->left->getWidth() ==
+                Context::get().getPointerWidth()) {
+          eqPointerCheck = cast<EqExpr>(Expr::createIsZero(cond));
+        }
+        if (eqPointerCheck && eqPointerCheck->left->isZero()) {
+          if (isa<EqExpr>(cond) && !branches.first) {
+            terminateStateOnTargetError(
+                *branches.second, ReachWithError::NullCheckAfterDerefException);
+          }
+          if (isa<EqExpr>(Expr::createIsZero(cond)) && !branches.second) {
+            terminateStateOnTargetError(
+                *branches.first, ReachWithError::NullCheckAfterDerefException);
+          }
+        }
+      }
     }
     break;
   }
@@ -3034,16 +3057,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     if (kgepi->offset)
       offset = AddExpr::create(offset, Expr::createPointer(kgepi->offset));
     ref<Expr> address = AddExpr::create(base, offset);
-    if (!isa<ConstantExpr>(address)) {
-      ref<Expr> extractedOffset = ExtractExpr::create(offset, 0, Expr::Int32);
-      if (state.isGEPExpr(base)) {
-        state.gepExprBases[address] = state.gepExprBases[base];
-        state.gepExprOffsets[address] =
-            AddExpr::create(state.gepExprOffsets[base], extractedOffset);
-      } else {
-        state.gepExprBases[address] = {base, gepInst->getSourceElementType()};
-        state.gepExprOffsets[address] = extractedOffset;
-      }
+    ref<Expr> extractedOffset = ExtractExpr::create(offset, 0, Expr::Int32);
+    if (state.isGEPExpr(base)) {
+      state.gepExprBases[address] = state.gepExprBases[base];
+      state.gepExprOffsets[address] =
+          AddExpr::create(state.gepExprOffsets[base], extractedOffset);
+    } else {
+      state.gepExprBases[address] = {base, gepInst->getSourceElementType()};
+      state.gepExprOffsets[address] = extractedOffset;
     }
     bindLocal(ki, state, address);
     break;
@@ -4368,6 +4389,10 @@ void Executor::terminateStateOnTargetError(ExecutionState &state,
     messaget = "use after free error";
     terminationType = StateTerminationType::Ptr;
     break;
+  case ReachWithError::NullCheckAfterDerefException:
+    messaget = "null check after deref";
+    terminationType = StateTerminationType::Exit;
+    break;
   case ReachWithError::Reachable:
     messaget = "";
     terminationType = StateTerminationType::Exit;
@@ -5040,8 +5065,15 @@ void Executor::executeMemoryOperation(
     }
   } else if (isa<ConstantExpr>(address) &&
              guidanceKind == GuidanceKind::ErrorGuidance) {
-    terminateStateOnTargetError(state, ReachWithError::UseAfterFree);
-    return;
+    solver->setTimeout(coreSolverTimeout);
+    state.addressSpace.resolveOne(state, solver, base, baseTargetType,
+                                  idFastResult, success, haltExecution);
+    solver->setTimeout(time::Span());
+
+    if (!success) {
+      terminateStateOnTargetError(state, ReachWithError::UseAfterFree);
+      return;
+    }
   }
 
   // we are on an error path (no resolution, multiple resolution, one
