@@ -41,17 +41,43 @@ bool SolverImpl::computeValidity(const Query &query,
 }
 
 bool SolverImpl::check(const Query &query, ref<SolverResponse> &result) {
-  if (ProduceUnsatCore)
-    klee_error("check is not implemented");
-  return false;
+  ExprHashSet expressions;
+  expressions.insert(query.constraints.begin(), query.constraints.end());
+  expressions.insert(query.expr);
+
+  std::vector<const Array *> objects;
+  findSymbolicObjects(expressions.begin(), expressions.end(), objects);
+  std::vector<SparseStorage<unsigned char>> values;
+
+  bool hasSolution;
+
+  if (!computeInitialValues(query, objects, values, hasSolution)) {
+    return false;
+  }
+
+  if (hasSolution) {
+    result = new InvalidResponse(objects, values);
+  } else {
+    result = new ValidResponse(ValidityCore(
+        ExprHashSet(query.constraints.begin(), query.constraints.end()),
+        query.expr));
+  }
+  return true;
 }
 
 bool SolverImpl::computeValidityCore(const Query &query,
                                      ValidityCore &validityCore,
                                      bool &isValid) {
-  if (ProduceUnsatCore)
-    klee_error("computeTruthCore is not implemented");
-  return false;
+  if (!computeTruth(query, isValid)) {
+    return false;
+  }
+
+  if (isValid) {
+    validityCore = ValidityCore(
+        ExprHashSet(query.constraints.begin(), query.constraints.end()),
+        query.expr);
+  }
+  return true;
 }
 
 bool SolverImpl::computeMinimalUnsignedValue(const Query &query,

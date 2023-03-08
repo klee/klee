@@ -134,6 +134,23 @@ bool StagedSolverImpl::computeInitialValues(
 }
 
 bool StagedSolverImpl::check(const Query &query, ref<SolverResponse> &result) {
+  ExprHashSet expressions;
+  expressions.insert(query.constraints.begin(), query.constraints.end());
+  expressions.insert(query.expr);
+
+  std::vector<const Array *> objects;
+  findSymbolicObjects(expressions.begin(), expressions.end(), objects);
+  std::vector<SparseStorage<unsigned char>> values;
+
+  bool hasSolution;
+
+  bool primaryResult =
+      primary->computeInitialValues(query, objects, values, hasSolution);
+  if (primaryResult && hasSolution) {
+    result = new InvalidResponse(objects, values);
+    return true;
+  }
+
   return secondary->impl->check(query, result);
 }
 

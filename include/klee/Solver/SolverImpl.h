@@ -11,6 +11,7 @@
 #define KLEE_SOLVERIMPL_H
 
 #include "Solver.h"
+#include "klee/Expr/ExprUtil.h"
 #include "klee/System/Time.h"
 
 #include <vector>

@@ -131,8 +131,7 @@ public:
     return false;
   }
 
-  virtual bool tryGetInitialValues(
-      std::map<const Array *, SparseStorage<unsigned char>> &values) const {
+  virtual bool tryGetInitialValues(Assignment::bindings_ty &values) const {
     return false;
   }
 
@@ -142,9 +141,15 @@ public:
 
   virtual bool equals(const SolverResponse &b) const = 0;
 
+  virtual bool lessThen(const SolverResponse &b) const = 0;
+
   bool operator==(const SolverResponse &b) const { return equals(b); }
 
   bool operator!=(const SolverResponse &b) const { return !equals(b); }
+
+  bool operator<(const SolverResponse &b) const { return lessThen(b); }
+
+  virtual void dump() = 0;
 };
 
 class ValidResponse : public SolverResponse {
@@ -174,40 +179,42 @@ public:
     const ValidResponse &vb = static_cast<const ValidResponse &>(b);
     return result == vb.result;
   }
+
+  bool lessThen(const SolverResponse &b) const {
+    if (b.getResponseKind() != ResponseKind::Valid)
+      return true;
+    const ValidResponse &vb = static_cast<const ValidResponse &>(b);
+    return std::set<ref<Expr>>(result.constraints.begin(),
+                               result.constraints.end()) <
+           std::set<ref<Expr>>(vb.result.constraints.begin(),
+                               vb.result.constraints.end());
+  }
+
+  void dump() { result.dump(); }
 };
 
 class InvalidResponse : public SolverResponse {
 private:
-  std::map<const Array *, SparseStorage<unsigned char>> result;
+  Assignment result;
 
 public:
   InvalidResponse(const std::vector<const Array *> &objects,
-                  const std::vector<SparseStorage<unsigned char>> &values) {
-    std::vector<SparseStorage<unsigned char>>::const_iterator values_it =
-        values.begin();
+                  std::vector<SparseStorage<unsigned char>> &values)
+      : result(Assignment(objects, values)) {}
 
-    for (std::vector<const Array *>::const_iterator i = objects.begin(),
-                                                    e = objects.end();
-         i != e; ++i, ++values_it) {
-      result[*i] = *values_it;
-    }
-  }
-
-  InvalidResponse(const std::map<const Array *, SparseStorage<unsigned char>>
-                      &initialValues)
+  InvalidResponse(Assignment::bindings_ty &initialValues)
       : result(initialValues) {}
 
   bool tryGetInitialValuesFor(
       const std::vector<const Array *> &objects,
       std::vector<SparseStorage<unsigned char>> &values) const {
-    Assignment resultAssignment(result);
     values.reserve(objects.size());
     for (auto object : objects) {
-      if (result.count(object)) {
-        values.push_back(result.at(object));
+      if (result.bindings.count(object)) {
+        values.push_back(result.bindings.at(object));
       } else {
         ref<ConstantExpr> constantSize =
-            dyn_cast<ConstantExpr>(resultAssignment.evaluate(object->size));
+            dyn_cast<ConstantExpr>(result.evaluate(object->size));
         assert(constantSize);
         values.push_back(
             SparseStorage<unsigned char>(constantSize->getZExtValue(), 0));
@@ -216,21 +223,20 @@ public:
     return true;
   }
 
-  bool tryGetInitialValues(
-      std::map<const Array *, SparseStorage<unsigned char>> &values) const {
-    values.insert(result.begin(), result.end());
+  bool tryGetInitialValues(Assignment::bindings_ty &values) const {
+    values.insert(result.bindings.begin(), result.bindings.end());
     return true;
   }
 
   Assignment initialValuesFor(const std::vector<const Array *> objects) const {
     std::vector<SparseStorage<unsigned char>> values;
-    assert(tryGetInitialValuesFor(objects, values));
+    tryGetInitialValuesFor(objects, values);
     return Assignment(objects, values, true);
   }
 
   Assignment initialValues() const {
-    std::map<const Array *, SparseStorage<unsigned char>> values;
-    assert(tryGetInitialValues(values));
+    Assignment::bindings_ty values;
+    tryGetInitialValues(values);
     return Assignment(values, true);
   }
 
@@ -245,8 +251,25 @@ public:
     if (b.getResponseKind() != ResponseKind::Invalid)
       return false;
     const InvalidResponse &ib = static_cast<const InvalidResponse &>(b);
-    return result == ib.result;
+    return result.bindings == ib.result.bindings;
   }
+
+  bool lessThen(const SolverResponse &b) const {
+    if (b.getResponseKind() != ResponseKind::Invalid)
+      return false;
+    const InvalidResponse &ib = static_cast<const InvalidResponse &>(b);
+    return result.bindings < ib.result.bindings;
+  }
+
+  bool satisfies(std::set<ref<Expr>> &key) {
+    return result.satisfies(key.begin(), key.end());
+  }
+
+  ref<Expr> evaluate(ref<Expr> &e) { return result.evaluate(e); }
+
+  void dump() { result.dump(); }
+
+  ref<Expr> evaluate(ref<Expr> e) { return (result.evaluate(e)); }
 };
 
 class Solver {
