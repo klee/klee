@@ -1554,7 +1554,8 @@ int run_klee(int argc, char **argv, char **envp) {
   if (module_triple.find("i686") != std::string::npos ||
       module_triple.find("i586") != std::string::npos ||
       module_triple.find("i486") != std::string::npos ||
-      module_triple.find("i386") != std::string::npos)
+      module_triple.find("i386") != std::string::npos ||
+      module_triple.find("arm") != std::string::npos)
     opt_suffix = "32";
 
   // Add additional user-selected suffix
