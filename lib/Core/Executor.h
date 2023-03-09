@@ -466,6 +466,8 @@ private:
   void terminateStateEarly(ExecutionState &state, const llvm::Twine &message,
                            StateTerminationType terminationType);
 
+  void reportStateOnTargetError(ExecutionState &state, ReachWithError error);
+
   /// Save extra information in targeted mode
   /// Then just call `terminateStateOnError`
   void terminateStateOnTargetError(ExecutionState &state, ReachWithError error);
