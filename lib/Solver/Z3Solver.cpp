@@ -585,7 +585,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
           assert(Z3_get_ast_kind(builder->ctx, arrayElementOffsetExpr) ==
                      Z3_NUMERAL_AST &&
                  "Evaluated size expression has wrong sort");
-          size_t concretizedOffsetValue = 0;
+          uint64_t concretizedOffsetValue = 0;
           assert(Z3_get_numeral_uint64(builder->ctx, arrayElementOffsetExpr,
                                        &concretizedOffsetValue) &&
                  "Failed to get size");

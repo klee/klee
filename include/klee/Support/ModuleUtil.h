@@ -41,7 +41,7 @@ linkModules(std::vector<std::unique_ptr<llvm::Module>> &modules,
 
 #if defined(__x86_64__) || defined(__i386__)
 #define addFunctionReplacement(from, to)                                       \
-  {#from "f", #to "f"}, {#from, #to}, { #from "l", #to "l" }
+  {#from "f", #to "f"}, {#from, #to}, { "" #from "l", #to "l" }
 
 #define addIntrinsicReplacement(from, to)                                      \
   {"llvm." #from ".f32", #to "f"}, {"llvm." #from ".f64", #to}, {              \
@@ -49,10 +49,11 @@ linkModules(std::vector<std::unique_ptr<llvm::Module>> &modules,
   }
 
 #else
-#define addFunctionReplacement(from, to) {#from "f", #to "f"}, {#from, #to},
+#define addFunctionReplacement(from, to)                                       \
+  {#from "f", #to "f"}, { "" #from, "" #to }
 
 #define addIntrinsicReplacement(from, to)                                      \
-  {"llvm." #from ".f32", #to "f"}, {"llvm." #from ".f64", #to},
+  {"llvm." #from ".f32", #to "f"}, { "llvm." #from ".f64", #to }
 
 #endif
 
