@@ -688,6 +688,10 @@ std::string KleeHandler::getRunTimeLibraryPath(const char *argv0) {
 //===----------------------------------------------------------------------===//
 // main Driver function
 //
+
+static Function *mainFn = nullptr;
+static Function *entryFn = nullptr;
+
 static std::string strip(std::string &in) {
   unsigned len = in.size();
   unsigned lead = 0, trail = len;
@@ -707,26 +711,15 @@ static void parseArguments(int argc, char **argv) {
 static void
 preparePOSIX(std::vector<std::unique_ptr<llvm::Module>> &loadedModules,
              llvm::StringRef libCPrefix) {
-  // Get the main function from the main module and rename it such that it can
-  // be called after the POSIX setup
-  Function *mainFn = nullptr;
-  for (auto &module : loadedModules) {
-    mainFn = module->getFunction(EntryPoint);
-    if (mainFn)
-      break;
-  }
-
-  if (!mainFn)
-    klee_error("Entry function '%s' not found in module.", EntryPoint.c_str());
   mainFn->setName("__klee_posix_wrapped_main");
 
-  // Add a definition of the entry function if needed. This is the case if we
+  // Add a definition of the main function if needed. This is the case if we
   // link against a libc implementation. Preparing for libc linking (i.e.
   // linking with uClibc will expect a main function and rename it to
   // _user_main. We just provide the definition here.
-  if (!libCPrefix.empty() && !mainFn->getParent()->getFunction(EntryPoint))
+  if (!libCPrefix.empty() && !mainFn->getParent()->getFunction("main"))
     llvm::Function::Create(mainFn->getFunctionType(),
-                           llvm::Function::ExternalLinkage, EntryPoint,
+                           llvm::Function::ExternalLinkage, "main",
                            mainFn->getParent());
 
   llvm::Function *wrapper = nullptr;
@@ -739,7 +732,7 @@ preparePOSIX(std::vector<std::unique_ptr<llvm::Module>> &loadedModules,
 
   // Rename the POSIX wrapper to prefixed entrypoint, e.g. _user_main as uClibc
   // would expect it or main otherwise
-  wrapper->setName(libCPrefix + EntryPoint);
+  wrapper->setName(libCPrefix + "main");
 }
 
 
@@ -1114,7 +1107,8 @@ linkWithUclibc(StringRef libDir, std::string opt_suffix,
     replaceOrRenameFunction(modules[i].get(), "__libc_fcntl", "fcntl");
   }
 
-  createLibCWrapper(modules, EntryPoint, "__uClibc_main");
+  if (mainFn)
+    createLibCWrapper(modules, "main", "__uClibc_main");
   klee_message("NOTE: Using klee-uclibc : %s", uclibcBCA.c_str());
 
   // Link the fortified library
@@ -1262,6 +1256,22 @@ int main(int argc, char **argv, char **envp) {
                                   /*CheckDivZero=*/CheckDivZero,
                                   /*CheckOvershift=*/CheckOvershift);
 
+  // Get the main function
+  for (auto &module : loadedModules) {
+    mainFn = module->getFunction("main");
+    if (mainFn)
+      break;
+  }
+
+  // Get the entry point function
+  for (auto &module : loadedModules) {
+    entryFn = module->getFunction(EntryPoint);
+    if (entryFn)
+      break;
+  }
+  if (!entryFn)
+    klee_error("Entry function '%s' not found in module.", EntryPoint.c_str());
+
   if (WithPOSIXRuntime) {
     SmallString<128> Path(Opts.LibraryDir);
     llvm::sys::path::append(Path, "libkleeRuntimePOSIX" + opt_suffix + ".bca");
@@ -1272,7 +1282,8 @@ int main(int argc, char **argv, char **envp) {
                  errorMsg.c_str());
 
     std::string libcPrefix = (Libc == LibcType::UcLibc ? "__user_" : "");
-    preparePOSIX(loadedModules, libcPrefix);
+    if (mainFn)
+      preparePOSIX(loadedModules, libcPrefix);
   }
 
   if (WithUBSanRuntime) {
@@ -1405,8 +1416,8 @@ int main(int argc, char **argv, char **envp) {
   // locale and other data and then calls main.
 
   auto finalModule = interpreter->setModule(loadedModules, Opts);
-  Function *mainFn = finalModule->getFunction(EntryPoint);
-  if (!mainFn) {
+  entryFn = finalModule->getFunction(EntryPoint);
+  if (!entryFn) {
     klee_error("Entry function '%s' not found in module.", EntryPoint.c_str());
   }
 
@@ -1466,7 +1477,7 @@ int main(int argc, char **argv, char **envp) {
                    << " bytes)"
                    << " (" << ++i << "/" << kTestFiles.size() << ")\n";
       // XXX should put envp in .ktest ?
-      interpreter->runFunctionAsMain(mainFn, out->numArgs, out->args, pEnvp);
+      interpreter->runFunctionAsMain(entryFn, out->numArgs, out->args, pEnvp);
       if (interrupted) break;
     }
     interpreter->setReplayKTest(0);
@@ -1515,7 +1526,8 @@ int main(int argc, char **argv, char **envp) {
                    sys::StrError(errno).c_str());
       }
     }
-    interpreter->runFunctionAsMain(mainFn, pArgc, pArgv, pEnvp);
+
+    interpreter->runFunctionAsMain(entryFn, pArgc, pArgv, pEnvp);
 
     while (!seeds.empty()) {
       kTest_free(seeds.back());
