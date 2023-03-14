@@ -1010,7 +1010,7 @@ void externalsAndGlobalsCheck(const llvm::Module *m) {
       if (ext.compare(0, 5, "llvm.") != 0) { // not an LLVM reserved name
         if (unsafe.count(ext)) {
           foundUnsafe.insert(*it);
-        } else {
+        } else if (WarnAllExternals) {
           klee_warning("undefined reference to %s: %s",
                        it->second ? "variable" : "function", ext.c_str());
         }
