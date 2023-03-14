@@ -1,6 +1,5 @@
 // REQUIRES: posix-runtime
 // REQUIRES: uclibc
-// XFAIL: *
 
 // RUN: %clang -emit-llvm -g -c %s -o %t.bc
 // RUN: rm -rf %t.klee-out
