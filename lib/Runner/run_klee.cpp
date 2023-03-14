@@ -766,8 +766,9 @@ preparePOSIX(std::vector<std::unique_ptr<llvm::Module>> &loadedModules,
       break;
   }
 
-  if (!mainFn)
+  if (!mainFn) {
     klee_error("Entry function '%s' not found in module.", EntryPoint.c_str());
+  }
   mainFn->setName("__klee_posix_wrapped_main");
 
   // Add a definition of the entry function if needed. This is the case if we
@@ -1091,7 +1092,12 @@ createLibCWrapper(std::vector<std::unique_ptr<llvm::Module>> &modules,
   // argv), since it does not explicitly take an envp argument.
   auto &ctx = modules[0]->getContext();
   Function *userMainFn = modules[0]->getFunction(intendedFunction);
-  assert(userMainFn && "unable to get user main");
+
+  if (!userMainFn) {
+    klee_error("Entry function '%s' not found in module.",
+               intendedFunction.str().c_str());
+  }
+
   // Rename entry point using a prefix
   userMainFn->setName("__user_" + intendedFunction);
 

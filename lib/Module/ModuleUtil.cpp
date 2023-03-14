@@ -207,6 +207,7 @@ klee::linkModules(std::vector<std::unique_ptr<llvm::Module>> &modules,
   for (auto &module : modules) {
     if (!module || !containsUsedSymbols(module.get()))
       continue;
+
     if (!linkTwoModules(composite.get(), std::move(module), errorMsg)) {
       // Linking failed
       errorMsg = "Linking module containing '__attribute__((used))'"
