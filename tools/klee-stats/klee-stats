@@ -463,11 +463,12 @@ def main():
 
     parser.add_argument('dir', nargs='+', help='KLEE output directory')
 
+    tableFormatArg = parser.add_argument('--table-format',
+                                         choices=['klee', 'csv', 'readable-csv'],
+                                         dest='tableFormat', default='klee',
+                                         help='Table format for the summary.')
     if tabulate_available:
-        parser.add_argument('--table-format',
-                            choices=['klee', 'csv', 'readable-csv'] + list(_table_formats.keys()),
-                            dest='tableFormat', default='klee',
-                            help='Table format for the summary.')
+        tableFormatArg.choices += list(_table_formats.keys())
 
     parser.add_argument('--to-csv',
                         action='store_true', dest='toCsv',
