@@ -2,7 +2,7 @@
 install_binary_artifact_llvm () {
   # Use the brew provided package
   LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
-  brew install "llvm\@${LLVM_VERSION_MAJOR}"
+  brew install "llvm@${LLVM_VERSION_MAJOR}"
 }
 
 # Check if the binary artifact is installed
