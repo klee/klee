@@ -464,10 +464,16 @@ def main():
     parser.add_argument('dir', nargs='+', help='KLEE output directory')
 
     if tabulate_available:
-        parser.add_argument('--table-format',
-                            choices=['klee', 'csv', 'readable-csv'] + list(_table_formats.keys()),
-                            dest='tableFormat', default='klee',
-                            help='Table format for the summary.')
+        tf_choices = ['klee', 'csv', 'readable-csv'] + list(_table_formats.keys())
+        tf_help = 'Table format for the summary.'
+        tf_default = 'klee'
+    else:
+        tf_choices = []
+        tf_help = '(not available due to missing "tabulate" package)'
+        tf_default = None
+    parser.add_argument('--table-format',
+                        choices=tf_choices, dest='tableFormat', default=tf_default,
+                        help=tf_help)
 
     parser.add_argument('--to-csv',
                         action='store_true', dest='toCsv',
@@ -506,6 +512,13 @@ def main():
     args = parser.parse_args()
 
 
+    if not tabulate_available and not (args.grafana or args.toCsv):
+        print('Error: Package "tabulate" required for table formatting. '
+              'Please install it using "pip" or your package manager. '
+              'You can still use --grafana and --to-csv without tabulate.',
+              file=sys.stderr)
+        sys.exit(1)
+
     # get print controls
     pr = 'NONE'
     if args.pAll or args.columns:
@@ -539,16 +552,7 @@ def main():
         write_csv(data)
         return
 
-    if tabulate_available:
-        write_table(args, data, dirs, pr)
-        return
-
-    print('Error: Package "tabulate" required for table formatting. '
-          'Please install it using "pip" or your package manager.'
-          'You can still use --grafana and --to-csv without tabulate.',
-          file=sys.stderr)
-    sys.exit(1)
-
+    write_table(args, data, dirs, pr)
 
 
 if __name__ == '__main__':
