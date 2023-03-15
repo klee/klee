@@ -2434,7 +2434,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                 Context::get().getPointerWidth()) {
           eqPointerCheck = cast<EqExpr>(Expr::createIsZero(cond));
         }
-        if (eqPointerCheck && eqPointerCheck->left->isZero()) {
+        if (eqPointerCheck && eqPointerCheck->left->isZero() &&
+            state.resolvedPointers.count(eqPointerCheck->right)) {
           if (isa<EqExpr>(cond) && !branches.first) {
             reportStateOnTargetError(
                 *branches.second, ReachWithError::NullCheckAfterDerefException);
