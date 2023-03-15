@@ -50,6 +50,7 @@ public:
 
   /// size in bytes
   unsigned size;
+  unsigned alignment;
   mutable std::string name;
 
   bool isLocal;
@@ -76,18 +77,20 @@ public:
     : id(counter++),
       address(_address),
       size(0),
+      alignment(0),
       isFixed(true),
       parent(NULL),
       allocSite(0) {
   }
 
-  MemoryObject(uint64_t _address, unsigned _size, 
+  MemoryObject(uint64_t _address, unsigned _size, unsigned _alignment,
                bool _isLocal, bool _isGlobal, bool _isFixed,
                const llvm::Value *_allocSite,
                MemoryManager *_parent)
     : id(counter++),
       address(_address),
       size(_size),
+      alignment(_alignment),
       name("unnamed"),
       isLocal(_isLocal),
       isGlobal(_isGlobal),

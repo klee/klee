@@ -7,7 +7,7 @@
 
 // RUN: %clang %s -emit-llvm %O0opt -c -g -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --allocate-determ=true --allocate-determ-start-address=0x0 %t1.bc | FileCheck %s
+// RUN: %klee --output-dir=%t.klee-out --kdalloc %t1.bc | FileCheck %s
 // RUN: test -f %t.klee-out/test000001.ptr.err
 
 #include <stdarg.h>

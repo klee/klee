@@ -11,12 +11,14 @@
 #define KLEE_EXECUTIONSTATE_H
 
 #include "AddressSpace.h"
+#include "MemoryManager.h"
 #include "MergeHandler.h"
 
 #include "klee/ADT/ImmutableSet.h"
 #include "klee/ADT/TreeStream.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
+#include "klee/KDAlloc/kdalloc.h"
 #include "klee/Module/KInstIterator.h"
 #include "klee/Solver/Solver.h"
 #include "klee/System/Time.h"
@@ -180,6 +182,12 @@ public:
   /// @brief Address space used by this state (e.g. Global and Heap)
   AddressSpace addressSpace;
 
+  /// @brief Stack allocator (used with deterministic allocation)
+  kdalloc::StackAllocator stackAllocator;
+
+  /// @brief Heap allocator (used with deterministic allocation)
+  kdalloc::Allocator heapAllocator;
+
   /// @brief Constraints collected so far
   ConstraintSet constraints;
 
@@ -246,7 +254,7 @@ public:
   ExecutionState() = default;
 #endif
   // only to create the initial state
-  explicit ExecutionState(KFunction *kf);
+  explicit ExecutionState(KFunction *kf, MemoryManager *mm);
   // no copy assignment, use copy constructor
   ExecutionState &operator=(const ExecutionState &) = delete;
   // no move ctor
@@ -260,6 +268,8 @@ public:
 
   void pushFrame(KInstIterator caller, KFunction *kf);
   void popFrame();
+
+  void deallocate(const MemoryObject *mo);
 
   void addSymbolic(const MemoryObject *mo, const Array *array);
 
