@@ -138,13 +138,13 @@ private:
   /// happens with other states (that don't satisfy the seeds) depends
   /// on as-yet-to-be-determined flags.
   std::map<ExecutionState*, std::vector<SeedInfo> > seedMap;
-  
+
   /// Map of globals to their representative memory object.
   std::map<const llvm::GlobalValue*, MemoryObject*> globalObjects;
 
   /// Map of globals to their bound address. This also includes
-  /// globals that have no representative object (i.e. functions).
-  std::map<const llvm::GlobalValue*, ref<ConstantExpr> > globalAddresses;
+  /// globals that have no representative object (e.g. aliases).
+  std::map<const llvm::GlobalValue*, ref<ConstantExpr>> globalAddresses;
 
   /// Map of legal function addresses to the corresponding Function.
   /// Used to validate and dereference function pointers.
@@ -212,8 +212,7 @@ private:
   /// Return the typeid corresponding to a certain `type_info`
   ref<ConstantExpr> getEhTypeidFor(ref<Expr> type_info);
 
-  llvm::Function* getTargetFunction(llvm::Value *calledVal,
-                                    ExecutionState &state);
+  llvm::Function* getTargetFunction(llvm::Value *calledVal);
   
   void executeInstruction(ExecutionState &state, KInstruction *ki);
 

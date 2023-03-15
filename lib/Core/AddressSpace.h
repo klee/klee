@@ -126,7 +126,11 @@ namespace klee {
 
     /// Copy the concrete values of all managed ObjectStates into the
     /// actual system memory location they were allocated at.
-    void copyOutConcretes();
+    /// Returns the (hypothetical) number of pages needed provided each written
+    /// object occupies (at least) a single page.
+    std::size_t copyOutConcretes();
+
+    void copyOutConcrete(const MemoryObject *mo, const ObjectState *os) const;
 
     /// Copy the concrete values of all managed ObjectStates back from
     /// the actual system memory location they were allocated
