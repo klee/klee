@@ -1027,9 +1027,6 @@ static void
 createLibCWrapper(std::vector<std::unique_ptr<llvm::Module>> &modules,
                   llvm::StringRef intendedFunction,
                   llvm::StringRef libcMainFunction) {
-  // XXX we need to rearchitect so this can also be used with
-  // programs externally linked with libc implementation.
-
   // We now need to swap things so that libcMainFunction is the entry
   // point, in such a way that the arguments are passed to
   // libcMainFunction correctly. We do this by renaming the user main
@@ -1072,13 +1069,13 @@ createLibCWrapper(std::vector<std::unique_ptr<llvm::Module>> &modules,
   BasicBlock *bb = BasicBlock::Create(ctx, "entry", stub);
   llvm::IRBuilder<> Builder(bb);
 
-  std::vector<llvm::Value*> args;
+  std::vector<llvm::Value *> args;
   args.push_back(llvm::ConstantExpr::getBitCast(
       cast<llvm::Constant>(inModuleReference.getCallee()),
       ft->getParamType(0)));
   args.push_back(&*(stub->arg_begin())); // argc
   auto arg_it = stub->arg_begin();
-  args.push_back(&*(++arg_it)); // argv
+  args.push_back(&*(++arg_it));                                // argv
   args.push_back(Constant::getNullValue(ft->getParamType(3))); // app_init
   args.push_back(Constant::getNullValue(ft->getParamType(4))); // app_fini
   args.push_back(Constant::getNullValue(ft->getParamType(5))); // rtld_fini
@@ -1134,10 +1131,6 @@ int main(int argc, char **argv, char **envp) {
   parseArguments(argc, argv);
   sys::PrintStackTraceOnErrorSignal(argv[0]);
 
-  if (EntryPoint.empty()) {
-    klee_error("entry-point cannot be empty");
-  }
-
   if (Watchdog) {
     if (MaxTime.empty()) {
       klee_error("--watchdog used without --max-time");
@@ -1155,23 +1148,22 @@ int main(int argc, char **argv, char **envp) {
       auto nextStep = time::getWallTime() + maxTime + (maxTime / 10);
       int level = 0;
 
-      // Simple stupid code...
       while (1) {
         sleep(1);
 
         int status, res = waitpid(pid, &status, WNOHANG);
 
         if (res < 0) {
-          if (errno==ECHILD) { // No child, no need to watch but
-                               // return error since we didn't catch
-                               // the exit.
+          if (errno == ECHILD) {
+            // No child, no need to watch but return error since
+            // we didn't catch the exit.
             klee_warning("KLEE: watchdog exiting (no child)\n");
             return 1;
-          } else if (errno!=EINTR) {
+          } else if (errno != EINTR) {
             perror("watchdog waitpid");
             exit(1);
           }
-        } else if (res==pid && WIFEXITED(status)) {
+        } else if (res == pid && WIFEXITED(status)) {
           return WEXITSTATUS(status);
         } else {
           auto time = time::getWallTime();
@@ -1191,7 +1183,7 @@ int main(int argc, char **argv, char **envp) {
               klee_warning(
                   "KLEE: WATCHDOG: kill(9)ing child (I tried to be nice)\n");
               kill(pid, SIGKILL);
-              return 1; // what more can we do
+              return 1; // what more can we do?
             }
 
             // Ideally this triggers a dump, which may take a while,
@@ -1264,13 +1256,18 @@ int main(int argc, char **argv, char **envp) {
   }
 
   // Get the entry point function
+  if (EntryPoint.empty())
+    klee_error("entry-point cannot be empty");
+
   for (auto &module : loadedModules) {
     entryFn = module->getFunction(EntryPoint);
     if (entryFn)
       break;
   }
+
   if (!entryFn)
     klee_error("Entry function '%s' not found in module.", EntryPoint.c_str());
+
 
   if (WithPOSIXRuntime) {
     SmallString<128> Path(Opts.LibraryDir);
@@ -1393,12 +1390,6 @@ int main(int argc, char **argv, char **envp) {
     pArgv[i] = pArg;
   }
 
-  std::vector<bool> replayPath;
-
-  if (ReplayPathFile != "") {
-    KleeHandler::loadPathFile(ReplayPathFile, replayPath);
-  }
-
   Interpreter::InterpreterOptions IOpts;
   IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
   KleeHandler *handler = new KleeHandler(pArgc, pArgv);
@@ -1407,9 +1398,8 @@ int main(int argc, char **argv, char **envp) {
   assert(interpreter);
   handler->setInterpreter(interpreter);
 
-  for (int i=0; i<argc; i++) {
-    handler->getInfoStream() << argv[i] << (i+1<argc ? " ":"\n");
-  }
+  for (int i = 0; i < argc; i++)
+    handler->getInfoStream() << argv[i] << (i + 1 < argc ? " " : "\n");
   handler->getInfoStream() << "PID: " << getpid() << "\n";
 
   // Get the desired main function.  klee_main initializes uClibc
@@ -1417,16 +1407,16 @@ int main(int argc, char **argv, char **envp) {
 
   auto finalModule = interpreter->setModule(loadedModules, Opts);
   entryFn = finalModule->getFunction(EntryPoint);
-  if (!entryFn) {
+  if (!entryFn)
     klee_error("Entry function '%s' not found in module.", EntryPoint.c_str());
-  }
 
   externalsAndGlobalsCheck(finalModule);
 
-  if (ReplayPathFile != "") {
+  std::vector<bool> replayPath;
+  if (!ReplayPathFile.empty()) {
+    KleeHandler::loadPathFile(ReplayPathFile, replayPath);
     interpreter->setReplayPath(&replayPath);
   }
-
 
   auto startTime = std::time(nullptr);
   { // output clock info and start time
