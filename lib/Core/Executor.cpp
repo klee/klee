@@ -5189,8 +5189,7 @@ void Executor::executeMemoryOperation(
       terminateStateOnSolverError(*unbound, "Query timed out (resolve).");
     } else if (LazyInitialization && !isa<ConstantExpr>(baseUniqueExpr) &&
                (isa<ReadExpr>(address) || isa<ConcatExpr>(address) ||
-                state.isGEPExpr(address)) &&
-               size <= MaxSymbolicAllocationSize) {
+                state.isGEPExpr(address))) {
       IDType idLazyInitialization =
           lazyInitializeObject(*unbound, base, target, baseTargetType, size);
 
@@ -5279,15 +5278,20 @@ IDType Executor::lazyInitializeObject(ExecutionState &state, ref<Expr> address,
     timestamp = moBasePair.first->timestamp;
   }
 
-  const Array *lazyInstantiationSize = makeArray(
-      state, Expr::createPointer(Context::get().getPointerWidth() / CHAR_BIT),
-      "lazy_instantiation_size", SourceBuilder::lazyInitializationSymbolic());
-  ref<Expr> sizeExpr = Expr::createTempRead(lazyInstantiationSize,
-                                            Context::get().getPointerWidth());
-  addConstraint(state, UgeExpr::create(sizeExpr, Expr::createPointer(size)));
-  addConstraint(
-      state, UleExpr::create(sizeExpr,
-                             Expr::createPointer(MaxSymbolicAllocationSize)));
+  ref<Expr> sizeExpr;
+  if (size <= MaxSymbolicAllocationSize) {
+    const Array *lazyInstantiationSize = makeArray(
+        state, Expr::createPointer(Context::get().getPointerWidth() / CHAR_BIT),
+        "lazy_instantiation_size", SourceBuilder::lazyInitializationSymbolic());
+    sizeExpr = Expr::createTempRead(lazyInstantiationSize,
+                                    Context::get().getPointerWidth());
+    addConstraint(state, UgeExpr::create(sizeExpr, Expr::createPointer(size)));
+    addConstraint(
+        state, UleExpr::create(sizeExpr,
+                               Expr::createPointer(MaxSymbolicAllocationSize)));
+  } else {
+    sizeExpr = Expr::createPointer(size);
+  }
 
   std::string name = "lazy_initialization_content";
   MemoryObject *mo = allocate(state, sizeExpr, false,
@@ -5319,7 +5323,7 @@ IDType Executor::lazyInitializeObject(ExecutionState &state, ref<Expr> address,
     return 0;
   }
 
-  addConstraint(state, EqExpr::create(mo->addressExpr, address));
+  addConstraint(state, EqExpr::create(mo->getBaseExpr(), address));
   executeMakeSymbolic(state, mo, targetType, name,
                       SourceBuilder::lazyInitializationSymbolic(), false);
   return mo->id;
