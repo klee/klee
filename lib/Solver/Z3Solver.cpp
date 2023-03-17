@@ -654,6 +654,9 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
     if (strcmp(reason, "unknown") == 0) {
       return SolverImpl::SOLVER_RUN_STATUS_FAILURE;
     }
+    if (strcmp(reason, "smt tactic failed to show goal to be sat/unsat") == 0) {
+      return SolverImpl::SOLVER_RUN_STATUS_FAILURE;
+    }
     if (strcmp(reason, "interrupted from keyboard") == 0) {
       return SolverImpl::SOLVER_RUN_STATUS_INTERRUPTED;
     }
