@@ -5,8 +5,10 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --exit-on-error --output-dir=%t.klee-out %t1.bc
 // RUN: FileCheck %s --input-file=%t.klee-out/assembly.ll
-// CHECK: @test1({{.*}}, i32 -1, %struct.foo* byval{{.*}} %struct.bar* byval
-// CHECK: @test2({{.*}}, %struct.foo* byval{{.*}} %struct.bar* byval
+//
+// TODO: Make noundef unconditional when LLVM 14 is the oldest supported version.
+// CHECK: @test1({{.*}}, i32 {{(noundef )?}}-1, %struct.foo* {{(noundef )?}}byval{{.*}} %struct.bar* {{(noundef )?}}byval
+// CHECK: @test2({{.*}}, %struct.foo* {{(noundef )?}}byval{{.*}} %struct.bar* {{(noundef )?}}byval
 
 #include <stdarg.h>
 #include <assert.h>
