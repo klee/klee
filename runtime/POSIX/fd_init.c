@@ -36,7 +36,6 @@ exe_sym_env_t __exe_env = {
    { 1, eOpen | eWriteable, 0, 0}, 
    { 2, eOpen | eWriteable, 0, 0}},
   022,
-  0,
   0
 };
 
@@ -94,12 +93,6 @@ static void __create_new_dfile(exe_disk_file_t *dfile, unsigned size,
   s->st_size = dfile->size;
   s->st_blocks = 8;
   dfile->stat = s;
-}
-
-static unsigned __sym_uint32(const char *name) {
-  unsigned x;
-  klee_make_symbolic(&x, sizeof x, name);
-  return x;
 }
 
 /* n_files: number of symbolic input files, excluding stdin
@@ -168,6 +161,4 @@ void klee_init_fds(unsigned n_files, unsigned file_length,
   else __exe_fs.sym_stdout = NULL;
   
   __exe_env.save_all_writes = save_all_writes_flag;
-  __exe_env.version = __sym_uint32("model_version");
-  klee_assume(__exe_env.version == 1);
 }

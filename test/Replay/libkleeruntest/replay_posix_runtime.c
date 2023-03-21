@@ -27,9 +27,8 @@ int main(int argc, char** argv) {
   return 0;
 }
 
-// CHECKMODEL: num objects: 2
-// CHECKMODEL: object 0: name: {{b*}}'model_version'
-// CHECKMODEL: object 1: name: {{b*}}'x'
+// CHECKMODEL: num objects: 1
+// CHECKMODEL: object 0: name: {{b*}}'x'
 
 // TESTONE: x is not 0
 // TESTTWO: x is 0

@@ -281,7 +281,6 @@ int main(int argc, char *argv[]) {
     push_random_obj(&b, "stdout", 1024, 1024);
     push_obj(&b, "stdout-stat", sizeof(struct stat), (unsigned char *)&s);
   }
-  push_range(&b, "model_version", 1);
 
   if (!kTest_toFile(&b, bout_file ? bout_file : "random.bout")) {
     error_exit("Error in storing data into random.bout\n");

@@ -466,30 +466,17 @@ void klee_posix_prefer_cex(void *buffer, uintptr_t condition) {
 }
 
 void klee_make_symbolic(void *addr, size_t nbytes, const char *name) {
-  /* XXX remove model version code once new tests gen'd */
   if (obj_index >= input->numObjects) {
-    if (strcmp("model_version", name) == 0) {
-      assert(nbytes == 4);
-      *((int*) addr) = 0;
-    } else {
       __emit_error("ran out of appropriate inputs");
-    }
   } else {
     KTestObject *boo = &input->objects[obj_index];
-
-    if (strcmp("model_version", name) == 0 &&
-        strcmp("model_version", boo->name) != 0) {
-      assert(nbytes == 4);
-      *((int*) addr) = 0;
+    if (boo->numBytes != nbytes) {
+      fprintf(stderr, "KLEE-REPLAY: ERROR: make_symbolic mismatch, different sizes: "
+              "%d in input file, %lu in code\n", boo->numBytes, (unsigned long)nbytes);
+      exit(1);
     } else {
-      if (boo->numBytes != nbytes) {
-        fprintf(stderr, "KLEE-REPLAY: ERROR: make_symbolic mismatch, different sizes: "
-           "%d in input file, %lu in code\n", boo->numBytes, (unsigned long)nbytes);
-        exit(1);
-      } else {
-        memcpy(addr, boo->bytes, nbytes);
-        obj_index++;
-      }
+      memcpy(addr, boo->bytes, nbytes);
+      obj_index++;
     }
   }
 }
