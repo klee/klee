@@ -109,13 +109,6 @@ void klee_make_symbolic(void *array, size_t nbytes, const char *name) {
       break;
     } else {
       KTestObject *o = &testData->objects[testPosition];
-      if (strcmp("model_version", o->name) == 0 &&
-          strcmp("model_version", name) != 0) {
-        // Skip over this KTestObject because we've hit
-        // `model_version` which is from the POSIX runtime
-        // and the caller didn't ask for it.
-        continue;
-      }
       if (strcmp(name, o->name) != 0) {
         report_internal_error(
             "object name mismatch. Requesting \"%s\" but returning \"%s\"",

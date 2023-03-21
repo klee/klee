@@ -303,8 +303,6 @@ int main(int argc, char *argv[]) {
   b.numArgs = argv_copy_idx;
   b.args = argv_copy;
 
-  push_range(&b, "model_version", 1);
-
   if (!kTest_toFile(&b, bout_file ? bout_file : "file.bout"))
     assert(0);
 

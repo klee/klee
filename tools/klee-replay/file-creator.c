@@ -301,7 +301,7 @@ static int create_reg_file(const char *fname, exe_disk_file_t *dfile,
   fprintf(stderr, "KLEE-REPLAY: NOTE: Creating file %s of length %d\n", fname, flen);
 
   // Open in RDWR just in case we have to end up using this fd.
-  if (__exe_env.version == 0 && mode == 0)
+  if (mode == 0)
     mode = 0644;
 
   int fd = open(fname, O_CREAT | O_RDWR, mode);

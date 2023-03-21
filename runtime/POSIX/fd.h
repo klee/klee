@@ -93,7 +93,6 @@ typedef struct {
 typedef struct {
   exe_file_t fds[MAX_FDS];
   mode_t umask; /* process umask */
-  unsigned version;
   /* If set, writes execute as expected.  Otherwise, writes extending
      the file size only change the contents up to the initial
      size. The file offset is always incremented correctly. */
