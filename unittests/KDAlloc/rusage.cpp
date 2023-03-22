@@ -11,7 +11,7 @@
 
 #include "gtest/gtest.h"
 
-#include <deque>
+#include <vector>
 
 #include <sys/resource.h>
 
@@ -20,7 +20,7 @@
 #if !defined(__has_feature) ||                                                 \
     (!__has_feature(memory_sanitizer) && !__has_feature(address_sanitizer))
 
-std::size_t write_to_allocations(std::deque<void *> &allocations) {
+std::size_t write_to_allocations(std::vector<void *> &allocations) {
   struct rusage ru;
   getrusage(RUSAGE_SELF, &ru);
   auto initial = ru.ru_minflt;
@@ -41,26 +41,33 @@ TEST(KDAllocTest, Rusage) {
                                           0); // 1 GB
   klee::kdalloc::Allocator allocator = factory.makeAllocator();
 
-  std::deque<void *> allocations;
+  std::vector<void *> allocations;
   for (std::size_t i = 0; i < 1000; ++i) {
-    auto p = allocator.allocate(16);
-    allocations.emplace_back(p);
+    allocations.emplace_back(allocator.allocate(16));
   }
 
-  auto pageFaults = write_to_allocations(allocations);
+  // When writing to allocations we should have at least one page fault per
+  // object, but may have more due to unrelated behavior (e.g., swapping). In
+  // the hopes that such interference is relatively rare, we try a few times to
+  // encounter a perfect run, where the number of page faults matches the number
+  // of allocated objects exactly.
+  constexpr std::size_t tries = 100;
+  for (std::size_t i = 0; i < tries; ++i) {
+    auto pageFaults = write_to_allocations(allocations);
+    if (pageFaults == allocations.size()) {
+      // we have a perfect match
+      return;
+    }
 
-  ASSERT_GT(pageFaults, static_cast<std::size_t>(0))
-      << "No page faults happened";
-  ASSERT_EQ(pageFaults, allocations.size())
-      << "Number of (minor) page faults and objects differs";
+    ASSERT_GE(pageFaults, allocations.size())
+        << "There should be at least as many page faults as allocated objects";
 
-  factory.getMapping().clear();
+    factory.getMapping().clear();
+  }
 
-  // try again: this should (again) trigger a minor page fault for every object
-  auto pageFaultsSecondTry = write_to_allocations(allocations);
-
-  ASSERT_EQ(pageFaults, pageFaultsSecondTry)
-      << "Number of minor page faults in second try differs";
+  FAIL()
+      << "No single try out of " << tries
+      << " yielded a perfect match between page faults and allocated objects";
 }
 
 #endif
