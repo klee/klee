@@ -10,6 +10,7 @@
 #ifndef KLEE_STATISTIC_H
 #define KLEE_STATISTIC_H
 
+#include <cstdint>
 #include <string>
 
 namespace klee {
