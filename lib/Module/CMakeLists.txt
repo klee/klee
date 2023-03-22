@@ -26,7 +26,8 @@ add_library(kleeModule
   ${KLEE_MODULE_COMPONENT_SRCS}
 )
 
-llvm_map_components_to_libnames(llvm_libs bitreader
+llvm_config(kleeModule "${USE_LLVM_SHARED}"
+  bitreader
   bitwriter
   codegen
   ipo
@@ -41,8 +42,6 @@ llvm_map_components_to_libnames(llvm_libs bitreader
   mc
   binaryformat
   )
-
-target_link_libraries(kleeModule PRIVATE ${llvm_libs})
 
 target_link_libraries(kleeModule PRIVATE
   kleeSupport

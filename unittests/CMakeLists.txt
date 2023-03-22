@@ -201,7 +201,7 @@ endif()
 
 add_library(unittest_main)
 target_sources(unittest_main PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/TestMain.cpp")
-llvm_map_components_to_libnames(UNITTEST_MAIN_LIBS support)
+llvm_config(unittest_main "${USE_LLVM_SHARED}" support)
 
 target_link_libraries(unittest_main
   PUBLIC
