@@ -10,7 +10,11 @@ add_executable(kleaver
   main.cpp
 )
 
-llvm_map_components_to_libnames(llvm_libs core support)
+if (USE_MAP)
+	llvm_map_components_to_libnames(llvm_libs core support)
+else()
+	set(llvm_libs LLVM)
+endif()
 
 target_link_libraries(kleaver kleaverSolver ${llvm_libs})
 target_include_directories(kleaver PRIVATE ${KLEE_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})

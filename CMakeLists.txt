@@ -727,3 +727,11 @@ add_custom_target(uninstall
   COMMENT "Uninstalling..."
   VERBATIM
 )
+
+set(USE_MAP FALSE)
+if (TARGET LLVMSupport)
+	get_target_property(LLVMSupport_TYPE LLVMSupport TYPE)
+	if (LLVMSupport STREQUAL SHARED_LIBRARY)
+		set(USE_MAP TRUE)
+	endif()
+endif()

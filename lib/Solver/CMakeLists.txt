@@ -32,7 +32,12 @@ add_library(kleaverSolver
   Z3Solver.cpp
 )
 
-llvm_map_components_to_libnames(llvm_libs support)
+if (USE_MAP)
+	llvm_map_components_to_libnames(llvm_libs support)
+else()
+	set(llvm_libs LLVM)
+endif()
+
 target_link_libraries(kleaverSolver PRIVATE
   kleeBasic
   kleaverExpr

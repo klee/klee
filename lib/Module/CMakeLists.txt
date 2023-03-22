@@ -26,21 +26,25 @@ add_library(kleeModule
   ${KLEE_MODULE_COMPONENT_SRCS}
 )
 
-llvm_map_components_to_libnames(llvm_libs bitreader
-  bitwriter
-  codegen
-  ipo
-  irreader
-  linker
-  support
-  scalaropts
-  instcombine
-  transformutils
-  analysis
-  object
-  mc
-  binaryformat
-  )
+if (USE_MAP)
+	llvm_map_components_to_libnames(llvm_libs bitreader
+		bitwriter
+		codegen
+		ipo
+		irreader
+		linker
+		support
+		scalaropts
+		instcombine
+		transformutils
+		analysis
+		object
+		mc
+		binaryformat
+		)
+else()
+	set(llvm_libs LLVM)
+endif()
 
 target_link_libraries(kleeModule PRIVATE ${llvm_libs})
 

@@ -26,7 +26,12 @@ add_library(kleaverExpr
   Updates.cpp
 )
 
-llvm_map_components_to_libnames(llvm_libs support)
+if (USE_MAP)
+	llvm_map_components_to_libnames(llvm_libs support)
+else()
+	set(llvm_libs LLVM)
+endif()
+
 target_link_libraries(kleaverExpr PRIVATE ${llvm_libs})
 target_include_directories(kleaverExpr PRIVATE ${KLEE_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})
 target_compile_options(kleaverExpr PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
