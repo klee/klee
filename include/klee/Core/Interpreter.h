@@ -9,6 +9,7 @@
 #ifndef KLEE_INTERPRETER_H
 #define KLEE_INTERPRETER_H
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <set>
