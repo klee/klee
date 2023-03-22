@@ -830,8 +830,6 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
       return bytes;
     } else {
       off64_t os_pos = f->off - 4096;
-      int res;
-      off64_t s = 0;
 
       /* For reasons which I really don't understand, if I don't
          memset this then sometimes the kernel returns d_ino==0 for
@@ -841,9 +839,10 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
          Even more bizarre, interchanging the memset and the seek also
          case strange behavior. Really should be debugged properly. */
       memset(dirp, 0, count);
-      s = syscall(__NR_lseek, f->fd, os_pos, SEEK_SET);
+      off64_t s = syscall(__NR_lseek, f->fd, os_pos, SEEK_SET);
+      (void)s;
       assert(s != (off64_t) -1);
-      res = syscall(__NR_getdents64, f->fd, dirp, count);
+      int res = syscall(__NR_getdents64, f->fd, dirp, count);
       if (res > -1) {
         int pos = 0;
         f->off = syscall(__NR_lseek, f->fd, 0, SEEK_CUR);
