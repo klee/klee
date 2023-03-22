@@ -20,6 +20,7 @@
 #include "llvm/Support/MathExtras.h"
 
 #include <cassert>
+#include <cstring>
 
 namespace klee {
 namespace floats {
@@ -134,9 +135,9 @@ inline uint64_t mod(uint64_t l, uint64_t r, unsigned inWidth) {
 inline bool isNaN(uint64_t l, unsigned inWidth) {
   switch( inWidth ) {
   case FLT_BITS:
-    return std::isnan(UInt64AsFloat(l));
+    return isnan(UInt64AsFloat(l));
   case DBL_BITS:
-    return std::isnan(UInt64AsDouble(l));
+    return isnan(UInt64AsDouble(l));
   default: llvm::report_fatal_error("unsupported floating point width");
   }
 }
