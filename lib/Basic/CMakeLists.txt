@@ -11,8 +11,7 @@ add_library(kleeBasic
   Statistics.cpp
 )
 
-llvm_map_components_to_libnames(llvm_libs support)
-target_link_libraries(kleeBasic PRIVATE ${llvm_libs})
+llvm_config(kleeBasic "${USE_LLVM_SHARED}" support)
 target_compile_options(kleeBasic PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
 target_compile_definitions(kleeBasic PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})
 

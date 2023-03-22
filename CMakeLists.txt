@@ -185,6 +185,11 @@ if (NOT EXISTS "${LLVM_AS}")
   message(FATAL_ERROR "Failed to find llvm-as at \"${LLVM_AS}\"")
 endif()
 
+# Check for dynamic linking
+if (LLVM_LINK_LLVM_DYLIB)
+  set(USE_LLVM_SHARED USE_SHARED)
+endif()
+
 ################################################################################
 # C++ version
 ################################################################################

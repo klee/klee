@@ -96,7 +96,7 @@ if (DOWNLOAD_FILECHECK_SOURCE)
   add_executable(FileCheck
     ${FILECHECK_SRC_FILE}
   )
-  llvm_map_components_to_libnames(FILECHECK_NEEDED_LIBS support)
+  llvm_config(FileCheck "${USE_LLVM_SHARED}" support)
   target_include_directories(FileCheck PRIVATE ${LLVM_INCLUDE_DIRS})
   target_link_libraries(FileCheck PRIVATE ${FILECHECK_NEEDED_LIBS})
 endif()
@@ -117,7 +117,7 @@ if (DOWNLOAD_NOT_SOURCE)
   add_executable("not"
     ${NOT_SRC_FILE}
   )
-  llvm_map_components_to_libnames(NOT_NEEDED_LIBS support)
+  llvm_config("not" "${USE_LLVM_SHARED}" support)
   target_include_directories("not" PRIVATE ${LLVM_INCLUDE_DIRS})
   target_link_libraries("not" PRIVATE ${NOT_NEEDED_LIBS})
 endif()
