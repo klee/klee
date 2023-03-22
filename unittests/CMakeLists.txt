@@ -260,7 +260,7 @@ get_property(UNIT_TEST_DEPENDS
 )
 add_custom_target(unittests
   COMMAND
-    "${LIT_TOOL}" ${LIT_ARGS} "${CMAKE_CURRENT_BINARY_DIR}"
+    "${LIT_TOOL}" -j1 ${LIT_ARGS} "${CMAKE_CURRENT_BINARY_DIR}"
     DEPENDS ${UNIT_TEST_DEPENDS}
     COMMENT "Running unittests"
     USES_TERMINAL
