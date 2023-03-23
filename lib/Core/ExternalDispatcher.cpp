@@ -27,6 +27,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetSelect.h"
 
+#include <cstdlib>
 #include <csetjmp>
 #include <csignal>
 #include <memory>
@@ -53,18 +54,16 @@ private:
   dispatchers_ty dispatchers;
   llvm::Function *createDispatcher(KCallable *target, llvm::Instruction *i,
                                    llvm::Module *module);
-  llvm::ExecutionEngine *executionEngine;
+  std::unique_ptr<llvm::ExecutionEngine> executionEngine;
   LLVMContext &ctx;
   std::map<std::string, void *> preboundFunctions;
   bool runProtectedCall(llvm::Function *f, uint64_t *args);
-  llvm::Module *singleDispatchModule;
   std::vector<std::string> moduleIDs;
   std::string &getFreshModuleID();
   int lastErrno;
 
 public:
   ExternalDispatcherImpl(llvm::LLVMContext &ctx);
-  ~ExternalDispatcherImpl();
   bool executeCall(KCallable *callable, llvm::Instruction *i,
                    uint64_t *args);
   void *resolveSymbol(const std::string &name);
@@ -115,20 +114,15 @@ void *ExternalDispatcherImpl::resolveSymbol(const std::string &name) {
 ExternalDispatcherImpl::ExternalDispatcherImpl(LLVMContext &ctx)
     : ctx(ctx), lastErrno(0) {
   std::string error;
-  singleDispatchModule = new Module(getFreshModuleID(), ctx);
-  // The MCJIT JITs whole modules at a time rather than individual functions
-  // so we will let it manage the modules.
-  // Note that we don't do anything with `singleDispatchModule`. This is just
-  // so we can use the EngineBuilder API.
-  auto dispatchModuleUniq = std::unique_ptr<Module>(singleDispatchModule);
-  executionEngine = EngineBuilder(std::move(dispatchModuleUniq))
-                        .setErrorStr(&error)
-                        .setEngineKind(EngineKind::JIT)
-                        .create();
+  executionEngine.reset(
+      EngineBuilder(std::make_unique<Module>(getFreshModuleID(), ctx))
+          .setErrorStr(&error)
+          .setEngineKind(EngineKind::JIT)
+          .create());
 
   if (!executionEngine) {
     llvm::errs() << "unable to make jit: " << error << "\n";
-    abort();
+    std::abort();
   }
 
   // If we have a native target, initialize it to ensure it is linked in and
@@ -152,13 +146,6 @@ ExternalDispatcherImpl::ExternalDispatcherImpl(LLVMContext &ctx)
   preboundFunctions["sprintf"] = (void *)(long)sprintf;
 #endif
 }
-
-ExternalDispatcherImpl::~ExternalDispatcherImpl() {
-  delete executionEngine;
-  // NOTE: the `executionEngine` owns all modules so
-  // we don't need to delete any of them.
-}
-
 bool ExternalDispatcherImpl::executeCall(KCallable *callable, Instruction *i,
                                          uint64_t *args) {
   ++stats::externalCalls;
@@ -183,11 +170,10 @@ bool ExternalDispatcherImpl::executeCall(KCallable *callable, Instruction *i,
   }
 #endif
 
-  Module *dispatchModule = NULL;
   // The MCJIT generates whole modules at a time so for every call that we
   // haven't made before we need to create a new Module.
-  dispatchModule = new Module(getFreshModuleID(), ctx);
-  dispatcher = createDispatcher(callable, i, dispatchModule);
+  auto dispatchModule = std::make_unique<Module>(getFreshModuleID(), ctx);
+  dispatcher = createDispatcher(callable, i, dispatchModule.get());
   dispatchers.insert(std::make_pair(i, dispatcher));
 
   // Force the JIT execution engine to go ahead and build the function. This
@@ -197,18 +183,12 @@ bool ExternalDispatcherImpl::executeCall(KCallable *callable, Instruction *i,
   if (dispatcher) {
     // The dispatchModule is now ready so tell MCJIT to generate the code for
     // it.
-    auto dispatchModuleUniq = std::unique_ptr<Module>(dispatchModule);
-    executionEngine->addModule(
-        std::move(dispatchModuleUniq)); // MCJIT takes ownership
+    executionEngine->addModule(std::move(dispatchModule));
     // Force code generation
-    uint64_t fnAddr =
+    [[maybe_unused]] std::uint64_t fnAddr =
         executionEngine->getFunctionAddress(dispatcher->getName().str());
     executionEngine->finalizeObject();
     assert(fnAddr && "failed to get function address");
-    (void)fnAddr;
-  } else {
-    // MCJIT didn't take ownership of the module so delete it.
-    delete dispatchModule;
   }
   return runProtectedCall(dispatcher, args);
 }
