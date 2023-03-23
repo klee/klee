@@ -10,33 +10,41 @@
 #ifndef KLEE_BITARRAY_H
 #define KLEE_BITARRAY_H
 
-namespace klee {
+#include <cstdint>
+#include <cstring>
+#include <memory>
 
-  // XXX would be nice not to have
-  // two allocations here for allocated
-  // BitArrays
+namespace klee {
 class BitArray {
 private:
-  uint32_t *bits;
-  
+  std::unique_ptr<std::uint32_t[]> bits;
+
 protected:
-  static uint32_t length(unsigned size) { return (size+31)/32; }
+  static std::uint32_t length(unsigned size) { return (size + 31) / 32; }
 
 public:
-  BitArray(unsigned size, bool value = false) : bits(new uint32_t[length(size)]) {
-    memset(bits, value?0xFF:0, sizeof(*bits)*length(size));
+  BitArray(unsigned size, bool value = false)
+      : bits(new std::uint32_t[length(size)]) {
+    std::memset(bits.get(), value ? 0xFF : 0, sizeof(bits[0]) * length(size));
   }
-  BitArray(const BitArray &b, unsigned size) : bits(new uint32_t[length(size)]) {
-    memcpy(bits, b.bits, sizeof(*bits)*length(size));
+  BitArray(const BitArray &b, unsigned size)
+      : bits(new std::uint32_t[length(size)]) {
+    std::memcpy(bits.get(), b.bits.get(), sizeof(bits[0]) * length(size));
   }
-  ~BitArray() { delete[] bits; }
 
-  bool get(unsigned idx) { return (bool) ((bits[idx/32]>>(idx&0x1F))&1); }
-  void set(unsigned idx) { bits[idx/32] |= 1<<(idx&0x1F); }
-  void unset(unsigned idx) { bits[idx/32] &= ~(1<<(idx&0x1F)); }
-  void set(unsigned idx, bool value) { if (value) set(idx); else unset(idx); }
+  bool get(unsigned idx) {
+    return static_cast<bool>((bits[idx / 32] >> (idx & 0x1F)) & 1);
+  }
+  void set(unsigned idx) { bits[idx / 32] |= 1 << (idx & 0x1F); }
+  void unset(unsigned idx) { bits[idx / 32] &= ~(1 << (idx & 0x1F)); }
+  void set(unsigned idx, bool value) {
+    if (value) {
+      set(idx);
+    } else {
+      unset(idx);
+    }
+  }
 };
-
-} // End klee namespace
+} // namespace klee
 
 #endif /* KLEE_BITARRAY_H */
