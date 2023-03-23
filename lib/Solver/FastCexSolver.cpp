@@ -17,8 +17,8 @@
 #include "klee/Expr/ExprVisitor.h"
 #include "klee/Solver/IncompleteSolver.h"
 #include "klee/Support/Debug.h"
-#include "klee/Support/IntEvaluation.h" // FIXME: Use APInt
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
@@ -260,6 +260,7 @@ public:
   }
   
   std::int64_t minSigned(unsigned bits) const {
+    assert(bits >= 2 && bits <= 64);
     assert((m_min >> bits) == 0 && (m_max >> bits) == 0 &&
            "range is outside given number of bits");
 
@@ -269,13 +270,14 @@ public:
 
     std::uint64_t smallest = (static_cast<std::uint64_t>(1) << (bits - 1));
     if (m_max >= smallest) {
-      return ints::sext(smallest, 64, bits);
+      return llvm::APInt::getSignedMinValue(bits).getSExtValue();
     } else {
       return m_min;
     }
   }
 
   std::int64_t maxSigned(unsigned bits) const {
+    assert(bits >= 2 && bits <= 64);
     assert((m_min >> bits) == 0 && (m_max >> bits) == 0 &&
            "range is outside given number of bits");
 
@@ -288,7 +290,7 @@ public:
     if (m_min < smallest && m_max >= smallest) {
       return smallest - 1;
     } else {
-      return ints::sext(m_max, 64, bits);
+      return llvm::APInt(bits, m_max, true).getSExtValue();
     }
   }
 };
