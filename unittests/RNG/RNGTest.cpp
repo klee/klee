@@ -10,14 +10,9 @@ TEST(RNG, InitialSeedEquality) {
   RNG seed(5489U);
 
   ASSERT_EQ(noseed.getBool(), seed.getBool());
-  ASSERT_EQ(noseed.getInt31(), seed.getInt31());
   ASSERT_EQ(noseed.getInt32(), seed.getInt32());
   ASSERT_EQ(noseed.getDouble(), seed.getDouble());
   ASSERT_EQ(noseed.getDoubleL(), seed.getDoubleL());
-  ASSERT_EQ(noseed.getDoubleLR(), seed.getDoubleLR());
-  ASSERT_EQ(noseed.getFloat(), seed.getFloat());
-  ASSERT_EQ(noseed.getFloatL(), seed.getFloatL());
-  ASSERT_EQ(noseed.getFloatLR(), seed.getFloatLR());
 }
 
 

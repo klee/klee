@@ -30,17 +30,6 @@ unsigned int RNG::getInt32() {
   return (*this)();
 }
 
-/* generates a random number on [0,0x7fffffff]-interval */
-int RNG::getInt31() {
-  return (int)(getInt32() >> 1U);
-}
-
-/* generates a random number on [0,1]-real-interval */
-double RNG::getDoubleLR() {
-  return getInt32()*(1.0/4294967295.0); 
-  /* divided by 2^32-1 */ 
-}
-
 /* generates a random number on [0,1)-real-interval */
 double RNG::getDoubleL() {
   return getInt32()*(1.0/4294967296.0); 
@@ -50,19 +39,6 @@ double RNG::getDoubleL() {
 /* generates a random number on (0,1)-real-interval */
 double RNG::getDouble() {
   return (((double)getInt32()) + 0.5)*(1.0/4294967296.0); 
-  /* divided by 2^32 */
-}
-
-float RNG::getFloatLR() {
-  return getInt32()*(1.0f/4294967295.0f); 
-  /* divided by 2^32-1 */ 
-}
-float RNG::getFloatL() {
-  return getInt32()*(1.0f/4294967296.0f); 
-  /* divided by 2^32 */
-}
-float RNG::getFloat() {
-  return (getInt32() + 0.5f)*(1.0f/4294967296.0f); 
   /* divided by 2^32 */
 }
 

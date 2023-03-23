@@ -19,17 +19,10 @@ namespace klee {
 
     /* generates a random number on [0,0xffffffff]-interval */
     unsigned int getInt32();
-    /* generates a random number on [0,0x7fffffff]-interval */
-    int getInt31();
-    /* generates a random number on [0,1]-real-interval */
-    double getDoubleLR();
-    float getFloatLR();
     /* generates a random number on [0,1)-real-interval */
     double getDoubleL();
-    float getFloatL();
     /* generates a random number on (0,1)-real-interval */
     double getDouble();
-    float getFloat();
     /* generators a random flop */
     bool getBool();
   };
