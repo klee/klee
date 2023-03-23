@@ -315,7 +315,7 @@ std::size_t AddressSpace::copyOutConcretes() {
 void AddressSpace::copyOutConcrete(const MemoryObject *mo,
                                    const ObjectState *os) const {
   auto address = reinterpret_cast<std::uint8_t *>(mo->address);
-  std::memcpy(address, os->concreteStore, mo->size);
+  std::memcpy(address, os->concreteStore.get(), mo->size);
 }
 
 bool AddressSpace::copyInConcretes() {
@@ -336,12 +336,12 @@ bool AddressSpace::copyInConcretes() {
 bool AddressSpace::copyInConcrete(const MemoryObject *mo, const ObjectState *os,
                                   uint64_t src_address) {
   auto address = reinterpret_cast<std::uint8_t*>(src_address);
-  if (memcmp(address, os->concreteStore, mo->size) != 0) {
+  if (std::memcmp(address, os->concreteStore.get(), mo->size) != 0) {
     if (os->readOnly) {
       return false;
     } else {
       ObjectState *wos = getWriteable(mo, os);
-      memcpy(wos->concreteStore, address, mo->size);
+      std::memcpy(wos->concreteStore.get(), address, mo->size);
     }
   }
   return true;

@@ -13,10 +13,12 @@
 #include "Context.h"
 #include "TimingSolver.h"
 
+#include "klee/ADT/BitArray.h"
 #include "klee/Expr/Expr.h"
 
 #include "llvm/ADT/StringExtras.h"
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -27,7 +29,6 @@ namespace llvm {
 namespace klee {
 
 class ArrayCache;
-class BitArray;
 class ExecutionState;
 class MemoryManager;
 class Solver;
@@ -176,18 +177,18 @@ private:
   ref<const MemoryObject> object;
 
   /// @brief Holds all known concrete bytes
-  uint8_t *concreteStore;
+  std::unique_ptr<std::uint8_t[]> concreteStore;
 
   /// @brief concreteMask[byte] is set if byte is known to be concrete
-  BitArray *concreteMask;
+  std::unique_ptr<BitArray> concreteMask;
 
   /// knownSymbolics[byte] holds the symbolic expression for byte,
   /// if byte is known to be symbolic
-  ref<Expr> *knownSymbolics;
+  std::unique_ptr<ref<Expr>[]> knownSymbolics;
 
   /// unflushedMask[byte] is set if byte is unflushed
   /// mutable because may need flushed during read of const
-  mutable BitArray *unflushedMask;
+  mutable std::unique_ptr<BitArray> unflushedMask;
 
   // mutable because we may need flush during read of const
   mutable UpdateList updates;
@@ -208,7 +209,6 @@ public:
   ObjectState(const MemoryObject *mo, const Array *array);
 
   ObjectState(const ObjectState &os);
-  ~ObjectState();
 
   const MemoryObject *getObject() const { return object.get(); }
 

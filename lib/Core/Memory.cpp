@@ -27,6 +27,8 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
+#include <cstddef>
+#include <cstring>
 #include <sstream>
 
 using namespace llvm;
@@ -76,7 +78,7 @@ void MemoryObject::getAllocInfo(std::string &result) const {
 ObjectState::ObjectState(const MemoryObject *mo)
   : copyOnWriteOwner(0),
     object(mo),
-    concreteStore(new uint8_t[mo->size]),
+    concreteStore(new uint8_t[mo->size]{}),
     concreteMask(nullptr),
     knownSymbolics(nullptr),
     unflushedMask(nullptr),
@@ -89,14 +91,13 @@ ObjectState::ObjectState(const MemoryObject *mo)
         getArrayCache()->CreateArray("tmp_arr" + llvm::utostr(++id), size);
     updates = UpdateList(array, 0);
   }
-  memset(concreteStore, 0, size);
 }
 
 
 ObjectState::ObjectState(const MemoryObject *mo, const Array *array)
   : copyOnWriteOwner(0),
     object(mo),
-    concreteStore(new uint8_t[mo->size]),
+    concreteStore(new uint8_t[mo->size]{}),
     concreteMask(nullptr),
     knownSymbolics(nullptr),
     unflushedMask(nullptr),
@@ -104,7 +105,6 @@ ObjectState::ObjectState(const MemoryObject *mo, const Array *array)
     size(mo->size),
     readOnly(false) {
   makeSymbolic();
-  memset(concreteStore, 0, size);
 }
 
 ObjectState::ObjectState(const ObjectState &os) 
@@ -119,19 +119,12 @@ ObjectState::ObjectState(const ObjectState &os)
     readOnly(false) {
   assert(!os.readOnly && "no need to copy read only object?");
   if (os.knownSymbolics) {
-    knownSymbolics = new ref<Expr>[size];
-    for (unsigned i=0; i<size; i++)
+    knownSymbolics.reset(new ref<Expr>[size]);
+    for (std::size_t i=0; i<size; i++)
       knownSymbolics[i] = os.knownSymbolics[i];
   }
 
-  memcpy(concreteStore, os.concreteStore, size*sizeof(*concreteStore));
-}
-
-ObjectState::~ObjectState() {
-  delete concreteMask;
-  delete unflushedMask;
-  delete[] knownSymbolics;
-  delete[] concreteStore;
+  std::memcpy(concreteStore.get(), os.concreteStore.get(), size*sizeof(concreteStore[0]));
 }
 
 ArrayCache *ObjectState::getArrayCache() const {
@@ -204,18 +197,15 @@ void ObjectState::flushToConcreteStore(TimingSolver *solver,
                      "byte %p+%u will have random value",
                      (void *)object->address, i);
       else
-        ce->toMemory(concreteStore + i);
+        ce->toMemory(concreteStore.get() + i);
     }
   }
 }
 
 void ObjectState::makeConcrete() {
-  delete concreteMask;
-  delete unflushedMask;
-  delete[] knownSymbolics;
-  concreteMask = nullptr;
-  unflushedMask = nullptr;
-  knownSymbolics = nullptr;
+  concreteMask.reset();
+  unflushedMask.reset();
+  knownSymbolics.reset();
 }
 
 void ObjectState::makeSymbolic() {
@@ -232,7 +222,7 @@ void ObjectState::makeSymbolic() {
 
 void ObjectState::initializeToZero() {
   makeConcrete();
-  memset(concreteStore, 0, size);
+  std::memset(concreteStore.get(), 0, size);
 }
 
 void ObjectState::initializeToRandom() {  
@@ -260,8 +250,9 @@ void ObjectState::fastRangeCheckOffset(ref<Expr> offset,
 
 void ObjectState::flushRangeForRead(unsigned rangeBase,
                                     unsigned rangeSize) const {
-  if (!unflushedMask)
-    unflushedMask = new BitArray(size, true);
+  if (!unflushedMask) {
+    unflushedMask.reset(new BitArray(size, true));
+  }
 
   for (unsigned offset = rangeBase; offset < rangeBase + rangeSize; offset++) {
     if (isByteUnflushed(offset)) {
@@ -281,8 +272,9 @@ void ObjectState::flushRangeForRead(unsigned rangeBase,
 }
 
 void ObjectState::flushRangeForWrite(unsigned rangeBase, unsigned rangeSize) {
-  if (!unflushedMask)
-    unflushedMask = new BitArray(size, true);
+  if (!unflushedMask) {
+    unflushedMask.reset(new BitArray(size, true));
+  }
 
   for (unsigned offset = rangeBase; offset < rangeBase + rangeSize; offset++) {
     if (isByteUnflushed(offset)) {
@@ -329,8 +321,9 @@ void ObjectState::markByteConcrete(unsigned offset) {
 }
 
 void ObjectState::markByteSymbolic(unsigned offset) {
-  if (!concreteMask)
-    concreteMask = new BitArray(size, true);
+  if (!concreteMask) {
+    concreteMask.reset(new BitArray(size, true));
+  }
   concreteMask->unset(offset);
 }
 
@@ -341,7 +334,7 @@ void ObjectState::markByteUnflushed(unsigned offset) {
 
 void ObjectState::markByteFlushed(unsigned offset) {
   if (!unflushedMask) {
-    unflushedMask = new BitArray(size, false);
+    unflushedMask.reset(new BitArray(size, false));
   } else {
     unflushedMask->unset(offset);
   }
@@ -353,7 +346,7 @@ void ObjectState::setKnownSymbolic(unsigned offset,
     knownSymbolics[offset] = value;
   } else {
     if (value) {
-      knownSymbolics = new ref<Expr>[size];
+      knownSymbolics.reset(new ref<Expr>[size]);
       knownSymbolics[offset] = value;
     }
   }
