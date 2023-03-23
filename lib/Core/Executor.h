@@ -107,15 +107,15 @@ public:
 private:
   std::unique_ptr<KModule> kmodule;
   InterpreterHandler *interpreterHandler;
-  Searcher *searcher;
+  std::unique_ptr<Searcher> searcher;
 
-  ExternalDispatcher *externalDispatcher;
-  TimingSolver *solver;
-  MemoryManager *memory;
+  std::unique_ptr<ExternalDispatcher> externalDispatcher;
+  std::unique_ptr<TimingSolver> solver;
+  std::unique_ptr<MemoryManager> memory;
   std::set<ExecutionState*, ExecutionStateIDCompare> states;
-  StatsTracker *statsTracker;
+  std::unique_ptr<StatsTracker> statsTracker;
   TreeStreamWriter *pathWriter, *symPathWriter;
-  SpecialFunctionHandler *specialFunctionHandler;
+  std::unique_ptr<SpecialFunctionHandler> specialFunctionHandler;
   TimerGroup timers;
   std::unique_ptr<PTree> processTree;
 
@@ -505,7 +505,6 @@ private:
 public:
   Executor(llvm::LLVMContext &ctx, const InterpreterOptions &opts,
       InterpreterHandler *ie);
-  virtual ~Executor();
 
   const InterpreterHandler& getHandler() {
     return *interpreterHandler;

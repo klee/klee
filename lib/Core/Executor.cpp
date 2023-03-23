@@ -464,13 +464,12 @@ unsigned dumpStates = 0, dumpPTree = 0;
 
 Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
                    InterpreterHandler *ih)
-    : Interpreter(opts), interpreterHandler(ih), searcher(0),
-      externalDispatcher(new ExternalDispatcher(ctx)), statsTracker(0),
-      pathWriter(0), symPathWriter(0), specialFunctionHandler(0), timers{time::Span(TimerInterval)},
-      replayKTest(0), replayPath(0), usingSeeds(0),
-      atMemoryLimit(false), inhibitForking(false), haltExecution(false),
-      ivcEnabled(false), debugLogBuffer(debugBufferString) {
-
+    : Interpreter(opts), interpreterHandler(ih),
+      externalDispatcher(new ExternalDispatcher(ctx)), pathWriter(0),
+      symPathWriter(0), timers{time::Span(TimerInterval)}, replayKTest(0),
+      replayPath(0), usingSeeds(0), atMemoryLimit(false), inhibitForking(false),
+      haltExecution(false), ivcEnabled(false),
+      debugLogBuffer(debugBufferString) {
 
   const time::Span maxTime{MaxTime};
   if (maxTime) timers.add(
@@ -493,8 +492,8 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       interpreterHandler->getOutputFilename(ALL_QUERIES_KQUERY_FILE_NAME),
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_KQUERY_FILE_NAME));
 
-  this->solver = new TimingSolver(solver, EqualitySubstitution);
-  memory = new MemoryManager(&arrayCache);
+  this->solver.reset(new TimingSolver(solver, EqualitySubstitution));
+  memory.reset(new MemoryManager(&arrayCache));
 
   initializeSearchOptions();
 
@@ -554,7 +553,7 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
 
   // Create a list of functions that should be preserved if used
   std::vector<const char *> preservedFunctions;
-  specialFunctionHandler = new SpecialFunctionHandler(*this);
+  specialFunctionHandler.reset(new SpecialFunctionHandler(*this));
   specialFunctionHandler->prepare(preservedFunctions);
 
   preservedFunctions.push_back(opts.EntryPoint.c_str());
@@ -574,10 +573,9 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
   specialFunctionHandler->bind();
 
   if (StatsTracker::useStatistics() || userSearcherRequiresMD2U()) {
-    statsTracker = 
-      new StatsTracker(*this,
-                       interpreterHandler->getOutputFilename("assembly.ll"),
-                       userSearcherRequiresMD2U());
+    statsTracker.reset(new StatsTracker(
+        *this, interpreterHandler->getOutputFilename("assembly.ll"),
+        userSearcherRequiresMD2U()));
   }
 
   // Initialize the context.
@@ -586,14 +584,6 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
                       (Expr::Width)TD->getPointerSizeInBits());
 
   return kmodule->module.get();
-}
-
-Executor::~Executor() {
-  delete memory;
-  delete externalDispatcher;
-  delete specialFunctionHandler;
-  delete statsTracker;
-  delete solver;
 }
 
 /***/
@@ -1236,7 +1226,7 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
       if (res) {
-        siit->patchSeed(state, condition, solver);
+        siit->patchSeed(state, condition, solver.get());
         warn = true;
       }
     }
@@ -3546,7 +3536,7 @@ void Executor::run(ExecutionState &initialState) {
     }
   }
 
-  searcher = constructUserSearcher(*this);
+  searcher.reset(constructUserSearcher(*this));
 
   std::vector<ExecutionState *> newStates(states.begin(), states.end());
   searcher->update(0, newStates, std::vector<ExecutionState *>());
@@ -3570,8 +3560,7 @@ void Executor::run(ExecutionState &initialState) {
     }
   }
 
-  delete searcher;
-  searcher = nullptr;
+  searcher.reset();
 
   doDumpStates();
 }
@@ -3892,7 +3881,7 @@ void Executor::callExternalFunction(ExecutionState &state,
       // Checking to see if the argument is a pointer to something
       if (ce->getWidth() == Context::get().getPointerWidth() &&
           state.addressSpace.resolveOne(ce, op)) {
-        op.second->flushToConcreteStore(solver, state);
+        op.second->flushToConcreteStore(solver.get(), state);
       }
       wordIndex += (ce->getWidth()+63)/64;
     } else {
@@ -4231,7 +4220,7 @@ void Executor::resolveExact(ExecutionState &state,
   p = optimizer.optimizeExpr(p, true);
   // XXX we may want to be capping this?
   ResolutionList rl;
-  state.addressSpace.resolve(state, solver, p, rl);
+  state.addressSpace.resolve(state, solver.get(), p, rl);
   
   ExecutionState *unbound = &state;
   for (ResolutionList::iterator it = rl.begin(), ie = rl.end(); 
@@ -4291,7 +4280,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   ObjectPair op;
   bool success;
   solver->setTimeout(coreSolverTimeout);
-  if (!state.addressSpace.resolveOne(state, solver, address, op, success)) {
+  if (!state.addressSpace.resolveOne(state, solver.get(), address, op, success)) {
     address = toConstant(state, address, "resolveOne failure");
     success = state.addressSpace.resolveOne(cast<ConstantExpr>(address), op);
   }
@@ -4346,9 +4335,9 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   // resolution with out of bounds)
 
   address = optimizer.optimizeExpr(address, true);
-  ResolutionList rl;  
+  ResolutionList rl;
   solver->setTimeout(coreSolverTimeout);
-  bool incomplete = state.addressSpace.resolve(state, solver, address, rl,
+  bool incomplete = state.addressSpace.resolve(state, solver.get(), address, rl,
                                                0, coreSolverTimeout);
   solver->setTimeout(time::Span());
   
@@ -4546,7 +4535,7 @@ void Executor::runFunctionAsMain(Function *f,
     }
   }
 
-  ExecutionState *state = new ExecutionState(kmodule->functionMap[f], memory);
+  ExecutionState *state = new ExecutionState(kmodule->functionMap[f], memory.get());
 
   if (pathWriter) 
     state->pathOS = pathWriter->open();
@@ -4595,8 +4584,7 @@ void Executor::runFunctionAsMain(Function *f,
   processTree = nullptr;
 
   // hack to clear memory objects
-  delete memory;
-  memory = new MemoryManager(NULL);
+  memory.reset(new MemoryManager(nullptr));
 
   globalObjects.clear();
   globalAddresses.clear();
