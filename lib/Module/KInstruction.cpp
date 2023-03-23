@@ -15,9 +15,7 @@ using namespace klee;
 
 /***/
 
-KInstruction::~KInstruction() {
-  delete[] operands;
-}
+KInstruction::~KInstruction() {}
 
 std::string KInstruction::getSourceLocation() const {
   if (!info->file.empty())

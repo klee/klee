@@ -454,7 +454,7 @@ KFunction::KFunction(llvm::Function *_function,
         const CallBase &cb = cast<CallBase>(*inst);
         Value *val = cb.getCalledOperand();
         unsigned numArgs = cb.arg_size();
-        ki->operands = new int[numArgs+1];
+        ki->operands.reset(new int[numArgs+1]);
         ki->operands[0] = getOperandNum(val, registerMap, km, ki);
         for (unsigned j=0; j<numArgs; j++) {
           Value *v = cb.getArgOperand(j);
@@ -462,7 +462,7 @@ KFunction::KFunction(llvm::Function *_function,
         }
       } else {
         unsigned numOperands = it->getNumOperands();
-        ki->operands = new int[numOperands];
+        ki->operands.reset(new int[numOperands]);
         for (unsigned j=0; j<numOperands; j++) {
           Value *v = it->getOperand(j);
           ki->operands[j] = getOperandNum(v, registerMap, km, ki);

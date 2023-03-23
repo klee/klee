@@ -16,6 +16,7 @@
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <memory>
 #include <vector>
 
 namespace llvm {
@@ -31,21 +32,20 @@ namespace klee {
   /// KInstruction - Intermediate instruction representation used
   /// during execution.
   struct KInstruction {
-    llvm::Instruction *inst;    
+    llvm::Instruction *inst;
     const InstructionInfo *info;
 
     /// Value numbers for each operand. -1 is an invalid value,
     /// otherwise negative numbers are indices (negated and offset by
     /// 2) into the module constant table and positive numbers are
     /// register indices.
-    int *operands;
+    std::unique_ptr<int[]> operands;
     /// Destination register index.
     unsigned dest;
 
   public:
     virtual ~KInstruction();
     std::string getSourceLocation() const;
-
   };
 
   struct KGEPInstruction : KInstruction {

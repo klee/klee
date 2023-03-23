@@ -19,6 +19,7 @@
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/KDAlloc/kdalloc.h"
+#include "klee/Module/Cell.h"
 #include "klee/Module/KInstIterator.h"
 #include "klee/Solver/Solver.h"
 #include "klee/System/Time.h"
@@ -31,7 +32,6 @@
 namespace klee {
 class Array;
 class CallPathNode;
-struct Cell;
 struct KFunction;
 struct KInstruction;
 class MemoryObject;
@@ -46,7 +46,7 @@ struct StackFrame {
   CallPathNode *callPathNode;
 
   std::vector<const MemoryObject *> allocas;
-  Cell *locals;
+  std::unique_ptr<Cell[]> locals;
 
   /// Minimum distance to an uncovered instruction once the function
   /// returns. This is not a good place for this but is used to
@@ -64,7 +64,6 @@ struct StackFrame {
 
   StackFrame(KInstIterator caller, KFunction *kf);
   StackFrame(const StackFrame &s);
-  ~StackFrame();
 };
 
 /// Contains information related to unwinding (Itanium ABI/2-Phase unwinding)
