@@ -11,6 +11,7 @@
 #define KLEE_IMMUTABLETREE_H
 
 #include <cassert>
+#include <memory>
 #include <vector>
 
 namespace klee {
@@ -100,40 +101,34 @@ namespace klee {
 
   // Should live somewhere else, this is a simple stack with maximum (dynamic)
   // size.
-  template<typename T>
-  class FixedStack {
+  template <typename T> class FixedStack {
     unsigned pos, max;
-    T *elts;
+    std::unique_ptr<T[]> elts;
 
   public:
-    FixedStack(unsigned _max) : pos(0),
-                                max(_max),
-                                elts(new T[max]) {}
-    FixedStack(const FixedStack &b) : pos(b.pos),
-                                      max(b.max),
-                                      elts(new T[b.max]) {
-      std::copy(b.elts, b.elts+pos, elts);
+    FixedStack(unsigned _max) : pos(0), max(_max), elts(new T[max]) {}
+    FixedStack(const FixedStack &b)
+        : pos(b.pos), max(b.max), elts(new T[b.max]) {
+      std::copy(b.elts.get(), b.elts.get() + pos, elts.get());
     }
-    ~FixedStack() { delete[] elts; }
 
     void push_back(const T &elt) { elts[pos++] = elt; }
     void pop_back() { --pos; }
-    bool empty() { return pos==0; }
-    T &back() { return elts[pos-1]; }
-
+    bool empty() { return pos == 0; }
+    T &back() { return elts[pos - 1]; }
 
     FixedStack &operator=(const FixedStack &b) {
-      assert(max == b.max); 
+      assert(max == b.max);
       pos = b.pos;
-      std::copy(b.elts, b.elts+pos, elts);
+      std::copy(b.elts.get(), b.elts.get() + pos, elts.get());
       return *this;
     }
 
     bool operator==(const FixedStack &b) {
       return (pos == b.pos &&
-              std::equal(elts, elts+pos, b.elts));
+              std::equal(elts.get(), elts.get() + pos, b.elts.get()));
     }
-    bool operator!=(const FixedStack &b) { return !(*this==b); }
+    bool operator!=(const FixedStack &b) { return !(*this == b); }
   };
 
   template<class K, class V, class KOV, class CMP>
