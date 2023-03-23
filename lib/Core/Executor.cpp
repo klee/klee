@@ -4581,11 +4581,10 @@ void Executor::runFunctionAsMain(Function *f,
 
   processTree = std::make_unique<PTree>(state);
   run(*state);
-  processTree = nullptr;
+  processTree.reset();
 
-  // hack to clear memory objects
-  memory.reset(new MemoryManager(nullptr));
-
+  // clear memory objects
+  memory.reset();
   globalObjects.clear();
   globalAddresses.clear();
 
