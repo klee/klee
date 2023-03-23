@@ -29,6 +29,7 @@
 
 #include <csetjmp>
 #include <csignal>
+#include <memory>
 
 using namespace llvm;
 using namespace klee;
@@ -262,7 +263,7 @@ Function *ExternalDispatcherImpl::createDispatcher(KCallable *target,
     return 0;
 
   const CallBase &cb = cast<CallBase>(*inst);
-  Value **args = new Value *[cb.arg_size()];
+  std::unique_ptr<Value *[]> args(new Value *[cb.arg_size()]);
 
   std::vector<Type *> nullary;
 
@@ -315,14 +316,15 @@ Function *ExternalDispatcherImpl::createDispatcher(KCallable *target,
   }
 
   llvm::CallInst *result;
-  if (auto* func = dyn_cast<KFunction>(target)) {
-    auto dispatchTarget = module->getOrInsertFunction(target->getName(), FTy,
-                                                      func->function->getAttributes());
-    result = Builder.CreateCall(dispatchTarget,
-                                llvm::ArrayRef<Value *>(args, args + i));
-  } else if (auto* asmValue = dyn_cast<KInlineAsm>(target)) {
-    result = Builder.CreateCall(asmValue->getInlineAsm(),
-                                llvm::ArrayRef<Value *>(args, args + i));
+  if (auto *func = dyn_cast<KFunction>(target)) {
+    auto dispatchTarget = module->getOrInsertFunction(
+        target->getName(), FTy, func->function->getAttributes());
+    result = Builder.CreateCall(
+        dispatchTarget, llvm::ArrayRef<Value *>(args.get(), args.get() + i));
+  } else if (auto *asmValue = dyn_cast<KInlineAsm>(target)) {
+    result =
+        Builder.CreateCall(asmValue->getInlineAsm(),
+                           llvm::ArrayRef<Value *>(args.get(), args.get() + i));
   } else {
     assert(0 && "Unhandled KCallable derived class");
   }
@@ -333,8 +335,6 @@ Function *ExternalDispatcherImpl::createDispatcher(KCallable *target,
   }
 
   Builder.CreateRetVoid();
-
-  delete[] args;
 
   return dispatcher;
 }
