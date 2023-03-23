@@ -56,7 +56,7 @@ install_binary_artifact_llvm() {
 
   # Check if package in standard repository otherwise use upstream
   with_sudo apt-get update -y
-  if ! apt-cache show "llvm${version}"; then
+  if ! apt-cache show "llvm-${version}"; then
     if [[ -z "$(which wget)" ]]; then
       # Add certificate
       with_sudo apt-get update -y
@@ -82,10 +82,10 @@ install_binary_artifact_llvm() {
   fi
 
   dependencies=(
-    "llvm${version}"
-    "llvm${version}-dev"
-    "llvm${version}-runtime"
-    "clang${version}"
+    "llvm-${version}"
+    "llvm-${version}-dev"
+    "llvm-${version}-runtime"
+    "clang-${version}"
   )
 
   #Install essential dependencies
