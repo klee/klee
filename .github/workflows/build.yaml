@@ -10,7 +10,7 @@ on:
 # Defaults for building KLEE
 env:
   BASE_IMAGE: ubuntu:jammy-20230126
-  REPOSITORY: klee
+  REPOSITORY: ghcr.io/klee
   COVERAGE: 0
   DISABLE_ASSERTIONS: 0
   ENABLE_DOXYGEN: 0
