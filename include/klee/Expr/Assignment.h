@@ -44,12 +44,12 @@ namespace klee {
     }
     
     ref<Expr> evaluate(const Array *mo, unsigned index) const;
-    ref<Expr> evaluate(ref<Expr> e);
+    ref<Expr> evaluate(ref<Expr> e) const;
     ConstraintSet createConstraintsFromAssignment() const;
 
     template<typename InputIterator>
-    bool satisfies(InputIterator begin, InputIterator end);
-    void dump();
+    bool satisfies(InputIterator begin, InputIterator end) const;
+    void dump() const;
   };
   
   class AssignmentEvaluator : public ExprEvaluator {
@@ -82,13 +82,13 @@ namespace klee {
     }
   }
 
-  inline ref<Expr> Assignment::evaluate(ref<Expr> e) { 
+  inline ref<Expr> Assignment::evaluate(ref<Expr> e) const { 
     AssignmentEvaluator v(*this);
     return v.visit(e); 
   }
 
   template<typename InputIterator>
-  inline bool Assignment::satisfies(InputIterator begin, InputIterator end) {
+  inline bool Assignment::satisfies(InputIterator begin, InputIterator end) const {
     AssignmentEvaluator v(*this);
     for (; begin!=end; ++begin)
       if (!v.visit(*begin)->isTrue())
