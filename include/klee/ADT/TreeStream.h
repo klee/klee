@@ -10,6 +10,7 @@
 #ifndef KLEE_TREESTREAM_H
 #define KLEE_TREESTREAM_H
 
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -28,7 +29,7 @@ namespace klee {
     unsigned lastID, bufferCount;
 
     std::string path;
-    std::ofstream *output;
+    std::ofstream output;
     unsigned ids;
 
     void write(TreeOStream &os, const char *s, unsigned size);
@@ -38,7 +39,7 @@ namespace klee {
     TreeStreamWriter(const std::string &_path);
     ~TreeStreamWriter();
 
-    bool good();
+    bool good() const;
 
     TreeOStream open();
     TreeOStream open(const TreeOStream &node);

@@ -25,72 +25,55 @@ using namespace klee;
 
 ///
 
-TreeStreamWriter::TreeStreamWriter(const std::string &_path) 
-  : lastID(0),
-    bufferCount(0),
-    path(_path),
-    output(new std::ofstream(path.c_str(), 
-                             std::ios::out | std::ios::binary)),
-    ids(1) {
-  if (!output->good()) {
-    delete output;
-    output = 0;
-  }
-}
+TreeStreamWriter::TreeStreamWriter(const std::string &_path)
+    : lastID(0), bufferCount(0), path(_path),
+      output(path.c_str(), std::ios::out | std::ios::binary), ids(1) {}
 
-TreeStreamWriter::~TreeStreamWriter() {
-  flush();
-  delete output;
-}
+TreeStreamWriter::~TreeStreamWriter() { flush(); }
 
-bool TreeStreamWriter::good() {
-  return !!output;
-}
+bool TreeStreamWriter::good() const { return output.good(); }
 
-TreeOStream TreeStreamWriter::open() {
-  return open(TreeOStream(*this, 0));
-}
+TreeOStream TreeStreamWriter::open() { return open(TreeOStream(*this, 0)); }
 
 TreeOStream TreeStreamWriter::open(const TreeOStream &os) {
-  assert(output && os.writer==this);
+  assert(output.good() && os.writer == this);
   flushBuffer();
   unsigned id = ids++;
-  output->write(reinterpret_cast<const char*>(&os.id), 4);
-  unsigned tag = id | (1<<31);
-  output->write(reinterpret_cast<const char*>(&tag), 4);
+  output.write(reinterpret_cast<const char *>(&os.id), 4);
+  unsigned tag = id | (1 << 31);
+  output.write(reinterpret_cast<const char *>(&tag), 4);
   return TreeOStream(*this, id);
 }
 
 void TreeStreamWriter::write(TreeOStream &os, const char *s, unsigned size) {
-  if (bufferCount && 
-      (os.id!=lastID || size+bufferCount>bufferSize))
+  if (bufferCount && (os.id != lastID || size + bufferCount > bufferSize))
     flushBuffer();
   if (bufferCount) { // (os.id==lastID && size+bufferCount<=bufferSize)
     memcpy(&buffer[bufferCount], s, size);
     bufferCount += size;
-  } else if (size<bufferSize) {
+  } else if (size < bufferSize) {
     lastID = os.id;
     memcpy(buffer, s, size);
     bufferCount = size;
   } else {
-    output->write(reinterpret_cast<const char*>(&os.id), 4);
-    output->write(reinterpret_cast<const char*>(&size), 4);
-    output->write(s, size);
+    output.write(reinterpret_cast<const char *>(&os.id), 4);
+    output.write(reinterpret_cast<const char *>(&size), 4);
+    output.write(s, size);
   }
 }
 
 void TreeStreamWriter::flushBuffer() {
-  if (bufferCount) {    
-    output->write(reinterpret_cast<const char*>(&lastID), 4);
-    output->write(reinterpret_cast<const char*>(&bufferCount), 4);
-    output->write(buffer, bufferCount);
+  if (bufferCount) {
+    output.write(reinterpret_cast<const char *>(&lastID), 4);
+    output.write(reinterpret_cast<const char *>(&bufferCount), 4);
+    output.write(buffer, bufferCount);
     bufferCount = 0;
   }
 }
 
 void TreeStreamWriter::flush() {
   flushBuffer();
-  output->flush();
+  output.flush();
 }
 
 void TreeStreamWriter::readStream(TreeStreamID streamID,
