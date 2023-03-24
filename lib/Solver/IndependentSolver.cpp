@@ -21,7 +21,9 @@
 
 #include <list>
 #include <map>
+#include <memory>
 #include <ostream>
+#include <utility>
 #include <vector>
 
 using namespace klee;
@@ -259,16 +261,16 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
 // list of IndependentElementSets or the independent factors.
 //
 // Caller takes ownership of returned std::list.
-static std::list<IndependentElementSet>*
+static std::list<IndependentElementSet>
 getAllIndependentConstraintsSets(const Query &query) {
-  std::list<IndependentElementSet> *factors = new std::list<IndependentElementSet>();
+  std::list<IndependentElementSet> factors;
   ConstantExpr *CE = dyn_cast<ConstantExpr>(query.expr);
   if (CE) {
     assert(CE && CE->isFalse() && "the expr should always be false and "
                                   "therefore not included in factors");
   } else {
     ref<Expr> neg = Expr::createIsZero(query.expr);
-    factors->push_back(IndependentElementSet(neg));
+    factors.push_back(IndependentElementSet(neg));
   }
 
   for (const auto &constraint : query.constraints) {
@@ -277,25 +279,23 @@ getAllIndependentConstraintsSets(const Query &query) {
     // evaluated.  If the queue property isn't maintained, then the exprs
     // could be returned in an order different from how they came it, negatively
     // affecting later stages.
-    factors->push_back(IndependentElementSet(constraint));
+    factors.push_back(IndependentElementSet(constraint));
   }
 
   bool doneLoop = false;
   do {
     doneLoop = true;
-    std::list<IndependentElementSet> *done =
-        new std::list<IndependentElementSet>;
-    while (factors->size() > 0) {
-      IndependentElementSet current = factors->front();
-      factors->pop_front();
+    std::list<IndependentElementSet> done;
+    while (factors.size() > 0) {
+      IndependentElementSet current = std::move(factors.front());
+      factors.pop_front();
       // This list represents the set of factors that are separate from current.
       // Those that are not inserted into this list (queue) intersect with
       // current.
-      std::list<IndependentElementSet> *keep =
-          new std::list<IndependentElementSet>;
-      while (factors->size() > 0) {
-        IndependentElementSet compare = factors->front();
-        factors->pop_front();
+      std::list<IndependentElementSet> keep;
+      while (factors.size() > 0) {
+        IndependentElementSet compare = std::move(factors.front());
+        factors.pop_front();
         if (current.intersects(compare)) {
           if (current.add(compare)) {
             // Means that we have added (z=y)added to (x=y)
@@ -303,15 +303,13 @@ getAllIndependentConstraintsSets(const Query &query) {
             doneLoop = false;
           }
         } else {
-          keep->push_back(compare);
+          keep.push_back(compare);
         }
       }
-      done->push_back(current);
-      delete factors;
-      factors = keep;
+      done.push_back(current);
+      factors = std::move(keep);
     }
-    delete factors;
-    factors = done;
+    factors = std::move(done);
   } while (!doneLoop);
 
   return factors;
@@ -388,12 +386,10 @@ void calculateArrayReferences(const IndependentElementSet & ie,
 
 class IndependentSolver : public SolverImpl {
 private:
-  Solver *solver;
+  std::unique_ptr<Solver> solver;
 
 public:
-  IndependentSolver(Solver *_solver) 
-    : solver(_solver) {}
-  ~IndependentSolver() { delete solver; }
+  IndependentSolver(Solver *_solver) : solver(_solver) {}
 
   bool computeTruth(const Query&, bool &isValid);
   bool computeValidity(const Query&, Solver::Validity &result);
@@ -478,31 +474,26 @@ bool IndependentSolver::computeInitialValues(const Query& query,
   // This is important in case we don't have any constraints but
   // we need initial values for requested array objects.
   hasSolution = true;
-  // FIXME: When we switch to C++11 this should be a std::unique_ptr so we don't need
-  // to remember to manually call delete
-  std::list<IndependentElementSet> *factors = getAllIndependentConstraintsSets(query);
+  auto factors = getAllIndependentConstraintsSets(query);
 
   //Used to rearrange all of the answers into the correct order
   std::map<const Array*, std::vector<unsigned char> > retMap;
-  for (std::list<IndependentElementSet>::iterator it = factors->begin();
-       it != factors->end(); ++it) {
+  for (auto &factor : factors) {
     std::vector<const Array*> arraysInFactor;
-    calculateArrayReferences(*it, arraysInFactor);
+    calculateArrayReferences(factor, arraysInFactor);
     // Going to use this as the "fresh" expression for the Query() invocation below
-    assert(it->exprs.size() >= 1 && "No null/empty factors");
+    assert(factor.exprs.size() >= 1 && "No null/empty factors");
     if (arraysInFactor.size() == 0){
       continue;
     }
-    ConstraintSet tmp(it->exprs);
+    ConstraintSet tmp(factor.exprs);
     std::vector<std::vector<unsigned char> > tempValues;
     if (!solver->impl->computeInitialValues(Query(tmp, ConstantExpr::alloc(0, Expr::Bool)),
                                             arraysInFactor, tempValues, hasSolution)){
       values.clear();
-      delete factors;
       return false;
     } else if (!hasSolution){
       values.clear();
-      delete factors;
       return true;
     } else {
       assert(tempValues.size() == arraysInFactor.size() &&
@@ -515,10 +506,9 @@ bool IndependentSolver::computeInitialValues(const Query& query,
           std::vector<unsigned char> * tempPtr = &retMap[arraysInFactor[i]];
           assert(tempPtr->size() == tempValues[i].size() &&
                  "we're talking about the same array here");
-          ::DenseSet<unsigned> * ds = &(it->elements[arraysInFactor[i]]);
-          for (std::set<unsigned>::iterator it2 = ds->begin(); it2 != ds->end(); it2++){
-            unsigned index = * it2;
-            (* tempPtr)[index] = tempValues[i][index];
+          ::DenseSet<unsigned> &ds = factor.elements[arraysInFactor[i]];
+          for (unsigned index : ds) {
+            (*tempPtr)[index] = tempValues[i][index];
           }
         } else {
           // Dump all the new values into the array
@@ -541,7 +531,6 @@ bool IndependentSolver::computeInitialValues(const Query& query,
     }
   }
   assert(assertCreatedPointEvaluatesToTrue(query, objects, values, retMap) && "should satisfy the equation");
-  delete factors;
   return true;
 }
 
