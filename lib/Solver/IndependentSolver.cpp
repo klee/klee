@@ -21,7 +21,9 @@
 
 #include <list>
 #include <map>
+#include <memory>
 #include <ostream>
+#include <utility>
 #include <vector>
 
 using namespace klee;
@@ -388,12 +390,10 @@ void calculateArrayReferences(const IndependentElementSet & ie,
 
 class IndependentSolver : public SolverImpl {
 private:
-  Solver *solver;
+  std::unique_ptr<Solver> solver;
 
 public:
-  IndependentSolver(Solver *_solver) 
-    : solver(_solver) {}
-  ~IndependentSolver() { delete solver; }
+  IndependentSolver(Solver *_solver) : solver(_solver) {}
 
   bool computeTruth(const Query&, bool &isValid);
   bool computeValidity(const Query&, Solver::Validity &result);
