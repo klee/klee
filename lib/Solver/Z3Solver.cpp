@@ -27,6 +27,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <memory>
+
 namespace {
 // NOTE: Very useful for debugging Z3 behaviour. These files can be given to
 // the z3 binary to replay all Z3 API calls using its `-log` option.
@@ -57,7 +59,7 @@ namespace klee {
 
 class Z3SolverImpl : public SolverImpl {
 private:
-  Z3Builder *builder;
+  std::unique_ptr<Z3Builder> builder;
   time::Span timeout;
   SolverRunStatus runStatusCode;
   std::unique_ptr<llvm::raw_fd_ostream> dumpedQueriesFile;
@@ -135,7 +137,6 @@ Z3SolverImpl::Z3SolverImpl()
 
 Z3SolverImpl::~Z3SolverImpl() {
   Z3_params_dec_ref(builder->ctx, solverParameters);
-  delete builder;
 }
 
 Z3Solver::Z3Solver() : Solver(new Z3SolverImpl()) {}
