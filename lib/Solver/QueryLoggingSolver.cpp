@@ -15,6 +15,8 @@
 #include "klee/Support/FileHandling.h"
 #include "klee/System/Time.h"
 
+#include <utility>
+
 namespace {
 llvm::cl::opt<bool> DumpPartialQueryiesEarly(
     "log-partial-queries-early", llvm::cl::init(false),
@@ -29,13 +31,14 @@ llvm::cl::opt<bool> CreateCompressedQueryLog(
 #endif
 } // namespace
 
-QueryLoggingSolver::QueryLoggingSolver(Solver *_solver, std::string path,
+QueryLoggingSolver::QueryLoggingSolver(std::unique_ptr<Solver> solver,
+                                       std::string path,
                                        const std::string &commentSign,
                                        time::Span queryTimeToLog,
                                        bool logTimedOut)
-    : solver(_solver), BufferString(""), logBuffer(BufferString), queryCount(0),
-      minQueryTimeToLog(queryTimeToLog), logTimedOutQueries(logTimedOut),
-      queryCommentSign(commentSign) {
+    : solver(std::move(solver)), BufferString(""), logBuffer(BufferString),
+      queryCount(0), minQueryTimeToLog(queryTimeToLog),
+      logTimedOutQueries(logTimedOut), queryCommentSign(commentSign) {
   std::string error;
 #ifdef HAVE_ZLIB_H
   if (!CreateCompressedQueryLog) {
@@ -50,7 +53,7 @@ QueryLoggingSolver::QueryLoggingSolver(Solver *_solver, std::string path,
   if (!os) {
     klee_error("Could not open file %s : %s", path.c_str(), error.c_str());
   }
-  assert(0 != solver);
+  assert(this->solver);
 }
 
 void QueryLoggingSolver::flushBufferConditionally(bool writeToFile) {

@@ -18,6 +18,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <utility>
 
 using namespace klee;
 
@@ -67,7 +68,7 @@ private:
   cache_map cache;
 
 public:
-  CachingSolver(Solver *s) : solver(s) {}
+  CachingSolver(std::unique_ptr<Solver> solver) : solver(std::move(solver)) {}
 
   bool computeValidity(const Query&, Solver::Validity &result);
   bool computeTruth(const Query&, bool &isValid);
@@ -255,6 +256,8 @@ void CachingSolver::setCoreSolverTimeout(time::Span timeout) {
 
 ///
 
-Solver *klee::createCachingSolver(Solver *_solver) {
-  return new Solver(new CachingSolver(_solver));
+std::unique_ptr<Solver>
+klee::createCachingSolver(std::unique_ptr<Solver> solver) {
+  return std::make_unique<Solver>(
+      std::make_unique<CachingSolver>(std::move(solver)));
 }

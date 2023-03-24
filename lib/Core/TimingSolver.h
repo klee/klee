@@ -16,6 +16,7 @@
 #include "klee/System/Time.h"
 
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace klee {
@@ -35,8 +36,8 @@ public:
   /// \param _simplifyExprs - Whether expressions should be
   /// simplified (via the constraint manager interface) prior to
   /// querying.
-  TimingSolver(Solver *_solver, bool _simplifyExprs = true)
-      : solver(_solver), simplifyExprs(_simplifyExprs) {}
+  TimingSolver(std::unique_ptr<Solver> solver, bool simplifyExprs = true)
+      : solver(std::move(solver)), simplifyExprs(simplifyExprs) {}
 
   void setTimeout(time::Span t) { solver->setCoreSolverTimeout(t); }
 

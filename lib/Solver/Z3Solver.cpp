@@ -139,7 +139,7 @@ Z3SolverImpl::~Z3SolverImpl() {
   Z3_params_dec_ref(builder->ctx, solverParameters);
 }
 
-Z3Solver::Z3Solver() : Solver(new Z3SolverImpl()) {}
+Z3Solver::Z3Solver() : Solver(std::make_unique<Z3SolverImpl>()) {}
 
 char *Z3Solver::getConstraintLog(const Query &query) {
   return impl->getConstraintLog(query);

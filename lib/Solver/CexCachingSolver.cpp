@@ -26,6 +26,7 @@
 #include <cstddef>
 #include <memory>
 #include <optional>
+#include <utility>
 
 using namespace klee;
 using namespace llvm;
@@ -85,7 +86,8 @@ class CexCachingSolver : public SolverImpl {
   std::optional<const Assignment *> getAssignment(const Query &query);
 
 public:
-  CexCachingSolver(Solver *_solver) : solver(_solver) {}
+  CexCachingSolver(std::unique_ptr<Solver> solver)
+      : solver(std::move(solver)) {}
 
   bool computeTruth(const Query &, bool &isValid);
   bool computeValidity(const Query &, Solver::Validity &result);
@@ -368,6 +370,8 @@ void CexCachingSolver::setCoreSolverTimeout(time::Span timeout) {
 
 ///
 
-Solver *klee::createCexCachingSolver(Solver *_solver) {
-  return new Solver(new CexCachingSolver(_solver));
+std::unique_ptr<Solver>
+klee::createCexCachingSolver(std::unique_ptr<Solver> solver) {
+  return std::make_unique<Solver>(
+      std::make_unique<CexCachingSolver>(std::move(solver)));
 }

@@ -23,12 +23,12 @@ namespace klee {
 
   /// SolverImpl - Abstract base clase for solver implementations.
   class SolverImpl {
-    // DO NOT IMPLEMENT.
-    SolverImpl(const SolverImpl&);
-    void operator=(const SolverImpl&);
-    
   public:
-    SolverImpl() {}
+    SolverImpl() = default;
+
+    SolverImpl(const SolverImpl&) = delete;
+    SolverImpl& operator=(const SolverImpl&) = delete;
+
     virtual ~SolverImpl();
 
     enum SolverRunStatus { SOLVER_RUN_STATUS_SUCCESS_SOLVABLE,

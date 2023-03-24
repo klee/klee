@@ -91,10 +91,11 @@ class StagedSolverImpl : public SolverImpl {
 private:
   std::unique_ptr<IncompleteSolver> primary;
   std::unique_ptr<Solver> secondary;
-  
+
 public:
-  StagedSolverImpl(IncompleteSolver *_primary, Solver *_secondary);
-    
+  StagedSolverImpl(std::unique_ptr<IncompleteSolver> primary,
+                   std::unique_ptr<Solver> secondary);
+
   bool computeTruth(const Query&, bool &isValid);
   bool computeValidity(const Query&, Solver::Validity &result);
   bool computeValue(const Query&, ref<Expr> &result);

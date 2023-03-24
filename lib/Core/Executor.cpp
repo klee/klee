@@ -480,19 +480,19 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
 
   coreSolverTimeout = time::Span{MaxCoreSolverTime};
   if (coreSolverTimeout) UseForkedCoreSolver = true;
-  Solver *coreSolver = klee::createCoreSolver(CoreSolverToUse);
+  std::unique_ptr<Solver> coreSolver = klee::createCoreSolver(CoreSolverToUse);
   if (!coreSolver) {
     klee_error("Failed to create core solver\n");
   }
 
-  Solver *solver = constructSolverChain(
-      coreSolver,
+  std::unique_ptr<Solver> solver = constructSolverChain(
+      std::move(coreSolver),
       interpreterHandler->getOutputFilename(ALL_QUERIES_SMT2_FILE_NAME),
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_SMT2_FILE_NAME),
       interpreterHandler->getOutputFilename(ALL_QUERIES_KQUERY_FILE_NAME),
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_KQUERY_FILE_NAME));
 
-  this->solver.reset(new TimingSolver(solver, EqualitySubstitution));
+  this->solver = std::make_unique<TimingSolver>(std::move(solver), EqualitySubstitution);
   memory.reset(new MemoryManager(&arrayCache));
 
   initializeSearchOptions();

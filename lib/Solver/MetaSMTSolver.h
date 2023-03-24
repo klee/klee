@@ -13,6 +13,8 @@
 
 #include "klee/Solver/Solver.h"
 
+#include <memory>
+
 namespace klee {
 
 template <typename SolverContext> class MetaSMTSolver : public Solver {
@@ -26,7 +28,7 @@ public:
 
 /// createMetaSMTSolver - Create a solver using the metaSMT backend set by
 /// the option MetaSMTBackend.
-Solver *createMetaSMTSolver();
+std::unique_ptr<Solver> createMetaSMTSolver();
 }
 
 #endif /* KLEE_METASMTSOLVER_H */
