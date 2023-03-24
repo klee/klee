@@ -443,8 +443,8 @@ public:
   }
 };
 
-ExprPPrinter *klee::ExprPPrinter::create(llvm::raw_ostream &os) {
-  return new PPrinter(os);
+std::unique_ptr<ExprPPrinter> klee::ExprPPrinter::create(llvm::raw_ostream &os) {
+  return std::make_unique<PPrinter>(os);
 }
 
 void ExprPPrinter::printOne(llvm::raw_ostream &os,

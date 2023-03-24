@@ -12,6 +12,8 @@
 
 #include "klee/Expr/Expr.h"
 
+#include <memory>
+
 namespace llvm {
   class raw_ostream;
 }
@@ -20,10 +22,10 @@ namespace klee {
 
   class ExprPPrinter {
   protected:
-    ExprPPrinter() {}
-    
+    ExprPPrinter() = default;
+
   public:
-    static ExprPPrinter *create(llvm::raw_ostream &os);
+    static std::unique_ptr<ExprPPrinter> create(llvm::raw_ostream &os);
 
     virtual ~ExprPPrinter() {}
 

@@ -13,12 +13,14 @@
 #include "klee/Expr/ExprPPrinter.h"
 #include "klee/System/Time.h"
 
+#include <memory>
+
 using namespace klee;
 
 class KQueryLoggingSolver : public QueryLoggingSolver {
 
 private :
-    ExprPPrinter *printer;
+    std::unique_ptr<ExprPPrinter> printer;
 
     virtual void printQuery(const Query& query,
                             const Query* falseQuery = 0,
@@ -48,14 +50,10 @@ private :
     }
 
 public:
-    KQueryLoggingSolver(Solver *_solver, std::string path, time::Span queryTimeToLog, bool logTimedOut)
-    : QueryLoggingSolver(_solver, path, "#", queryTimeToLog, logTimedOut),
-    printer(ExprPPrinter::create(logBuffer)) {
-    }
-
-    virtual ~KQueryLoggingSolver() {
-        delete printer;
-    }
+  KQueryLoggingSolver(Solver *_solver, std::string path,
+                      time::Span queryTimeToLog, bool logTimedOut)
+      : QueryLoggingSolver(_solver, path, "#", queryTimeToLog, logTimedOut),
+        printer(ExprPPrinter::create(logBuffer)) {}
 };
 
 ///

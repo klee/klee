@@ -93,7 +93,7 @@ void PTree::remove(PTreeNode *n) {
 }
 
 void PTree::dump(llvm::raw_ostream &os) {
-  ExprPPrinter *pp = ExprPPrinter::create(os);
+  std::unique_ptr<ExprPPrinter> pp = ExprPPrinter::create(os);
   pp->setNewline("\\l");
   os << "digraph G {\n";
   os << "\tsize=\"10,7.5\";\n";
@@ -125,7 +125,6 @@ void PTree::dump(llvm::raw_ostream &os) {
     }
   }
   os << "}\n";
-  delete pp;
 }
 
 PTreeNode::PTreeNode(PTreeNode *parent, ExecutionState *state) : parent{parent}, state{state} {
