@@ -16,6 +16,7 @@
 #include "klee/Solver/SolverImpl.h"
 #include "klee/Solver/SolverStats.h"
 
+#include <memory>
 #include <unordered_map>
 
 using namespace klee;
@@ -62,12 +63,11 @@ private:
                              CacheEntryHash>
       cache_map;
 
-  Solver *solver;
+  std::unique_ptr<Solver> solver;
   cache_map cache;
 
 public:
   CachingSolver(Solver *s) : solver(s) {}
-  ~CachingSolver() { cache.clear(); delete solver; }
 
   bool computeValidity(const Query&, Solver::Validity &result);
   bool computeTruth(const Query&, bool &isValid);
