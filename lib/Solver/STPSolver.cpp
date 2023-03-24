@@ -25,6 +25,7 @@
 
 #include <array>
 #include <csignal>
+#include <memory>
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/wait.h>
@@ -85,7 +86,7 @@ namespace klee {
 class STPSolverImpl : public SolverImpl {
 private:
   VC vc;
-  STPBuilder *builder;
+  std::unique_ptr<STPBuilder> builder;
   time::Span timeout;
   bool useForkedSTP;
   SolverRunStatus runStatusCode;
@@ -187,7 +188,7 @@ STPSolverImpl::~STPSolverImpl() {
   shared_memory_ptr = nullptr;
   shared_memory_id = 0;
 
-  delete builder;
+  builder.reset();
 
   vc_Destroy(vc);
 }
@@ -402,13 +403,13 @@ bool STPSolverImpl::computeInitialValues(
 
   bool success;
   if (useForkedSTP) {
-    runStatusCode = runAndGetCexForked(vc, builder, stp_e, objects, values,
-                                       hasSolution, timeout);
+    runStatusCode = runAndGetCexForked(vc, builder.get(), stp_e, objects,
+                                       values, hasSolution, timeout);
     success = ((SOLVER_RUN_STATUS_SUCCESS_SOLVABLE == runStatusCode) ||
                (SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE == runStatusCode));
   } else {
     runStatusCode =
-        runAndGetCex(vc, builder, stp_e, objects, values, hasSolution);
+        runAndGetCex(vc, builder.get(), stp_e, objects, values, hasSolution);
     success = true;
   }
 
