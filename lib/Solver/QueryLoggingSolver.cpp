@@ -53,10 +53,6 @@ QueryLoggingSolver::QueryLoggingSolver(Solver *_solver, std::string path,
   assert(0 != solver);
 }
 
-QueryLoggingSolver::~QueryLoggingSolver() {
-  delete solver;
-}
-
 void QueryLoggingSolver::flushBufferConditionally(bool writeToFile) {
   logBuffer.flush();
   if (writeToFile) {
