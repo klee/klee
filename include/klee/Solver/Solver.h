@@ -71,7 +71,7 @@ namespace klee {
 
     std::unique_ptr<SolverImpl> impl;
 
-    Solver(SolverImpl *impl);
+    Solver(std::unique_ptr<SolverImpl> impl);
     virtual ~Solver();
 
     /// evaluate - Determine for a particular state if the query
@@ -215,19 +215,22 @@ namespace klee {
   ///
   /// \param s - The primary underlying solver to use.
   /// \param oracle - The solver to check query results against.
-  Solver *createValidatingSolver(Solver *s, Solver *oracle, bool ownsOracle = false);
+  std::unique_ptr<Solver> createValidatingSolver(std::unique_ptr<Solver> s,
+                                                 Solver *oracle,
+                                                 bool ownsOracle);
 
   /// createAssignmentValidatingSolver - Create a solver that when requested
   /// for an assignment will check that the computed assignment satisfies
   /// the Query.
   /// \param s - The underlying solver to use.
-  Solver *createAssignmentValidatingSolver(Solver *s);
+  std::unique_ptr<Solver>
+  createAssignmentValidatingSolver(std::unique_ptr<Solver> s);
 
   /// createCachingSolver - Create a solver which will cache the queries in
   /// memory (without eviction).
   ///
   /// \param s - The underlying solver to use.
-  Solver *createCachingSolver(Solver *s);
+  std::unique_ptr<Solver> createCachingSolver(std::unique_ptr<Solver> s);
 
   /// createCexCachingSolver - Create a counterexample caching solver. This is a
   /// more sophisticated cache which records counterexamples for a constraint
@@ -235,41 +238,40 @@ namespace klee {
   /// quickly find satisfying assignments.
   ///
   /// \param s - The underlying solver to use.
-  Solver *createCexCachingSolver(Solver *s);
+  std::unique_ptr<Solver> createCexCachingSolver(std::unique_ptr<Solver> s);
 
   /// createFastCexSolver - Create a "fast counterexample solver", which tries
   /// to quickly compute a satisfying assignment for a constraint set using
   /// value propogation and range analysis.
   ///
   /// \param s - The underlying solver to use.
-  Solver *createFastCexSolver(Solver *s);
+  std::unique_ptr<Solver> createFastCexSolver(std::unique_ptr<Solver> s);
 
   /// createIndependentSolver - Create a solver which will eliminate any
   /// unnecessary constraints before propogating the query to the underlying
   /// solver.
   ///
   /// \param s - The underlying solver to use.
-  Solver *createIndependentSolver(Solver *s);
-  
+  std::unique_ptr<Solver> createIndependentSolver(std::unique_ptr<Solver> s);
+
   /// createKQueryLoggingSolver - Create a solver which will forward all queries
   /// after writing them to the given path in .kquery format.
-  Solver *createKQueryLoggingSolver(Solver *s, std::string path,
-                                    time::Span minQueryTimeToLog,
-                                    bool logTimedOut);
+  std::unique_ptr<Solver>
+  createKQueryLoggingSolver(std::unique_ptr<Solver> s, std::string path,
+                            time::Span minQueryTimeToLog, bool logTimedOut);
 
   /// createSMTLIBLoggingSolver - Create a solver which will forward all queries
   /// after writing them to the given path in .smt2 format.
-  Solver *createSMTLIBLoggingSolver(Solver *s, std::string path,
-                                    time::Span minQueryTimeToLog,
-                                    bool logTimedOut);
-
+  std::unique_ptr<Solver>
+  createSMTLIBLoggingSolver(std::unique_ptr<Solver> s, std::string path,
+                            time::Span minQueryTimeToLog, bool logTimedOut);
 
   /// createDummySolver - Create a dummy solver implementation which always
   /// fails.
-  Solver *createDummySolver();
+  std::unique_ptr<Solver> createDummySolver();
 
   // Create a solver based on the supplied ``CoreSolverType``.
-  Solver *createCoreSolver(CoreSolverType cst);
-}
+  std::unique_ptr<Solver> createCoreSolver(CoreSolverType cst);
+  } // namespace klee
 
 #endif /* KLEE_SOLVER_H */

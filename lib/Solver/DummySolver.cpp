@@ -11,6 +11,8 @@
 #include "klee/Solver/SolverImpl.h"
 #include "klee/Solver/SolverStats.h"
 
+#include <memory>
+
 namespace klee {
 
 class DummySolverImpl : public SolverImpl {
@@ -59,5 +61,7 @@ SolverImpl::SolverRunStatus DummySolverImpl::getOperationStatusCode() {
   return SOLVER_RUN_STATUS_FAILURE;
 }
 
-Solver *createDummySolver() { return new Solver(new DummySolverImpl()); }
+std::unique_ptr<Solver> createDummySolver() {
+  return std::make_unique<Solver>(std::make_unique<DummySolverImpl>());
+}
 }

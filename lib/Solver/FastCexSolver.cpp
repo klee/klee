@@ -24,6 +24,7 @@
 #include <cassert>
 #include <map>
 #include <sstream>
+#include <utility>
 #include <vector>
 
 using namespace klee;
@@ -1141,7 +1142,7 @@ FastCexSolver::computeInitialValues(const Query& query,
   return true;
 }
 
-
-Solver *klee::createFastCexSolver(Solver *s) {
-  return new Solver(new StagedSolverImpl(new FastCexSolver(), s));
+std::unique_ptr<Solver> klee::createFastCexSolver(std::unique_ptr<Solver> s) {
+  return std::make_unique<Solver>(std::make_unique<StagedSolverImpl>(
+      std::make_unique<FastCexSolver>(), std::move(s)));
 }

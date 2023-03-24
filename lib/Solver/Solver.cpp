@@ -12,6 +12,8 @@
 #include "klee/Expr/Constraints.h"
 #include "klee/Solver/SolverImpl.h"
 
+#include <utility>
+
 using namespace klee;
 
 const char *Solver::validity_to_str(Validity v) {
@@ -22,7 +24,7 @@ const char *Solver::validity_to_str(Validity v) {
   }
 }
 
-Solver::Solver(SolverImpl *impl) : impl(impl) {}
+Solver::Solver(std::unique_ptr<SolverImpl> impl) : impl(std::move(impl)) {}
 Solver::~Solver() = default;
 
 char *Solver::getConstraintLog(const Query& query) {

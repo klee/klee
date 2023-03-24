@@ -430,7 +430,7 @@ SolverImpl::SolverRunStatus STPSolverImpl::getOperationStatusCode() {
 }
 
 STPSolver::STPSolver(bool useForkedSTP, bool optimizeDivides)
-    : Solver(new STPSolverImpl(useForkedSTP, optimizeDivides)) {}
+    : Solver(std::make_unique<STPSolverImpl>(useForkedSTP, optimizeDivides)) {}
 
 char *STPSolver::getConstraintLog(const Query &query) {
   return impl->getConstraintLog(query);

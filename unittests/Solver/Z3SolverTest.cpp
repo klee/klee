@@ -19,6 +19,8 @@
 #include "klee/Expr/Expr.h"
 #include "klee/Solver/Solver.h"
 
+#include <memory>
+
 using namespace klee;
 
 namespace {
@@ -26,13 +28,11 @@ ArrayCache AC;
 }
 class Z3SolverTest : public ::testing::Test {
 protected:
+  std::unique_ptr<Solver> Z3Solver_;
+
   Z3SolverTest() : Z3Solver_(createCoreSolver(CoreSolverType::Z3_SOLVER)) {
     Z3Solver_->setCoreSolverTimeout(time::Span("10s"));
   }
-
-  virtual ~Z3SolverTest() { delete Z3Solver_; }
-
-  Solver *Z3Solver_;
 };
 
 TEST_F(Z3SolverTest, GetConstraintLog) {
