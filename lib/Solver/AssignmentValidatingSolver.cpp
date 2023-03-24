@@ -12,18 +12,18 @@
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverImpl.h"
 
+#include <memory>
 #include <vector>
 
 namespace klee {
 
 class AssignmentValidatingSolver : public SolverImpl {
 private:
-  Solver *solver;
+  std::unique_ptr<Solver> solver;
   void dumpAssignmentQuery(const Query &query, const Assignment &assignment);
 
 public:
   AssignmentValidatingSolver(Solver *_solver) : solver(_solver) {}
-  ~AssignmentValidatingSolver() { delete solver; }
 
   bool computeValidity(const Query &, Solver::Validity &result);
   bool computeTruth(const Query &, bool &isValid);
