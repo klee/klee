@@ -150,10 +150,10 @@ static void PrintInputTokens(const MemoryBuffer *MB) {
 static bool PrintInputAST(const char *Filename,
                           const MemoryBuffer *MB,
                           ExprBuilder *Builder) {
-  std::vector<Decl*> Decls;
   std::unique_ptr<Parser> P = Parser::Create(Filename, MB, Builder, ClearArrayAfterQuery);
   P->SetMaxErrors(20);
 
+  std::vector<std::unique_ptr<Decl>> Decls;
   unsigned NumQueries = 0;
   while (Decl *D = P->ParseTopLevelDecl()) {
     if (!P->GetNumErrors()) {
@@ -162,7 +162,7 @@ static bool PrintInputAST(const char *Filename,
 
       D->dump();
     }
-    Decls.push_back(D);
+    Decls.emplace_back(D);
   }
 
   bool success = true;
@@ -171,21 +171,17 @@ static bool PrintInputAST(const char *Filename,
     success = false;
   }
 
-  for (std::vector<Decl*>::iterator it = Decls.begin(),
-         ie = Decls.end(); it != ie; ++it)
-    delete *it;
-
   return success;
 }
 
 static bool EvaluateInputAST(const char *Filename,
                              const MemoryBuffer *MB,
                              ExprBuilder *Builder) {
-  std::vector<Decl*> Decls;
+  std::vector<std::unique_ptr<Decl>> Decls;
   std::unique_ptr<Parser> P = Parser::Create(Filename, MB, Builder, ClearArrayAfterQuery);
   P->SetMaxErrors(20);
   while (Decl *D = P->ParseTopLevelDecl()) {
-    Decls.push_back(D);
+    Decls.emplace_back(D);
   }
 
   bool success = true;
@@ -213,10 +209,8 @@ static bool EvaluateInputAST(const char *Filename,
       getQueryLogPath(SOLVER_QUERIES_KQUERY_FILE_NAME));
 
   unsigned Index = 0;
-  for (std::vector<Decl*>::iterator it = Decls.begin(),
-         ie = Decls.end(); it != ie; ++it) {
-    Decl *D = *it;
-    if (QueryCommand *QC = dyn_cast<QueryCommand>(D)) {
+  for (auto const& D : Decls) {
+    if (QueryCommand *QC = dyn_cast<QueryCommand>(&*D)) {
       llvm::outs() << "Query " << Index << ":\t";
 
       assert("FIXME: Support counterexample query commands!");
@@ -286,10 +280,6 @@ static bool EvaluateInputAST(const char *Filename,
     }
   }
 
-  for (std::vector<Decl*>::iterator it = Decls.begin(),
-         ie = Decls.end(); it != ie; ++it)
-    delete *it;
-
   if (uint64_t queries = *theStatisticManager->getStatisticByName("SolverQueries")) {
     llvm::outs()
       << "--\n"
@@ -310,12 +300,12 @@ static bool EvaluateInputAST(const char *Filename,
 static bool printInputAsSMTLIBv2(const char *Filename, const MemoryBuffer *MB,
                                  ExprBuilder *Builder) {
   // Parse the input file
-  std::vector<Decl *> Decls;
+  std::vector<std::unique_ptr<Decl>> Decls;
   std::unique_ptr<Parser> P =
       Parser::Create(Filename, MB, Builder, ClearArrayAfterQuery);
   P->SetMaxErrors(20);
   while (Decl *D = P->ParseTopLevelDecl()) {
-    Decls.push_back(D);
+    Decls.emplace_back(D);
   }
 
   bool success = true;
@@ -332,10 +322,8 @@ static bool printInputAsSMTLIBv2(const char *Filename, const MemoryBuffer *MB,
 
   unsigned int queryNumber = 0;
   // Loop over the declarations
-  for (std::vector<Decl *>::iterator it = Decls.begin(), ie = Decls.end();
-       it != ie; ++it) {
-    Decl *D = *it;
-    if (QueryCommand *QC = dyn_cast<QueryCommand>(D)) {
+  for (auto const& D : Decls) {
+    if (QueryCommand *QC = dyn_cast<QueryCommand>(&*D)) {
       // print line break to separate from previous query
       if (queryNumber != 0)
         llvm::outs() << "\n";
@@ -364,11 +352,6 @@ static bool printInputAsSMTLIBv2(const char *Filename, const MemoryBuffer *MB,
     }
   }
 
-  // Clean up
-  for (std::vector<Decl *>::iterator it = Decls.begin(), ie = Decls.end();
-       it != ie; ++it)
-    delete *it;
-
   return true;
 }
 
@@ -394,20 +377,20 @@ int main(int argc, char **argv) {
     return 1;
   }
   std::unique_ptr<MemoryBuffer> &MB = *MBResult;
-  
-  ExprBuilder *Builder = 0;
+
+  std::unique_ptr<ExprBuilder> Builder;
   switch (BuilderKind) {
   case DefaultBuilder:
-    Builder = createDefaultExprBuilder();
+    Builder.reset(createDefaultExprBuilder());
     break;
   case ConstantFoldingBuilder:
-    Builder = createDefaultExprBuilder();
-    Builder = createConstantFoldingExprBuilder(Builder);
+    Builder.reset(createDefaultExprBuilder());
+    Builder.reset(createConstantFoldingExprBuilder(Builder.release()));
     break;
   case SimplifyingBuilder:
-    Builder = createDefaultExprBuilder();
-    Builder = createConstantFoldingExprBuilder(Builder);
-    Builder = createSimplifyingExprBuilder(Builder);
+    Builder.reset(createDefaultExprBuilder());
+    Builder.reset(createConstantFoldingExprBuilder(Builder.release()));
+    Builder.reset(createSimplifyingExprBuilder(Builder.release()));
     break;
   }
 
@@ -416,21 +399,22 @@ int main(int argc, char **argv) {
     PrintInputTokens(MB.get());
     break;
   case PrintAST:
-    success = PrintInputAST(InputFile=="-" ? "<stdin>" : InputFile.c_str(), MB.get(),
-                            Builder);
+    success = PrintInputAST(InputFile == "-" ? "<stdin>" : InputFile.c_str(),
+                            MB.get(), Builder.get());
     break;
   case Evaluate:
-    success = EvaluateInputAST(InputFile=="-" ? "<stdin>" : InputFile.c_str(),
-                               MB.get(), Builder);
+    success = EvaluateInputAST(InputFile == "-" ? "<stdin>" : InputFile.c_str(),
+                               MB.get(), Builder.get());
     break;
   case PrintSMTLIBv2:
-    success = printInputAsSMTLIBv2(InputFile=="-"? "<stdin>" : InputFile.c_str(), MB.get(),Builder);
+    success =
+        printInputAsSMTLIBv2(InputFile == "-" ? "<stdin>" : InputFile.c_str(),
+                             MB.get(), Builder.get());
     break;
   default:
     llvm::errs() << argv[0] << ": error: Unknown program action!\n";
   }
 
-  delete Builder;
   llvm::llvm_shutdown();
   return success ? 0 : 1;
 }
