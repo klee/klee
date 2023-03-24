@@ -370,8 +370,8 @@ bool Z3SolverImpl::internalRunSolver(
       z3_ast_expr_to_klee_expr;
 
   std::unordered_map<Z3ASTHandle, Z3ASTHandle, Z3ASTHandleHash, Z3ASTHandleCmp>
-      exprToTrack;
-  std::vector<Z3ASTHandle> exprs;
+      expr_to_track;
+  std::unordered_set<Z3ASTHandle, Z3ASTHandleHash, Z3ASTHandleCmp> exprs;
 
   for (auto const &constraint : query.constraints) {
     Z3ASTHandle z3Constraint = builder->construct(constraint);
@@ -380,11 +380,11 @@ bool Z3SolverImpl::internalRunSolver(
           builder->buildFreshBoolConst(constraint->toString().c_str());
       z3_ast_expr_to_klee_expr.insert({p, constraint});
       z3_ast_expr_constraints.push_back(p);
-      exprToTrack[z3Constraint] = p;
+      expr_to_track[z3Constraint] = p;
     }
 
     Z3_goal_assert(builder->ctx, goal, z3Constraint);
-    exprs.push_back(z3Constraint);
+    exprs.insert(z3Constraint);
 
     constant_arrays_in_query.visit(constraint);
   }
@@ -402,7 +402,7 @@ bool Z3SolverImpl::internalRunSolver(
     for (auto const &arrayIndexValueExpr :
          builder->constant_array_assertions[constant_array]) {
       Z3_goal_assert(builder->ctx, goal, arrayIndexValueExpr);
-      exprs.push_back(arrayIndexValueExpr);
+      exprs.insert(arrayIndexValueExpr);
     }
   }
 
@@ -413,13 +413,7 @@ bool Z3SolverImpl::internalRunSolver(
   // ∃ X Constraints(X) ∧ ¬ query(X)
   Z3ASTHandle z3NotQueryExpr =
       Z3ASTHandle(Z3_mk_not(builder->ctx, z3QueryExpr), builder->ctx);
-  if (ProduceUnsatCore && validityCore) {
-    std::string s = "not " + query.expr->toString();
-    Z3ASTHandle p = builder->buildFreshBoolConst(s.c_str());
-    exprToTrack[z3NotQueryExpr] = p;
-  }
   Z3_goal_assert(builder->ctx, goal, z3NotQueryExpr);
-  exprs.push_back(z3NotQueryExpr);
 
   // Assert an generated side constraints we have to this last so that all other
   // constraints have been traversed so we have all the side constraints needed.
@@ -428,7 +422,7 @@ bool Z3SolverImpl::internalRunSolver(
        it != ie; ++it) {
     Z3ASTHandle sideConstraint = *it;
     Z3_goal_assert(builder->ctx, goal, sideConstraint);
-    exprs.push_back(sideConstraint);
+    exprs.insert(sideConstraint);
   }
 
   Z3_solver theSolver;
@@ -441,16 +435,19 @@ bool Z3SolverImpl::internalRunSolver(
   Z3_solver_inc_ref(builder->ctx, theSolver);
   Z3_solver_set_params(builder->ctx, theSolver, solverParameters);
 
-  for (unsigned idx = 0; idx < exprs.size(); ++idx) {
-    Z3ASTHandle expr = exprs[idx];
-    if (exprToTrack.count(expr)) {
+  for (std::unordered_set<Z3ASTHandle, Z3ASTHandleHash,
+                          Z3ASTHandleCmp>::iterator it = exprs.begin(),
+                                                    ie = exprs.end();
+       it != ie; ++it) {
+    Z3ASTHandle expr = *it;
+    if (expr_to_track.count(expr)) {
       Z3_solver_assert_and_track(builder->ctx, theSolver, expr,
-                                 exprToTrack[expr]);
-      exprToTrack.erase(expr);
+                                 expr_to_track[expr]);
     } else {
       Z3_solver_assert(builder->ctx, theSolver, expr);
     }
   }
+  Z3_solver_assert(builder->ctx, theSolver, z3NotQueryExpr);
 
   if (dumpedQueriesFile) {
     *dumpedQueriesFile << "; start Z3 query\n";

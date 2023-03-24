@@ -105,8 +105,7 @@ struct Z3ASTHandleHash {
 
 struct Z3ASTHandleCmp {
   bool operator()(const Z3ASTHandle &a, const Z3ASTHandle &b) const {
-    return const_cast<Z3ASTHandle *>(&a)->hash() ==
-           const_cast<Z3ASTHandle *>(&b)->hash();
+    return a == b;
   }
 };
 
