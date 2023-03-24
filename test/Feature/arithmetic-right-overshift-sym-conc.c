@@ -3,6 +3,9 @@
 // RUN: %klee --output-dir=%t.klee-out -use-cex-cache=1 -check-overshift=0 %t.bc
 // RUN: not grep "ASSERTION FAIL" %t.klee-out/messages.txt
 // RUN: grep "KLEE: done: explored paths = 1" %t.klee-out/info
+
+#include "klee/klee.h"
+
 #include <stdio.h>
 #include <assert.h>
 

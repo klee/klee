@@ -4,6 +4,11 @@
 // RUN: echo "good" > %t3.good
 // RUN: diff %t3.log %t3.good
 
+#include "klee/klee.h"
+
+#include <stdio.h>
+#include <string.h>
+
 int main() {
   char buf[4];
   char *s = "foo";
