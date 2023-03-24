@@ -23,6 +23,8 @@
 
 #include "llvm/Support/CommandLine.h"
 
+#include <memory>
+
 using namespace klee;
 using namespace llvm;
 
@@ -66,7 +68,7 @@ struct AssignmentLessThan {
 class CexCachingSolver : public SolverImpl {
   typedef std::set<Assignment*, AssignmentLessThan> assignmentsTable_ty;
 
-  Solver *solver;
+  std::unique_ptr<Solver> solver;
   
   MapOfSets<ref<Expr>, Assignment*> cache;
   // memo table
@@ -265,7 +267,6 @@ bool CexCachingSolver::getAssignment(const Query& query, Assignment *&result) {
 
 CexCachingSolver::~CexCachingSolver() {
   cache.clear();
-  delete solver;
   for (assignmentsTable_ty::iterator it = assignmentsTable.begin(), 
          ie = assignmentsTable.end(); it != ie; ++it)
     delete *it;
