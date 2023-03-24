@@ -14,6 +14,7 @@
 #include "klee/System/Time.h"
 #include "klee/Solver/SolverCmdLine.h"
 
+#include <memory>
 #include <vector>
 
 namespace klee {
@@ -58,10 +59,6 @@ namespace klee {
   };
 
   class Solver {
-    // DO NOT IMPLEMENT.
-    Solver(const Solver&);
-    void operator=(const Solver&);
-
   public:
     enum Validity {
       True = 1,
@@ -69,15 +66,12 @@ namespace klee {
       Unknown = 0
     };
   
-  public:
     /// validity_to_str - Return the name of given Validity enum value.
     static const char *validity_to_str(Validity v);
 
-  public:
-    SolverImpl *impl;
+    std::unique_ptr<SolverImpl> impl;
 
-  public:
-    Solver(SolverImpl *_impl) : impl(_impl) {}
+    Solver(SolverImpl *impl);
     virtual ~Solver();
 
     /// evaluate - Determine for a particular state if the query
