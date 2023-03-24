@@ -20,6 +20,7 @@ add_library(kleeCore
   Memory.cpp
   MemoryManager.cpp
   PTree.cpp
+  PTreeWriter.cpp
   Searcher.cpp
   SeedInfo.cpp
   SpecialFunctionHandler.cpp

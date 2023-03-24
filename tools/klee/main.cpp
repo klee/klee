@@ -1123,7 +1123,7 @@ int main(int argc, char **argv, char **envp) {
      {&ChecksCat,      &DebugCat,    &ExtCallsCat, &ExprCat,   &LinkCat,
       &MemoryCat,      &MergeCat,    &MiscCat,     &ModuleCat, &ReplayCat,
       &SearchCat,      &SeedingCat,  &SolvingCat,  &StartCat,  &StatsCat,
-      &TerminationCat, &TestCaseCat, &TestGenCat});
+      &TerminationCat, &TestCaseCat, &TestGenCat,  &PTreeCat});
 
   llvm::InitializeNativeTarget();
 

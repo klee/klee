@@ -412,7 +412,7 @@ private:
 
   /// Remove state from queue and delete state. This function should only be
   /// used in the termination functions below.
-  void terminateState(ExecutionState &state);
+  void terminateState(ExecutionState &state, StateTerminationType reason);
 
   /// Call exit handler and terminate state normally
   /// (end of execution path)
@@ -467,7 +467,8 @@ private:
   /// Call error handler and terminate state for user errors
   /// (e.g. wrong usage of klee.h API)
   void terminateStateOnUserError(ExecutionState &state,
-                                 const llvm::Twine &message);
+                                 const llvm::Twine &message,
+                                 bool writeErr = true);
 
   /// bindModuleConstants - Initialize the module constant table.
   void bindModuleConstants();

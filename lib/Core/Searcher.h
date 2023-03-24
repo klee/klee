@@ -172,7 +172,7 @@ namespace klee {
   ///
   /// The ownership bits are maintained in the update method.
   class RandomPathSearcher final : public Searcher {
-    PTree &processTree;
+    InMemoryPTree *processTree;
     RNG &theRNG;
 
     // Unique bitmask of this searcher
@@ -181,7 +181,7 @@ namespace klee {
   public:
     /// \param processTree The process tree.
     /// \param RNG A random number generator.
-    RandomPathSearcher(PTree &processTree, RNG &rng);
+    RandomPathSearcher(InMemoryPTree *processTree, RNG &rng);
     ~RandomPathSearcher() override = default;
 
     ExecutionState &selectState() override;

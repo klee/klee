@@ -6,12 +6,11 @@
 # License. See LICENSE.TXT for details.
 #
 #===------------------------------------------------------------------------===#
-add_subdirectory(ktest-gen)
-add_subdirectory(ktest-randgen)
-add_subdirectory(kleaver)
-add_subdirectory(klee)
-add_subdirectory(klee-ptree)
-add_subdirectory(klee-replay)
-add_subdirectory(klee-stats)
-add_subdirectory(klee-zesti)
-add_subdirectory(ktest-tool)
+
+add_executable(klee-ptree main.cpp Tree.cpp DFSVisitor.cpp Printers.cpp)
+
+target_compile_features(klee-ptree PRIVATE cxx_std_17)
+target_include_directories(klee-ptree PRIVATE ${KLEE_INCLUDE_DIRS} ${SQLite3_INCLUDE_DIRS})
+target_link_libraries(klee-ptree PUBLIC ${SQLite3_LIBRARIES})
+
+install(TARGETS klee-ptree DESTINATION bin)
