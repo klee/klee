@@ -13,6 +13,8 @@
 #include "klee/Expr/ExprPPrinter.h"
 #include "klee/System/Time.h"
 
+#include <utility>
+
 using namespace klee;
 
 class KQueryLoggingSolver : public QueryLoggingSolver {
@@ -48,10 +50,11 @@ private :
     }
 
 public:
-    KQueryLoggingSolver(Solver *_solver, std::string path, time::Span queryTimeToLog, bool logTimedOut)
-    : QueryLoggingSolver(_solver, path, "#", queryTimeToLog, logTimedOut),
-    printer(ExprPPrinter::create(logBuffer)) {
-    }
+  KQueryLoggingSolver(std::unique_ptr<Solver> solver, std::string path,
+                      time::Span queryTimeToLog, bool logTimedOut)
+      : QueryLoggingSolver(std::move(solver), std::move(path), "#",
+                           queryTimeToLog, logTimedOut),
+        printer(ExprPPrinter::create(logBuffer)) {}
 
     virtual ~KQueryLoggingSolver() {
         delete printer;
@@ -60,8 +63,10 @@ public:
 
 ///
 
-Solver *klee::createKQueryLoggingSolver(Solver *_solver, std::string path,
-                                    time::Span minQueryTimeToLog, bool logTimedOut) {
-  return new Solver(new KQueryLoggingSolver(_solver, path, minQueryTimeToLog, logTimedOut));
+std::unique_ptr<Solver>
+klee::createKQueryLoggingSolver(std::unique_ptr<Solver> solver,
+                                std::string path, time::Span minQueryTimeToLog,
+                                bool logTimedOut) {
+  return std::make_unique<Solver>(std::make_unique<KQueryLoggingSolver>(
+      std::move(solver), std::move(path), minQueryTimeToLog, logTimedOut));
 }
-

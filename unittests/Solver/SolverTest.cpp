@@ -131,11 +131,11 @@ void testOpcode(Solver &solver, bool tryBool = true, bool tryZero = true,
 }
 
 TEST(SolverTest, Evaluation) {
-  Solver *solver = klee::createCoreSolver(CoreSolverToUse);
+  auto solver = klee::createCoreSolver(CoreSolverToUse);
 
-  solver = createCexCachingSolver(solver);
-  solver = createCachingSolver(solver);
-  solver = createIndependentSolver(solver);
+  solver = createCexCachingSolver(std::move(solver));
+  solver = createCachingSolver(std::move(solver));
+  solver = createIndependentSolver(std::move(solver));
 
   testOpcode<SelectExpr>(*solver);
   testOpcode<ZExtExpr>(*solver);
@@ -165,8 +165,6 @@ TEST(SolverTest, Evaluation) {
   testOpcode<SleExpr>(*solver);
   testOpcode<SgtExpr>(*solver);
   testOpcode<SgeExpr>(*solver);
-
-  delete solver;
 }
 
 }

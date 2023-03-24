@@ -29,12 +29,11 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Signals.h"
 
 #include <sys/stat.h>
 #include <unistd.h>
-
-
-#include "llvm/Support/Signals.h"
+#include <utility>
 
 using namespace llvm;
 using namespace klee;
@@ -200,7 +199,7 @@ static bool EvaluateInputAST(const char *Filename,
   if (!success)
     return false;
 
-  Solver *coreSolver = klee::createCoreSolver(CoreSolverToUse);
+  std::unique_ptr<Solver> coreSolver = klee::createCoreSolver(CoreSolverToUse);
 
   if (CoreSolverToUse != DUMMY_SOLVER) {
     const time::Span maxCoreSolverTime(MaxCoreSolverTime);
@@ -209,11 +208,11 @@ static bool EvaluateInputAST(const char *Filename,
     }
   }
 
-  Solver *S = constructSolverChain(coreSolver,
-                                   getQueryLogPath(ALL_QUERIES_SMT2_FILE_NAME),
-                                   getQueryLogPath(SOLVER_QUERIES_SMT2_FILE_NAME),
-                                   getQueryLogPath(ALL_QUERIES_KQUERY_FILE_NAME),
-                                   getQueryLogPath(SOLVER_QUERIES_KQUERY_FILE_NAME));
+  std::unique_ptr<Solver> S = constructSolverChain(
+      std::move(coreSolver), getQueryLogPath(ALL_QUERIES_SMT2_FILE_NAME),
+      getQueryLogPath(SOLVER_QUERIES_SMT2_FILE_NAME),
+      getQueryLogPath(ALL_QUERIES_KQUERY_FILE_NAME),
+      getQueryLogPath(SOLVER_QUERIES_KQUERY_FILE_NAME));
 
   unsigned Index = 0;
   for (std::vector<Decl*>::iterator it = Decls.begin(),
@@ -293,8 +292,6 @@ static bool EvaluateInputAST(const char *Filename,
          ie = Decls.end(); it != ie; ++it)
     delete *it;
   delete P;
-
-  delete S;
 
   if (uint64_t queries = *theStatisticManager->getStatisticByName("SolverQueries")) {
     llvm::outs()

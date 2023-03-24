@@ -58,8 +58,9 @@ protected:
   void flushBufferConditionally(bool writeToFile);
 
 public:
-  QueryLoggingSolver(Solver *_solver, std::string path, const std::string &commentSign,
-                     time::Span queryTimeToLog, bool logTimedOut);
+  QueryLoggingSolver(std::unique_ptr<Solver> solver, std::string path,
+                     const std::string &commentSign, time::Span queryTimeToLog,
+                     bool logTimedOut);
 
   /// implementation of the SolverImpl interface
   bool computeTruth(const Query &query, bool &isValid);

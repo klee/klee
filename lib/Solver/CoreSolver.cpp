@@ -19,15 +19,16 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <string>
+#include <memory>
 
 namespace klee {
 
-Solver *createCoreSolver(CoreSolverType cst) {
+std::unique_ptr<Solver> createCoreSolver(CoreSolverType cst) {
   switch (cst) {
   case STP_SOLVER:
 #ifdef ENABLE_STP
     klee_message("Using STP solver backend");
-    return new STPSolver(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+    return std::make_unique<STPSolver>(UseForkedCoreSolver, CoreSolverOptimizeDivides);
 #else
     klee_message("Not compiled with STP support");
     return NULL;
@@ -45,7 +46,7 @@ Solver *createCoreSolver(CoreSolverType cst) {
   case Z3_SOLVER:
 #ifdef ENABLE_Z3
     klee_message("Using Z3 solver backend");
-    return new Z3Solver();
+    return std::make_unique<Z3Solver>();
 #else
     klee_message("Not compiled with Z3 support");
     return NULL;

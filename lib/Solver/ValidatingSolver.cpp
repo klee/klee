@@ -12,6 +12,7 @@
 #include "klee/Solver/SolverImpl.h"
 
 #include <memory>
+#include <utility>
 #include <vector>
 
 namespace klee {
@@ -22,8 +23,9 @@ private:
   std::unique_ptr<Solver, void(*)(Solver*)> oracle;
 
 public:
-  ValidatingSolver(Solver *solver, Solver *oracle, bool ownsOracle = false)
-      : solver(solver),
+  ValidatingSolver(std::unique_ptr<Solver> solver, Solver *oracle,
+                   bool ownsOracle)
+      : solver(std::move(solver)),
         oracle(
             oracle, ownsOracle ? [](Solver *solver) { delete solver; }
                                : [](Solver *) {}) {}
@@ -140,7 +142,10 @@ void ValidatingSolver::setCoreSolverTimeout(time::Span timeout) {
   solver->impl->setCoreSolverTimeout(timeout);
 }
 
-Solver *createValidatingSolver(Solver *s, Solver *oracle, bool ownsOracle) {
-  return new Solver(new ValidatingSolver(s, oracle, ownsOracle));
+std::unique_ptr<Solver> createValidatingSolver(std::unique_ptr<Solver> s,
+                                               Solver *oracle,
+                                               bool ownsOracle) {
+  return std::make_unique<Solver>(
+      std::make_unique<ValidatingSolver>(std::move(s), oracle, ownsOracle));
 }
 }

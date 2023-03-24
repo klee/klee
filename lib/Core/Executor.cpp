@@ -481,19 +481,19 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
 
   coreSolverTimeout = time::Span{MaxCoreSolverTime};
   if (coreSolverTimeout) UseForkedCoreSolver = true;
-  Solver *coreSolver = klee::createCoreSolver(CoreSolverToUse);
+  std::unique_ptr<Solver> coreSolver = klee::createCoreSolver(CoreSolverToUse);
   if (!coreSolver) {
     klee_error("Failed to create core solver\n");
   }
 
-  Solver *solver = constructSolverChain(
-      coreSolver,
+  std::unique_ptr<Solver> solver = constructSolverChain(
+      std::move(coreSolver),
       interpreterHandler->getOutputFilename(ALL_QUERIES_SMT2_FILE_NAME),
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_SMT2_FILE_NAME),
       interpreterHandler->getOutputFilename(ALL_QUERIES_KQUERY_FILE_NAME),
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_KQUERY_FILE_NAME));
 
-  this->solver = new TimingSolver(solver, EqualitySubstitution);
+  this->solver = std::make_unique<TimingSolver>(std::move(solver), EqualitySubstitution);
   memory = new MemoryManager(&arrayCache);
 
   initializeSearchOptions();
@@ -593,7 +593,6 @@ Executor::~Executor() {
   delete externalDispatcher;
   delete specialFunctionHandler;
   delete statsTracker;
-  delete solver;
 }
 
 /***/
@@ -1236,7 +1235,7 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
       assert(success && "FIXME: Unhandled solver failure");
       (void) success;
       if (res) {
-        siit->patchSeed(state, condition, solver);
+        siit->patchSeed(state, condition, solver.get());
         warn = true;
       }
     }
@@ -3895,7 +3894,7 @@ void Executor::callExternalFunction(ExecutionState &state,
       // Checking to see if the argument is a pointer to something
       if (ce->getWidth() == Context::get().getPointerWidth() &&
           state.addressSpace.resolveOne(ce, op)) {
-        op.second->flushToConcreteStore(solver, state);
+        op.second->flushToConcreteStore(solver.get(), state);
       }
       wordIndex += (ce->getWidth()+63)/64;
     } else {
@@ -4234,7 +4233,7 @@ void Executor::resolveExact(ExecutionState &state,
   p = optimizer.optimizeExpr(p, true);
   // XXX we may want to be capping this?
   ResolutionList rl;
-  state.addressSpace.resolve(state, solver, p, rl);
+  state.addressSpace.resolve(state, solver.get(), p, rl);
   
   ExecutionState *unbound = &state;
   for (ResolutionList::iterator it = rl.begin(), ie = rl.end(); 
@@ -4294,7 +4293,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   ObjectPair op;
   bool success;
   solver->setTimeout(coreSolverTimeout);
-  if (!state.addressSpace.resolveOne(state, solver, address, op, success)) {
+  if (!state.addressSpace.resolveOne(state, solver.get(), address, op, success)) {
     address = toConstant(state, address, "resolveOne failure");
     success = state.addressSpace.resolveOne(cast<ConstantExpr>(address), op);
   }
@@ -4351,7 +4350,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   address = optimizer.optimizeExpr(address, true);
   ResolutionList rl;  
   solver->setTimeout(coreSolverTimeout);
-  bool incomplete = state.addressSpace.resolve(state, solver, address, rl,
+  bool incomplete = state.addressSpace.resolve(state, solver.get(), address, rl,
                                                0, coreSolverTimeout);
   solver->setTimeout(time::Span());
   
