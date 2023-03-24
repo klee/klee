@@ -21,6 +21,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
+#include <cstdlib>
 #include <map>
 #include <cstring>
 
@@ -999,11 +1000,12 @@ ExprResult ParserImpl::ParseParenExpr(TypeResult FIXME_UNUSED) {
     if (ExprKind == Expr::Select) {
       return ParseSelectParenExpr(Name, ResTy);
     } else {
-      assert(0 && "Invalid ternary expression kind.");
+      assert(false && "Invalid ternary expression kind.");
+      std::abort();
     }
   default:
-    assert(0 && "Invalid argument kind (number of args).");
-    return ExprResult();
+    assert(false && "Invalid argument kind (number of args).");
+    std::abort();
   }
 }
 
