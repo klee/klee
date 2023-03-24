@@ -11,6 +11,8 @@
 // RUN: grep "^; Query" %t.klee-out/all-queries.smt2 | wc -l | grep -q 17
 // RUN: grep "^; Query" %t.klee-out/solver-queries.smt2 | wc -l | grep -q 17
 
+#include "klee/klee.h"
+
 #include <assert.h>
 
 int constantArr[16 ] = {
