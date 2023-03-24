@@ -21,7 +21,11 @@ namespace klee {
   
 struct ArrayHashFn  {
   unsigned operator()(const Array* array) const {
-    return(array ? array->hash() : 0);
+    return array ? array->hash() : 0;
+  }
+
+  unsigned operator()(const Array& array) const {
+    return array.hash();
   }
 };
     

@@ -10,28 +10,24 @@
 #ifndef KLEE_ARRAYCACHE_H
 #define KLEE_ARRAYCACHE_H
 
-#include "klee/Expr/Expr.h"
 #include "klee/Expr/ArrayExprHash.h" // For klee::ArrayHashFn
+#include "klee/Expr/Expr.h"
 
+#include <cstdint>
+#include <forward_list>
+#include <memory>
 #include <string>
 #include <unordered_set>
-#include <vector>
 
 namespace klee {
-
 struct EquivArrayCmpFn {
-  bool operator()(const Array *array1, const Array *array2) const {
-    if (array1 == NULL || array2 == NULL)
-      return false;
-    return (array1->size == array2->size) && (array1->name == array2->name);
+  bool operator()(const Array &array1, const Array &array2) const {
+    return array1.size == array2.size && array1.name == array2.name;
   }
 };
 
 /// Provides an interface for creating and destroying Array objects.
-class ArrayCache {
-public:
-  ArrayCache() {}
-  ~ArrayCache();
+struct ArrayCache {
   /// Create an Array object.
   //
   /// Symbolic Arrays are cached so that only one instance exists. This
@@ -53,20 +49,17 @@ public:
   /// \param _domain The size of the domain (i.e. the bitvector used to index
   /// the array)
   /// \param _range The size of range (i.e. the bitvector that is indexed to)
-  const Array *CreateArray(const std::string &_name, uint64_t _size,
-                           const ref<ConstantExpr> *constantValuesBegin = 0,
-                           const ref<ConstantExpr> *constantValuesEnd = 0,
+  const Array *CreateArray(const std::string &_name, std::uint64_t _size,
+                           const ref<ConstantExpr> *constantValuesBegin = {},
+                           const ref<ConstantExpr> *constantValuesEnd = {},
                            Expr::Width _domain = Expr::Int32,
                            Expr::Width _range = Expr::Int8);
 
 private:
-  typedef std::unordered_set<const Array *, klee::ArrayHashFn,
-                             klee::EquivArrayCmpFn>
-      ArrayHashMap;
-  ArrayHashMap cachedSymbolicArrays;
-  typedef std::vector<const Array *> ArrayPtrVec;
-  ArrayPtrVec concreteArrays;
+  std::unordered_set<Array, klee::ArrayHashFn, klee::EquivArrayCmpFn>
+      symbolicArrays;
+  std::forward_list<Array> concreteArrays;
 };
-}
+} // namespace klee
 
 #endif /* KLEE_ARRAYCACHE_H */

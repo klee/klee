@@ -487,6 +487,8 @@ public:
 };
 
 class Array {
+  friend class ArrayCache;
+
 public:
   // Name of the array
   const std::string name;
@@ -506,14 +508,9 @@ public:
 private:
   unsigned hashValue;
 
-  // FIXME: Make =delete when we switch to C++11
-  Array(const Array& array);
+  class Private {};
 
-  // FIXME: Make =delete when we switch to C++11
-  Array& operator =(const Array& array);
-
-  ~Array();
-
+public:
   /// Array - Construct a new array object.
   ///
   /// \param _name - The name for this array. Names should generally be unique
@@ -521,12 +518,14 @@ private:
   /// when printing expressions. When expressions are printed the output will
   /// not parse correctly since two arrays with the same name cannot be
   /// distinguished once printed.
-  Array(const std::string &_name, uint64_t _size,
+  Array(Private, const std::string &_name, uint64_t _size,
         const ref<ConstantExpr> *constantValuesBegin = 0,
         const ref<ConstantExpr> *constantValuesEnd = 0,
         Expr::Width _domain = Expr::Int32, Expr::Width _range = Expr::Int8);
 
-public:
+  Array(const Array &array) = delete;
+  Array &operator=(const Array &array) = delete;
+
   bool isSymbolicArray() const { return constantValues.empty(); }
   bool isConstantArray() const { return !isSymbolicArray(); }
 
@@ -538,7 +537,6 @@ public:
   /// ComputeHash must take into account the name, the size, the domain, and the range
   unsigned computeHash();
   unsigned hash() const { return hashValue; }
-  friend class ArrayCache;
 };
 
 /// Class representing a complete list of updates into an array.
