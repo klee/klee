@@ -23,6 +23,7 @@
 
 #include <cassert>
 #include <map>
+#include <memory>
 #include <sstream>
 #include <vector>
 
@@ -352,16 +353,17 @@ public:
 
 class CexRangeEvaluator : public ExprRangeEvaluator<ValueRange> {
 public:
-  std::map<const Array*, CexObjectData*> &objects;
-  CexRangeEvaluator(std::map<const Array*, CexObjectData*> &_objects) 
-    : objects(_objects) {}
+  std::map<const Array *, std::unique_ptr<CexObjectData>> &objects;
+  CexRangeEvaluator(
+      std::map<const Array *, std::unique_ptr<CexObjectData>> &_objects)
+      : objects(_objects) {}
 
   ValueRange getInitialReadRange(const Array &array, ValueRange index) {
     // Check for a concrete read of a constant array.
-    if (array.isConstantArray() && 
-        index.isFixed() && 
-        index.min() < array.size)
+    if (array.isConstantArray() && index.isFixed() &&
+        index.min() < array.size) {
       return ValueRange(array.constantValues[index.min()]->getZExtValue(8));
+    }
 
     return ValueRange(0, 255);
   }
@@ -369,73 +371,71 @@ public:
 
 class CexPossibleEvaluator : public ExprEvaluator {
 protected:
-  ref<Expr> getInitialValue(const Array& array, unsigned index) {
+  ref<Expr> getInitialValue(const Array &array, unsigned index) {
     // If the index is out of range, we cannot assign it a value, since that
     // value cannot be part of the assignment.
-    if (index >= array.size)
-      return ReadExpr::create(UpdateList(&array, 0), 
+    if (index >= array.size) {
+      return ReadExpr::create(UpdateList(&array, 0),
                               ConstantExpr::alloc(index, array.getDomain()));
-      
-    std::map<const Array*, CexObjectData*>::iterator it = objects.find(&array);
-    return ConstantExpr::alloc((it == objects.end() ? 127 : 
-                                it->second->getPossibleValue(index)),
-                               array.getRange());
+    }
+
+    auto it = objects.find(&array);
+    return ConstantExpr::alloc(
+        (it == objects.end() ? 127 : it->second->getPossibleValue(index)),
+        array.getRange());
   }
 
 public:
-  std::map<const Array*, CexObjectData*> &objects;
-  CexPossibleEvaluator(std::map<const Array*, CexObjectData*> &_objects) 
-    : objects(_objects) {}
+  std::map<const Array *, std::unique_ptr<CexObjectData>> &objects;
+  CexPossibleEvaluator(
+      std::map<const Array *, std::unique_ptr<CexObjectData>> &_objects)
+      : objects(_objects) {}
 };
 
 class CexExactEvaluator : public ExprEvaluator {
 protected:
-  ref<Expr> getInitialValue(const Array& array, unsigned index) {
+  ref<Expr> getInitialValue(const Array &array, unsigned index) {
     // If the index is out of range, we cannot assign it a value, since that
     // value cannot be part of the assignment.
     if (index >= array.size)
-      return ReadExpr::create(UpdateList(&array, 0), 
+      return ReadExpr::create(UpdateList(&array, 0),
                               ConstantExpr::alloc(index, array.getDomain()));
-      
-    std::map<const Array*, CexObjectData*>::iterator it = objects.find(&array);
-    if (it == objects.end())
-      return ReadExpr::create(UpdateList(&array, 0), 
+
+    auto it = objects.find(&array);
+    if (it == objects.end()) {
+      return ReadExpr::create(UpdateList(&array, 0),
                               ConstantExpr::alloc(index, array.getDomain()));
+    }
 
     CexValueData cvd = it->second->getExactValues(index);
     if (!cvd.isFixed())
-      return ReadExpr::create(UpdateList(&array, 0), 
+      return ReadExpr::create(UpdateList(&array, 0),
                               ConstantExpr::alloc(index, array.getDomain()));
 
     return ConstantExpr::alloc(cvd.min(), array.getRange());
   }
 
 public:
-  std::map<const Array*, CexObjectData*> &objects;
-  CexExactEvaluator(std::map<const Array*, CexObjectData*> &_objects) 
-    : objects(_objects) {}
+  std::map<const Array *, std::unique_ptr<CexObjectData>> &objects;
+  CexExactEvaluator(
+      std::map<const Array *, std::unique_ptr<CexObjectData>> &_objects)
+      : objects(_objects) {}
 };
 
 class CexData {
 public:
-  std::map<const Array*, CexObjectData*> objects;
+  std::map<const Array*, std::unique_ptr<CexObjectData>> objects;
 
-  CexData(const CexData&); // DO NOT IMPLEMENT
-  void operator=(const CexData&); // DO NOT IMPLEMENT
-
-public:
-  CexData() {}
-  ~CexData() {
-    for (std::map<const Array*, CexObjectData*>::iterator it = objects.begin(),
-           ie = objects.end(); it != ie; ++it)
-      delete it->second;
-  }
+  CexData() = default;
+  CexData(const CexData&) = delete;
+  CexData& operator=(const CexData&) = delete;
 
   CexObjectData &getObjectData(const Array *A) {
-    CexObjectData *&Entry = objects[A];
+    auto &Entry = objects[A];
 
-    if (!Entry)
-      Entry = new CexObjectData(A->size);
+    if (!Entry) {
+      Entry.reset(new CexObjectData(A->size));
+    }
 
     return *Entry;
   }
@@ -947,13 +947,7 @@ public:
 
   void dump() {
     llvm::errs() << "-- propagated values --\n";
-    for (std::map<const Array *, CexObjectData *>::iterator
-             it = objects.begin(),
-             ie = objects.end();
-         it != ie; ++it) {
-      const Array *A = it->first;
-      CexObjectData *COD = it->second;
-
+    for (auto const& [A, COD] : objects) {
       llvm::errs() << A->name << "\n";
       llvm::errs() << "possible: [";
       for (unsigned i = 0; i < A->size; ++i) {
