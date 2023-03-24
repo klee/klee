@@ -26,6 +26,7 @@
 #endif
 #include "llvm/Target/TargetMachine.h"
 
+#include <memory>
 
 using namespace llvm;
 using namespace klee;
@@ -83,13 +84,13 @@ bool RaiseAsmPass::runOnModule(Module &M) {
     TargetTriple = llvm::sys::getDefaultTargetTriple();
   const Target *Target = TargetRegistry::lookupTarget(TargetTriple, Err);
 
-  TargetMachine * TM = 0;
-  if (Target == 0) {
+  std::unique_ptr<TargetMachine> TM;
+  if (Target == nullptr) {
     klee_warning("Warning: unable to select target: %s", Err.c_str());
-    TLI = 0;
+    TLI = nullptr;
   } else {
-    TM = Target->createTargetMachine(TargetTriple, "", "", TargetOptions(),
-                                     None);
+    TM.reset(Target->createTargetMachine(TargetTriple, "", "", TargetOptions(),
+                                         None));
     TLI = TM->getSubtargetImpl(*(M.begin()))->getTargetLowering();
 
     triple = llvm::Triple(TargetTriple);
@@ -104,8 +105,6 @@ bool RaiseAsmPass::runOnModule(Module &M) {
       }
     }
   }
-
-  delete TM;
 
   return changed;
 }
