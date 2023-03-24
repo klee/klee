@@ -12,8 +12,9 @@
 
 #include "klee/Expr/Expr.h"
 
-#include <vector>
+#include <memory>
 #include <string>
+#include <vector>
 
 namespace llvm {
   class MemoryBuffer;
@@ -228,8 +229,10 @@ namespace expr {
     /// \arg MB - The input data.
     /// \arg Builder - The expression builder to use for constructing
     /// expressions.
-    static Parser *Create(const std::string Name, const llvm::MemoryBuffer *MB,
-                          ExprBuilder *Builder, bool ClearArrayAfterQuery);
+    static std::unique_ptr<Parser> Create(const std::string Name,
+                                          const llvm::MemoryBuffer *MB,
+                                          ExprBuilder *Builder,
+                                          bool ClearArrayAfterQuery);
   };
 }
 }

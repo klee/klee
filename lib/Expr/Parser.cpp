@@ -21,8 +21,9 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
-#include <map>
 #include <cstring>
+#include <map>
+#include <utility>
 
 using namespace llvm;
 using namespace klee;
@@ -1645,9 +1646,12 @@ Parser::Parser() {
 Parser::~Parser() {
 }
 
-Parser *Parser::Create(const std::string Filename, const MemoryBuffer *MB,
-                       ExprBuilder *Builder, bool ClearArrayAfterQuery) {
-  ParserImpl *P = new ParserImpl(Filename, MB, Builder, ClearArrayAfterQuery);
+std::unique_ptr<Parser> Parser::Create(const std::string Filename,
+                                       const MemoryBuffer *MB,
+                                       ExprBuilder *Builder,
+                                       bool ClearArrayAfterQuery) {
+  std::unique_ptr<ParserImpl> P = std::make_unique<ParserImpl>(
+      std::move(Filename), MB, Builder, ClearArrayAfterQuery);
   P->Initialize();
   return P;
 }

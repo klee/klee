@@ -151,7 +151,7 @@ static bool PrintInputAST(const char *Filename,
                           const MemoryBuffer *MB,
                           ExprBuilder *Builder) {
   std::vector<Decl*> Decls;
-  Parser *P = Parser::Create(Filename, MB, Builder, ClearArrayAfterQuery);
+  std::unique_ptr<Parser> P = Parser::Create(Filename, MB, Builder, ClearArrayAfterQuery);
   P->SetMaxErrors(20);
 
   unsigned NumQueries = 0;
@@ -175,8 +175,6 @@ static bool PrintInputAST(const char *Filename,
          ie = Decls.end(); it != ie; ++it)
     delete *it;
 
-  delete P;
-
   return success;
 }
 
@@ -184,7 +182,7 @@ static bool EvaluateInputAST(const char *Filename,
                              const MemoryBuffer *MB,
                              ExprBuilder *Builder) {
   std::vector<Decl*> Decls;
-  Parser *P = Parser::Create(Filename, MB, Builder, ClearArrayAfterQuery);
+  std::unique_ptr<Parser> P = Parser::Create(Filename, MB, Builder, ClearArrayAfterQuery);
   P->SetMaxErrors(20);
   while (Decl *D = P->ParseTopLevelDecl()) {
     Decls.push_back(D);
@@ -291,7 +289,6 @@ static bool EvaluateInputAST(const char *Filename,
   for (std::vector<Decl*>::iterator it = Decls.begin(),
          ie = Decls.end(); it != ie; ++it)
     delete *it;
-  delete P;
 
   if (uint64_t queries = *theStatisticManager->getStatisticByName("SolverQueries")) {
     llvm::outs()
@@ -310,75 +307,69 @@ static bool EvaluateInputAST(const char *Filename,
   return success;
 }
 
-static bool printInputAsSMTLIBv2(const char *Filename,
-                             const MemoryBuffer *MB,
-                             ExprBuilder *Builder)
-{
-	//Parse the input file
-	std::vector<Decl*> Decls;
-        Parser *P = Parser::Create(Filename, MB, Builder, ClearArrayAfterQuery);
-        P->SetMaxErrors(20);
-	while (Decl *D = P->ParseTopLevelDecl())
-	{
-		Decls.push_back(D);
-	}
+static bool printInputAsSMTLIBv2(const char *Filename, const MemoryBuffer *MB,
+                                 ExprBuilder *Builder) {
+  // Parse the input file
+  std::vector<Decl *> Decls;
+  std::unique_ptr<Parser> P =
+      Parser::Create(Filename, MB, Builder, ClearArrayAfterQuery);
+  P->SetMaxErrors(20);
+  while (Decl *D = P->ParseTopLevelDecl()) {
+    Decls.push_back(D);
+  }
 
-	bool success = true;
-	if (unsigned N = P->GetNumErrors())
-	{
-		llvm::errs() << Filename << ": parse failure: "
-				   << N << " errors.\n";
-		success = false;
-	}
+  bool success = true;
+  if (unsigned N = P->GetNumErrors()) {
+    llvm::errs() << Filename << ": parse failure: " << N << " errors.\n";
+    success = false;
+  }
 
-	if (!success)
-	return false;
+  if (!success)
+    return false;
 
-	ExprSMTLIBPrinter printer;
-	printer.setOutput(llvm::outs());
+  ExprSMTLIBPrinter printer;
+  printer.setOutput(llvm::outs());
 
-	unsigned int queryNumber = 0;
-	//Loop over the declarations
-	for (std::vector<Decl*>::iterator it = Decls.begin(), ie = Decls.end(); it != ie; ++it)
-	{
-		Decl *D = *it;
-		if (QueryCommand *QC = dyn_cast<QueryCommand>(D))
-		{
-			//print line break to separate from previous query
-			if(queryNumber!=0) 	llvm::outs() << "\n";
+  unsigned int queryNumber = 0;
+  // Loop over the declarations
+  for (std::vector<Decl *>::iterator it = Decls.begin(), ie = Decls.end();
+       it != ie; ++it) {
+    Decl *D = *it;
+    if (QueryCommand *QC = dyn_cast<QueryCommand>(D)) {
+      // print line break to separate from previous query
+      if (queryNumber != 0)
+        llvm::outs() << "\n";
 
-			//Output header for this query as a SMT-LIBv2 comment
-			llvm::outs() << ";SMTLIBv2 Query " << queryNumber << "\n";
+      // Output header for this query as a SMT-LIBv2 comment
+      llvm::outs() << ";SMTLIBv2 Query " << queryNumber << "\n";
 
-			/* Can't pass ConstraintManager constructor directly
-			 * as argument to Query object. Like...
-			 * query(ConstraintManager(QC->Constraints),QC->Query);
-			 *
-			 * For some reason if constructed this way the first
-			 * constraint in the constraint set is set to NULL and
-			 * will later cause a NULL pointer dereference.
-			 */
-                        ConstraintSet constraintM(QC->Constraints);
-                        Query query(constraintM, QC->Query);
-                        printer.setQuery(query);
+      /* Can't pass ConstraintManager constructor directly
+       * as argument to Query object. Like...
+       * query(ConstraintManager(QC->Constraints),QC->Query);
+       *
+       * For some reason if constructed this way the first
+       * constraint in the constraint set is set to NULL and
+       * will later cause a NULL pointer dereference.
+       */
+      ConstraintSet constraintM(QC->Constraints);
+      Query query(constraintM, QC->Query);
+      printer.setQuery(query);
 
-			if(!QC->Objects.empty())
-				printer.setArrayValuesToGet(QC->Objects);
+      if (!QC->Objects.empty())
+        printer.setArrayValuesToGet(QC->Objects);
 
-			printer.generateOutput();
+      printer.generateOutput();
 
+      queryNumber++;
+    }
+  }
 
-			queryNumber++;
-		}
-	}
+  // Clean up
+  for (std::vector<Decl *>::iterator it = Decls.begin(), ie = Decls.end();
+       it != ie; ++it)
+    delete *it;
 
-	//Clean up
-	for (std::vector<Decl*>::iterator it = Decls.begin(),
-			ie = Decls.end(); it != ie; ++it)
-		delete *it;
-	delete P;
-
-	return true;
+  return true;
 }
 
 int main(int argc, char **argv) {
