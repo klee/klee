@@ -26,6 +26,8 @@ config.cxx = "@NATIVE_CXX@"
 #       test/Concrete/CMakeLists.txt
 config.O0opt = "-O0 -Xclang -disable-O0-optnone"
 
+config.sqlite3 = "@SQLITE_CLI@"
+
 # Features
 config.enable_uclibc = True if @SUPPORT_KLEE_UCLIBC@ == 1 else False
 config.enable_posix_runtime = True if @ENABLE_POSIX_RUNTIME@ == 1 else False
@@ -39,6 +41,7 @@ config.have_asan = True if @IS_ASAN_BUILD@ == 1 else False
 config.have_ubsan = True if @IS_UBSAN_BUILD@ == 1 else False
 config.have_msan = True if @IS_MSAN_BUILD@ == 1 else False
 config.have_32bit_support = True if @M32_SUPPORTED@ == 1 else False
+config.have_sqlite3 = True if "@SQLITE_CLI@".strip() != "" else False
 
 # Add sanitizer list
 config.environment['LSAN_OPTIONS'] = "suppressions=@KLEE_UTILS_DIR@/sanitizers/lsan.txt"

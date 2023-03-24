@@ -310,6 +310,16 @@ if (NOT SQLite3_FOUND)
   message( FATAL_ERROR "SQLite3 not found, please install" )
 endif()
 
+find_program(
+  SQLITE_CLI
+  NAMES "sqlite3"
+  DOC "Path to sqlite3 tool"
+)
+
+if (NOT SQLITE_CLI)
+  set(SQLITE_CLI "")
+endif()
+
 ################################################################################
 # Detect libcap
 ################################################################################

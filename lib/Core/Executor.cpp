@@ -3639,14 +3639,15 @@ std::string Executor::getAddressInfo(ExecutionState &state,
   return info.str();
 }
 
-
-void Executor::terminateState(ExecutionState &state) {
+void Executor::terminateState(ExecutionState &state,
+                              StateTerminationType reason) {
   if (replayKTest && replayPosition!=replayKTest->numObjects) {
     klee_warning_once(replayKTest,
                       "replay did not consume all objects in test input.");
   }
 
   interpreterHandler->incPathsExplored();
+  processTree->setTerminationType(state, reason);
 
   std::vector<ExecutionState *>::iterator it =
       std::find(addedStates.begin(), addedStates.end(), &state);
@@ -3690,7 +3691,7 @@ void Executor::terminateStateOnExit(ExecutionState &state) {
         terminationTypeFileExtension(StateTerminationType::Exit).c_str());
 
   interpreterHandler->incPathsCompleted();
-  terminateState(state);
+  terminateState(state, StateTerminationType::Exit);
 }
 
 void Executor::terminateStateEarly(ExecutionState &state, const Twine &message,
@@ -3707,7 +3708,7 @@ void Executor::terminateStateEarly(ExecutionState &state, const Twine &message,
         terminationTypeFileExtension(reason).c_str());
   }
 
-  terminateState(state);
+  terminateState(state, reason);
 }
 
 void Executor::terminateStateEarlyAlgorithm(ExecutionState &state,
@@ -3815,7 +3816,7 @@ void Executor::terminateStateOnError(ExecutionState &state,
     interpreterHandler->processTestCase(state, msg.str().c_str(), file_suffix);
   }
 
-  terminateState(state);
+  terminateState(state, terminationType);
 
   if (shouldExitOn(terminationType))
     haltExecution = true;
@@ -3848,9 +3849,14 @@ void Executor::terminateStateOnSolverError(ExecutionState &state,
 }
 
 void Executor::terminateStateOnUserError(ExecutionState &state,
-                                         const llvm::Twine &message) {
+                                         const llvm::Twine &message,
+                                         bool writeErr) {
   ++stats::terminationUserError;
-  terminateStateOnError(state, message, StateTerminationType::User, "");
+  if (writeErr) {
+    terminateStateOnError(state, message, StateTerminationType::User, "");
+  } else {
+    terminateState(state, StateTerminationType::User);
+  }
 }
 
 // XXX shoot me
@@ -4601,7 +4607,8 @@ void Executor::runFunctionAsMain(Function *f,
   
   initializeGlobals(*state);
 
-  processTree = std::make_unique<PTree>(state);
+  processTree = createPTree(*state, userSearcherRequiresInMemoryPTree(),
+                            *interpreterHandler);
   run(*state);
   processTree = nullptr;
 

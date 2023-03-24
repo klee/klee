@@ -480,12 +480,8 @@ void SpecialFunctionHandler::handleAssume(ExecutionState &state,
       state.constraints, e, res, state.queryMetaData);
   assert(success && "FIXME: Unhandled solver failure");
   if (res) {
-    if (SilentKleeAssume) {
-      executor.terminateState(state);
-    } else {
-      executor.terminateStateOnUserError(
-          state, "invalid klee_assume call (provably false)");
-    }
+    executor.terminateStateOnUserError(
+        state, "invalid klee_assume call (provably false)", !SilentKleeAssume);
   } else {
     executor.addConstraint(state, e);
   }

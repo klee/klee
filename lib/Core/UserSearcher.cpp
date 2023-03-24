@@ -100,9 +100,13 @@ bool userSearcherRequiresMD2U() {
           std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_QC) != CoreSearch.end());
 }
 
+bool userSearcherRequiresInMemoryPTree() {
+  return std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::RandomPath) != CoreSearch.end();
+}
+
 } // namespace klee
 
-Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng, PTree &processTree) {
+Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng, InMemoryPTree *processTree) {
   Searcher *searcher = nullptr;
   switch (type) {
     case Searcher::DFS: searcher = new DFSSearcher(); break;
@@ -122,15 +126,15 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng, PTree &process
 }
 
 Searcher *klee::constructUserSearcher(Executor &executor) {
-
-  Searcher *searcher = getNewSearcher(CoreSearch[0], executor.theRNG, *executor.processTree);
+  auto *ptree = llvm::dyn_cast<InMemoryPTree>(executor.processTree.get());
+  Searcher *searcher = getNewSearcher(CoreSearch[0], executor.theRNG, ptree);
 
   if (CoreSearch.size() > 1) {
     std::vector<Searcher *> s;
     s.push_back(searcher);
 
     for (unsigned i = 1; i < CoreSearch.size(); i++)
-      s.push_back(getNewSearcher(CoreSearch[i], executor.theRNG, *executor.processTree));
+      s.push_back(getNewSearcher(CoreSearch[i], executor.theRNG, ptree));
 
     searcher = new InterleavedSearcher(s);
   }

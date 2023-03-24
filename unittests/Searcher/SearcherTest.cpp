@@ -24,11 +24,11 @@ namespace {
 TEST(SearcherTest, RandomPath) {
   // First state
   ExecutionState es;
-  PTree processTree(&es);
+  InMemoryPTree processTree(es);
   es.ptreeNode = processTree.root.getPointer();
 
   RNG rng;
-  RandomPathSearcher rp(processTree, rng);
+  RandomPathSearcher rp(&processTree, rng);
   EXPECT_TRUE(rp.empty());
 
   rp.update(nullptr, {&es}, {});
@@ -64,15 +64,15 @@ TEST(SearcherTest, RandomPath) {
 TEST(SearcherTest, TwoRandomPath) {
   // Root state
   ExecutionState root;
-  PTree processTree(&root);
+  InMemoryPTree processTree(root);
   root.ptreeNode = processTree.root.getPointer();
 
   ExecutionState es(root);
   processTree.attach(root.ptreeNode, &es, &root, BranchType::NONE);
 
   RNG rng, rng1;
-  RandomPathSearcher rp(processTree, rng);
-  RandomPathSearcher rp1(processTree, rng1);
+  RandomPathSearcher rp(&processTree, rng);
+  RandomPathSearcher rp1(&processTree, rng1);
   EXPECT_TRUE(rp.empty());
   EXPECT_TRUE(rp1.empty());
 
@@ -122,7 +122,7 @@ TEST(SearcherTest, TwoRandomPathDot) {
 
   // Root state
   ExecutionState root;
-  PTree processTree(&root);
+  InMemoryPTree processTree(root);
   root.ptreeNode = processTree.root.getPointer();
   rootPNode = root.ptreeNode;
 
@@ -132,8 +132,8 @@ TEST(SearcherTest, TwoRandomPathDot) {
   esParentPNode = es.ptreeNode;
 
   RNG rng;
-  RandomPathSearcher rp(processTree, rng);
-  RandomPathSearcher rp1(processTree, rng);
+  RandomPathSearcher rp(&processTree, rng);
+  RandomPathSearcher rp1(&processTree, rng);
 
   rp.update(nullptr, {&es}, {});
 
@@ -204,14 +204,14 @@ TEST(SearcherTest, TwoRandomPathDot) {
 TEST(SearcherDeathTest, TooManyRandomPaths) {
   // First state
   ExecutionState es;
-  PTree processTree(&es);
+  InMemoryPTree processTree(es);
   es.ptreeNode = processTree.root.getPointer();
   processTree.remove(es.ptreeNode); // Need to remove to avoid leaks
 
   RNG rng;
-  RandomPathSearcher rp(processTree, rng);
-  RandomPathSearcher rp1(processTree, rng);
-  RandomPathSearcher rp2(processTree, rng);
-  ASSERT_DEATH({ RandomPathSearcher rp3(processTree, rng); }, "");
+  RandomPathSearcher rp(&processTree, rng);
+  RandomPathSearcher rp1(&processTree, rng);
+  RandomPathSearcher rp2(&processTree, rng);
+  ASSERT_DEATH({ RandomPathSearcher rp3(&processTree, rng); }, "");
 }
 }
