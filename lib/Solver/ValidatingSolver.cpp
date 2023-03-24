@@ -11,24 +11,22 @@
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverImpl.h"
 
+#include <memory>
 #include <vector>
 
 namespace klee {
 
 class ValidatingSolver : public SolverImpl {
 private:
-  Solver *solver, *oracle;
-  bool ownsOracle;
+  std::unique_ptr<Solver> solver;
+  std::unique_ptr<Solver, void(*)(Solver*)> oracle;
 
 public:
   ValidatingSolver(Solver *solver, Solver *oracle, bool ownsOracle = false)
-      : solver(solver), oracle(oracle), ownsOracle(ownsOracle) {}
-  ~ValidatingSolver() {
-    delete solver;
-    if (ownsOracle) {
-      delete oracle;
-    }
-  }
+      : solver(solver),
+        oracle(
+            oracle, ownsOracle ? [](Solver *solver) { delete solver; }
+                               : [](Solver *) {}) {}
 
   bool computeValidity(const Query &, Solver::Validity &result);
   bool computeTruth(const Query &, bool &isValid);
