@@ -22,9 +22,8 @@ const char *Solver::validity_to_str(Validity v) {
   }
 }
 
-Solver::~Solver() { 
-  delete impl; 
-}
+Solver::Solver(SolverImpl *impl) : impl(impl) {}
+Solver::~Solver() = default;
 
 char *Solver::getConstraintLog(const Query& query) {
     return impl->getConstraintLog(query);
