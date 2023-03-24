@@ -64,11 +64,6 @@ StagedSolverImpl::StagedSolverImpl(IncompleteSolver *_primary,
     secondary(_secondary) {
 }
 
-StagedSolverImpl::~StagedSolverImpl() {
-  delete primary;
-  delete secondary;
-}
-
 bool StagedSolverImpl::computeTruth(const Query& query, bool &isValid) {
   IncompleteSolver::PartialValidity trueResult = primary->computeTruth(query); 
   
