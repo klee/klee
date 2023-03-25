@@ -1960,17 +1960,16 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
           argWidth = arguments[k]->getWidth();
         }
 
-        if (WordSize == Expr::Int32) {
-          offsets[k] = size;
-          size += Expr::getMinBytesForWidth(argWidth);
-        } else {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(11, 0)
-          MaybeAlign ma = cb.getParamAlign(k);
-          unsigned alignment = ma ? ma->value() : 0;
+        MaybeAlign ma = cb.getParamAlign(k);
+        unsigned alignment = ma ? ma->value() : 0;
 #else
-          unsigned alignment = cb.getParamAlignment(k);
+        unsigned alignment = cb.getParamAlignment(k);
 #endif
 
+        if (WordSize == Expr::Int32 && !alignment)
+          alignment = 4;
+        else {
           // AMD64-ABI 3.5.7p5: Step 7. Align l->overflow_arg_area upwards to a
           // 16 byte boundary if alignment needed by type exceeds 8 byte
           // boundary.
@@ -1981,10 +1980,14 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
 
           if (!alignment)
             alignment = 8;
+        }
 
-          size = llvm::alignTo(size, alignment);
-          offsets[k] = size;
+        size = llvm::alignTo(size, alignment);
+        offsets[k] = size;
 
+        if (WordSize == Expr::Int32)
+          size += Expr::getMinBytesForWidth(argWidth);
+        else {
           // AMD64-ABI 3.5.7p5: Step 9. Set l->overflow_arg_area to:
           // l->overflow_arg_area + sizeof(type)
           // Step 10. Align l->overflow_arg_area upwards to an 8 byte boundary.
