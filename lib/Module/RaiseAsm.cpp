@@ -74,6 +74,11 @@ bool RaiseAsmPass::runOnInstruction(Module &M, Instruction *I) {
 
 bool RaiseAsmPass::runOnModule(Module &M) {
   bool changed = false;
+
+  if (M.empty()) {
+    return false;
+  }
+
   std::string Err;
 
   // Use target triple from the module if possible.

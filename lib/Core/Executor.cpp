@@ -102,6 +102,7 @@ typedef unsigned TypeSize;
 #include <iomanip>
 #include <iosfwd>
 #include <limits>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <sys/mman.h>
@@ -548,24 +549,29 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
   assert(!kmodule && !modules.empty() &&
          "can only register one module"); // XXX gross
 
-  kmodule = std::unique_ptr<KModule>(new KModule());
+  kmodule = std::make_unique<KModule>();
 
-  // Preparing the final module happens in multiple stages
-
-  // Link with KLEE intrinsics library before running any optimizations
-  SmallString<128> LibPath(opts.LibraryDir);
-  llvm::sys::path::append(LibPath,
-                          "libkleeRuntimeIntrinsic" + opts.OptSuffix + ".bca");
-  std::string error;
-  if (!klee::loadFile(LibPath.c_str(), modules[0]->getContext(), modules,
-                      error)) {
-    klee_error("Could not load KLEE intrinsic file %s", LibPath.c_str());
-  }
+  kmodule->module = std::move(modules.front());
+  kmodule->targetData =
+      std::make_unique<llvm::DataLayout>(kmodule->module.get());
+  kmodule->instrument(opts);
 
   // 1.) Link the modules together
-  while (kmodule->link(modules, opts.EntryPoint)) {
-    // 2.) Apply different instrumentation
-    kmodule->instrument(opts);
+  kmodule->link(modules, 2);
+  // 2.) Apply different instrumentation
+  kmodule->instrument(opts);
+
+  {
+    // Link with KLEE intrinsics library before running any optimizations
+    SmallString<128> LibPath(opts.LibraryDir);
+    llvm::sys::path::append(LibPath, "libkleeRuntimeIntrinsic" +
+                                         opts.OptSuffix + ".bca");
+    std::string error;
+    if (!klee::loadFileAsOneModule(
+            LibPath.c_str(), kmodule->module->getContext(), modules, error)) {
+      klee_error("Could not load KLEE intrinsic file %s", LibPath.c_str());
+    }
+    kmodule->link(modules, 2);
   }
 
   // 3.) Optimise and prepare for KLEE

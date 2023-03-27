@@ -231,10 +231,8 @@ public:
   /// @param modules list of modules to be linked together
   /// @param entryPoint name of the function which acts as the program's entry
   /// point
-  /// @return true if at least one module has been linked in, false if nothing
-  /// changed
-  bool link(std::vector<std::unique_ptr<llvm::Module>> &modules,
-            const std::string &entryPoint);
+  void link(std::vector<std::unique_ptr<llvm::Module>> &modules,
+            const unsigned flag);
 
   void instrument(const Interpreter::ModuleOptions &opts);
 

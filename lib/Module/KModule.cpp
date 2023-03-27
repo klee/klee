@@ -220,21 +220,14 @@ void KModule::addInternalFunction(const char *functionName) {
   internalFunctions.insert(internalFunction);
 }
 
-bool KModule::link(std::vector<std::unique_ptr<llvm::Module>> &modules,
-                   const std::string &entryPoint) {
-  auto numRemainingModules = modules.size();
-  // Add the currently active module to the list of linkables
-  modules.push_back(std::move(module));
+void KModule::link(std::vector<std::unique_ptr<llvm::Module>> &modules,
+                   unsigned flags) {
   std::string error;
-  module = std::unique_ptr<llvm::Module>(
-      klee::linkModules(modules, entryPoint, error));
+  klee::linkModules(module.get(), modules, flags, error);
   if (!module)
     klee_error("Could not link KLEE files %s", error.c_str());
 
-  targetData = std::unique_ptr<llvm::DataLayout>(new DataLayout(module.get()));
-
-  // Check if we linked anything
-  return modules.size() != numRemainingModules;
+  targetData = std::make_unique<llvm::DataLayout>(module.get());
 }
 
 void KModule::replaceFunction(const std::unique_ptr<llvm::Module> &m,

@@ -755,29 +755,19 @@ static void parseArguments(int argc, char **argv) {
 }
 
 static void
-preparePOSIX(std::vector<std::unique_ptr<llvm::Module>> &loadedModules,
-             llvm::StringRef libCPrefix) {
+preparePOSIX(std::vector<std::unique_ptr<llvm::Module>> &loadedModules) {
   // Get the main function from the main module and rename it such that it can
   // be called after the POSIX setup
   Function *mainFn = nullptr;
   for (auto &module : loadedModules) {
     mainFn = module->getFunction(EntryPoint);
-    if (mainFn)
+    if (mainFn && !mainFn->empty())
       break;
   }
 
-  if (!mainFn)
+  if (!mainFn || mainFn->empty())
     klee_error("Entry function '%s' not found in module.", EntryPoint.c_str());
   mainFn->setName("__klee_posix_wrapped_main");
-
-  // Add a definition of the entry function if needed. This is the case if we
-  // link against a libc implementation. Preparing for libc linking (i.e.
-  // linking with uClibc will expect a main function and rename it to
-  // _user_main. We just provide the definition here.
-  if (!libCPrefix.empty() && !mainFn->getParent()->getFunction(EntryPoint))
-    llvm::Function::Create(mainFn->getFunctionType(),
-                           llvm::Function::ExternalLinkage, EntryPoint,
-                           mainFn->getParent());
 
   llvm::Function *wrapper = nullptr;
   for (auto &module : loadedModules) {
@@ -789,7 +779,9 @@ preparePOSIX(std::vector<std::unique_ptr<llvm::Module>> &loadedModules,
 
   // Rename the POSIX wrapper to prefixed entrypoint, e.g. _user_main as uClibc
   // would expect it or main otherwise
-  wrapper->setName(libCPrefix + EntryPoint);
+  wrapper->setName(EntryPoint);
+  loadedModules.front()->getOrInsertFunction(wrapper->getName(),
+                                             wrapper->getFunctionType());
 }
 
 // This is a terrible hack until we get some real modeling of the
@@ -1076,7 +1068,8 @@ static void replaceOrRenameFunction(llvm::Module *module, const char *old_name,
 }
 
 static void
-createLibCWrapper(std::vector<std::unique_ptr<llvm::Module>> &modules,
+createLibCWrapper(std::vector<std::unique_ptr<llvm::Module>> &userModules,
+                  std::vector<std::unique_ptr<llvm::Module>> &libsModules,
                   llvm::StringRef intendedFunction,
                   llvm::StringRef libcMainFunction) {
   // XXX we need to rearchitect so this can also be used with
@@ -1089,15 +1082,21 @@ createLibCWrapper(std::vector<std::unique_ptr<llvm::Module>> &modules,
   // also an implicit cooperation in that runFunctionAsMain sets up
   // the environment arguments to what a libc expects (following
   // argv), since it does not explicitly take an envp argument.
-  auto &ctx = modules[0]->getContext();
-  Function *userMainFn = modules[0]->getFunction(intendedFunction);
+  auto &ctx = userModules[0]->getContext();
+  Function *userMainFn = nullptr;
+  for (auto &module : userModules) {
+    userMainFn = module->getFunction(EntryPoint);
+    if (userMainFn) {
+      // Rename entry point using a prefix
+      userMainFn->setName("__user_" + intendedFunction);
+    }
+  }
+
   assert(userMainFn && "unable to get user main");
-  // Rename entry point using a prefix
-  userMainFn->setName("__user_" + intendedFunction);
 
   // force import of libcMainFunction
   llvm::Function *libcMainFn = nullptr;
-  for (auto &module : modules) {
+  for (auto &module : libsModules) {
     if ((libcMainFn = module->getFunction(libcMainFunction)))
       break;
   }
@@ -1141,46 +1140,47 @@ createLibCWrapper(std::vector<std::unique_ptr<llvm::Module>> &modules,
   args.push_back(Constant::getNullValue(ft->getParamType(6))); // stack_end
   Builder.CreateCall(libcMainFn, args);
   Builder.CreateUnreachable();
+
+  userModules.front()->getOrInsertFunction(stub->getName(),
+                                           stub->getFunctionType());
 }
 
 static void
 linkWithUclibc(StringRef libDir, std::string opt_suffix,
-               std::vector<std::unique_ptr<llvm::Module>> &modules) {
-  LLVMContext &ctx = modules[0]->getContext();
-
-  size_t newModules = modules.size();
-
-  // Ensure that klee-uclibc exists
-  SmallString<128> uclibcBCA(libDir);
+               std::vector<std::unique_ptr<llvm::Module>> &userModules,
+               std::vector<std::unique_ptr<llvm::Module>> &libsModules) {
+  LLVMContext &ctx = userModules[0]->getContext();
   std::string errorMsg;
-  llvm::sys::path::append(uclibcBCA, KLEE_UCLIBC_BCA_NAME);
-  if (!klee::loadFile(uclibcBCA.c_str(), ctx, modules, errorMsg))
-    klee_error("Cannot find klee-uclibc '%s': %s", uclibcBCA.c_str(),
-               errorMsg.c_str());
-
-  for (auto i = newModules, j = modules.size(); i < j; ++i) {
-    replaceOrRenameFunction(modules[i].get(), "__libc_open", "open");
-    replaceOrRenameFunction(modules[i].get(), "__libc_fcntl", "fcntl");
-  }
-
-  createLibCWrapper(modules, EntryPoint, "__uClibc_main");
-  klee_message("NOTE: Using klee-uclibc : %s", uclibcBCA.c_str());
 
   // Link the fortified library
   SmallString<128> FortifyPath(libDir);
   llvm::sys::path::append(FortifyPath,
                           "libkleeRuntimeFortify" + opt_suffix + ".bca");
-  if (!klee::loadFile(FortifyPath.c_str(), ctx, modules, errorMsg))
+  if (!klee::loadFileAsOneModule(FortifyPath.c_str(), ctx, libsModules,
+                                 errorMsg))
     klee_error("error loading the fortify library '%s': %s",
                FortifyPath.c_str(), errorMsg.c_str());
+
+  // Ensure that klee-uclibc exists
+  SmallString<128> uclibcBCA(libDir);
+  llvm::sys::path::append(uclibcBCA, KLEE_UCLIBC_BCA_NAME);
+  if (!klee::loadFileAsOneModule(uclibcBCA.c_str(), ctx, libsModules, errorMsg))
+    klee_error("Cannot find klee-uclibc '%s': %s", uclibcBCA.c_str(),
+               errorMsg.c_str());
+
+  replaceOrRenameFunction(libsModules.back().get(), "__libc_open", "open");
+  replaceOrRenameFunction(libsModules.back().get(), "__libc_fcntl", "fcntl");
+
+  createLibCWrapper(userModules, libsModules, EntryPoint, "__uClibc_main");
+
+  klee_message("NOTE: Using klee-uclibc : %s", uclibcBCA.c_str());
 }
 #endif
 
-static int run_klee_on_function(
-    int pArgc, char **pArgv, char **pEnvp, KleeHandler *handler,
-    Interpreter *interpreter, llvm::Module *finalModule,
-    std::vector<bool> &replayPath,
-    std::vector<std::unique_ptr<llvm::Module>> &loadedModules) {
+static int run_klee_on_function(int pArgc, char **pArgv, char **pEnvp,
+                                KleeHandler *handler, Interpreter *interpreter,
+                                llvm::Module *finalModule,
+                                std::vector<bool> &replayPath) {
   Function *mainFn = finalModule->getFunction(EntryPoint);
   if (!mainFn) {
     klee_error("Entry function '%s' not found in module.", EntryPoint.c_str());
@@ -1457,22 +1457,22 @@ int run_klee(int argc, char **argv, char **envp) {
   // Load the bytecode...
   std::string errorMsg;
   LLVMContext ctx;
-  std::vector<std::unique_ptr<llvm::Module>> loadedModules;
-  if (!klee::loadFile(InputFile, ctx, loadedModules, errorMsg)) {
+  std::vector<std::unique_ptr<llvm::Module>> loadedUserModules;
+  std::vector<std::unique_ptr<llvm::Module>> loadedLibsModules;
+  if (!klee::loadFileAsOneModule(InputFile, ctx, loadedUserModules, errorMsg)) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                errorMsg.c_str());
   }
   // Load and link the whole files content. The assumption is that this is the
   // application under test.
   // Nothing gets removed in the first place.
-  std::unique_ptr<llvm::Module> M(klee::linkModules(
-      loadedModules, "" /* link all modules together */, errorMsg));
-  if (!M) {
+
+  if (!loadedUserModules.front()) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                errorMsg.c_str());
   }
 
-  llvm::Module *mainModule = M.get();
+  llvm::Module *mainModule = loadedUserModules.front().get();
 
   std::vector<std::string> mainModuleFunctions;
   for (auto &Function : *mainModule) {
@@ -1500,9 +1500,6 @@ int run_klee(int argc, char **argv, char **envp) {
   // Add additional user-selected suffix
   opt_suffix += "_" + RuntimeBuild.getValue();
 
-  // Push the module as the first entry
-  loadedModules.emplace_back(std::move(M));
-
   std::string LibraryDir = KleeHandler::getRunTimeLibraryPath(argv[0]);
   Interpreter::ModuleOptions Opts(LibraryDir.c_str(), EntryPoint, opt_suffix,
                                   /*Optimize=*/OptimizeModule,
@@ -1514,8 +1511,8 @@ int run_klee(int argc, char **argv, char **envp) {
     SmallString<128> Path(Opts.LibraryDir);
     llvm::sys::path::append(Path, "libkleeRuntimePOSIX" + opt_suffix + ".bca");
     klee_message("NOTE: Using POSIX model: %s", Path.c_str());
-    if (!klee::loadFile(Path.c_str(), mainModule->getContext(), loadedModules,
-                        errorMsg))
+    if (!klee::loadFileAsOneModule(Path.c_str(), mainModule->getContext(),
+                                   loadedUserModules, errorMsg))
       klee_error("error loading POSIX support '%s': %s", Path.c_str(),
                  errorMsg.c_str());
 
@@ -1525,15 +1522,14 @@ int run_klee(int argc, char **argv, char **envp) {
                               "libkleeRuntimeIO_C" + opt_suffix + ".bca");
       klee_message("NOTE: using klee versions of input/output functions: %s",
                    Path_io.c_str());
-      if (!klee::loadFile(Path_io.c_str(), mainModule->getContext(),
-                          loadedModules, errorMsg))
+      if (!klee::loadFileAsOneModule(Path_io.c_str(), mainModule->getContext(),
+                                     loadedUserModules, errorMsg))
         klee_error("error loading POSIX_IO support '%s': %s", Path_io.c_str(),
                    errorMsg.c_str());
     }
 
     if (!UTBotMode) {
-      std::string libcPrefix = (Libc == LibcType::UcLibc ? "__user_" : "");
-      preparePOSIX(loadedModules, libcPrefix);
+      preparePOSIX(loadedUserModules);
     }
   }
 
@@ -1541,8 +1537,8 @@ int run_klee(int argc, char **argv, char **envp) {
 #if ENABLE_FP
     SmallString<128> Path(Opts.LibraryDir);
     llvm::sys::path::append(Path, "libkleeRuntimeFp" + opt_suffix + ".bca");
-    if (!klee::loadFile(Path.c_str(), mainModule->getContext(), loadedModules,
-                        errorMsg))
+    if (!klee::loadFileAsOneModule(Path.c_str(), mainModule->getContext(),
+                                   loadedUserModules, errorMsg))
       klee_error("error loading klee FP runtime '%s': %s", Path.c_str(),
                  errorMsg.c_str());
 #else
@@ -1557,16 +1553,16 @@ int run_klee(int argc, char **argv, char **envp) {
 #else
     SmallString<128> LibcxxBC(Opts.LibraryDir);
     llvm::sys::path::append(LibcxxBC, KLEE_LIBCXX_BC_NAME);
-    if (!klee::loadFile(LibcxxBC.c_str(), mainModule->getContext(),
-                        loadedModules, errorMsg))
+    if (!klee::loadFileAsOneModule(LibcxxBC.c_str(), mainModule->getContext(),
+                                   loadedLibsModules, errorMsg))
       klee_error("error loading libc++ '%s': %s", LibcxxBC.c_str(),
                  errorMsg.c_str());
     klee_message("NOTE: Using libc++ : %s", LibcxxBC.c_str());
 #ifdef SUPPORT_KLEE_EH_CXX
     SmallString<128> EhCxxPath(Opts.LibraryDir);
     llvm::sys::path::append(EhCxxPath, "libkleeeh-cxx" + opt_suffix + ".bca");
-    if (!klee::loadFile(EhCxxPath.c_str(), mainModule->getContext(),
-                        loadedModules, errorMsg))
+    if (!klee::loadFileAsOneModule(EhCxxPath.c_str(), mainModule->getContext(),
+                                   loadedLibsModules, errorMsg))
       klee_error("error loading libklee-eh-cxx '%s': %s", EhCxxPath.c_str(),
                  errorMsg.c_str());
     klee_message("NOTE: Enabled runtime support for C++ exceptions");
@@ -1582,8 +1578,8 @@ int run_klee(int argc, char **argv, char **envp) {
     SmallString<128> Path(Opts.LibraryDir);
     llvm::sys::path::append(Path,
                             "libkleeRuntimeKLEELibc" + opt_suffix + ".bca");
-    if (!klee::loadFile(Path.c_str(), mainModule->getContext(), loadedModules,
-                        errorMsg))
+    if (!klee::loadFileAsOneModule(Path.c_str(), mainModule->getContext(),
+                                   loadedLibsModules, errorMsg))
       klee_error("error loading klee libc '%s': %s", Path.c_str(),
                  errorMsg.c_str());
   }
@@ -1592,20 +1588,21 @@ int run_klee(int argc, char **argv, char **envp) {
     SmallString<128> Path(Opts.LibraryDir);
     llvm::sys::path::append(Path,
                             "libkleeRuntimeFreestanding" + opt_suffix + ".bca");
-    if (!klee::loadFile(Path.c_str(), mainModule->getContext(), loadedModules,
-                        errorMsg))
+    if (!klee::loadFileAsOneModule(Path.c_str(), mainModule->getContext(),
+                                   loadedLibsModules, errorMsg))
       klee_error("error loading freestanding support '%s': %s", Path.c_str(),
                  errorMsg.c_str());
     break;
   }
   case LibcType::UcLibc:
-    linkWithUclibc(LibraryDir, opt_suffix, loadedModules);
+    linkWithUclibc(LibraryDir, opt_suffix, loadedUserModules,
+                   loadedLibsModules);
     break;
   }
 
   for (const auto &library : LinkLibraries) {
-    if (!klee::loadFile(library, mainModule->getContext(), loadedModules,
-                        errorMsg))
+    if (!klee::loadFileAsOneModule(library, mainModule->getContext(),
+                                   loadedLibsModules, errorMsg))
       klee_error("error loading bitcode library '%s': %s", library.c_str(),
                  errorMsg.c_str());
   }
@@ -1671,8 +1668,26 @@ int run_klee(int argc, char **argv, char **envp) {
   // Get the desired main function.  klee_main initializes uClibc
   // locale and other data and then calls main.
 
+  {
+    // Link all except libs into one module
+    std::unique_ptr<llvm::Module> M = std::move(loadedUserModules.front());
+    linkModules(M.get(), loadedUserModules, 0, errorMsg);
+    loadedUserModules.push_back(std::move(M));
+  }
+
+  loadedUserModules.insert(loadedUserModules.end(),
+                           make_move_iterator(loadedLibsModules.begin()),
+                           make_move_iterator(loadedLibsModules.end()));
+  loadedLibsModules.clear();
+
   auto finalModule =
-      interpreter->setModule(loadedModules, Opts, mainModuleFunctions);
+      interpreter->setModule(loadedUserModules, Opts, mainModuleFunctions);
+  Function *mainFn = finalModule->getFunction(EntryPoint);
+  if (!mainFn) {
+    klee_error("Entry function '%s' not found in module.", EntryPoint.c_str());
+  }
+
+  externalsAndGlobalsCheck(finalModule);
 
   if (InteractiveMode) {
     klee_message("KLEE finish preprocessing.");
@@ -1725,7 +1740,7 @@ int run_klee(int argc, char **argv, char **envp) {
         sys::path::append(newOutputDirectory, entrypoint);
         handler->setOutputDirectory(newOutputDirectory.c_str());
         run_klee_on_function(pArgc, pArgv, pEnvp, handler, interpreter,
-                             finalModule, replayPath, loadedModules);
+                             finalModule, replayPath);
         exit(0);
       } else {
         child_processes.emplace_back(pid, std::chrono::steady_clock::now());
@@ -1748,7 +1763,7 @@ int run_klee(int argc, char **argv, char **envp) {
     }
   } else {
     run_klee_on_function(pArgc, pArgv, pEnvp, handler, interpreter, finalModule,
-                         replayPath, loadedModules);
+                         replayPath);
   }
 
   // Free all the args.

@@ -133,152 +133,23 @@ static void GetAllUndefinedSymbols(Module *M,
                            << "*** Finished computing undefined symbols ***\n");
 }
 
-static bool linkTwoModules(llvm::Module *Dest,
-                           std::unique_ptr<llvm::Module> Src,
-                           std::string &errorMsg) {
-  // Get the potential error message (Src is moved and won't be available later)
-  errorMsg = "Linking module " + Src->getModuleIdentifier() + " failed";
-  auto linkResult = Linker::linkModules(*Dest, std::move(Src));
+void klee::linkModules(llvm::Module *composite,
+                       std::vector<std::unique_ptr<llvm::Module>> &modules,
+                       const unsigned flags, std::string &errorMsg) {
+  //  assert(composite);
 
-  return !linkResult;
-}
-
-std::unique_ptr<llvm::Module>
-klee::linkModules(std::vector<std::unique_ptr<llvm::Module>> &modules,
-                  llvm::StringRef entryFunction, std::string &errorMsg) {
-  assert(!modules.empty() && "modules list should not be empty");
-
-  if (entryFunction.empty()) {
-    // If no entry function is provided, link all modules together into one
-    std::unique_ptr<llvm::Module> composite = std::move(modules.back());
-    modules.pop_back();
-
-    // Just link all modules together
-    for (auto &module : modules) {
-      if (linkTwoModules(composite.get(), std::move(module), errorMsg))
-        continue;
-
+  Linker linker(*composite);
+  for (auto &module : modules) {
+    if (!module)
+      continue;
+    errorMsg = "Linking module " + module->getModuleIdentifier() + " failed";
+    if (linker.linkInModule(std::move(module), flags)) {
       // Linking failed
       errorMsg = "Linking archive module with composite failed:" + errorMsg;
-      return nullptr;
-    }
-
-    // clean up every module as we already linked in every module
-    modules.clear();
-    return composite;
-  }
-
-  // Starting from the module containing the entry function, resolve unresolved
-  // dependencies recursively
-
-  // search for the module containing the entry function
-  std::unique_ptr<llvm::Module> composite;
-  for (auto &module : modules) {
-    if (!module || !module->getNamedValue(entryFunction))
-      continue;
-    if (composite) {
-      errorMsg =
-          "Function " + entryFunction.str() +
-          " defined in different modules (" + module->getModuleIdentifier() +
-          " already defined in: " + composite->getModuleIdentifier() + ")";
-      return nullptr;
-    }
-    composite = std::move(module);
-  }
-
-  // fail if not found
-  if (!composite) {
-    errorMsg =
-        "Entry function '" + entryFunction.str() + "' not found in module.";
-    return nullptr;
-  }
-
-  auto containsUsedSymbols = [](const llvm::Module *module) {
-    GlobalValue *GV =
-        dyn_cast_or_null<GlobalValue>(module->getNamedValue("llvm.used"));
-    if (!GV)
-      return false;
-    KLEE_DEBUG_WITH_TYPE("klee_linker", dbgs() << "Used attribute in "
-                                               << module->getModuleIdentifier()
-                                               << '\n');
-    return true;
-  };
-
-  for (auto &module : modules) {
-    if (!module || !containsUsedSymbols(module.get()))
-      continue;
-    if (!linkTwoModules(composite.get(), std::move(module), errorMsg)) {
-      // Linking failed
-      errorMsg = "Linking module containing '__attribute__((used))'"
-                 " symbols with composite failed:" +
-                 errorMsg;
-      return nullptr;
-    }
-    module = nullptr;
-  }
-
-  bool symbolsLinked = true;
-  while (symbolsLinked) {
-    symbolsLinked = false;
-    std::set<std::string> undefinedSymbols;
-    GetAllUndefinedSymbols(composite.get(), undefinedSymbols);
-    auto hasRequiredDefinition = [&undefinedSymbols](
-                                     const llvm::Module *module) {
-      for (auto symbol : undefinedSymbols) {
-        GlobalValue *GV =
-            dyn_cast_or_null<GlobalValue>(module->getNamedValue(symbol));
-        if (GV && !GV->isDeclaration()) {
-          KLEE_DEBUG_WITH_TYPE("klee_linker",
-                               dbgs() << "Found " << GV->getName() << " in "
-                                      << module->getModuleIdentifier() << "\n");
-          return true;
-        }
-      }
-      return false;
-    };
-
-    // replace std functions with KLEE internals
-    for (const auto &p : floatReplacements) {
-      if (composite->getFunction(p.first)) {
-        undefinedSymbols.insert(p.second);
-      }
-    }
-    for (const auto &p : feRoundReplacements) {
-      if (composite->getFunction(p.first)) {
-        undefinedSymbols.insert(p.second);
-      }
-    }
-
-    // Stop in nothing is undefined
-    if (undefinedSymbols.empty())
-      break;
-
-    for (auto &module : modules) {
-      if (!module)
-        continue;
-
-      if (!hasRequiredDefinition(module.get()))
-        continue;
-
-      if (!linkTwoModules(composite.get(), std::move(module), errorMsg)) {
-        // Linking failed
-        errorMsg = "Linking archive module with composite failed:" + errorMsg;
-        return nullptr;
-      }
-      module = nullptr;
-      symbolsLinked = true;
+      return;
     }
   }
-
-  // Condense the module array
-  std::vector<std::unique_ptr<llvm::Module>> LeftoverModules;
-  for (auto &module : modules) {
-    if (module)
-      LeftoverModules.emplace_back(std::move(module));
-  }
-
-  modules.swap(LeftoverModules);
-  return composite;
+  modules.clear();
 }
 
 Function *klee::getDirectCallTarget(
@@ -494,4 +365,17 @@ bool klee::loadFile(const std::string &fileName, LLVMContext &context,
   }
   modules.push_back(std::move(module));
   return true;
+}
+
+bool klee::loadFileAsOneModule(
+    const std::string &fileName, LLVMContext &context,
+    std::vector<std::unique_ptr<llvm::Module>> &modules,
+    std::string &errorMsg) {
+  std::vector<std::unique_ptr<llvm::Module>> modules2;
+  bool res = klee::loadFile(fileName, context, modules2, errorMsg);
+  if (res) {
+    modules.push_back(std::move(modules2.front()));
+    linkModules(modules.back().get(), modules2, 0, errorMsg);
+  }
+  return res;
 }
