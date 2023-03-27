@@ -31,51 +31,53 @@ DISABLE_WARNING_POP
 
 namespace klee {
 template <typename ItTy = llvm::User::const_op_iterator>
-class generic_gep_type_iterator
-    : public std::iterator<std::forward_iterator_tag, llvm::Type *, ptrdiff_t> {
-  typedef std::iterator<std::forward_iterator_tag, llvm::Type *, ptrdiff_t>
-      super;
+class generic_gep_type_iterator {
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = llvm::Type *;
+  using difference_type = ptrdiff_t;
+  using pointer = void;
+  using reference = void;
 
-    ItTy OpIt;
-    llvm::Type *CurTy;
-    generic_gep_type_iterator() {}
+  ItTy OpIt;
+  llvm::Type *CurTy;
+  generic_gep_type_iterator() {}
 
-    llvm::Value *asValue(llvm::Value *V) const { return V; }
-    llvm::Value *asValue(unsigned U) const {
-      return llvm::ConstantInt::get(CurTy->getContext(), llvm::APInt(32, U));
-    }
+  llvm::Value *asValue(llvm::Value *V) const { return V; }
+  llvm::Value *asValue(unsigned U) const {
+    return llvm::ConstantInt::get(CurTy->getContext(), llvm::APInt(32, U));
+  }
 
-  public:
-    static generic_gep_type_iterator begin(llvm::Type *Ty, ItTy It) {
-      generic_gep_type_iterator I;
-      I.CurTy = Ty;
-      I.OpIt = It;
-      return I;
-    }
-    static generic_gep_type_iterator end(ItTy It) {
-      generic_gep_type_iterator I;
-      I.CurTy = 0;
-      I.OpIt = It;
-      return I;
-    }
+public:
+  static generic_gep_type_iterator begin(llvm::Type *Ty, ItTy It) {
+    generic_gep_type_iterator I;
+    I.CurTy = Ty;
+    I.OpIt = It;
+    return I;
+  }
+  static generic_gep_type_iterator end(ItTy It) {
+    generic_gep_type_iterator I;
+    I.CurTy = 0;
+    I.OpIt = It;
+    return I;
+  }
 
-    bool operator==(const generic_gep_type_iterator& x) const {
-      return OpIt == x.OpIt;
-    }
-    bool operator!=(const generic_gep_type_iterator& x) const {
-      return !operator==(x);
-    }
+  bool operator==(const generic_gep_type_iterator &x) const {
+    return OpIt == x.OpIt;
+  }
+  bool operator!=(const generic_gep_type_iterator &x) const {
+    return !operator==(x);
+  }
 
-    llvm::Type *operator*() const { return CurTy; }
+  llvm::Type *operator*() const { return CurTy; }
 
-    llvm::Type *getIndexedType() const {
+  llvm::Type *getIndexedType() const {
 #if LLVM_VERSION_CODE >= LLVM_VERSION(11, 0)
       return llvm::GetElementPtrInst::getTypeAtIndex(CurTy, getOperand());
 #else
       llvm::CompositeType *CT = cast<llvm::CompositeType>(CurTy);
       return CT->getTypeAtIndex(getOperand());
 #endif
-    }
+  }
 
     // This is a non-standard operator->.  It allows you to call methods on the
     // current type directly.
@@ -104,7 +106,7 @@ class generic_gep_type_iterator
     generic_gep_type_iterator operator++(int) { // Postincrement
       generic_gep_type_iterator tmp = *this; ++*this; return tmp;
     }
-  };
+};
 
   typedef generic_gep_type_iterator<> gep_type_iterator;
   typedef generic_gep_type_iterator<llvm::ExtractValueInst::idx_iterator> ev_type_iterator;
