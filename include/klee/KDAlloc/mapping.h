@@ -139,7 +139,7 @@ public:
     [[maybe_unused]] int rc = ::munmap(baseAddress, size);
     assert(rc == 0 && "munmap failed");
     baseAddress = MAP_FAILED;
-    auto success = try_map(address);
+    [[maybe_unused]] auto success = try_map(address);
     assert(success && "could not recreate the mapping");
 #endif
   }
