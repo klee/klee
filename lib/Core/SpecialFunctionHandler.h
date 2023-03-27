@@ -50,12 +50,18 @@ namespace klee {
 
     // const_iterator to iterate over stored HandlerInfo
     // FIXME: Implement >, >=, <=, < operators
-    class const_iterator : public std::iterator<std::random_access_iterator_tag, HandlerInfo>
-    {
-      private:
-        value_type* base;
-        int index;
-      public:
+    class const_iterator {
+      using iterator_category = std::random_access_iterator_tag;
+      using value_type = HandlerInfo;
+      using difference_type = ptrdiff_t;
+      using pointer = void;
+      using reference = void;
+
+    private:
+      value_type *base;
+      int index;
+
+    public:
       const_iterator(value_type* hi) : base(hi), index(0) {};
       const_iterator& operator++();  // pre-fix
       const_iterator operator++(int); // post-fix
