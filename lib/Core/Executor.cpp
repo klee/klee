@@ -3923,7 +3923,7 @@ void Executor::callExternalFunction(ExecutionState &state,
   if (MemoryManager::isDeterministic) {
     auto const minflt = [] {
       struct rusage ru = {};
-      int ret = getrusage(RUSAGE_SELF, &ru);
+      [[maybe_unused]] int ret = getrusage(RUSAGE_SELF, &ru);
       assert(!ret && "getrusage failed");
       assert(ru.ru_minflt >= 0);
       return ru.ru_minflt;
