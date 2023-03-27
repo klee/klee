@@ -11,6 +11,9 @@
 #include "klee/Config/Version.h"
 #include "klee/Support/ErrorHandling.h"
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Function.h"
@@ -25,7 +28,7 @@
 #include "llvm/Support/TargetRegistry.h"
 #endif
 #include "llvm/Target/TargetMachine.h"
-
+DISABLE_WARNING_POP
 
 using namespace llvm;
 using namespace klee;

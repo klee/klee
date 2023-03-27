@@ -18,10 +18,14 @@
 #ifndef KLEE_GETELEMENTPTRTYPEITERATOR_H
 #define KLEE_GETELEMENTPTRTYPEITERATOR_H
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/User.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Constants.h"
+DISABLE_WARNING_POP
 
 #include "klee/Config/Version.h"
 
