@@ -12,10 +12,14 @@
 
 #include <string>
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/LLVMContext.h"
+DISABLE_WARNING_POP
 
 namespace klee {
 /// Wrapper for callable objects passed in callExternalFunction

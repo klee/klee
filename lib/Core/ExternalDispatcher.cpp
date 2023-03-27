@@ -14,6 +14,9 @@
 #include "klee/Module/KCallable.h"
 #include "klee/Module/KModule.h"
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -26,6 +29,7 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetSelect.h"
+DISABLE_WARNING_POP
 
 #include <csetjmp>
 #include <csignal>

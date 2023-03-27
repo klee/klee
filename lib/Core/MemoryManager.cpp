@@ -16,6 +16,9 @@
 #include "klee/Expr/Expr.h"
 #include "klee/Support/ErrorHandling.h"
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MathExtras.h"
@@ -24,6 +27,7 @@
 #else
 #include "llvm/Support/MathExtras.h"
 #endif
+DISABLE_WARNING_POP
 
 #include <cinttypes>
 #include <algorithm>
