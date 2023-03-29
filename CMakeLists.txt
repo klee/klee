@@ -90,8 +90,9 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 option(ENABLE_KLEE_ASSERTS "Enable KLEE assertions" ON)
 if (ENABLE_KLEE_ASSERTS)
   message(STATUS "KLEE assertions enabled")
-  # We have to add the undefine to the flags, otherwise "-D-UDNDEBUG" will be added
-  list(APPEND KLEE_COMPONENT_CXX_FLAGS "-UDNDEBUG")
+  # We have to undefine `NDEBUG` (which CMake adds by default) using `FLAGS`
+  # and not `DEFINES` since `target_compile_definitions` does not support `-U`.
+  list(APPEND KLEE_COMPONENT_CXX_FLAGS "-UNDEBUG")
 else()
   message(STATUS "KLEE assertions disabled")
   list(APPEND KLEE_COMPONENT_CXX_DEFINES "-DNDEBUG")
