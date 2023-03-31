@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#define _XOPEN_SOURCE 500
+
 #include "klee-replay.h"
 
 #include <assert.h>
