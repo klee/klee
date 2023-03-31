@@ -10,6 +10,8 @@
 #ifndef KLEE_INCLUDE_KLEE_SUPPORT_COMPILERWARNING_H
 #define KLEE_INCLUDE_KLEE_SUPPORT_COMPILERWARNING_H
 
+#include "klee/Config/Version.h"
+
 // Disables different warnings
 #if defined(__GNUC__) || defined(__clang__)
 #define ENABLE_PRAGMA(X) _Pragma(#X)
@@ -18,8 +20,12 @@
 #define DISABLE_WARNING(warningName)                                           \
   ENABLE_PRAGMA(GCC diagnostic ignored #warningName)
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(14, 0)
+#define DISABLE_WARNING_DEPRECATED_DECLARATIONS
+#else
 #define DISABLE_WARNING_DEPRECATED_DECLARATIONS                                \
-  DISABLE_WARNING(-Wdeprecated-declarations)
+  DISABLE_WARNING("-Wdeprecated-declarations")
+#endif
 
 #else
 
