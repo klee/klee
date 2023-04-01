@@ -1,6 +1,6 @@
 // RUN: %clang %s -fsanitize=shift-base -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --emit-all-errors --ubsan-runtime --check-overshift=false %t.bc 2>&1 | FileCheck %s
+// RUN: %klee --output-dir=%t.klee-out --emit-all-errors --ubsan-runtime --runtime-build=Debug+Asserts --check-overshift=false %t.bc 2>&1 | FileCheck %s
 //
 // There may be 2 or 3 test cases depending on the search heuristic, so we don't check the number of tests.
 // For example, 2 test cases may be as follows:

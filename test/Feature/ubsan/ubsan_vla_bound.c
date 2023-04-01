@@ -1,6 +1,6 @@
 // RUN: %clang %s -fsanitize=vla-bound -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --emit-all-errors --ubsan-runtime %t.bc 2>&1 | FileCheck %s
+// RUN: %klee --output-dir=%t.klee-out --emit-all-errors --ubsan-runtime --runtime-build=Debug+Asserts %t.bc 2>&1 | FileCheck %s
 // RUN: ls %t.klee-out/ | grep .ktest | wc -l | grep 3
 // RUN: ls %t.klee-out/ | grep .ptr.err | wc -l | grep 1
 // RUN: ls %t.klee-out/ | grep .model.err | wc -l | grep 1
