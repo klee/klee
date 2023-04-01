@@ -35,10 +35,8 @@ std::size_t write_to_allocations(std::vector<void *> &allocations) {
 }
 
 TEST(KDAllocTest, Rusage) {
-  // initialize a factory and an associated allocator (using the location "0"
-  // gives an OS-assigned location)
-  klee::kdalloc::AllocatorFactory factory(static_cast<std::size_t>(1) << 30,
-                                          0); // 1 GB
+  // initialize a factory and an associated allocator (1 GiB and no quarantine)
+  klee::kdalloc::AllocatorFactory factory(static_cast<std::size_t>(1) << 30, 0);
   klee::kdalloc::Allocator allocator = factory.makeAllocator();
 
   std::vector<void *> allocations;
