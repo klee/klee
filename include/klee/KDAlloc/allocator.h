@@ -29,7 +29,8 @@
 #include <type_traits>
 
 namespace klee::kdalloc {
-/// Wraps a mapping that is shared with other allocators.
+/// Wraps a mapping and delegates allocation to one of 8 sized-bin slot
+/// allocators (size < 4096) or a large object allocator (size >= 4096).
 class Allocator final : public TaggedLogger<Allocator> {
 public:
   class Control final {

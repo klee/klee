@@ -23,8 +23,7 @@ int allocate_sample_test() {
 #else
 int main() {
 #endif
-  // initialize a factory and an associated allocator (using the location "0"
-  // gives an OS-assigned location)
+  // initialize a factory and an associated allocator (1 MiB and no quarantine)
   klee::kdalloc::AllocatorFactory factory(static_cast<std::size_t>(1) << 20, 0);
   klee::kdalloc::Allocator allocator = factory.makeAllocator();
 
