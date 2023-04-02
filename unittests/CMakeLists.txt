@@ -248,9 +248,6 @@ llvm_config(unittest_main "${USE_LLVM_SHARED}" support)
 target_link_libraries(unittest_main
   PUBLIC
   ${GTEST_TARGET_NAME}
-
-  PRIVATE
-  ${UNITTEST_MAIN_LIBS}
 )
 target_include_directories(unittest_main
   PUBLIC
