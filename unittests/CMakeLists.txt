@@ -43,44 +43,99 @@ function(add_vanilla_googletest_subdirectory directory)
   add_subdirectory(${directory} "${CMAKE_CURRENT_BINARY_DIR}/gtest_build")
 endfunction()
 
-if (TARGET gtest)
-  # try to reuse LLVM's 'gtest' target
+function(ensure_valid_llvm_gtest_target)
+  block(SCOPE_FOR VARIABLES)
+  if ("${LLVM_VERSION_MAJOR}" LESS 13)
+    list(FIND LLVM_EXPORTED_TARGETS "gtest" _GTEST_INDEX)
+    if (${_GTEST_INDEX} GREATER -1)
+      return()
+    endif()
+  else()
+    # use that LLVM's Google Test always depends on LLVM's own support library
 
-  message(WARNING "LLVM exports its 'gtest' CMake target (for Google Test), so "
-    "KLEE cannot create its own. Thus, KLEE will reuse the existing one. This "
-    "is, however, only recommended if LLVM and KLEE were built using the same "
+    # if LLVM was built using "BUILD_SHARED_LIBS=ON", we need to collect
+    # IMPORTED_LINK_DEPENDENT_LIBRARIES[_<CONFIGURATION>] for the target
+    get_target_property(_GTEST_DEPENDENCIES gtest
+      IMPORTED_LINK_DEPENDENT_LIBRARIES)
+    if (NOT _GTEST_DEPENDENCIES)
+      set(_GTEST_DEPENDENCIES "")
+    endif()
+    get_target_property(_GTEST_CONFIGS gtest IMPORTED_CONFIGURATIONS)
+    foreach(_GTEST_CONFIG "${_GTEST_CONFIGS}")
+      get_target_property(_GTEST_DEP_CONFIG gtest
+        IMPORTED_LINK_DEPENDENT_LIBRARIES_${_GTEST_CONFIG})
+      if (_GTEST_DEP_CONFIG)
+        list(APPEND _GTEST_DEPENDENCIES "${_GTEST_DEP_CONFIG}")
+      endif()
+    endforeach()
+
+    # PUBLIC and INTERFACE link dependencies (when LLVM uses static linking)
+    get_target_property(_GTEST_LINK_LIBS gtest INTERFACE_LINK_LIBRARIES)
+    if (_GTEST_LINK_LIBS)
+        list(APPEND _GTEST_DEPENDENCIES "${_GTEST_LINK_LIBS}")
+    endif()
+
+    # determine the name of the library offering LLVM's support
+    if ("${LLVM_LINK_LLVM_DYLIB}")
+      set(_SUPPORT_DEPENDENCY "LLVM")
+    else()
+      llvm_map_components_to_libnames(_SUPPORT_DEPENDENCY support)
+    endif()
+
+    # check if this support library is among the dependencies of gtest
+    list(FIND _GTEST_DEPENDENCIES "${_SUPPORT_DEPENDENCY}" _SUPPORT_INDEX)
+    if (${_SUPPORT_INDEX} GREATER -1)
+      return()
+    endif()
+  endif()
+
+  message(FATAL_ERROR "An existing 'gtest' CMake target was imported. This "
+    "prevents KLEE from defining its own 'gtest' target (for Google Test).\n"
+    "KLEE has support for reusing the 'gtest' target exported by LLVM, but "
+    "the 'gtest' target imported does not appear to originate from LLVM.\n"
+    "Please make sure that no KLEE dependency (included with `find_package`) "
+    "exports a 'gtest' target in your configuration.")
+  endblock()
+endfunction()
+
+if (TARGET gtest)
+  # Google Test target is already defined, we cannot include Google Test twice.
+  # Thus, we try to reuse the 'gtest' target if it originates from LLVM.
+  # Otherwise, we fail with an error (and ask user to fix their configuration).
+
+  message(STATUS "Google Test: Reusing 'gtest' target.")
+  ensure_valid_llvm_gtest_target()
+
+  message(WARNING "LLVM exports its 'gtest' CMake target (for Google Test), "
+    "which is imported by KLEE (via `find_package`). This prevents KLEE from "
+    "defining its own 'gtest' target (for Google Test).\n"
+    "Thus, KLEE will reuse the imported 'gtest' target from LLVM. This is, "
+    "however, only recommended if LLVM and KLEE are built using the same "
     "compiler and linker flags (to prevent compatibility issues).\n"
     "To prevent CMake from reusing the target or to use a different version "
     "of Google Test, try either of the following:\n"
     "- Point LLVM_DIR to the directory containing the `LLVMConfig.cmake` file "
     "of an installed copy of LLVM instead of a build tree.\n"
-    "- Pass -DLLVM_INCLUDE_TESTS=OFF to CMake when building LLVM. This "
-    "prevents building unit tests in LLVM (but not in KLEE) and exporting the "
-    "target to the build tree.")
+    "- Pass -DLLVM_INCLUDE_TESTS=OFF to the CMake invocation used for building "
+    "LLVM. This prevents building unit tests in LLVM (but not in KLEE) and "
+    "exporting the target from LLVM's build tree.")
 
   if (GTEST_SRC_DIR)
     message(FATAL_ERROR "Cannot use GTEST_SRC_DIR when target 'gtest' is"
       "already defined.\n"
-      "Either reuse LLVM's Google Test setup by not setting GTEST_SRC_DIR or "
-      "choose one of the options to prevent LLVM from exporting this target.")
+      "Either let KLEE reuse LLVM's Google Test setup by not setting "
+      "GTEST_SRC_DIR explicitly or choose one of the options above to prevent"
+      "LLVM from exporting this target.")
   endif()
 
-  # check if it's really LLVM that exports the 'gtest' target
-  list(FIND LLVM_EXPORTED_TARGETS "gtest" _GTEST_INDEX)
-  if (${_GTEST_INDEX} GREATER -1)
-    message(STATUS "Google Test: Reusing LLVM's 'gtest' target.")
-    # in this case, only include directory has to be set
-    if (LLVM_BUILD_MAIN_SRC_DIR)
-      set(GTEST_INCLUDE_DIR
-        "${LLVM_BUILD_MAIN_SRC_DIR}/utils/unittest/googletest/include"
-        CACHE
-        PATH
-        "Path to Google Test include directory"
-      )
-    endif()
-  else()
-    message(FATAL_ERROR "Reusing Google Test (target) from LLVM failed:"
-      "LLVM_EXPORTED_TARGETS does not contain 'gtest'.")
+  # in this case, only include directory has to be set
+  if (LLVM_BUILD_MAIN_SRC_DIR)
+    set(GTEST_INCLUDE_DIR
+      "${LLVM_BUILD_MAIN_SRC_DIR}/utils/unittest/googletest/include"
+      CACHE
+      PATH
+      "Path to Google Test include directory"
+    )
   endif()
 else()
   # LLVM's 'gtest' target is not reused
