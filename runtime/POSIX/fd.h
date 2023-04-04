@@ -16,6 +16,13 @@
 #error "_LARGEFILE64_SOURCE should be defined"
 #endif
 
+#if defined(__APPLE__) || defined(__FreeBSD__)
+#else
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
+#endif
+
 #include <dirent.h>
 #include <sys/types.h>
 
@@ -23,7 +30,12 @@
 #include <sys/statfs.h>
 #endif
 
+#include <sys/stat.h>
+
 #ifdef __APPLE__
+#ifndef stat64
+#define stat64 stat
+#endif
 #include <sys/dtrace.h>
 #endif
 #ifdef __FreeBSD__
@@ -81,7 +93,6 @@ typedef struct {
 typedef struct {
   exe_file_t fds[MAX_FDS];
   mode_t umask; /* process umask */
-  unsigned version;
   /* If set, writes execute as expected.  Otherwise, writes extending
      the file size only change the contents up to the initial
      size. The file offset is always incremented correctly. */

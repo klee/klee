@@ -12,59 +12,68 @@
 
 #include "klee/Expr/Expr.h"
 
-// FIXME: Currently we use ConstraintManager for two things: to pass
-// sets of constraints around, and to optimize constraints. We should
-// move the first usage into a separate data structure
-// (ConstraintSet?) which ConstraintManager could embed if it likes.
 namespace klee {
 
-class ExprVisitor;
+/// Resembles a set of constraints that can be passed around
+///
+class ConstraintSet {
+  friend class ConstraintManager;
 
-class ConstraintManager {
 public:
   using constraints_ty = std::vector<ref<Expr>>;
   using iterator = constraints_ty::iterator;
   using const_iterator = constraints_ty::const_iterator;
 
-  ConstraintManager() = default;
-  ConstraintManager(const ConstraintManager &cs) = default;
-  ConstraintManager &operator=(const ConstraintManager &cs) = default;
-  ConstraintManager(ConstraintManager &&cs) = default;
-  ConstraintManager &operator=(ConstraintManager &&cs) = default;
+  using constraint_iterator = const_iterator;
 
-  // create from constraints with no optimization
-  explicit ConstraintManager(const std::vector<ref<Expr>> &_constraints)
-      : constraints(_constraints) {}
+  bool empty() const;
+  constraint_iterator begin() const;
+  constraint_iterator end() const;
+  size_t size() const noexcept;
 
-  // given a constraint which is known to be valid, attempt to
-  // simplify the existing constraint set
-  void simplifyForValidConstraint(ref<Expr> e);
+  explicit ConstraintSet(constraints_ty cs) : constraints(std::move(cs)) {}
+  ConstraintSet() = default;
 
-  ref<Expr> simplifyExpr(ref<Expr> e) const;
+  void push_back(const ref<Expr> &e);
 
-  void addConstraint(ref<Expr> e);
-
-  bool empty() const noexcept { return constraints.empty(); }
-  ref<Expr> back() const { return constraints.back(); }
-  const_iterator begin() const { return constraints.cbegin(); }
-  const_iterator end() const { return constraints.cend(); }
-  std::size_t size() const noexcept { return constraints.size(); }
-
-  bool operator==(const ConstraintManager &other) const {
-    return constraints == other.constraints;
-  }
-
-  bool operator!=(const ConstraintManager &other) const {
-    return constraints != other.constraints;
+  bool operator==(const ConstraintSet &b) const {
+    return constraints == b.constraints;
   }
 
 private:
-  std::vector<ref<Expr>> constraints;
+  constraints_ty constraints;
+};
 
-  // returns true iff the constraints were modified
+class ExprVisitor;
+
+/// Manages constraints, e.g. optimisation
+class ConstraintManager {
+public:
+  /// Create constraint manager that modifies constraints
+  /// \param constraints
+  explicit ConstraintManager(ConstraintSet &constraints);
+
+  /// Simplify expression expr based on constraints
+  /// \param constraints set of constraints used for simplification
+  /// \param expr to simplify
+  /// \return simplified expression
+  static ref<Expr> simplifyExpr(const ConstraintSet &constraints,
+                                const ref<Expr> &expr);
+
+  /// Add constraint to the referenced constraint set
+  /// \param constraint
+  void addConstraint(const ref<Expr> &constraint);
+
+private:
+  /// Rewrite set of constraints using the visitor
+  /// \param visitor constraint rewriter
+  /// \return true iff any constraint has been changed
   bool rewriteConstraints(ExprVisitor &visitor);
 
-  void addConstraintInternal(ref<Expr> e);
+  /// Add constraint to the set of constraints
+  void addConstraintInternal(const ref<Expr> &constraint);
+
+  ConstraintSet &constraints;
 };
 
 } // namespace klee

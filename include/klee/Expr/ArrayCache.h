@@ -13,16 +13,8 @@
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ArrayExprHash.h" // For klee::ArrayHashFn
 
-// FIXME: Remove this hack when we switch to C++11
-#ifdef _LIBCPP_VERSION
-#include <unordered_set>
-#define unordered_set std::unordered_set
-#else
-#include <tr1/unordered_set>
-#define unordered_set std::tr1::unordered_set
-#endif
-
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 namespace klee {
@@ -68,14 +60,13 @@ public:
                            Expr::Width _range = Expr::Int8);
 
 private:
-  typedef unordered_set<const Array *, klee::ArrayHashFn,
-                        klee::EquivArrayCmpFn> ArrayHashMap;
+  typedef std::unordered_set<const Array *, klee::ArrayHashFn,
+                             klee::EquivArrayCmpFn>
+      ArrayHashMap;
   ArrayHashMap cachedSymbolicArrays;
   typedef std::vector<const Array *> ArrayPtrVec;
   ArrayPtrVec concreteArrays;
 };
 }
-
-#undef unordered_set
 
 #endif /* KLEE_ARRAYCACHE_H */

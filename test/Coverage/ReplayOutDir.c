@@ -3,6 +3,8 @@
 // RUN: %klee --output-dir=%t1.out %t1.bc
 // RUN: %klee --output-dir=%t1.replay --replay-ktest-dir=%t1.out %t1.bc
 
+#include "klee/klee.h"
+
 int main() {
   int i;
   klee_make_symbolic(&i, sizeof i, "i");

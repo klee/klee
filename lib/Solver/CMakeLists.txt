@@ -6,7 +6,7 @@
 # License. See LICENSE.TXT for details.
 #
 #===------------------------------------------------------------------------===#
-klee_add_component(kleaverSolver
+add_library(kleaverSolver
   AssignmentValidatingSolver.cpp
   CachingSolver.cpp
   CexCachingSolver.cpp
@@ -32,15 +32,14 @@ klee_add_component(kleaverSolver
   Z3Solver.cpp
 )
 
-set(LLVM_COMPONENTS
-  support
-)
-klee_get_llvm_libs(LLVM_LIBS ${LLVM_COMPONENTS})
-target_link_libraries(kleaverSolver PUBLIC ${LLVM_LIBS})
-
+llvm_config(kleaverSolver "${USE_LLVM_SHARED}" support)
 target_link_libraries(kleaverSolver PRIVATE
   kleeBasic
   kleaverExpr
   kleeSupport
   ${KLEE_SOLVER_LIBRARIES})
+target_include_directories(kleaverSolver PRIVATE ${KLEE_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS} ${KLEE_SOLVER_INCLUDE_DIRS})
+target_compile_options(kleaverSolver PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
+target_compile_definitions(kleaverSolver PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})
+
 

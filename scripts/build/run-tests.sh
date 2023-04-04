@@ -37,6 +37,12 @@ run_tests() {
   # TODO change to pinpoint specific directory
   cd "${build_dir}"
 
+  # Remove klee from PATH
+  export PATH=${PATH/":/home/klee/klee_build/bin"/}
+  if which klee; then
+    return 1 # should not happen
+  fi
+
   ###############################################################################
   # Unit tests
   ###############################################################################
@@ -58,20 +64,15 @@ run_tests() {
     coverage_setup "${build_dir}"
   fi
 
-  if [[ -n "${SANITIZER_BUILD+x}" ]]; then
-    for num in {1..10}; do sleep 120; echo 'Keep Travis alive'; done &
-  fi
-
   make systemtests || return 1
   
   # If metaSMT is the only solver, then rerun lit tests with non-default metaSMT backends
   if [ "X${SOLVERS}" == "XmetaSMT" ]; then
+    base_path="$(python3 -m site --user-base)"
+    export PATH="$PATH:${base_path}/bin"
     available_metasmt_backends="btor stp z3 yices2 cvc4"
     for backend in $available_metasmt_backends; do
       if [ "X${METASMT_DEFAULT}" != "X$backend" ]; then
-        if [ "$backend" == "cvc4" ]; then
-          for num in {1..5}; do sleep 120; echo 'Keep Travis alive'; done &
-        fi
         lit -v --param klee_opts=-metasmt-backend="$backend" --param kleaver_opts=-metasmt-backend="$backend" test/
       fi
     done
@@ -89,11 +90,11 @@ function upload_coverage() {
   file="$1"
   tags="$2"
   cd /home/klee/klee_src
-  bash <(curl -s https://codecov.io/bash) -X gcov -R /tmp/klee_src/ -y .codecov.yml -f /home/klee/klee_build/coverage_all.info."${file}" -F "$tags"
+  bash <(curl -s https://codecov.io/bash) -X gcov -R /tmp/klee_src/ -f /home/klee/klee_build/coverage_all.info."${file}" -F "$tags"
 }
 
 function run_docker() {
- docker_arguments=(docker run -u root --cap-add SYS_PTRACE -ti)
+ docker_arguments=(docker run -u root --cap-add SYS_PTRACE -t -e SOLVERS -e METASMT_DEFAULT)
  script_arguments=("--debug" '"/tmp/klee_build"*')
  if [[ "${COVERAGE}" -eq 1 ]]; then
    script_arguments+=("--coverage")

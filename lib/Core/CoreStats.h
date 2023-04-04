@@ -10,7 +10,9 @@
 #ifndef KLEE_CORESTATS_H
 #define KLEE_CORESTATS_H
 
-#include "klee/Statistic.h"
+#include "klee/Core/BranchTypes.h"
+#include "klee/Core/TerminationTypes.h"
+#include "klee/Statistics/Statistic.h"
 
 namespace klee {
 namespace stats {
@@ -27,16 +29,18 @@ namespace stats {
   extern Statistic forkTime;
   extern Statistic solverTime;
 
+  /// The number of external calls.
+  extern Statistic externalCalls;
+
   /// The number of process forks.
   extern Statistic forks;
+
+  /// Number of inhibited forks.
+  extern Statistic inhibitedForks;
 
   /// Number of states, this is a "fake" statistic used by istats, it
   /// isn't normally up-to-date.
   extern Statistic states;
-
-  /// Instruction level statistic for tracking number of reachable
-  /// uncovered instructions.
-  extern Statistic reachableUncovered;
 
   /// Instruction level statistic tracking the minimum intraprocedural
   /// distance to an uncovered instruction; this is only periodically
@@ -47,6 +51,18 @@ namespace stats {
   /// distance to a function return.
   extern Statistic minDistToReturn;
 
+  /// Count branch types in execution tree. Inhibited branches are ignored.
+  #undef BTYPE
+  #define BTYPE(Name,I) extern Statistic branches ## Name;
+  BRANCH_TYPES
+
+  /// Count termination types.
+  #undef TCLASS
+  #define TCLASS(Name,I) extern Statistic termination ## Name;
+  TERMINATION_CLASSES
+
+  /// Increase a branch statistic for the given reason by value.
+  void incBranchStat(BranchType reason, std::uint32_t value);
 }
 }
 

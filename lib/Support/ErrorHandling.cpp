@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Support/ErrorHandling.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/CommandLine.h"
@@ -31,8 +31,11 @@ static const char *warningOncePrefix = "WARNING ONCE";
 static const char *errorPrefix = "ERROR";
 static const char *notePrefix = "NOTE";
 
-namespace {
+namespace klee {
 cl::OptionCategory MiscCat("Miscellaneous options", "");
+}
+
+namespace {
 cl::opt<bool> WarningsOnlyToFile(
     "warnings-only-to-file", cl::init(false),
     cl::desc("All warnings will be written to warnings.txt only.  If disabled, "

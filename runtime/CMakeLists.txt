@@ -6,136 +6,116 @@
 # License. See LICENSE.TXT for details.
 #
 #===------------------------------------------------------------------------===#
+# Handle binaries
 add_subdirectory(Runtest)
 
-if ("${KLEE_RUNTIME_BUILD_TYPE}" MATCHES "Release")
-  set(RUNTIME_IS_RELEASE 1)
-else()
-  set(RUNTIME_IS_RELEASE 0)
-endif()
+# Handle bitcode libraries
+# Define the different configurations to be compiled and made available using a specific suffix
+set(bc_architectures 64)
 
-if ("${KLEE_RUNTIME_BUILD_TYPE}" MATCHES "Asserts")
-  set(RUNTIME_HAS_ASSERTIONS 1)
-else()
-  set(RUNTIME_HAS_ASSERTIONS 0)
-endif()
+# Compile 32bit support if available
+if (M32_SUPPORTED)
+    list(APPEND bc_architectures "32")
+endif ()
 
-if ("${KLEE_RUNTIME_BUILD_TYPE}" MATCHES "Debug")
-  set(RUNTIME_HAS_DEBUG_SYMBOLS 1)
-else()
-  set(RUNTIME_HAS_DEBUG_SYMBOLS 0)
-endif()
+set(LIB_BC_SUFFIX "")
 
-if (ENABLE_POSIX_RUNTIME)
-  set(BUILD_POSIX_RUNTIME 1)
-else()
-  set(BUILD_POSIX_RUNTIME 0)
-endif()
+foreach (bc_architecture ${bc_architectures})
+    foreach (bc_optimization ${available_klee_runtime_build_types})
+        # Add configuration to the set of available configurations
+        list(APPEND LIB_BC_SUFFIX "${bc_architecture}_${bc_optimization}")
 
-# Configure the bitcode build system
-configure_file("Makefile.cmake.bitcode.config.in"
-  "Makefile.cmake.bitcode.config"
-  @ONLY
-)
-
-# Copy over the makefiles to the build directory
-configure_file("Makefile.cmake.bitcode" "Makefile.cmake.bitcode" COPYONLY)
-configure_file("Makefile.cmake.bitcode.rules" "Makefile.cmake.bitcode.rules" COPYONLY)
-
-# Makefile for root runtime directory
-# Copy over makefiles for libraries
-set(BITCODE_LIBRARIES "Intrinsic" "klee-libc" "FreeStanding")
-if (ENABLE_POSIX_RUNTIME)
-  list(APPEND BITCODE_LIBRARIES "POSIX")
-endif()
-foreach (bl ${BITCODE_LIBRARIES})
-  configure_file("${bl}/Makefile.cmake.bitcode"
-    "${CMAKE_CURRENT_BINARY_DIR}/${bl}/Makefile.cmake.bitcode"
-    COPYONLY)
-endforeach()
-
-# Find GNU make
-find_program(MAKE_BINARY
-  NAMES make gmake
-)
-
-if (NOT MAKE_BINARY)
-  message(STATUS "Failed to find make binary")
-endif()
-
-# Find env
-find_program(ENV_BINARY
-  NAMES env
-)
-if (NOT ENV_BINARY)
-  message(FATAL_ERROR "Failed to find env binary")
-endif()
-
-option(KLEE_RUNTIME_ALWAYS_REBUILD "Always try to rebuild KLEE runtime" ON)
-if (KLEE_RUNTIME_ALWAYS_REBUILD)
-  set(EXTERNAL_PROJECT_BUILD_ALWAYS_ARG 1)
-else()
-  set(EXTERNAL_PROJECT_BUILD_ALWAYS_ARG 0)
-endif()
-
-# Build the runtime as an external project.
-# We do this because CMake isn't really suitable
-# for building the runtime because it can't handle
-# the source file dependencies properly.
-include(ExternalProject)
-ExternalProject_Add(BuildKLEERuntimes
-  SOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}"
-  BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}"
-  CONFIGURE_COMMAND "${CMAKE_COMMAND}" -E echo "" # Dummy command
-  BUILD_COMMAND "${CMAKE_COMMAND}" -E echo "" # Dummy command
-  INSTALL_COMMAND "${CMAKE_COMMAND}" -E echo "" # Dummy command
-)
-
-set(O0OPT "-O0")
-if (${LLVM_VERSION_MAJOR} GREATER 4)
-	set(O0OPT "${O0OPT} -Xclang -disable-O0-optnone")
-endif()
+        # Set specific flags for that configuration
+        set(local_flags "")
+        if (bc_architecture EQUAL "32")
+            list(APPEND local_flags -m32)
+        endif ()
 
 
-# Use `ExternalProject_Add_Step` with `ALWAYS` argument instead of directly
-# building in `ExternalProject_Add` with `BUILD_ALWAYS` argument due to lack of
-# support for the `BUILD_ALWAYS` argument in CMake < 3.1.
-ExternalProject_Add_Step(BuildKLEERuntimes RuntimeBuild
-  # `env` is used here to make sure `MAKEFLAGS` of KLEE's build
-  # is not propagated into the bitcode build system.
-  COMMAND ${ENV_BINARY} MAKEFLAGS="" O0OPT=${O0OPT} ${MAKE_BINARY} -f Makefile.cmake.bitcode all
-  ALWAYS ${EXTERNAL_PROJECT_BUILD_ALWAYS_ARG}
-  WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-  ${EXTERNAL_PROJECT_ADD_STEP_USES_TERMINAL_ARG}
-)
+        # Set specific compiler flags depending on the optimization
+        if (bc_optimization STREQUAL "Release")
+            list(APPEND local_flags -O2 -DNDEBUG)
+        elseif (bc_optimization STREQUAL "Release+Debug")
+            list(APPEND local_flags -O2 -g -D_DEBUG -DNDEBUG)
+        elseif (bc_optimization STREQUAL "Release+Asserts")
+            list(APPEND local_flags -O2)
+        elseif (bc_optimization STREQUAL "Release+Debug+Asserts")
+            list(APPEND local_flags -O2 -g -D_DEBUG)
+        elseif (bc_optimization STREQUAL "Debug")
+            list(APPEND local_flags -g -D_DEBUG -DNDEBUG)
+        elseif (bc_optimization STREQUAL "Debug+Asserts")
+            list(APPEND local_flags -g -D_DEBUG)
+        else()
+            message(FATAL_ERROR
+                    "Optimization (\"${bc_optimization}\") for runtime library unknown.")
+        endif ()
 
-# Target for cleaning the bitcode build system
-# NOTE: Invoking `make clean` does not invoke this target.
-# Instead the user needs to invoke the `clean_all` target.
-# It's also weird that `ExternalProject` provides no way to do a clean.
-add_custom_target(clean_runtime
-  COMMAND ${ENV_BINARY} MAKEFLAGS="" ${MAKE_BINARY} -f Makefile.cmake.bitcode clean
-  WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-  ${ADD_CUSTOM_COMMAND_USES_TERMINAL_ARG}
-)
-add_dependencies(clean_all clean_runtime)
+        # Define suffix-specific optimizations
+        set("LIB_BC_FLAGS_${bc_architecture}_${bc_optimization}" ${local_flags})
+    endforeach ()
+endforeach ()
 
-###############################################################################
-# Runtime install
-###############################################################################
-set(RUNTIME_FILES_TO_INSTALL)
+message(STATUS "LIB_BC_SUFFIX: ${LIB_BC_SUFFIX}")
+message(STATUS "KLEE_RUNTIME_DIRECTORY: ${KLEE_RUNTIME_DIRECTORY}")
 
-list(APPEND RUNTIME_FILES_TO_INSTALL
-  "${KLEE_RUNTIME_DIRECTORY}/libkleeRuntimeIntrinsic.bca"
-  "${KLEE_RUNTIME_DIRECTORY}/libklee-libc.bca"
-  "${KLEE_RUNTIME_DIRECTORY}/libkleeRuntimeFreeStanding.bca"
-  )
+# Add additional setups if needed, e.g.
+# `list(APPEND LIB_BC_SUFFIX 64_MY_SPECIAL_CONFIG)`
+
+# Following define the specific flags: LIB_BC_FLAGS_*SUFFIX_FROM_ABOVE*, e.g.
+# ```set(LIB_BC_FLAGS_64_MY_SPECIAL_CONFIG
+#         -DSOME_DEFINE
+# )``
+
+# Common for all library configurations
+# Since the runtime now contains fortified libc functions, it is
+# important to compile it with -D_FORTIFY_SOURCE=0 to avoid infinite
+# recursion
+set(COMMON_CC_FLAGS
+        "-I${CMAKE_SOURCE_DIR}/include"
+        "-I${CMAKE_BINARY_DIR}/include"
+        -D_FORTIFY_SOURCE=0
+        -D_GNU_SOURCE
+        -D__STDC_LIMIT_MACROS
+        -D__STDC_CONSTANT_MACROS
+        -Wall
+        -Wwrite-strings
+        -Xclang
+        -disable-O0-optnone
+        )
+
+foreach (_suffix ${LIB_BC_SUFFIX})
+    list(APPEND "LIB_BC_FLAGS_${_suffix}" ${COMMON_CC_FLAGS})
+endforeach ()
+
+add_subdirectory(Freestanding)
+add_subdirectory(Intrinsic)
+add_subdirectory(klee-libc)
+add_subdirectory(Fortify)
+
+set(RUNTIME_LIBRARIES
+        RuntimeFreestanding
+        RuntimeIntrinsic
+        RuntimeKLEELibc
+        RuntimeFortify
+        )
+
+if (ENABLE_KLEE_EH_CXX)
+    list(APPEND RUNTIME_LIBRARIES eh-cxx)
+    add_subdirectory(klee-eh-cxx)
+endif ()
 
 if (ENABLE_POSIX_RUNTIME)
-  list(APPEND RUNTIME_FILES_TO_INSTALL
-    "${KLEE_RUNTIME_DIRECTORY}/libkleeRuntimePOSIX.bca")
-endif()
+    list(APPEND RUNTIME_LIBRARIES RuntimePOSIX)
+    add_subdirectory(POSIX)
+endif ()
 
-install(FILES
-  ${RUNTIME_FILES_TO_INSTALL}
-  DESTINATION "${KLEE_INSTALL_RUNTIME_DIR}")
+list(APPEND RUNTIME_LIBRARIES UBSan)
+add_subdirectory(Sanitizer)
+
+add_custom_target(BuildKLEERuntimes
+        DEPENDS "${RUNTIME_LIBRARIES}"
+        )
+
+install(DIRECTORY "${KLEE_RUNTIME_DIRECTORY}/"
+        DESTINATION "${KLEE_INSTALL_RUNTIME_DIR}"
+        )

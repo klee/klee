@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Statistics.h"
+#include "klee/Statistics/Statistics.h"
 
 #include <vector>
 
@@ -64,21 +64,16 @@ static StatisticManager &getStatisticManager() {
 
 /* *** */
 
-Statistic::Statistic(const std::string &_name, 
-                     const std::string &_shortName) 
-  : name(_name), 
-    shortName(_shortName) {
+Statistic::Statistic(const std::string &name, const std::string &shortName)
+  : name{name}, shortName{shortName} {
   getStatisticManager().registerStatistic(*this);
 }
 
-Statistic::~Statistic() {
-}
-
-Statistic &Statistic::operator +=(const uint64_t addend) {
+Statistic &Statistic::operator+=(std::uint64_t addend) {
   theStatisticManager->incrementStatistic(*this, addend);
   return *this;
 }
 
-uint64_t Statistic::getValue() const {
+std::uint64_t Statistic::getValue() const {
   return theStatisticManager->getValue(*this);
 }

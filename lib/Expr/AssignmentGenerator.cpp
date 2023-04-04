@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AssignmentGenerator.h"
+#include "klee/Expr/AssignmentGenerator.h"
 
 #include "klee/Expr/Assignment.h"
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Support/Casting.h"
+#include "klee/Support/ErrorHandling.h"
 #include "klee/klee.h"
 
 #include <llvm/ADT/APInt.h>
-#include <llvm/Support/Casting.h>
 #include <llvm/Support/raw_ostream.h>
 
 #include <cassert>
@@ -332,11 +332,7 @@ AssignmentGenerator::getIndexedValue(const std::vector<unsigned char> &c_val,
                                      const unsigned int size) {
   std::vector<unsigned char> toReturn;
   const llvm::APInt index_val = index.getAPValue();
-#if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
   assert(!index_val.isSignMask() && "Negative index");
-#else
-  assert(!index_val.isSignBit() && "Negative index");
-#endif
   const uint64_t id = index_val.getZExtValue() / c_val.size();
   uint64_t arraySize = size / c_val.size();
   for (uint64_t i = 0; i < arraySize; ++i) {

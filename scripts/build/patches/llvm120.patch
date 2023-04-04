@@ -1,0 +1,8 @@
+diff --git a/msan_suppressions.txt b/msan_suppressions.txt
+new file mode 100644
+index 000000000..f8c825e6f
+--- /dev/null
++++ b/msan_suppressions.txt
+@@ -0,0 +1,2 @@
++# Ignore llvm-config issue
++mainfile:llvm-config.cpp

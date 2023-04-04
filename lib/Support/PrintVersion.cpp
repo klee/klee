@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Internal/Support/PrintVersion.h"
+#include "klee/Support/PrintVersion.h"
 #include "klee/Config/config.h"
 #include "klee/Config/Version.h"
 #include "llvm/Support/raw_ostream.h"
@@ -15,16 +15,7 @@
 
 #include "klee/Config/CompileTimeInfo.h"
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(6, 0)
-void klee::printVersion(llvm::raw_ostream &OS)
-#else
-void klee::printVersion()
-#endif
-{
-#if LLVM_VERSION_CODE < LLVM_VERSION(6, 0)
-  llvm::raw_ostream &OS = llvm::outs();
-#endif
-
+void klee::printVersion(llvm::raw_ostream &OS) {
   OS << PACKAGE_STRING " (" PACKAGE_URL ")\n";
 #ifdef KLEE_ENABLE_TIMESTAMP
   OS << "  Built " __DATE__ " (" __TIME__ ")\n";

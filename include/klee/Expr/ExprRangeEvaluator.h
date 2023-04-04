@@ -10,8 +10,8 @@
 #ifndef KLEE_EXPRRANGEEVALUATOR_H
 #define KLEE_EXPRRANGEEVALUATOR_H
 
+#include "klee/ADT/Bits.h"
 #include "klee/Expr/Expr.h"
-#include "klee/util/Bits.h"
 
 namespace klee {
 
@@ -73,7 +73,7 @@ T ExprRangeEvaluator<T>::evalRead(const UpdateList &ul,
                                   T index) {
   T res;
 
-  for (const UpdateNode *un=ul.head; un; un=un->next) {
+  for (const UpdateNode *un = ul.head.get(); un; un = un->next.get()) {
     T ui = evaluate(un->index);
 
     if (ui.mustEqual(index)) {
@@ -85,7 +85,7 @@ T ExprRangeEvaluator<T>::evalRead(const UpdateList &ul,
       } 
     }
   }
-  
+
   return res.set_union(getInitialReadRange(*ul.root, index));
 }
 

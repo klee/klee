@@ -24,14 +24,13 @@ config.cxx = "@NATIVE_CXX@"
 
 # NOTE: any changes to compiler flags also have to be applied to
 #       test/Concrete/CMakeLists.txt
-config.O0opt = "-O0"
-if @LLVM_VERSION_MAJOR@ >= 5:
-  config.O0opt += " -Xclang -disable-O0-optnone"
+config.O0opt = "-O0 -Xclang -disable-O0-optnone"
 
 # Features
 config.enable_uclibc = True if @SUPPORT_KLEE_UCLIBC@ == 1 else False
 config.enable_posix_runtime = True if @ENABLE_POSIX_RUNTIME@ == 1 else False
 config.enable_libcxx = True if @SUPPORT_KLEE_LIBCXX@ == 1 else False
+config.enable_eh_cxx = True if @SUPPORT_KLEE_EH_CXX@ == 1 else False
 config.have_selinux = True if @HAVE_SELINUX@ == 1 else False
 config.enable_stp = True if @ENABLE_STP@ == 1 else False
 config.enable_z3 = True if @ENABLE_Z3@ == 1 else False
@@ -39,10 +38,11 @@ config.enable_zlib = True if @HAVE_ZLIB_H@ == 1 else False
 config.have_asan = True if @IS_ASAN_BUILD@ == 1 else False
 config.have_ubsan = True if @IS_UBSAN_BUILD@ == 1 else False
 config.have_msan = True if @IS_MSAN_BUILD@ == 1 else False
+config.have_32bit_support = True if @M32_SUPPORTED@ == 1 else False
 
 # Add sanitizer list
 config.environment['LSAN_OPTIONS'] = "suppressions=@KLEE_UTILS_DIR@/sanitizers/lsan.txt"
-config.environment['UBSAN_OPTIONS'] = "suppressions=@KLEE_UTILS_DIR@/sanitizers/ubsan.txt"
+config.environment['UBSAN_OPTIONS'] = "print_stacktrace=1,suppressions=@KLEE_UTILS_DIR@/sanitizers/ubsan.txt"
 
 # Current target
 config.target_triple = "@TARGET_TRIPLE@"

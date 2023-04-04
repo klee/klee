@@ -7,15 +7,50 @@
 #
 #===------------------------------------------------------------------------===#
 
-if (TARGET gtest AND TARGET gtest_main)
-  # try to reuse LLVM's targets
+function(add_vanilla_googletest_subdirectory directory)
+  if (POLICY CMP0077)
+    # Prevent Google Test from adding to our install target (Google Test 1.8.0+)
+    # However, this can only be disabled starting with 1.8.1 (a.k.a. 1.9.0)
+    set(INSTALL_GTEST OFF)
 
-  message(WARNING "LLVM exports 'gtest' and 'gtest_main' targets (for Google "
-    "Test), so KLEE cannot create them. By default, KLEE will reuse "
-    "LLVM's 'gtest' and 'gtest_main' targets if they are available. This is, "
-    "however, only recommended if LLVM and KLEE were build with the same "
-    "compiler and linker flags to prevent any compatibility issues.\n"
-    "To prevent CMake from reusing the targets or to use a different version "
+    # Google Mock is currently not used by our tests
+    set(BUILD_GMOCK OFF)
+
+    # (only) Google Test 1.8.0 with BUILD_GMOCK=OFF needs BUILD_GTEST=ON
+    set(BUILD_GTEST ON)
+
+    # Make option() in subdirectory respect normal variables (as set above).
+    # NOTE: The enclosing function limits the scope of this policy setting.
+    # FIXME: Remove once all supported Google Test versions require CMake 3.13+
+    #        (or set policy CMP0077 to NEW by themselves)
+    set(CMAKE_POLICY_DEFAULT_CMP0077 NEW)
+  else()
+    # FIXME: Remove with CMake minimum version 3.13+
+    # Use cache variable workaround as option() ignores normal variables
+
+    # Prevent Google Test from adding to our install target (Google Test 1.8.0+)
+    # However, this can only be disabled starting with 1.8.1 (a.k.a. 1.9.0)
+    set(INSTALL_GTEST OFF CACHE BOOL "disable installing Google Test" FORCE)
+
+    # Google Mock is currently not used by our tests
+    set(BUILD_GMOCK OFF CACHE BOOL "disable building Google Mock" FORCE)
+
+    # (only) Google Test 1.8.0 with BUILD_GMOCK=OFF needs BUILD_GTEST=ON
+    set(BUILD_GTEST ON CACHE BOOL "enable building Google Test" FORCE)
+  endif()
+
+  # include Google Test's CMakeLists.txt
+  add_subdirectory(${directory} "${CMAKE_CURRENT_BINARY_DIR}/gtest_build")
+endfunction()
+
+if (TARGET gtest)
+  # try to reuse LLVM's 'gtest' target
+
+  message(WARNING "LLVM exports its 'gtest' CMake target (for Google Test), so "
+    "KLEE cannot create its own. Thus, KLEE will reuse the existing one. This "
+    "is, however, only recommended if LLVM and KLEE were built using the same "
+    "compiler and linker flags (to prevent compatibility issues).\n"
+    "To prevent CMake from reusing the target or to use a different version "
     "of Google Test, try either of the following:\n"
     "- Point LLVM_DIR to the directory containing the `LLVMConfig.cmake` file "
     "of an installed copy of LLVM instead of a build tree.\n"
@@ -24,17 +59,16 @@ if (TARGET gtest AND TARGET gtest_main)
     "target to the build tree.")
 
   if (GTEST_SRC_DIR)
-    message(FATAL_ERROR "Cannot use GTEST_SRC_DIR when targets 'gtest' and "
-      "'gtest_main' are already defined.\n"
+    message(FATAL_ERROR "Cannot use GTEST_SRC_DIR when target 'gtest' is"
+      "already defined.\n"
       "Either reuse LLVM's Google Test setup by not setting GTEST_SRC_DIR or "
-      "choose one of the options to prevent LLVM from exporting these targets.")
+      "choose one of the options to prevent LLVM from exporting this target.")
   endif()
 
-  # check if it's really LLVM that exports them
+  # check if it's really LLVM that exports the 'gtest' target
   list(FIND LLVM_EXPORTED_TARGETS "gtest" _GTEST_INDEX)
-  list(FIND LLVM_EXPORTED_TARGETS "test_main" _GTEST_MAIN_INDEX)
-  if (${_GTEST_INDEX} GREATER -1 AND ${_GTEST_MAIN_INDEX})
-    message(STATUS "Google Test: Reusing LLVM's 'gtest' and 'gtest_main' targets.")
+  if (${_GTEST_INDEX} GREATER -1)
+    message(STATUS "Google Test: Reusing LLVM's 'gtest' target.")
     # in this case, only include directory has to be set
     if (LLVM_BUILD_MAIN_SRC_DIR)
       set(GTEST_INCLUDE_DIR
@@ -45,11 +79,11 @@ if (TARGET gtest AND TARGET gtest_main)
       )
     endif()
   else()
-    message(FATAL_ERROR "Reusing Google Test targets from LLVM failed:"
-      "LLVM_EXPORTED_TARGETS does not contain 'gtest' or 'gtest_main'.")
+    message(FATAL_ERROR "Reusing Google Test (target) from LLVM failed:"
+      "LLVM_EXPORTED_TARGETS does not contain 'gtest'.")
   endif()
 else()
-  # LLVM's targets are not reused
+  # LLVM's 'gtest' target is not reused
 
   if (NOT GTEST_SRC_DIR)
     if (USE_CMAKE_FIND_PACKAGE_LLVM AND LLVM_BUILD_MAIN_SRC_DIR)
@@ -71,7 +105,14 @@ else()
 
       # add includes for LLVM's modifications
       target_include_directories(gtest BEFORE PRIVATE ${LLVM_INCLUDE_DIRS})
+      # we cannot disable gtest_main, but will not use it later
       target_include_directories(gtest_main BEFORE PRIVATE ${LLVM_INCLUDE_DIRS})
+    endif()
+
+    # try using system installation of GTest instead
+    find_package(GTest QUIET)
+    if (GTest_FOUND)
+      message(STATUS "Found GTest ${GTest_VERSION}")
     else()
       # try to find Google Test, as GTEST_SRC_DIR is not manually specified
       find_path(GTEST_SRC_DIR
@@ -89,13 +130,14 @@ else()
     endif()
   endif()
 
-  if (NOT (TARGET gtest AND TARGET gtest_main))
+  if (NOT TARGET gtest AND NOT GTest_FOUND)
     # building from GTEST_SRC_DIR, not from LLVM's utils directory
     find_path(GTEST_INCLUDE_DIR
       "gtest/gtest.h"
 
       HINTS
       "${GTEST_SRC_DIR}/include"
+      "${GTEST_SRC_DIR}/googletest/include"
 
       NO_DEFAULT_PATH
 
@@ -114,20 +156,17 @@ else()
     message(STATUS "Google Test: Building from source.")
     message(STATUS "GTEST_SRC_DIR: ${GTEST_SRC_DIR}")
 
-    # Prevent Google Test from adding to our install target.
-    # Required for >= 1.8.0, but can only be disabled starting with 1.8.1
-    set(GTEST_INSTALL OFF CACHE BOOL "disable installing Google Test" FORCE)
-
-    # Build Google Test as part of our project
-    add_subdirectory(${GTEST_SRC_DIR} "${CMAKE_CURRENT_BINARY_DIR}/gtest_build")
+    add_vanilla_googletest_subdirectory(${GTEST_SRC_DIR})
   endif()
 
-  # build Google Test with KLEE's defines and compile flags
-  target_compile_definitions(gtest PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})
-  target_compile_definitions(gtest_main PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})
-  target_compile_options(gtest PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
-  target_compile_options(gtest_main PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
+  if (NOT GTest_FOUND)
+    # build Google Test with KLEE's defines and compile flags
+    target_compile_definitions(gtest PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})
+    target_compile_options(gtest PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
+  endif()
 endif()
+
+enable_testing()
 
 
 # This keeps track of all the unit test
@@ -139,17 +178,52 @@ define_property(GLOBAL
   FULL_DOCS "KLEE unit tests"
 )
 
-if (NOT IS_DIRECTORY "${GTEST_INCLUDE_DIR}")
-  message(FATAL_ERROR
-    "Cannot find Google Test include directory \"${GTEST_INCLUDE_DIR}\"")
+if (NOT GTest_FOUND)
+  # GTEST_INCLUDE_DIR is defined only when we build from sources.
+  if (NOT IS_DIRECTORY "${GTEST_INCLUDE_DIR}")
+    message(FATAL_ERROR
+      "Cannot find Google Test include directory \"${GTEST_INCLUDE_DIR}\"")
+  endif()
+  message(STATUS "GTEST_INCLUDE_DIR: ${GTEST_INCLUDE_DIR}")
 endif()
-message(STATUS "GTEST_INCLUDE_DIR: ${GTEST_INCLUDE_DIR}")
+
+if (TARGET gtest)
+  set(GTEST_TARGET_NAME gtest)
+elseif (TARGET GTest::gtest)
+  set(GTEST_TARGET_NAME GTest::gtest)
+elseif (TARGET GTest::GTest)
+  set(GTEST_TARGET_NAME GTest::GTest)
+else()
+  message(FATAL_ERROR
+    "Cannot determine name of the Google Test CMake target (tried 'gtest', \
+    'GTest::gtest' and 'GTest::GTest')")
+endif()
+
+add_library(unittest_main)
+target_sources(unittest_main PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/TestMain.cpp")
+llvm_config(unittest_main "${USE_LLVM_SHARED}" support)
+
+target_link_libraries(unittest_main
+  PUBLIC
+  ${GTEST_TARGET_NAME}
+
+  PRIVATE
+  ${UNITTEST_MAIN_LIBS}
+)
+target_include_directories(unittest_main
+  PUBLIC
+  ${GTEST_INCLUDE_DIR}
+  ${KLEE_COMPONENT_EXTRA_INCLUDE_DIRS}
+
+  PRIVATE
+  ${LLVM_INCLUDE_DIRS}
+)
+target_compile_definitions(unittest_main PUBLIC ${KLEE_COMPONENT_CXX_DEFINES})
+target_compile_options(unittest_main PUBLIC ${KLEE_COMPONENT_CXX_FLAGS})
 
 function(add_klee_unit_test target_name)
   add_executable(${target_name} ${ARGN})
-  target_link_libraries(${target_name} PRIVATE gtest_main)
-  target_include_directories(${target_name} BEFORE PRIVATE "${GTEST_INCLUDE_DIR}")
-  target_include_directories(${target_name} BEFORE PRIVATE ${KLEE_COMPONENT_EXTRA_INCLUDE_DIRS})
+  target_link_libraries(${target_name} PRIVATE unittest_main)
   set_target_properties(${target_name}
     PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/unittests/"
@@ -164,11 +238,14 @@ endfunction()
 # Unit Tests
 add_subdirectory(Assignment)
 add_subdirectory(Expr)
+add_subdirectory(KDAlloc)
 add_subdirectory(Ref)
 add_subdirectory(Solver)
+add_subdirectory(Searcher)
 add_subdirectory(TreeStream)
 add_subdirectory(DiscretePDF)
 add_subdirectory(Time)
+add_subdirectory(RNG)
 
 # Set up lit configuration
 set (UNIT_TEST_EXE_SUFFIX "Test")
@@ -186,5 +263,5 @@ add_custom_target(unittests
     "${LIT_TOOL}" ${LIT_ARGS} "${CMAKE_CURRENT_BINARY_DIR}"
     DEPENDS ${UNIT_TEST_DEPENDS}
     COMMENT "Running unittests"
-    ${ADD_CUSTOM_COMMAND_USES_TERMINAL_ARG}
+    USES_TERMINAL
 )

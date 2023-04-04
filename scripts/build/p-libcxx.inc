@@ -1,6 +1,6 @@
 # Build scripts for libc++
 setup_build_variables_libcxx() {
-  LIBCXX_SRC="${BASE}/libc++-${LLVM_VERSION_SHORT}"
+  LIBCXX_SRC="${BASE}/llvm-${LLVM_VERSION_SHORT}"
   LIBCXX_BUILD="${BASE}/libc++-build-${LLVM_VERSION_SHORT}"
   LIBCXX_INSTALL="${BASE}/libc++-install-${LLVM_VERSION_SHORT}"
 }
@@ -10,18 +10,16 @@ download_libcxx() {
   [[ -f "${LIBCXX_SRC}/.src_checked_out" ]] && return 0
 
   local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
-
-  local version=""
-  [[ "${LLVM_VERSION_MAJOR}" -le 3 ]] && version="release/${LLVM_VERSION}.x"
-  [[ "${LLVM_VERSION_MAJOR}" -ge 4 ]] && version="release/${LLVM_VERSION_MAJOR}.x"
-
+  local version="release/${LLVM_VERSION_MAJOR}.x"
 
   git clone --single-branch --branch "${version}" --depth 1 "https://github.com/llvm/llvm-project.git" "${LIBCXX_SRC}"
-  
-  # Prepare LLVM subprojects for older LLVM versions
-  cd "${LIBCXX_SRC}/llvm/projects"
-  ln -s ../../libcxx .
-  ln -s ../../libcxxabi .
+
+  # Apply existing patches if needed
+  if [ -f "${DIR}/patches/libcxx${LLVM_VERSION_SHORT}.patch" ]; then
+     cd "${LIBCXX_SRC}" || (echo "Directory does not exist"; exit 1)
+     patch -p1 --follow-symlinks -i "${DIR}/patches/libcxx${LLVM_VERSION_SHORT}.patch" || return 1
+  fi
+
 
   touch "${LIBCXX_SRC}/.src_checked_out" 
 }
@@ -55,7 +53,7 @@ build_libcxx() {
     export LLVM_COMPILER_PATH="$(dirname "${BITCODE_CC}")"
 
     cmake "${cmake_flags[@]}" "${LIBCXX_SRC}/llvm"
-    make cxx
+    make cxx -j$(nproc) || make cxx
   )
 }
 
@@ -79,7 +77,7 @@ install_libcxx() {
     fi
 
     local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
-    [[ "${LLVM_VERSION_MAJOR}" -ge 6 ]] && libraries+=("${LIBCXX_INSTALL}"/lib/lib*.a)
+    libraries+=("${LIBCXX_INSTALL}"/lib/lib*.a)
 
 
     for p in "${libraries[@]}" ; do
@@ -108,8 +106,8 @@ get_docker_config_id_libcxx() {
 get_build_artifacts_libcxx() {
   (
     setup_build_variables_libcxx
-    echo "${LIBCXX_SRC}"
     echo "${LIBCXX_INSTALL}"
+    echo "${LIBCXX_SRC}"
   )
 }
 

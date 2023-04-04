@@ -15,7 +15,7 @@
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/ExprUtil.h"
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Support/ErrorHandling.h"
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverImpl.h"
 
@@ -194,7 +194,7 @@ bool MetaSMTSolverImpl<SolverContext>::computeInitialValues(
   TimerStatIncrementer t(stats::queryTime);
   assert(_builder);
 
-  ++stats::queries;
+  ++stats::solverQueries;
   ++stats::queryCounterexamples;
 
   bool success = true;
@@ -225,11 +225,9 @@ SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCex(
     std::vector<std::vector<unsigned char> > &values, bool &hasSolution) {
 
   // assume the constraints of the query
-  for (ConstraintManager::const_iterator it = query.constraints.begin(),
-                                         ie = query.constraints.end();
-       it != ie; ++it) {
-    assumption(_meta_solver, _builder->construct(*it));
-  }
+  for (auto &constraint : query.constraints)
+    assumption(_meta_solver, _builder->construct(constraint));
+
   // assume the negation of the query
   assumption(_meta_solver, _builder->construct(Expr::createIsZero(query.expr)));
   hasSolution = solve(_meta_solver);
@@ -303,10 +301,8 @@ MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
     }
 
     // assert constraints as we are in a child process
-    for (ConstraintManager::const_iterator it = query.constraints.begin(),
-                                           ie = query.constraints.end();
-         it != ie; ++it) {
-      assertion(_meta_solver, _builder->construct(*it));
+    for (const auto &constraint : query.constraints) {
+      assertion(_meta_solver, _builder->construct(constraint));
       // assumption(_meta_solver, _builder->construct(*it));
     }
 

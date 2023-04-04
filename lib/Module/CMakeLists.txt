@@ -22,15 +22,11 @@ set(KLEE_MODULE_COMPONENT_SRCS
   RaiseAsm.cpp
 )
 
-if (USE_WORKAROUND_LLVM_PR39177)
-  list(APPEND KLEE_MODULE_COMPONENT_SRCS WorkaroundLLVMPR39177.cpp)
-endif()
-
-klee_add_component(kleeModule
+add_library(kleeModule
   ${KLEE_MODULE_COMPONENT_SRCS}
 )
 
-set(LLVM_COMPONENTS
+llvm_config(kleeModule "${USE_LLVM_SHARED}"
   bitreader
   bitwriter
   codegen
@@ -38,10 +34,18 @@ set(LLVM_COMPONENTS
   irreader
   linker
   support
-)
+  scalaropts
+  instcombine
+  transformutils
+  analysis
+  object
+  mc
+  binaryformat
+  )
 
-klee_get_llvm_libs(LLVM_LIBS ${LLVM_COMPONENTS})
-target_link_libraries(kleeModule PUBLIC ${LLVM_LIBS})
 target_link_libraries(kleeModule PRIVATE
   kleeSupport
 )
+target_include_directories(kleeModule PRIVATE ${KLEE_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})
+target_compile_options(kleeModule PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
+target_compile_definitions(kleeModule PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})

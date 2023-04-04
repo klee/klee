@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Internal/Module/KInstruction.h"
+#include "klee/Module/KInstruction.h"
 #include <string>
 
 using namespace llvm;

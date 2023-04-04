@@ -9,11 +9,13 @@
 
 #include "TimingSolver.h"
 
+#include "ExecutionState.h"
+
 #include "klee/Config/Version.h"
-#include "klee/ExecutionState.h"
+#include "klee/Statistics/Statistics.h"
+#include "klee/Statistics/TimerStatIncrementer.h"
 #include "klee/Solver/Solver.h"
-#include "klee/Statistics.h"
-#include "klee/TimerStatIncrementer.h"
+#include "klee/Solver/SolverStats.h"
 
 #include "CoreStats.h"
 
@@ -22,8 +24,10 @@ using namespace llvm;
 
 /***/
 
-bool TimingSolver::evaluate(const ExecutionState& state, ref<Expr> expr,
-                            Solver::Validity &result) {
+bool TimingSolver::evaluate(const ConstraintSet &constraints, ref<Expr> expr,
+                            Solver::Validity &result,
+                            SolverQueryMetaData &metaData) {
+  ++stats::queries;
   // Fast path, to avoid timer and OS overhead.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
     result = CE->isTrue() ? Solver::True : Solver::False;
@@ -33,17 +37,18 @@ bool TimingSolver::evaluate(const ExecutionState& state, ref<Expr> expr,
   TimerStatIncrementer timer(stats::solverTime);
 
   if (simplifyExprs)
-    expr = state.constraints.simplifyExpr(expr);
+    expr = ConstraintManager::simplifyExpr(constraints, expr);
 
-  bool success = solver->evaluate(Query(state.constraints, expr), result);
+  bool success = solver->evaluate(Query(constraints, expr), result);
 
-  state.queryCost += timer.check();
+  metaData.queryCost += timer.delta();
 
   return success;
 }
 
-bool TimingSolver::mustBeTrue(const ExecutionState& state, ref<Expr> expr, 
-                              bool &result) {
+bool TimingSolver::mustBeTrue(const ConstraintSet &constraints, ref<Expr> expr,
+                              bool &result, SolverQueryMetaData &metaData) {
+  ++stats::queries;
   // Fast path, to avoid timer and OS overhead.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
     result = CE->isTrue() ? true : false;
@@ -53,40 +58,42 @@ bool TimingSolver::mustBeTrue(const ExecutionState& state, ref<Expr> expr,
   TimerStatIncrementer timer(stats::solverTime);
 
   if (simplifyExprs)
-    expr = state.constraints.simplifyExpr(expr);
+    expr = ConstraintManager::simplifyExpr(constraints, expr);
 
-  bool success = solver->mustBeTrue(Query(state.constraints, expr), result);
+  bool success = solver->mustBeTrue(Query(constraints, expr), result);
 
-  state.queryCost += timer.check();
+  metaData.queryCost += timer.delta();
 
   return success;
 }
 
-bool TimingSolver::mustBeFalse(const ExecutionState& state, ref<Expr> expr,
-                               bool &result) {
-  return mustBeTrue(state, Expr::createIsZero(expr), result);
+bool TimingSolver::mustBeFalse(const ConstraintSet &constraints, ref<Expr> expr,
+                               bool &result, SolverQueryMetaData &metaData) {
+  return mustBeTrue(constraints, Expr::createIsZero(expr), result, metaData);
 }
 
-bool TimingSolver::mayBeTrue(const ExecutionState& state, ref<Expr> expr, 
-                             bool &result) {
+bool TimingSolver::mayBeTrue(const ConstraintSet &constraints, ref<Expr> expr,
+                             bool &result, SolverQueryMetaData &metaData) {
   bool res;
-  if (!mustBeFalse(state, expr, res))
+  if (!mustBeFalse(constraints, expr, res, metaData))
     return false;
   result = !res;
   return true;
 }
 
-bool TimingSolver::mayBeFalse(const ExecutionState& state, ref<Expr> expr, 
-                              bool &result) {
+bool TimingSolver::mayBeFalse(const ConstraintSet &constraints, ref<Expr> expr,
+                              bool &result, SolverQueryMetaData &metaData) {
   bool res;
-  if (!mustBeTrue(state, expr, res))
+  if (!mustBeTrue(constraints, expr, res, metaData))
     return false;
   result = !res;
   return true;
 }
 
-bool TimingSolver::getValue(const ExecutionState& state, ref<Expr> expr, 
-                            ref<ConstantExpr> &result) {
+bool TimingSolver::getValue(const ConstraintSet &constraints, ref<Expr> expr,
+                            ref<ConstantExpr> &result,
+                            SolverQueryMetaData &metaData) {
+  ++stats::queries;
   // Fast path, to avoid timer and OS overhead.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
     result = CE;
@@ -96,36 +103,39 @@ bool TimingSolver::getValue(const ExecutionState& state, ref<Expr> expr,
   TimerStatIncrementer timer(stats::solverTime);
 
   if (simplifyExprs)
-    expr = state.constraints.simplifyExpr(expr);
+    expr = ConstraintManager::simplifyExpr(constraints, expr);
 
-  bool success = solver->getValue(Query(state.constraints, expr), result);
+  bool success = solver->getValue(Query(constraints, expr), result);
 
-  state.queryCost += timer.check();
+  metaData.queryCost += timer.delta();
 
   return success;
 }
 
-bool 
-TimingSolver::getInitialValues(const ExecutionState& state, 
-                               const std::vector<const Array*>
-                                 &objects,
-                               std::vector< std::vector<unsigned char> >
-                                 &result) {
+bool TimingSolver::getInitialValues(
+    const ConstraintSet &constraints, const std::vector<const Array *> &objects,
+    std::vector<std::vector<unsigned char>> &result,
+    SolverQueryMetaData &metaData) {
+  ++stats::queries;
   if (objects.empty())
     return true;
 
   TimerStatIncrementer timer(stats::solverTime);
 
-  bool success = solver->getInitialValues(Query(state.constraints,
-                                                ConstantExpr::alloc(0, Expr::Bool)), 
-                                          objects, result);
-  
-  state.queryCost += timer.check();
-  
+  bool success = solver->getInitialValues(
+      Query(constraints, ConstantExpr::alloc(0, Expr::Bool)), objects, result);
+
+  metaData.queryCost += timer.delta();
+
   return success;
 }
 
-std::pair< ref<Expr>, ref<Expr> >
-TimingSolver::getRange(const ExecutionState& state, ref<Expr> expr) {
-  return solver->getRange(Query(state.constraints, expr));
+std::pair<ref<Expr>, ref<Expr>>
+TimingSolver::getRange(const ConstraintSet &constraints, ref<Expr> expr,
+                       SolverQueryMetaData &metaData) {
+  ++stats::queries;
+  TimerStatIncrementer timer(stats::solverTime);
+  auto result = solver->getRange(Query(constraints, expr));
+  metaData.queryCost += timer.delta();
+  return result;
 }

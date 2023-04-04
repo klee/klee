@@ -15,7 +15,7 @@
 #include "klee/Solver/SolverCmdLine.h"
 
 #include "klee/Config/Version.h"
-#include "klee/OptionCategories.h"
+#include "klee/Support/OptionCategories.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
@@ -104,8 +104,7 @@ cl::bits<QueryLoggingSolverType> QueryLoggingOptions(
             "All queries reaching the solver in .kquery (KQuery) format"),
         clEnumValN(
             SOLVER_SMTLIB, "solver:smt2",
-            "All queries reaching the solver in .smt2 (SMT-LIBv2) format")
-            KLEE_LLVM_CL_VAL_END),
+            "All queries reaching the solver in .smt2 (SMT-LIBv2) format")),
     cl::CommaSeparated, cl::cat(SolvingCat));
 
 cl::opt<bool> UseAssignmentValidatingSolver(
@@ -118,18 +117,10 @@ void KCommandLine::HideOptions(llvm::cl::OptionCategory &Category) {
   StringMap<cl::Option *> &map = cl::getRegisteredOptions();
 
   for (auto &elem : map) {
-    if (elem.second->Category == &Category) {
-      elem.second->setHiddenFlag(cl::Hidden);
-    }
-  }
-}
-
-void KCommandLine::HideUnrelatedOptions(cl::OptionCategory &Category) {
-  StringMap<cl::Option *> &map = cl::getRegisteredOptions();
-  for (StringMap<cl::Option *>::iterator i = map.begin(), e = map.end(); i != e;
-       i++) {
-    if (i->second->Category != &Category) {
-      i->second->setHiddenFlag(cl::Hidden);
+    for (auto &cat : elem.second->Categories) {
+      if (cat == &Category) {
+        elem.second->setHiddenFlag(cl::Hidden);
+      }
     }
   }
 }
@@ -161,8 +152,7 @@ MetaSMTBackend("metasmt-backend",
                           clEnumValN(METASMT_BACKEND_BOOLECTOR, "btor",
                                      "Use metaSMT with Boolector"),
                           clEnumValN(METASMT_BACKEND_CVC4, "cvc4", "Use metaSMT with CVC4"),
-                          clEnumValN(METASMT_BACKEND_YICES2, "yices2", "Use metaSMT with Yices2")
-                          KLEE_LLVM_CL_VAL_END),
+                          clEnumValN(METASMT_BACKEND_YICES2, "yices2", "Use metaSMT with Yices2")),
                cl::init(METASMT_DEFAULT_BACKEND),
                cl::cat(SolvingCat));
 
@@ -198,8 +188,7 @@ cl::opt<CoreSolverType> CoreSolverToUse(
                clEnumValN(METASMT_SOLVER, "metasmt",
                           "metaSMT" METASMT_IS_DEFAULT_STR),
                clEnumValN(DUMMY_SOLVER, "dummy", "Dummy solver"),
-               clEnumValN(Z3_SOLVER, "z3", "Z3" Z3_IS_DEFAULT_STR)
-                   KLEE_LLVM_CL_VAL_END),
+               clEnumValN(Z3_SOLVER, "z3", "Z3" Z3_IS_DEFAULT_STR)),
     cl::init(DEFAULT_CORE_SOLVER), cl::cat(SolvingCat));
 
 cl::opt<CoreSolverType> DebugCrossCheckCoreSolverWith(
@@ -210,8 +199,7 @@ cl::opt<CoreSolverType> DebugCrossCheckCoreSolverWith(
                clEnumValN(METASMT_SOLVER, "metasmt", "metaSMT"),
                clEnumValN(DUMMY_SOLVER, "dummy", "Dummy solver"),
                clEnumValN(Z3_SOLVER, "z3", "Z3"),
-               clEnumValN(NO_SOLVER, "none", "Do not crosscheck (default)")
-                   KLEE_LLVM_CL_VAL_END),
+               clEnumValN(NO_SOLVER, "none", "Do not crosscheck (default)")),
     cl::init(NO_SOLVER), cl::cat(SolvingCat));
 } // namespace klee
 

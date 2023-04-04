@@ -9,12 +9,11 @@
 
 #include "UserSearcher.h"
 
-#include "Searcher.h"
 #include "Executor.h"
+#include "MergeHandler.h"
+#include "Searcher.h"
 
-#include "klee/Internal/Support/ErrorHandling.h"
-#include "klee/MergeHandler.h"
-#include "klee/Solver/SolverCmdLine.h"
+#include "klee/Support/ErrorHandling.h"
 
 #include "llvm/Support/CommandLine.h"
 
@@ -42,13 +41,13 @@ cl::list<Searcher::CoreSearchType> CoreSearch(
                    "use Non Uniform Random Search (NURS) with Coverage-New"),
         clEnumValN(Searcher::NURS_MD2U, "nurs:md2u",
                    "use NURS with Min-Dist-to-Uncovered"),
-        clEnumValN(Searcher::NURS_Depth, "nurs:depth", "use NURS with 2^depth"),
+        clEnumValN(Searcher::NURS_Depth, "nurs:depth", "use NURS with depth"),
+        clEnumValN(Searcher::NURS_RP, "nurs:rp", "use NURS with 1/2^depth"),
         clEnumValN(Searcher::NURS_ICnt, "nurs:icnt",
                    "use NURS with Instr-Count"),
         clEnumValN(Searcher::NURS_CPICnt, "nurs:cpicnt",
                    "use NURS with CallPath-Instr-Count"),
-        clEnumValN(Searcher::NURS_QC, "nurs:qc", "use NURS with Query-Cost")
-            KLEE_LLVM_CL_VAL_END),
+        clEnumValN(Searcher::NURS_QC, "nurs:qc", "use NURS with Query-Cost")),
     cl::cat(SearchCat));
 
 cl::opt<bool> UseIterativeDeepeningTimeSearch(
@@ -97,26 +96,27 @@ void klee::initializeSearchOptions() {
 
 bool klee::userSearcherRequiresMD2U() {
   return (std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_MD2U) != CoreSearch.end() ||
-	  std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_CovNew) != CoreSearch.end() ||
-	  std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_ICnt) != CoreSearch.end() ||
-	  std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_CPICnt) != CoreSearch.end() ||
-	  std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_QC) != CoreSearch.end());
+          std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_CovNew) != CoreSearch.end() ||
+          std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_ICnt) != CoreSearch.end() ||
+          std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_CPICnt) != CoreSearch.end() ||
+          std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_QC) != CoreSearch.end());
 }
 
 
-Searcher *getNewSearcher(Searcher::CoreSearchType type, Executor &executor) {
-  Searcher *searcher = NULL;
+Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng, PTree &processTree) {
+  Searcher *searcher = nullptr;
   switch (type) {
-  case Searcher::DFS: searcher = new DFSSearcher(); break;
-  case Searcher::BFS: searcher = new BFSSearcher(); break;
-  case Searcher::RandomState: searcher = new RandomSearcher(); break;
-  case Searcher::RandomPath: searcher = new RandomPathSearcher(executor); break;
-  case Searcher::NURS_CovNew: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::CoveringNew); break;
-  case Searcher::NURS_MD2U: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::MinDistToUncovered); break;
-  case Searcher::NURS_Depth: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::Depth); break;
-  case Searcher::NURS_ICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::InstCount); break;
-  case Searcher::NURS_CPICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::CPInstCount); break;
-  case Searcher::NURS_QC: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::QueryCost); break;
+    case Searcher::DFS: searcher = new DFSSearcher(); break;
+    case Searcher::BFS: searcher = new BFSSearcher(); break;
+    case Searcher::RandomState: searcher = new RandomSearcher(rng); break;
+    case Searcher::RandomPath: searcher = new RandomPathSearcher(processTree, rng); break;
+    case Searcher::NURS_CovNew: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::CoveringNew, rng); break;
+    case Searcher::NURS_MD2U: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::MinDistToUncovered, rng); break;
+    case Searcher::NURS_Depth: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::Depth, rng); break;
+    case Searcher::NURS_RP: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::RP, rng); break;
+    case Searcher::NURS_ICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::InstCount, rng); break;
+    case Searcher::NURS_CPICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::CPInstCount, rng); break;
+    case Searcher::NURS_QC: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::QueryCost, rng); break;
   }
 
   return searcher;
@@ -124,34 +124,32 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, Executor &executor) {
 
 Searcher *klee::constructUserSearcher(Executor &executor) {
 
-  Searcher *searcher = getNewSearcher(CoreSearch[0], executor);
-  
+  Searcher *searcher = getNewSearcher(CoreSearch[0], executor.theRNG, *executor.processTree);
+
   if (CoreSearch.size() > 1) {
     std::vector<Searcher *> s;
     s.push_back(searcher);
 
-    for (unsigned i=1; i<CoreSearch.size(); i++)
-      s.push_back(getNewSearcher(CoreSearch[i], executor));
-    
+    for (unsigned i = 1; i < CoreSearch.size(); i++)
+      s.push_back(getNewSearcher(CoreSearch[i], executor.theRNG, *executor.processTree));
+
     searcher = new InterleavedSearcher(s);
   }
 
-  if (UseMerge) {
-    if (std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::RandomPath) != CoreSearch.end()){
-      klee_error("use-merge currently does not support random-path, please use another search strategy");
-    }
-  }
-
   if (UseBatchingSearch) {
-    searcher = new BatchingSearcher(searcher, time::Span(BatchTime), BatchInstructions);
-  }
-
-  if (UseMerge && UseIncompleteMerge) {
-    searcher = new MergingSearcher(executor, searcher);
+    searcher = new BatchingSearcher(searcher, time::Span(BatchTime),
+                                    BatchInstructions);
   }
 
   if (UseIterativeDeepeningTimeSearch) {
     searcher = new IterativeDeepeningTimeSearcher(searcher);
+  }
+
+  if (UseMerge) {
+    auto *ms = new MergingSearcher(searcher);
+    executor.setMergingSearcher(ms);
+
+    searcher = ms;
   }
 
   llvm::raw_ostream &os = executor.getHandler().getInfoStream();

@@ -9,13 +9,13 @@
 
 #include "CallPathManager.h"
 
-#include "klee/Statistics.h"
+#include "klee/Statistics/Statistics.h"
+
+#include "llvm/IR/Function.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <map>
 #include <vector>
-#include "llvm/IR/Function.h"
-
-#include "llvm/Support/raw_ostream.h"
 
 using namespace klee;
 

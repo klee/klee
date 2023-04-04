@@ -1,15 +1,15 @@
 # Build dependencies
 install_build_dependencies_klee() {
-  set +e
   brew upgrade python               # upgrade to Python 3
-  brew install python@2             # install Python 2 (OSX version outdated + pip missing)
-  brew link --overwrite python@2    # keg-only => link manually
-  rm -f /usr/local/bin/{python,pip} # re-link python/pip to Python 2
-  py2path=$(find /usr/local/Cellar/python@2/ -name "python" -type f | head -n 1)
-  pip2path=$(find /usr/local/Cellar/python@2/ -name "pip" -type f | head -n 1)
-  ln -s "${py2path}" /usr/local/bin/python
-  ln -s "${pip2path}" /usr/local/bin/pip
-  set -e
-  pip install lit
-  pip3 install tabulate
+  brew link --overwrite python
+
+  if [[ $(to_bool "${ENABLE_DOXYGEN}") -eq 1 ]]; then
+    brew install doxygen graphviz
+  fi
+
+  pip3 install --user --upgrade lit tabulate
+
+  # Get path of package location
+  base_path=$(python3 -m site --user-base)
+  export PATH="${base_path}/bin:$PATH"
 }

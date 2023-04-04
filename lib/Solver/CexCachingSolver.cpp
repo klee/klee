@@ -9,17 +9,17 @@
 
 #include "klee/Solver/Solver.h"
 
+#include "klee/ADT/MapOfSets.h"
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Expr/ExprVisitor.h"
-#include "klee/Internal/ADT/MapOfSets.h"
-#include "klee/Internal/Support/ErrorHandling.h"
-#include "klee/OptionCategories.h"
+#include "klee/Support/OptionCategories.h"
+#include "klee/Statistics/TimerStatIncrementer.h"
 #include "klee/Solver/SolverImpl.h"
 #include "klee/Solver/SolverStats.h"
-#include "klee/TimerStatIncrementer.h"
+#include "klee/Support/ErrorHandling.h"
 
 #include "llvm/Support/CommandLine.h"
 
@@ -123,7 +123,7 @@ struct NullOrSatisfyingAssignment {
 /// searchForAssignment - Look for a cached solution for a query.
 ///
 /// \param key - The query to look up.
-/// \param result [out] - The cached result, if the lookup is succesful. This is
+/// \param result [out] - The cached result, if the lookup is successful. This is
 /// either a satisfying assignment (for a satisfiable query), or 0 (for an
 /// unsatisfiable query).
 /// \return - True if a cached result was found.
@@ -192,7 +192,7 @@ bool CexCachingSolver::searchForAssignment(KeyType &key, Assignment *&result) {
 ///
 /// \param query - The query to lookup.
 /// \param key [out] - On return, the key constructed for the query.
-/// \param result [out] - The cached result, if the lookup is succesful. This is
+/// \param result [out] - The cached result, if the lookup is successful. This is
 /// either a satisfying assignment (for a satisfiable query), or 0 (for an
 /// unsatisfiable query).
 /// \return True if a cached result was found.

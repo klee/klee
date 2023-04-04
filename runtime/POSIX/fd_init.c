@@ -14,12 +14,9 @@
 #include "klee/klee.h"
 
 #include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
-#include <sys/syscall.h>
-#include <unistd.h>
 
 exe_file_system_t __exe_fs;
 
@@ -39,13 +36,15 @@ exe_sym_env_t __exe_env = {
    { 1, eOpen | eWriteable, 0, 0}, 
    { 2, eOpen | eWriteable, 0, 0}},
   022,
-  0,
   0
 };
 
 static void __create_new_dfile(exe_disk_file_t *dfile, unsigned size, 
                                const char *name, struct stat64 *defaults) {
   struct stat64 *s = malloc(sizeof(*s));
+  if (!s)
+    klee_report_error(__FILE__, __LINE__, "out of memory in klee_init_env", "user.err");
+
   const char *sp;
   char sname[64];
   for (sp=name; *sp; ++sp)
@@ -56,6 +55,8 @@ static void __create_new_dfile(exe_disk_file_t *dfile, unsigned size,
 
   dfile->size = size;
   dfile->contents = malloc(dfile->size);
+  if (!dfile->contents)
+    klee_report_error(__FILE__, __LINE__, "out of memory in klee_init_env", "user.err");
   klee_make_symbolic(dfile->contents, dfile->size, name);
   
   klee_make_symbolic(s, sizeof(*s), sname);
@@ -94,12 +95,6 @@ static void __create_new_dfile(exe_disk_file_t *dfile, unsigned size,
   dfile->stat = s;
 }
 
-static unsigned __sym_uint32(const char *name) {
-  unsigned x;
-  klee_make_symbolic(&x, sizeof x, name);
-  return x;
-}
-
 /* n_files: number of symbolic input files, excluding stdin
    file_length: size in bytes of each symbolic file, including stdin
    sym_stdout_flag: 1 if stdout should be symbolic, 0 otherwise
@@ -118,6 +113,9 @@ void klee_init_fds(unsigned n_files, unsigned file_length,
 
   __exe_fs.n_sym_files = n_files;
   __exe_fs.sym_files = malloc(sizeof(*__exe_fs.sym_files) * n_files);
+  if (n_files && !__exe_fs.sym_files)
+    klee_report_error(__FILE__, __LINE__, "out of memory in klee_init_env", "user.err");
+
   for (k=0; k < n_files; k++) {
     name[0] = 'A' + k;
     __create_new_dfile(&__exe_fs.sym_files[k], file_length, name, &s);
@@ -126,6 +124,8 @@ void klee_init_fds(unsigned n_files, unsigned file_length,
   /* setting symbolic stdin */
   if (stdin_length) {
     __exe_fs.sym_stdin = malloc(sizeof(*__exe_fs.sym_stdin));
+    if (!__exe_fs.sym_stdin)
+      klee_report_error(__FILE__, __LINE__, "out of memory in klee_init_env", "user.err");
     __create_new_dfile(__exe_fs.sym_stdin, stdin_length, "stdin", &s);
     __exe_env.fds[0].dfile = __exe_fs.sym_stdin;
   }
@@ -138,6 +138,9 @@ void klee_init_fds(unsigned n_files, unsigned file_length,
     __exe_fs.close_fail = malloc(sizeof(*__exe_fs.close_fail));
     __exe_fs.ftruncate_fail = malloc(sizeof(*__exe_fs.ftruncate_fail));
     __exe_fs.getcwd_fail = malloc(sizeof(*__exe_fs.getcwd_fail));
+    if (!(__exe_fs.read_fail && __exe_fs.write_fail && __exe_fs.close_fail
+          && __exe_fs.ftruncate_fail && __exe_fs.getcwd_fail))
+      klee_report_error(__FILE__, __LINE__, "out of memory in klee_init_env", "user.err");
 
     klee_make_symbolic(__exe_fs.read_fail, sizeof(*__exe_fs.read_fail), "read_fail");
     klee_make_symbolic(__exe_fs.write_fail, sizeof(*__exe_fs.write_fail), "write_fail");
@@ -149,6 +152,8 @@ void klee_init_fds(unsigned n_files, unsigned file_length,
   /* setting symbolic stdout */
   if (sym_stdout_flag) {
     __exe_fs.sym_stdout = malloc(sizeof(*__exe_fs.sym_stdout));
+    if (!__exe_fs.sym_stdout)
+      klee_report_error(__FILE__, __LINE__, "out of memory in klee_init_env", "user.err");
     __create_new_dfile(__exe_fs.sym_stdout, 1024, "stdout", &s);
     __exe_env.fds[1].dfile = __exe_fs.sym_stdout;
     __exe_fs.stdout_writes = 0;
@@ -156,6 +161,4 @@ void klee_init_fds(unsigned n_files, unsigned file_length,
   else __exe_fs.sym_stdout = NULL;
   
   __exe_env.save_all_writes = save_all_writes_flag;
-  __exe_env.version = __sym_uint32("model_version");
-  klee_assume(__exe_env.version == 1);
 }

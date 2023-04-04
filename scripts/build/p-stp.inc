@@ -1,6 +1,4 @@
-#!/bin/bash
 # Build scripts for STP
-
 # Variables that any artifact of this package might depend on
 setup_build_variables_stp() {
   STP_SUFFIX="${SANITIZER_SUFFIX}"
@@ -65,6 +63,7 @@ build_stp() {
       "-DNO_BOOST:BOOL=ON"
       "-DENABLE_PYTHON_INTERFACE:BOOL=OFF"
       "-DONLY_SIMPLE:BOOL=ON"
+      "-DNOCRYPTOMINISAT=ON"
       "-DCMAKE_PREFIX_PATH=${MINISAT_INSTALL_PATH}"
       "-DCMAKE_INSTALL_PREFIX=${STP_INSTALL_PATH}"
   )

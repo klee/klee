@@ -1,4 +1,4 @@
-; RUN: llvm-as %s -f -o %t1.bc
+; RUN: %llvmas %s -f -o %t1.bc
 ; RUN: rm -rf %t.klee-out
 ; RUN: %klee --output-dir=%t.klee-out --optimize=false -search=nurs:md2u %t1.bc > %t2
 ; RUN: grep PASS %t2

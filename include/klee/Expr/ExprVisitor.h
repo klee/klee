@@ -23,7 +23,7 @@ namespace klee {
     private:
       //      Action() {}
       Action(Kind _kind) 
-        : kind(_kind), argument(ConstantExpr::alloc(0, Expr::Bool)) {}
+        : kind(_kind), argument(nullptr) {}
       Action(Kind _kind, const ref<Expr> &_argument) 
         : kind(_kind), argument(_argument) {}
 

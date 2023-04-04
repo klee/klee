@@ -1,4 +1,4 @@
-#include "klee/Internal/ADT/DiscretePDF.h"
+#include "klee/ADT/DiscretePDF.h"
 #include "gtest/gtest.h"
 #include <iostream>
 #include <vector>

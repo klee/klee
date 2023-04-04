@@ -7,15 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "klee/Internal/System/MemoryUsage.h"
+#include "klee/System/MemoryUsage.h"
 
 #include "klee/Config/config.h"
+#include "klee/Support/ErrorHandling.h"
 
 #ifdef HAVE_GPERFTOOLS_MALLOC_EXTENSION_H
 #include "gperftools/malloc_extension.h"
 #endif
 
-#ifdef HAVE_MALLINFO
+#if defined(HAVE_MALLINFO) || defined(HAVE_MALLINFO2)
 #include <malloc.h>
 #endif
 #ifdef HAVE_MALLOC_ZONE_STATISTICS
@@ -95,6 +96,10 @@ size_t util::GetTotalMallocUsage() {
   MallocExtension::instance()->GetNumericProperty(
       "generic.current_allocated_bytes", &value);
   return value;
+#elif defined(HAVE_MALLINFO2)
+  // niy in tcmalloc
+  struct mallinfo2 mi = ::mallinfo2();
+  return mi.uordblks + mi.hblkhd;
 #elif defined(HAVE_MALLINFO)
   struct mallinfo mi = ::mallinfo();
   // The malloc implementation in glibc (pmalloc2)
@@ -108,10 +113,22 @@ size_t util::GetTotalMallocUsage() {
 
 #elif defined(HAVE_MALLOC_ZONE_STATISTICS)
 
-  // Support memory usage on Darwin.
-  malloc_statistics_t Stats;
-  malloc_zone_statistics(malloc_default_zone(), &Stats);
-  return Stats.size_in_use;
+  // Memory usage on macOS
+
+  malloc_statistics_t stats;
+  malloc_zone_t **zones;
+  unsigned int num_zones;
+
+  if (malloc_get_all_zones(0, nullptr, (vm_address_t **)&zones, &num_zones) !=
+      KERN_SUCCESS)
+    klee_error("malloc_get_all_zones failed.");
+
+  size_t total = 0;
+  for (unsigned i = 0; i < num_zones; i++) {
+    malloc_zone_statistics(zones[i], &stats);
+    total += stats.size_in_use;
+  }
+  return total;
 
 #else // HAVE_MALLINFO
 

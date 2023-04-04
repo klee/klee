@@ -15,6 +15,7 @@
 #endif
 #endif
 
+#define INSIDE_FD_64
 #define _LARGEFILE64_SOURCE
 #define _FILE_OFFSET_BITS 64
 #include "fd.h"
@@ -72,6 +73,16 @@ int openat(int fd, const char *pathname, int flags, ...) {
   return __fd_openat(fd, pathname, flags, mode);
 }
 
+/* removed in glibc 2.33 */
+#ifdef __REDIRECT_NTH
+extern int __REDIRECT_NTH(__fxstat, (int __ver, int __fildes,
+                          struct stat *__stat_buf), __fxstat64);
+extern int __REDIRECT_NTH(__xstat, (int __ver, const char *__filename,
+                          struct stat *__stat_buf), __xstat64);
+extern int __REDIRECT_NTH(__lxstat, (int __ver, const char *__filename,
+                          struct stat *__stat_buf), __lxstat64);
+#endif
+
 off64_t lseek(int fd, off64_t offset, int whence) {
   return __fd_lseek(fd, offset, whence);
 }
@@ -109,8 +120,8 @@ int statfs(const char *path, struct statfs *buf) {
   return __fd_statfs(path, buf);
 }
 
-int getdents64(unsigned int fd, struct dirent *dirp, unsigned int count) {
+ssize_t getdents64(int fd, void *dirp, size_t count) {
   return __fd_getdents(fd, (struct dirent64*) dirp, count);
 }
-int __getdents64(unsigned int fd, struct dirent *dirp, unsigned int count)
+ssize_t __getdents64(int fd, void *dirp, size_t count)
      __attribute__((alias("getdents64")));

@@ -1,0 +1,6 @@
+RUN: %klee-stats --print-all %S/klee-stats/missing_column %S/klee-stats/run %S/klee-stats/additional_column | FileCheck %s
+
+// Path, Instrs, ..., extra_column
+CHECK: {{^}}| missing_column  |        |{{.*}}|             |{{$}}
+CHECK: {{^}}|       run       |       3|{{.*}}|             |{{$}}
+CHECK: {{^}}|additional_column|       3|{{.*}}|         4711|{{$}}

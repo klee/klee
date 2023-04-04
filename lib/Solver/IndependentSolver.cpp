@@ -14,7 +14,7 @@
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprUtil.h"
-#include "klee/Internal/Support/Debug.h"
+#include "klee/Support/Debug.h"
 #include "klee/Solver/SolverImpl.h"
 
 #include "llvm/Support/raw_ostream.h"
@@ -120,8 +120,7 @@ public:
       const Array *array = re->updates.root;
       
       // Reads of a constant array don't alias.
-      if (re->updates.root->isConstantArray() &&
-          !re->updates.head)
+      if (re->updates.root->isConstantArray() && !re->updates.head)
         continue;
 
       if (!wholeObjects.count(array)) {
@@ -272,15 +271,13 @@ getAllIndependentConstraintsSets(const Query &query) {
     factors->push_back(IndependentElementSet(neg));
   }
 
-  for (ConstraintManager::const_iterator it = query.constraints.begin(),
-                                         ie = query.constraints.end();
-       it != ie; ++it) {
+  for (const auto &constraint : query.constraints) {
     // iterate through all the previously separated constraints.  Until we
     // actually return, factors is treated as a queue of expressions to be
     // evaluated.  If the queue property isn't maintained, then the exprs
     // could be returned in an order different from how they came it, negatively
     // affecting later stages.
-    factors->push_back(IndependentElementSet(*it));
+    factors->push_back(IndependentElementSet(constraint));
   }
 
   bool doneLoop = false;
@@ -326,9 +323,9 @@ IndependentElementSet getIndependentConstraints(const Query& query,
   IndependentElementSet eltsClosure(query.expr);
   std::vector< std::pair<ref<Expr>, IndependentElementSet> > worklist;
 
-  for (ConstraintManager::const_iterator it = query.constraints.begin(), 
-         ie = query.constraints.end(); it != ie; ++it)
-    worklist.push_back(std::make_pair(*it, IndependentElementSet(*it)));
+  for (const auto &constraint : query.constraints)
+    worklist.push_back(
+        std::make_pair(constraint, IndependentElementSet(constraint)));
 
   // XXX This should be more efficient (in terms of low level copy stuff).
   bool done = false;
@@ -356,11 +353,10 @@ IndependentElementSet getIndependentConstraints(const Query& query,
     errs() << "Q: " << query.expr << "\n";
     errs() << "\telts: " << IndependentElementSet(query.expr) << "\n";
     int i = 0;
-    for (ConstraintManager::const_iterator it = query.constraints.begin(),
-        ie = query.constraints.end(); it != ie; ++it) {
-      errs() << "C" << i++ << ": " << *it;
-      errs() << " " << (reqset.count(*it) ? "(required)" : "(independent)") << "\n";
-      errs() << "\telts: " << IndependentElementSet(*it) << "\n";
+    for (const auto &constraint: query.constraints) {
+      errs() << "C" << i++ << ": " << constraint;
+      errs() << " " << (reqset.count(constraint) ? "(required)" : "(independent)") << "\n";
+      errs() << "\telts: " << IndependentElementSet(constraint) << "\n";
     }
     errs() << "elts closure: " << eltsClosure << "\n";
  );
@@ -416,7 +412,7 @@ bool IndependentSolver::computeValidity(const Query& query,
   std::vector< ref<Expr> > required;
   IndependentElementSet eltsClosure =
     getIndependentConstraints(query, required);
-  ConstraintManager tmp(required);
+  ConstraintSet tmp(required);
   return solver->impl->computeValidity(Query(tmp, query.expr), 
                                        result);
 }
@@ -425,7 +421,7 @@ bool IndependentSolver::computeTruth(const Query& query, bool &isValid) {
   std::vector< ref<Expr> > required;
   IndependentElementSet eltsClosure = 
     getIndependentConstraints(query, required);
-  ConstraintManager tmp(required);
+  ConstraintSet tmp(required);
   return solver->impl->computeTruth(Query(tmp, query.expr), 
                                     isValid);
 }
@@ -434,7 +430,7 @@ bool IndependentSolver::computeValue(const Query& query, ref<Expr> &result) {
   std::vector< ref<Expr> > required;
   IndependentElementSet eltsClosure = 
     getIndependentConstraints(query, required);
-  ConstraintManager tmp(required);
+  ConstraintSet tmp(required);
   return solver->impl->computeValue(Query(tmp, query.expr), result);
 }
 
@@ -446,7 +442,7 @@ bool assertCreatedPointEvaluatesToTrue(
     std::vector<std::vector<unsigned char>> &values,
     std::map<const Array *, std::vector<unsigned char>> &retMap) {
   // _allowFreeValues is set to true so that if there are missing bytes in the
-  // assigment we will end up with a non ConstantExpr after evaluating the
+  // assignment we will end up with a non ConstantExpr after evaluating the
   // assignment and fail
   Assignment assign = Assignment(objects, values, /*_allowFreeValues=*/true);
 
@@ -497,7 +493,7 @@ bool IndependentSolver::computeInitialValues(const Query& query,
     if (arraysInFactor.size() == 0){
       continue;
     }
-    ConstraintManager tmp(it->exprs);
+    ConstraintSet tmp(it->exprs);
     std::vector<std::vector<unsigned char> > tempValues;
     if (!solver->impl->computeInitialValues(Query(tmp, ConstantExpr::alloc(0, Expr::Bool)),
                                             arraysInFactor, tempValues, hasSolution)){

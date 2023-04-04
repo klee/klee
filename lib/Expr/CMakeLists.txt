@@ -6,7 +6,7 @@
 # License. See LICENSE.TXT for details.
 #
 #===------------------------------------------------------------------------===#
-klee_add_component(kleaverExpr
+add_library(kleaverExpr
   ArrayCache.cpp
   ArrayExprOptimizer.cpp
   ArrayExprRewriter.cpp
@@ -26,8 +26,7 @@ klee_add_component(kleaverExpr
   Updates.cpp
 )
 
-set(LLVM_COMPONENTS
-  support
-)
-klee_get_llvm_libs(LLVM_LIBS ${LLVM_COMPONENTS})
-target_link_libraries(kleaverExpr PUBLIC ${LLVM_LIBS})
+llvm_config(kleaverExpr "${USE_LLVM_SHARED}" support)
+target_include_directories(kleaverExpr PRIVATE ${KLEE_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})
+target_compile_options(kleaverExpr PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
+target_compile_definitions(kleaverExpr PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})

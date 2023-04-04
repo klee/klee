@@ -16,9 +16,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
-#include <errno.h>
-#include <sys/syscall.h>
-#include <unistd.h>
 
 static void __emit_error(const char *msg) {
   klee_report_error(__FILE__, __LINE__, msg, "user.err");
@@ -26,18 +23,17 @@ static void __emit_error(const char *msg) {
 
 /* Helper function that converts a string to an integer, and
    terminates the program with an error message is the string is not a
-   proper number */   
+   proper number */
 static long int __str_to_int(char *s, const char *error_msg) {
   long int res = 0;
   char c;
 
-  if (!*s) __emit_error(error_msg);
+  if (!*s)
+    __emit_error(error_msg);
 
   while ((c = *s++)) {
-    if (c == '\0') {
-      break;
-    } else if (c>='0' && c<='9') {
-      res = res*10 + (c - '0');
+    if (c >= '0' && c <= '9') {
+      res = res * 10 + (c - '0');
     } else {
       __emit_error(error_msg);
     }
@@ -63,12 +59,14 @@ static int __streq(const char *a, const char *b) {
 static char *__get_sym_str(int numChars, char *name) {
   int i;
   char *s = malloc(numChars+1);
+  if (!s)
+    __emit_error("out of memory in klee_init_env");
   klee_mark_global(s);
   klee_make_symbolic(s, numChars+1, name);
 
   for (i=0; i<numChars; i++)
     klee_posix_prefer_cex(s, __isprint(s[i]));
-  
+
   s[numChars] = '\0';
   return s;
 }
@@ -224,6 +222,8 @@ usage: (klee_init_env) [options] [program arguments]\n\
   }
 
   final_argv = (char **)malloc((new_argc + 1) * sizeof(*final_argv));
+  if (!final_argv)
+    __emit_error("out of memory in klee_init_env");
   klee_mark_global(final_argv);
   memcpy(final_argv, new_argv, new_argc * sizeof(*final_argv));
   final_argv[new_argc] = 0;
@@ -237,10 +237,10 @@ usage: (klee_init_env) [options] [program arguments]\n\
 
 /* The following function represents the main function of the user application
  * and is renamed during POSIX setup */
-int __klee_posix_wrapped_main(int argc, char **argv);
+int __klee_posix_wrapped_main(int argc, char **argv, char **envp);
 
 /* This wrapper gets called instead of main if POSIX setup is used */
-int __klee_posix_wrapper(int argcPtr, char **argvPtr) {
+int __klee_posix_wrapper(int argcPtr, char **argvPtr, char** envp) {
   klee_init_env(&argcPtr, &argvPtr);
-  return __klee_posix_wrapped_main(argcPtr, argvPtr);
+  return __klee_posix_wrapped_main(argcPtr, argvPtr, envp);
 }

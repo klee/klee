@@ -7,11 +7,11 @@
 // RUN: FileCheck < %t.klee-out/run.istats %s
 
 // CHECK: positions: instr line
-// CHECK: ob={{.*}}/SourceMapping.c{{.*}}/assembly.ll
+// CHECK: ob=assembly.ll
 
 // Assuming the compiler doesn't reorder things, f0 should be first, and it
 // should immediately follow the first file name marker.
-// CHECK: fl={{.*}}/SourceMapping.c
+// CHECK: fl={{.*}}test/Feature/SourceMapping.c
 // CHECK-NEXT: fn=f0
 
 // Ensure we have a known position for the first instruction (instr and line
@@ -35,6 +35,8 @@ int f1(int a, int b) {
 // This check just brackets the checks above, to make sure they fall in the
 // appropriate region of the run.istats file.
 //
+// Explicitly check that there is no duplication of the path
+// CHECK-NOT: fl={{.*}}/test/Feature/{{.*}}/test/Feature/SourceMapping.c
 // CHECK: fn=main
 int main() {
   int x = f1(1, 2);

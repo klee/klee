@@ -10,8 +10,8 @@
 #include "klee/Expr/ExprPPrinter.h"
 
 #include "klee/Expr/Constraints.h"
-#include "klee/OptionCategories.h"
-#include "klee/util/PrintContext.h"
+#include "klee/Support/OptionCategories.h"
+#include "klee/Support/PrintContext.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
@@ -92,7 +92,8 @@ private:
     if (isVerySimple(e)) {
       return true;
     } else if (const ReadExpr *re = dyn_cast<ReadExpr>(e)) {
-      return isVerySimple(re->index) && isVerySimpleUpdate(re->updates.head);
+      return isVerySimple(re->index) &&
+             isVerySimpleUpdate(re->updates.head.get());
     } else {
       Expr *ep = e.get();
       for (unsigned i=0; i<ep->getNumKids(); i++)
@@ -113,7 +114,7 @@ private:
     // FIXME: This needs to be non-recursive.
     if (un) {
       if (couldPrintUpdates.insert(un).second) {
-        scanUpdate(un->next);
+        scanUpdate(un->next.get());
         scan1(un->index);
         scan1(un->value);
       } else {
@@ -130,7 +131,7 @@ private:
           scan1(ep->getKid(i));
         if (const ReadExpr *re = dyn_cast<ReadExpr>(e)) {
           usedArrays.insert(re->updates.root);
-          scanUpdate(re->updates.head);
+          scanUpdate(re->updates.head.get());
         }
       } else {
         shouldPrint.insert(e);
@@ -139,7 +140,7 @@ private:
   }
 
   void printUpdateList(const UpdateList &updates, PrintContext &PC) {
-    const UpdateNode *head = updates.head;
+    auto head = updates.head;
 
     // Special case empty list.
     if (!head) {
@@ -153,22 +154,22 @@ private:
     bool openedList = false, nextShouldBreak = false;
     unsigned outerIndent = PC.pos;
     unsigned middleIndent = 0;
-    for (const UpdateNode *un = head; un; un = un->next) {      
+    for (auto un = head; un; un = un->next) {
       // We are done if we hit the cache.
-      std::map<const UpdateNode*, unsigned>::iterator it = 
-        updateBindings.find(un);
+      std::map<const UpdateNode *, unsigned>::iterator it =
+          updateBindings.find(un.get());
       if (it!=updateBindings.end()) {
         if (openedList)
           PC << "] @ ";
         PC << "U" << it->second;
         return;
-      } else if (!hasScan || shouldPrintUpdates.count(un)) {
+      } else if (!hasScan || shouldPrintUpdates.count(un.get())) {
         if (openedList)
           PC << "] @";
         if (un != head)
           PC.breakLine(outerIndent);
-        PC << "U" << updateCounter << ":"; 
-        updateBindings.insert(std::make_pair(un, updateCounter++));
+        PC << "U" << updateCounter << ":";
+        updateBindings.insert(std::make_pair(un.get(), updateCounter++));
         openedList = nextShouldBreak = false;
      }
     
@@ -471,7 +472,7 @@ void ExprPPrinter::printSingleExpr(llvm::raw_ostream &os, const ref<Expr> &e) {
 }
 
 void ExprPPrinter::printConstraints(llvm::raw_ostream &os,
-                                    const ConstraintManager &constraints) {
+                                    const ConstraintSet &constraints) {
   printQuery(os, constraints, ConstantExpr::alloc(false, Expr::Bool));
 }
 
@@ -485,7 +486,7 @@ struct ArrayPtrsByName {
 }
 
 void ExprPPrinter::printQuery(llvm::raw_ostream &os,
-                              const ConstraintManager &constraints,
+                              const ConstraintSet &constraints,
                               const ref<Expr> &q,
                               const ref<Expr> *evalExprsBegin,
                               const ref<Expr> *evalExprsEnd,
@@ -493,10 +494,9 @@ void ExprPPrinter::printQuery(llvm::raw_ostream &os,
                               const Array * const *evalArraysEnd,
                               bool printArrayDecls) {
   PPrinter p(os);
-  
-  for (ConstraintManager::const_iterator it = constraints.begin(),
-         ie = constraints.end(); it != ie; ++it)
-    p.scan(*it);
+
+  for (const auto &constraint : constraints)
+    p.scan(constraint);
   p.scan(q);
 
   for (const ref<Expr> *it = evalExprsBegin; it != evalExprsEnd; ++it)
@@ -536,8 +536,7 @@ void ExprPPrinter::printQuery(llvm::raw_ostream &os,
   
   // Ident at constraint list;
   unsigned indent = PC.pos;
-  for (ConstraintManager::const_iterator it = constraints.begin(),
-         ie = constraints.end(); it != ie;) {
+  for (auto it = constraints.begin(), ie = constraints.end(); it != ie;) {
     p.print(*it, PC);
     ++it;
     if (it != ie)

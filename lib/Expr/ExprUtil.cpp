@@ -49,8 +49,9 @@ void klee::findReads(ref<Expr> e,
         // especially since we memoize all the expr results anyway. So
         // we take a simple approach of memoizing the results for the
         // head, which often will be shared among multiple nodes.
-        if (updates.insert(re->updates.head).second) {
-          for (const UpdateNode *un=re->updates.head; un; un=un->next) {
+        if (updates.insert(re->updates.head.get()).second) {
+          for (const auto *un = re->updates.head.get(); un;
+               un = un->next.get()) {
             if (!isa<ConstantExpr>(un->index) &&
                 visited.insert(un->index).second)
               stack.push_back(un->index);
@@ -82,7 +83,7 @@ protected:
     const UpdateList &ul = re.updates;
 
     // XXX should we memo better than what ExprVisitor is doing for us?
-    for (const UpdateNode *un=ul.head; un; un=un->next) {
+    for (const auto *un = ul.head.get(); un; un = un->next.get()) {
       visit(un->index);
       visit(un->value);
     }
@@ -106,7 +107,7 @@ ExprVisitor::Action ConstantArrayFinder::visitRead(const ReadExpr &re) {
   const UpdateList &ul = re.updates;
 
   // FIXME should we memo better than what ExprVisitor is doing for us?
-  for (const UpdateNode *un = ul.head; un; un = un->next) {
+  for (const auto *un = ul.head.get(); un; un = un->next.get()) {
     visit(un->index);
     visit(un->value);
   }

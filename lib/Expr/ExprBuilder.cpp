@@ -326,7 +326,7 @@ namespace {
     virtual ref<Expr> Read(const UpdateList &Updates,
                            const ref<Expr> &Index) {
       // Roll back through writes when possible.
-      const UpdateNode *UN = Updates.head;
+      auto UN = Updates.head;
       while (UN && Eq(Index, UN->index)->isFalse())
         UN = UN->next;
 

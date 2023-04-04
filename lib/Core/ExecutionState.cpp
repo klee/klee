@@ -7,16 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ExecutionState.h"
+
 #include "Memory.h"
 
-#include "klee/ExecutionState.h"
-
 #include "klee/Expr/Expr.h"
-#include "klee/Internal/Module/Cell.h"
-#include "klee/Internal/Module/InstructionInfoTable.h"
-#include "klee/Internal/Module/KInstruction.h"
-#include "klee/Internal/Module/KModule.h"
-#include "klee/OptionCategories.h"
+#include "klee/Module/Cell.h"
+#include "klee/Module/InstructionInfoTable.h"
+#include "klee/Module/KInstruction.h"
+#include "klee/Module/KModule.h"
+#include "klee/Support/Casting.h"
+#include "klee/Support/OptionCategories.h"
 
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
@@ -38,6 +39,10 @@ cl::opt<bool> DebugLogStateMerge(
     cl::desc("Debug information for underlying state merging (default=false)"),
     cl::cat(MergeCat));
 }
+
+/***/
+
+std::uint32_t ExecutionState::nextID = 1;
 
 /***/
 
@@ -65,38 +70,20 @@ StackFrame::~StackFrame() {
 
 /***/
 
-ExecutionState::ExecutionState(KFunction *kf) :
-    pc(kf->instructions),
-    prevPC(pc),
-
-    weight(1),
-    depth(0),
-
-    instsSinceCovNew(0),
-    coveredNew(false),
-    forkDisabled(false),
-    ptreeNode(0),
-    steppedInstructions(0){
-  pushFrame(0, kf);
+ExecutionState::ExecutionState(KFunction *kf, MemoryManager *mm)
+    : pc(kf->instructions), prevPC(pc) {
+  pushFrame(nullptr, kf);
+  setID();
+  if (mm->stackFactory && mm->heapFactory) {
+    stackAllocator = mm->stackFactory.makeAllocator();
+    heapAllocator = mm->heapFactory.makeAllocator();
+  }
 }
 
-ExecutionState::ExecutionState(const std::vector<ref<Expr> > &assumptions)
-    : constraints(assumptions), ptreeNode(0) {}
-
 ExecutionState::~ExecutionState() {
-  for (unsigned int i=0; i<symbolics.size(); i++)
-  {
-    const MemoryObject *mo = symbolics[i].first;
-    assert(mo->refCount > 0);
-    mo->refCount--;
-    if (mo->refCount == 0)
-      delete mo;
-  }
-
-  for (auto cur_mergehandler: openMergeStack){
+  for (const auto &cur_mergehandler: openMergeStack){
     cur_mergehandler->removeOpenState(this);
   }
-
 
   while (!stack.empty()) popFrame();
 }
@@ -106,62 +93,67 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     prevPC(state.prevPC),
     stack(state.stack),
     incomingBBIndex(state.incomingBBIndex),
-
-    addressSpace(state.addressSpace),
-    constraints(state.constraints),
-
-    queryCost(state.queryCost),
-    weight(state.weight),
     depth(state.depth),
-
+    addressSpace(state.addressSpace),
+    stackAllocator(state.stackAllocator),
+    heapAllocator(state.heapAllocator),
+    constraints(state.constraints),
     pathOS(state.pathOS),
     symPathOS(state.symPathOS),
-
-    instsSinceCovNew(state.instsSinceCovNew),
-    coveredNew(state.coveredNew),
-    forkDisabled(state.forkDisabled),
     coveredLines(state.coveredLines),
-    ptreeNode(state.ptreeNode),
     symbolics(state.symbolics),
+    cexPreferences(state.cexPreferences),
     arrayNames(state.arrayNames),
     openMergeStack(state.openMergeStack),
-    steppedInstructions(state.steppedInstructions)
-{
-  for (unsigned int i=0; i<symbolics.size(); i++)
-    symbolics[i].first->refCount++;
-
-  for (auto cur_mergehandler: openMergeStack)
+    steppedInstructions(state.steppedInstructions),
+    instsSinceCovNew(state.instsSinceCovNew),
+    unwindingInformation(state.unwindingInformation
+                             ? state.unwindingInformation->clone()
+                             : nullptr),
+    coveredNew(state.coveredNew),
+    forkDisabled(state.forkDisabled) {
+  for (const auto &cur_mergehandler: openMergeStack)
     cur_mergehandler->addOpenState(this);
 }
 
 ExecutionState *ExecutionState::branch() {
   depth++;
 
-  ExecutionState *falseState = new ExecutionState(*this);
+  auto *falseState = new ExecutionState(*this);
+  falseState->setID();
   falseState->coveredNew = false;
   falseState->coveredLines.clear();
-
-  weight *= .5;
-  falseState->weight -= weight;
 
   return falseState;
 }
 
 void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
-  stack.push_back(StackFrame(caller,kf));
+  stack.emplace_back(StackFrame(caller, kf));
 }
 
 void ExecutionState::popFrame() {
-  StackFrame &sf = stack.back();
-  for (std::vector<const MemoryObject*>::iterator it = sf.allocas.begin(), 
-         ie = sf.allocas.end(); it != ie; ++it)
-    addressSpace.unbindObject(*it);
+  const StackFrame &sf = stack.back();
+  for (const auto *memoryObject : sf.allocas) {
+    deallocate(memoryObject);
+    addressSpace.unbindObject(memoryObject);
+  }
   stack.pop_back();
 }
 
-void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) { 
-  mo->refCount++;
-  symbolics.push_back(std::make_pair(mo, array));
+void ExecutionState::deallocate(const MemoryObject *mo) {
+  if (!stackAllocator || !heapAllocator)
+    return;
+
+  auto address = reinterpret_cast<void *>(mo->address);
+  if (mo->isLocal) {
+    stackAllocator.free(address, std::max(mo->size, mo->alignment));
+  } else {
+    heapAllocator.free(address, std::max(mo->size, mo->alignment));
+  }
+}
+
+void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) {
+  symbolics.emplace_back(ref<const MemoryObject>(mo), array);
 }
 
 /**/
@@ -171,9 +163,9 @@ llvm::raw_ostream &klee::operator<<(llvm::raw_ostream &os, const MemoryMap &mm) 
   MemoryMap::iterator it = mm.begin();
   MemoryMap::iterator ie = mm.end();
   if (it!=ie) {
-    os << "MO" << it->first->id << ":" << it->second;
+    os << "MO" << it->first->id << ":" << it->second.get();
     for (++it; it!=ie; ++it)
-      os << ", MO" << it->first->id << ":" << it->second;
+      os << ", MO" << it->first->id << ":" << it->second.get();
   }
   os << "}";
   return os;
@@ -188,7 +180,8 @@ bool ExecutionState::merge(const ExecutionState &b) {
 
   // XXX is it even possible for these to differ? does it matter? probably
   // implies difference in object states?
-  if (symbolics!=b.symbolics)
+
+  if (symbolics != b.symbolics)
     return false;
 
   {
@@ -270,7 +263,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
       }
       return false;
     }
-    if (ai->second != bi->second) {
+    if (ai->second.get() != bi->second.get()) {
       if (DebugLogStateMerge)
         llvm::errs() << "\t\tmutated: " << ai->first->id << "\n";
       mutated.insert(ai->first);
@@ -305,7 +298,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
     for (unsigned i=0; i<af.kf->numRegisters; i++) {
       ref<Expr> &av = af.locals[i].value;
       const ref<Expr> &bv = bf.locals[i].value;
-      if (av.isNull() || bv.isNull()) {
+      if (!av || !bv) {
         // if one is null then by implication (we are at same pc)
         // we cannot reuse this local, so just ignore
       } else {
@@ -331,11 +324,12 @@ bool ExecutionState::merge(const ExecutionState &b) {
     }
   }
 
-  constraints = ConstraintManager();
-  for (std::set< ref<Expr> >::iterator it = commonConstraints.begin(), 
-         ie = commonConstraints.end(); it != ie; ++it)
-    constraints.addConstraint(*it);
-  constraints.addConstraint(OrExpr::create(inA, inB));
+  constraints = ConstraintSet();
+
+  ConstraintManager m(constraints);
+  for (const auto &constraint : commonConstraints)
+    m.addConstraint(constraint);
+  m.addConstraint(OrExpr::create(inA, inB));
 
   return true;
 }
@@ -353,18 +347,22 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
     std::stringstream AssStream;
     AssStream << std::setw(8) << std::setfill('0') << ii.assemblyLine;
     out << AssStream.str();
-    out << " in " << f->getName().str() << " (";
+    out << " in " << f->getName().str() << "(";
     // Yawn, we could go up and print varargs if we wanted to.
     unsigned index = 0;
     for (Function::arg_iterator ai = f->arg_begin(), ae = f->arg_end();
          ai != ae; ++ai) {
       if (ai!=f->arg_begin()) out << ", ";
 
-      out << ai->getName().str();
-      // XXX should go through function
+      if (ai->hasName())
+        out << ai->getName().str() << "=";
+
       ref<Expr> value = sf.locals[sf.kf->getArgRegister(index++)].value;
-      if (value.get() && isa<ConstantExpr>(value))
-        out << "=" << value;
+      if (isa_and_nonnull<ConstantExpr>(value)) {
+        out << value;
+      } else {
+        out << "symbolic";
+      }
     }
     out << ")";
     if (ii.file != "")
@@ -372,4 +370,13 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
     out << "\n";
     target = sf.caller;
   }
+}
+
+void ExecutionState::addConstraint(ref<Expr> e) {
+  ConstraintManager c(constraints);
+  c.addConstraint(e);
+}
+
+void ExecutionState::addCexPreference(const ref<Expr> &cond) {
+  cexPreferences = cexPreferences.insert(cond);
 }

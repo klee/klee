@@ -1,0 +1,129 @@
+#!/usr/bin/env python3
+import sys
+import os
+import subprocess
+import tempfile
+import select
+import shutil
+HELP="""OVERVIEW: ZESTI like wrapper of KLEE
+
+USAGE:  klee-zesti [klee-options] <input bytecode> <concrete program arguments>
+
+WARNING this script is not equivalent to ZESTI in ICSE 2012. It just provides a similar interface to KLEE. Namely it first explores the path of <concrete program arguments> and then continues symbolic execution from that point. Most importantly it does not implement the ZESTI searcher.
+"""
+
+
+KLEE="klee"
+KTEST_GEN="ktest-gen"
+
+def find_klee_bin_dir():
+  global KLEE
+  global KTEST_GEN
+  bin_dir = os.path.dirname(os.path.realpath(__file__))
+  KLEE = bin_dir + "/klee"
+  KTEST_GEN = bin_dir + "/ktest-gen"
+  if not os.path.isfile(KLEE):
+      print("WARNING can't find klee at " + KLEE)
+      KLEE= shutil.which("klee")
+      print("Using klee in PATH", KLEE)
+  if not os.path.isfile(KTEST_GEN):
+      print("WARNING can't find ktest-gen at " + KTEST_GEN)
+      KTEST_GEN= shutil.which("ktest-gen")
+      print("Using ktest-gen in PATH", KTEST_GEN)
+  if KTEST_GEN is None or KLEE is None:
+      print("Failed to find KLEE at this script location or in PATH. Quitting ...")
+      sys.exit(1)
+  print("Using", KLEE)
+ 
+  
+
+def split_args():
+  prog = None
+  prog_args = []
+  klee_args = []
+  is_progargs = False
+  for a in sys.argv[1:]:
+      if is_progargs:
+          prog_args += [a]
+      elif a.startswith("-"):
+          klee_args += [a]
+      else:
+          prog = a
+          is_progargs = True
+  return klee_args, prog, prog_args
+
+def maybe_file_size(name):
+  try:
+    return os.path.getsize(name)
+  except:
+    return None
+
+def get_stdin_file(tmpdir):
+  stdin = ""
+  stdin_size = 0
+  if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+    stdin += sys.stdin.readline()
+  if stdin == "":
+      return None, stdin_size
+  stdin_file_name = tmpdir.name + "/stdin.file"
+  with open(stdin_file_name, 'w') as f:
+    stdin_size = f.write(stdin)
+  return stdin_file_name, stdin_size
+    
+  
+
+def prog_args_to_posix(prog_args):
+  posix_args = []
+  sym_file = 'A'
+  sym_file_sizes = [] 
+  gen_out_args = []
+  for parg in prog_args:
+      file_size = maybe_file_size(parg)
+      if file_size is None:
+          posix_args += ['--sym-arg', str(len(parg))]
+          gen_out_args += [parg]
+      else:
+          sym_file_sizes += [file_size]
+          posix_args += [sym_file]
+          sym_file = chr(ord(sym_file) + 1)
+          gen_out_args += ['--sym-file', parg]
+
+  if ord(sym_file) - ord('A') > 0:
+      posix_args += ['--sym-files', str(ord(sym_file) - ord('A')), str(max(sym_file_sizes))]
+  return posix_args, gen_out_args
+
+def create_ktest_file(gen_out_args, tmpdir):
+  out_file=tmpdir + "/test.ktest"
+  subprocess.run([KTEST_GEN, "--bout-file", out_file] + gen_out_args, check=True)
+  return out_file
+
+
+
+def main():
+  klee_args, prog, prog_args = split_args()
+  if len(sys.argv) == 1 or prog is None:
+      print(HELP)
+      return
+  find_klee_bin_dir()
+  tmpdir = tempfile.TemporaryDirectory()
+  stdin_file, stdin_size = get_stdin_file(tmpdir)
+  posix_args, gen_out_args = prog_args_to_posix(prog_args)
+  if stdin_file is not None:
+      gen_out_args += ["--sym-stdin", stdin_file]
+      posix_args += ["--sym-stdin", str(stdin_size)]
+  ktest_file = create_ktest_file(gen_out_args,tmpdir.name)
+  klee_args += ["-seed-file=" + ktest_file]
+  
+  proc = subprocess.Popen([KLEE] + klee_args + [prog] + posix_args, stdout=sys.stdout, stderr=sys.stderr)
+  while proc.returncode is None:
+      try:
+        proc.wait()
+      except KeyboardInterrupt:
+        pass # This is expected when stopping KLEE, so we wait for KLEE to finish
+  sys.exit(proc.returncode)
+
+
+if __name__ == "__main__":
+  main()
+
+

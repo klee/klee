@@ -10,14 +10,15 @@
 #ifdef ENABLE_STP
 #include "STPBuilder.h"
 
+#include "klee/ADT/Bits.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverStats.h"
-#include "klee/util/Bits.h"
 
 #include "ConstantDivision.h"
 
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/CommandLine.h"
 
 #include <cstdio>
@@ -436,12 +437,8 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n, unsigned width
   if (!hashed) {
     // STP uniques arrays by name, so we make sure the name is unique by
     // using the size of the array hash as a counter.
-    std::string unique_id = llvm::itostr(_arr_hash._array_hash.size());
-    unsigned const uid_length = unique_id.length();
-    unsigned const space = (root->name.length() > 32 - uid_length)
-                               ? (32 - uid_length)
-                               : root->name.length();
-    std::string unique_name = root->name.substr(0, space) + unique_id;
+    std::string unique_id = llvm::utostr(_arr_hash._array_hash.size());
+    std::string unique_name = root->name + unique_id;
 
     array_expr = buildArray(unique_name.c_str(), root->getDomain(),
                             root->getRange());
@@ -469,27 +466,33 @@ ExprHandle STPBuilder::getInitialRead(const Array *root, unsigned index) {
   return vc_readExpr(vc, getInitialArray(root), bvConst32(32, index));
 }
 
-::VCExpr STPBuilder::getArrayForUpdate(const Array *root, 
+::VCExpr STPBuilder::getArrayForUpdate(const Array *root,
                                        const UpdateNode *un) {
+  // Iterate over the update nodes, until we find a cached version of the node,
+  // or no more update nodes remain
+  ::VCExpr un_expr;
+  std::vector<const UpdateNode *> update_nodes;
+  for (; un && !_arr_hash.lookupUpdateNodeExpr(un, un_expr);
+       un = un->next.get()) {
+    update_nodes.push_back(un);
+  }
   if (!un) {
-      return getInitialArray(root);
+    un_expr = getInitialArray(root);
   }
-  else {
-      // FIXME: This really needs to be non-recursive.
-      ::VCExpr un_expr;
-      bool hashed = _arr_hash.lookupUpdateNodeExpr(un, un_expr);
-      
-      if (!hashed) {
-	un_expr = vc_writeExpr(vc,
-                               getArrayForUpdate(root, un->next),
-                               construct(un->index, 0),
-                               construct(un->value, 0));
-	
-	_arr_hash.hashUpdateNodeExpr(un, un_expr);
-      }
-      
-      return un_expr;
+  // `un_expr` now holds an expression for the array - either from cache or by
+  // virtue of being the initial array expression
+
+  // Create and cache solver expressions based on the update nodes starting from
+  // the oldest
+  for (const auto &un :
+       llvm::make_range(update_nodes.crbegin(), update_nodes.crend())) {
+    un_expr = vc_writeExpr(vc, un_expr, construct(un->index, 0),
+                           construct(un->value, 0));
+
+    _arr_hash.hashUpdateNodeExpr(un, un_expr);
   }
+
+  return un_expr;
 }
 
 /** if *width_out!=1 then result is a bitvector,
@@ -560,9 +563,9 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     ReadExpr *re = cast<ReadExpr>(e);
     assert(re && re->updates.root);
     *width_out = re->updates.root->getRange();
-    return vc_readExpr(vc,
-                       getArrayForUpdate(re->updates.root, re->updates.head),
-                       construct(re->index, 0));
+    return vc_readExpr(
+        vc, getArrayForUpdate(re->updates.root, re->updates.head.get()),
+        construct(re->index, 0));
   }
     
   case Expr::Select: {

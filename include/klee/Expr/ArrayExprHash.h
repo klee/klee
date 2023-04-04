@@ -11,8 +11,8 @@
 #define KLEE_ARRAYEXPRHASH_H
 
 #include "klee/Expr/Expr.h"
+#include "klee/Statistics/TimerStatIncrementer.h"
 #include "klee/Solver/SolverStats.h"
-#include "klee/TimerStatIncrementer.h"
 
 #include <map>
 #include <unordered_map>

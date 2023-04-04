@@ -1,0 +1,2 @@
+# checkMemoryUsage depends on the malloc library linked with, ignore it
+fun:_ZN4klee4util19GetTotalMallocUsageEv

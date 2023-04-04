@@ -10,11 +10,11 @@
 # Top level target for building all documentation
 add_custom_target(docs)
 
-option(ENABLE_DOXYGEN "Enable building doxygen documentation" ON)
+option(ENABLE_DOXYGEN "Enable building doxygen documentation" OFF)
 if (ENABLE_DOXYGEN)
-  find_package(Doxygen)
-  if (DOXYGEN_FOUND)
-    message(STATUS "Doxygen found")
+  find_package(Doxygen OPTIONAL_COMPONENTS dot)
+  if (DOXYGEN_FOUND AND TARGET Doxygen::dot)
+    message(STATUS "Doxygen and dot found")
     set(abs_top_srcdir "${CMAKE_SOURCE_DIR}")
     set(abs_top_builddir "${CMAKE_BINARY_DIR}")
 
@@ -23,9 +23,9 @@ if (ENABLE_DOXYGEN)
 
     # Add rule to build doxygen documentation
     add_custom_target(doc-doxygen
-      COMMAND "${DOXYGEN_EXECUTABLE}" "${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg"
+      COMMAND Doxygen::doxygen "${CMAKE_CURRENT_BINARY_DIR}/doxygen.cfg"
       COMMENT "Generating Doxygen documentation"
-      ${ADD_CUSTOM_COMMAND_USES_TERMINAL_ARG}
+      USES_TERMINAL
     )
     add_dependencies(docs doc-doxygen)
 
@@ -33,17 +33,21 @@ if (ENABLE_DOXYGEN)
     # doxygen.cfg
     set(DOXYGEN_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/doxygen")
 
-    # Add rule to clean doxygen documentation
-    add_custom_target(clean_doxygen
-      COMMAND
-        "${CMAKE_COMMAND}"
-        "-E"
-        "remove_directory"
-        "${DOXYGEN_OUTPUT_DIR}"
-    )
-    add_dependencies(clean_all clean_doxygen)
+    if ("${CMAKE_VERSION}" VERSION_LESS "3.15")
+      set_directory_properties(PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
+              "${DOXYGEN_OUTPUT_DIR}")
+    else ()
+      set_directory_properties(PROPERTY ADDITIONAL_CLEAN_FILES
+              "${DOXYGEN_OUTPUT_DIR}")
+    endif ()
+
   else()
-    message(WARNING "Doxygen not found. Can't build Doxygen documentation")
+    if (NOT DOXYGEN_FOUND)
+      message(WARNING "Doxygen not found. Can't build Doxygen documentation")
+    endif ()
+    if (NOT TARGET Doxygen::dot)
+      message(WARNING "dot (graphviz) not found. Can't build Doxygen documentation")
+    endif ()
     set(ENABLE_DOXYGEN OFF
       CACHE
       BOOL

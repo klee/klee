@@ -16,13 +16,14 @@
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/ExprUtil.h"
-#include "klee/Internal/Support/ErrorHandling.h"
-#include "klee/OptionCategories.h"
 #include "klee/Solver/SolverImpl.h"
+#include "klee/Support/ErrorHandling.h"
+#include "klee/Support/OptionCategories.h"
 
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errno.h"
 
+#include <array>
 #include <csignal>
 #include <sys/ipc.h>
 #include <sys/shm.h>
@@ -40,7 +41,24 @@ llvm::cl::opt<bool> IgnoreSolverFailures(
     "ignore-solver-failures", llvm::cl::init(false),
     llvm::cl::desc("Ignore any STP solver failures (default=false)"),
     llvm::cl::cat(klee::SolvingCat));
-}
+
+enum SAT { MINISAT, SIMPLEMINISAT, CRYPTOMINISAT, RISS };
+const std::array<std::string, 4> SATNames{"MiniSat", "simplifying MiniSat",
+                                          "CryptoMiniSat", "RISS"};
+
+llvm::cl::opt<SAT> SATSolver(
+    "stp-sat-solver",
+    llvm::cl::desc(
+        "Set the underlying SAT solver for STP (default=cryptominisat)"),
+    llvm::cl::values(clEnumValN(SAT::MINISAT, "minisat",
+                                SATNames[SAT::MINISAT]),
+                     clEnumValN(SAT::SIMPLEMINISAT, "simpleminisat",
+                                SATNames[SAT::SIMPLEMINISAT]),
+                     clEnumValN(SAT::CRYPTOMINISAT, "cryptominisat",
+                                SATNames[SAT::CRYPTOMINISAT]),
+                     clEnumValN(SAT::RISS, "riss", SATNames[SAT::RISS])),
+    llvm::cl::init(CRYPTOMINISAT), llvm::cl::cat(klee::SolvingCat));
+} // namespace
 
 #define vc_bvBoolExtract IAMTHESPAWNOFSATAN
 
@@ -102,6 +120,49 @@ STPSolverImpl::STPSolverImpl(bool useForkedSTP, bool optimizeDivides)
   // the pointers using vc_DeleteExpr.  By setting EXPRDELETE to 0
   // we restore the old behaviour.
   vc_setInterfaceFlags(vc, EXPRDELETE, 0);
+
+  // set SAT solver
+  bool SATSolverAvailable = false;
+  bool specifiedOnCommandLine = SATSolver.getNumOccurrences() > 0;
+  switch (SATSolver) {
+  case SAT::MINISAT: {
+    SATSolverAvailable = vc_useMinisat(vc);
+    break;
+  }
+  case SAT::SIMPLEMINISAT: {
+    SATSolverAvailable = vc_useSimplifyingMinisat(vc);
+    break;
+  }
+  case SAT::CRYPTOMINISAT: {
+    SATSolverAvailable = vc_useCryptominisat(vc);
+    break;
+  }
+  case SAT::RISS: {
+    SATSolverAvailable = vc_useRiss(vc);
+    break;
+  }
+  default:
+    assert(false && "Illegal SAT solver value.");
+  }
+
+  // print SMT/SAT status
+  const auto expectedSATName = SATNames[SATSolver.getValue()];
+  std::string SATName{"unknown"};
+  if (vc_isUsingMinisat(vc))
+    SATName = SATNames[SAT::MINISAT];
+  else if (vc_isUsingSimplifyingMinisat(vc))
+    SATName = SATNames[SAT::SIMPLEMINISAT];
+  else if (vc_isUsingCryptominisat(vc))
+    SATName = SATNames[SAT::CRYPTOMINISAT];
+  else if (vc_isUsingRiss(vc))
+    SATName = SATNames[SAT::RISS];
+
+  if (!specifiedOnCommandLine || SATSolverAvailable) {
+    klee_message("SAT solver: %s", SATName.c_str());
+  } else {
+    klee_warning("%s not supported by STP", expectedSATName.c_str());
+    klee_message("Fallback SAT solver: %s", SATName.c_str());
+  }
 
   make_division_total(vc);
 
@@ -326,7 +387,7 @@ bool STPSolverImpl::computeInitialValues(
   for (const auto &constraint : query.constraints)
     vc_assertFormula(vc, builder->construct(constraint));
 
-  ++stats::queries;
+  ++stats::solverQueries;
   ++stats::queryCounterexamples;
 
   ExprHandle stp_e = builder->construct(query.expr);

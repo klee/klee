@@ -26,6 +26,7 @@ int main(int argc, char **argv) {
 
   assert(memcmp(src, dst, LENGTH) == 0);
   // CHECK-NOT: calling external: memcmp
+  // CHECK-NOT: calling external: bcmp
 
   assert(*src == 42);
   assert(*src == *dst);

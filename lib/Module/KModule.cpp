@@ -12,22 +12,17 @@
 #include "Passes.h"
 
 #include "klee/Config/Version.h"
-#include "klee/Internal/Module/Cell.h"
-#include "klee/Internal/Module/InstructionInfoTable.h"
-#include "klee/Internal/Module/KInstruction.h"
-#include "klee/Internal/Module/KModule.h"
-#include "klee/Internal/Support/Debug.h"
-#include "klee/Internal/Support/ErrorHandling.h"
-#include "klee/Internal/Support/ModuleUtil.h"
-#include "klee/Interpreter.h"
-#include "klee/OptionCategories.h"
+#include "klee/Core/Interpreter.h"
+#include "klee/Support/OptionCategories.h"
+#include "klee/Module/Cell.h"
+#include "klee/Module/InstructionInfoTable.h"
+#include "klee/Module/KInstruction.h"
+#include "klee/Module/KModule.h"
+#include "klee/Support/Debug.h"
+#include "klee/Support/ErrorHandling.h"
+#include "klee/Support/ModuleUtil.h"
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
 #include "llvm/Bitcode/BitcodeWriter.h"
-#else
-#include "llvm/Bitcode/ReaderWriter.h"
-#endif
-#include "llvm/IR/CallSite.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -42,13 +37,9 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Transforms/Scalar.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
 #include "llvm/Transforms/Scalar/Scalarizer.h"
-#endif
 #include "llvm/Transforms/Utils/Cloning.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
 #include "llvm/Transforms/Utils.h"
-#endif
 
 #include <sstream>
 
@@ -76,7 +67,7 @@ namespace {
 
   cl::opt<bool>
   OutputModule("output-module",
-               cl::desc("Write the bitcode for the final transformed module"),
+               cl::desc("Write the bitcode for the final transformed module (default=false)"),
                cl::init(false),
 	       cl::cat(ModuleCat));
 
@@ -87,8 +78,7 @@ namespace {
                         clEnumValN(eSwitchTypeLLVM, "llvm", 
                                    "lower using LLVM"),
                         clEnumValN(eSwitchTypeInternal, "internal", 
-                                   "execute switch internally")
-                        KLEE_LLVM_CL_VAL_END),
+                                   "execute switch internally")),
              cl::init(eSwitchTypeInternal),
 	     cl::cat(ModuleCat));
   
@@ -140,9 +130,8 @@ static Function *getStubFunctionForCtorList(Module *m,
   if (arr) {
     for (unsigned i=0; i<arr->getNumOperands(); i++) {
       auto cs = cast<ConstantStruct>(arr->getOperand(i));
-      // There is a third *optional* element in global_ctor elements (``i8
-      // @data``).
-      assert((cs->getNumOperands() == 2 || cs->getNumOperands() == 3) &&
+      // There is a third element in global_ctor elements (``i8 @data``).
+      assert(cs->getNumOperands() == 3 &&
              "unexpected element in ctor initializer list");
       auto fp = cs->getOperand(1);
       if (!fp->isNullValue()) {
@@ -286,6 +275,7 @@ void KModule::optimiseAndPrepare(
   default: klee_error("invalid --switch-type");
   }
   pm3.add(new IntrinsicCleanerPass(*targetData));
+  pm3.add(createScalarizerPass());
   pm3.add(new PhiCleanerPass());
   pm3.add(new FunctionAliasPass());
   pm3.run(*module);
@@ -300,11 +290,7 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
 
   if (OutputModule) {
     std::unique_ptr<llvm::raw_fd_ostream> f(ih->openOutputFile("final.bc"));
-#if LLVM_VERSION_CODE >= LLVM_VERSION(7, 0)
     WriteBitcodeToFile(*module, *f);
-#else
-    WriteBitcodeToFile(module.get(), *f);
-#endif
   }
 
   /* Build shadow structures */
@@ -317,7 +303,6 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
   for (auto &Function : *module) {
     if (Function.isDeclaration()) {
       declarations.push_back(&Function);
-      continue;
     }
 
     auto kf = std::unique_ptr<KFunction>(new KFunction(&Function, this));
@@ -420,7 +405,8 @@ static int getOperandNum(Value *v,
 
 KFunction::KFunction(llvm::Function *_function,
                      KModule *km) 
-  : function(_function),
+  : KCallable(CK_Function),
+    function(_function),
     numArgs(function->arg_size()),
     numInstructions(0),
     trackCoverage(true) {
@@ -465,13 +451,13 @@ KFunction::KFunction(llvm::Function *_function,
       ki->dest = registerMap[inst];
 
       if (isa<CallInst>(it) || isa<InvokeInst>(it)) {
-        CallSite cs(inst);
-        unsigned numArgs = cs.arg_size();
+        const CallBase &cb = cast<CallBase>(*inst);
+        Value *val = cb.getCalledOperand();
+        unsigned numArgs = cb.arg_size();
         ki->operands = new int[numArgs+1];
-        ki->operands[0] = getOperandNum(cs.getCalledValue(), registerMap, km,
-                                        ki);
+        ki->operands[0] = getOperandNum(val, registerMap, km, ki);
         for (unsigned j=0; j<numArgs; j++) {
-          Value *v = cs.getArgument(j);
+          Value *v = cb.getArgOperand(j);
           ki->operands[j+1] = getOperandNum(v, registerMap, km, ki);
         }
       } else {

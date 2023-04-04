@@ -8,9 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Config/config.h"
-#include "klee/Internal/Support/ErrorHandling.h"
-#include "klee/Internal/Support/FileHandling.h"
-#include "klee/OptionCategories.h"
+#include "klee/Support/ErrorHandling.h"
+#include "klee/Support/FileHandling.h"
+#include "klee/Support/OptionCategories.h"
+
+#include <csignal>
 
 #ifdef ENABLE_Z3
 
@@ -172,10 +174,10 @@ char *Z3SolverImpl::getConstraintLog(const Query &query) {
   constant_arrays_in_query.visit(query.expr);
 
   for (auto const &constant_array : constant_arrays_in_query.results) {
-    assert(builder->constant_array_assertions.count(constant_array) == 1 &&
+    assert(temp_builder.constant_array_assertions.count(constant_array) == 1 &&
            "Constant array found in query, but not handled by Z3Builder");
     for (auto const &arrayIndexValueExpr :
-         builder->constant_array_assertions[constant_array]) {
+         temp_builder.constant_array_assertions[constant_array]) {
       assumptions.push_back(arrayIndexValueExpr);
     }
   }
@@ -266,7 +268,7 @@ bool Z3SolverImpl::internalRunSolver(
     Z3_solver_assert(builder->ctx, theSolver, builder->construct(constraint));
     constant_arrays_in_query.visit(constraint);
   }
-  ++stats::queries;
+  ++stats::solverQueries;
   if (objects)
     ++stats::queryCounterexamples;
 
@@ -322,6 +324,9 @@ bool Z3SolverImpl::internalRunSolver(
     }
     return true; // success
   }
+  if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_INTERRUPTED) {
+    raise(SIGINT);
+  }
   return false; // failed
 }
 
@@ -357,7 +362,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
         __attribute__((unused))
         bool successfulEval =
             Z3_model_eval(builder->ctx, theModel, initial_read,
-                          /*model_completion=*/Z3_TRUE, &arrayElementExpr);
+                          /*model_completion=*/true, &arrayElementExpr);
         assert(successfulEval && "Failed to evaluate model");
         Z3_inc_ref(builder->ctx, arrayElementExpr);
         assert(Z3_get_ast_kind(builder->ctx, arrayElementExpr) ==
@@ -400,6 +405,9 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
     if (strcmp(reason, "unknown") == 0) {
       return SolverImpl::SOLVER_RUN_STATUS_FAILURE;
     }
+    if (strcmp(reason, "interrupted from keyboard") == 0) {
+      return SolverImpl::SOLVER_RUN_STATUS_INTERRUPTED;
+    }
     klee_warning("Unexpected solver failure. Reason is \"%s,\"\n", reason);
     abort();
   }
@@ -424,7 +432,7 @@ bool Z3SolverImpl::validateZ3Model(::Z3_solver &theSolver, ::Z3_model &theModel)
     __attribute__((unused))
     bool successfulEval =
         Z3_model_eval(builder->ctx, theModel, constraint,
-                      /*model_completion=*/Z3_TRUE, &rawEvaluatedExpr);
+                      /*model_completion=*/true, &rawEvaluatedExpr);
     assert(successfulEval && "Failed to evaluate model");
 
     // Use handle to do ref-counting.

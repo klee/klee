@@ -10,6 +10,8 @@
 #ifndef KLEE_SPECIALFUNCTIONHANDLER_H
 #define KLEE_SPECIALFUNCTIONHANDLER_H
 
+#include "klee/Config/config.h"
+
 #include <iterator>
 #include <map>
 #include <vector>
@@ -32,7 +34,7 @@ namespace klee {
                                                     KInstruction *target, 
                                                     std::vector<ref<Expr> > 
                                                       &arguments);
-    typedef std::map<const llvm::Function*, 
+    typedef std::map<const llvm::Function*,
                      std::pair<Handler,bool> > handlers_ty;
 
     handlers_ty handlers;
@@ -109,8 +111,12 @@ namespace klee {
     HANDLER(handleDefineFixedObject);
     HANDLER(handleDelete);    
     HANDLER(handleDeleteArray);
-    HANDLER(handleExit);
+#ifdef SUPPORT_KLEE_EH_CXX
+    HANDLER(handleEhUnwindRaiseExceptionImpl);
+    HANDLER(handleEhTypeid);
+#endif
     HANDLER(handleErrnoLocation);
+    HANDLER(handleExit);
     HANDLER(handleFree);
     HANDLER(handleGetErrno);
     HANDLER(handleGetObjSize);
@@ -138,10 +144,6 @@ namespace klee {
     HANDLER(handleUnderConstrained);
     HANDLER(handleWarning);
     HANDLER(handleWarningOnce);
-    HANDLER(handleAddOverflow);
-    HANDLER(handleMulOverflow);
-    HANDLER(handleSubOverflow);
-    HANDLER(handleDivRemOverflow);
 #undef HANDLER
   };
 } // End klee namespace

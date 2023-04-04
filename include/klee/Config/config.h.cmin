@@ -22,6 +22,9 @@
 /* Define if mallinfo() is available on this platform. */
 #cmakedefine HAVE_MALLINFO @HAVE_MALLINFO@
 
+/* Define if mallinfo2() is available on this platform. */
+#cmakedefine HAVE_MALLINFO2 @HAVE_MALLINFO2@
+
 /* Define to 1 if you have the `malloc_zone_statistics' function. */
 #cmakedefine HAVE_MALLOC_ZONE_STATISTICS @HAVE_MALLOC_ZONE_STATISTICS@
 
@@ -83,17 +86,20 @@
 /* Define to the version of this package. */
 #cmakedefine PACKAGE_VERSION @PACKAGE_VERSION@
 
-/* Use Workaround for LLVM PR39177 (affecting LLVM 3.9 - 7.0.0) */
-#cmakedefine USE_WORKAROUND_LLVM_PR39177 @USE_WORKAROUND_LLVM_PR39177@
-
-/* klee-uclibc is supported */
-#cmakedefine SUPPORT_KLEE_UCLIBC @SUPPORT_KLEE_UCLIBC@
-
 /* libcxx is supported */
 #cmakedefine SUPPORT_KLEE_LIBCXX @SUPPORT_KLEE_LIBCXX@
 
+/* exception handling for C++ is supported */
+#cmakedefine SUPPORT_KLEE_EH_CXX @SUPPORT_KLEE_EH_CXX@
+
 /* Configuration type of KLEE's runtime libraries */
 #define RUNTIME_CONFIGURATION "@KLEE_RUNTIME_BUILD_TYPE@"
+
+/* Configure name of KLEE's uClibc library */
+#cmakedefine KLEE_UCLIBC_BCA_NAME "@KLEE_UCLIBC_BCA_NAME@"
+
+/* Configure name of the libCXX bitcode library */
+#cmakedefine KLEE_LIBCXX_BC_NAME "@KLEE_LIBCXX_BC_NAME@"
 
 /* FIXME: This is a stupid name. Also this is only used for figuring out where
 the runtime directory is in the build tree. Instead we should just define a

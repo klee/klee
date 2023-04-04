@@ -22,7 +22,7 @@ static void RunAtExit(void) __attribute__((destructor));
 static void RunAtExit(void) {
   unsigned i;
 
-  for (i=0; i<NumAtExit; ++i)
+  for (i = NumAtExit - 1; i < MAX_ATEXIT; --i)
     AtExit[i].fn(AtExit[i].arg);
 }
 
@@ -38,7 +38,7 @@ int __cxa_atexit(void (*fn)(void*),
     klee_report_error(__FILE__,
                       __LINE__,
                       "__cxa_atexit: no room in array!",
-                      "exec");
+                      "exec.err");
   
   AtExit[NumAtExit].fn = fn;
   AtExit[NumAtExit].arg = arg;
@@ -47,3 +47,8 @@ int __cxa_atexit(void (*fn)(void*),
   return 0;
 }
 
+// This variant is part of more recent glibc versions and
+// is required by the Rust standard library
+int __cxa_thread_atexit_impl(void (*fn)(void*), void *arg, void *dso_handle) {
+  return __cxa_atexit(fn, arg, dso_handle);
+}

@@ -115,6 +115,7 @@ class KTest:
         return sio.getvalue()
 
     def extract(self, object_names, trim_zeros):
+        extracted_objects = set()
         for name, data in self.objects:
             if name not in object_names:
                 continue
@@ -123,6 +124,12 @@ class KTest:
             blob = data.rstrip(b'\x00') if trim_zeros else data
             f.write(blob)
             f.close()
+            extracted_objects.add(name)
+        missing_objects = list(object_names - extracted_objects)
+        missing_objects.sort()
+        if missing_objects:
+            sys.exit(f'Could not find object{"s"[:len(missing_objects)^1]}: {", ".join(missing_objects)}')
+
 
 
 

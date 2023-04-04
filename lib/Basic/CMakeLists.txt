@@ -6,13 +6,13 @@
 # License. See LICENSE.TXT for details.
 #
 #===------------------------------------------------------------------------===#
-klee_add_component(kleeBasic
+add_library(kleeBasic
   KTest.cpp
   Statistics.cpp
 )
-set(LLVM_COMPONENTS
-  support
-)
 
-klee_get_llvm_libs(LLVM_LIBS ${LLVM_COMPONENTS})
-target_link_libraries(kleeBasic PUBLIC ${LLVM_LIBS})
+llvm_config(kleeBasic "${USE_LLVM_SHARED}" support)
+target_compile_options(kleeBasic PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
+target_compile_definitions(kleeBasic PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})
+
+target_include_directories(kleeBasic PRIVATE ${KLEE_INCLUDE_DIRS})

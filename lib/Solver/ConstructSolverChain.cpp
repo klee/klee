@@ -11,10 +11,10 @@
  * This file groups declarations that are common to both KLEE and Kleaver.
  */
 
-#include "klee/Common.h"
-#include "klee/Internal/Support/ErrorHandling.h"
-#include "klee/Internal/System/Time.h"
+#include "klee/Solver/Common.h"
 #include "klee/Solver/SolverCmdLine.h"
+#include "klee/Support/ErrorHandling.h"
+#include "klee/System/Time.h"
 
 #include "llvm/Support/raw_ostream.h"
 
@@ -71,7 +71,7 @@ Solver *constructSolverChain(Solver *coreSolver,
   }
   if (DebugCrossCheckCoreSolverWith != NO_SOLVER) {
     Solver *oracleSolver = createCoreSolver(DebugCrossCheckCoreSolverWith);
-    solver = createValidatingSolver(/*s=*/solver, /*oracle=*/oracleSolver);
+    solver = createValidatingSolver(solver, oracleSolver, true);
   }
 
   return solver;

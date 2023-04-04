@@ -9,7 +9,7 @@
 
 #include "klee-replay.h"
 
-#include "klee/Internal/ADT/KTest.h"
+#include "klee/ADT/KTest.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -24,8 +24,15 @@
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
 #include <signal.h>
+
+#ifndef fgetc_unlocked
 #define fgetc_unlocked(x) fgetc (x)
+#endif
+
+#ifndef fputc_unlocked
 #define fputc_unlocked(x,y) fputc (x,y)
+#endif
+
 #else
 #include <sys/signal.h>
 #endif
@@ -304,10 +311,12 @@ int main(int argc, char** argv) {
 
       prg_argc = input->numArgs;
       prg_argv = input->args;
-      prg_argv[0] = argv[1];
+      free(prg_argv[0]);
+      prg_argv[0] = strdup(argv[1]);
       klee_init_env(&prg_argc, &prg_argv);
 
       replay_create_files(&__exe_fs);
+      kTest_free(input);
       return 0;
     }
 
@@ -321,9 +330,16 @@ int main(int argc, char** argv) {
     }
   }
 
+  // Executable needs to be converted to an absolute path, as klee-replay calls
+  // chdir just before executing it
+  char executable[PATH_MAX];
+  if (!realpath(argv[optind], executable)) {
+    snprintf(executable, PATH_MAX, "KLEE-REPLAY: ERROR: executable %s:",
+             argv[optind]);
+    perror(executable);
+    exit(1);
+  }
   /* Normal execution path ... */
-
-  char* executable = argv[optind];
 
   /* make sure this process has the CAP_SYS_CHROOT capability, if possible. */
 #ifdef HAVE_SYS_CAPABILITY_H
@@ -336,14 +352,6 @@ int main(int argc, char** argv) {
     fputs("KLEE-REPLAY: ERROR: chroot: root dir should be a parent dir of executable.\n", stderr);
     exit(1);
   }
-
-  /* Verify the executable exists. */
-  FILE *f = fopen(executable, "r");
-  if (!f) {
-    fprintf(stderr, "KLEE-REPLAY: ERROR: executable %s not found.\n", executable);
-    exit(1);
-  }
-  fclose(f);
 
   int idx = 0;
   for (idx = optind + 1; idx != argc; ++idx) {
@@ -360,8 +368,11 @@ int main(int argc, char** argv) {
     obj_index = 0;
     prg_argc = input->numArgs;
     prg_argv = input->args;
-    prg_argv[0] = argv[optind];
+    free(prg_argv[0]);
+    prg_argv[0] = strdup(argv[optind]);
+
     klee_init_env(&prg_argc, &prg_argv);
+
     if (idx > 2)
       fputc('\n', stderr);
     fprintf(stderr, "KLEE-REPLAY: NOTE: Test file: %s\n"
@@ -379,6 +390,7 @@ int main(int argc, char** argv) {
     /* Run the test case machinery in a subprocess, eventually this parent
        process should be a script or something which shells out to the actual
        execution tool. */
+
     int pid = fork();
     if (pid < 0) {
       perror("fork");
@@ -402,6 +414,9 @@ int main(int argc, char** argv) {
         perror("waitpid");
         _exit(66);
       }
+
+      free(prg_argv);
+      kTest_free(input);
     }
   }
 
@@ -451,30 +466,17 @@ void klee_posix_prefer_cex(void *buffer, uintptr_t condition) {
 }
 
 void klee_make_symbolic(void *addr, size_t nbytes, const char *name) {
-  /* XXX remove model version code once new tests gen'd */
   if (obj_index >= input->numObjects) {
-    if (strcmp("model_version", name) == 0) {
-      assert(nbytes == 4);
-      *((int*) addr) = 0;
-    } else {
       __emit_error("ran out of appropriate inputs");
-    }
   } else {
     KTestObject *boo = &input->objects[obj_index];
-
-    if (strcmp("model_version", name) == 0 &&
-        strcmp("model_version", boo->name) != 0) {
-      assert(nbytes == 4);
-      *((int*) addr) = 0;
+    if (boo->numBytes != nbytes) {
+      fprintf(stderr, "KLEE-REPLAY: ERROR: make_symbolic mismatch, different sizes: "
+              "%d in input file, %lu in code\n", boo->numBytes, (unsigned long)nbytes);
+      exit(1);
     } else {
-      if (boo->numBytes != nbytes) {
-        fprintf(stderr, "KLEE-REPLAY: ERROR: make_symbolic mismatch, different sizes: "
-           "%d in input file, %lu in code\n", boo->numBytes, (unsigned long)nbytes);
-        exit(1);
-      } else {
-        memcpy(addr, boo->bytes, nbytes);
-        obj_index++;
-      }
+      memcpy(addr, boo->bytes, nbytes);
+      obj_index++;
     }
   }
 }

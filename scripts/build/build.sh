@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -e
 set -u
+set -o pipefail
 # Build script for different components that are needed
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -78,7 +79,7 @@ check_docker_os() {
   local docker_base=$1
   local os_info=""
   # start docker using the base image, link this directory and get the os information
-  os_info=$(docker run -v "${DIR}:/tmp" "${docker_base}" /tmp/build.sh --check-os) || { echo "Docker execution failed: $os_info"; exit 1;}
+  os_info=$(docker run --rm -v "${DIR}:/tmp" "${docker_base}" /tmp/build.sh --check-os) || { echo "Docker execution failed: $os_info"; exit 1;}
 
   local line
   while read -r line; do
@@ -327,6 +328,11 @@ build_docker() {
     for f in "${DIR}/patches/${v}"*.patch; do
       cp -r "$f" "${temp_dir}/patches/"
     done
+
+    mkdir -p "${temp_dir}/sanitizer"
+    for f in "${DIR}/sanitizer/${v}"*.txt; do
+      cp -r "$f" "${temp_dir}/sanitizer/"
+    done
   done
   shopt -u nullglob # disallow nullglobing
 
@@ -538,7 +544,7 @@ get_all_dependencies() {
     mapfile -t deps_list <<< "$(get_all_dependencies_rec "$v" "$type")"
     [[ "${failed}" -eq 1 ]] && continue
 
-    # Make sure items are unique and keep the order of occurence
+    # Make sure items are unique and keep the order of occurrence
     for di in "${deps_list[@]}"; do
       local found=0
       for f in "${final_list[@]}"; do
@@ -642,7 +648,7 @@ install_component() {
   check_list artifact_dependency_"${component}"
   mapfile -t depending_artifact_components <<< "$(get_list artifact_dependency_"${component}")"
 
-  # Make sure an artefact is available for the depending component
+  # Make sure an artifact is available for the depending component
   for v in "${depending_artifact_components[@]}"; do
     [[ -z "${v}" ]] && continue
     install_component "${v}"
@@ -654,7 +660,7 @@ install_component() {
   # Handle dependencies of required artifacts
   gather_dependencies "${component}" "artifact" "setup_variables"
 
-  # Check if the artifact is installed ablready
+  # Check if the artifact is installed already
   execution_action is_installed "${component}" && execution_action setup_artifact_variables "${component}" && validate_required_variables "${component}"  "export_variables" && { echo "Already installed ${component}"; return 0; }
 
   # Install package if available
@@ -700,7 +706,6 @@ install_component() {
 main() {
   local NAME
   NAME=$(basename "${0}")
-  local USAGE="usage: ${NAME} "
   local COMPONENTS=()
   local BUILD_DOCKER=0
   local INSTALL_SYSTEM_DEPS=0

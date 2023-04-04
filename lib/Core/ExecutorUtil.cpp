@@ -7,16 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Context.h"
 #include "Executor.h"
 
-#include "Context.h"
-
 #include "klee/Config/Version.h"
+#include "klee/Core/Interpreter.h"
 #include "klee/Expr/Expr.h"
-#include "klee/Internal/Module/KModule.h"
-#include "klee/Internal/Support/ErrorHandling.h"
-#include "klee/Interpreter.h"
+#include "klee/Module/KModule.h"
 #include "klee/Solver/Solver.h"
+#include "klee/Support/ErrorHandling.h"
 
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -49,7 +48,9 @@ namespace klee {
       } else if (const ConstantFP *cf = dyn_cast<ConstantFP>(c)) {
         return ConstantExpr::alloc(cf->getValueAPF().bitcastToAPInt());
       } else if (const GlobalValue *gv = dyn_cast<GlobalValue>(c)) {
-        return globalAddresses.find(gv)->second;
+        auto it = globalAddresses.find(gv);
+        assert(it != globalAddresses.end());
+        return it->second;
       } else if (isa<ConstantPointerNull>(c)) {
         return Expr::createPointer(0);
       } else if (isa<UndefValue>(c) || isa<ConstantAggregateZero>(c)) {
@@ -213,11 +214,7 @@ namespace klee {
           continue;
 
         // Handle a struct index, which adds its field offset to the pointer.
-#if LLVM_VERSION_CODE >= LLVM_VERSION(4, 0)
         if (auto STy = ii.getStructTypeOrNull()) {
-#else
-        if (StructType *STy = dyn_cast<StructType>(*ii)) {
-#endif
           unsigned ElementIdx = indexOp->getZExtValue();
           const StructLayout *SL = kmodule->targetData->getStructLayout(STy);
           base = base->Add(

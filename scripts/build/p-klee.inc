@@ -3,6 +3,7 @@ validate_build_config_klee() {
 }
 
 setup_build_variables_klee() {
+  source "${DIR}/common-functions"
   KLEE_SUFFIX="${LLVM_VERSION_SHORT}${SOLVER_SUFFIX}${SANITIZER_SUFFIX}"
   KLEE_BUILD_DIR="${BASE}/klee_build${KLEE_SUFFIX}"
   KLEE_SRC="$DIR/../../"
@@ -16,14 +17,12 @@ build_klee() {
   CMAKE_PREFIX_PATH=("")
 
   local CMAKE_ARGUMENTS=(
-    -DLLVM_DIR="${LLVM_INSTALL}"
-    -DLLVM_CONFIG_BINARY="${LLVM_CONFIG}"
-    -DLLVMCC="${BITCODE_CC}"
-    -DLLVMCXX="${BITCODE_CXX}"
-    -DGTEST_SRC_DIR="${GTEST_INSTALL_PATH}"
-    -DENABLE_UNIT_TESTS="TRUE"
-    -DENABLE_SYSTEM_TESTS="TRUE"
-    -DLIT_ARGS="-v"
+    "-DLLVM_DIR=${LLVM_INSTALL}"
+    "-DGTEST_SRC_DIR=${GTEST_INSTALL_PATH}"
+    "-DENABLE_UNIT_TESTS=TRUE"
+    "-DENABLE_SYSTEM_TESTS=TRUE"
+    "-DENABLE_DOXYGEN=${ENABLE_DOXYGEN}"
+    "-DLIT_ARGS=-v"
   )
 
 
@@ -33,13 +32,11 @@ build_klee() {
 
   if [ "${UCLIBC_VERSION}" != "0" ]; then
     CMAKE_ARGUMENTS+=(
-      "-DENABLE_KLEE_UCLIBC=TRUE"
       "-DKLEE_UCLIBC_PATH=${BASE}/klee-uclibc-${LLVM_VERSION_SHORT}"
       "-DENABLE_POSIX_RUNTIME=TRUE"
     )
   else
     CMAKE_ARGUMENTS+=(
-      "-DENABLE_KLEE_UCLIBC=FALSE"
       "-DENABLE_POSIX_RUNTIME=FALSE"
     )
   fi
@@ -53,6 +50,8 @@ if [ "${USE_LIBCXX}" -eq 1 ]; then
     "-DENABLE_KLEE_LIBCXX=TRUE"
     "-DKLEE_LIBCXX_DIR=${LIBCXX_INSTALL}"
     "-DKLEE_LIBCXX_INCLUDE_DIR=${LIBCXX_INSTALL}/include/c++/v1"
+    "-DENABLE_KLEE_EH_CXX=TRUE"
+    "-DKLEE_LIBCXXABI_SRC_DIR=${LIBCXX_SRC}/libcxxabi"
   )
 else
   CMAKE_ARGUMENTS+=(
@@ -94,9 +93,9 @@ fi
         METASMT_DEFAULT=STP
       fi
       KLEE_METASMT_CONFIGURE_OPTION=(
-        -DENABLE_SOLVER_METASMT=TRUE
-        -DmetaSMT_DIR="${METASMT_BUILD_PATH}"
-        -DMETASMT_DEFAULT_BACKEND="${METASMT_DEFAULT}"
+        "-DENABLE_SOLVER_METASMT=TRUE"
+        "-DmetaSMT_DIR=${METASMT_BUILD_PATH}"
+        "-DMETASMT_DEFAULT_BACKEND=${METASMT_DEFAULT}"
       )
       ;;
     *)
@@ -159,12 +158,18 @@ fi
     CXX_FLAGS+=("${SANITIZER_CXX_FLAGS[@]}")
     LD_FLAGS+=("${SANITIZER_LD_FLAGS[@]}")
 
+    SANITIZER_DIR="$(cd "$(dirname "${SANITIZER_BITCODE_CC}")" && pwd)"
+
     CMAKE_ARGUMENTS+=(
       "-DCMAKE_C_COMPILER=${SANITIZER_C_COMPILER}"
       "-DCMAKE_CXX_COMPILER=${SANITIZER_CXX_COMPILER}"
     )
   fi
 
+  CMAKE_ARGUMENTS+=(
+    "-DLLVMCC=${BITCODE_CC}"
+    "-DLLVMCXX=${BITCODE_CXX}"
+  )
 
 
   mkdir -p "${KLEE_BUILD_DIR}" || return 1
@@ -185,6 +190,8 @@ fi
 
   source "${KLEE_BUILD_DIR}/.build_command"
   make -j$(nproc) || make || return 1
+
+  touch "${KLEE_BUILD_DIR}/.is_installed"
 }
 
 install_klee() {
@@ -212,4 +219,16 @@ get_build_artifacts_klee() {
     setup_build_variables_klee
     echo "${KLEE_BUILD_DIR}"
   )
+}
+
+# Check if the binary artifact is installed
+is_installed_klee() {
+  (
+    setup_build_variables_klee
+    [[ -f "${KLEE_BUILD_DIR}"/.is_installed ]]
+  ) || return 1
+}
+
+setup_artifact_variables_klee() {
+  setup_build_variables_klee
 }

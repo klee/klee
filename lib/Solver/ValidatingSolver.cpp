@@ -18,18 +18,24 @@ namespace klee {
 class ValidatingSolver : public SolverImpl {
 private:
   Solver *solver, *oracle;
+  bool ownsOracle;
 
 public:
-  ValidatingSolver(Solver *_solver, Solver *_oracle)
-      : solver(_solver), oracle(_oracle) {}
-  ~ValidatingSolver() { delete solver; }
+  ValidatingSolver(Solver *solver, Solver *oracle, bool ownsOracle = false)
+      : solver(solver), oracle(oracle), ownsOracle(ownsOracle) {}
+  ~ValidatingSolver() {
+    delete solver;
+    if (ownsOracle) {
+      delete oracle;
+    }
+  }
 
   bool computeValidity(const Query &, Solver::Validity &result);
   bool computeTruth(const Query &, bool &isValid);
   bool computeValue(const Query &, ref<Expr> &result);
   bool computeInitialValues(const Query &,
                             const std::vector<const Array *> &objects,
-                            std::vector<std::vector<unsigned char> > &values,
+                            std::vector<std::vector<unsigned char>> &values,
                             bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query &);
@@ -93,7 +99,7 @@ bool ValidatingSolver::computeInitialValues(
   if (hasSolution) {
     // Assert the bindings as constraints, and verify that the
     // conjunction of the actual constraints is satisfiable.
-    std::vector<ref<Expr> > bindings;
+    ConstraintSet bindings;
     for (unsigned i = 0; i != values.size(); ++i) {
       const Array *array = objects[i];
       assert(array);
@@ -107,12 +113,10 @@ bool ValidatingSolver::computeInitialValues(
     }
     ConstraintManager tmp(bindings);
     ref<Expr> constraints = Expr::createIsZero(query.expr);
-    for (ConstraintManager::const_iterator it = query.constraints.begin(),
-                                           ie = query.constraints.end();
-         it != ie; ++it)
-      constraints = AndExpr::create(constraints, *it);
+    for (auto const &constraint : query.constraints)
+      constraints = AndExpr::create(constraints, constraint);
 
-    if (!oracle->impl->computeTruth(Query(tmp, constraints), answer))
+    if (!oracle->impl->computeTruth(Query(bindings, constraints), answer))
       return false;
     if (!answer)
       assert(0 && "invalid solver result (computeInitialValues)");
@@ -138,7 +142,7 @@ void ValidatingSolver::setCoreSolverTimeout(time::Span timeout) {
   solver->impl->setCoreSolverTimeout(timeout);
 }
 
-Solver *createValidatingSolver(Solver *s, Solver *oracle) {
-  return new Solver(new ValidatingSolver(s, oracle));
+Solver *createValidatingSolver(Solver *s, Solver *oracle, bool ownsOracle) {
+  return new Solver(new ValidatingSolver(s, oracle, ownsOracle));
 }
 }

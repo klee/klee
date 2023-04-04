@@ -9,10 +9,9 @@
 
 #include "klee/Expr/Constraints.h"
 
-#include "klee/Expr/ExprPPrinter.h"
 #include "klee/Expr/ExprVisitor.h"
-#include "klee/Internal/Module/KModule.h"
-#include "klee/OptionCategories.h"
+#include "klee/Module/KModule.h"
+#include "klee/Support/OptionCategories.h"
 
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
@@ -28,29 +27,28 @@ llvm::cl::opt<bool> RewriteEqualities(
                    "constant is added (default=true)"),
     llvm::cl::init(true),
     llvm::cl::cat(SolvingCat));
-}
+} // namespace
 
 class ExprReplaceVisitor : public ExprVisitor {
 private:
   ref<Expr> src, dst;
 
 public:
-  ExprReplaceVisitor(ref<Expr> _src, ref<Expr> _dst) : src(_src), dst(_dst) {}
+  ExprReplaceVisitor(const ref<Expr> &_src, const ref<Expr> &_dst)
+      : src(_src), dst(_dst) {}
 
-  Action visitExpr(const Expr &e) {
-    if (e == *src.get()) {
+  Action visitExpr(const Expr &e) override {
+    if (e == *src) {
       return Action::changeTo(dst);
-    } else {
-      return Action::doChildren();
     }
+    return Action::doChildren();
   }
 
-  Action visitExprPost(const Expr &e) {
-    if (e == *src.get()) {
+  Action visitExprPost(const Expr &e) override {
+    if (e == *src) {
       return Action::changeTo(dst);
-    } else {
-      return Action::doChildren();
     }
+    return Action::doChildren();
   }
 };
 
@@ -59,29 +57,25 @@ private:
   const std::map< ref<Expr>, ref<Expr> > &replacements;
 
 public:
-  ExprReplaceVisitor2(const std::map< ref<Expr>, ref<Expr> > &_replacements) 
-    : ExprVisitor(true),
-      replacements(_replacements) {}
+  explicit ExprReplaceVisitor2(
+      const std::map<ref<Expr>, ref<Expr>> &_replacements)
+      : ExprVisitor(true), replacements(_replacements) {}
 
-  Action visitExprPost(const Expr &e) {
-    std::map< ref<Expr>, ref<Expr> >::const_iterator it =
-      replacements.find(ref<Expr>(const_cast<Expr*>(&e)));
+  Action visitExprPost(const Expr &e) override {
+    auto it = replacements.find(ref<Expr>(const_cast<Expr *>(&e)));
     if (it!=replacements.end()) {
       return Action::changeTo(it->second);
-    } else {
-      return Action::doChildren();
     }
+    return Action::doChildren();
   }
 };
 
 bool ConstraintManager::rewriteConstraints(ExprVisitor &visitor) {
-  ConstraintManager::constraints_ty old;
+  ConstraintSet old;
   bool changed = false;
 
-  constraints.swap(old);
-  for (ConstraintManager::constraints_ty::iterator 
-         it = old.begin(), ie = old.end(); it != ie; ++it) {
-    ref<Expr> &ce = *it;
+  std::swap(constraints, old);
+  for (auto &ce : old) {
     ref<Expr> e = visitor.visit(ce);
 
     if (e!=ce) {
@@ -95,44 +89,41 @@ bool ConstraintManager::rewriteConstraints(ExprVisitor &visitor) {
   return changed;
 }
 
-void ConstraintManager::simplifyForValidConstraint(ref<Expr> e) {
-  // XXX 
-}
+ref<Expr> ConstraintManager::simplifyExpr(const ConstraintSet &constraints,
+                                          const ref<Expr> &e) {
 
-ref<Expr> ConstraintManager::simplifyExpr(ref<Expr> e) const {
   if (isa<ConstantExpr>(e))
     return e;
 
   std::map< ref<Expr>, ref<Expr> > equalities;
-  
-  for (ConstraintManager::constraints_ty::const_iterator 
-         it = constraints.begin(), ie = constraints.end(); it != ie; ++it) {
-    if (const EqExpr *ee = dyn_cast<EqExpr>(*it)) {
+
+  for (auto &constraint : constraints) {
+    if (const EqExpr *ee = dyn_cast<EqExpr>(constraint)) {
       if (isa<ConstantExpr>(ee->left)) {
         equalities.insert(std::make_pair(ee->right,
                                          ee->left));
       } else {
-        equalities.insert(std::make_pair(*it,
-                                         ConstantExpr::alloc(1, Expr::Bool)));
+        equalities.insert(
+            std::make_pair(constraint, ConstantExpr::alloc(1, Expr::Bool)));
       }
     } else {
-      equalities.insert(std::make_pair(*it,
-                                       ConstantExpr::alloc(1, Expr::Bool)));
+      equalities.insert(
+          std::make_pair(constraint, ConstantExpr::alloc(1, Expr::Bool)));
     }
   }
 
   return ExprReplaceVisitor2(equalities).visit(e);
 }
 
-void ConstraintManager::addConstraintInternal(ref<Expr> e) {
+void ConstraintManager::addConstraintInternal(const ref<Expr> &e) {
   // rewrite any known equalities and split Ands into different conjuncts
 
   switch (e->getKind()) {
   case Expr::Constant:
-    assert(cast<ConstantExpr>(e)->isTrue() && 
+    assert(cast<ConstantExpr>(e)->isTrue() &&
            "attempt to add invalid (false) constraint");
     break;
-    
+
     // split to enable finer grained independence and other optimizations
   case Expr::And: {
     BinaryExpr *be = cast<BinaryExpr>(e);
@@ -157,14 +148,31 @@ void ConstraintManager::addConstraintInternal(ref<Expr> e) {
     constraints.push_back(e);
     break;
   }
-    
+
   default:
     constraints.push_back(e);
     break;
   }
 }
 
-void ConstraintManager::addConstraint(ref<Expr> e) {
-  e = simplifyExpr(e);
-  addConstraintInternal(e);
+void ConstraintManager::addConstraint(const ref<Expr> &e) {
+  ref<Expr> simplified = simplifyExpr(constraints, e);
+  addConstraintInternal(simplified);
 }
+
+ConstraintManager::ConstraintManager(ConstraintSet &_constraints)
+    : constraints(_constraints) {}
+
+bool ConstraintSet::empty() const { return constraints.empty(); }
+
+klee::ConstraintSet::constraint_iterator ConstraintSet::begin() const {
+  return constraints.begin();
+}
+
+klee::ConstraintSet::constraint_iterator ConstraintSet::end() const {
+  return constraints.end();
+}
+
+size_t ConstraintSet::size() const noexcept { return constraints.size(); }
+
+void ConstraintSet::push_back(const ref<Expr> &e) { constraints.push_back(e); }

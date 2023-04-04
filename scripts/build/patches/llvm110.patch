@@ -1,0 +1,122 @@
+--- a/compiler-rt/lib/sanitizer_common/sanitizer_platform_limits_posix.cpp
++++ b/compiler-rt/lib/sanitizer_common/sanitizer_platform_limits_posix.cpp
+@@ -143,7 +143,6 @@ typedef struct user_fpregs elf_fpregset_t;
+ # include <sys/procfs.h>
+ #endif
+ #include <sys/user.h>
+-#include <linux/cyclades.h>
+ #include <linux/if_eql.h>
+ #include <linux/if_plip.h>
+ #include <linux/lp.h>
+@@ -459,7 +458,6 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
+
+ #if SANITIZER_GLIBC
+   unsigned struct_ax25_parms_struct_sz = sizeof(struct ax25_parms_struct);
+-  unsigned struct_cyclades_monitor_sz = sizeof(struct cyclades_monitor);
+ #if EV_VERSION > (0x010000)
+   unsigned struct_input_keymap_entry_sz = sizeof(struct input_keymap_entry);
+ #else
+@@ -823,15 +821,6 @@ unsigned struct_ElfW_Phdr_sz = sizeof(Elf_Phdr);
+ #endif // SANITIZER_LINUX
+
+ #if SANITIZER_LINUX && !SANITIZER_ANDROID
+-  unsigned IOCTL_CYGETDEFTHRESH = CYGETDEFTHRESH;
+-  unsigned IOCTL_CYGETDEFTIMEOUT = CYGETDEFTIMEOUT;
+-  unsigned IOCTL_CYGETMON = CYGETMON;
+-  unsigned IOCTL_CYGETTHRESH = CYGETTHRESH;
+-  unsigned IOCTL_CYGETTIMEOUT = CYGETTIMEOUT;
+-  unsigned IOCTL_CYSETDEFTHRESH = CYSETDEFTHRESH;
+-  unsigned IOCTL_CYSETDEFTIMEOUT = CYSETDEFTIMEOUT;
+-  unsigned IOCTL_CYSETTHRESH = CYSETTHRESH;
+-  unsigned IOCTL_CYSETTIMEOUT = CYSETTIMEOUT;
+   unsigned IOCTL_EQL_EMANCIPATE = EQL_EMANCIPATE;
+   unsigned IOCTL_EQL_ENSLAVE = EQL_ENSLAVE;
+   unsigned IOCTL_EQL_GETMASTRCFG = EQL_GETMASTRCFG;
+--- a/compiler-rt/lib/sanitizer_common/sanitizer_common_interceptors_ioctl.inc
++++ b/compiler-rt/lib/sanitizer_common/sanitizer_common_interceptors_ioctl.inc
+@@ -370,15 +370,6 @@ static void ioctl_table_fill() {
+
+ #if SANITIZER_GLIBC
+   // _(SIOCDEVPLIP, WRITE, struct_ifreq_sz); // the same as EQL_ENSLAVE
+-  _(CYGETDEFTHRESH, WRITE, sizeof(int));
+-  _(CYGETDEFTIMEOUT, WRITE, sizeof(int));
+-  _(CYGETMON, WRITE, struct_cyclades_monitor_sz);
+-  _(CYGETTHRESH, WRITE, sizeof(int));
+-  _(CYGETTIMEOUT, WRITE, sizeof(int));
+-  _(CYSETDEFTHRESH, NONE, 0);
+-  _(CYSETDEFTIMEOUT, NONE, 0);
+-  _(CYSETTHRESH, NONE, 0);
+-  _(CYSETTIMEOUT, NONE, 0);
+   _(EQL_EMANCIPATE, WRITE, struct_ifreq_sz);
+   _(EQL_ENSLAVE, WRITE, struct_ifreq_sz);
+   _(EQL_GETMASTRCFG, WRITE, struct_ifreq_sz);
+--- a/compiler-rt/lib/sanitizer_common/sanitizer_posix_libcdep.cpp
++++ b/compiler-rt/lib/sanitizer_common/sanitizer_posix_libcdep.cpp
+@@ -169,7 +169,11 @@ bool SupportsColoredOutput(fd_t fd) {
+
+ #if !SANITIZER_GO
+ // TODO(glider): different tools may require different altstack size.
+-static const uptr kAltStackSize = SIGSTKSZ * 4;  // SIGSTKSZ is not enough.
++static uptr GetAltStackSize() {
++  // SIGSTKSZ is not enough.
++  static const uptr kAltStackSize = SIGSTKSZ * 4;
++  return kAltStackSize;
++}
+
+ void SetAlternateSignalStack() {
+   stack_t altstack, oldstack;
+@@ -180,10 +184,10 @@ void SetAlternateSignalStack() {
+   // TODO(glider): the mapped stack should have the MAP_STACK flag in the
+   // future. It is not required by man 2 sigaltstack now (they're using
+   // malloc()).
+-  void* base = MmapOrDie(kAltStackSize, __func__);
++  void *base = MmapOrDie(GetAltStackSize(), __func__);
+   altstack.ss_sp = (char*) base;
+   altstack.ss_flags = 0;
+-  altstack.ss_size = kAltStackSize;
++  altstack.ss_size = GetAltStackSize();
+   CHECK_EQ(0, sigaltstack(&altstack, nullptr));
+ }
+
+@@ -191,7 +195,7 @@ void UnsetAlternateSignalStack() {
+   stack_t altstack, oldstack;
+   altstack.ss_sp = nullptr;
+   altstack.ss_flags = SS_DISABLE;
+-  altstack.ss_size = kAltStackSize;  // Some sane value required on Darwin.
++  altstack.ss_size = GetAltStackSize();  // Some sane value required on Darwin.
+   CHECK_EQ(0, sigaltstack(&altstack, &oldstack));
+   UnmapOrDie(oldstack.ss_sp, oldstack.ss_size);
+ }
+--- a/llvm/lib/Transforms/CMakeLists.txt
++++ b/llvm/lib/Transforms/CMakeLists.txt
+@@ -5,7 +5,6 @@ add_subdirectory(InstCombine)
+ add_subdirectory(Scalar)
+ add_subdirectory(IPO)
+ add_subdirectory(Vectorize)
+-add_subdirectory(Hello)
+ add_subdirectory(ObjCARC)
+ add_subdirectory(Coroutines)
+ add_subdirectory(CFGuard)
+--- a/llvm/test/CMakeLists.txt
++++ b/llvm/test/CMakeLists.txt
+@@ -47,7 +47,6 @@ configure_lit_site_cfg(
+ set(LLVM_TEST_DEPENDS
+           BugpointPasses
+           FileCheck
+-          LLVMHello
+           UnitTests
+           bugpoint
+           count
+--- a/libcxx/include/__config
++++ b/libcxx/include/__config
+@@ -1167,10 +1167,6 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
+        _LIBCPP_HAS_NO_THREADS is defined.
+ #endif
+
+-#if defined(__STDCPP_THREADS__) && defined(_LIBCPP_HAS_NO_THREADS)
+-#error _LIBCPP_HAS_NO_THREADS cannot be set when __STDCPP_THREADS__ is set.
+-#endif
+-
+ #if !defined(_LIBCPP_HAS_NO_THREADS) && !defined(__STDCPP_THREADS__)
+ #define __STDCPP_THREADS__ 1
+ #endif

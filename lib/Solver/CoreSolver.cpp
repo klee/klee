@@ -12,7 +12,7 @@
 #include "MetaSMTSolver.h"
 
 #include "klee/Solver/SolverCmdLine.h"
-#include "klee/Internal/Support/ErrorHandling.h"
+#include "klee/Support/ErrorHandling.h"
 #include "klee/Solver/Solver.h"
 
 #include "llvm/Support/ErrorHandling.h"

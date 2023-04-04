@@ -6,7 +6,7 @@
 # License. See LICENSE.TXT for details.
 #
 #===------------------------------------------------------------------------===#
-klee_add_component(kleeSupport
+add_library(kleeSupport
   CompressionStream.cpp
   ErrorHandling.cpp
   FileHandling.cpp
@@ -18,10 +18,9 @@ klee_add_component(kleeSupport
   TreeStream.cpp
 )
 
-target_link_libraries(kleeSupport PRIVATE ${ZLIB_LIBRARIES})
+llvm_config(kleeSupport "${USE_LLVM_SHARED}" support)
 
-set(LLVM_COMPONENTS
-  support
-)
-klee_get_llvm_libs(LLVM_LIBS ${LLVM_COMPONENTS})
-target_link_libraries(kleeSupport PUBLIC ${LLVM_LIBS})
+target_link_libraries(kleeSupport PRIVATE ${ZLIB_LIBRARIES} ${TCMALLOC_LIBRARIES})
+target_include_directories(kleeSupport PRIVATE ${KLEE_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS} ${TCMALLOC_INCLUDE_DIR})
+target_compile_options(kleeSupport PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
+target_compile_definitions(kleeSupport PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})

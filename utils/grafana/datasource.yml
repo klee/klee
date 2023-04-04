@@ -1,0 +1,16 @@
+# config file version
+apiVersion: 1
+
+datasources:
+  # <string, required> name of the datasource. Required
+- name: KLEE Stats
+  # <string, required> datasource type. Required
+  type: grafana-simple-json-datasource
+  # <string, required> access mode. proxy or direct (Server or Browser in the UI). Required
+  access: proxy
+  # <string> url
+  url: http://localhost:5000
+  # <bool> mark as default datasource. Max one per org
+  isDefault: true
+  # <bool> allow users to edit datasources from the UI.
+  editable: true

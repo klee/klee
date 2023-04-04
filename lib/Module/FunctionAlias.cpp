@@ -8,8 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "Passes.h"
-#include "klee/Internal/Support/ErrorHandling.h"
-#include "klee/OptionCategories.h"
+
+#include "klee/Support/Casting.h"
+#include "klee/Support/ErrorHandling.h"
+#include "klee/Support/OptionCategories.h"
 
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/Support/CommandLine.h"
@@ -34,9 +36,7 @@ namespace klee {
 bool FunctionAliasPass::runOnModule(Module &M) {
   bool modified = false;
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(3, 9)
   assert((M.ifunc_size() == 0) && "Unexpected ifunc");
-#endif
 
   for (const auto &pair : FunctionAlias) {
     bool matchFound = false;
@@ -91,28 +91,7 @@ bool FunctionAliasPass::runOnModule(Module &M) {
     std::vector<GlobalValue *> matches;
 
     // find matches for regex
-#if LLVM_VERSION_CODE >= LLVM_VERSION(5, 0)
     for (GlobalValue &global : M.global_values()) {
-#else
-    // chain iterators of alias list and function list
-    auto firstIt = M.getAliasList().begin();
-    auto firstIe = M.getAliasList().end();
-    auto secondIt = M.getFunctionList().begin();
-    auto secondIe = M.getFunctionList().end();
-    for (bool firstList = true;;
-         (firstList && (++firstIt != firstIe)) || (++secondIt != secondIe)) {
-      GlobalValue *gv = nullptr;
-      if (firstIt == firstIe)
-        firstList = false;
-      if (firstList) {
-        gv = cast<GlobalValue>(&*firstIt);
-      } else {
-        if (secondIt == secondIe)
-          break;
-        gv = cast<GlobalValue>(&*secondIt);
-      }
-      GlobalValue &global = *gv;
-#endif
       if (!global.hasName())
         continue;
 
@@ -156,10 +135,8 @@ bool FunctionAliasPass::runOnModule(Module &M) {
 
 const FunctionType *FunctionAliasPass::getFunctionType(const GlobalValue *gv) {
   const Type *type = gv->getType();
-  while (type->isPointerTy()) {
-    const PointerType *ptr = cast<PointerType>(type);
-    type = ptr->getElementType();
-  }
+  while (type->isPointerTy())
+    type = type->getPointerElementType();
   return cast<FunctionType>(type);
 }
 
@@ -220,13 +197,10 @@ bool FunctionAliasPass::tryToReplace(GlobalValue *match,
 }
 
 bool FunctionAliasPass::isFunctionOrGlobalFunctionAlias(const GlobalValue *gv) {
-  if (gv == nullptr)
-    return false;
-
-  if (isa<Function>(gv))
+  if (isa_and_nonnull<Function>(gv))
     return true;
 
-  if (const auto *ga = dyn_cast<GlobalAlias>(gv)) {
+  if (const auto *ga = dyn_cast_or_null<GlobalAlias>(gv)) {
     const auto *aliasee = dyn_cast<GlobalValue>(ga->getAliasee());
     if (!aliasee) {
       // check if GlobalAlias is alias bitcast

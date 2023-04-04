@@ -31,7 +31,7 @@ build_z3() {
   LDFLAGS="${LDFLAGS}" \
   CC="${CC}" \
   CXX="${CXX}" \
-  python scripts/mk_make.py --prefix "${Z3_INSTALL_PATH}" -b "build${Z3_SUFFIX}"
+  python3 scripts/mk_make.py --prefix "${Z3_INSTALL_PATH}" -b "build${Z3_SUFFIX}"
   cd "build${Z3_SUFFIX}"
   make -j$(nproc) || make
 }

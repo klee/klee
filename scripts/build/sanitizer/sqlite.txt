@@ -1,0 +1,2 @@
+# Ignore uninit memory for sqlite3 external fstat call
+src:sqlite3.c

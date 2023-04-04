@@ -11,7 +11,7 @@
 
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprPPrinter.h"
-#include "klee/Internal/System/Time.h"
+#include "klee/System/Time.h"
 
 using namespace klee;
 

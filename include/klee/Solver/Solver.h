@@ -11,22 +11,30 @@
 #define KLEE_SOLVER_H
 
 #include "klee/Expr/Expr.h"
-#include "klee/Internal/System/Time.h"
+#include "klee/System/Time.h"
 #include "klee/Solver/SolverCmdLine.h"
 
 #include <vector>
 
 namespace klee {
-  class ConstraintManager;
+  class ConstraintSet;
   class Expr;
   class SolverImpl;
 
+  /// Collection of meta data that a solver can have access to. This is
+  /// independent of the actual constraints but can be used as a two-way
+  /// communication between solver and context of query.
+  struct SolverQueryMetaData {
+    /// @brief Costs for all queries issued for this state
+    time::Span queryCost;
+  };
+
   struct Query {
   public:
-    const ConstraintManager &constraints;
+    const ConstraintSet &constraints;
     ref<Expr> expr;
 
-    Query(const ConstraintManager& _constraints, ref<Expr> _expr)
+    Query(const ConstraintSet& _constraints, ref<Expr> _expr)
       : constraints(_constraints), expr(_expr) {
     }
 
@@ -213,7 +221,7 @@ namespace klee {
   ///
   /// \param s - The primary underlying solver to use.
   /// \param oracle - The solver to check query results against.
-  Solver *createValidatingSolver(Solver *s, Solver *oracle);
+  Solver *createValidatingSolver(Solver *s, Solver *oracle, bool ownsOracle = false);
 
   /// createAssignmentValidatingSolver - Create a solver that when requested
   /// for an assignment will check that the computed assignment satisfies
