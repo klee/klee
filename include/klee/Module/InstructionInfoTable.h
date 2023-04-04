@@ -14,6 +14,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <llvm/ADT/Optional.h>
 
 namespace llvm {
 class Function;
@@ -32,13 +33,13 @@ struct InstructionInfo {
   /// @brief Column number in source file.
   unsigned column;
   /// @brief Line number in generated assembly.ll.
-  unsigned assemblyLine;
+  llvm::Optional<uint64_t> assemblyLine;
   /// @brief Source file name.
   const std::string &file;
 
 public:
   InstructionInfo(unsigned id, const std::string &file, unsigned line,
-                  unsigned column, unsigned assemblyLine)
+                  unsigned column, llvm::Optional<uint64_t> assemblyLine)
       : id{id}, line{line}, column{column},
         assemblyLine{assemblyLine}, file{file} {}
 };
@@ -50,13 +51,13 @@ struct FunctionInfo {
   /// @brief Line number in source file.
   unsigned line;
   /// @brief Line number in generated assembly.ll.
-  uint64_t assemblyLine;
+  llvm::Optional<uint64_t> assemblyLine;
   /// @brief Source file name.
   const std::string &file;
 
 public:
   FunctionInfo(unsigned id, const std::string &file, unsigned line,
-               uint64_t assemblyLine)
+               llvm::Optional<uint64_t> assemblyLine)
       : id{id}, line{line}, assemblyLine{assemblyLine}, file{file} {}
 
   FunctionInfo(const FunctionInfo &) = delete;

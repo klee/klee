@@ -66,6 +66,7 @@ class DebugInfoExtractor {
   std::unordered_map<uintptr_t, uint64_t> lineTable;
 
   const llvm::Module &module;
+  bool withAsm;
 
 public:
   DebugInfoExtractor(
@@ -94,7 +95,10 @@ public:
   }
 
   std::unique_ptr<FunctionInfo> getFunctionInfo(const llvm::Function &Func) {
-    auto asmLine = lineTable.at(reinterpret_cast<std::uintptr_t>(&Func));
+    llvm::Optional<uint64_t> asmLine;
+    if(withAsm) {
+      asmLine = lineTable.at(reinterpret_cast<std::uintptr_t>(&Func));
+    }
     auto dsub = Func.getSubprogram();
 
     if (dsub != nullptr) {
@@ -110,7 +114,10 @@ public:
 
   std::unique_ptr<InstructionInfo>
   getInstructionInfo(const llvm::Instruction &Inst, const FunctionInfo *f) {
-    auto asmLine = lineTable.at(reinterpret_cast<std::uintptr_t>(&Inst));
+    llvm::Optional<uint64_t> asmLine;
+    if(withAsm) {
+      asmLine = lineTable.at(reinterpret_cast<std::uintptr_t>(&Inst));
+    }
 
     // Retrieve debug information associated with instruction
     auto dl = Inst.getDebugLoc();

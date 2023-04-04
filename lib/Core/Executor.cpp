@@ -1461,9 +1461,10 @@ void Executor::printDebugInstructions(ExecutionState &state) {
       !DebugPrintInstructions.isSet(FILE_COMPACT)) {
     (*stream) << "     " << state.pc->getSourceLocation() << ':';
   }
-
-  (*stream) << state.pc->info->assemblyLine << ':' << state.getID();
-
+  if (state.pc->info->assemblyLine.hasValue()) {
+    (*stream) << state.pc->info->assemblyLine << ':';
+  }
+  (*stream) << state.getID();
   if (DebugPrintInstructions.isSet(STDERR_ALL) ||
       DebugPrintInstructions.isSet(FILE_ALL))
     (*stream) << ':' << *(state.pc->inst);
@@ -4198,9 +4199,11 @@ void Executor::terminateStateOnError(ExecutionState &state,
     msg << "Error: " << message << '\n';
     if (!ii.file.empty()) {
       msg << "File: " << ii.file << '\n'
-          << "Line: " << ii.line << '\n'
-          << "assembly.ll line: " << ii.assemblyLine << '\n'
-          << "State: " << state.getID() << '\n';
+          << "Line: " << ii.line << '\n';
+      if(ii.assemblyLine.hasValue()) {
+        msg << "assembly.ll line: " << ii.assemblyLine << '\n';
+      }
+      msg << "State: " << state.getID() << '\n';
     }
     msg << "Stack: \n";
     state.dumpStack(msg);
