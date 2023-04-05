@@ -10,11 +10,12 @@
 #ifndef KLEE_INSTRUCTIONINFOTABLE_H
 #define KLEE_INSTRUCTIONINFOTABLE_H
 
+#include <llvm/ADT/Optional.h>
+#include <llvm/Support/raw_ostream.h>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include <llvm/ADT/Optional.h>
 
 namespace llvm {
 class Function;
@@ -75,7 +76,8 @@ class InstructionInfoTable {
   std::vector<std::unique_ptr<std::string>> internedStrings;
 
 public:
-  explicit InstructionInfoTable(const llvm::Module &m, const std::string& asmll);
+  explicit InstructionInfoTable(const llvm::Module &m,
+                                std::unique_ptr<llvm::raw_fd_ostream> assemblyFS);
 
   unsigned getMaxID() const;
   const InstructionInfo &getInfo(const llvm::Instruction &) const;

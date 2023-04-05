@@ -1,7 +1,7 @@
 #include "StreamWithLine.h"
 
-StreamWithLine::StreamWithLine(llvm::StringRef Filename, std::error_code &EC)
-    : fs(Filename, EC), state(State::NewLine) {}
+StreamWithLine::StreamWithLine(std::unique_ptr<llvm::raw_fd_ostream> assemblyFS)
+    : assemblyFS(std::move(assemblyFS)) {}
 
 void StreamWithLine::write_impl(const char *Ptr, size_t Size) {
   const char *start = Ptr;
@@ -30,7 +30,7 @@ void StreamWithLine::write_impl(const char *Ptr, size_t Size) {
       break;
     case State::ThirdP:
       if (isdigit(*ch)) {
-        fs.write(start, valid_end - start);
+        assemblyFS->write(start, valid_end - start);
         start = valid_end;
         value = *ch;
         state = State::Num;
@@ -60,11 +60,11 @@ void StreamWithLine::write_impl(const char *Ptr, size_t Size) {
       state = State::Another;
     }
   }
-  fs.write(start, end - start);
-  curpos += Size;
+  assemblyFS->write(start, end - start);
+  curPos += Size;
 }
 
-uint64_t StreamWithLine::current_pos() const { return curpos; }
+uint64_t StreamWithLine::current_pos() const { return curPos; }
 
 std::unordered_map<uintptr_t, uint64_t> StreamWithLine::getMapping() const {
   return mapping;

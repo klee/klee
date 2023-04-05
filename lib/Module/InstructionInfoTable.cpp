@@ -48,13 +48,13 @@ public:
 };
 
 static std::unordered_map<uintptr_t, uint64_t>
-buildInstructionToLineMap(const llvm::Module &m, const std::string& asmll) {
+buildInstructionToLineMap(const llvm::Module &m,
+                          std::unique_ptr<llvm::raw_fd_ostream> assemblyFS) {
 
   std::unordered_map<uintptr_t, uint64_t> mapping;
   InstructionToLineAnnotator a;
 
-  std::error_code EC;
-  StreamWithLine os(asmll, EC);
+  StreamWithLine os(std::move(assemblyFS));
   m.print(os, &a);
   os.flush();
 
@@ -66,16 +66,17 @@ class DebugInfoExtractor {
   std::unordered_map<uintptr_t, uint64_t> lineTable;
 
   const llvm::Module &module;
-  bool withAsm;
+  bool withAsm = false;
 
 public:
   DebugInfoExtractor(
       std::vector<std::unique_ptr<std::string>> &_internedStrings,
       const llvm::Module &_module,
-      const std::string& asmll)
+      std::unique_ptr<llvm::raw_fd_ostream> assemblyFS)
       : internedStrings(_internedStrings), module(_module) {
-    if(!asmll.empty()) {
-      lineTable = buildInstructionToLineMap(module, asmll);
+    if(assemblyFS) {
+      withAsm = true;
+      lineTable = buildInstructionToLineMap(module, std::move(assemblyFS));
     }
   }
 
@@ -151,12 +152,10 @@ public:
   }
 };
 
-InstructionInfoTable::InstructionInfoTable(const llvm::Module &m, const std::string& asmll) {
+InstructionInfoTable::InstructionInfoTable(const llvm::Module &m,
+                                           std::unique_ptr<llvm::raw_fd_ostream> assemblyFS) {
   // Generate all debug instruction information
-  DebugInfoExtractor DI(internedStrings, m, asmll);
-
-  functionInfos.reserve(m.size());
-  infos.reserve(const_cast<llvm::Module*>(&m)->getInstructionCount());
+  DebugInfoExtractor DI(internedStrings, m, std::move(assemblyFS));
 
   for (const auto &Func : m) {
     auto F = DI.getFunctionInfo(Func);

@@ -357,9 +357,14 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
 #endif
   }
 
-  /* Build shadow structures */
-  std::string asmll = OutputSource || forceSourceOutput ? ih->getOutputFilename("assembly.ll") : "";
-  infos = std::make_unique<InstructionInfoTable>(*module, asmll);
+  {
+    /* Build shadow structures */
+    std::unique_ptr<llvm::raw_fd_ostream> assemblyFS;
+    if (OutputSource || forceSourceOutput) {
+      assemblyFS = ih->openOutputFile("assembly.ll");
+    }
+    infos = std::make_unique<InstructionInfoTable>(*module, std::move(assemblyFS));
+  }
 
   std::vector<Function *> declarations;
 
