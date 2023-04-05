@@ -10,6 +10,7 @@
 #include "klee/Module/InstructionInfoTable.h"
 #include "klee/Config/Version.h"
 
+#include "StreamWithLine.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/IR/DebugInfo.h"
@@ -25,6 +26,7 @@
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
+#include <llvm/ADT/Optional.h>
 
 #include <cstdint>
 #include <map>
@@ -35,64 +37,47 @@ using namespace klee;
 class InstructionToLineAnnotator : public llvm::AssemblyAnnotationWriter {
 public:
   void emitInstructionAnnot(const llvm::Instruction *i,
-                            llvm::formatted_raw_ostream &os) {
-    os << "%%%";
-    os << reinterpret_cast<std::uintptr_t>(i);
+                            llvm::formatted_raw_ostream &os) override {
+    os << "%%%" + std::to_string(reinterpret_cast<std::uintptr_t>(i));
   }
 
   void emitFunctionAnnot(const llvm::Function *f,
-                         llvm::formatted_raw_ostream &os) {
-    os << "%%%";
-    os << reinterpret_cast<std::uintptr_t>(f);
+                         llvm::formatted_raw_ostream &os) override {
+    os << "%%%" + std::to_string(reinterpret_cast<std::uintptr_t>(f));
   }
 };
 
-static std::map<uintptr_t, uint64_t>
-buildInstructionToLineMap(const llvm::Module &m) {
+static std::unordered_map<uintptr_t, uint64_t>
+buildInstructionToLineMap(const llvm::Module &m,
+                          std::unique_ptr<llvm::raw_fd_ostream> assemblyFS) {
 
-  std::map<uintptr_t, uint64_t> mapping;
+  std::unordered_map<uintptr_t, uint64_t> mapping;
   InstructionToLineAnnotator a;
-  std::string str;
 
-  llvm::raw_string_ostream os(str);
+  StreamWithLine os(std::move(assemblyFS));
   m.print(os, &a);
   os.flush();
 
-  const char *s;
-
-  unsigned line = 1;
-  for (s = str.c_str(); *s; s++) {
-    if (*s != '\n')
-      continue;
-
-    line++;
-    if (s[1] != '%' || s[2] != '%' || s[3] != '%')
-      continue;
-
-    s += 4;
-    char *end;
-    uint64_t value = strtoull(s, &end, 10);
-    if (end != s) {
-      mapping.insert(std::make_pair(value, line));
-    }
-    s = end;
-  }
-
-  return mapping;
+  return os.getMapping();
 }
 
 class DebugInfoExtractor {
   std::vector<std::unique_ptr<std::string>> &internedStrings;
-  std::map<uintptr_t, uint64_t> lineTable;
+  std::unordered_map<uintptr_t, uint64_t> lineTable;
 
   const llvm::Module &module;
+  bool withAsm = false;
 
 public:
   DebugInfoExtractor(
       std::vector<std::unique_ptr<std::string>> &_internedStrings,
-      const llvm::Module &_module)
+      const llvm::Module &_module,
+      std::unique_ptr<llvm::raw_fd_ostream> assemblyFS)
       : internedStrings(_internedStrings), module(_module) {
-    lineTable = buildInstructionToLineMap(module);
+    if (assemblyFS) {
+      withAsm = true;
+      lineTable = buildInstructionToLineMap(module, std::move(assemblyFS));
+    }
   }
 
   std::string &getInternedString(const std::string &s) {
@@ -111,7 +96,10 @@ public:
   }
 
   std::unique_ptr<FunctionInfo> getFunctionInfo(const llvm::Function &Func) {
-    auto asmLine = lineTable.at(reinterpret_cast<std::uintptr_t>(&Func));
+    llvm::Optional<uint64_t> asmLine;
+    if (withAsm) {
+      asmLine = lineTable.at(reinterpret_cast<std::uintptr_t>(&Func));
+    }
     auto dsub = Func.getSubprogram();
 
     if (dsub != nullptr) {
@@ -127,7 +115,10 @@ public:
 
   std::unique_ptr<InstructionInfo>
   getInstructionInfo(const llvm::Instruction &Inst, const FunctionInfo *f) {
-    auto asmLine = lineTable.at(reinterpret_cast<std::uintptr_t>(&Inst));
+    llvm::Optional<uint64_t> asmLine;
+    if (withAsm) {
+      asmLine = lineTable.at(reinterpret_cast<std::uintptr_t>(&Inst));
+    }
 
     // Retrieve debug information associated with instruction
     auto dl = Inst.getDebugLoc();
@@ -161,18 +152,20 @@ public:
   }
 };
 
-InstructionInfoTable::InstructionInfoTable(const llvm::Module &m) {
+InstructionInfoTable::InstructionInfoTable(
+    const llvm::Module &m, std::unique_ptr<llvm::raw_fd_ostream> assemblyFS) {
   // Generate all debug instruction information
-  DebugInfoExtractor DI(internedStrings, m);
+  DebugInfoExtractor DI(internedStrings, m, std::move(assemblyFS));
+
   for (const auto &Func : m) {
     auto F = DI.getFunctionInfo(Func);
     auto FR = F.get();
-    functionInfos.insert(std::make_pair(&Func, std::move(F)));
+    functionInfos.emplace(&Func, std::move(F));
 
     for (auto it = llvm::inst_begin(Func), ie = llvm::inst_end(Func); it != ie;
          ++it) {
       auto instr = &*it;
-      infos.insert(std::make_pair(instr, DI.getInstructionInfo(*instr, FR)));
+      infos.emplace(instr, DI.getInstructionInfo(*instr, FR));
     }
   }
 

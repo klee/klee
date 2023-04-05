@@ -744,7 +744,10 @@ void StatsTracker::writeIStats() {
             of << "fl=" << ii.file << "\n";
             sourceFile = ii.file;
           }
-          of << ii.assemblyLine << " ";
+
+          assert(ii.assemblyLine.hasValue());
+          of << ii.assemblyLine.getValue() << " ";
+
           of << ii.line << " ";
           for (unsigned i = 0; i < nStats; i++)
             if (istatsMask.test(i))
@@ -766,10 +769,15 @@ void StatsTracker::writeIStats() {
                   of << "cfl=" << fii.file << "\n";
                 of << "cfn=" << f->getName().str() << "\n";
                 of << "calls=" << csi.count << " ";
-                of << fii.assemblyLine << " ";
+
+                assert(fii.assemblyLine.hasValue());
+                of << fii.assemblyLine.getValue() << " ";
+
                 of << fii.line << "\n";
 
-                of << ii.assemblyLine << " ";
+                assert(ii.assemblyLine.hasValue());
+                of << ii.assemblyLine.getValue() << " ";
+
                 of << ii.line << " ";
                 for (unsigned i = 0; i < nStats; i++) {
                   if (istatsMask.test(i)) {

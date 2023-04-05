@@ -438,9 +438,12 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
     Function *f = sf.kf->function;
     const InstructionInfo &ii = *target->info;
     out << "\t#" << idx++;
-    std::stringstream AssStream;
-    AssStream << std::setw(8) << std::setfill('0') << ii.assemblyLine;
-    out << AssStream.str();
+    if (ii.assemblyLine.hasValue()) {
+      std::stringstream AssStream;
+      AssStream << std::setw(8) << std::setfill('0')
+                << ii.assemblyLine.getValue();
+      out << AssStream.str();
+    }
     out << " in " << f->getName().str() << " (";
     // Yawn, we could go up and print varargs if we wanted to.
     unsigned index = 0;

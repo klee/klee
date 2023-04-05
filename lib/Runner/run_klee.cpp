@@ -1679,7 +1679,6 @@ int run_klee(int argc, char **argv, char **envp) {
 
   auto finalModule =
       interpreter->setModule(loadedModules, Opts, mainModuleFunctions);
-
   if (InteractiveMode) {
     klee_message("KLEE finish preprocessing.");
     std::ifstream entrypoints(EntryPointsFile);
