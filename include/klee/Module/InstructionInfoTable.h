@@ -74,7 +74,7 @@ class InstructionInfoTable {
   std::vector<std::unique_ptr<std::string>> internedStrings;
 
 public:
-  explicit InstructionInfoTable(const llvm::Module &m);
+  explicit InstructionInfoTable(const llvm::Module &m, const std::string& asmll);
 
   unsigned getMaxID() const;
   const InstructionInfo &getInfo(const llvm::Instruction &) const;

@@ -347,11 +347,6 @@ void KModule::optimiseAndPrepare(
 }
 
 void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
-  if (OutputSource || forceSourceOutput) {
-    std::unique_ptr<llvm::raw_fd_ostream> os(ih->openOutputFile("assembly.ll"));
-    assert(os && !os->has_error() && "unable to open source output");
-    *os << *module;
-  }
 
   if (OutputModule) {
     std::unique_ptr<llvm::raw_fd_ostream> f(ih->openOutputFile("final.bc"));
@@ -363,13 +358,12 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
   }
 
   /* Build shadow structures */
-
-  infos = std::unique_ptr<InstructionInfoTable>(
-      new InstructionInfoTable(*module.get()));
+  std::string asmll = OutputSource || forceSourceOutput ? ih->getOutputFilename("assembly.ll") : "";
+  infos = std::make_unique<InstructionInfoTable>(*module, asmll);
 
   std::vector<Function *> declarations;
 
-  for (auto &Function : *module) {
+  for (auto &Function : module->functions()) {
     if (Function.isDeclaration()) {
       declarations.push_back(&Function);
     }
