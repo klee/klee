@@ -28,4 +28,5 @@ jobs:
         uses: redhat-plumbers-in-action/differential-shellcheck@v4
         with:
           severity: warning
+          include-path: scripts/**.inc
           token: ${{ secrets.GITHUB_TOKEN }}
