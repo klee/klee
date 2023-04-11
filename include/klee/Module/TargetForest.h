@@ -149,6 +149,7 @@ public:
   Layer::iterator begin() const { return forest->begin(); }
   Layer::iterator end() const { return forest->end(); }
   bool contains(ref<Target> b) { return forest->find(b) != forest->end(); }
+  bool deepContains(ref<Target> b) { return forest->deepFind(b); }
 
   /// @brief Number of children of this layer (immediate successors)
   size_t successorCount() const { return forest->size(); }

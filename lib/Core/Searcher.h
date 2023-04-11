@@ -174,6 +174,8 @@ private:
   class TargetHashMap
       : public std::unordered_map<ref<Target>, T, RefTargetHash, RefTargetCmp> {
   };
+  class TargetHashSet
+      : public std::unordered_set<ref<Target>, RefTargetHash, RefTargetCmp> {};
   using TargetToSearcherMap = TargetHashMap<std::unique_ptr<TargetedSearcher>>;
   using TargetToStateSetMap =
       TargetHashMap<std::set<ExecutionState *, ExecutionStateIDCompare>>;
@@ -208,7 +210,7 @@ private:
   TargetForestHistoryToSearcherMap targetedSearchers;
   CodeGraphDistance &codeGraphDistance;
   TargetCalculator *stateHistory;
-  TargetForestHisoryToTargetSet reachedTargets;
+  TargetHashSet reachedTargets;
   std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates;
   std::size_t bound;
   RNG &theRNG;
