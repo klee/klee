@@ -5598,6 +5598,8 @@ void Executor::prepareSymbolicValue(ExecutionState &state,
       ref<Expr> count = eval(target, 0, state).value;
       count = Expr::createZExtToPointerWidth(count);
       size = MulExpr::create(size, count);
+      assert(isa<ConstantExpr>(size));
+      elementSize = cast<ConstantExpr>(size)->getZExtValue();
     }
     lazyInitializeObject(state, result, target,
                          typeSystemManager->getWrappedType(ai->getType()),
