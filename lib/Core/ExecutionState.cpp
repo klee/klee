@@ -87,6 +87,7 @@ ExecutionState::ExecutionState(KFunction *kf)
     : initPC(kf->instructions), pc(initPC), prevPC(pc),
       roundingMode(llvm::APFloat::rmNearestTiesToEven) {
   pushFrame(nullptr, kf);
+  setID();
 }
 
 ExecutionState::ExecutionState(KFunction *kf, KBlock *kb)
@@ -346,6 +347,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
 
   std::set<ref<Expr>> aConstraints(constraints.begin(), constraints.end());
   std::set<ref<Expr>> bConstraints(b.constraints.begin(), b.constraints.end());
+
   std::set<ref<Expr>> commonConstraints, aSuffix, bSuffix;
   std::set_intersection(
       aConstraints.begin(), aConstraints.end(), bConstraints.begin(),
@@ -357,6 +359,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
   std::set_difference(bConstraints.begin(), bConstraints.end(),
                       commonConstraints.begin(), commonConstraints.end(),
                       std::inserter(bSuffix, bSuffix.end()));
+
   if (DebugLogStateMerge) {
     llvm::errs() << "\tconstraint prefix: [";
     for (std::set<ref<Expr>>::iterator it = commonConstraints.begin(),
@@ -472,6 +475,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
   constraints = ConstraintSet();
 
   ConstraintManager m(constraints);
+
   for (const auto &constraint : commonConstraints)
     m.addConstraint(constraint);
   m.addConstraint(OrExpr::create(inA, inB));

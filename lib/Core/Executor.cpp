@@ -160,25 +160,50 @@ cl::opt<TypeSystemKind>
                                      "Use plain type system from LLVM"),
                           clEnumValN(TypeSystemKind::CXX, "CXX",
                                      "Use type system from CXX")),
-               cl::init(TypeSystemKind::LLVM));
+               cl::init(TypeSystemKind::LLVM), cl::cat(ExecCat));
 
 cl::opt<bool>
     UseTBAA("use-tbaa",
             cl::desc("Turns on restrictions based on types compatibility for "
                      "symbolic pointers (default=false)"),
-            cl::init(false));
+            cl::init(false), cl::cat(ExecCat));
 
 cl::opt<bool>
     AlignSymbolicPointers("align-symbolic-pointers",
                           cl::desc("Makes symbolic pointers aligned according"
                                    "to the used type system (default=true)"),
-                          cl::init(true));
+                          cl::init(true), cl::cat(ExecCat));
 
 cl::opt<bool>
     OutOfMemAllocs("out-of-mem-allocs",
                    cl::desc("Model malloc behavior, i.e. model NULL on 0 "
                             "or huge symbolic allocations."),
-                   cl::init(false));
+                   cl::init(false), cl::cat(ExecCat));
+
+cl::opt<bool>
+    ExternCallsCanReturnNull("extern-calls-can-return-null", cl::init(false),
+                             cl::desc("Enable case when extern call can crash "
+                                      "and return null (default=false)"),
+                             cl::cat(ExecCat));
+
+enum class MockMutableGlobalsPolicy {
+  None,
+  PrimitiveFields,
+  All,
+};
+
+cl::opt<MockMutableGlobalsPolicy> MockMutableGlobals(
+    "mock-mutable-globals",
+    cl::values(clEnumValN(MockMutableGlobalsPolicy::None, "none",
+                          "No mutable global object are allowed o mock except "
+                          "external (default)"),
+               clEnumValN(MockMutableGlobalsPolicy::PrimitiveFields,
+                          "primitive-fields",
+                          "Only primitive fileds of mutable global objects are "
+                          "allowed to mock."),
+               clEnumValN(MockMutableGlobalsPolicy::All, "all",
+                          "All mutable global object are allowed o mock.")),
+    cl::init(MockMutableGlobalsPolicy::None), cl::cat(ExecCat));
 } // namespace klee
 
 namespace {
@@ -199,12 +224,6 @@ cl::opt<bool> EmitAllErrors(
     "emit-all-errors", cl::init(false),
     cl::desc("Generate tests cases for all errors "
              "(default=false, i.e. one per (error,instruction) pair)"),
-    cl::cat(TestGenCat));
-
-cl::opt<bool> SkipNotLazyAndSymbolicPointers(
-    "skip-not-lazy-and-symbolic-pointers", cl::init(false),
-    cl::desc("Set pointers only on lazy and make_symbolic variables "
-             "(default=false)"),
     cl::cat(TestGenCat));
 
 /* Constraint solving options */
@@ -262,6 +281,18 @@ cl::opt<bool> AllExternalWarnings(
     cl::desc("Issue a warning everytime an external call is made, "
              "as opposed to once per function (default=false)"),
     cl::cat(ExtCallsCat));
+
+cl::opt<bool>
+    MockExternalCalls("mock-external-calls", cl::init(false),
+                      cl::desc("If true, failed external calls are mocked, "
+                               "i.e. return values are made symbolic "
+                               "and then added to generated test cases. "
+                               "If false, fails on externall calls."),
+                      cl::cat(ExtCallsCat));
+
+cl::opt<bool> MockAllExternals("mock-all-externals", cl::init(false),
+                               cl::desc("If true, all externals are mocked."),
+                               cl::cat(ExtCallsCat));
 
 /*** Seeding options ***/
 
@@ -854,6 +885,7 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
                                         /*alignment=*/globalObjectAlignment);
     if (!mo)
       klee_error("out of memory");
+
     globalObjects.emplace(&v, mo);
     globalAddresses.emplace(&v, mo->getBaseConstantExpr());
   }
@@ -919,12 +951,17 @@ void Executor::initializeGlobalObjects(ExecutionState &state) {
       } else {
         addr = externalDispatcher->resolveSymbol(v.getName().str());
       }
-      if (!addr) {
+      if (MockAllExternals && !addr) {
+        executeMakeSymbolic(
+            state, mo, typeSystemManager->getWrappedType(v.getType()),
+            "mocked_extern", SourceBuilder::irreproducible(), false);
+      } else if (!addr) {
         klee_error("Unable to load symbol(%.*s) while initializing globals",
                    static_cast<int>(v.getName().size()), v.getName().data());
-      }
-      for (unsigned offset = 0; offset < mo->size; offset++) {
-        os->write8(offset, static_cast<unsigned char *>(addr)[offset]);
+      } else {
+        for (unsigned offset = 0; offset < mo->size; offset++) {
+          os->write8(offset, static_cast<unsigned char *>(addr)[offset]);
+        }
       }
     } else if (v.hasInitializer()) {
       initializeGlobalObject(state, os, v.getInitializer(), 0);
@@ -2406,6 +2443,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       ref<Expr> cond = eval(ki, 0, state).value;
 
       cond = optimizer.optimizeExpr(cond, false);
+
       Executor::StatePair branches =
           fork(state, cond, false, BranchType::ConditionalBranch);
 
@@ -2733,45 +2771,53 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     } else {
       ref<Expr> v = eval(ki, 0, state).value;
 
-      ExecutionState *free = &state;
-      bool hasInvalid = false, first = true;
+      if (!isa<ConstantExpr>(v) && MockExternalCalls) {
+        if (ki->inst->getType()->isSized()) {
+          prepareSymbolicValue(state, ki, "mocked_extern",
+                               SourceBuilder::irreproducible());
+        }
+      } else {
+        ExecutionState *free = &state;
+        bool hasInvalid = false, first = true;
 
-      /* XXX This is wasteful, no need to do a full evaluate since we
-         have already got a value. But in the end the caches should
-         handle it for us, albeit with some overhead. */
-      do {
-        v = optimizer.optimizeExpr(v, true);
-        ref<ConstantExpr> value;
-        bool success =
-            solver->getValue(free->constraints, v, value, free->queryMetaData);
-        assert(success && "FIXME: Unhandled solver failure");
-        (void)success;
-        StatePair res =
-            fork(*free, EqExpr::create(v, value), true, BranchType::Call);
-        if (res.first) {
-          uint64_t addr = value->getZExtValue();
-          auto it = legalFunctions.find(addr);
-          if (it != legalFunctions.end()) {
-            f = it->second;
+        /* XXX This is wasteful, no need to do a full evaluate since we
+           have already got a value. But in the end the caches should
+           handle it for us, albeit with some overhead. */
+        do {
+          v = optimizer.optimizeExpr(v, true);
+          ref<ConstantExpr> value;
+          bool success = solver->getValue(free->constraints, v, value,
+                                          free->queryMetaData);
+          assert(success && "FIXME: Unhandled solver failure");
+          (void)success;
+          StatePair res =
+              fork(*free, EqExpr::create(v, value), true, BranchType::Call);
+          if (res.first) {
+            uint64_t addr = value->getZExtValue();
+            auto it = legalFunctions.find(addr);
+            if (it != legalFunctions.end()) {
+              f = it->second;
 
-            // Don't give warning on unique resolution
-            if (res.second || !first)
-              klee_warning_once(reinterpret_cast<void *>(addr),
-                                "resolved symbolic function pointer to: %s",
-                                f->getName().data());
+              // Don't give warning on unique resolution
+              if (res.second || !first)
+                klee_warning_once(reinterpret_cast<void *>(addr),
+                                  "resolved symbolic function pointer to: %s",
+                                  f->getName().data());
 
-            executeCall(*res.first, ki, f, arguments);
-          } else {
-            if (!hasInvalid) {
-              terminateStateOnExecError(state, "invalid function pointer");
-              hasInvalid = true;
+              executeCall(*res.first, ki, f, arguments);
+            } else {
+              if (!hasInvalid) {
+                terminateStateOnExecError(state, "invalid function pointer");
+                hasInvalid = true;
+              }
             }
           }
-        }
 
-        first = false;
-        free = res.second;
-      } while (free && !haltExecution);
+          first = false;
+          free = res.second;
+          timers.invoke();
+        } while (free && !haltExecution);
+      }
     }
     break;
   }
@@ -4375,11 +4421,12 @@ bool shouldExitOn(StateTerminationType reason) {
 void Executor::reportStateOnTargetError(ExecutionState &state,
                                         ReachWithError error) {
   if (guidanceKind == GuidanceKind::ErrorGuidance) {
-    bool reportedTruePositive =
-        targetedExecutionManager.reportTruePositive(state, error);
-    if (!reportedTruePositive) {
-      targetedExecutionManager.reportFalseNegative(state, error);
-    }
+    // TODO: uncomment when `targetedExecutionManager` will be added
+    // bool reportedTruePositive =
+    //     targetedExecutionManager.reportTruePositive(state, error);
+    // if (!reportedTruePositive) {
+    //   targetedExecutionManager.reportFalseNegative(state, error);
+    // }
   }
 }
 
@@ -4510,6 +4557,29 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
     return;
   }
 
+  if (ExternalCalls == ExternalCallPolicy::All && MockAllExternals) {
+    std::string TmpStr;
+    llvm::raw_string_ostream os(TmpStr);
+    os << "calling external: " << callable->getName().str() << "(";
+    for (unsigned i = 0; i < arguments.size(); i++) {
+      os << arguments[i];
+      if (i != arguments.size() - 1)
+        os << ", ";
+    }
+    os << ") at " << state.pc->getSourceLocation();
+
+    if (AllExternalWarnings)
+      klee_warning("%s", os.str().c_str());
+    else if (!SuppressExternalWarnings)
+      klee_warning_once(callable->getValue(), "%s", os.str().c_str());
+
+    if (target->inst->getType()->isSized()) {
+      prepareSymbolicValue(state, target, "mocked_extern",
+                           SourceBuilder::irreproducible());
+    }
+    return;
+  }
+
   // normal external function handling path
   // allocate 128 bits for each argument (+return value) to support fp80's;
   // we could iterate through all the arguments first and determine the exact
@@ -4634,8 +4704,16 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
                                                  roundingMode);
 
   if (!success) {
-    terminateStateOnError(state, "failed external call: " + callable->getName(),
-                          StateTerminationType::External);
+    if (MockExternalCalls) {
+      if (target->inst->getType()->isSized()) {
+        prepareSymbolicValue(state, target, "mocked_extern",
+                             SourceBuilder::irreproducible());
+      }
+    } else {
+      terminateStateOnError(state,
+                            "failed external call: " + callable->getName(),
+                            StateTerminationType::External);
+    }
     return;
   }
 
@@ -4656,6 +4734,18 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
   if (resultType != Type::getVoidTy(kmodule->module->getContext())) {
     ref<Expr> e =
         ConstantExpr::fromMemory((void *)args, getWidthForLLVMType(resultType));
+    if (ExternCallsCanReturnNull &&
+        e->getWidth() == Context::get().getPointerWidth()) {
+      const Array *symExternCallsCanReturnNull = makeArray(
+          state, Expr::createPointer(1), "symExternCallsCanReturnNull",
+          SourceBuilder::irreproducible());
+
+      ref<Expr> symExternCallsCanReturnNullExpr =
+          Expr::createTempRead(symExternCallsCanReturnNull, Expr::Bool);
+      e = SelectExpr::create(
+          symExternCallsCanReturnNullExpr,
+          ConstantExpr::alloc(0, Context::get().getPointerWidth()), e);
+    }
     bindLocal(target, state, e);
   }
 }
@@ -4689,6 +4779,16 @@ ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
   return res;
 }
 
+ref<Expr> Executor::mockValue(ExecutionState &state, ref<Expr> result) {
+  static unsigned id;
+  const Array *array = makeArray(
+      state, Expr::createPointer(Expr::getMinBytesForWidth(result->getWidth())),
+      "mockedGlobalValue" + llvm::utostr(++id),
+      SourceBuilder::irreproducible());
+  result = Expr::createTempRead(array, result->getWidth());
+  return result;
+}
+
 ObjectState *Executor::bindObjectInState(ExecutionState &state,
                                          const MemoryObject *mo,
                                          KType *dynamicType, bool isLocal,
@@ -4710,7 +4810,7 @@ ObjectState *Executor::bindObjectInState(ExecutionState &state,
 void Executor::executeAlloc(ExecutionState &state, ref<Expr> size, bool isLocal,
                             KInstruction *target, KType *type, bool zeroMemory,
                             const ObjectState *reallocFrom,
-                            size_t allocationAlignment) {
+                            size_t allocationAlignment, bool checkOutOfMemory) {
   const llvm::Value *allocSite = state.prevPC->inst;
   if (allocationAlignment == 0) {
     allocationAlignment = getAllocationAlignment(allocSite);
@@ -4737,7 +4837,20 @@ void Executor::executeAlloc(ExecutionState &state, ref<Expr> size, bool isLocal,
       } else {
         os->initializeToRandom();
       }
-      bindLocal(target, *bound, mo->getBaseExpr());
+
+      ref<Expr> address = mo->getBaseExpr();
+      if (checkOutOfMemory) {
+        const Array *symCheckOutOfMemory =
+            makeArray(state, Expr::createPointer(1), "symCheckOutOfMemory",
+                      SourceBuilder::irreproducible());
+
+        ref<Expr> symCheckOutOfMemoryExpr =
+            Expr::createTempRead(symCheckOutOfMemory, Expr::Bool);
+        address = SelectExpr::create(
+            symCheckOutOfMemoryExpr,
+            Expr::createPointer(0), address);
+      }
+      bindLocal(target, state, address);
 
       if (reallocFrom) {
         unsigned count = std::min(reallocFrom->size, os->size);
@@ -5079,6 +5192,14 @@ void Executor::executeMemoryOperation(
         if (interpreterOpts.MakeConcreteSymbolic)
           result = replaceReadWithSymbolic(state, result);
 
+        if (MockMutableGlobals != MockMutableGlobalsPolicy::None &&
+            mo->isGlobal && !wos->readOnly && !isa<ConstantExpr>(result) &&
+            (MockMutableGlobals != MockMutableGlobalsPolicy::PrimitiveFields ||
+             !targetType->getRawType()->isPointerTy())) {
+          result = mockValue(state, result);
+          wos->write(offset, result);
+        }
+
         bindLocal(target, state, result);
       }
 
@@ -5104,89 +5225,104 @@ void Executor::executeMemoryOperation(
   ResolutionList rl;
   ResolutionList rlSkipped;
 
-  solver->setTimeout(coreSolverTimeout);
-  bool incomplete = state.addressSpace.resolve(
-      state, solver, address, targetType, rl, rlSkipped, 0, coreSolverTimeout);
-  solver->setTimeout(time::Span());
-
-  // XXX there is some query wasteage here. who cares?
-
+  bool incomplete = false;
+  ExecutionState *unbound = &state;
   ref<Expr> checkOutOfBounds = ConstantExpr::create(1, Expr::Bool);
-  ref<Expr> canLazyInitialize = ConstantExpr::create(1, Expr::Bool);
-
-  std::vector<ref<Expr>> resolveConditions;
-  std::vector<IDType> resolvedMemoryObjects;
-
-  for (ResolutionList::iterator i = rl.begin(), ie = rl.end(); i != ie; ++i) {
-    const MemoryObject *mo = state.addressSpace.findObject(*i).first;
-    ref<Expr> inBounds = mo->getBoundsCheckPointer(address, bytes);
-    ref<Expr> outOfBound = NotExpr::create(inBounds);
-    canLazyInitialize = AndExpr::create(outOfBound, canLazyInitialize);
-    if (state.isGEPExpr(address)) {
-      inBounds = AndExpr::create(inBounds, mo->getBoundsCheckPointer(base, 1));
-      inBounds =
-          AndExpr::create(inBounds, mo->getBoundsCheckPointer(base, size));
-      outOfBound = AndExpr::create(outOfBound, mo->getBoundsCheckPointer(base));
-    }
-
-    bool mayBeInBounds;
+  if (guidanceKind != GuidanceKind::ErrorGuidance) {
     solver->setTimeout(coreSolverTimeout);
-    bool success = solver->mayBeTrue(state.constraints, inBounds, mayBeInBounds,
-                                     state.queryMetaData);
+    incomplete =
+        state.addressSpace.resolve(state, solver, address, targetType, rl,
+                                   rlSkipped, 0, coreSolverTimeout);
     solver->setTimeout(time::Span());
-    if (!success) {
-      terminateStateOnSolverError(state, "Query timed out (resolve)");
-      return;
-    }
 
-    if (mayBeInBounds) {
-      resolveConditions.push_back(inBounds);
-      resolvedMemoryObjects.push_back(mo->id);
-    }
-    checkOutOfBounds = AndExpr::create(outOfBound, checkOutOfBounds);
-  }
+    // XXX there is some query wasteage here. who cares?
 
-  // Fictive condition just to keep state for unbound case.
-  resolveConditions.push_back(ConstantExpr::create(1, Expr::Bool));
+    checkOutOfBounds = ConstantExpr::create(1, Expr::Bool);
 
-  std::vector<ExecutionState *> statesForMemoryOperation;
-  branch(state, resolveConditions, statesForMemoryOperation, BranchType::MemOp);
+    std::vector<ref<Expr>> resolveConditions;
+    std::vector<IDType> resolvedMemoryObjects;
 
-  for (unsigned int i = 0; i < resolvedMemoryObjects.size(); ++i) {
-    ExecutionState *bound = statesForMemoryOperation[i];
-    ObjectPair op = bound->addressSpace.findObject(resolvedMemoryObjects[i]);
-    const MemoryObject *mo = op.first;
-    const ObjectState *os = op.second;
-
-    bound->addPointerResolution(base, address, mo);
-
-    /* FIXME: Notice, that here we are creating a new instance of object
-    for every memory operation in order to handle type changes. This might
-    waste too much memory as we do now always modify something. To fix this
-    we can ask memory if we will make anything, and create a copy if
-    required. */
-    ObjectState *wos = bound->addressSpace.getWriteable(mo, os);
-
-    if (isWrite) {
-      wos->getDynamicType()->handleMemoryAccess(
-          targetType, mo->getOffsetExpr(address),
-          ConstantExpr::alloc(size, Context::get().getPointerWidth()), true);
-      if (wos->readOnly) {
-        terminateStateOnError(*bound, "memory error: object read only",
-                              StateTerminationType::ReadOnly);
-      } else {
-        wos->write(mo->getOffsetExpr(address), value);
+    for (ResolutionList::iterator i = rl.begin(), ie = rl.end(); i != ie; ++i) {
+      const MemoryObject *mo = state.addressSpace.findObject(*i).first;
+      ref<Expr> inBounds = mo->getBoundsCheckPointer(address, bytes);
+      ref<Expr> outOfBound = NotExpr::create(inBounds);
+      if (state.isGEPExpr(address)) {
+        inBounds =
+            AndExpr::create(inBounds, mo->getBoundsCheckPointer(base, 1));
+        inBounds =
+            AndExpr::create(inBounds, mo->getBoundsCheckPointer(base, size));
+        outOfBound =
+            AndExpr::create(outOfBound, mo->getBoundsCheckPointer(base));
       }
-    } else {
-      wos->getDynamicType()->handleMemoryAccess(
-          targetType, mo->getOffsetExpr(address),
-          ConstantExpr::alloc(size, Context::get().getPointerWidth()), false);
-      ref<Expr> result = wos->read(mo->getOffsetExpr(address), type);
-      bindLocal(target, *bound, result);
-    }
-  }
 
-  ExecutionState *unbound = statesForMemoryOperation.back();
+      bool mayBeInBounds;
+      solver->setTimeout(coreSolverTimeout);
+      bool success = solver->mayBeTrue(state.constraints, inBounds,
+                                       mayBeInBounds, state.queryMetaData);
+      solver->setTimeout(time::Span());
+      if (!success) {
+        terminateStateOnSolverError(state, "Query timed out (resolve)");
+        return;
+      }
+
+      if (mayBeInBounds) {
+        resolveConditions.push_back(inBounds);
+        resolvedMemoryObjects.push_back(mo->id);
+      }
+      checkOutOfBounds = AndExpr::create(outOfBound, checkOutOfBounds);
+    }
+
+    // Fictive condition just to keep state for unbound case.
+    resolveConditions.push_back(ConstantExpr::create(1, Expr::Bool));
+
+    std::vector<ExecutionState *> statesForMemoryOperation;
+    branch(state, resolveConditions, statesForMemoryOperation,
+           BranchType::MemOp);
+
+    for (unsigned int i = 0; i < resolvedMemoryObjects.size(); ++i) {
+      ExecutionState *bound = statesForMemoryOperation[i];
+      ObjectPair op = bound->addressSpace.findObject(resolvedMemoryObjects[i]);
+      const MemoryObject *mo = op.first;
+      const ObjectState *os = op.second;
+
+      bound->addPointerResolution(base, address, mo);
+
+      /* FIXME: Notice, that here we are creating a new instance of object
+      for every memory operation in order to handle type changes. This might
+      waste too much memory as we do now always modify something. To fix this
+      we can ask memory if we will make anything, and create a copy if
+      required. */
+      ObjectState *wos = bound->addressSpace.getWriteable(mo, os);
+
+      if (isWrite) {
+        wos->getDynamicType()->handleMemoryAccess(
+            targetType, mo->getOffsetExpr(address),
+            ConstantExpr::alloc(size, Context::get().getPointerWidth()), true);
+        if (wos->readOnly) {
+          terminateStateOnError(*bound, "memory error: object read only",
+                                StateTerminationType::ReadOnly);
+        } else {
+          wos->write(mo->getOffsetExpr(address), value);
+        }
+      } else {
+        wos->getDynamicType()->handleMemoryAccess(
+            targetType, mo->getOffsetExpr(address),
+            ConstantExpr::alloc(size, Context::get().getPointerWidth()), false);
+        ref<Expr> result = wos->read(mo->getOffsetExpr(address), type);
+
+        if (MockMutableGlobals != MockMutableGlobalsPolicy::None &&
+            mo->isGlobal && !wos->readOnly && !isa<ConstantExpr>(result) &&
+            (MockMutableGlobals != MockMutableGlobalsPolicy::PrimitiveFields ||
+             !targetType->getRawType()->isPointerTy())) {
+          result = mockValue(state, result);
+          wos->write(mo->getOffsetExpr(address), result);
+        }
+
+        bindLocal(target, *bound, result);
+      }
+    }
+    unbound = statesForMemoryOperation.back();
+  }
 
   // XXX should we distinguish out of bounds and overlapped cases?
   if (unbound) {
@@ -5565,6 +5701,7 @@ ExecutionState *Executor::formState(Function *f, int argc, char **argv,
                      /*allocSite=*/state->pc->inst, /*alignment=*/8);
         if (!arg)
           klee_error("Could not allocate memory for function arguments");
+
         ObjectState *os = bindObjectInState(
             *state, arg, typeSystemManager->getWrappedType(argumentType),
             false);
@@ -5592,13 +5729,13 @@ void Executor::clearMemory() {
   memory = new MemoryManager(NULL);
 }
 
-void Executor::prepareSymbolicValue(ExecutionState &state,
-                                    KInstruction *target) {
+void Executor::prepareSymbolicValue(ExecutionState &state, KInstruction *target,
+                                    std::string name,
+                                    ref<SymbolicSource> source) {
   Instruction *allocSite = target->inst;
   uint64_t size = kmodule->targetData->getTypeStoreSize(allocSite->getType());
   uint64_t width = kmodule->targetData->getTypeSizeInBits(allocSite->getType());
-  ref<Expr> result =
-      makeSymbolicValue(allocSite, state, size, width, "symbolic_value");
+  ref<Expr> result = makeSymbolic(allocSite, state, size, width, name, source);
   bindLocal(target, state, result);
   if (isa<AllocaInst>(allocSite)) {
     AllocaInst *ai = cast<AllocaInst>(allocSite);
@@ -5636,22 +5773,26 @@ void Executor::prepareSymbolicArgs(ExecutionState &state, KFunction *kf) {
   }
 }
 
-ref<Expr> Executor::makeSymbolicValue(Value *value, ExecutionState &state,
-                                      uint64_t size, Expr::Width width,
-                                      const std::string &name) {
-  MemoryObject *mo = memory->allocate(size, true,
-                                      /*isGlobal=*/false, value,
+ref<Expr> Executor::makeSymbolic(Value *value, ExecutionState &state,
+                                 uint64_t size, Expr::Width width,
+                                 const std::string &name,
+                                 ref<SymbolicSource> source) {
+  MemoryObject *mo = memory->allocate(size, true, /*isGlobal=*/false, value,
                                       /*allocationAlignment=*/8);
-  const Array *array = makeArray(state, Expr::createPointer(size), name,
-                                 SourceBuilder::symbolicValue());
+  const Array *array =
+      makeArray(state, Expr::createPointer(size), name, source);
   state.addSymbolic(mo, array,
                     typeSystemManager->getWrappedType(value->getType()));
   assert(value && "Attempted to make symbolic value from nullptr Value");
-  ObjectState *os = bindObjectInState(
-      state, mo, typeSystemManager->getWrappedType(value->getType()), false,
-      array);
-  ref<Expr> result = os->read(0, width);
+  ref<Expr> result = Expr::createTempRead(array, width);
   return result;
+}
+
+ref<Expr> Executor::makeSymbolicValue(Value *value, ExecutionState &state,
+                                      uint64_t size, Expr::Width width,
+                                      const std::string &name) {
+  return makeSymbolic(value, state, size, width, name,
+                      SourceBuilder::symbolicValue());
 }
 
 void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
@@ -5734,7 +5875,7 @@ ExecutionState *Executor::prepareStateForPOSIX(KInstIterator &caller,
                                                ExecutionState *state) {
   Function *mainFn = kmodule->module->getFunction("__klee_posix_wrapped_main");
 
-  assert(mainFn && "klee_posix_wrapped_main not found");
+  assert(mainFn && "__klee_posix_wrapped_main not found");
   KBlock *target = kmodule->functionMap[mainFn]->entryKBlock;
 
   if (pathWriter)
@@ -5886,7 +6027,6 @@ void Executor::setInitializationGraph(const ExecutionState &state,
           continue;
         }
         ref<ConstantExpr> constantAddress = cast<ConstantExpr>(addressInModel);
-        ref<const MemoryObject> mo;
         IDType idResult;
 
         if (state.resolveOnSymbolics(constantAddress, idResult)) {

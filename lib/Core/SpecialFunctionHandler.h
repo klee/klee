@@ -103,6 +103,7 @@ public:
   HANDLER(handleAbort);
   HANDLER(handleAssert);
   HANDLER(handleAssertFail);
+  HANDLER(handleSleep);
   HANDLER(handleAssume);
   HANDLER(handleCalloc);
   HANDLER(handleCheckMemoryAccess);

@@ -768,6 +768,7 @@ bool GuidedSearcher::isReached(ref<TargetForest::History> history,
                                ref<Target> target) {
   return reachedTargets.count(target) != 0;
 }
+
 bool GuidedSearcher::tryAddTarget(ref<TargetForest::History> history,
                                   ref<Target> target) {
   if (isReached(history, target)) {

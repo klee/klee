@@ -33,7 +33,8 @@
   TTYPE(ReadOnly, 17U, "read_only.err")                                        \
   TTYPE(ReportError, 18U, "report_error.err")                                  \
   TTYPE(UndefinedBehavior, 19U, "undefined_behavior.err")                      \
-  MARK(PROGERR, 19U)                                                           \
+  TTYPE(InternalOutOfMemory, 20U, "out_of_memory.er")                          \
+  MARK(PROGERR, 20U)                                                           \
   TTYPE(User, 23U, "user.err")                                                 \
   MARK(USERERR, 23U)                                                           \
   TTYPE(Execution, 25U, "exec.err")                                            \

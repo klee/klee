@@ -318,7 +318,8 @@ private:
   void executeAlloc(ExecutionState &state, ref<Expr> size, bool isLocal,
                     KInstruction *target, KType *type, bool zeroMemory = false,
                     const ObjectState *reallocFrom = 0,
-                    size_t allocationAlignment = 0);
+                    size_t allocationAlignment = 0,
+                    bool checkOutOfMemory = false);
 
   /// Free the given address with checking for errors. If target is
   /// given it will be bound to 0 in the resulting states (this is a
@@ -383,6 +384,8 @@ private:
   // Called on [for now] concrete reads, replaces constant with a symbolic
   // Used for testing.
   ref<Expr> replaceReadWithSymbolic(ExecutionState &state, ref<Expr> e);
+
+  ref<Expr> mockValue(ExecutionState &state, ref<Expr> result);
 
   const Cell &eval(KInstruction *ki, unsigned index, ExecutionState &state,
                    bool isSymbolic = true);
@@ -584,12 +587,19 @@ public:
 
   void clearMemory();
 
-  void prepareSymbolicValue(ExecutionState &state, KInstruction *targetW);
+  void prepareSymbolicValue(
+      ExecutionState &state, KInstruction *targetW,
+      std::string name = "symbolic_value",
+      ref<SymbolicSource> source = SourceBuilder::symbolicValue());
 
   void prepareSymbolicRegister(ExecutionState &state, StackFrame &sf,
                                unsigned index);
 
   void prepareSymbolicArgs(ExecutionState &state, KFunction *kf);
+
+  ref<Expr> makeSymbolic(llvm::Value *value, ExecutionState &state,
+                         uint64_t size, Expr::Width width,
+                         const std::string &name, ref<SymbolicSource> source);
 
   ref<Expr> makeSymbolicValue(llvm::Value *value, ExecutionState &state,
                               uint64_t size, Expr::Width width,
