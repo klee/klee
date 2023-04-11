@@ -229,6 +229,9 @@ bool ExecutionState::getBase(
   case Expr::Concat: {
     ref<ReadExpr> base =
         ArrayExprHelper::hasOrderedReads(*dyn_cast<ConcatExpr>(expr));
+    if (!base) {
+      return false;
+    }
     auto parent = findMemoryObject(base->updates.root);
     if (!parent) {
       return false;

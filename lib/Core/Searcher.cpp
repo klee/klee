@@ -175,11 +175,12 @@ bool TargetedSearcher::distanceInCallGraph(KFunction *kf, KBlock *kb,
 
   for (auto &kCallBlock : kf->kCallBlocks) {
     if (dist.count(kCallBlock) != 0) {
-      KFunction *calledKFunction =
-          kf->parent->functionMap[kCallBlock->calledFunction];
-      if (distanceToTargetFunction.count(calledKFunction) != 0 &&
-          distance > distanceToTargetFunction.at(calledKFunction) + 1) {
-        distance = distanceToTargetFunction.at(calledKFunction) + 1;
+      for (auto &calledFunction : kCallBlock->calledFunctions) {
+        KFunction *calledKFunction = kf->parent->functionMap[calledFunction];
+        if (distanceToTargetFunction.count(calledKFunction) != 0 &&
+            distance > distanceToTargetFunction.at(calledKFunction) + 1) {
+          distance = distanceToTargetFunction.at(calledKFunction) + 1;
+        }
       }
     }
   }
@@ -222,10 +223,12 @@ TargetedSearcher::tryGetPreTargetWeight(ExecutionState *es,
   KFunction *currentKF = es->pc->parent->parent;
   std::vector<KBlock *> localTargets;
   for (auto &kCallBlock : currentKF->kCallBlocks) {
-    KFunction *calledKFunction =
-        currentKF->parent->functionMap[kCallBlock->calledFunction];
-    if (distanceToTargetFunction.count(calledKFunction) > 0) {
-      localTargets.push_back(kCallBlock);
+    for (auto &calledFunction : kCallBlock->calledFunctions) {
+      KFunction *calledKFunction =
+          currentKF->parent->functionMap[calledFunction];
+      if (distanceToTargetFunction.count(calledKFunction) > 0) {
+        localTargets.push_back(kCallBlock);
+      }
     }
   }
 

@@ -71,15 +71,16 @@ void CodeGraphDistance::calculateDistance(KFunction *kf) {
   while (!nodes.empty()) {
     KFunction *currKF = nodes.front();
     for (auto &callBlock : currKF->kCallBlocks) {
-      if (!callBlock->calledFunction ||
-          callBlock->calledFunction->isDeclaration()) {
-        continue;
-      }
-      KFunction *callKF = functionMap[callBlock->calledFunction];
-      if (dist.count(callKF) == 0) {
-        dist[callKF] = dist[currKF] + 1;
-        sort.push_back({callKF, dist[currKF] + 1});
-        nodes.push_back(callKF);
+      for (auto &calledFunction : callBlock->calledFunctions) {
+        if (!calledFunction || calledFunction->isDeclaration()) {
+          continue;
+        }
+        KFunction *callKF = functionMap[calledFunction];
+        if (dist.count(callKF) == 0) {
+          dist[callKF] = dist[currKF] + 1;
+          sort.push_back({callKF, dist[currKF] + 1});
+          nodes.push_back(callKF);
+        }
       }
     }
     nodes.pop_front();

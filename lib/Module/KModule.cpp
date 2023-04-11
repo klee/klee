@@ -404,7 +404,23 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
 
   for (auto &kfp : functions) {
     for (auto &kcb : kfp.get()->kCallBlocks) {
-      callMap[kcb->calledFunction].insert(kfp.get()->function);
+      bool isInlineAsm = false;
+#if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
+      const CallBase &cs = cast<CallBase>(*kcb->kcallInstruction->inst);
+      if (isa<InlineAsm>(cs.getCalledOperand())) {
+#else
+      const CallSite cs(kcb->kcallInstruction->inst);
+      if (isa<InlineAsm>(cs.getCalledValue())) {
+#endif
+        isInlineAsm = true;
+      }
+      if (kcb->calledFunctions.empty() && !isInlineAsm) {
+        kcb->calledFunctions.insert(escapingFunctions.begin(),
+                                    escapingFunctions.end());
+      }
+      for (auto &calledFunction : kcb->calledFunctions) {
+        callMap[calledFunction].insert(kfp.get()->function);
+      }
     }
   }
 
@@ -591,9 +607,13 @@ KFunction::KFunction(llvm::Function *_function, KModule *_km)
       Value *fp = cs.getCalledValue();
 #endif
       Function *f = getTargetFunction(fp);
-      KCallBlock *ckb =
-          new KCallBlock(this, &*bbit, parent, instructionToRegisterMap,
-                         registerToInstructionMap, f, &instructions[n]);
+      std::set<llvm::Function *> calledFunctions;
+      if (f) {
+        calledFunctions.insert(f);
+      }
+      KCallBlock *ckb = new KCallBlock(
+          this, &*bbit, parent, instructionToRegisterMap,
+          registerToInstructionMap, calledFunctions, &instructions[n]);
       kCallBlocks.push_back(ckb);
       kb = ckb;
     } else if (SplitReturns && isa<ReturnInst>(lit)) {
@@ -659,22 +679,27 @@ KCallBlock::KCallBlock(
     KFunction *_kfunction, llvm::BasicBlock *block, KModule *km,
     std::unordered_map<Instruction *, unsigned> &instructionToRegisterMap,
     std::unordered_map<unsigned, KInstruction *> &registerToInstructionMap,
-    llvm::Function *_calledFunction, KInstruction **instructionsKF)
+    std::set<llvm::Function *> _calledFunctions, KInstruction **instructionsKF)
     : KBlock::KBlock(_kfunction, block, km, instructionToRegisterMap,
                      registerToInstructionMap, instructionsKF),
-      kcallInstruction(this->instructions[0]), calledFunction(_calledFunction) {
-}
+      kcallInstruction(this->instructions[0]),
+      calledFunctions(_calledFunctions) {}
 
 bool KCallBlock::intrinsic() const {
-  return calledFunction->getIntrinsicID() != llvm::Intrinsic::not_intrinsic;
+  return calledFunctions.size() == 1 &&
+         (*calledFunctions.begin())->getIntrinsicID() !=
+             llvm::Intrinsic::not_intrinsic;
 }
 
 bool KCallBlock::internal() const {
-  return parent->parent->functionMap[calledFunction] != nullptr;
+  return calledFunctions.size() == 1 &&
+         parent->parent->functionMap[*calledFunctions.begin()] != nullptr;
 }
 
 KFunction *KCallBlock::getKFunction() const {
-  return parent->parent->functionMap[calledFunction];
+  return calledFunctions.size() == 1
+             ? parent->parent->functionMap[*calledFunctions.begin()]
+             : nullptr;
 }
 
 KReturnBlock::KReturnBlock(
