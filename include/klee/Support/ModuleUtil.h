@@ -34,14 +34,14 @@ namespace klee {
 /// everything is linked against the first entry.
 /// @param entryFunction if set, missing functions of the module containing the
 /// entry function will be solved.
-/// @return final module or null in this case errorMsg is set
-std::unique_ptr<llvm::Module>
-linkModules(std::vector<std::unique_ptr<llvm::Module>> &modules,
-            llvm::StringRef entryFunction, std::string &errorMsg);
+/// @return false in this case errorMsg is set
+bool linkModules(llvm::Module *composite,
+                 std::vector<std::unique_ptr<llvm::Module>> &modules,
+                 const unsigned Flags, std::string &errorMsg);
 
 #if defined(__x86_64__) || defined(__i386__)
 #define addFunctionReplacement(from, to)                                       \
-  {#from "f", #to "f"}, {#from, #to}, { "" #from "l", #to "l" }
+  {#from "f", #to "f"}, {#from "", #to ""}, { "" #from "l", #to "l" }
 
 #define addIntrinsicReplacement(from, to)                                      \
   {"llvm." #from ".f32", #to "f"}, {"llvm." #from ".f64", #to}, {              \
@@ -119,6 +119,7 @@ bool functionEscapes(const llvm::Function *f);
 /// * .a archive containing .bc and .ll files
 ///
 /// @param libraryName library to read
+/// @param context module context
 /// @param modules contains extracted modules
 /// @param errorMsg contains the error description in case the file could not be
 /// loaded
@@ -126,6 +127,24 @@ bool functionEscapes(const llvm::Function *f);
 bool loadFile(const std::string &libraryName, llvm::LLVMContext &context,
               std::vector<std::unique_ptr<llvm::Module>> &modules,
               std::string &errorMsg);
+
+/// Loads the file libraryName and reads all modules into one.
+///
+/// Different file types are possible:
+/// * .bc binary file
+/// * .ll IR file
+/// * .a archive containing .bc and .ll files
+///
+/// @param libraryName library to read
+/// @param context module context
+/// @param modules contains extracted modules
+/// @param errorMsg contains the error description in case the file could not be
+/// loaded
+/// @return true if successful otherwise false
+bool loadFileAsOneModule(const std::string &libraryName,
+                         llvm::LLVMContext &context,
+                         std::vector<std::unique_ptr<llvm::Module>> &modules,
+                         std::string &errorMsg);
 } // namespace klee
 
 #endif /* KLEE_MODULEUTIL_H */

@@ -102,6 +102,7 @@ typedef unsigned TypeSize;
 #include <iomanip>
 #include <iosfwd>
 #include <limits>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <sys/mman.h>
@@ -542,29 +543,34 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
 }
 
 llvm::Module *
-Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
+Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &userModules,
+                    std::vector<std::unique_ptr<llvm::Module>> &libsModules,
                     const ModuleOptions &opts,
                     const std::vector<std::string> &mainModuleFunctions) {
-  assert(!kmodule && !modules.empty() &&
+  assert(!kmodule && !userModules.empty() &&
          "can only register one module"); // XXX gross
 
-  kmodule = std::unique_ptr<KModule>(new KModule());
+  kmodule = std::make_unique<KModule>();
 
-  // Preparing the final module happens in multiple stages
+  // 1.) Link the modules together && 2.) Apply different instrumentation
+  kmodule->link(userModules, 0);
+  kmodule->instrument(opts);
 
-  // Link with KLEE intrinsics library before running any optimizations
-  SmallString<128> LibPath(opts.LibraryDir);
-  llvm::sys::path::append(LibPath,
-                          "libkleeRuntimeIntrinsic" + opts.OptSuffix + ".bca");
-  std::string error;
-  if (!klee::loadFile(LibPath.c_str(), modules[0]->getContext(), modules,
-                      error)) {
-    klee_error("Could not load KLEE intrinsic file %s", LibPath.c_str());
-  }
+  kmodule->link(libsModules, 2);
+  kmodule->instrument(opts);
 
-  // 1.) Link the modules together
-  while (kmodule->link(modules, opts.EntryPoint)) {
-    // 2.) Apply different instrumentation
+  {
+    std::vector<std::unique_ptr<llvm::Module>> modules;
+    // Link with KLEE intrinsics library before running any optimizations
+    SmallString<128> LibPath(opts.LibraryDir);
+    llvm::sys::path::append(LibPath, "libkleeRuntimeIntrinsic" +
+                                         opts.OptSuffix + ".bca");
+    std::string error;
+    if (!klee::loadFileAsOneModule(
+            LibPath.c_str(), kmodule->module->getContext(), modules, error)) {
+      klee_error("Could not load KLEE intrinsic file %s", LibPath.c_str());
+    }
+    kmodule->link(modules, 2);
     kmodule->instrument(opts);
   }
 

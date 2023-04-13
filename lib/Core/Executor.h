@@ -541,7 +541,8 @@ public:
   }
 
   llvm::Module *
-  setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
+  setModule(std::vector<std::unique_ptr<llvm::Module>> &userModules,
+            std::vector<std::unique_ptr<llvm::Module>> &libsModules,
             const ModuleOptions &opts,
             const std::vector<std::string> &mainModuleFunctions) override;
 

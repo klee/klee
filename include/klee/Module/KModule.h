@@ -234,7 +234,7 @@ public:
   /// @return true if at least one module has been linked in, false if nothing
   /// changed
   bool link(std::vector<std::unique_ptr<llvm::Module>> &modules,
-            const std::string &entryPoint);
+            const unsigned flag);
 
   void instrument(const Interpreter::ModuleOptions &opts);
 

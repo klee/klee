@@ -102,12 +102,15 @@ public:
                              InterpreterHandler *ih);
 
   /// Register the module to be executed.
-  /// \param modules A list of modules that should form the final
+  /// \param userModules A list of user modules that should form the final
+  ///                module
+  /// \param libsModules A list of libs modules that should form the final
   ///                module
   /// \return The final module after it has been optimized, checks
   /// inserted, and modified for interpretation.
   virtual llvm::Module *
-  setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
+  setModule(std::vector<std::unique_ptr<llvm::Module>> &userModules,
+            std::vector<std::unique_ptr<llvm::Module>> &libsModules,
             const ModuleOptions &opts,
             const std::vector<std::string> &mainModuleFunctions) = 0;
 
