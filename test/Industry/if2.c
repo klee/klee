@@ -7,6 +7,8 @@ int main(int x) {
   }
   return *p;
 }
+
+// REQUIRES: z3
 // RUN: %clang %s -emit-llvm -c -g -O0 -Xclang -disable-O0-optnone -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --use-guided-search=error --mock-external-calls --skip-not-symbolic-objects --skip-not-lazy-initialized --check-out-of-memory --max-stepped-instructions=19 --max-cycles=0 --analysis-reproduce=%s.json %t1.bc

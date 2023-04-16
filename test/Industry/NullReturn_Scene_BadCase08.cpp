@@ -37,6 +37,7 @@ void TestBad9()
 	printf("the current integer is: %d", *p); // CHECK: KLEE: WARNING: 100.00% NullPointerException True Positive at trace 1
 }
 
+// REQUIRES: z3
 // RUN: %clangxx %s -emit-llvm %O0opt -c -g -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --write-kqueries --use-guided-search=error --location-accuracy --mock-external-calls --check-out-of-memory --libc=klee --skip-not-symbolic-objects --skip-not-lazy-initialized --analysis-reproduce=%s.json %t1.bc
