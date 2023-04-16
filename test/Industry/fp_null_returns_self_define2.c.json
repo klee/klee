@@ -1,0 +1,91 @@
+{
+    "runs": [
+        {
+            "tool": {
+                "driver": {
+                    "name": "huawei"
+                }
+            },
+            "results": [
+                {
+                    "codeFlows": [
+                        {
+                            "threadFlows": [
+                                {
+                                    "locations": [
+                                        {
+                                            "location": {
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "uri": "/root/test/fp_null_returns_self_define2.c"
+                                                    },
+                                                    "region": {
+                                                        "startLine": 8,
+                                                        "startColumn": null
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "location": {
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "uri": "/root/test/fp_null_returns_self_define2.c"
+                                                    },
+                                                    "region": {
+                                                        "startLine": 25,
+                                                        "startColumn": null
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "location": {
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "uri": "/root/test/fp_null_returns_self_define2.c"
+                                                    },
+                                                    "region": {
+                                                        "startLine": 26,
+                                                        "startColumn": null
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "location": {
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "uri": "/root/test/fp_null_returns_self_define2.c"
+                                                    },
+                                                    "region": {
+                                                        "startLine": 15,
+                                                        "startColumn": null
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "ruleId": "NullDereference",
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": "/root/test/fp_null_returns_self_define2.c"
+                                },
+                                "region": {
+                                    "startLine": 15,
+                                    "startColumn": null
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

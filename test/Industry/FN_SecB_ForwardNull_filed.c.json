@@ -1,0 +1,65 @@
+{
+    "runs": [
+        {
+            "tool": {
+                "driver": {
+                    "name": "huawei"
+                }
+            },
+            "results": [
+                {
+                    "codeFlows": [
+                        {
+                            "threadFlows": [
+                                {
+                                    "locations": [
+                                        {
+                                            "location": {
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "uri": "/mnt/d/wsl-ubuntu/test2/forward_null/./FN_SecB_ForwardNull_filed.c"
+                                                    },
+                                                    "region": {
+                                                        "startLine": 49,
+                                                        "startColumn": null
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "location": {
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "uri": "/mnt/d/wsl-ubuntu/test2/forward_null/./FN_SecB_ForwardNull_filed.c"
+                                                    },
+                                                    "region": {
+                                                        "startLine": 50,
+                                                        "startColumn": null
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "ruleId": "NullDereference",
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": "/mnt/d/wsl-ubuntu/test2/forward_null/./FN_SecB_ForwardNull_filed.c"
+                                },
+                                "region": {
+                                    "startLine": 50,
+                                    "startColumn": null
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

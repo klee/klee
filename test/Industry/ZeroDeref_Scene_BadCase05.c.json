@@ -1,0 +1,117 @@
+{
+    "runs": [
+        {
+            "tool": {
+                "driver": {
+                    "name": "huawei"
+                }
+            },
+            "results": [
+                {
+                    "codeFlows": [
+                        {
+                            "threadFlows": [
+                                {
+                                    "locations": [
+                                        {
+                                            "location": {
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "uri": "/mnt/d/dev/klee-test/src-bc-reports/sources/secbrella/SecB_ForwardNull/BadCase/ZeroDeref_Scene_BadCase05.c"
+                                                    },
+                                                    "region": {
+                                                        "startLine": 62,
+                                                        "startColumn": 2
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "location": {
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "uri": "/mnt/d/dev/klee-test/src-bc-reports/sources/secbrella/SecB_ForwardNull/BadCase/ZeroDeref_Scene_BadCase05.c"
+                                                    },
+                                                    "region": {
+                                                        "startLine": 52,
+                                                        "startColumn": 2
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "ruleId": "NullDereference",
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": "/mnt/d/dev/klee-test/src-bc-reports/sources/secbrella/SecB_ForwardNull/BadCase/ZeroDeref_Scene_BadCase05.c"
+                                },
+                                "region": {
+                                    "startLine": 52,
+                                    "startColumn": 2
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "codeFlows": [
+                        {
+                            "threadFlows": [
+                                {
+                                    "locations": [
+                                        {
+                                            "location": {
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "uri": "/mnt/d/dev/klee-test/src-bc-reports/sources/secbrella/SecB_ForwardNull/BadCase/ZeroDeref_Scene_BadCase05.c"
+                                                    },
+                                                    "region": {
+                                                        "startLine": 62,
+                                                        "startColumn": 2
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "location": {
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "uri": "/mnt/d/dev/klee-test/src-bc-reports/sources/secbrella/SecB_ForwardNull/BadCase/ZeroDeref_Scene_BadCase05.c"
+                                                    },
+                                                    "region": {
+                                                        "startLine": 49,
+                                                        "startColumn": 13
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "ruleId": "NullDereference",
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": "/mnt/d/dev/klee-test/src-bc-reports/sources/secbrella/SecB_ForwardNull/BadCase/ZeroDeref_Scene_BadCase05.c"
+                                },
+                                "region": {
+                                    "startLine": 49,
+                                    "startColumn": 13
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

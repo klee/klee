@@ -1,0 +1,90 @@
+{
+    "runs": [
+        {
+            "tool": {
+                "driver": {
+                    "name": "huawei"
+                }
+            },
+            "results": [
+                {
+                    "codeFlows": [
+                        {
+                            "threadFlows": [
+                                {
+                                    "locations": [
+                                        {
+                                            "location": {
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "uri": "/mnt/d/dev/klee-test/klee_verifier_scripts/tests/secb_suit/src/SecB_MemoryLeak/BadCase/LocalVar_Alloc_in_Loop_Exit_in_Loop_BadCase01.c"
+                                                    },
+                                                    "region": {
+                                                        "startLine": 34,
+                                                        "startColumn": 32
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "location": {
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "uri": "/mnt/d/dev/klee-test/klee_verifier_scripts/tests/secb_suit/src/SecB_MemoryLeak/BadCase/LocalVar_Alloc_in_Loop_Exit_in_Loop_BadCase01.c"
+                                                    },
+                                                    "region": {
+                                                        "startLine": 33,
+                                                        "startColumn": 5
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "location": {
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "uri": "/mnt/d/dev/klee-test/klee_verifier_scripts/tests/secb_suit/src/SecB_MemoryLeak/BadCase/LocalVar_Alloc_in_Loop_Exit_in_Loop_BadCase01.c"
+                                                    },
+                                                    "region": {
+                                                        "startLine": 43,
+                                                        "startColumn": 5
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "location": {
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "uri": "/mnt/d/dev/klee-test/klee_verifier_scripts/tests/secb_suit/src/SecB_MemoryLeak/BadCase/LocalVar_Alloc_in_Loop_Exit_in_Loop_BadCase01.c"
+                                                    },
+                                                    "region": {
+                                                        "startLine": 44,
+                                                        "startColumn": 9
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "location": {
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "uri": "/mnt/d/dev/klee-test/klee_verifier_scripts/tests/secb_suit/src/SecB_MemoryLeak/BadCase/LocalVar_Alloc_in_Loop_Exit_in_Loop_BadCase01.c"
+                                                    },
+                                                    "region": {
+                                                        "startLine": 44,
+                                                        "startColumn": 9
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

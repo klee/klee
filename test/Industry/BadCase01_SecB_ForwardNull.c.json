@@ -1,0 +1,12 @@
+{
+    "runs": [
+        {
+            "tool": {
+                "driver": {
+                    "name": "huawei"
+                }
+            },
+            "results": []
+        }
+    ]
+}

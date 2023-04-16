@@ -1,0 +1,78 @@
+{
+    "runs": [
+        {
+            "tool": {
+                "driver": {
+                    "name": "huawei"
+                }
+            },
+            "results": [
+                {
+                    "codeFlows": [
+                        {
+                            "threadFlows": [
+                                {
+                                    "locations": [
+                                        {
+                                            "location": {
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "uri": "/mnt/d/dev/klee-test/klee_verifier_scripts/tests/secb_suit/src/SecB_UseAfterFree/BadCase/Free_Not_Set_Null_BadCase02.cpp"
+                                                    },
+                                                    "region": {
+                                                        "startLine": 60,
+                                                        "startColumn": 18
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "location": {
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "uri": "/mnt/d/dev/klee-test/klee_verifier_scripts/tests/secb_suit/src/SecB_UseAfterFree/BadCase/Free_Not_Set_Null_BadCase02.cpp"
+                                                    },
+                                                    "region": {
+                                                        "startLine": 65,
+                                                        "startColumn": 9
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "location": {
+                                                "physicalLocation": {
+                                                    "artifactLocation": {
+                                                        "uri": "/mnt/d/dev/klee-test/klee_verifier_scripts/tests/secb_suit/src/SecB_UseAfterFree/BadCase/Free_Not_Set_Null_BadCase02.cpp"
+                                                    },
+                                                    "region": {
+                                                        "startLine": 67,
+                                                        "startColumn": 13
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "ruleId": "UseAfterFree",
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {
+                                    "uri": "/mnt/d/dev/klee-test/klee_verifier_scripts/tests/secb_suit/src/SecB_UseAfterFree/BadCase/Free_Not_Set_Null_BadCase02.cpp"
+                                },
+                                "region": {
+                                    "startLine": 67,
+                                    "startColumn": 13
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
