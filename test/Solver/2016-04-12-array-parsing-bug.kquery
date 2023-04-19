@@ -1,8 +1,8 @@
 # RUN: %kleaver %s > %t
 # RUN: %kleaver --clear-array-decls-after-query %s > %t
 
-array A-data[8] : w32 -> w8 = symbolic
-array A-data-stat[144] : w32 -> w8 = symbolic
+array A_data[8] : w32 -> w8 = symbolic
+array A_data_stat[144] : w32 -> w8 = symbolic
 array arg0[3] : w32 -> w8 = symbolic
 array arg1[3] : w32 -> w8 = symbolic
 array const_arr1[768] : w32 -> w8 = [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 3 32 2 32 2 32 2 32 2 32 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 1 96 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 8 216 8 216 8 216 8 216 8 216 8 216 8 216 8 216 8 216 8 216 4 192 4 192 4 192 4 192 4 192 4 192 4 192 8 213 8 213 8 213 8 213 8 213 8 213 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 4 192 4 192 4 192 4 192 4 192 4 192 8 214 8 214 8 214 8 214 8 214 8 214 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 4 192 4 192 4 192 4 192 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
@@ -11,9 +11,9 @@ array model_version[4] : w32 -> w8 = symbolic
 array n_args[4] : w32 -> w8 = symbolic
 array n_args_1[4] : w32 -> w8 = symbolic
 array stdin[8] : w32 -> w8 = symbolic
-array stdin-stat[144] : w32 -> w8 = symbolic
+array stdin_stat[144] : w32 -> w8 = symbolic
 array stdout[1024] : w32 -> w8 = symbolic
-array stdout-stat[144] : w32 -> w8 = symbolic
+array stdout_stat[144] : w32 -> w8 = symbolic
 (query [(Ult N0:(ReadLSB w32 0 n_args)
               2)
          (Eq false (Slt 0 N0))
@@ -23,21 +23,21 @@ array stdout-stat[144] : w32 -> w8 = symbolic
          (Slt 1 N1)
          (Eq false
              (Eq 0
-                 (And w64 (ReadLSB w64 8 A-data-stat)
+                 (And w64 (ReadLSB w64 8 A_data_stat)
                           2147483647)))
-         (Ult (ReadLSB w64 56 A-data-stat)
+         (Ult (ReadLSB w64 56 A_data_stat)
               65536)
          (Eq false
              (Eq 0
-                 (And w64 (ReadLSB w64 8 stdin-stat)
+                 (And w64 (ReadLSB w64 8 stdin_stat)
                           2147483647)))
-         (Ult (ReadLSB w64 56 stdin-stat)
+         (Ult (ReadLSB w64 56 stdin_stat)
               65536)
          (Eq false
              (Eq 0
-                 (And w64 (ReadLSB w64 8 stdout-stat)
+                 (And w64 (ReadLSB w64 8 stdout_stat)
                           2147483647)))
-         (Ult (ReadLSB w64 56 stdout-stat)
+         (Ult (ReadLSB w64 56 stdout_stat)
               65536)
          (Eq 1
              (ReadLSB w32 0 model_version))
@@ -83,25 +83,25 @@ array stdout-stat[144] : w32 -> w8 = symbolic
          n_args_1
          arg0
          arg1
-         A-data
-         A-data-stat
+         A_data
+         A_data_stat
          stdin
-         stdin-stat
+         stdin_stat
          stdout
-         stdout-stat
+         stdout_stat
          model_version])
 
-array A-data[8] : w32 -> w8 = symbolic
-array A-data-stat[144] : w32 -> w8 = symbolic
+array A_data[8] : w32 -> w8 = symbolic
+array A_data_stat[144] : w32 -> w8 = symbolic
 array arg0[11] : w32 -> w8 = symbolic
 array arg1[3] : w32 -> w8 = symbolic
 array model_version[4] : w32 -> w8 = symbolic
 array n_args[4] : w32 -> w8 = symbolic
 array n_args_1[4] : w32 -> w8 = symbolic
 array stdin[8] : w32 -> w8 = symbolic
-array stdin-stat[144] : w32 -> w8 = symbolic
+array stdin_stat[144] : w32 -> w8 = symbolic
 array stdout[1024] : w32 -> w8 = symbolic
-array stdout-stat[144] : w32 -> w8 = symbolic
+array stdout_stat[144] : w32 -> w8 = symbolic
 (query [(Ult N0:(ReadLSB w32 0 n_args)
               2)
          (Slt 0 N0)
@@ -111,21 +111,21 @@ array stdout-stat[144] : w32 -> w8 = symbolic
          (Eq false (Slt 1 N1))
          (Eq false
              (Eq 0
-                 (And w64 (ReadLSB w64 8 A-data-stat)
+                 (And w64 (ReadLSB w64 8 A_data_stat)
                           2147483647)))
-         (Ult (ReadLSB w64 56 A-data-stat)
+         (Ult (ReadLSB w64 56 A_data_stat)
               65536)
          (Eq false
              (Eq 0
-                 (And w64 (ReadLSB w64 8 stdin-stat)
+                 (And w64 (ReadLSB w64 8 stdin_stat)
                           2147483647)))
-         (Ult (ReadLSB w64 56 stdin-stat)
+         (Ult (ReadLSB w64 56 stdin_stat)
               65536)
          (Eq false
              (Eq 0
-                 (And w64 (ReadLSB w64 8 stdout-stat)
+                 (And w64 (ReadLSB w64 8 stdout_stat)
                           2147483647)))
-         (Ult (ReadLSB w64 56 stdout-stat)
+         (Ult (ReadLSB w64 56 stdout_stat)
               65536)
          (Eq 1
              (ReadLSB w32 0 model_version))
@@ -218,10 +218,10 @@ array stdout-stat[144] : w32 -> w8 = symbolic
          arg0
          n_args_1
          arg1
-         A-data
-         A-data-stat
+         A_data
+         A_data_stat
          stdin
-         stdin-stat
+         stdin_stat
          stdout
-         stdout-stat
+         stdout_stat
          model_version])
