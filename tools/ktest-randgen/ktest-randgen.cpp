@@ -242,8 +242,8 @@ int main(int argc, char *argv[]) {
   }
 
   for (i = 0; i < total_files; ++i) {
-    char filename[] = "A-data";
-    char file_stat[] = "A-data-stat";
+    char filename[] = "A_data";
+    char file_stat[] = "A_data_stat";
     unsigned nbytes;
     struct stat s;
 

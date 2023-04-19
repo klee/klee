@@ -139,8 +139,8 @@ int main(int argc, char *argv[]) {
   }
 
   if (file_counter > 0) {
-    char filename[7] = "A-data";
-    char statname[12] = "A-data-stat";
+    char filename[7] = "A_data";
+    char statname[12] = "A_data_stat";
     char sym_file_name = 'A';
     FILE *fp[file_counter];
     unsigned char *file_content[file_counter];
@@ -222,7 +222,7 @@ int main(int argc, char *argv[]) {
     FILE *fp;
     struct stat64 file_stat;
     char filename[6] = "stdin";
-    char statname[11] = "stdin-stat";
+    char statname[11] = "stdin_stat";
 #if defined(__has_feature)
 #if __has_feature(memory_sanitizer)
     memset(&file_stat, 0, sizeof(struct stat64));
@@ -265,7 +265,7 @@ int main(int argc, char *argv[]) {
     struct stat64 file_stat;
     unsigned char file_content[1024];
     char filename[7] = "stdout";
-    char statname[12] = "stdout-stat";
+    char statname[12] = "stdout_stat";
 
 #if defined(__has_feature)
 #if __has_feature(memory_sanitizer)
