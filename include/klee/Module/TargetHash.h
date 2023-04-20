@@ -47,5 +47,12 @@ typedef std::pair<llvm::BasicBlock *, llvm::BasicBlock *> Transition;
 struct TransitionHash {
   std::size_t operator()(const Transition &p) const;
 };
+
+struct RefTargetLess {
+  bool operator()(const ref<Target> &a, const ref<Target> &b) const {
+    return a.get() < b.get();
+  }
+};
+
 } // namespace klee
 #endif /* KLEE_TARGETHASH_H */

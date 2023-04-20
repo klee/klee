@@ -32,7 +32,14 @@ struct EquivTargetCmp;
 struct TargetHash;
 struct TargetCmp;
 
+using nonstd::optional;
 
+struct ErrorLocation {
+  unsigned int startLine;
+  unsigned int endLine;
+  optional<unsigned int> startColumn;
+  optional<unsigned int> endColumn;
+};
 
 struct Target {
 private:
@@ -42,15 +49,13 @@ private:
   static EquivTargetHashSet cachedTargets;
   static TargetHashSet targets;
   KBlock *block;
-  ReachWithError error;
-  unsigned id;
+  ReachWithError error;        // None - if it is not terminated in error trace
+  unsigned id;                 // 0 - if it is not terminated in error trace
+  optional<ErrorLocation> loc; // TODO(): only for check in reportTruePositive
 
-  Target(KBlock *block, ReachWithError error, unsigned id)
-      : block(block), error(error), id(id) {}
-
-  Target(KBlock *block, ReachWithError error) : Target(block, error, 0) {}
-
-  Target(KBlock *block) : Target(block, ReachWithError::None) {}
+  explicit Target(ReachWithError _error, unsigned _id,
+                  optional<ErrorLocation> _loc, KBlock *_block)
+      : block(_block), error(_error), id(_id), loc(_loc) {}
 
   static ref<Target> getFromCacheOrReturn(Target *target);
 
@@ -59,8 +64,9 @@ public:
   /// @brief Required by klee::ref-managed objects
   class ReferenceCounter _refCount;
 
-  static ref<Target> create(KBlock *block, ReachWithError error, unsigned id);
-  static ref<Target> create(KBlock *block);
+  static ref<Target> create(ReachWithError _error, unsigned _id,
+                            optional<ErrorLocation> _loc, KBlock *_block);
+  static ref<Target> create(KBlock *_block);
 
   int compare(const Target &other) const;
 
@@ -81,6 +87,8 @@ public:
   unsigned hash() const { return reinterpret_cast<uintptr_t>(block); }
 
   bool shouldFailOnThisTarget() const { return error != ReachWithError::None; }
+
+  bool isTheSameAsIn(KInstruction *instr) const;
 
   unsigned getId() const { return id; }
 
