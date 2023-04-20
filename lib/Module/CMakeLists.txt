@@ -28,6 +28,7 @@ set(KLEE_MODULE_COMPONENT_SRCS
   Target.cpp
   TargetHash.cpp
   TargetForest.cpp
+  SarifReport.cpp
 )
 
 if (USE_WORKAROUND_LLVM_PR39177)

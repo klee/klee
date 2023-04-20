@@ -1,4 +1,5 @@
 klee_add_component(kleeRunner
+        parse_static_analysis_json.cpp
         run_klee.cpp
         )
 

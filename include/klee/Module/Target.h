@@ -13,6 +13,7 @@
 #include "klee/ADT/RNG.h"
 #include "klee/ADT/Ref.h"
 #include "klee/Module/KModule.h"
+#include "klee/Module/SarifReport.h"
 #include "klee/System/Time.h"
 
 #include "klee/Support/OptionCategories.h"
@@ -31,23 +32,7 @@ struct EquivTargetCmp;
 struct TargetHash;
 struct TargetCmp;
 
-enum ReachWithError {
-  DoubleFree = 0,
-  UseAfterFree,
-  NullPointerException,
-  NullCheckAfterDerefException,
-  Reachable,
-  None,
-};
 
-static const char *ReachWithErrorNames[] = {
-    "DoubleFree",
-    "UseAfterFree",
-    "NullPointerException",
-    "NullCheckAfterDerefException",
-    "Reachable",
-    "None",
-};
 
 struct Target {
 private:
