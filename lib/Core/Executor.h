@@ -134,6 +134,7 @@ private:
 
   SetOfStates states;
   SetOfStates pausedStates;
+  SetOfStates removedButReachableStates;
   StatsTracker *statsTracker;
   TreeStreamWriter *pathWriter, *symPathWriter;
   SpecialFunctionHandler *specialFunctionHandler;
@@ -233,6 +234,7 @@ private:
   /// `nullptr` if merging is disabled
   MergingSearcher *mergingSearcher = nullptr;
 
+  std::unordered_map<KFunction *, TargetedHaltsOnTraces> targets;
 
   /// Typeids used during exception handling
   std::vector<ref<Expr>> eh_typeids;
@@ -520,6 +522,12 @@ private:
   void prepareTargetedExecution(ExecutionState *initialState,
                                 ref<TargetForest> whitelist);
 
+  void increaseProgressVelocity(ExecutionState &state, KBlock *block);
+
+  bool decreaseConfidenceFromStoppedStates(
+      SetOfStates &left_states,
+      HaltExecution::Reason reason = HaltExecution::NotHalt);
+
   template <typename SqType, typename TypeIt>
   void computeOffsetsSeqTy(KGEPInstruction *kgepi,
                            ref<ConstantExpr> &constantOffset, uint64_t index,
@@ -559,7 +567,7 @@ public:
 
   void setPathWriter(TreeStreamWriter *tsw) override { pathWriter = tsw; }
 
-  bool hasTargetForest() const override { return false; }
+  bool hasTargetForest() const override { return !targets.empty(); }
 
   void setSymbolicPathWriter(TreeStreamWriter *tsw) override {
     symPathWriter = tsw;

@@ -15,6 +15,7 @@
 #include "klee/ADT/TreeStream.h"
 #include "klee/Config/Version.h"
 #include "klee/Core/Interpreter.h"
+#include "klee/Core/TargetedExecutionReporter.h"
 #include "klee/Module/SarifReport.h"
 #include "klee/Module/TargetForest.h"
 #include "klee/Solver/SolverCmdLine.h"
@@ -1055,6 +1056,12 @@ static void interrupt_handle() {
     halt_execution();
     sys::SetInterruptFunction(interrupt_handle);
   } else {
+    if (paths && (!theInterpreter || !theInterpreter->hasTargetForest())) {
+      for (const auto &res : paths->results) {
+        reportFalsePositive(confidence::MinConfidence, res.error, res.id,
+                            "max-time");
+      }
+    }
     llvm::errs() << "KLEE: ctrl-c detected, exiting.\n";
     exit(1);
   }

@@ -162,6 +162,9 @@ public:
   void update(ExecutionState *current,
               const std::vector<ExecutionState *> &addedStates,
               const std::vector<ExecutionState *> &removedStates) override;
+  bool updateCheckCanReach(ExecutionState *current,
+                           const std::vector<ExecutionState *> &addedStates,
+                           const std::vector<ExecutionState *> &removedStates);
   bool empty() override;
   void printName(llvm::raw_ostream &os) override;
   std::set<ExecutionState *> reached();
@@ -211,6 +214,8 @@ private:
   CodeGraphDistance &codeGraphDistance;
   TargetCalculator *stateHistory;
   TargetHashSet reachedTargets;
+  std::set<ExecutionState *, ExecutionStateIDCompare>
+      &removedButReachableStates;
   std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates;
   std::size_t bound;
   RNG &theRNG;
@@ -229,7 +234,7 @@ private:
   void innerUpdate(ExecutionState *current,
                    const std::vector<ExecutionState *> &addedStates,
                    const std::vector<ExecutionState *> &removedStates);
-  void updateTargetedSearcher(ref<TargetForest::History> history,
+  bool updateTargetedSearcher(ref<TargetForest::History> history,
                               ref<Target> target, ExecutionState *current,
                               std::vector<ExecutionState *> &addedStates,
                               std::vector<ExecutionState *> &removedStates);
@@ -242,10 +247,14 @@ public:
   GuidedSearcher(
       Searcher *baseSearcher, CodeGraphDistance &codeGraphDistance,
       TargetCalculator &stateHistory,
+      std::set<ExecutionState *, ExecutionStateIDCompare>
+          &removedButReachableStates,
       std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates,
       std::size_t bound, RNG &rng);
   GuidedSearcher(
       CodeGraphDistance &codeGraphDistance,
+      std::set<ExecutionState *, ExecutionStateIDCompare>
+          &removedButReachableStates,
       std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates,
       std::size_t bound, RNG &rng);
   ~GuidedSearcher() override = default;

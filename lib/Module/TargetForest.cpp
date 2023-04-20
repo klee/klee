@@ -9,6 +9,7 @@
 
 #include "klee/Module/TargetForest.h"
 
+#include "klee/Core/TargetedExecutionReporter.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
@@ -117,10 +118,17 @@ void TargetForest::Layer::addTrace(
   }
 }
 
+void TargetForest::Layer::propagateConfidenceToChildren() {
+  auto parentConfidence = getConfidence();
+  for (auto &kv : forest) {
+    kv.second->confidence = kv.second->getConfidence(parentConfidence);
+  }
+}
 
 void TargetForest::Layer::unionWith(TargetForest::Layer *other) {
   if (other->forest.empty())
     return;
+  other->propagateConfidenceToChildren();
   for (const auto &kv : other->forest) {
     auto it = forest.find(kv.first);
     if (it == forest.end()) {
@@ -205,6 +213,7 @@ bool TargetForest::Layer::deepFindIn(ref<Target> child,
   if (res == targetsToVector.end()) {
     return false;
   }
+
   if (child == target) {
     return true;
   }
@@ -278,7 +287,7 @@ TargetForest::Layer::blockLeafInChild(ref<UnorderedTargetsSet> child,
     for (auto &target : child->getTargets()) {
       subTargetsToVector[target].insert(child);
     }
-    sublayer = new Layer(subforest, subTargetsToVector);
+    sublayer = new Layer(subforest, subTargetsToVector, confidence);
     auto result = replaceChildWith(child, sublayer.get());
     return result;
   }
@@ -363,6 +372,7 @@ bool TargetForest::Layer::allNodesRefCountOne() const {
 
 void TargetForest::Layer::dump(unsigned n) const {
   llvm::errs() << "THE " << n << " LAYER:\n";
+  llvm::errs() << "Confidence: " << confidence << "\n";
   for (const auto &kv : forest) {
     llvm::errs() << kv.first->toString() << "\n";
   }
@@ -499,6 +509,58 @@ void TargetForest::dump() const {
 bool TargetForest::allNodesRefCountOne() const {
   return forest->allNodesRefCountOne();
 }
+
+void TargetForest::Layer::addLeafs(
+    std::vector<std::pair<ref<Target>, confidence::ty>> *leafs,
+    confidence::ty parentConfidence) const {
+  for (const auto &targetAndForest : forest) {
+    auto targetsVec = targetAndForest.first;
+    auto layer = targetAndForest.second;
+    auto confidence = layer->getConfidence(parentConfidence);
+    if (layer->empty()) {
+      for (auto &target : targetsVec->getTargets()) {
+        leafs->push_back(std::make_pair(target, confidence));
+      }
+    } else {
+      layer->addLeafs(leafs, confidence);
+    }
+  }
+}
+
+std::vector<std::pair<ref<Target>, confidence::ty>> *
+TargetForest::leafs() const {
+  auto leafs = new std::vector<std::pair<ref<Target>, confidence::ty>>();
+  forest->addLeafs(leafs, forest->getConfidence());
+  return leafs;
+}
+
+void TargetForest::subtractConfidencesFrom(TargetForest &other) {
+  if (other.empty())
+    return;
+  forest->subtractConfidencesFrom(other.forest, forest->getConfidence());
+}
+
+void TargetForest::Layer::subtractConfidencesFrom(
+    ref<Layer> other, confidence::ty parentConfidence) {
+  for (auto &targetAndForest : forest) {
+    auto targetsVec = targetAndForest.first;
+    auto &layer = targetAndForest.second;
+    auto otherLayerIt = other->forest.find(targetsVec);
+    if (otherLayerIt == other->forest.end())
+      layer->subtractConfidencesFrom(other,
+                                     layer->getConfidence(parentConfidence));
+    else {
+      layer->confidence = layer->getConfidence(parentConfidence) -
+                          otherLayerIt->second->confidence;
+      if (confidence::isNormal(layer->confidence)) {
+        layer->confidence =
+            confidence::MinConfidence; // TODO: we have some bug which we do not
+                                       // want the user to see
+      }
+    }
+  }
+}
+
 ref<TargetForest> TargetForest::deepCopy() {
   return new TargetForest(forest->deepCopy(), entryFunction);
 }
@@ -511,6 +573,38 @@ ref<TargetForest::Layer> TargetForest::Layer::deepCopy() {
     copyForest->forest[targetsVec] = layer->deepCopy();
   }
   return copyForest;
+}
+
+void TargetForest::Layer::divideConfidenceBy(unsigned factor) {
+  for (auto &targetAndForest : forest) {
+    auto layer = targetAndForest.second;
+    layer->confidence /= factor;
+  }
+}
+
+TargetForest::Layer *TargetForest::Layer::divideConfidenceBy(
+    std::multiset<ref<Target>> &reachableStatesOfTarget) {
+  if (forest.empty() || reachableStatesOfTarget.empty())
+    return this;
+  auto result = new Layer(this);
+  for (auto &targetAndForest : forest) {
+    auto targetsVec = targetAndForest.first;
+    auto layer = targetAndForest.second;
+    size_t count = 0;
+    for (auto &target : targetsVec->getTargets()) {
+      count += reachableStatesOfTarget.count(target);
+    }
+    if (count) {
+      if (count == 1)
+        continue;
+      auto next = new Layer(layer);
+      result->forest[targetsVec] = next;
+      next->confidence /= count;
+    } else
+      result->forest[targetsVec] =
+          layer->divideConfidenceBy(reachableStatesOfTarget);
+  }
+  return result;
 }
 
 void TargetForest::Layer::collectHowManyEventsInTracesWereReached(

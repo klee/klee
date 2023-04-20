@@ -513,6 +513,120 @@ extern "C" unsigned dumpStates, dumpPForest;
 unsigned dumpStates = 0, dumpPForest = 0;
 
 bool Interpreter::hasTargetForest() const { return false; }
+
+TargetedHaltsOnTraces::TargetedHaltsOnTraces(ref<TargetForest> &forest) {
+  auto leafs = forest->leafs();
+  for (auto finalTargetPair : *leafs) {
+    traceToHaltTypeToConfidence.emplace(finalTargetPair.first,
+                                        HaltTypeToConfidence());
+  }
+  delete leafs;
+}
+
+void TargetedHaltsOnTraces::subtractConfidencesFrom(
+    TargetForest &forest, HaltExecution::Reason reason) {
+  auto leafs = forest.leafs();
+  for (auto finalTargetPair : *leafs) {
+    auto &haltTypeToConfidence =
+        traceToHaltTypeToConfidence.at(finalTargetPair.first);
+    auto confidence = finalTargetPair.second;
+    auto it = haltTypeToConfidence.find(reason);
+    if (it == haltTypeToConfidence.end()) {
+      haltTypeToConfidence.emplace(reason, confidence);
+    } else {
+      haltTypeToConfidence[reason] = it->second + confidence;
+    }
+  }
+  delete leafs;
+}
+
+void TargetedHaltsOnTraces::totalConfidenceAndTopContributor(
+    const HaltTypeToConfidence &haltTypeToConfidence,
+    confidence::ty *confidence, HaltExecution::Reason *reason) {
+  *confidence = confidence::MaxConfidence;
+  HaltExecution::Reason maxReason = HaltExecution::MaxTime;
+  confidence::ty maxConfidence = confidence::MinConfidence;
+  for (auto p : haltTypeToConfidence) {
+    auto r = p.first;
+    auto c = p.second;
+    if (c > maxConfidence) {
+      maxConfidence = c;
+      maxReason = r;
+    }
+    *confidence -= c;
+  }
+  *reason = maxReason;
+}
+
+std::string
+getAdviseWhatToIncreaseConfidenceRate(HaltExecution::Reason reason) {
+  std::string what = "";
+  switch (reason) {
+  case HaltExecution::MaxSolverTime:
+    what = MaxCoreSolverTime.ArgStr.str();
+    break;
+  case HaltExecution::MaxStackFrames:
+    what = RuntimeMaxStackFrames.ArgStr.str();
+    break;
+  case HaltExecution::MaxTests:
+    what = "max-tests"; // TODO: taken from run_klee.cpp
+    break;
+  case HaltExecution::MaxInstructions:
+    what = MaxInstructions.ArgStr.str();
+    break;
+  case HaltExecution::MaxSteppedInstructions:
+    what = MaxSteppedInstructions.ArgStr.str();
+    break;
+  case HaltExecution::CovCheck:
+    what = "cov-check"; // TODO: taken from StatsTracker.cpp
+    break;
+  case HaltExecution::MaxDepth:
+    what = MaxDepth.ArgStr.str();
+    break;
+  case HaltExecution::ErrorOnWhichShouldExit: // this should never be the case
+  case HaltExecution::ReachedTarget:          // this should never be the case
+  case HaltExecution::NoMoreStates:           // this should never be the case
+  case HaltExecution::Interrupt: // it is ok to advise to increase time if we
+                                 // were interrupted by user
+  case HaltExecution::MaxTime:
+#ifndef ENABLE_KLEE_DEBUG
+  default:
+#endif
+    what = MaxTime.ArgStr.str();
+    break;
+#ifdef ENABLE_KLEE_DEBUG
+  default:
+    what = std::to_string(reason);
+    break;
+#endif
+  }
+  return what;
+}
+
+void TargetedHaltsOnTraces::reportFalsePositives(bool canReachSomeTarget) {
+  confidence::ty confidence;
+  HaltExecution::Reason reason;
+  for (const auto &targetWithConfidences : traceToHaltTypeToConfidence) {
+    auto target = targetWithConfidences.first;
+    if (!target->shouldFailOnThisTarget())
+      continue;
+    if (target->isReported)
+      continue;
+    totalConfidenceAndTopContributor(targetWithConfidences.second, &confidence,
+                                     &reason);
+    if (canReachSomeTarget &&
+        confidence::isVeryConfident(
+            confidence)) { // We should not be so sure if there are states that
+                           // can reach some targets
+      confidence = confidence::VeryConfident;
+      reason = HaltExecution::MaxTime;
+    }
+    reportFalsePositive(confidence, target->getError(), target->getId(),
+                        getAdviseWhatToIncreaseConfidenceRate(reason));
+    target->isReported = true;
+  }
+}
+
 const std::unordered_set<Intrinsic::ID> Executor::supportedFPIntrinsics = {
     // Intrinsic::fabs, //handled individually because of its presence in
     // mainline KLEE
@@ -2281,6 +2395,22 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
   }
 }
 
+void Executor::increaseProgressVelocity(ExecutionState &state, KBlock *block) {
+  if (state.visited(block)) {
+    if (state.progressVelocity >= 0) {
+      state.progressVelocity -= state.progressAcceleration;
+      state.progressAcceleration *= 2;
+    }
+  } else {
+    if (state.progressVelocity >= 0) {
+      state.progressVelocity += 1;
+    } else {
+      state.progressVelocity = 0;
+      state.progressAcceleration = 1;
+    }
+  }
+}
+
 void Executor::transferToBasicBlock(KBlock *kdst, BasicBlock *src,
                                     ExecutionState &state) {
   // Note that in general phi nodes can reuse phi values from the same
@@ -2302,6 +2432,7 @@ void Executor::transferToBasicBlock(KBlock *kdst, BasicBlock *src,
     PHINode *first = static_cast<PHINode *>(state.pc->inst);
     state.incomingBBIndex = first->getBasicBlockIndex(src);
   }
+  increaseProgressVelocity(state, kdst);
 }
 
 void Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src,
@@ -3871,6 +4002,7 @@ void Executor::updateStates(ExecutionState *current) {
     processForest->remove(es->ptreeNode);
     delete es;
   }
+  removedButReachableStates.clear();
   removedStates.clear();
 }
 
@@ -3993,6 +4125,23 @@ bool Executor::checkMemoryUsage() {
   }
 
   return false;
+}
+
+bool Executor::decreaseConfidenceFromStoppedStates(
+    SetOfStates &left_states, HaltExecution::Reason reason) {
+  bool hasStateWhichCanReachSomeTarget = false;
+  for (auto state : left_states) {
+    if (state->targetForest.empty())
+      continue;
+    hasStateWhichCanReachSomeTarget = true;
+    auto realReason = reason ? reason : state->terminationReasonType.load();
+    if (state->progressVelocity >= 0) {
+      assert(targets.count(state->targetForest.getEntryFunction()) != 0);
+      targets.at(state->targetForest.getEntryFunction())
+          .subtractConfidencesFrom(state->targetForest, realReason);
+    }
+  }
+  return hasStateWhichCanReachSomeTarget;
 }
 
 void Executor::doDumpStates() {
@@ -4118,6 +4267,15 @@ void Executor::run(std::vector<ExecutionState *> initialStates) {
   }
 
   if (guidanceKind == GuidanceKind::ErrorGuidance) {
+    bool canReachNew1 = decreaseConfidenceFromStoppedStates(pausedStates);
+    bool canReachNew2 =
+        decreaseConfidenceFromStoppedStates(states, haltExecution);
+
+    for (auto &startBlockAndWhiteList : targets) {
+      startBlockAndWhiteList.second.reportFalsePositives(canReachNew1 ||
+                                                         canReachNew2);
+    }
+
     if (searcher->empty())
       haltExecution = HaltExecution::NoMoreStates;
   }
@@ -4427,12 +4585,11 @@ bool shouldExitOn(StateTerminationType reason) {
 void Executor::reportStateOnTargetError(ExecutionState &state,
                                         ReachWithError error) {
   if (guidanceKind == GuidanceKind::ErrorGuidance) {
-    // TODO: uncomment when `targetedExecutionManager` will be added
-    // bool reportedTruePositive =
-    //     targetedExecutionManager.reportTruePositive(state, error);
-    // if (!reportedTruePositive) {
-    //   targetedExecutionManager.reportFalseNegative(state, error);
-    // }
+    bool reportedTruePositive =
+        targetedExecutionManager.reportTruePositive(state, error);
+    if (!reportedTruePositive) {
+      targetedExecutionManager.reportFalseNegative(state, error);
+    }
   }
 }
 
@@ -5838,6 +5995,7 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
         continue;
       }
       auto whitelist = startFunctionAndWhiteList.second;
+      targets.emplace(kf, TargetedHaltsOnTraces(whitelist));
       ExecutionState *initialState = state->withStackFrame(caller, kf);
       prepareSymbolicArgs(*initialState, kf);
       prepareTargetedExecution(initialState, whitelist);

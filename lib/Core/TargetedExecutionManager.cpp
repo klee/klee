@@ -162,3 +162,52 @@ TargetedExecutionManager::prepareTargets(KModule *kmodule, SarifReport paths) {
 
   return whitelists;
 }
+
+void TargetedExecutionManager::reportFalseNegative(ExecutionState &state,
+                                                   ReachWithError error) {
+  klee_warning("100.00%% %s False Negative at: %s", getErrorString(error),
+               state.prevPC->getSourceLocation().c_str());
+}
+
+bool TargetedExecutionManager::reportTruePositive(ExecutionState &state,
+                                                  ReachWithError error) {
+  bool atLeastOneReported = false;
+  for (auto kvp : state.targetForest) {
+    auto target = kvp.first;
+    if (target->getError() != error || broken_traces.count(target->getId()))
+      continue;
+
+    /// The following code checks if target is a `call ...` instruction and we
+    /// failed somewhere *inside* call
+    auto possibleInstruction = state.prevPC;
+    int i = state.stack.size() - 1;
+    bool found = true;
+
+    while (!target->isTheSameAsIn(
+        possibleInstruction)) { // TODO: target->getBlock() ==
+                                // possibleInstruction should also be checked,
+                                // but more smartly
+      if (i <= 0) {
+        found = false;
+        break;
+      }
+      possibleInstruction = state.stack[i].caller;
+      i--;
+    }
+    if (!found)
+      continue;
+
+    state.error = error;
+    atLeastOneReported = true;
+    assert(!target->isReported);
+    if (target->getError() == ReachWithError::Reachable) {
+      klee_warning("100.00%% %s Reachable at trace %u", getErrorString(error),
+                   target->getId());
+    } else {
+      klee_warning("100.00%% %s True Positive at trace %u",
+                   getErrorString(error), target->getId());
+    }
+    target->isReported = true;
+  }
+  return atLeastOneReported;
+}

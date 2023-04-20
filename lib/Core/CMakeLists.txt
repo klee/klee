@@ -28,6 +28,7 @@ klee_add_component(kleeCore
   SpecialFunctionHandler.cpp
   StatsTracker.cpp
   TargetCalculator.cpp
+  TargetedExecutionReporter.cpp
   TargetedExecutionManager.cpp
   TimingSolver.cpp
   TypeManager.cpp

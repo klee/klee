@@ -15,6 +15,7 @@
 #define KLEE_TARGETFOREST_H
 
 #include "klee/ADT/Ref.h"
+#include "klee/Core/TargetedExecutionReporter.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Module/KModule.h"
 #include "klee/Module/Target.h"
@@ -111,15 +112,25 @@ private:
         RefTargetHash, RefTargetCmp>;
     TargetsToVector targetsToVector;
 
-    Layer(const InternalLayer &forest, const TargetsToVector &targetsToVector)
-        : forest(forest), targetsToVector(targetsToVector) {}
+    /// @brief Confidence in % that this layer (i.e., parent target node) can be
+    /// reached
+    confidence::ty confidence;
+
+    Layer(const InternalLayer &forest, const TargetsToVector &targetsToVector,
+          confidence::ty confidence)
+        : forest(forest), targetsToVector(targetsToVector),
+          confidence(confidence) {}
     explicit Layer(const Layer *layer)
-        : Layer(layer->forest, layer->targetsToVector) {}
+        : Layer(layer->forest, layer->targetsToVector, layer->confidence) {}
     explicit Layer(const ref<Layer> layer) : Layer(layer.get()) {}
     void unionWith(Layer *other);
     void block(ref<Target> target);
     void removeTarget(ref<Target> target);
     Layer *removeChild(ref<UnorderedTargetsSet> child) const;
+
+    confidence::ty getConfidence(confidence::ty parentConfidence) const {
+      return confidence::min(parentConfidence, confidence);
+    }
 
     void collectHowManyEventsInTracesWereReached(
         std::unordered_map<unsigned, std::pair<unsigned, unsigned>>
@@ -132,7 +143,7 @@ private:
     /// @brief Required by klee::ref-managed objects
     class ReferenceCounter _refCount;
 
-    explicit Layer() {}
+    explicit Layer() : confidence(confidence::MaxConfidence) {}
 
     iterator find(ref<Target> b) const { return targetsToVector.find(b); }
     iterator begin() const { return targetsToVector.begin(); }
@@ -162,7 +173,19 @@ private:
     bool allNodesRefCountOne() const;
     void dump(unsigned n) const;
     ref<Layer> deepCopy();
+    void addLeafs(std::vector<std::pair<ref<Target>, confidence::ty>> *leafs,
+                  confidence::ty parentConfidence) const;
+    void propagateConfidenceToChildren();
+    void subtractConfidencesFrom(ref<Layer> other,
+                                 confidence::ty parentConfidence);
+    void addTargetWithConfidence(ref<Target> target, confidence::ty confidence);
     Layer *copy();
+    void divideConfidenceBy(unsigned factor);
+    Layer *
+    divideConfidenceBy(std::multiset<ref<Target>> &reachableStatesOfTarget);
+    confidence::ty getConfidence() const {
+      return getConfidence(confidence::MaxConfidence);
+    }
     void collectHowManyEventsInTracesWereReached(
         std::unordered_map<unsigned, std::pair<unsigned, unsigned>>
             &traceToEventCount) const {
@@ -274,7 +297,18 @@ public:
   const ref<History> getHistory() { return history; };
   const ref<Layer> getTargets() { return forest; };
   void dump() const;
+  std::vector<std::pair<ref<Target>, confidence::ty>> *leafs() const;
+  void subtractConfidencesFrom(TargetForest &other);
+  void addTargetWithConfidence(ref<Target> target, confidence::ty confidence) {
+    forest->addTargetWithConfidence(target, confidence);
+  }
   ref<TargetForest> deepCopy();
+  void divideConfidenceBy(unsigned factor) {
+    forest->divideConfidenceBy(factor);
+  }
+  void divideConfidenceBy(std::multiset<ref<Target>> &reachableStatesOfTarget) {
+    forest = forest->divideConfidenceBy(reachableStatesOfTarget);
+  }
   void collectHowManyEventsInTracesWereReached(
       std::unordered_map<unsigned, std::pair<unsigned, unsigned>>
           &traceToEventCount) const {

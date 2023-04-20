@@ -222,6 +222,10 @@ public:
   /// @brief Key points which should be visited through execution
   TargetForest targetForest;
 
+  /// @brief Velocity and acceleration of this state investigating new blocks
+  long long progressVelocity = 0;
+  unsigned long progressAcceleration = 1;
+
   /// Statistics and information
 
   /// @brief Metadata utilized and collected by solvers for this state

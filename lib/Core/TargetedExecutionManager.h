@@ -14,6 +14,7 @@
 #ifndef KLEE_TARGETEDEXECUTIONMANAGER_H
 #define KLEE_TARGETEDEXECUTIONMANAGER_H
 
+#include "klee/Core/TargetedExecutionReporter.h"
 #include "klee/Module/KModule.h"
 #include "klee/Module/Target.h"
 #include "klee/Module/TargetForest.h"
@@ -21,6 +22,28 @@
 #include <unordered_map>
 
 namespace klee {
+
+class TargetedHaltsOnTraces {
+  using HaltTypeToConfidence =
+      std::unordered_map<HaltExecution::Reason, confidence::ty>;
+  using TraceToHaltTypeToConfidence =
+      std::unordered_map<ref<Target>, HaltTypeToConfidence, RefTargetHash,
+                         RefTargetCmp>;
+  TraceToHaltTypeToConfidence traceToHaltTypeToConfidence;
+
+  static void totalConfidenceAndTopContributor(
+      const HaltTypeToConfidence &haltTypeToConfidence,
+      confidence::ty *confidence, HaltExecution::Reason *reason);
+
+public:
+  explicit TargetedHaltsOnTraces(ref<TargetForest> &forest);
+
+  void subtractConfidencesFrom(TargetForest &forest,
+                               HaltExecution::Reason reason);
+
+  /* Report for targeted static analysis mode */
+  void reportFalsePositives(bool canReachSomeTarget);
+};
 
 class TargetedExecutionManager {
 private:
@@ -47,6 +70,10 @@ public:
   std::unordered_map<KFunction *, ref<TargetForest>>
   prepareTargets(KModule *kmodule, SarifReport paths);
 
+  void reportFalseNegative(ExecutionState &state, ReachWithError error);
+
+  // Return true if report is successful
+  bool reportTruePositive(ExecutionState &state, ReachWithError error);
 };
 
 } // namespace klee
