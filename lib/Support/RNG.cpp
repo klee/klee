@@ -19,7 +19,7 @@ llvm::cl::opt<RNG::result_type> RNGInitialSeed(
     llvm::cl::cat(klee::MiscCat));
 }
 
-RNG::RNG() : std::mt19937(RNGInitialSeed) { }
+RNG::RNG() : std::mt19937(RNGInitialSeed.getValue()) { }
 
 RNG::RNG(RNG::result_type seed) : std::mt19937(seed) {}
 
