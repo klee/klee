@@ -15,6 +15,7 @@
 #include "klee/ADT/TreeStream.h"
 #include "klee/Config/Version.h"
 #include "klee/Core/Interpreter.h"
+#include "klee/Module/SarifReport.h"
 #include "klee/Module/TargetForest.h"
 #include "klee/Solver/SolverCmdLine.h"
 #include "klee/Statistics/Statistics.h"
@@ -58,6 +59,9 @@
 #include <fstream>
 #include <iomanip>
 #include <iterator>
+
+#include <klee/Misc/json.hpp>
+using json = nlohmann::json;
 
 using namespace llvm;
 using namespace klee;
@@ -152,6 +156,12 @@ cl::opt<int> ProcessNumber("process-number",
                            cl::desc("Number of parallel process in klee, must "
                                     "lie in [1, 50] (default = 1)."),
                            cl::init(1), cl::cat(StartCat));
+
+cl::opt<std::string>
+    AnalysisReproduce("analysis-reproduce",
+                      cl::desc("Path of JSON file containing static analysis "
+                               "paths to be reproduced"),
+                      cl::init(""), cl::cat(StartCat));
 
 cl::opt<std::string>
     RunInDir("run-in-dir",
@@ -1028,6 +1038,7 @@ void externalsAndGlobalsCheck(const llvm::Module *m) {
 }
 
 static Interpreter *theInterpreter = 0;
+static nonstd::optional<SarifReport> paths = nonstd::nullopt;
 
 static std::atomic_bool interrupted{false};
 
@@ -1208,17 +1219,17 @@ linkWithUclibc(StringRef libDir, std::string opt_suffix,
 }
 #endif
 
-static std::unordered_map<llvm::Function *, TargetForest>
-parseStaticAnalysisInput() {
-  return std::unordered_map<llvm::Function *, TargetForest>();
+static nonstd::optional<SarifReport> parseStaticAnalysisInput() {
+  if (AnalysisReproduce != "")
+    return parseInputPathTree(AnalysisReproduce);
+  return nonstd::nullopt;
 }
 
 static int run_klee_on_function(
     int pArgc, char **pArgv, char **pEnvp,
     std::unique_ptr<KleeHandler> &handler,
     std::unique_ptr<Interpreter> &interpreter, llvm::Module *finalModule,
-    std::vector<bool> &replayPath,
-    std::unordered_map<llvm::Function *, TargetForest> &targets) {
+    std::vector<bool> &replayPath) {
   Function *mainFn = finalModule->getFunction(EntryPoint);
   if ((UseGuidedSearch != Interpreter::GuidanceKind::ErrorGuidance) &&
       !mainFn) { // in error guided mode we do not need main function
@@ -1513,9 +1524,13 @@ int run_klee(int argc, char **argv, char **envp) {
   }
 
   llvm::Module *mainModule = loadedUserModules.front().get();
+  std::unique_ptr<InstructionInfoTable> origInfos;
+  std::unique_ptr<llvm::raw_fd_ostream> assemblyFS;
 
   if (UseGuidedSearch == Interpreter::GuidanceKind::ErrorGuidance) {
     std::vector<llvm::Type *> args;
+    origInfos = std::make_unique<InstructionInfoTable>(
+        *mainModule, std::move(assemblyFS), true);
     args.push_back(llvm::Type::getInt32Ty(ctx)); // argc
     args.push_back(llvm::PointerType::get(
         Type::getInt8PtrTy(ctx),
@@ -1722,13 +1737,11 @@ int run_klee(int argc, char **argv, char **envp) {
   std::unique_ptr<KleeHandler> handler =
       std::make_unique<KleeHandler>(pArgc, pArgv);
 
-  std::unordered_map<llvm::Function *, TargetForest> targetForest;
-
   if (UseGuidedSearch == Interpreter::GuidanceKind::ErrorGuidance) {
-    targetForest = parseStaticAnalysisInput();
+    paths = parseStaticAnalysisInput();
   }
 
-  Interpreter::InterpreterOptions IOpts(targetForest);
+  Interpreter::InterpreterOptions IOpts(paths);
   IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
   IOpts.Guidance = UseGuidedSearch;
   std::unique_ptr<Interpreter> interpreter(
@@ -1745,8 +1758,9 @@ int run_klee(int argc, char **argv, char **envp) {
   // Get the desired main function.  klee_main initializes uClibc
   // locale and other data and then calls main.
 
-  auto finalModule = interpreter->setModule(
-      loadedUserModules, loadedLibsModules, Opts, mainModuleFunctions);
+  auto finalModule =
+      interpreter->setModule(loadedUserModules, loadedLibsModules, Opts,
+                             mainModuleFunctions, std::move(origInfos));
   Function *mainFn = finalModule->getFunction(EntryPoint);
   if (!mainFn) {
     klee_error("Entry function '%s' not found in module.", EntryPoint.c_str());
@@ -1804,7 +1818,7 @@ int run_klee(int argc, char **argv, char **envp) {
         sys::path::append(newOutputDirectory, entrypoint);
         handler->setOutputDirectory(newOutputDirectory.c_str());
         run_klee_on_function(pArgc, pArgv, pEnvp, handler, interpreter,
-                             finalModule, replayPath, targetForest);
+                             finalModule, replayPath);
         exit(0);
       } else {
         child_processes.emplace_back(pid, std::chrono::steady_clock::now());
@@ -1827,8 +1841,10 @@ int run_klee(int argc, char **argv, char **envp) {
     }
   } else {
     run_klee_on_function(pArgc, pArgv, pEnvp, handler, interpreter, finalModule,
-                         replayPath, targetForest);
+                         replayPath);
   }
+
+  paths.reset();
 
   // Free all the args.
   for (unsigned i = 0; i < InputArgv.size() + 1; i++)

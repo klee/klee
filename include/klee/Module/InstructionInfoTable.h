@@ -15,6 +15,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace llvm {
@@ -68,20 +69,31 @@ public:
 };
 
 class InstructionInfoTable {
+public:
+  using Instructions = std::unordered_map<
+      std::string,
+      std::unordered_map<
+          unsigned int,
+          std::unordered_map<unsigned int, std::unordered_set<unsigned int>>>>;
+
+private:
   std::unordered_map<const llvm::Instruction *,
                      std::unique_ptr<InstructionInfo>>
       infos;
   std::unordered_map<const llvm::Function *, std::unique_ptr<FunctionInfo>>
       functionInfos;
   std::vector<std::unique_ptr<std::string>> internedStrings;
+  Instructions insts;
 
 public:
   explicit InstructionInfoTable(
-      const llvm::Module &m, std::unique_ptr<llvm::raw_fd_ostream> assemblyFS);
+      const llvm::Module &m, std::unique_ptr<llvm::raw_fd_ostream> assemblyFS,
+      bool withInstructions = false);
 
   unsigned getMaxID() const;
   const InstructionInfo &getInfo(const llvm::Instruction &) const;
   const FunctionInfo &getFunctionInfo(const llvm::Function &) const;
+  Instructions getInstructions();
 };
 
 } // namespace klee

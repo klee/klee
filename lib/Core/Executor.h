@@ -16,6 +16,7 @@
 #define KLEE_EXECUTOR_H
 
 #include "ExecutionState.h"
+#include "TargetedExecutionManager.h"
 #include "UserSearcher.h"
 
 #include "klee/ADT/RNG.h"
@@ -173,6 +174,9 @@ private:
   /// Used to validate and dereference function pointers.
   std::unordered_map<std::uint64_t, llvm::Function *> legalFunctions;
 
+  /// Manager for everything related to targeted execution mode
+  TargetedExecutionManager targetedExecutionManager;
+
   /// When non-null the bindings that will be used for calls to
   /// klee_make_symbolic in order replay.
   const struct KTest *replayKTest;
@@ -228,6 +232,7 @@ private:
   /// Points to the merging searcher of the searcher chain,
   /// `nullptr` if merging is disabled
   MergingSearcher *mergingSearcher = nullptr;
+
 
   /// Typeids used during exception handling
   std::vector<ref<Expr>> eh_typeids;
@@ -352,6 +357,7 @@ private:
   IDType lazyInitializeObject(ExecutionState &state, ref<Expr> address,
                               KInstruction *target, KType *targetType,
                               uint64_t size);
+
   void executeMakeSymbolic(ExecutionState &state, const MemoryObject *mo,
                            KType *type, const std::string &name,
                            const ref<SymbolicSource> source, bool isLocal);
@@ -512,7 +518,7 @@ private:
                                        ExecutionState *state);
 
   void prepareTargetedExecution(ExecutionState *initialState,
-                                TargetForest whitelist);
+                                ref<TargetForest> whitelist);
 
   template <typename SqType, typename TypeIt>
   void computeOffsetsSeqTy(KGEPInstruction *kgepi,
@@ -553,6 +559,8 @@ public:
 
   void setPathWriter(TreeStreamWriter *tsw) override { pathWriter = tsw; }
 
+  bool hasTargetForest() const override { return false; }
+
   void setSymbolicPathWriter(TreeStreamWriter *tsw) override {
     symPathWriter = tsw;
   }
@@ -573,7 +581,8 @@ public:
   setModule(std::vector<std::unique_ptr<llvm::Module>> &userModules,
             std::vector<std::unique_ptr<llvm::Module>> &libsModules,
             const ModuleOptions &opts,
-            const std::vector<std::string> &mainModuleFunctions) override;
+            const std::vector<std::string> &mainModuleFunctions,
+            std::unique_ptr<InstructionInfoTable> origInfos) override;
 
   void useSeeds(const std::vector<struct KTest *> *seeds) override {
     usingSeeds = seeds;

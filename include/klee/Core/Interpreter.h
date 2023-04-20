@@ -11,12 +11,18 @@
 
 #include "TerminationTypes.h"
 
+#include "klee/Module/SarifReport.h"
+
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#include <klee/Misc/optional.hpp>
+
+using nonstd::optional;
 
 struct KTest;
 
@@ -31,9 +37,10 @@ class raw_fd_ostream;
 
 namespace klee {
 class ExecutionState;
+struct SarifReport;
 class Interpreter;
 class TreeStreamWriter;
-class TargetForest;
+class InstructionInfoTable;
 
 class InterpreterHandler {
 public:
@@ -101,12 +108,11 @@ public:
     /// symbolic execution on concrete programs.
     unsigned MakeConcreteSymbolic;
     GuidanceKind Guidance;
-    std::unordered_map<llvm::Function *, TargetForest> &Targets;
+    nonstd::optional<SarifReport> Paths;
 
-    InterpreterOptions(
-        std::unordered_map<llvm::Function *, TargetForest> &Targets)
+    InterpreterOptions(nonstd::optional<SarifReport> Paths)
         : MakeConcreteSymbolic(false), Guidance(GuidanceKind::NoGuidance),
-          Targets(Targets) {}
+          Paths(std::move(Paths)) {}
   };
 
 protected:
@@ -133,7 +139,8 @@ public:
   setModule(std::vector<std::unique_ptr<llvm::Module>> &userModules,
             std::vector<std::unique_ptr<llvm::Module>> &libsModules,
             const ModuleOptions &opts,
-            const std::vector<std::string> &mainModuleFunctions) = 0;
+            const std::vector<std::string> &mainModuleFunctions,
+            std::unique_ptr<InstructionInfoTable> origInfos) = 0;
 
   // supply a tree stream writer which the interpreter will use
   // to record the concrete path (as a stream of '0' and '1' bytes).
@@ -166,6 +173,8 @@ public:
   virtual void setInhibitForking(bool value) = 0;
 
   virtual void prepareForEarlyExit() = 0;
+
+  virtual bool hasTargetForest() const = 0;
 
   /*** State accessor methods ***/
 

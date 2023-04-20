@@ -512,6 +512,7 @@ extern llvm::cl::opt<uint64_t> MaxSymbolicAllocationSize;
 extern "C" unsigned dumpStates, dumpPForest;
 unsigned dumpStates = 0, dumpPForest = 0;
 
+bool Interpreter::hasTargetForest() const { return false; }
 const std::unordered_set<Intrinsic::ID> Executor::supportedFPIntrinsics = {
     // Intrinsic::fabs, //handled individually because of its presence in
     // mainline KLEE
@@ -598,7 +599,8 @@ llvm::Module *
 Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &userModules,
                     std::vector<std::unique_ptr<llvm::Module>> &libsModules,
                     const ModuleOptions &opts,
-                    const std::vector<std::string> &mainModuleFunctions) {
+                    const std::vector<std::string> &mainModuleFunctions,
+                    std::unique_ptr<InstructionInfoTable> origInfos) {
   assert(!kmodule && !userModules.empty() &&
          "can only register one module"); // XXX gross
 
@@ -649,6 +651,10 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &userModules,
   kmodule->mainModuleFunctions.insert(kmodule->mainModuleFunctions.end(),
                                       mainModuleFunctions.begin(),
                                       mainModuleFunctions.end());
+
+  if (origInfos) {
+    kmodule->origInfos = origInfos->getInstructions();
+  }
 
   specialFunctionHandler->bind();
 
@@ -2313,7 +2319,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     for (auto kvp : state.targetForest) {
       auto target = kvp.first;
       if (target->getError() == ReachWithError::Reachable &&
-          target->getBlock() == ki->parent) {
+          target->isTheSameAsIn(ki)) {
         terminateStateOnTargetError(state, ReachWithError::Reachable);
         return;
       }
@@ -4846,9 +4852,8 @@ void Executor::executeAlloc(ExecutionState &state, ref<Expr> size, bool isLocal,
 
         ref<Expr> symCheckOutOfMemoryExpr =
             Expr::createTempRead(symCheckOutOfMemory, Expr::Bool);
-        address = SelectExpr::create(
-            symCheckOutOfMemoryExpr,
-            Expr::createPointer(0), address);
+        address = SelectExpr::create(symCheckOutOfMemoryExpr,
+                                     Expr::createPointer(0), address);
       }
       bindLocal(target, state, address);
 
@@ -5798,7 +5803,7 @@ ref<Expr> Executor::makeSymbolicValue(Value *value, ExecutionState &state,
 void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
                                  char **envp) {
   if (guidanceKind == GuidanceKind::ErrorGuidance &&
-      interpreterOpts.Targets.empty()) {
+      (!interpreterOpts.Paths.has_value() || interpreterOpts.Paths->empty())) {
     klee_warning("No targets found in error-guided mode");
     return;
   }
@@ -5815,10 +5820,19 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
       state->popFrame();
     }
 
-    auto &targets = interpreterOpts.Targets;
-    for (auto &startFunctionAndWhiteList : targets) {
-      auto kf = kmodule->functionMap.at(startFunctionAndWhiteList.first);
-      if (startFunctionAndWhiteList.second.empty()) {
+    auto &paths = interpreterOpts.Paths.value();
+    auto prepTargets = targetedExecutionManager.prepareTargets(
+        kmodule.get(), std::move(paths));
+    if (prepTargets.empty()) {
+      klee_warning(
+          "No targets found in error-guided mode after prepare targets");
+      return;
+    }
+
+    for (auto &startFunctionAndWhiteList : prepTargets) {
+      auto kf =
+          kmodule->functionMap.at(startFunctionAndWhiteList.first->function);
+      if (startFunctionAndWhiteList.second->empty()) {
         klee_warning("No targets found for %s",
                      kf->function->getName().str().c_str());
         continue;
@@ -5912,8 +5926,8 @@ ExecutionState *Executor::prepareStateForPOSIX(KInstIterator &caller,
 }
 
 void Executor::prepareTargetedExecution(ExecutionState *initialState,
-                                        TargetForest whitelist) {
-  initialState->targetForest = whitelist;
+                                        ref<TargetForest> whitelist) {
+  initialState->targetForest = *whitelist->deepCopy();
 }
 
 unsigned Executor::getPathStreamID(const ExecutionState &state) {

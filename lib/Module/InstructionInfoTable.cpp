@@ -153,7 +153,8 @@ public:
 };
 
 InstructionInfoTable::InstructionInfoTable(
-    const llvm::Module &m, std::unique_ptr<llvm::raw_fd_ostream> assemblyFS) {
+    const llvm::Module &m, std::unique_ptr<llvm::raw_fd_ostream> assemblyFS,
+    bool withInstructions) {
   // Generate all debug instruction information
   DebugInfoExtractor DI(internedStrings, m, std::move(assemblyFS));
 
@@ -165,7 +166,12 @@ InstructionInfoTable::InstructionInfoTable(
     for (auto it = llvm::inst_begin(Func), ie = llvm::inst_end(Func); it != ie;
          ++it) {
       auto instr = &*it;
-      infos.emplace(instr, DI.getInstructionInfo(*instr, FR));
+      auto instInfo = DI.getInstructionInfo(*instr, FR);
+      if (withInstructions) {
+        insts[instInfo->file][instInfo->line][instInfo->column].insert(
+            instr->getOpcode());
+      }
+      infos.emplace(instr, std::move(instInfo));
     }
   }
 
@@ -198,4 +204,8 @@ InstructionInfoTable::getFunctionInfo(const llvm::Function &f) const {
                              "initial module!");
 
   return *found->second.get();
+}
+
+InstructionInfoTable::Instructions InstructionInfoTable::getInstructions() {
+  return std::move(insts);
 }
