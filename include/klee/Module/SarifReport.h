@@ -61,6 +61,7 @@ static const char *ReachWithErrorNames[] = {
 };
 
 const char *getErrorString(ReachWithError error);
+std::string getErrorsString(const std::unordered_set<ReachWithError> &errors);
 
 struct FunctionInfo;
 struct KBlock;
@@ -97,8 +98,13 @@ struct CodeFlowJson {
   std::vector<ThreadFlowJson> threadFlows;
 };
 
+struct Message {
+  std::string text;
+};
+
 struct ResultJson {
   optional<std::string> ruleId;
+  optional<Message> message;
   std::vector<LocationJson> locations;
   std::vector<CodeFlowJson> codeFlows;
 };
@@ -137,8 +143,10 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ThreadFlowJson, locations)
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(CodeFlowJson, threadFlows)
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ResultJson, ruleId, codeFlows,
-                                                locations)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Message, text)
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ResultJson, ruleId, message,
+                                                codeFlows, locations)
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DriverJson, name)
 
@@ -246,7 +254,7 @@ struct RefLocationCmp {
 struct Result {
   std::vector<ref<Location>> locations;
   unsigned id;
-  ReachWithError error;
+  std::unordered_set<ReachWithError> errors;
 };
 
 struct SarifReport {

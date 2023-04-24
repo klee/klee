@@ -274,7 +274,7 @@ TargetedSearcher::tryGetWeight(ExecutionState *es, weight_type &weight) {
   }
 
   if (target->shouldFailOnThisTarget() && target->isTheSameAsIn(es->prevPC) &&
-      es->error == target->getError()) {
+      target->isThatError(es->error)) {
     return Done;
   }
 
@@ -294,7 +294,7 @@ TargetedSearcher::tryGetWeight(ExecutionState *es, weight_type &weight) {
       if (callWeight == 0 && target->shouldFailOnThisTarget()) {
         weight = 0;
         return target->isTheSameAsIn(kb->getFirstInstruction()) &&
-                       es->error == target->getError()
+                       target->isThatError(es->error)
                    ? Done
                    : Continue;
       } else {
@@ -325,7 +325,7 @@ TargetedSearcher::tryGetWeight(ExecutionState *es, weight_type &weight) {
   else if (minSfNum != UINT_MAX)
     res = tryGetPostTargetWeight(es, weight);
   if (Done == res && target->shouldFailOnThisTarget()) {
-    if (es->error != target->getError()) {
+    if (!target->isThatError(es->error)) {
       res = Continue;
     }
   }
@@ -713,15 +713,6 @@ void GuidedSearcher::innerUpdate(
   updateConfidences(current, baseAddedStates, reachableStatesOfTarget);
   baseAddedStates.clear();
   baseRemovedStates.clear();
-}
-
-void GuidedSearcher::update(ExecutionState *current,
-                            const std::vector<ExecutionState *> &addedStates,
-                            const std::vector<ExecutionState *> &removedStates,
-                            TargetToStateSetMap &reachedStates) {
-  innerUpdate(current, addedStates, removedStates);
-  collectReached(reachedStates);
-  clearReached(removedStates);
 }
 
 void GuidedSearcher::update(

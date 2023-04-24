@@ -14,10 +14,11 @@
 
 using namespace klee;
 
-void klee::reportFalsePositive(confidence::ty confidence, ReachWithError error,
+void klee::reportFalsePositive(confidence::ty confidence,
+                               const std::unordered_set<ReachWithError> &errors,
                                unsigned id, std::string whatToIncrease) {
   std::ostringstream out;
-  out << getErrorString(error) << " False Positive at trace " << id;
+  out << getErrorsString(errors) << " False Positive at trace " << id;
   if (!confidence::isConfident(confidence)) {
     out << ". Advice: "
         << "increase --" << whatToIncrease << " command line parameter value";

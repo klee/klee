@@ -94,7 +94,7 @@ void TargetForest::Layer::addTrace(
     for (auto block : it->second) {
       ref<Target> target = nullptr;
       if (i == result.locations.size() - 1) {
-        target = Target::create(result.error, result.id,
+        target = Target::create(result.errors, result.id,
                                 ErrorLocation{loc->startLine, loc->endLine,
                                               loc->startColumn, loc->endColumn},
                                 block);

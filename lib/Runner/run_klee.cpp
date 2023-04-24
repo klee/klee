@@ -1058,7 +1058,7 @@ static void interrupt_handle() {
   } else {
     if (paths && (!theInterpreter || !theInterpreter->hasTargetForest())) {
       for (const auto &res : paths->results) {
-        reportFalsePositive(confidence::MinConfidence, res.error, res.id,
+        reportFalsePositive(confidence::MinConfidence, res.errors, res.id,
                             "max-time");
       }
     }

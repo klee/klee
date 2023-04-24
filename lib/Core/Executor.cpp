@@ -621,7 +621,7 @@ void TargetedHaltsOnTraces::reportFalsePositives(bool canReachSomeTarget) {
       confidence = confidence::VeryConfident;
       reason = HaltExecution::MaxTime;
     }
-    reportFalsePositive(confidence, target->getError(), target->getId(),
+    reportFalsePositive(confidence, target->getErrors(), target->getId(),
                         getAdviseWhatToIncreaseConfidenceRate(reason));
     target->isReported = true;
   }
@@ -2449,7 +2449,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       state.prevPC->inst->isTerminator()) {
     for (auto kvp : state.targetForest) {
       auto target = kvp.first;
-      if (target->getError() == ReachWithError::Reachable &&
+      if (target->isThatError(ReachWithError::Reachable) &&
           target->isTheSameAsIn(ki)) {
         terminateStateOnTargetError(state, ReachWithError::Reachable);
         return;
@@ -5521,9 +5521,7 @@ void Executor::executeMemoryOperation(
 
       if (unbound) {
         mo = unbound->addressSpace.findObject(idLazyInitialization).first;
-        terminateStateOnError(*unbound, "memory error: out of bound pointer",
-                              StateTerminationType::Ptr,
-                              getAddressInfo(*unbound, address, mo));
+        terminateStateOnTargetError(*unbound, ReachWithError::UseAfterFree);
       }
 
       if (bound) {
@@ -5562,9 +5560,7 @@ void Executor::executeMemoryOperation(
       }
       if (mayBeOutOfBound) {
         addConstraint(*unbound, checkOutOfBounds);
-        terminateStateOnError(*unbound, "memory error: out of bound pointer",
-                              StateTerminationType::Ptr,
-                              getAddressInfo(*unbound, address));
+        terminateStateOnTargetError(*unbound, ReachWithError::UseAfterFree);
       } else {
         terminateStateEarly(*unbound, "", StateTerminationType::SilentExit);
       }

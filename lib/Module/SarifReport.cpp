@@ -46,52 +46,70 @@ tryConvertLocationJson(const LocationJson &locationJson) {
                           region->endColumn);
 }
 
-optional<ReachWithError> tryConvertRuleJson(const std::string &ruleId,
-                                            const std::string &toolName) {
+std::unordered_set<ReachWithError>
+tryConvertRuleJson(const std::string &ruleId, const std::string &toolName,
+                   const optional<Message> &errorMessage) {
   if (toolName == "huawei") {
-    if ("NullDereference" == ruleId)
-      return ReachWithError::NullPointerException;
-    else if ("CheckAfterDeref" == ruleId)
-      return ReachWithError::NullCheckAfterDerefException;
-    else if ("DoubleFree" == ruleId)
-      return ReachWithError::DoubleFree;
-    else if ("UseAfterFree" == ruleId)
-      return ReachWithError::UseAfterFree;
-    else
-      return nonstd::nullopt;
+    if ("NullDereference" == ruleId) {
+      return {ReachWithError::NullPointerException};
+    } else if ("CheckAfterDeref" == ruleId) {
+      return {ReachWithError::NullCheckAfterDerefException};
+    } else if ("DoubleFree" == ruleId) {
+      return {ReachWithError::DoubleFree};
+    } else if ("UseAfterFree" == ruleId) {
+      return {ReachWithError::UseAfterFree};
+    } else {
+      return {};
+    }
   } else if (toolName == "clang") {
-    if ("core.NullDereference" == ruleId)
-      return ReachWithError::NullPointerException;
-    else
-      return nonstd::nullopt;
+    if ("core.NullDereference" == ruleId) {
+      return {ReachWithError::NullPointerException};
+    } else if ("unix.Malloc" == ruleId) {
+      if (errorMessage.has_value()) {
+        if (errorMessage->text == "Attempt to free released memory") {
+          return {ReachWithError::DoubleFree};
+        } else if (errorMessage->text == "Use of memory after it is freed") {
+          return {ReachWithError::UseAfterFree};
+        } else {
+          return {};
+        }
+      } else {
+        return {ReachWithError::UseAfterFree, ReachWithError::DoubleFree};
+      }
+    } else {
+      return {};
+    }
   } else if (toolName == "CppCheck") {
     if ("nullPointer" == ruleId || "ctunullpointer" == ruleId) {
-      return ReachWithError::NullPointerException;
+      return {ReachWithError::NullPointerException};
+    } else if ("doubleFree" == ruleId) {
+      return {ReachWithError::DoubleFree};
     } else {
-      return nonstd::nullopt;
+      return {};
     }
   } else if (toolName == "Infer") {
     if ("NULL_DEREFERENCE" == ruleId) {
-      return ReachWithError::NullPointerException;
+      return {ReachWithError::NullPointerException};
+    } else if ("USE_AFTER_DELETE" == ruleId || "USE_AFTER_FREE" == ruleId) {
+      return {ReachWithError::UseAfterFree, ReachWithError::DoubleFree};
     } else {
-      return nonstd::nullopt;
+      return {};
     }
   } else {
-    return nonstd::nullopt;
+    return {};
   }
 }
 
 optional<Result> tryConvertResultJson(const ResultJson &resultJson,
                                       const std::string &toolName,
                                       unsigned id) {
-  ReachWithError error = ReachWithError::None;
+  std::unordered_set<ReachWithError> errors = {ReachWithError::None};
   if (!resultJson.ruleId.has_value()) {
-    error = ReachWithError::Reachable;
+    errors = {ReachWithError::Reachable};
   } else {
-    auto maybeError = tryConvertRuleJson(*resultJson.ruleId, toolName);
-    if (maybeError.has_value()) {
-      error = *maybeError;
-    } else {
+    errors =
+        tryConvertRuleJson(*resultJson.ruleId, toolName, resultJson.message);
+    if (errors.size() == 0) {
       klee_warning("undefined error in %u result", id);
       return nonstd::nullopt;
     }
@@ -126,13 +144,31 @@ optional<Result> tryConvertResultJson(const ResultJson &resultJson,
     return nonstd::nullopt;
   }
 
-  return Result{locations, id, error};
+  return Result{locations, id, std::move(errors)};
 }
 } // anonymous namespace
 
 namespace klee {
 const char *getErrorString(ReachWithError error) {
   return ReachWithErrorNames[error];
+}
+
+std::string getErrorsString(const std::unordered_set<ReachWithError> &errors) {
+  if (errors.size() == 1) {
+    return getErrorString(*errors.begin());
+  }
+
+  std::string res = "(";
+  int index = 0;
+  for (auto err : errors) {
+    res += getErrorString(err);
+    if (index != errors.size() - 1) {
+      res += "|";
+    }
+    index++;
+  }
+  res += ")";
+  return res;
 }
 
 SarifReport convertAndFilterSarifJson(const SarifReportJson &reportJson) {

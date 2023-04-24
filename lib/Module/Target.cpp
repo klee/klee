@@ -56,14 +56,15 @@ ref<Target> Target::getFromCacheOrReturn(Target *target) {
   return target;
 }
 
-ref<Target> Target::create(ReachWithError _error, unsigned _id,
-                           optional<ErrorLocation> _loc, KBlock *_block) {
-  Target *target = new Target(_error, _id, _loc, _block);
+ref<Target> Target::create(const std::unordered_set<ReachWithError> &_errors,
+                           unsigned _id, optional<ErrorLocation> _loc,
+                           KBlock *_block) {
+  Target *target = new Target(_errors, _id, _loc, _block);
   return getFromCacheOrReturn(target);
 }
 
 ref<Target> Target::create(KBlock *_block) {
-  return create(ReachWithError::None, 0, nonstd::nullopt, _block);
+  return create({ReachWithError::None}, 0, nonstd::nullopt, _block);
 }
 
 bool Target::isTheSameAsIn(KInstruction *instr) const {
@@ -82,8 +83,8 @@ int Target::compare(const Target &other) const {
   if (block != other.block) {
     return block < other.block ? -1 : 1;
   }
-  if (error != other.error) {
-    return error < other.error ? -1 : 1;
+  if (errors != other.errors) {
+    return *errors.begin() < *other.errors.begin() ? -1 : 1;
   }
   if (id != other.id) {
     return id < other.id ? -1 : 1;

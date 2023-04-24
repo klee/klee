@@ -49,13 +49,14 @@ private:
   static EquivTargetHashSet cachedTargets;
   static TargetHashSet targets;
   KBlock *block;
-  ReachWithError error;        // None - if it is not terminated in error trace
+  std::unordered_set<ReachWithError>
+      errors;                   // None - if it is not terminated in error trace
   unsigned id;                 // 0 - if it is not terminated in error trace
   optional<ErrorLocation> loc; // TODO(): only for check in reportTruePositive
 
-  explicit Target(ReachWithError _error, unsigned _id,
-                  optional<ErrorLocation> _loc, KBlock *_block)
-      : block(_block), error(_error), id(_id), loc(_loc) {}
+  explicit Target(const std::unordered_set<ReachWithError> &_errors,
+                  unsigned _id, optional<ErrorLocation> _loc, KBlock *_block)
+      : block(_block), errors(_errors), id(_id), loc(_loc) {}
 
   static ref<Target> getFromCacheOrReturn(Target *target);
 
@@ -64,8 +65,9 @@ public:
   /// @brief Required by klee::ref-managed objects
   class ReferenceCounter _refCount;
 
-  static ref<Target> create(ReachWithError _error, unsigned _id,
-                            optional<ErrorLocation> _loc, KBlock *_block);
+  static ref<Target> create(const std::unordered_set<ReachWithError> &_errors,
+                            unsigned _id, optional<ErrorLocation> _loc,
+                            KBlock *_block);
   static ref<Target> create(KBlock *_block);
 
   int compare(const Target &other) const;
@@ -86,13 +88,15 @@ public:
 
   unsigned hash() const { return reinterpret_cast<uintptr_t>(block); }
 
-  bool shouldFailOnThisTarget() const { return error != ReachWithError::None; }
+  const std::unordered_set<ReachWithError> &getErrors() const { return errors; }
+  bool isThatError(ReachWithError err) const { return errors.count(err) != 0; }
+  bool shouldFailOnThisTarget() const {
+    return errors.count(ReachWithError::None) == 0;
+  }
 
   bool isTheSameAsIn(KInstruction *instr) const;
 
   unsigned getId() const { return id; }
-
-  ReachWithError getError() const { return error; }
 
   std::string toString() const;
   ~Target();

@@ -12,6 +12,8 @@
 
 #include "klee/Module/SarifReport.h"
 
+#include <unordered_set>
+
 namespace klee {
 
 namespace confidence {
@@ -27,7 +29,8 @@ std::string toString(ty conf);
 ty min(ty left, ty right);
 }; // namespace confidence
 
-void reportFalsePositive(confidence::ty confidence, ReachWithError error,
+void reportFalsePositive(confidence::ty confidence,
+                         const std::unordered_set<ReachWithError> &errors,
                          unsigned id, std::string whatToIncrease);
 
 } // namespace klee

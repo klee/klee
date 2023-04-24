@@ -127,7 +127,7 @@ bool TargetedExecutionManager::tryResolveLocations(
     } else if (index == result.locations.size() - 1) {
       klee_warning(
           "Trace %u is malformed! %s at location %s, so skipping this trace.",
-          result.id, getErrorString(result.error),
+          result.id, getErrorsString(result.errors).c_str(),
           location->toString().c_str());
       return false;
     }
@@ -174,7 +174,7 @@ bool TargetedExecutionManager::reportTruePositive(ExecutionState &state,
   bool atLeastOneReported = false;
   for (auto kvp : state.targetForest) {
     auto target = kvp.first;
-    if (target->getError() != error || broken_traces.count(target->getId()))
+    if (!target->isThatError(error) || broken_traces.count(target->getId()))
       continue;
 
     /// The following code checks if target is a `call ...` instruction and we
@@ -200,7 +200,7 @@ bool TargetedExecutionManager::reportTruePositive(ExecutionState &state,
     state.error = error;
     atLeastOneReported = true;
     assert(!target->isReported);
-    if (target->getError() == ReachWithError::Reachable) {
+    if (target->isThatError(ReachWithError::Reachable)) {
       klee_warning("100.00%% %s Reachable at trace %u", getErrorString(error),
                    target->getId());
     } else {
