@@ -65,14 +65,16 @@ private:
   std::unordered_set<unsigned> broken_traces;
   std::unordered_set<unsigned> reported_traces;
 
-  bool tryResolveLocations(Result &locations,
-                           LocationToBlocks &locToBlocks) const;
+  bool tryResolveLocations(Result &result, LocationToBlocks &locToBlocks) const;
   LocationToBlocks prepareAllLocations(KModule *kmodule,
                                        Locations &locations) const;
   Locations collectAllLocations(const SarifReport &paths) const;
 
   bool canReach(const ref<Location> &from, const ref<Location> &to,
                 LocationToBlocks &locToBlocks) const;
+
+  KFunction *tryResolveEntryFunction(const Result &result,
+                                     LocationToBlocks &locToBlocks) const;
 
   CodeGraphDistance &codeGraphDistance;
 

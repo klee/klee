@@ -20,7 +20,7 @@
                                                         "uri": "/mnt/d/wsl-ubuntu/test2/null_returns/fp_null_returns_self_define.c"
                                                     },
                                                     "region": {
-                                                        "startLine": 12,
+                                                        "startLine": 22,
                                                         "startColumn": null
                                                     }
                                                 }
@@ -33,7 +33,7 @@
                                                         "uri": "/mnt/d/wsl-ubuntu/test2/null_returns/fp_null_returns_self_define.c"
                                                     },
                                                     "region": {
-                                                        "startLine": 22,
+                                                        "startLine": 12,
                                                         "startColumn": null
                                                     }
                                                 }

@@ -24,6 +24,11 @@ namespace klee {
 llvm::cl::opt<bool> CheckTraversability(
     "check-traversability", cl::init(false),
     cl::desc("Check error trace for traversability (default=false)"));
+
+llvm::cl::opt<bool> SmartResolveEntryFunction(
+    "smart-resolve-entry-function", cl::init(false),
+    cl::desc("Resolve entry function using code flow graph instead of taking "
+             "function of first location (default=false)"));
 } // namespace klee
 
 class LocatedEventManager {
@@ -189,6 +194,31 @@ bool TargetedExecutionManager::tryResolveLocations(
   return true;
 }
 
+KFunction *TargetedExecutionManager::tryResolveEntryFunction(
+    const Result &result, LocationToBlocks &locToBlocks) const {
+  assert(result.locations.size() > 0);
+
+  auto resKf = (*locToBlocks[result.locations[0]].begin())->parent;
+  if (SmartResolveEntryFunction) {
+    for (size_t i = 1; i < result.locations.size(); ++i) {
+      const auto &funcDist = codeGraphDistance.getDistance(resKf);
+      auto curKf = (*locToBlocks[result.locations[i]].begin())->parent;
+      if (funcDist.count(curKf) == 0) {
+        const auto &curFuncDist = codeGraphDistance.getDistance(curKf);
+        if (curFuncDist.count(resKf) == 0) {
+          klee_warning("Trace %u is malformed! Can't resolve entry function, "
+                       "so skipping this trace.",
+                       result.id);
+        } else {
+          resKf = curKf;
+        }
+      }
+    }
+  }
+
+  return resKf;
+}
+
 std::unordered_map<KFunction *, ref<TargetForest>>
 TargetedExecutionManager::prepareTargets(KModule *kmodule, SarifReport paths) {
   Locations locations = collectAllLocations(paths);
@@ -200,14 +230,20 @@ TargetedExecutionManager::prepareTargets(KModule *kmodule, SarifReport paths) {
     bool isFullyResolved = tryResolveLocations(result, locToBlocks);
     if (!isFullyResolved) {
       broken_traces.insert(result.id);
-    } else {
-      auto kf = (*locToBlocks[result.locations[0]].begin())->parent;
-      if (whitelists.count(kf) == 0) {
-        ref<TargetForest> whitelist = new TargetForest(kf);
-        whitelists[kf] = whitelist;
-      }
-      whitelists[kf]->addTrace(result, locToBlocks);
+      continue;
     }
+
+    auto kf = tryResolveEntryFunction(result, locToBlocks);
+    if (!kf) {
+      broken_traces.insert(result.id);
+      continue;
+    }
+
+    if (whitelists.count(kf) == 0) {
+      ref<TargetForest> whitelist = new TargetForest(kf);
+      whitelists[kf] = whitelist;
+    }
+    whitelists[kf]->addTrace(result, locToBlocks);
   }
 
   return whitelists;

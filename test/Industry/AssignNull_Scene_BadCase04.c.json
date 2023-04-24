@@ -20,8 +20,8 @@
                                                         "uri": "/mnt/d/dev/klee-test/src-bc-reports/sources/secbrella/SecB_ForwardNull/BadCase/AssignNull_Scene_BadCase04.c"
                                                     },
                                                     "region": {
-                                                        "startLine": 47,
-                                                        "startColumn": 11
+                                                        "startLine": 31,
+                                                        "startColumn": 13
                                                     }
                                                 }
                                             }
@@ -33,8 +33,8 @@
                                                         "uri": "/mnt/d/dev/klee-test/src-bc-reports/sources/secbrella/SecB_ForwardNull/BadCase/AssignNull_Scene_BadCase04.c"
                                                     },
                                                     "region": {
-                                                        "startLine": 31,
-                                                        "startColumn": 13
+                                                        "startLine": 47,
+                                                        "startColumn": 11
                                                     }
                                                 }
                                             }

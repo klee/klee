@@ -20,7 +20,7 @@
                                                         "uri": "/root/test/fp_null_returns_self_define2.c"
                                                     },
                                                     "region": {
-                                                        "startLine": 8,
+                                                        "startLine": 25,
                                                         "startColumn": null
                                                     }
                                                 }
@@ -33,7 +33,7 @@
                                                         "uri": "/root/test/fp_null_returns_self_define2.c"
                                                     },
                                                     "region": {
-                                                        "startLine": 25,
+                                                        "startLine": 8,
                                                         "startColumn": null
                                                     }
                                                 }
