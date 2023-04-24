@@ -88,7 +88,7 @@ tryConvertRuleJson(const std::string &ruleId, const std::string &toolName,
       return {};
     }
   } else if (toolName == "Infer") {
-    if ("NULL_DEREFERENCE" == ruleId) {
+    if ("NULL_DEREFERENCE" == ruleId || "NULLPTR_DEREFERENCE" == ruleId) {
       return {ReachWithError::NullPointerException};
     } else if ("USE_AFTER_DELETE" == ruleId || "USE_AFTER_FREE" == ruleId) {
       return {ReachWithError::UseAfterFree, ReachWithError::DoubleFree};
