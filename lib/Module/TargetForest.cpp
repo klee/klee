@@ -154,13 +154,20 @@ void TargetForest::Layer::block(ref<Target> target) {
   if (empty())
     return;
   removeTarget(target);
-  for (InternalLayer::iterator itf = forest.begin(), eitf = forest.end();
-       itf != eitf;) {
+  for (InternalLayer::iterator itf = forest.begin(); itf != forest.end();) {
     ref<Layer> layer = itf->second->blockLeaf(target);
     itf->second = layer;
     if (itf->second->empty()) {
+      for (auto &itfTarget : itf->first->getTargets()) {
+        auto it = targetsToVector.find(itfTarget);
+        if (it != targetsToVector.end()) {
+          it->second.erase(itf->first);
+          if (it->second.empty()) {
+            targetsToVector.erase(it);
+          }
+        }
+      }
       itf = forest.erase(itf);
-      eitf = forest.end();
     } else {
       ++itf;
     }
@@ -253,8 +260,11 @@ TargetForest::Layer::removeChild(ref<UnorderedTargetsSet> child) const {
 }
 
 TargetForest::Layer *TargetForest::Layer::addChild(ref<Target> child) const {
-  auto result = new Layer(this);
   auto targetsVec = UnorderedTargetsSet::create(child);
+  auto result = new Layer(this);
+  if (forest.count(targetsVec) != 0) {
+    return result;
+  }
   result->forest.insert({targetsVec, new Layer()});
 
   result->targetsToVector[child].insert(targetsVec);

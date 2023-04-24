@@ -663,8 +663,15 @@ void GuidedSearcher::innerUpdate(
   if (current && !currTargets.empty()) {
     auto history = current->targetForest.getHistory();
     for (auto &target : currTargets) {
-      bool canReach = updateTargetedSearcher(history, target, current,
-                                             tmpAddedStates, tmpRemovedStates);
+      bool canReach = false;
+      if (current->targetForest.contains(target)) {
+        canReach = updateTargetedSearcher(history, target, current,
+                                          tmpAddedStates, tmpRemovedStates);
+      } else {
+        tmpRemovedStates.push_back(current);
+        canReach = updateTargetedSearcher(history, target, nullptr,
+                                          tmpAddedStates, tmpRemovedStates);
+      }
       if (canReach)
         reachableStatesOfTarget[target].insert(current);
       tmpAddedStates.clear();
@@ -675,14 +682,21 @@ void GuidedSearcher::innerUpdate(
   for (const auto state : targetedAddedStates) {
     auto history = state->targetForest.getHistory();
     auto targets = state->targetForest.getTargets();
+    TargetForest::TargetsSet stateTargets;
     for (auto &targetF : *targets) {
-      tmpAddedStates.push_back(state);
-      assert(!state->targetForest.empty());
-      auto target = targetF.first;
-      bool canReach = updateTargetedSearcher(history, target, nullptr,
-                                             tmpAddedStates, tmpRemovedStates);
-      if (canReach)
-        reachableStatesOfTarget[target].insert(state);
+      stateTargets.insert(targetF.first);
+    }
+
+    for (auto &target : stateTargets) {
+      if (state->targetForest.contains(target)) {
+        tmpAddedStates.push_back(state);
+        assert(!state->targetForest.empty());
+
+        bool canReach = updateTargetedSearcher(
+            history, target, nullptr, tmpAddedStates, tmpRemovedStates);
+        if (canReach)
+          reachableStatesOfTarget[target].insert(state);
+      }
       tmpAddedStates.clear();
       tmpRemovedStates.clear();
     }
@@ -692,9 +706,13 @@ void GuidedSearcher::innerUpdate(
   for (const auto state : baseRemovedStates) {
     auto history = state->targetForest.getHistory();
     auto targets = state->targetForest.getTargets();
+    TargetForest::TargetsSet stateTargets;
     for (auto &targetF : *targets) {
+      stateTargets.insert(targetF.first);
+    }
+
+    for (auto &target : stateTargets) {
       tmpRemovedStates.push_back(state);
-      auto target = targetF.first;
       bool canReach = updateTargetedSearcher(history, target, nullptr,
                                              tmpAddedStates, tmpRemovedStates);
       if (canReach) {
@@ -750,9 +768,12 @@ void GuidedSearcher::clearReached(
       auto targets = state->targetForest.getTargets();
       if (std::find(removedStates.begin(), removedStates.end(), state) ==
           removedStates.end()) {
-        tmpRemovedStates.push_back(state);
+        TargetForest::TargetsSet stateTargets;
         for (auto &targetF : *targets) {
-          auto anotherTarget = targetF.first;
+          stateTargets.insert(targetF.first);
+        }
+        tmpRemovedStates.push_back(state);
+        for (auto &anotherTarget : stateTargets) {
           if (target != anotherTarget) {
             updateTargetedSearcher(history, anotherTarget, nullptr,
                                    tmpAddedStates, tmpRemovedStates);
@@ -788,13 +809,19 @@ void GuidedSearcher::clearReached(
   for (const auto state : addedStates) {
     auto history = state->targetForest.getHistory();
     auto targets = state->targetForest.getTargets();
-    tmpAddedStates.push_back(state);
+    TargetForest::TargetsSet stateTargets;
     for (auto &targetF : *targets) {
-      auto target = targetF.first;
-      updateTargetedSearcher(history, target, nullptr, tmpAddedStates,
-                             tmpRemovedStates);
+      stateTargets.insert(targetF.first);
     }
-    tmpAddedStates.clear();
+    for (auto &target : stateTargets) {
+      if (state->targetForest.contains(target)) {
+        tmpAddedStates.push_back(state);
+        updateTargetedSearcher(history, target, nullptr, tmpAddedStates,
+                               tmpRemovedStates);
+      }
+      tmpAddedStates.clear();
+      tmpRemovedStates.clear();
+    }
   }
 }
 
