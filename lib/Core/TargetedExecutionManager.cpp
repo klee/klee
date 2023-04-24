@@ -224,7 +224,8 @@ bool TargetedExecutionManager::reportTruePositive(ExecutionState &state,
   bool atLeastOneReported = false;
   for (auto kvp : state.targetForest) {
     auto target = kvp.first;
-    if (!target->isThatError(error) || broken_traces.count(target->getId()))
+    if (!target->isThatError(error) || broken_traces.count(target->getId()) ||
+        reported_traces.count(target->getId()))
       continue;
 
     /// The following code checks if target is a `call ...` instruction and we
@@ -258,6 +259,7 @@ bool TargetedExecutionManager::reportTruePositive(ExecutionState &state,
                    getErrorString(error), target->getId());
     }
     target->isReported = true;
+    reported_traces.insert(target->getId());
   }
   return atLeastOneReported;
 }
