@@ -64,6 +64,18 @@ optional<ReachWithError> tryConvertRuleJson(const std::string &ruleId,
       return ReachWithError::NullPointerException;
     else
       return nonstd::nullopt;
+  } else if (toolName == "CppCheck") {
+    if ("nullPointer" == ruleId || "ctunullpointer" == ruleId) {
+      return ReachWithError::NullPointerException;
+    } else {
+      return nonstd::nullopt;
+    }
+  } else if (toolName == "Infer") {
+    if ("NULL_DEREFERENCE" == ruleId) {
+      return ReachWithError::NullPointerException;
+    } else {
+      return nonstd::nullopt;
+    }
   } else {
     return nonstd::nullopt;
   }
