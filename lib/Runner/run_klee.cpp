@@ -1087,10 +1087,11 @@ createLibCWrapper(std::vector<std::unique_ptr<llvm::Module>> &userModules,
   auto &ctx = userModules[0]->getContext();
   Function *userMainFn = nullptr;
   for (auto &module : userModules) {
-    userMainFn = module->getFunction(intendedFunction);
-    if (userMainFn) {
+    Function *func = module->getFunction(intendedFunction);
+    if (func) {
       // Rename entry point using a prefix
-      userMainFn->setName("__user_" + intendedFunction);
+      func->setName("__user_" + intendedFunction);
+      userMainFn = func;
     }
   }
 
