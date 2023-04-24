@@ -555,17 +555,26 @@ void TargetForest::Layer::divideConfidenceBy(unsigned factor) {
 }
 
 TargetForest::Layer *TargetForest::Layer::divideConfidenceBy(
-    std::multiset<ref<Target>> &reachableStatesOfTarget) {
+    const TargetForest::TargetToStateSetMap &reachableStatesOfTarget) {
   if (forest.empty() || reachableStatesOfTarget.empty())
     return this;
   auto result = new Layer(this);
   for (auto &targetAndForest : forest) {
     auto targetsVec = targetAndForest.first;
     auto layer = targetAndForest.second;
-    size_t count = 0;
-    for (auto &target : targetsVec->getTargets()) {
-      count += reachableStatesOfTarget.count(target);
+    std::unordered_set<ExecutionState *> reachableStatesForTargetsVec;
+    for (const auto &target : targetsVec->getTargets()) {
+      auto it = reachableStatesOfTarget.find(target);
+      if (it == reachableStatesOfTarget.end()) {
+        continue;
+      }
+
+      for (auto state : it->second) {
+        reachableStatesForTargetsVec.insert(state);
+      }
     }
+
+    size_t count = reachableStatesForTargetsVec.size();
     if (count) {
       if (count == 1)
         continue;

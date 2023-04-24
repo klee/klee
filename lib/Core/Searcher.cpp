@@ -540,17 +540,17 @@ bool GuidedSearcher::updateTargetedSearcher(
   return canReach;
 }
 
-static void
-updateConfidences(ExecutionState *current,
-                  std::multiset<ref<Target>> &reachableStatesOfTarget) {
+static void updateConfidences(ExecutionState *current,
+                              const GuidedSearcher::TargetToStateUnorderedSetMap
+                                  &reachableStatesOfTarget) {
   if (current)
     current->targetForest.divideConfidenceBy(reachableStatesOfTarget);
 }
 
-static void
-updateConfidences(ExecutionState *current,
-                  const std::vector<ExecutionState *> &addedStates,
-                  std::multiset<ref<Target>> &reachableStatesOfTarget) {
+static void updateConfidences(ExecutionState *current,
+                              const std::vector<ExecutionState *> &addedStates,
+                              const GuidedSearcher::TargetToStateUnorderedSetMap
+                                  &reachableStatesOfTarget) {
   updateConfidences(current, reachableStatesOfTarget);
   for (auto state : addedStates) {
     updateConfidences(state, reachableStatesOfTarget);
@@ -658,7 +658,7 @@ void GuidedSearcher::innerUpdate(
   }
   targetlessStates.clear();
 
-  std::multiset<ref<Target>> reachableStatesOfTarget;
+  TargetToStateUnorderedSetMap reachableStatesOfTarget;
 
   if (current && !currTargets.empty()) {
     auto history = current->targetForest.getHistory();
@@ -666,7 +666,7 @@ void GuidedSearcher::innerUpdate(
       bool canReach = updateTargetedSearcher(history, target, current,
                                              tmpAddedStates, tmpRemovedStates);
       if (canReach)
-        reachableStatesOfTarget.insert(target);
+        reachableStatesOfTarget[target].insert(current);
       tmpAddedStates.clear();
       tmpRemovedStates.clear();
     }
@@ -682,7 +682,7 @@ void GuidedSearcher::innerUpdate(
       bool canReach = updateTargetedSearcher(history, target, nullptr,
                                              tmpAddedStates, tmpRemovedStates);
       if (canReach)
-        reachableStatesOfTarget.insert(target);
+        reachableStatesOfTarget[target].insert(state);
       tmpAddedStates.clear();
       tmpRemovedStates.clear();
     }
@@ -698,7 +698,7 @@ void GuidedSearcher::innerUpdate(
       bool canReach = updateTargetedSearcher(history, target, nullptr,
                                              tmpAddedStates, tmpRemovedStates);
       if (canReach) {
-        reachableStatesOfTarget.insert(target);
+        reachableStatesOfTarget[target].insert(state);
         removedButReachableStates.insert(state);
       }
       tmpAddedStates.clear();
