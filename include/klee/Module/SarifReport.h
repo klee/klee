@@ -88,6 +88,7 @@ struct LocationJson {
 
 struct ThreadFlowLocationJson {
   optional<LocationJson> location;
+  optional<json> metadata;
 };
 
 struct ThreadFlowJson {
@@ -137,7 +138,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(PhysicalLocationJson,
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(LocationJson, physicalLocation)
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ThreadFlowLocationJson,
-                                                location)
+                                                location, metadata)
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ThreadFlowJson, locations)
 
@@ -253,6 +254,7 @@ struct RefLocationCmp {
 
 struct Result {
   std::vector<ref<Location>> locations;
+  std::vector<optional<json>> metadatas;
   unsigned id;
   std::unordered_set<ReachWithError> errors;
 };

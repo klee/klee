@@ -116,13 +116,14 @@ optional<Result> tryConvertResultJson(const ResultJson &resultJson,
   }
 
   std::vector<ref<Location>> locations;
+  std::vector<optional<json>> metadatas;
 
   if (resultJson.codeFlows.size() > 0) {
     assert(resultJson.codeFlows.size() == 1);
     assert(resultJson.codeFlows[0].threadFlows.size() == 1);
 
     const auto &threadFlow = resultJson.codeFlows[0].threadFlows[0];
-    for (const auto &threadFlowLocation : threadFlow.locations) {
+    for (auto &threadFlowLocation : threadFlow.locations) {
       if (!threadFlowLocation.location.has_value()) {
         return nonstd::nullopt;
       }
@@ -130,6 +131,7 @@ optional<Result> tryConvertResultJson(const ResultJson &resultJson,
       auto maybeLocation = tryConvertLocationJson(*threadFlowLocation.location);
       if (maybeLocation.has_value()) {
         locations.push_back(*maybeLocation);
+        metadatas.push_back(std::move(threadFlowLocation.metadata));
       }
     }
   } else {
@@ -144,7 +146,8 @@ optional<Result> tryConvertResultJson(const ResultJson &resultJson,
     return nonstd::nullopt;
   }
 
-  return Result{locations, id, std::move(errors)};
+  return Result{std::move(locations), std::move(metadatas), id,
+                std::move(errors)};
 }
 } // anonymous namespace
 
