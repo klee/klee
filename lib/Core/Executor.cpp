@@ -503,6 +503,19 @@ cl::opt<bool> DebugCheckForImpliedValues(
     "debug-check-for-implied-values", cl::init(false),
     cl::desc("Debug the implied value optimization"), cl::cat(DebugCat));
 
+bool allLeafsConstant(const ref<Expr> &expr) {
+  if (isa<klee::ConstantExpr>(expr)) {
+    return true;
+  }
+
+  if (!isa<SelectExpr>(expr)) {
+    return false;
+  }
+
+  const SelectExpr *sel = cast<SelectExpr>(expr);
+  return allLeafsConstant(sel->trueExpr) && allLeafsConstant(sel->falseExpr);
+}
+
 } // namespace
 
 extern llvm::cl::opt<uint64_t> MaxConstantAllocationSize;
@@ -5376,8 +5389,9 @@ void Executor::executeMemoryOperation(
 
       return;
     }
-  } else if (isa<ConstantExpr>(address) &&
-             guidanceKind == GuidanceKind::ErrorGuidance) {
+  } else if (guidanceKind == GuidanceKind::ErrorGuidance &&
+             allLeafsConstant(address)) {
+
     solver->setTimeout(coreSolverTimeout);
     state.addressSpace.resolveOne(state, solver, base, baseTargetType,
                                   idFastResult, success, haltExecution);
@@ -5530,7 +5544,9 @@ void Executor::executeMemoryOperation(
 
       if (unbound) {
         mo = unbound->addressSpace.findObject(idLazyInitialization).first;
-        terminateStateOnTargetError(*unbound, ReachWithError::UseAfterFree);
+        terminateStateOnError(*unbound, "memory error: out of bound pointer",
+                              StateTerminationType::Ptr,
+                              getAddressInfo(*unbound, address, mo));
       }
 
       if (bound) {
@@ -5569,7 +5585,9 @@ void Executor::executeMemoryOperation(
       }
       if (mayBeOutOfBound) {
         addConstraint(*unbound, checkOutOfBounds);
-        terminateStateOnTargetError(*unbound, ReachWithError::UseAfterFree);
+        terminateStateOnError(*unbound, "memory error: out of bound pointer",
+                              StateTerminationType::Ptr,
+                              getAddressInfo(*unbound, address));
       } else {
         terminateStateEarly(*unbound, "", StateTerminationType::SilentExit);
       }
