@@ -18,9 +18,9 @@
 using namespace klee;
 using namespace llvm;
 
-TargetForest::UnorderedTargetsSet::EquivTargetsVectorHashSet
+TargetForest::UnorderedTargetsSet::EquivUnorderedTargetsSetHashSet
     TargetForest::UnorderedTargetsSet::cachedVectors;
-TargetForest::UnorderedTargetsSet::TargetsVectorHashSet
+TargetForest::UnorderedTargetsSet::UnorderedTargetsSetHashSet
     TargetForest::UnorderedTargetsSet::vectors;
 
 TargetForest::UnorderedTargetsSet::UnorderedTargetsSet(
@@ -61,7 +61,7 @@ TargetForest::UnorderedTargetsSet::create(const TargetsSet &targets) {
 
 ref<TargetForest::UnorderedTargetsSet>
 TargetForest::UnorderedTargetsSet::create(UnorderedTargetsSet *vec) {
-  std::pair<EquivTargetsVectorHashSet::const_iterator, bool> success =
+  std::pair<EquivUnorderedTargetsSetHashSet::const_iterator, bool> success =
       cachedVectors.insert(vec);
   if (success.second) {
     // Cache miss
@@ -333,8 +333,9 @@ TargetForest::Layer *TargetForest::Layer::replaceChildWith(
 
 TargetForest::Layer *TargetForest::Layer::replaceChildWith(
     ref<Target> child,
-    const std::unordered_set<ref<UnorderedTargetsSet>, RefTargetsVectorHash,
-                             RefTargetsVectorCmp> &other) const {
+    const std::unordered_set<ref<UnorderedTargetsSet>,
+                             RefUnorderedTargetsSetHash,
+                             RefUnorderedTargetsSetCmp> &other) const {
   std::vector<Layer *> layers;
   for (auto &targetsVec : other) {
     auto it = forest.find(targetsVec);
@@ -511,54 +512,25 @@ bool TargetForest::allNodesRefCountOne() const {
 }
 
 void TargetForest::Layer::addLeafs(
-    std::vector<std::pair<ref<Target>, confidence::ty>> *leafs,
+    std::vector<std::pair<ref<UnorderedTargetsSet>, confidence::ty>> &leafs,
     confidence::ty parentConfidence) const {
   for (const auto &targetAndForest : forest) {
     auto targetsVec = targetAndForest.first;
     auto layer = targetAndForest.second;
     auto confidence = layer->getConfidence(parentConfidence);
     if (layer->empty()) {
-      for (auto &target : targetsVec->getTargets()) {
-        leafs->push_back(std::make_pair(target, confidence));
-      }
+      leafs.push_back(std::make_pair(targetsVec, confidence));
     } else {
       layer->addLeafs(leafs, confidence);
     }
   }
 }
 
-std::vector<std::pair<ref<Target>, confidence::ty>> *
+std::vector<std::pair<ref<TargetForest::UnorderedTargetsSet>, confidence::ty>>
 TargetForest::leafs() const {
-  auto leafs = new std::vector<std::pair<ref<Target>, confidence::ty>>();
+  std::vector<std::pair<ref<UnorderedTargetsSet>, confidence::ty>> leafs;
   forest->addLeafs(leafs, forest->getConfidence());
   return leafs;
-}
-
-void TargetForest::subtractConfidencesFrom(TargetForest &other) {
-  if (other.empty())
-    return;
-  forest->subtractConfidencesFrom(other.forest, forest->getConfidence());
-}
-
-void TargetForest::Layer::subtractConfidencesFrom(
-    ref<Layer> other, confidence::ty parentConfidence) {
-  for (auto &targetAndForest : forest) {
-    auto targetsVec = targetAndForest.first;
-    auto &layer = targetAndForest.second;
-    auto otherLayerIt = other->forest.find(targetsVec);
-    if (otherLayerIt == other->forest.end())
-      layer->subtractConfidencesFrom(other,
-                                     layer->getConfidence(parentConfidence));
-    else {
-      layer->confidence = layer->getConfidence(parentConfidence) -
-                          otherLayerIt->second->confidence;
-      if (confidence::isNormal(layer->confidence)) {
-        layer->confidence =
-            confidence::MinConfidence; // TODO: we have some bug which we do not
-                                       // want the user to see
-      }
-    }
-  }
 }
 
 ref<TargetForest> TargetForest::deepCopy() {

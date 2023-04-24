@@ -50,7 +50,7 @@ private:
   static TargetHashSet targets;
   KBlock *block;
   std::unordered_set<ReachWithError>
-      errors;                   // None - if it is not terminated in error trace
+      errors;                  // None - if it is not terminated in error trace
   unsigned id;                 // 0 - if it is not terminated in error trace
   optional<ErrorLocation> loc; // TODO(): only for check in reportTruePositive
 

@@ -162,7 +162,7 @@ std::string getErrorsString(const std::unordered_set<ReachWithError> &errors) {
   }
 
   std::string res = "(";
-  int index = 0;
+  size_t index = 0;
   for (auto err : errors) {
     res += getErrorString(err);
     if (index != errors.size() - 1) {

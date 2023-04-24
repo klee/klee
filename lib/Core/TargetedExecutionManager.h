@@ -27,8 +27,10 @@ class TargetedHaltsOnTraces {
   using HaltTypeToConfidence =
       std::unordered_map<HaltExecution::Reason, confidence::ty>;
   using TraceToHaltTypeToConfidence =
-      std::unordered_map<ref<Target>, HaltTypeToConfidence, RefTargetHash,
-                         RefTargetCmp>;
+      std::unordered_map<ref<TargetForest::UnorderedTargetsSet>,
+                         HaltTypeToConfidence,
+                         TargetForest::RefUnorderedTargetsSetHash,
+                         TargetForest::RefUnorderedTargetsSetCmp>;
   TraceToHaltTypeToConfidence traceToHaltTypeToConfidence;
 
   static void totalConfidenceAndTopContributor(

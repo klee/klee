@@ -516,20 +516,19 @@ bool Interpreter::hasTargetForest() const { return false; }
 
 TargetedHaltsOnTraces::TargetedHaltsOnTraces(ref<TargetForest> &forest) {
   auto leafs = forest->leafs();
-  for (auto finalTargetPair : *leafs) {
-    traceToHaltTypeToConfidence.emplace(finalTargetPair.first,
+  for (auto finalTargetSetPair : leafs) {
+    traceToHaltTypeToConfidence.emplace(finalTargetSetPair.first,
                                         HaltTypeToConfidence());
   }
-  delete leafs;
 }
 
 void TargetedHaltsOnTraces::subtractConfidencesFrom(
     TargetForest &forest, HaltExecution::Reason reason) {
   auto leafs = forest.leafs();
-  for (auto finalTargetPair : *leafs) {
+  for (auto finalTargetSetPair : leafs) {
     auto &haltTypeToConfidence =
-        traceToHaltTypeToConfidence.at(finalTargetPair.first);
-    auto confidence = finalTargetPair.second;
+        traceToHaltTypeToConfidence.at(finalTargetSetPair.first);
+    auto confidence = finalTargetSetPair.second;
     auto it = haltTypeToConfidence.find(reason);
     if (it == haltTypeToConfidence.end()) {
       haltTypeToConfidence.emplace(reason, confidence);
@@ -537,7 +536,6 @@ void TargetedHaltsOnTraces::subtractConfidencesFrom(
       haltTypeToConfidence[reason] = it->second + confidence;
     }
   }
-  delete leafs;
 }
 
 void TargetedHaltsOnTraces::totalConfidenceAndTopContributor(
@@ -606,14 +604,24 @@ getAdviseWhatToIncreaseConfidenceRate(HaltExecution::Reason reason) {
 void TargetedHaltsOnTraces::reportFalsePositives(bool canReachSomeTarget) {
   confidence::ty confidence;
   HaltExecution::Reason reason;
-  for (const auto &targetWithConfidences : traceToHaltTypeToConfidence) {
-    auto target = targetWithConfidences.first;
+  for (const auto &targetSetWithConfidences : traceToHaltTypeToConfidence) {
+    const auto &target = targetSetWithConfidences.first->getTargets().front();
     if (!target->shouldFailOnThisTarget())
       continue;
-    if (target->isReported)
+    bool atLeastOneReported = false;
+    for (const auto &target : targetSetWithConfidences.first->getTargets()) {
+      if (target->isReported) {
+        atLeastOneReported = true;
+        break;
+      }
+    }
+
+    if (atLeastOneReported) {
       continue;
-    totalConfidenceAndTopContributor(targetWithConfidences.second, &confidence,
-                                     &reason);
+    }
+
+    totalConfidenceAndTopContributor(targetSetWithConfidences.second,
+                                     &confidence, &reason);
     if (canReachSomeTarget &&
         confidence::isVeryConfident(
             confidence)) { // We should not be so sure if there are states that

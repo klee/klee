@@ -1232,11 +1232,11 @@ static nonstd::optional<SarifReport> parseStaticAnalysisInput() {
   return nonstd::nullopt;
 }
 
-static int run_klee_on_function(
-    int pArgc, char **pArgv, char **pEnvp,
-    std::unique_ptr<KleeHandler> &handler,
-    std::unique_ptr<Interpreter> &interpreter, llvm::Module *finalModule,
-    std::vector<bool> &replayPath) {
+static int run_klee_on_function(int pArgc, char **pArgv, char **pEnvp,
+                                std::unique_ptr<KleeHandler> &handler,
+                                std::unique_ptr<Interpreter> &interpreter,
+                                llvm::Module *finalModule,
+                                std::vector<bool> &replayPath) {
   Function *mainFn = finalModule->getFunction(EntryPoint);
   if ((UseGuidedSearch != Interpreter::GuidanceKind::ErrorGuidance) &&
       !mainFn) { // in error guided mode we do not need main function

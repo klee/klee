@@ -31,11 +31,11 @@ struct RefTargetCmp;
 struct TargetsHistoryHash;
 struct EquivTargetsHistoryCmp;
 struct TargetsHistoryCmp;
-struct TargetsVectorHash;
-struct TargetsVectorCmp;
-struct EquivTargetsVectorCmp;
-struct RefTargetsVectorHash;
-struct RefTargetsVectorCmp;
+struct UnorderedTargetsSetHash;
+struct UnorderedTargetsSetCmp;
+struct EquivUnorderedTargetsSetCmp;
+struct RefUnorderedTargetsSetHash;
+struct RefUnorderedTargetsSetCmp;
 
 class TargetForest {
 public:
@@ -71,28 +71,28 @@ public:
     explicit UnorderedTargetsSet(const TargetsSet &targets);
     static ref<UnorderedTargetsSet> create(UnorderedTargetsSet *vec);
 
-    typedef std::unordered_set<UnorderedTargetsSet *, TargetsVectorHash,
-                               EquivTargetsVectorCmp>
-        EquivTargetsVectorHashSet;
-    typedef std::unordered_set<UnorderedTargetsSet *, TargetsVectorHash,
-                               TargetsVectorCmp>
-        TargetsVectorHashSet;
+    typedef std::unordered_set<UnorderedTargetsSet *, UnorderedTargetsSetHash,
+                               EquivUnorderedTargetsSetCmp>
+        EquivUnorderedTargetsSetHashSet;
+    typedef std::unordered_set<UnorderedTargetsSet *, UnorderedTargetsSetHash,
+                               UnorderedTargetsSetCmp>
+        UnorderedTargetsSetHashSet;
 
-    static EquivTargetsVectorHashSet cachedVectors;
-    static TargetsVectorHashSet vectors;
+    static EquivUnorderedTargetsSetHashSet cachedVectors;
+    static UnorderedTargetsSetHashSet vectors;
     std::vector<ref<Target>> targetsVec;
     std::size_t hashValue;
 
     void sortAndComputeHash();
   };
 
-  struct RefTargetsVectorHash {
+  struct RefUnorderedTargetsSetHash {
     unsigned operator()(const ref<TargetForest::UnorderedTargetsSet> &t) const {
       return t->hash();
     }
   };
 
-  struct RefTargetsVectorCmp {
+  struct RefUnorderedTargetsSetCmp {
     bool operator()(const ref<TargetForest::UnorderedTargetsSet> &a,
                     const ref<TargetForest::UnorderedTargetsSet> &b) const {
       return a.get() == b.get();
@@ -103,12 +103,13 @@ private:
   class Layer {
     using InternalLayer =
         std::unordered_map<ref<UnorderedTargetsSet>, ref<Layer>,
-                           RefTargetsVectorHash, RefTargetsVectorCmp>;
+                           RefUnorderedTargetsSetHash,
+                           RefUnorderedTargetsSetCmp>;
     InternalLayer forest;
     using TargetsToVector = std::unordered_map<
         ref<Target>,
-        std::unordered_set<ref<UnorderedTargetsSet>, RefTargetsVectorHash,
-                           RefTargetsVectorCmp>,
+        std::unordered_set<ref<UnorderedTargetsSet>, RefUnorderedTargetsSetHash,
+                           RefUnorderedTargetsSetCmp>,
         RefTargetHash, RefTargetCmp>;
     TargetsToVector targetsToVector;
 
@@ -161,8 +162,9 @@ private:
     size_t size() const { return forest.size(); }
     Layer *replaceChildWith(
         ref<Target> child,
-        const std::unordered_set<ref<UnorderedTargetsSet>, RefTargetsVectorHash,
-                                 RefTargetsVectorCmp> &other) const;
+        const std::unordered_set<ref<UnorderedTargetsSet>,
+                                 RefUnorderedTargetsSetHash,
+                                 RefUnorderedTargetsSetCmp> &other) const;
     Layer *replaceChildWith(ref<UnorderedTargetsSet> child, Layer *other) const;
     Layer *removeChild(ref<Target> child) const;
     Layer *addChild(ref<Target> child) const;
@@ -172,13 +174,12 @@ private:
     Layer *blockLeaf(ref<Target> leaf) const;
     bool allNodesRefCountOne() const;
     void dump(unsigned n) const;
-    ref<Layer> deepCopy();
-    void addLeafs(std::vector<std::pair<ref<Target>, confidence::ty>> *leafs,
-                  confidence::ty parentConfidence) const;
+    void addLeafs(
+        std::vector<std::pair<ref<UnorderedTargetsSet>, confidence::ty>> &leafs,
+        confidence::ty parentConfidence) const;
     void propagateConfidenceToChildren();
-    void subtractConfidencesFrom(ref<Layer> other,
-                                 confidence::ty parentConfidence);
     void addTargetWithConfidence(ref<Target> target, confidence::ty confidence);
+    ref<Layer> deepCopy();
     Layer *copy();
     void divideConfidenceBy(unsigned factor);
     Layer *
@@ -297,8 +298,8 @@ public:
   const ref<History> getHistory() { return history; };
   const ref<Layer> getTargets() { return forest; };
   void dump() const;
-  std::vector<std::pair<ref<Target>, confidence::ty>> *leafs() const;
-  void subtractConfidencesFrom(TargetForest &other);
+  std::vector<std::pair<ref<UnorderedTargetsSet>, confidence::ty>>
+  leafs() const;
   void addTargetWithConfidence(ref<Target> target, confidence::ty confidence) {
     forest->addTargetWithConfidence(target, confidence);
   }
@@ -351,20 +352,20 @@ struct RefTargetsHistoryCmp {
   }
 };
 
-struct TargetsVectorHash {
+struct UnorderedTargetsSetHash {
   std::size_t operator()(const TargetForest::UnorderedTargetsSet *t) const {
     return t->hash();
   }
 };
 
-struct TargetsVectorCmp {
+struct UnorderedTargetsSetCmp {
   bool operator()(const TargetForest::UnorderedTargetsSet *a,
                   const TargetForest::UnorderedTargetsSet *b) const {
     return a == b;
   }
 };
 
-struct EquivTargetsVectorCmp {
+struct EquivUnorderedTargetsSetCmp {
   bool operator()(const TargetForest::UnorderedTargetsSet *a,
                   const TargetForest::UnorderedTargetsSet *b) const {
     if (a == NULL || b == NULL)
