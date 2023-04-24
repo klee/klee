@@ -11,6 +11,7 @@
 
 #include "ExecutionState.h"
 #include "klee/Core/TerminationTypes.h"
+#include "klee/Module/CodeGraphDistance.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Support/ErrorHandling.h"
 
@@ -18,6 +19,12 @@
 
 using namespace llvm;
 using namespace klee;
+
+namespace klee {
+llvm::cl::opt<bool> CheckTraversability(
+    "check-traversability", cl::init(false),
+    cl::desc("Check error trace for traversability (default=false)"));
+} // namespace klee
 
 class LocatedEventManager {
   using FilenameCache = std::unordered_map<std::string, bool>;
@@ -116,6 +123,40 @@ TargetedExecutionManager::collectAllLocations(const SarifReport &paths) const {
   return locations;
 }
 
+bool TargetedExecutionManager::canReach(const ref<Location> &from,
+                                        const ref<Location> &to,
+                                        LocationToBlocks &locToBlocks) const {
+  for (auto fromBlock : locToBlocks[from]) {
+    for (auto toBlock : locToBlocks[to]) {
+      auto fromKf = fromBlock->parent;
+      auto toKf = toBlock->parent;
+      if (fromKf == toKf) {
+        if (fromBlock == toBlock) {
+          return true;
+        }
+
+        const auto &blockDist = codeGraphDistance.getDistance(fromBlock);
+        if (blockDist.count(toBlock) != 0) {
+          return true;
+        }
+      } else {
+        const auto &funcDist = codeGraphDistance.getDistance(fromKf);
+        if (funcDist.count(toKf) != 0) {
+          return true;
+        }
+
+        const auto &backwardFuncDist =
+            codeGraphDistance.getBackwardDistance(fromKf);
+        if (backwardFuncDist.count(toKf) != 0) {
+          return true;
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
 bool TargetedExecutionManager::tryResolveLocations(
     Result &result, LocationToBlocks &locToBlocks) const {
   std::vector<ref<Location>> resolvedLocations;
@@ -123,6 +164,15 @@ bool TargetedExecutionManager::tryResolveLocations(
   for (const auto &location : result.locations) {
     auto it = locToBlocks.find(location);
     if (it != locToBlocks.end()) {
+      if (!resolvedLocations.empty() && CheckTraversability) {
+        if (!canReach(resolvedLocations.back(), location, locToBlocks)) {
+          klee_warning("Trace %u is untraversable! Can't reach location %s "
+                       "from location %s, so skipping this trace.",
+                       result.id, location->toString().c_str(),
+                       resolvedLocations.back()->toString().c_str());
+          return false;
+        }
+      }
       resolvedLocations.push_back(location);
     } else if (index == result.locations.size() - 1) {
       klee_warning(

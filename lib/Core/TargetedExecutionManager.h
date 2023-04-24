@@ -23,6 +23,8 @@
 
 namespace klee {
 
+class CodeGraphDistance;
+
 class TargetedHaltsOnTraces {
   using HaltTypeToConfidence =
       std::unordered_map<HaltExecution::Reason, confidence::ty>;
@@ -68,7 +70,14 @@ private:
                                        Locations &locations) const;
   Locations collectAllLocations(const SarifReport &paths) const;
 
+  bool canReach(const ref<Location> &from, const ref<Location> &to,
+                LocationToBlocks &locToBlocks) const;
+
+  CodeGraphDistance &codeGraphDistance;
+
 public:
+  explicit TargetedExecutionManager(CodeGraphDistance &codeGraphDistance_)
+      : codeGraphDistance(codeGraphDistance_) {}
   std::unordered_map<KFunction *, ref<TargetForest>>
   prepareTargets(KModule *kmodule, SarifReport paths);
 
