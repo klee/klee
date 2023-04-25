@@ -148,6 +148,8 @@ jobs:
     steps:
       - name: Checkout KLEE source code
         uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - name: Build KLEE
         env: ${{ matrix.env }}
         run: scripts/build/build.sh klee --docker --create-final-image
@@ -167,6 +169,8 @@ jobs:
         run: brew install bash
       - name: Checkout KLEE source code
         uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - name: Build KLEE
         run: scripts/build/build.sh klee --debug --install-system-deps
       - name: Run tests
@@ -177,6 +181,8 @@ jobs:
     steps:
       - name: Checkout KLEE Code
         uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - name: Build Docker image
         run: docker build .
 
@@ -189,6 +195,8 @@ jobs:
     steps:
       - name: Checkout KLEE source code
         uses: actions/checkout@v2
+        with:
+          submodules: recursive
       - name: Build KLEE
         run: scripts/build/build.sh klee --docker --create-final-image
       - name: Run tests
