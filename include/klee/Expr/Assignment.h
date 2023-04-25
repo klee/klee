@@ -36,17 +36,14 @@ public:
   Assignment(const bindings_ty &_bindings, bool _allowFreeValues = false)
       : allowFreeValues(_allowFreeValues), bindings(_bindings) {}
   Assignment(const std::vector<const Array *> &objects,
-             std::vector<SparseStorage<unsigned char>> &values,
+             const std::vector<SparseStorage<unsigned char>> &values,
              bool _allowFreeValues = false)
       : allowFreeValues(_allowFreeValues) {
-    std::vector<SparseStorage<unsigned char>>::iterator valIt = values.begin();
-    for (std::vector<const Array *>::const_iterator it = objects.begin(),
-                                                    ie = objects.end();
-         it != ie; ++it) {
-      const Array *os = *it;
-      SparseStorage<unsigned char> &arr = *valIt;
+    assert(objects.size() == values.size());
+    for (unsigned i = 0; i < values.size(); ++i) {
+      const Array *os = objects.at(i);
+      const SparseStorage<unsigned char> &arr = values.at(i);
       bindings.insert(std::make_pair(os, arr));
-      ++valIt;
     }
   }
 
