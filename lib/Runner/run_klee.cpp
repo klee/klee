@@ -61,7 +61,6 @@
 #include <iomanip>
 #include <iterator>
 
-#include <klee/Misc/json.hpp>
 using json = nlohmann::json;
 
 using namespace llvm;

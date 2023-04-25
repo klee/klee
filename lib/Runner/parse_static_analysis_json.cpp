@@ -15,7 +15,6 @@
 #include "klee/Support/ErrorHandling.h"
 
 #include <fstream>
-#include <klee/Misc/json.hpp>
 
 using json = nlohmann::json;
 

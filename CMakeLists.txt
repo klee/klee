@@ -724,6 +724,8 @@ configure_file(${CMAKE_SOURCE_DIR}/include/klee/Config/CompileTimeInfo.h.cmin
 ################################################################################
 include_directories("${CMAKE_BINARY_DIR}/include")
 include_directories("${CMAKE_SOURCE_DIR}/include")
+include_directories("${CMAKE_SOURCE_DIR}/json/include")
+include_directories("${CMAKE_SOURCE_DIR}/optional/include")
 
 ################################################################################
 # Set default location for targets in the build directory

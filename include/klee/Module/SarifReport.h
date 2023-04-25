@@ -15,8 +15,8 @@
 #include <vector>
 
 #include "klee/ADT/Ref.h"
-#include <klee/Misc/json.hpp>
-#include <klee/Misc/optional.hpp>
+#include <nlohmann/json.hpp>
+#include <nonstd/optional.hpp>
 
 using json = nlohmann::json;
 using nonstd::optional;

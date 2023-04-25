@@ -20,7 +20,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <klee/Misc/optional.hpp>
+#include <nonstd/optional.hpp>
 
 using nonstd::optional;
 
