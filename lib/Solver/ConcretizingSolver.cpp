@@ -267,6 +267,13 @@ bool ConcretizingSolver::computeValidity(
       concretizationManager->add(
           query, negatedQueryInvalidResponse->initialValuesFor(objects));
     }
+  } else {
+    concretizationManager->add(
+        query.negateExpr(),
+        cast<InvalidResponse>(queryResult)->initialValuesFor(objects));
+    concretizationManager->add(
+        query,
+        cast<InvalidResponse>(negatedQueryResult)->initialValuesFor(objects));
   }
 
   return true;
@@ -308,7 +315,14 @@ char *ConcretizingSolver::getConstraintLog(const Query &query) {
 
 bool ConcretizingSolver::computeTruth(const Query &query, bool &isValid) {
   if (!query.containsSymcretes()) {
-    return solver->impl->computeTruth(query, isValid);
+    if (solver->impl->computeTruth(query, isValid)) {
+      if (!isValid) {
+        concretizationManager->add(query.negateExpr(),
+                                   query.constraints.getConcretization());
+      }
+      return true;
+    }
+    return false;
   }
 
   auto assign = query.constraints.getConcretization();
@@ -377,9 +391,9 @@ bool ConcretizingSolver::computeValidityCore(const Query &query,
     if (ref<InvalidResponse> resultInvalidResponse =
             dyn_cast<InvalidResponse>(result)) {
       assign = resultInvalidResponse->initialValuesFor(assign.keys());
+      isValid = false;
     } else {
       assert(result->tryGetValidityCore(validityCore));
-      isValid = false;
     }
   }
 
@@ -444,6 +458,8 @@ bool ConcretizingSolver::computeInitialValues(
           constructConcretizedQuery(query, assign), objects, values,
           hasSolution);
     }
+  } else {
+    concretizationManager->add(query.negateExpr(), assign);
   }
 
   return true;

@@ -9,6 +9,7 @@ using namespace klee;
 
 Assignment ConcretizationManager::get(const ConstraintSet &set,
                                       ref<Expr> query) {
+  query = Expr::createIsZero(Expr::createIsZero(query));
   if (simplifyExprs) {
     query = ConstraintManager::simplifyExpr(set, query);
   }
@@ -25,6 +26,7 @@ Assignment ConcretizationManager::get(const ConstraintSet &set,
 
 bool ConcretizationManager::contains(const ConstraintSet &set,
                                      ref<Expr> query) {
+  query = Expr::createIsZero(Expr::createIsZero(query));
   if (simplifyExprs) {
     query = ConstraintManager::simplifyExpr(set, query);
   }
@@ -34,10 +36,12 @@ bool ConcretizationManager::contains(const ConstraintSet &set,
 }
 
 void ConcretizationManager::add(const Query &query, const Assignment &assign) {
-  ref<Expr> expr = query.expr;
+  ref<Expr> expr = Expr::createIsZero(Expr::createIsZero(query.expr));
   if (simplifyExprs) {
     expr = ConstraintManager::simplifyExpr(query.constraints, expr);
   }
-  CacheEntry ce(query.constraints, query.expr);
+  CacheEntry ce(query.constraints, expr);
   concretizations.insert(std::make_pair(ce, assign));
+  assert(concretizations.find(ce) != concretizations.end());
+  assert(contains(query.constraints, expr));
 }
