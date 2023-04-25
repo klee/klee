@@ -31,9 +31,14 @@ def convert_error(error):
             "physicalLocation": physicalLocation
         }
         locations.append({"location": location})
-        if trace["event"]["kind"] == "Error":
-            converted_error["ruleId"] = trace["event"]["error"]["sort"]
-            converted_error["locations"] = [location] 
+
+    trace = error["trace"][-1]
+    if trace["event"]["kind"] == "Error":
+        converted_error["ruleId"] = trace["event"]["error"]["sort"]
+    else:
+        converted_error["ruleId"] = "Reached"
+    converted_error["locations"] = [locations[-1]["location"]]
+
 
     return converted_error
 
