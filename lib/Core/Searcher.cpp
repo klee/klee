@@ -282,7 +282,8 @@ TargetedSearcher::tryGetWeight(ExecutionState *es, weight_type &weight) {
   KBlock *kb = es->pc->parent->parent->blockMap[bb];
   KInstruction *ki = es->pc;
   if (!target->shouldFailOnThisTarget() && kb->numInstructions &&
-      kb->getFirstInstruction() != ki && states->tryGetWeight(es, weight)) {
+      !isa<KCallBlock>(kb) && kb->getFirstInstruction() != ki &&
+      states->tryGetWeight(es, weight)) {
     return Continue;
   }
   unsigned int minCallWeight = UINT_MAX, minSfNum = UINT_MAX, sfNum = 0;
