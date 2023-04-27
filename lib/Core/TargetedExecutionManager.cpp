@@ -209,6 +209,7 @@ KFunction *TargetedExecutionManager::tryResolveEntryFunction(
           klee_warning("Trace %u is malformed! Can't resolve entry function, "
                        "so skipping this trace.",
                        result.id);
+          return nullptr;
         } else {
           resKf = curKf;
         }
