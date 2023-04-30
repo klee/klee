@@ -528,6 +528,9 @@ private:
       SetOfStates &left_states,
       HaltExecution::Reason reason = HaltExecution::NotHalt);
 
+  void checkNullCheckAfterDeref(ref<Expr> cond, ExecutionState &state,
+                                ExecutionState *fstate, ExecutionState *sstate);
+
   template <typename SqType, typename TypeIt>
   void computeOffsetsSeqTy(KGEPInstruction *kgepi,
                            ref<ConstantExpr> &constantOffset, uint64_t index,

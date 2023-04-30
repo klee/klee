@@ -21,6 +21,131 @@ using namespace llvm;
 using namespace klee;
 
 namespace klee {
+cl::OptionCategory
+    TerminationCat("State and overall termination options",
+                   "These options control termination of the overall KLEE "
+                   "execution and of individual states.");
+
+/*** Termination criteria options ***/
+
+cl::opt<std::string>
+    MaxTime("max-time",
+            cl::desc("Halt execution after the specified duration.  "
+                     "Set to 0s to disable (default=0s)"),
+            cl::init("0s"), cl::cat(TerminationCat));
+
+cl::list<StateTerminationType> ExitOnErrorType(
+    "exit-on-error-type",
+    cl::desc(
+        "Stop execution after reaching a specified condition (default=false)"),
+    cl::values(clEnumValN(StateTerminationType::Abort, "Abort",
+                          "The program crashed (reached abort()/klee_abort())"),
+               clEnumValN(StateTerminationType::Assert, "Assert",
+                          "An assertion was hit"),
+               clEnumValN(StateTerminationType::BadVectorAccess,
+                          "BadVectorAccess", "Vector accessed out of bounds"),
+               clEnumValN(StateTerminationType::Execution, "Execution",
+                          "Trying to execute an unexpected instruction"),
+               clEnumValN(StateTerminationType::External, "External",
+                          "External objects referenced"),
+               clEnumValN(StateTerminationType::Free, "Free",
+                          "Freeing invalid memory"),
+               clEnumValN(StateTerminationType::Model, "Model",
+                          "Memory model limit hit"),
+               clEnumValN(StateTerminationType::Overflow, "Overflow",
+                          "An overflow occurred"),
+               clEnumValN(StateTerminationType::Ptr, "Ptr", "Pointer error"),
+               clEnumValN(StateTerminationType::UndefinedBehavior,
+                          "UndefinedBehavior", "Undefined behavior detected"),
+               clEnumValN(StateTerminationType::ReadOnly, "ReadOnly",
+                          "Write to read-only memory"),
+               clEnumValN(StateTerminationType::ReportError, "ReportError",
+                          "klee_report_error called"),
+               clEnumValN(StateTerminationType::User, "User",
+                          "Wrong klee_* functions invocation")),
+    cl::ZeroOrMore, cl::cat(TerminationCat));
+
+cl::opt<unsigned long long>
+    MaxInstructions("max-instructions",
+                    cl::desc("Stop execution after this many instructions.  "
+                             "Set to 0 to disable (default=0)"),
+                    cl::init(0), cl::cat(TerminationCat));
+
+cl::opt<unsigned long long> MaxSteppedInstructions(
+    "max-stepped-instructions",
+    cl::desc("Stop state execution after this many instructions.  Set to 0 to "
+             "disable (default=0)"),
+    cl::init(0), cl::cat(TerminationCat));
+
+cl::opt<unsigned> MaxForks(
+    "max-forks",
+    cl::desc("Only fork this many times.  Set to -1 to disable (default=-1)"),
+    cl::init(~0u), cl::cat(TerminationCat));
+
+cl::opt<unsigned> MaxDepth("max-depth",
+                           cl::desc("Only allow this many symbolic branches.  "
+                                    "Set to 0 to disable (default=0)"),
+                           cl::init(0), cl::cat(TerminationCat));
+
+cl::opt<unsigned>
+    MaxMemory("max-memory",
+              cl::desc("Refuse to fork when above this amount of "
+                       "memory (in MB) (see -max-memory-inhibit) and terminate "
+                       "states when additional 100MB allocated (default=2000)"),
+              cl::init(2000), cl::cat(TerminationCat));
+
+cl::opt<bool> MaxMemoryInhibit("max-memory-inhibit",
+                               cl::desc("Inhibit forking when above memory cap "
+                                        "(see -max-memory) (default=true)"),
+                               cl::init(true), cl::cat(TerminationCat));
+
+cl::opt<unsigned> RuntimeMaxStackFrames(
+    "max-stack-frames",
+    cl::desc("Terminate a state after this many stack frames.  Set to 0 to "
+             "disable (default=8192)"),
+    cl::init(8192), cl::cat(TerminationCat));
+
+cl::opt<double> MaxStaticForkPct(
+    "max-static-fork-pct", cl::init(1.),
+    cl::desc("Maximum percentage spent by an instruction forking out of the "
+             "forking of all instructions (default=1.0 (always))"),
+    cl::cat(TerminationCat));
+
+cl::opt<double> MaxStaticSolvePct(
+    "max-static-solve-pct", cl::init(1.),
+    cl::desc("Maximum percentage of solving time that can be spent by a single "
+             "instruction over total solving time for all instructions "
+             "(default=1.0 (always))"),
+    cl::cat(TerminationCat));
+
+cl::opt<double> MaxStaticCPForkPct(
+    "max-static-cpfork-pct", cl::init(1.),
+    cl::desc("Maximum percentage spent by an instruction of a call path "
+             "forking out of the forking of all instructions in the call path "
+             "(default=1.0 (always))"),
+    cl::cat(TerminationCat));
+
+cl::opt<double> MaxStaticCPSolvePct(
+    "max-static-cpsolve-pct", cl::init(1.),
+    cl::desc("Maximum percentage of solving time that can be spent by a single "
+             "instruction of a call path over total solving time for all "
+             "instructions (default=1.0 (always))"),
+    cl::cat(TerminationCat));
+
+cl::opt<unsigned> MaxStaticPctCheckDelay(
+    "max-static-pct-check-delay",
+    cl::desc("Number of forks after which the --max-static-*-pct checks are "
+             "enforced (default=1000)"),
+    cl::init(1000), cl::cat(TerminationCat));
+
+cl::opt<std::string> TimerInterval(
+    "timer-interval",
+    cl::desc(
+        "Minimum interval to check timers. "
+        "Affects -max-time, -istats-write-interval, -stats-write-interval, and "
+        "-uncovered-update-interval (default=1s)"),
+    cl::init("1s"), cl::cat(TerminationCat));
+
 llvm::cl::opt<bool> CheckTraversability(
     "check-traversability", cl::init(false),
     cl::desc("Check error trace for traversability (default=false)"));
@@ -31,45 +156,157 @@ llvm::cl::opt<bool> SmartResolveEntryFunction(
              "function of first location (default=false)"));
 } // namespace klee
 
-class LocatedEventManager {
-  using FilenameCache = std::unordered_map<std::string, bool>;
-  std::unordered_map<std::string, std::unique_ptr<FilenameCache>>
-      filenameCacheMap;
-  FilenameCache *filenameCache = nullptr;
-
-public:
-  LocatedEventManager() {}
-
-  void prefetchFindFilename(const std::string &filename) {
-    auto it = filenameCacheMap.find(filename);
-    if (it != filenameCacheMap.end()) {
-      filenameCache = it->second.get();
-    } else {
-      filenameCache = nullptr;
-    }
+void LocatedEventManager::prefetchFindFilename(const std::string &filename) {
+  auto it = filenameCacheMap.find(filename);
+  if (it != filenameCacheMap.end()) {
+    filenameCache = it->second.get();
+  } else {
+    filenameCache = nullptr;
   }
+}
 
-  bool isInside(Location &loc, const klee::FunctionInfo &fi) {
-    bool isInside = false;
-    if (filenameCache == nullptr) {
+bool LocatedEventManager::isInside(Location &loc,
+                                   const klee::FunctionInfo &fi) {
+  bool isInside = false;
+  if (filenameCache == nullptr) {
+    isInside = loc.isInside(fi);
+    auto filenameCachePtr = std::make_unique<FilenameCache>();
+    filenameCache = filenameCachePtr.get();
+    filenameCacheMap.insert(
+        std::make_pair(fi.file, std::move(filenameCachePtr)));
+    filenameCache->insert(std::make_pair(loc.filename, isInside));
+  } else {
+    auto it = filenameCache->find(loc.filename);
+    if (it == filenameCache->end()) {
       isInside = loc.isInside(fi);
-      auto filenameCachePtr = std::make_unique<FilenameCache>();
-      filenameCache = filenameCachePtr.get();
-      filenameCacheMap.insert(
-          std::make_pair(fi.file, std::move(filenameCachePtr)));
       filenameCache->insert(std::make_pair(loc.filename, isInside));
     } else {
-      auto it = filenameCache->find(loc.filename);
-      if (it == filenameCache->end()) {
-        isInside = loc.isInside(fi);
-        filenameCache->insert(std::make_pair(loc.filename, isInside));
-      } else {
-        isInside = it->second;
+      isInside = it->second;
+    }
+  }
+  return isInside;
+}
+
+TargetedHaltsOnTraces::TargetedHaltsOnTraces(ref<TargetForest> &forest) {
+  auto leafs = forest->leafs();
+  for (auto finalTargetSetPair : leafs) {
+    traceToHaltTypeToConfidence.emplace(finalTargetSetPair.first,
+                                        HaltTypeToConfidence());
+  }
+}
+
+void TargetedHaltsOnTraces::subtractConfidencesFrom(
+    TargetForest &forest, HaltExecution::Reason reason) {
+  auto leafs = forest.leafs();
+  for (auto finalTargetSetPair : leafs) {
+    auto &haltTypeToConfidence =
+        traceToHaltTypeToConfidence.at(finalTargetSetPair.first);
+    auto confidence = finalTargetSetPair.second;
+    auto it = haltTypeToConfidence.find(reason);
+    if (it == haltTypeToConfidence.end()) {
+      haltTypeToConfidence.emplace(reason, confidence);
+    } else {
+      haltTypeToConfidence[reason] = it->second + confidence;
+    }
+  }
+}
+
+void TargetedHaltsOnTraces::totalConfidenceAndTopContributor(
+    const HaltTypeToConfidence &haltTypeToConfidence,
+    confidence::ty *confidence, HaltExecution::Reason *reason) {
+  *confidence = confidence::MaxConfidence;
+  HaltExecution::Reason maxReason = HaltExecution::MaxTime;
+  confidence::ty maxConfidence = confidence::MinConfidence;
+  for (auto p : haltTypeToConfidence) {
+    auto r = p.first;
+    auto c = p.second;
+    if (c > maxConfidence) {
+      maxConfidence = c;
+      maxReason = r;
+    }
+    *confidence -= c;
+  }
+  *reason = maxReason;
+}
+
+std::string
+getAdviseWhatToIncreaseConfidenceRate(HaltExecution::Reason reason) {
+  std::string what = "";
+  switch (reason) {
+  case HaltExecution::MaxSolverTime:
+    what = MaxCoreSolverTime.ArgStr.str();
+    break;
+  case HaltExecution::MaxStackFrames:
+    what = RuntimeMaxStackFrames.ArgStr.str();
+    break;
+  case HaltExecution::MaxTests:
+    what = "max-tests"; // TODO: taken from run_klee.cpp
+    break;
+  case HaltExecution::MaxInstructions:
+    what = MaxInstructions.ArgStr.str();
+    break;
+  case HaltExecution::MaxSteppedInstructions:
+    what = MaxSteppedInstructions.ArgStr.str();
+    break;
+  case HaltExecution::CovCheck:
+    what = "cov-check"; // TODO: taken from StatsTracker.cpp
+    break;
+  case HaltExecution::MaxDepth:
+    what = MaxDepth.ArgStr.str();
+    break;
+  case HaltExecution::ErrorOnWhichShouldExit: // this should never be the case
+  case HaltExecution::ReachedTarget:          // this should never be the case
+  case HaltExecution::NoMoreStates:           // this should never be the case
+  case HaltExecution::Interrupt: // it is ok to advise to increase time if we
+                                 // were interrupted by user
+  case HaltExecution::MaxTime:
+#ifndef ENABLE_KLEE_DEBUG
+  default:
+#endif
+    what = MaxTime.ArgStr.str();
+    break;
+#ifdef ENABLE_KLEE_DEBUG
+  default:
+    what = std::to_string(reason);
+    break;
+#endif
+  }
+  return what;
+}
+
+void TargetedHaltsOnTraces::reportFalsePositives(bool canReachSomeTarget) {
+  confidence::ty confidence;
+  HaltExecution::Reason reason;
+  for (const auto &targetSetWithConfidences : traceToHaltTypeToConfidence) {
+    const auto &target = targetSetWithConfidences.first->getTargets().front();
+    if (!target->shouldFailOnThisTarget())
+      continue;
+    bool atLeastOneReported = false;
+    for (const auto &target : targetSetWithConfidences.first->getTargets()) {
+      if (target->isReported) {
+        atLeastOneReported = true;
+        break;
       }
     }
-    return isInside;
+
+    if (atLeastOneReported) {
+      continue;
+    }
+
+    totalConfidenceAndTopContributor(targetSetWithConfidences.second,
+                                     &confidence, &reason);
+    if (canReachSomeTarget &&
+        confidence::isVeryConfident(
+            confidence)) { // We should not be so sure if there are states that
+                           // can reach some targets
+      confidence = confidence::VeryConfident;
+      reason = HaltExecution::MaxTime;
+    }
+    reportFalsePositive(confidence, target->getErrors(), target->getId(),
+                        getAdviseWhatToIncreaseConfidenceRate(reason));
+    target->isReported = true;
   }
-};
+}
 
 TargetedExecutionManager::LocationToBlocks
 TargetedExecutionManager::prepareAllLocations(KModule *kmodule,

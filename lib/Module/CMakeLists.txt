@@ -24,11 +24,11 @@ set(KLEE_MODULE_COMPONENT_SRCS
   PhiCleaner.cpp
   RaiseAsm.cpp
   ReturnSplitter.cpp
+  SarifReport.cpp
   StreamWithLine.cpp
   Target.cpp
   TargetHash.cpp
   TargetForest.cpp
-  SarifReport.cpp
 )
 
 if (USE_WORKAROUND_LLVM_PR39177)

@@ -22,8 +22,55 @@
 #include <unordered_map>
 
 namespace klee {
+extern llvm::cl::OptionCategory TerminationCat;
+
+/*** Termination criteria options ***/
+
+extern llvm::cl::opt<std::string> MaxTime;
+
+extern llvm::cl::list<StateTerminationType> ExitOnErrorType;
+
+extern llvm::cl::opt<unsigned long long> MaxInstructions;
+
+extern llvm::cl::opt<unsigned long long> MaxSteppedInstructions;
+
+extern llvm::cl::opt<unsigned> MaxForks;
+
+extern llvm::cl::opt<unsigned> MaxDepth;
+
+extern llvm::cl::opt<unsigned> MaxMemory;
+
+extern llvm::cl::opt<bool> MaxMemoryInhibit;
+
+extern llvm::cl::opt<unsigned> RuntimeMaxStackFrames;
+
+extern llvm::cl::opt<double> MaxStaticForkPct;
+
+extern llvm::cl::opt<double> MaxStaticSolvePct;
+
+extern llvm::cl::opt<double> MaxStaticCPForkPct;
+
+extern llvm::cl::opt<double> MaxStaticCPSolvePct;
+
+extern llvm::cl::opt<unsigned> MaxStaticPctCheckDelay;
+
+extern llvm::cl::opt<std::string> TimerInterval;
 
 class CodeGraphDistance;
+
+class LocatedEventManager {
+  using FilenameCache = std::unordered_map<std::string, bool>;
+  std::unordered_map<std::string, std::unique_ptr<FilenameCache>>
+      filenameCacheMap;
+  FilenameCache *filenameCache = nullptr;
+
+public:
+  LocatedEventManager() {}
+
+  void prefetchFindFilename(const std::string &filename);
+
+  bool isInside(Location &loc, const klee::FunctionInfo &fi);
+};
 
 class TargetedHaltsOnTraces {
   using HaltTypeToConfidence =
