@@ -5197,9 +5197,9 @@ void Executor::executeMemoryOperation(
       ref<Expr> outOfBound = NotExpr::create(inBounds);
       if (state.isGEPExpr(address)) {
         inBounds =
-            AndExpr::create(inBounds, mo->getBoundsCheckPointer(base, 1));
-        inBounds =
             AndExpr::create(inBounds, mo->getBoundsCheckPointer(base, size));
+        inBounds = AndExpr::create(inBounds,
+                                   Expr::createIsZero(mo->getOffsetExpr(base)));
         outOfBound =
             AndExpr::create(outOfBound, mo->getBoundsCheckPointer(base));
       }
@@ -5300,9 +5300,9 @@ void Executor::executeMemoryOperation(
       ref<Expr> inBounds = mo->getBoundsCheckPointer(address, bytes);
       if (unbound->isGEPExpr(address)) {
         inBounds =
-            AndExpr::create(inBounds, mo->getBoundsCheckPointer(base, 1));
-        inBounds =
             AndExpr::create(inBounds, mo->getBoundsCheckPointer(base, size));
+        inBounds = AndExpr::create(inBounds,
+                                   Expr::createIsZero(mo->getOffsetExpr(base)));
       }
 
       StatePair sp = fork(*unbound, inBounds, true, BranchType::MemOp);
