@@ -139,8 +139,11 @@ cl::opt<bool>
                        cl::desc("Enable lazy initialization (default=true)"),
                        cl::cat(ExecCat));
 
-cl::opt<bool> ForkPartialValidity("fork-partial-validity", cl::init(false),
-                                  cl::cat(ExecCat));
+cl::opt<bool>
+    ForkPartialValidity("fork-partial-validity", cl::init(false),
+                        cl::desc("Use partial validity to accurately handle "
+                                 "solver results (default=false)"),
+                        cl::cat(ExecCat));
 
 cl::opt<TypeSystemKind>
     TypeSystem("type-system",
@@ -1171,7 +1174,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
     }
 
     if (res == Solver::PartialValidity::MayBeTrue) {
-      current.addConstraint(condition);
+      addConstraint(current, condition);
     }
     return StatePair(&current, nullptr);
   } else if (res == Solver::PartialValidity::MustBeFalse ||
@@ -1183,7 +1186,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
     }
 
     if (res == Solver::PartialValidity::MayBeFalse) {
-      current.addConstraint(Expr::createIsZero(condition));
+      addConstraint(current, Expr::createIsZero(condition));
     }
     return StatePair(nullptr, &current);
   } else {
@@ -5227,6 +5230,9 @@ void Executor::executeMemoryOperation(
 
     for (unsigned int i = 0; i < resolvedMemoryObjects.size(); ++i) {
       ExecutionState *bound = statesForMemoryOperation[i];
+      if (!bound) {
+        continue;
+      }
       ObjectPair op = bound->addressSpace.findObject(resolvedMemoryObjects[i]);
       const MemoryObject *mo = op.first;
       const ObjectState *os = op.second;
