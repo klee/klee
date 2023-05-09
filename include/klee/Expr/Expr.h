@@ -93,7 +93,7 @@ Todo: Shouldn't bool \c Xor just be written as not equal?
 
 */
 
-class Expr {
+class Expr { //KLEE的核心数据结构之一，用于表示符号表达式，Expr可以是符号化变量、符号化操作符或者符号化变量
 public:
   static unsigned count;
   static const unsigned MAGIC_HASH_CONSTANT = 39;
@@ -103,7 +103,7 @@ public:
 
   // NOTE: The prefix "Int" in no way implies the integer type of expression.
   // For example, Int64 can indicate i64, double or <2 * i32> in different cases.
-  static const Width InvalidWidth = 0;
+  static const Width InvalidWidth = 0; //用类型的对应bit长度来表示类型
   static const Width Bool = 1;
   static const Width Int8 = 8;
   static const Width Int16 = 16;
@@ -115,7 +115,7 @@ public:
   static const Width Int512 = 512;
   static const Width MaxWidth = Int512;
   
-
+  //表达式类型，可以是变量、常量、操作符等
   enum Kind {
     InvalidKind = -1,
 
@@ -146,6 +146,7 @@ public:
     // All subsequent kinds are binary.
 
     // Arithmetic
+    //二元算术操作符
     Add,
     Sub,
     Mul,
@@ -154,7 +155,8 @@ public:
     URem,
     SRem,
 
-    // Bit
+    // Bit 
+    //bit级别操作符
     And,
     Or,
     Xor,
@@ -163,6 +165,7 @@ public:
     AShr,
     
     // Compare
+    //比较操作符
     Eq,
     Ne,  ///< Not used in canonical form
     Ult,

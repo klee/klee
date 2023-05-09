@@ -65,8 +65,8 @@ DISABLE_WARNING_POP
 using namespace llvm;
 using namespace klee;
 
-namespace {
-  cl::opt<std::string>
+namespace { //main.cpp中独立的namespace
+  cl::opt<std::string> //用llvm的命令行参数解析框架cl::opt来定义字符串类型的命令行参数InputFile，程序可以使用InputFile.getValue()来获取用户输入的bc文件名，后面类似
   InputFile(cl::desc("<input bytecode>"), cl::Positional, cl::init("-"));
 
   cl::list<std::string>
@@ -81,8 +81,8 @@ namespace {
 
   cl::opt<bool>
   WriteNone("write-no-tests",
-            cl::init(false),
-            cl::desc("Do not generate any test files (default=false)"),
+            cl::init(false), //初始值为false
+            cl::desc("Do not generate any test files (default=false)"),//description
             cl::cat(TestCaseCat));
 
   cl::opt<bool>
@@ -296,7 +296,7 @@ class ExecutionState;
 
 /***/
 
-class KleeHandler : public InterpreterHandler {
+class KleeHandler : public InterpreterHandler { //KleeHandler继承InterpreterHandler
 private:
   Interpreter *m_interpreter;
   TreeStreamWriter *m_pathWriter, *m_symPathWriter;
@@ -1126,7 +1126,7 @@ linkWithUclibc(StringRef libDir, std::string opt_suffix,
                FortifyPath.c_str(), errorMsg.c_str());
 }
 
-int main(int argc, char **argv, char **envp) {
+int main(int argc, char **argv, char **envp) { //klee的入口函数
   atexit(llvm_shutdown);  // Call llvm_shutdown() on exit.
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(13, 0)
@@ -1135,16 +1135,20 @@ int main(int argc, char **argv, char **envp) {
   KCommandLine::HideOptions(llvm::cl::GeneralCategory);
 #endif
 
-  llvm::InitializeNativeTarget();
-
-  parseArguments(argc, argv);
+  llvm::InitializeNativeTarget(); //一些环境初始化
+  klee_message("argc is %d", argc); //打印argc，by wqc
+  for(int i = 0; i < argc; i++) { //打印argv，by wqc
+    klee_message("argv%d is %s", i,  argv[i]);
+  }
+  
+  parseArguments(argc, argv); //解析用户输入的命令行参数，底层是llvm的cl框架
   sys::PrintStackTraceOnErrorSignal(argv[0]);
 
   if (EntryPoint.empty()) {
     klee_error("entry-point cannot be empty");
   }
 
-  if (Watchdog) {
+  if (Watchdog) { //fork一个watchdog用来监视超时
     if (MaxTime.empty()) {
       klee_error("--watchdog used without --max-time");
     }
@@ -1213,11 +1217,11 @@ int main(int argc, char **argv, char **envp) {
   }
 
   sys::SetInterruptFunction(interrupt_handle);
-
+  
   // Load the bytecode...
   std::string errorMsg;
   LLVMContext ctx;
-  std::vector<std::unique_ptr<llvm::Module>> loadedModules;
+  std::vector<std::unique_ptr<llvm::Module>> loadedModules; //一个module容器，保存输入的InputFile bc文件中包含的所有module
   if (!klee::loadFile(InputFile, ctx, loadedModules, errorMsg)) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                errorMsg.c_str());
@@ -1226,7 +1230,7 @@ int main(int argc, char **argv, char **envp) {
   // application under test.
   // Nothing gets removed in the first place.
   std::unique_ptr<llvm::Module> M(klee::linkModules(
-      loadedModules, "" /* link all modules together */, errorMsg));
+      loadedModules, "" /* link all modules together */, errorMsg)); //将所有module链接为一个整体module M
   if (!M) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                errorMsg.c_str());
@@ -1234,8 +1238,8 @@ int main(int argc, char **argv, char **envp) {
 
   llvm::Module *mainModule = M.get();
 
-  const std::string &module_triple = mainModule->getTargetTriple();
-  std::string host_triple = llvm::sys::getDefaultTargetTriple();
+  const std::string &module_triple = mainModule->getTargetTriple(); //获取应用的位数，64 or 32
+  std::string host_triple = llvm::sys::getDefaultTargetTriple(); //机器位数， 64 or 32
 
   if (module_triple != host_triple)
     klee_warning("Module and host target triples do not match: '%s' != '%s'\n"
@@ -1251,27 +1255,28 @@ int main(int argc, char **argv, char **envp) {
     opt_suffix = "32";
 
   // Add additional user-selected suffix
-  opt_suffix += "_" + RuntimeBuild.getValue();
+  opt_suffix += "_" + RuntimeBuild.getValue(); //类似64_Release
 
   // Push the module as the first entry
   loadedModules.emplace_back(std::move(M));
 
-  std::string LibraryDir = KleeHandler::getRunTimeLibraryPath(argv[0]);
-  Interpreter::ModuleOptions Opts(LibraryDir.c_str(), EntryPoint, opt_suffix,
+  std::string LibraryDir = KleeHandler::getRunTimeLibraryPath(argv[0]); //获取路径path，在本机上是/tmp/klee_build110stp_z3/runtime/lib/
+  Interpreter::ModuleOptions Opts(LibraryDir.c_str(), EntryPoint, opt_suffix, //将获取的信息赋值给ModuleOptions，包括lib库路径、程序入口和机器位数
                                   /*Optimize=*/OptimizeModule,
                                   /*CheckDivZero=*/CheckDivZero,
                                   /*CheckOvershift=*/CheckOvershift);
 
-  if (WithPOSIXRuntime) {
+  if (WithPOSIXRuntime) { //开启--posix-runtime
     SmallString<128> Path(Opts.LibraryDir);
     llvm::sys::path::append(Path, "libkleeRuntimePOSIX" + opt_suffix + ".bca");
-    klee_message("NOTE: Using POSIX model: %s", Path.c_str());
+    klee_message("NOTE: Using POSIX model: %s", Path.c_str()); //KLEE: NOTE: Using POSIX model: /tmp/klee_build110stp_z3/runtime/lib/libkleeRuntimePOSIX64_Debug+Asserts.bca
     if (!klee::loadFile(Path.c_str(), mainModule->getContext(), loadedModules,
                         errorMsg))
       klee_error("error loading POSIX support '%s': %s", Path.c_str(),
                  errorMsg.c_str());
 
     std::string libcPrefix = (Libc == LibcType::UcLibc ? "__user_" : "");
+    klee_message("libcPrefix is %s", libcPrefix.c_str()); //打印libcPrefix，by wqc
     preparePOSIX(loadedModules, libcPrefix);
   }
 
@@ -1309,7 +1314,7 @@ int main(int argc, char **argv, char **envp) {
 #endif
   }
 
-  switch (Libc) {
+  switch (Libc) { //Libc参数的处理
   case LibcType::KleeLibc: {
     // FIXME: Find a reasonable solution for this.
     SmallString<128> Path(Opts.LibraryDir);
@@ -1347,7 +1352,7 @@ int main(int argc, char **argv, char **envp) {
   int pArgc;
   char **pArgv;
   char **pEnvp;
-  if (Environ != "") {
+  if (Environ != "") { //将用户指定的环境变量的配置文件中的具体配置读出并存储到向量pEnvp中
     std::vector<std::string> items;
     std::ifstream f(Environ.c_str());
     if (!f.good())
@@ -1370,7 +1375,8 @@ int main(int argc, char **argv, char **envp) {
   }
 
   pArgc = InputArgv.size() + 1;
-  pArgv = new char *[pArgc];
+  klee_message("the pArgc is %d", pArgc); //打印目标程序参数数量pArgc，by wqc
+  pArgv = new char *[pArgc]; //将用户参数存储到pArgv中
   for (unsigned i=0; i<InputArgv.size()+1; i++) {
     std::string &arg = (i==0 ? InputFile : InputArgv[i-1]);
     unsigned size = arg.size() + 1;
@@ -1380,8 +1386,9 @@ int main(int argc, char **argv, char **envp) {
     pArg[size - 1] = 0;
 
     pArgv[i] = pArg;
+    klee_message("the pArgv[%d] is %s", i, pArgv[i]); //打印pArgv
   }
-
+  
   std::vector<bool> replayPath;
 
   if (ReplayPathFile != "") {
@@ -1392,7 +1399,7 @@ int main(int argc, char **argv, char **envp) {
   IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
   KleeHandler *handler = new KleeHandler(pArgc, pArgv);
   Interpreter *interpreter =
-    theInterpreter = Interpreter::create(ctx, IOpts, handler);
+    theInterpreter = Interpreter::create(ctx, IOpts, handler); //实例化一个interpreter对象
   assert(interpreter);
   handler->setInterpreter(interpreter);
 
@@ -1404,8 +1411,8 @@ int main(int argc, char **argv, char **envp) {
   // Get the desired main function.  klee_main initializes uClibc
   // locale and other data and then calls main.
 
-  auto finalModule = interpreter->setModule(loadedModules, Opts);
-  Function *mainFn = finalModule->getFunction(EntryPoint);
+  auto finalModule = interpreter->setModule(loadedModules, Opts); //对函数进行一些初始化赋值操作，返回完整的finalModule的指针
+  Function *mainFn = finalModule->getFunction(EntryPoint); //找到程序的主函数入口
   if (!mainFn) {
     klee_error("Entry function '%s' not found in module.", EntryPoint.c_str());
   }
@@ -1515,7 +1522,7 @@ int main(int argc, char **argv, char **envp) {
                    sys::StrError(errno).c_str());
       }
     }
-    interpreter->runFunctionAsMain(mainFn, pArgc, pArgv, pEnvp);
+    interpreter->runFunctionAsMain(mainFn, pArgc, pArgv, pEnvp); //从入口函数开始进行后续的符号执行操作，main函数的功能结束，转到runFunctionAsMain
 
     while (!seeds.empty()) {
       kTest_free(seeds.back());

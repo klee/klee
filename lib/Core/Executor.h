@@ -90,7 +90,7 @@ namespace klee {
   /// during an instruction step. Should contain addedStates,
   /// removedStates, and haltExecution, among others.
 
-class Executor : public Interpreter {
+class Executor : public Interpreter { //executor确实是继承Interpreter
   friend class OwningSearcher;
   friend class WeightedRandomSearcher;
   friend class SpecialFunctionHandler;
@@ -112,8 +112,10 @@ private:
   ExternalDispatcher *externalDispatcher;
   std::unique_ptr<TimingSolver> solver;
   MemoryManager *memory;
-  std::set<ExecutionState*, ExecutionStateIDCompare> states;
-  StatsTracker *statsTracker;
+  std::set<ExecutionState*, ExecutionStateIDCompare> states; //一个保存ExecutionState的容器，ExecutionStateIDCompare是一个Comparer类，按state ID进行比较排序
+  //states保存所有执行过的state，保证不会重复执行已经执行过的状态，当符号执行引擎执行指令时，它会先检查当前状态是否已经被执行过，如果是，则说明程序进入了无限循环或该状态已经被探索完毕，则需要回溯到上一个分支处探索其他分支；如果不是，则将当前状态加入到容器中，按ID进行排序
+  
+  StatsTracker *statsTracker; //StatsTracker是一个用于跟踪各种统计信息的类，可以跟踪执行状态的数量、求解器的调用次数、路径覆盖率等
   TreeStreamWriter *pathWriter, *symPathWriter;
   SpecialFunctionHandler *specialFunctionHandler;
   TimerGroup timers;
@@ -138,7 +140,7 @@ private:
   /// happens with other states (that don't satisfy the seeds) depends
   /// on as-yet-to-be-determined flags.
   std::map<ExecutionState*, std::vector<SeedInfo> > seedMap;
-
+  
   /// Map of globals to their representative memory object.
   std::map<const llvm::GlobalValue*, MemoryObject*> globalObjects;
 

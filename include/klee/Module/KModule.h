@@ -40,19 +40,19 @@ namespace klee {
   class KModule;
   template<class T> class ref;
 
-  struct KFunction : public KCallable {
-    llvm::Function *function;
+  struct KFunction : public KCallable { //Kfunction应该是klee处理函数的数据结构，包括函数指针、参数数量、寄存器数量、函数中的指令数等
+    llvm::Function *function; //函数指针
 
-    unsigned numArgs, numRegisters;
+    unsigned numArgs, numRegisters; //参数数量，寄存器数量
 
-    unsigned numInstructions;
-    KInstruction **instructions;
+    unsigned numInstructions; //函数中的指令数量
+    KInstruction **instructions; //函数中的指令指针，有多个指令所以是二阶指针
 
-    std::map<llvm::BasicBlock*, unsigned> basicBlockEntry;
+    std::map<llvm::BasicBlock*, unsigned> basicBlockEntry; //基本块到unsigned的映射？
 
     /// Whether instructions in this function should count as
     /// "coverable" for statistics and search heuristics.
-    bool trackCoverage;
+    bool trackCoverage; //该函数内的指令覆盖信息是否被用于全局统计和搜索策略
 
     explicit KFunction(llvm::Function*, KModule*);
     KFunction(const KFunction &) = delete;
@@ -98,8 +98,8 @@ namespace klee {
     std::unique_ptr<llvm::DataLayout> targetData;
 
     // Our shadow versions of LLVM structures.
-    std::vector<std::unique_ptr<KFunction>> functions;
-    std::map<llvm::Function*, KFunction*> functionMap;
+    std::vector<std::unique_ptr<KFunction>> functions; //kfunction的容器，一个module可以有多个kfunction
+    std::map<llvm::Function*, KFunction*> functionMap; //函数的map，从function指向Kfunction
 
     // Functions which escape (may be called indirectly)
     // XXX change to KFunction

@@ -53,7 +53,7 @@ ObjectState *AddressSpace::getWriteable(const MemoryObject *mo,
 }
 
 /// 
-
+//将addr指向的对象解析为一个ObjectPair，前者是MemoryObject，后者是ObjectState
 bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr, 
                               ObjectPair &result) const {
   uint64_t address = addr->getZExtValue();

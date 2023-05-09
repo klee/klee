@@ -54,9 +54,9 @@ public:
   /// ModuleOptions - Module level options which can be set when
   /// registering a module with the interpreter.
   struct ModuleOptions {
-    std::string LibraryDir;
-    std::string EntryPoint;
-    std::string OptSuffix;
+    std::string LibraryDir; //lib库路径
+    std::string EntryPoint; //entrypoint
+    std::string OptSuffix; //类似64__Release+Asserts
     bool Optimize;
     bool CheckDivZero;
     bool CheckOvershift;

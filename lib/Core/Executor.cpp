@@ -525,7 +525,7 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
 }
 
 llvm::Module *
-Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
+Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules, //Executor应该是继承了Interpreter类
                     const ModuleOptions &opts) {
   assert(!kmodule && !modules.empty() &&
          "can only register one module"); // XXX gross
@@ -545,7 +545,7 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
   }
 
   // 1.) Link the modules together
-  while (kmodule->link(modules, opts.EntryPoint)) {
+  while (kmodule->link(modules, opts.EntryPoint)) { //链接modules
     // 2.) Apply different instrumentation
     kmodule->instrument(opts);
   }
@@ -1021,6 +1021,7 @@ ref<Expr> Executor::maxStaticPctChecks(ExecutionState &current,
   return condition;
 }
 
+//一个相当重要的函数，负责求解分支条件来确定两个子分支是否可行，并为可行的子分支创建state实例（具体内容to read）
 Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
                                    bool isInternal, BranchType reason) {
   Solver::Validity res;
@@ -1248,7 +1249,7 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
     doImpliedValueConcretization(state, condition, 
                                  ConstantExpr::alloc(1, Expr::Bool));
 }
-
+//获取state状态下指令ki的操作数数组中index位置的操作数的值，在klee中，这些操作数可能是常值或符号表达式
 const Cell& Executor::eval(KInstruction *ki, unsigned index, 
                            ExecutionState &state) const {
   assert(index < ki->inst->getNumOperands());
@@ -1258,13 +1259,13 @@ const Cell& Executor::eval(KInstruction *ki, unsigned index,
          "Invalid operand to eval(), not a value or constant!");
 
   // Determine if this is a constant or not.
-  if (vnumber < 0) {
+  if (vnumber < 0) { //负数说明是constant，取反-2
     unsigned index = -vnumber - 2;
-    return kmodule->constantTable[index];
-  } else {
+    return kmodule->constantTable[index]; //返回常值
+  } else { //正数说明该操作数是函数局部变量
     unsigned index = vnumber;
-    StackFrame &sf = state.stack.back();
-    return sf.locals[index];
+    StackFrame &sf = state.stack.back(); //当前正在执行的函数的栈帧sf
+    return sf.locals[index]; //返回sf中第index个局部变量的值
   }
 }
 
@@ -1427,12 +1428,12 @@ void Executor::stepInstruction(ExecutionState &state) {
   if (statsTracker)
     statsTracker->stepInstruction(state);
 
-  ++stats::instructions;
-  ++state.steppedInstructions;
+  ++stats::instructions; //这里应该是全局统计下klee执行的指令数+1
+  ++state.steppedInstructions; //当前状态调用stepInstruction函数的次数+1
   state.prevPC = state.pc;
-  ++state.pc;
+  ++state.pc; //pc++
 
-  if (stats::instructions == MaxInstructions)
+  if (stats::instructions == MaxInstructions) //用户指定的klee执行最大指令数，到了就停机，印证了stats是全局统计信息
     haltExecution = true;
 }
 
@@ -1682,25 +1683,26 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
   Instruction *i = ki->inst;
   if (isa_and_nonnull<DbgInfoIntrinsic>(i))
     return;
-  if (f && f->isDeclaration()) {
-    switch (f->getIntrinsicID()) {
+  if (f && f->isDeclaration()) { //判断f是否是一个declaration
+    switch (f->getIntrinsicID()) { //f是declaration，先判断f是否是一些Instrisic Function
     case Intrinsic::not_intrinsic: {
       // state may be destroyed by this call, cannot touch
       callExternalFunction(state, ki, kmodule->functionMap[f], arguments);
       break;
     }
     case Intrinsic::fabs: {
+      //这里主要应该就是将参数具体化，传给llvm::abs具体执行得到返回值，再将返回值绑定到指令的目标寄存器，这样指令的目标寄存器中就保存了abs的具体执行结果，供后续使用
       ref<ConstantExpr> arg =
-          toConstant(state, arguments[0], "floating point");
+          toConstant(state, arguments[0], "floating point"); //因为浮点数，将参数表达式具体化，保存到arg
       if (!fpWidthToSemantics(arg->getWidth()))
         return terminateStateOnExecError(
             state, "Unsupported intrinsic llvm.fabs call");
 
       llvm::APFloat Res(*fpWidthToSemantics(arg->getWidth()),
                         arg->getAPValue());
-      Res = llvm::abs(Res);
+      Res = llvm::abs(Res); //得到abs的返回值
 
-      bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt()));
+      bindLocal(ki, state, ConstantExpr::alloc(Res.bitcastToAPInt())); //将Res转换为APInt类型，绑定到指令的目标寄存器中
       break;
     }
 
@@ -1913,27 +1915,27 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
     // guess. This just done to avoid having to pass KInstIterator everywhere
     // instead of the actual instruction, since we can't make a KInstIterator
     // from just an instruction (unlike LLVM).
-    KFunction *kf = kmodule->functionMap[f];
+    KFunction *kf = kmodule->functionMap[f]; //f对应的KFunction
 
-    state.pushFrame(state.prevPC, kf);
-    state.pc = kf->instructions;
+    state.pushFrame(state.prevPC, kf); //将当前函数（caller）上下文环境保存到新的栈帧压栈
+    state.pc = kf->instructions; //pc指向被调函数的首指令地址
 
     if (statsTracker)
       statsTracker->framePushed(state, &state.stack[state.stack.size() - 2]);
 
     // TODO: support zeroext, signext, sret attributes
 
-    unsigned callingArgs = arguments.size();
-    unsigned funcArgs = f->arg_size();
-    if (!f->isVarArg()) {
-      if (callingArgs > funcArgs) {
+    unsigned callingArgs = arguments.size(); //实际的实参数量
+    unsigned funcArgs = f->arg_size(); //函数的形参数量
+    if (!f->isVarArg()) { //f是否使用了可变参数列表
+      if (callingArgs > funcArgs) { //实参多于形参会警告
         klee_warning_once(f, "calling %s with extra arguments.",
                           f->getName().data());
-      } else if (callingArgs < funcArgs) {
+      } else if (callingArgs < funcArgs) { //实参少于形参会报错终止
         terminateStateOnUserError(state, "calling function with too few arguments");
         return;
       }
-    } else {
+    } else { //使用可变参数列表
       if (callingArgs < funcArgs) {
         terminateStateOnUserError(state, "calling function with too few arguments");
         return;
@@ -1942,21 +1944,21 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       // Only x86-32 and x86-64 are supported
       Expr::Width WordSize = Context::get().getPointerWidth();
       assert(((WordSize == Expr::Int32) || (WordSize == Expr::Int64)) &&
-             "Unknown word size!");
+             "Unknown word size!"); //结合klee本身的注释，WordSize可能和OS型号有关，指的是寄存器位数
 
-      uint64_t size = 0; // total size of variadic arguments
+      uint64_t size = 0; // total size of variadic arguments 可变参数的字节数
       bool requires16ByteAlignment = false;
 
       uint64_t offsets[callingArgs]; // offsets of variadic arguments
-      uint64_t argWidth;             // width of current variadic argument
+      uint64_t argWidth;             // width of current variadic argument 当前可变参数宽度
 
       const CallBase &cb = cast<CallBase>(*i);
-      for (unsigned k = funcArgs; k < callingArgs; k++) {
-        if (cb.isByValArgument(k)) {
-          Type *t = cb.getParamByValType(k);
-          argWidth = kmodule->targetData->getTypeSizeInBits(t);
+      for (unsigned k = funcArgs; k < callingArgs; k++) { //这里是在遍历形参数量之后的可变参数
+        if (cb.isByValArgument(k)) { //这里是检查第k个可变参数是否按值传递的方式传递参数
+          Type *t = cb.getParamByValType(k); //返回可变参数所属类型的指针，保存到t变量中
+          argWidth = kmodule->targetData->getTypeSizeInBits(t); //argWidth就是t指向的类型的bit宽度，即当前可变参数bit宽度
         } else {
-          argWidth = arguments[k]->getWidth();
+          argWidth = arguments[k]->getWidth(); //如果不是值传递，则直接查看arguments[k]所指向对象的宽度即可
         }
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(11, 0)
@@ -1993,11 +1995,11 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
           size += llvm::alignTo(argWidth, WordSize) / 8;
         }
       }
-
-      StackFrame &sf = state.stack.back();
+      //上面这一堆复杂的逻辑应该只是为了进入被调函数做准备，考虑到可变参数传递不同于不同的形参传递，因此要计算可变参数的字节size、对齐方式等
+      StackFrame &sf = state.stack.back(); //sf是被调函数的栈帧
       MemoryObject *mo = sf.varargs =
           memory->allocate(size, true, false, &state, state.prevPC->inst,
-                           (requires16ByteAlignment ? 16 : 8));
+                           (requires16ByteAlignment ? 16 : 8)); //可变参数被保存到MemoryObject中
       if (!mo && size) {
         terminateStateOnExecError(state, "out of memory (varargs)");
         return;
@@ -2011,12 +2013,12 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
               0, "While allocating varargs: malloc did not align to 16 bytes.");
         }
 
-        ObjectState *os = bindObjectInState(state, mo, true);
-
+        ObjectState *os = bindObjectInState(state, mo, true); //在当前函数的栈帧中为可变参数的memoryObject绑定到state中的ObjectState，生成对应的符号化内存空间
+        //这里应该是将可变参数的符号表达式写入到ObjectState os中
         for (unsigned k = funcArgs; k < callingArgs; k++) {
-          if (!cb.isByValArgument(k)) {
-            os->write(offsets[k], arguments[k]);
-          } else {
+          if (!cb.isByValArgument(k)) { //检查参数k是否按值传递的方式传递
+            os->write(offsets[k], arguments[k]); //否
+          } else { //是
             ConstantExpr *CE = dyn_cast<ConstantExpr>(arguments[k]);
             assert(CE); // byval argument needs to be a concrete pointer
 
@@ -2036,7 +2038,7 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       bindArgument(kf, k, state, arguments[k]);
   }
 }
-
+//通过更改state的pc值来进行基本块转换
 void Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src, 
                                     ExecutionState &state) {
   // Note that in general phi nodes can reuse phi values from the same
@@ -2095,27 +2097,28 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
   switch (i->getOpcode()) {
     // Control flow
-  case Instruction::Ret: {
-    ReturnInst *ri = cast<ReturnInst>(i);
-    KInstIterator kcaller = state.stack.back().caller;
+  case Instruction::Ret: { //return语句
+    ReturnInst *ri = cast<ReturnInst>(i); //用llvm对应的ReturnInst包装一下指令i
+    //调用该函数的指令地址kcaller
+    KInstIterator kcaller = state.stack.back().caller;//stack.back()是调用栈栈顶，指向当前正在执行的函数帧，每个函数帧包含函数指针、函数的起始指令地址、函数参数、返回地址等，其中caller表示调用该函数的指令地址
     Instruction *caller = kcaller ? kcaller->inst : nullptr;
-    bool isVoidReturn = (ri->getNumOperands() == 0);
-    ref<Expr> result = ConstantExpr::alloc(0, Expr::Bool);
+    bool isVoidReturn = (ri->getNumOperands() == 0); //查看ret指令后是否有操作数
+    ref<Expr> result = ConstantExpr::alloc(0, Expr::Bool); //一个表达式result
     
-    if (!isVoidReturn) {
-      result = eval(ki, 0, state).value;
+    if (!isVoidReturn) { //不是返回void，说明返回了操作数
+      result = eval(ki, 0, state).value; //获取ki中第0个操作数的值，result是表达式类型，说明这里返回的是表达式（reasonable）
     }
     
-    if (state.stack.size() <= 1) {
+    if (state.stack.size() <= 1) { //若栈中的栈帧数为1，则当前函数ret后程序将进入初始栈帧，整个程序执行结束，则直接退出
       assert(!caller && "caller set on initial stack frame");
-      terminateStateOnExit(state);
-    } else {
+      terminateStateOnExit(state); //exit
+    } else { //栈桢数不为1，则弹出当前栈帧，回到caller的栈帧即可
       state.popFrame();
 
       if (statsTracker)
-        statsTracker->framePopped(state);
+        statsTracker->framePopped(state); //通知统计跟踪器statsTracker当前函数栈帧已经弹出
 
-      if (InvokeInst *ii = dyn_cast<InvokeInst>(caller)) {
+      if (InvokeInst *ii = dyn_cast<InvokeInst>(caller)) { //设置正确的pc值
         transferToBasicBlock(ii->getNormalDest(), caller->getParent(), state);
       } else {
         state.pc = kcaller;
@@ -2190,9 +2193,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     }      
     break;
   }
-  case Instruction::Br: {
-    BranchInst *bi = cast<BranchInst>(i);
-    if (bi->isUnconditional()) {
+  case Instruction::Br: { //跳转指令
+    BranchInst *bi = cast<BranchInst>(i); //类似的，用llvm对应的指令形式BranchInst包装一下指令i
+    if (bi->isUnconditional()) { //非条件跳转，直接进行基本块的切换
       transferToBasicBlock(bi->getSuccessor(0), bi->getParent(), state);
     } else {
       // FIXME: Find a way that we don't have this hidden dependency.
@@ -2200,7 +2203,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
              "Wrong operand index!");
       ref<Expr> cond = eval(ki, 0, state).value;
 
-      cond = optimizer.optimizeExpr(cond, false);
+      cond = optimizer.optimizeExpr(cond, false);//拿到分支条件cond并进行优化
+      //将分支条件（一个布尔表达式的并集）传入求解器进行求解，查看是否两个分支都可满足，可行的分支会返回对应的state实例
+      //statePair是一个ExecutionState的pair，应该保存两个分支对应的state分支
       Executor::StatePair branches = fork(state, cond, false, BranchType::Conditional);
 
       // NOTE: There is a hidden dependency here, markBranchVisited
@@ -2208,33 +2213,33 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // instruction (it reuses its statistic id). Should be cleaned
       // up with convenient instruction specific data.
       if (statsTracker && state.stack.back().kf->trackCoverage)
-        statsTracker->markBranchVisited(branches.first, branches.second);
+        statsTracker->markBranchVisited(branches.first, branches.second); //更新统计信息
 
-      if (branches.first)
+      if (branches.first) //不为空说明存在一个state实例，说明true分支可满足，跳转到true分支的基本块
         transferToBasicBlock(bi->getSuccessor(0), bi->getParent(), *branches.first);
-      if (branches.second)
+      if (branches.second) //类似，跳转到false分支的基本块
         transferToBasicBlock(bi->getSuccessor(1), bi->getParent(), *branches.second);
     }
     break;
   }
-  case Instruction::IndirectBr: {
+  case Instruction::IndirectBr: { //间接跳转
     // implements indirect branch to a label within the current function
     const auto bi = cast<IndirectBrInst>(i);
     auto address = eval(ki, 0, state).value;
     address = toUnique(state, address);
 
     // concrete address
-    if (const auto CE = dyn_cast<ConstantExpr>(address.get())) {
-      const auto bb_address = (BasicBlock *) CE->getZExtValue(Context::get().getPointerWidth());
-      transferToBasicBlock(bb_address, bi->getParent(), state);
+    if (const auto CE = dyn_cast<ConstantExpr>(address.get())) { //CE存储的是具体值地址
+      const auto bb_address = (BasicBlock *) CE->getZExtValue(Context::get().getPointerWidth()); //转换成对应的指针类型
+      transferToBasicBlock(bb_address, bi->getParent(), state); //跳转至基本块
       break;
     }
 
     // symbolic address
-    const auto numDestinations = bi->getNumDestinations();
-    std::vector<BasicBlock *> targets;
+    const auto numDestinations = bi->getNumDestinations();//跳转地址是符号值，调用getNumDestinations()获取所有可能的目标地址数量
+    std::vector<BasicBlock *> targets; //保存基本块地址的容器
     targets.reserve(numDestinations);
-    std::vector<ref<Expr>> expressions;
+    std::vector<ref<Expr>> expressions; //保存地址表达式的容器
     expressions.reserve(numDestinations);
 
     ref<Expr> errorCase = ConstantExpr::alloc(1, Expr::Bool);
@@ -2243,12 +2248,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     for (unsigned k = 0; k < numDestinations; ++k) {
       // filter duplicates
       const auto d = bi->getDestination(k);
-      if (destinations.count(d)) continue;
+      if (destinations.count(d)) continue; //过滤重复的目标地址
       destinations.insert(d);
 
       // create address expression
       const auto PE = Expr::createPointer(reinterpret_cast<std::uint64_t>(d));
-      ref<Expr> e = EqExpr::create(address, PE);
+      ref<Expr> e = EqExpr::create(address, PE); //e是目标地址d对应的符号表达式
 
       // exclude address from errorCase
       errorCase = AndExpr::create(errorCase, Expr::createIsZero(e));
@@ -2256,11 +2261,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // check feasibility
       bool result;
       bool success __attribute__((unused)) =
-          solver->mayBeTrue(state.constraints, e, result, state.queryMetaData);
+          solver->mayBeTrue(state.constraints, e, result, state.queryMetaData); //调用solver求解状态state下是否存在输入能满足地址表达式e，将求解结果保存为result
       assert(success && "FIXME: Unhandled solver failure");
       if (result) {
-        targets.push_back(d);
-        expressions.push_back(e);
+        targets.push_back(d); //保存目标地址
+        expressions.push_back(e); //保存目标地址对应的符号表达式
       }
     }
     // check errorCase feasibility
@@ -2274,7 +2279,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // fork states
     std::vector<ExecutionState *> branches;
-    branch(state, expressions, branches, BranchType::Indirect);
+    branch(state, expressions, branches, BranchType::Indirect); //为得到的符号表达式生成对应的state
 
     // terminate error state
     if (result) {
@@ -2284,17 +2289,17 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     // branch states to resp. target blocks
     assert(targets.size() == branches.size());
-    for (std::vector<ExecutionState *>::size_type k = 0; k < branches.size(); ++k) {
+    for (std::vector<ExecutionState *>::size_type k = 0; k < branches.size(); ++k) { //遍历这些states，转移至对应的目标地址基本块
       if (branches[k]) {
-        transferToBasicBlock(targets[k], bi->getParent(), *branches[k]);
+        transferToBasicBlock(targets[k], bi->getParent(), *branches[k]); 
       }
     }
 
     break;
   }
   case Instruction::Switch: {
-    SwitchInst *si = cast<SwitchInst>(i);
-    ref<Expr> cond = eval(ki, 0, state).value;
+    SwitchInst *si = cast<SwitchInst>(i); //llvm封装
+    ref<Expr> cond = eval(ki, 0, state).value; //拿到语句操作数的表达式cond，即switch语句条件
     BasicBlock *bb = si->getParent();
 
     cond = toUnique(state, cond);
@@ -2418,23 +2423,23 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     terminateStateOnExecError(state, "reached \"unreachable\" instruction");
     break;
 
-  case Instruction::Invoke:
+  case Instruction::Invoke: //当指令类型为Invoke或Call时，都会执行Call下的代码
   case Instruction::Call: {
     // Ignore debug intrinsic calls
     if (isa<DbgInfoIntrinsic>(i))
       break;
 
-    const CallBase &cb = cast<CallBase>(*i);
-    Value *fp = cb.getCalledOperand();
-    unsigned numArgs = cb.arg_size();
-    Function *f = getTargetFunction(fp);
+    const CallBase &cb = cast<CallBase>(*i);//将指令i包装成CallBase类型的对象cb
+    Value *fp = cb.getCalledOperand(); //从指令中提取出被调用值（指向被调函数的指针），将其包装成一个Value对象
+    unsigned numArgs = cb.arg_size(); //被调函数的参数数量
+    Function *f = getTargetFunction(fp); //将Value对象转换成被调函数指针
 
     // evaluate arguments
     std::vector< ref<Expr> > arguments;
-    arguments.reserve(numArgs);
+    arguments.reserve(numArgs); //分配numArgs大小的容器arguments，其中的每个元素都是表达式类型
 
     for (unsigned j=0; j<numArgs; ++j)
-      arguments.push_back(eval(ki, j+1, state).value);
+      arguments.push_back(eval(ki, j+1, state).value); //将ki中对应位置的操作数对应的符号表达式保存在arguments中，这里是从ki的index为1开始取操作数的，猜测index为0的操作数是函数指针
 
     if (auto* asmValue = dyn_cast<InlineAsm>(fp)) { //TODO: move to `executeCall`
       if (ExternalCalls != ExternalCallPolicy::None) {
@@ -2447,10 +2452,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     }
 
     if (f) {
-      const FunctionType *fType = f->getFunctionType();
+      const FunctionType *fType = f->getFunctionType(); //被调用的函数类型
       const FunctionType *fpType =
-          dyn_cast<FunctionType>(fp->getType()->getPointerElementType());
+          dyn_cast<FunctionType>(fp->getType()->getPointerElementType()); //调用的函数指针类型
 
+      //这里有点晕，但其目标应该是确定两个指针指向的函数类型FunctionType相同，避免出现一些未定义的行为
       // special case the call with a bitcast case
       if (fType != fpType) {
         assert(fType && fpType && "unable to get function type");
@@ -2482,8 +2488,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         }
       }
 
-      executeCall(state, ki, f, arguments);
+      executeCall(state, ki, f, arguments); //实际执行函数
     } else {
+      //取ki第0个操作数v，应该是函数指针的符号值
       ref<Expr> v = eval(ki, 0, state).value;
 
       ExecutionState *free = &state;
@@ -2496,7 +2503,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         v = optimizer.optimizeExpr(v, true);
         ref<ConstantExpr> value;
         bool success =
-            solver->getValue(free->constraints, v, value, free->queryMetaData);
+            solver->getValue(free->constraints, v, value, free->queryMetaData); //对函数指针符号地址进行优化和求解，得到具体的函数地址value
         assert(success && "FIXME: Unhandled solver failure");
         (void) success;
         StatePair res = fork(*free, EqExpr::create(v, value), true, BranchType::Call);
@@ -3326,18 +3333,21 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     break;
   }
 }
-
+/*
+更新程序状态集合states，将当前状态执行过程中收集到的addedStates和removedStates更新到searcher中，然后清空全局变量addedStates和removedStates
+本质上就是利用addedStates和removedStates来更新states
+*/
 void Executor::updateStates(ExecutionState *current) {
   if (searcher) {
     searcher->update(current, addedStates, removedStates);
   }
   
-  states.insert(addedStates.begin(), addedStates.end());
-  addedStates.clear();
+  states.insert(addedStates.begin(), addedStates.end()); //将addedStates加入states
+  addedStates.clear();//清空addstates
 
   for (std::vector<ExecutionState *>::iterator it = removedStates.begin(),
                                                ie = removedStates.end();
-       it != ie; ++it) {
+       it != ie; ++it) { //遍历removedStates，删除相关的seed信息和进程树节点
     ExecutionState *es = *it;
     std::set<ExecutionState*>::iterator it2 = states.find(es);
     assert(it2!=states.end());
@@ -3349,7 +3359,7 @@ void Executor::updateStates(ExecutionState *current) {
     processTree->remove(es->ptreeNode);
     delete es;
   }
-  removedStates.clear();
+  removedStates.clear();//清空removedStates
 }
 
 template <typename TypeIt>
@@ -3477,15 +3487,18 @@ void Executor::doDumpStates() {
   updateStates(nullptr);
 }
 
+/*
+klee的核心函数，包含一个解释器的循环
+*/
 void Executor::run(ExecutionState &initialState) {
   bindModuleConstants();
 
   // Delay init till now so that ticks don't accrue during optimization and such.
-  timers.reset();
+  timers.reset(); //这里应该是重置所有计时器
 
-  states.insert(&initialState);
+  states.insert(&initialState); //将初始状态添加到全局变量states中
 
-  if (usingSeeds) {
+  if (usingSeeds) { //有传入seed，暂时不看
     std::vector<SeedInfo> &v = seedMap[&initialState];
     
     for (std::vector<KTest*>::const_iterator it = usingSeeds->begin(), 
@@ -3548,30 +3561,30 @@ void Executor::run(ExecutionState &initialState) {
     }
   }
 
-  searcher = constructUserSearcher(*this);
+  searcher = constructUserSearcher(*this); //创建一个searcher实例
 
-  std::vector<ExecutionState *> newStates(states.begin(), states.end());
-  searcher->update(0, newStates, std::vector<ExecutionState *>());
+  std::vector<ExecutionState *> newStates(states.begin(), states.end()); //newstates是新添加的状态，这里应该只有initialstate
+  searcher->update(0, newStates, std::vector<ExecutionState *>()); //告知searcher有哪些新状态，有哪些状态被移除了，在执行初始状态时，当前状态为initialstate，没有移除的状态
 
   // main interpreter loop
-  while (!states.empty() && !haltExecution) {
-    ExecutionState &state = searcher->selectState();
-    KInstruction *ki = state.pc;
-    stepInstruction(state);
+  while (!states.empty() && !haltExecution) { //主解释器循环
+    ExecutionState &state = searcher->selectState(); //searcher根据搜索策略从states中选择一个待执行状态，klee有多种搜索策略，如DFS，BFS，Random等
+    KInstruction *ki = state.pc; //state的待执行指令
+    stepInstruction(state); //将state的pc+1，此时state中的pc保存的是待执行指令的下一条指令？
 
-    executeInstruction(state, ki);
-    timers.invoke();
+    executeInstruction(state, ki); //执行语句，内部是一个很大的switch语句，处理不同类型的指令
+    timers.invoke(); //调用所有计时器，更新它们的状态
     if (::dumpStates) dumpStates();
     if (::dumpPTree) dumpPTree();
 
-    updateStates(&state);
+    updateStates(&state); //更新执行状态集合states
 
     if (!checkMemoryUsage()) {
       // update searchers when states were terminated early due to memory pressure
       updateStates(nullptr);
     }
   }
-
+  //善后工作
   delete searcher;
   searcher = nullptr;
 
@@ -3859,7 +3872,7 @@ void Executor::callExternalFunction(ExecutionState &state,
                                     std::vector< ref<Expr> > &arguments) {
   // check if specialFunctionHandler wants it
   if (const auto *func = dyn_cast<KFunction>(callable)) {
-    if (specialFunctionHandler->handle(state, func->function, target, arguments))
+    if (specialFunctionHandler->handle(state, func->function, target, arguments)) //一些函数虽然只有声明，但是klee有对应的handler直接去模拟执行，例如klee_make_symbolic，klee_assume等
       return;
   }
 
@@ -3876,28 +3889,28 @@ void Executor::callExternalFunction(ExecutionState &state,
   // fp80's and SIMD vectors as parameters for external calls;
   // we could iterate through all the arguments first and determine the exact
   // size we need, but this is faster, and the memory usage isn't significant.
-  size_t allocatedBytes = Expr::MaxWidth / 8 * (arguments.size() + 1);
+  size_t allocatedBytes = Expr::MaxWidth / 8 * (arguments.size() + 1); //为每个参数（包括返回值）返回128bits的内存，由于每个参数最多占用两个 uint64_t 的大小（即 16 字节），因此分配的大小应该足以容纳所有参数。
   uint64_t *args = (uint64_t*) alloca(allocatedBytes);
   memset(args, 0, allocatedBytes);
   unsigned wordIndex = 2;
   for (std::vector<ref<Expr> >::iterator ai = arguments.begin(), 
-       ae = arguments.end(); ai!=ae; ++ai) {
+       ae = arguments.end(); ai!=ae; ++ai) { //遍历参数，将参数具体化并填充到args中
     if (ExternalCalls == ExternalCallPolicy::All) { // don't bother checking uniqueness
-      *ai = optimizer.optimizeExpr(*ai, true);
+      *ai = optimizer.optimizeExpr(*ai, true); //优化参数的符号表达式
       ref<ConstantExpr> ce;
       bool success =
-          solver->getValue(state.constraints, *ai, ce, state.queryMetaData);
-      assert(success && "FIXME: Unhandled solver failure");
+          solver->getValue(state.constraints, *ai, ce, state.queryMetaData);//根据状态中的路径约束为符号参数找到一个符合约束的具体值，保存到ce中
+      assert(success && "FIXME: Unhandled solver failure"); //求解失败则assert退出
       (void) success;
-      ce->toMemory(&args[wordIndex]);
+      ce->toMemory(&args[wordIndex]); //将ce保存到args中，因为args是一个指向uint64_t的指针，每个uint64_t包含8个字节，所以偏移量是以字（两字节）为单位的
       ObjectPair op;
       // Checking to see if the argument is a pointer to something
       if (ce->getWidth() == Context::get().getPointerWidth() &&
-          state.addressSpace.resolveOne(ce, op)) {
-        op.second->flushToConcreteStore(solver.get(), state);
+          state.addressSpace.resolveOne(ce, op)) { //参数ce是一个指针，将指针指向的对象解析为一个ObjectPair，前者是MemoryObject，后者是ObjectState
+        op.second->flushToConcreteStore(solver.get(), state); //也是具体化操作
       }
       wordIndex += (ce->getWidth()+63)/64;
-    } else {
+    } else { //ExternalCalls=concrete的情况，只允许参数为具体值时调用外部函数
       ref<Expr> arg = toUnique(state, *ai);
       if (ConstantExpr *ce = dyn_cast<ConstantExpr>(arg)) {
         // fp80 must be aligned to 16 according to the System V AMD 64 ABI
@@ -3907,7 +3920,7 @@ void Executor::callExternalFunction(ExecutionState &state,
         // XXX kick toMemory functions from here
         ce->toMemory(&args[wordIndex]);
         wordIndex += (ce->getWidth()+63)/64;
-      } else {
+      } else { //如果某个参数ce不是ConstantExpr则直接报错结束执行，因为这个参数涉及符号表达式
         terminateStateOnExecError(state,
                                   "external call with symbolic argument: " +
                                   callable->getName());
@@ -3977,14 +3990,14 @@ void Executor::callExternalFunction(ExecutionState &state,
       if (i != arguments.size()-1)
         os << ", ";
     }
-    os << ") at " << state.pc->getSourceLocation();
+    os << ") at " << state.pc->getSourceLocation(); //打印一些调用信息
     
     if (AllExternalWarnings)
       klee_warning("%s", os.str().c_str());
     else
       klee_warning_once(callable->getValue(), "%s", os.str().c_str());
   }
-
+  //将函数指针、调用函数的指令以及具体值参数集合args传入executeCall进行实际执行
   bool success = externalDispatcher->executeCall(callable, target->inst, args);
   if (!success) {
     terminateStateOnExecError(state,
@@ -4012,12 +4025,12 @@ void Executor::callExternalFunction(ExecutionState &state,
   state.addressSpace.copyInConcrete(result.first, result.second,
                                     (uint64_t)&error);
 #endif
-
+  //这里应该是将函数调用的返回值绑定到调用指令中，对于返回类型不为void的外部函数，必须将返回结果保存
   Type *resultType = target->inst->getType();
   if (resultType != Type::getVoidTy(kmodule->module->getContext())) {
     ref<Expr> e = ConstantExpr::fromMemory((void*) args, 
-                                           getWidthForLLVMType(resultType));
-    bindLocal(target, state, e);
+                                           getWidthForLLVMType(resultType)); //表达式e是ConstantExpr
+    bindLocal(target, state, e); //执行状态state下指令target获得的函数调用返回值为e
   }
 }
 
@@ -4050,6 +4063,9 @@ ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
   return res;
 }
 
+/**
+ * 为MemoryObject对象创建并绑定一个state下的ObjectState对象
+*/
 ObjectState *Executor::bindObjectInState(ExecutionState &state, 
                                          const MemoryObject *mo,
                                          bool isLocal,
@@ -4498,19 +4514,20 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
   }
 }
 
-/***/
-
+/**
+ * 处理待测程序的入口函数，做一些参数的相关处理，然后做一些关于初始状态的处理后使用run(*state)来运行状态，在运行结束后做一些回收工作
+*/
 void Executor::runFunctionAsMain(Function *f,
 				 int argc,
 				 char **argv,
 				 char **envp) {
-  std::vector<ref<Expr> > arguments;
+  std::vector<ref<Expr> > arguments; //arguments是一个存储符号表达式Expr的容器，其中的每个成员都是一个Expr，ref<>用来进行表达式的引用计数从而管理内存空间
 
   // force deterministic initialization of memory objects
   srand(1);
   srandom(1);
   
-  MemoryObject *argvMO = 0;
+  MemoryObject *argvMO = 0; //表示分配在某个地址上的对象
 
   // In order to make uclibc happy and be closer to what the system is
   // doing we lay out the environments at the end of the argv array
@@ -4521,48 +4538,50 @@ void Executor::runFunctionAsMain(Function *f,
   for (envc=0; envp[envc]; ++envc) ;
 
   unsigned NumPtrBytes = Context::get().getPointerWidth() / 8;
-  KFunction *kf = kmodule->functionMap[f];
+  KFunction *kf = kmodule->functionMap[f]; //functionMap维护从function到Kfunction的映射，得到main函数对应的KFunction kf
   assert(kf);
   Function::arg_iterator ai = f->arg_begin(), ae = f->arg_end();
-  if (ai!=ae) {
+  //为argc个参数以及envc个环境变量分配内存空间
+  if (ai!=ae) { //1个参数
     arguments.push_back(ConstantExpr::alloc(argc, Expr::Int32));
-    if (++ai!=ae) {
+    if (++ai!=ae) { //2个参数
       Instruction *first = &*(f->begin()->begin());
       argvMO = memory->allocate((argc + 1 + envc + 1 + 1) * NumPtrBytes,
                                 /*isLocal=*/false, /*isGlobal=*/true,
                                 /*state=*/nullptr, /*allocSite=*/first,
-                                /*alignment=*/8);
+                                /*alignment=*/8); //分配空间
 
       if (!argvMO)
         klee_error("Could not allocate memory for function arguments");
 
       arguments.push_back(argvMO->getBaseExpr());
 
-      if (++ai!=ae) {
+      if (++ai!=ae) { //3个参数
         uint64_t envp_start = argvMO->address + (argc+1)*NumPtrBytes;
         arguments.push_back(Expr::createPointer(envp_start));
 
-        if (++ai!=ae)
+        if (++ai!=ae) //4个参数，报错，说明klee不允许main函数的参数数量超过三个？
           klee_error("invalid main function (expect 0-3 arguments)");
       }
     }
   }
 
-  ExecutionState *state = new ExecutionState(kmodule->functionMap[f], memory);
+  ExecutionState *state = new ExecutionState(kmodule->functionMap[f], memory); //基于main函数的Kfunction创建初始状态intial state，每个state都有寄存器、栈、堆、程序计数器pc和路径条件等信息
 
   if (pathWriter) 
-    state->pathOS = pathWriter->open();
+    state->pathOS = pathWriter->open(); //初始化记录concolic执行路径的流，以后理解
   if (symPathWriter) 
-    state->symPathOS = symPathWriter->open();
+    state->symPathOS = symPathWriter->open(); //初始化单纯符号执行路径的流，以后理解
 
 
-  if (statsTracker)
+  if (statsTracker) //记录符号执行时的状态转换，参数 parentFrame为0, 说明是初始状态
     statsTracker->framePushed(*state, 0);
 
   assert(arguments.size() == f->arg_size() && "wrong number of arguments");
   for (unsigned i = 0, e = f->arg_size(); i != e; ++i)
-    bindArgument(kf, i, *state, arguments[i]);
+    bindArgument(kf, i, *state, arguments[i]); //将参数与当前状态绑定
 
+  // 将参数用 MemoryObject 和 ObjectState 等类进行封装, 以便klee使用
   if (argvMO) {
     ObjectState *argvOS = bindObjectInState(*state, argvMO, false);
 
@@ -4590,13 +4609,14 @@ void Executor::runFunctionAsMain(Function *f,
     }
   }
   
-  initializeGlobals(*state);
+  initializeGlobals(*state); //初始化一些state相关的全局变量
 
-  processTree = std::make_unique<PTree>(state);
-  run(*state);
-  processTree = nullptr;
+  processTree = std::make_unique<PTree>(state); //以初始状态所在的当前进程作为根节点创建进程树processTree
+  run(*state); //核心函数，从初始状态开始执行
+  processTree = nullptr; //执行结束后清空进程树
 
   // hack to clear memory objects
+  //执行结束后的一些内存善后
   delete memory;
   memory = new MemoryManager(NULL);
 

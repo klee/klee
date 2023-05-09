@@ -70,6 +70,7 @@ namespace klee {
 
     /// Resolve address to an ObjectPair in result.
     /// \return true iff an object was found.
+    /// 将addr指向的对象解析为一个ObjectPair，前者是MemoryObject，后者是ObjectState
     bool resolveOne(const ref<ConstantExpr> &address, 
                     ObjectPair &result) const;
 

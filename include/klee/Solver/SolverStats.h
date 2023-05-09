@@ -13,7 +13,7 @@
 #include "klee/Statistics/Statistic.h"
 
 namespace klee {
-namespace stats {
+namespace stats { //包含对klee的统计信息进行跟踪的各种函数和变量
 
   extern Statistic cexCacheTime;
   extern Statistic solverQueries;
