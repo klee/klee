@@ -53,7 +53,7 @@ namespace klee {
 class ExternalDispatcherImpl {
 private:
   typedef std::map<const llvm::Instruction *, llvm::Function *> dispatchers_ty;
-  dispatchers_ty dispatchers;
+  dispatchers_ty dispatchers; //dispatchers是一个从Instruction指向Function的map
   llvm::Function *createDispatcher(KCallable *target, llvm::Instruction *i,
                                    llvm::Module *module);
   llvm::ExecutionEngine *executionEngine;
@@ -162,13 +162,14 @@ ExternalDispatcherImpl::~ExternalDispatcherImpl() {
   // we don't need to delete any of them.
 }
 
+//利用一个map来保存那些JIT已经建模处理过的指令，从而避免重复处理之前已经建模过的指令
 bool ExternalDispatcherImpl::executeCall(KCallable *callable, Instruction *i,
                                          uint64_t *args) {
   ++stats::externalCalls;
   dispatchers_ty::iterator it = dispatchers.find(i);
   if (it != dispatchers.end()) {
     // Code already JIT'ed for this
-    return runProtectedCall(it->second, args);
+    return runProtectedCall(it->second, args); //如果dispatchers中保存了指令i对应的函数，就直接运行该函数，it->second是函数指针，args是具体值参数
   }
 
   // Code for this not JIT'ed. Do this now.
@@ -189,24 +190,26 @@ bool ExternalDispatcherImpl::executeCall(KCallable *callable, Instruction *i,
   Module *dispatchModule = NULL;
   // The MCJIT generates whole modules at a time so for every call that we
   // haven't made before we need to create a new Module.
-  dispatchModule = new Module(getFreshModuleID(), ctx);
-  dispatcher = createDispatcher(callable, i, dispatchModule);
-  dispatchers.insert(std::make_pair(i, dispatcher));
+  // 这里的意思应该是MCJIT一次为待测程序生成全部的modules，所以对于那些之前未处理过的新的函数调用，要生成新的module
+  dispatchModule = new Module(getFreshModuleID(), ctx); //生成新的Mudule对象，为其分配一个唯一的module ID
+  dispatcher = createDispatcher(callable, i, dispatchModule); //在dispatchModule中为callable生成一个代理stub函数，里面可能只有一些最基本的内容，用dispatcher指向这个stub函数
+  dispatchers.insert(std::make_pair(i, dispatcher)); //在map中更新指令i与函数dispatcher的映射
 
   // Force the JIT execution engine to go ahead and build the function. This
   // ensures that any errors or assertions in the compilation process will
   // trigger crashes instead of being caught as aborts in the external
   // function.
+  //按注释理解，这里dispatcher生成成功后，MCJIT会build这个stub函数，生成可执行代码
   if (dispatcher) {
     // The dispatchModule is now ready so tell MCJIT to generate the code for
     // it.
     auto dispatchModuleUniq = std::unique_ptr<Module>(dispatchModule);
     executionEngine->addModule(
-        std::move(dispatchModuleUniq)); // MCJIT takes ownership
+        std::move(dispatchModuleUniq)); // MCJIT takes ownership 将dispatchModule添加到MCJIT中，使MCJIT接管对dispatchModule的管理
     // Force code generation
     uint64_t fnAddr =
-        executionEngine->getFunctionAddress(dispatcher->getName().str());
-    executionEngine->finalizeObject();
+        executionEngine->getFunctionAddress(dispatcher->getName().str()); //这里应该是stub函数的函数名fnName，通过它得到函数地址
+    executionEngine->finalizeObject(); //将dispatcher对应的模块中的IR代码生成为可执行代码
     assert(fnAddr && "failed to get function address");
     (void)fnAddr;
   } else {
@@ -218,16 +221,16 @@ bool ExternalDispatcherImpl::executeCall(KCallable *callable, Instruction *i,
 
 // FIXME: This is not reentrant.
 static uint64_t *gTheArgsP;
-bool ExternalDispatcherImpl::runProtectedCall(Function *f, uint64_t *args) {
+bool ExternalDispatcherImpl::runProtectedCall(Function *f, uint64_t *args) { //在一个受保护的环境中调用JIT编译后的函数
   struct sigaction segvAction, segvActionOld;
   bool res;
 
   if (!f)
     return false;
 
-  std::vector<GenericValue> gvArgs;
-  gTheArgsP = args;
-
+  std::vector<GenericValue> gvArgs; //genericValue是llvm的类，表示通用的值，可以在JIT编译器中传递和存储不同类型的值，例如整数、浮点数、指针等，而不需要明确指定具体的类型。
+  gTheArgsP = args;//将args保存到全局变量gTheArgsP
+  //这一段都是对系统信号进行处理，本质上应该是为了为实际执行函数调用准备环境
   segvAction.sa_handler = nullptr;
   sigemptyset(&(segvAction.sa_mask));
   sigaddset(&(segvAction.sa_mask), SIGSEGV);
@@ -239,7 +242,7 @@ bool ExternalDispatcherImpl::runProtectedCall(Function *f, uint64_t *args) {
     res = false;
   } else {
     errno = lastErrno;
-    executionEngine->runFunction(f, gvArgs);
+    executionEngine->runFunction(f, gvArgs); //调用llvm内部的函数来执行函数，传入一个经过JIT编译后的LLVM函数f，以及f所需的参数集合
     // Explicitly acquire errno information
     lastErrno = errno;
     res = true;
@@ -259,6 +262,8 @@ bool ExternalDispatcherImpl::runProtectedCall(Function *f, uint64_t *args) {
 // the special cases that the JIT knows how to directly call. If this is not
 // done, then the jit will end up generating a nullary stub just to call our
 // stub, for every single function call.
+// 个人理解，这个函数的主要作用就是利用被调函数target的一系列信息创建一个stub函数，用来代理target函数的调用
+// 在函数内会创建一个新的函数并绑定到模块module中，并为其添加一些基本的内容，最终返回指向这个新函数的指针
 Function *ExternalDispatcherImpl::createDispatcher(KCallable *target,
                                                    Instruction *inst,
                                                    Module *module) {
@@ -274,14 +279,14 @@ Function *ExternalDispatcherImpl::createDispatcher(KCallable *target,
   // The module identifier is included because for the MCJIT we need
   // unique function names across all `llvm::Modules`s.
   std::string fnName =
-      "dispatcher_" + target->getName().str() + module->getModuleIdentifier();
+      "dispatcher_" + target->getName().str() + module->getModuleIdentifier(); //创建一个独一无二的函数名
   Function *dispatcher =
       Function::Create(FunctionType::get(Type::getVoidTy(ctx), nullary, false),
-                       GlobalVariable::ExternalLinkage, fnName, module);
+                       GlobalVariable::ExternalLinkage, fnName, module); //创建一个新的Function对象，名为fnName，将它添加到模块module中，链接类型为ExternalLinkage
 
-  BasicBlock *dBB = BasicBlock::Create(ctx, "entry", dispatcher);
+  BasicBlock *dBB = BasicBlock::Create(ctx, "entry", dispatcher);//在dispatcher指向的函数（fnName）中创建一个名为entry的基本块
 
-  llvm::IRBuilder<> Builder(dBB);
+  llvm::IRBuilder<> Builder(dBB); //使用llvm的IRBuilder类来生成目标代码
   // Get a Value* for &gTheArgsP, as an i64**.
   auto argI64sp = Builder.CreateIntToPtr(
       ConstantInt::get(Type::getInt64Ty(ctx), (uintptr_t)(void *)&gTheArgsP),
@@ -317,26 +322,27 @@ Function *ExternalDispatcherImpl::createDispatcher(KCallable *target,
     unsigned argSize = argTy->getPrimitiveSizeInBits();
     idx += ((!!argSize ? argSize : 64) + 63) / 64;
   }
+  //上面的代码应该是根据参数类型和参数个数将参数从调用指令中提取出来，写入全局变量gTheArgsP
 
   llvm::CallInst *result;
   if (auto* func = dyn_cast<KFunction>(target)) {
     auto dispatchTarget = module->getOrInsertFunction(target->getName(), FTy,
                                                       func->function->getAttributes());
     result = Builder.CreateCall(dispatchTarget,
-                                llvm::ArrayRef<Value *>(args, args + i));
+                                llvm::ArrayRef<Value *>(args, args + i));//创建一个调用指令来调用目标函数
   } else if (auto* asmValue = dyn_cast<KInlineAsm>(target)) {
     result = Builder.CreateCall(asmValue->getInlineAsm(),
                                 llvm::ArrayRef<Value *>(args, args + i));
   } else {
     assert(0 && "Unhandled KCallable derived class");
   }
-  if (result->getType() != Type::getVoidTy(ctx)) {
+  if (result->getType() != Type::getVoidTy(ctx)) { //如果目标函数的返回类型不是void，将返回值也保存到全局变量gTheArgsP
     auto resp = Builder.CreateBitCast(
         argI64s, PointerType::getUnqual(result->getType()));
     Builder.CreateStore(result, resp);
   }
 
-  Builder.CreateRetVoid();
+  Builder.CreateRetVoid(); //创建一个空的返回指令来结束dispatcher函数
 
   delete[] args;
 

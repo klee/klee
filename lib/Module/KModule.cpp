@@ -287,7 +287,7 @@ void KModule::optimiseAndPrepare(
 
 void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
   if (OutputSource || forceSourceOutput) {
-    std::unique_ptr<llvm::raw_fd_ostream> os(ih->openOutputFile("assembly.ll"));
+    std::unique_ptr<llvm::raw_fd_ostream> os(ih->openOutputFile("assembly.ll")); //输出ll文件（human readable）
     assert(os && !os->has_error() && "unable to open source output");
     *os << *module;
   }
@@ -300,24 +300,24 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
   /* Build shadow structures */
 
   infos = std::unique_ptr<InstructionInfoTable>(
-      new InstructionInfoTable(*module.get()));
+      new InstructionInfoTable(*module.get())); //将module中的指令信息保存成一张指令-信息表infos
 
   std::vector<Function *> declarations;
 
-  for (auto &Function : *module) {
+  for (auto &Function : *module) { //遍历完整module中的所有函数，将只有声明而无定义的那些保存到容器declarations中
     if (Function.isDeclaration()) {
       declarations.push_back(&Function);
     }
-
+    //处理有实现的函数，将Function映射到Kfuction
     auto kf = std::unique_ptr<KFunction>(new KFunction(&Function, this));
 
-    for (unsigned i=0; i<kf->numInstructions; ++i) {
+    for (unsigned i=0; i<kf->numInstructions; ++i) { //对函数内部的Instruction做遍历
       KInstruction *ki = kf->instructions[i];
-      ki->info = &infos->getInfo(*ki->inst);
+      ki->info = &infos->getInfo(*ki->inst); //从infos表中取出Instruction的info，保存到ki中
     }
 
-    functionMap.insert(std::make_pair(&Function, kf.get()));
-    functions.push_back(std::move(kf));
+    functionMap.insert(std::make_pair(&Function, kf.get())); //functionMap维护从function到kfunction的map
+    functions.push_back(std::move(kf)); //容器functions保存这些有定义的kfunction
   }
 
   /* Compute various interesting properties */
