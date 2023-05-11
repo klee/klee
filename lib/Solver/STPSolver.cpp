@@ -159,7 +159,7 @@ STPSolverImpl::STPSolverImpl(bool useForkedSTP, bool optimizeDivides)
     SATName = SATNames[SAT::RISS];
 
   if (!specifiedOnCommandLine || SATSolverAvailable) {
-    klee_message("SAT solver: %s", SATName.c_str());
+    klee_message("SAT solver: %s", SATName.c_str()); //打印使用的SAT solver， by wqc
   } else {
     klee_warning("%s not supported by STP", expectedSATName.c_str());
     klee_message("Fallback SAT solver: %s", SATName.c_str());

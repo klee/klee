@@ -407,7 +407,7 @@ KleeHandler::KleeHandler(int argc, char **argv)
         klee_error("cannot create output directory: index out of range");
   }
 
-  klee_message("output directory is \"%s\"", m_outputDirectory.c_str());
+  klee_message("output directory is \"%s\"", m_outputDirectory.c_str()); //打印output directory
 
   // open warnings.txt
   std::string file_path = getOutputFilename("warnings.txt");
@@ -1220,12 +1220,21 @@ int main(int argc, char **argv, char **envp) { //klee的入口函数
   
   // Load the bytecode...
   std::string errorMsg;
-  LLVMContext ctx;
+  LLVMContext ctx; //LLVMContext包含并管理了LLVM中基础的全局数据，如类型(Type)、标准化的常量表等
   std::vector<std::unique_ptr<llvm::Module>> loadedModules; //一个module容器，保存输入的InputFile bc文件中包含的所有module
   if (!klee::loadFile(InputFile, ctx, loadedModules, errorMsg)) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                errorMsg.c_str());
   }
+  /**
+   * 这一段是为了看各个loadFile生成的loadedModules中各个module的id, by wqc
+  */
+  klee_message("the size of loadedModules is %lu", loadedModules.size());
+  for(unsigned int i = 0; i < loadedModules.size(); i++) {
+    llvm::Module *module = loadedModules[i].get();
+    klee_message("name of loadedModules[%d] is %s", i, module->getModuleIdentifier().c_str());
+  }
+
   // Load and link the whole files content. The assumption is that this is the
   // application under test.
   // Nothing gets removed in the first place.
@@ -1261,7 +1270,8 @@ int main(int argc, char **argv, char **envp) { //klee的入口函数
   loadedModules.emplace_back(std::move(M));
 
   std::string LibraryDir = KleeHandler::getRunTimeLibraryPath(argv[0]); //获取路径path，在本机上是/tmp/klee_build110stp_z3/runtime/lib/
-  Interpreter::ModuleOptions Opts(LibraryDir.c_str(), EntryPoint, opt_suffix, //将获取的信息赋值给ModuleOptions，包括lib库路径、程序入口和机器位数
+  klee_message("EntryPoint is %s", EntryPoint.c_str()); //打印EntryPoint，by wqc
+  Interpreter::ModuleOptions Opts(LibraryDir.c_str(), EntryPoint, opt_suffix, //将获取的信息赋值给ModuleOptions Opts，包括lib库路径、程序入口（用户命令行参数指定，initial为main）和机器位数
                                   /*Optimize=*/OptimizeModule,
                                   /*CheckDivZero=*/CheckDivZero,
                                   /*CheckOvershift=*/CheckOvershift);
@@ -1386,7 +1396,7 @@ int main(int argc, char **argv, char **envp) { //klee的入口函数
     pArg[size - 1] = 0;
 
     pArgv[i] = pArg;
-    klee_message("the pArgv[%d] is %s", i, pArgv[i]); //打印pArgv
+    klee_message("the pArgv[%d] is %s", i, pArgv[i]); //打印pArgv, by wqc
   }
   
   std::vector<bool> replayPath;
@@ -1402,7 +1412,6 @@ int main(int argc, char **argv, char **envp) { //klee的入口函数
     theInterpreter = Interpreter::create(ctx, IOpts, handler); //实例化一个interpreter对象
   assert(interpreter);
   handler->setInterpreter(interpreter);
-
   for (int i=0; i<argc; i++) {
     handler->getInfoStream() << argv[i] << (i+1<argc ? " ":"\n");
   }
@@ -1410,7 +1419,6 @@ int main(int argc, char **argv, char **envp) { //klee的入口函数
 
   // Get the desired main function.  klee_main initializes uClibc
   // locale and other data and then calls main.
-
   auto finalModule = interpreter->setModule(loadedModules, Opts); //对函数进行一些初始化赋值操作，返回完整的finalModule的指针
   Function *mainFn = finalModule->getFunction(EntryPoint); //找到程序的主函数入口
   if (!mainFn) {

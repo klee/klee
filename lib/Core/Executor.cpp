@@ -524,8 +524,9 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
   }
 }
 
+//Interpreter类中声明的函数被Executor类实现，说明Executor继承了Interpreter类
 llvm::Module *
-Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules, //Executor应该是继承了Interpreter类
+Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules, 
                     const ModuleOptions &opts) {
   assert(!kmodule && !modules.empty() &&
          "can only register one module"); // XXX gross
@@ -535,9 +536,9 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules, //Execu
   // Preparing the final module happens in multiple stages
 
   // Link with KLEE intrinsics library before running any optimizations
-  SmallString<128> LibPath(opts.LibraryDir);
+  SmallString<128> LibPath(opts.LibraryDir); //在本机上类似/tmp/klee_build110stp_z3/runtime/lib/
   llvm::sys::path::append(LibPath,
-                          "libkleeRuntimeIntrinsic" + opts.OptSuffix + ".bca");
+                          "libkleeRuntimeIntrinsic" + opts.OptSuffix + ".bca"); //在本机上类似/tmp/klee_build110stp_z3/runtime/lib/libkleeRuntimeIntrinsic/64_Release.bca
   std::string error;
   if (!klee::loadFile(LibPath.c_str(), modules[0]->getContext(), modules,
                       error)) {
@@ -549,6 +550,7 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules, //Execu
     // 2.) Apply different instrumentation
     kmodule->instrument(opts);
   }
+  
 
   // 3.) Optimise and prepare for KLEE
 

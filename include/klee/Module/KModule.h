@@ -92,14 +92,14 @@ namespace klee {
   };
 
 
-  class KModule {
+  class KModule { //KModule是klee对module进行建模的数据结构，保存了模块中的KFunction容器，从Function指向KFunction的map等
   public:
     std::unique_ptr<llvm::Module> module;
     std::unique_ptr<llvm::DataLayout> targetData;
 
     // Our shadow versions of LLVM structures.
-    std::vector<std::unique_ptr<KFunction>> functions; //kfunction的容器，一个module可以有多个kfunction
-    std::map<llvm::Function*, KFunction*> functionMap; //函数的map，从function指向Kfunction
+    std::vector<std::unique_ptr<KFunction>> functions; //KFunction的容器，一个module可以有多个kfunction
+    std::map<llvm::Function*, KFunction*> functionMap; //函数的map，从Function指向KFunction
 
     // Functions which escape (may be called indirectly)
     // XXX change to KFunction
