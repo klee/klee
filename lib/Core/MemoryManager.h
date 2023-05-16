@@ -38,7 +38,7 @@ private:
   kdalloc::Allocator constantsAllocator;
 
 public:
-  MemoryManager(ArrayCache *arrayCache);
+  explicit MemoryManager(ArrayCache *arrayCache);
   ~MemoryManager();
 
   kdalloc::AllocatorFactory heapFactory;
