@@ -10,6 +10,7 @@ add_library(kleeSupport
   CompressionStream.cpp
   ErrorHandling.cpp
   FileHandling.cpp
+  KConfig.cpp
   MemoryUsage.cpp
   PrintVersion.cpp
   RNG.cpp
