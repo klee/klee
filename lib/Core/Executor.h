@@ -111,7 +111,7 @@ private:
 
   ExternalDispatcher *externalDispatcher;
   std::unique_ptr<TimingSolver> solver;
-  MemoryManager *memory;
+  std::unique_ptr<MemoryManager> memory;
   std::set<ExecutionState*, ExecutionStateIDCompare> states;
   StatsTracker *statsTracker;
   TreeStreamWriter *pathWriter, *symPathWriter;
