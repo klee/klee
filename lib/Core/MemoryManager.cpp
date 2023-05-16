@@ -15,6 +15,7 @@
 
 #include "klee/Expr/Expr.h"
 #include "klee/Support/ErrorHandling.h"
+#include "klee/Support/KConfig.h"
 
 #include "klee/Support/CompilerWarning.h"
 DISABLE_WARNING_PUSH
@@ -250,6 +251,29 @@ MemoryManager::MemoryManager(ArrayCache *_arrayCache)
                    reinterpret_cast<std::uintptr_t>(
                        factory.get().getMapping().getBaseAddress()),
                    size / (1024 * 1024 * 1024));
+
+      if (segment == "globals") {
+        KConfig::get().register_option(
+            "kdalloc-globals-start-address",
+            std::to_string(reinterpret_cast<std::uintptr_t>(
+                factory.get().getMapping().getBaseAddress())));
+      } else if (segment == "constants") {
+        KConfig::get().register_option(
+            "kdalloc-constants-start-address",
+            std::to_string(reinterpret_cast<std::uintptr_t>(
+                factory.get().getMapping().getBaseAddress())));
+      } else if (segment == "heap") {
+        KConfig::get().register_option(
+            "kdalloc-heap-start-address",
+            std::to_string(reinterpret_cast<std::uintptr_t>(
+                factory.get().getMapping().getBaseAddress())));
+      } else if (segment == "stack") {
+        KConfig::get().register_option(
+            "kdalloc-stack-start-address",
+            std::to_string(reinterpret_cast<std::uintptr_t>(
+                factory.get().getMapping().getBaseAddress())));
+      }
+
       if (allocator) {
         *allocator = factory.get().makeAllocator();
       }
