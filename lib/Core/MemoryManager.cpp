@@ -48,55 +48,93 @@ llvm::cl::opt<bool, true> DeterministicAllocation(
     "kdalloc",
     llvm::cl::desc("Allocate memory deterministically (default=true)"),
     llvm::cl::location(MemoryManager::isDeterministic), llvm::cl::init(true),
-    llvm::cl::cat(MemoryCat));
+    llvm::cl::cat(MemoryCat), llvm::cl::callback([](const bool &value) {
+      KConfig::get().register_option("kdalloc", std::to_string(value));
+    }));
 
 llvm::cl::opt<bool> DeterministicAllocationMarkAsUnneeded(
     "kdalloc-mark-as-unneeded",
     llvm::cl::desc("Mark allocations as unneeded after external function calls "
                    "(default=true)"),
-    llvm::cl::init(true), llvm::cl::cat(MemoryCat));
+    llvm::cl::init(true), llvm::cl::cat(MemoryCat),
+    llvm::cl::callback([](const bool &value) {
+      KConfig::get().register_option("kdalloc-mark-as-unneeded",
+                                     std::to_string(value));
+    }));
 
 llvm::cl::opt<unsigned> DeterministicAllocationGlobalsSize(
     "kdalloc-globals-size",
     llvm::cl::desc("Reserved memory for globals in GiB (default=10)"),
-    llvm::cl::init(10), llvm::cl::cat(MemoryCat));
+    llvm::cl::init(10), llvm::cl::cat(MemoryCat),
+    llvm::cl::callback([](const unsigned &value) {
+      KConfig::get().register_option("kdalloc-globals-size",
+                                     std::to_string(value));
+    }));
 
 llvm::cl::opt<unsigned> DeterministicAllocationConstantsSize(
     "kdalloc-constants-size",
     llvm::cl::desc("Reserved memory for constant globals in GiB (default=10)"),
-    llvm::cl::init(10), llvm::cl::cat(MemoryCat));
+    llvm::cl::init(10), llvm::cl::cat(MemoryCat),
+    llvm::cl::callback([](const unsigned &value) {
+      KConfig::get().register_option("kdalloc-constants-size",
+                                     std::to_string(value));
+    }));
 
 llvm::cl::opt<unsigned> DeterministicAllocationHeapSize(
     "kdalloc-heap-size",
     llvm::cl::desc("Reserved memory for heap in GiB (default=1024)"),
-    llvm::cl::init(1024), llvm::cl::cat(MemoryCat));
+    llvm::cl::init(1024), llvm::cl::cat(MemoryCat),
+    llvm::cl::callback([](const unsigned &value) {
+      KConfig::get().register_option("kdalloc-heap-size",
+                                     std::to_string(value));
+    }));
 
 llvm::cl::opt<unsigned> DeterministicAllocationStackSize(
     "kdalloc-stack-size",
     llvm::cl::desc("Reserved memory for stack in GiB (default=100)"),
-    llvm::cl::init(128), llvm::cl::cat(MemoryCat));
+    llvm::cl::init(128), llvm::cl::cat(MemoryCat),
+    llvm::cl::callback([](const unsigned &value) {
+      KConfig::get().register_option("kdalloc-stack-size",
+                                     std::to_string(value));
+    }));
 
 llvm::cl::opt<std::uintptr_t> DeterministicAllocationGlobalsStartAddress(
     "kdalloc-globals-start-address",
     llvm::cl::desc(
         "Start address for globals segment (has to be page aligned)"),
-    llvm::cl::cat(MemoryCat));
+    llvm::cl::cat(MemoryCat),
+    llvm::cl::callback([](const std::uintptr_t &value) {
+      KConfig::get().register_option("kdalloc-globals-start-address",
+                                     std::to_string(value));
+    }));
 
 llvm::cl::opt<std::uintptr_t> DeterministicAllocationConstantsStartAddress(
     "kdalloc-constants-start-address",
     llvm::cl::desc(
         "Start address for constant globals segment (has to be page aligned)"),
-    llvm::cl::cat(MemoryCat));
+    llvm::cl::cat(MemoryCat),
+    llvm::cl::callback([](const std::uintptr_t &value) {
+      KConfig::get().register_option("kdalloc-constants-start-address",
+                                     std::to_string(value));
+    }));
 
 llvm::cl::opt<std::uintptr_t> DeterministicAllocationHeapStartAddress(
     "kdalloc-heap-start-address",
     llvm::cl::desc("Start address for heap segment (has to be page aligned)"),
-    llvm::cl::cat(MemoryCat));
+    llvm::cl::cat(MemoryCat),
+    llvm::cl::callback([](const std::uintptr_t &value) {
+      KConfig::get().register_option("kdalloc-heap-start-address",
+                                     std::to_string(value));
+    }));
 
 llvm::cl::opt<std::uintptr_t> DeterministicAllocationStackStartAddress(
     "kdalloc-stack-start-address",
     llvm::cl::desc("Start address for stack segment (has to be page aligned)"),
-    llvm::cl::cat(MemoryCat));
+    llvm::cl::cat(MemoryCat),
+    llvm::cl::callback([](const std::uintptr_t &value) {
+      KConfig::get().register_option("kdalloc-stack-start-address",
+                                     std::to_string(value));
+    }));
 
 struct QuarantineSizeParser : public llvm::cl::parser<std::uint32_t> {
   explicit QuarantineSizeParser(llvm::cl::Option &O)
@@ -121,12 +159,20 @@ llvm::cl::opt<std::uint32_t, true, QuarantineSizeParser>
                        "disabled=0, unlimited=-1)"),
         llvm::cl::location(klee::MemoryManager::quarantine),
         llvm::cl::value_desc("size"), llvm::cl::init(8),
-        llvm::cl::cat(MemoryCat));
+        llvm::cl::cat(MemoryCat),
+        llvm::cl::callback([](const std::uint32_t &value) {
+          KConfig::get().register_option("kdalloc-quarantine",
+                                         std::to_string(value));
+        }));
 
 llvm::cl::opt<bool> NullOnZeroMalloc(
     "return-null-on-zero-malloc",
     llvm::cl::desc("Returns NULL if malloc(0) is called (default=false)"),
-    llvm::cl::init(false), llvm::cl::cat(MemoryCat));
+    llvm::cl::init(false), llvm::cl::cat(MemoryCat),
+    llvm::cl::callback([](const bool &value) {
+      KConfig::get().register_option("return-null-on-zero-malloc",
+                                     std::to_string(value));
+    }));
 } // namespace
 
 /***/
