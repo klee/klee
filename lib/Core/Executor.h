@@ -134,7 +134,6 @@ private:
 
   SetOfStates states;
   SetOfStates pausedStates;
-  SetOfStates removedButReachableStates;
   StatsTracker *statsTracker;
   TreeStreamWriter *pathWriter, *symPathWriter;
   SpecialFunctionHandler *specialFunctionHandler;

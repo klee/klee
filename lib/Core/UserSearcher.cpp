@@ -193,15 +193,14 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
   if (executor.guidanceKind == Interpreter::GuidanceKind::CoverageGuidance) {
     searcher = new GuidedSearcher(
         searcher, *executor.codeGraphDistance.get(), *executor.targetCalculator,
-        executor.removedButReachableStates, executor.pausedStates,
-        MaxCycles - 1, executor.theRNG);
+        executor.pausedStates, MaxCycles - 1, executor.theRNG);
   }
 
   if (executor.guidanceKind == Interpreter::GuidanceKind::ErrorGuidance) {
     delete searcher;
-    searcher = new GuidedSearcher(
-        *executor.codeGraphDistance.get(), executor.removedButReachableStates,
-        executor.pausedStates, MaxCycles - 1, executor.theRNG);
+    searcher = new GuidedSearcher(*executor.codeGraphDistance.get(),
+                                  executor.pausedStates, MaxCycles - 1,
+                                  executor.theRNG);
   }
 
   llvm::raw_ostream &os = executor.getHandler().getInfoStream();

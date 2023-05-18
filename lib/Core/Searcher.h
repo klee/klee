@@ -220,8 +220,6 @@ private:
   CodeGraphDistance &codeGraphDistance;
   TargetCalculator *stateHistory;
   TargetHashSet reachedTargets;
-  std::set<ExecutionState *, ExecutionStateIDCompare>
-      &removedButReachableStates;
   std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates;
   std::size_t bound;
   RNG &theRNG;
@@ -244,6 +242,12 @@ private:
                               ref<Target> target, ExecutionState *current,
                               std::vector<ExecutionState *> &addedStates,
                               std::vector<ExecutionState *> &removedStates);
+  void updateTargetedSearcherForStates(
+      std::vector<ExecutionState *> &states,
+      std::vector<ExecutionState *> &tmpAddedStates,
+      std::vector<ExecutionState *> &tmpRemovedStates,
+      TargetToStateUnorderedSetMap &reachableStatesOfTarget,
+      bool areStatesStuck, bool areStatesRemoved);
 
   void clearReached(const std::vector<ExecutionState *> &removedStates);
   void collectReached(TargetToStateSetMap &reachedStates);
@@ -253,14 +257,10 @@ public:
   GuidedSearcher(
       Searcher *baseSearcher, CodeGraphDistance &codeGraphDistance,
       TargetCalculator &stateHistory,
-      std::set<ExecutionState *, ExecutionStateIDCompare>
-          &removedButReachableStates,
       std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates,
       std::size_t bound, RNG &rng);
   GuidedSearcher(
       CodeGraphDistance &codeGraphDistance,
-      std::set<ExecutionState *, ExecutionStateIDCompare>
-          &removedButReachableStates,
       std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates,
       std::size_t bound, RNG &rng);
   ~GuidedSearcher() override = default;

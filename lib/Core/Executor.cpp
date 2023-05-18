@@ -3788,7 +3788,6 @@ void Executor::updateStates(ExecutionState *current) {
     processForest->remove(es->ptreeNode);
     delete es;
   }
-  removedButReachableStates.clear();
   removedStates.clear();
 }
 

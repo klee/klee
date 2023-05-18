@@ -439,24 +439,18 @@ void TargetedSearcher::removeReached() {
 GuidedSearcher::GuidedSearcher(
     Searcher *baseSearcher, CodeGraphDistance &codeGraphDistance,
     TargetCalculator &stateHistory,
-    std::set<ExecutionState *, ExecutionStateIDCompare>
-        &removedButReachableStates,
     std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates,
     std::size_t bound, RNG &rng)
     : guidance(CoverageGuidance), baseSearcher(baseSearcher),
       codeGraphDistance(codeGraphDistance), stateHistory(&stateHistory),
-      removedButReachableStates(removedButReachableStates),
       pausedStates(pausedStates), bound(bound), theRNG(rng) {}
 
 GuidedSearcher::GuidedSearcher(
     CodeGraphDistance &codeGraphDistance,
-    std::set<ExecutionState *, ExecutionStateIDCompare>
-        &removedButReachableStates,
     std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates,
     std::size_t bound, RNG &rng)
     : guidance(ErrorGuidance), baseSearcher(nullptr),
       codeGraphDistance(codeGraphDistance), stateHistory(nullptr),
-      removedButReachableStates(removedButReachableStates),
       pausedStates(pausedStates), bound(bound), theRNG(rng) {}
 
 ExecutionState &GuidedSearcher::selectState() {
@@ -548,13 +542,39 @@ static void updateConfidences(ExecutionState *current,
     current->targetForest.divideConfidenceBy(reachableStatesOfTarget);
 }
 
-static void updateConfidences(ExecutionState *current,
-                              const std::vector<ExecutionState *> &addedStates,
-                              const GuidedSearcher::TargetToStateUnorderedSetMap
-                                  &reachableStatesOfTarget) {
-  updateConfidences(current, reachableStatesOfTarget);
-  for (auto state : addedStates) {
-    updateConfidences(state, reachableStatesOfTarget);
+void GuidedSearcher::updateTargetedSearcherForStates(
+    std::vector<ExecutionState *> &states,
+    std::vector<ExecutionState *> &tmpAddedStates,
+    std::vector<ExecutionState *> &tmpRemovedStates,
+    TargetToStateUnorderedSetMap &reachableStatesOfTarget, bool areStatesStuck,
+    bool areStatesRemoved) {
+  for (const auto state : states) {
+    auto history = state->targetForest.getHistory();
+    auto targets = state->targetForest.getTargets();
+    TargetForest::TargetsSet stateTargets;
+    for (auto &targetF : *targets) {
+      stateTargets.insert(targetF.first);
+    }
+
+    for (auto &target : stateTargets) {
+      if (areStatesRemoved || state->targetForest.contains(target)) {
+        if (areStatesRemoved)
+          tmpRemovedStates.push_back(state);
+        else
+          tmpAddedStates.push_back(state);
+        assert(!state->targetForest.empty());
+
+        bool canReach = areStatesStuck; // overapproximation: assume that stuck
+                                        // state can reach any target
+        if (!areStatesStuck)
+          canReach = updateTargetedSearcher(history, target, nullptr,
+                                            tmpAddedStates, tmpRemovedStates);
+        if (canReach)
+          reachableStatesOfTarget[target].insert(state);
+      }
+      tmpAddedStates.clear();
+      tmpRemovedStates.clear();
+    }
   }
 }
 
@@ -566,6 +586,7 @@ void GuidedSearcher::innerUpdate(
   baseRemovedStates.insert(baseRemovedStates.end(), removedStates.begin(),
                            removedStates.end());
 
+  std::vector<ExecutionState *> addedStuckStates;
   if (ErrorGuidance == guidance) {
     if (current &&
         (std::find(baseRemovedStates.begin(), baseRemovedStates.end(),
@@ -577,6 +598,7 @@ void GuidedSearcher::innerUpdate(
     for (const auto state : addedStates) {
       if (isStuck(*state)) {
         pausedStates.insert(state);
+        addedStuckStates.push_back(state);
         auto is =
             std::find(baseAddedStates.begin(), baseAddedStates.end(), state);
         assert(is != baseAddedStates.end());
@@ -680,56 +702,27 @@ void GuidedSearcher::innerUpdate(
     }
   }
 
-  for (const auto state : targetedAddedStates) {
-    auto history = state->targetForest.getHistory();
-    auto targets = state->targetForest.getTargets();
-    TargetForest::TargetsSet stateTargets;
-    for (auto &targetF : *targets) {
-      stateTargets.insert(targetF.first);
-    }
-
-    for (auto &target : stateTargets) {
-      if (state->targetForest.contains(target)) {
-        tmpAddedStates.push_back(state);
-        assert(!state->targetForest.empty());
-
-        bool canReach = updateTargetedSearcher(
-            history, target, nullptr, tmpAddedStates, tmpRemovedStates);
-        if (canReach)
-          reachableStatesOfTarget[target].insert(state);
-      }
-      tmpAddedStates.clear();
-      tmpRemovedStates.clear();
-    }
-  }
+  updateTargetedSearcherForStates(targetedAddedStates, tmpAddedStates,
+                                  tmpRemovedStates, reachableStatesOfTarget,
+                                  false, false);
   targetedAddedStates.clear();
-
-  for (const auto state : baseRemovedStates) {
-    auto history = state->targetForest.getHistory();
-    auto targets = state->targetForest.getTargets();
-    TargetForest::TargetsSet stateTargets;
-    for (auto &targetF : *targets) {
-      stateTargets.insert(targetF.first);
-    }
-
-    for (auto &target : stateTargets) {
-      tmpRemovedStates.push_back(state);
-      bool canReach = updateTargetedSearcher(history, target, nullptr,
-                                             tmpAddedStates, tmpRemovedStates);
-      if (canReach) {
-        reachableStatesOfTarget[target].insert(state);
-        removedButReachableStates.insert(state);
-      }
-      tmpAddedStates.clear();
-      tmpRemovedStates.clear();
-    }
-  }
+  updateTargetedSearcherForStates(addedStuckStates, tmpAddedStates,
+                                  tmpRemovedStates, reachableStatesOfTarget,
+                                  true, false);
+  updateTargetedSearcherForStates(baseRemovedStates, tmpAddedStates,
+                                  tmpRemovedStates, reachableStatesOfTarget,
+                                  false, true);
 
   if (CoverageGuidance == guidance) {
     assert(baseSearcher);
     baseSearcher->update(current, baseAddedStates, baseRemovedStates);
   }
-  updateConfidences(current, baseAddedStates, reachableStatesOfTarget);
+
+  updateConfidences(current, reachableStatesOfTarget);
+  for (auto state : baseAddedStates)
+    updateConfidences(state, reachableStatesOfTarget);
+  for (auto state : addedStuckStates)
+    updateConfidences(state, reachableStatesOfTarget);
   baseAddedStates.clear();
   baseRemovedStates.clear();
 }
