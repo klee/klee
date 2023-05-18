@@ -3,7 +3,7 @@
         {
             "tool": {
                 "driver": {
-                    "name": "huawei"
+                    "name": "SecB"
                 }
             },
             "results": []

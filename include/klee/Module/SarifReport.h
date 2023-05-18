@@ -106,6 +106,7 @@ struct Message {
 struct ResultJson {
   optional<std::string> ruleId;
   optional<Message> message;
+  optional<unsigned> id;
   std::vector<LocationJson> locations;
   std::vector<CodeFlowJson> codeFlows;
 };
@@ -146,7 +147,7 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(CodeFlowJson, threadFlows)
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Message, text)
 
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ResultJson, ruleId, message,
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ResultJson, ruleId, message, id,
                                                 codeFlows, locations)
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DriverJson, name)

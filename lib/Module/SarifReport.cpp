@@ -49,7 +49,7 @@ tryConvertLocationJson(const LocationJson &locationJson) {
 std::unordered_set<ReachWithError>
 tryConvertRuleJson(const std::string &ruleId, const std::string &toolName,
                    const optional<Message> &errorMessage) {
-  if (toolName == "huawei") {
+  if (toolName == "SecB") {
     if ("NullDereference" == ruleId) {
       return {ReachWithError::NullPointerException};
     } else if ("CheckAfterDeref" == ruleId) {
@@ -176,6 +176,15 @@ std::string getErrorsString(const std::unordered_set<ReachWithError> &errors) {
   return res;
 }
 
+void setResultId(const ResultJson &resultJson, bool useProperId, unsigned &id) {
+  if (useProperId) {
+    assert(resultJson.id.has_value() && "all results must have an proper id");
+    id = resultJson.id.value();
+  } else {
+    ++id;
+  }
+}
+
 SarifReport convertAndFilterSarifJson(const SarifReportJson &reportJson) {
   SarifReport report;
 
@@ -188,11 +197,12 @@ SarifReport convertAndFilterSarifJson(const SarifReportJson &reportJson) {
   const RunJson &run = reportJson.runs[0];
 
   unsigned id = 0;
+  bool useProperId = run.results.size() > 0 && run.results[0].id.has_value();
 
   for (const auto &resultJson : run.results) {
+    setResultId(resultJson, useProperId, id);
     auto maybeResult =
-        tryConvertResultJson(resultJson, run.tool.driver.name, ++id);
-
+        tryConvertResultJson(resultJson, run.tool.driver.name, id);
     if (maybeResult.has_value()) {
       report.results.push_back(*maybeResult);
     }

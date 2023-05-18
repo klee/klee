@@ -38,6 +38,7 @@ def convert_error(error):
     else:
         converted_error["ruleId"] = "Reached"
     converted_error["locations"] = [locations[-1]["location"]]
+    converted_error["id"] = error["id"]
 
 
     return converted_error
@@ -50,13 +51,13 @@ def convert_file(input: str, output_dir: str):
     output_report = {}
     output_report["runs"] = [defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: 0)))))]
     run = output_report["runs"][0]
-    run["tool"]["driver"]["name"] = "huawei"
+    run["tool"]["driver"]["name"] = "SecB"
     run["results"] = []
     results = run["results"]
-    
+
     for error in input_report["errors"]:
         results.append(convert_error(error))
-    
+
     with open(os.path.join(output_dir, os.path.basename(input)), 'w') as f:
         json.dump(output_report, f, indent=4)
 
