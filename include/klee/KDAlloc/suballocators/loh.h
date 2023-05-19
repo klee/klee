@@ -193,7 +193,9 @@ public:
 
   LargeObjectAllocator(LargeObjectAllocator &&rhs) noexcept
       : data(std::exchange(rhs.data, nullptr)) {
-    assert(data->referenceCount > 0);
+    if (data) {
+      assert(data->referenceCount > 0);
+    }
   }
 
   LargeObjectAllocator &operator=(LargeObjectAllocator &&rhs) noexcept {

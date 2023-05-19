@@ -54,14 +54,14 @@ class Mapping {
 
     auto mappedAddress = ::mmap(reinterpret_cast<void *>(baseAddress), size,
                                 PROT_READ | PROT_WRITE, flags, -1, 0);
+    if (mappedAddress == MAP_FAILED) {
+      this->baseAddress = MAP_FAILED;
+      return false;
+    }
     if (baseAddress != 0 &&
         baseAddress != reinterpret_cast<std::uintptr_t>(mappedAddress)) {
       [[maybe_unused]] int rc = ::munmap(mappedAddress, size);
       assert(rc == 0 && "munmap failed");
-      this->baseAddress = MAP_FAILED;
-      return false;
-    }
-    if (mappedAddress == MAP_FAILED) {
       this->baseAddress = MAP_FAILED;
       return false;
     }
@@ -98,10 +98,6 @@ public:
 
   Mapping(std::uintptr_t baseAddress, std::size_t size) noexcept : size(size) {
     try_map(baseAddress);
-    assert(*this && "failed to allocate mapping");
-    if (!*this) {
-      std::abort();
-    }
   }
 
   Mapping(Mapping const &) = delete;
