@@ -61,6 +61,19 @@ public:
       return meta.size();
     }
 
+    [[nodiscard]] inline int
+    convertPtrToBinIndex(void const *const p) noexcept {
+      for (std::size_t i = 0; i < sizedBins.size(); ++i) {
+        if (p >= sizedBins[i].mapping_begin() &&
+            p < sizedBins[i].mapping_end()) {
+          return i;
+        }
+      }
+      assert(p >= largeObjectBin.mapping_begin() &&
+             p < largeObjectBin.mapping_end());
+      return meta.size();
+    }
+
   public:
     mutable class klee::ReferenceCounter _refCount;
 
@@ -131,6 +144,19 @@ public:
       return sizedBins[bin].deallocate(control->sizedBins[bin], ptr);
     } else {
       return largeObjectBin.deallocate(control->largeObjectBin, ptr, size);
+    }
+  }
+
+  std::size_t getSize(void const *const ptr) const noexcept {
+    assert(!!ptr);
+
+    auto bin = control->convertPtrToBinIndex(ptr);
+    traceLine("Getting size for ", ptr, " in bin ", bin);
+
+    if (bin < static_cast<int>(sizedBins.size())) {
+      return Control::meta[bin];
+    } else {
+      return largeObjectBin.getSize(control->largeObjectBin, ptr);
     }
   }
 
