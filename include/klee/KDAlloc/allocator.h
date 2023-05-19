@@ -143,6 +143,20 @@ public:
     return result;
   }
 
+  void free(void *ptr) {
+    assert(*this && "Invalid allocator");
+    assert(ptr && "Freeing nullptrs is not supported"); // we are not ::free!
+
+    auto bin = control->convertPtrToBinIndex(ptr);
+    traceLine("Freeing ", ptr, " in bin ", bin);
+
+    if (bin < static_cast<int>(sizedBins.size())) {
+      return sizedBins[bin].deallocate(control->sizedBins[bin], ptr);
+    } else {
+      return largeObjectBin.deallocate(control->largeObjectBin, ptr);
+    }
+  }
+
   void free(void *ptr, std::size_t size) {
     assert(*this && "Invalid allocator");
     assert(ptr && "Freeing nullptrs is not supported"); // we are not ::free!
