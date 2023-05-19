@@ -192,35 +192,36 @@ public:
       : AllocatorFactory(Mapping{address, size}, quarantineSize) {}
 
   AllocatorFactory(Mapping &&mapping, std::uint32_t const quarantineSize) {
-    assert(mapping && "Invalid mapping");
-    assert(mapping.getSize() >
-               Allocator::Control::meta.size() * 4096 + 3 * 4096 &&
-           "Mapping is *far* to small");
+    if (mapping) {
+      assert(mapping.getSize() >
+                 Allocator::Control::meta.size() * 4096 + 3 * 4096 &&
+             "Mapping is *far* too small");
 
-    control = new Allocator::Control(std::move(mapping));
-    auto const binSize =
-        static_cast<std::size_t>(1)
-        << (std::numeric_limits<std::size_t>::digits - 1 -
-            countLeadingZeroes(control->mapping.getSize() /
-                               (Allocator::Control::meta.size() + 1)));
-    char *const base = static_cast<char *>(control->mapping.getBaseAddress());
-    std::size_t totalSize = 0;
-    for (std::size_t i = 0; i < Allocator::Control::meta.size(); ++i) {
-      control->sizedBins[i].initialize(
-          base + totalSize, binSize, Allocator::Control::meta[i],
+      control = new Allocator::Control(std::move(mapping));
+      auto const binSize =
+          static_cast<std::size_t>(1)
+          << (std::numeric_limits<std::size_t>::digits - 1 -
+              countLeadingZeroes(control->mapping.getSize() /
+                                 (Allocator::Control::meta.size() + 1)));
+      char *const base = static_cast<char *>(control->mapping.getBaseAddress());
+      std::size_t totalSize = 0;
+      for (std::size_t i = 0; i < Allocator::Control::meta.size(); ++i) {
+        control->sizedBins[i].initialize(
+            base + totalSize, binSize, Allocator::Control::meta[i],
+            quarantineSize == unlimitedQuarantine,
+            quarantineSize == unlimitedQuarantine ? 0 : quarantineSize);
+
+        totalSize += binSize;
+        assert(totalSize <= control->mapping.getSize() && "Mapping too small");
+      }
+
+      auto largeObjectBinSize = control->mapping.getSize() - totalSize;
+      assert(largeObjectBinSize > 0);
+      control->largeObjectBin.initialize(
+          base + totalSize, largeObjectBinSize,
           quarantineSize == unlimitedQuarantine,
           quarantineSize == unlimitedQuarantine ? 0 : quarantineSize);
-
-      totalSize += binSize;
-      assert(totalSize <= control->mapping.getSize() && "Mapping too small");
     }
-
-    auto largeObjectBinSize = control->mapping.getSize() - totalSize;
-    assert(largeObjectBinSize > 0);
-    control->largeObjectBin.initialize(
-        base + totalSize, largeObjectBinSize,
-        quarantineSize == unlimitedQuarantine,
-        quarantineSize == unlimitedQuarantine ? 0 : quarantineSize);
   }
 
   explicit operator bool() const noexcept { return !control.isNull(); }
