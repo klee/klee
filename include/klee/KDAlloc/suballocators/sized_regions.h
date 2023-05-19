@@ -412,136 +412,51 @@ public:
     }
   }
 
-private:
-  static CoWPtr<Node> mergeRegionWithPreviousRec(CoWPtr<Node> &treap,
-                                                 char *const baseAddress) {
-    assert(treap && "cannot extract region that is not part of the treap");
-    if (baseAddress < treap->getBaseAddress()) {
-      auto &node = treap.acquire();
-      if (auto greater = mergeRegionWithPreviousRec(node.lhs, baseAddress)) {
-        if (node.getBaseAddress() < greater->getBaseAddress()) {
-          auto newSize = static_cast<std::size_t>(greater->getBaseAddress() -
-                                                  node.getBaseAddress() +
-                                                  greater->getSize());
-          assert(
-              newSize > node.getSize() &&
-              "Sizes only get greater by adding `greater - smaller` to them");
-          node.setSize(newSize);
-          return {};
+  /// This function merges the region after the given address, with the region
+  /// immediately preceding it. There must be a region before and a region after
+  /// `address`.
+  void mergeAroundAddress(char const *const address) noexcept {
+    assert(root && "An empty treap holds no regions to merge");
+
+    CoWPtr<Node> *currentNode = &root;
+    CoWPtr<Node> *closestPredecessor = nullptr;
+    CoWPtr<Node> *closestSuccessor = nullptr;
+    for (;;) {
+      if (address < (*currentNode)->getBaseAddress()) {
+        assert(!closestSuccessor ||
+               (*currentNode)->getBaseAddress() <
+                   (*closestSuccessor)->getBaseAddress());
+        closestSuccessor = currentNode;
+        if ((*currentNode)->lhs) {
+          currentNode = &currentNode->acquire().lhs;
         } else {
-          return greater;
+          break;
         }
       } else {
-        if (node.lhs->getSize() > node.getSize() ||
-            (node.lhs->getSize() == node.getSize() &&
-             node.lhs->hash() > node.hash())) {
-          auto temp = std::move(node.lhs);
-          auto &nodeTemp = temp.getOwned();
-          node.lhs = std::move(nodeTemp.rhs);
-          nodeTemp.rhs = std::move(treap);
-          treap = std::move(temp);
-        }
-        return {};
-      }
-    } else if (treap->getBaseAddress() < baseAddress) {
-      auto &node = treap.acquire();
-      if (auto greater = mergeRegionWithPreviousRec(node.rhs, baseAddress)) {
-        if (node.getBaseAddress() < greater->getBaseAddress()) {
-          auto newSize = static_cast<std::size_t>(greater->getBaseAddress() -
-                                                  node.getBaseAddress() +
-                                                  greater->getSize());
-          assert(
-              newSize > node.getSize() &&
-              "Sizes only get greater by adding `greater - smaller` to them");
-          node.setSize(newSize);
-          return {};
+        assert(!closestPredecessor ||
+               (*currentNode)->getBaseAddress() >
+                   (*closestPredecessor)->getBaseAddress());
+        closestPredecessor = currentNode;
+        if ((*currentNode)->rhs) {
+          currentNode = &currentNode->acquire().rhs;
         } else {
-          return greater;
+          break;
         }
-      } else {
-        if (node.rhs->getSize() > node.getSize() ||
-            (node.rhs->getSize() == node.getSize() &&
-             node.rhs->hash() > node.hash())) {
-          auto temp = std::move(node.rhs);
-          auto &nodeTemp = temp.getOwned();
-          node.rhs = std::move(nodeTemp.lhs);
-          nodeTemp.lhs = std::move(treap);
-          treap = std::move(temp);
-        }
-        return greater;
-      }
-    } else {
-      assert(treap->getBaseAddress() == baseAddress);
-      // target is now the greater (w.r.t. the tree key) of the two regions we
-      // are looking for
-      if (treap->lhs) {
-        CoWPtr<Node> lhs, rhs;
-        if (treap.isOwned()) {
-          auto &node = treap.acquire();
-          lhs = std::move(node.lhs);
-          rhs = std::move(node.rhs);
-        } else {
-          lhs = treap->lhs;
-          rhs = treap->rhs;
-        }
-        auto const greaterBaseAddress = treap->getBaseAddress();
-        auto const greaterSize = treap->getSize();
-
-        auto *target = &lhs;
-        while ((*target)->rhs) {
-          target = &target->acquire().rhs;
-        }
-        treap = std::move(*target);
-        auto &node = treap.acquire();
-        *target = std::move(node.lhs);
-
-        assert(greaterBaseAddress > node.getBaseAddress());
-        auto newSize = static_cast<std::size_t>(
-            greaterBaseAddress - node.getBaseAddress() + greaterSize);
-        assert(newSize > node.getSize() &&
-               "Sizes only get greater by adding `greater - smaller` to them");
-        node.setSize(newSize);
-
-        assert(!node.rhs && "We looked for a node that has no rhs");
-        assert((!rhs || node.getBaseAddress() < rhs->getBaseAddress()) &&
-               "`lesser` comes from the left subtree of `greater`, while "
-               "rhs is the right subtree of `greater`");
-        assert((!rhs || node.getSize() > rhs->getSize()) &&
-               "The old size of `greater` was >= that of its right subtree, "
-               "so the new size (of `lesser`) is strictly greater");
-        node.rhs = std::move(rhs);
-
-        assert(!node.lhs && "The lhs of this node has already been removed");
-        assert((!lhs || lhs->getBaseAddress() < node.getBaseAddress()) &&
-               "`lesser` is the greatest child of the `lhs` subtree");
-        assert((!lhs || node.getSize() > lhs->getSize()) &&
-               "The old size of `greater` was >= that of its left subtree, "
-               "so the new size (of `lesser`) is strictly greater");
-        node.lhs = std::move(lhs);
-        return {};
-      } else {
-        auto greater = std::move(treap);
-        if (greater->rhs) {
-          if (greater.isOwned()) {
-            treap = std::move(greater.acquire().rhs);
-          } else {
-            treap = greater->rhs;
-          }
-        }
-        return greater; // no move to enable copy elision
       }
     }
-  }
 
-public:
-  /// This function merges the region starting at the given address, with the
-  /// region immediately preceding it. Both regions must exist. The resulting
-  /// region has the same base address as the lesser region with its size large
-  /// enough to cover the space to the end of the greater region (filling any
-  /// holes in the process).
-  inline void mergeRegionWithPrevious(char *const baseAddress) {
-    assert(root && "An empty treap holds no regions to merge");
-    mergeRegionWithPreviousRec(root, baseAddress);
+    assert(closestPredecessor && closestSuccessor &&
+           "address must be in between two regions");
+
+    closestPredecessor->acquire().setSize(
+        (*closestSuccessor)->getBaseAddress() + (*closestSuccessor)->getSize() -
+        (*closestPredecessor)->getBaseAddress());
+    CoWPtr<Node> lhs = (*closestSuccessor)->lhs;
+    CoWPtr<Node> rhs = (*closestSuccessor)->rhs;
+    closestSuccessor->release();
+    if (lhs || rhs) {
+      mergeTreaps(closestSuccessor, lhs, rhs);
+    }
   }
 
 private:

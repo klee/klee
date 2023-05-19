@@ -153,7 +153,7 @@ public:
     if (bin < static_cast<int>(sizedBins.size())) {
       return sizedBins[bin].deallocate(control->sizedBins[bin], ptr);
     } else {
-      return largeObjectBin.deallocate(control->largeObjectBin, ptr, size);
+      return largeObjectBin.deallocate(control->largeObjectBin, ptr);
     }
   }
 
