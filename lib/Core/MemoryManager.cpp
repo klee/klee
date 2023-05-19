@@ -243,9 +243,10 @@ MemoryManager::MemoryManager(ArrayCache *_arrayCache)
           start, size, DeterministicAllocationQuarantineSize);
 
       if (!factory.get()) {
-        klee_error(
-            "Deterministic allocator: Could not allocate mapping for %s: %s",
-            segment.c_str(), strerror(errno));
+        klee_error("Deterministic allocator: Could not allocate mapping for %s "
+                   "(start-address=0x%" PRIxPTR " size=%zu GiB): %s",
+                   segment.c_str(), start, size / (1024 * 1024 * 1024),
+                   strerror(errno));
       }
       if (start && factory.get().getMapping().getBaseAddress() !=
                        reinterpret_cast<void *>(start)) {
