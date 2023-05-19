@@ -40,30 +40,25 @@ public:
     static constexpr const std::uint32_t unlimitedQuarantine =
         static_cast<std::uint32_t>(-1);
 
-    /// @todo This should really be a data member `static constexpr const
-    /// std::array meta = { ... }`.
-    static inline const std::array<std::size_t, 8> &getMeta() noexcept {
-      static const std::array<std::size_t, 8> meta = {
-          1u,    // bool
-          4u,    // int
-          8u,    // pointer size
-          16u,   // double
-          32u,   // compound types #1
-          64u,   // compound types #2
-          256u,  // compound types #3
-          2048u, // reasonable buffers
-      };
-      return meta;
-    }
+    static constexpr const std::array<std::size_t, 8> meta = {
+        1u,    // bool
+        4u,    // int
+        8u,    // pointer size
+        16u,   // double
+        32u,   // compound types #1
+        64u,   // compound types #2
+        256u,  // compound types #3
+        2048u, // reasonable buffers
+    };
 
     [[nodiscard]] static inline int
     convertSizeToBinIndex(std::size_t const size) noexcept {
-      for (std::size_t i = 0; i < getMeta().size(); ++i) {
-        if (getMeta()[i] >= size) {
+      for (std::size_t i = 0; i < meta.size(); ++i) {
+        if (meta[i] >= size) {
           return i;
         }
       }
-      return getMeta().size();
+      return meta.size();
     }
 
   public:
@@ -71,9 +66,7 @@ public:
 
   private:
     Mapping mapping;
-    std::array<suballocators::SlotAllocator::Control,
-               std::tuple_size<std::decay_t<decltype(getMeta())>>::value>
-        sizedBins;
+    std::array<suballocators::SlotAllocator::Control, meta.size()> sizedBins;
     suballocators::LargeObjectAllocator::Control largeObjectBin;
 
   public:
@@ -93,9 +86,7 @@ public:
 private:
   klee::ref<Control> control;
 
-  std::array<suballocators::SlotAllocator,
-             std::tuple_size<std::decay_t<decltype(Control::getMeta())>>::value>
-      sizedBins;
+  std::array<suballocators::SlotAllocator, Control::meta.size()> sizedBins;
   suballocators::LargeObjectAllocator largeObjectBin;
 
 public:
@@ -112,8 +103,6 @@ public:
   Allocator(klee::ref<Control> control) : control(std::move(control)) {}
 
   explicit operator bool() const noexcept { return !control.isNull(); }
-
-  auto const &getSizedBinInfo() const noexcept { return Control::getMeta(); }
 
   [[nodiscard]] void *allocate(std::size_t size) {
     assert(*this && "Invalid allocator");
@@ -155,7 +144,7 @@ public:
 
     // the following is technically UB if `ptr` does not actually point inside
     // the mapping at all
-    for (std::size_t i = 0; i < Allocator::Control::getMeta().size(); ++i) {
+    for (std::size_t i = 0; i < Allocator::Control::meta.size(); ++i) {
       if (control->sizedBins[i].mapping_begin() <= ptr &&
           ptr < control->sizedBins[i].mapping_end()) {
         if (reinterpret_cast<char const *>(ptr) + size <=
@@ -205,7 +194,7 @@ public:
   AllocatorFactory(Mapping &&mapping, std::uint32_t const quarantineSize) {
     assert(mapping && "Invalid mapping");
     assert(mapping.getSize() >
-               Allocator::Control::getMeta().size() * 4096 + 3 * 4096 &&
+               Allocator::Control::meta.size() * 4096 + 3 * 4096 &&
            "Mapping is *far* to small");
 
     control = new Allocator::Control(std::move(mapping));
@@ -213,12 +202,12 @@ public:
         static_cast<std::size_t>(1)
         << (std::numeric_limits<std::size_t>::digits - 1 -
             countLeadingZeroes(control->mapping.getSize() /
-                               (Allocator::Control::getMeta().size() + 1)));
+                               (Allocator::Control::meta.size() + 1)));
     char *const base = static_cast<char *>(control->mapping.getBaseAddress());
     std::size_t totalSize = 0;
-    for (std::size_t i = 0; i < Allocator::Control::getMeta().size(); ++i) {
+    for (std::size_t i = 0; i < Allocator::Control::meta.size(); ++i) {
       control->sizedBins[i].initialize(
-          base + totalSize, binSize, Allocator::Control::getMeta()[i],
+          base + totalSize, binSize, Allocator::Control::meta[i],
           quarantineSize == unlimitedQuarantine,
           quarantineSize == unlimitedQuarantine ? 0 : quarantineSize);
 
