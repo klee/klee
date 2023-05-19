@@ -43,17 +43,17 @@ class LargeObjectAllocator final : public TaggedLogger<LargeObjectAllocator> {
     /// over sizes
     SizedRegions regions;
 
-    static_assert(
-        sizeof(void *) >= sizeof(std::size_t),
-        "The quarantine elements are alternating `void*` and `std::size_t`");
-    static_assert(
-        alignof(void *) >= alignof(std::size_t),
-        "The quarantine elements are alternating `void*` and `std::size_t`");
+    static_assert(sizeof(void *) >= sizeof(std::size_t),
+                  "The quarantine structure contains a `std::size_t` followed "
+                  "by many `void*`s");
+    static_assert(alignof(void *) >= alignof(std::size_t),
+                  "The quarantine structure contains a `std::size_t` followed "
+                  "by many `void*`s");
     using QuarantineElement =
         std::aligned_storage_t<sizeof(void *), alignof(void *)>;
 
     /// The quarantine position followed by the quarantine ring buffer
-    /// Structure: [pos, ptr1, size1, ptr2, size2, ...]
+    /// Structure: [pos, ptr1, ptr2, ...]
     QuarantineElement quarantine[];
 
     Data() = default;
@@ -90,7 +90,7 @@ public:
         this->quarantineSize = 0;
         this->unlimitedQuarantine = true;
       } else {
-        this->quarantineSize = quarantineSize == 0 ? 0 : quarantineSize * 2 + 1;
+        this->quarantineSize = quarantineSize == 0 ? 0 : quarantineSize + 1;
         this->unlimitedQuarantine = false;
       }
 
@@ -140,32 +140,27 @@ private:
     assert(data->referenceCount == 1);
   }
 
-  std::pair<void *, std::size_t>
-  quarantine(Control const &control, void *const ptr, std::size_t const size) {
+  void *quarantine(Control const &control, void *const ptr) {
     assert(!!data &&
            "Deallocations can only happen if allocations happened beforehand");
     assert(!control.unlimitedQuarantine);
 
     if (control.quarantineSize == 0) {
-      return {ptr, size};
+      return ptr;
     }
 
     assert(data->referenceCount == 1 &&
            "Must hold CoW ownership to quarantine a new pointer+size pair");
 
     auto const pos = reinterpret_cast<std::size_t &>(data->quarantine[0]);
-    if (pos + 2 == control.quarantineSize) {
+    if (pos + 1 == control.quarantineSize) {
       reinterpret_cast<std::size_t &>(data->quarantine[0]) = 1;
     } else {
-      reinterpret_cast<std::size_t &>(data->quarantine[0]) = pos + 2;
+      reinterpret_cast<std::size_t &>(data->quarantine[0]) = pos + 1;
     }
 
-    auto quarantinedPtr = std::exchange(
-        reinterpret_cast<void *&>(data->quarantine[pos]), std::move(ptr));
-    auto quarantinedSize = std::exchange(
-        reinterpret_cast<std::size_t &>(data->quarantine[pos + 1]),
-        std::move(size));
-    return {quarantinedPtr, quarantinedSize};
+    return std::exchange(reinterpret_cast<void *&>(data->quarantine[pos]),
+                         std::move(ptr));
   }
 
 public:
@@ -293,39 +288,30 @@ public:
     return result;
   }
 
-  void deallocate(Control const &control, void *ptr, std::size_t size) {
+  void deallocate(Control const &control, void *ptr) {
     assert(!!data &&
            "Deallocations can only happen if allocations happened beforehand");
 
     if (control.unlimitedQuarantine) {
       traceLine("Quarantining ", ptr, " for ever");
     } else {
-      auto quantizedSize = roundUpToMultipleOf4096(size);
-      traceLine("Quarantining ", ptr, " with size ", size, " (", quantizedSize,
-                ") for ", (control.quarantineSize - 1) / 2, " deallocations");
-      assert(size > 0);
-      assert(quantizedSize % 4096 == 0);
+      traceLine("Quarantining ", ptr, " for ", control.quarantineSize - 1,
+                " deallocations");
 
       acquireData(control); // we will need quarantine and/or region ownership
-      std::tie(ptr, size) = quarantine(control, ptr, size);
+      ptr = quarantine(control, ptr);
       if (!ptr) {
         return;
       }
 
-      quantizedSize = roundUpToMultipleOf4096(size);
-      traceLine("Deallocating ", ptr, " with size ", size, " (", quantizedSize,
-                ")");
+      traceLine("Deallocating ", ptr);
 
       assert(data->referenceCount == 1);
-      assert(size > 0);
-      assert(quantizedSize % 4096 == 0);
-      size = quantizedSize;
       traceContents(control);
-      traceLine("Merging region at ",
-                static_cast<void *>(static_cast<char *>(ptr) + size),
-                " with the preceding region");
+      traceLine("Merging regions around ",
+                static_cast<void *>(static_cast<char *>(ptr)));
 
-      data->regions.mergeRegionWithPrevious(static_cast<char *>(ptr) + size);
+      data->regions.mergeAroundAddress(static_cast<char *>(ptr));
     }
   }
 
