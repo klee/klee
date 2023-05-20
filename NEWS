@@ -1,7 +1,7 @@
 KLEE 2.3, 4 April 2022
 ======================
 
-Incorporating changes from 8 December 2020 to March 2022.
+Incorporating changes from 8 December 2020 to 4 April 2022.
 Maintainers during this time span: @ccadar and @MartinNowack
 Documentation at http://klee.github.io/releases/docs/v2.3
 
@@ -34,6 +34,7 @@ Documentation at http://klee.github.io/releases/docs/v2.3
 - Fixed the memory usage computation on macOS (@ccadar)
 - Removed or updated obsolete Doxygen options and added Doxygen generation to the CI (@ccadar)
 - Smaller refactorings, fixes and improvements, test cases, maintenance, comments, web version, website, etc. (@251, @aesophor, @arrowd, @bathooman,  @ccadar, @carlocab, @davidtr1037, @dependabot, @futile, @iangneal, @jbuening, @jirislaby, @jiseongg, @jordr, @lzaoral, @MartinNowack, @numinit, @operasfantom, @prncoprs)
+
 
 KLEE 2.2, 7 December 2020
 =========================
