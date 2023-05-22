@@ -13,6 +13,7 @@ klee_add_component(kleeCore
   Context.cpp
   CoreStats.cpp
   CXXTypeSystem/CXXTypeManager.cpp
+  DistanceCalculator.cpp
   ExecutionState.cpp
   Executor.cpp
   ExecutorUtil.cpp

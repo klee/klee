@@ -10,6 +10,7 @@
 #ifndef KLEE_SEARCHER_H
 #define KLEE_SEARCHER_H
 
+#include "DistanceCalculator.h"
 #include "ExecutionState.h"
 #include "PForest.h"
 #include "PTree.h"
@@ -34,13 +35,14 @@ class raw_ostream;
 } // namespace llvm
 
 namespace klee {
-class CodeGraphDistance;
+class DistanceCalculator;
 template <class T, class Comparator> class DiscretePDF;
 template <class T, class Comparator> class WeightedQueue;
 class ExecutionState;
 class Executor;
 class TargetCalculator;
 class TargetForest;
+class TargetReachability;
 
 /// A Searcher implements an exploration strategy for the Executor by selecting
 /// states for further exploration using different strategies or heuristics.
@@ -129,33 +131,17 @@ public:
 
 /// TargetedSearcher picks a state /*COMMENT*/.
 class TargetedSearcher final : public Searcher {
-public:
-  enum WeightResult : std::uint8_t {
-    Continue,
-    Done,
-    Miss,
-  };
-
 private:
-  typedef unsigned weight_type;
-
   std::unique_ptr<WeightedQueue<ExecutionState *, ExecutionStateIDCompare>>
       states;
   ref<Target> target;
-  CodeGraphDistance &codeGraphDistance;
-  const std::unordered_map<KFunction *, unsigned int> &distanceToTargetFunction;
+  DistanceCalculator &distanceCalculator;
   std::set<ExecutionState *> reachedOnLastUpdate;
 
-  bool distanceInCallGraph(KFunction *kf, KBlock *kb, unsigned int &distance);
-  WeightResult tryGetLocalWeight(ExecutionState *es, weight_type &weight,
-                                 const std::vector<KBlock *> &localTargets);
-  WeightResult tryGetPreTargetWeight(ExecutionState *es, weight_type &weight);
-  WeightResult tryGetTargetWeight(ExecutionState *es, weight_type &weight);
-  WeightResult tryGetPostTargetWeight(ExecutionState *es, weight_type &weight);
   WeightResult tryGetWeight(ExecutionState *es, weight_type &weight);
 
 public:
-  TargetedSearcher(ref<Target> target, CodeGraphDistance &distance);
+  TargetedSearcher(ref<Target> target, DistanceCalculator &distanceCalculator);
   ~TargetedSearcher() override;
 
   ExecutionState &selectState() override;
@@ -217,7 +203,7 @@ private:
   Guidance guidance;
   std::unique_ptr<Searcher> baseSearcher;
   TargetForestHistoryToSearcherMap targetedSearchers;
-  CodeGraphDistance &codeGraphDistance;
+  DistanceCalculator &distanceCalculator;
   TargetCalculator &stateHistory;
   TargetHashSet reachedTargets;
   std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates;
@@ -255,7 +241,7 @@ private:
 
 public:
   GuidedSearcher(
-      CodeGraphDistance &codeGraphDistance, TargetCalculator &stateHistory,
+      DistanceCalculator &distanceCalculator, TargetCalculator &stateHistory,
       std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates,
       unsigned long long bound, RNG &rng, Searcher *baseSearcher = nullptr);
   ~GuidedSearcher() override = default;

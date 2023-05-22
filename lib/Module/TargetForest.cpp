@@ -15,6 +15,8 @@
 #include "klee/Module/KModule.h"
 #include "klee/Module/TargetHash.h"
 
+#include "klee/Support/ErrorHandling.h"
+
 using namespace klee;
 using namespace llvm;
 
@@ -508,6 +510,14 @@ void TargetForest::blockIn(ref<Target> subtarget, ref<Target> target) {
     return;
   }
   forest = forest->blockLeafInChild(subtarget, target);
+}
+
+void TargetForest::block(const ref<Target> &target) {
+  if (!forest->deepFind(target)) {
+    return;
+  }
+
+  forest = forest->blockLeaf(target);
 }
 
 void TargetForest::dump() const {

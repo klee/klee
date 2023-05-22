@@ -183,7 +183,7 @@ Searcher *klee::constructUserSearcher(Executor &executor,
       searcher = nullptr;
     }
     searcher = new GuidedSearcher(
-        *executor.codeGraphDistance.get(), *executor.targetCalculator,
+        *executor.distanceCalculator, *executor.targetCalculator,
         executor.pausedStates, MaxCycles - 1, executor.theRNG, searcher);
   }
 

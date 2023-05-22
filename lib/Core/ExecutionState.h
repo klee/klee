@@ -204,6 +204,8 @@ private:
 
 public:
   using stack_ty = std::vector<StackFrame>;
+  using TargetHashSet =
+      std::unordered_set<ref<Target>, RefTargetHash, RefTargetCmp>;
 
   // Execution - Control Flow specific
 
