@@ -1030,6 +1030,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
   std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it = 
     seedMap.find(&current);
   bool isSeeding = it != seedMap.end();
+  //klee_message("isSeeding is %d", isSeeding); //print isSeeding, by wqc，打印 结果为false
 
   if (!isSeeding)
     condition = maxStaticPctChecks(current, condition);
@@ -1039,16 +1040,17 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
     timeout *= static_cast<unsigned>(it->second.size());
   solver->setTimeout(timeout);
   bool success = solver->evaluate(current.constraints, condition, res,
-                                  current.queryMetaData);
+                                  current.queryMetaData); //基于当前状态current的路径约束来对条件cond进行求解，将求解结果保存到res
   solver->setTimeout(time::Span());
   if (!success) {
-    current.pc = current.prevPC;
-    terminateStateOnSolverError(current, "Query timed out (fork).");
+    current.pc = current.prevPC; //求解失败，pc指向当前正在执行的指令，即没有下一条要执行的指令
+    terminateStateOnSolverError(current, "Query timed out (fork)."); //没有可以继续执行的分支了，终止当前状态
     return StatePair(nullptr, nullptr);
   }
 
   if (!isSeeding) {
     if (replayPath && !isInternal) {
+      klee_message("replayPath test"); //by wqc
       assert(replayPosition<replayPath->size() &&
              "ran out of branches in replay path mode");
       bool branch = (*replayPath)[replayPosition++];
@@ -1068,6 +1070,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
         }
       }
     } else if (res==Solver::Unknown) {
+      klee_message("res == Unknown"); //by wqc
       assert(!replayKTest && "in replay mode, only one branch can be true.");
       
       if (!branchingPermitted(current)) {
@@ -1124,6 +1127,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
   // hint to just use the single constraint instead of all the binary
   // search ones. If that makes sense.
   if (res==Solver::True) {
+    //klee_message("res == True"); //by wqc
     if (!isInternal) {
       if (pathWriter) {
         current.pathOS << "1";
@@ -1132,6 +1136,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
 
     return StatePair(&current, nullptr);
   } else if (res==Solver::False) {
+    //klee_message("res == False"); //by wqc
     if (!isInternal) {
       if (pathWriter) {
         current.pathOS << "0";
@@ -1140,6 +1145,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
 
     return StatePair(nullptr, &current);
   } else {
+    //klee_message("tow sub states are forked!!!"); //by wqc
     TimerStatIncrementer timer(stats::forkTime);
     ExecutionState *falseState, *trueState = &current;
 
@@ -1424,7 +1430,9 @@ void Executor::printDebugInstructions(ExecutionState &state) {
     debugBufferString = "";
   }
 }
-
+/**
+ * 更新state的pc，使其指向下一条要执行的指令，使prevPC指向当前要执行的指令
+*/
 void Executor::stepInstruction(ExecutionState &state) {
   printDebugInstructions(state);
   if (statsTracker)
@@ -2040,7 +2048,7 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       bindArgument(kf, k, state, arguments[k]);
   }
 }
-//通过更改state的pc值来进行基本块转换
+//通过更改state的pc值来进行基本块转换，从src转换到dst
 void Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src, 
                                     ExecutionState &state) {
   // Note that in general phi nodes can reuse phi values from the same
@@ -2049,7 +2057,7 @@ void Executor::transferToBasicBlock(BasicBlock *dst, BasicBlock *src,
   // really seem to occur, but just in case we run the PhiCleanerPass
   // which makes sure this cannot happen and so it is safe to just
   // eval things in order. The PhiCleanerPass also makes sure that all
-  // incoming blocks have the same order for each PHINode so we only
+  // incoming blocks have the same order for each PHINode so we  
   // have to compute the index once.
   //
   // With that done we simply set an index in the state so that PHI
@@ -2095,6 +2103,9 @@ Function *Executor::getTargetFunction(Value *calledVal) {
   }
 }
 
+/**
+ * 负责具体解析和执行状态state下的指令ki
+*/
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
   switch (i->getOpcode()) {
@@ -2121,7 +2132,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         statsTracker->framePopped(state); //通知统计跟踪器statsTracker当前函数栈帧已经弹出
 
       if (InvokeInst *ii = dyn_cast<InvokeInst>(caller)) { //设置正确的pc值
-        transferToBasicBlock(ii->getNormalDest(), caller->getParent(), state);
+        transferToBasicBlock(ii->getNormalDest(), caller->getParent(), state); //ii->getNormalDest()获得当前函数的caller所在基本块，是基本块跳转的目标地址
       } else {
         state.pc = kcaller;
         ++state.pc;
@@ -2204,8 +2215,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       assert(bi->getCondition() == bi->getOperand(0) &&
              "Wrong operand index!");
       ref<Expr> cond = eval(ki, 0, state).value;
-
+      //ExprPPrinter::printOne(llvm::outs(), "the cond in Instruction:Br is ", cond); //打印条件跳转指令中拿到的条件表达式
       cond = optimizer.optimizeExpr(cond, false);//拿到分支条件cond并进行优化
+      //ExprPPrinter::printOne(llvm::outs(), "the cond in Instruction:Br is ", cond); //打印优化后条件跳转指令中拿到的条件表达式
       //将分支条件（一个布尔表达式的并集）传入求解器进行求解，查看是否两个分支都可满足，可行的分支会返回对应的state实例
       //statePair是一个ExecutionState的pair，应该保存两个分支对应的state分支
       Executor::StatePair branches = fork(state, cond, false, BranchType::Conditional);
@@ -3565,16 +3577,16 @@ void Executor::run(ExecutionState &initialState) {
 
   searcher = constructUserSearcher(*this); //创建一个searcher实例
 
-  std::vector<ExecutionState *> newStates(states.begin(), states.end()); //newstates是新添加的状态，这里应该只有initialstate
+  std::vector<ExecutionState *> newStates(states.begin(), states.end()); //newstates是新添加的状态，这里states向量中只有initialstate
   searcher->update(0, newStates, std::vector<ExecutionState *>()); //告知searcher有哪些新状态，有哪些状态被移除了，在执行初始状态时，当前状态为initialstate，没有移除的状态
 
   // main interpreter loop
   while (!states.empty() && !haltExecution) { //主解释器循环
     ExecutionState &state = searcher->selectState(); //searcher根据搜索策略从states中选择一个待执行状态，klee有多种搜索策略，如DFS，BFS，Random等
-    KInstruction *ki = state.pc; //state的待执行指令
-    stepInstruction(state); //将state的pc+1，此时state中的pc保存的是待执行指令的下一条指令？
+    KInstruction *ki = state.pc; //state的待执行指令（还未执行）
+    stepInstruction(state); //将state的pc+1，此时state中的pc保存的是待执行指令（还未执行）的下一条指令
 
-    executeInstruction(state, ki); //执行语句，内部是一个很大的switch语句，处理不同类型的指令
+    executeInstruction(state, ki); //执行待执行语句，内部是一个很大的switch语句，处理不同类型的指令
     timers.invoke(); //调用所有计时器，更新它们的状态
     if (::dumpStates) dumpStates();
     if (::dumpPTree) dumpPTree();
@@ -4066,7 +4078,7 @@ ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
 }
 
 /**
- * 为MemoryObject对象创建并绑定一个state下的ObjectState对象
+ * 为MemoryObject对象创建并绑定一个state下的ObjectState对象，isLocal参数决定是否将绑定的内存对象mo视为局部变量
 */
 ObjectState *Executor::bindObjectInState(ExecutionState &state, 
                                          const MemoryObject *mo,
@@ -4080,7 +4092,7 @@ ObjectState *Executor::bindObjectInState(ExecutionState &state,
   // matter because all we use this list for is to unbind the object
   // on function return.
   if (isLocal)
-    state.stack.back().allocas.push_back(mo);
+    state.stack.back().allocas.push_back(mo); //视为局部变量，将mo添加到当前执行状态的栈帧的allocas列表中
 
   return os;
 }
@@ -4539,22 +4551,27 @@ void Executor::runFunctionAsMain(Function *f,
   int envc;
   for (envc=0; envp[envc]; ++envc) ;
 
-  unsigned NumPtrBytes = Context::get().getPointerWidth() / 8;
+  unsigned NumPtrBytes = Context::get().getPointerWidth() / 8; //指针的字节大小
   KFunction *kf = kmodule->functionMap[f]; //functionMap维护从function到Kfunction的映射，得到main函数对应的KFunction kf
+  //打印functionMap中维护的函数名，by wqc
+  // for(const auto& pair : kmodule->functionMap) {
+  //   const llvm::Function *function_wqc = pair.first;
+  //   klee_message("the function's name is %s", function_wqc->getName().data());
+  // }
   assert(kf);
   Function::arg_iterator ai = f->arg_begin(), ae = f->arg_end();
   //为argc个参数以及envc个环境变量分配内存空间
   if (ai!=ae) { //1个参数
-    arguments.push_back(ConstantExpr::alloc(argc, Expr::Int32));
+    arguments.push_back(ConstantExpr::alloc(argc, Expr::Int32)); //为第一个参数分配32bit内存
     if (++ai!=ae) { //2个参数
       Instruction *first = &*(f->begin()->begin());
       argvMO = memory->allocate((argc + 1 + envc + 1 + 1) * NumPtrBytes,
                                 /*isLocal=*/false, /*isGlobal=*/true,
                                 /*state=*/nullptr, /*allocSite=*/first,
-                                /*alignment=*/8); //分配空间
+                                /*alignment=*/8); //为指向程序参数和环境变量的所有指针分配空间
 
       if (!argvMO)
-        klee_error("Could not allocate memory for function arguments");
+        klee_error("Could not allocate memory for function arguments"); //第二个参数是函数参数
 
       arguments.push_back(argvMO->getBaseExpr());
 
@@ -4583,22 +4600,22 @@ void Executor::runFunctionAsMain(Function *f,
   for (unsigned i = 0, e = f->arg_size(); i != e; ++i)
     bindArgument(kf, i, *state, arguments[i]); //将参数与当前状态绑定
 
-  // 将参数用 MemoryObject 和 ObjectState 等类进行封装, 以便klee使用
+  // 将参数用 MemoryObject 和 ObjectState 等类进行封装, 以便klee使用，false代表将argvMO视为初始状态(initial state)下的全局变量
   if (argvMO) {
-    ObjectState *argvOS = bindObjectInState(*state, argvMO, false);
+    ObjectState *argvOS = bindObjectInState(*state, argvMO, false); //将保存参数指针的内存对象argvMO绑定到state下的argvOS
 
-    for (int i=0; i<argc+1+envc+1+1; i++) {
+    for (int i=0; i<argc+1+envc+1+1; i++) { //遍历所有参数，包括argc个程序参数和envc个环境变量
       if (i==argc || i>=argc+1+envc) {
         // Write NULL pointer
         argvOS->write(i * NumPtrBytes, Expr::createPointer(0));
       } else {
-        char *s = i<argc ? argv[i] : envp[i-(argc+1)];
+        char *s = i<argc ? argv[i] : envp[i-(argc+1)]; //取出的参数字符串
         int j, len = strlen(s);
 
         MemoryObject *arg =
             memory->allocate(len + 1, /*isLocal=*/false, /*isGlobal=*/true,
                              state, /*allocSite=*/state->pc->inst,
-                             /*alignment=*/8);
+                             /*alignment=*/8); //为每个参数分配内存空间
         if (!arg)
           klee_error("Could not allocate memory for function arguments");
         ObjectState *os = bindObjectInState(*state, arg, false);

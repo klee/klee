@@ -1380,9 +1380,17 @@ int main(int argc, char **argv, char **envp) { //klee的入口函数
     for (; i != items.size(); ++i)
       pEnvp[i] = strdup(items[i].c_str());
     pEnvp[i] = 0;
+    klee_message("test if Environ != """); //by wqc
   } else {
     pEnvp = envp;
   }
+
+  //这里是在打印pEnvp，发现就是系统的环境变量env
+  // int wqc = 0;
+  // while(pEnvp[wqc] != NULL) {
+  //   klee_message("pEnvp[%d] is %s", wqc, pEnvp[wqc]);
+  //   wqc++;
+  // }
 
   pArgc = InputArgv.size() + 1;
   klee_message("the pArgc is %d", pArgc); //打印目标程序参数数量pArgc，by wqc
@@ -1424,7 +1432,7 @@ int main(int argc, char **argv, char **envp) { //klee的入口函数
   if (!mainFn) {
     klee_error("Entry function '%s' not found in module.", EntryPoint.c_str());
   }
-
+  
   externalsAndGlobalsCheck(finalModule);
 
   if (ReplayPathFile != "") {
@@ -1530,6 +1538,7 @@ int main(int argc, char **argv, char **envp) { //klee的入口函数
                    sys::StrError(errno).c_str());
       }
     }
+    //klee_message("the name of mainFn is %s", mainFn->getName().data()); //打印mianFn的函数名，by wqc
     interpreter->runFunctionAsMain(mainFn, pArgc, pArgv, pEnvp); //从入口函数开始进行后续的符号执行操作，main函数的功能结束，转到runFunctionAsMain
 
     while (!seeds.empty()) {

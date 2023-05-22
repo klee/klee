@@ -131,13 +131,16 @@ void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
   stack.emplace_back(StackFrame(caller, kf));
 }
 
+/**
+ * 弹出调用栈栈顶的栈帧
+*/
 void ExecutionState::popFrame() {
-  const StackFrame &sf = stack.back();
-  for (const auto *memoryObject : sf.allocas) {
-    deallocate(memoryObject);
-    addressSpace.unbindObject(memoryObject);
+  const StackFrame &sf = stack.back(); //获取栈顶的栈帧对象sf
+  for (const auto *memoryObject : sf.allocas) { //对于sf中的每个内存对象memoryObject
+    deallocate(memoryObject); //1. 释放内存
+    addressSpace.unbindObject(memoryObject); //从addressSpace中解绑，从此移除本状态中对memoryObject的绑定
   }
-  stack.pop_back();
+  stack.pop_back(); //将栈顶pop
 }
 
 void ExecutionState::deallocate(const MemoryObject *mo) {

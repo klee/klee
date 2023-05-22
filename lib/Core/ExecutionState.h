@@ -146,6 +146,7 @@ struct CleanupPhaseUnwindingInformation : public UnwindingInformation {
 };
 
 /// @brief ExecutionState representing a path under exploration
+/// klee中用于表示符号执行中程序状态的数据结构，一个Executionstate代表一条执行路径
 class ExecutionState {
 #ifdef KLEE_UNITTEST
 public:
@@ -162,16 +163,20 @@ public:
 
   /// @brief Pointer to instruction to be executed after the current
   /// instruction
+  /// 当前指令执行完后紧接着执行的下一条指令
   KInstIterator pc;
 
   /// @brief Pointer to instruction which is currently executed
+  /// 当前执行的指令
   KInstIterator prevPC;
 
   /// @brief Stack representing the current instruction stream
+  /// 状态的调用栈
   stack_ty stack;
 
   /// @brief Remember from which Basic Block control flow arrived
   /// (i.e. to select the right phi values)
+  /// 当前状态是从incomingBBIndex基本块跳转而来的
   std::uint32_t incomingBBIndex;
 
   // Overall state of the state - Data specific
