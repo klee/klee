@@ -384,7 +384,7 @@ bool TargetForest::Layer::allNodesRefCountOne() const {
 void TargetForest::Layer::dump(unsigned n) const {
   llvm::errs() << "THE " << n << " LAYER:\n";
   llvm::errs() << "Confidence: " << confidence << "\n";
-  for (const auto &kv : forest) {
+  for (const auto &kv : targetsToVector) {
     llvm::errs() << kv.first->toString() << "\n";
   }
   llvm::errs() << "-----------------------\n";

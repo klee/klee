@@ -95,6 +95,8 @@ Todo: Shouldn't bool \c Xor just be written as not equal?
 */
 
 class Expr {
+public:
+  static void splitAnds(ref<Expr> e, std::vector<ref<Expr>> &exprs);
 
 protected:
   struct ExprHash {

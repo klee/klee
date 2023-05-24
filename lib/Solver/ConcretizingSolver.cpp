@@ -125,10 +125,12 @@ bool ConcretizingSolver::relaxSymcreteConstraints(const Query &query,
     bool success = result->tryGetValidityCore(validityCore);
     assert(success);
 
-    std::vector<const Array *> currentlyBrokenSymcretizedArrays =
-        ConstraintSet(validityCore.constraints, {}, {true})
-            .withExpr(validityCore.expr)
-            .gatherArrays();
+    constraints_ty allValidityCoreConstraints = validityCore.constraints;
+    allValidityCoreConstraints.insert(validityCore.expr);
+    std::vector<const Array *> currentlyBrokenSymcretizedArrays;
+    findObjects(allValidityCoreConstraints.begin(),
+                allValidityCoreConstraints.end(),
+                currentlyBrokenSymcretizedArrays);
 
     std::queue<const Array *> arrayQueue;
     std::queue<const Array *> addressQueue;
@@ -225,7 +227,8 @@ bool ConcretizingSolver::relaxSymcreteConstraints(const Query &query,
   assert(!sizeSymcretes.empty());
   ref<Expr> symbolicSizesSum = createNonOverflowingSumExpr(sizeSymcretes);
   symbolicSizesSum =
-      Simplificator::simplifyExpr(query.constraints, symbolicSizesSum);
+      Simplificator::simplifyExpr(query.constraints, symbolicSizesSum)
+          .simplified;
 
   ref<ConstantExpr> minimalValueOfSum;
   ref<SolverResponse> response;

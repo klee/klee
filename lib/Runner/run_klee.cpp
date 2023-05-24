@@ -120,6 +120,11 @@ cl::opt<bool> WriteSymPaths(
     cl::desc("Write .sym.path files for each test case (default=false)"),
     cl::cat(TestCaseCat));
 
+cl::opt<bool> WriteKPaths(
+    "write-kpaths",
+    cl::desc("Write .kpath files for each test case (default=false)"),
+    cl::cat(TestCaseCat));
+
 cl::opt<bool>
     WriteStates("write-states", cl::init(false),
                 cl::desc("Write state info for debug (default=false)"),
@@ -628,6 +633,14 @@ void KleeHandler::processTestCase(const ExecutionState &state,
           *f << branch << '\n';
         }
       }
+    }
+
+    if (WriteKPaths) {
+      std::string blockPath;
+      m_interpreter->getBlockPath(state, blockPath);
+      auto f = openTestFile("kpath", id);
+      if (f)
+        *f << blockPath;
     }
 
     if (WriteCov) {

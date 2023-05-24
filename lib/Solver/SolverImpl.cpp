@@ -146,12 +146,14 @@ bool SolverImpl::computeMinimalUnsignedValue(const Query &query,
       ref<ConstantExpr> middle =
           LShrExpr::create(AddExpr::create(left, right),
                            ConstantExpr::create(1, left->getWidth()));
-      ref<Expr> valueMustBeGreaterExpr = Simplificator::simplifyExpr(
-          query.constraints,
-          UgtExpr::create(
-              query.expr,
-              ShlExpr::create(ConstantExpr::create(1, middle->getWidth()),
-                              middle)));
+      ref<Expr> valueMustBeGreaterExpr =
+          Simplificator::simplifyExpr(
+              query.constraints,
+              UgtExpr::create(
+                  query.expr,
+                  ShlExpr::create(ConstantExpr::create(1, middle->getWidth()),
+                                  middle)))
+              .simplified;
 
       bool mustBeGreater;
       if (!computeTruth(query.withExpr(valueMustBeGreaterExpr),
@@ -186,8 +188,10 @@ bool SolverImpl::computeMinimalUnsignedValue(const Query &query,
         right = cast<ConstantExpr>(
             ShlExpr::create(right, ConstantExpr::create(1, right->getWidth())));
       }
-      ref<Expr> valueMustBeGreaterExpr = Simplificator::simplifyExpr(
-          query.constraints, UgtExpr::create(query.expr, right));
+      ref<Expr> valueMustBeGreaterExpr =
+          Simplificator::simplifyExpr(query.constraints,
+                                      UgtExpr::create(query.expr, right))
+              .simplified;
       if (!computeTruth(query.withExpr(valueMustBeGreaterExpr), mustBeTrue)) {
         return false;
       }
@@ -207,8 +211,10 @@ bool SolverImpl::computeMinimalUnsignedValue(const Query &query,
                             ZExtExpr::create(right, right->getWidth() + 1)),
             ConstantExpr::create(1, right->getWidth() + 1)),
         right->getWidth()));
-    ref<Expr> valueMustBeGreaterExpr = Simplificator::simplifyExpr(
-        query.constraints, UgtExpr::create(query.expr, middle));
+    ref<Expr> valueMustBeGreaterExpr =
+        Simplificator::simplifyExpr(query.constraints,
+                                    UgtExpr::create(query.expr, middle))
+            .simplified;
 
     bool mustBeGreater;
     if (!computeTruth(query.withExpr(valueMustBeGreaterExpr), mustBeGreater)) {

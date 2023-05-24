@@ -97,6 +97,12 @@ public:
   ValidityCore(const constraints_typ &_constraints, ref<Expr> _expr)
       : constraints(_constraints), expr(_expr) {}
 
+  ValidityCore(const ExprHashSet &_constraints, ref<Expr> _expr) : expr(_expr) {
+    for (auto e : _constraints) {
+      constraints.insert(e);
+    }
+  }
+
   /// withExpr - Return a copy of the validity core with the given expression.
   ValidityCore withExpr(ref<Expr> _expr) const {
     return ValidityCore(constraints, _expr);

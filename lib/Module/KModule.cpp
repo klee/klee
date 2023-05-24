@@ -369,6 +369,7 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
 
   std::vector<Function *> declarations;
 
+  unsigned functionID = 0;
   for (auto &Function : module->functions()) {
     if (Function.isDeclaration()) {
       declarations.push_back(&Function);
@@ -386,6 +387,9 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
       }
     }
 
+    functionIDMap.insert({&Function, functionID});
+    kf->id = functionID;
+    functionID++;
     functionNameMap.insert({kf->getName().str(), kf.get()});
     functionMap.insert(std::make_pair(&Function, kf.get()));
     functions.push_back(std::move(kf));
@@ -593,6 +597,7 @@ KFunction::KFunction(llvm::Function *_function, KModule *_km)
   }
   numRegisters = rnum;
 
+  unsigned blockID = 0;
   for (llvm::Function::iterator bbit = function->begin(),
                                 bbie = function->end();
        bbit != bbie; ++bbit) {
@@ -627,6 +632,7 @@ KFunction::KFunction(llvm::Function *_function, KModule *_km)
     for (unsigned i = 0; i < kb->numInstructions; i++, n++) {
       instructionMap[instructions[n]->inst] = instructions[n];
     }
+    kb->id = blockID++;
     blockMap[&*bbit] = kb;
     blocks.push_back(std::unique_ptr<KBlock>(kb));
   }

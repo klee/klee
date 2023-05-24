@@ -24,6 +24,8 @@
 
 namespace klee {
 
+enum class RewriteEqualitiesPolicy { None, Simple, Full };
+
 class MemoryObject;
 struct KInstruction;
 
@@ -57,6 +59,8 @@ public:
   void dump() const;
   void print(llvm::raw_ostream &os) const;
 
+  void changeCS(constraints_ty &cs);
+
   const constraints_ty &cs() const;
   const symcretes_ty &symcretes() const;
   const Assignment &concretization() const;
@@ -74,9 +78,9 @@ public:
 
   void advancePath(KInstruction *ki);
   void advancePath(const Path &path);
-  void addConstraint(ref<Expr> e, const Assignment &delta,
-                     Path::PathIndex currIndex);
-  void addConstraint(ref<Expr> e, const Assignment &delta);
+  ExprHashSet addConstraint(ref<Expr> e, const Assignment &delta,
+                            Path::PathIndex currIndex);
+  ExprHashSet addConstraint(ref<Expr> e, const Assignment &delta);
   bool isSymcretized(ref<Expr> expr) const;
   void addSymcrete(ref<Symcrete> s, const Assignment &concretization);
   void rewriteConcretization(const Assignment &a);
@@ -123,24 +127,41 @@ public:
 
 class Simplificator {
 public:
-  static ref<Expr> simplifyExpr(const constraints_ty &constraints,
-                                const ref<Expr> &expr);
+  struct ExprResult {
+    ref<Expr> simplified;
+    ExprHashSet dependency;
+  };
 
-  static ref<Expr> simplifyExpr(const ConstraintSet &constraints,
-                                const ref<Expr> &expr);
+  struct SetResult {
+    constraints_ty simplified;
+    ExprHashMap<ExprHashSet> dependency;
+  };
 
-  static void splitAnds(ref<Expr> e, std::vector<ref<Expr>> &exprs);
+public:
+  static ExprResult simplifyExpr(const constraints_ty &constraints,
+                                 const ref<Expr> &expr);
 
-  Simplificator(const ConstraintSet &constraints) : constraints(constraints) {}
+  static ExprResult simplifyExpr(const ConstraintSet &constraints,
+                                 const ref<Expr> &expr);
 
-  ConstraintSet simplify();
+  static Simplificator::SetResult
+  simplify(const constraints_ty &constraints,
+           RewriteEqualitiesPolicy p = RewriteEqualitiesPolicy::Full);
 
-  ExprHashMap<constraints_ty> &getSimplificationMap();
+  static ExprHashMap<ExprHashSet>
+  composeExprDependencies(const ExprHashMap<ExprHashSet> &upper,
+                          const ExprHashMap<ExprHashSet> &lower);
 
 private:
-  bool simplificationDone = false;
-  const ConstraintSet &constraints;
-  ExprHashMap<constraints_ty> simplificationMap;
+  struct Replacements {
+    ExprHashMap<ref<Expr>> equalities;
+    ExprHashMap<ref<Expr>> equalitiesParents;
+  };
+
+private:
+  static Replacements gatherReplacements(constraints_ty constraints);
+  static void addReplacement(Replacements &replacements, ref<Expr> expr);
+  static void removeReplacement(Replacements &replacements, ref<Expr> expr);
 };
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,

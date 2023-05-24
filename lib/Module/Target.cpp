@@ -86,8 +86,11 @@ int Target::compare(const Target &other) const {
   if (id != other.id) {
     return id < other.id ? -1 : 1;
   }
-  if (block != other.block) {
-    return block < other.block ? -1 : 1;
+  if (block->parent->id != other.block->parent->id) {
+    return block->parent->id < other.block->parent->id ? -1 : 1;
+  }
+  if (block->id != other.block->id) {
+    return block->id < other.block->id ? -1 : 1;
   }
   return 0;
 }

@@ -169,22 +169,23 @@ struct Symbolic {
   }
 };
 
-struct Resolution {
-  IDType memoryObjectID;
-  ref<Expr> offset;
-  Resolution(IDType memoryObjectID, ref<Expr> offset)
-      : memoryObjectID(memoryObjectID), offset(offset) {}
-  Resolution &operator=(const Resolution &other) = default;
+struct MemorySubobject {
+  ref<Expr> address;
+  unsigned size;
+  MemorySubobject(ref<Expr> address, unsigned size)
+      : address(address), size(size) {}
+  MemorySubobject &operator=(const MemorySubobject &other) = default;
+};
 
-  friend bool operator==(const Resolution &lhs, const Resolution &rhs) {
-    return lhs.memoryObjectID == rhs.memoryObjectID && lhs.offset == rhs.offset;
+struct MemorySubobjectHash {
+  bool operator()(const MemorySubobject &a) const {
+    return a.size * Expr::MAGIC_HASH_CONSTANT + a.address->hash();
   }
 };
 
-struct ResolutionCompare {
-  bool operator()(Resolution a, Resolution b) const {
-    return a.memoryObjectID < b.memoryObjectID ||
-           (a.memoryObjectID == b.memoryObjectID && a.offset < b.offset);
+struct MemorySubobjectCompare {
+  bool operator()(MemorySubobject a, MemorySubobject b) const {
+    return a.address == b.address && a.size == b.size;
   }
 };
 
@@ -274,7 +275,10 @@ public:
   std::vector<Symbolic> symbolics;
 
   /// @brief map from memory accesses to accessed objects and access offsets.
-  ExprHashMap<std::set<Resolution, ResolutionCompare>> resolvedPointers;
+  ExprHashMap<std::set<IDType>> resolvedPointers;
+  std::unordered_map<MemorySubobject, std::set<IDType>, MemorySubobjectHash,
+                     MemorySubobjectCompare>
+      resolvedSubobjects;
 
   /// @brief A set of boolean expressions
   /// the user has requested be true of a counterexample.
@@ -357,7 +361,8 @@ public:
                std::pair<ref<const MemoryObject>, ref<Expr>> &resolution) const;
 
   void removePointerResolutions(const MemoryObject *mo);
-  void addPointerResolution(ref<Expr> address, const MemoryObject *mo);
+  void addPointerResolution(ref<Expr> address, const MemoryObject *mo,
+                            unsigned size = 0);
   bool resolveOnSymbolics(const ref<ConstantExpr> &addr, IDType &result) const;
 
   void addConstraint(ref<Expr> e, const Assignment &c);

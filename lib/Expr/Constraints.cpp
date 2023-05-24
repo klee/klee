@@ -28,11 +28,17 @@
 using namespace klee;
 
 namespace {
-llvm::cl::opt<bool> RewriteEqualities(
+llvm::cl::opt<RewriteEqualitiesPolicy> RewriteEqualities(
     "rewrite-equalities",
     llvm::cl::desc("Rewrite existing constraints when an equality with a "
-                   "constant is added (default=true)"),
-    llvm::cl::init(true), llvm::cl::cat(SolvingCat));
+                   "constant is added (default=simple)"),
+    llvm::cl::values(clEnumValN(RewriteEqualitiesPolicy::None, "none",
+                                "Don't rewrite"),
+                     clEnumValN(RewriteEqualitiesPolicy::Simple, "simple",
+                                "lightweight visitor"),
+                     clEnumValN(RewriteEqualitiesPolicy::Full, "full",
+                                "more powerful visitor")),
+    llvm::cl::init(RewriteEqualitiesPolicy::Simple), llvm::cl::cat(SolvingCat));
 } // namespace
 
 class ExprReplaceVisitor : public ExprVisitor {
@@ -62,25 +68,85 @@ class ExprReplaceVisitor2 : public ExprVisitor {
 private:
   std::vector<std::reference_wrapper<const ExprHashMap<ref<Expr>>>>
       replacements;
+  const ExprHashMap<ref<Expr>> &replacementParents;
 
 public:
-  explicit ExprReplaceVisitor2(const ExprHashMap<ref<Expr>> &_replacements)
-      : ExprVisitor(true), replacements({_replacements}) {}
+  explicit ExprReplaceVisitor2(const ExprHashMap<ref<Expr>> &_replacements,
+                               const ExprHashMap<ref<Expr>> &_parents)
+      : ExprVisitor(true), replacements({_replacements}),
+        replacementParents(_parents) {}
 
-  Action visitExprPost(const Expr &e) override {
+  Action visitExpr(const Expr &e) override {
     for (auto i = replacements.rbegin(); i != replacements.rend(); i++) {
       if (i->get().count(ref<Expr>(const_cast<Expr *>(&e)))) {
-        return Action::changeTo(i->get().at(ref<Expr>(const_cast<Expr *>(&e))));
+        auto replacement = i->get().at(ref<Expr>(const_cast<Expr *>(&e)));
+        if (replacementParents.count(const_cast<Expr *>(&e))) {
+          replacementDependency.insert(
+              replacementParents.at(const_cast<Expr *>(&e)));
+        }
+        return Action::changeTo(replacement);
       }
     }
     return Action::doChildren();
   }
 
-  ref<Expr> processSelect(const SelectExpr &sexpr) {
-    auto cond = visit(sexpr.cond);
+  Action visitExprPost(const Expr &e) override {
+    for (auto i = replacements.rbegin(); i != replacements.rend(); i++) {
+      if (i->get().count(ref<Expr>(const_cast<Expr *>(&e)))) {
+        auto replacement = i->get().at(ref<Expr>(const_cast<Expr *>(&e)));
+        if (replacementParents.count(const_cast<Expr *>(&e))) {
+          replacementDependency.insert(
+              replacementParents.at(const_cast<Expr *>(&e)));
+        }
+        return Action::changeTo(replacement);
+      }
+    }
+    return Action::doChildren();
+  }
 
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(cond)) {
-      return CE->isTrue() ? visit(sexpr.trueExpr) : visit(sexpr.falseExpr);
+  std::pair<UpdateList, bool> processUpdateList(const UpdateList &updates) {
+    UpdateList newUpdates = UpdateList(updates.root, 0);
+    std::stack<ref<UpdateNode>> forward;
+
+    for (auto it = updates.head; !it.isNull(); it = it->next) {
+      forward.push(it);
+    }
+
+    bool changed = false;
+    while (!forward.empty()) {
+      ref<UpdateNode> UNode = forward.top();
+      forward.pop();
+      ref<Expr> newIndex = visit(UNode->index);
+      ref<Expr> newValue = visit(UNode->value);
+      if (newIndex != UNode->index || newValue != UNode->value) {
+        changed = true;
+      }
+      newUpdates.extend(newIndex, newValue);
+    }
+    return {newUpdates, changed};
+  }
+
+  Action visitRead(const ReadExpr &re) override {
+    auto updates = processUpdateList(re.updates);
+
+    ref<Expr> index = visit(re.index);
+    if (!updates.second && index == re.index) {
+      return Action::skipChildren();
+    } else {
+      ref<Expr> reres = ReadExpr::create(updates.first, index);
+      Action res = visitExprPost(*reres.get());
+      if (res.kind == Action::ChangeTo) {
+        reres = res.argument;
+      }
+      return Action::changeTo(reres);
+    }
+  }
+
+  Action visitSelect(const SelectExpr &sexpr) override {
+    auto cond = visit(sexpr.cond);
+    if (auto CE = dyn_cast<ConstantExpr>(cond)) {
+      return CE->isTrue() ? Action::changeTo(visit(sexpr.trueExpr))
+                          : Action::changeTo(visit(sexpr.falseExpr));
     }
 
     ExprHashMap<ref<Expr>> localReplacements;
@@ -113,92 +179,64 @@ public:
     visited.popFrame();
     replacements.pop_back();
 
-    ref<Expr> seres = SelectExpr::create(cond, trueExpr, falseExpr);
+    if (trueExpr != sexpr.trueExpr || falseExpr != sexpr.falseExpr) {
+      ref<Expr> seres = SelectExpr::create(cond, trueExpr, falseExpr);
 
-    auto res = visitExprPost(*seres.get());
-    if (res.kind == Action::ChangeTo) {
-      seres = res.argument;
-    }
-    return seres;
-  }
-
-  UpdateList processUpdateList(const UpdateList &updates) {
-    UpdateList newUpdates = UpdateList(updates.root, 0);
-    std::stack<ref<UpdateNode>> forward;
-
-    for (auto it = updates.head; !it.isNull(); it = it->next) {
-      forward.push(it);
-    }
-
-    while (!forward.empty()) {
-      ref<UpdateNode> UNode = forward.top();
-      forward.pop();
-      ref<Expr> newIndex = visit(UNode->index);
-      ref<Expr> newValue = visit(UNode->value);
-      newUpdates.extend(newIndex, newValue);
-    }
-    return newUpdates;
-  }
-
-  ref<Expr> processRead(const ReadExpr &re) {
-    UpdateList updates = processUpdateList(re.updates);
-
-    ref<Expr> index = visit(re.index);
-    ref<Expr> reres = ReadExpr::create(updates, index);
-    Action res = visitExprPost(*reres.get());
-    if (res.kind == Action::ChangeTo) {
-      reres = res.argument;
-    }
-    return reres;
-  }
-
-  ref<Expr> processOrderedRead(const ConcatExpr &ce, const ReadExpr &base) {
-    UpdateList updates = processUpdateList(base.updates);
-    std::stack<ref<Expr>> forward;
-
-    ref<ReadExpr> read = cast<ReadExpr>(ce.getLeft());
-    ref<Expr> index = visit(read->index);
-    ref<Expr> e = ce.getKid(1);
-    forward.push(ReadExpr::create(updates, index));
-
-    while (auto concat = dyn_cast<ConcatExpr>(e)) {
-      read = cast<ReadExpr>(concat->getLeft());
-      index = visit(read->index);
-      forward.push(ReadExpr::create(updates, index));
-      e = concat->getRight();
-    }
-
-    read = cast<ReadExpr>(e);
-    index = visit(read->index);
-    forward.push(ReadExpr::create(updates, index));
-
-    ref<Expr> reres = forward.top();
-    forward.pop();
-
-    while (!forward.empty()) {
-      ref<Expr> newRead = forward.top();
-      forward.pop();
-      reres = ConcatExpr::create(newRead, reres);
-    }
-
-    return reres;
-  }
-
-  Action visitSelect(const SelectExpr &sexpr) override {
-    return Action::changeTo(processSelect(sexpr));
-  }
-
-  Action visitConcat(const ConcatExpr &concat) override {
-    const ReadExpr *base = ArrayExprHelper::hasOrderedReads(concat);
-    if (base) {
-      return Action::changeTo(processOrderedRead(concat, *base));
+      auto res = visitExprPost(*seres.get());
+      if (res.kind == Action::ChangeTo) {
+        seres = res.argument;
+      }
+      return Action::changeTo(seres);
     } else {
-      return Action::doChildren();
+      return Action::skipChildren();
     }
   }
-  Action visitRead(const ReadExpr &re) override {
-    return Action::changeTo(processRead(re));
+
+public:
+  ExprHashSet replacementDependency;
+};
+
+class ExprReplaceVisitor3 : public ExprVisitor {
+private:
+  std::vector<std::reference_wrapper<const ExprHashMap<ref<Expr>>>>
+      replacements;
+  const ExprHashMap<ref<Expr>> &replacementParents;
+
+public:
+  explicit ExprReplaceVisitor3(const ExprHashMap<ref<Expr>> &_replacements,
+                               const ExprHashMap<ref<Expr>> &_parents)
+      : ExprVisitor(true), replacements({_replacements}),
+        replacementParents(_parents) {}
+
+  Action visitExpr(const Expr &e) override {
+    for (auto i = replacements.rbegin(); i != replacements.rend(); i++) {
+      if (i->get().count(ref<Expr>(const_cast<Expr *>(&e)))) {
+        auto replacement = i->get().at(ref<Expr>(const_cast<Expr *>(&e)));
+        if (replacementParents.count(const_cast<Expr *>(&e))) {
+          replacementDependency.insert(
+              replacementParents.at(const_cast<Expr *>(&e)));
+        }
+        return Action::changeTo(replacement);
+      }
+    }
+    return Action::doChildren();
   }
+
+  Action visitExprPost(const Expr &e) override {
+    for (auto i = replacements.rbegin(); i != replacements.rend(); i++) {
+      if (i->get().count(ref<Expr>(const_cast<Expr *>(&e)))) {
+        auto replacement = i->get().at(ref<Expr>(const_cast<Expr *>(&e)));
+        if (replacementParents.count(const_cast<Expr *>(&e))) {
+          replacementDependency.insert(
+              replacementParents.at(const_cast<Expr *>(&e)));
+        }
+        return Action::changeTo(replacement);
+      }
+    }
+    return Action::doChildren();
+  }
+
+  ExprHashSet replacementDependency;
 };
 
 ConstraintSet::ConstraintSet(constraints_ty cs, symcretes_ty symcretes,
@@ -210,6 +248,8 @@ ConstraintSet::ConstraintSet() : _concretization(Assignment(true)) {}
 
 void ConstraintSet::addConstraint(ref<Expr> e, const Assignment &delta) {
   _constraints.insert(e);
+
+  // Update bindings
   for (auto i : delta.bindings) {
     _concretization.bindings[i.first] = i.second;
   }
@@ -242,21 +282,6 @@ void ConstraintSet::rewriteConcretization(const Assignment &a) {
   }
 }
 
-/**
- * @brief Copies the current constraint set and adds expression e.
- *
- * Ideally, this function should accept variadic arguments pack
- * and unpack them with fold expressions, but this feature availible only
- * from C++17.
- *
- * @return copied and modified constraint set.
- */
-ConstraintSet ConstraintSet::withExpr(ref<Expr> e) const {
-  ConstraintSet newConstraintSet = *this;
-  newConstraintSet.addConstraint(e, {});
-  return newConstraintSet;
-}
-
 void ConstraintSet::print(llvm::raw_ostream &os) const {
   os << "Constraints [\n";
   for (const auto &constraint : _constraints) {
@@ -274,6 +299,8 @@ void ConstraintSet::print(llvm::raw_ostream &os) const {
 }
 
 void ConstraintSet::dump() const { this->print(llvm::errs()); }
+
+void ConstraintSet::changeCS(constraints_ty &cs) { _constraints = cs; }
 
 const constraints_ty &ConstraintSet::cs() const { return _constraints; }
 
@@ -308,43 +335,44 @@ void PathConstraints::advancePath(const Path &path) {
   _path = Path::concat(_path, path);
 }
 
-void PathConstraints::addConstraint(ref<Expr> e, const Assignment &delta,
-                                    Path::PathIndex currIndex) {
+ExprHashSet PathConstraints::addConstraint(ref<Expr> e, const Assignment &delta,
+                                           Path::PathIndex currIndex) {
   auto expr = Simplificator::simplifyExpr(constraints, e);
-  if (auto ce = dyn_cast<ConstantExpr>(expr)) {
+  if (auto ce = dyn_cast<ConstantExpr>(expr.simplified)) {
     assert(ce->isTrue() && "Attempt to add invalid constraint");
-    return;
+    return {};
   }
+  ExprHashSet added;
   std::vector<ref<Expr>> exprs;
-  Simplificator::splitAnds(expr, exprs);
+  Expr::splitAnds(expr.simplified, exprs);
   for (auto expr : exprs) {
     if (auto ce = dyn_cast<ConstantExpr>(expr)) {
       assert(ce->isTrue() && "Expression simplified to false");
-      return;
+    } else {
+      _original.insert(expr);
+      added.insert(expr);
+      pathIndexes.insert({expr, currIndex});
+      _simplificationMap[expr].insert(expr);
+      orderedConstraints[currIndex].insert(expr);
+      constraints.addConstraint(expr, delta);
     }
-    _original.insert(expr);
-    pathIndexes.insert({expr, currIndex});
-    _simplificationMap[expr].insert(expr);
-    orderedConstraints[currIndex].insert(expr);
-    constraints.addConstraint(expr, delta);
   }
-  auto simplificator = Simplificator(constraints);
-  constraints = simplificator.simplify();
-  ExprHashMap<ExprHashSet> newMap;
-  for (auto i : simplificator.getSimplificationMap()) {
-    ExprHashSet newSet;
-    for (auto j : i.second) {
-      for (auto k : _simplificationMap[j]) {
-        newSet.insert(k);
-      }
-    }
-    newMap.insert({i.first, newSet});
+
+  if (RewriteEqualities != RewriteEqualitiesPolicy::None) {
+    auto simplified =
+        Simplificator::simplify(constraints.cs(), RewriteEqualities);
+    constraints.changeCS(simplified.simplified);
+
+    _simplificationMap = Simplificator::composeExprDependencies(
+        _simplificationMap, simplified.dependency);
   }
-  _simplificationMap = newMap;
+
+  return added;
 }
 
-void PathConstraints::addConstraint(ref<Expr> e, const Assignment &delta) {
-  addConstraint(e, delta, _path.getCurrentIndex());
+ExprHashSet PathConstraints::addConstraint(ref<Expr> e,
+                                           const Assignment &delta) {
+  return addConstraint(e, delta, _path.getCurrentIndex());
 }
 
 bool PathConstraints::isSymcretized(ref<Expr> expr) const {
@@ -383,128 +411,169 @@ PathConstraints PathConstraints::concat(const PathConstraints &l,
   return path;
 }
 
-ref<Expr> Simplificator::simplifyExpr(const constraints_ty &constraints,
-                                      const ref<Expr> &expr) {
+Simplificator::ExprResult
+Simplificator::simplifyExpr(const constraints_ty &constraints,
+                            const ref<Expr> &expr) {
   if (isa<ConstantExpr>(expr))
-    return expr;
+    return {expr, {}};
 
   ExprHashMap<ref<Expr>> equalities;
+  ExprHashMap<ref<Expr>> equalitiesParents;
 
   for (auto &constraint : constraints) {
     if (const EqExpr *ee = dyn_cast<EqExpr>(constraint)) {
       if (isa<ConstantExpr>(ee->left)) {
         equalities.insert(std::make_pair(ee->right, ee->left));
+        equalitiesParents.insert({ee->right, constraint});
       } else {
         equalities.insert(
             std::make_pair(constraint, ConstantExpr::alloc(1, Expr::Bool)));
+        equalitiesParents.insert({constraint, constraint});
       }
     } else {
       equalities.insert(
           std::make_pair(constraint, ConstantExpr::alloc(1, Expr::Bool)));
+      equalitiesParents.insert({constraint, constraint});
     }
   }
 
-  return ExprReplaceVisitor2(equalities).visit(expr);
+  ExprReplaceVisitor2 visitor(equalities, equalitiesParents);
+  auto visited = visitor.visit(expr);
+  return {visited, visitor.replacementDependency};
 }
 
-ref<Expr> Simplificator::simplifyExpr(const ConstraintSet &constraints,
-                                      const ref<Expr> &expr) {
+Simplificator::ExprResult
+Simplificator::simplifyExpr(const ConstraintSet &constraints,
+                            const ref<Expr> &expr) {
   return simplifyExpr(constraints.cs(), expr);
 }
 
-ConstraintSet Simplificator::simplify() {
-  assert(!simplificationDone);
-  using EqualityMap = ExprHashMap<std::pair<ref<Expr>, ref<Expr>>>;
-  EqualityMap equalities;
-  bool changed = true;
-  ExprHashMap<constraints_ty> map;
-  constraints_ty current;
-  constraints_ty next = constraints.cs();
-
-  for (auto e : next) {
-    map.insert({e, {e}});
-    if (e->getKind() == Expr::Eq) {
-      auto be = cast<BinaryExpr>(e);
-      if (isa<ConstantExpr>(be->left)) {
-        equalities.insert({e, {be->right, be->left}});
-      }
-    }
+Simplificator::SetResult
+Simplificator::simplify(const constraints_ty &constraints,
+                        RewriteEqualitiesPolicy policy) {
+  // Initialization
+  constraints_ty simplified;
+  ExprHashMap<ExprHashSet> dependencies;
+  for (auto constraint : constraints) {
+    simplified.insert(constraint);
+    dependencies.insert({constraint, {constraint}});
   }
 
+  bool changed = true;
   while (changed) {
     changed = false;
-    std::vector<EqualityMap::value_type> newEqualitites;
-    for (auto eq : equalities) {
-      auto visitor = ExprReplaceVisitor(eq.second.first, eq.second.second);
-      current = next;
-      next.clear();
-      for (auto expr : current) {
-        ref<Expr> simplifiedExpr;
-        if (expr != eq.first && RewriteEqualities) {
-          simplifiedExpr = visitor.visit(expr);
-        } else {
-          simplifiedExpr = expr;
-        }
-        if (simplifiedExpr != expr) {
-          changed = true;
-          constraints_ty mapEntry;
-          if (auto ce = dyn_cast<ConstantExpr>(simplifiedExpr)) {
-            assert(ce->isTrue() && "Constraint simplified to false");
-            continue;
-          }
-          if (map.count(expr)) {
-            mapEntry = map.at(expr);
-          }
-          mapEntry.insert(eq.first);
-          std::vector<ref<Expr>> simplifiedExprs;
-          splitAnds(simplifiedExpr, simplifiedExprs);
-          for (auto simplifiedExpr : simplifiedExprs) {
-            if (simplifiedExpr->getKind() == Expr::Eq) {
-              auto be = cast<BinaryExpr>(simplifiedExpr);
-              if (isa<ConstantExpr>(be->left)) {
-                newEqualitites.push_back(
-                    {simplifiedExpr, {be->right, be->left}});
-              }
-            }
-          }
-          for (auto simplifiedExpr : simplifiedExprs) {
-            for (auto i : mapEntry) {
-              map[simplifiedExpr].insert(i);
-            }
-            next.insert(simplifiedExpr);
-          }
-        } else {
-          next.insert(expr);
-        }
+    Replacements replacements = gatherReplacements(simplified);
+    constraints_ty currentSimplified;
+    ExprHashMap<ExprHashSet> currentDependencies;
+
+    for (auto &constraint : simplified) {
+      removeReplacement(replacements, constraint);
+      ref<Expr> simplifiedConstraint;
+      ExprHashSet dependency;
+      if (policy == RewriteEqualitiesPolicy::Simple) {
+        auto visitor = ExprReplaceVisitor3(replacements.equalities,
+                                           replacements.equalitiesParents);
+        simplifiedConstraint = visitor.visit(constraint);
+        dependency = visitor.replacementDependency;
+      } else {
+        assert(policy != RewriteEqualitiesPolicy::None);
+        auto visitor = ExprReplaceVisitor2(replacements.equalities,
+                                           replacements.equalitiesParents);
+        simplifiedConstraint = visitor.visit(constraint);
+        dependency = visitor.replacementDependency;
+      }
+      addReplacement(replacements, constraint);
+      std::vector<ref<Expr>> andsSplit;
+      Expr::splitAnds(simplifiedConstraint, andsSplit);
+      for (auto part : andsSplit) {
+        currentSimplified.insert(part);
+        currentDependencies.insert({part, dependency});
+        currentDependencies[part].insert(constraint);
+      }
+      if (constraint != simplifiedConstraint || andsSplit.size() > 1) {
+        changed = true;
       }
     }
-    for (auto equality : newEqualitites) {
-      equalities.insert(equality);
+
+    if (changed) {
+      simplified = currentSimplified;
+      dependencies = composeExprDependencies(dependencies, currentDependencies);
     }
   }
 
-  for (auto entry : map) {
-    if (next.count(entry.first)) {
-      simplificationMap.insert(entry);
+  simplified.erase(ConstantExpr::createTrue());
+  dependencies.erase(ConstantExpr::createTrue());
+
+  return {simplified, dependencies};
+}
+
+Simplificator::Replacements
+Simplificator::gatherReplacements(constraints_ty constraints) {
+  Replacements result;
+  for (auto &constraint : constraints) {
+    if (const EqExpr *ee = dyn_cast<EqExpr>(constraint)) {
+      if (isa<ConstantExpr>(ee->left)) {
+        result.equalities.insert(std::make_pair(ee->right, ee->left));
+        result.equalitiesParents.insert({ee->right, constraint});
+      } else {
+        result.equalities.insert(
+            std::make_pair(constraint, ConstantExpr::alloc(1, Expr::Bool)));
+        result.equalitiesParents.insert({constraint, constraint});
+      }
+    } else {
+      result.equalities.insert(
+          std::make_pair(constraint, ConstantExpr::alloc(1, Expr::Bool)));
+      result.equalitiesParents.insert({constraint, constraint});
     }
   }
-  simplificationDone = true;
-  return ConstraintSet(next, constraints.symcretes(),
-                       constraints.concretization());
+  return result;
 }
 
-ExprHashMap<constraints_ty> &Simplificator::getSimplificationMap() {
-  assert(simplificationDone);
-  return simplificationMap;
-}
-
-void Simplificator::splitAnds(ref<Expr> e, std::vector<ref<Expr>> &exprs) {
-  if (auto andExpr = dyn_cast<AndExpr>(e)) {
-    splitAnds(andExpr->getKid(0), exprs);
-    splitAnds(andExpr->getKid(1), exprs);
+void Simplificator::addReplacement(Replacements &replacements, ref<Expr> expr) {
+  if (const EqExpr *ee = dyn_cast<EqExpr>(expr)) {
+    if (isa<ConstantExpr>(ee->left)) {
+      replacements.equalities.insert(std::make_pair(ee->right, ee->left));
+      replacements.equalitiesParents.insert({ee->right, expr});
+    } else {
+      replacements.equalities.insert(
+          std::make_pair(expr, ConstantExpr::alloc(1, Expr::Bool)));
+      replacements.equalitiesParents.insert({expr, expr});
+    }
   } else {
-    exprs.push_back(e);
+    replacements.equalities.insert(
+        std::make_pair(expr, ConstantExpr::alloc(1, Expr::Bool)));
+    replacements.equalitiesParents.insert({expr, expr});
   }
+}
+
+void Simplificator::removeReplacement(Replacements &replacements,
+                                      ref<Expr> expr) {
+  if (const EqExpr *ee = dyn_cast<EqExpr>(expr)) {
+    if (isa<ConstantExpr>(ee->left)) {
+      replacements.equalities.erase(ee->right);
+      replacements.equalitiesParents.erase(ee->right);
+    } else {
+      replacements.equalities.erase(expr);
+      replacements.equalitiesParents.erase(expr);
+    }
+  } else {
+    replacements.equalities.erase(expr);
+    replacements.equalitiesParents.erase(expr);
+  }
+}
+
+ExprHashMap<ExprHashSet>
+Simplificator::composeExprDependencies(const ExprHashMap<ExprHashSet> &upper,
+                                       const ExprHashMap<ExprHashSet> &lower) {
+  ExprHashMap<ExprHashSet> result;
+  for (const auto &dependent : lower) {
+    for (const auto &dependency : dependent.second) {
+      for (const auto &upperDependency : upper.at(dependency)) {
+        result[dependent.first].insert(upperDependency);
+      }
+    }
+  }
+  return result;
 }
 
 std::vector<const Array *> ConstraintSet::gatherArrays() const {

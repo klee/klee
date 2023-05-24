@@ -80,7 +80,7 @@ void testOperation(Solver &solver, int value, Expr::Width operandWidth,
 
     ConstraintSet constraints;
     constraints.addConstraint(
-        Simplificator::simplifyExpr(ConstraintSet(), expr), {});
+        Simplificator::simplifyExpr(ConstraintSet(), expr).simplified, {});
     bool res;
     bool success = solver.mustBeTrue(Query(constraints, queryExpr), res);
     EXPECT_EQ(true, success) << "Constraint solving failed";

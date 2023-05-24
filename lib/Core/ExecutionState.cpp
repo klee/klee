@@ -256,32 +256,34 @@ bool ExecutionState::getBase(
 }
 
 void ExecutionState::removePointerResolutions(const MemoryObject *mo) {
-  for (auto i = resolvedPointers.begin(), last = resolvedPointers.end();
-       i != last;) {
-    for (auto resolution = i->second.begin(), re = i->second.end();
-         resolution != re;) {
-      if (resolution->memoryObjectID == mo->id) {
-        resolution = i->second.erase(resolution);
-        re = i->second.end();
-      } else {
-        resolution++;
-      }
-    }
-    if (i->second.size() == 0) {
-      i = resolvedPointers.erase(i);
-      last = resolvedPointers.end();
+  for (auto resolution = begin(resolvedPointers);
+       resolution != end(resolvedPointers);) {
+    resolution->second.erase(mo->id);
+    if (resolution->second.size() == 0) {
+      resolution = resolvedPointers.erase(resolution);
     } else {
-      ++i;
+      ++resolution;
+    }
+  }
+
+  for (auto resolution = begin(resolvedSubobjects);
+       resolution != end(resolvedSubobjects);) {
+    resolution->second.erase(mo->id);
+    if (resolution->second.size() == 0) {
+      resolution = resolvedSubobjects.erase(resolution);
+    } else {
+      ++resolution;
     }
   }
 }
 
 // base address mo and ignore non pure reads in setinitializationgraph
 void ExecutionState::addPointerResolution(ref<Expr> address,
-                                          const MemoryObject *mo) {
+                                          const MemoryObject *mo,
+                                          unsigned size) {
   if (!isa<ConstantExpr>(address)) {
-    resolvedPointers[address].insert(
-        Resolution(mo->id, mo->getOffsetExpr(address)));
+    resolvedPointers[address].insert(mo->id);
+    resolvedSubobjects[MemorySubobject(address, size)].insert(mo->id);
   }
 }
 

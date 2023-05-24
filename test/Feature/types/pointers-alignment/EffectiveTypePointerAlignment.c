@@ -1,6 +1,6 @@
 // RUN: %clang %s -emit-llvm -g -c -fsanitize=alignment,null -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --type-system=CXX --use-tbaa --use-lazy-initialization=false --align-symbolic-pointers=true --use-gep-opt %t.bc 2>&1 | FileCheck %s
+// RUN: %klee --output-dir=%t.klee-out --type-system=CXX --use-tbaa --use-lazy-initialization=none --align-symbolic-pointers=true --use-gep-opt %t.bc 2>&1 | FileCheck %s
 
 #include "klee/klee.h"
 #include <stdlib.h>

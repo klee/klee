@@ -4,7 +4,7 @@
 // RUN: echo "x" >> %t.res
 // RUN: %clang %s -emit-llvm -g -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --type-system=CXX --use-tbaa --use-lazy-initialization=false --skip-local=false --use-gep-opt %t.bc >%t.log
+// RUN: %klee --output-dir=%t.klee-out --type-system=CXX --use-tbaa --use-lazy-initialization=none --skip-local=false --use-gep-opt %t.bc >%t.log
 // RUN: diff %t.res %t.log
 
 #include "klee/klee.h"

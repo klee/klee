@@ -476,9 +476,10 @@ bool Z3SolverImpl::internalRunSolver(
     dumpedQueriesFile->flush();
   }
 
-  ConstraintSet allConstraints = query.constraints.withExpr(query.expr);
+  constraints_ty allConstraints = query.constraints.cs();
+  allConstraints.insert(query.expr);
   std::unordered_map<const Array *, ExprHashSet> usedArrayBytes;
-  for (auto constraint : allConstraints.cs()) {
+  for (auto constraint : allConstraints) {
     std::vector<ref<ReadExpr>> reads;
     findReads(constraint, true, reads);
     for (auto readExpr : reads) {

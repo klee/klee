@@ -111,6 +111,15 @@ ref<Expr> Expr::createTempRead(const Array *array, Expr::Width w,
   }
 }
 
+void Expr::splitAnds(ref<Expr> e, std::vector<ref<Expr>> &exprs) {
+  if (auto andExpr = dyn_cast<AndExpr>(e)) {
+    splitAnds(andExpr->getKid(0), exprs);
+    splitAnds(andExpr->getKid(1), exprs);
+  } else {
+    exprs.push_back(e);
+  }
+}
+
 int Expr::compare(const Expr &b) const {
   static ExprEquivSet equivs;
   int r = compare(b, equivs);

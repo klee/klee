@@ -64,7 +64,7 @@ private:
 public:
   ConcretizationManager(bool simplifyExprs) : simplifyExprs(simplifyExprs) {}
 
-  Assignment get(const ConstraintSet &set, ref<Expr> query);
+  std::pair<Assignment, bool> get(const ConstraintSet &set, ref<Expr> query);
   bool contains(const ConstraintSet &set, ref<Expr> query);
   void add(const Query &q, const Assignment &assign);
 };

@@ -135,11 +135,6 @@ cl::OptionCategory SeedingCat(
 cl::OptionCategory TestGenCat("Test generation options",
                               "These options impact test generation.");
 
-cl::opt<bool>
-    LazyInitialization("use-lazy-initialization", cl::init(true),
-                       cl::desc("Enable lazy initialization (default=true)"),
-                       cl::cat(ExecCat));
-
 cl::opt<TypeSystemKind>
     TypeSystem("type-system",
                cl::desc("Use information about type system from specified "
@@ -197,6 +192,22 @@ cl::opt<MockMutableGlobalsPolicy> MockMutableGlobals(
                clEnumValN(MockMutableGlobalsPolicy::All, "all",
                           "All mutable global object are allowed o mock.")),
     cl::init(MockMutableGlobalsPolicy::None), cl::cat(ExecCat));
+
+enum class LazyInitializationPolicy {
+  None,
+  Only,
+  All,
+};
+
+cl::opt<LazyInitializationPolicy> LazyInitialization(
+    "use-lazy-initialization",
+    cl::values(clEnumValN(LazyInitializationPolicy::None, "none",
+                          "Disable lazy initialization."),
+               clEnumValN(LazyInitializationPolicy::Only, "only",
+                          "Only lazy initilization without resolving."),
+               clEnumValN(LazyInitializationPolicy::All, "all",
+                          "Enable lazy initialization (default).")),
+    cl::init(LazyInitializationPolicy::All), cl::cat(ExecCat));
 } // namespace klee
 
 namespace {
@@ -1291,26 +1302,28 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
       klee_warning("seeds patched for violating constraint");
   }
 
-  if (!concretizationManager->contains(state.constraints.cs(), condition)) {
-    if (Query(state.constraints.cs(), condition).containsSymcretes()) {
-      bool mayBeInBounds;
-      solver->setTimeout(coreSolverTimeout);
-      bool success = solver->mayBeTrue(state.constraints.cs(), condition,
-                                       mayBeInBounds, state.queryMetaData);
-      solver->setTimeout(time::Span());
-      assert(success);
-      assert(mayBeInBounds);
-      assert(
-          concretizationManager->contains(state.constraints.cs(), condition));
-    }
+  std::pair<Assignment, bool> symcretization =
+      concretizationManager->get(state.constraints.cs(), condition);
+
+  if (!symcretization.second &&
+      Query(state.constraints.cs(), condition).containsSymcretes()) {
+    bool mayBeInBounds;
+    solver->setTimeout(coreSolverTimeout);
+    bool success = solver->mayBeTrue(state.constraints.cs(), condition,
+                                     mayBeInBounds, state.queryMetaData);
+    solver->setTimeout(time::Span());
+    assert(success);
+    assert(mayBeInBounds);
+    symcretization =
+        concretizationManager->get(state.constraints.cs(), condition);
+    assert(symcretization.second);
   }
 
-  if (concretizationManager->contains(state.constraints.cs(), condition)) {
+  if (symcretization.second) {
     // Update memory objects if arrays have affected them.
-    Assignment delta = state.constraints.cs().concretization().diffWith(
-        concretizationManager->get(state.constraints.cs(), condition));
-    updateStateWithSymcretes(
-        state, concretizationManager->get(state.constraints.cs(), condition));
+    Assignment delta =
+        state.constraints.cs().concretization().diffWith(symcretization.first);
+    updateStateWithSymcretes(state, symcretization.first);
     state.addConstraint(condition, delta);
   } else {
     state.addConstraint(condition, {});
@@ -1382,7 +1395,7 @@ ref<Expr> Executor::toUnique(const ExecutionState &state, ref<Expr> &e) {
    concretization. */
 ref<klee::ConstantExpr> Executor::toConstant(ExecutionState &state, ref<Expr> e,
                                              const char *reason) {
-  e = Simplificator::simplifyExpr(state.constraints.cs(), e);
+  e = Simplificator::simplifyExpr(state.constraints.cs(), e).simplified;
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
     return CE;
 
@@ -1410,7 +1423,7 @@ ref<klee::ConstantExpr> Executor::toConstant(ExecutionState &state, ref<Expr> e,
 
 void Executor::executeGetValue(ExecutionState &state, ref<Expr> e,
                                KInstruction *target) {
-  e = Simplificator::simplifyExpr(state.constraints.cs(), e);
+  e = Simplificator::simplifyExpr(state.constraints.cs(), e).simplified;
   std::map<ExecutionState *, std::vector<SeedInfo>>::iterator it =
       seedMap.find(&state);
   if (it == seedMap.end() || isa<ConstantExpr>(e)) {
@@ -3957,9 +3970,7 @@ void Executor::doDumpStates() {
   updateStates(nullptr);
   for (const auto &state : states)
     terminateStateEarly(*state, "Execution halting.",
-                        guidanceKind == GuidanceKind::ErrorGuidance
-                            ? StateTerminationType::SilentExit
-                            : StateTerminationType::Interrupted);
+                        StateTerminationType::Interrupted);
   updateStates(nullptr);
 }
 
@@ -4980,11 +4991,13 @@ bool Executor::computeSizes(ExecutionState &state, ref<Expr> size,
     to optimize the number of queries we will ask it one time with assignment
     for symcretes. */
 
+    ConstraintSet minimized = state.constraints.cs();
+    minimized.addConstraint(EqExpr::create(symbolicSizesSum, minimalSumValue),
+                            {});
+
     solver->setTimeout(coreSolverTimeout);
-    success =
-        solver->getInitialValues(state.constraints.cs().withExpr(EqExpr::create(
-                                     symbolicSizesSum, minimalSumValue)),
-                                 objects, values, state.queryMetaData);
+    success = solver->getInitialValues(minimized, objects, values,
+                                       state.queryMetaData);
     solver->setTimeout(time::Span());
   }
   return success;
@@ -5126,11 +5139,16 @@ bool Executor::resolveMemoryObjects(
                                kmodule->targetData->getAllocaAddrSpace()));
   }
 
-  if (state.resolvedPointers.count(address)) {
-    for (auto &resolution : state.resolvedPointers.at(address)) {
-      mayBeResolvedMemoryObjects.push_back(resolution.memoryObjectID);
+  auto mso = MemorySubobject(address, bytes);
+  if (state.resolvedSubobjects.count(mso)) {
+    for (auto resolution : state.resolvedSubobjects.at(mso)) {
+      mayBeResolvedMemoryObjects.push_back(resolution);
     }
     mayBeOutOfBound = false;
+  } else if (state.resolvedPointers.count(address)) {
+    for (auto resolution : state.resolvedPointers.at(address)) {
+      mayBeResolvedMemoryObjects.push_back(resolution);
+    }
   } else {
     // we are on an error path (no resolution, multiple resolution, one
     // resolution with out of bounds)
@@ -5176,7 +5194,7 @@ bool Executor::resolveMemoryObjects(
       }
     }
 
-    mayLazyInitialize = LazyInitialization &&
+    mayLazyInitialize = LazyInitialization != LazyInitializationPolicy::None &&
                         !isa<ConstantExpr>(baseUniqueExpr) && baseWasResolved &&
                         checkAddress;
 
@@ -5254,6 +5272,10 @@ bool Executor::checkResolvedMemoryObjects(
     if (!mayBeInBounds) {
       continue;
     }
+
+    state.addPointerResolution(address, mo, bytes);
+    state.addPointerResolution(base, mo, size);
+
     inBounds = AndExpr::create(inBounds, baseInBounds);
 
     resolveConditions.push_back(inBounds);
@@ -5329,10 +5351,10 @@ bool Executor::collectConcretizations(
   }
 
   for (unsigned int i = 0; i < resolvedMemoryObjects.size(); ++i) {
-    if (concretizationManager->contains(state.constraints.cs(),
-                                        resolveConditions.at(i))) {
-      Assignment assigment = concretizationManager->get(
-          state.constraints.cs(), resolveConditions.at(i));
+    auto symcretization = concretizationManager->get(state.constraints.cs(),
+                                                     resolveConditions.at(i));
+    if (symcretization.second) {
+      Assignment assigment = symcretization.first;
       resolveConcretizations.push_back(assigment);
     } else {
       resolveConcretizations.push_back(state.constraints.cs().concretization());
@@ -5405,18 +5427,21 @@ void Executor::executeMemoryOperation(
 
   if (SimplifySymIndices) {
     if (!isa<ConstantExpr>(address))
-      address = Simplificator::simplifyExpr(estate.constraints.cs(), address);
+      address = Simplificator::simplifyExpr(estate.constraints.cs(), address)
+                    .simplified;
     if (!isa<ConstantExpr>(base))
-      base = Simplificator::simplifyExpr(estate.constraints.cs(), base);
+      base =
+          Simplificator::simplifyExpr(estate.constraints.cs(), base).simplified;
     if (isWrite && !isa<ConstantExpr>(value))
-      value = Simplificator::simplifyExpr(estate.constraints.cs(), value);
+      value = Simplificator::simplifyExpr(estate.constraints.cs(), value)
+                  .simplified;
   }
 
   address = optimizer.optimizeExpr(address, true);
   base = optimizer.optimizeExpr(base, true);
 
   ref<Expr> uniqueBase =
-      Simplificator::simplifyExpr(estate.constraints.cs(), base);
+      Simplificator::simplifyExpr(estate.constraints.cs(), base).simplified;
   uniqueBase = toUnique(estate, uniqueBase);
 
   StatePair branches =
@@ -5441,7 +5466,7 @@ void Executor::executeMemoryOperation(
   if (state->resolvedPointers.count(address) &&
       state->resolvedPointers.at(address).size() == 1) {
     success = true;
-    idFastResult = state->resolvedPointers[address].begin()->memoryObjectID;
+    idFastResult = *state->resolvedPointers[address].begin();
   } else {
     solver->setTimeout(coreSolverTimeout);
 
@@ -5544,10 +5569,10 @@ void Executor::executeMemoryOperation(
   bool incomplete = false;
   std::vector<IDType> mayBeResolvedMemoryObjects;
 
-  if (!resolveMemoryObjects(*state, address, targetType, target, bytes,
-                            mayBeResolvedMemoryObjects, mayBeOutOfBound,
-                            hasLazyInitialized, incomplete,
-                            guidanceKind == GuidanceKind::ErrorGuidance)) {
+  if (!resolveMemoryObjects(
+          *state, address, targetType, target, bytes,
+          mayBeResolvedMemoryObjects, mayBeOutOfBound, hasLazyInitialized,
+          incomplete, LazyInitialization == LazyInitializationPolicy::Only)) {
     terminateStateOnSolverError(*state,
                                 "Query timed out (executeMemoryOperation)");
     return;
@@ -6494,9 +6519,10 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
     // If the particular constraint operated on in this iteration through
     // the loop isn't implied then add it to the list of constraints.
     if (!mustBeTrue) {
-      if (concretizationManager->contains(extendedConstraints.cs(), pi)) {
-        extendedConstraints.addConstraint(
-            pi, concretizationManager->get(extendedConstraints.cs(), pi));
+      auto symcretization =
+          concretizationManager->get(extendedConstraints.cs(), pi);
+      if (symcretization.second) {
+        extendedConstraints.addConstraint(pi, symcretization.first);
       } else {
         extendedConstraints.addConstraint(pi, {});
       }
@@ -6546,6 +6572,11 @@ void Executor::getCoveredLines(
     const ExecutionState &state,
     std::map<const std::string *, std::set<unsigned>> &res) {
   res = state.coveredLines;
+}
+
+void Executor::getBlockPath(const ExecutionState &state,
+                            std::string &blockPath) {
+  blockPath = state.constraints.path().toString();
 }
 
 void Executor::doImpliedValueConcretization(ExecutionState &state, ref<Expr> e,

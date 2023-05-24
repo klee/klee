@@ -3,6 +3,8 @@
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprPPrinter.h"
 #include "klee/Expr/ExprUtil.h"
+#include "klee/Module/KInstruction.h"
+#include "klee/Module/KModule.h"
 
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"

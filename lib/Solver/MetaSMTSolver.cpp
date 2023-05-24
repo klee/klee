@@ -235,7 +235,9 @@ SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCex(
 
   if (hasSolution) {
     std::unordered_map<const Array *, std::vector<unsigned>> readOffsets;
-    for (ref<Expr> expr : query.constraints.withExpr(query.expr).cs()) {
+    constraints_ty allConstraints = query.constraints.cs();
+    allConstraints.insert(query.expr);
+    for (ref<Expr> expr : allConstraints) {
       std::vector<ref<ReadExpr>> reads;
       findReads(expr, true, reads);
       for (ref<ReadExpr> read : reads) {

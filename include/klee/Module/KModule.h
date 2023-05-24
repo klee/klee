@@ -65,6 +65,8 @@ struct KBlock {
   /// "coverable" for statistics and search heuristics.
   bool trackCoverage;
 
+  unsigned id;
+
 public:
   KBlock(KFunction *, llvm::BasicBlock *, KModule *,
          std::unordered_map<llvm::Instruction *, unsigned> &,
@@ -129,6 +131,7 @@ public:
   llvm::Function *function;
 
   unsigned numArgs, numRegisters;
+  unsigned id;
 
   std::unordered_map<unsigned, KInstruction *> registerToInstructionMap;
   unsigned numInstructions;
@@ -208,6 +211,7 @@ public:
   std::unordered_map<const llvm::Function *, KFunction *> functionMap;
   std::unordered_map<llvm::Function *, std::set<llvm::Function *>> callMap;
   std::unordered_map<std::string, KFunction *> functionNameMap;
+  std::unordered_map<const llvm::Function *, unsigned> functionIDMap;
 
   // Functions which escape (may be called indirectly)
   // XXX change to KFunction

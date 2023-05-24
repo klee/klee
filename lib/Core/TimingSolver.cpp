@@ -38,7 +38,7 @@ bool TimingSolver::evaluate(const ConstraintSet &constraints, ref<Expr> expr,
   TimerStatIncrementer timer(stats::solverTime);
 
   if (simplifyExprs)
-    expr = Simplificator::simplifyExpr(constraints, expr);
+    expr = Simplificator::simplifyExpr(constraints, expr).simplified;
 
   ref<SolverResponse> queryResult;
   ref<SolverResponse> negatedQueryResult;
@@ -118,7 +118,7 @@ bool TimingSolver::mustBeTrue(const ConstraintSet &constraints, ref<Expr> expr,
   TimerStatIncrementer timer(stats::solverTime);
 
   if (simplifyExprs)
-    expr = Simplificator::simplifyExpr(constraints, expr);
+    expr = Simplificator::simplifyExpr(constraints, expr).simplified;
 
   ValidityCore validityCore;
 
@@ -171,7 +171,7 @@ bool TimingSolver::getValue(const ConstraintSet &constraints, ref<Expr> expr,
   TimerStatIncrementer timer(stats::solverTime);
 
   if (simplifyExprs)
-    expr = Simplificator::simplifyExpr(constraints, expr);
+    expr = Simplificator::simplifyExpr(constraints, expr).simplified;
 
   bool success = solver->getValue(Query(constraints, expr), result);
 
@@ -193,7 +193,7 @@ bool TimingSolver::getMinimalUnsignedValue(const ConstraintSet &constraints,
   TimerStatIncrementer timer(stats::solverTime);
 
   if (simplifyExprs)
-    expr = Simplificator::simplifyExpr(constraints, expr);
+    expr = Simplificator::simplifyExpr(constraints, expr).simplified;
 
   bool success =
       solver->getMinimalUnsignedValue(Query(constraints, expr), result);
@@ -238,8 +238,24 @@ bool TimingSolver::evaluate(const ConstraintSet &constraints, ref<Expr> expr,
                             SolverQueryMetaData &metaData) {
   TimerStatIncrementer timer(stats::solverTime);
 
-  if (simplifyExprs)
-    expr = Simplificator::simplifyExpr(constraints, expr);
+  if (simplifyExprs) {
+    auto simplification = Simplificator::simplifyExpr(constraints, expr);
+    auto simplified = simplification.simplified;
+    auto dependency = simplification.dependency;
+    if (auto CE = dyn_cast<ConstantExpr>(simplified)) {
+      if (CE->isTrue()) {
+        queryResult = new ValidResponse(ValidityCore(dependency, expr));
+        return solver->check(Query(constraints, simplified).negateExpr(),
+                             negatedQueryResult);
+      } else {
+        negatedQueryResult = new ValidResponse(
+            ValidityCore(dependency, Expr::createIsZero(expr)));
+        return solver->check(Query(constraints, simplified), queryResult);
+      }
+    } else {
+      expr = simplified;
+    }
+  }
 
   bool success = solver->evaluate(Query(constraints, expr), queryResult,
                                   negatedQueryResult);
@@ -261,8 +277,19 @@ bool TimingSolver::getValidityCore(const ConstraintSet &constraints,
 
   TimerStatIncrementer timer(stats::solverTime);
 
-  if (simplifyExprs)
-    expr = Simplificator::simplifyExpr(constraints, expr);
+  if (simplifyExprs) {
+    auto simplification = Simplificator::simplifyExpr(constraints, expr);
+    auto simplifed = simplification.simplified;
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(simplifed)) {
+      result = CE->isTrue();
+      if (result) {
+        validityCore = ValidityCore(simplification.dependency, expr);
+      }
+      return true;
+    } else {
+      expr = simplifed;
+    }
+  }
 
   bool success =
       solver->getValidityCore(Query(constraints, expr), validityCore, result);
@@ -283,8 +310,19 @@ bool TimingSolver::getResponse(const ConstraintSet &constraints, ref<Expr> expr,
 
   TimerStatIncrementer timer(stats::solverTime);
 
-  if (simplifyExprs)
-    expr = Simplificator::simplifyExpr(constraints, expr);
+  if (simplifyExprs) {
+    auto simplification = Simplificator::simplifyExpr(constraints, expr);
+    auto simplifed = simplification.simplified;
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(simplifed)) {
+      if (CE->isTrue()) {
+        queryResult =
+            new ValidResponse(ValidityCore(simplification.dependency, expr));
+        return true;
+      }
+    } else {
+      expr = simplifed;
+    }
+  }
 
   bool success = solver->check(Query(constraints, expr), queryResult);
 
