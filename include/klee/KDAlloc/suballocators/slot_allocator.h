@@ -24,144 +24,150 @@
 #include <type_traits>
 
 namespace klee::kdalloc::suballocators {
-class SlotAllocator final : public TaggedLogger<SlotAllocator> {
+namespace slotallocator {
+template<bool UnlimitedQuarantine>
+class SlotAllocator;
+
+struct Data final {
+  /// The reference count.
+  std::size_t referenceCount; // initial value is 1 as soon as this member
+                              // is actually allocated
+
+  /// The number of allocated words. Always non-negative.
+  std::ptrdiff_t capacity; // initial value is 0 (changes as soon as this
+                           // member is actually allocated)
+
+  /// Always less than or equal to the first word that contains a one bit.
+  /// Less than or equal to _capacity. Always non-negative.
+  std::ptrdiff_t firstFreeFinger; // initial value is 0
+
+  /// Always greater than or equal to the last word that contains a zero bit.
+  /// Less than _capacity. May be negative (exactly -1).
+  std::ptrdiff_t lastUsedFinger; // initial value is -1
+
+  /// position in the quarantine, followed by the quarantine ring buffer,
+  /// followed by the bitmap
+  std::size_t quarantineAndBitmap[];
+};
+
+class Control final : public TaggedLogger<Control> {
+  template<bool UnlimitedQuarantine>
+  friend class SlotAllocator;
+
+  /// pointer to the start of the range managed by this allocator
+  char *baseAddress = nullptr;
+
+  /// size in bytes of the range managed by this allocator
+  std::size_t size = 0;
+
+  /// size in bytes of the slots that are managed in this slot allocator
+  std::size_t slotSize = 0;
+
+  /// number of bytes before the start of the bitmap (includes ordinary
+  /// members and quarantine)
+  std::size_t prefixSize = -1;
+
+  /// quarantine size *including* the position (=> is never 1)
+  std::uint32_t quarantineSize = 0;
+
+  /// true iff the quarantine is unlimited (=> quarantineSize == 0)
+  bool unlimitedQuarantine = false;
+
+  [[nodiscard]] inline std::size_t
+  convertIndexToPosition(std::size_t index) const noexcept {
+    index += 1;
+    int const layer =
+        std::numeric_limits<std::size_t>::digits - countLeadingZeroes(index);
+    auto const layerSlots = static_cast<std::size_t>(1) << (layer - 1);
+    auto const currentSlotSize = (size >> layer);
+    assert(currentSlotSize > slotSize && "Zero (or below) red zone size!");
+
+    auto const highBit = static_cast<std::size_t>(1) << (layer - 1);
+    assert((index & highBit) != 0 && "Failed to compute high bit");
+    assert((index ^ highBit) < highBit && "Failed to compute high bit");
+
+    auto layerIndex = index ^ highBit;
+    if (layerIndex % 2 == 0) {
+      layerIndex /= 2; // drop trailing 0
+    } else {
+      layerIndex /= 2; // drop trailing 1
+      layerIndex = layerSlots - 1 - layerIndex;
+    }
+    assert(layerIndex < highBit && "Invalid tempering");
+    auto const pos = layerIndex * 2 + 1;
+    return currentSlotSize * pos;
+  }
+
+  [[nodiscard]] inline std::size_t
+  convertPositionToIndex(std::size_t const Position) const noexcept {
+    int const trailingZeroes = countTrailingZeroes(Position);
+    auto const layer = countTrailingZeroes(size) - trailingZeroes;
+    auto const layerSlots = static_cast<std::size_t>(1) << (layer - 1);
+
+    auto const highBit = static_cast<std::size_t>(1) << (layer - 1);
+    auto layerIndex = Position >> (trailingZeroes + 1);
+    assert(layerIndex < highBit && "Tempered value was not restored correctly");
+
+    if (layerIndex < (layerSlots + 1) / 2) {
+      layerIndex *= 2; // add trailing 0
+    } else {
+      layerIndex = layerSlots - 1 - layerIndex;
+      layerIndex = layerIndex * 2 + 1; // add trailing 1
+    }
+    assert(layerIndex < highBit && "Invalid reverse tempering");
+
+    auto const index = highBit ^ layerIndex;
+    return index - 1;
+  }
+
+public:
+  Control() = default;
+  Control(Control const &) = delete;
+  Control &operator=(Control const &) = delete;
+  Control(Control &&) = delete;
+  Control &operator=(Control &&) = delete;
+
+  void initialize(void *const baseAddress, std::size_t const size,
+                  std::size_t const slotSize, bool const unlimitedQuarantine,
+                  std::uint32_t const quarantineSize) noexcept {
+    assert(size > 0 && (size & (size - 1)) == 0 &&
+           "Sizes of sized bins must be powers of two");
+
+    this->baseAddress = static_cast<char *>(baseAddress);
+    this->size = size;
+    this->slotSize = slotSize;
+    if (unlimitedQuarantine) {
+      this->quarantineSize = 0;
+      this->unlimitedQuarantine = true;
+    } else {
+      this->quarantineSize = quarantineSize == 0 ? 0 : quarantineSize + 1;
+      this->unlimitedQuarantine = false;
+    }
+    this->prefixSize =
+        sizeof(Data) + this->quarantineSize * sizeof(std::size_t);
+
+    traceLine("Initialization complete");
+  }
+
+  inline std::ostream &logTag(std::ostream &out) const noexcept {
+    return out << "[slot " << slotSize << " Control] ";
+  }
+
+  bool isQuarantineUnlimited() const noexcept { return unlimitedQuarantine; }
+
+  constexpr void *mapping_begin() const noexcept { return baseAddress; }
+  constexpr void *mapping_end() const noexcept {
+    return static_cast<void *>(static_cast<char *>(baseAddress) + size);
+  }
+};
+
+template<>
+class SlotAllocator<false> final : public TaggedLogger<SlotAllocator<false>> {
   static_assert(static_cast<std::size_t>(-1) == ~static_cast<std::size_t>(0),
                 "-1 must be ~0 for size_t");
-  struct Data final {
-    /// The reference count.
-    std::size_t referenceCount; // initial value is 1 as soon as this member
-                                // is actually allocated
-
-    /// The number of allocated words. Always non-negative.
-    std::ptrdiff_t capacity; // initial value is 0 (changes as soon as this
-                             // member is actually allocated)
-
-    /// Always less than or equal to the first word that contains a one bit.
-    /// Less than or equal to _capacity. Always non-negative.
-    std::ptrdiff_t firstFreeFinger; // initial value is 0
-
-    /// Always greater than or equal to the last word that contains a zero bit.
-    /// Less than _capacity. May be negative (exactly -1).
-    std::ptrdiff_t lastUsedFinger; // initial value is -1
-
-    /// position in the quarantine, followed by the quarantine ring buffer,
-    /// followed by the bitmap
-    std::size_t quarantineAndBitmap[];
-  };
 
   static_assert(std::is_pod<Data>::value, "Data must be POD");
 
-public:
-  class Control final : public TaggedLogger<Control> {
-    friend class SlotAllocator;
-
-    /// pointer to the start of the range managed by this allocator
-    char *baseAddress = nullptr;
-
-    /// size in bytes of the range managed by this allocator
-    std::size_t size = 0;
-
-    /// size in bytes of the slots that are managed in this slot allocator
-    std::size_t slotSize = 0;
-
-    /// number of bytes before the start of the bitmap (includes ordinary
-    /// members and quarantine)
-    std::size_t prefixSize = -1;
-
-    /// quarantine size *including* the position (=> is never 1)
-    std::uint32_t quarantineSize = 0;
-
-    /// true iff the quarantine is unlimited (=> _qurantine_size == 0)
-    bool unlimitedQuarantine = false;
-
-    [[nodiscard]] inline std::size_t
-    convertIndexToPosition(std::size_t index) const noexcept {
-      index += 1;
-      int const layer =
-          std::numeric_limits<std::size_t>::digits - countLeadingZeroes(index);
-      auto const layerSlots = static_cast<std::size_t>(1) << (layer - 1);
-      auto const currentSlotSize = (size >> layer);
-      assert(currentSlotSize > slotSize && "Zero (or below) red zone size!");
-
-      auto const highBit = static_cast<std::size_t>(1) << (layer - 1);
-      assert((index & highBit) != 0 && "Failed to compute high bit");
-      assert((index ^ highBit) < highBit && "Failed to compute high bit");
-
-      auto layerIndex = index ^ highBit;
-      if (layerIndex % 2 == 0) {
-        layerIndex /= 2; // drop trailing 0
-      } else {
-        layerIndex /= 2; // drop trailing 1
-        layerIndex = layerSlots - 1 - layerIndex;
-      }
-      assert(layerIndex < highBit && "Invalid tempering");
-      auto const pos = layerIndex * 2 + 1;
-      return currentSlotSize * pos;
-    }
-
-    [[nodiscard]] inline std::size_t
-    convertPositionToIndex(std::size_t const Position) const noexcept {
-      int const trailingZeroes = countTrailingZeroes(Position);
-      auto const layer = countTrailingZeroes(size) - trailingZeroes;
-      auto const layerSlots = static_cast<std::size_t>(1) << (layer - 1);
-
-      auto const highBit = static_cast<std::size_t>(1) << (layer - 1);
-      auto layerIndex = Position >> (trailingZeroes + 1);
-      assert(layerIndex < highBit &&
-             "Tempered value was not restored correctly");
-
-      if (layerIndex < (layerSlots + 1) / 2) {
-        layerIndex *= 2; // add trailing 0
-      } else {
-        layerIndex = layerSlots - 1 - layerIndex;
-        layerIndex = layerIndex * 2 + 1; // add trailing 1
-      }
-      assert(layerIndex < highBit && "Invalid reverse tempering");
-
-      auto const index = highBit ^ layerIndex;
-      return index - 1;
-    }
-
-  public:
-    Control() = default;
-    Control(Control const &) = delete;
-    Control &operator=(Control const &) = delete;
-    Control(Control &&) = delete;
-    Control &operator=(Control &&) = delete;
-
-    void initialize(void *const baseAddress, std::size_t const size,
-                    std::size_t const slotSize, bool const unlimitedQuarantine,
-                    std::uint32_t const quarantineSize) noexcept {
-      assert(size > 0 && (size & (size - 1)) == 0 &&
-             "Sizes of sized bins must be powers of two");
-
-      this->baseAddress = static_cast<char *>(baseAddress);
-      this->size = size;
-      this->slotSize = slotSize;
-      if (unlimitedQuarantine) {
-        this->quarantineSize = 0;
-        this->unlimitedQuarantine = true;
-      } else {
-        this->quarantineSize = quarantineSize == 0 ? 0 : quarantineSize + 1;
-        this->unlimitedQuarantine = false;
-      }
-      this->prefixSize =
-          sizeof(Data) + this->quarantineSize * sizeof(std::size_t);
-
-      traceLine("Initialization complete");
-    }
-
-    inline std::ostream &logTag(std::ostream &out) const noexcept {
-      return out << "[slot " << slotSize << " Control] ";
-    }
-
-    constexpr void *mapping_begin() const noexcept { return baseAddress; }
-    constexpr void *mapping_end() const noexcept {
-      return static_cast<void *>(static_cast<char *>(baseAddress) + size);
-    }
-  };
-
-private:
   Data *data = nullptr;
 
   inline void releaseData() noexcept {
@@ -209,9 +215,6 @@ private:
   std::size_t quarantine(Control const &control, std::size_t const index) {
     assert(!!data &&
            "Deallocations can only happen if allocations happened beforehand");
-    assert(
-        !control.unlimitedQuarantine &&
-        "Please check for unlimited quarantine before calling this function");
 
     if (control.quarantineSize == 0) {
       return index;
@@ -487,26 +490,22 @@ public:
     assert(!!data &&
            "Deallocations can only happen if allocations happened beforehand");
 
-    if (control.unlimitedQuarantine) {
-      traceLine("Quarantining ", ptr, " for ever");
+    auto pos = static_cast<std::size_t>(static_cast<char *>(ptr) -
+                                        control.baseAddress);
+    acquireData(control); // we will need quarantine and/or bitmap ownership
+
+    traceLine("Quarantining ", ptr, " as ", pos, " for ",
+              control.quarantineSize, " deallocations");
+    pos = quarantine(control, pos);
+
+    if (pos == static_cast<std::size_t>(-1)) {
+      traceLine("Nothing to deallocate");
     } else {
-      auto pos = static_cast<std::size_t>(static_cast<char *>(ptr) -
-                                          control.baseAddress);
-      acquireData(control); // we will need quarantine and/or bitmap ownership
+      traceLine("Deallocating ", pos);
+      traceContents(control);
+      assert(pos < control.size);
 
-      traceLine("Quarantining ", ptr, " as ", pos, " for ",
-                control.quarantineSize, " deallocations");
-      pos = quarantine(control, pos);
-
-      if (pos == static_cast<std::size_t>(-1)) {
-        traceLine("Nothing to deallocate");
-      } else {
-        traceLine("Deallocating ", pos);
-        traceContents(control);
-        assert(pos < control.size);
-
-        setFree(control, control.convertPositionToIndex(pos));
-      }
+      setFree(control, control.convertPositionToIndex(pos));
     }
   }
 
@@ -533,6 +532,60 @@ public:
 #endif
   }
 };
+
+
+template<>
+class SlotAllocator<true> final : public TaggedLogger<SlotAllocator<true>> {
+  std::size_t next;
+
+public:
+  inline std::ostream &logTag(std::ostream &out) const noexcept {
+    return out << "[uslot] ";
+  }
+
+  LocationInfo getLocationInfo(Control const &control, void const *const ptr,
+                               std::size_t const size) const noexcept {
+    assert(control.mapping_begin() <= ptr &&
+           reinterpret_cast<char const *>(ptr) + size < control.mapping_end() &&
+           "This property should have been ensured by the caller");
+
+    auto const begin = static_cast<std::size_t>(static_cast<char const *>(ptr) -
+                                                control.baseAddress);
+    auto const end = static_cast<std::size_t>(static_cast<char const *>(ptr) +
+                                              size - control.baseAddress);
+    assert(control.slotSize > 0 && "Uninitialized Control structure");
+    auto const pos = begin - begin % control.slotSize;
+    if (pos != (end - 1) - (end - 1) % control.slotSize) {
+      return LocationInfo::LI_Unaligned;
+    }
+
+    auto const index = control.convertPositionToIndex(pos);
+    if (index >= next) {
+      return LocationInfo::LI_Unallocated;
+    } else {
+      return {LocationInfo::LI_AllocatedOrQuarantined,
+              control.baseAddress + pos};
+    }
+  }
+
+  [[nodiscard]] void *allocate(Control const &control) noexcept {
+    traceLine("Allocating ", control.slotSize, " bytes");
+
+    return control.baseAddress + control.convertIndexToPosition(next++);
+  }
+
+  void deallocate(Control const &control, void *const ptr) {
+    traceLine("Quarantining ", ptr, " for ever");
+  }
+
+  void traceContents(Control const &) const noexcept {
+    traceLine("next: ", next);
+  }
+};
+} // namespace slotallocator
+
+using slotallocator::SlotAllocator;
+using SlotAllocatorControl = slotallocator::Control;
 } // namespace klee::kdalloc::suballocators
 
 #endif
