@@ -79,7 +79,7 @@ public:
 
   private:
     Mapping mapping;
-    std::array<suballocators::SlotAllocator::Control, meta.size()> sizedBins;
+    std::array<suballocators::SlotAllocatorControl, meta.size()> sizedBins;
     suballocators::LargeObjectAllocator::Control largeObjectBin;
 
   public:
@@ -99,8 +99,37 @@ public:
 private:
   klee::ref<Control> control;
 
-  std::array<suballocators::SlotAllocator, Control::meta.size()> sizedBins;
+  std::array<std::aligned_union_t<0, suballocators::SlotAllocator<false>,
+                                  suballocators::SlotAllocator<true>>,
+             Control::meta.size()>
+      sizedBins;
   suballocators::LargeObjectAllocator largeObjectBin;
+
+  void initializeSizedBins() {
+    if (control) {
+      for (std::size_t i = 0; i < sizedBins.size(); ++i) {
+        if (control->sizedBins[i].isQuarantineUnlimited()) {
+          new (&sizedBins[i]) suballocators::SlotAllocator<true>{};
+        } else {
+          new (&sizedBins[i]) suballocators::SlotAllocator<false>{};
+        }
+      }
+    }
+  }
+
+  void destroySizedBins() {
+    if (control) {
+      for (std::size_t i = 0; i < sizedBins.size(); ++i) {
+        if (control->sizedBins[i].isQuarantineUnlimited()) {
+          reinterpret_cast<suballocators::SlotAllocator<true> &>(sizedBins[i])
+              .~SlotAllocator<true>();
+        } else {
+          reinterpret_cast<suballocators::SlotAllocator<false> &>(sizedBins[i])
+              .~SlotAllocator<false>();
+        }
+      }
+    }
+  }
 
 public:
   std::ostream &logTag(std::ostream &out) const noexcept {
@@ -108,12 +137,123 @@ public:
   }
 
   Allocator() = default;
-  Allocator(Allocator const &rhs) = default;
-  Allocator &operator=(Allocator const &rhs) = default;
-  Allocator(Allocator &&) = default;
-  Allocator &operator=(Allocator &&) = default;
 
-  Allocator(klee::ref<Control> control) : control(std::move(control)) {}
+  Allocator(Allocator const &rhs)
+      : control(rhs.control), largeObjectBin(rhs.largeObjectBin) {
+    if (control) {
+      for (std::size_t i = 0; i < sizedBins.size(); ++i) {
+        if (control->sizedBins[i].isQuarantineUnlimited()) {
+          new (&sizedBins[i]) suballocators::SlotAllocator<true>{
+              reinterpret_cast<suballocators::SlotAllocator<true> const &>(
+                  rhs.sizedBins[i])};
+        } else {
+          new (&sizedBins[i]) suballocators::SlotAllocator<false>{
+              reinterpret_cast<suballocators::SlotAllocator<false> const &>(
+                  rhs.sizedBins[i])};
+        }
+      }
+    }
+  }
+
+  Allocator &operator=(Allocator const &rhs) {
+    if (this != &rhs) {
+      // `control` may differ in whether it is initialized and in the properties
+      // of any one bin. However, in the expected usage, allocators that are
+      // assigned always either share the same `control' or are uninitialized
+      // (i.e. have a `nullptr` control).
+      if (control.get() != rhs.control.get()) {
+        destroySizedBins();
+        control = rhs.control;
+        initializeSizedBins();
+      } else {
+        control = rhs.control;
+      }
+
+      if (control) {
+        for (std::size_t i = 0; i < sizedBins.size(); ++i) {
+          if (control->sizedBins[i].isQuarantineUnlimited()) {
+            reinterpret_cast<suballocators::SlotAllocator<true> &>(
+                sizedBins[i]) =
+                reinterpret_cast<suballocators::SlotAllocator<true> const &>(
+                    rhs.sizedBins[i]);
+          } else {
+            reinterpret_cast<suballocators::SlotAllocator<false> &>(
+                sizedBins[i]) =
+                reinterpret_cast<suballocators::SlotAllocator<false> const &>(
+                    rhs.sizedBins[i]);
+          }
+        }
+      }
+      largeObjectBin = rhs.largeObjectBin;
+    }
+    return *this;
+  }
+
+  Allocator(Allocator &&rhs)
+      : control(std::move(rhs.control)),
+        largeObjectBin(std::move(rhs.largeObjectBin)) {
+    if (control) {
+      for (std::size_t i = 0; i < sizedBins.size(); ++i) {
+        if (control->sizedBins[i].isQuarantineUnlimited()) {
+          new (&sizedBins[i]) suballocators::SlotAllocator<true>{
+              std::move(reinterpret_cast<suballocators::SlotAllocator<true> &>(
+                  rhs.sizedBins[i]))};
+          reinterpret_cast<suballocators::SlotAllocator<true> &>(
+              rhs.sizedBins[i])
+              .~SlotAllocator<true>();
+        } else {
+          new (&sizedBins[i]) suballocators::SlotAllocator<false>{
+              std::move(reinterpret_cast<suballocators::SlotAllocator<false> &>(
+                  rhs.sizedBins[i]))};
+          reinterpret_cast<suballocators::SlotAllocator<false> &>(
+              rhs.sizedBins[i])
+              .~SlotAllocator<false>();
+        }
+      }
+    }
+  }
+
+  Allocator &operator=(Allocator &&rhs) {
+    if (this != &rhs) {
+      // `control` may differ in whether it is initialized and in the properties
+      // of any one bin. However, in the expected usage, allocators that are
+      // assigned always either share the same `control' or are uninitialized
+      // (i.e. have a `nullptr` control).
+      if (control.get() != rhs.control.get()) {
+        destroySizedBins();
+        control = std::move(rhs.control);
+        initializeSizedBins();
+      } else {
+        control = std::move(rhs.control);
+      }
+
+      if (control) {
+        for (std::size_t i = 0; i < sizedBins.size(); ++i) {
+          if (control->sizedBins[i].isQuarantineUnlimited()) {
+            reinterpret_cast<suballocators::SlotAllocator<true> &>(
+                sizedBins[i]) =
+                std::move(
+                    reinterpret_cast<suballocators::SlotAllocator<true> &>(
+                        rhs.sizedBins[i]));
+          } else {
+            reinterpret_cast<suballocators::SlotAllocator<false> &>(
+                sizedBins[i]) =
+                std::move(
+                    reinterpret_cast<suballocators::SlotAllocator<false> &>(
+                        rhs.sizedBins[i]));
+          }
+        }
+      }
+      largeObjectBin = std::move(rhs.largeObjectBin);
+    }
+    return *this;
+  }
+
+  Allocator(klee::ref<Control> control) : control(std::move(control)) {
+    initializeSizedBins();
+  }
+
+  ~Allocator() { destroySizedBins(); }
 
   explicit operator bool() const noexcept { return !control.isNull(); }
 
@@ -135,7 +275,15 @@ public:
 
     void *result = nullptr;
     if (bin < static_cast<int>(sizedBins.size())) {
-      result = sizedBins[bin].allocate(control->sizedBins[bin]);
+      if (control->sizedBins[bin].isQuarantineUnlimited()) {
+        result = reinterpret_cast<suballocators::SlotAllocator<true> &>(
+                     sizedBins[bin])
+                     .allocate(control->sizedBins[bin]);
+      } else {
+        result = reinterpret_cast<suballocators::SlotAllocator<false> &>(
+                     sizedBins[bin])
+                     .allocate(control->sizedBins[bin]);
+      }
     } else {
       result = largeObjectBin.allocate(control->largeObjectBin, size);
     }
@@ -151,7 +299,15 @@ public:
     traceLine("Freeing ", ptr, " in bin ", bin);
 
     if (bin < static_cast<int>(sizedBins.size())) {
-      return sizedBins[bin].deallocate(control->sizedBins[bin], ptr);
+      if (control->sizedBins[bin].isQuarantineUnlimited()) {
+        return reinterpret_cast<suballocators::SlotAllocator<true> &>(
+                   sizedBins[bin])
+            .deallocate(control->sizedBins[bin], ptr);
+      } else {
+        return reinterpret_cast<suballocators::SlotAllocator<false> &>(
+                   sizedBins[bin])
+            .deallocate(control->sizedBins[bin], ptr);
+      }
     } else {
       return largeObjectBin.deallocate(control->largeObjectBin, ptr);
     }
@@ -165,7 +321,15 @@ public:
     traceLine("Freeing ", ptr, " of size ", size, " in bin ", bin);
 
     if (bin < static_cast<int>(sizedBins.size())) {
-      return sizedBins[bin].deallocate(control->sizedBins[bin], ptr);
+      if (control->sizedBins[bin].isQuarantineUnlimited()) {
+        return reinterpret_cast<suballocators::SlotAllocator<true> &>(
+                   sizedBins[bin])
+            .deallocate(control->sizedBins[bin], ptr);
+      } else {
+        return reinterpret_cast<suballocators::SlotAllocator<false> &>(
+                   sizedBins[bin])
+            .deallocate(control->sizedBins[bin], ptr);
+      }
     } else {
       return largeObjectBin.deallocate(control->largeObjectBin, ptr);
     }
@@ -199,7 +363,16 @@ public:
           ptr < control->sizedBins[i].mapping_end()) {
         if (reinterpret_cast<char const *>(ptr) + size <=
             control->sizedBins[i].mapping_end()) {
-          return sizedBins[i].getLocationInfo(control->sizedBins[i], ptr, size);
+          if (control->sizedBins[i].isQuarantineUnlimited()) {
+            return reinterpret_cast<suballocators::SlotAllocator<true> const &>(
+                       sizedBins[i])
+                .getLocationInfo(control->sizedBins[i], ptr, size);
+          } else {
+            return reinterpret_cast<
+                       suballocators::SlotAllocator<false> const &>(
+                       sizedBins[i])
+                .getLocationInfo(control->sizedBins[i], ptr, size);
+          }
         } else {
           return LocationInfo::LI_SpansSuballocators;
         }
