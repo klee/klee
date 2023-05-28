@@ -141,11 +141,8 @@ else()
   # LLVM's 'gtest' target is not reused
 
   if (NOT GTEST_SRC_DIR)
-    if (USE_CMAKE_FIND_PACKAGE_LLVM AND LLVM_BUILD_MAIN_SRC_DIR)
+    if (IS_DIRECTORY "${LLVM_BUILD_MAIN_SRC_DIR}")
       # build from LLVM's utils directory
-      # NOTE: This can only be done using USE_CMAKE_FIND_PACKAGE_LLVM as
-      #       LLVM replaced Google Test's CMakeLists.txt with its own,
-      #       requiring add_llvm_library() from AddLLVM.cmake.
       message(STATUS "Google Test: Building from LLVM's source tree.")
 
       set(GTEST_INCLUDE_DIR
@@ -154,6 +151,11 @@ else()
         PATH
         "Path to Google Test include directory"
       )
+
+      # LLVM replaced Google Test's CMakeLists.txt with its own, which requires
+      # add_llvm_library() from AddLLVM.cmake.
+      list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+      include(AddLLVM)
 
       add_subdirectory("${LLVM_BUILD_MAIN_SRC_DIR}/utils/unittest/"
         "${CMAKE_CURRENT_BINARY_DIR}/gtest_build")

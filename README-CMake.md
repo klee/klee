@@ -58,8 +58,8 @@ cmake -DCMAKE_BUILD_TYPE=Release /path/to/klee/src
 * `ENABLE_ZLIB` (BOOLEAN) - Enable zlib support.
 
 * `GTEST_SRC_DIR` (STRING) - Path to Google Test source tree. If it is not
-   specified and `USE_CMAKE_FIND_PACKAGE_LLVM` is used, CMake will try to reuse
-   the version included within the LLVM source tree.
+   specified, CMake will try to reuse the version included within the LLVM
+   source tree or find a system installation of Google Test.
 
 * `GTEST_INCLUDE_DIR` (STRING) - Path to Google Test include directory,
    if it is not under `GTEST_SRC_DIR`.
