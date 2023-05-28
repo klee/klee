@@ -188,8 +188,7 @@ else()
     )
 
     if (NOT EXISTS "${GTEST_SRC_DIR}")
-      message(FATAL_ERROR "Google Test source directory \"${GTEST_SRC_DIR}\" "
-      "cannot be found.\n"
+      message(FATAL_ERROR "Google Test source directory cannot be found.\n"
       "Try passing -DGTEST_SRC_DIR=<path_to_gtest_source> to CMake where "
       "<path_to_gtest_source> is the path to the Google Test source tree.\n"
       "Alternatively, you can disable unit tests by passing "
