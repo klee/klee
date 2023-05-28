@@ -113,14 +113,14 @@ if (TARGET gtest)
       "LLVM from exporting this target.")
   endif()
 
-  # in this case, only include directory has to be set
-  if (LLVM_BUILD_MAIN_SRC_DIR)
-    set(GTEST_INCLUDE_DIR
-      "${LLVM_BUILD_MAIN_SRC_DIR}/utils/unittest/googletest/include"
-      CACHE
-      PATH
-      "Path to Google Test include directory"
-    )
+  # older LLVM versions do not set INTERFACE_INCLUDE_DIRECTORIES for gtest
+  if ("${LLVM_VERSION_MAJOR}" LESS 12)
+    if (IS_DIRECTORY "${LLVM_BUILD_MAIN_SRC_DIR}")
+      target_include_directories(gtest
+        INTERFACE
+        "${LLVM_BUILD_MAIN_SRC_DIR}/utils/unittest/googletest/include"
+      )
+    endif()
   endif()
 else()
   # LLVM's 'gtest' target is not reused
@@ -130,12 +130,6 @@ else()
       # build from LLVM's utils directory
       message(STATUS "Google Test: Building from LLVM's source tree.")
 
-      set(GTEST_INCLUDE_DIR
-        "${LLVM_BUILD_MAIN_SRC_DIR}/utils/unittest/googletest/include"
-        CACHE
-        PATH
-        "Path to Google Test include directory"
-      )
 
       # LLVM replaced Google Test's CMakeLists.txt with its own, which requires
       # add_llvm_library() from AddLLVM.cmake.
@@ -144,6 +138,14 @@ else()
 
       add_subdirectory("${LLVM_BUILD_MAIN_SRC_DIR}/utils/unittest/"
         "${CMAKE_CURRENT_BINARY_DIR}/gtest_build")
+
+      # older LLVM versions do not set INTERFACE_INCLUDE_DIRECTORIES for gtest
+      if ("${LLVM_VERSION_MAJOR}" LESS 12)
+        target_include_directories(gtest
+          INTERFACE
+          "${LLVM_BUILD_MAIN_SRC_DIR}/utils/unittest/googletest/include"
+        )
+      endif()
 
       # add includes for LLVM's modifications
       target_include_directories(gtest BEFORE PRIVATE ${LLVM_INCLUDE_DIRS})
@@ -198,6 +200,12 @@ else()
     message(STATUS "GTEST_SRC_DIR: ${GTEST_SRC_DIR}")
 
     add_vanilla_googletest_subdirectory(${GTEST_SRC_DIR})
+
+    # Google Test versions < 1.8.0 do not set INTERFACE_INCLUDE_DIRECTORIES
+    target_include_directories(gtest
+      INTERFACE
+      ${GTEST_INCLUDE_DIR}
+    )
   endif()
 
   if (NOT GTest_FOUND)
@@ -218,15 +226,6 @@ define_property(GLOBAL
   BRIEF_DOCS "KLEE unit tests"
   FULL_DOCS "KLEE unit tests"
 )
-
-if (NOT GTest_FOUND)
-  # GTEST_INCLUDE_DIR is defined only when we build from sources.
-  if (NOT IS_DIRECTORY "${GTEST_INCLUDE_DIR}")
-    message(FATAL_ERROR
-      "Cannot find Google Test include directory \"${GTEST_INCLUDE_DIR}\"")
-  endif()
-  message(STATUS "GTEST_INCLUDE_DIR: ${GTEST_INCLUDE_DIR}")
-endif()
 
 if (TARGET gtest)
   set(GTEST_TARGET_NAME gtest)
@@ -249,8 +248,7 @@ target_link_libraries(unittest_main
   ${GTEST_TARGET_NAME}
 )
 target_include_directories(unittest_main
-  PUBLIC
-  ${GTEST_INCLUDE_DIR}
+  INTERFACE
   ${KLEE_COMPONENT_EXTRA_INCLUDE_DIRS}
 
   PRIVATE
