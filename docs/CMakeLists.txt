@@ -33,13 +33,8 @@ if (ENABLE_DOXYGEN)
     # doxygen.cfg
     set(DOXYGEN_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/doxygen")
 
-    if ("${CMAKE_VERSION}" VERSION_LESS "3.15")
-      set_directory_properties(PROPERTY ADDITIONAL_MAKE_CLEAN_FILES
-              "${DOXYGEN_OUTPUT_DIR}")
-    else ()
-      set_directory_properties(PROPERTY ADDITIONAL_CLEAN_FILES
-              "${DOXYGEN_OUTPUT_DIR}")
-    endif ()
+    set_directory_properties(PROPERTY ADDITIONAL_CLEAN_FILES
+      "${DOXYGEN_OUTPUT_DIR}")
 
   else()
     if (NOT DOXYGEN_FOUND)
