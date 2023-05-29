@@ -412,33 +412,50 @@ void MergingSearcher::printName(llvm::raw_ostream &os) {
 
 ///
 
-BatchingSearcher::BatchingSearcher(Searcher *baseSearcher, time::Span timeBudget, unsigned instructionBudget)
-  : baseSearcher{baseSearcher},
-    timeBudget{timeBudget},
-    instructionBudget{instructionBudget} {};
+BatchingSearcher::BatchingSearcher(Searcher *baseSearcher,
+                                   time::Span timeBudget,
+                                   unsigned instructionBudget)
+    : baseSearcher{baseSearcher}, timeBudgetEnabled{timeBudget},
+      timeBudget{timeBudget}, instructionBudgetEnabled{instructionBudget > 0},
+      instructionBudget{instructionBudget} {};
+
+bool BatchingSearcher::withinTimeBudget() const {
+  return !timeBudgetEnabled ||
+         (time::getWallTime() - lastStartTime) <= timeBudget;
+}
+
+bool BatchingSearcher::withinInstructionBudget() const {
+  return !instructionBudgetEnabled ||
+         (stats::instructions - lastStartInstructions) <= instructionBudget;
+}
 
 ExecutionState &BatchingSearcher::selectState() {
-  if (!lastState ||
-      (((timeBudget.toSeconds() > 0) &&
-        (time::getWallTime() - lastStartTime) > timeBudget)) ||
-      ((instructionBudget > 0) &&
-       (stats::instructions - lastStartInstructions) > instructionBudget)) {
-    if (lastState && timeBudget.toSeconds() > 0) {
-      time::Span delta = time::getWallTime() - lastStartTime;
-      auto t = timeBudget;
-      t *= 1.1;
-      if (delta > t) {
-        klee_message("increased time budget from %f to %f\n", timeBudget.toSeconds(), delta.toSeconds());
-        timeBudget = delta;
-      }
-    }
-    lastState = &baseSearcher->selectState();
-    lastStartTime = time::getWallTime();
-    lastStartInstructions = stats::instructions;
-    return *lastState;
-  } else {
+  if (lastState && withinTimeBudget() && withinInstructionBudget()) {
+    // return same state for as long as possible
     return *lastState;
   }
+
+  // ensure time budget is larger than time between two calls (for same state)
+  if (lastState && timeBudgetEnabled) {
+    time::Span delta = time::getWallTime() - lastStartTime;
+    auto t = timeBudget;
+    t *= 1.1;
+    if (delta > t) {
+      klee_message("increased time budget from %f to %f\n",
+                   timeBudget.toSeconds(), delta.toSeconds());
+      timeBudget = delta;
+    }
+  }
+
+  // pick a new state
+  lastState = &baseSearcher->selectState();
+  if (timeBudgetEnabled) {
+    lastStartTime = time::getWallTime();
+  }
+  if (instructionBudgetEnabled) {
+    lastStartInstructions = stats::instructions;
+  }
+  return *lastState;
 }
 
 void BatchingSearcher::update(ExecutionState *current,

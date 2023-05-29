@@ -243,12 +243,17 @@ namespace klee {
   /// of instructions.
   class BatchingSearcher final : public Searcher {
     std::unique_ptr<Searcher> baseSearcher;
+    bool timeBudgetEnabled;
     time::Span timeBudget;
+    bool instructionBudgetEnabled;
     unsigned instructionBudget;
 
     ExecutionState *lastState {nullptr};
     time::Point lastStartTime;
     unsigned lastStartInstructions;
+
+    bool withinTimeBudget() const;
+    bool withinInstructionBudget() const;
 
   public:
     /// \param baseSearcher The underlying searcher (takes ownership).
