@@ -25,7 +25,6 @@ set(KLEE_MODULE_COMPONENT_SRCS
   RaiseAsm.cpp
   ReturnSplitter.cpp
   SarifReport.cpp
-  StreamWithLine.cpp
   Target.cpp
   TargetHash.cpp
   TargetForest.cpp

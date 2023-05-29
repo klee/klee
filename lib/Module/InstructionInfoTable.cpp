@@ -10,7 +10,6 @@
 #include "klee/Module/InstructionInfoTable.h"
 #include "klee/Config/Version.h"
 
-#include "StreamWithLine.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/IR/DebugInfo.h"
@@ -35,30 +34,35 @@
 using namespace klee;
 
 class InstructionToLineAnnotator : public llvm::AssemblyAnnotationWriter {
+private:
+  std::unordered_map<uintptr_t, uint64_t> mapping = {};
+
 public:
   void emitInstructionAnnot(const llvm::Instruction *i,
                             llvm::formatted_raw_ostream &os) override {
-    os << "%%%" + std::to_string(reinterpret_cast<std::uintptr_t>(i));
+    os.flush();
+    mapping.emplace(reinterpret_cast<std::uintptr_t>(i), os.getLine() + 1);
   }
 
   void emitFunctionAnnot(const llvm::Function *f,
                          llvm::formatted_raw_ostream &os) override {
-    os << "%%%" + std::to_string(reinterpret_cast<std::uintptr_t>(f));
+    os.flush();
+    mapping.emplace(reinterpret_cast<std::uintptr_t>(f), os.getLine() + 1);
   }
+
+  std::unordered_map<uintptr_t, uint64_t> getMapping() const { return mapping; }
 };
 
 static std::unordered_map<uintptr_t, uint64_t>
 buildInstructionToLineMap(const llvm::Module &m,
                           std::unique_ptr<llvm::raw_fd_ostream> assemblyFS) {
 
-  std::unordered_map<uintptr_t, uint64_t> mapping;
   InstructionToLineAnnotator a;
 
-  StreamWithLine os(std::move(assemblyFS));
-  m.print(os, &a);
-  os.flush();
+  m.print(*assemblyFS, &a);
+  assemblyFS->flush();
 
-  return os.getMapping();
+  return a.getMapping();
 }
 
 class DebugInfoExtractor {
