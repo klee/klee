@@ -20,11 +20,6 @@ set(SRC_FILES
         stubs.c
         )
 
-try_compile (FSTATAT_PATH_ACCEPTS_NULL
-        ${CMAKE_BINARY_DIR}
-        ${PROJECT_SOURCE_DIR}/cmake/fstatat.c
-        )
-
 # Build it
 include("${CMAKE_SOURCE_DIR}/cmake/compile_bitcode_library.cmake")
 prefix_with_path("${SRC_FILES}" "${CMAKE_CURRENT_SOURCE_DIR}/" prefixed_files)

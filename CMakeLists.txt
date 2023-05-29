@@ -405,11 +405,15 @@ else()
   set(HAVE_SELINUX 0)
 endif()
 
+try_compile (FSTATAT_PATH_ACCEPTS_NULL
+  ${CMAKE_BINARY_DIR}
+  ${PROJECT_SOURCE_DIR}/cmake/fstatat.c
+)
+
 ################################################################################
 # KLEE runtime support
 ################################################################################
 # This is set here and not in `runtime` because `config.h` needs to be generated.
-
 
 set(available_klee_runtime_build_types
   "Release"

@@ -13,6 +13,9 @@
 /* Using Z3 Solver backend */
 #cmakedefine ENABLE_Z3 @ENABLE_Z3@
 
+/* Define if fstatat() accepts NULL as pathname argument. */
+#cmakedefine FSTATAT_PATH_ACCEPTS_NULL 1
+
 /* Does the platform use __ctype_b_loc, etc. */
 #cmakedefine HAVE_CTYPE_EXTERNALS @HAVE_CTYPE_EXTERNALS@
 
