@@ -37,7 +37,7 @@ target_link_libraries(kleeCore PRIVATE
 )
 
 llvm_config(kleeCore "${USE_LLVM_SHARED}" core executionengine mcjit native support)
-target_link_libraries(kleeCore PRIVATE ${SQLITE3_LIBRARIES})
-target_include_directories(kleeCore PRIVATE ${KLEE_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS} ${SQLITE3_INCLUDE_DIRS})
+target_link_libraries(kleeCore PRIVATE ${SQLite3_LIBRARIES})
+target_include_directories(kleeCore PRIVATE ${KLEE_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS} ${SQLite3_INCLUDE_DIRS})
 target_compile_options(kleeCore PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
 target_compile_definitions(kleeCore PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})
