@@ -9,8 +9,6 @@
 
 ###############################################################################
 # Compiler warnings
-#
-# NOTE: All these variables should be lists of flags and NOT a single string.
 ###############################################################################
 # FIXME: -Wunused-parameter fires a lot so for now suppress it.
 add_compile_options(
