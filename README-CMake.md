@@ -1,22 +1,16 @@
 # CMake build system
 
-KLEE now has a CMake build system which is intended to replace
-its autoconf/Makefile based build system.
+KLEE has a CMake build system.
 
-## Useful top level targets
+## Useful top-level targets
 
 * `check` - Build and run all tests.
-* `clean` - Invoke CMake's built-in target to clean the build tree.  Note this
-  won't invoke the `clean_*` targets. It is advised that the `clean_all` target
-  is used instead.
-* `clean_all` - Run all clean targets.
-* `clean_doxygen` - Clean doxygen build tree.
-* `clean_runtime` - Clean the runtime build tree.
-* `docs` - Build documentation
-* `edit_cache` - Show cmake/ccmake/cmake-gui interface for chaning configure options.
-* `help` - Show list of top level targets
-* `systemtests` - Run system tests
-* `unittests` - Build and run unittests
+* `clean` - Clean the build tree.
+* `docs` - Build documentation.
+* `edit_cache` - Show cmake/ccmake/cmake-gui interface for changing configure options.
+* `help` - Show list of top-level targets.
+* `systemtests` - Build and run system tests.
+* `unittests` - Build and run unit tests.
 
 ## Useful CMake variables
 
