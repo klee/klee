@@ -15,8 +15,8 @@ if (ENABLE_DOXYGEN)
   find_package(Doxygen OPTIONAL_COMPONENTS dot)
   if (DOXYGEN_FOUND AND TARGET Doxygen::dot)
     message(STATUS "Doxygen and dot found")
-    set(abs_top_srcdir "${CMAKE_SOURCE_DIR}")
-    set(abs_top_builddir "${CMAKE_BINARY_DIR}")
+
+    set(DOXYGEN_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/doxygen")
 
     # Configure the Doxyfile
     configure_file(doxygen.cfg.in doxygen.cfg @ONLY)
@@ -28,10 +28,6 @@ if (ENABLE_DOXYGEN)
       USES_TERMINAL
     )
     add_dependencies(docs doc-doxygen)
-
-    # FIXME: This variable should be used to set `OUTPUT_DIRECTORY` in
-    # doxygen.cfg
-    set(DOXYGEN_OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/doxygen")
 
     set_directory_properties(PROPERTY ADDITIONAL_CLEAN_FILES
       "${DOXYGEN_OUTPUT_DIR}")
