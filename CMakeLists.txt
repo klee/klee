@@ -77,14 +77,6 @@ set(CMAKE_SKIP_BUILD_RPATH FALSE)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules")
 
 ################################################################################
-# Compiler flags for KLEE components
-# Subsequent commands will append to these. These are used instead of
-# directly modifying CMAKE_CXX_FLAGS so that other code can be easily built with
-# different flags.
-################################################################################
-
-
-################################################################################
 # Assertions
 ################################################################################
 option(ENABLE_KLEE_ASSERTS "Enable KLEE assertions" ON)
