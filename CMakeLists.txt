@@ -260,7 +260,6 @@ if (ENABLE_ZLIB)
   message(STATUS "Zlib support enabled")
   if (ZLIB_FOUND)
     set(HAVE_ZLIB_H 1) # For config.h
-    list(APPEND KLEE_COMPONENT_EXTRA_LIBRARIES ${ZLIB_LIBRARIES})
     list(APPEND KLEE_COMPONENT_EXTRA_INCLUDE_DIRS ${ZLIB_INCLUDE_DIRS})
   else()
     message(FATAL_ERROR "ENABLE_ZLIB is true but zlib could not be found")
@@ -296,7 +295,6 @@ if (ENABLE_TCMALLOC)
       message(FATAL_ERROR
         "Found \"${TCMALLOC_HEADER}\" but could not find library")
     endif()
-    list(APPEND KLEE_COMPONENT_EXTRA_LIBRARIES ${TCMALLOC_LIBRARIES})
     list(APPEND KLEE_COMPONENT_EXTRA_INCLUDE_DIRS ${TCMALLOC_INCLUDE_DIR})
     # TCMalloc's documentation says its safest to pass these flags when
     # building with gcc because gcc can optimize assuming its using its own
@@ -633,7 +631,6 @@ set(KLEE_UTILS_DIR ${CMAKE_SOURCE_DIR}/utils)
 message(STATUS "KLEE_COMPONENT_EXTRA_INCLUDE_DIRS: '${KLEE_COMPONENT_EXTRA_INCLUDE_DIRS}'")
 message(STATUS "KLEE_COMPONENT_CXX_DEFINES: '${KLEE_COMPONENT_CXX_DEFINES}'")
 message(STATUS "KLEE_COMPONENT_CXX_FLAGS: '${KLEE_COMPONENT_CXX_FLAGS}'")
-message(STATUS "KLEE_COMPONENT_EXTRA_LIBRARIES: '${KLEE_COMPONENT_EXTRA_LIBRARIES}'")
 message(STATUS "KLEE_SOLVER_LIBRARIES: '${KLEE_SOLVER_LIBRARIES}'")
 
 ################################################################################
