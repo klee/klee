@@ -1,4 +1,3 @@
-// REQUIRES: geq-llvm-7.0
 // RUN: %clang %s -emit-llvm %O0opt -g -c -fdiscard-value-names -o %t.bc
 // RUN: rm -rf %t.klee-out-d
 // RUN: %klee --output-dir=%t.klee-out-d %t.bc
@@ -16,10 +15,10 @@
 void foo(int i, int k) {
   ++i; ++k;
   assert(0);
-  // CHECK-DISCARD: {{.*}} in foo(symbolic, 12) at {{.*}}.c:18
-  // CHECK-DISCARD: {{.*}} in main() at {{.*}}.c:28
-  // CHECK-NODISCARD: {{.*}} in foo(i=symbolic, k=12) at {{.*}}.c:18
-  // CHECK-NODISCARD: {{.*}} in main() at {{.*}}.c:28
+  // CHECK-DISCARD: {{.*}} in foo(symbolic, 12) at {{.*}}.c:17
+  // CHECK-DISCARD: {{.*}} in main() at {{.*}}.c:27
+  // CHECK-NODISCARD: {{.*}} in foo(i=symbolic, k=12) at {{.*}}.c:17
+  // CHECK-NODISCARD: {{.*}} in main() at {{.*}}.c:27
 }
 
 int main(void) {
