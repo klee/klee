@@ -260,7 +260,6 @@ if (ENABLE_ZLIB)
   message(STATUS "Zlib support enabled")
   if (ZLIB_FOUND)
     set(HAVE_ZLIB_H 1) # For config.h
-    set(TARGET_LIBS ${TARGET_LIBS} z)
     list(APPEND KLEE_COMPONENT_EXTRA_LIBRARIES ${ZLIB_LIBRARIES})
     list(APPEND KLEE_COMPONENT_EXTRA_INCLUDE_DIRS ${ZLIB_INCLUDE_DIRS})
   else()
