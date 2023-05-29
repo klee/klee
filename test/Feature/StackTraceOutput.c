@@ -13,16 +13,19 @@
 #include <assert.h>
 
 void foo(int i, int k) {
-  ++i; ++k;
+  ++i;
+  ++k;
+
+  // CHECK-DISCARD: {{.*}} in foo(symbolic, 12) at {{.*}}.c:[[@LINE+2]]
+  // CHECK-NODISCARD: {{.*}} in foo(i=symbolic, k=12) at {{.*}}.c:[[@LINE+1]]
   assert(0);
-  // CHECK-DISCARD: {{.*}} in foo(symbolic, 12) at {{.*}}.c:17
-  // CHECK-DISCARD: {{.*}} in main() at {{.*}}.c:27
-  // CHECK-NODISCARD: {{.*}} in foo(i=symbolic, k=12) at {{.*}}.c:17
-  // CHECK-NODISCARD: {{.*}} in main() at {{.*}}.c:27
 }
 
 int main(void) {
-  int i, k=12;
+  int i, k = 12;
   klee_make_symbolic(&i, sizeof(i), "i");
-  foo(i,k);
+
+  // CHECK-DISCARD: {{.*}} in main() at {{.*}}.c:[[@LINE+2]]
+  // CHECK-NODISCARD: {{.*}} in main() at {{.*}}.c:[[@LINE+1]]
+  foo(i, k);
 }
