@@ -99,13 +99,14 @@ option(KLEE_ENABLE_TIMESTAMP "Add timestamps to KLEE sources" OFF)
 # Include useful CMake functions
 ################################################################################
 include(GNUInstallDirs)
+include(CheckCSourceCompiles)
 include(CheckCXXSymbolExists)
+include(CheckFunctionExists)
 include(CheckIncludeFile)
 include(CheckIncludeFileCXX)
+include(CheckLibraryExists)
 include(CheckPrototypeDefinition)
 include(CMakePushCheckState)
-include(CheckFunctionExists)
-include(CheckLibraryExists)
 
 ################################################################################
 # Find LLVM
@@ -394,10 +395,20 @@ else()
   set(HAVE_SELINUX 0)
 endif()
 
-try_compile (FSTATAT_PATH_ACCEPTS_NULL
-  ${CMAKE_BINARY_DIR}
-  ${PROJECT_SOURCE_DIR}/cmake/fstatat.c
-)
+cmake_push_check_state()
+check_c_source_compiles("
+        #include <fcntl.h>
+        #include <stddef.h>
+        #include <sys/stat.h>
+
+        int main(void) {
+          struct stat buf;
+          #pragma GCC diagnostic error \"-Wnonnull\"
+          fstatat(0, NULL, &buf, 0);
+        }
+        "
+        FSTATAT_PATH_ACCEPTS_NULL)
+cmake_pop_check_state()
 
 ################################################################################
 # KLEE runtime support
