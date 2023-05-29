@@ -305,7 +305,7 @@ endif()
 # Detect SQLite3
 ################################################################################
 find_package(SQLite3)
-if (NOT SQLITE3_FOUND)
+if (NOT SQLite3_FOUND)
   message( FATAL_ERROR "SQLite3 not found, please install" )
 endif()
 
