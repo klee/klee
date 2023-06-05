@@ -36,17 +36,6 @@ static void push_obj(KTest *b, const char *name, unsigned total_bytes,
   memcpy(o->bytes, bytes, total_bytes);
 }
 
-static void push_range(KTest *b, const char *name, unsigned value) {
-  KTestObject *o = &b->objects[b->numObjects++];
-  assert(b->numObjects < MAX);
-
-  o->name = strdup(name);
-  o->numBytes = 4;
-  o->bytes = (unsigned char *)malloc(o->numBytes);
-
-  *(unsigned *)o->bytes = value;
-}
-
 void print_usage_and_exit(char *program_name) {
   fprintf(stderr,
     "%s: Tool for generating a ktest file from concrete input, e.g., for using a concrete crashing input as a ktest seed.\n"
