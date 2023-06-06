@@ -36,6 +36,12 @@ llvm::cl::opt<bool> SkipNotLazyInitialized(
                    "use only with timestamps (default=false)"),
     llvm::cl::cat(PointerResolvingCat));
 
+llvm::cl::opt<bool> SkipLocal(
+    "skip-local", llvm::cl::init(true),
+    llvm::cl::desc(
+        "Do not set symbolic pointers on local objects (default=true)"),
+    llvm::cl::cat(PointerResolvingCat));
+
 llvm::cl::opt<bool> UseTimestamps(
     "use-timestamps", llvm::cl::init(true),
     llvm::cl::desc("Set symbolic pointers only to objects created before those "
@@ -244,7 +250,12 @@ bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
   }
   if (SkipNotLazyInitialized) {
     predicate = [predicate](const MemoryObject *mo) {
-      return predicate(mo) && mo->isLazyInitialized();
+      return predicate(mo) && mo->isLazyInitialized;
+    };
+  }
+  if (SkipLocal) {
+    predicate = [predicate](const MemoryObject *mo) {
+      return predicate(mo) && !mo->isLocal;
     };
   }
 
@@ -373,7 +384,12 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
   }
   if (SkipNotLazyInitialized) {
     predicate = [predicate](const MemoryObject *mo) {
-      return predicate(mo) && mo->isLazyInitialized();
+      return predicate(mo) && mo->isLazyInitialized;
+    };
+  }
+  if (SkipLocal) {
+    predicate = [predicate](const MemoryObject *mo) {
+      return predicate(mo) && !mo->isLocal;
     };
   }
 
