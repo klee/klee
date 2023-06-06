@@ -49,13 +49,13 @@ private:
   static EquivTargetHashSet cachedTargets;
   static TargetHashSet targets;
   KBlock *block;
-  std::unordered_set<ReachWithError>
+  std::set<ReachWithError>
       errors;                  // None - if it is not terminated in error trace
   unsigned id;                 // 0 - if it is not terminated in error trace
   optional<ErrorLocation> loc; // TODO(): only for check in reportTruePositive
 
-  explicit Target(const std::unordered_set<ReachWithError> &_errors,
-                  unsigned _id, optional<ErrorLocation> _loc, KBlock *_block)
+  explicit Target(const std::set<ReachWithError> &_errors, unsigned _id,
+                  optional<ErrorLocation> _loc, KBlock *_block)
       : block(_block), errors(_errors), id(_id), loc(_loc) {}
 
   static ref<Target> getFromCacheOrReturn(Target *target);
@@ -65,7 +65,7 @@ public:
   /// @brief Required by klee::ref-managed objects
   class ReferenceCounter _refCount;
 
-  static ref<Target> create(const std::unordered_set<ReachWithError> &_errors,
+  static ref<Target> create(const std::set<ReachWithError> &_errors,
                             unsigned _id, optional<ErrorLocation> _loc,
                             KBlock *_block);
   static ref<Target> create(KBlock *_block);
@@ -88,7 +88,7 @@ public:
 
   unsigned hash() const { return reinterpret_cast<uintptr_t>(block); }
 
-  const std::unordered_set<ReachWithError> &getErrors() const { return errors; }
+  const std::set<ReachWithError> &getErrors() const { return errors; }
   bool isThatError(ReachWithError err) const { return errors.count(err) != 0; }
   bool shouldFailOnThisTarget() const {
     return errors.count(ReachWithError::None) == 0;

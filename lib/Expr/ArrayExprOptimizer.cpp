@@ -143,7 +143,7 @@ ref<Expr> ExprOptimizer::optimizeExpr(const ref<Expr> &e, bool valueOnly) {
           result = ExprRewriter::createOptExpr(e, arrays, idx_valIdx);
         } else {
           klee_warning("OPT_I: infeasible branch!");
-          result = ConstantExpr::create(0, Expr::Bool);
+          result = Expr::createFalse();
         }
         // Add new expression to cache
         if (result) {
@@ -218,31 +218,35 @@ bool ExprOptimizer::computeIndexes(array2idx_ty &arrays, const ref<Expr> &e,
     }
 
     // For each concrete value 'i' stored in the array
-    for (size_t aIdx = 0; aIdx < arr->constantValues.size(); aIdx += width) {
-      auto *a = new Assignment();
-      std::vector<const Array *> objects;
-      std::vector<std::vector<unsigned char>> values;
+    if (ref<ConstantSource> constantSource =
+            cast<ConstantSource>(arr->source)) {
+      for (size_t aIdx = 0; aIdx < constantSource->constantValues.size();
+           aIdx += width) {
+        auto *a = new Assignment();
+        std::vector<const Array *> objects;
+        std::vector<std::vector<unsigned char>> values;
 
-      // For each symbolic index Expr(k) found
-      for (auto &index_it : element.second) {
-        ref<Expr> idx = index_it;
-        ref<Expr> val = ConstantExpr::alloc(aIdx, arr->getDomain());
-        // We create a partial assignment on 'k' s.t. Expr(k)==i
-        bool assignmentSuccess =
-            AssignmentGenerator::generatePartialAssignment(idx, val, a);
-        success |= assignmentSuccess;
+        // For each symbolic index Expr(k) found
+        for (auto &index_it : element.second) {
+          ref<Expr> idx = index_it;
+          ref<Expr> val = ConstantExpr::alloc(aIdx, arr->getDomain());
+          // We create a partial assignment on 'k' s.t. Expr(k)==i
+          bool assignmentSuccess =
+              AssignmentGenerator::generatePartialAssignment(idx, val, a);
+          success |= assignmentSuccess;
 
-        // If the assignment satisfies both the expression 'e' and the PC
-        ref<Expr> evaluation = a->evaluate(e);
-        if (assignmentSuccess && evaluation->isTrue()) {
-          if (idx_valIdx.find(idx) == idx_valIdx.end()) {
-            idx_valIdx.insert(std::make_pair(idx, std::vector<ref<Expr>>()));
+          // If the assignment satisfies both the expression 'e' and the PC
+          ref<Expr> evaluation = a->evaluate(e);
+          if (assignmentSuccess && evaluation->isTrue()) {
+            if (idx_valIdx.find(idx) == idx_valIdx.end()) {
+              idx_valIdx.insert(std::make_pair(idx, std::vector<ref<Expr>>()));
+            }
+            idx_valIdx[idx].emplace_back(
+                ConstantExpr::alloc(aIdx, arr->getDomain()));
           }
-          idx_valIdx[idx].emplace_back(
-              ConstantExpr::alloc(aIdx, arr->getDomain()));
         }
+        delete a;
       }
-      delete a;
     }
   }
   return success;
@@ -291,7 +295,11 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
            un = un->next.get())
         us.push_back(un);
 
-      auto arrayConstValues = read->updates.root->constantValues;
+      std::vector<ref<ConstantExpr>> arrayConstValues;
+      if (ref<ConstantSource> constantSource =
+              dyn_cast<ConstantSource>(read->updates.root->source)) {
+        arrayConstValues = constantSource->constantValues;
+      }
       for (auto it = us.rbegin(); it != us.rend(); it++) {
         const UpdateNode *un = *it;
         auto ce = dyn_cast<ConstantExpr>(un->index);
@@ -362,7 +370,11 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
       // Note: we already filtered the ReadExpr, so here we can safely
       // assume that the UpdateNodes contain ConstantExpr indexes, but in
       // this case we *cannot* assume anything on the values
-      auto arrayConstValues = read->updates.root->constantValues;
+      std::vector<ref<ConstantExpr>> arrayConstValues;
+      if (ref<ConstantSource> constantSource =
+              dyn_cast<ConstantSource>(read->updates.root->source)) {
+        arrayConstValues = constantSource->constantValues;
+      }
       if (arrayConstValues.size() < size) {
         // We need to "force" initialization of the values
         for (size_t i = arrayConstValues.size(); i < size; i++) {

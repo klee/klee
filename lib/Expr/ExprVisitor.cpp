@@ -27,13 +27,12 @@ ref<Expr> ExprVisitor::visit(const ref<Expr> &e) {
   if (!UseVisitorHash || isa<ConstantExpr>(e)) {
     return visitActual(e);
   } else {
-    visited_ty::iterator it = visited.find(e);
-
-    if (it != visited.end()) {
-      return it->second;
+    auto cached = visited.get(e);
+    if (cached.second) {
+      return cached.first;
     } else {
-      ref<Expr> res = visitActual(e);
-      visited.insert(std::make_pair(e, res));
+      auto res = visitActual(cached.first);
+      visited.add({e, res});
       return res;
     }
   }

@@ -26,6 +26,7 @@ klee_add_component(kleaverSolver
   Solver.cpp
   SolverCmdLine.cpp
   SolverImpl.cpp
+  SolverUtil.cpp
   SolverStats.cpp
   STPBuilder.cpp
   STPSolver.cpp
@@ -47,6 +48,7 @@ target_link_libraries(kleaverSolver PUBLIC
   kleeBasic
   kleaverExpr
   kleeSupport
+  kleeModule
   ${KLEE_SOLVER_LIBRARIES})
 
 install(TARGETS kleaverSolver

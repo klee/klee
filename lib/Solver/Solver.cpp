@@ -11,8 +11,8 @@
 
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/ExprUtil.h"
-#include "klee/Expr/SymbolicSource.h"
 #include "klee/Solver/SolverImpl.h"
+#include "klee/Solver/SolverUtil.h"
 
 using namespace klee;
 
@@ -20,9 +20,9 @@ const char *Solver::validity_to_str(Validity v) {
   switch (v) {
   default:
     return "Unknown";
-  case True:
+  case Validity::True:
     return "True";
-  case False:
+  case Validity::False:
     return "False";
   }
 }
@@ -37,27 +37,17 @@ void Solver::setCoreSolverTimeout(time::Span timeout) {
   impl->setCoreSolverTimeout(timeout);
 }
 
-bool Solver::evaluate(const Query &query, Validity &result) {
+bool Solver::evaluate(const Query &query, PartialValidity &result) {
   assert(query.expr->getWidth() == Expr::Bool && "Invalid expression type!");
 
   // Maintain invariants implementations expect.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(query.expr)) {
-    result = CE->isTrue() ? True : False;
+    result = CE->isTrue() ? PartialValidity::MustBeTrue
+                          : PartialValidity::MustBeFalse;
     return true;
   }
 
   return impl->computeValidity(query, result);
-}
-
-Solver::PartialValidity Solver::evaluate(const Query &query) {
-  assert(query.expr->getWidth() == Expr::Bool && "Invalid expression type!");
-
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(query.expr)) {
-    return CE->isTrue() ? PartialValidity::MustBeTrue
-                        : PartialValidity::MustBeFalse;
-  }
-
-  return impl->computePartialValidity(query);
 }
 
 bool Solver::mustBeTrue(const Query &query, bool &result) {
@@ -187,14 +177,14 @@ std::pair<ref<Expr>, ref<Expr>> Solver::getRange(const Query &query,
   auto start_time = time::getWallTime();
 
   if (width == 1) {
-    Solver::Validity result;
+    PartialValidity result;
     if (!evaluate(query, result))
       assert(0 && "computeValidity failed");
     switch (result) {
-    case Solver::True:
+    case PValidity::MustBeTrue:
       min = max = 1;
       break;
-    case Solver::False:
+    case PValidity::MustBeFalse:
       min = max = 0;
       break;
     default:
@@ -314,29 +304,31 @@ std::pair<ref<Expr>, ref<Expr>> Solver::getRange(const Query &query,
 std::vector<const Array *> Query::gatherArrays() const {
   std::vector<const Array *> arrays = constraints.gatherArrays();
   findObjects(expr, arrays);
-  return arrays;
-}
 
-std::vector<const Array *> Query::gatherSymcreteArrays() const {
-  std::unordered_set<const Array *> arrays;
-  for (const Array *array :
-       ConstraintSet(std::vector<ref<Expr>>{expr}).gatherSymcreteArrays()) {
-    arrays.insert(array);
-  }
-  for (const Array *array : constraints.gatherSymcreteArrays()) {
-    arrays.insert(array);
-  }
-  return std::vector<const Array *>(arrays.begin(), arrays.end());
+  std::unordered_set<const Array *> arraysSet;
+  arraysSet.insert(arrays.begin(), arrays.end());
+
+  return std::vector<const Array *>(arraysSet.begin(), arraysSet.end());
 }
 
 bool Query::containsSymcretes() const {
-  return !gatherSymcreteArrays().empty();
+  return !constraints.symcretes().empty();
+}
+
+bool Query::containsSizeSymcretes() const {
+  for (ref<Symcrete> s : constraints.symcretes()) {
+    if (isa<SizeSymcrete>(s) && !isa<ConstantExpr>(s->symcretized)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void Query::dump() const {
   llvm::errs() << "Constraints [\n";
-  for (const auto &constraint : constraints)
-    constraint->dump();
+
+  for (const auto &constraint : constraints.cs())
+    constraint->dump(); // TODO
 
   llvm::errs() << "]\n";
   llvm::errs() << "Query [\n";
@@ -345,5 +337,5 @@ void Query::dump() const {
 }
 
 void ValidityCore::dump() const {
-  Query(ConstraintSet(constraints), expr).dump();
+  Query(ConstraintSet(constraints, {}, {true}), expr).dump();
 }

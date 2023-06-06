@@ -1,12 +1,12 @@
 // REQUIRES: not-darwin, z3
 // RUN: %clang %s -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --libc=klee --posix-runtime -solver-backend=z3 --skip-not-lazy-initialized --skip-not-symbolic-objects %t.bc > %t.log
+// RUN: %klee --output-dir=%t.klee-out --libc=klee --posix-runtime --solver-backend=z3 --skip-not-lazy-initialized --skip-not-symbolic-objects %t.bc > %t.log
 
-// RUN: test -f %t.klee-out/test000007.ktest
+// RUN: test -f %t.klee-out/test000008.ktest
 
 // RUN: %cc %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner
-// RUN: env KTEST_FILE=%t.klee-out/test000007.ktest %t_runner | FileCheck %s
+// RUN: env KTEST_FILE=%t.klee-out/test000008.ktest %t_runner | FileCheck %s
 
 #include <stdlib.h>
 

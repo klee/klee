@@ -11,6 +11,9 @@
 #define KLEE_PARSER_H
 
 #include "klee/Expr/Expr.h"
+#include "klee/Expr/ExprHashMap.h"
+#include "klee/Expr/Path.h"
+#include "klee/Module/KModule.h"
 
 #include <string>
 #include <vector>
@@ -76,23 +79,11 @@ public:
 ///   array obj[32] : w32 -> w8 = [ ... ]
 class ArrayDecl : public Decl {
 public:
-  /// Name - The name of this array.
-  const Identifier *Name;
-
-  /// Domain - The width of indices.
-  const unsigned Domain;
-
-  /// Range - The width of array contents.
-  const unsigned Range;
-
   /// Root - The root array object defined by this decl.
   const Array *Root;
 
 public:
-  ArrayDecl(const Identifier *_Name, uint64_t _Size, unsigned _Domain,
-            unsigned _Range, const Array *_Root)
-      : Decl(ArrayDeclKind), Name(_Name), Domain(_Domain), Range(_Range),
-        Root(_Root) {}
+  ArrayDecl(const Array *_Root) : Decl(ArrayDeclKind), Root(_Root) {}
 
   virtual void dump();
 
@@ -164,6 +155,8 @@ public:
   // being able to do independence. We may want this as a flag, if
   // we are to interface with things like SMT.
 
+  KModule *km;
+
   /// Constraints - The list of constraints to assume for this
   /// expression.
   const std::vector<ExprHandle> Constraints;
@@ -180,10 +173,10 @@ public:
   const std::vector<const Array *> Objects;
 
 public:
-  QueryCommand(const std::vector<ExprHandle> &_Constraints, ExprHandle _Query,
-               const std::vector<ExprHandle> &_Values,
+  QueryCommand(const std::vector<ExprHandle> &_Constraints, KModule *km,
+               ExprHandle _Query, const std::vector<ExprHandle> &_Values,
                const std::vector<const Array *> &_Objects)
-      : CommandDecl(QueryCommandDeclKind), Constraints(_Constraints),
+      : CommandDecl(QueryCommandDeclKind), km(km), Constraints(_Constraints),
         Query(_Query), Values(_Values), Objects(_Objects) {}
 
   virtual void dump();
@@ -223,6 +216,10 @@ public:
   /// expressions.
   static Parser *Create(const std::string Name, const llvm::MemoryBuffer *MB,
                         ExprBuilder *Builder, bool ClearArrayAfterQuery);
+
+  static Parser *Create(const std::string Name, const llvm::MemoryBuffer *MB,
+                        ExprBuilder *Builder, ArrayCache *TheArrayCache,
+                        KModule *km, bool ClearArrayAfterQuery);
 };
 } // namespace expr
 } // namespace klee

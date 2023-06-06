@@ -169,6 +169,27 @@ struct Symbolic {
   }
 };
 
+struct Resolution {
+  IDType memoryObjectID;
+  ref<Expr> offset;
+  Resolution(IDType memoryObjectID, ref<Expr> offset)
+      : memoryObjectID(memoryObjectID), offset(offset) {}
+  Resolution &operator=(const Resolution &other) = default;
+
+  friend bool operator==(const Resolution &lhs, const Resolution &rhs) {
+    return lhs.memoryObjectID == rhs.memoryObjectID && lhs.offset == rhs.offset;
+  }
+};
+
+struct ResolutionCompare {
+  bool operator()(Resolution a, Resolution b) const {
+    return a.memoryObjectID < b.memoryObjectID ||
+           (a.memoryObjectID == b.memoryObjectID && a.offset < b.offset);
+  }
+};
+
+typedef std::pair<llvm::BasicBlock *, llvm::BasicBlock *> Transition;
+
 /// @brief ExecutionState representing a path under exploration
 class ExecutionState {
 #ifdef KLEE_UNITTEST
@@ -197,9 +218,11 @@ public:
   /// @brief Stack representing the current instruction stream
   stack_ty stack;
 
+  int stackBalance = 0;
+
   /// @brief Remember from which Basic Block control flow arrived
   /// (i.e. to select the right phi values)
-  std::int32_t incomingBBIndex;
+  std::int32_t incomingBBIndex = -1;
 
   // Overall state of the state - Data specific
 
@@ -216,7 +239,7 @@ public:
   AddressSpace addressSpace;
 
   /// @brief Constraints collected so far
-  ConstraintSet constraints;
+  PathConstraints constraints;
 
   /// @brief Key points which should be visited through execution
   TargetForest targetForest;
@@ -250,18 +273,15 @@ public:
   // FIXME: Move to a shared list structure (not critical).
   std::vector<Symbolic> symbolics;
 
-  /// @brief Ordered listof symbolic sizes: used to generate test cases.
-  std::vector<const Array *> symbolicSizes;
-
   /// @brief map from memory accesses to accessed objects and access offsets.
-  ExprHashMap<std::pair<IDType, ref<Expr>>> resolvedPointers;
+  ExprHashMap<std::set<Resolution, ResolutionCompare>> resolvedPointers;
 
   /// @brief A set of boolean expressions
   /// the user has requested be true of a counterexample.
   ImmutableSet<ref<Expr>> cexPreferences;
 
   /// @brief Set of used array names for this state.  Used to avoid collisions.
-  std::set<std::string> arrayNames;
+  std::map<std::string, uint64_t> arrayNames;
 
   /// @brief The numbers of times this state has run through
   /// Executor::stepInstruction
@@ -293,8 +313,10 @@ public:
   /// @brief Disables forking for this state. Set by user code
   bool forkDisabled = false;
 
+  /// Needed for composition
+  ref<Expr> returnValue;
+
   ExprHashMap<std::pair<ref<Expr>, llvm::Type *>> gepExprBases;
-  ExprHashMap<ref<Expr>> gepExprOffsets;
 
   ReachWithError error = ReachWithError::None;
   std::atomic<HaltExecution::Reason> terminationReasonType{
@@ -317,9 +339,9 @@ public:
   ExecutionState *branch();
   ExecutionState *withKFunction(KFunction *kf);
   ExecutionState *withStackFrame(KInstIterator caller, KFunction *kf);
-  ExecutionState *withKBlock(KBlock *kb);
+  ExecutionState *withKInstruction(KInstruction *ki) const;
   ExecutionState *empty();
-  ExecutionState *copy();
+  ExecutionState *copy() const;
 
   bool inSymbolics(const MemoryObject *mo) const;
 
@@ -335,11 +357,9 @@ public:
                std::pair<ref<const MemoryObject>, ref<Expr>> &resolution) const;
 
   void removePointerResolutions(const MemoryObject *mo);
-  void addPointerResolution(ref<Expr> address, ref<Expr> base,
-                            const MemoryObject *mo);
+  void addPointerResolution(ref<Expr> address, const MemoryObject *mo);
   bool resolveOnSymbolics(const ref<ConstantExpr> &addr, IDType &result) const;
 
-  void addConstraint(ref<Expr> e);
   void addConstraint(ref<Expr> e, const Assignment &c);
   void addCexPreference(const ref<Expr> &cond);
 
@@ -355,6 +375,8 @@ public:
   void increaseLevel();
   bool isTransfered();
   bool isGEPExpr(ref<Expr> expr) const;
+
+  bool reachedTarget(Target target) const;
 };
 
 struct ExecutionStateIDCompare {
@@ -362,6 +384,9 @@ struct ExecutionStateIDCompare {
     return a->getID() < b->getID();
   }
 };
+
+using states_ty = std::set<ExecutionState *, ExecutionStateIDCompare>;
+
 } // namespace klee
 
 #endif /* KLEE_EXECUTIONSTATE_H */

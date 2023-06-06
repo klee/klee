@@ -497,13 +497,13 @@ void ExprSMTLIBPrinter::printUpdatesAndArray(const UpdateNode *un,
     *p << ")";
   } else {
     // The base case of the recursion
-    *p << root->name;
+    *p << root->getIdentifier();
   }
 }
 
 void ExprSMTLIBPrinter::scanAll() {
   // perform scan of all expressions
-  for (const auto &constraint : query->constraints)
+  for (const auto &constraint : query->constraints.cs())
     scan(constraint);
 
   // Scan the query too
@@ -553,7 +553,7 @@ namespace {
 
 struct ArrayPtrsByName {
   bool operator()(const Array *a1, const Array *a2) const {
-    return a1->name < a2->name;
+    return a1->id < a2->id;
   }
 };
 
@@ -569,7 +569,7 @@ void ExprSMTLIBPrinter::printArrayDeclarations() {
   std::sort(sortedArrays.begin(), sortedArrays.end(), ArrayPtrsByName());
   for (std::vector<const Array *>::iterator it = sortedArrays.begin();
        it != sortedArrays.end(); it++) {
-    *o << "(declare-fun " << (*it)->name
+    *o << "(declare-fun " << (*it)->getIdentifier()
        << " () "
           "(Array (_ BitVec "
        << (*it)->getDomain()
@@ -596,7 +596,7 @@ void ExprSMTLIBPrinter::printArrayDeclarations() {
          */
         uint64_t size =
             cast<ConstantExpr>(
-                query->constraints.getConcretization().evaluate(array->size))
+                query->constraints.concretization().evaluate(array->size))
                 ->getZExtValue();
         for (uint64_t byteIndex = 0; byteIndex < size; ++byteIndex) {
           *p << "(assert (";
@@ -605,18 +605,17 @@ void ExprSMTLIBPrinter::printArrayDeclarations() {
           p->pushIndent();
           printSeperator();
 
-          *p << "(select " << array->name << " (_ bv" << byteIndex << " "
-             << array->getDomain() << ") )";
+          *p << "(select " << array->getIdentifier() << " (_ bv" << byteIndex
+             << " " << array->getDomain() << ") )";
           printSeperator();
 
-          if (ref<ConstantWithSymbolicSizeSource>
-                  constantWithSymbolicSizeSource =
-                      dyn_cast<ConstantWithSymbolicSizeSource>(array->source)) {
+          if (ref<SymbolicSizeConstantSource> symbolicSizeConstantSource =
+                  dyn_cast<SymbolicSizeConstantSource>(array->source)) {
             printConstant(ConstantExpr::create(
-                constantWithSymbolicSizeSource->defaultValue,
-                array->getRange()));
-          } else {
-            printConstant(array->constantValues[byteIndex]);
+                symbolicSizeConstantSource->defaultValue, array->getRange()));
+          } else if (ref<ConstantSource> constantSource =
+                         cast<ConstantSource>(array->source)) {
+            printConstant(constantSource->constantValues[byteIndex]);
           }
 
           p->popIndent();
@@ -639,7 +638,7 @@ void ExprSMTLIBPrinter::printHumanReadableQuery() {
 
   if (abbrMode != ABBR_LET) {
     // Generate assert statements for each constraint
-    for (const auto &constraint : query->constraints)
+    for (const auto &constraint : query->constraints.cs())
       printAssert(constraint);
 
     *o << "; QueryExpr\n";
@@ -666,8 +665,8 @@ void ExprSMTLIBPrinter::printQueryInSingleAssert() {
   ref<Expr> queryAssert = Expr::createIsZero(query->expr);
 
   // Print constraints inside the main query to reuse the Expr bindings
-  for (std::vector<ref<Expr>>::const_iterator i = query->constraints.begin(),
-                                              e = query->constraints.end();
+  for (std::set<ref<Expr>>::const_iterator i = query->constraints.cs().begin(),
+                                           e = query->constraints.cs().end();
        i != e; ++i) {
     queryAssert = AndExpr::create(queryAssert, *i);
   }
@@ -694,17 +693,18 @@ void ExprSMTLIBPrinter::printAction() {
       theArray = *it;
       // Loop over the array indices
       ref<ConstantExpr> arrayConstantSize = dyn_cast<ConstantExpr>(
-          query->constraints.getConcretization().evaluate(theArray->size));
+          query->constraints.concretization().evaluate(theArray->size));
       if (!arrayConstantSize) {
-        klee_warning("Query for %s can not be printed as it has non-conretized "
-                     "symbolic size!",
-                     theArray->getName().c_str());
+        klee_warning(
+            "Query for %s can not  be printed as it has non-conretized "
+            "symbolic size!",
+            theArray->getIdentifier().c_str());
         continue;
       }
       for (unsigned int index = 0; index < arrayConstantSize->getZExtValue();
            ++index) {
-        *o << "(get-value ( (select " << (**it).name << " (_ bv" << index << " "
-           << theArray->getDomain() << ") ) ) )\n";
+        *o << "(get-value ( (select " << (**it).getIdentifier() << " (_ bv"
+           << index << " " << theArray->getDomain() << ") ) ) )\n";
       }
     }
   }

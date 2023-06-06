@@ -24,33 +24,6 @@ namespace klee {
 /// a complete Solver implementation.
 class IncompleteSolver {
 public:
-  /// PartialValidity - Represent a possibility incomplete query
-  /// validity.
-  enum PartialValidity {
-    /// The query is provably true.
-    MustBeTrue = 1,
-
-    /// The query is provably false.
-    MustBeFalse = -1,
-
-    /// The query is not provably false (a true assignment is known to
-    /// exist).
-    MayBeTrue = 2,
-
-    /// The query is not provably true (a false assignment is known to
-    /// exist).
-    MayBeFalse = -2,
-
-    /// The query is known to have both true and false assignments.
-    TrueOrFalse = 0,
-
-    /// The validity of the query is unknown.
-    None = 3
-  };
-
-  static PartialValidity negatePartialValidity(PartialValidity pv);
-
-public:
   IncompleteSolver() {}
   virtual ~IncompleteSolver() {}
 
@@ -61,12 +34,12 @@ public:
   /// The IncompleteSolver class provides an implementation of
   /// computeValidity using computeTruth. Sub-classes may override
   /// this if a more efficient implementation is available.
-  virtual IncompleteSolver::PartialValidity computeValidity(const Query &);
+  virtual PartialValidity computeValidity(const Query &);
 
   /// computeValidity - Compute a partial validity for the given query.
   ///
   /// The passed expression is non-constant with bool type.
-  virtual IncompleteSolver::PartialValidity computeTruth(const Query &) = 0;
+  virtual PartialValidity computeTruth(const Query &) = 0;
 
   /// computeValue - Attempt to compute a value for the given expression.
   virtual bool computeValue(const Query &, ref<Expr> &result) = 0;
@@ -93,7 +66,7 @@ public:
   ~StagedSolverImpl();
 
   bool computeTruth(const Query &, bool &isValid);
-  bool computeValidity(const Query &, Solver::Validity &result);
+  bool computeValidity(const Query &, PartialValidity &result);
   bool computeValue(const Query &, ref<Expr> &result);
   bool computeInitialValues(const Query &,
                             const std::vector<const Array *> &objects,

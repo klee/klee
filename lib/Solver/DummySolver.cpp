@@ -17,7 +17,7 @@ class DummySolverImpl : public SolverImpl {
 public:
   DummySolverImpl();
 
-  bool computeValidity(const Query &, Solver::Validity &result);
+  bool computeValidity(const Query &, PartialValidity &result);
   bool computeTruth(const Query &, bool &isValid);
   bool computeValue(const Query &, ref<Expr> &result);
   bool computeInitialValues(const Query &,
@@ -32,7 +32,7 @@ public:
 
 DummySolverImpl::DummySolverImpl() {}
 
-bool DummySolverImpl::computeValidity(const Query &, Solver::Validity &result) {
+bool DummySolverImpl::computeValidity(const Query &, PartialValidity &result) {
   ++stats::queries;
   // FIXME: We should have stats::queriesFail;
   return false;

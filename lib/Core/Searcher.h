@@ -218,7 +218,7 @@ private:
   std::unique_ptr<Searcher> baseSearcher;
   TargetForestHistoryToSearcherMap targetedSearchers;
   CodeGraphDistance &codeGraphDistance;
-  TargetCalculator *stateHistory;
+  TargetCalculator &stateHistory;
   TargetHashSet reachedTargets;
   std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates;
   std::size_t bound;
@@ -255,14 +255,9 @@ private:
 
 public:
   GuidedSearcher(
-      Searcher *baseSearcher, CodeGraphDistance &codeGraphDistance,
-      TargetCalculator &stateHistory,
+      CodeGraphDistance &codeGraphDistance, TargetCalculator &stateHistory,
       std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates,
-      std::size_t bound, RNG &rng);
-  GuidedSearcher(
-      CodeGraphDistance &codeGraphDistance,
-      std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates,
-      std::size_t bound, RNG &rng);
+      std::size_t bound, RNG &rng, Searcher *baseSearcher = nullptr);
   ~GuidedSearcher() override = default;
   ExecutionState &selectState() override;
   void update(ExecutionState *current,

@@ -8,14 +8,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Expr/Parser/Parser.h"
-#include "klee/Config/Version.h"
 #include "klee/Expr/ArrayCache.h"
 #include "klee/Expr/Constraints.h"
+#include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprBuilder.h"
+#include "klee/Expr/ExprHashMap.h"
 #include "klee/Expr/ExprPPrinter.h"
 #include "klee/Expr/Parser/Lexer.h"
+#include "klee/Expr/Path.h"
 #include "klee/Expr/SourceBuilder.h"
-#include "klee/Solver/Solver.h"
+#include "klee/Expr/SymbolicSource.h"
+#include "klee/Module/KInstruction.h"
+#include "klee/Module/KModule.h"
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -24,8 +28,8 @@
 #include <cassert>
 #include <cstring>
 #include <map>
+#include <vector>
 
-using namespace llvm;
 using namespace klee;
 using namespace klee::expr;
 
@@ -69,7 +73,7 @@ typedef ParseResult<Decl *> DeclResult;
 typedef ParseResult<Expr::Width> TypeResult;
 typedef ParseResult<VersionHandle> VersionResult;
 typedef ParseResult<uint64_t> IntegerResult;
-
+typedef ParseResult<ref<SymbolicSource>> SourceResult;
 /// NumberOrExprResult - Represent a number or expression. This is used to
 /// wrap an expression production which may be a number, but for
 /// which the type width is unknown.
@@ -103,9 +107,11 @@ class ParserImpl : public Parser {
   typedef std::map<const Identifier *, VersionHandle> VersionSymTabTy;
 
   const std::string Filename;
-  const MemoryBuffer *TheMemoryBuffer;
+  const llvm::MemoryBuffer *TheMemoryBuffer;
   ExprBuilder *Builder;
-  ArrayCache TheArrayCache;
+  ArrayCache *TheArrayCache;
+  KModule *km;
+  bool ownArrayCache;
   bool ClearArrayAfterQuery;
 
   Lexer TheLexer;
@@ -308,17 +314,42 @@ class ParserImpl : public Parser {
 
   TypeResult ParseTypeSpecifier();
 
+  SourceResult ParseSource();
+
+  SourceResult ParseConstantSource();
+  SourceResult ParseSymbolicSizeConstantSource();
+  SourceResult ParseSymbolicSizeConstantAddressSource();
+  SourceResult ParseMakeSymbolicSource();
+  SourceResult ParseLazyInitializationContentSource();
+  SourceResult ParseLazyInitializationAddressSource();
+  SourceResult ParseLazyInitializationSizeSource();
+  SourceResult ParseInstructionSource();
+  SourceResult ParseArgumentSource();
+
   /*** Diagnostics ***/
 
   void Error(const char *Message, const Token &At);
   void Error(const char *Message) { Error(Message, Tok); }
 
 public:
-  ParserImpl(const std::string _Filename, const MemoryBuffer *MB,
+  ParserImpl(const std::string _Filename, const llvm::MemoryBuffer *MB,
              ExprBuilder *_Builder, bool _ClearArrayAfterQuery)
       : Filename(_Filename), TheMemoryBuffer(MB), Builder(_Builder),
         ClearArrayAfterQuery(_ClearArrayAfterQuery), TheLexer(MB),
-        MaxErrors(~0u), NumErrors(0) {}
+        MaxErrors(~0u), NumErrors(0) {
+    TheArrayCache = new ArrayCache();
+    ownArrayCache = true;
+  }
+
+  ParserImpl(const std::string _Filename, const llvm::MemoryBuffer *MB,
+             ExprBuilder *_Builder, ArrayCache *_TheArrayCache, KModule *km,
+             bool _ClearArrayAfterQuery)
+      : Filename(_Filename), TheMemoryBuffer(MB), Builder(_Builder),
+        TheArrayCache(_TheArrayCache), km(km ? km : 0),
+        ClearArrayAfterQuery(_ClearArrayAfterQuery), TheLexer(MB),
+        MaxErrors(~0u), NumErrors(0) {
+    ownArrayCache = false;
+  }
 
   virtual ~ParserImpl();
 
@@ -358,7 +389,7 @@ Decl *ParserImpl::ParseTopLevelDecl() {
   // Repeat until success or EOF.
   while (Tok.kind != Token::EndOfFile) {
     switch (Tok.kind) {
-    case Token::KWArray: {
+    case Token::Identifier: {
       DeclResult Res = ParseArrayDecl();
       if (Res.isValid())
         return Res.get();
@@ -373,7 +404,7 @@ Decl *ParserImpl::ParseTopLevelDecl() {
     }
 
     default:
-      Error("expected 'array' or '(' token.");
+      Error("expected identifier or '(' token.");
       ConsumeAnyToken();
     }
   }
@@ -390,144 +421,177 @@ Decl *ParserImpl::ParseTopLevelDecl() {
 DeclResult ParserImpl::ParseArrayDecl() {
   // FIXME: Recovery here is horrible, we need to scan to next decl start or
   // something.
-  ConsumeExpectedToken(Token::KWArray);
+  Token ID = Tok;
 
-  if (Tok.kind != Token::Identifier) {
-    Error("expected identifier token.");
-    return DeclResult();
-  }
-
-  Token Name = Tok;
-  IntegerResult Size;
-  TypeResult DomainType;
-  TypeResult RangeType;
-  std::vector<ref<ConstantExpr>> Values;
-
-  ConsumeToken();
-
-  if (Tok.kind != Token::LSquare) {
-    Error("expected '['.");
-    goto exit;
-  }
-  ConsumeLSquare();
-
-  if (Tok.kind != Token::RSquare) {
-    Size = ParseIntegerConstant(64);
-  }
-  if (Tok.kind != Token::RSquare) {
-    Error("expected ']'.");
-    goto exit;
-  }
-  ConsumeRSquare();
-
-  if (Tok.kind != Token::Colon) {
-    Error("expected ':'.");
-    goto exit;
-  }
+  ConsumeExpectedToken(Token::Identifier);
   ConsumeExpectedToken(Token::Colon);
 
-  DomainType = ParseTypeSpecifier();
-  if (Tok.kind != Token::Arrow) {
-    Error("expected '->'.");
-    goto exit;
-  }
-  ConsumeExpectedToken(Token::Arrow);
+  ConsumeLParen();
+  ConsumeExpectedToken(Token::KWArray);
 
-  RangeType = ParseTypeSpecifier();
-  if (Tok.kind != Token::Equals) {
-    Error("expected '='.");
-    goto exit;
-  }
-  ConsumeExpectedToken(Token::Equals);
+  auto sizeResult = ParseExpr(TypeResult());
 
-  if (Tok.kind == Token::KWSymbolic) {
-    ConsumeExpectedToken(Token::KWSymbolic);
-  } else if (Tok.kind == Token::LSquare) {
-    ConsumeLSquare();
-    while (Tok.kind != Token::RSquare) {
-      if (Tok.kind == Token::EndOfFile) {
-        Error("unexpected end of file.");
-        goto exit;
-      }
+  auto sourceResult = ParseSource();
 
-      ExprResult Res = ParseNumber(RangeType.get());
-      if (Res.isValid())
-        Values.push_back(cast<ConstantExpr>(Res.get()));
-    }
-    ConsumeRSquare();
+  TypeResult DomainType;
+  TypeResult RangeType;
+
+  if (Tok.kind != Token::RParen) {
+    ConsumeExpectedToken(Token::Colon);
+    DomainType = ParseTypeSpecifier();
+    ConsumeExpectedToken(Token::Arrow);
+    RangeType = ParseTypeSpecifier();
   } else {
-    Error("expected 'symbolic' or '['.");
-    goto exit;
-  }
-
-  // Type check size.
-  if (!Size.isValid()) {
-    if (Values.empty()) {
-      Error("unsized arrays are not yet supported.");
-      Size = 1;
-    } else {
-      Size = Values.size();
-    }
-  }
-
-  if (!Values.empty()) {
-    if (Size.get() != Values.size()) {
-      // FIXME: Lame message.
-      Error("constant arrays must be completely specified.");
-      Values.clear();
-    }
-
-    // for (unsigned i = 0; i != Size.get(); ++i) {
-    // TODO: Check: Must be constant expression.
-    //}
-  }
-
-  // FIXME: Validate that size makes sense for domain type.
-
-  if (DomainType.get() != Expr::Int32) {
-    Error("array domain must currently be w32.");
-    DomainType = Expr::Int32;
-    Values.clear();
-  }
-
-  if (RangeType.get() != Expr::Int8) {
-    Error("array domain must currently be w8.");
-    RangeType = Expr::Int8;
-    Values.clear();
-  }
-
-  // FIXME: Validate that this array is undeclared.
-
-exit:
-  if (!Size.isValid())
-    Size = 1;
-  if (!DomainType.isValid())
     DomainType = 32;
-  if (!RangeType.isValid())
     RangeType = 8;
+  }
 
-  // FIXME: Array should take domain and range.
-  const Identifier *Label = GetOrCreateIdentifier(Name);
-  const Array *Root;
-  if (!Values.empty())
-    Root = TheArrayCache.CreateArray(
-        Label->Name,
-        ConstantExpr::create(Size.get(), sizeof(uint64_t) * CHAR_BIT),
-        SourceBuilder::constant(), &Values[0], &Values[0] + Values.size());
-  else
-    Root = TheArrayCache.CreateArray(
-        Label->Name,
-        ConstantExpr::create(Size.get(), sizeof(uint64_t) * CHAR_BIT),
-        SourceBuilder::makeSymbolic());
-  ArrayDecl *AD =
-      new ArrayDecl(Label, Size.get(), DomainType.get(), RangeType.get(), Root);
+  ConsumeRParen();
+
+  auto size = sizeResult.get();
+  auto source = sourceResult.get();
+  auto domain = DomainType.get();
+  auto range = RangeType.get();
+
+  auto array = TheArrayCache->CreateArray(size, source, domain, range);
+
+  // auto IDExpr = ParseNumberToken(64, ID).get();
+  // assert(isa<ConstantExpr>(IDExpr));
+  // auto name = "A" + IDExpr->toString();
+
+  ArrayDecl *AD = new ArrayDecl(array);
+
+  auto Label = GetOrCreateIdentifier(ID);
 
   ArraySymTab[Label] = AD;
 
-  // Create the initial version reference.
-  VersionSymTab.insert(std::make_pair(Label, UpdateList(Root, NULL)));
+  VersionSymTab.insert(std::make_pair(Label, UpdateList(array, NULL)));
 
   return AD;
+}
+
+SourceResult ParserImpl::ParseSource() {
+  ConsumeLParen();
+  // TODO refactor this
+  auto type = Tok.getString();
+  ConsumeExpectedToken(Token::Identifier);
+  SourceResult source;
+  if (type == "constant") {
+    source = ParseConstantSource();
+  } else if (type == "symbolicSizeConstant") {
+    source = ParseSymbolicSizeConstantSource();
+  } else if (type == "symbolicSizeConstantAddress") {
+    source = ParseSymbolicSizeConstantAddressSource();
+  } else if (type == "makeSymbolic") {
+    source = ParseMakeSymbolicSource();
+  } else if (type == "lazyInitializationContent") {
+    source = ParseLazyInitializationContentSource();
+  } else if (type == "lazyInitializationAddress") {
+    source = ParseLazyInitializationAddressSource();
+  } else if (type == "lazyInitializationSize") {
+    source = ParseLazyInitializationSizeSource();
+  } else if (type == "instruction") {
+    assert(km);
+    source = ParseInstructionSource();
+  } else if (type == "argument") {
+    assert(km);
+    source = ParseArgumentSource();
+  } else {
+    assert(0);
+  }
+  ConsumeRParen();
+  return source;
+}
+
+SourceResult ParserImpl::ParseConstantSource() {
+  std::vector<ref<ConstantExpr>> Values;
+  ConsumeLSquare();
+  while (Tok.kind != Token::RSquare) {
+    if (Tok.kind == Token::EndOfFile) {
+      Error("unexpected end of file.");
+      assert(0);
+    }
+
+    ExprResult Res = ParseNumber(8); // Should be Range Type
+    if (Res.isValid())
+      Values.push_back(cast<ConstantExpr>(Res.get()));
+  }
+  ConsumeRSquare();
+  return SourceBuilder::constant(Values);
+}
+
+SourceResult ParserImpl::ParseSymbolicSizeConstantSource() {
+  auto valueExpr = ParseNumber(64).get();
+  if (auto ce = dyn_cast<ConstantExpr>(valueExpr)) {
+    return SourceBuilder::symbolicSizeConstant(ce->getZExtValue());
+  } else {
+    assert(0);
+  }
+}
+
+SourceResult ParserImpl::ParseSymbolicSizeConstantAddressSource() {
+  auto valueExpr = ParseNumber(64).get();
+  auto versionExpr = ParseNumber(64).get();
+  auto value = dyn_cast<ConstantExpr>(valueExpr);
+  auto version = dyn_cast<ConstantExpr>(versionExpr);
+  assert(value && version);
+  return SourceBuilder::symbolicSizeConstantAddress(value->getZExtValue(),
+                                                    version->getZExtValue());
+}
+
+SourceResult ParserImpl::ParseMakeSymbolicSource() {
+  auto name = Tok.getString();
+  ConsumeExpectedToken(Token::Identifier);
+  auto versionExpr = ParseNumber(64).get();
+  auto version = dyn_cast<ConstantExpr>(versionExpr);
+  assert(version);
+  return SourceBuilder::makeSymbolic(name, version->getZExtValue());
+}
+
+SourceResult ParserImpl::ParseLazyInitializationContentSource() {
+  auto pointer = ParseExpr(TypeResult()).get();
+  return SourceBuilder::lazyInitializationContent(pointer);
+}
+
+SourceResult ParserImpl::ParseLazyInitializationAddressSource() {
+  auto pointer = ParseExpr(TypeResult()).get();
+  return SourceBuilder::lazyInitializationAddress(pointer);
+}
+
+SourceResult ParserImpl::ParseLazyInitializationSizeSource() {
+  auto pointer = ParseExpr(TypeResult()).get();
+  return SourceBuilder::lazyInitializationSize(pointer);
+}
+
+SourceResult ParserImpl::ParseArgumentSource() {
+  auto name = Tok;
+  ConsumeExpectedToken(Token::Identifier);
+  auto argNoExpr = ParseNumber(64);
+  auto indexExpr = ParseNumber(64);
+  auto argNo = dyn_cast<ConstantExpr>(argNoExpr.get())->getZExtValue();
+  auto index = dyn_cast<ConstantExpr>(indexExpr.get())->getZExtValue();
+#if LLVM_VERSION_CODE >= LLVM_VERSION(10, 0)
+  auto arg = km->functionNameMap[name.getString()]->function->getArg(argNo);
+#else
+  auto arg =
+      &km->functionNameMap[name.getString()]->function->arg_begin()[argNo];
+#endif
+  return SourceBuilder::argument(*arg, index, km);
+}
+
+SourceResult ParserImpl::ParseInstructionSource() {
+  auto KIIndexExpr = ParseNumber(64);
+  auto Label = Tok;
+  ConsumeExpectedToken(Token::Identifier);
+  auto FName = Tok;
+  ConsumeExpectedToken(Token::Identifier);
+  auto indexExpr = ParseNumber(64);
+  auto KIIndex = dyn_cast<ConstantExpr>(KIIndexExpr.get())->getZExtValue();
+  auto index = dyn_cast<ConstantExpr>(indexExpr.get())->getZExtValue();
+  auto KF = km->functionNameMap[FName.getString()];
+  auto KB = KF->getLabelMap().at(Label.getString());
+  auto KI = KB->instructions[KIIndex];
+  return SourceBuilder::instruction(*KI->inst, index, km);
 }
 
 /// ParseCommandDecl - Parse a command declaration. The lexer should
@@ -575,7 +639,7 @@ DeclResult ParserImpl::ParseQueryCommand() {
            ie = ArraySymTab.end();
        it != ie; ++it) {
     VersionSymTab.insert(
-        std::make_pair(it->second->Name, UpdateList(it->second->Root, NULL)));
+        std::make_pair(it->first, UpdateList(it->second->Root, NULL)));
   }
 
   ConsumeExpectedToken(Token::KWQuery);
@@ -678,7 +742,7 @@ exit:
   if (ClearArrayAfterQuery)
     ArraySymTab.clear();
 
-  return new QueryCommand(Constraints, Res.get(), Values, Objects);
+  return new QueryCommand(Constraints, km, Res.get(), Values, Objects);
 }
 
 /// ParseNumberOrExpr - Parse an expression whose type cannot be
@@ -1328,8 +1392,8 @@ VersionResult ParserImpl::ParseVersionSpecifier() {
   if (!Res.isValid()) {
     // FIXME: I'm not sure if this is right. Do we need a unique array here?
     Res = VersionResult(true,
-                        UpdateList(TheArrayCache.CreateArray(
-                                       "", 0, SourceBuilder::makeSymbolic()),
+                        UpdateList(TheArrayCache->CreateArray(
+                                       0, SourceBuilder::makeSymbolic("", 0)),
                                    NULL));
   }
 
@@ -1485,9 +1549,9 @@ ExprResult ParserImpl::ParseNumberToken(Expr::Width Type, const Token &Tok) {
   }
 
   // This is a simple but slow way to handle overflow.
-  APInt Val(RadixBits * N, 0);
-  APInt RadixVal(Val.getBitWidth(), Radix);
-  APInt DigitVal(Val.getBitWidth(), 0);
+  llvm::APInt Val(RadixBits * N, 0);
+  llvm::APInt RadixVal(Val.getBitWidth(), Radix);
+  llvm::APInt DigitVal(Val.getBitWidth(), 0);
   for (unsigned i = 0; i < N; ++i) {
     unsigned Digit, Char = S[i];
 
@@ -1606,6 +1670,10 @@ ParserImpl::~ParserImpl() {
     if (freedNodes.insert(id).second)
       delete id;
   }
+
+  if (ownArrayCache) {
+    delete TheArrayCache;
+  }
 }
 
 // AST API
@@ -1614,25 +1682,17 @@ ParserImpl::~ParserImpl() {
 Decl::Decl(DeclKind _Kind) : Kind(_Kind) {}
 
 void ArrayDecl::dump() {
-  llvm::outs() << "array " << Root->name << "[" << Root->size << "]"
-               << " : " << 'w' << Domain << " -> " << 'w' << Range << " = ";
-
-  if (Root->isSymbolicArray()) {
-    llvm::outs() << "symbolic\n";
-  } else {
-    llvm::outs() << '[';
-    for (unsigned i = 0, e = Root->constantValues.size(); i != e; ++i) {
-      if (i)
-        llvm::outs() << " ";
-      llvm::outs() << Root->constantValues[i];
-    }
-    llvm::outs() << "]\n";
-  }
+  ExprPPrinter::printSignleArray(llvm::outs(), Root);
+  llvm::outs() << "\n";
 }
 
 void QueryCommand::dump() {
   const ExprHandle *ValuesBegin = 0, *ValuesEnd = 0;
   const Array *const *ObjectsBegin = 0, *const *ObjectsEnd = 0;
+  constraints_ty constraints;
+  for (auto i : Constraints) {
+    constraints.insert(i);
+  }
   if (!Values.empty()) {
     ValuesBegin = &Values[0];
     ValuesEnd = ValuesBegin + Values.size();
@@ -1641,9 +1701,9 @@ void QueryCommand::dump() {
     ObjectsBegin = &Objects[0];
     ObjectsEnd = ObjectsBegin + Objects.size();
   }
-  ExprPPrinter::printQuery(llvm::outs(), ConstraintSet(Constraints), Query,
-                           ValuesBegin, ValuesEnd, ObjectsBegin, ObjectsEnd,
-                           false);
+  ExprPPrinter::printQuery(llvm::outs(), ConstraintSet(constraints, {}, {}),
+                           Query, ValuesBegin, ValuesEnd, ObjectsBegin,
+                           ObjectsEnd, false);
 }
 
 // Public parser API
@@ -1652,9 +1712,18 @@ Parser::Parser() {}
 
 Parser::~Parser() {}
 
-Parser *Parser::Create(const std::string Filename, const MemoryBuffer *MB,
+Parser *Parser::Create(const std::string Filename, const llvm::MemoryBuffer *MB,
                        ExprBuilder *Builder, bool ClearArrayAfterQuery) {
   ParserImpl *P = new ParserImpl(Filename, MB, Builder, ClearArrayAfterQuery);
+  P->Initialize();
+  return P;
+}
+
+Parser *Parser::Create(const std::string Filename, const llvm::MemoryBuffer *MB,
+                       ExprBuilder *Builder, ArrayCache *TheArrayCache,
+                       KModule *km, bool ClearArrayAfterQuery) {
+  ParserImpl *P = new ParserImpl(Filename, MB, Builder, TheArrayCache, km,
+                                 ClearArrayAfterQuery);
   P->Initialize();
   return P;
 }

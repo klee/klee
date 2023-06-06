@@ -12,6 +12,7 @@
 
 #include "klee/Expr/Expr.h"
 
+#include <set>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -27,6 +28,12 @@ struct ExprCmp {
     return a == b;
   }
 };
+
+struct ExprLess {
+  bool operator()(const ref<Expr> &a, const ref<Expr> &b) const {
+    return a < b;
+  }
+};
 } // namespace util
 
 template <class T>
@@ -36,6 +43,9 @@ class ExprHashMap
 
 typedef std::unordered_set<ref<Expr>, klee::util::ExprHash, klee::util::ExprCmp>
     ExprHashSet;
+
+typedef std::set<ref<Expr>, util::ExprLess> ExprOrderedSet;
+using constraints_ty = ExprOrderedSet;
 } // namespace klee
 
 #endif /* KLEE_EXPRHASHMAP_H */

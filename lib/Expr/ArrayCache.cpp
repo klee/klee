@@ -6,7 +6,7 @@ namespace klee {
 
 ArrayCache::~ArrayCache() {
   // Free Allocated Array objects
-  for (ArrayHashMap::iterator ai = cachedSymbolicArrays.begin(),
+  for (ArrayHashSet::iterator ai = cachedSymbolicArrays.begin(),
                               e = cachedSymbolicArrays.end();
        ai != e; ++ai) {
     delete *ai;
@@ -18,17 +18,13 @@ ArrayCache::~ArrayCache() {
   }
 }
 
-const Array *
-ArrayCache::CreateArray(const std::string &_name, ref<Expr> _size,
-                        ref<SymbolicSource> _source,
-                        const ref<ConstantExpr> *constantValuesBegin,
-                        const ref<ConstantExpr> *constantValuesEnd,
-                        Expr::Width _domain, Expr::Width _range) {
+const Array *ArrayCache::CreateArray(ref<Expr> _size,
+                                     ref<SymbolicSource> _source,
+                                     Expr::Width _domain, Expr::Width _range) {
 
-  const Array *array = new Array(_name, _size, _source, constantValuesBegin,
-                                 constantValuesEnd, _domain, _range);
+  const Array *array = new Array(_size, _source, _domain, _range, getNextID());
   if (array->isSymbolicArray()) {
-    std::pair<ArrayHashMap::const_iterator, bool> success =
+    std::pair<ArrayHashSet::const_iterator, bool> success =
         cachedSymbolicArrays.insert(array);
     if (success.second) {
       // Cache miss
@@ -47,4 +43,9 @@ ArrayCache::CreateArray(const std::string &_name, ref<Expr> _size,
     return array;
   }
 }
+
+unsigned ArrayCache::getNextID() const {
+  return cachedSymbolicArrays.size() + concreteArrays.size();
+}
+
 } // namespace klee

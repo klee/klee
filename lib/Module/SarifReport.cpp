@@ -16,10 +16,9 @@
 #include "llvm/IR/IntrinsicInst.h"
 
 using namespace llvm;
-
-namespace {
 using namespace klee;
 
+namespace {
 bool isOSSeparator(char c) { return c == '/' || c == '\\'; }
 
 optional<ref<Location>>
@@ -46,7 +45,7 @@ tryConvertLocationJson(const LocationJson &locationJson) {
                           region->endColumn);
 }
 
-std::unordered_set<ReachWithError>
+std::set<ReachWithError>
 tryConvertRuleJson(const std::string &ruleId, const std::string &toolName,
                    const optional<Message> &errorMessage) {
   if (toolName == "SecB") {
@@ -105,7 +104,7 @@ tryConvertRuleJson(const std::string &ruleId, const std::string &toolName,
 optional<Result> tryConvertResultJson(const ResultJson &resultJson,
                                       const std::string &toolName,
                                       unsigned id) {
-  std::unordered_set<ReachWithError> errors = {ReachWithError::None};
+  std::set<ReachWithError> errors = {ReachWithError::None};
   if (!resultJson.ruleId.has_value()) {
     errors = {ReachWithError::Reachable};
   } else {
@@ -158,7 +157,7 @@ const char *getErrorString(ReachWithError error) {
   return ReachWithErrorNames[error];
 }
 
-std::string getErrorsString(const std::unordered_set<ReachWithError> &errors) {
+std::string getErrorsString(const std::set<ReachWithError> &errors) {
   if (errors.size() == 1) {
     return getErrorString(*errors.begin());
   }

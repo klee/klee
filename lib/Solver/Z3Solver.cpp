@@ -214,7 +214,8 @@ char *Z3SolverImpl::getConstraintLog(const Query &query) {
     break;
   }
   ConstantArrayFinder constant_arrays_in_query;
-  for (auto const &constraint : query.constraints) {
+  assert(!query.containsSymcretes());
+  for (auto const &constraint : query.constraints.cs()) {
     assumptions.push_back(temp_builder->construct(constraint));
     constant_arrays_in_query.visit(constraint);
   }
@@ -305,7 +306,9 @@ bool Z3SolverImpl::computeInitialValues(
 
 bool Z3SolverImpl::check(const Query &query, ref<SolverResponse> &result) {
   ExprHashSet expressions;
-  expressions.insert(query.constraints.begin(), query.constraints.end());
+  assert(!query.containsSymcretes());
+  expressions.insert(query.constraints.cs().begin(),
+                     query.constraints.cs().end());
   expressions.insert(query.expr);
 
   std::vector<const Array *> objects;
@@ -341,6 +344,8 @@ bool Z3SolverImpl::internalRunSolver(
     std::vector<SparseStorage<unsigned char>> *values,
     ValidityCore *validityCore, bool &hasSolution) {
 
+  assert(!query.containsSymcretes());
+
   if (ProduceUnsatCore && validityCore) {
     enableUnsatCore();
   } else {
@@ -373,11 +378,13 @@ bool Z3SolverImpl::internalRunSolver(
       expr_to_track;
   std::unordered_set<Z3ASTHandle, Z3ASTHandleHash, Z3ASTHandleCmp> exprs;
 
-  for (auto const &constraint : query.constraints) {
+  unsigned id = 0;
+  std::string freshName = "freshName";
+  for (auto const &constraint : query.constraints.cs()) {
     Z3ASTHandle z3Constraint = builder->construct(constraint);
     if (ProduceUnsatCore && validityCore) {
-      Z3ASTHandle p =
-          builder->buildFreshBoolConst(constraint->toString().c_str());
+      Z3ASTHandle p = builder->buildFreshBoolConst(
+          (freshName + llvm::utostr(++id)).c_str());
       z3_ast_expr_to_klee_expr.insert({p, constraint});
       z3_ast_expr_constraints.push_back(p);
       expr_to_track[z3Constraint] = p;
@@ -428,7 +435,7 @@ bool Z3SolverImpl::internalRunSolver(
   std::vector<const Array *> arrays = query.gatherArrays();
   bool forceTactic = true;
   for (const Array *array : arrays) {
-    if (isa<ConstantWithSymbolicSizeSource>(array->source)) {
+    if (isa<SymbolicSizeConstantSource>(array->source)) {
       forceTactic = false;
       break;
     }
@@ -460,7 +467,8 @@ bool Z3SolverImpl::internalRunSolver(
 
   if (dumpedQueriesFile) {
     *dumpedQueriesFile << "; start Z3 query\n";
-    *dumpedQueriesFile << Z3_params_to_string(builder->ctx, solverParameters);
+    *dumpedQueriesFile << Z3_params_to_string(builder->ctx, solverParameters)
+                       << "\n";
     *dumpedQueriesFile << Z3_solver_to_string(builder->ctx, theSolver);
     *dumpedQueriesFile << "(check-sat)\n";
     *dumpedQueriesFile << "(reset)\n";
@@ -470,7 +478,7 @@ bool Z3SolverImpl::internalRunSolver(
 
   ConstraintSet allConstraints = query.constraints.withExpr(query.expr);
   std::unordered_map<const Array *, ExprHashSet> usedArrayBytes;
-  for (auto constraint : allConstraints) {
+  for (auto constraint : allConstraints.cs()) {
     std::vector<ref<ReadExpr>> reads;
     findReads(constraint, true, reads);
     for (auto readExpr : reads) {
@@ -484,7 +492,7 @@ bool Z3SolverImpl::internalRunSolver(
   runStatusCode = handleSolverResponse(theSolver, satisfiable, objects, values,
                                        usedArrayBytes, hasSolution);
   if (ProduceUnsatCore && validityCore && satisfiable == Z3_L_FALSE) {
-    ExprHashSet unsatCore;
+    constraints_ty unsatCore;
     Z3_ast_vector z3_unsat_core =
         Z3_solver_get_unsat_core(builder->ctx, theSolver);
     Z3_ast_vector_inc_ref(builder->ctx, z3_unsat_core);
@@ -577,11 +585,14 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
       Z3_model_eval(builder->ctx, theModel, builder->construct(array->size),
                     Z3_TRUE, &arraySizeExpr);
       Z3_inc_ref(builder->ctx, arraySizeExpr);
-      assert(Z3_get_ast_kind(builder->ctx, arraySizeExpr) == Z3_NUMERAL_AST &&
+      ::Z3_ast_kind arraySizeExprKind =
+          Z3_get_ast_kind(builder->ctx, arraySizeExpr);
+      assert(arraySizeExprKind == Z3_NUMERAL_AST &&
              "Evaluated size expression has wrong sort");
       uint64_t arraySize = 0;
-      assert(Z3_get_numeral_uint64(builder->ctx, arraySizeExpr, &arraySize) &&
-             "Failed to get size");
+      bool success =
+          Z3_get_numeral_uint64(builder->ctx, arraySizeExpr, &arraySize);
+      assert(success && "Failed to get size");
 
       data.resize(arraySize);
       if (usedArrayBytes.count(array)) {
@@ -591,13 +602,14 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
           Z3_model_eval(builder->ctx, theModel, builder->construct(offsetExpr),
                         Z3_TRUE, &arrayElementOffsetExpr);
           Z3_inc_ref(builder->ctx, arrayElementOffsetExpr);
-          assert(Z3_get_ast_kind(builder->ctx, arrayElementOffsetExpr) ==
-                     Z3_NUMERAL_AST &&
+          ::Z3_ast_kind arrayElementOffsetExprKind =
+              Z3_get_ast_kind(builder->ctx, arrayElementOffsetExpr);
+          assert(arrayElementOffsetExprKind == Z3_NUMERAL_AST &&
                  "Evaluated size expression has wrong sort");
           uint64_t concretizedOffsetValue = 0;
-          assert(Z3_get_numeral_uint64(builder->ctx, arrayElementOffsetExpr,
-                                       &concretizedOffsetValue) &&
-                 "Failed to get size");
+          bool success = Z3_get_numeral_uint64(
+              builder->ctx, arrayElementOffsetExpr, &concretizedOffsetValue);
+          assert(success && "Failed to get size");
           offsetValues.insert(concretizedOffsetValue);
           Z3_dec_ref(builder->ctx, arrayElementOffsetExpr);
         }

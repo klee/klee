@@ -10,6 +10,7 @@
 #ifndef KLEE_SARIF_REPORT_H
 #define KLEE_SARIF_REPORT_H
 
+#include <set>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -61,7 +62,7 @@ static const char *ReachWithErrorNames[] = {
 };
 
 const char *getErrorString(ReachWithError error);
-std::string getErrorsString(const std::unordered_set<ReachWithError> &errors);
+std::string getErrorsString(const std::set<ReachWithError> &errors);
 
 struct FunctionInfo;
 struct KBlock;
@@ -257,7 +258,7 @@ struct Result {
   std::vector<ref<Location>> locations;
   std::vector<optional<json>> metadatas;
   unsigned id;
-  std::unordered_set<ReachWithError> errors;
+  std::set<ReachWithError> errors;
 };
 
 struct SarifReport {

@@ -1,28 +1,28 @@
 # RUN: %kleaver -evaluate %s > %t.log
 
-array arr0[4] : w32 -> w8 = symbolic
-array arr1[8] : w32 -> w8 = symbolic
+arr01 : (array (w64 4) (makeSymbolic arr0 0))
+arr12 : (array (w64 8) (makeSymbolic arr1 0))
 
 # RUN: grep "Query 0:	INVALID" %t.log
 # Query 0
-(query [] (Not (Ult (ReadLSB w32 0 arr0)
+(query [] (Not (Ult (ReadLSB w32 0 arr01)
                     16)))
 
 # RUN: grep "Query 1:	VALID" %t.log
 # Query 1
-(query [(Eq N0:(ReadLSB w32 0 arr1) 10)
-        (Eq N1:(ReadLSB w32 4 arr1) 20)]
+(query [(Eq N0:(ReadLSB w32 0 arr12) 10)
+        (Eq N1:(ReadLSB w32 4 arr12) 20)]
        (Eq (Add w32 N0 N1)
            30))
 
 # RUN: grep "Query 2:	VALID" %t.log
 # Query 2
-array hello[4] : w32 -> w8 = [ 1 2 3 5 ]
-(query [] (Eq (Add w8 (Read w8 0 hello)
-                      (Read w8 3 hello))
+constant0 : (array (w64 4) (constant [ 1 2 3 5 ]))
+(query [] (Eq (Add w8 (Read w8 0 constant0)
+                      (Read w8 3 constant0))
               6))
 
 # RUN: grep "Query 3:	VALID" %t.log
 # Query 2
-(query [] (Eq (Not w8 (Read w8 0 arr1))
-              (Xor w8 (Read w8 0 arr1) 0xff)))
+(query [] (Eq (Not w8 (Read w8 0 arr12))
+              (Xor w8 (Read w8 0 arr12) 0xff)))

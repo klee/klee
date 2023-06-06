@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MemoryManager.h"
+#include "AddressManager.h"
 
 #include "CoreStats.h"
 #include "Memory.h"
@@ -109,10 +110,12 @@ MemoryManager::~MemoryManager() {
     munmap(deterministicSpace, spaceSize);
 }
 
-MemoryObject *MemoryManager::allocate(
-    uint64_t size, bool isLocal, bool isGlobal, const llvm::Value *allocSite,
-    size_t alignment, ref<Expr> addressExpr, ref<Expr> sizeExpr,
-    ref<Expr> lazyInitializationSource, unsigned timestamp, IDType id) {
+MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
+                                      bool isGlobal, bool isLazyInitialiazed,
+                                      const llvm::Value *allocSite,
+                                      size_t alignment, ref<Expr> addressExpr,
+                                      ref<Expr> sizeExpr, unsigned timestamp,
+                                      IDType id) {
   if (size > MaxConstantAllocationSize) {
     return 0;
   }
@@ -160,8 +163,8 @@ MemoryObject *MemoryManager::allocate(
 
   ++stats::allocations;
   MemoryObject *res = new MemoryObject(
-      address, size, alignment, isLocal, isGlobal, false, allocSite, this,
-      addressExpr, sizeExpr, lazyInitializationSource, timestamp);
+      address, size, alignment, isLocal, isGlobal, false, isLazyInitialiazed,
+      allocSite, this, addressExpr, sizeExpr, timestamp);
   if (id) {
     res->id = id;
   }
@@ -183,8 +186,8 @@ MemoryObject *MemoryManager::allocateFixed(uint64_t address, uint64_t size,
 #endif
 
   ++stats::allocations;
-  MemoryObject *res =
-      new MemoryObject(address, size, 8, false, true, true, allocSite, this);
+  MemoryObject *res = new MemoryObject(address, size, 8, false, true, true,
+                                       false, allocSite, this);
   objects.insert(res);
   return res;
 }
@@ -194,6 +197,9 @@ void MemoryManager::deallocate(const MemoryObject *mo) { assert(0); }
 void MemoryManager::markFreed(MemoryObject *mo) {
   if (objects.find(mo) != objects.end()) {
     allocatedSizes[mo->id].erase(mo->size);
+    if (allocatedSizes[mo->id].empty()) {
+      am->bindingsAdressesToObjects.erase(mo->getBaseExpr());
+    }
     if (!mo->isFixed && !DeterministicAllocation)
       free((void *)mo->address);
     objects.erase(mo);

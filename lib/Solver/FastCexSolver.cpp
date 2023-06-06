@@ -380,14 +380,15 @@ public:
   ValueRange getInitialReadRange(const Array &array, ValueRange index) {
     // Check for a concrete read of a constant array.
     if (array.isConstantArray() && index.isFixed()) {
-      if (isa<ConstantSource>(array.source) &&
-          index.min() < array.constantValues.size()) {
-        return ValueRange(array.constantValues[index.min()]->getZExtValue(8));
-      } else if (ref<ConstantWithSymbolicSizeSource>
-                     constantWithSymbolicSizeSource =
-                         dyn_cast<ConstantWithSymbolicSizeSource>(
-                             array.source)) {
-        return ValueRange(constantWithSymbolicSizeSource->defaultValue);
+      if (ref<ConstantSource> constantSource =
+              dyn_cast<ConstantSource>(array.source)) {
+        if (index.min() < constantSource->constantValues.size()) {
+          return ValueRange(
+              constantSource->constantValues[index.min()]->getZExtValue(8));
+        }
+      } else if (ref<SymbolicSizeConstantSource> symbolicSizeConstantSource =
+                     dyn_cast<SymbolicSizeConstantSource>(array.source)) {
+        return ValueRange(symbolicSizeConstantSource->defaultValue);
       }
     }
     return ValueRange(0, 255);
@@ -885,9 +886,13 @@ public:
 
       // We reached the initial array write, update the exact range if possible.
       if (index.isFixed()) {
-        if (array->isConstantArray()) {
+        if (ref<ConstantSource> constantSource =
+                dyn_cast<ConstantSource>(array->source)) {
           // Verify the range.
-          propogateExactValues(array->constantValues[index.min()], range);
+          propogateExactValues(constantSource->constantValues[index.min()],
+                               range);
+        } else if (isa<SymbolicSizeConstantSource>(array->source)) {
+          assert(0 && "not implemented");
         } else {
           CexValueData cvd = cod.getExactValues(index.min());
           if (range.min() > cvd.min()) {
@@ -1017,12 +1022,12 @@ public:
       ref<ConstantExpr> arrayConstantSize = dyn_cast<ConstantExpr>(A->size);
       if (!arrayConstantSize) {
         klee_warning("Cannot dump %s as it has symbolic size\n",
-                     A->name.c_str());
+                     A->getIdentifier().c_str());
       }
 
       CexObjectData *COD = it->second;
 
-      llvm::errs() << A->name << "\n";
+      llvm::errs() << A->getIdentifier() << "\n";
       llvm::errs() << "possible: [";
       for (unsigned i = 0; i < arrayConstantSize->getZExtValue(); ++i) {
         if (i)
@@ -1048,7 +1053,7 @@ public:
   FastCexSolver();
   ~FastCexSolver();
 
-  IncompleteSolver::PartialValidity computeTruth(const Query &);
+  PartialValidity computeTruth(const Query &);
   bool computeValue(const Query &, ref<Expr> &result);
   bool computeInitialValues(const Query &,
                             const std::vector<const Array *> &objects,
@@ -1076,7 +1081,8 @@ FastCexSolver::~FastCexSolver() {}
 /// \return - True if the propogation was able to prove validity or invalidity.
 static bool propogateValues(const Query &query, CexData &cd, bool checkExpr,
                             bool &isValid) {
-  for (const auto &constraint : query.constraints) {
+  assert(!query.containsSymcretes());
+  for (const auto &constraint : query.constraints.cs()) {
     cd.propogatePossibleValue(constraint, 1);
     cd.propogateExactValue(constraint, 1);
   }
@@ -1100,7 +1106,7 @@ static bool propogateValues(const Query &query, CexData &cd, bool checkExpr,
     }
   }
 
-  for (const auto &constraint : query.constraints) {
+  for (const auto &constraint : query.constraints.cs()) {
     if (hasSatisfyingAssignment && !cd.evaluatePossible(constraint)->isTrue())
       hasSatisfyingAssignment = false;
 
@@ -1120,17 +1126,16 @@ static bool propogateValues(const Query &query, CexData &cd, bool checkExpr,
   return false;
 }
 
-IncompleteSolver::PartialValidity
-FastCexSolver::computeTruth(const Query &query) {
+PartialValidity FastCexSolver::computeTruth(const Query &query) {
   CexData cd;
 
   bool isValid;
   bool success = propogateValues(query, cd, true, isValid);
 
   if (!success)
-    return IncompleteSolver::None;
+    return PValidity::None;
 
-  return isValid ? IncompleteSolver::MustBeTrue : IncompleteSolver::MayBeFalse;
+  return isValid ? PValidity::MustBeTrue : PValidity::MayBeFalse;
 }
 
 bool FastCexSolver::computeValue(const Query &query, ref<Expr> &result) {

@@ -10,9 +10,11 @@
 #include "klee/Expr/ExprPPrinter.h"
 
 #include "klee/Expr/Constraints.h"
-#include "klee/Support/OptionCategories.h"
+#include "klee/Expr/Expr.h"
+#include "klee/Expr/SymbolicSource.h"
+#include "klee/Module/KInstruction.h"
+#include "klee/Module/KModule.h"
 #include "klee/Support/PrintContext.h"
-
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -58,6 +60,7 @@ llvm::cl::opt<bool> PCAllConstWidths(
 class PPrinter : public ExprPPrinter {
 public:
   std::set<const Array *> usedArrays;
+  bool printArrayDecls = 0;
 
 private:
   std::map<ref<Expr>, unsigned> bindings;
@@ -132,6 +135,11 @@ private:
         if (const ReadExpr *re = dyn_cast<ReadExpr>(e)) {
           usedArrays.insert(re->updates.root);
           scanUpdate(re->updates.head.get());
+          scan1(re->updates.root->size);
+          if (auto li = dyn_cast<LazyInitializationSource>(
+                  re->updates.root->source)) {
+            scan1(li->pointer);
+          }
         }
       } else {
         shouldPrint.insert(e);
@@ -144,9 +152,11 @@ private:
 
     // Special case empty list.
     if (!head) {
-      // FIXME: We need to do something (assert, mangle, etc.) so that printing
-      // distinct arrays with the same name doesn't fail.
-      PC << updates.root->name;
+      if (printArrayDecls) {
+        printArrayDecl(updates.root, PC);
+      } else {
+        PC << updates.root->getIdentifier();
+      }
       return;
     }
 
@@ -196,7 +206,12 @@ private:
     if (openedList)
       PC << ']';
 
-    PC << " @ " << updates.root->name;
+    PC << " @ ";
+    if (printArrayDecls) {
+      printArrayDecl(updates.root, PC);
+    } else {
+      PC << updates.root->getIdentifier();
+    }
   }
 
   void printWidth(PrintContext &PC, ref<Expr> e) {
@@ -244,8 +259,9 @@ private:
 
     // right now, all Reads are byte reads but some
     // transformations might change this
-    if (!base || base->getWidth() != Expr::Int8)
+    if (!base || base->getWidth() != Expr::Int8) {
       return NULL;
+    }
 
     // Get stride expr in proper index width.
     Expr::Width idxWidth = base->index->getWidth();
@@ -257,8 +273,9 @@ private:
     // concat chains are unbalanced to the right
     while (e->getKind() == Expr::Concat) {
       offset = AddExpr::create(offset, strideExpr);
-      if (!isReadExprAtOffset(e->getKid(0), base, offset))
+      if (!isReadExprAtOffset(e->getKid(0), base, offset)) {
         return NULL;
+      }
 
       e = e->getKid(1);
     }
@@ -347,6 +364,54 @@ public:
     PrintContext PC(os);
     PC.pos = level;
     print(e, PC);
+  }
+
+  void printArrayDecl(const Array *array, PrintContext &PC) {
+    PC << "(array ";
+    print(array->size, PC, true);
+    PC << " ";
+    printSource(array->source, PC);
+    if (array->domain != 32 || array->range != 8) {
+      PC << " : w" << array->domain << " -> w" << array->range;
+    }
+    PC << ")";
+  }
+
+  void printSource(ref<SymbolicSource> source, PrintContext &PC) {
+    PC << "(";
+    PC << source->getName() << " ";
+    if (auto s = dyn_cast<ConstantSource>(source)) {
+      PC << " [";
+      for (unsigned i = 0; i < s->constantValues.size(); i++) {
+        PC << s->constantValues[i];
+        if (i != s->constantValues.size() - 1) {
+          PC << " ";
+        }
+      }
+      PC << "]";
+    } else if (auto s = dyn_cast<SymbolicSizeConstantSource>(source)) {
+      PC << s->defaultValue;
+    } else if (auto s = dyn_cast<SymbolicSizeConstantAddressSource>(source)) {
+      PC << s->defaultValue << " " << s->version;
+    } else if (auto s = dyn_cast<MakeSymbolicSource>(source)) {
+      PC << s->name << " " << s->version;
+    } else if (auto s = dyn_cast<LazyInitializationSource>(source)) {
+      print(s->pointer);
+    } else if (auto s = dyn_cast<ArgumentSource>(source)) {
+      PC << s->allocSite.getParent()->getName().str() << " "
+         << s->allocSite.getArgNo() << " " << s->index;
+    } else if (auto s = dyn_cast<InstructionSource>(source)) {
+      auto kf = s->km->functionMap.at(s->allocSite.getFunction());
+      auto ki = kf->instructionMap.at(&s->allocSite);
+      auto kb = ki->parent;
+      PC << ki->index << " " << kb->getLabel() << " " << kf->getName().str()
+         << " " << s->index;
+    } else if (auto s = dyn_cast<IrreproducibleSource>(source)) {
+      PC << s->name;
+    } else {
+      assert(0 && "Not implemented");
+    }
+    PC << ")";
   }
 
   void printConst(const ref<ConstantExpr> &e, PrintContext &PC,
@@ -444,27 +509,29 @@ ExprPPrinter *klee::ExprPPrinter::create(llvm::raw_ostream &os) {
   return new PPrinter(os);
 }
 
-void ExprPPrinter::printOne(llvm::raw_ostream &os, const char *message,
-                            const ref<Expr> &e) {
-  PPrinter p(os);
-  p.scan(e);
-
-  // FIXME: Need to figure out what to do here. Probably print as a
-  // "forward declaration" with whatever syntax we pick for that.
-  PrintContext PC(os);
-  PC << message << ": ";
-  p.print(e, PC);
-  PC.breakLine();
-}
-
 void ExprPPrinter::printSingleExpr(llvm::raw_ostream &os, const ref<Expr> &e) {
   PPrinter p(os);
+  p.printArrayDecls = true;
   p.scan(e);
 
   // FIXME: Need to figure out what to do here. Probably print as a
   // "forward declaration" with whatever syntax we pick for that.
   PrintContext PC(os);
   p.print(e, PC);
+}
+
+void ExprPPrinter::printSignleArray(llvm::raw_ostream &os, const Array *a) {
+  PPrinter p(os);
+  os << a->getIdentifier() << " : ";
+  PrintContext PC(os);
+  p.printArrayDecl(a, PC);
+}
+
+void ExprPPrinter::printSignleSource(llvm::raw_ostream &os,
+                                     const ref<SymbolicSource> s) {
+  PPrinter p(os);
+  PrintContext PC(os);
+  p.printSource(s, PC);
 }
 
 void ExprPPrinter::printConstraints(llvm::raw_ostream &os,
@@ -476,9 +543,22 @@ namespace {
 
 struct ArrayPtrsByName {
   bool operator()(const Array *a1, const Array *a2) const {
-    return a1->name < a2->name;
+    return a1->getName() < a2->getName();
   }
 };
+
+struct ArrayPtrsByDependency {
+  bool operator()(const Array *a1, const Array *a2) const {
+    if (a1->dependency.count(a2)) {
+      return false;
+    } else if (a2->dependency.count(a1)) {
+      return true;
+    } else {
+      return a1->id < a2->id;
+    }
+  }
+};
+
 } // namespace
 
 void ExprPPrinter::printQuery(
@@ -488,7 +568,7 @@ void ExprPPrinter::printQuery(
     bool printArrayDecls) {
   PPrinter p(os);
 
-  for (const auto &constraint : constraints)
+  for (const auto &constraint : constraints.cs())
     p.scan(constraint);
   p.scan(q);
 
@@ -503,33 +583,13 @@ void ExprPPrinter::printQuery(
       p.usedArrays.insert(*it);
     std::vector<const Array *> sortedArray(p.usedArrays.begin(),
                                            p.usedArrays.end());
-    std::sort(sortedArray.begin(), sortedArray.end(), ArrayPtrsByName());
+    std::sort(sortedArray.begin(), sortedArray.end(), ArrayPtrsByDependency());
     for (std::vector<const Array *>::iterator it = sortedArray.begin(),
                                               ie = sortedArray.end();
          it != ie; ++it) {
       const Array *A = *it;
-      PC << "array " << A->name << "[" << A->size << "]"
-         << " : w" << A->domain << " -> w" << A->range << " = ";
-      if (A->isSymbolicArray()) {
-        PC << "symbolic";
-      } else {
-        ref<ConstantExpr> sizeConstantExpr = cast<ConstantExpr>(
-            constraints.getConcretization().evaluate(A->size));
-        PC << "[";
-        for (unsigned i = 0, e = sizeConstantExpr->getZExtValue(); i != e;
-             ++i) {
-          if (i)
-            PC << " ";
-          if (ref<ConstantWithSymbolicSizeSource>
-                  constantWithSymbolicSizeSource =
-                      dyn_cast<ConstantWithSymbolicSizeSource>(A->source)) {
-            PC << constantWithSymbolicSizeSource->defaultValue;
-          } else {
-            PC << A->constantValues[i];
-          }
-        }
-        PC << "]";
-      }
+      PC << A->getIdentifier() << " : ";
+      p.printArrayDecl(A, PC);
       PC.breakLine();
     }
   }
@@ -538,7 +598,8 @@ void ExprPPrinter::printQuery(
 
   // Ident at constraint list;
   unsigned indent = PC.pos;
-  for (auto it = constraints.begin(), ie = constraints.end(); it != ie;) {
+  for (auto it = constraints.cs().begin(), ie = constraints.cs().end();
+       it != ie;) {
     p.print(*it, PC);
     ++it;
     if (it != ie)
@@ -546,7 +607,7 @@ void ExprPPrinter::printQuery(
   }
   PC << ']';
 
-  p.printSeparator(PC, constraints.empty(), indent - 1);
+  p.printSeparator(PC, constraints.cs().empty(), indent - 1);
   p.print(q, PC);
 
   // Print expressions to obtain values for, if any.
@@ -569,7 +630,7 @@ void ExprPPrinter::printQuery(
     PC.breakLine(indent - 1);
     PC << '[';
     for (const Array *const *it = evalArraysBegin; it != evalArraysEnd; ++it) {
-      PC << (*it)->name;
+      PC << (*it)->getIdentifier();
       if (it + 1 != evalArraysEnd)
         PC.breakLine(indent);
     }

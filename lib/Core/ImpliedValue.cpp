@@ -205,7 +205,7 @@ void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e,
   reads = std::vector<ref<ReadExpr>>(readsSet.begin(), readsSet.end());
 
   ConstraintSet assumption;
-  assumption.push_back(EqExpr::create(e, value));
+  assumption.addConstraint(EqExpr::create(e, value), {});
 
   // obscure... we need to make sure that all the read indices are
   // bounds checked. if we don't do this we can end up constructing
@@ -216,7 +216,8 @@ void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e,
   for (std::vector<ref<ReadExpr>>::iterator i = reads.begin(), ie = reads.end();
        i != ie; ++i) {
     ReadExpr *re = i->get();
-    assumption.push_back(UltExpr::create(re->index, re->updates.root->size));
+    assumption.addConstraint(UltExpr::create(re->index, re->updates.root->size),
+                             {});
   }
 
   for (const auto &var : reads) {

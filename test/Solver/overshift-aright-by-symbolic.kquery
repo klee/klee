@@ -1,26 +1,26 @@
 # RUN: %kleaver %s > %t
 # RUN: not grep INVALID %t
 
-array shift[4] : w32 -> w8 = symbolic
+makeSymbolic0 : (array (w64 4) (makeSymbolic shift 0))
 # ∀ x. x >= 32 → ( ( ( (signed int)2 ) >> x) = 0 )
 # Check we arithmetic right overshift to zero when shifting a constant ALWAYS!
 
-(query [ (Ule  (w32 32) (ReadLSB w32 (w32 0) shift)) ]
+(query [ (Ule  (w32 32) (ReadLSB w32 (w32 0) makeSymbolic0)) ]
     (Eq
         (AShr w32 (w32 2)
-            (ReadLSB w32 (w32 0) shift)
+            (ReadLSB w32 (w32 0) makeSymbolic0)
         )
         (w32 0)
-    ) [ ] [shift] )
+    ) [ ] [makeSymbolic0] )
 
 # 64-bit version
 # ∀ x. x >= 64 → ( (((signed int) 2) >> x) = 0 )
-array shift64[8] : w32 -> w8 = symbolic
+makeSymbolic1 : (array (w64 8) (makeSymbolic shift64 0))
 
-(query [ (Ule  (w64 64) (ReadLSB w64 (w32 0) shift64)) ]
+(query [ (Ule  (w64 64) (ReadLSB w64 (w32 0) makeSymbolic1)) ]
     (Eq
         (AShr w64 (w64 2)
-            (ReadLSB w64 (w32 0) shift64)
+            (ReadLSB w64 (w32 0) makeSymbolic1)
         )
         (w64 0)
-    ) [ ] [shift64] )
+    ) [ ] [makeSymbolic1] )

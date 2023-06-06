@@ -11,6 +11,7 @@
 
 #include "klee/Config/Version.h"
 #include "klee/Expr/ExprPPrinter.h"
+#include "klee/Expr/ExprUtil.h"
 #include "klee/Expr/SymbolicSource.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/OptionCategories.h"
@@ -29,6 +30,7 @@
 
 #include <cfenv>
 #include <sstream>
+#include <vector>
 
 using namespace klee;
 using namespace llvm;
@@ -116,25 +118,16 @@ int Expr::compare(const Expr &b) const {
   return r;
 }
 
-bool Expr::equals(const Expr &b) const { return compare(b) == 0; }
+bool Expr::equals(const Expr &b) const {
+  return (toBeCleared || b.toBeCleared) || (isCached && b.isCached)
+             ? this == &b
+             : compare(b) == 0;
+}
 
 // returns 0 if b is structurally equal to *this
 int Expr::compare(const Expr &b, ExprEquivSet &equivs) const {
-  if (toBeCleared || b.toBeCleared)
-    return this == &b ? 0 : (this < &b ? -1 : 1);
-
   if (this == &b)
     return 0;
-
-  Kind ak = getKind(), bk = b.getKind();
-  if (ak != bk)
-    return (ak < bk) ? -1 : 1;
-
-  if (hashValue != b.hashValue)
-    return (hashValue < b.hashValue) ? -1 : 1;
-
-  if (isCached && b.isCached)
-    return (this < &b) ? -1 : 1;
 
   const Expr *ap, *bp;
   if (this < &b) {
@@ -147,6 +140,13 @@ int Expr::compare(const Expr &b, ExprEquivSet &equivs) const {
 
   if (equivs.count(std::make_pair(ap, bp)))
     return 0;
+
+  Kind ak = getKind(), bk = b.getKind();
+  if (ak != bk)
+    return (ak < bk) ? -1 : 1;
+
+  if (hashValue != b.hashValue)
+    return (hashValue < b.hashValue) ? -1 : 1;
 
   if (int res = compareContents(b))
     return res;
@@ -480,8 +480,16 @@ ref<Expr> Expr::createImplies(ref<Expr> hyp, ref<Expr> conc) {
 }
 
 ref<Expr> Expr::createIsZero(ref<Expr> e) {
-  return EqExpr::create(e, ConstantExpr::create(0, e->getWidth()));
+  if (e->getWidth() == Expr::Bool) {
+    return NotExpr::create(e);
+  } else {
+    return EqExpr::create(ConstantExpr::create(0, e->getWidth()), e);
+  }
 }
+
+ref<Expr> Expr::createTrue() { return ConstantExpr::create(1, Expr::Bool); }
+
+ref<Expr> Expr::createFalse() { return ConstantExpr::create(0, Expr::Bool); }
 
 void Expr::print(llvm::raw_ostream &os) const {
   ExprPPrinter::printSingleExpr(os, const_cast<Expr *>(this));
@@ -1433,33 +1441,47 @@ ref<Expr> NotOptimizedExpr::create(ref<Expr> src) {
 
 /***/
 
-Array::Array(const std::string &_name, ref<Expr> _size,
-             ref<SymbolicSource> _source,
-             const ref<ConstantExpr> *constantValuesBegin,
-             const ref<ConstantExpr> *constantValuesEnd, Expr::Width _domain,
-             Expr::Width _range)
-    : name(_name), size(_size), source(_source), domain(_domain), range(_range),
-      constantValues(constantValuesBegin, constantValuesEnd) {
+Array::Array(ref<Expr> _size, ref<SymbolicSource> _source, Expr::Width _domain,
+             Expr::Width _range, unsigned _id)
+    : size(_size), source(_source), domain(_domain), range(_range), id(_id) {
   ref<ConstantExpr> constantSize = dyn_cast<ConstantExpr>(size);
-  assert((!isa<ConstantSource>(_source) ||
-          constantValues.size() == constantSize->getZExtValue()) &&
-         "Invalid size for constant array!");
+  assert(
+      (!isa<ConstantSource>(_source) ||
+       cast<ConstantSource>(_source)->size() == constantSize->getZExtValue()) &&
+      "Invalid size for constant array!");
   computeHash();
 #ifndef NDEBUG
-  for (const ref<ConstantExpr> *it = constantValuesBegin;
-       it != constantValuesEnd; ++it)
-    assert((*it)->getWidth() == getRange() &&
-           "Invalid initial constant value!");
+  if (isa<ConstantSource>(_source)) {
+    for (const ref<ConstantExpr> *
+             it = cast<ConstantSource>(_source)->constantValues.data(),
+            *end = cast<ConstantSource>(_source)->constantValues.data() +
+                   cast<ConstantSource>(_source)->constantValues.size();
+         it != end; ++it)
+      assert((*it)->getWidth() == getRange() &&
+             "Invalid initial constant value!");
+  }
 #endif // NDEBUG
+
+  std::set<const Array *> allArrays = _source->getRelatedArrays();
+  std::vector<const Array *> sizeArrays;
+  findObjects(_size, sizeArrays);
+  for (auto i : sizeArrays) {
+    allArrays.insert(i);
+  }
+  for (auto i : allArrays) {
+    dependency.insert(i);
+    for (auto j : i->dependency) {
+      dependency.insert(j);
+    }
+  }
 }
 
 Array::~Array() {}
 
 unsigned Array::computeHash() {
   unsigned res = 0;
-  for (unsigned i = 0, e = name.size(); i != e; ++i)
-    res = (res * Expr::MAGIC_HASH_CONSTANT) + name[i];
   res = (res * Expr::MAGIC_HASH_CONSTANT) + size->hash();
+  res = (res * Expr::MAGIC_HASH_CONSTANT) + source->hash();
   hashValue = res;
   return hashValue;
 }
@@ -1491,10 +1513,12 @@ ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index) {
     // No updates with symbolic index to a constant array have been found
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(index)) {
       assert(CE->getWidth() <= 64 && "Index too large");
+      ref<ConstantSource> constantSource =
+          cast<ConstantSource>(ul.root->source);
       uint64_t concreteIndex = CE->getZExtValue();
-      uint64_t size = ul.root->constantValues.size();
+      uint64_t size = constantSource->constantValues.size();
       if (concreteIndex < size) {
-        return ul.root->constantValues[concreteIndex];
+        return constantSource->constantValues[concreteIndex];
       }
     }
   }
@@ -1648,6 +1672,20 @@ ref<Expr> ExtractExpr::create(ref<Expr> expr, unsigned off, Width w) {
 ref<Expr> NotExpr::create(const ref<Expr> &e) {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
     return CE->Not();
+
+  if (NotExpr *NE = dyn_cast<NotExpr>(e)) {
+    return NE->expr;
+  }
+
+  if (AndExpr *AE = dyn_cast<AndExpr>(e)) {
+    return OrExpr::create(NotExpr::create(AE->left),
+                          NotExpr::create(AE->right));
+  }
+
+  if (OrExpr *OE = dyn_cast<OrExpr>(e)) {
+    return AndExpr::create(NotExpr::create(OE->left),
+                           NotExpr::create(OE->right));
+  }
 
   return NotExpr::alloc(e);
 }
@@ -2040,6 +2078,38 @@ BCREATE(AShrExpr, AShr)
 static ref<Expr> EqExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
   if (l == r) {
     return ConstantExpr::alloc(1, Expr::Bool);
+  } else if (isa<AddExpr>(l) &&
+             (cast<AddExpr>(l)->left == r || cast<AddExpr>(l)->right == r)) {
+    ref<AddExpr> al = cast<AddExpr>(l);
+    if (al->left == r) {
+      return Expr::createIsZero(al->right);
+    } else {
+      return Expr::createIsZero(al->left);
+    }
+  } else if (isa<AddExpr>(r) &&
+             (cast<AddExpr>(r)->left == l || cast<AddExpr>(r)->right == l)) {
+    ref<AddExpr> ar = cast<AddExpr>(r);
+    if (ar->left == l) {
+      return Expr::createIsZero(ar->right);
+    } else {
+      return Expr::createIsZero(ar->left);
+    }
+  } else if (isa<AddExpr>(l) && isa<AddExpr>(r)) {
+    ref<AddExpr> al = cast<AddExpr>(l);
+    ref<AddExpr> ar = cast<AddExpr>(r);
+    if (al->left == ar->left) {
+      return EqExpr::create(al->right, ar->right);
+    }
+    if (al->left == ar->right) {
+      return EqExpr::create(al->right, ar->left);
+    }
+    if (al->right == ar->left) {
+      return EqExpr::create(al->left, ar->right);
+    }
+    if (al->right == ar->right) {
+      return EqExpr::create(al->left, ar->left);
+    }
+    return EqExpr::alloc(l, r);
   } else {
     return EqExpr::alloc(l, r);
   }
@@ -2059,16 +2129,19 @@ static ref<Expr> TryConstArrayOpt(const ref<ConstantExpr> &cl, ReadExpr *rd) {
   // for now, just assume standard "flushing" of a concrete array,
   // where the concrete array has one update for each index, in order
   ref<Expr> res = ConstantExpr::alloc(0, Expr::Bool);
-  for (unsigned i = 0, e = rd->updates.root->constantValues.size(); i != e;
-       ++i) {
-    if (cl == rd->updates.root->constantValues[i]) {
-      // Arbitrary maximum on the size of disjunction.
-      if (++numMatches > 100)
-        return EqExpr_create(cl, rd);
+  if (ref<ConstantSource> constantSource =
+          dyn_cast<ConstantSource>(rd->updates.root->source)) {
+    for (unsigned i = 0, e = constantSource->constantValues.size(); i != e;
+         ++i) {
+      if (cl == constantSource->constantValues[i]) {
+        // Arbitrary maximum on the size of disjunction.
+        if (++numMatches > 100)
+          return EqExpr_create(cl, rd);
 
-      ref<Expr> mayBe = EqExpr::create(
-          rd->index, ConstantExpr::alloc(i, rd->index->getWidth()));
-      res = OrExpr::create(res, mayBe);
+        ref<Expr> mayBe = EqExpr::create(
+            rd->index, ConstantExpr::alloc(i, rd->index->getWidth()));
+        res = OrExpr::create(res, mayBe);
+      }
     }
   }
 
@@ -2101,6 +2174,7 @@ static ref<Expr> EqExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {
         return AndExpr::create(Expr::createIsZero(roe->left),
                                Expr::createIsZero(roe->right));
       }
+      return NotExpr::create(r);
     }
   } else if (rk == Expr::SExt) {
     // (sext(a,T)==c) == (a==c)
@@ -2154,8 +2228,7 @@ static ref<Expr> EqExpr_createPartial(Expr *l, const ref<ConstantExpr> &cr) {
 }
 
 ref<Expr> NeExpr::create(const ref<Expr> &l, const ref<Expr> &r) {
-  return EqExpr::create(ConstantExpr::create(0, Expr::Bool),
-                        EqExpr::create(l, r));
+  return Expr::createIsZero(EqExpr::create(l, r));
 }
 
 ref<Expr> UgtExpr::create(const ref<Expr> &l, const ref<Expr> &r) {

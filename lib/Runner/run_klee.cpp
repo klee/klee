@@ -835,10 +835,9 @@ static const char *modelledExternals[] = {
     "klee_get_valuef", "klee_get_valued", "klee_get_valuel", "klee_get_valuell",
     "klee_get_value_i32", "klee_get_value_i64", "klee_get_obj_size",
     "klee_is_symbolic", "klee_make_symbolic", "klee_mark_global",
-    "klee_open_merge", "klee_close_merge", "klee_prefer_cex",
-    "klee_posix_prefer_cex", "klee_print_expr", "klee_print_range",
-    "klee_report_error", "klee_set_forking", "klee_silent_exit", "klee_warning",
-    "klee_warning_once", "klee_stack_trace",
+    "klee_prefer_cex", "klee_posix_prefer_cex", "klee_print_expr",
+    "klee_print_range", "klee_report_error", "klee_set_forking",
+    "klee_silent_exit", "klee_warning", "klee_warning_once", "klee_stack_trace",
 #ifdef SUPPORT_KLEE_EH_CXX
     "_klee_eh_Unwind_RaiseException_impl", "klee_eh_typeid_for",
 #endif

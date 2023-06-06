@@ -151,7 +151,8 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng,
   return searcher;
 }
 
-Searcher *klee::constructUserSearcher(Executor &executor) {
+Searcher *klee::constructUserSearcher(Executor &executor,
+                                      bool stopAfterReachingTarget) {
 
   Searcher *searcher =
       getNewSearcher(CoreSearch[0], executor.theRNG, *executor.processForest);
@@ -176,17 +177,14 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
     searcher = new IterativeDeepeningTimeSearcher(searcher);
   }
 
-  if (executor.guidanceKind == Interpreter::GuidanceKind::CoverageGuidance) {
+  if (executor.guidanceKind != Interpreter::GuidanceKind::NoGuidance) {
+    if (executor.guidanceKind == Interpreter::GuidanceKind::ErrorGuidance) {
+      delete searcher;
+      searcher = nullptr;
+    }
     searcher = new GuidedSearcher(
-        searcher, *executor.codeGraphDistance.get(), *executor.targetCalculator,
-        executor.pausedStates, MaxCycles - 1, executor.theRNG);
-  }
-
-  if (executor.guidanceKind == Interpreter::GuidanceKind::ErrorGuidance) {
-    delete searcher;
-    searcher = new GuidedSearcher(*executor.codeGraphDistance.get(),
-                                  executor.pausedStates, MaxCycles - 1,
-                                  executor.theRNG);
+        *executor.codeGraphDistance.get(), *executor.targetCalculator,
+        executor.pausedStates, MaxCycles - 1, executor.theRNG, searcher);
   }
 
   llvm::raw_ostream &os = executor.getHandler().getInfoStream();

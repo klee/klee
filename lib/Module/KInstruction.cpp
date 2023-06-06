@@ -8,6 +8,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Module/KInstruction.h"
+#include "klee/Module/KModule.h"
+#include "llvm/ADT/StringExtras.h"
 #include <string>
 
 using namespace llvm;
@@ -23,4 +25,9 @@ std::string KInstruction::getSourceLocation() const {
            std::to_string(info->column);
   else
     return "[no debug info]";
+}
+
+std::string KInstruction::toString() const {
+  return llvm::utostr(index) + " at " + parent->toString() + " (" +
+         inst->getOpcodeName() + ")";
 }

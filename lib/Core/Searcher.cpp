@@ -436,28 +436,20 @@ void TargetedSearcher::removeReached() {
 ///
 
 GuidedSearcher::GuidedSearcher(
-    Searcher *baseSearcher, CodeGraphDistance &codeGraphDistance,
-    TargetCalculator &stateHistory,
+    CodeGraphDistance &codeGraphDistance, TargetCalculator &stateHistory,
     std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates,
-    std::size_t bound, RNG &rng)
-    : guidance(CoverageGuidance), baseSearcher(baseSearcher),
-      codeGraphDistance(codeGraphDistance), stateHistory(&stateHistory),
-      pausedStates(pausedStates), bound(bound), theRNG(rng) {}
-
-GuidedSearcher::GuidedSearcher(
-    CodeGraphDistance &codeGraphDistance,
-    std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates,
-    std::size_t bound, RNG &rng)
-    : guidance(ErrorGuidance), baseSearcher(nullptr),
-      codeGraphDistance(codeGraphDistance), stateHistory(nullptr),
-      pausedStates(pausedStates), bound(bound), theRNG(rng) {}
+    std::size_t bound, RNG &rng, Searcher *baseSearcher)
+    : baseSearcher(baseSearcher), codeGraphDistance(codeGraphDistance),
+      stateHistory(stateHistory), pausedStates(pausedStates), bound(bound),
+      theRNG(rng) {
+  guidance = baseSearcher ? CoverageGuidance : ErrorGuidance;
+}
 
 ExecutionState &GuidedSearcher::selectState() {
   unsigned size = historiesAndTargets.size();
   index = theRNG.getInt32() % (size + 1);
   ExecutionState *state = nullptr;
   if (CoverageGuidance == guidance && index == size) {
-    assert(baseSearcher);
     state = &baseSearcher->selectState();
   } else {
     index = index % size;
@@ -647,10 +639,9 @@ void GuidedSearcher::innerUpdate(
   std::vector<ExecutionState *> tmpRemovedStates;
 
   if (CoverageGuidance == guidance) {
-    assert(stateHistory);
     for (const auto state : targetlessStates) {
       if (isStuck(*state)) {
-        ref<Target> target(stateHistory->calculate(*state));
+        ref<Target> target(stateHistory.calculate(*state));
         if (target) {
           state->targetForest.add(target);
           auto history = state->targetForest.getHistory();

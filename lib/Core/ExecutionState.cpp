@@ -102,12 +102,13 @@ ExecutionState::~ExecutionState() {
 
 ExecutionState::ExecutionState(const ExecutionState &state)
     : initPC(state.initPC), pc(state.pc), prevPC(state.prevPC),
-      stack(state.stack), incomingBBIndex(state.incomingBBIndex),
-      depth(state.depth), multilevel(state.multilevel), level(state.level),
-      addressSpace(state.addressSpace), constraints(state.constraints),
-      targetForest(state.targetForest), pathOS(state.pathOS),
-      symPathOS(state.symPathOS), coveredLines(state.coveredLines),
-      symbolics(state.symbolics), symbolicSizes(state.symbolicSizes),
+      stack(state.stack), stackBalance(state.stackBalance),
+      incomingBBIndex(state.incomingBBIndex), depth(state.depth),
+      multilevel(state.multilevel), level(state.level),
+      transitionLevel(state.transitionLevel), addressSpace(state.addressSpace),
+      constraints(state.constraints), targetForest(state.targetForest),
+      pathOS(state.pathOS), symPathOS(state.symPathOS),
+      coveredLines(state.coveredLines), symbolics(state.symbolics),
       resolvedPointers(state.resolvedPointers),
       cexPreferences(state.cexPreferences), arrayNames(state.arrayNames),
       steppedInstructions(state.steppedInstructions),
@@ -118,8 +119,7 @@ ExecutionState::ExecutionState(const ExecutionState &state)
                                ? state.unwindingInformation->clone()
                                : nullptr),
       coveredNew(state.coveredNew), forkDisabled(state.forkDisabled),
-      gepExprBases(state.gepExprBases), gepExprOffsets(state.gepExprOffsets) {
-}
+      returnValue(state.returnValue), gepExprBases(state.gepExprBases) {}
 
 ExecutionState *ExecutionState::branch() {
   depth++;
@@ -152,20 +152,26 @@ ExecutionState *ExecutionState::withStackFrame(KInstIterator caller,
   return newState;
 }
 
-ExecutionState *ExecutionState::withKFunction(KFunction *kf) {
-  return withStackFrame(nullptr, kf);
-}
-
-ExecutionState *ExecutionState::withKBlock(KBlock *kb) {
+ExecutionState *ExecutionState::withKInstruction(KInstruction *ki) const {
+  assert(stack.size() == 0);
   ExecutionState *newState = new ExecutionState(*this);
   newState->setID();
-  newState->initPC = kb->instructions;
+  newState->pushFrame(nullptr, ki->parent->parent);
+  newState->stackBalance = 0;
+  newState->initPC = ki->parent->instructions;
+  while (newState->initPC != ki) {
+    ++newState->initPC;
+  }
   newState->pc = newState->initPC;
   newState->prevPC = newState->pc;
   return newState;
 }
 
-ExecutionState *ExecutionState::copy() {
+ExecutionState *ExecutionState::withKFunction(KFunction *kf) {
+  return withStackFrame(nullptr, kf);
+}
+
+ExecutionState *ExecutionState::copy() const {
   ExecutionState *newState = new ExecutionState(*this);
   newState->setID();
   return newState;
@@ -173,6 +179,7 @@ ExecutionState *ExecutionState::copy() {
 
 void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
   stack.emplace_back(StackFrame(caller, kf));
+  ++stackBalance;
 }
 
 void ExecutionState::popFrame() {
@@ -184,6 +191,7 @@ void ExecutionState::popFrame() {
     addressSpace.unbindObject(memoryObject);
   }
   stack.pop_back();
+  --stackBalance;
 }
 
 void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array,
@@ -250,8 +258,18 @@ bool ExecutionState::getBase(
 void ExecutionState::removePointerResolutions(const MemoryObject *mo) {
   for (auto i = resolvedPointers.begin(), last = resolvedPointers.end();
        i != last;) {
-    if (i->second.first == mo->id) {
+    for (auto resolution = i->second.begin(), re = i->second.end();
+         resolution != re;) {
+      if (resolution->memoryObjectID == mo->id) {
+        resolution = i->second.erase(resolution);
+        re = i->second.end();
+      } else {
+        resolution++;
+      }
+    }
+    if (i->second.size() == 0) {
       i = resolvedPointers.erase(i);
+      last = resolvedPointers.end();
     } else {
       ++i;
     }
@@ -259,14 +277,11 @@ void ExecutionState::removePointerResolutions(const MemoryObject *mo) {
 }
 
 // base address mo and ignore non pure reads in setinitializationgraph
-void ExecutionState::addPointerResolution(ref<Expr> address, ref<Expr> base,
+void ExecutionState::addPointerResolution(ref<Expr> address,
                                           const MemoryObject *mo) {
   if (!isa<ConstantExpr>(address)) {
-    resolvedPointers[address] =
-        std::make_pair(mo->id, mo->getOffsetExpr(address));
-  }
-  if (base != address && !isa<ConstantExpr>(base)) {
-    resolvedPointers[base] = std::make_pair(mo->id, mo->getOffsetExpr(base));
+    resolvedPointers[address].insert(
+        Resolution(mo->id, mo->getOffsetExpr(address)));
   }
 }
 
@@ -279,7 +294,7 @@ bool ExecutionState::resolveOnSymbolics(const ref<ConstantExpr> &addr,
     // Check if the provided address is between start and end of the object
     // [mo->address, mo->address + mo->size) or the object is a 0-sized object.
     ref<ConstantExpr> size = cast<ConstantExpr>(
-        constraints.getConcretization().evaluate(mo->getSizeExpr()));
+        constraints.cs().concretization().evaluate(mo->getSizeExpr()));
     if ((size->getZExtValue() == 0 && address == mo->address) ||
         (address - mo->address < size->getZExtValue())) {
       result = mo->id;
@@ -344,14 +359,8 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
   }
 }
 
-void ExecutionState::addConstraint(ref<Expr> e) {
-  ConstraintManager cm(constraints);
-  cm.addConstraint(e);
-}
-
-void ExecutionState::addConstraint(ref<Expr> e, const Assignment &c) {
-  ConstraintManager cm(constraints);
-  cm.addConstraint(e, c);
+void ExecutionState::addConstraint(ref<Expr> e, const Assignment &delta) {
+  constraints.addConstraint(e, delta);
 }
 
 void ExecutionState::addCexPreference(const ref<Expr> &cond) {
@@ -389,4 +398,15 @@ bool ExecutionState::isGEPExpr(ref<Expr> expr) const {
 
 bool ExecutionState::visited(KBlock *block) const {
   return level.find(block->basicBlock) != level.end();
+}
+
+bool ExecutionState::reachedTarget(Target target) const {
+  if (constraints.path().KBlockSize() == 0) {
+    return false;
+  }
+  if (target.atReturn()) {
+    return prevPC == target.getBlock()->getLastInstruction();
+  } else {
+    return pc == target.getBlock()->getFirstInstruction();
+  }
 }

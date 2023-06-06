@@ -6,14 +6,14 @@
 # RUN: %kleaver -print-ast %s
 
 # Query 0 -- Type: Truth, Instructions: 31
-array arr53[4] : w32 -> w8 = symbolic
+arr53 : (array (w64 4) (makeSymbolic arr53 0))
 (query [] (Not (Ult (ReadLSB w32 0 arr53)
                     16)))
 #   OK -- Elapsed: 0.00137401
 #   Is Valid: false
 
 # Query 1 -- Type: Value, Instructions: 39
-array arr53[4] : w32 -> w8 = symbolic
+arr53 : (array (w64 4) (makeSymbolic arr53 0))
 (query [(Ult N0:(ReadLSB w32 0 arr53)
              16)]
        false
@@ -22,7 +22,7 @@ array arr53[4] : w32 -> w8 = symbolic
 #   Result: 31543488
 
 # Query 2 -- Type: Truth, Instructions: 39
-array arr53[4] : w32 -> w8 = symbolic
+arr53 : (array (w64 4) (makeSymbolic arr53 0))
 (query [(Ult N0:(ReadLSB w32 0 arr53)
              16)]
        (Ult (Mul w32 4 N0) 61))
@@ -30,8 +30,8 @@ array arr53[4] : w32 -> w8 = symbolic
 #   Is Valid: true
 
 # Query 3 -- Type: Truth, Instructions: 55
-array arr53[4] : w32 -> w8 = symbolic
-array arr60[4] : w32 -> w8 = symbolic
+arr53 : (array (w64 4) (makeSymbolic arr53 0))
+arr60 : (array (w64 4) (makeSymbolic arr60 0))
 (query [(Ult (ReadLSB w32 0 arr53)
              16)]
        (Not (Ult (ReadLSB w32 0 arr60)
@@ -40,8 +40,8 @@ array arr60[4] : w32 -> w8 = symbolic
 #   Is Valid: false
 
 # Query 4 -- Type: Value, Instructions: 60
-array arr53[4] : w32 -> w8 = symbolic
-array arr60[4] : w32 -> w8 = symbolic
+arr53 : (array (w64 4) (makeSymbolic arr53 0))
+arr60 : (array (w64 4) (makeSymbolic arr60 0))
 (query [(Ult (ReadLSB w32 0 arr53)
              16)
         (Ult N0:(ReadLSB w32 0 arr60)
@@ -52,8 +52,8 @@ array arr60[4] : w32 -> w8 = symbolic
 #   Result: 31543488
 
 # Query 5 -- Type: Truth, Instructions: 60
-array arr53[4] : w32 -> w8 = symbolic
-array arr60[4] : w32 -> w8 = symbolic
+arr53 : (array (w64 4) (makeSymbolic arr53 0))
+arr60 : (array (w64 4) (makeSymbolic arr60 0))
 (query [(Ult (ReadLSB w32 0 arr53)
              16)
         (Ult N0:(ReadLSB w32 0 arr60)
@@ -63,9 +63,9 @@ array arr60[4] : w32 -> w8 = symbolic
 #   Is Valid: true
 
 # Query 6 -- Type: Truth, Instructions: 77
-array arr53[4] : w32 -> w8 = symbolic
-array arr60[4] : w32 -> w8 = symbolic
-array arr67[4] : w32 -> w8 = symbolic
+arr53 : (array (w64 4) (makeSymbolic arr53 0))
+arr60 : (array (w64 4) (makeSymbolic arr60 0))
+arr67 : (array (w64 4) (makeSymbolic arr67 0))
 (query [(Ult (ReadLSB w32 0 arr53)
              16)
         (Ult (ReadLSB w32 0 arr60)
@@ -76,9 +76,9 @@ array arr67[4] : w32 -> w8 = symbolic
 #   Is Valid: false
 
 # Query 7 -- Type: Value, Instructions: 85
-array arr53[4] : w32 -> w8 = symbolic
-array arr60[4] : w32 -> w8 = symbolic
-array arr67[4] : w32 -> w8 = symbolic
+arr53 : (array (w64 4) (makeSymbolic arr53 0))
+arr60 : (array (w64 4) (makeSymbolic arr60 0))
+arr67 : (array (w64 4) (makeSymbolic arr67 0))
 (query [(Ult (ReadLSB w32 0 arr53)
              16)
         (Ult (ReadLSB w32 0 arr60)
@@ -91,9 +91,9 @@ array arr67[4] : w32 -> w8 = symbolic
 #   Result: 31543488
 
 # Query 8 -- Type: Truth, Instructions: 85
-array arr53[4] : w32 -> w8 = symbolic
-array arr60[4] : w32 -> w8 = symbolic
-array arr67[4] : w32 -> w8 = symbolic
+arr53 : (array (w64 4) (makeSymbolic arr53 0))
+arr60 : (array (w64 4) (makeSymbolic arr60 0))
+arr67 : (array (w64 4) (makeSymbolic arr67 0))
 (query [(Ult (ReadLSB w32 0 arr53)
              16)
         (Ult (ReadLSB w32 0 arr60)
@@ -105,10 +105,10 @@ array arr67[4] : w32 -> w8 = symbolic
 #   Is Valid: true
 
 # Query 9 -- Type: Truth, Instructions: 101
-array arr53[4] : w32 -> w8 = symbolic
-array arr74[4] : w32 -> w8 = symbolic
-array arr60[4] : w32 -> w8 = symbolic
-array arr67[4] : w32 -> w8 = symbolic
+arr53 : (array (w64 4) (makeSymbolic arr53 0))
+arr74 : (array (w64 4) (makeSymbolic arr74 0))
+arr60 : (array (w64 4) (makeSymbolic arr60 0))
+arr67 : (array (w64 4) (makeSymbolic arr67 0))
 (query [(Ult (ReadLSB w32 0 arr53)
              16)
         (Ult (ReadLSB w32 0 arr60)
@@ -124,10 +124,10 @@ array arr67[4] : w32 -> w8 = symbolic
 #   Is Valid: false
 
 # Query 10 -- Type: Value, Instructions: 106
-array arr53[4] : w32 -> w8 = symbolic
-array arr74[4] : w32 -> w8 = symbolic
-array arr60[4] : w32 -> w8 = symbolic
-array arr67[4] : w32 -> w8 = symbolic
+arr53 : (array (w64 4) (makeSymbolic arr53 0))
+arr74 : (array (w64 4) (makeSymbolic arr74 0))
+arr60 : (array (w64 4) (makeSymbolic arr60 0))
+arr67 : (array (w64 4) (makeSymbolic arr67 0))
 (query [(Ult (ReadLSB w32 0 arr53)
              16)
         (Ult (ReadLSB w32 0 arr60)
@@ -145,10 +145,10 @@ array arr67[4] : w32 -> w8 = symbolic
 #   Result: 31583235
 
 # Query 11 -- Type: Truth, Instructions: 106
-array arr53[4] : w32 -> w8 = symbolic
-array arr74[4] : w32 -> w8 = symbolic
-array arr60[4] : w32 -> w8 = symbolic
-array arr67[4] : w32 -> w8 = symbolic
+arr53 : (array (w64 4) (makeSymbolic arr53 0))
+arr74 : (array (w64 4) (makeSymbolic arr74 0))
+arr60 : (array (w64 4) (makeSymbolic arr60 0))
+arr67 : (array (w64 4) (makeSymbolic arr67 0))
 (query [(Ult (ReadLSB w32 0 arr53)
              16)
         (Ult (ReadLSB w32 0 arr60)
@@ -166,11 +166,11 @@ array arr67[4] : w32 -> w8 = symbolic
 #   Is Valid: true
 
 # Query 12 -- Type: Truth, Instructions: 112
-array arr53[4] : w32 -> w8 = symbolic
-array arr49[4] : w32 -> w8 = symbolic
-array arr74[4] : w32 -> w8 = symbolic
-array arr60[4] : w32 -> w8 = symbolic
-array arr67[4] : w32 -> w8 = symbolic
+arr53 : (array (w64 4) (makeSymbolic arr53 0))
+arr49 : (array (w64 4) (makeSymbolic arr49 0))
+arr74 : (array (w64 4) (makeSymbolic arr74 0))
+arr60 : (array (w64 4) (makeSymbolic arr60 0))
+arr67 : (array (w64 4) (makeSymbolic arr67 0))
 (query [(Ult (ReadLSB w32 0 arr53)
              16)
         (Ult (ReadLSB w32 0 arr60)
@@ -189,11 +189,11 @@ array arr67[4] : w32 -> w8 = symbolic
 #   Is Valid: false
 
 # Query 13 -- Type: Truth, Instructions: 122
-array arr53[4] : w32 -> w8 = symbolic
-array arr49[4] : w32 -> w8 = symbolic
-array arr74[4] : w32 -> w8 = symbolic
-array arr60[4] : w32 -> w8 = symbolic
-array arr67[4] : w32 -> w8 = symbolic
+arr53 : (array (w64 4) (makeSymbolic arr53 0))
+arr49 : (array (w64 4) (makeSymbolic arr49 0))
+arr74 : (array (w64 4) (makeSymbolic arr74 0))
+arr60 : (array (w64 4) (makeSymbolic arr60 0))
+arr67 : (array (w64 4) (makeSymbolic arr67 0))
 (query [(Ult (ReadLSB w32 0 arr53)
              16)
         (Ult (ReadLSB w32 0 arr60)
@@ -216,12 +216,12 @@ array arr67[4] : w32 -> w8 = symbolic
 #   Is Valid: false
 
 # Query 14 -- Type: Truth, Instructions: 128
-array arr5[64] : w32 -> w8 = symbolic
-array arr53[4] : w32 -> w8 = symbolic
-array arr49[4] : w32 -> w8 = symbolic
-array arr74[4] : w32 -> w8 = symbolic
-array arr60[4] : w32 -> w8 = symbolic
-array arr67[4] : w32 -> w8 = symbolic
+arr5 : (array (w64 64) (makeSymbolic arr5 0))
+arr53 : (array (w64 4) (makeSymbolic arr53 0))
+arr49 : (array (w64 4) (makeSymbolic arr49 0))
+arr74 : (array (w64 4) (makeSymbolic arr74 0))
+arr60 : (array (w64 4) (makeSymbolic arr60 0))
+arr67 : (array (w64 4) (makeSymbolic arr67 0))
 (query [(Ult N0:(ReadLSB w32 0 arr53)
              16)
         (Ult (ReadLSB w32 0 arr60)
@@ -254,12 +254,12 @@ array arr67[4] : w32 -> w8 = symbolic
 #   Is Valid: false
 
 # Query 15 -- Type: Truth, Instructions: 133
-array arr5[64] : w32 -> w8 = symbolic
-array arr53[4] : w32 -> w8 = symbolic
-array arr49[4] : w32 -> w8 = symbolic
-array arr74[4] : w32 -> w8 = symbolic
-array arr60[4] : w32 -> w8 = symbolic
-array arr67[4] : w32 -> w8 = symbolic
+arr5 : (array (w64 64) (makeSymbolic arr5 0))
+arr53 : (array (w64 4) (makeSymbolic arr53 0))
+arr49 : (array (w64 4) (makeSymbolic arr49 0))
+arr74 : (array (w64 4) (makeSymbolic arr74 0))
+arr60 : (array (w64 4) (makeSymbolic arr60 0))
+arr67 : (array (w64 4) (makeSymbolic arr67 0))
 (query [(Ult N0:(ReadLSB w32 0 arr53)
              16)
         (Ult N1:(ReadLSB w32 0 arr60)
@@ -294,12 +294,12 @@ array arr67[4] : w32 -> w8 = symbolic
 #   Is Valid: false
 
 # Query 16 -- Type: InitialValues, Instructions: 135
-array arr5[64] : w32 -> w8 = symbolic
-array arr53[4] : w32 -> w8 = symbolic
-array arr49[4] : w32 -> w8 = symbolic
-array arr74[4] : w32 -> w8 = symbolic
-array arr60[4] : w32 -> w8 = symbolic
-array arr67[4] : w32 -> w8 = symbolic
+arr5 : (array (w64 64) (makeSymbolic arr5 0))
+arr53 : (array (w64 4) (makeSymbolic arr53 0))
+arr49 : (array (w64 4) (makeSymbolic arr49 0))
+arr74 : (array (w64 4) (makeSymbolic arr74 0))
+arr60 : (array (w64 4) (makeSymbolic arr60 0))
+arr67 : (array (w64 4) (makeSymbolic arr67 0))
 (query [(Ult N0:(ReadLSB w32 0 arr53)
              16)
         (Ult N1:(ReadLSB w32 0 arr60)

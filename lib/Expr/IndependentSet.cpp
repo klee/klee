@@ -1,11 +1,16 @@
 #include "klee/Expr/IndependentSet.h"
 
+#include "klee/ADT/Ref.h"
+#include "klee/Expr/Constraints.h"
+#include "klee/Expr/ExprHashMap.h"
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Expr/SymbolicSource.h"
+#include "klee/Expr/Symcrete.h"
 #include "klee/Solver/Solver.h"
 
 #include <list>
 #include <map>
+#include <queue>
 #include <set>
 #include <vector>
 
@@ -14,7 +19,7 @@ namespace klee {
 IndependentElementSet::IndependentElementSet() {}
 
 IndependentElementSet::IndependentElementSet(ref<Expr> e) {
-  exprs.push_back(e);
+  exprs.insert(e);
   // Track all reads in the program.  Determines whether reads are
   // concrete or symbolic.  If they are symbolic, "collapses" array
   // by adding it to wholeObjects.  Otherwise, creates a mapping of
@@ -31,12 +36,60 @@ IndependentElementSet::IndependentElementSet(ref<Expr> e) {
       continue;
 
     if (!wholeObjects.count(array)) {
-      if (ref<SymbolicAllocationSource> allocSource =
-              dyn_cast_or_null<SymbolicAllocationSource>(array->source)) {
+      if (ConstantExpr *CE = dyn_cast<ConstantExpr>(re->index)) {
+        // if index constant, then add to set of constraints operating
+        // on that array (actually, don't add constraint, just set index)
+        DenseSet<unsigned> &dis = elements[array];
+        dis.add((unsigned)CE->getZExtValue(32));
+      } else {
+        elements_ty::iterator it2 = elements.find(array);
+        if (it2 != elements.end())
+          elements.erase(it2);
         wholeObjects.insert(array);
-        wholeObjects.insert(allocSource->linkedArray);
       }
+    }
+  }
+}
 
+IndependentElementSet::IndependentElementSet(ref<Symcrete> s) {
+  symcretes.insert(s);
+
+  for (Symcrete &dependentSymcrete : s->dependentSymcretes()) {
+    symcretes.insert(ref<Symcrete>(&dependentSymcrete));
+  }
+
+  // Track all reads in the program.  Determines whether reads are
+  // concrete or symbolic.  If they are symbolic, "collapses" array
+  // by adding it to wholeObjects.  Otherwise, creates a mapping of
+  // the form Map<array, set<index>> which tracks which parts of the
+  // array are being accessed.
+  std::vector<ref<ReadExpr>> reads;
+
+  SymcreteOrderedSet usedSymcretes;
+  usedSymcretes.insert(s);
+  std::queue<ref<Symcrete>> queueSymcretes;
+  queueSymcretes.push(s);
+
+  while (!queueSymcretes.empty()) {
+    ref<Symcrete> top = queueSymcretes.front();
+    queueSymcretes.pop();
+    findReads(top->symcretized, true, reads);
+    for (Symcrete &dependentSymcrete : top->dependentSymcretes()) {
+      if (usedSymcretes.insert(ref<Symcrete>(&dependentSymcrete)).second) {
+        queueSymcretes.push(ref<Symcrete>(&dependentSymcrete));
+      }
+    }
+  }
+
+  for (unsigned i = 0; i != reads.size(); ++i) {
+    ReadExpr *re = reads[i].get();
+    const Array *array = re->updates.root;
+
+    // Reads of a constant array don't alias.
+    if (re->updates.root->isConstantArray() && !re->updates.head)
+      continue;
+
+    if (!wholeObjects.count(array)) {
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(re->index)) {
         // if index constant, then add to set of constraints operating
         // on that array (actually, don't add constraint, just set index)
@@ -78,7 +131,7 @@ void IndependentElementSet::print(llvm::raw_ostream &os) const {
       os << ", ";
     }
 
-    os << "MO" << array->name;
+    os << "MO" << array->getIdentifier();
   }
   for (elements_ty::const_iterator it = elements.begin(), ie = elements.end();
        it != ie; ++it) {
@@ -91,7 +144,7 @@ void IndependentElementSet::print(llvm::raw_ostream &os) const {
       os << ", ";
     }
 
-    os << "MO" << array->name << " : " << dis;
+    os << "MO" << array->getIdentifier() << " : " << dis;
   }
   os << "}";
 }
@@ -120,14 +173,18 @@ bool IndependentElementSet::intersects(const IndependentElementSet &b) {
         return true;
     }
   }
+  // No need to check symcretes here, arrays must be sufficient.
   return false;
 }
 
 // returns true iff set is changed by addition
 bool IndependentElementSet::add(const IndependentElementSet &b) {
-  for (unsigned i = 0; i < b.exprs.size(); i++) {
-    ref<Expr> expr = b.exprs[i];
-    exprs.push_back(expr);
+  for (auto expr : b.exprs) {
+    exprs.insert(expr);
+  }
+
+  for (const ref<Symcrete> &symcrete : b.symcretes) {
+    symcretes.insert(symcrete);
   }
 
   bool modified = false;
@@ -184,13 +241,17 @@ getAllIndependentConstraintsSets(const Query &query) {
     factors->push_back(IndependentElementSet(neg));
   }
 
-  for (const auto &constraint : query.constraints) {
+  for (const auto &constraint : query.constraints.cs()) {
     // iterate through all the previously separated constraints.  Until we
     // actually return, factors is treated as a queue of expressions to be
     // evaluated.  If the queue property isn't maintained, then the exprs
     // could be returned in an order different from how they came it, negatively
     // affecting later stages.
     factors->push_back(IndependentElementSet(constraint));
+  }
+
+  for (const auto &symcrete : query.constraints.symcretes()) {
+    factors->push_back(IndependentElementSet(symcrete));
   }
 
   bool doneLoop = false;
@@ -230,14 +291,19 @@ getAllIndependentConstraintsSets(const Query &query) {
   return factors;
 }
 
-IndependentElementSet
-getIndependentConstraints(const Query &query, std::vector<ref<Expr>> &result) {
+IndependentElementSet getIndependentConstraints(const Query &query,
+                                                constraints_ty &result) {
   IndependentElementSet eltsClosure(query.expr);
   std::vector<std::pair<ref<Expr>, IndependentElementSet>> worklist;
 
-  for (const auto &constraint : query.constraints)
+  for (const auto &constraint : query.constraints.cs())
     worklist.push_back(
         std::make_pair(constraint, IndependentElementSet(constraint)));
+
+  for (const ref<Symcrete> &symcrete : query.constraints.symcretes()) {
+    worklist.push_back(
+        std::make_pair(symcrete->symcretized, IndependentElementSet(symcrete)));
+  }
 
   // XXX This should be more efficient (in terms of low level copy stuff).
   bool done = false;
@@ -251,7 +317,7 @@ getIndependentConstraints(const Query &query, std::vector<ref<Expr>> &result) {
       if (it->second.intersects(eltsClosure)) {
         if (eltsClosure.add(it->second))
           done = false;
-        result.push_back(it->first);
+        result.insert(it->first);
         // Means that we have added (z=y)added to (x=y)
         // Now need to see if there are any (z=?)'s
       } else {
@@ -288,6 +354,7 @@ void calculateArrayReferences(const IndependentElementSet &ie,
   }
   for (std::set<const Array *>::iterator it = ie.wholeObjects.begin();
        it != ie.wholeObjects.end(); it++) {
+    assert(*it);
     thisSeen.insert(*it);
   }
   for (std::set<const Array *>::iterator it = thisSeen.begin();

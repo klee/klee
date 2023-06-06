@@ -51,9 +51,8 @@ void testOperation(Solver &solver, int value, Expr::Width operandWidth,
     unsigned size = Expr::getMinBytesForWidth(operandWidth);
     static uint64_t id = 0;
     const Array *array =
-        ac.CreateArray("arr" + llvm::utostr(++id),
-                       ConstantExpr::create(size, sizeof(uint64_t) * CHAR_BIT),
-                       SourceBuilder::makeSymbolic());
+        ac.CreateArray(ConstantExpr::create(size, sizeof(uint64_t) * CHAR_BIT),
+                       SourceBuilder::makeSymbolic("arr", ++id));
     symbolicArgs.push_back(
         Expr::CreateArg(Expr::createTempRead(array, operandWidth)));
   }
@@ -80,8 +79,8 @@ void testOperation(Solver &solver, int value, Expr::Width operandWidth,
         EqExpr::create(fullySymbolicExpr, partiallyConstantExpr);
 
     ConstraintSet constraints;
-    ConstraintManager cm(constraints);
-    cm.addConstraint(expr);
+    constraints.addConstraint(
+        Simplificator::simplifyExpr(ConstraintSet(), expr), {});
     bool res;
     bool success = solver.mustBeTrue(Query(constraints, queryExpr), res);
     EXPECT_EQ(true, success) << "Constraint solving failed";

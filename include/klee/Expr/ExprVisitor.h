@@ -13,6 +13,38 @@
 #include "ExprHashMap.h"
 
 namespace klee {
+
+class VisitorHash {
+public:
+  // Global context
+  VisitorHash() { hash.push_back({}); }
+
+  void pushFrame() { hash.push_back({}); }
+
+  void popFrame() {
+    assert(hash.size() > 0);
+    hash.pop_back();
+  }
+
+  void add(std::pair<ref<Expr>, ref<Expr>> e) { hash.back().insert(e); }
+
+  // true if is in the top frame
+  std::pair<ref<Expr>, bool> get(ref<Expr> e) {
+    if (hash.back().count(e)) {
+      return {hash.back().at(e), true};
+    }
+    for (auto i = hash.rbegin(); i != hash.rend(); i++) {
+      if ((*i).count(e)) {
+        return {(*i).at(e), false};
+      }
+    }
+    return {e, false};
+  }
+
+private:
+  std::vector<ExprHashMap<ref<Expr>>> hash;
+};
+
 class ExprVisitor {
 protected:
   // typed variant, but non-virtual for efficiency
@@ -105,9 +137,10 @@ protected:
   virtual Action visitFNeg(const FNegExpr &);
   virtual Action visitFRint(const FRintExpr &);
 
+protected:
+  VisitorHash visited;
+
 private:
-  typedef ExprHashMap<ref<Expr>> visited_ty;
-  visited_ty visited;
   bool recursive;
 
   ref<Expr> visitActual(const ref<Expr> &e);

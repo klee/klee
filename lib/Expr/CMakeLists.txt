@@ -23,6 +23,7 @@ klee_add_component(kleaverExpr
   ExprUtil.cpp
   ExprVisitor.cpp
   IndependentSet.cpp
+  Path.cpp
   SourceBuilder.cpp
   SymbolicSource.cpp
   Lexer.cpp

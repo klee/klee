@@ -13,7 +13,6 @@
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprUtil.h"
-#include "klee/Expr/ExprVisitor.h"
 #include "klee/Solver/SolverImpl.h"
 #include "klee/Solver/SolverStats.h"
 #include "klee/Statistics/TimerStatIncrementer.h"
@@ -93,7 +92,7 @@ public:
   ~CexCachingSolver();
 
   bool computeTruth(const Query &, bool &isValid);
-  bool computeValidity(const Query &, Solver::Validity &result);
+  bool computeValidity(const Query &, PartialValidity &result);
   bool computeValue(const Query &, ref<Expr> &result);
   bool computeInitialValues(const Query &,
                             const std::vector<const Array *> &objects,
@@ -208,7 +207,8 @@ bool CexCachingSolver::searchForResponse(KeyType &key,
 /// an unsatisfiable query). \return True if a cached result was found.
 bool CexCachingSolver::lookupResponse(const Query &query, KeyType &key,
                                       ref<SolverResponse> &result) {
-  key = KeyType(query.constraints.begin(), query.constraints.end());
+  assert(!query.containsSymcretes());
+  key = KeyType(query.constraints.cs().begin(), query.constraints.cs().end());
   ref<Expr> neg = Expr::createIsZero(query.expr);
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(neg)) {
     if (CE->isFalse()) {
@@ -278,7 +278,7 @@ CexCachingSolver::~CexCachingSolver() {
 }
 
 bool CexCachingSolver::computeValidity(const Query &query,
-                                       Solver::Validity &result) {
+                                       PartialValidity &result) {
   TimerStatIncrementer t(stats::cexCacheTime);
   ref<SolverResponse> a;
   if (!getResponse(query.withFalse(), a))
@@ -296,11 +296,13 @@ bool CexCachingSolver::computeValidity(const Query &query,
   if (cast<ConstantExpr>(q)->isTrue()) {
     if (!getResponse(query, a))
       return false;
-    result = isa<ValidResponse>(a) ? Solver::True : Solver::Unknown;
+    result =
+        isa<ValidResponse>(a) ? PValidity::MustBeTrue : PValidity::TrueOrFalse;
   } else {
     if (!getResponse(query.negateExpr(), a))
       return false;
-    result = isa<ValidResponse>(a) ? Solver::False : Solver::Unknown;
+    result =
+        isa<ValidResponse>(a) ? PValidity::MustBeFalse : PValidity::TrueOrFalse;
   }
 
   return true;

@@ -41,10 +41,8 @@
   TTYPE(External, 26U, "external.err")                                         \
   MARK(EXECERR, 26U)                                                           \
   TTYPE(Replay, 27U, "")                                                       \
-  TTYPE(Merge, 28U, "")                                                        \
-  TTYPE(SilentExit, 29U, "")                                                   \
-  TTYPE(Paused, 30U, "")                                                       \
-  MARK(END, 30U)
+  TTYPE(SilentExit, 28U, "")                                                   \
+  MARK(END, 28U)
 
 ///@brief Reason an ExecutionState got terminated.
 enum class StateTerminationType : std::uint8_t {

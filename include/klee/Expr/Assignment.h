@@ -14,10 +14,16 @@
 #include "klee/Expr/ExprEvaluator.h"
 
 #include <map>
+#include <set>
 
 namespace klee {
 class Array;
+class Symcrete;
+struct SymcreteLess;
 class ConstraintSet;
+
+typedef std::set<ref<Symcrete>, SymcreteLess> SymcreteOrderedSet;
+using symcretes_ty = SymcreteOrderedSet;
 
 class Assignment {
 public:
@@ -56,6 +62,7 @@ public:
   void dump() const;
 
   Assignment diffWith(const Assignment &other) const;
+  Assignment part(const SymcreteOrderedSet &symcretes) const;
 
   bindings_ty::const_iterator begin() const { return bindings.begin(); }
   bindings_ty::const_iterator end() const { return bindings.end(); }

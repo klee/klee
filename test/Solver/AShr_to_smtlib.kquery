@@ -11,6 +11,7 @@
 # We could fix this if we required STP to be in the user's PATH and made available
 # as a substitution in llvm-lit
 
-array value[1] : w32 -> w8 = symbolic
-array shift[1] : w32 -> w8 = symbolic
-(query [(Ule 8 (Read w8 0 shift))] (Eq 0 (AShr w8 (Read w8 0 value) (Read w8 0 shift))) )
+makeSymbolic0 : (array (w64 1) (makeSymbolic value 0))
+makeSymbolic1 : (array (w64 1) (makeSymbolic shift 0))
+
+(query [(Ule 8 (Read w8 0 makeSymbolic1))] (Eq 0 (AShr w8 (Read w8 0 makeSymbolic0) (Read w8 0 makeSymbolic1))) )

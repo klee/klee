@@ -32,7 +32,7 @@ std::string Target::toString() const {
   if (shouldFailOnThisTarget()) {
     repr << "error in ";
   }
-  repr << block->getAssemblyLocation();
+  repr << block->toString();
   if (atReturn()) {
     repr << " (at the end)";
   }
@@ -56,7 +56,7 @@ ref<Target> Target::getFromCacheOrReturn(Target *target) {
   return target;
 }
 
-ref<Target> Target::create(const std::unordered_set<ReachWithError> &_errors,
+ref<Target> Target::create(const std::set<ReachWithError> &_errors,
                            unsigned _id, optional<ErrorLocation> _loc,
                            KBlock *_block) {
   Target *target = new Target(_errors, _id, _loc, _block);
@@ -80,14 +80,14 @@ bool Target::isTheSameAsIn(KInstruction *instr) const {
 }
 
 int Target::compare(const Target &other) const {
-  if (block != other.block) {
-    return block < other.block ? -1 : 1;
-  }
   if (errors != other.errors) {
-    return *errors.begin() < *other.errors.begin() ? -1 : 1;
+    return errors < other.errors ? -1 : 1;
   }
   if (id != other.id) {
     return id < other.id ? -1 : 1;
+  }
+  if (block != other.block) {
+    return block < other.block ? -1 : 1;
   }
   return 0;
 }

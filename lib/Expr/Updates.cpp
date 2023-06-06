@@ -61,8 +61,8 @@ void UpdateList::extend(const ref<Expr> &index, const ref<Expr> &value) {
 }
 
 int UpdateList::compare(const UpdateList &b) const {
-  if (root->name != b.root->name)
-    return root->name < b.root->name ? -1 : 1;
+  if (root->source != b.root->source)
+    return root->source < b.root->source ? -1 : 1;
 
   // Check the root itself in case we have separate objects with the
   // same name.
@@ -90,9 +90,8 @@ int UpdateList::compare(const UpdateList &b) const {
 
 unsigned UpdateList::hash() const {
   unsigned res = 0;
-  for (unsigned i = 0, e = root->name.size(); i != e; ++i)
-    res = (res * Expr::MAGIC_HASH_CONSTANT) + root->name[i];
+  res = (res * Expr::MAGIC_HASH_CONSTANT) + root->source->hash();
   if (head)
-    res ^= head->hash();
+    res = (res * Expr::MAGIC_HASH_CONSTANT) + head->hash();
   return res;
 }

@@ -219,6 +219,12 @@ llvm::cl::opt<bool>
     ProduceUnsatCore("produce-unsat-core", llvm::cl::init(true),
                      llvm::cl::desc("Produce unsat core (default=true)."),
                      llvm::cl::cat(klee::SolvingCat));
+
+llvm::cl::opt<unsigned> SymbolicAllocationThreshhold(
+    "symbolic-allocation-threshhold",
+    llvm::cl::desc("Maximum possible sum of sizes for all symbolic allocation "
+                   "before minimazation (default 1Kb)"),
+    llvm::cl::init(1024), llvm::cl::cat(klee::SolvingCat));
 } // namespace klee
 
 #undef STP_IS_DEFAULT_STR

@@ -2,6 +2,7 @@
 #define KLEE_INDEPENDENTSET_H
 
 #include "klee/Expr/Expr.h"
+#include "klee/Expr/ExprHashMap.h"
 #include "klee/Solver/Solver.h"
 #include "llvm/Support/raw_ostream.h"
 #include <list>
@@ -75,14 +76,14 @@ public:
   elements_ty
       elements; // Represents individual elements of array accesses (arr[1])
   std::set<const Array *>
-      wholeObjects; // Represents symbolically accessed arrays (arr[x])
-  std::vector<ref<Expr>> exprs; // All expressions that are associated with this
-                                // factor Although order doesn't matter, we use
-                                // a vector to match the ConstraintManager
-                                // constructor that will eventually be invoked.
+      wholeObjects;     // Represents symbolically accessed arrays (arr[x])
+  constraints_ty exprs; // All expressions (constraints) that are associated
+                        // with this factor
+  SymcreteOrderedSet symcretes; // All symcretes associated with this factor
 
   IndependentElementSet();
   IndependentElementSet(ref<Expr> e);
+  IndependentElementSet(ref<Symcrete> s);
   IndependentElementSet(const IndependentElementSet &ies);
 
   IndependentElementSet &operator=(const IndependentElementSet &ies);
@@ -110,7 +111,7 @@ std::list<IndependentElementSet> *
 getAllIndependentConstraintsSets(const Query &query);
 
 IndependentElementSet getIndependentConstraints(const Query &query,
-                                                std::vector<ref<Expr>> &result);
+                                                constraints_ty &result);
 
 // Extracts which arrays are referenced from a particular independent set.
 // Examines both the actual known array accesses arr[1] plus the undetermined

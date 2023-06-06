@@ -43,11 +43,15 @@ struct KInstruction {
   unsigned dest;
   KBlock *parent;
 
+  // Instruction index in the basic block
+  unsigned index;
+
 public:
   KInstruction() = default;
   explicit KInstruction(const KInstruction &ki);
   virtual ~KInstruction();
   std::string getSourceLocation() const;
+  std::string toString() const;
 };
 
 struct KGEPInstruction : KInstruction {

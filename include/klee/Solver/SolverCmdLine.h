@@ -70,6 +70,8 @@ extern llvm::cl::opt<CoreSolverType> DebugCrossCheckCoreSolverWith;
 
 extern llvm::cl::opt<bool> ProduceUnsatCore;
 
+extern llvm::cl::opt<unsigned> SymbolicAllocationThreshhold;
+
 #ifdef ENABLE_METASMT
 
 enum MetaSMTBackendType {

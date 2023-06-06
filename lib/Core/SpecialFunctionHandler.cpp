@@ -301,8 +301,13 @@ void SpecialFunctionHandler::bind() {
     HandlerInfo &hi = handlerInfo[i];
     Function *f = executor.kmodule->module->getFunction(hi.name);
 
-    if (f && (!hi.doNotOverride || f->isDeclaration()))
+    if (f && (!hi.doNotOverride || f->isDeclaration())) {
       handlers[f] = std::make_pair(hi.handler, hi.hasReturnValue);
+
+      if (executor.kmodule->functionMap.count(f)) {
+        executor.kmodule->functionMap.at(f)->kleeHandled = true;
+      }
+    }
   }
 }
 
@@ -506,7 +511,7 @@ void SpecialFunctionHandler::handleMemalign(ExecutionState &state,
   }
 
   std::pair<ref<Expr>, ref<Expr>> alignmentRangeExpr =
-      executor.solver->getRange(state.constraints, arguments[0],
+      executor.solver->getRange(state.constraints.cs(), arguments[0],
                                 state.queryMetaData);
   ref<Expr> alignmentExpr = alignmentRangeExpr.first;
   auto alignmentConstExpr = dyn_cast<ConstantExpr>(alignmentExpr);
@@ -587,7 +592,7 @@ void SpecialFunctionHandler::handleAssume(ExecutionState &state,
 
   bool res;
   bool success __attribute__((unused)) = executor.solver->mustBeFalse(
-      state.constraints, e, res, state.queryMetaData);
+      state.constraints.cs(), e, res, state.queryMetaData);
   assert(success && "FIXME: Unhandled solver failure");
   if (res) {
     if (SilentKleeAssume) {
@@ -698,10 +703,10 @@ void SpecialFunctionHandler::handlePrintRange(
     // FIXME: Pull into a unique value method?
     ref<ConstantExpr> value;
     bool success __attribute__((unused)) = executor.solver->getValue(
-        state.constraints, arguments[1], value, state.queryMetaData);
+        state.constraints.cs(), arguments[1], value, state.queryMetaData);
     assert(success && "FIXME: Unhandled solver failure");
     bool res;
-    success = executor.solver->mustBeTrue(state.constraints,
+    success = executor.solver->mustBeTrue(state.constraints.cs(),
                                           EqExpr::create(arguments[1], value),
                                           res, state.queryMetaData);
     assert(success && "FIXME: Unhandled solver failure");
@@ -710,7 +715,7 @@ void SpecialFunctionHandler::handlePrintRange(
     } else {
       llvm::errs() << " ~= " << value;
       std::pair<ref<Expr>, ref<Expr>> res = executor.solver->getRange(
-          state.constraints, arguments[1], state.queryMetaData);
+          state.constraints.cs(), arguments[1], state.queryMetaData);
       llvm::errs() << " (in [" << res.first << ", " << res.second << "])";
     }
   }
@@ -956,7 +961,7 @@ void SpecialFunctionHandler::handleMakeSymbolic(
     // FIXME: Type coercion should be done consistently somewhere.
     bool res;
     bool success __attribute__((unused)) = executor.solver->mustBeTrue(
-        s->constraints,
+        s->constraints.cs(),
         EqExpr::create(
             ZExtExpr::create(arguments[1], Context::get().getPointerWidth()),
             mo->getSizeExpr()),
@@ -964,8 +969,15 @@ void SpecialFunctionHandler::handleMakeSymbolic(
     assert(success && "FIXME: Unhandled solver failure");
 
     if (res) {
-      executor.executeMakeSymbolic(*s, mo, old->getDynamicType(), name,
-                                   SourceBuilder::makeSymbolic(), false);
+      uint64_t sid = 0;
+      if (state.arrayNames.count(name)) {
+        sid = state.arrayNames[name];
+      }
+      executor.executeMakeSymbolic(
+          *s, mo, old->getDynamicType(),
+          SourceBuilder::makeSymbolic(name,
+                                      executor.updateNameVersion(*s, name)),
+          false);
     } else {
       executor.terminateStateOnUserError(
           *s, "Wrong size given to klee_make_symbolic");

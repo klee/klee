@@ -11,6 +11,7 @@
 #define KLEE_IMMUTABLETREE_H
 
 #include <cassert>
+#include <cstddef>
 #include <vector>
 
 namespace klee {

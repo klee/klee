@@ -48,6 +48,8 @@ const char *Token::getKindName() const {
     return "KWFalse";
   case KWQuery:
     return "KWQuery";
+  case KWPath:
+    return "KWPath";
   case KWReserved:
     return "KWReserved";
   case KWSymbolic:
@@ -83,7 +85,8 @@ void Token::dump() {
 ///
 
 static inline bool isInternalIdentifierChar(int Char) {
-  return isalnum(Char) || Char == '_' || Char == '.' || Char == '-';
+  return isalnum(Char) || Char == '_' || Char == '.' || Char == '-' ||
+         Char == '%';
 }
 
 Lexer::Lexer(const llvm::MemoryBuffer *MB)
@@ -171,6 +174,8 @@ Token &Lexer::SetIdentifierTokenKind(Token &Result) {
   case 4:
     if (memcmp("true", Result.start, 4) == 0)
       return SetTokenKind(Result, Token::KWTrue);
+    if (memcmp("path", Result.start, 4) == 0)
+      return SetTokenKind(Result, Token::KWPath);
     break;
 
   case 5:
@@ -293,7 +298,7 @@ Token &Lexer::Lex(Token &Result) {
   default:
     if (isdigit(Char))
       return LexNumber(Result);
-    else if (isalpha(Char) || Char == '_')
+    else if (isalpha(Char) || Char == '_' || Char == '%')
       return LexIdentifier(Result);
     return SetTokenKind(Result, Token::Unknown);
   }

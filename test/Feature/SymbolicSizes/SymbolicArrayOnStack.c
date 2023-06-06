@@ -1,7 +1,7 @@
 // REQUIRES: z3
 // RUN: %clang %s -emit-llvm %O0opt -c -g -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --out-of-mem-allocs=true -solver-backend=z3 %t.bc 2>&1 | FileCheck %s
+// RUN: %klee --output-dir=%t.klee-out --out-of-mem-allocs=true --solver-backend=z3 --use-merged-pointer-dereference=true %t.bc 2>&1 | FileCheck %s
 
 #include "klee/klee.h"
 

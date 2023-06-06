@@ -1,7 +1,7 @@
 // REQUIRES: z3
 // RUN: %clang %s -g -emit-llvm %O0opt -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out %t1.bc 2>&1 | FileCheck %s
+// RUN: %klee --out-of-mem-allocs --output-dir=%t.klee-out --use-merged-pointer-dereference=true %t1.bc 2>&1 | FileCheck %s
 
 #include "klee/klee.h"
 #include <assert.h>
@@ -13,6 +13,7 @@ int main() {
   if (n >= 5) {
     char *c1 = (char *)malloc(n);
     char *c2 = (char *)malloc(9 - n);
+    // CHECK: ImplicitSizeConcretization.c:[[@LINE+2]]: memory error: null pointer exception
     // CHECK: ImplicitSizeConcretization.c:[[@LINE+1]]: memory error: out of bound pointer
     c2[3] = 10;
     if (n >= 6) {
@@ -25,5 +26,5 @@ int main() {
 }
 
 // CHECK: KLEE: done: completed paths = 2
-// CHECK: KLEE: done: partially completed paths = 3
-// CHECK: KLEE: done: generated tests = 3
+// CHECK: KLEE: done: partially completed paths = 2
+// CHECK: KLEE: done: generated tests = 4

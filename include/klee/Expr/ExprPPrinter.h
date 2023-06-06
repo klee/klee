@@ -45,11 +45,6 @@ public:
       scan(*it);
   }
 
-  /// printOne - Pretty print a single expression prefixed by a
-  /// message and followed by a line break.
-  static void printOne(llvm::raw_ostream &os, const char *message,
-                       const ref<Expr> &e);
-
   /// printSingleExpr - Pretty print a single expression.
   ///
   /// The expression will not be followed by a line break.
@@ -58,6 +53,11 @@ public:
   /// beginning of a line then printing will not resume at the
   /// correct position following any output line breaks.
   static void printSingleExpr(llvm::raw_ostream &os, const ref<Expr> &e);
+
+  static void printSignleArray(llvm::raw_ostream &os, const Array *a);
+
+  static void printSignleSource(llvm::raw_ostream &os,
+                                const ref<SymbolicSource> s);
 
   static void printConstraints(llvm::raw_ostream &os,
                                const ConstraintSet &constraints);

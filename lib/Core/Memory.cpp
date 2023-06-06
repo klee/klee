@@ -85,8 +85,7 @@ ObjectState::ObjectState(const MemoryObject *mo, KType *dt)
   if (!UseConstantArrays) {
     static unsigned id = 0;
     const Array *array = getArrayCache()->CreateArray(
-        "tmp_arr" + llvm::utostr(++id), mo->getSizeExpr(),
-        SourceBuilder::makeSymbolic());
+        mo->getSizeExpr(), SourceBuilder::makeSymbolic("tmp_arr", ++id));
     updates = UpdateList(array, 0);
   }
   memset(concreteStore, 0, size);
@@ -145,7 +144,7 @@ ObjectState::ObjectState(const MemoryObject *mo, const ObjectState &os)
 
   if (updates.root &&
       (isa_and_nonnull<MakeSymbolicSource>(updates.root->source) ||
-       isa_and_nonnull<LazyInitializationSymbolicSource>(
+       isa_and_nonnull<LazyInitializationContentSource>(
            updates.root->source))) {
     /* As now we cannot make only a part of object symbolic,
     we will mark all remain bytes as symbolic. */
@@ -228,8 +227,7 @@ const UpdateList &ObjectState::getUpdates() const {
       /* Extend updates with last written non-zero constant values.
       ConstantValues must be empty in constant array. */
       array = getArrayCache()->CreateArray(
-          arrayName, object->getSizeExpr(),
-          SourceBuilder::constantWithSymbolicSize(0));
+          object->getSizeExpr(), SourceBuilder::symbolicSizeConstant(0));
       updates = UpdateList(array, 0);
       for (unsigned idx = 0; idx < size; ++idx) {
         if (!Contents[idx]->getZExtValue()) {
@@ -237,9 +235,8 @@ const UpdateList &ObjectState::getUpdates() const {
         }
       }
     } else {
-      array = getArrayCache()->CreateArray(
-          arrayName, object->getSizeExpr(), SourceBuilder::constant(),
-          &Contents[0], &Contents[0] + Contents.size());
+      array = getArrayCache()->CreateArray(object->getSizeExpr(),
+                                           SourceBuilder::constant(Contents));
       updates = UpdateList(array, 0);
     }
 
@@ -256,7 +253,7 @@ void ObjectState::flushToConcreteStore(TimingSolver *solver,
   for (unsigned i = 0; i < size; i++) {
     if (isByteKnownSymbolic(i)) {
       ref<ConstantExpr> ce;
-      bool success = solver->getValue(state.constraints, read8(i), ce,
+      bool success = solver->getValue(state.constraints.cs(), read8(i), ce,
                                       state.queryMetaData);
       if (!success)
         klee_warning("Solver timed out when getting a value for external call, "

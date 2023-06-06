@@ -24,7 +24,7 @@ public:
       : solver(_solver), oracle(_oracle) {}
   ~ValidatingSolver() { delete solver; }
 
-  bool computeValidity(const Query &, Solver::Validity &result);
+  bool computeValidity(const Query &, PartialValidity &result);
   bool computeTruth(const Query &, bool &isValid);
   bool computeValue(const Query &, ref<Expr> &result);
   bool computeInitialValues(const Query &,
@@ -54,8 +54,8 @@ bool ValidatingSolver::computeTruth(const Query &query, bool &isValid) {
 }
 
 bool ValidatingSolver::computeValidity(const Query &query,
-                                       Solver::Validity &result) {
-  Solver::Validity answer;
+                                       PartialValidity &result) {
+  PartialValidity answer;
 
   if (!solver->impl->computeValidity(query, result))
     return false;
@@ -89,6 +89,7 @@ bool ValidatingSolver::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
     std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
   bool answer;
+  assert(!query.containsSymcretes());
 
   if (!solver->impl->computeInitialValues(query, objects, values, hasSolution))
     return false;
@@ -109,15 +110,16 @@ bool ValidatingSolver::computeInitialValues(
 
       for (unsigned j = 0; j < arrayConstantSize->getZExtValue(); j++) {
         unsigned char value = values[i].load(j);
-        bindings.push_back(EqExpr::create(
-            ReadExpr::create(UpdateList(array, 0),
-                             ConstantExpr::alloc(j, array->getDomain())),
-            ConstantExpr::alloc(value, array->getRange())));
+        bindings.addConstraint(
+            EqExpr::create(
+                ReadExpr::create(UpdateList(array, 0),
+                                 ConstantExpr::alloc(j, array->getDomain())),
+                ConstantExpr::alloc(value, array->getRange())),
+            {});
       }
     }
-    ConstraintManager tmp(bindings);
     ref<Expr> constraints = Expr::createIsZero(query.expr);
-    for (auto const &constraint : query.constraints)
+    for (auto const &constraint : query.constraints.cs())
       constraints = AndExpr::create(constraints, constraint);
 
     if (!oracle->impl->computeTruth(Query(bindings, constraints), answer))
@@ -164,15 +166,16 @@ bool ValidatingSolver::check(const Query &query, ref<SolverResponse> &result) {
 
       for (unsigned j = 0; j < arrayConstantSize->getZExtValue(); j++) {
         unsigned char value = arrayValues.second.load(j);
-        bindings.push_back(EqExpr::create(
-            ReadExpr::create(UpdateList(array, 0),
-                             ConstantExpr::alloc(j, array->getDomain())),
-            ConstantExpr::alloc(value, array->getRange())));
+        bindings.addConstraint(
+            EqExpr::create(
+                ReadExpr::create(UpdateList(array, 0),
+                                 ConstantExpr::alloc(j, array->getDomain())),
+                ConstantExpr::alloc(value, array->getRange())),
+            {});
       }
     }
-    ConstraintManager tmp(bindings);
     ref<Expr> constraints = Expr::createIsZero(query.expr);
-    for (auto const &constraint : query.constraints)
+    for (auto const &constraint : query.constraints.cs())
       constraints = AndExpr::create(constraints, constraint);
 
     if (!oracle->impl->computeTruth(Query(bindings, constraints), banswer))

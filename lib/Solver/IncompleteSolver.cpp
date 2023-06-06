@@ -10,52 +10,35 @@
 #include "klee/Solver/IncompleteSolver.h"
 
 #include "klee/Expr/Constraints.h"
+#include "klee/Solver/SolverUtil.h"
 
 using namespace klee;
 using namespace llvm;
 
 /***/
 
-IncompleteSolver::PartialValidity
-IncompleteSolver::negatePartialValidity(PartialValidity pv) {
-  switch (pv) {
-  default:
-    assert(0 && "invalid partial validity");
-  case MustBeTrue:
-    return MustBeFalse;
-  case MustBeFalse:
-    return MustBeTrue;
-  case MayBeTrue:
-    return MayBeFalse;
-  case MayBeFalse:
-    return MayBeTrue;
-  case TrueOrFalse:
-    return TrueOrFalse;
-  }
-}
-
-IncompleteSolver::PartialValidity
-IncompleteSolver::computeValidity(const Query &query) {
+PartialValidity IncompleteSolver::computeValidity(const Query &query) {
   PartialValidity trueResult = computeTruth(query);
 
-  if (trueResult == MustBeTrue) {
-    return MustBeTrue;
+  if (trueResult == PValidity::MustBeTrue) {
+    return PValidity::MustBeTrue;
   } else {
     PartialValidity falseResult = computeTruth(query.negateExpr());
 
-    if (falseResult == MustBeTrue) {
-      return MustBeFalse;
+    if (falseResult == PValidity::MustBeTrue) {
+      return PValidity::MustBeFalse;
     } else {
-      bool trueCorrect = trueResult != None, falseCorrect = falseResult != None;
+      bool trueCorrect = trueResult != PValidity::None,
+           falseCorrect = falseResult != PValidity::None;
 
       if (trueCorrect && falseCorrect) {
-        return TrueOrFalse;
+        return PValidity::TrueOrFalse;
       } else if (trueCorrect) { // ==> trueResult == MayBeFalse
-        return MayBeFalse;
+        return PValidity::MayBeFalse;
       } else if (falseCorrect) { // ==> falseResult == MayBeFalse
-        return MayBeTrue;
+        return PValidity::MayBeTrue;
       } else {
-        return None;
+        return PValidity::None;
       }
     }
   }
@@ -73,10 +56,10 @@ StagedSolverImpl::~StagedSolverImpl() {
 }
 
 bool StagedSolverImpl::computeTruth(const Query &query, bool &isValid) {
-  IncompleteSolver::PartialValidity trueResult = primary->computeTruth(query);
+  PartialValidity trueResult = primary->computeTruth(query);
 
-  if (trueResult != IncompleteSolver::None) {
-    isValid = (trueResult == IncompleteSolver::MustBeTrue);
+  if (trueResult != PValidity::None) {
+    isValid = (trueResult == PValidity::MustBeTrue);
     return true;
   }
 
@@ -84,28 +67,33 @@ bool StagedSolverImpl::computeTruth(const Query &query, bool &isValid) {
 }
 
 bool StagedSolverImpl::computeValidity(const Query &query,
-                                       Solver::Validity &result) {
+                                       PartialValidity &result) {
   bool tmp;
 
   switch (primary->computeValidity(query)) {
-  case IncompleteSolver::MustBeTrue:
-    result = Solver::True;
+  case PValidity::MustBeTrue:
+    result = PValidity::MustBeTrue;
     break;
-  case IncompleteSolver::MustBeFalse:
-    result = Solver::False;
+  case PValidity::MustBeFalse:
+    result = PValidity::MustBeFalse;
     break;
-  case IncompleteSolver::TrueOrFalse:
-    result = Solver::Unknown;
+  case PValidity::TrueOrFalse:
+    result = PValidity::TrueOrFalse;
     break;
-  case IncompleteSolver::MayBeTrue:
-    if (!secondary->impl->computeTruth(query, tmp))
-      return false;
-    result = tmp ? Solver::True : Solver::Unknown;
+  case PValidity::MayBeTrue:
+    if (secondary->impl->computeTruth(query, tmp)) {
+
+      result = tmp ? PValidity::MustBeTrue : PValidity::TrueOrFalse;
+    } else {
+      result = PValidity::MayBeTrue;
+    }
     break;
-  case IncompleteSolver::MayBeFalse:
-    if (!secondary->impl->computeTruth(query.negateExpr(), tmp))
-      return false;
-    result = tmp ? Solver::False : Solver::Unknown;
+  case PValidity::MayBeFalse:
+    if (secondary->impl->computeTruth(query.negateExpr(), tmp)) {
+      result = tmp ? PValidity::MustBeFalse : PValidity::TrueOrFalse;
+    } else {
+      result = PValidity::MayBeFalse;
+    }
     break;
   default:
     if (!secondary->impl->computeValidity(query, result))
@@ -135,7 +123,8 @@ bool StagedSolverImpl::computeInitialValues(
 
 bool StagedSolverImpl::check(const Query &query, ref<SolverResponse> &result) {
   ExprHashSet expressions;
-  expressions.insert(query.constraints.begin(), query.constraints.end());
+  expressions.insert(query.constraints.cs().begin(),
+                     query.constraints.cs().end());
   expressions.insert(query.expr);
 
   std::vector<const Array *> objects;

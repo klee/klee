@@ -12,6 +12,7 @@
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprBuilder.h"
+#include "klee/Expr/ExprHashMap.h"
 #include "klee/Expr/ExprPPrinter.h"
 #include "klee/Expr/ExprSMTLIBPrinter.h"
 #include "klee/Expr/ExprVisitor.h"
@@ -36,7 +37,6 @@
 
 #include "llvm/Support/Signals.h"
 
-using namespace llvm;
 using namespace klee;
 using namespace klee::expr;
 
@@ -127,14 +127,14 @@ static std::string escapedString(const char *start, unsigned length) {
     } else if (c == '\n') {
       s << "\\n";
     } else {
-      s << "\\x" << hexdigit(((unsigned char)c >> 4) & 0xF)
-        << hexdigit((unsigned char)c & 0xF);
+      s << "\\x" << llvm::hexdigit(((unsigned char)c >> 4) & 0xF)
+        << llvm::hexdigit((unsigned char)c & 0xF);
     }
   }
   return s.str();
 }
 
-static void PrintInputTokens(const MemoryBuffer *MB) {
+static void PrintInputTokens(const llvm::MemoryBuffer *MB) {
   Lexer L(MB);
   Token T;
   do {
@@ -145,7 +145,7 @@ static void PrintInputTokens(const MemoryBuffer *MB) {
   } while (T.kind != Token::EndOfFile);
 }
 
-static bool PrintInputAST(const char *Filename, const MemoryBuffer *MB,
+static bool PrintInputAST(const char *Filename, const llvm::MemoryBuffer *MB,
                           ExprBuilder *Builder) {
   std::vector<Decl *> Decls;
   Parser *P = Parser::Create(Filename, MB, Builder, ClearArrayAfterQuery);
@@ -177,7 +177,7 @@ static bool PrintInputAST(const char *Filename, const MemoryBuffer *MB,
   return success;
 }
 
-static bool EvaluateInputAST(const char *Filename, const MemoryBuffer *MB,
+static bool EvaluateInputAST(const char *Filename, const llvm::MemoryBuffer *MB,
                              ExprBuilder *Builder) {
   std::vector<Decl *> Decls;
   Parser *P = Parser::Create(Filename, MB, Builder, ClearArrayAfterQuery);
@@ -220,8 +220,13 @@ static bool EvaluateInputAST(const char *Filename, const MemoryBuffer *MB,
       assert("FIXME: Support counterexample query commands!");
       if (QC->Values.empty() && QC->Objects.empty()) {
         bool result;
-        if (S->mustBeTrue(Query(ConstraintSet(QC->Constraints), QC->Query),
-                          result)) {
+        constraints_ty constraints;
+        for (auto i : QC->Constraints) {
+          constraints.insert(i);
+        }
+        if (S->mustBeTrue(
+                Query(ConstraintSet(constraints, {}, {true}), QC->Query),
+                result)) {
           llvm::outs() << (result ? "VALID" : "INVALID");
         } else {
           llvm::outs() << "FAIL (reason: "
@@ -237,8 +242,13 @@ static bool EvaluateInputAST(const char *Filename, const MemoryBuffer *MB,
         assert(QC->Query->isFalse() &&
                "FIXME: Support counterexamples with non-trivial query!");
         ref<ConstantExpr> result;
-        if (S->getValue(Query(ConstraintSet(QC->Constraints), QC->Values[0]),
-                        result)) {
+        constraints_ty constraints;
+        for (auto i : QC->Constraints) {
+          constraints.insert(i);
+        }
+        if (S->getValue(
+                Query(ConstraintSet(constraints, {}, {true}), QC->Values[0]),
+                result)) {
           llvm::outs() << "INVALID\n";
           llvm::outs() << "\tExpr 0:\t" << result;
         } else {
@@ -250,14 +260,19 @@ static bool EvaluateInputAST(const char *Filename, const MemoryBuffer *MB,
       } else {
         std::vector<SparseStorage<unsigned char>> result;
 
+        constraints_ty constraints;
+        for (auto i : QC->Constraints) {
+          constraints.insert(i);
+        }
+
         if (S->getInitialValues(
-                Query(ConstraintSet(QC->Constraints), QC->Query), QC->Objects,
-                result)) {
+                Query(ConstraintSet(constraints, {}, {true}), QC->Query),
+                QC->Objects, result)) {
           llvm::outs() << "INVALID\n";
           Assignment solutionAssugnment(QC->Objects, result);
           for (unsigned i = 0, e = result.size(); i != e; ++i) {
-            llvm::outs() << "\tArray " << i << ":\t" << QC->Objects[i]->name
-                         << "[";
+            llvm::outs() << "\tArray " << i << ":\t"
+                         << QC->Objects[i]->getIdentifier() << "[";
             ref<ConstantExpr> arrayConstantSize = dyn_cast<ConstantExpr>(
                 solutionAssugnment.evaluate(QC->Objects[i]->size));
             assert(arrayConstantSize &&
@@ -316,7 +331,8 @@ static bool EvaluateInputAST(const char *Filename, const MemoryBuffer *MB,
   return success;
 }
 
-static bool printInputAsSMTLIBv2(const char *Filename, const MemoryBuffer *MB,
+static bool printInputAsSMTLIBv2(const char *Filename,
+                                 const llvm::MemoryBuffer *MB,
                                  ExprBuilder *Builder) {
   // Parse the input file
   std::vector<Decl *> Decls;
@@ -359,7 +375,12 @@ static bool printInputAsSMTLIBv2(const char *Filename, const MemoryBuffer *MB,
        * constraint in the constraint set is set to NULL and
        * will later cause a NULL pointer dereference.
        */
-      ConstraintSet constraintM(QC->Constraints);
+      constraints_ty constraints;
+      for (auto i : QC->Constraints) {
+        constraints.insert(i);
+      }
+
+      ConstraintSet constraintM(constraints, {}, {true});
       Query query(constraintM, QC->Query);
       printer.setQuery(query);
 
@@ -396,13 +417,13 @@ int main(int argc, char **argv) {
 
   std::string ErrorStr;
 
-  auto MBResult = MemoryBuffer::getFileOrSTDIN(InputFile.c_str());
+  auto MBResult = llvm::MemoryBuffer::getFileOrSTDIN(InputFile.c_str());
   if (!MBResult) {
     llvm::errs() << argv[0] << ": error: " << MBResult.getError().message()
                  << "\n";
     return 1;
   }
-  std::unique_ptr<MemoryBuffer> &MB = *MBResult;
+  std::unique_ptr<llvm::MemoryBuffer> &MB = *MBResult;
 
   ExprBuilder *Builder = 0;
   switch (BuilderKind) {

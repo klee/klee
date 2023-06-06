@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Expr/SymbolicSource.h"
+#include "klee/Solver/SolverUtil.h"
 #include "llvm/Support/Casting.h"
 #define DEBUG_TYPE "independent-solver"
 #include "klee/Solver/Solver.h"
@@ -15,6 +16,7 @@
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
+#include "klee/Expr/ExprHashMap.h"
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Expr/IndependentSet.h"
 #include "klee/Solver/SolverImpl.h"
@@ -39,7 +41,7 @@ public:
   ~IndependentSolver() { delete solver; }
 
   bool computeTruth(const Query &, bool &isValid);
-  bool computeValidity(const Query &, Solver::Validity &result);
+  bool computeValidity(const Query &, PartialValidity &result);
   bool computeValue(const Query &, ref<Expr> &result);
   bool computeInitialValues(const Query &query,
                             const std::vector<const Array *> &objects,
@@ -54,27 +56,33 @@ public:
 };
 
 bool IndependentSolver::computeValidity(const Query &query,
-                                        Solver::Validity &result) {
-  std::vector<ref<Expr>> required;
+                                        PartialValidity &result) {
+  constraints_ty required;
   IndependentElementSet eltsClosure =
       getIndependentConstraints(query, required);
-  ConstraintSet tmp(required);
+  ConstraintSet tmp(
+      required, eltsClosure.symcretes,
+      query.constraints.concretization().part(eltsClosure.symcretes));
   return solver->impl->computeValidity(query.withConstraints(tmp), result);
 }
 
 bool IndependentSolver::computeTruth(const Query &query, bool &isValid) {
-  std::vector<ref<Expr>> required;
+  constraints_ty required;
   IndependentElementSet eltsClosure =
       getIndependentConstraints(query, required);
-  ConstraintSet tmp(required);
+  ConstraintSet tmp(
+      required, eltsClosure.symcretes,
+      query.constraints.concretization().part(eltsClosure.symcretes));
   return solver->impl->computeTruth(query.withConstraints(tmp), isValid);
 }
 
 bool IndependentSolver::computeValue(const Query &query, ref<Expr> &result) {
-  std::vector<ref<Expr>> required;
+  constraints_ty required;
   IndependentElementSet eltsClosure =
       getIndependentConstraints(query, required);
-  ConstraintSet tmp(required);
+  ConstraintSet tmp(
+      required, eltsClosure.symcretes,
+      query.constraints.concretization().part(eltsClosure.symcretes));
   return solver->impl->computeValue(query.withConstraints(tmp), result);
 }
 
@@ -97,7 +105,7 @@ bool assertCreatedPointEvaluatesToTrue(
   if (retMap.size() > 0)
     assign.bindings.insert(retMap.begin(), retMap.end());
 
-  for (auto const &constraint : query.constraints) {
+  for (auto const &constraint : query.constraints.cs()) {
     ref<Expr> ret = assign.evaluate(constraint);
 
     assert(isa<ConstantExpr>(ret) &&
@@ -153,7 +161,8 @@ bool IndependentSolver::computeInitialValues(
     if (arraysInFactor.size() == 0) {
       continue;
     }
-    ConstraintSet tmp(it->exprs);
+    ConstraintSet tmp(it->exprs, it->symcretes,
+                      query.constraints.concretization().part(it->symcretes));
     std::vector<SparseStorage<unsigned char>> tempValues;
     if (!solver->impl->computeInitialValues(
             Query(tmp, ConstantExpr::alloc(0, Expr::Bool)), arraysInFactor,
@@ -237,7 +246,7 @@ bool IndependentSolver::check(const Query &query, ref<SolverResponse> &result) {
       continue;
     }
 
-    std::vector<ref<Expr>> factorConstraints = it->exprs;
+    constraints_ty factorConstraints = it->exprs;
     ref<Expr> factorExpr = ConstantExpr::alloc(0, Expr::Bool);
     auto factorConstraintsExprIterator =
         std::find(factorConstraints.begin(), factorConstraints.end(),
@@ -250,7 +259,11 @@ bool IndependentSolver::check(const Query &query, ref<SolverResponse> &result) {
     ref<SolverResponse> tempResult;
     std::vector<SparseStorage<unsigned char>> tempValues;
     if (!solver->impl->check(
-            Query(ConstraintSet(factorConstraints), factorExpr), tempResult)) {
+            Query(ConstraintSet(
+                      factorConstraints, it->symcretes,
+                      query.constraints.concretization().part(it->symcretes)),
+                  factorExpr),
+            tempResult)) {
       delete factors;
       return false;
     } else if (isa<ValidResponse>(tempResult)) {
@@ -258,8 +271,9 @@ bool IndependentSolver::check(const Query &query, ref<SolverResponse> &result) {
       result = tempResult;
       return true;
     } else {
-      assert(tempResult->tryGetInitialValuesFor(arraysInFactor, tempValues) &&
-             "Can not get initial values (Independent solver)!");
+      bool success =
+          tempResult->tryGetInitialValuesFor(arraysInFactor, tempValues);
+      assert(success && "Can not get initial values (Independent solver)!");
       assert(tempValues.size() == arraysInFactor.size() &&
              "Should be equal number arrays and answers");
       for (unsigned i = 0; i < tempValues.size(); i++) {
@@ -285,7 +299,8 @@ bool IndependentSolver::check(const Query &query, ref<SolverResponse> &result) {
   }
   result = new InvalidResponse(retMap);
   std::map<const Array *, SparseStorage<unsigned char>> bindings;
-  assert(result->tryGetInitialValues(bindings));
+  bool success = result->tryGetInitialValues(bindings);
+  assert(success);
   assert(assertCreatedPointEvaluatesToTrue(query, bindings, retMap) &&
          "should satisfy the equation");
   delete factors;
@@ -295,10 +310,12 @@ bool IndependentSolver::check(const Query &query, ref<SolverResponse> &result) {
 bool IndependentSolver::computeValidityCore(const Query &query,
                                             ValidityCore &validityCore,
                                             bool &isValid) {
-  std::vector<ref<Expr>> required;
+  constraints_ty required;
   IndependentElementSet eltsClosure =
       getIndependentConstraints(query, required);
-  ConstraintSet tmp(required);
+  ConstraintSet tmp(
+      required, eltsClosure.symcretes,
+      query.constraints.concretization().part(eltsClosure.symcretes));
   return solver->impl->computeValidityCore(query.withConstraints(tmp),
                                            validityCore, isValid);
 }

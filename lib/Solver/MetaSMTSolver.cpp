@@ -226,7 +226,7 @@ SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCex(
     std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
 
   // assume the constraints of the query
-  for (auto &constraint : query.constraints)
+  for (auto &constraint : query.constraints.cs())
     assumption(_meta_solver, _builder->construct(constraint));
 
   // assume the negation of the query
@@ -235,7 +235,7 @@ SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCex(
 
   if (hasSolution) {
     std::unordered_map<const Array *, std::vector<unsigned>> readOffsets;
-    for (ref<Expr> expr : query.constraints.withExpr(query.expr)) {
+    for (ref<Expr> expr : query.constraints.withExpr(query.expr).cs()) {
       std::vector<ref<ReadExpr>> reads;
       findReads(expr, true, reads);
       for (ref<ReadExpr> read : reads) {
@@ -325,7 +325,7 @@ MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
     }
 
     // assert constraints as we are in a child process
-    for (const auto &constraint : query.constraints) {
+    for (const auto &constraint : query.constraints.cs()) {
       assertion(_meta_solver, _builder->construct(constraint));
       // assumption(_meta_solver, _builder->construct(*it));
     }

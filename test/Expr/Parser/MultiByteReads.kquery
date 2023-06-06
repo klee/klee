@@ -1,20 +1,20 @@
 # RUN: %kleaver -print-ast -pc-multibyte-reads=true %s > %t.log
-# RUN: grep -q "(ReadLSB w32 4 arr1)" %t.log
-# RUN: grep -q "(ReadMSB w32 2 arr2)" %t.log
+# RUN: grep -q "(ReadLSB w32 4 makeSymbolic0)" %t.log
+# RUN: grep -q "(ReadMSB w32 2 makeSymbolic1)" %t.log
 
-array arr1[8] : w32 -> w8 = symbolic
-array arr2[8] : w32 -> w8 = symbolic
+makeSymbolic0 : (array (w64 8) (makeSymbolic arr1 0))
+makeSymbolic1 : (array (w64 8) (makeSymbolic arr2 0))
 
 (query [(Not (Slt 100
-                  (Concat w32 (Read w8 7 arr1)
-                              (Concat w24 (Read w8 6 arr1)
-                                          (Concat w16 (Read w8 5 arr1) (Read w8 4 arr1))))))]
+                  (Concat w32 (Read w8 7 makeSymbolic0)
+                              (Concat w24 (Read w8 6 makeSymbolic0)
+                                          (Concat w16 (Read w8 5 makeSymbolic0) (Read w8 4 makeSymbolic0))))))]
        false)
 
 
 (query [(Not (Slt 100
-                  (Concat w32 (Read w8 2 arr2)
-                              (Concat w24 (Read w8 3 arr2)
-                                          (Concat w16 (Read w8 4 arr2) (Read w8 5 arr2))))))]
+                  (Concat w32 (Read w8 2 makeSymbolic1)
+                              (Concat w24 (Read w8 3 makeSymbolic1)
+                                          (Concat w16 (Read w8 4 makeSymbolic1) (Read w8 5 makeSymbolic1))))))]
        false)
 

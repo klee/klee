@@ -23,6 +23,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <memory>
+#include <set>
 #include <sstream>
 #include <unordered_set>
 #include <vector>
@@ -102,7 +103,7 @@ protected:
 
   struct ExprCmp {
     bool operator()(Expr *const a, Expr *const b) const {
-      return a->compare(*b) == 0;
+      return a->equals(*b);
     }
   };
 
@@ -339,6 +340,8 @@ public:
   static ref<Expr> createZExtToPointerWidth(ref<Expr> e);
   static ref<Expr> createImplies(ref<Expr> hyp, ref<Expr> conc);
   static ref<Expr> createIsZero(ref<Expr> e);
+  static ref<Expr> createTrue();
+  static ref<Expr> createFalse();
 
   /// Create a little endian read of the given type at offset 0 of the
   /// given object.
@@ -561,9 +564,7 @@ public:
 
 class Array {
 public:
-  // Name of the array
-  const std::string name;
-
+  // Size of the array
   ref<Expr> size;
 
   /// This represents the reason why this array was created as well as some
@@ -575,10 +576,10 @@ public:
   /// 8)
   const Expr::Width domain, range;
 
-  /// constantValues - The constant initial values for this array, or empty for
-  /// a symbolic array. If non-empty, this size of this array is equivalent to
-  /// the array size.
-  const std::vector<ref<ConstantExpr>> constantValues;
+  /// ID used for references in query printing and parsing
+  unsigned id;
+
+  std::set<const Array *> dependency;
 
 private:
   unsigned hashValue;
@@ -598,20 +599,22 @@ private:
   /// when printing expressions. When expressions are printed the output will
   /// not parse correctly since two arrays with the same name cannot be
   /// distinguished once printed.
-  Array(const std::string &_name, ref<Expr> _size,
-        const ref<SymbolicSource> source,
-        const ref<ConstantExpr> *constantValuesBegin = 0,
-        const ref<ConstantExpr> *constantValuesEnd = 0,
-        Expr::Width _domain = Expr::Int32, Expr::Width _range = Expr::Int8);
+public:
+  Array(ref<Expr> _size, const ref<SymbolicSource> source,
+        Expr::Width _domain = Expr::Int32, Expr::Width _range = Expr::Int8,
+        unsigned _id = 0);
 
 public:
   bool isSymbolicArray() const { return !isConstantArray(); }
   bool isConstantArray() const {
     return isa<ConstantSource>(source) ||
-           isa<ConstantWithSymbolicSizeSource>(source);
+           isa<SymbolicSizeConstantSource>(source);
   }
 
-  const std::string getName() const { return name; }
+  const std::string getName() const { return source->toString(); }
+  const std::string getIdentifier() const {
+    return source->getName() + llvm::utostr(id);
+  }
   ref<Expr> getSize() const { return size; }
   Expr::Width getDomain() const { return domain; }
   Expr::Width getRange() const { return range; }
@@ -1421,13 +1424,13 @@ public:
   static ref<ConstantExpr> alloc(const llvm::APInt &v) {
     ref<ConstantExpr> r(new ConstantExpr(v));
     r->computeHash();
-    return createCachedExpr(r);
+    return r;
   }
 
   static ref<ConstantExpr> alloc(const llvm::APFloat &f) {
     ref<ConstantExpr> r(new ConstantExpr(f));
     r->computeHash();
-    return createCachedExpr(r);
+    return r;
   }
 
   static ref<ConstantExpr> alloc(uint64_t v, Width w) {

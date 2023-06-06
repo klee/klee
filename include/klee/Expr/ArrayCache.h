@@ -24,13 +24,18 @@ struct EquivArrayCmpFn {
   bool operator()(const Array *array1, const Array *array2) const {
     if (array1 == NULL || array2 == NULL)
       return false;
-    return (array1->size == array2->size) && (array1->name == array2->name);
+    return (array1->size == array2->size) && (array1->source == array2->source);
   }
 };
 
 /// Provides an interface for creating and destroying Array objects.
 class ArrayCache {
 public:
+  template <class T>
+  class ArrayHashMap
+      : public std::unordered_map<const Array *, T, klee::ArrayHashFn,
+                                  klee::EquivArrayCmpFn> {};
+
   ArrayCache() {}
   ~ArrayCache();
   /// Create an Array object.
@@ -44,30 +49,22 @@ public:
   ///
   /// \param _name The name of the array
   /// \param _size The size of the array in bytes
-  /// \param constantValuesBegin A pointer to the beginning of a block of
-  //         memory that constains a ``ref<ConstantExpr>`` (i.e. concrete values
-  //         for the //array). This should be NULL for symbolic arrays.
-  /// for symbolic arrays.
-  /// \param constantValuesEnd A pointer +1 pass the end of a block of memory
-  ///        that contains a ``ref<ConstantExpr>``. This should be NULL for a
-  ///        symbolic array.
   /// \param _domain The size of the domain (i.e. the bitvector used to index
   /// the array)
   /// \param _range The size of range (i.e. the bitvector that is indexed to)
-  const Array *CreateArray(const std::string &_name, ref<Expr> _size,
-                           const ref<SymbolicSource> source,
-                           const ref<ConstantExpr> *constantValuesBegin = 0,
-                           const ref<ConstantExpr> *constantValuesEnd = 0,
+  const Array *CreateArray(ref<Expr> _size, const ref<SymbolicSource> source,
                            Expr::Width _domain = Expr::Int32,
                            Expr::Width _range = Expr::Int8);
 
 private:
   typedef std::unordered_set<const Array *, klee::ArrayHashFn,
                              klee::EquivArrayCmpFn>
-      ArrayHashMap;
-  ArrayHashMap cachedSymbolicArrays;
+      ArrayHashSet;
+  ArrayHashSet cachedSymbolicArrays;
   typedef std::vector<const Array *> ArrayPtrVec;
   ArrayPtrVec concreteArrays;
+
+  unsigned getNextID() const;
 };
 } // namespace klee
 

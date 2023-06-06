@@ -29,8 +29,9 @@ ReadExpr *ArrayExprHelper::hasOrderedReads(const ConcatExpr &ce) {
 
   // right now, all Reads are byte reads but some
   // transformations might change this
-  if (!base || base->getWidth() != Expr::Int8)
+  if (!base || base->getWidth() != Expr::Int8) {
     return nullptr;
+  }
 
   // Get stride expr in proper index width.
   Expr::Width idxWidth = base->index->getWidth();
@@ -52,6 +53,20 @@ ReadExpr *ArrayExprHelper::hasOrderedReads(const ConcatExpr &ce) {
     return nullptr;
 
   return cast<ReadExpr>(e.get());
+}
+
+void ArrayExprHelper::collectAlternatives(
+    const SelectExpr &se, std::vector<ref<Expr>> &alternatives) {
+  if (isa<SelectExpr>(se.trueExpr)) {
+    collectAlternatives(*cast<SelectExpr>(se.trueExpr), alternatives);
+  } else {
+    alternatives.push_back(se.trueExpr);
+  }
+  if (isa<SelectExpr>(se.falseExpr)) {
+    collectAlternatives(*cast<SelectExpr>(se.falseExpr), alternatives);
+  } else {
+    alternatives.push_back(se.falseExpr);
+  }
 }
 
 //--------------------------- INDEX-BASED OPTIMIZATION-----------------------//

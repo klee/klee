@@ -27,10 +27,11 @@ struct Token {
     Comment,    ///< #[^\n]+
     EndOfFile,  ///< <end of file>
     Equals,     ///< ' = '
-    Identifier, ///< [a-zA-Z_][a-zA-Z0-9._]*
+    Identifier, ///< [a-zA-Z_%][a-zA-Z0-9._%]*
     KWArray,    ///< 'array'
     KWFalse,    ///< 'false'
     KWQuery,    ///< 'query'
+    KWPath,     ///< 'path'
     KWReserved, ///< fp[0-9]+([.].*)?, i[0-9]+
     KWSymbolic, ///< 'symbolic'
     KWTrue,     ///< 'true'

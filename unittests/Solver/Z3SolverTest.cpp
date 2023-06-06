@@ -38,7 +38,6 @@ protected:
 
 TEST_F(Z3SolverTest, GetConstraintLog) {
   ConstraintSet Constraints;
-  ConstraintManager cm(Constraints);
 
   const std::vector<uint64_t> ConstantValues{1, 2, 3, 4};
   std::vector<ref<ConstantExpr>> ConstantExpressions;
@@ -50,10 +49,9 @@ TEST_F(Z3SolverTest, GetConstraintLog) {
         return ConstantExpr;
       });
 
-  const Array *ConstantArray = AC.CreateArray(
-      "const_array", ConstantExpr::create(4, sizeof(uint64_t) * CHAR_BIT),
-      SourceBuilder::constant(), ConstantExpressions.data(),
-      ConstantExpressions.data() + ConstantExpressions.size());
+  const Array *ConstantArray =
+      AC.CreateArray(ConstantExpr::create(4, sizeof(uint64_t) * CHAR_BIT),
+                     SourceBuilder::constant(ConstantExpressions));
 
   const UpdateList ConstantArrayUL(ConstantArray, nullptr);
   const ref<Expr> Index = ConstantExpr::alloc(1, Expr::Int32);
@@ -66,7 +64,7 @@ TEST_F(Z3SolverTest, GetConstraintLog) {
   // Ensure this is not buggy as fixed in https://github.com/klee/klee/pull/1235
   // If the bug is still present this fail due to an internal assertion
   char *ConstraintsString = Z3Solver_->getConstraintLog(TheQuery);
-  const char *ExpectedArraySelection = "(= (select const_array0";
+  const char *ExpectedArraySelection = "(= (select constant00";
   const char *Occurence =
       std::strstr(ConstraintsString, ExpectedArraySelection);
   ASSERT_STRNE(Occurence, nullptr);

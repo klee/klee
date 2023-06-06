@@ -40,9 +40,18 @@ void klee::findReads(ref<Expr> e, bool visitUpdates,
       if (!isa<ConstantExpr>(re->index) && visited.insert(re->index).second)
         stack.push_back(re->index);
 
-      if (re->updates.root->getSize() &&
+      if (!isa<ConstantExpr>(re->updates.root->getSize()) &&
           visited.insert(re->updates.root->getSize()).second) {
         stack.push_back(re->updates.root->getSize());
+      }
+
+      if (isa<LazyInitializationSource>(re->updates.root->source) &&
+          visited
+              .insert(cast<LazyInitializationSource>(re->updates.root->source)
+                          ->pointer)
+              .second) {
+        stack.push_back(
+            cast<LazyInitializationSource>(re->updates.root->source)->pointer);
       }
 
       if (visitUpdates) {
@@ -197,7 +206,7 @@ bool klee::isReadFromSymbolicArray(ref<Expr> e) {
 ref<Expr>
 klee::createNonOverflowingSumExpr(const std::vector<ref<Expr>> &terms) {
   if (terms.empty()) {
-    return ConstantExpr::create(0, Expr::Bool);
+    return Expr::createFalse();
   }
 
   Expr::Width termWidth = terms.front()->getWidth();

@@ -200,7 +200,7 @@ MetaSMTBuilder<SolverContext>::getInitialArray(const Array *root) {
   bool hashed = _arr_hash.lookupArrayExpr(root, array_expr);
 
   if (!hashed) {
-    if (isa<ConstantWithSymbolicSizeSource>(root->source)) {
+    if (isa<SymbolicSizeConstantSource>(root->source)) {
       llvm::report_fatal_error("MetaSMT does not support constant arrays or "
                                "quantifiers to instantiate "
                                "constant array of symbolic size!");
@@ -209,7 +209,8 @@ MetaSMTBuilder<SolverContext>::getInitialArray(const Array *root) {
     array_expr =
         evaluate(_solver, buildArray(root->getRange(), root->getDomain()));
 
-    if (root->isConstantArray()) {
+    if (ref<ConstantSource> constantSource =
+            dyn_cast<ConstantSource>(root->source)) {
       uint64_t constantSize = cast<ConstantExpr>(root->size)->getZExtValue();
       for (unsigned i = 0, e = constantSize; i != e; ++i) {
         typename SolverContext::result_type tmp = evaluate(
@@ -217,7 +218,7 @@ MetaSMTBuilder<SolverContext>::getInitialArray(const Array *root) {
             metaSMT::logic::Array::store(
                 array_expr,
                 construct(ConstantExpr::alloc(i, root->getDomain()), 0),
-                construct(root->constantValues[i], 0)));
+                construct(constantSource->constantValues[i], 0)));
         array_expr = tmp;
       }
     }

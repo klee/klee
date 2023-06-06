@@ -15,9 +15,8 @@ using namespace klee;
 TEST(AssignmentTest, FoldNotOptimized) {
   ArrayCache ac;
   const Array *array = ac.CreateArray(
-      "simple_array",
       /*size=*/ConstantExpr::create(1, sizeof(uint64_t) * CHAR_BIT),
-      SourceBuilder::makeSymbolic());
+      SourceBuilder::makeSymbolic("simple_array", 0));
   // Create a simple assignment
   std::vector<const Array *> objects;
   SparseStorage<unsigned char> value(1);

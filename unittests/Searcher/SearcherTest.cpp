@@ -1,5 +1,4 @@
-//===-- SearcherTest.cpp
-//----------------------------------------------------===//
+//===-- SearcherTest.cpp --------------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -7,6 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
+#include "klee/Core/BranchTypes.h"
 #define KLEE_UNITTEST
 
 #include "gtest/gtest.h"

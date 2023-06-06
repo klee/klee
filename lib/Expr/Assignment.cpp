@@ -9,7 +9,9 @@
 
 #include "klee/Expr/Assignment.h"
 
+#include "klee/ADT/Ref.h"
 #include "klee/Expr/Constraints.h"
+#include "klee/Expr/Symcrete.h"
 
 namespace klee {
 
@@ -20,7 +22,7 @@ void Assignment::dump() const {
   }
   for (bindings_ty::const_iterator i = bindings.begin(), e = bindings.end();
        i != e; ++i) {
-    llvm::errs() << (*i).first->name << "\n[";
+    llvm::errs() << (*i).first->getIdentifier() << "\n[";
     for (int j = 0, k = (*i).second.size(); j < k; ++j)
       llvm::errs() << (int)(*i).second.load(j) << ",";
     llvm::errs() << "]\n";
@@ -38,15 +40,17 @@ ConstraintSet Assignment::createConstraintsFromAssignment() const {
     uint64_t arraySize = arrayConstantSize->getZExtValue();
     if (arraySize <= 8 && array->getRange() == Expr::Int8) {
       ref<Expr> e = Expr::createTempRead(array, arraySize * array->getRange());
-      result.push_back(EqExpr::create(e, evaluate(e)));
+      result.addConstraint(EqExpr::create(e, evaluate(e)), {});
     } else {
       for (unsigned arrayIndex = 0; arrayIndex < arraySize; ++arrayIndex) {
         unsigned char value = values.load(arrayIndex);
-        result.push_back(EqExpr::create(
-            ReadExpr::create(
-                UpdateList(array, 0),
-                ConstantExpr::alloc(arrayIndex, array->getDomain())),
-            ConstantExpr::alloc(value, array->getRange())));
+        result.addConstraint(
+            EqExpr::create(
+                ReadExpr::create(
+                    UpdateList(array, 0),
+                    ConstantExpr::alloc(arrayIndex, array->getDomain())),
+                ConstantExpr::alloc(value, array->getRange())),
+            {});
       }
     }
   }
@@ -80,4 +84,15 @@ std::vector<SparseStorage<unsigned char>> Assignment::values() const {
   }
   return result;
 }
+
+Assignment Assignment::part(const SymcreteOrderedSet &symcretes) const {
+  Assignment ret(allowFreeValues);
+  for (auto symcrete : symcretes) {
+    for (auto array : symcrete->dependentArrays()) {
+      ret.bindings.insert({array, bindings.at(array)});
+    }
+  }
+  return ret;
+}
+
 } // namespace klee

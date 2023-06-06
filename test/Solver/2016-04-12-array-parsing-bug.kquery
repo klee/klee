@@ -1,49 +1,50 @@
 # RUN: %kleaver %s > %t
 # RUN: %kleaver --clear-array-decls-after-query %s > %t
 
-array A-data[8] : w32 -> w8 = symbolic
-array A-data-stat[144] : w32 -> w8 = symbolic
-array arg0[3] : w32 -> w8 = symbolic
-array arg1[3] : w32 -> w8 = symbolic
-array const_arr1[768] : w32 -> w8 = [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 3 32 2 32 2 32 2 32 2 32 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 1 96 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 8 216 8 216 8 216 8 216 8 216 8 216 8 216 8 216 8 216 8 216 4 192 4 192 4 192 4 192 4 192 4 192 4 192 8 213 8 213 8 213 8 213 8 213 8 213 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 4 192 4 192 4 192 4 192 4 192 4 192 8 214 8 214 8 214 8 214 8 214 8 214 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 4 192 4 192 4 192 4 192 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]
-array const_arr8[277] : w32 -> w8 = [0 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 24 2 2 25 2 2 2 2 2 2 2 2 2 2 23 2 2 2 2 2 22 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21]
-array model_version[4] : w32 -> w8 = symbolic
-array n_args[4] : w32 -> w8 = symbolic
-array n_args_1[4] : w32 -> w8 = symbolic
-array stdin[8] : w32 -> w8 = symbolic
-array stdin-stat[144] : w32 -> w8 = symbolic
-array stdout[1024] : w32 -> w8 = symbolic
-array stdout-stat[144] : w32 -> w8 = symbolic
-(query [(Ult N0:(ReadLSB w32 0 n_args)
+makeSymbolic0 : (array (w64 8) (makeSymbolic A-data 0))
+makeSymbolic1 : (array (w64 144) (makeSymbolic A-data-stat 0))
+makeSymbolic2 : (array (w64 3) (makeSymbolic arg0 0))
+makeSymbolic3 : (array (w64 3) (makeSymbolic arg1 0))
+constant4 : (array (w64 768) (constant [0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 3 32 2 32 2 32 2 32 2 32 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 2 0 1 96 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 4 192 8 216 8 216 8 216 8 216 8 216 8 216 8 216 8 216 8 216 8 216 4 192 4 192 4 192 4 192 4 192 4 192 4 192 8 213 8 213 8 213 8 213 8 213 8 213 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 8 197 4 192 4 192 4 192 4 192 4 192 4 192 8 214 8 214 8 214 8 214 8 214 8 214 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 8 198 4 192 4 192 4 192 4 192 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0]))
+constant5 : (array (w64 277) (constant [0 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 24 2 2 25 2 2 2 2 2 2 2 2 2 2 23 2 2 2 2 2 22 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21]))
+makeSymbolic6 : (array (w64 4) (makeSymbolic model_version 0))
+makeSymbolic7 : (array (w64 4) (makeSymbolic n_args 0))
+makeSymbolic8 : (array (w64 4) (makeSymbolic n_args_1 0))
+makeSymbolic9 : (array (w64 8) (makeSymbolic stdin 0))
+makeSymbolic10 : (array (w64 144) (makeSymbolic stdin-stat 0))
+makeSymbolic11 : (array (w64 1024) (makeSymbolic stdout 0))
+makeSymbolic12 : (array (w64 144) (makeSymbolic stdout-stat 0))
+
+(query [(Ult N0:(ReadLSB w32 0 makeSymbolic7)
               2)
          (Eq false (Slt 0 N0))
-         (Ult N1:(ReadLSB w32 0 n_args_1)
+         (Ult N1:(ReadLSB w32 0 makeSymbolic8)
               3)
          (Slt 0 N1)
          (Slt 1 N1)
          (Eq false
              (Eq 0
-                 (And w64 (ReadLSB w64 8 A-data-stat)
+                 (And w64 (ReadLSB w64 8 makeSymbolic1)
                           2147483647)))
-         (Ult (ReadLSB w64 56 A-data-stat)
+         (Ult (ReadLSB w64 56 makeSymbolic1)
               65536)
          (Eq false
              (Eq 0
-                 (And w64 (ReadLSB w64 8 stdin-stat)
+                 (And w64 (ReadLSB w64 8 makeSymbolic10)
                           2147483647)))
-         (Ult (ReadLSB w64 56 stdin-stat)
+         (Ult (ReadLSB w64 56 makeSymbolic10)
               65536)
          (Eq false
              (Eq 0
-                 (And w64 (ReadLSB w64 8 stdout-stat)
+                 (And w64 (ReadLSB w64 8 makeSymbolic12)
                           2147483647)))
-         (Ult (ReadLSB w64 56 stdout-stat)
+         (Ult (ReadLSB w64 56 makeSymbolic12)
               65536)
          (Eq 1
-             (ReadLSB w32 0 model_version))
-         (Eq 45 (Read w8 0 arg0))
+             (ReadLSB w32 0 makeSymbolic6))
+         (Eq 45 (Read w8 0 makeSymbolic2))
          (Eq false
-             (Eq 0 N2:(Read w8 1 arg0)))
+             (Eq 0 N2:(Read w8 1 makeSymbolic2)))
          (Eq false (Eq 45 N2))
          (Eq 100
              (AShr w32 (Shl w32 (SExt w32 N2) 24)
@@ -51,7 +52,7 @@ array stdout-stat[144] : w32 -> w8 = symbolic
          (Eq 0
              (And w16 (ReadLSB w16 N3:(Extract w32 0 (Add w64 256
                                                               (Mul w64 2
-                                                                       (ZExt w64 N4:(Read w8 0 arg1))))) const_arr1)
+                                                                       (ZExt w64 N4:(Read w8 0 makeSymbolic3))))) constant4)
                       8192))
          (Eq false (Eq 84 N4))
          (Eq false
@@ -61,13 +62,13 @@ array stdout-stat[144] : w32 -> w8 = symbolic
          (Eq false
              (Ult (Add w32 4294967248
                            (ZExt w32 N6:(Read w8 (Extract w32 0 (Add w64 18446744073657810032 N5))
-                                                 U0:[2=0] @ arg1)))
+                                                 U0:[2=0] @ makeSymbolic3)))
                   10))
          (Eq false (Eq 45 N6))
          (Eq false (Eq 43 N6))
          (Eq 0
              (And w16 (ReadLSB w16 N7:(Extract w32 0 (Add w64 256
-                                                              (Mul w64 2 (ZExt w64 N6)))) const_arr1)
+                                                              (Mul w64 2 (ZExt w64 N6)))) constant4)
                       1024))
          (Eq false (Eq 40 N6))
          (Eq false
@@ -75,69 +76,70 @@ array stdout-stat[144] : w32 -> w8 = symbolic
          (Ult 96
               (Add w32 4294967286
                        (ZExt w32 (Read w8 (Extract w32 0 (SExt w64 N8))
-                                          const_arr8))))
+                                          constant5))))
          (Eq 7 (Read w8 0 U0))
          (Eq 13 (Read w8 1 U0))]
         false []
-        [n_args
-         n_args_1
-         arg0
-         arg1
-         A-data
-         A-data-stat
-         stdin
-         stdin-stat
-         stdout
-         stdout-stat
-         model_version])
+        [makeSymbolic7
+         makeSymbolic8
+         makeSymbolic2
+         makeSymbolic3
+         makeSymbolic0
+         makeSymbolic1
+         makeSymbolic9
+         makeSymbolic10
+         makeSymbolic11
+         makeSymbolic12
+         makeSymbolic6])
 
-array A-data[8] : w32 -> w8 = symbolic
-array A-data-stat[144] : w32 -> w8 = symbolic
-array arg0[11] : w32 -> w8 = symbolic
-array arg1[3] : w32 -> w8 = symbolic
-array model_version[4] : w32 -> w8 = symbolic
-array n_args[4] : w32 -> w8 = symbolic
-array n_args_1[4] : w32 -> w8 = symbolic
-array stdin[8] : w32 -> w8 = symbolic
-array stdin-stat[144] : w32 -> w8 = symbolic
-array stdout[1024] : w32 -> w8 = symbolic
-array stdout-stat[144] : w32 -> w8 = symbolic
-(query [(Ult N0:(ReadLSB w32 0 n_args)
+makeSymbolic0 : (array (w64 8) (makeSymbolic A-data 0))
+makeSymbolic1 : (array (w64 144) (makeSymbolic A-data-stat 0))
+makeSymbolic2 : (array (w64 11) (makeSymbolic arg0 0))
+makeSymbolic3 : (array (w64 3) (makeSymbolic arg1 0))
+makeSymbolic4 : (array (w64 4) (makeSymbolic model_version 0))
+makeSymbolic5 : (array (w64 4) (makeSymbolic n_args 0))
+makeSymbolic6 : (array (w64 4) (makeSymbolic n_args_1 0))
+makeSymbolic7 : (array (w64 8) (makeSymbolic stdin 0))
+makeSymbolic8 : (array (w64 144) (makeSymbolic stdin-stat 0))
+makeSymbolic9 : (array (w64 1024) (makeSymbolic stdout 0))
+makeSymbolic10 : (array (w64 144) (makeSymbolic stdout-stat 0))
+
+(query [(Ult N0:(ReadLSB w32 0 makeSymbolic5)
               2)
          (Slt 0 N0)
-         (Ult N1:(ReadLSB w32 0 n_args_1)
+         (Ult N1:(ReadLSB w32 0 makeSymbolic6)
               3)
          (Slt 0 N1)
          (Eq false (Slt 1 N1))
          (Eq false
              (Eq 0
-                 (And w64 (ReadLSB w64 8 A-data-stat)
+                 (And w64 (ReadLSB w64 8 makeSymbolic1)
                           2147483647)))
-         (Ult (ReadLSB w64 56 A-data-stat)
+         (Ult (ReadLSB w64 56 makeSymbolic1)
               65536)
          (Eq false
              (Eq 0
-                 (And w64 (ReadLSB w64 8 stdin-stat)
+                 (And w64 (ReadLSB w64 8 makeSymbolic8)
                           2147483647)))
-         (Ult (ReadLSB w64 56 stdin-stat)
+         (Ult (ReadLSB w64 56 makeSymbolic8)
               65536)
          (Eq false
              (Eq 0
-                 (And w64 (ReadLSB w64 8 stdout-stat)
+                 (And w64 (ReadLSB w64 8 makeSymbolic10)
                           2147483647)))
-         (Ult (ReadLSB w64 56 stdout-stat)
+         (Ult (ReadLSB w64 56 makeSymbolic10)
               65536)
          (Eq 1
-             (ReadLSB w32 0 model_version))
-         (Eq 45 (Read w8 0 arg0))
-         (Eq 45 (Read w8 1 arg0))
-         (Eq 61 (Read w8 3 arg0))
-         (Eq 116 (Read w8 2 arg0))
+             (ReadLSB w32 0 makeSymbolic4))
+         (Eq 45 (Read w8 0 makeSymbolic2))
+         (Eq 45 (Read w8 1 makeSymbolic2))
+         (Eq 61 (Read w8 3 makeSymbolic2))
+         (Eq 116 (Read w8 2 makeSymbolic2))
          (Eq false
-             (Eq 0 (Read w8 4 arg0)))
+             (Eq 0 (Read w8 4 makeSymbolic2)))
          (Eq false
              (Eq 0
-                 N2:(Read w8 7 U0:[10=0] @ arg0)))
+                 N2:(Read w8 7 U0:[10=0] @ makeSymbolic2)))
          (Eq 0 (Read w8 8 U0))
          (Eq 11 (Read w8 4 U0))
          (Eq 63 (Read w8 5 U0))
@@ -214,14 +216,14 @@ array stdout-stat[144] : w32 -> w8 = symbolic
                                                                                                                                                                                                                                                                                          (Or (Eq 44 N2)
                                                                                                                                                                                                                                                                                              (Or (Eq 43 N2) (Eq 37 N2)))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))]
         false []
-        [n_args
-         arg0
-         n_args_1
-         arg1
-         A-data
-         A-data-stat
-         stdin
-         stdin-stat
-         stdout
-         stdout-stat
-         model_version])
+        [makeSymbolic5
+         makeSymbolic2
+         makeSymbolic6
+         makeSymbolic3
+         makeSymbolic0
+         makeSymbolic1
+         makeSymbolic7
+         makeSymbolic8
+         makeSymbolic9
+         makeSymbolic10
+         makeSymbolic4])

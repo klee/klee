@@ -47,7 +47,7 @@ public:
     return solver->getConstraintLog(query);
   }
 
-  bool evaluate(const ConstraintSet &, ref<Expr>, Solver::Validity &result,
+  bool evaluate(const ConstraintSet &, ref<Expr>, PartialValidity &result,
                 SolverQueryMetaData &metaData,
                 bool produceValidityCore = false);
 
@@ -61,9 +61,6 @@ public:
   /// value) in the result. Otherwise writes the original expression.
   bool tryGetUnique(const ConstraintSet &, ref<Expr>, ref<Expr> &result,
                     SolverQueryMetaData &metaData);
-
-  Solver::PartialValidity evaluate(const ConstraintSet &, ref<Expr>,
-                                   SolverQueryMetaData &metaData);
 
   bool mustBeTrue(const ConstraintSet &, ref<Expr>, bool &result,
                   SolverQueryMetaData &metaData,
@@ -97,6 +94,10 @@ public:
   bool getValidityCore(const ConstraintSet &, ref<Expr>,
                        ValidityCore &validityCore, bool &result,
                        SolverQueryMetaData &metaData);
+
+  bool getResponse(const ConstraintSet &, ref<Expr>,
+                   ref<SolverResponse> &queryResult,
+                   SolverQueryMetaData &metaData);
 
   std::pair<ref<Expr>, ref<Expr>> getRange(const ConstraintSet &,
                                            ref<Expr> query,

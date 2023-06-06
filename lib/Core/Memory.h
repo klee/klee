@@ -63,7 +63,6 @@ public:
 
   uint64_t address;
   ref<Expr> addressExpr;
-  ref<Expr> lazyInitializationSource;
 
   /// size in bytes
   unsigned size;
@@ -76,6 +75,7 @@ public:
   bool isLocal;
   mutable bool isGlobal;
   bool isFixed;
+  bool isLazyInitialized;
 
   bool isUserSpecified;
 
@@ -93,25 +93,23 @@ public:
 public:
   // XXX this is just a temp hack, should be removed
   explicit MemoryObject(uint64_t _address)
-      : id(counter++), timestamp(time++), address(_address),
-        addressExpr(nullptr), lazyInitializationSource(nullptr), size(0),
-        sizeExpr(nullptr), alignment(0), isFixed(true), parent(NULL),
-        allocSite(0) {}
+      : id(0), timestamp(0), address(_address), addressExpr(nullptr), size(0),
+        sizeExpr(nullptr), alignment(0), isFixed(true),
+        isLazyInitialized(false), parent(NULL), allocSite(0) {}
 
   MemoryObject(
       uint64_t _address, unsigned _size, uint64_t alignment, bool _isLocal,
-      bool _isGlobal, bool _isFixed, const llvm::Value *_allocSite,
-      MemoryManager *_parent, ref<Expr> _addressExpr = nullptr,
-      ref<Expr> _sizeExpr = nullptr,
-      ref<Expr> _lazyInitializationSource = nullptr,
-      unsigned _timestamp = 0 /* unused if _lazyInstantiatedSource is null*/)
+      bool _isGlobal, bool _isFixed, bool _isLazyInitialized,
+      const llvm::Value *_allocSite, MemoryManager *_parent,
+      ref<Expr> _addressExpr = nullptr, ref<Expr> _sizeExpr = nullptr,
+      unsigned _timestamp = 0 /* unused if _isLazyInitialized is false*/)
       : id(counter++), timestamp(_timestamp), address(_address),
-        addressExpr(_addressExpr),
-        lazyInitializationSource(_lazyInitializationSource), size(_size),
-        sizeExpr(_sizeExpr), alignment(alignment), name("unnamed"),
-        isLocal(_isLocal), isGlobal(_isGlobal), isFixed(_isFixed),
-        isUserSpecified(false), parent(_parent), allocSite(_allocSite) {
-    if (lazyInitializationSource) {
+        addressExpr(_addressExpr), size(_size), sizeExpr(_sizeExpr),
+        alignment(alignment), name("unnamed"), isLocal(_isLocal),
+        isGlobal(_isGlobal), isFixed(_isFixed),
+        isLazyInitialized(_isLazyInitialized), isUserSpecified(false),
+        parent(_parent), allocSite(_allocSite) {
+    if (isLazyInitialized) {
       timestamp = _timestamp;
     } else {
       timestamp = time++;
@@ -127,13 +125,6 @@ public:
 
   void updateTimestamp() const { this->timestamp = time++; }
 
-  bool isLazyInitialized() const { return bool(lazyInitializationSource); }
-  ref<Expr> getLazyInitializationSource() const {
-    return lazyInitializationSource;
-  }
-  void setlazyInitializationSource(ref<Expr> source) {
-    lazyInitializationSource = source;
-  }
   bool hasSymbolicSize() const { return !isa<ConstantExpr>(getSizeExpr()); }
   ref<ConstantExpr> getBaseConstantExpr() const {
     return ConstantExpr::create(address, Context::get().getPointerWidth());
@@ -157,10 +148,7 @@ public:
     return getBoundsCheckOffset(getOffsetExpr(pointer));
   }
   ref<Expr> getBoundsCheckPointer(ref<Expr> pointer, unsigned bytes) const {
-    return SelectExpr::create(
-        EqExpr::create(getSizeExpr(), Expr::createPointer(bytes)),
-        EqExpr::create(pointer, getBaseExpr()),
-        getBoundsCheckOffset(getOffsetExpr(pointer), bytes));
+    return getBoundsCheckOffset(getOffsetExpr(pointer), bytes);
   }
 
   ref<Expr> getBoundsCheckOffset(ref<Expr> offset) const {
@@ -196,7 +184,7 @@ public:
     if (allocSite != b.allocSite)
       return (allocSite < b.allocSite ? -1 : 1);
 
-    assert(lazyInitializationSource == b.lazyInitializationSource);
+    assert(isLazyInitialized == b.isLazyInitialized);
     return 0;
   }
 
@@ -207,11 +195,12 @@ class ObjectState {
 private:
   friend class AddressSpace;
   friend class ref<ObjectState>;
+  friend class ref<const ObjectState>;
 
   unsigned copyOnWriteOwner; // exclusively for AddressSpace
 
   /// @brief Required by klee::ref-managed objects
-  class ReferenceCounter _refCount;
+  mutable class ReferenceCounter _refCount;
 
   ref<const MemoryObject> object;
 

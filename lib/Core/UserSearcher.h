@@ -21,7 +21,8 @@ bool userSearcherRequiresMD2U();
 
 void initializeSearchOptions();
 
-Searcher *constructUserSearcher(Executor &executor);
+Searcher *constructUserSearcher(Executor &executor,
+                                bool stopAfterReachingTarget = true);
 } // namespace klee
 
 #endif /* KLEE_USERSEARCHER_H */

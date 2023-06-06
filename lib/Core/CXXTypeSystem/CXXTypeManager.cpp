@@ -186,7 +186,6 @@ static ref<Expr> getComplexPointerRestrictions(
     ref<Expr> object,
     const std::vector<std::pair<size_t, KType *>> &offsetsToTypes) {
   ConstraintSet restrictions;
-  ConstraintManager cm(restrictions);
   ref<Expr> resultCondition;
   for (auto &offsetToTypePair : offsetsToTypes) {
     size_t offset = offsetToTypePair.first;
@@ -200,11 +199,11 @@ static ref<Expr> getComplexPointerRestrictions(
     if (innerAlignmentRequirement.isNull()) {
       continue;
     }
-
-    cm.addConstraint(innerAlignmentRequirement);
+    restrictions.addConstraint(innerAlignmentRequirement, {});
   }
 
-  for (auto restriction : restrictions) {
+  restrictions = Simplificator(restrictions).simplify();
+  for (auto restriction : restrictions.cs()) {
     if (resultCondition.isNull()) {
       resultCondition = restriction;
     } else {
