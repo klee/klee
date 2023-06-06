@@ -11,7 +11,6 @@
 #define KLEE_EXECUTIONSTATE_H
 
 #include "AddressSpace.h"
-#include "MergeHandler.h"
 
 #include "klee/ADT/ImmutableSet.h"
 #include "klee/ADT/TreeStream.h"
@@ -264,10 +263,6 @@ public:
   /// @brief Set of used array names for this state.  Used to avoid collisions.
   std::set<std::string> arrayNames;
 
-  /// @brief The objects handling the klee_open_merge calls this state ran
-  /// through
-  std::vector<ref<MergeHandler>> openMergeStack;
-
   /// @brief The numbers of times this state has run through
   /// Executor::stepInstruction
   std::uint64_t steppedInstructions = 0;
@@ -348,7 +343,6 @@ public:
   void addConstraint(ref<Expr> e, const Assignment &c);
   void addCexPreference(const ref<Expr> &cond);
 
-  bool merge(const ExecutionState &b);
   void dumpStack(llvm::raw_ostream &out) const;
 
   bool visited(KBlock *block) const;

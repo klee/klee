@@ -10,7 +10,6 @@
 #include "UserSearcher.h"
 
 #include "Executor.h"
-#include "MergeHandler.h"
 #include "Searcher.h"
 
 #include "klee/Core/Interpreter.h"
@@ -87,14 +86,8 @@ cl::opt<unsigned long long>
 void klee::initializeSearchOptions() {
   // default values
   if (CoreSearch.empty()) {
-    if (UseMerge) {
-      CoreSearch.push_back(Searcher::NURS_CovNew);
-      klee_warning(
-          "--use-merge enabled. Using NURS_CovNew as default searcher.");
-    } else {
-      CoreSearch.push_back(Searcher::RandomPath);
-      CoreSearch.push_back(Searcher::NURS_CovNew);
-    }
+    CoreSearch.push_back(Searcher::RandomPath);
+    CoreSearch.push_back(Searcher::NURS_CovNew);
   }
 }
 
@@ -181,13 +174,6 @@ Searcher *klee::constructUserSearcher(Executor &executor) {
 
   if (UseIterativeDeepeningTimeSearch) {
     searcher = new IterativeDeepeningTimeSearcher(searcher);
-  }
-
-  if (UseMerge) {
-    auto *ms = new MergingSearcher(searcher);
-    executor.setMergingSearcher(ms);
-
-    searcher = ms;
   }
 
   if (executor.guidanceKind == Interpreter::GuidanceKind::CoverageGuidance) {

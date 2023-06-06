@@ -347,50 +347,6 @@ public:
   void printName(llvm::raw_ostream &os) override;
 };
 
-extern llvm::cl::opt<bool> UseIncompleteMerge;
-class MergeHandler;
-class MergingSearcher final : public Searcher {
-  friend class MergeHandler;
-
-private:
-  std::unique_ptr<Searcher> baseSearcher;
-
-  /// States that have been paused by the 'pauseState' function
-  std::vector<ExecutionState *> pausedStates;
-
-public:
-  /// \param baseSearcher The underlying searcher (takes ownership).
-  explicit MergingSearcher(Searcher *baseSearcher);
-  ~MergingSearcher() override = default;
-
-  /// ExecutionStates currently paused from scheduling because they are
-  /// waiting to be merged in a klee_close_merge instruction
-  std::set<ExecutionState *> inCloseMerge;
-
-  /// Keeps track of all currently ongoing merges.
-  /// An ongoing merge is a set of states (stored in a MergeHandler object)
-  /// which branched from a single state which ran into a klee_open_merge(),
-  /// and not all states in the set have reached the corresponding
-  /// klee_close_merge() yet.
-  std::vector<MergeHandler *> mergeGroups;
-
-  /// Remove state from the searcher chain, while keeping it in the executor.
-  /// This is used here to 'freeze' a state while it is waiting for other
-  /// states in its merge group to reach the same instruction.
-  void pauseState(ExecutionState &state);
-
-  /// Continue a paused state
-  void continueState(ExecutionState &state);
-
-  ExecutionState &selectState() override;
-  void update(ExecutionState *current,
-              const std::vector<ExecutionState *> &addedStates,
-              const std::vector<ExecutionState *> &removedStates) override;
-
-  bool empty() override;
-  void printName(llvm::raw_ostream &os) override;
-};
-
 /// BatchingSearcher selects a state from an underlying searcher and returns
 /// that state for further exploration for a given time or a given number
 /// of instructions.

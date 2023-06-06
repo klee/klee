@@ -12,7 +12,6 @@
 #include "CoreStats.h"
 #include "ExecutionState.h"
 #include "Executor.h"
-#include "MergeHandler.h"
 #include "PTree.h"
 #include "StatsTracker.h"
 #include "TargetCalculator.h"
@@ -1085,72 +1084,6 @@ bool RandomPathSearcher::empty() {
 
 void RandomPathSearcher::printName(llvm::raw_ostream &os) {
   os << "RandomPathSearcher\n";
-}
-
-///
-
-MergingSearcher::MergingSearcher(Searcher *baseSearcher)
-    : baseSearcher{baseSearcher} {};
-
-void MergingSearcher::pauseState(ExecutionState &state) {
-  assert(std::find(pausedStates.begin(), pausedStates.end(), &state) ==
-         pausedStates.end());
-  pausedStates.push_back(&state);
-  baseSearcher->update(nullptr, {}, {&state});
-}
-
-void MergingSearcher::continueState(ExecutionState &state) {
-  auto it = std::find(pausedStates.begin(), pausedStates.end(), &state);
-  assert(it != pausedStates.end());
-  pausedStates.erase(it);
-  baseSearcher->update(nullptr, {&state}, {});
-}
-
-ExecutionState &MergingSearcher::selectState() {
-  assert(!baseSearcher->empty() && "base searcher is empty");
-
-  if (!UseIncompleteMerge)
-    return baseSearcher->selectState();
-
-  // Iterate through all MergeHandlers
-  for (auto cur_mergehandler : mergeGroups) {
-    // Find one that has states that could be released
-    if (!cur_mergehandler->hasMergedStates()) {
-      continue;
-    }
-    // Find a state that can be prioritized
-    ExecutionState *es = cur_mergehandler->getPrioritizeState();
-    if (es) {
-      return *es;
-    } else {
-      if (DebugLogIncompleteMerge) {
-        llvm::errs() << "Preemptively releasing states\n";
-      }
-      // If no state can be prioritized, they all exceeded the amount of time we
-      // are willing to wait for them. Release the states that already arrived
-      // at close_merge.
-      cur_mergehandler->releaseStates();
-    }
-  }
-  // If we were not able to prioritize a merging state, just return some state
-  return baseSearcher->selectState();
-}
-
-void MergingSearcher::update(
-    ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
-    const std::vector<ExecutionState *> &removedStates) {
-  // We have to check if the current execution state was just deleted, as to
-  // not confuse the nurs searchers
-  if (std::find(pausedStates.begin(), pausedStates.end(), current) ==
-      pausedStates.end()) {
-    baseSearcher->update(current, addedStates, removedStates);
-  }
-}
-
-bool MergingSearcher::empty() { return baseSearcher->empty(); }
-
-void MergingSearcher::printName(llvm::raw_ostream &os) {
-  os << "MergingSearcher\n";
 }
 
 ///

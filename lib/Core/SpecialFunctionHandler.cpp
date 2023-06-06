@@ -13,7 +13,6 @@
 #include "Executor.h"
 #include "Memory.h"
 #include "MemoryManager.h"
-#include "MergeHandler.h"
 #include "Searcher.h"
 #include "StatsTracker.h"
 #include "TimingSolver.h"
@@ -111,8 +110,6 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
     add("klee_is_symbolic", handleIsSymbolic, true),
     add("klee_make_symbolic", handleMakeSymbolic, false),
     add("klee_mark_global", handleMarkGlobal, false),
-    add("klee_open_merge", handleOpenMerge, false),
-    add("klee_close_merge", handleCloseMerge, false),
     add("klee_prefer_cex", handlePreferCex, false),
     add("klee_posix_prefer_cex", handlePosixPreferCex, false),
     add("klee_print_expr", handlePrintExpr, false),
@@ -435,48 +432,6 @@ void SpecialFunctionHandler::handleReportError(
       state, readStringAtAddress(state, arguments[2]),
       StateTerminationType::ReportError, "",
       readStringAtAddress(state, arguments[3]).c_str());
-}
-
-void SpecialFunctionHandler::handleOpenMerge(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  if (!UseMerge) {
-    klee_warning_once(0, "klee_open_merge ignored, use '-use-merge'");
-    return;
-  }
-
-  state.openMergeStack.push_back(
-      ref<MergeHandler>(new MergeHandler(&executor, &state)));
-
-  if (DebugLogMerge)
-    llvm::errs() << "open merge: " << &state << "\n";
-}
-
-void SpecialFunctionHandler::handleCloseMerge(
-    ExecutionState &state, KInstruction *target,
-    std::vector<ref<Expr>> &arguments) {
-  if (!UseMerge) {
-    klee_warning_once(0, "klee_close_merge ignored, use '-use-merge'");
-    return;
-  }
-  Instruction *i = target->inst;
-
-  if (DebugLogMerge)
-    llvm::errs() << "close merge: " << &state << " at [" << *i << "]\n";
-
-  if (state.openMergeStack.empty()) {
-    std::ostringstream warning;
-    warning << &state << " ran into a close at " << i
-            << " without a preceding open";
-    klee_warning("%s", warning.str().c_str());
-  } else {
-    assert(executor.mergingSearcher->inCloseMerge.find(&state) ==
-               executor.mergingSearcher->inCloseMerge.end() &&
-           "State cannot run into close_merge while being closed");
-    executor.mergingSearcher->inCloseMerge.insert(&state);
-    state.openMergeStack.back()->addClosedState(&state, i);
-    state.openMergeStack.pop_back();
-  }
 }
 
 void SpecialFunctionHandler::handleNew(ExecutionState &state,
