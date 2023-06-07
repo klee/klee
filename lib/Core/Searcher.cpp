@@ -708,11 +708,13 @@ void GuidedSearcher::innerUpdate(
     baseSearcher->update(current, baseAddedStates, baseRemovedStates);
   }
 
-  updateConfidences(current, reachableStatesOfTarget);
-  for (auto state : baseAddedStates)
-    updateConfidences(state, reachableStatesOfTarget);
-  for (auto state : addedStuckStates)
-    updateConfidences(state, reachableStatesOfTarget);
+  if (ErrorGuidance == guidance) {
+    updateConfidences(current, reachableStatesOfTarget);
+    for (auto state : baseAddedStates)
+      updateConfidences(state, reachableStatesOfTarget);
+    for (auto state : addedStuckStates)
+      updateConfidences(state, reachableStatesOfTarget);
+  }
   baseAddedStates.clear();
   baseRemovedStates.clear();
 }
