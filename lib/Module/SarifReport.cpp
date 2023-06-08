@@ -98,6 +98,16 @@ tryConvertRuleJson(const std::string &ruleId, const std::string &toolName,
     } else {
       return {};
     }
+  } else if (toolName == "Cooddy") {
+    if ("NULL.DEREF" == ruleId || "NULL.UNTRUSTED.DEREF" == ruleId) {
+      return {ReachWithError::NullPointerException};
+    } else if ("MEM.DOUBLE.FREE" == ruleId) {
+      return {ReachWithError::DoubleFree};
+    } else if ("MEM.USE.FREE" == ruleId) {
+      return {ReachWithError::UseAfterFree};
+    } else {
+      return {};
+    }
   } else {
     return {};
   }
