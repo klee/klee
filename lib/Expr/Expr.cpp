@@ -2119,6 +2119,16 @@ static ref<Expr> EqExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
       return EqExpr::create(al->left, ar->left);
     }
     return EqExpr::alloc(l, r);
+  } else if (isa<SelectExpr>(l) || isa<SelectExpr>(r)) {
+    if (SelectExpr *se = dyn_cast<SelectExpr>(l)) {
+      return SelectExpr::create(se->cond, EqExpr::create(se->trueExpr, r),
+                                EqExpr::create(se->falseExpr, r));
+    }
+    if (SelectExpr *se = dyn_cast<SelectExpr>(r)) {
+      return SelectExpr::create(se->cond, EqExpr::create(se->trueExpr, l),
+                                EqExpr::create(se->falseExpr, l));
+    }
+    return EqExpr::alloc(l, r);
   } else {
     return EqExpr::alloc(l, r);
   }

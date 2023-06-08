@@ -149,17 +149,22 @@ public:
                           : Action::changeTo(visit(sexpr.falseExpr));
     }
 
+    std::vector<ref<Expr>> splittedCond;
+    Expr::splitAnds(cond, splittedCond);
+
     ExprHashMap<ref<Expr>> localReplacements;
-    if (const EqExpr *ee = dyn_cast<EqExpr>(cond)) {
-      if (isa<ConstantExpr>(ee->left)) {
-        localReplacements.insert(std::make_pair(ee->right, ee->left));
+    for (auto scond : splittedCond) {
+      if (const EqExpr *ee = dyn_cast<EqExpr>(scond)) {
+        if (isa<ConstantExpr>(ee->left)) {
+          localReplacements.insert(std::make_pair(ee->right, ee->left));
+        } else {
+          localReplacements.insert(
+              std::make_pair(scond, ConstantExpr::alloc(1, Expr::Bool)));
+        }
       } else {
         localReplacements.insert(
-            std::make_pair(cond, ConstantExpr::alloc(1, Expr::Bool)));
+            std::make_pair(scond, ConstantExpr::alloc(1, Expr::Bool)));
       }
-    } else {
-      localReplacements.insert(
-          std::make_pair(cond, ConstantExpr::alloc(1, Expr::Bool)));
     }
 
     replacements.push_back(localReplacements);
