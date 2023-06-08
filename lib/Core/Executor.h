@@ -361,16 +361,19 @@ private:
       ExecutionState &state, ref<Expr> address, KInstruction *target,
       unsigned bytes, const std::vector<IDType> &mayBeResolvedMemoryObjects,
       std::vector<IDType> &resolvedMemoryObjects,
-      std::vector<ref<Expr>> &resolveConditions, ref<Expr> &checkOutOfBounds,
+      std::vector<ref<Expr>> &resolveConditions,
+      std::vector<ref<Expr>> &unboundConditions, ref<Expr> &checkOutOfBounds,
       bool &mayBeOutOfBound);
 
   bool makeGuard(ExecutionState &state,
                  const std::vector<ref<Expr>> &resolveConditions,
+                 const std::vector<ref<Expr>> &unboundConditions,
                  ref<Expr> checkOutOfBounds, bool hasLazyInitialized,
                  ref<Expr> &guard, bool &mayBeInBounds);
 
   bool collectConcretizations(ExecutionState &state,
                               const std::vector<ref<Expr>> &resolveConditions,
+                              const std::vector<ref<Expr>> &unboundConditions,
                               const std::vector<IDType> &resolvedMemoryObjects,
                               ref<Expr> checkOutOfBounds,
                               bool hasLazyInitialized, ref<Expr> &guard,

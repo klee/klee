@@ -5231,7 +5231,8 @@ bool Executor::checkResolvedMemoryObjects(
     ExecutionState &state, ref<Expr> address, KInstruction *target,
     unsigned bytes, const std::vector<IDType> &mayBeResolvedMemoryObjects,
     std::vector<IDType> &resolvedMemoryObjects,
-    std::vector<ref<Expr>> &resolveConditions, ref<Expr> &checkOutOfBounds,
+    std::vector<ref<Expr>> &resolveConditions,
+    std::vector<ref<Expr>> &unboundConditions, ref<Expr> &checkOutOfBounds,
     bool &mayBeOutOfBound) {
 
   ref<Expr> base = address;
@@ -5280,6 +5281,7 @@ bool Executor::checkResolvedMemoryObjects(
 
     resolveConditions.push_back(inBounds);
     resolvedMemoryObjects.push_back(mo->id);
+    unboundConditions.push_back(notInBounds);
     if (mayBeOutOfBound) {
       checkOutOfBounds = AndExpr::create(checkOutOfBounds, notInBounds);
     }
@@ -5302,10 +5304,12 @@ bool Executor::checkResolvedMemoryObjects(
 
 bool Executor::makeGuard(ExecutionState &state,
                          const std::vector<ref<Expr>> &resolveConditions,
+                         const std::vector<ref<Expr>> &unboundConditions,
                          ref<Expr> checkOutOfBounds, bool hasLazyInitialized,
                          ref<Expr> &guard, bool &mayBeInBounds) {
   guard = Expr::createFalse();
 
+  assert(resolveConditions.size() == unboundConditions.size());
   if (resolveConditions.size() > 0) {
     ref<Expr> excludeGuard = Expr::createTrue();
     ref<Expr> selectGuard = Expr::createFalse();
@@ -5317,8 +5321,7 @@ bool Executor::makeGuard(ExecutionState &state,
       ref<Expr> body = Expr::createTrue();
       for (unsigned int j = 0; j < resolveConditions.size(); ++j) {
         if (resolveConditions.size() - 1 != j) {
-          body = AndExpr::create(body,
-                                 Expr::createIsZero(resolveConditions.at(j)));
+          body = AndExpr::create(body, unboundConditions.at(j));
         }
       }
       excludeGuard = AndExpr::create(
@@ -5342,11 +5345,12 @@ bool Executor::makeGuard(ExecutionState &state,
 
 bool Executor::collectConcretizations(
     ExecutionState &state, const std::vector<ref<Expr>> &resolveConditions,
+    const std::vector<ref<Expr>> &unboundConditions,
     const std::vector<IDType> &resolvedMemoryObjects,
     ref<Expr> checkOutOfBounds, bool hasLazyInitialized, ref<Expr> &guard,
     std::vector<Assignment> &resolveConcretizations, bool &mayBeInBounds) {
-  if (!makeGuard(state, resolveConditions, checkOutOfBounds, hasLazyInitialized,
-                 guard, mayBeInBounds)) {
+  if (!makeGuard(state, resolveConditions, unboundConditions, checkOutOfBounds,
+                 hasLazyInitialized, guard, mayBeInBounds)) {
     return false;
   }
 
@@ -5501,11 +5505,12 @@ void Executor::executeMemoryOperation(
     inBounds = Simplificator::simplifyExpr(state->constraints.cs(), inBounds)
                    .simplified;
 
-    bool mustBeInBounds;
+    ref<SolverResponse> response;
     solver->setTimeout(coreSolverTimeout);
-    bool success = solver->mustBeTrue(state->constraints.cs(), inBounds,
-                                      mustBeInBounds, state->queryMetaData);
+    bool success = solver->getResponse(state->constraints.cs(), inBounds,
+                                       response, state->queryMetaData);
     solver->setTimeout(time::Span());
+    bool mustBeInBounds = !isa<InvalidResponse>(response);
     if (!success) {
       state->pc = state->prevPC;
       terminateStateOnSolverError(*state, "Query timed out (bounds check).");
@@ -5513,7 +5518,11 @@ void Executor::executeMemoryOperation(
     }
 
     if (mustBeInBounds) {
+      if (isa<UnknownResponse>(response)) {
+        addConstraint(*state, inBounds);
+      }
       ref<Expr> result;
+      op = state->addressSpace.findObject(idFastResult);
       const ObjectState *os = op.second;
       state->addPointerResolution(base, mo);
       state->addPointerResolution(address, mo);
@@ -5580,12 +5589,13 @@ void Executor::executeMemoryOperation(
 
   ref<Expr> checkOutOfBounds;
   std::vector<ref<Expr>> resolveConditions;
+  std::vector<ref<Expr>> unboundConditions;
   std::vector<IDType> resolvedMemoryObjects;
 
-  if (!checkResolvedMemoryObjects(*state, address, target, bytes,
-                                  mayBeResolvedMemoryObjects,
-                                  resolvedMemoryObjects, resolveConditions,
-                                  checkOutOfBounds, mayBeOutOfBound)) {
+  if (!checkResolvedMemoryObjects(
+          *state, address, target, bytes, mayBeResolvedMemoryObjects,
+          resolvedMemoryObjects, resolveConditions, unboundConditions,
+          checkOutOfBounds, mayBeOutOfBound)) {
     terminateStateOnSolverError(*state,
                                 "Query timed out (executeMemoryOperation)");
     return;
@@ -5597,9 +5607,10 @@ void Executor::executeMemoryOperation(
     std::vector<Assignment> resolveConcretizations;
     bool mayBeInBounds;
 
-    if (!collectConcretizations(
-            *state, resolveConditions, resolvedMemoryObjects, checkOutOfBounds,
-            hasLazyInitialized, guard, resolveConcretizations, mayBeInBounds)) {
+    if (!collectConcretizations(*state, resolveConditions, unboundConditions,
+                                resolvedMemoryObjects, checkOutOfBounds,
+                                hasLazyInitialized, guard,
+                                resolveConcretizations, mayBeInBounds)) {
       terminateStateOnSolverError(*state, "Query timed out (resolve)");
       return;
     }

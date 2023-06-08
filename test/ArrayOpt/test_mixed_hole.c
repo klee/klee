@@ -26,7 +26,7 @@ int main() {
   array[2] = symHole;
   array[0] = symHole2;
 
-  // CHECK: KLEE: done: completed paths = 2
+  // CHECK-DAG: KLEE: done: completed paths = 2
   // CHECK-DAG: Yes
   // CHECK-DAG: No
   if (array[idx + 1] == 400)
