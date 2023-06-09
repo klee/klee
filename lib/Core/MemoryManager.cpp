@@ -201,7 +201,7 @@ MemoryManager::MemoryManager(ArrayCache *_arrayCache)
 #if LLVM_VERSION_CODE >= LLVM_VERSION(10, 0)
       if (start1 != 0 && !llvm::isAligned(pageAlignment, start1)) {
         klee_error("Deterministic allocator: Requested start address for %s "
-                   "is not page aligned (page size: %zu B)",
+                   "is not page aligned (page size: %" PRIu64 " B)",
                    segment1.c_str(), pageAlignment.value());
       }
 #else
