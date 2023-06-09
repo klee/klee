@@ -106,32 +106,18 @@ mode_t umask(mode_t mask) {
 
 
 /* Returns 1 if the process has the access rights specified by 'flags'
-   to the file with stat 's'.  Returns 0 otherwise*/
+   to the file with stat 's', and returns 0 otherwise. 
+   We allow access if any user has access to the file, so we ignore 
+   s->st_uid / geteuid() and s->st_gid / getegid(). */
 static int has_permission(int flags, struct stat64 *s) {
-  int write_access, read_access;
   mode_t mode = s->st_mode;
-  
-  if (flags & O_RDONLY || flags & O_RDWR)
-    read_access = 1;
-  else read_access = 0;
+  int read_request = ((flags & O_RDONLY) | (flags & O_RDWR)) ? 1 : 0;
+  int write_request = ((flags & O_WRONLY) | (flags & O_RDWR)) ? 1 : 0;
 
-  if (flags & O_WRONLY || flags & O_RDWR)
-    write_access = 1;
-  else write_access = 0;
-
-  /* XXX: We don't worry about process uid and gid for now. 
-     We allow access if any user has access to the file. */
-#if 0
-  uid_t uid = s->st_uid;
-  uid_t euid = geteuid();
-  gid_t gid = s->st_gid;
-  gid_t egid = getegid();
-#endif  
-
-  if (read_access && ((mode & S_IRUSR) | (mode & S_IRGRP) | (mode & S_IROTH)))
-    return 0;
-
-  if (write_access && !((mode & S_IWUSR) | (mode & S_IWGRP) | (mode & S_IWOTH)))
+  /* It is important to do this check using only bitwise operators so that we 
+     return 0 a single time in symbolic execution mode. */
+  if ((read_request  & !((mode & S_IRUSR) | (mode & S_IRGRP) | (mode & S_IROTH))) |
+      (write_request & !((mode & S_IWUSR) | (mode & S_IWGRP) | (mode & S_IWOTH))))
     return 0;
 
   return 1;
