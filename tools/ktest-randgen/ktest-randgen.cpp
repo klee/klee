@@ -114,7 +114,6 @@ void create_stat(size_t size, struct stat *s) {
 
   if (write(fd, memset(buf, 0, size), size) != (int)size) {
     free(buf);
-    free(filename);
     error_exit("%s:%d: Error writing %s\n", __FILE__, __LINE__, filename);
   }
 #if defined(__has_feature)
