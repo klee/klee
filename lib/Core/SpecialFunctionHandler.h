@@ -12,7 +12,6 @@
 
 #include "klee/Config/config.h"
 
-#include <iterator>
 #include <map>
 #include <vector>
 #include <string>
@@ -47,36 +46,6 @@ namespace klee {
       bool hasReturnValue; /// Intrinsic has a return value
       bool doNotOverride; /// Intrinsic should not be used if already defined
     };
-
-    // const_iterator to iterate over stored HandlerInfo
-    // FIXME: Implement >, >=, <=, < operators
-    class const_iterator {
-      using iterator_category = std::random_access_iterator_tag;
-      using value_type = HandlerInfo;
-      using difference_type = ptrdiff_t;
-      using pointer = void;
-      using reference = void;
-
-    private:
-      value_type *base;
-      int index;
-
-    public:
-      const_iterator(value_type* hi) : base(hi), index(0) {};
-      const_iterator& operator++();  // pre-fix
-      const_iterator operator++(int); // post-fix
-      const value_type& operator*() { return base[index];}
-      const value_type* operator->() { return &(base[index]);}
-      const value_type& operator[](int i) { return base[i];}
-      bool operator==(const_iterator& rhs) { return (rhs.base + rhs.index) == (this->base + this->index);}
-      bool operator!=(const_iterator& rhs) { return !(*this == rhs);}
-    };
-
-    static const_iterator begin();
-    static const_iterator end();
-    static int size();
-
-
 
   public:
     SpecialFunctionHandler(Executor &_executor);

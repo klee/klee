@@ -36,6 +36,7 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/Module.h"
 DISABLE_WARNING_POP
 
+#include <array>
 #include <cerrno>
 #include <sstream>
 
@@ -69,11 +70,11 @@ cl::opt<bool>
 // especially things like realloc which have complicated semantics
 // w.r.t. forking. Among other things this makes delayed query
 // dispatch easier to implement.
-static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
-#define add(name, handler, ret) { name, \
+static constexpr std::array handlerInfo = {
+#define add(name, handler, ret) SpecialFunctionHandler::HandlerInfo{ name, \
                                   &SpecialFunctionHandler::handler, \
                                   false, ret, false }
-#define addDNR(name, handler) { name, \
+#define addDNR(name, handler) SpecialFunctionHandler::HandlerInfo{ name, \
                                 &SpecialFunctionHandler::handler, \
                                 true, false, false }
   addDNR("__assert_rtn", handleAssertFail),
@@ -82,7 +83,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
   addDNR("_assert", handleAssert),
   addDNR("abort", handleAbort),
   addDNR("_exit", handleExit),
-  { "exit", &SpecialFunctionHandler::handleExit, true, false, true },
+  SpecialFunctionHandler::HandlerInfo{ "exit", &SpecialFunctionHandler::handleExit, true, false, true },
   addDNR("klee_abort", handleAbort),
   addDNR("klee_silent_exit", handleSilentExit),
   addDNR("klee_report_error", handleReportError),
@@ -147,40 +148,12 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
 #undef add
 };
 
-SpecialFunctionHandler::const_iterator SpecialFunctionHandler::begin() {
-  return SpecialFunctionHandler::const_iterator(handlerInfo);
-}
-
-SpecialFunctionHandler::const_iterator SpecialFunctionHandler::end() {
-  // NULL pointer is sentinel
-  return SpecialFunctionHandler::const_iterator(0);
-}
-
-SpecialFunctionHandler::const_iterator& SpecialFunctionHandler::const_iterator::operator++() {
-  ++index;
-  if ( index >= SpecialFunctionHandler::size())
-  {
-    // Out of range, return .end()
-    base=0; // Sentinel
-    index=0;
-  }
-
-  return *this;
-}
-
-int SpecialFunctionHandler::size() {
-	return sizeof(handlerInfo)/sizeof(handlerInfo[0]);
-}
-
 SpecialFunctionHandler::SpecialFunctionHandler(Executor &_executor) 
   : executor(_executor) {}
 
 void SpecialFunctionHandler::prepare(
     std::vector<const char *> &preservedFunctions) {
-  unsigned N = size();
-
-  for (unsigned i=0; i<N; ++i) {
-    HandlerInfo &hi = handlerInfo[i];
+  for (auto &hi : handlerInfo) {
     Function *f = executor.kmodule->module->getFunction(hi.name);
 
     // No need to create if the function doesn't exist, since it cannot
@@ -201,12 +174,9 @@ void SpecialFunctionHandler::prepare(
 }
 
 void SpecialFunctionHandler::bind() {
-  unsigned N = size();
-
-  for (unsigned i=0; i<N; ++i) {
-    HandlerInfo &hi = handlerInfo[i];
+  for (auto &hi : handlerInfo) {
     Function *f = executor.kmodule->module->getFunction(hi.name);
-    
+
     if (f && (!hi.doNotOverride || f->isDeclaration()))
       handlers[f] = std::make_pair(hi.handler, hi.hasReturnValue);
   }
