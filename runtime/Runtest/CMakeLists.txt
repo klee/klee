@@ -9,6 +9,8 @@
 
 add_library(kleeRuntest SHARED
   intrinsics.c
+  # Mocks:
+  ${CMAKE_SOURCE_DIR}/runtime/Mocks/models.c
   # HACK:
   ${CMAKE_SOURCE_DIR}/lib/Basic/KTest.cpp
 )

@@ -54,6 +54,16 @@ void klee::findReads(ref<Expr> e, bool visitUpdates,
             cast<LazyInitializationSource>(re->updates.root->source)->pointer);
       }
 
+      if (ref<MockDeterministicSource> mockSource =
+              dyn_cast_or_null<MockDeterministicSource>(
+                  re->updates.root->source)) {
+        for (auto arg : mockSource->args) {
+          if (visited.insert(arg).second) {
+            stack.push_back(arg);
+          }
+        }
+      }
+
       if (visitUpdates) {
         // XXX this is probably suboptimal. We want to avoid a potential
         // explosion traversing update lists which can be quite

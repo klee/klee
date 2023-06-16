@@ -423,6 +423,18 @@ public:
          << kf->getName().str() << " " << s->index;
     } else if (auto s = dyn_cast<IrreproducibleSource>(source)) {
       PC << s->name;
+    } else if (auto s = dyn_cast<MockNaiveSource>(source)) {
+      PC << s->km->functionMap.at(&s->function)->getName() << ' ' << s->version;
+    } else if (auto s = dyn_cast<MockDeterministicSource>(source)) {
+      PC << s->km->functionMap.at(&s->function)->getName() << ' ';
+      PC << "(";
+      for (unsigned i = 0; i < s->args.size(); i++) {
+        print(s->args[i], PC);
+        if (i != s->args.size() - 1) {
+          PC << " ";
+        }
+      }
+      PC << ')';
     } else if (auto s = dyn_cast<AlphaSource>(source)) {
       PC << s->index;
     } else {

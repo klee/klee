@@ -29,6 +29,7 @@ class BasicBlock;
 class Function;
 class LLVMContext;
 class Module;
+class Type;
 class raw_ostream;
 class raw_fd_ostream;
 } // namespace llvm
@@ -63,6 +64,13 @@ using FLCtoOpcode = std::unordered_map<
     std::unordered_map<
         unsigned, std::unordered_map<unsigned, std::unordered_set<unsigned>>>>;
 
+enum class MockStrategy {
+  None,          // No mocks are generated
+  Naive,         // For each function call new symbolic value is generated
+  Deterministic, // Each function is treated as uninterpreted function in SMT.
+                 // Compatible with Z3 solver only
+};
+
 class Interpreter {
 public:
   enum class GuidanceKind {
@@ -79,6 +87,8 @@ public:
     std::string LibraryDir;
     std::string EntryPoint;
     std::string OptSuffix;
+    std::string MainCurrentName;
+    std::string MainNameAfterMock;
     bool Optimize;
     bool Simplify;
     bool CheckDivZero;
@@ -88,13 +98,16 @@ public:
 
     ModuleOptions(const std::string &_LibraryDir,
                   const std::string &_EntryPoint, const std::string &_OptSuffix,
-                  bool _Optimize, bool _Simplify, bool _CheckDivZero,
-                  bool _CheckOvershift, bool _WithFPRuntime,
-                  bool _WithPOSIXRuntime)
+                  const std::string &_MainCurrentName,
+                  const std::string &_MainNameAfterMock, bool _Optimize,
+                  bool _Simplify, bool _CheckDivZero, bool _CheckOvershift,
+                  bool _WithFPRuntime, bool _WithPOSIXRuntime)
         : LibraryDir(_LibraryDir), EntryPoint(_EntryPoint),
-          OptSuffix(_OptSuffix), Optimize(_Optimize), Simplify(_Simplify),
-          CheckDivZero(_CheckDivZero), CheckOvershift(_CheckOvershift),
-          WithFPRuntime(_WithFPRuntime), WithPOSIXRuntime(_WithPOSIXRuntime) {}
+          OptSuffix(_OptSuffix), MainCurrentName(_MainCurrentName),
+          MainNameAfterMock(_MainNameAfterMock), Optimize(_Optimize),
+          Simplify(_Simplify), CheckDivZero(_CheckDivZero),
+          CheckOvershift(_CheckOvershift), WithFPRuntime(_WithFPRuntime),
+          WithPOSIXRuntime(_WithPOSIXRuntime) {}
   };
 
   enum LogType {
@@ -112,10 +125,11 @@ public:
     unsigned MakeConcreteSymbolic;
     GuidanceKind Guidance;
     std::optional<SarifReport> Paths;
+    enum MockStrategy MockStrategy;
 
     InterpreterOptions(std::optional<SarifReport> Paths)
         : MakeConcreteSymbolic(false), Guidance(GuidanceKind::NoGuidance),
-          Paths(std::move(Paths)) {}
+          Paths(std::move(Paths)), MockStrategy(MockStrategy::None) {}
   };
 
 protected:
@@ -144,7 +158,11 @@ public:
             const ModuleOptions &opts,
             std::set<std::string> &&mainModuleFunctions,
             std::set<std::string> &&mainModuleGlobals,
-            FLCtoOpcode &&origInstructions) = 0;
+            FLCtoOpcode &&origInstructions,
+            const std::set<std::string> &ignoredExternals) = 0;
+
+  virtual std::map<std::string, llvm::Type *>
+  getAllExternals(const std::set<std::string> &ignoredExternals) = 0;
 
   // supply a tree stream writer which the interpreter will use
   // to record the concrete path (as a stream of '0' and '1' bytes).

@@ -112,6 +112,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
 #endif
     add("klee_is_symbolic", handleIsSymbolic, true),
     add("klee_make_symbolic", handleMakeSymbolic, false),
+    add("klee_make_mock", handleMakeMock, false),
     add("klee_mark_global", handleMarkGlobal, false),
     add("klee_prefer_cex", handlePreferCex, false),
     add("klee_posix_prefer_cex", handlePosixPreferCex, false),
@@ -935,6 +936,28 @@ void SpecialFunctionHandler::handleMakeSymbolic(
           *s, "Wrong size given to klee_make_symbolic");
     }
   }
+}
+
+void SpecialFunctionHandler::handleMakeMock(ExecutionState &state,
+                                            KInstruction *target,
+                                            std::vector<ref<Expr>> &arguments) {
+  std::string name;
+
+  if (arguments.size() != 3) {
+    executor.terminateStateOnUserError(state,
+                                       "Incorrect number of arguments to "
+                                       "klee_make_mock(void*, size_t, char*)");
+    return;
+  }
+
+  name = arguments[2]->isZero() ? "" : readStringAtAddress(state, arguments[2]);
+
+  if (name.length() == 0) {
+    executor.terminateStateOnUserError(
+        state, "Empty name of function in klee_make_mock");
+    return;
+  }
+  executor.executeMakeMock(state, target, arguments);
 }
 
 void SpecialFunctionHandler::handleMarkGlobal(

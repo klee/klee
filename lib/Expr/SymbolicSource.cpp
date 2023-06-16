@@ -1,6 +1,6 @@
 #include "klee/Expr/SymbolicSource.h"
-
 #include "klee/Expr/Expr.h"
+
 #include "klee/Expr/ExprPPrinter.h"
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Module/KInstruction.h"
@@ -200,6 +200,67 @@ unsigned InstructionSource::computeHash() {
         kf->instructionMap[&allocSite]->getIndex();
   hashValue = res;
   return hashValue;
+}
+
+unsigned MockNaiveSource::computeHash() {
+  unsigned res = (getKind() * SymbolicSource::MAGIC_HASH_CONSTANT) + version;
+  unsigned funcID = km->functionIDMap.at(&function);
+  res = (res * SymbolicSource::MAGIC_HASH_CONSTANT) + funcID;
+  hashValue = res;
+  return res;
+}
+
+int MockNaiveSource::internalCompare(const SymbolicSource &b) const {
+  if (getKind() != b.getKind()) {
+    return getKind() < b.getKind() ? -1 : 1;
+  }
+  const MockNaiveSource &mnb = static_cast<const MockNaiveSource &>(b);
+  if (version != mnb.version) {
+    return version < mnb.version ? -1 : 1;
+  }
+  unsigned funcID = km->functionIDMap.at(&function);
+  unsigned bFuncID = mnb.km->functionIDMap.at(&mnb.function);
+  if (funcID != bFuncID) {
+    return funcID < bFuncID ? -1 : 1;
+  }
+  return 0;
+}
+
+MockDeterministicSource::MockDeterministicSource(
+    const KModule *km, const llvm::Function &function,
+    const std::vector<ref<Expr>> &_args)
+    : MockSource(km, function), args(_args) {}
+
+unsigned MockDeterministicSource::computeHash() {
+  unsigned res = getKind();
+  res = (res * SymbolicSource::MAGIC_HASH_CONSTANT) +
+        km->functionIDMap.at(&function);
+  for (const auto &arg : args) {
+    res = (res * SymbolicSource::MAGIC_HASH_CONSTANT) + arg->hash();
+  }
+  hashValue = res;
+  return res;
+}
+
+int MockDeterministicSource::internalCompare(const SymbolicSource &b) const {
+  if (getKind() != b.getKind()) {
+    return getKind() < b.getKind() ? -1 : 1;
+  }
+  const MockDeterministicSource &mdb =
+      static_cast<const MockDeterministicSource &>(b);
+  unsigned funcID = km->functionIDMap.at(&function);
+  unsigned bFuncID = mdb.km->functionIDMap.at(&mdb.function);
+  if (funcID != bFuncID) {
+    return funcID < bFuncID ? -1 : 1;
+  }
+  assert(args.size() == mdb.args.size() &&
+         "the same functions should have the same arguments number");
+  for (unsigned i = 0; i < args.size(); i++) {
+    if (args[i] != mdb.args[i]) {
+      return args[i] < mdb.args[i] ? -1 : 1;
+    }
+  }
+  return 0;
 }
 
 } // namespace klee

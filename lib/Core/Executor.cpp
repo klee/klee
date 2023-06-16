@@ -40,6 +40,7 @@
 #include "klee/Config/Version.h"
 #include "klee/Config/config.h"
 #include "klee/Core/Interpreter.h"
+#include "klee/Core/MockBuilder.h"
 #include "klee/Expr/ArrayExprOptimizer.h"
 #include "klee/Expr/ArrayExprVisitor.h"
 #include "klee/Expr/Assignment.h"
@@ -508,9 +509,9 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
                    InterpreterHandler *ih)
     : Interpreter(opts), interpreterHandler(ih), searcher(nullptr),
       externalDispatcher(new ExternalDispatcher(ctx)), statsTracker(0),
-      pathWriter(0), symPathWriter(0),
-      specialFunctionHandler(0), timers{time::Span(TimerInterval)},
-      guidanceKind(opts.Guidance), codeGraphInfo(new CodeGraphInfo()),
+      pathWriter(0), symPathWriter(0), specialFunctionHandler(0),
+      timers{time::Span(TimerInterval)}, guidanceKind(opts.Guidance),
+      codeGraphInfo(new CodeGraphInfo()),
       distanceCalculator(new DistanceCalculator(*codeGraphInfo)),
       targetCalculator(new TargetCalculator(*codeGraphInfo)),
       targetManager(new TargetManager(guidanceKind, *distanceCalculator,
@@ -521,6 +522,11 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       inhibitForking(false), coverOnTheFly(false),
       haltExecution(HaltExecution::NotHalt), ivcEnabled(false),
       debugLogBuffer(debugBufferString) {
+  if (CoreSolverToUse != Z3_SOLVER &&
+      interpreterOpts.MockStrategy == MockStrategy::Deterministic) {
+    klee_error("Deterministic mocks can be generated with Z3 solver only.\n");
+  }
+
   const time::Span maxTime{MaxTime};
   if (maxTime)
     timers.add(std::make_unique<Timer>(maxTime, [&] {
@@ -587,9 +593,21 @@ llvm::Module *Executor::setModule(
     std::vector<std::unique_ptr<llvm::Module>> &userModules,
     std::vector<std::unique_ptr<llvm::Module>> &libsModules,
     const ModuleOptions &opts, std::set<std::string> &&mainModuleFunctions,
-    std::set<std::string> &&mainModuleGlobals, FLCtoOpcode &&origInstructions) {
+    std::set<std::string> &&mainModuleGlobals, FLCtoOpcode &&origInstructions,
+    const std::set<std::string> &ignoredExternals) {
   assert(!kmodule && !userModules.empty() &&
          "can only register one module"); // XXX gross
+
+  if (ExternalCalls == ExternalCallPolicy::All &&
+      interpreterOpts.MockStrategy != MockStrategy::None) {
+    llvm::Function *mainFn =
+        userModules.front()->getFunction(opts.MainCurrentName);
+    if (!mainFn) {
+      klee_error("Entry function '%s' not found in module.",
+                 opts.MainCurrentName.c_str());
+    }
+    mainFn->setName(opts.MainNameAfterMock);
+  }
 
   kmodule = std::make_unique<KModule>();
 
@@ -613,6 +631,42 @@ llvm::Module *Executor::setModule(
     }
     kmodule->link(modules, 2);
     kmodule->instrument(opts);
+  }
+
+  if (ExternalCalls == ExternalCallPolicy::All &&
+      interpreterOpts.MockStrategy != MockStrategy::None) {
+    // TODO: move this to function
+    std::map<std::string, llvm::Type *> externals =
+        getAllExternals(ignoredExternals);
+    MockBuilder builder(kmodule->module.get(), opts.MainCurrentName,
+                        opts.MainNameAfterMock, externals);
+    std::unique_ptr<llvm::Module> mockModule = builder.build();
+    if (!mockModule) {
+      klee_error("Unable to generate mocks");
+    }
+    // TODO: change this to bc file
+    std::unique_ptr<llvm::raw_fd_ostream> f(
+        interpreterHandler->openOutputFile("externals.ll"));
+    auto mainFn = mockModule->getFunction(opts.MainCurrentName);
+    mainFn->setName(opts.EntryPoint);
+    *f << *mockModule;
+    mainFn->setName(opts.MainCurrentName);
+
+    std::vector<std::unique_ptr<llvm::Module>> mockModules;
+    mockModules.push_back(std::move(mockModule));
+    kmodule->link(mockModules, 0);
+
+    for (auto &global : kmodule->module->globals()) {
+      if (global.isDeclaration()) {
+        llvm::Constant *zeroInitializer =
+            llvm::Constant::getNullValue(global.getValueType());
+        if (!zeroInitializer) {
+          klee_error("Unable to get zero initializer for '%s'",
+                     global.getName().str().c_str());
+        }
+        global.setInitializer(zeroInitializer);
+      }
+    }
   }
 
   // 3.) Optimise and prepare for KLEE
@@ -675,6 +729,37 @@ llvm::Module *Executor::setModule(
                       (Expr::Width)TD->getPointerSizeInBits());
 
   return kmodule->module.get();
+}
+
+std::map<std::string, llvm::Type *>
+Executor::getAllExternals(const std::set<std::string> &ignoredExternals) {
+  std::map<std::string, llvm::Type *> externals;
+  for (const auto &f : kmodule->module->functions()) {
+    if (f.isDeclaration() && !f.use_empty() &&
+        !ignoredExternals.count(f.getName().str()))
+      // NOTE: here we detect all the externals, even linked.
+      externals.insert(std::make_pair(f.getName(), f.getFunctionType()));
+  }
+
+  for (const auto &global : kmodule->module->globals()) {
+    if (global.isDeclaration() &&
+        !ignoredExternals.count(global.getName().str()))
+      externals.insert(std::make_pair(global.getName(), global.getValueType()));
+  }
+
+  for (const auto &alias : kmodule->module->aliases()) {
+    auto it = externals.find(alias.getName().str());
+    if (it != externals.end()) {
+      externals.erase(it);
+    }
+  }
+
+  for (const auto &e : externals) {
+    klee_message("Mocking external %s %s",
+                 e.second->isFunctionTy() ? "function" : "variable",
+                 e.first.c_str());
+  }
+  return externals;
 }
 
 Executor::~Executor() {
@@ -6743,6 +6828,48 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
       }
     }
   }
+}
+
+void Executor::executeMakeMock(ExecutionState &state, KInstruction *target,
+                               std::vector<ref<Expr>> &arguments) {
+  KFunction *kf = target->parent->parent;
+  std::string name = "@call_" + kf->getName().str();
+  uint64_t width =
+      kmodule->targetData->getTypeSizeInBits(kf->function->getReturnType());
+  KType *type = typeSystemManager->getWrappedType(
+      llvm::PointerType::get(kf->function->getReturnType(),
+                             kmodule->targetData->getAllocaAddrSpace()));
+
+  IDType moID;
+  bool success = state.addressSpace.resolveOne(cast<ConstantExpr>(arguments[0]),
+                                               type, moID);
+  assert(success && "memory object for mock should already be allocated");
+  const MemoryObject *mo = state.addressSpace.findObject(moID).first;
+  assert(mo && "memory object for mock should already be allocated");
+  mo->setName(name);
+
+  ref<SymbolicSource> source;
+  switch (interpreterOpts.MockStrategy) {
+  case MockStrategy::None:
+    klee_error("klee_make_mock is not allowed when mock strategy is none");
+    break;
+  case MockStrategy::Naive:
+    source = SourceBuilder::mockNaive(kmodule.get(), *kf->function,
+                                      updateNameVersion(state, name));
+    break;
+  case MockStrategy::Deterministic:
+    std::vector<ref<Expr>> args(kf->numArgs);
+    for (size_t i = 0; i < kf->numArgs; i++) {
+      args[i] = getArgumentCell(state, kf, i).value;
+    }
+    source =
+        SourceBuilder::mockDeterministic(kmodule.get(), *kf->function, args);
+    break;
+  }
+  executeMakeSymbolic(state, mo, type, source, false);
+  const ObjectState *os = state.addressSpace.findObject(mo->id).second;
+  auto result = os->read(0, width);
+  bindLocal(target, state, result);
 }
 
 /***/

@@ -22,6 +22,7 @@ add_library(kleeCore
   Memory.cpp
   MemoryManager.cpp
   PForest.cpp
+  MockBuilder.cpp
   PTree.cpp
   Searcher.cpp
   SeedInfo.cpp

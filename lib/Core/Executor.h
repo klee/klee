@@ -428,6 +428,9 @@ private:
                            KType *type, const ref<SymbolicSource> source,
                            bool isLocal);
 
+  void executeMakeMock(ExecutionState &state, KInstruction *target,
+                       std::vector<ref<Expr>> &arguments);
+
   void updateStateWithSymcretes(ExecutionState &state,
                                 const Assignment &assignment);
 
@@ -735,7 +738,11 @@ public:
             const ModuleOptions &opts,
             std::set<std::string> &&mainModuleFunctions,
             std::set<std::string> &&mainModuleGlobals,
-            FLCtoOpcode &&origInstructions) override;
+            FLCtoOpcode &&origInstructions,
+            const std::set<std::string> &ignoredExternals) override;
+
+  std::map<std::string, llvm::Type *>
+  getAllExternals(const std::set<std::string> &ignoredExternals) override;
 
   void useSeeds(const std::vector<struct KTest *> *seeds) override {
     usingSeeds = seeds;

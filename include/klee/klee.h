@@ -201,5 +201,6 @@ long double klee_rintl(long double d);
 // stdin/stdout
 void klee_init_env(int *argcPtr, char ***argvPtr);
 void check_stdin_read();
+void *__klee_wrapped_malloc(size_t size);
 
 #endif /* KLEE_H */
