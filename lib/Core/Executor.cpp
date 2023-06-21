@@ -1063,8 +1063,10 @@ ref<Expr> Executor::maxStaticPctChecks(ExecutionState &current,
 }
 
 Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
-                                   bool isInternal, BranchType reason) {
+                                   KBlock *ifTrueBlock, KBlock *ifFalseBlock,
+                                   BranchType reason) {
   PartialValidity res;
+  bool isInternal = ifTrueBlock == ifFalseBlock;
   std::map<ExecutionState *, std::vector<SeedInfo>>::iterator it =
       seedMap.find(&current);
   bool isSeeding = it != seedMap.end();
@@ -1264,6 +1266,12 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
 
     return StatePair(trueState, falseState);
   }
+}
+
+Executor::StatePair Executor::forkInternal(ExecutionState &current,
+                                           ref<Expr> condition,
+                                           BranchType reason) {
+  return fork(current, condition, nullptr, nullptr, reason);
 }
 
 void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
@@ -2415,8 +2423,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
       cond = optimizer.optimizeExpr(cond, false);
 
+      KFunction *kf = state.stack.back().kf;
+      auto ifTrueBlock = kf->blockMap[bi->getSuccessor(0)];
+      auto ifFalseBlock = kf->blockMap[bi->getSuccessor(1)];
       Executor::StatePair branches =
-          fork(state, cond, false, BranchType::ConditionalBranch);
+          fork(state, cond, ifTrueBlock, ifFalseBlock,
+               BranchType::ConditionalBranch);
 
       // NOTE: There is a hidden dependency here, markBranchVisited
       // requires that we still be in the context of the branch
@@ -2741,7 +2753,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
           assert(success && "FIXME: Unhandled solver failure");
           (void)success;
           StatePair res =
-              fork(*free, EqExpr::create(v, value), true, BranchType::Call);
+              forkInternal(*free, EqExpr::create(v, value), BranchType::Call);
           if (res.first) {
             uint64_t addr = value->getZExtValue();
             auto it = legalFunctions.find(addr);
@@ -4899,7 +4911,7 @@ void Executor::executeFree(ExecutionState &state, ref<Expr> address,
                            KInstruction *target) {
   address = optimizer.optimizeExpr(address, true);
   StatePair zeroPointer =
-      fork(state, Expr::createIsZero(address), true, BranchType::Free);
+      forkInternal(state, Expr::createIsZero(address), BranchType::Free);
   if (zeroPointer.first) {
     if (target)
       bindLocal(target, *zeroPointer.first, Expr::createPointer(0));
@@ -4963,7 +4975,7 @@ bool Executor::resolveExact(ExecutionState &estate, ref<Expr> address,
   uniqueBase = toUnique(estate, uniqueBase);
 
   StatePair branches =
-      fork(estate, Expr::createIsZero(base), true, BranchType::MemOp);
+      forkInternal(estate, Expr::createIsZero(base), BranchType::MemOp);
   ExecutionState *bound = branches.first;
   if (bound) {
     if (!isReadFromSymbolicArray(uniqueBase) ||
@@ -5001,7 +5013,7 @@ bool Executor::resolveExact(ExecutionState &estate, ref<Expr> address,
       inBounds = EqExpr::create(address, mo->getBaseExpr());
     }
     StatePair branches =
-        fork(*unbound, inBounds, true, BranchType::ResolvePointer);
+        forkInternal(*unbound, inBounds, BranchType::ResolvePointer);
 
     if (branches.first)
       results.push_back(std::make_pair(rl.at(i), branches.first));
@@ -5600,7 +5612,7 @@ void Executor::executeMemoryOperation(
   uniqueBase = toUnique(estate, uniqueBase);
 
   StatePair branches =
-      fork(estate, Expr::createIsZero(base), true, BranchType::MemOp);
+      forkInternal(estate, Expr::createIsZero(base), BranchType::MemOp);
   ExecutionState *bound = branches.first;
   if (bound) {
     if (!isReadFromSymbolicArray(uniqueBase) ||
@@ -5791,8 +5803,9 @@ void Executor::executeMemoryOperation(
 
           ObjectState *wos = state->addressSpace.getWriteable(mo, os);
           if (wos->readOnly) {
-            branches = fork(*state, Expr::createIsZero(unboundConditions[i]),
-                            true, BranchType::MemOp);
+            branches =
+                forkInternal(*state, Expr::createIsZero(unboundConditions[i]),
+                             BranchType::MemOp);
             assert(branches.first);
             terminateStateOnError(*branches.first,
                                   "memory error: object read only",

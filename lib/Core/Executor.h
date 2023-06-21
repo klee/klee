@@ -424,8 +424,11 @@ private:
   /// Fork current and return states in which condition holds / does
   /// not hold, respectively. One of the states is necessarily the
   /// current state, and one of the states may be null.
-  StatePair fork(ExecutionState &current, ref<Expr> condition, bool isInternal,
-                 BranchType reason);
+  /// if ifTrueBlock == ifFalseBlock, then fork is internal
+  StatePair fork(ExecutionState &current, ref<Expr> condition,
+                 KBlock *ifTrueBlock, KBlock *ifFalseBlock, BranchType reason);
+  StatePair forkInternal(ExecutionState &current, ref<Expr> condition,
+                         BranchType reason);
 
   // If the MaxStatic*Pct limits have been reached, concretize the condition and
   // return it. Otherwise, return the unmodified condition.
