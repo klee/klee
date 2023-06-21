@@ -96,6 +96,11 @@ public:
 
   bool isTheSameAsIn(KInstruction *instr) const;
 
+  /// returns true if we cannot use CFG reachability checks
+  /// from instr children to this target
+  /// to avoid solver calls
+  bool mustVisitForkBranches(KInstruction *instr) const;
+
   unsigned getId() const { return id; }
 
   std::string toString() const;

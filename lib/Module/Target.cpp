@@ -79,6 +79,15 @@ bool Target::isTheSameAsIn(KInstruction *instr) const {
            instr->info->column <= *errLoc.endColumn));
 }
 
+bool Target::mustVisitForkBranches(KInstruction *instr) const {
+  // null check after deref error is checked after fork
+  // but reachability of this target from instr children
+  // will always give false, so we need to force visiting
+  // fork branches here
+  return isTheSameAsIn(instr) &&
+         isThatError(ReachWithError::NullCheckAfterDerefException);
+}
+
 int Target::compare(const Target &other) const {
   if (errors != other.errors) {
     return errors < other.errors ? -1 : 1;

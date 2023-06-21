@@ -1062,10 +1062,25 @@ ref<Expr> Executor::maxStaticPctChecks(ExecutionState &current,
   return condition;
 }
 
+bool Executor::canReachSomeTargetFromBlock(ExecutionState &es, KBlock *block) {
+  if (interpreterOpts.Guidance != GuidanceKind::ErrorGuidance)
+    return true;
+  auto nextInstr = block->getFirstInstruction();
+  for (const auto &p : *es.targetForest.getTargets()) {
+    auto target = p.first;
+    if (target->mustVisitForkBranches(es.prevPC))
+      return true;
+    auto dist = distanceCalculator->getDistance(nextInstr, es.prevPC, es.initPC,
+                                                es.stack, es.error, target);
+    if (dist.result != WeightResult::Miss)
+      return true;
+  }
+  return false;
+}
+
 Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
                                    KBlock *ifTrueBlock, KBlock *ifFalseBlock,
                                    BranchType reason) {
-  PartialValidity res;
   bool isInternal = ifTrueBlock == ifFalseBlock;
   std::map<ExecutionState *, std::vector<SeedInfo>>::iterator it =
       seedMap.find(&current);
@@ -1078,8 +1093,46 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
   if (isSeeding)
     timeout *= static_cast<unsigned>(it->second.size());
   solver->setTimeout(timeout);
-  bool success = solver->evaluate(current.constraints.cs(), condition, res,
-                                  current.queryMetaData);
+
+  bool shouldCheckTrueBlock = true, shouldCheckFalseBlock = true;
+  if (!isInternal) {
+    shouldCheckTrueBlock = canReachSomeTargetFromBlock(current, ifTrueBlock);
+    shouldCheckFalseBlock = canReachSomeTargetFromBlock(current, ifFalseBlock);
+  }
+  PartialValidity res = PartialValidity::None;
+  bool terminateEverything = false, success = false;
+  if (!shouldCheckTrueBlock) {
+    assert(shouldCheckFalseBlock &&
+           "current state cannot reach any targets itself!");
+    // only solver->check-sat(!condition)
+    bool mayBeFalse;
+    success = solver->mayBeFalse(current.constraints.cs(), condition,
+                                 mayBeFalse, current.queryMetaData);
+    if (success && !mayBeFalse)
+      terminateEverything = true;
+    else
+      res = PartialValidity::MayBeFalse;
+  } else if (!shouldCheckFalseBlock) {
+    // only solver->check-sat(condition)
+    bool mayBeTrue;
+    success = solver->mayBeTrue(current.constraints.cs(), condition, mayBeTrue,
+                                current.queryMetaData);
+    if (success && !mayBeTrue)
+      terminateEverything = true;
+    else
+      res = PartialValidity::MayBeTrue;
+  }
+  if (terminateEverything) {
+    current.pc = current.prevPC;
+    terminateStateEarly(current, "State missed all it's targets.",
+                        StateTerminationType::MissedAllTargets);
+    return StatePair(nullptr, nullptr);
+  }
+  if (res != PartialValidity::None)
+    success = true;
+  else
+    success = solver->evaluate(current.constraints.cs(), condition, res,
+                               current.queryMetaData);
   solver->setTimeout(time::Span());
   if (!success) {
     current.pc = current.prevPC;
@@ -2473,11 +2526,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     ref<Expr> errorCase = ConstantExpr::alloc(1, Expr::Bool);
     SmallPtrSet<BasicBlock *, 5> destinations;
+    KFunction *kf = state.stack.back().kf;
     // collect and check destinations from label list
     for (unsigned k = 0; k < numDestinations; ++k) {
       // filter duplicates
       const auto d = bi->getDestination(k);
       if (destinations.count(d))
+        continue;
+      if (!canReachSomeTargetFromBlock(state, kf->blockMap[d]))
         continue;
       destinations.insert(d);
 
@@ -2565,12 +2621,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // Track default branch values
       ref<Expr> defaultValue = ConstantExpr::alloc(1, Expr::Bool);
 
+      KFunction *kf = state.stack.back().kf;
+
       // iterate through all non-default cases but in order of the expressions
       for (std::map<ref<Expr>, BasicBlock *>::iterator
                it = expressionOrder.begin(),
                itE = expressionOrder.end();
            it != itE; ++it) {
         ref<Expr> match = EqExpr::create(cond, it->first);
+        BasicBlock *caseSuccessor = it->second;
 
         // skip if case has same successor basic block as default case
         // (should work even with phi nodes as a switch is a single terminating
@@ -2581,6 +2640,9 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         // Make sure that the default value does not contain this target's value
         defaultValue = AndExpr::create(defaultValue, Expr::createIsZero(match));
 
+        if (!canReachSomeTargetFromBlock(state, kf->blockMap[caseSuccessor]))
+          continue;
+
         // Check if control flow could take this case
         bool result;
         match = optimizer.optimizeExpr(match, false);
@@ -2589,8 +2651,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         assert(success && "FIXME: Unhandled solver failure");
         (void)success;
         if (result) {
-          BasicBlock *caseSuccessor = it->second;
-
           // Handle the case that a basic block might be the target of multiple
           // switch cases.
           // Currently we generate an expression containing all switch-case
@@ -2610,19 +2670,21 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
         }
       }
 
-      // Check if control could take the default case
-      defaultValue = optimizer.optimizeExpr(defaultValue, false);
-      bool res;
-      bool success = solver->mayBeTrue(state.constraints.cs(), defaultValue,
-                                       res, state.queryMetaData);
-      assert(success && "FIXME: Unhandled solver failure");
-      (void)success;
-      if (res) {
-        std::pair<std::map<BasicBlock *, ref<Expr>>::iterator, bool> ret =
-            branchTargets.insert(
-                std::make_pair(si->getDefaultDest(), defaultValue));
-        if (ret.second) {
-          bbOrder.push_back(si->getDefaultDest());
+      auto defaultDest = si->getDefaultDest();
+      if (canReachSomeTargetFromBlock(state, kf->blockMap[defaultDest])) {
+        // Check if control could take the default case
+        defaultValue = optimizer.optimizeExpr(defaultValue, false);
+        bool res;
+        bool success = solver->mayBeTrue(state.constraints.cs(), defaultValue,
+                                         res, state.queryMetaData);
+        assert(success && "FIXME: Unhandled solver failure");
+        (void)success;
+        if (res) {
+          std::pair<std::map<BasicBlock *, ref<Expr>>::iterator, bool> ret =
+              branchTargets.insert(std::make_pair(defaultDest, defaultValue));
+          if (ret.second) {
+            bbOrder.push_back(defaultDest);
+          }
         }
       }
 

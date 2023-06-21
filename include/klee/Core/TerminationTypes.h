@@ -42,7 +42,8 @@
   MARK(EXECERR, 26U)                                                           \
   TTYPE(Replay, 27U, "")                                                       \
   TTYPE(SilentExit, 28U, "")                                                   \
-  MARK(END, 28U)
+  TTYPE(MissedAllTargets, 29U, "")                                             \
+  MARK(END, 29U)
 
 ///@brief Reason an ExecutionState got terminated.
 enum class StateTerminationType : std::uint8_t {
