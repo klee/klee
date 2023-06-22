@@ -95,8 +95,11 @@ TEST(RefTest, SelfMove) {
     struct Expr *r_e = new Expr();
     ref<Expr> r(r_e);
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wself-move"
     // Check self move
     r = std::move(r);
+#pragma GCC diagnostic pop
     finished = 1;
   }
   EXPECT_EQ(1, finished_counter);
