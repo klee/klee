@@ -10,6 +10,7 @@
 
 #include "klee/Config/config.h"
 #include "klee/Expr/Constraints.h"
+#include "klee/Expr/ExprUtil.h"
 #include "klee/Statistics/Statistics.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/FileHandling.h"
@@ -169,8 +170,17 @@ bool QueryLoggingSolver::computeInitialValues(
     std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
   startQuery(query, "InitialValues", 0, &objects);
 
-  bool success =
-      solver->impl->computeInitialValues(query, objects, values, hasSolution);
+  ExprHashSet expressions;
+  expressions.insert(query.constraints.cs().begin(),
+                     query.constraints.cs().end());
+  expressions.insert(query.expr);
+
+  std::vector<const Array *> allObjects;
+  findSymbolicObjects(expressions.begin(), expressions.end(), allObjects);
+  std::vector<SparseStorage<unsigned char>> allValues;
+
+  bool success = solver->impl->computeInitialValues(query, allObjects,
+                                                    allValues, hasSolution);
 
   finishQuery(success);
 
@@ -178,6 +188,11 @@ bool QueryLoggingSolver::computeInitialValues(
     logBuffer << queryCommentSign
               << "   Solvable: " << (hasSolution ? "true" : "false") << "\n";
     if (hasSolution) {
+      ref<InvalidResponse> invalidResponse =
+          new InvalidResponse(allObjects, allValues);
+      success = invalidResponse->tryGetInitialValuesFor(objects, values);
+      assert(success);
+      Assignment allSolutionAssignment(allObjects, allValues, true);
       std::vector<SparseStorage<unsigned char>>::iterator values_it =
           values.begin();
 
@@ -190,7 +205,7 @@ bool QueryLoggingSolver::computeInitialValues(
         logBuffer << queryCommentSign << "     " << array->getIdentifier()
                   << " = [";
         ref<ConstantExpr> arrayConstantSize =
-            dyn_cast<ConstantExpr>(solutionAssignment.evaluate(array->size));
+            dyn_cast<ConstantExpr>(allSolutionAssignment.evaluate(array->size));
         assert(arrayConstantSize &&
                "Array of symbolic size had not receive value for size!");
 
