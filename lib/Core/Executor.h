@@ -593,6 +593,10 @@ private:
   void terminateStateOnUserError(ExecutionState &state,
                                  const llvm::Twine &message);
 
+  void reportProgressTowardsTargets(std::string prefix,
+                                    const SetOfStates &states) const;
+  void reportProgressTowardsTargets() const;
+
   /// bindModuleConstants - Initialize the module constant table.
   void bindModuleConstants(const llvm::APFloat::roundingMode &rm);
 

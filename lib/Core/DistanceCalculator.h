@@ -21,9 +21,9 @@ class CodeGraphDistance;
 struct Target;
 
 enum WeightResult : std::uint8_t {
-  Continue,
-  Done,
-  Miss,
+  Done = 0U,
+  Continue = 1U,
+  Miss = 2U,
 };
 
 using weight_type = unsigned;
@@ -33,9 +33,14 @@ struct DistanceResult {
   weight_type weight;
   bool isInsideFunction;
 
-  explicit DistanceResult(WeightResult result_, weight_type weight_ = 0,
+  explicit DistanceResult(WeightResult result_ = WeightResult::Miss,
+                          weight_type weight_ = 0,
                           bool isInsideFunction_ = true)
-      : result(result_), weight(weight_), isInsideFunction(isInsideFunction_) {}
+      : result(result_), weight(weight_), isInsideFunction(isInsideFunction_){};
+
+  bool operator<(const DistanceResult &b) const;
+
+  std::string toString() const;
 };
 
 class DistanceCalculator {

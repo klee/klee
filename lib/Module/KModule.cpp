@@ -728,6 +728,8 @@ std::string KBlock::getLabel() const {
   std::string _label;
   llvm::raw_string_ostream label_stream(_label);
   basicBlock->printAsOperand(label_stream, false);
+  label_stream << " (lines " << getFirstInstruction()->info->line << " to "
+               << getLastInstruction()->info->line << ")";
   std::string label = label_stream.str();
   return label;
 }

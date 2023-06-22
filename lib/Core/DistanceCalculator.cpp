@@ -13,8 +13,25 @@
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/Target.h"
 
+#include <limits>
+
 using namespace llvm;
 using namespace klee;
+
+bool DistanceResult::operator<(const DistanceResult &b) const {
+  if (isInsideFunction != b.isInsideFunction)
+    return isInsideFunction;
+  if (result == WeightResult::Continue && b.result == WeightResult::Continue)
+    return weight < b.weight;
+  return result < b.result;
+}
+
+std::string DistanceResult::toString() const {
+  std::ostringstream out;
+  out << "(" << (int)!isInsideFunction << ", " << (int)result << ", " << weight
+      << ")";
+  return out.str();
+}
 
 DistanceResult DistanceCalculator::getDistance(ExecutionState &es,
                                                ref<Target> target) {

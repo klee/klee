@@ -14,6 +14,7 @@
 
 #include <map>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace llvm {
 class BasicBlock;
@@ -53,6 +54,13 @@ struct RefTargetLess {
     return a.get() < b.get();
   }
 };
+
+template <class T>
+class TargetHashMap
+    : public std::unordered_map<ref<Target>, T, RefTargetHash, RefTargetCmp> {};
+
+class TargetHashSet
+    : public std::unordered_set<ref<Target>, RefTargetHash, RefTargetCmp> {};
 
 } // namespace klee
 #endif /* KLEE_TARGETHASH_H */

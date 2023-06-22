@@ -158,14 +158,6 @@ public:
 };
 
 class GuidedSearcher final : public Searcher {
-private:
-  template <class T>
-  class TargetHashMap
-      : public std::unordered_map<ref<Target>, T, RefTargetHash, RefTargetCmp> {
-  };
-  class TargetHashSet
-      : public std::unordered_set<ref<Target>, RefTargetHash, RefTargetCmp> {};
-
 public:
   using TargetToStateUnorderedSetMap =
       TargetHashMap<std::unordered_set<ExecutionState *>>;
