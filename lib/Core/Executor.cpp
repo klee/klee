@@ -198,17 +198,27 @@ cl::opt<ExternalCallPolicy> ExternalCalls(
     cl::init(ExternalCallPolicy::Concrete),
     cl::cat(ExtCallsCat));
 
-cl::opt<bool> SuppressExternalWarnings(
-    "suppress-external-warnings",
-    cl::init(false),
-    cl::desc("Supress warnings about calling external functions."),
-    cl::cat(ExtCallsCat));
 
-cl::opt<bool> AllExternalWarnings(
-    "all-external-warnings",
-    cl::init(false),
-    cl::desc("Issue a warning every time an external call is made, "
-             "as opposed to once per function (default=false)"),
+/*** External call warnings options ***/
+
+enum class ExtCallWarnings {
+  None,            // Never warn on external calls
+  OncePerFunction, // Only warn once per function on external calls
+  All,             // Always warn on external calls
+};
+
+cl::opt<ExtCallWarnings> ExternalCallWarnings(
+    "external-call-warnings",
+    cl::desc("Specify when to warn about external calls"),
+    cl::values(
+        clEnumValN(
+            ExtCallWarnings::None, "none",
+            "Never warn"),
+        clEnumValN(ExtCallWarnings::OncePerFunction, "once-per-function",
+                   "Warn once per external function (default)"),
+        clEnumValN(ExternalCallPolicy::All, "all",
+                   "Always warn")),
+    cl::init(ExtCallWarnings::OncePerFunction),
     cl::cat(ExtCallsCat));
 
 cl::opt<std::size_t> ExternalPageThreshold(
@@ -1323,7 +1333,7 @@ Executor::toConstant(ExecutionState &state,
      << " to value " << value << " (" << (*(state.pc)).info->file << ":"
      << (*(state.pc)).info->line << ")";
 
-  if (AllExternalWarnings)
+  if (ExternalCallWarnings == ExtCallWarnings::All)
     klee_warning("%s", os.str().c_str());
   else
     klee_warning_once(reason, "%s", os.str().c_str());
@@ -3966,8 +3976,7 @@ void Executor::callExternalFunction(ExecutionState &state,
       errnoValue->getZExtValue(sizeof(*errno_addr) * 8));
 #endif
 
-  if (!SuppressExternalWarnings) {
-
+  if (ExternalCallWarnings != ExtCallWarnings::None) {
     std::string TmpStr;
     llvm::raw_string_ostream os(TmpStr);
     os << "calling external: " << callable->getName().str() << "(";
@@ -3978,7 +3987,7 @@ void Executor::callExternalFunction(ExecutionState &state,
     }
     os << ") at " << state.pc->getSourceLocation();
     
-    if (AllExternalWarnings)
+    if (ExternalCallWarnings == ExtCallWarnings::All)
       klee_warning("%s", os.str().c_str());
     else
       klee_warning_once(callable->getValue(), "%s", os.str().c_str());
