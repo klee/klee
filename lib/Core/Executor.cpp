@@ -281,7 +281,7 @@ cl::list<StateTerminationType> ExitOnErrorType(
     cl::desc("Stop execution after reaching a specified condition (default=false)"),
     cl::values(
         clEnumValN(StateTerminationType::Abort, "Abort",
-                   "The program crashed (reached abort()/klee_abort())"),
+                   "The program reached abort or klee_abort"),
         clEnumValN(StateTerminationType::Assert, "Assert",
                    "An assertion was hit"),
         clEnumValN(StateTerminationType::BadVectorAccess, "BadVectorAccess",
