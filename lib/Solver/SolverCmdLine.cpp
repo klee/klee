@@ -112,16 +112,24 @@ cl::opt<bool> UseAssignmentValidatingSolver(
     cl::desc("Debug the correctness of generated assignments (default=false)"),
     cl::cat(SolvingCat));
 
-
-void KCommandLine::HideOptions(llvm::cl::OptionCategory &Category) {
+void KCommandLine::KeepOnlyCategories(
+    std::set<llvm::cl::OptionCategory *> const &categories) {
   StringMap<cl::Option *> &map = cl::getRegisteredOptions();
 
   for (auto &elem : map) {
+    if (elem.first() == "version" || elem.first() == "color" ||
+        elem.first() == "help"    || elem.first() == "help-list")
+      continue;
+
+    bool keep = false;
     for (auto &cat : elem.second->Categories) {
-      if (cat == &Category) {
-        elem.second->setHiddenFlag(cl::Hidden);
+      if (categories.find(cat) != categories.end()) {
+        keep = true;
+        break;
       }
     }
+    if (!keep)
+      elem.second->setHiddenFlag(cl::Hidden);
   }
 }
 
