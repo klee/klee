@@ -55,7 +55,7 @@ cl::opt<bool>
 cl::opt<bool>
     SilentKleeAssume("silent-klee-assume", cl::init(false),
                      cl::desc("Silently terminate paths with an infeasible "
-                              "condition given to klee_assume() rather than "
+                              "condition given to klee_assume rather than "
                               "emitting an error (default=false)"),
                      cl::cat(TerminationCat));
 } // namespace
