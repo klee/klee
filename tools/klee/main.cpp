@@ -234,13 +234,13 @@ namespace {
   
   cl::list<std::string>
   ReplayKTestFile("replay-ktest-file",
-                  cl::desc("Specify a ktest file to use for replay"),
-                  cl::value_desc("ktest file"),
+                  cl::desc("Specify a .ktest file to use for replay"),
+                  cl::value_desc(".ktest file"),
                   cl::cat(ReplayCat));
 
   cl::list<std::string>
   ReplayKTestDir("replay-ktest-dir",
-                 cl::desc("Specify a directory to replay ktest files from"),
+                 cl::desc("Specify a directory to replay .ktest files from"),
                  cl::value_desc("output directory"),
                  cl::cat(ReplayCat));
 
