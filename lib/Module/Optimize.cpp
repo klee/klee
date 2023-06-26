@@ -117,7 +117,9 @@ static void AddStandardCompilePasses(legacy::PassManager &PM) {
 
   if (!DisableInline)
     addPass(PM, createFunctionInliningPass());   // Inline small functions
+#if LLVM_VERSION_CODE < LLVM_VERSION(15, 0)
   addPass(PM, createArgumentPromotionPass());    // Scalarize uninlined fn args
+#endif
 
   addPass(PM, createInstructionCombiningPass()); // Cleanup for scalarrepl.
   addPass(PM, createJumpThreadingPass());        // Thread jumps.
@@ -130,7 +132,9 @@ static void AddStandardCompilePasses(legacy::PassManager &PM) {
   addPass(PM, createReassociatePass());          // Reassociate expressions
   addPass(PM, createLoopRotatePass());
   addPass(PM, createLICMPass());                 // Hoist loop invariants
+#if LLVM_VERSION_CODE < LLVM_VERSION(15, 0)
   addPass(PM, createLoopUnswitchPass());         // Unswitch loops.
+#endif
   // FIXME : Removing instcombine causes nestedloop regression.
   addPass(PM, createInstructionCombiningPass());
   addPass(PM, createIndVarSimplifyPass());       // Canonicalize indvars
@@ -212,9 +216,11 @@ void Optimize(Module *M, llvm::ArrayRef<const char *> preservedFunctions) {
   addPass(Passes, createGlobalOptimizerPass()); // Optimize globals again.
   addPass(Passes, createGlobalDCEPass());       // Remove dead functions
 
+#if LLVM_VERSION_CODE < LLVM_VERSION(15, 0)
   // If we didn't decide to inline a function, check to see if we can
   // transform it to pass arguments by value instead of by reference.
   addPass(Passes, createArgumentPromotionPass());
+#endif
 
   // The IPO passes may leave cruft around.  Clean up after them.
   addPass(Passes, createInstructionCombiningPass());
