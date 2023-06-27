@@ -149,40 +149,9 @@ public:
                           : Action::changeTo(visit(sexpr.falseExpr));
     }
 
-    std::vector<ref<Expr>> splittedCond;
-    Expr::splitAnds(cond, splittedCond);
-
-    ExprHashMap<ref<Expr>> localReplacements;
-    for (auto scond : splittedCond) {
-      if (const EqExpr *ee = dyn_cast<EqExpr>(scond)) {
-        if (isa<ConstantExpr>(ee->left)) {
-          localReplacements.insert(std::make_pair(ee->right, ee->left));
-        } else {
-          localReplacements.insert(
-              std::make_pair(scond, ConstantExpr::alloc(1, Expr::Bool)));
-        }
-      } else {
-        localReplacements.insert(
-            std::make_pair(scond, ConstantExpr::alloc(1, Expr::Bool)));
-      }
-    }
-
-    replacements.push_back(localReplacements);
-    visited.pushFrame();
     auto trueExpr = visit(sexpr.trueExpr);
-    visited.popFrame();
-    replacements.pop_back();
 
-    // Reuse for false branch replacements
-    localReplacements.clear();
-    localReplacements.insert(
-        std::make_pair(cond, ConstantExpr::alloc(0, Expr::Bool)));
-
-    replacements.push_back(localReplacements);
-    visited.pushFrame();
     auto falseExpr = visit(sexpr.falseExpr);
-    visited.popFrame();
-    replacements.pop_back();
 
     if (trueExpr != sexpr.trueExpr || falseExpr != sexpr.falseExpr) {
       ref<Expr> seres = SelectExpr::create(cond, trueExpr, falseExpr);
@@ -427,18 +396,28 @@ Simplificator::simplifyExpr(const constraints_ty &constraints,
 
   for (auto &constraint : constraints) {
     if (const EqExpr *ee = dyn_cast<EqExpr>(constraint)) {
+      ref<Expr> left = ee->left;
+      ref<Expr> right = ee->right;
+      if (right < left) {
+        left = ee->right;
+        right = ee->left;
+      }
       if (isa<ConstantExpr>(ee->left)) {
         equalities.insert(std::make_pair(ee->right, ee->left));
         equalitiesParents.insert({ee->right, constraint});
       } else {
-        equalities.insert(
-            std::make_pair(constraint, ConstantExpr::alloc(1, Expr::Bool)));
+        equalities.insert(std::make_pair(constraint, Expr::createTrue()));
+        equalities.insert(std::make_pair(right, left));
         equalitiesParents.insert({constraint, constraint});
+        equalitiesParents.insert({right, constraint});
       }
     } else {
-      equalities.insert(
-          std::make_pair(constraint, ConstantExpr::alloc(1, Expr::Bool)));
+      equalities.insert(std::make_pair(constraint, Expr::createTrue()));
       equalitiesParents.insert({constraint, constraint});
+      if (const NotExpr *ne = dyn_cast<NotExpr>(constraint)) {
+        equalities.insert(std::make_pair(ne->expr, Expr::createFalse()));
+        equalitiesParents.insert({ne->expr, constraint});
+      }
     }
   }
 
@@ -522,12 +501,11 @@ Simplificator::gatherReplacements(constraints_ty constraints) {
         result.equalitiesParents.insert({ee->right, constraint});
       } else {
         result.equalities.insert(
-            std::make_pair(constraint, ConstantExpr::alloc(1, Expr::Bool)));
+            std::make_pair(constraint, Expr::createTrue()));
         result.equalitiesParents.insert({constraint, constraint});
       }
     } else {
-      result.equalities.insert(
-          std::make_pair(constraint, ConstantExpr::alloc(1, Expr::Bool)));
+      result.equalities.insert(std::make_pair(constraint, Expr::createTrue()));
       result.equalitiesParents.insert({constraint, constraint});
     }
   }
@@ -540,13 +518,11 @@ void Simplificator::addReplacement(Replacements &replacements, ref<Expr> expr) {
       replacements.equalities.insert(std::make_pair(ee->right, ee->left));
       replacements.equalitiesParents.insert({ee->right, expr});
     } else {
-      replacements.equalities.insert(
-          std::make_pair(expr, ConstantExpr::alloc(1, Expr::Bool)));
+      replacements.equalities.insert(std::make_pair(expr, Expr::createTrue()));
       replacements.equalitiesParents.insert({expr, expr});
     }
   } else {
-    replacements.equalities.insert(
-        std::make_pair(expr, ConstantExpr::alloc(1, Expr::Bool)));
+    replacements.equalities.insert(std::make_pair(expr, Expr::createTrue()));
     replacements.equalitiesParents.insert({expr, expr});
   }
 }
