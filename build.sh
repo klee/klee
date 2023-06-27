@@ -1,35 +1,51 @@
-#!/bin/bash
-# This script is used to build KLEE as UTBot backend
+#!/bin/sh
 
-set -e
-set -o pipefail
-mkdir -p build
-cd build
+# For more build options, visit
+# https://klee.github.io/build-script/
 
-$UTBOT_CMAKE_BINARY -G Ninja \
-  -DCMAKE_PREFIX_PATH=$UTBOT_INSTALL_DIR/lib/cmake/z3 \
-  -DCMAKE_LIBRARY_PATH=$UTBOT_INSTALL_DIR/lib \
-  -DCMAKE_INCLUDE_PATH=$UTBOT_INSTALL_DIR/include \
-  -DENABLE_SOLVER_Z3=TRUE \
-  -DENABLE_POSIX_RUNTIME=TRUE \
-  -DENABLE_KLEE_UCLIBC=ON \
-  -DKLEE_UCLIBC_PATH=$UTBOT_ALL/klee-uclibc \
-  -DENABLE_FLOATING_POINT=TRUE \
-  -DENABLE_FP_RUNTIME=TRUE \
-  -DLLVM_CONFIG_BINARY=$UTBOT_INSTALL_DIR/bin/llvm-config \
-  -DLLVMCC=/utbot_distr/install/bin/clang \
-  -DLLVMCXX=/utbot_distr/install/bin/clang++ \
-  -DENABLE_UNIT_TESTS=TRUE \
-  -DENABLE_SYSTEM_TESTS=TRUE \
-  -DGTEST_SRC_DIR=$UTBOT_ALL/gtest \
-  -DGTEST_INCLUDE_DIR=$UTBOT_ALL/gtest/googletest/include \
-  -DCMAKE_INSTALL_PREFIX=$UTBOT_ALL/klee \
-  -DENABLE_KLEE_LIBCXX=TRUE \
-  -DKLEE_LIBCXX_DIR=$UTBOT_ALL/libcxx/install \
-  -DKLEE_LIBCXX_INCLUDE_DIR=$UTBOT_ALL/libcxx/install/include/c++/v1 \
-  -DENABLE_KLEE_EH_CXX=TRUE \
-  -DKLEE_LIBCXXABI_SRC_DIR=$UTBOT_ALL/libcxx/libcxxabi \
-   ..
+# Base folder where dependencies and KLEE itself are installed
+BASE=$HOME/klee_build
 
-$UTBOT_CMAKE_BINARY --build .
-$UTBOT_CMAKE_BINARY --install .
+## KLEE Required options
+# Build type for KLEE. The options are:
+# Release
+# Release+Debug
+# Release+Asserts
+# Release+Debug+Asserts
+# Debug
+# Debug+Asserts
+# KLEE_RUNTIME_BUILD="Debug+Asserts"
+KLEE_RUNTIME_BUILD="Debug" # "Debug+Asserts"
+
+COVERAGE=0
+ENABLE_DOXYGEN=0
+USE_TCMALLOC=0
+USE_LIBCXX=1
+# Also required despite not being mentioned in the guide
+SQLITE_VERSION="3370200"
+
+
+## LLVM Required options
+LLVM_VERSION=11
+ENABLE_OPTIMIZED=1
+ENABLE_DEBUG=0
+DISABLE_ASSERTIONS=1
+REQUIRES_RTTI=1
+
+## Solvers Required options
+# SOLVERS=STP
+SOLVERS=Z3
+
+## Google Test Required options
+GTEST_VERSION=1.11.0
+
+## UClibC Required options
+UCLIBC_VERSION=klee_0_9_29
+# LLVM_VERSION is also required for UClibC
+
+## Z3 Required options
+Z3_VERSION=4.8.15
+STP_VERSION=2.3.3
+MINISAT_VERSION=master
+
+BASE="$BASE" KLEE_RUNTIME_BUILD=$KLEE_RUNTIME_BUILD COVERAGE=$COVERAGE ENABLE_DOXYGEN=$ENABLE_DOXYGEN USE_TCMALLOC=$USE_TCMALLOC USE_LIBCXX=$USE_LIBCXX LLVM_VERSION=$LLVM_VERSION ENABLE_OPTIMIZED=$ENABLE_OPTIMIZED ENABLE_DEBUG=$ENABLE_DEBUG DISABLE_ASSERTIONS=$DISABLE_ASSERTIONS REQUIRES_RTTI=$REQUIRES_RTTI SOLVERS=$SOLVERS GTEST_VERSION=$GTEST_VERSION UCLIBC_VERSION=$UCLIBC_VERSION STP_VERSION=$STP_VERSION MINISAT_VERSION=$MINISAT_VERSION Z3_VERSION=$Z3_VERSION SQLITE_VERSION=$SQLITE_VERSION ./scripts/build/build.sh klee --install-system-deps
