@@ -117,6 +117,8 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
                                       ref<Expr> sizeExpr, unsigned timestamp,
                                       IDType id) {
   if (size > MaxConstantAllocationSize) {
+    klee_warning_once(
+        0, "Large alloc: %" PRIu64 " bytes.  KLEE models out of memory.", size);
     return 0;
   }
 

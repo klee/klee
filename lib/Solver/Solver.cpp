@@ -325,12 +325,7 @@ bool Query::containsSizeSymcretes() const {
 }
 
 void Query::dump() const {
-  llvm::errs() << "Constraints [\n";
-
-  for (const auto &constraint : constraints.cs())
-    constraint->dump(); // TODO
-
-  llvm::errs() << "]\n";
+  constraints.dump();
   llvm::errs() << "Query [\n";
   expr->dump();
   llvm::errs() << "]\n";

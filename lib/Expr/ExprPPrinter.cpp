@@ -530,6 +530,7 @@ void ExprPPrinter::printSignleArray(llvm::raw_ostream &os, const Array *a) {
 void ExprPPrinter::printSignleSource(llvm::raw_ostream &os,
                                      const ref<SymbolicSource> s) {
   PPrinter p(os);
+  p.printArrayDecls = true;
   PrintContext PC(os);
   p.printSource(s, PC);
 }
