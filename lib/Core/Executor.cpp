@@ -5038,8 +5038,9 @@ MemoryObject *Executor::allocate(ExecutionState &state, ref<Expr> size,
   ref<AddressSymcrete> addressSymcrete =
       lazyInitializationSource
           ? cast<AddressSymcrete>(
-                new LazyInitializedAddressSymcrete(addressExpr))
-          : cast<AddressSymcrete>(new AllocAddressSymcrete(addressExpr));
+                new LazyInitializedAddressSymcrete(addressArray, addressExpr))
+          : cast<AddressSymcrete>(
+                new AllocAddressSymcrete(addressArray, addressExpr));
   ref<SizeSymcrete> sizeSymcrete =
       lazyInitializationSource
           ? cast<SizeSymcrete>(new LazyInitializedSizeSymcrete(

@@ -197,6 +197,18 @@ bool ConcretizingSolver::relaxSymcreteConstraints(const Query &query,
       }
 
       for (const ref<Symcrete> &symcrete : currentlyBrokenSymcretes) {
+        constraints_ty required;
+        IndependentElementSet eltsClosure = getIndependentConstraints(
+            Query(query.constraints,
+                  AndExpr::create(query.expr,
+                                  Expr::createIsZero(symcrete->symcretized))),
+            required);
+        for (ref<Symcrete> symcrete : eltsClosure.symcretes) {
+          currentlyBrokenSymcretes.insert(symcrete);
+        }
+      }
+
+      for (const ref<Symcrete> &symcrete : currentlyBrokenSymcretes) {
         brokenSymcretes.insert(symcrete);
         for (const Array *array : symcrete->dependentArrays()) {
           if (usedSymcretizedArrays.insert(array).second) {
@@ -230,7 +242,6 @@ bool ConcretizingSolver::relaxSymcreteConstraints(const Query &query,
       Simplificator::simplifyExpr(query.constraints, symbolicSizesSum)
           .simplified;
 
-  ref<ConstantExpr> minimalValueOfSum;
   ref<SolverResponse> response;
 
   /* Compute assignment for symcretes. */
@@ -249,6 +260,7 @@ bool ConcretizingSolver::relaxSymcreteConstraints(const Query &query,
   }
 
   if (!response->tryGetInitialValuesFor(objects, brokenSymcretizedValues)) {
+    ref<ConstantExpr> minimalValueOfSum;
     /* Receive model with a smallest sum as possible. */
     if (!solver->impl->computeMinimalUnsignedValue(
             Query(queryConstraints, symbolicSizesSum), minimalValueOfSum)) {
@@ -271,6 +283,13 @@ bool ConcretizingSolver::relaxSymcreteConstraints(const Query &query,
     assignment.bindings[objects[idx]] = brokenSymcretizedValues[idx];
   }
 
+  ExprHashMap<ref<Expr>> concretizations;
+
+  for (ref<Symcrete> symcrete : query.constraints.symcretes()) {
+    concretizations[symcrete->symcretized] =
+        assignment.evaluate(symcrete->symcretized);
+  }
+
   for (const ref<Symcrete> &symcrete : brokenSymcretes) {
     ref<SizeSymcrete> sizeSymcrete = dyn_cast<SizeSymcrete>(symcrete);
 
@@ -280,15 +299,10 @@ bool ConcretizingSolver::relaxSymcreteConstraints(const Query &query,
 
     /* Receive address array linked with this size array to request address
      * concretization. */
-    uint64_t newSize =
-        cast<ConstantExpr>(assignment.evaluate(symcrete->symcretized))
-            ->getZExtValue();
+    ref<Expr> condcretized = assignment.evaluate(symcrete->symcretized);
 
-    /* TODO: we should be sure that `addressSymcrete` constains only one
-     * dependent array. */
-    assert(sizeSymcrete->addressSymcrete.dependentArrays().size() == 1);
-    const Array *addressArray =
-        sizeSymcrete->addressSymcrete.dependentArrays().back();
+    uint64_t newSize = cast<ConstantExpr>(condcretized)->getZExtValue();
+
     void *address = addressGenerator->allocate(
         sizeSymcrete->addressSymcrete.symcretized, newSize);
     unsigned char *charAddressIterator =
@@ -296,11 +310,22 @@ bool ConcretizingSolver::relaxSymcreteConstraints(const Query &query,
     SparseStorage<unsigned char> storage(sizeof(address));
     storage.store(0, charAddressIterator,
                   charAddressIterator + sizeof(address));
-    assignment.bindings[addressArray] = storage;
+
+    concretizations[sizeSymcrete->addressSymcrete.symcretized] =
+        ConstantExpr::create(
+            reinterpret_cast<uint64_t>(address),
+            sizeSymcrete->addressSymcrete.symcretized->getWidth());
   }
 
-  if (!solver->impl->check(constructConcretizedQuery(query, assignment),
-                           result)) {
+  ref<Expr> concretizationCondition = query.expr;
+  for (const auto &concretization : concretizations) {
+    concretizationCondition =
+        OrExpr::create(Expr::createIsZero(EqExpr::create(
+                           concretization.first, concretization.second)),
+                       concretizationCondition);
+  }
+
+  if (!solver->impl->check(query.withExpr(concretizationCondition), result)) {
     return false;
   }
 
