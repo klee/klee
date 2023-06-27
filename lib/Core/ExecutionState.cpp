@@ -386,10 +386,12 @@ void ExecutionState::increaseLevel() {
   KModule *kmodule = kf->parent;
 
   if (prevPC->inst->isTerminator() && kmodule->inMainModule(kf->function)) {
-    multilevel.insert(srcbb);
+    multilevel[srcbb]++;
     level.insert(srcbb);
   }
-  transitionLevel.insert(std::make_pair(srcbb, dstbb));
+  if (srcbb != dstbb) {
+    transitionLevel.insert(std::make_pair(srcbb, dstbb));
+  }
 }
 
 bool ExecutionState::isTransfered() { return getPrevPCBlock() != getPCBlock(); }

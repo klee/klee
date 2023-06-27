@@ -438,7 +438,7 @@ void TargetedSearcher::removeReached() {
 GuidedSearcher::GuidedSearcher(
     CodeGraphDistance &codeGraphDistance, TargetCalculator &stateHistory,
     std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates,
-    std::size_t bound, RNG &rng, Searcher *baseSearcher)
+    unsigned long long bound, RNG &rng, Searcher *baseSearcher)
     : baseSearcher(baseSearcher), codeGraphDistance(codeGraphDistance),
       stateHistory(stateHistory), pausedStates(pausedStates), bound(bound),
       theRNG(rng) {
@@ -468,7 +468,7 @@ ExecutionState &GuidedSearcher::selectState() {
 bool GuidedSearcher::isStuck(ExecutionState &state) {
   KInstruction *prevKI = state.prevPC;
   return (prevKI->inst->isTerminator() &&
-          state.multilevel.count(state.getPCBlock()) > bound);
+          state.multilevel[state.getPCBlock()] > bound);
 }
 
 bool GuidedSearcher::updateTargetedSearcher(

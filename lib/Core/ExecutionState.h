@@ -31,6 +31,7 @@
 #include <map>
 #include <memory>
 #include <set>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -232,7 +233,7 @@ public:
   std::uint32_t depth = 0;
 
   /// @brief Exploration level, i.e., number of times KLEE cycled for this state
-  std::unordered_multiset<llvm::BasicBlock *> multilevel;
+  std::unordered_map<llvm::BasicBlock *, unsigned long long> multilevel;
   std::unordered_set<llvm::BasicBlock *> level;
   std::unordered_set<Transition, TransitionHash> transitionLevel;
 

@@ -221,7 +221,7 @@ private:
   TargetCalculator &stateHistory;
   TargetHashSet reachedTargets;
   std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates;
-  std::size_t bound;
+  unsigned long long bound;
   RNG &theRNG;
   unsigned index{1};
 
@@ -257,7 +257,7 @@ public:
   GuidedSearcher(
       CodeGraphDistance &codeGraphDistance, TargetCalculator &stateHistory,
       std::set<ExecutionState *, ExecutionStateIDCompare> &pausedStates,
-      std::size_t bound, RNG &rng, Searcher *baseSearcher = nullptr);
+      unsigned long long bound, RNG &rng, Searcher *baseSearcher = nullptr);
   ~GuidedSearcher() override = default;
   ExecutionState &selectState() override;
   void update(ExecutionState *current,
