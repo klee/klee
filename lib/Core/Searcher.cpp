@@ -622,15 +622,17 @@ void GuidedSearcher::innerUpdate(
     targetlessStates.push_back(current);
   }
 
-  if (!baseRemovedStates.empty()) {
-    std::vector<ExecutionState *> alt = baseRemovedStates;
-    for (const auto state : alt) {
-      auto it = pausedStates.find(state);
-      if (it != pausedStates.end()) {
-        pausedStates.erase(it);
-        baseRemovedStates.erase(std::remove(baseRemovedStates.begin(),
-                                            baseRemovedStates.end(), state),
-                                baseRemovedStates.end());
+  if (ErrorGuidance == guidance) {
+    if (!removedStates.empty()) {
+      std::vector<ExecutionState *> alt = removedStates;
+      for (const auto state : alt) {
+        auto it = pausedStates.find(state);
+        if (it != pausedStates.end()) {
+          pausedStates.erase(it);
+          baseRemovedStates.erase(std::remove(baseRemovedStates.begin(),
+                                              baseRemovedStates.end(), state),
+                                  baseRemovedStates.end());
+        }
       }
     }
   }
