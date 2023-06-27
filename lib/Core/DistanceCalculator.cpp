@@ -72,14 +72,7 @@ DistanceCalculator::getDistance(KInstruction *pc, KInstruction *prevPC,
     if (distanceInCallGraph(sfi->kf, kb, callWeight, distanceToTargetFunction,
                             target)) {
       callWeight *= 2;
-      if (callWeight == 0 && target->shouldFailOnThisTarget()) {
-        return target->isTheSameAsIn(kb->getFirstInstruction()) &&
-                       target->isThatError(error)
-                   ? DistanceResult(Done)
-                   : DistanceResult(Continue);
-      } else {
-        callWeight += sfNum;
-      }
+      callWeight += sfNum;
 
       if (callWeight < minCallWeight) {
         minCallWeight = callWeight;
