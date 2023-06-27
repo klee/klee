@@ -1,0 +1,45 @@
+{
+    "inputs" : {
+        "buildPath" : "",
+        "sarifTracesFilePath" : ".json",
+        "bytecodeFilePath" : ".bc",
+        "maxTime" : "240",
+        "maxSolverTime" : "5",
+        "maxForks" : "200",
+        "maxSymAlloc" : "32",
+        "symbolicAllocationThreshhold" : "2048"
+    },
+    "configurations": [
+        {
+            "program": "${buildPath}/bin/klee",
+            "args": [
+                "--use-guided-search=error",
+                "--mock-external-calls",
+                "--posix-runtime",
+                "--check-out-of-memory",
+                "--suppress-external-warnings",
+                "--libc=klee",
+                "--skip-not-lazy-initialized",
+                "--external-calls=all",
+                "--output-source=false",
+                "--output-istats=false",
+                "--output-stats=false",
+                "--max-time=${maxTime}s",
+                "--max-sym-alloc=${maxSymAlloc}",
+                "--max-forks=${maxForks}",
+                "--max-solver-time=${maxSolverTime}s",
+                "--mock-all-externals",
+                "--smart-resolve-entry-function",
+                "--extern-calls-can-return-null",
+                "--align-symbolic-pointers=false",
+                "--write-no-tests",
+                "--write-kpaths",
+                "--use-lazy-initialization=only",
+                "--rewrite-equalities=simple",
+                "--symbolic-allocation-threshhold=${symbolicAllocationThreshhold}",
+                "--analysis-reproduce=${sarifTracesFilePath}",
+                "${bytecodeFilePath}"
+            ]
+        }
+    ]
+}
