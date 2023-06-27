@@ -17,15 +17,16 @@ namespace klee {
 class ExprEvaluator : public ExprVisitor {
 protected:
   Action evalRead(const UpdateList &ul, unsigned index);
-  Action visitRead(const ReadExpr &re);
-  Action visitExpr(const Expr &e);
+  Action visitRead(const ReadExpr &re) override;
+  Action visitSelect(const SelectExpr &se) override;
+  Action visitExpr(const Expr &e) override;
 
   Action protectedDivOperation(const BinaryExpr &e);
-  Action visitUDiv(const UDivExpr &e);
-  Action visitSDiv(const SDivExpr &e);
-  Action visitURem(const URemExpr &e);
-  Action visitSRem(const SRemExpr &e);
-  Action visitExprPost(const Expr &e);
+  Action visitUDiv(const UDivExpr &e) override;
+  Action visitSDiv(const SDivExpr &e) override;
+  Action visitURem(const URemExpr &e) override;
+  Action visitSRem(const SRemExpr &e) override;
+  Action visitExprPost(const Expr &e) override;
 
 public:
   ExprEvaluator() {}

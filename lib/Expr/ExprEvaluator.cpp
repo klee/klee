@@ -76,6 +76,16 @@ ExprVisitor::Action ExprEvaluator::visitRead(const ReadExpr &re) {
   }
 }
 
+ExprVisitor::Action ExprEvaluator::visitSelect(const SelectExpr &se) {
+  auto cond = visit(se.cond);
+  if (auto CE = dyn_cast<ConstantExpr>(cond)) {
+    return CE->isTrue() ? Action::changeTo(visit(se.trueExpr))
+                        : Action::changeTo(visit(se.falseExpr));
+  }
+
+  return Action::doChildren();
+}
+
 // we need to check for div by zero during partial evaluation,
 // if this occurs then simply ignore the 0 divisor and use the
 // original expression.
