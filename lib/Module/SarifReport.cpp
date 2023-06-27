@@ -77,6 +77,8 @@ tryConvertRuleJson(const std::string &ruleId, const std::string &toolName,
       } else {
         return {ReachWithError::UseAfterFree, ReachWithError::DoubleFree};
       }
+    } else if ("core.Reach" == ruleId) {
+      return {ReachWithError::Reachable};
     } else {
       return {};
     }

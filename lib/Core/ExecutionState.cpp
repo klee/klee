@@ -277,11 +277,29 @@ void ExecutionState::removePointerResolutions(const MemoryObject *mo) {
   }
 }
 
+void ExecutionState::removePointerResolutions(ref<Expr> address,
+                                              unsigned size) {
+  if (!isa<ConstantExpr>(address)) {
+    resolvedPointers[address].clear();
+    resolvedSubobjects[MemorySubobject(address, size)].clear();
+  }
+}
+
 // base address mo and ignore non pure reads in setinitializationgraph
 void ExecutionState::addPointerResolution(ref<Expr> address,
                                           const MemoryObject *mo,
                                           unsigned size) {
   if (!isa<ConstantExpr>(address)) {
+    resolvedPointers[address].insert(mo->id);
+    resolvedSubobjects[MemorySubobject(address, size)].insert(mo->id);
+  }
+}
+
+void ExecutionState::addUniquePointerResolution(ref<Expr> address,
+                                                const MemoryObject *mo,
+                                                unsigned size) {
+  if (!isa<ConstantExpr>(address)) {
+    removePointerResolutions(address, size);
     resolvedPointers[address].insert(mo->id);
     resolvedSubobjects[MemorySubobject(address, size)].insert(mo->id);
   }

@@ -360,7 +360,7 @@ private:
   bool checkResolvedMemoryObjects(
       ExecutionState &state, ref<Expr> address, KInstruction *target,
       unsigned bytes, const std::vector<IDType> &mayBeResolvedMemoryObjects,
-      std::vector<IDType> &resolvedMemoryObjects,
+      bool hasLazyInitialized, std::vector<IDType> &resolvedMemoryObjects,
       std::vector<ref<Expr>> &resolveConditions,
       std::vector<ref<Expr>> &unboundConditions, ref<Expr> &checkOutOfBounds,
       bool &mayBeOutOfBound);

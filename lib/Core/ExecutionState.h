@@ -362,8 +362,11 @@ public:
                std::pair<ref<const MemoryObject>, ref<Expr>> &resolution) const;
 
   void removePointerResolutions(const MemoryObject *mo);
+  void removePointerResolutions(ref<Expr> address, unsigned size);
   void addPointerResolution(ref<Expr> address, const MemoryObject *mo,
                             unsigned size = 0);
+  void addUniquePointerResolution(ref<Expr> address, const MemoryObject *mo,
+                                  unsigned size = 0);
   bool resolveOnSymbolics(const ref<ConstantExpr> &addr, IDType &result) const;
 
   void addConstraint(ref<Expr> e, const Assignment &c);

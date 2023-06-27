@@ -163,12 +163,6 @@ cl::opt<bool>
                           cl::init(true), cl::cat(ExecCat));
 
 cl::opt<bool>
-    OutOfMemAllocs("out-of-mem-allocs",
-                   cl::desc("Model malloc behavior, i.e. model NULL on 0 "
-                            "or huge symbolic allocations."),
-                   cl::init(false), cl::cat(ExecCat));
-
-cl::opt<bool>
     ExternCallsCanReturnNull("extern-calls-can-return-null", cl::init(false),
                              cl::desc("Enable case when extern call can crash "
                                       "and return null (default=false)"),
@@ -408,7 +402,7 @@ bool allLeafsAreConstant(const ref<Expr> &expr) {
   ArrayExprHelper::collectAlternatives(*sel, alternatives);
 
   for (auto leaf : alternatives) {
-    if (!isa<klee::ConstantExpr>(expr)) {
+    if (!isa<klee::ConstantExpr>(leaf)) {
       return false;
     }
   }
@@ -1271,6 +1265,8 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
 }
 
 void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
+  condition =
+      Simplificator::simplifyExpr(state.constraints.cs(), condition).simplified;
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(condition)) {
     if (!CE->isTrue())
       llvm::report_fatal_error("attempt to add invalid constraint");
@@ -4800,10 +4796,12 @@ void Executor::executeAlloc(ExecutionState &state, ref<Expr> size, bool isLocal,
   if (allocationAlignment == 0) {
     allocationAlignment = getAllocationAlignment(allocSite);
   }
-  ref<Expr> upperBoundSizeConstraint = UleExpr::create(
-      ZExtExpr::create(size, Context::get().getPointerWidth()),
-      Expr::createPointer(isa<ConstantExpr>(size) ? MaxConstantAllocationSize
-                                                  : MaxSymbolicAllocationSize));
+  ref<Expr> upperBoundSizeConstraint = Expr::createTrue();
+  if (!isa<ConstantExpr>(size)) {
+    upperBoundSizeConstraint = UleExpr::create(
+        ZExtExpr::create(size, Context::get().getPointerWidth()),
+        Expr::createPointer(MaxSymbolicAllocationSize));
+  }
 
   /* If size greater then upper bound for size, then we will follow
   the malloc semantic and return NULL. Otherwise continue execution. */
@@ -4819,6 +4817,10 @@ void Executor::executeAlloc(ExecutionState &state, ref<Expr> size, bool isLocal,
   }
 
   if (inBounds != PValidity::MustBeFalse && inBounds != PValidity::MayBeFalse) {
+    if (inBounds != PValidity::MustBeTrue) {
+      addConstraint(state, upperBoundSizeConstraint);
+    }
+
     MemoryObject *mo = allocate(state, size, isLocal, /*isGlobal=*/false,
                                 allocSite, allocationAlignment);
     if (!mo) {
@@ -4839,21 +4841,8 @@ void Executor::executeAlloc(ExecutionState &state, ref<Expr> size, bool isLocal,
                                      Expr::createPointer(0), address);
       }
 
-      if (inBounds == PValidity::MustBeTrue) {
-        bindLocal(target, state, address);
-      } else {
-        if (OutOfMemAllocs) {
-          ref<Expr> isNull = EqExpr::create(address, Expr::createPointer(0));
-          addConstraint(state, EqExpr::create(upperBoundSizeConstraint,
-                                              Expr::createIsZero(isNull)));
-          ref<Expr> result = SelectExpr::create(
-              upperBoundSizeConstraint, address, Expr::createPointer(0));
-          bindLocal(target, state, result);
-        } else {
-          addConstraint(state, upperBoundSizeConstraint);
-          bindLocal(target, state, address);
-        }
-      }
+      // state.addPointerResolution(address, mo);
+      bindLocal(target, state, address);
 
       if (reallocFrom) {
         unsigned count = std::min(reallocFrom->size, os->size);
@@ -4865,7 +4854,7 @@ void Executor::executeAlloc(ExecutionState &state, ref<Expr> size, bool isLocal,
       }
     }
   } else {
-    bindLocal(target, state, Expr::createPointer(0));
+    terminateStateEarly(state, "", StateTerminationType::SilentExit);
   }
 }
 
@@ -4911,31 +4900,74 @@ void Executor::executeFree(ExecutionState &state, ref<Expr> address,
   }
 }
 
-bool Executor::resolveExact(ExecutionState &state, ref<Expr> p, KType *type,
-                            ExactResolutionList &results,
+bool Executor::resolveExact(ExecutionState &estate, ref<Expr> address,
+                            KType *type, ExactResolutionList &results,
                             const std::string &name) {
+  ref<Expr> base = address;
+
+  if (estate.isGEPExpr(address)) {
+    base = estate.gepExprBases[address].first;
+  }
+
+  if (SimplifySymIndices) {
+    if (!isa<ConstantExpr>(address))
+      address = Simplificator::simplifyExpr(estate.constraints.cs(), address)
+                    .simplified;
+    if (!isa<ConstantExpr>(base))
+      base =
+          Simplificator::simplifyExpr(estate.constraints.cs(), base).simplified;
+  }
+
+  address = optimizer.optimizeExpr(address, true);
+  base = optimizer.optimizeExpr(base, true);
+
+  ref<Expr> uniqueBase =
+      Simplificator::simplifyExpr(estate.constraints.cs(), base).simplified;
+  uniqueBase = toUnique(estate, uniqueBase);
+
+  StatePair branches =
+      fork(estate, Expr::createIsZero(base), true, BranchType::MemOp);
+  ExecutionState *bound = branches.first;
+  if (bound) {
+    if (!isReadFromSymbolicArray(uniqueBase) ||
+        guidanceKind != GuidanceKind::ErrorGuidance) {
+      terminateStateOnTargetError(*bound, ReachWithError::NullPointerException);
+    } else {
+      terminateStateEarly(*bound, "", StateTerminationType::SilentExit);
+    }
+  }
+  if (!branches.second) {
+    address = Expr::createPointer(0);
+  }
+
+  ExecutionState &state = *branches.second;
+
   ResolutionList rl;
   bool mayBeOutOfBound = true;
   bool hasLazyInitialized = false;
   bool incomplete = false;
 
   /* We do not need this variable here, just a placeholder for resolve */
-  bool success =
-      resolveMemoryObjects(state, p, type, state.prevPC, 0, rl, mayBeOutOfBound,
-                           hasLazyInitialized, incomplete);
+  bool success = resolveMemoryObjects(
+      state, address, type, state.prevPC, 0, rl, mayBeOutOfBound,
+      hasLazyInitialized, incomplete,
+      LazyInitialization == LazyInitializationPolicy::Only);
   assert(success);
 
   ExecutionState *unbound = &state;
-  for (ResolutionList::iterator it = rl.begin(), ie = rl.end(); it != ie;
-       ++it) {
-    const MemoryObject *mo = unbound->addressSpace.findObject(*it).first;
-    ref<Expr> inBounds = EqExpr::create(p, mo->getBaseExpr());
-
+  for (unsigned i = 0; i < rl.size(); ++i) {
+    const MemoryObject *mo = unbound->addressSpace.findObject(rl.at(i)).first;
+    ref<Expr> inBounds;
+    if (i + 1 == rl.size() && hasLazyInitialized) {
+      inBounds = Expr::createTrue();
+    } else {
+      inBounds = EqExpr::create(address, mo->getBaseExpr());
+    }
     StatePair branches =
         fork(*unbound, inBounds, true, BranchType::ResolvePointer);
 
     if (branches.first)
-      results.push_back(std::make_pair(*it, branches.first));
+      results.push_back(std::make_pair(rl.at(i), branches.first));
 
     unbound = branches.second;
     if (!unbound) // Fork failure
@@ -4952,7 +4984,7 @@ bool Executor::resolveExact(ExecutionState &state, ref<Expr> p, KType *type,
     } else {
       terminateStateOnError(*unbound, "memory error: invalid pointer: " + name,
                             StateTerminationType::Ptr,
-                            getAddressInfo(*unbound, p));
+                            getAddressInfo(*unbound, address));
     }
   }
   return true;
@@ -5150,35 +5182,17 @@ bool Executor::resolveMemoryObjects(
     for (auto resolution : state.resolvedPointers.at(address)) {
       mayBeResolvedMemoryObjects.push_back(resolution);
     }
+  } else if (state.resolvedPointers.count(base)) {
+    for (auto resolution : state.resolvedPointers.at(base)) {
+      mayBeResolvedMemoryObjects.push_back(resolution);
+    }
   } else {
     // we are on an error path (no resolution, multiple resolution, one
     // resolution with out of bounds)
 
-    bool baseWasResolved = state.resolvedPointers.count(base) == 0;
+    bool baseWasNotResolved = state.resolvedPointers.count(base) == 0;
     address = optimizer.optimizeExpr(address, true);
     ref<Expr> checkOutOfBounds = Expr::createTrue();
-
-    if (!onlyLazyInitialize) {
-      ResolutionList rl;
-      ResolutionList rlSkipped;
-
-      solver->setTimeout(coreSolverTimeout);
-      incomplete =
-          state.addressSpace.resolve(state, solver, address, targetType, rl,
-                                     rlSkipped, 0, coreSolverTimeout);
-      solver->setTimeout(time::Span());
-
-      for (ResolutionList::iterator i = rl.begin(), ie = rl.end(); i != ie;
-           ++i) {
-        const MemoryObject *mo = state.addressSpace.findObject(*i).first;
-        ref<Expr> inBounds = mo->getBoundsCheckPointer(address, bytes);
-        ref<Expr> notInBounds = Expr::createIsZero(inBounds);
-        mayBeResolvedMemoryObjects.push_back(mo->id);
-        state.addPointerResolution(address, mo);
-        state.addPointerResolution(base, mo);
-        checkOutOfBounds = AndExpr::create(checkOutOfBounds, notInBounds);
-      }
-    }
 
     ref<Expr> baseUniqueExpr = toUnique(state, base);
 
@@ -5196,8 +5210,28 @@ bool Executor::resolveMemoryObjects(
     }
 
     mayLazyInitialize = LazyInitialization != LazyInitializationPolicy::None &&
-                        !isa<ConstantExpr>(baseUniqueExpr) && baseWasResolved &&
-                        checkAddress;
+                        !isa<ConstantExpr>(baseUniqueExpr) &&
+                        baseWasNotResolved && checkAddress;
+
+    if (!onlyLazyInitialize || !mayLazyInitialize) {
+      ResolutionList rl;
+      ResolutionList rlSkipped;
+
+      solver->setTimeout(coreSolverTimeout);
+      incomplete =
+          state.addressSpace.resolve(state, solver, address, targetType, rl,
+                                     rlSkipped, 0, coreSolverTimeout);
+      solver->setTimeout(time::Span());
+
+      for (ResolutionList::iterator i = rl.begin(), ie = rl.end(); i != ie;
+           ++i) {
+        const MemoryObject *mo = state.addressSpace.findObject(*i).first;
+        ref<Expr> inBounds = mo->getBoundsCheckPointer(address, bytes);
+        ref<Expr> notInBounds = Expr::createIsZero(inBounds);
+        mayBeResolvedMemoryObjects.push_back(mo->id);
+        checkOutOfBounds = AndExpr::create(checkOutOfBounds, notInBounds);
+      }
+    }
 
     if (mayLazyInitialize) {
       solver->setTimeout(coreSolverTimeout);
@@ -5217,8 +5251,6 @@ bool Executor::resolveMemoryObjects(
           ObjectPair pa = state.addressSpace.findObject(idLazyInitialization);
           const MemoryObject *mo = pa.first;
           mayBeResolvedMemoryObjects.push_back(mo->id);
-          state.addPointerResolution(address, mo);
-          state.addPointerResolution(base, mo);
         } else {
           mayLazyInitialize = false;
         }
@@ -5231,7 +5263,7 @@ bool Executor::resolveMemoryObjects(
 bool Executor::checkResolvedMemoryObjects(
     ExecutionState &state, ref<Expr> address, KInstruction *target,
     unsigned bytes, const std::vector<IDType> &mayBeResolvedMemoryObjects,
-    std::vector<IDType> &resolvedMemoryObjects,
+    bool hasLazyInitialized, std::vector<IDType> &resolvedMemoryObjects,
     std::vector<ref<Expr>> &resolveConditions,
     std::vector<ref<Expr>> &unboundConditions, ref<Expr> &checkOutOfBounds,
     bool &mayBeOutOfBound) {
@@ -5246,45 +5278,124 @@ bool Executor::checkResolvedMemoryObjects(
   }
 
   checkOutOfBounds = Expr::createTrue();
-  for (unsigned int i = 0; i < mayBeResolvedMemoryObjects.size(); ++i) {
+  if (mayBeResolvedMemoryObjects.size() == 1) {
     const MemoryObject *mo =
-        state.addressSpace.findObject(mayBeResolvedMemoryObjects.at(i)).first;
+        state.addressSpace.findObject(*mayBeResolvedMemoryObjects.begin())
+            .first;
+
+    state.addPointerResolution(address, mo);
+    state.addPointerResolution(base, mo);
 
     ref<Expr> inBounds = mo->getBoundsCheckPointer(address, bytes);
     ref<Expr> baseInBounds = Expr::createTrue();
+    ref<Expr> notInBounds = Expr::createIsZero(inBounds);
 
     if (state.isGEPExpr(address)) {
       baseInBounds =
           AndExpr::create(baseInBounds, mo->getBoundsCheckPointer(base, size));
+    }
+
+    if (hasLazyInitialized) {
       baseInBounds = AndExpr::create(
           baseInBounds, Expr::createIsZero(mo->getOffsetExpr(base)));
     }
 
-    ref<Expr> notInBounds = Expr::createIsZero(inBounds);
+    inBounds = AndExpr::create(inBounds, baseInBounds);
+    inBounds = optimizer.optimizeExpr(inBounds, true);
+    inBounds = Simplificator::simplifyExpr(state.constraints.cs(), inBounds)
+                   .simplified;
+    notInBounds =
+        Simplificator::simplifyExpr(state.constraints.cs(), notInBounds)
+            .simplified;
 
-    bool mayBeInBounds;
+    PartialValidity result;
     solver->setTimeout(coreSolverTimeout);
-    bool success = solver->mayBeTrue(state.constraints.cs(),
-                                     AndExpr::create(inBounds, baseInBounds),
-                                     mayBeInBounds, state.queryMetaData);
+    bool success = solver->evaluate(state.constraints.cs(), inBounds, result,
+                                    state.queryMetaData);
     solver->setTimeout(time::Span());
     if (!success) {
       return false;
     }
-    if (!mayBeInBounds) {
-      continue;
+
+    mayBeOutOfBound = PValidity::MustBeFalse == result ||
+                      PValidity::MayBeFalse == result ||
+                      PValidity::TrueOrFalse == result;
+    bool mayBeInBound = PValidity::MustBeTrue == result ||
+                        PValidity::MayBeTrue == result ||
+                        PValidity::TrueOrFalse == result;
+    bool mustBeInBounds = PValidity::MustBeTrue == result;
+    bool mustBeOutOfBound = PValidity::MustBeFalse == result;
+
+    if (mayBeInBound) {
+      state.addPointerResolution(address, mo, bytes);
+      state.addPointerResolution(base, mo, size);
+      resolvedMemoryObjects.push_back(mo->id);
+      if (mustBeInBounds) {
+        resolveConditions.push_back(Expr::createTrue());
+        unboundConditions.push_back(Expr::createFalse());
+        checkOutOfBounds = Expr::createFalse();
+      } else {
+        resolveConditions.push_back(inBounds);
+        unboundConditions.push_back(notInBounds);
+        checkOutOfBounds = notInBounds;
+      }
+    } else if (mayBeOutOfBound) {
+      if (mustBeOutOfBound) {
+        checkOutOfBounds = Expr::createTrue();
+      } else {
+        checkOutOfBounds = notInBounds;
+      }
     }
+  } else {
+    for (unsigned int i = 0; i < mayBeResolvedMemoryObjects.size(); ++i) {
+      const MemoryObject *mo =
+          state.addressSpace.findObject(mayBeResolvedMemoryObjects.at(i)).first;
 
-    state.addPointerResolution(address, mo, bytes);
-    state.addPointerResolution(base, mo, size);
+      state.addPointerResolution(address, mo);
+      state.addPointerResolution(base, mo);
 
-    inBounds = AndExpr::create(inBounds, baseInBounds);
+      ref<Expr> inBounds = mo->getBoundsCheckPointer(address, bytes);
+      ref<Expr> baseInBounds = Expr::createTrue();
+      ref<Expr> notInBounds = Expr::createIsZero(inBounds);
 
-    resolveConditions.push_back(inBounds);
-    resolvedMemoryObjects.push_back(mo->id);
-    unboundConditions.push_back(notInBounds);
-    if (mayBeOutOfBound) {
-      checkOutOfBounds = AndExpr::create(checkOutOfBounds, notInBounds);
+      if (state.isGEPExpr(address)) {
+        baseInBounds = AndExpr::create(baseInBounds,
+                                       mo->getBoundsCheckPointer(base, size));
+      }
+
+      if (hasLazyInitialized && i == mayBeResolvedMemoryObjects.size() - 1) {
+        baseInBounds = AndExpr::create(
+            baseInBounds, Expr::createIsZero(mo->getOffsetExpr(base)));
+      }
+
+      inBounds = AndExpr::create(inBounds, baseInBounds);
+      inBounds = Simplificator::simplifyExpr(state.constraints.cs(), inBounds)
+                     .simplified;
+      notInBounds =
+          Simplificator::simplifyExpr(state.constraints.cs(), notInBounds)
+              .simplified;
+
+      bool mayBeInBounds;
+      solver->setTimeout(coreSolverTimeout);
+      bool success = solver->mayBeTrue(state.constraints.cs(), inBounds,
+                                       mayBeInBounds, state.queryMetaData);
+      solver->setTimeout(time::Span());
+      if (!success) {
+        return false;
+      }
+      if (!mayBeInBounds) {
+        continue;
+      }
+
+      state.addPointerResolution(address, mo, bytes);
+      state.addPointerResolution(base, mo, size);
+
+      resolveConditions.push_back(inBounds);
+      resolvedMemoryObjects.push_back(mo->id);
+      unboundConditions.push_back(notInBounds);
+      if (mayBeOutOfBound) {
+        checkOutOfBounds = AndExpr::create(checkOutOfBounds, notInBounds);
+      }
     }
   }
 
@@ -5297,9 +5408,11 @@ bool Executor::checkResolvedMemoryObjects(
       return false;
     }
   }
+
   if (!mayBeOutOfBound) {
     checkOutOfBounds = Expr::createFalse();
   }
+
   return true;
 }
 
@@ -5466,13 +5579,13 @@ void Executor::executeMemoryOperation(
 
   // fast path: single in-bounds resolution
   IDType idFastResult;
-  bool success;
+  bool success = false;
 
-  if (state->resolvedPointers.count(address) &&
-      state->resolvedPointers.at(address).size() == 1) {
+  if (state->resolvedPointers.count(base) &&
+      state->resolvedPointers.at(base).size() == 1) {
     success = true;
-    idFastResult = *state->resolvedPointers[address].begin();
-  } else {
+    idFastResult = *state->resolvedPointers[base].begin();
+  } else if (allLeafsAreConstant(address)) {
     solver->setTimeout(coreSolverTimeout);
 
     if (!state->addressSpace.resolveOne(*state, solver, address, targetType,
@@ -5494,13 +5607,6 @@ void Executor::executeMemoryOperation(
     }
 
     ref<Expr> inBounds = mo->getBoundsCheckPointer(address, bytes);
-
-    if (state->isGEPExpr(address)) {
-      inBounds =
-          AndExpr::create(inBounds, mo->getBoundsCheckPointer(base, size));
-      inBounds = AndExpr::create(inBounds,
-                                 Expr::createIsZero(mo->getOffsetExpr(base)));
-    }
 
     inBounds = optimizer.optimizeExpr(inBounds, true);
     inBounds = Simplificator::simplifyExpr(state->constraints.cs(), inBounds)
@@ -5595,8 +5701,8 @@ void Executor::executeMemoryOperation(
 
   if (!checkResolvedMemoryObjects(
           *state, address, target, bytes, mayBeResolvedMemoryObjects,
-          resolvedMemoryObjects, resolveConditions, unboundConditions,
-          checkOutOfBounds, mayBeOutOfBound)) {
+          hasLazyInitialized, resolvedMemoryObjects, resolveConditions,
+          unboundConditions, checkOutOfBounds, mayBeOutOfBound)) {
     terminateStateOnSolverError(*state,
                                 "Query timed out (executeMemoryOperation)");
     return;
@@ -5648,25 +5754,26 @@ void Executor::executeMemoryOperation(
 
           ObjectState *wos = state->addressSpace.getWriteable(mo, os);
           if (wos->readOnly) {
-            branches =
-                fork(*state, resolveConditions[i], true, BranchType::MemOp);
+            branches = fork(*state, Expr::createIsZero(unboundConditions[i]),
+                            true, BranchType::MemOp);
             assert(branches.first);
             terminateStateOnError(*branches.first,
                                   "memory error: object read only",
                                   StateTerminationType::ReadOnly);
             state = branches.second;
           } else {
-            ref<Expr> result =
-                SelectExpr::create(resolveConditions[i], value, results[i]);
+            ref<Expr> result = SelectExpr::create(
+                Expr::createIsZero(unboundConditions[i]), value, results[i]);
             wos->write(mo->getOffsetExpr(address), result);
           }
         }
       } else {
-        ref<Expr> result = results[resolveConditions.size() - 1];
-        for (unsigned int i = 0; i < resolveConditions.size(); ++i) {
-          unsigned int index = resolveConditions.size() - 1 - i;
-          result = SelectExpr::create(resolveConditions[index], results[index],
-                                      result);
+        ref<Expr> result = results[unboundConditions.size() - 1];
+        for (unsigned int i = 0; i < unboundConditions.size(); ++i) {
+          unsigned int index = unboundConditions.size() - 1 - i;
+          result =
+              SelectExpr::create(Expr::createIsZero(unboundConditions[index]),
+                                 results[index], result);
         }
         bindLocal(target, *state, result);
       }
@@ -5693,8 +5800,8 @@ void Executor::executeMemoryOperation(
       const MemoryObject *mo = op.first;
       const ObjectState *os = op.second;
 
-      bound->addPointerResolution(address, mo);
-      bound->addPointerResolution(base, mo);
+      bound->addUniquePointerResolution(address, mo);
+      bound->addUniquePointerResolution(base, mo);
 
       /* FIXME: Notice, that here we are creating a new instance of object
       for every memory operation in order to handle type changes. This might
@@ -5850,6 +5957,9 @@ IDType Executor::lazyInitializeLocalObject(ExecutionState &state,
   state.addConstraint(EqExpr::create(address, op.first->getBaseExpr()), {});
   state.addConstraint(
       Expr::createIsZero(EqExpr::create(address, Expr::createPointer(0))), {});
+  if (isa<ConstantExpr>(size)) {
+    addConstraint(state, EqExpr::create(size, op.first->getSizeExpr()));
+  }
   return id;
 }
 
