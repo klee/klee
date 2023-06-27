@@ -34,7 +34,8 @@ ConstraintSet Assignment::createConstraintsFromAssignment() const {
   for (const auto &binding : bindings) {
     const auto &array = binding.first;
     const auto &values = binding.second;
-    ref<ConstantExpr> arrayConstantSize = dyn_cast<ConstantExpr>(array->size);
+    ref<ConstantExpr> arrayConstantSize =
+        dyn_cast<ConstantExpr>(evaluate(array->size));
     assert(arrayConstantSize &&
            "Size of symbolic array should be computed in assignment.");
     uint64_t arraySize = arrayConstantSize->getZExtValue();
