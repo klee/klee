@@ -1,0 +1,65 @@
+{
+  "runs": [
+      {
+          "tool": {
+              "driver": {
+                  "name": "SecB"
+              }
+          },
+          "results": [
+              {
+                  "codeFlows": [
+                      {
+                          "threadFlows": [
+                              {
+                                  "locations": [
+                                      {
+                                          "location": {
+                                              "physicalLocation": {
+                                                  "artifactLocation": {
+                                                      "uri": "/tmp/NotCallingUnreachableBranchesInForkErrorGuided.c"
+                                                  },
+                                                  "region": {
+                                                      "startLine": 9,
+                                                      "startColumn": 14
+                                                  }
+                                              }
+                                          }
+                                      },
+                                      {
+                                          "location": {
+                                              "physicalLocation": {
+                                                  "artifactLocation": {
+                                                      "uri": "/tmp/NotCallingUnreachableBranchesInForkErrorGuided.c"
+                                                  },
+                                                  "region": {
+                                                      "startLine": 13,
+                                                      "startColumn": 5
+                                                  }
+                                              }
+                                          }
+                                      }
+                                  ]
+                              }
+                          ]
+                      }
+                  ],
+                  "ruleId": "Reached",
+                  "locations": [
+                      {
+                          "physicalLocation": {
+                            "artifactLocation": {
+                                "uri": "/tmp/NotCallingUnreachableBranchesInForkErrorGuided.c"
+                            },
+                            "region": {
+                                "startLine": 13,
+                                "startColumn": 5
+                            }
+                        }
+                      }
+                  ]
+              }
+          ]
+      }
+  ]
+}
