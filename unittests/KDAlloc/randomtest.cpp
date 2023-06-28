@@ -29,9 +29,7 @@ namespace {
 class RandomTest {
   xoshiro512 rng;
 
-#if defined(USE_KDALLOC)
   klee::kdalloc::Allocator allocator;
-#endif
 
   std::vector<std::pair<void *, std::size_t>> allocations;
 
@@ -44,16 +42,10 @@ public:
   std::uint64_t deallocation_count = 0;
 
   RandomTest(std::uint64_t seed = 0x31337)
-      : rng(seed)
-#if defined(USE_KDALLOC)
-        ,
-        allocator(klee::kdalloc::AllocatorFactory(
-            static_cast<std::size_t>(1) << 42, 0))
-#endif
-        ,
+      : rng(seed), allocator(klee::kdalloc::AllocatorFactory(
+                       static_cast<std::size_t>(1) << 42, 0)),
         allocation_bin_distribution(0.3),
-        large_allocation_distribution(0.00003) {
-  }
+        large_allocation_distribution(0.00003) {}
 
   void run(std::uint64_t const iterations) {
     std::uniform_int_distribution<std::uint32_t> choice(0, 999);
@@ -77,7 +69,6 @@ public:
     while (!allocations.empty()) {
       auto choice = std::uniform_int_distribution<std::size_t>(
           0, allocations.size() - 1)(rng);
-#if defined(USE_KDALLOC)
       assert(allocator.locationInfo(allocations[choice].first, 1) ==
              klee::kdalloc::LocationInfo::LI_AllocatedOrQuarantined);
       assert(allocator.locationInfo(allocations[choice].first,
@@ -89,9 +80,6 @@ public:
       assert(allocator.locationInfo(allocations[choice].first,
                                     allocations[choice].second) ==
              klee::kdalloc::LocationInfo::LI_Unallocated);
-#else
-      free(allocations[choice].first);
-#endif
       allocations[choice] = allocations.back();
       allocations.pop_back();
     }
@@ -106,11 +94,7 @@ public:
     auto max = static_cast<std::size_t>(1) << (bin + 2);
     auto size = std::uniform_int_distribution<std::size_t>(min, max)(rng);
 
-#if defined(USE_KDALLOC)
     allocations.emplace_back(allocator.allocate(size), size);
-#else
-    allocations.emplace_back(std::malloc(size), size);
-#endif
     if (allocations.size() > maximum_concurrent_allocations) {
       maximum_concurrent_allocations = allocations.size();
     }
@@ -122,11 +106,7 @@ public:
       size = large_allocation_distribution(rng) + 4097;
     }
 
-#if defined(USE_KDALLOC)
     allocations.emplace_back(allocator.allocate(size), size);
-#else
-    allocations.emplace_back(std::malloc(size), size);
-#endif
     if (allocations.size() > maximum_concurrent_allocations) {
       maximum_concurrent_allocations = allocations.size();
     }
@@ -138,27 +118,14 @@ public:
     }
     auto choice = std::uniform_int_distribution<std::size_t>(
         0, allocations.size() - 1)(rng);
-#if defined(USE_KDALLOC)
     allocator.free(allocations[choice].first, allocations[choice].second);
-#else
-    free(allocations[choice].first);
-#endif
     allocations[choice] = allocations.back();
     allocations.pop_back();
   }
 };
 } // namespace
 
-#if defined(USE_GTEST_INSTEAD_OF_MAIN)
-int random_test() {
-#else
-int main() {
-#endif
-#if defined(USE_KDALLOC)
-  std::cout << "Using kdalloc\n";
-#else
-  std::cout << "Using std::malloc\n";
-#endif
+void random_test() {
   auto start = std::chrono::steady_clock::now();
 
   RandomTest tester;
@@ -184,4 +151,6 @@ int main() {
 TEST(KDAllocDeathTest, Random) {
   ASSERT_EXIT(random_test(), ::testing::ExitedWithCode(0), "");
 }
+#else
+int main() { random_test(); }
 #endif

@@ -15,11 +15,7 @@
 
 #include <cassert>
 
-#if defined(USE_GTEST_INSTEAD_OF_MAIN)
-int sample_test() {
-#else
-int main() {
-#endif
+void sample_test() {
   // initialize a factory and an associated allocator (1 TiB and no quarantine)
   klee::kdalloc::AllocatorFactory factory(static_cast<std::size_t>(1) << 40, 0);
   klee::kdalloc::Allocator allocator = factory.makeAllocator();
@@ -64,4 +60,6 @@ int main() {
 TEST(KDAllocDeathTest, Sample) {
   ASSERT_EXIT(sample_test(), ::testing::ExitedWithCode(0), "");
 }
+#else
+int main() { sample_test(); }
 #endif
