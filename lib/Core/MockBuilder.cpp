@@ -1,17 +1,21 @@
 #include "klee/Core/MockBuilder.h"
 
+#include "klee/Module/Annotation.h"
 #include "klee/Support/ErrorHandling.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 
 #include <memory>
+#include <utility>
 
 namespace klee {
 
 MockBuilder::MockBuilder(const llvm::Module *initModule,
                          std::string mockEntrypoint, std::string userEntrypoint,
-                         std::map<std::string, llvm::Type *> externals)
+                         std::map<std::string, llvm::Type *> externals,
+                         Annotations annotations)
     : userModule(initModule), externals(std::move(externals)),
+      annotations(std::move(annotations)),
       mockEntrypoint(std::move(mockEntrypoint)),
       userEntrypoint(std::move(userEntrypoint)) {}
 
@@ -115,6 +119,11 @@ void MockBuilder::buildExternalFunctionsDefinitions() {
       continue;
     }
 
+    const auto annotation = annotations.find(extName);
+    if (annotation != annotations.end()) {
+      buildAnnotationForExternalFunctionParams(func, annotation->second);
+    }
+
     auto *mockReturnValue =
         builder->CreateAlloca(func->getReturnType(), nullptr);
     buildCallKleeMakeSymbol("klee_make_mock", mockReturnValue,
@@ -147,6 +156,69 @@ void MockBuilder::buildCallKleeMakeSymbol(const std::string &klee_function_name,
            llvm::APInt(64, mockModule->getDataLayout().getTypeStoreSize(type),
                        false)),
        gep});
+}
+
+// TODO: add method for return value of external functions.
+void MockBuilder::buildAnnotationForExternalFunctionParams(
+    llvm::Function *func, Annotation &annotation) {
+  for (size_t i = 1; i < annotation.statements.size(); i++) {
+    const auto arg = func->getArg(i - 1);
+    for (const auto &statement : annotation.statements[i]) {
+      llvm::Value *elem = goByOffset(arg, statement->offset);
+      switch (statement->getStatementName()) {
+      case Annotation::StatementKind::Deref: {
+        if (!elem->getType()->isPointerTy()) {
+          klee_error("Incorrect annotation offset.");
+        }
+        builder->CreateLoad(elem);
+        break;
+      }
+      case Annotation::StatementKind::InitNull: {
+        // TODO
+      }
+      case Annotation::StatementKind::Unknown:
+      default:
+        __builtin_unreachable();
+      }
+    }
+  }
+
+  for (const auto &property : annotation.properties) {
+    switch (property) {
+    case Annotation::Property::Determ: {
+      // TODO
+    }
+    case Annotation::Property::Noreturn: {
+      // TODO
+    }
+    case Annotation::Property::Unknown:
+    default:
+      __builtin_unreachable();
+    }
+  }
+}
+
+llvm::Value *MockBuilder::goByOffset(llvm::Value *value,
+                                     const std::vector<std::string> &offset) {
+  llvm::Value *current = value;
+  for (const auto &inst : offset) {
+    if (inst == "*") {
+      if (!current->getType()->isPointerTy()) {
+        klee_error("Incorrect annotation offset.");
+      }
+      current = builder->CreateLoad(current);
+    } else if (inst == "&") {
+      auto addr = builder->CreateAlloca(current->getType());
+      current = builder->CreateStore(current, addr);
+    } else {
+      const size_t index = std::stol(inst);
+      if (!(current->getType()->isPointerTy() || current->getType()->isArrayTy())) {
+        klee_error("Incorrect annotation offset.");
+      }
+      current = builder->CreateConstInBoundsGEP1_64(current, index);
+    }
+  }
+  return current;
 }
 
 } // namespace klee

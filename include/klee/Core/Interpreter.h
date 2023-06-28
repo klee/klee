@@ -10,6 +10,7 @@
 #define KLEE_INTERPRETER_H
 
 #include "TerminationTypes.h"
+#include "klee/Module/Annotation.h"
 
 #include "klee/Module/SarifReport.h"
 
@@ -159,7 +160,8 @@ public:
             std::set<std::string> &&mainModuleFunctions,
             std::set<std::string> &&mainModuleGlobals,
             FLCtoOpcode &&origInstructions,
-            const std::set<std::string> &ignoredExternals) = 0;
+            const std::set<std::string> &ignoredExternals,
+            const Annotations &annotations) = 0;
 
   virtual std::map<std::string, llvm::Type *>
   getAllExternals(const std::set<std::string> &ignoredExternals) = 0;

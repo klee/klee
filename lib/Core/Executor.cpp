@@ -594,7 +594,8 @@ llvm::Module *Executor::setModule(
     std::vector<std::unique_ptr<llvm::Module>> &libsModules,
     const ModuleOptions &opts, std::set<std::string> &&mainModuleFunctions,
     std::set<std::string> &&mainModuleGlobals, FLCtoOpcode &&origInstructions,
-    const std::set<std::string> &ignoredExternals) {
+    const std::set<std::string> &ignoredExternals,
+                    const Annotations &annotations) {
   assert(!kmodule && !userModules.empty() &&
          "can only register one module"); // XXX gross
 
@@ -639,7 +640,7 @@ llvm::Module *Executor::setModule(
     std::map<std::string, llvm::Type *> externals =
         getAllExternals(ignoredExternals);
     MockBuilder builder(kmodule->module.get(), opts.MainCurrentName,
-                        opts.MainNameAfterMock, externals);
+                        opts.MainNameAfterMock, externals, annotations);
     std::unique_ptr<llvm::Module> mockModule = builder.build();
     if (!mockModule) {
       klee_error("Unable to generate mocks");

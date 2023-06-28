@@ -739,7 +739,8 @@ public:
             std::set<std::string> &&mainModuleFunctions,
             std::set<std::string> &&mainModuleGlobals,
             FLCtoOpcode &&origInstructions,
-            const std::set<std::string> &ignoredExternals) override;
+            const std::set<std::string> &ignoredExternals,
+            const Annotations &annotations) override;
 
   std::map<std::string, llvm::Type *>
   getAllExternals(const std::set<std::string> &ignoredExternals) override;

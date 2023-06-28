@@ -272,6 +272,7 @@ function(add_klee_unit_test target_name)
 endfunction()
 
 # Unit Tests
+add_subdirectory(Annotations)
 add_subdirectory(Assignment)
 add_subdirectory(Expr)
 add_subdirectory(Ref)

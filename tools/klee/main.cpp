@@ -12,10 +12,13 @@
 #include "klee/ADT/KTest.h"
 #include "klee/ADT/TreeStream.h"
 #include "klee/Config/Version.h"
+#include "klee/Core/Annotation.h"
 #include "klee/Core/Context.h"
 #include "klee/Core/Interpreter.h"
 #include "klee/Core/TargetedExecutionReporter.h"
 #include "klee/Module/LocationInfo.h"
+#include "klee/Core/FunctionAnnotation.h"
+#include "klee/Module/Annotation.h"
 #include "klee/Module/SarifReport.h"
 #include "klee/Module/TargetForest.h"
 #include "klee/Solver/SolverCmdLine.h"
@@ -373,6 +376,15 @@ cl::opt<MockStrategy> MockUnlinkedStrategy(
             "function. Therefore, when function is called many times "
             "with equal arguments, every time equal values will be returned.")),
     cl::init(MockStrategy::None), cl::cat(MockCat));
+
+/*** Annotations options ***/
+
+cl::OptionCategory AnnotCat("Annotations category");
+
+cl::opt<std::string>
+    AnnotationsFile("annotations", cl::desc("Path to the annotation JSON file"),
+                    cl::value_desc("path file"),
+                    cl::cat(AnnotCat));
 
 } // namespace
 
@@ -1285,7 +1297,7 @@ createLibCWrapper(std::vector<std::unique_ptr<llvm::Module>> &userModules,
   args.push_back(llvm::ConstantExpr::getBitCast(
       cast<llvm::Constant>(inModuleReference.getCallee()),
       ft->getParamType(0)));
-  args.push_back(&*(stub->arg_begin())); // argc
+  args.push_back(&*(stub->arg_begin()));                       // argc
   auto arg_it = stub->arg_begin();
   args.push_back(&*(++arg_it));                                // argv
   args.push_back(Constant::getNullValue(ft->getParamType(3))); // app_init
@@ -2215,6 +2227,10 @@ int main(int argc, char **argv, char **envp) {
     UseGuidedSearch = Interpreter::GuidanceKind::ErrorGuidance;
   }
 
+  const Annotations annotations = (AnnotationsFile.empty())
+    ? Annotations()
+    : parseAnnotationsFile(AnnotationsFile);
+
   Interpreter::InterpreterOptions IOpts(paths);
   IOpts.MakeConcreteSymbolic = MakeConcreteSymbolic;
   IOpts.Guidance = UseGuidedSearch;
@@ -2268,7 +2284,11 @@ int main(int argc, char **argv, char **envp) {
   auto finalModule = interpreter->setModule(
       loadedUserModules, loadedLibsModules, Opts,
       std::move(mainModuleFunctions), std::move(mainModuleGlobals),
-      std::move(origInstructions));
+      std::move(origInstructions), ignoredExternals, annotations);
+  Function *mainFn = finalModule->getFunction(EntryPoint);
+  if (!mainFn) {
+    klee_error("Entry function '%s' not found in module.", EntryPoint.c_str());
+  }
 
   externalsAndGlobalsCheck(finalModule);
 
