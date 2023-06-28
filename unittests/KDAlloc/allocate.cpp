@@ -18,11 +18,7 @@
 #include <iomanip>
 #include <iostream>
 
-#if defined(USE_GTEST_INSTEAD_OF_MAIN)
-int allocate_sample_test() {
-#else
-int main() {
-#endif
+void allocate_sample_test() {
   // initialize a factory and an associated allocator (1 MiB and no quarantine)
   klee::kdalloc::AllocatorFactory factory(static_cast<std::size_t>(1) << 20, 0);
   klee::kdalloc::Allocator allocator = factory.makeAllocator();
@@ -62,4 +58,6 @@ int main() {
 TEST(KDAllocDeathTest, AllocateSample) {
   ASSERT_EXIT(allocate_sample_test(), ::testing::ExitedWithCode(0), "");
 }
+#else
+int main() { allocate_sample_test(); }
 #endif

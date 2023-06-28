@@ -19,11 +19,7 @@
 #include <iostream>
 #include <unordered_set>
 
-#if defined(USE_GTEST_INSTEAD_OF_MAIN)
-int reuse_test() {
-#else
-int main() {
-#endif
+void reuse_test() {
   {
     static const std::size_t size = 8;
     static const std::uint32_t quarantine = 0;
@@ -131,4 +127,6 @@ int main() {
 TEST(KDAllocDeathTest, Reuse) {
   ASSERT_EXIT(reuse_test(), ::testing::ExitedWithCode(0), "");
 }
+#else
+int main() { reuse_test(); }
 #endif
