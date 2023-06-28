@@ -595,10 +595,11 @@ void ExprPPrinter::printQuery(
     }
   }
 
+  PC.breakLine();
   PC << "(query [";
 
   // Ident at constraint list;
-  unsigned indent = PC.pos;
+  unsigned indent = PC.pos - 1;
   for (auto it = constraints.cs().begin(), ie = constraints.cs().end();
        it != ie;) {
     p.print(*it, PC);
@@ -608,12 +609,12 @@ void ExprPPrinter::printQuery(
   }
   PC << ']';
 
-  p.printSeparator(PC, constraints.cs().empty(), indent - 1);
+  p.printSeparator(PC, constraints.cs().empty(), indent);
   p.print(q, PC);
 
   // Print expressions to obtain values for, if any.
   if (evalExprsBegin != evalExprsEnd) {
-    p.printSeparator(PC, q->isFalse(), indent - 1);
+    p.printSeparator(PC, q->isFalse(), indent);
     PC << '[';
     for (const ref<Expr> *it = evalExprsBegin; it != evalExprsEnd; ++it) {
       p.print(*it, PC, /*printConstWidth*/ true);
@@ -628,7 +629,7 @@ void ExprPPrinter::printQuery(
     if (evalExprsBegin == evalExprsEnd)
       PC << " []";
 
-    PC.breakLine(indent - 1);
+    PC.breakLine(indent);
     PC << '[';
     for (const Array *const *it = evalArraysBegin; it != evalArraysEnd; ++it) {
       PC << (*it)->getIdentifier();
