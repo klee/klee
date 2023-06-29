@@ -39,7 +39,6 @@ class DistanceCalculator;
 template <class T, class Comparator> class DiscretePDF;
 template <class T, class Comparator> class WeightedQueue;
 class ExecutionState;
-class Executor;
 class TargetCalculator;
 class TargetForest;
 class TargetReachability;

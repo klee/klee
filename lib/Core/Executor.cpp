@@ -2340,8 +2340,7 @@ void Executor::checkNullCheckAfterDeref(ref<Expr> cond, ExecutionState &state,
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
 
-  if (guidanceKind == GuidanceKind::ErrorGuidance &&
-      state.prevPC->inst->isTerminator()) {
+  if (guidanceKind == GuidanceKind::ErrorGuidance) {
     for (auto kvp : state.targetForest) {
       auto target = kvp.first;
       if (target->isThatError(ReachWithError::Reachable) &&
@@ -6379,11 +6378,11 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
       prepareTargetedExecution(initialState, whitelist);
       states.push_back(initialState);
     }
-  } else {
-    ExecutionState *initialState = state->copy();
-    states.push_back(initialState);
     delete state;
+  } else {
+    states.push_back(state);
   }
+  state = nullptr;
 
   TreeOStream pathOS;
   TreeOStream symPathOS;
