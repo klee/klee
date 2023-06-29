@@ -348,8 +348,8 @@ public:
     }
   }
 
-  LocationInfo location_info(void const *const ptr,
-                             std::size_t const size) const noexcept {
+  LocationInfo locationInfo(void const *const ptr,
+                            std::size_t const size) const noexcept {
     assert(*this && "Invalid allocator");
 
     if (!ptr || reinterpret_cast<std::uintptr_t>(ptr) < 4096) {

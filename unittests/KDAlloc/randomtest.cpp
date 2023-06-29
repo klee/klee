@@ -78,16 +78,16 @@ public:
       auto choice = std::uniform_int_distribution<std::size_t>(
           0, allocations.size() - 1)(rng);
 #if defined(USE_KDALLOC)
-      assert(allocator.location_info(allocations[choice].first, 1) ==
+      assert(allocator.locationInfo(allocations[choice].first, 1) ==
              klee::kdalloc::LocationInfo::LI_AllocatedOrQuarantined);
-      assert(allocator.location_info(allocations[choice].first,
-                                     allocations[choice].second) ==
+      assert(allocator.locationInfo(allocations[choice].first,
+                                    allocations[choice].second) ==
              klee::kdalloc::LocationInfo::LI_AllocatedOrQuarantined);
       allocator.free(allocations[choice].first, allocations[choice].second);
-      assert(allocator.location_info(allocations[choice].first, 1) ==
+      assert(allocator.locationInfo(allocations[choice].first, 1) ==
              klee::kdalloc::LocationInfo::LI_Unallocated);
-      assert(allocator.location_info(allocations[choice].first,
-                                     allocations[choice].second) ==
+      assert(allocator.locationInfo(allocations[choice].first,
+                                    allocations[choice].second) ==
              klee::kdalloc::LocationInfo::LI_Unallocated);
 #else
       free(allocations[choice].first);

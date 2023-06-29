@@ -4255,9 +4255,9 @@ void Executor::resolveExact(ExecutionState &state,
     if (MemoryManager::isDeterministic && CE) {
       using kdalloc::LocationInfo;
       auto ptr = reinterpret_cast<void *>(CE->getZExtValue());
-      auto locinfo = unbound->heapAllocator.location_info(ptr, 1);
-      if (locinfo == LocationInfo::LI_AllocatedOrQuarantined &&
-          locinfo.getBaseAddress() == ptr && name == "free") {
+      auto li = unbound->heapAllocator.locationInfo(ptr, 1);
+      if (li == LocationInfo::LI_AllocatedOrQuarantined &&
+          li.getBaseAddress() == ptr && name == "free") {
         terminateStateOnProgramError(*unbound, "memory error: double free",
                                      StateTerminationType::Ptr,
                                      getAddressInfo(*unbound, p));
@@ -4400,7 +4400,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           return;
         } else if (MemoryManager::isDeterministic) {
           using kdalloc::LocationInfo;
-          auto li = unbound->heapAllocator.location_info(ptr, bytes);
+          auto li = unbound->heapAllocator.locationInfo(ptr, bytes);
           if (li == LocationInfo::LI_AllocatedOrQuarantined) {
             // In case there is no size mismatch (checked by resolving for base
             // address), the object is quarantined.
