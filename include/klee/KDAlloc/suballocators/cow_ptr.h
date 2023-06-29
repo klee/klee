@@ -87,41 +87,26 @@ public:
   /// Accesses an existing object.
   /// Must not be called when `*this` is in an empty state.
   T const &operator*() const noexcept {
-    assert(ptr && "the `CoWPtr` must not be empty");
-    return get();
+    assert(!isEmpty() && "the `CoWPtr` must not be empty");
+    return *get();
   }
 
   /// Accesses an existing object.
   /// Must not be called when `*this` is in an empty state.
   T const *operator->() const noexcept {
-    assert(ptr && "the `CoWPtr` must not be empty");
-    return &get();
+    assert(!isEmpty() && "the `CoWPtr` must not be empty");
+    return get();
   }
 
-  /// Accesses an existing object.
-  /// Must not be called when `*this` is in an empty state.
-  T const &get() const noexcept {
-    assert(ptr && "the `CoWPtr` must not be empty");
-    return ptr->data;
-  }
+  /// Gets a pointer to the managed object.
+  /// Returns `nullptr` if no object is currently managed.
+  T const *get() const noexcept { return ptr ? &ptr->data : nullptr; }
 
-  /// Accesses an existing, owned object.
+  /// Gets a pointer to an existing, owned object.
   /// Must not be called when `*this` does not hold CoW ownership.
-  T &getOwned() noexcept {
+  T *getOwned() noexcept {
     assert(isOwned() && "the `CoWPtr` must be owned");
-    return ptr->data;
-  }
-
-  /// Accesses an existing, owned object.
-  /// Must not be called when `*this` does not hold CoW ownership.
-  ///
-  /// Note: This function is included for completeness' sake. Instead of calling
-  /// `getOwned` on a constant, one should probably just call `get` as it
-  /// produces the same result without requiring the target object to hold
-  /// ownership of the data.
-  T const &getOwned() const noexcept {
-    assert(isOwned() && "the `CoWPtr` must be owned");
-    return ptr->data;
+    return &ptr->data;
   }
 
   /// Acquires CoW ownership of an existing object and returns a reference to
@@ -132,7 +117,7 @@ public:
     assert(ptr->referenceCount > 0);
     if (ptr->referenceCount > 1) {
       --ptr->referenceCount;
-      ptr = new Wrapper(*ptr);
+      ptr = new Wrapper{*ptr};
       ptr->referenceCount = 1;
     }
     assert(ptr->referenceCount == 1);

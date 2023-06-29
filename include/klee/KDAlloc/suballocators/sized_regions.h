@@ -162,7 +162,7 @@ public:
   [[nodiscard]] std::size_t getSize(char const *const address) const noexcept {
     assert(root && "Cannot get size from an empty treap");
 
-    Node const *currentNode = &*root;
+    Node const *currentNode = root.get();
     Node const *closestPredecessor = nullptr;
     Node const *closestSuccessor = nullptr;
     while (currentNode) {
@@ -170,12 +170,12 @@ public:
         assert(!closestSuccessor || currentNode->getBaseAddress() <
                                         closestSuccessor->getBaseAddress());
         closestSuccessor = currentNode;
-        currentNode = &*currentNode->lhs;
+        currentNode = currentNode->lhs.get();
       } else {
         assert(!closestPredecessor || currentNode->getBaseAddress() >
                                           closestPredecessor->getBaseAddress());
         closestPredecessor = currentNode;
-        currentNode = &*currentNode->rhs;
+        currentNode = currentNode->rhs.get();
       }
     }
 
@@ -195,7 +195,7 @@ public:
                                       std::size_t const size) const noexcept {
     assert(root && "Cannot compute location info for an empty treap");
 
-    Node const *currentNode = &*root;
+    Node const *currentNode = root.get();
     Node const *closestPredecessor = nullptr;
     for (;;) {
       if (currentNode->getBaseAddress() <= address) {
@@ -213,7 +213,7 @@ public:
                     closestPredecessor->getBaseAddress() +
                         closestPredecessor->getSize()};
           }
-          currentNode = &*currentNode->rhs;
+          currentNode = currentNode->rhs.get();
         }
       } else {
         assert(closestPredecessor &&
@@ -229,7 +229,7 @@ public:
                   closestPredecessor->getBaseAddress() +
                       closestPredecessor->getSize()};
         }
-        currentNode = &*currentNode->lhs;
+        currentNode = currentNode->lhs.get();
       }
     }
   }
@@ -307,7 +307,7 @@ private:
       target = &targetNode.lhs;
     }
 
-    update.getOwned().rhs = std::move(rhs);
+    update.getOwned()->rhs = std::move(rhs);
     *target = std::move(update);
   }
 
@@ -324,7 +324,7 @@ private:
       target = &targetNode.rhs;
     }
 
-    update.getOwned().lhs = std::move(lhs);
+    update.getOwned()->lhs = std::move(lhs);
     *target = std::move(update);
   }
 
@@ -423,9 +423,8 @@ public:
     CoWPtr<Node> *closestSuccessor = nullptr;
     for (;;) {
       if (address < (*currentNode)->getBaseAddress()) {
-        assert(!closestSuccessor ||
-               (*currentNode)->getBaseAddress() <
-                   (*closestSuccessor)->getBaseAddress());
+        assert(!closestSuccessor || (*currentNode)->getBaseAddress() <
+                                        (*closestSuccessor)->getBaseAddress());
         closestSuccessor = currentNode;
         if ((*currentNode)->lhs) {
           currentNode = &currentNode->acquire().lhs;
