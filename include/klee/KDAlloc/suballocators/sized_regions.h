@@ -197,41 +197,34 @@ public:
 
     Node const *currentNode = root.get();
     Node const *closestPredecessor = nullptr;
-    for (;;) {
-      if (currentNode->getBaseAddress() <= address) {
-        if (address < currentNode->getBaseAddress() + currentNode->getSize()) {
-          if (address + size <=
-              currentNode->getBaseAddress() + currentNode->getSize()) {
-            return LocationInfo::LI_Unallocated;
-          } else {
-            return LocationInfo::LI_Unaligned;
-          }
-        } else {
-          closestPredecessor = currentNode;
-          if (!currentNode->rhs) {
-            return {LocationInfo::LI_AllocatedOrQuarantined,
-                    closestPredecessor->getBaseAddress() +
-                        closestPredecessor->getSize()};
-          }
-          currentNode = currentNode->rhs.get();
-        }
-      } else {
-        assert(closestPredecessor &&
-               "If there is no closest predecessor, there must not be a "
-               "predecessor at all. Since regions are only ever split, "
-               "this would mean that the lookup is outside the valid "
-               "range, which has to be handled by the caller.");
-        if (currentNode->getBaseAddress() < address + size) {
+    while (currentNode) {
+      if (address < currentNode->getBaseAddress()) {
+        if (address + size > currentNode->getBaseAddress()) {
           return LocationInfo::LI_Unaligned;
         }
-        if (!currentNode->lhs) {
-          return {LocationInfo::LI_AllocatedOrQuarantined,
-                  closestPredecessor->getBaseAddress() +
-                      closestPredecessor->getSize()};
-        }
         currentNode = currentNode->lhs.get();
+      } else {
+        if (address < currentNode->getBaseAddress() + currentNode->getSize()) {
+          if (address + size >
+              currentNode->getBaseAddress() + currentNode->getSize()) {
+            return LocationInfo::LI_Unaligned;
+          } else {
+            return LocationInfo::LI_Unallocated;
+          }
+        }
+        assert(!closestPredecessor || currentNode->getBaseAddress() >
+                                          closestPredecessor->getBaseAddress());
+        closestPredecessor = currentNode;
+        currentNode = currentNode->rhs.get();
       }
     }
+
+    assert(closestPredecessor && "the caller must ensure that the requested "
+                                 "address is in range of the sized region");
+
+    return {LocationInfo::LI_AllocatedOrQuarantined,
+            closestPredecessor->getBaseAddress() +
+                closestPredecessor->getSize()};
   }
 
   void insert(char *const baseAddress, std::size_t const size) {
