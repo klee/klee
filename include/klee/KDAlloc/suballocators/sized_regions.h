@@ -193,7 +193,7 @@ public:
   /// the beginning and end and in between any two allocations.
   inline LocationInfo getLocationInfo(char const *const address,
                                       std::size_t const size) const noexcept {
-    assert(root && "Cannot compute location_info for an empty treap");
+    assert(root && "Cannot compute location info for an empty treap");
 
     Node const *currentNode = &*root;
     Node const *closestPredecessor = nullptr;
