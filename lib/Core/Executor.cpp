@@ -3127,7 +3127,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       offset = AddExpr::create(offset, Expr::createPointer(kgepi->offset));
     ref<Expr> address = AddExpr::create(base, offset);
 
-    if (!isa<ConstantExpr>(address) || base->isZero()) {
+    if (!isa<ConstantExpr>(address) || base->isZero() ||
+        state.isGEPExpr(base)) {
       if (state.isGEPExpr(base)) {
         state.gepExprBases[address] = state.gepExprBases[base];
       } else {
