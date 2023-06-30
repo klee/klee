@@ -218,10 +218,33 @@ public:
     static EquivTargetsHistoryHashSet cachedHistories;
     static TargetsHistoryHashSet histories;
     unsigned hashValue;
+    unsigned sizeValue;
 
     explicit History(ref<Target> _target, ref<History> _visitedTargets)
         : target(_target), visitedTargets(_visitedTargets) {
       computeHash();
+    }
+
+    void computeHash() {
+      unsigned res = 0;
+      if (target) {
+        res = target->hash() * Expr::MAGIC_HASH_CONSTANT;
+      }
+      if (visitedTargets) {
+        res ^= visitedTargets->hash() * Expr::MAGIC_HASH_CONSTANT;
+      }
+      hashValue = res;
+    }
+
+    void computeSize() {
+      unsigned res = 0;
+      if (target) {
+        ++res;
+      }
+      if (visitedTargets) {
+        res += visitedTargets->size();
+      }
+      sizeValue = res;
     }
 
   public:
@@ -238,20 +261,10 @@ public:
     }
 
     unsigned hash() const { return hashValue; }
+    unsigned size() const { return sizeValue; }
 
     int compare(const History &h) const;
     bool equals(const History &h) const;
-
-    void computeHash() {
-      unsigned res = 0;
-      if (target) {
-        res = target->hash() * Expr::MAGIC_HASH_CONSTANT;
-      }
-      if (visitedTargets) {
-        res ^= visitedTargets->hash() * Expr::MAGIC_HASH_CONSTANT;
-      }
-      hashValue = res;
-    }
 
     void dump() const;
 

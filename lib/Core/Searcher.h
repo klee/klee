@@ -161,7 +161,6 @@ public:
   using TargetToStateUnorderedSetMap =
       TargetHashMap<std::unordered_set<ExecutionState *>>;
 
-private:
   using TargetToSearcherMap = TargetHashMap<std::unique_ptr<TargetedSearcher>>;
   using TargetToStateSetMap =
       TargetHashMap<std::set<ExecutionState *, ExecutionStateIDCompare>>;
@@ -189,6 +188,7 @@ private:
   using TargetForestHisoryTargetVector =
       std::vector<std::pair<ref<TargetForest::History>, ref<Target>>>;
 
+private:
   enum Guidance { CoverageGuidance, ErrorGuidance };
 
   Guidance guidance;

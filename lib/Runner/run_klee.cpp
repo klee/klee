@@ -557,7 +557,6 @@ void KleeHandler::processTestCase(const ExecutionState &state,
 
     const auto start_time = time::getWallTime();
 
-
     if (success) {
       if (!kTest_toFile(
               &ktest,
