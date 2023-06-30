@@ -1605,6 +1605,8 @@ ref<Expr> SelectExpr::create(ref<Expr> c, ref<Expr> t, ref<Expr> f) {
             AndExpr::create(Expr::createIsZero(c), se->cond), se->trueExpr, t);
       }
     }
+  } else if (!isa<ConstantExpr>(t) && isa<ConstantExpr>(f)) {
+    return SelectExpr::alloc(Expr::createIsZero(c), f, t);
   }
 
   return SelectExpr::alloc(c, t, f);
@@ -1621,6 +1623,21 @@ ref<Expr> ConcatExpr::create(const ref<Expr> &l, const ref<Expr> &r) {
   if (ConstantExpr *lCE = dyn_cast<ConstantExpr>(l))
     if (ConstantExpr *rCE = dyn_cast<ConstantExpr>(r))
       return lCE->Concat(rCE);
+
+  if (isa<SelectExpr>(l) || isa<SelectExpr>(r)) {
+    if (SelectExpr *se = dyn_cast<SelectExpr>(l)) {
+      if (isa<ConstantExpr>(se->trueExpr)) {
+        return SelectExpr::create(se->cond, ConcatExpr::create(se->trueExpr, r),
+                                  ConcatExpr::create(se->falseExpr, r));
+      }
+    }
+    if (SelectExpr *se = dyn_cast<SelectExpr>(r)) {
+      if (isa<ConstantExpr>(se->trueExpr)) {
+        return SelectExpr::create(se->cond, ConcatExpr::create(l, se->trueExpr),
+                                  ConcatExpr::create(l, se->falseExpr));
+      }
+    }
+  }
 
   // Merge contiguous Extracts
   if (ExtractExpr *ee_left = dyn_cast<ExtractExpr>(l)) {
@@ -1678,6 +1695,12 @@ ref<Expr> ExtractExpr::create(ref<Expr> expr, unsigned off, Width w) {
     return expr;
   } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
     return CE->Extract(off, w);
+  } else if (SelectExpr *se = dyn_cast<SelectExpr>(expr)) {
+    if (isa<ConstantExpr>(se->trueExpr)) {
+      return SelectExpr::create(se->cond,
+                                ExtractExpr::create(se->trueExpr, off, w),
+                                ExtractExpr::create(se->falseExpr, off, w));
+    }
   } else {
     // Extract(Concat)
     if (ConcatExpr *ce = dyn_cast<ConcatExpr>(expr)) {
@@ -1722,6 +1745,11 @@ ref<Expr> NotExpr::create(const ref<Expr> &e) {
                            NotExpr::create(OE->right));
   }
 
+  if (SelectExpr *SE = dyn_cast<SelectExpr>(e)) {
+    return SelectExpr::create(SE->cond, NotExpr::create(SE->trueExpr),
+                              NotExpr::create(SE->falseExpr));
+  }
+
   return NotExpr::alloc(e);
 }
 
@@ -1735,9 +1763,14 @@ ref<Expr> ZExtExpr::create(const ref<Expr> &e, Width w) {
     return ExtractExpr::create(e, 0, w);
   } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e)) {
     return CE->ZExt(w);
-  } else {
-    return ZExtExpr::alloc(e, w);
+  } else if (SelectExpr *se = dyn_cast<SelectExpr>(e)) {
+    if (isa<ConstantExpr>(se->trueExpr)) {
+      return SelectExpr::create(se->cond, ZExtExpr::create(se->trueExpr, w),
+                                ZExtExpr::create(se->falseExpr, w));
+    }
   }
+
+  return ZExtExpr::alloc(e, w);
 }
 
 ref<Expr> SExtExpr::create(const ref<Expr> &e, Width w) {
@@ -1748,9 +1781,14 @@ ref<Expr> SExtExpr::create(const ref<Expr> &e, Width w) {
     return ExtractExpr::create(e, 0, w);
   } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e)) {
     return CE->SExt(w);
-  } else {
-    return SExtExpr::alloc(e, w);
+  } else if (SelectExpr *se = dyn_cast<SelectExpr>(e)) {
+    if (isa<ConstantExpr>(se->trueExpr)) {
+      return SelectExpr::create(se->cond, SExtExpr::create(se->trueExpr, w),
+                                SExtExpr::create(se->falseExpr, w));
+    }
   }
+
+  return SExtExpr::alloc(e, w);
 }
 
 /***/
@@ -1839,10 +1877,6 @@ static ref<Expr> AddExpr_createPartialR(const ref<ConstantExpr> &cl, Expr *r) {
     } else if (rk == Expr::Sub &&
                isa<ConstantExpr>(r->getKid(0))) { // A + (B-c) == (A+B) - c
       return SubExpr::create(AddExpr::create(cl, r->getKid(0)), r->getKid(1));
-    } else if (rk == Expr::Select) {
-      SelectExpr *se = cast<SelectExpr>(r);
-      return SelectExpr::create(se->cond, AddExpr::create(cl, se->trueExpr),
-                                AddExpr::create(cl, se->falseExpr));
     } else {
       return AddExpr::alloc(cl, r);
     }
@@ -2058,6 +2092,18 @@ static ref<Expr> AShrExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 #define BCREATE_R(_e_op, _op, partialL, partialR)                              \
   ref<Expr> _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) {           \
     assert(l->getWidth() == r->getWidth() && "type mismatch");                 \
+    if (SelectExpr *sel = dyn_cast<SelectExpr>(l)) {                           \
+      if (isa<ConstantExpr>(sel->trueExpr)) {                                  \
+        return SelectExpr::create(sel->cond, _e_op::create(sel->trueExpr, r),  \
+                                  _e_op::create(sel->falseExpr, r));           \
+      }                                                                        \
+    }                                                                          \
+    if (SelectExpr *ser = dyn_cast<SelectExpr>(r)) {                           \
+      if (isa<ConstantExpr>(ser->trueExpr)) {                                  \
+        return SelectExpr::create(ser->cond, _e_op::create(l, ser->trueExpr),  \
+                                  _e_op::create(l, ser->falseExpr));           \
+      }                                                                        \
+    }                                                                          \
     if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l)) {                        \
       if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))                        \
         return cl->_op(cr);                                                    \
@@ -2071,6 +2117,18 @@ static ref<Expr> AShrExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
 #define BCREATE(_e_op, _op)                                                    \
   ref<Expr> _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) {           \
     assert(l->getWidth() == r->getWidth() && "type mismatch");                 \
+    if (SelectExpr *sel = dyn_cast<SelectExpr>(l)) {                           \
+      if (isa<ConstantExpr>(sel->trueExpr)) {                                  \
+        return SelectExpr::create(sel->cond, _e_op::create(sel->trueExpr, r),  \
+                                  _e_op::create(sel->falseExpr, r));           \
+      }                                                                        \
+    }                                                                          \
+    if (SelectExpr *ser = dyn_cast<SelectExpr>(r)) {                           \
+      if (isa<ConstantExpr>(ser->trueExpr)) {                                  \
+        return SelectExpr::create(ser->cond, _e_op::create(l, ser->trueExpr),  \
+                                  _e_op::create(l, ser->falseExpr));           \
+      }                                                                        \
+    }                                                                          \
     if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l))                          \
       if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))                        \
         return cl->_op(cr);                                                    \
@@ -2094,6 +2152,18 @@ BCREATE(AShrExpr, AShr)
 #define CMPCREATE(_e_op, _op)                                                  \
   ref<Expr> _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) {           \
     assert(l->getWidth() == r->getWidth() && "type mismatch");                 \
+    if (SelectExpr *sel = dyn_cast<SelectExpr>(l)) {                           \
+      if (isa<ConstantExpr>(sel->trueExpr)) {                                  \
+        return SelectExpr::create(sel->cond, _e_op::create(sel->trueExpr, r),  \
+                                  _e_op::create(sel->falseExpr, r));           \
+      }                                                                        \
+    }                                                                          \
+    if (SelectExpr *ser = dyn_cast<SelectExpr>(r)) {                           \
+      if (isa<ConstantExpr>(ser->trueExpr)) {                                  \
+        return SelectExpr::create(ser->cond, _e_op::create(l, ser->trueExpr),  \
+                                  _e_op::create(l, ser->falseExpr));           \
+      }                                                                        \
+    }                                                                          \
     if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l))                          \
       if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))                        \
         return cl->_op(cr);                                                    \
@@ -2103,15 +2173,26 @@ BCREATE(AShrExpr, AShr)
 #define CMPCREATE_T(_e_op, _op, _reflexive_e_op, partialL, partialR)           \
   ref<Expr> _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) {           \
     assert(l->getWidth() == r->getWidth() && "type mismatch");                 \
+    if (SelectExpr *sel = dyn_cast<SelectExpr>(l)) {                           \
+      if (isa<ConstantExpr>(sel->trueExpr)) {                                  \
+        return SelectExpr::create(sel->cond, _e_op::create(sel->trueExpr, r),  \
+                                  _e_op::create(sel->falseExpr, r));           \
+      }                                                                        \
+    }                                                                          \
+    if (SelectExpr *ser = dyn_cast<SelectExpr>(r)) {                           \
+      if (isa<ConstantExpr>(ser->trueExpr)) {                                  \
+        return SelectExpr::create(ser->cond, _e_op::create(l, ser->trueExpr),  \
+                                  _e_op::create(l, ser->falseExpr));           \
+      }                                                                        \
+    }                                                                          \
     if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l)) {                        \
       if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))                        \
         return cl->_op(cr);                                                    \
       return partialR(cl, r.get());                                            \
     } else if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r)) {                 \
       return partialL(l.get(), cr);                                            \
-    } else {                                                                   \
-      return _e_op##_create(l.get(), r.get());                                 \
     }                                                                          \
+    return _e_op##_create(l.get(), r.get());                                   \
   }
 
 static ref<Expr> EqExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
@@ -2150,12 +2231,16 @@ static ref<Expr> EqExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
     }
   } else if (isa<SelectExpr>(l) || isa<SelectExpr>(r)) {
     if (SelectExpr *se = dyn_cast<SelectExpr>(l)) {
-      return SelectExpr::create(se->cond, EqExpr::create(se->trueExpr, r),
-                                EqExpr::create(se->falseExpr, r));
+      if (isa<ConstantExpr>(se->trueExpr)) {
+        return SelectExpr::create(se->cond, EqExpr::create(se->trueExpr, r),
+                                  EqExpr::create(se->falseExpr, r));
+      }
     }
     if (SelectExpr *se = dyn_cast<SelectExpr>(r)) {
-      return SelectExpr::create(se->cond, EqExpr::create(se->trueExpr, l),
-                                EqExpr::create(se->falseExpr, l));
+      if (isa<ConstantExpr>(se->trueExpr)) {
+        return SelectExpr::create(se->cond, EqExpr::create(l, se->trueExpr),
+                                  EqExpr::create(l, se->falseExpr));
+      }
     }
   }
 
@@ -2299,6 +2384,10 @@ static ref<Expr> UltExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
   Expr::Width t = l->getWidth();
   if (t == Expr::Bool) { // !l && r
     return AndExpr::create(Expr::createIsZero(l), r);
+  } else if (r->isOne()) {
+    return EqExpr::create(l, ConstantExpr::create(0, t));
+  } else if (r->isZero()) {
+    return Expr::createFalse();
   } else {
     return UltExpr::alloc(l, r);
   }
@@ -2309,9 +2398,9 @@ static ref<Expr> UleExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
     return OrExpr::create(Expr::createIsZero(l), r);
   } else if (r->isZero()) {
     return EqExpr::create(l, r);
+  } else {
+    return UleExpr::alloc(l, r);
   }
-
-  return UleExpr::alloc(l, r);
 }
 
 static ref<Expr> SltExpr_create(const ref<Expr> &l, const ref<Expr> &r) {

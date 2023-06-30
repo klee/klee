@@ -104,44 +104,6 @@ public:
     return Action::doChildren();
   }
 
-  std::pair<UpdateList, bool> processUpdateList(const UpdateList &updates) {
-    UpdateList newUpdates = UpdateList(updates.root, 0);
-    std::stack<ref<UpdateNode>> forward;
-
-    for (auto it = updates.head; !it.isNull(); it = it->next) {
-      forward.push(it);
-    }
-
-    bool changed = false;
-    while (!forward.empty()) {
-      ref<UpdateNode> UNode = forward.top();
-      forward.pop();
-      ref<Expr> newIndex = visit(UNode->index);
-      ref<Expr> newValue = visit(UNode->value);
-      if (newIndex != UNode->index || newValue != UNode->value) {
-        changed = true;
-      }
-      newUpdates.extend(newIndex, newValue);
-    }
-    return {newUpdates, changed};
-  }
-
-  Action visitRead(const ReadExpr &re) override {
-    auto updates = processUpdateList(re.updates);
-
-    ref<Expr> index = visit(re.index);
-    if (!updates.second && index == re.index) {
-      return Action::skipChildren();
-    } else {
-      ref<Expr> reres = ReadExpr::create(updates.first, index);
-      Action res = visitExprPost(*reres.get());
-      if (res.kind == Action::ChangeTo) {
-        reres = res.argument;
-      }
-      return Action::changeTo(reres);
-    }
-  }
-
   Action visitSelect(const SelectExpr &sexpr) override {
     auto cond = visit(sexpr.cond);
     if (auto CE = dyn_cast<ConstantExpr>(cond)) {

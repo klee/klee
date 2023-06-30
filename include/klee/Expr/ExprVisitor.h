@@ -137,10 +137,9 @@ protected:
   virtual Action visitFNeg(const FNegExpr &);
   virtual Action visitFRint(const FRintExpr &);
 
-protected:
-  VisitorHash visited;
-
 private:
+  typedef ExprHashMap<ref<Expr>> visited_ty;
+  visited_ty visited;
   bool recursive;
 
   ref<Expr> visitActual(const ref<Expr> &e);
