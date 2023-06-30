@@ -542,6 +542,7 @@ KleeHandler::openTestFile(const std::string &suffix, unsigned id) {
 void KleeHandler::processTestCase(const ExecutionState &state,
                                   const char *errorMessage,
                                   const char *errorSuffix) {
+  unsigned id = ++m_numTotalTests;
   if (!WriteNone) {
     KTest ktest;
     ktest.numArgs = m_argc;
@@ -556,7 +557,6 @@ void KleeHandler::processTestCase(const ExecutionState &state,
 
     const auto start_time = time::getWallTime();
 
-    unsigned id = ++m_numTotalTests;
 
     if (success) {
       if (!kTest_toFile(
@@ -597,32 +597,6 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       }
     }
 
-    if (errorMessage || WriteKQueries) {
-      std::string constraints;
-      m_interpreter->getConstraintLog(state, constraints, Interpreter::KQUERY);
-      auto f = openTestFile("kquery", id);
-      if (f)
-        *f << constraints;
-    }
-
-    if (WriteCVCs) {
-      // FIXME: If using Z3 as the core solver the emitted file is actually
-      // SMT-LIBv2 not CVC which is a bit confusing
-      std::string constraints;
-      m_interpreter->getConstraintLog(state, constraints, Interpreter::STP);
-      auto f = openTestFile("cvc", id);
-      if (f)
-        *f << constraints;
-    }
-
-    if (WriteSMT2s) {
-      std::string constraints;
-      m_interpreter->getConstraintLog(state, constraints, Interpreter::SMTLIB2);
-      auto f = openTestFile("smt2", id);
-      if (f)
-        *f << constraints;
-    }
-
     if (m_symPathWriter) {
       std::vector<unsigned char> symbolicBranches;
       m_symPathWriter->readStream(m_interpreter->getSymbolicPathStreamID(state),
@@ -631,27 +605,6 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       if (f) {
         for (const auto &branch : symbolicBranches) {
           *f << branch << '\n';
-        }
-      }
-    }
-
-    if (WriteKPaths) {
-      std::string blockPath;
-      m_interpreter->getBlockPath(state, blockPath);
-      auto f = openTestFile("kpath", id);
-      if (f)
-        *f << blockPath;
-    }
-
-    if (WriteCov) {
-      std::map<const std::string *, std::set<unsigned>> cov;
-      m_interpreter->getCoveredLines(state, cov);
-      auto f = openTestFile("cov", id);
-      if (f) {
-        for (const auto &entry : cov) {
-          for (const auto &line : entry.second) {
-            *f << *entry.first << ':' << line << '\n';
-          }
         }
       }
     }
@@ -666,6 +619,53 @@ void KleeHandler::processTestCase(const ExecutionState &state,
         *f << "Time to generate test case: " << elapsed_time << '\n';
     }
   } // if (!WriteNone)
+
+  if (WriteKQueries) {
+    std::string constraints;
+    m_interpreter->getConstraintLog(state, constraints, Interpreter::KQUERY);
+    auto f = openTestFile("kquery", id);
+    if (f)
+      *f << constraints;
+  }
+
+  if (WriteCVCs) {
+    // FIXME: If using Z3 as the core solver the emitted file is actually
+    // SMT-LIBv2 not CVC which is a bit confusing
+    std::string constraints;
+    m_interpreter->getConstraintLog(state, constraints, Interpreter::STP);
+    auto f = openTestFile("cvc", id);
+    if (f)
+      *f << constraints;
+  }
+
+  if (WriteSMT2s) {
+    std::string constraints;
+    m_interpreter->getConstraintLog(state, constraints, Interpreter::SMTLIB2);
+    auto f = openTestFile("smt2", id);
+    if (f)
+      *f << constraints;
+  }
+
+  if (WriteKPaths) {
+    std::string blockPath;
+    m_interpreter->getBlockPath(state, blockPath);
+    auto f = openTestFile("kpath", id);
+    if (f)
+      *f << blockPath;
+  }
+
+  if (WriteCov) {
+    std::map<const std::string *, std::set<unsigned>> cov;
+    m_interpreter->getCoveredLines(state, cov);
+    auto f = openTestFile("cov", id);
+    if (f) {
+      for (const auto &entry : cov) {
+        for (const auto &line : entry.second) {
+          *f << *entry.first << ':' << line << '\n';
+        }
+      }
+    }
+  }
 
   if (errorMessage && OptExitOnError) {
     m_interpreter->prepareForEarlyExit();
