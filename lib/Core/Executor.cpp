@@ -4155,8 +4155,10 @@ void Executor::reportProgressTowardsTargets(std::string prefix,
   for (auto &p : distancesTowardsTargets) {
     auto target = p.first;
     auto distance = p.second;
-    klee_message("%s for %s", distance.toString().c_str(),
-                 target->toString().c_str());
+    klee_message("%s for %s (lines %d to %d)", distance.toString().c_str(),
+                 target->toString().c_str(),
+                 target->getBlock()->getFirstInstruction()->info->line,
+                 target->getBlock()->getLastInstruction()->info->line);
   }
 }
 
