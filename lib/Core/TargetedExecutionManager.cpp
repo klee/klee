@@ -248,6 +248,9 @@ getAdviseWhatToIncreaseConfidenceRate(HaltExecution::Reason reason) {
   case HaltExecution::MaxSteppedInstructions:
     what = MaxSteppedInstructions.ArgStr.str();
     break;
+  case HaltExecution::MaxCycles:
+    what = "max-cycles"; // TODO: taken from UserSearcher.cpp
+    break;
   case HaltExecution::CovCheck:
     what = "cov-check"; // TODO: taken from StatsTracker.cpp
     break;

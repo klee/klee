@@ -61,6 +61,7 @@ enum Reason {
   MaxInstructions,
   MaxSteppedInstructions,
   MaxTime,
+  MaxCycles,
   CovCheck,
   NoMoreStates,
   ReachedTarget,

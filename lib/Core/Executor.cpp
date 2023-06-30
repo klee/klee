@@ -4203,10 +4203,16 @@ void Executor::run(std::vector<ExecutionState *> initialStates) {
   }
 
   if (guidanceKind == GuidanceKind::ErrorGuidance) {
+    SetOfStates leftState = states;
+    for (auto state : pausedStates) {
+      leftState.erase(state);
+    }
+
     reportProgressTowardsTargets();
-    bool canReachNew1 = decreaseConfidenceFromStoppedStates(pausedStates);
+    bool canReachNew1 = decreaseConfidenceFromStoppedStates(
+        pausedStates, HaltExecution::MaxCycles);
     bool canReachNew2 =
-        decreaseConfidenceFromStoppedStates(states, haltExecution);
+        decreaseConfidenceFromStoppedStates(leftState, haltExecution);
 
     for (auto &startBlockAndWhiteList : targets) {
       startBlockAndWhiteList.second.reportFalsePositives(canReachNew1 ||
@@ -5541,7 +5547,7 @@ bool Executor::makeGuard(ExecutionState &state,
       selectGuard = OrExpr::create(selectGuard, resolveConditions.at(i));
     }
     if (hasLazyInitialized) {
-      ref<Expr> head = resolveConditions.back();
+      ref<Expr> head = Expr::createIsZero(unboundConditions.back());
       ref<Expr> body = Expr::createTrue();
       for (unsigned int j = 0; j < resolveConditions.size(); ++j) {
         if (resolveConditions.size() - 1 != j) {

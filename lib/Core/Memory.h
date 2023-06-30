@@ -155,17 +155,18 @@ public:
     ref<Expr> isZeroSizeExpr =
         EqExpr::create(Expr::createPointer(0), getSizeExpr());
     ref<Expr> isZeroOffsetExpr = EqExpr::create(Expr::createPointer(0), offset);
-    /* Check for zero size with zero offset. Useful for free of malloc(0) */
-    ref<Expr> andZeroExpr = AndExpr::create(isZeroSizeExpr, isZeroOffsetExpr);
-    return OrExpr::create(UltExpr::create(offset, getSizeExpr()), andZeroExpr);
+    return SelectExpr::create(isZeroSizeExpr, isZeroOffsetExpr,
+                              UltExpr::create(offset, getSizeExpr()));
   }
 
   ref<Expr> getBoundsCheckOffset(ref<Expr> offset, unsigned bytes) const {
     ref<Expr> offsetSizeCheck =
         UleExpr::create(Expr::createPointer(bytes), getSizeExpr());
-    ref<Expr> writeInSizeCheck = UleExpr::create(
-        offset, SubExpr::create(getSizeExpr(), Expr::createPointer(bytes)));
-    return AndExpr::create(offsetSizeCheck, writeInSizeCheck);
+    ref<Expr> trueExpr = UltExpr::create(
+        offset, AddExpr::create(
+                    SubExpr::create(getSizeExpr(), Expr::createPointer(bytes)),
+                    Expr::createPointer(1)));
+    return SelectExpr::create(offsetSizeCheck, trueExpr, Expr::createFalse());
   }
 
   /// Compare this object with memory object b.
