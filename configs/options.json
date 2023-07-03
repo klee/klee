@@ -7,7 +7,11 @@
         "maxSolverTime" : "5",
         "maxForks" : "200",
         "maxSymAlloc" : "32",
-        "symbolicAllocationThreshhold" : "2048"
+        "SymbolicAllocationThreshold" : "2048",
+        "minNumberElements" : "4",
+        "maxCycles" : 10,
+        "useSymbolicSizeLI" : false,
+        "writeKpaths": false
     },
     "configurations": [
         {
@@ -33,10 +37,13 @@
                 "--extern-calls-can-return-null",
                 "--align-symbolic-pointers=false",
                 "--write-no-tests",
-                "--write-kpaths",
+                "--write-kpaths=${writeKpaths}",
                 "--use-lazy-initialization=only",
+                "--min-number-elements-li=${minNumberElements}",
+                "--use-sym-size-li=${useSymbolicSizeLI}",
+                "--max-cycles=${maxCycles}",
                 "--rewrite-equalities=simple",
-                "--symbolic-allocation-threshhold=${symbolicAllocationThreshhold}",
+                "--symbolic-allocation-threshold=${SymbolicAllocationThreshold}",
                 "--analysis-reproduce=${sarifTracesFilePath}",
                 "${bytecodeFilePath}"
             ]
