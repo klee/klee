@@ -33,8 +33,9 @@
   TTYPE(ReadOnly, 17U, "read_only.err")                                        \
   TTYPE(ReportError, 18U, "report_error.err")                                  \
   TTYPE(UndefinedBehavior, 19U, "undefined_behavior.err")                      \
-  TTYPE(InternalOutOfMemory, 20U, "out_of_memory.er")                          \
-  MARK(PROGERR, 20U)                                                           \
+  TTYPE(InternalOutOfMemory, 20U, "out_of_memory.err")                         \
+  TTYPE(MissedAllTargets, 21U, "miss_all_targets.err")                         \
+  MARK(PROGERR, 21U)                                                           \
   TTYPE(User, 23U, "user.err")                                                 \
   MARK(USERERR, 23U)                                                           \
   TTYPE(Execution, 25U, "exec.err")                                            \
@@ -42,8 +43,7 @@
   MARK(EXECERR, 26U)                                                           \
   TTYPE(Replay, 27U, "")                                                       \
   TTYPE(SilentExit, 28U, "")                                                   \
-  TTYPE(MissedAllTargets, 29U, "")                                             \
-  MARK(END, 29U)
+  MARK(END, 28U)
 
 ///@brief Reason an ExecutionState got terminated.
 enum class StateTerminationType : std::uint8_t {
