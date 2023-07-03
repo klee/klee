@@ -274,12 +274,8 @@ int AddressSpace::checkPointerInObject(ExecutionState &state,
   // mustBeTrue before mayBeTrue for the first result. easy
   // to add I just want to have a nice symbolic test case first.
   const MemoryObject *mo = op.first;
-  ref<Expr> base = state.isGEPExpr(p) ? state.gepExprBases.at(p).first : p;
   ref<Expr> inBounds = mo->getBoundsCheckPointer(p);
-  inBounds = AndExpr::create(
-      inBounds,
-      mo->getBoundsCheckPointer(base)); // FIXME: remove when segmented memory
-                                        // model will be implemented
+
   bool mayBeTrue;
   if (!solver->mayBeTrue(state.constraints.cs(), inBounds, mayBeTrue,
                          state.queryMetaData)) {

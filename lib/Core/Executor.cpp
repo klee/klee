@@ -136,6 +136,9 @@ cl::OptionCategory SeedingCat(
 cl::OptionCategory TestGenCat("Test generation options",
                               "These options impact test generation.");
 
+cl::OptionCategory LazyInitCat("Lazy initialization option",
+                               "These options configure lazy initialization.");
+
 cl::opt<TypeSystemKind>
     TypeSystem("type-system",
                cl::desc("Use information about type system from specified "
@@ -202,7 +205,20 @@ cl::opt<LazyInitializationPolicy> LazyInitialization(
                           "Only lazy initilization without resolving."),
                clEnumValN(LazyInitializationPolicy::All, "all",
                           "Enable lazy initialization (default).")),
-    cl::init(LazyInitializationPolicy::All), cl::cat(ExecCat));
+    cl::init(LazyInitializationPolicy::All), cl::cat(LazyInitCat));
+
+llvm::cl::opt<bool> UseSymbolicSizeLazyInit(
+    "use-sym-size-li",
+    llvm::cl::desc(
+        "Allows lazy initialize symbolic size objects (default false)"),
+    llvm::cl::init(false), llvm::cl::cat(LazyInitCat));
+
+llvm::cl::opt<unsigned> MinNumberElementsLazyInit(
+    "min-number-elements-li",
+    llvm::cl::desc("Minimum number of array elements for one lazy "
+                   "initialization (default 4)"),
+    llvm::cl::init(4), llvm::cl::cat(LazyInitCat));
+
 } // namespace klee
 
 namespace {
@@ -235,9 +251,9 @@ cl::opt<unsigned> MaxSymArraySize(
     cl::init(0), cl::cat(SolvingCat));
 
 cl::opt<bool>
-    SimplifySymIndices("simplify-sym-indices", cl::init(false),
+    SimplifySymIndices("simplify-sym-indices", cl::init(true),
                        cl::desc("Simplify symbolic accesses using equalities "
-                                "from other constraints (default=false)"),
+                                "from other constraints (default=true)"),
                        cl::cat(SolvingCat));
 
 cl::opt<bool>
@@ -415,6 +431,7 @@ bool allLeafsAreConstant(const ref<Expr> &expr) {
 
 extern llvm::cl::opt<uint64_t> MaxConstantAllocationSize;
 extern llvm::cl::opt<uint64_t> MaxSymbolicAllocationSize;
+extern llvm::cl::opt<bool> UseSymbolicSizeAllocation;
 
 // XXX hack
 extern "C" unsigned dumpStates, dumpPForest;
@@ -4328,13 +4345,19 @@ void Executor::targetedRun(ExecutionState &initialState, KBlock *target,
 }
 
 std::string Executor::getAddressInfo(ExecutionState &state, ref<Expr> address,
+                                     unsigned size,
                                      const MemoryObject *mo) const {
   std::string Str;
   llvm::raw_string_ostream info(Str);
+  address =
+      Simplificator::simplifyExpr(state.constraints.cs(), address).simplified;
   info << "\taddress: " << address << "\n";
   if (state.isGEPExpr(address)) {
     ref<Expr> base = state.gepExprBases[address].first;
     info << "\tbase: " << base << "\n";
+  }
+  if (size) {
+    info << "\tsize: " << size << "\n";
   }
 
   uint64_t example;
@@ -4915,6 +4938,11 @@ void Executor::executeAlloc(ExecutionState &state, ref<Expr> size, bool isLocal,
   if (allocationAlignment == 0) {
     allocationAlignment = getAllocationAlignment(allocSite);
   }
+
+  if (!isa<ConstantExpr>(size) && !UseSymbolicSizeAllocation) {
+    size = toConstant(state, size, "symbolic size allocation");
+  }
+
   ref<Expr> upperBoundSizeConstraint = Expr::createTrue();
   if (!isa<ConstantExpr>(size)) {
     upperBoundSizeConstraint = UleExpr::create(
@@ -5309,14 +5337,11 @@ bool Executor::resolveMemoryObjects(
     // we are on an error path (no resolution, multiple resolution, one
     // resolution with out of bounds)
 
-    bool baseWasNotResolved = state.resolvedPointers.count(base) == 0;
     address = optimizer.optimizeExpr(address, true);
     ref<Expr> checkOutOfBounds = Expr::createTrue();
 
-    ref<Expr> baseUniqueExpr = toUnique(state, base);
-
-    bool checkAddress = isa<ReadExpr>(address) || isa<ConcatExpr>(address) ||
-                        state.isGEPExpr(address);
+    bool checkAddress =
+        isa<ReadExpr>(address) || isa<ConcatExpr>(address) || base != address;
     if (!checkAddress && isa<SelectExpr>(address)) {
       checkAddress = true;
       std::vector<ref<Expr>> alternatives;
@@ -5329,8 +5354,7 @@ bool Executor::resolveMemoryObjects(
     }
 
     mayLazyInitialize = LazyInitialization != LazyInitializationPolicy::None &&
-                        !isa<ConstantExpr>(baseUniqueExpr) &&
-                        baseWasNotResolved && checkAddress;
+                        !isa<ConstantExpr>(base);
 
     if (!onlyLazyInitialize || !mayLazyInitialize) {
       ResolutionList rl;
@@ -5361,8 +5385,11 @@ bool Executor::resolveMemoryObjects(
         return false;
       } else if (mayLazyInitialize) {
         IDType idLazyInitialization;
-        if (!lazyInitializeObject(state, base, target, baseTargetType, size,
-                                  idLazyInitialization)) {
+        uint64_t minObjectSize = MinNumberElementsLazyInit * size;
+        if (!lazyInitializeObject(state, base, target, baseTargetType,
+                                  minObjectSize, false, idLazyInitialization,
+                                  /*state.isolated || UseSymbolicSizeLazyInit*/
+                                  UseSymbolicSizeLazyInit)) {
           return false;
         }
         // Lazy initialization might fail if we've got unappropriate address
@@ -5409,7 +5436,7 @@ bool Executor::checkResolvedMemoryObjects(
     ref<Expr> baseInBounds = Expr::createTrue();
     ref<Expr> notInBounds = Expr::createIsZero(inBounds);
 
-    if (state.isGEPExpr(address)) {
+    if (base != address || size != bytes) {
       baseInBounds =
           AndExpr::create(baseInBounds, mo->getBoundsCheckPointer(base, size));
     }
@@ -5456,12 +5483,20 @@ bool Executor::checkResolvedMemoryObjects(
       } else {
         resolveConditions.push_back(inBounds);
         unboundConditions.push_back(notInBounds);
+        if (hasLazyInitialized /*&& !state.isolated*/) {
+          notInBounds = AndExpr::create(
+              notInBounds, Expr::createIsZero(mo->getOffsetExpr(base)));
+        }
         checkOutOfBounds = notInBounds;
       }
     } else if (mayBeOutOfBound) {
       if (mustBeOutOfBound) {
         checkOutOfBounds = Expr::createTrue();
       } else {
+        if (hasLazyInitialized /*&& !state.isolated*/) {
+          notInBounds = AndExpr::create(
+              notInBounds, Expr::createIsZero(mo->getOffsetExpr(base)));
+        }
         checkOutOfBounds = notInBounds;
       }
     }
@@ -5477,9 +5512,11 @@ bool Executor::checkResolvedMemoryObjects(
       ref<Expr> baseInBounds = Expr::createTrue();
       ref<Expr> notInBounds = Expr::createIsZero(inBounds);
 
-      if (state.isGEPExpr(address)) {
+      if (base != address || size != bytes) {
         baseInBounds = AndExpr::create(baseInBounds,
                                        mo->getBoundsCheckPointer(base, size));
+        baseInBounds = AndExpr::create(
+            baseInBounds, Expr::createIsZero(mo->getOffsetExpr(base)));
       }
 
       if (hasLazyInitialized && i == mayBeResolvedMemoryObjects.size() - 1) {
@@ -5512,6 +5549,13 @@ bool Executor::checkResolvedMemoryObjects(
       resolveConditions.push_back(inBounds);
       resolvedMemoryObjects.push_back(mo->id);
       unboundConditions.push_back(notInBounds);
+
+      if (hasLazyInitialized &&
+          i == mayBeResolvedMemoryObjects.size() - 1 /*&& !state.isolated*/) {
+        notInBounds = AndExpr::create(
+            notInBounds, Expr::createIsZero(mo->getOffsetExpr(base)));
+      }
+
       if (mayBeOutOfBound) {
         checkOutOfBounds = AndExpr::create(checkOutOfBounds, notInBounds);
       }
@@ -5663,12 +5707,24 @@ void Executor::executeMemoryOperation(
   }
 
   if (SimplifySymIndices) {
-    if (!isa<ConstantExpr>(address))
+    ref<Expr> oldAddress = address;
+    ref<Expr> oldbase = base;
+    if (!isa<ConstantExpr>(address)) {
       address = Simplificator::simplifyExpr(estate.constraints.cs(), address)
                     .simplified;
-    if (!isa<ConstantExpr>(base))
+    }
+    if (!isa<ConstantExpr>(base)) {
       base =
           Simplificator::simplifyExpr(estate.constraints.cs(), base).simplified;
+    }
+    if (!isa<ConstantExpr>(address) || base->isZero()) {
+      if (estate.isGEPExpr(oldAddress)) {
+        estate.gepExprBases[address] = {
+            base,
+            estate.gepExprBases[oldAddress].second,
+        };
+      }
+    }
     if (isWrite && !isa<ConstantExpr>(value))
       value = Simplificator::simplifyExpr(estate.constraints.cs(), value)
                   .simplified;
@@ -5677,9 +5733,7 @@ void Executor::executeMemoryOperation(
   address = optimizer.optimizeExpr(address, true);
   base = optimizer.optimizeExpr(base, true);
 
-  ref<Expr> uniqueBase =
-      Simplificator::simplifyExpr(estate.constraints.cs(), base).simplified;
-  uniqueBase = toUnique(estate, uniqueBase);
+  ref<Expr> uniqueBase = toUnique(estate, base);
 
   StatePair branches =
       forkInternal(estate, Expr::createIsZero(base), BranchType::MemOp);
@@ -5704,7 +5758,7 @@ void Executor::executeMemoryOperation(
       state->resolvedPointers.at(base).size() == 1) {
     success = true;
     idFastResult = *state->resolvedPointers[base].begin();
-  } else if (allLeafsAreConstant(address)) {
+  } else {
     solver->setTimeout(coreSolverTimeout);
 
     if (!state->addressSpace.resolveOne(*state, solver, address, targetType,
@@ -5726,6 +5780,16 @@ void Executor::executeMemoryOperation(
     }
 
     ref<Expr> inBounds = mo->getBoundsCheckPointer(address, bytes);
+    ref<Expr> baseInBounds = Expr::createTrue();
+
+    if (base != address || size != bytes) {
+      baseInBounds =
+          AndExpr::create(baseInBounds, mo->getBoundsCheckPointer(base, size));
+      baseInBounds = AndExpr::create(
+          baseInBounds, Expr::createIsZero(mo->getOffsetExpr(base)));
+    }
+
+    inBounds = AndExpr::create(inBounds, baseInBounds);
 
     inBounds = optimizer.optimizeExpr(inBounds, true);
     inBounds = Simplificator::simplifyExpr(state->constraints.cs(), inBounds)
@@ -5920,6 +5984,16 @@ void Executor::executeMemoryOperation(
       const MemoryObject *mo = op.first;
       const ObjectState *os = op.second;
 
+      if (hasLazyInitialized && i + 1 != resolvedMemoryObjects.size()) {
+        const MemoryObject *liMO =
+            bound->addressSpace
+                .findObject(
+                    resolvedMemoryObjects[resolvedMemoryObjects.size() - 1])
+                .first;
+        bound->removePointerResolutions(liMO);
+        bound->addressSpace.unbindObject(liMO);
+      }
+
       bound->addUniquePointerResolution(address, mo);
       bound->addUniquePointerResolution(base, mo);
 
@@ -5972,15 +6046,14 @@ void Executor::executeMemoryOperation(
     assert(mayBeOutOfBound && "must be true since unbound is not null");
     terminateStateOnError(*unbound, "memory error: out of bound pointer",
                           StateTerminationType::Ptr,
-                          getAddressInfo(*unbound, address));
+                          getAddressInfo(*unbound, address, bytes));
   }
 }
 
 bool Executor::lazyInitializeObject(ExecutionState &state, ref<Expr> address,
                                     const KInstruction *target,
                                     KType *targetType, uint64_t size,
-                                    IDType &id, bool isConstantSize,
-                                    bool isLocal) {
+                                    bool isLocal, IDType &id, bool isSymbolic) {
   assert(!isa<ConstantExpr>(address));
   const llvm::Value *allocSite = target ? target->inst : nullptr;
   std::pair<ref<const MemoryObject>, ref<Expr>> moBasePair;
@@ -5990,7 +6063,7 @@ bool Executor::lazyInitializeObject(ExecutionState &state, ref<Expr> address,
   }
 
   ref<Expr> sizeExpr;
-  if (size <= MaxSymbolicAllocationSize && !isConstantSize) {
+  if (size < MaxSymbolicAllocationSize && !isLocal && isSymbolic) {
     const Array *lazyInstantiationSize = makeArray(
         Expr::createPointer(Context::get().getPointerWidth() / CHAR_BIT),
         SourceBuilder::lazyInitializationSize(address));
@@ -6016,9 +6089,11 @@ bool Executor::lazyInitializeObject(ExecutionState &state, ref<Expr> address,
     sizeExpr = Expr::createPointer(size);
   }
 
-  MemoryObject *mo = allocate(state, sizeExpr, isLocal,
-                              /*isGlobal=*/false, allocSite,
-                              /*allocationAlignment=*/8, address, timestamp);
+  ref<Expr> addressExpr = isSymbolic ? address : nullptr;
+  MemoryObject *mo =
+      allocate(state, sizeExpr, isLocal,
+               /*isGlobal=*/false, allocSite,
+               /*allocationAlignment=*/8, addressExpr, timestamp);
   if (!mo) {
     return false;
   }
@@ -6041,6 +6116,8 @@ bool Executor::lazyInitializeObject(ExecutionState &state, ref<Expr> address,
   if (!mayBeLazyInitialized) {
     id = 0;
   } else {
+    address =
+        Simplificator::simplifyExpr(state.constraints.cs(), address).simplified;
     executeMakeSymbolic(state, mo, targetType,
                         SourceBuilder::lazyInitializationContent(address),
                         isLocal);
@@ -6068,7 +6145,8 @@ IDType Executor::lazyInitializeLocalObject(ExecutionState &state,
   IDType id;
   bool success = lazyInitializeObject(
       state, address, target, typeSystemManager->getWrappedType(ai->getType()),
-      elementSize, id, isa<ConstantExpr>(size), true);
+      elementSize, true, id,
+      /*state.isolated || UseSymbolicSizeLazyInit*/ UseSymbolicSizeLazyInit);
   assert(success);
   assert(id);
   auto op = state.addressSpace.findObject(id);
@@ -6606,18 +6684,24 @@ void Executor::getConstraintLog(const ExecutionState &state, std::string &res,
 void Executor::logState(const ExecutionState &state, int id,
                         std::unique_ptr<llvm::raw_fd_ostream> &f) {
   *f << "State number " << state.id << ". Test number: " << id << "\n\n";
+  for (auto &object : state.addressSpace.objects) {
+    *f << "ID memory object: " << object.first->id << "\n";
+    *f << "Address memory object: " << object.first->address << "\n";
+    *f << "Memory object size: " << object.first->size << "\n";
+  }
   *f << state.symbolics.size() << " symbolics total. "
      << "Symbolics:\n";
   size_t sc = 0;
-  for (auto &i : state.symbolics) {
+  for (auto &symbolic : state.symbolics) {
     *f << "Symbolic number " << sc++ << "\n";
-    *f << "Associated memory object: " << i.memoryObject.get()->id << "\n";
-    *f << "Memory object size: " << i.memoryObject.get()->size << "\n";
+    *f << "Associated memory object: " << symbolic.memoryObject.get()->id
+       << "\n";
+    *f << "Memory object size: " << symbolic.memoryObject.get()->size << "\n";
   }
   *f << "\n";
   *f << "State constraints:\n";
-  for (auto i : state.constraints.cs().cs()) {
-    i->print(*f);
+  for (auto constraint : state.constraints.cs().cs()) {
+    constraint->print(*f);
     *f << "\n";
   }
 }

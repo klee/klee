@@ -397,8 +397,8 @@ private:
 
   bool lazyInitializeObject(ExecutionState &state, ref<Expr> address,
                             const KInstruction *target, KType *targetType,
-                            uint64_t size, IDType &id,
-                            bool isConstantSize = false, bool isLocal = false);
+                            uint64_t size, bool isLocal, IDType &id,
+                            bool isConstant = true);
 
   IDType lazyInitializeLocalObject(ExecutionState &state, StackFrame &sf,
                                    ref<Expr> address,
@@ -547,6 +547,7 @@ private:
 
   /// Get textual information regarding a memory address.
   std::string getAddressInfo(ExecutionState &state, ref<Expr> address,
+                             unsigned size = 0,
                              const MemoryObject *mo = nullptr) const;
 
   // Determines the \param lastInstruction of the \param state which is not KLEE
