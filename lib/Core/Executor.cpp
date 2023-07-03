@@ -5666,18 +5666,14 @@ void Executor::collectReads(
     const MemoryObject *mo = op.first;
     const ObjectState *os = op.second;
 
-    ObjectState *wos = state.addressSpace.getWriteable(mo, os);
-
-    wos->getDynamicType()->handleMemoryAccess(
-        targetType, mo->getOffsetExpr(address),
-        ConstantExpr::alloc(size, Context::get().getPointerWidth()), true);
-    ref<Expr> result = wos->read(mo->getOffsetExpr(address), type);
+    ref<Expr> result = os->read(mo->getOffsetExpr(address), type);
 
     if (MockMutableGlobals != MockMutableGlobalsPolicy::None && mo->isGlobal &&
-        !wos->readOnly && isa<ConstantExpr>(result) &&
+        !os->readOnly && isa<ConstantExpr>(result) &&
         (MockMutableGlobals != MockMutableGlobalsPolicy::PrimitiveFields ||
          !targetType->getRawType()->isPointerTy())) {
       result = makeMockValue(state, "mockGlobalValue", result->getWidth());
+      ObjectState *wos = state.addressSpace.getWriteable(mo, os);
       wos->write(mo->getOffsetExpr(address), result);
     }
 
@@ -5816,8 +5812,8 @@ void Executor::executeMemoryOperation(
       const ObjectState *os = op.second;
       state->addPointerResolution(base, mo);
       state->addPointerResolution(address, mo);
-      ObjectState *wos = state->addressSpace.getWriteable(mo, os);
       if (isWrite) {
+        ObjectState *wos = state->addressSpace.getWriteable(mo, os);
         wos->getDynamicType()->handleMemoryAccess(
             targetType, mo->getOffsetExpr(address),
             ConstantExpr::alloc(size, Context::get().getPointerWidth()), true);
@@ -5828,19 +5824,17 @@ void Executor::executeMemoryOperation(
           wos->write(mo->getOffsetExpr(address), value);
         }
       } else {
-        wos->getDynamicType()->handleMemoryAccess(
-            targetType, mo->getOffsetExpr(address),
-            ConstantExpr::alloc(size, Context::get().getPointerWidth()), false);
-        result = wos->read(mo->getOffsetExpr(address), type);
+        result = os->read(mo->getOffsetExpr(address), type);
 
         if (interpreterOpts.MakeConcreteSymbolic)
           result = replaceReadWithSymbolic(*state, result);
 
         if (MockMutableGlobals != MockMutableGlobalsPolicy::None &&
-            mo->isGlobal && !wos->readOnly && isa<ConstantExpr>(result) &&
+            mo->isGlobal && !os->readOnly && isa<ConstantExpr>(result) &&
             (MockMutableGlobals != MockMutableGlobalsPolicy::PrimitiveFields ||
              !targetType->getRawType()->isPointerTy())) {
           result = makeMockValue(*state, "mockGlobalValue", result->getWidth());
+          ObjectState *wos = state->addressSpace.getWriteable(mo, os);
           wos->write(mo->getOffsetExpr(address), result);
         }
 
@@ -6002,9 +5996,9 @@ void Executor::executeMemoryOperation(
       waste too much memory as we do now always modify something. To fix this
       we can ask memory if we will make anything, and create a copy if
       required. */
-      ObjectState *wos = bound->addressSpace.getWriteable(mo, os);
 
       if (isWrite) {
+        ObjectState *wos = bound->addressSpace.getWriteable(mo, os);
         wos->getDynamicType()->handleMemoryAccess(
             targetType, mo->getOffsetExpr(address),
             ConstantExpr::alloc(size, Context::get().getPointerWidth()), true);
@@ -6015,16 +6009,14 @@ void Executor::executeMemoryOperation(
           wos->write(mo->getOffsetExpr(address), value);
         }
       } else {
-        wos->getDynamicType()->handleMemoryAccess(
-            targetType, mo->getOffsetExpr(address),
-            ConstantExpr::alloc(size, Context::get().getPointerWidth()), false);
-        ref<Expr> result = wos->read(mo->getOffsetExpr(address), type);
+        ref<Expr> result = os->read(mo->getOffsetExpr(address), type);
 
         if (MockMutableGlobals != MockMutableGlobalsPolicy::None &&
-            mo->isGlobal && !wos->readOnly && isa<ConstantExpr>(result) &&
+            mo->isGlobal && !os->readOnly && isa<ConstantExpr>(result) &&
             (MockMutableGlobals != MockMutableGlobalsPolicy::PrimitiveFields ||
              !targetType->getRawType()->isPointerTy())) {
           result = makeMockValue(*bound, "mockGlobalValue", result->getWidth());
+          ObjectState *wos = bound->addressSpace.getWriteable(mo, os);
           wos->write(mo->getOffsetExpr(address), result);
         }
 
