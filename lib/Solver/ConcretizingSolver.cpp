@@ -253,7 +253,7 @@ bool ConcretizingSolver::relaxSymcreteConstraints(const Query &query,
           Query(queryConstraints,
                 UgtExpr::create(
                     symbolicSizesSum,
-                    ConstantExpr::create(SymbolicAllocationThreshhold,
+                    ConstantExpr::create(SymbolicAllocationThreshold,
                                          symbolicSizesSum->getWidth()))),
           response)) {
     return false;

@@ -5152,7 +5152,7 @@ bool Executor::computeSizes(ExecutionState &state, ref<Expr> size,
   bool success = solver->getResponse(
       state.constraints.cs(),
       UgtExpr::create(symbolicSizesSum,
-                      ConstantExpr::create(SymbolicAllocationThreshhold,
+                      ConstantExpr::create(SymbolicAllocationThreshold,
                                            symbolicSizesSum->getWidth())),
       response, state.queryMetaData);
   solver->setTimeout(time::Span());

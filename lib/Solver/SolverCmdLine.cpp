@@ -220,8 +220,8 @@ llvm::cl::opt<bool>
                      llvm::cl::desc("Produce unsat core (default=true)."),
                      llvm::cl::cat(klee::SolvingCat));
 
-llvm::cl::opt<unsigned> SymbolicAllocationThreshhold(
-    "symbolic-allocation-threshhold",
+llvm::cl::opt<unsigned> SymbolicAllocationThreshold(
+    "symbolic-allocation-threshold",
     llvm::cl::desc("Maximum possible sum of sizes for all symbolic allocation "
                    "before minimazation (default 1Kb)"),
     llvm::cl::init(1024), llvm::cl::cat(klee::SolvingCat));
