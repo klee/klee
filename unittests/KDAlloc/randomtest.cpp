@@ -15,7 +15,6 @@
 #endif
 
 #include <cassert>
-#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -126,18 +125,8 @@ public:
 } // namespace
 
 void random_test() {
-  auto start = std::chrono::steady_clock::now();
-
   RandomTest tester;
   tester.run(1'000'000);
-
-  auto stop = std::chrono::steady_clock::now();
-  std::cout << std::dec
-            << std::chrono::duration_cast<std::chrono::milliseconds>(stop -
-                                                                     start)
-                   .count()
-            << " ms\n";
-  std::cout << "\n";
 
   std::cout << "Allocations: " << tester.allocation_count << "\n";
   std::cout << "Deallocations: " << tester.deallocation_count << "\n";
