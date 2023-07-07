@@ -43,9 +43,7 @@ std::uint32_t MemoryManager::quarantine;
 std::size_t MemoryManager::pageSize = sysconf(_SC_PAGE_SIZE);
 
 bool MemoryManager::isDeterministic;
-} // namespace klee
 
-namespace {
 llvm::cl::OptionCategory MemoryCat("Memory management options",
                                    "These options control memory management.");
 
