@@ -20,7 +20,7 @@
 using namespace llvm;
 using namespace klee;
 
-namespace {
+namespace klee {
 llvm::cl::OptionCategory
     SearchCat("Search options", "These options control the search heuristic.");
 
@@ -79,12 +79,10 @@ cl::opt<std::string> BatchTime(
     cl::init("5s"),
     cl::cat(SearchCat));
 
-} // namespace
-
-void klee::initializeSearchOptions() {
+void initializeSearchOptions() {
   // default values
   if (CoreSearch.empty()) {
-    if (UseMerge){
+    if (UseMerge) {
       CoreSearch.push_back(Searcher::NURS_CovNew);
       klee_warning("--use-merge enabled. Using NURS_CovNew as default searcher.");
     } else {
@@ -94,7 +92,7 @@ void klee::initializeSearchOptions() {
   }
 }
 
-bool klee::userSearcherRequiresMD2U() {
+bool userSearcherRequiresMD2U() {
   return (std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_MD2U) != CoreSearch.end() ||
           std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_CovNew) != CoreSearch.end() ||
           std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_ICnt) != CoreSearch.end() ||
@@ -102,6 +100,7 @@ bool klee::userSearcherRequiresMD2U() {
           std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_QC) != CoreSearch.end());
 }
 
+} // namespace klee
 
 Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng, PTree &processTree) {
   Searcher *searcher = nullptr;
