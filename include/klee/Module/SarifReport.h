@@ -104,10 +104,23 @@ struct Message {
   std::string text;
 };
 
+struct Fingerprints {
+  std::string cooddy_uid;
+};
+
+static void to_json(json &j, const Fingerprints &p) {
+  j = json{{"cooddy.uid", p.cooddy_uid}};
+}
+
+static void from_json(const json &j, Fingerprints &p) {
+  j.at("cooddy.uid").get_to(p.cooddy_uid);
+}
+
 struct ResultJson {
   optional<std::string> ruleId;
   optional<Message> message;
   optional<unsigned> id;
+  optional<Fingerprints> fingerprints;
   std::vector<LocationJson> locations;
   std::vector<CodeFlowJson> codeFlows;
 };
@@ -149,7 +162,8 @@ NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(CodeFlowJson, threadFlows)
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(Message, text)
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(ResultJson, ruleId, message, id,
-                                                codeFlows, locations)
+                                                fingerprints, codeFlows,
+                                                locations)
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE_WITH_DEFAULT(DriverJson, name)
 
@@ -257,7 +271,7 @@ struct RefLocationCmp {
 struct Result {
   std::vector<ref<Location>> locations;
   std::vector<optional<json>> metadatas;
-  unsigned id;
+  std::string id;
   std::set<ReachWithError> errors;
 };
 

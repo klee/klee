@@ -137,7 +137,7 @@ private:
     }
 
     void collectHowManyEventsInTracesWereReached(
-        std::unordered_map<unsigned, std::pair<unsigned, unsigned>>
+        std::unordered_map<std::string, std::pair<unsigned, unsigned>>
             &traceToEventCount,
         unsigned reached, unsigned total) const;
 
@@ -191,7 +191,7 @@ private:
       return getConfidence(confidence::MaxConfidence);
     }
     void collectHowManyEventsInTracesWereReached(
-        std::unordered_map<unsigned, std::pair<unsigned, unsigned>>
+        std::unordered_map<std::string, std::pair<unsigned, unsigned>>
             &traceToEventCount) const {
       collectHowManyEventsInTracesWereReached(traceToEventCount, 0, 0);
     }
@@ -328,7 +328,7 @@ public:
     forest = forest->divideConfidenceBy(reachableStatesOfTarget);
   }
   void collectHowManyEventsInTracesWereReached(
-      std::unordered_map<unsigned, std::pair<unsigned, unsigned>>
+      std::unordered_map<std::string, std::pair<unsigned, unsigned>>
           &traceToEventCount) const {
     forest->collectHowManyEventsInTracesWereReached(traceToEventCount);
   }

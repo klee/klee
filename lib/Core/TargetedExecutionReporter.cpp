@@ -16,7 +16,8 @@ using namespace klee;
 
 void klee::reportFalsePositive(confidence::ty confidence,
                                const std::set<ReachWithError> &errors,
-                               unsigned id, std::string whatToIncrease) {
+                               const std::string &id,
+                               std::string whatToIncrease) {
   std::ostringstream out;
   out << getErrorsString(errors) << " False Positive at trace " << id;
   if (!confidence::isConfident(confidence)) {

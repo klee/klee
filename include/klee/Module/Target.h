@@ -51,11 +51,12 @@ private:
   KBlock *block;
   std::set<ReachWithError>
       errors;                  // None - if it is not terminated in error trace
-  unsigned id;                 // 0 - if it is not terminated in error trace
+  std::string id;              // "" - if it is not terminated in error trace
   optional<ErrorLocation> loc; // TODO(): only for check in reportTruePositive
 
-  explicit Target(const std::set<ReachWithError> &_errors, unsigned _id,
-                  optional<ErrorLocation> _loc, KBlock *_block)
+  explicit Target(const std::set<ReachWithError> &_errors,
+                  const std::string &_id, optional<ErrorLocation> _loc,
+                  KBlock *_block)
       : block(_block), errors(_errors), id(_id), loc(_loc) {}
 
   static ref<Target> getFromCacheOrReturn(Target *target);
@@ -66,8 +67,8 @@ public:
   class ReferenceCounter _refCount;
 
   static ref<Target> create(const std::set<ReachWithError> &_errors,
-                            unsigned _id, optional<ErrorLocation> _loc,
-                            KBlock *_block);
+                            const std::string &_id,
+                            optional<ErrorLocation> _loc, KBlock *_block);
   static ref<Target> create(KBlock *_block);
 
   int compare(const Target &other) const;
@@ -101,7 +102,7 @@ public:
   /// to avoid solver calls
   bool mustVisitForkBranches(KInstruction *instr) const;
 
-  unsigned getId() const { return id; }
+  std::string getId() const { return id; }
 
   std::string toString() const;
   ~Target();

@@ -115,7 +115,7 @@ tryConvertRuleJson(const std::string &ruleId, const std::string &toolName,
 
 optional<Result> tryConvertResultJson(const ResultJson &resultJson,
                                       const std::string &toolName,
-                                      unsigned id) {
+                                      const std::string &id) {
   std::set<ReachWithError> errors = {ReachWithError::None};
   if (!resultJson.ruleId.has_value()) {
     errors = {ReachWithError::Reachable};
@@ -123,7 +123,7 @@ optional<Result> tryConvertResultJson(const ResultJson &resultJson,
     errors =
         tryConvertRuleJson(*resultJson.ruleId, toolName, resultJson.message);
     if (errors.size() == 0) {
-      klee_warning("undefined error in %u result", id);
+      klee_warning("undefined error in %s result", id.c_str());
       return nonstd::nullopt;
     }
   }
@@ -187,6 +187,49 @@ std::string getErrorsString(const std::set<ReachWithError> &errors) {
   return res;
 }
 
+struct TraceId {
+  virtual ~TraceId() {}
+  virtual std::string toString() const = 0;
+  virtual void getNextId(const klee::ResultJson &resultJson) = 0;
+};
+
+class CooddyTraceId : public TraceId {
+  std::string uid = "";
+
+public:
+  std::string toString() const override { return uid; }
+  void getNextId(const klee::ResultJson &resultJson) override {
+    uid = resultJson.fingerprints.value().cooddy_uid;
+  }
+};
+
+class GetterTraceId : public TraceId {
+  unsigned id = 0;
+
+public:
+  std::string toString() const override { return std::to_string(id); }
+  void getNextId(const klee::ResultJson &resultJson) override {
+    id = resultJson.id.value();
+  }
+};
+
+class NumericTraceId : public TraceId {
+  unsigned id = 0;
+
+public:
+  std::string toString() const override { return std::to_string(id); }
+  void getNextId(const klee::ResultJson &resultJson) override { id++; }
+};
+
+TraceId *createTraceId(const std::string &toolName,
+                       const std::vector<klee::ResultJson> &results) {
+  if (toolName == "Cooddy")
+    return new CooddyTraceId();
+  else if (results.size() > 0 && results[0].id.has_value())
+    return new GetterTraceId();
+  return new NumericTraceId();
+}
+
 void setResultId(const ResultJson &resultJson, bool useProperId, unsigned &id) {
   if (useProperId) {
     assert(resultJson.id.has_value() && "all results must have an proper id");
@@ -206,18 +249,19 @@ SarifReport convertAndFilterSarifJson(const SarifReportJson &reportJson) {
   assert(reportJson.runs.size() == 1);
 
   const RunJson &run = reportJson.runs[0];
+  const std::string toolName = run.tool.driver.name;
 
-  unsigned id = 0;
-  bool useProperId = run.results.size() > 0 && run.results[0].id.has_value();
+  TraceId *id = createTraceId(toolName, run.results);
 
   for (const auto &resultJson : run.results) {
-    setResultId(resultJson, useProperId, id);
+    id->getNextId(resultJson);
     auto maybeResult =
-        tryConvertResultJson(resultJson, run.tool.driver.name, id);
+        tryConvertResultJson(resultJson, toolName, id->toString());
     if (maybeResult.has_value()) {
       report.results.push_back(*maybeResult);
     }
   }
+  delete id;
 
   return report;
 }

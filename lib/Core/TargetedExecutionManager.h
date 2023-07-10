@@ -109,8 +109,8 @@ private:
       std::unordered_map<
           unsigned int,
           std::unordered_map<unsigned int, std::unordered_set<unsigned int>>>>;
-  std::unordered_set<unsigned> broken_traces;
-  std::unordered_set<unsigned> reported_traces;
+  std::unordered_set<std::string> broken_traces;
+  std::unordered_set<std::string> reported_traces;
 
   bool tryResolveLocations(Result &result, LocationToBlocks &locToBlocks) const;
   LocationToBlocks prepareAllLocations(KModule *kmodule,

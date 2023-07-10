@@ -57,14 +57,14 @@ ref<Target> Target::getFromCacheOrReturn(Target *target) {
 }
 
 ref<Target> Target::create(const std::set<ReachWithError> &_errors,
-                           unsigned _id, optional<ErrorLocation> _loc,
+                           const std::string &_id, optional<ErrorLocation> _loc,
                            KBlock *_block) {
   Target *target = new Target(_errors, _id, _loc, _block);
   return getFromCacheOrReturn(target);
 }
 
 ref<Target> Target::create(KBlock *_block) {
-  return create({ReachWithError::None}, 0, nonstd::nullopt, _block);
+  return create({ReachWithError::None}, "", nonstd::nullopt, _block);
 }
 
 bool Target::isTheSameAsIn(KInstruction *instr) const {

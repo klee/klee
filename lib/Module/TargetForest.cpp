@@ -609,7 +609,7 @@ TargetForest::Layer *TargetForest::Layer::divideConfidenceBy(
 }
 
 void TargetForest::Layer::collectHowManyEventsInTracesWereReached(
-    std::unordered_map<unsigned, std::pair<unsigned, unsigned>>
+    std::unordered_map<std::string, std::pair<unsigned, unsigned>>
         &traceToEventCount,
     unsigned reached, unsigned total) const {
   total++;

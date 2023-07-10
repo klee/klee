@@ -411,9 +411,9 @@ bool TargetedExecutionManager::tryResolveLocations(
     if (it != locToBlocks.end()) {
       if (!resolvedLocations.empty() && CheckTraversability) {
         if (!canReach(resolvedLocations.back(), location, locToBlocks)) {
-          klee_warning("Trace %u is untraversable! Can't reach location %s "
+          klee_warning("Trace %s is untraversable! Can't reach location %s "
                        "from location %s, so skipping this trace.",
-                       result.id, location->toString().c_str(),
+                       result.id.c_str(), location->toString().c_str(),
                        resolvedLocations.back()->toString().c_str());
           return false;
         }
@@ -421,8 +421,8 @@ bool TargetedExecutionManager::tryResolveLocations(
       resolvedLocations.push_back(location);
     } else if (index == result.locations.size() - 1) {
       klee_warning(
-          "Trace %u is malformed! %s at location %s, so skipping this trace.",
-          result.id, getErrorsString(result.errors).c_str(),
+          "Trace %s is malformed! %s at location %s, so skipping this trace.",
+          result.id.c_str(), getErrorsString(result.errors).c_str(),
           location->toString().c_str());
       return false;
     }
@@ -446,9 +446,9 @@ KFunction *TargetedExecutionManager::tryResolveEntryFunction(
       if (funcDist.count(curKf) == 0) {
         const auto &curFuncDist = codeGraphDistance.getDistance(curKf);
         if (curFuncDist.count(resKf) == 0) {
-          klee_warning("Trace %u is malformed! Can't resolve entry function, "
+          klee_warning("Trace %s is malformed! Can't resolve entry function, "
                        "so skipping this trace.",
-                       result.id);
+                       result.id.c_str());
           return nullptr;
         } else {
           resKf = curKf;
@@ -529,11 +529,11 @@ bool TargetedExecutionManager::reportTruePositive(ExecutionState &state,
     atLeastOneReported = true;
     assert(!target->isReported);
     if (target->isThatError(ReachWithError::Reachable)) {
-      klee_warning("100.00%% %s Reachable at trace %u", getErrorString(error),
-                   target->getId());
+      klee_warning("100.00%% %s Reachable at trace %s", getErrorString(error),
+                   target->getId().c_str());
     } else {
-      klee_warning("100.00%% %s True Positive at trace %u",
-                   getErrorString(error), target->getId());
+      klee_warning("100.00%% %s True Positive at trace %s",
+                   getErrorString(error), target->getId().c_str());
     }
     target->isReported = true;
     reported_traces.insert(target->getId());

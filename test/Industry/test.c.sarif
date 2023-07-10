@@ -1,0 +1,118 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Cooddy",
+          "version": "v1_101",
+          "properties": {
+            "revisionTag": "bbceeffcbd252fd8a86aa2ed68549f3d713505ac"
+          }
+        }
+      },
+      "invocations": [
+        {
+          "executionSuccessful": true,
+          "exitCode": 0,
+          "commandLine": "build/release/cooddy --scope /home/user/pool --reporter sarif",
+          "executableLocation": {
+            "uri": "file:///home/user/src/cooddy/build/release/cooddy"
+          },
+          "arguments": [
+            "--scope",
+            "/home/user/pool",
+            "--reporter",
+            "sarif"
+          ],
+          "properties": {
+            "profileUri": "file:///home/user/src/cooddy/build/release/.cooddy/default.profile.json",
+            "annotationUris": [
+              "file:///home/user/src/cooddy/build/release/.cooddy/.annotations.json",
+              "file:///home/user/src/cooddy/build/release/.cooddy/.java-annotations.json",
+              "file:///home/user/src/cooddy/build/release/.cooddy/.tinyxml-annotations.json",
+              "file:///home/user/src/cooddy/build/release/.cooddy/.huawei-annotations.json"
+            ]
+          },
+          "startTimeUtc": "2023-07-05T13:43:00.892Z",
+          "endTimeUtc": "2023-07-05T13:50:26.467Z"
+        }
+      ],
+      "columnKind": "unicodeCodePoints",
+      "results": [
+        {
+          "message": {
+            "text": "Dereferencing of \"buf\" which can be null"
+          },
+          "level": "error",
+          "ruleId": "NULL.DEREF",
+          "fingerprints": {
+            "cooddy.uid": "8389b1896658d867c9e15267acfe8c32"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/mnt/d/wsl-ubuntu/test2/./test.c"
+                },
+                "region": {
+                  "startLine": 19,
+                  "endLine": 19,
+                  "startColumn": 13,
+                  "endColumn": 37
+                }
+              }
+            }
+          ],
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "/mnt/d/wsl-ubuntu/test2/./test.c"
+                          },
+                          "region": {
+                            "startLine": 18,
+                            "endLine": 18,
+                            "startColumn": 16,
+                            "endColumn": 20,
+                            "message": {
+                              "text": "Null pointer source"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "/mnt/d/wsl-ubuntu/test2/./test.c"
+                          },
+                          "region": {
+                            "startLine": 19,
+                            "endLine": 19,
+                            "startColumn": 13,
+                            "endColumn": 37,
+                            "message": {
+                              "text": "Dereferencing of \"buf\" which can be null"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
