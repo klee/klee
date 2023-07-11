@@ -90,7 +90,7 @@ public:
   unsigned hash() const { return reinterpret_cast<uintptr_t>(block); }
 
   const std::set<ReachWithError> &getErrors() const { return errors; }
-  bool isThatError(ReachWithError err) const { return errors.count(err) != 0; }
+  bool isThatError(ReachWithError err) const;
   bool shouldFailOnThisTarget() const {
     return errors.count(ReachWithError::None) == 0;
   }

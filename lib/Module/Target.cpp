@@ -112,6 +112,12 @@ bool Target::operator<(const Target &other) const {
 
 bool Target::operator==(const Target &other) const { return equals(other); }
 
+bool Target::isThatError(ReachWithError err) const {
+  return errors.count(err) != 0 ||
+         (err == ReachWithError::MustBeNullPointerException &&
+          errors.count(ReachWithError::MayBeNullPointerException) != 0);
+}
+
 Target::~Target() {
   if (targets.find(this) != targets.end()) {
     cachedTargets.erase(this);

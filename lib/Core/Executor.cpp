@@ -4565,7 +4565,8 @@ void Executor::terminateStateOnTargetError(ExecutionState &state,
   std::string messaget;
   StateTerminationType terminationType;
   switch (error) {
-  case ReachWithError::NullPointerException:
+  case ReachWithError::MayBeNullPointerException:
+  case ReachWithError::MustBeNullPointerException:
     messaget = "memory error: null pointer exception";
     terminationType = StateTerminationType::Ptr;
     break;
@@ -5076,12 +5077,10 @@ bool Executor::resolveExact(ExecutionState &estate, ref<Expr> address,
       forkInternal(estate, Expr::createIsZero(base), BranchType::MemOp);
   ExecutionState *bound = branches.first;
   if (bound) {
-    if (!isReadFromSymbolicArray(uniqueBase) ||
-        guidanceKind != GuidanceKind::ErrorGuidance) {
-      terminateStateOnTargetError(*bound, ReachWithError::NullPointerException);
-    } else {
-      terminateStateEarly(*bound, "", StateTerminationType::SilentExit);
-    }
+    auto error = isReadFromSymbolicArray(uniqueBase)
+                     ? ReachWithError::MayBeNullPointerException
+                     : ReachWithError::MustBeNullPointerException;
+    terminateStateOnTargetError(*bound, error);
   }
   if (!branches.second) {
     address = Expr::createPointer(0);
@@ -5735,12 +5734,10 @@ void Executor::executeMemoryOperation(
       forkInternal(estate, Expr::createIsZero(base), BranchType::MemOp);
   ExecutionState *bound = branches.first;
   if (bound) {
-    if (!isReadFromSymbolicArray(uniqueBase) ||
-        guidanceKind != GuidanceKind::ErrorGuidance) {
-      terminateStateOnTargetError(*bound, ReachWithError::NullPointerException);
-    } else {
-      terminateStateEarly(*bound, "", StateTerminationType::SilentExit);
-    }
+    auto error = isReadFromSymbolicArray(uniqueBase)
+                     ? ReachWithError::MayBeNullPointerException
+                     : ReachWithError::MustBeNullPointerException;
+    terminateStateOnTargetError(*bound, error);
   }
   if (!branches.second)
     return;

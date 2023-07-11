@@ -46,7 +46,8 @@ namespace klee {
 enum ReachWithError {
   DoubleFree = 0,
   UseAfterFree,
-  NullPointerException,
+  MayBeNullPointerException,  // void f(int *x) { *x = 42; } - should it error?
+  MustBeNullPointerException, // MayBeNPE = yes, MustBeNPE = no
   NullCheckAfterDerefException,
   Reachable,
   None,
@@ -55,7 +56,8 @@ enum ReachWithError {
 static const char *ReachWithErrorNames[] = {
     "DoubleFree",
     "UseAfterFree",
-    "NullPointerException",
+    "MayBeNullPointerException",
+    "NullPointerException", // for backward compatibility with SecB
     "NullCheckAfterDerefException",
     "Reachable",
     "None",
