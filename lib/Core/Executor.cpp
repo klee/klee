@@ -900,9 +900,16 @@ void Executor::initializeGlobalObjects(ExecutionState &state) {
         }
       }
     } else if (v.hasInitializer()) {
-      initializeGlobalObject(state, os, v.getInitializer(), 0);
-      if (v.isConstant())
-        constantObjects.emplace_back(os);
+      if (!v.isConstant() &&
+          MockMutableGlobals == MockMutableGlobalsPolicy::All)
+        executeMakeSymbolic(
+            state, mo, typeSystemManager->getWrappedType(v.getType()),
+            SourceBuilder::irreproducible("mockMutableGlobalObject"), false);
+      else {
+        initializeGlobalObject(state, os, v.getInitializer(), 0);
+        if (v.isConstant())
+          constantObjects.emplace_back(os);
+      }
     } else {
       os->initializeToRandom();
     }
