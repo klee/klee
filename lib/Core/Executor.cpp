@@ -926,7 +926,8 @@ void Executor::initializeGlobalObjects(ExecutionState &state) {
   }
 }
 
-bool Executor::branchingPermitted(const ExecutionState &state) const {
+bool Executor::branchingPermitted(ExecutionState &state, unsigned N) {
+  assert(N);
   if ((MaxMemoryInhibit && atMemoryLimit) || state.forkDisabled ||
       inhibitForking || (MaxForks != ~0u && stats::forks >= MaxForks)) {
 
@@ -936,8 +937,13 @@ bool Executor::branchingPermitted(const ExecutionState &state) const {
       klee_warning_once(0, "skipping fork (fork disabled on current path)");
     else if (inhibitForking)
       klee_warning_once(0, "skipping fork (fork disabled globally)");
-    else
+    else {
+      state.targetForest.divideConfidenceBy(N);
+      SetOfStates states = {&state};
+      for (unsigned i = 0; i < N - 1; i++)
+        decreaseConfidenceFromStoppedStates(states, HaltExecution::MaxForks);
       klee_warning_once(0, "skipping fork (max-forks reached)");
+    }
 
     return false;
   }
@@ -953,7 +959,7 @@ void Executor::branch(ExecutionState &state,
   unsigned N = conditions.size();
   assert(N);
 
-  if (!branchingPermitted(state)) {
+  if (!branchingPermitted(state, N)) {
     unsigned next = theRNG.getInt32() % N;
     for (unsigned i = 0; i < N; ++i) {
       if (i == next) {
@@ -1187,7 +1193,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
     } else if (res == PValidity::TrueOrFalse) {
       assert(!replayKTest && "in replay mode, only one branch can be true.");
 
-      if (!branchingPermitted(current)) {
+      if (!branchingPermitted(current, 2)) {
         TimerStatIncrementer timer(stats::forkTime);
         if (theRNG.getBool()) {
           res = PValidity::MayBeTrue;
@@ -4039,6 +4045,8 @@ bool Executor::checkMemoryUsage() {
 bool Executor::decreaseConfidenceFromStoppedStates(
     SetOfStates &left_states, HaltExecution::Reason reason) {
   bool hasStateWhichCanReachSomeTarget = false;
+  if (targets.empty())
+    return hasStateWhichCanReachSomeTarget;
   for (auto state : left_states) {
     if (state->targetForest.empty())
       continue;

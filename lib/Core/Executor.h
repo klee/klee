@@ -647,8 +647,8 @@ private:
   /// terminated)
   bool checkMemoryUsage();
 
-  /// check if branching/forking is allowed
-  bool branchingPermitted(const ExecutionState &state) const;
+  /// check if branching/forking into N branches is allowed
+  bool branchingPermitted(ExecutionState &state, unsigned N);
 
   void printDebugInstructions(ExecutionState &state);
   void doDumpStates();

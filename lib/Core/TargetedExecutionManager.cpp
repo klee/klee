@@ -251,6 +251,9 @@ getAdviseWhatToIncreaseConfidenceRate(HaltExecution::Reason reason) {
   case HaltExecution::MaxCycles:
     what = "max-cycles"; // TODO: taken from UserSearcher.cpp
     break;
+  case HaltExecution::MaxForks:
+    what = "max-forks";
+    break;
   case HaltExecution::CovCheck:
     what = "cov-check"; // TODO: taken from StatsTracker.cpp
     break;
