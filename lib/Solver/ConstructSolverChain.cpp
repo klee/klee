@@ -28,14 +28,12 @@ DISABLE_WARNING_POP
 #include <utility>
 
 namespace klee {
-class ConcretizationManager;
 class AddressGenerator;
 
 std::unique_ptr<Solver> constructSolverChain(
     std::unique_ptr<Solver> coreSolver, std::string querySMT2LogPath,
     std::string baseSolverQuerySMT2LogPath, std::string queryKQueryLogPath,
     std::string baseSolverQueryKQueryLogPath,
-    ConcretizationManager *concretizationManager,
     AddressGenerator *addressGenerator) {
   Solver *rawCoreSolver = coreSolver.get();
   std::unique_ptr<Solver> solver = std::move(coreSolver);
@@ -72,9 +70,8 @@ std::unique_ptr<Solver> constructSolverChain(
   if (UseIndependentSolver)
     solver = createIndependentSolver(std::move(solver));
 
-  if (UseConcretizingSolver && concretizationManager)
-    solver = createConcretizingSolver(std::move(solver), concretizationManager,
-                                      addressGenerator);
+  if (UseConcretizingSolver)
+    solver = createConcretizingSolver(std::move(solver), addressGenerator);
 
   if (DebugValidateSolver)
     solver = createValidatingSolver(std::move(solver), rawCoreSolver, false);

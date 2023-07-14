@@ -31,7 +31,6 @@
 #include "klee/Module/Cell.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
-#include "klee/Solver/ConcretizationManager.h"
 #include "klee/System/Time.h"
 
 #include "klee/Support/CompilerWarning.h"
@@ -145,7 +144,6 @@ private:
   TreeStreamWriter *pathWriter, *symPathWriter;
   SpecialFunctionHandler *specialFunctionHandler;
   TimerGroup timers;
-  std::unique_ptr<ConcretizationManager> concretizationManager;
   std::unique_ptr<PForest> processForest;
   std::unique_ptr<CodeGraphDistance> codeGraphDistance;
   std::unique_ptr<DistanceCalculator> distanceCalculator;

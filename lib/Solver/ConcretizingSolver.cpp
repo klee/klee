@@ -8,7 +8,6 @@
 #include "klee/Expr/Symcrete.h"
 
 #include "klee/Solver/AddressGenerator.h"
-#include "klee/Solver/ConcretizationManager.h"
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverImpl.h"
 #include "klee/Solver/SolverUtil.h"
@@ -28,7 +27,6 @@ namespace klee {
 class ConcretizingSolver : public SolverImpl {
 private:
   std::unique_ptr<Solver> solver;
-  ConcretizationManager *concretizationManager;
   AddressGenerator *addressGenerator;
 
 public:
@@ -401,36 +399,14 @@ bool ConcretizingSolver::computeValidity(
   // appropriate for the remain branch.
 
   if (isa<ValidResponse>(queryResult)) {
-    concretizationManager->add(
-        query,
-        cast<InvalidResponse>(negatedQueryResult)->initialValuesFor(objects));
     if (!relaxSymcreteConstraints(query, queryResult)) {
       return false;
     }
-    if (ref<InvalidResponse> queryInvalidResponse =
-            dyn_cast<InvalidResponse>(queryResult)) {
-      concretizationManager->add(
-          query.negateExpr(), queryInvalidResponse->initialValuesFor(objects));
-    }
   } else if (isa<ValidResponse>(negatedQueryResult)) {
-    concretizationManager->add(
-        query.negateExpr(),
-        cast<InvalidResponse>(queryResult)->initialValuesFor(objects));
     if (!relaxSymcreteConstraints(query.negateExpr(), negatedQueryResult)) {
       return false;
     }
-    if (ref<InvalidResponse> negatedQueryInvalidResponse =
-            dyn_cast<InvalidResponse>(negatedQueryResult)) {
-      concretizationManager->add(
-          query, negatedQueryInvalidResponse->initialValuesFor(objects));
-    }
   } else {
-    concretizationManager->add(
-        query.negateExpr(),
-        cast<InvalidResponse>(queryResult)->initialValuesFor(objects));
-    concretizationManager->add(
-        query,
-        cast<InvalidResponse>(negatedQueryResult)->initialValuesFor(objects));
   }
 
   return true;
@@ -456,13 +432,6 @@ bool ConcretizingSolver::check(const Query &query,
     }
   }
 
-  if (ref<InvalidResponse> resultInvalidResponse =
-          dyn_cast<InvalidResponse>(result)) {
-    concretizationManager->add(
-        query.negateExpr(),
-        resultInvalidResponse->initialValuesFor(assign.keys()));
-  }
-
   return true;
 }
 
@@ -473,10 +442,6 @@ char *ConcretizingSolver::getConstraintLog(const Query &query) {
 bool ConcretizingSolver::computeTruth(const Query &query, bool &isValid) {
   if (!query.containsSymcretes()) {
     if (solver->impl->computeTruth(query, isValid)) {
-      if (!isValid) {
-        concretizationManager->add(query.negateExpr(),
-                                   query.constraints.concretization());
-      }
       return true;
     }
     return false;
@@ -511,10 +476,6 @@ bool ConcretizingSolver::computeTruth(const Query &query, bool &isValid) {
       assign = resultInvalidResponse->initialValuesFor(assign.keys());
       isValid = false;
     }
-  }
-
-  if (!isValid) {
-    concretizationManager->add(query.negateExpr(), assign);
   }
 
   return true;
@@ -563,7 +524,6 @@ bool ConcretizingSolver::computeValidityCore(const Query &query,
 
   if (!isValid) {
     validityCore = ValidityCore();
-    concretizationManager->add(query.negateExpr(), assign);
   }
 
   return true;
@@ -617,14 +577,11 @@ bool ConcretizingSolver::computeInitialValues(
             dyn_cast<InvalidResponse>(result)) {
       hasSolution = true;
       assign = resultInvalidResponse->initialValuesFor(assign.keys());
-      concretizationManager->add(query.negateExpr(), assign);
       values = std::vector<SparseStorage<unsigned char>>();
       return solver->impl->computeInitialValues(
           constructConcretizedQuery(query, assign), objects, values,
           hasSolution);
     }
-  } else {
-    concretizationManager->add(query.negateExpr(), assign);
   }
 
   return true;
@@ -641,7 +598,6 @@ void ConcretizingSolver::setCoreSolverTimeout(time::Span timeout) {
 
 std::unique_ptr<Solver>
 createConcretizingSolver(std::unique_ptr<Solver> s,
-                         ConcretizationManager *concretizationManager,
                          AddressGenerator *addressGenerator) {
   return std::make_unique<Solver>(
       std::make_unique<ConcretizingSolver>(std::move(s), addressGenerator));

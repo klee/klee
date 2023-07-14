@@ -12,7 +12,6 @@
 
 #include "klee/ADT/SparseStorage.h"
 #include "klee/Expr/Expr.h"
-#include "klee/Solver/ConcretizationManager.h"
 #include "klee/Solver/SolverCmdLine.h"
 #include "klee/Solver/SolverUtil.h"
 #include "klee/System/Time.h"
@@ -264,7 +263,6 @@ std::unique_ptr<Solver> createCoreSolver(CoreSolverType cst);
 
 std::unique_ptr<Solver>
 createConcretizingSolver(std::unique_ptr<Solver> s,
-                         ConcretizationManager *concretizationManager,
                          AddressGenerator *addressGenerator);
 } // namespace klee
 

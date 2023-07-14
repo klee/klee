@@ -15,7 +15,6 @@
 #define KLEE_COMMON_H
 
 #include "klee/Solver/AddressGenerator.h"
-#include "klee/Solver/ConcretizationManager.h"
 #include "klee/Solver/Solver.h"
 
 #include <string>
@@ -30,7 +29,6 @@ std::unique_ptr<Solver> constructSolverChain(
     std::unique_ptr<Solver> coreSolver, std::string querySMT2LogPath,
     std::string baseSolverQuerySMT2LogPath, std::string queryKQueryLogPath,
     std::string baseSolverQueryKQueryLogPath,
-    ConcretizationManager *concretizationManager,
     AddressGenerator *addressGenerator);
 } // namespace klee
 

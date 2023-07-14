@@ -12,7 +12,6 @@ add_library(kleaverSolver
   CexCachingSolver.cpp
   ConstantDivision.cpp
   ConstructSolverChain.cpp
-  ConcretizationManager.cpp
   ConcretizingSolver.cpp
   CoreSolver.cpp
   DummySolver.cpp

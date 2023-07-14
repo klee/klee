@@ -101,7 +101,7 @@ void TargetManager::updateTargets(ExecutionState &state) {
     if (targets(state).empty() && state.isStuck(MaxCyclesBeforeStuck)) {
       state.setTargeted(true);
     }
-    if (isTargeted(state) && !targets(state).empty()) {
+    if (isTargeted(state) && targets(state).empty()) {
       ref<Target> target(targetCalculator.calculate(state));
       if (target) {
         state.targetForest.add(target);

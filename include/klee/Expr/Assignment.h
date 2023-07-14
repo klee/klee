@@ -66,6 +66,7 @@ public:
 
   bindings_ty::const_iterator begin() const { return bindings.begin(); }
   bindings_ty::const_iterator end() const { return bindings.end(); }
+  bool isEmpty() { return begin() == end(); }
 
   std::vector<const Array *> keys() const;
   std::vector<SparseStorage<unsigned char>> values() const;
