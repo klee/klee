@@ -20,6 +20,7 @@
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprHashMap.h"
 #include "klee/Module/KInstIterator.h"
+#include "klee/Module/KInstruction.h"
 #include "klee/Module/Target.h"
 #include "klee/Module/TargetForest.h"
 #include "klee/Module/TargetHash.h"
@@ -55,6 +56,27 @@ struct Target;
 struct TranstionHash;
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const MemoryMap &mm);
+
+extern llvm::cl::opt<unsigned long long> MaxCyclesBeforeStuck;
+
+struct CallStackFrame {
+  KInstruction *caller;
+  KFunction *kf;
+
+  CallStackFrame(KInstruction *caller_, KFunction *kf_)
+      : caller(caller_), kf(kf_) {}
+  ~CallStackFrame() = default;
+
+  int compare(const CallStackFrame &other) const;
+
+  bool operator<(const CallStackFrame &other) const {
+    return compare(other) == -1;
+  }
+
+  bool operator==(const CallStackFrame &other) const {
+    return compare(other) == 0;
+  }
+};
 
 struct StackFrame {
   KInstIterator caller;
@@ -208,8 +230,8 @@ private:
 
 public:
   using stack_ty = std::vector<StackFrame>;
-  using TargetHashSet =
-      std::unordered_set<ref<Target>, RefTargetHash, RefTargetCmp>;
+  using call_stack_ty = std::vector<CallStackFrame>;
+  using frames_ty = std::vector<CallStackFrame>;
 
   // Execution - Control Flow specific
 
@@ -225,6 +247,8 @@ public:
 
   /// @brief Stack representing the current instruction stream
   stack_ty stack;
+  call_stack_ty callStack;
+  frames_ty frames;
 
   int stackBalance = 0;
 
@@ -333,6 +357,14 @@ public:
   std::atomic<HaltExecution::Reason> terminationReasonType{
       HaltExecution::NotHalt};
 
+private:
+  TargetHashSet prevTargets_;
+  TargetHashSet targets_;
+  ref<TargetsHistory> prevHistory_;
+  ref<TargetsHistory> history_;
+  bool isTargeted_ = false;
+  bool areTargetsChanged_ = false;
+
 public:
   // only to create the initial state
   explicit ExecutionState();
@@ -388,11 +420,49 @@ public:
   llvm::BasicBlock *getPrevPCBlock() const;
   llvm::BasicBlock *getPCBlock() const;
   void increaseLevel();
-  bool isTransfered();
+
+  inline bool isTransfered() { return getPrevPCBlock() != getPCBlock(); }
+
   bool isGEPExpr(ref<Expr> expr) const;
+
+  inline const TargetHashSet &prevTargets() const { return prevTargets_; }
+
+  inline const TargetHashSet &targets() const { return targets_; }
+
+  inline ref<const TargetsHistory> prevHistory() const { return prevHistory_; }
+
+  inline ref<const TargetsHistory> history() const { return history_; }
+
+  inline bool isTargeted() const { return isTargeted_; }
+
+  inline bool areTargetsChanged() const { return areTargetsChanged_; }
+
+  void stepTargetsAndHistory() {
+    prevHistory_ = history_;
+    prevTargets_ = targets_;
+    areTargetsChanged_ = false;
+  }
+
+  inline void setTargeted(bool targeted) { isTargeted_ = targeted; }
+
+  inline void setTargets(const TargetHashSet &targets) {
+    targets_ = targets;
+    areTargetsChanged_ = true;
+  }
+
+  inline void setHistory(ref<TargetsHistory> history) {
+    history_ = history;
+    areTargetsChanged_ = true;
+  }
 
   bool reachedTarget(Target target) const;
   static std::uint32_t getLastID() { return nextID - 1; };
+
+  inline bool isStuck(unsigned long long bound) {
+    KInstruction *prevKI = prevPC;
+    return (prevKI->inst->isTerminator() &&
+            multilevel[getPCBlock()] > bound - 1);
+  }
 };
 
 struct ExecutionStateIDCompare {

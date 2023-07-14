@@ -95,6 +95,7 @@ class SpecialFunctionHandler;
 struct StackFrame;
 class SymbolicSource;
 class TargetCalculator;
+class TargetManager;
 class StatsTracker;
 class TimingSolver;
 class TreeStreamWriter;
@@ -149,6 +150,7 @@ private:
   std::unique_ptr<CodeGraphDistance> codeGraphDistance;
   std::unique_ptr<DistanceCalculator> distanceCalculator;
   std::unique_ptr<TargetCalculator> targetCalculator;
+  std::unique_ptr<TargetManager> targetManager;
 
   /// Used to track states that have been added during the current
   /// instructions step.
@@ -182,7 +184,7 @@ private:
   std::unordered_map<std::uint64_t, llvm::Function *> legalFunctions;
 
   /// Manager for everything related to targeted execution mode
-  TargetedExecutionManager targetedExecutionManager;
+  std::unique_ptr<TargetedExecutionManager> targetedExecutionManager;
 
   /// When non-null the bindings that will be used for calls to
   /// klee_make_symbolic in order replay.
@@ -242,6 +244,8 @@ private:
   std::vector<ref<Expr>> eh_typeids;
 
   GuidanceKind guidanceKind;
+
+  bool hasStateWhichCanReachSomeTarget = false;
 
   /// Return the typeid corresponding to a certain `type_info`
   ref<ConstantExpr> getEhTypeidFor(ref<Expr> type_info);
@@ -645,13 +649,13 @@ private:
   ExecutionState *prepareStateForPOSIX(KInstIterator &caller,
                                        ExecutionState *state);
 
-  void prepareTargetedExecution(ExecutionState *initialState,
+  void prepareTargetedExecution(ExecutionState &initialState,
                                 ref<TargetForest> whitelist);
 
   void increaseProgressVelocity(ExecutionState &state, KBlock *block);
 
-  bool decreaseConfidenceFromStoppedStates(
-      SetOfStates &left_states,
+  void decreaseConfidenceFromStoppedStates(
+      SetOfStates &leftStates,
       HaltExecution::Reason reason = HaltExecution::NotHalt);
 
   void checkNullCheckAfterDeref(ref<Expr> cond, ExecutionState &state,

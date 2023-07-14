@@ -80,11 +80,6 @@ cl::opt<std::string> BatchTime(
              "--use-batching-search.  Set to 0s to disable (default=5s)"),
     cl::init("5s"), cl::cat(SearchCat));
 
-cl::opt<unsigned long long>
-    MaxCycles("max-cycles",
-              cl::desc("stop execution after visiting some basic block this "
-                       "amount of times (default=1)."),
-              cl::init(1), cl::cat(TerminationCat));
 } // namespace
 
 void klee::initializeSearchOptions() {
@@ -182,13 +177,9 @@ Searcher *klee::constructUserSearcher(Executor &executor,
   }
 
   if (executor.guidanceKind != Interpreter::GuidanceKind::NoGuidance) {
-    if (executor.guidanceKind == Interpreter::GuidanceKind::ErrorGuidance) {
-      delete searcher;
-      searcher = nullptr;
-    }
-    searcher = new GuidedSearcher(
-        *executor.distanceCalculator, *executor.targetCalculator,
-        executor.pausedStates, MaxCycles - 1, executor.theRNG, searcher);
+    searcher = new GuidedSearcher(searcher, *executor.distanceCalculator,
+                                  executor.theRNG);
+    executor.targetManager->subscribe(*static_cast<GuidedSearcher *>(searcher));
   }
 
   llvm::raw_ostream &os = executor.getHandler().getInfoStream();

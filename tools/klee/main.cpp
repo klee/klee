@@ -381,8 +381,8 @@ public:
 
   void setInterpreter(Interpreter *i);
 
-  void processTestCase(const ExecutionState &state, const char *errorMessage,
-                       const char *errorSuffix);
+  void processTestCase(const ExecutionState &state, const char *message,
+                       const char *suffix, bool isError = false);
 
   std::string getOutputFilename(const std::string &filename);
   std::unique_ptr<llvm::raw_fd_ostream>
@@ -549,8 +549,8 @@ KleeHandler::openTestFile(const std::string &suffix, unsigned id) {
 
 /* Outputs all files (.ktest, .kquery, .cov etc.) describing a test case */
 void KleeHandler::processTestCase(const ExecutionState &state,
-                                  const char *errorMessage,
-                                  const char *errorSuffix) {
+                                  const char *message, const char *suffix,
+                                  bool isError) {
   unsigned id = ++m_numTotalTests;
   if (!WriteNone) {
     KTest ktest;
@@ -587,10 +587,10 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     }
     delete[] ktest.objects;
 
-    if (errorMessage) {
-      auto f = openTestFile(errorSuffix, id);
+    if (message) {
+      auto f = openTestFile(suffix, id);
       if (f)
-        *f << errorMessage;
+        *f << message;
     }
 
     if (m_pathWriter) {
@@ -675,9 +675,9 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     }
   }
 
-  if (errorMessage && OptExitOnError) {
+  if (isError && OptExitOnError) {
     m_interpreter->prepareForEarlyExit();
-    klee_error("EXITING ON ERROR:\n%s\n", errorMessage);
+    klee_error("EXITING ON ERROR:\n%s\n", message);
   }
 }
 

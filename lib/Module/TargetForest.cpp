@@ -20,10 +20,8 @@
 using namespace klee;
 using namespace llvm;
 
-TargetForest::UnorderedTargetsSet::EquivUnorderedTargetsSetHashSet
+TargetForest::UnorderedTargetsSet::UnorderedTargetsSetCacheSet
     TargetForest::UnorderedTargetsSet::cachedVectors;
-TargetForest::UnorderedTargetsSet::UnorderedTargetsSetHashSet
-    TargetForest::UnorderedTargetsSet::vectors;
 
 TargetForest::UnorderedTargetsSet::UnorderedTargetsSet(
     const ref<Target> &target) {
@@ -32,21 +30,46 @@ TargetForest::UnorderedTargetsSet::UnorderedTargetsSet(
 }
 
 TargetForest::UnorderedTargetsSet::UnorderedTargetsSet(
-    const TargetsSet &targets) {
+    const TargetHashSet &targets) {
   for (const auto &p : targets) {
     targetsVec.push_back(p);
   }
   sortAndComputeHash();
 }
 
-void TargetForest::UnorderedTargetsSet::sortAndComputeHash() {
-  std::sort(targetsVec.begin(), targetsVec.end(), RefTargetLess{});
-  RefTargetHash hasher;
-  std::size_t seed = targetsVec.size();
-  for (const auto &r : targetsVec) {
-    seed ^= hasher(r) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+unsigned TargetForest::UnorderedTargetsSet::sortAndComputeHash() {
+  std::sort(targetsVec.begin(), targetsVec.end(), TargetLess{});
+  unsigned res = targetsVec.size();
+  for (auto r : targetsVec) {
+    res = (res * Expr::MAGIC_HASH_CONSTANT) + r->hash();
   }
-  hashValue = seed;
+  hashValue = res;
+  return res;
+}
+
+int TargetForest::UnorderedTargetsSet::compare(
+    const TargetForest::UnorderedTargetsSet &other) const {
+  if (targetsVec != other.targetsVec) {
+    return targetsVec < other.targetsVec ? -1 : 1;
+  }
+  return 0;
+}
+
+bool TargetForest::UnorderedTargetsSet::equals(
+    const TargetForest::UnorderedTargetsSet &b) const {
+  return (toBeCleared || b.toBeCleared) || (isCached && b.isCached)
+             ? this == &b
+             : compare(b) == 0;
+}
+
+bool TargetForest::UnorderedTargetsSet::operator<(
+    const TargetForest::UnorderedTargetsSet &other) const {
+  return compare(other) == -1;
+}
+
+bool TargetForest::UnorderedTargetsSet::operator==(
+    const TargetForest::UnorderedTargetsSet &other) const {
+  return equals(other);
 }
 
 ref<TargetForest::UnorderedTargetsSet>
@@ -56,30 +79,28 @@ TargetForest::UnorderedTargetsSet::create(const ref<Target> &target) {
 }
 
 ref<TargetForest::UnorderedTargetsSet>
-TargetForest::UnorderedTargetsSet::create(const TargetsSet &targets) {
+TargetForest::UnorderedTargetsSet::create(const TargetHashSet &targets) {
   UnorderedTargetsSet *vec = new UnorderedTargetsSet(targets);
   return create(vec);
 }
 
 ref<TargetForest::UnorderedTargetsSet>
-TargetForest::UnorderedTargetsSet::create(UnorderedTargetsSet *vec) {
-  std::pair<EquivUnorderedTargetsSetHashSet::const_iterator, bool> success =
-      cachedVectors.insert(vec);
+TargetForest::UnorderedTargetsSet::create(ref<UnorderedTargetsSet> vec) {
+  std::pair<CacheType::const_iterator, bool> success =
+      cachedVectors.cache.insert(vec.get());
   if (success.second) {
     // Cache miss
-    vectors.insert(vec);
+    vec->isCached = true;
     return vec;
   }
   // Cache hit
-  delete vec;
-  vec = *(success.first);
-  return vec;
+  return (ref<UnorderedTargetsSet>)*(success.first);
 }
 
 TargetForest::UnorderedTargetsSet::~UnorderedTargetsSet() {
-  if (vectors.find(this) != vectors.end()) {
-    vectors.erase(this);
-    cachedVectors.erase(this);
+  if (isCached) {
+    toBeCleared = true;
+    cachedVectors.cache.erase(this);
   }
 }
 
@@ -92,7 +113,7 @@ void TargetForest::Layer::addTrace(
     const auto &loc = result.locations[i];
     auto it = locToBlocks.find(loc);
     assert(it != locToBlocks.end());
-    TargetsSet targets;
+    TargetHashSet targets;
     for (auto block : it->second) {
       ref<Target> target = nullptr;
       if (i == result.locations.size() - 1) {
@@ -205,8 +226,7 @@ void TargetForest::Layer::removeTarget(ref<Target> target) {
 bool TargetForest::Layer::deepFind(ref<Target> target) const {
   if (empty())
     return false;
-  auto res = targetsToVector.find(target);
-  if (res != targetsToVector.end()) {
+  if (targetsToVector.count(target) != 0) {
     return true;
   }
   for (auto &f : forest) {
@@ -218,18 +238,17 @@ bool TargetForest::Layer::deepFind(ref<Target> target) const {
 
 bool TargetForest::Layer::deepFindIn(ref<Target> child,
                                      ref<Target> target) const {
-  auto res = targetsToVector.find(child);
-  if (res == targetsToVector.end()) {
+  if (targetsToVector.count(child) == 0) {
     return false;
   }
+  auto &res = targetsToVector.at(child);
 
   if (child == target) {
     return true;
   }
-  for (auto &targetsVec : res->second) {
-    auto it = forest.find(targetsVec);
-    assert(it != forest.end());
-    if (it->second->deepFind(target)) {
+  for (auto &targetsVec : res) {
+    auto &it = forest.at(targetsVec);
+    if (it->deepFind(target)) {
       return true;
     }
   }
@@ -345,9 +364,8 @@ TargetForest::Layer *TargetForest::Layer::replaceChildWith(
 
 TargetForest::Layer *TargetForest::Layer::replaceChildWith(
     ref<Target> child,
-    const std::unordered_set<ref<UnorderedTargetsSet>,
-                             RefUnorderedTargetsSetHash,
-                             RefUnorderedTargetsSetCmp> &other) const {
+    const std::unordered_set<ref<UnorderedTargetsSet>, UnorderedTargetsSetHash,
+                             UnorderedTargetsSetCmp> &other) const {
   std::vector<Layer *> layers;
   for (auto &targetsVec : other) {
     auto it = forest.find(targetsVec);
@@ -373,16 +391,6 @@ TargetForest::Layer *TargetForest::Layer::replaceChildWith(
   return result;
 }
 
-bool TargetForest::Layer::allNodesRefCountOne() const {
-  bool all = true;
-  for (const auto &it : forest) {
-    all &= it.second->_refCount.getCount() == 1;
-    assert(all);
-    all &= it.second->allNodesRefCountOne();
-  }
-  return all;
-}
-
 void TargetForest::Layer::dump(unsigned n) const {
   llvm::errs() << "THE " << n << " LAYER:\n";
   llvm::errs() << "Confidence: " << confidence << "\n";
@@ -398,62 +406,64 @@ void TargetForest::Layer::dump(unsigned n) const {
   }
 }
 
-TargetForest::History::EquivTargetsHistoryHashSet
-    TargetForest::History::cachedHistories;
-TargetForest::History::TargetsHistoryHashSet TargetForest::History::histories;
+TargetsHistory::TargetHistoryCacheSet TargetsHistory::cachedHistories;
 
-ref<TargetForest::History>
-TargetForest::History::create(ref<Target> _target,
-                              ref<History> _visitedTargets) {
-  History *history = new History(_target, _visitedTargets);
+ref<TargetsHistory>
+TargetsHistory::create(ref<Target> _target,
+                       ref<TargetsHistory> _visitedTargets) {
+  ref<TargetsHistory> history = new TargetsHistory(_target, _visitedTargets);
 
-  std::pair<EquivTargetsHistoryHashSet::const_iterator, bool> success =
-      cachedHistories.insert(history);
+  std::pair<CacheType::const_iterator, bool> success =
+      cachedHistories.cache.insert(history.get());
   if (success.second) {
     // Cache miss
-    histories.insert(history);
+    history->isCached = true;
     return history;
   }
   // Cache hit
-  delete history;
-  history = *(success.first);
-  return history;
+  return (ref<TargetsHistory>)*(success.first);
 }
 
-ref<TargetForest::History> TargetForest::History::create(ref<Target> _target) {
+ref<TargetsHistory> TargetsHistory::create(ref<Target> _target) {
   return create(_target, nullptr);
 }
 
-ref<TargetForest::History> TargetForest::History::create() {
-  return create(nullptr);
-}
+ref<TargetsHistory> TargetsHistory::create() { return create(nullptr); }
 
-int TargetForest::History::compare(const History &h) const {
+int TargetsHistory::compare(const TargetsHistory &h) const {
   if (this == &h)
     return 0;
 
+  if (size() != h.size()) {
+    return (size() < h.size()) ? -1 : 1;
+  }
+
+  if (size() == 0) {
+    return 0;
+  }
+
   if (target && h.target) {
-    if (target != h.target)
+    if (target != h.target) {
       return (target < h.target) ? -1 : 1;
-  } else {
-    return h.target ? -1 : (target ? 1 : 0);
+    }
   }
 
   if (visitedTargets && h.visitedTargets) {
-    if (h.visitedTargets != h.visitedTargets)
+    if (h.visitedTargets != h.visitedTargets) {
       return (visitedTargets < h.visitedTargets) ? -1 : 1;
-  } else {
-    return h.visitedTargets ? -1 : (visitedTargets ? 1 : 0);
+    }
   }
 
   return 0;
 }
 
-bool TargetForest::History::equals(const History &h) const {
-  return compare(h) == 0;
+bool TargetsHistory::equals(const TargetsHistory &b) const {
+  return (toBeCleared || b.toBeCleared) || (isCached && b.isCached)
+             ? this == &b
+             : compare(b) == 0;
 }
 
-void TargetForest::History::dump() const {
+void TargetsHistory::dump() const {
   if (target) {
     llvm::errs() << target->toString() << "\n";
   } else {
@@ -465,10 +475,10 @@ void TargetForest::History::dump() const {
     visitedTargets->dump();
 }
 
-TargetForest::History::~History() {
-  if (histories.find(this) != histories.end()) {
-    histories.erase(this);
-    cachedHistories.erase(this);
+TargetsHistory::~TargetsHistory() {
+  if (isCached) {
+    toBeCleared = true;
+    cachedHistories.cache.erase(this);
   }
 }
 
@@ -487,7 +497,7 @@ void TargetForest::stepTo(ref<Target> loc) {
     loc->isReported = true;
   }
   if (forest->empty() && !loc->shouldFailOnThisTarget()) {
-    history = History::create();
+    history = TargetsHistory::create();
   }
 }
 
@@ -521,14 +531,10 @@ void TargetForest::block(const ref<Target> &target) {
 }
 
 void TargetForest::dump() const {
-  llvm::errs() << "History:\n";
+  llvm::errs() << "TargetHistory:\n";
   history->dump();
   llvm::errs() << "Forest:\n";
   forest->dump(1);
-}
-
-bool TargetForest::allNodesRefCountOne() const {
-  return forest->allNodesRefCountOne();
 }
 
 void TargetForest::Layer::addLeafs(
@@ -606,29 +612,4 @@ TargetForest::Layer *TargetForest::Layer::divideConfidenceBy(
           layer->divideConfidenceBy(reachableStatesOfTarget);
   }
   return result;
-}
-
-void TargetForest::Layer::collectHowManyEventsInTracesWereReached(
-    std::unordered_map<std::string, std::pair<unsigned, unsigned>>
-        &traceToEventCount,
-    unsigned reached, unsigned total) const {
-  total++;
-  for (const auto &p : forest) {
-    auto targetsVec = p.first;
-    auto child = p.second;
-    bool isReported = false;
-    for (auto &target : targetsVec->getTargets()) {
-      if (target->isReported) {
-        isReported = true;
-      }
-    }
-    auto reachedCurrent = isReported ? reached + 1 : reached;
-    auto target = *targetsVec->getTargets().begin();
-    if (target->shouldFailOnThisTarget()) {
-      traceToEventCount[target->getId()] =
-          std::make_pair(reachedCurrent, total);
-    }
-    child->collectHowManyEventsInTracesWereReached(traceToEventCount,
-                                                   reachedCurrent, total);
-  }
 }

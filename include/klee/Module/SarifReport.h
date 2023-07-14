@@ -54,7 +54,7 @@ enum ReachWithError {
 };
 
 const char *getErrorString(ReachWithError error);
-std::string getErrorsString(const std::set<ReachWithError> &errors);
+std::string getErrorsString(const std::vector<ReachWithError> &errors);
 
 struct FunctionInfo;
 struct KBlock;
@@ -264,7 +264,7 @@ struct Result {
   std::vector<ref<Location>> locations;
   std::vector<optional<json>> metadatas;
   std::string id;
-  std::set<ReachWithError> errors;
+  std::vector<ReachWithError> errors;
 };
 
 struct SarifReport {

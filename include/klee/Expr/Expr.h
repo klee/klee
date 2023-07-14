@@ -127,7 +127,7 @@ protected:
   };
 
   static ExprCacheSet cachedExpressions;
-  static ref<Expr> createCachedExpr(const ref<Expr> &e);
+  static ref<Expr> createCachedExpr(ref<Expr> e);
   bool isCached = false;
   bool toBeCleared = false;
 

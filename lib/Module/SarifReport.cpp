@@ -49,7 +49,7 @@ tryConvertLocationJson(const LocationJson &locationJson) {
                           region->endColumn);
 }
 
-std::set<ReachWithError>
+std::vector<ReachWithError>
 tryConvertRuleJson(const std::string &ruleId, const std::string &toolName,
                    const optional<Message> &errorMessage) {
   if (toolName == "SecB") {
@@ -68,7 +68,8 @@ tryConvertRuleJson(const std::string &ruleId, const std::string &toolName,
     }
   } else if (toolName == "clang") {
     if ("core.NullDereference" == ruleId) {
-      return {ReachWithError::MayBeNullPointerException};
+      return {ReachWithError::MayBeNullPointerException,
+              ReachWithError::MayBeNullPointerException};
     } else if ("unix.Malloc" == ruleId) {
       if (errorMessage.has_value()) {
         if (errorMessage->text == "Attempt to free released memory") {
@@ -88,7 +89,8 @@ tryConvertRuleJson(const std::string &ruleId, const std::string &toolName,
     }
   } else if (toolName == "CppCheck") {
     if ("nullPointer" == ruleId || "ctunullpointer" == ruleId) {
-      return {ReachWithError::MayBeNullPointerException}; // TODO: check it out
+      return {ReachWithError::MayBeNullPointerException,
+              ReachWithError::MayBeNullPointerException}; // TODO: check it out
     } else if ("doubleFree" == ruleId) {
       return {ReachWithError::DoubleFree};
     } else {
@@ -96,7 +98,8 @@ tryConvertRuleJson(const std::string &ruleId, const std::string &toolName,
     }
   } else if (toolName == "Infer") {
     if ("NULL_DEREFERENCE" == ruleId || "NULLPTR_DEREFERENCE" == ruleId) {
-      return {ReachWithError::MayBeNullPointerException}; // TODO: check it out
+      return {ReachWithError::MayBeNullPointerException,
+              ReachWithError::MayBeNullPointerException}; // TODO: check it out
     } else if ("USE_AFTER_DELETE" == ruleId || "USE_AFTER_FREE" == ruleId) {
       return {ReachWithError::UseAfterFree, ReachWithError::DoubleFree};
     } else {
@@ -104,7 +107,8 @@ tryConvertRuleJson(const std::string &ruleId, const std::string &toolName,
     }
   } else if (toolName == "Cooddy") {
     if ("NULL.DEREF" == ruleId || "NULL.UNTRUSTED.DEREF" == ruleId) {
-      return {ReachWithError::MayBeNullPointerException};
+      return {ReachWithError::MayBeNullPointerException,
+              ReachWithError::MayBeNullPointerException};
     } else if ("MEM.DOUBLE.FREE" == ruleId) {
       return {ReachWithError::DoubleFree};
     } else if ("MEM.USE.FREE" == ruleId) {
@@ -120,7 +124,7 @@ tryConvertRuleJson(const std::string &ruleId, const std::string &toolName,
 optional<Result> tryConvertResultJson(const ResultJson &resultJson,
                                       const std::string &toolName,
                                       const std::string &id) {
-  std::set<ReachWithError> errors = {ReachWithError::None};
+  std::vector<ReachWithError> errors = {};
   if (!resultJson.ruleId.has_value()) {
     errors = {ReachWithError::Reachable};
   } else {
@@ -183,7 +187,7 @@ const char *getErrorString(ReachWithError error) {
   return ReachWithErrorNames[error];
 }
 
-std::string getErrorsString(const std::set<ReachWithError> &errors) {
+std::string getErrorsString(const std::vector<ReachWithError> &errors) {
   if (errors.size() == 1) {
     return getErrorString(*errors.begin());
   }

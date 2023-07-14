@@ -39,35 +39,33 @@ std::string Target::toString() const {
   return repr.str();
 }
 
-Target::EquivTargetHashSet Target::cachedTargets;
-Target::TargetHashSet Target::targets;
+Target::TargetCacheSet Target::cachedTargets;
 
-ref<Target> Target::getFromCacheOrReturn(Target *target) {
-  std::pair<TargetHashSet::const_iterator, bool> success =
-      cachedTargets.insert(target);
+ref<Target> Target::createCachedTarget(ref<Target> target) {
+  std::pair<CacheType::const_iterator, bool> success =
+      cachedTargets.cache.insert(target.get());
+
   if (success.second) {
     // Cache miss
-    targets.insert(target);
+    target->isCached = true;
     return target;
   }
   // Cache hit
-  delete target;
-  target = *(success.first);
-  return target;
+  return (ref<Target>)*(success.first);
 }
 
-ref<Target> Target::create(const std::set<ReachWithError> &_errors,
+ref<Target> Target::create(const std::vector<ReachWithError> &_errors,
                            const std::string &_id, optional<ErrorLocation> _loc,
                            KBlock *_block) {
   Target *target = new Target(_errors, _id, _loc, _block);
-  return getFromCacheOrReturn(target);
+  return createCachedTarget(target);
 }
 
 ref<Target> Target::create(KBlock *_block) {
   return create({ReachWithError::None}, "", nonstd::nullopt, _block);
 }
 
-bool Target::isTheSameAsIn(KInstruction *instr) const {
+bool Target::isTheSameAsIn(const KInstruction *instr) const {
   if (!loc.has_value()) {
     return false;
   }
@@ -89,9 +87,6 @@ bool Target::mustVisitForkBranches(KInstruction *instr) const {
 }
 
 int Target::compare(const Target &other) const {
-  if (errors != other.errors) {
-    return errors < other.errors ? -1 : 1;
-  }
   if (id != other.id) {
     return id < other.id ? -1 : 1;
   }
@@ -101,10 +96,25 @@ int Target::compare(const Target &other) const {
   if (block->id != other.block->id) {
     return block->id < other.block->id ? -1 : 1;
   }
+
+  if (errors.size() != other.errors.size()) {
+    return errors.size() < other.errors.size() ? -1 : 1;
+  }
+
+  for (unsigned i = 0; i < errors.size(); ++i) {
+    if (errors.at(i) != other.errors.at(i)) {
+      return errors.at(i) < other.errors.at(i) ? -1 : 1;
+    }
+  }
+
   return 0;
 }
 
-bool Target::equals(const Target &other) const { return compare(other) == 0; }
+bool Target::equals(const Target &b) const {
+  return (toBeCleared || b.toBeCleared) || (isCached && b.isCached)
+             ? this == &b
+             : compare(b) == 0;
+}
 
 bool Target::operator<(const Target &other) const {
   return compare(other) == -1;
@@ -112,15 +122,9 @@ bool Target::operator<(const Target &other) const {
 
 bool Target::operator==(const Target &other) const { return equals(other); }
 
-bool Target::isThatError(ReachWithError err) const {
-  return errors.count(err) != 0 ||
-         (err == ReachWithError::MustBeNullPointerException &&
-          errors.count(ReachWithError::MayBeNullPointerException) != 0);
-}
-
 Target::~Target() {
-  if (targets.find(this) != targets.end()) {
-    cachedTargets.erase(this);
-    targets.erase(this);
+  if (isCached) {
+    toBeCleared = true;
+    cachedTargets.cache.erase(this);
   }
 }

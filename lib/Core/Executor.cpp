@@ -27,6 +27,7 @@
 #include "SpecialFunctionHandler.h"
 #include "StatsTracker.h"
 #include "TargetCalculator.h"
+#include "TargetManager.h"
 #include "TargetedExecutionManager.h"
 #include "TimingSolver.h"
 #include "TypeManager.h"
@@ -458,10 +459,11 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       concretizationManager(new ConcretizationManager(EqualitySubstitution)),
       codeGraphDistance(new CodeGraphDistance()),
       distanceCalculator(new DistanceCalculator(*codeGraphDistance)),
-      targetedExecutionManager(*codeGraphDistance), replayKTest(0),
-      replayPath(0), usingSeeds(0), atMemoryLimit(false), inhibitForking(false),
-      haltExecution(HaltExecution::NotHalt), ivcEnabled(false),
-      debugLogBuffer(debugBufferString) {
+      targetedExecutionManager(new TargetedExecutionManager(
+          *codeGraphDistance, *distanceCalculator)),
+      replayKTest(0), replayPath(0), usingSeeds(0), atMemoryLimit(false),
+      inhibitForking(false), haltExecution(HaltExecution::NotHalt),
+      ivcEnabled(false), debugLogBuffer(debugBufferString) {
 
   guidanceKind = opts.Guidance;
 
@@ -605,6 +607,12 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &userModules,
 
   targetCalculator = std::unique_ptr<TargetCalculator>(
       new TargetCalculator(*kmodule.get(), *codeGraphDistance.get()));
+
+  targetManager = std::unique_ptr<TargetManager>(new TargetManager(
+      guidanceKind, *distanceCalculator.get(), *targetCalculator.get()));
+
+  targetedExecutionManager = std::unique_ptr<TargetedExecutionManager>(
+      new TargetedExecutionManager(*codeGraphDistance, *distanceCalculator));
 
   return kmodule->module.get();
 }
@@ -1090,12 +1098,12 @@ bool Executor::canReachSomeTargetFromBlock(ExecutionState &es, KBlock *block) {
   if (interpreterOpts.Guidance != GuidanceKind::ErrorGuidance)
     return true;
   auto nextInstr = block->getFirstInstruction();
-  for (const auto &p : *es.targetForest.getTargets()) {
+  for (const auto &p : *es.targetForest.getTopLayer()) {
     auto target = p.first;
     if (target->mustVisitForkBranches(es.prevPC))
       return true;
-    auto dist = distanceCalculator->getDistance(nextInstr, es.prevPC, es.initPC,
-                                                es.stack, es.error, target);
+    auto dist = distanceCalculator->getDistance(es.prevPC, nextInstr, es.frames,
+                                                es.error, target);
     if (dist.result != WeightResult::Miss)
       return true;
   }
@@ -1578,7 +1586,13 @@ void Executor::printDebugInstructions(ExecutionState &state) {
   if (state.pc->info->assemblyLine.hasValue()) {
     (*stream) << state.pc->info->assemblyLine.getValue() << ':';
   }
-  (*stream) << state.getID();
+  (*stream) << state.getID() << ":";
+  (*stream) << "[";
+  for (auto target : state.targets()) {
+    (*stream) << target->toString() << ",";
+  }
+  (*stream) << "]";
+
   if (DebugPrintInstructions.isSet(STDERR_ALL) ||
       DebugPrintInstructions.isSet(FILE_ALL))
     (*stream) << ':' << *(state.pc->inst);
@@ -3907,6 +3921,13 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 }
 
 void Executor::updateStates(ExecutionState *current) {
+  if (targetManager) {
+    targetManager->update(current, addedStates, removedStates);
+  }
+  if (guidanceKind == GuidanceKind::ErrorGuidance && targetedExecutionManager) {
+    targetedExecutionManager->update(current, addedStates, removedStates);
+  }
+
   if (searcher) {
     searcher->update(current, addedStates, removedStates);
   }
@@ -4049,12 +4070,12 @@ bool Executor::checkMemoryUsage() {
   return false;
 }
 
-bool Executor::decreaseConfidenceFromStoppedStates(
-    SetOfStates &left_states, HaltExecution::Reason reason) {
-  bool hasStateWhichCanReachSomeTarget = false;
-  if (targets.empty())
-    return hasStateWhichCanReachSomeTarget;
-  for (auto state : left_states) {
+void Executor::decreaseConfidenceFromStoppedStates(
+    SetOfStates &leftStates, HaltExecution::Reason reason) {
+  if (targets.size() == 0) {
+    return;
+  }
+  for (auto state : leftStates) {
     if (state->targetForest.empty())
       continue;
     hasStateWhichCanReachSomeTarget = true;
@@ -4065,7 +4086,6 @@ bool Executor::decreaseConfidenceFromStoppedStates(
           .subtractConfidencesFrom(state->targetForest, realReason);
     }
   }
-  return hasStateWhichCanReachSomeTarget;
 }
 
 void Executor::doDumpStates() {
@@ -4178,7 +4198,7 @@ void Executor::reportProgressTowardsTargets(std::string prefix,
   klee_message("%zu %sstates remaining", states.size(), prefix.c_str());
   TargetHashMap<DistanceResult> distancesTowardsTargets;
   for (auto &state : states) {
-    for (auto &p : *state->targetForest.getTargets()) {
+    for (auto &p : *state->targetForest.getTopLayer()) {
       auto target = p.first;
       auto distance = distanceCalculator->getDistance(*state, target);
       auto it = distancesTowardsTargets.find(target);
@@ -4235,6 +4255,9 @@ void Executor::run(std::vector<ExecutionState *> initialStates) {
   searcher = constructUserSearcher(*this);
 
   std::vector<ExecutionState *> newStates(states.begin(), states.end());
+  targetManager->update(0, newStates, std::vector<ExecutionState *>());
+  targetedExecutionManager->update(0, newStates,
+                                   std::vector<ExecutionState *>());
   searcher->update(0, newStates, std::vector<ExecutionState *>());
 
   // main interpreter loop
@@ -4246,6 +4269,13 @@ void Executor::run(std::vector<ExecutionState *> initialStates) {
 
       if (prevKI->inst->isTerminator() && kmodule->inMainModule(kf->function)) {
         targetCalculator->update(state);
+        auto target = Target::create(state.prevPC->parent);
+        if (guidanceKind == GuidanceKind::CoverageGuidance) {
+          if (!target->atReturn() ||
+              state.prevPC == target->getBlock()->getLastInstruction()) {
+            targetManager->setReached(target);
+          }
+        }
       }
 
       executeStep(state);
@@ -4256,20 +4286,12 @@ void Executor::run(std::vector<ExecutionState *> initialStates) {
   }
 
   if (guidanceKind == GuidanceKind::ErrorGuidance) {
-    SetOfStates leftState = states;
-    for (auto state : pausedStates) {
-      leftState.erase(state);
-    }
-
     reportProgressTowardsTargets();
-    bool canReachNew1 = decreaseConfidenceFromStoppedStates(
-        pausedStates, HaltExecution::MaxCycles);
-    bool canReachNew2 =
-        decreaseConfidenceFromStoppedStates(leftState, haltExecution);
+    decreaseConfidenceFromStoppedStates(states, haltExecution);
 
     for (auto &startBlockAndWhiteList : targets) {
-      startBlockAndWhiteList.second.reportFalsePositives(canReachNew1 ||
-                                                         canReachNew2);
+      startBlockAndWhiteList.second.reportFalsePositives(
+          hasStateWhichCanReachSomeTarget);
     }
 
     if (searcher->empty())
@@ -4278,6 +4300,7 @@ void Executor::run(std::vector<ExecutionState *> initialStates) {
 
   delete searcher;
   searcher = nullptr;
+  targetManager = nullptr;
 
   doDumpStates();
   haltExecution = HaltExecution::NotHalt;
@@ -4312,10 +4335,20 @@ void Executor::initializeTypeManager() {
 }
 
 void Executor::executeStep(ExecutionState &state) {
-  KInstruction *ki = state.pc;
-  stepInstruction(state);
+  KInstruction *prevKI = state.prevPC;
+  if (targetManager->isTargeted(state) && state.targets().empty()) {
+    terminateStateEarly(state, "State missed all it's targets.",
+                        StateTerminationType::MissedAllTargets);
+  } else if (prevKI->inst->isTerminator() &&
+             state.multilevel[state.getPCBlock()] > MaxCycles - 1) {
+    terminateStateEarly(state, "max-cycles exceeded.",
+                        StateTerminationType::MaxCycles);
+  } else {
+    KInstruction *ki = state.pc;
+    stepInstruction(state);
+    executeInstruction(state, ki);
+  }
 
-  executeInstruction(state, ki);
   timers.invoke();
   if (::dumpStates)
     dumpStates();
@@ -4445,6 +4478,10 @@ HaltExecution::Reason fromStateTerminationType(StateTerminationType t) {
     return HaltExecution::MaxStackFrames;
   case StateTerminationType::Solver:
     return HaltExecution::MaxSolverTime;
+  case StateTerminationType::MaxCycles:
+    return HaltExecution::MaxCycles;
+  case StateTerminationType::Interrupted:
+    return HaltExecution::Interrupt;
   default:
     return HaltExecution::Unspecified;
   }
@@ -4453,6 +4490,11 @@ HaltExecution::Reason fromStateTerminationType(StateTerminationType t) {
 void Executor::terminateState(ExecutionState &state,
                               StateTerminationType terminationType) {
   state.terminationReasonType = fromStateTerminationType(terminationType);
+  if (terminationType >= StateTerminationType::MaxDepth &&
+      terminationType < StateTerminationType::MissedAllTargets) {
+    SetOfStates states = {&state};
+    decreaseConfidenceFromStoppedStates(states, state.terminationReasonType);
+  }
   if (replayKTest && replayPosition != replayKTest->numObjects) {
     klee_warning_once(replayKTest,
                       "replay did not consume all objects in test input.");
@@ -4512,7 +4554,9 @@ void Executor::terminateStateEarly(ExecutionState &state, const Twine &message,
       (AlwaysOutputSeeds && seedMap.count(&state))) {
     interpreterHandler->processTestCase(
         state, (message + "\n").str().c_str(),
-        terminationTypeFileExtension(reason).c_str());
+        terminationTypeFileExtension(reason).c_str(),
+        reason > StateTerminationType::EARLY &&
+            reason <= StateTerminationType::EXECERR);
   }
   terminateState(state, reason);
 }
@@ -4586,9 +4630,9 @@ void Executor::reportStateOnTargetError(ExecutionState &state,
                                         ReachWithError error) {
   if (guidanceKind == GuidanceKind::ErrorGuidance) {
     bool reportedTruePositive =
-        targetedExecutionManager.reportTruePositive(state, error);
+        targetedExecutionManager->reportTruePositive(state, error);
     if (!reportedTruePositive) {
-      targetedExecutionManager.reportFalseNegative(state, error);
+      targetedExecutionManager->reportFalseNegative(state, error);
     }
   }
 }
@@ -4668,7 +4712,8 @@ void Executor::terminateStateOnError(ExecutionState &state,
     const std::string ext = terminationTypeFileExtension(terminationType);
     // use user provided suffix from klee_report_error()
     const char *file_suffix = suffix ? suffix : ext.c_str();
-    interpreterHandler->processTestCase(state, msg.str().c_str(), file_suffix);
+    interpreterHandler->processTestCase(state, msg.str().c_str(), file_suffix,
+                                        true);
   }
 
   targetCalculator->update(state);
@@ -4702,8 +4747,6 @@ void Executor::terminateStateOnSolverError(ExecutionState &state,
                                            const llvm::Twine &message) {
   ++stats::terminationSolverError;
   terminateStateOnError(state, message, StateTerminationType::Solver, "");
-  SetOfStates states = {&state};
-  decreaseConfidenceFromStoppedStates(states, HaltExecution::MaxSolverTime);
 }
 
 void Executor::terminateStateOnUserError(ExecutionState &state,
@@ -6565,7 +6608,7 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
 
   if (guidanceKind == GuidanceKind::ErrorGuidance) {
     auto &paths = interpreterOpts.Paths.value();
-    auto prepTargets = targetedExecutionManager.prepareTargets(
+    auto prepTargets = targetedExecutionManager->prepareTargets(
         kmodule.get(), std::move(paths));
     if (prepTargets.empty()) {
       klee_warning(
@@ -6593,7 +6636,7 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
       targets.emplace(kf, TargetedHaltsOnTraces(whitelist));
       ExecutionState *initialState = state->withStackFrame(caller, kf);
       prepareSymbolicArgs(*initialState);
-      prepareTargetedExecution(initialState, whitelist);
+      prepareTargetedExecution(*initialState, whitelist);
       states.push_back(initialState);
     }
     delete state;
@@ -6657,7 +6700,9 @@ ExecutionState *Executor::prepareStateForPOSIX(KInstIterator &caller,
   processForest->addRoot(state);
   ExecutionState *original = state->copy();
   ExecutionState *initialState = nullptr;
-  state->targetForest.add(Target::create(target));
+  ref<TargetForest> targets(new TargetForest());
+  targets->add(Target::create(target));
+  prepareTargetedExecution(*state, targets);
   targetedRun(*state, target, &initialState);
   state = initialState;
   if (state) {
@@ -6678,9 +6723,12 @@ ExecutionState *Executor::prepareStateForPOSIX(KInstIterator &caller,
   return state;
 }
 
-void Executor::prepareTargetedExecution(ExecutionState *initialState,
+void Executor::prepareTargetedExecution(ExecutionState &initialState,
                                         ref<TargetForest> whitelist) {
-  initialState->targetForest = *whitelist->deepCopy();
+  initialState.targetForest = *whitelist->deepCopy();
+  initialState.setTargeted(true);
+  initialState.setHistory(initialState.targetForest.getHistory());
+  initialState.setTargets(initialState.targetForest.getTargets());
 }
 
 bool isReturnValueFromInitBlock(const ExecutionState &state,
@@ -6892,14 +6940,14 @@ void Executor::setInitializationGraph(const ExecutionState &state,
       continue;
     }
 
-    ref<Expr> update_check;
+    ref<Expr> updateCheck;
     if (auto e = dyn_cast<ConcatExpr>(pointer.first)) {
-      update_check = e->getLeft();
+      updateCheck = e->getLeft();
     } else {
-      update_check = e;
+      updateCheck = e;
     }
 
-    if (auto e = dyn_cast<ReadExpr>(update_check)) {
+    if (auto e = dyn_cast<ReadExpr>(updateCheck)) {
       if (e->updates.getSize() != 0) {
         continue;
       }
@@ -6932,7 +6980,7 @@ void Executor::setInitializationGraph(const ExecutionState &state,
         if (s[pointerIndex].count(o.offset) &&
             s[pointerIndex][o.offset] !=
                 std::make_pair(o.index, o.indexOffset)) {
-          assert(0 && "wft");
+          assert(0 && "unreachable");
         }
         if (!s[pointerIndex].count(o.offset)) {
           pointers[pointerIndex].push_back(o);

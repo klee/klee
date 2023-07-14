@@ -41,7 +41,7 @@
                 "--use-lazy-initialization=only",
                 "--min-number-elements-li=${minNumberElements}",
                 "--use-sym-size-li=${useSymbolicSizeLI}",
-                "--max-cycles=${maxCycles}",
+                "--max-cycles-before-stuck=${maxCycles}",
                 "--rewrite-equalities=simple",
                 "--symbolic-allocation-threshold=${SymbolicAllocationThreshold}",
                 "--analysis-reproduce=${sarifTracesFilePath}",

@@ -14,31 +14,12 @@
 using namespace llvm;
 using namespace klee;
 
-unsigned TargetHash::operator()(const Target *t) const {
-  if (t) {
-    return t->hash();
-  } else {
-    return 0;
-  }
-}
-
-bool TargetCmp::operator()(const Target *a, const Target *b) const {
-  return a == b;
-}
-
-bool EquivTargetCmp::operator()(const Target *a, const Target *b) const {
-  if (a == NULL || b == NULL)
-    return false;
-  return a->compare(*b) == 0;
-}
-
-unsigned RefTargetHash::operator()(const ref<Target> &t) const {
+unsigned TargetHash::operator()(const ref<Target> &t) const {
   return t->hash();
 }
 
-bool RefTargetCmp::operator()(const ref<Target> &a,
-                              const ref<Target> &b) const {
-  return a.get() == b.get();
+bool TargetCmp::operator()(const ref<Target> &a, const ref<Target> &b) const {
+  return a == b;
 }
 
 std::size_t TransitionHash::operator()(const Transition &p) const {

@@ -10,6 +10,8 @@
 #ifndef KLEE_TARGET_H
 #define KLEE_TARGET_H
 
+#include "klee/Module/TargetHash.h"
+
 #include "klee/ADT/RNG.h"
 #include "klee/ADT/Ref.h"
 #include "klee/Module/KModule.h"
@@ -32,10 +34,6 @@ DISABLE_WARNING_POP
 #include <vector>
 
 namespace klee {
-struct EquivTargetCmp;
-struct TargetHash;
-struct TargetCmp;
-
 using nonstd::optional;
 
 struct ErrorLocation {
@@ -47,30 +45,59 @@ struct ErrorLocation {
 
 struct Target {
 private:
-  typedef std::unordered_set<Target *, TargetHash, EquivTargetCmp>
-      EquivTargetHashSet;
-  typedef std::unordered_set<Target *, TargetHash, TargetCmp> TargetHashSet;
-  static EquivTargetHashSet cachedTargets;
-  static TargetHashSet targets;
   KBlock *block;
-  std::set<ReachWithError>
+  std::vector<ReachWithError>
       errors;                  // None - if it is not terminated in error trace
   std::string id;              // "" - if it is not terminated in error trace
   optional<ErrorLocation> loc; // TODO(): only for check in reportTruePositive
 
-  explicit Target(const std::set<ReachWithError> &_errors,
+  explicit Target(const std::vector<ReachWithError> &_errors,
                   const std::string &_id, optional<ErrorLocation> _loc,
                   KBlock *_block)
-      : block(_block), errors(_errors), id(_id), loc(_loc) {}
+      : block(_block), errors(_errors), id(_id), loc(_loc) {
+    std::sort(errors.begin(), errors.end());
+  }
 
-  static ref<Target> getFromCacheOrReturn(Target *target);
+  static ref<Target> createCachedTarget(ref<Target> target);
+
+protected:
+  friend class ref<Target>;
+  friend class ref<const Target>;
+
+  struct TargetHash {
+    unsigned operator()(Target *const t) const { return t->hash(); }
+  };
+
+  struct TargetCmp {
+    bool operator()(Target *const a, Target *const b) const {
+      return a->equals(*b);
+    }
+  };
+
+  typedef std::unordered_set<Target *, TargetHash, TargetCmp> CacheType;
+
+  struct TargetCacheSet {
+    CacheType cache;
+    ~TargetCacheSet() {
+      while (cache.size() != 0) {
+        ref<Target> tmp = *cache.begin();
+        tmp->isCached = false;
+        cache.erase(cache.begin());
+      }
+    }
+  };
+
+  static TargetCacheSet cachedTargets;
+  bool isCached = false;
+  bool toBeCleared = false;
+
+  /// @brief Required by klee::ref-managed objects
+  mutable class ReferenceCounter _refCount;
 
 public:
   bool isReported = false;
-  /// @brief Required by klee::ref-managed objects
-  class ReferenceCounter _refCount;
 
-  static ref<Target> create(const std::set<ReachWithError> &_errors,
+  static ref<Target> create(const std::vector<ReachWithError> &_errors,
                             const std::string &_id,
                             optional<ErrorLocation> _loc, KBlock *_block);
   static ref<Target> create(KBlock *_block);
@@ -93,13 +120,16 @@ public:
 
   unsigned hash() const { return reinterpret_cast<uintptr_t>(block); }
 
-  const std::set<ReachWithError> &getErrors() const { return errors; }
-  bool isThatError(ReachWithError err) const;
+  const std::vector<ReachWithError> &getErrors() const { return errors; }
+  bool isThatError(ReachWithError err) const {
+    return std::find(errors.begin(), errors.end(), err) != errors.end();
+  }
   bool shouldFailOnThisTarget() const {
-    return errors.count(ReachWithError::None) == 0;
+    return std::find(errors.begin(), errors.end(), ReachWithError::None) ==
+           errors.end();
   }
 
-  bool isTheSameAsIn(KInstruction *instr) const;
+  bool isTheSameAsIn(const KInstruction *instr) const;
 
   /// returns true if we cannot use CFG reachability checks
   /// from instr children to this target

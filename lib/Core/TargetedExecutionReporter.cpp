@@ -15,11 +15,12 @@
 using namespace klee;
 
 void klee::reportFalsePositive(confidence::ty confidence,
-                               const std::set<ReachWithError> &errors,
+                               const std::vector<ReachWithError> &errors,
                                const std::string &id,
                                std::string whatToIncrease) {
   std::ostringstream out;
-  out << getErrorsString(errors) << " False Positive at trace " << id;
+  std::vector<ReachWithError> errorsSet(errors.begin(), errors.end());
+  out << getErrorsString(errorsSet) << " False Positive at trace " << id;
   if (!confidence::isConfident(confidence)) {
     out << ". Advice: "
         << "increase --" << whatToIncrease << " command line parameter value";

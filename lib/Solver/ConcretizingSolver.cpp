@@ -32,10 +32,8 @@ private:
   AddressGenerator *addressGenerator;
 
 public:
-  ConcretizingSolver(std::unique_ptr<Solver> _solver,
-                     ConcretizationManager *_cm, AddressGenerator *_ag)
-      : solver(std::move(_solver)), concretizationManager(_cm),
-        addressGenerator(_ag) {}
+  ConcretizingSolver(std::unique_ptr<Solver> _solver, AddressGenerator *_ag)
+      : solver(std::move(_solver)), addressGenerator(_ag) {}
 
   ~ConcretizingSolver() = default;
 
@@ -645,7 +643,7 @@ std::unique_ptr<Solver>
 createConcretizingSolver(std::unique_ptr<Solver> s,
                          ConcretizationManager *concretizationManager,
                          AddressGenerator *addressGenerator) {
-  return std::make_unique<Solver>(std::make_unique<ConcretizingSolver>(
-      std::move(s), concretizationManager, addressGenerator));
+  return std::make_unique<Solver>(
+      std::make_unique<ConcretizingSolver>(std::move(s), addressGenerator));
 }
 } // namespace klee

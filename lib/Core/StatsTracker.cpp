@@ -863,11 +863,13 @@ void StatsTracker::writeIStats() {
 
 ///
 
-typedef std::map<Instruction *, std::vector<Function *>> calltargets_ty;
+typedef std::unordered_map<Instruction *, std::vector<Function *>>
+    calltargets_ty;
 
 static calltargets_ty callTargets;
-static std::map<Function *, std::vector<Instruction *>> functionCallers;
-static std::map<Function *, unsigned> functionShortestPath;
+static std::unordered_map<Function *, std::vector<Instruction *>>
+    functionCallers;
+static std::unordered_map<Function *, unsigned> functionShortestPath;
 
 static std::vector<Instruction *> getSuccs(Instruction *i) {
   BasicBlock *bb = i->getParent();

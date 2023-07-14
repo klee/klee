@@ -30,6 +30,7 @@ add_library(kleeCore
   TargetCalculator.cpp
   TargetedExecutionReporter.cpp
   TargetedExecutionManager.cpp
+  TargetManager.cpp
   TimingSolver.cpp
   TypeManager.cpp
   UserSearcher.cpp

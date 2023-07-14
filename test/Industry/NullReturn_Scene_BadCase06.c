@@ -58,5 +58,5 @@ void TestBad6(unsigned int count)
 // RUN: %klee --output-dir=%t.klee-out --use-guided-search=error --mock-external-calls --check-out-of-memory --skip-not-symbolic-objects --skip-not-lazy-initialized --use-lazy-initialization=only --analysis-reproduce=%s.json %t1.bc
 // RUN: FileCheck -input-file=%t.klee-out/warnings.txt %s
 
-// CHECK: KLEE: WARNING: 100.00% NullPointerException True Positive at trace 1
-// CHECK: KLEE: WARNING: 100.00% NullPointerException True Positive at trace 2
+// CHECK-DAG: KLEE: WARNING: 100.00% NullPointerException True Positive at trace 1
+// CHECK-DAG: KLEE: WARNING: 100.00% NullPointerException True Positive at trace 2

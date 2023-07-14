@@ -40,12 +40,21 @@ DISABLE_WARNING_POP
 using namespace llvm;
 using namespace klee;
 
+namespace klee {
+cl::opt<unsigned long long> MaxCyclesBeforeStuck(
+    "max-cycles-before-stuck",
+    cl::desc("Set target after after state visiting some basic block this "
+             "amount of times (default=1)."),
+    cl::init(1), cl::cat(TerminationCat));
+}
+
 namespace {
 cl::opt<bool> UseGEPOptimization(
     "use-gep-opt", cl::init(true),
     cl::desc("Lazily initialize whole objects referenced by gep expressions "
              "instead of only the referenced parts (default=true)"),
     cl::cat(ExecCat));
+
 } // namespace
 
 /***/
@@ -53,6 +62,19 @@ cl::opt<bool> UseGEPOptimization(
 std::uint32_t ExecutionState::nextID = 1;
 
 /***/
+
+int CallStackFrame::compare(const CallStackFrame &other) const {
+  if (kf != other.kf) {
+    return kf < other.kf ? -1 : 1;
+  }
+  if (!caller || !other.caller) {
+    return !caller ? !other.caller ? 0 : -1 : 1;
+  }
+  if (caller != other.caller) {
+    return caller < other.caller ? -1 : 1;
+  }
+  return 0;
+}
 
 StackFrame::StackFrame(KInstIterator _caller, KFunction *_kf)
     : caller(_caller), kf(_kf), callPathNode(0), minDistToUncoveredOnReturn(0),
@@ -78,13 +100,18 @@ ExecutionState::ExecutionState()
       depth(0), ptreeNode(nullptr), steppedInstructions(0),
       steppedMemoryInstructions(0), instsSinceCovNew(0),
       roundingMode(llvm::APFloat::rmNearestTiesToEven), coveredNew(false),
-      forkDisabled(false) {
+      forkDisabled(false), prevHistory_(TargetsHistory::create()),
+      history_(TargetsHistory::create()) {
   setID();
 }
 
 ExecutionState::ExecutionState(KFunction *kf)
-    : initPC(kf->instructions), pc(initPC), prevPC(pc),
-      roundingMode(llvm::APFloat::rmNearestTiesToEven) {
+    : initPC(kf->instructions), pc(initPC), prevPC(pc), incomingBBIndex(-1),
+      depth(0), ptreeNode(nullptr), steppedInstructions(0),
+      steppedMemoryInstructions(0), instsSinceCovNew(0),
+      roundingMode(llvm::APFloat::rmNearestTiesToEven), coveredNew(false),
+      forkDisabled(false), prevHistory_(TargetsHistory::create()),
+      history_(TargetsHistory::create()) {
   pushFrame(nullptr, kf);
   setID();
 }
@@ -94,7 +121,8 @@ ExecutionState::ExecutionState(KFunction *kf, KBlock *kb)
       depth(0), ptreeNode(nullptr), steppedInstructions(0),
       steppedMemoryInstructions(0), instsSinceCovNew(0),
       roundingMode(llvm::APFloat::rmNearestTiesToEven), coveredNew(false),
-      forkDisabled(false) {
+      forkDisabled(false), prevHistory_(TargetsHistory::create()),
+      history_(TargetsHistory::create()) {
   pushFrame(nullptr, kf);
   setID();
 }
@@ -106,9 +134,9 @@ ExecutionState::~ExecutionState() {
 
 ExecutionState::ExecutionState(const ExecutionState &state)
     : initPC(state.initPC), pc(state.pc), prevPC(state.prevPC),
-      stack(state.stack), stackBalance(state.stackBalance),
-      incomingBBIndex(state.incomingBBIndex), depth(state.depth),
-      multilevel(state.multilevel), level(state.level),
+      stack(state.stack), callStack(state.callStack), frames(state.frames),
+      stackBalance(state.stackBalance), incomingBBIndex(state.incomingBBIndex),
+      depth(state.depth), multilevel(state.multilevel), level(state.level),
       transitionLevel(state.transitionLevel), addressSpace(state.addressSpace),
       constraints(state.constraints), targetForest(state.targetForest),
       pathOS(state.pathOS), symPathOS(state.symPathOS),
@@ -123,7 +151,10 @@ ExecutionState::ExecutionState(const ExecutionState &state)
                                ? state.unwindingInformation->clone()
                                : nullptr),
       coveredNew(state.coveredNew), forkDisabled(state.forkDisabled),
-      returnValue(state.returnValue), gepExprBases(state.gepExprBases) {}
+      returnValue(state.returnValue), gepExprBases(state.gepExprBases),
+      prevTargets_(state.prevTargets_), targets_(state.targets_),
+      prevHistory_(state.prevHistory_), history_(state.history_),
+      isTargeted_(state.isTargeted_) {}
 
 ExecutionState *ExecutionState::branch() {
   depth++;
@@ -183,6 +214,11 @@ ExecutionState *ExecutionState::copy() const {
 
 void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
   stack.emplace_back(StackFrame(caller, kf));
+  if (std::find(callStack.begin(), callStack.end(),
+                CallStackFrame(caller, kf)) == callStack.end()) {
+    frames.emplace_back(CallStackFrame(caller, kf));
+  }
+  callStack.emplace_back(CallStackFrame(caller, kf));
   ++stackBalance;
 }
 
@@ -195,6 +231,12 @@ void ExecutionState::popFrame() {
     addressSpace.unbindObject(memoryObject);
   }
   stack.pop_back();
+  callStack.pop_back();
+  auto it = std::find(callStack.begin(), callStack.end(),
+                      CallStackFrame(sf.caller, sf.kf));
+  if (it == callStack.end()) {
+    frames.pop_back();
+  }
   --stackBalance;
 }
 
@@ -412,15 +454,13 @@ void ExecutionState::increaseLevel() {
   KModule *kmodule = kf->parent;
 
   if (prevPC->inst->isTerminator() && kmodule->inMainModule(kf->function)) {
-    multilevel[srcbb]++;
+    ++multilevel[srcbb];
     level.insert(srcbb);
   }
   if (srcbb != dstbb) {
     transitionLevel.insert(std::make_pair(srcbb, dstbb));
   }
 }
-
-bool ExecutionState::isTransfered() { return getPrevPCBlock() != getPCBlock(); }
 
 bool ExecutionState::isGEPExpr(ref<Expr> expr) const {
   return UseGEPOptimization && gepExprBases.find(expr) != gepExprBases.end();

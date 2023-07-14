@@ -48,44 +48,90 @@ public:
   explicit DistanceCalculator(CodeGraphDistance &codeGraphDistance_)
       : codeGraphDistance(codeGraphDistance_) {}
 
-  DistanceResult getDistance(ExecutionState &es, ref<Target> target);
-  DistanceResult getDistance(KInstruction *pc, KInstruction *prevPC,
-                             KInstruction *initPC,
-                             const ExecutionState::stack_ty &stack,
+  DistanceResult getDistance(const ExecutionState &es, ref<Target> target);
+
+  DistanceResult getDistance(const KInstruction *prevPC, const KInstruction *pc,
+                             const ExecutionState::frames_ty &frames,
                              ReachWithError error, ref<Target> target);
 
 private:
+  enum TargetKind : std::uint8_t {
+    LocalTarget = 0U,
+    PreTarget = 1U,
+    PostTarget = 2U,
+    NoneTarget = 3U,
+  };
+
+  struct SpeculativeState {
+  private:
+    unsigned hashValue;
+
+    unsigned computeHash();
+
+  public:
+    KBlock *kb;
+    TargetKind kind;
+    ReachWithError error;
+    SpeculativeState(KBlock *kb_, TargetKind kind_, ReachWithError error_)
+        : kb(kb_), kind(kind_), error(error_) {
+      computeHash();
+    }
+    ~SpeculativeState() = default;
+    unsigned hash() const { return hashValue; }
+  };
+
+  struct SpeculativeStateHash {
+    bool operator()(const SpeculativeState &a) const { return a.hash(); }
+  };
+
+  struct SpeculativeStateCompare {
+    bool operator()(const SpeculativeState &a,
+                    const SpeculativeState &b) const {
+      return a.kb == b.kb && a.error == b.error && a.kind == b.kind;
+    }
+  };
+
+  using SpeculativeStateToDistanceResultMap =
+      std::unordered_map<SpeculativeState, DistanceResult, SpeculativeStateHash,
+                         SpeculativeStateCompare>;
+  using TargetToSpeculativeStateToDistanceResultMap =
+      std::unordered_map<ref<Target>, SpeculativeStateToDistanceResultMap,
+                         TargetHash, TargetCmp>;
+
+  using StatesSet = std::unordered_set<ExecutionState *>;
+
   CodeGraphDistance &codeGraphDistance;
+  TargetToSpeculativeStateToDistanceResultMap distanceResultCache;
+  StatesSet localStates;
+
+  DistanceResult getDistance(KBlock *kb, TargetKind kind, ReachWithError error,
+                             ref<Target> target);
+
+  DistanceResult computeDistance(KBlock *kb, TargetKind kind,
+                                 ReachWithError error,
+                                 ref<Target> target) const;
 
   bool distanceInCallGraph(KFunction *kf, KBlock *kb, unsigned int &distance,
                            const std::unordered_map<KFunction *, unsigned int>
                                &distanceToTargetFunction,
-                           ref<Target> target);
+                           ref<Target> target) const;
   bool distanceInCallGraph(KFunction *kf, KBlock *kb, unsigned int &distance,
                            const std::unordered_map<KFunction *, unsigned int>
                                &distanceToTargetFunction,
-                           ref<Target> target, bool strictlyAfterKB);
-  WeightResult tryGetLocalWeight(KInstruction *pc, KInstruction *initPC,
-                                 llvm::BasicBlock *pcBlock,
-                                 llvm::BasicBlock *prevPCBlock,
-                                 weight_type &weight,
+                           ref<Target> target, bool strictlyAfterKB) const;
+
+  WeightResult tryGetLocalWeight(KBlock *kb, weight_type &weight,
                                  const std::vector<KBlock *> &localTargets,
-                                 ref<Target> target);
+                                 ref<Target> target) const;
   WeightResult
-  tryGetPreTargetWeight(KInstruction *pc, KInstruction *initPC,
-                        llvm::BasicBlock *pcBlock,
-                        llvm::BasicBlock *prevPCBlock, weight_type &weight,
+  tryGetPreTargetWeight(KBlock *kb, weight_type &weight,
                         const std::unordered_map<KFunction *, unsigned int>
                             &distanceToTargetFunction,
-                        ref<Target> target);
-  WeightResult tryGetTargetWeight(KInstruction *pc, KInstruction *initPC,
-                                  llvm::BasicBlock *pcBlock,
-                                  llvm::BasicBlock *prevPCBlock,
-                                  weight_type &weight, ref<Target> target);
-  WeightResult tryGetPostTargetWeight(KInstruction *pc, KInstruction *initPC,
-                                      llvm::BasicBlock *pcBlock,
-                                      llvm::BasicBlock *prevPCBlock,
-                                      weight_type &weight, ref<Target> target);
+                        ref<Target> target) const;
+  WeightResult tryGetTargetWeight(KBlock *kb, weight_type &weight,
+                                  ref<Target> target) const;
+  WeightResult tryGetPostTargetWeight(KBlock *kb, weight_type &weight,
+                                      ref<Target> target) const;
 };
 } // namespace klee
 

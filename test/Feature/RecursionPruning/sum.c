@@ -13,9 +13,9 @@ int main() {
     sn = sn + a;
   }
   if (sn > 10) {
-    printf("sn > 10");
+    printf("sn > 10\n");
   } else {
-    printf("sn <= 10");
+    printf("sn <= 10\n");
   }
 }
 

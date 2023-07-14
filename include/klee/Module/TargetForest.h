@@ -26,32 +26,120 @@
 #include <vector>
 
 namespace klee {
-struct RefTargetHash;
-struct RefTargetCmp;
-struct TargetsHistoryHash;
-struct EquivTargetsHistoryCmp;
-struct TargetsHistoryCmp;
-struct UnorderedTargetsSetHash;
-struct UnorderedTargetsSetCmp;
-struct EquivUnorderedTargetsSetCmp;
-struct RefUnorderedTargetsSetHash;
-struct RefUnorderedTargetsSetCmp;
+struct TargetHash;
+struct TargetCmp;
+
+class TargetsHistory {
+private:
+  unsigned hashValue;
+  unsigned sizeValue;
+
+  explicit TargetsHistory(ref<Target> _target,
+                          ref<TargetsHistory> _visitedTargets)
+      : target(_target), visitedTargets(_visitedTargets) {
+    computeHash();
+    computeSize();
+  }
+
+  void computeHash() {
+    unsigned res = 0;
+    if (target) {
+      res = target->hash() * Expr::MAGIC_HASH_CONSTANT;
+    }
+    if (visitedTargets) {
+      res ^= visitedTargets->hash() * Expr::MAGIC_HASH_CONSTANT;
+    }
+    hashValue = res;
+  }
+
+  void computeSize() {
+    unsigned res = 0;
+    if (target) {
+      ++res;
+    }
+    if (visitedTargets) {
+      res += visitedTargets->size();
+    }
+    sizeValue = res;
+  }
+
+protected:
+  friend class ref<TargetsHistory>;
+  friend class ref<const TargetsHistory>;
+
+  struct TargetsHistoryHash {
+    unsigned operator()(TargetsHistory *const t) const { return t->hash(); }
+  };
+
+  struct TargetsHistoryCmp {
+    bool operator()(TargetsHistory *const a, TargetsHistory *const b) const {
+      return a->equals(*b);
+    }
+  };
+
+  typedef std::unordered_set<TargetsHistory *, TargetsHistoryHash,
+                             TargetsHistoryCmp>
+      CacheType;
+
+  struct TargetHistoryCacheSet {
+    CacheType cache;
+    ~TargetHistoryCacheSet() {
+      while (cache.size() != 0) {
+        ref<TargetsHistory> tmp = *cache.begin();
+        tmp->isCached = false;
+        cache.erase(cache.begin());
+      }
+    }
+  };
+
+  static TargetHistoryCacheSet cachedHistories;
+  bool isCached = false;
+  bool toBeCleared = false;
+
+  /// @brief Required by klee::ref-managed objects
+  mutable class ReferenceCounter _refCount;
+
+public:
+  const ref<Target> target;
+  const ref<TargetsHistory> visitedTargets;
+
+  static ref<TargetsHistory> create(ref<Target> _target,
+                                    ref<TargetsHistory> _visitedTargets);
+  static ref<TargetsHistory> create(ref<Target> _target);
+  static ref<TargetsHistory> create();
+
+  ref<TargetsHistory> add(ref<Target> _target) {
+    return TargetsHistory::create(_target, this);
+  }
+
+  unsigned hash() const { return hashValue; }
+  unsigned size() const { return sizeValue; }
+
+  int compare(const TargetsHistory &h) const;
+  bool equals(const TargetsHistory &h) const;
+
+  void dump() const;
+
+  ~TargetsHistory();
+};
+
+using TargetHistoryTargetPair =
+    std::pair<ref<const TargetsHistory>, ref<Target>>;
 
 class TargetForest {
 public:
-  using TargetsSet =
-      std::unordered_set<ref<Target>, RefTargetHash, RefTargetCmp>;
-
   class UnorderedTargetsSet {
   public:
     static ref<UnorderedTargetsSet> create(const ref<Target> &target);
-    static ref<UnorderedTargetsSet> create(const TargetsSet &targets);
+    static ref<UnorderedTargetsSet> create(const TargetHashSet &targets);
 
     ~UnorderedTargetsSet();
-    std::size_t hash() const { return hashValue; }
-    bool operator==(const UnorderedTargetsSet &other) const {
-      return targetsVec == other.targetsVec;
-    }
+    unsigned hash() const { return hashValue; }
+    bool operator==(const UnorderedTargetsSet &other) const;
+    bool operator<(const UnorderedTargetsSet &other) const;
+
+    int compare(const UnorderedTargetsSet &h) const;
+    bool equals(const UnorderedTargetsSet &h) const;
 
     const std::vector<ref<Target>> &getTargets() const { return targetsVec; }
 
@@ -66,54 +154,77 @@ public:
     /// @brief Required by klee::ref-managed objects
     class ReferenceCounter _refCount;
 
-  private:
-    explicit UnorderedTargetsSet(const ref<Target> &target);
-    explicit UnorderedTargetsSet(const TargetsSet &targets);
-    static ref<UnorderedTargetsSet> create(UnorderedTargetsSet *vec);
+  protected:
+    struct UnorderedTargetsSetHash {
+      unsigned operator()(UnorderedTargetsSet *const t) const {
+        return t->hash();
+      }
+    };
 
-    typedef std::unordered_set<UnorderedTargetsSet *, UnorderedTargetsSetHash,
-                               EquivUnorderedTargetsSetCmp>
-        EquivUnorderedTargetsSetHashSet;
+    struct UnorderedTargetsSetCmp {
+      bool operator()(UnorderedTargetsSet *const a,
+                      UnorderedTargetsSet *const b) const {
+        return a->equals(*b);
+      }
+    };
+
     typedef std::unordered_set<UnorderedTargetsSet *, UnorderedTargetsSetHash,
                                UnorderedTargetsSetCmp>
-        UnorderedTargetsSetHashSet;
+        CacheType;
 
-    static EquivUnorderedTargetsSetHashSet cachedVectors;
-    static UnorderedTargetsSetHashSet vectors;
+    struct UnorderedTargetsSetCacheSet {
+      CacheType cache;
+      ~UnorderedTargetsSetCacheSet() {
+        while (cache.size() != 0) {
+          ref<UnorderedTargetsSet> tmp = *cache.begin();
+          tmp->isCached = false;
+          cache.erase(cache.begin());
+        }
+      }
+    };
+
+    static UnorderedTargetsSetCacheSet cachedVectors;
+    bool isCached = false;
+    bool toBeCleared = false;
+
+  private:
+    explicit UnorderedTargetsSet(const ref<Target> &target);
+    explicit UnorderedTargetsSet(const TargetHashSet &targets);
+    static ref<UnorderedTargetsSet> create(ref<UnorderedTargetsSet> vec);
+
     std::vector<ref<Target>> targetsVec;
-    std::size_t hashValue;
+    unsigned hashValue;
 
-    void sortAndComputeHash();
+    unsigned sortAndComputeHash();
   };
 
-  struct RefUnorderedTargetsSetHash {
+  struct UnorderedTargetsSetHash {
     unsigned operator()(const ref<TargetForest::UnorderedTargetsSet> &t) const {
       return t->hash();
     }
   };
 
-  struct RefUnorderedTargetsSetCmp {
+  struct UnorderedTargetsSetCmp {
     bool operator()(const ref<TargetForest::UnorderedTargetsSet> &a,
                     const ref<TargetForest::UnorderedTargetsSet> &b) const {
-      return a.get() == b.get();
+      return a == b;
     }
   };
 
 private:
   using TargetToStateSetMap =
       std::unordered_map<ref<Target>, std::unordered_set<ExecutionState *>,
-                         RefTargetHash, RefTargetCmp>;
+                         TargetHash, TargetCmp>;
   class Layer {
     using InternalLayer =
         std::unordered_map<ref<UnorderedTargetsSet>, ref<Layer>,
-                           RefUnorderedTargetsSetHash,
-                           RefUnorderedTargetsSetCmp>;
+                           UnorderedTargetsSetHash, UnorderedTargetsSetCmp>;
     InternalLayer forest;
     using TargetsToVector = std::unordered_map<
         ref<Target>,
-        std::unordered_set<ref<UnorderedTargetsSet>, RefUnorderedTargetsSetHash,
-                           RefUnorderedTargetsSetCmp>,
-        RefTargetHash, RefTargetCmp>;
+        std::unordered_set<ref<UnorderedTargetsSet>, UnorderedTargetsSetHash,
+                           UnorderedTargetsSetCmp>,
+        TargetHash, TargetCmp>;
     TargetsToVector targetsToVector;
 
     /// @brief Confidence in % that this layer (i.e., parent target node) can be
@@ -124,6 +235,7 @@ private:
           confidence::ty confidence)
         : forest(forest), targetsToVector(targetsToVector),
           confidence(confidence) {}
+
     explicit Layer(const Layer *layer)
         : Layer(layer->forest, layer->targetsToVector, layer->confidence) {}
     explicit Layer(const ref<Layer> layer) : Layer(layer.get()) {}
@@ -135,11 +247,6 @@ private:
     confidence::ty getConfidence(confidence::ty parentConfidence) const {
       return confidence::min(parentConfidence, confidence);
     }
-
-    void collectHowManyEventsInTracesWereReached(
-        std::unordered_map<std::string, std::pair<unsigned, unsigned>>
-            &traceToEventCount,
-        unsigned reached, unsigned total) const;
 
   public:
     using iterator = TargetsToVector::const_iterator;
@@ -166,8 +273,8 @@ private:
     Layer *replaceChildWith(
         ref<Target> child,
         const std::unordered_set<ref<UnorderedTargetsSet>,
-                                 RefUnorderedTargetsSetHash,
-                                 RefUnorderedTargetsSetCmp> &other) const;
+                                 UnorderedTargetsSetHash,
+                                 UnorderedTargetsSetCmp> &other) const;
     Layer *replaceChildWith(ref<UnorderedTargetsSet> child, Layer *other) const;
     Layer *removeChild(ref<Target> child) const;
     Layer *addChild(ref<Target> child) const;
@@ -175,13 +282,19 @@ private:
                             ref<Target> leaf) const;
     Layer *blockLeafInChild(ref<Target> child, ref<Target> leaf) const;
     Layer *blockLeaf(ref<Target> leaf) const;
-    bool allNodesRefCountOne() const;
+    TargetHashSet getTargets() const {
+      TargetHashSet targets;
+      for (auto &targetVect : targetsToVector) {
+        targets.insert(targetVect.first);
+      }
+      return targets;
+    }
+
     void dump(unsigned n) const;
     void addLeafs(
         std::vector<std::pair<ref<UnorderedTargetsSet>, confidence::ty>> &leafs,
         confidence::ty parentConfidence) const;
     void propagateConfidenceToChildren();
-    void addTargetWithConfidence(ref<Target> target, confidence::ty confidence);
     ref<Layer> deepCopy();
     Layer *copy();
     void divideConfidenceBy(unsigned factor);
@@ -189,11 +302,6 @@ private:
     divideConfidenceBy(const TargetToStateSetMap &reachableStatesOfTarget);
     confidence::ty getConfidence() const {
       return getConfidence(confidence::MaxConfidence);
-    }
-    void collectHowManyEventsInTracesWereReached(
-        std::unordered_map<std::string, std::pair<unsigned, unsigned>>
-            &traceToEventCount) const {
-      collectHowManyEventsInTracesWereReached(traceToEventCount, 0, 0);
     }
 
     void addTrace(
@@ -204,84 +312,13 @@ private:
 
   ref<Layer> forest;
 
-  bool allNodesRefCountOne() const;
-
-public:
-  class History {
-  private:
-    typedef std::unordered_set<History *, TargetsHistoryHash,
-                               EquivTargetsHistoryCmp>
-        EquivTargetsHistoryHashSet;
-    typedef std::unordered_set<History *, TargetsHistoryHash, TargetsHistoryCmp>
-        TargetsHistoryHashSet;
-
-    static EquivTargetsHistoryHashSet cachedHistories;
-    static TargetsHistoryHashSet histories;
-    unsigned hashValue;
-    unsigned sizeValue;
-
-    explicit History(ref<Target> _target, ref<History> _visitedTargets)
-        : target(_target), visitedTargets(_visitedTargets) {
-      computeHash();
-    }
-
-    void computeHash() {
-      unsigned res = 0;
-      if (target) {
-        res = target->hash() * Expr::MAGIC_HASH_CONSTANT;
-      }
-      if (visitedTargets) {
-        res ^= visitedTargets->hash() * Expr::MAGIC_HASH_CONSTANT;
-      }
-      hashValue = res;
-    }
-
-    void computeSize() {
-      unsigned res = 0;
-      if (target) {
-        ++res;
-      }
-      if (visitedTargets) {
-        res += visitedTargets->size();
-      }
-      sizeValue = res;
-    }
-
-  public:
-    const ref<Target> target;
-    const ref<History> visitedTargets;
-
-    static ref<History> create(ref<Target> _target,
-                               ref<History> _visitedTargets);
-    static ref<History> create(ref<Target> _target);
-    static ref<History> create();
-
-    ref<History> add(ref<Target> _target) {
-      return History::create(_target, this);
-    }
-
-    unsigned hash() const { return hashValue; }
-    unsigned size() const { return sizeValue; }
-
-    int compare(const History &h) const;
-    bool equals(const History &h) const;
-
-    void dump() const;
-
-    ~History();
-
-    /// @brief Required by klee::ref-managed objects
-    class ReferenceCounter _refCount;
-  };
-
 private:
-  ref<History> history;
+  ref<TargetsHistory> history;
   KFunction *entryFunction;
 
 public:
   /// @brief Required by klee::ref-managed objects
   class ReferenceCounter _refCount;
-  unsigned getDebugReferenceCount() { return forest->_refCount.getCount(); }
   KFunction *getEntryFunction() { return entryFunction; }
 
   void addTrace(
@@ -292,7 +329,7 @@ public:
   }
 
   TargetForest(ref<Layer> layer, KFunction *entryFunction)
-      : forest(layer), history(History::create()),
+      : forest(layer), history(TargetsHistory::create()),
         entryFunction(entryFunction) {}
   TargetForest() : TargetForest(new Layer(), nullptr) {}
   TargetForest(KFunction *entryFunction)
@@ -312,14 +349,12 @@ public:
   void remove(ref<Target>);
   void blockIn(ref<Target>, ref<Target>);
   void block(const ref<Target> &);
-  const ref<History> getHistory() { return history; };
-  const ref<Layer> getTargets() { return forest; };
+  const ref<TargetsHistory> getHistory() { return history; };
+  const ref<Layer> getTopLayer() { return forest; };
+  const TargetHashSet getTargets() const { return forest->getTargets(); }
   void dump() const;
   std::vector<std::pair<ref<UnorderedTargetsSet>, confidence::ty>>
   leafs() const;
-  void addTargetWithConfidence(ref<Target> target, confidence::ty confidence) {
-    forest->addTargetWithConfidence(target, confidence);
-  }
   ref<TargetForest> deepCopy();
   void divideConfidenceBy(unsigned factor) {
     forest->divideConfidenceBy(factor);
@@ -327,45 +362,29 @@ public:
   void divideConfidenceBy(const TargetToStateSetMap &reachableStatesOfTarget) {
     forest = forest->divideConfidenceBy(reachableStatesOfTarget);
   }
-  void collectHowManyEventsInTracesWereReached(
-      std::unordered_map<std::string, std::pair<unsigned, unsigned>>
-          &traceToEventCount) const {
-    forest->collectHowManyEventsInTracesWereReached(traceToEventCount);
-  }
 };
 
 struct TargetsHistoryHash {
-  unsigned operator()(const TargetForest::History *t) const {
-    return t ? t->hash() : 0;
-  }
+  unsigned operator()(const ref<TargetsHistory> &t) const { return t->hash(); }
 };
 
 struct TargetsHistoryCmp {
-  bool operator()(const TargetForest::History *a,
-                  const TargetForest::History *b) const {
+  bool operator()(const ref<TargetsHistory> &a,
+                  const ref<TargetsHistory> &b) const {
     return a == b;
   }
 };
 
-struct EquivTargetsHistoryCmp {
-  bool operator()(const TargetForest::History *a,
-                  const TargetForest::History *b) const {
-    if (a == NULL || b == NULL)
-      return false;
-    return a->compare(*b) == 0;
+struct TargetHistoryTargetHash {
+  unsigned operator()(const TargetHistoryTargetPair &t) const {
+    return t.first->hash() * Expr::MAGIC_HASH_CONSTANT + t.second->hash();
   }
 };
 
-struct RefTargetsHistoryHash {
-  unsigned operator()(const ref<TargetForest::History> &t) const {
-    return t->hash();
-  }
-};
-
-struct RefTargetsHistoryCmp {
-  bool operator()(const ref<TargetForest::History> &a,
-                  const ref<TargetForest::History> &b) const {
-    return a.get() == b.get();
+struct TargetHistoryTargetCmp {
+  bool operator()(const TargetHistoryTargetPair &a,
+                  const TargetHistoryTargetPair &b) const {
+    return a.first == b.first && a.second == b.second;
   }
 };
 
