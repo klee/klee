@@ -51,7 +51,8 @@ unsigned DistanceCalculator::SpeculativeState::computeHash() {
 
 DistanceResult DistanceCalculator::getDistance(const ExecutionState &state,
                                                ref<Target> target) {
-  return getDistance(state.prevPC, state.pc, state.frames, state.error, target);
+  return getDistance(state.prevPC, state.pc, state.stack.uniqueFrames(),
+                     state.error, target);
 }
 
 DistanceResult DistanceCalculator::getDistance(KBlock *kb, TargetKind kind,
@@ -103,7 +104,7 @@ DistanceResult DistanceCalculator::computeDistance(KBlock *kb, TargetKind kind,
 DistanceResult
 DistanceCalculator::getDistance(const KInstruction *prevPC,
                                 const KInstruction *pc,
-                                const ExecutionState::frames_ty &frames,
+                                const ExecutionStack::call_stack_ty &frames,
                                 ReachWithError error, ref<Target> target) {
   weight_type weight = 0;
 

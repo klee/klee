@@ -625,7 +625,8 @@ void SpecialFunctionHandler::handleWarning(ExecutionState &state,
          "invalid number of arguments to klee_warning");
 
   std::string msg_str = readStringAtAddress(state, arguments[0]);
-  klee_warning("%s: %s", state.stack.back().kf->function->getName().data(),
+  klee_warning("%s: %s",
+               state.stack.callStack().back().kf->function->getName().data(),
                msg_str.c_str());
 }
 
@@ -636,9 +637,10 @@ void SpecialFunctionHandler::handleWarningOnce(
          "invalid number of arguments to klee_warning_once");
 
   std::string msg_str = readStringAtAddress(state, arguments[0]);
-  klee_warning_once(0, "%s: %s",
-                    state.stack.back().kf->function->getName().data(),
-                    msg_str.c_str());
+  klee_warning_once(
+      0, "%s: %s",
+      state.stack.callStack().back().kf->function->getName().data(),
+      msg_str.c_str());
 }
 
 void SpecialFunctionHandler::handlePrintRange(

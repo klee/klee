@@ -51,7 +51,7 @@ public:
   DistanceResult getDistance(const ExecutionState &es, ref<Target> target);
 
   DistanceResult getDistance(const KInstruction *prevPC, const KInstruction *pc,
-                             const ExecutionState::frames_ty &frames,
+                             const ExecutionStack::call_stack_ty &frames,
                              ReachWithError error, ref<Target> target);
 
 private:

@@ -499,11 +499,11 @@ private:
 
   Cell &getArgumentCell(const ExecutionState &state, const KFunction *kf,
                         unsigned index) {
-    return getArgumentCell(state.stack.back(), kf, index);
+    return getArgumentCell(state.stack.valueStack().back(), kf, index);
   }
 
   Cell &getDestCell(const ExecutionState &state, const KInstruction *target) {
-    return getDestCell(state.stack.back(), target);
+    return getDestCell(state.stack.valueStack().back(), target);
   }
 
   void bindLocal(const KInstruction *target, StackFrame &frame,

@@ -60,38 +60,23 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const MemoryMap &mm);
 extern llvm::cl::opt<unsigned long long> MaxCyclesBeforeStuck;
 
 struct CallStackFrame {
-  KInstruction *caller;
+  KInstIterator caller;
   KFunction *kf;
 
-  CallStackFrame(KInstruction *caller_, KFunction *kf_)
+  CallStackFrame(KInstIterator caller_, KFunction *kf_)
       : caller(caller_), kf(kf_) {}
   ~CallStackFrame() = default;
+  CallStackFrame(const CallStackFrame &s);
 
-  int compare(const CallStackFrame &other) const;
+  bool equals(const CallStackFrame &other) const;
 
-  bool operator<(const CallStackFrame &other) const {
-    return compare(other) == -1;
-  }
-
-  bool operator==(const CallStackFrame &other) const {
-    return compare(other) == 0;
-  }
+  bool operator==(const CallStackFrame &other) const { return equals(other); }
 };
 
 struct StackFrame {
-  KInstIterator caller;
   KFunction *kf;
-  CallPathNode *callPathNode;
-
   std::vector<IDType> allocas;
   Cell *locals;
-
-  /// Minimum distance to an uncovered instruction once the function
-  /// returns. This is not a good place for this but is used to
-  /// quickly compute the context sensitive minimum distance to an
-  /// uncovered instruction. This value is updated by the StatsTracker
-  /// periodically.
-  unsigned minDistToUncoveredOnReturn;
 
   // For vararg functions: arguments not passed via parameter are
   // stored (packed tightly) in a local (alloca) memory object. This
@@ -100,9 +85,51 @@ struct StackFrame {
   // of intrinsic lowering.
   MemoryObject *varargs;
 
-  StackFrame(KInstIterator caller, KFunction *kf);
+  StackFrame(KFunction *kf);
   StackFrame(const StackFrame &s);
   ~StackFrame();
+};
+
+struct InfoStackFrame {
+  KFunction *kf;
+  CallPathNode *callPathNode = nullptr;
+
+  /// Minimum distance to an uncovered instruction once the function
+  /// returns. This is not a good place for this but is used to
+  /// quickly compute the context sensitive minimum distance to an
+  /// uncovered instruction. This value is updated by the StatsTracker
+  /// periodically.
+  unsigned minDistToUncoveredOnReturn = 0;
+
+  InfoStackFrame(KFunction *kf);
+  InfoStackFrame(const InfoStackFrame &s);
+  ~InfoStackFrame() = default;
+};
+
+struct ExecutionStack {
+public:
+  using value_stack_ty = std::vector<StackFrame>;
+  using call_stack_ty = std::vector<CallStackFrame>;
+  using info_stack_ty = std::vector<InfoStackFrame>;
+
+private:
+  value_stack_ty valueStack_;
+  call_stack_ty callStack_;
+  info_stack_ty infoStack_;
+  call_stack_ty uniqueFrames_;
+  unsigned stackBalance = 0;
+
+public:
+  void pushFrame(KInstIterator caller, KFunction *kf);
+  void popFrame();
+  inline value_stack_ty &valueStack() { return valueStack_; }
+  inline const value_stack_ty &valueStack() const { return valueStack_; }
+  inline const call_stack_ty &callStack() const { return callStack_; }
+  inline info_stack_ty &infoStack() { return infoStack_; }
+  inline const call_stack_ty &uniqueFrames() const { return uniqueFrames_; }
+
+  inline unsigned size() const { return callStack_.size(); }
+  inline bool empty() const { return callStack_.empty(); }
 };
 
 /// Contains information related to unwinding (Itanium ABI/2-Phase unwinding)
@@ -229,9 +256,7 @@ private:
   ExecutionState(const ExecutionState &state);
 
 public:
-  using stack_ty = std::vector<StackFrame>;
-  using call_stack_ty = std::vector<CallStackFrame>;
-  using frames_ty = std::vector<CallStackFrame>;
+  using stack_ty = ExecutionStack;
 
   // Execution - Control Flow specific
 
@@ -245,10 +270,8 @@ public:
   /// @brief Pointer to instruction which is currently executed
   KInstIterator prevPC;
 
-  /// @brief Stack representing the current instruction stream
+  /// @brief Execution stack representing the current instruction stream
   stack_ty stack;
-  call_stack_ty callStack;
-  frames_ty frames;
 
   int stackBalance = 0;
 

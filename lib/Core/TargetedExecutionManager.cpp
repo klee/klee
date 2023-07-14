@@ -546,7 +546,7 @@ bool TargetedExecutionManager::reportTruePositive(ExecutionState &state,
         found = false;
         break;
       }
-      possibleInstruction = state.stack[i].caller;
+      possibleInstruction = state.stack.callStack().at(i).caller;
       i--;
     }
     if (!found)

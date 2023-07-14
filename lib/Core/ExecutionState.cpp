@@ -63,36 +63,61 @@ std::uint32_t ExecutionState::nextID = 1;
 
 /***/
 
-int CallStackFrame::compare(const CallStackFrame &other) const {
-  if (kf != other.kf) {
-    return kf < other.kf ? -1 : 1;
+void ExecutionStack::pushFrame(KInstIterator caller, KFunction *kf) {
+  valueStack_.emplace_back(StackFrame(kf));
+  if (std::find(callStack_.begin(), callStack_.end(),
+                CallStackFrame(caller, kf)) == callStack_.end()) {
+    uniqueFrames_.emplace_back(CallStackFrame(caller, kf));
   }
-  if (!caller || !other.caller) {
-    return !caller ? !other.caller ? 0 : -1 : 1;
-  }
-  if (caller != other.caller) {
-    return caller < other.caller ? -1 : 1;
-  }
-  return 0;
+  callStack_.emplace_back(CallStackFrame(caller, kf));
+  infoStack_.emplace_back(InfoStackFrame(kf));
+  ++stackBalance;
+  assert(valueStack_.size() == callStack_.size());
+  assert(valueStack_.size() == infoStack_.size());
 }
 
-StackFrame::StackFrame(KInstIterator _caller, KFunction *_kf)
-    : caller(_caller), kf(_kf), callPathNode(0), minDistToUncoveredOnReturn(0),
-      varargs(0) {
+void ExecutionStack::popFrame() {
+  assert(callStack_.size() > 0);
+  KInstIterator caller = callStack_.back().caller;
+  KFunction *kf = callStack_.back().kf;
+  valueStack_.pop_back();
+  callStack_.pop_back();
+  infoStack_.pop_back();
+  auto it = std::find(callStack_.begin(), callStack_.end(),
+                      CallStackFrame(caller, kf));
+  if (it == callStack_.end()) {
+    uniqueFrames_.pop_back();
+  }
+  --stackBalance;
+  assert(valueStack_.size() == callStack_.size());
+  assert(valueStack_.size() == infoStack_.size());
+}
+
+bool CallStackFrame::equals(const CallStackFrame &other) const {
+  return kf == other.kf && caller == other.caller;
+}
+
+StackFrame::StackFrame(KFunction *kf) : kf(kf), varargs(0) {
   locals = new Cell[kf->numRegisters];
 }
 
 StackFrame::StackFrame(const StackFrame &s)
-    : caller(s.caller), kf(s.kf), callPathNode(s.callPathNode),
-      allocas(s.allocas),
-      minDistToUncoveredOnReturn(s.minDistToUncoveredOnReturn),
-      varargs(s.varargs) {
-  locals = new Cell[s.kf->numRegisters];
-  for (unsigned i = 0; i < s.kf->numRegisters; i++)
+    : kf(s.kf), allocas(s.allocas), varargs(s.varargs) {
+  locals = new Cell[kf->numRegisters];
+  for (unsigned i = 0; i < kf->numRegisters; i++)
     locals[i] = s.locals[i];
 }
 
 StackFrame::~StackFrame() { delete[] locals; }
+
+CallStackFrame::CallStackFrame(const CallStackFrame &s)
+    : caller(s.caller), kf(s.kf) {}
+
+InfoStackFrame::InfoStackFrame(KFunction *kf) : kf(kf) {}
+
+InfoStackFrame::InfoStackFrame(const InfoStackFrame &s)
+    : kf(s.kf), callPathNode(s.callPathNode),
+      minDistToUncoveredOnReturn(s.minDistToUncoveredOnReturn) {}
 
 /***/
 ExecutionState::ExecutionState()
@@ -134,9 +159,9 @@ ExecutionState::~ExecutionState() {
 
 ExecutionState::ExecutionState(const ExecutionState &state)
     : initPC(state.initPC), pc(state.pc), prevPC(state.prevPC),
-      stack(state.stack), callStack(state.callStack), frames(state.frames),
-      stackBalance(state.stackBalance), incomingBBIndex(state.incomingBBIndex),
-      depth(state.depth), multilevel(state.multilevel), level(state.level),
+      stack(state.stack), stackBalance(state.stackBalance),
+      incomingBBIndex(state.incomingBBIndex), depth(state.depth),
+      multilevel(state.multilevel), level(state.level),
       transitionLevel(state.transitionLevel), addressSpace(state.addressSpace),
       constraints(state.constraints), targetForest(state.targetForest),
       pathOS(state.pathOS), symPathOS(state.symPathOS),
@@ -213,31 +238,18 @@ ExecutionState *ExecutionState::copy() const {
 }
 
 void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
-  stack.emplace_back(StackFrame(caller, kf));
-  if (std::find(callStack.begin(), callStack.end(),
-                CallStackFrame(caller, kf)) == callStack.end()) {
-    frames.emplace_back(CallStackFrame(caller, kf));
-  }
-  callStack.emplace_back(CallStackFrame(caller, kf));
-  ++stackBalance;
+  stack.pushFrame(caller, kf);
 }
 
 void ExecutionState::popFrame() {
-  const StackFrame &sf = stack.back();
+  const StackFrame &sf = stack.valueStack().back();
   for (const auto id : sf.allocas) {
     const MemoryObject *memoryObject = addressSpace.findObject(id).first;
     assert(memoryObject);
     removePointerResolutions(memoryObject);
     addressSpace.unbindObject(memoryObject);
   }
-  stack.pop_back();
-  callStack.pop_back();
-  auto it = std::find(callStack.begin(), callStack.end(),
-                      CallStackFrame(sf.caller, sf.kf));
-  if (it == callStack.end()) {
-    frames.pop_back();
-  }
-  --stackBalance;
+  stack.popFrame();
 }
 
 void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array,
@@ -388,15 +400,15 @@ llvm::raw_ostream &klee::operator<<(llvm::raw_ostream &os,
 }
 
 void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
-  unsigned idx = 0;
   const KInstruction *target = prevPC;
-  for (ExecutionState::stack_ty::const_reverse_iterator it = stack.rbegin(),
-                                                        ie = stack.rend();
-       it != ie; ++it) {
-    const StackFrame &sf = *it;
-    Function *f = sf.kf->function;
+  for (unsigned i = 0; i < stack.size(); ++i) {
+    unsigned ri = stack.size() - 1 - i;
+    const CallStackFrame &csf = stack.callStack().at(ri);
+    const StackFrame &sf = stack.valueStack().at(ri);
+
+    Function *f = csf.kf->function;
     const InstructionInfo &ii = *target->info;
-    out << "\t#" << idx++;
+    out << "\t#" << i;
     if (ii.assemblyLine.hasValue()) {
       std::stringstream AssStream;
       AssStream << std::setw(8) << std::setfill('0')
@@ -414,7 +426,7 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
       if (ai->hasName())
         out << ai->getName().str() << "=";
 
-      ref<Expr> value = sf.locals[sf.kf->getArgRegister(index++)].value;
+      ref<Expr> value = sf.locals[csf.kf->getArgRegister(index++)].value;
       if (isa_and_nonnull<ConstantExpr>(value)) {
         out << value;
       } else {
@@ -425,7 +437,7 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
     if (ii.file != "")
       out << " at " << ii.file << ":" << ii.line;
     out << "\n";
-    target = sf.caller;
+    target = csf.caller;
   }
 }
 

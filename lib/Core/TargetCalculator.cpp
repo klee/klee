@@ -98,8 +98,9 @@ ref<Target> TargetCalculator::calculate(ExecutionState &state) {
   unsigned int minDistance = UINT_MAX;
   unsigned int sfNum = 0;
   bool newCov = false;
-  for (auto sfi = state.stack.rbegin(), sfe = state.stack.rend(); sfi != sfe;
-       sfi++, sfNum++) {
+  for (auto sfi = state.stack.callStack().rbegin(),
+            sfe = state.stack.callStack().rend();
+       sfi != sfe; sfi++, sfNum++) {
     kf = sfi->kf;
 
     for (const auto &kbd : codeGraphDistance.getSortedDistance(kb)) {
