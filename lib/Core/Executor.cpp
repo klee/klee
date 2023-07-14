@@ -4332,8 +4332,8 @@ void Executor::initializeTypeManager() {
 void Executor::executeStep(ExecutionState &state) {
   KInstruction *prevKI = state.prevPC;
   if (targetManager->isTargeted(state) && state.targets().empty()) {
-    terminateStateEarly(state, "State missed all it's targets.",
-                        StateTerminationType::MissedAllTargets);
+    terminateStateEarlyAlgorithm(state, "State missed all it's targets.",
+                                 StateTerminationType::MissedAllTargets);
   } else if (prevKI->inst->isTerminator() &&
              state.multilevel[state.getPCBlock()] > MaxCycles - 1) {
     terminateStateEarly(state, "max-cycles exceeded.",
@@ -4486,7 +4486,7 @@ void Executor::terminateState(ExecutionState &state,
                               StateTerminationType terminationType) {
   state.terminationReasonType = fromStateTerminationType(terminationType);
   if (terminationType >= StateTerminationType::MaxDepth &&
-      terminationType < StateTerminationType::MissedAllTargets) {
+      terminationType <= StateTerminationType::EARLY) {
     SetOfStates states = {&state};
     decreaseConfidenceFromStoppedStates(states, state.terminationReasonType);
   }
