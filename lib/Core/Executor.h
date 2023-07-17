@@ -449,6 +449,10 @@ private:
   // return it. Otherwise, return the unmodified condition.
   ref<Expr> maxStaticPctChecks(ExecutionState &current, ref<Expr> condition);
 
+  Assignment computeConcretization(const ConstraintSet &constraints,
+                                   ref<Expr> condition,
+                                   SolverQueryMetaData &queryMetaData);
+
   /// Add the given (boolean) condition as a constraint on state. This
   /// function is a wrapper around the state's addConstraint function
   /// which also manages propagation of implied values,

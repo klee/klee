@@ -1393,19 +1393,8 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
       klee_warning("seeds patched for violating constraint");
   }
 
-  Assignment concretization;
-  if (Query(state.constraints.cs(), condition).containsSymcretes()) {
-    ref<SolverResponse> response;
-    solver->setTimeout(coreSolverTimeout);
-    bool success = solver->getResponse(state.constraints.cs(),
-                                       Expr::createIsZero(condition), response,
-                                       state.queryMetaData);
-    solver->setTimeout(time::Span());
-    assert(success);
-    assert(isa<InvalidResponse>(response));
-    concretization = cast<InvalidResponse>(response)->initialValuesFor(
-        state.constraints.cs().gatherSymcretizedArrays());
-  }
+  Assignment concretization = computeConcretization(
+      state.constraints.cs(), condition, state.queryMetaData);
 
   if (!concretization.isEmpty()) {
     // Update memory objects if arrays have affected them.
@@ -5815,22 +5804,11 @@ bool Executor::collectConcretizations(
   }
 
   for (unsigned int i = 0; i < resolvedMemoryObjects.size(); ++i) {
-    Assignment symcretization;
-    if (Query(state.constraints.cs(), resolveConditions.at(i))
-            .containsSymcretes()) {
-      ref<SolverResponse> response;
-      solver->setTimeout(coreSolverTimeout);
-      bool success = solver->getResponse(
-          state.constraints.cs(), Expr::createIsZero(resolveConditions.at(i)),
-          response, state.queryMetaData);
-      solver->setTimeout(time::Span());
-      assert(success);
-      assert(isa<InvalidResponse>(response));
-      symcretization = cast<InvalidResponse>(response)->initialValuesFor(
-          state.constraints.cs().gatherSymcretizedArrays());
-    }
-    resolveConcretizations.push_back(symcretization);
+    Assignment concretization = computeConcretization(
+        state.constraints.cs(), resolveConditions.at(i), state.queryMetaData);
+    resolveConcretizations.push_back(concretization);
   }
+
   return true;
 }
 
@@ -7006,6 +6984,24 @@ void Executor::setInitializationGraph(const ExecutionState &state,
   return;
 }
 
+Assignment Executor::computeConcretization(const ConstraintSet &constraints,
+                                           ref<Expr> condition,
+                                           SolverQueryMetaData &queryMetaData) {
+  Assignment concretization;
+  if (Query(constraints, condition).containsSymcretes()) {
+    ref<SolverResponse> response;
+    solver->setTimeout(coreSolverTimeout);
+    bool success = solver->getResponse(
+        constraints, Expr::createIsZero(condition), response, queryMetaData);
+    solver->setTimeout(time::Span());
+    assert(success);
+    assert(isa<InvalidResponse>(response));
+    concretization = cast<InvalidResponse>(response)->initialValuesFor(
+        constraints.gatherSymcretizedArrays());
+  }
+  return concretization;
+}
+
 bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
   solver->setTimeout(coreSolverTimeout);
 
@@ -7031,22 +7027,11 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
     // If the particular constraint operated on in this iteration through
     // the loop isn't implied then add it to the list of constraints.
     if (!mustBeTrue) {
-      Assignment symcretization;
-      if (Query(extendedConstraints.cs(), pi).containsSymcretes()) {
-        ref<SolverResponse> response;
-        solver->setTimeout(coreSolverTimeout);
-        bool success = solver->getResponse(extendedConstraints.cs(),
-                                           Expr::createIsZero(pi), response,
-                                           state.queryMetaData);
-        solver->setTimeout(time::Span());
-        assert(success);
-        assert(isa<InvalidResponse>(response));
-        symcretization = cast<InvalidResponse>(response)->initialValuesFor(
-            state.constraints.cs().gatherSymcretizedArrays());
-      }
+      Assignment concretization = computeConcretization(
+          extendedConstraints.cs(), pi, state.queryMetaData);
 
-      if (!symcretization.isEmpty()) {
-        extendedConstraints.addConstraint(pi, symcretization);
+      if (!concretization.isEmpty()) {
+        extendedConstraints.addConstraint(pi, concretization);
       } else {
         extendedConstraints.addConstraint(pi, {});
       }
