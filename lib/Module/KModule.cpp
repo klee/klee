@@ -346,7 +346,9 @@ void KModule::optimiseAndPrepare(
   pm3.run(*module);
 }
 
-void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
+void KModule::manifest(InterpreterHandler *ih,
+                       Interpreter::GuidanceKind guidance,
+                       bool forceSourceOutput) {
 
   if (OutputModule) {
     std::unique_ptr<llvm::raw_fd_ostream> f(ih->openOutputFile("final.bc"));
@@ -408,7 +410,7 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
   }
 
   for (auto &kfp : functions) {
-    for (auto &kcb : kfp.get()->kCallBlocks) {
+    for (auto kcb : kfp.get()->kCallBlocks) {
       bool isInlineAsm = false;
 #if LLVM_VERSION_CODE >= LLVM_VERSION(8, 0)
       const CallBase &cs = cast<CallBase>(*kcb->kcallInstruction->inst);
@@ -419,7 +421,8 @@ void KModule::manifest(InterpreterHandler *ih, bool forceSourceOutput) {
 #endif
         isInlineAsm = true;
       }
-      if (kcb->calledFunctions.empty() && !isInlineAsm) {
+      if (kcb->calledFunctions.empty() && !isInlineAsm &&
+          guidance != Interpreter::GuidanceKind::ErrorGuidance) {
         kcb->calledFunctions.insert(escapingFunctions.begin(),
                                     escapingFunctions.end());
       }
