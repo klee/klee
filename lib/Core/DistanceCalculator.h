@@ -61,6 +61,10 @@ private:
                            const std::unordered_map<KFunction *, unsigned int>
                                &distanceToTargetFunction,
                            ref<Target> target);
+  bool distanceInCallGraph(KFunction *kf, KBlock *kb, unsigned int &distance,
+                           const std::unordered_map<KFunction *, unsigned int>
+                               &distanceToTargetFunction,
+                           ref<Target> target, bool strictlyAfterKB);
   WeightResult tryGetLocalWeight(KInstruction *pc, KInstruction *initPC,
                                  llvm::BasicBlock *pcBlock,
                                  llvm::BasicBlock *prevPCBlock,

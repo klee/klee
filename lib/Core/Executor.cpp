@@ -1131,14 +1131,14 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
     shouldCheckFalseBlock = canReachSomeTargetFromBlock(current, ifFalseBlock);
   }
   PartialValidity res = PartialValidity::None;
-  bool terminateEverything = false, success = false;
+  bool terminateEverything = false, success = true;
   if (!shouldCheckTrueBlock) {
-    assert(shouldCheckFalseBlock &&
-           "current state cannot reach any targets itself!");
-    // only solver->check-sat(!condition)
-    bool mayBeFalse;
-    success = solver->mayBeFalse(current.constraints.cs(), condition,
-                                 mayBeFalse, current.queryMetaData);
+    bool mayBeFalse = false;
+    if (shouldCheckFalseBlock) {
+      // only solver->check-sat(!condition)
+      success = solver->mayBeFalse(current.constraints.cs(), condition,
+                                   mayBeFalse, current.queryMetaData);
+    }
     if (success && !mayBeFalse)
       terminateEverything = true;
     else
@@ -2357,11 +2357,11 @@ void Executor::checkNullCheckAfterDeref(ref<Expr> cond, ExecutionState &state,
   }
   if (eqPointerCheck && eqPointerCheck->left->isZero() &&
       state.resolvedPointers.count(eqPointerCheck->right)) {
-    if (isa<EqExpr>(cond) && !fstate) {
+    if (isa<EqExpr>(cond) && !fstate && sstate) {
       reportStateOnTargetError(*sstate,
                                ReachWithError::NullCheckAfterDerefException);
     }
-    if (isa<EqExpr>(Expr::createIsZero(cond)) && !sstate) {
+    if (isa<EqExpr>(Expr::createIsZero(cond)) && !sstate && fstate) {
       reportStateOnTargetError(*fstate,
                                ReachWithError::NullCheckAfterDerefException);
     }

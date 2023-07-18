@@ -12,6 +12,8 @@
 #include "klee/Module/CodeGraphDistance.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/Target.h"
+#include "llvm/IR/CFG.h"
+#include "llvm/IR/IntrinsicInst.h"
 
 #include <limits>
 
@@ -67,10 +69,14 @@ DistanceCalculator::getDistance(KInstruction *pc, KInstruction *prevPC,
   const auto &distanceToTargetFunction =
       codeGraphDistance.getBackwardDistance(target->getBlock()->parent);
   unsigned int minCallWeight = UINT_MAX, minSfNum = UINT_MAX, sfNum = 0;
-  for (auto sfi = stack.rbegin(), sfe = stack.rend(); sfi != sfe; sfi++) {
+  auto sfi = stack.rbegin(), sfe = stack.rend();
+  bool strictlyAfterKB =
+      sfi != sfe && (!target->shouldFailOnThisTarget() ||
+                     sfi->kf->parent->inMainModule(sfi->kf->function));
+  for (; sfi != sfe; sfi++) {
     unsigned callWeight;
     if (distanceInCallGraph(sfi->kf, kb, callWeight, distanceToTargetFunction,
-                            target)) {
+                            target, strictlyAfterKB && sfNum != 0)) {
       callWeight *= 2;
       callWeight += sfNum;
 
@@ -113,6 +119,26 @@ DistanceCalculator::getDistance(KInstruction *pc, KInstruction *prevPC,
 }
 
 bool DistanceCalculator::distanceInCallGraph(
+    KFunction *kf, KBlock *origKB, unsigned int &distance,
+    const std::unordered_map<KFunction *, unsigned int>
+        &distanceToTargetFunction,
+    ref<Target> target, bool strictlyAfterKB) {
+  if (!strictlyAfterKB)
+    return distanceInCallGraph(kf, origKB, distance, distanceToTargetFunction,
+                               target);
+  auto min_distance = UINT_MAX;
+  distance = UINT_MAX;
+  for (auto bb : successors(origKB->basicBlock)) {
+    auto kb = kf->blockMap[bb];
+    distanceInCallGraph(kf, kb, distance, distanceToTargetFunction, target);
+    if (distance < min_distance)
+      min_distance = distance;
+  }
+  distance = min_distance;
+  return distance != UINT_MAX;
+}
+
+bool DistanceCalculator::distanceInCallGraph(
     KFunction *kf, KBlock *kb, unsigned int &distance,
     const std::unordered_map<KFunction *, unsigned int>
         &distanceToTargetFunction,
@@ -129,13 +155,13 @@ bool DistanceCalculator::distanceInCallGraph(
   }
 
   for (auto &kCallBlock : kf->kCallBlocks) {
-    if (dist.count(kCallBlock) != 0) {
-      for (auto &calledFunction : kCallBlock->calledFunctions) {
-        KFunction *calledKFunction = kf->parent->functionMap[calledFunction];
-        if (distanceToTargetFunction.count(calledKFunction) != 0 &&
-            distance > distanceToTargetFunction.at(calledKFunction) + 1) {
-          distance = distanceToTargetFunction.at(calledKFunction) + 1;
-        }
+    if (dist.count(kCallBlock) == 0)
+      continue;
+    for (auto &calledFunction : kCallBlock->calledFunctions) {
+      KFunction *calledKFunction = kf->parent->functionMap[calledFunction];
+      if (distanceToTargetFunction.count(calledKFunction) != 0 &&
+          distance > distanceToTargetFunction.at(calledKFunction) + 1) {
+        distance = distanceToTargetFunction.at(calledKFunction) + 1;
       }
     }
   }
