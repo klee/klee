@@ -1566,12 +1566,15 @@ int run_klee(int argc, char **argv, char **envp) {
     EntryPoint = stubEntryPoint;
   }
 
-  std::vector<std::string> mainModuleFunctions;
+  std::unordered_set<std::string> mainModuleFunctions;
   for (auto &Function : *mainModule) {
     if (!Function.isDeclaration()) {
-      mainModuleFunctions.push_back(Function.getName().str());
+      mainModuleFunctions.insert(Function.getName().str());
     }
   }
+  std::unordered_set<std::string> mainModuleGlobals;
+  for (const auto &gv : mainModule->globals())
+    mainModuleGlobals.insert(gv.getName().str());
 
   const std::string &module_triple = mainModule->getTargetTriple();
   std::string host_triple = llvm::sys::getDefaultTargetTriple();
@@ -1775,9 +1778,9 @@ int run_klee(int argc, char **argv, char **envp) {
   // Get the desired main function.  klee_main initializes uClibc
   // locale and other data and then calls main.
 
-  auto finalModule =
-      interpreter->setModule(loadedUserModules, loadedLibsModules, Opts,
-                             mainModuleFunctions, std::move(origInfos));
+  auto finalModule = interpreter->setModule(
+      loadedUserModules, loadedLibsModules, Opts, mainModuleFunctions,
+      mainModuleGlobals, std::move(origInfos));
   Function *mainFn = finalModule->getFunction(EntryPoint);
   if (!mainFn) {
     klee_error("Entry function '%s' not found in module.", EntryPoint.c_str());

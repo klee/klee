@@ -140,7 +140,8 @@ public:
   setModule(std::vector<std::unique_ptr<llvm::Module>> &userModules,
             std::vector<std::unique_ptr<llvm::Module>> &libsModules,
             const ModuleOptions &opts,
-            const std::vector<std::string> &mainModuleFunctions,
+            const std::unordered_set<std::string> &mainModuleFunctions,
+            const std::unordered_set<std::string> &mainModuleGlobals,
             std::unique_ptr<InstructionInfoTable> origInfos) = 0;
 
   // supply a tree stream writer which the interpreter will use

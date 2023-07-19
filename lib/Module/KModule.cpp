@@ -466,10 +466,11 @@ KBlock *KModule::getKBlock(llvm::BasicBlock *bb) {
 }
 
 bool KModule::inMainModule(llvm::Function *f) {
-  auto found = std::find_if(
-      mainModuleFunctions.begin(), mainModuleFunctions.end(),
-      [&f](const std::string &str) { return str == f->getName().str(); });
-  return found != mainModuleFunctions.end();
+  return mainModuleFunctions.count(f->getName().str()) != 0;
+}
+
+bool KModule::inMainModule(const GlobalVariable &v) {
+  return mainModuleGlobals.count(v.getName().str()) != 0;
 }
 
 Function *llvm::getTargetFunction(Value *calledVal) {

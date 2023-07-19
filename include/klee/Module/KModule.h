@@ -217,7 +217,9 @@ public:
   // XXX change to KFunction
   std::set<llvm::Function *> escapingFunctions;
 
-  std::vector<std::string> mainModuleFunctions;
+  std::unordered_set<std::string> mainModuleFunctions;
+
+  std::unordered_set<std::string> mainModuleGlobals;
 
   InstructionInfoTable::Instructions origInfos;
 
@@ -282,6 +284,8 @@ public:
   KBlock *getKBlock(llvm::BasicBlock *bb);
 
   bool inMainModule(llvm::Function *f);
+
+  bool inMainModule(const llvm::GlobalVariable &v);
 
   bool WithPOSIXRuntime() { return withPosixRuntime; }
 };

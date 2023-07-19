@@ -528,7 +528,8 @@ llvm::Module *
 Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &userModules,
                     std::vector<std::unique_ptr<llvm::Module>> &libsModules,
                     const ModuleOptions &opts,
-                    const std::vector<std::string> &mainModuleFunctions,
+                    const std::unordered_set<std::string> &mainModuleFunctions,
+                    const std::unordered_set<std::string> &mainModuleGlobals,
                     std::unique_ptr<InstructionInfoTable> origInfos) {
   assert(!kmodule && !userModules.empty() &&
          "can only register one module"); // XXX gross
@@ -578,9 +579,10 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &userModules,
   // 4.) Manifest the module
   kmodule->manifest(interpreterHandler, interpreterOpts.Guidance,
                     StatsTracker::useStatistics());
-  kmodule->mainModuleFunctions.insert(kmodule->mainModuleFunctions.end(),
-                                      mainModuleFunctions.begin(),
+  kmodule->mainModuleFunctions.insert(mainModuleFunctions.begin(),
                                       mainModuleFunctions.end());
+  kmodule->mainModuleGlobals.insert(mainModuleGlobals.begin(),
+                                    mainModuleGlobals.end());
 
   if (origInfos) {
     kmodule->origInfos = origInfos->getInstructions();
@@ -901,7 +903,7 @@ void Executor::initializeGlobalObjects(ExecutionState &state) {
         }
       }
     } else if (v.hasInitializer()) {
-      if (!v.isConstant() &&
+      if (!v.isConstant() && kmodule->inMainModule(v) &&
           MockMutableGlobals == MockMutableGlobalsPolicy::All)
         executeMakeSymbolic(
             state, mo, typeSystemManager->getWrappedType(v.getType()),
