@@ -5685,10 +5685,9 @@ void Executor::collectReads(
 
     ref<Expr> result = os->read(mo->getOffsetExpr(address), type);
 
-    if (MockMutableGlobals != MockMutableGlobalsPolicy::None && mo->isGlobal &&
-        !os->readOnly && isa<ConstantExpr>(result) &&
-        (MockMutableGlobals != MockMutableGlobalsPolicy::PrimitiveFields ||
-         !targetType->getRawType()->isPointerTy())) {
+    if (MockMutableGlobals == MockMutableGlobalsPolicy::PrimitiveFields &&
+        mo->isGlobal && !os->readOnly && isa<ConstantExpr>(result) &&
+        !targetType->getRawType()->isPointerTy()) {
       result = makeMockValue(state, "mockGlobalValue", result->getWidth());
       ObjectState *wos = state.addressSpace.getWriteable(mo, os);
       wos->write(mo->getOffsetExpr(address), result);
@@ -5844,10 +5843,9 @@ void Executor::executeMemoryOperation(
         if (interpreterOpts.MakeConcreteSymbolic)
           result = replaceReadWithSymbolic(*state, result);
 
-        if (MockMutableGlobals != MockMutableGlobalsPolicy::None &&
+        if (MockMutableGlobals == MockMutableGlobalsPolicy::PrimitiveFields &&
             mo->isGlobal && !os->readOnly && isa<ConstantExpr>(result) &&
-            (MockMutableGlobals != MockMutableGlobalsPolicy::PrimitiveFields ||
-             !targetType->getRawType()->isPointerTy())) {
+            !targetType->getRawType()->isPointerTy()) {
           result = makeMockValue(*state, "mockGlobalValue", result->getWidth());
           ObjectState *wos = state->addressSpace.getWriteable(mo, os);
           wos->write(mo->getOffsetExpr(address), result);
@@ -6026,10 +6024,9 @@ void Executor::executeMemoryOperation(
       } else {
         ref<Expr> result = os->read(mo->getOffsetExpr(address), type);
 
-        if (MockMutableGlobals != MockMutableGlobalsPolicy::None &&
+        if (MockMutableGlobals == MockMutableGlobalsPolicy::PrimitiveFields &&
             mo->isGlobal && !os->readOnly && isa<ConstantExpr>(result) &&
-            (MockMutableGlobals != MockMutableGlobalsPolicy::PrimitiveFields ||
-             !targetType->getRawType()->isPointerTy())) {
+            !targetType->getRawType()->isPointerTy()) {
           result = makeMockValue(*bound, "mockGlobalValue", result->getWidth());
           ObjectState *wos = bound->addressSpace.getWriteable(mo, os);
           wos->write(mo->getOffsetExpr(address), result);
