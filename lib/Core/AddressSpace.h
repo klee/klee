@@ -96,10 +96,6 @@ public:
   bool resolveOne(ExecutionState &state, TimingSolver *solver,
                   ref<Expr> address, KType *objectType, IDType &result,
                   bool &success, const std::atomic_bool &haltExecution) const;
-  bool resolveOne(ExecutionState &state, TimingSolver *solver,
-                  ref<Expr> address, KType *objectType, IDType &result,
-                  MOPredicate predicate, bool &success,
-                  const std::atomic_bool &haltExecution) const;
 
   /// @brief Tries to resolve the pointer in the concrete object
   /// if it value is unique.
@@ -123,10 +119,6 @@ public:
   bool resolve(ExecutionState &state, TimingSolver *solver, ref<Expr> p,
                KType *objectType, ResolutionList &rl, ResolutionList &rlSkipped,
                unsigned maxResolutions = 0,
-               time::Span timeout = time::Span()) const;
-  bool resolve(ExecutionState &state, TimingSolver *solver, ref<Expr> p,
-               KType *objectType, ResolutionList &rl, ResolutionList &rlSkipped,
-               MOPredicate predicate, unsigned maxResolutions = 0,
                time::Span timeout = time::Span()) const;
 
   /***/

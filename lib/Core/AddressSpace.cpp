@@ -150,11 +150,44 @@ bool AddressSpace::resolveOneIfUnique(ExecutionState &state,
   return true;
 }
 
+class ResolvePredicate {
+  bool useTimestamps;
+  bool skipNotSymbolicObjects;
+  bool skipNotLazyInitialized;
+  bool skipLocal;
+  unsigned timestamp;
+  ExecutionState *state;
+
+public:
+  explicit ResolvePredicate(ExecutionState &state, ref<Expr> address)
+      : useTimestamps(UseTimestamps),
+        skipNotSymbolicObjects(SkipNotSymbolicObjects),
+        skipNotLazyInitialized(SkipNotLazyInitialized), skipLocal(SkipLocal),
+        timestamp(UINT_MAX), state(&state) {
+    auto base =
+        state.isGEPExpr(address) ? state.gepExprBases[address].first : address;
+    if (!isa<ConstantExpr>(address)) {
+      std::pair<ref<const MemoryObject>, ref<Expr>> moBasePair;
+      if (state.getBase(base, moBasePair)) {
+        timestamp = moBasePair.first->timestamp;
+      }
+    }
+  }
+
+  bool operator()(const MemoryObject *mo) const {
+    bool result = !useTimestamps || mo->timestamp <= timestamp;
+    result = result && (!skipNotSymbolicObjects || state->inSymbolics(mo));
+    result = result && (!skipNotLazyInitialized || mo->isLazyInitialized);
+    result = result && (!skipLocal || !mo->isLocal);
+    return result;
+  }
+};
+
 bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
                               ref<Expr> address, KType *objectType,
-                              IDType &result, MOPredicate predicate,
-                              bool &success,
+                              IDType &result, bool &success,
                               const std::atomic_bool &haltExecution) const {
+  ResolvePredicate predicate(state, address);
   if (ref<ConstantExpr> CE = dyn_cast<ConstantExpr>(address)) {
     if (resolveOne(CE, objectType, result)) {
       success = true;
@@ -227,45 +260,6 @@ bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
   return true;
 }
 
-bool AddressSpace::resolveOne(ExecutionState &state, TimingSolver *solver,
-                              ref<Expr> address, KType *objectType,
-                              IDType &result, bool &success,
-                              const std::atomic_bool &haltExecution) const {
-  MOPredicate predicate([](const MemoryObject *mo) { return true; });
-  if (UseTimestamps) {
-    ref<Expr> base =
-        state.isGEPExpr(address) ? state.gepExprBases[address].first : address;
-    unsigned timestamp = UINT_MAX;
-    if (!isa<ConstantExpr>(address)) {
-      std::pair<ref<const MemoryObject>, ref<Expr>> moBasePair;
-      if (state.getBase(base, moBasePair)) {
-        timestamp = moBasePair.first->timestamp;
-      }
-    }
-    predicate = [timestamp, predicate](const MemoryObject *mo) {
-      return predicate(mo) && mo->timestamp <= timestamp;
-    };
-  }
-  if (SkipNotSymbolicObjects) {
-    predicate = [&state, predicate](const MemoryObject *mo) {
-      return predicate(mo) && state.inSymbolics(mo);
-    };
-  }
-  if (SkipNotLazyInitialized) {
-    predicate = [predicate](const MemoryObject *mo) {
-      return predicate(mo) && mo->isLazyInitialized;
-    };
-  }
-  if (SkipLocal) {
-    predicate = [predicate](const MemoryObject *mo) {
-      return predicate(mo) && !mo->isLocal;
-    };
-  }
-
-  return resolveOne(state, solver, address, objectType, result, predicate,
-                    success, haltExecution);
-}
-
 int AddressSpace::checkPointerInObject(ExecutionState &state,
                                        TimingSolver *solver, ref<Expr> p,
                                        const ObjectPair &op, ResolutionList &rl,
@@ -303,8 +297,9 @@ int AddressSpace::checkPointerInObject(ExecutionState &state,
 
 bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
                            ref<Expr> p, KType *objectType, ResolutionList &rl,
-                           ResolutionList &rlSkipped, MOPredicate predicate,
-                           unsigned maxResolutions, time::Span timeout) const {
+                           ResolutionList &rlSkipped, unsigned maxResolutions,
+                           time::Span timeout) const {
+  ResolvePredicate predicate(state, p);
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(p)) {
     IDType res;
     if (resolveOne(CE, objectType, res)) {
@@ -361,44 +356,6 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
       return incomplete ? true : false;
   }
   return false;
-}
-
-bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
-                           ref<Expr> p, KType *objectType, ResolutionList &rl,
-                           ResolutionList &rlSkipped, unsigned maxResolutions,
-                           time::Span timeout) const {
-  MOPredicate predicate([](const MemoryObject *mo) { return true; });
-  if (UseTimestamps) {
-    ref<Expr> base = state.isGEPExpr(p) ? state.gepExprBases[p].first : p;
-    unsigned timestamp = UINT_MAX;
-    if (!isa<ConstantExpr>(p)) {
-      std::pair<ref<const MemoryObject>, ref<Expr>> moBasePair;
-      if (state.getBase(base, moBasePair)) {
-        timestamp = moBasePair.first->timestamp;
-      }
-    }
-    predicate = [timestamp, predicate](const MemoryObject *mo) {
-      return predicate(mo) && mo->timestamp <= timestamp;
-    };
-  }
-  if (SkipNotSymbolicObjects) {
-    predicate = [&state, predicate](const MemoryObject *mo) {
-      return predicate(mo) && state.inSymbolics(mo);
-    };
-  }
-  if (SkipNotLazyInitialized) {
-    predicate = [predicate](const MemoryObject *mo) {
-      return predicate(mo) && mo->isLazyInitialized;
-    };
-  }
-  if (SkipLocal) {
-    predicate = [predicate](const MemoryObject *mo) {
-      return predicate(mo) && !mo->isLocal;
-    };
-  }
-
-  return resolve(state, solver, p, objectType, rl, rlSkipped, predicate,
-                 maxResolutions, timeout);
 }
 
 // These two are pretty big hack so we can sort of pass memory back
