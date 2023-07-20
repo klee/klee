@@ -286,10 +286,10 @@ int main(int argc, char *argv[]) {
     // Using disk file works well with klee-replay.
     create_stat(stdin_size, &s);
 
-    off64_t read_count = 0;
+    off_t read_count = 0;
     push_random_obj(&b, "stdin", stdin_size, stdin_size);
     push_obj(&b, "stdin-stat", sizeof(struct stat), (unsigned char *)&s);
-    push_obj(&b, "stdin-read", sizeof(off64_t), (unsigned char *)&read_count);
+    push_obj(&b, "stdin-read", sizeof(off_t), (unsigned char *)&read_count);
   }
   if (sym_stdout) {
     struct stat s;

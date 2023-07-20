@@ -13,7 +13,12 @@
 #include "klee/Core/BranchTypes.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Support/ErrorHandling.h"
+
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/PointerIntPair.h"
+DISABLE_WARNING_POP
 
 namespace klee {
 class ExecutionState;

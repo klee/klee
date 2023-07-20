@@ -20,8 +20,12 @@
 #include "klee/Module/KModule.h"
 #include "klee/Support/OptionCategories.h"
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
+DISABLE_WARNING_POP
 
 #include <map>
 

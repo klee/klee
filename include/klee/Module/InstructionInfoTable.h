@@ -10,8 +10,13 @@
 #ifndef KLEE_INSTRUCTIONINFOTABLE_H
 #define KLEE_INSTRUCTIONINFOTABLE_H
 
-#include <llvm/ADT/Optional.h>
-#include <llvm/Support/raw_ostream.h>
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
+#include "llvm/ADT/Optional.h"
+#include "llvm/Support/raw_ostream.h"
+DISABLE_WARNING_POP
+
 #include <memory>
 #include <string>
 #include <unordered_map>

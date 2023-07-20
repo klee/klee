@@ -12,7 +12,6 @@
 
 #include "klee/Expr/Expr.h"
 
-#include "klee/Expr/SourceBuilder.h"
 #include <cstddef>
 #include <cstdint>
 #include <map>

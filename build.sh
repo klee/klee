@@ -35,7 +35,7 @@ REQUIRES_RTTI=1
 
 ## Solvers Required options
 # SOLVERS=STP
-SOLVERS=Z3
+SOLVERS=STP:Z3
 
 ## Google Test Required options
 GTEST_VERSION=1.11.0

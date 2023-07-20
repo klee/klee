@@ -17,9 +17,13 @@
 #include "klee/Solver/SolverStats.h"
 #include "klee/Support/ErrorHandling.h"
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/CommandLine.h"
+DISABLE_WARNING_POP
 
 using namespace klee;
 

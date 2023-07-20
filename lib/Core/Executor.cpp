@@ -69,6 +69,9 @@
 #include "klee/System/MemoryUsage.h"
 #include "klee/System/Time.h"
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Attributes.h"
@@ -94,6 +97,7 @@
 typedef unsigned TypeSize;
 #endif
 #include "llvm/Support/raw_ostream.h"
+DISABLE_WARNING_POP
 
 #include <algorithm>
 #include <cassert>
@@ -137,26 +141,22 @@ cl::OptionCategory TestGenCat("Test generation options",
 cl::OptionCategory LazyInitCat("Lazy initialization option",
                                "These options configure lazy initialization.");
 
-cl::opt<TypeSystemKind>
-    TypeSystem("type-system",
-               cl::desc("Use information about type system from specified "
-                        "language (default=llvm)"),
-               cl::values(clEnumValN(TypeSystemKind::LLVM, "LLVM",
-                                     "Use plain type system from LLVM"),
-                          clEnumValN(TypeSystemKind::CXX, "CXX",
-                                     "Use type system from CXX")),
-               cl::init(TypeSystemKind::LLVM), cl::cat(ExecCat));
+cl::opt<bool> UseAdvancedTypeSystem(
+    "use-advanced-type-system",
+    cl::desc("Use advanced information about type system from "
+             "language (default=false)"),
+    cl::init(false), cl::cat(ExecCat));
 
 cl::opt<bool> MergedPointerDereference(
     "use-merged-pointer-dereference", cl::init(false),
     cl::desc("Enable merged pointer dereference (default=false)"),
     cl::cat(ExecCat));
 
-cl::opt<bool>
-    UseTBAA("use-tbaa",
-            cl::desc("Turns on restrictions based on types compatibility for "
-                     "symbolic pointers (default=false)"),
-            cl::init(false), cl::cat(ExecCat));
+cl::opt<bool> UseTypeBasedAliasAnalysis(
+    "use-tbaa",
+    cl::desc("Turns on restrictions based on types compatibility for "
+             "symbolic pointers (default=false)"),
+    cl::init(false), cl::cat(ExecCat));
 
 cl::opt<bool>
     AlignSymbolicPointers("align-symbolic-pointers",
@@ -4195,10 +4195,21 @@ void Executor::reportProgressTowardsTargets(std::string prefix,
   for (auto &p : distancesTowardsTargets) {
     auto target = p.first;
     auto distance = p.second;
-    klee_message("%s for %s (lines %d to %d)", distance.toString().c_str(),
-                 target->toString().c_str(),
-                 target->getBlock()->getFirstInstruction()->info->line,
-                 target->getBlock()->getLastInstruction()->info->line);
+    std::ostringstream repr;
+    repr << "Target " << target->getId() << ": ";
+    if (target->shouldFailOnThisTarget()) {
+      repr << "error ";
+    }
+    repr << "in function " +
+                target->getBlock()->parent->function->getName().str();
+    repr << " (lines ";
+    repr << target->getBlock()->getFirstInstruction()->info->line;
+    repr << " to ";
+    repr << target->getBlock()->getLastInstruction()->info->line;
+    repr << ")";
+    std::string targetString = repr.str();
+    klee_message("%s for %s", distance.toString().c_str(),
+                 targetString.c_str());
   }
 }
 
@@ -4292,15 +4303,10 @@ void Executor::runWithTarget(ExecutionState &state, KFunction *kf,
 }
 
 void Executor::initializeTypeManager() {
-  switch (TypeSystem) {
-  case (TypeSystemKind::LLVM):
-    typeSystemManager = new TypeManager(kmodule.get());
-    break;
-  case (TypeSystemKind::CXX):
+  if (UseAdvancedTypeSystem) {
     typeSystemManager = new CXXTypeManager(kmodule.get());
-    break;
-  default:
-    assert(false && "Unknown type system!");
+  } else {
+    typeSystemManager = new TypeManager(kmodule.get());
   }
   typeSystemManager->initModule();
 }

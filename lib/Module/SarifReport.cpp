@@ -13,7 +13,11 @@
 #include "klee/Module/KModule.h"
 #include "klee/Support/ErrorHandling.h"
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/IntrinsicInst.h"
+DISABLE_WARNING_POP
 
 using namespace llvm;
 using namespace klee;

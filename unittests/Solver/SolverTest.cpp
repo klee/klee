@@ -16,7 +16,11 @@
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverCmdLine.h"
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/StringExtras.h"
+DISABLE_WARNING_POP
 
 #include <iostream>
 

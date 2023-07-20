@@ -18,7 +18,7 @@
 #include "klee/Config/Version.h"
 
 #ifndef UBSAN_CHECK
-# error "Define UBSAN_CHECK prior to including this file!"
+#error "Define UBSAN_CHECK prior to including this file!"
 #endif
 
 // UBSAN_CHECK(Name, SummaryKind, FSanitizeFlagName)
@@ -58,8 +58,7 @@ UBSAN_CHECK(ImplicitUnsignedIntegerTruncation,
 UBSAN_CHECK(ImplicitSignedIntegerTruncation,
             "implicit-signed-integer-truncation",
             "implicit-signed-integer-truncation")
-UBSAN_CHECK(ImplicitIntegerSignChange,
-            "implicit-integer-sign-change",
+UBSAN_CHECK(ImplicitIntegerSignChange, "implicit-integer-sign-change",
             "implicit-integer-sign-change")
 UBSAN_CHECK(ImplicitSignedIntegerTruncationOrSignChange,
             "implicit-signed-integer-truncation-or-sign-change",

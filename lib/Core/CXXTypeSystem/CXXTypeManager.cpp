@@ -8,13 +8,16 @@
 #include "klee/Module/KModule.h"
 #include "klee/Module/KType.h"
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-
 #include "llvm/Support/Casting.h"
+DISABLE_WARNING_POP
 
 #include <algorithm>
 #include <cassert>
@@ -213,7 +216,7 @@ static ref<Expr> getComplexPointerRestrictions(
 /* C++ KType base class */
 cxxtypes::KCXXType::KCXXType(llvm::Type *type, TypeManager *parent)
     : KType(type, parent) {
-  typeSystemKind = TypeSystemKind::CXX;
+  typeSystemKind = TypeSystemKind::Advanced;
   typeKind = DEFAULT;
 }
 
@@ -261,7 +264,7 @@ cxxtypes::CXXTypeKind cxxtypes::KCXXType::getTypeKind() const {
 }
 
 bool cxxtypes::KCXXType::classof(const KType *requestedType) {
-  return requestedType->getTypeSystemKind() == TypeSystemKind::CXX;
+  return requestedType->getTypeSystemKind() == TypeSystemKind::Advanced;
 }
 
 /* Composite type */

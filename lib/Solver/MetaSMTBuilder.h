@@ -20,8 +20,13 @@
 
 #ifdef ENABLE_METASMT
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
+DISABLE_WARNING_POP
 
 #include <metaSMT/frontend/Array.hpp>
 #include <metaSMT/frontend/Logic.hpp>

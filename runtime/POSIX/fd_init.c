@@ -168,7 +168,7 @@ void klee_init_fds(unsigned n_files, unsigned file_length,
     __exe_env.fds[0].dfile = __exe_fs.sym_stdin;
     off64_t *ptr = malloc(sizeof(off64_t));
     klee_make_symbolic(ptr, sizeof(off64_t), "stdin_read");
-    mempcpy(&__exe_env.stdin_off, ptr, sizeof(off64_t));
+    memcpy(&__exe_env.stdin_off, ptr, sizeof(off64_t));
     free(ptr);
     __exe_env.max_off = 0;
   } else

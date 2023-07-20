@@ -20,6 +20,7 @@
 
 #if defined(__FreeBSD__) || defined(__minix) || defined(__APPLE__)
 #define stat64 stat
+#define off64_t off_t
 #endif
 
 #define MAX 64

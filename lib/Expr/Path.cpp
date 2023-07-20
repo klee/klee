@@ -2,8 +2,13 @@
 
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
+
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Casting.h"
+DISABLE_WARNING_POP
 
 using namespace klee;
 using namespace llvm;

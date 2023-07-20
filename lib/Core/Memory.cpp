@@ -28,12 +28,12 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 DISABLE_WARNING_POP
 
 #include <cassert>
-#include <llvm/Support/Casting.h>
 #include <sstream>
 
 using namespace llvm;
@@ -663,5 +663,6 @@ void ObjectState::print() const {
 KType *ObjectState::getDynamicType() const { return dynamicType; }
 
 bool ObjectState::isAccessableFrom(KType *accessingType) const {
-  return !UseTBAA || dynamicType->isAccessableFrom(accessingType);
+  return !UseTypeBasedAliasAnalysis ||
+         dynamicType->isAccessableFrom(accessingType);
 }

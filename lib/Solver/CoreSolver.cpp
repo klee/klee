@@ -15,8 +15,12 @@
 #include "klee/Solver/SolverCmdLine.h"
 #include "klee/Support/ErrorHandling.h"
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+DISABLE_WARNING_POP
 
 #include <memory>
 #include <string>
@@ -28,11 +32,6 @@ std::unique_ptr<Solver> createCoreSolver(CoreSolverType cst) {
   case STP_SOLVER:
 #ifdef ENABLE_STP
     klee_message("Using STP solver backend");
-    if (ProduceUnsatCore) {
-      ProduceUnsatCore = false;
-      klee_message(
-          "Unsat cores are only supported by Z3, disabling unsat cores.");
-    }
     return std::make_unique<STPSolver>(UseForkedCoreSolver,
                                        CoreSolverOptimizeDivides);
 #else

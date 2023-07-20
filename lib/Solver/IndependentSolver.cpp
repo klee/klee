@@ -9,7 +9,7 @@
 
 #include "klee/Expr/SymbolicSource.h"
 #include "klee/Solver/SolverUtil.h"
-#include "llvm/Support/Casting.h"
+
 #define DEBUG_TYPE "independent-solver"
 #include "klee/Solver/Solver.h"
 
@@ -22,7 +22,12 @@
 #include "klee/Solver/SolverImpl.h"
 #include "klee/Support/Debug.h"
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+DISABLE_WARNING_POP
 
 #include <list>
 #include <map>

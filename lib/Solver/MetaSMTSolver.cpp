@@ -19,7 +19,11 @@
 #include "klee/Solver/SolverImpl.h"
 #include "klee/Support/ErrorHandling.h"
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/ErrorHandling.h"
+DISABLE_WARNING_POP
 
 #include <metaSMT/DirectSolver_Context.hpp>
 

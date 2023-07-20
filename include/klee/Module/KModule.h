@@ -15,8 +15,12 @@
 #include "klee/Module/InstructionInfoTable.h"
 #include "klee/Module/KCallable.h"
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/CFG.h"
+DISABLE_WARNING_POP
 
 #include <deque>
 #include <map>

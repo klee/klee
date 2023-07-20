@@ -12,8 +12,13 @@
 #include "klee/Module/CodeGraphDistance.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/Target.h"
+
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/IntrinsicInst.h"
+DISABLE_WARNING_POP
 
 #include <limits>
 

@@ -13,7 +13,11 @@
 #include "klee/Expr/ArrayExprVisitor.h"
 #include "klee/Support/Casting.h"
 
-#include <llvm/ADT/APInt.h>
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
+#include "llvm/ADT/APInt.h"
+DISABLE_WARNING_POP
 
 #include <cassert>
 #include <cstdint>

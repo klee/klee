@@ -4,18 +4,22 @@
 #include "klee/Expr/Expr.h"
 #include "klee/Module/KModule.h"
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
+DISABLE_WARNING_POP
 
 using namespace klee;
 using namespace llvm;
 
 KType::KType(llvm::Type *type, TypeManager *parent)
     : type(type), parent(parent) {
-  typeSystemKind = TypeSystemKind::LLVM;
+  typeSystemKind = TypeSystemKind::Default;
   /* Type itself can be reached at offset 0 */
   innerTypes[this].insert(0);
 }

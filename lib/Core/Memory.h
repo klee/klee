@@ -18,7 +18,11 @@
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/SourceBuilder.h"
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/StringExtras.h"
+DISABLE_WARNING_POP
 
 #include <cstdint>
 #include <string>
@@ -39,7 +43,7 @@ class Solver;
 
 typedef uint64_t IDType;
 
-extern llvm::cl::opt<bool> UseTBAA;
+extern llvm::cl::opt<bool> UseTypeBasedAliasAnalysis;
 
 class MemoryObject {
   friend class STPBuilder;

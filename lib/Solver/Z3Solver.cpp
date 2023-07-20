@@ -59,7 +59,11 @@ llvm::cl::opt<unsigned>
                      llvm::cl::cat(klee::SolvingCat));
 } // namespace
 
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/ErrorHandling.h"
+DISABLE_WARNING_POP
 
 namespace klee {
 
@@ -146,9 +150,7 @@ Z3SolverImpl::Z3SolverImpl(Z3BuilderType type)
   Z3_params_inc_ref(builder->ctx, solverParameters);
   timeoutParamStrSymbol = Z3_mk_string_symbol(builder->ctx, "timeout");
   setCoreSolverTimeout(timeout);
-  if (ProduceUnsatCore) {
-    unsatCoreParamStrSymbol = Z3_mk_string_symbol(builder->ctx, "unsat_core");
-  }
+  unsatCoreParamStrSymbol = Z3_mk_string_symbol(builder->ctx, "unsat_core");
 
   // HACK: This changes Z3's handling of the `to_ieee_bv` function so that
   // we get a signal bit pattern interpretation for NaN. At the time of writing

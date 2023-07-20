@@ -7,7 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 #ifndef KLEE_ROUNDING_MODE_UTIL_H
+
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/APFloat.h"
+DISABLE_WARNING_POP
 
 namespace klee {
 
