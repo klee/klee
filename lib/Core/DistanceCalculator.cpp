@@ -123,6 +123,16 @@ bool DistanceCalculator::distanceInCallGraph(
     const std::unordered_map<KFunction *, unsigned int>
         &distanceToTargetFunction,
     ref<Target> target, bool strictlyAfterKB) {
+  const std::unordered_map<KBlock *, unsigned> &dist =
+      codeGraphDistance.getDistance(origKB);
+  KBlock *targetBB = target->getBlock();
+  KFunction *targetF = targetBB->parent;
+
+  if (kf == targetF && dist.count(targetBB) != 0) {
+    distance = 0;
+    return true;
+  }
+
   if (!strictlyAfterKB)
     return distanceInCallGraph(kf, origKB, distance, distanceToTargetFunction,
                                target);
@@ -146,13 +156,6 @@ bool DistanceCalculator::distanceInCallGraph(
   distance = UINT_MAX;
   const std::unordered_map<KBlock *, unsigned> &dist =
       codeGraphDistance.getDistance(kb);
-  KBlock *targetBB = target->getBlock();
-  KFunction *targetF = targetBB->parent;
-
-  if (kf == targetF && dist.count(targetBB) != 0) {
-    distance = 0;
-    return true;
-  }
 
   for (auto &kCallBlock : kf->kCallBlocks) {
     if (dist.count(kCallBlock) == 0)
