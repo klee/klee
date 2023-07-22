@@ -1,3 +1,4 @@
+// REQUIRES: not-asan
 // REQUIRES: not-msan
 // Ignore msan: Generates a large stack trace > 8k but not a stack overflow for larger stacks
 // RUN: %clang %s -emit-llvm %O0opt -c -o %t.bc

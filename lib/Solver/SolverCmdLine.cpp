@@ -174,16 +174,16 @@ cl::opt<klee::MetaSMTBackendType> MetaSMTBackend(
 #endif /* ENABLE_METASMT */
 
 // Pick the default core solver based on configuration
-#ifdef ENABLE_STP
-#define STP_IS_DEFAULT_STR " (default)"
-#define METASMT_IS_DEFAULT_STR ""
-#define Z3_IS_DEFAULT_STR ""
-#define DEFAULT_CORE_SOLVER STP_SOLVER
-#elif ENABLE_Z3
+#ifdef ENABLE_Z3
 #define STP_IS_DEFAULT_STR ""
 #define METASMT_IS_DEFAULT_STR ""
 #define Z3_IS_DEFAULT_STR " (default)"
 #define DEFAULT_CORE_SOLVER Z3_SOLVER
+#elif ENABLE_STP
+#define STP_IS_DEFAULT_STR " (default)"
+#define METASMT_IS_DEFAULT_STR ""
+#define Z3_IS_DEFAULT_STR ""
+#define DEFAULT_CORE_SOLVER STP_SOLVER
 #elif ENABLE_METASMT
 #define STP_IS_DEFAULT_STR ""
 #define METASMT_IS_DEFAULT_STR " (default)"
