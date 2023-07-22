@@ -169,6 +169,16 @@ optional<Result> tryConvertResultJson(const ResultJson &resultJson,
 } // anonymous namespace
 
 namespace klee {
+static const char *ReachWithErrorNames[] = {
+    "DoubleFree",
+    "UseAfterFree",
+    "MayBeNullPointerException",
+    "NullPointerException", // for backward compatibility with SecB
+    "NullCheckAfterDerefException",
+    "Reachable",
+    "None",
+};
+
 const char *getErrorString(ReachWithError error) {
   return ReachWithErrorNames[error];
 }

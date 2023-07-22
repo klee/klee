@@ -18,10 +18,10 @@ namespace klee {
 
 namespace confidence {
 using ty = double;
-static ty MinConfidence = 0.0;
-static ty MaxConfidence = 100.0;
-static ty Confident = 90.0;
-static ty VeryConfident = 99.0;
+extern ty MinConfidence;
+extern ty MaxConfidence;
+extern ty Confident;
+extern ty VeryConfident;
 bool isConfident(ty conf);
 bool isVeryConfident(ty conf);
 bool isNormal(ty conf);

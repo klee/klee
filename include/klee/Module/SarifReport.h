@@ -53,16 +53,6 @@ enum ReachWithError {
   None,
 };
 
-static const char *ReachWithErrorNames[] = {
-    "DoubleFree",
-    "UseAfterFree",
-    "MayBeNullPointerException",
-    "NullPointerException", // for backward compatibility with SecB
-    "NullCheckAfterDerefException",
-    "Reachable",
-    "None",
-};
-
 const char *getErrorString(ReachWithError error);
 std::string getErrorsString(const std::set<ReachWithError> &errors);
 

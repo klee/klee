@@ -58,3 +58,8 @@ confidence::ty confidence::min(confidence::ty left, confidence::ty right) {
 bool confidence::isNormal(confidence::ty conf) {
   return confidence::MinConfidence <= conf && conf <= confidence::MaxConfidence;
 }
+
+confidence::ty confidence::MinConfidence = 0.0;
+confidence::ty confidence::MaxConfidence = 100.0;
+confidence::ty confidence::Confident = 90.0;
+confidence::ty confidence::VeryConfident = 99.0;
