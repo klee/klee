@@ -6564,20 +6564,21 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
   std::vector<ExecutionState *> states;
 
   if (guidanceKind == GuidanceKind::ErrorGuidance) {
-    KInstIterator caller;
-    if (kmodule->WithPOSIXRuntime()) {
-      state = prepareStateForPOSIX(caller, state->copy());
-    } else {
-      state->popFrame();
-    }
-
     auto &paths = interpreterOpts.Paths.value();
     auto prepTargets = targetedExecutionManager.prepareTargets(
         kmodule.get(), std::move(paths));
     if (prepTargets.empty()) {
       klee_warning(
           "No targets found in error-guided mode after prepare targets");
+      delete state;
       return;
+    }
+
+    KInstIterator caller;
+    if (kmodule->WithPOSIXRuntime()) {
+      state = prepareStateForPOSIX(caller, state->copy());
+    } else {
+      state->popFrame();
     }
 
     for (auto &startFunctionAndWhiteList : prepTargets) {

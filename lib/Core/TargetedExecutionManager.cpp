@@ -175,37 +175,6 @@ llvm::cl::opt<bool> SmartResolveEntryFunction(
              "function of first location (default=false)"));
 } // namespace klee
 
-void LocatedEventManager::prefetchFindFilename(const std::string &filename) {
-  auto it = filenameCacheMap.find(filename);
-  if (it != filenameCacheMap.end()) {
-    filenameCache = it->second.get();
-  } else {
-    filenameCache = nullptr;
-  }
-}
-
-bool LocatedEventManager::isInside(Location &loc,
-                                   const klee::FunctionInfo &fi) {
-  bool isInside = false;
-  if (filenameCache == nullptr) {
-    isInside = loc.isInside(fi);
-    auto filenameCachePtr = std::make_unique<FilenameCache>();
-    filenameCache = filenameCachePtr.get();
-    filenameCacheMap.insert(
-        std::make_pair(fi.file, std::move(filenameCachePtr)));
-    filenameCache->insert(std::make_pair(loc.filename, isInside));
-  } else {
-    auto it = filenameCache->find(loc.filename);
-    if (it == filenameCache->end()) {
-      isInside = loc.isInside(fi);
-      filenameCache->insert(std::make_pair(loc.filename, isInside));
-    } else {
-      isInside = it->second;
-    }
-  }
-  return isInside;
-}
-
 TargetedHaltsOnTraces::TargetedHaltsOnTraces(ref<TargetForest> &forest) {
   auto leafs = forest->leafs();
   for (auto finalTargetSetPair : leafs) {
@@ -337,40 +306,32 @@ TargetedExecutionManager::LocationToBlocks
 TargetedExecutionManager::prepareAllLocations(KModule *kmodule,
                                               Locations &locations) const {
   LocationToBlocks locToBlocks;
-  LocatedEventManager lem;
   const auto &infos = kmodule->infos;
-  for (const auto &kfunc : kmodule->functions) {
-    const auto &fi = infos->getFunctionInfo(*kfunc->function);
-    lem.prefetchFindFilename(fi.file);
-    if (kmodule->origInfos.count(fi.file) == 0) {
-      continue;
-    }
-    const auto &origInstsInFile = kmodule->origInfos.at(fi.file);
-    for (auto it = locations.begin(); it != locations.end();) {
-      auto loc = *it;
-      if (locToBlocks.count(loc) != 0) {
-        ++it;
+  for (auto it = locations.begin(); it != locations.end(); ++it) {
+    auto loc = *it;
+    for (const auto &fileName : infos->getFilesNames()) {
+      if (kmodule->origInfos.count(fileName) == 0) {
+        continue;
+      }
+      if (!loc->isInside(fileName)) {
         continue;
       }
 
-      if (!lem.isInside(*loc, fi)) {
-        ++it;
-        continue;
-      }
-      Blocks blocks = Blocks();
-      for (const auto &kblock : kfunc->blocks) {
-        auto b = kblock.get();
-        if (!loc->isInside(b, origInstsInFile)) {
-          continue;
+      const auto &relatedFunctions =
+          infos->getFileNameToFunctions().at(fileName);
+
+      for (const auto func : relatedFunctions) {
+        const auto kfunc = kmodule->functionMap[func];
+        const auto &fi = infos->getFunctionInfo(*kfunc->function);
+        const auto &origInstsInFile = kmodule->origInfos.at(fi.file);
+
+        for (const auto &kblock : kfunc->blocks) {
+          auto b = kblock.get();
+          if (!loc->isInside(b, origInstsInFile)) {
+            continue;
+          }
+          locToBlocks[loc].insert(b);
         }
-        blocks.insert(b);
-      }
-
-      if (blocks.size() > 0) {
-        locToBlocks[loc] = blocks;
-        it = locations.erase(it);
-      } else {
-        ++it;
       }
     }
   }
@@ -460,25 +421,60 @@ KFunction *TargetedExecutionManager::tryResolveEntryFunction(
     const Result &result, LocationToBlocks &locToBlocks) const {
   assert(result.locations.size() > 0);
 
-  auto resKf = (*locToBlocks[result.locations[0]].begin())->parent;
+  KFunction *resKf = nullptr;
   if (SmartResolveEntryFunction) {
-    for (size_t i = 1; i < result.locations.size(); ++i) {
-      const auto &funcDist = codeGraphDistance.getDistance(resKf);
-      auto curKf = (*locToBlocks[result.locations[i]].begin())->parent;
-      if (funcDist.count(curKf) == 0) {
-        const auto &curFuncDist = codeGraphDistance.getDistance(curKf);
-        if (curFuncDist.count(resKf) == 0) {
-          klee_warning("Trace %s is malformed! Can't resolve entry function, "
-                       "so skipping this trace.",
-                       result.id.c_str());
-          return nullptr;
-        } else {
-          resKf = curKf;
+    for (size_t i = 0; i < result.locations.size() && !resKf; ++i) {
+      std::vector<KFunction *> applicantKFs;
+      for (auto block : locToBlocks[result.locations[i]]) {
+        if (std::find(applicantKFs.begin(), applicantKFs.end(),
+                      block->parent) == applicantKFs.end()) {
+          applicantKFs.push_back(block->parent);
+        }
+      }
+      for (size_t k = 0; k < applicantKFs.size() && !resKf; ++k) {
+        resKf = applicantKFs.at(k);
+        for (size_t j = i; j < result.locations.size(); ++j) {
+          if (i == j) {
+            continue;
+          }
+          const auto &funcDist = codeGraphDistance.getDistance(resKf);
+
+          std::vector<KFunction *> currKFs;
+          for (auto block : locToBlocks[result.locations[j]]) {
+            if (std::find(currKFs.begin(), currKFs.end(), block->parent) ==
+                currKFs.end()) {
+              currKFs.push_back(block->parent);
+            }
+          }
+          KFunction *curKf = nullptr;
+          for (size_t m = 0; m < currKFs.size() && !curKf; ++m) {
+            curKf = currKFs.at(m);
+            if (funcDist.count(curKf) == 0) {
+              const auto &curFuncDist = codeGraphDistance.getDistance(curKf);
+              if (curFuncDist.count(resKf) == 0) {
+                curKf = nullptr;
+              } else {
+                i = j;
+                resKf = curKf;
+              }
+            }
+          }
+          if (!curKf) {
+            resKf = nullptr;
+            break;
+          }
         }
       }
     }
+  } else {
+    resKf = (*locToBlocks[result.locations[0]].begin())->parent;
   }
 
+  if (!resKf) {
+    klee_warning("Trace %s is malformed! Can't resolve entry function, "
+                 "so skipping this trace.",
+                 result.id.c_str());
+  }
   return resKf;
 }
 

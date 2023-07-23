@@ -309,15 +309,15 @@ Location::~Location() {
   }
 }
 
-bool Location::isInside(const FunctionInfo &info) const {
+bool Location::isInside(const std::string &name) const {
   size_t suffixSize = 0;
-  int m = info.file.size() - 1, n = filename.size() - 1;
-  for (; m >= 0 && n >= 0 && info.file[m] == filename[n]; m--, n--) {
+  int m = name.size() - 1, n = filename.size() - 1;
+  for (; m >= 0 && n >= 0 && name[m] == filename[n]; m--, n--) {
     suffixSize++;
     if (isOSSeparator(filename[n]))
       return true;
   }
-  return suffixSize >= 3 && (n == -1 ? (m == -1 || isOSSeparator(info.file[m]))
+  return suffixSize >= 3 && (n == -1 ? (m == -1 || isOSSeparator(name[m]))
                                      : (m == -1 && isOSSeparator(filename[n])));
 }
 

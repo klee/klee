@@ -80,6 +80,9 @@ public:
       std::unordered_map<
           unsigned int,
           std::unordered_map<unsigned int, std::unordered_set<unsigned int>>>>;
+  using LocationToFunctionsMap =
+      std::unordered_map<std::string,
+                         std::unordered_set<const llvm::Function *>>;
 
 private:
   std::unordered_map<const llvm::Instruction *,
@@ -87,7 +90,9 @@ private:
       infos;
   std::unordered_map<const llvm::Function *, std::unique_ptr<FunctionInfo>>
       functionInfos;
+  LocationToFunctionsMap fileNameToFunctions;
   std::vector<std::unique_ptr<std::string>> internedStrings;
+  std::unordered_set<std::string> filesNames;
   Instructions insts;
 
 public:
@@ -98,6 +103,8 @@ public:
   unsigned getMaxID() const;
   const InstructionInfo &getInfo(const llvm::Instruction &) const;
   const FunctionInfo &getFunctionInfo(const llvm::Function &) const;
+  const LocationToFunctionsMap &getFileNameToFunctions() const;
+  const std::unordered_set<std::string> &getFilesNames() const;
   Instructions getInstructions();
 };
 

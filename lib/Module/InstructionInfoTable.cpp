@@ -178,6 +178,8 @@ InstructionInfoTable::InstructionInfoTable(
         insts[instInfo->file][instInfo->line][instInfo->column].insert(
             instr->getOpcode());
       }
+      filesNames.insert(instInfo->file);
+      fileNameToFunctions[instInfo->file].insert(&Func);
       infos.emplace(instr, std::move(instInfo));
     }
   }
@@ -211,6 +213,16 @@ InstructionInfoTable::getFunctionInfo(const llvm::Function &f) const {
                              "initial module!");
 
   return *found->second.get();
+}
+
+const InstructionInfoTable::LocationToFunctionsMap &
+InstructionInfoTable::getFileNameToFunctions() const {
+  return fileNameToFunctions;
+}
+
+const std::unordered_set<std::string> &
+InstructionInfoTable::getFilesNames() const {
+  return filesNames;
 }
 
 InstructionInfoTable::Instructions InstructionInfoTable::getInstructions() {

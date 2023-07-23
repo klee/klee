@@ -206,7 +206,7 @@ struct Location {
            endColumn == other.endColumn;
   }
 
-  bool isInside(const FunctionInfo &info) const;
+  bool isInside(const std::string &name) const;
 
   using Instructions = std::unordered_map<
       unsigned int,

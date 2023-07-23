@@ -58,20 +58,6 @@ extern llvm::cl::opt<std::string> TimerInterval;
 
 class CodeGraphDistance;
 
-class LocatedEventManager {
-  using FilenameCache = std::unordered_map<std::string, bool>;
-  std::unordered_map<std::string, std::unique_ptr<FilenameCache>>
-      filenameCacheMap;
-  FilenameCache *filenameCache = nullptr;
-
-public:
-  LocatedEventManager() {}
-
-  void prefetchFindFilename(const std::string &filename);
-
-  bool isInside(Location &loc, const klee::FunctionInfo &fi);
-};
-
 class TargetedHaltsOnTraces {
   using HaltTypeToConfidence =
       std::unordered_map<HaltExecution::Reason, confidence::ty>;
