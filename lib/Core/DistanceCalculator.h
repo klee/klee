@@ -18,7 +18,7 @@ class BasicBlock;
 
 namespace klee {
 class CodeGraphDistance;
-struct Target;
+class Target;
 
 enum WeightResult : std::uint8_t {
   Done = 0U,
@@ -48,11 +48,11 @@ public:
   explicit DistanceCalculator(CodeGraphDistance &codeGraphDistance_)
       : codeGraphDistance(codeGraphDistance_) {}
 
-  DistanceResult getDistance(const ExecutionState &es, ref<Target> target);
+  DistanceResult getDistance(const ExecutionState &es, KBlock *target);
 
   DistanceResult getDistance(const KInstruction *prevPC, const KInstruction *pc,
                              const ExecutionStack::call_stack_ty &frames,
-                             ReachWithError error, ref<Target> target);
+                             KBlock *target);
 
 private:
   enum TargetKind : std::uint8_t {
@@ -71,9 +71,7 @@ private:
   public:
     KBlock *kb;
     TargetKind kind;
-    ReachWithError error;
-    SpeculativeState(KBlock *kb_, TargetKind kind_, ReachWithError error_)
-        : kb(kb_), kind(kind_), error(error_) {
+    SpeculativeState(KBlock *kb_, TargetKind kind_) : kb(kb_), kind(kind_) {
       computeHash();
     }
     ~SpeculativeState() = default;
@@ -87,7 +85,7 @@ private:
   struct SpeculativeStateCompare {
     bool operator()(const SpeculativeState &a,
                     const SpeculativeState &b) const {
-      return a.kb == b.kb && a.error == b.error && a.kind == b.kind;
+      return a.kb == b.kb && a.kind == b.kind;
     }
   };
 
@@ -95,8 +93,7 @@ private:
       std::unordered_map<SpeculativeState, DistanceResult, SpeculativeStateHash,
                          SpeculativeStateCompare>;
   using TargetToSpeculativeStateToDistanceResultMap =
-      std::unordered_map<ref<Target>, SpeculativeStateToDistanceResultMap,
-                         TargetHash, TargetCmp>;
+      std::unordered_map<KBlock *, SpeculativeStateToDistanceResultMap>;
 
   using StatesSet = std::unordered_set<ExecutionState *>;
 
@@ -104,34 +101,32 @@ private:
   TargetToSpeculativeStateToDistanceResultMap distanceResultCache;
   StatesSet localStates;
 
-  DistanceResult getDistance(KBlock *kb, TargetKind kind, ReachWithError error,
-                             ref<Target> target);
+  DistanceResult getDistance(KBlock *kb, TargetKind kind, KBlock *target);
 
   DistanceResult computeDistance(KBlock *kb, TargetKind kind,
-                                 ReachWithError error,
-                                 ref<Target> target) const;
+                                 KBlock *target) const;
 
   bool distanceInCallGraph(KFunction *kf, KBlock *kb, unsigned int &distance,
                            const std::unordered_map<KFunction *, unsigned int>
                                &distanceToTargetFunction,
-                           ref<Target> target) const;
+                           KBlock *target) const;
   bool distanceInCallGraph(KFunction *kf, KBlock *kb, unsigned int &distance,
                            const std::unordered_map<KFunction *, unsigned int>
                                &distanceToTargetFunction,
-                           ref<Target> target, bool strictlyAfterKB) const;
+                           KBlock *target, bool strictlyAfterKB) const;
 
   WeightResult tryGetLocalWeight(KBlock *kb, weight_type &weight,
                                  const std::vector<KBlock *> &localTargets,
-                                 ref<Target> target) const;
+                                 KBlock *target) const;
   WeightResult
   tryGetPreTargetWeight(KBlock *kb, weight_type &weight,
                         const std::unordered_map<KFunction *, unsigned int>
                             &distanceToTargetFunction,
-                        ref<Target> target) const;
+                        KBlock *target) const;
   WeightResult tryGetTargetWeight(KBlock *kb, weight_type &weight,
-                                  ref<Target> target) const;
+                                  KBlock *target) const;
   WeightResult tryGetPostTargetWeight(KBlock *kb, weight_type &weight,
-                                      ref<Target> target) const;
+                                      KBlock *target) const;
 };
 } // namespace klee
 

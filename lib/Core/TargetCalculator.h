@@ -39,34 +39,44 @@ struct TransitionHash;
 enum TargetCalculateBy { Default, Blocks, Transitions };
 
 typedef std::pair<llvm::BasicBlock *, llvm::BasicBlock *> Transition;
+typedef std::pair<llvm::BasicBlock *, unsigned> Branch;
 
 class TargetCalculator {
   typedef std::unordered_set<llvm::BasicBlock *> VisitedBlocks;
   typedef std::unordered_set<Transition, TransitionHash> VisitedTransitions;
+  typedef std::unordered_set<Branch, BranchHash> VisitedBranches;
 
   enum HistoryKind { Blocks, Transitions };
 
   typedef std::unordered_map<
-      llvm::BasicBlock *, std::unordered_map<llvm::BasicBlock *, VisitedBlocks>>
+      llvm::Function *, std::unordered_map<llvm::BasicBlock *, VisitedBlocks>>
       BlocksHistory;
   typedef std::unordered_map<
-      llvm::BasicBlock *,
+      llvm::Function *,
       std::unordered_map<llvm::BasicBlock *, VisitedTransitions>>
       TransitionsHistory;
 
+  typedef std::unordered_map<
+      llvm::Function *,
+      std::unordered_map<llvm::BasicBlock *, std::set<unsigned>>>
+      CoveredBranches;
+
+  typedef std::unordered_map<llvm::Function *, VisitedBlocks> CoveredBlocks;
+
 public:
-  TargetCalculator(const KModule &module, CodeGraphDistance &codeGraphDistance)
-      : module(module), codeGraphDistance(codeGraphDistance) {}
+  TargetCalculator(CodeGraphDistance &codeGraphDistance)
+      : codeGraphDistance(codeGraphDistance) {}
 
   void update(const ExecutionState &state);
 
-  ref<Target> calculate(ExecutionState &state);
+  TargetHashSet calculate(ExecutionState &state);
 
 private:
-  const KModule &module;
   CodeGraphDistance &codeGraphDistance;
   BlocksHistory blocksHistory;
   TransitionsHistory transitionsHistory;
+  CoveredBranches coveredBranches;
+  CoveredBlocks coveredBlocks;
 
   bool differenceIsEmpty(
       const ExecutionState &state,
@@ -76,6 +86,8 @@ private:
       const ExecutionState &state,
       const std::unordered_map<llvm::BasicBlock *, VisitedTransitions> &history,
       KBlock *target);
+
+  bool uncoveredBlockPredicate(ExecutionState *state, KBlock *kblock);
 };
 } // namespace klee
 

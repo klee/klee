@@ -281,12 +281,11 @@ void TargetedHaltsOnTraces::reportFalsePositives(bool canReachSomeTarget) {
   confidence::ty confidence;
   HaltExecution::Reason reason;
   for (const auto &targetSetWithConfidences : traceToHaltTypeToConfidence) {
-    const auto &target = targetSetWithConfidences.first->getTargets().front();
-    if (!target->shouldFailOnThisTarget())
-      continue;
     bool atLeastOneReported = false;
     for (const auto &target : targetSetWithConfidences.first->getTargets()) {
-      if (target->isReported) {
+      if (!target->shouldFailOnThisTarget())
+        continue;
+      if (cast<ReproduceErrorTarget>(target)->isReported) {
         atLeastOneReported = true;
         break;
       }
@@ -295,6 +294,9 @@ void TargetedHaltsOnTraces::reportFalsePositives(bool canReachSomeTarget) {
     if (atLeastOneReported) {
       continue;
     }
+    const auto &target = targetSetWithConfidences.first->getTargets().front();
+    assert(target->shouldFailOnThisTarget());
+    auto errorTarget = cast<ReproduceErrorTarget>(target);
 
     totalConfidenceAndTopContributor(targetSetWithConfidences.second,
                                      &confidence, &reason);
@@ -305,9 +307,10 @@ void TargetedHaltsOnTraces::reportFalsePositives(bool canReachSomeTarget) {
       confidence = confidence::VeryConfident;
       reason = HaltExecution::MaxTime;
     }
-    reportFalsePositive(confidence, target->getErrors(), target->getId(),
+    reportFalsePositive(confidence, errorTarget->getErrors(),
+                        errorTarget->getId(),
                         getAdviseWhatToIncreaseConfidenceRate(reason));
-    target->isReported = true;
+    errorTarget->isReported = true;
   }
 }
 
@@ -528,8 +531,12 @@ bool TargetedExecutionManager::reportTruePositive(ExecutionState &state,
                                                   ReachWithError error) {
   bool atLeastOneReported = false;
   for (auto target : state.targetForest.getTargets()) {
-    if (!target->isThatError(error) || brokenTraces.count(target->getId()) ||
-        reportedTraces.count(target->getId()))
+    if (!target->shouldFailOnThisTarget())
+      continue;
+    auto errorTarget = cast<ReproduceErrorTarget>(target);
+    if (!errorTarget->isThatError(error) ||
+        brokenTraces.count(errorTarget->getId()) ||
+        reportedTraces.count(errorTarget->getId()))
       continue;
 
     /// The following code checks if target is a `call ...` instruction and we
@@ -538,7 +545,7 @@ bool TargetedExecutionManager::reportTruePositive(ExecutionState &state,
     int i = state.stack.size() - 1;
     bool found = true;
 
-    while (!target->isTheSameAsIn(
+    while (!errorTarget->isTheSameAsIn(
         possibleInstruction)) { // TODO: target->getBlock() ==
                                 // possibleInstruction should also be checked,
                                 // but more smartly
@@ -554,16 +561,16 @@ bool TargetedExecutionManager::reportTruePositive(ExecutionState &state,
 
     state.error = error;
     atLeastOneReported = true;
-    assert(!target->isReported);
-    if (target->isThatError(ReachWithError::Reachable)) {
+    assert(!errorTarget->isReported);
+    if (errorTarget->isThatError(ReachWithError::Reachable)) {
       klee_warning("100.00%% %s Reachable at trace %s", getErrorString(error),
-                   target->getId().c_str());
+                   errorTarget->getId().c_str());
     } else {
       klee_warning("100.00%% %s True Positive at trace %s",
-                   getErrorString(error), target->getId().c_str());
+                   getErrorString(error), errorTarget->getId().c_str());
     }
-    target->isReported = true;
-    reportedTraces.insert(target->getId());
+    errorTarget->isReported = true;
+    reportedTraces.insert(errorTarget->getId());
   }
   return atLeastOneReported;
 }
@@ -588,8 +595,7 @@ void TargetedExecutionManager::update(
     auto &stateTargets = state->targets();
 
     for (auto target : stateTargets) {
-      DistanceResult stateDistance =
-          distanceCalculator.getDistance(*state, target);
+      DistanceResult stateDistance = targetManager.distance(*state, target);
       switch (stateDistance.result) {
       case WeightResult::Miss:
         break;

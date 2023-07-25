@@ -175,3 +175,28 @@ CodeGraphDistance::getSortedBackwardDistance(KFunction *kf) {
     calculateBackwardDistance(kf);
   return functionSortedBackwardDistance.at(kf);
 }
+
+void CodeGraphDistance::getNearestPredicateSatisfying(
+    KBlock *from, KBlockPredicate predicate, std::set<KBlock *> &result) {
+  std::set<KBlock *> visited;
+
+  auto blockMap = from->parent->blockMap;
+  std::deque<KBlock *> nodes;
+  nodes.push_back(from);
+
+  while (!nodes.empty()) {
+    KBlock *currBB = nodes.front();
+    visited.insert(currBB);
+
+    if (predicate(currBB) && currBB != from) {
+      result.insert(currBB);
+    } else {
+      for (auto const &succ : successors(currBB->basicBlock)) {
+        if (visited.count(blockMap[succ]) == 0) {
+          nodes.push_back(blockMap[succ]);
+        }
+      }
+    }
+    nodes.pop_front();
+  }
+}

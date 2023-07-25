@@ -25,7 +25,9 @@ void TargetManager::updateMiss(ExecutionState &state, ref<Target> target) {
   stateTargetForest.remove(target);
   setTargets(state, stateTargetForest.getTargets());
   if (guidance == Interpreter::GuidanceKind::CoverageGuidance) {
-    state.setTargeted(false);
+    if (targets(state).size() == 0) {
+      state.setTargeted(false);
+    }
   }
 }
 
@@ -54,12 +56,16 @@ void TargetManager::updateDone(ExecutionState &state, ref<Target> target) {
     }
   }
   if (guidance == Interpreter::GuidanceKind::CoverageGuidance) {
-    state.setTargeted(false);
+    if (targets(state).size() == 0) {
+      state.setTargeted(false);
+    }
   }
 }
 
 void TargetManager::collect(ExecutionState &state) {
   if (!state.areTargetsChanged()) {
+    assert(state.targets() == state.prevTargets());
+    assert(state.history() == state.prevHistory());
     return;
   }
 
@@ -96,15 +102,44 @@ void TargetManager::collect(ExecutionState &state) {
   }
 }
 
+void TargetManager::updateReached(ExecutionState &state) {
+  auto prevKI = state.prevPC;
+  auto kf = prevKI->parent->parent;
+  auto kmodule = kf->parent;
+
+  if (prevKI->inst->isTerminator() && kmodule->inMainModule(*kf->function)) {
+    ref<Target> target;
+
+    if (state.getPrevPCBlock()->getTerminator()->getNumSuccessors() == 0) {
+      target = ReachBlockTarget::create(state.prevPC->parent, true);
+    } else {
+      unsigned index = 0;
+      for (auto succ : successors(state.getPrevPCBlock())) {
+        if (succ == state.getPCBlock()) {
+          target = CoverBranchTarget::create(state.prevPC->parent, index);
+          break;
+        }
+        ++index;
+      }
+    }
+
+    if (target && guidance == Interpreter::GuidanceKind::CoverageGuidance) {
+      setReached(target);
+    }
+  }
+}
+
 void TargetManager::updateTargets(ExecutionState &state) {
   if (guidance == Interpreter::GuidanceKind::CoverageGuidance) {
     if (targets(state).empty() && state.isStuck(MaxCyclesBeforeStuck)) {
       state.setTargeted(true);
     }
     if (isTargeted(state) && targets(state).empty()) {
-      ref<Target> target(targetCalculator.calculate(state));
-      if (target) {
-        state.targetForest.add(target);
+      TargetHashSet targets(targetCalculator.calculate(state));
+      if (!targets.empty()) {
+        for (auto target : targets) {
+          state.targetForest.add(target);
+        }
         setTargets(state, state.targetForest.getTargets());
       }
     }
@@ -157,6 +192,7 @@ void TargetManager::update(ExecutionState *current,
   }
 
   for (auto state : localStates) {
+    updateReached(*state);
     updateTargets(*state);
     if (state->areTargetsChanged()) {
       changedStates.insert(state);
@@ -173,6 +209,7 @@ void TargetManager::update(ExecutionState *current,
 
   for (const auto state : removedStates) {
     states.erase(state);
+    distances.erase(state);
   }
 
   for (auto subscriber : subscribers) {
@@ -188,4 +225,61 @@ void TargetManager::update(ExecutionState *current,
 
   changedStates.clear();
   localStates.clear();
+}
+
+bool TargetManager::isReachedTarget(const ExecutionState &state,
+                                    ref<Target> target) {
+  WeightResult result;
+  if (isReachedTarget(state, target, result)) {
+    return result == Done;
+  }
+  return false;
+}
+
+bool TargetManager::isReachedTarget(const ExecutionState &state,
+                                    ref<Target> target, WeightResult &result) {
+  if (state.constraints.path().KBlockSize() == 0) {
+    return false;
+  }
+
+  if (isa<ReachBlockTarget>(target)) {
+    if (cast<ReachBlockTarget>(target)->isAtEnd()) {
+      if (state.prevPC->parent == target->getBlock() ||
+          state.pc->parent == target->getBlock()) {
+        if (state.prevPC == target->getBlock()->getLastInstruction()) {
+          result = Done;
+        } else {
+          result = Continue;
+        }
+        return true;
+      }
+    }
+  }
+
+  if (isa<CoverBranchTarget>(target)) {
+    if (state.prevPC->parent == target->getBlock()) {
+      if (state.prevPC == target->getBlock()->getLastInstruction() &&
+          state.prevPC->inst->getSuccessor(
+              cast<CoverBranchTarget>(target)->getBranchCase()) ==
+              state.pc->parent->basicBlock) {
+        result = Done;
+      } else {
+        result = Continue;
+      }
+      return true;
+    }
+  }
+
+  if (target->shouldFailOnThisTarget()) {
+    if (state.pc->parent == target->getBlock()) {
+      if (cast<ReproduceErrorTarget>(target)->isTheSameAsIn(state.prevPC) &&
+          cast<ReproduceErrorTarget>(target)->isThatError(state.error)) {
+        result = Done;
+      } else {
+        result = Continue;
+      }
+      return true;
+    }
+  }
+  return false;
 }

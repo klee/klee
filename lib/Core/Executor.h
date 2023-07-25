@@ -145,6 +145,7 @@ private:
   SpecialFunctionHandler *specialFunctionHandler;
   TimerGroup timers;
   std::unique_ptr<PForest> processForest;
+  GuidanceKind guidanceKind;
   std::unique_ptr<CodeGraphDistance> codeGraphDistance;
   std::unique_ptr<DistanceCalculator> distanceCalculator;
   std::unique_ptr<TargetCalculator> targetCalculator;
@@ -240,8 +241,6 @@ private:
 
   /// Typeids used during exception handling
   std::vector<ref<Expr>> eh_typeids;
-
-  GuidanceKind guidanceKind;
 
   bool hasStateWhichCanReachSomeTarget = false;
 

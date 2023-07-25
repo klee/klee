@@ -22,7 +22,6 @@
 #include <unordered_map>
 
 namespace klee {
-class DistanceCalculator;
 class TargetManager;
 
 extern llvm::cl::OptionCategory TerminationCat;
@@ -118,7 +117,7 @@ private:
                                      LocationToBlocks &locToBlocks) const;
 
   CodeGraphDistance &codeGraphDistance;
-  DistanceCalculator &distanceCalculator;
+  TargetManager &targetManager;
   StatesSet localStates;
 
 public:
@@ -129,9 +128,8 @@ public:
   };
 
   explicit TargetedExecutionManager(CodeGraphDistance &codeGraphDistance_,
-                                    DistanceCalculator &distanceCalculator_)
-      : codeGraphDistance(codeGraphDistance_),
-        distanceCalculator(distanceCalculator_) {}
+                                    TargetManager &targetManager_)
+      : codeGraphDistance(codeGraphDistance_), targetManager(targetManager_) {}
   ~TargetedExecutionManager() = default;
   std::map<KFunction *, ref<TargetForest>, KFunctionLess>
   prepareTargets(KModule *kmodule, SarifReport paths);

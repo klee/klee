@@ -172,7 +172,9 @@ class GuidedSearcher final : public Searcher, public TargetManagerSubscriber {
       std::unordered_map<TargetHistoryTargetPair, StatesVector,
                          TargetHistoryTargetHash, TargetHistoryTargetCmp>;
   using TargetForestHisoryTargetVector = std::vector<TargetHistoryTargetPair>;
-  using TargetForestHistoryTargetSet = std::set<TargetHistoryTargetPair>;
+  using TargetForestHistoryTargetSet =
+      std::unordered_set<TargetHistoryTargetPair, TargetHistoryTargetHash,
+                         TargetHistoryTargetCmp>;
 
   std::unique_ptr<Searcher> baseSearcher;
   TargetHistoryTargetPairToSearcherMap targetedSearchers;

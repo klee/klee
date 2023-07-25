@@ -26,16 +26,28 @@ llvm::cl::opt<bool> LocationAccuracy(
     cl::desc("Check location with line and column accuracy (default=false)"));
 }
 
-std::string Target::toString() const {
+std::string ReproduceErrorTarget::toString() const {
   std::ostringstream repr;
   repr << "Target " << getId() << ": ";
-  if (shouldFailOnThisTarget()) {
-    repr << "error in ";
-  }
+  repr << "error in ";
   repr << block->toString();
-  if (atReturn()) {
+  return repr.str();
+}
+
+std::string ReachBlockTarget::toString() const {
+  std::ostringstream repr;
+  repr << "Target: ";
+  repr << block->toString();
+  if (atEnd) {
     repr << " (at the end)";
   }
+  return repr.str();
+}
+
+std::string CoverBranchTarget::toString() const {
+  std::ostringstream repr;
+  repr << "Target: ";
+  repr << "cover " << branchCase << "branch at " << block->toString();
   return repr.str();
 }
 
@@ -54,22 +66,33 @@ ref<Target> Target::createCachedTarget(ref<Target> target) {
   return (ref<Target>)*(success.first);
 }
 
-ref<Target> Target::create(const std::vector<ReachWithError> &_errors,
-                           const std::string &_id, optional<ErrorLocation> _loc,
-                           KBlock *_block) {
-  Target *target = new Target(_errors, _id, _loc, _block);
+ref<Target>
+ReproduceErrorTarget::create(const std::vector<ReachWithError> &_errors,
+                             const std::string &_id, ErrorLocation _loc,
+                             KBlock *_block) {
+  ReproduceErrorTarget *target =
+      new ReproduceErrorTarget(_errors, _id, _loc, _block);
   return createCachedTarget(target);
 }
 
-ref<Target> Target::create(KBlock *_block) {
-  return create({ReachWithError::None}, "", nonstd::nullopt, _block);
+ref<Target> ReachBlockTarget::create(KBlock *_block, bool _atEnd) {
+  ReachBlockTarget *target = new ReachBlockTarget(_block, _atEnd);
+  return createCachedTarget(target);
 }
 
-bool Target::isTheSameAsIn(const KInstruction *instr) const {
-  if (!loc.has_value()) {
-    return false;
-  }
-  const auto &errLoc = *loc;
+ref<Target> ReachBlockTarget::create(KBlock *_block) {
+  ReachBlockTarget *target =
+      new ReachBlockTarget(_block, isa<KReturnBlock>(_block));
+  return createCachedTarget(target);
+}
+
+ref<Target> CoverBranchTarget::create(KBlock *_block, unsigned _branchCase) {
+  CoverBranchTarget *target = new CoverBranchTarget(_block, _branchCase);
+  return createCachedTarget(target);
+}
+
+bool ReproduceErrorTarget::isTheSameAsIn(const KInstruction *instr) const {
+  const auto &errLoc = loc;
   return instr->info->line >= errLoc.startLine &&
          instr->info->line <= errLoc.endLine &&
          (!LocationAccuracy || !errLoc.startColumn.has_value() ||
@@ -77,16 +100,61 @@ bool Target::isTheSameAsIn(const KInstruction *instr) const {
            instr->info->column <= *errLoc.endColumn));
 }
 
-bool Target::mustVisitForkBranches(KInstruction *instr) const {
-  // null check after deref error is checked after fork
-  // but reachability of this target from instr children
-  // will always give false, so we need to force visiting
-  // fork branches here
-  return isTheSameAsIn(instr) &&
-         isThatError(ReachWithError::NullCheckAfterDerefException);
+int Target::compare(const Target &b) const { return internalCompare(b); }
+
+bool Target::equals(const Target &b) const {
+  return (toBeCleared || b.toBeCleared) || (isCached && b.isCached)
+             ? this == &b
+             : compare(b) == 0;
 }
 
-int Target::compare(const Target &other) const {
+int ReachBlockTarget::internalCompare(const Target &b) const {
+  if (getKind() != b.getKind()) {
+    return getKind() < b.getKind() ? -1 : 1;
+  }
+  const ReachBlockTarget &other = static_cast<const ReachBlockTarget &>(b);
+
+  if (block->parent->id != other.block->parent->id) {
+    return block->parent->id < other.block->parent->id ? -1 : 1;
+  }
+  if (block->id != other.block->id) {
+    return block->id < other.block->id ? -1 : 1;
+  }
+
+  if (atEnd != other.atEnd) {
+    return !atEnd ? -1 : 1;
+  }
+
+  return 0;
+}
+
+int CoverBranchTarget::internalCompare(const Target &b) const {
+  if (getKind() != b.getKind()) {
+    return getKind() < b.getKind() ? -1 : 1;
+  }
+  const CoverBranchTarget &other = static_cast<const CoverBranchTarget &>(b);
+
+  if (block->parent->id != other.block->parent->id) {
+    return block->parent->id < other.block->parent->id ? -1 : 1;
+  }
+  if (block->id != other.block->id) {
+    return block->id < other.block->id ? -1 : 1;
+  }
+
+  if (branchCase != other.branchCase) {
+    return branchCase < other.branchCase ? -1 : 1;
+  }
+
+  return 0;
+}
+
+int ReproduceErrorTarget::internalCompare(const Target &b) const {
+  if (getKind() != b.getKind()) {
+    return getKind() < b.getKind() ? -1 : 1;
+  }
+  const ReproduceErrorTarget &other =
+      static_cast<const ReproduceErrorTarget &>(b);
+
   if (id != other.id) {
     return id < other.id ? -1 : 1;
   }
@@ -108,12 +176,6 @@ int Target::compare(const Target &other) const {
   }
 
   return 0;
-}
-
-bool Target::equals(const Target &b) const {
-  return (toBeCleared || b.toBeCleared) || (isCached && b.isCached)
-             ? this == &b
-             : compare(b) == 0;
 }
 
 bool Target::operator<(const Target &other) const {

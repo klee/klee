@@ -26,3 +26,7 @@ std::size_t TransitionHash::operator()(const Transition &p) const {
   return reinterpret_cast<size_t>(p.first) * 31 +
          reinterpret_cast<size_t>(p.second);
 }
+
+std::size_t BranchHash::operator()(const Branch &p) const {
+  return reinterpret_cast<size_t>(p.first) * 31 + p.second;
+}

@@ -94,6 +94,8 @@ public:
   std::string toString() const;
 };
 
+typedef std::function<bool(KBlock *)> KBlockPredicate;
+
 struct KCallBlock : KBlock {
   KInstruction *kcallInstruction;
   std::set<llvm::Function *> calledFunctions;
@@ -287,7 +289,7 @@ public:
 
   KBlock *getKBlock(llvm::BasicBlock *bb);
 
-  bool inMainModule(llvm::Function *f);
+  bool inMainModule(const llvm::Function &f);
 
   bool inMainModule(const llvm::GlobalVariable &v);
 

@@ -404,7 +404,8 @@ void KModule::manifest(InterpreterHandler *ih,
         isInlineAsm = true;
       }
       if (kcb->calledFunctions.empty() && !isInlineAsm &&
-          guidance != Interpreter::GuidanceKind::ErrorGuidance) {
+          (guidance != Interpreter::GuidanceKind::ErrorGuidance ||
+           !inMainModule(*kfp.get()->function))) {
         kcb->calledFunctions.insert(escapingFunctions.begin(),
                                     escapingFunctions.end());
       }
@@ -447,8 +448,8 @@ KBlock *KModule::getKBlock(llvm::BasicBlock *bb) {
   return functionMap[bb->getParent()]->blockMap[bb];
 }
 
-bool KModule::inMainModule(llvm::Function *f) {
-  return mainModuleFunctions.count(f->getName().str()) != 0;
+bool KModule::inMainModule(const llvm::Function &f) {
+  return mainModuleFunctions.count(f.getName().str()) != 0;
 }
 
 bool KModule::inMainModule(const GlobalVariable &v) {

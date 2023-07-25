@@ -21,7 +21,7 @@ class BasicBlock;
 }
 
 namespace klee {
-struct Target;
+class Target;
 
 struct TargetHash {
   unsigned operator()(const ref<Target> &t) const;
@@ -32,9 +32,14 @@ struct TargetCmp {
 };
 
 typedef std::pair<llvm::BasicBlock *, llvm::BasicBlock *> Transition;
+typedef std::pair<llvm::BasicBlock *, unsigned> Branch;
 
 struct TransitionHash {
   std::size_t operator()(const Transition &p) const;
+};
+
+struct BranchHash {
+  std::size_t operator()(const Branch &p) const;
 };
 
 struct TargetLess {

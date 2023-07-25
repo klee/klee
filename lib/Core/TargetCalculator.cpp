@@ -38,21 +38,40 @@ llvm::cl::opt<TargetCalculateBy> TargetCalculatorMode(
 } // namespace klee
 
 void TargetCalculator::update(const ExecutionState &state) {
+  Function *initialFunction = state.getInitPCBlock()->getParent();
   switch (TargetCalculatorMode) {
   case TargetCalculateBy::Default:
-    blocksHistory[state.getInitPCBlock()][state.getPrevPCBlock()].insert(
+    blocksHistory[initialFunction][state.getPrevPCBlock()].insert(
         state.getInitPCBlock());
+    if (state.prevPC == state.prevPC->parent->getLastInstruction()) {
+      coveredBlocks[state.getPrevPCBlock()->getParent()].insert(
+          state.getPrevPCBlock());
+    }
+    if (state.prevPC == state.prevPC->parent->getLastInstruction()) {
+      unsigned index = 0;
+      coveredBranches[state.getPrevPCBlock()->getParent()]
+                     [state.getPrevPCBlock()];
+      for (auto succ : successors(state.getPrevPCBlock())) {
+        if (succ == state.getPCBlock()) {
+          coveredBranches[state.getPrevPCBlock()->getParent()]
+                         [state.getPrevPCBlock()]
+                             .insert(index);
+          break;
+        }
+        ++index;
+      }
+    }
     break;
 
   case TargetCalculateBy::Blocks:
-    blocksHistory[state.getInitPCBlock()][state.getPrevPCBlock()].insert(
+    blocksHistory[initialFunction][state.getPrevPCBlock()].insert(
         state.level.begin(), state.level.end());
     break;
 
   case TargetCalculateBy::Transitions:
-    blocksHistory[state.getInitPCBlock()][state.getPrevPCBlock()].insert(
+    blocksHistory[initialFunction][state.getPrevPCBlock()].insert(
         state.level.begin(), state.level.end());
-    transitionsHistory[state.getInitPCBlock()][state.getPrevPCBlock()].insert(
+    transitionsHistory[initialFunction][state.getPrevPCBlock()].insert(
         state.transitionLevel.begin(), state.transitionLevel.end());
     break;
   }
@@ -85,58 +104,77 @@ bool TargetCalculator::differenceIsEmpty(
   return diff.empty();
 }
 
-ref<Target> TargetCalculator::calculate(ExecutionState &state) {
-  BasicBlock *initialBlock = state.getInitPCBlock();
+bool TargetCalculator::uncoveredBlockPredicate(ExecutionState *state,
+                                               KBlock *kblock) {
+  Function *initialFunction = state->getInitPCBlock()->getParent();
   std::unordered_map<llvm::BasicBlock *, VisitedBlocks> &history =
-      blocksHistory[initialBlock];
+      blocksHistory[initialFunction];
   std::unordered_map<llvm::BasicBlock *, VisitedTransitions>
-      &transitionHistory = transitionsHistory[initialBlock];
+      &transitionHistory = transitionsHistory[initialFunction];
+  bool result = false;
+  switch (TargetCalculatorMode) {
+  case TargetCalculateBy::Default: {
+    if (coveredBranches[kblock->parent->function].count(kblock->basicBlock) ==
+        0) {
+      result = true;
+    } else {
+      auto &cb = coveredBranches[kblock->parent->function][kblock->basicBlock];
+      result =
+          kblock->basicBlock->getTerminator()->getNumSuccessors() > cb.size();
+    }
+    break;
+  }
+  case TargetCalculateBy::Blocks: {
+    if (history[kblock->basicBlock].size() != 0) {
+      result = !differenceIsEmpty(*state, history, kblock);
+    }
+    break;
+  }
+  case TargetCalculateBy::Transitions: {
+    if (history[kblock->basicBlock].size() != 0) {
+      result = !differenceIsEmpty(*state, transitionHistory, kblock);
+    }
+    break;
+  }
+  }
+
+  return result;
+}
+
+TargetHashSet TargetCalculator::calculate(ExecutionState &state) {
   BasicBlock *bb = state.getPCBlock();
+  const KModule &module = *state.pc->parent->parent->parent;
   KFunction *kf = module.functionMap.at(bb->getParent());
   KBlock *kb = kf->blockMap[bb];
-  ref<Target> nearestBlock;
-  unsigned int minDistance = UINT_MAX;
-  unsigned int sfNum = 0;
-  bool newCov = false;
   for (auto sfi = state.stack.callStack().rbegin(),
             sfe = state.stack.callStack().rend();
-       sfi != sfe; sfi++, sfNum++) {
+       sfi != sfe; sfi++) {
     kf = sfi->kf;
 
-    for (const auto &kbd : codeGraphDistance.getSortedDistance(kb)) {
-      KBlock *target = kbd.first;
-      unsigned distance = kbd.second;
-      if ((sfNum > 0 || distance > 0)) {
-        if (distance >= minDistance)
-          break;
-        if (history[target->basicBlock].size() != 0) {
-          bool diffIsEmpty = true;
-          if (!newCov) {
-            switch (TargetCalculatorMode) {
-            case TargetCalculateBy::Blocks:
-              diffIsEmpty = differenceIsEmpty(state, history, target);
-              break;
-            case TargetCalculateBy::Transitions:
-              diffIsEmpty = differenceIsEmpty(state, transitionHistory, target);
-              break;
-            case TargetCalculateBy::Default:
-              break;
-            }
-          }
+    std::set<KBlock *> blocks;
+    using std::placeholders::_1;
+    KBlockPredicate func =
+        std::bind(&TargetCalculator::uncoveredBlockPredicate, this, &state, _1);
+    codeGraphDistance.getNearestPredicateSatisfying(kb, func, blocks);
 
-          if (diffIsEmpty) {
-            continue;
-          }
+    if (!blocks.empty()) {
+      TargetHashSet targets;
+      for (auto block : blocks) {
+        if (coveredBranches[block->parent->function].count(block->basicBlock) ==
+            0) {
+          targets.insert(ReachBlockTarget::create(block, true));
         } else {
-          newCov = true;
+          auto &cb =
+              coveredBranches[block->parent->function][block->basicBlock];
+          for (unsigned index = 0;
+               index < block->basicBlock->getTerminator()->getNumSuccessors();
+               ++index) {
+            if (!cb.count(index))
+              targets.insert(CoverBranchTarget::create(block, index));
+          }
         }
-        nearestBlock = Target::create(target);
-        minDistance = distance;
       }
-    }
-
-    if (nearestBlock) {
-      return nearestBlock;
+      return targets;
     }
 
     if (sfi->caller) {
@@ -144,5 +182,5 @@ ref<Target> TargetCalculator::calculate(ExecutionState &state) {
     }
   }
 
-  return nearestBlock;
+  return {};
 }

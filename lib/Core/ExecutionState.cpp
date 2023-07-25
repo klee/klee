@@ -465,7 +465,7 @@ void ExecutionState::increaseLevel() {
   KFunction *kf = prevPC->parent->parent;
   KModule *kmodule = kf->parent;
 
-  if (prevPC->inst->isTerminator() && kmodule->inMainModule(kf->function)) {
+  if (prevPC->inst->isTerminator() && kmodule->inMainModule(*kf->function)) {
     ++multilevel[srcbb];
     level.insert(srcbb);
   }
@@ -482,13 +482,13 @@ bool ExecutionState::visited(KBlock *block) const {
   return level.count(block->basicBlock) != 0;
 }
 
-bool ExecutionState::reachedTarget(Target target) const {
+bool ExecutionState::reachedTarget(ref<ReachBlockTarget> target) const {
   if (constraints.path().KBlockSize() == 0) {
     return false;
   }
-  if (target.atReturn()) {
-    return prevPC == target.getBlock()->getLastInstruction();
+  if (target->isAtEnd()) {
+    return prevPC == target->getBlock()->getLastInstruction();
   } else {
-    return pc == target.getBlock()->getFirstInstruction();
+    return pc == target->getBlock()->getFirstInstruction();
   }
 }

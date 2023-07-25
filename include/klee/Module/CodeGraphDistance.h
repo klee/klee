@@ -65,6 +65,9 @@ public:
   getSortedDistance(KFunction *kf);
   const std::vector<std::pair<KFunction *, unsigned int>> &
   getSortedBackwardDistance(KFunction *kf);
+
+  void getNearestPredicateSatisfying(KBlock *from, KBlockPredicate predicate,
+                                     std::set<KBlock *> &result);
 };
 
 } // namespace klee

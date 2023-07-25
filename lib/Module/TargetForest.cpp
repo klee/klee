@@ -117,12 +117,13 @@ void TargetForest::Layer::addTrace(
     for (auto block : it->second) {
       ref<Target> target = nullptr;
       if (i == result.locations.size() - 1) {
-        target = Target::create(result.errors, result.id,
-                                ErrorLocation{loc->startLine, loc->endLine,
-                                              loc->startColumn, loc->endColumn},
-                                block);
+        target = ReproduceErrorTarget::create(
+            result.errors, result.id,
+            ErrorLocation{loc->startLine, loc->endLine, loc->startColumn,
+                          loc->endColumn},
+            block);
       } else {
-        target = Target::create(block);
+        target = ReachBlockTarget::create(block);
       }
       targets.insert(target);
     }
@@ -442,16 +443,14 @@ int TargetsHistory::compare(const TargetsHistory &h) const {
     return 0;
   }
 
-  if (target && h.target) {
-    if (target != h.target) {
-      return (target < h.target) ? -1 : 1;
-    }
+  assert(target && h.target);
+  if (target != h.target) {
+    return (target < h.target) ? -1 : 1;
   }
 
-  if (visitedTargets && h.visitedTargets) {
-    if (h.visitedTargets != h.visitedTargets) {
-      return (visitedTargets < h.visitedTargets) ? -1 : 1;
-    }
+  assert(visitedTargets && h.visitedTargets);
+  if (visitedTargets != h.visitedTargets) {
+    return (visitedTargets < h.visitedTargets) ? -1 : 1;
   }
 
   return 0;
@@ -494,7 +493,6 @@ void TargetForest::stepTo(ref<Target> loc) {
   } else {
     history = history->add(loc);
     forest = forest->replaceChildWith(loc, res->second);
-    loc->isReported = true;
   }
   if (forest->empty() && !loc->shouldFailOnThisTarget()) {
     history = TargetsHistory::create();

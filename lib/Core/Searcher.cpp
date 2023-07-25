@@ -195,7 +195,7 @@ weight_type TargetedSearcher::getWeight(ExecutionState *es) {
       states->tryGetWeight(es, weight)) {
     return weight;
   }
-  auto distRes = distanceCalculator.getDistance(*es, target);
+  auto distRes = distanceCalculator.getDistance(*es, target->getBlock());
   weight = ulog2(distRes.weight + es->steppedMemoryInstructions + 1); // [0, 32)
   if (!distRes.isInsideFunction) {
     weight += 32; // [32, 64)

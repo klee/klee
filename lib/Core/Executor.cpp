@@ -455,16 +455,16 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       externalDispatcher(new ExternalDispatcher(ctx)), statsTracker(0),
       pathWriter(0), symPathWriter(0),
       specialFunctionHandler(0), timers{time::Span(TimerInterval)},
-      codeGraphDistance(new CodeGraphDistance()),
+      guidanceKind(opts.Guidance), codeGraphDistance(new CodeGraphDistance()),
       distanceCalculator(new DistanceCalculator(*codeGraphDistance)),
-      targetedExecutionManager(new TargetedExecutionManager(
-          *codeGraphDistance, *distanceCalculator)),
+      targetCalculator(new TargetCalculator(*codeGraphDistance)),
+      targetManager(new TargetManager(guidanceKind, *distanceCalculator,
+                                      *targetCalculator)),
+      targetedExecutionManager(
+          new TargetedExecutionManager(*codeGraphDistance, *targetManager)),
       replayKTest(0), replayPath(0), usingSeeds(0), atMemoryLimit(false),
       inhibitForking(false), haltExecution(HaltExecution::NotHalt),
       ivcEnabled(false), debugLogBuffer(debugBufferString) {
-
-  guidanceKind = opts.Guidance;
-
   const time::Span maxTime{MaxTime};
   if (maxTime)
     timers.add(std::make_unique<Timer>(maxTime, [&] {
@@ -577,12 +577,12 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &userModules,
   kmodule->checkModule();
 
   // 4.) Manifest the module
-  kmodule->manifest(interpreterHandler, interpreterOpts.Guidance,
-                    StatsTracker::useStatistics());
   kmodule->mainModuleFunctions.insert(mainModuleFunctions.begin(),
                                       mainModuleFunctions.end());
   kmodule->mainModuleGlobals.insert(mainModuleGlobals.begin(),
                                     mainModuleGlobals.end());
+  kmodule->manifest(interpreterHandler, interpreterOpts.Guidance,
+                    StatsTracker::useStatistics());
 
   if (origInfos) {
     kmodule->origInfos = origInfos->getInstructions();
@@ -602,15 +602,6 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &userModules,
   DataLayout *TD = kmodule->targetData.get();
   Context::initialize(TD->isLittleEndian(),
                       (Expr::Width)TD->getPointerSizeInBits());
-
-  targetCalculator = std::unique_ptr<TargetCalculator>(
-      new TargetCalculator(*kmodule.get(), *codeGraphDistance.get()));
-
-  targetManager = std::unique_ptr<TargetManager>(new TargetManager(
-      guidanceKind, *distanceCalculator.get(), *targetCalculator.get()));
-
-  targetedExecutionManager = std::unique_ptr<TargetedExecutionManager>(
-      new TargetedExecutionManager(*codeGraphDistance, *distanceCalculator));
 
   return kmodule->module.get();
 }
@@ -1092,16 +1083,32 @@ ref<Expr> Executor::maxStaticPctChecks(ExecutionState &current,
   return condition;
 }
 
+/// returns true if we cannot use CFG reachability checks
+/// from instr children to this target
+/// to avoid solver calls
+bool mustVisitForkBranches(ref<Target> target, KInstruction *instr) {
+  // null check after deref error is checked after fork
+  // but reachability of this target from instr children
+  // will always give false, so we need to force visiting
+  // fork branches here
+  if (auto reprErrorTarget = dyn_cast<ReproduceErrorTarget>(target)) {
+    return reprErrorTarget->isTheSameAsIn(instr) &&
+           reprErrorTarget->isThatError(
+               ReachWithError::NullCheckAfterDerefException);
+  }
+  return false;
+}
+
 bool Executor::canReachSomeTargetFromBlock(ExecutionState &es, KBlock *block) {
   if (interpreterOpts.Guidance != GuidanceKind::ErrorGuidance)
     return true;
   auto nextInstr = block->getFirstInstruction();
   for (const auto &p : *es.targetForest.getTopLayer()) {
     auto target = p.first;
-    if (target->mustVisitForkBranches(es.prevPC))
+    if (mustVisitForkBranches(target, es.prevPC))
       return true;
     auto dist = distanceCalculator->getDistance(
-        es.prevPC, nextInstr, es.stack.callStack(), es.error, target);
+        es.prevPC, nextInstr, es.stack.callStack(), target->getBlock());
     if (dist.result != WeightResult::Miss)
       return true;
   }
@@ -2395,8 +2402,10 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   if (guidanceKind == GuidanceKind::ErrorGuidance) {
     for (auto kvp : state.targetForest) {
       auto target = kvp.first;
-      if (target->isThatError(ReachWithError::Reachable) &&
-          target->isTheSameAsIn(ki)) {
+      if (target->shouldFailOnThisTarget() &&
+          cast<ReproduceErrorTarget>(target)->isThatError(
+              ReachWithError::Reachable) &&
+          cast<ReproduceErrorTarget>(target)->isTheSameAsIn(ki)) {
         terminateStateOnTargetError(state, ReachWithError::Reachable);
         return;
       }
@@ -4185,7 +4194,7 @@ void Executor::reportProgressTowardsTargets(std::string prefix,
   for (auto &state : states) {
     for (auto &p : *state->targetForest.getTopLayer()) {
       auto target = p.first;
-      auto distance = distanceCalculator->getDistance(*state, target);
+      auto distance = targetManager->distance(*state, target);
       auto it = distancesTowardsTargets.find(target);
       if (it == distancesTowardsTargets.end())
         distancesTowardsTargets.insert(it, std::make_pair(target, distance));
@@ -4201,9 +4210,11 @@ void Executor::reportProgressTowardsTargets(std::string prefix,
     auto target = p.first;
     auto distance = p.second;
     std::ostringstream repr;
-    repr << "Target " << target->getId() << ": ";
+    repr << "Target ";
     if (target->shouldFailOnThisTarget()) {
-      repr << "error ";
+      repr << cast<ReproduceErrorTarget>(target)->getId() << ": error ";
+    } else {
+      repr << ": ";
     }
     repr << "in function " +
                 target->getBlock()->parent->function->getName().str();
@@ -4252,15 +4263,9 @@ void Executor::run(std::vector<ExecutionState *> initialStates) {
       KInstruction *prevKI = state.prevPC;
       KFunction *kf = prevKI->parent->parent;
 
-      if (prevKI->inst->isTerminator() && kmodule->inMainModule(kf->function)) {
+      if (prevKI->inst->isTerminator() &&
+          kmodule->inMainModule(*kf->function)) {
         targetCalculator->update(state);
-        auto target = Target::create(state.prevPC->parent);
-        if (guidanceKind == GuidanceKind::CoverageGuidance) {
-          if (!target->atReturn() ||
-              state.prevPC == target->getBlock()->getLastInstruction()) {
-            targetManager->setReached(target);
-          }
-        }
       }
 
       executeStep(state);
@@ -4283,11 +4288,12 @@ void Executor::run(std::vector<ExecutionState *> initialStates) {
       haltExecution = HaltExecution::NoMoreStates;
   }
 
+  doDumpStates();
+
   delete searcher;
   searcher = nullptr;
   targetManager = nullptr;
 
-  doDumpStates();
   haltExecution = HaltExecution::NotHalt;
 }
 
@@ -4358,8 +4364,8 @@ void Executor::targetedRun(ExecutionState &initialState, KBlock *target,
 
   states.insert(&initialState);
 
-  TargetedSearcher *targetedSearcher =
-      new TargetedSearcher(Target::create(target), *distanceCalculator);
+  TargetedSearcher *targetedSearcher = new TargetedSearcher(
+      ReachBlockTarget::create(target), *distanceCalculator);
   searcher = targetedSearcher;
 
   std::vector<ExecutionState *> newStates(states.begin(), states.end());
@@ -4494,9 +4500,9 @@ void Executor::terminateState(ExecutionState &state,
   }
 
   interpreterHandler->incPathsExplored();
+  state.pc = state.prevPC;
   targetCalculator->update(state);
 
-  state.pc = state.prevPC;
   removedStates.push_back(&state);
 }
 
@@ -4704,7 +4710,6 @@ void Executor::terminateStateOnError(ExecutionState &state,
                                         true);
   }
 
-  targetCalculator->update(state);
   terminateState(state, terminationType);
 
   if (shouldExitOn(terminationType))
@@ -6686,7 +6691,7 @@ ExecutionState *Executor::prepareStateForPOSIX(KInstIterator &caller,
   ExecutionState *original = state->copy();
   ExecutionState *initialState = nullptr;
   ref<TargetForest> targets(new TargetForest());
-  targets->add(Target::create(target));
+  targets->add(ReachBlockTarget::create(target));
   prepareTargetedExecution(*state, targets);
   targetedRun(*state, target, &initialState);
   state = initialState;

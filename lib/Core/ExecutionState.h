@@ -52,7 +52,7 @@ struct KInstruction;
 class MemoryObject;
 class PTreeNode;
 struct InstructionInfo;
-struct Target;
+class Target;
 struct TranstionHash;
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const MemoryMap &mm);
@@ -444,7 +444,7 @@ public:
   llvm::BasicBlock *getPCBlock() const;
   void increaseLevel();
 
-  inline bool isTransfered() { return getPrevPCBlock() != getPCBlock(); }
+  inline bool isTransfered() const { return getPrevPCBlock() != getPCBlock(); }
 
   bool isGEPExpr(ref<Expr> expr) const;
 
@@ -478,7 +478,7 @@ public:
     areTargetsChanged_ = true;
   }
 
-  bool reachedTarget(Target target) const;
+  bool reachedTarget(ref<ReachBlockTarget> target) const;
   static std::uint32_t getLastID() { return nextID - 1; };
 
   inline bool isStuck(unsigned long long bound) {

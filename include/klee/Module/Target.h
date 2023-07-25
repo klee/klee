@@ -43,23 +43,10 @@ struct ErrorLocation {
   optional<unsigned int> endColumn;
 };
 
-struct Target {
+class ReproduceErrorTarget;
+
+class Target {
 private:
-  KBlock *block;
-  std::vector<ReachWithError>
-      errors;                  // None - if it is not terminated in error trace
-  std::string id;              // "" - if it is not terminated in error trace
-  optional<ErrorLocation> loc; // TODO(): only for check in reportTruePositive
-
-  explicit Target(const std::vector<ReachWithError> &_errors,
-                  const std::string &_id, optional<ErrorLocation> _loc,
-                  KBlock *_block)
-      : block(_block), errors(_errors), id(_id), loc(_loc) {
-    std::sort(errors.begin(), errors.end());
-  }
-
-  static ref<Target> createCachedTarget(ref<Target> target);
-
 protected:
   friend class ref<Target>;
   friend class ref<const Target>;
@@ -87,6 +74,7 @@ protected:
     }
   };
 
+  KBlock *block;
   static TargetCacheSet cachedTargets;
   bool isCached = false;
   bool toBeCleared = false;
@@ -94,13 +82,24 @@ protected:
   /// @brief Required by klee::ref-managed objects
   mutable class ReferenceCounter _refCount;
 
-public:
-  bool isReported = false;
+  explicit Target(KBlock *_block) : block(_block) {}
 
-  static ref<Target> create(const std::vector<ReachWithError> &_errors,
-                            const std::string &_id,
-                            optional<ErrorLocation> _loc, KBlock *_block);
-  static ref<Target> create(KBlock *_block);
+  static ref<Target> createCachedTarget(ref<Target> target);
+
+public:
+  static const unsigned MAGIC_HASH_CONSTANT = 39;
+
+  enum Kind {
+    CoverBranch = 3,
+    ReproduceError,
+    ReachBlock,
+  };
+
+  virtual ~Target();
+  virtual Kind getKind() const = 0;
+  virtual int internalCompare(const Target &b) const = 0;
+  static bool classof(const Target *) { return true; }
+  virtual std::string toString() const = 0;
 
   int compare(const Target &other) const;
 
@@ -110,8 +109,6 @@ public:
 
   bool operator==(const Target &other) const;
 
-  bool atReturn() const { return isa<KReturnBlock>(block); }
-
   KBlock *getBlock() const { return block; }
 
   bool isNull() const { return block == nullptr; }
@@ -120,26 +117,99 @@ public:
 
   unsigned hash() const { return reinterpret_cast<uintptr_t>(block); }
 
+  bool shouldFailOnThisTarget() const {
+    return isa<ReproduceErrorTarget>(this);
+  }
+};
+
+class ReachBlockTarget : public Target {
+protected:
+  bool atEnd;
+
+  explicit ReachBlockTarget(KBlock *_block, bool _atEnd)
+      : Target(_block), atEnd(_atEnd) {}
+
+public:
+  static ref<Target> create(KBlock *_block, bool _atEnd);
+  static ref<Target> create(KBlock *_block);
+
+  Kind getKind() const override { return Kind::ReachBlock; }
+
+  static bool classof(const Target *S) {
+    return S->getKind() == Kind::ReachBlock;
+  }
+  static bool classof(const ReachBlockTarget *) { return true; }
+
+  bool isAtEnd() const { return atEnd; }
+
+  virtual int internalCompare(const Target &other) const override;
+  virtual std::string toString() const override;
+};
+
+class CoverBranchTarget : public Target {
+protected:
+  unsigned branchCase;
+
+  explicit CoverBranchTarget(KBlock *_block, unsigned _branchCase)
+      : Target(_block), branchCase(_branchCase) {}
+
+public:
+  static ref<Target> create(KBlock *_block, unsigned _branchCase);
+
+  Kind getKind() const override { return Kind::CoverBranch; }
+
+  static bool classof(const Target *S) {
+    return S->getKind() == Kind::CoverBranch;
+  }
+  static bool classof(const CoverBranchTarget *) { return true; }
+
+  virtual int internalCompare(const Target &other) const override;
+  virtual std::string toString() const override;
+
+  unsigned getBranchCase() const { return branchCase; }
+};
+
+class ReproduceErrorTarget : public Target {
+private:
+  std::vector<ReachWithError>
+      errors;        // None - if it is not terminated in error trace
+  std::string id;    // "" - if it is not terminated in error trace
+  ErrorLocation loc; // TODO(): only for check in reportTruePositive
+
+protected:
+  explicit ReproduceErrorTarget(const std::vector<ReachWithError> &_errors,
+                                const std::string &_id, ErrorLocation _loc,
+                                KBlock *_block)
+      : Target(_block), errors(_errors), id(_id), loc(_loc) {
+    assert(errors.size() > 0);
+    std::sort(errors.begin(), errors.end());
+  }
+
+public:
+  static ref<Target> create(const std::vector<ReachWithError> &_errors,
+                            const std::string &_id, ErrorLocation _loc,
+                            KBlock *_block);
+
+  Kind getKind() const override { return Kind::ReproduceError; }
+
+  static bool classof(const Target *S) {
+    return S->getKind() == Kind::ReproduceError;
+  }
+  static bool classof(const ReproduceErrorTarget *) { return true; }
+
+  virtual int internalCompare(const Target &other) const override;
+  virtual std::string toString() const override;
+
+  std::string getId() const { return id; }
+
+  bool isReported = false;
+
   const std::vector<ReachWithError> &getErrors() const { return errors; }
   bool isThatError(ReachWithError err) const {
     return std::find(errors.begin(), errors.end(), err) != errors.end();
   }
-  bool shouldFailOnThisTarget() const {
-    return std::find(errors.begin(), errors.end(), ReachWithError::None) ==
-           errors.end();
-  }
 
   bool isTheSameAsIn(const KInstruction *instr) const;
-
-  /// returns true if we cannot use CFG reachability checks
-  /// from instr children to this target
-  /// to avoid solver calls
-  bool mustVisitForkBranches(KInstruction *instr) const;
-
-  std::string getId() const { return id; }
-
-  std::string toString() const;
-  ~Target();
 };
 } // namespace klee
 
