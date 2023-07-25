@@ -41,6 +41,9 @@ struct ErrorLocation {
   unsigned int endLine;
   optional<unsigned int> startColumn;
   optional<unsigned int> endColumn;
+
+  ErrorLocation(const klee::ref<klee::Location> &loc);
+  ErrorLocation(const KInstruction *ki);
 };
 
 class ReproduceErrorTarget;

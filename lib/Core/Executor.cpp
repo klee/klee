@@ -217,6 +217,10 @@ llvm::cl::opt<unsigned> MinNumberElementsLazyInit(
                    "initialization (default 4)"),
     llvm::cl::init(4), llvm::cl::cat(LazyInitCat));
 
+cl::opt<std::string> FunctionCallReproduce(
+    "function-call-reproduce", cl::init(""),
+    cl::desc("Marks mentioned function as target for error-guided mode."),
+    cl::cat(ExecCat));
 } // namespace klee
 
 namespace {
@@ -509,10 +513,6 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
                                                 EqualitySubstitution);
   initializeSearchOptions();
 
-  if (OnlyOutputStatesCoveringNew && !StatsTracker::useIStats())
-    klee_error("To use --only-output-states-covering-new, you need to enable "
-               "--output-istats.");
-
   if (DebugPrintInstructions.isSet(FILE_ALL) ||
       DebugPrintInstructions.isSet(FILE_COMPACT) ||
       DebugPrintInstructions.isSet(FILE_SRC)) {
@@ -584,6 +584,13 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &userModules,
   preservedFunctions.push_back("memcpy");
   preservedFunctions.push_back("memcmp");
   preservedFunctions.push_back("memmove");
+
+  if (FunctionCallReproduce != "") {
+    // prevent elimination of the function
+    auto f = kmodule->module->getFunction(FunctionCallReproduce);
+    if (f)
+      f->addFnAttr(Attribute::OptimizeNone);
+  }
 
   kmodule->optimiseAndPrepare(opts, preservedFunctions);
   kmodule->checkModule();
@@ -6635,7 +6642,8 @@ void Executor::clearMemory() {
 
 void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
                                  char **envp) {
-  if (guidanceKind == GuidanceKind::ErrorGuidance &&
+  if (FunctionCallReproduce == "" &&
+      guidanceKind == GuidanceKind::ErrorGuidance &&
       (!interpreterOpts.Paths.has_value() || interpreterOpts.Paths->empty())) {
     klee_warning("No targets found in error-guided mode");
     return;
@@ -6646,9 +6654,26 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
   std::vector<ExecutionState *> states;
 
   if (guidanceKind == GuidanceKind::ErrorGuidance) {
-    auto &paths = interpreterOpts.Paths.value();
-    auto prepTargets = targetedExecutionManager->prepareTargets(
-        kmodule.get(), std::move(paths));
+    std::map<klee::KFunction *, klee::ref<klee::TargetForest>,
+             klee::TargetedExecutionManager::KFunctionLess>
+        prepTargets;
+    if (FunctionCallReproduce == "") {
+      auto &paths = interpreterOpts.Paths.value();
+      prepTargets = targetedExecutionManager->prepareTargets(kmodule.get(),
+                                                             std::move(paths));
+    } else {
+      /* Find all calls to function specified in .prp file
+       * and combine them to single target forest */
+      KFunction *kEntryFunction = kmodule->functionMap.at(f);
+      ref<TargetForest> forest = new TargetForest(kEntryFunction);
+      auto kfunction = kmodule->functionNameMap.at(FunctionCallReproduce);
+      KBlock *kCallBlock = kfunction->entryKBlock;
+      forest->add(ReproduceErrorTarget::create(
+          {ReachWithError::Reachable}, "",
+          ErrorLocation(kCallBlock->getFirstInstruction()), kCallBlock));
+      prepTargets.emplace(kEntryFunction, forest);
+    }
+
     if (prepTargets.empty()) {
       klee_warning(
           "No targets found in error-guided mode after prepare targets");

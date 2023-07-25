@@ -21,6 +21,7 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 DISABLE_WARNING_POP
 
 namespace klee {
+extern llvm::cl::OptionCategory TestCompCat;
 extern llvm::cl::OptionCategory ExecCat;
 extern llvm::cl::OptionCategory DebugCat;
 extern llvm::cl::OptionCategory ExecCat;

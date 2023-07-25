@@ -26,6 +26,15 @@ llvm::cl::opt<bool> LocationAccuracy(
     cl::desc("Check location with line and column accuracy (default=false)"));
 }
 
+ErrorLocation::ErrorLocation(const klee::ref<klee::Location> &loc)
+    : startLine(loc->startLine), endLine(loc->endLine),
+      startColumn(loc->startColumn), endColumn(loc->endColumn) {}
+
+ErrorLocation::ErrorLocation(const KInstruction *ki) {
+  startLine = (endLine = ki->info->line);
+  startColumn = (endColumn = ki->info->line);
+}
+
 std::string ReproduceErrorTarget::toString() const {
   std::ostringstream repr;
   repr << "Target " << getId() << ": ";
