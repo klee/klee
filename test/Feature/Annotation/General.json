@@ -1,0 +1,24 @@
+{
+  "ptrArg": {
+    "name": "ptrArg",
+    "annotation": [
+      [],
+      [],
+      [
+        "InitNull:*",
+        "AllocSource:*:1"
+      ]
+    ],
+    "properties": []
+  },
+  "ptrRet": {
+    "name": "ptrRet",
+    "annotation": [
+      [
+        "MaybeInitNull",
+        "AllocSource::1"
+      ]
+    ],
+    "properties": []
+  }
+}

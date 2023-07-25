@@ -1,0 +1,67 @@
+{
+  "maybeDeref1": {
+    "name": "maybeDeref1",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "maybeDeref2": {
+    "name": "maybeDeref2",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "maybeDeref3": {
+    "name": "maybeDeref3",
+    "annotation": [
+      [],
+      [
+        "Deref:*"
+      ]
+    ],
+    "properties": []
+  },
+  "maybeDeref4": {
+    "name": "maybeDeref4",
+    "annotation": [
+      [],
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "maybeDeref5": {
+    "name": "maybeDeref5",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "maybeDeref6": {
+    "name": "maybeDeref6",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  }
+}

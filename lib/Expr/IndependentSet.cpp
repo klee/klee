@@ -9,10 +9,8 @@
 #include "klee/Expr/SymbolicSource.h"
 #include "klee/Expr/Symcrete.h"
 #include "klee/Module/KModule.h"
-#include "klee/Solver/Solver.h"
 
 #include <list>
-#include <map>
 #include <queue>
 #include <set>
 #include <vector>
@@ -270,13 +268,11 @@ bool IndependentConstraintSet::intersects(
     if (it2 != b->elements.end()) {
       if (it->second.intersects(it2->second)) {
         return true;
+      }
     }
-  }
-  for (std::set<std::string>::iterator it = uninterpretedFunctions.begin(),
-                                       ie = uninterpretedFunctions.end();
-       it != ie; ++it) {
-    if (b.uninterpretedFunctions.count(*it)) {
-      return true;
+    for (const auto &uFn : a->uninterpretedFunctions) {
+      if (b->uninterpretedFunctions.count(uFn)) {
+        return true;
       }
     }
   }

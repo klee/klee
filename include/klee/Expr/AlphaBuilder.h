@@ -34,7 +34,7 @@ private:
 
 public:
   AlphaBuilder(ArrayCache &_arrayCache);
-  constraints_ty visitConstraints(constraints_ty cs);
+  constraints_ty visitConstraints(const constraints_ty &cs);
   ref<Expr> build(ref<Expr> v);
   const Array *buildArray(const Array *arr) { return visitArray(arr); }
   ref<Expr> reverseBuild(ref<Expr> v);

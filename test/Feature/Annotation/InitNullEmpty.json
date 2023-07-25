@@ -1,0 +1,32 @@
+{
+  "maybeInitNull1": {
+    "name": "maybeInitNull1",
+    "annotation": [
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "maybeInitNull2": {
+    "name": "maybeInitNull2",
+    "annotation": [
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "maybeInitNull3": {
+    "name": "maybeInitNull3",
+    "annotation": [
+      []
+    ],
+    "properties": []
+  },
+  "maybeInitNull4": {
+    "name": "maybeInitNull4",
+    "annotation": [
+      []
+    ],
+    "properties": []
+  }
+}

@@ -36,7 +36,6 @@
 #include "klee/Core/Context.h"
 
 #include "klee/ADT/KTest.h"
-#include "klee/ADT/RNG.h"
 #include "klee/Config/Version.h"
 #include "klee/Config/config.h"
 #include "klee/Core/Interpreter.h"
@@ -183,24 +182,9 @@ cl::opt<size_t> StackCopySizeMemoryCheckThreshold(
              "copied"),
     cl::cat(ExecCat));
 
-enum class MockMutableGlobalsPolicy {
-  None,
-  PrimitiveFields,
-  All,
-};
+namespace {
 
-cl::opt<MockMutableGlobalsPolicy> MockMutableGlobals(
-    "mock-mutable-globals",
-    cl::values(clEnumValN(MockMutableGlobalsPolicy::None, "none",
-                          "No mutable global object are allowed o mock except "
-                          "external (default)"),
-               clEnumValN(MockMutableGlobalsPolicy::PrimitiveFields,
-                          "primitive-fields",
-                          "Only primitive fileds of mutable global objects are "
-                          "allowed to mock."),
-               clEnumValN(MockMutableGlobalsPolicy::All, "all",
-                          "All mutable global object are allowed o mock.")),
-    cl::init(MockMutableGlobalsPolicy::None), cl::cat(ExecCat));
+/*** Lazy initialization options ***/
 
 enum class LazyInitializationPolicy {
   None,
@@ -229,6 +213,7 @@ llvm::cl::opt<unsigned> MinNumberElementsLazyInit(
     llvm::cl::desc("Minimum number of array elements for one lazy "
                    "initialization (default 4)"),
     llvm::cl::init(4), llvm::cl::cat(LazyInitCat));
+} // namespace
 
 cl::opt<std::string> FunctionCallReproduce(
     "function-call-reproduce", cl::init(""),
@@ -349,18 +334,6 @@ cl::opt<bool> AllExternalWarnings(
     cl::desc("Issue a warning everytime an external call is made, "
              "as opposed to once per function (default=false)"),
     cl::cat(ExtCallsCat));
-
-cl::opt<bool>
-    MockExternalCalls("mock-external-calls", cl::init(false),
-                      cl::desc("If true, failed external calls are mocked, "
-                               "i.e. return values are made symbolic "
-                               "and then added to generated test cases. "
-                               "If false, fails on externall calls."),
-                      cl::cat(ExtCallsCat));
-
-cl::opt<bool> MockAllExternals("mock-all-externals", cl::init(false),
-                               cl::desc("If true, all externals are mocked."),
-                               cl::cat(ExtCallsCat));
 
 /*** Seeding options ***/
 
@@ -509,9 +482,9 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
                    InterpreterHandler *ih)
     : Interpreter(opts), interpreterHandler(ih), searcher(nullptr),
       externalDispatcher(new ExternalDispatcher(ctx)), statsTracker(0),
-      pathWriter(0), symPathWriter(0), specialFunctionHandler(0),
-      timers{time::Span(TimerInterval)}, guidanceKind(opts.Guidance),
-      codeGraphInfo(new CodeGraphInfo()),
+      pathWriter(0), symPathWriter(0),
+      specialFunctionHandler(0), timers{time::Span(TimerInterval)},
+      guidanceKind(opts.Guidance), codeGraphInfo(new CodeGraphInfo()),
       distanceCalculator(new DistanceCalculator(*codeGraphInfo)),
       targetCalculator(new TargetCalculator(*codeGraphInfo)),
       targetManager(new TargetManager(guidanceKind, *distanceCalculator,
@@ -522,9 +495,14 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       inhibitForking(false), coverOnTheFly(false),
       haltExecution(HaltExecution::NotHalt), ivcEnabled(false),
       debugLogBuffer(debugBufferString) {
-  if (CoreSolverToUse != Z3_SOLVER &&
-      interpreterOpts.MockStrategy == MockStrategy::Deterministic) {
+  if (interpreterOpts.MockStrategy == MockStrategyKind::Deterministic &&
+      CoreSolverToUse != Z3_SOLVER) {
     klee_error("Deterministic mocks can be generated with Z3 solver only.\n");
+  }
+  if (interpreterOpts.MockStrategy == MockStrategyKind::Deterministic &&
+      interpreterOpts.Mock != MockPolicy::All) {
+    klee_error("Deterministic mocks can be generated only with "
+               "`--mock-policy=all`.\n");
   }
 
   const time::Span maxTime{MaxTime};
@@ -595,20 +573,9 @@ llvm::Module *Executor::setModule(
     const ModuleOptions &opts, std::set<std::string> &&mainModuleFunctions,
     std::set<std::string> &&mainModuleGlobals, FLCtoOpcode &&origInstructions,
     const std::set<std::string> &ignoredExternals,
-                    const Annotations &annotations) {
+    std::vector<std::pair<std::string, std::string>> redefinitions) {
   assert(!kmodule && !userModules.empty() &&
          "can only register one module"); // XXX gross
-
-  if (ExternalCalls == ExternalCallPolicy::All &&
-      interpreterOpts.MockStrategy != MockStrategy::None) {
-    llvm::Function *mainFn =
-        userModules.front()->getFunction(opts.MainCurrentName);
-    if (!mainFn) {
-      klee_error("Entry function '%s' not found in module.",
-                 opts.MainCurrentName.c_str());
-    }
-    mainFn->setName(opts.MainNameAfterMock);
-  }
 
   kmodule = std::make_unique<KModule>();
 
@@ -634,28 +601,19 @@ llvm::Module *Executor::setModule(
     kmodule->instrument(opts);
   }
 
-  if (ExternalCalls == ExternalCallPolicy::All &&
-      interpreterOpts.MockStrategy != MockStrategy::None) {
-    // TODO: move this to function
-    std::map<std::string, llvm::Type *> externals =
-        getAllExternals(ignoredExternals);
-    MockBuilder builder(kmodule->module.get(), opts.MainCurrentName,
-                        opts.MainNameAfterMock, externals, annotations);
-    std::unique_ptr<llvm::Module> mockModule = builder.build();
-    if (!mockModule) {
-      klee_error("Unable to generate mocks");
-    }
-    // TODO: change this to bc file
-    std::unique_ptr<llvm::raw_fd_ostream> f(
-        interpreterHandler->openOutputFile("externals.ll"));
-    auto mainFn = mockModule->getFunction(opts.MainCurrentName);
-    mainFn->setName(opts.EntryPoint);
-    *f << *mockModule;
-    mainFn->setName(opts.MainCurrentName);
+  if (interpreterOpts.Mock == MockPolicy::All ||
+      interpreterOpts.MockMutableGlobals == MockMutableGlobalsPolicy::All ||
+      !opts.AnnotationsFile.empty()) {
+    MockBuilder mockBuilder(kmodule->module.get(), opts, interpreterOpts,
+                            ignoredExternals, redefinitions, interpreterHandler,
+                            mainModuleFunctions, mainModuleGlobals);
+    std::unique_ptr<llvm::Module> mockModule = mockBuilder.build();
 
     std::vector<std::unique_ptr<llvm::Module>> mockModules;
     mockModules.push_back(std::move(mockModule));
-    kmodule->link(mockModules, 0);
+    // std::swap(mockModule, kmodule->module);
+    kmodule->link(mockModules, 1);
+    klee_message("Mock linkage: done");
 
     for (auto &global : kmodule->module->globals()) {
       if (global.isDeclaration()) {
@@ -730,37 +688,6 @@ llvm::Module *Executor::setModule(
                       (Expr::Width)TD->getPointerSizeInBits());
 
   return kmodule->module.get();
-}
-
-std::map<std::string, llvm::Type *>
-Executor::getAllExternals(const std::set<std::string> &ignoredExternals) {
-  std::map<std::string, llvm::Type *> externals;
-  for (const auto &f : kmodule->module->functions()) {
-    if (f.isDeclaration() && !f.use_empty() &&
-        !ignoredExternals.count(f.getName().str()))
-      // NOTE: here we detect all the externals, even linked.
-      externals.insert(std::make_pair(f.getName(), f.getFunctionType()));
-  }
-
-  for (const auto &global : kmodule->module->globals()) {
-    if (global.isDeclaration() &&
-        !ignoredExternals.count(global.getName().str()))
-      externals.insert(std::make_pair(global.getName(), global.getValueType()));
-  }
-
-  for (const auto &alias : kmodule->module->aliases()) {
-    auto it = externals.find(alias.getName().str());
-    if (it != externals.end()) {
-      externals.erase(it);
-    }
-  }
-
-  for (const auto &e : externals) {
-    klee_message("Mocking external %s %s",
-                 e.second->isFunctionTy() ? "function" : "variable",
-                 e.first.c_str());
-  }
-  return externals;
 }
 
 Executor::~Executor() {
@@ -1098,11 +1025,7 @@ void Executor::initializeGlobalObjects(ExecutionState &state) {
         } else {
           addr = externalDispatcher->resolveSymbol(v.getName().str());
         }
-        if (MockAllExternals && !addr) {
-          executeMakeSymbolic(
-              state, mo, typeSystemManager->getWrappedType(v.getType()),
-              SourceBuilder::irreproducible("mockExternGlobalObject"), false);
-        } else if (!addr) {
+        if (!addr) {
           klee_error("Unable to load symbol(%.*s) while initializing globals",
                      static_cast<int>(v.getName().size()), v.getName().data());
         } else {
@@ -1116,18 +1039,11 @@ void Executor::initializeGlobalObjects(ExecutionState &state) {
             SourceBuilder::irreproducible("unsizedGlobal"), false);
       }
     } else if (v.hasInitializer()) {
-      if (!v.isConstant() && kmodule->inMainModule(v) &&
-          MockMutableGlobals == MockMutableGlobalsPolicy::All) {
-        executeMakeSymbolic(
-            state, mo, typeSystemManager->getWrappedType(v.getType()),
-            SourceBuilder::irreproducible("mockMutableGlobalObject"), false);
-      } else {
-        initializeGlobalObject(state, os, v.getInitializer(), 0);
-        if (v.isConstant()) {
-          os->setReadOnly(true);
-          // initialise constant memory that may be used with external calls
-          state.addressSpace.copyOutConcrete(mo, os, {});
-        }
+      initializeGlobalObject(state, os, v.getInitializer(), 0);
+      if (v.isConstant()) {
+        os->setReadOnly(true);
+        // initialise constant memory that may be used with external calls
+        state.addressSpace.copyOutConcrete(mo, os, {});
       }
     }
   }
@@ -3091,7 +3007,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
           have already got a value. But in the end the caches should
           handle it for us, albeit with some overhead. */
       do {
-        if (!first && MockExternalCalls) {
+        if (!first && interpreterOpts.Mock == MockPolicy::Failed) {
           free = nullptr;
           if (ki->inst()->getType()->isSized()) {
             prepareMockValue(state, "mockExternResult", ki);
@@ -5078,28 +4994,6 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
     return;
   }
 
-  if (ExternalCalls == ExternalCallPolicy::All && MockAllExternals) {
-    std::string TmpStr;
-    llvm::raw_string_ostream os(TmpStr);
-    os << "calling external: " << callable->getName().str() << "(";
-    for (unsigned i = 0; i < arguments.size(); i++) {
-      os << arguments[i];
-      if (i != arguments.size() - 1)
-        os << ", ";
-    }
-    os << ") at " << state.pc->getSourceLocationString();
-
-    if (AllExternalWarnings)
-      klee_warning("%s", os.str().c_str());
-    else if (!SuppressExternalWarnings)
-      klee_warning_once(callable->unwrap(), "%s", os.str().c_str());
-
-    if (target->inst()->getType()->isSized()) {
-      prepareMockValue(state, "mockExternResult", target);
-    }
-    return;
-  }
-
   // normal external function handling path
   // allocate 512 bits for each argument (+return value) to support
   // fp80's and SIMD vectors as parameters for external calls;
@@ -5218,7 +5112,7 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
                                                  roundingMode);
 
   if (!success) {
-    if (MockExternalCalls) {
+    if (interpreterOpts.Mock == MockPolicy::Failed) {
       if (target->inst()->getType()->isSized()) {
         prepareMockValue(state, "mockExternResult", target);
       }
@@ -5309,7 +5203,7 @@ ObjectState *Executor::bindObjectInState(ExecutionState &state,
   // will put multiple copies on this list, but it doesn't really
   // matter because all we use this list for is to unbind the object
   // on function return.
-  if (isLocal && state.stack.size() > 0) {
+  if (isLocal && !state.stack.empty()) {
     state.stack.valueStack().back().allocas.push_back(mo->id);
   }
   return os;
@@ -6163,16 +6057,6 @@ void Executor::collectReads(
       result = FPToX87FP80Ext(result);
     }
 
-    if (MockMutableGlobals == MockMutableGlobalsPolicy::PrimitiveFields &&
-        mo->isGlobal && !os->readOnly && isa<ConstantExpr>(result) &&
-        !targetType->getRawType()->isPointerTy()) {
-      result = makeMockValue(state, "mockGlobalValue", result->getWidth());
-      ObjectState *wos = state.addressSpace.getWriteable(mo, os);
-      maxNewWriteableOSSize =
-          std::max(maxNewWriteableOSSize, wos->getSparseStorageEntries());
-      wos->write(mo->getOffsetExpr(address), result);
-    }
-
     results.push_back(result);
   }
 }
@@ -6341,16 +6225,6 @@ void Executor::executeMemoryOperation(
 
         if (interpreterOpts.MakeConcreteSymbolic)
           result = replaceReadWithSymbolic(*state, result);
-
-        if (MockMutableGlobals == MockMutableGlobalsPolicy::PrimitiveFields &&
-            mo->isGlobal && !os->readOnly && isa<ConstantExpr>(result) &&
-            !targetType->getRawType()->isPointerTy()) {
-          result = makeMockValue(*state, "mockGlobalValue", result->getWidth());
-          ObjectState *wos = state->addressSpace.getWriteable(mo, os);
-          maxNewWriteableOSSize =
-              std::max(maxNewWriteableOSSize, wos->getSparseStorageEntries());
-          wos->write(mo->getOffsetExpr(address), result);
-        }
 
         bindLocal(target, *state, result);
       }
@@ -6532,16 +6406,6 @@ void Executor::executeMemoryOperation(
         if (X86FPAsX87FP80 && ki->inst()->getType()->isFloatingPointTy() &&
             Context::get().getPointerWidth() == 32) {
           result = FPToX87FP80Ext(result);
-        }
-
-        if (MockMutableGlobals == MockMutableGlobalsPolicy::PrimitiveFields &&
-            mo->isGlobal && !os->readOnly && isa<ConstantExpr>(result) &&
-            !targetType->getRawType()->isPointerTy()) {
-          result = makeMockValue(*bound, "mockGlobalValue", result->getWidth());
-          ObjectState *wos = bound->addressSpace.getWriteable(mo, os);
-          maxNewWriteableOSSize =
-              std::max(maxNewWriteableOSSize, wos->getSparseStorageEntries());
-          wos->write(mo->getOffsetExpr(address), result);
         }
 
         bindLocal(target, *bound, result);
@@ -6829,48 +6693,6 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
       }
     }
   }
-}
-
-void Executor::executeMakeMock(ExecutionState &state, KInstruction *target,
-                               std::vector<ref<Expr>> &arguments) {
-  KFunction *kf = target->parent->parent;
-  std::string name = "@call_" + kf->getName().str();
-  uint64_t width =
-      kmodule->targetData->getTypeSizeInBits(kf->function->getReturnType());
-  KType *type = typeSystemManager->getWrappedType(
-      llvm::PointerType::get(kf->function->getReturnType(),
-                             kmodule->targetData->getAllocaAddrSpace()));
-
-  IDType moID;
-  bool success = state.addressSpace.resolveOne(cast<ConstantExpr>(arguments[0]),
-                                               type, moID);
-  assert(success && "memory object for mock should already be allocated");
-  const MemoryObject *mo = state.addressSpace.findObject(moID).first;
-  assert(mo && "memory object for mock should already be allocated");
-  mo->setName(name);
-
-  ref<SymbolicSource> source;
-  switch (interpreterOpts.MockStrategy) {
-  case MockStrategy::None:
-    klee_error("klee_make_mock is not allowed when mock strategy is none");
-    break;
-  case MockStrategy::Naive:
-    source = SourceBuilder::mockNaive(kmodule.get(), *kf->function,
-                                      updateNameVersion(state, name));
-    break;
-  case MockStrategy::Deterministic:
-    std::vector<ref<Expr>> args(kf->numArgs);
-    for (size_t i = 0; i < kf->numArgs; i++) {
-      args[i] = getArgumentCell(state, kf, i).value;
-    }
-    source =
-        SourceBuilder::mockDeterministic(kmodule.get(), *kf->function, args);
-    break;
-  }
-  executeMakeSymbolic(state, mo, type, source, false);
-  const ObjectState *os = state.addressSpace.findObject(mo->id).second;
-  auto result = os->read(0, width);
-  bindLocal(target, state, result);
 }
 
 /***/

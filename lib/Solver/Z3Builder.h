@@ -92,11 +92,11 @@ template <> void Z3NodeHandle<Z3_sort>::dump() const __attribute__((used));
 template <> unsigned Z3NodeHandle<Z3_sort>::hash() __attribute__((used));
 
 // Specialize for Z3_func_decl
-template <> inline ::Z3_ast Z3NodeHandle<Z3_func_decl>::as_ast() {
+template <> inline ::Z3_ast Z3NodeHandle<Z3_func_decl>::as_ast() const {
   return ::Z3_func_decl_to_ast(context, node);
 }
 typedef Z3NodeHandle<Z3_func_decl> Z3FuncDeclHandle;
-template <> void Z3NodeHandle<Z3_func_decl>::dump() __attribute__((used));
+template <> void Z3NodeHandle<Z3_func_decl>::dump() const __attribute__((used));
 
 // Specialise for Z3_ast
 template <> inline ::Z3_ast Z3NodeHandle<Z3_ast>::as_ast() const {

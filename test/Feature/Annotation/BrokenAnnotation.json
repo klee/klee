@@ -1,0 +1,11 @@
+{
+  "maybeDeref1": {
+    "name": "maybeDeref1",
+    "annotation": [
+      [],
+      [
+        "Deref"
+    ],
+    "properties": []
+  }
+}

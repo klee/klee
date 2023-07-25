@@ -646,7 +646,7 @@ SourceResult ParserImpl::ParseMockNaiveSource() {
   auto versionExpr = ParseNumber(64).get();
   auto version = dyn_cast<ConstantExpr>(versionExpr);
   assert(version);
-  return SourceBuilder::mockNaive(km, *kf->function, version->getZExtValue());
+  return SourceBuilder::mockNaive(km, *kf->function(), version->getZExtValue());
 }
 
 SourceResult ParserImpl::ParseMockDeterministicSource() {
@@ -655,8 +655,8 @@ SourceResult ParserImpl::ParseMockDeterministicSource() {
   ConsumeExpectedToken(Token::Identifier);
   ConsumeLParen();
   std::vector<ref<Expr>> args;
-  args.reserve(kf->numArgs);
-  for (unsigned i = 0; i < kf->numArgs; i++) {
+  args.reserve(kf->getNumArgs());
+  for (unsigned i = 0; i < kf->getNumArgs(); i++) {
     auto expr = ParseExpr(TypeResult());
     if (!expr.isValid()) {
       return {false, nullptr};
@@ -664,7 +664,7 @@ SourceResult ParserImpl::ParseMockDeterministicSource() {
     args.push_back(expr.get());
   }
   ConsumeRParen();
-  return SourceBuilder::mockDeterministic(km, *kf->function, args);
+  return SourceBuilder::mockDeterministic(km, *kf->function(), args);
 }
 
 SourceResult ParserImpl::ParseAlphaSource() {

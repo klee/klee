@@ -361,8 +361,8 @@ public:
   const unsigned index;
 
   AlphaSource(unsigned _index) : index(_index) {}
-  Kind getKind() const override { return Kind::Alpha; }
-  virtual std::string getName() const override { return "alpha"; }
+  [[nodiscard]] Kind getKind() const override { return Kind::Alpha; }
+  [[nodiscard]] virtual std::string getName() const override { return "alpha"; }
 
   static bool classof(const SymbolicSource *S) {
     return S->getKind() == Kind::Alpha;
@@ -408,8 +408,8 @@ public:
                   unsigned _version)
       : MockSource(km, function), version(_version) {}
 
-  Kind getKind() const override { return Kind::MockNaive; }
-  std::string getName() const override { return "mockNaive"; }
+  [[nodiscard]] Kind getKind() const override { return Kind::MockNaive; }
+  [[nodiscard]] std::string getName() const override { return "mockNaive"; }
 
   static bool classof(const SymbolicSource *S) {
     return S->getKind() == Kind::MockNaive;
@@ -417,7 +417,7 @@ public:
 
   unsigned computeHash() override;
 
-  int internalCompare(const SymbolicSource &b) const override;
+  [[nodiscard]] int internalCompare(const SymbolicSource &b) const override;
 };
 
 class MockDeterministicSource : public MockSource {
@@ -427,8 +427,12 @@ public:
   MockDeterministicSource(const KModule *_km, const llvm::Function &_function,
                           const std::vector<ref<Expr>> &_args);
 
-  Kind getKind() const override { return Kind::MockDeterministic; }
-  std::string getName() const override { return "mockDeterministic"; }
+  [[nodiscard]] Kind getKind() const override {
+    return Kind::MockDeterministic;
+  }
+  [[nodiscard]] std::string getName() const override {
+    return "mockDeterministic";
+  }
 
   static bool classof(const SymbolicSource *S) {
     return S->getKind() == Kind::MockDeterministic;
@@ -436,7 +440,7 @@ public:
 
   unsigned computeHash() override;
 
-  int internalCompare(const SymbolicSource &b) const override;
+  [[nodiscard]] int internalCompare(const SymbolicSource &b) const override;
 };
 
 } // namespace klee

@@ -24,7 +24,6 @@ namespace klee {
 extern llvm::cl::OptionCategory TestCompCat;
 extern llvm::cl::OptionCategory ExecCat;
 extern llvm::cl::OptionCategory DebugCat;
-extern llvm::cl::OptionCategory ExecCat;
 extern llvm::cl::OptionCategory MiscCat;
 extern llvm::cl::OptionCategory ModuleCat;
 extern llvm::cl::OptionCategory SeedingCat;

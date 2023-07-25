@@ -1,3 +1,12 @@
+//===-- models.c ----------------------------------------------------------===//
+//
+//                     The KLEEF Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
 #include "stddef.h"
 
 extern void klee_make_symbolic(void *array, size_t nbytes, const char *name);
@@ -6,7 +15,7 @@ extern void *calloc(size_t num, size_t size);
 extern void *realloc(void *ptr, size_t new_size);
 
 void *__klee_wrapped_malloc(size_t size) {
-  char retNull;
+  unsigned char retNull;
   klee_make_symbolic(&retNull, sizeof(retNull), "retNullMalloc");
   if (retNull) {
     return 0;
@@ -16,7 +25,7 @@ void *__klee_wrapped_malloc(size_t size) {
 }
 
 void *__klee_wrapped_calloc(size_t num, size_t size) {
-  char retNull;
+  unsigned char retNull;
   klee_make_symbolic(&retNull, sizeof(retNull), "retNullCalloc");
   if (retNull) {
     return 0;
@@ -26,7 +35,7 @@ void *__klee_wrapped_calloc(size_t num, size_t size) {
 }
 
 void *__klee_wrapped_realloc(void *ptr, size_t new_size) {
-  char retNull;
+  unsigned char retNull;
   klee_make_symbolic(&retNull, sizeof(retNull), "retNullRealloc");
   if (retNull) {
     return 0;

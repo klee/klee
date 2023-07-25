@@ -35,6 +35,7 @@ config.clang = "@LLVMCC@"
 config.clangxx = "@LLVMCXX@"
 
 config.cc = "@NATIVE_CC@"
+config.objcopy = "@NATIVE_OBJCOPY@"
 config.cxx = "@NATIVE_CXX@"
 
 # NOTE: any changes to compiler flags also have to be applied to

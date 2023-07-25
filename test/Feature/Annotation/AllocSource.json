@@ -1,0 +1,40 @@
+{
+  "maybeAllocSource1": {
+    "name": "maybeAllocSource1",
+    "annotation": [
+      [],
+      [
+        "AllocSource::1"
+      ]
+    ],
+    "properties": []
+  },
+  "maybeAllocSource2": {
+    "name": "maybeAllocSource2",
+    "annotation": [
+      [],
+      [
+        "AllocSource:*:1"
+      ]
+    ],
+    "properties": []
+  },
+  "maybeAllocSource3": {
+    "name": "maybeAllocSource3",
+    "annotation": [
+      [
+        "AllocSource::1"
+      ]
+    ],
+    "properties": []
+  },
+  "maybeAllocSource4": {
+    "name": "maybeAllocSource4",
+    "annotation": [
+      [
+        "AllocSource::1"
+      ]
+    ],
+    "properties": []
+  }
+}

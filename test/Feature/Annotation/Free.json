@@ -1,0 +1,31 @@
+{
+  "maybeFree1": {
+    "name": "maybeFree1",
+    "annotation": [
+      [],
+      [
+        "FreeSink::1"
+      ]
+    ],
+    "properties": []
+  },
+  "maybeFree2": {
+    "name": "maybeFree2",
+    "annotation": [
+      [],
+      [
+        "FreeSink:*:1"
+      ]
+    ],
+    "properties": []
+  },
+  "maybeAllocSource1": {
+    "name": "maybeAllocSource1",
+    "annotation": [
+      [
+        "AllocSource::1"
+      ]
+    ],
+    "properties": []
+  }
+}

@@ -1,123 +1,220 @@
-#include "klee/Module/Annotation.h"
+//===-- Annotation.cpp ----------------------------------------------------===//
+//
+//                     The KLEEF Symbolic Virtual Machine
+//
+// This file is distributed under the University of Illinois Open Source
+// License. See LICENSE.TXT for details.
+//===----------------------------------------------------------------------===//
 
+#include "klee/Module/Annotation.h"
 #include "klee/Support/ErrorHandling.h"
 
 #include <fstream>
-
-namespace {
-
-using namespace klee;
-
-Annotation::StatementPtr toStatement(const std::string &name,
-                                     const std::string &str) {
-  if (name == "Deref") {
-    return std::make_shared<Annotation::StatementDeref>(str);
-  } else if (name == "InitNull") {
-    return std::make_shared<Annotation::StatementInitNull>(str);
-  } else {
-    return std::make_shared<Annotation::StatementUnknown>(str);
-  }
-}
-
-} // namespace
+#include <llvm/Support/raw_ostream.h>
 
 namespace klee {
 
-Annotation::StatementUnknown::StatementUnknown(const std::string &str)
-    : statementStr(str) {
-  parseOnlyOffset(str);
+static inline std::string toLower(const std::string &str) {
+  std::string strLower;
+  strLower.reserve(str.size());
+  std::transform(str.begin(), str.end(), std::back_inserter(strLower), tolower);
+  return strLower;
 }
 
-Annotation::StatementUnknown::~StatementUnknown() = default;
+namespace Statement {
 
-Annotation::StatementKind
-Annotation::StatementUnknown::getStatementName() const {
-  return Annotation::StatementKind::Unknown;
-}
+Unknown::Unknown(const std::string &str) {
+  {
+    const size_t firstColonPos = str.find(':');
+    const size_t startOffset = firstColonPos + 1;
+    const size_t secondColonPos = str.find(':', startOffset);
+    const size_t offsetLength = (secondColonPos == std::string::npos)
+                                    ? std::string::npos
+                                    : secondColonPos - startOffset;
 
-bool Annotation::StatementUnknown::operator==(
-    const Annotation::StatementUnknown &other) const {
-  return (statementStr == other.statementStr) && (offset == other.offset);
-}
+    rawAnnotation = str.substr(0, firstColonPos);
+    if (firstColonPos == std::string::npos) {
+      return;
+    }
+    rawOffset = str.substr(startOffset, offsetLength);
+    if (secondColonPos != std::string::npos) {
+      rawValue = str.substr(secondColonPos + 1, std::string::npos);
+    }
+  }
 
-void Annotation::StatementUnknown::parseOffset(const std::string &offsetStr) {
-  size_t pos = 0;
-  while (pos < offsetStr.size()) {
-    if (offsetStr[pos] == '*') {
+  for (size_t pos = 0; pos < rawOffset.size(); pos++) {
+    switch (rawOffset[pos]) {
+    case '*': {
       offset.emplace_back("*");
-      pos++;
-    } else if (offsetStr[pos] == '&') {
+      break;
+    }
+    case '&': {
       offset.emplace_back("&");
-      pos++;
-    } else if (offsetStr[pos] == '[') {
-      size_t posEndExpr = offsetStr.find(']', pos);
+      break;
+    }
+    case '[': {
+      size_t posEndExpr = rawOffset.find(']', pos);
       if (posEndExpr == std::string::npos) {
-        klee_error("Incorrect annotation offset format.");
+        klee_error("Annotation: Incorrect offset format \"%s\"", str.c_str());
       }
-      offset.push_back(offsetStr.substr(pos + 1, posEndExpr - 1 - pos));
-      pos = posEndExpr + 1;
-    } else {
-      klee_error("Incorrect annotation offset format.");
+      offset.push_back(rawOffset.substr(pos + 1, posEndExpr - 1 - pos));
+      pos = posEndExpr;
+      break;
+    }
+    default: {
+      klee_warning("Annotation: Incorrect offset format \"%s\"", str.c_str());
+      break;
+    }
     }
   }
 }
 
-void Annotation::StatementUnknown::parseOnlyOffset(const std::string &str) {
-  const size_t delimiterAfterName = str.find(':');
-  if (delimiterAfterName == std::string::npos) {
-    return;
+Unknown::~Unknown() = default;
+
+Kind Unknown::getKind() const { return Kind::Unknown; }
+
+const std::vector<std::string> &Unknown::getOffset() const { return offset; }
+
+std::string Unknown::toString() const {
+  if (rawValue.empty()) {
+    if (rawOffset.empty()) {
+      return rawAnnotation;
+    } else {
+      return rawAnnotation + ":" + rawOffset;
+    }
   }
-  const size_t delimiterAfterOffset = str.find(':', delimiterAfterName + 1);
-  const size_t offsetLength =
-      (delimiterAfterOffset == std::string::npos)
-          ? std::string::npos
-          : delimiterAfterOffset - delimiterAfterName - 1;
-  parseOffset(str.substr(delimiterAfterName + 1, offsetLength));
+  return rawAnnotation + ":" + rawOffset + ":" + rawValue;
 }
 
-Annotation::StatementDeref::StatementDeref(const std::string &str)
-    : StatementUnknown(str) {}
-
-Annotation::StatementKind Annotation::StatementDeref::getStatementName() const {
-  return Annotation::StatementKind::Deref;
+bool Unknown::operator==(const Unknown &other) const {
+  return this->getKind() == other.getKind() && toString() == other.toString();
 }
 
-Annotation::StatementInitNull::StatementInitNull(const std::string &str)
-    : StatementUnknown(str) {}
+/*
+ * Format: {kind}:{offset}:{data}
+ * Example: InitNull:*[5]:
+ */
 
-Annotation::StatementKind
-Annotation::StatementInitNull::getStatementName() const {
-  return Annotation::StatementKind::InitNull;
+Deref::Deref(const std::string &str) : Unknown(str) {}
+
+Kind Deref::getKind() const { return Kind::Deref; }
+
+InitNull::InitNull(const std::string &str) : Unknown(str) {}
+
+Kind InitNull::getKind() const { return Kind::InitNull; }
+
+MaybeInitNull::MaybeInitNull(const std::string &str) : Unknown(str) {}
+
+Kind MaybeInitNull::getKind() const { return Kind::MaybeInitNull; }
+
+Alloc::Alloc(const std::string &str) : Unknown(str) {
+  if (!std::all_of(rawValue.begin(), rawValue.end(), isdigit)) {
+    klee_error("Annotation: Incorrect value format \"%s\"", rawValue.c_str());
+  }
+  if (!rawValue.empty()) {
+    value = static_cast<Type>(std::stoi(rawValue));
+  }
 }
 
-bool Annotation::operator==(const Annotation &other) const {
-  return (functionName == other.functionName) &&
-         (statements == other.statements) && (properties == other.properties);
+Kind Alloc::getKind() const { return Kind::AllocSource; }
+
+Free::Free(const std::string &str) : Unknown(str) {
+  if (!std::all_of(rawValue.begin(), rawValue.end(), isdigit)) {
+    klee_error("Annotation: Incorrect value format \"%s\"", rawValue.c_str());
+  }
+  if (!rawValue.empty()) {
+    value = static_cast<Type>(std::stoi(rawValue));
+  }
 }
 
-void from_json(const json &j, Annotation::StatementPtr &statement) {
+Kind Free::getKind() const { return Kind::Free; }
+
+const std::map<std::string, Statement::Kind> StringToKindMap = {
+    {"deref", Statement::Kind::Deref},
+    {"initnull", Statement::Kind::InitNull},
+    {"maybeinitnull", Statement::Kind::MaybeInitNull},
+    {"allocsource", Statement::Kind::AllocSource},
+    {"freesource", Statement::Kind::Free},
+    {"freesink", Statement::Kind::Free}};
+
+inline Statement::Kind stringToKind(const std::string &str) {
+  auto it = StringToKindMap.find(toLower(str));
+  if (it != StringToKindMap.end()) {
+    return it->second;
+  }
+  return Statement::Kind::Unknown;
+}
+
+Ptr stringToKindPtr(const std::string &str) {
+  std::string statementStr = toLower(str.substr(0, str.find(':')));
+  switch (stringToKind(statementStr)) {
+  case Statement::Kind::Unknown:
+    return std::make_shared<Unknown>(str);
+  case Statement::Kind::Deref:
+    return std::make_shared<Deref>(str);
+  case Statement::Kind::InitNull:
+    return std::make_shared<InitNull>(str);
+  case Statement::Kind::MaybeInitNull:
+    return std::make_shared<MaybeInitNull>(str);
+  case Statement::Kind::AllocSource:
+    return std::make_shared<Alloc>(str);
+  case Statement::Kind::Free:
+    return std::make_shared<Free>(str);
+  }
+}
+
+const std::map<std::string, Property> StringToPropertyMap{
+    {"deterministic", Property::Deterministic},
+    {"noreturn", Property::Noreturn},
+};
+
+inline Property stringToProperty(const std::string &str) {
+  auto it = StringToPropertyMap.find(toLower(str));
+  if (it != StringToPropertyMap.end()) {
+    return it->second;
+  }
+  return Property::Unknown;
+}
+
+void from_json(const json &j, Ptr &statement) {
   if (!j.is_string()) {
-    klee_error("Incorrect annotation format.");
+    klee_error("Annotation: Incorrect statement format");
   }
   const std::string jStr = j.get<std::string>();
-  statement = toStatement(jStr.substr(0, jStr.find(':')), jStr);
+  statement = Statement::stringToKindPtr(jStr);
 }
 
-void from_json(const json &j, Annotation::Property &property) {
+void from_json(const json &j, Property &property) {
   if (!j.is_string()) {
-    klee_error("Incorrect properties format in annotations file.");
+    klee_error("Annotation: Incorrect properties format");
   }
   const std::string jStr = j.get<std::string>();
 
-  property = Annotation::Property::Unknown;
-  const auto propertyPtr = toProperties.find(jStr);
-  if (propertyPtr != toProperties.end()) {
+  property = Statement::Property::Unknown;
+  const auto propertyPtr = Statement::StringToPropertyMap.find(jStr);
+  if (propertyPtr != Statement::StringToPropertyMap.end()) {
     property = propertyPtr->second;
   }
 }
 
-Annotations parseAnnotationsFile(const json &annotationsJson) {
-  Annotations annotations;
+bool operator==(const Statement::Ptr &first, const Statement::Ptr &second) {
+  if (first->getKind() != second->getKind()) {
+    return false;
+  }
+
+  return *first.get() == *second.get();
+}
+} // namespace Statement
+
+bool Annotation::operator==(const Annotation &other) const {
+  return (functionName == other.functionName) &&
+         (returnStatements == other.returnStatements) &&
+         (argsStatements == other.argsStatements) &&
+         (properties == other.properties);
+}
+
+AnnotationsMap parseAnnotationsJson(const json &annotationsJson) {
+  AnnotationsMap annotations;
   for (auto &item : annotationsJson.items()) {
     Annotation annotation;
     annotation.functionName = item.key();
@@ -125,51 +222,53 @@ Annotations parseAnnotationsFile(const json &annotationsJson) {
     const json &j = item.value();
     if (!j.is_object() || !j.contains("annotation") ||
         !j.contains("properties")) {
-      klee_error("Incorrect annotations file format.");
+      klee_error("Annotation: Incorrect file format");
+    }
+    {
+      std::vector<std::vector<Statement::Ptr>> allStatements =
+          j.at("annotation").get<std::vector<std::vector<Statement::Ptr>>>();
+
+      if (allStatements.empty()) {
+        klee_error("Annotation: function \"%s\" should has return",
+                   annotation.functionName.c_str());
+      }
+      annotation.returnStatements = allStatements[0];
+      if (std::any_of(allStatements.begin() + 1, allStatements.end(),
+                      [](const std::vector<Statement::Ptr> &statements) {
+                        return std::any_of(
+                            statements.begin(), statements.end(),
+                            [](const Statement::Ptr &statement) {
+                              return statement->getKind() ==
+                                     Statement::Kind::MaybeInitNull;
+                            });
+                      })) {
+        klee_error("Annotation: MaybeInitNull can annotate only return value");
+      }
+      annotation.argsStatements = std::vector<std::vector<Statement::Ptr>>(
+          allStatements.begin() + 1, allStatements.end());
     }
 
-    annotation.statements =
-        j.at("annotation").get<std::vector<Annotation::StatementPtrs>>();
     annotation.properties =
-        j.at("properties").get<std::set<Annotation::Property>>();
+        j.at("properties").get<std::set<Statement::Property>>();
     annotations[item.key()] = annotation;
   }
   return annotations;
 }
 
-Annotations parseAnnotationsFile(const std::string &path) {
+AnnotationsMap parseAnnotations(const std::string &path) {
+  if (path.empty()) {
+    return {};
+  }
   std::ifstream annotationsFile(path);
   if (!annotationsFile.good()) {
-    klee_error("Opening %s failed.", path.c_str());
+    klee_error("Annotation: Opening %s failed.", path.c_str());
   }
-
   json annotationsJson = json::parse(annotationsFile, nullptr, false);
   if (annotationsJson.is_discarded()) {
-    klee_error("Parsing JSON %s failed.", path.c_str());
+    klee_error("Annotation: Parsing JSON %s failed.", path.c_str());
   }
 
-  return parseAnnotationsFile(annotationsJson);
-}
-
-bool operator==(const Annotation::StatementPtr &first,
-                const Annotation::StatementPtr &second) {
-  if (first->getStatementName() != second->getStatementName()) {
-    return false;
-  }
-
-  switch (first->getStatementName()) {
-  case Annotation::StatementKind::Unknown:
-    return (*dynamic_cast<Annotation::StatementUnknown *>(first.get()) ==
-            *dynamic_cast<Annotation::StatementUnknown *>(second.get()));
-  case Annotation::StatementKind::Deref:
-    return (*dynamic_cast<Annotation::StatementDeref *>(first.get()) ==
-            *dynamic_cast<Annotation::StatementDeref *>(second.get()));
-  case Annotation::StatementKind::InitNull:
-    return (*dynamic_cast<Annotation::StatementInitNull *>(first.get()) ==
-            *dynamic_cast<Annotation::StatementInitNull *>(second.get()));
-  default:
-    __builtin_unreachable();
-  }
+  return parseAnnotationsJson(annotationsJson);
 }
 
 } // namespace klee

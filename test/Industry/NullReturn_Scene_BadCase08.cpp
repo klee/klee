@@ -39,6 +39,6 @@ void TestBad9()
 
 // RUN: %clangxx %s -emit-llvm %O0opt -c -g -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --write-kqueries --use-guided-search=error --location-accuracy --mock-external-calls --check-out-of-memory --libc=klee --skip-not-symbolic-objects --skip-not-lazy-initialized --use-lazy-initialization=only --analysis-reproduce=%s.json %t1.bc
+// RUN: %klee --output-dir=%t.klee-out --write-kqueries --use-guided-search=error --location-accuracy --annotations=%annotations --mock-policy=failed --check-out-of-memory --libc=klee --skip-not-symbolic-objects --skip-not-lazy-initialized --use-lazy-initialization=only --analysis-reproduce=%s.json %t1.bc
 // RUN: FileCheck -input-file=%t.klee-out/warnings.txt %s
 // CHECK: KLEE: WARNING: 100.00% NullPointerException False Positive at trace 2

@@ -2,7 +2,7 @@
 // REQUIRES: not-darwin
 // RUN: %clang %s -g -emit-llvm %O0opt -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --mock-all-externals --write-xml-tests --output-dir=%t.klee-out %t1.bc
+// RUN: %klee --mock-policy=all --write-xml-tests --output-dir=%t.klee-out %t1.bc
 // RUN: FileCheck --input-file %t.klee-out/test000001.xml %s
 
 extern void *__crc_mc44s803_attach __attribute__((__weak__));
@@ -13,4 +13,4 @@ int main() {
   return 0;
 }
 
-// CHECK-NOT: <input
+// CHECK: @external___crc_mc44s803_attach

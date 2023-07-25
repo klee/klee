@@ -1,0 +1,2027 @@
+{
+  "atof": {
+    "name": "atof",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "atoi": {
+    "name": "atoi",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "atol": {
+    "name": "atol",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "atoll": {
+    "name": "atoll",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "bcmp": {
+    "name": "bcmp",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "calloc": {
+    "name": "calloc",
+    "annotation": [
+      [
+        "AllocSource::1",
+        "InitNull"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "fclose": {
+    "name": "fclose",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "fcvt": {
+    "name": "fcvt",
+    "annotation": [
+      [],
+      [],
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "feof": {
+    "name": "feof",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "ferror": {
+    "name": "ferror",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "fgetc": {
+    "name": "fgetc",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "fgetpos": {
+    "name": "fgetpos",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "fgetpos64": {
+    "name": "fgetpos64",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "fgets": {
+    "name": "fgets",
+    "annotation": [
+      [
+        "InitNull"
+      ],
+      [
+        "Deref"
+      ],
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "fgetwc": {
+    "name": "fgetwc",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "fgetws": {
+    "name": "fgetws",
+    "annotation": [
+      [
+        "InitNull"
+      ],
+      [
+        "Deref"
+      ],
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "fileno": {
+    "name": "fileno",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "fopen": {
+    "name": "fopen",
+    "annotation": [
+      [
+        "InitNull"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "fopen64": {
+    "name": "fopen64",
+    "annotation": [
+      [
+        "InitNull"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "fopen_s": {
+    "name": "fopen_s",
+    "annotation": [
+      [],
+      [
+        "InitNull:*:!=0"
+      ],
+      [],
+      [
+        "FreeSink::4"
+      ]
+    ],
+    "properties": []
+  },
+  "fprintf": {
+    "name": "fprintf",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "fputc": {
+    "name": "fputc",
+    "annotation": [
+      [],
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "fputs": {
+    "name": "fputs",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "fputwc": {
+    "name": "fputwc",
+    "annotation": [
+      [],
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "fputws": {
+    "name": "fputws",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "fread": {
+    "name": "fread",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "free": {
+    "name": "free",
+    "annotation": [
+      [],
+      [
+        "FreeSink::1"
+      ]
+    ],
+    "properties": []
+  },
+  "freopen": {
+    "name": "freopen",
+    "annotation": [
+      [
+        "InitNull"
+      ],
+      [],
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "freopen64": {
+    "name": "freopen64",
+    "annotation": [
+      [
+        "InitNull"
+      ],
+      [],
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "freopen_s": {
+    "name": "freopen_s",
+    "annotation": [
+      [],
+      [
+        "InitNull:*:!=0"
+      ],
+      [],
+      [],
+      [
+        "FreeSink::4"
+      ]
+    ],
+    "properties": []
+  },
+  "fscanf": {
+    "name": "fscanf",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "fscanf_s": {
+    "name": "fscanf_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "fseek": {
+    "name": "fseek",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "fsetpos": {
+    "name": "fsetpos",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "fsetpos64": {
+    "name": "fsetpos64",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "ftell": {
+    "name": "ftell",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "fwide": {
+    "name": "fwide",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "fwprintf": {
+    "name": "fwprintf",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "fwrite": {
+    "name": "fwrite",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "fwscanf": {
+    "name": "fwscanf",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "getc": {
+    "name": "getc",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "getenv": {
+    "name": "getenv",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "getenv_s": {
+    "name": "getenv_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "gets": {
+    "name": "gets",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "gets_s": {
+    "name": "gets_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "getw": {
+    "name": "getw",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "getwc": {
+    "name": "getwc",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "itoa": {
+    "name": "itoa",
+    "annotation": [
+      [],
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "localtime": {
+    "name": "localtime",
+    "annotation": [
+      [
+        "InitNull::Must"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "malloc": {
+    "name": "malloc",
+    "annotation": [
+      [
+        "AllocSource::1",
+        "InitNull"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "memccpy": {
+    "name": "memccpy",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "memchr": {
+    "name": "memchr",
+    "annotation": [
+      [
+        "InitNull"
+      ],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "memcmp": {
+    "name": "memcmp",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "memcpy": {
+    "name": "memcpy",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "memcpy_s": {
+    "name": "memcpy_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "memicmp": {
+    "name": "memicmp",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "memmem": {
+    "name": "memmem",
+    "annotation": [
+      [
+        "InitNull"
+      ],
+      [
+        "Deref"
+      ],
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "memmove": {
+    "name": "memmove",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "memmove_s": {
+    "name": "memmove_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "mempcpy": {
+    "name": "mempcpy",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "memset": {
+    "name": "memset",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "memset_s": {
+    "name": "memset_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "pthread_mutex_lock": {
+    "name": "pthread_mutex_lock",
+    "annotation": [
+      [],
+      [
+        "InitNull::!=0"
+      ]
+    ],
+    "properties": []
+  },
+  "pthread_mutex_trylock": {
+    "name": "pthread_mutex_trylock",
+    "annotation": [
+      [],
+      [
+        "InitNull::!=0"
+      ]
+    ],
+    "properties": []
+  },
+  "putc": {
+    "name": "putc",
+    "annotation": [
+      [],
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "puts": {
+    "name": "puts",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "qsort": {
+    "name": "qsort",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "rawmemchr": {
+    "name": "rawmemchr",
+    "annotation": [
+      [
+        "InitNull"
+      ],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "realloc": {
+    "name": "realloc",
+    "annotation": [
+      [
+        "AllocSource::1",
+        "InitNull"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "setbuf": {
+    "name": "setbuf",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "setlocale": {
+    "name": "setlocale",
+    "annotation": [
+      [
+        "InitNull"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "snprintf": {
+    "name": "snprintf",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "snprintf_s": {
+    "name": "snprintf_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "snwprintf": {
+    "name": "snwprintf",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "sprintf": {
+    "name": "sprintf",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "sprintf_s": {
+    "name": "sprintf_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "sscanf": {
+    "name": "sscanf",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "sscanf_s": {
+    "name": "sscanf_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "std::from_chars": {
+    "name": "std::from_chars",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "std::to_chars": {
+    "name": "std::to_chars",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "stpcpy": {
+    "name": "stpcpy",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "strcat": {
+    "name": "strcat",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "strcat_s": {
+    "name": "strcat_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "strchr": {
+    "name": "strchr",
+    "annotation": [
+      [
+        "InitNull"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "strchrnul": {
+    "name": "strchrnul",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "strcmp": {
+    "name": "strcmp",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "strcpy": {
+    "name": "strcpy",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "strcpy_s": {
+    "name": "strcpy_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "strdup": {
+    "name": "strdup",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "strlen": {
+    "name": "strlen",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "strncasecmp": {
+    "name": "strncasecmp",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "strncat": {
+    "name": "strncat",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "strncat_s": {
+    "name": "strncat_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "strncmp": {
+    "name": "strncmp",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "strncpy": {
+    "name": "strncpy",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "strncpy_s": {
+    "name": "strncpy_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "strndup": {
+    "name": "strndup",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "strnlen": {
+    "name": "strnlen",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "strnset": {
+    "name": "strnset",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "strpbrk": {
+    "name": "strpbrk",
+    "annotation": [
+      [
+        "InitNull"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "strrchr": {
+    "name": "strrchr",
+    "annotation": [
+      [
+        "InitNull"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "strset": {
+    "name": "strset",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "strspn": {
+    "name": "strspn",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "strstr": {
+    "name": "strstr",
+    "annotation": [
+      [
+        "InitNull"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "strtod": {
+    "name": "strtod",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "strtol": {
+    "name": "strtol",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "strtold": {
+    "name": "strtold",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "strtoll": {
+    "name": "strtoll",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "strtoul": {
+    "name": "strtoul",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "strtoull": {
+    "name": "strtoull",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "strxfrm": {
+    "name": "strxfrm",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "swprintf": {
+    "name": "swprintf",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "swprintf_s": {
+    "name": "swprintf_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "swscanf": {
+    "name": "swscanf",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "swscanf_s": {
+    "name": "swscanf_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "tmpnam": {
+    "name": "tmpnam",
+    "annotation": [
+      [
+        "InitNull"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "vfprintf_s": {
+    "name": "vfprintf_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "vfscanf": {
+    "name": "vfscanf",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "vfwprintf": {
+    "name": "vfwprintf",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "vfwprintf_s": {
+    "name": "vfwprintf_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "vfwscanf": {
+    "name": "vfwscanf",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "vsnprintf_s": {
+    "name": "vsnprintf_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "vsnwprintf": {
+    "name": "vsnwprintf",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "vsprintf": {
+    "name": "vsprintf",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "vsprintf_s": {
+    "name": "vsprintf_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "vsscanf": {
+    "name": "vsscanf",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "vswscanf": {
+    "name": "vswscanf",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "wcscat": {
+    "name": "wcscat",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "wcscat_s": {
+    "name": "wcscat_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "wcschr": {
+    "name": "wcschr",
+    "annotation": [
+      [
+        "InitNull"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "wcschrnul": {
+    "name": "wcschrnul",
+    "annotation": [
+      [
+        "InitNull"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "wcscmp": {
+    "name": "wcscmp",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "wcscoll": {
+    "name": "wcscoll",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "wcscpy": {
+    "name": "wcscpy",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "wcscpy_s": {
+    "name": "wcscpy_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "wcscspn": {
+    "name": "wcscspn",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "wcsftime": {
+    "name": "wcsftime",
+    "annotation": [
+      [],
+      [],
+      [],
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "wcsncasecmp": {
+    "name": "wcsncasecmp",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "wcsncat": {
+    "name": "wcsncat",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "wcsncat_s": {
+    "name": "wcsncat_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "wcsncmp": {
+    "name": "wcsncmp",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "wcsncpy": {
+    "name": "wcsncpy",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "wcsncpy_s": {
+    "name": "wcsncpy_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "wcspbrk": {
+    "name": "wcspbrk",
+    "annotation": [
+      [
+        "InitNull"
+      ],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "wcsrchr": {
+    "name": "wcsrchr",
+    "annotation": [
+      [
+        "InitNull"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "wcsspn": {
+    "name": "wcsspn",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "wcsstr": {
+    "name": "wcsstr",
+    "annotation": [
+      [
+        "InitNull"
+      ],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "wcstol": {
+    "name": "wcstol",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "wcstold": {
+    "name": "wcstold",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "wcstoll": {
+    "name": "wcstoll",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "wcstoul": {
+    "name": "wcstoul",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "wcstoull": {
+    "name": "wcstoull",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "wcsxfrm": {
+    "name": "wcsxfrm",
+    "annotation": [
+      [],
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "wctrans": {
+    "name": "wctrans",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "wctype": {
+    "name": "wctype",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ]
+    ],
+    "properties": []
+  },
+  "wmemchr": {
+    "name": "wmemchr",
+    "annotation": [
+      [
+        "InitNull"
+      ],
+      [
+        "Deref"
+      ],
+      [],
+      []
+    ],
+    "properties": []
+  },
+  "wmemcmp": {
+    "name": "wmemcmp",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "wmemcpy": {
+    "name": "wmemcpy",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "wmemcpy_s": {
+    "name": "wmemcpy_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "wmemmove": {
+    "name": "wmemmove",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "wmemmove_s": {
+    "name": "wmemmove_s",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  },
+  "wmempcpy": {
+    "name": "wmempcpy",
+    "annotation": [
+      [],
+      [
+        "Deref"
+      ],
+      [
+        "Deref"
+      ],
+      []
+    ],
+    "properties": []
+  }
+}

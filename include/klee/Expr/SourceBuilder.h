@@ -3,8 +3,6 @@
 
 #include "klee/Expr/SymbolicSource.h"
 
-#include "llvm/IR/Function.h"
-
 namespace klee {
 
 class KInstruction;

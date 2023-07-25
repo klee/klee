@@ -1,0 +1,49 @@
+{
+  "mustInitNull1": {
+    "name": "maybeInitNull1",
+    "annotation": [
+      [],
+      [
+        "InitNull"
+      ]
+    ],
+    "properties": []
+  },
+  "mustInitNull2": {
+    "name": "maybeInitNull2",
+    "annotation": [
+      [],
+      [
+        "InitNull:*"
+      ]
+    ],
+    "properties": []
+  },
+  "maybeInitNull1": {
+    "name": "maybeInitNull1",
+    "annotation": [
+      [
+        "MaybeInitNull"
+      ]
+    ],
+    "properties": []
+  },
+  "maybeInitNull2": {
+    "name": "maybeInitNull2",
+    "annotation": [
+      [
+        "MaybeInitNull:*"
+      ]
+    ],
+    "properties": []
+  },
+  "mustInitNull3": {
+    "name": "mustInitNull3",
+    "annotation": [
+      [
+        "InitNull"
+      ]
+    ],
+    "properties": []
+  }
+}
