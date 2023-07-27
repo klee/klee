@@ -82,7 +82,7 @@ unsigned long __VERIFIER_nondet_ulong(void) {
 }
 
 double __VERIFIER_nondet_double(void) {
-  long x;
+  double x;
   klee_make_symbolic(&x, sizeof(x), "double");
   return x;
 }
@@ -96,7 +96,7 @@ void *__VERIFIER_nondet_pointer(void) {
 }
 
 float __VERIFIER_nondet_float(void) {
-  int x;
+  float x;
   klee_make_symbolic(&x, sizeof(x), "float");
   return x;
 }
