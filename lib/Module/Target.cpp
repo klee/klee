@@ -47,7 +47,7 @@ std::string ReachBlockTarget::toString() const {
 std::string CoverBranchTarget::toString() const {
   std::ostringstream repr;
   repr << "Target: ";
-  repr << "cover " << branchCase << "branch at " << block->toString();
+  repr << "cover " << branchCase << " branch at " << block->toString();
   return repr.str();
 }
 

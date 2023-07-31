@@ -294,6 +294,24 @@ TargetForest::Layer *TargetForest::Layer::addChild(ref<Target> child) const {
 }
 
 TargetForest::Layer *
+TargetForest::Layer::addChild(ref<UnorderedTargetsSet> child) const {
+  auto result = new Layer(this);
+  if (forest.count(child) != 0) {
+    return result;
+  }
+  result->forest.insert({child, new Layer()});
+
+  for (auto &target : child->getTargets()) {
+    result->insertTargetsToVec(target, child);
+  }
+  return result;
+}
+
+bool TargetForest::Layer::hasChild(ref<UnorderedTargetsSet> child) const {
+  return forest.count(child) != 0;
+}
+
+TargetForest::Layer *
 TargetForest::Layer::blockLeafInChild(ref<UnorderedTargetsSet> child,
                                       ref<Target> leaf) const {
   auto subtree = forest.find(child);
@@ -488,19 +506,19 @@ void TargetForest::stepTo(ref<Target> loc) {
   if (res == forest->end()) {
     return;
   }
-  if (loc->shouldFailOnThisTarget()) {
-    forest = new Layer();
-  } else {
-    history = history->add(loc);
-    forest = forest->replaceChildWith(loc, res->second);
-  }
-  if (forest->empty() && !loc->shouldFailOnThisTarget()) {
-    history = TargetsHistory::create();
-  }
+  history = history->add(loc);
+  forest = forest->replaceChildWith(loc, res->second);
 }
 
 void TargetForest::add(ref<Target> target) {
   if (forest->find(target) != forest->end()) {
+    return;
+  }
+  forest = forest->addChild(target);
+}
+
+void TargetForest::add(ref<UnorderedTargetsSet> target) {
+  if (forest->hasChild(target)) {
     return;
   }
   forest = forest->addChild(target);

@@ -278,6 +278,8 @@ private:
     Layer *replaceChildWith(ref<UnorderedTargetsSet> child, Layer *other) const;
     Layer *removeChild(ref<Target> child) const;
     Layer *addChild(ref<Target> child) const;
+    Layer *addChild(ref<UnorderedTargetsSet> child) const;
+    bool hasChild(ref<UnorderedTargetsSet> child) const;
     Layer *blockLeafInChild(ref<UnorderedTargetsSet> child,
                             ref<Target> leaf) const;
     Layer *blockLeafInChild(ref<Target> child, ref<Target> leaf) const;
@@ -346,6 +348,7 @@ public:
 
   void stepTo(ref<Target>);
   void add(ref<Target>);
+  void add(ref<UnorderedTargetsSet>);
   void remove(ref<Target>);
   void blockIn(ref<Target>, ref<Target>);
   void block(const ref<Target> &);
