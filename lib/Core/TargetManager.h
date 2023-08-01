@@ -120,6 +120,12 @@ public:
 
     DistanceResult result =
         distanceCalculator.getDistance(state, target->getBlock());
+
+    if (Done == result.result && (!isa<ReachBlockTarget>(target) ||
+                                  cast<ReachBlockTarget>(target)->isAtEnd())) {
+      result.result = Continue;
+    }
+
     distances[&state][target] = result;
 
     return result;
