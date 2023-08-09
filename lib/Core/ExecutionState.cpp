@@ -71,6 +71,7 @@ void ExecutionStack::pushFrame(KInstIterator caller, KFunction *kf) {
   }
   callStack_.emplace_back(CallStackFrame(caller, kf));
   infoStack_.emplace_back(InfoStackFrame(kf));
+  ++multilevel[kf];
   ++stackBalance;
   assert(valueStack_.size() == callStack_.size());
   assert(valueStack_.size() == infoStack_.size());
@@ -88,6 +89,7 @@ void ExecutionStack::popFrame() {
   if (it == callStack_.end()) {
     uniqueFrames_.pop_back();
   }
+  --multilevel[kf];
   --stackBalance;
   assert(valueStack_.size() == callStack_.size());
   assert(valueStack_.size() == infoStack_.size());
@@ -161,12 +163,11 @@ ExecutionState::ExecutionState(const ExecutionState &state)
     : initPC(state.initPC), pc(state.pc), prevPC(state.prevPC),
       stack(state.stack), stackBalance(state.stackBalance),
       incomingBBIndex(state.incomingBBIndex), depth(state.depth),
-      multilevel(state.multilevel), level(state.level),
-      transitionLevel(state.transitionLevel), addressSpace(state.addressSpace),
-      constraints(state.constraints), targetForest(state.targetForest),
-      pathOS(state.pathOS), symPathOS(state.symPathOS),
-      coveredLines(state.coveredLines), symbolics(state.symbolics),
-      resolvedPointers(state.resolvedPointers),
+      level(state.level), transitionLevel(state.transitionLevel),
+      addressSpace(state.addressSpace), constraints(state.constraints),
+      targetForest(state.targetForest), pathOS(state.pathOS),
+      symPathOS(state.symPathOS), coveredLines(state.coveredLines),
+      symbolics(state.symbolics), resolvedPointers(state.resolvedPointers),
       cexPreferences(state.cexPreferences), arrayNames(state.arrayNames),
       steppedInstructions(state.steppedInstructions),
       steppedMemoryInstructions(state.steppedMemoryInstructions),
@@ -466,7 +467,7 @@ void ExecutionState::increaseLevel() {
   KModule *kmodule = kf->parent;
 
   if (prevPC->inst->isTerminator() && kmodule->inMainModule(*kf->function)) {
-    ++multilevel[srcbb];
+    ++stack.infoStack().back().multilevel[srcbb];
     level.insert(srcbb);
   }
   if (srcbb != dstbb) {

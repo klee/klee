@@ -93,6 +93,7 @@ struct StackFrame {
 struct InfoStackFrame {
   KFunction *kf;
   CallPathNode *callPathNode = nullptr;
+  std::unordered_map<llvm::BasicBlock *, unsigned long long> multilevel;
 
   /// Minimum distance to an uncovered instruction once the function
   /// returns. This is not a good place for this but is used to
@@ -120,6 +121,7 @@ private:
   unsigned stackBalance = 0;
 
 public:
+  std::unordered_map<KFunction *, unsigned long long> multilevel;
   void pushFrame(KInstIterator caller, KFunction *kf);
   void popFrame();
   inline value_stack_ty &valueStack() { return valueStack_; }
@@ -286,7 +288,6 @@ public:
   std::uint32_t depth = 0;
 
   /// @brief Exploration level, i.e., number of times KLEE cycled for this state
-  std::unordered_map<llvm::BasicBlock *, unsigned long long> multilevel;
   std::unordered_set<llvm::BasicBlock *> level;
   std::unordered_set<Transition, TransitionHash> transitionLevel;
 
@@ -483,8 +484,16 @@ public:
 
   inline bool isStuck(unsigned long long bound) {
     KInstruction *prevKI = prevPC;
-    return (prevKI->inst->isTerminator() &&
-            multilevel[getPCBlock()] > bound - 1);
+    if (prevKI->inst->isTerminator() && stack.size() > 0) {
+      auto level = stack.infoStack().back().multilevel[getPCBlock()];
+      return bound && level > bound;
+    }
+    if (pc == pc->parent->getFirstInstruction() &&
+        pc->parent == pc->parent->parent->entryKBlock) {
+      auto level = stack.multilevel[stack.callStack().back().kf];
+      return bound && level > bound;
+    }
+    return false;
   }
 };
 
