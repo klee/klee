@@ -4331,8 +4331,12 @@ void Executor::executeStep(ExecutionState &state) {
     terminateStateEarlyAlgorithm(state, "State missed all it's targets.",
                                  StateTerminationType::MissedAllTargets);
   } else if (prevKI->inst->isTerminator() && MaxCycles &&
-             state.stack.infoStack().back().multilevel[state.getPCBlock()] >
-                 MaxCycles) {
+             (state.stack.infoStack()
+                      .back()
+                      .multilevel[state.getPCBlock()]
+                      .second > MaxCycles ||
+              state.stack.multilevel[state.stack.callStack().back().kf].second >
+                  MaxCycles)) {
     terminateStateEarly(state, "max-cycles exceeded.",
                         StateTerminationType::MaxCycles);
   } else {

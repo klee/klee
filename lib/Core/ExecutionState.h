@@ -13,6 +13,7 @@
 #include "AddressSpace.h"
 
 #include "klee/ADT/ImmutableSet.h"
+#include "klee/ADT/PersistentMap.h"
 #include "klee/ADT/TreeStream.h"
 #include "klee/Core/TerminationTypes.h"
 #include "klee/Expr/Assignment.h"
@@ -93,7 +94,7 @@ struct StackFrame {
 struct InfoStackFrame {
   KFunction *kf;
   CallPathNode *callPathNode = nullptr;
-  std::unordered_map<llvm::BasicBlock *, unsigned long long> multilevel;
+  PersistentMap<llvm::BasicBlock *, unsigned long long> multilevel;
 
   /// Minimum distance to an uncovered instruction once the function
   /// returns. This is not a good place for this but is used to
@@ -121,7 +122,7 @@ private:
   unsigned stackBalance = 0;
 
 public:
-  std::unordered_map<KFunction *, unsigned long long> multilevel;
+  PersistentMap<KFunction *, unsigned long long> multilevel;
   void pushFrame(KInstIterator caller, KFunction *kf);
   void popFrame();
   inline value_stack_ty &valueStack() { return valueStack_; }
@@ -485,12 +486,12 @@ public:
   inline bool isStuck(unsigned long long bound) {
     KInstruction *prevKI = prevPC;
     if (prevKI->inst->isTerminator() && stack.size() > 0) {
-      auto level = stack.infoStack().back().multilevel[getPCBlock()];
+      auto level = stack.infoStack().back().multilevel[getPCBlock()].second;
       return bound && level > bound;
     }
     if (pc == pc->parent->getFirstInstruction() &&
         pc->parent == pc->parent->parent->entryKBlock) {
-      auto level = stack.multilevel[stack.callStack().back().kf];
+      auto level = stack.multilevel[stack.callStack().back().kf].second;
       return bound && level > bound;
     }
     return false;

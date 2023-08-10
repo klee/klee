@@ -71,7 +71,8 @@ void ExecutionStack::pushFrame(KInstIterator caller, KFunction *kf) {
   }
   callStack_.emplace_back(CallStackFrame(caller, kf));
   infoStack_.emplace_back(InfoStackFrame(kf));
-  ++multilevel[kf];
+  auto kfLevel = multilevel[kf].second;
+  multilevel.replace({kf, kfLevel + 1});
   ++stackBalance;
   assert(valueStack_.size() == callStack_.size());
   assert(valueStack_.size() == infoStack_.size());
@@ -89,7 +90,8 @@ void ExecutionStack::popFrame() {
   if (it == callStack_.end()) {
     uniqueFrames_.pop_back();
   }
-  --multilevel[kf];
+  auto kfLevel = multilevel[kf].second;
+  multilevel.replace({kf, kfLevel - 1});
   --stackBalance;
   assert(valueStack_.size() == callStack_.size());
   assert(valueStack_.size() == infoStack_.size());
@@ -467,7 +469,8 @@ void ExecutionState::increaseLevel() {
   KModule *kmodule = kf->parent;
 
   if (prevPC->inst->isTerminator() && kmodule->inMainModule(*kf->function)) {
-    ++stack.infoStack().back().multilevel[srcbb];
+    auto srcLevel = stack.infoStack().back().multilevel[srcbb].second;
+    stack.infoStack().back().multilevel.replace({srcbb, srcLevel + 1});
     level.insert(srcbb);
   }
   if (srcbb != dstbb) {
