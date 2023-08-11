@@ -6,7 +6,15 @@
 // RUN: test -f %t.klee-out/test000006.ktest
 
 // RUN: %cc %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner
-// RUN: env KTEST_FILE=%t.klee-out/test000006.ktest %t_runner | FileCheck %s
+
+// RUN: env KTEST_FILE=%t.klee-out/test000001.ktest %t_runner >> %t_runner.log
+// RUN: env KTEST_FILE=%t.klee-out/test000002.ktest %t_runner >> %t_runner.log
+// RUN: env KTEST_FILE=%t.klee-out/test000003.ktest %t_runner >> %t_runner.log
+// RUN: env KTEST_FILE=%t.klee-out/test000004.ktest %t_runner >> %t_runner.log
+// RUN: env KTEST_FILE=%t.klee-out/test000005.ktest %t_runner >> %t_runner.log
+// RUN: env KTEST_FILE=%t.klee-out/test000006.ktest %t_runner >> %t_runner.log
+
+// RUN: FileCheck -input-file=%t_runner.log %s
 
 #include <stdlib.h>
 
