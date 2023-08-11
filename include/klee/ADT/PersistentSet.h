@@ -61,13 +61,14 @@ public:
 
   bool operator==(const PersistentSet &other) const {
     if (size() != other.size()) {
-        return false;
+      return false;
     }
-    auto it = begin(), otherIt = other.begin(), endIt = end(), otherEndIt = other.end();
+    auto it = begin(), otherIt = other.begin(), endIt = end(),
+         otherEndIt = other.end();
     for (; it != endIt && otherIt != otherEndIt; ++it, ++otherIt) {
-        if (*it != *otherIt) {
-            return false;
-        }
+      if (*it != *otherIt) {
+        return false;
+      }
     }
     return true;
   }

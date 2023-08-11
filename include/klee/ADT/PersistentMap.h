@@ -16,8 +16,7 @@
 
 namespace klee {
 
-template <class K, class D, class CMP = std::less<K>>
-class PersistentMap {
+template <class K, class D, class CMP = std::less<K>> class PersistentMap {
 public:
   typedef ImmutableMap<K, D, CMP> Map;
   typedef typename Map::iterator iterator;
