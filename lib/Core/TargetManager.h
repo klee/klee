@@ -131,7 +131,7 @@ public:
     return result;
   }
 
-  const TargetHashSet &targets(const ExecutionState &state) {
+  const PersistentSet<ref<Target>> &targets(const ExecutionState &state) {
     return state.targets();
   }
 
@@ -143,7 +143,7 @@ public:
     return state.prevHistory();
   }
 
-  const TargetHashSet &prevTargets(const ExecutionState &state) {
+  const PersistentSet<ref<Target>> &prevTargets(const ExecutionState &state) {
     return state.prevTargets();
   }
 

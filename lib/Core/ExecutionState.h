@@ -14,6 +14,7 @@
 
 #include "klee/ADT/ImmutableSet.h"
 #include "klee/ADT/PersistentMap.h"
+#include "klee/ADT/PersistentSet.h"
 #include "klee/ADT/TreeStream.h"
 #include "klee/Core/TerminationTypes.h"
 #include "klee/Expr/Assignment.h"
@@ -383,8 +384,8 @@ public:
       HaltExecution::NotHalt};
 
 private:
-  TargetHashSet prevTargets_;
-  TargetHashSet targets_;
+  PersistentSet<ref<Target>> prevTargets_;
+  PersistentSet<ref<Target>> targets_;
   ref<TargetsHistory> prevHistory_;
   ref<TargetsHistory> history_;
   bool isTargeted_ = false;
@@ -450,9 +451,11 @@ public:
 
   bool isGEPExpr(ref<Expr> expr) const;
 
-  inline const TargetHashSet &prevTargets() const { return prevTargets_; }
+  inline const PersistentSet<ref<Target>> &prevTargets() const {
+    return prevTargets_;
+  }
 
-  inline const TargetHashSet &targets() const { return targets_; }
+  inline const PersistentSet<ref<Target>> &targets() const { return targets_; }
 
   inline ref<const TargetsHistory> prevHistory() const { return prevHistory_; }
 
@@ -471,7 +474,10 @@ public:
   inline void setTargeted(bool targeted) { isTargeted_ = targeted; }
 
   inline void setTargets(const TargetHashSet &targets) {
-    targets_ = targets;
+    targets_ = PersistentSet<ref<Target>>();
+    for (auto target : targets) {
+      targets_.insert(target);
+    }
     areTargetsChanged_ = true;
   }
 

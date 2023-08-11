@@ -71,8 +71,8 @@ void TargetManager::collect(ExecutionState &state) {
 
   ref<const TargetsHistory> prevHistory = state.prevHistory();
   ref<const TargetsHistory> history = state.history();
-  const TargetHashSet &prevTargets = state.prevTargets();
-  const TargetHashSet &targets = state.targets();
+  const auto &prevTargets = state.prevTargets();
+  const auto &targets = state.targets();
   if (prevHistory != history) {
     for (auto target : prevTargets) {
       removedTStates[{prevHistory, target}].push_back(&state);
@@ -83,7 +83,7 @@ void TargetManager::collect(ExecutionState &state) {
       removedTStates[{history, target}];
     }
   } else {
-    addedTargets = targets;
+    addedTargets.insert(targets.begin(), targets.end());
     for (auto target : prevTargets) {
       if (addedTargets.erase(target) == 0) {
         removedTargets.insert(target);

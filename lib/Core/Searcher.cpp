@@ -231,7 +231,7 @@ void GuidedSearcher::update(
 
   if (current) {
     ref<const TargetsHistory> history = current->history();
-    const TargetHashSet &targets = current->targets();
+    const auto &targets = current->targets();
     for (auto target : targets) {
       localHistoryTargets.insert({history, target});
       currTargets.insert({history, target});
@@ -240,7 +240,7 @@ void GuidedSearcher::update(
 
   for (const auto state : addedStates) {
     ref<const TargetsHistory> history = state->history();
-    const TargetHashSet &targets = state->targets();
+    const auto &targets = state->targets();
     for (auto target : targets) {
       localHistoryTargets.insert({history, target});
       addedTStates[{history, target}].push_back(state);
@@ -249,7 +249,7 @@ void GuidedSearcher::update(
 
   for (const auto state : removedStates) {
     ref<const TargetsHistory> history = state->history();
-    const TargetHashSet &targets = state->targets();
+    const auto &targets = state->targets();
     for (auto target : targets) {
       localHistoryTargets.insert({history, target});
       removedTStates[{history, target}].push_back(state);
