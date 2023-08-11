@@ -50,7 +50,7 @@ public:
   }
   const value_type &min() const { return elts.min(); }
   const value_type &max() const { return elts.max(); }
-  size_t size() { return elts.size(); }
+  size_t size() const { return elts.size(); }
 
   ImmutableSet insert(const value_type &value) const {
     return elts.insert(value);
