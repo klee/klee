@@ -983,6 +983,16 @@ ref<ConstantExpr> tryBinaryOpNaNArgs(const ConstantExpr *lhs,
     return rhsIsNaN;
   return NULL;
 }
+
+ref<ConstantExpr> tryBinaryOpBothNaNArgs(const ConstantExpr *lhs,
+                                         const ConstantExpr *rhs) {
+  ref<ConstantExpr> lhsIsNaN = tryUnaryOpNaNArgs(lhs);
+  ref<ConstantExpr> rhsIsNaN = tryUnaryOpNaNArgs(rhs);
+  if (lhsIsNaN.get() && rhsIsNaN.get()) {
+    return lhsIsNaN;
+  }
+  return NULL;
+}
 } // namespace
 
 ref<ConstantExpr> ConstantExpr::Concat(const ref<ConstantExpr> &RHS) {
@@ -1302,7 +1312,7 @@ ref<ConstantExpr> ConstantExpr::FRem(const ref<ConstantExpr> &RHS,
 
 ref<ConstantExpr> ConstantExpr::FMax(const ref<ConstantExpr> &RHS,
                                      llvm::APFloat::roundingMode rm) const {
-  ref<ConstantExpr> nanEval = tryBinaryOpNaNArgs(this, RHS.get());
+  ref<ConstantExpr> nanEval = tryBinaryOpBothNaNArgs(this, RHS.get());
   if (nanEval.get())
     return nanEval;
   ref<ConstantExpr> nativeEval =
@@ -1316,7 +1326,7 @@ ref<ConstantExpr> ConstantExpr::FMax(const ref<ConstantExpr> &RHS,
 
 ref<ConstantExpr> ConstantExpr::FMin(const ref<ConstantExpr> &RHS,
                                      llvm::APFloat::roundingMode rm) const {
-  ref<ConstantExpr> nanEval = tryBinaryOpNaNArgs(this, RHS.get());
+  ref<ConstantExpr> nanEval = tryBinaryOpBothNaNArgs(this, RHS.get());
   if (nanEval.get())
     return nanEval;
   ref<ConstantExpr> nativeEval =
