@@ -132,9 +132,9 @@ Z3SortHandle Z3Builder::getArraySort(Z3SortHandle domainSort,
   return Z3SortHandle(Z3_mk_array_sort(ctx, domainSort, rangeSort), ctx);
 }
 
-Z3ASTHandle Z3Builder::buildFreshBoolConst(const char *name) {
+Z3ASTHandle Z3Builder::buildFreshBoolConst() {
   Z3SortHandle boolSort = getBoolSort();
-  return Z3ASTHandle(Z3_mk_fresh_const(ctx, name, boolSort), ctx);
+  return Z3ASTHandle(Z3_mk_fresh_const(ctx, "freshName", boolSort), ctx);
 }
 
 Z3ASTHandle Z3Builder::buildArray(const char *name, unsigned indexWidth,

@@ -381,13 +381,10 @@ bool Z3SolverImpl::internalRunSolver(
       expr_to_track;
   std::unordered_set<Z3ASTHandle, Z3ASTHandleHash, Z3ASTHandleCmp> exprs;
 
-  unsigned id = 0;
-  std::string freshName = "freshName";
   for (auto const &constraint : query.constraints.cs()) {
     Z3ASTHandle z3Constraint = builder->construct(constraint);
     if (ProduceUnsatCore && validityCore) {
-      Z3ASTHandle p = builder->buildFreshBoolConst(
-          (freshName + llvm::utostr(++id)).c_str());
+      Z3ASTHandle p = builder->buildFreshBoolConst();
       z3_ast_expr_to_klee_expr.insert({p, constraint});
       z3_ast_expr_constraints.push_back(p);
       expr_to_track[z3Constraint] = p;

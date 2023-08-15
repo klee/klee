@@ -207,7 +207,7 @@ public:
 
   Z3ASTHandle getTrue();
   Z3ASTHandle getFalse();
-  Z3ASTHandle buildFreshBoolConst(const char *name);
+  Z3ASTHandle buildFreshBoolConst();
   Z3ASTHandle getInitialRead(const Array *os, unsigned index);
 
   Z3ASTHandle construct(ref<Expr> e) {
