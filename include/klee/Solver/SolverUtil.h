@@ -231,6 +231,8 @@ public:
   InvalidResponse(Assignment::bindings_ty &initialValues)
       : result(initialValues) {}
 
+  explicit InvalidResponse() : result() {}
+
   bool tryGetInitialValuesFor(
       const std::vector<const Array *> &objects,
       std::vector<SparseStorage<unsigned char>> &values) const {

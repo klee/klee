@@ -81,7 +81,7 @@ void IndependentConstraintSetUnion::reEvaluateConcretization(
     const Assignment &newConcretization) {
   Assignment delta;
   Assignment removed;
-  for (const auto it : concretization) {
+  for (const auto &it : concretization) {
     if (newConcretization.bindings.count(it.first) == 0) {
       removed.bindings.insert(it);
     } else if (newConcretization.bindings.at(it.first) != it.second) {
