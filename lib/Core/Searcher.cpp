@@ -19,7 +19,6 @@
 #include "klee/ADT/DiscretePDF.h"
 #include "klee/ADT/RNG.h"
 #include "klee/ADT/WeightedQueue.h"
-#include "klee/Module/InstructionInfoTable.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
 #include "klee/Module/Target.h"
@@ -389,8 +388,8 @@ double WeightedRandomSearcher::getWeight(ExecutionState *es) {
   case RP:
     return std::pow(0.5, es->depth);
   case InstCount: {
-    uint64_t count = theStatisticManager->getIndexedValue(stats::instructions,
-                                                          es->pc->info->id);
+    uint64_t count = theStatisticManager->getIndexedValue(
+        stats::instructions, es->pc->getGlobalIndex());
     double inv = 1. / std::max((uint64_t)1, count);
     return inv * inv;
   }

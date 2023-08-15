@@ -16,7 +16,7 @@
 #endif
 #endif
 
-#include <stdio.h>
+#include <cstdio>
 
 namespace klee {
 

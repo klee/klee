@@ -13,9 +13,9 @@
 
 #include "klee/Config/Version.h"
 #include "klee/Core/TerminationTypes.h"
-#include "klee/Module/InstructionInfoTable.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
+#include "klee/Module/LocationInfo.h"
 #include "klee/Solver/SolverStats.h"
 #include "klee/Statistics/Statistics.h"
 #include "klee/Support/ErrorHandling.h"
@@ -233,27 +233,25 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
   }
 
   if (useStatistics() || userSearcherRequiresMD2U())
-    theStatisticManager->useIndexedStats(km->infos->getMaxID());
+    theStatisticManager->useIndexedStats(km->getMaxGlobalIndex());
 
   for (auto &kfp : km->functions) {
     KFunction *kf = kfp.get();
-    kf->trackCoverage = 1;
 
     for (unsigned i = 0; i < kf->numInstructions; ++i) {
       KInstruction *ki = kf->instructions[i];
 
       if (OutputIStats) {
-        unsigned id = ki->info->id;
+        unsigned id = ki->getGlobalIndex();
         theStatisticManager->setIndex(id);
-        if (kf->trackCoverage && instructionIsCoverable(ki->inst))
+        if (instructionIsCoverable(ki->inst)) {
           ++stats::uncoveredInstructions;
+        }
       }
 
-      if (kf->trackCoverage) {
-        if (BranchInst *bi = dyn_cast<BranchInst>(ki->inst))
-          if (!bi->isUnconditional())
-            numBranches++;
-      }
+      if (BranchInst *bi = dyn_cast<BranchInst>(ki->inst))
+        if (!bi->isUnconditional())
+          numBranches++;
     }
   }
 
@@ -393,24 +391,24 @@ void StatsTracker::stepInstruction(ExecutionState &es) {
     }
 
     Instruction *inst = es.pc->inst;
-    const InstructionInfo &ii = *es.pc->info;
+    const KInstruction *ki = es.pc;
     InfoStackFrame &sf = es.stack.infoStack().back();
-    theStatisticManager->setIndex(ii.id);
+    theStatisticManager->setIndex(ki->getGlobalIndex());
     if (UseCallPaths)
       theStatisticManager->setContext(&sf.callPathNode->statistics);
 
     if (es.instsSinceCovNew)
       ++es.instsSinceCovNew;
 
-    if (sf.kf->trackCoverage && instructionIsCoverable(inst)) {
+    if (instructionIsCoverable(inst)) {
       if (!theStatisticManager->getIndexedValue(stats::coveredInstructions,
-                                                ii.id)) {
+                                                ki->getGlobalIndex())) {
         // Checking for actual stoppoints avoids inconsistencies due
         // to line number propogation.
         //
         // FIXME: This trick no longer works, we should fix this in the line
         // number propogation.
-        es.coveredLines[&ii.file].insert(ii.line);
+        es.coveredLines[ki->getSourceFilepath()].insert(ki->getLine());
         es.instsSinceCovNew = 1;
         ++stats::coveredInstructions;
         stats::uncoveredInstructions += (uint64_t)-1;
@@ -695,8 +693,8 @@ void StatsTracker::updateStateStatistics(uint64_t addend) {
                                             ie = executor.states.end();
        it != ie; ++it) {
     ExecutionState &state = **it;
-    const InstructionInfo &ii = *state.pc->info;
-    theStatisticManager->incrementIndexedValue(stats::states, ii.id, addend);
+    theStatisticManager->incrementIndexedValue(
+        stats::states, state.pc->getGlobalIndex(), addend);
     if (UseCallPaths)
       state.stack.infoStack().back().callPathNode->statistics.incrementValue(
           stats::states, addend);
@@ -765,66 +763,70 @@ void StatsTracker::writeIStats() {
 
   of << "ob=" << llvm::sys::path::filename(objectFilename).str() << "\n";
 
-  for (Module::iterator fnIt = m->begin(), fn_ie = m->end(); fnIt != fn_ie;
-       ++fnIt) {
-    if (!fnIt->isDeclaration()) {
+  for (auto &fn : *m) {
+    if (!fn.isDeclaration()) {
       // Always try to write the filename before the function name, as otherwise
       // KCachegrind can create two entries for the function, one with an
       // unnamed file and one without.
-      Function *fn = &*fnIt;
-      const FunctionInfo &ii = executor.kmodule->infos->getFunctionInfo(*fn);
-      if (ii.file != sourceFile) {
-        of << "fl=" << ii.file << "\n";
-        sourceFile = ii.file;
+      auto fnlFile = getLocationInfo(&fn).file;
+      if (fnlFile != sourceFile) {
+        of << "fl=" << fnlFile << "\n";
+        sourceFile = fnlFile;
       }
 
-      of << "fn=" << fnIt->getName().str() << "\n";
-      for (Function::iterator bbIt = fnIt->begin(), bb_ie = fnIt->end();
-           bbIt != bb_ie; ++bbIt) {
-        for (BasicBlock::iterator it = bbIt->begin(), ie = bbIt->end();
-             it != ie; ++it) {
-          Instruction *instr = &*it;
-          const InstructionInfo &ii = executor.kmodule->infos->getInfo(*instr);
-          unsigned index = ii.id;
-          if (ii.file != sourceFile) {
-            of << "fl=" << ii.file << "\n";
-            sourceFile = ii.file;
+      of << "fn=" << fn.getName().str() << "\n";
+      for (auto &bb : fn) {
+        for (auto &instr : bb) {
+          Instruction *instrPtr = &instr;
+
+          auto instrLI = getLocationInfo(instrPtr);
+
+          unsigned index = executor.kmodule->getGlobalIndex(instrPtr);
+          if (instrLI.file != sourceFile) {
+            of << "fl=" << instrLI.file << "\n";
+            sourceFile = instrLI.file;
           }
 
-          assert(ii.assemblyLine.hasValue());
-          of << ii.assemblyLine.getValue() << " ";
+          {
+            auto asmLine = executor.kmodule->getAsmLine(instrPtr);
+            assert(asmLine.has_value());
+            of << asmLine.value() << " ";
+          }
 
-          of << ii.line << " ";
+          of << instrLI.line << " ";
           for (unsigned i = 0; i < nStats; i++)
             if (istatsMask.test(i))
               of << sm.getIndexedValue(sm.getStatistic(i), index) << " ";
           of << "\n";
 
           if (UseCallPaths &&
-              (isa<CallInst>(instr) || isa<InvokeInst>(instr))) {
-            CallSiteSummaryTable::iterator it = callSiteStats.find(instr);
+              (isa<CallInst>(instrPtr) || isa<InvokeInst>(instrPtr))) {
+            CallSiteSummaryTable::iterator it = callSiteStats.find(instrPtr);
             if (it != callSiteStats.end()) {
-              for (auto fit = it->second.begin(), fie = it->second.end();
-                   fit != fie; ++fit) {
-                const Function *f = fit->first;
-                CallSiteInfo &csi = fit->second;
-                const FunctionInfo &fii =
-                    executor.kmodule->infos->getFunctionInfo(*f);
-
-                if (fii.file != "" && fii.file != sourceFile)
-                  of << "cfl=" << fii.file << "\n";
+              for (auto &fit : it->second) {
+                const Function *f = fit.first;
+                CallSiteInfo &csi = fit.second;
+                auto fli = getLocationInfo(f);
+                if (fli.file != "" && fli.file != sourceFile)
+                  of << "cfl=" << fli.file << "\n";
                 of << "cfn=" << f->getName().str() << "\n";
                 of << "calls=" << csi.count << " ";
 
-                assert(fii.assemblyLine.hasValue());
-                of << fii.assemblyLine.getValue() << " ";
+                {
+                  auto asmLine = executor.kmodule->getAsmLine(f);
+                  assert(asmLine.has_value());
+                  of << asmLine.value() << " ";
+                }
 
-                of << fii.line << "\n";
+                of << fli.line << "\n";
 
-                assert(ii.assemblyLine.hasValue());
-                of << ii.assemblyLine.getValue() << " ";
+                {
+                  auto asmLine = executor.kmodule->getAsmLine(instrPtr);
+                  assert(asmLine.has_value());
+                  of << asmLine.value() << " ";
+                }
 
-                of << ii.line << " ";
+                of << instrLI.line << " ";
                 for (unsigned i = 0; i < nStats; i++) {
                   if (istatsMask.test(i)) {
                     Statistic &s = sm.getStatistic(i);
@@ -889,12 +891,12 @@ uint64_t klee::computeMinDistToUncovered(const KInstruction *ki,
                                          uint64_t minDistAtRA) {
   StatisticManager &sm = *theStatisticManager;
   if (minDistAtRA == 0) { // unreachable on return, best is local
-    return sm.getIndexedValue(stats::minDistToUncovered, ki->info->id);
+    return sm.getIndexedValue(stats::minDistToUncovered, ki->getGlobalIndex());
   } else {
     uint64_t minDistLocal =
-        sm.getIndexedValue(stats::minDistToUncovered, ki->info->id);
+        sm.getIndexedValue(stats::minDistToUncovered, ki->getGlobalIndex());
     uint64_t distToReturn =
-        sm.getIndexedValue(stats::minDistToReturn, ki->info->id);
+        sm.getIndexedValue(stats::minDistToReturn, ki->getGlobalIndex());
 
     if (distToReturn == 0) { // return unreachable, best is local
       return minDistLocal;
@@ -910,7 +912,6 @@ void StatsTracker::computeReachableUncovered() {
   KModule *km = executor.kmodule.get();
   const auto m = km->module.get();
   static bool init = true;
-  const InstructionInfoTable &infos = *km->infos;
   StatisticManager &sm = *theStatisticManager;
 
   if (init) {
@@ -973,11 +974,10 @@ void StatsTracker::computeReachableUncovered() {
       // Not sure if I should bother to preorder here. XXX I should.
       for (Function::iterator bbIt = fnIt->begin(), bb_ie = fnIt->end();
            bbIt != bb_ie; ++bbIt) {
-        for (BasicBlock::iterator it = bbIt->begin(), ie = bbIt->end();
-             it != ie; ++it) {
-          Instruction *inst = &*it;
+        for (auto &it : *bbIt) {
+          Instruction *inst = &it;
           instructions.push_back(inst);
-          unsigned id = infos.getInfo(*inst).id;
+          unsigned id = km->getGlobalIndex(inst);
           sm.setIndexedValue(stats::minDistToReturn, id, isa<ReturnInst>(inst));
         }
       }
@@ -989,9 +989,8 @@ void StatsTracker::computeReachableUncovered() {
     bool changed;
     do {
       changed = false;
-      for (auto it = instructions.begin(), ie = instructions.end(); it != ie;
-           ++it) {
-        Instruction *inst = *it;
+      for (auto &instruction : instructions) {
+        Instruction *inst = instruction;
         unsigned bestThrough = 0;
 
         if (isa<CallInst>(inst) || isa<InvokeInst>(inst)) {
@@ -1011,15 +1010,15 @@ void StatsTracker::computeReachableUncovered() {
         }
 
         if (bestThrough) {
-          unsigned id = infos.getInfo(*(*it)).id;
+          unsigned id = km->getGlobalIndex(instruction);
           uint64_t best,
               cur = best = sm.getIndexedValue(stats::minDistToReturn, id);
-          std::vector<Instruction *> succs = getSuccs(*it);
+          std::vector<Instruction *> succs = getSuccs(instruction);
           for (std::vector<Instruction *>::iterator it2 = succs.begin(),
                                                     ie = succs.end();
                it2 != ie; ++it2) {
             uint64_t dist = sm.getIndexedValue(stats::minDistToReturn,
-                                               infos.getInfo(*(*it2)).id);
+                                               km->getGlobalIndex(*it2));
             if (dist) {
               uint64_t val = bestThrough + dist;
               if (best == 0 || val < best)
@@ -1055,7 +1054,7 @@ void StatsTracker::computeReachableUncovered() {
       for (BasicBlock::iterator it = bbIt->begin(), ie = bbIt->end(); it != ie;
            ++it) {
         Instruction *inst = &*it;
-        unsigned id = infos.getInfo(*inst).id;
+        unsigned id = km->getGlobalIndex(inst);
         instructions.push_back(inst);
         sm.setIndexedValue(
             stats::minDistToUncovered, id,
@@ -1070,29 +1069,24 @@ void StatsTracker::computeReachableUncovered() {
   bool changed;
   do {
     changed = false;
-    for (std::vector<Instruction *>::iterator it = instructions.begin(),
-                                              ie = instructions.end();
-         it != ie; ++it) {
-      Instruction *inst = *it;
+    for (auto inst : instructions) {
       uint64_t best, cur = best = sm.getIndexedValue(stats::minDistToUncovered,
-                                                     infos.getInfo(*inst).id);
+                                                     km->getGlobalIndex(inst));
       unsigned bestThrough = 0;
 
       if (isa<CallInst>(inst) || isa<InvokeInst>(inst)) {
         std::vector<Function *> &targets = callTargets[inst];
-        for (std::vector<Function *>::iterator fnIt = targets.begin(),
-                                               ie = targets.end();
-             fnIt != ie; ++fnIt) {
-          uint64_t dist = functionShortestPath[*fnIt];
+        for (auto &target : targets) {
+          uint64_t dist = functionShortestPath[target];
           if (dist) {
             dist = 1 + dist; // count instruction itself
             if (bestThrough == 0 || dist < bestThrough)
               bestThrough = dist;
           }
 
-          if (!(*fnIt)->isDeclaration()) {
+          if (!target->isDeclaration()) {
             uint64_t calleeDist = sm.getIndexedValue(
-                stats::minDistToUncovered, infos.getFunctionInfo(*(*fnIt)).id);
+                stats::minDistToUncovered, km->getGlobalIndex(target));
             if (calleeDist) {
               calleeDist = 1 + calleeDist; // count instruction itself
               if (best == 0 || calleeDist < best)
@@ -1106,11 +1100,9 @@ void StatsTracker::computeReachableUncovered() {
 
       if (bestThrough) {
         std::vector<Instruction *> succs = getSuccs(inst);
-        for (std::vector<Instruction *>::iterator it2 = succs.begin(),
-                                                  ie = succs.end();
-             it2 != ie; ++it2) {
+        for (auto &succ : succs) {
           uint64_t dist = sm.getIndexedValue(stats::minDistToUncovered,
-                                             infos.getInfo(*(*it2)).id);
+                                             km->getGlobalIndex(succ));
           if (dist) {
             uint64_t val = bestThrough + dist;
             if (best == 0 || val < best)
@@ -1120,7 +1112,7 @@ void StatsTracker::computeReachableUncovered() {
       }
 
       if (best != cur) {
-        sm.setIndexedValue(stats::minDistToUncovered, infos.getInfo(*inst).id,
+        sm.setIndexedValue(stats::minDistToUncovered, km->getGlobalIndex(inst),
                            best);
         changed = true;
       }

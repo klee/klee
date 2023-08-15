@@ -12,6 +12,7 @@
 
 #include "AddressSpace.h"
 
+#include "klee/ADT/ImmutableList.h"
 #include "klee/ADT/ImmutableSet.h"
 #include "klee/ADT/PersistentMap.h"
 #include "klee/ADT/PersistentSet.h"
@@ -53,9 +54,7 @@ struct KBlock;
 struct KInstruction;
 class MemoryObject;
 class PTreeNode;
-struct InstructionInfo;
 class Target;
-struct TranstionHash;
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const MemoryMap &mm);
 
@@ -216,7 +215,8 @@ struct Symbolic {
   const Array *array;
   KType *type;
   Symbolic(ref<const MemoryObject> mo, const Array *a, KType *t)
-      : memoryObject(mo), array(a), type(t) {}
+      : memoryObject(std::move(mo)), array(a), type(t) {}
+  Symbolic(const Symbolic &other) = default;
   Symbolic &operator=(const Symbolic &other) = default;
 
   friend bool operator==(const Symbolic &lhs, const Symbolic &rhs) {
@@ -317,16 +317,14 @@ public:
   TreeOStream symPathOS;
 
   /// @brief Set containing which lines in which files are covered by this state
-  std::map<const std::string *, std::set<std::uint32_t>> coveredLines;
+  std::map<std::string, std::set<unsigned>> coveredLines;
 
   /// @brief Pointer to the process tree of the current state
   /// Copies of ExecutionState should not copy ptreeNode
   PTreeNode *ptreeNode = nullptr;
 
   /// @brief Ordered list of symbolics: used to generate test cases.
-  //
-  // FIXME: Move to a shared list structure (not critical).
-  std::vector<Symbolic> symbolics;
+  ImmutableList<Symbolic> symbolics;
 
   /// @brief map from memory accesses to accessed objects and access offsets.
   ExprHashMap<std::set<IDType>> resolvedPointers;

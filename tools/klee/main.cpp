@@ -15,7 +15,7 @@
 #include "klee/Core/Context.h"
 #include "klee/Core/Interpreter.h"
 #include "klee/Core/TargetedExecutionReporter.h"
-#include "klee/Expr/Expr.h"
+#include "klee/Module/LocationInfo.h"
 #include "klee/Module/SarifReport.h"
 #include "klee/Module/TargetForest.h"
 #include "klee/Solver/SolverCmdLine.h"
@@ -34,9 +34,7 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/CommandLine.h"
@@ -52,8 +50,8 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/TargetSelect.h"
 DISABLE_WARNING_POP
 
+#include <csignal>
 #include <dirent.h>
-#include <signal.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <thread>
@@ -64,6 +62,7 @@ DISABLE_WARNING_POP
 #include <fstream>
 #include <iomanip>
 #include <iterator>
+#include <llvm/IR/InstIterator.h>
 #include <sstream>
 
 using json = nlohmann::json;
@@ -678,13 +677,13 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     }
 
     if (WriteCov) {
-      std::map<const std::string *, std::set<unsigned>> cov;
+      std::map<std::string, std::set<unsigned>> cov;
       m_interpreter->getCoveredLines(state, cov);
       auto f = openTestFile("cov", id);
       if (f) {
         for (const auto &entry : cov) {
           for (const auto &line : entry.second) {
-            *f << *entry.first << ':' << line << '\n';
+            *f << entry.first << ':' << line << '\n';
           }
         }
       }
@@ -1691,13 +1690,19 @@ int main(int argc, char **argv, char **envp) {
   }
 
   llvm::Module *mainModule = loadedUserModules.front().get();
-  std::unique_ptr<InstructionInfoTable> origInfos;
-  std::unique_ptr<llvm::raw_fd_ostream> assemblyFS;
+  FLCtoOpcode origInstructions;
 
   if (UseGuidedSearch == Interpreter::GuidanceKind::ErrorGuidance) {
+    for (const auto &Func : *mainModule) {
+      for (const auto &instr : llvm::instructions(Func)) {
+        auto locationInfo = getLocationInfo(&instr);
+        origInstructions[locationInfo.file][locationInfo.line]
+                        [locationInfo.column]
+                            .insert(instr.getOpcode());
+      }
+    }
+
     std::vector<llvm::Type *> args;
-    origInfos = std::make_unique<InstructionInfoTable>(
-        *mainModule, std::move(assemblyFS), true);
     args.push_back(llvm::Type::getInt32Ty(ctx)); // argc
     args.push_back(llvm::PointerType::get(
         Type::getInt8PtrTy(ctx),
@@ -1716,15 +1721,16 @@ int main(int argc, char **argv, char **envp) {
     EntryPoint = stubEntryPoint;
   }
 
-  std::unordered_set<std::string> mainModuleFunctions;
+  std::set<std::string> mainModuleFunctions;
   for (auto &Function : *mainModule) {
     if (!Function.isDeclaration()) {
       mainModuleFunctions.insert(Function.getName().str());
     }
   }
-  std::unordered_set<std::string> mainModuleGlobals;
-  for (const auto &gv : mainModule->globals())
+  std::set<std::string> mainModuleGlobals;
+  for (const auto &gv : mainModule->globals()) {
     mainModuleGlobals.insert(gv.getName().str());
+  }
 
   const std::string &module_triple = mainModule->getTargetTriple();
   std::string host_triple = llvm::sys::getDefaultTargetTriple();
@@ -1962,8 +1968,9 @@ int main(int argc, char **argv, char **envp) {
   // locale and other data and then calls main.
 
   auto finalModule = interpreter->setModule(
-      loadedUserModules, loadedLibsModules, Opts, mainModuleFunctions,
-      mainModuleGlobals, std::move(origInfos));
+      loadedUserModules, loadedLibsModules, Opts,
+      std::move(mainModuleFunctions), std::move(mainModuleGlobals),
+      std::move(origInstructions));
 
   externalsAndGlobalsCheck(finalModule);
   if (InteractiveMode) {

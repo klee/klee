@@ -11,7 +11,7 @@ set(KLEE_MODULE_COMPONENT_SRCS
   Checks.cpp
   CodeGraphInfo.cpp
   FunctionAlias.cpp
-  InstructionInfoTable.cpp
+  LocationInfo.cpp
   InstructionOperandTypeCheckPass.cpp
   IntrinsicCleaner.cpp
   KInstruction.cpp

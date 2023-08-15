@@ -96,12 +96,6 @@ private:
   using StatesSet = std::unordered_set<ExecutionState *>;
   using TargetToStateUnorderedSetMap = TargetHashMap<StatesSet>;
 
-  using Instructions = std::unordered_map<
-      std::string,
-      std::unordered_map<
-          unsigned int,
-          std::unordered_map<unsigned int, std::unordered_set<unsigned int>>>>;
-
   std::unordered_set<std::string> brokenTraces;
   std::unordered_set<std::string> reportedTraces;
 

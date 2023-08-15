@@ -14,7 +14,6 @@
 #include "klee/Expr/ArrayExprVisitor.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Module/Cell.h"
-#include "klee/Module/InstructionInfoTable.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
 #include "klee/Support/Casting.h"
@@ -101,14 +100,14 @@ bool CallStackFrame::equals(const CallStackFrame &other) const {
   return kf == other.kf && caller == other.caller;
 }
 
-StackFrame::StackFrame(KFunction *kf) : kf(kf), varargs(0) {
-  locals = new Cell[kf->numRegisters];
+StackFrame::StackFrame(KFunction *kf) : kf(kf), varargs(nullptr) {
+  locals = new Cell[kf->getNumRegisters()];
 }
 
 StackFrame::StackFrame(const StackFrame &s)
     : kf(s.kf), allocas(s.allocas), varargs(s.varargs) {
-  locals = new Cell[kf->numRegisters];
-  for (unsigned i = 0; i < kf->numRegisters; i++)
+  locals = new Cell[kf->getNumRegisters()];
+  for (unsigned i = 0; i < kf->getNumRegisters(); i++)
     locals[i] = s.locals[i];
 }
 
@@ -119,7 +118,7 @@ InfoStackFrame::InfoStackFrame(KFunction *kf) : kf(kf) {}
 /***/
 ExecutionState::ExecutionState()
     : initPC(nullptr), pc(nullptr), prevPC(nullptr), incomingBBIndex(-1),
-      depth(0), ptreeNode(nullptr), steppedInstructions(0),
+      depth(0), ptreeNode(nullptr), symbolics(), steppedInstructions(0),
       steppedMemoryInstructions(0), instsSinceCovNew(0),
       roundingMode(llvm::APFloat::rmNearestTiesToEven),
       coveredNew(new box<bool>(false)), forkDisabled(false),
@@ -130,7 +129,7 @@ ExecutionState::ExecutionState()
 
 ExecutionState::ExecutionState(KFunction *kf)
     : initPC(kf->instructions), pc(initPC), prevPC(pc), incomingBBIndex(-1),
-      depth(0), ptreeNode(nullptr), steppedInstructions(0),
+      depth(0), ptreeNode(nullptr), symbolics(), steppedInstructions(0),
       steppedMemoryInstructions(0), instsSinceCovNew(0),
       roundingMode(llvm::APFloat::rmNearestTiesToEven),
       coveredNew(new box<bool>(false)), forkDisabled(false),
@@ -142,7 +141,7 @@ ExecutionState::ExecutionState(KFunction *kf)
 
 ExecutionState::ExecutionState(KFunction *kf, KBlock *kb)
     : initPC(kb->instructions), pc(initPC), prevPC(pc), incomingBBIndex(-1),
-      depth(0), ptreeNode(nullptr), steppedInstructions(0),
+      depth(0), ptreeNode(nullptr), symbolics(), steppedInstructions(0),
       steppedMemoryInstructions(0), instsSinceCovNew(0),
       roundingMode(llvm::APFloat::rmNearestTiesToEven),
       coveredNew(new box<bool>(false)), forkDisabled(false),
@@ -193,8 +192,8 @@ ExecutionState *ExecutionState::branch() {
 }
 
 bool ExecutionState::inSymbolics(const MemoryObject *mo) const {
-  for (auto i : symbolics) {
-    if (mo->id == i.memoryObject->id) {
+  for (const auto &symbolic : symbolics) {
+    if (mo->id == symbolic.memoryObject->id) {
       return true;
     }
   }
@@ -254,13 +253,12 @@ void ExecutionState::popFrame() {
 
 void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array,
                                  KType *type) {
-  symbolics.emplace_back(ref<const MemoryObject>(mo), array, type);
+  symbolics.push_back({mo, array, type});
 }
 
 ref<const MemoryObject>
 ExecutionState::findMemoryObject(const Array *array) const {
-  for (unsigned i = 0; i != symbolics.size(); ++i) {
-    const auto &symbolic = symbolics[i];
+  for (const auto &symbolic : symbolics) {
     if (array == symbolic.array) {
       return symbolic.memoryObject;
     }
@@ -387,13 +385,12 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
     const StackFrame &sf = stack.valueStack().at(ri);
 
     Function *f = csf.kf->function;
-    const InstructionInfo &ii = *target->info;
     out << "\t#" << i;
-    if (ii.assemblyLine.hasValue()) {
-      std::stringstream AssStream;
-      AssStream << std::setw(8) << std::setfill('0')
-                << ii.assemblyLine.getValue();
-      out << AssStream.str();
+    auto assemblyLine = target->getKModule()->getAsmLine(target->inst);
+    if (assemblyLine.has_value()) {
+      std::stringstream AsmStream;
+      AsmStream << std::setw(8) << std::setfill('0') << assemblyLine.value();
+      out << AsmStream.str();
     }
     out << " in " << f->getName().str() << "(";
     // Yawn, we could go up and print varargs if we wanted to.
@@ -414,8 +411,9 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
       }
     }
     out << ")";
-    if (ii.file != "")
-      out << " at " << ii.file << ":" << ii.line;
+    std::string filepath = target->getSourceFilepath();
+    if (!filepath.empty())
+      out << " at " << filepath << ":" << target->getLine();
     out << "\n";
     target = csf.caller;
   }

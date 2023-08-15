@@ -409,8 +409,8 @@ public:
       auto kf = s->km->functionMap.at(s->allocSite.getFunction());
       auto ki = kf->instructionMap.at(&s->allocSite);
       auto kb = ki->parent;
-      PC << ki->index << " " << kb->getLabel() << " " << kf->getName().str()
-         << " " << s->index;
+      PC << ki->getIndex() << " " << kb->getLabel() << " "
+         << kf->getName().str() << " " << s->index;
     } else if (auto s = dyn_cast<IrreproducibleSource>(source)) {
       PC << s->name;
     } else {

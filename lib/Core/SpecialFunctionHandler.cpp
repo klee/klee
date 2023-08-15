@@ -921,7 +921,7 @@ void SpecialFunctionHandler::handleMakeSymbolic(
     assert(success && "FIXME: Unhandled solver failure");
 
     if (res) {
-      uint64_t sid = 0;
+      uint64_t sid = 0; // TODO: unused variable
       if (state.arrayNames.count(name)) {
         sid = state.arrayNames[name];
       }

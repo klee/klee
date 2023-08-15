@@ -50,7 +50,7 @@ Statistic *StatisticManager::getStatisticByName(const std::string &name) const {
   return 0;
 }
 
-StatisticManager *klee::theStatisticManager = 0;
+StatisticManager *klee::theStatisticManager = nullptr;
 
 static StatisticManager &getStatisticManager() {
   static StatisticManager sm;

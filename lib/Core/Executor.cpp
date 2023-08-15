@@ -51,7 +51,6 @@
 #include "klee/Expr/Symcrete.h"
 #include "klee/Module/Cell.h"
 #include "klee/Module/CodeGraphInfo.h"
-#include "klee/Module/InstructionInfoTable.h"
 #include "klee/Module/KCallable.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
@@ -536,13 +535,11 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
   }
 }
 
-llvm::Module *
-Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &userModules,
-                    std::vector<std::unique_ptr<llvm::Module>> &libsModules,
-                    const ModuleOptions &opts,
-                    const std::unordered_set<std::string> &mainModuleFunctions,
-                    const std::unordered_set<std::string> &mainModuleGlobals,
-                    std::unique_ptr<InstructionInfoTable> origInfos) {
+llvm::Module *Executor::setModule(
+    std::vector<std::unique_ptr<llvm::Module>> &userModules,
+    std::vector<std::unique_ptr<llvm::Module>> &libsModules,
+    const ModuleOptions &opts, std::set<std::string> &&mainModuleFunctions,
+    std::set<std::string> &&mainModuleGlobals, FLCtoOpcode &&origInstructions) {
   assert(!kmodule && !userModules.empty() &&
          "can only register one module"); // XXX gross
 
@@ -596,16 +593,12 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &userModules,
   kmodule->checkModule();
 
   // 4.) Manifest the module
-  kmodule->mainModuleFunctions.insert(mainModuleFunctions.begin(),
-                                      mainModuleFunctions.end());
-  kmodule->mainModuleGlobals.insert(mainModuleGlobals.begin(),
-                                    mainModuleGlobals.end());
+  std::swap(kmodule->mainModuleFunctions, mainModuleFunctions);
+  std::swap(kmodule->mainModuleGlobals, mainModuleGlobals);
   kmodule->manifest(interpreterHandler, interpreterOpts.Guidance,
                     StatsTracker::useStatistics());
 
-  if (origInfos) {
-    kmodule->origInfos = origInfos->getInstructions();
-  }
+  kmodule->origInstructions = origInstructions;
 
   specialFunctionHandler->bind();
 
@@ -750,6 +743,7 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
                         true, nullptr, 8);
     errnoObj->isFixed = true;
 
+    // TODO: unused variable
     ObjectState *os = bindObjectInState(
         state, errnoObj, typeSystemManager->getWrappedType(pointerErrnoAddr),
         false);
@@ -1108,7 +1102,7 @@ ref<Expr> Executor::maxStaticPctChecks(ExecutionState &current,
     std::string msg("skipping fork and concretizing condition (MaxStatic*Pct "
                     "limit reached) at ");
     llvm::raw_string_ostream os(msg);
-    os << current.prevPC->getSourceLocation();
+    os << current.prevPC->getSourceLocationString();
     klee_warning_once(0, "%s", os.str().c_str());
 
     addConstraint(current, EqExpr::create(value, condition));
@@ -1526,8 +1520,8 @@ ref<klee::ConstantExpr> Executor::toConstant(ExecutionState &state, ref<Expr> e,
   std::string str;
   llvm::raw_string_ostream os(str);
   os << "silently concretizing (reason: " << reason << ") expression " << e
-     << " to value " << value << " (" << (*(state.pc)).info->file << ":"
-     << (*(state.pc)).info->line << ")";
+     << " to value " << value << " (" << state.pc->getSourceFilepath() << ":"
+     << state.pc->getLine() << ")";
 
   if (AllExternalWarnings)
     klee_warning("%s", os.str().c_str());
@@ -1606,10 +1600,13 @@ void Executor::printDebugInstructions(ExecutionState &state) {
   //   [src]     src location:asm line:state ID
   if (!DebugPrintInstructions.isSet(STDERR_COMPACT) &&
       !DebugPrintInstructions.isSet(FILE_COMPACT)) {
-    (*stream) << "     " << state.pc->getSourceLocation() << ':';
+    (*stream) << "     " << state.pc->getSourceLocationString() << ':';
   }
-  if (state.pc->info->assemblyLine.hasValue()) {
-    (*stream) << state.pc->info->assemblyLine.getValue() << ':';
+  {
+    auto asmLine = state.pc->getKModule()->getAsmLine(state.pc->inst);
+    if (asmLine.has_value()) {
+      (*stream) << asmLine.value() << ':';
+    }
   }
   (*stream) << state.getID() << ":";
   (*stream) << "[";
@@ -2574,7 +2571,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       // requires that we still be in the context of the branch
       // instruction (it reuses its statistic id). Should be cleaned
       // up with convenient instruction specific data.
-      if (statsTracker && state.stack.callStack().back().kf->trackCoverage)
+      if (statsTracker)
         statsTracker->markBranchVisited(branches.first, branches.second);
 
       if (branches.first)
@@ -4253,9 +4250,9 @@ void Executor::reportProgressTowardsTargets(std::string prefix,
     repr << "in function " +
                 target->getBlock()->parent->function->getName().str();
     repr << " (lines ";
-    repr << target->getBlock()->getFirstInstruction()->info->line;
+    repr << target->getBlock()->getFirstInstruction()->getLine();
     repr << " to ";
-    repr << target->getBlock()->getLastInstruction()->info->line;
+    repr << target->getBlock()->getLastInstruction()->getLine();
     repr << ")";
     std::string targetString = repr.str();
     klee_message("%s for %s", distance.toString().c_str(),
@@ -4620,22 +4617,19 @@ void Executor::terminateStateEarlyUser(ExecutionState &state,
   terminateStateEarly(state, message, StateTerminationType::SilentExit);
 }
 
-const InstructionInfo &
-Executor::getLastNonKleeInternalInstruction(const ExecutionState &state,
-                                            Instruction **lastInstruction) {
+const KInstruction *
+Executor::getLastNonKleeInternalInstruction(const ExecutionState &state) {
   // unroll the stack of the applications state and find
   // the last instruction which is not inside a KLEE internal function
-  ExecutionStack::call_stack_ty::const_reverse_iterator
-      it = state.stack.callStack().rbegin(),
-      itE = state.stack.callStack().rend();
+  auto it = state.stack.callStack().rbegin();
+  auto itE = state.stack.callStack().rend();
 
   // don't check beyond the outermost function (i.e. main())
   itE--;
 
-  const InstructionInfo *ii = 0;
+  const KInstruction *ki = nullptr;
   if (kmodule->internalFunctions.count(it->kf->function) == 0) {
-    ii = state.prevPC->info;
-    *lastInstruction = state.prevPC->inst;
+    ki = state.prevPC;
     //  Cannot return yet because even though
     //  it->function is not an internal function it might of
     //  been called from an internal function.
@@ -4649,21 +4643,19 @@ Executor::getLastNonKleeInternalInstruction(const ExecutionState &state,
     // function
     const Function *f = (*it->caller).inst->getParent()->getParent();
     if (kmodule->internalFunctions.count(f)) {
-      ii = 0;
+      ki = nullptr;
       continue;
     }
-    if (!ii) {
-      ii = (*it->caller).info;
-      *lastInstruction = (*it->caller).inst;
+    if (!ki) {
+      ki = it->caller;
     }
   }
 
-  if (!ii) {
+  if (!ki) {
     // something went wrong, play safe and return the current instruction info
-    *lastInstruction = state.prevPC->inst;
-    return *state.prevPC->info;
+    return state.prevPC;
   }
-  return *ii;
+  return ki;
 }
 
 bool shouldExitOn(StateTerminationType reason) {
@@ -4722,14 +4714,14 @@ void Executor::terminateStateOnError(ExecutionState &state,
                                      const char *suffix) {
   std::string message = messaget.str();
   static std::set<std::pair<Instruction *, std::string>> emittedErrors;
-  Instruction *lastInst;
-  const InstructionInfo &ii =
-      getLastNonKleeInternalInstruction(state, &lastInst);
+  const KInstruction *ki = getLastNonKleeInternalInstruction(state);
+  Instruction *lastInst = ki->inst;
 
   if (EmitAllErrors ||
       emittedErrors.insert(std::make_pair(lastInst, message)).second) {
-    if (!ii.file.empty()) {
-      klee_message("ERROR: %s:%d: %s", ii.file.c_str(), ii.line,
+    std::string filepath = ki->getSourceFilepath();
+    if (!filepath.empty()) {
+      klee_message("ERROR: %s:%zu: %s", filepath.c_str(), ki->getLine(),
                    message.c_str());
     } else {
       klee_message("ERROR: (location information missing) %s", message.c_str());
@@ -4740,10 +4732,13 @@ void Executor::terminateStateOnError(ExecutionState &state,
     std::string MsgString;
     llvm::raw_string_ostream msg(MsgString);
     msg << "Error: " << message << '\n';
-    if (!ii.file.empty()) {
-      msg << "File: " << ii.file << '\n' << "Line: " << ii.line << '\n';
-      if (ii.assemblyLine.hasValue()) {
-        msg << "assembly.ll line: " << ii.assemblyLine.getValue() << '\n';
+    if (!filepath.empty()) {
+      msg << "File: " << filepath << '\n' << "Line: " << ki->getLine() << '\n';
+      {
+        auto asmLine = ki->getKModule()->getAsmLine(ki->inst);
+        if (asmLine.has_value()) {
+          msg << "assembly.ll line: " << asmLine.value() << '\n';
+        }
       }
       msg << "State: " << state.getID() << '\n';
     }
@@ -4832,7 +4827,7 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
       if (i != arguments.size() - 1)
         os << ", ";
     }
-    os << ") at " << state.pc->getSourceLocation();
+    os << ") at " << state.pc->getSourceLocationString();
 
     if (AllExternalWarnings)
       klee_warning("%s", os.str().c_str());
@@ -4950,7 +4945,7 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
       if (i != arguments.size() - 1)
         os << ", ";
     }
-    os << ") at " << state.pc->getSourceLocation();
+    os << ") at " << state.pc->getSourceLocationString();
 
     if (AllExternalWarnings)
       klee_warning("%s", os.str().c_str());
@@ -5875,7 +5870,7 @@ void Executor::collectReads(
     const std::vector<IDType> &resolvedMemoryObjects,
     const std::vector<Assignment> &resolveConcretizations,
     std::vector<ref<Expr>> &results) {
-  ref<Expr> base = address;
+  ref<Expr> base = address; // TODO: unused
   unsigned size = bytes;
   if (state.isGEPExpr(address)) {
     base = state.gepExprBases[address].first;
@@ -6852,7 +6847,7 @@ void Executor::prepareSymbolicValue(ExecutionState &state,
 
 void Executor::prepareSymbolicRegister(ExecutionState &state, StackFrame &sf,
                                        unsigned regNum) {
-  KInstruction *allocInst = sf.kf->registerToInstructionMap[regNum];
+  KInstruction *allocInst = sf.kf->getInstructionByRegister(regNum);
   prepareSymbolicValue(state, sf, allocInst);
 }
 
@@ -6935,7 +6930,7 @@ void Executor::logState(const ExecutionState &state, int id,
   *f << state.symbolics.size() << " symbolics total. "
      << "Symbolics:\n";
   size_t sc = 0;
-  for (auto &symbolic : state.symbolics) {
+  for (const auto &symbolic : state.symbolics) {
     *f << "Symbolic number " << sc++ << "\n";
     *f << "Associated memory object: " << symbolic.memoryObject.get()->id
        << "\n";
@@ -7048,15 +7043,17 @@ void Executor::setInitializationGraph(
       // The objects have to be symbolic
       bool pointerFound = false, pointeeFound = false;
       size_t pointerIndex = 0, pointeeIndex = 0;
-      for (size_t i = 0; i < symbolics.size(); i++) {
-        if (symbolics[i].memoryObject == pointerResolution.first) {
+      size_t i = 0;
+      for (auto &symbolic : symbolics) {
+        if (symbolic.memoryObject == pointerResolution.first) {
           pointerIndex = i;
           pointerFound = true;
         }
-        if (symbolics[i].memoryObject->id == pointer.second.first) {
+        if (symbolic.memoryObject->id == pointer.second.first) {
           pointeeIndex = i;
           pointeeFound = true;
         }
+        ++i;
       }
       if (pointerFound && pointeeFound) {
         ref<ConstantExpr> offset = model.evaluate(pointerResolution.second);
@@ -7157,8 +7154,9 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
 
   std::vector<SparseStorage<unsigned char>> values;
   std::vector<const Array *> objects;
-  for (unsigned i = 0; i != symbolics.size(); ++i)
-    objects.push_back(symbolics[i].array);
+  for (auto &symbolic : symbolics) {
+    objects.push_back(symbolic.array);
+  }
   bool success = solver->getInitialValues(extendedConstraints.cs(), objects,
                                           values, state.queryMetaData);
   solver->setTimeout(time::Span());
@@ -7169,19 +7167,23 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
     return false;
   }
 
-  res.objects = new KTestObject[symbolics.size()];
   res.numObjects = symbolics.size();
+  res.objects = new KTestObject[res.numObjects];
 
-  for (unsigned i = 0; i != symbolics.size(); ++i) {
-    auto mo = symbolics[i].memoryObject;
-    KTestObject *o = &res.objects[i];
-    o->name = const_cast<char *>(mo->name.c_str());
-    o->address = mo->address;
-    o->numBytes = values[i].size();
-    o->bytes = new unsigned char[o->numBytes];
-    std::copy(values[i].begin(), values[i].end(), o->bytes);
-    o->numPointers = 0;
-    o->pointers = nullptr;
+  {
+    size_t i = 0;
+    for (auto &symbolic : symbolics) {
+      auto mo = symbolic.memoryObject;
+      KTestObject *o = &res.objects[i];
+      o->name = const_cast<char *>(mo->name.c_str());
+      o->address = mo->address;
+      o->numBytes = values[i].size();
+      o->bytes = new unsigned char[o->numBytes];
+      std::copy(values[i].begin(), values[i].end(), o->bytes);
+      o->numPointers = 0;
+      o->pointers = nullptr;
+      ++i;
+    }
   }
 
   Assignment model = Assignment(objects, values);
@@ -7194,9 +7196,8 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
   return true;
 }
 
-void Executor::getCoveredLines(
-    const ExecutionState &state,
-    std::map<const std::string *, std::set<unsigned>> &res) {
+void Executor::getCoveredLines(const ExecutionState &state,
+                               std::map<std::string, std::set<unsigned>> &res) {
   res = state.coveredLines;
 }
 
@@ -7355,9 +7356,9 @@ void Executor::dumpStates() {
            sfIt != sf_ie; ++sfIt) {
         *os << "('" << sfIt->kf->function->getName().str() << "',";
         if (next == es->stack.callStack().end()) {
-          *os << es->prevPC->info->line << "), ";
+          *os << es->prevPC->getLine() << "), ";
         } else {
-          *os << next->caller->info->line << "), ";
+          *os << next->caller->getLine() << "), ";
           ++next;
         }
       }
@@ -7366,8 +7367,8 @@ void Executor::dumpStates() {
       InfoStackFrame &sf = es->stack.infoStack().back();
       uint64_t md2u =
           computeMinDistToUncovered(es->pc, sf.minDistToUncoveredOnReturn);
-      uint64_t icnt = theStatisticManager->getIndexedValue(stats::instructions,
-                                                           es->pc->info->id);
+      uint64_t icnt = theStatisticManager->getIndexedValue(
+          stats::instructions, es->pc->getGlobalIndex());
       uint64_t cpicnt =
           sf.callPathNode->statistics.getValue(stats::instructions);
 

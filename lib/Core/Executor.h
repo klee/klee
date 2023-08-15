@@ -78,7 +78,6 @@ class ExecutionState;
 class ExternalDispatcher;
 class Expr;
 template <class T> class ExprHashMap;
-class InstructionInfoTable;
 class KCallable;
 struct KFunction;
 struct KInstruction;
@@ -482,7 +481,7 @@ private:
 
   ref<Expr> readDest(ExecutionState &state, StackFrame &frame,
                      const KInstruction *target) {
-    unsigned index = target->dest;
+    unsigned index = target->getDest();
     ref<Expr> reg = frame.locals[index].value;
     if (!reg) {
       prepareSymbolicRegister(state, frame, index);
@@ -496,7 +495,7 @@ private:
   }
 
   Cell &getDestCell(const StackFrame &frame, const KInstruction *target) {
-    return frame.locals[target->dest];
+    return frame.locals[target->getDest()];
   }
 
   const Cell &eval(const KInstruction *ki, unsigned index,
@@ -567,10 +566,9 @@ private:
                              const MemoryObject *mo = nullptr) const;
 
   // Determines the \param lastInstruction of the \param state which is not KLEE
-  // internal and returns its InstructionInfo
-  const InstructionInfo &
-  getLastNonKleeInternalInstruction(const ExecutionState &state,
-                                    llvm::Instruction **lastInstruction);
+  // internal and returns its KInstruction
+  const KInstruction *
+  getLastNonKleeInternalInstruction(const ExecutionState &state);
 
   /// Remove state from queue and delete state
   void terminateState(ExecutionState &state,
@@ -729,9 +727,9 @@ public:
   setModule(std::vector<std::unique_ptr<llvm::Module>> &userModules,
             std::vector<std::unique_ptr<llvm::Module>> &libsModules,
             const ModuleOptions &opts,
-            const std::unordered_set<std::string> &mainModuleFunctions,
-            const std::unordered_set<std::string> &mainModuleGlobals,
-            std::unique_ptr<InstructionInfoTable> origInfos) override;
+            std::set<std::string> &&mainModuleFunctions,
+            std::set<std::string> &&mainModuleGlobals,
+            FLCtoOpcode &&origInstructions) override;
 
   void useSeeds(const std::vector<struct KTest *> *seeds) override {
     usingSeeds = seeds;
@@ -801,9 +799,8 @@ public:
 
   bool getSymbolicSolution(const ExecutionState &state, KTest &res) override;
 
-  void getCoveredLines(
-      const ExecutionState &state,
-      std::map<const std::string *, std::set<unsigned>> &res) override;
+  void getCoveredLines(const ExecutionState &state,
+                       std::map<std::string, std::set<unsigned>> &res) override;
 
   void getBlockPath(const ExecutionState &state,
                     std::string &blockPath) override;

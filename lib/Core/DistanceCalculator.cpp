@@ -95,8 +95,6 @@ DistanceResult DistanceCalculator::computeDistance(KBlock *kb, TargetKind kind,
 DistanceResult DistanceCalculator::getDistance(
     const KInstruction *prevPC, const KInstruction *pc,
     const ExecutionStack::call_stack_ty &frames, KBlock *target) {
-  weight_type weight = 0;
-
   KBlock *kb = pc->parent;
   const auto &distanceToTargetFunction =
       codeGraphInfo.getBackwardDistance(target->parent);
@@ -196,7 +194,6 @@ WeightResult
 DistanceCalculator::tryGetLocalWeight(KBlock *kb, weight_type &weight,
                                       const std::vector<KBlock *> &localTargets,
                                       KBlock *target) const {
-  KFunction *currentKF = kb->parent;
   KBlock *currentKB = kb;
   const std::unordered_map<KBlock *, unsigned> &dist =
       codeGraphInfo.getDistance(currentKB);

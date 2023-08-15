@@ -134,7 +134,7 @@ ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c,
       std::string msg("Cannot handle constant ");
       llvm::raw_string_ostream os(msg);
       os << "'" << *c << "' at location "
-         << (ki ? ki->getSourceLocation() : "[unknown]");
+         << (ki ? ki->getSourceLocationString() : "[unknown]");
       klee_error("%s", os.str().c_str());
     }
   }
@@ -261,7 +261,7 @@ ref<ConstantExpr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce,
       std::string msg(
           "Division/modulo by zero during constant folding at location ");
       llvm::raw_string_ostream os(msg);
-      os << (ki ? ki->getSourceLocation() : "[unknown]");
+      os << (ki ? ki->getSourceLocationString() : "[unknown]");
       klee_error("%s", os.str().c_str());
     }
     break;
@@ -271,7 +271,7 @@ ref<ConstantExpr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce,
     if (op2->getLimitedValue() >= op1->getWidth()) {
       std::string msg("Overshift during constant folding at location ");
       llvm::raw_string_ostream os(msg);
-      os << (ki ? ki->getSourceLocation() : "[unknown]");
+      os << (ki ? ki->getSourceLocationString() : "[unknown]");
       klee_error("%s", os.str().c_str());
     }
   }
@@ -282,7 +282,7 @@ ref<ConstantExpr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce,
   switch (ce->getOpcode()) {
   default:
     os << "'" << *ce << "' at location "
-       << (ki ? ki->getSourceLocation() : "[unknown]");
+       << (ki ? ki->getSourceLocationString() : "[unknown]");
     klee_error("%s", os.str().c_str());
 
   case Instruction::Trunc:

@@ -41,7 +41,6 @@ class ExecutionState;
 struct SarifReport;
 class Interpreter;
 class TreeStreamWriter;
-class InstructionInfoTable;
 
 class InterpreterHandler {
 public:
@@ -60,6 +59,12 @@ public:
   virtual void processTestCase(const ExecutionState &state, const char *message,
                                const char *suffix, bool isError = false) = 0;
 };
+
+/// [File][Line][Column] -> Opcode
+using FLCtoOpcode = std::unordered_map<
+    std::string,
+    std::unordered_map<
+        unsigned, std::unordered_map<unsigned, std::unordered_set<unsigned>>>>;
 
 class Interpreter {
 public:
@@ -140,9 +145,9 @@ public:
   setModule(std::vector<std::unique_ptr<llvm::Module>> &userModules,
             std::vector<std::unique_ptr<llvm::Module>> &libsModules,
             const ModuleOptions &opts,
-            const std::unordered_set<std::string> &mainModuleFunctions,
-            const std::unordered_set<std::string> &mainModuleGlobals,
-            std::unique_ptr<InstructionInfoTable> origInfos) = 0;
+            std::set<std::string> &&mainModuleFunctions,
+            std::set<std::string> &&mainModuleGlobals,
+            FLCtoOpcode &&origInstructions) = 0;
 
   // supply a tree stream writer which the interpreter will use
   // to record the concrete path (as a stream of '0' and '1' bytes).
@@ -194,7 +199,7 @@ public:
 
   virtual void
   getCoveredLines(const ExecutionState &state,
-                  std::map<const std::string *, std::set<unsigned>> &res) = 0;
+                  std::map<std::string, std::set<unsigned>> &res) = 0;
 
   virtual void getBlockPath(const ExecutionState &state,
                             std::string &blockPath) = 0;

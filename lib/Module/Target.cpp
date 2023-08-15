@@ -31,8 +31,8 @@ ErrorLocation::ErrorLocation(const klee::ref<klee::Location> &loc)
       startColumn(loc->startColumn), endColumn(loc->endColumn) {}
 
 ErrorLocation::ErrorLocation(const KInstruction *ki) {
-  startLine = (endLine = ki->info->line);
-  startColumn = (endColumn = ki->info->line);
+  startLine = (endLine = ki->getLine());
+  startColumn = (endColumn = ki->getLine());
 }
 
 std::string ReproduceErrorTarget::toString() const {
@@ -102,11 +102,11 @@ ref<Target> CoverBranchTarget::create(KBlock *_block, unsigned _branchCase) {
 
 bool ReproduceErrorTarget::isTheSameAsIn(const KInstruction *instr) const {
   const auto &errLoc = loc;
-  return instr->info->line >= errLoc.startLine &&
-         instr->info->line <= errLoc.endLine &&
+  return instr->getLine() >= errLoc.startLine &&
+         instr->getLine() <= errLoc.endLine &&
          (!LocationAccuracy || !errLoc.startColumn.has_value() ||
-          (instr->info->column >= *errLoc.startColumn &&
-           instr->info->column <= *errLoc.endColumn));
+          (instr->getColumn() >= *errLoc.startColumn &&
+           instr->getColumn() <= *errLoc.endColumn));
 }
 
 int Target::compare(const Target &b) const { return internalCompare(b); }
@@ -126,8 +126,8 @@ int ReachBlockTarget::internalCompare(const Target &b) const {
   if (block->parent->id != other.block->parent->id) {
     return block->parent->id < other.block->parent->id ? -1 : 1;
   }
-  if (block->id != other.block->id) {
-    return block->id < other.block->id ? -1 : 1;
+  if (block->getId() != other.block->getId()) {
+    return block->getId() < other.block->getId() ? -1 : 1;
   }
 
   if (atEnd != other.atEnd) {
@@ -146,8 +146,8 @@ int CoverBranchTarget::internalCompare(const Target &b) const {
   if (block->parent->id != other.block->parent->id) {
     return block->parent->id < other.block->parent->id ? -1 : 1;
   }
-  if (block->id != other.block->id) {
-    return block->id < other.block->id ? -1 : 1;
+  if (block->getId() != other.block->getId()) {
+    return block->getId() < other.block->getId() ? -1 : 1;
   }
 
   if (branchCase != other.branchCase) {
@@ -170,8 +170,8 @@ int ReproduceErrorTarget::internalCompare(const Target &b) const {
   if (block->parent->id != other.block->parent->id) {
     return block->parent->id < other.block->parent->id ? -1 : 1;
   }
-  if (block->id != other.block->id) {
-    return block->id < other.block->id ? -1 : 1;
+  if (block->getId() != other.block->getId()) {
+    return block->getId() < other.block->getId() ? -1 : 1;
   }
 
   if (errors.size() != other.errors.size()) {

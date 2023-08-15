@@ -98,9 +98,8 @@ int ArgumentSource::internalCompare(const SymbolicSource &b) const {
   assert(km == ab.km);
   auto parent = allocSite.getParent();
   auto bParent = ab.allocSite.getParent();
-  if (km->functionIDMap.at(parent) != km->functionIDMap.at(bParent)) {
-    return km->functionIDMap.at(parent) < km->functionIDMap.at(bParent) ? -1
-                                                                        : 1;
+  if (km->getFunctionId(parent) != km->getFunctionId(bParent)) {
+    return km->getFunctionId(parent) < km->getFunctionId(bParent) ? -1 : 1;
   }
   if (allocSite.getArgNo() != ab.allocSite.getArgNo()) {
     return allocSite.getArgNo() < ab.allocSite.getArgNo() ? -1 : 1;
@@ -119,20 +118,20 @@ int InstructionSource::internalCompare(const SymbolicSource &b) const {
   assert(km == ib.km);
   auto function = allocSite.getParent()->getParent();
   auto bFunction = ib.allocSite.getParent()->getParent();
-  if (km->functionIDMap.at(function) != km->functionIDMap.at(bFunction)) {
-    return km->functionIDMap.at(function) < km->functionIDMap.at(bFunction) ? -1
-                                                                            : 1;
+  if (km->getFunctionId(function) != km->getFunctionId(bFunction)) {
+    return km->getFunctionId(function) < km->getFunctionId(bFunction) ? -1 : 1;
   }
   auto kf = km->functionMap.at(function);
   auto block = allocSite.getParent();
   auto bBlock = ib.allocSite.getParent();
-  if (kf->blockMap[block]->id != kf->blockMap[bBlock]->id) {
-    return kf->blockMap[block]->id < kf->blockMap[bBlock]->id ? -1 : 1;
+  if (kf->blockMap[block]->getId() != kf->blockMap[bBlock]->getId()) {
+    return kf->blockMap[block]->getId() < kf->blockMap[bBlock]->getId() ? -1
+                                                                        : 1;
   }
-  if (kf->instructionMap[&allocSite]->index !=
-      kf->instructionMap[&ib.allocSite]->index) {
-    return kf->instructionMap[&allocSite]->index <
-                   kf->instructionMap[&ib.allocSite]->index
+  if (kf->instructionMap[&allocSite]->getIndex() !=
+      kf->instructionMap[&ib.allocSite]->getIndex()) {
+    return kf->instructionMap[&allocSite]->getIndex() <
+                   kf->instructionMap[&ib.allocSite]->getIndex()
                ? -1
                : 1;
   }
@@ -142,8 +141,7 @@ int InstructionSource::internalCompare(const SymbolicSource &b) const {
 unsigned ArgumentSource::computeHash() {
   unsigned res = (getKind() * SymbolicSource::MAGIC_HASH_CONSTANT) + index;
   auto parent = allocSite.getParent();
-  res = (res * SymbolicSource::MAGIC_HASH_CONSTANT) +
-        km->functionIDMap.at(parent);
+  res = (res * SymbolicSource::MAGIC_HASH_CONSTANT) + km->getFunctionId(parent);
   res = (res * SymbolicSource::MAGIC_HASH_CONSTANT) + allocSite.getArgNo();
   hashValue = res;
   return hashValue;
@@ -154,11 +152,12 @@ unsigned InstructionSource::computeHash() {
   auto function = allocSite.getParent()->getParent();
   auto kf = km->functionMap.at(function);
   auto block = allocSite.getParent();
+  res =
+      (res * SymbolicSource::MAGIC_HASH_CONSTANT) + km->getFunctionId(function);
   res = (res * SymbolicSource::MAGIC_HASH_CONSTANT) +
-        km->functionIDMap.at(function);
-  res = (res * SymbolicSource::MAGIC_HASH_CONSTANT) + kf->blockMap[block]->id;
+        kf->blockMap[block]->getId();
   res = (res * SymbolicSource::MAGIC_HASH_CONSTANT) +
-        kf->instructionMap[&allocSite]->index;
+        kf->instructionMap[&allocSite]->getIndex();
   hashValue = res;
   return hashValue;
 }

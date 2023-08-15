@@ -125,7 +125,7 @@ public:
   /// Get an identifying string for this allocation.
   void getAllocInfo(std::string &result) const;
 
-  void setName(std::string name) const { this->name = name; }
+  void setName(const std::string &_name) const { this->name = _name; }
 
   void updateTimestamp() const { this->timestamp = time++; }
 

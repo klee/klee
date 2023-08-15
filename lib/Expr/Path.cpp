@@ -15,8 +15,8 @@ using namespace llvm;
 
 void Path::advance(KInstruction *ki) {
   if (KBlocks.empty()) {
-    firstInstruction = ki->index;
-    lastInstruction = ki->index;
+    firstInstruction = ki->getIndex();
+    lastInstruction = ki->getIndex();
     KBlocks.push_back(ki->parent);
     return;
   }
@@ -24,8 +24,7 @@ void Path::advance(KInstruction *ki) {
   if (ki->parent != lastBlock) {
     KBlocks.push_back(ki->parent);
   }
-  lastInstruction = ki->index;
-  return;
+  lastInstruction = ki->getIndex();
 }
 
 unsigned Path::KBlockSize() const { return KBlocks.size(); }

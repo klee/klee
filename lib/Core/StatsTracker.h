@@ -27,7 +27,6 @@ class raw_fd_ostream;
 namespace klee {
 class ExecutionState;
 class Executor;
-class InstructionInfoTable;
 class InterpreterHandler;
 struct KInstruction;
 struct InfoStackFrame;

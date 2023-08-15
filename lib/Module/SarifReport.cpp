@@ -326,20 +326,22 @@ bool Location::isInside(const std::string &name) const {
 }
 
 bool Location::isInside(KBlock *block, const Instructions &origInsts) const {
-  auto first = block->getFirstInstruction()->info;
-  auto last = block->getLastInstruction()->info;
+  auto first = block->getFirstInstruction();
+  auto last = block->getLastInstruction();
   if (!startColumn.has_value()) {
-    if (first->line > endLine)
+    if (first->getLine() > endLine)
       return false;
-    return startLine <= last->line; // and `first <= line` from above
+    return startLine <= last->getLine(); // and `first <= line` from above
   } else {
     for (size_t i = 0; i < block->numInstructions; ++i) {
-      auto inst = block->instructions[i]->info;
+      auto inst = block->instructions[i];
       auto opCode = block->instructions[i]->inst->getOpcode();
       if (!isa<DbgInfoIntrinsic>(block->instructions[i]->inst) &&
-          inst->line <= endLine && inst->line >= startLine &&
-          inst->column <= *endColumn && inst->column >= *startColumn &&
-          origInsts.at(inst->line).at(inst->column).count(opCode) != 0) {
+          inst->getLine() <= endLine && inst->getLine() >= startLine &&
+          inst->getColumn() <= *endColumn &&
+          inst->getColumn() >= *startColumn &&
+          origInsts.at(inst->getLine()).at(inst->getColumn()).count(opCode) !=
+              0) {
         return true;
       }
     }
