@@ -122,6 +122,8 @@ public:
   RNG theRNG;
 
 private:
+  int *errno_addr;
+
   using SetOfStates = std::set<ExecutionState *, ExecutionStateIDCompare>;
   /* Set of Intrinsic::ID. Plain type is used here to avoid including llvm in
    * the header */

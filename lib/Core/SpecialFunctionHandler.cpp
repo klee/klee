@@ -734,7 +734,8 @@ void SpecialFunctionHandler::handleErrnoLocation(
          "invalid number of arguments to __errno_location/__error");
 
 #ifndef WINDOWS
-  int *errno_addr = executor.getErrnoLocation(state);
+  // int *errno_addr = executor.getErrnoLocation(state);
+  int *errno_addr = executor.errno_addr;
 #else
   int *errno_addr = nullptr;
 #endif
