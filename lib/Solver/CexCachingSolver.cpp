@@ -48,11 +48,6 @@ cl::opt<bool>
                               "before asking the SMT solver (default=false)"),
                      cl::cat(SolvingCat));
 
-cl::opt<bool> CexCacheExperimental(
-    "cex-cache-exp", cl::init(false),
-    cl::desc("Optimization for validity queries (default=false)"),
-    cl::cat(SolvingCat));
-
 } // namespace
 
 ///
@@ -301,20 +296,6 @@ bool CexCachingSolver::computeValidity(const Query& query,
 bool CexCachingSolver::computeTruth(const Query& query,
                                     bool &isValid) {
   TimerStatIncrementer t(stats::cexCacheTime);
-
-  // There is a small amount of redundancy here. We only need to know
-  // truth and do not really need to compute an assignment. This means
-  // that we could check the cache to see if we already know that
-  // state ^ query has no assignment. In that case, by the validity of
-  // state, we know that state ^ !query must have an assignment, and
-  // so query cannot be true (valid). This does get hits, but doesn't
-  // really seem to be worth the overhead.
-
-  if (CexCacheExperimental) {
-    Assignment *a;
-    if (lookupAssignment(query.negateExpr(), a) && !a)
-      return false;
-  }
 
   Assignment *a;
   if (!getAssignment(query, a))
