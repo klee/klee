@@ -49,8 +49,8 @@ llvm::cl::OptionCategory MemoryCat("Memory management options",
 
 llvm::cl::opt<bool, true> DeterministicAllocation(
     "kdalloc",
-    llvm::cl::desc("Allocate memory deterministically (default=false)"),
-    llvm::cl::location(MemoryManager::isDeterministic), llvm::cl::init(false),
+    llvm::cl::desc("Allocate memory deterministically (default=true)"),
+    llvm::cl::location(MemoryManager::isDeterministic), llvm::cl::init(true),
     llvm::cl::cat(MemoryCat));
 
 llvm::cl::opt<bool> DeterministicAllocationMarkAsUnneeded(
