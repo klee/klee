@@ -10,6 +10,7 @@
 #ifndef KLEE_ASSIGNMENT_H
 #define KLEE_ASSIGNMENT_H
 
+#include "klee/ADT/PersistentMap.h"
 #include "klee/ADT/SparseStorage.h"
 #include "klee/Expr/ExprEvaluator.h"
 
@@ -27,9 +28,9 @@ using symcretes_ty = SymcreteOrderedSet;
 
 class Assignment {
 public:
-  typedef std::map<const Array *, SparseStorage<unsigned char>> bindings_ty;
+  using bindings_ty =
+      PersistentMap<const Array *, SparseStorage<unsigned char>>;
 
-  bool allowFreeValues;
   bindings_ty bindings;
 
   friend bool operator==(const Assignment &lhs, const Assignment &rhs) {
@@ -37,14 +38,10 @@ public:
   }
 
 public:
-  Assignment(bool _allowFreeValues = false)
-      : allowFreeValues(_allowFreeValues) {}
-  Assignment(const bindings_ty &_bindings, bool _allowFreeValues = false)
-      : allowFreeValues(_allowFreeValues), bindings(_bindings) {}
+  Assignment() {}
+  Assignment(const bindings_ty &_bindings) : bindings(_bindings) {}
   Assignment(const std::vector<const Array *> &objects,
-             const std::vector<SparseStorage<unsigned char>> &values,
-             bool _allowFreeValues = false)
-      : allowFreeValues(_allowFreeValues) {
+             const std::vector<SparseStorage<unsigned char>> &values) {
     assert(objects.size() == values.size());
     for (unsigned i = 0; i < values.size(); ++i) {
       const Array *os = objects.at(i);
@@ -53,19 +50,26 @@ public:
     }
   }
 
-  ref<Expr> evaluate(const Array *mo, unsigned index) const;
-  ref<Expr> evaluate(ref<Expr> e) const;
-  ConstraintSet createConstraintsFromAssignment() const;
+  void addIndependentAssignment(const Assignment &b);
+
+  ref<Expr> evaluate(const Array *mo, unsigned index,
+                     bool allowFreeValues = true) const;
+  ref<Expr> evaluate(ref<Expr> e, bool allowFreeValues = true) const;
+  constraints_ty createConstraintsFromAssignment() const;
 
   template <typename InputIterator>
-  bool satisfies(InputIterator begin, InputIterator end);
+  bool satisfies(InputIterator begin, InputIterator end,
+                 bool allowFreeValues = true);
+  template <typename InputIterator>
+  bool satisfiesNonBoolean(InputIterator begin, InputIterator end,
+                           bool allowFreeValues = true);
   void dump() const;
 
   Assignment diffWith(const Assignment &other) const;
   Assignment part(const SymcreteOrderedSet &symcretes) const;
 
-  bindings_ty::const_iterator begin() const { return bindings.begin(); }
-  bindings_ty::const_iterator end() const { return bindings.end(); }
+  bindings_ty::iterator begin() const { return bindings.begin(); }
+  bindings_ty::iterator end() const { return bindings.end(); }
   bool isEmpty() { return begin() == end(); }
 
   std::vector<const Array *> keys() const;
@@ -74,22 +78,24 @@ public:
 
 class AssignmentEvaluator : public ExprEvaluator {
   const Assignment &a;
+  bool allowFreeValues;
 
 protected:
   ref<Expr> getInitialValue(const Array &mo, unsigned index) {
-    return a.evaluate(&mo, index);
+    return a.evaluate(&mo, index, allowFreeValues);
   }
 
 public:
-  AssignmentEvaluator(const Assignment &_a) : a(_a) {}
+  AssignmentEvaluator(const Assignment &_a, bool _allowFreeValues)
+      : a(_a), allowFreeValues(_allowFreeValues) {}
 };
 
 /***/
 
-inline ref<Expr> Assignment::evaluate(const Array *array,
-                                      unsigned index) const {
+inline ref<Expr> Assignment::evaluate(const Array *array, unsigned index,
+                                      bool allowFreeValues) const {
   assert(array);
-  bindings_ty::const_iterator it = bindings.find(array);
+  bindings_ty::iterator it = bindings.find(array);
   if (it != bindings.end() && index < it->second.size()) {
     return ConstantExpr::alloc(it->second.load(index), array->getRange());
   } else {
@@ -102,17 +108,32 @@ inline ref<Expr> Assignment::evaluate(const Array *array,
   }
 }
 
-inline ref<Expr> Assignment::evaluate(ref<Expr> e) const {
-  AssignmentEvaluator v(*this);
+inline ref<Expr> Assignment::evaluate(ref<Expr> e, bool allowFreeValues) const {
+  AssignmentEvaluator v(*this, allowFreeValues);
   return v.visit(e);
 }
 
 template <typename InputIterator>
-inline bool Assignment::satisfies(InputIterator begin, InputIterator end) {
-  AssignmentEvaluator v(*this);
-  for (; begin != end; ++begin)
+inline bool Assignment::satisfies(InputIterator begin, InputIterator end,
+                                  bool allowFreeValues) {
+  AssignmentEvaluator v(*this, allowFreeValues);
+  for (; begin != end; ++begin) {
+    assert((*begin)->getWidth() == Expr::Bool && "constraints must be boolean");
     if (!v.visit(*begin)->isTrue())
       return false;
+  }
+  return true;
+}
+
+template <typename InputIterator>
+inline bool Assignment::satisfiesNonBoolean(InputIterator begin,
+                                            InputIterator end,
+                                            bool allowFreeValues) {
+  AssignmentEvaluator v(*this, allowFreeValues);
+  for (; begin != end; ++begin) {
+    if (!isa<ConstantExpr>(v.visit(*begin)))
+      return false;
+  }
   return true;
 }
 } // namespace klee

@@ -20,8 +20,8 @@ void Assignment::dump() const {
     llvm::errs() << "No bindings\n";
     return;
   }
-  for (bindings_ty::const_iterator i = bindings.begin(), e = bindings.end();
-       i != e; ++i) {
+  for (bindings_ty::iterator i = bindings.begin(), e = bindings.end(); i != e;
+       ++i) {
     llvm::errs() << (*i).first->getName() << "\n[";
     for (int j = 0, k = (*i).second.size(); j < k; ++j)
       llvm::errs() << (int)(*i).second.load(j) << ",";
@@ -29,8 +29,14 @@ void Assignment::dump() const {
   }
 }
 
-ConstraintSet Assignment::createConstraintsFromAssignment() const {
-  ConstraintSet result;
+void Assignment::addIndependentAssignment(const Assignment &b) {
+  for (auto it : b) {
+    bindings.insert(it);
+  }
+}
+
+constraints_ty Assignment::createConstraintsFromAssignment() const {
+  constraints_ty result;
   for (const auto &binding : bindings) {
     const auto &array = binding.first;
     const auto &values = binding.second;
@@ -41,17 +47,15 @@ ConstraintSet Assignment::createConstraintsFromAssignment() const {
     uint64_t arraySize = arrayConstantSize->getZExtValue();
     if (arraySize <= 8 && array->getRange() == Expr::Int8) {
       ref<Expr> e = Expr::createTempRead(array, arraySize * array->getRange());
-      result.addConstraint(EqExpr::create(e, evaluate(e)), {});
+      result.insert(EqExpr::create(e, evaluate(e)));
     } else {
       for (unsigned arrayIndex = 0; arrayIndex < arraySize; ++arrayIndex) {
         unsigned char value = values.load(arrayIndex);
-        result.addConstraint(
-            EqExpr::create(
-                ReadExpr::create(
-                    UpdateList(array, 0),
-                    ConstantExpr::alloc(arrayIndex, array->getDomain())),
-                ConstantExpr::alloc(value, array->getRange())),
-            {});
+        result.insert(EqExpr::create(
+            ReadExpr::create(
+                UpdateList(array, 0),
+                ConstantExpr::alloc(arrayIndex, array->getDomain())),
+            ConstantExpr::alloc(value, array->getRange())));
       }
     }
   }
@@ -59,7 +63,7 @@ ConstraintSet Assignment::createConstraintsFromAssignment() const {
 }
 
 Assignment Assignment::diffWith(const Assignment &other) const {
-  Assignment diffAssignment(allowFreeValues);
+  Assignment diffAssignment;
   for (const auto &it : other) {
     if (bindings.count(it.first) == 0 || bindings.at(it.first) != it.second) {
       diffAssignment.bindings.insert(it);
@@ -87,10 +91,12 @@ std::vector<SparseStorage<unsigned char>> Assignment::values() const {
 }
 
 Assignment Assignment::part(const SymcreteOrderedSet &symcretes) const {
-  Assignment ret(allowFreeValues);
+  Assignment ret;
   for (auto symcrete : symcretes) {
     for (auto array : symcrete->dependentArrays()) {
-      ret.bindings.insert({array, bindings.at(array)});
+      if (bindings.find(array) != bindings.end()) {
+        ret.bindings.insert({array, bindings.at(array)});
+      }
     }
   }
   return ret;
