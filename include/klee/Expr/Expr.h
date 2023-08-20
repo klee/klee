@@ -328,6 +328,13 @@ public:
   // Given an array of new kids return a copy of the expression
   // but using those children.
   virtual ref<Expr> rebuild(ref<Expr> kids[/* getNumKids() */]) const = 0;
+  virtual ref<Expr> rebuild() const {
+    ref<Expr> kids[getNumKids()];
+    for (unsigned i = 0; i < getNumKids(); ++i) {
+      kids[i] = getKid(i);
+    }
+    return rebuild(kids);
+  }
 
   /// isZero - Is this a constant zero.
   bool isZero() const;

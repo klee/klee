@@ -5,6 +5,7 @@
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprHashMap.h"
+#include "klee/Expr/IndependentSet.h"
 #include "klee/System/Time.h"
 
 namespace klee {
@@ -78,6 +79,16 @@ public:
   friend bool operator<(const Query &lhs, const Query &rhs) {
     return lhs.constraints < rhs.constraints ||
            (lhs.constraints == rhs.constraints && lhs.expr < rhs.expr);
+  }
+
+  void getAllIndependentConstraintsSets(
+      std::vector<ref<const IndependentConstraintSet>> &result) const {
+    constraints.getAllIndependentConstraintsSets(expr, result);
+  }
+
+  void getAllDependentConstraintsSets(
+      std::vector<ref<const IndependentConstraintSet>> &result) const {
+    constraints.getAllDependentConstraintsSets(expr, result);
   }
 
   /// Dump query
@@ -239,20 +250,20 @@ public:
   }
 
   bool tryGetInitialValues(Assignment::bindings_ty &values) const {
-    values.insert(result.bindings.begin(), result.bindings.end());
+    values = result.bindings;
     return true;
   }
 
   Assignment initialValuesFor(const std::vector<const Array *> objects) const {
     std::vector<SparseStorage<unsigned char>> values;
     tryGetInitialValuesFor(objects, values);
-    return Assignment(objects, values, true);
+    return Assignment(objects, values);
   }
 
   Assignment initialValues() const {
     Assignment::bindings_ty values;
     tryGetInitialValues(values);
-    return Assignment(values, true);
+    return Assignment(values);
   }
 
   ResponseKind getResponseKind() const { return Invalid; };
@@ -276,15 +287,20 @@ public:
     return result.bindings < ib.result.bindings;
   }
 
-  bool satisfies(std::set<ref<Expr>> &key) {
-    return result.satisfies(key.begin(), key.end());
+  bool satisfies(const std::set<ref<Expr>> &key, bool allowFreeValues = true) {
+    return result.satisfies(key.begin(), key.end(), allowFreeValues);
   }
 
-  ref<Expr> evaluate(ref<Expr> &e) { return result.evaluate(e); }
+  bool satisfiesNonBoolean(const std::set<ref<Expr>> &key,
+                           bool allowFreeValues = true) {
+    return result.satisfiesNonBoolean(key.begin(), key.end(), allowFreeValues);
+  }
 
   void dump() { result.dump(); }
 
-  ref<Expr> evaluate(ref<Expr> e) { return (result.evaluate(e)); }
+  ref<Expr> evaluate(ref<Expr> e, bool allowFreeValues = true) {
+    return (result.evaluate(e, allowFreeValues));
+  }
 };
 
 class UnknownResponse : public SolverResponse {

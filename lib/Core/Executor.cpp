@@ -1145,7 +1145,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       success = solver->mayBeFalse(current.constraints.cs(), condition,
                                    mayBeFalse, current.queryMetaData);
     }
-    if (success && !mayBeFalse)
+    if (!success || !mayBeFalse)
       terminateEverything = true;
     else
       res = PartialValidity::MayBeFalse;
@@ -1154,7 +1154,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
     bool mayBeTrue;
     success = solver->mayBeTrue(current.constraints.cs(), condition, mayBeTrue,
                                 current.queryMetaData);
-    if (success && !mayBeTrue)
+    if (!success || !mayBeTrue)
       terminateEverything = true;
     else
       res = PartialValidity::MayBeTrue;
@@ -5419,18 +5419,19 @@ MemoryObject *Executor::allocate(ExecutionState &state, ref<Expr> size,
   std::vector<ref<Expr>> symbolicSizesTerms = {
       ZExtExpr::create(size, pointerWidthInBits)};
 
-  constraints_ty required;
-  IndependentElementSet eltsClosure = getIndependentConstraints(
-      Query(state.constraints.cs(), ZExtExpr::create(size, pointerWidthInBits)),
-      required);
+  std::vector<ref<const IndependentConstraintSet>> factors;
+  Query(state.constraints.cs(), ZExtExpr::create(size, pointerWidthInBits))
+      .getAllDependentConstraintsSets(factors);
+
   /* Collect dependent size symcretes. */
-  for (ref<Symcrete> symcrete : eltsClosure.symcretes) {
-    if (isa<SizeSymcrete>(symcrete)) {
-      symbolicSizesTerms.push_back(
-          ZExtExpr::create(symcrete->symcretized, pointerWidthInBits));
+  for (ref<const IndependentConstraintSet> ics : factors) {
+    for (ref<Symcrete> symcrete : ics->symcretes) {
+      if (isa<SizeSymcrete>(symcrete)) {
+        symbolicSizesTerms.push_back(
+            ZExtExpr::create(symcrete->symcretized, pointerWidthInBits));
+      }
     }
   }
-
   ref<Expr> symbolicSizesSum = createNonOverflowingSumExpr(symbolicSizesTerms);
 
   std::vector<const Array *> objects;
@@ -5441,7 +5442,7 @@ MemoryObject *Executor::allocate(ExecutionState &state, ref<Expr> size,
     return nullptr;
   }
 
-  Assignment assignment(objects, values, true);
+  Assignment assignment(objects, values);
   uint64_t sizeMemoryObject =
       cast<ConstantExpr>(assignment.evaluate(size))->getZExtValue();
 
@@ -5471,7 +5472,8 @@ MemoryObject *Executor::allocate(ExecutionState &state, ref<Expr> size,
     state.addPointerResolution(addressExpr, mo);
   }
 
-  assignment.bindings[addressArray] = sparseBytesFromValue(mo->address);
+  assignment.bindings.replace(
+      {addressArray, sparseBytesFromValue(mo->address)});
 
   state.constraints.addSymcrete(sizeSymcrete, assignment);
   state.constraints.addSymcrete(addressSymcrete, assignment);
@@ -6428,8 +6430,8 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
 
         if (!obj) {
           if (ZeroSeedExtension) {
-            si.assignment.bindings[array] =
-                SparseStorage<unsigned char>(mo->size, 0);
+            si.assignment.bindings.replace(
+                {array, SparseStorage<unsigned char>(mo->size, 0)});
           } else if (!AllowSeedExtension) {
             terminateStateOnUserError(state,
                                       "ran out of inputs during seeding");
@@ -6449,14 +6451,18 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
             terminateStateOnUserError(state, msg.str());
             break;
           } else {
-            SparseStorage<unsigned char> &values =
-                si.assignment.bindings[array];
+            SparseStorage<unsigned char> values;
+            if (si.assignment.bindings.find(array) !=
+                si.assignment.bindings.end()) {
+              values = si.assignment.bindings.at(array);
+            }
             values.resize(std::min(mo->size, obj->numBytes));
             values.store(0, obj->bytes,
                          obj->bytes + std::min(obj->numBytes, mo->size));
             if (ZeroSeedExtension) {
               values.resize(mo->size);
             }
+            si.assignment.bindings.replace({array, values});
           }
         }
       }
@@ -7077,7 +7083,7 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
     o->pointers = nullptr;
   }
 
-  Assignment model = Assignment(objects, values, true);
+  Assignment model = Assignment(objects, values);
   for (auto binding : state.constraints.cs().concretization().bindings) {
     model.bindings.insert(binding);
   }

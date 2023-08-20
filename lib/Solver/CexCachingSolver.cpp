@@ -127,12 +127,23 @@ struct isInvalidResponse {
 };
 
 struct isValidOrSatisfyingResponse {
-  KeyType &key;
-
-  isValidOrSatisfyingResponse(KeyType &_key) : key(_key) {}
+  KeyType booleanKey;
+  KeyType nonBooleanKey;
+  isValidOrSatisfyingResponse(KeyType &_key) {
+    for (auto i : _key) {
+      if (i->getWidth() == Expr::Bool) {
+        booleanKey.insert(i);
+      } else {
+        nonBooleanKey.insert(i);
+      }
+    }
+  }
 
   bool operator()(ref<SolverResponse> a) const {
-    return isa<ValidResponse>(a) || cast<InvalidResponse>(a)->satisfies(key);
+    return isa<ValidResponse>(a) ||
+           (isa<InvalidResponse>(a) &&
+            cast<InvalidResponse>(a)->satisfies(booleanKey) &&
+            cast<InvalidResponse>(a)->satisfiesNonBoolean(nonBooleanKey));
   }
 };
 
@@ -215,8 +226,10 @@ bool CexCachingSolver::searchForResponse(KeyType &key,
 /// an unsatisfiable query). \return True if a cached result was found.
 bool CexCachingSolver::lookupResponse(const Query &query, KeyType &key,
                                       ref<SolverResponse> &result) {
-  assert(!query.containsSymcretes());
   key = KeyType(query.constraints.cs().begin(), query.constraints.cs().end());
+  for (ref<Symcrete> s : query.constraints.symcretes()) {
+    key.insert(s->symcretized);
+  }
   ref<Expr> neg = Expr::createIsZero(query.expr);
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(neg)) {
     if (CE->isFalse()) {
@@ -240,8 +253,9 @@ bool CexCachingSolver::lookupResponse(const Query &query, KeyType &key,
 bool CexCachingSolver::getResponse(const Query &query,
                                    ref<SolverResponse> &result) {
   KeyType key;
-  if (lookupResponse(query, key, result))
+  if (lookupResponse(query, key, result)) {
     return true;
+  }
 
   if (!solver->impl->check(query, result)) {
     return false;
@@ -264,14 +278,15 @@ bool CexCachingSolver::getResponse(const Query &query,
   }
 
   ValidityCore resultCore;
-  if (CexCacheValidityCores && result->tryGetValidityCore(resultCore)) {
+  if (CexCacheValidityCores && isa<ValidResponse>(result)) {
+    result->tryGetValidityCore(resultCore);
     KeyType resultCoreConstarints(resultCore.constraints.begin(),
                                   resultCore.constraints.end());
     ref<Expr> neg = Expr::createIsZero(query.expr);
     resultCoreConstarints.insert(neg);
     cache.insert(resultCoreConstarints, result);
-    cache.insert(key, result);
-  } else {
+  }
+  if (isa<ValidResponse>(result) || isa<InvalidResponse>(result)) {
     cache.insert(key, result);
   }
 
@@ -290,7 +305,7 @@ bool CexCachingSolver::computeValidity(const Query &query,
     return false;
   assert(isa<InvalidResponse>(a) && "computeValidity() must have assignment");
 
-  ref<Expr> q = cast<InvalidResponse>(a)->evaluate(query.expr);
+  ref<Expr> q = cast<InvalidResponse>(a)->evaluate(query.expr, false);
 
   if (!isa<ConstantExpr>(q) && solver->impl->computeValue(query, q))
     return false;
@@ -301,13 +316,23 @@ bool CexCachingSolver::computeValidity(const Query &query,
   if (cast<ConstantExpr>(q)->isTrue()) {
     if (!getResponse(query, a))
       return false;
-    result =
-        isa<ValidResponse>(a) ? PValidity::MustBeTrue : PValidity::TrueOrFalse;
+    if (isa<ValidResponse>(a)) {
+      result = PValidity::MustBeTrue;
+    } else if (isa<InvalidResponse>(a)) {
+      result = PValidity::TrueOrFalse;
+    } else {
+      result = PValidity::MayBeTrue;
+    }
   } else {
     if (!getResponse(query.negateExpr(), a))
       return false;
-    result =
-        isa<ValidResponse>(a) ? PValidity::MustBeFalse : PValidity::TrueOrFalse;
+    if (isa<ValidResponse>(a)) {
+      result = PValidity::MustBeFalse;
+    } else if (isa<InvalidResponse>(a)) {
+      result = PValidity::TrueOrFalse;
+    } else {
+      result = PValidity::MayBeFalse;
+    }
   }
 
   return true;
@@ -334,7 +359,7 @@ bool CexCachingSolver::computeTruth(const Query &query, bool &isValid) {
   if (!getResponse(query, a))
     return false;
 
-  isValid = isa<ValidResponse>(a);
+  isValid = !isa<InvalidResponse>(a);
 
   return true;
 }
@@ -346,7 +371,7 @@ bool CexCachingSolver::computeValue(const Query &query, ref<Expr> &result) {
   if (!getResponse(query.withFalse(), a))
     return false;
   assert(isa<InvalidResponse>(a) && "computeValue() must have assignment");
-  result = cast<InvalidResponse>(a)->evaluate(query.expr);
+  result = cast<InvalidResponse>(a)->evaluate(query.expr, false);
 
   if (!isa<ConstantExpr>(result) && solver->impl->computeValue(query, result))
     return false;
@@ -365,7 +390,7 @@ bool CexCachingSolver::computeInitialValues(
     return false;
   hasSolution = isa<InvalidResponse>(a);
 
-  if (isa<ValidResponse>(a))
+  if (!hasSolution)
     return true;
 
   // FIXME: We should use smarter assignment for result so we don't

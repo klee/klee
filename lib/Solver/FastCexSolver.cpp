@@ -1088,7 +1088,6 @@ FastCexSolver::~FastCexSolver() {}
 /// \return - True if the propogation was able to prove validity or invalidity.
 static bool propagateValues(const Query &query, CexData &cd, bool checkExpr,
                             bool &isValid) {
-  assert(!query.containsSymcretes());
   for (const auto &constraint : query.constraints.cs()) {
     cd.propagatePossibleValue(constraint, 1);
     cd.propagateExactValue(constraint, 1);

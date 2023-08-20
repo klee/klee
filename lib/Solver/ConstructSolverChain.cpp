@@ -73,6 +73,15 @@ std::unique_ptr<Solver> constructSolverChain(
   if (UseConcretizingSolver)
     solver = createConcretizingSolver(std::move(solver), addressGenerator);
 
+  if (UseCexCache && UseConcretizingSolver)
+    solver = createCexCachingSolver(std::move(solver));
+
+  if (UseBranchCache && UseConcretizingSolver)
+    solver = createCachingSolver(std::move(solver));
+
+  if (UseIndependentSolver && UseConcretizingSolver)
+    solver = createIndependentSolver(std::move(solver));
+
   if (DebugValidateSolver)
     solver = createValidatingSolver(std::move(solver), rawCoreSolver, false);
 

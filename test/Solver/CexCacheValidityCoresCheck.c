@@ -30,6 +30,6 @@ int main(int argc, char **argv) {
   }
 }
 // CHECK-CACHE-ON: QCexCacheHits,SolverQueries
-// CHECK-CACHE-ON: 1461,202
+// CHECK-CACHE-ON: 1460,202
 // CHECK-CACHE-OFF: QCexCacheHits,SolverQueries
-// CHECK-CACHE-OFF: 1011,652
+// CHECK-CACHE-OFF: 1010,652

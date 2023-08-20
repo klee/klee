@@ -107,7 +107,9 @@ void SeedInfo::patchSeed(const ExecutionState &state, ref<Expr> condition,
             solver->getValue(required, read, value, state.queryMetaData);
         assert(success && "FIXME: Unhandled solver failure");
         (void)success;
-        it2->second.store(i, value->getZExtValue(8));
+        auto s = it2->second;
+        s.store(i, value->getZExtValue(8));
+        assignment.bindings.replace({it2->first, s});
         required.addConstraint(
             EqExpr::create(
                 read, ConstantExpr::alloc(it2->second.load(i), Expr::Int8)),
@@ -151,7 +153,9 @@ void SeedInfo::patchSeed(const ExecutionState &state, ref<Expr> condition,
             solver->getValue(required, read, value, state.queryMetaData);
         assert(success && "FIXME: Unhandled solver failure");
         (void)success;
-        it->second.store(i, value->getZExtValue(8));
+        auto s = it->second;
+        s.store(i, value->getZExtValue(8));
+        assignment.bindings.replace({it->first, s});
         required.addConstraint(
             EqExpr::create(read,
                            ConstantExpr::alloc(it->second.load(i), Expr::Int8)),

@@ -65,9 +65,8 @@ void AssignmentValidatingSolver::validateAssigment(
     std::vector<SparseStorage<unsigned char>> &values) {
   // Use `_allowFreeValues` so that if we are missing an assignment
   // we can't compute a constant and flag this as a problem.
-  Assignment assignment(objects, values, /*_allowFreeValues=*/true);
+  Assignment assignment(objects, values);
   // Check computed assignment satisfies query
-  assert(!query.containsSymcretes());
   for (const auto &constraint : query.constraints.cs()) {
     ref<Expr> constraintEvaluated = assignment.evaluate(constraint);
     ConstantExpr *CE = dyn_cast<ConstantExpr>(constraintEvaluated);
@@ -143,7 +142,6 @@ bool AssignmentValidatingSolver::check(const Query &query,
   }
 
   ExprHashSet expressions;
-  assert(!query.containsSymcretes());
   expressions.insert(query.constraints.cs().begin(),
                      query.constraints.cs().end());
   expressions.insert(query.expr);
@@ -170,10 +168,10 @@ void AssignmentValidatingSolver::dumpAssignmentQuery(
     const Query &query, const Assignment &assignment) {
   // Create a Query that is augmented with constraints that
   // enforce the given assignment.
-  auto constraints = assignment.createConstraintsFromAssignment();
+  auto constraints =
+      ConstraintSet(assignment.createConstraintsFromAssignment(), {}, {});
 
   // Add Constraints from `query`
-  assert(!query.containsSymcretes());
   for (const auto &constraint : query.constraints.cs())
     constraints.addConstraint(constraint, {});
 

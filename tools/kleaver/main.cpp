@@ -228,9 +228,8 @@ static bool EvaluateInputAST(const char *Filename, const llvm::MemoryBuffer *MB,
         for (auto i : QC->Constraints) {
           constraints.insert(i);
         }
-        if (S->mustBeTrue(
-                Query(ConstraintSet(constraints, {}, {true}), QC->Query),
-                result)) {
+        if (S->mustBeTrue(Query(ConstraintSet(constraints, {}, {}), QC->Query),
+                          result)) {
           llvm::outs() << (result ? "VALID" : "INVALID");
         } else {
           llvm::outs() << "FAIL (reason: "
@@ -251,7 +250,7 @@ static bool EvaluateInputAST(const char *Filename, const llvm::MemoryBuffer *MB,
           constraints.insert(i);
         }
         if (S->getValue(
-                Query(ConstraintSet(constraints, {}, {true}), QC->Values[0]),
+                Query(ConstraintSet(constraints, {}, {}), QC->Values[0]),
                 result)) {
           llvm::outs() << "INVALID\n";
           llvm::outs() << "\tExpr 0:\t" << result;
@@ -270,7 +269,7 @@ static bool EvaluateInputAST(const char *Filename, const llvm::MemoryBuffer *MB,
         }
 
         if (S->getInitialValues(
-                Query(ConstraintSet(constraints, {}, {true}), QC->Query),
+                Query(ConstraintSet(constraints, {}, {}), QC->Query),
                 QC->Objects, result)) {
           llvm::outs() << "INVALID\n";
           Assignment solutionAssugnment(QC->Objects, result);
@@ -383,7 +382,7 @@ static bool printInputAsSMTLIBv2(const char *Filename,
         constraints.insert(i);
       }
 
-      ConstraintSet constraintM(constraints, {}, {true});
+      ConstraintSet constraintM(constraints, {}, {});
       Query query(constraintM, QC->Query);
       printer.setQuery(query);
 

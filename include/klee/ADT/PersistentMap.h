@@ -37,6 +37,8 @@ public:
     elts = b.elts;
     return *this;
   }
+  bool operator==(const PersistentMap &b) const { return elts == b.elts; }
+  bool operator<(const PersistentMap &b) const { return elts < b.elts; }
 
   bool empty() const { return elts.empty(); }
   size_t count(const key_type &key) const { return elts.count(key); }
@@ -77,6 +79,8 @@ public:
       return *lookup(key);
     }
   }
+
+  const D &at(const key_type &key) const { return elts.at(key); }
 };
 } // namespace klee
 

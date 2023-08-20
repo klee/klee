@@ -217,7 +217,6 @@ char *Z3SolverImpl::getConstraintLog(const Query &query) {
     break;
   }
   ConstantArrayFinder constant_arrays_in_query;
-  assert(!query.containsSymcretes());
   for (auto const &constraint : query.constraints.cs()) {
     assumptions.push_back(temp_builder->construct(constraint));
     constant_arrays_in_query.visit(constraint);
@@ -309,7 +308,6 @@ bool Z3SolverImpl::computeInitialValues(
 
 bool Z3SolverImpl::check(const Query &query, ref<SolverResponse> &result) {
   ExprHashSet expressions;
-  assert(!query.containsSymcretes());
   expressions.insert(query.constraints.cs().begin(),
                      query.constraints.cs().end());
   expressions.insert(query.expr);
@@ -346,8 +344,6 @@ bool Z3SolverImpl::internalRunSolver(
     const Query &query, const std::vector<const Array *> *objects,
     std::vector<SparseStorage<unsigned char>> *values,
     ValidityCore *validityCore, bool &hasSolution) {
-
-  assert(!query.containsSymcretes());
 
   if (ProduceUnsatCore && validityCore) {
     enableUnsatCore();

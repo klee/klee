@@ -1,4 +1,4 @@
-# RUN: %kleaver -evaluate %s > %t.log
+# RUN: %kleaver -evaluate --use-concretizing-solver=false %s > %t.log
 
 arr01 : (array (w64 4) (makeSymbolic arr0 0))
 arr12 : (array (w64 8) (makeSymbolic arr1 0))

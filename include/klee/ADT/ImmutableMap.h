@@ -44,6 +44,32 @@ public:
     return *this;
   }
 
+  bool operator==(const ImmutableMap &b) const {
+    if (size() != b.size()) {
+      return false;
+    }
+    for (iterator it1 = begin(), it2 = b.begin();
+         it1 != end() && it2 != b.end(); ++it1, ++it2) {
+      if (*it1 != *it2)
+        return false;
+    }
+    return true;
+  }
+
+  bool operator<(const ImmutableMap &b) const {
+    if (size() != b.size()) {
+      return size() < b.size();
+    }
+    for (iterator it1 = begin(), it2 = b.begin();
+         it1 != end() && it2 != b.end(); ++it1, ++it2) {
+      if (*it1 < *it2)
+        return true;
+      if (*it1 > *it2)
+        return false;
+    }
+    return false;
+  }
+
   bool empty() const { return elts.empty(); }
   size_t count(const key_type &key) const { return elts.count(key); }
   const value_type *lookup(const key_type &key) const {
@@ -80,6 +106,7 @@ public:
     return elts.upper_bound(key);
   }
 
+  const D &at(const key_type &key) const { return find(key)->second; }
   static size_t getAllocated() { return Tree::allocated; }
 };
 

@@ -193,11 +193,11 @@ bool QueryLoggingSolver::computeInitialValues(
           new InvalidResponse(allObjects, allValues);
       success = invalidResponse->tryGetInitialValuesFor(objects, values);
       assert(success);
-      Assignment allSolutionAssignment(allObjects, allValues, true);
+      Assignment allSolutionAssignment(allObjects, allValues);
       std::vector<SparseStorage<unsigned char>>::iterator values_it =
           values.begin();
 
-      Assignment solutionAssignment(objects, values, true);
+      Assignment solutionAssignment(objects, values);
       for (std::vector<const Array *>::const_iterator i = objects.begin(),
                                                       e = objects.end();
            i != e; ++i, ++values_it) {
@@ -241,13 +241,12 @@ bool QueryLoggingSolver::check(const Query &query,
     logBuffer << queryCommentSign
               << "   Solvable: " << (hasSolution ? "true" : "false") << "\n";
     if (hasSolution) {
-      std::map<const Array *, SparseStorage<unsigned char>> initialValues;
+      Assignment::bindings_ty initialValues;
       result->tryGetInitialValues(initialValues);
-      Assignment solutionAssignment(initialValues, true);
+      Assignment solutionAssignment(initialValues);
 
-      for (std::map<const Array *, SparseStorage<unsigned char>>::const_iterator
-               i = initialValues.begin(),
-               e = initialValues.end();
+      for (Assignment::bindings_ty::iterator i = initialValues.begin(),
+                                             e = initialValues.end();
            i != e; ++i) {
         const Array *array = i->first;
         const SparseStorage<unsigned char> &data = i->second;
@@ -271,7 +270,7 @@ bool QueryLoggingSolver::check(const Query &query,
       result->tryGetValidityCore(validityCore);
       logBuffer << queryCommentSign << "   ValidityCore:\n";
 
-      printQuery(Query(ConstraintSet(validityCore.constraints, {}, {true}),
+      printQuery(Query(ConstraintSet(validityCore.constraints, {}, {}),
                        validityCore.expr));
     }
   }
@@ -300,7 +299,7 @@ bool QueryLoggingSolver::computeValidityCore(const Query &query,
   if (isValid) {
     logBuffer << queryCommentSign << "   ValidityCore:\n";
 
-    printQuery(Query(ConstraintSet(validityCore.constraints, {}, {true}),
+    printQuery(Query(ConstraintSet(validityCore.constraints, {}, {}),
                      validityCore.expr));
   }
 

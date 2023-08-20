@@ -335,5 +335,5 @@ void Query::dump() const {
 }
 
 void ValidityCore::dump() const {
-  Query(ConstraintSet(constraints, {}, {true}), expr).dump();
+  Query(ConstraintSet(constraints, {}, {}), expr).dump();
 }

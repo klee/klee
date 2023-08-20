@@ -27,7 +27,7 @@ TEST(AssignmentTest, FoldNotOptimized) {
   values.push_back(value);
   // We want to simplify to a constant so allow free values so
   // if the assignment is incomplete we don't get back a constant.
-  Assignment assignment(objects, values, /*_allowFreeValues=*/true);
+  Assignment assignment(objects, values);
 
   // Now make an expression that reads from the array at position
   // zero.
