@@ -16,6 +16,8 @@
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprHashMap.h"
 #include "klee/Expr/ExprUtil.h"
+#include "klee/Expr/IndependentConstraintSetUnion.h"
+#include "klee/Expr/IndependentSet.h"
 #include "klee/Expr/Path.h"
 #include "klee/Expr/Symcrete.h"
 
@@ -35,6 +37,8 @@ class ConstraintSet {
 public:
   ConstraintSet(constraints_ty cs, symcretes_ty symcretes,
                 Assignment concretization);
+  ConstraintSet(ref<const IndependentConstraintSet> ics);
+  ConstraintSet(const std::vector<ref<const IndependentConstraintSet>> &ics);
   ConstraintSet();
 
   void addConstraint(ref<Expr> e, const Assignment &delta);
@@ -55,7 +59,8 @@ public:
     return _constraints < b._constraints ||
            (_constraints == b._constraints && _symcretes < b._symcretes);
   }
-
+  ConstraintSet getConcretizedVersion() const;
+  ConstraintSet getConcretizedVersion(const Assignment &c) const;
   void dump() const;
   void print(llvm::raw_ostream &os) const;
 
@@ -64,11 +69,21 @@ public:
   const constraints_ty &cs() const;
   const symcretes_ty &symcretes() const;
   const Assignment &concretization() const;
+  const IndependentConstraintSetUnion &independentElements() const;
+
+  void getAllIndependentConstraintsSets(
+      ref<Expr> queryExpr,
+      std::vector<ref<const IndependentConstraintSet>> &result) const;
+
+  void getAllDependentConstraintsSets(
+      ref<Expr> queryExpr,
+      std::vector<ref<const IndependentConstraintSet>> &result) const;
 
 private:
   constraints_ty _constraints;
   symcretes_ty _symcretes;
   Assignment _concretization;
+  IndependentConstraintSetUnion _independentElements;
 };
 
 class PathConstraints {

@@ -1,6 +1,7 @@
 #include "klee/Expr/IndependentSet.h"
 
 #include "klee/ADT/Ref.h"
+#include "klee/Expr/Assignment.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/ExprHashMap.h"
 #include "klee/Expr/ExprUtil.h"
@@ -16,9 +17,87 @@
 
 namespace klee {
 
-IndependentElementSet::IndependentElementSet() {}
+ref<const IndependentConstraintSet>
+IndependentConstraintSet::addExpr(ref<Expr> e) const {
+  ref<IndependentConstraintSet> ics = new IndependentConstraintSet(this);
+  ics->concretizedSets.addValue(concretization.evaluate(e));
+  return ics;
+}
 
-IndependentElementSet::IndependentElementSet(ref<Expr> e) {
+ref<const IndependentConstraintSet>
+IndependentConstraintSet::updateConcretization(
+    const Assignment &delta, ExprHashMap<ref<Expr>> &concretizedExprs) const {
+  ref<IndependentConstraintSet> ics = new IndependentConstraintSet(this);
+  if (delta.bindings.size() == 0) {
+    return ics;
+  }
+  for (auto i : delta.bindings) {
+    ics->concretization.bindings.replace({i.first, i.second});
+  }
+  InnerSetUnion DSU;
+  for (ref<Expr> i : exprs) {
+    ref<Expr> e = ics->concretization.evaluate(i);
+    concretizedExprs[i] = e;
+    DSU.addValue(e);
+  }
+  for (ref<Symcrete> s : symcretes) {
+    DSU.addValue(EqExpr::create(ics->concretization.evaluate(s->symcretized),
+                                s->symcretized));
+  }
+  ics->concretizedSets = DSU;
+  return ics;
+}
+
+ref<const IndependentConstraintSet>
+IndependentConstraintSet::removeConcretization(
+    const Assignment &delta, ExprHashMap<ref<Expr>> &concretizedExprs) const {
+  ref<IndependentConstraintSet> ics = new IndependentConstraintSet(this);
+  if (delta.bindings.size() == 0) {
+    return ics;
+  }
+  for (auto i : delta.bindings) {
+    ics->concretization.bindings.remove(i.first);
+  }
+  InnerSetUnion DSU;
+  for (ref<Expr> i : exprs) {
+    ref<Expr> e = ics->concretization.evaluate(i);
+    concretizedExprs[i] = e;
+    DSU.addValue(e);
+  }
+  for (ref<Symcrete> s : symcretes) {
+    DSU.addValue(EqExpr::create(ics->concretization.evaluate(s->symcretized),
+                                s->symcretized));
+  }
+
+  ics->concretizedSets = DSU;
+  return ics;
+}
+
+void IndependentConstraintSet::addValuesToAssignment(
+    const std::vector<const Array *> &objects,
+    const std::vector<SparseStorage<unsigned char>> &values,
+    Assignment &assign) const {
+  for (unsigned i = 0; i < objects.size(); i++) {
+    if (assign.bindings.count(objects[i])) {
+      SparseStorage<unsigned char> value = assign.bindings.at(objects[i]);
+      assert(value.size() == values[i].size() &&
+             "we're talking about the same array here");
+      DenseSet<unsigned> ds = (elements.find(objects[i]))->second;
+      for (std::set<unsigned>::iterator it2 = ds.begin(); it2 != ds.end();
+           it2++) {
+        unsigned index = *it2;
+        value.store(index, values[i].load(index));
+      }
+      assign.bindings.replace({objects[i], value});
+    } else {
+      assign.bindings.replace({objects[i], values[i]});
+    }
+  }
+}
+
+IndependentConstraintSet::IndependentConstraintSet() {}
+
+IndependentConstraintSet::IndependentConstraintSet(ref<Expr> e) {
   exprs.insert(e);
   // Track all reads in the program.  Determines whether reads are
   // concrete or symbolic.  If they are symbolic, "collapses" array
@@ -39,19 +118,23 @@ IndependentElementSet::IndependentElementSet(ref<Expr> e) {
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(re->index)) {
         // if index constant, then add to set of constraints operating
         // on that array (actually, don't add constraint, just set index)
-        DenseSet<unsigned> &dis = elements[array];
+        DenseSet<unsigned> dis;
+        if (elements.find(array) != elements.end()) {
+          dis = (elements.find(array))->second;
+        }
         dis.add((unsigned)CE->getZExtValue(32));
+        elements.replace({array, dis});
       } else {
         elements_ty::iterator it2 = elements.find(array);
         if (it2 != elements.end())
-          elements.erase(it2);
+          elements.remove(it2->first);
         wholeObjects.insert(array);
       }
     }
   }
 }
 
-IndependentElementSet::IndependentElementSet(ref<Symcrete> s) {
+IndependentConstraintSet::IndependentConstraintSet(ref<Symcrete> s) {
   symcretes.insert(s);
 
   for (Symcrete &dependentSymcrete : s->dependentSymcretes()) {
@@ -93,35 +176,45 @@ IndependentElementSet::IndependentElementSet(ref<Symcrete> s) {
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(re->index)) {
         // if index constant, then add to set of constraints operating
         // on that array (actually, don't add constraint, just set index)
-        DenseSet<unsigned> &dis = elements[array];
+        DenseSet<unsigned> dis;
+        if (elements.find(array) != elements.end()) {
+          dis = (elements.find(array))->second;
+        }
         dis.add((unsigned)CE->getZExtValue(32));
+        elements.replace({array, dis});
       } else {
         elements_ty::iterator it2 = elements.find(array);
         if (it2 != elements.end())
-          elements.erase(it2);
+          elements.remove(it2->first);
         wholeObjects.insert(array);
       }
     }
   }
 }
 
-IndependentElementSet::IndependentElementSet(const IndependentElementSet &ies)
-    : elements(ies.elements), wholeObjects(ies.wholeObjects), exprs(ies.exprs) {
-}
+IndependentConstraintSet::IndependentConstraintSet(
+    const ref<const IndependentConstraintSet> &ics)
+    : elements(ics->elements), wholeObjects(ics->wholeObjects),
+      exprs(ics->exprs), symcretes(ics->symcretes),
+      concretization(ics->concretization),
+      concretizedSets(ics->concretizedSets) {}
 
-IndependentElementSet &
-IndependentElementSet::operator=(const IndependentElementSet &ies) {
-  elements = ies.elements;
-  wholeObjects = ies.wholeObjects;
-  exprs = ies.exprs;
+IndependentConstraintSet &
+IndependentConstraintSet::operator=(const IndependentConstraintSet &ics) {
+  elements = ics.elements;
+  wholeObjects = ics.wholeObjects;
+  exprs = ics.exprs;
+  symcretes = ics.symcretes;
+  concretization = ics.concretization;
+  concretizedSets = ics.concretizedSets;
   return *this;
 }
 
-void IndependentElementSet::print(llvm::raw_ostream &os) const {
+void IndependentConstraintSet::print(llvm::raw_ostream &os) const {
   os << "{";
   bool first = true;
-  for (std::set<const Array *>::iterator it = wholeObjects.begin(),
-                                         ie = wholeObjects.end();
+  for (PersistentSet<const Array *>::iterator it = wholeObjects.begin(),
+                                              ie = wholeObjects.end();
        it != ie; ++it) {
     const Array *array = *it;
 
@@ -133,7 +226,7 @@ void IndependentElementSet::print(llvm::raw_ostream &os) const {
 
     os << "MO" << array->getIdentifier();
   }
-  for (elements_ty::const_iterator it = elements.begin(), ie = elements.end();
+  for (elements_ty::iterator it = elements.begin(), ie = elements.end();
        it != ie; ++it) {
     const Array *array = it->first;
     const DenseSet<unsigned> &dis = it->second;
@@ -149,218 +242,123 @@ void IndependentElementSet::print(llvm::raw_ostream &os) const {
   os << "}";
 }
 
-// more efficient when this is the smaller set
-bool IndependentElementSet::intersects(const IndependentElementSet &b) {
+bool IndependentConstraintSet::intersects(
+    ref<const IndependentConstraintSet> a,
+    ref<const IndependentConstraintSet> b) {
+  if (a->wholeObjects.size() + a->elements.size() >
+      b->wholeObjects.size() + b->elements.size()) {
+    std::swap(a, b);
+  }
   // If there are any symbolic arrays in our query that b accesses
-  for (std::set<const Array *>::iterator it = wholeObjects.begin(),
-                                         ie = wholeObjects.end();
+  for (PersistentSet<const Array *>::iterator it = a->wholeObjects.begin(),
+                                              ie = a->wholeObjects.end();
        it != ie; ++it) {
     const Array *array = *it;
-    if (b.wholeObjects.count(array) ||
-        b.elements.find(array) != b.elements.end())
+    if (b->wholeObjects.count(array) ||
+        b->elements.find(array) != b->elements.end())
       return true;
   }
-  for (elements_ty::iterator it = elements.begin(), ie = elements.end();
+  for (elements_ty::iterator it = a->elements.begin(), ie = a->elements.end();
        it != ie; ++it) {
     const Array *array = it->first;
     // if the array we access is symbolic in b
-    if (b.wholeObjects.count(array))
+    if (b->wholeObjects.count(array))
       return true;
-    elements_ty::const_iterator it2 = b.elements.find(array);
+    elements_ty::iterator it2 = b->elements.find(array);
     // if any of the elements we access are also accessed by b
-    if (it2 != b.elements.end()) {
-      if (it->second.intersects(it2->second))
+    if (it2 != b->elements.end()) {
+      if (it->second.intersects(it2->second)) {
         return true;
+      }
     }
   }
   // No need to check symcretes here, arrays must be sufficient.
   return false;
 }
 
-// returns true iff set is changed by addition
-bool IndependentElementSet::add(const IndependentElementSet &b) {
-  for (auto expr : b.exprs) {
-    exprs.insert(expr);
+ref<const IndependentConstraintSet>
+IndependentConstraintSet::merge(ref<const IndependentConstraintSet> A,
+                                ref<const IndependentConstraintSet> B) {
+  ref<IndependentConstraintSet> a = new IndependentConstraintSet(A);
+  ref<IndependentConstraintSet> b = new IndependentConstraintSet(B);
+
+  if (a->wholeObjects.size() + a->elements.size() <
+      b->wholeObjects.size() + b->elements.size()) {
+    std::swap(a, b);
+  }
+  for (ref<Expr> expr : b->exprs) {
+    a->exprs.insert(expr);
+  }
+  for (const ref<Symcrete> &symcrete : b->symcretes) {
+    a->symcretes.insert(symcrete);
   }
 
-  for (const ref<Symcrete> &symcrete : b.symcretes) {
-    symcretes.insert(symcrete);
-  }
-
-  bool modified = false;
-  for (std::set<const Array *>::const_iterator it = b.wholeObjects.begin(),
-                                               ie = b.wholeObjects.end();
+  for (PersistentSet<const Array *>::iterator it = b->wholeObjects.begin(),
+                                              ie = b->wholeObjects.end();
        it != ie; ++it) {
     const Array *array = *it;
-    elements_ty::iterator it2 = elements.find(array);
-    if (it2 != elements.end()) {
-      modified = true;
-      elements.erase(it2);
-      wholeObjects.insert(array);
+    elements_ty::iterator it2 = a->elements.find(array);
+    if (it2 != a->elements.end()) {
+      a->elements.remove(it2->first);
+      a->wholeObjects.insert(array);
     } else {
-      if (!wholeObjects.count(array)) {
-        modified = true;
-        wholeObjects.insert(array);
+      if (!a->wholeObjects.count(array)) {
+        a->wholeObjects.insert(array);
       }
     }
   }
-  for (elements_ty::const_iterator it = b.elements.begin(),
-                                   ie = b.elements.end();
+  for (elements_ty::iterator it = b->elements.begin(), ie = b->elements.end();
        it != ie; ++it) {
     const Array *array = it->first;
-    if (!wholeObjects.count(array)) {
-      elements_ty::iterator it2 = elements.find(array);
-      if (it2 == elements.end()) {
-        modified = true;
-        elements.insert(*it);
+    if (!a->wholeObjects.count(array)) {
+      elements_ty::iterator it2 = a->elements.find(array);
+      if (it2 == a->elements.end()) {
+        a->elements.insert(*it);
       } else {
-        // Now need to see if there are any (z=?)'s
-        if (it2->second.add(it->second))
-          modified = true;
+        DenseSet<unsigned> dis = it2->second;
+        dis.add(it->second);
+        a->elements.replace({array, dis});
       }
     }
   }
-  return modified;
+  b->addValuesToAssignment(b->concretization.keys(), b->concretization.values(),
+                           a->concretization);
+  a->concretizedSets.add(b->concretizedSets);
+  return a;
 }
 
-// Breaks down a constraint into all of it's individual pieces, returning a
-// list of IndependentElementSets or the independent factors.
-//
-// Caller takes ownership of returned std::list.
-std::list<IndependentElementSet> *
-getAllIndependentConstraintsSets(const Query &query) {
-  std::list<IndependentElementSet> *factors =
-      new std::list<IndependentElementSet>();
-  ConstantExpr *CE = dyn_cast<ConstantExpr>(query.expr);
-  if (CE) {
-    assert(CE && CE->isFalse() &&
-           "the expr should always be false and "
-           "therefore not included in factors");
-  } else {
-    ref<Expr> neg = Expr::createIsZero(query.expr);
-    factors->push_back(IndependentElementSet(neg));
-  }
-
-  for (const auto &constraint : query.constraints.cs()) {
-    // iterate through all the previously separated constraints.  Until we
-    // actually return, factors is treated as a queue of expressions to be
-    // evaluated.  If the queue property isn't maintained, then the exprs
-    // could be returned in an order different from how they came it, negatively
-    // affecting later stages.
-    factors->push_back(IndependentElementSet(constraint));
-  }
-
-  for (const auto &symcrete : query.constraints.symcretes()) {
-    factors->push_back(IndependentElementSet(symcrete));
-  }
-
-  bool doneLoop = false;
-  do {
-    doneLoop = true;
-    std::list<IndependentElementSet> *done =
-        new std::list<IndependentElementSet>;
-    while (factors->size() > 0) {
-      IndependentElementSet current = factors->front();
-      factors->pop_front();
-      // This list represents the set of factors that are separate from current.
-      // Those that are not inserted into this list (queue) intersect with
-      // current.
-      std::list<IndependentElementSet> *keep =
-          new std::list<IndependentElementSet>;
-      while (factors->size() > 0) {
-        IndependentElementSet compare = factors->front();
-        factors->pop_front();
-        if (current.intersects(compare)) {
-          if (current.add(compare)) {
-            // Means that we have added (z=y)added to (x=y)
-            // Now need to see if there are any (z=?)'s
-            doneLoop = false;
-          }
-        } else {
-          keep->push_back(compare);
-        }
-      }
-      done->push_back(current);
-      delete factors;
-      factors = keep;
-    }
-    delete factors;
-    factors = done;
-  } while (!doneLoop);
-
-  return factors;
-}
-
-IndependentElementSet getIndependentConstraints(const Query &query,
-                                                constraints_ty &result) {
-  IndependentElementSet eltsClosure(query.expr);
-  std::vector<std::pair<ref<Expr>, IndependentElementSet>> worklist;
-
-  for (const auto &constraint : query.constraints.cs())
-    worklist.push_back(
-        std::make_pair(constraint, IndependentElementSet(constraint)));
-
-  for (const ref<Symcrete> &symcrete : query.constraints.symcretes()) {
-    worklist.push_back(
-        std::make_pair(symcrete->symcretized, IndependentElementSet(symcrete)));
-  }
-
-  // XXX This should be more efficient (in terms of low level copy stuff).
-  bool done = false;
-  do {
-    done = true;
-    std::vector<std::pair<ref<Expr>, IndependentElementSet>> newWorklist;
-    for (std::vector<std::pair<ref<Expr>, IndependentElementSet>>::iterator
-             it = worklist.begin(),
-             ie = worklist.end();
-         it != ie; ++it) {
-      if (it->second.intersects(eltsClosure)) {
-        if (eltsClosure.add(it->second))
-          done = false;
-        result.insert(it->first);
-        // Means that we have added (z=y)added to (x=y)
-        // Now need to see if there are any (z=?)'s
-      } else {
-        newWorklist.push_back(*it);
-      }
-    }
-    worklist.swap(newWorklist);
-  } while (!done);
-
-  // KLEE_DEBUG(
-  //     std::set<ref<Expr>> reqset(result.begin(), result.end());
-  //     errs() << "--\n"; errs() << "Q: " << query.expr << "\n";
-  //     errs() << "\telts: " << IndependentElementSet(query.expr) << "\n";
-  //     int i = 0; for (const auto &constraint
-  //                     : query.constraints) {
-  //       errs() << "C" << i++ << ": " << constraint;
-  //       errs() << " "
-  //              << (reqset.count(constraint) ? "(required)" : "(independent)")
-  //              << "\n";
-  //       errs() << "\telts: " << IndependentElementSet(constraint) << "\n";
-  //     } errs() << "elts closure: "
-  //              << eltsClosure << "\n";);
-
-  return eltsClosure;
-}
-
-void calculateArrayReferences(const IndependentElementSet &ie,
-                              std::vector<const Array *> &returnVector) {
+void IndependentConstraintSet::calculateArrayReferences(
+    std::vector<const Array *> &returnVector) const {
   std::set<const Array *> thisSeen;
-  for (std::map<const Array *, DenseSet<unsigned>>::const_iterator it =
-           ie.elements.begin();
-       it != ie.elements.end(); it++) {
+  for (IndependentConstraintSet::elements_ty::iterator it = elements.begin();
+       it != elements.end(); ++it) {
     thisSeen.insert(it->first);
   }
-  for (std::set<const Array *>::iterator it = ie.wholeObjects.begin();
-       it != ie.wholeObjects.end(); it++) {
-    assert(*it);
+  for (PersistentSet<const Array *>::iterator it = wholeObjects.begin();
+       it != wholeObjects.end(); ++it) {
     thisSeen.insert(*it);
   }
   for (std::set<const Array *>::iterator it = thisSeen.begin();
-       it != thisSeen.end(); it++) {
+       it != thisSeen.end(); ++it) {
     returnVector.push_back(*it);
   }
+}
+
+void calculateArraysInFactors(
+    const std::vector<ref<const IndependentConstraintSet>> &factors,
+    ref<Expr> queryExpr, std::vector<const Array *> &returnVector) {
+  std::set<const Array *> returnSet;
+  for (ref<const IndependentConstraintSet> ics : factors) {
+    std::vector<const Array *> result;
+    ics->calculateArrayReferences(result);
+    returnSet.insert(result.begin(), result.end());
+  }
+  std::vector<const Array *> result;
+  ref<IndependentConstraintSet> queryExprSet =
+      new IndependentConstraintSet(queryExpr);
+  queryExprSet->calculateArrayReferences(result);
+  returnSet.insert(result.begin(), result.end());
+  returnVector.insert(returnVector.begin(), returnSet.begin(), returnSet.end());
 }
 
 } // namespace klee

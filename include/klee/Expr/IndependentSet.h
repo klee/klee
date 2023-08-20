@@ -1,9 +1,13 @@
 #ifndef KLEE_INDEPENDENTSET_H
 #define KLEE_INDEPENDENTSET_H
 
+#include "klee/ADT/DisjointSetUnion.h"
+#include "klee/ADT/PersistentMap.h"
+#include "klee/ADT/PersistentSet.h"
+#include "klee/Expr/Assignment.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprHashMap.h"
-#include "klee/Solver/Solver.h"
+#include "klee/Expr/Symcrete.h"
 
 #include "klee/Support/CompilerWarning.h"
 DISABLE_WARNING_PUSH
@@ -11,8 +15,10 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/raw_ostream.h"
 DISABLE_WARNING_POP
 
-#include <list>
+#include <map>
 #include <set>
+#include <string>
+#include <vector>
 
 namespace klee {
 
@@ -42,7 +48,7 @@ public:
     return modified;
   }
 
-  bool intersects(const DenseSet &b) {
+  bool intersects(const DenseSet &b) const {
     for (typename set_ty::iterator it = s.begin(), ie = s.end(); it != ie; ++it)
       if (b.s.count(*it))
         return true;
@@ -76,54 +82,89 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
   return os;
 }
 
-class IndependentElementSet {
+class IndependentConstraintSet {
+private:
+  using InnerSetUnion = DisjointSetUnion<ref<Expr>, IndependentConstraintSet>;
+
 public:
-  typedef std::map<const Array *, DenseSet<unsigned>> elements_ty;
+  // All containers need to become persistent to make fast copy and faster
+  // merge possible map from concretized to normal
+  typedef PersistentMap<const Array *, DenseSet<unsigned>> elements_ty;
   elements_ty
       elements; // Represents individual elements of array accesses (arr[1])
-  std::set<const Array *>
-      wholeObjects;     // Represents symbolically accessed arrays (arr[x])
-  constraints_ty exprs; // All expressions (constraints) that are associated
-                        // with this factor
-  SymcreteOrderedSet symcretes; // All symcretes associated with this factor
+  PersistentSet<const Array *>
+      wholeObjects; // Represents symbolically accessed arrays (arr[x])
+  PersistentSet<ref<Expr>> exprs; // All expressions (constraints) that are
+                                  // associated with this factor
+  PersistentSet<ref<Symcrete>>
+      symcretes; // All symcretes associated with this factor
 
-  IndependentElementSet();
-  IndependentElementSet(ref<Expr> e);
-  IndependentElementSet(ref<Symcrete> s);
-  IndependentElementSet(const IndependentElementSet &ies);
+  Assignment concretization;
 
-  IndependentElementSet &operator=(const IndependentElementSet &ies);
+  InnerSetUnion concretizedSets;
+
+  ref<const IndependentConstraintSet> addExpr(ref<Expr> e) const;
+  ref<const IndependentConstraintSet>
+  updateConcretization(const Assignment &delta,
+                       ExprHashMap<ref<Expr>> &changedExprs) const;
+  ref<const IndependentConstraintSet>
+  removeConcretization(const Assignment &delta,
+                       ExprHashMap<ref<Expr>> &changedExprs) const;
+
+  void
+  addValuesToAssignment(const std::vector<const Array *> &objects,
+                        const std::vector<SparseStorage<unsigned char>> &values,
+                        Assignment &assign) const;
+
+  IndependentConstraintSet();
+  IndependentConstraintSet(ref<Expr> e);
+  IndependentConstraintSet(ref<Symcrete> s);
+  IndependentConstraintSet(const ref<const IndependentConstraintSet> &ics);
+
+  IndependentConstraintSet &operator=(const IndependentConstraintSet &ies);
 
   void print(llvm::raw_ostream &os) const;
 
-  // more efficient when this is the smaller set
-  bool intersects(const IndependentElementSet &b);
+  static bool intersects(ref<const IndependentConstraintSet> a,
+                         ref<const IndependentConstraintSet> b);
 
-  // returns true iff set is changed by addition
-  bool add(const IndependentElementSet &b);
+  static ref<const IndependentConstraintSet>
+  merge(ref<const IndependentConstraintSet> a,
+        ref<const IndependentConstraintSet> b);
+
+  // Extracts which arrays are referenced from a particular independent set.
+  // Examines both the actual known array accesses arr[1] plus the undetermined
+  // accesses arr[x].Z
+  void calculateArrayReferences(std::vector<const Array *> &returnVector) const;
+
+  SymcreteOrderedSet getSymcretes() const {
+    SymcreteOrderedSet a;
+    for (ref<Symcrete> s : symcretes) {
+      a.insert(s);
+    }
+    return a;
+  }
+
+  constraints_ty getConstraints() const {
+    constraints_ty a;
+    for (ref<Expr> e : exprs) {
+      a.insert(e);
+    }
+    return a;
+  }
+  mutable class ReferenceCounter _refCount;
 };
 
+void calculateArraysInFactors(
+    const std::vector<ref<const IndependentConstraintSet>> &factors,
+    ref<Expr> queryExpr, std::vector<const Array *> &returnVector);
+
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
-                                     const IndependentElementSet &ies) {
+                                     const IndependentConstraintSet &ies) {
   ies.print(os);
   return os;
 }
 
-// Breaks down a constraint into all of it's individual pieces, returning a
-// list of IndependentElementSets or the independent factors.
-//
-// Caller takes ownership of returned std::list.
-std::list<IndependentElementSet> *
-getAllIndependentConstraintsSets(const Query &query);
-
-IndependentElementSet getIndependentConstraints(const Query &query,
-                                                constraints_ty &result);
-
-// Extracts which arrays are referenced from a particular independent set.
-// Examines both the actual known array accesses arr[1] plus the undetermined
-// accesses arr[x].
-void calculateArrayReferences(const IndependentElementSet &ie,
-                              std::vector<const Array *> &returnVector);
 } // namespace klee
 
 #endif /* KLEE_INDEPENDENTSET_H */

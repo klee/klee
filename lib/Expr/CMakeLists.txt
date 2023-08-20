@@ -22,6 +22,7 @@ add_library(kleaverExpr
   ExprSMTLIBPrinter.cpp
   ExprUtil.cpp
   ExprVisitor.cpp
+  IndependentConstraintSetUnion.cpp
   IndependentSet.cpp
   Path.cpp
   SourceBuilder.cpp
