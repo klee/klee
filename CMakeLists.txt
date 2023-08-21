@@ -506,19 +506,29 @@ endif()
 # KLEE uclibc support
 ################################################################################
 set(KLEE_UCLIBC_PATH "" CACHE PATH "Path to klee-uclibc root directory")
-set(KLEE_UCLIBC_BCA_NAME "klee-uclibc.bca")
+
+set(KLEE_UCLIBC_BCA_32_NAME "klee-uclibc-32.bca")
+set(KLEE_UCLIBC_BCA_64_NAME "klee-uclibc-64.bca")
+
 if (NOT KLEE_UCLIBC_PATH STREQUAL "")
   # Find the C library bitcode archive
-  set(KLEE_UCLIBC_C_BCA "${KLEE_UCLIBC_PATH}/lib/libc.a")
-  if (NOT EXISTS "${KLEE_UCLIBC_C_BCA}")
+  set(KLEE_UCLIBC_C_32_BCA "${KLEE_UCLIBC_PATH}-32/lib/libc.a")
+  set(KLEE_UCLIBC_C_64_BCA "${KLEE_UCLIBC_PATH}-64/lib/libc.a")
+
+  if (NOT EXISTS "${KLEE_UCLIBC_C_32_BCA}" OR NOT EXISTS "${KLEE_UCLIBC_C_64_BCA}")
     message(FATAL_ERROR
-      "klee-uclibc library not found at \"${KLEE_UCLIBC_C_BCA}\". Set KLEE_UCLIBC_PATH to klee-uclibc root directory or empty string.")
+      "klee-uclibc library not found at \"${KLEE_UCLIBC_C_32_BCA}\" or \"${KLEE_UCLIBC_C_64_BCA}\". Set KLEE_UCLIBC_PATH to klee-uclibc root directory or empty string.")
   endif()
-  message(STATUS "Found klee-uclibc library: \"${KLEE_UCLIBC_C_BCA}\"")
+  message(STATUS "Found klee-uclibc library: \"${KLEE_UCLIBC_C_32_BCA}\" and \"${KLEE_UCLIBC_C_64_BCA}\"")
   # Copy KLEE_UCLIBC_C_BCA so KLEE can find it where it is expected.
+  # Create 32 and 64 bit versions
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy
-    "${KLEE_UCLIBC_C_BCA}"
-    "${KLEE_RUNTIME_DIRECTORY}/${KLEE_UCLIBC_BCA_NAME}"
+    "${KLEE_UCLIBC_C_32_BCA}"
+    "${KLEE_RUNTIME_DIRECTORY}/${KLEE_UCLIBC_BCA_32_NAME}"
+  )
+  execute_process(COMMAND ${CMAKE_COMMAND} -E copy
+    "${KLEE_UCLIBC_C_64_BCA}"
+    "${KLEE_RUNTIME_DIRECTORY}/${KLEE_UCLIBC_BCA_64_NAME}"
   )
 else()
   message(STATUS "Skipping copying of klee-uclibc runtime")

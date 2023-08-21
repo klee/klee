@@ -739,13 +739,10 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
   MemoryObject *errnoObj = nullptr;
 
   if (Context::get().getPointerWidth() == 32) {
-    // This is not working (?) 
-    // errno_addr = (int *)mmap(NULL, sizeof(*errno_addr), PROT_READ | PROT_WRITE,
-    //                          MAP_32BIT | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-    errnoObj = allocate(state, Expr::createPointer(sizeof(*errno_addr)), false, true,
-             nullptr, 8);
+    errnoObj = allocate(state, Expr::createPointer(sizeof(*errno_addr)), false,
+                        true, nullptr, 8);
     errnoObj->isFixed = true;
-    
+
     ObjectState *os = bindObjectInState(
         state, errnoObj, typeSystemManager->getWrappedType(pointerErrnoAddr),
         false);
