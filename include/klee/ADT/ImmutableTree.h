@@ -132,6 +132,13 @@ template <class K, class V, class KOV, class CMP>
 class ImmutableTree<K, V, KOV, CMP>::iterator {
   friend class ImmutableTree<K, V, KOV, CMP>;
 
+public:
+  typedef std::bidirectional_iterator_tag iterator_category;
+  typedef V value_type;
+  typedef std::ptrdiff_t difference_type;
+  typedef V *pointer;
+  typedef V &reference;
+
 private:
   Node *root; // so can back up from end
   FixedStack<Node *> stack;
