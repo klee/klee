@@ -1059,6 +1059,8 @@ Z3ASTHandle Z3BitvectorBuilder::castToBitVector(const Z3ASTHandle &e) {
   Z3SortHandle currentSort = Z3SortHandle(Z3_get_sort(ctx, e), ctx);
   Z3_sort_kind kind = Z3_get_sort_kind(ctx, currentSort);
   switch (kind) {
+  case Z3_BOOL_SORT:
+    return Z3ASTHandle(Z3_mk_ite(ctx, e, bvOne(1), bvZero(1)), ctx);
   case Z3_BV_SORT:
     // Already a bitvector
     return e;
