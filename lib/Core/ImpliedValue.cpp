@@ -203,8 +203,8 @@ void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e,
   std::set<ref<ReadExpr>> readsSet(reads.begin(), reads.end());
   reads = std::vector<ref<ReadExpr>>(readsSet.begin(), readsSet.end());
 
-  ConstraintSet assumption;
-  assumption.addConstraint(EqExpr::create(e, value), {});
+  constraints_ty assumption;
+  assumption.insert(EqExpr::create(e, value));
 
   // obscure... we need to make sure that all the read indices are
   // bounds checked. if we don't do this we can end up constructing
@@ -212,11 +212,8 @@ void ImpliedValue::checkForImpliedValues(Solver *S, ref<Expr> e,
   // bounds indices which will not get picked up. this is of utmost
   // importance if we are being backed by the CexCachingSolver.
 
-  for (std::vector<ref<ReadExpr>>::iterator i = reads.begin(), ie = reads.end();
-       i != ie; ++i) {
-    ReadExpr *re = i->get();
-    assumption.addConstraint(UltExpr::create(re->index, re->updates.root->size),
-                             {});
+  for (const auto &re : reads) {
+    assumption.insert(UltExpr::create(re->index, re->updates.root->size));
   }
 
   for (const auto &var : reads) {

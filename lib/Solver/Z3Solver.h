@@ -23,16 +23,13 @@ class Z3Solver : public Solver {
 public:
   /// Z3Solver - Construct a new Z3Solver.
   Z3Solver(Z3BuilderType type);
-
-  /// Get the query in SMT-LIBv2 format.
-  /// \return A C-style string. The caller is responsible for freeing this.
-  virtual char *getConstraintLog(const Query &);
-
-  /// setCoreSolverTimeout - Set constraint solver timeout delay to the given
-  /// value; 0
-  /// is off.
-  virtual void setCoreSolverTimeout(time::Span timeout);
 };
+
+class Z3TreeSolver : public Solver {
+public:
+  Z3TreeSolver(Z3BuilderType type, unsigned maxSolvers);
+};
+
 } // namespace klee
 
 #endif /* KLEE_Z3SOLVER_H */

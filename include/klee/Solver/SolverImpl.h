@@ -119,6 +119,8 @@ public:
   }
 
   virtual void setCoreSolverTimeout(time::Span timeout){};
+
+  virtual void notifyStateTermination(std::uint32_t id) = 0;
 };
 
 } // namespace klee

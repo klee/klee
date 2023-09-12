@@ -201,6 +201,8 @@ ConstraintSet::ConstraintSet(
   }
 }
 
+ConstraintSet::ConstraintSet(constraints_ty cs) : ConstraintSet(cs, {}, {}) {}
+
 ConstraintSet::ConstraintSet() {}
 
 void ConstraintSet::addConstraint(ref<Expr> e, const Assignment &delta) {

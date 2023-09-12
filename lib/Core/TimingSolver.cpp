@@ -44,11 +44,11 @@ bool TimingSolver::evaluate(const ConstraintSet &constraints, ref<Expr> expr,
 
   ref<SolverResponse> queryResult;
   ref<SolverResponse> negatedQueryResult;
+  Query query(constraints, expr, metaData.id);
 
   bool success = produceValidityCore
-                     ? solver->evaluate(Query(constraints, expr), queryResult,
-                                        negatedQueryResult)
-                     : solver->evaluate(Query(constraints, expr), result);
+                     ? solver->evaluate(query, queryResult, negatedQueryResult)
+                     : solver->evaluate(query, result);
 
   if (success && produceValidityCore) {
     if (isa<ValidResponse>(queryResult) &&
@@ -91,12 +91,12 @@ bool TimingSolver::tryGetUnique(const ConstraintSet &constraints, ref<Expr> e,
     e = optimizer.optimizeExpr(e, true);
     TimerStatIncrementer timer(stats::solverTime);
 
-    if (!solver->getValue(Query(constraints, e), value)) {
+    if (!solver->getValue(Query(constraints, e, metaData.id), value)) {
       return false;
     }
     ref<Expr> cond = EqExpr::create(e, value);
     cond = optimizer.optimizeExpr(cond, false);
-    if (!solver->mustBeTrue(Query(constraints, cond), isTrue)) {
+    if (!solver->mustBeTrue(Query(constraints, cond, metaData.id), isTrue)) {
       return false;
     }
     if (isTrue) {
@@ -125,11 +125,11 @@ bool TimingSolver::mustBeTrue(const ConstraintSet &constraints, ref<Expr> expr,
     expr = Simplificator::simplifyExpr(constraints, expr).simplified;
 
   ValidityCore validityCore;
+  Query query(constraints, expr, metaData.id);
 
   bool success = produceValidityCore
-                     ? solver->getValidityCore(Query(constraints, expr),
-                                               validityCore, result)
-                     : solver->mustBeTrue(Query(constraints, expr), result);
+                     ? solver->getValidityCore(query, validityCore, result)
+                     : solver->mustBeTrue(query, result);
 
   metaData.queryCost += timer.delta();
 
@@ -178,7 +178,8 @@ bool TimingSolver::getValue(const ConstraintSet &constraints, ref<Expr> expr,
   if (simplifyExprs)
     expr = Simplificator::simplifyExpr(constraints, expr).simplified;
 
-  bool success = solver->getValue(Query(constraints, expr), result);
+  bool success =
+      solver->getValue(Query(constraints, expr, metaData.id), result);
 
   metaData.queryCost += timer.delta();
 
@@ -201,8 +202,8 @@ bool TimingSolver::getMinimalUnsignedValue(const ConstraintSet &constraints,
   if (simplifyExprs)
     expr = Simplificator::simplifyExpr(constraints, expr).simplified;
 
-  bool success =
-      solver->getMinimalUnsignedValue(Query(constraints, expr), result);
+  bool success = solver->getMinimalUnsignedValue(
+      Query(constraints, expr, metaData.id), result);
 
   metaData.queryCost += timer.delta();
 
@@ -220,15 +221,11 @@ bool TimingSolver::getInitialValues(
   TimerStatIncrementer timer(stats::solverTime);
 
   ref<SolverResponse> queryResult;
+  Query query(constraints, Expr::createFalse(), metaData.id);
 
-  bool success =
-      produceValidityCore
-          ? solver->check(
-                Query(constraints, ConstantExpr::alloc(0, Expr::Bool)),
-                queryResult)
-          : solver->getInitialValues(
-                Query(constraints, ConstantExpr::alloc(0, Expr::Bool)), objects,
-                result);
+  bool success = produceValidityCore
+                     ? solver->check(query, queryResult)
+                     : solver->getInitialValues(query, objects, result);
 
   if (success && produceValidityCore && isa<InvalidResponse>(queryResult)) {
     success = queryResult->tryGetInitialValuesFor(objects, result);
@@ -251,22 +248,22 @@ bool TimingSolver::evaluate(const ConstraintSet &constraints, ref<Expr> expr,
     auto simplified = simplification.simplified;
     auto dependency = simplification.dependency;
     if (auto CE = dyn_cast<ConstantExpr>(simplified)) {
+      Query query(constraints, simplified, metaData.id);
       if (CE->isTrue()) {
         queryResult = new ValidResponse(ValidityCore(dependency, expr));
-        return solver->check(Query(constraints, simplified).negateExpr(),
-                             negatedQueryResult);
+        return solver->check(query.negateExpr(), negatedQueryResult);
       } else {
         negatedQueryResult = new ValidResponse(
             ValidityCore(dependency, Expr::createIsZero(expr)));
-        return solver->check(Query(constraints, simplified), queryResult);
+        return solver->check(query, queryResult);
       }
     } else {
       expr = simplified;
     }
   }
 
-  bool success = solver->evaluate(Query(constraints, expr), queryResult,
-                                  negatedQueryResult);
+  bool success = solver->evaluate(Query(constraints, expr, metaData.id),
+                                  queryResult, negatedQueryResult);
 
   metaData.queryCost += timer.delta();
 
@@ -300,8 +297,8 @@ bool TimingSolver::getValidityCore(const ConstraintSet &constraints,
     }
   }
 
-  bool success =
-      solver->getValidityCore(Query(constraints, expr), validityCore, result);
+  bool success = solver->getValidityCore(Query(constraints, expr, metaData.id),
+                                         validityCore, result);
 
   metaData.queryCost += timer.delta();
 
@@ -334,7 +331,8 @@ bool TimingSolver::getResponse(const ConstraintSet &constraints, ref<Expr> expr,
     }
   }
 
-  bool success = solver->check(Query(constraints, expr), queryResult);
+  bool success =
+      solver->check(Query(constraints, expr, metaData.id), queryResult);
 
   metaData.queryCost += timer.delta();
 
@@ -346,8 +344,12 @@ TimingSolver::getRange(const ConstraintSet &constraints, ref<Expr> expr,
                        SolverQueryMetaData &metaData, time::Span timeout) {
   ++stats::queries;
   TimerStatIncrementer timer(stats::solverTime);
-  auto query = Query(constraints, expr);
+  Query query(constraints, expr, metaData.id);
   auto result = solver->getRange(query, timeout);
   metaData.queryCost += timer.delta();
   return result;
+}
+
+void TimingSolver::notifyStateTermination(std::uint32_t id) {
+  solver->notifyStateTermination(id);
 }

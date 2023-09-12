@@ -31,7 +31,7 @@ protected:
 
 private:
   // To be specialised
-  inline ::Z3_ast as_ast();
+  inline ::Z3_ast as_ast() const;
 
 public:
   Z3NodeHandle() : node(NULL), context(NULL) {}
@@ -73,7 +73,7 @@ public:
     return *this;
   }
   // To be specialised
-  void dump();
+  void dump() const;
 
   operator T() const { return node; }
 
@@ -82,19 +82,21 @@ public:
 };
 
 // Specialise for Z3_sort
-template <> inline ::Z3_ast Z3NodeHandle<Z3_sort>::as_ast() {
+template <> inline ::Z3_ast Z3NodeHandle<Z3_sort>::as_ast() const {
   // In Z3 internally this call is just a cast. We could just do that
   // instead to simplify our implementation but this seems cleaner.
   return ::Z3_sort_to_ast(context, node);
 }
 typedef Z3NodeHandle<Z3_sort> Z3SortHandle;
-template <> void Z3NodeHandle<Z3_sort>::dump() __attribute__((used));
+template <> void Z3NodeHandle<Z3_sort>::dump() const __attribute__((used));
 template <> unsigned Z3NodeHandle<Z3_sort>::hash() __attribute__((used));
 
 // Specialise for Z3_ast
-template <> inline ::Z3_ast Z3NodeHandle<Z3_ast>::as_ast() { return node; }
+template <> inline ::Z3_ast Z3NodeHandle<Z3_ast>::as_ast() const {
+  return node;
+}
 typedef Z3NodeHandle<Z3_ast> Z3ASTHandle;
-template <> void Z3NodeHandle<Z3_ast>::dump() __attribute__((used));
+template <> void Z3NodeHandle<Z3_ast>::dump() const __attribute__((used));
 template <> unsigned Z3NodeHandle<Z3_ast>::hash() __attribute__((used));
 
 struct Z3ASTHandleHash {

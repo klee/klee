@@ -95,6 +95,7 @@ public:
 
   char *getConstraintLog(const Query &);
   void setCoreSolverTimeout(time::Span timeout) { _timeout = timeout; }
+  void notifyStateTermination(std::uint32_t id) {}
 
   bool computeTruth(const Query &, bool &isValid);
   bool computeValue(const Query &, ref<Expr> &result);

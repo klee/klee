@@ -89,6 +89,7 @@ public:
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query &);
   void setCoreSolverTimeout(time::Span timeout);
+  void notifyStateTermination(std::uint32_t id);
 };
 
 /** @returns the canonical version of the given query.  The reference
@@ -385,6 +386,10 @@ char *CachingSolver::getConstraintLog(const Query &query) {
 
 void CachingSolver::setCoreSolverTimeout(time::Span timeout) {
   solver->impl->setCoreSolverTimeout(timeout);
+}
+
+void CachingSolver::notifyStateTermination(std::uint32_t id) {
+  solver->impl->notifyStateTermination(id);
 }
 
 ///

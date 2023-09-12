@@ -82,9 +82,9 @@ void testOperation(Solver &solver, int value, Expr::Width operandWidth,
     ref<Expr> queryExpr =
         EqExpr::create(fullySymbolicExpr, partiallyConstantExpr);
 
-    ConstraintSet constraints;
-    constraints.addConstraint(
-        Simplificator::simplifyExpr(ConstraintSet(), expr).simplified, {});
+    constraints_ty constraints;
+    constraints.insert(
+        Simplificator::simplifyExpr(ConstraintSet(), expr).simplified);
     bool res;
     bool success = solver.mustBeTrue(Query(constraints, queryExpr), res);
     EXPECT_EQ(true, success) << "Constraint solving failed";

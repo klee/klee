@@ -52,6 +52,7 @@ public:
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query &);
   void setCoreSolverTimeout(time::Span timeout);
+  void notifyStateTermination(std::uint32_t id);
 
 private:
   bool assertConcretization(const Query &query, const Assignment &assign) const;
@@ -76,13 +77,13 @@ Query ConcretizingSolver::constructConcretizedQuery(const Query &query,
                                                     const Assignment &assign) {
   ConstraintSet cs = query.constraints;
   ref<Expr> concretizedExpr = assign.evaluate(query.expr);
-  return Query(cs.getConcretizedVersion(assign), concretizedExpr);
+  return Query(cs.getConcretizedVersion(assign), concretizedExpr, query.id);
 }
 
 Query ConcretizingSolver::getConcretizedVersion(const Query &query) {
   ConstraintSet cs = query.constraints;
   ref<Expr> concretizedExpr = cs.concretization().evaluate(query.expr);
-  return Query(cs.getConcretizedVersion(), concretizedExpr);
+  return Query(cs.getConcretizedVersion(), concretizedExpr, query.id);
 }
 
 void ConcretizingSolver::reverseConcretization(
@@ -265,9 +266,9 @@ bool ConcretizingSolver::relaxSymcreteConstraints(const Query &query,
 
       for (const ref<Symcrete> &symcrete : currentlyBrokenSymcretes) {
         std::vector<ref<const IndependentConstraintSet>> factors;
-        Query(query.constraints,
-              AndExpr::create(query.expr,
-                              Expr::createIsZero(symcrete->symcretized)))
+        query
+            .withExpr(AndExpr::create(
+                query.expr, Expr::createIsZero(symcrete->symcretized)))
             .getAllDependentConstraintsSets(factors);
         for (ref<const IndependentConstraintSet> ics : factors) {
           for (ref<Symcrete> symcrete : ics->symcretes) {
@@ -322,7 +323,8 @@ bool ConcretizingSolver::relaxSymcreteConstraints(const Query &query,
                 UgtExpr::create(
                     symbolicSizesSum,
                     ConstantExpr::create(SymbolicAllocationThreshold,
-                                         symbolicSizesSum->getWidth()))),
+                                         symbolicSizesSum->getWidth())),
+                query.id),
           response)) {
     return false;
   }
@@ -331,14 +333,15 @@ bool ConcretizingSolver::relaxSymcreteConstraints(const Query &query,
     ref<ConstantExpr> minimalValueOfSum;
     /* Receive model with a smallest sum as possible. */
     if (!solver->impl->computeMinimalUnsignedValue(
-            Query(queryConstraints, symbolicSizesSum), minimalValueOfSum)) {
+            Query(queryConstraints, symbolicSizesSum, query.id),
+            minimalValueOfSum)) {
       return false;
     }
 
     bool hasSolution = false;
     if (!solver->impl->computeInitialValues(
             Query(queryConstraints,
-                  EqExpr::create(symbolicSizesSum, minimalValueOfSum))
+                  EqExpr::create(symbolicSizesSum, minimalValueOfSum), query.id)
                 .negateExpr(),
             objects, brokenSymcretizedValues, hasSolution)) {
       return false;
@@ -630,6 +633,10 @@ SolverImpl::SolverRunStatus ConcretizingSolver::getOperationStatusCode() {
 
 void ConcretizingSolver::setCoreSolverTimeout(time::Span timeout) {
   solver->setCoreSolverTimeout(timeout);
+}
+
+void ConcretizingSolver::notifyStateTermination(std::uint32_t id) {
+  solver->impl->notifyStateTermination(id);
 }
 
 std::unique_ptr<Solver>

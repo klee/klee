@@ -43,6 +43,7 @@ public:
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query &);
   void setCoreSolverTimeout(time::Span timeout);
+  void notifyStateTermination(std::uint32_t id);
 };
 
 bool ValidatingSolver::computeTruth(const Query &query, bool &isValid) {
@@ -127,7 +128,8 @@ bool ValidatingSolver::computeInitialValues(
     for (auto const &constraint : query.constraints.cs())
       constraints = AndExpr::create(constraints, constraint);
 
-    if (!oracle->impl->computeTruth(Query(bindings, constraints), answer))
+    if (!oracle->impl->computeTruth(Query(bindings, constraints, query.id),
+                                    answer))
       return false;
     if (!answer)
       assert(0 && "invalid solver result (computeInitialValues)");
@@ -183,7 +185,8 @@ bool ValidatingSolver::check(const Query &query, ref<SolverResponse> &result) {
     for (auto const &constraint : query.constraints.cs())
       constraints = AndExpr::create(constraints, constraint);
 
-    if (!oracle->impl->computeTruth(Query(bindings, constraints), banswer))
+    if (!oracle->impl->computeTruth(Query(bindings, constraints, query.id),
+                                    banswer))
       return false;
     if (!banswer)
       assert(0 && "invalid solver result (computeInitialValues)");
@@ -226,6 +229,11 @@ char *ValidatingSolver::getConstraintLog(const Query &query) {
 
 void ValidatingSolver::setCoreSolverTimeout(time::Span timeout) {
   solver->impl->setCoreSolverTimeout(timeout);
+}
+
+void ValidatingSolver::notifyStateTermination(std::uint32_t id) {
+  solver->impl->notifyStateTermination(id);
+  oracle->impl->notifyStateTermination(id);
 }
 
 std::unique_ptr<Solver> createValidatingSolver(std::unique_ptr<Solver> s,

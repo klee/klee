@@ -112,6 +112,7 @@ public:
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query &query);
   void setCoreSolverTimeout(time::Span timeout);
+  void notifyStateTermination(std::uint32_t id);
 };
 
 ///
@@ -443,6 +444,10 @@ char *CexCachingSolver::getConstraintLog(const Query &query) {
 
 void CexCachingSolver::setCoreSolverTimeout(time::Span timeout) {
   solver->impl->setCoreSolverTimeout(timeout);
+}
+
+void CexCachingSolver::notifyStateTermination(std::uint32_t id) {
+  solver->impl->notifyStateTermination(id);
 }
 
 ///

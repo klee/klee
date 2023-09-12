@@ -30,14 +30,14 @@ using namespace klee;
 namespace klee {
 
 // Declared here rather than `Z3Builder.h` so they can be called in gdb.
-template <> void Z3NodeHandle<Z3_sort>::dump() {
+template <> void Z3NodeHandle<Z3_sort>::dump() const {
   llvm::errs() << "Z3SortHandle:\n"
                << ::Z3_sort_to_string(context, node) << "\n";
 }
 template <> unsigned Z3NodeHandle<Z3_sort>::hash() {
   return Z3_get_ast_hash(context, as_ast());
 }
-template <> void Z3NodeHandle<Z3_ast>::dump() {
+template <> void Z3NodeHandle<Z3_ast>::dump() const {
   llvm::errs() << "Z3ASTHandle:\n"
                << ::Z3_ast_to_string(context, as_ast()) << "\n";
 }

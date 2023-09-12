@@ -4507,6 +4507,7 @@ void Executor::terminateState(ExecutionState &state,
   interpreterHandler->incPathsExplored();
   state.pc = state.prevPC;
   targetCalculator->update(state);
+  solver->notifyStateTermination(state.id);
 
   removedStates.push_back(&state);
 }
@@ -5420,7 +5421,7 @@ MemoryObject *Executor::allocate(ExecutionState &state, ref<Expr> size,
       ZExtExpr::create(size, pointerWidthInBits)};
 
   std::vector<ref<const IndependentConstraintSet>> factors;
-  Query(state.constraints.cs(), ZExtExpr::create(size, pointerWidthInBits))
+  state.toQuery(ZExtExpr::create(size, pointerWidthInBits))
       .getAllDependentConstraintsSets(factors);
 
   /* Collect dependent size symcretes. */
@@ -6832,7 +6833,7 @@ void Executor::getConstraintLog(const ExecutionState &state, std::string &res,
 
   switch (logFormat) {
   case STP: {
-    Query query(state.constraints.cs(), ConstantExpr::alloc(0, Expr::Bool));
+    auto query = state.toQuery();
     char *log = solver->getConstraintLog(query);
     res = std::string(log);
     free(log);
@@ -6850,7 +6851,7 @@ void Executor::getConstraintLog(const ExecutionState &state, std::string &res,
     llvm::raw_string_ostream info(Str);
     ExprSMTLIBPrinter printer;
     printer.setOutput(info);
-    Query query(state.constraints.cs(), ConstantExpr::alloc(0, Expr::Bool));
+    auto query = state.toQuery();
     printer.setQuery(query);
     printer.generateOutput();
     res = info.str();
@@ -7004,7 +7005,7 @@ Assignment Executor::computeConcretization(const ConstraintSet &constraints,
                                            ref<Expr> condition,
                                            SolverQueryMetaData &queryMetaData) {
   Assignment concretization;
-  if (Query(constraints, condition).containsSymcretes()) {
+  if (Query(constraints, condition, queryMetaData.id).containsSymcretes()) {
     ref<SolverResponse> response;
     solver->setTimeout(coreSolverTimeout);
     bool success = solver->getResponse(

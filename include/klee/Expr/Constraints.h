@@ -37,9 +37,11 @@ class ConstraintSet {
 public:
   ConstraintSet(constraints_ty cs, symcretes_ty symcretes,
                 Assignment concretization);
-  ConstraintSet(ref<const IndependentConstraintSet> ics);
-  ConstraintSet(const std::vector<ref<const IndependentConstraintSet>> &ics);
-  ConstraintSet();
+  explicit ConstraintSet(ref<const IndependentConstraintSet> ics);
+  explicit ConstraintSet(
+      const std::vector<ref<const IndependentConstraintSet>> &ics);
+  explicit ConstraintSet(constraints_ty cs);
+  explicit ConstraintSet();
 
   void addConstraint(ref<Expr> e, const Assignment &delta);
   void addSymcrete(ref<Symcrete> s, const Assignment &concretization);

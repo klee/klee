@@ -104,6 +104,7 @@ public:
   void setCoreSolverTimeout(time::Span timeout) override {
     this->timeout = timeout;
   }
+  void notifyStateTermination(std::uint32_t id) override {}
 
   bool computeTruth(const Query &, bool &isValid) override;
   bool computeValue(const Query &, ref<Expr> &result) override;

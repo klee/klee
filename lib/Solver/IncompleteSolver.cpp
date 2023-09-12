@@ -119,13 +119,8 @@ bool StagedSolverImpl::computeInitialValues(
 }
 
 bool StagedSolverImpl::check(const Query &query, ref<SolverResponse> &result) {
-  ExprHashSet expressions;
-  expressions.insert(query.constraints.cs().begin(),
-                     query.constraints.cs().end());
-  expressions.insert(query.expr);
-
   std::vector<const Array *> objects;
-  findSymbolicObjects(expressions.begin(), expressions.end(), objects);
+  findSymbolicObjects(query, objects);
   std::vector<SparseStorage<unsigned char>> values;
 
   bool hasSolution;
@@ -156,4 +151,8 @@ char *StagedSolverImpl::getConstraintLog(const Query &query) {
 
 void StagedSolverImpl::setCoreSolverTimeout(time::Span timeout) {
   secondary->impl->setCoreSolverTimeout(timeout);
+}
+
+void StagedSolverImpl::notifyStateTermination(std::uint32_t id) {
+  secondary->impl->notifyStateTermination(id);
 }

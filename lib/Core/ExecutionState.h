@@ -436,12 +436,18 @@ public:
   void addConstraint(ref<Expr> e, const Assignment &c);
   void addCexPreference(const ref<Expr> &cond);
 
+  Query toQuery(ref<Expr> head) const;
+  Query toQuery() const;
+
   void dumpStack(llvm::raw_ostream &out) const;
 
   bool visited(KBlock *block) const;
 
   std::uint32_t getID() const { return id; };
-  void setID() { id = nextID++; };
+  void setID() {
+    id = nextID++;
+    queryMetaData.id = id;
+  };
   llvm::BasicBlock *getInitPCBlock() const;
   llvm::BasicBlock *getPrevPCBlock() const;
   llvm::BasicBlock *getPCBlock() const;

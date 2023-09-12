@@ -224,12 +224,9 @@ static bool EvaluateInputAST(const char *Filename, const llvm::MemoryBuffer *MB,
       assert("FIXME: Support counterexample query commands!");
       if (QC->Values.empty() && QC->Objects.empty()) {
         bool result;
-        constraints_ty constraints;
-        for (auto i : QC->Constraints) {
-          constraints.insert(i);
-        }
-        if (S->mustBeTrue(Query(ConstraintSet(constraints, {}, {}), QC->Query),
-                          result)) {
+        constraints_ty constraints(QC->Constraints.begin(),
+                                   QC->Constraints.end());
+        if (S->mustBeTrue(Query(constraints, QC->Query), result)) {
           llvm::outs() << (result ? "VALID" : "INVALID");
         } else {
           llvm::outs() << "FAIL (reason: "
@@ -245,13 +242,9 @@ static bool EvaluateInputAST(const char *Filename, const llvm::MemoryBuffer *MB,
         assert(QC->Query->isFalse() &&
                "FIXME: Support counterexamples with non-trivial query!");
         ref<ConstantExpr> result;
-        constraints_ty constraints;
-        for (auto i : QC->Constraints) {
-          constraints.insert(i);
-        }
-        if (S->getValue(
-                Query(ConstraintSet(constraints, {}, {}), QC->Values[0]),
-                result)) {
+        constraints_ty constraints(QC->Constraints.begin(),
+                                   QC->Constraints.end());
+        if (S->getValue(Query(constraints, QC->Values[0]), result)) {
           llvm::outs() << "INVALID\n";
           llvm::outs() << "\tExpr 0:\t" << result;
         } else {
@@ -263,14 +256,11 @@ static bool EvaluateInputAST(const char *Filename, const llvm::MemoryBuffer *MB,
       } else {
         std::vector<SparseStorage<unsigned char>> result;
 
-        constraints_ty constraints;
-        for (auto i : QC->Constraints) {
-          constraints.insert(i);
-        }
+        constraints_ty constraints(QC->Constraints.begin(),
+                                   QC->Constraints.end());
 
-        if (S->getInitialValues(
-                Query(ConstraintSet(constraints, {}, {}), QC->Query),
-                QC->Objects, result)) {
+        if (S->getInitialValues(Query(constraints, QC->Query), QC->Objects,
+                                result)) {
           llvm::outs() << "INVALID\n";
           Assignment solutionAssugnment(QC->Objects, result);
           for (unsigned i = 0, e = result.size(); i != e; ++i) {
@@ -377,13 +367,9 @@ static bool printInputAsSMTLIBv2(const char *Filename,
        * constraint in the constraint set is set to NULL and
        * will later cause a NULL pointer dereference.
        */
-      constraints_ty constraints;
-      for (auto i : QC->Constraints) {
-        constraints.insert(i);
-      }
-
-      ConstraintSet constraintM(constraints, {}, {});
-      Query query(constraintM, QC->Query);
+      constraints_ty constraints(QC->Constraints.begin(),
+                                 QC->Constraints.end());
+      Query query(constraints, QC->Query);
       printer.setQuery(query);
 
       if (!QC->Objects.empty())

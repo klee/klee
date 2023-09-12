@@ -30,6 +30,7 @@ public:
   bool computeValidityCore(const Query &query, ValidityCore &validityCore,
                            bool &isValid);
   SolverRunStatus getOperationStatusCode();
+  void notifyStateTermination(std::uint32_t id);
 };
 
 DummySolverImpl::DummySolverImpl() {}
@@ -78,6 +79,8 @@ bool DummySolverImpl::computeValidityCore(const Query &query,
 SolverImpl::SolverRunStatus DummySolverImpl::getOperationStatusCode() {
   return SOLVER_RUN_STATUS_FAILURE;
 }
+
+void DummySolverImpl::notifyStateTermination(std::uint32_t id) {}
 
 std::unique_ptr<Solver> createDummySolver() {
   return std::make_unique<Solver>(std::make_unique<DummySolverImpl>());

@@ -28,6 +28,7 @@ DISABLE_WARNING_POP
 namespace klee {
 
 std::unique_ptr<Solver> createCoreSolver(CoreSolverType cst) {
+  bool isTreeSolver = false;
   switch (cst) {
   case STP_SOLVER:
 #ifdef ENABLE_STP
@@ -54,16 +55,22 @@ std::unique_ptr<Solver> createCoreSolver(CoreSolverType cst) {
 #endif
   case DUMMY_SOLVER:
     return createDummySolver();
+  case Z3_TREE_SOLVER:
+    isTreeSolver = true;
   case Z3_SOLVER:
 #ifdef ENABLE_Z3
     klee_message("Using Z3 solver backend");
+    Z3BuilderType type;
 #ifdef ENABLE_FP
     klee_message("Using Z3 bitvector builder");
-    return std::make_unique<Z3Solver>(KLEE_BITVECTOR);
+    type = KLEE_BITVECTOR;
 #else
     klee_message("Using Z3 core builder");
-    return std::make_unique<Z3Solver>(KLEE_CORE);
+    type = KLEE_CORE;
 #endif
+    if (isTreeSolver)
+      return std::make_unique<Z3TreeSolver>(type, MaxSolversApproxTreeInc);
+    return std::make_unique<Z3Solver>(type);
 #else
     klee_message("Not compiled with Z3 support");
     return NULL;
