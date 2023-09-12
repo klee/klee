@@ -189,6 +189,13 @@ public:
   }
 };
 
+struct KBlockCompare {
+  bool operator()(const KBlock *a, const KBlock *b) const {
+    return a->parent->id < b->parent->id ||
+           (a->parent->id == b->parent->id && a->id < b->id);
+  }
+};
+
 class KConstant {
 public:
   /// Actual LLVM constant this represents.

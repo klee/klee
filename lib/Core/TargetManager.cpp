@@ -41,7 +41,11 @@ void TargetManager::updateDone(ExecutionState &state, ref<Target> target) {
   setHistory(state, stateTargetForest.getHistory());
   if (guidance == Interpreter::GuidanceKind::CoverageGuidance ||
       target->shouldFailOnThisTarget()) {
-    reachedTargets.insert(target);
+    if (target->shouldFailOnThisTarget() ||
+        !isa<KCallBlock>(target->getBlock())) {
+      reachedTargets.insert(target);
+    }
+
     for (auto es : states) {
       if (isTargeted(*es)) {
         auto &esTargetForest = targetForest(*es);
@@ -112,7 +116,7 @@ void TargetManager::updateReached(ExecutionState &state) {
 
     if (state.getPrevPCBlock()->getTerminator()->getNumSuccessors() == 0) {
       target = ReachBlockTarget::create(state.prevPC->parent, true);
-    } else {
+    } else if (!isa<KCallBlock>(state.prevPC->parent)) {
       unsigned index = 0;
       for (auto succ : successors(state.getPrevPCBlock())) {
         if (succ == state.getPCBlock()) {

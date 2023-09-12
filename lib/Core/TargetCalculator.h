@@ -42,7 +42,7 @@ typedef std::pair<llvm::BasicBlock *, llvm::BasicBlock *> Transition;
 typedef std::pair<llvm::BasicBlock *, unsigned> Branch;
 
 class TargetCalculator {
-  typedef std::unordered_set<llvm::BasicBlock *> VisitedBlocks;
+  typedef std::unordered_set<KBlock *> VisitedBlocks;
   typedef std::unordered_set<Transition, TransitionHash> VisitedTransitions;
   typedef std::unordered_set<Branch, BranchHash> VisitedBranches;
 
@@ -56,10 +56,11 @@ class TargetCalculator {
       std::unordered_map<llvm::BasicBlock *, VisitedTransitions>>
       TransitionsHistory;
 
-  typedef std::unordered_map<
-      llvm::Function *,
-      std::unordered_map<llvm::BasicBlock *, std::set<unsigned>>>
+  typedef std::unordered_map<KFunction *,
+                             std::map<KBlock *, std::set<unsigned>>>
       CoveredBranches;
+
+  typedef std::unordered_set<KFunction *> CoveredFunctionsBranches;
 
   typedef std::unordered_map<llvm::Function *, VisitedBlocks> CoveredBlocks;
 
@@ -76,6 +77,8 @@ private:
   BlocksHistory blocksHistory;
   TransitionsHistory transitionsHistory;
   CoveredBranches coveredBranches;
+  CoveredFunctionsBranches coveredFunctionsInBranches;
+  CoveredFunctionsBranches fullyCoveredFunctions;
   CoveredBlocks coveredBlocks;
 
   bool differenceIsEmpty(

@@ -473,7 +473,7 @@ void ExecutionState::increaseLevel() {
   if (prevPC->inst->isTerminator() && kmodule->inMainModule(*kf->function)) {
     auto srcLevel = stack.infoStack().back().multilevel[srcbb].second;
     stack.infoStack().back().multilevel.replace({srcbb, srcLevel + 1});
-    level.insert(srcbb);
+    level.insert(prevPC->parent);
   }
   if (srcbb != dstbb) {
     transitionLevel.insert(std::make_pair(srcbb, dstbb));
@@ -485,7 +485,7 @@ bool ExecutionState::isGEPExpr(ref<Expr> expr) const {
 }
 
 bool ExecutionState::visited(KBlock *block) const {
-  return level.count(block->basicBlock) != 0;
+  return level.count(block) != 0;
 }
 
 bool ExecutionState::reachedTarget(ref<ReachBlockTarget> target) const {

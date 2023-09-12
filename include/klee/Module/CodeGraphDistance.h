@@ -30,6 +30,9 @@ class CodeGraphDistance {
       std::unordered_map<KFunction *,
                          std::vector<std::pair<KFunction *, unsigned>>>;
 
+  using functionBranchesSet =
+      std::unordered_map<KFunction *, std::map<KBlock *, std::set<unsigned>>>;
+
 private:
   blockDistanceMap blockDistance;
   blockDistanceMap blockBackwardDistance;
@@ -41,12 +44,16 @@ private:
   functionDistanceList functionSortedDistance;
   functionDistanceList functionSortedBackwardDistance;
 
+  functionBranchesSet functionBranches;
+
 private:
   void calculateDistance(KBlock *bb);
   void calculateBackwardDistance(KBlock *bb);
 
   void calculateDistance(KFunction *kf);
   void calculateBackwardDistance(KFunction *kf);
+
+  void calculateFunctionBranches(KFunction *kf);
 
 public:
   const std::unordered_map<KBlock *, unsigned int> &getDistance(KBlock *kb);
@@ -68,6 +75,8 @@ public:
 
   void getNearestPredicateSatisfying(KBlock *from, KBlockPredicate predicate,
                                      std::set<KBlock *> &result);
+
+  const std::map<KBlock *, std::set<unsigned>> &getFunctionBranches(KFunction *kf);
 };
 
 } // namespace klee

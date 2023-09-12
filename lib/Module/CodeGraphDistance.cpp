@@ -120,6 +120,18 @@ void CodeGraphDistance::calculateBackwardDistance(KFunction *kf) {
   }
 }
 
+void CodeGraphDistance::calculateFunctionBranches(KFunction *kf) {
+  std::map<KBlock *, std::set<unsigned>> &fbranches = functionBranches[kf];
+  for (auto &kb : kf->blocks) {
+    fbranches[kb.get()];
+    for (unsigned branch = 0;
+         branch < kb->basicBlock->getTerminator()->getNumSuccessors();
+         ++branch) {
+      fbranches[kb.get()].insert(branch);
+    }
+  }
+}
+
 const std::unordered_map<KBlock *, unsigned> &
 CodeGraphDistance::getDistance(KBlock *kb) {
   if (blockDistance.count(kb) == 0)
@@ -199,4 +211,11 @@ void CodeGraphDistance::getNearestPredicateSatisfying(
     }
     nodes.pop_front();
   }
+}
+
+const std::map<KBlock *, std::set<unsigned>> &
+CodeGraphDistance::getFunctionBranches(KFunction *kf) {
+  if (functionBranches.count(kf) == 0)
+    calculateFunctionBranches(kf);
+  return functionBranches.at(kf);
 }

@@ -39,28 +39,66 @@ llvm::cl::opt<TargetCalculateBy> TargetCalculatorMode(
 
 void TargetCalculator::update(const ExecutionState &state) {
   Function *initialFunction = state.getInitPCBlock()->getParent();
+
+  if (state.prevPC == state.prevPC->parent->getLastInstruction()) {
+    coveredBlocks[state.getPrevPCBlock()->getParent()].insert(
+        state.prevPC->parent);
+  }
+  if (state.prevPC == state.prevPC->parent->getLastInstruction()) {
+    unsigned index = 0;
+    coveredBranches[state.prevPC->parent->parent][state.prevPC->parent];
+    for (auto succ : successors(state.getPrevPCBlock())) {
+      if (succ == state.getPCBlock()) {
+        coveredBranches[state.prevPC->parent->parent][state.prevPC->parent]
+            .insert(index);
+        break;
+      }
+      ++index;
+    }
+    if (!coveredFunctionsInBranches.count(state.prevPC->parent->parent) &&
+        codeGraphDistance.getFunctionBranches(state.prevPC->parent->parent) ==
+            coveredBranches[state.prevPC->parent->parent]) {
+      coveredFunctionsInBranches.insert(state.prevPC->parent->parent);
+    }
+    if (!fullyCoveredFunctions.count(state.prevPC->parent->parent) &&
+        coveredFunctionsInBranches.count(state.prevPC->parent->parent)) {
+      bool covered = true;
+      std::set<KFunction *> fnsTaken;
+      std::deque<KFunction *> fns;
+      fns.push_back(state.prevPC->parent->parent);
+
+      while (!fns.empty() && covered) {
+        KFunction *currKF = fns.front();
+        fnsTaken.insert(currKF);
+        for (auto &kcallBlock : currKF->kCallBlocks) {
+          if (kcallBlock->calledFunctions.size() == 1) {
+            auto calledFunction = *kcallBlock->calledFunctions.begin();
+            KFunction *calledKFunction = state.prevPC->parent->parent->parent
+                                             ->functionMap[calledFunction];
+            if (calledKFunction->numInstructions != 0 &&
+                coveredFunctionsInBranches.count(calledKFunction) == 0) {
+              covered = false;
+              break;
+            }
+            if (!fnsTaken.count(calledKFunction) &&
+                fullyCoveredFunctions.count(calledKFunction) == 0) {
+              fns.push_back(calledKFunction);
+            }
+          }
+        }
+        fns.pop_front();
+      }
+
+      if (covered) {
+        fullyCoveredFunctions.insert(state.prevPC->parent->parent);
+      }
+    }
+  }
+
   switch (TargetCalculatorMode) {
   case TargetCalculateBy::Default:
     blocksHistory[initialFunction][state.getPrevPCBlock()].insert(
-        state.getInitPCBlock());
-    if (state.prevPC == state.prevPC->parent->getLastInstruction()) {
-      coveredBlocks[state.getPrevPCBlock()->getParent()].insert(
-          state.getPrevPCBlock());
-    }
-    if (state.prevPC == state.prevPC->parent->getLastInstruction()) {
-      unsigned index = 0;
-      coveredBranches[state.getPrevPCBlock()->getParent()]
-                     [state.getPrevPCBlock()];
-      for (auto succ : successors(state.getPrevPCBlock())) {
-        if (succ == state.getPCBlock()) {
-          coveredBranches[state.getPrevPCBlock()->getParent()]
-                         [state.getPrevPCBlock()]
-                             .insert(index);
-          break;
-        }
-        ++index;
-      }
-    }
+        state.initPC->parent);
     break;
 
   case TargetCalculateBy::Blocks:
@@ -81,10 +119,10 @@ bool TargetCalculator::differenceIsEmpty(
     const ExecutionState &state,
     const std::unordered_map<llvm::BasicBlock *, VisitedBlocks> &history,
     KBlock *target) {
-  std::vector<BasicBlock *> diff;
-  std::set<BasicBlock *> left(state.level.begin(), state.level.end());
-  std::set<BasicBlock *> right(history.at(target->basicBlock).begin(),
-                               history.at(target->basicBlock).end());
+  std::vector<KBlock *> diff;
+  std::set<KBlock *> left(state.level.begin(), state.level.end());
+  std::set<KBlock *> right(history.at(target->basicBlock).begin(),
+                           history.at(target->basicBlock).end());
   std::set_difference(left.begin(), left.end(), right.begin(), right.end(),
                       std::inserter(diff, diff.begin()));
   return diff.empty();
@@ -112,27 +150,35 @@ bool TargetCalculator::uncoveredBlockPredicate(ExecutionState *state,
   std::unordered_map<llvm::BasicBlock *, VisitedTransitions>
       &transitionHistory = transitionsHistory[initialFunction];
   bool result = false;
+  if (coveredBranches[kblock->parent].count(kblock) == 0) {
+    result = true;
+  } else {
+    auto &cb = coveredBranches[kblock->parent][kblock];
+    if (isa<KCallBlock>(kblock) &&
+        cast<KCallBlock>(kblock)->calledFunctions.size() == 1) {
+      auto calledFunction = *cast<KCallBlock>(kblock)->calledFunctions.begin();
+      KFunction *calledKFunction =
+          kblock->parent->parent->functionMap[calledFunction];
+      result = fullyCoveredFunctions.count(calledKFunction) == 0 &&
+               calledKFunction->numInstructions;
+    }
+    result |=
+        kblock->basicBlock->getTerminator()->getNumSuccessors() > cb.size();
+  }
+
   switch (TargetCalculatorMode) {
   case TargetCalculateBy::Default: {
-    if (coveredBranches[kblock->parent->function].count(kblock->basicBlock) ==
-        0) {
-      result = true;
-    } else {
-      auto &cb = coveredBranches[kblock->parent->function][kblock->basicBlock];
-      result =
-          kblock->basicBlock->getTerminator()->getNumSuccessors() > cb.size();
-    }
     break;
   }
   case TargetCalculateBy::Blocks: {
     if (history[kblock->basicBlock].size() != 0) {
-      result = !differenceIsEmpty(*state, history, kblock);
+      result |= !differenceIsEmpty(*state, history, kblock);
     }
     break;
   }
   case TargetCalculateBy::Transitions: {
     if (history[kblock->basicBlock].size() != 0) {
-      result = !differenceIsEmpty(*state, transitionHistory, kblock);
+      result |= !differenceIsEmpty(*state, transitionHistory, kblock);
     }
     break;
   }
@@ -146,6 +192,10 @@ TargetHashSet TargetCalculator::calculate(ExecutionState &state) {
   const KModule &module = *state.pc->parent->parent->parent;
   KFunction *kf = module.functionMap.at(bb->getParent());
   KBlock *kb = kf->blockMap[bb];
+  kb = !isa<KCallBlock>(kb) || (kb->getLastInstruction() != state.pc)
+           ? kb
+           : kf->blockMap[state.pc->parent->basicBlock->getTerminator()
+                              ->getSuccessor(0)];
   for (auto sfi = state.stack.callStack().rbegin(),
             sfe = state.stack.callStack().rend();
        sfi != sfe; sfi++) {
@@ -160,17 +210,30 @@ TargetHashSet TargetCalculator::calculate(ExecutionState &state) {
     if (!blocks.empty()) {
       TargetHashSet targets;
       for (auto block : blocks) {
-        if (coveredBranches[block->parent->function].count(block->basicBlock) ==
-            0) {
-          targets.insert(ReachBlockTarget::create(block, true));
+        if (coveredBranches[block->parent].count(block) == 0) {
+          targets.insert(ReachBlockTarget::create(block, false));
         } else {
-          auto &cb =
-              coveredBranches[block->parent->function][block->basicBlock];
-          for (unsigned index = 0;
-               index < block->basicBlock->getTerminator()->getNumSuccessors();
-               ++index) {
-            if (!cb.count(index))
-              targets.insert(CoverBranchTarget::create(block, index));
+          auto &cb = coveredBranches[block->parent][block];
+          bool notCoveredFunction = false;
+          if (isa<KCallBlock>(block) &&
+              cast<KCallBlock>(block)->calledFunctions.size() == 1) {
+            auto calledFunction =
+                *cast<KCallBlock>(block)->calledFunctions.begin();
+            KFunction *calledKFunction =
+                block->parent->parent->functionMap[calledFunction];
+            notCoveredFunction =
+                fullyCoveredFunctions.count(calledKFunction) == 0 &&
+                calledKFunction->numInstructions;
+          }
+          if (notCoveredFunction) {
+            targets.insert(ReachBlockTarget::create(block, true));
+          } else {
+            for (unsigned index = 0;
+                 index < block->basicBlock->getTerminator()->getNumSuccessors();
+                 ++index) {
+              if (!cb.count(index))
+                targets.insert(CoverBranchTarget::create(block, index));
+            }
           }
         }
       }
@@ -179,6 +242,11 @@ TargetHashSet TargetCalculator::calculate(ExecutionState &state) {
 
     if (sfi->caller) {
       kb = sfi->caller->parent;
+
+      kb = !isa<KCallBlock>(kb) || (kb->getLastInstruction() != sfi->caller)
+               ? kb
+               : kf->blockMap[sfi->caller->parent->basicBlock->getTerminator()
+                                  ->getSuccessor(0)];
     }
   }
 
