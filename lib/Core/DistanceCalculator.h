@@ -17,7 +17,7 @@ class BasicBlock;
 } // namespace llvm
 
 namespace klee {
-class CodeGraphDistance;
+class CodeGraphInfo;
 class Target;
 
 enum WeightResult : std::uint8_t {
@@ -45,8 +45,8 @@ struct DistanceResult {
 
 class DistanceCalculator {
 public:
-  explicit DistanceCalculator(CodeGraphDistance &codeGraphDistance_)
-      : codeGraphDistance(codeGraphDistance_) {}
+  explicit DistanceCalculator(CodeGraphInfo &codeGraphInfo_)
+      : codeGraphInfo(codeGraphInfo_) {}
 
   DistanceResult getDistance(const ExecutionState &es, KBlock *target);
 
@@ -97,7 +97,7 @@ private:
 
   using StatesSet = std::unordered_set<ExecutionState *>;
 
-  CodeGraphDistance &codeGraphDistance;
+  CodeGraphInfo &codeGraphInfo;
   TargetToSpeculativeStateToDistanceResultMap distanceResultCache;
   StatesSet localStates;
 

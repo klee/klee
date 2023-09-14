@@ -1,4 +1,4 @@
-//===-- CodeGraphDistance.h -------------------------------------*- C++ -*-===//
+//===-- CodeGraphInfo.h -----------------------------------------*- C++ -*-===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -16,7 +16,7 @@
 
 namespace klee {
 
-class CodeGraphDistance {
+class CodeGraphInfo {
 
   using blockDistanceMap =
       std::unordered_map<KBlock *, std::unordered_map<KBlock *, unsigned>>;
@@ -76,7 +76,8 @@ public:
   void getNearestPredicateSatisfying(KBlock *from, KBlockPredicate predicate,
                                      std::set<KBlock *> &result);
 
-  const std::map<KBlock *, std::set<unsigned>> &getFunctionBranches(KFunction *kf);
+  const std::map<KBlock *, std::set<unsigned>> &
+  getFunctionBranches(KFunction *kf);
 };
 
 } // namespace klee

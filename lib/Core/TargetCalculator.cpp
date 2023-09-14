@@ -11,7 +11,7 @@
 
 #include "ExecutionState.h"
 
-#include "klee/Module/CodeGraphDistance.h"
+#include "klee/Module/CodeGraphInfo.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/Target.h"
 #include "klee/Module/TargetHash.h"
@@ -44,21 +44,24 @@ void TargetCalculator::update(const ExecutionState &state) {
     coveredBlocks[state.getPrevPCBlock()->getParent()].insert(
         state.prevPC->parent);
   }
-  if (state.prevPC == state.prevPC->parent->getLastInstruction()) {
-    unsigned index = 0;
-    coveredBranches[state.prevPC->parent->parent][state.prevPC->parent];
-    for (auto succ : successors(state.getPrevPCBlock())) {
-      if (succ == state.getPCBlock()) {
-        coveredBranches[state.prevPC->parent->parent][state.prevPC->parent]
-            .insert(index);
-        break;
+  if (state.prevPC == state.prevPC->parent->getLastInstruction() &&
+      !fullyCoveredFunctions.count(state.prevPC->parent->parent)) {
+
+    if (!coveredFunctionsInBranches.count(state.prevPC->parent->parent)) {
+      unsigned index = 0;
+      coveredBranches[state.prevPC->parent->parent][state.prevPC->parent];
+      for (auto succ : successors(state.getPrevPCBlock())) {
+        if (succ == state.getPCBlock()) {
+          coveredBranches[state.prevPC->parent->parent][state.prevPC->parent]
+              .insert(index);
+          break;
+        }
+        ++index;
       }
-      ++index;
-    }
-    if (!coveredFunctionsInBranches.count(state.prevPC->parent->parent) &&
-        codeGraphDistance.getFunctionBranches(state.prevPC->parent->parent) ==
-            coveredBranches[state.prevPC->parent->parent]) {
-      coveredFunctionsInBranches.insert(state.prevPC->parent->parent);
+      if (codeGraphInfo.getFunctionBranches(state.prevPC->parent->parent) ==
+          coveredBranches[state.prevPC->parent->parent]) {
+        coveredFunctionsInBranches.insert(state.prevPC->parent->parent);
+      }
     }
     if (!fullyCoveredFunctions.count(state.prevPC->parent->parent) &&
         coveredFunctionsInBranches.count(state.prevPC->parent->parent)) {
@@ -205,7 +208,7 @@ TargetHashSet TargetCalculator::calculate(ExecutionState &state) {
     using std::placeholders::_1;
     KBlockPredicate func =
         std::bind(&TargetCalculator::uncoveredBlockPredicate, this, &state, _1);
-    codeGraphDistance.getNearestPredicateSatisfying(kb, func, blocks);
+    codeGraphInfo.getNearestPredicateSatisfying(kb, func, blocks);
 
     if (!blocks.empty()) {
       TargetHashSet targets;
@@ -237,6 +240,7 @@ TargetHashSet TargetCalculator::calculate(ExecutionState &state) {
           }
         }
       }
+      assert(!targets.empty());
       return targets;
     }
 

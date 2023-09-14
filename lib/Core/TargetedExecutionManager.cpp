@@ -14,7 +14,7 @@
 
 #include "ExecutionState.h"
 #include "klee/Core/TerminationTypes.h"
-#include "klee/Module/CodeGraphDistance.h"
+#include "klee/Module/CodeGraphInfo.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Support/ErrorHandling.h"
 
@@ -375,18 +375,18 @@ bool TargetedExecutionManager::canReach(const ref<Location> &from,
           return true;
         }
 
-        const auto &blockDist = codeGraphDistance.getDistance(fromBlock);
+        const auto &blockDist = codeGraphInfo.getDistance(fromBlock);
         if (blockDist.count(toBlock) != 0) {
           return true;
         }
       } else {
-        const auto &funcDist = codeGraphDistance.getDistance(fromKf);
+        const auto &funcDist = codeGraphInfo.getDistance(fromKf);
         if (funcDist.count(toKf) != 0) {
           return true;
         }
 
         const auto &backwardFuncDist =
-            codeGraphDistance.getBackwardDistance(fromKf);
+            codeGraphInfo.getBackwardDistance(fromKf);
         if (backwardFuncDist.count(toKf) != 0) {
           return true;
         }
@@ -449,7 +449,7 @@ KFunction *TargetedExecutionManager::tryResolveEntryFunction(
           if (i == j) {
             continue;
           }
-          const auto &funcDist = codeGraphDistance.getDistance(resKf);
+          const auto &funcDist = codeGraphInfo.getDistance(resKf);
 
           std::vector<KFunction *> currKFs;
           for (auto block : locToBlocks[result.locations[j]]) {
@@ -462,7 +462,7 @@ KFunction *TargetedExecutionManager::tryResolveEntryFunction(
           for (size_t m = 0; m < currKFs.size() && !curKf; ++m) {
             curKf = currKFs.at(m);
             if (funcDist.count(curKf) == 0) {
-              const auto &curFuncDist = codeGraphDistance.getDistance(curKf);
+              const auto &curFuncDist = codeGraphInfo.getDistance(curKf);
               if (curFuncDist.count(resKf) == 0) {
                 curKf = nullptr;
               } else {

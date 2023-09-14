@@ -50,7 +50,7 @@
 #include "klee/Expr/IndependentSet.h"
 #include "klee/Expr/Symcrete.h"
 #include "klee/Module/Cell.h"
-#include "klee/Module/CodeGraphDistance.h"
+#include "klee/Module/CodeGraphInfo.h"
 #include "klee/Module/InstructionInfoTable.h"
 #include "klee/Module/KCallable.h"
 #include "klee/Module/KInstruction.h"
@@ -455,13 +455,13 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       externalDispatcher(new ExternalDispatcher(ctx)), statsTracker(0),
       pathWriter(0), symPathWriter(0),
       specialFunctionHandler(0), timers{time::Span(TimerInterval)},
-      guidanceKind(opts.Guidance), codeGraphDistance(new CodeGraphDistance()),
-      distanceCalculator(new DistanceCalculator(*codeGraphDistance)),
-      targetCalculator(new TargetCalculator(*codeGraphDistance)),
+      guidanceKind(opts.Guidance), codeGraphInfo(new CodeGraphInfo()),
+      distanceCalculator(new DistanceCalculator(*codeGraphInfo)),
+      targetCalculator(new TargetCalculator(*codeGraphInfo)),
       targetManager(new TargetManager(guidanceKind, *distanceCalculator,
                                       *targetCalculator)),
       targetedExecutionManager(
-          new TargetedExecutionManager(*codeGraphDistance, *targetManager)),
+          new TargetedExecutionManager(*codeGraphInfo, *targetManager)),
       replayKTest(0), replayPath(0), usingSeeds(0), atMemoryLimit(false),
       inhibitForking(false), haltExecution(HaltExecution::NotHalt),
       ivcEnabled(false), debugLogBuffer(debugBufferString) {

@@ -9,7 +9,7 @@
 
 #include "DistanceCalculator.h"
 #include "ExecutionState.h"
-#include "klee/Module/CodeGraphDistance.h"
+#include "klee/Module/CodeGraphInfo.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/Target.h"
 
@@ -67,7 +67,7 @@ DistanceResult DistanceCalculator::getDistance(KBlock *kb, TargetKind kind,
 DistanceResult DistanceCalculator::computeDistance(KBlock *kb, TargetKind kind,
                                                    KBlock *target) const {
   const auto &distanceToTargetFunction =
-      codeGraphDistance.getBackwardDistance(target->parent);
+      codeGraphInfo.getBackwardDistance(target->parent);
   weight_type weight = 0;
   WeightResult res = Miss;
   bool isInsideFunction = true;
@@ -99,7 +99,7 @@ DistanceResult DistanceCalculator::getDistance(
 
   KBlock *kb = pc->parent;
   const auto &distanceToTargetFunction =
-      codeGraphDistance.getBackwardDistance(target->parent);
+      codeGraphInfo.getBackwardDistance(target->parent);
   unsigned int minCallWeight = UINT_MAX, minSfNum = UINT_MAX, sfNum = 0;
   auto sfi = frames.rbegin(), sfe = frames.rend();
   bool strictlyAfterKB =
@@ -145,7 +145,7 @@ bool DistanceCalculator::distanceInCallGraph(
     KBlock *target, bool strictlyAfterKB) const {
   distance = UINT_MAX;
   const std::unordered_map<KBlock *, unsigned> &dist =
-      codeGraphDistance.getDistance(origKB);
+      codeGraphInfo.getDistance(origKB);
   KBlock *targetBB = target;
   KFunction *targetF = targetBB->parent;
 
@@ -176,7 +176,7 @@ bool DistanceCalculator::distanceInCallGraph(
     KBlock *target) const {
   distance = UINT_MAX;
   const std::unordered_map<KBlock *, unsigned> &dist =
-      codeGraphDistance.getDistance(kb);
+      codeGraphInfo.getDistance(kb);
 
   for (auto &kCallBlock : kf->kCallBlocks) {
     if (dist.count(kCallBlock) == 0)
@@ -199,7 +199,7 @@ DistanceCalculator::tryGetLocalWeight(KBlock *kb, weight_type &weight,
   KFunction *currentKF = kb->parent;
   KBlock *currentKB = kb;
   const std::unordered_map<KBlock *, unsigned> &dist =
-      codeGraphDistance.getDistance(currentKB);
+      codeGraphInfo.getDistance(currentKB);
   weight = UINT_MAX;
   for (auto &end : localTargets) {
     if (dist.count(end) > 0) {

@@ -72,7 +72,7 @@ namespace klee {
 class AddressManager;
 class Array;
 struct Cell;
-class CodeGraphDistance;
+class CodeGraphInfo;
 class DistanceCalculator;
 class ExecutionState;
 class ExternalDispatcher;
@@ -146,7 +146,7 @@ private:
   TimerGroup timers;
   std::unique_ptr<PForest> processForest;
   GuidanceKind guidanceKind;
-  std::unique_ptr<CodeGraphDistance> codeGraphDistance;
+  std::unique_ptr<CodeGraphInfo> codeGraphInfo;
   std::unique_ptr<DistanceCalculator> distanceCalculator;
   std::unique_ptr<TargetCalculator> targetCalculator;
   std::unique_ptr<TargetManager> targetManager;

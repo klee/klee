@@ -32,7 +32,7 @@ DISABLE_WARNING_POP
 #include <vector>
 
 namespace klee {
-class CodeGraphDistance;
+class CodeGraphInfo;
 class ExecutionState;
 struct TransitionHash;
 
@@ -65,15 +65,15 @@ class TargetCalculator {
   typedef std::unordered_map<llvm::Function *, VisitedBlocks> CoveredBlocks;
 
 public:
-  TargetCalculator(CodeGraphDistance &codeGraphDistance)
-      : codeGraphDistance(codeGraphDistance) {}
+  TargetCalculator(CodeGraphInfo &codeGraphInfo)
+      : codeGraphInfo(codeGraphInfo) {}
 
   void update(const ExecutionState &state);
 
   TargetHashSet calculate(ExecutionState &state);
 
 private:
-  CodeGraphDistance &codeGraphDistance;
+  CodeGraphInfo &codeGraphInfo;
   BlocksHistory blocksHistory;
   TransitionsHistory transitionsHistory;
   CoveredBranches coveredBranches;
