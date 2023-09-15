@@ -411,7 +411,6 @@ void StatsTracker::stepInstruction(ExecutionState &es) {
         // FIXME: This trick no longer works, we should fix this in the line
         // number propogation.
         es.coveredLines[&ii.file].insert(ii.line);
-        es.coveredNew = true;
         es.instsSinceCovNew = 1;
         ++stats::coveredInstructions;
         stats::uncoveredInstructions += (uint64_t)-1;
@@ -480,7 +479,6 @@ void StatsTracker::markBranchVisited(ExecutionState *visitedTrue,
     uint64_t hasFalse =
         theStatisticManager->getIndexedValue(stats::falseBranches, id);
     if (visitedTrue && !hasTrue) {
-      visitedTrue->coveredNew = true;
       visitedTrue->instsSinceCovNew = 1;
       ++stats::trueBranches;
       if (hasFalse) {
@@ -491,7 +489,6 @@ void StatsTracker::markBranchVisited(ExecutionState *visitedTrue,
       hasTrue = 1;
     }
     if (visitedFalse && !hasFalse) {
-      visitedFalse->coveredNew = true;
       visitedFalse->instsSinceCovNew = 1;
       ++stats::falseBranches;
       if (hasTrue) {

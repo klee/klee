@@ -227,6 +227,18 @@ inline std::stringstream &operator<<(std::stringstream &os, const ref<T> &e) {
   return os;
 }
 
+template <class T> class box {
+  friend class ref<box<T>>;
+
+private:
+  /// @brief Required by klee::ref-managed objects
+  class ReferenceCounter _refCount;
+
+public:
+  box(T value_) : value(value_) {}
+  ReferenceCounter count() { return _refCount; }
+  T value;
+};
 } // end namespace klee
 
 namespace llvm {

@@ -4053,7 +4053,7 @@ bool Executor::checkMemoryUsage() {
     unsigned idx = theRNG.getInt32() % N;
     // Make two pulls to try and not hit a state that
     // covered new code.
-    if (arr[idx]->coveredNew)
+    if (arr[idx]->coveredNew->value)
       idx = theRNG.getInt32() % N;
 
     std::swap(arr[idx], arr[N - 1]);
@@ -4513,7 +4513,9 @@ void Executor::terminateState(ExecutionState &state,
 }
 
 static bool shouldWriteTest(const ExecutionState &state) {
-  return !OnlyOutputStatesCoveringNew || state.coveredNew;
+  bool coveredNew = state.coveredNew->value;
+  state.coveredNew->value = false;
+  return !OnlyOutputStatesCoveringNew || coveredNew;
 }
 
 static std::string terminationTypeFileExtension(StateTerminationType type) {
@@ -7274,7 +7276,7 @@ void Executor::dumpStates() {
       *os << "{";
       *os << "'depth' : " << es->depth << ", ";
       *os << "'queryCost' : " << es->queryMetaData.queryCost << ", ";
-      *os << "'coveredNew' : " << es->coveredNew << ", ";
+      *os << "'coveredNew' : " << es->coveredNew->value << ", ";
       *os << "'instsSinceCovNew' : " << es->instsSinceCovNew << ", ";
       *os << "'md2u' : " << md2u << ", ";
       *os << "'icnt' : " << icnt << ", ";

@@ -369,7 +369,7 @@ public:
   std::uint32_t id = 0;
 
   /// @brief Whether a new instruction was covered in this state
-  bool coveredNew = false;
+  mutable ref<box<bool>> coveredNew;
 
   /// @brief Disables forking for this state. Set by user code
   bool forkDisabled = false;

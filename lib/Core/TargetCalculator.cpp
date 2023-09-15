@@ -49,11 +49,22 @@ void TargetCalculator::update(const ExecutionState &state) {
 
     if (!coveredFunctionsInBranches.count(state.prevPC->parent->parent)) {
       unsigned index = 0;
-      coveredBranches[state.prevPC->parent->parent][state.prevPC->parent];
+      if (!coveredBranches[state.prevPC->parent->parent].count(
+              state.prevPC->parent)) {
+        state.coveredNew->value = false;
+        state.coveredNew = new box<bool>(true);
+        coveredBranches[state.prevPC->parent->parent][state.prevPC->parent];
+      }
       for (auto succ : successors(state.getPrevPCBlock())) {
         if (succ == state.getPCBlock()) {
-          coveredBranches[state.prevPC->parent->parent][state.prevPC->parent]
-              .insert(index);
+          if (!coveredBranches[state.prevPC->parent->parent]
+                              [state.prevPC->parent]
+                                  .count(index)) {
+            state.coveredNew->value = false;
+            state.coveredNew = new box<bool>(true);
+            coveredBranches[state.prevPC->parent->parent][state.prevPC->parent]
+                .insert(index);
+          }
           break;
         }
         ++index;
