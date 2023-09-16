@@ -40,7 +40,8 @@ enum class StateTerminationClass : std::uint8_t {
   TTYPE(OutOfMemory, 12U, "early")                                             \
   TTYPE(OutOfStackMemory, 13U, "early")                                        \
   TTYPE(MaxCycles, 14U, "early")                                               \
-  TTMARK(EARLY, 14U)                                                           \
+  TTYPE(CoverOnTheFly, 15U, "early")                                           \
+  TTMARK(EARLY, 15U)                                                           \
   TTYPE(Solver, 20U, "solver.err")                                             \
   TTMARK(SOLVERERR, 20U)                                                       \
   TTYPE(Abort, 30U, "abort.err")                                               \

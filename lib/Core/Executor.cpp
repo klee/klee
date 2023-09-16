@@ -239,6 +239,18 @@ cl::opt<bool> EmitAllErrors(
              "(default=false, i.e. one per (error,instruction) pair)"),
     cl::cat(TestGenCat));
 
+cl::opt<bool> CoverOnTheFly(
+    "cover-on-the-fly", cl::init(false),
+    cl::desc("Generate tests cases for each new covered block or branch "
+             "(default=false, i.e. one per (error,instruction) pair)"),
+    cl::cat(TestGenCat));
+
+cl::opt<unsigned> DelayCoverOnTheFly(
+    "delay-cover-on-the-fly", cl::init(10000),
+    cl::desc("Start on the fly tests generation after this many instructions "
+             "(default=10000)"),
+    cl::cat(TestGenCat));
+
 /* Constraint solving options */
 
 cl::opt<unsigned> MaxSymArraySize(
@@ -4325,8 +4337,36 @@ void Executor::initializeTypeManager() {
   typeSystemManager->initModule();
 }
 
+static bool shouldWriteTest(const ExecutionState &state) {
+  bool coveredNew = state.coveredNew->value;
+  state.coveredNew->value = false;
+  return !OnlyOutputStatesCoveringNew || coveredNew;
+}
+
+static std::string terminationTypeFileExtension(StateTerminationType type) {
+  std::string ret;
+#undef TTYPE
+#undef TTMARK
+#define TTYPE(N, I, S)                                                         \
+  case StateTerminationType::N:                                                \
+    ret = (S);                                                                 \
+    break;
+#define TTMARK(N, I)
+  switch (type) { TERMINATION_TYPES }
+  return ret;
+};
+
 void Executor::executeStep(ExecutionState &state) {
   KInstruction *prevKI = state.prevPC;
+
+  if (CoverOnTheFly && guidanceKind != GuidanceKind::ErrorGuidance &&
+      stats::instructions > DelayCoverOnTheFly && shouldWriteTest(state)) {
+    interpreterHandler->processTestCase(
+        state, nullptr,
+        terminationTypeFileExtension(StateTerminationType::CoverOnTheFly)
+            .c_str());
+  }
+
   if (targetManager->isTargeted(state) && state.targets().empty()) {
     terminateStateEarlyAlgorithm(state, "State missed all it's targets.",
                                  StateTerminationType::MissedAllTargets);
@@ -4511,25 +4551,6 @@ void Executor::terminateState(ExecutionState &state,
 
   removedStates.push_back(&state);
 }
-
-static bool shouldWriteTest(const ExecutionState &state) {
-  bool coveredNew = state.coveredNew->value;
-  state.coveredNew->value = false;
-  return !OnlyOutputStatesCoveringNew || coveredNew;
-}
-
-static std::string terminationTypeFileExtension(StateTerminationType type) {
-  std::string ret;
-#undef TTYPE
-#undef TTMARK
-#define TTYPE(N, I, S)                                                         \
-  case StateTerminationType::N:                                                \
-    ret = (S);                                                                 \
-    break;
-#define TTMARK(N, I)
-  switch (type) { TERMINATION_TYPES }
-  return ret;
-};
 
 void Executor::terminateStateOnExit(ExecutionState &state) {
   auto terminationType = StateTerminationType::Exit;

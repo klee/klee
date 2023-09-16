@@ -1,6 +1,6 @@
 // RUN: %clang %s -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --use-cov-check=instruction-based --output-dir=%t.klee-out %t.bc > %t.log
+// RUN: %klee --use-guided-search=none --use-cov-check=instruction-based --output-dir=%t.klee-out %t.bc > %t.log
 #include "klee/klee.h"
 
 #define a (2)
