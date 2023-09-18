@@ -530,6 +530,7 @@ void TargetedExecutionManager::reportFalseNegative(ExecutionState &state,
 bool TargetedExecutionManager::reportTruePositive(ExecutionState &state,
                                                   ReachWithError error) {
   bool atLeastOneReported = false;
+  state.error = error;
   for (auto target : state.targetForest.getTargets()) {
     if (!target->shouldFailOnThisTarget())
       continue;
@@ -539,27 +540,10 @@ bool TargetedExecutionManager::reportTruePositive(ExecutionState &state,
         reportedTraces.count(errorTarget->getId()))
       continue;
 
-    /// The following code checks if target is a `call ...` instruction and we
-    /// failed somewhere *inside* call
-    auto possibleInstruction = state.prevPC;
-    int i = state.stack.size() - 1;
-    bool found = true;
-
-    while (!errorTarget->isTheSameAsIn(
-        possibleInstruction)) { // TODO: target->getBlock() ==
-                                // possibleInstruction should also be checked,
-                                // but more smartly
-      if (i <= 0) {
-        found = false;
-        break;
-      }
-      possibleInstruction = state.stack.callStack().at(i).caller;
-      i--;
-    }
-    if (!found)
+    if (!targetManager.isReachedTarget(state, errorTarget)) {
       continue;
+    }
 
-    state.error = error;
     atLeastOneReported = true;
     assert(!errorTarget->isReported);
     if (errorTarget->isThatError(ReachWithError::Reachable)) {
