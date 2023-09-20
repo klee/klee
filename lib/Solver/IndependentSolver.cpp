@@ -218,7 +218,6 @@ bool IndependentSolver::computeInitialValues(
       // satisfy the query.
       ref<ConstantExpr> arrayConstantSize =
           dyn_cast<ConstantExpr>(retMap.evaluate(arr->size));
-      arrayConstantSize->dump();
       assert(arrayConstantSize &&
              "Array of symbolic size had not receive value for size!");
       SparseStorage<unsigned char> ret(arrayConstantSize->getZExtValue());

@@ -68,7 +68,6 @@ struct CallStackFrame {
   CallStackFrame(KInstIterator caller_, KFunction *kf_)
       : caller(caller_), kf(kf_) {}
   ~CallStackFrame() = default;
-  CallStackFrame(const CallStackFrame &s);
 
   bool equals(const CallStackFrame &other) const;
 
@@ -105,7 +104,6 @@ struct InfoStackFrame {
   unsigned minDistToUncoveredOnReturn = 0;
 
   InfoStackFrame(KFunction *kf);
-  InfoStackFrame(const InfoStackFrame &s);
   ~InfoStackFrame() = default;
 };
 

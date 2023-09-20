@@ -114,14 +114,7 @@ StackFrame::StackFrame(const StackFrame &s)
 
 StackFrame::~StackFrame() { delete[] locals; }
 
-CallStackFrame::CallStackFrame(const CallStackFrame &s)
-    : caller(s.caller), kf(s.kf) {}
-
 InfoStackFrame::InfoStackFrame(KFunction *kf) : kf(kf) {}
-
-InfoStackFrame::InfoStackFrame(const InfoStackFrame &s)
-    : kf(s.kf), callPathNode(s.callPathNode),
-      minDistToUncoveredOnReturn(s.minDistToUncoveredOnReturn) {}
 
 /***/
 ExecutionState::ExecutionState()

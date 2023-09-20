@@ -1635,21 +1635,6 @@ ref<Expr> ConcatExpr::create(const ref<Expr> &l, const ref<Expr> &r) {
     if (ConstantExpr *rCE = dyn_cast<ConstantExpr>(r))
       return lCE->Concat(rCE);
 
-  if (isa<SelectExpr>(l) || isa<SelectExpr>(r)) {
-    if (SelectExpr *se = dyn_cast<SelectExpr>(l)) {
-      if (isa<ConstantExpr>(se->trueExpr)) {
-        return SelectExpr::create(se->cond, ConcatExpr::create(se->trueExpr, r),
-                                  ConcatExpr::create(se->falseExpr, r));
-      }
-    }
-    if (SelectExpr *se = dyn_cast<SelectExpr>(r)) {
-      if (isa<ConstantExpr>(se->trueExpr)) {
-        return SelectExpr::create(se->cond, ConcatExpr::create(l, se->trueExpr),
-                                  ConcatExpr::create(l, se->falseExpr));
-      }
-    }
-  }
-
   // Merge contiguous Extracts
   if (ExtractExpr *ee_left = dyn_cast<ExtractExpr>(l)) {
     if (ExtractExpr *ee_right = dyn_cast<ExtractExpr>(r)) {
@@ -1707,11 +1692,6 @@ ref<Expr> ExtractExpr::create(ref<Expr> expr, unsigned off, Width w) {
   } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
     return CE->Extract(off, w);
   } else if (SelectExpr *se = dyn_cast<SelectExpr>(expr)) {
-    if (isa<ConstantExpr>(se->trueExpr)) {
-      return SelectExpr::create(se->cond,
-                                ExtractExpr::create(se->trueExpr, off, w),
-                                ExtractExpr::create(se->falseExpr, off, w));
-    }
   } else {
     // Extract(Concat)
     if (ConcatExpr *ce = dyn_cast<ConcatExpr>(expr)) {
