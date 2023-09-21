@@ -1301,7 +1301,7 @@ createLibCWrapper(std::vector<std::unique_ptr<llvm::Module>> &userModules,
 }
 
 static void
-linkWithUclibc(StringRef libDir, std::string opt_suffix,
+linkWithUclibc(StringRef libDir, std::string bit_suffix, std::string opt_suffix,
                std::vector<std::unique_ptr<llvm::Module>> &userModules,
                std::vector<std::unique_ptr<llvm::Module>> &libsModules) {
   LLVMContext &ctx = userModules[0]->getContext();
@@ -1320,10 +1320,10 @@ linkWithUclibc(StringRef libDir, std::string opt_suffix,
   SmallString<128> uclibcBCA(libDir);
   // Hack to find out bitness of .bc file
 
-  if (opt_suffix.substr(0, 2) == "32") {
-    llvm::sys::path::append(uclibcBCA, KLEE_UCLIBC_BCA_32_NAME);
-  } else if (opt_suffix.substr(0, 2) == "64") {
+  if (bit_suffix == "64") {
     llvm::sys::path::append(uclibcBCA, KLEE_UCLIBC_BCA_64_NAME);
+  } else if (bit_suffix == "32") {
+    llvm::sys::path::append(uclibcBCA, KLEE_UCLIBC_BCA_32_NAME);
   } else {
     klee_error("Cannot determine bitness of source file from the name %s",
                uclibcBCA.c_str());
@@ -1744,7 +1744,7 @@ int main(int argc, char **argv, char **envp) {
     bit_suffix = "32";
 
   // Add additional user-selected suffix
-  opt_suffix += "_" + RuntimeBuild.getValue();
+  std::string opt_suffix = bit_suffix + "_" + RuntimeBuild.getValue();
 
   if (UseGuidedSearch == Interpreter::GuidanceKind::ErrorGuidance) {
     SimplifyModule = false;
@@ -1876,7 +1876,7 @@ int main(int argc, char **argv, char **envp) {
     break;
   }
   case LibcType::UcLibc:
-    linkWithUclibc(LibraryDir, opt_suffix, loadedUserModules,
+    linkWithUclibc(LibraryDir, bit_suffix, opt_suffix, loadedUserModules,
                    loadedLibsModules);
     break;
   }
