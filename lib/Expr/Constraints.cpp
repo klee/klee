@@ -207,12 +207,12 @@ ConstraintSet::ConstraintSet() {}
 
 void ConstraintSet::addConstraint(ref<Expr> e, const Assignment &delta) {
   _constraints.insert(e);
-  _independentElements.addExpr(e);
   // Update bindings
   for (auto i : delta.bindings) {
     _concretization.bindings.replace({i.first, i.second});
   }
   _independentElements.updateConcretization(delta);
+  _independentElements.addExpr(e);
 }
 
 IDType Symcrete::idCounter = 0;
@@ -252,8 +252,10 @@ ConstraintSet ConstraintSet::getConcretizedVersion() const {
   ConstraintSet cs;
   cs._independentElements = _independentElements.getConcretizedVersion();
 
-  for (ref<Expr> e : cs._independentElements.is()) {
-    cs._constraints.insert(e);
+  for (auto &e : cs._independentElements.is()) {
+    if (isa<ExprEitherSymcrete::left>(e)) {
+      cs._constraints.insert(cast<ExprEitherSymcrete::left>(e)->value());
+    }
   }
   return cs;
 }
@@ -263,8 +265,8 @@ ConstraintSet ConstraintSet::getConcretizedVersion(
   ConstraintSet cs;
   cs._independentElements =
       _independentElements.getConcretizedVersion(newConcretization);
-  for (ref<Expr> e : cs._independentElements.is()) {
-    cs._constraints.insert(e);
+  for (auto &e : cs._independentElements.is()) {
+    cs._constraints.insert(cast<ExprEitherSymcrete::left>(e)->value());
   }
   return cs;
 }

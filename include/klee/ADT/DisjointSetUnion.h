@@ -1,14 +1,27 @@
 #ifndef KLEE_DISJOINEDSETUNION_H
 #define KLEE_DISJOINEDSETUNION_H
+
+#include "klee/ADT/Either.h"
 #include "klee/ADT/PersistentMap.h"
 #include "klee/ADT/PersistentSet.h"
 #include "klee/ADT/Ref.h"
+#include "klee/Expr/Expr.h"
+#include "klee/Expr/Symcrete.h"
+
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
+#include "llvm/Support/raw_ostream.h"
+DISABLE_WARNING_POP
+
+#include <map>
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 namespace klee {
+using ExprEitherSymcrete = either<Expr, Symcrete>;
 
 template <typename ValueType, typename SetType,
           typename CMP = std::less<ValueType>>
@@ -55,7 +68,7 @@ protected:
     roots.remove(b);
     disjointSets.replace(
         {a, SetType::merge(disjointSets.at(a), disjointSets.at(b))});
-    disjointSets.replace({b, nullptr});
+    disjointSets.remove(b);
   }
 
   bool areJoined(const ValueType &i, const ValueType &j) const {
@@ -109,6 +122,8 @@ public:
   }
 
   void add(const DisjointSetUnion &b) {
+    internalStorage_ty oldRoots = roots;
+    internalStorage_ty newRoots = b.roots;
     for (auto it : b.parent) {
       parent.insert(it);
     }
@@ -123,6 +138,15 @@ public:
     }
     for (auto it : b.disjointSets) {
       disjointSets.insert(it);
+    }
+    for (ValueType nv : newRoots) {
+      for (ValueType ov : oldRoots) {
+        if (!areJoined(ov, nv) &&
+            SetType::intersects(disjointSets.at(find(ov)),
+                                disjointSets.at(find(nv)))) {
+          merge(ov, nv);
+        }
+      }
     }
   }
 
@@ -140,4 +164,5 @@ public:
   disjointSets_ty ds() const { return disjointSets; }
 };
 } // namespace klee
-#endif
+
+#endif /* KLEE_DISJOINEDSETUNION_H */

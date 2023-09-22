@@ -1,12 +1,15 @@
 #ifndef KLEE_INDEPENDENTCONSTRAINTSETUNION_H
 #define KLEE_INDEPENDENTCONSTRAINTSETUNION_H
 
+#include "klee/ADT/Either.h"
+
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/IndependentSet.h"
 
 namespace klee {
 class IndependentConstraintSetUnion
-    : public DisjointSetUnion<ref<Expr>, IndependentConstraintSet> {
+    : public DisjointSetUnion<ref<ExprEitherSymcrete>,
+                              IndependentConstraintSet> {
 public:
   Assignment concretization;
 
@@ -43,4 +46,4 @@ public:
 };
 } // namespace klee
 
-#endif
+#endif /* KLEE_INDEPENDENTCONSTRAINTSETUNION_H */

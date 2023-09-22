@@ -2,6 +2,7 @@
 #define KLEE_INDEPENDENTSET_H
 
 #include "klee/ADT/DisjointSetUnion.h"
+#include "klee/ADT/Either.h"
 #include "klee/ADT/PersistentMap.h"
 #include "klee/ADT/PersistentSet.h"
 #include "klee/Expr/Assignment.h"
@@ -21,6 +22,7 @@ DISABLE_WARNING_POP
 #include <vector>
 
 namespace klee {
+using ExprEitherSymcrete = either<Expr, Symcrete>;
 
 template <class T> class DenseSet {
   typedef std::set<T> set_ty;
@@ -84,7 +86,11 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
 
 class IndependentConstraintSet {
 private:
-  using InnerSetUnion = DisjointSetUnion<ref<Expr>, IndependentConstraintSet>;
+  using InnerSetUnion =
+      DisjointSetUnion<ref<ExprEitherSymcrete>, IndependentConstraintSet>;
+
+  void initIndependentConstraintSet(ref<Expr> e);
+  void initIndependentConstraintSet(ref<Symcrete> s);
 
 public:
   // All containers need to become persistent to make fast copy and faster
@@ -117,11 +123,8 @@ public:
                         Assignment &assign) const;
 
   IndependentConstraintSet();
-  IndependentConstraintSet(ref<Expr> e);
-  IndependentConstraintSet(ref<Symcrete> s);
-  IndependentConstraintSet(const ref<const IndependentConstraintSet> &ics);
-
-  IndependentConstraintSet &operator=(const IndependentConstraintSet &ies);
+  explicit IndependentConstraintSet(ref<ExprEitherSymcrete> v);
+  IndependentConstraintSet(const IndependentConstraintSet &ics);
 
   void print(llvm::raw_ostream &os) const;
 

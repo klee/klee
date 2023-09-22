@@ -228,7 +228,7 @@ struct Symbolic {
 struct MemorySubobject {
   ref<Expr> address;
   unsigned size;
-  MemorySubobject(ref<Expr> address, unsigned size)
+  explicit MemorySubobject(ref<Expr> address, unsigned size)
       : address(address), size(size) {}
   MemorySubobject &operator=(const MemorySubobject &other) = default;
 };

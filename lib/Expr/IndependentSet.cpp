@@ -16,18 +16,10 @@
 #include <vector>
 
 namespace klee {
-
-ref<const IndependentConstraintSet>
-IndependentConstraintSet::addExpr(ref<Expr> e) const {
-  ref<IndependentConstraintSet> ics = new IndependentConstraintSet(this);
-  ics->concretizedSets.addValue(concretization.evaluate(e));
-  return ics;
-}
-
 ref<const IndependentConstraintSet>
 IndependentConstraintSet::updateConcretization(
     const Assignment &delta, ExprHashMap<ref<Expr>> &concretizedExprs) const {
-  ref<IndependentConstraintSet> ics = new IndependentConstraintSet(this);
+  ref<IndependentConstraintSet> ics = new IndependentConstraintSet(*this);
   if (delta.bindings.size() == 0) {
     return ics;
   }
@@ -37,12 +29,21 @@ IndependentConstraintSet::updateConcretization(
   InnerSetUnion DSU;
   for (ref<Expr> i : exprs) {
     ref<Expr> e = ics->concretization.evaluate(i);
+    if (auto ce = dyn_cast<ConstantExpr>(e)) {
+      assert(ce->isTrue() && "Attempt to add invalid constraint");
+      continue;
+    }
     concretizedExprs[i] = e;
-    DSU.addValue(e);
+    DSU.addValue(new ExprEitherSymcrete::left(e));
   }
   for (ref<Symcrete> s : symcretes) {
-    DSU.addValue(EqExpr::create(ics->concretization.evaluate(s->symcretized),
-                                s->symcretized));
+    ref<Expr> e = EqExpr::create(ics->concretization.evaluate(s->symcretized),
+                                 s->symcretized);
+    if (auto ce = dyn_cast<ConstantExpr>(e)) {
+      assert(ce->isTrue() && "Attempt to add invalid constraint");
+      continue;
+    }
+    DSU.addValue(new ExprEitherSymcrete::left(e));
   }
   ics->concretizedSets = DSU;
   return ics;
@@ -51,7 +52,7 @@ IndependentConstraintSet::updateConcretization(
 ref<const IndependentConstraintSet>
 IndependentConstraintSet::removeConcretization(
     const Assignment &delta, ExprHashMap<ref<Expr>> &concretizedExprs) const {
-  ref<IndependentConstraintSet> ics = new IndependentConstraintSet(this);
+  ref<IndependentConstraintSet> ics = new IndependentConstraintSet(*this);
   if (delta.bindings.size() == 0) {
     return ics;
   }
@@ -61,12 +62,21 @@ IndependentConstraintSet::removeConcretization(
   InnerSetUnion DSU;
   for (ref<Expr> i : exprs) {
     ref<Expr> e = ics->concretization.evaluate(i);
+    if (auto ce = dyn_cast<ConstantExpr>(e)) {
+      assert(ce->isTrue() && "Attempt to add invalid constraint");
+      continue;
+    }
     concretizedExprs[i] = e;
-    DSU.addValue(e);
+    DSU.addValue(new ExprEitherSymcrete::left(e));
   }
   for (ref<Symcrete> s : symcretes) {
-    DSU.addValue(EqExpr::create(ics->concretization.evaluate(s->symcretized),
-                                s->symcretized));
+    ref<Expr> e = EqExpr::create(ics->concretization.evaluate(s->symcretized),
+                                 s->symcretized);
+    if (auto ce = dyn_cast<ConstantExpr>(e)) {
+      assert(ce->isTrue() && "Attempt to add invalid constraint");
+      continue;
+    }
+    DSU.addValue(new ExprEitherSymcrete::left(e));
   }
 
   ics->concretizedSets = DSU;
@@ -97,7 +107,15 @@ void IndependentConstraintSet::addValuesToAssignment(
 
 IndependentConstraintSet::IndependentConstraintSet() {}
 
-IndependentConstraintSet::IndependentConstraintSet(ref<Expr> e) {
+IndependentConstraintSet::IndependentConstraintSet(ref<ExprEitherSymcrete> v) {
+  if (isa<ExprEitherSymcrete::left>(v)) {
+    initIndependentConstraintSet(cast<ExprEitherSymcrete::left>(v)->value());
+  } else {
+    initIndependentConstraintSet(cast<ExprEitherSymcrete::right>(v)->value());
+  }
+}
+
+void IndependentConstraintSet::initIndependentConstraintSet(ref<Expr> e) {
   exprs.insert(e);
   // Track all reads in the program.  Determines whether reads are
   // concrete or symbolic.  If they are symbolic, "collapses" array
@@ -134,12 +152,8 @@ IndependentConstraintSet::IndependentConstraintSet(ref<Expr> e) {
   }
 }
 
-IndependentConstraintSet::IndependentConstraintSet(ref<Symcrete> s) {
+void IndependentConstraintSet::initIndependentConstraintSet(ref<Symcrete> s) {
   symcretes.insert(s);
-
-  for (Symcrete &dependentSymcrete : s->dependentSymcretes()) {
-    symcretes.insert(ref<Symcrete>(&dependentSymcrete));
-  }
 
   // Track all reads in the program.  Determines whether reads are
   // concrete or symbolic.  If they are symbolic, "collapses" array
@@ -193,22 +207,10 @@ IndependentConstraintSet::IndependentConstraintSet(ref<Symcrete> s) {
 }
 
 IndependentConstraintSet::IndependentConstraintSet(
-    const ref<const IndependentConstraintSet> &ics)
-    : elements(ics->elements), wholeObjects(ics->wholeObjects),
-      exprs(ics->exprs), symcretes(ics->symcretes),
-      concretization(ics->concretization),
-      concretizedSets(ics->concretizedSets) {}
-
-IndependentConstraintSet &
-IndependentConstraintSet::operator=(const IndependentConstraintSet &ics) {
-  elements = ics.elements;
-  wholeObjects = ics.wholeObjects;
-  exprs = ics.exprs;
-  symcretes = ics.symcretes;
-  concretization = ics.concretization;
-  concretizedSets = ics.concretizedSets;
-  return *this;
-}
+    const IndependentConstraintSet &ics)
+    : elements(ics.elements), wholeObjects(ics.wholeObjects), exprs(ics.exprs),
+      symcretes(ics.symcretes), concretization(ics.concretization),
+      concretizedSets(ics.concretizedSets) {}
 
 void IndependentConstraintSet::print(llvm::raw_ostream &os) const {
   os << "{";
@@ -279,8 +281,8 @@ bool IndependentConstraintSet::intersects(
 ref<const IndependentConstraintSet>
 IndependentConstraintSet::merge(ref<const IndependentConstraintSet> A,
                                 ref<const IndependentConstraintSet> B) {
-  ref<IndependentConstraintSet> a = new IndependentConstraintSet(A);
-  ref<IndependentConstraintSet> b = new IndependentConstraintSet(B);
+  ref<IndependentConstraintSet> a = new IndependentConstraintSet(*A);
+  ref<IndependentConstraintSet> b = new IndependentConstraintSet(*B);
 
   if (a->wholeObjects.size() + a->elements.size() <
       b->wholeObjects.size() + b->elements.size()) {
@@ -323,7 +325,30 @@ IndependentConstraintSet::merge(ref<const IndependentConstraintSet> A,
   }
   b->addValuesToAssignment(b->concretization.keys(), b->concretization.values(),
                            a->concretization);
-  a->concretizedSets.add(b->concretizedSets);
+
+  if (!a->concretization.bindings.empty()) {
+    InnerSetUnion DSU;
+    for (ref<Expr> i : a->exprs) {
+      ref<Expr> e = a->concretization.evaluate(i);
+      if (auto ce = dyn_cast<ConstantExpr>(e)) {
+        assert(ce->isTrue() && "Attempt to add invalid constraint");
+        continue;
+      }
+      DSU.addValue(new ExprEitherSymcrete::left(e));
+    }
+    for (ref<Symcrete> s : a->symcretes) {
+      ref<Expr> e = EqExpr::create(a->concretization.evaluate(s->symcretized),
+                                   s->symcretized);
+      if (auto ce = dyn_cast<ConstantExpr>(e)) {
+        assert(ce->isTrue() && "Attempt to add invalid constraint");
+        continue;
+      }
+      DSU.addValue(new ExprEitherSymcrete::left(e));
+    }
+
+    a->concretizedSets = DSU;
+  }
+
   return a;
 }
 
@@ -355,7 +380,7 @@ void calculateArraysInFactors(
   }
   std::vector<const Array *> result;
   ref<IndependentConstraintSet> queryExprSet =
-      new IndependentConstraintSet(queryExpr);
+      new IndependentConstraintSet(new ExprEitherSymcrete::left(queryExpr));
   queryExprSet->calculateArrayReferences(result);
   returnSet.insert(result.begin(), result.end());
   returnVector.insert(returnVector.begin(), returnSet.begin(), returnSet.end());
