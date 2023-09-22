@@ -130,6 +130,26 @@ void CodeGraphInfo::calculateFunctionBranches(KFunction *kf) {
     }
   }
 }
+void CodeGraphInfo::calculateFunctionConditionalBranches(KFunction *kf) {
+  std::map<KBlock *, std::set<unsigned>> &fbranches =
+      functionConditionalBranches[kf];
+  for (auto &kb : kf->blocks) {
+    if (kb->basicBlock->getTerminator()->getNumSuccessors() > 1) {
+      fbranches[kb.get()];
+      for (unsigned branch = 0;
+           branch < kb->basicBlock->getTerminator()->getNumSuccessors();
+           ++branch) {
+        fbranches[kb.get()].insert(branch);
+      }
+    }
+  }
+}
+void CodeGraphInfo::calculateFunctionBlocks(KFunction *kf) {
+  std::map<KBlock *, std::set<unsigned>> &fbranches = functionBlocks[kf];
+  for (auto &kb : kf->blocks) {
+    fbranches[kb.get()];
+  }
+}
 
 const std::unordered_map<KBlock *, unsigned> &
 CodeGraphInfo::getDistance(KBlock *kb) {
@@ -218,4 +238,18 @@ CodeGraphInfo::getFunctionBranches(KFunction *kf) {
   if (functionBranches.count(kf) == 0)
     calculateFunctionBranches(kf);
   return functionBranches.at(kf);
+}
+
+const std::map<KBlock *, std::set<unsigned>> &
+CodeGraphInfo::getFunctionConditionalBranches(KFunction *kf) {
+  if (functionConditionalBranches.count(kf) == 0)
+    calculateFunctionConditionalBranches(kf);
+  return functionConditionalBranches.at(kf);
+}
+
+const std::map<KBlock *, std::set<unsigned>> &
+CodeGraphInfo::getFunctionBlocks(KFunction *kf) {
+  if (functionBlocks.count(kf) == 0)
+    calculateFunctionBlocks(kf);
+  return functionBlocks.at(kf);
 }

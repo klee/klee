@@ -445,6 +445,7 @@ bool allLeafsAreConstant(const ref<Expr> &expr) {
 extern llvm::cl::opt<uint64_t> MaxConstantAllocationSize;
 extern llvm::cl::opt<uint64_t> MaxSymbolicAllocationSize;
 extern llvm::cl::opt<bool> UseSymbolicSizeAllocation;
+extern llvm::cl::opt<TrackCoverageBy> TrackCoverage;
 
 // XXX hack
 extern "C" unsigned dumpStates, dumpPForest;
@@ -4373,6 +4374,7 @@ static std::string terminationTypeFileExtension(StateTerminationType type) {
 };
 
 void Executor::executeStep(ExecutionState &state) {
+  KFunction *initKF = state.initPC->parent->parent;
   if (CoverOnTheFly && guidanceKind != GuidanceKind::ErrorGuidance &&
       stats::instructions > DelayCoverOnTheFly && shouldWriteTest(state)) {
     state.clearCoveredNew();
@@ -4406,6 +4408,11 @@ void Executor::executeStep(ExecutionState &state) {
     // update searchers when states were terminated early due to memory
     // pressure
     updateStates(nullptr);
+  }
+
+  if (targetCalculator && TrackCoverage != TrackCoverageBy::None &&
+      targetCalculator->isCovered(initKF)) {
+    haltExecution = HaltExecution::CovCheck;
   }
 }
 

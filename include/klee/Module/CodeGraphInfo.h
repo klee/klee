@@ -45,6 +45,8 @@ private:
   functionDistanceList functionSortedBackwardDistance;
 
   functionBranchesSet functionBranches;
+  functionBranchesSet functionConditionalBranches;
+  functionBranchesSet functionBlocks;
 
 private:
   void calculateDistance(KBlock *bb);
@@ -54,6 +56,8 @@ private:
   void calculateBackwardDistance(KFunction *kf);
 
   void calculateFunctionBranches(KFunction *kf);
+  void calculateFunctionConditionalBranches(KFunction *kf);
+  void calculateFunctionBlocks(KFunction *kf);
 
 public:
   const std::unordered_map<KBlock *, unsigned int> &getDistance(KBlock *kb);
@@ -78,6 +82,10 @@ public:
 
   const std::map<KBlock *, std::set<unsigned>> &
   getFunctionBranches(KFunction *kf);
+  const std::map<KBlock *, std::set<unsigned>> &
+  getFunctionConditionalBranches(KFunction *kf);
+  const std::map<KBlock *, std::set<unsigned>> &
+  getFunctionBlocks(KFunction *kf);
 };
 
 } // namespace klee

@@ -36,9 +36,8 @@ class CodeGraphInfo;
 class ExecutionState;
 struct TransitionHash;
 
-enum TargetCalculateBy { Default, Blocks, Transitions };
+enum class TrackCoverageBy { None, Blocks, Branches, All };
 
-typedef std::pair<llvm::BasicBlock *, llvm::BasicBlock *> Transition;
 typedef std::pair<llvm::BasicBlock *, unsigned> Branch;
 
 class TargetCalculator {
@@ -50,21 +49,12 @@ class TargetCalculator {
 
   enum HistoryKind { Blocks, Transitions };
 
-  typedef std::unordered_map<
-      llvm::Function *, std::unordered_map<llvm::BasicBlock *, VisitedBlocks>>
-      BlocksHistory;
-  typedef std::unordered_map<
-      llvm::Function *,
-      std::unordered_map<llvm::BasicBlock *, VisitedTransitions>>
-      TransitionsHistory;
-
   typedef std::unordered_map<KFunction *,
                              std::map<KBlock *, std::set<unsigned>>>
       CoveredBranches;
 
   typedef std::unordered_set<KFunction *> CoveredFunctionsBranches;
 
-  typedef std::unordered_map<llvm::Function *, VisitedBlocks> CoveredBlocks;
   void update(const ExecutionState &state);
 
 public:
@@ -77,24 +67,17 @@ public:
 
   TargetHashSet calculate(ExecutionState &state);
 
+  bool isCovered(KFunction *kf) const;
+
 private:
   CodeGraphInfo &codeGraphInfo;
-  BlocksHistory blocksHistory;
-  TransitionsHistory transitionsHistory;
   CoveredBranches coveredBranches;
   CoveredFunctionsBranches coveredFunctionsInBranches;
   CoveredFunctionsBranches fullyCoveredFunctions;
-  CoveredBlocks coveredBlocks;
   StatesSet localStates;
 
-  bool differenceIsEmpty(
-      const ExecutionState &state,
-      const std::unordered_map<llvm::BasicBlock *, VisitedBlocks> &history,
-      KBlock *target);
-  bool differenceIsEmpty(
-      const ExecutionState &state,
-      const std::unordered_map<llvm::BasicBlock *, VisitedTransitions> &history,
-      KBlock *target);
+  const std::map<KBlock *, std::set<unsigned>> &
+  getCoverageTargets(KFunction *kf);
 
   bool uncoveredBlockPredicate(ExecutionState *state, KBlock *kblock);
 };
