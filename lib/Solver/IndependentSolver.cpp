@@ -152,6 +152,14 @@ bool IndependentSolver::computeInitialValues(
   Assignment retMap;
   std::vector<ref<const IndependentConstraintSet>> dependentFactors;
   query.getAllDependentConstraintsSets(dependentFactors);
+  std::vector<ref<const IndependentConstraintSet>> independentFactors;
+  query.getAllIndependentConstraintsSets(independentFactors);
+
+  if (independentFactors.size() == 0 && dependentFactors.size() == 1) {
+    return solver->impl->computeInitialValues(query, objects, values,
+                                              hasSolution);
+  }
+
   ConstraintSet dependentConstriants(dependentFactors);
 
   std::vector<const Array *> dependentFactorsObjects;
@@ -173,9 +181,6 @@ bool IndependentSolver::computeInitialValues(
       retMap = Assignment(dependentFactorsObjects, dependentFactorsValues);
     }
   }
-
-  std::vector<ref<const IndependentConstraintSet>> independentFactors;
-  query.getAllIndependentConstraintsSets(independentFactors);
 
   // Used to rearrange all of the answers into the correct order
   for (ref<const IndependentConstraintSet> it : independentFactors) {
@@ -242,6 +247,13 @@ bool IndependentSolver::check(const Query &query, ref<SolverResponse> &result) {
   Assignment retMap;
   std::vector<ref<const IndependentConstraintSet>> dependentFactors;
   query.getAllDependentConstraintsSets(dependentFactors);
+  std::vector<ref<const IndependentConstraintSet>> independentFactors;
+  query.getAllIndependentConstraintsSets(independentFactors);
+
+  if (independentFactors.size() == 0 && dependentFactors.size() == 1) {
+    return solver->impl->check(query, result);
+  }
+
   ConstraintSet dependentConstriants(dependentFactors);
 
   std::vector<const Array *> dependentFactorsObjects;
@@ -265,9 +277,6 @@ bool IndependentSolver::check(const Query &query, ref<SolverResponse> &result) {
       retMap = Assignment(dependentFactorsObjects, dependentFactorsValues);
     }
   }
-
-  std::vector<ref<const IndependentConstraintSet>> independentFactors;
-  query.getAllIndependentConstraintsSets(independentFactors);
 
   // Used to rearrange all of the answers into the correct order
   for (ref<const IndependentConstraintSet> it : independentFactors) {
