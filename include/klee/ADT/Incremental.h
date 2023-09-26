@@ -28,6 +28,11 @@ void extend(std::vector<_Tp, _Alloc> &ths,
   ths.insert(ths.end(), other.begin(), other.end());
 }
 
+template <typename _Tp, typename _Alloc>
+void takeAfterv(std::vector<_Tp, _Alloc> &ths, size_t n) {
+  std::vector<_Tp, _Alloc>(ths.begin() + n, ths.end()).swap(ths);
+}
+
 template <typename _Tp, typename _Alloc = std::allocator<_Tp>>
 class inc_vector {
 public:
@@ -131,12 +136,9 @@ public:
     size_t frames_count, frame_index;
     take(n, frames_count, frame_index);
     result = *this;
-    std::vector<_Tp, _Alloc>(result.v.begin() + n, result.v.end())
-        .swap(result.v);
-    std::vector<size_t>(result.frame_sizes.begin() + frame_index,
-                        result.frame_sizes.end())
-        .swap(result.frame_sizes);
-    if (frames_count)
+    takeAfterv(result.v, n);
+    takeAfterv(result.frame_sizes, frame_index);
+    if (frames_count && !result.frame_sizes.empty())
       result.frame_sizes[0] -= frames_count;
   }
 
