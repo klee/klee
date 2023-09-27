@@ -223,19 +223,11 @@ bool CachingSolver::computeValidity(const Query &query,
   if (!solver->impl->computeValidity(query, result))
     return false;
 
-  switch (result) {
-  case PValidity::MustBeTrue:
-    cachedResult = PValidity::MustBeTrue;
-    break;
-  case PValidity::MustBeFalse:
-    cachedResult = PValidity::MustBeFalse;
-    break;
-  default:
-    cachedResult = PValidity::TrueOrFalse;
-    break;
-  }
+  cachedResult = result;
+  assert(cachedResult != PValidity::None);
 
   cacheInsert(query, cachedResult);
+
   return true;
 }
 
