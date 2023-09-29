@@ -15,6 +15,7 @@
 #include "klee/Expr/ExprHashMap.h"
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Expr/ExprVisitor.h"
+#include "klee/Expr/IndependentSet.h"
 #include "klee/Expr/Path.h"
 #include "klee/Expr/Symcrete.h"
 #include "klee/Module/KModule.h"
@@ -289,7 +290,11 @@ void ConstraintSet::print(llvm::raw_ostream &os) const {
 
 void ConstraintSet::dump() const { this->print(llvm::errs()); }
 
-void ConstraintSet::changeCS(constraints_ty &cs) { _constraints = cs; }
+void ConstraintSet::changeCS(constraints_ty &cs) {
+  _constraints = cs;
+  _independentElements =
+      IndependentConstraintSetUnion(_constraints, _symcretes, _concretization);
+}
 
 const constraints_ty &ConstraintSet::cs() const { return _constraints; }
 
@@ -355,10 +360,12 @@ ExprHashSet PathConstraints::addConstraint(ref<Expr> e, const Assignment &delta,
   if (RewriteEqualities != RewriteEqualitiesPolicy::None) {
     auto simplified =
         Simplificator::simplify(constraints.cs(), RewriteEqualities);
-    constraints.changeCS(simplified.simplified);
+    if (simplified.wasSimplified) {
+      constraints.changeCS(simplified.simplified);
 
-    _simplificationMap = Simplificator::composeExprDependencies(
-        _simplificationMap, simplified.dependency);
+      _simplificationMap = Simplificator::composeExprDependencies(
+          _simplificationMap, simplified.dependency);
+    }
   }
 
   return added;
@@ -463,6 +470,7 @@ Simplificator::simplify(const constraints_ty &constraints,
     dependencies.insert({constraint, {constraint}});
   }
 
+  bool actuallyChanged = false;
   bool changed = true;
   while (changed) {
     changed = false;
@@ -495,6 +503,7 @@ Simplificator::simplify(const constraints_ty &constraints,
         currentDependencies[part].insert(constraint);
       }
       if (constraint != simplifiedConstraint || andsSplit.size() > 1) {
+        actuallyChanged = true;
         changed = true;
       }
     }
@@ -508,7 +517,7 @@ Simplificator::simplify(const constraints_ty &constraints,
   simplified.erase(ConstantExpr::createTrue());
   dependencies.erase(ConstantExpr::createTrue());
 
-  return {simplified, dependencies};
+  return {simplified, dependencies, actuallyChanged};
 }
 
 Simplificator::Replacements

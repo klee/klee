@@ -152,6 +152,7 @@ public:
   struct SetResult {
     constraints_ty simplified;
     ExprHashMap<ExprHashSet> dependency;
+    bool wasSimplified;
   };
 
 public:
