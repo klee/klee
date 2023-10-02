@@ -6949,19 +6949,43 @@ void Executor::logState(const ExecutionState &state, int id,
   }
 }
 
-void Executor::setInitializationGraph(const ExecutionState &state,
-                                      const Assignment &model, KTest &ktest) {
+bool resolveOnSymbolics(const std::vector<klee::Symbolic> &symbolics,
+                        const Assignment &assn,
+                        const ref<klee::ConstantExpr> &addr, IDType &result) {
+  uint64_t address = addr->getZExtValue();
+
+  for (const auto &res : symbolics) {
+    const auto &mo = res.memoryObject;
+    // Check if the provided address is between start and end of the object
+    // [mo->address, mo->address + mo->size) or the object is a 0-sized object.
+    ref<klee::ConstantExpr> size =
+        cast<klee::ConstantExpr>(assn.evaluate(mo->getSizeExpr()));
+    if ((size->getZExtValue() == 0 && address == mo->address) ||
+        (address - mo->address < size->getZExtValue())) {
+      result = mo->id;
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void Executor::setInitializationGraph(
+    const ExecutionState &state, const std::vector<klee::Symbolic> &symbolics,
+    const Assignment &model, KTest &ktest) {
   std::map<size_t, std::vector<Pointer>> pointers;
   std::map<size_t, std::map<unsigned, std::pair<unsigned, unsigned>>> s;
   ExprHashMap<std::pair<IDType, ref<Expr>>> resolvedPointers;
 
   std::unordered_map<IDType, ref<const MemoryObject>> idToSymbolics;
-  for (const auto &symbolic : state.symbolics) {
+  for (const auto &symbolic : symbolics) {
     ref<const MemoryObject> mo = symbolic.memoryObject;
     idToSymbolics[mo->id] = mo;
   }
 
-  for (const auto &symbolic : state.symbolics) {
+  const klee::Assignment &assn = state.constraints.cs().concretization();
+
+  for (const auto &symbolic : symbolics) {
     KType *symbolicType = symbolic.type;
     if (!symbolicType->getRawType()) {
       continue;
@@ -6989,7 +7013,7 @@ void Executor::setInitializationGraph(const ExecutionState &state,
         ref<ConstantExpr> constantAddress = cast<ConstantExpr>(addressInModel);
         IDType idResult;
 
-        if (state.resolveOnSymbolics(constantAddress, idResult)) {
+        if (resolveOnSymbolics(symbolics, assn, constantAddress, idResult)) {
           ref<const MemoryObject> mo = idToSymbolics[idResult];
           resolvedPointers[address] =
               std::make_pair(idResult, mo->getOffsetExpr(address));
@@ -7024,12 +7048,12 @@ void Executor::setInitializationGraph(const ExecutionState &state,
       // The objects have to be symbolic
       bool pointerFound = false, pointeeFound = false;
       size_t pointerIndex = 0, pointeeIndex = 0;
-      for (size_t i = 0; i < state.symbolics.size(); i++) {
-        if (state.symbolics[i].memoryObject == pointerResolution.first) {
+      for (size_t i = 0; i < symbolics.size(); i++) {
+        if (symbolics[i].memoryObject == pointerResolution.first) {
           pointerIndex = i;
           pointerFound = true;
         }
-        if (state.symbolics[i].memoryObject->id == pointer.second.first) {
+        if (symbolics[i].memoryObject->id == pointer.second.first) {
           pointeeIndex = i;
           pointeeFound = true;
         }
@@ -7081,6 +7105,16 @@ Assignment Executor::computeConcretization(const ConstraintSet &constraints,
   return concretization;
 }
 
+bool isReproducible(const klee::Symbolic &symb) {
+  auto arr = symb.array;
+  bool bad = IrreproducibleSource::classof(arr->source.get());
+  if (bad)
+    klee_warning_once(arr->source.get(),
+                      "A irreproducible symbolic %s reaches a test",
+                      arr->getIdentifier().c_str());
+  return !bad;
+}
+
 bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
   solver->setTimeout(coreSolverTimeout);
 
@@ -7117,10 +7151,14 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
     }
   }
 
+  std::vector<klee::Symbolic> symbolics;
+  std::copy_if(state.symbolics.begin(), state.symbolics.end(),
+               std::back_inserter(symbolics), isReproducible);
+
   std::vector<SparseStorage<unsigned char>> values;
   std::vector<const Array *> objects;
-  for (unsigned i = 0; i != state.symbolics.size(); ++i)
-    objects.push_back(state.symbolics[i].array);
+  for (unsigned i = 0; i != symbolics.size(); ++i)
+    objects.push_back(symbolics[i].array);
   bool success = solver->getInitialValues(extendedConstraints.cs(), objects,
                                           values, state.queryMetaData);
   solver->setTimeout(time::Span());
@@ -7131,11 +7169,11 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
     return false;
   }
 
-  res.objects = new KTestObject[state.symbolics.size()];
-  res.numObjects = state.symbolics.size();
+  res.objects = new KTestObject[symbolics.size()];
+  res.numObjects = symbolics.size();
 
-  for (unsigned i = 0; i != state.symbolics.size(); ++i) {
-    auto mo = state.symbolics[i].memoryObject;
+  for (unsigned i = 0; i != symbolics.size(); ++i) {
+    auto mo = symbolics[i].memoryObject;
     KTestObject *o = &res.objects[i];
     o->name = const_cast<char *>(mo->name.c_str());
     o->address = mo->address;
@@ -7151,7 +7189,7 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
     model.bindings.insert(binding);
   }
 
-  setInitializationGraph(state, model, res);
+  setInitializationGraph(state, symbolics, model, res);
 
   return true;
 }

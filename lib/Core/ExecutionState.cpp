@@ -363,26 +363,6 @@ void ExecutionState::addUniquePointerResolution(ref<Expr> address,
   }
 }
 
-bool ExecutionState::resolveOnSymbolics(const ref<ConstantExpr> &addr,
-                                        IDType &result) const {
-  uint64_t address = addr->getZExtValue();
-
-  for (const auto &res : symbolics) {
-    const auto &mo = res.memoryObject;
-    // Check if the provided address is between start and end of the object
-    // [mo->address, mo->address + mo->size) or the object is a 0-sized object.
-    ref<ConstantExpr> size = cast<ConstantExpr>(
-        constraints.cs().concretization().evaluate(mo->getSizeExpr()));
-    if ((size->getZExtValue() == 0 && address == mo->address) ||
-        (address - mo->address < size->getZExtValue())) {
-      result = mo->id;
-      return true;
-    }
-  }
-
-  return false;
-}
-
 /**/
 
 llvm::raw_ostream &klee::operator<<(llvm::raw_ostream &os,

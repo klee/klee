@@ -793,6 +793,7 @@ public:
                    Interpreter::LogType logFormat = Interpreter::STP) override;
 
   void setInitializationGraph(const ExecutionState &state,
+                              const std::vector<klee::Symbolic> &symbolics,
                               const Assignment &model, KTest &tc);
 
   void logState(const ExecutionState &state, int id,
