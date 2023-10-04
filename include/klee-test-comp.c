@@ -33,6 +33,12 @@ unsigned int __VERIFIER_nondet_uint(void) {
   return x;
 }
 
+unsigned __int128 __VERIFIER_nondet_uint128(void) {
+  unsigned __int128 x;
+  klee_make_symbolic(&x, sizeof(x), "unsigned __int128");
+  return x;
+}
+
 unsigned __VERIFIER_nondet_unsigned(void) {
   unsigned x;
   klee_make_symbolic(&x, sizeof(x), "unsigned");
