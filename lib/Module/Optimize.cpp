@@ -75,6 +75,10 @@ static cl::opt<bool>
 static cl::alias A1("S", cl::desc("Alias for --strip-debug"),
                     cl::aliasopt(StripDebug));
 
+static cl::opt<bool> DeleteDeadLoops("delete-dead-loops",
+                                     cl::desc("Use LoopDeletionPass"),
+                                     cl::init(true), cl::cat(klee::ModuleCat));
+
 // A utility function that adds a pass to the pass manager but will also add
 // a verifier pass after if we're supposed to verify.
 static inline void addPass(legacy::PassManager &PM, Pass *P) {
@@ -131,8 +135,9 @@ static void AddStandardCompilePasses(legacy::PassManager &PM) {
   addPass(PM, createLoopUnswitchPass()); // Unswitch loops.
   // FIXME : Removing instcombine causes nestedloop regression.
   addPass(PM, createInstructionCombiningPass());
-  addPass(PM, createIndVarSimplifyPass());       // Canonicalize indvars
-  addPass(PM, createLoopDeletionPass());         // Delete dead loops
+  addPass(PM, createIndVarSimplifyPass()); // Canonicalize indvars
+  if (DeleteDeadLoops)
+    addPass(PM, createLoopDeletionPass());       // Delete dead loops
   addPass(PM, createLoopUnrollPass());           // Unroll small loops
   addPass(PM, createInstructionCombiningPass()); // Clean up after the unroller
   addPass(PM, createGVNPass());                  // Remove redundancies
