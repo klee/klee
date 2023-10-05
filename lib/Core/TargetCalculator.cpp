@@ -51,8 +51,7 @@ void TargetCalculator::update(const ExecutionState &state) {
       unsigned index = 0;
       if (!coveredBranches[state.prevPC->parent->parent].count(
               state.prevPC->parent)) {
-        state.coveredNew->value = false;
-        state.coveredNew = new box<bool>(true);
+        state.coverNew();
         coveredBranches[state.prevPC->parent->parent][state.prevPC->parent];
       }
       for (auto succ : successors(state.getPrevPCBlock())) {
@@ -60,8 +59,7 @@ void TargetCalculator::update(const ExecutionState &state) {
           if (!coveredBranches[state.prevPC->parent->parent]
                               [state.prevPC->parent]
                                   .count(index)) {
-            state.coveredNew->value = false;
-            state.coveredNew = new box<bool>(true);
+            state.coverNew();
             coveredBranches[state.prevPC->parent->parent][state.prevPC->parent]
                 .insert(index);
           }
@@ -127,6 +125,30 @@ void TargetCalculator::update(const ExecutionState &state) {
         state.transitionLevel.begin(), state.transitionLevel.end());
     break;
   }
+}
+
+void TargetCalculator::update(
+    ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
+    const std::vector<ExecutionState *> &removedStates) {
+  if (current && (std::find(removedStates.begin(), removedStates.end(),
+                            current) == removedStates.end())) {
+    localStates.insert(current);
+  }
+  for (const auto state : addedStates) {
+    localStates.insert(state);
+  }
+  for (const auto state : removedStates) {
+    localStates.insert(state);
+  }
+  for (auto state : localStates) {
+    KFunction *kf = state->prevPC->parent->parent;
+    KModule *km = kf->parent;
+    if (state->prevPC->inst->isTerminator() &&
+        km->inMainModule(*kf->function)) {
+      update(*state);
+    }
+  }
+  localStates.clear();
 }
 
 bool TargetCalculator::differenceIsEmpty(

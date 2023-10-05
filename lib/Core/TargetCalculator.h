@@ -42,6 +42,8 @@ typedef std::pair<llvm::BasicBlock *, llvm::BasicBlock *> Transition;
 typedef std::pair<llvm::BasicBlock *, unsigned> Branch;
 
 class TargetCalculator {
+  using StatesSet = std::unordered_set<ExecutionState *>;
+
   typedef std::unordered_set<KBlock *> VisitedBlocks;
   typedef std::unordered_set<Transition, TransitionHash> VisitedTransitions;
   typedef std::unordered_set<Branch, BranchHash> VisitedBranches;
@@ -63,12 +65,15 @@ class TargetCalculator {
   typedef std::unordered_set<KFunction *> CoveredFunctionsBranches;
 
   typedef std::unordered_map<llvm::Function *, VisitedBlocks> CoveredBlocks;
+  void update(const ExecutionState &state);
 
 public:
   TargetCalculator(CodeGraphInfo &codeGraphInfo)
       : codeGraphInfo(codeGraphInfo) {}
 
-  void update(const ExecutionState &state);
+  void update(ExecutionState *current,
+              const std::vector<ExecutionState *> &addedStates,
+              const std::vector<ExecutionState *> &removedStates);
 
   TargetHashSet calculate(ExecutionState &state);
 
@@ -80,6 +85,7 @@ private:
   CoveredFunctionsBranches coveredFunctionsInBranches;
   CoveredFunctionsBranches fullyCoveredFunctions;
   CoveredBlocks coveredBlocks;
+  StatesSet localStates;
 
   bool differenceIsEmpty(
       const ExecutionState &state,

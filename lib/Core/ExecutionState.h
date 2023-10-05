@@ -36,6 +36,7 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/Function.h"
 DISABLE_WARNING_POP
 
+#include <deque>
 #include <map>
 #include <memory>
 #include <set>
@@ -364,7 +365,7 @@ public:
   std::uint32_t id = 0;
 
   /// @brief Whether a new instruction was covered in this state
-  mutable ref<box<bool>> coveredNew;
+  mutable std::deque<ref<box<bool>>> coveredNew;
 
   /// @brief Disables forking for this state. Set by user code
   bool forkDisabled = false;
@@ -501,6 +502,22 @@ public:
       return bound && level > bound;
     }
     return false;
+  }
+
+  bool isCoveredNew() const {
+    return !coveredNew.empty() && coveredNew.back()->value;
+  }
+  void coverNew() const { coveredNew.push_back(new box<bool>(true)); }
+  void updateCoveredNew() const {
+    while (!coveredNew.empty() && !coveredNew.front()->value) {
+      coveredNew.pop_front();
+    }
+  }
+  void clearCoveredNew() const {
+    for (auto signal : coveredNew) {
+      signal->value = false;
+    }
+    coveredNew.clear();
   }
 };
 

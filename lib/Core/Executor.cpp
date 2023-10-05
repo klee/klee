@@ -3953,6 +3953,10 @@ void Executor::updateStates(ExecutionState *current) {
     targetedExecutionManager->update(current, addedStates, removedStates);
   }
 
+  if (targetCalculator) {
+    targetCalculator->update(current, addedStates, removedStates);
+  }
+
   if (searcher) {
     searcher->update(current, addedStates, removedStates);
   }
@@ -4084,7 +4088,7 @@ bool Executor::checkMemoryUsage() {
     unsigned idx = theRNG.getInt32() % N;
     // Make two pulls to try and not hit a state that
     // covered new code.
-    if (arr[idx]->coveredNew->value)
+    if (arr[idx]->isCoveredNew())
       idx = theRNG.getInt32() % N;
 
     std::swap(arr[idx], arr[N - 1]);
@@ -4294,11 +4298,6 @@ void Executor::run(std::vector<ExecutionState *> initialStates) {
       KInstruction *prevKI = state.prevPC;
       KFunction *kf = prevKI->parent->parent;
 
-      if (prevKI->inst->isTerminator() &&
-          kmodule->inMainModule(*kf->function)) {
-        targetCalculator->update(state);
-      }
-
       executeStep(state);
     }
 
@@ -4357,8 +4356,8 @@ void Executor::initializeTypeManager() {
 }
 
 static bool shouldWriteTest(const ExecutionState &state) {
-  bool coveredNew = state.coveredNew->value;
-  state.coveredNew->value = false;
+  state.updateCoveredNew();
+  bool coveredNew = state.isCoveredNew();
   return !OnlyOutputStatesCoveringNew || coveredNew;
 }
 
@@ -4380,6 +4379,7 @@ void Executor::executeStep(ExecutionState &state) {
 
   if (CoverOnTheFly && guidanceKind != GuidanceKind::ErrorGuidance &&
       stats::instructions > DelayCoverOnTheFly && shouldWriteTest(state)) {
+    state.clearCoveredNew();
     interpreterHandler->processTestCase(
         state, nullptr,
         terminationTypeFileExtension(StateTerminationType::CoverOnTheFly)
@@ -4565,7 +4565,6 @@ void Executor::terminateState(ExecutionState &state,
 
   interpreterHandler->incPathsExplored();
   state.pc = state.prevPC;
-  targetCalculator->update(state);
   solver->notifyStateTermination(state.id);
 
   removedStates.push_back(&state);
@@ -4574,9 +4573,11 @@ void Executor::terminateState(ExecutionState &state,
 void Executor::terminateStateOnExit(ExecutionState &state) {
   auto terminationType = StateTerminationType::Exit;
   ++stats::terminationExit;
-  if (shouldWriteTest(state) || (AlwaysOutputSeeds && seedMap.count(&state)))
+  if (shouldWriteTest(state) || (AlwaysOutputSeeds && seedMap.count(&state))) {
+    state.clearCoveredNew();
     interpreterHandler->processTestCase(
         state, nullptr, terminationTypeFileExtension(terminationType).c_str());
+  }
 
   interpreterHandler->incPathsCompleted();
   terminateState(state, terminationType);
@@ -4593,6 +4594,7 @@ void Executor::terminateStateEarly(ExecutionState &state, const Twine &message,
         reason == StateTerminationType::MissedAllTargets) &&
        shouldWriteTest(state)) ||
       (AlwaysOutputSeeds && seedMap.count(&state))) {
+    state.clearCoveredNew();
     interpreterHandler->processTestCase(
         state, (message + "\n").str().c_str(),
         terminationTypeFileExtension(reason).c_str(),
@@ -4717,8 +4719,9 @@ void Executor::terminateStateOnError(ExecutionState &state,
   const KInstruction *ki = getLastNonKleeInternalInstruction(state);
   Instruction *lastInst = ki->inst;
 
-  if (EmitAllErrors ||
-      emittedErrors.insert(std::make_pair(lastInst, message)).second) {
+  if ((EmitAllErrors ||
+       emittedErrors.insert(std::make_pair(lastInst, message)).second) &&
+      shouldWriteTest(state)) {
     std::string filepath = ki->getSourceFilepath();
     if (!filepath.empty()) {
       klee_message("ERROR: %s:%zu: %s", filepath.c_str(), ki->getLine(),
@@ -7375,7 +7378,7 @@ void Executor::dumpStates() {
       *os << "{";
       *os << "'depth' : " << es->depth << ", ";
       *os << "'queryCost' : " << es->queryMetaData.queryCost << ", ";
-      *os << "'coveredNew' : " << es->coveredNew->value << ", ";
+      *os << "'coveredNew' : " << es->isCoveredNew() << ", ";
       *os << "'instsSinceCovNew' : " << es->instsSinceCovNew << ", ";
       *os << "'md2u' : " << md2u << ", ";
       *os << "'icnt' : " << icnt << ", ";

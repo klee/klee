@@ -120,9 +120,8 @@ ExecutionState::ExecutionState()
     : initPC(nullptr), pc(nullptr), prevPC(nullptr), incomingBBIndex(-1),
       depth(0), ptreeNode(nullptr), symbolics(), steppedInstructions(0),
       steppedMemoryInstructions(0), instsSinceCovNew(0),
-      roundingMode(llvm::APFloat::rmNearestTiesToEven),
-      coveredNew(new box<bool>(false)), forkDisabled(false),
-      prevHistory_(TargetsHistory::create()),
+      roundingMode(llvm::APFloat::rmNearestTiesToEven), coveredNew({}),
+      forkDisabled(false), prevHistory_(TargetsHistory::create()),
       history_(TargetsHistory::create()) {
   setID();
 }
@@ -131,9 +130,8 @@ ExecutionState::ExecutionState(KFunction *kf)
     : initPC(kf->instructions), pc(initPC), prevPC(pc), incomingBBIndex(-1),
       depth(0), ptreeNode(nullptr), symbolics(), steppedInstructions(0),
       steppedMemoryInstructions(0), instsSinceCovNew(0),
-      roundingMode(llvm::APFloat::rmNearestTiesToEven),
-      coveredNew(new box<bool>(false)), forkDisabled(false),
-      prevHistory_(TargetsHistory::create()),
+      roundingMode(llvm::APFloat::rmNearestTiesToEven), coveredNew({}),
+      forkDisabled(false), prevHistory_(TargetsHistory::create()),
       history_(TargetsHistory::create()) {
   pushFrame(nullptr, kf);
   setID();
@@ -143,9 +141,8 @@ ExecutionState::ExecutionState(KFunction *kf, KBlock *kb)
     : initPC(kb->instructions), pc(initPC), prevPC(pc), incomingBBIndex(-1),
       depth(0), ptreeNode(nullptr), symbolics(), steppedInstructions(0),
       steppedMemoryInstructions(0), instsSinceCovNew(0),
-      roundingMode(llvm::APFloat::rmNearestTiesToEven),
-      coveredNew(new box<bool>(false)), forkDisabled(false),
-      prevHistory_(TargetsHistory::create()),
+      roundingMode(llvm::APFloat::rmNearestTiesToEven), coveredNew({}),
+      forkDisabled(false), prevHistory_(TargetsHistory::create()),
       history_(TargetsHistory::create()) {
   pushFrame(nullptr, kf);
   setID();
