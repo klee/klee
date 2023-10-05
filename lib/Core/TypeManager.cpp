@@ -141,20 +141,13 @@ void TypeManager::initTypesFromGlobals() {
  */
 void TypeManager::initTypesFromInstructions() {
   for (auto &function : *(parent->module)) {
-    auto kf = parent->functionMap[&function];
-
     for (auto &BasicBlock : function) {
-      unsigned numInstructions = kf->blockMap[&BasicBlock]->numInstructions;
-      KBlock *kb = kf->blockMap[&BasicBlock];
-
-      for (unsigned i = 0; i < numInstructions; ++i) {
-        llvm::Instruction *inst = kb->instructions[i]->inst;
-
+      for (auto &inst : BasicBlock) {
         /* Register return type */
-        getWrappedType(inst->getType());
+        getWrappedType(inst.getType());
 
         /* Register types for arguments */
-        for (auto opb = inst->op_begin(), ope = inst->op_end(); opb != ope;
+        for (auto opb = inst.op_begin(), ope = inst.op_end(); opb != ope;
              ++opb) {
           getWrappedType((*opb)->getType());
         }

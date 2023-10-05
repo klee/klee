@@ -189,7 +189,7 @@ weight_type TargetedSearcher::getWeight(ExecutionState *es) {
   KBlock *kb = es->pc->parent;
   KInstruction *ki = es->pc;
   weight_type weight;
-  if (!target->shouldFailOnThisTarget() && kb->numInstructions &&
+  if (!target->shouldFailOnThisTarget() && kb->getNumInstructions() &&
       !isa<KCallBlock>(kb) && kb->getFirstInstruction() != ki &&
       states->tryGetWeight(es, weight)) {
     return weight;

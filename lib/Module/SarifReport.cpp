@@ -333,7 +333,7 @@ bool Location::isInside(KBlock *block, const Instructions &origInsts) const {
       return false;
     return startLine <= last->getLine(); // and `first <= line` from above
   } else {
-    for (size_t i = 0; i < block->numInstructions; ++i) {
+    for (unsigned i = 0, ie = block->getNumInstructions(); i < ie; ++i) {
       auto inst = block->instructions[i];
       auto opCode = block->instructions[i]->inst->getOpcode();
       if (!isa<DbgInfoIntrinsic>(block->instructions[i]->inst) &&

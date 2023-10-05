@@ -60,8 +60,6 @@ enum KBlockType { Base, Call, Return };
 struct KBlock {
   KFunction *parent;
   llvm::BasicBlock *basicBlock;
-
-  unsigned numInstructions;
   KInstruction **instructions;
 
 public:
@@ -76,9 +74,10 @@ public:
   virtual KBlockType getKBlockType() const { return KBlockType::Base; }
   static bool classof(const KBlock *) { return true; }
 
+  unsigned getNumInstructions() const noexcept { return basicBlock->size(); }
   KInstruction *getFirstInstruction() const noexcept { return instructions[0]; }
   KInstruction *getLastInstruction() const noexcept {
-    return instructions[numInstructions - 1];
+    return instructions[getNumInstructions() - 1];
   }
   std::string getLabel() const;
   std::string toString() const;

@@ -606,7 +606,7 @@ KFunction::KFunction(llvm::Function *_function, KModule *_km,
       kb = new KBlock(this, &*bbit, parent, instructionToRegisterMap,
                       &instructions[n], globalIndexInc);
     }
-    for (unsigned i = 0; i < kb->numInstructions; i++, n++) {
+    for (unsigned i = 0, ie = kb->getNumInstructions(); i < ie; i++, n++) {
       instructionMap[instructions[n]->inst] = instructions[n];
     }
     blockMap[&*bbit] = kb;
@@ -639,8 +639,7 @@ KBlock::KBlock(
     KFunction *_kfunction, llvm::BasicBlock *block, KModule *km,
     const std::unordered_map<Instruction *, unsigned> &instructionToRegisterMap,
     KInstruction **instructionsKF, unsigned &globalIndexInc)
-    : parent(_kfunction), basicBlock(block), numInstructions(0) {
-  numInstructions += block->size();
+    : parent(_kfunction), basicBlock(block) {
   instructions = instructionsKF;
 
   for (auto &it : *block) {
