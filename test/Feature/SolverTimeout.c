@@ -1,6 +1,6 @@
 // RUN: %clang %s -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --max-solver-time=1 %t.bc
+// RUN: %klee --output-dir=%t.klee-out --max-solver-time=1 %t.bc 2>&1 | FileCheck %s
 //
 // Note: This test occasionally fails when using Z3 4.4.1
 
@@ -11,6 +11,8 @@ int main() {
 
   klee_make_symbolic(&x, sizeof(x), "x");
 
+  // CHECK-NOT: Yes
+  // CHECK: No
   if (x * x * x * x * x * x * x * x * x * x * x * x * x * x * x * x + (x * x % (x + 12)) == y * y * y * y * y * y * y * y * y * y * y * y * y * y * y * y % i)
     printf("Yes\n");
   else

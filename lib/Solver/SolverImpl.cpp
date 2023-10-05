@@ -18,27 +18,41 @@ using namespace klee;
 SolverImpl::~SolverImpl() {}
 
 bool SolverImpl::computeValidity(const Query &query, PartialValidity &result) {
+  bool trueSuccess, falseSuccess;
   bool isTrue, isFalse;
-  if (!computeTruth(query, isTrue))
-    return false;
-  if (isTrue) {
+  trueSuccess = computeTruth(query, isTrue);
+  if (trueSuccess && isTrue) {
     result = PValidity::MustBeTrue;
   } else {
-    if (!computeTruth(query.negateExpr(), isFalse))
-      return false;
-    result = isFalse ? PValidity::MustBeFalse : PValidity::TrueOrFalse;
+    falseSuccess = computeTruth(query.negateExpr(), isFalse);
+    if (falseSuccess && isFalse) {
+      result = PValidity::MustBeFalse;
+    } else {
+      if (trueSuccess && falseSuccess) {
+        result = PValidity::TrueOrFalse;
+      } else if (!trueSuccess) {
+        result = PValidity::MayBeTrue;
+      } else if (!falseSuccess) {
+        result = PValidity::MayBeFalse;
+      } else {
+        result = PValidity::None;
+      }
+    }
   }
-  return true;
+  return result != PValidity::None;
 }
 
 bool SolverImpl::computeValidity(const Query &query,
                                  ref<SolverResponse> &queryResult,
                                  ref<SolverResponse> &negatedQueryResult) {
-  if (!check(query, queryResult))
-    return false;
-  if (!check(query.negateExpr(), negatedQueryResult))
-    return false;
-  return true;
+  if (!check(query, queryResult)) {
+    queryResult = new UnknownResponse();
+  }
+  if (!check(query.negateExpr(), negatedQueryResult)) {
+    negatedQueryResult = new UnknownResponse();
+  }
+  return !isa<UnknownResponse>(queryResult) ||
+         !isa<UnknownResponse>(negatedQueryResult);
 }
 
 bool SolverImpl::check(const Query &query, ref<SolverResponse> &result) {

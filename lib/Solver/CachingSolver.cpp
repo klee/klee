@@ -187,29 +187,35 @@ bool CachingSolver::computeValidity(const Query &query,
       return true;
     case PValidity::MayBeTrue: {
       ++stats::queryCacheMisses;
-      if (!solver->impl->computeTruth(query, tmp))
-        return false;
-      if (tmp) {
+      bool success = solver->impl->computeTruth(query, tmp);
+      if (success && tmp) {
         cacheInsert(query, PValidity::MustBeTrue);
         result = PValidity::MustBeTrue;
         return true;
-      } else {
+      } else if (success && !tmp) {
         cacheInsert(query, PValidity::TrueOrFalse);
         result = PValidity::TrueOrFalse;
+        return true;
+      } else {
+        cacheInsert(query, PValidity::MayBeTrue);
+        result = PValidity::MayBeTrue;
         return true;
       }
     }
     case PValidity::MayBeFalse: {
       ++stats::queryCacheMisses;
-      if (!solver->impl->computeTruth(query.negateExpr(), tmp))
-        return false;
-      if (tmp) {
+      bool success = solver->impl->computeTruth(query.negateExpr(), tmp);
+      if (success && tmp) {
         cacheInsert(query, PValidity::MustBeFalse);
         result = PValidity::MustBeFalse;
         return true;
-      } else {
+      } else if (success && !tmp) {
         cacheInsert(query, PValidity::TrueOrFalse);
         result = PValidity::TrueOrFalse;
+        return true;
+      } else {
+        cacheInsert(query, PValidity::MayBeFalse);
+        result = PValidity::MayBeFalse;
         return true;
       }
     }
@@ -267,50 +273,8 @@ bool CachingSolver::computeTruth(const Query &query, bool &isValid) {
 bool CachingSolver::computeValidityCore(const Query &query,
                                         ValidityCore &validityCore,
                                         bool &isValid) {
-  PartialValidity cachedResult;
-  bool tmp, cacheHit = cacheLookup(query, cachedResult);
-
-  // a cached result of MayBeTrue forces us to check whether
-  // a False assignment exists.
-  if (cacheHit && cachedResult != PValidity::MayBeTrue) {
-    ValidityCore cachedValidityCore;
-    cacheHit = validityCoreCacheLookup(query, cachedValidityCore);
-    if (cacheHit && cachedResult == PValidity::MustBeTrue) {
-      ++stats::queryCacheHits;
-      validityCore = cachedValidityCore;
-    } else if (cachedResult == PValidity::MustBeTrue) {
-      ++stats::queryCacheMisses;
-      if (!solver->impl->computeValidityCore(query, validityCore, tmp))
-        return false;
-      assert(tmp && "Query must be true!");
-      validityCoreCacheInsert(query, validityCore);
-    } else {
-      ++stats::queryCacheHits;
-    }
-    isValid = (cachedResult == PValidity::MustBeTrue);
-    return true;
-  }
-
   ++stats::queryCacheMisses;
-
-  // cache miss: query solver
-  if (!solver->impl->computeValidityCore(query, validityCore, isValid))
-    return false;
-
-  if (isValid) {
-    cachedResult = PValidity::MustBeTrue;
-    validityCoreCacheInsert(query, validityCore);
-  } else if (cacheHit) {
-    // We know a true assignment exists, and query isn't valid, so
-    // must be TrueOrFalse.
-    assert(cachedResult == PValidity::MayBeTrue);
-    cachedResult = PValidity::TrueOrFalse;
-  } else {
-    cachedResult = PValidity::MayBeFalse;
-  }
-
-  cacheInsert(query, cachedResult);
-  return true;
+  return solver->impl->computeValidityCore(query, validityCore, isValid);
 }
 
 bool CachingSolver::computeInitialValues(
@@ -322,50 +286,8 @@ bool CachingSolver::computeInitialValues(
 }
 
 bool CachingSolver::check(const Query &query, ref<SolverResponse> &result) {
-  PartialValidity cachedResult;
-  bool tmp, cacheHit = cacheLookup(query, cachedResult);
-
-  // a cached result of MayBeTrue forces us to check whether
-  // a False assignment exists.
-  if (cacheHit && cachedResult != PValidity::MayBeTrue) {
-    ValidityCore cachedValidityCore;
-    cacheHit = validityCoreCacheLookup(query, cachedValidityCore);
-    if (cacheHit && cachedResult == PValidity::MustBeTrue) {
-      ++stats::queryCacheHits;
-      result = new ValidResponse(cachedValidityCore);
-    } else if (cachedResult == PValidity::MustBeTrue) {
-      ++stats::queryCacheMisses;
-      if (!solver->impl->computeValidityCore(query, cachedValidityCore, tmp))
-        return false;
-      result = new ValidResponse(cachedValidityCore);
-      assert(tmp && "Query must be true!");
-    } else {
-      ++stats::queryCacheMisses;
-      if (!solver->impl->check(query, result))
-        return false;
-    }
-    return true;
-  }
-
   ++stats::queryCacheMisses;
-
-  // cache miss: query solver
-  if (!solver->impl->check(query, result))
-    return false;
-
-  if (isa<ValidResponse>(result)) {
-    cachedResult = PValidity::MustBeTrue;
-  } else if (cacheHit) {
-    // We know a true assignment exists, and query isn't valid, so
-    // must be TrueOrFalse.
-    assert(cachedResult == PValidity::MayBeTrue);
-    cachedResult = PValidity::TrueOrFalse;
-  } else {
-    cachedResult = PValidity::MayBeFalse;
-  }
-
-  cacheInsert(query, cachedResult);
-  return true;
+  return solver->impl->check(query, result);
 }
 
 SolverImpl::SolverRunStatus CachingSolver::getOperationStatusCode() {

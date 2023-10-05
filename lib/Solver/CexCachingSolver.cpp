@@ -180,13 +180,25 @@ bool CexCachingSolver::searchForResponse(KeyType &key,
       return true;
     }
 
+    KeyType booleanKey;
+    KeyType nonBooleanKey;
+    for (auto i : key) {
+      if (i->getWidth() == Expr::Bool) {
+        booleanKey.insert(i);
+      } else {
+        nonBooleanKey.insert(i);
+      }
+    }
+
     // Otherwise, iterate through the set of current solver responses to see if
     // one of them satisfies the query.
     for (responseTable_ty::iterator it = responseTable.begin(),
                                     ie = responseTable.end();
          it != ie; ++it) {
       ref<SolverResponse> a = *it;
-      if (isa<InvalidResponse>(a) && cast<InvalidResponse>(a)->satisfies(key)) {
+      if (isa<InvalidResponse>(a) &&
+          cast<InvalidResponse>(a)->satisfies(booleanKey) &&
+          cast<InvalidResponse>(a)->satisfiesNonBoolean(nonBooleanKey)) {
         result = a;
         return true;
       }
@@ -270,12 +282,23 @@ bool CexCachingSolver::getResponse(const Query &query,
       result = *res.first;
     }
 
-    if (DebugCexCacheCheckBinding)
-      if (!cast<InvalidResponse>(result)->satisfies(key)) {
+    if (DebugCexCacheCheckBinding) {
+      KeyType booleanKey;
+      KeyType nonBooleanKey;
+      for (auto i : key) {
+        if (i->getWidth() == Expr::Bool) {
+          booleanKey.insert(i);
+        } else {
+          nonBooleanKey.insert(i);
+        }
+      }
+      if (!cast<InvalidResponse>(result)->satisfies(booleanKey) ||
+          !cast<InvalidResponse>(result)->satisfiesNonBoolean(nonBooleanKey)) {
         query.dump();
         result->dump();
         klee_error("Generated assignment doesn't match query");
       }
+    }
   }
 
   ValidityCore resultCore;
@@ -307,21 +330,19 @@ bool CexCachingSolver::computeValidity(const Query &query,
     return false;
 
   if (cast<ConstantExpr>(q)->isTrue()) {
-    if (!getResponse(query, a))
-      return false;
-    if (isa<ValidResponse>(a)) {
+    bool success = getResponse(query, a);
+    if (success && isa<ValidResponse>(a)) {
       result = PValidity::MustBeTrue;
-    } else if (isa<InvalidResponse>(a)) {
+    } else if (success && isa<InvalidResponse>(a)) {
       result = PValidity::TrueOrFalse;
     } else {
       result = PValidity::MayBeTrue;
     }
   } else {
-    if (!getResponse(query.negateExpr(), a))
-      return false;
-    if (isa<ValidResponse>(a)) {
+    bool success = getResponse(query.negateExpr(), a);
+    if (success && isa<ValidResponse>(a)) {
       result = PValidity::MustBeFalse;
-    } else if (isa<InvalidResponse>(a)) {
+    } else if (success && isa<InvalidResponse>(a)) {
       result = PValidity::TrueOrFalse;
     } else {
       result = PValidity::MayBeFalse;
