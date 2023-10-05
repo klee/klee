@@ -593,6 +593,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       klee_warning("unable to get symbolic solution, losing test case");
 
     const auto start_time = time::getWallTime();
+    bool atLeastOneGenerated = false;
 
     if (WriteKTests) {
 
@@ -602,7 +603,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
                 getOutputFilename(getTestFilename("ktest", id)).c_str())) {
           klee_warning("unable to write output test case, losing it");
         } else {
-          ++m_numGeneratedTests;
+          atLeastOneGenerated = true;
         }
 
         if (WriteStates) {
@@ -691,6 +692,10 @@ void KleeHandler::processTestCase(const ExecutionState &state,
 
     if (WriteXMLTests) {
       writeTestCaseXML(message != nullptr, ktest, id);
+      atLeastOneGenerated = true;
+    }
+
+    if (atLeastOneGenerated) {
       ++m_numGeneratedTests;
     }
 
