@@ -1,7 +1,6 @@
-// REQUIRES: z3
 // RUN: %clang %s -emit-llvm %O0opt -g -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --write-kqueries --solver-backend=z3 --output-dir=%t.klee-out --skip-not-symbolic-objects %t.bc > %t.log
+// RUN: %klee --write-kqueries --output-dir=%t.klee-out --skip-not-symbolic-objects %t.bc > %t.log
 // RUN: FileCheck %s -input-file=%t.log
 #include "klee/klee.h"
 

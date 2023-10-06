@@ -20,7 +20,7 @@
                                                         "uri": "/mnt/d/wsl-ubuntu/test2/forward_null/./FN_SecB_ForwardNull_filed.c"
                                                     },
                                                     "region": {
-                                                        "startLine": 49,
+                                                        "startLine": 44,
                                                         "startColumn": null
                                                     }
                                                 }
@@ -33,7 +33,7 @@
                                                         "uri": "/mnt/d/wsl-ubuntu/test2/forward_null/./FN_SecB_ForwardNull_filed.c"
                                                     },
                                                     "region": {
-                                                        "startLine": 50,
+                                                        "startLine": 45,
                                                         "startColumn": null
                                                     }
                                                 }
@@ -52,7 +52,7 @@
                                     "uri": "/mnt/d/wsl-ubuntu/test2/forward_null/./FN_SecB_ForwardNull_filed.c"
                                 },
                                 "region": {
-                                    "startLine": 50,
+                                    "startLine": 45,
                                     "startColumn": null
                                 }
                             }

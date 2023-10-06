@@ -53,7 +53,6 @@ void call_func(int num)
     ResourceLeak_bad01(num);
 }
 
-// REQUIRES: z3
 // RUN: %clang %s -emit-llvm -c -g -O0 -Xclang -disable-O0-optnone -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --write-kqueries --max-cycles-before-stuck=0 --use-guided-search=error --check-out-of-memory --mock-external-calls --skip-not-symbolic-objects --skip-not-lazy-initialized --use-lazy-initialization=only --analysis-reproduce=%s.json %t1.bc

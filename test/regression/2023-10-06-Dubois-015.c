@@ -29,7 +29,10 @@ void abort_prog() {
   abort();
 }
 int __VERIFIER_nondet_int();
-void reach_error() { abort_prog(); __assert_fail("0", "Dubois-015.c", 5, "reach_error"); }
+void reach_error() {
+  abort_prog();
+  __assert_fail("0", "Dubois-015.c", 5, "reach_error");
+}
 void assume(int cond) {
   if (!cond)
     abort_prog();

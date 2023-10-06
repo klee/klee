@@ -20,7 +20,7 @@
                                                         "uri": "/mnt/d/wsl-ubuntu/test2/null_returns/NullReturn_BadCase_WhiteBox01.c"
                                                     },
                                                     "region": {
-                                                        "startLine": 45,
+                                                        "startLine": 40,
                                                         "startColumn": 9
                                                     }
                                                 }
@@ -33,7 +33,7 @@
                                                         "uri": "/mnt/d/wsl-ubuntu/test2/null_returns/NullReturn_BadCase_WhiteBox01.c"
                                                     },
                                                     "region": {
-                                                        "startLine": 66,
+                                                        "startLine": 61,
                                                         "startColumn": 34
                                                     }
                                                 }
@@ -46,7 +46,7 @@
                                                         "uri": "/mnt/d/wsl-ubuntu/test2/null_returns/NullReturn_BadCase_WhiteBox01.c"
                                                     },
                                                     "region": {
-                                                        "startLine": 68,
+                                                        "startLine": 63,
                                                         "startColumn": 9
                                                     }
                                                 }
@@ -59,7 +59,7 @@
                                                         "uri": "/mnt/d/wsl-ubuntu/test2/null_returns/NullReturn_BadCase_WhiteBox01.c"
                                                     },
                                                     "region": {
-                                                        "startLine": 56,
+                                                        "startLine": 51,
                                                         "startColumn": 30
                                                     }
                                                 }
@@ -78,7 +78,7 @@
                                     "uri": "/mnt/d/wsl-ubuntu/test2/null_returns/NullReturn_BadCase_WhiteBox01.c"
                                 },
                                 "region": {
-                                    "startLine": 56,
+                                    "startLine": 51,
                                     "startColumn": 30
                                 }
                             }
@@ -98,7 +98,7 @@
                                                         "uri": "/mnt/d/wsl-ubuntu/test2/null_returns/NullReturn_BadCase_WhiteBox01.c"
                                                     },
                                                     "region": {
-                                                        "startLine": 45,
+                                                        "startLine": 40,
                                                         "startColumn": 9
                                                     }
                                                 }
@@ -111,7 +111,7 @@
                                                         "uri": "/mnt/d/wsl-ubuntu/test2/null_returns/NullReturn_BadCase_WhiteBox01.c"
                                                     },
                                                     "region": {
-                                                        "startLine": 66,
+                                                        "startLine": 61,
                                                         "startColumn": 34
                                                     }
                                                 }
@@ -124,7 +124,7 @@
                                                         "uri": "/mnt/d/wsl-ubuntu/test2/null_returns/NullReturn_BadCase_WhiteBox01.c"
                                                     },
                                                     "region": {
-                                                        "startLine": 68,
+                                                        "startLine": 63,
                                                         "startColumn": 9
                                                     }
                                                 }
@@ -137,7 +137,7 @@
                                                         "uri": "/mnt/d/wsl-ubuntu/test2/null_returns/NullReturn_BadCase_WhiteBox01.c"
                                                     },
                                                     "region": {
-                                                        "startLine": 54,
+                                                        "startLine": 49,
                                                         "startColumn": 30
                                                     }
                                                 }
@@ -156,7 +156,7 @@
                                     "uri": "/mnt/d/wsl-ubuntu/test2/null_returns/NullReturn_BadCase_WhiteBox01.c"
                                 },
                                 "region": {
-                                    "startLine": 54,
+                                    "startLine": 49,
                                     "startColumn": 30
                                 }
                             }

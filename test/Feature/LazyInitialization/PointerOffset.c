@@ -1,7 +1,6 @@
-// REQUIRES: z3
 // RUN: %clang %s -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --solver-backend=z3 --skip-not-symbolic-objects --use-timestamps=false --skip-local=false %t.bc
+// RUN: %klee --output-dir=%t.klee-out --skip-not-symbolic-objects --use-timestamps=false --skip-local=false %t.bc
 // RUN: %ktest-tool %t.klee-out/test*.ktest > %t.log
 // RUN: FileCheck %s -input-file=%t.log
 // CHECK: pointers: [(0, 1, 4)]

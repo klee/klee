@@ -16,8 +16,8 @@
  * @author xwx356597;x00407107
  * 
  */
+
 #include <stdio.h>
-#include <malloc.h>
 
 //@scene 指针释放后未置空导致双重释放
 void DoubleFreeBad01()
@@ -36,7 +36,6 @@ void DoubleFreeBad01()
     free(p); // CHECK: KLEE: WARNING: 100.00% DoubleFree True Positive at trace 1
 }
 
-// REQUIRES: z3
 // RUN: %clang %s -emit-llvm -c -g -O0 -Xclang -disable-O0-optnone -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --use-guided-search=error --mock-external-calls --libc=klee --skip-not-symbolic-objects --skip-not-lazy-initialized --use-lazy-initialization=only --analysis-reproduce=%s.json %t1.bc

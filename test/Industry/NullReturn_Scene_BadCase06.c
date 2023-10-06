@@ -52,7 +52,6 @@ void TestBad6(unsigned int count)
     free(buf);
 }
 
-// REQUIRES: z3
 // RUN: %clang %s -emit-llvm -c -g -O0 -Xclang -disable-O0-optnone -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --use-guided-search=error --mock-external-calls --check-out-of-memory --skip-not-symbolic-objects --skip-not-lazy-initialized --use-lazy-initialization=only --analysis-reproduce=%s.json %t1.bc

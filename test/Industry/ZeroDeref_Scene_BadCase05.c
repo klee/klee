@@ -62,7 +62,6 @@ void TestBad18(struct STU *stu)
 	HelpBadTest1(NULL);
 }
 
-// REQUIRES: z3
 // RUN: %clang %s -emit-llvm -c -g -O0 -Xclang -disable-O0-optnone -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --use-guided-search=error --check-out-of-memory --mock-external-calls --libc=klee --external-calls=all --skip-not-symbolic-objects --skip-not-lazy-initialized --use-lazy-initialization=only --analysis-reproduce=%s.json %t1.bc
