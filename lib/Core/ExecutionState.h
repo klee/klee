@@ -366,6 +366,7 @@ public:
 
   /// @brief Whether a new instruction was covered in this state
   mutable std::deque<ref<box<bool>>> coveredNew;
+  mutable ref<box<bool>> coveredNewError;
 
   /// @brief Disables forking for this state. Set by user code
   bool forkDisabled = false;
@@ -507,7 +508,12 @@ public:
   bool isCoveredNew() const {
     return !coveredNew.empty() && coveredNew.back()->value;
   }
-  void coverNew() const { coveredNew.push_back(new box<bool>(true)); }
+  bool isCoveredNewError() const { return coveredNewError->value; }
+  void coverNew() const {
+    coveredNew.push_back(new box<bool>(true));
+    coveredNewError->value = false;
+    coveredNewError = new box<bool>(true);
+  }
   void updateCoveredNew() const {
     while (!coveredNew.empty() && !coveredNew.front()->value) {
       coveredNew.pop_front();
@@ -519,6 +525,7 @@ public:
     }
     coveredNew.clear();
   }
+  void clearCoveredNewError() const { coveredNewError->value = false; }
 };
 
 struct ExecutionStateIDCompare {

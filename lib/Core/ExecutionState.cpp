@@ -121,7 +121,8 @@ ExecutionState::ExecutionState()
       depth(0), ptreeNode(nullptr), symbolics(), steppedInstructions(0),
       steppedMemoryInstructions(0), instsSinceCovNew(0),
       roundingMode(llvm::APFloat::rmNearestTiesToEven), coveredNew({}),
-      forkDisabled(false), prevHistory_(TargetsHistory::create()),
+      coveredNewError(new box<bool>(false)), forkDisabled(false),
+      prevHistory_(TargetsHistory::create()),
       history_(TargetsHistory::create()) {
   setID();
 }
@@ -131,7 +132,8 @@ ExecutionState::ExecutionState(KFunction *kf)
       depth(0), ptreeNode(nullptr), symbolics(), steppedInstructions(0),
       steppedMemoryInstructions(0), instsSinceCovNew(0),
       roundingMode(llvm::APFloat::rmNearestTiesToEven), coveredNew({}),
-      forkDisabled(false), prevHistory_(TargetsHistory::create()),
+      coveredNewError(new box<bool>(false)), forkDisabled(false),
+      prevHistory_(TargetsHistory::create()),
       history_(TargetsHistory::create()) {
   pushFrame(nullptr, kf);
   setID();
@@ -142,7 +144,8 @@ ExecutionState::ExecutionState(KFunction *kf, KBlock *kb)
       depth(0), ptreeNode(nullptr), symbolics(), steppedInstructions(0),
       steppedMemoryInstructions(0), instsSinceCovNew(0),
       roundingMode(llvm::APFloat::rmNearestTiesToEven), coveredNew({}),
-      forkDisabled(false), prevHistory_(TargetsHistory::create()),
+      coveredNewError(new box<bool>(false)), forkDisabled(false),
+      prevHistory_(TargetsHistory::create()),
       history_(TargetsHistory::create()) {
   pushFrame(nullptr, kf);
   setID();
@@ -170,11 +173,11 @@ ExecutionState::ExecutionState(const ExecutionState &state)
       unwindingInformation(state.unwindingInformation
                                ? state.unwindingInformation->clone()
                                : nullptr),
-      coveredNew(state.coveredNew), forkDisabled(state.forkDisabled),
-      returnValue(state.returnValue), gepExprBases(state.gepExprBases),
-      prevTargets_(state.prevTargets_), targets_(state.targets_),
-      prevHistory_(state.prevHistory_), history_(state.history_),
-      isTargeted_(state.isTargeted_) {
+      coveredNew(state.coveredNew), coveredNewError(state.coveredNewError),
+      forkDisabled(state.forkDisabled), returnValue(state.returnValue),
+      gepExprBases(state.gepExprBases), prevTargets_(state.prevTargets_),
+      targets_(state.targets_), prevHistory_(state.prevHistory_),
+      history_(state.history_), isTargeted_(state.isTargeted_) {
   queryMetaData.id = state.id;
 }
 

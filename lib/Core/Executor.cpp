@@ -4355,9 +4355,9 @@ void Executor::initializeTypeManager() {
   typeSystemManager->initModule();
 }
 
-static bool shouldWriteTest(const ExecutionState &state) {
+static bool shouldWriteTest(const ExecutionState &state, bool isError = false) {
   state.updateCoveredNew();
-  bool coveredNew = state.isCoveredNew();
+  bool coveredNew = isError ? state.isCoveredNewError() : state.isCoveredNew();
   return !OnlyOutputStatesCoveringNew || coveredNew;
 }
 
@@ -4721,7 +4721,7 @@ void Executor::terminateStateOnError(ExecutionState &state,
 
   if ((EmitAllErrors ||
        emittedErrors.insert(std::make_pair(lastInst, message)).second) &&
-      shouldWriteTest(state)) {
+      shouldWriteTest(state, true)) {
     std::string filepath = ki->getSourceFilepath();
     if (!filepath.empty()) {
       klee_message("ERROR: %s:%zu: %s", filepath.c_str(), ki->getLine(),
@@ -4751,6 +4751,8 @@ void Executor::terminateStateOnError(ExecutionState &state,
     std::string info_str = info.str();
     if (!info_str.empty())
       msg << "Info: \n" << info_str;
+
+    state.clearCoveredNewError();
 
     const std::string ext = terminationTypeFileExtension(terminationType);
     // use user provided suffix from klee_report_error()
