@@ -55,11 +55,17 @@ cl::list<Searcher::CoreSearchType> CoreSearch(
         clEnumValN(Searcher::NURS_QC, "nurs:qc", "use NURS with Query-Cost")),
     cl::cat(SearchCat));
 
-cl::opt<bool> UseIterativeDeepeningTimeSearch(
-    "use-iterative-deepening-time-search",
-    cl::desc(
-        "Use iterative deepening time search (experimental) (default=false)"),
-    cl::init(false), cl::cat(SearchCat));
+cl::opt<HaltExecution::Reason> UseIterativeDeepeningSearch(
+    "use-iterative-deepening-search",
+    cl::desc("Use iterative deepening search based on metric (experimental) "
+             "(default=unspecified)"),
+    cl::values(clEnumValN(HaltExecution::Reason::Unspecified, "unspecified",
+                          "Do not use iterative deepening search (default)"),
+               clEnumValN(HaltExecution::Reason::MaxTime, "max-time",
+                          "metric is maximum time"),
+               clEnumValN(HaltExecution::Reason::MaxCycles, "max-cycles",
+                          "metric is maximum cycles")),
+    cl::init(HaltExecution::Reason::Unspecified), cl::cat(SearchCat));
 
 cl::opt<bool> UseBatchingSearch(
     "use-batching-search",
@@ -172,15 +178,21 @@ Searcher *klee::constructUserSearcher(Executor &executor,
                                     BatchInstructions);
   }
 
-  if (UseIterativeDeepeningTimeSearch) {
-    searcher = new IterativeDeepeningTimeSearcher(searcher);
-  }
-
+  TargetManagerSubscriber *tms = nullptr;
   if (executor.guidanceKind != Interpreter::GuidanceKind::NoGuidance) {
     searcher = new GuidedSearcher(searcher, *executor.distanceCalculator,
                                   executor.theRNG);
-    executor.targetManager->subscribe(*static_cast<GuidedSearcher *>(searcher));
+    tms = static_cast<GuidedSearcher *>(searcher);
   }
+
+  if (UseIterativeDeepeningSearch != HaltExecution::Reason::Unspecified) {
+    searcher = new IterativeDeepeningSearcher(searcher, tms,
+                                              UseIterativeDeepeningSearch);
+    tms = static_cast<IterativeDeepeningSearcher *>(searcher);
+  }
+
+  if (tms)
+    executor.targetManager->subscribe(*tms);
 
   llvm::raw_ostream &os = executor.getHandler().getInfoStream();
 

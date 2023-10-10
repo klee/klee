@@ -160,16 +160,9 @@ class GuidedSearcher final : public Searcher, public TargetManagerSubscriber {
   using TargetHistoryTargetPairHashMap =
       std::unordered_map<TargetHistoryTargetPair, T, TargetHistoryTargetHash,
                          TargetHistoryTargetCmp>;
-
-  using TargetHistoryTargetPair =
-      std::pair<ref<const TargetsHistory>, ref<Target>>;
   using TargetHistoryTargetPairToSearcherMap =
       std::unordered_map<TargetHistoryTargetPair,
                          std::unique_ptr<TargetedSearcher>,
-                         TargetHistoryTargetHash, TargetHistoryTargetCmp>;
-  using StatesVector = std::vector<ExecutionState *>;
-  using TargetHistoryTargetPairToStatesMap =
-      std::unordered_map<TargetHistoryTargetPair, StatesVector,
                          TargetHistoryTargetHash, TargetHistoryTargetCmp>;
   using TargetForestHisoryTargetVector = std::vector<TargetHistoryTargetPair>;
   using TargetForestHistoryTargetSet =
@@ -323,26 +316,43 @@ public:
   void printName(llvm::raw_ostream &os) override;
 };
 
-/// IterativeDeepeningTimeSearcher implements time-based deepening. States
-/// are selected from an underlying searcher. When a state reaches its time
-/// limit it is paused (removed from underlying searcher). When the underlying
-/// searcher runs out of states, the time budget is increased and all paused
+/// IterativeDeepeningSearcher implements a metric-based deepening. States
+/// are selected from an underlying searcher. When a state exceeds its metric
+/// limit, it is paused (removed from underlying searcher). When the underlying
+/// searcher runs out of states, the metric limit is increased and all paused
 /// states are revived (added to underlying searcher).
-class IterativeDeepeningTimeSearcher final : public Searcher {
+class IterativeDeepeningSearcher final : public Searcher,
+                                         public TargetManagerSubscriber {
+public:
+  struct Metric {
+    virtual ~Metric() = default;
+    virtual void selectState(){};
+    virtual bool exceeds(const ExecutionState &state) const = 0;
+    virtual void increaseLimit() = 0;
+  };
+
+private:
   std::unique_ptr<Searcher> baseSearcher;
-  time::Point startTime;
-  time::Span time{time::seconds(1)};
+  TargetManagerSubscriber *tms;
+  std::unique_ptr<Metric> metric;
   std::set<ExecutionState *> pausedStates;
+
+  void filter(const std::vector<ExecutionState *> &states,
+              std::vector<ExecutionState *> &result) const;
 
 public:
   /// \param baseSearcher The underlying searcher (takes ownership).
-  explicit IterativeDeepeningTimeSearcher(Searcher *baseSearcher);
-  ~IterativeDeepeningTimeSearcher() override = default;
+  explicit IterativeDeepeningSearcher(Searcher *baseSearcher,
+                                      TargetManagerSubscriber *tms,
+                                      HaltExecution::Reason metric);
+  ~IterativeDeepeningSearcher() override = default;
 
   ExecutionState &selectState() override;
   void update(ExecutionState *current,
               const std::vector<ExecutionState *> &addedStates,
               const std::vector<ExecutionState *> &removedStates) override;
+  void update(const TargetHistoryTargetPairToStatesMap &added,
+              const TargetHistoryTargetPairToStatesMap &removed) override;
   bool empty() override;
   void printName(llvm::raw_ostream &os) override;
 };

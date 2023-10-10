@@ -25,15 +25,15 @@
 namespace klee {
 class TargetCalculator;
 
+using TargetHistoryTargetPair =
+    std::pair<ref<const TargetsHistory>, ref<Target>>;
+using StatesVector = std::vector<ExecutionState *>;
+using TargetHistoryTargetPairToStatesMap =
+    std::unordered_map<TargetHistoryTargetPair, StatesVector,
+                       TargetHistoryTargetHash, TargetHistoryTargetCmp>;
+
 class TargetManagerSubscriber {
 public:
-  using TargetHistoryTargetPair =
-      std::pair<ref<const TargetsHistory>, ref<Target>>;
-  using StatesVector = std::vector<ExecutionState *>;
-  using TargetHistoryTargetPairToStatesMap =
-      std::unordered_map<TargetHistoryTargetPair, StatesVector,
-                         TargetHistoryTargetHash, TargetHistoryTargetCmp>;
-
   virtual ~TargetManagerSubscriber() = default;
 
   /// Selects a state for further exploration.
@@ -47,12 +47,6 @@ private:
   using StatesSet = std::unordered_set<ExecutionState *>;
   using StateToDistanceMap =
       std::unordered_map<const ExecutionState *, TargetHashMap<DistanceResult>>;
-  using TargetHistoryTargetPair =
-      std::pair<ref<const TargetsHistory>, ref<Target>>;
-  using StatesVector = std::vector<ExecutionState *>;
-  using TargetHistoryTargetPairToStatesMap =
-      std::unordered_map<TargetHistoryTargetPair, StatesVector,
-                         TargetHistoryTargetHash, TargetHistoryTargetCmp>;
   using TargetForestHistoryTargetSet =
       std::unordered_set<TargetHistoryTargetPair, TargetHistoryTargetHash,
                          TargetHistoryTargetCmp>;

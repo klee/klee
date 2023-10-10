@@ -392,7 +392,7 @@ void StatsTracker::stepInstruction(ExecutionState &es) {
 
     Instruction *inst = es.pc->inst;
     const KInstruction *ki = es.pc;
-    InfoStackFrame &sf = es.stack.infoStack().back();
+    auto &sf = es.stack.infoStack().back();
     theStatisticManager->setIndex(ki->getGlobalIndex());
     if (UseCallPaths)
       theStatisticManager->setContext(&sf.callPathNode->statistics);

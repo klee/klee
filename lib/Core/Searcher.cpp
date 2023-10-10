@@ -640,33 +640,94 @@ void BatchingSearcher::printName(llvm::raw_ostream &os) {
 
 ///
 
-IterativeDeepeningTimeSearcher::IterativeDeepeningTimeSearcher(
-    Searcher *baseSearcher)
-    : baseSearcher{baseSearcher} {};
+class TimeMetric final : public IterativeDeepeningSearcher::Metric {
+  time::Point startTime;
+  time::Span time{time::seconds(1)};
 
-ExecutionState &IterativeDeepeningTimeSearcher::selectState() {
+public:
+  void selectState() final { startTime = time::getWallTime(); }
+  bool exceeds(const ExecutionState &state) const final {
+    return time::getWallTime() - startTime > time;
+  }
+  void increaseLimit() final {
+    time *= 2U;
+    klee_message("increased time budget to %f seconds", time.toSeconds());
+  }
+};
+
+class MaxCyclesMetric final : public IterativeDeepeningSearcher::Metric {
+public:
+  using ty = unsigned long long;
+
+private:
+  ty maxCycles;
+
+public:
+  explicit MaxCyclesMetric(ty maxCycles) : maxCycles(maxCycles){};
+  explicit MaxCyclesMetric() : MaxCyclesMetric(1ULL){};
+
+  bool exceeds(const ExecutionState &state) const final {
+    return state.isStuck(maxCycles);
+  }
+  void increaseLimit() final {
+    maxCycles *= 2ULL;
+    klee_message("increased max-cycles to %llu", maxCycles);
+  }
+};
+
+IterativeDeepeningSearcher::IterativeDeepeningSearcher(
+    Searcher *baseSearcher, TargetManagerSubscriber *tms,
+    HaltExecution::Reason m)
+    : baseSearcher{baseSearcher}, tms{tms} {
+  switch (m) {
+  case HaltExecution::Reason::MaxTime:
+    metric = std::make_unique<TimeMetric>();
+    return;
+  case HaltExecution::Reason::MaxCycles:
+    metric = std::make_unique<MaxCyclesMetric>();
+    return;
+  default:
+    klee_error("Illegal metric for iterative deepening searcher: %d", m);
+  }
+}
+
+ExecutionState &IterativeDeepeningSearcher::selectState() {
   ExecutionState &res = baseSearcher->selectState();
-  startTime = time::getWallTime();
+  metric->selectState();
   return res;
 }
 
-void IterativeDeepeningTimeSearcher::update(
-    ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
-    const std::vector<ExecutionState *> &removedStates) {
+void IterativeDeepeningSearcher::filter(const StatesVector &states,
+                                        StatesVector &result) const {
+  StatesVector states1(states);
+  std::sort(states1.begin(), states1.end());
+  std::set_difference(states1.begin(), states1.end(), pausedStates.begin(),
+                      pausedStates.end(), std::back_inserter(result));
+}
 
-  const auto elapsed = time::getWallTime() - startTime;
+void IterativeDeepeningSearcher::update(
+    const TargetHistoryTargetPairToStatesMap &added,
+    const TargetHistoryTargetPairToStatesMap &removed) {
+  if (!tms)
+    return;
+  TargetHistoryTargetPairToStatesMap removedRefined(removed.size());
+  for (const auto &pair : removed) {
+    StatesVector refined;
+    IterativeDeepeningSearcher::filter(pair.second, refined);
+    removedRefined.emplace(pair.first, std::move(refined));
+  }
+  tms->update(added, removedRefined);
+}
+
+void IterativeDeepeningSearcher::update(ExecutionState *current,
+                                        const StatesVector &addedStates,
+                                        const StatesVector &removedStates) {
 
   // update underlying searcher (filter paused states unknown to underlying
   // searcher)
   if (!removedStates.empty()) {
-    std::vector<ExecutionState *> alt = removedStates;
-    for (const auto state : removedStates) {
-      auto it = pausedStates.find(state);
-      if (it != pausedStates.end()) {
-        pausedStates.erase(it);
-        alt.erase(std::remove(alt.begin(), alt.end(), state), alt.end());
-      }
-    }
+    StatesVector alt;
+    IterativeDeepeningSearcher::filter(removedStates, alt);
     baseSearcher->update(current, addedStates, alt);
   } else {
     baseSearcher->update(current, addedStates, removedStates);
@@ -676,27 +737,26 @@ void IterativeDeepeningTimeSearcher::update(
   if (current &&
       std::find(removedStates.begin(), removedStates.end(), current) ==
           removedStates.end() &&
-      elapsed > time) {
+      metric->exceeds(*current)) {
     pausedStates.insert(current);
     baseSearcher->update(nullptr, {}, {current});
   }
 
   // no states left in underlying searcher: fill with paused states
   if (baseSearcher->empty()) {
-    time *= 2U;
-    klee_message("increased time budget to %f\n", time.toSeconds());
-    std::vector<ExecutionState *> ps(pausedStates.begin(), pausedStates.end());
-    baseSearcher->update(nullptr, ps, std::vector<ExecutionState *>());
+    metric->increaseLimit();
+    StatesVector ps(pausedStates.begin(), pausedStates.end());
+    baseSearcher->update(nullptr, ps, {});
     pausedStates.clear();
   }
 }
 
-bool IterativeDeepeningTimeSearcher::empty() {
+bool IterativeDeepeningSearcher::empty() {
   return baseSearcher->empty() && pausedStates.empty();
 }
 
-void IterativeDeepeningTimeSearcher::printName(llvm::raw_ostream &os) {
-  os << "IterativeDeepeningTimeSearcher\n";
+void IterativeDeepeningSearcher::printName(llvm::raw_ostream &os) {
+  os << "IterativeDeepeningSearcher\n";
 }
 
 ///

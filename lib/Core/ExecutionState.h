@@ -127,6 +127,7 @@ public:
   inline value_stack_ty &valueStack() { return valueStack_; }
   inline const value_stack_ty &valueStack() const { return valueStack_; }
   inline const call_stack_ty &callStack() const { return callStack_; }
+  inline const info_stack_ty &infoStack() const { return infoStack_; }
   inline info_stack_ty &infoStack() { return infoStack_; }
   inline const call_stack_ty &uniqueFrames() const { return uniqueFrames_; }
 
@@ -491,16 +492,18 @@ public:
   bool reachedTarget(ref<ReachBlockTarget> target) const;
   static std::uint32_t getLastID() { return nextID - 1; };
 
-  inline bool isStuck(unsigned long long bound) {
-    KInstruction *prevKI = prevPC;
-    if (prevKI->inst->isTerminator() && stack.size() > 0) {
-      auto level = stack.infoStack().back().multilevel[getPCBlock()].second;
-      return bound && level > bound;
+  inline bool isStuck(unsigned long long bound) const {
+    if (bound == 0)
+      return false;
+    if (prevPC->inst->isTerminator() && stack.size() > 0) {
+      auto &ml = stack.infoStack().back().multilevel;
+      auto level = ml.find(getPCBlock());
+      return level != ml.end() && level->second > bound;
     }
     if (pc == pc->parent->getFirstInstruction() &&
         pc->parent == pc->parent->parent->entryKBlock) {
-      auto level = stack.multilevel[stack.callStack().back().kf].second;
-      return bound && level > bound;
+      auto level = stack.multilevel.at(stack.callStack().back().kf);
+      return level > bound;
     }
     return false;
   }

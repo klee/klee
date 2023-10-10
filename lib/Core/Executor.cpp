@@ -4295,8 +4295,6 @@ void Executor::run(std::vector<ExecutionState *> initialStates) {
   while (!states.empty() && !haltExecution) {
     while (!searcher->empty() && !haltExecution) {
       ExecutionState &state = searcher->selectState();
-      KInstruction *prevKI = state.prevPC;
-      KFunction *kf = prevKI->parent->parent;
 
       executeStep(state);
     }
@@ -4375,8 +4373,6 @@ static std::string terminationTypeFileExtension(StateTerminationType type) {
 };
 
 void Executor::executeStep(ExecutionState &state) {
-  KInstruction *prevKI = state.prevPC;
-
   if (CoverOnTheFly && guidanceKind != GuidanceKind::ErrorGuidance &&
       stats::instructions > DelayCoverOnTheFly && shouldWriteTest(state)) {
     state.clearCoveredNew();
@@ -4389,13 +4385,7 @@ void Executor::executeStep(ExecutionState &state) {
   if (targetManager->isTargeted(state) && state.targets().empty()) {
     terminateStateEarlyAlgorithm(state, "State missed all it's targets.",
                                  StateTerminationType::MissedAllTargets);
-  } else if (prevKI->inst->isTerminator() && MaxCycles &&
-             (state.stack.infoStack()
-                      .back()
-                      .multilevel[state.getPCBlock()]
-                      .second > MaxCycles ||
-              state.stack.multilevel[state.stack.callStack().back().kf].second >
-                  MaxCycles)) {
+  } else if (state.isStuck(MaxCycles)) {
     terminateStateEarly(state, "max-cycles exceeded.",
                         StateTerminationType::MaxCycles);
   } else {

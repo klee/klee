@@ -18,13 +18,13 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --search=random-path --search=nurs:qc %t2.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --use-iterative-deepening-time-search --use-batching-search %t2.bc
+// RUN: %klee --output-dir=%t.klee-out --use-iterative-deepening-search=max-time --use-batching-search %t2.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --use-iterative-deepening-time-search --use-batching-search --search=random-state %t2.bc
+// RUN: %klee --output-dir=%t.klee-out --use-iterative-deepening-search=max-time --use-batching-search --search=random-state %t2.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --use-iterative-deepening-time-search --use-batching-search --search=nurs:depth %t2.bc
+// RUN: %klee --output-dir=%t.klee-out --use-iterative-deepening-search=max-time --use-batching-search --search=nurs:depth %t2.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --use-iterative-deepening-time-search --use-batching-search --search=nurs:qc %t2.bc
+// RUN: %klee --output-dir=%t.klee-out --use-iterative-deepening-search=max-time --use-batching-search --search=nurs:qc %t2.bc
 
 /* this test is basically just for coverage and doesn't really do any
    correctness check (aside from testing that the various combinations
