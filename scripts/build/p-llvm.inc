@@ -174,16 +174,21 @@ configure_llvm() {
   )
 
   if [[ "${SANITIZER_BUILD:-}" == "memory" ]]; then
-    # We have to build without libunwind if RTTI is disables
+    # We have to build without libunwind if RTTI is disabled
     CONFIG+=("-DLLVM_ENABLE_PROJECTS=${ENABLED_LLVM_PROJECTS}")
   else
-      CONFIG+=(
-          "-DLLVM_BUILD_LLVM_DYLIB:BOOL=ON"
-          "-DLLVM_LINK_LLVM_DYLIB:BOOL=ON"
-          "-DLLVM_BUILD_STATIC:BOOL=OFF"
-          "-DLIBCLANG_BUILD_STATIC:BOOL=OFF"
-      )
-      CONFIG+=("-DLLVM_ENABLE_PROJECTS=${ENABLED_LLVM_PROJECTS};libcxx;libcxxabi;libunwind")
+    CONFIG+=(
+        "-DLLVM_BUILD_LLVM_DYLIB:BOOL=ON"
+        "-DLLVM_LINK_LLVM_DYLIB:BOOL=ON"
+        "-DLLVM_BUILD_STATIC:BOOL=OFF"
+        "-DLIBCLANG_BUILD_STATIC:BOOL=OFF"
+    )
+    if [[ "${LLVM_VERSION_SHORT}" -ge "14" ]]; then
+      CONFIG+=("-DLLVM_ENABLE_PROJECTS=${ENABLED_LLVM_PROJECTS}")
+      CONFIG+=("-DLLVM_ENABLE_RUNTIMES=libcxx;libcxxabi")
+    else
+      CONFIG+=("-DLLVM_ENABLE_PROJECTS=${ENABLED_LLVM_PROJECTS};libcxx;libcxxabi")
+    fi
   fi
 
   if [[ -n ${SANITIZER_BUILD} ]]; then
