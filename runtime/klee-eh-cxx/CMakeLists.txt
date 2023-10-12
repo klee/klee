@@ -16,8 +16,14 @@ set(ADDITIONAL_CXX_FLAGS
         -nostdinc++
         -I "${KLEE_LIBCXXABI_SRC_DIR}/src"
         -I "${KLEE_LIBCXXABI_SRC_DIR}/include"
-        -I "${KLEE_LIBCXX_INCLUDE_DIR}"
+        -I "${KLEE_LIBCXX_INCLUDE_PATH}"
+)
+
+if (KLEE_LIBCXX_PLATFORM_INCLUDE_PATH)
+        list(APPEND ADDITIONAL_CXX_FLAGS
+                -I "${KLEE_LIBCXX_PLATFORM_INCLUDE_PATH}"
         )
+endif ()
 # Build it
 include("${CMAKE_SOURCE_DIR}/cmake/compile_bitcode_library.cmake")
 prefix_with_path("${SRC_FILES}" "${CMAKE_CURRENT_SOURCE_DIR}/" prefixed_files)
