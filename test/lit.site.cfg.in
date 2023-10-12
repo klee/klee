@@ -9,7 +9,9 @@ config.klee_obj_root = "@KLEE_BINARY_DIR@"
 config.klee_tools_dir = "@KLEE_TOOLS_DIR@"
 config.llvm_tools_dir = "@LLVM_TOOLS_DIR@"
 
-config.libcxx_include_dir = "@KLEE_LIBCXX_INCLUDE_DIR@"
+config.libcxx_include_dirs = ["@KLEE_LIBCXX_INCLUDE_PATH@"]
+if len("@KLEE_LIBCXX_PLATFORM_INCLUDE_PATH@") > 0:
+    config.libcxx_include_dirs.append("@KLEE_LIBCXX_PLATFORM_INCLUDE_PATH@")
 
 # Needed to check if a hack needs to be applied
 config.llvm_version_major = "@LLVM_VERSION_MAJOR@"
