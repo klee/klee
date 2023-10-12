@@ -248,6 +248,10 @@ public:
   /// @brief Disables forking for this state. Set by user code
   bool forkDisabled = false;
 
+  /// @brief Mapping symbolic address expressions to concrete base addresses
+  typedef std::map<ref<Expr>, ref<ConstantExpr>> base_addrs_t;
+  base_addrs_t base_addrs;
+
 public:
 #ifdef KLEE_UNITTEST
   // provide this function only in the context of unittests
