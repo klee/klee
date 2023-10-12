@@ -30,7 +30,6 @@ build_libcxx() {
   local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
 
   local cmake_flags=(
-   "-DLLVM_ENABLE_PROJECTS=libcxx;libcxxabi"
    "-DLLVM_ENABLE_THREADS:BOOL=OFF"
    "-DLIBCXX_ENABLE_THREADS:BOOL=OFF"
    "-DLIBCXX_ENABLE_SHARED:BOOL=ON"
@@ -40,6 +39,13 @@ build_libcxx() {
   )
 
   # Static ABI libraries are not supported under OS X
+  if [[ "${LLVM_VERSION_SHORT}" -ge "14" ]]; then
+    cmake_flags+=("-DLLVM_ENABLE_RUNTIMES=libcxx;libcxxabi")
+    cmake_flags+=("-DLLVM_ENABLE_PROJECTS=")
+    cmake_flags+=("-DLLVM_ENABLE_PROJECTS_USED:BOOL=ON")
+  else
+    cmake_flags+=("-DLLVM_ENABLE_PROJECTS=libcxx;libcxxabi")
+  fi
   if [[ "${OS}" == "osx" ]]; then
     cmake_flags+=("-DLIBCXX_ENABLE_STATIC_ABI_LIBRARY:BOOL=OFF")
   else
@@ -53,7 +59,11 @@ build_libcxx() {
     export LLVM_COMPILER_PATH="$(dirname "${BITCODE_CC}")"
 
     cmake "${cmake_flags[@]}" "${LIBCXX_SRC}/llvm"
-    make cxx -j$(nproc) || make cxx
+   if [[ "${LLVM_VERSION_SHORT}" -ge "14" ]]; then
+     make runtimes - j"$(nproc)" || make cxx || return 1
+   else
+     make cxx - j"$(nproc)" || make cxx || return 1
+   fi
   )
 }
 
@@ -65,19 +75,24 @@ install_libcxx() {
     export LLVM_COMPILER=clang
     export LLVM_COMPILER_PATH="$(dirname "${BITCODE_CC}")"
 
-    cd "${LIBCXX_BUILD}/projects"
-    make install
+    if [[ "${LLVM_VERSION_SHORT}" -ge "14" ]]; then
+      cd "${LIBCXX_BUILD}/runtimes" || return 1
+      make install || return 1
+    else
+      cd "${LIBCXX_BUILD}/projects" || return 1
+      make install || return 1
+    fi
 
     local libraries
 
     if [[ "${OS}" == "osx" ]]; then
-      libraries=("${LIBCXX_INSTALL}"/lib/lib*.dylib)
+      libraries=("${LIBCXX_INSTALL}"/lib/*/lib*.dylib)
     else
-      libraries=("${LIBCXX_INSTALL}"/lib/lib*.so)
+      libraries=("${LIBCXX_INSTALL}"/lib/*/lib*.so)
     fi
 
     local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
-    libraries+=("${LIBCXX_INSTALL}"/lib/lib*.a)
+    libraries+=("${LIBCXX_INSTALL}"/lib/*/lib*.a)
 
 
     for p in "${libraries[@]}" ; do
