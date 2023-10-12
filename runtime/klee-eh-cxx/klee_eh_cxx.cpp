@@ -90,7 +90,7 @@ get_thrown_object_ptr(_Unwind_Exception* unwind_exception)
 // Our implementation of a personality function for handling
 // libcxxabi-exceptions. Follows how libcxxabi's __gxx_personality_v0 handles
 // exceptions.
-[[gnu::used]] extern "C" std::int32_t
+extern "C" std::int32_t
 _klee_eh_cxx_personality(_Unwind_Exception *exceptionPointer,
                          const std::size_t num_bytes,
                          const unsigned char *lp_clauses) {
