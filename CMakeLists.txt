@@ -506,51 +506,44 @@ option(ENABLE_KLEE_LIBCXX "Enable libc++ for klee" OFF)
 if (ENABLE_KLEE_LIBCXX)
   message(STATUS "klee-libc++ support enabled")
   set(SUPPORT_KLEE_LIBCXX 1) # For config.h
-  set(KLEE_LIBCXX_DIR "" CACHE PATH "Path to directory containing libc++ shared object (bitcode)")
-  if (NOT EXISTS "${KLEE_LIBCXX_DIR}")
-    message(FATAL_ERROR
-      "KLEE_LIBCXX_DIR (\"${KLEE_LIBCXX_DIR}\") does not exist.\n"
-      "Try passing -DKLEE_LIBCXX_DIR=<path> to CMake where <path> is the path"
-      "to the directory containing the libc++ shared object file (as bitcode).")
-  endif()
 
-  set(KLEE_LIBCXX_INCLUDE_DIR "" CACHE PATH "Path to libc++ include directory")
-  if (NOT EXISTS "${KLEE_LIBCXX_INCLUDE_DIR}")
-    message(FATAL_ERROR
-      "KLEE_LIBCXX_INCLUDE_DIR (\"${KLEE_LIBCXX_INCLUDE_DIR}\") does not exist.\n"
-      "Try passing -DKLEE_LIBCXX_INCLUDE_DIR=<path> to CMake where <path> is the"
-      "libc++ include directory.")
-  endif()
-  message(STATUS "Use libc++ include path: \"${KLEE_LIBCXX_INCLUDE_DIR}\"")
-
-  # Find the library bitcode archive
-
-  # Check for static first
-  set(KLEE_LIBCXX_BC_NAME "libc++.bca")
-  set(KLEE_LIBCXX_BC_PATH "${KLEE_LIBCXX_DIR}/lib/${KLEE_LIBCXX_BC_NAME}")
-  if (NOT EXISTS "${KLEE_LIBCXX_BC_PATH}")
-    # Check for dynamic so lib
-    set(KLEE_LIBCXX_BC_NAME "libc++.so.bc")
-    set(KLEE_LIBCXX_BC_PATH "${KLEE_LIBCXX_DIR}/lib/${KLEE_LIBCXX_BC_NAME}")
-    if (NOT EXISTS "${KLEE_LIBCXX_BC_PATH}")
-      set(KLEE_LIBCXX_BC_NAME "libc++.dylib.bc")
-      set(KLEE_LIBCXX_BC_PATH "${KLEE_LIBCXX_DIR}/lib/${KLEE_LIBCXX_BC_NAME}")
-      if (NOT EXISTS "${KLEE_LIBCXX_BC_PATH}")
-        message(FATAL_ERROR
-          "libc++ library not found at \"${KLEE_LIBCXX_DIR}\"")
-      endif()
-    endif()
-  endif()
+  find_file(KLEE_LIBCXX_BC_PATH
+          NAMES libc++.bca libc++.so.bc libc++.dylib.bc
+          DOC "Path to directory containing libc++ shared object (bitcode)"
+          PATH_SUFFIXES "lib" "lib/x86_64-unknown-linux-gnu"
+          HINTS ${KLEE_LIBCXX_DIR}
+          REQUIRED
+  )
   message(STATUS "Found libc++ library: \"${KLEE_LIBCXX_BC_PATH}\"")
+
+  find_path(KLEE_LIBCXX_PLATFORM_INCLUDE_PATH
+          NAMES __config_site #We are searching for a platform-specific C++ library header called `__config_site`
+          DOC "Path to platform-specific libc++ include directory"
+          PATH_SUFFIXES "x86_64-unknown-linux-gnu/c++/v1" "include/x86_64-unknown-linux-gnu/c++/v1"
+          HINTS ${KLEE_LIBCXX_INCLUDE_DIR}
+          NO_DEFAULT_PATH # Make sure we don't pick-up the standard library's path
+  )
+
+  find_path(KLEE_LIBCXX_INCLUDE_PATH
+          NAMES cerrno #We are searching for a C++ library header called `cerrno`
+          DOC "Path to libc++ include directory"
+          PATH_SUFFIXES "c++/v1" "include/c++/v1"
+          HINTS ${KLEE_LIBCXX_INCLUDE_DIR}
+          REQUIRED
+          NO_DEFAULT_PATH # Make sure we don't pick-up the standard library's path
+  )
+
+  message(STATUS "Found libc++ include path: ${KLEE_LIBCXX_INCLUDE_PATH} and ${KLEE_LIBCXX_PLATFORM_INCLUDE_PATH} ")
+
 
   # Copy KLEE_LIBCXX_BC_PATH so KLEE can find it where it is expected.
   file(MAKE_DIRECTORY "${KLEE_RUNTIME_DIRECTORY}")
   execute_process(COMMAND ${CMAKE_COMMAND} -E copy
     "${KLEE_LIBCXX_BC_PATH}"
-    "${KLEE_RUNTIME_DIRECTORY}/${KLEE_LIBCXX_BC_NAME}"
+    "${KLEE_RUNTIME_DIRECTORY}/${KLEE_LIBCXX_BC_PATH}"
   )
   list(APPEND KLEE_COMPONENT_CXX_DEFINES
-    -DKLEE_LIBCXX_BC_NAME=\"${KLEE_LIBCXX_BC_NAME}\")
+    -DKLEE_LIBCXX_BC_NAME=\"${KLEE_LIBCXX_BC_PATH}\")
 
 else()
   message(STATUS "libc++ support disabled")
