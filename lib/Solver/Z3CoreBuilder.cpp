@@ -210,6 +210,11 @@ Z3ASTHandle Z3CoreBuilder::constructActual(ref<Expr> e, int *width_out) {
   ++stats::queryConstructs;
 
   switch (e->getKind()) {
+  case Expr::Pointer:
+  case Expr::ConstantPointer: {
+    assert(0 && "unreachable");
+  }
+
   case Expr::Constant: {
     ConstantExpr *CE = cast<ConstantExpr>(e);
     *width_out = CE->getWidth();

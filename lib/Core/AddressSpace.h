@@ -57,7 +57,7 @@ private:
   /// the resolution is complete (`p` can only point to the given
   /// memory object), and 2 otherwise.
   int checkPointerInObject(ExecutionState &state, TimingSolver *solver,
-                           ref<Expr> p, const ObjectPair &op,
+                           ref<PointerExpr> p, const ObjectPair &op,
                            ResolutionList &rl, unsigned maxResolutions) const;
 
 public:
@@ -84,7 +84,7 @@ public:
 
   /// Resolve address to an ObjectPair in result.
   /// \return true iff an object was found.
-  bool resolveOne(const ref<ConstantExpr> &address, KType *objectType,
+  bool resolveOne(ref<ConstantPointerExpr> address, KType *objectType,
                   ObjectPair &result) const;
 
   /// Resolve address to an ObjectPair in result.
@@ -97,8 +97,9 @@ public:
   ///               (when returning true).
   /// \return true iff an object was found at \a address.
   bool resolveOne(ExecutionState &state, TimingSolver *solver,
-                  ref<Expr> address, KType *objectType, ObjectPair &result,
-                  bool &success, const std::atomic_bool &haltExecution) const;
+                  ref<PointerExpr> address, KType *objectType,
+                  ObjectPair &result, bool &success,
+                  const std::atomic_bool &haltExecution) const;
 
   /// @brief Tries to resolve the pointer in the concrete object
   /// if it value is unique.
@@ -110,7 +111,7 @@ public:
   /// @param success True iff object was found.
   /// @return false iff the resolution is incomplete (query timed out).
   bool resolveOneIfUnique(ExecutionState &state, TimingSolver *solver,
-                          ref<Expr> address, KType *objectType,
+                          ref<PointerExpr> address, KType *objectType,
                           ObjectPair &result, bool &success) const;
 
   /// Resolve pointer `p` to a list of `ObjectPairs` it can point
@@ -119,7 +120,7 @@ public:
   ///
   /// \return true iff the resolution is incomplete (`maxResolutions`
   /// is non-zero and it was reached, or a query timed out).
-  bool resolve(ExecutionState &state, TimingSolver *solver, ref<Expr> p,
+  bool resolve(ExecutionState &state, TimingSolver *solver, ref<PointerExpr> p,
                KType *objectType, ResolutionList &rl, ResolutionList &rlSkipped,
                unsigned maxResolutions = 0,
                time::Span timeout = time::Span()) const;

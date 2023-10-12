@@ -10,7 +10,7 @@ int main() {
   klee_make_symbolic(&x, sizeof(x), "*x");
   // CHECK: SingleInitializationAndAccess.c:[[@LINE+1]]: memory error: null pointer exception
   *x = 10;
-  // CHECK-NOT: SingleInitializationAndAccess.c:[[@LINE+1]]: memory error: null pointer exception
+  // CHECK: SingleInitializationAndAccess.c:[[@LINE+1]]: memory error: null pointer exception
   if (*x == 10) {
     // CHECK-NOT: SingleInitializationAndAccess.c:[[@LINE+2]]: memory error: null pointer exception
     // CHECK-NOT: SingleInitializationAndAccess.c:[[@LINE+1]]: memory error: out of bound pointer
@@ -25,4 +25,4 @@ int main() {
 }
 
 // CHECK: KLEE: done: completed paths = 1
-// CHECK: KLEE: done: generated tests = 4
+// CHECK: KLEE: done: generated tests = 5

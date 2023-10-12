@@ -2,7 +2,7 @@
 
 // RUN: %clang %s -fsanitize=pointer-overflow -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --emit-all-errors --ubsan-runtime %t.bc 2>&1 | FileCheck %s
+// RUN: %klee --output-dir=%t.klee-out --emit-all-errors --ubsan-runtime --use-lazy-initialization=none %t.bc 2>&1 | FileCheck %s
 // RUN: ls %t.klee-out/ | grep .ktest | wc -l | grep 1
 // RUN: ls %t.klee-out/ | grep .ptr.err | wc -l | grep 1
 

@@ -411,6 +411,12 @@ void ExprSMTLIBPrinter::printAShrExpr(const ref<AShrExpr> &e) {
 const char *ExprSMTLIBPrinter::getSMTLIBKeyword(const ref<Expr> &e) {
 
   switch (e->getKind()) {
+  case Expr::Pointer:
+  case Expr::ConstantPointer: {
+    PointerExpr *pe = cast<PointerExpr>(e);
+    return getSMTLIBKeyword(pe->getValue());
+  }
+
   case Expr::Read:
     return "select";
   case Expr::Select:

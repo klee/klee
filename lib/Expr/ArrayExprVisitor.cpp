@@ -139,7 +139,7 @@ ExprVisitor::Action ArrayReadExprVisitor::inspectRead(ref<Expr> hash,
                                                       Expr::Width width,
                                                       const ReadExpr &re) {
   // pre(*): index is symbolic
-  if (!isa<ConstantExpr>(re.index)) {
+  if (!isa<ConstantExpr>(re.index) && re.updates.root->getRange() == 8) {
     if (readInfo.find(&re) == readInfo.end()) {
       if (re.updates.root->isSymbolicArray() && !re.updates.head) {
         return Action::doChildren();

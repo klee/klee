@@ -31,13 +31,13 @@ ref<Expr> ExprVisitor::visit(const ref<Expr> &e) {
   if (!UseVisitorHash || isa<ConstantExpr>(e)) {
     return visitActual(e);
   } else {
-    visited_ty::iterator it = visited.find(e);
+    auto result = visited.get(e);
 
-    if (it != visited.end()) {
-      return it->second;
+    if (result.second) {
+      return result.first;
     } else {
       ref<Expr> res = visitActual(e);
-      visited.insert(std::make_pair(e, res));
+      visited.add({e, res});
       return res;
     }
   }
@@ -231,6 +231,12 @@ ref<Expr> ExprVisitor::visitActual(const ref<Expr> &e) {
       break;
     case Expr::FNeg:
       res = visitFNeg(static_cast<FNegExpr &>(ep));
+      break;
+    case Expr::Pointer:
+      res = visitPointer(static_cast<PointerExpr &>(ep));
+      break;
+    case Expr::ConstantPointer:
+      res = visitConstantPointer(static_cast<ConstantPointerExpr &>(ep));
       break;
     case Expr::Constant:
     default:
@@ -503,5 +509,14 @@ ExprVisitor::Action ExprVisitor::visitFMax(const FMaxExpr &) {
 }
 
 ExprVisitor::Action ExprVisitor::visitFMin(const FMinExpr &) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action ExprVisitor::visitPointer(const PointerExpr &) {
+  return Action::doChildren();
+}
+
+ExprVisitor::Action
+ExprVisitor::visitConstantPointer(const ConstantPointerExpr &) {
   return Action::doChildren();
 }

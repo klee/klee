@@ -11,14 +11,16 @@
 #define KLEE_ARRAYCACHE_H
 
 #include "klee/Expr/ArrayExprHash.h" // For klee::ArrayHashFn
-#include "klee/Expr/Expr.h"
-#include "klee/Expr/SymbolicSource.h"
 
 #include <string>
 #include <unordered_set>
 #include <vector>
 
 namespace klee {
+class Array;
+class Expr;
+class SymbolicSource;
+template <class T> class ref;
 
 struct EquivArrayCmpFn {
   bool operator()(const Array *array1, const Array *array2) const {

@@ -267,8 +267,14 @@ public:
 
   Assignment initialValuesFor(const std::vector<const Array *> objects) const {
     std::vector<SparseStorage<unsigned char>> values;
-    tryGetInitialValuesFor(objects, values);
+    std::ignore = tryGetInitialValuesFor(objects, values);
     return Assignment(objects, values);
+  }
+
+  void initialValuesFor(
+      const std::vector<const Array *> objects,
+      std::vector<SparseStorage<unsigned char>> &values) const {
+    std::ignore = tryGetInitialValuesFor(objects, values);
   }
 
   Assignment initialValues() const {

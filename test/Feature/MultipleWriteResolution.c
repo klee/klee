@@ -1,5 +1,5 @@
 // RUN: echo "x" > %t1.res
-// RUN: %clang %s -emit-llvm %O0opt -c -o %t1.bc
+// RUN: %clang %s -emit-llvm %O0opt -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --use-timestamps=false --use-merged-pointer-dereference=true %t1.bc > %t1.log
 // RUN: diff %t1.res %t1.log

@@ -144,6 +144,10 @@ class DefaultExprBuilder : public ExprBuilder {
   virtual ref<Expr> Sge(const ref<Expr> &LHS, const ref<Expr> &RHS) {
     return SgeExpr::alloc(LHS, RHS);
   }
+
+  virtual ref<Expr> Pointer(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+    return PointerExpr::create(LHS, RHS);
+  }
 };
 
 /// ChainedBuilder - Helper class for construct specialized expression
@@ -287,6 +291,10 @@ public:
   ref<Expr> Sge(const ref<Expr> &LHS, const ref<Expr> &RHS) {
     return Base->Sge(LHS, RHS);
   }
+
+  ref<Expr> Pointer(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+    return Base->Pointer(LHS, RHS);
+  }
 };
 
 /// ConstantSpecializedExprBuilder - A base expression builder class which
@@ -330,6 +338,10 @@ public:
       return CE->isTrue() ? LHS : RHS;
 
     return Builder.Select(cast<NonConstantExpr>(Cond), LHS, RHS);
+  }
+
+  virtual ref<Expr> Pointer(const ref<Expr> &LHS, const ref<Expr> &RHS) {
+    return Builder.Pointer(LHS, RHS);
   }
 
   virtual ref<Expr> Concat(const ref<Expr> &LHS, const ref<Expr> &RHS) {

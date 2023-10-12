@@ -175,11 +175,11 @@ KTest *kTest_fromFile(const char *path) {
         goto error;
       for (j = 0; j < o->numPointers; j++) {
         Pointer *p = &o->pointers[j];
-        if (!read_uint32(f, &p->offset))
+        if (!read_uint64(f, &p->offset))
           goto error;
-        if (!read_uint32(f, &p->index))
+        if (!read_uint64(f, &p->index))
           goto error;
-        if (!read_uint32(f, &p->indexOffset))
+        if (!read_uint64(f, &p->indexOffset))
           goto error;
       }
     }
@@ -256,11 +256,11 @@ int kTest_toFile(const KTest *bo, const char *path) {
       goto error;
     for (j = 0; j < o->numPointers; j++) {
       Pointer *p = &o->pointers[j];
-      if (!write_uint32(f, p->offset))
+      if (!write_uint64(f, p->offset))
         goto error;
-      if (!write_uint32(f, p->index))
+      if (!write_uint64(f, p->index))
         goto error;
-      if (!write_uint32(f, p->indexOffset))
+      if (!write_uint64(f, p->indexOffset))
         goto error;
     }
   }

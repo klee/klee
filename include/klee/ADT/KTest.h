@@ -10,6 +10,7 @@
 #ifndef KLEE_KTEST_H
 #define KLEE_KTEST_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -18,9 +19,9 @@ extern "C" {
 
 typedef struct Pointer Pointer;
 struct Pointer {
-  unsigned offset;
-  unsigned index;
-  unsigned indexOffset;
+  uint64_t offset;
+  uint64_t index;
+  uint64_t indexOffset;
 };
 
 typedef struct KTestObject KTestObject;

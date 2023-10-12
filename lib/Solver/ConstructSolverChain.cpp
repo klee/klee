@@ -32,7 +32,7 @@ namespace klee {
 std::unique_ptr<Solver> constructSolverChain(
     std::unique_ptr<Solver> coreSolver, std::string querySMT2LogPath,
     std::string baseSolverQuerySMT2LogPath, std::string queryKQueryLogPath,
-    std::string baseSolverQueryKQueryLogPath, ArrayCache &arrayCache) {
+    std::string baseSolverQueryKQueryLogPath) {
   Solver *rawCoreSolver = coreSolver.get();
   std::unique_ptr<Solver> solver = std::move(coreSolver);
   const time::Span minQueryTimeToLog(MinQueryTimeToLog);
@@ -66,7 +66,7 @@ std::unique_ptr<Solver> constructSolverChain(
     solver = createCachingSolver(std::move(solver));
 
   if (UseAlphaEquivalence)
-    solver = createAlphaEquivalenceSolver(std::move(solver), arrayCache);
+    solver = createAlphaEquivalenceSolver(std::move(solver));
 
   if (UseIndependentSolver)
     solver = createIndependentSolver(std::move(solver));

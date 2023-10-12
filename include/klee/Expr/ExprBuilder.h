@@ -57,6 +57,7 @@ public:
   virtual ref<Expr> Sle(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
   virtual ref<Expr> Sgt(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
   virtual ref<Expr> Sge(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
+  virtual ref<Expr> Pointer(const ref<Expr> &LHS, const ref<Expr> &RHS) = 0;
 
   // Utility functions
 

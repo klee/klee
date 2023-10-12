@@ -13,8 +13,7 @@ int finished = 0;
 using namespace klee;
 
 TEST(AssignmentTest, FoldNotOptimized) {
-  ArrayCache ac;
-  const Array *array = ac.CreateArray(
+  const Array *array = Array::create(
       /*size=*/ConstantExpr::create(1, sizeof(uint64_t) * CHAR_BIT),
       SourceBuilder::makeSymbolic("simple_array", 0));
   // Create a simple assignment

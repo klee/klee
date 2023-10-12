@@ -23,7 +23,7 @@ extern "C" {
  * (obviously) not correctly interact with external function
  * calls.
  */
-void klee_define_fixed_object(void *addr, size_t nbytes);
+void *klee_define_fixed_object(void *addr, size_t nbytes);
 
 /* klee_make_symbolic - Make the contents of the object pointer to by \arg
  * addr symbolic.
@@ -111,6 +111,7 @@ void klee_warning_once(const char *message);
 void klee_prefer_cex(void *object, uintptr_t condition);
 void klee_posix_prefer_cex(void *object, uintptr_t condition);
 void klee_mark_global(void *object);
+void klee_dump_constraints();
 
 /* Return a possible constant value for the input expression. This
    allows programs to forcibly concretize values on their own. */

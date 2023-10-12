@@ -1,5 +1,4 @@
 // Something is wrong in the replaying process, compiled binary evalaluates fmin of nan and number as nan
-// XFAIL: not-bitwuzla
 // REQUIRES: floating-point
 // RUN: %clang %s -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out

@@ -37,18 +37,16 @@ ref<Expr> getConstant(int value, Expr::Width width) {
   return ConstantExpr::create(trunc, width);
 }
 
-static ArrayCache ac;
-
 TEST(ArrayExprTest, HashCollisions) {
   klee::OptimizeArray = ALL;
   SparseStorage<ref<ConstantExpr>> constVals(
       ConstantExpr::create(5, Expr::Int8));
-  const Array *array = ac.CreateArray(
+  const Array *array = Array::create(
       ConstantExpr::create(256, sizeof(uint64_t) * CHAR_BIT),
       SourceBuilder::constant(constVals), Expr::Int32, Expr::Int8);
   const Array *symArray =
-      ac.CreateArray(ConstantExpr::create(4, sizeof(uint64_t) * CHAR_BIT),
-                     SourceBuilder::makeSymbolic("symIdx", 0));
+      Array::create(ConstantExpr::create(4, sizeof(uint64_t) * CHAR_BIT),
+                    SourceBuilder::makeSymbolic("symIdx", 0));
   ref<Expr> symIdx = Expr::createTempRead(symArray, Expr::Int32);
   UpdateList ul(array, 0);
   ul.extend(getConstant(3, Expr::Int32), getConstant(11, Expr::Int8));

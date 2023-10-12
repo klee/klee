@@ -94,6 +94,79 @@ void klee::findReads(ref<Expr> e, bool visitUpdates,
   }
 }
 
+void klee::findSymbolicPointers(ref<Expr> e, bool visitUpdates,
+                                ExprHashSet &results, Expr::Width width) {
+  // Invariant: \forall_{i \in stack} !i.isConstant() && i \in visited
+  std::vector<ref<Expr>> stack;
+  ExprHashSet visited;
+  std::set<const UpdateNode *> updates;
+
+  if (!isa<ConstantExpr>(e)) {
+    visited.insert(e);
+    stack.push_back(e);
+  }
+
+  while (!stack.empty()) {
+    ref<Expr> top = stack.back();
+    stack.pop_back();
+
+    if (ReadExpr *re = dyn_cast<ReadExpr>(top)) {
+      if (!isa<ConstantExpr>(re->index) && visited.insert(re->index).second)
+        stack.push_back(re->index);
+
+      if (!isa<ConstantExpr>(re->updates.root->getSize()) &&
+          visited.insert(re->updates.root->getSize()).second) {
+        stack.push_back(re->updates.root->getSize());
+      }
+
+      if (isa<LazyInitializationSource>(re->updates.root->source) &&
+          visited
+              .insert(cast<LazyInitializationSource>(re->updates.root->source)
+                          ->pointer)
+              .second) {
+        stack.push_back(
+            cast<LazyInitializationSource>(re->updates.root->source)->pointer);
+      }
+
+      if (visitUpdates) {
+        // XXX this is probably suboptimal. We want to avoid a potential
+        // explosion traversing update lists which can be quite
+        // long. However, it seems silly to hash all of the update nodes
+        // especially since we memoize all the expr results anyway. So
+        // we take a simple approach of memoizing the results for the
+        // head, which often will be shared among multiple nodes.
+        if (updates.insert(re->updates.head.get()).second) {
+          for (const auto *un = re->updates.head.get(); un;
+               un = un->next.get()) {
+            if (!isa<ConstantExpr>(un->index) &&
+                visited.insert(un->index).second)
+              stack.push_back(un->index);
+            if (!isa<ConstantExpr>(un->value) &&
+                visited.insert(un->value).second)
+              stack.push_back(un->value);
+          }
+        }
+      }
+    }
+
+    if (top->getWidth() == width && top->hasOrderedReads()) {
+      // We memoized so can just add to list without worrying about
+      // repeats.
+      results.insert(top);
+      ref<ReadExpr> k = top->hasOrderedReads();
+      if (visited.insert(k).second)
+        stack.push_back(k);
+    } else if (!isa<ConstantExpr>(top)) {
+      Expr *e = top.get();
+      for (unsigned i = 0; i < e->getNumKids(); i++) {
+        ref<Expr> k = e->getKid(i);
+        if (!isa<ConstantExpr>(k) && visited.insert(k).second)
+          stack.push_back(k);
+      }
+    }
+  }
+}
+
 ///
 
 namespace klee {

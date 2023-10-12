@@ -64,7 +64,7 @@ protected:
     }
   };
 
-  typedef std::unordered_set<Target *, TargetHash, TargetCmp> CacheType;
+  using CacheType = std::unordered_set<Target *, TargetHash, TargetCmp>;
 
   struct TargetCacheSet {
     CacheType cache;

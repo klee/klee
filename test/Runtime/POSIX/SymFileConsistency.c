@@ -1,7 +1,7 @@
 // REQUIRES: posix-runtime
 // RUN: %clang %s -emit-llvm %O0opt -c -g -o %t.bc
 // RUN: rm -rf %t.klee-out-tmp
-// RUN: %klee --output-dir=%t.klee-out-tmp --libc=uclibc --posix-runtime --exit-on-error %t.bc --sym-files 1 1 > %t1.log
+// RUN: %klee --output-dir=%t.klee-out-tmp --libc=uclibc --use-query-log=solver:kquery --posix-runtime --exit-on-error %t.bc --sym-files 1 1 > %t1.log
 
 // This test checks that symbolic files can be resolved both with a relative path
 // ie. 'A' or by its full path ie. '/full/path/to/cwd/A'

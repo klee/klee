@@ -272,45 +272,21 @@ ExecutionState::findMemoryObject(const Array *array) const {
 bool ExecutionState::getBase(
     ref<Expr> expr,
     std::pair<ref<const MemoryObject>, ref<Expr>> &resolution) const {
-  switch (expr->getKind()) {
-  case Expr::Read: {
-    ref<ReadExpr> base = dyn_cast<ReadExpr>(expr);
-    auto parent = findMemoryObject(base->updates.root);
-    if (!parent) {
-      return false;
-    }
-    resolution = std::make_pair(parent, base->index);
-    return true;
+  ref<ReadExpr> base = expr->hasOrderedReads();
+  if (!base) {
+    return false;
   }
-  case Expr::Concat: {
-    ref<ReadExpr> base = expr->hasOrderedReads();
-    if (!base) {
-      return false;
-    }
-    auto parent = findMemoryObject(base->updates.root);
-    if (!parent) {
-      return false;
-    }
-    resolution = std::make_pair(parent, base->index);
-    return true;
+  if (ref<LazyInitializationAddressSource> liaSource =
+          dyn_cast<LazyInitializationAddressSource>(
+              base->updates.root->source)) {
+    return getBase(liaSource->pointer, resolution);
   }
-  default: {
-    if (isGEPExpr(expr)) {
-      ref<Expr> gepBase = gepExprBases.at(expr).first;
-      std::pair<ref<const MemoryObject>, ref<Expr>> gepResolved;
-      if (expr != gepBase && getBase(gepBase, gepResolved)) {
-        auto parent = gepResolved.first;
-        auto index = gepResolved.second;
-        resolution = std::make_pair(parent, index);
-        return true;
-      } else {
-        return false;
-      }
-    } else {
-      return false;
-    }
+  auto parent = findMemoryObject(base->updates.root);
+  if (!parent) {
+    return false;
   }
-  }
+  resolution = std::make_pair(parent, base->index);
+  return true;
 }
 
 void ExecutionState::removePointerResolutions(const MemoryObject *mo) {
@@ -335,30 +311,33 @@ void ExecutionState::removePointerResolutions(const MemoryObject *mo) {
   }
 }
 
-void ExecutionState::removePointerResolutions(ref<Expr> address,
+void ExecutionState::removePointerResolutions(ref<PointerExpr> address,
                                               unsigned size) {
-  if (!isa<ConstantExpr>(address)) {
-    resolvedPointers[address].clear();
+  ref<Expr> base = address->getBase();
+  if (!isa<ConstantExpr>(base)) {
+    resolvedPointers[base].clear();
     resolvedSubobjects[MemorySubobject(address, size)].clear();
   }
 }
 
 // base address mo and ignore non pure reads in setinitializationgraph
-void ExecutionState::addPointerResolution(ref<Expr> address,
+void ExecutionState::addPointerResolution(ref<PointerExpr> address,
                                           const MemoryObject *mo,
                                           unsigned size) {
-  if (!isa<ConstantExpr>(address)) {
-    resolvedPointers[address].insert(mo);
+  ref<Expr> base = address->getBase();
+  if (!isa<ConstantExpr>(base)) {
+    resolvedPointers[base].insert(mo);
     resolvedSubobjects[MemorySubobject(address, size)].insert(mo);
   }
 }
 
-void ExecutionState::addUniquePointerResolution(ref<Expr> address,
+void ExecutionState::addUniquePointerResolution(ref<PointerExpr> address,
                                                 const MemoryObject *mo,
                                                 unsigned size) {
-  if (!isa<ConstantExpr>(address)) {
+  ref<Expr> base = address->getBase();
+  if (!isa<ConstantExpr>(base)) {
     removePointerResolutions(address, size);
-    resolvedPointers[address].insert(mo);
+    resolvedPointers[base].insert(mo);
     resolvedSubobjects[MemorySubobject(address, size)].insert(mo);
   }
 }
@@ -407,6 +386,8 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
 
       ref<Expr> value = sf.locals[csf.kf->getArgRegister(index++)].value;
       if (isa_and_nonnull<ConstantExpr>(value)) {
+        out << value;
+      } else if (isa_and_nonnull<ConstantPointerExpr>(value)) {
         out << value;
       } else {
         out << "symbolic";

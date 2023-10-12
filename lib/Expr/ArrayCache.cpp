@@ -19,6 +19,7 @@ const Array *ArrayCache::CreateArray(ref<Expr> _size,
 
   auto id = allocatedCount[_source->getKind()];
   const Array *array = new Array(_size, _source, _domain, _range, id);
+
   std::pair<ArrayHashSet::const_iterator, bool> success =
       cachedSymbolicArrays.insert(array);
   if (success.second) {

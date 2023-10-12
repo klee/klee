@@ -85,10 +85,14 @@ bool Solver::mayBeFalse(const Query &query, bool &result) {
   return true;
 }
 
-bool Solver::getValue(const Query &query, ref<ConstantExpr> &result) {
+bool Solver::getValue(const Query &query, ref<Expr> &result) {
   // Maintain invariants implementation expect.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(query.expr)) {
     result = CE;
+    return true;
+  }
+  if (ConstantPointerExpr *CP = dyn_cast<ConstantPointerExpr>(query.expr)) {
+    result = CP;
     return true;
   }
 
@@ -97,7 +101,29 @@ bool Solver::getValue(const Query &query, ref<ConstantExpr> &result) {
   if (!impl->computeValue(query, tmp))
     return false;
 
+  result = tmp;
+  return true;
+}
+
+bool Solver::getValue(const Query &query, ref<ConstantExpr> &result) {
+  ref<Expr> tmp;
+  if (!getValue(query, tmp)) {
+    return false;
+  }
+
+  assert(isa<ConstantExpr>(tmp));
   result = cast<ConstantExpr>(tmp);
+  return true;
+}
+
+bool Solver::getValue(const Query &query, ref<ConstantPointerExpr> &result) {
+  ref<Expr> tmp;
+  if (!getValue(query, tmp)) {
+    return false;
+  }
+
+  assert(isa<ConstantPointerExpr>(tmp));
+  result = cast<ConstantPointerExpr>(tmp);
   return true;
 }
 

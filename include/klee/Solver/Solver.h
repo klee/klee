@@ -141,7 +141,9 @@ public:
   /// satisfying assignment.
   ///
   /// \return True on success.
+  bool getValue(const Query &, ref<Expr> &result);
   bool getValue(const Query &, ref<ConstantExpr> &result);
+  bool getValue(const Query &, ref<ConstantPointerExpr> &result);
 
   /// getValue - Compute the minimal possible non-negative value for the given
   /// expression.
@@ -247,9 +249,7 @@ std::unique_ptr<Solver> createIndependentSolver(std::unique_ptr<Solver> s);
 /// independent queries to their alpha-equvalent version
 ///
 /// \param s - The underlying solver to use.
-/// \param arrayCache - Class to create new arrays.
-std::unique_ptr<Solver> createAlphaEquivalenceSolver(std::unique_ptr<Solver> s,
-                                                     ArrayCache &arrayCache);
+std::unique_ptr<Solver> createAlphaEquivalenceSolver(std::unique_ptr<Solver> s);
 
 /// createKQueryLoggingSolver - Create a solver which will forward all queries
 /// after writing them to the given path in .kquery format.

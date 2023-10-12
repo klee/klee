@@ -11,6 +11,7 @@
 #define KLEE_EXPRUTIL_H
 
 #include "klee/Expr/Expr.h"
+#include "klee/Expr/ExprHashMap.h"
 #include "klee/Expr/ExprVisitor.h"
 
 #include <set>
@@ -29,6 +30,9 @@ template <typename T> class ref;
 /// number of results.
 void findReads(ref<Expr> e, bool visitUpdates,
                std::vector<ref<ReadExpr>> &result);
+
+void findSymbolicPointers(ref<Expr> e, bool visitUpdates, ExprHashSet &result,
+                          Expr::Width width);
 
 /// Return a list of all unique symbolic objects referenced by the given
 /// expression.

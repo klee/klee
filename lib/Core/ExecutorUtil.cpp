@@ -10,6 +10,7 @@
 #include "Executor.h"
 #include "klee/Core/Context.h"
 
+#include "klee/ADT/Either.h"
 #include "klee/Config/Version.h"
 #include "klee/Core/Interpreter.h"
 #include "klee/Expr/Expr.h"
@@ -21,6 +22,7 @@
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
@@ -96,7 +98,7 @@ ref<klee::Expr> Executor::evalConstant(const Constant *c,
       assert(it != globalAddresses.end());
       return it->second;
     } else if (isa<ConstantPointerNull>(c)) {
-      return Expr::createPointer(0);
+      return PointerExpr::create(Expr::createPointer(0));
     } else if (isa<UndefValue>(c) || isa<ConstantAggregateZero>(c)) {
       if (getWidthForLLVMType(c->getType()) == 0) {
         if (isa<llvm::LandingPadInst>(ki->inst())) {
@@ -149,7 +151,7 @@ ref<klee::Expr> Executor::evalConstant(const Constant *c,
       }
       assert(Context::get().isLittleEndian() && "FIXME:Broken for big endian");
       ref<Expr> res = ConcatExpr::createN(kids.size(), kids.data());
-      return cast<ConstantExpr>(res);
+      return res;
     } else if (const ConstantVector *cv = dyn_cast<ConstantVector>(c)) {
       llvm::SmallVector<ref<Expr>, 8> kids;
       const size_t numOperands = cv->getNumOperands();
@@ -159,16 +161,14 @@ ref<klee::Expr> Executor::evalConstant(const Constant *c,
       }
       assert(Context::get().isLittleEndian() && "FIXME:Broken for big endian");
       ref<Expr> res = ConcatExpr::createN(numOperands, kids.data());
-      assert(isa<ConstantExpr>(res) &&
-             "result of constant vector built is not a constant");
-      return cast<ConstantExpr>(res);
+      return res;
     } else if (const BlockAddress *ba = dyn_cast<BlockAddress>(c)) {
       // return the address of the specified basic block in the specified
       // function
       const auto arg_bb = (BasicBlock *)ba->getOperand(1);
-      const auto res =
-          Expr::createPointer(reinterpret_cast<std::uint64_t>(arg_bb));
-      return cast<ConstantExpr>(res);
+      const auto res = PointerExpr::create(
+          Expr::createPointer(reinterpret_cast<std::uint64_t>(arg_bb)));
+      return res;
     } else {
       std::string msg("Cannot handle constant ");
       llvm::raw_string_ostream os(msg);
@@ -179,9 +179,8 @@ ref<klee::Expr> Executor::evalConstant(const Constant *c,
   }
 }
 
-ref<klee::Expr> Executor::evaluateFCmp(unsigned int predicate,
-                                       ref<klee::Expr> left,
-                                       ref<klee::Expr> right) const {
+ref<Expr> Executor::evaluateFCmp(unsigned int predicate, ref<klee::Expr> left,
+                                 ref<klee::Expr> right) const {
   ref<klee::Expr> result = 0;
   switch (predicate) {
   case FCmpInst::FCMP_FALSE: {
@@ -281,14 +280,21 @@ ref<Expr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce,
   llvm::Type *type = ce->getType();
 
   ref<Expr> op1(0), op2(0), op3(0);
+  bool isPointer1(false), isPointer2(false), isPointer3(false);
   int numOperands = ce->getNumOperands();
 
-  if (numOperands > 0)
+  if (numOperands > 0) {
     op1 = evalConstant(ce->getOperand(0), rm, ki);
-  if (numOperands > 1)
+    isPointer1 = isa<PointerExpr>(op1);
+  }
+  if (numOperands > 1) {
     op2 = evalConstant(ce->getOperand(1), rm, ki);
-  if (numOperands > 2)
+    isPointer2 = isa<PointerExpr>(op2);
+  }
+  if (numOperands > 2) {
     op3 = evalConstant(ce->getOperand(2), rm, ki);
+    isPointer3 = isa<PointerExpr>(op3);
+  }
 
   /* Checking for possible errors during constant folding */
   switch (ce->getOpcode()) {
@@ -296,28 +302,33 @@ ref<Expr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce,
   case Instruction::UDiv:
   case Instruction::SRem:
   case Instruction::URem: {
-    if (auto op2Const = dyn_cast<ConstantExpr>(op2)) {
-      if (op2Const->getLimitedValue() == 0) {
-        std::string msg(
-            "Division/modulo by zero during constant folding at location ");
-        llvm::raw_string_ostream os(msg);
-        os << (ki ? ki->getSourceLocationString() : "[unknown]");
-        klee_error("%s", os.str().c_str());
+    if (!isPointer2) {
+      if (auto op2Const = dyn_cast<ConstantExpr>(op2)) {
+        if (op2Const->getLimitedValue() == 0) {
+          std::string msg(
+              "Division/modulo by zero during constant folding at location ");
+          llvm::raw_string_ostream os(msg);
+          os << (ki ? ki->getSourceLocationString() : "[unknown]");
+          klee_error("%s", os.str().c_str());
+        }
       }
     }
     break;
   }
   case Instruction::Shl:
   case Instruction::LShr:
-  case Instruction::AShr:
-    if (auto op2Const = dyn_cast<ConstantExpr>(op2)) {
-      if (op2Const->getLimitedValue() >= op1->getWidth()) {
-        std::string msg("Overshift during constant folding at location ");
-        llvm::raw_string_ostream os(msg);
-        os << (ki ? ki->getSourceLocationString() : "[unknown]");
-        klee_error("%s", os.str().c_str());
+  case Instruction::AShr: {
+    if (!isPointer2) {
+      if (auto op2Const = dyn_cast<ConstantExpr>(op2)) {
+        if (op2Const->getLimitedValue() >= op1->getWidth()) {
+          std::string msg("Overshift during constant folding at location ");
+          llvm::raw_string_ostream os(msg);
+          os << (ki ? ki->getSourceLocationString() : "[unknown]");
+          klee_error("%s", os.str().c_str());
+        }
       }
     }
+  }
   }
 
   std::string msg("Unknown ConstantExpr type");
@@ -376,25 +387,34 @@ ref<Expr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce,
       result = cast<klee::ConstantExpr>(FPToX87FP80Ext(result));
     }
 
-    if (constantGepExprBases.count(result)) {
-      constantGepExprBases[result] = {constantGepExprBases[result].first,
-                                      ce->getType()};
-    }
-
     return result;
   }
 
-  case Instruction::IntToPtr:
+  case Instruction::IntToPtr: {
     return ZExtExpr::create(op1, getWidthForLLVMType(type));
+  }
 
   case Instruction::PtrToInt:
     return ZExtExpr::create(op1, getWidthForLLVMType(type));
 
   case Instruction::GetElementPtr: {
-    ref<Expr> base = ZExtExpr::create(op1, Context::get().getPointerWidth());
+    if (!isPointer1) {
+      op1 = PointerExpr::create(op1, op1);
+    }
+
+    ref<Expr> base = cast<PointerExpr>(op1)->getBase();
+    ref<Expr> offset = cast<PointerExpr>(op1)->getOffset();
+
     for (gep_type_iterator ii = gep_type_begin(ce), ie = gep_type_end(ce);
          ii != ie; ++ii) {
-      ref<Expr> indexOp = evalConstant(cast<Constant>(ii.getOperand()), rm, ki);
+      auto iop = evalConstant(cast<Constant>(ii.getOperand()), rm, ki);
+      ref<Expr> indexOp;
+      if (auto ipointer = dyn_cast<PointerExpr>(iop)) {
+        base = AddExpr::create(base, ipointer->getBase());
+        indexOp = ipointer->getOffset();
+      } else
+        indexOp = iop;
+
       if (indexOp->isZero())
         continue;
 
@@ -407,31 +427,24 @@ ref<Expr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce,
         }
         unsigned ElementIdx = indexOpConst->getZExtValue();
         const StructLayout *SL = kmodule->targetData->getStructLayout(STy);
-        base = AddExpr::create(
-            base, ConstantExpr::alloc(APInt(Context::get().getPointerWidth(),
-                                            SL->getElementOffset(ElementIdx))));
+        offset = AddExpr::create(
+            offset,
+            ConstantExpr::alloc(APInt(Context::get().getPointerWidth(),
+                                      SL->getElementOffset(ElementIdx))));
         continue;
       }
 
       // For array or vector indices, scale the index by the size of the type.
       // Indices can be negative
-      base = AddExpr::create(
-          base,
+      offset = AddExpr::create(
+          offset,
           MulExpr::create(
               SExtExpr::create(indexOp, Context::get().getPointerWidth()),
               ConstantExpr::alloc(APInt(Context::get().getPointerWidth(),
                                         kmodule->targetData->getTypeAllocSize(
                                             ii.getIndexedType())))));
     }
-
-    if (constantGepExprBases.count(op1)) {
-      constantGepExprBases[base] = constantGepExprBases[op1];
-    } else {
-      constantGepExprBases[base] = {
-          op1, llvm::cast<GEPOperator>(ce)->getSourceElementType()};
-    }
-
-    return base;
+    return PointerExpr::create(base, AddExpr::create(base, offset));
   }
 
   case Instruction::ICmp: {

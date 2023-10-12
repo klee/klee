@@ -84,23 +84,24 @@ bool TimingSolver::tryGetUnique(const ConstraintSet &constraints, ref<Expr> e,
                                 SolverQueryMetaData &metaData) {
   ++stats::queries;
   result = e;
-  if (!isa<ConstantExpr>(result)) {
-    ref<ConstantExpr> value;
+  if (!isa<ConstantExpr>(result) && !isa<ConstantPointerExpr>(result)) {
+    ref<Expr> unique;
     bool isTrue = false;
 
     e = optimizer.optimizeExpr(e, true);
     TimerStatIncrementer timer(stats::solverTime);
 
-    if (!solver->getValue(Query(constraints, e, metaData.id), value)) {
+    if (!solver->getValue(Query(constraints, e, metaData.id), unique)) {
       return false;
     }
-    ref<Expr> cond = EqExpr::create(e, value);
+
+    ref<Expr> cond = EqExpr::create(e, unique);
     cond = optimizer.optimizeExpr(cond, false);
     if (!solver->mustBeTrue(Query(constraints, cond, metaData.id), isTrue)) {
       return false;
     }
     if (isTrue) {
-      result = value;
+      result = unique;
     }
 
     metaData.queryCost += timer.delta();
@@ -164,8 +165,7 @@ bool TimingSolver::mayBeFalse(const ConstraintSet &constraints, ref<Expr> expr,
 }
 
 bool TimingSolver::getValue(const ConstraintSet &constraints, ref<Expr> expr,
-                            ref<ConstantExpr> &result,
-                            SolverQueryMetaData &metaData) {
+                            ref<Expr> &result, SolverQueryMetaData &metaData) {
   ++stats::queries;
   // Fast path, to avoid timer and OS overhead.
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(expr)) {
@@ -182,6 +182,31 @@ bool TimingSolver::getValue(const ConstraintSet &constraints, ref<Expr> expr,
       solver->getValue(Query(constraints, expr, metaData.id), result);
 
   metaData.queryCost += timer.delta();
+
+  return success;
+}
+
+bool TimingSolver::getValue(const ConstraintSet &constraints, ref<Expr> expr,
+                            ref<ConstantExpr> &result,
+                            SolverQueryMetaData &metaData) {
+  ref<Expr> tmp;
+  bool success = getValue(constraints, expr, tmp, metaData);
+
+  assert(isa<ConstantExpr>(tmp));
+  result = cast<ConstantExpr>(tmp);
+
+  return success;
+}
+
+bool TimingSolver::getValue(const ConstraintSet &constraints,
+                            ref<PointerExpr> pointer,
+                            ref<ConstantPointerExpr> &result,
+                            SolverQueryMetaData &metaData) {
+  ref<Expr> tmp;
+  bool success = getValue(constraints, pointer, tmp, metaData);
+
+  assert(isa<ConstantPointerExpr>(tmp));
+  result = cast<ConstantPointerExpr>(tmp);
 
   return success;
 }

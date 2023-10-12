@@ -218,10 +218,8 @@ public:
                         ExprBuilder *Builder, bool ClearArrayAfterQuery);
 
   static Parser *Create(const std::string Name, const llvm::MemoryBuffer *MB,
-                        ExprBuilder *Builder, ArrayCache *TheArrayCache,
-                        KModule *km, bool ClearArrayAfterQuery);
-
-  virtual ArrayCache &getArrayCache() = 0;
+                        ExprBuilder *Builder, KModule *km,
+                        bool ClearArrayAfterQuery);
 };
 } // namespace expr
 } // namespace klee

@@ -65,9 +65,9 @@ class KTest:
             if version >= 4:
                 numPointers, = struct.unpack('>i', f.read(4))
                 for _ in range(numPointers):
-                    offset, = struct.unpack('>i', f.read(4))
-                    index, = struct.unpack('>i', f.read(4))
-                    indexOffset, = struct.unpack('>i', f.read(4))
+                    offset, = struct.unpack('>q', f.read(8))
+                    index, = struct.unpack('>q', f.read(8))
+                    indexOffset, = struct.unpack('>q', f.read(8))
                     pointers.append((offset, index, indexOffset))
             objects.append((name, address, bytes, pointers))
 

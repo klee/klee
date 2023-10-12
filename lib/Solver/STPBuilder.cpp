@@ -535,6 +535,14 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
   ++stats::queryConstructs;
 
   switch (e->getKind()) {
+  // FIXME: There shouldn't be pointer exprs building here, but due to an bug
+  // occurring in the optimized runtime job at, it's here
+  case Expr::Pointer:
+  case Expr::ConstantPointer: {
+    PointerExpr *pe = cast<PointerExpr>(e);
+    return construct(pe->getValue(), width_out);
+  }
+
   case Expr::Constant: {
     ConstantExpr *CE = cast<ConstantExpr>(e);
     *width_out = CE->getWidth();

@@ -4,6 +4,7 @@
 #include "klee/Expr/SymbolicSource.h"
 
 namespace klee {
+class KModule;
 
 struct KInstruction;
 struct KGlobalVariable;

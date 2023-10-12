@@ -13,6 +13,7 @@
 #include "klee/Solver/Solver.h"
 
 #include "klee/Expr/AlphaBuilder.h"
+#include "klee/Expr/ArrayCache.h"
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/ExprHashMap.h"
@@ -32,12 +33,10 @@ using namespace llvm;
 class AlphaEquivalenceSolver : public SolverImpl {
 private:
   std::unique_ptr<Solver> solver;
-  ArrayCache &arrayCache;
 
 public:
-  AlphaEquivalenceSolver(std::unique_ptr<Solver> solver,
-                         ArrayCache &_arrayCache)
-      : solver(std::move(solver)), arrayCache(_arrayCache) {}
+  AlphaEquivalenceSolver(std::unique_ptr<Solver> solver)
+      : solver(std::move(solver)) {}
 
   bool computeTruth(const Query &, bool &isValid);
   bool computeValidity(const Query &, PartialValidity &result);
@@ -140,7 +139,7 @@ AlphaEquivalenceSolver::changeVersion(ref<SolverResponse> res,
 
 bool AlphaEquivalenceSolver::computeValidity(const Query &query,
                                              PartialValidity &result) {
-  AlphaBuilder builder(arrayCache);
+  AlphaBuilder builder;
   constraints_ty alphaQuery = builder.visitConstraints(query.constraints.cs());
   ref<Expr> alphaQueryExpr = builder.build(query.expr);
   return solver->impl->computeValidity(
@@ -149,7 +148,7 @@ bool AlphaEquivalenceSolver::computeValidity(const Query &query,
 }
 
 bool AlphaEquivalenceSolver::computeTruth(const Query &query, bool &isValid) {
-  AlphaBuilder builder(arrayCache);
+  AlphaBuilder builder;
   constraints_ty alphaQuery = builder.visitConstraints(query.constraints.cs());
   ref<Expr> alphaQueryExpr = builder.build(query.expr);
   return solver->impl->computeTruth(
@@ -159,7 +158,7 @@ bool AlphaEquivalenceSolver::computeTruth(const Query &query, bool &isValid) {
 
 bool AlphaEquivalenceSolver::computeValue(const Query &query,
                                           ref<Expr> &result) {
-  AlphaBuilder builder(arrayCache);
+  AlphaBuilder builder;
   constraints_ty alphaQuery = builder.visitConstraints(query.constraints.cs());
   ref<Expr> alphaQueryExpr = builder.build(query.expr);
   return solver->impl->computeValue(
@@ -170,7 +169,7 @@ bool AlphaEquivalenceSolver::computeValue(const Query &query,
 bool AlphaEquivalenceSolver::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
     std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
-  AlphaBuilder builder(arrayCache);
+  AlphaBuilder builder;
   constraints_ty alphaQuery = builder.visitConstraints(query.constraints.cs());
   ref<Expr> alphaQueryExpr = builder.build(query.expr);
   const std::vector<const Array *> newObjects = changeVersion(objects, builder);
@@ -185,7 +184,7 @@ bool AlphaEquivalenceSolver::computeInitialValues(
 
 bool AlphaEquivalenceSolver::check(const Query &query,
                                    ref<SolverResponse> &result) {
-  AlphaBuilder builder(arrayCache);
+  AlphaBuilder builder;
 
   constraints_ty alphaQuery = builder.visitConstraints(query.constraints.cs());
   ref<Expr> alphaQueryExpr = builder.build(query.expr);
@@ -202,7 +201,7 @@ bool AlphaEquivalenceSolver::check(const Query &query,
 bool AlphaEquivalenceSolver::computeValidityCore(const Query &query,
                                                  ValidityCore &validityCore,
                                                  bool &isValid) {
-  AlphaBuilder builder(arrayCache);
+  AlphaBuilder builder;
 
   constraints_ty alphaQuery = builder.visitConstraints(query.constraints.cs());
   ref<Expr> alphaQueryExpr = builder.build(query.expr);
@@ -232,8 +231,7 @@ void AlphaEquivalenceSolver::notifyStateTermination(std::uint32_t id) {
 }
 
 std::unique_ptr<Solver>
-klee::createAlphaEquivalenceSolver(std::unique_ptr<Solver> s,
-                                   ArrayCache &arrayCache) {
+klee::createAlphaEquivalenceSolver(std::unique_ptr<Solver> s) {
   return std::make_unique<Solver>(
-      std::make_unique<AlphaEquivalenceSolver>(std::move(s), arrayCache));
+      std::make_unique<AlphaEquivalenceSolver>(std::move(s)));
 }

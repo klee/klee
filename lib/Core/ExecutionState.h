@@ -182,11 +182,12 @@ private:
 
 public:
   // _Unwind_Exception* of the thrown exception, used in both phases
-  ref<ConstantExpr> exceptionObject;
+  ref<ConstantPointerExpr> exceptionObject;
 
   Kind getKind() const { return kind; }
 
-  explicit UnwindingInformation(ref<ConstantExpr> exceptionObject, Kind k)
+  explicit UnwindingInformation(ref<ConstantPointerExpr> exceptionObject,
+                                Kind k)
       : kind(k), exceptionObject(exceptionObject) {}
   virtual ~UnwindingInformation() = default;
 
@@ -201,7 +202,7 @@ struct SearchPhaseUnwindingInformation : public UnwindingInformation {
   // landingpad, so we can clean it up after the personality fn returns.
   MemoryObject *serializedLandingpad = nullptr;
 
-  SearchPhaseUnwindingInformation(ref<ConstantExpr> exceptionObject,
+  SearchPhaseUnwindingInformation(ref<ConstantPointerExpr> exceptionObject,
                                   std::size_t const unwindingProgress)
       : UnwindingInformation(exceptionObject,
                              UnwindingInformation::Kind::SearchPhase),
@@ -230,7 +231,7 @@ struct CleanupPhaseUnwindingInformation : public UnwindingInformation {
   // we first found a handler in the search phase.
   const std::size_t catchingStackIndex;
 
-  CleanupPhaseUnwindingInformation(ref<ConstantExpr> exceptionObject,
+  CleanupPhaseUnwindingInformation(ref<ConstantPointerExpr> exceptionObject,
                                    ref<ConstantExpr> selectorValue,
                                    const std::size_t catchingStackIndex)
       : UnwindingInformation(exceptionObject,
@@ -414,7 +415,7 @@ public:
   /// Needed for composition
   ref<Expr> returnValue;
 
-  ExprHashMap<std::pair<ref<Expr>, llvm::Type *>> gepExprBases;
+  ExprHashMap<llvm::Type *> gepExprBases;
 
   mutable ReachWithError error = ReachWithError::None;
   std::atomic<HaltExecution::Reason> terminationReasonType{
@@ -466,11 +467,11 @@ public:
                std::pair<ref<const MemoryObject>, ref<Expr>> &resolution) const;
 
   void removePointerResolutions(const MemoryObject *mo);
-  void removePointerResolutions(ref<Expr> address, unsigned size);
-  void addPointerResolution(ref<Expr> address, const MemoryObject *mo,
+  void removePointerResolutions(ref<PointerExpr> address, unsigned size);
+  void addPointerResolution(ref<PointerExpr> address, const MemoryObject *mo,
                             unsigned size = 0);
-  void addUniquePointerResolution(ref<Expr> address, const MemoryObject *mo,
-                                  unsigned size = 0);
+  void addUniquePointerResolution(ref<PointerExpr> address,
+                                  const MemoryObject *mo, unsigned size = 0);
 
   void addConstraint(ref<Expr> e);
   void addCexPreference(const ref<Expr> &cond);

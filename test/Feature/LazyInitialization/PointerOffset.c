@@ -5,6 +5,8 @@
 // RUN: FileCheck %s -input-file=%t.log
 // CHECK: pointers: [(0, 1, 4)]
 
+#include "klee/klee.h"
+
 int main() {
   int *index;
   int a[2];

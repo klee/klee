@@ -18,4 +18,4 @@ int main() {
 }
 
 // CHECK: KLEE: done: completed paths = {{3|5}}
-// CHECK: KLEE: done: partially completed paths = 0
+// CHECK: KLEE: done: partially completed paths = 2

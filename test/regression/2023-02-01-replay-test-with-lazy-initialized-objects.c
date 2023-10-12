@@ -1,7 +1,7 @@
 // REQUIRES: not-darwin
 // RUN: %clang %s -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --libc=klee --posix-runtime --skip-not-lazy-initialized --skip-not-symbolic-objects --min-number-elements-li=4 --min-element-size-li=4 %t.bc > %t.log
+// RUN: %klee --output-dir=%t.klee-out --libc=klee --posix-runtime --skip-not-lazy-initialized --min-number-elements-li=4 %t.bc > %t.log
 
 // RUN: %cc %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner
 
@@ -9,6 +9,8 @@
 // RUN: %replay %t.klee-out %t_runner > %t_runner.log
 // RUN: FileCheck -input-file=%t_runner.log %s
 
+#include "klee/klee.h"
+#include <stdio.h>
 #include <stdlib.h>
 
 struct Data {

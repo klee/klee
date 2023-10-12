@@ -90,8 +90,8 @@ llvm::cl::opt<bool> UseSymbolicSizeAllocation(
     llvm::cl::init(false), llvm::cl::cat(MemoryCat));
 
 /***/
-MemoryManager::MemoryManager(ArrayCache *_arrayCache)
-    : arrayCache(_arrayCache), deterministicSpace(0), nextFreeSlot(0),
+MemoryManager::MemoryManager()
+    : deterministicSpace(0), nextFreeSlot(0),
       spaceSize(DeterministicAllocationSize.getValue() * 1024 * 1024) {
   if (DeterministicAllocation) {
     // Page boundary
@@ -135,6 +135,7 @@ MemoryObject *MemoryManager::allocate(ref<Expr> size, bool isLocal,
                                       bool isGlobal, bool isLazyInitialized,
                                       ref<CodeLocation> allocSite,
                                       size_t alignment, KType *type,
+                                      ref<Expr> conditionExpr,
                                       ref<Expr> addressExpr, unsigned timestamp,
                                       const Array *content) {
   if (ref<ConstantExpr> sizeExpr = dyn_cast<ConstantExpr>(size)) {

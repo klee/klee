@@ -69,8 +69,9 @@ void recursively_allocate(KTestObject *obj, size_t index, void *addr,
                            obj->pointers[i].index, 0, 1);
     }
     void *offset_addr = (void *)(addresses[index] + (obj->pointers[i].offset));
-    memcpy(offset_addr, &addresses[obj->pointers[i].index], sizeof(void *));
-    *((char *)offset_addr) += obj->pointers[i].indexOffset;
+    void *pointee_addr = (void *)(addresses[obj->pointers[i].index]);
+    pointee_addr += obj->pointers[i].indexOffset;
+    memcpy(offset_addr, &pointee_addr, sizeof(void *));
   }
   return;
 }

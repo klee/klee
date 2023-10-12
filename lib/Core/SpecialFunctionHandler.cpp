@@ -20,6 +20,7 @@
 #include "TypeManager.h"
 
 #include "klee/Config/config.h"
+#include "klee/Expr/Expr.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
 #include "klee/Solver/SolverCmdLine.h"
@@ -104,7 +105,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
     add("klee_get_valuell", handleGetValue, true),
     add("klee_get_value_i32", handleGetValue, true),
     add("klee_get_value_i64", handleGetValue, true),
-    add("klee_define_fixed_object", handleDefineFixedObject, false),
+    add("klee_define_fixed_object", handleDefineFixedObject, true),
     add("klee_get_obj_size", handleGetObjSize, true),
     add("klee_get_errno", handleGetErrno, true),
 #ifndef __APPLE__
@@ -124,6 +125,7 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
     add("klee_stack_trace", handleStackTrace, false),
     add("klee_warning", handleWarning, false),
     add("klee_warning_once", handleWarningOnce, false),
+    add("klee_dump_constraints", handleDumpConstraints, false),
     add("malloc", handleMalloc, true),
     add("memalign", handleMemalign, true),
     add("realloc", handleRealloc, true),
@@ -287,18 +289,20 @@ bool SpecialFunctionHandler::handle(ExecutionState &state, Function *f,
 /****/
 
 // reads a concrete string from memory
-std::string SpecialFunctionHandler::readStringAtAddress(ExecutionState &state,
-                                                        ref<Expr> addressExpr) {
+std::string
+SpecialFunctionHandler::readStringAtAddress(ExecutionState &state,
+                                            ref<PointerExpr> pointer) {
   ObjectPair idStringAddress;
-  addressExpr = executor.toUnique(state, addressExpr);
-  if (!isa<ConstantExpr>(addressExpr)) {
+  ref<PointerExpr> uniquePointer = executor.toUnique(state, pointer);
+  if (!isa<ConstantPointerExpr>(uniquePointer)) {
     executor.terminateStateOnUserError(
         state, "Symbolic string pointer passed to one of the klee_ functions");
     return "";
   }
-  ref<ConstantExpr> address = cast<ConstantExpr>(addressExpr);
+  ref<ConstantPointerExpr> pointerConst =
+      cast<ConstantPointerExpr>(uniquePointer);
   if (!state.addressSpace.resolveOne(
-          address, executor.typeSystemManager->getUnknownType(),
+          pointerConst, executor.typeSystemManager->getUnknownType(),
           idStringAddress)) {
     executor.terminateStateOnUserError(
         state, "Invalid string pointer passed to one of the klee_ functions");
@@ -308,9 +312,8 @@ std::string SpecialFunctionHandler::readStringAtAddress(ExecutionState &state,
   const MemoryObject *mo = op.first;
   const ObjectState *os = op.second;
 
-  auto relativeOffset = mo->getOffsetExpr(address);
   // the relativeOffset must be concrete as the address is concrete
-  size_t offset = cast<ConstantExpr>(relativeOffset)->getZExtValue();
+  size_t offset = pointerConst->getConstantOffset()->getZExtValue();
 
   std::ostringstream buf;
   char c = 0;
@@ -372,7 +375,7 @@ void SpecialFunctionHandler::handleAssert(ExecutionState &state,
       state,
       new ErrorEvent(executor.locationOf(state), StateTerminationType::Assert,
                      "ASSERTION FAIL: " +
-                         readStringAtAddress(state, arguments[0])));
+                         readStringAtAddress(state, executor.makePointer(arguments[0]))));
 }
 
 void SpecialFunctionHandler::handleAssertFail(
@@ -384,7 +387,7 @@ void SpecialFunctionHandler::handleAssertFail(
       state,
       new ErrorEvent(executor.locationOf(state), StateTerminationType::Assert,
                      "ASSERTION FAIL: " +
-                         readStringAtAddress(state, arguments[0])));
+                         readStringAtAddress(state, executor.makePointer(arguments[0]))));
 }
 
 void SpecialFunctionHandler::handleReportError(
@@ -398,8 +401,8 @@ void SpecialFunctionHandler::handleReportError(
       state,
       new ErrorEvent(executor.locationOf(state),
                      StateTerminationType::ReportError,
-                     readStringAtAddress(state, arguments[2])),
-      "", readStringAtAddress(state, arguments[3]).c_str());
+                     readStringAtAddress(state, executor.makePointer(arguments[2]))),
+      "", readStringAtAddress(state, executor.makePointer(arguments[3])).c_str());
 }
 
 void SpecialFunctionHandler::handleNew(ExecutionState &state,
@@ -420,7 +423,7 @@ void SpecialFunctionHandler::handleDelete(ExecutionState &state,
 
   // XXX should type check args
   assert(arguments.size() == 1 && "invalid number of arguments to delete");
-  executor.executeFree(state, arguments[0]);
+  executor.executeFree(state, executor.makePointer(arguments[0]));
 }
 
 void SpecialFunctionHandler::handleNewArray(ExecutionState &state,
@@ -450,7 +453,7 @@ void SpecialFunctionHandler::handleDeleteArray(
     std::vector<ref<Expr>> &arguments) {
   // XXX should type check args
   assert(arguments.size() == 1 && "invalid number of arguments to delete[]");
-  executor.executeFree(state, arguments[0]);
+  executor.executeFree(state, executor.makePointer(arguments[0]));
 }
 
 void SpecialFunctionHandler::handleMalloc(ExecutionState &state,
@@ -505,7 +508,8 @@ void SpecialFunctionHandler::handleEhUnwindRaiseExceptionImpl(
   assert(arguments.size() == 1 &&
          "invalid number of arguments to _klee_eh_Unwind_RaiseException_impl");
 
-  ref<ConstantExpr> exceptionObject = dyn_cast<ConstantExpr>(arguments[0]);
+  ref<ConstantPointerExpr> exceptionObject =
+      dyn_cast<ConstantPointerExpr>(executor.makePointer(arguments[0]));
   if (!exceptionObject.get()) {
     executor.terminateStateOnExecError(
         state, "Internal error: Symbolic exception pointer");
@@ -606,7 +610,8 @@ void SpecialFunctionHandler::handlePrintExpr(
   assert(arguments.size() == 2 &&
          "invalid number of arguments to klee_print_expr");
 
-  std::string msg_str = readStringAtAddress(state, arguments[0]);
+  std::string msg_str =
+      readStringAtAddress(state, executor.makePointer(arguments[0]));
   llvm::errs() << msg_str << ":" << arguments[1] << "\n";
 }
 
@@ -637,7 +642,8 @@ void SpecialFunctionHandler::handleWarning(ExecutionState &state,
   assert(arguments.size() == 1 &&
          "invalid number of arguments to klee_warning");
 
-  std::string msg_str = readStringAtAddress(state, arguments[0]);
+  std::string msg_str =
+      readStringAtAddress(state, executor.makePointer(arguments[0]));
   klee_warning("%s: %s",
                state.stack.callStack().back().kf->function()->getName().data(),
                msg_str.c_str());
@@ -649,11 +655,21 @@ void SpecialFunctionHandler::handleWarningOnce(
   assert(arguments.size() == 1 &&
          "invalid number of arguments to klee_warning_once");
 
-  std::string msg_str = readStringAtAddress(state, arguments[0]);
+  std::string msg_str =
+      readStringAtAddress(state, executor.makePointer(arguments[0]));
   klee_warning_once(
       0, "%s: %s",
       state.stack.callStack().back().kf->function()->getName().data(),
       msg_str.c_str());
+}
+
+void SpecialFunctionHandler::handleDumpConstraints(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr>> &arguments) {
+
+  assert(arguments.size() == 0 &&
+         "invalid number of arguments to klee_warning_once");
+  state.constraints.cs().dump();
 }
 
 void SpecialFunctionHandler::handlePrintRange(
@@ -662,7 +678,8 @@ void SpecialFunctionHandler::handlePrintRange(
   assert(arguments.size() == 2 &&
          "invalid number of arguments to klee_print_range");
 
-  std::string msg_str = readStringAtAddress(state, arguments[0]);
+  std::string msg_str =
+      readStringAtAddress(state, executor.makePointer(arguments[0]));
   llvm::errs() << msg_str << ":" << arguments[1];
   if (!isa<ConstantExpr>(arguments[1])) {
     // FIXME: Pull into a unique value method?
@@ -724,7 +741,8 @@ void SpecialFunctionHandler::handleGetErrno(ExecutionState &state,
       executor.kmodule->targetData->getAllocaAddrSpace());
 
   bool resolved = state.addressSpace.resolveOne(
-      ConstantExpr::createPointer((uint64_t)errno_addr),
+      ConstantPointerExpr::create(Expr::createPointer((uint64_t)errno_addr),
+                                  Expr::createPointer((uint64_t)errno_addr)),
       executor.typeSystemManager->getWrappedType(pointerErrnoAddr),
       idErrnoObject);
   if (!resolved)
@@ -748,11 +766,11 @@ void SpecialFunctionHandler::handleErrnoLocation(
   int *errno_addr = nullptr;
 #endif
 
-  executor.bindLocal(
-      target, state,
-      ConstantExpr::create((uint64_t)errno_addr,
-                           executor.kmodule->targetData->getTypeSizeInBits(
-                               target->inst()->getType())));
+  ref<ConstantExpr> errnoExpr = ConstantExpr::create(
+      (uint64_t)errno_addr, executor.kmodule->targetData->getTypeSizeInBits(
+                                target->inst()->getType()));
+
+  executor.bindLocal(target, state, PointerExpr::create(errnoExpr, errnoExpr));
 }
 void SpecialFunctionHandler::handleCalloc(ExecutionState &state,
                                           KInstruction *target,
@@ -773,16 +791,21 @@ void SpecialFunctionHandler::handleRealloc(ExecutionState &state,
   assert(arguments.size() == 2 && "invalid number of arguments to realloc");
   ref<Expr> address = arguments[0];
   ref<Expr> size = arguments[1];
+  ref<PointerExpr> addressPointer = executor.makePointer(address);
 
   Executor::StatePair zeroSize = executor.forkInternal(
       state, Expr::createIsZero(size), BranchType::Realloc);
 
   if (zeroSize.first) { // size == 0
-    executor.executeFree(*zeroSize.first, address, target);
+    executor.executeFree(*zeroSize.first,
+                         PointerExpr::create(addressPointer->getValue(),
+                                             addressPointer->getValue()),
+                         target);
   }
   if (zeroSize.second) { // size != 0
     Executor::StatePair zeroPointer = executor.forkInternal(
-        *zeroSize.second, Expr::createIsZero(address), BranchType::Realloc);
+        *zeroSize.second, Expr::createIsZero(addressPointer->getValue()),
+        BranchType::Realloc);
 
     if (zeroPointer.first) { // address == 0
       executor.executeAlloc(*zeroPointer.first, size, false, target,
@@ -798,12 +821,13 @@ void SpecialFunctionHandler::handleRealloc(ExecutionState &state,
       for (Executor::ExactResolutionList::iterator it = rl.begin(),
                                                    ie = rl.end();
            it != ie; ++it) {
-        const ObjectState *os =
-            it->second->addressSpace.findObject(it->first).second;
+        ref<const ObjectState> os =
+            it->second->addressSpace.findOrLazyInitializeObject(it->first)
+                .second;
         executor.executeAlloc(*it->second, size, false, target,
                               executor.typeSystemManager->handleRealloc(
                                   os->getDynamicType(), size),
-                              false, os, 0, CheckOutOfMemory);
+                              false, os.get(), 0, CheckOutOfMemory);
       }
     }
   }
@@ -814,7 +838,7 @@ void SpecialFunctionHandler::handleFree(ExecutionState &state,
                                         std::vector<ref<Expr>> &arguments) {
   // XXX should type check args
   assert(arguments.size() == 1 && "invalid number of arguments to free");
-  executor.executeFree(state, arguments[0]);
+  executor.executeFree(state, executor.makePointer(arguments[0]));
 }
 
 void SpecialFunctionHandler::handleCheckMemoryAccess(
@@ -823,33 +847,34 @@ void SpecialFunctionHandler::handleCheckMemoryAccess(
   assert(arguments.size() == 2 &&
          "invalid number of arguments to klee_check_memory_access");
 
-  ref<Expr> address = executor.toUnique(state, arguments[0]);
-  ref<Expr> size = executor.toUnique(state, arguments[1]);
-  if (!isa<ConstantExpr>(address) || !isa<ConstantExpr>(size)) {
+  ref<PointerExpr> pointer = executor.makePointer(arguments[0]);
+  ref<Expr> size = executor.toUnique(state, arguments[1]->getValue());
+  ref<PointerExpr> uniquePointer = executor.toUnique(state, pointer);
+  if (!isa<ConstantPointerExpr>(uniquePointer) || !isa<ConstantExpr>(size)) {
     executor.terminateStateOnUserError(
         state, "check_memory_access requires constant args");
   } else {
     ObjectPair idObject;
 
     if (!state.addressSpace.resolveOne(
-            cast<ConstantExpr>(address),
+            cast<ConstantPointerExpr>(uniquePointer),
             executor.typeSystemManager->getUnknownType(), idObject)) {
       executor.terminateStateOnProgramError(
           state,
           new ErrorEvent(executor.locationOf(state), StateTerminationType::Ptr,
                          "check_memory_access: memory error"),
-          executor.getAddressInfo(state, address));
+          executor.getAddressInfo(state, pointer));
     } else {
       const MemoryObject *mo = idObject.first;
       ref<Expr> chk = mo->getBoundsCheckPointer(
-          address, cast<ConstantExpr>(size)->getZExtValue());
+          pointer, cast<ConstantExpr>(size)->getZExtValue());
       if (!chk->isTrue()) {
         executor.terminateStateOnProgramError(
             state,
             new ErrorEvent(
                 new AllocEvent(mo->allocSite), executor.locationOf(state),
                 StateTerminationType::Ptr, "check_memory_access: memory error"),
-            executor.getAddressInfo(state, address));
+            executor.getAddressInfo(state, pointer));
       }
     }
   }
@@ -869,12 +894,17 @@ void SpecialFunctionHandler::handleDefineFixedObject(
     std::vector<ref<Expr>> &arguments) {
   assert(arguments.size() == 2 &&
          "invalid number of arguments to klee_define_fixed_object");
-  assert(isa<ConstantExpr>(arguments[0]) &&
+  assert((isa<ConstantExpr>(arguments[0]) ||
+          isa<ConstantPointerExpr>(arguments[0])) &&
          "expect constant address argument to klee_define_fixed_object");
   assert(isa<ConstantExpr>(arguments[1]) &&
          "expect constant size argument to klee_define_fixed_object");
 
-  uint64_t address = cast<ConstantExpr>(arguments[0])->getZExtValue();
+  uint64_t address = isa<ConstantExpr>(arguments[0])
+                         ? cast<ConstantExpr>(arguments[0])->getZExtValue()
+                         : cast<ConstantPointerExpr>(arguments[0])
+                               ->getConstantValue()
+                               ->getZExtValue();
   uint64_t size = cast<ConstantExpr>(arguments[1])->getZExtValue();
   MemoryObject *mo = executor.memory->allocateFixed(
       address, size, executor.locationOf(state),
@@ -882,6 +912,9 @@ void SpecialFunctionHandler::handleDefineFixedObject(
   executor.bindObjectInState(
       state, mo, executor.typeSystemManager->getUnknownType(), false);
   mo->isUserSpecified = true; // XXX hack;
+
+  executor.bindLocal(target, state,
+                     PointerExpr::create(mo->getBaseExpr(), mo->getBaseExpr()));
 }
 
 void SpecialFunctionHandler::handleMakeSymbolic(
@@ -896,7 +929,10 @@ void SpecialFunctionHandler::handleMakeSymbolic(
     return;
   }
 
-  name = arguments[2]->isZero() ? "" : readStringAtAddress(state, arguments[2]);
+  ref<PointerExpr> pointer = PointerExpr::create(arguments[2]);
+  name = pointer->getBase()->isZero() && pointer->getValue()->isZero()
+             ? ""
+             : readStringAtAddress(state, executor.makePointer(arguments[2]));
 
   if (name.length() == 0) {
     name = "unnamed";
@@ -910,12 +946,13 @@ void SpecialFunctionHandler::handleMakeSymbolic(
 
   for (Executor::ExactResolutionList::iterator it = rl.begin(), ie = rl.end();
        it != ie; ++it) {
-    ObjectPair op = it->second->addressSpace.findObject(it->first);
+    RefObjectPair op =
+        it->second->addressSpace.findOrLazyInitializeObject(it->first);
     const MemoryObject *mo = op.first;
     mo->setName(name);
     mo->updateTimestamp();
 
-    const ObjectState *old = op.second;
+    ref<const ObjectState> old = op.second;
     ExecutionState *s = it->second;
 
     if (old->readOnly) {
@@ -963,7 +1000,7 @@ void SpecialFunctionHandler::handleMakeMock(ExecutionState &state,
     return;
   }
 
-  name = arguments[2]->isZero() ? "" : readStringAtAddress(state, arguments[2]);
+  name = arguments[2]->isZero() ? "" : readStringAtAddress(state, executor.makePointer(arguments[2]));
 
   if (name.empty()) {
     executor.terminateStateOnUserError(

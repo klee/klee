@@ -24,6 +24,7 @@ class Function;
 namespace klee {
 class Executor;
 class Expr;
+class PointerExpr;
 class ExecutionState;
 struct KInstruction;
 template <typename T> class ref;
@@ -98,7 +99,8 @@ public:
 
   /* Convenience routines */
 
-  std::string readStringAtAddress(ExecutionState &state, ref<Expr> address);
+  std::string readStringAtAddress(ExecutionState &state,
+                                  ref<PointerExpr> address);
 
   /* Handlers */
 
@@ -148,6 +150,7 @@ public:
   HANDLER(handleUnderConstrained);
   HANDLER(handleWarning);
   HANDLER(handleWarningOnce);
+  HANDLER(handleDumpConstraints);
   HANDLER(handleTypeMismatchV1);
   HANDLER(handleAlignmentAssumption);
   HANDLER(handleAddOverflow);

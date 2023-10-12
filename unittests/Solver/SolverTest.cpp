@@ -38,11 +38,6 @@ ref<Expr> getConstant(int value, Expr::Width width) {
   return ConstantExpr::create(trunc, width);
 }
 
-// We have to have the cache globally scopped (and not in ``testOperation``)
-// because the Solver (i.e. in STP's case the STPBuilder) holds on to pointers
-// to allocated Arrays.
-ArrayCache ac;
-
 template <class T>
 void testOperation(Solver &solver, int value, Expr::Width operandWidth,
                    Expr::Width resultWidth) {
@@ -55,8 +50,8 @@ void testOperation(Solver &solver, int value, Expr::Width operandWidth,
     unsigned size = Expr::getMinBytesForWidth(operandWidth);
     static uint64_t id = 0;
     const Array *array =
-        ac.CreateArray(ConstantExpr::create(size, sizeof(uint64_t) * CHAR_BIT),
-                       SourceBuilder::makeSymbolic("arr", ++id));
+        Array::create(ConstantExpr::create(size, sizeof(uint64_t) * CHAR_BIT),
+                      SourceBuilder::makeSymbolic("arr", ++id));
     symbolicArgs.push_back(
         Expr::CreateArg(Expr::createTempRead(array, operandWidth)));
   }
