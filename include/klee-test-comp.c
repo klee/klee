@@ -24,12 +24,14 @@ void __assert_fail(const char *assertion, const char *file, unsigned int line,
 int __VERIFIER_nondet_int(void) {
   int x;
   klee_make_symbolic(&x, sizeof(x), "int");
+  klee_prefer_cex(&x, x < 1024);
   return x;
 }
 
 unsigned int __VERIFIER_nondet_uint(void) {
   unsigned int x;
   klee_make_symbolic(&x, sizeof(x), "unsigned int");
+  klee_prefer_cex(&x, x < 1024);
   return x;
 }
 
