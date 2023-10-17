@@ -25,8 +25,7 @@
 
 namespace klee::kdalloc::suballocators {
 namespace slotallocator {
-template<bool UnlimitedQuarantine>
-class SlotAllocator;
+template <bool UnlimitedQuarantine> class SlotAllocator;
 
 struct Data final {
   /// The reference count.
@@ -51,8 +50,7 @@ struct Data final {
 };
 
 class Control final : public TaggedLogger<Control> {
-  template<bool UnlimitedQuarantine>
-  friend class SlotAllocator;
+  template <bool UnlimitedQuarantine> friend class SlotAllocator;
 
   /// pointer to the start of the range managed by this allocator
   char *baseAddress = nullptr;
@@ -161,12 +159,14 @@ public:
   }
 };
 
-template<>
+template <>
 class SlotAllocator<false> final : public TaggedLogger<SlotAllocator<false>> {
   static_assert(static_cast<std::size_t>(-1) == ~static_cast<std::size_t>(0),
                 "-1 must be ~0 for size_t");
 
-  static_assert(std::is_pod<Data>::value, "Data must be POD");
+  static_assert(std::is_trivial<Data>::value &&
+                    std::is_standard_layout<Data>::value,
+                "Data must be POD");
 
   Data *data = nullptr;
 
@@ -533,8 +533,7 @@ public:
   }
 };
 
-
-template<>
+template <>
 class SlotAllocator<true> final : public TaggedLogger<SlotAllocator<true>> {
   std::size_t next;
 
