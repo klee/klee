@@ -425,8 +425,7 @@ bool CexCachingSolver::computeInitialValues(
           cast<InvalidResponse>(a)->evaluate(os->size);
       assert(arrayConstantSize &&
              "Array of symbolic size had not receive value for size!");
-      values[i] =
-          SparseStorage<unsigned char>(arrayConstantSize->getZExtValue(), 0);
+      values[i] = SparseStorage<unsigned char>(0);
     } else {
       values[i] = it->second;
     }

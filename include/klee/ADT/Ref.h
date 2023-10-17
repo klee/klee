@@ -215,6 +215,19 @@ public:
   bool operator!=(const ref &rhs) const { return !equals(rhs); }
 };
 
+template <typename T> class OptionalRefEq {
+public:
+  bool operator()(const ref<T> &lhs, const ref<T> &rhs) {
+    if (lhs.isNull() && rhs.isNull()) {
+      return true;
+    }
+    if (lhs.isNull() || rhs.isNull()) {
+      return false;
+    }
+    return lhs.get()->equals(*rhs.get());
+  }
+};
+
 template <class T>
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const ref<T> &e) {
   os << *e;

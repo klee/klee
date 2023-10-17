@@ -9,14 +9,14 @@
 #include "klee/klee.h"
 
 int main(int argc, char **argv) {
-  // CHECK-DAG: (assert (= (select constant11 #x00000000) #x67))
-  // CHECK-DAG: (assert (= (select constant11 #x00000001) #x79))
-  // CHECK-DAG: (assert (= (select constant11 #x00000002) #x7a))
-  // CHECK-DAG: (assert (= (select constant11 #x00000003) #x00))
-  // TEST-CASE-DAG: (assert (=  (select constant1 (_ bv0 32) ) (_ bv103 8) ) )
-  // TEST-CASE-DAG: (assert (=  (select constant1 (_ bv1 32) ) (_ bv121 8) ) )
-  // TEST-CASE-DAG: (assert (=  (select constant1 (_ bv2 32) ) (_ bv122 8) ) )
-  // TEST-CASE-DAG: (assert (=  (select constant1 (_ bv3 32) ) (_ bv0 8) ) )
+  // CHECK-DAG: (assert (= (select constant01 #x00000000) #x67))
+  // CHECK-DAG: (assert (= (select constant01 #x00000001) #x79))
+  // CHECK-DAG: (assert (= (select constant01 #x00000002) #x7a))
+  // CHECK-DAG: (assert (= (select constant01 #x00000003) #x00))
+  // TEST-CASE-DAG: (assert (=  (select constant0 (_ bv0 32) ) (_ bv103 8) ) )
+  // TEST-CASE-DAG: (assert (=  (select constant0 (_ bv1 32) ) (_ bv121 8) ) )
+  // TEST-CASE-DAG: (assert (=  (select constant0 (_ bv2 32) ) (_ bv122 8) ) )
+  // TEST-CASE-DAG: (assert (=  (select constant0 (_ bv3 32) ) (_ bv0 8) ) )
   char c[4] = {'g', 'y', 'z', '\0'};
   unsigned i;
   klee_make_symbolic(&i, sizeof i, "i");

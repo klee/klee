@@ -364,30 +364,36 @@ bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
 // transparently avoid screwing up symbolics (if the byte is symbolic
 // then its concrete cache byte isn't being used) but is just a hack.
 
-void AddressSpace::copyOutConcretes() {
+void AddressSpace::copyOutConcretes(const Assignment &assignment) {
   for (const auto &object : objects) {
     auto &mo = object.first;
     auto &os = object.second;
-    if (!mo->isUserSpecified && !os->readOnly && os->size != 0) {
-      copyOutConcrete(mo, os.get());
+    if (!mo->isUserSpecified && !os->readOnly && mo->size != 0) {
+      copyOutConcrete(mo, os.get(), assignment);
     }
   }
 }
 
 void AddressSpace::copyOutConcrete(const MemoryObject *mo,
-                                   const ObjectState *os) const {
+                                   const ObjectState *os,
+                                   const Assignment &assignment) const {
   auto address = reinterpret_cast<std::uint8_t *>(mo->address);
-  std::memcpy(address, os->concreteStore, mo->size);
+  std::vector<uint8_t> concreteStore(mo->size);
+  for (size_t i = 0; i < mo->size; i++) {
+    auto byte = assignment.evaluate(os->read8(i), false);
+    concreteStore[i] = cast<ConstantExpr>(byte)->getZExtValue(8);
+  }
+  std::memcpy(address, concreteStore.data(), mo->size);
 }
 
-bool AddressSpace::copyInConcretes() {
+bool AddressSpace::copyInConcretes(const Assignment &assignment) {
   for (auto &obj : objects) {
     const MemoryObject *mo = obj.first;
 
     if (!mo->isUserSpecified) {
       const auto &os = obj.second;
 
-      if (!copyInConcrete(mo, os.get(), mo->address))
+      if (!copyInConcrete(mo, os.get(), mo->address, assignment))
         return false;
     }
   }
@@ -396,14 +402,22 @@ bool AddressSpace::copyInConcretes() {
 }
 
 bool AddressSpace::copyInConcrete(const MemoryObject *mo, const ObjectState *os,
-                                  uint64_t src_address) {
+                                  uint64_t src_address,
+                                  const Assignment &assignment) {
   auto address = reinterpret_cast<std::uint8_t *>(src_address);
-  if (memcmp(address, os->concreteStore, mo->size) != 0) {
+  std::vector<uint8_t> concreteStore(mo->size);
+  for (size_t i = 0; i < mo->size; i++) {
+    auto byte = assignment.evaluate(os->read8(i), false);
+    concreteStore[i] = cast<ConstantExpr>(byte)->getZExtValue(8);
+  }
+  if (memcmp(address, concreteStore.data(), mo->size) != 0) {
     if (os->readOnly) {
       return false;
     } else {
       ObjectState *wos = getWriteable(mo, os);
-      memcpy(wos->concreteStore, address, mo->size);
+      for (size_t i = 0; i < mo->size; i++) {
+        wos->write(i, ConstantExpr::create(address[i], Expr::Int8));
+      }
     }
   }
   return true;

@@ -17,7 +17,7 @@ arr12 : (array (w64 8) (makeSymbolic arr1 0))
 
 # RUN: grep "Query 2:	VALID" %t.log
 # Query 2
-constant0 : (array (w64 4) (constant [ 1 2 3 5 ]))
+constant0 : (array (w64 4) (constant [1, 2, 3, 5] default: 0))
 (query [] (Eq (Add w8 (Read w8 0 constant0)
                       (Read w8 3 constant0))
               6))

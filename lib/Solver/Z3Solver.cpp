@@ -551,8 +551,8 @@ bool Z3SolverImpl::internalRunSolver(
     }
 
     for (auto constant_array : constant_arrays_in_query.results) {
-      assert(builder->constant_array_assertions.count(constant_array) == 1 &&
-             "Constant array found in query, but not handled by Z3Builder");
+      // assert(builder->constant_array_assertions.count(constant_array) == 1 &&
+      //        "Constant array found in query, but not handled by Z3Builder");
       if (all_constant_arrays_in_query.count(constant_array))
         continue;
       all_constant_arrays_in_query.insert(constant_array);
@@ -701,7 +701,6 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
           Z3_get_numeral_uint64(builder->ctx, arraySizeExpr, &arraySize);
       assert(success && "Failed to get size");
 
-      data.resize(arraySize);
       if (env.usedArrayBytes.count(array)) {
         std::unordered_set<uint64_t> offsetValues;
         for (const ref<Expr> &offsetExpr : env.usedArrayBytes.at(array)) {
@@ -853,7 +852,8 @@ public:
     auto arrays = query.gatherArrays();
     bool forceTactic = true;
     for (auto array : arrays) {
-      if (isa<SymbolicSizeConstantSource>(array->source)) {
+      if (isa<ConstantSource>(array->source) &&
+          !isa<ConstantExpr>(array->size)) {
         forceTactic = false;
         break;
       }

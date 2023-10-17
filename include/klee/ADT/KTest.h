@@ -46,6 +46,7 @@ struct KTest {
 
   unsigned numObjects;
   KTestObject *objects;
+  unsigned uninitCoeff;
 };
 
 /* returns the current .ktest file format version */

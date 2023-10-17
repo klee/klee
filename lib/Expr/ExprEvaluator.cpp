@@ -32,14 +32,9 @@ ExprVisitor::Action ExprEvaluator::evalRead(const UpdateList &ul,
 
   if (ref<ConstantSource> constantSource =
           dyn_cast<ConstantSource>(ul.root->source)) {
-    if (index < constantSource->constantValues.size()) {
-      return Action::changeTo(constantSource->constantValues[index]);
+    if (auto value = constantSource->constantValues.load(index)) {
+      return Action::changeTo(value);
     }
-  }
-  if (ref<SymbolicSizeConstantSource> symbolicSizeConstantSource =
-          dyn_cast<SymbolicSizeConstantSource>(ul.root->source)) {
-    return Action::changeTo(ConstantExpr::create(
-        symbolicSizeConstantSource->defaultValue, ul.root->getRange()));
   }
 
   return Action::changeTo(getInitialValue(*ul.root, index));

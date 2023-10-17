@@ -22,10 +22,13 @@ void Assignment::dump() const {
   }
   for (bindings_ty::iterator i = bindings.begin(), e = bindings.end(); i != e;
        ++i) {
-    llvm::errs() << (*i).first->getName() << "\n[";
-    for (int j = 0, k = (*i).second.size(); j < k; ++j)
-      llvm::errs() << (int)(*i).second.load(j) << ",";
-    llvm::errs() << "]\n";
+    llvm::errs() << (*i).first->getName() << "\n";
+    Density d =
+        ((*i).second.storage().size() * 2 < (*i).second.sizeOfSetRange())
+            ? Density::Sparse
+            : Density::Dense;
+    (*i).second.print(llvm::errs(), d);
+    llvm::errs() << "\n";
   }
 }
 

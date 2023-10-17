@@ -12,6 +12,8 @@
 
 #include "MemoryManager.h"
 #include "TimingSolver.h"
+#include "klee/ADT/Ref.h"
+#include "klee/ADT/SparseStorage.h"
 #include "klee/Core/Context.h"
 
 #include "klee/Expr/Assignment.h"
@@ -209,57 +211,42 @@ private:
 
   ref<const MemoryObject> object;
 
-  /// @brief Holds all known concrete bytes
-  uint8_t *concreteStore;
-
-  /// @brief concreteMask[byte] is set if byte is known to be concrete
-  BitArray *concreteMask;
-
-  /// knownSymbolics[byte] holds the symbolic expression for byte,
-  /// if byte is known to be symbolic
-  ref<Expr> *knownSymbolics;
+  /// knownSymbolics[byte] holds the expression for byte,
+  /// if byte is known
+  mutable SparseStorage<ref<Expr>, OptionalRefEq<Expr>> knownSymbolics;
 
   /// unflushedMask[byte] is set if byte is unflushed
   /// mutable because may need flushed during read of const
-  mutable BitArray *unflushedMask;
+  mutable SparseStorage<bool> unflushedMask;
 
   // mutable because we may need flush during read of const
   mutable UpdateList updates;
 
-  bool wasZeroInitialized = true;
-
   ref<UpdateNode> lastUpdate;
+
+  ref<Expr> size;
 
   KType *dynamicType;
 
 public:
-  unsigned size;
-
   bool readOnly;
 
 public:
-  /// Create a new object state for the given memory object with concrete
-  /// contents. The initial contents are undefined, it is the callers
-  /// responsibility to initialize the object contents appropriately.
+  /// Create a new object state for the given memory
+  // For objects in memory
+  ObjectState(const MemoryObject *mo, const Array *array, KType *dt);
   ObjectState(const MemoryObject *mo, KType *dt);
 
-  /// Create a new object state for the given memory object with symbolic
-  /// contents.
-  ObjectState(const MemoryObject *mo, const Array *array, KType *dt);
-  ObjectState(const MemoryObject *mo, const ObjectState &os);
+  // For symbolic objects not in memory (hack)
 
   ObjectState(const ObjectState &os);
-  ~ObjectState();
+  ~ObjectState() = default;
 
   const MemoryObject *getObject() const { return object.get(); }
 
   void setReadOnly(bool ro) { readOnly = ro; }
 
-  /// Make contents all concrete and zero
-  void initializeToZero();
-
-  /// Make contents all concrete and random
-  void initializeToRandom();
+  void swapObjectHack(MemoryObject *mo) { object = mo; }
 
   ref<Expr> read(ref<Expr> offset, Expr::Width width) const;
   ref<Expr> read(unsigned offset, Expr::Width width) const;
@@ -267,19 +254,13 @@ public:
 
   void write(unsigned offset, ref<Expr> value);
   void write(ref<Expr> offset, ref<Expr> value);
+  void write(ref<const ObjectState> os);
 
   void write8(unsigned offset, uint8_t value);
   void write16(unsigned offset, uint16_t value);
   void write32(unsigned offset, uint32_t value);
   void write64(unsigned offset, uint64_t value);
   void print() const;
-
-  /*
-    Looks at all the symbolic bytes of this object, gets a value for them
-    from the solver and puts them in the concreteStore.
-  */
-  void flushToConcreteStore(TimingSolver *solver,
-                            const ExecutionState &state) const;
 
   bool isAccessableFrom(KType *) const;
 
@@ -290,31 +271,12 @@ private:
 
   void makeConcrete();
 
-  void makeSymbolic();
-
   ref<Expr> read8(ref<Expr> offset) const;
   void write8(unsigned offset, ref<Expr> value);
   void write8(ref<Expr> offset, ref<Expr> value);
 
-  void fastRangeCheckOffset(ref<Expr> offset, unsigned *base_r,
-                            unsigned *size_r) const;
-  void flushRangeForRead(unsigned rangeBase, unsigned rangeSize) const;
-  void flushRangeForWrite(unsigned rangeBase, unsigned rangeSize);
-
-  /// isByteConcrete ==> !isByteKnownSymbolic
-  bool isByteConcrete(unsigned offset) const;
-
-  /// isByteKnownSymbolic ==> !isByteConcrete
-  bool isByteKnownSymbolic(unsigned offset) const;
-
-  /// isByteUnflushed(i) => (isByteConcrete(i) || isByteKnownSymbolic(i))
-  bool isByteUnflushed(unsigned offset) const;
-
-  void markByteConcrete(unsigned offset);
-  void markByteSymbolic(unsigned offset);
-  void markByteFlushed(unsigned offset);
-  void markByteUnflushed(unsigned offset);
-  void setKnownSymbolic(unsigned offset, Expr *value);
+  void flushForRead() const;
+  void flushForWrite();
 
   ArrayCache *getArrayCache() const;
 };

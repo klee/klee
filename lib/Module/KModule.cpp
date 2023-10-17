@@ -482,7 +482,7 @@ void KModule::checkModule() {
   }
 }
 
-KBlock *KModule::getKBlock(llvm::BasicBlock *bb) {
+KBlock *KModule::getKBlock(const llvm::BasicBlock *bb) {
   return functionMap[bb->getParent()]->blockMap[bb];
 }
 

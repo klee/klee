@@ -54,6 +54,10 @@ const char *Token::getKindName() const {
     return "KWQuery";
   case KWPath:
     return "KWPath";
+  case KWDefault:
+    return "KWDefault";
+  case KWNull:
+    return "KWNull";
   case KWReserved:
     return "KWReserved";
   case KWSymbolic:
@@ -180,6 +184,8 @@ Token &Lexer::SetIdentifierTokenKind(Token &Result) {
       return SetTokenKind(Result, Token::KWTrue);
     if (memcmp("path", Result.start, 4) == 0)
       return SetTokenKind(Result, Token::KWPath);
+    if (memcmp("null", Result.start, 4) == 0)
+      return SetTokenKind(Result, Token::KWNull);
     break;
 
   case 5:
@@ -199,6 +205,8 @@ Token &Lexer::SetIdentifierTokenKind(Token &Result) {
   case 7:
     if (memcmp("declare", Result.start, 7) == 0)
       return SetTokenKind(Result, Token::KWReserved);
+    if (memcmp("default", Result.start, 7) == 0)
+      return SetTokenKind(Result, Token::KWDefault);
     break;
 
   case 8:

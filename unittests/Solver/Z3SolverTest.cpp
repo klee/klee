@@ -14,6 +14,7 @@
 
 #include "gtest/gtest.h"
 
+#include "klee/ADT/SparseStorage.h"
 #include "klee/Expr/ArrayCache.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
@@ -40,14 +41,13 @@ TEST_F(Z3SolverTest, GetConstraintLog) {
   constraints_ty Constraints;
 
   const std::vector<uint64_t> ConstantValues{1, 2, 3, 4};
-  std::vector<ref<ConstantExpr>> ConstantExpressions;
+  SparseStorage<ref<ConstantExpr>> ConstantExpressions(
+      ConstantExpr::create(0, Expr::Int8));
 
-  std::transform(
-      ConstantValues.begin(), ConstantValues.end(),
-      std::back_inserter(ConstantExpressions), [](const uint64_t Value) {
-        ref<ConstantExpr> ConstantExpr(ConstantExpr::alloc(Value, Expr::Int8));
-        return ConstantExpr;
-      });
+  for (unsigned i = 0; i < ConstantValues.size(); ++i) {
+    ConstantExpressions.store(
+        i, ConstantExpr::alloc(ConstantValues[i], Expr::Int8));
+  }
 
   const Array *ConstantArray =
       AC.CreateArray(ConstantExpr::create(4, sizeof(uint64_t) * CHAR_BIT),

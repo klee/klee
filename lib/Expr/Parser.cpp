@@ -322,7 +322,6 @@ class ParserImpl : public Parser {
   SourceResult ParseSource();
 
   SourceResult ParseConstantSource();
-  SourceResult ParseSymbolicSizeConstantSource();
   SourceResult ParseSymbolicSizeConstantAddressSource();
   SourceResult ParseMakeSymbolicSource();
   SourceResult ParseLazyInitializationContentSource();
@@ -483,8 +482,6 @@ SourceResult ParserImpl::ParseSource() {
   SourceResult source;
   if (type == "constant") {
     source = ParseConstantSource();
-  } else if (type == "symbolicSizeConstant") {
-    source = ParseSymbolicSizeConstantSource();
   } else if (type == "symbolicSizeConstantAddress") {
     source = ParseSymbolicSizeConstantAddressSource();
   } else if (type == "makeSymbolic") {
@@ -509,39 +506,69 @@ SourceResult ParserImpl::ParseSource() {
 }
 
 SourceResult ParserImpl::ParseConstantSource() {
-  std::vector<ref<ConstantExpr>> Values;
-  ConsumeLSquare();
-  while (Tok.kind != Token::RSquare) {
-    if (Tok.kind == Token::EndOfFile) {
-      Error("unexpected end of file.");
-      assert(0);
-    }
+  std::unordered_map<size_t, ref<ConstantExpr>> storage;
+  ref<ConstantExpr> defaultValue = nullptr;
 
-    ExprResult Res = ParseNumber(8); // Should be Range Type
-    if (Res.isValid())
-      Values.push_back(cast<ConstantExpr>(Res.get()));
+  if (Tok.kind == Token::LSquare) {
+    ConsumeLSquare();
+    unsigned index = 0;
+    while (Tok.kind != Token::RSquare) {
+      if (Tok.kind == Token::EndOfFile) {
+        Error("unexpected end of file.");
+        assert(0);
+      }
+      ExprResult Res = ParseNumber(8).get(); // Should be Range Type
+      storage.insert({index, cast<ConstantExpr>(Res.get())});
+      if (Tok.kind == Token::Comma) {
+        ConsumeExpectedToken(Token::Comma);
+      }
+      index++;
+    }
+    ConsumeRSquare();
+  } else if (Tok.kind == Token::LBrace) {
+    ConsumeExpectedToken(Token::LBrace);
+    while (Tok.kind != Token::RBrace) {
+      if (Tok.kind == Token::EndOfFile) {
+        Error("unexpected end of file.");
+        assert(0);
+      }
+      ExprResult Index = ParseNumber(64).get();
+      ConsumeExpectedToken(Token::Colon);
+      ExprResult Res = ParseNumber(8).get(); // Should be Range Type
+      storage.insert({cast<ConstantExpr>(Index.get())->getZExtValue(),
+                      cast<ConstantExpr>(Res.get())});
+      if (Tok.kind == Token::Comma) {
+        ConsumeExpectedToken(Token::Comma);
+      }
+    }
+    ConsumeExpectedToken(Token::RBrace);
+  } else {
+    assert(0 && "Parsing error");
   }
-  ConsumeRSquare();
+
+  ConsumeExpectedToken(Token::KWDefault);
+  ConsumeExpectedToken(Token::Colon);
+
+  if (Tok.kind != Token::KWNull) {
+    ExprResult DV = ParseNumber(8).get(); // Should be Range Type
+    defaultValue = cast<ConstantExpr>(DV.get());
+  } else {
+    ConsumeExpectedToken(Token::KWNull);
+  }
+
+  SparseStorage<ref<ConstantExpr>> Values(storage, defaultValue);
   return SourceBuilder::constant(Values);
 }
 
-SourceResult ParserImpl::ParseSymbolicSizeConstantSource() {
-  auto valueExpr = ParseNumber(64).get();
-  if (auto ce = dyn_cast<ConstantExpr>(valueExpr)) {
-    return SourceBuilder::symbolicSizeConstant(ce->getZExtValue());
-  } else {
-    assert(0);
-  }
-}
-
 SourceResult ParserImpl::ParseSymbolicSizeConstantAddressSource() {
-  auto valueExpr = ParseNumber(64).get();
-  auto versionExpr = ParseNumber(64).get();
-  auto value = dyn_cast<ConstantExpr>(valueExpr);
-  auto version = dyn_cast<ConstantExpr>(versionExpr);
-  assert(value && version);
-  return SourceBuilder::symbolicSizeConstantAddress(value->getZExtValue(),
-                                                    version->getZExtValue());
+  assert(0 && "unimplemented");
+  // auto valueExpr = ParseNumber(64).get();
+  // auto versionExpr = ParseNumber(64).get();
+  // auto value = dyn_cast<ConstantExpr>(valueExpr);
+  // auto version = dyn_cast<ConstantExpr>(versionExpr);
+  // assert(value && version);
+  // return SourceBuilder::symbolicSizeConstantAddress(value->getZExtValue(),
+  //                                                   version->getZExtValue());
 }
 
 SourceResult ParserImpl::ParseMakeSymbolicSource() {

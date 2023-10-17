@@ -6,10 +6,11 @@
 # License. See LICENSE.TXT for details.
 #
 #===------------------------------------------------------------------------===#
-add_subdirectory(ADT)
-add_subdirectory(Basic)
-add_subdirectory(Support)
-add_subdirectory(Expr)
-add_subdirectory(Solver)
-add_subdirectory(Module)
-add_subdirectory(Core)
+add_library(kleeADT
+  SparseStorage.cpp
+)
+
+llvm_config(kleeADT "${USE_LLVM_SHARED}" support)
+target_include_directories(kleeADT PRIVATE ${KLEE_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})
+target_compile_options(kleeADT PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
+target_compile_definitions(kleeADT PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})

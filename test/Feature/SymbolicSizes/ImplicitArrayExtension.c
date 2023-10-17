@@ -1,7 +1,6 @@
-// REQUIRES: z3
 // RUN: %clang %s -g -emit-llvm %O0opt -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --check-out-of-memory --use-sym-size-alloc --solver-backend=z3 %t1.bc 2>&1 | FileCheck %s
+// RUN: %klee --output-dir=%t.klee-out --check-out-of-memory --use-sym-size-alloc %t1.bc 2>&1 | FileCheck %s
 
 #include "klee/klee.h"
 #include <assert.h>

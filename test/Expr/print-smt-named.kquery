@@ -1068,7 +1068,7 @@ makeSymbolic0 : (array (w64 4) (makeSymbolic unnamed_1 0))
        [makeSymbolic0])
 
 # Query 72 -- Type: InitialValues, Instructions: 30
-constant2 : (array (w64 4) (constant [121 101 115 0]))
+constant2 : (array (w64 4) (constant [121, 101, 115, 0] default: 0))
 makeSymbolic1 : (array (w64 4) (makeSymbolic unnamed 0))
 makeSymbolic0 : (array (w64 4) (makeSymbolic unnamed_1 0))
 (query [(Eq false
@@ -1104,7 +1104,7 @@ makeSymbolic0 : (array (w64 4) (makeSymbolic unnamed_1 0))
 # Query 74 -- Type: InitialValues, Instructions: 37
 makeSymbolic1 : (array (w64 4) (makeSymbolic unnamed 0))
 makeSymbolic0 : (array (w64 4) (makeSymbolic unnamed_1 0))
-constant2 : (array (w64 4) (constant [171 171 171 171]))
+constant2 : (array (w64 4) (constant [171, 171, 171, 171] default: 0))
 (query [(Eq false
             (Ult N0:(Mul w64 4
                              (SExt w64 (ReadLSB w32 0 makeSymbolic0)))
@@ -1127,7 +1127,7 @@ constant2 : (array (w64 4) (constant [171 171 171 171]))
 # Query 75 -- Type: InitialValues, Instructions: 40
 makeSymbolic1 : (array (w64 4) (makeSymbolic unnamed 0))
 makeSymbolic0 : (array (w64 4) (makeSymbolic unnamed_1 0))
-constant2 : (array (w64 16) (constant [12 0 0 0 13 0 0 0 14 0 0 0 15 0 0 0]))
+constant2 : (array (w64 16) (constant {0: 12, 4: 13, 8: 14, 12: 15} default: 0))
 (query [(Ult N0:(Mul w64 4
                          (SExt w64 (ReadLSB w32 0 makeSymbolic0)))
              13)]
@@ -1140,7 +1140,7 @@ constant2 : (array (w64 16) (constant [12 0 0 0 13 0 0 0 14 0 0 0 15 0 0 0]))
 # Query 76 -- Type: InitialValues, Instructions: 50
 makeSymbolic1 : (array (w64 4) (makeSymbolic unnamed 0))
 makeSymbolic0 : (array (w64 4) (makeSymbolic unnamed_1 0))
-constant2 : (array (w64 4) (constant [171 171 171 171]))
+constant2 : (array (w64 4) (constant [171, 171, 171, 171] default: 0))
 (query [(Eq false
             (Ult N0:(Mul w64 4
                              (SExt w64 (ReadLSB w32 0 makeSymbolic0)))
@@ -1159,7 +1159,7 @@ constant2 : (array (w64 4) (constant [171 171 171 171]))
 # Query 77 -- Type: InitialValues, Instructions: 51
 makeSymbolic1 : (array (w64 4) (makeSymbolic unnamed 0))
 makeSymbolic0 : (array (w64 4) (makeSymbolic unnamed_1 0))
-constant2 : (array (w64 16) (constant [12 0 0 0 13 0 0 0 14 0 0 0 15 0 0 0]))
+constant2 : (array (w64 16) (constant {0: 12, 4: 13, 8: 14, 12: 15} default: 0))
 (query [(Eq false
             (Ult N0:(Mul w64 4
                              (SExt w64 (ReadLSB w32 0 makeSymbolic0)))

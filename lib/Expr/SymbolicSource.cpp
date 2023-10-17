@@ -46,27 +46,74 @@ std::set<const Array *> LazyInitializationSource::getRelatedArrays() const {
 }
 
 unsigned ConstantSource::computeHash() {
-  unsigned res = 0;
-  for (unsigned i = 0, e = constantValues.size(); i != e; ++i) {
-    res =
-        (res * SymbolicSource::MAGIC_HASH_CONSTANT) + constantValues[i]->hash();
+  auto defaultV = constantValues.defaultV();
+  auto ordered = constantValues.calculateOrderedStorage();
+
+  unsigned res = (getKind() * SymbolicSource::MAGIC_HASH_CONSTANT) +
+                 (defaultV ? defaultV->hash() : 0);
+
+  for (auto kv : ordered) {
+    res = (res * SymbolicSource::MAGIC_HASH_CONSTANT) + kv.first;
+    res = (res * SymbolicSource::MAGIC_HASH_CONSTANT) + kv.second->hash();
   }
-  res = (res * SymbolicSource::MAGIC_HASH_CONSTANT) + getKind();
+
   hashValue = res;
   return hashValue;
 }
 
-unsigned SymbolicSizeConstantSource::computeHash() {
-  unsigned res =
-      (getKind() * SymbolicSource::MAGIC_HASH_CONSTANT) + defaultValue;
+unsigned UninitializedSource::computeHash() {
+  unsigned res = getKind();
+  res = res * SymbolicSource::MAGIC_HASH_CONSTANT + version;
+  res = res * SymbolicSource::MAGIC_HASH_CONSTANT + allocSite->hash();
   hashValue = res;
   return hashValue;
+}
+
+int UninitializedSource::internalCompare(const SymbolicSource &b) const {
+  if (getKind() != b.getKind()) {
+    return getKind() < b.getKind() ? -1 : 1;
+  }
+  const UninitializedSource &ub = static_cast<const UninitializedSource &>(b);
+
+  if (version != ub.version) {
+    return version < ub.version ? -1 : 1;
+  }
+
+  if (allocSite != ub.allocSite) {
+    return allocSite->getGlobalIndex() < ub.allocSite->getGlobalIndex() ? -1
+                                                                        : 1;
+  }
+
+  return 0;
+}
+
+int SymbolicSizeConstantAddressSource::internalCompare(
+    const SymbolicSource &b) const {
+  if (getKind() != b.getKind()) {
+    return getKind() < b.getKind() ? -1 : 1;
+  }
+  const SymbolicSizeConstantAddressSource &ub =
+      static_cast<const SymbolicSizeConstantAddressSource &>(b);
+
+  if (version != ub.version) {
+    return version < ub.version ? -1 : 1;
+  }
+  if (size != ub.size) {
+    return size < ub.size ? -1 : 1;
+  }
+  if (allocSite != ub.allocSite) {
+    return allocSite->getGlobalIndex() < ub.allocSite->getGlobalIndex() ? -1
+                                                                        : 1;
+  }
+
+  return 0;
 }
 
 unsigned SymbolicSizeConstantAddressSource::computeHash() {
-  unsigned res =
-      (getKind() * SymbolicSource::MAGIC_HASH_CONSTANT) + defaultValue;
-  res = (res * SymbolicSource::MAGIC_HASH_CONSTANT) + version;
+  unsigned res = getKind();
+  res = res * MAGIC_HASH_CONSTANT + version;
+  res = res * MAGIC_HASH_CONSTANT + allocSite->hash();
+  res = res * MAGIC_HASH_CONSTANT + size->hash();
   hashValue = res;
   return hashValue;
 }
@@ -117,21 +164,14 @@ int InstructionSource::internalCompare(const SymbolicSource &b) const {
   }
   assert(km == ib.km);
   auto function = allocSite.getParent()->getParent();
-  auto bFunction = ib.allocSite.getParent()->getParent();
-  if (km->getFunctionId(function) != km->getFunctionId(bFunction)) {
-    return km->getFunctionId(function) < km->getFunctionId(bFunction) ? -1 : 1;
-  }
   auto kf = km->functionMap.at(function);
-  auto block = allocSite.getParent();
-  auto bBlock = ib.allocSite.getParent();
-  if (kf->blockMap[block]->getId() != kf->blockMap[bBlock]->getId()) {
-    return kf->blockMap[block]->getId() < kf->blockMap[bBlock]->getId() ? -1
-                                                                        : 1;
-  }
-  if (kf->instructionMap[&allocSite]->getIndex() !=
-      kf->instructionMap[&ib.allocSite]->getIndex()) {
-    return kf->instructionMap[&allocSite]->getIndex() <
-                   kf->instructionMap[&ib.allocSite]->getIndex()
+  auto bfunction = ib.allocSite.getParent()->getParent();
+  auto bkf = km->functionMap.at(bfunction);
+
+  if (kf->instructionMap[&allocSite]->getGlobalIndex() !=
+      bkf->instructionMap[&ib.allocSite]->getGlobalIndex()) {
+    return kf->instructionMap[&allocSite]->getGlobalIndex() <
+                   bkf->instructionMap[&ib.allocSite]->getGlobalIndex()
                ? -1
                : 1;
   }

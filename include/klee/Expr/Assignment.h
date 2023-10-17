@@ -95,8 +95,10 @@ public:
 inline ref<Expr> Assignment::evaluate(const Array *array, unsigned index,
                                       bool allowFreeValues) const {
   assert(array);
+  auto sizeExpr = evaluate(array->size);
   bindings_ty::iterator it = bindings.find(array);
-  if (it != bindings.end() && index < it->second.size()) {
+  if (it != bindings.end() && isa<ConstantExpr>(sizeExpr) &&
+      index < cast<ConstantExpr>(sizeExpr)->getZExtValue()) {
     return ConstantExpr::alloc(it->second.load(index), array->getRange());
   } else {
     if (allowFreeValues) {

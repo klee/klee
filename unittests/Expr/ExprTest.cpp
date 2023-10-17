@@ -128,9 +128,10 @@ TEST(ExprTest, ReadExprFoldingBasic) {
   unsigned size = 5;
 
   // Constant array
-  std::vector<ref<ConstantExpr>> Contents(size);
+  SparseStorage<ref<ConstantExpr>> Contents(
+      ConstantExpr::create(0, Expr::Int8));
   for (unsigned i = 0; i < size; ++i)
-    Contents[i] = ConstantExpr::create(i + 1, Expr::Int8);
+    Contents.store(i, ConstantExpr::create(i + 1, Expr::Int8));
   ArrayCache ac;
 
   const Array *array =
@@ -148,7 +149,7 @@ TEST(ExprTest, ReadExprFoldingBasic) {
     // Read - should be constant folded to Contents[i]
     // Check that constant folding worked
     ConstantExpr *c = static_cast<ConstantExpr *>(read.get());
-    EXPECT_EQ(Contents[i]->getZExtValue(), c->getZExtValue());
+    EXPECT_EQ(Contents.load(i)->getZExtValue(), c->getZExtValue());
   }
 }
 
@@ -156,9 +157,10 @@ TEST(ExprTest, ReadExprFoldingIndexOutOfBound) {
   unsigned size = 5;
 
   // Constant array
-  std::vector<ref<ConstantExpr>> Contents(size);
+  SparseStorage<ref<ConstantExpr>> Contents(
+      ConstantExpr::create(0, Expr::Int8));
   for (unsigned i = 0; i < size; ++i)
-    Contents[i] = ConstantExpr::create(i + 1, Expr::Int8);
+    Contents.store(i, ConstantExpr::create(i + 1, Expr::Int8));
   ArrayCache ac;
   const Array *array =
       ac.CreateArray(ConstantExpr::create(size, sizeof(uint64_t) * CHAR_BIT),
@@ -178,9 +180,10 @@ TEST(ExprTest, ReadExprFoldingConstantUpdate) {
   unsigned size = 5;
 
   // Constant array
-  std::vector<ref<ConstantExpr>> Contents(size);
+  SparseStorage<ref<ConstantExpr>> Contents(
+      ConstantExpr::create(0, Expr::Int8));
   for (unsigned i = 0; i < size; ++i)
-    Contents[i] = ConstantExpr::create(i + 1, Expr::Int8);
+    Contents.store(i, ConstantExpr::create(i + 1, Expr::Int8));
   ArrayCache ac;
 
   const Array *array =
@@ -205,9 +208,10 @@ TEST(ExprTest, ReadExprFoldingConstantMultipleUpdate) {
   unsigned size = 5;
 
   // Constant array
-  std::vector<ref<ConstantExpr>> Contents(size);
+  SparseStorage<ref<ConstantExpr>> Contents(
+      ConstantExpr::create(0, Expr::Int8));
   for (unsigned i = 0; i < size; ++i)
-    Contents[i] = ConstantExpr::create(i + 1, Expr::Int8);
+    Contents.store(i, ConstantExpr::create(i + 1, Expr::Int8));
   ArrayCache ac;
 
   const Array *array =
@@ -234,9 +238,10 @@ TEST(ExprTest, ReadExprFoldingSymbolicValueUpdate) {
   unsigned size = 5;
 
   // Constant array
-  std::vector<ref<ConstantExpr>> Contents(size);
+  SparseStorage<ref<ConstantExpr>> Contents(
+      ConstantExpr::create(0, Expr::Int8));
   for (unsigned i = 0; i < size; ++i)
-    Contents[i] = ConstantExpr::create(i + 1, Expr::Int8);
+    Contents.store(i, ConstantExpr::create(i + 1, Expr::Int8));
   ArrayCache ac;
 
   const Array *array =
@@ -263,9 +268,10 @@ TEST(ExprTest, ReadExprFoldingSymbolicIndexUpdate) {
   unsigned size = 5;
 
   // Constant array
-  std::vector<ref<ConstantExpr>> Contents(size);
+  SparseStorage<ref<ConstantExpr>> Contents(
+      ConstantExpr::create(0, Expr::Int8));
   for (unsigned i = 0; i < size; ++i)
-    Contents[i] = ConstantExpr::create(i + 1, Expr::Int8);
+    Contents.store(i, ConstantExpr::create(i + 1, Expr::Int8));
   ArrayCache ac;
 
   const Array *array =

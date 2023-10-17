@@ -2,6 +2,7 @@
 #define KLEE_SOURCEBUILDER_H
 
 #include "klee/ADT/Ref.h"
+#include "klee/ADT/SparseStorage.h"
 #include "klee/Expr/SymbolicSource.h"
 #include "klee/Module/KModule.h"
 
@@ -12,10 +13,13 @@ public:
   SourceBuilder() = delete;
 
   static ref<SymbolicSource>
-  constant(const std::vector<ref<ConstantExpr>> &constantValues);
-  static ref<SymbolicSource> symbolicSizeConstant(unsigned defaultValue);
-  static ref<SymbolicSource> symbolicSizeConstantAddress(unsigned defaultValue,
-                                                         unsigned version);
+  constant(SparseStorage<ref<ConstantExpr>> constantValues);
+
+  static ref<SymbolicSource> uninitialized(unsigned version,
+                                           const KInstruction *allocSite);
+  static ref<SymbolicSource>
+  symbolicSizeConstantAddress(unsigned version, const KInstruction *allocSite,
+                              ref<Expr> size);
   static ref<SymbolicSource> makeSymbolic(const std::string &name,
                                           unsigned version);
   static ref<SymbolicSource> lazyInitializationAddress(ref<Expr> pointer);

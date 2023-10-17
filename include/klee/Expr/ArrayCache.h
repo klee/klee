@@ -61,10 +61,9 @@ private:
                              klee::EquivArrayCmpFn>
       ArrayHashSet;
   ArrayHashSet cachedSymbolicArrays;
-  typedef std::vector<const Array *> ArrayPtrVec;
-  ArrayPtrVec concreteArrays;
 
-  unsigned getNextID() const;
+  // Number of arrays of each source allocated
+  std::unordered_map<SymbolicSource::Kind, unsigned> allocatedCount;
 };
 } // namespace klee
 

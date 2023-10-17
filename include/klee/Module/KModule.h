@@ -296,7 +296,7 @@ public:
   /// expected by KLEE's Executor hold.
   void checkModule();
 
-  KBlock *getKBlock(llvm::BasicBlock *bb);
+  KBlock *getKBlock(const llvm::BasicBlock *bb);
 
   bool inMainModule(const llvm::Function &f);
 

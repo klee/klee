@@ -90,8 +90,6 @@ void IndependentConstraintSet::addValuesToAssignment(
   for (unsigned i = 0; i < objects.size(); i++) {
     if (assign.bindings.count(objects[i])) {
       SparseStorage<unsigned char> value = assign.bindings.at(objects[i]);
-      assert(value.size() == values[i].size() &&
-             "we're talking about the same array here");
       DenseSet<unsigned> ds = (elements.find(objects[i]))->second;
       for (std::set<unsigned>::iterator it2 = ds.begin(); it2 != ds.end();
            it2++) {

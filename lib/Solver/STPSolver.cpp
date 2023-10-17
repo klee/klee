@@ -392,7 +392,7 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
       values.reserve(objects.size());
       for (unsigned idx = 0; idx < objects.size(); ++idx) {
         uint64_t objectSize = shared_memory_object_sizes[idx];
-        values.emplace_back(objectSize, 0);
+        values.emplace_back(0);
         values.back().store(0, pos, pos + objectSize);
         pos += objectSize;
       }

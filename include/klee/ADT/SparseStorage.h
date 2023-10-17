@@ -3,67 +3,56 @@
 
 #include <cassert>
 #include <cstddef>
+#include <functional>
 #include <iterator>
 #include <map>
+#include <unordered_map>
 #include <vector>
+
+namespace llvm {
+class raw_ostream;
+};
 
 namespace klee {
 
-template <typename ValueType> class SparseStorage {
+enum class Density {
+  Sparse,
+  Dense,
+};
+
+template <typename ValueType, typename Eq = std::equal_to<ValueType>>
+class SparseStorage {
 private:
-  size_t capacity;
-  std::map<size_t, ValueType> internalStorage;
+  std::unordered_map<size_t, ValueType> internalStorage;
   ValueType defaultValue;
+  Eq eq;
 
   bool contains(size_t key) const { return internalStorage.count(key) != 0; }
 
 public:
-  struct Iterator {
-    using iterator_category = std::input_iterator_tag;
-    using difference_type = std::ptrdiff_t;
-    using value_type = ValueType;
-    using pointer = ValueType *;
-    using reference = ValueType &;
+  SparseStorage(const ValueType &defaultValue = ValueType())
+      : defaultValue(defaultValue) {}
 
-  private:
-    size_t idx;
-    const SparseStorage *owner;
-
-  public:
-    Iterator(size_t idx, const SparseStorage *owner) : idx(idx), owner(owner) {}
-
-    value_type operator*() const { return owner->load(idx); }
-
-    Iterator &operator++() {
-      ++idx;
-      return *this;
+  SparseStorage(const std::unordered_map<size_t, ValueType> &internalStorage,
+                const ValueType &defaultValue)
+      : defaultValue(defaultValue) {
+    for (auto &[index, value] : internalStorage) {
+      store(index, value);
     }
-
-    Iterator operator++(int) {
-      Iterator snap = *this;
-      ++(*this);
-      return snap;
-    }
-
-    bool operator==(const Iterator &other) const { return idx == other.idx; }
-
-    bool operator!=(const Iterator &other) const { return !(*this == other); }
-  };
-
-  SparseStorage(size_t capacity = 0,
-                const ValueType &defaultValue = ValueType())
-      : capacity(capacity), defaultValue(defaultValue) {}
+  }
 
   SparseStorage(const std::vector<ValueType> &values,
                 const ValueType &defaultValue = ValueType())
-      : capacity(values.capacity()), defaultValue(defaultValue) {
-    for (size_t idx = 0; idx < values.capacity(); ++idx) {
-      internalStorage[idx] = values[idx];
+      : defaultValue(defaultValue) {
+    for (size_t idx = 0; idx < values.size(); ++idx) {
+      store(idx, values[idx]);
     }
   }
 
   void store(size_t idx, const ValueType &value) {
-    if (idx < capacity) {
+    if (eq(value, defaultValue)) {
+      internalStorage.erase(idx);
+    } else {
       internalStorage[idx] = value;
     }
   }
@@ -77,32 +66,19 @@ public:
   }
 
   ValueType load(size_t idx) const {
-    assert(idx < capacity && idx >= 0);
     return contains(idx) ? internalStorage.at(idx) : defaultValue;
   }
 
-  size_t size() const { return capacity; }
-
-  void resize(size_t newCapacity) {
-    assert(newCapacity >= 0);
-    // Free to extend
-    if (newCapacity >= capacity) {
-      capacity = newCapacity;
-      return;
+  size_t sizeOfSetRange() const {
+    size_t sizeOfRange = 0;
+    for (auto i : internalStorage) {
+      sizeOfRange = std::max(i.first, sizeOfRange);
     }
-
-    // Truncate unnessecary elements
-    auto iterOnNewSize = internalStorage.lower_bound(newCapacity);
-    while (iterOnNewSize != internalStorage.end()) {
-      iterOnNewSize = internalStorage.erase(iterOnNewSize);
-    }
-
-    capacity = newCapacity;
+    return sizeOfRange;
   }
 
   bool operator==(const SparseStorage<ValueType> &another) const {
-    return size() == another.size() && defaultValue == another.defaultValue &&
-           internalStorage == another.internalStorage;
+    return defaultValue == another.defaultValue && compare(another) == 0;
   }
 
   bool operator!=(const SparseStorage<ValueType> &another) const {
@@ -110,22 +86,61 @@ public:
   }
 
   bool operator<(const SparseStorage &another) const {
-    return internalStorage < another.internalStorage;
+    return compare(another) == -1;
   }
 
   bool operator>(const SparseStorage &another) const {
-    return internalStorage > another.internalStorage;
+    return compare(another) == 1;
   }
 
-  Iterator begin() const { return Iterator(0, this); }
-  Iterator end() const { return Iterator(size(), this); }
+  int compare(const SparseStorage<ValueType> &other) const {
+    auto ordered = calculateOrderedStorage();
+    auto otherOrdered = other.calculateOrderedStorage();
+
+    if (ordered == otherOrdered) {
+      return 0;
+    } else {
+      return ordered < otherOrdered ? -1 : 1;
+    }
+  }
+
+  std::map<size_t, ValueType> calculateOrderedStorage() const {
+    std::map<size_t, ValueType> ordered;
+    for (const auto &i : internalStorage) {
+      ordered.insert(i);
+    }
+    return ordered;
+  }
+
+  std::vector<ValueType> getFirstNIndexes(size_t n) const {
+    std::vector<ValueType> vectorized(n);
+    for (size_t i = 0; i < n; i++) {
+      vectorized[i] = load(i);
+    }
+    return vectorized;
+  }
+
+  const std::unordered_map<size_t, ValueType> &storage() const {
+    return internalStorage;
+  };
+
+  const ValueType &defaultV() const { return defaultValue; };
+
+  void reset() { internalStorage.clear(); }
+
+  void reset(ValueType newDefault) {
+    defaultValue = newDefault;
+    internalStorage.clear();
+  }
+
+  void print(llvm::raw_ostream &os, Density) const;
 };
 
 template <typename U>
 SparseStorage<unsigned char> sparseBytesFromValue(const U &value) {
   const unsigned char *valueUnsignedCharIterator =
       reinterpret_cast<const unsigned char *>(&value);
-  SparseStorage<unsigned char> result(sizeof(value));
+  SparseStorage<unsigned char> result;
   result.store(0, valueUnsignedCharIterator,
                valueUnsignedCharIterator + sizeof(value));
   return result;

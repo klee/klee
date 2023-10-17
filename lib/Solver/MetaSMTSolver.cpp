@@ -261,14 +261,7 @@ SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCex(
       typename SolverContext::result_type array_exp =
           _builder->getInitialArray(array);
 
-      size_t constantSize = 0;
-      if (ref<ConstantExpr> sizeExpr = dyn_cast<ConstantExpr>(array->size)) {
-        constantSize = sizeExpr->getZExtValue();
-      } else {
-        constantSize =
-            read_value(_meta_solver, _builder->construct(array->size));
-      }
-      SparseStorage<unsigned char> data(constantSize, 0);
+      SparseStorage<unsigned char> data(0);
 
       for (unsigned offset : readOffsets.at(array)) {
         typename SolverContext::result_type elem_exp = evaluate(
@@ -415,7 +408,6 @@ MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
       values = std::vector<SparseStorage<unsigned char>>(objects.size());
       for (unsigned i = 0; i < objects.size(); ++i) {
         SparseStorage<unsigned char> &data = values[i];
-        data.resize(shared_memory_sizes_ptr[i]);
         data.store(0, pos, pos + shared_memory_sizes_ptr[i]);
         pos += shared_memory_sizes_ptr[i];
       }

@@ -13,7 +13,7 @@
 #include "KModule.h"
 #include "klee/Config/Version.h"
 #include "klee/Support/CompilerWarning.h"
-
+#include "llvm/IR/Argument.h"
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/DataTypes.h"
@@ -31,10 +31,41 @@ namespace klee {
 class Executor;
 class KModule;
 struct KBlock;
+struct KFunction;
+
+static const unsigned MAGIC_HASH_CONSTANT = 39;
 
 /// KInstruction - Intermediate instruction representation used
 /// during execution.
 struct KInstruction {
+
+  struct Index {
+    unsigned long instID;
+    unsigned long blockID;
+    unsigned long funcID;
+
+    bool operator==(const Index &other) const {
+      return std::tie(instID, blockID, funcID) ==
+             std::tie(other.instID, other.blockID, other.funcID);
+    }
+
+    bool operator<(const Index &other) const {
+      return std::tie(instID, blockID, funcID) <
+             std::tie(other.instID, other.blockID, other.funcID);
+    }
+
+    unsigned hash() const {
+      unsigned res = instID;
+      res = res * MAGIC_HASH_CONSTANT + blockID;
+      res = res * MAGIC_HASH_CONSTANT + funcID;
+      return res;
+    }
+
+    void print(llvm::raw_ostream &os) const {
+      os << "[" << instID << ", " << blockID << ", " << funcID << "]";
+    }
+  };
+
   llvm::Instruction *inst;
 
   /// Value numbers for each operand. -1 is an invalid value,
@@ -65,21 +96,31 @@ public:
   KInstruction() = delete;
   explicit KInstruction(const KInstruction &ki) = delete;
   virtual ~KInstruction();
+  std::string getSourceLocation() const;
 
   [[nodiscard]] size_t getLine() const;
   [[nodiscard]] size_t getColumn() const;
   [[nodiscard]] std::string getSourceFilepath() const;
+  Index getID() const;
 
   [[nodiscard]] std::string getSourceLocationString() const;
   [[nodiscard]] std::string toString() const;
+  bool operator==(const KInstruction &other) const {
+    return getID() == other.getID();
+  }
 
   [[nodiscard]] inline KBlock *getKBlock() const { return parent; }
   [[nodiscard]] inline KFunction *getKFunction() const {
     return getKBlock()->parent;
   }
+  bool operator<(const KInstruction &other) const {
+    return getID() < other.getID();
+  }
   [[nodiscard]] inline KModule *getKModule() const {
     return getKFunction()->parent;
   }
+
+  unsigned hash() const { return getID().hash(); }
 };
 
 struct KGEPInstruction : KInstruction {

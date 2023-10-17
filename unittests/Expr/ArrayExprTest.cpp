@@ -41,8 +41,8 @@ static ArrayCache ac;
 
 TEST(ArrayExprTest, HashCollisions) {
   klee::OptimizeArray = ALL;
-  std::vector<ref<ConstantExpr>> constVals(256,
-                                           ConstantExpr::create(5, Expr::Int8));
+  SparseStorage<ref<ConstantExpr>> constVals(
+      ConstantExpr::create(5, Expr::Int8));
   const Array *array = ac.CreateArray(
       ConstantExpr::create(256, sizeof(uint64_t) * CHAR_BIT),
       SourceBuilder::constant(constVals), Expr::Int32, Expr::Int8);

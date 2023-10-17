@@ -198,6 +198,7 @@ bool ExprOptimizer::computeIndexes(array2idx_ty &arrays, const ref<Expr> &e,
   // For each constant array found
   for (auto &element : arrays) {
     const Array *arr = element.first;
+    auto arraySize = cast<ConstantExpr>(arr->size)->getZExtValue();
 
     assert(arr->isConstantArray() && "Array is not concrete");
     assert(element.second.size() == 1 && "Multiple indexes on the same array");
@@ -224,8 +225,7 @@ bool ExprOptimizer::computeIndexes(array2idx_ty &arrays, const ref<Expr> &e,
     // For each concrete value 'i' stored in the array
     if (ref<ConstantSource> constantSource =
             cast<ConstantSource>(arr->source)) {
-      for (size_t aIdx = 0; aIdx < constantSource->constantValues.size();
-           aIdx += width) {
+      for (size_t aIdx = 0; aIdx < arraySize; aIdx += width) {
         auto *a = new Assignment();
         std::vector<const Array *> objects;
         std::vector<std::vector<unsigned char>> values;
@@ -302,7 +302,8 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
       std::vector<ref<ConstantExpr>> arrayConstValues;
       if (ref<ConstantSource> constantSource =
               dyn_cast<ConstantSource>(read->updates.root->source)) {
-        arrayConstValues = constantSource->constantValues;
+        arrayConstValues =
+            constantSource->constantValues.getFirstNIndexes(size);
       }
       for (auto it = us.rbegin(); it != us.rend(); it++) {
         const UpdateNode *un = *it;
@@ -377,7 +378,8 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
       std::vector<ref<ConstantExpr>> arrayConstValues;
       if (ref<ConstantSource> constantSource =
               dyn_cast<ConstantSource>(read->updates.root->source)) {
-        arrayConstValues = constantSource->constantValues;
+        arrayConstValues =
+            constantSource->constantValues.getFirstNIndexes(size);
       }
       if (arrayConstValues.size() < size) {
         // We need to "force" initialization of the values

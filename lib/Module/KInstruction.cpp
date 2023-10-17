@@ -115,3 +115,7 @@ unsigned KInstruction::getDest() const {
   return parent->parent->getNumArgs() + getIndex() +
          (parent->instructions - parent->parent->instructions);
 }
+
+KInstruction::Index KInstruction::getID() const {
+  return {getGlobalIndex(), parent->getId(), parent->parent->id};
+}

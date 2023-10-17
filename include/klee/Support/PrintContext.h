@@ -72,6 +72,8 @@ public:
     return *this;
   }
 
+  llvm::raw_ostream &getStream() { return os; }
+
   /// Pop the top off the indent stack
   /// \return The PrintContext object so the method is chainable
   PrintContext &popIndent() {

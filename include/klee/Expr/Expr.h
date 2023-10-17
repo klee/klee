@@ -415,7 +415,7 @@ struct Expr::CreateArg {
 // Comparison operators
 
 inline bool operator==(const Expr &lhs, const Expr &rhs) {
-  return lhs.compare(rhs) == 0;
+  return lhs.equals(rhs);
 }
 
 inline bool operator<(const Expr &lhs, const Expr &rhs) {
@@ -636,10 +636,7 @@ public:
 
 public:
   bool isSymbolicArray() const { return !isConstantArray(); }
-  bool isConstantArray() const {
-    return isa<ConstantSource>(source) ||
-           isa<SymbolicSizeConstantSource>(source);
-  }
+  bool isConstantArray() const { return isa<ConstantSource>(source); }
 
   const std::string getName() const { return source->toString(); }
   const std::string getIdentifier() const {

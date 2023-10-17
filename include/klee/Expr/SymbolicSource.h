@@ -3,11 +3,14 @@
 
 #include "klee/ADT/Ref.h"
 
+#include "klee/ADT/SparseStorage.h"
 #include "klee/Support/CompilerWarning.h"
+
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
 DISABLE_WARNING_POP
 
@@ -21,6 +24,7 @@ class Array;
 class Expr;
 class ConstantExpr;
 class KModule;
+struct KInstruction;
 
 class SymbolicSource {
 protected:
@@ -33,7 +37,7 @@ public:
 
   enum Kind {
     Constant = 3,
-    SymbolicSizeConstant,
+    Uninitialied,
     SymbolicSizeConstantAddress,
     MakeSymbolic,
     LazyInitializationContent,
@@ -63,24 +67,26 @@ public:
 
 class ConstantSource : public SymbolicSource {
 public:
-  /// constantValues - The constant initial values for this array, or empty for
-  /// a symbolic array. If non-empty, this size of this array is equivalent to
-  /// the array size.
-  const std::vector<ref<ConstantExpr>> constantValues;
+  const SparseStorage<ref<ConstantExpr>> constantValues;
 
-  ConstantSource(const std::vector<ref<ConstantExpr>> &_constantValues)
-      : constantValues(_constantValues){};
+  ConstantSource(SparseStorage<ref<ConstantExpr>> _constantValues)
+      : constantValues(std::move(_constantValues)) {
+    assert(constantValues.defaultV() && "Constant must be constant!");
+  }
+
   Kind getKind() const override { return Kind::Constant; }
-  virtual std::string getName() const override { return "constant"; }
-  uint64_t size() const { return constantValues.size(); }
+
+  std::string getName() const override { return "constant"; }
 
   static bool classof(const SymbolicSource *S) {
     return S->getKind() == Kind::Constant;
   }
-  static bool classof(const ConstantSource *) { return true; }
-  virtual unsigned computeHash() override;
 
-  virtual int internalCompare(const SymbolicSource &b) const override {
+  static bool classof(const ConstantSource *) { return true; }
+
+  unsigned computeHash() override;
+
+  int internalCompare(const SymbolicSource &b) const override {
     if (getKind() != b.getKind()) {
       return getKind() < b.getKind() ? -1 : 1;
     }
@@ -92,43 +98,38 @@ public:
   }
 };
 
-class SymbolicSizeConstantSource : public SymbolicSource {
+class UninitializedSource : public SymbolicSource {
 public:
-  const unsigned defaultValue;
-  SymbolicSizeConstantSource(unsigned _defaultValue)
-      : defaultValue(_defaultValue) {}
+  const unsigned version;
+  const KInstruction *allocSite;
 
-  Kind getKind() const override { return Kind::SymbolicSizeConstant; }
-  virtual std::string getName() const override {
-    return "symbolicSizeConstant";
-  }
+  UninitializedSource(unsigned version, const KInstruction *allocSite)
+      : version(version), allocSite(allocSite) {}
+
+  Kind getKind() const override { return Kind::Uninitialied; }
+
+  std::string getName() const override { return "uninitialized"; }
 
   static bool classof(const SymbolicSource *S) {
-    return S->getKind() == Kind::SymbolicSizeConstant;
+    return S->getKind() == Kind::Uninitialied;
   }
-  static bool classof(const SymbolicSizeConstantSource *) { return true; }
 
-  virtual unsigned computeHash() override;
+  static bool classof(const UninitializedSource *) { return true; }
 
-  virtual int internalCompare(const SymbolicSource &b) const override {
-    if (getKind() != b.getKind()) {
-      return getKind() < b.getKind() ? -1 : 1;
-    }
-    const SymbolicSizeConstantSource &ssb =
-        static_cast<const SymbolicSizeConstantSource &>(b);
-    if (defaultValue != ssb.defaultValue) {
-      return defaultValue < ssb.defaultValue ? -1 : 1;
-    }
-    return 0;
-  }
+  unsigned computeHash() override;
+
+  int internalCompare(const SymbolicSource &b) const override;
 };
 
 class SymbolicSizeConstantAddressSource : public SymbolicSource {
 public:
-  const unsigned defaultValue;
   const unsigned version;
-  SymbolicSizeConstantAddressSource(unsigned _defaultValue, unsigned _version)
-      : defaultValue(_defaultValue), version(_version) {}
+  const KInstruction *allocSite;
+  ref<Expr> size;
+  SymbolicSizeConstantAddressSource(unsigned _version,
+                                    const KInstruction *_allocSite,
+                                    ref<Expr> _size)
+      : version(_version), allocSite(_allocSite), size(_size) {}
 
   Kind getKind() const override { return Kind::SymbolicSizeConstantAddress; }
   virtual std::string getName() const override {
@@ -144,20 +145,7 @@ public:
 
   virtual unsigned computeHash() override;
 
-  virtual int internalCompare(const SymbolicSource &b) const override {
-    if (getKind() != b.getKind()) {
-      return getKind() < b.getKind() ? -1 : 1;
-    }
-    const SymbolicSizeConstantAddressSource &ssb =
-        static_cast<const SymbolicSizeConstantAddressSource &>(b);
-    if (defaultValue != ssb.defaultValue) {
-      return defaultValue < ssb.defaultValue ? -1 : 1;
-    }
-    if (version != ssb.version) {
-      return version < ssb.version ? -1 : 1;
-    }
-    return 0;
-  }
+  virtual int internalCompare(const SymbolicSource &b) const override;
 };
 
 class MakeSymbolicSource : public SymbolicSource {

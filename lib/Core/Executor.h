@@ -287,7 +287,7 @@ private:
 
   ObjectState *bindObjectInState(ExecutionState &state, const MemoryObject *mo,
                                  KType *dynamicType, bool IsAlloca,
-                                 const Array *array = 0);
+                                 const Array *array = nullptr);
 
   /// Resolve a pointer to the memory objects it could point to the
   /// start of, forking execution when necessary and generating errors

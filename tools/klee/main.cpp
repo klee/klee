@@ -408,14 +408,16 @@ public:
   void processTestCase(const ExecutionState &state, const char *message,
                        const char *suffix, bool isError = false);
 
-  void writeTestCaseXML(bool isError, const KTest &out, unsigned id);
+  void writeTestCaseXML(bool isError, const KTest &out, unsigned id,
+                        unsigned version = 0);
 
   std::string getOutputFilename(const std::string &filename);
   std::unique_ptr<llvm::raw_fd_ostream>
   openOutputFile(const std::string &filename);
-  std::string getTestFilename(const std::string &suffix, unsigned id);
-  std::unique_ptr<llvm::raw_fd_ostream> openTestFile(const std::string &suffix,
-                                                     unsigned id);
+  std::string getTestFilename(const std::string &suffix, unsigned id,
+                              unsigned version = 0);
+  std::unique_ptr<llvm::raw_fd_ostream>
+  openTestFile(const std::string &suffix, unsigned id, unsigned version = 0);
 
   // load a .path file
   static void loadPathFile(std::string name, std::vector<bool> &buffer);
@@ -556,11 +558,14 @@ KleeHandler::openOutputFile(const std::string &filename) {
   return f;
 }
 
-std::string KleeHandler::getTestFilename(const std::string &suffix,
-                                         unsigned id) {
+std::string KleeHandler::getTestFilename(const std::string &suffix, unsigned id,
+                                         unsigned version) {
   std::stringstream filename;
-  filename << "test" << std::setfill('0') << std::setw(6) << id << '.'
-           << suffix;
+  filename << "test" << std::setfill('0') << std::setw(6) << id;
+  if (version) {
+    filename << '_' << version;
+  }
+  filename << '.' << suffix;
   return filename.str();
 }
 
@@ -569,8 +574,9 @@ SmallString<128> KleeHandler::getOutputDirectory() const {
 }
 
 std::unique_ptr<llvm::raw_fd_ostream>
-KleeHandler::openTestFile(const std::string &suffix, unsigned id) {
-  return openOutputFile(getTestFilename(suffix, id));
+KleeHandler::openTestFile(const std::string &suffix, unsigned id,
+                          unsigned version) {
+  return openOutputFile(getTestFilename(suffix, id, version));
 }
 
 /* Outputs all files (.ktest, .kquery, .cov etc.) describing a test case */
@@ -598,12 +604,14 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     if (WriteKTests) {
 
       if (success) {
-        if (!kTest_toFile(
-                &ktest,
-                getOutputFilename(getTestFilename("ktest", id)).c_str())) {
-          klee_warning("unable to write output test case, losing it");
-        } else {
-          atLeastOneGenerated = true;
+        for (unsigned i = 0; i < ktest.uninitCoeff + 1; ++i) {
+          if (!kTest_toFile(
+                  &ktest,
+                  getOutputFilename(getTestFilename("ktest", id, i)).c_str())) {
+            klee_warning("unable to write output test case, losing it");
+          } else {
+            atLeastOneGenerated = true;
+          }
         }
 
         if (WriteStates) {
@@ -691,8 +699,10 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     }
 
     if (WriteXMLTests) {
-      writeTestCaseXML(message != nullptr, ktest, id);
-      atLeastOneGenerated = true;
+      for (unsigned i = 0; i < ktest.uninitCoeff + 1; ++i) {
+        writeTestCaseXML(message != nullptr, ktest, id, i);
+        atLeastOneGenerated = true;
+      }
     }
 
     if (atLeastOneGenerated) {
@@ -723,11 +733,11 @@ void KleeHandler::processTestCase(const ExecutionState &state,
 }
 
 void KleeHandler::writeTestCaseXML(bool isError, const KTest &assignments,
-                                   unsigned id) {
+                                   unsigned id, unsigned version) {
 
   // TODO: This is super specific to test-comp and assumes that the name is the
   // type information
-  auto file = openTestFile("xml", id);
+  auto file = openTestFile("xml", id, version);
   if (!file)
     return;
 

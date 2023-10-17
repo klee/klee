@@ -216,10 +216,11 @@ MetaSMTBuilder<SolverContext>::getInitialArray(const Array *root) {
   bool hashed = _arr_hash.lookupArrayExpr(root, array_expr);
 
   if (!hashed) {
-    if (isa<SymbolicSizeConstantSource>(root->source)) {
-      llvm::report_fatal_error("MetaSMT does not support constant arrays or "
-                               "quantifiers to instantiate "
-                               "constant array of symbolic size!");
+    if (ref<ConstantSource> constantSource =
+            dyn_cast<ConstantSource>(root->source)) {
+      if (!isa<ConstantExpr>(root->size)) {
+        assert(0 && "MetaSMT does not support symsize constant arrays");
+      }
     }
 
     array_expr =
@@ -227,14 +228,14 @@ MetaSMTBuilder<SolverContext>::getInitialArray(const Array *root) {
 
     if (ref<ConstantSource> constantSource =
             dyn_cast<ConstantSource>(root->source)) {
-      uint64_t constantSize = cast<ConstantExpr>(root->size)->getZExtValue();
-      for (unsigned i = 0, e = constantSize; i != e; ++i) {
+      auto constantSize = cast<ConstantExpr>(root->size)->getZExtValue();
+      for (unsigned i = 0; i < constantSize; ++i) {
         typename SolverContext::result_type tmp = evaluate(
             _solver,
             metaSMT::logic::Array::store(
                 array_expr,
                 construct(ConstantExpr::alloc(i, root->getDomain()), 0),
-                construct(constantSource->constantValues[i], 0)));
+                construct(constantSource->constantValues.load(i), 0)));
         array_expr = tmp;
       }
     }
@@ -705,6 +706,33 @@ MetaSMTBuilder<SolverContext>::constructActual(ref<Expr> e, int *width_out) {
     ReadExpr *re = cast<ReadExpr>(e);
     assert(re && re->updates.root);
     *width_out = re->updates.root->getRange();
+
+    if (auto constantSource =
+            dyn_cast<ConstantSource>(re->updates.root->source)) {
+      if (!isa<ConstantExpr>(re->updates.root->size)) {
+        ref<Expr> selectExpr = constantSource->constantValues.defaultV();
+        for (const auto &[index, value] :
+             constantSource->constantValues.storage()) {
+          selectExpr = SelectExpr::create(
+              EqExpr::create(re->index, ConstantExpr::create(
+                                            index, re->index->getWidth())),
+              value, selectExpr);
+        }
+        std::vector<const UpdateNode *> update_nodes;
+        auto un = re->updates.head.get();
+        for (; un; un = un->next.get()) {
+          update_nodes.push_back(un);
+        }
+
+        for (auto it = update_nodes.rbegin(); it != update_nodes.rend(); ++it) {
+          selectExpr =
+              SelectExpr::create(EqExpr::create(re->index, (*it)->index),
+                                 (*it)->value, selectExpr);
+        }
+        return construct(selectExpr, width_out);
+      }
+    }
+
     // FixMe call method of Array
     res = evaluate(_solver, metaSMT::logic::Array::select(
                                 getArrayForUpdate(re->updates.root,

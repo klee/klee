@@ -557,7 +557,11 @@ namespace {
 
 struct ArrayPtrsByName {
   bool operator()(const Array *a1, const Array *a2) const {
-    return a1->id < a2->id;
+    if (a1->source->getKind() != a2->source->getKind()) {
+      return a1->source->getKind() < a2->source->getKind();
+    } else {
+      return a1->id < a2->id;
+    }
   }
 };
 
@@ -613,14 +617,8 @@ void ExprSMTLIBPrinter::printArrayDeclarations() {
              << " " << array->getDomain() << ") )";
           printSeperator();
 
-          if (ref<SymbolicSizeConstantSource> symbolicSizeConstantSource =
-                  dyn_cast<SymbolicSizeConstantSource>(array->source)) {
-            printConstant(ConstantExpr::create(
-                symbolicSizeConstantSource->defaultValue, array->getRange()));
-          } else if (ref<ConstantSource> constantSource =
-                         cast<ConstantSource>(array->source)) {
-            printConstant(constantSource->constantValues[byteIndex]);
-          }
+          auto source = dyn_cast<ConstantSource>(array->source);
+          printConstant(source->constantValues.load(byteIndex));
 
           p->popIndent();
           printSeperator();

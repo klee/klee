@@ -426,6 +426,14 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n,
 ::VCExpr STPBuilder::getInitialArray(const Array *root) {
 
   assert(root);
+
+  if (ref<ConstantSource> constantSource =
+          dyn_cast<ConstantSource>(root->source)) {
+    if (!isa<ConstantExpr>(root->size)) {
+      assert(0 && "STP does not support symsize constant arrays");
+    }
+  }
+
   ::VCExpr array_expr;
   bool hashed = _arr_hash.lookupArrayExpr(root, array_expr);
 
@@ -433,13 +441,7 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n,
     // STP uniques arrays by name, so we make sure the name is unique by
     // using the size of the array hash as a counter.
     std::string unique_id = llvm::utostr(_arr_hash._array_hash.size());
-    std::string unique_name = root->getName() + unique_id;
-
-    if (isa<SymbolicSizeConstantSource>(root->source)) {
-      llvm::report_fatal_error(
-          "STP does not support constant arrays or quantifiers to instantiate "
-          "constant array of symbolic size!");
-    }
+    std::string unique_name = root->getIdentifier() + unique_id;
 
     array_expr =
         buildArray(unique_name.c_str(), root->getDomain(), root->getRange());
@@ -450,13 +452,13 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n,
       // using assertions, which is much faster, but we need to fix the caching
       // to work correctly in that case.
 
+      auto constSize = cast<ConstantExpr>(root->size)->getZExtValue();
       // TODO: usage of `constantValues.size()` seems unconvinient.
-      for (unsigned i = 0, e = constantSource->constantValues.size(); i != e;
-           ++i) {
+      for (unsigned i = 0; i < constSize; i++) {
         ::VCExpr prev = array_expr;
         array_expr = vc_writeExpr(
             vc, prev, construct(ConstantExpr::alloc(i, root->getDomain()), 0),
-            construct(constantSource->constantValues[i], 0));
+            construct(constantSource->constantValues.load(i), 0));
         vc_DeleteExpr(prev);
       }
     }
@@ -568,6 +570,33 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     ReadExpr *re = cast<ReadExpr>(e);
     assert(re && re->updates.root);
     *width_out = re->updates.root->getRange();
+
+    if (auto constantSource =
+            dyn_cast<ConstantSource>(re->updates.root->source)) {
+      if (!isa<ConstantExpr>(re->updates.root->size)) {
+        ref<Expr> selectExpr = constantSource->constantValues.defaultV();
+        for (const auto &[index, value] :
+             constantSource->constantValues.storage()) {
+          selectExpr = SelectExpr::create(
+              EqExpr::create(re->index, ConstantExpr::create(
+                                            index, re->index->getWidth())),
+              value, selectExpr);
+        }
+        std::vector<const UpdateNode *> update_nodes;
+        auto un = re->updates.head.get();
+        for (; un; un = un->next.get()) {
+          update_nodes.push_back(un);
+        }
+
+        for (auto it = update_nodes.rbegin(); it != update_nodes.rend(); ++it) {
+          selectExpr =
+              SelectExpr::create(EqExpr::create(re->index, (*it)->index),
+                                 (*it)->value, selectExpr);
+        }
+        return construct(selectExpr, width_out);
+      }
+    }
+
     return vc_readExpr(
         vc, getArrayForUpdate(re->updates.root, re->updates.head.get()),
         construct(re->index, 0));

@@ -1482,22 +1482,7 @@ Array::Array(ref<Expr> _size, ref<SymbolicSource> _source, Expr::Width _domain,
              Expr::Width _range, unsigned _id)
     : size(_size), source(_source), domain(_domain), range(_range), id(_id) {
   ref<ConstantExpr> constantSize = dyn_cast<ConstantExpr>(size);
-  assert(
-      (!isa<ConstantSource>(_source) ||
-       cast<ConstantSource>(_source)->size() == constantSize->getZExtValue()) &&
-      "Invalid size for constant array!");
   computeHash();
-#ifndef NDEBUG
-  if (isa<ConstantSource>(_source)) {
-    for (const ref<ConstantExpr> *
-             it = cast<ConstantSource>(_source)->constantValues.data(),
-            *end = cast<ConstantSource>(_source)->constantValues.data() +
-                   cast<ConstantSource>(_source)->constantValues.size();
-         it != end; ++it)
-      assert((*it)->getWidth() == getRange() &&
-             "Invalid initial constant value!");
-  }
-#endif // NDEBUG
 
   std::set<const Array *> allArrays = _source->getRelatedArrays();
   std::vector<const Array *> sizeArrays;
@@ -1546,6 +1531,22 @@ ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index) {
     }
   }
 
+  // So that we return weird stuff like reads from consts that should have
+  // simplified to constant exprs if we read beyond size boundary.
+  if (auto source = dyn_cast<ConstantSource>(ul.root->source)) {
+    if (auto arraySizeExpr = dyn_cast<ConstantExpr>(ul.root->size)) {
+      if (auto indexExpr = dyn_cast<ConstantExpr>(index)) {
+        auto arraySize = arraySizeExpr->getZExtValue();
+        auto concreteIndex = indexExpr->getZExtValue();
+        if (concreteIndex >= arraySize) {
+          return ReadExpr::alloc(ul, index);
+        }
+      }
+    } else {
+      return ReadExpr::alloc(ul, index);
+    }
+  }
+
   if (isa<ConstantSource>(ul.root->source) && !updateListHasSymbolicWrites) {
     // No updates with symbolic index to a constant array have been found
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(index)) {
@@ -1553,9 +1554,8 @@ ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index) {
       ref<ConstantSource> constantSource =
           cast<ConstantSource>(ul.root->source);
       uint64_t concreteIndex = CE->getZExtValue();
-      uint64_t size = constantSource->constantValues.size();
-      if (concreteIndex < size) {
-        return constantSource->constantValues[concreteIndex];
+      if (auto value = constantSource->constantValues.load(concreteIndex)) {
+        return value;
       }
     }
   }
@@ -2268,12 +2268,14 @@ static ref<Expr> TryConstArrayOpt(const ref<ConstantExpr> &cl, ReadExpr *rd) {
 
   // for now, just assume standard "flushing" of a concrete array,
   // where the concrete array has one update for each index, in order
+  auto arraySize = dyn_cast<ConstantExpr>(rd->updates.root->size);
+  assert(arraySize);
+  auto size = arraySize->getZExtValue();
   ref<Expr> res = ConstantExpr::alloc(0, Expr::Bool);
   if (ref<ConstantSource> constantSource =
           dyn_cast<ConstantSource>(rd->updates.root->source)) {
-    for (unsigned i = 0, e = constantSource->constantValues.size(); i != e;
-         ++i) {
-      if (cl == constantSource->constantValues[i]) {
+    for (unsigned i = 0, e = size; i != e; ++i) {
+      if (cl == constantSource->constantValues.load(i)) {
         // Arbitrary maximum on the size of disjunction.
         if (++numMatches > 100)
           return EqExpr_create(cl, rd);

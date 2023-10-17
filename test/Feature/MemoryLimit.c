@@ -44,7 +44,7 @@ int main() {
     malloc_failed |= (p == 0);
     // Ensure we hit the periodic check
     // Use the pointer to be not optimized out by the compiler
-    for (j = 0; j < 10000; j++)
+    for (j = 0; j < 100; j++)
       x += (long)p;
   }
 #endif

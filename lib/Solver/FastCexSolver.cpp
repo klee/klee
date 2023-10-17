@@ -389,13 +389,9 @@ public:
     if (array.isConstantArray() && index.isFixed()) {
       if (ref<ConstantSource> constantSource =
               dyn_cast<ConstantSource>(array.source)) {
-        if (index.min() < constantSource->constantValues.size()) {
-          return ValueRange(
-              constantSource->constantValues[index.min()]->getZExtValue(8));
+        if (auto value = constantSource->constantValues.load(index.min())) {
+          return ValueRange(value->getZExtValue(8));
         }
-      } else if (ref<SymbolicSizeConstantSource> symbolicSizeConstantSource =
-                     dyn_cast<SymbolicSizeConstantSource>(array.source)) {
-        return ValueRange(symbolicSizeConstantSource->defaultValue);
       }
     }
     return ValueRange(0, 255);
@@ -896,10 +892,11 @@ public:
         if (ref<ConstantSource> constantSource =
                 dyn_cast<ConstantSource>(array->source)) {
           // Verify the range.
-          propagateExactValues(constantSource->constantValues[index.min()],
+          if (!isa<ConstantExpr>(array->size)) {
+            assert(0 && "Unimplemented");
+          }
+          propagateExactValues(constantSource->constantValues.load(index.min()),
                                range);
-        } else if (isa<SymbolicSizeConstantSource>(array->source)) {
-          assert(0 && "not implemented");
         } else {
           CexValueData cvd = cod.getExactValues(index.min());
           if (range.min() > cvd.min()) {
@@ -1195,7 +1192,6 @@ bool FastCexSolver::computeInitialValues(
         dyn_cast<ConstantExpr>(cd.evaluatePossible(array->size));
     assert(arrayConstantSize &&
            "Array of symbolic size had not receive value for size!");
-    data.resize(arrayConstantSize->getZExtValue());
 
     for (unsigned i = 0; i < arrayConstantSize->getZExtValue(); i++) {
       ref<Expr> read = ReadExpr::create(

@@ -32,6 +32,10 @@ add_library(kleaverExpr
   Updates.cpp
 )
 
+target_link_libraries(kleaverExpr PRIVATE
+  kleeADT
+)
+
 llvm_config(kleaverExpr "${USE_LLVM_SHARED}" support)
 target_include_directories(kleaverExpr PRIVATE ${KLEE_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})
 target_compile_options(kleaverExpr PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
