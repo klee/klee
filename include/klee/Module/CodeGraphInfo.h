@@ -16,31 +16,35 @@
 
 namespace klee {
 
+using Block = llvm::BasicBlock;
+using BlockDistanceMap = std::unordered_map<Block *, unsigned>;
+using FunctionDistanceMap = std::unordered_map<llvm::Function *, unsigned>;
+using SortedBlockDistances = std::vector<std::pair<Block *, unsigned>>;
+using SortedFunctionDistances =
+    std::vector<std::pair<llvm::Function *, unsigned>>;
+
 class CodeGraphInfo {
 
-  using blockDistanceMap =
-      std::unordered_map<KBlock *, std::unordered_map<KBlock *, unsigned>>;
-  using blockDistanceList =
-      std::unordered_map<KBlock *, std::vector<std::pair<KBlock *, unsigned>>>;
+  using blockToDistanceMap = std::unordered_map<Block *, BlockDistanceMap>;
+  using blockDistanceList = std::unordered_map<Block *, SortedBlockDistances>;
 
-  using functionDistanceMap =
-      std::unordered_map<KFunction *,
-                         std::unordered_map<KFunction *, unsigned>>;
+  using functionToDistanceMap =
+      std::unordered_map<llvm::Function *, FunctionDistanceMap>;
   using functionDistanceList =
-      std::unordered_map<KFunction *,
-                         std::vector<std::pair<KFunction *, unsigned>>>;
+      std::unordered_map<llvm::Function *, SortedFunctionDistances>;
 
   using functionBranchesSet =
       std::unordered_map<KFunction *, std::map<KBlock *, std::set<unsigned>>>;
 
 private:
-  blockDistanceMap blockDistance;
-  blockDistanceMap blockBackwardDistance;
+  blockToDistanceMap blockDistance;
+  blockToDistanceMap blockBackwardDistance;
+  std::set<Block *> blockCycles;
   blockDistanceList blockSortedDistance;
   blockDistanceList blockSortedBackwardDistance;
 
-  functionDistanceMap functionDistance;
-  functionDistanceMap functionBackwardDistance;
+  functionToDistanceMap functionDistance;
+  functionToDistanceMap functionBackwardDistance;
   functionDistanceList functionSortedDistance;
   functionDistanceList functionSortedBackwardDistance;
 
@@ -49,33 +53,24 @@ private:
   functionBranchesSet functionBlocks;
 
 private:
-  void calculateDistance(KBlock *bb);
-  void calculateBackwardDistance(KBlock *bb);
+  void calculateDistance(Block *bb);
+  void calculateBackwardDistance(Block *bb);
 
-  void calculateDistance(KFunction *kf);
-  void calculateBackwardDistance(KFunction *kf);
+  void calculateDistance(KFunction *f);
+  void calculateBackwardDistance(KFunction *f);
 
   void calculateFunctionBranches(KFunction *kf);
   void calculateFunctionConditionalBranches(KFunction *kf);
   void calculateFunctionBlocks(KFunction *kf);
 
 public:
-  const std::unordered_map<KBlock *, unsigned int> &getDistance(KBlock *kb);
-  const std::unordered_map<KBlock *, unsigned int> &
-  getBackwardDistance(KBlock *kb);
-  const std::vector<std::pair<KBlock *, unsigned int>> &
-  getSortedDistance(KBlock *kb);
-  const std::vector<std::pair<KBlock *, unsigned int>> &
-  getSortedBackwardDistance(KBlock *kb);
+  const BlockDistanceMap &getDistance(Block *b);
+  const BlockDistanceMap &getDistance(KBlock *kb);
+  const BlockDistanceMap &getBackwardDistance(KBlock *kb);
+  bool hasCycle(KBlock *kb);
 
-  const std::unordered_map<KFunction *, unsigned int> &
-  getDistance(KFunction *kf);
-  const std::unordered_map<KFunction *, unsigned int> &
-  getBackwardDistance(KFunction *kf);
-  const std::vector<std::pair<KFunction *, unsigned int>> &
-  getSortedDistance(KFunction *kf);
-  const std::vector<std::pair<KFunction *, unsigned int>> &
-  getSortedBackwardDistance(KFunction *kf);
+  const FunctionDistanceMap &getDistance(KFunction *kf);
+  const FunctionDistanceMap &getBackwardDistance(KFunction *kf);
 
   void getNearestPredicateSatisfying(KBlock *from, KBlockPredicate predicate,
                                      std::set<KBlock *> &result);

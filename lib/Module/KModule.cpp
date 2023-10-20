@@ -422,7 +422,7 @@ void KModule::manifest(InterpreterHandler *ih,
   }
 
   for (auto &kfp : functions) {
-    for (auto kcb : kfp.get()->kCallBlocks) {
+    for (auto kcb : kfp->kCallBlocks) {
       bool isInlineAsm = false;
       const CallBase &cs = cast<CallBase>(*kcb->kcallInstruction->inst);
       if (isa<InlineAsm>(cs.getCalledOperand())) {
@@ -430,12 +430,12 @@ void KModule::manifest(InterpreterHandler *ih,
       }
       if (kcb->calledFunctions.empty() && !isInlineAsm &&
           (guidance != Interpreter::GuidanceKind::ErrorGuidance ||
-           !inMainModule(*kfp.get()->function))) {
+           !inMainModule(*kfp->function))) {
         kcb->calledFunctions.insert(escapingFunctions.begin(),
                                     escapingFunctions.end());
       }
-      for (auto &calledFunction : kcb->calledFunctions) {
-        callMap[calledFunction].insert(kfp.get()->function);
+      for (auto calledFunction : kcb->calledFunctions) {
+        callMap[calledFunction].insert(kfp->function);
       }
     }
   }
