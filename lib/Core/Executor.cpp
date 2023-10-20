@@ -4205,24 +4205,30 @@ void Executor::executeAlloc(ExecutionState &state,
     size = optimizer.optimizeExpr(size, true);
 
     ref<ConstantExpr> example;
-    bool success =
-        solver->getValue(state.constraints, size, example, state.queryMetaData);
-    assert(success && "FIXME: Unhandled solver failure");
-    (void) success;
-    
-    // Try and start with a small example.
-    Expr::Width W = example->getWidth();
-    while (example->Ugt(ConstantExpr::alloc(128, W))->isTrue()) {
-      ref<ConstantExpr> tmp = example->LShr(ConstantExpr::alloc(1, W));
-      bool res;
-      bool success =
-          solver->mayBeTrue(state.constraints, EqExpr::create(tmp, size), res,
-                            state.queryMetaData);
-      assert(success && "FIXME: Unhandled solver failure");      
-      (void) success;
-      if (!res)
-        break;
-      example = tmp;
+    // Check if in seed mode, then try to replicate size from a seed
+    ref<Expr> value = nullptr;
+    if (auto found = seedMap.find(&state); found != seedMap.end())
+      value = getValueFromSeeds(found->second, size);
+    /* If no seed evaluation results in a constant, call the solver */
+    if (!value || !(example = dyn_cast<ConstantExpr>(value))) {
+      bool success = solver->getValue(state.constraints, size, example,
+                                      state.queryMetaData);
+      assert(success && "FIXME: Unhandled solver failure");
+      (void)success;
+
+      // Try and start with a small example.
+      Expr::Width W = example->getWidth();
+      while (example->Ugt(ConstantExpr::alloc(128, W))->isTrue()) {
+        ref<ConstantExpr> tmp = example->LShr(ConstantExpr::alloc(1, W));
+        bool res;
+        [[maybe_unused]] bool success =
+            solver->mayBeTrue(state.constraints, EqExpr::create(tmp, size), res,
+                              state.queryMetaData);
+        assert(success && "FIXME: Unhandled solver failure");
+        if (!res)
+          break;
+        example = tmp;
+      }
     }
 
     StatePair fixedSize =
@@ -4249,8 +4255,9 @@ void Executor::executeAlloc(ExecutionState &state,
         // malloc will fail for it, so lets fork and return 0.
         StatePair hugeSize =
             fork(*fixedSize.second,
-                 UltExpr::create(ConstantExpr::alloc(1U << 31, W), size), true,
-                 BranchType::Alloc);
+                 UltExpr::create(
+                     ConstantExpr::alloc(1U << 31, example->getWidth()), size),
+                 true, BranchType::Alloc);
         if (hugeSize.first) {
           klee_message("NOTE: found huge malloc, returning 0");
           bindLocal(target, *hugeSize.first, 
