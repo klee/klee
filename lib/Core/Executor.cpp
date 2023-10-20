@@ -3909,19 +3909,24 @@ void Executor::callExternalFunction(ExecutionState &state,
        ae = arguments.end(); ai!=ae; ++ai) {
     if (ExternalCalls == ExternalCallPolicy::All) { // don't bother checking uniqueness
       *ai = optimizer.optimizeExpr(*ai, true);
-      ref<ConstantExpr> ce;
-      bool success =
-          solver->getValue(state.constraints, *ai, ce, state.queryMetaData);
-      assert(success && "FIXME: Unhandled solver failure");
-      (void) success;
-      ce->toMemory(&args[wordIndex]);
+      ref<ConstantExpr> cvalue;
+      ref<Expr> value = nullptr;
+      if (auto found = seedMap.find(&state); found != seedMap.end())
+        value = getValueFromSeeds(found->second, *ai);
+      /* If no seed evaluation results in a constant, call the solver */
+      if (!value || !(cvalue = dyn_cast<ConstantExpr>(value))) {
+        [[maybe_unused]] bool success = solver->getValue(
+            state.constraints, *ai, cvalue, state.queryMetaData);
+        assert(success && "FIXME: Unhandled solver failure");
+      }
+      cvalue->toMemory(&args[wordIndex]);
       ObjectPair op;
       // Checking to see if the argument is a pointer to something
-      if (ce->getWidth() == Context::get().getPointerWidth() &&
-          state.addressSpace.resolveOne(ce, op)) {
+      if (cvalue->getWidth() == Context::get().getPointerWidth() &&
+          state.addressSpace.resolveOne(cvalue, op)) {
         op.second->flushToConcreteStore(solver.get(), state);
       }
-      wordIndex += (ce->getWidth()+63)/64;
+      wordIndex += (cvalue->getWidth() + 63) / 64;
     } else {
       ref<Expr> arg = toUnique(state, *ai);
       if (ConstantExpr *ce = dyn_cast<ConstantExpr>(arg)) {
