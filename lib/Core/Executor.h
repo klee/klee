@@ -396,6 +396,13 @@ private:
   ref<klee::ConstantExpr> toConstant(ExecutionState &state, ref<Expr> e, 
                                      const char *purpose);
 
+  /// Evaluate the given expression under each seed, and return the
+  /// first one that results in a constant, if such a seed exist.  Otherwise,
+  /// return the non-constant evaluation of the expression under one of the
+  /// seeds.
+  ref<klee::Expr> getValueFromSeeds(std::vector<SeedInfo> &seeds,
+                                            ref<Expr> e);
+
   /// Bind a constant value for e to the given target. NOTE: This
   /// function may fork state if the state has multiple seeds.
   void executeGetValue(ExecutionState &state, ref<Expr> e, KInstruction *target);
