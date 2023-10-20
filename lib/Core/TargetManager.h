@@ -28,9 +28,121 @@ class TargetCalculator;
 using TargetHistoryTargetPair =
     std::pair<ref<const TargetsHistory>, ref<Target>>;
 using StatesVector = std::vector<ExecutionState *>;
-using TargetHistoryTargetPairToStatesMap =
-    std::unordered_map<TargetHistoryTargetPair, StatesVector,
-                       TargetHistoryTargetHash, TargetHistoryTargetCmp>;
+using StateSet = std::set<ExecutionState *>;
+
+class StateIterable final {
+private:
+  using v = ExecutionState *;
+  const StatesVector *self;
+  mutable const StateSet *without = nullptr;
+  using vec_it = StatesVector::const_iterator;
+  bool shouldDestruct;
+
+  class it : public std::iterator<std::input_iterator_tag, v> {
+    vec_it self;
+    const vec_it ie;
+    const StateSet *without = nullptr;
+    void goUntilRealNode() {
+      if (!without)
+        return;
+      for (; self != ie; self++) {
+        if (!without->count(*self))
+          return;
+      }
+    }
+
+  public:
+    it(vec_it i, vec_it ie, const StateSet *without)
+        : self(i), ie(ie), without(without) {
+      goUntilRealNode();
+    }
+    bool operator==(const it &other) const noexcept {
+      return self == other.self;
+    };
+    bool operator!=(const it &other) const noexcept {
+      return self != other.self;
+    };
+    it &operator++() noexcept {
+      if (self != ie) {
+        self++;
+        goUntilRealNode();
+      }
+      return *this;
+    }
+    v operator*() const noexcept { return *self; }
+  };
+
+public:
+  StateIterable() : self(new StatesVector()), shouldDestruct(true) {}
+  StateIterable(v s) : self(new StatesVector({s})), shouldDestruct(true) {}
+  StateIterable(const StatesVector &v, const StateSet *without)
+      : self(&v), without(without), shouldDestruct(false) {}
+  StateIterable(const StatesVector &v) : StateIterable(v, nullptr) {}
+  StateIterable(const StateSet &s)
+      : self(new StatesVector(s.begin(), s.end())), shouldDestruct(true) {}
+  ~StateIterable() {
+    if (shouldDestruct)
+      delete self;
+  }
+  bool empty() const noexcept {
+    return without ? begin() == end() : self->empty();
+  }
+  it begin() const noexcept { return it(self->begin(), self->end(), without); }
+  it end() const noexcept { return it(self->end(), self->end(), without); }
+
+  void setWithout(const StateSet *w) const { without = w; }
+  void clearWithout() const { without = nullptr; }
+};
+
+class TargetHistoryTargetPairToStatesMap final {
+private:
+  using k = TargetHistoryTargetPair;
+  using cv = StateIterable;
+  using p = std::pair<k, cv>;
+  using v = StatesVector;
+  using t =
+      std::unordered_map<k, v, TargetHistoryTargetHash, TargetHistoryTargetCmp>;
+  using map_it = t::iterator;
+  using map_cit = t::const_iterator;
+  t self;
+  mutable const StateSet *without = nullptr;
+
+  class it : public std::iterator<std::input_iterator_tag, p> {
+  protected:
+    map_cit self;
+    const StateSet *without = nullptr;
+
+  public:
+    it(map_cit i, const StateSet *without) : self(i), without(without) {}
+    bool operator==(const it &other) const noexcept {
+      return self == other.self;
+    };
+    bool operator!=(const it &other) const noexcept {
+      return self != other.self;
+    };
+    it &operator++() noexcept {
+      self++;
+      return *this;
+    }
+    p operator*() const noexcept {
+      return std::make_pair(self->first, StateIterable(self->second, without));
+    }
+  };
+
+public:
+  inline v &operator[](const k &__k) { return self[__k]; }
+  inline v &operator[](k &&__k) { return self[std::move(__k)]; }
+  inline v &at(const k &__k) { return self.at(__k); }
+  inline map_it begin() noexcept { return self.begin(); }
+  inline map_it end() noexcept { return self.end(); }
+
+  inline const cv at(const k &__k) const { return self.at(__k); }
+  inline it begin() const noexcept { return it(self.begin(), without); };
+  inline it end() const noexcept { return it(self.end(), without); };
+
+  void setWithout(const StateSet *w) const { without = w; }
+  void clearWithout() const { without = nullptr; }
+};
 
 class TargetManagerSubscriber {
 public:

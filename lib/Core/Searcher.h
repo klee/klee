@@ -63,9 +63,8 @@ public:
   /// \param current The currently selected state for exploration.
   /// \param addedStates The newly branched states with `current` as common
   /// ancestor. \param removedStates The states that will be terminated.
-  virtual void update(ExecutionState *current,
-                      const std::vector<ExecutionState *> &addedStates,
-                      const std::vector<ExecutionState *> &removedStates) = 0;
+  virtual void update(ExecutionState *current, const StateIterable &addedStates,
+                      const StateIterable &removedStates) = 0;
 
   /// \return True if no state left for exploration, False otherwise
   virtual bool empty() = 0;
@@ -96,9 +95,8 @@ class DFSSearcher final : public Searcher {
 
 public:
   ExecutionState &selectState() override;
-  void update(ExecutionState *current,
-              const std::vector<ExecutionState *> &addedStates,
-              const std::vector<ExecutionState *> &removedStates) override;
+  void update(ExecutionState *current, const StateIterable &addedStates,
+              const StateIterable &removedStates) override;
   bool empty() override;
   void printName(llvm::raw_ostream &os) override;
 };
@@ -112,9 +110,8 @@ class BFSSearcher final : public Searcher {
 
 public:
   ExecutionState &selectState() override;
-  void update(ExecutionState *current,
-              const std::vector<ExecutionState *> &addedStates,
-              const std::vector<ExecutionState *> &removedStates) override;
+  void update(ExecutionState *current, const StateIterable &addedStates,
+              const StateIterable &removedStates) override;
   bool empty() override;
   void printName(llvm::raw_ostream &os) override;
 };
@@ -127,9 +124,8 @@ class RandomSearcher final : public Searcher {
 public:
   explicit RandomSearcher(RNG &rng);
   ExecutionState &selectState() override;
-  void update(ExecutionState *current,
-              const std::vector<ExecutionState *> &addedStates,
-              const std::vector<ExecutionState *> &removedStates) override;
+  void update(ExecutionState *current, const StateIterable &addedStates,
+              const StateIterable &removedStates) override;
   bool empty() override;
   void printName(llvm::raw_ostream &os) override;
 };
@@ -148,9 +144,8 @@ public:
   ~TargetedSearcher() override;
 
   ExecutionState &selectState() override;
-  void update(ExecutionState *current,
-              const std::vector<ExecutionState *> &addedStates,
-              const std::vector<ExecutionState *> &removedStates) override;
+  void update(ExecutionState *current, const StateIterable &addedStates,
+              const StateIterable &removedStates) override;
   bool empty() override;
   void printName(llvm::raw_ostream &os) override;
 };
@@ -197,9 +192,8 @@ public:
         theRNG(rng) {}
   ~GuidedSearcher() override = default;
   ExecutionState &selectState() override;
-  void update(ExecutionState *current,
-              const std::vector<ExecutionState *> &addedStates,
-              const std::vector<ExecutionState *> &removedStates) override;
+  void update(ExecutionState *current, const StateIterable &addedStates,
+              const StateIterable &removedStates) override;
   void update(const TargetHistoryTargetPairToStatesMap &added,
               const TargetHistoryTargetPairToStatesMap &removed) override;
   void updateTargets(ExecutionState *current);
@@ -238,9 +232,8 @@ public:
   ~WeightedRandomSearcher() override = default;
 
   ExecutionState &selectState() override;
-  void update(ExecutionState *current,
-              const std::vector<ExecutionState *> &addedStates,
-              const std::vector<ExecutionState *> &removedStates) override;
+  void update(ExecutionState *current, const StateIterable &addedStates,
+              const StateIterable &removedStates) override;
   bool empty() override;
   void printName(llvm::raw_ostream &os) override;
 };
@@ -275,9 +268,8 @@ public:
   ~RandomPathSearcher() override = default;
 
   ExecutionState &selectState() override;
-  void update(ExecutionState *current,
-              const std::vector<ExecutionState *> &addedStates,
-              const std::vector<ExecutionState *> &removedStates) override;
+  void update(ExecutionState *current, const StateIterable &addedStates,
+              const StateIterable &removedStates) override;
   bool empty() override;
   void printName(llvm::raw_ostream &os) override;
 };
@@ -309,9 +301,8 @@ public:
   ~BatchingSearcher() override = default;
 
   ExecutionState &selectState() override;
-  void update(ExecutionState *current,
-              const std::vector<ExecutionState *> &addedStates,
-              const std::vector<ExecutionState *> &removedStates) override;
+  void update(ExecutionState *current, const StateIterable &addedStates,
+              const StateIterable &removedStates) override;
   bool empty() override;
   void printName(llvm::raw_ostream &os) override;
 };
@@ -337,9 +328,6 @@ private:
   std::unique_ptr<Metric> metric;
   std::set<ExecutionState *> pausedStates;
 
-  void filter(const std::vector<ExecutionState *> &states,
-              std::vector<ExecutionState *> &result) const;
-
 public:
   /// \param baseSearcher The underlying searcher (takes ownership).
   explicit IterativeDeepeningSearcher(Searcher *baseSearcher,
@@ -348,9 +336,8 @@ public:
   ~IterativeDeepeningSearcher() override = default;
 
   ExecutionState &selectState() override;
-  void update(ExecutionState *current,
-              const std::vector<ExecutionState *> &addedStates,
-              const std::vector<ExecutionState *> &removedStates) override;
+  void update(ExecutionState *current, const StateIterable &addedStates,
+              const StateIterable &removedStates) override;
   void update(const TargetHistoryTargetPairToStatesMap &added,
               const TargetHistoryTargetPairToStatesMap &removed) override;
   bool empty() override;
@@ -370,9 +357,8 @@ public:
   ~InterleavedSearcher() override = default;
 
   ExecutionState &selectState() override;
-  void update(ExecutionState *current,
-              const std::vector<ExecutionState *> &addedStates,
-              const std::vector<ExecutionState *> &removedStates) override;
+  void update(ExecutionState *current, const StateIterable &addedStates,
+              const StateIterable &removedStates) override;
   bool empty() override;
   void printName(llvm::raw_ostream &os) override;
 };
