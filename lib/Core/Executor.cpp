@@ -1321,16 +1321,21 @@ Executor::toConstant(ExecutionState &state,
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
     return CE;
 
-  ref<ConstantExpr> value;
-  bool success =
-      solver->getValue(state.constraints, e, value, state.queryMetaData);
-  assert(success && "FIXME: Unhandled solver failure");
-  (void) success;
+  ref<Expr> value;
+  if (auto found = seedMap.find(&state); found != seedMap.end())
+    value = getValueFromSeeds(found->second, e);
+  /* If no seed evaluation results in a constant, call the solver */
+  ref<ConstantExpr> cvalue = llvm::dyn_cast_or_null<ConstantExpr>(value);
+  if (!cvalue) {
+    [[maybe_unused]] bool success =
+        solver->getValue(state.constraints, e, cvalue, state.queryMetaData);
+    assert(success && "FIXME: Unhandled solver failure");
+  }
 
   std::string str;
   llvm::raw_string_ostream os(str);
   os << "silently concretizing (reason: " << reason << ") expression " << e
-     << " to value " << value << " (" << (*(state.pc)).info->file << ":"
+     << " to value " << cvalue << " (" << (*(state.pc)).info->file << ":"
      << (*(state.pc)).info->line << ")";
 
   if (ExternalCallWarnings == ExtCallWarnings::All)
@@ -1338,9 +1343,20 @@ Executor::toConstant(ExecutionState &state,
   else
     klee_warning_once(reason, "%s", os.str().c_str());
 
-  addConstraint(state, EqExpr::create(e, value));
-    
-  return value;
+  addConstraint(state, EqExpr::create(e, cvalue));
+
+  return cvalue;
+}
+
+ref<klee::Expr>
+Executor::getValueFromSeeds(std::vector<SeedInfo> &seeds, ref<Expr> e) {
+  assert(!seeds.empty());
+  for (auto seed:seeds) {
+    auto value = seed.assignment.evaluate(e);
+    if (isa<ConstantExpr>(value))
+      return value;
+  }
+  return nullptr;
 }
 
 void Executor::executeGetValue(ExecutionState &state,
