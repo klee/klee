@@ -425,7 +425,7 @@ Simplificator::simplifyExpr(const constraints_ty &constraints,
     if (const EqExpr *ee = dyn_cast<EqExpr>(constraint)) {
       ref<Expr> left = ee->left;
       ref<Expr> right = ee->right;
-      if (right < left) {
+      if (right->height() < left->height()) {
         left = ee->right;
         right = ee->left;
       }

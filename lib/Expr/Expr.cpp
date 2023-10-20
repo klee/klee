@@ -260,6 +260,18 @@ unsigned Expr::computeHash() {
   return hashValue;
 }
 
+unsigned Expr::computeHeight() {
+  unsigned maxKidHeight = 0;
+
+  int n = getNumKids();
+  for (int i = 0; i < n; i++) {
+    maxKidHeight = std::max(maxKidHeight, getKid(i)->height());
+  }
+
+  heightValue = maxKidHeight + 1;
+  return heightValue;
+}
+
 unsigned ConstantExpr::computeHash() {
   Expr::Width w = getWidth();
   if (w <= 64)
@@ -288,6 +300,11 @@ unsigned ReadExpr::computeHash() {
   res ^= updates.hash();
   hashValue = res;
   return hashValue;
+}
+
+unsigned ReadExpr::computeHeight() {
+  heightValue = std::max(index->height(), updates.height()) + 1;
+  return heightValue;
 }
 
 unsigned NotExpr::computeHash() {

@@ -260,6 +260,7 @@ public:
 
 protected:
   unsigned hashValue;
+  unsigned heightValue;
 
   /// Compares `b` to `this` Expr and determines how they are ordered
   /// (ignoring their kid expressions - i.e. those returned by `getKid()`).
@@ -304,10 +305,12 @@ public:
 
   /// Returns the pre-computed hash of the current expression
   virtual unsigned hash() const { return hashValue; }
+  virtual unsigned height() const { return heightValue; }
 
   /// (Re)computes the hash of the current expression.
   /// Returns the hash value.
   virtual unsigned computeHash();
+  virtual unsigned computeHeight();
 
   /// Compares `b` to `this` Expr for structural equivalence.
   ///
@@ -522,6 +525,7 @@ public:
   static ref<Expr> alloc(const ref<Expr> &src) {
     ref<Expr> r(new NotOptimizedExpr(src));
     r->computeHash();
+    r->computeHeight();
     return createCachedExpr(r);
   }
 
@@ -557,6 +561,7 @@ class UpdateNode {
 
   // cache instead of recalc
   unsigned hashValue;
+  unsigned heightValue;
 
 public:
   const ref<UpdateNode> next;
@@ -578,11 +583,13 @@ public:
   int compare(const UpdateNode &b) const;
   bool equals(const UpdateNode &b) const;
   unsigned hash() const { return hashValue; }
+  unsigned height() const { return heightValue; }
 
   UpdateNode() = delete;
   ~UpdateNode() = default;
 
   unsigned computeHash();
+  unsigned computeHeight();
 };
 
 class Array {
@@ -677,6 +684,7 @@ public:
   bool operator<(const UpdateList &rhs) const { return compare(rhs) < 0; }
 
   unsigned hash() const;
+  unsigned height() const;
 };
 
 /// Class representing a one byte read from an array.
@@ -693,6 +701,7 @@ public:
   static ref<Expr> alloc(const UpdateList &updates, const ref<Expr> &index) {
     ref<Expr> r(new ReadExpr(updates, index));
     r->computeHash();
+    r->computeHeight();
     return createCachedExpr(r);
   }
 
@@ -714,6 +723,7 @@ public:
   }
 
   virtual unsigned computeHash();
+  virtual unsigned computeHeight();
 
 private:
   ReadExpr(const UpdateList &_updates, const ref<Expr> &_index)
@@ -740,6 +750,7 @@ public:
                          const ref<Expr> &f) {
     ref<Expr> r(new SelectExpr(c, t, f));
     r->computeHash();
+    r->computeHeight();
     return createCachedExpr(r);
   }
 
@@ -804,6 +815,7 @@ public:
   static ref<Expr> alloc(const ref<Expr> &l, const ref<Expr> &r) {
     ref<Expr> c(new ConcatExpr(l, r));
     c->computeHash();
+    c->computeHeight();
     return createCachedExpr(c);
   }
 
@@ -874,6 +886,7 @@ public:
   static ref<Expr> alloc(const ref<Expr> &e, unsigned o, Width w) {
     ref<Expr> r(new ExtractExpr(e, o, w));
     r->computeHash();
+    r->computeHeight();
     return createCachedExpr(r);
   }
 
@@ -924,6 +937,7 @@ public:
   static ref<Expr> alloc(const ref<Expr> &e) {
     ref<Expr> r(new NotExpr(e));
     r->computeHash();
+    r->computeHeight();
     return createCachedExpr(r);
   }
 
@@ -997,6 +1011,7 @@ public:
     static ref<Expr> alloc(const ref<Expr> &e, Width w) {                      \
       ref<Expr> r(new _class_kind##Expr(e, w));                                \
       r->computeHash();                                                        \
+      r->computeHeight();                                                      \
       return createCachedExpr(r);                                              \
     }                                                                          \
     static ref<Expr> create(const ref<Expr> &e, Width w);                      \
@@ -1030,6 +1045,7 @@ CAST_EXPR_CLASS(FPExt)
                            llvm::APFloat::roundingMode rm) {                   \
       ref<Expr> r(new _class_kind##Expr(e, w, rm));                            \
       r->computeHash();                                                        \
+      r->computeHeight();                                                      \
       return createCachedExpr(r);                                              \
     }                                                                          \
     static ref<Expr> create(const ref<Expr> &e, Width w,                       \
@@ -1076,6 +1092,7 @@ FP_CAST_EXPR_CLASS(SIToFP)
     static ref<Expr> alloc(const ref<Expr> &l, const ref<Expr> &r) {           \
       ref<Expr> res(new _class_kind##Expr(l, r));                              \
       res->computeHash();                                                      \
+      res->computeHeight();                                                    \
       return createCachedExpr(res);                                            \
     }                                                                          \
     static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r);           \
@@ -1126,6 +1143,7 @@ ARITHMETIC_EXPR_CLASS(AShr)
                            const llvm::APFloat::roundingMode rm) {             \
       ref<Expr> res(new _class_kind##Expr(l, r, rm));                          \
       res->computeHash();                                                      \
+      res->computeHeight();                                                    \
       return createCachedExpr(res);                                            \
     }                                                                          \
     static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r,            \
@@ -1172,6 +1190,7 @@ FLOAT_ARITHMETIC_EXPR_CLASS(FMin)
     static ref<Expr> alloc(const ref<Expr> &l, const ref<Expr> &r) {           \
       ref<Expr> res(new _class_kind##Expr(l, r));                              \
       res->computeHash();                                                      \
+      res->computeHeight();                                                    \
       return createCachedExpr(res);                                            \
     }                                                                          \
     static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r);           \
@@ -1218,6 +1237,7 @@ COMPARISON_EXPR_CLASS(FOGe)
     static ref<Expr> alloc(const ref<Expr> &e) {                               \
       ref<Expr> r(new _class_kind##Expr(e));                                   \
       r->computeHash();                                                        \
+      r->computeHeight();                                                      \
       return createCachedExpr(r);                                              \
     }                                                                          \
     static ref<Expr> create(const ref<Expr> &e);                               \
@@ -1263,6 +1283,7 @@ FP_PRED_EXPR_CLASS(IsSubnormal)
                            const llvm::APFloat::roundingMode rm) {             \
       ref<Expr> r(new _class_kind##Expr(e, rm));                               \
       r->computeHash();                                                        \
+      r->computeHeight();                                                      \
       return createCachedExpr(r);                                              \
     }                                                                          \
     static ref<Expr> create(const ref<Expr> &e,                                \
@@ -1309,6 +1330,7 @@ public:
   static ref<Expr> alloc(const ref<Expr> &e) {
     ref<Expr> r(new FAbsExpr(e));
     r->computeHash();
+    r->computeHeight();
     return createCachedExpr(r);
   }
   static ref<Expr> create(const ref<Expr> &e);
@@ -1341,6 +1363,7 @@ public:
   static ref<Expr> alloc(const ref<Expr> &e) {
     ref<Expr> r(new FNegExpr(e));
     r->computeHash();
+    r->computeHeight();
     return createCachedExpr(r);
   }
   static ref<Expr> create(const ref<Expr> &e);
@@ -1447,12 +1470,14 @@ public:
   static ref<ConstantExpr> alloc(const llvm::APInt &v) {
     ref<ConstantExpr> r(new ConstantExpr(v));
     r->computeHash();
+    r->computeHeight();
     return r;
   }
 
   static ref<ConstantExpr> alloc(const llvm::APFloat &f) {
     ref<ConstantExpr> r(new ConstantExpr(f));
     r->computeHash();
+    r->computeHeight();
     return r;
   }
 

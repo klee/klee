@@ -25,6 +25,7 @@ UpdateNode::UpdateNode(const ref<UpdateNode> &_next, const ref<Expr> &_index,
          "Update value should be 8-bit wide.");
   */
   computeHash();
+  computeHeight();
   size = next ? next->size + 1 : 1;
 }
 
@@ -43,6 +44,14 @@ unsigned UpdateNode::computeHash() {
   if (next)
     hashValue ^= next->hash();
   return hashValue;
+}
+
+unsigned UpdateNode::computeHeight() {
+  unsigned maxHeight = next ? next->height() : 0;
+  maxHeight = std::max(maxHeight, index->height());
+  maxHeight = std::max(maxHeight, value->height());
+  heightValue = maxHeight;
+  return heightValue;
 }
 
 ///
@@ -95,3 +104,5 @@ unsigned UpdateList::hash() const {
     res = (res * Expr::MAGIC_HASH_CONSTANT) + head->hash();
   return res;
 }
+
+unsigned UpdateList::height() const { return head ? head->height() : 0; }
