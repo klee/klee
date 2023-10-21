@@ -36,12 +36,12 @@ private:
 
   struct CacheEntry {
     CacheEntry(const ConstraintSet &c, ref<Expr> q)
-        : constraints(c), query(q) {}
+        : constraints(c.cs()), query(q) {}
 
     CacheEntry(const CacheEntry &ce)
         : constraints(ce.constraints), query(ce.query) {}
 
-    ConstraintSet constraints;
+    constraints_ty constraints;
     ref<Expr> query;
 
     bool operator==(const CacheEntry &b) const {
@@ -53,7 +53,7 @@ private:
     unsigned operator()(const CacheEntry &ce) const {
       unsigned result = ce.query->hash();
 
-      for (auto const &constraint : ce.constraints.cs()) {
+      for (auto const &constraint : ce.constraints) {
         result ^= constraint->hash();
       }
 
