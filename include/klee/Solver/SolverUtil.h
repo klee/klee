@@ -299,7 +299,21 @@ public:
   }
 
   bool satisfies(const std::set<ref<Expr>> &key, bool allowFreeValues = true) {
-    return result.satisfies(key.begin(), key.end(), allowFreeValues);
+    std::set<ref<Expr>> booleanKey;
+    std::set<ref<Expr>> nonBooleanKey;
+
+    for (auto i : key) {
+      if (i->getWidth() == Expr::Bool) {
+        booleanKey.insert(i);
+      } else {
+        nonBooleanKey.insert(i);
+      }
+    }
+
+    return result.satisfies(booleanKey.begin(), booleanKey.end(),
+                            allowFreeValues) &&
+           result.satisfiesNonBoolean(nonBooleanKey.begin(),
+                                      nonBooleanKey.end(), allowFreeValues);
   }
 
   bool satisfiesNonBoolean(const std::set<ref<Expr>> &key,

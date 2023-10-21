@@ -128,23 +128,12 @@ struct isInvalidResponse {
 };
 
 struct isValidOrSatisfyingResponse {
-  KeyType booleanKey;
-  KeyType nonBooleanKey;
-  isValidOrSatisfyingResponse(KeyType &_key) {
-    for (auto i : _key) {
-      if (i->getWidth() == Expr::Bool) {
-        booleanKey.insert(i);
-      } else {
-        nonBooleanKey.insert(i);
-      }
-    }
-  }
+  KeyType key;
+  isValidOrSatisfyingResponse(KeyType &_key) : key(_key) {}
 
   bool operator()(ref<SolverResponse> a) const {
-    return isa<ValidResponse>(a) ||
-           (isa<InvalidResponse>(a) &&
-            cast<InvalidResponse>(a)->satisfies(booleanKey) &&
-            cast<InvalidResponse>(a)->satisfiesNonBoolean(nonBooleanKey));
+    return isa<ValidResponse>(a) || (isa<InvalidResponse>(a) &&
+                                     cast<InvalidResponse>(a)->satisfies(key));
   }
 };
 
