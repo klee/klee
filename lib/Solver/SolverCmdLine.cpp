@@ -57,6 +57,11 @@ cl::opt<bool> UseBranchCache("use-branch-cache", cl::init(true),
                              cl::cat(SolvingCat));
 
 cl::opt<bool>
+    UseAlphaEquivalence("use-alpha-equivalence", cl::init(true),
+                        cl::desc("Use the alpha version builder(default=true)"),
+                        cl::cat(SolvingCat));
+
+cl::opt<bool>
     UseConcretizingSolver("use-concretizing-solver", cl::init(true),
                           cl::desc("Use concretization manager(default=true)"),
                           cl::cat(SolvingCat));

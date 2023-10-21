@@ -7,6 +7,7 @@
 #
 #===------------------------------------------------------------------------===#
 add_library(kleaverExpr
+  AlphaBuilder.cpp
   APFloatEval.cpp
   ArrayCache.cpp
   ArrayExprOptimizer.cpp

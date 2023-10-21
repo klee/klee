@@ -515,7 +515,7 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_SMT2_FILE_NAME),
       interpreterHandler->getOutputFilename(ALL_QUERIES_KQUERY_FILE_NAME),
       interpreterHandler->getOutputFilename(SOLVER_QUERIES_KQUERY_FILE_NAME),
-      addressManager.get());
+      addressManager.get(), arrayCache);
 
   this->solver = std::make_unique<TimingSolver>(std::move(solver), optimizer,
                                                 EqualitySubstitution);

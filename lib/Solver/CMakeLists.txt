@@ -7,6 +7,7 @@
 #
 #===------------------------------------------------------------------------===#
 add_library(kleaverSolver
+  AlphaEquivalenceSolver.cpp
   AssignmentValidatingSolver.cpp
   CachingSolver.cpp
   CexCachingSolver.cpp

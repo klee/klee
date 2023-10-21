@@ -29,7 +29,7 @@ std::unique_ptr<Solver> constructSolverChain(
     std::unique_ptr<Solver> coreSolver, std::string querySMT2LogPath,
     std::string baseSolverQuerySMT2LogPath, std::string queryKQueryLogPath,
     std::string baseSolverQueryKQueryLogPath,
-    AddressGenerator *addressGenerator);
+    AddressGenerator *addressGenerator, ArrayCache &arrayCache);
 } // namespace klee
 
 #endif /* KLEE_COMMON_H */

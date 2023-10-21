@@ -244,6 +244,14 @@ std::unique_ptr<Solver> createFastCexSolver(std::unique_ptr<Solver> s);
 /// \param s - The underlying solver to use.
 std::unique_ptr<Solver> createIndependentSolver(std::unique_ptr<Solver> s);
 
+/// createAlphaEquivalenceSolver - Create a solver which will change
+/// independent queries to their alpha-equvalent version
+///
+/// \param s - The underlying solver to use.
+/// \param arrayCache - Class to create new arrays.
+std::unique_ptr<Solver> createAlphaEquivalenceSolver(std::unique_ptr<Solver> s,
+                                                     ArrayCache &arrayCache);
+
 /// createKQueryLoggingSolver - Create a solver which will forward all queries
 /// after writing them to the given path in .kquery format.
 std::unique_ptr<Solver> createKQueryLoggingSolver(std::unique_ptr<Solver> s,

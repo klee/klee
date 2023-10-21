@@ -410,6 +410,8 @@ public:
          << kf->getName().str() << " " << s->index;
     } else if (auto s = dyn_cast<IrreproducibleSource>(source)) {
       PC << s->name;
+    } else if (auto s = dyn_cast<AlphaSource>(source)) {
+      PC << s->index;
     } else {
       assert(0 && "Not implemented");
     }

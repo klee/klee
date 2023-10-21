@@ -280,6 +280,8 @@ class ParserImpl : public Parser {
     }
   }
 
+  ArrayCache &getArrayCache() { return *TheArrayCache; }
+
   /*** Grammar productions ****/
 
   /* Top level decls */
@@ -329,6 +331,7 @@ class ParserImpl : public Parser {
   SourceResult ParseLazyInitializationSizeSource();
   SourceResult ParseInstructionSource();
   SourceResult ParseArgumentSource();
+  SourceResult ParseAlphaSource();
 
   /*** Diagnostics ***/
 
@@ -498,6 +501,8 @@ SourceResult ParserImpl::ParseSource() {
   } else if (type == "argument") {
     assert(km);
     source = ParseArgumentSource();
+  } else if (type == "alpha") {
+    source = ParseAlphaSource();
   } else {
     assert(0);
   }
@@ -624,6 +629,12 @@ SourceResult ParserImpl::ParseInstructionSource() {
   auto KB = KF->getLabelMap().at(Label.getString());
   auto KI = KB->instructions[KIIndex];
   return SourceBuilder::instruction(*KI->inst, index, km);
+}
+
+SourceResult ParserImpl::ParseAlphaSource() {
+  auto indexExpr = ParseNumber(64).get();
+  auto index = dyn_cast<ConstantExpr>(indexExpr)->getZExtValue();
+  return SourceBuilder::alpha(index);
 }
 
 /// ParseCommandDecl - Parse a command declaration. The lexer should

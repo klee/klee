@@ -45,7 +45,8 @@ public:
     LazyInitializationSize,
     Instruction,
     Argument,
-    Irreproducible
+    Irreproducible,
+    Alpha
   };
 
 public:
@@ -344,6 +345,37 @@ public:
         static_cast<const IrreproducibleSource &>(b);
     if (name != irb.name) {
       return name < irb.name ? -1 : 1;
+    }
+    return 0;
+  }
+};
+
+class AlphaSource : public SymbolicSource {
+public:
+  const unsigned index;
+
+  AlphaSource(unsigned _index) : index(_index) {}
+  Kind getKind() const override { return Kind::Alpha; }
+  virtual std::string getName() const override { return "alpha"; }
+
+  static bool classof(const SymbolicSource *S) {
+    return S->getKind() == Kind::Alpha;
+  }
+  static bool classof(const AlphaSource *) { return true; }
+
+  virtual unsigned computeHash() override {
+    unsigned res = getKind();
+    hashValue = res ^ (index * SymbolicSource::MAGIC_HASH_CONSTANT);
+    return hashValue;
+  }
+
+  virtual int internalCompare(const SymbolicSource &b) const override {
+    if (getKind() != b.getKind()) {
+      return getKind() < b.getKind() ? -1 : 1;
+    }
+    const AlphaSource &amb = static_cast<const AlphaSource &>(b);
+    if (index != amb.index) {
+      return index < amb.index ? -1 : 1;
     }
     return 0;
   }

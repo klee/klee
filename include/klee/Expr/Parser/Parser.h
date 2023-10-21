@@ -220,6 +220,8 @@ public:
   static Parser *Create(const std::string Name, const llvm::MemoryBuffer *MB,
                         ExprBuilder *Builder, ArrayCache *TheArrayCache,
                         KModule *km, bool ClearArrayAfterQuery);
+
+  virtual ArrayCache &getArrayCache() = 0;
 };
 } // namespace expr
 } // namespace klee

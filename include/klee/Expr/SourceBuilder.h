@@ -32,6 +32,7 @@ public:
   static ref<SymbolicSource> value(const llvm::Value &_allocSite, int _index,
                                    KModule *km);
   static ref<SymbolicSource> irreproducible(const std::string &name);
+  static ref<SymbolicSource> alpha(int _index);
 };
 
 }; // namespace klee

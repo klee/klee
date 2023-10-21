@@ -34,7 +34,7 @@ std::unique_ptr<Solver> constructSolverChain(
     std::unique_ptr<Solver> coreSolver, std::string querySMT2LogPath,
     std::string baseSolverQuerySMT2LogPath, std::string queryKQueryLogPath,
     std::string baseSolverQueryKQueryLogPath,
-    AddressGenerator *addressGenerator) {
+    AddressGenerator *addressGenerator, ArrayCache &arrayCache) {
   Solver *rawCoreSolver = coreSolver.get();
   std::unique_ptr<Solver> solver = std::move(coreSolver);
   const time::Span minQueryTimeToLog(MinQueryTimeToLog);
@@ -66,6 +66,9 @@ std::unique_ptr<Solver> constructSolverChain(
 
   if (UseBranchCache)
     solver = createCachingSolver(std::move(solver));
+
+  if (UseAlphaEquivalence)
+    solver = createAlphaEquivalenceSolver(std::move(solver), arrayCache);
 
   if (UseIndependentSolver)
     solver = createIndependentSolver(std::move(solver));

@@ -88,3 +88,9 @@ ref<SymbolicSource> SourceBuilder::irreproducible(const std::string &name) {
   r->computeHash();
   return r;
 }
+
+ref<SymbolicSource> SourceBuilder::alpha(int _index) {
+  ref<SymbolicSource> r(new AlphaSource(_index));
+  r->computeHash();
+  return r;
+}
