@@ -66,7 +66,8 @@ public:
   }
 
   ValueType load(size_t idx) const {
-    return contains(idx) ? internalStorage.at(idx) : defaultValue;
+    auto it = internalStorage.find(idx);
+    return it != internalStorage.end() ? it->second : defaultValue;
   }
 
   size_t sizeOfSetRange() const {

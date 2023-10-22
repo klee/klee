@@ -138,9 +138,9 @@ const UpdateList &ObjectState::getUpdates() const {
 void ObjectState::flushForRead() const {
   for (const auto &unflushed : unflushedMask.storage()) {
     auto offset = unflushed.first;
-    assert(knownSymbolics.load(offset));
-    updates.extend(ConstantExpr::create(offset, Expr::Int32),
-                   knownSymbolics.load(offset));
+    auto value = knownSymbolics.load(offset);
+    assert(value);
+    updates.extend(ConstantExpr::create(offset, Expr::Int32), value);
   }
   unflushedMask.reset(false);
 }
