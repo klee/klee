@@ -136,7 +136,11 @@ public:
   inline map_it begin() noexcept { return self.begin(); }
   inline map_it end() noexcept { return self.end(); }
 
-  inline const cv at(const k &__k) const { return self.at(__k); }
+  inline const cv at(const k &__k) const {
+    cv result = self.at(__k);
+    result.setWithout(without);
+    return result;
+  }
   inline it begin() const noexcept { return it(self.begin(), without); };
   inline it end() const noexcept { return it(self.end(), without); };
 
