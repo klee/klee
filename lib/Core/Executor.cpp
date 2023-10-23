@@ -6021,13 +6021,13 @@ void Executor::executeMemoryOperation(
     bool success = solver->getResponse(state->constraints.cs(), inBounds,
                                        response, state->queryMetaData);
     solver->setTimeout(time::Span());
-    bool mustBeInBounds = !isa<InvalidResponse>(response);
     if (!success) {
       state->pc = state->prevPC;
       terminateStateOnSolverError(*state, "Query timed out (bounds check).");
       return;
     }
 
+    bool mustBeInBounds = !isa<InvalidResponse>(response);
     if (mustBeInBounds) {
       if (isa<UnknownResponse>(response)) {
         addConstraint(*state, inBounds);
