@@ -7180,7 +7180,6 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
   }
   bool success = solver->getInitialValues(extendedConstraints.cs(), objects,
                                           values, state.queryMetaData);
-  Assignment assignment(objects, values);
   solver->setTimeout(time::Span());
   if (!success) {
     klee_warning("unable to compute initial values (invalid constraints?)!");

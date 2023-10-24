@@ -34,6 +34,7 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Type.h"
@@ -62,7 +63,6 @@ DISABLE_WARNING_POP
 #include <fstream>
 #include <iomanip>
 #include <iterator>
-#include <llvm/IR/InstIterator.h>
 #include <sstream>
 
 using json = nlohmann::json;
@@ -601,9 +601,8 @@ void KleeHandler::processTestCase(const ExecutionState &state,
     const auto start_time = time::getWallTime();
     bool atLeastOneGenerated = false;
 
-    if (WriteKTests) {
-
-      if (success) {
+    if (success) {
+      if (WriteKTests) {
         for (unsigned i = 0; i < ktest.uninitCoeff + 1; ++i) {
           if (!kTest_toFile(
                   &ktest,
@@ -620,49 +619,36 @@ void KleeHandler::processTestCase(const ExecutionState &state,
         }
       }
 
-      if (message) {
-        auto f = openTestFile(suffix, id);
-        if (f)
-          *f << message;
-      }
-
-      if (m_pathWriter) {
-        std::vector<unsigned char> concreteBranches;
-        m_pathWriter->readStream(m_interpreter->getPathStreamID(state),
-                                 concreteBranches);
-        auto f = openTestFile("path", id);
-        if (f) {
-          for (const auto &branch : concreteBranches) {
-            *f << branch << '\n';
-          }
+      if (WriteXMLTests) {
+        for (unsigned i = 0; i < ktest.uninitCoeff + 1; ++i) {
+          writeTestCaseXML(message != nullptr, ktest, id, i);
+          atLeastOneGenerated = true;
         }
       }
+
+      for (unsigned i = 0; i < ktest.numObjects; i++) {
+        delete[] ktest.objects[i].bytes;
+        delete[] ktest.objects[i].pointers;
+      }
+      delete[] ktest.objects;
     }
 
-    if (message || WriteKQueries) {
-      std::string constraints;
-      m_interpreter->getConstraintLog(state, constraints, Interpreter::KQUERY);
-      auto f = openTestFile("kquery", id);
+    if (message) {
+      auto f = openTestFile(suffix, id);
       if (f)
-        *f << constraints;
+        *f << message;
     }
 
-    if (WriteCVCs) {
-      // FIXME: If using Z3 as the core solver the emitted file is actually
-      // SMT-LIBv2 not CVC which is a bit confusing
-      std::string constraints;
-      m_interpreter->getConstraintLog(state, constraints, Interpreter::STP);
-      auto f = openTestFile("cvc", id);
-      if (f)
-        *f << constraints;
-    }
-
-    if (WriteSMT2s) {
-      std::string constraints;
-      m_interpreter->getConstraintLog(state, constraints, Interpreter::SMTLIB2);
-      auto f = openTestFile("smt2", id);
-      if (f)
-        *f << constraints;
+    if (m_pathWriter) {
+      std::vector<unsigned char> concreteBranches;
+      m_pathWriter->readStream(m_interpreter->getPathStreamID(state),
+                               concreteBranches);
+      auto f = openTestFile("path", id);
+      if (f) {
+        for (const auto &branch : concreteBranches) {
+          *f << branch << '\n';
+        }
+      }
     }
 
     if (m_symPathWriter) {
@@ -677,54 +663,67 @@ void KleeHandler::processTestCase(const ExecutionState &state,
       }
     }
 
-    if (WriteKPaths) {
-      std::string blockPath;
-      m_interpreter->getBlockPath(state, blockPath);
-      auto f = openTestFile("kpath", id);
-      if (f)
-        *f << blockPath;
-    }
-
-    if (WriteCov) {
-      std::map<std::string, std::set<unsigned>> cov;
-      m_interpreter->getCoveredLines(state, cov);
-      auto f = openTestFile("cov", id);
-      if (f) {
-        for (const auto &entry : cov) {
-          for (const auto &line : entry.second) {
-            *f << entry.first << ':' << line << '\n';
-          }
-        }
-      }
-    }
-
-    if (WriteXMLTests) {
-      for (unsigned i = 0; i < ktest.uninitCoeff + 1; ++i) {
-        writeTestCaseXML(message != nullptr, ktest, id, i);
-        atLeastOneGenerated = true;
-      }
-    }
-
     if (atLeastOneGenerated) {
       ++m_numGeneratedTests;
     }
 
-    for (unsigned i = 0; i < ktest.numObjects; i++) {
-      delete[] ktest.objects[i].bytes;
-      delete[] ktest.objects[i].pointers;
-    }
-    delete[] ktest.objects;
-
     if (m_numGeneratedTests == MaxTests)
       m_interpreter->setHaltExecution(HaltExecution::MaxTests);
 
-    if (!WriteXMLTests && WriteTestInfo) {
+    if (WriteTestInfo) {
       time::Span elapsed_time(time::getWallTime() - start_time);
       auto f = openTestFile("info", id);
       if (f)
         *f << "Time to generate test case: " << elapsed_time << '\n';
     }
   } // if (!WriteNone)
+
+  if (WriteKQueries) {
+    std::string constraints;
+    m_interpreter->getConstraintLog(state, constraints, Interpreter::KQUERY);
+    auto f = openTestFile("kquery", id);
+    if (f)
+      *f << constraints;
+  }
+
+  if (WriteCVCs) {
+    // FIXME: If using Z3 as the core solver the emitted file is actually
+    // SMT-LIBv2 not CVC which is a bit confusing
+    std::string constraints;
+    m_interpreter->getConstraintLog(state, constraints, Interpreter::STP);
+    auto f = openTestFile("cvc", id);
+    if (f)
+      *f << constraints;
+  }
+
+  if (WriteSMT2s) {
+    std::string constraints;
+    m_interpreter->getConstraintLog(state, constraints, Interpreter::SMTLIB2);
+    auto f = openTestFile("smt2", id);
+    if (f)
+      *f << constraints;
+  }
+
+  if (WriteKPaths) {
+    std::string blockPath;
+    m_interpreter->getBlockPath(state, blockPath);
+    auto f = openTestFile("kpath", id);
+    if (f)
+      *f << blockPath;
+  }
+
+  if (WriteCov) {
+    std::map<std::string, std::set<unsigned>> cov;
+    m_interpreter->getCoveredLines(state, cov);
+    auto f = openTestFile("cov", id);
+    if (f) {
+      for (const auto &entry : cov) {
+        for (const auto &line : entry.second) {
+          *f << entry.first << ':' << line << '\n';
+        }
+      }
+    }
+  }
 
   if (isError && OptExitOnError) {
     m_interpreter->prepareForEarlyExit();
