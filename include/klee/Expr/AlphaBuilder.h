@@ -16,7 +16,7 @@
 
 namespace klee {
 
-class AlphaBuilder : public ExprVisitor {
+class AlphaBuilder final : public ExprVisitor {
 public:
   ExprHashMap<ref<Expr>> reverseExprMap;
   ArrayCache::ArrayHashMap<const Array *> reverseAlphaArrayMap;
@@ -28,7 +28,8 @@ private:
 
   const Array *visitArray(const Array *arr);
   UpdateList visitUpdateList(UpdateList u);
-  Action visitRead(const ReadExpr &re);
+  Action visitRead(const ReadExpr &re) override;
+  using ExprVisitor::visitExpr;
 
 public:
   AlphaBuilder(ArrayCache &_arrayCache);
