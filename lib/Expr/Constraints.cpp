@@ -423,27 +423,23 @@ Simplificator::simplifyExpr(const constraints_ty &constraints,
 
   for (auto &constraint : constraints) {
     if (const EqExpr *ee = dyn_cast<EqExpr>(constraint)) {
-      ref<Expr> left = ee->left;
-      ref<Expr> right = ee->right;
-      if (right->height() < left->height()) {
-        left = ee->right;
-        right = ee->left;
+      ref<Expr> small = ee->left;
+      ref<Expr> big = ee->right;
+      if (!isa<ConstantExpr>(small)) {
+        auto hr = big->height(), hl = small->height();
+        if (hr < hl || (hr == hl && big < small))
+          std::swap(small, big);
+        equalities.emplace(constraint, Expr::createTrue());
+        equalitiesParents.emplace(constraint, constraint);
       }
-      if (isa<ConstantExpr>(ee->left)) {
-        equalities.insert(std::make_pair(ee->right, ee->left));
-        equalitiesParents.insert({ee->right, constraint});
-      } else {
-        equalities.insert(std::make_pair(constraint, Expr::createTrue()));
-        equalities.insert(std::make_pair(right, left));
-        equalitiesParents.insert({constraint, constraint});
-        equalitiesParents.insert({right, constraint});
-      }
+      equalities.emplace(big, small);
+      equalitiesParents.emplace(big, constraint);
     } else {
-      equalities.insert(std::make_pair(constraint, Expr::createTrue()));
-      equalitiesParents.insert({constraint, constraint});
+      equalities.emplace(constraint, Expr::createTrue());
+      equalitiesParents.emplace(constraint, constraint);
       if (const NotExpr *ne = dyn_cast<NotExpr>(constraint)) {
-        equalities.insert(std::make_pair(ne->expr, Expr::createFalse()));
-        equalitiesParents.insert({ne->expr, constraint});
+        equalities.emplace(ne->expr, Expr::createFalse());
+        equalitiesParents.emplace(ne->expr, constraint);
       }
     }
   }

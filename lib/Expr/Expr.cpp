@@ -153,11 +153,13 @@ int Expr::compare(const Expr &b, ExprEquivSet &equivs) const {
     return 0;
 
   Kind ak = getKind(), bk = b.getKind();
-  if (ak != bk)
-    return (ak < bk) ? -1 : 1;
+  int kc = (ak > bk) - (ak < bk);
+  if (kc)
+    return kc;
 
-  if (hashValue != b.hashValue)
-    return (hashValue < b.hashValue) ? -1 : 1;
+  int hc = (hashValue > b.hashValue) - (hashValue < b.hashValue);
+  if (hc)
+    return hc;
 
   if (int res = compareContents(b))
     return res;

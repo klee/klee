@@ -304,8 +304,8 @@ public:
   std::string toString() const;
 
   /// Returns the pre-computed hash of the current expression
-  virtual unsigned hash() const { return hashValue; }
-  virtual unsigned height() const { return heightValue; }
+  unsigned hash() const { return hashValue; }
+  unsigned height() const { return heightValue; }
 
   /// (Re)computes the hash of the current expression.
   /// Returns the hash value.
