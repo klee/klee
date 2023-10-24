@@ -208,6 +208,9 @@ private:
   /// Disables forking, set by client. \see setInhibitForking()
   bool inhibitForking;
 
+  /// Should it generate test cases for each new covered block or branch
+  bool coverOnTheFly;
+
   /// Signals the executor to halt execution at the next instruction
   /// step.
   HaltExecution::Reason haltExecution = HaltExecution::NotHalt;

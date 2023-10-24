@@ -249,10 +249,10 @@ cl::opt<bool> CoverOnTheFly(
              "(default=false, i.e. one per (error,instruction) pair)"),
     cl::cat(TestGenCat));
 
-cl::opt<unsigned> DelayCoverOnTheFly(
-    "delay-cover-on-the-fly", cl::init(10000),
-    cl::desc("Start on the fly tests generation after this many instructions "
-             "(default=10000)"),
+cl::opt<std::string> DelayCoverOnTheFly(
+    "delay-cover-on-the-fly", cl::init("0s"),
+    cl::desc("Start on the fly tests generation after the specified duration. "
+             "Set to 0s to disable (default=0s)"),
     cl::cat(TestGenCat));
 
 cl::opt<unsigned> UninitMemoryTestMultiplier(
@@ -487,14 +487,22 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
       targetedExecutionManager(
           new TargetedExecutionManager(*codeGraphInfo, *targetManager)),
       replayKTest(0), replayPath(0), usingSeeds(0), atMemoryLimit(false),
-      inhibitForking(false), haltExecution(HaltExecution::NotHalt),
-      ivcEnabled(false), debugLogBuffer(debugBufferString) {
+      inhibitForking(false), coverOnTheFly(false),
+      haltExecution(HaltExecution::NotHalt), ivcEnabled(false),
+      debugLogBuffer(debugBufferString) {
   const time::Span maxTime{MaxTime};
   if (maxTime)
     timers.add(std::make_unique<Timer>(maxTime, [&] {
       klee_message("HaltTimer invoked");
       setHaltExecution(HaltExecution::MaxTime);
     }));
+
+  if (CoverOnTheFly && guidanceKind != GuidanceKind::ErrorGuidance) {
+    const time::Span delayTime{DelayCoverOnTheFly};
+    if (delayTime)
+      timers.add(
+          std::make_unique<Timer>(delayTime, [&] { coverOnTheFly = true; }));
+  }
 
   coreSolverTimeout = time::Span{MaxCoreSolverTime};
   if (coreSolverTimeout)
@@ -4381,8 +4389,8 @@ static std::string terminationTypeFileExtension(StateTerminationType type) {
 
 void Executor::executeStep(ExecutionState &state) {
   KFunction *initKF = state.initPC->parent->parent;
-  if (CoverOnTheFly && guidanceKind != GuidanceKind::ErrorGuidance &&
-      stats::instructions > DelayCoverOnTheFly && shouldWriteTest(state)) {
+
+  if (coverOnTheFly && shouldWriteTest(state)) {
     state.clearCoveredNew();
     interpreterHandler->processTestCase(
         state, nullptr,
