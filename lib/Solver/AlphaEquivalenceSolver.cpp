@@ -55,8 +55,12 @@ public:
   void notifyStateTermination(std::uint32_t id);
   ValidityCore changeVersion(const ValidityCore &validityCore,
                              const ExprHashMap<ref<Expr>> &reverse);
-  const std::vector<const Array *>
+  std::vector<const Array *>
   changeVersion(const std::vector<const Array *> &objects,
+                const ArrayCache::ArrayHashMap<const Array *> &reverse);
+  Assignment
+  changeVersion(const std::vector<const Array *> &objects,
+                const std::vector<SparseStorage<unsigned char>> &values,
                 const ArrayCache::ArrayHashMap<const Array *> &reverse);
   Assignment
   changeVersion(const Assignment &a,
@@ -80,12 +84,29 @@ AlphaEquivalenceSolver::changeVersion(const ValidityCore &validityCore,
   return reverseValidityCore;
 }
 
-const std::vector<const Array *> AlphaEquivalenceSolver::changeVersion(
+Assignment AlphaEquivalenceSolver::changeVersion(
+    const std::vector<const Array *> &objects,
+    const std::vector<SparseStorage<unsigned char>> &values,
+    const ArrayCache::ArrayHashMap<const Array *> &reverse) {
+  std::vector<const Array *> reverseObjects;
+  std::vector<SparseStorage<unsigned char>> reverseValues;
+  for (size_t i = 0; i < objects.size(); i++) {
+    if (reverse.count(objects.at(i)) != 0) {
+      reverseObjects.push_back(reverse.at(objects.at(i)));
+      reverseValues.push_back(values.at(i));
+    }
+  }
+  return Assignment(reverseObjects, reverseValues);
+}
+
+std::vector<const Array *> AlphaEquivalenceSolver::changeVersion(
     const std::vector<const Array *> &objects,
     const ArrayCache::ArrayHashMap<const Array *> &reverse) {
   std::vector<const Array *> reverseObjects;
-  for (auto it : objects) {
-    reverseObjects.push_back(reverse.at(it));
+  for (size_t i = 0; i < objects.size(); i++) {
+    if (reverse.count(objects.at(i)) != 0) {
+      reverseObjects.push_back(reverse.at(objects.at(i)));
+    }
   }
   return reverseObjects;
 }
@@ -95,8 +116,7 @@ Assignment AlphaEquivalenceSolver::changeVersion(
     const ArrayCache::ArrayHashMap<const Array *> &reverse) {
   std::vector<const Array *> objects = a.keys();
   std::vector<SparseStorage<unsigned char>> values = a.values();
-  objects = changeVersion(objects, reverse);
-  return Assignment(objects, values);
+  return changeVersion(objects, values, reverse);
 }
 
 ref<SolverResponse>
@@ -136,7 +156,7 @@ bool AlphaEquivalenceSolver::computeValidity(const Query &query,
                                              PartialValidity &result) {
   AlphaBuilder builder(arrayCache);
   constraints_ty alphaQuery = builder.visitConstraints(query.constraints.cs());
-  ref<Expr> alphaQueryExpr = builder.visitExpr(query.expr);
+  ref<Expr> alphaQueryExpr = builder.build(query.expr);
   return solver->impl->computeValidity(
       Query(ConstraintSet(alphaQuery, {}, {}), alphaQueryExpr, query.id),
       result);
@@ -145,7 +165,7 @@ bool AlphaEquivalenceSolver::computeValidity(const Query &query,
 bool AlphaEquivalenceSolver::computeTruth(const Query &query, bool &isValid) {
   AlphaBuilder builder(arrayCache);
   constraints_ty alphaQuery = builder.visitConstraints(query.constraints.cs());
-  ref<Expr> alphaQueryExpr = builder.visitExpr(query.expr);
+  ref<Expr> alphaQueryExpr = builder.build(query.expr);
   return solver->impl->computeTruth(
       Query(ConstraintSet(alphaQuery, {}, {}), alphaQueryExpr, query.id),
       isValid);
@@ -155,7 +175,7 @@ bool AlphaEquivalenceSolver::computeValue(const Query &query,
                                           ref<Expr> &result) {
   AlphaBuilder builder(arrayCache);
   constraints_ty alphaQuery = builder.visitConstraints(query.constraints.cs());
-  ref<Expr> alphaQueryExpr = builder.visitExpr(query.expr);
+  ref<Expr> alphaQueryExpr = builder.build(query.expr);
   return solver->impl->computeValue(
       Query(ConstraintSet(alphaQuery, {}, {}), alphaQueryExpr, query.id),
       result);
@@ -166,7 +186,7 @@ bool AlphaEquivalenceSolver::computeInitialValues(
     std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
   AlphaBuilder builder(arrayCache);
   constraints_ty alphaQuery = builder.visitConstraints(query.constraints.cs());
-  ref<Expr> alphaQueryExpr = builder.visitExpr(query.expr);
+  ref<Expr> alphaQueryExpr = builder.build(query.expr);
   const std::vector<const Array *> newObjects =
       changeVersion(objects, builder.alphaArrayMap);
 
@@ -183,7 +203,7 @@ bool AlphaEquivalenceSolver::check(const Query &query,
   AlphaBuilder builder(arrayCache);
 
   constraints_ty alphaQuery = builder.visitConstraints(query.constraints.cs());
-  ref<Expr> alphaQueryExpr = builder.visitExpr(query.expr);
+  ref<Expr> alphaQueryExpr = builder.build(query.expr);
   result = createAlphaVersion(result, builder);
   if (!solver->impl->check(
           Query(ConstraintSet(alphaQuery, {}, {}), alphaQueryExpr, query.id),
@@ -201,7 +221,7 @@ bool AlphaEquivalenceSolver::computeValidityCore(const Query &query,
   AlphaBuilder builder(arrayCache);
 
   constraints_ty alphaQuery = builder.visitConstraints(query.constraints.cs());
-  ref<Expr> alphaQueryExpr = builder.visitExpr(query.expr);
+  ref<Expr> alphaQueryExpr = builder.build(query.expr);
   if (!solver->impl->computeValidityCore(
           Query(ConstraintSet(alphaQuery, {}, {}), alphaQueryExpr, query.id),
           validityCore, isValid)) {

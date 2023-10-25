@@ -75,7 +75,7 @@ constraints_ty AlphaBuilder::visitConstraints(constraints_ty cs) {
   }
   return result;
 }
-ref<Expr> AlphaBuilder::visitExpr(ref<Expr> v) {
+ref<Expr> AlphaBuilder::build(ref<Expr> v) {
   ref<Expr> e = visit(v);
   reverseExprMap[e] = v;
   reverseExprMap[Expr::createIsZero(e)] = Expr::createIsZero(v);
