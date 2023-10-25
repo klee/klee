@@ -206,6 +206,14 @@ public:
   bool runOnFunction(llvm::Function &F) override;
 };
 
+/// Remove unwanted calls
+class CallRemover : public llvm::ModulePass {
+public:
+  static char ID;
+  CallRemover() : llvm::ModulePass(ID) {}
+  bool runOnModule(llvm::Module &M) override;
+};
+
 class ReturnSplitter : public llvm::FunctionPass {
 public:
   static char ID;

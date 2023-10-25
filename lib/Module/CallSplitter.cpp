@@ -1,5 +1,4 @@
-//===-- CallSplitter.cpp
-//-------------------------------------------------------===//
+//===-- CallSplitter.cpp --------------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -46,8 +45,9 @@ bool CallSplitter::runOnFunction(Function &F) {
         if (callInst != firstInst) {
           fbb = fbb->splitBasicBlock(callInst);
         }
-        if (isa<BranchInst>(afterCallInst) &&
-            cast<BranchInst>(afterCallInst)->isUnconditional()) {
+        if ((isa<BranchInst>(afterCallInst) &&
+             cast<BranchInst>(afterCallInst)->isUnconditional()) ||
+            isa<UnreachableInst>(afterCallInst)) {
           break;
         }
         fbb = fbb->splitBasicBlock(afterCallInst);

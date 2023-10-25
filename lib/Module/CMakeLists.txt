@@ -8,6 +8,7 @@
 #===------------------------------------------------------------------------===#
 set(KLEE_MODULE_COMPONENT_SRCS
   CallSplitter.cpp
+  CallRemover.cpp
   Checks.cpp
   CodeGraphInfo.cpp
   FunctionAlias.cpp

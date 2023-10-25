@@ -72,11 +72,6 @@ static cl::opt<bool>
                cl::desc("Strip debugger symbol info from executable"),
                cl::init(false), cl::cat(klee::ModuleCat));
 
-static cl::opt<bool>
-    StripDebugDeclare("strip-debug-declare",
-                      cl::desc("Strip all llvm.dbg.declare intrinsics"),
-                      cl::init(true), cl::cat(klee::ModuleCat));
-
 static cl::alias A1("S", cl::desc("Alias for --strip-debug"),
                     cl::aliasopt(StripDebug));
 
@@ -103,8 +98,6 @@ static void AddStandardCompilePasses(legacy::PassManager &PM) {
   // If the -strip-debug command line option was specified, do it.
   if (StripDebug)
     addPass(PM, createStripSymbolsPass(true));
-  if (StripDebugDeclare)
-    addPass(PM, createStripDebugDeclarePass());
 
   addPass(PM, createCFGSimplificationPass());       // Clean up disgusting code
   addPass(PM, createPromoteMemoryToRegisterPass()); // Kill useless allocas

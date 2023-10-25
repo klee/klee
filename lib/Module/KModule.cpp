@@ -117,6 +117,11 @@ cl::opt<bool>
                cl::desc("Split each call in own basic block (default=true)"),
                cl::init(true), cl::cat(klee::ModuleCat));
 
+static cl::opt<bool>
+    StripUnwantedCalls("strip-unwanted-calls",
+                       cl::desc("Strip all unwanted calls (llvm.dbg.* stuff)"),
+                       cl::init(false), cl::cat(klee::ModuleCat));
+
 cl::opt<bool> SplitReturns(
     "split-returns",
     cl::desc("Split each return in own basic block (default=true)"),
@@ -332,6 +337,8 @@ void KModule::optimiseAndPrepare(
   pm3.add(createScalarizerPass());
   pm3.add(new PhiCleanerPass());
   pm3.add(new FunctionAliasPass());
+  if (StripUnwantedCalls)
+    pm3.add(new CallRemover());
   if (SplitCalls) {
     pm3.add(new CallSplitter());
   }
