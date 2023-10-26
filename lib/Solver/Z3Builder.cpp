@@ -284,7 +284,7 @@ Z3ASTHandle Z3Builder::getInitialArray(const Array *root) {
         }
         constant_array_assertions[root] = std::move(array_assertions);
       } else {
-        for (auto [index, value] : source->constantValues.storage()) {
+        for (auto &[index, value] : source->constantValues.storage()) {
           int width_out;
           Z3ASTHandle array_value = construct(value, &width_out);
           assert(width_out == (int)root->getRange() &&

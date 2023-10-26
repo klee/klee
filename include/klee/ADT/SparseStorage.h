@@ -79,7 +79,7 @@ public:
   }
 
   bool operator==(const SparseStorage<ValueType> &another) const {
-    return defaultValue == another.defaultValue && compare(another) == 0;
+    return eq(defaultValue, another.defaultValue) && compare(another) == 0;
   }
 
   bool operator!=(const SparseStorage<ValueType> &another) const {
@@ -131,7 +131,7 @@ public:
 
   void reset(ValueType newDefault) {
     defaultValue = newDefault;
-    internalStorage.clear();
+    reset();
   }
 
   void print(llvm::raw_ostream &os, Density) const;

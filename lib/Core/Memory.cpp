@@ -183,13 +183,6 @@ ref<Expr> ObjectState::read8(ref<Expr> offset) const {
 }
 
 void ObjectState::write8(unsigned offset, uint8_t value) {
-  auto byte = knownSymbolics.load(offset);
-  if (byte) {
-    auto ce = dyn_cast<ConstantExpr>(byte);
-    if (ce && ce->getZExtValue(8) == value) {
-      return;
-    }
-  }
   knownSymbolics.store(offset, ConstantExpr::create(value, Expr::Int8));
   unflushedMask.store(offset, true);
 }
@@ -199,10 +192,6 @@ void ObjectState::write8(unsigned offset, ref<Expr> value) {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(value)) {
     write8(offset, (uint8_t)CE->getZExtValue(8));
   } else {
-    auto byte = knownSymbolics.load(offset);
-    if (byte && byte == value) {
-      return;
-    }
     knownSymbolics.store(offset, value);
     unflushedMask.store(offset, true);
   }
