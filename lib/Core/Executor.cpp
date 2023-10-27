@@ -6672,14 +6672,19 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
     } else {
       /* Find all calls to function specified in .prp file
        * and combine them to single target forest */
-      KFunction *kEntryFunction = kmodule->functionMap.at(f);
-      ref<TargetForest> forest = new TargetForest(kEntryFunction);
-      auto kfunction = kmodule->functionNameMap.at(FunctionCallReproduce);
-      KBlock *kCallBlock = kfunction->entryKBlock;
-      forest->add(ReproduceErrorTarget::create(
-          {ReachWithError::Reachable}, "",
-          ErrorLocation(kCallBlock->getFirstInstruction()), kCallBlock));
-      prepTargets.emplace(kEntryFunction, forest);
+      auto kfIt = kmodule->functionNameMap.find(FunctionCallReproduce);
+      if (kfIt == kmodule->functionNameMap.end()) {
+        klee_warning("%s was eliminated by LLVM passes, so it is unreachable",
+                     FunctionCallReproduce.c_str());
+      } else {
+        auto kCallBlock = kfIt->second->entryKBlock;
+        KFunction *kEntryFunction = kmodule->functionMap.at(f);
+        ref<TargetForest> forest = new TargetForest(kEntryFunction);
+        forest->add(ReproduceErrorTarget::create(
+            {ReachWithError::Reachable}, "",
+            ErrorLocation(kCallBlock->getFirstInstruction()), kCallBlock));
+        prepTargets.emplace(kEntryFunction, forest);
+      }
     }
 
     if (prepTargets.empty()) {
