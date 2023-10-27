@@ -35,6 +35,7 @@ public:
   AlphaBuilder(ArrayCache &_arrayCache);
   constraints_ty visitConstraints(constraints_ty cs);
   ref<Expr> build(ref<Expr> v);
+  const Array *buildArray(const Array *arr) { return visitArray(arr); }
 };
 
 } // namespace klee

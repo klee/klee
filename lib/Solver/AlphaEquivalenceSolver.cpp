@@ -57,7 +57,7 @@ public:
                              const ExprHashMap<ref<Expr>> &reverse);
   std::vector<const Array *>
   changeVersion(const std::vector<const Array *> &objects,
-                const ArrayCache::ArrayHashMap<const Array *> &reverse);
+                AlphaBuilder &builder);
   Assignment
   changeVersion(const std::vector<const Array *> &objects,
                 const std::vector<SparseStorage<unsigned char>> &values,
@@ -99,14 +99,12 @@ Assignment AlphaEquivalenceSolver::changeVersion(
   return Assignment(reverseObjects, reverseValues);
 }
 
-std::vector<const Array *> AlphaEquivalenceSolver::changeVersion(
-    const std::vector<const Array *> &objects,
-    const ArrayCache::ArrayHashMap<const Array *> &reverse) {
+std::vector<const Array *>
+AlphaEquivalenceSolver::changeVersion(const std::vector<const Array *> &objects,
+                                      AlphaBuilder &builder) {
   std::vector<const Array *> reverseObjects;
   for (size_t i = 0; i < objects.size(); i++) {
-    if (reverse.count(objects.at(i)) != 0) {
-      reverseObjects.push_back(reverse.at(objects.at(i)));
-    }
+    reverseObjects.push_back(builder.buildArray(objects.at(i)));
   }
   return reverseObjects;
 }
@@ -187,8 +185,7 @@ bool AlphaEquivalenceSolver::computeInitialValues(
   AlphaBuilder builder(arrayCache);
   constraints_ty alphaQuery = builder.visitConstraints(query.constraints.cs());
   ref<Expr> alphaQueryExpr = builder.build(query.expr);
-  const std::vector<const Array *> newObjects =
-      changeVersion(objects, builder.alphaArrayMap);
+  const std::vector<const Array *> newObjects = changeVersion(objects, builder);
 
   if (!solver->impl->computeInitialValues(
           Query(ConstraintSet(alphaQuery, {}, {}), alphaQueryExpr, query.id),
