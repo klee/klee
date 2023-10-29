@@ -77,7 +77,7 @@ public:
   Z3SolverImpl();
   ~Z3SolverImpl();
 
-  char *getConstraintLog(const Query &);
+  std::string getConstraintLog(const Query &) override;
   void setCoreSolverTimeout(time::Span _timeout) {
     timeout = _timeout;
 
@@ -141,7 +141,7 @@ Z3SolverImpl::~Z3SolverImpl() {
 
 Z3Solver::Z3Solver() : Solver(std::make_unique<Z3SolverImpl>()) {}
 
-char *Z3Solver::getConstraintLog(const Query &query) {
+std::string Z3Solver::getConstraintLog(const Query &query) {
   return impl->getConstraintLog(query);
 }
 
@@ -149,7 +149,7 @@ void Z3Solver::setCoreSolverTimeout(time::Span timeout) {
   impl->setCoreSolverTimeout(timeout);
 }
 
-char *Z3SolverImpl::getConstraintLog(const Query &query) {
+std::string Z3SolverImpl::getConstraintLog(const Query &query) {
   std::vector<Z3ASTHandle> assumptions;
   // We use a different builder here because we don't want to interfere
   // with the solver's builder because it may change the solver builder's
@@ -183,35 +183,26 @@ char *Z3SolverImpl::getConstraintLog(const Query &query) {
     }
   }
 
-  ::Z3_ast *assumptionsArray = NULL;
-  int numAssumptions = assumptions.size();
-  if (numAssumptions) {
-    assumptionsArray = (::Z3_ast *)malloc(sizeof(::Z3_ast) * numAssumptions);
-    for (int index = 0; index < numAssumptions; ++index) {
-      assumptionsArray[index] = (::Z3_ast)assumptions[index];
-    }
-  }
-
+  std::vector<::Z3_ast> raw_assumptions{assumptions.cbegin(),
+                                        assumptions.cend()};
   ::Z3_string result = Z3_benchmark_to_smtlib_string(
       temp_builder.ctx,
       /*name=*/"Emited by klee::Z3SolverImpl::getConstraintLog()",
       /*logic=*/"",
       /*status=*/"unknown",
       /*attributes=*/"",
-      /*num_assumptions=*/numAssumptions,
-      /*assumptions=*/assumptionsArray,
+      /*num_assumptions=*/raw_assumptions.size(),
+      /*assumptions=*/raw_assumptions.size() ? raw_assumptions.data() : nullptr,
       /*formula=*/formula);
-
-  if (numAssumptions)
-    free(assumptionsArray);
 
   // We need to trigger a dereference before the `temp_builder` gets destroyed.
   // We do this indirectly by emptying `assumptions` and assigning to
   // `formula`.
+  raw_assumptions.clear();
   assumptions.clear();
   formula = Z3ASTHandle(NULL, temp_builder.ctx);
-  // Client is responsible for freeing the returned C-string
-  return strdup(result);
+
+  return {result};
 }
 
 bool Z3SolverImpl::computeTruth(const Query &query, bool &isValid) {

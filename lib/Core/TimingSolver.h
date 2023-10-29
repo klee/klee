@@ -16,6 +16,7 @@
 #include "klee/System/Time.h"
 
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -41,7 +42,7 @@ public:
 
   void setTimeout(time::Span t) { solver->setCoreSolverTimeout(t); }
 
-  char *getConstraintLog(const Query &query) {
+  std::string getConstraintLog(const Query &query) {
     return solver->getConstraintLog(query);
   }
 

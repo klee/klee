@@ -4734,9 +4734,7 @@ void Executor::getConstraintLog(const ExecutionState &state, std::string &res,
   switch (logFormat) {
   case STP: {
     Query query(state.constraints, ConstantExpr::alloc(0, Expr::Bool));
-    char *log = solver->getConstraintLog(query);
-    res = std::string(log);
-    free(log);
+    res = solver->getConstraintLog(query);
   } break;
 
   case KQUERY: {

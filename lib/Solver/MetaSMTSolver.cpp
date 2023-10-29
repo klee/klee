@@ -88,7 +88,7 @@ public:
   MetaSMTSolverImpl(MetaSMTSolver<SolverContext> *solver, bool useForked,
                     bool optimizeDivides);
 
-  char *getConstraintLog(const Query &);
+  std::string getConstraintLog(const Query &) override;
   void setCoreSolverTimeout(time::Span timeout) { _timeout = timeout; }
 
   bool computeTruth(const Query &, bool &isValid);
@@ -135,11 +135,8 @@ MetaSMTSolverImpl<SolverContext>::MetaSMTSolverImpl(
 }
 
 template <typename SolverContext>
-char *MetaSMTSolverImpl<SolverContext>::getConstraintLog(const Query &) {
-  const char *msg = "Not supported";
-  char *buf = new char[strlen(msg) + 1];
-  strcpy(buf, msg);
-  return buf;
+std::string MetaSMTSolverImpl<SolverContext>::getConstraintLog(const Query &) {
+  return {"Not supported"};
 }
 
 template <typename SolverContext>
@@ -409,7 +406,7 @@ template <typename SolverContext>
 MetaSMTSolver<SolverContext>::~MetaSMTSolver() {}
 
 template <typename SolverContext>
-char *MetaSMTSolver<SolverContext>::getConstraintLog(const Query &query) {
+std::string MetaSMTSolver<SolverContext>::getConstraintLog(const Query &query) {
   return impl->getConstraintLog(query);
 }
 
