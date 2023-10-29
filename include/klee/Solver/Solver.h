@@ -15,6 +15,7 @@
 #include "klee/Solver/SolverCmdLine.h"
 
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace klee {
@@ -202,7 +203,7 @@ namespace klee {
     // FIXME: This should go into a helper class, and should handle failure.
     virtual std::pair< ref<Expr>, ref<Expr> > getRange(const Query&);
     
-    virtual char *getConstraintLog(const Query& query);
+    virtual std::string getConstraintLog(const Query& query);
     virtual void setCoreSolverTimeout(time::Span timeout);
   };
 

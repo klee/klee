@@ -101,9 +101,9 @@ namespace klee {
     /// status code
     static const char* getOperationStatusString(SolverRunStatus statusCode);
 
-    virtual char *getConstraintLog(const Query& query)  {
-        // dummy
-        return nullptr;
+    virtual std::string getConstraintLog(const Query &query) {
+      // dummy
+      return {};
     }
 
     virtual void setCoreSolverTimeout(time::Span timeout) {};

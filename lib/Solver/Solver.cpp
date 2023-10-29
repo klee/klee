@@ -27,7 +27,7 @@ const char *Solver::validity_to_str(Validity v) {
 Solver::Solver(std::unique_ptr<SolverImpl> impl) : impl(std::move(impl)) {}
 Solver::~Solver() = default;
 
-char *Solver::getConstraintLog(const Query& query) {
+std::string Solver::getConstraintLog(const Query& query) {
     return impl->getConstraintLog(query);
 }
 

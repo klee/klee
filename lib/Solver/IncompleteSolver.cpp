@@ -134,7 +134,7 @@ SolverImpl::SolverRunStatus StagedSolverImpl::getOperationStatusCode() {
   return secondary->impl->getOperationStatusCode();
 }
 
-char *StagedSolverImpl::getConstraintLog(const Query& query) {
+std::string StagedSolverImpl::getConstraintLog(const Query& query) {
   return secondary->impl->getConstraintLog(query);
 }
 

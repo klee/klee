@@ -35,7 +35,7 @@ public:
                             std::vector<std::vector<unsigned char> > &values,
                             bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
-  char *getConstraintLog(const Query &);
+  std::string getConstraintLog(const Query &) override;
   void setCoreSolverTimeout(time::Span timeout);
 };
 
@@ -132,9 +132,8 @@ void AssignmentValidatingSolver::dumpAssignmentQuery(
   Query augmentedQuery(constraints, query.expr);
 
   // Ask the solver for the log for this query.
-  char *logText = solver->getConstraintLog(augmentedQuery);
-  llvm::errs() << "Query with assignment as constraints:\n" << logText << "\n";
-  free(logText);
+  llvm::errs() << "Query with assignment as constraints:\n"
+               << solver->getConstraintLog(augmentedQuery) << "\n";
 }
 
 SolverImpl::SolverRunStatus
@@ -142,7 +141,7 @@ AssignmentValidatingSolver::getOperationStatusCode() {
   return solver->impl->getOperationStatusCode();
 }
 
-char *AssignmentValidatingSolver::getConstraintLog(const Query &query) {
+std::string AssignmentValidatingSolver::getConstraintLog(const Query &query) {
   return solver->impl->getConstraintLog(query);
 }
 

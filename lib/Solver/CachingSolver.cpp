@@ -85,7 +85,7 @@ public:
                                               hasSolution);
   }
   SolverRunStatus getOperationStatusCode();
-  char *getConstraintLog(const Query&);
+  std::string getConstraintLog(const Query&) override;
   void setCoreSolverTimeout(time::Span timeout);
 };
 
@@ -246,7 +246,7 @@ SolverImpl::SolverRunStatus CachingSolver::getOperationStatusCode() {
   return solver->impl->getOperationStatusCode();
 }
 
-char *CachingSolver::getConstraintLog(const Query& query) {
+std::string CachingSolver::getConstraintLog(const Query& query) {
   return solver->impl->getConstraintLog(query);
 }
 
