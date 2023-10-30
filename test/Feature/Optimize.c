@@ -6,6 +6,7 @@
 // RUN: diff %t3.log %t3.good
 
 // should complete by 100 instructions if opt is on
+#include <stdio.h>
 
 int main() {
   int i, res = 0;

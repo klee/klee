@@ -2,6 +2,8 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out %t1.bc
 
+#include "klee/klee.h"
+#include <stdio.h>
 unsigned sym() {
   unsigned x;
   klee_make_symbolic(&x, sizeof x, "x");

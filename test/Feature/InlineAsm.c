@@ -1,7 +1,7 @@
 // RUN: %clang %s -emit-llvm %O0opt -c -g -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --external-calls=all --exit-on-error --output-dir=%t.klee-out %t.bc > %t.output.log 2>&1
-
+#include "klee/klee.h"
 #include <assert.h>
 
 int main() {

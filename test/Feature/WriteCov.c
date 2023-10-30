@@ -7,7 +7,7 @@
 // RUN: grep %t.klee-out/test000001.cov:1 %t3.txt
 // RUN: grep %t.klee-out/test000002.cov:0 %t3.txt
 // RUN: grep %t.klee-out/test000002.cov:1 %t3.txt
-
+#include "klee/klee.h"
 #include <assert.h>
 #include <stdio.h>
 

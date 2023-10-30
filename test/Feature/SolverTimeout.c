@@ -3,7 +3,7 @@
 // RUN: %klee --output-dir=%t.klee-out --max-solver-time=1 %t.bc
 //
 // Note: This test occasionally fails when using Z3 4.4.1
-
+#include "klee/klee.h"
 #include <stdio.h>
 
 int main() {

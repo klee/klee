@@ -8,7 +8,7 @@
 #include <assert.h>
 
 int main() {
-  int (*scmp)(char*,char*) = strcmp;
+  int (*scmp)(const char *, const char *) = strcmp;
 
   assert(scmp("hello","hi") < 0);
 

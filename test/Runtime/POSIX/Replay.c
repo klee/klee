@@ -8,6 +8,7 @@
 // REPLAY: Yes
 
 #ifdef KLEE_EXECUTION
+#include "klee/klee.h"
 #define EXIT klee_silent_exit
 #else
 #include <stdlib.h>

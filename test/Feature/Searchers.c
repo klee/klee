@@ -30,7 +30,7 @@
 /* this test is basically just for coverage and doesn't really do any
    correctness check (aside from testing that the various combinations
    don't crash) */
-
+#include "klee/klee.h"
 #include <stdlib.h>
 
 int validate(char *buf, int N) {

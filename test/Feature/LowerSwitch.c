@@ -6,7 +6,7 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --exit-on-error --switch-type=simple %t.bc
 // RUN: test -f %t.klee-out/test000010.ktest
-
+#include "klee/klee.h"
 #include <stdio.h>
 
 int main(int argc, char **argv) {
