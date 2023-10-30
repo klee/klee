@@ -100,9 +100,14 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
               Builder.CreatePointerCast(dst, i8pp, "vacopy.cast.dst");
           auto castedSrc =
               Builder.CreatePointerCast(src, i8pp, "vacopy.cast.src");
+#if LLVM_VERSION_CODE >= LLVM_VERSION(15, 0)
+          auto load = Builder.CreateLoad(Builder.getInt8PtrTy(), castedSrc,
+                                         "vacopy.read");
+#else
           auto load =
               Builder.CreateLoad(castedSrc->getType()->getPointerElementType(),
                                  castedSrc, "vacopy.read");
+#endif
           Builder.CreateStore(load, castedDst, false /* isVolatile */);
         } else {
           assert(WordSize == 8 && "Invalid word size!");
@@ -110,9 +115,13 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
           auto pDst = Builder.CreatePointerCast(dst, i64p, "vacopy.cast.dst");
           auto pSrc = Builder.CreatePointerCast(src, i64p, "vacopy.cast.src");
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(15, 0)
+          auto pSrcType = Builder.getPtrTy();
+          auto pDstType = Builder.getPtrTy();
+#else
           auto pSrcType = pSrc->getType()->getPointerElementType();
           auto pDstType = pDst->getType()->getPointerElementType();
-
+#endif
           auto val = Builder.CreateLoad(pSrcType, pSrc);
           Builder.CreateStore(val, pDst, ii);
 
