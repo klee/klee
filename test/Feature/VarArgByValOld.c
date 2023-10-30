@@ -1,4 +1,4 @@
-// REQUIRES: geq-llvm-15.0
+// REQUIRES: lt-llvm-15.0
 /* This test checks that KLEE correctly handles variadic arguments with the
    byval attribute */
 
@@ -8,10 +8,10 @@
 // RUN: FileCheck %s --input-file=%t.klee-out/assembly.ll
 //
 // TODO: Make noundef unconditional when LLVM 14 is the oldest supported version.
-// CHECK: call void (ptr, i32, ...) @test1(ptr sret(%struct.foo) align 8 {{.*}}, i32 noundef -1, ptr noundef byval(%struct.foo) align 8 {{.*}}, ptr noundef byval(%struct.bar) align 8 {{.*}})
-// CHECK: call void (ptr, i32, i64, ...) @test2(ptr sret(%struct.foo) align 8 %tmp, i32 noundef {{.*}}, i64 noundef {{.*}}, i32 noundef {{.*}}, ptr noundef byval(%struct.foo) align 8 {{.*}}, i64 noundef {{.*}}, ptr noundef byval(%struct.bar) align 8 {{.*}}, ptr noundef byval(%struct.foo) align 8 {{.*}}, ptr noundef byval(%struct.bar) align 8 {{.*}})
-#include <stdarg.h>
+// CHECK: @test1({{.*}}, i32 {{(noundef )?}}-1, %struct.foo* {{(noundef )?}}byval{{.*}} %struct.bar* {{(noundef )?}}byval
+// CHECK: @test2({{.*}}, %struct.foo* {{(noundef )?}}byval{{.*}} %struct.bar* {{(noundef )?}}byval
 #include <assert.h>
+#include <stdarg.h>
 #include <stdio.h>
 
 struct foo {
@@ -45,14 +45,14 @@ struct foo test1(int x, ...) {
   assert(f.f5 == 5);
   assert(f.f6 == 6);
   assert(f.f7 == 7);
-  
+
   struct bar b = va_arg(ap, struct bar);
   assert(b.f1 == 11);
   assert(b.f2 == 12);
   assert(b.f3 == 13);
   assert(b.f4 == 14);
   assert(b.f5 == 15);
-  
+
   va_end(ap);
 
   f.f1++;
@@ -79,7 +79,7 @@ struct foo test2(int x, long long int l, ...) {
 
   l = va_arg(ap, long long int);
   assert(l == 1000);
-  
+
   struct bar b = va_arg(ap, struct bar);
   assert(b.f1 == 11);
   assert(b.f2 == 12);
@@ -102,7 +102,7 @@ struct foo test2(int x, long long int l, ...) {
   assert(b.f3 == 5);
   assert(b.f4 == 7);
   assert(b.f5 == 9);
-  
+
   va_end(ap);
 
   f.f1++;
@@ -110,8 +110,8 @@ struct foo test2(int x, long long int l, ...) {
 }
 
 int main() {
-  struct foo f = { 1, 2, 3, 4, 5, 6, 7 };
-  struct bar b = { 11, 12, 13, 14, 15 };
+  struct foo f = {1, 2, 3, 4, 5, 6, 7};
+  struct bar b = {11, 12, 13, 14, 15};
   struct foo res = test1(-1, f, b);
   assert(res.f1 == 2);
   assert(res.f2 == 2);
@@ -125,7 +125,7 @@ int main() {
 
   int i = 10;
   long long int l = 1000;
-  struct foo f2 = { 10, 20, 30, 40, 50, 60, 70 };
-  struct bar b2 = { 1, 3, 5, 7, 9 };
+  struct foo f2 = {10, 20, 30, 40, 50, 60, 70};
+  struct bar b2 = {1, 3, 5, 7, 9};
   test2(i, l, i, f, l, b, f2, b2);
 }

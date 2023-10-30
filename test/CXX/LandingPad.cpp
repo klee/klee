@@ -1,3 +1,5 @@
+// REQUIRES: lt-llvm-15.0
+// Different LLVM IR syntax with opaque ptr - it's a nullptr directly, no constant
 // RUN: %clangxx %s -emit-llvm -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out %t1.bc 2>&1 | FileCheck %s
