@@ -3043,7 +3043,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     llvm::APFloat Arg(*fpWidthToSemantics(arg->getWidth()), arg->getAPValue());
     uint64_t value = 0;
     bool isExact = true;
+#if LLVM_VERSION_CODE >= LLVM_VERSION(16, 0)
+    auto valueRef = llvm::MutableArrayRef(value);
+#else
     auto valueRef = makeMutableArrayRef(value);
+#endif
     Arg.convertToInteger(valueRef, resultType, false,
                          llvm::APFloat::rmTowardZero, &isExact);
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
@@ -3061,7 +3065,11 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     uint64_t value = 0;
     bool isExact = true;
+#if LLVM_VERSION_CODE >= LLVM_VERSION(16, 0)
+    auto valueRef = llvm::MutableArrayRef(value);
+#else
     auto valueRef = makeMutableArrayRef(value);
+#endif
     Arg.convertToInteger(valueRef, resultType, true,
                          llvm::APFloat::rmTowardZero, &isExact);
     bindLocal(ki, state, ConstantExpr::alloc(value, resultType));
@@ -4947,7 +4955,12 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
       type = GO->getType();
     }
   } else if (const AllocaInst *AI = dyn_cast<AllocaInst>(allocSite)) {
+#if LLVM_VERSION_CODE <= LLVM_VERSION(10, 0)
     alignment = AI->getAlignment();
+
+#else
+    alignment = AI->getAlign().value();
+#endif
     type = AI->getAllocatedType();
   } else if (isa<InvokeInst>(allocSite) || isa<CallInst>(allocSite)) {
     // FIXME: Model the semantics of the call to use the right alignment
@@ -4970,7 +4983,12 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
     assert(type != NULL);
     // No specified alignment. Get the alignment for the type.
     if (type->isSized()) {
+#if LLVM_VERSION_CODE >= LLVM_VERSION(16, 0)
+      alignment = kmodule->targetData->getPrefTypeAlign(type).value();
+#else
       alignment = kmodule->targetData->getPrefTypeAlignment(type);
+#endif
+
     } else {
       klee_warning_once(allocSite, "Cannot determine memory alignment for "
                                    "\"%s\". Using alignment of %zu.",
