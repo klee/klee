@@ -1201,6 +1201,10 @@ int main(int argc, char **argv, char **envp) {
   // Load the bytecode...
   std::string errorMsg;
   LLVMContext ctx;
+#if LLVM_VERSION_CODE == LLVM_VERSION(15, 0)
+  // We have to force the upgrade to opaque pointer explicitly for LLVM 15.
+  ctx.setOpaquePointers(true);
+#endif
   std::vector<std::unique_ptr<llvm::Module>> loadedModules;
   if (!klee::loadFile(InputFile, ctx, loadedModules, errorMsg)) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),

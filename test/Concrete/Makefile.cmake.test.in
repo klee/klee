@@ -14,6 +14,8 @@ LLVMCC := @LLVMCC@
 LLVMAS := @LLVM_AS@
 LLVMLINK := @LLVM_LINK@
 LLVMCC.CFlags := @OZERO_OPT@ -Wall
+LLVMAS.Flags := @LLVM_AS_FLAGS@
+LLVMLINK.Flags := @LLVM_LINK_FLAGS@
 
 # Make sure source files can match the pattern rules
 VPATH := @CMAKE_CURRENT_SOURCE_DIR@
@@ -28,7 +30,7 @@ Output/%.bc: %.c Output/.dir
 	$(LLVMCC) -emit-llvm -c $(LLVMCC.CFlags) $< -o $@
 
 Output/%.bc: %.ll $(LLVMAS) Output/.dir
-	$(LLVMAS) -f $< -o $@
+	$(LLVMAS) $(LLVMAS.Flags) -f $< -o $@
 
 # We build a separate testingUtils bitcode for each test, to make sure parallel
 # tests don't interact with one another.
@@ -36,7 +38,7 @@ Output/%_testingUtils.bc: _testingUtils.c Output/.dir
 	$(LLVMCC) -emit-llvm -c $(LLVMCC.CFlags) $< -o $@
 
 Output/linked_%.bc: Output/%.bc Output/%_testingUtils.bc
-	$(LLVMLINK) $< Output/$*_testingUtils.bc -o $@
+	$(LLVMLINK) $(LLVMLINK.Flags) $< Output/$*_testingUtils.bc -o $@
 
 .PRECIOUS: Output/.dir
 
