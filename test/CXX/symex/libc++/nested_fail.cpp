@@ -24,4 +24,4 @@ int main(int argc, char **args) {
   }
   return 0;
 }
-// CHECK: terminating with uncaught exception of type char*
+// CHECK: terminating {{.*}} uncaught exception of type char*
