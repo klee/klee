@@ -1117,7 +1117,13 @@ public:
   }
 
   /// isAllOnes - Is this constant all ones.
-  bool isAllOnes() const { return getAPValue().isAllOnesValue(); }
+  bool isAllOnes() const {
+#if LLVM_VERSION_CODE <= LLVM_VERSION(13, 0)
+    return getAPValue().isAllOnesValue();
+#else
+    return getAPValue().isAllOnes();
+#endif
+  }
 
   /* Constant Operations */
 

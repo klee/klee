@@ -70,9 +70,8 @@ void LowerSwitchPass::switchConvert(CaseItr begin, CaseItr end,
 
   // iterate through all the cases, creating a new BasicBlock for each
   for (CaseItr it = begin; it < end; ++it) {
-    BasicBlock *newBlock = BasicBlock::Create(F->getContext(), "NodeBlock");
-    Function::iterator FI = origBlock->getIterator();
-    F->getBasicBlockList().insert(++FI, newBlock);
+    BasicBlock *newBlock = BasicBlock::Create(F->getContext(), "NodeBlock", F);
+
     Builder.SetInsertPoint(newBlock);
     auto cmpValue = Builder.CreateICmpEQ(value, it->value, "case.cmp");
     Builder.CreateCondBr(cmpValue, it->block, curHead);
@@ -106,10 +105,10 @@ void LowerSwitchPass::processSwitchInst(SwitchInst *SI) {
 
   // Create a new, empty default block so that the new hierarchy of
   // if-then statements go to this and the PHI nodes are happy.
-  BasicBlock* newDefault = BasicBlock::Create(F->getContext(), "newDefault");
+  BasicBlock *newDefault =
+      BasicBlock::Create(F->getContext(), "newDefault", F, defaultBlock);
   llvm::IRBuilder<> Builder(newDefault);
 
-  F->getBasicBlockList().insert(defaultBlock->getIterator(), newDefault);
   Builder.CreateBr(defaultBlock);
 
   // If there is an entry in any PHI nodes for the default edge, make sure
@@ -132,11 +131,10 @@ void LowerSwitchPass::processSwitchInst(SwitchInst *SI) {
   //   the if comparisons will happen in the same order
   //   as the cases appear in the switch
   std::reverse(cases.begin(), cases.end());
-  
-  switchConvert(cases.begin(), cases.end(), switchValue, origBlock, newDefault);
 
+  switchConvert(cases.begin(), cases.end(), switchValue, origBlock, newDefault);
   // We are now done with the switch instruction, so delete it
-  origBlock->getInstList().erase(SI);
+  SI->eraseFromParent();
 }
 
 }
