@@ -7,8 +7,9 @@
 // RUN: %klee --output-dir=%t.klee-out %t1.bc > %t1.log
 // RUN: diff %t1.res %t1.log
 
+#include "klee/klee.h"
 #include <stdio.h>
-
+#include <stdlib.h>
 unsigned klee_urange(unsigned start, unsigned end) {
   unsigned x;
   klee_make_symbolic(&x, sizeof x, "x");

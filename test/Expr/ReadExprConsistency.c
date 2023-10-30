@@ -2,8 +2,9 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --exit-on-error %t.bc 2>%t.log
 // RUN: cat %t.log | FileCheck %s
-
+#include "klee/klee.h"
 #include <assert.h>
+#include <stdio.h>
 
 /*
 This tests checks ensures that only relevant updates are present when doing
@@ -15,7 +16,6 @@ https://github.com/klee/klee/issues/921
 https://github.com/klee/klee/pull/1061
 */
 
-void klee_print_expr(const char*, char);
 int main() {
 	char  arr[3];
   char symbolic;
@@ -25,12 +25,12 @@ int main() {
   
   
   char a = arr[2];  // (ReadExpr 2 arr)
-  //CHECK: arr[2]:(Read w8 2 arr)
+  // CHECK: arr[2]:(SExt w32 (Read w8 2 arr))
   klee_print_expr("arr[2]", arr[2]);
   arr[1] = 0;
   char b = arr[symbolic];  // (ReadExpr symbolic [1=0]@arr)
-  //CHECK: arr[2]:(Read w8 2 arr)
-  //CHECK-NOT: arr[2]:(Read w8 2 [1=0]@arr)
+  // CHECK: arr[2]:(SExt w32 (Read w8 2 arr))
+  // CHECK-NOT: arr[2]:(SExt w32 (Read w8 2 [1=0]@arr))
   klee_print_expr("arr[2]", arr[2]);
   
   if(a == b) printf("Equal!\n");

@@ -10,9 +10,9 @@
 // RUN: grep -q "b==4" %t.log
 // RUN: grep -q "c==5" %t.log
 // RUN: grep -q "x==6" %t.log
-
-#include <string.h>
+#include "klee/klee.h"
 #include <stdio.h>
+#include <string.h>
 
 int main(int argc, char **argv) {
   int a, b, c, x;

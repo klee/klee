@@ -2,6 +2,7 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --emit-all-errors %t2.bc 2>&1 | FileCheck %s
 // RUN: ls %t.klee-out/ | grep .my.err | wc -l | grep 2
+#include "klee/klee.h"
 #include <assert.h>
 #include <stdio.h>
 

@@ -9,6 +9,7 @@
    this takes under 2 seconds w/ the optimization and almost 6 minutes
    w/o.  So we kill it in 10 sec and check if it has finished
    successfully. */
+#include "klee/klee.h"
 
 #include <unistd.h>
 #include <assert.h>

@@ -3,8 +3,7 @@
 // RUN: %klee --output-dir=%t.klee-out --klee-call-optimisation=false %t.bc 2>&1 | FileCheck %s
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --klee-call-optimisation=false --optimize %t.bc 2>&1 | FileCheck %s
-
-#include <stdio.h>
+#include "klee/klee.h"
 #include <assert.h>
 
 int main(int argc, char** argv)

@@ -4,6 +4,8 @@
 // RUN: test -f %t.klee-out/test000001.ptr.err -o -f %t.klee-out/test000002.ptr.err
 // RUN: not test -f %t.klee-out/test000001.ptr.err -a -f %t.klee-out/test000002.ptr.err
 // RUN: not test -f %t.klee-out/test000003.ktest
+#include "klee/klee.h"
+#include <stdlib.h>
 
 unsigned klee_urange(unsigned start, unsigned end) {
   unsigned x;

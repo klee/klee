@@ -3,6 +3,7 @@
 // RUN: %klee --output-dir=%t.klee-out %t.ll
 // KLEE just must not fail
 #include "klee/klee.h"
+#include <stdlib.h>
 
 int main() {
   char i;

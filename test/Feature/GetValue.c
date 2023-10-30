@@ -1,9 +1,9 @@
 // RUN: %clang -emit-llvm -c -o %t1.bc %s
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --exit-on-error %t1.bc
-
-#include <stdio.h>
+#include "klee/klee.h"
 #include <assert.h>
+#include <stdio.h>
 
 int main() {
   int x = klee_int("x");

@@ -2,7 +2,7 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --kdalloc %t.bc 2>&1 | FileCheck %s
 // RUN: test -f %t.klee-out/test000001.ptr.err
-
+#include <stdlib.h>
 int main() {
   int *x = malloc(sizeof(int));
   // CHECK: OneOutOfBounds.c:[[@LINE+1]]: memory error: out of bound pointer

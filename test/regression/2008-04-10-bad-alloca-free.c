@@ -2,6 +2,7 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --exit-on-error %t1.bc
 
+#include "klee/klee.h"
 void f(int *addr) {
   klee_make_symbolic(addr, sizeof *addr, "moo");
 }

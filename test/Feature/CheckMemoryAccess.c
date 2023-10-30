@@ -3,10 +3,10 @@
 // RUN: %klee --output-dir=%t.klee-out %t.bc > %t.log
 // RUN: grep -q "good" %t.log
 // RUN: not grep -q "bad" %t.log
-
+#include "klee/klee.h"
 #include <assert.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 int main() {
   char buf[4];

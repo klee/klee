@@ -13,7 +13,7 @@
 // RUN: FileCheck -input-file=%t-dfs-bfs.out %s
 
 #include "klee/klee.h"
-
+#include <stdio.h>
 int main() {
   int x, y, z;
   klee_make_symbolic(&x, sizeof(x), "x");

@@ -1,7 +1,7 @@
 // RUN: %clang %s -emit-llvm %O0opt -c -o %t2.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --posix-runtime --exit-on-error %t2.bc --sym-files 1 10
-
+#include "klee/klee.h"
 #include <assert.h>
 #include <fcntl.h>
 

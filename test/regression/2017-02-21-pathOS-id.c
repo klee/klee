@@ -5,6 +5,9 @@
 // RUN: cat %t.klee-out/test000002.path | wc -l | grep -q 1
 // RUN: cat %t.klee-out/test000003.path | wc -l | grep -q 1
 // RUN: cat %t.klee-out/test000004.path | wc -l | grep -q 1
+
+#include "klee/klee.h"
+#include "stdlib.h"
 int main(){
 	int a, b;
 	klee_make_symbolic (&a, sizeof(int), "a");

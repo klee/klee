@@ -3,10 +3,11 @@
 // RUN: %klee --output-dir=%t.klee-out %t1.bc 2>&1 | FileCheck %s
 // RUN: test -f %t.klee-out/test000001.free.err
 
+#include <stdlib.h>
 int buf[4];
 
 int main() {
-  // CHECK: 2008-03-04-free-of-global.c:10: free of global
+  // CHECK: 2008-03-04-free-of-global.c:[[@LINE+1]]: free of global
   free(buf); // this should give runtime error, not crash
   return 0;
 }

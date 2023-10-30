@@ -3,6 +3,7 @@
    is printed a single time. 
 */
 #include "klee/klee.h"
+#include <stdio.h>
 
 // RUN: %clang %s -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out

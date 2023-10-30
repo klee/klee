@@ -5,7 +5,7 @@
 // RUN: grep "1 A" %t.uniq.log
 // RUN: grep "1 B" %t.uniq.log
 // RUN: grep "1 C" %t.uniq.log
-
+#include "klee/klee.h"
 #include <stdio.h>
 
 int main() {

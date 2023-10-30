@@ -4,7 +4,8 @@
 // RUN: test -f %t.klee-out/test000001.free.err
 // RUN: test -f %t.klee-out/test000002.free.err
 // RUN: test -f %t.klee-out/test000003.free.err
-
+#include "klee/klee.h"
+#include <stdlib.h>
 int main(int argc, char **argv) {
   switch (klee_range(0, 3, "range")) {
   case 0:

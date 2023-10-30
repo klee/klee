@@ -6,9 +6,9 @@
 // RUN: rm -rf %t.klee-out-2
 // RUN: %klee --output-dir=%t.klee-out-2 --replay-path %t.klee-out/test000001.path %t2.bc > %t3.log
 // RUN: diff %t3.log %t3.good
-
-#include <unistd.h>
+#include "klee/klee.h"
 #include <stdio.h>
+#include <unistd.h>
 
 void cond_exit() {
 #ifdef COND_EXIT

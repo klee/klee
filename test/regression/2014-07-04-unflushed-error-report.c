@@ -6,6 +6,7 @@
 /* This test checks that the error file isn't empty and contains the
  * right content.
  */
+#include "klee/klee.h"
 int main() {
   unsigned int x = 15;
   unsigned int y;

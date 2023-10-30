@@ -9,11 +9,12 @@
 // RUN: grep "mode:lnk" %t.log
 // RUN: grep "read:sym:yes" %t.log
 // RUN: grep "read:sym:no" %t.log
-
-#include <stdio.h>
-#include <fcntl.h>
-#include <sys/stat.h>
 #include <assert.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 int main(int argc, char **argv) {
   struct stat stats;
