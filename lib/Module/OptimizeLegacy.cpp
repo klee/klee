@@ -98,14 +98,18 @@ static void AddStandardCompilePasses(legacy::PassManager &PM) {
   addPass(PM, createInstructionCombiningPass()); // Clean up after IPCP & DAE
   addPass(PM, createCFGSimplificationPass());    // Clean up after IPCP & DAE
 
+#if LLVM_VERSION_CODE <= LLVM_VERSION(15, 0)
   addPass(PM, createPruneEHPass()); // Remove dead EH info
+#endif
   addPass(PM, createPostOrderFunctionAttrsLegacyPass());
   addPass(PM,
           createReversePostOrderFunctionAttrsPass()); // Deduce function attrs
 
   if (!DisableInline)
     addPass(PM, createFunctionInliningPass()); // Inline small functions
-  addPass(PM, createArgumentPromotionPass());  // Scalarize uninlined fn args
+#if LLVM_VERSION_CODE <= LLVM_VERSION(14, 0)
+  addPass(PM, createArgumentPromotionPass()); // Scalarize uninlined fn args
+#endif
 
   addPass(PM, createInstructionCombiningPass()); // Cleanup for scalarrepl.
   addPass(PM, createJumpThreadingPass());        // Thread jumps.
@@ -118,7 +122,9 @@ static void AddStandardCompilePasses(legacy::PassManager &PM) {
   addPass(PM, createReassociatePass());         // Reassociate expressions
   addPass(PM, createLoopRotatePass());
   addPass(PM, createLICMPass());         // Hoist loop invariants
+#if LLVM_VERSION_CODE <= LLVM_VERSION(14, 0)
   addPass(PM, createLoopUnswitchPass()); // Unswitch loops.
+#endif
   // FIXME : Removing instcombine causes nestedloop regression.
   addPass(PM, createInstructionCombiningPass());
   addPass(PM, createIndVarSimplifyPass());       // Canonicalize indvars
@@ -197,13 +203,17 @@ void klee::optimizeModule(llvm::Module *M,
   if (!DisableInline)
     addPass(Passes, createFunctionInliningPass()); // Inline small functions
 
-  addPass(Passes, createPruneEHPass());         // Remove dead EH info
+#if LLVM_VERSION_CODE <= LLVM_VERSION(15, 0)
+  addPass(Passes, createPruneEHPass()); // Remove dead EH info
+#endif
   addPass(Passes, createGlobalOptimizerPass()); // Optimize globals again.
   addPass(Passes, createGlobalDCEPass());       // Remove dead functions
 
+#if LLVM_VERSION_CODE <= LLVM_VERSION(14, 0)
   // If we didn't decide to inline a function, check to see if we can
   // transform it to pass arguments by value instead of by reference.
   addPass(Passes, createArgumentPromotionPass());
+#endif
 
   // The IPO passes may leave cruft around.  Clean up after them.
   addPass(Passes, createInstructionCombiningPass());
