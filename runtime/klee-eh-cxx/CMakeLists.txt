@@ -17,6 +17,7 @@ set(ADDITIONAL_CXX_FLAGS
         -I "${KLEE_LIBCXXABI_SRC_DIR}/src"
         -I "${KLEE_LIBCXXABI_SRC_DIR}/include"
         -I "${KLEE_LIBCXX_INCLUDE_PATH}"
+        -std=c++11
 )
 
 if (KLEE_LIBCXX_PLATFORM_INCLUDE_PATH)
