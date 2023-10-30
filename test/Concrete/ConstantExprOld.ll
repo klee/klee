@@ -1,4 +1,4 @@
-; REQUIRES: geq-llvm-15.0
+; REQUIRES: lt-llvm-15.0
 ; RUN: %S/ConcreteTest.py --klee='%klee' --lli=%lli %s
 
 ; Most of the test below use the *address* of gInt as part of their computation,
@@ -87,6 +87,32 @@ define void @"test_simple_arith"() {
 
   ret void     
 }
+
+define void @"test_div_and_mod"() {
+  %t1 = add i32 udiv(i32 ptrtoint(i32* @gInt to i32), i32 13), 0
+  %t2 = add i32 urem(i32 ptrtoint(i32* @gInt to i32), i32 13), 0
+  %t3 = add i32 sdiv(i32 ptrtoint(i32* @gInt to i32), i32 13), 0
+  %t4 = add i32 srem(i32 ptrtoint(i32* @gInt to i32), i32 13), 0
+
+  %p = ptrtoint i32* @gInt to i32
+
+  %i1 = udiv i32 %p, 13
+  %i2 = urem i32 %p, 13
+  %i3 = sdiv i32 %p, 13
+  %i4 = srem i32 %p, 13
+
+  %x1 = sub i32 %t1, %i1
+  %x2 = sub i32 %t2, %i2
+  %x3 = sub i32 %t3, %i3
+  %x4 = sub i32 %t4, %i4
+
+  call void @print_i32(i32 %x1)
+  call void @print_i32(i32 %x2)
+  call void @print_i32(i32 %x3)
+  call void @print_i32(i32 %x4)
+
+  ret void     
+}
         
 define void @test_cmp() {
   %t1 = add i8 zext(i1 icmp ult (i64 ptrtoint(i32* @gInt to i64), i64 0) to i8), 1
@@ -116,6 +142,8 @@ define void @test_cmp() {
 
 define i32 @main() {
     call void @test_simple_arith()
+
+    call void @test_div_and_mod()
 
     call void @test_cmp()
  
