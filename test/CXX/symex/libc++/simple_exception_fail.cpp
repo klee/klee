@@ -11,4 +11,4 @@
 int main(int argc, char **args) {
   throw std::runtime_error("foo");
 }
-// CHECK: terminating with uncaught exception of type std::runtime_error: foo
+// CHECK: terminating {{.*}} uncaught exception of type std::runtime_error: foo
