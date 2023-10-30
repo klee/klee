@@ -17,7 +17,7 @@ entry:
   %1 = getelementptr inbounds [47 x i8], [47 x i8]* %0, i64 0, i64 0
   ; Make sure memory barrier with function arguments is kept
   %2 = call i8* asm sideeffect "", "=r,0,~{memory},~{dirflag},~{fpsr},~{flags}"(i8* nonnull %1)
-  ; CHECK: %2 = call i8* asm sideeffect "", "=r,0,~{memory},~{dirflag},~{fpsr},~{flags}"(i8* nonnull %1)
+  ; CHECK: %2 = call {{.*}} asm sideeffect "", "=r,0,~{memory},~{dirflag},~{fpsr},~{flags}"({{.*}} nonnull %1)
   ret i32 0
 }
 
