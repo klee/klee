@@ -17,7 +17,8 @@ using namespace llvm;
 char CallRemover::ID;
 
 bool CallRemover::runOnModule(llvm::Module &M) {
-  std::vector<std::string> badFuncs = {"llvm.dbg.declare", "llvm.dbg.label"};
+  std::vector<std::string> badFuncs = {"llvm.dbg.declare", "llvm.dbg.label",
+                                       "llvm.dbg.value"};
 
   for (const auto &f : badFuncs) {
     auto Declare = M.getFunction(f);
