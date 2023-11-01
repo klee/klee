@@ -1,6 +1,6 @@
 // RUN: %clang  -Wno-everything %s -emit-llvm %O0opt -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --use-forked-solver=false --max-memory=6008 --optimize --skip-not-lazy-initialized --istats-write-interval=90s --exit-on-error-type=Assert --search=dfs --max-time=10s %t1.bc 2>&1 | FileCheck -check-prefix=CHECK %s
+// RUN: %klee --output-dir=%t.klee-out --use-forked-solver=false --optimize-aggressive=false --track-coverage=branches --max-memory=6008 --optimize --skip-not-lazy-initialized --istats-write-interval=90s --exit-on-error-type=Assert --search=dfs --max-time=10s %t1.bc 2>&1 | FileCheck -check-prefix=CHECK %s
 
 // RUN find %t.klee-out -type f -name "*.assert.err" | sed 's/assert\.err/ktest/' | xargs %ktest-tool | FileCheck -check-prefix=CHECK-TEST %s
 // CHECK-TEST-NOT: object 20

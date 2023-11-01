@@ -1,12 +1,21 @@
 // RUN: %clang  -Wno-everything %s -emit-llvm %O0opt -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --track-coverage=branches --optimize=true --emit-all-errors --only-output-states-covering-new=true --dump-states-on-halt=true --search=dfs %t1.bc
-// RUN: %klee-stats --print-columns 'ICov(%),BCov(%)' --table-format=csv %t.klee-out > %t.stats
-// RUN: FileCheck -input-file=%t.stats %s
+// RUN: %klee --output-dir=%t.klee-out --optimize-aggressive --track-coverage=branches --optimize=true --emit-all-errors --only-output-states-covering-new=true --dump-states-on-halt=true --search=dfs %t1.bc
+// RUN: %klee-stats --print-columns ' Branches,ICov(%),BCov(%)' --table-format=csv %t.klee-out > %t.stats
+// RUN: FileCheck --input-file=%t.stats --check-prefix=CHECK-AGGRESSIVE %s
 
-// Branch coverage 100%, and instruction coverage is very small:
-// CHECK: ICov(%),BCov(%)
-// CHECK-NEXT: {{(0\.[0-9][0-9])}},100.00
+// Branch coverage 100%, the number of branches is 1:
+// CHECK-AGGRESSIVE: Branches,ICov(%),BCov(%)
+// CHECK-AGGRESSIVE-NEXT: 1,{{(0\.[0-9][0-9])}},100.00
+
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --optimize-aggressive=false --track-coverage=branches --optimize=true --emit-all-errors --only-output-states-covering-new=true --dump-states-on-halt=true --search=dfs %t1.bc
+// RUN: %klee-stats --print-columns ' Branches,ICov(%),BCov(%)' --table-format=csv %t.klee-out > %t.stats
+// RUN: FileCheck --input-file=%t.stats --check-prefix=CHECK-NOT-AGGRESSIVE %s
+
+// Branch coverage 50%, but the number of branches is 2:
+// CHECK-NOT-AGGRESSIVE: Branches,ICov(%),BCov(%)
+// CHECK-NOT-AGGRESSIVE-NEXT: 2,{{(0\.[0-9][0-9])}},50.00
 
 #include "klee-test-comp.c"
 

@@ -79,6 +79,11 @@ static cl::opt<bool> DeleteDeadLoops("delete-dead-loops",
                                      cl::desc("Use LoopDeletionPass"),
                                      cl::init(true), cl::cat(klee::ModuleCat));
 
+static cl::opt<bool>
+    OptimizeAggressive("optimize-aggressive",
+                       cl::desc("Use aggressive optimization passes"),
+                       cl::init(true), cl::cat(klee::ModuleCat));
+
 // A utility function that adds a pass to the pass manager but will also add
 // a verifier pass after if we're supposed to verify.
 static inline void addPass(legacy::PassManager &PM, Pass *P) {
@@ -149,43 +154,12 @@ static void AddStandardCompilePasses(legacy::PassManager &PM) {
   addPass(PM, createInstructionCombiningPass());
 
   addPass(PM, createDeadStoreEliminationPass()); // Delete dead stores
-  addPass(PM, createAggressiveDCEPass());        // Delete dead instructions
   addPass(PM, createCFGSimplificationPass());    // Merge & remove BBs
   addPass(PM, createStripDeadPrototypesPass());  // Get rid of dead prototypes
   addPass(PM, createConstantMergePass());        // Merge dup global constants
 }
 
-/// Optimize - Perform link time optimizations. This will run the scalar
-/// optimizations, any loaded plugin-optimization modules, and then the
-/// inter-procedural optimizations if applicable.
-void Optimize(Module *M, llvm::ArrayRef<const char *> preservedFunctions) {
-
-  // Instantiate the pass manager to organize the passes.
-  legacy::PassManager Passes;
-
-  // If we're verifying, start off with a verification pass.
-  if (VerifyEach)
-    Passes.add(createVerifierPass());
-
-  // DWD - Run the opt standard pass list as well.
-  AddStandardCompilePasses(Passes);
-
-  // Now that composite has been compiled, scan through the module, looking
-  // for a main function.  If main is defined, mark all other functions
-  // internal.
-  if (!DisableInternalize) {
-    auto PreserveFunctions = [=](const GlobalValue &GV) {
-      StringRef GVName = GV.getName();
-
-      for (const char *fun : preservedFunctions)
-        if (GVName.equals(fun))
-          return true;
-
-      return false;
-    };
-    ModulePass *pass = createInternalizePass(PreserveFunctions);
-    addPass(Passes, pass);
-  }
+static void AddNonStandardCompilePasses(legacy::PassManager &Passes) {
 
   // Propagate constants at call sites into the functions they call.  This
   // opens opportunities for globalopt (and inlining) by substituting function
@@ -257,6 +231,43 @@ void Optimize(Module *M, llvm::ArrayRef<const char *> preservedFunctions) {
   addPass(Passes, createCFGSimplificationPass());
   addPass(Passes, createAggressiveDCEPass());
   addPass(Passes, createGlobalDCEPass());
+}
+
+/// Optimize - Perform link time optimizations. This will run the scalar
+/// optimizations, any loaded plugin-optimization modules, and then the
+/// inter-procedural optimizations if applicable.
+void Optimize(Module *M, llvm::ArrayRef<const char *> preservedFunctions) {
+
+  // Instantiate the pass manager to organize the passes.
+  legacy::PassManager Passes;
+
+  // If we're verifying, start off with a verification pass.
+  if (VerifyEach)
+    Passes.add(createVerifierPass());
+
+  // DWD - Run the opt standard pass list as well.
+  AddStandardCompilePasses(Passes);
+
+  // Now that composite has been compiled, scan through the module, looking
+  // for a main function.  If main is defined, mark all other functions
+  // internal.
+  if (!DisableInternalize) {
+    auto PreserveFunctions = [=](const GlobalValue &GV) {
+      StringRef GVName = GV.getName();
+
+      for (const char *fun : preservedFunctions)
+        if (GVName.equals(fun))
+          return true;
+
+      return false;
+    };
+    ModulePass *pass = createInternalizePass(PreserveFunctions);
+    addPass(Passes, pass);
+  }
+
+  if (OptimizeAggressive) {
+    AddNonStandardCompilePasses(Passes);
+  }
 
   // Run our queue of passes all at once now, efficiently.
   Passes.run(*M);
