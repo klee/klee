@@ -246,7 +246,13 @@ cl::opt<bool> EmitAllErrors(
 cl::opt<bool> CoverOnTheFly(
     "cover-on-the-fly", cl::init(false),
     cl::desc("Generate tests cases for each new covered block or branch "
-             "(default=false, i.e. one per (error,instruction) pair)"),
+             "(default=false)"),
+    cl::cat(TestGenCat));
+
+cl::opt<bool> MemoryTriggerCoverOnTheFly(
+    "mem-trigger-cof", cl::init(false),
+    cl::desc("Start on the fly tests generation after approaching memory cup"
+             "(default=false)"),
     cl::cat(TestGenCat));
 
 cl::opt<std::string> DelayCoverOnTheFly(
@@ -4082,6 +4088,14 @@ bool Executor::checkMemoryUsage() {
   const auto mallocUsage = util::GetTotalMallocUsage() >> 20U;
   const auto mmapUsage = memory->getUsedDeterministicSize() >> 20U;
   const auto totalUsage = mallocUsage + mmapUsage;
+
+  if (MemoryTriggerCoverOnTheFly && 3 * totalUsage <= 2 * MaxMemory) {
+    klee_warning_once(0,
+                      "enabling cover-on-the-fly (close to memory cap: %luMB)",
+                      totalUsage);
+    coverOnTheFly = true;
+  }
+
   atMemoryLimit = totalUsage > MaxMemory; // inhibit forking
   if (!atMemoryLimit)
     return true;
