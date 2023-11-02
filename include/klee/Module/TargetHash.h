@@ -31,12 +31,7 @@ struct TargetCmp {
   bool operator()(const ref<Target> &a, const ref<Target> &b) const;
 };
 
-typedef std::pair<llvm::BasicBlock *, llvm::BasicBlock *> Transition;
 typedef std::pair<llvm::BasicBlock *, unsigned> Branch;
-
-struct TransitionHash {
-  std::size_t operator()(const Transition &p) const;
-};
 
 struct BranchHash {
   std::size_t operator()(const Branch &p) const;

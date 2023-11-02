@@ -160,11 +160,11 @@ ExecutionState::ExecutionState(const ExecutionState &state)
     : initPC(state.initPC), pc(state.pc), prevPC(state.prevPC),
       stack(state.stack), stackBalance(state.stackBalance),
       incomingBBIndex(state.incomingBBIndex), depth(state.depth),
-      level(state.level), transitionLevel(state.transitionLevel),
-      addressSpace(state.addressSpace), constraints(state.constraints),
-      targetForest(state.targetForest), pathOS(state.pathOS),
-      symPathOS(state.symPathOS), coveredLines(state.coveredLines),
-      symbolics(state.symbolics), resolvedPointers(state.resolvedPointers),
+      level(state.level), addressSpace(state.addressSpace),
+      constraints(state.constraints), targetForest(state.targetForest),
+      pathOS(state.pathOS), symPathOS(state.symPathOS),
+      coveredLines(state.coveredLines), symbolics(state.symbolics),
+      resolvedPointers(state.resolvedPointers),
       cexPreferences(state.cexPreferences), arrayNames(state.arrayNames),
       steppedInstructions(state.steppedInstructions),
       steppedMemoryInstructions(state.steppedMemoryInstructions),
@@ -447,9 +447,6 @@ void ExecutionState::increaseLevel() {
     auto srcLevel = stack.infoStack().back().multilevel[srcbb].second;
     stack.infoStack().back().multilevel.replace({srcbb, srcLevel + 1});
     level.insert(prevPC->parent);
-  }
-  if (srcbb != dstbb) {
-    transitionLevel.insert(std::make_pair(srcbb, dstbb));
   }
 }
 

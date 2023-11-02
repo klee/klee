@@ -34,7 +34,6 @@ DISABLE_WARNING_POP
 namespace klee {
 class CodeGraphInfo;
 class ExecutionState;
-struct TransitionHash;
 
 enum class TrackCoverageBy { None, Blocks, Branches, All };
 
@@ -44,7 +43,6 @@ class TargetCalculator {
   using StatesSet = std::unordered_set<ExecutionState *>;
 
   typedef std::unordered_set<KBlock *> VisitedBlocks;
-  typedef std::unordered_set<Transition, TransitionHash> VisitedTransitions;
   typedef std::unordered_set<Branch, BranchHash> VisitedBranches;
 
   enum HistoryKind { Blocks, Transitions };

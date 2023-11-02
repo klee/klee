@@ -291,7 +291,6 @@ public:
 
   /// @brief Exploration level, i.e., number of times KLEE cycled for this state
   std::set<KBlock *, KBlockCompare> level;
-  std::unordered_set<Transition, TransitionHash> transitionLevel;
 
   /// @brief Address space used by this state (e.g. Global and Heap)
   AddressSpace addressSpace;
