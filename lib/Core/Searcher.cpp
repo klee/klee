@@ -25,6 +25,7 @@
 #include "klee/Statistics/Statistics.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/System/Time.h"
+#include "klee/Utilities/Math.h"
 
 #include "klee/Support/CompilerWarning.h"
 DISABLE_WARNING_PUSH
@@ -136,21 +137,6 @@ void RandomSearcher::printName(llvm::raw_ostream &os) {
 
 ///
 
-static unsigned int ulog2(unsigned int val) {
-  if (val == 0)
-    return UINT_MAX;
-  if (val == 1)
-    return 0;
-  unsigned int ret = 0;
-  while (val > 1) {
-    val >>= 1;
-    ret++;
-  }
-  return ret;
-}
-
-///
-
 TargetedSearcher::~TargetedSearcher() {}
 
 bool TargetedSearcher::empty() { return states->empty(); }
@@ -195,7 +181,8 @@ weight_type TargetedSearcher::getWeight(ExecutionState *es) {
     return weight;
   }
   auto distRes = distanceCalculator.getDistance(*es, target->getBlock());
-  weight = ulog2(distRes.weight + es->steppedMemoryInstructions + 1); // [0, 32)
+  weight = klee::util::ulog2(distRes.weight + es->steppedMemoryInstructions +
+                             1); // [0, 32)
   if (!distRes.isInsideFunction) {
     weight += 32; // [32, 64)
   }
@@ -667,7 +654,7 @@ public:
   explicit MaxCyclesMetric() : MaxCyclesMetric(1ULL){};
 
   bool exceeds(const ExecutionState &state) const final {
-    return state.isStuck(maxCycles);
+    return state.isCycled(maxCycles);
   }
   void increaseLimit() final {
     maxCycles *= 2ULL;

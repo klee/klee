@@ -29,6 +29,7 @@
 #include "klee/Module/TargetHash.h"
 #include "klee/Solver/Solver.h"
 #include "klee/System/Time.h"
+#include "klee/Utilities/Math.h"
 
 #include "klee/Support/CompilerWarning.h"
 DISABLE_WARNING_PUSH
@@ -492,7 +493,7 @@ public:
   bool reachedTarget(ref<ReachBlockTarget> target) const;
   static std::uint32_t getLastID() { return nextID - 1; };
 
-  inline bool isStuck(unsigned long long bound) const {
+  inline bool isCycled(unsigned long long bound) const {
     if (bound == 0)
       return false;
     if (prevPC->inst->isTerminator() && stack.size() > 0) {
@@ -506,6 +507,12 @@ public:
       return level > bound;
     }
     return false;
+  }
+
+  inline bool isStuck(unsigned long long bound) const {
+    if (depth == 1)
+      return false;
+    return isCycled(bound) && depth > klee::util::ulog2(bound);
   }
 
   bool isCoveredNew() const {

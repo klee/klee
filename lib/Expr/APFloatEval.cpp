@@ -6,7 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#include "klee/util/APFloatEval.h"
+#include "klee/Utilities/APFloatEval.h"
 #include "klee/Config/Version.h"
 
 #include "klee/Support/CompilerWarning.h"

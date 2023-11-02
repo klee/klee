@@ -16,7 +16,7 @@
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/OptionCategories.h"
 #include "klee/Support/RoundingModeUtil.h"
-#include "klee/util/APFloatEval.h"
+#include "klee/Utilities/APFloatEval.h"
 
 #include "klee/Support/CompilerWarning.h"
 DISABLE_WARNING_PUSH
