@@ -1,6 +1,8 @@
 #ifndef KLEE_PATH_H
 #define KLEE_PATH_H
 
+#include "klee/ADT/ImmutableList.h"
+
 #include <stack>
 #include <string>
 #include <vector>
@@ -16,7 +18,7 @@ using stackframe_ty = std::pair<KInstruction *, KFunction *>;
 
 class Path {
 public:
-  using path_ty = std::vector<KBlock *>;
+  using path_ty = ImmutableList<KBlock *>;
   enum class TransitionKind { StepInto, StepOut, None };
 
   struct PathIndex {
@@ -38,23 +40,6 @@ public:
 
   void advance(KInstruction *ki);
 
-  friend bool operator==(const Path &lhs, const Path &rhs) {
-    return lhs.KBlocks == rhs.KBlocks &&
-           lhs.firstInstruction == rhs.firstInstruction &&
-           lhs.lastInstruction == rhs.lastInstruction;
-  }
-  friend bool operator!=(const Path &lhs, const Path &rhs) {
-    return !(lhs == rhs);
-  }
-
-  friend bool operator<(const Path &lhs, const Path &rhs) {
-    return lhs.KBlocks < rhs.KBlocks ||
-           (lhs.KBlocks == rhs.KBlocks &&
-            (lhs.firstInstruction < rhs.firstInstruction ||
-             (lhs.firstInstruction == rhs.firstInstruction &&
-              lhs.lastInstruction < rhs.lastInstruction)));
-  }
-
   unsigned KBlockSize() const;
   const path_ty &getBlocks() const;
   unsigned getFirstIndex() const;
@@ -64,7 +49,6 @@ public:
 
   std::vector<stackframe_ty> getStack(bool reversed) const;
 
-  std::vector<std::pair<KFunction *, BlockRange>> asFunctionRanges() const;
   std::string toString() const;
 
   static Path concat(const Path &l, const Path &r);
@@ -73,7 +57,7 @@ public:
 
   Path() = default;
 
-  Path(unsigned firstInstruction, std::vector<KBlock *> kblocks,
+  Path(unsigned firstInstruction, const path_ty &kblocks,
        unsigned lastInstruction)
       : KBlocks(kblocks), firstInstruction(firstInstruction),
         lastInstruction(lastInstruction) {}

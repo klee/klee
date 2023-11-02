@@ -12,6 +12,7 @@
 
 #include "klee/ADT/Ref.h"
 
+#include "klee/ADT/PersistentMap.h"
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprHashMap.h"
@@ -91,7 +92,7 @@ private:
 class PathConstraints {
 public:
   using ordered_constraints_ty =
-      std::map<Path::PathIndex, constraints_ty, Path::PathIndexCompare>;
+      PersistentMap<Path::PathIndex, constraints_ty, Path::PathIndexCompare>;
 
   void advancePath(KInstruction *ki);
   void advancePath(const Path &path);

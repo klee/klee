@@ -39,67 +39,6 @@ Path::PathIndex Path::getCurrentIndex() const {
   return {KBlocks.size() - 1, lastInstruction};
 }
 
-std::vector<stackframe_ty> Path::getStack(bool reversed) const {
-  std::vector<stackframe_ty> stack;
-  for (unsigned i = 0; i < KBlocks.size(); i++) {
-    auto current = reversed ? KBlocks[KBlocks.size() - 1 - i] : KBlocks[i];
-    // Previous for reversed is the next
-    KBlock *prev = nullptr;
-    if (i != 0) {
-      prev = reversed ? KBlocks[KBlocks.size() - i] : KBlocks[i - 1];
-    }
-    if (i == 0) {
-      stack.push_back({nullptr, current->parent});
-      continue;
-    }
-    if (reversed) {
-      auto kind = getTransitionKind(current, prev);
-      if (kind == TransitionKind::StepInto) {
-        if (!stack.empty()) {
-          stack.pop_back();
-        }
-      } else if (kind == TransitionKind::StepOut) {
-        assert(isa<KCallBlock>(prev));
-        stack.push_back({prev->getFirstInstruction(), current->parent});
-      }
-    } else {
-      auto kind = getTransitionKind(prev, current);
-      if (kind == TransitionKind::StepInto) {
-        stack.push_back({prev->getFirstInstruction(), current->parent});
-      } else if (kind == TransitionKind::StepOut) {
-        if (!stack.empty()) {
-          stack.pop_back();
-        }
-      }
-    }
-  }
-  return stack;
-}
-
-std::vector<std::pair<KFunction *, Path::BlockRange>>
-Path::asFunctionRanges() const {
-  assert(!KBlocks.empty());
-  std::vector<std::pair<KFunction *, BlockRange>> ranges;
-  BlockRange range{0, 0};
-  KFunction *function = KBlocks[0]->parent;
-  for (unsigned i = 1; i < KBlocks.size(); i++) {
-    if (getTransitionKind(KBlocks[i - 1], KBlocks[i]) == TransitionKind::None) {
-      if (i == KBlocks.size() - 1) {
-        range.last = i;
-        ranges.push_back({function, range});
-        return ranges;
-      } else {
-        continue;
-      }
-    }
-    range.last = i - 1;
-    ranges.push_back({function, range});
-    range.first = i;
-    function = KBlocks[i]->parent;
-  }
-  llvm_unreachable("asFunctionRanges reached the end of the for!");
-}
-
 Path Path::concat(const Path &l, const Path &r) {
   Path path = l;
   for (auto block : r.KBlocks) {
@@ -112,11 +51,16 @@ Path Path::concat(const Path &l, const Path &r) {
 std::string Path::toString() const {
   std::string blocks = "";
   unsigned depth = 0;
-  for (unsigned i = 0; i < KBlocks.size(); i++) {
-    auto current = KBlocks[i];
+  std::vector<KBlock *> KBlocksVector;
+  KBlocksVector.reserve(KBlocks.size());
+  for (auto kblock : KBlocks) {
+    KBlocksVector.push_back(kblock);
+  }
+  for (size_t i = 0; i < KBlocksVector.size(); i++) {
+    auto current = KBlocksVector[i];
     KBlock *prev = nullptr;
     if (i != 0) {
-      prev = KBlocks[i - 1];
+      prev = KBlocksVector[i - 1];
     }
     auto kind =
         i == 0 ? TransitionKind::StepInto : getTransitionKind(prev, current);

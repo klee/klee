@@ -10,6 +10,7 @@
 #ifndef KLEE_IMMUTABLELIST_H
 #define KLEE_IMMUTABLELIST_H
 
+#include <cassert>
 #include <memory>
 #include <vector>
 
@@ -94,6 +95,22 @@ public:
       node = std::make_shared<ImmutableListNode>();
     }
     node->values.push_back(std::move(value));
+  }
+
+  void push_back(const T &value) {
+    if (!node) {
+      node = std::make_shared<ImmutableListNode>();
+    }
+    node->values.push_back(value);
+  }
+
+  bool empty() { return size() == 0; }
+
+  const T &back() {
+    assert(node && "requiers not empty list");
+    auto it = iterator(node.get());
+    it.get = size() - 1;
+    return *it;
   }
 
   ImmutableList() : node(){};
