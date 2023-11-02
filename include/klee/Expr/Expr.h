@@ -753,7 +753,14 @@ public:
 
   static ref<Expr> create(ref<Expr> c, ref<Expr> t, ref<Expr> f);
 
-  Width getWidth() const { return trueExpr->getWidth(); }
+  Width getWidth() const {
+    if (trueExpr->height() < falseExpr->height()) {
+      return trueExpr->getWidth();
+    } else {
+      return falseExpr->getWidth();
+    }
+  }
+
   Kind getKind() const { return Select; }
 
   unsigned getNumKids() const { return numKids; }
@@ -1093,7 +1100,6 @@ FP_CAST_EXPR_CLASS(SIToFP)
       return createCachedExpr(res);                                            \
     }                                                                          \
     static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r);           \
-    Width getWidth() const { return left->getWidth(); }                        \
     Kind getKind() const { return _class_kind; }                               \
     virtual ref<Expr> rebuild(ref<Expr> kids[]) const {                        \
       return create(kids[0], kids[1]);                                         \
@@ -1103,6 +1109,13 @@ FP_CAST_EXPR_CLASS(SIToFP)
       return E->getKind() == Expr::_class_kind;                                \
     }                                                                          \
     static bool classof(const _class_kind##Expr *) { return true; }            \
+    Width getWidth() const {                                                   \
+      if (left->height() < right->height()) {                                  \
+        return left->getWidth();                                               \
+      } else {                                                                 \
+        return right->getWidth();                                              \
+      }                                                                        \
+    }                                                                          \
                                                                                \
   protected:                                                                   \
     virtual int compareContents(const Expr &b) const {                         \
@@ -1145,7 +1158,14 @@ ARITHMETIC_EXPR_CLASS(AShr)
     }                                                                          \
     static ref<Expr> create(const ref<Expr> &l, const ref<Expr> &r,            \
                             llvm::APFloat::roundingMode rm);                   \
-    Width getWidth() const { return left->getWidth(); }                        \
+    Width getWidth() const {                                                   \
+      if (left->height() < right->height()) {                                  \
+        return left->getWidth();                                               \
+      } else {                                                                 \
+        return right->getWidth();                                              \
+      }                                                                        \
+    }                                                                          \
+                                                                               \
     Kind getKind() const { return _class_kind; }                               \
     virtual ref<Expr> rebuild(ref<Expr> kids[]) const {                        \
       return create(kids[0], kids[1], roundingMode);                           \
