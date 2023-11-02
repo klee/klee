@@ -7151,26 +7151,32 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
   // the preferred constraints.  See test/Features/PreferCex.c for
   // an example) While this process can be very expensive, it can
   // also make understanding individual test cases much easier.
-  for (auto &pi : state.cexPreferences) {
-    bool mustBeTrue;
-    // Attempt to bound byte to constraints held in cexPreferences
-    bool success =
-        solver->mustBeTrue(extendedConstraints.cs(), Expr::createIsZero(pi),
-                           mustBeTrue, state.queryMetaData);
-    // If it isn't possible to add the condition without making the entire
-    // list UNSAT, then just continue to the next condition
-    if (!success)
-      break;
-    // If the particular constraint operated on in this iteration through
-    // the loop isn't implied then add it to the list of constraints.
-    if (!mustBeTrue) {
-      Assignment concretization = computeConcretization(
-          extendedConstraints.cs(), pi, state.queryMetaData);
+  const size_t cexPreferencesBound = 16;
+  if (state.cexPreferences.size() > cexPreferencesBound) {
+    klee_warning_once(0, "skipping cex preffering (size of restrictons > %d).",
+                      cexPreferencesBound);
+  } else {
+    for (auto &pi : state.cexPreferences) {
+      bool mustBeTrue;
+      // Attempt to bound byte to constraints held in cexPreferences
+      bool success =
+          solver->mustBeTrue(extendedConstraints.cs(), Expr::createIsZero(pi),
+                             mustBeTrue, state.queryMetaData);
+      // If it isn't possible to add the condition without making the entire
+      // list UNSAT, then just continue to the next condition
+      if (!success)
+        break;
+      // If the particular constraint operated on in this iteration through
+      // the loop isn't implied then add it to the list of constraints.
+      if (!mustBeTrue) {
+        Assignment concretization = computeConcretization(
+            extendedConstraints.cs(), pi, state.queryMetaData);
 
-      if (!concretization.isEmpty()) {
-        extendedConstraints.addConstraint(pi, concretization);
-      } else {
-        extendedConstraints.addConstraint(pi, {});
+        if (!concretization.isEmpty()) {
+          extendedConstraints.addConstraint(pi, concretization);
+        } else {
+          extendedConstraints.addConstraint(pi, {});
+        }
       }
     }
   }

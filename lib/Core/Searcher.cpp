@@ -714,7 +714,7 @@ void IterativeDeepeningSearcher::update(ExecutionState *current,
   }
 
   // no states left in underlying searcher: fill with paused states
-  if (baseSearcher->empty()) {
+  if (baseSearcher->empty() && !pausedStates.empty()) {
     metric->increaseLimit();
     baseSearcher->update(nullptr, pausedStates, {});
     pausedStates.clear();
