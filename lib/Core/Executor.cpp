@@ -7167,7 +7167,7 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
   // also make understanding individual test cases much easier.
   const size_t cexPreferencesBound = 16;
   if (state.cexPreferences.size() > cexPreferencesBound) {
-    klee_warning_once(0, "skipping cex preffering (size of restrictons > %d).",
+    klee_warning_once(0, "skipping cex preffering (size of restrictons > %zu).",
                       cexPreferencesBound);
   } else {
     for (auto &pi : state.cexPreferences) {
