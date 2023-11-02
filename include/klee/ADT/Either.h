@@ -32,6 +32,9 @@ protected:
 
   /// @brief Required by klee::ref-managed objects
   class ReferenceCounter _refCount;
+  unsigned hashValue;
+
+  static const unsigned MAGIC_HASH_CONSTANT = 39;
 
 public:
   using left = either_left<T1, T2>;
@@ -46,6 +49,8 @@ public:
   // virtual unsigned hash() = 0;
   virtual int compare(const either<T1, T2> &b) = 0;
   virtual bool equals(const either<T1, T2> &b) = 0;
+
+  unsigned hash() const { return hashValue; }
 };
 
 template <class T1, class T2> class either_left : public either<T1, T2> {
@@ -56,8 +61,15 @@ protected:
 private:
   ref<T1> value_;
 
+  unsigned computeHash() {
+    unsigned res = (unsigned)getKind();
+    res = (res * either<T1, T2>::MAGIC_HASH_CONSTANT) + value_->hash();
+    either<T1, T2>::hashValue = res;
+    return either<T1, T2>::hashValue;
+  }
+
 public:
-  either_left(ref<T1> leftValue) : value_(leftValue){};
+  either_left(ref<T1> leftValue) : value_(leftValue) { computeHash(); };
 
   ref<T1> value() const { return value_; }
   operator ref<T1> const() { return value_; }
@@ -100,8 +112,15 @@ protected:
 private:
   ref<T2> value_;
 
+  unsigned computeHash() {
+    unsigned res = (unsigned)getKind();
+    res = (res * either<T1, T2>::MAGIC_HASH_CONSTANT) + value_->hash();
+    either<T1, T2>::hashValue = res;
+    return either<T1, T2>::hashValue;
+  }
+
 public:
-  either_right(ref<T2> rightValue) : value_(rightValue){};
+  either_right(ref<T2> rightValue) : value_(rightValue) { computeHash(); };
 
   ref<T2> value() const { return value_; }
   operator ref<T2> const() { return value_; }

@@ -24,6 +24,19 @@ DISABLE_WARNING_POP
 namespace klee {
 using ExprEitherSymcrete = either<Expr, Symcrete>;
 
+struct ExprEitherSymcreteHash {
+  unsigned operator()(const ref<ExprEitherSymcrete> &e) const {
+    return e->hash();
+  }
+};
+
+struct ExprEitherSymcreteCmp {
+  bool operator()(const ref<ExprEitherSymcrete> &a,
+                  const ref<ExprEitherSymcrete> &b) const {
+    return a == b;
+  }
+};
+
 template <class T> class DenseSet {
   typedef std::set<T> set_ty;
   set_ty s;
@@ -87,7 +100,8 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
 class IndependentConstraintSet {
 private:
   using InnerSetUnion =
-      DisjointSetUnion<ref<ExprEitherSymcrete>, IndependentConstraintSet>;
+      DisjointSetUnion<ref<ExprEitherSymcrete>, IndependentConstraintSet,
+                       ExprEitherSymcreteHash, ExprEitherSymcreteCmp>;
 
   void initIndependentConstraintSet(ref<Expr> e);
   void initIndependentConstraintSet(ref<Symcrete> s);

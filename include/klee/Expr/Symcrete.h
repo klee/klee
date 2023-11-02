@@ -75,6 +75,8 @@ public:
     return id < rhs.id ? -1 : 1;
   }
 
+  unsigned hash() { return id; }
+
   bool operator<(const Symcrete &rhs) const { return compare(rhs) < 0; };
 };
 

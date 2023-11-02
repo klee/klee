@@ -24,21 +24,29 @@ namespace klee {
 using ExprEitherSymcrete = either<Expr, Symcrete>;
 
 template <typename ValueType, typename SetType,
+          typename HASH = std::hash<ValueType>,
+          typename PRED = std::equal_to<ValueType>,
           typename CMP = std::less<ValueType>>
 class DisjointSetUnion {
-protected:
-  PersistentMap<ValueType, ValueType, CMP> parent;
-  PersistentSet<ValueType, CMP> roots;
-  PersistentMap<ValueType, size_t, CMP> rank;
+public:
+  using internal_storage_ty = std::unordered_set<ValueType, HASH, PRED>;
+  using disjoint_sets_ty =
+      std::unordered_map<ValueType, ref<const SetType>, HASH, PRED>;
+  using iterator = typename internal_storage_ty::iterator;
 
-  PersistentSet<ValueType, CMP> internalStorage;
-  PersistentMap<ValueType, ref<const SetType>, CMP> disjointSets;
+protected:
+  std::unordered_map<ValueType, ValueType, HASH, PRED> parent;
+  std::set<ValueType, CMP> roots;
+  std::unordered_map<ValueType, size_t, HASH, PRED> rank;
+
+  std::unordered_set<ValueType, HASH, PRED> internalStorage;
+  std::unordered_map<ValueType, ref<const SetType>, HASH, PRED> disjointSets;
 
   ValueType find(const ValueType &v) { // findparent
     assert(parent.find(v) != parent.end());
     if (v == parent.at(v))
       return v;
-    parent.replace({v, find(parent.at(v))});
+    parent.insert_or_assign(v, find(parent.at(v)));
     return parent.at(v);
   }
 
@@ -60,15 +68,15 @@ protected:
     if (rank.at(a) < rank.at(b)) {
       std::swap(a, b);
     }
-    parent.replace({b, a});
+    parent.insert_or_assign(b, a);
     if (rank.at(a) == rank.at(b)) {
-      rank.replace({a, rank.at(a) + 1});
+      rank.insert_or_assign(a, rank.at(a) + 1);
     }
 
-    roots.remove(b);
-    disjointSets.replace(
-        {a, SetType::merge(disjointSets.at(a), disjointSets.at(b))});
-    disjointSets.remove(b);
+    roots.erase(b);
+    disjointSets.insert_or_assign(
+        a, SetType::merge(disjointSets.at(a), disjointSets.at(b)));
+    disjointSets.erase(b);
   }
 
   bool areJoined(const ValueType &i, const ValueType &j) const {
@@ -76,10 +84,6 @@ protected:
   }
 
 public:
-  using internalStorage_ty = PersistentSet<ValueType, CMP>;
-  using disjointSets_ty = ImmutableMap<ValueType, ref<const SetType>, CMP>;
-  using iterator = typename internalStorage_ty::iterator;
-
   iterator begin() const { return internalStorage.begin(); }
   iterator end() const { return internalStorage.end(); }
 
@@ -107,7 +111,7 @@ public:
     disjointSets.insert({value, new SetType(value)});
 
     internalStorage.insert(value);
-    internalStorage_ty oldRoots = roots;
+    std::set<ValueType, CMP> oldRoots = roots;
     for (ValueType v : oldRoots) {
       if (!areJoined(v, value) &&
           SetType::intersects(disjointSets.at(find(v)),
@@ -122,8 +126,8 @@ public:
   }
 
   void add(const DisjointSetUnion &b) {
-    internalStorage_ty oldRoots = roots;
-    internalStorage_ty newRoots = b.roots;
+    std::set<ValueType, CMP> oldRoots = roots;
+    std::set<ValueType, CMP> newRoots = b.roots;
     for (auto it : b.parent) {
       parent.insert(it);
     }
@@ -152,16 +156,16 @@ public:
 
   DisjointSetUnion() {}
 
-  DisjointSetUnion(const internalStorage_ty &is) {
+  DisjointSetUnion(const internal_storage_ty &is) {
     for (ValueType v : is) {
       addValue(v);
     }
   }
 
 public:
-  internalStorage_ty is() const { return internalStorage; }
+  internal_storage_ty is() const { return internalStorage; }
 
-  disjointSets_ty ds() const { return disjointSets; }
+  disjoint_sets_ty ds() const { return disjointSets; }
 };
 } // namespace klee
 

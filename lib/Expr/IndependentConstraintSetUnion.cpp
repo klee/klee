@@ -21,13 +21,13 @@ IndependentConstraintSetUnion::IndependentConstraintSetUnion(
   auto exprs = ics->exprs;
   for (ref<Expr> e : exprs) {
     auto v = ref<ExprEitherSymcrete::left>(new ExprEitherSymcrete::left(e));
-    rank.replace({v, 0});
+    rank.insert_or_assign(v, 0);
     internalStorage.insert(v);
   }
 
   for (ref<Symcrete> s : ics->symcretes) {
     auto v = ref<ExprEitherSymcrete::right>(new ExprEitherSymcrete::right(s));
-    rank.replace({v, 0});
+    rank.insert_or_assign(v, 0);
     internalStorage.insert(v);
   }
 
@@ -37,11 +37,11 @@ IndependentConstraintSetUnion::IndependentConstraintSetUnion(
 
   auto &first = *(internalStorage.begin());
   for (auto &e : internalStorage) {
-    parent.replace({e, first});
+    parent.insert_or_assign(e, first);
   }
-  rank.replace({first, 1});
+  rank.insert_or_assign(first, 1);
   roots.insert(first);
-  disjointSets.replace({first, ics});
+  disjointSets.insert_or_assign(first, ics);
   concretization = ics->concretization;
 }
 
@@ -57,7 +57,7 @@ void IndependentConstraintSetUnion::updateConcretization(
     ref<const IndependentConstraintSet> ics = disjointSets.at(e);
     Assignment part = delta.part(ics->getSymcretes());
     ics = ics->updateConcretization(part, concretizedExprs);
-    disjointSets.replace({e, ics});
+    disjointSets.insert_or_assign(e, ics);
   }
   for (auto &it : delta.bindings) {
     concretization.bindings.replace({it.first, it.second});
@@ -70,7 +70,7 @@ void IndependentConstraintSetUnion::removeConcretization(
     ref<const IndependentConstraintSet> ics = disjointSets.at(e);
     Assignment part = remove.part(ics->getSymcretes());
     ics = ics->removeConcretization(part, concretizedExprs);
-    disjointSets.replace({e, ics});
+    disjointSets.insert_or_assign(e, ics);
   }
   for (auto &it : remove.bindings) {
     concretization.bindings.remove(it.first);

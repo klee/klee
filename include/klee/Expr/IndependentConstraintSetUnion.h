@@ -8,8 +8,8 @@
 
 namespace klee {
 class IndependentConstraintSetUnion
-    : public DisjointSetUnion<ref<ExprEitherSymcrete>,
-                              IndependentConstraintSet> {
+    : public DisjointSetUnion<ref<ExprEitherSymcrete>, IndependentConstraintSet,
+                              ExprEitherSymcreteHash, ExprEitherSymcreteCmp> {
 public:
   Assignment concretization;
 
