@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <stdint.h>
 #ifdef EXTERNAL
 #include "klee.h"
 #include <assert.h>
 #include <stddef.h>
-#include <stdint.h>
 #include <stdlib.h>
 #else
 void klee_make_symbolic(void *addr, unsigned int nbytes, const char *name);
@@ -19,6 +19,7 @@ void klee_assume(_Bool condition);
 __attribute__((noreturn)) void klee_silent_exit(int status);
 void __assert_fail(const char *assertion, const char *file, unsigned int line,
                    const char *function);
+void klee_prefer_cex(void *, uintptr_t);
 #endif
 
 int __VERIFIER_nondet_int(void) {
@@ -35,11 +36,13 @@ unsigned int __VERIFIER_nondet_uint(void) {
   return x;
 }
 
+#ifdef __x86_64__
 unsigned __int128 __VERIFIER_nondet_uint128(void) {
   unsigned __int128 x;
   klee_make_symbolic(&x, sizeof(x), "unsigned __int128");
   return x;
 }
+#endif
 
 unsigned __VERIFIER_nondet_unsigned(void) {
   unsigned x;

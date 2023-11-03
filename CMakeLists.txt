@@ -644,6 +644,12 @@ configure_file(${CMAKE_SOURCE_DIR}/include/klee/Config/config.h.cmin
   ${CMAKE_BINARY_DIR}/include/klee/Config/config.h)
 
 ################################################################################
+# Generate `klee/klee.h` and `klee-test-comp.c`
+################################################################################
+configure_file(${CMAKE_SOURCE_DIR}/include/klee/klee.h ${CMAKE_BINARY_DIR}/include/klee/klee.h COPYONLY)
+configure_file(${CMAKE_SOURCE_DIR}/include/klee-test-comp.c ${CMAKE_BINARY_DIR}/include/klee-test-comp.c COPYONLY)
+
+################################################################################
 # Generate `CompileTimeInfo.h`
 ################################################################################
 if (EXISTS "${CMAKE_SOURCE_DIR}/.git")
