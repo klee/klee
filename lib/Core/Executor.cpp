@@ -4415,7 +4415,7 @@ void Executor::executeStep(ExecutionState &state) {
   if (targetManager->isTargeted(state) && state.targets().empty()) {
     terminateStateEarlyAlgorithm(state, "State missed all it's targets.",
                                  StateTerminationType::MissedAllTargets);
-  } else if (state.isStuck(MaxCycles)) {
+  } else if (state.isCycled(MaxCycles)) {
     terminateStateEarly(state, "max-cycles exceeded.",
                         StateTerminationType::MaxCycles);
   } else {

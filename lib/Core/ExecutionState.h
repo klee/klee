@@ -509,9 +509,9 @@ public:
   }
 
   inline bool isStuck(unsigned long long bound) const {
-    if (depth == 1)
+    if (depth == 0)
       return false;
-    return isCycled(bound) && depth > klee::util::ulog2(bound);
+    return isCycled(bound) && klee::util::ulog2(depth) > bound;
   }
 
   bool isCoveredNew() const {
