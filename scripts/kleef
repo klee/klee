@@ -1,0 +1,432 @@
+#!/usr/bin/env python3
+import argparse
+import os
+import subprocess
+import shutil
+import tempfile
+import hashlib
+from functools import partial
+from pathlib import Path
+
+
+def klee_options(
+    max_memory,
+    test_output_dir,
+    source,
+    hexhash,
+    max_time,
+    compiled_file,
+    is32,
+    f_err,
+    f_cov,
+):
+    if max_time and int(max_time) > 30:
+        MAX_SOLVER_TIME = 10
+    else:
+        MAX_SOLVER_TIME = 5
+    cmd = [
+        "--strip-unwanted-calls",  # removes llvm.dbg.* instructions, exponentially reduces time on some benchmarks
+        "--delete-dead-loops=false",  # without this optimizer removes some code, which decreases coverage
+        "--emit-all-errors",  # without this we generate only one test for assertion failures, which decreases coverage
+        "--mock-all-externals",  # this helps for some linux benchmarks, which have unused extern globals. without this flag we will not even start on them.
+        "--use-forked-solver=false",
+        # "--solver-backend=stp",
+        "--solver-backend=z3-tree",
+        "--max-solvers-approx-tree-inc=16",
+        f"--max-memory={int(max_memory * 0.9)}",  # Just use half of the memory in case we have to fork
+        "--optimize",
+        "--skip-not-lazy-initialized",
+        f"--output-dir={test_output_dir}",  # Output files into specific directory
+        "--output-source=false",  # Do not output assembly.ll - it can be too large
+        "--output-stats=false",
+        "--output-istats=false",
+        # "--istats-write-interval=90s", # Istats file can be large as well
+        "--write-xml-tests",  # Write tests in XML format
+        f"--xml-metadata-programfile={source.name}",  # Provide the name of the original source file
+        f"--xml-metadata-programhash={hexhash}",  # Provide sha256 hash of source file
+        # "--use-guided-search=none",
+        "--use-sym-size-alloc=true",
+        "--cex-cache-validity-cores",
+        # "--libc=uclibc",
+        # "--posix-runtime",
+        # "--fp-runtime",
+        # "--max-sym-array-size=4096",
+        "--symbolic-allocation-threshold=8192",
+        # "--dump-all-states=false",
+        #  "--search=nurs:covnew",
+        #  "--search=nurs:md2u", "--search=random-path",
+        #  "-const-array-opt",
+    ]
+
+    if is32:
+        cmd += [
+            "--allocate-determ",
+            f"--allocate-determ-size={min(int(max_memory * 0.6), 3 * 1024)}",
+            "--allocate-determ-start-address=0x00030000000",
+        ]
+
+    if f_err:
+        cmd += [
+            "--use-alpha-equivalence=false",
+            "--function-call-reproduce=reach_error",
+            # "--max-cycles=0",
+            # "--tc-type=bug",
+            "--dump-states-on-halt=false",  # Explicitly do not dump states
+            "--exit-on-error-type=Assert",  # Only generate test cases of type assert
+            # "--dump-test-case-type=Assert", # Only dump test cases of type assert
+            "--search=dfs",
+            #    "--search=nurs:covnew", "--search=random-path","--search=dfs", "--use-batching-search",
+            #    "--search=distance","--search=random-path","--use-batching-search",
+            # "--target-assert", # Target
+        ]
+        if max_time:
+            cmd += [
+                f"--max-time={int(max_time)}",  # Use the whole time
+            ]
+
+    if f_cov:
+        cmd += [
+            "--mem-trigger-cof", # Start on the fly tests generation after approaching memory cup
+            "--use-alpha-equivalence=true",
+            "--track-coverage=all", # Only branches and only instructions are wrong in real life. E.g., ternary operators are sometimes counted as different branches, while we stick to look at them as a single instruction from a single branch
+            "--use-iterative-deepening-search=max-cycles",
+            f"--max-solver-time={MAX_SOLVER_TIME}s",
+            # "--tc-type=cov",
+            "--only-output-states-covering-new",  # Don't generate all test cases
+            "--dump-states-on-halt=true",  # Check in case we missed some oncovered instructions
+            "--search=dfs",
+            "--search=random-state",
+        ]
+        if max_time:
+            max_time = float(max_time)
+            late_time = int(max_time * 0.9)
+            last_time = int(max_time * 0.97)
+            cmd += [
+                "--cover-on-the-fly=true",
+                f"--delay-cover-on-the-fly={late_time}",
+                f"--max-time={last_time}",
+            ]
+
+    cmd += [compiled_file]  # Finally add the file to be tested
+    return cmd
+
+
+def normalize_command(cmd, shell=False):
+    if shell:
+        out = cmd
+    else:
+        cmd2 = [x.as_posix() if isinstance(x, Path) else x for x in cmd]
+        out = " ".join(cmd2)
+    print("Running:", out)
+    return out
+
+
+def check_call(cmd, shell=False):
+    normalize_command(cmd, shell)
+    subprocess.check_call(cmd, shell=shell)
+    # p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    # p.communicate()
+    # print(p.returncode)
+
+
+def locateBinaryOrFail(binary, err_mess=""):
+    output = shutil.which(binary)
+    if output is not None:
+        return Path(output)
+    print(f"Command '{binary}' not found{err_mess}")
+    exit(1)
+
+
+def tryFind(folder, binary):
+    output = folder / binary
+    if output.exists():
+        return output
+    return locateBinaryOrFail(binary)
+
+
+def printNotNone(s):
+    if s is not None:
+        print(s.decode("utf-8"))
+
+
+class KLEEF(object):
+    """
+    Wrapper to run KLEEF within BenchExec
+    Compiles source and executes KLEEF
+    """
+
+    def __init__(
+        self,
+        source=None,
+        is32=False,
+        f_cov=False,
+        f_err=False,
+        max_memory=0,
+        max_time=0,
+        use_perf=False,
+        use_valgrind=False,
+    ):
+        self.source = Path(source) if source else None
+        self.is32 = is32
+        self.tempdir = None
+        self.compiled_file = None
+        self.f_cov = f_cov
+        self.f_err = f_err
+        self.max_memory = max_memory / 1024 / 1024  # Convert to MB
+        self.max_time = max_time
+        self.use_perf = use_perf
+        self.use_valgrind = use_valgrind
+
+        # This file is inside the bin directory - use the root as base
+        self.bin_directory = Path(__file__).parent
+        self.base_directory = self.bin_directory.parent
+        self.klee_path = self.bin_directory / "klee"
+        self.compiler_path = tryFind(self.bin_directory, "clang")
+        self.linker_path = tryFind(self.bin_directory, "llvm-link")
+        self.library_path = self.base_directory / "libraries"
+        self.runtime_library_path = self.base_directory / "runtime/lib"
+        self.test_results_path = Path.cwd() / "test-suite"
+        self.test_results_path.mkdir(exist_ok=True)
+
+        self.callEnv = os.environ.copy()
+        self.callEnv["LD_LIBRARY_PATH"] = self.library_path
+        self.callEnv["KLEE_RUNTIME_LIBRARY_PATH"] = self.runtime_library_path
+
+    def compile(self):
+        self.tempdir = Path(tempfile.mkdtemp())
+
+        # Compile file for testing
+        self.compiled_file = self.tempdir / (self.source.name + ".bc")
+
+        compiler_options = [
+            self.compiler_path,
+            "-O0",
+            "-Xclang",
+            "-disable-O0-optnone",
+            "-fbracket-depth=1024",
+            "-c",
+            "-g",
+            "-emit-llvm",
+        ]
+        if self.is32:
+            compiler_options += ["-m32"]
+        if self.use_perf:
+            compiler_options += ["-gdwarf-4"]
+        cmd = compiler_options + [
+            "-Wno-everything",  # do not print any error statements - we are not allowed to change the code
+            "-fno-default-inline",
+            "-o",
+            self.compiled_file,
+            self.source,
+        ]
+        check_call(cmd)
+
+        # Compile library
+        compiled_library = self.tempdir / "library.bc"
+        include_path = self.base_directory / "include/klee-test-comp.c"
+        cmd = compiler_options + [
+            "-o",
+            compiled_library,
+            include_path,
+        ]
+        check_call(cmd)
+
+        # Link both together to final
+        cmd = [
+            self.linker_path,
+            "-o",
+            self.compiled_file,
+            compiled_library,
+            self.compiled_file,
+        ]
+        check_call(cmd)
+
+    def isModifyingUlimitPermitted(self):
+        out = subprocess.run(
+            "ulimit -s unlimited",
+            shell=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        ).returncode
+        return not out
+
+    def run(self):
+        test_output_dir = self.test_results_path / self.source.name
+        # Clean-up from previous runs if needed
+        shutil.rmtree(test_output_dir, ignore_errors=True)
+
+        # Calculate hashsum of original source file
+        with open(self.source, mode="rb") as f:
+            h = hashlib.sha256()
+            for buf in iter(partial(f.read, 128), b""):
+                h.update(buf)
+
+        cmd = [self.klee_path]
+        if self.use_perf:
+            cmd = ["perf", "record", "-g", "--call-graph", "dwarf"] + cmd
+        elif self.use_valgrind:
+            cmd = ["valgrind", "--tool=massif"] + cmd
+
+        # Add common arguments
+        cmd += klee_options(
+            self.max_memory,
+            test_output_dir,
+            self.source,
+            h.hexdigest(),
+            self.max_time,
+            self.compiled_file,
+            self.is32,
+            self.f_err,
+            self.f_cov,
+        )
+        if self.isModifyingUlimitPermitted():
+            cmd = ["ulimit -s unlimited", "&&"] + cmd
+        cmd = normalize_command(cmd)
+
+        p = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True,
+            env=self.callEnv,
+        )
+        s_out, s_err = p.communicate()
+        if not self.use_perf:
+            printNotNone(s_out)
+        printNotNone(s_err)
+
+        if self.use_perf:
+            cmd = "perf script | c++filt | gprof2dot -f perf -s | dot -Tpdf -o output.pdf"
+            check_call(cmd, shell=True)
+
+        return test_output_dir
+
+    def version(self):
+        cmd = [self.klee_path, "--version"]
+        p = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=self.callEnv,
+        )
+        s_out, s_err = p.communicate()
+        printNotNone(s_out)
+
+
+def run(args):
+    if args.version:
+        wrapper = KLEEF()
+        wrapper.version()
+        exit(0)
+
+    # Validation of arguments
+    if not args.source or not os.path.isfile(args.source):
+        print("File does not exist", args.source)
+        exit(1)
+
+    if args.property_file:
+        with open(args.property_file, "r") as f:
+            for line in f:
+                if "@DECISIONEDGE" in line:
+                    args.coverage_only = True
+                if "@CALL(reach_error)" in line:
+                    args.error_only = True
+    # Generate wrapper
+    time = 0
+    if args.max_cputime_soft:  # Use soft timeout if available
+        time = args.max_cputime_soft
+    elif args.max_cputime_hard:
+        time = args.max_cputime_hard
+    elif args.max_walltime:
+        time = args.max_walltime
+    elif args.max_time:
+        time = args.max_time
+
+    is32 = None
+    if vars(args).get("32"):
+        is32 = True
+    if vars(args).get("64"):
+        if is32:
+            print("Cannot set --64 and --32 simultanously")
+            exit(1)
+        is32 = False
+
+    if is32 is None:
+        print("No architecture set. Assume 64bit")
+        is32 = False
+    optAndUsed = [
+        (args.perf, "perf", ["perf", "c++filt", "gprof2dot", "dot"]),
+        (args.valgrind, "valgrind", ["valgrind"]),
+    ]
+    for opt, name, used_by_opt in optAndUsed:
+        if not opt:
+            continue
+        for tool in used_by_opt:
+            locateBinaryOrFail(tool, err_mess=f", so cannot run with option --{name}")
+
+    if args.perf and args.valgrind:
+        print("Cannot use perf and valgrind at the same time")
+        exit(1)
+    wrapper = KLEEF(
+        source=args.source,
+        is32=is32,
+        f_cov=args.coverage_only,
+        f_err=args.error_only,
+        max_memory=args.max_memory,
+        max_time=time,
+        use_perf=args.perf,
+        use_valgrind=args.valgrind,
+    )
+    wrapper.compile()
+    return wrapper.run()
+
+
+def main():
+    # Initialize argparse
+    parser = argparse.ArgumentParser(description="KLEEF single-file runner")
+    parser.add_argument(
+        "source", help="klee-out directory to parse", nargs="?", default=None
+    )
+    parser.add_argument("--version", help="print version of klee", action="store_true")
+    parser.add_argument("--32", help="Compile 32bit binaries", action="store_true")
+    parser.add_argument("--64", help="Compile 64bit binaries", action="store_true")
+    parser.add_argument(
+        "--error-only", help="Focus on searching errors", action="store_true"
+    )
+    parser.add_argument(
+        "--perf", help="Measure speed with perf", action="store_true", default=False
+    )
+    parser.add_argument(
+        "--valgrind",
+        help="Measure memory with valgrind",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--coverage-only", help="Focus on coverage", action="store_true"
+    )
+    parser.add_argument(
+        "--max-memory", help="Maximum memory in byte ", type=int, default=2000
+    )
+    parser.add_argument("--max-time", help="Maximum time in s", type=int, default=0)
+    parser.add_argument(
+        "--max-walltime", help="Maximum walltime in s", type=int, default=0
+    )
+    parser.add_argument(
+        "--max-cputime-soft", help="Maximum cputime in s (soft)", type=int, default=0
+    )
+    parser.add_argument(
+        "--max-cputime-hard", help="Maximum cputime in s (hard)", type=int, default=0
+    )
+    parser.add_argument(
+        "--property-file",
+        help="Property file for test goal description",
+        type=str,
+        default=None,
+    )
+    args = parser.parse_args()
+    run(args)
+
+
+if __name__ == "__main__":
+    main()
