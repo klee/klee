@@ -25,6 +25,7 @@ class ConstraintSet;
 
 typedef std::set<ref<Symcrete>, SymcreteLess> SymcreteOrderedSet;
 using symcretes_ty = SymcreteOrderedSet;
+typedef std::function<bool(ref<Expr>)> ExprPredicate;
 
 class Assignment {
 public:
@@ -59,9 +60,12 @@ public:
 
   template <typename InputIterator>
   bool satisfies(InputIterator begin, InputIterator end,
+                 ExprPredicate predicate, bool allowFreeValues = true);
+  template <typename InputIterator>
+  bool satisfies(InputIterator begin, InputIterator end,
                  bool allowFreeValues = true);
   template <typename InputIterator>
-  bool satisfiesNonBoolean(InputIterator begin, InputIterator end,
+  bool satisfiesOrConstant(InputIterator begin, InputIterator end,
                            bool allowFreeValues = true);
   void dump() const;
 
@@ -115,28 +119,43 @@ inline ref<Expr> Assignment::evaluate(ref<Expr> e, bool allowFreeValues) const {
   return v.visit(e);
 }
 
+struct isTrueBoolean {
+  bool operator()(ref<Expr> e) const {
+    return e->getWidth() == Expr::Bool && e->isTrue();
+  }
+};
+
+struct isTrueBooleanOrConstantNotBoolean {
+  bool operator()(ref<Expr> e) const {
+    return (e->getWidth() == Expr::Bool && e->isTrue()) ||
+           ((isa<ConstantExpr>(e) && e->getWidth() != Expr::Bool));
+  }
+};
+
 template <typename InputIterator>
 inline bool Assignment::satisfies(InputIterator begin, InputIterator end,
+                                  ExprPredicate predicate,
                                   bool allowFreeValues) {
   AssignmentEvaluator v(*this, allowFreeValues);
   for (; begin != end; ++begin) {
-    assert((*begin)->getWidth() == Expr::Bool && "constraints must be boolean");
-    if (!v.visit(*begin)->isTrue())
+    if (!predicate(v.visit(*begin)))
       return false;
   }
   return true;
 }
 
 template <typename InputIterator>
-inline bool Assignment::satisfiesNonBoolean(InputIterator begin,
+inline bool Assignment::satisfies(InputIterator begin, InputIterator end,
+                                  bool allowFreeValues) {
+  return satisfies(begin, end, isTrueBoolean(), allowFreeValues);
+}
+
+template <typename InputIterator>
+inline bool Assignment::satisfiesOrConstant(InputIterator begin,
                                             InputIterator end,
                                             bool allowFreeValues) {
-  AssignmentEvaluator v(*this, allowFreeValues);
-  for (; begin != end; ++begin) {
-    if (!isa<ConstantExpr>(v.visit(*begin)))
-      return false;
-  }
-  return true;
+  return satisfies(begin, end, isTrueBooleanOrConstantNotBoolean(),
+                   allowFreeValues);
 }
 } // namespace klee
 

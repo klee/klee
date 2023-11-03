@@ -169,16 +169,6 @@ bool CexCachingSolver::searchForResponse(KeyType &key,
       return true;
     }
 
-    KeyType booleanKey;
-    KeyType nonBooleanKey;
-    for (auto i : key) {
-      if (i->getWidth() == Expr::Bool) {
-        booleanKey.insert(i);
-      } else {
-        nonBooleanKey.insert(i);
-      }
-    }
-
     // Otherwise, iterate through the set of current solver responses to see if
     // one of them satisfies the query.
     for (responseTable_ty::iterator it = responseTable.begin(),
@@ -186,8 +176,7 @@ bool CexCachingSolver::searchForResponse(KeyType &key,
          it != ie; ++it) {
       ref<SolverResponse> a = *it;
       if (isa<InvalidResponse>(a) &&
-          cast<InvalidResponse>(a)->satisfies(booleanKey) &&
-          cast<InvalidResponse>(a)->satisfiesNonBoolean(nonBooleanKey)) {
+          cast<InvalidResponse>(a)->satisfiesOrConstant(key)) {
         result = a;
         return true;
       }
@@ -272,17 +261,7 @@ bool CexCachingSolver::getResponse(const Query &query,
     }
 
     if (DebugCexCacheCheckBinding) {
-      KeyType booleanKey;
-      KeyType nonBooleanKey;
-      for (auto i : key) {
-        if (i->getWidth() == Expr::Bool) {
-          booleanKey.insert(i);
-        } else {
-          nonBooleanKey.insert(i);
-        }
-      }
-      if (!cast<InvalidResponse>(result)->satisfies(booleanKey) ||
-          !cast<InvalidResponse>(result)->satisfiesNonBoolean(nonBooleanKey)) {
+      if (!cast<InvalidResponse>(result)->satisfiesOrConstant(key)) {
         query.dump();
         result->dump();
         klee_error("Generated assignment doesn't match query");
