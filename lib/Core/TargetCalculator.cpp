@@ -92,8 +92,7 @@ void TargetCalculator::update(const ExecutionState &state) {
             }
             if (!fnsTaken.count(calledKFunction) &&
                 fullyCoveredFunctions.count(calledKFunction) == 0 &&
-                calledKFunction->numInstructions != 0 &&
-                !getCoverageTargets(calledKFunction).empty()) {
+                calledKFunction->numInstructions != 0) {
               fns.push_back(calledKFunction);
             }
           }
