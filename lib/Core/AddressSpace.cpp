@@ -378,9 +378,10 @@ void AddressSpace::copyOutConcrete(const MemoryObject *mo,
                                    const ObjectState *os,
                                    const Assignment &assignment) const {
   auto address = reinterpret_cast<std::uint8_t *>(mo->address);
+  AssignmentEvaluator ae(assignment, false);
   std::vector<uint8_t> concreteStore(mo->size);
   for (size_t i = 0; i < mo->size; i++) {
-    auto byte = assignment.evaluate(os->read8(i), false);
+    auto byte = ae.visit(os->read8(i));
     concreteStore[i] = cast<ConstantExpr>(byte)->getZExtValue(8);
   }
   std::memcpy(address, concreteStore.data(), mo->size);
@@ -405,9 +406,10 @@ bool AddressSpace::copyInConcrete(const MemoryObject *mo, const ObjectState *os,
                                   uint64_t src_address,
                                   const Assignment &assignment) {
   auto address = reinterpret_cast<std::uint8_t *>(src_address);
+  AssignmentEvaluator ae(assignment, false);
   std::vector<uint8_t> concreteStore(mo->size);
   for (size_t i = 0; i < mo->size; i++) {
-    auto byte = assignment.evaluate(os->read8(i), false);
+    auto byte = ae.visit(os->read8(i));
     concreteStore[i] = cast<ConstantExpr>(byte)->getZExtValue(8);
   }
   if (memcmp(address, concreteStore.data(), mo->size) != 0) {
