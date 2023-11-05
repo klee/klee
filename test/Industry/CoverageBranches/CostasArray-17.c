@@ -1,21 +1,28 @@
-// RUN: %clang  -Wno-everything %s -emit-llvm %O0opt -g -c -o %t1.bc
+// RUN: %clang -Wno-everything %s -emit-llvm %O0opt -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --optimize-aggressive --track-coverage=branches --optimize=true --emit-all-errors --only-output-states-covering-new=true --dump-states-on-halt=true --search=dfs %t1.bc
-// RUN: %klee-stats --print-columns ' Branches,ICov(%),BCov(%)' --table-format=csv %t.klee-out > %t.stats
-// RUN: FileCheck --input-file=%t.stats --check-prefix=CHECK-AGGRESSIVE %s
 
-// Branch coverage 100%, the number of branches is 1:
-// CHECK-AGGRESSIVE: Branches,ICov(%),BCov(%)
-// CHECK-AGGRESSIVE-NEXT: 1,{{(0\.[0-9][0-9])}},100.00
+// RUN: rm -f %t*.gcda %t*.gcno %t*.gcov
+// RUN: %cc -DGCOV %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner --coverage
+// RUN: %replay %t.klee-out %t_runner
+// RUN: gcov -b %t_runner-%basename_t > %t.cov.log
+
+// RUN: FileCheck --input-file=%t.cov.log --check-prefix=CHECK %s
 
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --optimize-aggressive=false --track-coverage=branches --optimize=true --emit-all-errors --only-output-states-covering-new=true --dump-states-on-halt=true --search=dfs %t1.bc
-// RUN: %klee-stats --print-columns ' Branches,ICov(%),BCov(%)' --table-format=csv %t.klee-out > %t.stats
-// RUN: FileCheck --input-file=%t.stats --check-prefix=CHECK-NOT-AGGRESSIVE %s
 
-// Branch coverage 50%, but the number of branches is 2:
-// CHECK-NOT-AGGRESSIVE: Branches,ICov(%),BCov(%)
-// CHECK-NOT-AGGRESSIVE-NEXT: 2,{{(0\.[0-9][0-9])}},50.00
+// RUN: rm -f %t*.gcda %t*.gcno %t*.gcov
+// RUN: %cc -DGCOV %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner --coverage
+// RUN: %replay %t.klee-out %t_runner
+// RUN: gcov -b %t_runner-%basename_t > %t.cov.log
+
+// RUN: FileCheck --input-file=%t.cov.log --check-prefix=CHECK %s
+
+// Branch coverage 100%, the number of branches is 1:
+// CHECK: Lines executed:{{(0\.7[0-9])}}% of 1545
+// CHECK-NEXT: Branches executed:100.00% of 2
+// CHECK-NEXT: Taken at least once:100.00% of 2
 
 #include "klee-test-comp.c"
 
@@ -34,10 +41,24 @@ extern void __assert_fail(const char *, const char *, unsigned int,
                           const char *) __attribute__((__nothrow__, __leaf__))
 __attribute__((__noreturn__));
 int __VERIFIER_nondet_int();
+
+#ifdef GCOV
+extern void __gcov_dump(void);
+#endif
+
+void abort_prog() {
+#ifdef GCOV
+  __gcov_dump();
+  exit(0);
+#else
+  abort();
+#endif
+}
+
 void reach_error() { __assert_fail("0", "CostasArray-17.c", 5, "reach_error"); }
 void assume(int cond) {
   if (!cond)
-    abort();
+    abort_prog();
 }
 int main() {
   int cond0;

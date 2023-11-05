@@ -4,7 +4,7 @@
 // RUN: %klee-stats --print-columns 'ICov(%),BCov(%)' --table-format=csv %t.klee-out > %t.stats
 // RUN: FileCheck -check-prefix=CHECK-BRANCH -input-file=%t.stats %s
 
-// Branch coverage 100%, and instruction coverage is very small:
+// Branch coverage 100%, and instruction coverage may vary:
 // CHECK-BRANCH: ICov(%),BCov(%)
 // CHECK-BRANCH-NEXT: {{([1-9][0-9]\.[0-9][0-9])}},100.00
 
@@ -13,7 +13,7 @@
 // RUN: %klee-stats --print-columns 'ICov(%),BCov(%)' --table-format=csv %t.klee-out > %t.stats
 // RUN: FileCheck -check-prefix=CHECK-BLOCK -input-file=%t.stats %s
 
-// Branch coverage 100%, and instruction coverage is very small:
+// Branch coverage 100%, and instruction 100%:
 // CHECK-BLOCK: ICov(%),BCov(%)
 // CHECK-BLOCK-NEXT: 100.00,100.00
 

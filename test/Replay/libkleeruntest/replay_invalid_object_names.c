@@ -12,7 +12,7 @@
 
 // Check that setting `KLEE_RUN_TEST_ERRORS_NON_FATAL` will not exit with an error
 // and will continue executing.
-// RUN: env KTEST_FILE=%t.klee-out/test000001.ktest KLEE_RUN_TEST_ERRORS_NON_FATAL=1 %t_runner 2>&1 | FileCheck %s
+// RUN: env KTEST_FILE=%t.klee-out/test000001.ktest KLEE_RUN_TEST_ERRORS_NON_FATAL=FORCE %t_runner 2>&1 | FileCheck %s
 
 #include "klee/klee.h"
 #include <stdio.h>

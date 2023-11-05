@@ -1,9 +1,8 @@
-// REQUIRES: geq-llvm-14.0
 // RUN: %clang  -Wno-everything %s -emit-llvm %O0opt -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --optimize-aggressive=false --track-coverage=branches --optimize=true --mock-all-externals --external-calls=all --use-forked-solver=false --max-memory=6008 --skip-not-lazy-initialized --istats-write-interval=90s --use-sym-size-alloc=true --cex-cache-validity-cores --symbolic-allocation-threshold=8192 --write-kqueries --write-xml-tests --only-output-states-covering-new=true --dump-states-on-halt=true --emit-all-errors=true --search=bfs %t1.bc
+// RUN: ls %t.klee-out | grep _1.xml | wc -l | grep 8
 
-// RUN: test -f %t.klee-out/test000023_1.xml
 #include "klee-test-comp.c"
 
 extern void abort(void);
@@ -3645,5 +3644,3 @@ NTSTATUS ZwClose(HANDLE Handle) {
     }
   }
 }
-
-// CHECK: generated tests = 3

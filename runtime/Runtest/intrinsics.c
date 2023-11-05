@@ -43,7 +43,10 @@ static void report_internal_error(const char *msg, ...) {
   va_end(ap);
   fprintf(stderr, "\n");
   char *testErrorsNonFatal = getenv("KLEE_RUN_TEST_ERRORS_NON_FATAL");
-  if (testErrorsNonFatal) {
+  if (testErrorsNonFatal && !strcmp(testErrorsNonFatal, "STOP")) {
+    fprintf(stderr, "KLEE_RUN_TEST_ERROR: Stop execution without an error\n");
+    exit(0);
+  } else if (testErrorsNonFatal && !strcmp(testErrorsNonFatal, "FORCE")) {
     fprintf(stderr, "KLEE_RUN_TEST_ERROR: Forcing execution to continue\n");
   } else {
     exit(1);
