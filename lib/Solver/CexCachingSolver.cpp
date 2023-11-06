@@ -274,7 +274,7 @@ bool CexCachingSolver::getResponse(const Query &query,
     result->tryGetValidityCore(resultCore);
     KeyType resultCoreConstarints(resultCore.constraints.begin(),
                                   resultCore.constraints.end());
-    ref<Expr> neg = Expr::createIsZero(query.expr);
+    ref<Expr> neg = Expr::createIsZero(resultCore.expr);
     resultCoreConstarints.insert(neg);
     cache.insert(resultCoreConstarints, result);
   }
