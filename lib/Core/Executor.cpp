@@ -3771,7 +3771,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::SIToFP: {
     SIToFPInst *fi = cast<SIToFPInst>(i);
     Expr::Width resultType = getWidthForLLVMType(fi->getType());
-    if (Context::get().getPointerWidth() == 32) {
+    if (X86FPAsX87FP80 && Context::get().getPointerWidth() == 32) {
       resultType = Expr::Fl80;
     }
     ref<Expr> arg = eval(ki, 0, state).value;
