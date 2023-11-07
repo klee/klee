@@ -35,6 +35,24 @@ DISABLE_WARNING_POP
 using namespace llvm;
 
 namespace klee {
+extern llvm::cl::opt<unsigned> X86FPAsX87FP80;
+
+ref<Expr> FPToX87FP80Ext(ref<Expr> arg) {
+  ref<Expr> result = arg;
+#ifdef ENABLE_FP
+  Expr::Width resultType = Expr::Fl80;
+  if (Context::get().getPointerWidth() == 32 &&
+      arg->getWidth() == Expr::Int64) {
+    result = FPExtExpr::create(arg, resultType);
+  }
+#else
+  klee_message(
+      "You may enable x86-as-x87FP80 behaviour by passing the following options"
+      " to cmake:\n"
+      "\"-DENABLE_FLOATING_POINT=ON\"\n");
+#endif // ENABLE_FP
+  return result;
+}
 
 ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c,
                                                llvm::APFloat::roundingMode rm,
@@ -51,7 +69,12 @@ ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c,
     if (const ConstantInt *ci = dyn_cast<ConstantInt>(c)) {
       return ConstantExpr::alloc(ci->getValue());
     } else if (const ConstantFP *cf = dyn_cast<ConstantFP>(c)) {
-      return ConstantExpr::alloc(cf->getValueAPF());
+      ref<klee::ConstantExpr> result = ConstantExpr::alloc(cf->getValueAPF());
+      if (X86FPAsX87FP80 && c->getType()->isFloatingPointTy() &&
+          Context::get().getPointerWidth() == 32) {
+        result = cast<klee::ConstantExpr>(FPToX87FP80Ext(result));
+      }
+      return result;
     } else if (const GlobalValue *gv = dyn_cast<GlobalValue>(c)) {
       auto it = globalAddresses.find(gv);
       assert(it != globalAddresses.end());
