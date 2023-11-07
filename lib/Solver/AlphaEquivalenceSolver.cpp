@@ -75,8 +75,12 @@ ValidityCore
 AlphaEquivalenceSolver::changeVersion(const ValidityCore &validityCore,
                                       const ExprHashMap<ref<Expr>> &reverse) {
   ValidityCore reverseValidityCore;
-  assert(reverse.find(validityCore.expr) != reverse.end());
-  reverseValidityCore.expr = reverse.at(validityCore.expr);
+  if (isa<ConstantExpr>(validityCore.expr)) {
+    reverseValidityCore.expr = validityCore.expr;
+  } else {
+    assert(reverse.find(validityCore.expr) != reverse.end());
+    reverseValidityCore.expr = reverse.at(validityCore.expr);
+  }
   for (auto e : validityCore.constraints) {
     assert(reverse.find(e) != reverse.end());
     reverseValidityCore.constraints.insert(reverse.at(e));
