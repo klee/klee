@@ -7,7 +7,7 @@
 // RUN: not test -f %t.klee-out/test000002.ktest
 
 // RUN: rm -rf %t.klee-out-2
-// RUN: %klee --exit-on-error --output-dir=%t.klee-out-2 --seed-file %t.klee-out/test000001.ktest --allow-seed-extension --zero-seed-extension %t.bc 2>&1 | FileCheck %s
+// RUN: %klee --exit-on-error --output-dir=%t.klee-out-2 --seed-file %t.klee-out/test000001.ktest --allow-seed-extension %t.bc 2>&1 | FileCheck %s
 
 #include "klee/klee.h"
 
