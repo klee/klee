@@ -251,18 +251,10 @@ cl::opt<bool> OnlySeed("only-seed",
                                 "doing regular search (default=false)."),
                        cl::cat(SeedingCat));
 
-cl::opt<bool>
-    AllowSeedExtension("allow-seed-extension",
-                       cl::init(false),
-                       cl::desc("Allow extra (unbound) values to become "
-                                "symbolic during seeding (default=false)."),
-                       cl::cat(SeedingCat));
-
-cl::opt<bool> ZeroSeedExtension(
-    "zero-seed-extension",
-    cl::init(false),
-    cl::desc(
-        "Use zero-filled objects if matching seed not found (default=false)"),
+cl::opt<bool> AllowSeedExtension(
+    "allow-seed-extension", cl::init(false),
+    cl::desc("Allow extra values to become symbolic during seeding; "
+             "the seed is extended with zeros (default=false)."),
     cl::cat(SeedingCat));
 
 cl::opt<bool> AllowSeedTruncation(
@@ -4484,17 +4476,17 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
         KTestObject *obj = si.getNextInput(mo, NamedSeedMatching);
 
         if (!obj) {
-          if (ZeroSeedExtension) {
+          if (AllowSeedExtension) {
             std::vector<unsigned char> &values = si.assignment.bindings[array];
             values = std::vector<unsigned char>(mo->size, '\0');
-          } else if (!AllowSeedExtension) {
+          } else /*if (!AllowSeedExtension)*/ {
             terminateStateOnUserError(state,
                                       "ran out of inputs during seeding");
             break;
           }
         } else {
           /* The condition below implies obj->numBytes != mo->size */
-          if ((obj->numBytes < mo->size && !(AllowSeedExtension || ZeroSeedExtension)) ||
+          if ((obj->numBytes < mo->size && !AllowSeedExtension) ||
               (obj->numBytes > mo->size && !AllowSeedTruncation)) {
             std::stringstream msg;
 	    msg << "replace size mismatch: "
@@ -4508,11 +4500,8 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
             std::vector<unsigned char> &values = si.assignment.bindings[array];
             values.insert(values.begin(), obj->bytes,
                           obj->bytes + std::min(obj->numBytes, mo->size));
-
-            if (ZeroSeedExtension) {
-              for (unsigned i=obj->numBytes; i<mo->size; ++i)
+              for (unsigned i = obj->numBytes; i < mo->size; ++i)
                 values.push_back('\0');
-            }
           }
         }
       }
