@@ -1,3 +1,5 @@
+// REQUIRES: not-msan
+// Disabling msan because it times out on CI
 // Testcase for proper handling of exception destructors that throw.
 // REQUIRES: uclibc
 // REQUIRES: libcxx

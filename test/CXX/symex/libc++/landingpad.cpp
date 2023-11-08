@@ -1,3 +1,5 @@
+// REQUIRES: not-msan
+// Disabling msan because it times out on CI
 // Testcase for proper handling of
 // c++ type, constructors and destructors.
 // Based on: https://gcc.gnu.org/wiki/Dwarf2EHNewbiesHowto
