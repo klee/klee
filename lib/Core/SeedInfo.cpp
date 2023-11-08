@@ -74,27 +74,22 @@ void SeedInfo::patchSeed(const ExecutionState &state,
   std::set< std::pair<const Array*, unsigned> > directReads;
   std::vector< ref<ReadExpr> > reads;
   findReads(condition, false, reads);
-  for (std::vector< ref<ReadExpr> >::iterator it = reads.begin(), 
-         ie = reads.end(); it != ie; ++it) {
-    ReadExpr *re = it->get();
+  for (auto const &re : reads) {
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(re->index)) {
       directReads.insert(std::make_pair(re->updates.root, 
                                         (unsigned) CE->getZExtValue(32)));
     }
   }
-  
-  for (std::set< std::pair<const Array*, unsigned> >::iterator
-         it = directReads.begin(), ie = directReads.end(); it != ie; ++it) {
-    const Array *array = it->first;
-    unsigned i = it->second;
+
+  for (auto const &[array, i] : directReads) {
     ref<Expr> read = ReadExpr::create(UpdateList(array, 0),
                                       ConstantExpr::alloc(i, Expr::Int32));
     
-    // If not in bindings then this can't be a violation?
-    Assignment::bindings_ty::iterator it2 = assignment.bindings.find(array);
-    if (it2 != assignment.bindings.end()) {
+    // If not in bindings, then this can't be a violation?
+    auto a = assignment.bindings.find(array);
+    if (a != assignment.bindings.end()) {
       ref<Expr> isSeed = EqExpr::create(read, 
-                                        ConstantExpr::alloc(it2->second[i], 
+                                        ConstantExpr::alloc(a->second[i],
                                                             Expr::Int8));
       bool res;
       bool success =
@@ -107,9 +102,9 @@ void SeedInfo::patchSeed(const ExecutionState &state,
             solver->getValue(required, read, value, state.queryMetaData);
         assert(success && "FIXME: Unhandled solver failure");            
         (void) success;
-        it2->second[i] = value->getZExtValue(8);
+        a->second[i] = value->getZExtValue(8);
         cm.addConstraint(EqExpr::create(
-            read, ConstantExpr::alloc(it2->second[i], Expr::Int8)));
+            read, ConstantExpr::alloc(a->second[i], Expr::Int8)));
       } else {
         cm.addConstraint(isSeed);
       }

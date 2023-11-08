@@ -4476,13 +4476,11 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
     bindObjectInState(state, mo, false, array);
     state.addSymbolic(mo, array);
     
-    std::map< ExecutionState*, std::vector<SeedInfo> >::iterator it = 
-      seedMap.find(&state);
-    if (it!=seedMap.end()) { // In seed mode we need to add this as a
-                             // binding.
-      for (std::vector<SeedInfo>::iterator siit = it->second.begin(), 
-             siie = it->second.end(); siit != siie; ++siit) {
-        SeedInfo &si = *siit;
+    auto found = seedMap.find(&state);
+    if (found != seedMap.end()) {
+      // In seed mode we need to add this as binding
+
+      for (SeedInfo &si : found->second) {
         KTestObject *obj = si.getNextInput(mo, NamedSeedMatching);
 
         if (!obj) {
@@ -4490,26 +4488,27 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
             std::vector<unsigned char> &values = si.assignment.bindings[array];
             values = std::vector<unsigned char>(mo->size, '\0');
           } else if (!AllowSeedExtension) {
-            terminateStateOnUserError(state, "ran out of inputs during seeding");
+            terminateStateOnUserError(state,
+                                      "ran out of inputs during seeding");
             break;
           }
         } else {
-          if (obj->numBytes != mo->size &&
-              ((!(AllowSeedExtension || ZeroSeedExtension)
-                && obj->numBytes < mo->size) ||
-               (!AllowSeedTruncation && obj->numBytes > mo->size))) {
-	    std::stringstream msg;
+          /* The condition below implies obj->numBytes != mo->size */
+          if ((obj->numBytes < mo->size && !(AllowSeedExtension || ZeroSeedExtension)) ||
+              (obj->numBytes > mo->size && !AllowSeedTruncation)) {
+            std::stringstream msg;
 	    msg << "replace size mismatch: "
 		<< mo->name << "[" << mo->size << "]"
 		<< " vs " << obj->name << "[" << obj->numBytes << "]"
 		<< " in test\n";
-
             terminateStateOnUserError(state, msg.str());
             break;
           } else {
+            /* Either sizes are equal or seed extension/trucation is allowed */
             std::vector<unsigned char> &values = si.assignment.bindings[array];
-            values.insert(values.begin(), obj->bytes, 
+            values.insert(values.begin(), obj->bytes,
                           obj->bytes + std::min(obj->numBytes, mo->size));
+
             if (ZeroSeedExtension) {
               for (unsigned i=obj->numBytes; i<mo->size; ++i)
                 values.push_back('\0');
