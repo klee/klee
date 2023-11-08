@@ -209,7 +209,7 @@ ConstraintSet::ConstraintSet() {}
 void ConstraintSet::addConstraint(ref<Expr> e, const Assignment &delta) {
   _constraints.insert(e);
   // Update bindings
-  for (auto i : delta.bindings) {
+  for (auto &i : delta.bindings) {
     _concretization.bindings.replace({i.first, i.second});
   }
   _independentElements.updateConcretization(delta);

@@ -23,7 +23,7 @@ IndependentConstraintSet::updateConcretization(
   if (delta.bindings.size() == 0) {
     return ics;
   }
-  for (auto i : delta.bindings) {
+  for (auto &i : delta.bindings) {
     ics->concretization.bindings.replace({i.first, i.second});
   }
   InnerSetUnion DSU;
@@ -45,6 +45,15 @@ IndependentConstraintSet::updateConcretization(
     }
     DSU.addValue(new ExprEitherSymcrete::left(e));
   }
+  auto concretizationConstraints =
+      ics->concretization.createConstraintsFromAssignment();
+  for (ref<Expr> e : concretizationConstraints) {
+    if (auto ce = dyn_cast<ConstantExpr>(e)) {
+      assert(ce->isTrue() && "Attempt to add invalid constraint");
+      continue;
+    }
+    DSU.addValue(new ExprEitherSymcrete::left(e));
+  }
   ics->concretizedSets = DSU;
   return ics;
 }
@@ -56,7 +65,7 @@ IndependentConstraintSet::removeConcretization(
   if (delta.bindings.size() == 0) {
     return ics;
   }
-  for (auto i : delta.bindings) {
+  for (auto &i : delta.bindings) {
     ics->concretization.bindings.remove(i.first);
   }
   InnerSetUnion DSU;
@@ -72,6 +81,15 @@ IndependentConstraintSet::removeConcretization(
   for (ref<Symcrete> s : symcretes) {
     ref<Expr> e = EqExpr::create(ics->concretization.evaluate(s->symcretized),
                                  s->symcretized);
+    if (auto ce = dyn_cast<ConstantExpr>(e)) {
+      assert(ce->isTrue() && "Attempt to add invalid constraint");
+      continue;
+    }
+    DSU.addValue(new ExprEitherSymcrete::left(e));
+  }
+  auto concretizationConstraints =
+      ics->concretization.createConstraintsFromAssignment();
+  for (ref<Expr> e : concretizationConstraints) {
     if (auto ce = dyn_cast<ConstantExpr>(e)) {
       assert(ce->isTrue() && "Attempt to add invalid constraint");
       continue;
@@ -337,6 +355,15 @@ IndependentConstraintSet::merge(ref<const IndependentConstraintSet> A,
     for (ref<Symcrete> s : a->symcretes) {
       ref<Expr> e = EqExpr::create(a->concretization.evaluate(s->symcretized),
                                    s->symcretized);
+      if (auto ce = dyn_cast<ConstantExpr>(e)) {
+        assert(ce->isTrue() && "Attempt to add invalid constraint");
+        continue;
+      }
+      DSU.addValue(new ExprEitherSymcrete::left(e));
+    }
+    auto concretizationConstraints =
+        a->concretization.createConstraintsFromAssignment();
+    for (ref<Expr> e : concretizationConstraints) {
       if (auto ce = dyn_cast<ConstantExpr>(e)) {
         assert(ce->isTrue() && "Attempt to add invalid constraint");
         continue;

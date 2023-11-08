@@ -1460,9 +1460,9 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
 
   if (!concretization.isEmpty()) {
     // Update memory objects if arrays have affected them.
+    updateStateWithSymcretes(state, concretization);
     Assignment delta =
         state.constraints.cs().concretization().diffWith(concretization);
-    updateStateWithSymcretes(state, delta);
     state.addConstraint(condition, delta);
   } else {
     state.addConstraint(condition, {});
@@ -6490,7 +6490,7 @@ void Executor::updateStateWithSymcretes(ExecutionState &state,
    * assign. We want to update only objects, whose size were changed. */
 
   std::vector<ref<SizeSymcrete>> updatedSizeSymcretes;
-  const Assignment &diffAssignment =
+  Assignment diffAssignment =
       state.constraints.cs().concretization().diffWith(assignment);
 
   for (const ref<Symcrete> &symcrete : state.constraints.cs().symcretes()) {
