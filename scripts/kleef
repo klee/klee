@@ -92,6 +92,7 @@ def klee_options(
             "--track-coverage=all", # Only branches and only instructions are wrong in real life. E.g., ternary operators are sometimes counted as different branches, while we stick to look at them as a single instruction from a single branch
             "--use-iterative-deepening-search=max-cycles",
             f"--max-solver-time={MAX_SOLVER_TIME}s",
+            "--max-cycles-before-stuck=15",
             # "--tc-type=cov",
             "--only-output-states-covering-new",  # Don't generate all test cases
             "--dump-states-on-halt=true",  # Check in case we missed some oncovered instructions
