@@ -9,7 +9,6 @@
 
 // RUN: FileCheck --input-file=%t.cov.log --check-prefix=CHECK %s
 
-// Branch coverage 100%, the number of branches is 1:
 // CHECK: Lines executed:87.93% of 58
 // CHECK-NEXT: Branches executed:100.00% of 18
 // CHECK-NEXT: Taken at least once:83.33% of 18
