@@ -18,7 +18,7 @@ void SparseStorage<unsigned char>::print(llvm::raw_ostream &os,
       if (firstPrinted) {
         os << ", ";
       }
-      os << element.first << ": " << element.second;
+      os << element.first << ": " << llvm::utostr(element.second);
       firstPrinted = true;
     }
     os << "} default: ";
@@ -35,7 +35,7 @@ void SparseStorage<unsigned char>::print(llvm::raw_ostream &os,
     }
     os << "] default: ";
   }
-  os << defaultValue;
+  os << llvm::utostr(defaultValue);
 }
 
 template <>
