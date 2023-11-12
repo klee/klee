@@ -1,7 +1,7 @@
 // It requires Z3 because the script currently runs with Z3 solver backend
-//REQUIRES: z3
-//RUN: %kleef --property-file=%S/coverage-error-call.prp --max-memory=7000000000 --max-cputime-soft=30 --64 %s 2>&1 | FileCheck %s
-//CHECK: KLEE: WARNING: 100.00% Reachable Reachable
+// REQUIRES: z3
+// RUN: %kleef --property-file=%S/coverage-error-call.prp --max-memory=7000000000 --max-cputime-soft=30 --64 --write-ktests %s 2>&1 | FileCheck %s
+// CHECK: KLEE: WARNING: 100.00% Reachable Reachable
 
 // This file is part of the SV-Benchmarks collection of verification tasks:
 // https://gitlab.com/sosy-lab/benchmarking/sv-benchmarks

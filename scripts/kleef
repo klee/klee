@@ -19,6 +19,7 @@ def klee_options(
     is32,
     f_err,
     f_cov,
+    write_ktests,
 ):
     if max_time and int(max_time) > 30:
         MAX_SOLVER_TIME = 10
@@ -29,6 +30,7 @@ def klee_options(
         "--delete-dead-loops=false",  # without this optimizer removes some code, which decreases coverage
         "--emit-all-errors",  # without this we generate only one test for assertion failures, which decreases coverage
         "--mock-all-externals",  # this helps for some linux benchmarks, which have unused extern globals. without this flag we will not even start on them.
+        "--external-calls=all",
         "--use-forked-solver=false",
         # "--solver-backend=stp",
         "--solver-backend=z3-tree",
@@ -42,6 +44,7 @@ def klee_options(
         "--output-istats=false",
         # "--istats-write-interval=90s", # Istats file can be large as well
         "--write-xml-tests",  # Write tests in XML format
+        f"--write-ktests={write_ktests}", # Write tests in KTest format
         f"--xml-metadata-programfile={source.name}",  # Provide the name of the original source file
         f"--xml-metadata-programhash={hexhash}",  # Provide sha256 hash of source file
         # "--use-guided-search=none",
@@ -101,8 +104,12 @@ def klee_options(
         ]
         if max_time:
             max_time = float(max_time)
-            late_time = int(max_time * 0.9)
-            last_time = int(max_time * 0.97)
+            if max_time and int(max_time) > 30:
+                late_time = int(max_time * 0.9)
+                last_time = int(max_time * 0.97)
+            else:
+                late_time = int(max_time * 0.8)
+                last_time = int(max_time * 0.9)
             cmd += [
                 "--cover-on-the-fly=true",
                 f"--delay-cover-on-the-fly={late_time}",
@@ -167,6 +174,7 @@ class KLEEF(object):
         max_time=0,
         use_perf=False,
         use_valgrind=False,
+        write_ktests=False,
     ):
         self.source = Path(source) if source else None
         self.is32 = is32
@@ -178,6 +186,10 @@ class KLEEF(object):
         self.max_time = max_time
         self.use_perf = use_perf
         self.use_valgrind = use_valgrind
+        if write_ktests:
+            self.write_ktests = "true"
+        else:
+            self.write_ktests = "false"
 
         # This file is inside the bin directory - use the root as base
         self.bin_directory = Path(__file__).parent
@@ -280,6 +292,7 @@ class KLEEF(object):
             self.is32,
             self.f_err,
             self.f_cov,
+            self.write_ktests,
         )
         if self.isModifyingUlimitPermitted():
             cmd = ["ulimit -s unlimited", "&&"] + cmd
@@ -378,6 +391,7 @@ def run(args):
         max_time=time,
         use_perf=args.perf,
         use_valgrind=args.valgrind,
+        write_ktests=args.write_ktests,
     )
     wrapper.compile()
     return wrapper.run()
@@ -425,6 +439,9 @@ def main():
         help="Property file for test goal description",
         type=str,
         default=None,
+    )
+    parser.add_argument(
+        "--write-ktests", help="Write tests in KTest format", action="store_true"
     )
     args = parser.parse_args()
     run(args)
