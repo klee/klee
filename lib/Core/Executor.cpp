@@ -4142,7 +4142,7 @@ bool Executor::checkMemoryUsage() {
   const auto mmapUsage = memory->getUsedDeterministicSize() >> 20U;
   const auto totalUsage = mallocUsage + mmapUsage;
 
-  if (MemoryTriggerCoverOnTheFly && 3 * totalUsage <= 2 * MaxMemory) {
+  if (MemoryTriggerCoverOnTheFly && totalUsage > MaxMemory * 0.75) {
     klee_warning_once(0,
                       "enabling cover-on-the-fly (close to memory cap: %luMB)",
                       totalUsage);
