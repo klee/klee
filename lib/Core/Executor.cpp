@@ -575,7 +575,7 @@ llvm::Module *Executor::setModule(
   kmodule = std::make_unique<KModule>();
 
   // 1.) Link the modules together && 2.) Apply different instrumentation
-  kmodule->link(userModules, 0);
+  kmodule->link(userModules, 1);
   kmodule->instrument(opts);
 
   kmodule->link(libsModules, 2);
@@ -603,8 +603,6 @@ llvm::Module *Executor::setModule(
   specialFunctionHandler = new SpecialFunctionHandler(*this);
   specialFunctionHandler->prepare(preservedFunctions);
 
-  preservedFunctions.push_back(opts.EntryPoint.c_str());
-
   // Preserve the free-standing library calls
   preservedFunctions.push_back("memset");
   preservedFunctions.push_back("memcpy");
@@ -612,11 +610,20 @@ llvm::Module *Executor::setModule(
   preservedFunctions.push_back("memmove");
 
   if (FunctionCallReproduce != "") {
-    // prevent elimination of the function
-    auto f = kmodule->module->getFunction(FunctionCallReproduce);
-    if (f)
-      f->addFnAttr(Attribute::OptimizeNone);
+    preservedFunctions.push_back(FunctionCallReproduce.c_str());
   }
+
+  // prevent elimination of the preservedFunctions functions
+  for (auto pf : preservedFunctions) {
+    auto f = kmodule->module->getFunction(pf);
+    if (f) {
+      f->addFnAttr(Attribute::OptimizeNone);
+      f->addFnAttr(Attribute::NoInline);
+    }
+  }
+
+  // except the entry point
+  preservedFunctions.push_back(opts.EntryPoint.c_str());
 
   kmodule->optimiseAndPrepare(opts, preservedFunctions);
   kmodule->checkModule();
