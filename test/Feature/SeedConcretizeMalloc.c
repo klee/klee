@@ -6,6 +6,7 @@
 
 // RUN: rm -rf %t.klee-out-2
 // RUN: %klee --output-dir=%t.klee-out-2 --seed-file %t.klee-out/test000001.ktest %t.bc | FileCheck --allow-empty %s
+// RUN: %klee-stats --print-columns 'SolverQueries' --table-format=csv %t.klee-out-2 | FileCheck --check-prefix=CHECK-STATS %s
 
 #include "klee/klee.h"
 
@@ -14,13 +15,13 @@
 #include <stdlib.h>
 
 void SeedGen() {
-  unsigned x;
+  size_t x;
   klee_make_symbolic(&x, sizeof(x), "x");
   klee_assume(x == 100);
 }
 
 int main(int argc, char **argv) {
-  unsigned s;
+  size_t s;
   klee_make_symbolic(&s, sizeof(s), "size");
   char *p = (char *)malloc(s);
   if (!p)
@@ -29,4 +30,7 @@ int main(int argc, char **argv) {
   if (s != 100)
     printf("Error\n");
     // CHECK-NOT: Error
+
+  // CHECK-STATS: 4
+  // These queries are due to the explicit constraint asserting that s is 100 and the implicit one checking if we have a huge malloc
 }

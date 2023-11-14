@@ -6,6 +6,7 @@
 
 // RUN: rm -rf %t.klee-out-2
 // RUN: %klee --exit-on-error --output-dir=%t.klee-out-2 --seed-file %t.klee-out/test000001.ktest %t.bc 2>&1 | FileCheck %s
+// RUN: %klee-stats --print-columns 'SolverQueries' --table-format=csv %t.klee-out-2 | FileCheck --check-prefix=CHECK-STATS %s
 
 #include "klee/klee.h"
 
@@ -24,4 +25,7 @@ int main() {
   double d = i;
   // CHECK: concretizing (reason: floating point)
   assert((unsigned) d == 12345678);
+
+  // CHECK-STATS: 1
+  // This one query involves the constraint that i == 12345678
 }
