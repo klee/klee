@@ -10,18 +10,18 @@
 set(LIB_PREFIX "RuntimeFp")
 set(SRC_FILES
     ceil.c
-    klee_copysign.c
+    copysign.c
     exp.c
     fabs.c
-    klee_fenv.c
-    klee_floor.c
+    fenv.c
+    floor.c
     fpclassify.c
-    klee_internal_isinf.ll
-    klee_rint.c
+    isinf.ll
     klee_set_rounding_mode.c
-    klee_signbit.ll
     log.c
+    rint.c
     round.c
+    signbit.ll
     sqrt.c
     trigonometry.c
     )

@@ -367,3 +367,19 @@ bool klee::loadFileAsOneModule(
   }
   return res;
 }
+
+void klee::replaceOrRenameFunction(llvm::Module *module, const char *old_name,
+                                   const char *new_name) {
+  Function *new_function, *old_function;
+  new_function = module->getFunction(new_name);
+  old_function = module->getFunction(old_name);
+  if (old_function) {
+    if (new_function) {
+      old_function->replaceAllUsesWith(new_function);
+      old_function->eraseFromParent();
+    } else {
+      old_function->setName(new_name);
+      assert(old_function->getName() == new_name);
+    }
+  }
+}

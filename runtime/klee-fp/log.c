@@ -8,8 +8,9 @@
 //===----------------------------------------------------------------------===*/
 
 #include "fenv.h"
-#include "klee_fenv.h"
 #include "math.h"
+
+#include <fenv.h>
 
 #define LOG_CORNER_CASE(suffix, type, isnan_function)                          \
   int log_corner_case_##suffix(type *x) {                                      \

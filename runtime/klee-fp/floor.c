@@ -1,4 +1,5 @@
-/*===-- klee_floor.c ------------------------------------------------------===//
+/*===-- floor.c
+------------------------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -7,11 +8,11 @@
 //
 //===----------------------------------------------------------------------===*/
 
-#include "klee_floor.h"
+#include "floor.h"
 #include "klee/klee.h"
 #include "math.h"
 
-float klee_floorf(float x) {
+float floorf(float x) {
   int sign = signbit(x);
   x = klee_abs_float(x);
   if (klee_rintf(x) > x) {
@@ -21,7 +22,7 @@ float klee_floorf(float x) {
   }
 }
 
-double klee_floor(double x) {
+double floor(double x) {
   int sign = signbit(x);
   x = klee_abs_double(x);
   if (klee_rint(x) > x) {
@@ -31,7 +32,7 @@ double klee_floor(double x) {
   }
 }
 
-long double klee_floorl(long double x) {
+long double floorl(long double x) {
   int sign = signbit(x);
   x = klee_abs_long_double(x);
   if (klee_rintl(x) > x) {

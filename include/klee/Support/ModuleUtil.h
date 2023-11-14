@@ -39,19 +39,16 @@ bool linkModules(llvm::Module *composite,
                  std::vector<std::unique_ptr<llvm::Module>> &modules,
                  const unsigned Flags, std::string &errorMsg);
 
-#if defined(__x86_64__) || defined(__i386__)
-#define addFunctionReplacement(from, to)                                       \
-  {#from "f", #to "f"}, {#from "", #to ""}, { "" #from "l", #to "l" }
+void replaceOrRenameFunction(llvm::Module *module, const char *old_name,
+                             const char *new_name);
 
+#if defined(__x86_64__) || defined(__i386__)
 #define addIntrinsicReplacement(from, to)                                      \
   {"llvm." #from ".f32", #to "f"}, {"llvm." #from ".f64", #to}, {              \
     "llvm." #from ".f80", #to "l"                                              \
   }
 
 #else
-#define addFunctionReplacement(from, to)                                       \
-  {#from "f", #to "f"}, { "" #from, "" #to }
-
 #define addIntrinsicReplacement(from, to)                                      \
   {"llvm." #from ".f32", #to "f"}, { "llvm." #from ".f64", #to }
 
@@ -62,32 +59,14 @@ bool linkModules(llvm::Module *composite,
 /// implementations in runtime/klee-fp, but not explicitly replaced here. Should
 /// we rename them and complete the list?
 const std::vector<std::pair<std::string, std::string>> floatReplacements = {
-    addFunctionReplacement(__isnan, klee_internal_isnan),
-    addFunctionReplacement(isnan, klee_internal_isnan),
-    addFunctionReplacement(__isinf, klee_internal_isinf),
-    addFunctionReplacement(isinf, klee_internal_isinf),
-    addFunctionReplacement(__fpclassify, klee_internal_fpclassify),
-    addFunctionReplacement(fpclassify, klee_internal_fpclassify),
-    addFunctionReplacement(__finite, klee_internal_finite),
-    addFunctionReplacement(finite, klee_internal_finite),
-    addFunctionReplacement(sqrt, klee_internal_sqrt),
-    addFunctionReplacement(fabs, klee_internal_fabs),
-    addFunctionReplacement(rint, klee_internal_rint),
-    addFunctionReplacement(round, klee_internal_rint),
-    addFunctionReplacement(__signbit, klee_internal_signbit),
-    addIntrinsicReplacement(sqrt, klee_internal_sqrt),
-    addIntrinsicReplacement(rint, klee_internal_rint),
-    addIntrinsicReplacement(round, klee_internal_rint),
+    addIntrinsicReplacement(sqrt, sqrt),
+    addIntrinsicReplacement(rint, rint),
+    addIntrinsicReplacement(round, rint),
     addIntrinsicReplacement(nearbyint, nearbyint),
     addIntrinsicReplacement(copysign, copysign),
-    addIntrinsicReplacement(floor, klee_floor),
+    addIntrinsicReplacement(floor, floor),
     addIntrinsicReplacement(ceil, ceil)};
-#undef addFunctionReplacement
 #undef addIntrinsicReplacement
-
-const std::vector<std::pair<std::string, std::string>> feRoundReplacements{
-    {"fegetround", "klee_internal_fegetround"},
-    {"fesetround", "klee_internal_fesetround"}};
 
 /// Return the Function* target of a Call or Invoke instruction, or
 /// null if it cannot be determined (should be only for indirect

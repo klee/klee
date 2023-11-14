@@ -8,26 +8,26 @@
 //===----------------------------------------------------------------------===*/
 
 #include "float.h"
-#include "klee_floor.h"
-#include "klee_rint.h"
+#include "floor.h"
+#include "rint.h"
 
 float ceilf(float f) {
-  if (f == klee_internal_rintf(f)) {
+  if (f == rintf(f)) {
     return f;
   }
-  return ((f < 0.0f) ? -1 : 1) + klee_floorf(f);
+  return ((f < 0.0f) ? -1 : 1) + floorf(f);
 }
 
 double ceil(double f) {
-  if (f == klee_internal_rint(f)) {
+  if (f == rint(f)) {
     return f;
   }
-  return ((f < 0.0f) ? -1 : 1) + klee_floor(f);
+  return ((f < 0.0f) ? -1 : 1) + floor(f);
 }
 
 long double ceill(long double f) {
-  if (f == klee_internal_rintl(f)) {
+  if (f == rintl(f)) {
     return f;
   }
-  return ((f < 0.0f) ? -1 : 1) + klee_floorl(f);
+  return ((f < 0.0f) ? -1 : 1) + floorl(f);
 }

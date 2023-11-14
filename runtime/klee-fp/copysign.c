@@ -1,4 +1,4 @@
-/*===-- klee_copysign.c ---------------------------------------------------===//
+/*===-- copysign.c --------------------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===*/
 
-#include "klee_copysign.h"
+#include "copysign.h"
 #include "ansidecl.h"
 #include "klee/klee.h"
 

@@ -1,4 +1,4 @@
-/*===-- klee_fenv.c -------------------------------------------------------===//
+/*===-- fenv.c ------------------------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -6,7 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===*/
-#include "klee_fenv.h"
+#include "fenv.h"
 #include "klee/klee.h"
 
 // Define the constants. Don't include `fenv.h` here to avoid
@@ -28,7 +28,7 @@ enum {
 #error Architecture not supported
 #endif
 
-int klee_internal_fegetround(void) {
+int fegetround(void) {
   enum KleeRoundingMode rm = klee_get_rounding_mode();
   switch (rm) {
   case KLEE_FP_RNE:
@@ -52,7 +52,7 @@ int klee_internal_fegetround(void) {
   }
 }
 
-int klee_internal_fesetround(int rm) {
+int fesetround(int rm) {
   switch (rm) {
   case FE_TONEAREST:
     klee_set_rounding_mode(KLEE_FP_RNE);

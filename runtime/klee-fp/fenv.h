@@ -1,4 +1,4 @@
-/*===-- klee_floor.h ------------------------------------------------------===//
+/*===-- klee_fenv.h -------------------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -7,11 +7,11 @@
 //
 //===----------------------------------------------------------------------===*/
 
-#ifndef KLEE_FLOOR_H
-#define KLEE_FLOOR_H
+#ifndef KLEE_FENV_H
+#define KLEE_FENV_H
+#include "klee/klee.h"
 
-float klee_floorf(float x);
-double klee_floor(double x);
-long double klee_floorl(long double x);
+int fegetround(void);
+int fesetround(int rm);
 
-#endif // KLEE_FLOOR_H
+#endif // KLEE_FENV_H

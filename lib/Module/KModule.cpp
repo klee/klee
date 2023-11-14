@@ -235,19 +235,6 @@ bool KModule::link(std::vector<std::unique_ptr<llvm::Module>> &modules,
   return true;
 }
 
-void KModule::replaceFunction(const std::unique_ptr<llvm::Module> &m,
-                              const char *original, const char *replacement) {
-  llvm::Function *originalFunc = m->getFunction(original);
-  llvm::Function *replacementFunc = m->getFunction(replacement);
-  if (!originalFunc)
-    return;
-  klee_message("Replacing function \"%s\" with \"%s\"", original, replacement);
-  assert(replacementFunc && "Replacement function not found");
-  assert(!(replacementFunc->isDeclaration()) && "replacement must have body");
-  originalFunc->replaceAllUsesWith(replacementFunc);
-  originalFunc->eraseFromParent();
-}
-
 void KModule::instrument(const Interpreter::ModuleOptions &opts) {
   // Inject checks prior to optimization... we also perform the
   // invariant transformations that we will end up doing later so that
@@ -301,11 +288,9 @@ void KModule::optimiseAndPrepare(
   if (opts.WithFPRuntime) {
     if (UseKleeFloatInternals) {
       for (const auto &p : klee::floatReplacements) {
-        replaceFunction(module, p.first.c_str(), p.second.c_str());
+        replaceOrRenameFunction(module.get(), p.first.c_str(),
+                                p.second.c_str());
       }
-    }
-    for (const auto &p : klee::feRoundReplacements) {
-      replaceFunction(module, p.first.c_str(), p.second.c_str());
     }
   }
 

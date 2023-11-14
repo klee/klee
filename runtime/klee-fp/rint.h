@@ -1,4 +1,4 @@
-/*===-- klee_rint.h -------------------------------------------------------===//
+/*===-- rint.h ------------------------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -10,9 +10,9 @@
 #ifndef KLEE_RINT_H
 #define KLEE_RINT_H
 
-float klee_internal_rintf(float arg);
-double klee_internal_rint(double arg);
-long double klee_internal_rintl(long double arg);
+float rintf(float arg);
+double rint(double arg);
+long double rintl(long double arg);
 float nearbyintf(float arg);
 double nearbyint(double arg);
 long double nearbyintl(long double arg);
