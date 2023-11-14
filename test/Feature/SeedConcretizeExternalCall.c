@@ -6,6 +6,7 @@
 
 // RUN: rm -rf %t.klee-out-2
 // RUN: %klee --external-calls=all --exit-on-error --output-dir=%t.klee-out-2 --seed-file %t.klee-out/test000001.ktest %t.bc
+// RUN: %klee-stats --print-columns 'SolverQueries' --table-format=csv %t.klee-out-2 | FileCheck --check-prefix=CHECK-STATS %s
 
 #include "klee/klee.h"
 
@@ -22,4 +23,7 @@ int main() {
   int x;
   klee_make_symbolic(&x, sizeof(x), "x");
   assert(abs(x) == 12345678);
+
+  // CHECK-STATS: 0
+  // No queries, but this will change once https://github.com/klee/klee/pull/1520 is merged
 }
