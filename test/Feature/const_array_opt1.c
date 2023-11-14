@@ -1,5 +1,6 @@
 // REQUIRES: not-msan
 // REQUIRES: not-ubsan
+// REQUIRES: not-bitwuzla
 // Disabling msan and ubsan because it times out on CI
 // RUN: %clang %s -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out

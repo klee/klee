@@ -15,7 +15,8 @@ required_variables_check_solvers() {
     [[ "${solver}" == "z3" ]] && continue
     [[ "${solver}" == "stp" ]] && continue
     [[ "${solver}" == "metasmt" ]] && continue
-    
+    [[ "${solver}" == "bitwuzla" ]] && continue
+
     echo "Unknown solver: \"$solver\""
     exit 1
   done
@@ -51,7 +52,7 @@ setup_variables_solvers() {
     [[ "${solver}" == "z3" ]] && SELECTED_SOLVERS+=("z3") && continue
     [[ "${solver}" == "stp" ]] && SELECTED_SOLVERS+=("stp") && continue
     [[ "${solver}" == "metasmt" ]] && SELECTED_SOLVERS+=("metasmt") && continue
-
+    [[ "${solver}" == "bitwuzla" ]] && SELECTED_SOLVERS+=("bitwuzla") && continue
     echo "Unknown solver: \"$solver\""
     exit 1
   done

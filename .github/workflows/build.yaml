@@ -21,7 +21,7 @@ env:
   LLVM_VERSION: 11
   MINISAT_VERSION: "master"
   REQUIRES_RTTI: 0
-  SOLVERS: Z3:STP
+  SOLVERS: BITWUZLA:Z3:STP
   STP_VERSION: 2.3.3
   TCMALLOC_VERSION: 2.9.1
   UCLIBC_VERSION: klee_uclibc_v1.3
@@ -29,6 +29,8 @@ env:
   USE_LIBCXX: 1
   Z3_VERSION: 4.8.15
   SQLITE_VERSION: 3400100
+  BITWUZLA_VERSION: main
+  BITWUZLA_COMMIT: 80ef7cd803e1c71b5939c3eb951f1736388f7090
 
 jobs:
   Linux:
@@ -48,6 +50,7 @@ jobs:
           "Z3 only",
           "metaSMT",
           "STP master",
+          "Bitwuzla only",
           "Latest klee-uclibc",
           "Asserts disabled",
           "No TCMalloc, optimised runtime",
@@ -109,6 +112,10 @@ jobs:
             env:
               SOLVERS: STP
               STP_VERSION: master
+          # Test just using Bitwuzla only
+          - name: "Bitwuzla only"
+            env:
+              SOLVERS: BITWUZLA
           # Check we can build latest klee-uclibc branch
           - name: "Latest klee-uclibc"
             env:
@@ -172,6 +179,7 @@ jobs:
         name: [
           "STP",
           "Z3",
+          "Bitwuzla",
         ]
         include:
           - name: "STP"
@@ -180,6 +188,9 @@ jobs:
           - name: "Z3"
             env:
               SOLVERS: Z3:STP
+          - name: "Bitwuzla"
+            env:
+              SOLVERS: BITWUZLA:Z3
     env:
       ENABLE_OPTIMIZED: 0
       COVERAGE: 1

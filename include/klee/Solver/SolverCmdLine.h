@@ -65,6 +65,8 @@ enum QueryLoggingSolverType {
 extern llvm::cl::bits<QueryLoggingSolverType> QueryLoggingOptions;
 
 enum CoreSolverType {
+  BITWUZLA_SOLVER,
+  BITWUZLA_TREE_SOLVER,
   STP_SOLVER,
   METASMT_SOLVER,
   DUMMY_SOLVER,

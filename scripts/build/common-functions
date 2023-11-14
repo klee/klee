@@ -8,11 +8,18 @@ function git_clone_or_update() {
   if [[ ! -e "${destination}/.git" ]]; then
     git clone $([ "${branch}x" != "x" ] && echo "--depth 1 -b ${branch}" || echo "") "$url" "$destination"
   else
-    cd "$destination"
+    pushd "$destination"
     git pull
     if [[ ! -z "$branch" ]]; then
       git checkout "${branch}"
     fi
+    popd
+  fi
+
+  if [[ $# -ge 4 ]]; then
+    pushd "$destination"
+    git checkout $4
+    popd
   fi
 }
 
@@ -20,12 +27,12 @@ function get_git_hash() {
   local url="$1"
   local branch="$2"
   local commit_id=""
-  
+
   # List remote git branches and get the commit id of the branch
-  commit_id="$(git ls-remote -h "$url" |grep "$branch" | cut -d$'\t' -f 1)"
-  
+  commit_id="$(git ls-remote -h "$url" | grep "$branch" | cut -d$'\t' -f 1)"
+
   # If that doesn't work use the branch instead of the commit id
-  if [[ -z "${commit_id}" ]]; then 
+  if [[ -z "${commit_id}" ]]; then
     echo "${branch}"
   else
     echo "${commit_id:0:7}"
@@ -33,10 +40,10 @@ function get_git_hash() {
 }
 
 function with_sudo() {
-    echo "Checking sudo $@"
-    if [[ $(whoami) != "root" ]]; then
-        sudo "$@"
-    else
-        "$@"
-    fi
+  echo "Checking sudo $@"
+  if [[ $(whoami) != "root" ]]; then
+    sudo "$@"
+  else
+    "$@"
+  fi
 }

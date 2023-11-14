@@ -49,7 +49,11 @@ public:
   bool isSymcretized(ref<Expr> expr) const;
 
   void rewriteConcretization(const Assignment &a);
-  ConstraintSet withExpr(ref<Expr> e) const;
+  ConstraintSet withExpr(ref<Expr> e) const {
+    ConstraintSet copy = ConstraintSet(*this);
+    copy.addConstraint(e, Assignment());
+    return copy;
+  }
 
   std::vector<const Array *> gatherArrays() const;
   std::vector<const Array *> gatherSymcretizedArrays() const;

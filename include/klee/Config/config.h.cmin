@@ -13,6 +13,9 @@
 /* Using Z3 Solver backend */
 #cmakedefine ENABLE_Z3 @ENABLE_Z3@
 
+/* Using Bitwuzla Solver backend */
+#cmakedefine ENABLE_BITWUZLA @ENABLE_BITWUZLA@
+
 /* Enable KLEE floating point extension */
 #cmakedefine ENABLE_FP @ENABLE_FP@
 

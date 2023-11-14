@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "BitwuzlaSolver.h"
 #include "MetaSMTSolver.h"
 #include "STPSolver.h"
 #include "Z3Solver.h"
@@ -28,7 +29,7 @@ DISABLE_WARNING_POP
 namespace klee {
 
 std::unique_ptr<Solver> createCoreSolver(CoreSolverType cst) {
-  bool isTreeSolver = cst == Z3_TREE_SOLVER;
+  bool isTreeSolver = (cst == Z3_TREE_SOLVER || cst == BITWUZLA_TREE_SOLVER);
   if (!isTreeSolver && MaxSolversApproxTreeInc > 0)
     klee_warning("--%s option is ignored because --%s is not z3-tree",
                  MaxSolversApproxTreeInc.ArgStr.str().c_str(),
@@ -74,12 +75,27 @@ std::unique_ptr<Solver> createCoreSolver(CoreSolverType cst) {
     if (isTreeSolver) {
       if (MaxSolversApproxTreeInc > 0)
         return std::make_unique<Z3TreeSolver>(type, MaxSolversApproxTreeInc);
-      klee_warning("--%s is 0, so falling back to non tree-incremental solver",
+      klee_warning("--%s is 0, so falling back to non tree-incremental solver ",
                    MaxSolversApproxTreeInc.ArgStr.str().c_str());
     }
     return std::make_unique<Z3Solver>(type);
 #else
     klee_message("Not compiled with Z3 support");
+    return NULL;
+#endif
+  case BITWUZLA_TREE_SOLVER:
+  case BITWUZLA_SOLVER:
+#ifdef ENABLE_BITWUZLA
+    klee_message("Using Bitwuzla solver backend");
+    if (isTreeSolver) {
+      if (MaxSolversApproxTreeInc > 0)
+        return std::make_unique<BitwuzlaTreeSolver>(MaxSolversApproxTreeInc);
+      klee_warning("--%s is 0, so falling back to non tree-incremental solver",
+                   MaxSolversApproxTreeInc.ArgStr.str().c_str());
+    }
+    return std::make_unique<BitwuzlaSolver>();
+#else
+    klee_message("Not compiled with Bitwuzla support");
     return NULL;
 #endif
   case NO_SOLVER:

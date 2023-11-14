@@ -52,6 +52,7 @@ config.have_selinux = True if @HAVE_SELINUX@ == 1 else False
 config.enable_stp = True if @ENABLE_STP@ == 1 else False
 config.enable_z3 = True if @ENABLE_Z3@ == 1 else False
 config.enable_metasmt = True if @ENABLE_METASMT@ == 1 else False
+config.enable_bitwuzla = True if @ENABLE_BITWUZLA@ == 1 else False
 config.enable_zlib = True if @HAVE_ZLIB_H@ == 1 else False
 config.have_asan = True if @IS_ASAN_BUILD@ == 1 else False
 config.have_ubsan = True if @IS_UBSAN_BUILD@ == 1 else False

@@ -186,15 +186,23 @@ cl::opt<klee::MetaSMTBackendType> MetaSMTBackend(
 #endif /* ENABLE_METASMT */
 
 // Pick the default core solver based on configuration
-#ifdef ENABLE_Z3
+#ifdef ENABLE_BITWUZLA
+#define STP_IS_DEFAULT_STR ""
+#define METASMT_IS_DEFAULT_STR ""
+#define Z3_IS_DEFAULT_STR ""
+#define BITWUZLA_IS_DEFAULT_STR " (default)"
+#define DEFAULT_CORE_SOLVER BITWUZLA_SOLVER
+#elif ENABLE_Z3
 #define STP_IS_DEFAULT_STR ""
 #define METASMT_IS_DEFAULT_STR ""
 #define Z3_IS_DEFAULT_STR " (default)"
+#define BITWUZLA_IS_DEFAULT_STR ""
 #define DEFAULT_CORE_SOLVER Z3_SOLVER
 #elif ENABLE_STP
 #define STP_IS_DEFAULT_STR " (default)"
 #define METASMT_IS_DEFAULT_STR ""
 #define Z3_IS_DEFAULT_STR ""
+#define BITWUZLA_IS_DEFAULT_STR ""
 #define DEFAULT_CORE_SOLVER STP_SOLVER
 #elif ENABLE_METASMT
 #define STP_IS_DEFAULT_STR ""
@@ -202,6 +210,7 @@ cl::opt<klee::MetaSMTBackendType> MetaSMTBackend(
 #define Z3_IS_DEFAULT_STR ""
 #define DEFAULT_CORE_SOLVER METASMT_SOLVER
 #define Z3_IS_DEFAULT_STR ""
+#define BITWUZLA_IS_DEFAULT_STR ""
 #else
 #error "Unsupported solver configuration"
 #endif
@@ -209,6 +218,10 @@ cl::opt<klee::MetaSMTBackendType> MetaSMTBackend(
 cl::opt<CoreSolverType> CoreSolverToUse(
     "solver-backend", cl::desc("Specifiy the core solver backend to use"),
     cl::values(
+        clEnumValN(BITWUZLA_SOLVER, "bitwuzla",
+                   "Bitwuzla" BITWUZLA_IS_DEFAULT_STR),
+        clEnumValN(BITWUZLA_TREE_SOLVER, "bitwuzla-tree",
+                   "Bitwuzla tree-incremental solver"),
         clEnumValN(STP_SOLVER, "stp", "STP" STP_IS_DEFAULT_STR),
         clEnumValN(METASMT_SOLVER, "metasmt", "metaSMT" METASMT_IS_DEFAULT_STR),
         clEnumValN(DUMMY_SOLVER, "dummy", "Dummy solver"),
@@ -224,6 +237,7 @@ cl::opt<CoreSolverType> DebugCrossCheckCoreSolverWith(
                clEnumValN(METASMT_SOLVER, "metasmt", "metaSMT"),
                clEnumValN(DUMMY_SOLVER, "dummy", "Dummy solver"),
                clEnumValN(Z3_SOLVER, "z3", "Z3"),
+               clEnumValN(BITWUZLA_SOLVER, "bitwuzla", "Bitwuzla"),
                clEnumValN(NO_SOLVER, "none", "Do not crosscheck (default)")),
     cl::init(NO_SOLVER), cl::cat(SolvingCat));
 
@@ -235,11 +249,12 @@ llvm::cl::opt<bool>
 llvm::cl::opt<unsigned> SymbolicAllocationThreshold(
     "symbolic-allocation-threshold",
     llvm::cl::desc("Maximum possible sum of sizes for all symbolic allocation "
-                   "before minimazation (default 1Kb)"),
+                   "before minimization (default 1Kb)"),
     llvm::cl::init(1024), llvm::cl::cat(klee::SolvingCat));
 } // namespace klee
 
 #undef STP_IS_DEFAULT_STR
 #undef METASMT_IS_DEFAULT_STR
 #undef Z3_IS_DEFAULT_STR
+#undef BITWUZLA_IS_DEFAULT_STR
 #undef DEFAULT_CORE_SOLVER
