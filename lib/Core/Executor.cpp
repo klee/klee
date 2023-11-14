@@ -2949,18 +2949,19 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     } else {
       ref<Expr> v = eval(ki, 0, state).value;
 
-      if (!isa<ConstantExpr>(v) && MockExternalCalls) {
-        if (ki->inst->getType()->isSized()) {
-          prepareMockValue(state, "mockExternResult", ki);
-        }
-      } else {
-        ExecutionState *free = &state;
-        bool hasInvalid = false, first = true;
+      ExecutionState *free = &state;
+      bool hasInvalid = false, first = true;
 
-        /* XXX This is wasteful, no need to do a full evaluate since we
-           have already got a value. But in the end the caches should
-           handle it for us, albeit with some overhead. */
-        do {
+      /* XXX This is wasteful, no need to do a full evaluate since we
+          have already got a value. But in the end the caches should
+          handle it for us, albeit with some overhead. */
+      do {
+        if (!first && MockExternalCalls) {
+          free = nullptr;
+          if (ki->inst->getType()->isSized()) {
+            prepareMockValue(state, "mockExternResult", ki);
+          }
+        } else {
           v = optimizer.optimizeExpr(v, true);
           ref<ConstantExpr> value;
           bool success = solver->getValue(free->constraints.cs(), v, value,
@@ -2993,8 +2994,8 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
           first = false;
           free = res.second;
           timers.invoke();
-        } while (free && !haltExecution);
-      }
+        }
+      } while (free && !haltExecution);
     }
     break;
   }
