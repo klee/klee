@@ -6763,7 +6763,7 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
 
   if (guidanceKind == GuidanceKind::ErrorGuidance) {
     std::map<klee::KFunction *, klee::ref<klee::TargetForest>,
-             klee::TargetedExecutionManager::KFunctionLess>
+             klee::KFunctionCompare>
         prepTargets;
     if (FunctionCallReproduce == "") {
       auto &paths = interpreterOpts.Paths.value();

@@ -169,6 +169,7 @@ class GuidedSearcher final : public Searcher, public TargetManagerSubscriber {
   DistanceCalculator &distanceCalculator;
   RNG &theRNG;
   unsigned index{1};
+  bool interleave = true;
 
   TargetForestHistoryTargetSet localHistoryTargets;
   std::vector<ExecutionState *> baseAddedStates;

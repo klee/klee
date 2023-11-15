@@ -14,4 +14,4 @@ int main(int x) {
 // RUN: FileCheck -input-file=%t.klee-out/warnings.txt %s -check-prefix=CHECK-NONE
 // CHECK-NONE: KLEE: WARNING: 50.00% NullPointerException False Positive at trace 1
 // RUN: FileCheck -input-file=%t.klee-out/messages.txt %s -check-prefix=CHECK-DISTANCE
-// CHECK-DISTANCE: KLEE: (0, 1, 1) for Target 1: error in function main (lines 8 to 8)
+// CHECK-DISTANCE: KLEE: (0, 1, 0) for Target 1: error in function main (lines 8 to 8) 

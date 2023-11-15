@@ -193,12 +193,12 @@ weight_type TargetedSearcher::getWeight(ExecutionState *es) {
 
 ExecutionState &GuidedSearcher::selectState() {
   unsigned size = historiesAndTargets.size();
-  index = theRNG.getInt32() % (size + 1);
+  interleave ^= 1;
   ExecutionState *state = nullptr;
-  if (index == size) {
+  if (interleave || !size) {
     state = &baseSearcher->selectState();
   } else {
-    index = index % size;
+    index = theRNG.getInt32() % size;
     auto &historyTargetPair = historiesAndTargets[index];
     ref<const TargetsHistory> history = historyTargetPair.first;
     ref<Target> target = historyTargetPair.second;
@@ -657,7 +657,7 @@ public:
     return state.isCycled(maxCycles);
   }
   void increaseLimit() final {
-    maxCycles *= 2ULL;
+    maxCycles *= 4ULL;
     klee_message("increased max-cycles to %llu", maxCycles);
   }
 };

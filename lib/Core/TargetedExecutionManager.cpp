@@ -493,13 +493,12 @@ KFunction *TargetedExecutionManager::tryResolveEntryFunction(
   return resKf;
 }
 
-std::map<KFunction *, ref<TargetForest>,
-         TargetedExecutionManager::KFunctionLess>
+std::map<KFunction *, ref<TargetForest>, KFunctionCompare>
 TargetedExecutionManager::prepareTargets(KModule *kmodule, SarifReport paths) {
   Locations locations = collectAllLocations(paths);
   LocationToBlocks locToBlocks = prepareAllLocations(kmodule, locations);
 
-  std::map<KFunction *, ref<TargetForest>, KFunctionLess> whitelists;
+  std::map<KFunction *, ref<TargetForest>, KFunctionCompare> whitelists;
 
   for (auto &result : paths.results) {
     bool isFullyResolved = tryResolveLocations(result, locToBlocks);

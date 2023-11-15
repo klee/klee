@@ -197,6 +197,12 @@ struct KBlockCompare {
   }
 };
 
+struct KFunctionCompare {
+  bool operator()(const KFunction *a, const KFunction *b) const {
+    return a->id < b->id;
+  }
+};
+
 class KConstant {
 public:
   /// Actual LLVM constant this represents.

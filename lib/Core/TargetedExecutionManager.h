@@ -115,17 +115,11 @@ private:
   StatesSet localStates;
 
 public:
-  struct KFunctionLess {
-    bool operator()(const KFunction *a, const KFunction *b) const {
-      return a->id < b->id;
-    }
-  };
-
   explicit TargetedExecutionManager(CodeGraphInfo &codeGraphInfo_,
                                     TargetManager &targetManager_)
       : codeGraphInfo(codeGraphInfo_), targetManager(targetManager_) {}
   ~TargetedExecutionManager() = default;
-  std::map<KFunction *, ref<TargetForest>, KFunctionLess>
+  std::map<KFunction *, ref<TargetForest>, KFunctionCompare>
   prepareTargets(KModule *kmodule, SarifReport paths);
 
   void reportFalseNegative(ExecutionState &state, ReachWithError error);
