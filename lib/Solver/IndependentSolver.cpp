@@ -225,7 +225,7 @@ bool IndependentSolver::computeInitialValues(
           dyn_cast<ConstantExpr>(retMap.evaluate(arr->size));
       assert(arrayConstantSize &&
              "Array of symbolic size had not receive value for size!");
-      SparseStorage<unsigned char> ret(arrayConstantSize->getZExtValue());
+      SparseStorage<unsigned char> ret(0);
       values.push_back(ret);
     } else {
       values.push_back(retMap.bindings.at(arr));

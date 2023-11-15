@@ -378,7 +378,7 @@ bool ConcretizingSolver::relaxSymcreteConstraints(const Query &query,
         sizeSymcrete->addressSymcrete.symcretized, newSize);
     unsigned char *charAddressIterator =
         reinterpret_cast<unsigned char *>(&address);
-    SparseStorage<unsigned char> storage(sizeof(address));
+    SparseStorage<unsigned char> storage(0);
     storage.store(0, charAddressIterator,
                   charAddressIterator + sizeof(address));
 

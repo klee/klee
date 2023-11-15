@@ -19,7 +19,7 @@ TEST(AssignmentTest, FoldNotOptimized) {
       SourceBuilder::makeSymbolic("simple_array", 0));
   // Create a simple assignment
   std::vector<const Array *> objects;
-  SparseStorage<unsigned char> value(1);
+  SparseStorage<unsigned char> value(0);
   std::vector<SparseStorage<unsigned char>> values;
 
   objects.push_back(array);

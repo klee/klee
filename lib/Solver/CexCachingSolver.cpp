@@ -382,10 +382,11 @@ bool CexCachingSolver::computeInitialValues(
   // FIXME: We should use smarter assignment for result so we don't
   // need redundant copy.
   values = std::vector<SparseStorage<unsigned char>>(objects.size());
+  Assignment::bindings_ty aBindings;
+  a->tryGetInitialValues(aBindings);
+
   for (unsigned i = 0; i < objects.size(); ++i) {
     const Array *os = objects[i];
-    Assignment::bindings_ty aBindings;
-    a->tryGetInitialValues(aBindings);
     Assignment::bindings_ty::iterator it = aBindings.find(os);
 
     if (it == aBindings.end()) {
