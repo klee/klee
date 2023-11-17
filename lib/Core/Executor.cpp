@@ -663,6 +663,39 @@ Executor::~Executor() {
 
 /***/
 
+ref<Expr> X87FP80ToFPTrunc(ref<Expr> arg, Expr::Width type,
+                           llvm::APFloat::roundingMode rm) {
+  ref<Expr> result = arg;
+#ifdef ENABLE_FP
+  Expr::Width resultType = type;
+  if (Context::get().getPointerWidth() == 32 && arg->getWidth() == Expr::Fl80) {
+    result = FPTruncExpr::create(arg, resultType, rm);
+  }
+#else
+  klee_message(
+      "You may enable x86-as-x87FP80 behaviour by passing the following options"
+      " to cmake:\n"
+      "\"-DENABLE_FLOATING_POINT=ON\"\n");
+#endif
+  return result;
+}
+
+ref<Expr> FPToX87FP80Ext(ref<Expr> arg) {
+  ref<Expr> result = arg;
+#ifdef ENABLE_FP
+  Expr::Width resultType = Expr::Fl80;
+  if (Context::get().getPointerWidth() == 32) {
+    result = FPExtExpr::create(arg, resultType);
+  }
+#else
+  klee_message(
+      "You may enable x86-as-x87FP80 behaviour by passing the following options"
+      " to cmake:\n"
+      "\"-DENABLE_FLOATING_POINT=ON\"\n");
+#endif
+  return result;
+}
+
 void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
                                       const Constant *c, unsigned offset) {
   const auto targetData = kmodule->targetData.get();
@@ -697,6 +730,12 @@ void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
   } else if (!isa<UndefValue>(c) && !isa<MetadataAsValue>(c)) {
     unsigned StoreBits = targetData->getTypeStoreSizeInBits(c->getType());
     ref<ConstantExpr> C = evalConstant(c, state.roundingMode);
+
+    if (c->getType()->isFloatingPointTy() &&
+        Context::get().getPointerWidth() == 32) {
+      C = X87FP80ToFPTrunc(C, getWidthForLLVMType(c->getType()),
+                           state.roundingMode);
+    }
 
     // Extend the constant if necessary;
     assert(StoreBits >= C->getWidth() && "Invalid store size!");
@@ -2463,40 +2502,6 @@ void Executor::checkNullCheckAfterDeref(ref<Expr> cond, ExecutionState &state,
   }
 }
 
-ref<Expr> X87FP80ToFPTrunc(ref<Expr> arg, Expr::Width type,
-                           llvm::APFloat::roundingMode rm) {
-  ref<Expr> result = arg;
-#ifdef ENABLE_FP
-  Expr::Width resultType = type;
-  if (Context::get().getPointerWidth() == 32 && arg->getWidth() == Expr::Fl80) {
-    result = FPTruncExpr::create(arg, resultType, rm);
-  }
-#else
-  klee_message(
-      "You may enable x86-as-x87FP80 behaviour by passing the following options"
-      " to cmake:\n"
-      "\"-DENABLE_FLOATING_POINT=ON\"\n");
-#endif
-  return result;
-}
-
-ref<Expr> FPToX87FP80Ext(ref<Expr> arg) {
-  ref<Expr> result = arg;
-#ifdef ENABLE_FP
-  Expr::Width resultType = Expr::Fl80;
-  if (Context::get().getPointerWidth() == 32 &&
-      arg->getWidth() == Expr::Int64) {
-    result = FPExtExpr::create(arg, resultType);
-  }
-#else
-  klee_message(
-      "You may enable x86-as-x87FP80 behaviour by passing the following options"
-      " to cmake:\n"
-      "\"-DENABLE_FLOATING_POINT=ON\"\n");
-#endif
-  return result;
-}
-
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   Instruction *i = ki->inst;
 
@@ -3338,6 +3343,20 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     BitCastInst *bc = cast<BitCastInst>(ki->inst);
 
     llvm::Type *castToType = bc->getType();
+
+    if (X86FPAsX87FP80 && result->getWidth() == Expr::Fl80 &&
+        !castToType->isFloatingPointTy() &&
+        Context::get().getPointerWidth() == 32) {
+      result = X87FP80ToFPTrunc(
+          result, getWidthForLLVMType(bc->getOperand(0)->getType()),
+          state.roundingMode);
+    }
+
+    if (X86FPAsX87FP80 && castToType->isFloatingPointTy() &&
+        Context::get().getPointerWidth() == 32) {
+      result = FPToX87FP80Ext(result);
+    }
+
     if (castToType->isPointerTy()) {
       castToType = castToType->getPointerElementType();
     }
@@ -3715,9 +3734,12 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> arg = eval(ki, 0, state).value;
     if (!fpWidthToSemantics(arg->getWidth()) || !fpWidthToSemantics(resultType))
       return terminateStateOnExecError(state, "Unsupported FPTrunc operation");
-    if (arg->getWidth() < resultType)
-      return terminateStateOnExecError(state, "Invalid FPTrunc");
-    ref<Expr> result = FPTruncExpr::create(arg, resultType, state.roundingMode);
+    ref<Expr> result = arg;
+    if (arg->getWidth() > resultType)
+      result = FPTruncExpr::create(arg, resultType, state.roundingMode);
+    if (X86FPAsX87FP80 && Context::get().getPointerWidth() == 32) {
+      result = FPToX87FP80Ext(result);
+    }
     bindLocal(ki, state, result);
     break;
   }
@@ -3728,9 +3750,14 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     ref<Expr> arg = eval(ki, 0, state).value;
     if (!fpWidthToSemantics(arg->getWidth()) || !fpWidthToSemantics(resultType))
       return terminateStateOnExecError(state, "Unsupported FPExt operation");
-    if (arg->getWidth() > resultType)
-      return terminateStateOnExecError(state, "Invalid FPExt");
-    ref<Expr> result = FPExtExpr::create(arg, resultType);
+    ref<Expr> result = arg;
+    if (arg->getWidth() < resultType) {
+      // return terminateStateOnExecError(state, "Invalid FPExt");
+      result = FPExtExpr::create(arg, resultType);
+    }
+    if (X86FPAsX87FP80 && Context::get().getPointerWidth() == 32) {
+      result = FPToX87FP80Ext(result);
+    }
     bindLocal(ki, state, result);
     break;
   }

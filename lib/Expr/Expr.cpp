@@ -1821,9 +1821,13 @@ ref<Expr> FPTruncExpr::create(const ref<Expr> &e, Width w,
     return e;
   } else if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e)) {
     return CE->FPTrunc(w, rm);
-  } else {
-    return FPTruncExpr::alloc(e, w, rm);
+  } else if (FPExtExpr *ExtE = dyn_cast<FPExtExpr>(e)) {
+    if (ExtE->src->getWidth() == w) {
+      return ExtE->src;
+    }
   }
+
+  return FPTruncExpr::alloc(e, w, rm);
 }
 
 ref<Expr> FPToUIExpr::create(const ref<Expr> &e, Width w,
