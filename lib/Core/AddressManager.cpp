@@ -25,9 +25,15 @@ void *AddressManager::allocate(ref<Expr> address, uint64_t size) {
     }
   } else {
     if (sizeLocation == objects.end() || !sizeLocation->second) {
-      uint64_t newSize = (uint64_t)1
-                         << (sizeof(size) * CHAR_BIT -
-                             __builtin_clzll(std::max((uint64_t)1, size)));
+      uint64_t newSize = std::max((uint64_t)1, size);
+      int clz = __builtin_clzll(std::max((uint64_t)1, newSize));
+      int popcount = __builtin_popcountll(std::max((uint64_t)1, newSize));
+      if (popcount > 1) {
+        newSize = (uint64_t)1 << (sizeof(newSize) * CHAR_BIT - clz);
+      }
+      if (newSize > maxSize) {
+        newSize = std::max((uint64_t)1, size);
+      }
       assert(!objects.empty());
       MemoryObject *mo = objects.begin()->second;
       newMO = memory->allocate(newSize, mo->isLocal, mo->isGlobal,
