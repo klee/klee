@@ -2,6 +2,8 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --single-object-resolution %t.bc > %t.log 2>&1
 // RUN: FileCheck %s -input-file=%t.log
+// RUN: %klee-stats --print-columns 'Queries' --table-format=csv %t.klee-out | FileCheck %s --check-prefix CHECK-STATS
+// CHECK-STATS: 6218
 
 #include "klee/klee.h"
 #include <stdlib.h>
@@ -20,15 +22,19 @@ struct B {
   int z;
 };
 
-int foo(int *pointer) {
-  //printf("pointer is called\n");
-  int *ptr = pointer + 123;
+int bar(int *pointer, int selector) {
+  int *ptr = 0;
+  if (selector)
+    ptr = pointer + 123;
+  else
+    ptr = pointer + 124;
+  // CHECK: SingleObjectResolution.c:[[@LINE+1]]: memory error: out of bound pointer
   return *ptr;
 }
 
-int main(int argc, char *argv[]) {
-
-  int x;
+int foo() {
+  size_t x;
+  int y;
   struct B b;
 
   // create a lot of memory objects
@@ -38,15 +44,25 @@ int main(int argc, char *argv[]) {
   }
 
   klee_make_symbolic(&x, sizeof(x), "x");
+  klee_make_symbolic(&y, sizeof(y), "y");
 
   b.y1 = malloc(20 * sizeof(struct A));
 
   // dereference of a pointer within a struct
   int *tmp = &b.y1[x].z;
 
-  // CHECK: SingleObjectResolution.c:26: memory error: out of bound pointer
-  // CHECK: KLEE: done: completed paths = 1
-  // CHECK: KLEE: done: partially completed paths = 1
-  // CHECK: KLEE: done: generated tests = 2
-  return foo(tmp);
+  int z = bar(tmp, y);
+  // cleanup test for heap
+  free(b.y1);
+
+  tmp = &b.y[x].z; // this is to test the cleanup for stack vars
+  z = bar(tmp, y);
+  return z;
+}
+
+int main(int argc, char *argv[]) {
+  // CHECK: KLEE: done: completed paths = 2
+  // CHECK: KLEE: done: partially completed paths = 2
+  // CHECK: KLEE: done: generated tests = 3
+  return foo();
 }

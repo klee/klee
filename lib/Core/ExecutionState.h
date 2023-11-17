@@ -249,8 +249,11 @@ public:
   bool forkDisabled = false;
 
   /// @brief Mapping symbolic address expressions to concrete base addresses
-  typedef std::map<ref<Expr>, ref<ConstantExpr>> base_addrs_t;
+  using base_addrs_t = std::map<ref<Expr>, ref<ConstantExpr>>;
   base_addrs_t base_addrs;
+  /// @brief Mapping MemoryObject addresses to refs used in the base_addrs map
+  using base_mo_t = std::map<uint64_t, std::set<ref<Expr>>>;
+  base_mo_t base_mos;
 
 public:
 #ifdef KLEE_UNITTEST

@@ -38,6 +38,10 @@ cl::opt<bool> DebugLogStateMerge(
     "debug-log-state-merge", cl::init(false),
     cl::desc("Debug information for underlying state merging (default=false)"),
     cl::cat(MergeCat));
+  
+}
+namespace klee {
+  extern cl::opt<bool> SingleObjectResolution; 
 }
 
 /***/
@@ -111,7 +115,9 @@ ExecutionState::ExecutionState(const ExecutionState& state):
                              ? state.unwindingInformation->clone()
                              : nullptr),
     coveredNew(state.coveredNew),
-    forkDisabled(state.forkDisabled) {
+    forkDisabled(state.forkDisabled),
+    base_addrs(state.base_addrs),
+    base_mos(state.base_mos) {
   for (const auto &cur_mergehandler: openMergeStack)
     cur_mergehandler->addOpenState(this);
 }
@@ -141,6 +147,16 @@ void ExecutionState::popFrame() {
 }
 
 void ExecutionState::deallocate(const MemoryObject *mo) {
+  if (SingleObjectResolution) {
+    auto mos_it = base_mos.find(mo->address);
+    if (mos_it != base_mos.end()) {
+      for (auto it = mos_it->second.begin(); it != mos_it->second.end(); ++it) {
+        base_addrs.erase(*it);
+      }
+      base_mos.erase(mos_it->first);
+    }
+  }
+
   if (!stackAllocator || !heapAllocator)
     return;
 

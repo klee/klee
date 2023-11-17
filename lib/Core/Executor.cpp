@@ -82,6 +82,7 @@ typedef unsigned TypeSize;
 #include <algorithm>
 #include <cassert>
 #include <cerrno>
+#include <cinttypes>
 #include <cstdint>
 #include <cstring>
 #include <cxxabi.h>
@@ -123,6 +124,13 @@ cl::opt<std::string> MaxTime(
              "Set to 0s to disable (default=0s)"),
     cl::init("0s"),
     cl::cat(TerminationCat));
+
+/*** Misc options ***/
+cl::opt<bool> SingleObjectResolution(
+    "single-object-resolution",
+    cl::desc("Try to resolve memory reads/writes to single objects "
+             "when offsets are symbolic (default=false)"),
+    cl::init(false), cl::cat(MiscCat));
 } // namespace klee
 
 namespace {
@@ -466,12 +474,6 @@ cl::opt<bool> DebugCheckForImpliedValues(
     cl::desc("Debug the implied value optimization"),
     cl::cat(DebugCat));
 
-/*** Misc options ***/
-cl::opt<bool> SingleObjectResolution(
-    "single-object-resolution",
-    cl::desc("Try to resolve memory reads/writes to single objects "
-             "when offsets are symbolic (default=false)"),
-    cl::init(false), cl::cat(MiscCat));
 } // namespace
 
 // XXX hack
@@ -2789,26 +2791,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::GetElementPtr: {
     KGEPInstruction *kgepi = static_cast<KGEPInstruction*>(ki);
     ref<Expr> base = eval(ki, 0, state).value;
-
-    bool const_base = isa<ConstantExpr>(base);
-    bool update = false;
-    ref<ConstantExpr> original_base = 0;
-    ref<Expr> key = 0;
-    ref<ConstantExpr> value = 0;
-
-    if (SingleObjectResolution) {
-      ExecutionState::base_addrs_t::iterator base_it;
-      if (!const_base) {
-        base_it = state.base_addrs.find(base);
-        if (base_it != state.base_addrs.end()) {
-          update = true;
-          key = base_it->first;
-          value = base_it->second;
-        }
-      } else {
-        original_base = dyn_cast<ConstantExpr>(base);
-      }
-    }
+    ref<Expr> original_base = base;
 
     for (std::vector< std::pair<unsigned, uint64_t> >::iterator 
            it = kgepi->indices.begin(), ie = kgepi->indices.end(); 
@@ -2824,17 +2807,41 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
                              Expr::createPointer(kgepi->offset));
 
     if (SingleObjectResolution) {
-      if (const_base && !isa<ConstantExpr>(base)) {
+      if (isa<ConstantExpr>(original_base) && !isa<ConstantExpr>(base)) {
         // the initial base address was a constant expression, the final is not:
         // store the mapping between constant address and the non-const
         // reference in the state
-        state.base_addrs[base] = original_base;
-      }
+        ref<ConstantExpr> c_orig_base = dyn_cast<ConstantExpr>(original_base);
 
-      if (update) {
-        // we need to update the current entry with a new value
-        state.base_addrs[base] = value;
-        state.base_addrs.erase(key);
+        ObjectPair op;
+        if (state.addressSpace.resolveOne(c_orig_base, op)) {
+          // store the address of the MemoryObject associated with this GEP
+          // instruction
+          state.base_mos[op.first->address].insert(base);
+          ref<ConstantExpr> r =
+              ConstantExpr::alloc(op.first->address, Expr::Int64);
+          state.base_addrs[base] = r;
+        } else {
+          // this case should not happen - we have a GEP instruction with const
+          // base address, so we should be able to find an exact memory object
+          // match
+          klee_warning("Failed to find a memory object for address %" PRIx64,
+                       c_orig_base->getZExtValue());
+        }
+
+      } else if (!isa<ConstantExpr>(original_base)) {
+        auto base_it = state.base_addrs.find(original_base);
+        if (base_it != state.base_addrs.end()) {
+          // we need to update the current entry with a new value
+          uint64_t address = base_it->second->getZExtValue();
+          auto refs_it = state.base_mos[address].find(base_it->first);
+          if (refs_it != state.base_mos[address].end()) {
+            state.base_mos[address].erase(refs_it);
+          }
+          state.base_mos[address].insert(base);
+          state.base_addrs[base] = base_it->second;
+          state.base_addrs.erase(base_it->first);
+        }
       }
     }
 
@@ -4349,8 +4356,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     // Address is symbolic
 
     resolveSingleObject = false;
-    ExecutionState::base_addrs_t::iterator base_it =
-        state.base_addrs.find(address);
+    auto base_it = state.base_addrs.find(address);
     if (base_it != state.base_addrs.end()) {
       // Concrete address found in the map, now find the associated memory
       // object
