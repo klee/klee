@@ -1,9 +1,9 @@
 // RUN: %clang %s -g -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --single-object-resolution %t.bc > %t.log 2>&1
+// RUN: %klee --search=dfs --output-dir=%t.klee-out --single-object-resolution %t.bc > %t.log 2>&1
 // RUN: FileCheck %s -input-file=%t.log
-// RUN: %klee-stats --print-columns 'Queries' --table-format=csv %t.klee-out | FileCheck %s --check-prefix CHECK-STATS
-// CHECK-STATS: 6218
+// RUN: %klee-stats --print-columns 'SolverQueries' --table-format=csv %t.klee-out | FileCheck %s --check-prefix CHECK-STATS
+// CHECK-STATS: 193
 
 #include "klee/klee.h"
 #include <stdlib.h>
