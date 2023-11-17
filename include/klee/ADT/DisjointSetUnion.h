@@ -21,7 +21,7 @@ DISABLE_WARNING_POP
 #include <vector>
 
 namespace klee {
-using ExprEitherSymcrete = either<Expr, Symcrete>;
+using ExprOrSymcrete = either<Expr, Symcrete>;
 
 template <typename ValueType, typename SetType,
           typename HASH = std::hash<ValueType>,

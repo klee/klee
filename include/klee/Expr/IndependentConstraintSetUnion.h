@@ -8,11 +8,11 @@
 
 namespace klee {
 class IndependentConstraintSetUnion
-    : public DisjointSetUnion<ref<ExprEitherSymcrete>, IndependentConstraintSet,
-                              ExprEitherSymcreteHash, ExprEitherSymcreteCmp> {
+    : public DisjointSetUnion<ref<ExprOrSymcrete>, IndependentConstraintSet,
+                              ExprOrSymcreteHash, ExprOrSymcreteCmp> {
 public:
   Assignment concretization;
-  std::vector<ref<ExprEitherSymcrete>> constraintQueue;
+  std::vector<ref<ExprOrSymcrete>> constraintQueue;
   Assignment updateQueue;
   Assignment removeQueue;
 

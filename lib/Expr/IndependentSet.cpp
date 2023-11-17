@@ -34,7 +34,7 @@ IndependentConstraintSet::updateConcretization(
       continue;
     }
     concretizedExprs[i] = e;
-    DSU.addValue(new ExprEitherSymcrete::left(e));
+    DSU.addValue(new ExprOrSymcrete::left(e));
   }
   for (ref<Symcrete> s : symcretes) {
     ref<Expr> e = EqExpr::create(ics->concretization.evaluate(s->symcretized),
@@ -43,7 +43,7 @@ IndependentConstraintSet::updateConcretization(
       assert(ce->isTrue() && "Attempt to add invalid constraint");
       continue;
     }
-    DSU.addValue(new ExprEitherSymcrete::left(e));
+    DSU.addValue(new ExprOrSymcrete::left(e));
   }
   auto concretizationConstraints =
       ics->concretization.createConstraintsFromAssignment();
@@ -52,7 +52,7 @@ IndependentConstraintSet::updateConcretization(
       assert(ce->isTrue() && "Attempt to add invalid constraint");
       continue;
     }
-    DSU.addValue(new ExprEitherSymcrete::left(e));
+    DSU.addValue(new ExprOrSymcrete::left(e));
   }
   ics->concretizedSets = DSU;
   return ics;
@@ -76,7 +76,7 @@ IndependentConstraintSet::removeConcretization(
       continue;
     }
     concretizedExprs[i] = e;
-    DSU.addValue(new ExprEitherSymcrete::left(e));
+    DSU.addValue(new ExprOrSymcrete::left(e));
   }
   for (ref<Symcrete> s : symcretes) {
     ref<Expr> e = EqExpr::create(ics->concretization.evaluate(s->symcretized),
@@ -85,7 +85,7 @@ IndependentConstraintSet::removeConcretization(
       assert(ce->isTrue() && "Attempt to add invalid constraint");
       continue;
     }
-    DSU.addValue(new ExprEitherSymcrete::left(e));
+    DSU.addValue(new ExprOrSymcrete::left(e));
   }
   auto concretizationConstraints =
       ics->concretization.createConstraintsFromAssignment();
@@ -94,7 +94,7 @@ IndependentConstraintSet::removeConcretization(
       assert(ce->isTrue() && "Attempt to add invalid constraint");
       continue;
     }
-    DSU.addValue(new ExprEitherSymcrete::left(e));
+    DSU.addValue(new ExprOrSymcrete::left(e));
   }
 
   ics->concretizedSets = DSU;
@@ -123,11 +123,11 @@ void IndependentConstraintSet::addValuesToAssignment(
 
 IndependentConstraintSet::IndependentConstraintSet() {}
 
-IndependentConstraintSet::IndependentConstraintSet(ref<ExprEitherSymcrete> v) {
-  if (isa<ExprEitherSymcrete::left>(v)) {
-    initIndependentConstraintSet(cast<ExprEitherSymcrete::left>(v)->value());
+IndependentConstraintSet::IndependentConstraintSet(ref<ExprOrSymcrete> v) {
+  if (isa<ExprOrSymcrete::left>(v)) {
+    initIndependentConstraintSet(cast<ExprOrSymcrete::left>(v)->value());
   } else {
-    initIndependentConstraintSet(cast<ExprEitherSymcrete::right>(v)->value());
+    initIndependentConstraintSet(cast<ExprOrSymcrete::right>(v)->value());
   }
 }
 
@@ -350,7 +350,7 @@ IndependentConstraintSet::merge(ref<const IndependentConstraintSet> A,
         assert(ce->isTrue() && "Attempt to add invalid constraint");
         continue;
       }
-      DSU.addValue(new ExprEitherSymcrete::left(e));
+      DSU.addValue(new ExprOrSymcrete::left(e));
     }
     for (ref<Symcrete> s : a->symcretes) {
       ref<Expr> e = EqExpr::create(a->concretization.evaluate(s->symcretized),
@@ -359,7 +359,7 @@ IndependentConstraintSet::merge(ref<const IndependentConstraintSet> A,
         assert(ce->isTrue() && "Attempt to add invalid constraint");
         continue;
       }
-      DSU.addValue(new ExprEitherSymcrete::left(e));
+      DSU.addValue(new ExprOrSymcrete::left(e));
     }
     auto concretizationConstraints =
         a->concretization.createConstraintsFromAssignment();
@@ -368,7 +368,7 @@ IndependentConstraintSet::merge(ref<const IndependentConstraintSet> A,
         assert(ce->isTrue() && "Attempt to add invalid constraint");
         continue;
       }
-      DSU.addValue(new ExprEitherSymcrete::left(e));
+      DSU.addValue(new ExprOrSymcrete::left(e));
     }
 
     a->concretizedSets = DSU;
@@ -405,7 +405,7 @@ void calculateArraysInFactors(
   }
   std::vector<const Array *> result;
   ref<IndependentConstraintSet> queryExprSet =
-      new IndependentConstraintSet(new ExprEitherSymcrete::left(queryExpr));
+      new IndependentConstraintSet(new ExprOrSymcrete::left(queryExpr));
   queryExprSet->calculateArrayReferences(result);
   returnSet.insert(result.begin(), result.end());
   returnVector.insert(returnVector.begin(), returnSet.begin(), returnSet.end());

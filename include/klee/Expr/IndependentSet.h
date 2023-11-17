@@ -22,17 +22,15 @@ DISABLE_WARNING_POP
 #include <vector>
 
 namespace klee {
-using ExprEitherSymcrete = either<Expr, Symcrete>;
+using ExprOrSymcrete = either<Expr, Symcrete>;
 
-struct ExprEitherSymcreteHash {
-  unsigned operator()(const ref<ExprEitherSymcrete> &e) const {
-    return e->hash();
-  }
+struct ExprOrSymcreteHash {
+  unsigned operator()(const ref<ExprOrSymcrete> &e) const { return e->hash(); }
 };
 
-struct ExprEitherSymcreteCmp {
-  bool operator()(const ref<ExprEitherSymcrete> &a,
-                  const ref<ExprEitherSymcrete> &b) const {
+struct ExprOrSymcreteCmp {
+  bool operator()(const ref<ExprOrSymcrete> &a,
+                  const ref<ExprOrSymcrete> &b) const {
     return a == b;
   }
 };
@@ -100,8 +98,8 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
 class IndependentConstraintSet {
 private:
   using InnerSetUnion =
-      DisjointSetUnion<ref<ExprEitherSymcrete>, IndependentConstraintSet,
-                       ExprEitherSymcreteHash, ExprEitherSymcreteCmp>;
+      DisjointSetUnion<ref<ExprOrSymcrete>, IndependentConstraintSet,
+                       ExprOrSymcreteHash, ExprOrSymcreteCmp>;
 
   void initIndependentConstraintSet(ref<Expr> e);
   void initIndependentConstraintSet(ref<Symcrete> s);
@@ -137,7 +135,7 @@ public:
                         Assignment &assign) const;
 
   IndependentConstraintSet();
-  explicit IndependentConstraintSet(ref<ExprEitherSymcrete> v);
+  explicit IndependentConstraintSet(ref<ExprOrSymcrete> v);
   IndependentConstraintSet(const IndependentConstraintSet &ics);
 
   void print(llvm::raw_ostream &os) const;

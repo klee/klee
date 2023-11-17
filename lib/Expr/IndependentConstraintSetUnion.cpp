@@ -20,13 +20,13 @@ IndependentConstraintSetUnion::IndependentConstraintSetUnion(
     ref<const IndependentConstraintSet> ics) {
   auto exprs = ics->exprs;
   for (ref<Expr> e : exprs) {
-    auto v = ref<ExprEitherSymcrete::left>(new ExprEitherSymcrete::left(e));
+    auto v = ref<ExprOrSymcrete::left>(new ExprOrSymcrete::left(e));
     rank.insert_or_assign(v, 0);
     internalStorage.insert(v);
   }
 
   for (ref<Symcrete> s : ics->symcretes) {
-    auto v = ref<ExprEitherSymcrete::right>(new ExprEitherSymcrete::right(s));
+    auto v = ref<ExprOrSymcrete::right>(new ExprOrSymcrete::right(s));
     rank.insert_or_assign(v, 0);
     internalStorage.insert(v);
   }
@@ -114,7 +114,7 @@ void IndependentConstraintSetUnion::getAllIndependentConstraintSets(
     ref<Expr> e, std::vector<ref<const IndependentConstraintSet>> &result) {
   calculateQueue();
   ref<const IndependentConstraintSet> compare =
-      new IndependentConstraintSet(new ExprEitherSymcrete::left(e));
+      new IndependentConstraintSet(new ExprOrSymcrete::left(e));
   for (auto &r : roots) {
     ref<const IndependentConstraintSet> ics = disjointSets.at(r);
     if (!IndependentConstraintSet::intersects(ics, compare)) {
@@ -127,7 +127,7 @@ void IndependentConstraintSetUnion::getAllDependentConstraintSets(
     ref<Expr> e, std::vector<ref<const IndependentConstraintSet>> &result) {
   calculateQueue();
   ref<const IndependentConstraintSet> compare =
-      new IndependentConstraintSet(new ExprEitherSymcrete::left(e));
+      new IndependentConstraintSet(new ExprOrSymcrete::left(e));
   for (auto &r : roots) {
     ref<const IndependentConstraintSet> ics = disjointSets.at(r);
     if (IndependentConstraintSet::intersects(ics, compare)) {
@@ -137,11 +137,11 @@ void IndependentConstraintSetUnion::getAllDependentConstraintSets(
 }
 
 void IndependentConstraintSetUnion::addExpr(ref<Expr> e) {
-  constraintQueue.push_back(new ExprEitherSymcrete::left(e));
+  constraintQueue.push_back(new ExprOrSymcrete::left(e));
 }
 
 void IndependentConstraintSetUnion::addSymcrete(ref<Symcrete> s) {
-  constraintQueue.push_back(new ExprEitherSymcrete::right(s));
+  constraintQueue.push_back(new ExprOrSymcrete::right(s));
 }
 
 IndependentConstraintSetUnion
@@ -152,7 +152,7 @@ IndependentConstraintSetUnion::getConcretizedVersion() {
     ref<const IndependentConstraintSet> root = disjointSets.at(i);
     if (root->concretization.bindings.empty()) {
       for (ref<Expr> expr : root->exprs) {
-        icsu.addValue(new ExprEitherSymcrete::left(expr));
+        icsu.addValue(new ExprOrSymcrete::left(expr));
       }
     } else {
       icsu.add(root->concretizedSets);

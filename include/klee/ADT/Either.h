@@ -46,7 +46,6 @@ public:
   virtual EitherKind getKind() const = 0;
 
   static bool classof(const either<T1, T2> *) { return true; }
-  // virtual unsigned hash() = 0;
   virtual int compare(const either<T1, T2> &b) = 0;
   virtual bool equals(const either<T1, T2> &b) = 0;
 
@@ -83,7 +82,6 @@ public:
   }
   static bool classof(const either_left<T1, T2> *) { return true; }
 
-  // virtual unsigned hash() override { return value_->hash(); };
   virtual int compare(const either<T1, T2> &b) override {
     if (b.getKind() != getKind()) {
       return b.getKind() < getKind() ? -1 : 1;
@@ -134,7 +132,6 @@ public:
   }
   static bool classof(const either_right<T1, T2> *) { return true; }
 
-  // virtual unsigned hash() override { return value_->hash(); };
   virtual int compare(const either<T1, T2> &b) override {
     if (b.getKind() != getKind()) {
       return b.getKind() < getKind() ? -1 : 1;

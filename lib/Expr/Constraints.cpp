@@ -265,8 +265,8 @@ ConstraintSet ConstraintSet::getConcretizedVersion() const {
       _independentElements->getConcretizedVersion());
 
   for (auto &e : cs._independentElements->is()) {
-    if (isa<ExprEitherSymcrete::left>(e)) {
-      cs._constraints.insert(cast<ExprEitherSymcrete::left>(e)->value());
+    if (isa<ExprOrSymcrete::left>(e)) {
+      cs._constraints.insert(cast<ExprOrSymcrete::left>(e)->value());
     }
   }
   return cs;
@@ -278,7 +278,7 @@ ConstraintSet ConstraintSet::getConcretizedVersion(
   cs._independentElements = std::make_shared<IndependentConstraintSetUnion>(
       _independentElements->getConcretizedVersion(newConcretization));
   for (auto &e : cs._independentElements->is()) {
-    cs._constraints.insert(cast<ExprEitherSymcrete::left>(e)->value());
+    cs._constraints.insert(cast<ExprOrSymcrete::left>(e)->value());
   }
   return cs;
 }
