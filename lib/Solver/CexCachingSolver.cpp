@@ -93,6 +93,7 @@ class CexCachingSolver : public SolverImpl {
   }
 
   bool getResponse(const Query &query, ref<SolverResponse> &result);
+  void setResponse(const Query &query, ref<SolverResponse> &result);
 
 public:
   CexCachingSolver(std::unique_ptr<Solver> solver)
@@ -132,8 +133,9 @@ struct isValidOrSatisfyingResponse {
   isValidOrSatisfyingResponse(KeyType &_key) : key(_key) {}
 
   bool operator()(ref<SolverResponse> a) const {
-    return isa<ValidResponse>(a) || (isa<InvalidResponse>(a) &&
-                                     cast<InvalidResponse>(a)->satisfies(key));
+    return isa<ValidResponse>(a) ||
+           (isa<InvalidResponse>(a) &&
+            cast<InvalidResponse>(a)->satisfiesOrConstant(key));
   }
 };
 
@@ -208,6 +210,17 @@ bool CexCachingSolver::searchForResponse(KeyType &key,
   return false;
 }
 
+KeyType makeKey(const Query &query) {
+  KeyType key =
+      KeyType(query.constraints.cs().begin(), query.constraints.cs().end());
+  for (ref<Symcrete> s : query.constraints.symcretes()) {
+    key.insert(s->symcretized);
+  }
+  ref<Expr> neg = Expr::createIsZero(query.expr);
+  key.insert(neg);
+  return key;
+}
+
 /// lookupResponse - Lookup a cached result for the given \arg query.
 ///
 /// \param query - The query to lookup.
@@ -217,10 +230,7 @@ bool CexCachingSolver::searchForResponse(KeyType &key,
 /// an unsatisfiable query). \return True if a cached result was found.
 bool CexCachingSolver::lookupResponse(const Query &query, KeyType &key,
                                       ref<SolverResponse> &result) {
-  key = KeyType(query.constraints.cs().begin(), query.constraints.cs().end());
-  for (ref<Symcrete> s : query.constraints.symcretes()) {
-    key.insert(s->symcretized);
-  }
+  key = makeKey(query);
   ref<Expr> neg = Expr::createIsZero(query.expr);
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(neg)) {
     if (CE->isFalse()) {
@@ -228,8 +238,6 @@ bool CexCachingSolver::lookupResponse(const Query &query, KeyType &key,
       ++stats::queryCexCacheHits;
       return true;
     }
-  } else {
-    key.insert(neg);
   }
 
   bool found = searchForResponse(key, result);
@@ -243,14 +251,21 @@ bool CexCachingSolver::lookupResponse(const Query &query, KeyType &key,
 
 bool CexCachingSolver::getResponse(const Query &query,
                                    ref<SolverResponse> &result) {
-  KeyType key;
-  if (lookupResponse(query, key, result)) {
+  if (lookupResponse(query, result)) {
     return true;
   }
 
   if (!solver->impl->check(query, result)) {
     return false;
   }
+
+  setResponse(query, result);
+  return true;
+}
+
+void CexCachingSolver::setResponse(const Query &query,
+                                   ref<SolverResponse> &result) {
+  KeyType key = makeKey(query);
 
   if (isa<InvalidResponse>(result)) {
     // Memorize the result.
@@ -261,7 +276,7 @@ bool CexCachingSolver::getResponse(const Query &query,
     }
 
     if (DebugCexCacheCheckBinding) {
-      if (!cast<InvalidResponse>(result)->satisfiesOrConstant(key)) {
+      if (!cast<InvalidResponse>(result)->satisfiesOrConstant(key, false)) {
         query.dump();
         result->dump();
         klee_error("Generated assignment doesn't match query");
@@ -281,8 +296,6 @@ bool CexCachingSolver::getResponse(const Query &query,
   if (isa<ValidResponse>(result) || isa<InvalidResponse>(result)) {
     cache.insert(key, result);
   }
-
-  return true;
 }
 
 ///
@@ -364,6 +377,12 @@ bool CexCachingSolver::computeValue(const Query &query, ref<Expr> &result) {
 
   assert(isa<ConstantExpr>(result) &&
          "assignment evaluation did not result in constant");
+
+  if (cast<ConstantExpr>(result)->isTrue()) {
+    setResponse(query.negateExpr(), a);
+  } else if (cast<ConstantExpr>(result)->isFalse()) {
+    setResponse(query, a);
+  }
   return true;
 }
 
