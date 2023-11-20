@@ -75,7 +75,7 @@ public:
     for (auto i : internalStorage) {
       sizeOfRange = std::max(i.first, sizeOfRange);
     }
-    return sizeOfRange;
+    return internalStorage.empty() ? 0 : sizeOfRange + 1;
   }
 
   bool operator==(const SparseStorage<ValueType> &another) const {
