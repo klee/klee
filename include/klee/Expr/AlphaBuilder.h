@@ -25,6 +25,7 @@ public:
 private:
   ArrayCache &arrayCache;
   unsigned index = 0;
+  bool reverse = false;
 
   const Array *visitArray(const Array *arr);
   UpdateList visitUpdateList(UpdateList u);
@@ -36,6 +37,7 @@ public:
   constraints_ty visitConstraints(constraints_ty cs);
   ref<Expr> build(ref<Expr> v);
   const Array *buildArray(const Array *arr) { return visitArray(arr); }
+  ref<Expr> reverseBuild(ref<Expr> v);
 };
 
 } // namespace klee

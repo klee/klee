@@ -54,7 +54,7 @@ public:
   void setCoreSolverTimeout(time::Span timeout);
   void notifyStateTermination(std::uint32_t id);
   ValidityCore changeVersion(const ValidityCore &validityCore,
-                             const ExprHashMap<ref<Expr>> &reverse);
+                             AlphaBuilder &builder);
   std::vector<const Array *>
   changeVersion(const std::vector<const Array *> &objects,
                 AlphaBuilder &builder);
@@ -66,24 +66,20 @@ public:
   changeVersion(const Assignment &a,
                 const ArrayCache::ArrayHashMap<const Array *> &reverse);
   ref<SolverResponse> changeVersion(ref<SolverResponse> res,
-                                    const AlphaBuilder &builder);
-  ref<SolverResponse> createAlphaVersion(ref<SolverResponse> res,
-                                         const AlphaBuilder &builder);
+                                    AlphaBuilder &builder);
 };
 
 ValidityCore
 AlphaEquivalenceSolver::changeVersion(const ValidityCore &validityCore,
-                                      const ExprHashMap<ref<Expr>> &reverse) {
+                                      AlphaBuilder &builder) {
   ValidityCore reverseValidityCore;
   if (isa<ConstantExpr>(validityCore.expr)) {
     reverseValidityCore.expr = validityCore.expr;
   } else {
-    assert(reverse.find(validityCore.expr) != reverse.end());
-    reverseValidityCore.expr = reverse.at(validityCore.expr);
+    reverseValidityCore.expr = builder.reverseBuild(validityCore.expr);
   }
   for (auto e : validityCore.constraints) {
-    assert(reverse.find(e) != reverse.end());
-    reverseValidityCore.constraints.insert(reverse.at(e));
+    reverseValidityCore.constraints.insert(builder.reverseBuild(e));
   }
   return reverseValidityCore;
 }
@@ -123,7 +119,7 @@ Assignment AlphaEquivalenceSolver::changeVersion(
 
 ref<SolverResponse>
 AlphaEquivalenceSolver::changeVersion(ref<SolverResponse> res,
-                                      const AlphaBuilder &builder) {
+                                      AlphaBuilder &builder) {
   ref<SolverResponse> reverseRes;
   if (!isa<InvalidResponse>(res) && !isa<ValidResponse>(res)) {
     return res;
@@ -136,22 +132,10 @@ AlphaEquivalenceSolver::changeVersion(ref<SolverResponse> res,
   } else {
     ValidityCore validityCore;
     res->tryGetValidityCore(validityCore);
-    validityCore = changeVersion(validityCore, builder.reverseExprMap);
+    validityCore = changeVersion(validityCore, builder);
     reverseRes = new ValidResponse(validityCore);
   }
   return reverseRes;
-}
-
-ref<SolverResponse>
-AlphaEquivalenceSolver::createAlphaVersion(ref<SolverResponse> res,
-                                           const AlphaBuilder &builder) {
-  if (!res || !isa<InvalidResponse>(res)) {
-    return res;
-  }
-
-  Assignment a = cast<InvalidResponse>(res)->initialValues();
-  changeVersion(a, builder.alphaArrayMap);
-  return new InvalidResponse(a.bindings);
 }
 
 bool AlphaEquivalenceSolver::computeValidity(const Query &query,
@@ -205,7 +189,6 @@ bool AlphaEquivalenceSolver::check(const Query &query,
 
   constraints_ty alphaQuery = builder.visitConstraints(query.constraints.cs());
   ref<Expr> alphaQueryExpr = builder.build(query.expr);
-  result = createAlphaVersion(result, builder);
   if (!solver->impl->check(
           Query(ConstraintSet(alphaQuery, {}, {}), alphaQueryExpr, query.id),
           result)) {
@@ -228,7 +211,7 @@ bool AlphaEquivalenceSolver::computeValidityCore(const Query &query,
           validityCore, isValid)) {
     return false;
   }
-  validityCore = changeVersion(validityCore, builder.reverseExprMap);
+  validityCore = changeVersion(validityCore, builder);
   return true;
 }
 

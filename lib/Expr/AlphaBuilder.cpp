@@ -16,7 +16,7 @@
 namespace klee {
 
 const Array *AlphaBuilder::visitArray(const Array *arr) {
-  if (alphaArrayMap.find(arr) == alphaArrayMap.end()) {
+  if (!reverse && alphaArrayMap.find(arr) == alphaArrayMap.end()) {
     ref<SymbolicSource> source = arr->source;
     ref<Expr> size = visit(arr->getSize());
 
@@ -35,7 +35,11 @@ const Array *AlphaBuilder::visitArray(const Array *arr) {
       reverseAlphaArrayMap[arr] = arr;
     }
   }
-  return alphaArrayMap[arr];
+  if (reverse) {
+    return reverseAlphaArrayMap[arr];
+  } else {
+    return alphaArrayMap[arr];
+  }
 }
 
 UpdateList AlphaBuilder::visitUpdateList(UpdateList u) {
@@ -79,6 +83,12 @@ ref<Expr> AlphaBuilder::build(ref<Expr> v) {
   ref<Expr> e = visit(v);
   reverseExprMap[e] = v;
   reverseExprMap[Expr::createIsZero(e)] = Expr::createIsZero(v);
+  return e;
+}
+ref<Expr> AlphaBuilder::reverseBuild(ref<Expr> v) {
+  reverse = true;
+  ref<Expr> e = visit(v);
+  reverse = false;
   return e;
 }
 
