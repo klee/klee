@@ -394,7 +394,9 @@ Z3ASTHandle Z3Builder::getInitialArray(const Array *root) {
     // Unique arrays by name, so we make sure the name is unique by
     // using the size of the array hash as a counter.
     std::string unique_id = llvm::utostr(_arr_hash._array_hash.size());
-    std::string unique_name = root->name + unique_id;
+    // Prefix unique ID with '_' to avoid name collision if name ends with
+    // number
+    std::string unique_name = root->name + "_" + unique_id;
 
     array_expr = buildArray(unique_name.c_str(), root->getDomain(),
                             root->getRange());

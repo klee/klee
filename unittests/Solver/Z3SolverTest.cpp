@@ -64,7 +64,7 @@ TEST_F(Z3SolverTest, GetConstraintLog) {
   // Ensure this is not buggy as fixed in https://github.com/klee/klee/pull/1235
   // If the bug is still present this fail due to an internal assertion
   char *ConstraintsString = Z3Solver_->getConstraintLog(TheQuery);
-  const char *ExpectedArraySelection = "(= (select const_array0";
+  const char *ExpectedArraySelection = "(= (select const_array_0";
   const char *Occurence = std::strstr(ConstraintsString, ExpectedArraySelection);
   ASSERT_STRNE(Occurence, nullptr);
   free(ConstraintsString);

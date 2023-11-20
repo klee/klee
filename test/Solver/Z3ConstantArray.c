@@ -9,10 +9,10 @@
 #include "klee/klee.h"
 
 int main(int argc, char **argv) {
-  // CHECK-DAG: (assert (= (select const_arr11 #x00000000) #x67))
-  // CHECK-DAG: (assert (= (select const_arr11 #x00000001) #x79))
-  // CHECK-DAG: (assert (= (select const_arr11 #x00000002) #x7a))
-  // CHECK-DAG: (assert (= (select const_arr11 #x00000003) #x00))
+  // CHECK-DAG: (assert (= (select const_arr1_1 #x00000000) #x67))
+  // CHECK-DAG: (assert (= (select const_arr1_1 #x00000001) #x79))
+  // CHECK-DAG: (assert (= (select const_arr1_1 #x00000002) #x7a))
+  // CHECK-DAG: (assert (= (select const_arr1_1 #x00000003) #x00))
   // TEST-CASE-DAG: (assert (=  (select const_arr1 (_ bv0 32) ) (_ bv103 8) ) )
   // TEST-CASE-DAG: (assert (=  (select const_arr1 (_ bv1 32) ) (_ bv121 8) ) )
   // TEST-CASE-DAG: (assert (=  (select const_arr1 (_ bv2 32) ) (_ bv122 8) ) )
