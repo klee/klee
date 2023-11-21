@@ -19,7 +19,7 @@ install_build_dependencies_bitwuzla() {
   with_sudo apt-get update -y
   with_sudo apt-get -y --no-install-recommends install pkg-config cmake-data m4
 
-  with_sudo pip3 install --user meson
+  pip3 install --user meson
   base_path="$(python3 -m site --user-base)"
   export PATH="$PATH:${base_path}/bin"
 }

@@ -7,8 +7,8 @@ install_build_dependencies_bitwuzla() {
     git
     pkg-config
   )
-  brew install "${dependencies[@]}"  
-  with_sudo pip3 install --user meson
+  brew install "${dependencies[@]}"
+  pip3 install --user meson
   base_path="$(python3 -m site --user-base)"
   export PATH="$PATH:${base_path}/bin"
 }
