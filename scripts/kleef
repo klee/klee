@@ -22,9 +22,9 @@ def klee_options(
     write_ktests,
 ):
     if max_time and int(max_time) > 30:
-        MAX_SOLVER_TIME = 10
+        MAX_SOLVER_TIME = 15
     else:
-        MAX_SOLVER_TIME = 5
+        MAX_SOLVER_TIME = 10
     cmd = [
         "--strip-unwanted-calls",  # removes llvm.dbg.* instructions, exponentially reduces time on some benchmarks
         "--delete-dead-loops=false",  # without this optimizer removes some code, which decreases coverage
@@ -33,10 +33,11 @@ def klee_options(
         "--external-calls=all",
         "--use-forked-solver=false",
         # "--solver-backend=stp",
-        "--solver-backend=z3-tree",
+        # "--solver-backend=z3-tree",
+        "--solver-backend=bitwuzla-tree",
         "--max-solvers-approx-tree-inc=16",
         f"--max-memory={int(max_memory * 0.9)}",  # Just use half of the memory in case we have to fork
-        "--optimize",
+        "--libc=klee",
         "--skip-not-lazy-initialized",
         f"--output-dir={test_output_dir}",  # Output files into specific directory
         "--output-source=false",  # Do not output assembly.ll - it can be too large
@@ -53,7 +54,6 @@ def klee_options(
         # "--libc=uclibc",
         # "--posix-runtime",
         "--fp-runtime",
-        "--x86FP-as-x87FP80=false",
         # "--max-sym-array-size=4096",
         "--symbolic-allocation-threshold=8192",
         "--uninit-memory-test-multiplier=10",
@@ -68,19 +68,21 @@ def klee_options(
             "--allocate-determ",
             f"--allocate-determ-size={min(int(max_memory * 0.6), 3 * 1024)}",
             "--allocate-determ-start-address=0x00030000000",
+            "--x86FP-as-x87FP80",
         ]
 
     if f_err:
         cmd += [
-            "--use-alpha-equivalence=false",
+            "--optimize=true",
+            "--use-alpha-equivalence=true",
             "--function-call-reproduce=reach_error",
-            "--dump-states-on-halt-with-function-call-reproduce",
             # "--max-cycles=0",
             # "--tc-type=bug",
             "--dump-states-on-halt=unreached",  # Explicitly do not dump states
             "--exit-on-error-type=Assert",  # Only generate test cases of type assert
             # "--dump-test-case-type=Assert", # Only dump test cases of type assert
             "--search=dfs",
+            "--search=bfs",
             #    "--search=nurs:covnew", "--search=random-path","--search=dfs", "--use-batching-search",
             #    "--search=distance","--search=random-path","--use-batching-search",
             # "--target-assert", # Target
@@ -97,8 +99,10 @@ def klee_options(
 
     if f_cov:
         cmd += [
+            "--optimize=false",
             "--mem-trigger-cof", # Start on the fly tests generation after approaching memory cup
             "--use-alpha-equivalence=true",
+            "--optimize-aggressive=false",
             "--track-coverage=all", # Only branches and only instructions are wrong in real life. E.g., ternary operators are sometimes counted as different branches, while we stick to look at them as a single instruction from a single branch
             "--use-iterative-deepening-search=max-cycles",
             f"--max-solver-time={MAX_SOLVER_TIME}s",
@@ -273,6 +277,7 @@ class KLEEF(object):
 
     def run(self):
         test_output_dir = self.test_results_path / self.source.name
+        test_output_dir = self.test_results_path
         # Clean-up from previous runs if needed
         shutil.rmtree(test_output_dir, ignore_errors=True)
 
