@@ -1,0 +1,18 @@
+format_version: '2.0'
+
+# old file name: cast_union_loose_false-unreach-call_true-termination.c
+input_files: 'cast_union_loose.c'
+
+properties:
+  - property_file: ../properties/termination.prp
+    expected_verdict: true
+  - property_file: ../properties/unreach-call.prp
+    expected_verdict: false
+  - property_file: ../properties/coverage-error-call.prp
+  - property_file: ../properties/coverage-branches.prp
+  - property_file: ../properties/coverage-conditions.prp
+  - property_file: ../properties/coverage-statements.prp
+
+options:
+  language: C
+  data_model: ILP32

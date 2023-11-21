@@ -1,0 +1,15 @@
+format_version: '2.0'
+
+# old file name: double_req_bl_0670_true-unreach-call.c
+input_files: 'double_req_bl_0670.c'
+
+properties:
+  - property_file: ../properties/unreach-call.prp
+    expected_verdict: true
+  - property_file: ../properties/coverage-branches.prp
+  - property_file: ../properties/coverage-conditions.prp
+  - property_file: ../properties/coverage-statements.prp
+
+options:
+  language: C
+  data_model: ILP32

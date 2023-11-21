@@ -2,7 +2,7 @@
 // Disabling msan because it times out on CI
 // RUN: %clang %s -emit-llvm %O0opt -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --use-forked-solver=false -max-memory=6008 --optimize=true --skip-not-lazy-initialized -output-source=true --output-stats=false --output-istats=false --write-xml-tests --write-ktests=false --xml-metadata-programfile=wrapped_btor2c-lazyMod.adding.1.prop1-back-serstep.c --xml-metadata-programhash=a18daeacf63b42ad6e1cb490555b7cdecd71ad6e58b167ed0f5626c03bc3d772 --use-sym-size-alloc=true --cex-cache-validity-cores --symbolic-allocation-threshold=8192 --function-call-reproduce=reach_error --dump-states-on-halt=none -exit-on-error-type=Assert --search=dfs --search=random-path -max-time=20 %t1.bc 2>&1 | FileCheck -check-prefix=CHECK-VERDICT %s
+// RUN: %klee --output-dir=%t.klee-out --use-forked-solver=false -max-memory=6008 --optimize=true --skip-not-lazy-initialized -output-source=true --output-stats=false --output-istats=false --write-xml-tests --write-ktests=false --xml-metadata-programfile=wrapped_btor2c-lazyMod.adding.1.prop1-back-serstep.c --xml-metadata-programhash=a18daeacf63b42ad6e1cb490555b7cdecd71ad6e58b167ed0f5626c03bc3d772 --use-sym-size-alloc=true --cex-cache-validity-cores --symbolic-allocation-threshold=8192 --function-call-reproduce=reach_error --dump-states-on-halt=all -exit-on-error-type=Assert --search=dfs --search=random-path -max-time=20 %t1.bc 2>&1 | FileCheck -check-prefix=CHECK-VERDICT %s
 
 // RUN: test -f %t.klee-out/test000001.xml
 // RUN: not test -f %t.klee-out/test000001.ktest
