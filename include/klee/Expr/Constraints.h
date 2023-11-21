@@ -43,6 +43,7 @@ public:
       const std::vector<ref<const IndependentConstraintSet>> &ics);
   explicit ConstraintSet(constraints_ty cs);
   explicit ConstraintSet();
+  void fork();
 
   void addConstraint(ref<Expr> e, const Assignment &delta);
   void addSymcrete(ref<Symcrete> s, const Assignment &concretization);
@@ -90,7 +91,7 @@ private:
   constraints_ty _constraints;
   symcretes_ty _symcretes;
   Assignment _concretization;
-  IndependentConstraintSetUnion _independentElements;
+  std::shared_ptr<IndependentConstraintSetUnion> _independentElements;
 };
 
 class PathConstraints {
@@ -100,6 +101,8 @@ public:
 
   void advancePath(KInstruction *ki);
   void advancePath(const Path &path);
+  void fork();
+
   ExprHashSet addConstraint(ref<Expr> e, const Assignment &delta,
                             Path::PathIndex currIndex);
   ExprHashSet addConstraint(ref<Expr> e, const Assignment &delta);

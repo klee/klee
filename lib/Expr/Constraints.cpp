@@ -183,14 +183,18 @@ public:
 ConstraintSet::ConstraintSet(constraints_ty cs, symcretes_ty symcretes,
                              Assignment concretization)
     : _constraints(cs), _symcretes(symcretes), _concretization(concretization),
-      _independentElements(_constraints, _symcretes, _concretization) {}
+      _independentElements(new IndependentConstraintSetUnion(
+          _constraints, _symcretes, _concretization)) {}
 
 ConstraintSet::ConstraintSet(ref<const IndependentConstraintSet> ics)
     : _constraints(ics->getConstraints()), _symcretes(ics->getSymcretes()),
-      _concretization(ics->concretization), _independentElements(ics) {}
+      _concretization(ics->concretization),
+      _independentElements(new IndependentConstraintSetUnion(ics)) {}
 
 ConstraintSet::ConstraintSet(
-    const std::vector<ref<const IndependentConstraintSet>> &factors) {
+    const std::vector<ref<const IndependentConstraintSet>> &factors)
+    : _independentElements(new IndependentConstraintSetUnion(
+          _constraints, _symcretes, _concretization)) {
   for (auto ics : factors) {
     constraints_ty constraints = ics->getConstraints();
     SymcreteOrderedSet symcretes = ics->getSymcretes();
@@ -198,13 +202,19 @@ ConstraintSet::ConstraintSet(
     _constraints.insert(constraints.begin(), constraints.end());
     _symcretes.insert(symcretes.begin(), symcretes.end());
     _concretization.addIndependentAssignment(ics->concretization);
-    _independentElements.addIndependentConstraintSetUnion(icsu);
+    _independentElements->addIndependentConstraintSetUnion(icsu);
   }
 }
 
 ConstraintSet::ConstraintSet(constraints_ty cs) : ConstraintSet(cs, {}, {}) {}
 
-ConstraintSet::ConstraintSet() {}
+ConstraintSet::ConstraintSet()
+    : _independentElements(new IndependentConstraintSetUnion()) {}
+
+void ConstraintSet::fork() {
+  _independentElements = std::make_shared<IndependentConstraintSetUnion>(
+      IndependentConstraintSetUnion(*_independentElements));
+}
 
 void ConstraintSet::addConstraint(ref<Expr> e, const Assignment &delta) {
   _constraints.insert(e);
@@ -212,8 +222,8 @@ void ConstraintSet::addConstraint(ref<Expr> e, const Assignment &delta) {
   for (auto &i : delta.bindings) {
     _concretization.bindings.replace({i.first, i.second});
   }
-  _independentElements.updateConcretization(delta);
-  _independentElements.addExpr(e);
+  _independentElements->updateConcretization(delta);
+  _independentElements->addExpr(e);
 }
 
 IDType Symcrete::idCounter = 0;
@@ -221,14 +231,14 @@ IDType Symcrete::idCounter = 0;
 void ConstraintSet::addSymcrete(ref<Symcrete> s,
                                 const Assignment &concretization) {
   _symcretes.insert(s);
-  _independentElements.addSymcrete(s);
+  _independentElements->addSymcrete(s);
   Assignment dependentConcretization;
   for (auto i : s->dependentArrays()) {
     _concretization.bindings.replace({i, concretization.bindings.at(i)});
     dependentConcretization.bindings.replace(
         {i, concretization.bindings.at(i)});
   }
-  _independentElements.updateConcretization(dependentConcretization);
+  _independentElements->updateConcretization(dependentConcretization);
 }
 
 bool ConstraintSet::isSymcretized(ref<Expr> expr) const {
@@ -246,14 +256,15 @@ void ConstraintSet::rewriteConcretization(const Assignment &a) {
       _concretization.bindings.replace({i.first, i.second});
     }
   }
-  _independentElements.updateConcretization(a);
+  _independentElements->updateConcretization(a);
 }
 
 ConstraintSet ConstraintSet::getConcretizedVersion() const {
   ConstraintSet cs;
-  cs._independentElements = _independentElements.getConcretizedVersion();
+  cs._independentElements = std::make_shared<IndependentConstraintSetUnion>(
+      _independentElements->getConcretizedVersion());
 
-  for (auto &e : cs._independentElements.is()) {
+  for (auto &e : cs._independentElements->is()) {
     if (isa<ExprEitherSymcrete::left>(e)) {
       cs._constraints.insert(cast<ExprEitherSymcrete::left>(e)->value());
     }
@@ -264,9 +275,9 @@ ConstraintSet ConstraintSet::getConcretizedVersion() const {
 ConstraintSet ConstraintSet::getConcretizedVersion(
     const Assignment &newConcretization) const {
   ConstraintSet cs;
-  cs._independentElements =
-      _independentElements.getConcretizedVersion(newConcretization);
-  for (auto &e : cs._independentElements.is()) {
+  cs._independentElements = std::make_shared<IndependentConstraintSetUnion>(
+      _independentElements->getConcretizedVersion(newConcretization));
+  for (auto &e : cs._independentElements->is()) {
     cs._constraints.insert(cast<ExprEitherSymcrete::left>(e)->value());
   }
   return cs;
@@ -292,8 +303,8 @@ void ConstraintSet::dump() const { this->print(llvm::errs()); }
 
 void ConstraintSet::changeCS(constraints_ty &cs) {
   _constraints = cs;
-  _independentElements =
-      IndependentConstraintSetUnion(_constraints, _symcretes, _concretization);
+  _independentElements = std::make_shared<IndependentConstraintSetUnion>(
+      IndependentConstraintSetUnion(_constraints, _symcretes, _concretization));
 }
 
 const constraints_ty &ConstraintSet::cs() const { return _constraints; }
@@ -302,7 +313,7 @@ const symcretes_ty &ConstraintSet::symcretes() const { return _symcretes; }
 
 const IndependentConstraintSetUnion &
 ConstraintSet::independentElements() const {
-  return _independentElements;
+  return *_independentElements;
 }
 
 const Path &PathConstraints::path() const { return _path; }
@@ -329,6 +340,8 @@ PathConstraints::orderedCS() const {
 }
 
 void PathConstraints::advancePath(KInstruction *ki) { _path.advance(ki); }
+
+void PathConstraints::fork() { constraints.fork(); }
 
 ExprHashSet PathConstraints::addConstraint(ref<Expr> e, const Assignment &delta,
                                            Path::PathIndex currIndex) {
@@ -560,13 +573,13 @@ Simplificator::composeExprDependencies(const ExprHashMap<ExprHashSet> &upper,
 void ConstraintSet::getAllIndependentConstraintsSets(
     ref<Expr> queryExpr,
     std::vector<ref<const IndependentConstraintSet>> &result) const {
-  _independentElements.getAllIndependentConstraintSets(queryExpr, result);
+  _independentElements->getAllIndependentConstraintSets(queryExpr, result);
 }
 
 void ConstraintSet::getAllDependentConstraintsSets(
     ref<Expr> queryExpr,
     std::vector<ref<const IndependentConstraintSet>> &result) const {
-  _independentElements.getAllDependentConstraintSets(queryExpr, result);
+  _independentElements->getAllDependentConstraintSets(queryExpr, result);
 }
 
 std::vector<const Array *> ConstraintSet::gatherArrays() const {

@@ -12,18 +12,22 @@ class IndependentConstraintSetUnion
                               ExprEitherSymcreteHash, ExprEitherSymcreteCmp> {
 public:
   Assignment concretization;
+  std::vector<ref<ExprEitherSymcrete>> constraintQueue;
+  Assignment updateQueue;
+  Assignment removeQueue;
 
 public:
   ExprHashMap<ref<Expr>> concretizedExprs;
 
 public:
-  void updateConcretization(const Assignment &c);
+  void updateConcretization(const Assignment &delta);
   void removeConcretization(const Assignment &remove);
+  void calculateUpdateConcretizationQueue();
+  void calculateRemoveConcretizationQueue();
   void reEvaluateConcretization(const Assignment &newConcretization);
 
-  IndependentConstraintSetUnion getConcretizedVersion() const;
-  IndependentConstraintSetUnion
-  getConcretizedVersion(const Assignment &c) const;
+  IndependentConstraintSetUnion getConcretizedVersion();
+  IndependentConstraintSetUnion getConcretizedVersion(const Assignment &c);
 
   IndependentConstraintSetUnion();
   IndependentConstraintSetUnion(const constraints_ty &is,
@@ -35,14 +39,13 @@ public:
   addIndependentConstraintSetUnion(const IndependentConstraintSetUnion &icsu);
 
   void getAllDependentConstraintSets(
-      ref<Expr> e,
-      std::vector<ref<const IndependentConstraintSet>> &result) const;
+      ref<Expr> e, std::vector<ref<const IndependentConstraintSet>> &result);
   void getAllIndependentConstraintSets(
-      ref<Expr> e,
-      std::vector<ref<const IndependentConstraintSet>> &result) const;
+      ref<Expr> e, std::vector<ref<const IndependentConstraintSet>> &result);
 
   void addExpr(ref<Expr> e);
   void addSymcrete(ref<Symcrete> s);
+  void calculateQueue();
 };
 } // namespace klee
 
