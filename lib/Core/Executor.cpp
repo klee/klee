@@ -162,7 +162,7 @@ cl::opt<bool>
     AlignSymbolicPointers("align-symbolic-pointers",
                           cl::desc("Makes symbolic pointers aligned according"
                                    "to the used type system (default=true)"),
-                          cl::init(true), cl::cat(ExecCat));
+                          cl::init(false), cl::cat(ExecCat));
 
 cl::opt<bool>
     ExternCallsCanReturnNull("extern-calls-can-return-null", cl::init(false),
