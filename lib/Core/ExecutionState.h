@@ -37,6 +37,7 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/Function.h"
 DISABLE_WARNING_POP
 
+#include <cstddef>
 #include <deque>
 #include <map>
 #include <memory>
@@ -119,6 +120,7 @@ private:
   call_stack_ty callStack_;
   info_stack_ty infoStack_;
   call_stack_ty uniqueFrames_;
+  size_t stackSize = 0;
   unsigned stackBalance = 0;
 
 public:
@@ -133,6 +135,7 @@ public:
   inline const call_stack_ty &uniqueFrames() const { return uniqueFrames_; }
 
   inline unsigned size() const { return callStack_.size(); }
+  inline size_t stackRegisterSize() const { return stackSize; }
   inline bool empty() const { return callStack_.empty(); }
 };
 

@@ -75,6 +75,7 @@ void ExecutionStack::pushFrame(KInstIterator caller, KFunction *kf) {
   ++stackBalance;
   assert(valueStack_.size() == callStack_.size());
   assert(valueStack_.size() == infoStack_.size());
+  stackSize += kf->getNumRegisters();
 }
 
 void ExecutionStack::popFrame() {
@@ -94,6 +95,7 @@ void ExecutionStack::popFrame() {
   --stackBalance;
   assert(valueStack_.size() == callStack_.size());
   assert(valueStack_.size() == infoStack_.size());
+  stackSize -= kf->getNumRegisters();
 }
 
 bool CallStackFrame::equals(const CallStackFrame &other) const {

@@ -123,6 +123,9 @@ public:
 private:
   int *errno_addr;
 
+  size_t maxNewWriteableOSSize = 0;
+  size_t maxNewStateStackSize = 0;
+
   using SetOfStates = std::set<ExecutionState *, ExecutionStateIDCompare>;
   /* Set of Intrinsic::ID. Plain type is used here to avoid including llvm in
    * the header */

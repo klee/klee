@@ -246,6 +246,10 @@ public:
 
   void setReadOnly(bool ro) { readOnly = ro; }
 
+  size_t getSparseStorageEntries() {
+    return knownSymbolics.storage().size() + unflushedMask.storage().size();
+  }
+
   void swapObjectHack(MemoryObject *mo) { object = mo; }
 
   ref<Expr> read(ref<Expr> offset, Expr::Width width) const;
