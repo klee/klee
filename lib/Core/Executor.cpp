@@ -171,12 +171,12 @@ cl::opt<bool>
                              cl::cat(ExecCat));
 
 cl::opt<size_t> OSCopySizeMemoryCheckThreshold(
-    "os-copy-size-mem-check-threshold", cl::init(100000),
+    "os-copy-size-mem-check-threshold", cl::init(10000),
     cl::desc("Check memory usage when this amount of bytes dense OS is copied"),
     cl::cat(ExecCat));
 
 cl::opt<size_t> StackCopySizeMemoryCheckThreshold(
-    "stack-copy-size-mem-check-threshold", cl::init(100000),
+    "stack-copy-size-mem-check-threshold", cl::init(10000),
     cl::desc("Check memory usage when state with stack this big (in bytes) is "
              "copied"),
     cl::cat(ExecCat));
