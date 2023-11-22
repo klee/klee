@@ -1343,7 +1343,7 @@ Executor::toConstant(ExecutionState &state,
 ref<klee::Expr>
 Executor::getValueFromSeeds(std::vector<SeedInfo> &seeds, ref<Expr> e) {
   assert(!seeds.empty());
-  for (auto seed:seeds) {
+  for (auto const &seed : seeds) {
     auto value = seed.assignment.evaluate(e);
     if (isa<ConstantExpr>(value))
       return value;
