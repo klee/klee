@@ -380,7 +380,7 @@ public:
 
   ExprHashMap<std::pair<ref<Expr>, llvm::Type *>> gepExprBases;
 
-  ReachWithError error = ReachWithError::None;
+  mutable ReachWithError error = ReachWithError::None;
   std::atomic<HaltExecution::Reason> terminationReasonType{
       HaltExecution::NotHalt};
 

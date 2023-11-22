@@ -7290,6 +7290,13 @@ Assignment Executor::computeConcretization(const ConstraintSet &constraints,
 bool isReproducible(const klee::Symbolic &symb) {
   auto arr = symb.array;
   bool bad = IrreproducibleSource::classof(arr->source.get());
+  if (auto liSource = dyn_cast<LazyInitializationSource>(arr->source.get())) {
+    std::vector<const Array *> arrays;
+    findObjects(liSource->pointer, arrays);
+    for (auto innerArr : arrays) {
+      bad |= IrreproducibleSource::classof(innerArr->source.get());
+    }
+  }
   if (bad)
     klee_warning_once(arr->source.get(),
                       "A irreproducible symbolic %s reaches a test",
@@ -7358,6 +7365,13 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
   std::vector<klee::Symbolic> symbolics;
   std::copy_if(state.symbolics.begin(), state.symbolics.end(),
                std::back_inserter(symbolics), isReproducible);
+
+  // we cannot be sure that an irreproducible state proves the presence of an
+  // error
+  if (allObjects.size() != uninitObjects.size() ||
+      state.symbolics.size() != symbolics.size()) {
+    state.error = ReachWithError::None;
+  }
 
   std::vector<SparseStorage<unsigned char>> values;
   std::vector<const Array *> objects;
