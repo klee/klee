@@ -782,6 +782,8 @@ public:
     haltExecution = value;
   }
 
+  HaltExecution::Reason getHaltExecution() override { return haltExecution; }
+
   void setInhibitForking(bool value) override { inhibitForking = value; }
 
   void prepareForEarlyExit() override;

@@ -177,6 +177,8 @@ public:
 
   virtual void setHaltExecution(HaltExecution::Reason value) = 0;
 
+  virtual HaltExecution::Reason getHaltExecution() = 0;
+
   virtual void setInhibitForking(bool value) = 0;
 
   virtual void prepareForEarlyExit() = 0;

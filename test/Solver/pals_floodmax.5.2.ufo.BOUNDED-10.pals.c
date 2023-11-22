@@ -1,7 +1,7 @@
 // REQUIRES: z3
 // RUN: %clang %s -emit-llvm %O0opt -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --use-forked-solver=false --solver-backend=z3-tree --max-solvers-approx-tree-inc=16 --optimize-aggressive=false --track-coverage=branches -max-memory=6008 --optimize --skip-not-lazy-initialized -output-source=false --output-stats=false --use-sym-size-alloc=true --cex-cache-validity-cores --symbolic-allocation-threshold=8192 --function-call-reproduce=reach_error -dump-states-on-halt=true -exit-on-error-type=Assert --search=dfs -max-instructions=6000 --debug-crosscheck-core-solver=z3 --debug-z3-validate-models --debug-assignment-validating-solver --use-cex-cache=false %t1.bc 2>&1 | FileCheck -check-prefix=CHECK-VERDICT %s
+// RUN: %klee --output-dir=%t.klee-out --use-forked-solver=false --solver-backend=z3-tree --max-solvers-approx-tree-inc=16 --optimize-aggressive=false --track-coverage=branches -max-memory=6008 --optimize --skip-not-lazy-initialized -output-source=false --output-stats=false --use-sym-size-alloc=true --cex-cache-validity-cores --symbolic-allocation-threshold=8192 --function-call-reproduce=reach_error -dump-states-on-halt=all -exit-on-error-type=Assert --search=dfs -max-instructions=6000 --debug-crosscheck-core-solver=z3 --debug-z3-validate-models --debug-assignment-validating-solver --use-cex-cache=false %t1.bc 2>&1 | FileCheck -check-prefix=CHECK-VERDICT %s
 // CHECK-VERDICT: KLEE: done: total instructions = 6000
 #include "klee-test-comp.c"
 

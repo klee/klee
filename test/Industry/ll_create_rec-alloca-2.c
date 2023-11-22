@@ -1,6 +1,6 @@
 // RUN: %clang  -Wno-everything %s -emit-llvm %O0opt -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --track-coverage=branches --delete-dead-loops=false --cex-cache-validity-cores --optimize=true --emit-all-errors --only-output-states-covering-new=true --dump-states-on-halt=true --search=dfs --search=random-path %t1.bc
+// RUN: %klee --output-dir=%t.klee-out --track-coverage=branches --delete-dead-loops=false --cex-cache-validity-cores --optimize=true --emit-all-errors --only-output-states-covering-new=true --dump-states-on-halt=all --search=dfs --search=random-path %t1.bc
 // RUN: %klee-stats --print-columns 'ICov(%),BCov(%)' --table-format=csv %t.klee-out > %t.stats
 // RUN: FileCheck -check-prefix=CHECK-BRANCH -input-file=%t.stats %s
 
@@ -9,7 +9,7 @@
 // CHECK-BRANCH-NEXT: {{([1-9][0-9]\.[0-9][0-9])}},100.00
 
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --track-coverage=blocks --delete-dead-loops=false --cex-cache-validity-cores --optimize=true --emit-all-errors --only-output-states-covering-new=true --dump-states-on-halt=true --search=dfs --search=random-path %t1.bc
+// RUN: %klee --output-dir=%t.klee-out --track-coverage=blocks --delete-dead-loops=false --cex-cache-validity-cores --optimize=true --emit-all-errors --only-output-states-covering-new=true --dump-states-on-halt=all --search=dfs --search=random-path %t1.bc
 // RUN: %klee-stats --print-columns 'ICov(%),BCov(%)' --table-format=csv %t.klee-out > %t.stats
 // RUN: FileCheck -check-prefix=CHECK-BLOCK -input-file=%t.stats %s
 

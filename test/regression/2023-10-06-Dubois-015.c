@@ -1,6 +1,6 @@
 // RUN: %clang  -Wno-everything %s -emit-llvm %O0opt -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --optimize-aggressive=false --track-coverage=branches --optimize=true --emit-all-errors --only-output-states-covering-new=true --dump-states-on-halt=true --search=dfs %t1.bc 2>&1 | FileCheck -check-prefix=CHECK %s
+// RUN: %klee --output-dir=%t.klee-out --optimize-aggressive=false --track-coverage=branches --optimize=true --emit-all-errors --only-output-states-covering-new=true --dump-states-on-halt=all --search=dfs %t1.bc 2>&1 | FileCheck -check-prefix=CHECK %s
 
 #include "klee-test-comp.c"
 

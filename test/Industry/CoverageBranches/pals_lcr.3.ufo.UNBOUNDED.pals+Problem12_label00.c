@@ -1,7 +1,7 @@
 // REQUIRES: z3
 // RUN: %clang %s -emit-llvm %O0opt -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --optimize-aggressive=false --track-coverage=branches --delete-dead-loops=false --emit-all-errors --mock-all-externals --use-forked-solver=false --optimize --skip-not-lazy-initialized --output-source=false --output-stats=true --output-istats=true -istats-write-interval=3s --use-sym-size-alloc=true --cex-cache-validity-cores --symbolic-allocation-threshold=8192 --cover-on-the-fly=false --delay-cover-on-the-fly=400000 --only-output-states-covering-new --dump-states-on-halt=true --search=dfs --search=random-state --use-iterative-deepening-search=max-cycles --max-cycles=4 %t1.bc
+// RUN: %klee --output-dir=%t.klee-out --optimize-aggressive=false --track-coverage=branches --delete-dead-loops=false --emit-all-errors --mock-all-externals --use-forked-solver=false --optimize --skip-not-lazy-initialized --output-source=false --output-stats=true --output-istats=true -istats-write-interval=3s --use-sym-size-alloc=true --cex-cache-validity-cores --symbolic-allocation-threshold=8192 --cover-on-the-fly=false --delay-cover-on-the-fly=400000 --only-output-states-covering-new --dump-states-on-halt=all --search=dfs --search=random-state --use-iterative-deepening-search=max-cycles --max-cycles=4 %t1.bc
 
 // RUN: rm -f %t*.gcda %t*.gcno %t*.gcov
 // RUN: %cc -DGCOV %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner --coverage

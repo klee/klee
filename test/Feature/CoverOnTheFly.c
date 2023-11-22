@@ -1,8 +1,8 @@
-// ASAN fails because KLEE does not cleanup states with -dump-states-on-halt=false
+// ASAN fails because KLEE does not cleanup states with -dump-states-on-halt=none
 // REQUIRES: not-asan
 // RUN: %clang %s -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --only-output-states-covering-new --max-instructions=2000 --timer-interval=1ms --delay-cover-on-the-fly=1ms --dump-states-on-halt=false --cover-on-the-fly --search=bfs --use-guided-search=none --output-dir=%t.klee-out %t.bc 2>&1 | FileCheck %s
+// RUN: %klee --only-output-states-covering-new --max-instructions=2000 --timer-interval=1ms --delay-cover-on-the-fly=1ms --dump-states-on-halt=none --cover-on-the-fly --search=bfs --use-guided-search=none --output-dir=%t.klee-out %t.bc 2>&1 | FileCheck %s
 
 #include "klee/klee.h"
 

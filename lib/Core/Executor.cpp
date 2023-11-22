@@ -238,16 +238,23 @@ llvm::cl::opt<bool> X86FPAsX87FP80(
     cl::desc("Convert X86 fp values to X87FP80 during computation according to "
              "GCC behavior (default=false)"),
     cl::cat(ExecCat));
+
+cl::opt<HaltExecution::Reason> DumpStatesOnHalt(
+    "dump-states-on-halt", cl::init(HaltExecution::Reason::Unspecified),
+    cl::values(
+        clEnumValN(HaltExecution::Reason::NotHalt, "none",
+                   "Do not dump test cases for all active states on exit."),
+        clEnumValN(HaltExecution::Reason::UnreachedTarget, "unreached",
+                   "Dump test cases for all active states on exit if error not "
+                   "reached."),
+        clEnumValN(HaltExecution::Reason::Unspecified, "all",
+                   "Dump test cases for all active states on exit (default)")),
+    cl::cat(TestGenCat));
 } // namespace klee
 
 namespace {
 
 /*** Test generation options ***/
-
-cl::opt<bool> DumpStatesOnHalt(
-    "dump-states-on-halt", cl::init(true),
-    cl::desc("Dump test cases for all active states on exit (default=true)"),
-    cl::cat(TestGenCat));
 
 cl::opt<bool> OnlyOutputStatesCoveringNew(
     "only-output-states-covering-new", cl::init(false),
@@ -4259,9 +4266,17 @@ void Executor::decreaseConfidenceFromStoppedStates(
 }
 
 void Executor::doDumpStates() {
-  if (!DumpStatesOnHalt || states.empty()) {
+  if (DumpStatesOnHalt == HaltExecution::Reason::NotHalt ||
+      (DumpStatesOnHalt == HaltExecution::Reason::UnreachedTarget &&
+       haltExecution == HaltExecution::Reason::ReachedTarget) ||
+      states.empty()) {
     interpreterHandler->incPathsExplored(states.size());
     return;
+  }
+
+  if (FunctionCallReproduce != "" &&
+      haltExecution != HaltExecution::Reason::ReachedTarget) {
+    haltExecution = HaltExecution::UnreachedTarget;
   }
 
   klee_message("halting execution, dumping remaining states");
@@ -7368,9 +7383,11 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
 
   // we cannot be sure that an irreproducible state proves the presence of an
   // error
-  if (allObjects.size() != uninitObjects.size() ||
-      state.symbolics.size() != symbolics.size()) {
+  if (uninitObjects.size() > 0 || state.symbolics.size() != symbolics.size()) {
     state.error = ReachWithError::None;
+  } else if (FunctionCallReproduce != "" &&
+             state.error == ReachWithError::Reachable) {
+    setHaltExecution(HaltExecution::ReachedTarget);
   }
 
   std::vector<SparseStorage<unsigned char>> values;

@@ -1,6 +1,6 @@
 // RUN: %clang -Wno-everything %s -emit-llvm %O0opt -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --optimize-aggressive --track-coverage=branches --optimize=true --emit-all-errors --only-output-states-covering-new=true --dump-states-on-halt=true --search=dfs %t1.bc
+// RUN: %klee --output-dir=%t.klee-out --optimize-aggressive --track-coverage=branches --optimize=true --emit-all-errors --only-output-states-covering-new=true --dump-states-on-halt=all --search=dfs %t1.bc
 
 // RUN: rm -f %t*.gcda %t*.gcno %t*.gcov
 // RUN: %cc -DGCOV %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner --coverage
@@ -10,7 +10,7 @@
 // RUN: FileCheck --input-file=%t.cov.log --check-prefix=CHECK %s
 
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --optimize-aggressive=false --track-coverage=branches --optimize=true --emit-all-errors --only-output-states-covering-new=true --dump-states-on-halt=true --search=dfs %t1.bc
+// RUN: %klee --output-dir=%t.klee-out --optimize-aggressive=false --track-coverage=branches --optimize=true --emit-all-errors --only-output-states-covering-new=true --dump-states-on-halt=all --search=dfs %t1.bc
 
 // RUN: rm -f %t*.gcda %t*.gcno %t*.gcov
 // RUN: %cc -DGCOV %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner --coverage
