@@ -609,6 +609,10 @@ llvm::Module *Executor::setModule(
   preservedFunctions.push_back("memcmp");
   preservedFunctions.push_back("memmove");
 
+  for (const auto &p : klee::floatReplacements) {
+    preservedFunctions.push_back(p.second.c_str());
+  }
+
   if (FunctionCallReproduce != "") {
     preservedFunctions.push_back(FunctionCallReproduce.c_str());
   }

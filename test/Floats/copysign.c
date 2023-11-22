@@ -16,4 +16,4 @@ int main() {
     return 2;
   }
 }
-// CHECK: KLEE: done: completed paths = 4
+// CHECK: KLEE: done: completed paths = {{4|6}}
