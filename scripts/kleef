@@ -86,8 +86,13 @@ def klee_options(
             # "--target-assert", # Target
         ]
         if max_time:
+            max_time = float(max_time)
+            if max_time and int(max_time) > 30:
+                max_time = int(max_time * 0.99)
+            else:
+                max_time = int(max_time * 0.9)
             cmd += [
-                f"--max-time={int(max_time)}",  # Use the whole time
+                f"--max-time={max_time}",
             ]
 
     if f_cov:
