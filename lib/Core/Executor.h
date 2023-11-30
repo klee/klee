@@ -400,8 +400,7 @@ private:
   /// first one that results in a constant, if such a seed exist.  Otherwise,
   /// return the non-constant evaluation of the expression under one of the
   /// seeds.
-  ref<klee::Expr> getValueFromSeeds(std::vector<SeedInfo> &seeds,
-                                            ref<Expr> e);
+  ref<klee::ConstantExpr> getValueFromSeeds(ExecutionState &state, ref<Expr> e);
 
   /// Bind a constant value for e to the given target. NOTE: This
   /// function may fork state if the state has multiple seeds.

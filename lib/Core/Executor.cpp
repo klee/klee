@@ -1321,11 +1321,8 @@ Executor::toConstant(ExecutionState &state,
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
     return CE;
 
-  ref<Expr> value;
-  if (auto found = seedMap.find(&state); found != seedMap.end())
-    value = getValueFromSeeds(found->second, e);
   /* If no seed evaluation results in a constant, call the solver */
-  ref<ConstantExpr> cvalue = llvm::dyn_cast_or_null<ConstantExpr>(value);
+  ref<ConstantExpr> cvalue = getValueFromSeeds(state, e);
   if (!cvalue) {
     [[maybe_unused]] bool success =
         solver->getValue(state.constraints, e, cvalue, state.queryMetaData);
@@ -1348,9 +1345,13 @@ Executor::toConstant(ExecutionState &state,
   return cvalue;
 }
 
-ref<klee::Expr>
-Executor::getValueFromSeeds(std::vector<SeedInfo> &seeds, ref<Expr> e) {
-  assert(!seeds.empty());
+ref<klee::ConstantExpr> Executor::getValueFromSeeds(ExecutionState &state,
+                                                    ref<Expr> e) {
+  auto found = seedMap.find(&state);
+  if (found == seedMap.end())
+    return nullptr;
+
+  auto seeds = found->second;
   for (auto const &seed : seeds) {
     auto value = seed.assignment.evaluate(e);
     if (isa<ConstantExpr>(value))
@@ -3958,12 +3959,9 @@ void Executor::callExternalFunction(ExecutionState &state,
        ae = arguments.end(); ai!=ae; ++ai) {
     if (ExternalCalls == ExternalCallPolicy::All) { // don't bother checking uniqueness
       *ai = optimizer.optimizeExpr(*ai, true);
-      ref<ConstantExpr> cvalue;
-      ref<Expr> value = nullptr;
-      if (auto found = seedMap.find(&state); found != seedMap.end())
-        value = getValueFromSeeds(found->second, *ai);
+      ref<ConstantExpr> cvalue = getValueFromSeeds(state, *ai);
       /* If no seed evaluation results in a constant, call the solver */
-      if (!value || !(cvalue = dyn_cast<ConstantExpr>(value))) {
+      if (!cvalue) {
         [[maybe_unused]] bool success = solver->getValue(
             state.constraints, *ai, cvalue, state.queryMetaData);
         assert(success && "FIXME: Unhandled solver failure");
@@ -4196,13 +4194,9 @@ void Executor::executeAlloc(ExecutionState &state,
 
     size = optimizer.optimizeExpr(size, true);
 
-    ref<ConstantExpr> example;
     // Check if in seed mode, then try to replicate size from a seed
-    ref<Expr> value = nullptr;
-    if (auto found = seedMap.find(&state); found != seedMap.end())
-      value = getValueFromSeeds(found->second, size);
-    /* If no seed evaluation results in a constant, call the solver */
-    if (!value || !(example = dyn_cast<ConstantExpr>(value))) {
+    ref<ConstantExpr> example = getValueFromSeeds(state, size);
+    if (!example) {
       bool success = solver->getValue(state.constraints, size, example,
                                       state.queryMetaData);
       assert(success && "FIXME: Unhandled solver failure");
