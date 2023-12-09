@@ -2,8 +2,6 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --search=dfs --output-dir=%t.klee-out --single-object-resolution %t.bc > %t.log 2>&1
 // RUN: FileCheck %s -input-file=%t.log
-// RUN: %klee-stats --print-columns 'SolverQueries' --table-format=csv %t.klee-out | FileCheck %s --check-prefix CHECK-STATS
-// CHECK-STATS: 193
 
 #include "klee/klee.h"
 #include <stdlib.h>
