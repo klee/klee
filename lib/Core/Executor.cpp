@@ -13,12 +13,12 @@
 #include "Context.h"
 #include "CoreStats.h"
 #include "ExecutionState.h"
+#include "ExecutionTree.h"
 #include "ExternalDispatcher.h"
 #include "GetElementPtrTypeIterator.h"
 #include "ImpliedValue.h"
 #include "Memory.h"
 #include "MemoryManager.h"
-#include "PTree.h"
 #include "Searcher.h"
 #include "SeedInfo.h"
 #include "SpecialFunctionHandler.h"
@@ -469,8 +469,8 @@ cl::opt<bool> DebugCheckForImpliedValues(
 } // namespace
 
 // XXX hack
-extern "C" unsigned dumpStates, dumpPTree;
-unsigned dumpStates = 0, dumpPTree = 0;
+extern "C" unsigned dumpStates, dumpExecutionTree;
+unsigned dumpStates = 0, dumpExecutionTree = 0;
 
 Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
                    InterpreterHandler *ih)
@@ -918,7 +918,7 @@ void Executor::branch(ExecutionState &state,
       ExecutionState *ns = es->branch();
       addedStates.push_back(ns);
       result.push_back(ns);
-      processTree->attach(es->ptreeNode, ns, es, reason);
+      executionTree->attach(es->executionTreeNode, ns, es, reason);
     }
   }
 
@@ -1189,7 +1189,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       }
     }
 
-    processTree->attach(current.ptreeNode, falseState, trueState, reason);
+    executionTree->attach(current.executionTreeNode, falseState, trueState, reason);
     stats::incBranchStat(reason, 1);
 
     if (pathWriter) {
@@ -3355,7 +3355,7 @@ void Executor::updateStates(ExecutionState *current) {
       seedMap.find(es);
     if (it3 != seedMap.end())
       seedMap.erase(it3);
-    processTree->remove(es->ptreeNode);
+    executionTree->remove(es->executionTreeNode);
     delete es;
   }
   removedStates.clear();
@@ -3522,7 +3522,7 @@ void Executor::run(ExecutionState &initialState) {
       executeInstruction(state, ki);
       timers.invoke();
       if (::dumpStates) dumpStates();
-      if (::dumpPTree) dumpPTree();
+      if (::dumpExecutionTree) dumpExecutionTree();
       updateStates(&state);
 
       if ((stats::instructions % 1000) == 0) {
@@ -3571,7 +3571,7 @@ void Executor::run(ExecutionState &initialState) {
     executeInstruction(state, ki);
     timers.invoke();
     if (::dumpStates) dumpStates();
-    if (::dumpPTree) dumpPTree();
+    if (::dumpExecutionTree) dumpExecutionTree();
 
     updateStates(&state);
 
@@ -3647,7 +3647,7 @@ void Executor::terminateState(ExecutionState &state,
   }
 
   interpreterHandler->incPathsExplored();
-  processTree->setTerminationType(state, reason);
+  executionTree->setTerminationType(state, reason);
 
   std::vector<ExecutionState *>::iterator it =
       std::find(addedStates.begin(), addedStates.end(), &state);
@@ -3662,7 +3662,7 @@ void Executor::terminateState(ExecutionState &state,
     if (it3 != seedMap.end())
       seedMap.erase(it3);
     addedStates.erase(it);
-    processTree->remove(state.ptreeNode);
+    executionTree->remove(state.executionTreeNode);
     delete &state;
   }
 }
@@ -4607,10 +4607,10 @@ void Executor::runFunctionAsMain(Function *f,
   
   initializeGlobals(*state);
 
-  processTree = createPTree(*state, userSearcherRequiresInMemoryPTree(),
-                            *interpreterHandler);
+  executionTree = createExecutionTree(
+      *state, userSearcherRequiresInMemoryExecutionTree(), *interpreterHandler);
   run(*state);
-  processTree = nullptr;
+  executionTree = nullptr;
 
   // hack to clear memory objects
   memory = nullptr;
@@ -4840,18 +4840,17 @@ int *Executor::getErrnoLocation(const ExecutionState &state) const {
 #endif
 }
 
-
-void Executor::dumpPTree() {
-  if (!::dumpPTree) return;
+void Executor::dumpExecutionTree() {
+  if (!::dumpExecutionTree)
+    return;
 
   char name[32];
-  snprintf(name, sizeof(name),"ptree%08d.dot", (int) stats::instructions);
+  snprintf(name, sizeof(name), "exec_tree%08d.dot", (int) stats::instructions);
   auto os = interpreterHandler->openOutputFile(name);
-  if (os) {
-    processTree->dump(*os);
-  }
+  if (os)
+    executionTree->dump(*os);
 
-  ::dumpPTree = 0;
+  ::dumpExecutionTree = 0;
 }
 
 void Executor::dumpStates() {

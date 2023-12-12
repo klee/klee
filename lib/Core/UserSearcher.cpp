@@ -100,19 +100,19 @@ bool userSearcherRequiresMD2U() {
           std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_QC) != CoreSearch.end());
 }
 
-bool userSearcherRequiresInMemoryPTree() {
+bool userSearcherRequiresInMemoryExecutionTree() {
   return std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::RandomPath) != CoreSearch.end();
 }
 
 } // namespace klee
 
-Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng, InMemoryPTree *processTree) {
+Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng, InMemoryExecutionTree *executionTree) {
   Searcher *searcher = nullptr;
   switch (type) {
     case Searcher::DFS: searcher = new DFSSearcher(); break;
     case Searcher::BFS: searcher = new BFSSearcher(); break;
     case Searcher::RandomState: searcher = new RandomSearcher(rng); break;
-    case Searcher::RandomPath: searcher = new RandomPathSearcher(processTree, rng); break;
+    case Searcher::RandomPath: searcher = new RandomPathSearcher(executionTree, rng); break;
     case Searcher::NURS_CovNew: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::CoveringNew, rng); break;
     case Searcher::NURS_MD2U: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::MinDistToUncovered, rng); break;
     case Searcher::NURS_Depth: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::Depth, rng); break;
@@ -126,15 +126,15 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng, InMemoryPTree 
 }
 
 Searcher *klee::constructUserSearcher(Executor &executor) {
-  auto *ptree = llvm::dyn_cast<InMemoryPTree>(executor.processTree.get());
-  Searcher *searcher = getNewSearcher(CoreSearch[0], executor.theRNG, ptree);
+  auto *etree = llvm::dyn_cast<InMemoryExecutionTree>(executor.executionTree.get());
+  Searcher *searcher = getNewSearcher(CoreSearch[0], executor.theRNG, etree);
 
   if (CoreSearch.size() > 1) {
     std::vector<Searcher *> s;
     s.push_back(searcher);
 
     for (unsigned i = 1; i < CoreSearch.size(); i++)
-      s.push_back(getNewSearcher(CoreSearch[i], executor.theRNG, ptree));
+      s.push_back(getNewSearcher(CoreSearch[i], executor.theRNG, etree));
 
     searcher = new InterleavedSearcher(s);
   }

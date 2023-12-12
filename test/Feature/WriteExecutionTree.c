@@ -1,13 +1,13 @@
 // RUN: %clang %s -emit-llvm %O0opt -g -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee -write-ptree --output-dir=%t.klee-out %t.bc
-// RUN: %klee-ptree branches %t.klee-out/ptree.db | FileCheck --check-prefix=CHECK-BRANCH %s
-// RUN: %klee-ptree depths %t.klee-out | FileCheck --check-prefix=CHECK-DEPTH %s
-// RUN: %klee-ptree instructions %t.klee-out | FileCheck --check-prefix=CHECK-INSTR %s
-// RUN: %klee-ptree terminations %t.klee-out | FileCheck --check-prefix=CHECK-TERM %s
-// RUN: %klee-ptree tree-dot %t.klee-out | FileCheck --check-prefix=CHECK-DOT %s
-// RUN: %klee-ptree tree-info %t.klee-out | FileCheck --check-prefix=CHECK-TINFO %s
-// RUN: not %klee-ptree dot %t.klee-out/ptree-doesnotexist.db
+// RUN: %klee -write-exec-tree --output-dir=%t.klee-out %t.bc
+// RUN: %klee-exec-tree branches %t.klee-out/exec_tree.db | FileCheck --check-prefix=CHECK-BRANCH %s
+// RUN: %klee-exec-tree depths %t.klee-out | FileCheck --check-prefix=CHECK-DEPTH %s
+// RUN: %klee-exec-tree instructions %t.klee-out | FileCheck --check-prefix=CHECK-INSTR %s
+// RUN: %klee-exec-tree terminations %t.klee-out | FileCheck --check-prefix=CHECK-TERM %s
+// RUN: %klee-exec-tree tree-dot %t.klee-out | FileCheck --check-prefix=CHECK-DOT %s
+// RUN: %klee-exec-tree tree-info %t.klee-out | FileCheck --check-prefix=CHECK-TINFO %s
+// RUN: not %klee-exec-tree dot %t.klee-out/exec-tree-doesnotexist.db
 
 #include "klee/klee.h"
 
@@ -61,7 +61,7 @@ int main(void) {
 // CHECK-TERM-DAG: User,2
 // CHECK-TERM-DAG: SilentExit,2
 
-// CHECK-DOT: strict digraph PTree {
+// CHECK-DOT: strict digraph ExecutionTree {
 // CHECK-DOT: node[shape=point,width=0.15,color=darkgrey];
 // CHECK-DOT: edge[color=darkgrey];
 // CHECK-DOT-DAG: N{{[0-9]+}}[tooltip="Conditional\nnode: {{[0-9]+}}\nstate: 0\nasm: {{[0-9]+}}"];

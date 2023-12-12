@@ -163,7 +163,7 @@ void printEdges(std::uint32_t id, Node node, std::uint32_t depth) {
 void printDOT(const Tree &tree) {
   // header
   // - style defaults to intermediate nodes
-  std::cout << "strict digraph PTree {\n"
+  std::cout << "strict digraph ExecutionTree {\n"
                "node[shape=point,width=0.15,color=darkgrey];\n"
                "edge[color=darkgrey];\n\n";
 

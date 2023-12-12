@@ -11,7 +11,7 @@
 #define KLEE_SEARCHER_H
 
 #include "ExecutionState.h"
-#include "PTree.h"
+#include "ExecutionTree.h"
 #include "klee/ADT/RNG.h"
 #include "klee/System/Time.h"
 
@@ -89,10 +89,11 @@ namespace klee {
     void printName(llvm::raw_ostream &os) override;
   };
 
-  /// BFSSearcher implements breadth-first exploration. When KLEE branches multiple
-  /// times for a single instruction, all new states have the same depth. Keep in
-  /// mind that the process tree (PTree) is a binary tree and hence the depth of
-  /// a state in that tree and its branch depth during BFS are different.
+  /// BFSSearcher implements breadth-first exploration. When KLEE branches
+  /// multiple times for a single instruction, all new states have the same
+  /// depth. Keep in mind that the execution tree (ExecutionTree) is a binary
+  /// tree and hence the depth of a state in that tree and its branch depth
+  /// during BFS are different.
   class BFSSearcher final : public Searcher {
     std::deque<ExecutionState*> states;
 
@@ -156,32 +157,35 @@ namespace klee {
     void printName(llvm::raw_ostream &os) override;
   };
 
-  /// RandomPathSearcher performs a random walk of the PTree to select a state.
-  /// PTree is a global data structure, however, a searcher can sometimes only
-  /// select from a subset of all states (depending on the update calls).
+  /// RandomPathSearcher performs a random walk of the ExecutionTree to select a
+  /// state. ExecutionTree is a global data structure, however, a searcher can
+  /// sometimes only select from a subset of all states (depending on the update
+  /// calls).
   ///
-  /// To support this, RandomPathSearcher has a subgraph view of PTree, in that it
-  /// only walks the PTreeNodes that it "owns". Ownership is stored in the
-  /// getInt method of the PTreeNodePtr class (which hides it in the pointer itself).
+  /// To support this, RandomPathSearcher has a subgraph view of ExecutionTree,
+  /// in that it only walks the ExecutionTreeNodes that it "owns". Ownership is
+  /// stored in the getInt method of the ExecutionTreeNodePtr class (which hides
+  /// it in the pointer itself).
   ///
-  /// The current implementation of PTreeNodePtr supports only 3 instances of the
-  /// RandomPathSearcher. This is because the current PTreeNodePtr implementation
-  /// conforms to C++ and only steals the last 3 alignment bits. This restriction
-  /// could be relaxed slightly by an architecture-specific implementation of
-  /// PTreeNodePtr that also steals the top bits of the pointer.
+  /// The current implementation of ExecutionTreeNodePtr supports only 3
+  /// instances of the RandomPathSearcher. This is because the current
+  /// ExecutionTreeNodePtr implementation conforms to C++ and only steals the
+  /// last 3 alignment bits. This restriction could be relaxed slightly by an
+  /// architecture-specific implementation of ExecutionTreeNodePtr that also
+  /// steals the top bits of the pointer.
   ///
   /// The ownership bits are maintained in the update method.
   class RandomPathSearcher final : public Searcher {
-    InMemoryPTree *processTree;
+    InMemoryExecutionTree *executionTree;
     RNG &theRNG;
 
     // Unique bitmask of this searcher
     const uint8_t idBitMask;
 
   public:
-    /// \param processTree The process tree.
+    /// \param executionTree The execution tree.
     /// \param RNG A random number generator.
-    RandomPathSearcher(InMemoryPTree *processTree, RNG &rng);
+    RandomPathSearcher(InMemoryExecutionTree *executionTree, RNG &rng);
     ~RandomPathSearcher() override = default;
 
     ExecutionState &selectState() override;

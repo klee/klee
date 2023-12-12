@@ -1120,10 +1120,10 @@ int main(int argc, char **argv, char **envp) {
   atexit(llvm_shutdown); // Call llvm_shutdown() on exit
 
   KCommandLine::KeepOnlyCategories(
-     {&ChecksCat,      &DebugCat,    &ExtCallsCat, &ExprCat,   &LinkCat,
-      &MemoryCat,      &MergeCat,    &MiscCat,     &ModuleCat, &ReplayCat,
-      &SearchCat,      &SeedingCat,  &SolvingCat,  &StartCat,  &StatsCat,
-      &TerminationCat, &TestCaseCat, &TestGenCat,  &PTreeCat});
+     {&ChecksCat,      &DebugCat,    &ExtCallsCat, &ExprCat,    &LinkCat,
+      &MemoryCat,      &MergeCat,    &MiscCat,     &ModuleCat,  &ReplayCat,
+      &SearchCat,      &SeedingCat,  &SolvingCat,  &StartCat,   &StatsCat,
+      &TerminationCat, &TestCaseCat, &TestGenCat,  &ExecTreeCat});
 
   llvm::InitializeNativeTarget();
 

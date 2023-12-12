@@ -1,0 +1,65 @@
+REQUIRES: sqlite3
+
+fail on broken db (not sqlite)
+RUN: not %klee-exec-tree tree-info %S/exec-tree-dbs/not_a.db 2> %t.err
+RUN: FileCheck -check-prefix=CHECK-CORRUPT -input-file=%t.err %s
+CHECK-CORRUPT: Cannot prepare read statement: file is not a database
+
+empty tree
+RUN: rm -f %t.db
+RUN: %sqlite3 -separator ',' %t.db ".import %S/exec-tree-dbs/empty_db.csv nodes" 
+RUN: %klee-exec-tree tree-info %t.db > %t.err
+RUN: FileCheck -check-prefix=CHECK-EMPTY -input-file=%t.err %s
+CHECK-EMPTY: Empty tree.
+
+fail on tree with duplicate node IDs
+RUN: rm -f %t.db
+RUN: %sqlite3 -separator ',' %t.db ".import %S/exec-tree-dbs/duplicated_node.csv nodes" 
+RUN: not %klee-exec-tree tree-info %t.db 2> %t.err
+RUN: FileCheck -check-prefix=CHECK-DUP -input-file=%t.err %s
+CHECK-DUP: ExecutionTree DB contains duplicate child reference or circular structure. Affected node: 2
+
+fail on invalid branch type
+RUN: rm -f %t.db
+RUN: %sqlite3 -separator ',' %t.db ".import %S/exec-tree-dbs/invalid_btype.csv nodes" 
+RUN: not %klee-exec-tree tree-info %t.db 2> %t.err
+RUN: FileCheck -check-prefix=CHECK-BTYPE -input-file=%t.err %s
+CHECK-BTYPE: ExecutionTree DB contains unknown branch type (123) in node 1
+
+fail on invalid termination type
+RUN: rm -f %t.db
+RUN: %sqlite3 -separator ',' %t.db ".import %S/exec-tree-dbs/invalid_ttype.csv nodes" 
+RUN: not %klee-exec-tree tree-info %t.db 2> %t.err
+RUN: FileCheck -check-prefix=CHECK-TTYPE -input-file=%t.err %s
+CHECK-TTYPE: ExecutionTree DB contains unknown termination type (123) in node 3
+
+fail on tree with looping nodes
+RUN: rm -f %t.db
+RUN: %sqlite3 -separator ',' %t.db ".import %S/exec-tree-dbs/loop.csv nodes" 
+RUN: not %klee-exec-tree tree-info %t.db 2> %t.err
+RUN: FileCheck -check-prefix=CHECK-LOOP -input-file=%t.err %s
+CHECK-LOOP: ExecutionTree DB contains duplicate child reference or circular structure. Affected node: 1
+
+fail on tree with missing node (child node ID > max. ID)
+RUN: rm -f %t.db
+RUN: %sqlite3 -separator ',' %t.db ".import %S/exec-tree-dbs/missing_after_max.csv nodes" 
+RUN: not %klee-exec-tree tree-info %t.db 2> %t.err
+RUN: FileCheck -check-prefix=CHECK-MISSA -input-file=%t.err %s
+CHECK-MISSA: ExecutionTree DB contains references to non-existing nodes (> max. ID) in node 3
+
+fail on tree with missing node (child node ID < max. ID)
+RUN: rm -f %t.db
+RUN: %sqlite3 -separator ',' %t.db ".import %S/exec-tree-dbs/missing_before_max.csv nodes" 
+RUN: not %klee-exec-tree tree-info %t.db 2> %t.err
+RUN: FileCheck -check-prefix=CHECK-MISSB -input-file=%t.err %s
+CHECK-MISSB: ExecutionTree DB references undefined node. Affected node: 4
+
+fail on illegal node ID (0)
+RUN: rm -f %t.db
+RUN: %sqlite3 -separator ',' %t.db ".import %S/exec-tree-dbs/node_id0.csv nodes" 
+RUN: not %klee-exec-tree tree-info %t.db 2> %t.err
+RUN: FileCheck -check-prefix=CHECK-ID0 -input-file=%t.err %s
+CHECK-ID0: ExecutionTree DB contains illegal node ID (0)
+
+cleanup
+RUN rm -f %t.db

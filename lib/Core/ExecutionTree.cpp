@@ -1,4 +1,4 @@
-//===-- PTree.cpp ---------------------------------------------------------===//
+//===-- ExecutionTree.cpp ---------------------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PTree.h"
+#include "ExecutionTree.h"
 
 #include "ExecutionState.h"
 
@@ -23,100 +23,100 @@ using namespace klee;
 
 namespace klee {
 llvm::cl::OptionCategory
-    PTreeCat("Process tree related options",
-             "These options affect the process tree handling.");
+    ExecTreeCat("Execution tree related options",
+                "These options affect the execution tree handling.");
 }
 
 namespace {
-llvm::cl::opt<bool> CompressProcessTree(
-    "compress-process-tree",
-    llvm::cl::desc("Remove intermediate nodes in the process "
+llvm::cl::opt<bool> CompressExecutionTree(
+    "compress-execution-tree",
+    llvm::cl::desc("Remove intermediate nodes in the execution "
                    "tree whenever possible (default=false)"),
-    llvm::cl::init(false), llvm::cl::cat(PTreeCat));
+    llvm::cl::init(false), llvm::cl::cat(ExecTreeCat));
 
-llvm::cl::opt<bool> WritePTree(
-    "write-ptree", llvm::cl::init(false),
-    llvm::cl::desc("Write process tree into ptree.db (default=false)"),
-    llvm::cl::cat(PTreeCat));
+llvm::cl::opt<bool> WriteExecutionTree(
+    "write-exec-tree", llvm::cl::init(false),
+    llvm::cl::desc("Write execution tree into exec_tree.db (default=false)"),
+    llvm::cl::cat(ExecTreeCat));
 } // namespace
 
-// PTreeNode
+// ExecutionTreeNode
 
-PTreeNode::PTreeNode(PTreeNode *parent, ExecutionState *state) noexcept
+ExecutionTreeNode::ExecutionTreeNode(ExecutionTreeNode *parent, ExecutionState *state) noexcept
     : parent{parent}, left{nullptr}, right{nullptr}, state{state} {
-  state->ptreeNode = this;
+  state->executionTreeNode = this;
 }
 
-// AnnotatedPTreeNode
+// AnnotatedExecutionTreeNode
 
-AnnotatedPTreeNode::AnnotatedPTreeNode(PTreeNode *parent,
+AnnotatedExecutionTreeNode::AnnotatedExecutionTreeNode(ExecutionTreeNode *parent,
                                        ExecutionState *state) noexcept
-    : PTreeNode(parent, state) {
+    : ExecutionTreeNode(parent, state) {
   id = nextID++;
 }
 
-// NoopPTree
+// NoopExecutionTree
 
-void NoopPTree::dump(llvm::raw_ostream &os) noexcept {
+void NoopExecutionTree::dump(llvm::raw_ostream &os) noexcept {
   os << "digraph G {\nTreeNotAvailable [shape=box]\n}";
 }
 
-// InMemoryPTree
+// InMemoryExecutionTree
 
-InMemoryPTree::InMemoryPTree(ExecutionState &initialState) noexcept {
-  root = PTreeNodePtr(createNode(nullptr, &initialState));
-  initialState.ptreeNode = root.getPointer();
+InMemoryExecutionTree::InMemoryExecutionTree(ExecutionState &initialState) noexcept {
+  root = ExecutionTreeNodePtr(createNode(nullptr, &initialState));
+  initialState.executionTreeNode = root.getPointer();
 }
 
-PTreeNode *InMemoryPTree::createNode(PTreeNode *parent, ExecutionState *state) {
-  return new PTreeNode(parent, state);
+ExecutionTreeNode *InMemoryExecutionTree::createNode(ExecutionTreeNode *parent, ExecutionState *state) {
+  return new ExecutionTreeNode(parent, state);
 }
 
-void InMemoryPTree::attach(PTreeNode *node, ExecutionState *leftState,
+void InMemoryExecutionTree::attach(ExecutionTreeNode *node, ExecutionState *leftState,
                            ExecutionState *rightState,
                            BranchType reason) noexcept {
   assert(node && !node->left.getPointer() && !node->right.getPointer());
-  assert(node == rightState->ptreeNode &&
+  assert(node == rightState->executionTreeNode &&
          "Attach assumes the right state is the current state");
-  node->left = PTreeNodePtr(createNode(node, leftState));
+  node->left = ExecutionTreeNodePtr(createNode(node, leftState));
   // The current node inherits the tag
   uint8_t currentNodeTag = root.getInt();
   if (node->parent)
     currentNodeTag = node->parent->left.getPointer() == node
                          ? node->parent->left.getInt()
                          : node->parent->right.getInt();
-  node->right = PTreeNodePtr(createNode(node, rightState), currentNodeTag);
+  node->right = ExecutionTreeNodePtr(createNode(node, rightState), currentNodeTag);
   updateBranchingNode(*node, reason);
   node->state = nullptr;
 }
 
-void InMemoryPTree::remove(PTreeNode *n) noexcept {
+void InMemoryExecutionTree::remove(ExecutionTreeNode *n) noexcept {
   assert(!n->left.getPointer() && !n->right.getPointer());
   updateTerminatingNode(*n);
   do {
-    PTreeNode *p = n->parent;
+    ExecutionTreeNode *p = n->parent;
     if (p) {
       if (n == p->left.getPointer()) {
-        p->left = PTreeNodePtr(nullptr);
+        p->left = ExecutionTreeNodePtr(nullptr);
       } else {
         assert(n == p->right.getPointer());
-        p->right = PTreeNodePtr(nullptr);
+        p->right = ExecutionTreeNodePtr(nullptr);
       }
     }
     delete n;
     n = p;
   } while (n && !n->left.getPointer() && !n->right.getPointer());
 
-  if (n && CompressProcessTree) {
-    // We're now at a node that has exactly one child; we've just deleted the
+  if (n && CompressExecutionTree) {
+    // We are now at a node that has exactly one child; we've just deleted the
     // other one. Eliminate the node and connect its child to the parent
     // directly (if it's not the root).
-    PTreeNodePtr child = n->left.getPointer() ? n->left : n->right;
-    PTreeNode *parent = n->parent;
+    ExecutionTreeNodePtr child = n->left.getPointer() ? n->left : n->right;
+    ExecutionTreeNode *parent = n->parent;
 
     child.getPointer()->parent = parent;
     if (!parent) {
-      // We're at the root.
+      // We are at the root
       root = child;
     } else {
       if (n == parent->left.getPointer()) {
@@ -131,7 +131,7 @@ void InMemoryPTree::remove(PTreeNode *n) noexcept {
   }
 }
 
-void InMemoryPTree::dump(llvm::raw_ostream &os) noexcept {
+void InMemoryExecutionTree::dump(llvm::raw_ostream &os) noexcept {
   std::unique_ptr<ExprPPrinter> pp(ExprPPrinter::create(os));
   pp->setNewline("\\l");
   os << "digraph G {\n"
@@ -141,10 +141,10 @@ void InMemoryPTree::dump(llvm::raw_ostream &os) noexcept {
      << "\tcenter = \"true\";\n"
      << "\tnode [style=\"filled\",width=.1,height=.1,fontname=\"Terminus\"]\n"
      << "\tedge [arrowsize=.3]\n";
-  std::vector<const PTreeNode *> stack;
+  std::vector<const ExecutionTreeNode *> stack;
   stack.push_back(root.getPointer());
   while (!stack.empty()) {
-    const PTreeNode *n = stack.back();
+    const ExecutionTreeNode *n = stack.back();
     stack.pop_back();
     os << "\tn" << n << " [shape=diamond";
     if (n->state)
@@ -164,43 +164,43 @@ void InMemoryPTree::dump(llvm::raw_ostream &os) noexcept {
   os << "}\n";
 }
 
-std::uint8_t InMemoryPTree::getNextId() noexcept {
+std::uint8_t InMemoryExecutionTree::getNextId() noexcept {
   static_assert(PtrBitCount <= 8);
   std::uint8_t id = 1 << registeredIds++;
   if (registeredIds > PtrBitCount) {
-    klee_error("PTree cannot support more than %d RandomPathSearchers",
+    klee_error("ExecutionTree cannot support more than %d RandomPathSearchers",
                PtrBitCount);
   }
   return id;
 }
 
-// PersistentPTree
+// PersistentExecutionTree
 
-PersistentPTree::PersistentPTree(ExecutionState &initialState,
+PersistentExecutionTree::PersistentExecutionTree(ExecutionState &initialState,
                                  InterpreterHandler &ih) noexcept
-    : writer(ih.getOutputFilename("ptree.db")) {
-  root = PTreeNodePtr(createNode(nullptr, &initialState));
-  initialState.ptreeNode = root.getPointer();
+    : writer(ih.getOutputFilename("exec_tree.db")) {
+  root = ExecutionTreeNodePtr(createNode(nullptr, &initialState));
+  initialState.executionTreeNode = root.getPointer();
 }
 
-void PersistentPTree::dump(llvm::raw_ostream &os) noexcept {
+void PersistentExecutionTree::dump(llvm::raw_ostream &os) noexcept {
   writer.batchCommit(true);
-  InMemoryPTree::dump(os);
+  InMemoryExecutionTree::dump(os);
 }
 
-PTreeNode *PersistentPTree::createNode(PTreeNode *parent,
+ExecutionTreeNode *PersistentExecutionTree::createNode(ExecutionTreeNode *parent,
                                        ExecutionState *state) {
-  return new AnnotatedPTreeNode(parent, state);
+  return new AnnotatedExecutionTreeNode(parent, state);
 }
 
-void PersistentPTree::setTerminationType(ExecutionState &state,
+void PersistentExecutionTree::setTerminationType(ExecutionState &state,
                                          StateTerminationType type) {
-  auto *annotatedNode = llvm::cast<AnnotatedPTreeNode>(state.ptreeNode);
+  auto *annotatedNode = llvm::cast<AnnotatedExecutionTreeNode>(state.executionTreeNode);
   annotatedNode->kind = type;
 }
 
-void PersistentPTree::updateBranchingNode(PTreeNode &node, BranchType reason) {
-  auto *annotatedNode = llvm::cast<AnnotatedPTreeNode>(&node);
+void PersistentExecutionTree::updateBranchingNode(ExecutionTreeNode &node, BranchType reason) {
+  auto *annotatedNode = llvm::cast<AnnotatedExecutionTreeNode>(&node);
   const auto &state = *node.state;
   const auto prevPC = state.prevPC;
   annotatedNode->asmLine =
@@ -209,9 +209,9 @@ void PersistentPTree::updateBranchingNode(PTreeNode &node, BranchType reason) {
   writer.write(*annotatedNode);
 }
 
-void PersistentPTree::updateTerminatingNode(PTreeNode &node) {
+void PersistentExecutionTree::updateTerminatingNode(ExecutionTreeNode &node) {
   assert(node.state);
-  auto *annotatedNode = llvm::cast<AnnotatedPTreeNode>(&node);
+  auto *annotatedNode = llvm::cast<AnnotatedExecutionTreeNode>(&node);
   const auto &state = *node.state;
   const auto prevPC = state.prevPC;
   annotatedNode->asmLine =
@@ -222,14 +222,14 @@ void PersistentPTree::updateTerminatingNode(PTreeNode &node) {
 
 // Factory
 
-std::unique_ptr<PTree> klee::createPTree(ExecutionState &initialState,
+std::unique_ptr<ExecutionTree> klee::createExecutionTree(ExecutionState &initialState,
                                          bool inMemory,
                                          InterpreterHandler &ih) {
-  if (WritePTree)
-    return std::make_unique<PersistentPTree>(initialState, ih);
+  if (WriteExecutionTree)
+    return std::make_unique<PersistentExecutionTree>(initialState, ih);
 
   if (inMemory)
-    return std::make_unique<InMemoryPTree>(initialState);
+    return std::make_unique<InMemoryExecutionTree>(initialState);
 
-  return std::make_unique<NoopPTree>();
+  return std::make_unique<NoopExecutionTree>();
 };
