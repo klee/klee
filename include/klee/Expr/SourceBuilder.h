@@ -1,12 +1,12 @@
 #ifndef KLEE_SOURCEBUILDER_H
 #define KLEE_SOURCEBUILDER_H
 
-#include "klee/ADT/Ref.h"
-#include "klee/ADT/SparseStorage.h"
 #include "klee/Expr/SymbolicSource.h"
-#include "klee/Module/KModule.h"
 
 namespace klee {
+
+template <typename T, typename Eq> class SparseStorage;
+template <typename T> class ref;
 
 class SourceBuilder {
 public:
@@ -18,7 +18,7 @@ public:
   static ref<SymbolicSource> uninitialized(unsigned version,
                                            const KInstruction *allocSite);
   static ref<SymbolicSource>
-  symbolicSizeConstantAddress(unsigned version, const KInstruction *allocSite,
+  symbolicSizeConstantAddress(unsigned version, const KValue *allocSite,
                               ref<Expr> size);
   static ref<SymbolicSource> makeSymbolic(const std::string &name,
                                           unsigned version);

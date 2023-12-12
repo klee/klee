@@ -23,7 +23,9 @@ namespace klee {
 class Array;
 class Expr;
 class ConstantExpr;
+struct KGlobalVariable;
 class KModule;
+struct KValue;
 struct KInstruction;
 
 class SymbolicSource {
@@ -125,10 +127,10 @@ public:
 class SymbolicSizeConstantAddressSource : public SymbolicSource {
 public:
   const unsigned version;
-  const KInstruction *allocSite;
+  const KValue *allocSite;
   ref<Expr> size;
-  SymbolicSizeConstantAddressSource(unsigned _version,
-                                    const KInstruction *_allocSite,
+
+  SymbolicSizeConstantAddressSource(unsigned _version, const KValue *_allocSite,
                                     ref<Expr> _size)
       : version(_version), allocSite(_allocSite), size(_size) {}
 

@@ -751,7 +751,7 @@ void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
                              offset + i * elementSize);
   } else if (!isa<UndefValue>(c) && !isa<MetadataAsValue>(c)) {
     unsigned StoreBits = targetData->getTypeStoreSizeInBits(c->getType());
-    ref<ConstantExpr> C = evalConstant(c, state.roundingMode);
+    ref<Expr> C = evalConstant(c, state.roundingMode);
 
     if (c->getType()->isFloatingPointTy() &&
         Context::get().getPointerWidth() == 32) {
@@ -762,7 +762,7 @@ void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
     // Extend the constant if necessary;
     assert(StoreBits >= C->getWidth() && "Invalid store size!");
     if (StoreBits > C->getWidth())
-      C = C->ZExt(StoreBits);
+      C = ZExtExpr::create(C, StoreBits);
 
     os->write(offset, C);
   }
@@ -903,10 +903,10 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
   for (const GlobalVariable &v : m->globals()) {
     std::size_t globalObjectAlignment = getAllocationAlignment(&v);
     Type *ty = v.getValueType();
-    std::uint64_t size = 0;
+    ref<Expr> size = Expr::createPointer(0);
     if (ty->isSized()) {
       // size includes padding
-      size = kmodule->targetData->getTypeAllocSize(ty);
+      size = Expr::createPointer(kmodule->targetData->getTypeAllocSize(ty));
     }
     if (v.isDeclaration()) {
       // FIXME: We have no general way of handling unknown external
@@ -922,30 +922,33 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
       // XXX - DWD - hardcode some things until we decide how to fix.
 #ifndef WINDOWS
       if (v.getName() == "_ZTVN10__cxxabiv117__class_type_infoE") {
-        size = 0x2C;
+        size = Expr::createPointer(0x2C);
       } else if (v.getName() == "_ZTVN10__cxxabiv120__si_class_type_infoE") {
-        size = 0x2C;
+        size = Expr::createPointer(0x2C);
       } else if (v.getName() == "_ZTVN10__cxxabiv121__vmi_class_type_infoE") {
-        size = 0x2C;
+        size = Expr::createPointer(0x2C);
       }
 #endif
 
-      if (size == 0) {
-        klee_warning("Unable to find size for global variable: %.*s (use will "
-                     "result in out of bounds access)",
+      if (size->isZero()) {
+        const Array *array = makeArray(
+            Expr::createPointer(Context::get().getPointerWidthInBytes()),
+            SourceBuilder::irreproducible(v.getName().str()));
+        size = Expr::createTempRead(array, Context::get().getPointerWidth());
+        klee_warning("Unable to find size for global variable: %.*s (model "
+                     "size as symbolic with irreproducible content)",
                      static_cast<int>(v.getName().size()), v.getName().data());
       }
     }
 
-    MemoryObject *mo =
-        memory->allocate(size, /*isLocal=*/false,
-                         /*isGlobal=*/true, false, /*allocSite=*/&v,
-                         /*alignment=*/globalObjectAlignment);
+    MemoryObject *mo = allocate(state, size, /*isLocal=*/false,
+                                /*isGlobal=*/true, /*allocSite=*/&v,
+                                /*alignment=*/globalObjectAlignment);
     if (!mo)
       klee_error("out of memory");
 
     globalObjects.emplace(&v, mo);
-    globalAddresses.emplace(&v, mo->getBaseConstantExpr());
+    globalAddresses.emplace(&v, mo->getBaseExpr());
   }
 }
 
@@ -998,26 +1001,32 @@ void Executor::initializeGlobalObjects(ExecutionState &state) {
         state, mo, typeSystemManager->getWrappedType(v.getType()), false,
         nullptr);
 
-    if (v.isDeclaration() && mo->size) {
-      // Program already running -> object already initialized.
-      // Read concrete value and write it to our copy.
-      void *addr;
-      if (v.getName() == "__dso_handle") {
-        addr = &__dso_handle; // wtf ?
+    if (v.isDeclaration()) {
+      if (isa<ConstantExpr>(mo->getSizeExpr())) {
+        // Program already running -> object already initialized.
+        // Read concrete value and write it to our copy.
+        void *addr;
+        if (v.getName() == "__dso_handle") {
+          addr = &__dso_handle; // wtf ?
+        } else {
+          addr = externalDispatcher->resolveSymbol(v.getName().str());
+        }
+        if (MockAllExternals && !addr) {
+          executeMakeSymbolic(
+              state, mo, typeSystemManager->getWrappedType(v.getType()),
+              SourceBuilder::irreproducible("mockExternGlobalObject"), false);
+        } else if (!addr) {
+          klee_error("Unable to load symbol(%.*s) while initializing globals",
+                     static_cast<int>(v.getName().size()), v.getName().data());
+        } else {
+          for (unsigned offset = 0; offset < mo->size; offset++) {
+            os->write8(offset, static_cast<unsigned char *>(addr)[offset]);
+          }
+        }
       } else {
-        addr = externalDispatcher->resolveSymbol(v.getName().str());
-      }
-      if (MockAllExternals && !addr) {
         executeMakeSymbolic(
             state, mo, typeSystemManager->getWrappedType(v.getType()),
-            SourceBuilder::irreproducible("mockExternGlobalObject"), false);
-      } else if (!addr) {
-        klee_error("Unable to load symbol(%.*s) while initializing globals",
-                   static_cast<int>(v.getName().size()), v.getName().data());
-      } else {
-        for (unsigned offset = 0; offset < mo->size; offset++) {
-          os->write8(offset, static_cast<unsigned char *>(addr)[offset]);
-        }
+            SourceBuilder::irreproducible("unsizedGlobal"), false);
       }
     } else if (v.hasInitializer()) {
       if (!v.isConstant() && kmodule->inMainModule(v) &&
@@ -1544,7 +1553,7 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
 const Cell &Executor::eval(const KInstruction *ki, unsigned index,
                            ExecutionState &state, StackFrame &sf,
                            bool isSymbolic) {
-  assert(index < ki->inst->getNumOperands());
+  assert(index < ki->inst()->getNumOperands());
   int vnumber = ki->operands[index];
 
   assert(vnumber != -1 &&
@@ -1698,7 +1707,7 @@ void Executor::printDebugInstructions(ExecutionState &state) {
     (*stream) << "     " << state.pc->getSourceLocationString() << ':';
   }
   {
-    auto asmLine = state.pc->getKModule()->getAsmLine(state.pc->inst);
+    auto asmLine = state.pc->getKModule()->getAsmLine(state.pc->inst());
     if (asmLine.has_value()) {
       (*stream) << asmLine.value() << ':';
     }
@@ -1712,7 +1721,7 @@ void Executor::printDebugInstructions(ExecutionState &state) {
 
   if (DebugPrintInstructions.isSet(STDERR_ALL) ||
       DebugPrintInstructions.isSet(FILE_ALL))
-    (*stream) << ':' << *(state.pc->inst);
+    (*stream) << ':' << *(state.pc->inst());
 
   (*stream) << '\n';
 
@@ -1733,7 +1742,7 @@ void Executor::stepInstruction(ExecutionState &state) {
 
   ++stats::instructions;
   ++state.steppedInstructions;
-  if (isa<LoadInst>(state.pc->inst) || isa<StoreInst>(state.pc->inst)) {
+  if (isa<LoadInst>(state.pc->inst()) || isa<StoreInst>(state.pc->inst())) {
     ++state.steppedMemoryInstructions;
   }
   state.prevPC = state.pc;
@@ -1783,7 +1792,11 @@ MemoryObject *Executor::serializeLandingpad(ExecutionState &state,
         llvm::GlobalValue *clause_type =
             dyn_cast<GlobalValue>(clause_bitcast->getOperand(0));
 
-        ti_addr = globalAddresses[clause_type]->getZExtValue();
+        // Since global variable may have symbolic address,
+        // here we must guarantee that the address of clause is
+        // constant (which seems to be true).
+        ti_addr =
+            cast<ConstantExpr>(globalAddresses[clause_type])->getZExtValue();
       } else if (current_clause->isNullValue()) {
         ti_addr = 0;
       } else {
@@ -1843,8 +1856,10 @@ MemoryObject *Executor::serializeLandingpad(ExecutionState &state,
             return nullptr;
           }
 
+          // We assume again that the clause_value is a
+          // constant global.
           std::uint64_t const ti_addr =
-              globalAddresses[clause_value]->getZExtValue();
+              cast<ConstantExpr>(globalAddresses[clause_value])->getZExtValue();
 
           const std::size_t old_size = serialized.size();
           serialized.resize(old_size + 8);
@@ -1888,7 +1903,7 @@ void Executor::unwindToNextLandingpad(ExecutionState &state) {
   for (std::size_t i = startIndex; i > lowestStackIndex; i--) {
     auto const &sf = state.stack.callStack().at(i);
 
-    Instruction *inst = sf.caller ? sf.caller->inst : nullptr;
+    Instruction *inst = sf.caller ? sf.caller->inst() : nullptr;
 
     if (popFrames) {
       state.popFrame();
@@ -1993,7 +2008,7 @@ ref<klee::ConstantExpr> Executor::getEhTypeidFor(ref<Expr> type_info) {
 
 void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
                            std::vector<ref<Expr>> &arguments) {
-  Instruction *i = ki->inst;
+  Instruction *i = ki->inst();
   if (isa_and_nonnull<DbgInfoIntrinsic>(i))
     return;
   if (f && f->isDeclaration()) {
@@ -2316,7 +2331,7 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
     KFunction *kf = kmodule->functionMap[f];
 
     state.pushFrame(state.prevPC, kf);
-    transferToBasicBlock(&*kf->function->begin(), state.getPrevPCBlock(),
+    transferToBasicBlock(&*kf->function()->begin(), state.getPrevPCBlock(),
                          state);
 
     if (statsTracker)
@@ -2401,7 +2416,7 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
 
       StackFrame &sf = state.stack.valueStack().back();
       MemoryObject *mo = sf.varargs =
-          memory->allocate(size, true, false, false, state.prevPC->inst,
+          memory->allocate(size, true, false, false, state.prevPC->inst(),
                            (requires16ByteAlignment ? 16 : 8));
       if (!mo && size) {
         terminateStateOnExecError(state, "out of memory (varargs)");
@@ -2484,8 +2499,8 @@ void Executor::transferToBasicBlock(KBlock *kdst, BasicBlock *src,
   // XXX this lookup has to go ?
   state.pc = kdst->instructions;
   state.increaseLevel();
-  if (state.pc->inst->getOpcode() == Instruction::PHI) {
-    PHINode *first = static_cast<PHINode *>(state.pc->inst);
+  if (state.pc->inst()->getOpcode() == Instruction::PHI) {
+    PHINode *first = static_cast<PHINode *>(state.pc->inst());
     state.incomingBBIndex = first->getBasicBlockIndex(src);
   }
   increaseProgressVelocity(state, kdst);
@@ -2525,7 +2540,7 @@ void Executor::checkNullCheckAfterDeref(ref<Expr> cond, ExecutionState &state,
 }
 
 void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
-  Instruction *i = ki->inst;
+  Instruction *i = ki->inst();
 
   if (guidanceKind == GuidanceKind::ErrorGuidance) {
     for (auto kvp : state.targetForest) {
@@ -2545,7 +2560,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::Ret: {
     ReturnInst *ri = cast<ReturnInst>(i);
     KInstIterator kcaller = state.stack.callStack().back().caller;
-    Instruction *caller = kcaller ? kcaller->inst : nullptr;
+    Instruction *caller = kcaller ? kcaller->inst() : nullptr;
     bool isVoidReturn = (ri->getNumOperands() == 0);
     ref<Expr> result = ConstantExpr::alloc(0, Expr::Bool);
 
@@ -2991,7 +3006,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       do {
         if (!first && MockExternalCalls) {
           free = nullptr;
-          if (ki->inst->getType()->isSized()) {
+          if (ki->inst()->getType()->isSized()) {
             prepareMockValue(state, "mockExternResult", ki);
           }
         } else {
@@ -3280,7 +3295,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     executeMemoryOperation(
         state, false,
         typeSystemManager->getWrappedType(
-            cast<llvm::LoadInst>(ki->inst)->getPointerOperandType()),
+            cast<llvm::LoadInst>(ki->inst())->getPointerOperandType()),
         base, 0, ki);
     break;
   }
@@ -3290,14 +3305,15 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     executeMemoryOperation(
         state, true,
         typeSystemManager->getWrappedType(
-            cast<llvm::StoreInst>(ki->inst)->getPointerOperandType()),
+            cast<llvm::StoreInst>(ki->inst())->getPointerOperandType()),
         base, value, ki);
     break;
   }
 
   case Instruction::GetElementPtr: {
     KGEPInstruction *kgepi = static_cast<KGEPInstruction *>(ki);
-    GetElementPtrInst *gepInst = static_cast<GetElementPtrInst *>(kgepi->inst);
+    GetElementPtrInst *gepInst =
+        static_cast<GetElementPtrInst *>(kgepi->inst());
     ref<Expr> base = eval(ki, 0, state).value;
     ref<Expr> offset = ConstantExpr::create(0, base->getWidth());
 
@@ -3368,7 +3384,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::BitCast: {
     ref<Expr> result = eval(ki, 0, state).value;
-    BitCastInst *bc = cast<BitCastInst>(ki->inst);
+    BitCastInst *bc = cast<BitCastInst>(ki->inst());
 
     llvm::Type *castToType = bc->getType();
 
@@ -4129,7 +4145,7 @@ void Executor::computeOffsetsSeqTy(KGEPInstruction *kgepi,
   const Value *operand = it.getOperand();
   if (const Constant *c = dyn_cast<Constant>(operand)) {
     ref<ConstantExpr> index =
-        evalConstant(c, llvm::APFloat::rmNearestTiesToEven)
+        cast<ConstantExpr>(evalConstant(c, llvm::APFloat::rmNearestTiesToEven))
             ->SExt(Context::get().getPointerWidth());
     ref<ConstantExpr> addend = index->Mul(
         ConstantExpr::alloc(elementSize, Context::get().getPointerWidth()));
@@ -4161,14 +4177,14 @@ void Executor::computeOffsets(KGEPInstruction *kgepi, TypeIt ib, TypeIt ie) {
 }
 
 void Executor::bindInstructionConstants(KInstruction *KI) {
-  if (GetElementPtrInst *gepi = dyn_cast<GetElementPtrInst>(KI->inst)) {
+  if (GetElementPtrInst *gepi = dyn_cast<GetElementPtrInst>(KI->inst())) {
     KGEPInstruction *kgepi = static_cast<KGEPInstruction *>(KI);
     computeOffsets(kgepi, gep_type_begin(gepi), gep_type_end(gepi));
-  } else if (InsertValueInst *ivi = dyn_cast<InsertValueInst>(KI->inst)) {
+  } else if (InsertValueInst *ivi = dyn_cast<InsertValueInst>(KI->inst())) {
     KGEPInstruction *kgepi = static_cast<KGEPInstruction *>(KI);
     computeOffsets(kgepi, iv_type_begin(ivi), iv_type_end(ivi));
     assert(kgepi->indices.empty() && "InsertValue constant offset expected");
-  } else if (ExtractValueInst *evi = dyn_cast<ExtractValueInst>(KI->inst)) {
+  } else if (ExtractValueInst *evi = dyn_cast<ExtractValueInst>(KI->inst())) {
     KGEPInstruction *kgepi = static_cast<KGEPInstruction *>(KI);
     computeOffsets(kgepi, ev_type_begin(evi), ev_type_end(evi));
     assert(kgepi->indices.empty() && "ExtractValue constant offset expected");
@@ -4408,7 +4424,7 @@ void Executor::reportProgressTowardsTargets(std::string prefix,
       repr << ": ";
     }
     repr << "in function " +
-                target->getBlock()->parent->function->getName().str();
+                target->getBlock()->parent->function()->getName().str();
     repr << " (lines ";
     repr << target->getBlock()->getFirstInstruction()->getLine();
     repr << " to ";
@@ -4784,10 +4800,10 @@ Executor::getLastNonKleeInternalInstruction(const ExecutionState &state) {
   itE--;
 
   const KInstruction *ki = nullptr;
-  if (kmodule->internalFunctions.count(it->kf->function) == 0) {
+  if (kmodule->internalFunctions.count(it->kf->function()) == 0) {
     ki = state.prevPC;
     //  Cannot return yet because even though
-    //  it->function is not an internal function it might of
+    //  it->function() is not an internal function it might of
     //  been called from an internal function.
   }
 
@@ -4797,7 +4813,7 @@ Executor::getLastNonKleeInternalInstruction(const ExecutionState &state) {
   for (; it != itE; ++it) {
     // check calling instruction and if it is contained in a KLEE internal
     // function
-    const Function *f = (*it->caller).inst->getParent()->getParent();
+    const Function *f = (*it->caller).inst()->getParent()->getParent();
     if (kmodule->internalFunctions.count(f)) {
       ki = nullptr;
       continue;
@@ -4871,7 +4887,7 @@ void Executor::terminateStateOnError(ExecutionState &state,
   std::string message = messaget.str();
   static std::set<std::pair<Instruction *, std::string>> emittedErrors;
   const KInstruction *ki = getLastNonKleeInternalInstruction(state);
-  Instruction *lastInst = ki->inst;
+  Instruction *lastInst = ki->inst();
 
   if ((EmitAllErrors ||
        emittedErrors.insert(std::make_pair(lastInst, message)).second) &&
@@ -4892,7 +4908,7 @@ void Executor::terminateStateOnError(ExecutionState &state,
     if (!filepath.empty()) {
       msg << "File: " << filepath << '\n' << "Line: " << ki->getLine() << '\n';
       {
-        auto asmLine = ki->getKModule()->getAsmLine(ki->inst);
+        auto asmLine = ki->getKModule()->getAsmLine(ki->inst());
         if (asmLine.has_value()) {
           msg << "assembly.ll line: " << asmLine.value() << '\n';
         }
@@ -4964,7 +4980,7 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
                                     std::vector<ref<Expr>> &arguments) {
   // check if specialFunctionHandler wants it
   if (const auto *func = dyn_cast<KFunction>(callable)) {
-    if (specialFunctionHandler->handle(state, func->function, target,
+    if (specialFunctionHandler->handle(state, func->function(), target,
                                        arguments))
       return;
   }
@@ -4991,9 +5007,9 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
     if (AllExternalWarnings)
       klee_warning("%s", os.str().c_str());
     else if (!SuppressExternalWarnings)
-      klee_warning_once(callable->getValue(), "%s", os.str().c_str());
+      klee_warning_once(callable->unwrap(), "%s", os.str().c_str());
 
-    if (target->inst->getType()->isSized()) {
+    if (target->inst()->getType()->isSized()) {
       prepareMockValue(state, "mockExternResult", target);
     }
     return;
@@ -5102,7 +5118,7 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
     if (AllExternalWarnings)
       klee_warning("%s", os.str().c_str());
     else
-      klee_warning_once(callable->getValue(), "%s", os.str().c_str());
+      klee_warning_once(callable->unwrap(), "%s", os.str().c_str());
   }
 
   int roundingMode = LLVMRoundingModeToCRoundingMode(state.roundingMode);
@@ -5113,12 +5129,12 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
     return;
   }
 
-  bool success = externalDispatcher->executeCall(callable, target->inst, args,
+  bool success = externalDispatcher->executeCall(callable, target->inst(), args,
                                                  roundingMode);
 
   if (!success) {
     if (MockExternalCalls) {
-      if (target->inst->getType()->isSized()) {
+      if (target->inst()->getType()->isSized()) {
         prepareMockValue(state, "mockExternResult", target);
       }
     } else {
@@ -5142,7 +5158,7 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
                                     (uint64_t)&error, assignment);
 #endif
 
-  Type *resultType = target->inst->getType();
+  Type *resultType = target->inst()->getType();
   if (resultType != Type::getVoidTy(kmodule->module->getContext())) {
     ref<Expr> e =
         ConstantExpr::fromMemory((void *)args, getWidthForLLVMType(resultType));
@@ -5219,7 +5235,7 @@ void Executor::executeAlloc(ExecutionState &state, ref<Expr> size, bool isLocal,
                             const ObjectState *reallocFrom,
                             size_t allocationAlignment, bool checkOutOfMemory) {
   static unsigned allocations = 0;
-  const llvm::Value *allocSite = state.prevPC->inst;
+  const llvm::Value *allocSite = state.prevPC->inst();
   if (allocationAlignment == 0) {
     allocationAlignment = getAllocationAlignment(allocSite);
   }
@@ -5578,10 +5594,13 @@ MemoryObject *Executor::allocate(ExecutionState &state, ref<Expr> size,
   Expr::Width pointerWidthInBits = Context::get().getPointerWidth();
 
   /* Create symbol for array */
-  KInstruction *ki = nullptr;
+  KValue *ki = nullptr;
   if (!lazyInitializationSource) {
-    auto inst = cast<llvm::Instruction>(allocSite);
-    ki = kmodule->getKBlock(inst->getParent())->parent->instructionMap[inst];
+    if (auto inst = dyn_cast<llvm::Instruction>(allocSite)) {
+      ki = kmodule->getKBlock(inst->getParent())->parent->instructionMap[inst];
+    } else if (auto global = dyn_cast<llvm::GlobalVariable>(allocSite)) {
+      ki = kmodule->globalMap[global].get();
+    }
   }
 
   const Array *addressArray = makeArray(
@@ -6046,7 +6065,8 @@ void Executor::collectReads(
 
     ref<Expr> result = os->read(mo->getOffsetExpr(address), type);
 
-    if (X86FPAsX87FP80 && state.prevPC->inst->getType()->isFloatingPointTy() &&
+    if (X86FPAsX87FP80 &&
+        state.prevPC->inst()->getType()->isFloatingPointTy() &&
         Context::get().getPointerWidth() == 32) {
       result = FPToX87FP80Ext(result);
     }
@@ -6071,7 +6091,8 @@ void Executor::executeMemoryOperation(
     KInstruction *target /* undef if write */) {
   KInstruction *ki = estate.prevPC;
   if (X86FPAsX87FP80 && isWrite) {
-    auto valueOperand = cast<llvm::StoreInst>(ki->inst)->getValueOperand();
+    auto valueOperand =
+        cast<const llvm::StoreInst>(ki->inst())->getValueOperand();
     if (valueOperand->getType()->isFloatingPointTy() &&
         Context::get().getPointerWidth() == 32) {
       value =
@@ -6080,7 +6101,7 @@ void Executor::executeMemoryOperation(
     }
   }
   Expr::Width type = (isWrite ? value->getWidth()
-                              : getWidthForLLVMType(target->inst->getType()));
+                              : getWidthForLLVMType(target->inst()->getType()));
   unsigned bytes = Expr::getMinBytesForWidth(type);
 
   ref<Expr> base = address;
@@ -6221,7 +6242,7 @@ void Executor::executeMemoryOperation(
       } else {
         result = os->read(mo->getOffsetExpr(address), type);
 
-        if (X86FPAsX87FP80 && ki->inst->getType()->isFloatingPointTy() &&
+        if (X86FPAsX87FP80 && ki->inst()->getType()->isFloatingPointTy() &&
             Context::get().getPointerWidth() == 32) {
           result = FPToX87FP80Ext(result);
         }
@@ -6416,7 +6437,7 @@ void Executor::executeMemoryOperation(
       } else {
         ref<Expr> result = os->read(mo->getOffsetExpr(address), type);
 
-        if (X86FPAsX87FP80 && ki->inst->getType()->isFloatingPointTy() &&
+        if (X86FPAsX87FP80 && ki->inst()->getType()->isFloatingPointTy() &&
             Context::get().getPointerWidth() == 32) {
           result = FPToX87FP80Ext(result);
         }
@@ -6458,7 +6479,7 @@ bool Executor::lazyInitializeObject(ExecutionState &state, ref<Expr> address,
                                     KType *targetType, uint64_t size,
                                     bool isLocal, IDType &id, bool isSymbolic) {
   assert(!isa<ConstantExpr>(address));
-  const llvm::Value *allocSite = target ? target->inst : nullptr;
+  const llvm::Value *allocSite = target ? target->inst() : nullptr;
   std::pair<ref<const MemoryObject>, ref<Expr>> moBasePair;
   unsigned timestamp = 0;
   if (state.getBase(address, moBasePair)) {
@@ -6533,7 +6554,7 @@ bool Executor::lazyInitializeObject(ExecutionState &state, ref<Expr> address,
 IDType Executor::lazyInitializeLocalObject(ExecutionState &state,
                                            StackFrame &sf, ref<Expr> address,
                                            const KInstruction *target) {
-  AllocaInst *ai = cast<AllocaInst>(target->inst);
+  AllocaInst *ai = cast<AllocaInst>(target->inst());
   unsigned elementSize =
       kmodule->targetData->getTypeStoreSize(ai->getAllocatedType());
   ref<Expr> size = Expr::createPointer(elementSize);
@@ -6800,7 +6821,7 @@ ExecutionState *Executor::formState(Function *f, int argc, char **argv,
         MemoryObject *arg =
             allocate(*state, Expr::createPointer(len + 1), /*isLocal=*/false,
                      /*isGlobal=*/true,
-                     /*allocSite=*/state->pc->inst, /*alignment=*/8);
+                     /*allocSite=*/state->pc->inst(), /*alignment=*/8);
         if (!arg)
           klee_error("Could not allocate memory for function arguments");
 
@@ -6885,10 +6906,10 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
 
     for (auto &startFunctionAndWhiteList : prepTargets) {
       auto kf =
-          kmodule->functionMap.at(startFunctionAndWhiteList.first->function);
+          kmodule->functionMap.at(startFunctionAndWhiteList.first->function());
       if (startFunctionAndWhiteList.second->empty()) {
         klee_warning("No targets found for %s",
-                     kf->function->getName().str().c_str());
+                     kf->function()->getName().str().c_str());
         continue;
       }
       auto whitelist = startFunctionAndWhiteList.second;
@@ -6994,7 +7015,7 @@ bool isReturnValueFromInitBlock(const ExecutionState &state,
                                 const llvm::Value *value) {
   return state.initPC->parent->getKBlockType() == KBlockType::Call &&
          state.initPC == state.initPC->parent->getLastInstruction() &&
-         state.initPC->parent->getFirstInstruction()->inst == value;
+         state.initPC->parent->getFirstInstruction()->inst() == value;
 }
 
 ref<Expr> Executor::makeSymbolicValue(llvm::Value *value,
@@ -7016,9 +7037,9 @@ ref<Expr> Executor::makeSymbolicValue(llvm::Value *value,
 
 void Executor::prepareSymbolicValue(ExecutionState &state, StackFrame &frame,
                                     KInstruction *target) {
-  ref<Expr> result = makeSymbolicValue(target->inst, state);
+  ref<Expr> result = makeSymbolicValue(target->inst(), state);
   bindLocal(target, frame, result);
-  if (isa<AllocaInst>(target->inst)) {
+  if (isa<AllocaInst>(target->inst())) {
     lazyInitializeLocalObject(state, frame, result, target);
   }
 }
@@ -7028,7 +7049,7 @@ void Executor::prepareMockValue(ExecutionState &state, StackFrame &frame,
                                 KInstruction *target) {
   ref<Expr> result = makeMockValue(state, name, width);
   bindLocal(target, frame, result);
-  if (isa<AllocaInst>(target->inst)) {
+  if (isa<AllocaInst>(target->inst())) {
     lazyInitializeLocalObject(state, frame, result, target);
   }
 }
@@ -7036,7 +7057,7 @@ void Executor::prepareMockValue(ExecutionState &state, StackFrame &frame,
 void Executor::prepareMockValue(ExecutionState &state, const std::string &name,
                                 KInstruction *target) {
   Expr::Width width =
-      kmodule->targetData->getTypeSizeInBits(target->inst->getType());
+      kmodule->targetData->getTypeSizeInBits(target->inst()->getType());
   prepareMockValue(state, state.stack.valueStack().back(), name, width, target);
 }
 
@@ -7055,9 +7076,9 @@ void Executor::prepareSymbolicArg(ExecutionState &state, StackFrame &frame,
                                   unsigned index) {
   KFunction *kf = frame.kf;
 #if LLVM_VERSION_CODE >= LLVM_VERSION(10, 0)
-  Argument *arg = kf->function->getArg(index);
+  Argument *arg = kf->function()->getArg(index);
 #else
-  Argument *arg = &kf->function->arg_begin()[index];
+  Argument *arg = &kf->function()->arg_begin()[index];
 #endif
   ref<Expr> result = makeSymbolicValue(arg, state);
   bindArgument(kf, index, frame, result);
@@ -7065,7 +7086,7 @@ void Executor::prepareSymbolicArg(ExecutionState &state, StackFrame &frame,
 
 void Executor::prepareSymbolicArgs(ExecutionState &state, StackFrame &frame) {
   KFunction *kf = frame.kf;
-  unsigned argSize = kf->function->arg_size();
+  unsigned argSize = kf->function()->arg_size();
   for (unsigned argNo = 0; argNo < argSize; ++argNo) {
     prepareSymbolicArg(state, frame, argNo);
   }
@@ -7598,7 +7619,7 @@ void Executor::dumpStates() {
       for (auto sfIt = es->stack.callStack().begin(),
                 sf_ie = es->stack.callStack().end();
            sfIt != sf_ie; ++sfIt) {
-        *os << "('" << sfIt->kf->function->getName().str() << "',";
+        *os << "('" << sfIt->kf->function()->getName().str() << "',";
         if (next == es->stack.callStack().end()) {
           *os << es->prevPC->getLine() << "), ";
         } else {

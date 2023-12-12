@@ -123,8 +123,8 @@ void TargetCalculator::update(
   for (auto state : localStates) {
     KFunction *kf = state->prevPC->parent->parent;
     KModule *km = kf->parent;
-    if (state->prevPC->inst->isTerminator() &&
-        km->inMainModule(*kf->function)) {
+    if (state->prevPC->inst()->isTerminator() &&
+        km->inMainModule(*kf->function())) {
       update(*state);
     }
   }
@@ -169,8 +169,8 @@ bool TargetCalculator::uncoveredBlockPredicate(ExecutionState *state,
                  calledKFunction->numInstructions;
       }
       if (fBranches.at(kblock) != cb) {
-        result |=
-            kblock->basicBlock->getTerminator()->getNumSuccessors() > cb.size();
+        result |= kblock->basicBlock()->getTerminator()->getNumSuccessors() >
+                  cb.size();
       }
     }
   }
@@ -185,7 +185,8 @@ TargetHashSet TargetCalculator::calculate(ExecutionState &state) {
   KBlock *kb = kf->blockMap[bb];
   kb = !isa<KCallBlock>(kb) || (kb->getLastInstruction() != state.pc)
            ? kb
-           : kf->blockMap[state.pc->parent->basicBlock->getTerminator()
+           : kf->blockMap[state.pc->parent->basicBlock()
+                              ->getTerminator()
                               ->getSuccessor(0)];
   for (auto sfi = state.stack.callStack().rbegin(),
             sfe = state.stack.callStack().rend();
@@ -225,7 +226,7 @@ TargetHashSet TargetCalculator::calculate(ExecutionState &state) {
               if (fBranches.at(block) != cb) {
                 for (unsigned index = 0;
                      index <
-                     block->basicBlock->getTerminator()->getNumSuccessors();
+                     block->basicBlock()->getTerminator()->getNumSuccessors();
                      ++index) {
                   if (!cb.count(index))
                     targets.insert(CoverBranchTarget::create(block, index));
@@ -244,7 +245,8 @@ TargetHashSet TargetCalculator::calculate(ExecutionState &state) {
 
       kb = !isa<KCallBlock>(kb) || (kb->getLastInstruction() != sfi->caller)
                ? kb
-               : kf->blockMap[sfi->caller->parent->basicBlock->getTerminator()
+               : kf->blockMap[sfi->caller->parent->basicBlock()
+                                  ->getTerminator()
                                   ->getSuccessor(0)];
     }
   }

@@ -111,7 +111,8 @@ void TargetManager::updateReached(ExecutionState &state) {
   auto kf = prevKI->parent->parent;
   auto kmodule = kf->parent;
 
-  if (prevKI->inst->isTerminator() && kmodule->inMainModule(*kf->function)) {
+  if (prevKI->inst()->isTerminator() &&
+      kmodule->inMainModule(*kf->function())) {
     ref<Target> target;
 
     if (state.getPrevPCBlock()->getTerminator()->getNumSuccessors() == 0) {
@@ -262,9 +263,9 @@ bool TargetManager::isReachedTarget(const ExecutionState &state,
   if (isa<CoverBranchTarget>(target)) {
     if (state.prevPC->parent == target->getBlock()) {
       if (state.prevPC == target->getBlock()->getLastInstruction() &&
-          state.prevPC->inst->getSuccessor(
+          state.prevPC->inst()->getSuccessor(
               cast<CoverBranchTarget>(target)->getBranchCase()) ==
-              state.pc->parent->basicBlock) {
+              state.pc->parent->basicBlock()) {
         result = Done;
       } else {
         result = Continue;

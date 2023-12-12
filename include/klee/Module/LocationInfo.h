@@ -15,6 +15,7 @@
 
 namespace llvm {
 class Function;
+class GlobalVariable;
 class Instruction;
 class Module;
 } // namespace llvm
@@ -29,6 +30,7 @@ struct LocationInfo {
 
 LocationInfo getLocationInfo(const llvm::Function *func);
 LocationInfo getLocationInfo(const llvm::Instruction *inst);
+LocationInfo getLocationInfo(const llvm::GlobalVariable *global);
 
 } // namespace klee
 

@@ -12,6 +12,7 @@
 
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -58,6 +59,28 @@ LocationInfo getLocationInfo(const llvm::Instruction *inst) {
   }
 
   return getLocationInfo(inst->getParent()->getParent());
+}
+
+LocationInfo getLocationInfo(const llvm::GlobalVariable *globalVar) {
+  // Retrieve debug information associated with global variable.
+  // LLVM does not expose API for getting single DINode with location
+  // information.
+  llvm::SmallVector<llvm::DIGlobalVariableExpression *, 16> debugInfo;
+  globalVar->getDebugInfo(debugInfo);
+
+  for (const llvm::DIGlobalVariableExpression *debugInfoEntry : debugInfo) {
+    // Return location from any debug info for global variable.
+    if (const llvm::DIGlobalVariable *debugInfoGlobalVar =
+            debugInfoEntry->getVariable()) {
+      // Assume that global variable declared at line 0.
+      return {debugInfoGlobalVar->getFilename().str(),
+              debugInfoGlobalVar->getLine(), 0};
+    }
+  }
+
+  // Fallback to empty location if there is no appropriate debug
+  // info.
+  return {"", 0, 0};
 }
 
 } // namespace klee

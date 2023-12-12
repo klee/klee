@@ -12,6 +12,7 @@
 
 #include <string>
 
+#include "klee/Module/KValue.h"
 #include "klee/Support/CompilerWarning.h"
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
@@ -19,57 +20,52 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/Support/Casting.h"
 DISABLE_WARNING_POP
 
 namespace klee {
 /// Wrapper for callable objects passed in callExternalFunction
-class KCallable {
-public:
-  enum CallableKind { CK_Function, CK_InlineAsm };
-
-private:
-  const CallableKind Kind;
+class KCallable : public KValue {
+protected:
+  KCallable(llvm::Value *value, KValue::Kind kind) : KValue(value, kind) {}
 
 public:
-  KCallable(CallableKind Kind) : Kind(Kind) {}
-
-  CallableKind getKind() const { return Kind; }
-
-  virtual llvm::StringRef getName() const = 0;
   virtual llvm::FunctionType *getFunctionType() const = 0;
-  virtual llvm::Value *getValue() = 0;
 
-  virtual ~KCallable() = default;
+  static bool classof(const KValue *rhs) {
+    return rhs->getKind() == KValue::Kind::FUNCTION ||
+           rhs->getKind() == KValue::Kind::INLINE_ASM;
+  }
 };
 
 class KInlineAsm : public KCallable {
 private:
+  /* Prepared name of ASM code */
+  std::string name;
+
   static unsigned getFreshAsmId() {
     static unsigned globalId = 0;
     return globalId++;
   }
 
-  llvm::InlineAsm *value;
-  std::string name;
-
 public:
-  KInlineAsm(llvm::InlineAsm *value)
-      : KCallable(CK_InlineAsm), value(value),
+  KInlineAsm(llvm::InlineAsm *inlineAsm)
+      : KCallable(inlineAsm, KValue::Kind::INLINE_ASM),
         name("__asm__" + llvm::Twine(getFreshAsmId()).str()) {}
 
   llvm::StringRef getName() const override { return name; }
 
   llvm::FunctionType *getFunctionType() const override {
-    return value->getFunctionType();
+    return inlineAsm()->getFunctionType();
   }
 
-  llvm::Value *getValue() override { return value; }
-
-  static bool classof(const KCallable *callable) {
-    return callable->getKind() == CK_InlineAsm;
+  static bool classof(const KValue *rhs) {
+    return rhs->getKind() == KValue::Kind::INLINE_ASM;
   }
 
-  llvm::InlineAsm *getInlineAsm() { return value; }
+  [[nodiscard]] llvm::InlineAsm *inlineAsm() const {
+    return llvm::dyn_cast<llvm::InlineAsm>(value);
+  }
 };
 
 } // namespace klee

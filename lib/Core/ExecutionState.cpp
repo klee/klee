@@ -208,7 +208,7 @@ ExecutionState *ExecutionState::withStackFrame(KInstIterator caller,
   ExecutionState *newState = new ExecutionState(*this);
   newState->setID();
   newState->pushFrame(caller, kf);
-  newState->initPC = kf->blockMap[&*kf->function->begin()]->instructions;
+  newState->initPC = kf->blockMap[&*kf->function()->begin()]->instructions;
   newState->pc = newState->initPC;
   newState->prevPC = newState->pc;
   return newState;
@@ -387,9 +387,9 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
     const CallStackFrame &csf = stack.callStack().at(ri);
     const StackFrame &sf = stack.valueStack().at(ri);
 
-    Function *f = csf.kf->function;
+    Function *f = csf.kf->function();
     out << "\t#" << i;
-    auto assemblyLine = target->getKModule()->getAsmLine(target->inst);
+    auto assemblyLine = target->getKModule()->getAsmLine(target->inst());
     if (assemblyLine.has_value()) {
       std::stringstream AsmStream;
       AsmStream << std::setw(8) << std::setfill('0') << assemblyLine.value();
@@ -431,14 +431,16 @@ void ExecutionState::addCexPreference(const ref<Expr> &cond) {
 }
 
 BasicBlock *ExecutionState::getInitPCBlock() const {
-  return initPC->inst->getParent();
+  return initPC->inst()->getParent();
 }
 
 BasicBlock *ExecutionState::getPrevPCBlock() const {
-  return prevPC->inst->getParent();
+  return prevPC->inst()->getParent();
 }
 
-BasicBlock *ExecutionState::getPCBlock() const { return pc->inst->getParent(); }
+BasicBlock *ExecutionState::getPCBlock() const {
+  return pc->inst()->getParent();
+}
 
 void ExecutionState::increaseLevel() {
   llvm::BasicBlock *srcbb = getPrevPCBlock();
@@ -446,7 +448,8 @@ void ExecutionState::increaseLevel() {
   KFunction *kf = prevPC->parent->parent;
   KModule *kmodule = kf->parent;
 
-  if (prevPC->inst->isTerminator() && kmodule->inMainModule(*kf->function)) {
+  if (prevPC->inst()->isTerminator() &&
+      kmodule->inMainModule(*kf->function())) {
     auto srcLevel = stack.infoStack().back().multilevel[srcbb].second;
     stack.infoStack().back().multilevel.replace({srcbb, srcLevel + 1});
     level.insert(prevPC->parent);

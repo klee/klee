@@ -18,6 +18,7 @@ set(KLEE_MODULE_COMPONENT_SRCS
   KInstruction.cpp
   KModule.cpp
   KType.cpp
+  KValue.cpp
   LowerSwitch.cpp
   ModuleUtil.cpp
   Optimize.cpp

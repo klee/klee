@@ -3,6 +3,7 @@
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/SymbolicSource.h"
 #include "klee/Module/KModule.h"
+#include "klee/Module/KValue.h"
 
 using namespace klee;
 
@@ -21,7 +22,7 @@ SourceBuilder::uninitialized(unsigned version, const KInstruction *allocSite) {
 }
 
 ref<SymbolicSource> SourceBuilder::symbolicSizeConstantAddress(
-    unsigned version, const KInstruction *allocSite, ref<Expr> size) {
+    unsigned version, const KValue *allocSite, ref<Expr> size) {
   ref<SymbolicSource> r(
       new SymbolicSizeConstantAddressSource(version, allocSite, size));
   r->computeHash();

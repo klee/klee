@@ -608,10 +608,10 @@ SourceResult ParserImpl::ParseArgumentSource() {
   auto argNo = dyn_cast<ConstantExpr>(argNoExpr.get())->getZExtValue();
   auto index = dyn_cast<ConstantExpr>(indexExpr.get())->getZExtValue();
 #if LLVM_VERSION_CODE >= LLVM_VERSION(10, 0)
-  auto arg = km->functionNameMap[name.getString()]->function->getArg(argNo);
+  auto arg = km->functionNameMap[name.getString()]->function()->getArg(argNo);
 #else
   auto arg =
-      &km->functionNameMap[name.getString()]->function->arg_begin()[argNo];
+      &km->functionNameMap[name.getString()]->function()->arg_begin()[argNo];
 #endif
   return SourceBuilder::argument(*arg, index, km);
 }
@@ -628,7 +628,7 @@ SourceResult ParserImpl::ParseInstructionSource() {
   auto KF = km->functionNameMap[FName.getString()];
   auto KB = KF->getLabelMap().at(Label.getString());
   auto KI = KB->instructions[KIIndex];
-  return SourceBuilder::instruction(*KI->inst, index, km);
+  return SourceBuilder::instruction(*KI->inst(), index, km);
 }
 
 SourceResult ParserImpl::ParseAlphaSource() {

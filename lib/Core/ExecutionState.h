@@ -498,7 +498,7 @@ public:
   inline bool isCycled(unsigned long long bound) const {
     if (bound == 0)
       return false;
-    if (prevPC->inst->isTerminator() && stack.size() > 0) {
+    if (prevPC->inst()->isTerminator() && stack.size() > 0) {
       auto &ml = stack.infoStack().back().multilevel;
       auto level = ml.find(getPCBlock());
       return level != ml.end() && level->second > bound;

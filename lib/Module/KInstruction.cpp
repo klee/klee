@@ -50,9 +50,10 @@ KInstruction::KInstruction(
         &_instructionToRegisterMap,
     llvm::Instruction *_inst, KModule *_km, KBlock *_kb,
     unsigned &_globalIndexInc)
-    : inst(_inst), parent(_kb), globalIndex(_globalIndexInc++) {
-  if (isa<llvm::CallInst>(inst) || isa<llvm::InvokeInst>(inst)) {
-    const llvm::CallBase &cs = cast<llvm::CallBase>(*inst);
+    : KValue(_inst, KValue::Kind::INSTRUCTION), parent(_kb),
+      globalIndex(_globalIndexInc++) {
+  if (isa<llvm::CallInst>(inst()) || isa<llvm::InvokeInst>(inst())) {
+    const llvm::CallBase &cs = cast<llvm::CallBase>(*inst());
     Value *val = cs.getCalledOperand();
     unsigned numArgs = cs.arg_size();
     operands = new int[numArgs + 1];
@@ -62,10 +63,10 @@ KInstruction::KInstruction(
       operands[j + 1] = getOperandNum(v, _instructionToRegisterMap, _km, this);
     }
   } else {
-    unsigned numOperands = inst->getNumOperands();
+    unsigned numOperands = inst()->getNumOperands();
     operands = new int[numOperands];
     for (unsigned j = 0; j < numOperands; j++) {
-      Value *v = inst->getOperand(j);
+      Value *v = inst()->getOperand(j);
       operands[j] = getOperandNum(v, _instructionToRegisterMap, _km, this);
     }
   }
@@ -74,17 +75,17 @@ KInstruction::KInstruction(
 KInstruction::~KInstruction() { delete[] operands; }
 
 size_t KInstruction::getLine() const {
-  auto locationInfo = getLocationInfo(inst);
+  auto locationInfo = getLocationInfo(inst());
   return locationInfo.line;
 }
 
 size_t KInstruction::getColumn() const {
-  auto locationInfo = getLocationInfo(inst);
+  auto locationInfo = getLocationInfo(inst());
   return locationInfo.column;
 }
 
 std::string KInstruction::getSourceFilepath() const {
-  auto locationInfo = getLocationInfo(inst);
+  auto locationInfo = getLocationInfo(inst());
   return locationInfo.file;
 }
 
@@ -101,7 +102,7 @@ std::string KInstruction::getSourceLocationString() const {
 
 std::string KInstruction::toString() const {
   return llvm::utostr(getIndex()) + " at " + parent->toString() + " (" +
-         inst->getOpcodeName() + ")";
+         inst()->getOpcodeName() + ")";
 }
 
 unsigned KInstruction::getGlobalIndex() const { return globalIndex; }

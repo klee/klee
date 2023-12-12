@@ -68,7 +68,7 @@ void CodeGraphInfo::calculateBackwardDistance(Block *bb) {
 }
 
 void CodeGraphInfo::calculateDistance(KFunction *kf) {
-  auto f = kf->function;
+  auto f = kf->function();
   auto &functionMap = kf->parent->functionMap;
   auto &dist = functionDistance[f];
   auto &sort = functionSortedDistance[f];
@@ -83,7 +83,7 @@ void CodeGraphInfo::calculateDistance(KFunction *kf) {
         if (!calledFunction || calledFunction->isDeclaration())
           continue;
         if (dist.count(calledFunction) == 0) {
-          auto d = dist[currKF->function] + 1;
+          auto d = dist[currKF->function()] + 1;
           dist[calledFunction] = d;
           sort.emplace_back(calledFunction, d);
           auto callKF = functionMap[calledFunction];
@@ -96,7 +96,7 @@ void CodeGraphInfo::calculateDistance(KFunction *kf) {
 }
 
 void CodeGraphInfo::calculateBackwardDistance(KFunction *kf) {
-  auto f = kf->function;
+  auto f = kf->function();
   auto &callMap = kf->parent->callMap;
   auto &bdist = functionBackwardDistance[f];
   auto &bsort = functionSortedBackwardDistance[f];
@@ -124,7 +124,7 @@ void CodeGraphInfo::calculateFunctionBranches(KFunction *kf) {
   for (auto &kb : kf->blocks) {
     fbranches[kb.get()];
     for (unsigned branch = 0;
-         branch < kb->basicBlock->getTerminator()->getNumSuccessors();
+         branch < kb->basicBlock()->getTerminator()->getNumSuccessors();
          ++branch) {
       fbranches[kb.get()].insert(branch);
     }
@@ -134,10 +134,10 @@ void CodeGraphInfo::calculateFunctionConditionalBranches(KFunction *kf) {
   std::map<KBlock *, std::set<unsigned>> &fbranches =
       functionConditionalBranches[kf];
   for (auto &kb : kf->blocks) {
-    if (kb->basicBlock->getTerminator()->getNumSuccessors() > 1) {
+    if (kb->basicBlock()->getTerminator()->getNumSuccessors() > 1) {
       fbranches[kb.get()];
       for (unsigned branch = 0;
-           branch < kb->basicBlock->getTerminator()->getNumSuccessors();
+           branch < kb->basicBlock()->getTerminator()->getNumSuccessors();
            ++branch) {
         fbranches[kb.get()].insert(branch);
       }
@@ -158,31 +158,31 @@ const BlockDistanceMap &CodeGraphInfo::getDistance(Block *b) {
 }
 
 bool CodeGraphInfo::hasCycle(KBlock *kb) {
-  auto b = kb->basicBlock;
+  auto b = kb->basicBlock();
   if (!blockDistance.count(b))
     calculateDistance(b);
   return blockCycles.count(b);
 }
 
 const BlockDistanceMap &CodeGraphInfo::getDistance(KBlock *kb) {
-  return getDistance(kb->basicBlock);
+  return getDistance(kb->basicBlock());
 }
 
 const BlockDistanceMap &CodeGraphInfo::getBackwardDistance(KBlock *kb) {
-  if (blockBackwardDistance.count(kb->basicBlock) == 0)
-    calculateBackwardDistance(kb->basicBlock);
-  return blockBackwardDistance.at(kb->basicBlock);
+  if (blockBackwardDistance.count(kb->basicBlock()) == 0)
+    calculateBackwardDistance(kb->basicBlock());
+  return blockBackwardDistance.at(kb->basicBlock());
 }
 
 const FunctionDistanceMap &CodeGraphInfo::getDistance(KFunction *kf) {
-  auto f = kf->function;
+  auto f = kf->function();
   if (functionDistance.count(f) == 0)
     calculateDistance(kf);
   return functionDistance.at(f);
 }
 
 const FunctionDistanceMap &CodeGraphInfo::getBackwardDistance(KFunction *kf) {
-  auto f = kf->function;
+  auto f = kf->function();
   if (functionBackwardDistance.count(f) == 0)
     calculateBackwardDistance(kf);
   return functionBackwardDistance.at(f);
@@ -204,7 +204,7 @@ void CodeGraphInfo::getNearestPredicateSatisfying(KBlock *from,
     if (predicate(currBB) && currBB != from) {
       result.insert(currBB);
     } else {
-      for (auto succ : successors(currBB->basicBlock)) {
+      for (auto succ : successors(currBB->basicBlock())) {
         if (visited.count(blockMap[succ]) == 0) {
           nodes.push_back(blockMap[succ]);
         }

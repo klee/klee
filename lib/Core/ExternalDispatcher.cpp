@@ -346,11 +346,11 @@ Function *ExternalDispatcherImpl::createDispatcher(KCallable *target,
   llvm::CallInst *result;
   if (auto *func = dyn_cast<KFunction>(target)) {
     auto dispatchTarget = module->getOrInsertFunction(
-        target->getName(), FTy, func->function->getAttributes());
+        target->getName(), FTy, func->function()->getAttributes());
     result = Builder.CreateCall(dispatchTarget,
                                 llvm::ArrayRef<Value *>(args, args + i));
   } else if (auto *asmValue = dyn_cast<KInlineAsm>(target)) {
-    result = Builder.CreateCall(asmValue->getInlineAsm(),
+    result = Builder.CreateCall(asmValue->inlineAsm(),
                                 llvm::ArrayRef<Value *>(args, args + i));
   } else {
     assert(0 && "Unhandled KCallable derived class");

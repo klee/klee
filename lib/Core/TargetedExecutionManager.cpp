@@ -322,7 +322,7 @@ TargetedExecutionManager::prepareAllLocations(KModule *kmodule,
       fileNameToFunctions;
 
   for (const auto &kfunc : kmodule->functions) {
-    fileNameToFunctions[kfunc->getSourceFilepath()].insert(kfunc->function);
+    fileNameToFunctions[kfunc->getSourceFilepath()].insert(kfunc->function());
   }
 
   for (auto it = locations.begin(); it != locations.end(); ++it) {
@@ -379,18 +379,18 @@ bool TargetedExecutionManager::canReach(const ref<Location> &from,
         }
 
         const auto &blockDist = codeGraphInfo.getDistance(fromBlock);
-        if (blockDist.count(toBlock->basicBlock) != 0) {
+        if (blockDist.count(toBlock->basicBlock()) != 0) {
           return true;
         }
       } else {
         const auto &funcDist = codeGraphInfo.getDistance(fromKf);
-        if (funcDist.count(toKf->function) != 0) {
+        if (funcDist.count(toKf->function()) != 0) {
           return true;
         }
 
         const auto &backwardFuncDist =
             codeGraphInfo.getBackwardDistance(fromKf);
-        if (backwardFuncDist.count(toKf->function) != 0) {
+        if (backwardFuncDist.count(toKf->function()) != 0) {
           return true;
         }
       }
@@ -464,9 +464,9 @@ KFunction *TargetedExecutionManager::tryResolveEntryFunction(
           KFunction *curKf = nullptr;
           for (size_t m = 0; m < currKFs.size() && !curKf; ++m) {
             curKf = currKFs.at(m);
-            if (funcDist.count(curKf->function) == 0) {
+            if (funcDist.count(curKf->function()) == 0) {
               const auto &curFuncDist = codeGraphInfo.getDistance(curKf);
-              if (curFuncDist.count(resKf->function) == 0) {
+              if (curFuncDist.count(resKf->function()) == 0) {
                 curKf = nullptr;
               } else {
                 i = j;

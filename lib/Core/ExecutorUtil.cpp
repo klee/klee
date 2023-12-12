@@ -69,9 +69,9 @@ ref<Expr> FPToX87FP80Ext(ref<Expr> arg) {
   return result;
 }
 
-ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c,
-                                               llvm::APFloat::roundingMode rm,
-                                               const KInstruction *ki) {
+ref<klee::Expr> Executor::evalConstant(const Constant *c,
+                                       llvm::APFloat::roundingMode rm,
+                                       const KInstruction *ki) {
   if (!ki) {
     KConstant *kc = kmodule->getKConstant(c);
     if (kc)
@@ -98,7 +98,7 @@ ref<klee::ConstantExpr> Executor::evalConstant(const Constant *c,
       return Expr::createPointer(0);
     } else if (isa<UndefValue>(c) || isa<ConstantAggregateZero>(c)) {
       if (getWidthForLLVMType(c->getType()) == 0) {
-        if (isa<llvm::LandingPadInst>(ki->inst)) {
+        if (isa<llvm::LandingPadInst>(ki->inst())) {
           klee_warning_once(
               0, "Using zero size array fix for landingpad instruction filter");
           return ConstantExpr::create(0, 1);
@@ -274,12 +274,12 @@ ref<klee::Expr> Executor::evaluateFCmp(unsigned int predicate,
   return result;
 }
 
-ref<ConstantExpr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce,
-                                             llvm::APFloat::roundingMode rm,
-                                             const KInstruction *ki) {
+ref<Expr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce,
+                                     llvm::APFloat::roundingMode rm,
+                                     const KInstruction *ki) {
   llvm::Type *type = ce->getType();
 
-  ref<ConstantExpr> op1(0), op2(0), op3(0);
+  ref<Expr> op1(0), op2(0), op3(0);
   int numOperands = ce->getNumOperands();
 
   if (numOperands > 0)
@@ -294,23 +294,28 @@ ref<ConstantExpr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce,
   case Instruction::SDiv:
   case Instruction::UDiv:
   case Instruction::SRem:
-  case Instruction::URem:
-    if (op2->getLimitedValue() == 0) {
-      std::string msg(
-          "Division/modulo by zero during constant folding at location ");
-      llvm::raw_string_ostream os(msg);
-      os << (ki ? ki->getSourceLocationString() : "[unknown]");
-      klee_error("%s", os.str().c_str());
+  case Instruction::URem: {
+    if (auto op2Const = dyn_cast<ConstantExpr>(op2)) {
+      if (op2Const->getLimitedValue() == 0) {
+        std::string msg(
+            "Division/modulo by zero during constant folding at location ");
+        llvm::raw_string_ostream os(msg);
+        os << (ki ? ki->getSourceLocationString() : "[unknown]");
+        klee_error("%s", os.str().c_str());
+      }
     }
     break;
+  }
   case Instruction::Shl:
   case Instruction::LShr:
   case Instruction::AShr:
-    if (op2->getLimitedValue() >= op1->getWidth()) {
-      std::string msg("Overshift during constant folding at location ");
-      llvm::raw_string_ostream os(msg);
-      os << (ki ? ki->getSourceLocationString() : "[unknown]");
-      klee_error("%s", os.str().c_str());
+    if (auto op2Const = dyn_cast<ConstantExpr>(op2)) {
+      if (op2Const->getLimitedValue() >= op1->getWidth()) {
+        std::string msg("Overshift during constant folding at location ");
+        llvm::raw_string_ostream os(msg);
+        os << (ki ? ki->getSourceLocationString() : "[unknown]");
+        klee_error("%s", os.str().c_str());
+      }
     }
   }
 
@@ -324,37 +329,37 @@ ref<ConstantExpr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce,
     klee_error("%s", os.str().c_str());
 
   case Instruction::Trunc:
-    return op1->Extract(0, getWidthForLLVMType(type));
+    return ExtractExpr::create(op1, 0, getWidthForLLVMType(type));
   case Instruction::ZExt:
-    return op1->ZExt(getWidthForLLVMType(type));
+    return ZExtExpr::create(op1, getWidthForLLVMType(type));
   case Instruction::SExt:
-    return op1->SExt(getWidthForLLVMType(type));
+    return SExtExpr::create(op1, getWidthForLLVMType(type));
   case Instruction::Add:
-    return op1->Add(op2);
+    return AddExpr::create(op1, op2);
   case Instruction::Sub:
-    return op1->Sub(op2);
+    return SubExpr::create(op1, op2);
   case Instruction::Mul:
-    return op1->Mul(op2);
+    return MulExpr::create(op1, op2);
   case Instruction::SDiv:
-    return op1->SDiv(op2);
+    return SDivExpr::create(op1, op2);
   case Instruction::UDiv:
-    return op1->UDiv(op2);
+    return UDivExpr::create(op1, op2);
   case Instruction::SRem:
-    return op1->SRem(op2);
+    return SRemExpr::create(op1, op2);
   case Instruction::URem:
-    return op1->URem(op2);
+    return URemExpr::create(op1, op2);
   case Instruction::And:
-    return op1->And(op2);
+    return AndExpr::create(op1, op2);
   case Instruction::Or:
-    return op1->Or(op2);
+    return OrExpr::create(op1, op2);
   case Instruction::Xor:
-    return op1->Xor(op2);
+    return XorExpr::create(op1, op2);
   case Instruction::Shl:
-    return op1->Shl(op2);
+    return ShlExpr::create(op1, op2);
   case Instruction::LShr:
-    return op1->LShr(op2);
+    return LShrExpr::create(op1, op2);
   case Instruction::AShr:
-    return op1->AShr(op2);
+    return AShrExpr::create(op1, op2);
   case Instruction::BitCast: {
     ref<klee::Expr> result = op1;
 
@@ -373,37 +378,43 @@ ref<ConstantExpr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce,
   }
 
   case Instruction::IntToPtr:
-    return op1->ZExt(getWidthForLLVMType(type));
+    return ZExtExpr::create(op1, getWidthForLLVMType(type));
 
   case Instruction::PtrToInt:
-    return op1->ZExt(getWidthForLLVMType(type));
+    return ZExtExpr::create(op1, getWidthForLLVMType(type));
 
   case Instruction::GetElementPtr: {
-    ref<ConstantExpr> base = op1->ZExt(Context::get().getPointerWidth());
+    ref<Expr> base = ZExtExpr::create(op1, Context::get().getPointerWidth());
     for (gep_type_iterator ii = gep_type_begin(ce), ie = gep_type_end(ce);
          ii != ie; ++ii) {
-      ref<ConstantExpr> indexOp =
-          evalConstant(cast<Constant>(ii.getOperand()), rm, ki);
+      ref<Expr> indexOp = evalConstant(cast<Constant>(ii.getOperand()), rm, ki);
       if (indexOp->isZero())
         continue;
 
       // Handle a struct index, which adds its field offset to the pointer.
       if (auto STy = ii.getStructTypeOrNull()) {
-        unsigned ElementIdx = indexOp->getZExtValue();
+        auto indexOpConst = dyn_cast<ConstantExpr>(indexOp);
+        if (!indexOpConst) {
+          klee_error(
+              "Found non-constant index in evaluation of llvm::ConstantExpr");
+        }
+        unsigned ElementIdx = indexOpConst->getZExtValue();
         const StructLayout *SL = kmodule->targetData->getStructLayout(STy);
-        base = base->Add(
-            ConstantExpr::alloc(APInt(Context::get().getPointerWidth(),
-                                      SL->getElementOffset(ElementIdx))));
+        base = AddExpr::create(
+            base, ConstantExpr::alloc(APInt(Context::get().getPointerWidth(),
+                                            SL->getElementOffset(ElementIdx))));
         continue;
       }
 
       // For array or vector indices, scale the index by the size of the type.
       // Indices can be negative
-      base = base->Add(indexOp->SExt(Context::get().getPointerWidth())
-                           ->Mul(ConstantExpr::alloc(
-                               APInt(Context::get().getPointerWidth(),
-                                     kmodule->targetData->getTypeAllocSize(
-                                         ii.getIndexedType())))));
+      base = AddExpr::create(
+          base,
+          MulExpr::create(
+              SExtExpr::create(indexOp, Context::get().getPointerWidth()),
+              ConstantExpr::alloc(APInt(Context::get().getPointerWidth(),
+                                        kmodule->targetData->getTypeAllocSize(
+                                            ii.getIndexedType())))));
     }
     return base;
   }
@@ -413,25 +424,25 @@ ref<ConstantExpr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce,
     default:
       assert(0 && "unhandled ICmp predicate");
     case ICmpInst::ICMP_EQ:
-      return op1->Eq(op2);
+      return EqExpr::create(op1, op2);
     case ICmpInst::ICMP_NE:
-      return op1->Ne(op2);
+      return NeExpr::create(op1, op2);
     case ICmpInst::ICMP_UGT:
-      return op1->Ugt(op2);
+      return UgtExpr::create(op1, op2);
     case ICmpInst::ICMP_UGE:
-      return op1->Uge(op2);
+      return UgeExpr::create(op1, op2);
     case ICmpInst::ICMP_ULT:
-      return op1->Ult(op2);
+      return UltExpr::create(op1, op2);
     case ICmpInst::ICMP_ULE:
-      return op1->Ule(op2);
+      return UleExpr::create(op1, op2);
     case ICmpInst::ICMP_SGT:
-      return op1->Sgt(op2);
+      return SgtExpr::create(op1, op2);
     case ICmpInst::ICMP_SGE:
-      return op1->Sge(op2);
+      return SgeExpr::create(op1, op2);
     case ICmpInst::ICMP_SLT:
-      return op1->Slt(op2);
+      return SltExpr::create(op1, op2);
     case ICmpInst::ICMP_SLE:
-      return op1->Sle(op2);
+      return SleExpr::create(op1, op2);
     }
   }
 
@@ -439,46 +450,43 @@ ref<ConstantExpr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce,
     return op1->isTrue() ? op2 : op3;
 
   case Instruction::FAdd:
-    return op1->FAdd(op2, rm);
+    return FAddExpr::create(op1, op2, rm);
   case Instruction::FSub:
-    return op1->FSub(op2, rm);
+    return FSubExpr::create(op1, op2, rm);
   case Instruction::FMul:
-    return op1->FMul(op2, rm);
+    return FMulExpr::create(op1, op2, rm);
   case Instruction::FDiv:
-    return op1->FDiv(op2, rm);
+    return FDivExpr::create(op1, op2, rm);
   case Instruction::FRem: {
-    return op1->FRem(op2, rm);
+    return FRemExpr::create(op1, op2, rm);
   }
 
   case Instruction::FPTrunc: {
     Expr::Width width = getWidthForLLVMType(ce->getType());
-    return op1->FPTrunc(width, rm);
+    return FPTruncExpr::create(op1, width, rm);
   }
   case Instruction::FPExt: {
     Expr::Width width = getWidthForLLVMType(ce->getType());
-    return op1->FPExt(width);
+    return FPExtExpr::create(op1, width);
   }
   case Instruction::UIToFP: {
     Expr::Width width = getWidthForLLVMType(ce->getType());
-    return op1->UIToFP(width, rm);
+    return UIToFPExpr::create(op1, width, rm);
   }
   case Instruction::SIToFP: {
     Expr::Width width = getWidthForLLVMType(ce->getType());
-    return op1->SIToFP(width, rm);
+    return SIToFPExpr::create(op1, width, rm);
   }
   case Instruction::FPToUI: {
     Expr::Width width = getWidthForLLVMType(ce->getType());
-    return op1->FPToUI(width, rm);
+    return FPToUIExpr::create(op1, width, rm);
   }
   case Instruction::FPToSI: {
     Expr::Width width = getWidthForLLVMType(ce->getType());
-    return op1->FPToSI(width, rm);
+    return FPToSIExpr::create(op1, width, rm);
   }
   case Instruction::FCmp: {
-    ref<Expr> result = evaluateFCmp(ce->getPredicate(), op1, op2);
-    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(result)) {
-      return ref<ConstantExpr>(CE);
-    }
+    return evaluateFCmp(ce->getPredicate(), op1, op2);
   }
     assert(0 && "floating point ConstantExprs unsupported");
   }

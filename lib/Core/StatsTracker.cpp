@@ -244,12 +244,12 @@ StatsTracker::StatsTracker(Executor &_executor, std::string _objectFilename,
       if (OutputIStats) {
         unsigned id = ki->getGlobalIndex();
         theStatisticManager->setIndex(id);
-        if (instructionIsCoverable(ki->inst)) {
+        if (instructionIsCoverable(ki->inst())) {
           ++stats::uncoveredInstructions;
         }
       }
 
-      if (BranchInst *bi = dyn_cast<BranchInst>(ki->inst))
+      if (BranchInst *bi = dyn_cast<BranchInst>(ki->inst()))
         if (!bi->isUnconditional())
           numBranches++;
     }
@@ -390,7 +390,7 @@ void StatsTracker::stepInstruction(ExecutionState &es) {
       }
     }
 
-    Instruction *inst = es.pc->inst;
+    Instruction *inst = es.pc->inst();
     const KInstruction *ki = es.pc;
     auto &sf = es.stack.infoStack().back();
     theStatisticManager->setIndex(ki->getGlobalIndex());
@@ -444,7 +444,7 @@ void StatsTracker::framePushed(ExecutionState &es,
     if (UseCallPaths) {
       CallPathNode *parent = parentFrame ? parentFrame->callPathNode : 0;
       CallPathNode *cp = callPathManager.getCallPath(
-          parent, csf.caller ? csf.caller->inst : 0, csf.kf->function);
+          parent, csf.caller ? csf.caller->inst() : 0, csf.kf->function());
       isf.callPathNode = cp;
       cp->count++;
     }

@@ -11,6 +11,8 @@
 #define KLEE_KINSTRUCTION_H
 
 #include "KModule.h"
+#include "KValue.h"
+
 #include "klee/Config/Version.h"
 #include "klee/Support/CompilerWarning.h"
 #include "llvm/IR/Argument.h"
@@ -37,7 +39,7 @@ static const unsigned MAGIC_HASH_CONSTANT = 39;
 
 /// KInstruction - Intermediate instruction representation used
 /// during execution.
-struct KInstruction {
+struct KInstruction : public KValue {
 
   struct Index {
     unsigned long instID;
@@ -66,7 +68,9 @@ struct KInstruction {
     }
   };
 
-  llvm::Instruction *inst;
+  llvm::Instruction *inst() const {
+    return llvm::dyn_cast_or_null<llvm::Instruction>(value);
+  }
 
   /// Value numbers for each operand. -1 is an invalid value,
   /// otherwise negative numbers are indices (negated and offset by
@@ -113,14 +117,24 @@ public:
   [[nodiscard]] inline KFunction *getKFunction() const {
     return getKBlock()->parent;
   }
-  bool operator<(const KInstruction &other) const {
-    return getID() < other.getID();
+
+  [[nodiscard]] bool operator<(const KValue &rhs) const override {
+    if (getKind() == rhs.getKind()) {
+      return getID() < cast<KInstruction>(rhs).getID();
+    } else {
+      return getKind() < rhs.getKind();
+    }
   }
+
   [[nodiscard]] inline KModule *getKModule() const {
     return getKFunction()->parent;
   }
 
-  unsigned hash() const { return getID().hash(); }
+  [[nodiscard]] unsigned hash() const override { return getID().hash(); }
+
+  static bool classof(const KValue *rhs) {
+    return rhs->getKind() == Kind::INSTRUCTION;
+  }
 };
 
 struct KGEPInstruction : KInstruction {

@@ -269,7 +269,7 @@ bool SpecialFunctionHandler::handle(ExecutionState &state, Function *f,
     Handler h = it->second.first;
     bool hasReturnValue = it->second.second;
     // FIXME: Check this... add test?
-    if (!hasReturnValue && !target->inst->use_empty()) {
+    if (!hasReturnValue && !target->inst()->use_empty()) {
       executor.terminateStateOnExecError(
           state, "expected return value from void special function");
     } else {
@@ -626,7 +626,7 @@ void SpecialFunctionHandler::handleWarning(ExecutionState &state,
 
   std::string msg_str = readStringAtAddress(state, arguments[0]);
   klee_warning("%s: %s",
-               state.stack.callStack().back().kf->function->getName().data(),
+               state.stack.callStack().back().kf->function()->getName().data(),
                msg_str.c_str());
 }
 
@@ -639,7 +639,7 @@ void SpecialFunctionHandler::handleWarningOnce(
   std::string msg_str = readStringAtAddress(state, arguments[0]);
   klee_warning_once(
       0, "%s: %s",
-      state.stack.callStack().back().kf->function->getName().data(),
+      state.stack.callStack().back().kf->function()->getName().data(),
       msg_str.c_str());
 }
 
@@ -692,7 +692,7 @@ void SpecialFunctionHandler::handleGetObjSize(
         target, *it->second,
         ConstantExpr::create(mo->size,
                              executor.kmodule->targetData->getTypeSizeInBits(
-                                 target->inst->getType())));
+                                 target->inst()->getType())));
   }
 }
 
@@ -744,7 +744,7 @@ void SpecialFunctionHandler::handleErrnoLocation(
       target, state,
       ConstantExpr::create((uint64_t)errno_addr,
                            executor.kmodule->targetData->getTypeSizeInBits(
-                               target->inst->getType())));
+                               target->inst()->getType())));
 }
 void SpecialFunctionHandler::handleCalloc(ExecutionState &state,
                                           KInstruction *target,
@@ -864,7 +864,7 @@ void SpecialFunctionHandler::handleDefineFixedObject(
   uint64_t address = cast<ConstantExpr>(arguments[0])->getZExtValue();
   uint64_t size = cast<ConstantExpr>(arguments[1])->getZExtValue();
   MemoryObject *mo =
-      executor.memory->allocateFixed(address, size, state.prevPC->inst);
+      executor.memory->allocateFixed(address, size, state.prevPC->inst());
   executor.bindObjectInState(
       state, mo, executor.typeSystemManager->getUnknownType(), false);
   mo->isUserSpecified = true; // XXX hack;

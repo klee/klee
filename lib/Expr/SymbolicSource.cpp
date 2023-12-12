@@ -5,6 +5,7 @@
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
+#include "klee/Module/KValue.h"
 
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
@@ -102,8 +103,11 @@ int SymbolicSizeConstantAddressSource::internalCompare(
     return size < ub.size ? -1 : 1;
   }
   if (allocSite != ub.allocSite) {
-    return allocSite->getGlobalIndex() < ub.allocSite->getGlobalIndex() ? -1
-                                                                        : 1;
+    if (allocSite->getKind() == ub.allocSite->getKind()) {
+      return *allocSite < *ub.allocSite ? -1 : 1;
+    } else {
+      return allocSite->getKind() < ub.allocSite->getKind() ? -1 : 1;
+    }
   }
 
   return 0;

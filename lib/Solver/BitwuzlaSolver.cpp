@@ -771,7 +771,7 @@ public:
   Bitwuzla &getOrInit();
 
   bool isConsistent() const {
-    klee_warning("Empty isConsistent() check");
+    // klee_warning("Empty isConsistent() check");
     return true;
   }
 

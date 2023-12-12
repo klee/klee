@@ -390,7 +390,20 @@ public:
       s->constantValues.print(PC.getStream(), Density::Sparse);
     } else if (auto s = dyn_cast<SymbolicSizeConstantAddressSource>(source)) {
       PC << s->version << " ";
-      s->allocSite->getID().print(PC.getStream());
+      switch (s->allocSite->getKind()) {
+      case KValue::Kind::INSTRUCTION: {
+        cast<KInstruction>(s->allocSite)->getID().print(PC.getStream());
+        break;
+      }
+      case KValue::Kind::GLOBAL_VARIABLE: {
+        PC.getStream() << "[" << cast<KGlobalVariable>(s->allocSite)->getName()
+                       << "]";
+        break;
+      }
+      default: {
+        llvm_unreachable("unknown kind of alloc site");
+      }
+      }
       PC << " " << s->size;
     } else if (auto s = dyn_cast<UninitializedSource>(source)) {
       PC << s->version << " ";

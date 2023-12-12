@@ -13,12 +13,14 @@
 #include "klee/Config/Version.h"
 #include "klee/Core/Interpreter.h"
 #include "klee/Module/KCallable.h"
+#include "klee/Module/KValue.h"
 
 #include "klee/Support/CompilerWarning.h"
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/Support/Casting.h"
 DISABLE_WARNING_POP
 
 #include <deque>
@@ -57,10 +59,13 @@ template <class T> class ref;
 
 enum KBlockType { Base, Call, Return };
 
-struct KBlock {
+struct KBlock : public KValue {
   KFunction *parent;
-  llvm::BasicBlock *basicBlock;
   KInstruction **instructions;
+
+  [[nodiscard]] llvm::BasicBlock *basicBlock() const {
+    return llvm::dyn_cast_or_null<llvm::BasicBlock>(value);
+  }
 
 public:
   KBlock(KFunction *, llvm::BasicBlock *, KModule *,
@@ -74,7 +79,7 @@ public:
   virtual KBlockType getKBlockType() const { return KBlockType::Base; }
   static bool classof(const KBlock *) { return true; }
 
-  unsigned getNumInstructions() const noexcept { return basicBlock->size(); }
+  unsigned getNumInstructions() const noexcept { return basicBlock()->size(); }
   KInstruction *getFirstInstruction() const noexcept { return instructions[0]; }
   KInstruction *getLastInstruction() const noexcept {
     return instructions[getNumInstructions() - 1];
@@ -84,6 +89,10 @@ public:
 
   /// Block number in function
   [[nodiscard]] uintptr_t getId() const;
+
+  static bool classof(const KValue *rhs) {
+    return rhs->getKind() == Kind::BLOCK ? classof(cast<KBlock>(rhs)) : false;
+  }
 };
 
 typedef std::function<bool(KBlock *)> KBlockPredicate;
@@ -107,6 +116,10 @@ public:
   bool internal() const;
   bool kleeHandled() const;
   KFunction *getKFunction() const;
+
+  static bool classof(const KValue *rhs) {
+    return rhs->getKind() == Kind::BLOCK ? classof(cast<KBlock>(rhs)) : false;
+  }
 };
 
 struct KReturnBlock : KBlock {
@@ -120,6 +133,10 @@ public:
     return E->getKBlockType() == KBlockType::Return;
   }
   KBlockType getKBlockType() const override { return KBlockType::Return; };
+
+  static bool classof(const KValue *rhs) {
+    return rhs->getKind() == Kind::BLOCK ? classof(cast<KBlock>(rhs)) : false;
+  }
 };
 
 struct KFunction : public KCallable {
@@ -129,8 +146,11 @@ private:
 
 public:
   KModule *parent;
-  llvm::Function *function;
   KInstruction **instructions;
+
+  [[nodiscard]] llvm::Function *function() const {
+    return llvm::dyn_cast_or_null<llvm::Function>(value);
+  }
 
   [[nodiscard]] KInstruction *getInstructionByRegister(size_t reg) const;
 
@@ -158,12 +178,8 @@ public:
 
   unsigned getArgRegister(unsigned index) const { return index; }
 
-  llvm::StringRef getName() const override {
-    return function ? function->getName() : "";
-  }
-
   llvm::FunctionType *getFunctionType() const override {
-    return function->getFunctionType();
+    return function()->getFunctionType();
   }
 
   const std::unordered_map<std::string, KBlock *> &getLabelMap() {
@@ -175,10 +191,8 @@ public:
     return labelMap;
   }
 
-  llvm::Value *getValue() override { return function; }
-
-  static bool classof(const KCallable *callable) {
-    return callable->getKind() == CK_Function;
+  static bool classof(const KValue *callable) {
+    return callable->getKind() == KValue::Kind::FUNCTION;
   }
 
   [[nodiscard]] size_t getLine() const;
@@ -203,10 +217,12 @@ struct KFunctionCompare {
   }
 };
 
-class KConstant {
+struct KConstant : public KValue {
 public:
   /// Actual LLVM constant this represents.
-  llvm::Constant *ct;
+  [[nodiscard]] llvm::Constant *ct() const {
+    return llvm::dyn_cast_or_null<llvm::Constant>(value);
+  };
 
   /// The constant ID.
   unsigned id;
@@ -216,6 +232,28 @@ public:
   KInstruction *ki;
 
   KConstant(llvm::Constant *, unsigned, KInstruction *);
+
+  [[nodiscard]] static bool classof(const KValue *rhs) {
+    return rhs->getKind() == KValue::Kind::CONSTANT;
+  }
+};
+
+struct KGlobalVariable : public KValue {
+public:
+  KGlobalVariable(llvm::GlobalVariable *global);
+
+  [[nodiscard]] llvm::GlobalVariable *globalVariable() const {
+    return llvm::dyn_cast_or_null<llvm::GlobalVariable>(value);
+  }
+
+  [[nodiscard]] static bool classof(const KValue *rhs) {
+    return rhs->getKind() == KValue::Kind::GLOBAL_VARIABLE;
+  }
+
+  // Filename where the global variable is defined
+  [[nodiscard]] std::string getSourceFilepath() const;
+  // Line number where the global variable is defined
+  [[nodiscard]] size_t getLine() const;
 };
 
 class KModule {
@@ -247,6 +285,10 @@ public:
   std::unordered_map<const llvm::Constant *, std::unique_ptr<KConstant>>
       constantMap;
   KConstant *getKConstant(const llvm::Constant *c);
+
+  std::unordered_map<const llvm::GlobalValue *,
+                     std::unique_ptr<KGlobalVariable>>
+      globalMap;
 
   std::unique_ptr<Cell[]> constantTable;
 

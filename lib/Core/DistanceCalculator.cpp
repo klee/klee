@@ -106,7 +106,7 @@ DistanceResult DistanceCalculator::getDistance(
   unsigned int minCallWeight = UINT_MAX, minSfNum = UINT_MAX, sfNum = 0;
   auto sfi = frames.rbegin(), sfe = frames.rend();
   bool strictlyAfterKB =
-      sfi != sfe && sfi->kf->parent->inMainModule(*sfi->kf->function);
+      sfi != sfe && sfi->kf->parent->inMainModule(*sfi->kf->function());
   for (; sfi != sfe; sfi++, sfNum++) {
     unsigned callWeight;
     if (distanceInCallGraph(sfi->kf, kb, callWeight, distanceToTargetFunction,
@@ -140,8 +140,8 @@ bool DistanceCalculator::distanceInCallGraph(
     KFunction *kf, KBlock *origKB, unsigned int &distance,
     const FunctionDistanceMap &distanceToTargetFunction, KBlock *targetKB,
     bool strictlyAfterKB) const {
-  auto &dist = codeGraphInfo.getDistance(origKB->basicBlock);
-  if (kf == targetKB->parent && dist.count(targetKB->basicBlock)) {
+  auto &dist = codeGraphInfo.getDistance(origKB->basicBlock());
+  if (kf == targetKB->parent && dist.count(targetKB->basicBlock())) {
     distance = 0;
     return true;
   }
@@ -149,7 +149,7 @@ bool DistanceCalculator::distanceInCallGraph(
   distance = UINT_MAX;
   bool cannotReachItself = strictlyAfterKB && !codeGraphInfo.hasCycle(origKB);
   for (auto kCallBlock : kf->kCallBlocks) {
-    if (!dist.count(kCallBlock->basicBlock) ||
+    if (!dist.count(kCallBlock->basicBlock()) ||
         (cannotReachItself && origKB == kCallBlock))
       continue;
     for (auto calledFunction : kCallBlock->calledFunctions) {
@@ -167,7 +167,7 @@ WeightResult DistanceCalculator::tryGetLocalWeight(
   const auto &dist = codeGraphInfo.getDistance(kb);
   weight = UINT_MAX;
   for (auto end : localTargets) {
-    auto it = dist.find(end->basicBlock);
+    auto it = dist.find(end->basicBlock());
     if (it != dist.end())
       weight = std::min(it->second, weight);
   }
