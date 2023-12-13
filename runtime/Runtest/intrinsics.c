@@ -101,7 +101,12 @@ void klee_make_symbolic(void *array, size_t nbytes, const char *name) {
       exit(1);
     }
   }
-
+  if (testPosition == 0) {
+    char *testPositionFromEnv = getenv("TEST_POSITION");
+    if (testPositionFromEnv != NULL) {
+      testPosition = strtoull(testPositionFromEnv, NULL, 0);
+    }
+  }
   for (;; ++testPosition) {
     if (testPosition >= testData->numObjects) {
       report_internal_error("out of inputs. Will use zero if continuing.");
