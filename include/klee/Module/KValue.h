@@ -28,25 +28,19 @@ protected:
   /* Kind of KValue required for llvm rtti purposes */
   const Kind kind;
 
-  /* Inner constructor for setting kind */
+  /* Inner constructor for setting value and kind */
   KValue(llvm::Value *const value, const Kind kind)
       : value(value), kind(kind) {}
 
 public:
-  /* Construct KValue from raw llvm::Value. */
-  KValue(llvm::Value *const value) : KValue(value, Kind::VALUE) {
-    /* NB: heirs of this class should use inner constructor instead.
-       This constructor exposes convenient public interface. */
-  }
-
   /* Unwraps KValue to receive inner value. */
   [[nodiscard]] llvm::Value *unwrap() const;
 
   /* Returns name of inner value if so exists. */
   [[nodiscard]] virtual llvm::StringRef getName() const;
 
-  [[nodiscard]] virtual bool operator<(const KValue &rhs) const;
-  [[nodiscard]] virtual unsigned hash() const;
+  [[nodiscard]] virtual bool operator<(const KValue &rhs) const = 0;
+  [[nodiscard]] virtual unsigned hash() const = 0;
 
   /* Kind of value. Serves for llvm rtti purposes. */
   [[nodiscard]] Kind getKind() const { return kind; }

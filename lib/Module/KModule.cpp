@@ -401,8 +401,9 @@ void KModule::manifest(InterpreterHandler *ih,
     functions.push_back(std::move(kf));
   }
 
+  unsigned globalID = 0;
   for (auto &global : module->globals()) {
-    globalMap.emplace(&global, new KGlobalVariable(&global));
+    globalMap.emplace(&global, new KGlobalVariable(&global, globalID++));
   }
 
   /* Compute various interesting properties */
@@ -557,15 +558,32 @@ KConstant::KConstant(llvm::Constant *_ct, unsigned _id, KInstruction *_ki)
   ki = _ki;
 }
 
-KGlobalVariable::KGlobalVariable(llvm::GlobalVariable *global)
-    : KValue(global, KValue::Kind::GLOBAL_VARIABLE) {}
+bool KConstant::operator<(const KValue &rhs) const {
+  return getKind() == rhs.getKind() ? id < cast<KConstant>(rhs).id
+                                    : getKind() < rhs.getKind();
+}
+
+unsigned KConstant::hash() const { return id; }
+
+KGlobalVariable::KGlobalVariable(llvm::GlobalVariable *global, unsigned id)
+    : KValue(global, KValue::Kind::GLOBAL_VARIABLE), id(id) {}
 
 std::string KGlobalVariable::getSourceFilepath() const {
-  getLocationInfo(globalVariable()).file;
+  return getLocationInfo(globalVariable()).file;
 }
 // Line number where the global variable is defined
 size_t KGlobalVariable::getLine() const {
-  getLocationInfo(globalVariable()).line;
+  return getLocationInfo(globalVariable()).line;
+}
+
+bool KGlobalVariable::operator<(const KValue &rhs) const {
+  return getKind() == rhs.getKind() ? id < cast<KGlobalVariable>(rhs).id
+                                    : getKind() < rhs.getKind();
+}
+unsigned KGlobalVariable::hash() const {
+  // It is good enough value to use it as hash as ID of globals
+  // different.
+  return id;
 }
 
 KFunction::KFunction(llvm::Function *_function, KModule *_km,
@@ -669,6 +687,23 @@ KBlock::KBlock(
   }
 }
 
+unsigned KBlock::inModuleID() const {
+  return parent->getGlobalIndex() + static_cast<unsigned>(getId());
+}
+
+bool KBlock::operator<(const KValue &rhs) const {
+  // Additional comparison on block types is redundant,
+  // as inModuleID defines the position of block.
+  return getKind() == rhs.getKind()
+             ? inModuleID() < cast<KBlock>(rhs).inModuleID()
+             : getKind() < rhs.getKind();
+}
+
+unsigned KBlock::hash() const {
+  // Use position of a block as a hash
+  return inModuleID();
+}
+
 KCallBlock::KCallBlock(
     KFunction *_kfunction, llvm::BasicBlock *block, KModule *km,
     const std::unordered_map<Instruction *, unsigned> &instructionToRegisterMap,
@@ -726,6 +761,19 @@ uintptr_t KBlock::getId() const { return instructions - parent->instructions; }
 KInstruction *KFunction::getInstructionByRegister(size_t reg) const {
   return instructions[reg - function()->arg_size()];
 }
+
+bool KFunction::operator<(const KValue &rhs) const {
+  return getKind() == rhs.getKind()
+             ? KFunctionCompare{}(this, cast<KFunction>(&rhs))
+             : getKind() < rhs.getKind();
+}
+
+unsigned KFunction::hash() const {
+  // It is good enough value to use it as
+  // index is unique.
+  return id;
+}
+
 size_t KFunction::getNumArgs() const { return function()->arg_size(); }
 size_t KFunction::getNumRegisters() const {
   return function()->arg_size() + numInstructions;

@@ -10,8 +10,6 @@
 #ifndef KLEE_KCALLABLE_H
 #define KLEE_KCALLABLE_H
 
-#include <string>
-
 #include "klee/Module/KValue.h"
 #include "klee/Support/CompilerWarning.h"
 DISABLE_WARNING_PUSH
@@ -23,9 +21,12 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/Casting.h"
 DISABLE_WARNING_POP
 
+#include <functional>
+#include <string>
+
 namespace klee {
 /// Wrapper for callable objects passed in callExternalFunction
-class KCallable : public KValue {
+struct KCallable : public KValue {
 protected:
   KCallable(llvm::Value *value, KValue::Kind kind) : KValue(value, kind) {}
 
@@ -38,7 +39,7 @@ public:
   }
 };
 
-class KInlineAsm : public KCallable {
+struct KInlineAsm : public KCallable {
 private:
   /* Prepared name of ASM code */
   std::string name;
@@ -65,6 +66,15 @@ public:
 
   [[nodiscard]] llvm::InlineAsm *inlineAsm() const {
     return llvm::dyn_cast<llvm::InlineAsm>(value);
+  }
+
+  [[nodiscard]] bool operator<(const KValue &rhs) const override {
+    return getKind() == rhs.getKind()
+               ? getName() < llvm::cast<KInlineAsm>(rhs).getName()
+               : getKind() < rhs.getKind();
+  }
+  [[nodiscard]] unsigned hash() const override {
+    return std::hash<std::string>{}(name);
   }
 };
 

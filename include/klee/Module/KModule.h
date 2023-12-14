@@ -89,9 +89,13 @@ public:
 
   /// Block number in function
   [[nodiscard]] uintptr_t getId() const;
+  [[nodiscard]] unsigned inModuleID() const;
+
+  [[nodiscard]] bool operator<(const KValue &rhs) const override;
+  [[nodiscard]] unsigned hash() const override;
 
   static bool classof(const KValue *rhs) {
-    return rhs->getKind() == Kind::BLOCK ? classof(cast<KBlock>(rhs)) : false;
+    return rhs->getKind() == Kind::BLOCK && classof(cast<KBlock>(rhs));
   }
 };
 
@@ -118,7 +122,7 @@ public:
   KFunction *getKFunction() const;
 
   static bool classof(const KValue *rhs) {
-    return rhs->getKind() == Kind::BLOCK ? classof(cast<KBlock>(rhs)) : false;
+    return rhs->getKind() == Kind::BLOCK && classof(cast<KBlock>(rhs));
   }
 };
 
@@ -135,7 +139,7 @@ public:
   KBlockType getKBlockType() const override { return KBlockType::Return; };
 
   static bool classof(const KValue *rhs) {
-    return rhs->getKind() == Kind::BLOCK ? classof(cast<KBlock>(rhs)) : false;
+    return rhs->getKind() == Kind::BLOCK && classof(cast<KBlock>(rhs));
   }
 };
 
@@ -198,6 +202,9 @@ public:
   [[nodiscard]] size_t getLine() const;
   [[nodiscard]] std::string getSourceFilepath() const;
 
+  [[nodiscard]] bool operator<(const KValue &rhs) const override;
+  [[nodiscard]] unsigned hash() const override;
+
   /// Unique index for KFunction and KInstruction inside KModule
   /// from 0 to [KFunction + KInstruction]
   [[nodiscard]] inline unsigned getGlobalIndex() const { return globalIndex; }
@@ -236,11 +243,17 @@ public:
   [[nodiscard]] static bool classof(const KValue *rhs) {
     return rhs->getKind() == KValue::Kind::CONSTANT;
   }
+
+  [[nodiscard]] bool operator<(const KValue &rhs) const override;
+  [[nodiscard]] unsigned hash() const override;
 };
 
 struct KGlobalVariable : public KValue {
 public:
-  KGlobalVariable(llvm::GlobalVariable *global);
+  // ID of the global variable
+  const unsigned id;
+
+  KGlobalVariable(llvm::GlobalVariable *global, unsigned id);
 
   [[nodiscard]] llvm::GlobalVariable *globalVariable() const {
     return llvm::dyn_cast_or_null<llvm::GlobalVariable>(value);
@@ -249,6 +262,9 @@ public:
   [[nodiscard]] static bool classof(const KValue *rhs) {
     return rhs->getKind() == KValue::Kind::GLOBAL_VARIABLE;
   }
+
+  [[nodiscard]] bool operator<(const KValue &rhs) const override;
+  [[nodiscard]] unsigned hash() const override;
 
   // Filename where the global variable is defined
   [[nodiscard]] std::string getSourceFilepath() const;
