@@ -67,18 +67,17 @@ struct KBlock : public KValue {
     return llvm::dyn_cast_or_null<llvm::BasicBlock>(value);
   }
 
-public:
+private:
+  const KBlockType blockKind;
+
+protected:
   KBlock(KFunction *, llvm::BasicBlock *, KModule *,
          const std::unordered_map<llvm::Instruction *, unsigned> &,
-         KInstruction **, unsigned &globalIndexInc);
-  KBlock() = delete;
+         KInstruction **, unsigned &globalIndexInc, KBlockType blockType);
   KBlock(const KBlock &) = delete;
   KBlock &operator=(const KBlock &) = delete;
-  virtual ~KBlock() = default;
 
-  virtual KBlockType getKBlockType() const { return KBlockType::Base; }
-  static bool classof(const KBlock *) { return true; }
-
+public:
   unsigned getNumInstructions() const noexcept { return basicBlock()->size(); }
   KInstruction *getFirstInstruction() const noexcept { return instructions[0]; }
   KInstruction *getLastInstruction() const noexcept {
@@ -89,11 +88,19 @@ public:
 
   /// Block number in function
   [[nodiscard]] uintptr_t getId() const;
-  [[nodiscard]] unsigned inModuleID() const;
 
+  // Block number in module
+  [[nodiscard]] unsigned getGlobalIndex() const;
+
+  /// Util methods defined for KValue
   [[nodiscard]] bool operator<(const KValue &rhs) const override;
   [[nodiscard]] unsigned hash() const override;
 
+  ///  For LLVM RTTI purposes in KBlock inheritance system
+  [[nodiscard]] KBlockType getKBlockType() const { return blockKind; }
+  static bool classof(const KBlock *) { return true; }
+
+  /// For LLVM RTTI purposes in KValue inheritance system
   static bool classof(const KValue *rhs) {
     return rhs->getKind() == Kind::BLOCK && classof(cast<KBlock>(rhs));
   }
@@ -101,12 +108,28 @@ public:
 
 typedef std::function<bool(KBlock *)> KBlockPredicate;
 
+struct KBasicBlock : public KBlock {
+public:
+  KBasicBlock(KFunction *, llvm::BasicBlock *, KModule *,
+              const std::unordered_map<llvm::Instruction *, unsigned> &,
+              KInstruction **, unsigned &globalIndexInc);
+
+  ///  For LLVM RTTI purposes in KBlock inheritance system
+  static bool classof(const KBlock *rhs) {
+    return rhs->getKBlockType() == KBlockType::Base;
+  }
+
+  /// For LLVM RTTI purposes in KValue inheritance system
+  static bool classof(const KValue *rhs) {
+    return rhs->getKind() == Kind::BLOCK && classof(cast<KBasicBlock>(rhs));
+  }
+};
+
 struct KCallBlock : KBlock {
   KInstruction *kcallInstruction;
   std::set<llvm::Function *> calledFunctions;
 
 public:
-  KCallBlock() = delete;
   KCallBlock(KFunction *, llvm::BasicBlock *, KModule *,
              const std::unordered_map<llvm::Instruction *, unsigned> &,
              std::set<llvm::Function *>, KInstruction **,
@@ -115,7 +138,6 @@ public:
   static bool classof(const KBlock *E) {
     return E->getKBlockType() == KBlockType::Call;
   }
-  KBlockType getKBlockType() const override { return KBlockType::Call; };
   bool intrinsic() const;
   bool internal() const;
   bool kleeHandled() const;
@@ -128,7 +150,6 @@ public:
 
 struct KReturnBlock : KBlock {
 public:
-  KReturnBlock() = delete;
   KReturnBlock(KFunction *, llvm::BasicBlock *, KModule *,
                const std::unordered_map<llvm::Instruction *, unsigned> &,
                KInstruction **, unsigned &globalIndexInc);
@@ -136,7 +157,6 @@ public:
   static bool classof(const KBlock *E) {
     return E->getKBlockType() == KBlockType::Return;
   }
-  KBlockType getKBlockType() const override { return KBlockType::Return; };
 
   static bool classof(const KValue *rhs) {
     return rhs->getKind() == Kind::BLOCK && classof(cast<KBlock>(rhs));
@@ -174,11 +194,10 @@ public:
   bool kleeHandled = false;
 
   explicit KFunction(llvm::Function *, KModule *, unsigned &);
-  KFunction() = delete;
   KFunction(const KFunction &) = delete;
   KFunction &operator=(const KFunction &) = delete;
 
-  ~KFunction();
+  ~KFunction() override;
 
   unsigned getArgRegister(unsigned index) const { return index; }
 

@@ -103,11 +103,7 @@ int SymbolicSizeConstantAddressSource::internalCompare(
     return size < ub.size ? -1 : 1;
   }
   if (allocSite != ub.allocSite) {
-    if (allocSite->getKind() == ub.allocSite->getKind()) {
-      return *allocSite < *ub.allocSite ? -1 : 1;
-    } else {
-      return allocSite->getKind() < ub.allocSite->getKind() ? -1 : 1;
-    }
+    return *allocSite < *ub.allocSite ? -1 : 1;
   }
 
   return 0;

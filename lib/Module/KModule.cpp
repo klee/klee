@@ -619,9 +619,9 @@ KFunction::KFunction(llvm::Function *_function, KModule *_km,
       if (f) {
         calledFunctions.insert(f);
       }
-      auto *ckb =
-          new KCallBlock(this, &*bbit, parent, instructionToRegisterMap,
-                         calledFunctions, &instructions[n], globalIndexInc);
+      auto *ckb = new KCallBlock(this, &*bbit, parent, instructionToRegisterMap,
+                                 std::move(calledFunctions), &instructions[n],
+                                 globalIndexInc);
       kCallBlocks.push_back(ckb);
       kb = ckb;
     } else if (SplitReturns && isa<ReturnInst>(lit)) {
@@ -629,8 +629,8 @@ KFunction::KFunction(llvm::Function *_function, KModule *_km,
                             &instructions[n], globalIndexInc);
       returnKBlocks.push_back(kb);
     } else {
-      kb = new KBlock(this, &*bbit, parent, instructionToRegisterMap,
-                      &instructions[n], globalIndexInc);
+      kb = new KBasicBlock(this, &*bbit, parent, instructionToRegisterMap,
+                           &instructions[n], globalIndexInc);
     }
     for (unsigned i = 0, ie = kb->getNumInstructions(); i < ie; i++, n++) {
       instructionMap[instructions[n]->inst()] = instructions[n];
@@ -664,8 +664,10 @@ KFunction::~KFunction() {
 KBlock::KBlock(
     KFunction *_kfunction, llvm::BasicBlock *block, KModule *km,
     const std::unordered_map<Instruction *, unsigned> &instructionToRegisterMap,
-    KInstruction **instructionsKF, unsigned &globalIndexInc)
-    : KValue(block, KValue::Kind::BLOCK), parent(_kfunction) {
+    KInstruction **instructionsKF, unsigned &globalIndexInc,
+    KBlockType blockType)
+    : KValue(block, KValue::Kind::BLOCK), blockKind(blockType),
+      parent(_kfunction) {
   instructions = instructionsKF;
 
   for (auto &it : *block) {
@@ -687,21 +689,21 @@ KBlock::KBlock(
   }
 }
 
-unsigned KBlock::inModuleID() const {
-  return parent->getGlobalIndex() + static_cast<unsigned>(getId());
+unsigned KBlock::getGlobalIndex() const {
+  return getFirstInstruction()->getGlobalIndex();
 }
 
 bool KBlock::operator<(const KValue &rhs) const {
   // Additional comparison on block types is redundant,
-  // as inModuleID defines the position of block.
+  // as getGlobalIndex defines the position of block.
   return getKind() == rhs.getKind()
-             ? inModuleID() < cast<KBlock>(rhs).inModuleID()
+             ? getGlobalIndex() < cast<KBlock>(rhs).getGlobalIndex()
              : getKind() < rhs.getKind();
 }
 
 unsigned KBlock::hash() const {
   // Use position of a block as a hash
-  return inModuleID();
+  return getGlobalIndex();
 }
 
 KCallBlock::KCallBlock(
@@ -710,7 +712,7 @@ KCallBlock::KCallBlock(
     std::set<llvm::Function *> _calledFunctions, KInstruction **instructionsKF,
     unsigned &globalIndexInc)
     : KBlock::KBlock(_kfunction, block, km, instructionToRegisterMap,
-                     instructionsKF, globalIndexInc),
+                     instructionsKF, globalIndexInc, KBlockType::Call),
       kcallInstruction(this->instructions[0]),
       calledFunctions(std::move(_calledFunctions)) {}
 
@@ -737,12 +739,21 @@ KFunction *KCallBlock::getKFunction() const {
              : nullptr;
 }
 
+KBasicBlock::KBasicBlock(KFunction *_kfunction, llvm::BasicBlock *block,
+                         KModule *km,
+                         const std::unordered_map<llvm::Instruction *, unsigned>
+                             &instructionToRegisterMap,
+                         KInstruction **instructionsKF,
+                         unsigned &globalIndexInc)
+    : KBlock::KBlock(_kfunction, block, km, instructionToRegisterMap,
+                     instructionsKF, globalIndexInc, KBlockType::Base) {}
+
 KReturnBlock::KReturnBlock(
     KFunction *_kfunction, llvm::BasicBlock *block, KModule *km,
     const std::unordered_map<Instruction *, unsigned> &instructionToRegisterMap,
     KInstruction **instructionsKF, unsigned &globalIndexInc)
     : KBlock::KBlock(_kfunction, block, km, instructionToRegisterMap,
-                     instructionsKF, globalIndexInc) {}
+                     instructionsKF, globalIndexInc, KBlockType::Return) {}
 
 std::string KBlock::getLabel() const {
   std::string _label;

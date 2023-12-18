@@ -18,7 +18,6 @@ public:
     FUNCTION,
     INLINE_ASM,
     INSTRUCTION,
-    VALUE,
   };
 
 protected:
