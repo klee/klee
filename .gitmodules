@@ -1,6 +1,0 @@
-[submodule "json"]
-	path = json
-	url = https://github.com/nlohmann/json.git
-[submodule "optional"]
-	path = optional
-	url = https://github.com/martinmoene/optional-lite.git
