@@ -2,6 +2,7 @@
 #include "klee/ADT/SparseStorage.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/SymbolicSource.h"
+#include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
 #include "klee/Module/KValue.h"
 
@@ -22,7 +23,15 @@ SourceBuilder::uninitialized(unsigned version, const KInstruction *allocSite) {
 }
 
 ref<SymbolicSource> SourceBuilder::symbolicSizeConstantAddress(
-    unsigned version, const KValue *allocSite, ref<Expr> size) {
+    unsigned version, const KInstruction *allocSite, ref<Expr> size) {
+  ref<SymbolicSource> r =
+      new SymbolicSizeConstantAddressSource(version, allocSite, size);
+  r->computeHash();
+  return r;
+}
+
+ref<SymbolicSource> SourceBuilder::symbolicSizeConstantAddress(
+    unsigned version, const KGlobalVariable *allocSite, ref<Expr> size) {
   ref<SymbolicSource> r(
       new SymbolicSizeConstantAddressSource(version, allocSite, size));
   r->computeHash();

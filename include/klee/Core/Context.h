@@ -41,7 +41,9 @@ public:
   /// Returns width of the pointer in bits
   Expr::Width getPointerWidth() const { return PointerWidth; }
 
-  Expr::Width getPointerWidthInBytes() const { return PointerWidth / CHAR_BIT; }
+  Expr::ByteWidth getPointerWidthInBytes() const {
+    return (PointerWidth + CHAR_BIT - 1) / CHAR_BIT;
+  }
 };
 
 } // namespace klee

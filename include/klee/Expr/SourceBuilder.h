@@ -5,6 +5,9 @@
 
 namespace klee {
 
+class KInstruction;
+class KGlobalVariable;
+
 template <typename T, typename Eq> class SparseStorage;
 template <typename T> class ref;
 
@@ -18,8 +21,12 @@ public:
   static ref<SymbolicSource> uninitialized(unsigned version,
                                            const KInstruction *allocSite);
   static ref<SymbolicSource>
-  symbolicSizeConstantAddress(unsigned version, const KValue *allocSite,
+  symbolicSizeConstantAddress(unsigned version, const KInstruction *allocSite,
                               ref<Expr> size);
+  static ref<SymbolicSource>
+  symbolicSizeConstantAddress(unsigned version,
+                              const KGlobalVariable *allocSite, ref<Expr> size);
+
   static ref<SymbolicSource> makeSymbolic(const std::string &name,
                                           unsigned version);
   static ref<SymbolicSource> lazyInitializationAddress(ref<Expr> pointer);

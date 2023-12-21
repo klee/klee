@@ -138,6 +138,10 @@ public:
   /// The type of an expression is simply its width, in bits.
   typedef unsigned Width;
 
+  /// Width of an expression in bytes.
+  /// ByteWidth = (Width + CHAR_BIT - 1) / CHAR_BIT
+  typedef unsigned ByteWidth;
+
   // NOTE: The prefix "Int" in no way implies the integer type of expression.
   // For example, Int64 can indicate i64, double or <2 * i32> in different
   // cases.
@@ -292,6 +296,7 @@ public:
 
   virtual Kind getKind() const = 0;
   virtual Width getWidth() const = 0;
+  ByteWidth getByteWidth() const;
 
   virtual unsigned getNumKids() const = 0;
   virtual ref<Expr> getKid(unsigned i) const = 0;

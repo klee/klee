@@ -5593,22 +5593,29 @@ MemoryObject *Executor::allocate(ExecutionState &state, ref<Expr> size,
 
   Expr::Width pointerWidthInBits = Context::get().getPointerWidth();
 
-  /* Create symbol for array */
-  KValue *ki = nullptr;
+  /// Determine source for address array:
+  /// * LI source if allocate occures on lazi initialization
+  /// * Otherwise choose source depending on the allocation site
+  ref<SymbolicSource> sourceAddressArray;
   if (!lazyInitializationSource) {
     if (auto inst = dyn_cast<llvm::Instruction>(allocSite)) {
-      ki = kmodule->getKBlock(inst->getParent())->parent->instructionMap[inst];
+      KInstruction *ki =
+          kmodule->getKBlock(inst->getParent())->parent->instructionMap[inst];
+      sourceAddressArray = SourceBuilder::symbolicSizeConstantAddress(
+          updateNameVersion(state, "const_arr"), ki, size);
     } else if (auto global = dyn_cast<llvm::GlobalVariable>(allocSite)) {
-      ki = kmodule->globalMap[global].get();
+      KGlobalVariable *kgb = kmodule->globalMap[global].get();
+      sourceAddressArray = SourceBuilder::symbolicSizeConstantAddress(
+          updateNameVersion(state, "const_arr"), kgb, size);
     }
+  } else {
+    sourceAddressArray =
+        SourceBuilder::lazyInitializationAddress(lazyInitializationSource);
   }
 
+  /* Create symbol for array */
   const Array *addressArray = makeArray(
-      Expr::createPointer(pointerWidthInBits / CHAR_BIT),
-      lazyInitializationSource
-          ? SourceBuilder::lazyInitializationAddress(lazyInitializationSource)
-          : SourceBuilder::symbolicSizeConstantAddress(
-                updateNameVersion(state, "const_arr"), ki, size));
+      Expr::createPointer(pointerWidthInBits / CHAR_BIT), sourceAddressArray);
   ref<Expr> addressExpr =
       Expr::createTempRead(addressArray, pointerWidthInBits);
 

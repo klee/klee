@@ -527,6 +527,10 @@ ref<Expr> Expr::createTrue() { return ConstantExpr::create(1, Expr::Bool); }
 
 ref<Expr> Expr::createFalse() { return ConstantExpr::create(0, Expr::Bool); }
 
+Expr::ByteWidth Expr::getByteWidth() const {
+  return (getWidth() + CHAR_BIT - 1) / CHAR_BIT;
+}
+
 void Expr::print(llvm::raw_ostream &os) const {
   ExprPPrinter::printSingleExpr(os, const_cast<Expr *>(this));
 }
