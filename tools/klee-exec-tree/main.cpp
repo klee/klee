@@ -16,7 +16,7 @@
 namespace fs = std::filesystem;
 
 void print_usage() {
-  std::cout << "Usage: klee-ptree <option> /path[/ptree.db]\n\n"
+  std::cout << "Usage: klee-exec-tree <option> /path[/exec_tree.db]\n\n"
                "Options:\n"
                "\tbranches     -  print branch statistics in csv format\n"
                "\tdepths       -  print depths statistics in csv format\n"
@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
   // create tree
   fs::path path{argv[2]};
   if (fs::is_directory(path))
-    path /= "ptree.db";
+    path /= "exec_tree.db";
   if (!fs::exists(path)) {
     std::cerr << "Cannot open " << path << '\n';
     exit(EXIT_FAILURE);

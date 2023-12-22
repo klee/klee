@@ -1,4 +1,4 @@
-//===-- PTreeWriter.h -------------------------------------------*- C++ -*-===//
+//===-- ExecutionTreeWriter.h -----------------------------------*- C++ -*-===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -15,11 +15,11 @@
 #include <string>
 
 namespace klee {
-class AnnotatedPTreeNode;
+class AnnotatedExecutionTreeNode;
 
-/// @brief Writes process tree nodes into an SQLite database
-class PTreeWriter {
-  friend class PersistentPTree;
+/// @brief Writes execution tree nodes into an SQLite database
+class ExecutionTreeWriter {
+  friend class PersistentExecutionTree;
 
   ::sqlite3 *db{nullptr};
   ::sqlite3_stmt *insertStmt{nullptr};
@@ -32,15 +32,15 @@ class PTreeWriter {
   void batchCommit(bool force = false);
 
 public:
-  explicit PTreeWriter(const std::string &dbPath);
-  ~PTreeWriter();
-  PTreeWriter(const PTreeWriter &other) = delete;
-  PTreeWriter(PTreeWriter &&other) noexcept = delete;
-  PTreeWriter &operator=(const PTreeWriter &other) = delete;
-  PTreeWriter &operator=(PTreeWriter &&other) noexcept = delete;
+  explicit ExecutionTreeWriter(const std::string &dbPath);
+  ~ExecutionTreeWriter();
+  ExecutionTreeWriter(const ExecutionTreeWriter &other) = delete;
+  ExecutionTreeWriter(ExecutionTreeWriter &&other) noexcept = delete;
+  ExecutionTreeWriter &operator=(const ExecutionTreeWriter &other) = delete;
+  ExecutionTreeWriter &operator=(ExecutionTreeWriter &&other) noexcept = delete;
 
   /// Write new node into database
-  void write(const AnnotatedPTreeNode &node);
+  void write(const AnnotatedExecutionTreeNode &node);
 };
 
 } // namespace klee

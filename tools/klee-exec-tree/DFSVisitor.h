@@ -13,7 +13,7 @@
 
 #include <functional>
 
-/// @brief Traverses a process tree and calls registered callbacks for
+/// @brief Traverses an execution tree and calls registered callbacks for
 /// intermediate and leaf nodes (not the classical Visitor pattern).
 class DFSVisitor {
   // void _(node ID, node, depth)

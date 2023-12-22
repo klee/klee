@@ -77,7 +77,7 @@ def main():
     if opts.dumpStates:
         execCmd(pid, "p dumpStates = 1", opts)        
     if opts.dumpTree:
-        execCmd(pid, "p dumpPTree = 1", opts)        
+        execCmd(pid, "p dumpExecutionTree = 1", opts)        
     if opts.stopForking:
         execCmd(pid, 'p stop_forking()', opts)    
     if opts.haltExecution:

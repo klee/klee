@@ -20,7 +20,7 @@ Tree::Tree(const std::filesystem::path &path) {
   ::sqlite3 *db;
   if (sqlite3_open_v2(path.c_str(), &db, SQLITE_OPEN_READONLY, nullptr) !=
       SQLITE_OK) {
-    std::cerr << "Can't open process tree database: " << sqlite3_errmsg(db)
+    std::cerr << "Cannot open execution tree database: " << sqlite3_errmsg(db)
               << std::endl;
     exit(EXIT_FAILURE);
   }
@@ -31,7 +31,7 @@ Tree::Tree(const std::filesystem::path &path) {
       "SELECT ID, stateID, leftID, rightID, asmLine, kind FROM nodes;"};
   if (sqlite3_prepare_v3(db, query.c_str(), -1, SQLITE_PREPARE_PERSISTENT,
                          &readStmt, nullptr) != SQLITE_OK) {
-    std::cerr << "Can't prepare read statement: " << sqlite3_errmsg(db)
+    std::cerr << "Cannot prepare read statement: " << sqlite3_errmsg(db)
               << std::endl;
     exit(EXIT_FAILURE);
   }
@@ -40,7 +40,7 @@ Tree::Tree(const std::filesystem::path &path) {
   query = "SELECT MAX(ID) FROM nodes;";
   if (sqlite3_prepare_v3(db, query.c_str(), -1, SQLITE_PREPARE_PERSISTENT,
                          &maxStmt, nullptr) != SQLITE_OK) {
-    std::cerr << "Can't prepare max statement: " << sqlite3_errmsg(db)
+    std::cerr << "Cannot prepare max statement: " << sqlite3_errmsg(db)
               << std::endl;
     exit(EXIT_FAILURE);
   }
@@ -51,7 +51,7 @@ Tree::Tree(const std::filesystem::path &path) {
   if ((rc = sqlite3_step(maxStmt)) == SQLITE_ROW) {
     maxID = static_cast<std::uint32_t>(sqlite3_column_int(maxStmt, 0));
   } else {
-    std::cerr << "Can't read maximum ID: " << sqlite3_errmsg(db) << std::endl;
+    std::cerr << "Cannot read maximum ID: " << sqlite3_errmsg(db) << std::endl;
     exit(EXIT_FAILURE);
   }
 
@@ -74,20 +74,20 @@ Tree::Tree(const std::filesystem::path &path) {
 
     // sanity checks: valid indices
     if (ID == 0) {
-      std::cerr << "PTree DB contains illegal node ID (0)" << std::endl;
+      std::cerr << "ExecutionTree DB contains illegal node ID (0)" << std::endl;
       exit(EXIT_FAILURE);
     }
 
     if (left > maxID || right > maxID) {
-      std::cerr << "PTree DB contains references to non-existing nodes (> max. "
-                   "ID) in node "
+      std::cerr << "ExecutionTree DB contains references to non-existing nodes "
+                   "(> max. ID) in node "
                 << ID << std::endl;
       exit(EXIT_FAILURE);
     }
 
     if ((left == 0 && right != 0) || (left != 0 && right == 0)) {
-      std::cerr << "Warning: PTree DB contains ambiguous node (0 vs. non-0 "
-                   "children): "
+      std::cerr << "Warning: ExecutionTree DB contains ambiguous node "
+                   "(0 vs. non-0 children): "
                 << ID << std::endl;
     }
 
@@ -161,9 +161,10 @@ void Tree::sanityCheck() {
     stack.pop_back();
 
     if (!visited.insert(id).second) {
-      std::cerr << "PTree DB contains duplicate child reference or circular "
-                   "structure. Affected node: "
-                << id << std::endl;
+      std::cerr
+          << "ExecutionTree DB contains duplicate child reference or circular "
+             "structure. Affected node: "
+          << id << std::endl;
       exit(EXIT_FAILURE);
     }
 
@@ -173,8 +174,8 @@ void Tree::sanityCheck() {
     if (!node.left && !node.right &&
         std::holds_alternative<BranchType>(node.kind) &&
         static_cast<std::uint8_t>(std::get<BranchType>(node.kind)) == 0u) {
-      std::cerr << "PTree DB references undefined node. Affected node: " << id
-                << std::endl;
+      std::cerr << "ExecutionTree DB references undefined node. Affected node: "
+                << id << std::endl;
       exit(EXIT_FAILURE);
     }
 
@@ -187,7 +188,7 @@ void Tree::sanityCheck() {
       assert(std::holds_alternative<BranchType>(node.kind));
       const auto branchType = std::get<BranchType>(node.kind);
       if (validBranchTypes.count(branchType) == 0) {
-        std::cerr << "PTree DB contains unknown branch type ("
+        std::cerr << "ExecutionTree DB contains unknown branch type ("
                   << (unsigned)static_cast<std::uint8_t>(branchType)
                   << ") in node " << id << std::endl;
         exit(EXIT_FAILURE);
@@ -198,7 +199,7 @@ void Tree::sanityCheck() {
       const auto terminationType = std::get<StateTerminationType>(node.kind);
       if (validTerminationTypes.count(terminationType) == 0 ||
           terminationType == StateTerminationType::RUNNING) {
-        std::cerr << "PTree DB contains unknown termination type ("
+        std::cerr << "ExecutionTree DB contains unknown termination type ("
                   << (unsigned)static_cast<std::uint8_t>(terminationType)
                   << ") in node " << id << std::endl;
         exit(EXIT_FAILURE);
