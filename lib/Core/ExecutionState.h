@@ -31,9 +31,13 @@
 #include "klee/System/Time.h"
 #include "klee/Utilities/Math.h"
 
+#include "CodeLocation.h"
+#include "EventRecorder.h"
+
 #include "klee/Support/CompilerWarning.h"
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
+#include "llvm/ADT/APFloat.h"
 #include "llvm/IR/Function.h"
 DISABLE_WARNING_POP
 
@@ -41,6 +45,7 @@ DISABLE_WARNING_POP
 #include <deque>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
@@ -66,6 +71,12 @@ extern llvm::cl::opt<unsigned long long> MaxCyclesBeforeStuck;
 struct CallStackFrame {
   KInstIterator caller;
   KFunction *kf;
+
+  /// @brief Location of a return statement in current stack frame.
+  /// @details Serves for a very special case when actual location
+  /// of `return` statement in source code can not be deduced from
+  /// LLVM IR `dbg!` metadata.
+  std::optional<ref<CodeLocation>> returnLocation;
 
   CallStackFrame(KInstIterator caller_, KFunction *kf_)
       : caller(caller_), kf(kf_) {}
@@ -133,6 +144,24 @@ public:
   inline const info_stack_ty &infoStack() const { return infoStack_; }
   inline info_stack_ty &infoStack() { return infoStack_; }
   inline const call_stack_ty &uniqueFrames() const { return uniqueFrames_; }
+
+  void forceReturnLocation(const ref<CodeLocation> &location) {
+    assert(!callStack_.empty() && "Call stack should contain at least one "
+                                  "stack frame to force return location");
+    std::optional<ref<CodeLocation>> &callStackReturnLocation =
+        callStack_.back().returnLocation;
+    assert(!callStackReturnLocation.has_value() &&
+           "Forced return location twice for a single call stack");
+
+    callStackReturnLocation.emplace(location);
+  }
+
+  std::optional<ref<CodeLocation>> forcedReturnLocation() const {
+    if (callStack_.empty()) {
+      return std::nullopt;
+    }
+    return callStack_.back().returnLocation;
+  }
 
   inline unsigned size() const { return callStack_.size(); }
   inline size_t stackRegisterSize() const { return stackSize; }
@@ -300,6 +329,10 @@ public:
 
   /// @brief Constraints collected so far
   PathConstraints constraints;
+
+  /// @brief Storage for the source code events (e.g. changing control flow or
+  /// errors)
+  EventRecorder eventsRecorder;
 
   /// @brief Key points which should be visited through execution
   TargetForest targetForest;

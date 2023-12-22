@@ -8,8 +8,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Module/LocationInfo.h"
-#include "klee/Support/CompilerWarning.h"
+#include "klee/Module/SarifReport.h"
 
+#include "klee/Support/CompilerWarning.h"
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/SmallVector.h"
@@ -23,17 +24,42 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/FormattedStream.h"
 DISABLE_WARNING_POP
 
+#include <cstdint>
+#include <optional>
+
 namespace klee {
+
+PhysicalLocationJson LocationInfo::serialize() const {
+  // clang-format off
+  return PhysicalLocationJson{
+    {
+      ArtifactLocationJson {
+        {file}
+      }
+    },
+    {
+      RegionJson {
+        {line}, 
+        std::nullopt, 
+        column, 
+        std::nullopt
+      }
+    }
+  };
+  // clang-format on
+}
+
+////////////////////////////////////////////////////////////////
 
 LocationInfo getLocationInfo(const llvm::Function *func) {
   const auto dsub = func->getSubprogram();
 
   if (dsub != nullptr) {
     auto path = dsub->getFilename();
-    return {path.str(), dsub->getLine(), 0}; // TODO why not use column here?
+    return {path.str(), dsub->getLine(), {}};
   }
 
-  return {"", 0, 0};
+  return {"", 0, {}};
 }
 
 LocationInfo getLocationInfo(const llvm::Instruction *inst) {
@@ -55,7 +81,7 @@ LocationInfo getLocationInfo(const llvm::Instruction *inst) {
         column = LexicalBlock->getColumn();
       }
     }
-    return {full_path.str(), line, column};
+    return {full_path.str(), line, {column}};
   }
 
   return getLocationInfo(inst->getParent()->getParent());
@@ -72,15 +98,20 @@ LocationInfo getLocationInfo(const llvm::GlobalVariable *globalVar) {
     // Return location from any debug info for global variable.
     if (const llvm::DIGlobalVariable *debugInfoGlobalVar =
             debugInfoEntry->getVariable()) {
-      // Assume that global variable declared at line 0.
       return {debugInfoGlobalVar->getFilename().str(),
-              debugInfoGlobalVar->getLine(), 0};
+              debugInfoGlobalVar->getLine(),
+              {}};
     }
+  }
+
+  // For `extern` variables return `external` file.
+  if (globalVar->hasExternalLinkage()) {
+    return {"external", 0, {}};
   }
 
   // Fallback to empty location if there is no appropriate debug
   // info.
-  return {"", 0, 0};
+  return {"", 0, {}};
 }
 
 } // namespace klee

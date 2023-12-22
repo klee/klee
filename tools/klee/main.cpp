@@ -32,6 +32,7 @@
 #include "llvm/Analysis/CallGraph.h"
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
+#include "llvm/ADT/APFloat.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
@@ -88,6 +89,11 @@ cl::opt<bool>
     WriteNone("write-no-tests", cl::init(false),
               cl::desc("Do not generate any test files (default=false)"),
               cl::cat(TestCaseCat));
+
+cl::opt<bool> WriteSARIFs(
+    "write-sarifs", cl::init(false),
+    cl::desc("Write .sarif files for each erroneous test case (default=false)"),
+    cl::cat(TestCaseCat));
 
 cl::opt<bool> WriteKTests(
     "write-ktests", cl::init(true),
@@ -471,6 +477,8 @@ public:
   void setOutputDirectory(const std::string &directory);
 
   SmallString<128> getOutputDirectory() const;
+
+  ToolJson info() const override;
 };
 
 KleeHandler::KleeHandler(int argc, char **argv)
@@ -612,6 +620,36 @@ std::string KleeHandler::getTestFilename(const std::string &suffix, unsigned id,
 
 SmallString<128> KleeHandler::getOutputDirectory() const {
   return m_outputDirectory;
+}
+
+static std::vector<RuleJson> rules() {
+  std::vector<RuleJson> ret;
+  // Push back rules
+  // Wtype-limits deprecated as I might be equal to 0.
+  DISABLE_WARNING_PUSH
+  // clang-format off
+  DISABLE_WARNING(-Wtype-limits)
+  // clang-format on
+#undef TTYPE
+#undef TTMARK
+#define TTYPE(N, I, S)                                                         \
+  if ((I) > (unsigned int)StateTerminationType::SOLVERERR &&                   \
+      (I) < (unsigned int)StateTerminationType::PROGERR) {                     \
+    ret.push_back(RuleJson{#N, {"Program error"}, {}, {}});                    \
+  }
+#define TTMARK(N, I)
+
+  TERMINATION_TYPES;
+  DISABLE_WARNING_POP
+  return ret;
+};
+
+ToolJson KleeHandler::info() const {
+  DriverJson driver{"KLEEF", "https://toolchain-labs.com/projects/kleef.html",
+                    rules()};
+  ToolJson tool = {std::move(driver)};
+
+  return tool;
 }
 
 std::unique_ptr<llvm::raw_fd_ostream>
@@ -766,6 +804,17 @@ void KleeHandler::processTestCase(const ExecutionState &state,
           *f << entry.first << ':' << line << '\n';
         }
       }
+    }
+  }
+
+  if (isError && WriteSARIFs) {
+    auto f = openOutputFile("report.sarif");
+
+    // Rewrite .sarif each time it is updated to
+    // receive results as they appear.
+    if (f) {
+      m_interpreter->addSARIFReport(state);
+      *f << json(m_interpreter->getSARIFReport()).dump(2);
     }
   }
 
@@ -1964,7 +2013,7 @@ int main(int argc, char **argv, char **envp) {
       for (const auto &instr : llvm::instructions(Func)) {
         auto locationInfo = getLocationInfo(&instr);
         origInstructions[locationInfo.file][locationInfo.line]
-                        [locationInfo.column]
+                        [locationInfo.column.value_or(0)]
                             .insert(instr.getOpcode());
       }
     }
@@ -2110,6 +2159,7 @@ int main(int argc, char **argv, char **envp) {
                    errorMsg.c_str());
     }
 
+    mainModuleFunctions.insert("__klee_posix_wrapped_main");
     preparePOSIX(loadedUserModules);
   }
 

@@ -21,6 +21,7 @@
 #include "klee/Support/CompilerWarning.h"
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Hashing.h"
 #if LLVM_VERSION_CODE >= LLVM_VERSION(13, 0)

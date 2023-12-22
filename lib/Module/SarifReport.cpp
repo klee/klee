@@ -373,7 +373,7 @@ bool Location::isInside(const llvm::Function *f,
           locInfo.line >= startLine && locInfo.column <= *endColumn &&
           locInfo.column >= *startColumn &&
           origInsts.at(locInfo.line)
-                  .at(locInfo.column)
+                  .at(locInfo.column.value_or(0))
                   .count(inst.getOpcode()) != 0) {
         return true;
       }

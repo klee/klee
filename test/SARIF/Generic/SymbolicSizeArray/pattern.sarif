@@ -1,0 +1,106 @@
+{
+  "runs": [
+    {
+      "results": [
+        {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "message": {
+                          "text": "Heap memory allocation"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "SymbolicSizeArray.c"
+                          },
+                          "region": {
+                            "endColumn": null,
+                            "endLine": null,
+                            "startColumn": 21,
+                            "startLine": 14
+                          }
+                        }
+                      },
+                      "metadata": null
+                    },
+                    {
+                      "location": {
+                        "message": {
+                          "text": "memory error: out of bound pointer"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "SymbolicSizeArray.c"
+                          },
+                          "region": {
+                            "endColumn": null,
+                            "endLine": null,
+                            "startColumn": 8,
+                            "startLine": 15
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "message": {
+                          "text": "Heap memory allocation"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "SymbolicSizeArray.c"
+                          },
+                          "region": {
+                            "endColumn": null,
+                            "endLine": null,
+                            "startColumn": 21,
+                            "startLine": 14
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "message": {
+                          "text": "memory error: out of bound pointer"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "SymbolicSizeArray.c"
+                          },
+                          "region": {
+                            "endColumn": null,
+                            "endLine": null,
+                            "startColumn": 8,
+                            "startLine": 16
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "version": "2.1.0"
+}

@@ -24,7 +24,7 @@ class LLVMContext;
 
 namespace klee {
 class ExternalDispatcherImpl;
-class KCallable;
+struct KCallable;
 class ExternalDispatcher {
 private:
   ExternalDispatcherImpl *impl;

@@ -38,6 +38,7 @@ class raw_fd_ostream;
 namespace klee {
 class ExecutionState;
 struct SarifReport;
+struct ToolJson;
 class Interpreter;
 class TreeStreamWriter;
 
@@ -57,6 +58,8 @@ public:
 
   virtual void processTestCase(const ExecutionState &state, const char *message,
                                const char *suffix, bool isError = false) = 0;
+
+  virtual ToolJson info() const = 0;
 };
 
 /// [File][Line][Column] -> Opcode
@@ -227,6 +230,10 @@ public:
                                 LogType logFormat = STP) = 0;
 
   virtual bool getSymbolicSolution(const ExecutionState &state, KTest &res) = 0;
+
+  virtual void addSARIFReport(const ExecutionState &state) = 0;
+
+  virtual SarifReportJson getSARIFReport() const = 0;
 
   virtual void logState(const ExecutionState &state, int id,
                         std::unique_ptr<llvm::raw_fd_ostream> &f) = 0;

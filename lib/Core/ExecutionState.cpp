@@ -22,6 +22,7 @@
 #include "klee/Support/CompilerWarning.h"
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
+#include "llvm/ADT/APFloat.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
@@ -161,10 +162,10 @@ ExecutionState::ExecutionState(const ExecutionState &state)
       stack(state.stack), stackBalance(state.stackBalance),
       incomingBBIndex(state.incomingBBIndex), depth(state.depth),
       level(state.level), addressSpace(state.addressSpace),
-      constraints(state.constraints), targetForest(state.targetForest),
-      pathOS(state.pathOS), symPathOS(state.symPathOS),
-      coveredLines(state.coveredLines), symbolics(state.symbolics),
-      resolvedPointers(state.resolvedPointers),
+      constraints(state.constraints), eventsRecorder(state.eventsRecorder),
+      targetForest(state.targetForest), pathOS(state.pathOS),
+      symPathOS(state.symPathOS), coveredLines(state.coveredLines),
+      symbolics(state.symbolics), resolvedPointers(state.resolvedPointers),
       cexPreferences(state.cexPreferences), arrayNames(state.arrayNames),
       steppedInstructions(state.steppedInstructions),
       steppedMemoryInstructions(state.steppedMemoryInstructions),

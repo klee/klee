@@ -97,9 +97,9 @@ public:
     node->values.push_back(value);
   }
 
-  bool empty() { return size() == 0; }
+  bool empty() const { return size() == 0; }
 
-  const T &back() {
+  const T &back() const {
     assert(node && "requiers not empty list");
     auto it = iterator(node.get());
     it.get = size() - 1;
@@ -109,6 +109,10 @@ public:
   ImmutableList() : node(){};
   ImmutableList(const ImmutableList<T> &il)
       : node(std::make_shared<ImmutableListNode>(il)) {}
+  ImmutableList &operator=(const ImmutableList<T> &il) {
+    node = std::make_shared<ImmutableListNode>(il);
+    return *this;
+  }
 };
 
 } // namespace klee

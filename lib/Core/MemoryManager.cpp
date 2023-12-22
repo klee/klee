@@ -130,7 +130,7 @@ MemoryManager::~MemoryManager() {
 
 MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
                                       bool isGlobal, bool isLazyInitialiazed,
-                                      const llvm::Value *allocSite,
+                                      ref<CodeLocation> allocSite,
                                       size_t alignment, ref<Expr> addressExpr,
                                       ref<Expr> sizeExpr, unsigned timestamp,
                                       IDType id) {
@@ -195,7 +195,7 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
 }
 
 MemoryObject *MemoryManager::allocateFixed(uint64_t address, uint64_t size,
-                                           const llvm::Value *allocSite) {
+                                           ref<CodeLocation> allocSite) {
 #ifndef NDEBUG
   for (objects_ty::iterator it = objects.begin(), ie = objects.end(); it != ie;
        ++it) {

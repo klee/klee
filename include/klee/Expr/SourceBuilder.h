@@ -5,8 +5,8 @@
 
 namespace klee {
 
-class KInstruction;
-class KGlobalVariable;
+struct KInstruction;
+struct KGlobalVariable;
 
 template <typename T, typename Eq> class SparseStorage;
 template <typename T> class ref;

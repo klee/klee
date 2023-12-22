@@ -1,0 +1,57 @@
+{
+  "runs": [
+    {
+      "results": [
+        {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "message": {
+                          "text": "Heap memory allocation"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "MEDIUM03.c"
+                          },
+                          "region": {
+                            "endColumn": null,
+                            "endLine": null,
+                            "startColumn": 15,
+                            "startLine": 72
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "message": {
+                          "text": "memory error: out of bound pointer"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "MEDIUM03.c"
+                          },
+                          "region": {
+                            "endColumn": null,
+                            "endLine": null,
+                            "startColumn": 30,
+                            "startLine": 64
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "version": "2.1.0"
+}

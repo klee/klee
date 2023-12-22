@@ -20,12 +20,14 @@ set(KLEE_MODULE_COMPONENT_SRCS
   KModule.cpp
   KType.cpp
   KValue.cpp
+  LocalVarDeclarationFinderPass.cpp
   LowerSwitch.cpp
   ModuleUtil.cpp
   Optimize.cpp
   OptNone.cpp
   PhiCleaner.cpp
   RaiseAsm.cpp
+  ReturnLocationFinderPass.cpp
   ReturnSplitter.cpp
   SarifReport.cpp
   Target.cpp

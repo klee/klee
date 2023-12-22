@@ -9,6 +9,7 @@
 
 #include "SpecialFunctionHandler.h"
 
+#include "CodeEvent.h"
 #include "ExecutionState.h"
 #include "Executor.h"
 #include "Memory.h"
@@ -31,6 +32,7 @@
 #include "klee/Support/CompilerWarning.h"
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instructions.h"
@@ -340,8 +342,9 @@ void SpecialFunctionHandler::handleAbort(ExecutionState &state,
                                          KInstruction *target,
                                          std::vector<ref<Expr>> &arguments) {
   assert(arguments.size() == 0 && "invalid number of arguments to abort");
-  executor.terminateStateOnProgramError(state, "abort failure",
-                                        StateTerminationType::Abort);
+  executor.terminateStateOnProgramError(
+      state, new ErrorEvent(executor.locationOf(state),
+                            StateTerminationType::Abort, "abort failure"));
 }
 
 void SpecialFunctionHandler::handleExit(ExecutionState &state,
@@ -363,8 +366,10 @@ void SpecialFunctionHandler::handleAssert(ExecutionState &state,
                                           std::vector<ref<Expr>> &arguments) {
   assert(arguments.size() == 3 && "invalid number of arguments to _assert");
   executor.terminateStateOnProgramError(
-      state, "ASSERTION FAIL: " + readStringAtAddress(state, arguments[0]),
-      StateTerminationType::Assert);
+      state,
+      new ErrorEvent(executor.locationOf(state), StateTerminationType::Assert,
+                     "ASSERTION FAIL: " +
+                         readStringAtAddress(state, arguments[0])));
 }
 
 void SpecialFunctionHandler::handleAssertFail(
@@ -373,8 +378,10 @@ void SpecialFunctionHandler::handleAssertFail(
   assert(arguments.size() == 4 &&
          "invalid number of arguments to __assert_fail");
   executor.terminateStateOnProgramError(
-      state, "ASSERTION FAIL: " + readStringAtAddress(state, arguments[0]),
-      StateTerminationType::Assert);
+      state,
+      new ErrorEvent(executor.locationOf(state), StateTerminationType::Assert,
+                     "ASSERTION FAIL: " +
+                         readStringAtAddress(state, arguments[0])));
 }
 
 void SpecialFunctionHandler::handleReportError(
@@ -385,9 +392,11 @@ void SpecialFunctionHandler::handleReportError(
 
   // arguments[0,1,2,3] are file, line, message, suffix
   executor.terminateStateOnProgramError(
-      state, readStringAtAddress(state, arguments[2]),
-      StateTerminationType::ReportError, "",
-      readStringAtAddress(state, arguments[3]).c_str());
+      state,
+      new ErrorEvent(executor.locationOf(state),
+                     StateTerminationType::ReportError,
+                     readStringAtAddress(state, arguments[2])),
+      "", readStringAtAddress(state, arguments[3]).c_str());
 }
 
 void SpecialFunctionHandler::handleNew(ExecutionState &state,
@@ -828,7 +837,9 @@ void SpecialFunctionHandler::handleCheckMemoryAccess(
             cast<ConstantExpr>(address),
             executor.typeSystemManager->getUnknownType(), idObject)) {
       executor.terminateStateOnProgramError(
-          state, "check_memory_access: memory error", StateTerminationType::Ptr,
+          state,
+          new ErrorEvent(executor.locationOf(state), StateTerminationType::Ptr,
+                         "check_memory_access: memory error"),
           executor.getAddressInfo(state, address));
     } else {
       const MemoryObject *mo = state.addressSpace.findObject(idObject).first;
@@ -836,8 +847,11 @@ void SpecialFunctionHandler::handleCheckMemoryAccess(
           address, cast<ConstantExpr>(size)->getZExtValue());
       if (!chk->isTrue()) {
         executor.terminateStateOnProgramError(
-            state, "check_memory_access: memory error",
-            StateTerminationType::Ptr, executor.getAddressInfo(state, address));
+            state,
+            new ErrorEvent(
+                new AllocEvent(mo->allocSite), executor.locationOf(state),
+                StateTerminationType::Ptr, "check_memory_access: memory error"),
+            executor.getAddressInfo(state, address));
       }
     }
   }
@@ -865,7 +879,7 @@ void SpecialFunctionHandler::handleDefineFixedObject(
   uint64_t address = cast<ConstantExpr>(arguments[0])->getZExtValue();
   uint64_t size = cast<ConstantExpr>(arguments[1])->getZExtValue();
   MemoryObject *mo =
-      executor.memory->allocateFixed(address, size, state.prevPC->inst());
+      executor.memory->allocateFixed(address, size, executor.locationOf(state));
   executor.bindObjectInState(
       state, mo, executor.typeSystemManager->getUnknownType(), false);
   mo->isUserSpecified = true; // XXX hack;

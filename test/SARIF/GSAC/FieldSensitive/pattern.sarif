@@ -1,0 +1,57 @@
+{
+  "runs": [
+    {
+      "results": [
+        {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "message": {
+                          "text": "Heap memory allocation"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "FieldSensitive.c"
+                          },
+                          "region": {
+                            "endColumn": null,
+                            "endLine": null,
+                            "startColumn": 30,
+                            "startLine": 23
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "location": {
+                        "message": {
+                          "text": "memory error: out of bound pointer"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "FieldSensitive.c"
+                          },
+                          "region": {
+                            "endColumn": null,
+                            "endLine": null,
+                            "startColumn": 25,
+                            "startLine": 37
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "version": "2.1.0"
+}

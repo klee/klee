@@ -304,6 +304,10 @@ void KModule::optimiseAndPrepare(
   // going to be unresolved. We really need to handle the intrinsics
   // directly I think?
   legacy::PassManager pm3;
+
+  pm3.add(new ReturnLocationFinderPass());
+  pm3.add(new LocalVarDeclarationFinderPass());
+
   if (opts.Simplify)
     pm3.add(createCFGSimplificationPass());
   switch (SwitchType) {
@@ -486,6 +490,10 @@ KBlock *KModule::getKBlock(const llvm::BasicBlock *bb) {
 
 bool KModule::inMainModule(const llvm::Function &f) {
   return mainModuleFunctions.count(f.getName().str()) != 0;
+}
+
+bool KModule::inMainModule(const llvm::Instruction &i) {
+  return inMainModule(*i.getParent()->getParent());
 }
 
 bool KModule::inMainModule(const GlobalVariable &v) {

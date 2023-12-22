@@ -10,6 +10,7 @@
 #ifndef KLEE_MEMORY_H
 #define KLEE_MEMORY_H
 
+#include "CodeLocation.h"
 #include "MemoryManager.h"
 #include "TimingSolver.h"
 #include "klee/ADT/Ref.h"
@@ -90,7 +91,7 @@ public:
   /// "Location" for which this memory object was allocated. This
   /// should be either the allocating instruction or the global object
   /// it was allocated for (or whatever else makes sense).
-  const llvm::Value *allocSite;
+  ref<CodeLocation> allocSite;
 
   // DO NOT IMPLEMENT
   MemoryObject(const MemoryObject &b);
@@ -106,7 +107,7 @@ public:
   MemoryObject(
       uint64_t _address, unsigned _size, uint64_t alignment, bool _isLocal,
       bool _isGlobal, bool _isFixed, bool _isLazyInitialized,
-      const llvm::Value *_allocSite, MemoryManager *_parent,
+      ref<CodeLocation> _allocSite, MemoryManager *_parent,
       ref<Expr> _addressExpr = nullptr, ref<Expr> _sizeExpr = nullptr,
       unsigned _timestamp = 0 /* unused if _isLazyInitialized is false*/)
       : id(counter++), timestamp(_timestamp), address(_address),
@@ -125,7 +126,7 @@ public:
   ~MemoryObject();
 
   /// Get an identifying string for this allocation.
-  void getAllocInfo(std::string &result) const;
+  std::string getAllocInfo() const;
 
   void setName(const std::string &_name) const { this->name = _name; }
 
@@ -188,8 +189,8 @@ public:
     if (size != b.size)
       return (size < b.size ? -1 : 1);
 
-    if (allocSite != b.allocSite)
-      return (allocSite < b.allocSite ? -1 : 1);
+    if (allocSite->source != b.allocSite->source)
+      return (allocSite->source < b.allocSite->source ? -1 : 1);
 
     assert(isLazyInitialized == b.isLazyInitialized);
     return 0;

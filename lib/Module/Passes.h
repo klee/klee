@@ -220,6 +220,46 @@ public:
   ReturnSplitter() : llvm::FunctionPass(ID) {}
   bool runOnFunction(llvm::Function &F) override;
 };
+
+/// @brief Pass able to find the actual location of
+/// `return` statements in source code.
+///
+/// @details For function with multiple `return` statements
+/// clang compiler generates LLVM IR with exactly one `ret`
+/// instruction. `return` statements transform to the:
+///   ```
+///     ret_reg = val
+///     br ret_block
+///   ...
+///   ret_block:
+///     ret_val = load ret_reg
+///     ret ret_val
+///   ```
+/// This pass finds such constructions and marks
+/// `br ret_block` with `md_ret` metadata.
+class ReturnLocationFinderPass : public llvm::FunctionPass {
+public:
+  static char ID;
+  ReturnLocationFinderPass() : llvm::FunctionPass(ID) {}
+  bool runOnFunction(llvm::Function &) override;
+};
+
+/// @brief Pass able to find line in source code with
+/// declaration of local variable.
+///
+/// @details "Construction" of local variable in LLVM IR
+/// is represented as allocation of memory in the beginning
+/// of each function and subsequent call of `llvm.dbg.declare`
+/// function on allocated memory. This pass moves `!dbg` infos
+/// from calls to mentioned functions to the corresponding `alloca`
+/// instructions.
+class LocalVarDeclarationFinderPass : public llvm::FunctionPass {
+public:
+  static char ID;
+  LocalVarDeclarationFinderPass() : llvm::FunctionPass(ID) {}
+  bool runOnFunction(llvm::Function &) override;
+};
+
 } // namespace klee
 
 #endif /* KLEE_PASSES_H */

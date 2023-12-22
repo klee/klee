@@ -1,0 +1,69 @@
+{
+  "runs": [
+    {
+      "results": [
+        {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "message": {
+                          "text": "memory error: null pointer exception"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "LazyInitialization.c"
+                          },
+                          "region": {
+                            "endColumn": null,
+                            "endLine": null,
+                            "startColumn": 6,
+                            "startLine": 14
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "message": {
+                          "text": "memory error: out of bound pointer"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "LazyInitialization.c"
+                          },
+                          "region": {
+                            "endColumn": null,
+                            "endLine": null,
+                            "startColumn": 10,
+                            "startLine": 15
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "version": "2.1.0"
+}
