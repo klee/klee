@@ -32,10 +32,10 @@ namespace klee {
 class Array;
 class CallPathNode;
 struct Cell;
+class ExecutionTreeNode;
 struct KFunction;
 struct KInstruction;
 class MemoryObject;
-class PTreeNode;
 struct InstructionInfo;
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const MemoryMap &mm);
@@ -207,9 +207,9 @@ public:
   /// @brief Set containing which lines in which files are covered by this state
   std::map<const std::string *, std::set<std::uint32_t>> coveredLines;
 
-  /// @brief Pointer to the process tree of the current state
-  /// Copies of ExecutionState should not copy ptreeNode
-  PTreeNode *ptreeNode = nullptr;
+  /// @brief Pointer to the execution tree of the current state
+  /// Copies of ExecutionState should not copy executionTreeNode
+  ExecutionTreeNode *executionTreeNode = nullptr;
 
   /// @brief Ordered list of symbolics: used to generate test cases.
   //

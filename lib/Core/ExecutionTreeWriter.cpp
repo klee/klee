@@ -1,4 +1,4 @@
-//===-- PTreeWriter.cpp ---------------------------------------------------===//
+//===-- ExecutionTreeWriter.cpp -------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PTreeWriter.h"
+#include "ExecutionTreeWriter.h"
 
-#include "PTree.h"
+#include "ExecutionTree.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/OptionCategories.h"
 
@@ -18,9 +18,9 @@
 namespace {
 llvm::cl::opt<unsigned> BatchSize(
     "ptree-batch-size", llvm::cl::init(100U),
-    llvm::cl::desc("Number of process tree nodes to batch for writing, "
-                   "see --write-ptree (default=100)"),
-    llvm::cl::cat(klee::PTreeCat));
+    llvm::cl::desc("Number of execution tree nodes to batch for writing, "
+                   "see --write-execution-tree (default=100)"),
+    llvm::cl::cat(klee::ExecTreeCat));
 } // namespace
 
 using namespace klee;
@@ -34,28 +34,29 @@ void prepare_statement(sqlite3 *db, const std::string &query, sqlite3_stmt **stm
   result = sqlite3_prepare_v3(db, query.c_str(), -1, 0, stmt, nullptr);
 #endif
   if (result != SQLITE_OK) {
-    klee_warning("Process tree database: can't prepare query: %s [%s]",
+    klee_warning("Execution tree database: cannot prepare query: %s [%s]",
                  sqlite3_errmsg(db), query.c_str());
     sqlite3_close(db);
-    klee_error("Process tree database: can't prepare query: %s", query.c_str());
+    klee_error("Execution tree database: cannot prepare query: %s",
+               query.c_str());
   }
 }
 
-PTreeWriter::PTreeWriter(const std::string &dbPath) {
+ExecutionTreeWriter::ExecutionTreeWriter(const std::string &dbPath) {
   // create database file
   if (sqlite3_open(dbPath.c_str(), &db) != SQLITE_OK)
-    klee_error("Can't create process tree database: %s", sqlite3_errmsg(db));
+    klee_error("Cannot create execution tree database: %s", sqlite3_errmsg(db));
 
   // - set options: asynchronous + WAL
   char *errMsg = nullptr;
   if (sqlite3_exec(db, "PRAGMA synchronous = OFF;", nullptr, nullptr,
                    &errMsg) != SQLITE_OK) {
-    klee_warning("Process tree database: can't set option: %s", errMsg);
+    klee_warning("Execution tree database: cannot set option: %s", errMsg);
     sqlite3_free(errMsg);
   }
   if (sqlite3_exec(db, "PRAGMA journal_mode = WAL;", nullptr, nullptr,
                    &errMsg) != SQLITE_OK) {
-    klee_warning("Process tree database: can't set option: %s", errMsg);
+    klee_warning("Execution tree database: cannot set option: %s", errMsg);
     sqlite3_free(errMsg);
   }
 
@@ -66,10 +67,10 @@ PTreeWriter::PTreeWriter(const std::string &dbPath) {
       "asmLine INT, kind INT);";
   char *zErr = nullptr;
   if (sqlite3_exec(db, query.c_str(), nullptr, nullptr, &zErr) != SQLITE_OK) {
-    klee_warning("Process tree database: initialisation error: %s", zErr);
+    klee_warning("Execution tree database: initialisation error: %s", zErr);
     sqlite3_free(zErr);
     sqlite3_close(db);
-    klee_error("Process tree database: initialisation error.");
+    klee_error("Execution tree database: initialisation error.");
   }
 
   // create prepared statements
@@ -85,16 +86,16 @@ PTreeWriter::PTreeWriter(const std::string &dbPath) {
 
   // begin transaction
   if (sqlite3_step(transactionBeginStmt) != SQLITE_DONE) {
-    klee_warning("Process tree database: can't begin transaction: %s",
+    klee_warning("Execution tree database: cannot begin transaction: %s",
                  sqlite3_errmsg(db));
   }
   if (sqlite3_reset(transactionBeginStmt) != SQLITE_OK) {
-    klee_warning("Process tree database: can't reset transaction: %s",
+    klee_warning("Execution tree database: cannot reset transaction: %s",
                  sqlite3_errmsg(db));
   }
 }
 
-PTreeWriter::~PTreeWriter() {
+ExecutionTreeWriter::~ExecutionTreeWriter() {
   batchCommit(!flushed);
 
   // finalize prepared statements
@@ -105,39 +106,39 @@ PTreeWriter::~PTreeWriter() {
   // commit
   if (sqlite3_exec(db, "END TRANSACTION", nullptr, nullptr, nullptr) !=
       SQLITE_OK) {
-    klee_warning("Process tree database: can't end transaction: %s",
+    klee_warning("Execution tree database: cannot end transaction: %s",
                  sqlite3_errmsg(db));
   }
 
   if (sqlite3_close(db) != SQLITE_OK) {
-    klee_warning("Process tree database: can't close database: %s",
+    klee_warning("Execution tree database: cannot close database: %s",
                  sqlite3_errmsg(db));
   }
 }
 
-void PTreeWriter::batchCommit(bool force) {
+void ExecutionTreeWriter::batchCommit(bool force) {
   ++batch;
   if (batch < BatchSize && !force)
     return;
 
   // commit and begin transaction
   if (sqlite3_step(transactionCommitStmt) != SQLITE_DONE) {
-    klee_warning("Process tree database: transaction commit error: %s",
+    klee_warning("Execution tree database: transaction commit error: %s",
                  sqlite3_errmsg(db));
   }
 
   if (sqlite3_reset(transactionCommitStmt) != SQLITE_OK) {
-    klee_warning("Process tree database: transaction reset error: %s",
+    klee_warning("Execution tree database: transaction reset error: %s",
                  sqlite3_errmsg(db));
   }
 
   if (sqlite3_step(transactionBeginStmt) != SQLITE_DONE) {
-    klee_warning("Process tree database: transaction begin error: %s",
+    klee_warning("Execution tree database: transaction begin error: %s",
                  sqlite3_errmsg(db));
   }
 
   if (sqlite3_reset(transactionBeginStmt) != SQLITE_OK) {
-    klee_warning("Process tree database: transaction reset error: %s",
+    klee_warning("Execution tree database: transaction reset error: %s",
                  sqlite3_errmsg(db));
   }
 
@@ -145,7 +146,7 @@ void PTreeWriter::batchCommit(bool force) {
   flushed = true;
 }
 
-void PTreeWriter::write(const AnnotatedPTreeNode &node) {
+void ExecutionTreeWriter::write(const AnnotatedExecutionTreeNode &node) {
   unsigned rc = 0;
 
   // bind values (SQLITE_OK is defined as 0 - just check success once at the
@@ -155,12 +156,12 @@ void PTreeWriter::write(const AnnotatedPTreeNode &node) {
   rc |= sqlite3_bind_int64(
       insertStmt, 3,
       node.left.getPointer()
-          ? (static_cast<AnnotatedPTreeNode *>(node.left.getPointer()))->id
+          ? (static_cast<AnnotatedExecutionTreeNode *>(node.left.getPointer()))->id
           : 0);
   rc |= sqlite3_bind_int64(
       insertStmt, 4,
       node.right.getPointer()
-          ? (static_cast<AnnotatedPTreeNode *>(node.right.getPointer()))->id
+          ? (static_cast<AnnotatedExecutionTreeNode *>(node.right.getPointer()))->id
           : 0);
   rc |= sqlite3_bind_int(insertStmt, 5, node.asmLine);
   std::uint8_t value{0};
@@ -170,25 +171,26 @@ void PTreeWriter::write(const AnnotatedPTreeNode &node) {
     value =
         static_cast<std::uint8_t>(std::get<StateTerminationType>(node.kind));
   } else {
-    assert(false && "PTreeWriter: Illegal node kind!");
+    assert(false && "ExecutionTreeWriter: Illegal node kind!");
   }
   rc |= sqlite3_bind_int(insertStmt, 6, value);
   if (rc != SQLITE_OK) {
     // This is either a programming error (e.g. SQLITE_MISUSE) or we ran out of
     // resources (e.g. SQLITE_NOMEM). Calling sqlite3_errmsg() after a possible
     // successful call above is undefined, hence no error message here.
-    klee_error("Process tree database: can't persist data for node: %u",
+    klee_error("Execution tree database: cannot persist data for node: %u",
                node.id);
   }
 
   // insert
   if (sqlite3_step(insertStmt) != SQLITE_DONE) {
-    klee_warning("Process tree database: can't persist data for node: %u: %s",
-                 node.id, sqlite3_errmsg(db));
+    klee_warning(
+        "Execution tree database: cannot persist data for node: %u: %s",
+        node.id, sqlite3_errmsg(db));
   }
 
   if (sqlite3_reset(insertStmt) != SQLITE_OK) {
-    klee_warning("Process tree database: error reset node: %u: %s", node.id,
+    klee_warning("Execution tree database: error reset node: %u: %s", node.id,
                  sqlite3_errmsg(db));
   }
 

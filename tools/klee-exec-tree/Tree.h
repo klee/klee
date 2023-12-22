@@ -25,7 +25,7 @@ inline std::unordered_map<BranchType, std::string> branchTypeNames;
 inline std::unordered_map<StateTerminationType, std::string>
     terminationTypeNames;
 
-///@brief A Tree node representing a PTreeNode
+///@brief A Tree node representing an ExecutionTreeNode
 struct Node final {
   std::uint32_t left{0};
   std::uint32_t right{0};
@@ -34,7 +34,7 @@ struct Node final {
   std::variant<BranchType, StateTerminationType> kind{BranchType::NONE};
 };
 
-///@brief An in-memory representation of a complete process tree
+///@brief An in-memory representation of a complete execution tree
 class Tree final {
   /// Creates branchTypeNames and terminationTypeNames maps
   static void initialiseTypeNames();
@@ -45,9 +45,9 @@ class Tree final {
 
 public:
   /// sorted vector of Nodes default initialised with BranchType::NONE
-  std::vector<Node> nodes; // PTree node IDs start with 1!
+  std::vector<Node> nodes; // ExecutionTree node IDs start with 1!
 
-  /// Reads complete ptree.db into memory
+  /// Reads complete exec-tree.db into memory
   explicit Tree(const std::filesystem::path &path);
   ~Tree() = default;
 };

@@ -147,7 +147,7 @@ file(GENERATE
 
 add_custom_target(systemtests
   COMMAND "${LIT_TOOL}" ${LIT_ARGS} "${CMAKE_CURRENT_BINARY_DIR}"
-  DEPENDS klee kleaver klee-ptree klee-replay kleeRuntest ktest-gen ktest-randgen
+  DEPENDS klee kleaver klee-exec-tree klee-replay kleeRuntest ktest-gen ktest-randgen
   COMMENT "Running system tests"
   USES_TERMINAL
 )

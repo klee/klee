@@ -10,10 +10,10 @@
 
 #include "gtest/gtest.h"
 
-#include "klee/ADT/RNG.h"
 #include "Core/ExecutionState.h"
-#include "Core/PTree.h"
+#include "Core/ExecutionTree.h"
 #include "Core/Searcher.h"
+#include "klee/ADT/RNG.h"
 
 #include "llvm/Support/raw_ostream.h"
 
@@ -24,10 +24,10 @@ namespace {
 TEST(SearcherTest, RandomPath) {
   // First state
   ExecutionState es;
-  InMemoryPTree processTree(es);
+  InMemoryExecutionTree executionTree(es);
 
   RNG rng;
-  RandomPathSearcher rp(&processTree, rng);
+  RandomPathSearcher rp(&executionTree, rng);
   EXPECT_TRUE(rp.empty());
 
   rp.update(nullptr, {&es}, {});
@@ -36,7 +36,8 @@ TEST(SearcherTest, RandomPath) {
 
   // Two states
   ExecutionState es1(es);
-  processTree.attach(es.ptreeNode, &es1, &es, BranchType::Conditional);
+  executionTree.attach(es.executionTreeNode, &es1, &es,
+                       BranchType::Conditional);
   rp.update(&es, {&es1}, {});
 
   // Random path seed dependant
@@ -50,27 +51,28 @@ TEST(SearcherTest, RandomPath) {
   }
 
   rp.update(&es, {&es1}, {&es});
-  processTree.remove(es.ptreeNode);
+  executionTree.remove(es.executionTreeNode);
   for (int i = 0; i < 100; i++) {
     EXPECT_EQ(&rp.selectState(), &es1);
   }
 
   rp.update(&es1, {}, {&es1});
-  processTree.remove(es1.ptreeNode);
+  executionTree.remove(es1.executionTreeNode);
   EXPECT_TRUE(rp.empty());
 }
 
 TEST(SearcherTest, TwoRandomPath) {
   // Root state
   ExecutionState root;
-  InMemoryPTree processTree(root);
+  InMemoryExecutionTree executionTree(root);
 
   ExecutionState es(root);
-  processTree.attach(root.ptreeNode, &es, &root, BranchType::Conditional);
+  executionTree.attach(root.executionTreeNode, &es, &root,
+                       BranchType::Conditional);
 
   RNG rng, rng1;
-  RandomPathSearcher rp(&processTree, rng);
-  RandomPathSearcher rp1(&processTree, rng1);
+  RandomPathSearcher rp(&executionTree, rng);
+  RandomPathSearcher rp1(&executionTree, rng1);
   EXPECT_TRUE(rp.empty());
   EXPECT_TRUE(rp1.empty());
 
@@ -81,7 +83,8 @@ TEST(SearcherTest, TwoRandomPath) {
 
   // Two states
   ExecutionState es1(es);
-  processTree.attach(es.ptreeNode, &es1, &es, BranchType::Conditional);
+  executionTree.attach(es.executionTreeNode, &es1, &es,
+                       BranchType::Conditional);
 
   rp.update(&es, {}, {});
   rp1.update(nullptr, {&es1}, {});
@@ -101,49 +104,50 @@ TEST(SearcherTest, TwoRandomPath) {
   }
 
   rp1.update(&es, {}, {&es});
-  processTree.remove(es.ptreeNode);
+  executionTree.remove(es.executionTreeNode);
   EXPECT_TRUE(rp1.empty());
   EXPECT_EQ(&rp.selectState(), &es1);
 
   rp.update(&es1, {}, {&es1});
-  processTree.remove(es1.ptreeNode);
+  executionTree.remove(es1.executionTreeNode);
   EXPECT_TRUE(rp.empty());
   EXPECT_TRUE(rp1.empty());
 
-  processTree.remove(root.ptreeNode);
+  executionTree.remove(root.executionTreeNode);
 }
 
 TEST(SearcherTest, TwoRandomPathDot) {
-  std::stringstream modelPTreeDot;
-  PTreeNode *rootPNode, *rightLeafPNode, *esParentPNode, *es1LeafPNode,
-      *esLeafPNode;
+  std::stringstream modelExecutionTreeDot;
+  ExecutionTreeNode *rootExecutionTreeNode, *rightLeafExecutionTreeNode,
+      *esParentExecutionTreeNode, *es1LeafExecutionTreeNode,
+      *esLeafExecutionTreeNode;
 
   // Root state
   ExecutionState root;
-  InMemoryPTree processTree(root);
-  rootPNode = root.ptreeNode;
+  InMemoryExecutionTree executionTree(root);
+  rootExecutionTreeNode = root.executionTreeNode;
 
   ExecutionState es(root);
-  processTree.attach(root.ptreeNode, &es, &root, BranchType::NONE);
-  rightLeafPNode = root.ptreeNode;
-  esParentPNode = es.ptreeNode;
+  executionTree.attach(root.executionTreeNode, &es, &root, BranchType::NONE);
+  rightLeafExecutionTreeNode = root.executionTreeNode;
+  esParentExecutionTreeNode = es.executionTreeNode;
 
   RNG rng;
-  RandomPathSearcher rp(&processTree, rng);
-  RandomPathSearcher rp1(&processTree, rng);
+  RandomPathSearcher rp(&executionTree, rng);
+  RandomPathSearcher rp1(&executionTree, rng);
 
   rp.update(nullptr, {&es}, {});
 
   ExecutionState es1(es);
-  processTree.attach(es.ptreeNode, &es1, &es, BranchType::NONE);
-  esLeafPNode = es.ptreeNode;
-  es1LeafPNode = es1.ptreeNode;
+  executionTree.attach(es.executionTreeNode, &es1, &es, BranchType::NONE);
+  esLeafExecutionTreeNode = es.executionTreeNode;
+  es1LeafExecutionTreeNode = es1.executionTreeNode;
 
   rp.update(&es, {}, {});
   rp1.update(nullptr, {&es1}, {});
 
-  // Compare PTree to model PTree
-  modelPTreeDot
+  // Compare ExecutionTree to model ExecutionTree
+  modelExecutionTreeDot
       << "digraph G {\n"
       << "\tsize=\"10,7.5\";\n"
       << "\tratio=fill;\n"
@@ -151,30 +155,29 @@ TEST(SearcherTest, TwoRandomPathDot) {
       << "\tcenter = \"true\";\n"
       << "\tnode [style=\"filled\",width=.1,height=.1,fontname=\"Terminus\"]\n"
       << "\tedge [arrowsize=.3]\n"
-      << "\tn" << rootPNode << " [shape=diamond];\n"
-      << "\tn" << rootPNode << " -> n" << esParentPNode << " [label=0b011];\n"
-      << "\tn" << rootPNode << " -> n" << rightLeafPNode << " [label=0b000];\n"
-      << "\tn" << rightLeafPNode << " [shape=diamond,fillcolor=green];\n"
-      << "\tn" << esParentPNode << " [shape=diamond];\n"
-      << "\tn" << esParentPNode << " -> n" << es1LeafPNode
-      << " [label=0b010];\n"
-      << "\tn" << esParentPNode << " -> n" << esLeafPNode << " [label=0b001];\n"
-      << "\tn" << esLeafPNode << " [shape=diamond,fillcolor=green];\n"
-      << "\tn" << es1LeafPNode << " [shape=diamond,fillcolor=green];\n"
+      << "\tn" << rootExecutionTreeNode << " [shape=diamond];\n"
+      << "\tn" << rootExecutionTreeNode << " -> n" << esParentExecutionTreeNode << " [label=0b011];\n"
+      << "\tn" << rootExecutionTreeNode << " -> n" << rightLeafExecutionTreeNode << " [label=0b000];\n"
+      << "\tn" << rightLeafExecutionTreeNode << " [shape=diamond,fillcolor=green];\n"
+      << "\tn" << esParentExecutionTreeNode << " [shape=diamond];\n"
+      << "\tn" << esParentExecutionTreeNode << " -> n" << es1LeafExecutionTreeNode << " [label=0b010];\n"
+      << "\tn" << esParentExecutionTreeNode << " -> n" << esLeafExecutionTreeNode << " [label=0b001];\n"
+      << "\tn" << esLeafExecutionTreeNode << " [shape=diamond,fillcolor=green];\n"
+      << "\tn" << es1LeafExecutionTreeNode << " [shape=diamond,fillcolor=green];\n"
       << "}\n";
-  std::string pTreeDot;
-  llvm::raw_string_ostream pTreeDotStream(pTreeDot);
-  processTree.dump(pTreeDotStream);
-  EXPECT_EQ(modelPTreeDot.str(), pTreeDotStream.str());
+  std::string executionTreeDot;
+  llvm::raw_string_ostream executionTreeDotStream(executionTreeDot);
+  executionTree.dump(executionTreeDotStream);
+  EXPECT_EQ(modelExecutionTreeDot.str(), executionTreeDotStream.str());
 
   rp.update(&es, {&es1}, {&es});
   rp1.update(nullptr, {&es}, {&es1});
 
   rp1.update(&es, {}, {&es});
-  processTree.remove(es.ptreeNode);
+  executionTree.remove(es.executionTreeNode);
 
-  modelPTreeDot.str("");
-  modelPTreeDot
+  modelExecutionTreeDot.str("");
+  modelExecutionTreeDot
       << "digraph G {\n"
       << "\tsize=\"10,7.5\";\n"
       << "\tratio=fill;\n"
@@ -182,33 +185,32 @@ TEST(SearcherTest, TwoRandomPathDot) {
       << "\tcenter = \"true\";\n"
       << "\tnode [style=\"filled\",width=.1,height=.1,fontname=\"Terminus\"]\n"
       << "\tedge [arrowsize=.3]\n"
-      << "\tn" << rootPNode << " [shape=diamond];\n"
-      << "\tn" << rootPNode << " -> n" << esParentPNode << " [label=0b001];\n"
-      << "\tn" << rootPNode << " -> n" << rightLeafPNode << " [label=0b000];\n"
-      << "\tn" << rightLeafPNode << " [shape=diamond,fillcolor=green];\n"
-      << "\tn" << esParentPNode << " [shape=diamond];\n"
-      << "\tn" << esParentPNode << " -> n" << es1LeafPNode
-      << " [label=0b001];\n"
-      << "\tn" << es1LeafPNode << " [shape=diamond,fillcolor=green];\n"
+      << "\tn" << rootExecutionTreeNode << " [shape=diamond];\n"
+      << "\tn" << rootExecutionTreeNode << " -> n" << esParentExecutionTreeNode << " [label=0b001];\n"
+      << "\tn" << rootExecutionTreeNode << " -> n" << rightLeafExecutionTreeNode << " [label=0b000];\n"
+      << "\tn" << rightLeafExecutionTreeNode << " [shape=diamond,fillcolor=green];\n"
+      << "\tn" << esParentExecutionTreeNode << " [shape=diamond];\n"
+      << "\tn" << esParentExecutionTreeNode << " -> n" << es1LeafExecutionTreeNode << " [label=0b001];\n"
+      << "\tn" << es1LeafExecutionTreeNode << " [shape=diamond,fillcolor=green];\n"
       << "}\n";
 
-  pTreeDot = "";
-  processTree.dump(pTreeDotStream);
-  EXPECT_EQ(modelPTreeDot.str(), pTreeDotStream.str());
-  processTree.remove(es1.ptreeNode);
-  processTree.remove(root.ptreeNode);
+  executionTreeDot = "";
+  executionTree.dump(executionTreeDotStream);
+  EXPECT_EQ(modelExecutionTreeDot.str(), executionTreeDotStream.str());
+  executionTree.remove(es1.executionTreeNode);
+  executionTree.remove(root.executionTreeNode);
 }
 
 TEST(SearcherDeathTest, TooManyRandomPaths) {
   // First state
   ExecutionState es;
-  InMemoryPTree processTree(es);
-  processTree.remove(es.ptreeNode); // Need to remove to avoid leaks
+  InMemoryExecutionTree executionTree(es);
+  executionTree.remove(es.executionTreeNode); // Need to remove to avoid leaks
 
   RNG rng;
-  RandomPathSearcher rp(&processTree, rng);
-  RandomPathSearcher rp1(&processTree, rng);
-  RandomPathSearcher rp2(&processTree, rng);
-  ASSERT_DEATH({ RandomPathSearcher rp3(&processTree, rng); }, "");
+  RandomPathSearcher rp(&executionTree, rng);
+  RandomPathSearcher rp1(&executionTree, rng);
+  RandomPathSearcher rp2(&executionTree, rng);
+  ASSERT_DEATH({ RandomPathSearcher rp3(&executionTree, rng); }, "");
 }
 }
