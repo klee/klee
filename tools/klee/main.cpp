@@ -29,6 +29,7 @@
 #include "klee/System/Time.h"
 
 #include "klee/Support/CompilerWarning.h"
+#include "llvm/Analysis/CallGraph.h"
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -149,27 +150,9 @@ cl::opt<std::string>
                cl::desc("Function in which to start execution (default=main)"),
                cl::init("main"), cl::cat(StartCat));
 
-cl::opt<bool> UTBotMode("utbot", cl::desc("Klee was launched by utbot"),
-                        cl::init(false), cl::cat(StartCat));
-
-cl::opt<bool> InteractiveMode("interactive",
-                              cl::desc("Launch klee in interactive mode."),
-                              cl::init(false), cl::cat(StartCat));
-
 cl::opt<int> TimeoutPerFunction("timeout-per-function",
                                 cl::desc("Timeout per function in klee."),
                                 cl::init(0), cl::cat(StartCat));
-
-cl::opt<std::string>
-    EntryPointsFile("entrypoints-file",
-                    cl::desc("Path to file with entrypoints name."),
-                    cl::init("entrypoints.txt"), cl::cat(StartCat));
-
-const int MAX_PROCESS_NUMBER = 50;
-cl::opt<int> ProcessNumber("process-number",
-                           cl::desc("Number of parallel process in klee, must "
-                                    "lie in [1, 50] (default = 1)."),
-                           cl::init(1), cl::cat(StartCat));
 
 cl::opt<std::string>
     AnalysisReproduce("analysis-reproduce",
@@ -1363,13 +1346,8 @@ static int run_klee_on_function(int pArgc, char **pArgv, char **pEnvp,
                                 std::unique_ptr<Interpreter> &interpreter,
                                 llvm::Module *finalModule,
                                 std::vector<bool> &replayPath) {
-  Function *mainFn = finalModule->getFunction(EntryPoint);
-  if ((UseGuidedSearch != Interpreter::GuidanceKind::ErrorGuidance) &&
-      !mainFn) { // in error guided mode we do not need main function
-    klee_error("Entry function '%s' not found in module.", EntryPoint.c_str());
-  }
 
-  externalsAndGlobalsCheck(finalModule);
+  Function *mainFn = finalModule->getFunction(EntryPoint);
 
   if (ReplayPathFile != "") {
     interpreter->setReplayPath(&replayPath);
@@ -1581,6 +1559,201 @@ void wait_until_any_child_dies(
   }
 }
 
+llvm::Value *createStringArray(LLVMContext &ctx, const char *str) {
+  auto type = llvm::ArrayType::get(llvm::Type::getInt8Ty(ctx), strlen(str) + 1);
+  std::vector<llvm::Constant *> chars;
+  for (size_t i = 0; i < strlen(str) + 1; ++i) {
+    chars.push_back(llvm::ConstantInt::get(llvm::Type::getInt8Ty(ctx), str[i]));
+  }
+  return llvm::ConstantArray::get(type, chars);
+}
+
+void multiplexEntryPoint(llvm::Module *m, LLVMContext &ctx,
+                         std::vector<llvm::Function *> entryFns) {
+
+  klee_message("Multiplexing entry point for the following functions:");
+  for (auto fn : entryFns) {
+    klee_message("%s", fn->getName().data());
+  }
+  klee_message("entry-point parameter is ignored. "
+               "Initial source can't be used for test replay.");
+
+  llvm::IRBuilder<> builder(ctx);
+
+  // todo 32 and 64 bit
+  std::vector<llvm::Type *> kleeMakeSymbolicArgsType = {
+      llvm::Type::getInt8PtrTy(ctx), llvm::Type::getInt64Ty(ctx),
+      llvm::Type::getInt8PtrTy(ctx)};
+  auto kleeMakeSymbolicFnType = llvm::FunctionType::get(
+      llvm::Type::getVoidTy(ctx), kleeMakeSymbolicArgsType, false);
+
+  auto kleeMakeSymbolicFn =
+      m->getOrInsertFunction("klee_make_symbolic", kleeMakeSymbolicFnType);
+
+  std::string multiplexedEntryName = "__klee_multiplexed_entry";
+  auto type = llvm::FunctionType::get(llvm::Type::getVoidTy(ctx), {}, false);
+  auto multiplexedEntry = llvm::Function::Create(
+      type, GlobalVariable::ExternalLinkage, multiplexedEntryName, m);
+
+  auto entryBB = llvm::BasicBlock::Create(ctx, "entry", multiplexedEntry);
+  auto exitBB = llvm::BasicBlock::Create(ctx, "exit", multiplexedEntry);
+
+  std::vector<llvm::BasicBlock *> FnBlocks;
+  for (size_t i = 0; i < entryFns.size(); ++i) {
+    auto block = llvm::BasicBlock::Create(ctx, "func_" + llvm::utostr(i + 1),
+                                          multiplexedEntry);
+    FnBlocks.push_back(block);
+  }
+
+  auto sizeType = llvm::Type::getInt64Ty(ctx);
+  size_t sizeByteWidth = 8;
+
+  // populate entry
+  builder.SetInsertPoint(entryBB);
+  auto alloca = builder.CreateAlloca(sizeType);
+  auto bitcast = builder.CreateBitCast(alloca, llvm::Type::getInt8PtrTy(ctx));
+  auto name = createStringArray(ctx, "__klee_multiplex_switch");
+  auto nameAlloca = builder.CreateAlloca(name->getType());
+  builder.CreateStore(name, nameAlloca);
+  auto nameBitcast =
+      builder.CreateBitCast(nameAlloca, llvm::Type::getInt8PtrTy(ctx));
+  std::vector<llvm::Value *> args;
+  args.push_back(bitcast);
+  args.push_back(llvm::ConstantInt::get(sizeType, sizeByteWidth));
+  args.push_back(nameBitcast);
+  builder.CreateCall(kleeMakeSymbolicFn, args);
+  auto load = builder.CreateLoad(llvm::Type::getInt64Ty(ctx), alloca);
+  auto swtch = builder.CreateSwitch(load, exitBB, entryFns.size());
+
+  for (size_t i = 0; i < entryFns.size(); ++i) {
+    swtch->addCase(llvm::ConstantInt::get(sizeType, i + 1), FnBlocks[i]);
+  }
+
+  // populate exit
+  builder.SetInsertPoint(exitBB);
+  builder.CreateRetVoid();
+
+  // populate funcs
+  for (size_t i = 0; i < entryFns.size(); ++i) {
+    builder.SetInsertPoint(FnBlocks[i]);
+
+    // symbolize function arguments
+    std::vector<llvm::Value *> args;
+    for (size_t arg_i = 0; arg_i < entryFns[i]->arg_size(); ++arg_i) {
+      std::string argName = "__klee_arg" + llvm::utostr(arg_i);
+      auto type = (entryFns[i]->arg_begin() + arg_i)->getType();
+      auto byteWidth =
+          m->getDataLayout().getTypeSizeInBits(type) / 8; // check that
+      auto alloca = builder.CreateAlloca(type);
+      auto bitcast =
+          builder.CreateBitCast(alloca, llvm::Type::getInt8PtrTy(ctx));
+      auto name = createStringArray(ctx, argName.c_str());
+      auto nameAlloca = builder.CreateAlloca(name->getType());
+      builder.CreateStore(name, nameAlloca);
+      auto nameBitcast =
+          builder.CreateBitCast(nameAlloca, llvm::Type::getInt8PtrTy(ctx));
+      std::vector<llvm::Value *> makeSymbolicArgs;
+      makeSymbolicArgs.push_back(bitcast);
+      makeSymbolicArgs.push_back(llvm::ConstantInt::get(sizeType, byteWidth));
+      makeSymbolicArgs.push_back(nameBitcast);
+      builder.CreateCall(kleeMakeSymbolicFn, makeSymbolicArgs);
+      auto load = builder.CreateLoad(type, alloca);
+      args.push_back(load);
+    }
+
+    builder.CreateCall(entryFns[i], args);
+    builder.CreateBr(exitBB);
+  }
+
+  EntryPoint = multiplexedEntryName;
+  return;
+}
+
+struct FunctionReachability {
+public:
+  bool isReachableFrom(llvm::Module *m, llvm::Function *from,
+                       llvm::Function *to) {
+    if (reachable.count(from) && reachable[from].count(to)) {
+      return true;
+    }
+
+    std::unordered_set<llvm::Function *> visited;
+    auto result = checkReachability(m, from, to, visited);
+
+    for (auto f : visited) {
+      reachable[from].insert(f);
+    }
+
+    return result;
+  }
+
+private:
+  bool checkReachability(llvm::Module *m, llvm::Function *from,
+                         llvm::Function *to,
+                         std::unordered_set<llvm::Function *> &visited) {
+    if (from == to) {
+      visited.insert(from);
+      return true;
+    }
+    bool reachable = false;
+    llvm::CallGraph callGraph(*m);
+    auto node = callGraph[from];
+    for (auto child : *node) {
+      auto f = child.second->getFunction();
+      if (f && !visited.count(f)) {
+        visited.insert(f);
+        reachable = reachable || checkReachability(m, f, to, visited);
+        if (reachable) {
+          break;
+        }
+      }
+    }
+    return reachable;
+  }
+
+  std::unordered_map<llvm::Function *, std::unordered_set<llvm::Function *>>
+      reachable;
+};
+
+llvm::Function *
+tryResolveEntryFunction(llvm::Module *mod,
+                        std::vector<std::vector<llvm::Function *>> &trace) {
+
+  llvm::Function *resKF = nullptr;
+
+  FunctionReachability reachability;
+
+  for (size_t i = 0; i < trace.size() && !resKF; ++i) {
+    for (size_t k = 0; k < trace[i].size(); ++k) {
+      resKF = trace[i][k];
+      for (size_t j = i; j < trace.size(); ++j) {
+        if (i == j) {
+          continue;
+        }
+
+        llvm::Function *curKf = nullptr;
+        for (size_t m = 0; m < trace[j].size() && !curKf; ++m) {
+          curKf = trace[j][m];
+          if (!reachability.isReachableFrom(mod, resKF, curKf)) {
+            if (!reachability.isReachableFrom(mod, curKf, resKF)) {
+              curKf = nullptr;
+            } else {
+              i = j;
+              resKF = curKf;
+            }
+          }
+        }
+        if (!curKf) {
+          resKF = nullptr;
+          break;
+        }
+      }
+    }
+  }
+
+  return resKF;
+}
+
 int main(int argc, char **argv, char **envp) {
   if (theInterpreter) {
     theInterpreter = nullptr;
@@ -1704,23 +1877,45 @@ int main(int argc, char **argv, char **envp) {
       }
     }
 
-    std::vector<llvm::Type *> args;
-    args.push_back(llvm::Type::getInt32Ty(ctx)); // argc
-    args.push_back(llvm::PointerType::get(
-        Type::getInt8PtrTy(ctx),
-        mainModule->getDataLayout().getAllocaAddrSpace())); // argv
-    args.push_back(llvm::PointerType::get(
-        Type::getInt8PtrTy(ctx),
-        mainModule->getDataLayout().getAllocaAddrSpace())); // envp
-    std::string stubEntryPoint = "__klee_entry_point_main";
-    Function *stub = Function::Create(
-        llvm::FunctionType::get(llvm::Type::getInt32Ty(ctx), args, false),
-        GlobalVariable::ExternalLinkage, stubEntryPoint, mainModule);
-    BasicBlock *bb = BasicBlock::Create(ctx, "entry", stub);
+    std::vector<llvm::Function *> entryFns;
 
-    llvm::IRBuilder<> Builder(bb);
-    Builder.CreateRet(ConstantInt::get(Type::getInt32Ty(ctx), 0));
-    EntryPoint = stubEntryPoint;
+    auto paths = parseStaticAnalysisInput();
+
+    if (paths->empty()) {
+      klee_warning("No paths were given to trace verify");
+      return 0;
+    }
+
+    for (const auto &path : paths->results) {
+      std::vector<std::vector<llvm::Function *>> trace;
+      for (const auto &loc : path.locations) {
+        std::vector<llvm::Function *> funcs;
+        for (auto &f : *mainModule) {
+          if (loc->isInside(&f, origInstructions[getLocationInfo(&f).file])) {
+            funcs.push_back(&f);
+          }
+        }
+        if (!funcs.empty()) {
+          trace.push_back(funcs);
+        } else {
+          klee_warning("weird trace");
+        }
+      }
+      auto entryFn = tryResolveEntryFunction(mainModule, trace);
+      if (entryFn) {
+        if (std::find(entryFns.begin(), entryFns.end(), entryFn) ==
+            entryFns.end()) {
+          entryFns.push_back(entryFn);
+        }
+      } else {
+        klee_warning("Broken trace (entry fn not resolved).");
+      }
+    }
+
+    if (entryFns.empty()) {
+      klee_error("Entry function resolved for no trace");
+    }
+    multiplexEntryPoint(mainModule, ctx, entryFns);
   }
 
   std::set<std::string> mainModuleFunctions;
@@ -1808,9 +2003,7 @@ int main(int argc, char **argv, char **envp) {
                    errorMsg.c_str());
     }
 
-    if (!UTBotMode) {
-      preparePOSIX(loadedUserModules);
-    }
+    preparePOSIX(loadedUserModules);
   }
 
   if (WithFPRuntime) {
@@ -1975,82 +2168,9 @@ int main(int argc, char **argv, char **envp) {
       std::move(origInstructions));
 
   externalsAndGlobalsCheck(finalModule);
-  if (InteractiveMode) {
-    klee_message("KLEE finish preprocessing.");
-    std::ifstream entrypoints(EntryPointsFile);
-    if (!entrypoints.good()) {
-      klee_error("Opening %s failed.", EntryPointsFile.c_str());
-    }
 
-    if (ProcessNumber < 1 || ProcessNumber > MAX_PROCESS_NUMBER) {
-      klee_error("Incorrect number of process, your value is %d, but it must "
-                 "lie in [1, %d].",
-                 ProcessNumber.getValue(), MAX_PROCESS_NUMBER);
-    }
-    klee_message("Start %d processes.", ProcessNumber.getValue());
-
-    SmallString<128> outputDirectory = handler->getOutputDirectory();
-    const size_t PROCESS = ProcessNumber;
-    using time_point = std::chrono::time_point<std::chrono::steady_clock>;
-    std::vector<std::pair<pid_t, time_point>> child_processes;
-    signal(SIGCHLD, SIG_IGN);
-    while (true) {
-      std::string entrypoint;
-      if (!(entrypoints >> entrypoint)) {
-        break;
-      }
-
-      if (child_processes.size() == PROCESS) {
-        if (TimeoutPerFunction != 0) {
-          wait_until_any_child_dies(child_processes);
-        } else {
-          wait(NULL);
-        }
-      }
-
-      std::vector<std::pair<pid_t, time_point>> alive_child;
-      for (const auto &child_process : child_processes) {
-        if (kill(child_process.first, 0) == 0) {
-          alive_child.push_back(child_process);
-        }
-      }
-      child_processes = alive_child;
-
-      pid_t pid = fork();
-      if (pid < 0) {
-        klee_error("%s", "Cannot create child process.");
-      } else if (pid == 0) {
-        signal(SIGCHLD, SIG_DFL);
-        EntryPoint = entrypoint;
-        SmallString<128> newOutputDirectory = outputDirectory;
-        sys::path::append(newOutputDirectory, entrypoint);
-        handler->setOutputDirectory(newOutputDirectory.c_str());
-        run_klee_on_function(pArgc, pArgv, pEnvp, handler, interpreter,
-                             finalModule, replayPath);
-        exit(0);
-      } else {
-        child_processes.emplace_back(pid, std::chrono::steady_clock::now());
-      }
-    }
-    if (TimeoutPerFunction != 0) {
-      while (!child_processes.empty()) {
-        wait_until_any_child_dies(child_processes);
-        std::vector<std::pair<pid_t, time_point>> alive_child;
-        for (const auto &child_process : child_processes) {
-          if (kill(child_process.first, 0) == 0) {
-            alive_child.push_back(child_process);
-          }
-        }
-        child_processes = alive_child;
-      }
-    } else {
-      while (wait(NULL) > 0)
-        ;
-    }
-  } else {
-    run_klee_on_function(pArgc, pArgv, pEnvp, handler, interpreter, finalModule,
-                         replayPath);
-  }
+  run_klee_on_function(pArgc, pArgv, pEnvp, handler, interpreter, finalModule,
+                       replayPath);
 
   paths.reset();
 

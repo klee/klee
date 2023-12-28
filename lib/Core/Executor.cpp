@@ -4441,17 +4441,15 @@ void Executor::reportProgressTowardsTargets() const {
   reportProgressTowardsTargets("", states);
 }
 
-void Executor::run(std::vector<ExecutionState *> initialStates) {
+void Executor::run(ExecutionState *initialState) {
   // Delay init till now so that ticks don't accrue during optimization and
   // such.
   if (guidanceKind != GuidanceKind::ErrorGuidance)
     timers.reset();
 
-  states.insert(initialStates.begin(), initialStates.end());
+  states.insert(initialState);
 
   if (usingSeeds) {
-    assert(initialStates.size() == 1);
-    ExecutionState *initialState = initialStates.back();
     seed(*initialState);
   }
 
@@ -6869,16 +6867,14 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
 
   ExecutionState *state = formState(f, argc, argv, envp);
   bindModuleConstants(llvm::APFloat::rmNearestTiesToEven);
-  std::vector<ExecutionState *> states;
 
+  KFunction *kEntryFunction = kmodule->functionMap.at(f);
   if (guidanceKind == GuidanceKind::ErrorGuidance) {
-    std::map<klee::KFunction *, klee::ref<klee::TargetForest>,
-             klee::KFunctionCompare>
-        prepTargets;
+    ref<TargetForest> forest;
     if (FunctionCallReproduce == "") {
       auto &paths = interpreterOpts.Paths.value();
-      prepTargets = targetedExecutionManager->prepareTargets(kmodule.get(),
-                                                             std::move(paths));
+      forest = targetedExecutionManager->prepareTargets(
+          kmodule.get(), kEntryFunction, std::move(paths));
     } else {
       /* Find all calls to function specified in .prp file
        * and combine them to single target forest */
@@ -6888,49 +6884,23 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
                      FunctionCallReproduce.c_str());
       } else {
         auto kCallBlock = kfIt->second->entryKBlock;
-        KFunction *kEntryFunction = kmodule->functionMap.at(f);
-        ref<TargetForest> forest = new TargetForest(kEntryFunction);
+        forest = new TargetForest(kEntryFunction);
         forest->add(ReproduceErrorTarget::create(
             {ReachWithError::Reachable}, "",
             ErrorLocation(kCallBlock->getFirstInstruction()), kCallBlock));
-        prepTargets.emplace(kEntryFunction, forest);
       }
     }
 
-    if (prepTargets.empty()) {
+    if (forest->empty()) {
       klee_warning(
           "No targets found in error-guided mode after prepare targets");
       delete state;
       return;
     }
 
-    KInstIterator caller;
-    if (kmodule->WithPOSIXRuntime()) {
-      state = prepareStateForPOSIX(caller, state->copy());
-    } else {
-      state->popFrame();
-    }
-
-    for (auto &startFunctionAndWhiteList : prepTargets) {
-      auto kf =
-          kmodule->functionMap.at(startFunctionAndWhiteList.first->function());
-      if (startFunctionAndWhiteList.second->empty()) {
-        klee_warning("No targets found for %s",
-                     kf->function()->getName().str().c_str());
-        continue;
-      }
-      auto whitelist = startFunctionAndWhiteList.second;
-      targets.emplace(kf, TargetedHaltsOnTraces(whitelist));
-      ExecutionState *initialState = state->withStackFrame(caller, kf);
-      prepareSymbolicArgs(*initialState);
-      prepareTargetedExecution(*initialState, whitelist);
-      states.push_back(initialState);
-    }
-    delete state;
-  } else {
-    states.push_back(state);
+    targets.emplace(kEntryFunction, TargetedHaltsOnTraces(forest));
+    prepareTargetedExecution(*state, forest);
   }
-  state = nullptr;
 
   TreeOStream pathOS;
   TreeOStream symPathOS;
@@ -6943,19 +6913,18 @@ void Executor::runFunctionAsMain(Function *f, int argc, char **argv,
   }
 
   processForest = std::make_unique<PForest>();
-  for (auto &state : states) {
-    if (statsTracker)
-      statsTracker->framePushed(*state, 0);
 
-    if (pathWriter)
-      state->pathOS = pathOS;
-    if (symPathWriter)
-      state->symPathOS = symPathOS;
+  if (statsTracker)
+    statsTracker->framePushed(*state, 0);
 
-    processForest->addRoot(state);
-  }
+  if (pathWriter)
+    state->pathOS = pathOS;
+  if (symPathWriter)
+    state->symPathOS = symPathOS;
 
-  run(states);
+  processForest->addRoot(state);
+
+  run(state);
   processForest = nullptr;
 
   if (statsTracker)

@@ -11,6 +11,7 @@
 
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
+#include "klee/Module/LocationInfo.h"
 #include "klee/Support/ErrorHandling.h"
 
 #include "klee/Support/CompilerWarning.h"
@@ -348,6 +349,37 @@ bool Location::isInside(KBlock *block, const Instructions &origInsts) const {
 
     return false;
   }
+}
+
+bool Location::isInside(const llvm::Function *f,
+                        const Instructions &origInsts) const {
+  if (f->empty()) {
+    return false;
+  }
+  auto first = &f->front().front();
+  auto last = &f->back().back();
+  auto firstLoc = getLocationInfo(first);
+  auto lastLoc = getLocationInfo(last);
+  if (!startColumn.has_value()) {
+    if (firstLoc.line > endLine) {
+      return false;
+    }
+    return startLine <= lastLoc.line;
+  }
+  for (const auto &block : *f) {
+    for (const auto &inst : block) {
+      auto locInfo = getLocationInfo(&inst);
+      if (!isa<DbgInfoIntrinsic>(&inst) && locInfo.line <= endLine &&
+          locInfo.line >= startLine && locInfo.column <= *endColumn &&
+          locInfo.column >= *startColumn &&
+          origInsts.at(locInfo.line)
+                  .at(locInfo.column)
+                  .count(inst.getOpcode()) != 0) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 std::string Location::toString() const {

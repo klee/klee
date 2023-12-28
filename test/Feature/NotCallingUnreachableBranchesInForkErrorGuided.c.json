@@ -20,7 +20,7 @@
                                                       "uri": "/tmp/NotCallingUnreachableBranchesInForkErrorGuided.c"
                                                   },
                                                   "region": {
-                                                      "startLine": 9,
+                                                      "startLine": 10,
                                                       "startColumn": 14
                                                   }
                                               }
@@ -33,7 +33,7 @@
                                                       "uri": "/tmp/NotCallingUnreachableBranchesInForkErrorGuided.c"
                                                   },
                                                   "region": {
-                                                      "startLine": 13,
+                                                      "startLine": 14,
                                                       "startColumn": 5
                                                   }
                                               }
@@ -52,7 +52,7 @@
                                 "uri": "/tmp/NotCallingUnreachableBranchesInForkErrorGuided.c"
                             },
                             "region": {
-                                "startLine": 13,
+                                "startLine": 14,
                                 "startColumn": 5
                             }
                         }

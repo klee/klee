@@ -119,8 +119,9 @@ public:
                                     TargetManager &targetManager_)
       : codeGraphInfo(codeGraphInfo_), targetManager(targetManager_) {}
   ~TargetedExecutionManager() = default;
-  std::map<KFunction *, ref<TargetForest>, KFunctionCompare>
-  prepareTargets(KModule *kmodule, SarifReport paths);
+
+  ref<TargetForest> prepareTargets(KModule *kmodule, KFunction *entry,
+                                   SarifReport paths);
 
   void reportFalseNegative(ExecutionState &state, ReachWithError error);
 

@@ -16,6 +16,7 @@
 #include "klee/Core/TerminationTypes.h"
 #include "klee/Module/CodeGraphInfo.h"
 #include "klee/Module/KInstruction.h"
+#include "klee/Module/KModule.h"
 #include "klee/Support/ErrorHandling.h"
 
 #include <memory>
@@ -493,12 +494,13 @@ KFunction *TargetedExecutionManager::tryResolveEntryFunction(
   return resKf;
 }
 
-std::map<KFunction *, ref<TargetForest>, KFunctionCompare>
-TargetedExecutionManager::prepareTargets(KModule *kmodule, SarifReport paths) {
+ref<TargetForest> TargetedExecutionManager::prepareTargets(KModule *kmodule,
+                                                           KFunction *entry,
+                                                           SarifReport paths) {
+  ref<TargetForest> forest = new TargetForest(entry);
+
   Locations locations = collectAllLocations(paths);
   LocationToBlocks locToBlocks = prepareAllLocations(kmodule, locations);
-
-  std::map<KFunction *, ref<TargetForest>, KFunctionCompare> whitelists;
 
   for (auto &result : paths.results) {
     bool isFullyResolved = tryResolveLocations(result, locToBlocks);
@@ -513,14 +515,10 @@ TargetedExecutionManager::prepareTargets(KModule *kmodule, SarifReport paths) {
       continue;
     }
 
-    if (whitelists.count(kf) == 0) {
-      ref<TargetForest> whitelist = new TargetForest(kf);
-      whitelists[kf] = whitelist;
-    }
-    whitelists[kf]->addTrace(result, locToBlocks);
+    forest->addTrace(result, locToBlocks);
   }
 
-  return whitelists;
+  return forest;
 }
 
 void TargetedExecutionManager::reportFalseNegative(ExecutionState &state,

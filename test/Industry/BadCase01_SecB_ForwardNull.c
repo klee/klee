@@ -142,6 +142,6 @@ void badbad(char *ptr)
 
 // RUN: %clang %s -emit-llvm -c -g -O0 -Xclang -disable-O0-optnone -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --use-guided-search=error --mock-external-calls --libc=klee --skip-not-symbolic-objects --skip-not-lazy-initialized --check-out-of-memory --use-lazy-initialization=only --analysis-reproduce=%s.json %t1.bc
-// RUN: FileCheck -input-file=%t.klee-out/warnings.txt %s
-// CHECK: KLEE: WARNING: No targets found in error-guided mode
+// RUN: %klee --output-dir=%t.klee-out --use-guided-search=error --mock-external-calls --libc=klee --skip-not-symbolic-objects --skip-not-lazy-initialized --check-out-of-memory --use-lazy-initialization=only --analysis-reproduce=%s.json %t1.bc > %t1.log 2>&1
+// RUN: FileCheck -input-file=%t1.log %s
+// CHECK: KLEE: WARNING: No paths were given to trace verify

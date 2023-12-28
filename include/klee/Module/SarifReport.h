@@ -17,6 +17,7 @@
 #include <vector>
 
 #include "klee/ADT/Ref.h"
+#include "llvm/IR/Function.h"
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
@@ -212,6 +213,8 @@ struct Location {
       std::unordered_map<unsigned int, std::unordered_set<unsigned int>>>;
 
   bool isInside(KBlock *block, const Instructions &origInsts) const;
+
+  bool isInside(const llvm::Function *f, const Instructions &origInsts) const;
 
   std::string toString() const;
 
