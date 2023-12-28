@@ -98,6 +98,7 @@ double __VERIFIER_nondet_double(void) {
   return x;
 }
 
+/*
 void *__VERIFIER_nondet_pointer(void) {
   int size = 1024;
   char *obj = (char *)calloc(1, size);
@@ -105,6 +106,7 @@ void *__VERIFIER_nondet_pointer(void) {
 
   return obj;
 }
+*/
 
 float __VERIFIER_nondet_float(void) {
   float x;
