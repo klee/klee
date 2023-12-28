@@ -25,23 +25,23 @@ using namespace klee;
 namespace {
 bool isOSSeparator(char c) { return c == '/' || c == '\\'; }
 
-optional<ref<Location>>
+std::optional<ref<Location>>
 tryConvertLocationJson(const LocationJson &locationJson) {
   const auto &physicalLocation = locationJson.physicalLocation;
   if (!physicalLocation.has_value()) {
-    return nonstd::nullopt;
+    return std::nullopt;
   }
 
   const auto &artifactLocation = physicalLocation->artifactLocation;
   if (!artifactLocation.has_value() || !artifactLocation->uri.has_value()) {
-    return nonstd::nullopt;
+    return std::nullopt;
   }
 
   const auto filename = std::move(*(artifactLocation->uri));
 
   const auto &region = physicalLocation->region;
   if (!region.has_value() || !region->startLine.has_value()) {
-    return nonstd::nullopt;
+    return std::nullopt;
   }
 
   return Location::create(std::move(filename), *(region->startLine),
@@ -51,7 +51,7 @@ tryConvertLocationJson(const LocationJson &locationJson) {
 
 std::vector<ReachWithError>
 tryConvertRuleJson(const std::string &ruleId, const std::string &toolName,
-                   const optional<Message> &errorMessage) {
+                   const std::optional<Message> &errorMessage) {
   if (toolName == "SecB") {
     if ("NullDereference" == ruleId) {
       return {ReachWithError::MustBeNullPointerException};
@@ -121,9 +121,9 @@ tryConvertRuleJson(const std::string &ruleId, const std::string &toolName,
   }
 }
 
-optional<Result> tryConvertResultJson(const ResultJson &resultJson,
-                                      const std::string &toolName,
-                                      const std::string &id) {
+std::optional<Result> tryConvertResultJson(const ResultJson &resultJson,
+                                           const std::string &toolName,
+                                           const std::string &id) {
   std::vector<ReachWithError> errors = {};
   if (!resultJson.ruleId.has_value()) {
     errors = {ReachWithError::Reachable};
@@ -132,12 +132,12 @@ optional<Result> tryConvertResultJson(const ResultJson &resultJson,
         tryConvertRuleJson(*resultJson.ruleId, toolName, resultJson.message);
     if (errors.size() == 0) {
       klee_warning("undefined error in %s result", id.c_str());
-      return nonstd::nullopt;
+      return std::nullopt;
     }
   }
 
   std::vector<ref<Location>> locations;
-  std::vector<optional<json>> metadatas;
+  std::vector<std::optional<json>> metadatas;
 
   if (resultJson.codeFlows.size() > 0) {
     assert(resultJson.codeFlows.size() == 1);
@@ -146,7 +146,7 @@ optional<Result> tryConvertResultJson(const ResultJson &resultJson,
     const auto &threadFlow = resultJson.codeFlows[0].threadFlows[0];
     for (auto &threadFlowLocation : threadFlow.locations) {
       if (!threadFlowLocation.location.has_value()) {
-        return nonstd::nullopt;
+        return std::nullopt;
       }
 
       auto maybeLocation = tryConvertLocationJson(*threadFlowLocation.location);
@@ -164,7 +164,7 @@ optional<Result> tryConvertResultJson(const ResultJson &resultJson,
   }
 
   if (locations.empty()) {
-    return nonstd::nullopt;
+    return std::nullopt;
   }
 
   return Result{std::move(locations), std::move(metadatas), id,
@@ -288,9 +288,9 @@ Location::EquivLocationHashSet Location::cachedLocations;
 Location::LocationHashSet Location::locations;
 
 ref<Location> Location::create(std::string filename_, unsigned int startLine_,
-                               optional<unsigned int> endLine_,
-                               optional<unsigned int> startColumn_,
-                               optional<unsigned int> endColumn_) {
+                               std::optional<unsigned int> endLine_,
+                               std::optional<unsigned int> startColumn_,
+                               std::optional<unsigned int> endColumn_) {
   Location *loc =
       new Location(filename_, startLine_, endLine_, startColumn_, endColumn_);
   std::pair<EquivLocationHashSet::const_iterator, bool> success =

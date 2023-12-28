@@ -1177,7 +1177,7 @@ void externalsAndGlobalsCheck(const llvm::Module *m) {
 }
 
 static Interpreter *theInterpreter = 0;
-static nonstd::optional<SarifReport> paths = nonstd::nullopt;
+static std::optional<SarifReport> paths = std::nullopt;
 
 static std::atomic_bool interrupted{false};
 
@@ -1352,10 +1352,10 @@ static SarifReport parseInputPathTree(const std::string &inputPathTreePath) {
   return klee::convertAndFilterSarifJson(sarifJson);
 }
 
-static nonstd::optional<SarifReport> parseStaticAnalysisInput() {
+static std::optional<SarifReport> parseStaticAnalysisInput() {
   if (AnalysisReproduce != "")
     return parseInputPathTree(AnalysisReproduce);
-  return nonstd::nullopt;
+  return std::nullopt;
 }
 
 static int run_klee_on_function(int pArgc, char **pArgv, char **pEnvp,

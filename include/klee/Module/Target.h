@@ -28,19 +28,19 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 DISABLE_WARNING_POP
 
 #include <map>
+#include <optional>
 #include <queue>
 #include <set>
 #include <unordered_set>
 #include <vector>
 
 namespace klee {
-using nonstd::optional;
 
 struct ErrorLocation {
   unsigned int startLine;
   unsigned int endLine;
-  optional<unsigned int> startColumn;
-  optional<unsigned int> endColumn;
+  std::optional<unsigned int> startColumn;
+  std::optional<unsigned int> endColumn;
 
   ErrorLocation(const klee::ref<klee::Location> &loc);
   ErrorLocation(const KInstruction *ki);

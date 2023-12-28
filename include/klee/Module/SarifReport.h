@@ -10,6 +10,7 @@
 #ifndef KLEE_SARIF_REPORT_H
 #define KLEE_SARIF_REPORT_H
 
+#include <optional>
 #include <set>
 #include <string>
 #include <unordered_set>
@@ -17,24 +18,22 @@
 
 #include "klee/ADT/Ref.h"
 #include <nlohmann/json.hpp>
-#include <nonstd/optional.hpp>
 
 using json = nlohmann::json;
-using nonstd::optional;
 
 namespace nlohmann {
-template <typename T> struct adl_serializer<nonstd::optional<T>> {
-  static void to_json(json &j, const nonstd::optional<T> &opt) {
-    if (opt == nonstd::nullopt) {
+template <typename T> struct adl_serializer<std::optional<T>> {
+  static void to_json(json &j, const std::optional<T> &opt) {
+    if (opt == std::nullopt) {
       j = nullptr;
     } else {
       j = *opt;
     }
   }
 
-  static void from_json(const json &j, nonstd::optional<T> &opt) {
+  static void from_json(const json &j, std::optional<T> &opt) {
     if (j.is_null()) {
-      opt = nonstd::nullopt;
+      opt = std::nullopt;
     } else {
       opt = j.get<T>();
     }
@@ -60,28 +59,28 @@ struct FunctionInfo;
 struct KBlock;
 
 struct ArtifactLocationJson {
-  optional<std::string> uri;
+  std::optional<std::string> uri;
 };
 
 struct RegionJson {
-  optional<unsigned int> startLine;
-  optional<unsigned int> endLine;
-  optional<unsigned int> startColumn;
-  optional<unsigned int> endColumn;
+  std::optional<unsigned int> startLine;
+  std::optional<unsigned int> endLine;
+  std::optional<unsigned int> startColumn;
+  std::optional<unsigned int> endColumn;
 };
 
 struct PhysicalLocationJson {
-  optional<ArtifactLocationJson> artifactLocation;
-  optional<RegionJson> region;
+  std::optional<ArtifactLocationJson> artifactLocation;
+  std::optional<RegionJson> region;
 };
 
 struct LocationJson {
-  optional<PhysicalLocationJson> physicalLocation;
+  std::optional<PhysicalLocationJson> physicalLocation;
 };
 
 struct ThreadFlowLocationJson {
-  optional<LocationJson> location;
-  optional<json> metadata;
+  std::optional<LocationJson> location;
+  std::optional<json> metadata;
 };
 
 struct ThreadFlowJson {
@@ -109,10 +108,10 @@ static void from_json(const json &j, Fingerprints &p) {
 }
 
 struct ResultJson {
-  optional<std::string> ruleId;
-  optional<Message> message;
-  optional<unsigned> id;
-  optional<Fingerprints> fingerprints;
+  std::optional<std::string> ruleId;
+  std::optional<Message> message;
+  std::optional<unsigned> id;
+  std::optional<Fingerprints> fingerprints;
   std::vector<LocationJson> locations;
   std::vector<CodeFlowJson> codeFlows;
 };
@@ -186,13 +185,13 @@ struct Location {
   std::string filename;
   unsigned int startLine;
   unsigned int endLine;
-  optional<unsigned int> startColumn;
-  optional<unsigned int> endColumn;
+  std::optional<unsigned int> startColumn;
+  std::optional<unsigned int> endColumn;
 
   static ref<Location> create(std::string filename_, unsigned int startLine_,
-                              optional<unsigned int> endLine_,
-                              optional<unsigned int> startColumn_,
-                              optional<unsigned int> endColumn_);
+                              std::optional<unsigned int> endLine_,
+                              std::optional<unsigned int> startColumn_,
+                              std::optional<unsigned int> endColumn_);
 
   ~Location();
   std::size_t hash() const { return hashValue; }
@@ -240,8 +239,9 @@ private:
   }
 
   Location(std::string filename_, unsigned int startLine_,
-           optional<unsigned int> endLine_, optional<unsigned int> startColumn_,
-           optional<unsigned int> endColumn_)
+           std::optional<unsigned int> endLine_,
+           std::optional<unsigned int> startColumn_,
+           std::optional<unsigned int> endColumn_)
       : filename(filename_), startLine(startLine_),
         endLine(endLine_.has_value() ? *endLine_ : startLine_),
         startColumn(startColumn_),
@@ -262,7 +262,7 @@ struct RefLocationCmp {
 
 struct Result {
   std::vector<ref<Location>> locations;
-  std::vector<optional<json>> metadatas;
+  std::vector<std::optional<json>> metadatas;
   std::string id;
   std::vector<ReachWithError> errors;
 };
