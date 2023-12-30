@@ -9,25 +9,6 @@
 #include "fenv.h"
 #include "klee/klee.h"
 
-// Define the constants. Don't include `fenv.h` here to avoid
-// polluting the Intrinsic module.
-#if defined(__x86_64__) || defined(__i386__)
-// These are the constants used by glibc and musl for x86_64 and i386
-enum {
-  FE_TONEAREST = 0,
-  FE_DOWNWARD = 0x400,
-  FE_UPWARD = 0x800,
-  FE_TOWARDZERO = 0xc00,
-
-  // Our own implementation defined values.
-  // Do we want this? Although it's allowed by
-  // the standard it won't be replayable on native
-  // binaries.
-};
-#else
-#error Architecture not supported
-#endif
-
 int fegetround(void) {
   enum KleeRoundingMode rm = klee_get_rounding_mode();
   switch (rm) {
