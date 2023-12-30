@@ -192,7 +192,7 @@ private:
     }
   };
 
-  using idMap = std::unordered_map<_Value, MinFrameIds, _Hash, _Pred, _Alloc>;
+  using idMap = std::unordered_map<_Value, MinFrameIds, _Hash, _Pred>;
   using citerator = typename idMap::const_iterator;
   idMap ids;
   FrameId current_frame = 0;
@@ -302,7 +302,7 @@ template <typename _Key, typename _Tp, typename _Hash = std::hash<_Key>,
 class inc_umap {
 private:
   std::unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc> map;
-  using idMap = std::unordered_map<_Key, FrameIds, _Hash, _Pred, _Alloc>;
+  using idMap = std::unordered_map<_Key, FrameIds, _Hash, _Pred>;
   idMap ids;
   FrameId current_frame = 0;
 
