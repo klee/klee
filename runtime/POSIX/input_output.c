@@ -2,6 +2,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 
 /*
  * Return the (stdio) flags for a given mode. Store the flags
@@ -53,8 +54,13 @@ FILE *fopen(const char *file, const char *mode) {
     if ((f = open(file, oflags)) < 0)
       return NULL;
   }
+#ifndef __FreeBSD__
   fp->_fileno = f;
   fp->_mode = oflags;
+#else
+  fp->_file = f;
+  fp->_flags = oflags;
+#endif
   return fp;
 }
 
@@ -68,7 +74,11 @@ int get_file_descriptor(FILE *stream) {
   if (stream == stderr) {
     return 2;
   }
+#ifndef __FreeBSD__
   return stream->_fileno;
+#else
+  return stream->_file;
+#endif
 }
 
 int fgetc(FILE *stream) {
@@ -86,6 +96,7 @@ int fgetc(FILE *stream) {
   }
 }
 
+#ifndef __FreeBSD__
 int getc(FILE *stream) {
   if (stream == NULL) {
     return 0;
@@ -100,6 +111,7 @@ int getc(FILE *stream) {
     return EOF;
   }
 }
+#endif
 
 size_t fread(void *buffer, size_t size, size_t count, FILE *stream) {
   if (stream == NULL) {
@@ -137,7 +149,9 @@ char *fgets(char *s, int n, FILE *stream) {
   return s;
 }
 
+#ifndef __FreeBSD__
 int getchar(void) { return getc(stdin); }
+#endif
 
 char *gets(char *s) {
   char *p = s;
@@ -174,6 +188,7 @@ int fputc(int c, FILE *stream) {
   }
 }
 
+#ifndef __FreeBSD__
 int putc(int c, FILE *stream) {
   if (stream == NULL) {
     return 0;
@@ -188,6 +203,7 @@ int putc(int c, FILE *stream) {
     return EOF;
   }
 }
+#endif
 
 size_t fwrite(const void *buffer, size_t size, size_t count, FILE *stream) {
   if (stream == NULL) {
@@ -221,7 +237,9 @@ int fputs(const char *str, FILE *stream) {
   return 1;
 }
 
+#ifndef __FreeBSD__
 int putchar(int c) { return putc(c, stdout); }
+#endif
 
 int puts(const char *str) {
   int write_code = fputs(str, stdout);

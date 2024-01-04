@@ -1,18 +1,17 @@
-// REQUIRES: z3
 // RUN: %clang %s -emit-llvm %O0opt -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --optimize-aggressive=false --track-coverage=branches --delete-dead-loops=false --emit-all-errors --mock-all-externals --use-forked-solver=false --optimize --skip-not-lazy-initialized --output-source=false --output-stats=true --output-istats=true -istats-write-interval=3s --use-sym-size-alloc=true --cex-cache-validity-cores --symbolic-allocation-threshold=8192 --cover-on-the-fly=false --delay-cover-on-the-fly=400000 --only-output-states-covering-new --dump-states-on-halt=all --search=dfs --search=random-state --use-iterative-deepening-search=max-cycles --max-cycles=4 %t1.bc
 
-// RUN: rm -f %t*.gcda %t*.gcno %t*.gcov
+// RUN: rm -f ./%gcov-files-path*.gcda ./%gcov-files-path*.gcno ./%gcov-files-path*.gcov
 // RUN: %cc -DGCOV %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner --coverage
 // RUN: %replay %t.klee-out %t_runner
-// RUN: gcov -b %t_runner-%basename_t > %t.cov.log
+// RUN: gcov -b %gcov-files-path > %t.cov.log
 
 // RUN: FileCheck --input-file=%t.cov.log --check-prefix=CHECK %s
 
-// CHECK: Lines executed:{{(9[0-9]\.[0-9][0-9])}}% of 4114
-// CHECK-NEXT: Branches executed:{{(9[0-9]\.[0-9][0-9])}}% of 13404
-// CHECK-NEXT: Taken at least once:{{(8[0-9]\.[0-9][0-9])}}% of 13404
+// CHECK: Lines executed:{{(9[0-9]\.[0-9][0-9])}}% of 41{{(1|5)(3|4)}}
+// CHECK-NEXT: Branches executed:{{(9[0-9]\.[0-9][0-9])}}% of {{13404|11628}}
+// CHECK-NEXT: Taken at least once:{{([8-9][0-9]\.[0-9][0-9])}}% of {{13404|11628}}
 
 // This file is part of the SV-Benchmarks collection of verification tasks:
 // https://gitlab.com/sosy-lab/benchmarking/sv-benchmarks
@@ -35,6 +34,7 @@ extern void exit(int);
 extern void abort(void);
 #ifdef GCOV
 extern void __gcov_dump(void);
+extern void exit(int exit_code) __attribute__((noreturn));
 #endif
 
 void dump() {

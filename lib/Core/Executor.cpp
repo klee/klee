@@ -161,7 +161,7 @@ cl::opt<bool> UseTypeBasedAliasAnalysis(
 cl::opt<bool>
     AlignSymbolicPointers("align-symbolic-pointers",
                           cl::desc("Makes symbolic pointers aligned according"
-                                   "to the used type system (default=true)"),
+                                   "to the used type system (default=false)"),
                           cl::init(false), cl::cat(ExecCat));
 
 cl::opt<bool>

@@ -12,6 +12,7 @@ install_build_dependencies_klee() {
     python3-wheel
     pkg-config
     cmake-data
+    coreutils
   )
 
   if [[ "${SOLVERS:-}" == "metaSMT" ]]; then

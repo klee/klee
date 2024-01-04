@@ -11,6 +11,10 @@
 #include <arpa/inet.h>
 #include <stdio.h>
 
+#ifdef __FreeBSD__
+#include <sys/socket.h>
+#endif
+
 #ifdef INET_NTOP
 const char *inet_ntop(int af, const void *restrict src,
                       char *restrict dst, socklen_t size) {
@@ -22,8 +26,8 @@ const char *inet_ntop(int af, const void *restrict src,
 
 int main(int argc, char **argv) {
   inet_ntop(0, 0, 0, 0);
-  // CHECK_INTERNAL-NOT: calling external: inet_ntop
-  // CHECK_EXTERNAL: calling external: inet_ntop
+  // CHECK_INTERNAL-NOT: calling external: {{inet_ntop|__inet_ntop}}
+  // CHECK_EXTERNAL: calling external: {{inet_ntop|__inet_ntop}}
 #ifdef INET_PTON
   struct in_addr inaddr;
   inet_pton(AF_INET, "10.1.0.29", &inaddr);

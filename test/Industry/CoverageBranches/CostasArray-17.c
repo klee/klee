@@ -2,25 +2,25 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --optimize-aggressive --track-coverage=branches --optimize=true --emit-all-errors --only-output-states-covering-new=true --dump-states-on-halt=all --search=dfs %t1.bc
 
-// RUN: rm -f %t*.gcda %t*.gcno %t*.gcov
+// RUN: rm -f ./%gcov-files-path*.gcda ./%gcov-files-path*.gcno ./%gcov-files-path*.gcov
 // RUN: %cc -DGCOV %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner --coverage
 // RUN: %replay %t.klee-out %t_runner
-// RUN: gcov -b %t_runner-%basename_t > %t.cov.log
+// RUN: gcov -b %gcov-files-path > %t.cov.log
 
 // RUN: FileCheck --input-file=%t.cov.log --check-prefix=CHECK %s
 
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --optimize-aggressive=false --track-coverage=branches --optimize=true --emit-all-errors --only-output-states-covering-new=true --dump-states-on-halt=all --search=dfs %t1.bc
 
-// RUN: rm -f %t*.gcda %t*.gcno %t*.gcov
+// RUN: rm -f ./%gcov-files-path*.gcda ./%gcov-files-path*.gcno ./%gcov-files-path*.gcov
 // RUN: %cc -DGCOV %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner --coverage
 // RUN: %replay %t.klee-out %t_runner
-// RUN: gcov -b %t_runner-%basename_t > %t.cov.log
+// RUN: gcov -b %gcov-files-path > %t.cov.log
 
 // RUN: FileCheck --input-file=%t.cov.log --check-prefix=CHECK %s
 
 // Branch coverage 100%, the number of branches is 2:
-// CHECK: Lines executed:{{(0\.7[0-9])}}% of 1545
+// CHECK: Lines executed:{{(0\.7[0-9])|(99\.94)}}% of 1545
 // CHECK-NEXT: Branches executed:100.00% of 2
 // CHECK-NEXT: Taken at least once:100.00% of 2
 
@@ -44,6 +44,7 @@ int __VERIFIER_nondet_int();
 
 #ifdef GCOV
 extern void __gcov_dump(void);
+extern void exit(int exit_code) __attribute__((noreturn));
 #endif
 
 void abort_prog() {

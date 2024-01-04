@@ -2,24 +2,24 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --optimize-aggressive=false --track-coverage=all --max-cycles=2 --optimize=true --emit-all-errors --delete-dead-loops=false --use-forked-solver=false -max-memory=6008 --cex-cache-validity-cores --only-output-states-covering-new=true --dump-states-on-halt=all --use-sym-size-alloc=true --symbolic-allocation-threshold=8192 %t1.bc 2>&1
 
-// RUN: rm -f %t*.gcda %t*.gcno %t*.gcov
+// RUN: rm -f ./%gcov-files-path*.gcda ./%gcov-files-path*.gcno ./%gcov-files-path*.gcov
 // RUN: %cc -DGCOV %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner --coverage
 // RUN: %replay %t.klee-out %t_runner
-// RUN: gcov -b %t_runner-%basename_t > %t.cov.log
+// RUN: gcov -b %gcov-files-path > %t.cov.log
 
 // RUN: FileCheck --input-file=%t.cov.log --check-prefix=CHECK-COV %s
 
 // Branch coverage is greater 80%:
-// CHECK-COV: Lines executed:9{{([0-9]\.[0-9][0-9])}}% of 24
+// CHECK-COV: Lines executed:{{(9[0-9]\.[0-9][0-9])|(100\.00)}}% of 2{{4|5}}
 // CHECK-COV-NEXT: Branches executed:100.00% of 16
-// CHECK-COV-NEXT: Taken at least once:{{([8-9][0-9]\.[0-9][0-9])}}% of 16
+// CHECK-COV-NEXT: Taken at least once:{{([8-9][0-9]\.[0-9][0-9])|(100\.00)}}% of 16
 
 #include "klee-test-comp.c"
 
-extern void exit(int);
 extern void abort(void);
 #ifdef GCOV
 extern void __gcov_dump(void);
+extern void exit(int);
 #endif
 
 void dump() {

@@ -1,16 +1,16 @@
 task:
   freebsd_instance:
     matrix:
-      - image_family: freebsd-12-3-snap
-      - image_family: freebsd-13-1-snap
+      - image_family: freebsd-13-2-snap
+      - image_family: freebsd-14-0-snap
   deps_script:
     - sed -i.bak -e 's/quarterly/latest/' /etc/pkg/FreeBSD.conf
     - env ASSUME_ALWAYS_YES=yes pkg update -f
-    - env ASSUME_ALWAYS_YES=yes pkg install -y llvm11 gmake z3 cmake pkgconf google-perftools python3 py39-sqlite3 py39-tabulate
+    - env ASSUME_ALWAYS_YES=yes pkg install -y llvm11 gmake z3 cmake pkgconf google-perftools python3 py39-sqlite3 py39-tabulate nlohmann-json bash coreutils
   build_script:
     - mkdir build
     - cd build
-    - cmake -DLLVM_DIR=/usr/local/llvm11 -DMAKE_BINARY=/usr/local/bin/gmake -DENABLE_TCMALLOC:BOOL=true -DENABLE_POSIX_RUNTIME:BOOL=ON -DENABLE_SOLVER_Z3:BOOL=true -DENABLE_SYSTEM_TESTS:BOOL=ON ..
+    - cmake -DLLVM_DIR=/usr/local/llvm11 -DMAKE_BINARY=/usr/local/bin/gmake -DJSON_SRC_DIR=/usr/local -DENABLE_TCMALLOC:BOOL=true -DENABLE_POSIX_RUNTIME:BOOL=ON -DENABLE_SOLVER_Z3:BOOL=true -DENABLE_SYSTEM_TESTS:BOOL=ON ..
     - gmake
   test_script:
     - sed -i.bak -e 's/lit\./lit11\./' test/lit.cfg

@@ -22,6 +22,18 @@ void __assert_fail(const char *assertion, const char *file, unsigned int line,
 void klee_prefer_cex(void *, uintptr_t);
 #endif
 
+#if defined(__APPLE__) || defined(__FreeBSD__)
+#include <err.h>
+
+extern void abort(void);
+void __assert_fail(const char *failedexpr, const char *file, unsigned int line,
+                   const char *fn) {
+  warnx("assertion \"%s\" failed: file \"%s\", line %u%s%s%s", failedexpr, file,
+        line, fn ? ", function: \"" : "", fn ? fn : "", fn ? "\"" : "");
+  abort();
+}
+#endif
+
 int __VERIFIER_nondet_int(void) {
   int x;
   klee_make_symbolic(&x, sizeof(x), "int");
