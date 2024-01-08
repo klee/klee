@@ -4054,7 +4054,6 @@ ref<Expr> Executor::replaceReadWithSymbolic(ExecutionState &state,
   ref<Expr> res = Expr::createTempRead(array, e->getWidth());
   ref<Expr> eq = NotOptimizedExpr::create(EqExpr::create(e, res));
   llvm::errs() << "Making symbolic: " << eq << "\n";
-  state.addConstraint(eq);
   return res;
 }
 
