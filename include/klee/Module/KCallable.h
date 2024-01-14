@@ -90,7 +90,9 @@ public:
 
   llvm::StringRef getName() const override { return name; }
 
-  llvm::PointerType *getType() const override { return value->getType(); }
+  llvm::FunctionType *getFunctionType() const override {
+    return value->getFunctionType();
+  }
 
   llvm::Value *getValue() const override { return value; }
 
