@@ -10,12 +10,9 @@
 # ===----------------------------------------------------------------------===##
 
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-  for f in `find $1 -name "*.ktest" -type f`; do
-    KLEE_RUN_TEST_ERRORS_NON_FATAL=STOP KTEST_FILE=$f timeout 1 $2
-  done
+  TIMEOUT="timeout"
 else
-  for f in `find $1 -name "*.ktest" -type f`; do
-    KLEE_RUN_TEST_ERRORS_NON_FATAL=STOP KTEST_FILE=$f gtimeout 1 $2
-  done
+  TIMEOUT="gtimeout"
 fi
+find $1 -name "*.ktest" -type f -exec bash -c 'KLEE_RUN_TEST_ERRORS_NON_FATAL=STOP KTEST_FILE=$1 $3 1 $2' bash {} $2 $TIMEOUT \;
 exit 0
