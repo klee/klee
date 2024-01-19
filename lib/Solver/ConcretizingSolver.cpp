@@ -3,6 +3,7 @@
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprUtil.h"
+#include "klee/Expr/IndependentConstraintSetUnion.h"
 #include "klee/Expr/IndependentSet.h"
 #include "klee/Expr/SymbolicSource.h"
 #include "klee/Expr/Symcrete.h"

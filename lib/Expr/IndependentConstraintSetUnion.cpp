@@ -1,5 +1,8 @@
 #include "klee/Expr/IndependentConstraintSetUnion.h"
 
+#include "klee/ADT/DisjointSetUnion.h"
+#include "klee/Expr/IndependentSet.h"
+
 namespace klee {
 
 IndependentConstraintSetUnion::IndependentConstraintSetUnion() {}
@@ -152,10 +155,11 @@ IndependentConstraintSetUnion::getConcretizedVersion() {
     ref<const IndependentConstraintSet> root = disjointSets.at(i);
     if (root->concretization.bindings.empty()) {
       for (ref<Expr> expr : root->exprs) {
-        icsu.addValue(new ExprOrSymcrete::left(expr));
+        icsu.addExpr(expr);
       }
     } else {
-      icsu.add(root->concretizedSets);
+      root->concretizedSets->calculateQueue();
+      icsu.add(*root->concretizedSets.get());
     }
     icsu.concretization.addIndependentAssignment(root->concretization);
   }
@@ -178,7 +182,15 @@ void IndependentConstraintSetUnion::calculateQueue() {
   calculateUpdateConcretizationQueue();
   calculateRemoveConcretizationQueue();
   while (!constraintQueue.empty()) {
-    addValue(constraintQueue[constraintQueue.size() - 1]);
+    auto constraint = constraintQueue[constraintQueue.size() - 1];
+    if (auto expr = dyn_cast<ExprOrSymcrete::left>(constraint)) {
+      if (auto ce = dyn_cast<ConstantExpr>(expr->value())) {
+        assert(ce->isTrue() && "Attempt to add invalid constraint");
+        constraintQueue.pop_back();
+        continue;
+      }
+    }
+    addValue(constraint);
     constraintQueue.pop_back();
   }
   calculateUpdateConcretizationQueue();

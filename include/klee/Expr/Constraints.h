@@ -17,7 +17,6 @@
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprHashMap.h"
 #include "klee/Expr/ExprUtil.h"
-#include "klee/Expr/IndependentConstraintSetUnion.h"
 #include "klee/Expr/IndependentSet.h"
 #include "klee/Expr/Path.h"
 #include "klee/Expr/Symcrete.h"

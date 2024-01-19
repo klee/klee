@@ -5,6 +5,7 @@
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/ExprHashMap.h"
 #include "klee/Expr/ExprUtil.h"
+#include "klee/Expr/IndependentConstraintSetUnion.h"
 #include "klee/Expr/SymbolicSource.h"
 #include "klee/Expr/Symcrete.h"
 #include "klee/Solver/Solver.h"
@@ -29,32 +30,20 @@ IndependentConstraintSet::updateConcretization(
   InnerSetUnion DSU;
   for (ref<Expr> i : exprs) {
     ref<Expr> e = ics->concretization.evaluate(i);
-    if (auto ce = dyn_cast<ConstantExpr>(e)) {
-      assert(ce->isTrue() && "Attempt to add invalid constraint");
-      continue;
-    }
     concretizedExprs[i] = e;
-    DSU.addValue(new ExprOrSymcrete::left(e));
+    DSU.addExpr(e);
   }
   for (ref<Symcrete> s : symcretes) {
     ref<Expr> e = EqExpr::create(ics->concretization.evaluate(s->symcretized),
                                  s->symcretized);
-    if (auto ce = dyn_cast<ConstantExpr>(e)) {
-      assert(ce->isTrue() && "Attempt to add invalid constraint");
-      continue;
-    }
-    DSU.addValue(new ExprOrSymcrete::left(e));
+    DSU.addExpr(e);
   }
   auto concretizationConstraints =
       ics->concretization.createConstraintsFromAssignment();
   for (ref<Expr> e : concretizationConstraints) {
-    if (auto ce = dyn_cast<ConstantExpr>(e)) {
-      assert(ce->isTrue() && "Attempt to add invalid constraint");
-      continue;
-    }
-    DSU.addValue(new ExprOrSymcrete::left(e));
+    DSU.addExpr(e);
   }
-  ics->concretizedSets = DSU;
+  ics->concretizedSets.reset(new InnerSetUnion(DSU));
   return ics;
 }
 
@@ -71,33 +60,21 @@ IndependentConstraintSet::removeConcretization(
   InnerSetUnion DSU;
   for (ref<Expr> i : exprs) {
     ref<Expr> e = ics->concretization.evaluate(i);
-    if (auto ce = dyn_cast<ConstantExpr>(e)) {
-      assert(ce->isTrue() && "Attempt to add invalid constraint");
-      continue;
-    }
     concretizedExprs[i] = e;
-    DSU.addValue(new ExprOrSymcrete::left(e));
+    DSU.addExpr(e);
   }
   for (ref<Symcrete> s : symcretes) {
     ref<Expr> e = EqExpr::create(ics->concretization.evaluate(s->symcretized),
                                  s->symcretized);
-    if (auto ce = dyn_cast<ConstantExpr>(e)) {
-      assert(ce->isTrue() && "Attempt to add invalid constraint");
-      continue;
-    }
-    DSU.addValue(new ExprOrSymcrete::left(e));
+    DSU.addExpr(e);
   }
   auto concretizationConstraints =
       ics->concretization.createConstraintsFromAssignment();
   for (ref<Expr> e : concretizationConstraints) {
-    if (auto ce = dyn_cast<ConstantExpr>(e)) {
-      assert(ce->isTrue() && "Attempt to add invalid constraint");
-      continue;
-    }
-    DSU.addValue(new ExprOrSymcrete::left(e));
+    DSU.addExpr(e);
   }
 
-  ics->concretizedSets = DSU;
+  ics->concretizedSets.reset(new InnerSetUnion(DSU));
   return ics;
 }
 
@@ -346,32 +323,20 @@ IndependentConstraintSet::merge(ref<const IndependentConstraintSet> A,
     InnerSetUnion DSU;
     for (ref<Expr> i : a->exprs) {
       ref<Expr> e = a->concretization.evaluate(i);
-      if (auto ce = dyn_cast<ConstantExpr>(e)) {
-        assert(ce->isTrue() && "Attempt to add invalid constraint");
-        continue;
-      }
-      DSU.addValue(new ExprOrSymcrete::left(e));
+      DSU.addExpr(e);
     }
     for (ref<Symcrete> s : a->symcretes) {
       ref<Expr> e = EqExpr::create(a->concretization.evaluate(s->symcretized),
                                    s->symcretized);
-      if (auto ce = dyn_cast<ConstantExpr>(e)) {
-        assert(ce->isTrue() && "Attempt to add invalid constraint");
-        continue;
-      }
-      DSU.addValue(new ExprOrSymcrete::left(e));
+      DSU.addExpr(e);
     }
     auto concretizationConstraints =
         a->concretization.createConstraintsFromAssignment();
     for (ref<Expr> e : concretizationConstraints) {
-      if (auto ce = dyn_cast<ConstantExpr>(e)) {
-        assert(ce->isTrue() && "Attempt to add invalid constraint");
-        continue;
-      }
-      DSU.addValue(new ExprOrSymcrete::left(e));
+      DSU.addExpr(e);
     }
 
-    a->concretizedSets = DSU;
+    a->concretizedSets.reset(new InnerSetUnion(DSU));
   }
 
   return a;

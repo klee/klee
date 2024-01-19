@@ -23,6 +23,7 @@ DISABLE_WARNING_POP
 
 namespace klee {
 using ExprOrSymcrete = either<Expr, Symcrete>;
+class IndependentConstraintSetUnion;
 
 struct ExprOrSymcreteHash {
   unsigned operator()(const ref<ExprOrSymcrete> &e) const { return e->hash(); }
@@ -97,9 +98,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
 
 class IndependentConstraintSet {
 private:
-  using InnerSetUnion =
-      DisjointSetUnion<ref<ExprOrSymcrete>, IndependentConstraintSet,
-                       ExprOrSymcreteHash, ExprOrSymcreteCmp>;
+  using InnerSetUnion = IndependentConstraintSetUnion;
 
   void initIndependentConstraintSet(ref<Expr> e);
   void initIndependentConstraintSet(ref<Symcrete> s);
@@ -119,7 +118,7 @@ public:
 
   Assignment concretization;
 
-  InnerSetUnion concretizedSets;
+  std::shared_ptr<InnerSetUnion> concretizedSets;
 
   ref<const IndependentConstraintSet> addExpr(ref<Expr> e) const;
   ref<const IndependentConstraintSet>
