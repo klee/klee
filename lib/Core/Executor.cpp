@@ -48,6 +48,7 @@
 #include "klee/Expr/ExprPPrinter.h"
 #include "klee/Expr/ExprSMTLIBPrinter.h"
 #include "klee/Expr/ExprUtil.h"
+#include "klee/Expr/IndependentConstraintSetUnion.h"
 #include "klee/Expr/IndependentSet.h"
 #include "klee/Expr/Symcrete.h"
 #include "klee/Module/Cell.h"
@@ -1884,9 +1885,9 @@ void Executor::unwindToNextLandingpad(ExecutionState &state) {
   UnwindingInformation *ui = state.unwindingInformation.get();
   assert(ui && "unwinding without unwinding information");
 
-  std::size_t startIndex;
-  std::size_t lowestStackIndex;
-  bool popFrames;
+  std::size_t startIndex = 0;
+  std::size_t lowestStackIndex = 0;
+  bool popFrames = false;
 
   if (auto *sui = dyn_cast<SearchPhaseUnwindingInformation>(ui)) {
     startIndex = sui->unwindingProgress;
