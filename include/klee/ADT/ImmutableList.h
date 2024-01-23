@@ -47,16 +47,10 @@ public:
 
   struct iterator {
     const ImmutableListNode *rootNode;
-    std::unique_ptr<iterator> it;
     size_t get;
 
   public:
-    explicit iterator(const ImmutableListNode *p)
-        : rootNode(p), it(nullptr), get(0) {
-      if (rootNode && rootNode->prev.get()) {
-        it = std::make_unique<iterator>(rootNode->prev.get());
-      }
-    }
+    explicit iterator(const ImmutableListNode *p) : rootNode(p), get(0) {}
 
     bool operator==(const iterator &b) const {
       return rootNode == b.rootNode && get == b.get;
@@ -66,17 +60,16 @@ public:
 
     iterator &operator++() {
       ++get;
-      if (get < rootNode->prev_len) {
-        it->operator++();
-      }
       return *this;
     }
 
     const T &operator*() const {
-      if (get < rootNode->prev_len) {
-        return **it;
+      assert(get < rootNode->size() && "Out of bound");
+      const ImmutableListNode *curNode = rootNode;
+      while (get < curNode->prev_len) {
+        curNode = curNode->prev.get();
       }
-      return rootNode->values[get - rootNode->prev_len];
+      return curNode->values[get - curNode->prev_len];
     }
 
     const T &operator->() const { return **this; }
