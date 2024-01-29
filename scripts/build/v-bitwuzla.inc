@@ -1,7 +1,6 @@
 # Build information for Bitwuzla solver
 required_variables_bitwuzla=(
   "BITWUZLA_VERSION"
-  "BITWUZLA_COMMIT"
 )
 
 artifact_dependency_bitwuzla=("sanitizer")

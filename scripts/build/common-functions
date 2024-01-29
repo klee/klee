@@ -15,12 +15,6 @@ function git_clone_or_update() {
     fi
     popd
   fi
-
-  if [[ $# -ge 4 ]]; then
-    pushd "$destination"
-    git checkout $4
-    popd
-  fi
 }
 
 function get_git_hash() {

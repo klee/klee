@@ -13,7 +13,7 @@ setup_build_variables_bitwuzla() {
 download_bitwuzla() {
   source "${DIR}/common-functions"
   # Download Bitwuzla
-  git_clone_or_update "${bitwuzla_url}" "${BASE}/bitwuzla-${BITWUZLA_VERSION}" "${BITWUZLA_VERSION}" "${BITWUZLA_COMMIT}"
+  git_clone_or_update "${bitwuzla_url}" "${BASE}/bitwuzla-${BITWUZLA_VERSION}" "${BITWUZLA_VERSION}"
 }
 
 build_bitwuzla() {
