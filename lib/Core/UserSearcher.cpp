@@ -86,6 +86,13 @@ cl::opt<std::string> BatchTime(
              "--use-batching-search.  Set to 0s to disable (default=5s)"),
     cl::init("5s"), cl::cat(SearchCat));
 
+cl::opt<bool> UseFairSearch(
+    "use-fair-search",
+    cl::desc(
+        "Use fair searcher to interleave states with different entry points"
+        "(default=false)"),
+    cl::init(false), cl::cat(SearchCat));
+
 } // namespace
 
 void klee::initializeSearchOptions() {
@@ -156,9 +163,7 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng,
   return searcher;
 }
 
-Searcher *klee::constructUserSearcher(Executor &executor,
-                                      bool stopAfterReachingTarget) {
-
+Searcher *klee::constructBaseSearcher(Executor &executor) {
   Searcher *searcher =
       getNewSearcher(CoreSearch[0], executor.theRNG, *executor.processForest);
 
@@ -186,6 +191,19 @@ Searcher *klee::constructUserSearcher(Executor &executor,
   if (UseIterativeDeepeningSearch != HaltExecution::Reason::Unspecified) {
     searcher =
         new IterativeDeepeningSearcher(searcher, UseIterativeDeepeningSearch);
+  }
+
+  return searcher;
+}
+
+Searcher *klee::constructUserSearcher(Executor &executor) {
+
+  Searcher *searcher = nullptr;
+  if (UseFairSearch) {
+    searcher = new DiscreteTimeFairSearcher(BaseSearcherConstructor(executor),
+                                            executor.theRNG, 1);
+  } else {
+    searcher = constructBaseSearcher(executor);
   }
 
   llvm::raw_ostream &os = executor.getHandler().getInfoStream();

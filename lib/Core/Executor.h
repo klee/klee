@@ -117,8 +117,8 @@ class Executor : public Interpreter {
   friend class WeightedRandomSearcher;
   friend class SpecialFunctionHandler;
   friend class StatsTracker;
-  friend klee::Searcher *
-  klee::constructUserSearcher(Executor &executor, bool stopAfterReachingTarget);
+  friend klee::Searcher *klee::constructBaseSearcher(Executor &executor);
+  friend klee::Searcher *klee::constructUserSearcher(Executor &executor);
 
 public:
   typedef std::pair<ExecutionState *, ExecutionState *> StatePair;

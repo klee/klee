@@ -25,6 +25,8 @@
 // RUN: %klee --output-dir=%t.klee-out --use-iterative-deepening-search=max-time --use-batching-search --search=nurs:depth %t2.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --use-iterative-deepening-search=max-time --use-batching-search --search=nurs:qc %t2.bc
+// RUN: rm -rf %t.klee-out
+// RUN: %klee --output-dir=%t.klee-out --use-fair-search --entry-points=main --entry-points=other_main %t2.bc
 
 /* this test is basically just for coverage and doesn't really do any
    correctness check (aside from testing that the various combinations
@@ -55,6 +57,17 @@ int main(int argc, char **argv) {
 
   klee_make_symbolic(buf, N, "buf");
   if (validate(buf, N))
+    return buf[0];
+  return 0;
+}
+
+int other_main(int argc, char **argv) {
+  int N = SYMBOLIC_SIZE;
+  unsigned char *buf = malloc(N);
+  int i;
+
+  klee_make_symbolic(buf, N, "buf");
+  if (validate(buf, N + 1))
     return buf[0];
   return 0;
 }

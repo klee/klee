@@ -374,6 +374,56 @@ public:
   void printName(llvm::raw_ostream &os) override;
 };
 
+class DiscreteTimeFairSearcher final : public Searcher {
+public:
+  using BaseSearcherConstructor = std::function<Searcher *()>;
+
+private:
+  using KFunctionToSearcherMap =
+      std::unordered_map<std::optional<KFunction *>, std::unique_ptr<Searcher>>;
+  using KFunctionVector = std::vector<std::optional<KFunction *>>;
+  using KFunctionSet = std::set<std::optional<KFunction *>>;
+  using StatesVector = std::vector<ExecutionState *>;
+  using KFunctionStatesMap =
+      std::unordered_map<std::optional<KFunction *>, StatesVector>;
+  using StateKFunctionMap =
+      std::unordered_map<ExecutionState *, std::optional<KFunction *>>;
+
+  BaseSearcherConstructor constructor;
+  KFunctionToSearcherMap searchers;
+  RNG &theRNG;
+  std::optional<KFunction *> currentFunction;
+  const unsigned selectQuant;
+  unsigned currentQuant{1};
+
+  KFunctionStatesMap addedKStates;
+  KFunctionStatesMap removedKStates;
+  states_ty localStates;
+  StateKFunctionMap statesToFunction;
+
+  KFunctionSet localFunction;
+  KFunctionSet currFunction;
+
+  KFunctionVector functions;
+  bool isThereKFunction(std::optional<KFunction *> kf);
+  void addKFunction(std::optional<KFunction *> kf);
+  void removeKFunction(std::optional<KFunction *> kf);
+
+public:
+  DiscreteTimeFairSearcher(BaseSearcherConstructor constructor, RNG &rng,
+                           unsigned selectQuant)
+      : constructor(constructor), theRNG(rng), selectQuant(selectQuant),
+        currentQuant(selectQuant) {}
+  ~DiscreteTimeFairSearcher() override = default;
+  ExecutionState &selectState() override;
+  void update(ExecutionState *current,
+              const std::vector<ExecutionState *> &addedStates,
+              const std::vector<ExecutionState *> &removedStates) override;
+  void update(const states_ty &states);
+
+  bool empty() override;
+  void printName(llvm::raw_ostream &os) override;
+};
 } // namespace klee
 
 #endif /* KLEE_SEARCHER_H */

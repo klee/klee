@@ -781,3 +781,145 @@ void InterleavedSearcher::printName(llvm::raw_ostream &os) {
     searcher->printName(os);
   os << "</InterleavedSearcher>\n";
 }
+
+//
+
+ExecutionState &DiscreteTimeFairSearcher::selectState() {
+  if (searchers.find(std::nullopt) != searchers.end()) {
+    return searchers.at(std::nullopt)->selectState();
+  }
+
+  if (!currentQuant || searchers.find(currentFunction) == searchers.end()) {
+    unsigned size = functions.size();
+    currentFunction = functions[theRNG.getInt32() % size];
+    currentQuant = selectQuant;
+  } else {
+    --currentQuant;
+  }
+
+  auto &function = currentFunction;
+  assert(searchers.find(function) != searchers.end() &&
+         searchers.at(function) && !searchers.at(function)->empty());
+  return searchers.at(function)->selectState();
+}
+
+void DiscreteTimeFairSearcher::update(
+    ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
+    const std::vector<ExecutionState *> &removedStates) {
+  if (current) {
+    if (current && (std::find(removedStates.begin(), removedStates.end(),
+                              current) == removedStates.end())) {
+      localStates.insert(current);
+    }
+    for (const auto state : removedStates) {
+      if (std::find(addedStates.begin(), addedStates.end(), state) ==
+          addedStates.end()) {
+        localStates.insert(state);
+      }
+    }
+    update(localStates);
+    localStates.clear();
+  }
+
+  if (current) {
+    auto function = current->multiplexKF
+                        ? std::optional<KFunction *>(current->multiplexKF)
+                        : std::nullopt;
+    localFunction.insert(function);
+    currFunction.insert(function);
+    statesToFunction[current] = function;
+  }
+
+  for (const auto state : addedStates) {
+    auto function = state->multiplexKF
+                        ? std::optional<KFunction *>(state->multiplexKF)
+                        : std::nullopt;
+    localFunction.insert(function);
+    addedKStates[function].push_back(state);
+    statesToFunction[state] = function;
+  }
+
+  for (const auto state : removedStates) {
+    auto function = state->multiplexKF
+                        ? std::optional<KFunction *>(state->multiplexKF)
+                        : std::nullopt;
+    localFunction.insert(function);
+    removedKStates[function].push_back(state);
+    statesToFunction.erase(state);
+  }
+
+  for (auto function : localFunction) {
+
+    ExecutionState *currTState =
+        currFunction.count(function) != 0 ? current : nullptr;
+
+    if (!isThereKFunction(function)) {
+      addKFunction(function);
+    }
+
+    searchers.at(function)->update(currTState, addedKStates[function],
+                                   removedKStates[function]);
+    addedKStates.at(function).clear();
+    removedKStates.at(function).clear();
+    if (searchers.at(function)->empty()) {
+      removeKFunction(function);
+    }
+  }
+  localFunction.clear();
+  currFunction.clear();
+}
+
+void DiscreteTimeFairSearcher::update(const states_ty &states) {
+  for (const auto &state : states) {
+    auto function = state->multiplexKF
+                        ? std::optional<KFunction *>(state->multiplexKF)
+                        : std::nullopt;
+    if (function != statesToFunction.at(state)) {
+      addedKStates[function].push_back(state);
+      removedKStates[function];
+      addedKStates[statesToFunction[state]];
+      removedKStates[statesToFunction[state]].push_back(state);
+      localFunction.insert(function);
+      localFunction.insert(statesToFunction[state]);
+    }
+  }
+
+  for (auto function : localFunction) {
+    if (!isThereKFunction(function)) {
+      addKFunction(function);
+    }
+
+    searchers.at(function)->update(nullptr, addedKStates.at(function),
+                                   removedKStates.at(function));
+    addedKStates.at(function).clear();
+    removedKStates.at(function).clear();
+    if (searchers.at(function)->empty()) {
+      removeKFunction(function);
+    }
+  }
+  localFunction.clear();
+}
+
+bool DiscreteTimeFairSearcher::isThereKFunction(std::optional<KFunction *> kf) {
+  return searchers.count(kf) != 0;
+}
+
+void DiscreteTimeFairSearcher::addKFunction(std::optional<KFunction *> kf) {
+  assert(searchers.count(kf) == 0);
+  searchers[kf] = std::unique_ptr<Searcher>(constructor());
+  assert(std::find(functions.begin(), functions.end(), kf) == functions.end());
+  functions.push_back(kf);
+}
+
+void DiscreteTimeFairSearcher::removeKFunction(std::optional<KFunction *> kf) {
+  searchers.erase(kf);
+  auto it = std::find(functions.begin(), functions.end(), kf);
+  assert(it != functions.end());
+  functions.erase(it);
+}
+
+bool DiscreteTimeFairSearcher::empty() { return functions.empty(); }
+
+void DiscreteTimeFairSearcher::printName(llvm::raw_ostream &os) {
+  os << "DiscreteTimeFairSearcher\n";
+}
