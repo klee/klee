@@ -1,5 +1,3 @@
-// REQUIRES: geq-llvm-11.0
-
 /* The scalarizer pass in LLVM 11 was changed to generate, for a
  write of the form f[k] = v, with f a 4-element vector:
  if k == 0 => f[0] = v

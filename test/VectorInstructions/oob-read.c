@@ -1,5 +1,4 @@
-// REQUIRES: geq-llvm-11.0
-// XFAIL: geq-llvm-11.0
+// XFAIL: *
 
 /* The scalarizer pass in LLVM 11 was changed to generate, for a
  read f[k], with k symbolic and f a 4-element vector:

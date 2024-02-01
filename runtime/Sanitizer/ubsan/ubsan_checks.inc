@@ -26,17 +26,13 @@
 
 UBSAN_CHECK(GenericUB, "undefined-behavior", "undefined")
 UBSAN_CHECK(NullPointerUse, "null-pointer-use", "null")
-#if LLVM_VERSION_MAJOR >= 11
 UBSAN_CHECK(NullPointerUseWithNullability, "null-pointer-use",
             "nullability-assign")
-#endif
-#if LLVM_VERSION_MAJOR >= 10
 UBSAN_CHECK(NullptrWithOffset, "nullptr-with-offset", "pointer-overflow")
 UBSAN_CHECK(NullptrWithNonZeroOffset, "nullptr-with-nonzero-offset",
             "pointer-overflow")
 UBSAN_CHECK(NullptrAfterNonZeroOffset, "nullptr-after-nonzero-offset",
             "pointer-overflow")
-#endif
 UBSAN_CHECK(PointerOverflow, "pointer-overflow", "pointer-overflow")
 UBSAN_CHECK(MisalignedPointerUse, "misaligned-pointer-use", "alignment")
 UBSAN_CHECK(AlignmentAssumption, "alignment-assumption", "alignment")
@@ -49,9 +45,7 @@ UBSAN_CHECK(IntegerDivideByZero, "integer-divide-by-zero",
             "integer-divide-by-zero")
 UBSAN_CHECK(FloatDivideByZero, "float-divide-by-zero", "float-divide-by-zero")
 UBSAN_CHECK(InvalidBuiltin, "invalid-builtin-use", "invalid-builtin-use")
-#if LLVM_VERSION_MAJOR >= 11
 UBSAN_CHECK(InvalidObjCCast, "invalid-objc-cast", "invalid-objc-cast")
-#endif
 UBSAN_CHECK(ImplicitUnsignedIntegerTruncation,
             "implicit-unsigned-integer-truncation",
             "implicit-unsigned-integer-truncation")
@@ -76,14 +70,10 @@ UBSAN_CHECK(InvalidEnumLoad, "invalid-enum-load", "enum")
 UBSAN_CHECK(FunctionTypeMismatch, "function-type-mismatch", "function")
 UBSAN_CHECK(InvalidNullReturn, "invalid-null-return",
             "returns-nonnull-attribute")
-#if LLVM_VERSION_MAJOR >= 11
 UBSAN_CHECK(InvalidNullReturnWithNullability, "invalid-null-return",
             "nullability-return")
-#endif
 UBSAN_CHECK(InvalidNullArgument, "invalid-null-argument", "nonnull-attribute")
-#if LLVM_VERSION_MAJOR >= 11
 UBSAN_CHECK(InvalidNullArgumentWithNullability, "invalid-null-argument",
             "nullability-arg")
-#endif
 UBSAN_CHECK(DynamicTypeMismatch, "dynamic-type-mismatch", "vptr")
 UBSAN_CHECK(CFIBadType, "cfi-bad-type", "cfi")
