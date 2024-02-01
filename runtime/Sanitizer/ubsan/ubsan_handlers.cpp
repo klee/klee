@@ -45,14 +45,10 @@ static const char *get_suffix(ErrorType ET) {
     // It should never happen in KLEE runtime.
     return "exec.err";
   case ErrorType::NullPointerUse:
-#if LLVM_VERSION_MAJOR >= 11
   case ErrorType::NullPointerUseWithNullability:
-#endif
-#if LLVM_VERSION_MAJOR >= 10
   case ErrorType::NullptrWithOffset:
   case ErrorType::NullptrWithNonZeroOffset:
   case ErrorType::NullptrAfterNonZeroOffset:
-#endif
   case ErrorType::PointerOverflow:
   case ErrorType::MisalignedPointerUse:
   case ErrorType::AlignmentAssumption:
@@ -69,12 +65,10 @@ static const char *get_suffix(ErrorType ET) {
     return "div.err";
   case ErrorType::InvalidBuiltin:
     return "invalid_builtin_use.err";
-#if LLVM_VERSION_MAJOR >= 11
   case ErrorType::InvalidObjCCast:
     // Option `fsanitize=objc-cast` is not supported due to the requirement for
     // Darwin system.
     return "exec.err";
-#endif
   case ErrorType::ImplicitUnsignedIntegerTruncation:
   case ErrorType::ImplicitSignedIntegerTruncation:
     return "implicit_truncation.err";
@@ -101,13 +95,9 @@ static const char *get_suffix(ErrorType ET) {
     // This check is unsupported
     return "exec.err";
   case ErrorType::InvalidNullReturn:
-#if LLVM_VERSION_MAJOR >= 11
   case ErrorType::InvalidNullReturnWithNullability:
-#endif
   case ErrorType::InvalidNullArgument:
-#if LLVM_VERSION_MAJOR >= 11
   case ErrorType::InvalidNullArgumentWithNullability:
-#endif
     return "nullable_attribute.err";
   case ErrorType::DynamicTypeMismatch:
   case ErrorType::CFIBadType:
@@ -122,7 +112,6 @@ __attribute__((noreturn)) static void report_error_type(ErrorType ET) {
   report_error(ConvertTypeToString(ET), get_suffix(ET));
 }
 
-#if LLVM_VERSION_MAJOR >= 11
 /// Situations in which we might emit a check for the suitability of a
 /// pointer or glvalue. Needs to be kept in sync with CodeGenFunction.h in
 /// clang.
@@ -161,20 +150,15 @@ enum TypeCheckKind {
   /// null or an object within its lifetime.
   TCK_DynamicOperation
 };
-#endif
 
 static void handleTypeMismatchImpl(TypeMismatchData *Data,
                                    ValueHandle Pointer) {
   uptr Alignment = (uptr)1 << Data->LogAlignment;
   ErrorType ET;
   if (!Pointer)
-#if LLVM_VERSION_MAJOR >= 11
     ET = (Data->TypeCheckKind == TCK_NonnullAssign)
              ? ErrorType::NullPointerUseWithNullability
              : ErrorType::NullPointerUse;
-#else
-    ET = ErrorType::NullPointerUse;
-#endif
   else if (Pointer & (Alignment - 1))
     ET = ErrorType::MisalignedPointerUse;
   else
@@ -440,12 +424,8 @@ extern "C" void __ubsan_handle_invalid_builtin_abort(InvalidBuiltinData *Data) {
 
 static void handleNonNullReturn(NonNullReturnData * /*Data*/,
                                 SourceLocation * /*LocPtr*/, bool IsAttr) {
-#if LLVM_VERSION_MAJOR >= 11
   ErrorType ET = IsAttr ? ErrorType::InvalidNullReturn
                         : ErrorType::InvalidNullReturnWithNullability;
-#else
-  ErrorType ET = ErrorType::InvalidNullReturn;
-#endif
   report_error_type(ET);
 }
 
@@ -471,12 +451,8 @@ __ubsan_handle_nullability_return_v1_abort(NonNullReturnData *Data,
 }
 
 static void handleNonNullArg(NonNullArgData * /*Data*/, bool IsAttr) {
-#if LLVM_VERSION_MAJOR >= 11
   ErrorType ET = IsAttr ? ErrorType::InvalidNullArgument
                         : ErrorType::InvalidNullArgumentWithNullability;
-#else
-  ErrorType ET = ErrorType::InvalidNullArgument;
-#endif
   report_error_type(ET);
 }
 
@@ -499,7 +475,6 @@ extern "C" void __ubsan_handle_nullability_arg_abort(NonNullArgData *Data) {
 
 static void handlePointerOverflowImpl(PointerOverflowData * /*Data*/,
                                       ValueHandle Base, ValueHandle Result) {
-#if LLVM_VERSION_MAJOR >= 10
   ErrorType ET;
   if (Base == 0 && Result == 0)
     ET = ErrorType::NullptrWithOffset;
@@ -509,9 +484,6 @@ static void handlePointerOverflowImpl(PointerOverflowData * /*Data*/,
     ET = ErrorType::NullptrAfterNonZeroOffset;
   else
     ET = ErrorType::PointerOverflow;
-#else
-  ErrorType ET = ErrorType::PointerOverflow;
-#endif
   report_error_type(ET);
 }
 

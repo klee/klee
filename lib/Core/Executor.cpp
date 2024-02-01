@@ -77,11 +77,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(10, 0)
 #include "llvm/Support/TypeSize.h"
-#else
-typedef unsigned TypeSize;
-#endif
 #include "llvm/Support/raw_ostream.h"
 
 #include <algorithm>
@@ -1990,12 +1986,8 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
           argWidth = arguments[k]->getWidth();
         }
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(11, 0)
         MaybeAlign ma = cb.getParamAlign(k);
         unsigned alignment = ma ? ma->value() : 0;
-#else
-        unsigned alignment = cb.getParamAlignment(k);
-#endif
 
         if (WordSize == Expr::Int32 && !alignment)
           alignment = 4;
@@ -3245,11 +3237,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       return;
     }
     uint64_t iIdx = cIdx->getZExtValue();
-#if LLVM_VERSION_MAJOR >= 11
     const auto *vt = cast<llvm::FixedVectorType>(iei->getType());
-#else
-    const llvm::VectorType *vt = iei->getType();
-#endif
     unsigned EltBits = getWidthForLLVMType(vt->getElementType());
 
     if (iIdx >= vt->getNumElements()) {
@@ -3287,11 +3275,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
       return;
     }
     uint64_t iIdx = cIdx->getZExtValue();
-#if LLVM_VERSION_MAJOR >= 11
     const auto *vt = cast<llvm::FixedVectorType>(eei->getVectorOperandType());
-#else
-    const llvm::VectorType *vt = eei->getVectorOperandType();
-#endif
     unsigned EltBits = getWidthForLLVMType(vt->getElementType());
 
     if (iIdx >= vt->getNumElements()) {
@@ -3502,10 +3486,6 @@ void Executor::bindInstructionConstants(KInstruction *KI) {
 #endif
   } else if (InsertValueInst *ivi = dyn_cast<InsertValueInst>(KI->inst)) {
     KGEPInstruction *kgepi = static_cast<KGEPInstruction *>(KI);
-#if LLVM_VERSION_CODE <= LLVM_VERSION(10, 0)
-    computeOffsets(kgepi, iv_type_begin(ivi), iv_type_end(ivi));
-    assert(kgepi->indices.empty() && "InsertValue constant offset expected");
-#else
     llvm::Value *agg = ivi->getAggregateOperand();
     llvm::Type *current_type = agg->getType();
     std::uint64_t offset = 0;
@@ -3526,14 +3506,8 @@ void Executor::bindInstructionConstants(KInstruction *KI) {
       current_type = GetElementPtrInst::getTypeAtIndex(current_type, index);
     }
     kgepi->offset = offset;
-#endif
   } else if (ExtractValueInst *evi = dyn_cast<ExtractValueInst>(KI->inst)) {
     KGEPInstruction *kgepi = static_cast<KGEPInstruction *>(KI);
-#if LLVM_VERSION_CODE <= LLVM_VERSION(10, 0)
-    computeOffsets(kgepi, ev_type_begin(evi), ev_type_end(evi));
-    assert(kgepi->indices.empty() && "ExtractValue constant offset expected");
-#else
-
     llvm::Value *agg = evi->getAggregateOperand();
     llvm::Type *current_type = agg->getType();
     uint64_t offset = 0;
@@ -3554,7 +3528,6 @@ void Executor::bindInstructionConstants(KInstruction *KI) {
       current_type = GetElementPtrInst::getTypeAtIndex(current_type, index);
     }
     kgepi->offset = offset;
-#endif
   }
 }
 
@@ -4955,12 +4928,7 @@ size_t Executor::getAllocationAlignment(const llvm::Value *allocSite) const {
       type = GO->getType();
     }
   } else if (const AllocaInst *AI = dyn_cast<AllocaInst>(allocSite)) {
-#if LLVM_VERSION_CODE <= LLVM_VERSION(10, 0)
-    alignment = AI->getAlignment();
-
-#else
     alignment = AI->getAlign().value();
-#endif
     type = AI->getAllocatedType();
   } else if (isa<InvokeInst>(allocSite) || isa<CallInst>(allocSite)) {
     // FIXME: Model the semantics of the call to use the right alignment

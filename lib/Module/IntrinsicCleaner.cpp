@@ -25,9 +25,7 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(10, 0)
 #include "llvm/IR/IntrinsicsX86.h"
-#endif
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
@@ -391,9 +389,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       case Intrinsic::readcyclecounter:
       case Intrinsic::returnaddress:
       case Intrinsic::round:
-#if LLVM_VERSION_CODE >= LLVM_VERSION(11, 0)
       case Intrinsic::roundeven:
-#endif
       case Intrinsic::sin:
       case Intrinsic::sqrt:
       case Intrinsic::stackrestore:

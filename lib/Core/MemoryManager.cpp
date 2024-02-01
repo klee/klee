@@ -22,11 +22,7 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MathExtras.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(10, 0)
 #include "llvm/Support/Alignment.h"
-#else
-#include "llvm/Support/MathExtras.h"
-#endif
 DISABLE_WARNING_POP
 
 #include <cinttypes>
@@ -187,28 +183,18 @@ MemoryManager::MemoryManager(ArrayCache *_arrayCache)
         stackFactory, nullptr);
 
     // check invariants
-#if LLVM_VERSION_CODE >= LLVM_VERSION(10, 0)
     llvm::Align pageAlignment(pageSize);
-#endif
     for (auto &requestedSegment : requestedSegments) {
       auto &segment1 = std::get<0>(requestedSegment);
       auto &start1 = std::get<1>(requestedSegment);
       auto &size1 = std::get<2>(requestedSegment);
       // check for page alignment
       // NOTE: sizes are assumed to be page aligned due to multiplication
-#if LLVM_VERSION_CODE >= LLVM_VERSION(10, 0)
       if (start1 != 0 && !llvm::isAligned(pageAlignment, start1)) {
         klee_error("Deterministic allocator: Requested start address for %s "
                    "is not page aligned (page size: %" PRIu64 " B)",
                    segment1.c_str(), pageAlignment.value());
       }
-#else
-      if (start1 != 0 && llvm::OffsetToAlignment(start1, pageSize) != 0) {
-        klee_error("Deterministic allocator: Requested start address for %s "
-                   "is not page aligned (page size: %zu B)",
-                   segment1.c_str(), pageSize);
-      }
-#endif
 
       // check for overlap of segments
       std::uintptr_t end1 = start1 + size1;
