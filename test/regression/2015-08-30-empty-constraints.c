@@ -11,6 +11,7 @@
  * Make sure we are able to generate an input.
  */
 #include "klee/klee.h"
+
 int main() {
   int d;
 
