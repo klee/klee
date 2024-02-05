@@ -1550,7 +1550,7 @@ MemoryObject *Executor::serializeLandingpad(ExecutionState &state,
             clause_value = dyn_cast<GlobalValue>(bitcast->getOperand(0));
           }
 
-          if (auto *gv = dyn_cast<llvm::GlobalVariable>(v)) {
+          if (auto const *gv = dyn_cast<llvm::GlobalVariable>(v)) {
             clause_value = gv;
           }
 
@@ -3448,7 +3448,7 @@ void Executor::computeOffsetsSeqTy(KGEPInstruction *kgepi,
 #else
   assert(it.isSequential() && "Called with non-sequential type");
   // Get the size of a single element
-  uint64_t elementSize =
+  std::uint64_t elementSize =
       kmodule->targetData->getTypeStoreSize(it.getIndexedType());
 #endif
   const Value *operand = it.getOperand();
@@ -3508,15 +3508,15 @@ void Executor::bindInstructionConstants(KInstruction *KI) {
 #else
     llvm::Value *agg = ivi->getAggregateOperand();
     llvm::Type *current_type = agg->getType();
-    uint64_t offset = 0;
+    std::uint64_t offset = 0;
     for (auto index : ivi->indices()) {
       if (StructType *st = dyn_cast<llvm::StructType>(current_type)) {
         const StructLayout *sl = kmodule->targetData->getStructLayout(st);
-        uint64_t addend = sl->getElementOffset(index);
+        std::uint64_t addend = sl->getElementOffset(index);
         offset = offset + addend;
       } else if (current_type->isArrayTy() || current_type->isVectorTy() ||
                  current_type->isPointerTy()) {
-        uint64_t elementSize = kmodule->targetData->getTypeStoreSize(
+        std::uint64_t elementSize = kmodule->targetData->getTypeStoreSize(
             current_type->getArrayElementType());
         offset += elementSize * index;
       } else {
