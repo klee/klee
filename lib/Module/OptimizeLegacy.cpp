@@ -58,12 +58,12 @@ static cl::opt<bool> VerifyEach("verify-each",
                                 cl::init(false), cl::cat(klee::ModuleCat));
 
 static cl::opt<bool>
-    Strip("strip-all", cl::desc("Strip all symbol information from executable"),
+    Strip("strip-all", cl::desc("Strip all symbol information from executable (default=false)"),
           cl::init(false), cl::cat(klee::ModuleCat));
 
 static cl::opt<bool>
     StripDebug("strip-debug",
-               cl::desc("Strip debugger symbol info from executable"),
+               cl::desc("Strip debugger symbol info from executable (default=false)"),
                cl::init(false), cl::cat(klee::ModuleCat));
 
 // A utility function that adds a pass to the pass manager but will also add
