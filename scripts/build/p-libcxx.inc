@@ -60,9 +60,9 @@ build_libcxx() {
 
     cmake "${cmake_flags[@]}" "${LIBCXX_SRC}/llvm"
    if [[ "${LLVM_VERSION_SHORT}" -ge "14" ]]; then
-     make runtimes - j"$(nproc)" || make cxx || return 1
+     make runtimes "-j$(nproc)" || make runtimes || return 1
    else
-     make cxx - j"$(nproc)" || make cxx || return 1
+     make cxx "-j$(nproc)" || make cxx || return 1
    fi
   )
 }
