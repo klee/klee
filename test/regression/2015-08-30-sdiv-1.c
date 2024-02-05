@@ -9,6 +9,7 @@
  */
 #include "klee/klee.h"
 #include <stdint.h>
+
 int main() {
   int32_t dividend;
   klee_make_symbolic(&dividend, sizeof dividend, "Dividend");

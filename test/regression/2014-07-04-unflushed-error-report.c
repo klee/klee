@@ -7,6 +7,7 @@
  * right content.
  */
 #include "klee/klee.h"
+
 int main() {
   unsigned int x = 15;
   unsigned int y;

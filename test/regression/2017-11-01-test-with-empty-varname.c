@@ -3,6 +3,7 @@
 // RUN: %klee --output-dir=%t.klee-out %t1.bc
 // RUN: FileCheck %s --input-file=%t.klee-out/warnings.txt
 #include "klee/klee.h"
+
 int main() {
   unsigned a;
 
