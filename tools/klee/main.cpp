@@ -119,6 +119,10 @@ namespace {
                 cl::desc("Write .sym.path files for each test case (default=false)"),
                 cl::cat(TestCaseCat));
 
+  cl::opt<bool> WriteBinTests(
+      "write-bin-tests",
+      cl::desc("Write binary files for test cases (default=false)"),
+      cl::cat(TestCaseCat));
 
   /*** Startup options ***/
 
@@ -515,6 +519,22 @@ void KleeHandler::processTestCase(const ExecutionState &state,
         klee_warning("unable to write output test case, losing it");
       } else {
         ++m_numGeneratedTests;
+        if (WriteBinTests) {
+          std::string binTestSuffix = "ktest.buffer";
+          FILE *f = fopen(
+              getOutputFilename(getTestFilename(binTestSuffix.c_str(), id))
+                  .c_str(),
+              "wb");
+          for (unsigned i = 0; i < b.numObjects; i++) {
+            KTestObject *o = &b.objects[i];
+            std::string oname(o->name);
+
+            if (1 != fwrite(o->bytes, o->numBytes, 1, f)) {
+              klee_warning("Writing object to a binary file failed");
+            }
+          }
+          fclose(f);
+        }
       }
 
       for (unsigned i=0; i<b.numObjects; i++)
