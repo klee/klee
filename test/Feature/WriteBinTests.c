@@ -18,6 +18,8 @@
 // RUN: %ktest-tool %t.klee-out/test000004.ktest | grep hex | awk '{print $NF}' | tr -d '\n' &> %t.klee-out/oracle4.bin
 // RUN  diff %t.klee-out/oracle4.bin %t.klee-out/test000004.ktest.buffer
 
+#include "klee/klee.h"
+
 int main(int argc, char *argv[]) {
 
   int x;
