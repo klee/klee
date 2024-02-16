@@ -29,7 +29,7 @@ llvm::cl::OptionCategory
 
 namespace {
 llvm::cl::opt<bool> CompressExecutionTree(
-    "compress-execution-tree",
+    "compress-exec-tree",
     llvm::cl::desc("Remove intermediate nodes in the execution "
                    "tree whenever possible (default=false)"),
     llvm::cl::init(false), llvm::cl::cat(ExecTreeCat));

@@ -17,9 +17,9 @@
 
 namespace {
 llvm::cl::opt<unsigned> BatchSize(
-    "ptree-batch-size", llvm::cl::init(100U),
+    "exec-tree-batch-size", llvm::cl::init(100U),
     llvm::cl::desc("Number of execution tree nodes to batch for writing, "
-                   "see --write-execution-tree (default=100)"),
+                   "see --write-exec-tree (default=100)"),
     llvm::cl::cat(klee::ExecTreeCat));
 } // namespace
 
