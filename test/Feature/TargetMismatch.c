@@ -1,4 +1,3 @@
-// REQUIRES: not-darwin
 // RUN: %clang %s -m32 -emit-llvm %O0opt -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --exit-on-error > %t2.out 2>&1 || true
