@@ -225,7 +225,7 @@ cl::opt<ExtCallWarnings> ExternalCallWarnings(
             "Never warn"),
         clEnumValN(ExtCallWarnings::OncePerFunction, "once-per-function",
                    "Warn once per external function (default)"),
-        clEnumValN(ExternalCallPolicy::All, "all",
+        clEnumValN(ExtCallWarnings::All, "all",
                    "Always warn")),
     cl::init(ExtCallWarnings::OncePerFunction),
     cl::cat(ExtCallsCat));
