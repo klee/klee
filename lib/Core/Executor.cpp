@@ -184,9 +184,10 @@ cl::opt<bool>
 /*** External call policy options ***/
 
 enum class ExternalCallPolicy {
-  None,     // No external calls allowed
-  Concrete, // Only external calls with concrete arguments allowed
-  All,      // All external calls allowed
+  None,       // No external calls allowed
+  Concrete,   // Only external calls with concrete arguments allowed
+  All,        // All external calls allowed, symbolic arguments concretized
+  OverApprox, // All external calls allowed, symbolic inputs are not constrained by the call
 };
 
 cl::opt<ExternalCallPolicy> ExternalCalls(
@@ -203,7 +204,11 @@ cl::opt<ExternalCallPolicy> ExternalCalls(
                    "allowed (default)"),
         clEnumValN(ExternalCallPolicy::All, "all",
                    "All external function calls are allowed.  This concretizes "
-                   "any symbolic arguments in calls to external functions.")),
+                   "any symbolic arguments in calls to external functions."),
+        clEnumValN(ExternalCallPolicy::OverApprox, "over-approx",
+                   "All external function calls are allowed.  This concretizes "
+                   "any symbolic arguments in calls to external functions but"
+                   "the concretization is ignored after the call (see docs).")),
     cl::init(ExternalCallPolicy::Concrete),
     cl::cat(ExtCallsCat));
 
@@ -4013,7 +4018,8 @@ void Executor::callExternalFunction(ExecutionState &state,
   unsigned wordIndex = 2;
   for (std::vector<ref<Expr> >::iterator ai = arguments.begin(), 
        ae = arguments.end(); ai!=ae; ++ai) {
-    if (ExternalCalls == ExternalCallPolicy::All) { // don't bother checking uniqueness
+    if (ExternalCalls == ExternalCallPolicy::All ||
+        ExternalCalls == ExternalCallPolicy::OverApprox) {
       *ai = optimizer.optimizeExpr(*ai, true);
       ref<ConstantExpr> cvalue = getValueFromSeeds(state, *ai);
       /* If no seed evaluation results in a constant, call the solver */
@@ -4022,7 +4028,11 @@ void Executor::callExternalFunction(ExecutionState &state,
             state.constraints, *ai, cvalue, state.queryMetaData);
         assert(success && "FIXME: Unhandled solver failure");
       }
+
       cvalue->toMemory(&args[wordIndex]);
+      if (ExternalCalls == ExternalCallPolicy::All)
+        addConstraint(state, EqExpr::create(cvalue, *ai));
+
       ObjectPair op;
       // Checking to see if the argument is a pointer to something
       if (cvalue->getWidth() == Context::get().getPointerWidth() &&

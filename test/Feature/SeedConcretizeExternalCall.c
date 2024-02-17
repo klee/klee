@@ -24,6 +24,5 @@ int main() {
   klee_make_symbolic(&x, sizeof(x), "x");
   assert(abs(x) == 12345678);
 
-  // CHECK-STATS: 0
-  // No queries, but this will change once https://github.com/klee/klee/pull/1520 is merged
+  // CHECK-STATS: 1
 }
