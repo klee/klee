@@ -1,4 +1,3 @@
-// XFAIL: *
 // This test checks that symbolic arguments to a function call are correctly concretized
 // RUN: %clang %s -emit-llvm %O0opt -g -c -o %t.bc
 
