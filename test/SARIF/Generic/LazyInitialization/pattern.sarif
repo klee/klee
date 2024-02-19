@@ -24,7 +24,39 @@
                             "startLine": 14
                           }
                         }
-                      }
+                      },
+                      "metadata": null
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "message": {
+                          "text": "memory error: out of bound pointer"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "LazyInitialization.c"
+                          },
+                          "region": {
+                            "endColumn": null,
+                            "endLine": null,
+                            "startColumn": 6,
+                            "startLine": 14
+                          }
+                        }
+                      },
+                      "metadata": null
                     }
                   ]
                 }
@@ -54,7 +86,8 @@
                             "startLine": 15
                           }
                         }
-                      }
+                      },
+                      "metadata": null
                     }
                   ]
                 }

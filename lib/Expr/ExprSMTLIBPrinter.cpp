@@ -621,7 +621,7 @@ void ExprSMTLIBPrinter::printArrayDeclarations() {
           printSeperator();
 
           auto source = dyn_cast<ConstantSource>(array->source);
-          printConstant(source->constantValues.load(byteIndex));
+          printConstant(source->constantValues->load(byteIndex));
 
           p->popIndent();
           printSeperator();

@@ -299,7 +299,6 @@ ExprVisitor::Action ExprVisitor::visitSelect(const SelectExpr &) {
 ExprVisitor::Action ExprVisitor::visitConcat(const ConcatExpr &) {
   return Action::doChildren();
 }
-
 ExprVisitor::Action ExprVisitor::visitExtract(const ExtractExpr &) {
   return Action::doChildren();
 }

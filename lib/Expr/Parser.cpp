@@ -558,7 +558,7 @@ SourceResult ParserImpl::ParseConstantSource() {
   }
 
   SparseStorage<ref<ConstantExpr>> Values(storage, defaultValue);
-  return SourceBuilder::constant(Values);
+  return SourceBuilder::constant(Values.clone());
 }
 
 SourceResult ParserImpl::ParseSymbolicSizeConstantAddressSource() {

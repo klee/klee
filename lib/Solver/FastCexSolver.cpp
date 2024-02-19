@@ -389,7 +389,7 @@ public:
     if (array.isConstantArray() && index.isFixed()) {
       if (ref<ConstantSource> constantSource =
               dyn_cast<ConstantSource>(array.source)) {
-        if (auto value = constantSource->constantValues.load(index.min())) {
+        if (auto value = constantSource->constantValues->load(index.min())) {
           return ValueRange(value->getZExtValue(8));
         }
       }
@@ -895,8 +895,8 @@ public:
           if (!isa<ConstantExpr>(array->size)) {
             assert(0 && "Unimplemented");
           }
-          propagateExactValues(constantSource->constantValues.load(index.min()),
-                               range);
+          propagateExactValues(
+              constantSource->constantValues->load(index.min()), range);
         } else {
           CexValueData cvd = cod.getExactValues(index.min());
           if (range.min() > cvd.min()) {

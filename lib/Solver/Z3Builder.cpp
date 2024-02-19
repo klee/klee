@@ -255,7 +255,7 @@ Z3ASTHandle Z3Builder::getInitialArray(const Array *root) {
     std::string unique_name = root->getIdentifier() + unique_id;
 
     auto source = dyn_cast<ConstantSource>(root->source);
-    auto value = (source ? source->constantValues.defaultV() : nullptr);
+    auto value = (source ? source->constantValues->defaultV() : nullptr);
     if (source) {
       assert(value);
     }
@@ -302,7 +302,7 @@ Z3ASTHandle Z3Builder::getInitialArray(const Array *root) {
       if (auto constSize = dyn_cast<ConstantExpr>(root->size)) {
         std::vector<Z3ASTHandle> array_assertions;
         for (size_t i = 0; i < constSize->getZExtValue(); i++) {
-          auto value = source->constantValues.load(i);
+          auto value = source->constantValues->load(i);
           // construct(= (select i root) root->value[i]) to be asserted in
           // Z3Solver.cpp
           int width_out;
@@ -315,7 +315,7 @@ Z3ASTHandle Z3Builder::getInitialArray(const Array *root) {
         }
         constant_array_assertions[root] = std::move(array_assertions);
       } else {
-        for (auto &[index, value] : source->constantValues.storage()) {
+        for (const auto &[index, value] : source->constantValues->storage()) {
           int width_out;
           Z3ASTHandle array_value = construct(value, &width_out);
           assert(width_out == (int)root->getRange() &&

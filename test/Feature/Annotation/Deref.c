@@ -56,7 +56,7 @@ int main() {
   // CHECK-DEREF1: memory error: null pointer exception
   maybeDeref1(a);
   // CHECK-DEREF1: memory error: out of bound pointer
-  maybeDeref1((int *)42);
+  maybeDeref1(&c + 42);
   // CHECK-DEREF1: partially completed paths = 2
   // CHECK-DEREF1: generated tests = 3
 #endif

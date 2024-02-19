@@ -248,6 +248,11 @@ private:
 
   FunctionsByModule functionsByModule;
 
+  const char *okExternalsList[4] = {"printf", "fprintf", "puts", "getpid"};
+  std::set<std::string> okExternals = std::set<std::string>(
+      okExternalsList,
+      okExternalsList + (sizeof(okExternalsList) / sizeof(okExternalsList[0])));
+
   /// Return the typeid corresponding to a certain `type_info`
   ref<ConstantExpr> getEhTypeidFor(ref<Expr> type_info);
 
@@ -464,42 +469,63 @@ private:
 
   ref<Expr> readArgument(ExecutionState &state, StackFrame &frame,
                          const KFunction *kf, unsigned index) {
-    ref<Expr> arg = frame.locals[kf->getArgRegister(index)].value;
+    ref<Expr> arg = frame.locals->at(kf->getArgRegister(index)).value;
     if (!arg) {
       prepareSymbolicArg(state, frame, index);
     }
-    return frame.locals[kf->getArgRegister(index)].value;
+    return frame.locals->at(kf->getArgRegister(index)).value;
   }
 
   ref<Expr> readDest(ExecutionState &state, StackFrame &frame,
                      const KInstruction *target) {
     unsigned index = target->getDest();
-    ref<Expr> reg = frame.locals[index].value;
+    ref<Expr> reg = frame.locals->at(index).value;
     if (!reg) {
       prepareSymbolicRegister(state, frame, index);
     }
-    return frame.locals[index].value;
+    return frame.locals->at(index).value;
   }
 
-  Cell &getArgumentCell(const StackFrame &frame, const KFunction *kf,
-                        unsigned index) {
-    return frame.locals[kf->getArgRegister(index)];
+  const Cell &getArgumentCell(const StackFrame &frame, const KFunction *kf,
+                              unsigned index) {
+    return frame.locals->at(kf->getArgRegister(index));
   }
 
-  Cell &getDestCell(const StackFrame &frame, const KInstruction *target) {
-    return frame.locals[target->getDest()];
+  const Cell &getDestCell(const StackFrame &frame, const KInstruction *target) {
+    return frame.locals->at(target->getDest());
+  }
+
+  void setArgumentCell(StackFrame &frame, const KFunction *kf, unsigned index,
+                       ref<Expr> value) {
+    return frame.locals->set(kf->getArgRegister(index), Cell(value));
+  }
+
+  void setDestCell(StackFrame &frame, const KInstruction *target,
+                   ref<Expr> value) {
+    return frame.locals->set(target->getDest(), Cell(value));
   }
 
   const Cell &eval(const KInstruction *ki, unsigned index,
                    ExecutionState &state, bool isSymbolic = true);
 
-  Cell &getArgumentCell(const ExecutionState &state, const KFunction *kf,
-                        unsigned index) {
+  const Cell &getArgumentCell(const ExecutionState &state, const KFunction *kf,
+                              unsigned index) {
     return getArgumentCell(state.stack.valueStack().back(), kf, index);
   }
 
-  Cell &getDestCell(const ExecutionState &state, const KInstruction *target) {
+  const Cell &getDestCell(const ExecutionState &state,
+                          const KInstruction *target) {
     return getDestCell(state.stack.valueStack().back(), target);
+  }
+
+  void setArgumentCell(ExecutionState &state, const KFunction *kf,
+                       unsigned index, ref<Expr> value) {
+    setArgumentCell(state.stack.valueStack().back(), kf, index, value);
+  }
+
+  void setDestCell(ExecutionState &state, const KInstruction *target,
+                   ref<Expr> value) {
+    setDestCell(state.stack.valueStack().back(), target, value);
   }
 
   void bindLocal(const KInstruction *target, StackFrame &frame,

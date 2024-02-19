@@ -453,12 +453,12 @@ ExprHandle STPBuilder::constructSDivByConstant(ExprHandle expr_n,
       // to work correctly in that case.
 
       auto constSize = cast<ConstantExpr>(root->size)->getZExtValue();
-      // TODO: usage of `constantValues.size()` seems unconvinient.
+      // TODO: usage of `constantValues->size()` seems unconvinient.
       for (unsigned i = 0; i < constSize; i++) {
         ::VCExpr prev = array_expr;
         array_expr = vc_writeExpr(
             vc, prev, construct(ConstantExpr::alloc(i, root->getDomain()), 0),
-            construct(constantSource->constantValues.load(i), 0));
+            construct(constantSource->constantValues->load(i), 0));
         vc_DeleteExpr(prev);
       }
     }
@@ -582,9 +582,9 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
     if (auto constantSource =
             dyn_cast<ConstantSource>(re->updates.root->source)) {
       if (!isa<ConstantExpr>(re->updates.root->size)) {
-        ref<Expr> selectExpr = constantSource->constantValues.defaultV();
+        ref<Expr> selectExpr = constantSource->constantValues->defaultV();
         for (const auto &[index, value] :
-             constantSource->constantValues.storage()) {
+             constantSource->constantValues->storage()) {
           selectExpr = SelectExpr::create(
               EqExpr::create(re->index, ConstantExpr::create(
                                             index, re->index->getWidth())),

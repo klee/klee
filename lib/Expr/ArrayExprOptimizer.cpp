@@ -303,7 +303,7 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
       if (ref<ConstantSource> constantSource =
               dyn_cast<ConstantSource>(read->updates.root->source)) {
         arrayConstValues =
-            constantSource->constantValues.getFirstNIndexes(size);
+            constantSource->constantValues->getFirstNIndexes(size);
       }
       for (auto it = us.rbegin(); it != us.rend(); it++) {
         const UpdateNode *un = *it;
@@ -379,7 +379,7 @@ ref<Expr> ExprOptimizer::getSelectOptExpr(
       if (ref<ConstantSource> constantSource =
               dyn_cast<ConstantSource>(read->updates.root->source)) {
         arrayConstValues =
-            constantSource->constantValues.getFirstNIndexes(size);
+            constantSource->constantValues->getFirstNIndexes(size);
       }
       if (arrayConstValues.size() < size) {
         // We need to "force" initialization of the values

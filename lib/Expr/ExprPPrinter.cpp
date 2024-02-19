@@ -340,7 +340,7 @@ public:
     PC << source->getName() << " ";
 
     if (auto s = dyn_cast<ConstantSource>(source)) {
-      s->constantValues.print(PC.getStream(), Density::Sparse);
+      s->constantValues->print(PC.getStream(), Density::Sparse);
     } else if (auto s = dyn_cast<SymbolicSizeConstantAddressSource>(source)) {
       PC << s->version << " ";
       switch (s->allocSite->getKind()) {

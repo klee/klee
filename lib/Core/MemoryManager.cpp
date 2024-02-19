@@ -202,7 +202,7 @@ MemoryObject *MemoryManager::allocate(ref<Expr> size, bool isLocal,
   ++stats::allocations;
   res = new MemoryObject(addressExpr, size, alignment, isLocal, isGlobal, false,
                          isLazyInitialized, allocSite, this, type,
-                         timestamp, content);
+                         conditionExpr, timestamp, content);
 
   objects.insert(res);
   return res;

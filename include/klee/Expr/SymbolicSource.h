@@ -5,6 +5,7 @@
 
 #include "klee/ADT/SparseStorage.h"
 #include "klee/Support/CompilerWarning.h"
+#include <memory>
 
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
@@ -74,11 +75,11 @@ public:
 
 class ConstantSource : public SymbolicSource {
 public:
-  const SparseStorage<ref<ConstantExpr>> constantValues;
+  const std::unique_ptr<Storage<ref<ConstantExpr>>> constantValues;
 
-  ConstantSource(SparseStorage<ref<ConstantExpr>> _constantValues)
-      : constantValues(std::move(_constantValues)) {
-    assert(constantValues.defaultV() && "Constant must be constant!");
+  ConstantSource(Storage<ref<ConstantExpr>> *_constantValues)
+      : constantValues(_constantValues) {
+    assert(constantValues->defaultV() && "Constant must be constant!");
   }
 
   Kind getKind() const override { return Kind::Constant; }
@@ -98,8 +99,8 @@ public:
       return getKind() < b.getKind() ? -1 : 1;
     }
     const ConstantSource &cb = static_cast<const ConstantSource &>(b);
-    if (constantValues != cb.constantValues) {
-      return constantValues < cb.constantValues ? -1 : 1;
+    if (*constantValues.get() != *cb.constantValues.get()) {
+      return *constantValues.get() < *cb.constantValues.get() ? -1 : 1;
     }
     return 0;
   }

@@ -141,14 +141,11 @@ protected:
 
   struct APIntHash {
     unsigned operator()(const llvm::APInt &e) const {
-      return llvm::hash_value(e);
-    }
-  };
-
-  struct APIntPairHash {
-    unsigned operator()(const std::pair<llvm::APInt, llvm::APInt> &e) const {
-      return llvm::hash_value(e.first) ^
-             (llvm::hash_value(e.second) * MAGIC_HASH_CONSTANT);
+      Expr::Width w = e.getBitWidth();
+      if (w <= 64)
+        return e.getLimitedValue() ^ (w * MAGIC_HASH_CONSTANT);
+      else
+        return hash_value(e) ^ (w * MAGIC_HASH_CONSTANT);
     }
   };
 
@@ -158,28 +155,13 @@ protected:
     }
   };
 
-  struct APIntPairEq {
-    bool operator()(const std::pair<llvm::APInt, llvm::APInt> &l,
-                    const std::pair<llvm::APInt, llvm::APInt> &r) const {
-      return APIntEq()(l.first, r.first) && APIntEq()(l.second, r.second);
-    }
-  };
-
   struct ConstantExprCacheSet {
     std::unordered_map<llvm::APInt, ConstantExpr *, APIntHash, APIntEq> cache;
     ~ConstantExprCacheSet();
   };
 
-  struct ConstantPointerExprCacheSet {
-    std::unordered_map<std::pair<llvm::APInt, llvm::APInt>,
-                       ConstantPointerExpr *, APIntPairHash, APIntPairEq>
-        cache;
-    ~ConstantPointerExprCacheSet();
-  };
-
   static ExprCacheSet cachedExpressions;
   static ConstantExprCacheSet cachedConstantExpressions;
-  static ConstantPointerExprCacheSet cachedConstantPointerExpressions;
   static ref<Expr> createCachedExpr(ref<Expr> e);
   bool isCached = false;
   bool toBeCleared = false;
@@ -1578,7 +1560,7 @@ public:
     ref<ConstantExpr> r(new ConstantExpr(f.bitcastToAPInt(), true));
     r->computeHash();
     r->computeHeight();
-    return r;
+    return createCachedExpr(r);
   }
 
   static ref<ConstantExpr> alloc(uint64_t v, Width w) {
@@ -1785,7 +1767,6 @@ public:
   static ref<Expr> create(const ref<ConstantExpr> &b,
                           const ref<ConstantExpr> &o);
 
-  ~ConstantPointerExpr();
   Kind getKind() const { return Expr::ConstantPointer; }
   ref<ConstantExpr> getConstantBase() const { return cast<ConstantExpr>(base); }
   ref<ConstantExpr> getConstantOffset() const {

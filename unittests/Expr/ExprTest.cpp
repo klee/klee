@@ -133,7 +133,7 @@ TEST(ExprTest, ReadExprFoldingBasic) {
 
   const Array *array =
       Array::create(ConstantExpr::create(size, sizeof(uint64_t) * CHAR_BIT),
-                    SourceBuilder::constant(Contents));
+                    SourceBuilder::constant(Contents.clone()));
 
   // Basic constant folding rule
   UpdateList ul(array, 0);
@@ -160,7 +160,7 @@ TEST(ExprTest, ReadExprFoldingIndexOutOfBound) {
     Contents.store(i, ConstantExpr::create(i + 1, Expr::Int8));
   const Array *array =
       Array::create(ConstantExpr::create(size, sizeof(uint64_t) * CHAR_BIT),
-                    SourceBuilder::constant(Contents));
+                    SourceBuilder::constant(Contents.clone()));
 
   // Constant folding rule with index-out-of-bound
   // Constant index (128)
@@ -183,7 +183,7 @@ TEST(ExprTest, ReadExprFoldingConstantUpdate) {
 
   const Array *array =
       Array::create(ConstantExpr::create(size, sizeof(uint64_t) * CHAR_BIT),
-                    SourceBuilder::constant(Contents));
+                    SourceBuilder::constant(Contents.clone()));
 
   // Constant folding rule with constant update
   // Constant index (0)
@@ -210,7 +210,7 @@ TEST(ExprTest, ReadExprFoldingConstantMultipleUpdate) {
 
   const Array *array =
       Array::create(ConstantExpr::create(size, sizeof(uint64_t) * CHAR_BIT),
-                    SourceBuilder::constant(Contents));
+                    SourceBuilder::constant(Contents.clone()));
 
   // Constant folding rule with constant update
   // Constant index (0)
@@ -239,7 +239,7 @@ TEST(ExprTest, ReadExprFoldingSymbolicValueUpdate) {
 
   const Array *array =
       Array::create(ConstantExpr::create(size, sizeof(uint64_t) * CHAR_BIT),
-                    SourceBuilder::constant(Contents));
+                    SourceBuilder::constant(Contents.clone()));
 
   // Constant folding rule with symbolic update (value)
   // Constant index (0)
@@ -268,7 +268,7 @@ TEST(ExprTest, ReadExprFoldingSymbolicIndexUpdate) {
 
   const Array *array =
       Array::create(ConstantExpr::create(size, sizeof(uint64_t) * CHAR_BIT),
-                    SourceBuilder::constant(Contents));
+                    SourceBuilder::constant(Contents.clone()));
 
   // Constant folding rule with symbolic update (index)
   UpdateList ul(array, 0);

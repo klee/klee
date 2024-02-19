@@ -17,6 +17,8 @@ class MemoryObject;
 
 struct Cell {
   ref<Expr> value;
+  Cell() = default;
+  explicit Cell(ref<Expr> value) : value(value) {}
 };
 } // namespace klee
 

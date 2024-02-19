@@ -36,6 +36,7 @@ ENV USE_LIBCXX=1
 ENV KLEE_RUNTIME_BUILD="Debug+Asserts"
 ENV SQLITE_VERSION=3400100
 ENV JSON_VERSION=v3.11.3
+ENV IMMER_VERSION=v0.8.1
 LABEL maintainer="KLEE Developers"
 
 # TODO remove adding sudo package

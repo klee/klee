@@ -55,7 +55,8 @@
                             "startLine": 14
                           }
                         }
-                      }
+                      },
+                      "metadata": null
                     },
                     {
                       "location": {
@@ -73,7 +74,8 @@
                             "startLine": 15
                           }
                         }
-                      }
+                      },
+                      "metadata": null
                     }
                   ]
                 }
@@ -103,7 +105,8 @@
                             "startLine": 14
                           }
                         }
-                      }
+                      },
+                      "metadata": null
                     },
                     {
                       "location": {
@@ -121,7 +124,8 @@
                             "startLine": 16
                           }
                         }
-                      }
+                      },
+                      "metadata": null
                     }
                   ]
                 }

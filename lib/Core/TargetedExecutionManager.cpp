@@ -86,7 +86,7 @@ cl::list<StateTerminationType> ExitOnErrorType(
                    "Violation of nullable attribute detected"),
         clEnumValN(StateTerminationType::User, "User",
                    "Wrong klee_* functions invocation")),
-    cl::ZeroOrMore, cl::cat(TerminationCat));
+    cl::cat(TerminationCat));
 
 cl::opt<unsigned long long>
     MaxInstructions("max-instructions",

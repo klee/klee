@@ -27,8 +27,10 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/StringExtras.h"
 DISABLE_WARNING_POP
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -69,6 +71,7 @@ public:
   mutable unsigned timestamp;
 
   ref<Expr> addressExpr;
+  std::optional<uint64_t> address;
 
   /// size in bytes
   ref<Expr> sizeExpr;
@@ -103,9 +106,10 @@ public:
   // XXX this is just a temp hack, should be removed
   explicit MemoryObject(uint64_t _address)
       : id(0), timestamp(0), addressExpr(Expr::createPointer(_address)),
-        sizeExpr(Expr::createPointer(0)), conditionExpr(Expr::createTrue()),
-        alignment(0), isFixed(true), isLazyInitialized(false), parent(nullptr),
-        type(nullptr), content(nullptr), allocSite(nullptr) {}
+        address(_address), sizeExpr(Expr::createPointer(0)),
+        conditionExpr(Expr::createTrue()), alignment(0), isFixed(true),
+        isLazyInitialized(false), parent(nullptr), type(nullptr),
+        content(nullptr), allocSite(nullptr) {}
 
   MemoryObject(
       ref<Expr> _address, ref<Expr> _size, uint64_t alignment, bool _isLocal,
@@ -125,6 +129,9 @@ public:
       timestamp = _timestamp;
     } else {
       timestamp = time++;
+    }
+    if (auto constAddress = dyn_cast<ConstantExpr>(_address)) {
+      address = constAddress->getZExtValue();
     }
   }
 
@@ -216,13 +223,15 @@ public:
 
 class ObjectStage {
 private:
+  using storage_ty = Storage<ref<Expr>, OptionalRefEq<Expr>>;
+  using bool_storage_ty = Storage<bool>;
   /// knownSymbolics[byte] holds the expression for byte,
   /// if byte is known
-  mutable SparseStorage<ref<Expr>, OptionalRefEq<Expr>> knownSymbolics;
+  mutable std::unique_ptr<storage_ty> knownSymbolics;
 
   /// unflushedMask[byte] is set if byte is unflushed
   /// mutable because may need flushed during read of const
-  mutable SparseStorage<bool> unflushedMask;
+  mutable std::unique_ptr<bool_storage_ty> unflushedMask;
 
   // mutable because we may need flush during read of const
   mutable UpdateList updates;
@@ -253,7 +262,7 @@ public:
   void print() const;
 
   size_t getSparseStorageEntries() {
-    return knownSymbolics.storage().size() + unflushedMask.storage().size();
+    return knownSymbolics->storage().size() + unflushedMask->storage().size();
   }
   void initializeToZero();
 
@@ -305,6 +314,7 @@ public:
   const MemoryObject *getObject() const { return object.get(); }
 
   void setReadOnly(bool ro) { readOnly = ro; }
+  void initializeToZero();
 
   size_t getSparseStorageEntries() {
     return valueOS.getSparseStorageEntries() + baseOS.getSparseStorageEntries();
@@ -315,7 +325,12 @@ public:
   ref<Expr> read(ref<Expr> offset, Expr::Width width) const;
   ref<Expr> read(unsigned offset, Expr::Width width) const;
   ref<Expr> read8(unsigned offset) const;
+  ref<Expr> readValue(ref<Expr> offset, Expr::Width width) const;
+  ref<Expr> readBase(ref<Expr> offset, Expr::Width width) const;
+  ref<Expr> readValue(unsigned offset, Expr::Width width) const;
+  ref<Expr> readBase(unsigned offset, Expr::Width width) const;
   ref<Expr> readValue8(unsigned offset) const;
+  ref<Expr> readBase8(unsigned offset) const;
 
   void write(unsigned offset, ref<Expr> value);
   void write(ref<Expr> offset, ref<Expr> value);
@@ -333,6 +348,8 @@ public:
 
 private:
   ref<Expr> read8(ref<Expr> offset) const;
+  ref<Expr> readValue8(ref<Expr> offset) const;
+  ref<Expr> readBase8(ref<Expr> offset) const;
   void write8(unsigned offset, ref<Expr> value);
   void write8(ref<Expr> offset, ref<Expr> value);
 };

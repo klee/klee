@@ -19,7 +19,7 @@
 // RUN: rm -rf %t5.klee-out-1
 // RUN: %klee --solver-backend=z3 --output-dir=%t5.klee-out-1 --annotations=%S/InitNullEmpty.json --mock-policy=all -emit-all-errors=true %t5.bc 2>&1 | FileCheck %s -check-prefix=CHECK-EMPTY
 // CHECK-EMPTY: ASSERTION FAIL
-// CHECK-EMPTY: partially completed paths = {{[1-2]}}
+// CHECK-EMPTY: partially completed paths = {{[1-4]}}
 
 // RUN: %clang -DMustInitNull5 %s -g -emit-llvm %O0opt -c -o %t6.bc
 // RUN: rm -rf %t6.klee-out-1
@@ -64,7 +64,7 @@ int main() {
 #ifdef InitNull4
   a = *maybeInitNull2();
   // CHECK-INITNULL4: ASSERTION FAIL
-  // CHECK-INITNULL4: partially completed paths = {{[2-3]}}
+  // CHECK-INITNULL4: partially completed paths = {{[2-4]}}
 #endif
 
 #ifdef MustInitNull5

@@ -48,7 +48,7 @@ TEST_F(Z3SolverTest, GetConstraintLog) {
 
   const Array *ConstantArray =
       Array::create(ConstantExpr::create(4, sizeof(uint64_t) * CHAR_BIT),
-                    SourceBuilder::constant(ConstantExpressions));
+                    SourceBuilder::constant(ConstantExpressions.clone()));
 
   const UpdateList ConstantArrayUL(ConstantArray, nullptr);
   const ref<Expr> Index = ConstantExpr::alloc(1, Expr::Int32);

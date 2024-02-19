@@ -573,7 +573,6 @@ std::string Expr::toString() const {
 
 Expr::ExprCacheSet Expr::cachedExpressions;
 Expr::ConstantExprCacheSet Expr::cachedConstantExpressions;
-Expr::ConstantPointerExprCacheSet Expr::cachedConstantPointerExpressions;
 
 Expr::~Expr() {
   Expr::count--;
@@ -596,30 +595,7 @@ ConstantExpr::~ConstantExpr() {
   }
 }
 
-ConstantPointerExpr::~ConstantPointerExpr() {
-  if (isCached) {
-    toBeCleared = true;
-    if (!cast<ConstantExpr>(base)->isFloat() &&
-        !cast<ConstantExpr>(value)->isFloat()) {
-      cachedConstantPointerExpressions.cache.erase(
-          {cast<ConstantExpr>(base)->getAPValue(),
-           cast<ConstantExpr>(value)->getAPValue()});
-    } else {
-      cachedExpressions.cache.erase(this);
-    }
-    isCached = false;
-  }
-}
-
 Expr::ConstantExprCacheSet::~ConstantExprCacheSet() {
-  while (cache.size() != 0) {
-    auto tmp = *cache.begin();
-    tmp.second->isCached = false;
-    cache.erase(cache.begin());
-  }
-}
-
-Expr::ConstantPointerExprCacheSet::~ConstantPointerExprCacheSet() {
   while (cache.size() != 0) {
     auto tmp = *cache.begin();
     tmp.second->isCached = false;
@@ -1606,7 +1582,7 @@ ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index, bool safe) {
 
   // So that we return weird stuff like reads from consts that should have
   // simplified to constant exprs if we read beyond size boundary.
-  if (auto source = dyn_cast<ConstantSource>(ul.root->source)) {
+  if (ConstantSource *source = dyn_cast<ConstantSource>(ul.root->source)) {
     if (auto arraySizeExpr = dyn_cast<ConstantExpr>(ul.root->size)) {
       if (auto indexExpr = dyn_cast<ConstantExpr>(index)) {
         auto arraySize = arraySizeExpr->getZExtValue();
@@ -1620,20 +1596,20 @@ ref<Expr> ReadExpr::create(const UpdateList &ul, ref<Expr> index, bool safe) {
     }
   }
 
-  if (ref<ConstantSource> constantSource =
+  if (ConstantSource *constantSource =
           dyn_cast<ConstantSource>(ul.root->source)) {
     if (!updateListHasSymbolicWrites) {
       // No updates with symbolic index to a constant array have been found
       if (ConstantExpr *CE = dyn_cast<ConstantExpr>(index)) {
         assert(CE->getWidth() <= 64 && "Index too large");
         uint64_t concreteIndex = CE->getZExtValue();
-        auto value = constantSource->constantValues.load(concreteIndex);
+        auto value = constantSource->constantValues->load(concreteIndex);
         assert(value);
         return value;
-      } else if (constantSource->constantValues.storage().size() == 0 &&
+      } else if (constantSource->constantValues->storage().size() == 0 &&
                  !safe) {
-        assert(constantSource->constantValues.defaultV());
-        return constantSource->constantValues.defaultV();
+        assert(constantSource->constantValues->defaultV());
+        return constantSource->constantValues->defaultV();
       }
     }
   }
@@ -1792,6 +1768,11 @@ ref<Expr> Expr::getValue() const {
                                 : const_cast<Expr *>(this);
 }
 
+ref<Expr> convolution(const ref<Expr> &l, const ref<Expr> &r) {
+  ref<Expr> null = ConstantExpr::create(0, l->getWidth());
+  return SelectExpr::create(EqExpr::create(l, r), l, null);
+}
+
 ref<Expr> ConcatExpr::create(const ref<Expr> &l, const ref<Expr> &r) {
   Expr::Width w = l->getWidth() + r->getWidth();
 
@@ -1815,10 +1796,7 @@ ref<Expr> ConcatExpr::create(const ref<Expr> &l, const ref<Expr> &r) {
   if (PointerExpr *ee_left = dyn_cast<PointerExpr>(l)) {
     if (PointerExpr *ee_right = dyn_cast<PointerExpr>(r)) {
       return PointerExpr::create(
-          SelectExpr::create(
-              EqExpr::create(ee_left->getBase(), ee_right->getBase()),
-              ee_left->getBase(),
-              ConstantExpr::create(0, ee_left->getBase()->getWidth())),
+          convolution(ee_left->getBase(), ee_right->getBase()),
           ConcatExpr::create(ee_left->getValue(), ee_right->getValue()));
     }
   }
@@ -2383,6 +2361,51 @@ static ref<Expr> AShrExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
     return _e_op##_create(l.get(), r.get());                                   \
   }
 
+#define BCREATE_R_C(_e_op, _op, partialL, partialR, pointerL, pointerR)        \
+  ref<Expr> _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) {           \
+    assert(l->getWidth() == r->getWidth() && "type mismatch");                 \
+    if (SelectExpr *sel = dyn_cast<SelectExpr>(l)) {                           \
+      if (isa<ConstantExpr>(sel->trueExpr)) {                                  \
+        return SelectExpr::create(sel->cond, _e_op::create(sel->trueExpr, r),  \
+                                  _e_op::create(sel->falseExpr, r));           \
+      }                                                                        \
+    }                                                                          \
+    if (SelectExpr *ser = dyn_cast<SelectExpr>(r)) {                           \
+      if (isa<ConstantExpr>(ser->trueExpr)) {                                  \
+        return SelectExpr::create(ser->cond, _e_op::create(l, ser->trueExpr),  \
+                                  _e_op::create(l, ser->falseExpr));           \
+      }                                                                        \
+    }                                                                          \
+    if (PointerExpr *pl = dyn_cast<PointerExpr>(l)) {                          \
+      if (PointerExpr *pr = dyn_cast<PointerExpr>(r))                          \
+        return pl->_op(pr);                                                    \
+      return pointerR(pl, r.get());                                            \
+    } else if (PointerExpr *pr = dyn_cast<PointerExpr>(r)) {                   \
+      return pointerL(l.get(), pr);                                            \
+    }                                                                          \
+    if (ConstantExpr *cl = dyn_cast<ConstantExpr>(l)) {                        \
+      if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r))                        \
+        return cl->_op(cr);                                                    \
+      return partialR(cl, r.get());                                            \
+    } else if (ConstantExpr *cr = dyn_cast<ConstantExpr>(r)) {                 \
+      return partialL(l.get(), cr);                                            \
+    }                                                                          \
+    if (isa<_e_op>(l) && l->height() > r->height() + 1) {                      \
+      if (l->getKid(0)->height() > l->getKid(1)->height()) {                   \
+        return _e_op::create(l->getKid(0), _e_op::create(r, l->getKid(1)));    \
+      } else {                                                                 \
+        return _e_op::create(l->getKid(1), _e_op::create(r, l->getKid(0)));    \
+      }                                                                        \
+    } else if (isa<_e_op>(r) && r->height() > l->height() + 1) {               \
+      if (r->getKid(0)->height() > r->getKid(1)->height()) {                   \
+        return _e_op::create(r->getKid(0), _e_op::create(l, r->getKid(1)));    \
+      } else {                                                                 \
+        return _e_op::create(r->getKid(1), _e_op::create(l, r->getKid(0)));    \
+      }                                                                        \
+    }                                                                          \
+    return _e_op##_create(l.get(), r.get());                                   \
+  }
+
 #define BCREATE(_e_op, _op)                                                    \
   ref<Expr> _e_op ::create(const ref<Expr> &l, const ref<Expr> &r) {           \
     assert(l->getWidth() == r->getWidth() && "type mismatch");                 \
@@ -2415,14 +2438,14 @@ BCREATE_R(AddExpr, Add, AddExpr_createPartial, AddExpr_createPartialR,
           AddExpr_createPointer, AddExpr_createPointerR)
 BCREATE_R(SubExpr, Sub, SubExpr_createPartial, SubExpr_createPartialR,
           SubExpr_createPointer, SubExpr_createPointerR)
-BCREATE_R(MulExpr, Mul, MulExpr_createPartial, MulExpr_createPartialR,
-          MulExpr_createPointer, MulExpr_createPointerR)
-BCREATE_R(AndExpr, And, AndExpr_createPartial, AndExpr_createPartialR,
-          AndExpr_createPointer, AndExpr_createPointerR)
-BCREATE_R(OrExpr, Or, OrExpr_createPartial, OrExpr_createPartialR,
-          OrExpr_createPointer, OrExpr_createPointerR)
-BCREATE_R(XorExpr, Xor, XorExpr_createPartial, XorExpr_createPartialR,
-          XorExpr_createPointer, XorExpr_createPointerR)
+BCREATE_R_C(MulExpr, Mul, MulExpr_createPartial, MulExpr_createPartialR,
+            MulExpr_createPointer, MulExpr_createPointerR)
+BCREATE_R_C(AndExpr, And, AndExpr_createPartial, AndExpr_createPartialR,
+            AndExpr_createPointer, AndExpr_createPointerR)
+BCREATE_R_C(OrExpr, Or, OrExpr_createPartial, OrExpr_createPartialR,
+            OrExpr_createPointer, OrExpr_createPointerR)
+BCREATE_R_C(XorExpr, Xor, XorExpr_createPartial, XorExpr_createPartialR,
+            XorExpr_createPointer, XorExpr_createPointerR)
 BCREATE(UDivExpr, UDiv)
 BCREATE(SDivExpr, SDiv)
 BCREATE(URemExpr, URem)
@@ -2560,10 +2583,10 @@ static ref<Expr> TryConstArrayOpt(const ref<ConstantExpr> &cl, ReadExpr *rd) {
   assert(arraySize);
   auto size = arraySize->getZExtValue();
   ref<Expr> res = ConstantExpr::alloc(0, Expr::Bool);
-  if (ref<ConstantSource> constantSource =
+  if (ConstantSource *constantSource =
           dyn_cast<ConstantSource>(rd->updates.root->source)) {
     for (unsigned i = 0, e = size; i != e; ++i) {
-      if (cl == constantSource->constantValues.load(i)) {
+      if (cl == constantSource->constantValues->load(i)) {
         // Arbitrary maximum on the size of disjunction.
         if (++numMatches > 100)
           return EqExpr_create(cl, rd);
@@ -2879,13 +2902,12 @@ ref<Expr> PointerExpr::create(const ref<Expr> &expr) {
     pointer = cast<PointerExpr>(
         SelectExpr::create(se->cond, PointerExpr::create(se->trueExpr),
                            PointerExpr::create(se->falseExpr)));
-  } else if (read &&
+  } else if (read && read->updates.root->isSymbolicArray() &&
              read->updates.root->getSize()->getWidth() == expr->getWidth() &&
              read->updates.getSize() == 0) {
     pointer = PointerExpr::createSymbolic(expr, read, read->index);
   } else {
-    pointer =
-        PointerExpr::create(ConstantExpr::create(0, expr->getWidth()), expr);
+    pointer = PointerExpr::create(expr, expr);
   }
   return pointer;
 }

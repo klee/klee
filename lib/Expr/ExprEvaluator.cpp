@@ -32,7 +32,7 @@ ExprVisitor::Action ExprEvaluator::evalRead(const UpdateList &ul,
 
   if (ref<ConstantSource> constantSource =
           dyn_cast<ConstantSource>(ul.root->source)) {
-    if (auto value = constantSource->constantValues.load(index)) {
+    if (auto value = constantSource->constantValues->load(index)) {
       return Action::changeTo(value);
     }
   }

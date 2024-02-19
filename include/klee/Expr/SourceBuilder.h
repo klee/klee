@@ -9,7 +9,7 @@ class KModule;
 struct KInstruction;
 struct KGlobalVariable;
 
-template <typename T, typename Eq> class SparseStorage;
+template <typename T, typename Eq, typename IS, typename A> class SparseStorage;
 template <typename T> class ref;
 
 class SourceBuilder {
@@ -17,7 +17,7 @@ public:
   SourceBuilder() = delete;
 
   static ref<SymbolicSource>
-  constant(SparseStorage<ref<ConstantExpr>> constantValues);
+  constant(Storage<ref<ConstantExpr>> *constantValues);
 
   static ref<SymbolicSource> uninitialized(unsigned version,
                                            const KInstruction *allocSite);

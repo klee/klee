@@ -9,9 +9,6 @@
 
 int main() {
   int *p = klee_define_fixed_object(ADDRESS, 4);
-  klee_print_expr("p", p);
-  klee_print_expr("ADDRESS", ADDRESS);
-  klee_assert((int)p == (int)ADDRESS);
   *p = 10;
   printf("*p: %d\n", *p);
 

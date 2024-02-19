@@ -27,8 +27,8 @@ const Array *AlphaBuilder::visitArray(const Array *arr) {
       }
       source = SourceBuilder::mockDeterministic(mockSource->km,
                                                 mockSource->function, args);
-      alphaArrayMap[arr] = Array::create(
-          size, source, arr->getDomain(), arr->getRange());
+      alphaArrayMap[arr] =
+          Array::create(size, source, arr->getDomain(), arr->getRange());
       reverseAlphaArrayMap[alphaArrayMap[arr]] = arr;
     } else if (!arr->isConstantArray()) {
       source = SourceBuilder::alpha(index);

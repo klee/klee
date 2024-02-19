@@ -43,7 +43,7 @@ TEST(ArrayExprTest, HashCollisions) {
       ConstantExpr::create(5, Expr::Int8));
   const Array *array = Array::create(
       ConstantExpr::create(256, sizeof(uint64_t) * CHAR_BIT),
-      SourceBuilder::constant(constVals), Expr::Int32, Expr::Int8);
+      SourceBuilder::constant(constVals.clone()), Expr::Int32, Expr::Int8);
   const Array *symArray =
       Array::create(ConstantExpr::create(4, sizeof(uint64_t) * CHAR_BIT),
                     SourceBuilder::makeSymbolic("symIdx", 0));

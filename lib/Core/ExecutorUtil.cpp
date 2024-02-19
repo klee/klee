@@ -167,6 +167,7 @@ ref<klee::Expr> Executor::evalConstant(const Constant *c,
       // function
       const auto arg_bb = (BasicBlock *)ba->getOperand(1);
       const auto res = PointerExpr::create(
+          Expr::createPointer(reinterpret_cast<std::uint64_t>(arg_bb)),
           Expr::createPointer(reinterpret_cast<std::uint64_t>(arg_bb)));
       return res;
     } else {

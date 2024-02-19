@@ -11,6 +11,7 @@
 
 #include "AddressSpace.h"
 #include "CXXTypeSystem/CXXTypeManager.h"
+#include "ConstructStorage.h"
 #include "CoreStats.h"
 #include "DistanceCalculator.h"
 #include "ExecutionState.h"
@@ -122,7 +123,6 @@ DISABLE_WARNING_POP
 #include <memory>
 #include <sstream>
 #include <string>
-#include <cstdint>
 #include <sys/mman.h>
 #include <sys/resource.h>
 #include <utility>
@@ -773,8 +773,12 @@ void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
                              offset + i * elementSize);
   } else if (isa<ConstantAggregateZero>(c)) {
     unsigned i, size = targetData->getTypeStoreSize(c->getType());
-    for (i = 0; i < size; i++)
-      os->write8(offset + i, (uint8_t)0);
+    if (offset) {
+      for (i = 0; i < size; i++)
+        os->write8(offset + i, (uint8_t)0);
+    } else {
+      os->initializeToZero();
+    }
   } else if (const ConstantArray *ca = dyn_cast<ConstantArray>(c)) {
     unsigned elementSize =
         targetData->getTypeStoreSize(ca->getType()->getElementType());
@@ -874,8 +878,8 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
       ref<CodeLocation> fCodeLocation = CodeLocation::create(
           kf, kf->getSourceFilepath(), kf->getLine(), std::nullopt);
 
-      auto mo = allocate(state, Expr::createPointer(8), false, true, fCodeLocation , 8,
-                         typeSystemManager->getUnknownType());
+      auto mo = allocate(state, Expr::createPointer(8), false, true,
+                         fCodeLocation, 8, typeSystemManager->getUnknownType());
       auto baseExpr = cast<ConstantExpr>(mo->getBaseExpr());
       addr = ConstantPointerExpr::create(baseExpr, baseExpr);
       legalFunctions.emplace(baseExpr->getZExtValue(), &f);
@@ -1615,11 +1619,11 @@ const Cell &Executor::eval(const KInstruction *ki, unsigned index,
     return kmodule->constantTable[index];
   } else {
     unsigned index = vnumber;
-    ref<Expr> reg = sf.locals[index].value;
+    ref<Expr> reg = sf.locals->at(index).value;
     if (isSymbolic && reg.isNull()) {
       prepareSymbolicRegister(state, sf, index);
     }
-    return sf.locals[index];
+    return sf.locals->at(index);
   }
 }
 
@@ -1630,22 +1634,22 @@ const Cell &Executor::eval(const KInstruction *ki, unsigned index,
 
 void Executor::bindLocal(const KInstruction *target, StackFrame &frame,
                          ref<Expr> value) {
-  getDestCell(frame, target).value = value;
+  setDestCell(frame, target, value);
 }
 
 void Executor::bindArgument(KFunction *kf, unsigned index, StackFrame &frame,
                             ref<Expr> value) {
-  getArgumentCell(frame, kf, index).value = value;
+  setArgumentCell(frame, kf, index, value);
 }
 
 void Executor::bindLocal(const KInstruction *target, ExecutionState &state,
                          ref<Expr> value) {
-  getDestCell(state, target).value = value;
+  setDestCell(state, target, value);
 }
 
 void Executor::bindArgument(KFunction *kf, unsigned index,
                             ExecutionState &state, ref<Expr> value) {
-  getArgumentCell(state, kf, index).value = value;
+  setArgumentCell(state, kf, index, value);
 }
 
 ref<Expr> Executor::toUnique(const ExecutionState &state, ref<Expr> e) {
@@ -2980,7 +2984,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
       // Iterate through all non-default cases and order them by expressions
       for (auto i : si->cases()) {
-        auto ec = evalConstant(i.getCaseValue(), state.roundingMode);
         ref<Expr> value = evalConstant(i.getCaseValue(), state.roundingMode);
 
         BasicBlock *caseSuccessor = i.getCaseSuccessor();
@@ -3589,8 +3592,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     if (castToType->isPointerTy()) {
       castToType = castToType->getPointerElementType();
-      if (ref<PointerExpr> pointer =
-              dyn_cast<PointerExpr>(makePointer(result))) {
+      if (ref<PointerExpr> pointer = cast<PointerExpr>(makePointer(result))) {
         ref<Expr> base = pointer->getBase();
         if (state.isGEPExpr(base)) {
           state.gepExprBases[base] = castToType;
@@ -5192,12 +5194,6 @@ void Executor::terminateStateOnUserError(ExecutionState &state,
   terminateStateOnError(state, message, StateTerminationType::User, "");
 }
 
-// XXX shoot me
-static const char *okExternalsList[] = {"printf", "fprintf", "puts", "getpid"};
-static std::set<std::string> okExternals(
-    okExternalsList,
-    okExternalsList + (sizeof(okExternalsList) / sizeof(okExternalsList[0])));
-
 void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
                                     KCallable *callable,
                                     std::vector<ref<Expr>> &arguments) {
@@ -5240,6 +5236,7 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
            "FIXME: Unhandled solver failure");
     (void)success;
     Assignment model = cast<InvalidResponse>(response)->initialValues();
+    AssignmentEvaluator evaluator(model, false);
     llvm::FunctionType::param_iterator ati = functionType->param_begin();
     for (std::vector<ref<Expr>>::iterator ai = arguments.begin(),
                                           ae = arguments.end();
@@ -5251,7 +5248,7 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
           arg = pointer->getValue();
         }
         arg = optimizer.optimizeExpr(arg, true);
-        ref<ConstantExpr> ce = model.evaluate(arg, false);
+        ref<ConstantExpr> ce = evaluator.visit(arg);
         ce->toMemory(&args[wordIndex]);
         addConstraint(state, EqExpr::create(ce, arg));
         wordIndex += (ce->getWidth() + 63) / 64;
@@ -5353,7 +5350,8 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
   if (!success) {
     if (interpreterOpts.Mock == MockPolicy::Failed) {
       if (target->inst()->getType()->isSized()) {
-        prepareMockValue(state, "mockExternResult", target->inst()->getType(), target);
+        prepareMockValue(state, "mockExternResult", target->inst()->getType(),
+                         target);
       }
     } else {
       terminateStateOnExecError(state,
@@ -5496,8 +5494,8 @@ void Executor::executeAlloc(ExecutionState &state, ref<Expr> size, bool isLocal,
     }
 
     MemoryObject *mo =
-        allocate(state, size, isLocal, /*isGlobal=*/false, allocSite,
-                 locationOf(state),, type, conditionExpr);
+        allocate(state, size, isLocal, /*isGlobal=*/false, locationOf(state),
+                 allocationAlignment, type, conditionExpr);
     if (!mo) {
       bindLocal(
           target, state,
@@ -5506,7 +5504,7 @@ void Executor::executeAlloc(ExecutionState &state, ref<Expr> size, bool isLocal,
       ref<SymbolicSource> source = nullptr;
       if (zeroMemory) {
         source = SourceBuilder::constant(
-            SparseStorage(ConstantExpr::create(0, Expr::Int8)));
+            constructStorage(size, ConstantExpr::create(0, Expr::Int8)));
       } else {
         source = SourceBuilder::uninitialized(allocations++, target);
       }
@@ -5544,7 +5542,7 @@ void Executor::executeAlloc(ExecutionState &state, ref<Expr> size, bool isLocal,
 void Executor::executeFree(ExecutionState &state, ref<PointerExpr> address,
                            KInstruction *target) {
   address = optimizer.optimizeExpr(address, true);
-  ref<Expr> isNullPointer = Expr::createIsZero(address->getBase());
+  ref<Expr> isNullPointer = Expr::createIsZero(address->getValue());
   StatePair zeroPointer = forkInternal(state, isNullPointer, BranchType::Free);
   if (zeroPointer.first) {
     if (target)
@@ -6011,7 +6009,6 @@ bool Executor::resolveMemoryObjects(
         ref<Expr> addressNotInBounds =
             Expr::createIsZero(mo->getBoundsCheckAddress(address->getValue()));
         mayBeResolvedMemoryObjects.push_back(mo);
-        ref<Expr> notInBounds = Expr::createIsZero(inBounds);
         checkOutOfBounds = AndExpr::create(checkOutOfBounds, notInBounds);
       }
     }
@@ -6081,6 +6078,9 @@ bool Executor::checkResolvedMemoryObjects(
     notInBounds =
         Simplificator::simplifyExpr(state.constraints.cs(), notInBounds)
             .simplified;
+    addressNotInBounds =
+        Simplificator::simplifyExpr(state.constraints.cs(), addressNotInBounds)
+            .simplified;
 
     PartialValidity result;
     solver->setTimeout(coreSolverTimeout);
@@ -6142,6 +6142,9 @@ bool Executor::checkResolvedMemoryObjects(
       notInBounds =
           Simplificator::simplifyExpr(state.constraints.cs(), notInBounds)
               .simplified;
+      addressNotInBounds = Simplificator::simplifyExpr(state.constraints.cs(),
+                                                       addressNotInBounds)
+                               .simplified;
 
       bool mayBeInBounds;
       solver->setTimeout(coreSolverTimeout);
@@ -6160,7 +6163,7 @@ bool Executor::checkResolvedMemoryObjects(
 
       resolveConditions.push_back(inBounds);
       resolvedMemoryObjects.push_back(mo);
-      unboundConditions.push_back(notInBounds);
+      unboundConditions.push_back(addressNotInBounds);
 
       if (mayBeOutOfBound) {
         checkOutOfBounds = AndExpr::create(checkOutOfBounds, notInBounds);
@@ -6629,18 +6632,26 @@ void Executor::executeMemoryOperation(
     /* If base may point to some object then we may provide additional
     information about object allocations site.*/
 
-    ref<PointerExpr> uniqueBase = PointerExpr::create(toUnique(*unbound, base));
+    ref<const MemoryObject> idFastResult;
     bool uniqueBaseResolved = false;
-    ObjectPair baseObjectPair;
 
-    if (!unbound->addressSpace.resolveOneIfUnique(*unbound, solver.get(),
-                                                  uniqueBase, baseTargetType,
-                                                  baseObjectPair, uniqueBaseResolved)) {
-      terminateStateOnSolverError(*unbound, "Query timed out (resolve)");
-      return;
+    if (unbound->resolvedPointers.count(base) &&
+        unbound->resolvedPointers.at(base).size() == 1) {
+      uniqueBaseResolved = true;
+      idFastResult = *unbound->resolvedPointers[base].begin();
+    } else if (auto constBasePointer =
+                   dyn_cast<ConstantPointerExpr>(basePointer)) {
+      ObjectPair contantResult;
+      uniqueBaseResolved = unbound->addressSpace.resolveOne(
+          constBasePointer, baseTargetType, contantResult);
+      if (uniqueBaseResolved) {
+        idFastResult = contantResult.first;
+      }
     }
 
     if (uniqueBaseResolved) {
+      RefObjectPair baseObjectPair =
+          unbound->addressSpace.findOrLazyInitializeObject(idFastResult.get());
       if (!baseObjectPair.first->isLazyInitialized) {
         // Termiante with source event
         terminateStateOnProgramError(
@@ -6775,9 +6786,6 @@ const Array *Executor::makeArray(ref<Expr> size,
 }
 
 ref<PointerExpr> Executor::makePointer(ref<Expr> expr) const {
-  if (isa<ConstantExpr>(expr)) {
-    llvm::errs();
-  }
   return PointerExpr::create(expr);
 }
 
@@ -7278,17 +7286,18 @@ bool resolveOnSymbolics(const std::vector<klee::Symbolic> &symbolics,
                         const ref<klee::ConstantPointerExpr> &addr,
                         ref<const MemoryObject> &result) {
   uint64_t base = addr->getConstantBase()->getZExtValue();
+  AssignmentEvaluator evaluator(assn, true);
 
   for (const auto &res : symbolics) {
     const auto &mo = res.memoryObject;
     // Check if the provided address is between start and end of the object
     // [mo->address, mo->address + mo->size) or the object is a 0-sized object.
     ref<klee::ConstantExpr> moSize =
-        cast<klee::ConstantExpr>(assn.evaluate(mo->getSizeExpr()));
+        cast<klee::ConstantExpr>(evaluator.visit(mo->getSizeExpr()));
     ref<klee::ConstantExpr> moAddress =
-        cast<klee::ConstantExpr>(assn.evaluate(mo->getBaseExpr()));
+        cast<klee::ConstantExpr>(evaluator.visit(mo->getBaseExpr()));
     ref<klee::ConstantExpr> moCondition =
-        cast<klee::ConstantExpr>(assn.evaluate(mo->getConditionExpr()));
+        cast<klee::ConstantExpr>(evaluator.visit(mo->getConditionExpr()));
     if (((base == moAddress->getZExtValue())) && moCondition->getZExtValue(1)) {
       result = mo;
       return true;
@@ -7538,6 +7547,7 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
   assert(isa<InvalidResponse>(response));
 
   Assignment model = cast<InvalidResponse>(response)->initialValuesFor(objects);
+  AssignmentEvaluator evaluator(model, false);
 
   Expr::Width pointerWidthInBits = Context::get().getPointerWidth();
 
@@ -7572,7 +7582,7 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
 
     for (ref<Symcrete> symcrete : extendedConstraints.cs().symcretes()) {
       concretizations[symcrete->symcretized] =
-          model.evaluate(symcrete->symcretized);
+          evaluator.visit(symcrete->symcretized);
     }
 
     std::vector<void *> addresses;
@@ -7644,10 +7654,10 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
       auto &values = model.bindings.at(symbolic.array);
       KTestObject *o = &res.objects[i];
       o->name = const_cast<char *>(mo->name.c_str());
-      o->address =
-          cast<ConstantExpr>(model.evaluate(mo->getBaseExpr()))->getZExtValue();
-      o->numBytes =
-          cast<ConstantExpr>(model.evaluate(mo->getSizeExpr()))->getZExtValue();
+      o->address = cast<ConstantExpr>(evaluator.visit(mo->getBaseExpr()))
+                       ->getZExtValue();
+      o->numBytes = cast<ConstantExpr>(evaluator.visit(mo->getSizeExpr()))
+                        ->getZExtValue();
       o->bytes = new unsigned char[o->numBytes];
       for (size_t j = 0; j < o->numBytes; j++) {
         o->bytes[j] = values.load(j);

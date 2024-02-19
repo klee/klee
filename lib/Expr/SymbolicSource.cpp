@@ -46,8 +46,8 @@ std::set<const Array *> LazyInitializationSource::getRelatedArrays() const {
 }
 
 unsigned ConstantSource::computeHash() {
-  auto defaultV = constantValues.defaultV();
-  auto ordered = constantValues.calculateOrderedStorage();
+  auto defaultV = constantValues->defaultV();
+  auto ordered = constantValues->calculateOrderedStorage();
 
   unsigned res = (getKind() * SymbolicSource::MAGIC_HASH_CONSTANT) +
                  (defaultV ? defaultV->hash() : 0);

@@ -373,9 +373,10 @@ void SpecialFunctionHandler::handleAssert(ExecutionState &state,
   assert(arguments.size() == 3 && "invalid number of arguments to _assert");
   executor.terminateStateOnProgramError(
       state,
-      new ErrorEvent(executor.locationOf(state), StateTerminationType::Assert,
-                     "ASSERTION FAIL: " +
-                         readStringAtAddress(state, executor.makePointer(arguments[0]))));
+      new ErrorEvent(
+          executor.locationOf(state), StateTerminationType::Assert,
+          "ASSERTION FAIL: " +
+              readStringAtAddress(state, executor.makePointer(arguments[0]))));
 }
 
 void SpecialFunctionHandler::handleAssertFail(
@@ -385,9 +386,10 @@ void SpecialFunctionHandler::handleAssertFail(
          "invalid number of arguments to __assert_fail");
   executor.terminateStateOnProgramError(
       state,
-      new ErrorEvent(executor.locationOf(state), StateTerminationType::Assert,
-                     "ASSERTION FAIL: " +
-                         readStringAtAddress(state, executor.makePointer(arguments[0]))));
+      new ErrorEvent(
+          executor.locationOf(state), StateTerminationType::Assert,
+          "ASSERTION FAIL: " +
+              readStringAtAddress(state, executor.makePointer(arguments[0]))));
 }
 
 void SpecialFunctionHandler::handleReportError(
@@ -399,10 +401,11 @@ void SpecialFunctionHandler::handleReportError(
   // arguments[0,1,2,3] are file, line, message, suffix
   executor.terminateStateOnProgramError(
       state,
-      new ErrorEvent(executor.locationOf(state),
-                     StateTerminationType::ReportError,
-                     readStringAtAddress(state, executor.makePointer(arguments[2]))),
-      "", readStringAtAddress(state, executor.makePointer(arguments[3])).c_str());
+      new ErrorEvent(
+          executor.locationOf(state), StateTerminationType::ReportError,
+          readStringAtAddress(state, executor.makePointer(arguments[2]))),
+      "",
+      readStringAtAddress(state, executor.makePointer(arguments[3])).c_str());
 }
 
 void SpecialFunctionHandler::handleNew(ExecutionState &state,
@@ -1000,7 +1003,9 @@ void SpecialFunctionHandler::handleMakeMock(ExecutionState &state,
     return;
   }
 
-  name = arguments[2]->isZero() ? "" : readStringAtAddress(state, executor.makePointer(arguments[2]));
+  name = arguments[2]->isZero()
+             ? ""
+             : readStringAtAddress(state, executor.makePointer(arguments[2]));
 
   if (name.empty()) {
     executor.terminateStateOnUserError(
