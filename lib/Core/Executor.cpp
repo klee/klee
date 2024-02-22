@@ -1316,13 +1316,9 @@ ref<Expr> Executor::toUnique(const ExecutionState &state,
   return result;
 }
 
-
-/* Concretize the given expression, and return a possible constant value. 
-   'reason' is just a documentation string stating the reason for concretization. */
-ref<klee::ConstantExpr> 
-Executor::toConstant(ExecutionState &state, 
-                     ref<Expr> e,
-                     const char *reason) {
+ref<klee::ConstantExpr> Executor::toConstant(ExecutionState &state, ref<Expr> e,
+                                             const std::string &reason,
+                                             bool concretize) {
   e = ConstraintManager::simplifyExpr(state.constraints, e);
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
     return CE;
@@ -1344,9 +1340,10 @@ Executor::toConstant(ExecutionState &state,
   if (ExternalCallWarnings == ExtCallWarnings::All)
     klee_warning("%s", os.str().c_str());
   else
-    klee_warning_once(reason, "%s", os.str().c_str());
+    klee_warning_once(reason.c_str(), "%s", os.str().c_str());
 
-  addConstraint(state, EqExpr::create(e, cvalue));
+  if (concretize)
+    addConstraint(state, EqExpr::create(e, cvalue));
 
   return cvalue;
 }
