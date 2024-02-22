@@ -213,10 +213,10 @@ jobs:
   clang-format:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout KLEE Code
-        uses: actions/checkout@v2
-      - name: Run clang-format on KLEE Code
-        uses: jidicula/clang-format-action@v4.10.2
-        with:
-          clang-format-version: '13'
-          include-regex: '(^.*\.((((c|C)(c|pp|xx|\+\+)?$)|((h|H)h?(pp|xx|\+\+)?$))|((ino|pde|proto|cu))$)|^(include|lib)\/.*\.inc)$'
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with:
+        python-version: 3.x
+    - uses: pre-commit/action@v3.0.1
+    - uses: pre-commit-ci/lite-action@v1.0.2
+      if: always()
