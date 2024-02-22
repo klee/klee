@@ -387,14 +387,15 @@ private:
   /// value). Otherwise return the original expression.
   ref<Expr> toUnique(const ExecutionState &state, ref<Expr> &e);
 
-  /// Return a constant value for the given expression, forcing it to
-  /// be constant in the given state by adding a constraint if
+  /// Return a constant value for the given expression.  If \param concretize is
+  /// true, the expression is forced to be a constant by adding a constraint if
   /// necessary. Note that this function breaks completeness and
   /// should generally be avoided.
   ///
-  /// \param purpose An identify string to printed in case of concretization.
-  ref<klee::ConstantExpr> toConstant(ExecutionState &state, ref<Expr> e, 
-                                     const char *purpose);
+  /// \param reason A documentation string stating the reason for concretization
+  ref<klee::ConstantExpr> toConstant(ExecutionState &state, ref<Expr> e,
+                                     const std::string &reason,
+                                     bool concretize = true);
 
   /// Evaluate the given expression under each seed, and return the
   /// first one that results in a constant, if such a seed exist.  Otherwise,
