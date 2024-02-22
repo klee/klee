@@ -4018,17 +4018,10 @@ void Executor::callExternalFunction(ExecutionState &state,
     if (ExternalCalls == ExternalCallPolicy::All ||
         ExternalCalls == ExternalCallPolicy::OverApprox) {
       *ai = optimizer.optimizeExpr(*ai, true);
-      ref<ConstantExpr> cvalue = getValueFromSeeds(state, *ai);
-      /* If no seed evaluation results in a constant, call the solver */
-      if (!cvalue) {
-        [[maybe_unused]] bool success = solver->getValue(
-            state.constraints, *ai, cvalue, state.queryMetaData);
-        assert(success && "FIXME: Unhandled solver failure");
-      }
-
+      ref<ConstantExpr> cvalue =
+          toConstant(state, *ai, "external call",
+                     ExternalCalls == ExternalCallPolicy::All);
       cvalue->toMemory(&args[wordIndex]);
-      if (ExternalCalls == ExternalCallPolicy::All)
-        addConstraint(state, EqExpr::create(cvalue, *ai));
 
       ObjectPair op;
       // Checking to see if the argument is a pointer to something
