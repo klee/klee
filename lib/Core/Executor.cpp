@@ -3986,20 +3986,19 @@ static std::set<std::string> okExternals(okExternalsList,
                                          okExternalsList + 
                                          (sizeof(okExternalsList)/sizeof(okExternalsList[0])));
 
-void Executor::callExternalFunction(ExecutionState &state,
-                                    KInstruction *target,
+void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
                                     KCallable *callable,
-                                    std::vector< ref<Expr> > &arguments) {
+                                    std::vector<ref<Expr>> &arguments) {
   // check if specialFunctionHandler wants it
-  if (const auto *func = dyn_cast<KFunction>(callable)) {
-    if (specialFunctionHandler->handle(state, func->function, target, arguments))
-      return;
-  }
+  if (const auto *func = dyn_cast<KFunction>(callable);
+      func &&
+      specialFunctionHandler->handle(state, func->function, target, arguments))
+    return;
 
   if (ExternalCalls == ExternalCallPolicy::None &&
       !okExternals.count(callable->getName().str())) {
     klee_warning("Disallowed call to external function: %s\n",
-               callable->getName().str().c_str());
+                 callable->getName().str().c_str());
     terminateStateOnUserError(state, "external calls disallowed");
     return;
   }
@@ -4010,17 +4009,15 @@ void Executor::callExternalFunction(ExecutionState &state,
   // we could iterate through all the arguments first and determine the exact
   // size we need, but this is faster, and the memory usage isn't significant.
   size_t allocatedBytes = Expr::MaxWidth / 8 * (arguments.size() + 1);
-  uint64_t *args = (uint64_t*) alloca(allocatedBytes);
+  uint64_t *args = (uint64_t *)alloca(allocatedBytes);
   memset(args, 0, allocatedBytes);
   unsigned wordIndex = 2;
-  for (std::vector<ref<Expr> >::iterator ai = arguments.begin(), 
-       ae = arguments.end(); ai!=ae; ++ai) {
+  for (auto &a : arguments) {
     if (ExternalCalls == ExternalCallPolicy::All ||
         ExternalCalls == ExternalCallPolicy::OverApprox) {
-      *ai = optimizer.optimizeExpr(*ai, true);
-      ref<ConstantExpr> cvalue =
-          toConstant(state, *ai, "external call",
-                     ExternalCalls == ExternalCallPolicy::All);
+      a = optimizer.optimizeExpr(a, true);
+      ref<ConstantExpr> cvalue = toConstant(
+          state, a, "external call", ExternalCalls == ExternalCallPolicy::All);
       cvalue->toMemory(&args[wordIndex]);
 
       ObjectPair op;
@@ -4031,7 +4028,7 @@ void Executor::callExternalFunction(ExecutionState &state,
       }
       wordIndex += (cvalue->getWidth() + 63) / 64;
     } else {
-      ref<Expr> arg = toUnique(state, *ai);
+      ref<Expr> arg = toUnique(state, a);
       if (ConstantExpr *ce = dyn_cast<ConstantExpr>(arg)) {
         // fp80 must be aligned to 16 according to the System V AMD 64 ABI
         if (ce->getWidth() == Expr::Fl80 && wordIndex & 0x01)
@@ -4039,11 +4036,11 @@ void Executor::callExternalFunction(ExecutionState &state,
 
         // XXX kick toMemory functions from here
         ce->toMemory(&args[wordIndex]);
-        wordIndex += (ce->getWidth()+63)/64;
+        wordIndex += (ce->getWidth() + 63) / 64;
       } else {
         terminateStateOnExecError(state,
                                   "external call with symbolic argument: " +
-                                  callable->getName());
+                                      callable->getName());
         return;
       }
     }
@@ -4104,13 +4101,13 @@ void Executor::callExternalFunction(ExecutionState &state,
     std::string TmpStr;
     llvm::raw_string_ostream os(TmpStr);
     os << "calling external: " << callable->getName().str() << "(";
-    for (unsigned i=0; i<arguments.size(); i++) {
+    for (unsigned i = 0; i < arguments.size(); i++) {
       os << arguments[i];
-      if (i != arguments.size()-1)
+      if (i != arguments.size() - 1)
         os << ", ";
     }
     os << ") at " << state.pc->getSourceLocation();
-    
+
     if (ExternalCallWarnings == ExtCallWarnings::All)
       klee_warning("%s", os.str().c_str());
     else
@@ -4147,8 +4144,8 @@ void Executor::callExternalFunction(ExecutionState &state,
 
   Type *resultType = target->inst->getType();
   if (resultType != Type::getVoidTy(kmodule->module->getContext())) {
-    ref<Expr> e = ConstantExpr::fromMemory((void*) args, 
-                                           getWidthForLLVMType(resultType));
+    ref<Expr> e =
+        ConstantExpr::fromMemory((void *)args, getWidthForLLVMType(resultType));
     bindLocal(target, state, e);
   }
 }
