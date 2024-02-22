@@ -1,4 +1,4 @@
-// This test checks that under using the under-approximate external call policy, the symbolic arguments are left unconstrained by the external call
+// This test checks that under using the over-approximate external call policy, the symbolic arguments are left unconstrained by the external call
 
 // RUN: %clang %s -emit-llvm %O0opt -g -c -o %t.bc
 // RUN: rm -rf %t.klee-out
