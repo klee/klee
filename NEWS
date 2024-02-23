@@ -1,3 +1,41 @@
+KLEE 3.1, 29 February 2024
+==========================
+
+Incorporating changes from 8 June 2023 to 29 February 2029.
+Maintainers during this time span: @ccadar, @MartinNowack, @251.
+Documentation at http://klee.github.io/releases/docs/v3.1
+
+== Major features ==
+- KDAlloc is now the default allocator in KLEE (KDAlloc was introduced in KLEE 3.0)
+- New execution tree implementation and klee-exec-tree tool (@251)
+- Resolve memory reads/writes to single objects in more cases (@tkuchta)
+- Concretize values based on seeds when available (@ccadar)
+
+== LLVM support ==
+- Current recommended version is still LLVM 13
+- Added support for LLVM 15 and 16 (@MartinNowack)
+- Removed support for LLVM <11 (@danielschemmel)
+- KLEE 3.1 will be the last version with support for LLVM <13
+
+== Options, scripts and KLEE intrinsics added, changed or removed ==
+- New klee-exec-tree tool (@251)
+- New --write-exec-tree and --exec-tree-batch-size options (@251)
+- Renamed --compress-process-tree to --compress-exec-tree (@ccadar)
+- PTree is now called ExecutionTree in the code (@ccadar)
+- KDAlloc (--kdalloc) is now enabled by default (@ccadar)
+- Replaced --suppress-external-warnings and --all-external-warnings with --external-call-warnings=none|once-per-function|all (@ccadar)
+- Keep in the KLEE and Kleaver help menus only the KLEE/Kleaver option categories (@ccadar)
+- Removed --cex-cache-exp, a broken experimental optimisation for validity (@ccadar)
+- Removed --zero-seed-extension, and merge it with --allow-seed-extension (@ccadar)
+
+== Other changes ==
+- Fixed some interactions with external code (@ccadar, mishok2503)
+- Improvements to KDAlloc (@danielschemmel)
+- Avoid generating array names in solver builders that could accidently collide (@MartinNowack)
+- Function has_permission in the POSIX model now returns permission error a single time in symbolic execution mode (@ccadar)
+- Smaller refactorings, fixes and improvements, test cases, maintenance, comments, web version, website, etc. (@251, @ccadar, @dependabot, @danielschemmel, @davidtr1037, @jbuening, @marco6, @MartinNowack, @McSinyx, @sp1ff)
+
+
 KLEE 3.0, 7 June 2023
 =====================
 
