@@ -11,6 +11,7 @@
 
 #include "Context.h"
 #include "ExecutionState.h"
+#include "Executor.h"
 #include "MemoryManager.h"
 
 #include "klee/ADT/BitArray.h"
@@ -196,20 +197,16 @@ const UpdateList &ObjectState::getUpdates() const {
   return updates;
 }
 
-void ObjectState::flushToConcreteStore(TimingSolver *solver,
-                                       const ExecutionState &state) const {
+void ObjectState::flushToConcreteStore(Executor &executor,
+                                       ExecutionState &state, bool concretize) {
   for (unsigned i = 0; i < size; i++) {
-    if (!isByteConcrete(i)) {
-      ref<ConstantExpr> ce;
-      bool success = solver->getValue(state.constraints, read8(i), ce,
-                                      state.queryMetaData);
-      if (!success)
-        klee_warning("Solver timed out when getting a value for external call, "
-                     "byte %p+%u will have random value",
-                     (void *)object->address, i);
-      else
-        ce->toMemory(concreteStore + i);
-    }
+    if (isByteConcrete(i))
+      continue;
+    // Get a concrete value for the symbolic byte and write it to the memory
+    // object
+    ref<ConstantExpr> ce =
+        executor.toConstant(state, read8(i), "external call", concretize);
+    ce->toMemory(concreteStore + i);
   }
 }
 
