@@ -4020,12 +4020,16 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
           state, a, "external call", ExternalCalls == ExternalCallPolicy::All);
       cvalue->toMemory(&args[wordIndex]);
 
-      ObjectPair op;
-      // Checking to see if the argument is a pointer to something
-      if (cvalue->getWidth() == Context::get().getPointerWidth() &&
-          state.addressSpace.resolveOne(cvalue, op)) {
-        op.second->flushToConcreteStore(solver.get(), state);
+      // If the argument points to a valid and writable object, concretise it
+      // according to the selected policy
+      if (ObjectPair op;
+          cvalue->getWidth() == Context::get().getPointerWidth() &&
+          state.addressSpace.resolveOne(cvalue, op) && !op.second->readOnly) {
+        auto *os = state.addressSpace.getWriteable(op.first, op.second);
+        os->flushToConcreteStore(*this, state,
+                                 ExternalCalls == ExternalCallPolicy::All);
       }
+
       wordIndex += (cvalue->getWidth() + 63) / 64;
     } else {
       ref<Expr> arg = toUnique(state, a);
