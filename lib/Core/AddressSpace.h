@@ -138,18 +138,22 @@ namespace klee {
     /// potentially copied) if the memory values are different from
     /// the current concrete values.
     ///
-    /// \retval true The copy succeeded. 
-    /// \retval false The copy failed because a read-only object was modified.
-    bool copyInConcretes();
+    /// \param concretize fully concretize the object representation if changed
+    /// externally
+    /// \return true if copy succeeded, otherwise false (e.g. try to modify
+    /// read-only object)
+    bool copyInConcretes(bool concretize);
 
     /// Updates the memory object with the raw memory from the address
     ///
     /// @param mo The MemoryObject to update
     /// @param os The associated memory state containing the actual data
     /// @param src_address the address to copy from
+    /// @param concretize fully concretize the object representation if changed
+    /// externally
     /// @return
     bool copyInConcrete(const MemoryObject *mo, const ObjectState *os,
-                        uint64_t src_address);
+                        uint64_t src_address, bool concretize);
   };
 } // End klee namespace
 
