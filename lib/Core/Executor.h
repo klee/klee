@@ -94,6 +94,7 @@ class Executor : public Interpreter {
   friend class SpecialFunctionHandler;
   friend class StatsTracker;
   friend class MergeHandler;
+  friend class ObjectState;
   friend klee::Searcher *klee::constructUserSearcher(Executor &executor);
 
 public:
