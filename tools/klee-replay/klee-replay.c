@@ -181,9 +181,9 @@ static void run_monitored(char *executable, int argc, char **argv) {
   signal(SIGTERM, int_handler);
 
   signal(SIGALRM, timeout_handler);
-  char array[8];
-  sprintf(array, "%d", obj_index);
-  setenv("TEST_POSITION", array, 0);
+  char array[12];
+  sprintf(array, "%u", obj_index);
+  setenv("KLEE_TEST_POSITION", array, 0);
   pid = fork();
   if (pid < 0) {
     perror("fork");
