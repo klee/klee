@@ -9,6 +9,8 @@
 
 #include "klee/Module/CodeGraphInfo.h"
 
+#include "klee/Module/KModule.h"
+
 #include "klee/Support/CompilerWarning.h"
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
@@ -123,10 +125,12 @@ void CodeGraphInfo::calculateFunctionBranches(KFunction *kf) {
   std::map<KBlock *, std::set<unsigned>> &fbranches = functionBranches[kf];
   for (auto &kb : kf->blocks) {
     fbranches[kb.get()];
-    for (unsigned branch = 0;
-         branch < kb->basicBlock()->getTerminator()->getNumSuccessors();
-         ++branch) {
-      fbranches[kb.get()].insert(branch);
+    if (!isa<KCallBlock>(kb.get())) {
+      for (unsigned branch = 0;
+           branch < kb->basicBlock()->getTerminator()->getNumSuccessors();
+           ++branch) {
+        fbranches[kb.get()].insert(branch);
+      }
     }
   }
 }

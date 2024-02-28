@@ -178,21 +178,15 @@ Searcher *klee::constructUserSearcher(Executor &executor,
                                     BatchInstructions);
   }
 
-  TargetManagerSubscriber *tms = nullptr;
   if (executor.guidanceKind != Interpreter::GuidanceKind::NoGuidance) {
     searcher = new GuidedSearcher(searcher, *executor.distanceCalculator,
-                                  executor.theRNG);
-    tms = static_cast<GuidedSearcher *>(searcher);
+                                  *executor.targetManager, executor.theRNG);
   }
 
   if (UseIterativeDeepeningSearch != HaltExecution::Reason::Unspecified) {
-    searcher = new IterativeDeepeningSearcher(searcher, tms,
-                                              UseIterativeDeepeningSearch);
-    tms = static_cast<IterativeDeepeningSearcher *>(searcher);
+    searcher =
+        new IterativeDeepeningSearcher(searcher, UseIterativeDeepeningSearch);
   }
-
-  if (tms)
-    executor.targetManager->subscribe(*tms);
 
   llvm::raw_ostream &os = executor.getHandler().getInfoStream();
 

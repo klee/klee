@@ -189,6 +189,8 @@ ExecutionState *ExecutionState::branch() {
   auto *falseState = new ExecutionState(*this);
   falseState->setID();
   falseState->coveredLines.clear();
+  falseState->prevTargets_ = falseState->targets_;
+  falseState->prevHistory_ = falseState->history_;
 
   return falseState;
 }

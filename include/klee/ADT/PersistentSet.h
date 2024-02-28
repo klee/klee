@@ -72,6 +72,9 @@ public:
     }
     return true;
   }
+  bool operator!=(const PersistentSet &other) const {
+    return !(*this == other);
+  }
 
   iterator find(const key_type &key) const { return elts.find(key); }
   iterator lower_bound(const key_type &key) const {

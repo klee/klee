@@ -186,8 +186,8 @@ cl::opt<unsigned long long>
 } // namespace klee
 
 TargetedHaltsOnTraces::TargetedHaltsOnTraces(ref<TargetForest> &forest) {
-  auto leafs = forest->leafs();
-  for (auto finalTargetSetPair : leafs) {
+  auto confidences = forest->confidences();
+  for (auto finalTargetSetPair : confidences) {
     traceToHaltTypeToConfidence.emplace(finalTargetSetPair.first,
                                         HaltTypeToConfidence());
   }
@@ -195,8 +195,8 @@ TargetedHaltsOnTraces::TargetedHaltsOnTraces(ref<TargetForest> &forest) {
 
 void TargetedHaltsOnTraces::subtractConfidencesFrom(
     TargetForest &forest, HaltExecution::Reason reason) {
-  auto leafs = forest.leafs();
-  for (auto finalTargetSetPair : leafs) {
+  auto confidences = forest.confidences();
+  for (auto finalTargetSetPair : confidences) {
     auto &haltTypeToConfidence =
         traceToHaltTypeToConfidence.at(finalTargetSetPair.first);
     auto confidence = finalTargetSetPair.second;

@@ -4642,7 +4642,12 @@ void Executor::executeStep(ExecutionState &state) {
             .c_str());
   }
 
-  if (targetManager->isTargeted(state) && state.targets().empty()) {
+  if (targetManager) {
+    targetManager->pullGlobal(state);
+  }
+
+  if (targetManager && targetManager->isTargeted(state) &&
+      state.targets().empty()) {
     terminateStateEarlyAlgorithm(state, "State missed all it's targets.",
                                  StateTerminationType::MissedAllTargets);
   } else if (state.isCycled(MaxCycles)) {

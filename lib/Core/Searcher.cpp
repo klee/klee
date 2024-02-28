@@ -48,8 +48,8 @@ using namespace llvm;
 ExecutionState &DFSSearcher::selectState() { return *states.back(); }
 
 void DFSSearcher::update(ExecutionState *current,
-                         const StateIterable &addedStates,
-                         const StateIterable &removedStates) {
+                         const std::vector<ExecutionState *> &addedStates,
+                         const std::vector<ExecutionState *> &removedStates) {
   // insert states
   states.insert(states.end(), addedStates.begin(), addedStates.end());
 
@@ -74,8 +74,8 @@ void DFSSearcher::printName(llvm::raw_ostream &os) { os << "DFSSearcher\n"; }
 ExecutionState &BFSSearcher::selectState() { return *states.front(); }
 
 void BFSSearcher::update(ExecutionState *current,
-                         const StateIterable &addedStates,
-                         const StateIterable &removedStates) {
+                         const std::vector<ExecutionState *> &addedStates,
+                         const std::vector<ExecutionState *> &removedStates) {
   // update current state
   // Assumption: If new states were added KLEE forked, therefore states evolved.
   // constraints were added to the current state, it evolved.
@@ -115,9 +115,9 @@ ExecutionState &RandomSearcher::selectState() {
   return *states[theRNG.getInt32() % states.size()];
 }
 
-void RandomSearcher::update(ExecutionState *current,
-                            const StateIterable &addedStates,
-                            const StateIterable &removedStates) {
+void RandomSearcher::update(
+    ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
+    const std::vector<ExecutionState *> &removedStates) {
   // insert states
   states.insert(states.end(), addedStates.begin(), addedStates.end());
 
@@ -153,9 +153,9 @@ TargetedSearcher::TargetedSearcher(ref<Target> target,
 
 ExecutionState &TargetedSearcher::selectState() { return *states->choose(0); }
 
-void TargetedSearcher::update(ExecutionState *current,
-                              const StateIterable &addedStates,
-                              const StateIterable &removedStates) {
+void TargetedSearcher::update(
+    ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
+    const std::vector<ExecutionState *> &removedStates) {
 
   // update current
   if (current && std::find(removedStates.begin(), removedStates.end(),
@@ -211,9 +211,14 @@ ExecutionState &GuidedSearcher::selectState() {
   return *state;
 }
 
-void GuidedSearcher::update(ExecutionState *current,
-                            const StateIterable &addedStates,
-                            const StateIterable &removedStates) {
+void GuidedSearcher::update(
+    ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
+    const std::vector<ExecutionState *> &removedStates) {
+  if (current) {
+    localStates.insert(current);
+  }
+  update(localStates);
+  localStates.clear();
 
   if (current) {
     ref<const TargetsHistory> history = current->history();
@@ -270,13 +275,14 @@ void GuidedSearcher::update(ExecutionState *current,
   }
 }
 
-void GuidedSearcher::update(const TargetHistoryTargetPairToStatesMap &added,
-                            const TargetHistoryTargetPairToStatesMap &removed) {
-  for (const auto &pair : added) {
+void GuidedSearcher::update(const states_ty &states) {
+  targetManager.collectFiltered(states, addedTStates, removedTStates);
+
+  for (const auto &pair : addedTStates) {
     if (!pair.second.empty())
       localHistoryTargets.insert(pair.first);
   }
-  for (const auto &pair : removed) {
+  for (const auto &pair : removedTStates) {
     if (!pair.second.empty())
       localHistoryTargets.insert(pair.first);
   }
@@ -290,13 +296,20 @@ void GuidedSearcher::update(const TargetHistoryTargetPairToStatesMap &added,
     }
 
     targetedSearchers.at({history, target})
-        ->update(nullptr, added.at({history, target}),
-                 removed.at({history, target}));
+        ->update(nullptr, addedTStates.at({history, target}),
+                 removedTStates.at({history, target}));
     if (targetedSearchers.at({history, target})->empty()) {
       removeTarget(history, target);
     }
   }
   localHistoryTargets.clear();
+
+  for (auto &pair : addedTStates) {
+    pair.second.clear();
+  }
+  for (auto &pair : removedTStates) {
+    pair.second.clear();
+  }
 }
 
 bool GuidedSearcher::isThereTarget(ref<const TargetsHistory> history,
@@ -408,9 +421,9 @@ double WeightedRandomSearcher::getWeight(ExecutionState *es) {
   }
 }
 
-void WeightedRandomSearcher::update(ExecutionState *current,
-                                    const StateIterable &addedStates,
-                                    const StateIterable &removedStates) {
+void WeightedRandomSearcher::update(
+    ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
+    const std::vector<ExecutionState *> &removedStates) {
 
   // update current
   if (current && updateWeights &&
@@ -501,11 +514,11 @@ ExecutionState &RandomPathSearcher::selectState() {
   return *n->state;
 }
 
-void RandomPathSearcher::update(ExecutionState *current,
-                                const StateIterable &addedStates,
-                                const StateIterable &removedStates) {
+void RandomPathSearcher::update(
+    ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
+    const std::vector<ExecutionState *> &removedStates) {
   // insert states
-  for (auto es : addedStates) {
+  for (auto &es : addedStates) {
     PTreeNode *pnode = es->ptreeNode, *parent = pnode->parent;
     PTreeNodePtr &root = processForest.getPTrees().at(pnode->getTreeID())->root;
     PTreeNodePtr *childPtr;
@@ -605,9 +618,9 @@ ExecutionState &BatchingSearcher::selectState() {
   return *lastState;
 }
 
-void BatchingSearcher::update(ExecutionState *current,
-                              const StateIterable &addedStates,
-                              const StateIterable &removedStates) {
+void BatchingSearcher::update(
+    ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
+    const std::vector<ExecutionState *> &removedStates) {
   // drop memoized state if it is marked for deletion
   if (std::find(removedStates.begin(), removedStates.end(), lastState) !=
       removedStates.end())
@@ -662,10 +675,9 @@ public:
   }
 };
 
-IterativeDeepeningSearcher::IterativeDeepeningSearcher(
-    Searcher *baseSearcher, TargetManagerSubscriber *tms,
-    HaltExecution::Reason m)
-    : baseSearcher{baseSearcher}, tms{tms} {
+IterativeDeepeningSearcher::IterativeDeepeningSearcher(Searcher *baseSearcher,
+                                                       HaltExecution::Reason m)
+    : baseSearcher{baseSearcher} {
   switch (m) {
   case HaltExecution::Reason::MaxTime:
     metric = std::make_unique<TimeMetric>();
@@ -684,30 +696,35 @@ ExecutionState &IterativeDeepeningSearcher::selectState() {
   return res;
 }
 
-void IterativeDeepeningSearcher::update(
-    const TargetHistoryTargetPairToStatesMap &added,
-    const TargetHistoryTargetPairToStatesMap &removed) {
-  if (!tms)
-    return;
-  added.setWithout(&pausedStates);
-  removed.setWithout(&pausedStates);
-  tms->update(added, removed);
-  added.clearWithout();
-  removed.clearWithout();
+void IterativeDeepeningSearcher::updateAndFilter(
+    const StatesVector &removedStates, StatesVector &result) {
+  for (auto &state : removedStates) {
+    if (pausedStates.count(state)) {
+      pausedStates.erase(state);
+    } else {
+      result.push_back(state);
+    }
+  }
 }
 
 void IterativeDeepeningSearcher::update(ExecutionState *current,
-                                        const StateIterable &added,
-                                        const StateIterable &removed) {
-  removed.setWithout(&pausedStates);
-  baseSearcher->update(current, added, removed);
-  removed.clearWithout();
+                                        const StatesVector &addedStates,
+                                        const StatesVector &removedStates) {
+  activeRemovedStates.clear();
+  // update underlying searcher (filter paused states unknown to underlying
+  // searcher)
+  if (!removedStates.empty() && !pausedStates.empty()) {
+    IterativeDeepeningSearcher::updateAndFilter(removedStates,
+                                                activeRemovedStates);
+    baseSearcher->update(current, addedStates, activeRemovedStates);
+  } else {
+    baseSearcher->update(current, addedStates, removedStates);
+  }
 
-  for (auto state : removed)
-    pausedStates.erase(state);
-
+  // update current: pause if time exceeded
   if (current &&
-      std::find(removed.begin(), removed.end(), current) == removed.end() &&
+      std::find(removedStates.begin(), removedStates.end(), current) ==
+          removedStates.end() &&
       metric->exceeds(*current)) {
     pausedStates.insert(current);
     baseSearcher->update(nullptr, {}, {current});
@@ -716,7 +733,8 @@ void IterativeDeepeningSearcher::update(ExecutionState *current,
   // no states left in underlying searcher: fill with paused states
   if (baseSearcher->empty() && !pausedStates.empty()) {
     metric->increaseLimit();
-    baseSearcher->update(nullptr, pausedStates, {});
+    StatesVector ps(pausedStates.begin(), pausedStates.end());
+    baseSearcher->update(nullptr, ps, {});
     pausedStates.clear();
   }
 }
@@ -745,9 +763,9 @@ ExecutionState &InterleavedSearcher::selectState() {
   return s->selectState();
 }
 
-void InterleavedSearcher::update(ExecutionState *current,
-                                 const StateIterable &addedStates,
-                                 const StateIterable &removedStates) {
+void InterleavedSearcher::update(
+    ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
+    const std::vector<ExecutionState *> &removedStates) {
 
   // update underlying searchers
   for (auto &searcher : searchers)
