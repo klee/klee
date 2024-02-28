@@ -183,7 +183,7 @@ configure_llvm() {
         "-DLLVM_BUILD_STATIC:BOOL=OFF"
         "-DLIBCLANG_BUILD_STATIC:BOOL=OFF"
     )
-    if [[ "${LLVM_VERSION_SHORT}" -ge "14" ]]; then
+    if [[ "${LLVM_VERSION_SHORT}" -ge "140" ]]; then
       CONFIG+=("-DLLVM_ENABLE_PROJECTS=${ENABLED_LLVM_PROJECTS}")
       CONFIG+=("-DLLVM_ENABLE_RUNTIMES=libcxx;libcxxabi")
     else

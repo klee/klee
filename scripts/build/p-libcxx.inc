@@ -38,14 +38,14 @@ build_libcxx() {
    "-DCMAKE_INSTALL_PREFIX=${LIBCXX_INSTALL}"
   )
 
-  # Static ABI libraries are not supported under OS X
-  if [[ "${LLVM_VERSION_SHORT}" -ge "14" ]]; then
+  if [[ "${LLVM_VERSION_SHORT}" -ge "140" ]]; then
     cmake_flags+=("-DLLVM_ENABLE_RUNTIMES=libcxx;libcxxabi")
     cmake_flags+=("-DLLVM_ENABLE_PROJECTS=")
     cmake_flags+=("-DLLVM_ENABLE_PROJECTS_USED:BOOL=ON")
   else
     cmake_flags+=("-DLLVM_ENABLE_PROJECTS=libcxx;libcxxabi")
   fi
+  # Static ABI libraries are not supported under OS X
   if [[ "${OS}" == "osx" ]]; then
     cmake_flags+=("-DLIBCXX_ENABLE_STATIC_ABI_LIBRARY:BOOL=OFF")
   else
@@ -59,7 +59,7 @@ build_libcxx() {
     export LLVM_COMPILER_PATH="$(dirname "${BITCODE_CC}")"
 
     cmake "${cmake_flags[@]}" "${LIBCXX_SRC}/llvm"
-   if [[ "${LLVM_VERSION_SHORT}" -ge "14" ]]; then
+   if [[ "${LLVM_VERSION_SHORT}" -ge "140" ]]; then
      make runtimes "-j$(nproc)" || make runtimes || return 1
    else
      make cxx "-j$(nproc)" || make cxx || return 1
@@ -75,7 +75,7 @@ install_libcxx() {
     export LLVM_COMPILER=clang
     export LLVM_COMPILER_PATH="$(dirname "${BITCODE_CC}")"
 
-    if [[ "${LLVM_VERSION_SHORT}" -ge "14" ]]; then
+    if [[ "${LLVM_VERSION_SHORT}" -ge "140" ]]; then
       cd "${LIBCXX_BUILD}/runtimes" || return 1
       make install || return 1
     else
