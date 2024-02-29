@@ -1,15 +1,16 @@
 KLEE 3.1, 29 February 2024
 ==========================
 
-Incorporating changes from 8 June 2023 to 29 February 2029.
+Incorporating changes from 8 June 2023 to 29 February 2024.
 Maintainers during this time span: @ccadar, @MartinNowack, @251.
 Documentation at http://klee.github.io/releases/docs/v3.1
 
-== Major features ==
-- KDAlloc is now the default allocator in KLEE (KDAlloc was introduced in KLEE 3.0)
+== Major features and important changes ==
 - New execution tree implementation and klee-exec-tree tool (@251)
+- KDAlloc is now the default allocator in KLEE (KDAlloc was introduced in KLEE 3.0)
 - Resolve memory reads/writes to single objects in more cases (@tkuchta)
 - Concretize values based on seeds when available (@ccadar)
+- Fixed some interactions with external code (@ccadar, @MartinNowack, mishok2503)
 
 == LLVM support ==
 - Current recommended version is still LLVM 13
@@ -29,7 +30,6 @@ Documentation at http://klee.github.io/releases/docs/v3.1
 - Removed --zero-seed-extension, and merge it with --allow-seed-extension (@ccadar)
 
 == Other changes ==
-- Fixed some interactions with external code (@ccadar, mishok2503)
 - Improvements to KDAlloc (@danielschemmel)
 - Avoid generating array names in solver builders that could accidently collide (@MartinNowack)
 - Function has_permission in the POSIX model now returns permission error a single time in symbolic execution mode (@ccadar)
