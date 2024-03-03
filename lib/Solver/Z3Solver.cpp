@@ -78,7 +78,7 @@ public:
   ~Z3SolverImpl();
 
   std::string getConstraintLog(const Query &) override;
-  void setCoreSolverTimeout(time::Span _timeout) {
+  void setCoreSolverTimeout(time::Span _timeout) override {
     timeout = _timeout;
 
     auto timeoutInMilliSeconds = static_cast<unsigned>((timeout.toMicroseconds() / 1000));
@@ -88,18 +88,18 @@ public:
                        timeoutInMilliSeconds);
   }
 
-  bool computeTruth(const Query &, bool &isValid);
-  bool computeValue(const Query &, ref<Expr> &result);
+  bool computeTruth(const Query &, bool &isValid) override;
+  bool computeValue(const Query &, ref<Expr> &result) override;
   bool computeInitialValues(const Query &,
                             const std::vector<const Array *> &objects,
-                            std::vector<std::vector<unsigned char> > &values,
-                            bool &hasSolution);
+                            std::vector<std::vector<unsigned char>> &values,
+                            bool &hasSolution) override;
   SolverRunStatus
   handleSolverResponse(::Z3_solver theSolver, ::Z3_lbool satisfiable,
                        const std::vector<const Array *> *objects,
-                       std::vector<std::vector<unsigned char> > *values,
+                       std::vector<std::vector<unsigned char>> *values,
                        bool &hasSolution);
-  SolverRunStatus getOperationStatusCode();
+  SolverRunStatus getOperationStatusCode() override;
 };
 
 Z3SolverImpl::Z3SolverImpl()

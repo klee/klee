@@ -30,16 +30,16 @@ public:
             oracle, ownsOracle ? [](Solver *solver) { delete solver; }
                                : [](Solver *) {}) {}
 
-  bool computeValidity(const Query &, Solver::Validity &result);
-  bool computeTruth(const Query &, bool &isValid);
-  bool computeValue(const Query &, ref<Expr> &result);
+  bool computeValidity(const Query &, Solver::Validity &result) override;
+  bool computeTruth(const Query &, bool &isValid) override;
+  bool computeValue(const Query &, ref<Expr> &result) override;
   bool computeInitialValues(const Query &,
                             const std::vector<const Array *> &objects,
                             std::vector<std::vector<unsigned char>> &values,
-                            bool &hasSolution);
-  SolverRunStatus getOperationStatusCode();
+                            bool &hasSolution) override;
+  SolverRunStatus getOperationStatusCode() override;
   std::string getConstraintLog(const Query &) override;
-  void setCoreSolverTimeout(time::Span timeout);
+  void setCoreSolverTimeout(time::Span timeout) override;
 };
 
 bool ValidatingSolver::computeTruth(const Query &query, bool &isValid) {

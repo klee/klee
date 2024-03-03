@@ -30,9 +30,8 @@ public:
   std::string getConstraintLog(const Query &) override;
 
   /// setCoreSolverTimeout - Set constraint solver timeout delay to the given
-  /// value; 0
-  /// is off.
-  virtual void setCoreSolverTimeout(time::Span timeout);
+  /// value; 0 is off.
+  void setCoreSolverTimeout(time::Span timeout) override;
 };
 }
 
