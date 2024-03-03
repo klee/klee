@@ -396,16 +396,16 @@ public:
   IndependentSolver(std::unique_ptr<Solver> solver)
       : solver(std::move(solver)) {}
 
-  bool computeTruth(const Query&, bool &isValid);
-  bool computeValidity(const Query&, Solver::Validity &result);
-  bool computeValue(const Query&, ref<Expr> &result);
-  bool computeInitialValues(const Query& query,
-                            const std::vector<const Array*> &objects,
-                            std::vector< std::vector<unsigned char> > &values,
-                            bool &hasSolution);
-  SolverRunStatus getOperationStatusCode();
-  std::string getConstraintLog(const Query&) override;
-  void setCoreSolverTimeout(time::Span timeout);
+  bool computeTruth(const Query &, bool &isValid) override;
+  bool computeValidity(const Query &, Solver::Validity &result) override;
+  bool computeValue(const Query &, ref<Expr> &result) override;
+  bool computeInitialValues(const Query &query,
+                            const std::vector<const Array *> &objects,
+                            std::vector<std::vector<unsigned char>> &values,
+                            bool &hasSolution) override;
+  SolverRunStatus getOperationStatusCode() override;
+  std::string getConstraintLog(const Query &) override;
+  void setCoreSolverTimeout(time::Span timeout) override;
 };
   
 bool IndependentSolver::computeValidity(const Query& query,

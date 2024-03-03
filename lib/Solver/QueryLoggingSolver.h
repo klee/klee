@@ -63,16 +63,16 @@ public:
                      bool logTimedOut);
 
   /// implementation of the SolverImpl interface
-  bool computeTruth(const Query &query, bool &isValid);
-  bool computeValidity(const Query &query, Solver::Validity &result);
-  bool computeValue(const Query &query, ref<Expr> &result);
+  bool computeTruth(const Query &query, bool &isValid) override;
+  bool computeValidity(const Query &query, Solver::Validity &result) override;
+  bool computeValue(const Query &query, ref<Expr> &result) override;
   bool computeInitialValues(const Query &query,
                             const std::vector<const Array *> &objects,
-                            std::vector<std::vector<unsigned char> > &values,
-                            bool &hasSolution);
-  SolverRunStatus getOperationStatusCode();
+                            std::vector<std::vector<unsigned char>> &values,
+                            bool &hasSolution) override;
+  SolverRunStatus getOperationStatusCode() override;
   std::string getConstraintLog(const Query &) override;
-  void setCoreSolverTimeout(time::Span timeout);
+  void setCoreSolverTimeout(time::Span timeout) override;
 };
 
 #endif /* KLEE_QUERYLOGGINGSOLVER_H */

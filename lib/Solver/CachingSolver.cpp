@@ -70,23 +70,23 @@ private:
 public:
   CachingSolver(std::unique_ptr<Solver> solver) : solver(std::move(solver)) {}
 
-  bool computeValidity(const Query&, Solver::Validity &result);
-  bool computeTruth(const Query&, bool &isValid);
-  bool computeValue(const Query& query, ref<Expr> &result) {
+  bool computeValidity(const Query &, Solver::Validity &result) override;
+  bool computeTruth(const Query &, bool &isValid) override;
+  bool computeValue(const Query &query, ref<Expr> &result) override {
     ++stats::queryCacheMisses;
     return solver->impl->computeValue(query, result);
   }
-  bool computeInitialValues(const Query& query,
-                            const std::vector<const Array*> &objects,
-                            std::vector< std::vector<unsigned char> > &values,
-                            bool &hasSolution) {
+  bool computeInitialValues(const Query &query,
+                            const std::vector<const Array *> &objects,
+                            std::vector<std::vector<unsigned char>> &values,
+                            bool &hasSolution) override {
     ++stats::queryCacheMisses;
-    return solver->impl->computeInitialValues(query, objects, values, 
+    return solver->impl->computeInitialValues(query, objects, values,
                                               hasSolution);
   }
-  SolverRunStatus getOperationStatusCode();
-  std::string getConstraintLog(const Query&) override;
-  void setCoreSolverTimeout(time::Span timeout);
+  SolverRunStatus getOperationStatusCode() override;
+  std::string getConstraintLog(const Query &) override;
+  void setCoreSolverTimeout(time::Span timeout) override;
 };
 
 /** @returns the canonical version of the given query.  The reference
