@@ -50,6 +50,7 @@
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Expr/IndependentConstraintSetUnion.h"
 #include "klee/Expr/IndependentSet.h"
+#include "klee/Expr/SymbolicSource.h"
 #include "klee/Expr/Symcrete.h"
 #include "klee/Module/Cell.h"
 #include "klee/Module/CodeGraphInfo.h"
@@ -306,6 +307,12 @@ cl::opt<bool>
                                   "querying the solver (default=true)"),
                          cl::cat(SolvingCat));
 
+cl::opt<bool> OnlyOutputMakeSymbolicArrays(
+    "only-output-make-symbolic-arrays", cl::init(false),
+    cl::desc(
+        "Only output test data with klee_make_symbolic source (default=false)"),
+    cl::cat(TestGenCat));
+
 /*** External call policy options ***/
 
 enum class ExternalCallPolicy {
@@ -488,9 +495,9 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
                    InterpreterHandler *ih)
     : Interpreter(opts), interpreterHandler(ih), searcher(nullptr),
       externalDispatcher(new ExternalDispatcher(ctx)), statsTracker(0),
-      pathWriter(0), symPathWriter(0),
-      specialFunctionHandler(0), timers{time::Span(TimerInterval)},
-      guidanceKind(opts.Guidance), codeGraphInfo(new CodeGraphInfo()),
+      pathWriter(0), symPathWriter(0), specialFunctionHandler(0),
+      timers{time::Span(TimerInterval)}, guidanceKind(opts.Guidance),
+      codeGraphInfo(new CodeGraphInfo()),
       distanceCalculator(new DistanceCalculator(*codeGraphInfo)),
       targetCalculator(new TargetCalculator(*codeGraphInfo)),
       targetManager(new TargetManager(guidanceKind, *distanceCalculator,
@@ -7418,6 +7425,16 @@ bool isUninitialized(const klee::Array *array) {
   return bad;
 }
 
+bool isMakeSymbolic(const klee::Symbolic &symb) {
+  auto array = symb.array;
+  bool good = isa<MakeSymbolicSource>(array->source);
+  if (!good)
+    klee_warning_once(array->source.get(),
+                      "A not make_symbolic array %s reaches a test",
+                      array->getIdentifier().c_str());
+  return good;
+}
+
 bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
   solver->setTimeout(coreSolverTimeout);
 
@@ -7468,8 +7485,14 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
                std::back_inserter(uninitObjects), isUninitialized);
 
   std::vector<klee::Symbolic> symbolics;
-  std::copy_if(state.symbolics.begin(), state.symbolics.end(),
-               std::back_inserter(symbolics), isReproducible);
+
+  if (OnlyOutputMakeSymbolicArrays) {
+    std::copy_if(state.symbolics.begin(), state.symbolics.end(),
+                 std::back_inserter(symbolics), isMakeSymbolic);
+  } else {
+    std::copy_if(state.symbolics.begin(), state.symbolics.end(),
+                 std::back_inserter(symbolics), isReproducible);
+  }
 
   // we cannot be sure that an irreproducible state proves the presence of an
   // error
