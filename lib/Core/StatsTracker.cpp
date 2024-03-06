@@ -637,7 +637,8 @@ void StatsTracker::writeStatsLine() {
   sqlite3_bind_int64(insertStmt, arg++, partialBranches);
   sqlite3_bind_int64(insertStmt, arg++, numBranches);
   sqlite3_bind_int64(insertStmt, arg++, time::getUserTime().toMicroseconds());
-  sqlite3_bind_int64(insertStmt, arg++, executor.states.size());
+  sqlite3_bind_int64(insertStmt, arg++,
+                     executor.objectManager->getStates().size());
   sqlite3_bind_int64(
       insertStmt, arg++,
       util::GetTotalMallocUsage() +
@@ -689,8 +690,9 @@ void StatsTracker::writeStatsLine() {
 }
 
 void StatsTracker::updateStateStatistics(uint64_t addend) {
-  for (std::set<ExecutionState *>::iterator it = executor.states.begin(),
-                                            ie = executor.states.end();
+  for (std::set<ExecutionState *>::iterator
+           it = executor.objectManager->getStates().begin(),
+           ie = executor.objectManager->getStates().end();
        it != ie; ++it) {
     ExecutionState &state = **it;
     theStatisticManager->incrementIndexedValue(
@@ -1119,8 +1121,9 @@ void StatsTracker::computeReachableUncovered() {
     }
   } while (changed);
 
-  for (std::set<ExecutionState *>::iterator it = executor.states.begin(),
-                                            ie = executor.states.end();
+  for (std::set<ExecutionState *>::iterator
+           it = executor.objectManager->getStates().begin(),
+           ie = executor.objectManager->getStates().end();
        it != ie; ++it) {
     ExecutionState *es = *it;
     uint64_t currentFrameMinDist = 0;

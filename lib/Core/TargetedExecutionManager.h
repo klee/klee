@@ -14,6 +14,7 @@
 #ifndef KLEE_TARGETEDEXECUTIONMANAGER_H
 #define KLEE_TARGETEDEXECUTIONMANAGER_H
 
+#include "ObjectManager.h"
 #include "klee/Core/TargetedExecutionReporter.h"
 #include "klee/Module/KModule.h"
 #include "klee/Module/Target.h"
@@ -86,7 +87,7 @@ public:
   void reportFalsePositives(bool canReachSomeTarget);
 };
 
-class TargetedExecutionManager {
+class TargetedExecutionManager : public Subscriber {
 private:
   using Blocks = std::unordered_set<KBlock *>;
   using LocationToBlocks = std::unordered_map<ref<Location>, Blocks,
@@ -127,6 +128,8 @@ public:
 
   // Return true if report is successful
   bool reportTruePositive(ExecutionState &state, ReachWithError error);
+
+  void update(ref<ObjectManager::Event> e) override;
 
   void update(ExecutionState *current,
               const std::vector<ExecutionState *> &addedStates,

@@ -212,6 +212,18 @@ void TargetManager::updateTargets(ExecutionState &state) {
   }
 }
 
+void TargetManager::update(ref<ObjectManager::Event> e) {
+  switch (e->getKind()) {
+  case ObjectManager::Event::Kind::States: {
+    auto statesEvent = cast<ObjectManager::States>(e);
+    update(statesEvent->modified, statesEvent->added, statesEvent->removed);
+    break;
+  }
+  default:
+    break;
+  }
+}
+
 void TargetManager::update(ExecutionState *current,
                            const std::vector<ExecutionState *> &addedStates,
                            const std::vector<ExecutionState *> &removedStates) {

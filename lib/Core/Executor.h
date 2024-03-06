@@ -15,7 +15,10 @@
 #ifndef KLEE_EXECUTOR_H
 #define KLEE_EXECUTOR_H
 
+#include "BidirectionalSearcher.h"
 #include "ExecutionState.h"
+#include "ObjectManager.h"
+#include "SeedMap.h"
 #include "TargetedExecutionManager.h"
 #include "UserSearcher.h"
 
@@ -137,7 +140,7 @@ private:
 
   std::unique_ptr<KModule> kmodule;
   InterpreterHandler *interpreterHandler;
-  Searcher *searcher;
+  std::unique_ptr<IBidirectionalSearcher> searcher;
 
   ExternalDispatcher *externalDispatcher;
   std::unique_ptr<TimingSolver> solver;
@@ -145,8 +148,7 @@ private:
   std::unique_ptr<MemoryManager> memory;
   TypeManager *typeSystemManager;
 
-  SetOfStates states;
-  SetOfStates pausedStates;
+  std::unique_ptr<ObjectManager> objectManager;
   StatsTracker *statsTracker;
   TreeStreamWriter *pathWriter, *symPathWriter;
   SpecialFunctionHandler *specialFunctionHandler;
@@ -160,17 +162,6 @@ private:
 
   ExprHashMap<std::pair<ref<Expr>, llvm::Type *>> constantGepExprBases;
 
-  /// Used to track states that have been added during the current
-  /// instructions step.
-  /// \invariant \ref addedStates is a subset of \ref states.
-  /// \invariant \ref addedStates and \ref removedStates are disjoint.
-  std::vector<ExecutionState *> addedStates;
-  /// Used to track states that have been removed during the current
-  /// instructions step.
-  /// \invariant \ref removedStates is a subset of \ref states.
-  /// \invariant \ref addedStates and \ref removedStates are disjoint.
-  std::vector<ExecutionState *> removedStates;
-
   /// When non-empty the Executor is running in "seed" mode. The
   /// states in this map will be executed in an arbitrary order
   /// (outside the normal search interface) until they terminate. When
@@ -178,7 +169,7 @@ private:
   /// satisfies one or more seeds will be added to this map. What
   /// happens with other states (that don't satisfy the seeds) depends
   /// on as-yet-to-be-determined flags.
-  std::map<ExecutionState *, std::vector<SeedInfo>> seedMap;
+  std::unique_ptr<SeedMap> seedMap;
 
   /// Map of globals to their representative memory object.
   std::map<const llvm::GlobalValue *, MemoryObject *> globalObjects;
@@ -289,7 +280,6 @@ private:
   void initializeGlobalObjects(ExecutionState &state);
 
   void stepInstruction(ExecutionState &state);
-  void updateStates(ExecutionState *current);
   void transferToBasicBlock(llvm::BasicBlock *dst, llvm::BasicBlock *src,
                             ExecutionState &state);
   void transferToBasicBlock(KBlock *dst, llvm::BasicBlock *src,
@@ -673,7 +663,7 @@ private:
   void increaseProgressVelocity(ExecutionState &state, KBlock *block);
 
   void decreaseConfidenceFromStoppedStates(
-      SetOfStates &leftStates,
+      const SetOfStates &leftStates,
       HaltExecution::Reason reason = HaltExecution::NotHalt);
 
   void checkNullCheckAfterDeref(ref<Expr> cond, ExecutionState &state,
@@ -708,6 +698,9 @@ private:
   /// Only for debug purposes; enable via debugger or klee-control
   void dumpStates();
   void dumpPForest();
+
+  void executeAction(ref<SearcherAction> action);
+  void goForward(ref<ForwardAction> action);
 
   const KInstruction *getKInst(const llvm::Instruction *ints) const;
   const KBlock *getKBlock(const llvm::BasicBlock *bb) const;
@@ -833,8 +826,6 @@ public:
 
   /// Returns the errno location in memory of the state
   int *getErrnoLocation(const ExecutionState &state) const;
-
-  void executeStep(ExecutionState &state);
 };
 
 } // namespace klee

@@ -9,6 +9,7 @@
 add_library(kleeCore
   AddressManager.cpp
   AddressSpace.cpp
+  BidirectionalSearcher.cpp
   CallPathManager.cpp
   CodeLocation.cpp
   Context.cpp
@@ -23,11 +24,13 @@ add_library(kleeCore
   ImpliedValue.cpp
   Memory.cpp
   MemoryManager.cpp
+  ObjectManager.cpp
   PForest.cpp
   MockBuilder.cpp
   PTree.cpp
   Searcher.cpp
   SeedInfo.cpp
+  SeedMap.cpp
   SpecialFunctionHandler.cpp
   StatsTracker.cpp
   TargetCalculator.cpp

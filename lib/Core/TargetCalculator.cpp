@@ -148,6 +148,12 @@ void TargetCalculator::update(
   localStates.clear();
 }
 
+void TargetCalculator::update(ref<ObjectManager::Event> e) {
+  if (auto statesEvent = dyn_cast<ObjectManager::States>(e)) {
+    update(statesEvent->modified, statesEvent->added, statesEvent->removed);
+  }
+}
+
 const std::map<KBlock *, std::set<unsigned>> &
 TargetCalculator::getCoverageTargets(KFunction *kf) {
   switch (TrackCoverage) {

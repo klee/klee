@@ -559,6 +559,12 @@ bool TargetedExecutionManager::reportTruePositive(ExecutionState &state,
   return atLeastOneReported;
 }
 
+void TargetedExecutionManager::update(ref<ObjectManager::Event> e) {
+  if (auto states = dyn_cast<ObjectManager::States>(e)) {
+    update(states->modified, states->added, states->removed);
+  }
+}
+
 void TargetedExecutionManager::update(
     ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
     const std::vector<ExecutionState *> &removedStates) {
