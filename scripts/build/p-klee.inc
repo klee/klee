@@ -4,7 +4,7 @@ validate_build_config_klee() {
 
 setup_build_variables_klee() {
   source "${DIR}/common-functions"
-  KLEE_SUFFIX="${LLVM_VERSION_SHORT}${SOLVER_SUFFIX}${SANITIZER_SUFFIX}"
+  KLEE_SUFFIX="${LLVM_VERSION_SHORT}${SOLVER_SUFFIX}${SANITIZER_SUFFIX}${BUILD_SUFFIX}"
   KLEE_BUILD_DIR="${BASE}/klee_build${KLEE_SUFFIX}"
   KLEE_SRC="$DIR/../../"
 }
