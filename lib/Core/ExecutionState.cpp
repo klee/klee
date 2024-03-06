@@ -453,6 +453,12 @@ void ExecutionState::increaseLevel() {
       kmodule->inMainModule(*kf->function())) {
     auto srcLevel = stack.infoStack().back().multilevel[srcbb].second;
     stack.infoStack().back().multilevel.replace({srcbb, srcLevel + 1});
+    if (afterFork) {
+      auto symSrcLevel =
+          stack.infoStack().back().symbolicMultilevel[srcbb].second;
+      stack.infoStack().back().symbolicMultilevel.replace(
+          {srcbb, symSrcLevel + 1});
+    }
     level.insert(prevPC->parent);
   }
 }

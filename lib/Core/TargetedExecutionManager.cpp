@@ -183,6 +183,12 @@ cl::opt<unsigned long long>
               cl::desc("stop execution after visiting some basic block this "
                        "amount of times (default=0)."),
               cl::init(0), cl::cat(TerminationCat));
+
+cl::opt<unsigned long long> MaxSymbolicCycles(
+    "max-sym-cycles",
+    cl::desc("stop execution after visiting some basic block this "
+             "amount of times just after symbolic fork (default=0)."),
+    cl::init(0), cl::cat(TerminationCat));
 } // namespace klee
 
 TargetedHaltsOnTraces::TargetedHaltsOnTraces(ref<TargetForest> &forest) {

@@ -60,6 +60,7 @@ extern llvm::cl::opt<unsigned> MaxStaticPctCheckDelay;
 extern llvm::cl::opt<std::string> TimerInterval;
 
 extern llvm::cl::opt<unsigned long long> MaxCycles;
+extern llvm::cl::opt<unsigned long long> MaxSymbolicCycles;
 
 class CodeGraphInfo;
 

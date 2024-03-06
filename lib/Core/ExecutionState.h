@@ -108,6 +108,7 @@ struct InfoStackFrame {
   KFunction *kf;
   CallPathNode *callPathNode = nullptr;
   PersistentMap<llvm::BasicBlock *, unsigned long long> multilevel;
+  PersistentMap<llvm::BasicBlock *, unsigned long long> symbolicMultilevel;
 
   /// Minimum distance to an uncovered instruction once the function
   /// returns. This is not a good place for this but is used to
@@ -408,6 +409,8 @@ public:
   /// @brief Disables forking for this state. Set by user code
   bool forkDisabled = false;
 
+  bool afterFork = false;
+
   /// Needed for composition
   ref<Expr> returnValue;
 
@@ -544,10 +547,26 @@ public:
     return false;
   }
 
+  inline bool isSymbolicCycled(unsigned long long bound) const {
+    if (bound == 0)
+      return false;
+    if (prevPC->inst()->isTerminator() && stack.size() > 0) {
+      auto &ml = stack.infoStack().back().symbolicMultilevel;
+      auto level = ml.find(getPCBlock());
+      return level != ml.end() && level->second > bound;
+    }
+    if (pc == pc->parent->getFirstInstruction() &&
+        pc->parent == pc->parent->parent->entryKBlock) {
+      auto level = stack.multilevel.at(stack.callStack().back().kf);
+      return level > bound;
+    }
+    return false;
+  }
+
   inline bool isStuck(unsigned long long bound) const {
     if (depth == 0)
       return false;
-    return isCycled(bound) && klee::util::ulog2(depth) > bound;
+    return isSymbolicCycled(bound) && klee::util::ulog2(depth) > bound;
   }
 
   bool isCoveredNew() const {

@@ -71,7 +71,8 @@ enum class StateTerminationClass : std::uint8_t {
   TTMARK(EXECERR, 61U)                                                         \
   TTYPE(Replay, 70U, "")                                                       \
   TTYPE(MissedAllTargets, 71U, "miss_all_targets.early")                       \
-  TTMARK(EARLYALGORITHM, 71U)                                                  \
+  TTYPE(CoveredEntryPoint, 72U, "covered_entry_point.early")                   \
+  TTMARK(EARLYALGORITHM, 72U)                                                  \
   TTYPE(SilentExit, 80U, "")                                                   \
   TTMARK(EARLYUSER, 80U)                                                       \
   TTMARK(END, 80U)

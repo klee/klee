@@ -40,6 +40,7 @@
 #include "klee/Config/config.h"
 #include "klee/Core/Interpreter.h"
 #include "klee/Core/MockBuilder.h"
+#include "klee/Core/TerminationTypes.h"
 #include "klee/Expr/ArrayExprOptimizer.h"
 #include "klee/Expr/ArrayExprVisitor.h"
 #include "klee/Expr/Assignment.h"
@@ -1190,8 +1191,10 @@ void Executor::branch(ExecutionState &state,
   }
 
   for (unsigned i = 0; i < N; ++i)
-    if (result[i])
+    if (result[i]) {
+      result[i]->afterFork = true;
       addConstraint(*result[i], conditions[i]);
+    }
 }
 
 ref<Expr> Executor::maxStaticPctChecks(ExecutionState &current,
@@ -1507,6 +1510,8 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       }
     }
 
+    trueState->afterFork = true;
+    falseState->afterFork = true;
     addConstraint(*trueState, condition);
     addConstraint(*falseState, Expr::createIsZero(condition));
 
@@ -1779,6 +1784,7 @@ void Executor::stepInstruction(ExecutionState &state) {
   state.prevPC = state.pc;
   state.constraints.advancePath(state.pc);
   ++state.pc;
+  state.afterFork = false;
 
   if (stats::instructions == MaxInstructions)
     haltExecution = HaltExecution::MaxInstructions;
@@ -4616,33 +4622,37 @@ void Executor::executeAction(ref<SearcherAction> action) {
 void Executor::goForward(ref<ForwardAction> action) {
   ref<ForwardAction> fa = cast<ForwardAction>(action);
   objectManager->setCurrentState(fa->state);
+  ExecutionState &state = *fa->state;
 
-  if (coverOnTheFly && shouldWriteTest(*fa->state)) {
+  if (coverOnTheFly && shouldWriteTest(state)) {
     fa->state->clearCoveredNew();
     interpreterHandler->processTestCase(
-        *fa->state, nullptr,
+        state, nullptr,
         terminationTypeFileExtension(StateTerminationType::CoverOnTheFly)
             .c_str());
   }
 
   if (targetManager) {
-    targetManager->pullGlobal(*fa->state);
+    targetManager->pullGlobal(state);
   }
 
-  if (targetManager && targetManager->isTargeted(*fa->state) &&
-      fa->state->targets().empty()) {
-    terminateStateEarlyAlgorithm(*fa->state, "State missed all it's targets.",
+  if (targetManager && targetManager->isTargeted(state) &&
+      state.targets().empty()) {
+    terminateStateEarlyAlgorithm(state, "State missed all it's targets.",
                                  StateTerminationType::MissedAllTargets);
-  } else if (fa->state->isCycled(MaxCycles)) {
-    terminateStateEarly(*fa->state, "max-cycles exceeded.",
+  } else if (state.isCycled(MaxCycles)) {
+    terminateStateEarly(state, "max-cycles exceeded.",
+                        StateTerminationType::MaxCycles);
+  } else if (state.isSymbolicCycled(MaxSymbolicCycles)) {
+    terminateStateEarly(state, "max-sym-cycles exceeded.",
                         StateTerminationType::MaxCycles);
   } else {
     maxNewWriteableOSSize = 0;
     maxNewStateStackSize = 0;
 
-    KInstruction *ki = fa->state->pc;
-    stepInstruction(*fa->state);
-    executeInstruction(*fa->state, ki);
+    KInstruction *ki = state.pc;
+    stepInstruction(state);
+    executeInstruction(state, ki);
   }
 
   timers.invoke();
@@ -4652,7 +4662,7 @@ void Executor::goForward(ref<ForwardAction> action) {
     dumpPForest();
 
   if (targetCalculator && TrackCoverage != TrackCoverageBy::None &&
-      targetCalculator->isCovered(fa->state->initPC->parent->parent)) {
+      targetCalculator->isCovered(state.initPC->parent->parent)) {
     haltExecution = HaltExecution::CovCheck;
   }
 }
