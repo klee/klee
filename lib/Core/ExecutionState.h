@@ -420,6 +420,9 @@ public:
   std::atomic<HaltExecution::Reason> terminationReasonType{
       HaltExecution::NotHalt};
 
+  // Temp: to know which multiplex path this state has taken
+  KFunction *multiplexKF = nullptr;
+
 private:
   PersistentSet<ref<Target>> prevTargets_;
   PersistentSet<ref<Target>> targets_;

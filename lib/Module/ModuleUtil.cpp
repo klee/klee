@@ -368,6 +368,46 @@ bool klee::loadFileAsOneModule(
   return res;
 }
 
+bool klee::loadArchiveAsOneModule(
+    const std::string &libraryName, LLVMContext &context,
+    std::vector<std::unique_ptr<llvm::Module>> &modules,
+    Interpreter::FunctionsByModule &functionsByModule, std::string &errorMsg) {
+  std::vector<std::unique_ptr<llvm::Module>> modules2;
+  bool res = klee::loadFile(libraryName, context, modules2, errorMsg);
+  if (res) {
+    std::vector<std::vector<std::pair<std::string, unsigned>>> namesByModule;
+    for (const auto &mod : modules2) {
+      llvm::CallGraph cg(*mod);
+      std::vector<std::pair<std::string, unsigned>> names;
+      for (const auto &f : *mod) {
+        if (!f.isDeclaration()) {
+          names.push_back({f.getName().str(), cg[&f]->getNumReferences()});
+        }
+      }
+      namesByModule.push_back(std::move(names));
+    }
+
+    modules.push_back(std::move(modules2.front()));
+    res = linkModules(modules.back().get(), modules2, 0, errorMsg);
+    auto mainMod = modules.front().get();
+    for (const auto &mod : namesByModule) {
+      std::unordered_set<llvm::Function *> setFns;
+      std::vector<llvm::Function *> fns;
+      for (const auto &name : mod) {
+        auto fn = mainMod->getFunction(name.first);
+        if (fn) {
+          setFns.insert(fn);
+          fns.push_back(fn);
+          functionsByModule.usesInModule[fn] = name.second;
+        }
+      }
+      functionsByModule.setModules.push_back(std::move(setFns));
+      functionsByModule.modules.push_back(std::move(fns));
+    }
+  }
+  return res;
+}
+
 void klee::replaceOrRenameFunction(llvm::Module *module, const char *old_name,
                                    const char *new_name) {
   Function *new_function, *old_function;

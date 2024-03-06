@@ -132,6 +132,8 @@ private:
   size_t maxNewWriteableOSSize = 0;
   size_t maxNewStateStackSize = 0;
 
+  size_t multiplexReached = 0;
+
   using SetOfStates = std::set<ExecutionState *, ExecutionStateIDCompare>;
   /* Set of Intrinsic::ID. Plain type is used here to avoid including llvm in
    * the header */
@@ -249,6 +251,8 @@ private:
 
   /// @brief SARIF report for all exploration paths.
   SarifReportJson sarifReport;
+
+  FunctionsByModule functionsByModule;
 
   /// Return the typeid corresponding to a certain `type_info`
   ref<ConstantExpr> getEhTypeidFor(ref<Expr> type_info);
@@ -740,6 +744,8 @@ public:
       std::set<std::string> &&mainModuleGlobals, FLCtoOpcode &&origInstructions,
       const std::set<std::string> &ignoredExternals,
       std::vector<std::pair<std::string, std::string>> redefinitions) override;
+
+  void setFunctionsByModule(FunctionsByModule &&functionsByModule) override;
 
   void useSeeds(const std::vector<struct KTest *> *seeds) override {
     usingSeeds = seeds;

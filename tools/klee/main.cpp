@@ -30,6 +30,7 @@
 
 #include "klee/Support/CompilerWarning.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/IR/Attributes.h"
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/APFloat.h"
@@ -151,10 +152,10 @@ cl::opt<bool>
 cl::OptionCategory StartCat("Startup options",
                             "These options affect how execution is started.");
 
-cl::opt<std::string>
-    EntryPoint("entry-point",
-               cl::desc("Function in which to start execution (default=main)"),
-               cl::init("main"), cl::cat(StartCat));
+cl::list<std::string>
+    EntryPoints("entry-points",
+                cl::desc("Functions in which to start execution."),
+                cl::cat(StartCat));
 
 cl::opt<int> TimeoutPerFunction("timeout-per-function",
                                 cl::desc("Timeout per function in klee."),
@@ -410,6 +411,20 @@ cl::opt<bool> AnnotateOnlyExternal(
     cl::desc("Ignore annotations for defined function (default=false)"),
     cl::init(false), cl::cat(MockCat));
 
+enum class SAMultiplexKind {
+  None,
+  Traces,
+  Module,
+  All,
+};
+
+cl::opt<SAMultiplexKind> MultiplexForStaticAnalysis(
+    "multiplex-static-analysis",
+    cl::values(clEnumValN(SAMultiplexKind::None, "none", ""),
+               clEnumValN(SAMultiplexKind::Traces, "traces", ""),
+               clEnumValN(SAMultiplexKind::Module, "module", ""),
+               clEnumValN(SAMultiplexKind::All, "all", "")),
+    cl::desc(""), cl::init(SAMultiplexKind::None), cl::cat(StartCat));
 } // namespace
 
 namespace klee {
@@ -1017,7 +1032,8 @@ static void parseArguments(int argc, char **argv) {
 }
 
 static void
-preparePOSIX(std::vector<std::unique_ptr<llvm::Module>> &loadedModules) {
+preparePOSIX(std::vector<std::unique_ptr<llvm::Module>> &loadedModules,
+             const std::string &EntryPoint) {
   // Get the main function from the main module and rename it such that it can
   // be called after the POSIX setup
   Function *mainFn = nullptr;
@@ -1396,7 +1412,8 @@ createLibCWrapper(std::vector<std::unique_ptr<llvm::Module>> &userModules,
 static void
 linkWithUclibc(StringRef libDir, std::string bit_suffix, std::string opt_suffix,
                std::vector<std::unique_ptr<llvm::Module>> &userModules,
-               std::vector<std::unique_ptr<llvm::Module>> &libsModules) {
+               std::vector<std::unique_ptr<llvm::Module>> &libsModules,
+               const std::string &EntryPoint) {
   LLVMContext &ctx = userModules[0]->getContext();
   std::string errorMsg;
 
@@ -1454,10 +1471,8 @@ static int run_klee_on_function(int pArgc, char **pArgv, char **pEnvp,
                                 std::unique_ptr<KleeHandler> &handler,
                                 std::unique_ptr<Interpreter> &interpreter,
                                 llvm::Module *finalModule,
+                                llvm::Function *mainFn,
                                 std::vector<bool> &replayPath) {
-
-  Function *mainFn = finalModule->getFunction(EntryPoint);
-
   if (ReplayPathFile != "") {
     interpreter->setReplayPath(&replayPath);
   }
@@ -1494,7 +1509,8 @@ static int run_klee_on_function(int pArgc, char **pArgv, char **pEnvp,
                << ".c</programfile>\n";
     *meta_file << "\t<programhash>" << XMLMetadataProgramHash
                << "</programhash>\n";
-    *meta_file << "\t<entryfunction>" << EntryPoint << "</entryfunction>\n";
+    *meta_file << "\t<entryfunction>" << mainFn->getName().str()
+               << "</entryfunction>\n";
     *meta_file << "\t<architecture>"
                << finalModule->getDataLayout().getPointerSizeInBits()
                << "bit</architecture>\n";
@@ -1708,9 +1724,8 @@ llvm::Value *createStringArray(LLVMContext &ctx, const char *str) {
   return llvm::ConstantArray::get(type, chars);
 }
 
-void multiplexEntryPoint(llvm::Module *m, LLVMContext &ctx,
-                         std::vector<llvm::Function *> entryFns) {
-
+std::string multiplexEntryPoint(llvm::Module *m, LLVMContext &ctx,
+                                std::vector<llvm::Function *> entryFns) {
   klee_message("Multiplexing entry point for the following functions:");
   for (auto fn : entryFns) {
     klee_message("%s", fn->getName().data());
@@ -1805,8 +1820,7 @@ void multiplexEntryPoint(llvm::Module *m, LLVMContext &ctx,
     builder.CreateBr(exitBB);
   }
 
-  EntryPoint = multiplexedEntryName;
-  return;
+  return multiplexedEntryName;
 }
 
 struct FunctionReachability {
@@ -1992,7 +2006,9 @@ int main(int argc, char **argv, char **envp) {
   // Load the bytecode...
   std::vector<std::unique_ptr<llvm::Module>> loadedUserModules;
   std::vector<std::unique_ptr<llvm::Module>> loadedLibsModules;
-  if (!klee::loadFileAsOneModule(InputFile, ctx, loadedUserModules, errorMsg)) {
+  Interpreter::FunctionsByModule functionsByModule;
+  if (!klee::loadArchiveAsOneModule(InputFile, ctx, loadedUserModules,
+                                    functionsByModule, errorMsg)) {
     klee_error("error loading program '%s': %s", InputFile.c_str(),
                errorMsg.c_str());
   }
@@ -2008,7 +2024,51 @@ int main(int argc, char **argv, char **envp) {
   llvm::Module *mainModule = loadedUserModules.front().get();
   FLCtoOpcode origInstructions;
 
+  std::set<std::string> mainModuleFunctions;
+  for (auto &Function : *mainModule) {
+    if (!Function.isDeclaration()) {
+      mainModuleFunctions.insert(Function.getName().str());
+    }
+  }
+
+  std::set<std::string> mainModuleGlobals;
+  for (const auto &gv : mainModule->globals()) {
+    mainModuleGlobals.insert(gv.getName().str());
+  }
+
+  std::string EntryPoint;
   if (UseGuidedSearch == Interpreter::GuidanceKind::ErrorGuidance) {
+    MultiplexForStaticAnalysis = SAMultiplexKind::Traces;
+    klee_warning("ignore MultiplexForStaticAnalysis option.");
+  } else if (MultiplexForStaticAnalysis != SAMultiplexKind::None) {
+    klee_warning("ignore EntryPoints option.");
+  }
+  std::vector<llvm::Function *> Fns;
+
+  switch (MultiplexForStaticAnalysis) {
+  case SAMultiplexKind::All: {
+    for (auto &f : *mainModule) {
+      if (!f.isDeclaration()) {
+        Fns.push_back(&f);
+      }
+    }
+    break;
+  }
+
+  case SAMultiplexKind::Module: {
+    for (const auto &mod : functionsByModule.modules) {
+      for (const auto &f : mod) {
+        if (functionsByModule.usesInModule[f] <= 1) {
+          Fns.push_back(f);
+        }
+      }
+    }
+    break;
+  }
+
+  case SAMultiplexKind::Traces: {
+    assert(UseGuidedSearch == Interpreter::GuidanceKind::ErrorGuidance &&
+           "Use Traces value only together with error guided search.");
     for (const auto &Func : *mainModule) {
       for (const auto &instr : llvm::instructions(Func)) {
         auto locationInfo = getLocationInfo(&instr);
@@ -2017,8 +2077,6 @@ int main(int argc, char **argv, char **envp) {
                             .insert(instr.getOpcode());
       }
     }
-
-    std::vector<llvm::Function *> entryFns;
 
     auto paths = parseStaticAnalysisInput();
 
@@ -2044,30 +2102,46 @@ int main(int argc, char **argv, char **envp) {
       }
       auto entryFn = tryResolveEntryFunction(mainModule, trace);
       if (entryFn) {
-        if (std::find(entryFns.begin(), entryFns.end(), entryFn) ==
-            entryFns.end()) {
-          entryFns.push_back(entryFn);
+        if (std::find(Fns.begin(), Fns.end(), entryFn) == Fns.end()) {
+          Fns.push_back(entryFn);
         }
       } else {
         klee_warning("Broken trace (entry fn not resolved).");
       }
     }
 
-    if (entryFns.empty()) {
+    if (Fns.empty()) {
       klee_error("Entry function resolved for no trace");
     }
-    multiplexEntryPoint(mainModule, ctx, entryFns);
+    break;
   }
 
-  std::set<std::string> mainModuleFunctions;
-  for (auto &Function : *mainModule) {
-    if (!Function.isDeclaration()) {
-      mainModuleFunctions.insert(Function.getName().str());
+  case SAMultiplexKind::None: {
+    if (EntryPoints.empty()) {
+      EntryPoint = "main";
+    } else {
+      for (auto &entryPoint : EntryPoints) {
+        if (llvm::Function *entryFn = mainModule->getFunction(entryPoint)) {
+          if (std::find(Fns.begin(), Fns.end(), entryFn) == Fns.end()) {
+            Fns.push_back(entryFn);
+          }
+        } else if (entryPoint.empty()) {
+          klee_error("entry-point cannot be empty");
+        } else {
+          klee_error("Entry function '%s' not found in module.",
+                     entryPoint.c_str());
+        }
+      }
     }
+    break;
   }
-  std::set<std::string> mainModuleGlobals;
-  for (const auto &gv : mainModule->globals()) {
-    mainModuleGlobals.insert(gv.getName().str());
+
+  default:
+    assert(0);
+  }
+
+  if (EntryPoint.empty()) {
+    EntryPoint = multiplexEntryPoint(mainModule, ctx, Fns);
   }
 
   const std::string &module_triple = mainModule->getTargetTriple();
@@ -2160,7 +2234,7 @@ int main(int argc, char **argv, char **envp) {
     }
 
     mainModuleFunctions.insert("__klee_posix_wrapped_main");
-    preparePOSIX(loadedUserModules);
+    preparePOSIX(loadedUserModules, EntryPoint);
   }
 
   if (WithFPRuntime) {
@@ -2235,7 +2309,7 @@ int main(int argc, char **argv, char **envp) {
   }
   case LibcType::UcLibc:
     linkWithUclibc(LibraryDir, bit_suffix, opt_suffix, loadedUserModules,
-                   loadedLibsModules);
+                   loadedLibsModules, EntryPoint);
     break;
   }
 
@@ -2358,10 +2432,12 @@ int main(int argc, char **argv, char **envp) {
     klee_error("Entry function '%s' not found in module.", EntryPoint.c_str());
   }
 
+  interpreter->setFunctionsByModule(std::move(functionsByModule));
+
   externalsAndGlobalsCheck(finalModule);
 
   run_klee_on_function(pArgc, pArgv, pEnvp, handler, interpreter, finalModule,
-                       replayPath);
+                       mainFn, replayPath);
 
   paths.reset();
 

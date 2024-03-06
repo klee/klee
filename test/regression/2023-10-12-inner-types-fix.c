@@ -1,6 +1,6 @@
 // RUN: %clang  -Wno-everything %s -emit-llvm %O0opt -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --entry-point=klee_entry --skip-not-lazy-initialized --min-number-elements-li=1 %t1.bc 2>&1
+// RUN: %klee --output-dir=%t.klee-out --skip-not-lazy-initialized --min-number-elements-li=1 %t1.bc 2>&1
 // RUN: %ktest-tool %t.klee-out/test000003.ktest | FileCheck %s
 
 #include "klee/klee.h"
@@ -75,7 +75,7 @@ int sumStructComplex(struct StructComplex par) {
 }
 
 // CHECK: object 2: pointers: [(8, 3, 0)]
-int klee_entry(int utbot_argc, char **utbot_argv, char **utbot_envp) {
+int main(int utbot_argc, char **utbot_argv, char **utbot_envp) {
   struct StructComplex par;
   klee_make_symbolic(&par, sizeof(par), "par");
   klee_prefer_cex(&par, par.x >= -10 & par.x <= 10);

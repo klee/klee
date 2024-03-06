@@ -176,9 +176,10 @@ ExecutionState::ExecutionState(const ExecutionState &state)
                                : nullptr),
       coveredNew(state.coveredNew), coveredNewError(state.coveredNewError),
       forkDisabled(state.forkDisabled), returnValue(state.returnValue),
-      gepExprBases(state.gepExprBases), prevTargets_(state.prevTargets_),
-      targets_(state.targets_), prevHistory_(state.prevHistory_),
-      history_(state.history_), isTargeted_(state.isTargeted_) {
+      gepExprBases(state.gepExprBases), multiplexKF(state.multiplexKF),
+      prevTargets_(state.prevTargets_), targets_(state.targets_),
+      prevHistory_(state.prevHistory_), history_(state.history_),
+      isTargeted_(state.isTargeted_) {
   constraints.fork();
   queryMetaData.id = state.id;
 }

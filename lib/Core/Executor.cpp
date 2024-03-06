@@ -349,6 +349,7 @@ cl::opt<bool> AllExternalWarnings(
              "as opposed to once per function (default=false)"),
     cl::cat(ExtCallsCat));
 
+
 /*** Seeding options ***/
 
 cl::opt<bool> AlwaysOutputSeeds(
@@ -707,6 +708,10 @@ llvm::Module *Executor::setModule(
                       (Expr::Width)TD->getPointerSizeInBits());
 
   return kmodule->module.get();
+}
+
+void Executor::setFunctionsByModule(FunctionsByModule &&fnsByModule) {
+  functionsByModule = std::forward<FunctionsByModule>(fnsByModule);
 }
 
 Executor::~Executor() {
@@ -2045,6 +2050,7 @@ ref<klee::ConstantExpr> Executor::getEhTypeidFor(ref<Expr> type_info) {
 
 void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
                            std::vector<ref<Expr>> &arguments) {
+
   Instruction *i = ki->inst();
   if (isa_and_nonnull<DbgInfoIntrinsic>(i))
     return;
@@ -2504,6 +2510,12 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
     unsigned numFormals = f->arg_size();
     for (unsigned k = 0; k < numFormals; k++)
       bindArgument(kf, k, state, arguments[k]);
+  }
+
+  if (!state.multiplexKF && !f->isIntrinsic() && !f->isDeclaration() &&
+      kmodule->mainModuleFunctions.count(std::string(f->getName()))) {
+    state.multiplexKF = ki->getKModule()->functionMap.at(f);
+    multiplexReached++;
   }
 }
 
@@ -4636,8 +4648,13 @@ void Executor::goForward(ref<ForwardAction> action) {
     targetManager->pullGlobal(state);
   }
 
-  if (targetManager && targetManager->isTargeted(state) &&
-      state.targets().empty()) {
+  if (targetCalculator && TrackCoverage != TrackCoverageBy::None &&
+      state.multiplexKF && functionsByModule.modules.size() > 1 &&
+      targetCalculator->isCovered(state.multiplexKF)) {
+    terminateStateEarly(state, "Multiplex function has been covered.",
+                        StateTerminationType::CoveredEntryPoint);
+  } else if (targetManager && targetManager->isTargeted(state) &&
+             state.targets().empty()) {
     terminateStateEarlyAlgorithm(state, "State missed all it's targets.",
                                  StateTerminationType::MissedAllTargets);
   } else if (state.isCycled(MaxCycles)) {

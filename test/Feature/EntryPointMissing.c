@@ -3,53 +3,53 @@
 
 // RUN: %clang -emit-llvm -g -c %s -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: not %klee --output-dir=%t.klee-out --entry-point=missing %t.bc 2>&1 | FileCheck -check-prefix=CHECK-MISSING %s
+// RUN: not %klee --output-dir=%t.klee-out --entry-points=missing %t.bc 2>&1 | FileCheck -check-prefix=CHECK-MISSING %s
 
 // RUN: %clang -emit-llvm -g -c %s -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: not %klee --output-dir=%t.klee-out --entry-point=missing --libc=uclibc %t.bc 2>&1 | FileCheck -check-prefix=CHECK-MISSING %s
+// RUN: not %klee --output-dir=%t.klee-out --entry-points=missing --libc=uclibc %t.bc 2>&1 | FileCheck -check-prefix=CHECK-MISSING %s
 
 // RUN: %clang -emit-llvm -g -c %s -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: not %klee --output-dir=%t.klee-out --entry-point=missing %t.bc --posix-runtime 2>&1 | FileCheck -check-prefix=CHECK-MISSING %s
+// RUN: not %klee --output-dir=%t.klee-out --entry-points=missing %t.bc --posix-runtime 2>&1 | FileCheck -check-prefix=CHECK-MISSING %s
 
 // RUN: %clang -emit-llvm -g -c %s -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: not %klee --output-dir=%t.klee-out --entry-point=missing %t.bc --libc=uclibc --posix-runtime 2>&1 | FileCheck -check-prefix=CHECK-MISSING %s
+// RUN: not %klee --output-dir=%t.klee-out --entry-points=missing %t.bc --libc=uclibc --posix-runtime 2>&1 | FileCheck -check-prefix=CHECK-MISSING %s
 
 // RUN: %clang -emit-llvm -g -c %s -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: not %klee --output-dir=%t.klee-out --entry-point=missing --libc=klee %t.bc 2>&1 | FileCheck -check-prefix=CHECK-MISSING %s
+// RUN: not %klee --output-dir=%t.klee-out --entry-points=missing --libc=klee %t.bc 2>&1 | FileCheck -check-prefix=CHECK-MISSING %s
 
 // RUN: %clang -emit-llvm -g -c %s -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: not %klee --output-dir=%t.klee-out --entry-point=missing --libc=klee --posix-runtime %t.bc 2>&1 | FileCheck -check-prefix=CHECK-MISSING %s
+// RUN: not %klee --output-dir=%t.klee-out --entry-points=missing --libc=klee --posix-runtime %t.bc 2>&1 | FileCheck -check-prefix=CHECK-MISSING %s
 
 /* Missing main */
 
 // RUN: %clang -emit-llvm -g -c %s -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: not %klee --output-dir=%t.klee-out --entry-point=main %t.bc 2>&1 | FileCheck -check-prefix=CHECK-MAIN %s
+// RUN: not %klee --output-dir=%t.klee-out --entry-points=main %t.bc 2>&1 | FileCheck -check-prefix=CHECK-MAIN %s
 
 // RUN: %clang -emit-llvm -g -c %s -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: not %klee --output-dir=%t.klee-out --entry-point=main --libc=uclibc %t.bc 2>&1 | FileCheck -check-prefix=CHECK-MAIN %s
+// RUN: not %klee --output-dir=%t.klee-out --entry-points=main --libc=uclibc %t.bc 2>&1 | FileCheck -check-prefix=CHECK-MAIN %s
 
 // RUN: %clang -emit-llvm -g -c %s -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: not %klee --output-dir=%t.klee-out --entry-point=main --posix-runtime %t.bc 2>&1 | FileCheck -check-prefix=CHECK-MAIN %s
+// RUN: not %klee --output-dir=%t.klee-out --entry-points=main --posix-runtime %t.bc 2>&1 | FileCheck -check-prefix=CHECK-MAIN %s
 
 // RUN: %clang -emit-llvm -g -c %s -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: not %klee --output-dir=%t.klee-out --entry-point=main --libc=uclibc --posix-runtime %t.bc 2>&1 | FileCheck -check-prefix=CHECK-MAIN %s
+// RUN: not %klee --output-dir=%t.klee-out --entry-points=main --libc=uclibc --posix-runtime %t.bc 2>&1 | FileCheck -check-prefix=CHECK-MAIN %s
 
 // RUN: %clang -emit-llvm -g -c %s -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: not %klee --output-dir=%t.klee-out --entry-point=main --libc=klee %t.bc 2>&1 | FileCheck -check-prefix=CHECK-MAIN %s
+// RUN: not %klee --output-dir=%t.klee-out --entry-points=main --libc=klee %t.bc 2>&1 | FileCheck -check-prefix=CHECK-MAIN %s
 
 // RUN: %clang -emit-llvm -g -c %s -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: not %klee --output-dir=%t.klee-out --entry-point=main --libc=klee --posix-runtime %t.bc 2>&1 | FileCheck -check-prefix=CHECK-MAIN %s
+// RUN: not %klee --output-dir=%t.klee-out --entry-points=main --libc=klee --posix-runtime %t.bc 2>&1 | FileCheck -check-prefix=CHECK-MAIN %s
 
 #include <stdio.h>
 
