@@ -89,7 +89,7 @@ void TargetCalculator::update(const ExecutionState &state) {
     if (!fullyCoveredFunctions.count(state.prevPC->parent->parent) &&
         coveredFunctionsInBranches.count(state.prevPC->parent->parent)) {
       bool covered = true;
-      std::set<KFunction *> fnsTaken;
+      KFunctionSet fnsTaken;
       std::deque<KFunction *> fns;
       fns.push_back(state.prevPC->parent->parent);
 
@@ -99,18 +99,16 @@ void TargetCalculator::update(const ExecutionState &state) {
         for (auto &kcallBlock : currKF->kCallBlocks) {
           if (kcallBlock->calledFunctions.size() == 1) {
             auto calledFunction = *kcallBlock->calledFunctions.begin();
-            KFunction *calledKFunction = state.prevPC->parent->parent->parent
-                                             ->functionMap[calledFunction];
-            if (calledKFunction->numInstructions != 0 &&
-                coveredFunctionsInBranches.count(calledKFunction) == 0 &&
-                !getCoverageTargets(calledKFunction).empty()) {
+            if (calledFunction->numInstructions != 0 &&
+                coveredFunctionsInBranches.count(calledFunction) == 0 &&
+                !getCoverageTargets(calledFunction).empty()) {
               covered = false;
               break;
             }
-            if (!fnsTaken.count(calledKFunction) &&
-                fullyCoveredFunctions.count(calledKFunction) == 0 &&
-                calledKFunction->numInstructions != 0) {
-              fns.push_back(calledKFunction);
+            if (!fnsTaken.count(calledFunction) &&
+                fullyCoveredFunctions.count(calledFunction) == 0 &&
+                calledFunction->numInstructions != 0) {
+              fns.push_back(calledFunction);
             }
           }
         }
@@ -154,7 +152,7 @@ void TargetCalculator::update(ref<ObjectManager::Event> e) {
   }
 }
 
-const std::map<KBlock *, std::set<unsigned>> &
+const KBlockMap<std::set<unsigned>> &
 TargetCalculator::getCoverageTargets(KFunction *kf) {
   switch (TrackCoverage) {
   case TrackCoverageBy::Blocks:
@@ -184,10 +182,8 @@ bool TargetCalculator::uncoveredBlockPredicate(KBlock *kblock) {
           cast<KCallBlock>(kblock)->calledFunctions.size() == 1) {
         auto calledFunction =
             *cast<KCallBlock>(kblock)->calledFunctions.begin();
-        KFunction *calledKFunction =
-            kblock->parent->parent->functionMap[calledFunction];
-        result = fullyCoveredFunctions.count(calledKFunction) == 0 &&
-                 calledKFunction->numInstructions;
+        result = fullyCoveredFunctions.count(calledFunction) == 0 &&
+                 calledFunction->numInstructions;
       }
       if (fBranches.at(kblock) != cb) {
         result |= kblock->basicBlock()->getTerminator()->getNumSuccessors() >
@@ -214,7 +210,7 @@ TargetHashSet TargetCalculator::calculate(ExecutionState &state) {
        sfi != sfe; sfi++) {
     kf = sfi->kf;
 
-    std::set<KBlock *> blocks;
+    KBlockSet blocks;
     using std::placeholders::_1;
     KBlockPredicate func =
         std::bind(&TargetCalculator::uncoveredBlockPredicate, this, _1);
@@ -235,11 +231,9 @@ TargetHashSet TargetCalculator::calculate(ExecutionState &state) {
                 cast<KCallBlock>(block)->calledFunctions.size() == 1) {
               auto calledFunction =
                   *cast<KCallBlock>(block)->calledFunctions.begin();
-              KFunction *calledKFunction =
-                  block->parent->parent->functionMap[calledFunction];
               notCoveredFunction =
-                  fullyCoveredFunctions.count(calledKFunction) == 0 &&
-                  calledKFunction->numInstructions;
+                  fullyCoveredFunctions.count(calledFunction) == 0 &&
+                  calledFunction->numInstructions;
             }
             if (notCoveredFunction) {
               targets.insert(ReachBlockTarget::create(block, true));

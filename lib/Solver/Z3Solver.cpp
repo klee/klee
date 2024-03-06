@@ -624,7 +624,9 @@ bool Z3SolverImpl::internalRunSolver(
       if (z3_ast_expr_unsat_core.find(z3_constraint) !=
           z3_ast_expr_unsat_core.end()) {
         ref<Expr> constraint = env.z3_ast_expr_to_klee_expr[z3_constraint];
-        unsatCore.insert(constraint);
+        if (Expr::createIsZero(constraint) != query.getOriginalQueryExpr()) {
+          unsatCore.insert(constraint);
+        }
       }
     }
     assert(validityCore && "validityCore cannot be nullptr");

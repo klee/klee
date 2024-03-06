@@ -598,14 +598,11 @@ void ExprSMTLIBPrinter::printArrayDeclarations() {
     for (std::vector<const Array *>::iterator it = sortedArrays.begin();
          it != sortedArrays.end(); it++) {
       array = *it;
-      if (array->isConstantArray()) {
+      if (array->isConstantArray() && isa<ConstantExpr>(array->size)) {
         /*loop over elements in the array and generate an assert statement
           for each one
          */
-        uint64_t size =
-            cast<ConstantExpr>(
-                query->constraints.concretization().evaluate(array->size))
-                ->getZExtValue();
+        uint64_t size = cast<ConstantExpr>(array->size)->getZExtValue();
         for (uint64_t byteIndex = 0; byteIndex < size; ++byteIndex) {
           *p << "(assert (";
           p->pushIndent();
@@ -694,8 +691,8 @@ void ExprSMTLIBPrinter::printAction() {
          it != arraysToCallGetValueOn->end(); it++) {
       theArray = *it;
       // Loop over the array indices
-      ref<ConstantExpr> arrayConstantSize = dyn_cast<ConstantExpr>(
-          query->constraints.concretization().evaluate(theArray->size));
+      ref<ConstantExpr> arrayConstantSize =
+          dyn_cast<ConstantExpr>(theArray->size);
       if (!arrayConstantSize) {
         klee_warning(
             "Query for %s can not  be printed as it has non-conretized "

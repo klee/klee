@@ -177,7 +177,7 @@ bool AssignmentGenerator::helperGenerateAssignment(const ref<Expr> &e,
 
   // SPECIAL
   case Expr::Concat: {
-    ReadExpr *base = hasOrderedReads(&ep);
+    ref<ReadExpr> base = ep.hasOrderedReads();
     if (base) {
       return helperGenerateAssignment(ref<Expr>(base), val, a, ep.getWidth(),
                                       sign);
@@ -230,46 +230,6 @@ bool AssignmentGenerator::helperGenerateAssignment(const ref<Expr> &e,
     klee_warning("%s is not supported", rso.str().c_str());
     return false;
   }
-}
-
-bool AssignmentGenerator::isReadExprAtOffset(ref<Expr> e, const ReadExpr *base,
-                                             ref<Expr> offset) {
-  const ReadExpr *re = dyn_cast<ReadExpr>(e.get());
-  if (!re || (re->getWidth() != Expr::Int8))
-    return false;
-  return SubExpr::create(re->index, base->index) == offset;
-}
-
-ReadExpr *AssignmentGenerator::hasOrderedReads(ref<Expr> e) {
-  assert(e->getKind() == Expr::Concat);
-
-  const ReadExpr *base = dyn_cast<ReadExpr>(e->getKid(0));
-
-  // right now, all Reads are byte reads but some
-  // transformations might change this
-  if (!base || base->getWidth() != Expr::Int8)
-    return NULL;
-
-  // Get stride expr in proper index width.
-  Expr::Width idxWidth = base->index->getWidth();
-  ref<Expr> strideExpr = ConstantExpr::alloc(-1, idxWidth);
-  ref<Expr> offset = ConstantExpr::create(0, idxWidth);
-
-  e = e->getKid(1);
-
-  // concat chains are unbalanced to the right
-  while (e->getKind() == Expr::Concat) {
-    offset = AddExpr::create(offset, strideExpr);
-    if (!isReadExprAtOffset(e->getKid(0), base, offset))
-      return NULL;
-    e = e->getKid(1);
-  }
-
-  offset = AddExpr::create(offset, strideExpr);
-  if (!isReadExprAtOffset(e, base, offset))
-    return NULL;
-
-  return cast<ReadExpr>(e.get());
 }
 
 ref<Expr> AssignmentGenerator::createSubExpr(const ref<Expr> &l, ref<Expr> &r) {

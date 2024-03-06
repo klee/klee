@@ -1,6 +1,6 @@
 // RUN: %clang %s -emit-llvm -g -c -o %t.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --skip-not-symbolic-objects %t.bc 2>&1 | FileCheck %s
+// RUN: %klee --output-dir=%t.klee-out --skip-local --skip-global %t.bc 2>&1 | FileCheck %s
 
 #include "klee/klee.h"
 
@@ -15,5 +15,5 @@ int main() {
   *x = 30;
 }
 
-// CHECK: KLEE: done: completed paths = 1
+// CHECK: KLEE: done: completed paths = 2
 // CHECK: KLEE: done: generated tests = 3

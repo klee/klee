@@ -940,8 +940,9 @@ void StatsTracker::computeReachableUncovered() {
                            cb, /*moduleIsFullyLinked=*/true)) {
               callTargets[inst].push_back(target);
             } else {
-              callTargets[inst] = std::vector<Function *>(
-                  km->escapingFunctions.begin(), km->escapingFunctions.end());
+              for (auto kf : km->escapingFunctions) {
+                callTargets[inst].push_back(kf->function());
+              }
             }
           }
         }

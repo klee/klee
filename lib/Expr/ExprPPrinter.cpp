@@ -248,53 +248,6 @@ private:
     return SubExpr::create(re->index, base->index) == offset;
   }
 
-  /// hasOrderedReads: \arg e must be a ConcatExpr, \arg stride must
-  /// be 1 or -1.
-  ///
-  /// If all children of this Concat are reads or concats of reads
-  /// with consecutive offsets according to the given \arg stride, it
-  /// returns the base ReadExpr according to \arg stride: first Read
-  /// for 1 (MSB), last Read for -1 (LSB).  Otherwise, it returns
-  /// null.
-  const ReadExpr *hasOrderedReads(ref<Expr> e, int stride) {
-    assert(e->getKind() == Expr::Concat);
-    assert(stride == 1 || stride == -1);
-
-    const ReadExpr *base = dyn_cast<ReadExpr>(e->getKid(0));
-
-    // right now, all Reads are byte reads but some
-    // transformations might change this
-    if (!base || base->getWidth() != Expr::Int8) {
-      return NULL;
-    }
-
-    // Get stride expr in proper index width.
-    Expr::Width idxWidth = base->index->getWidth();
-    ref<Expr> strideExpr = ConstantExpr::alloc(stride, idxWidth);
-    ref<Expr> offset = ConstantExpr::create(0, idxWidth);
-
-    e = e->getKid(1);
-
-    // concat chains are unbalanced to the right
-    while (e->getKind() == Expr::Concat) {
-      offset = AddExpr::create(offset, strideExpr);
-      if (!isReadExprAtOffset(e->getKid(0), base, offset)) {
-        return NULL;
-      }
-
-      e = e->getKid(1);
-    }
-
-    offset = AddExpr::create(offset, strideExpr);
-    if (!isReadExprAtOffset(e, base, offset))
-      return NULL;
-
-    if (stride == -1)
-      return cast<ReadExpr>(e.get());
-    else
-      return base;
-  }
-
 #if 0
   /// hasAllByteReads - True iff all children are byte level reads or
   /// concats of byte level reads.
@@ -489,15 +442,15 @@ public:
         // or they are (base + offset) and base will get printed with
         // a declaration.
         if (PCMultibyteReads && e->getKind() == Expr::Concat) {
-          const ReadExpr *base = hasOrderedReads(e, -1);
-          const bool isLSB = (base != nullptr);
+          ref<ReadExpr> base = e->hasOrderedReads(false);
+          const bool isLSB = (!base.isNull());
           if (!isLSB)
-            base = hasOrderedReads(e, 1);
+            base = e->hasOrderedReads(true);
           if (base) {
             PC << "(Read" << (isLSB ? "LSB" : "MSB");
             printWidth(PC, e);
             PC << ' ';
-            printRead(base, PC, PC.pos);
+            printRead(base.get(), PC, PC.pos);
             PC << ')';
             return;
           }

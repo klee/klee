@@ -2,6 +2,7 @@
 required_variables_klee=(
   "COVERAGE"
   "KLEE_RUNTIME_BUILD"
+  "BUILD_SUFFIX"
   "USE_TCMALLOC"
   "USE_LIBCXX"
   "ENABLE_DOXYGEN"

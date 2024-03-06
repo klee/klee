@@ -24,10 +24,6 @@ namespace klee {
 //------------------------------ HELPER FUNCTIONS ---------------------------//
 class ArrayExprHelper {
 public:
-  static bool isReadExprAtOffset(ref<Expr> e, const ReadExpr *base,
-                                 ref<Expr> offset);
-
-  static ReadExpr *hasOrderedReads(const ConcatExpr &ce);
   static void collectAlternatives(const SelectExpr &se,
                                   std::vector<ref<Expr>> &alternatives);
 };

@@ -43,6 +43,7 @@ class Array;
 class ArrayCache;
 class ConstantExpr;
 class Expr;
+class ReadExpr;
 class ObjectState;
 
 template <class T> class ref;
@@ -355,6 +356,17 @@ public:
 
   /// isFalse - Is this the false expression.
   bool isFalse() const;
+
+  /// hasOrderedReads: \arg this must be a ConcatExpr, \arg stride must
+  /// be true or false.
+  ///
+  /// If all children of this Concat are reads or concats of reads
+  /// with consecutive offsets according to the given \arg stride, it
+  /// returns the base ReadExpr according to \arg stride: first Read
+  /// for true (MSB), last Read for false (LSB). Otherwise, it returns
+  /// null.
+  ref<ReadExpr> hasOrderedReads(bool stride) const;
+  ref<ReadExpr> hasOrderedReads() const;
 
   /* Static utility methods */
 

@@ -38,9 +38,6 @@ private:
   using StatesSet = states_ty;
   using StateToDistanceMap =
       std::unordered_map<const ExecutionState *, TargetHashMap<DistanceResult>>;
-  using TargetForestHistoryTargetSet =
-      std::unordered_set<TargetHistoryTargetPair, TargetHistoryTargetHash,
-                         TargetHistoryTargetCmp>;
 
   Interpreter::GuidanceKind guidance;
   DistanceCalculator &distanceCalculator;

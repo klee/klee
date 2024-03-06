@@ -16,6 +16,7 @@
 #include "klee/Support/CompilerWarning.h"
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -45,6 +46,7 @@ DISABLE_WARNING_POP
 #include <set>
 #include <sstream>
 #include <string>
+#include <unordered_set>
 
 using namespace llvm;
 using namespace klee;

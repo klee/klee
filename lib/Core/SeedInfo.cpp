@@ -40,11 +40,15 @@ KTestObject *SeedInfo::getNextInput(const MemoryObject *mo, bool byName) {
         break;
     if (i < input->numObjects) {
       KTestObject *obj = &input->objects[i];
-      if (obj->numBytes == mo->size) {
-        used.insert(obj);
-        klee_warning_once(mo, "using seed input %s[%d] for: %s (no name match)",
-                          obj->name, obj->numBytes, mo->name.c_str());
-        return obj;
+      if (ref<ConstantExpr> sizeExpr =
+              dyn_cast<ConstantExpr>(mo->getSizeExpr())) {
+        if (obj->numBytes == sizeExpr->getZExtValue()) {
+          used.insert(obj);
+          klee_warning_once(mo,
+                            "using seed input %s[%d] for: %s (no name match)",
+                            obj->name, obj->numBytes, mo->name.c_str());
+          return obj;
+        }
       }
     }
 
@@ -62,7 +66,7 @@ KTestObject *SeedInfo::getNextInput(const MemoryObject *mo, bool byName) {
 void SeedInfo::patchSeed(const ExecutionState &state, ref<Expr> condition,
                          TimingSolver *solver) {
   ConstraintSet required = state.constraints.cs();
-  required.addConstraint(condition, {});
+  required.addConstraint(condition);
 
   // Try and patch direct reads first, this is likely to resolve the
   // problem quickly and avoids long traversal of all seed
@@ -110,12 +114,10 @@ void SeedInfo::patchSeed(const ExecutionState &state, ref<Expr> condition,
         auto s = it2->second;
         s.store(i, value->getZExtValue(8));
         assignment.bindings.replace({it2->first, s});
-        required.addConstraint(
-            EqExpr::create(
-                read, ConstantExpr::alloc(it2->second.load(i), Expr::Int8)),
-            {});
+        required.addConstraint(EqExpr::create(
+            read, ConstantExpr::alloc(it2->second.load(i), Expr::Int8)));
       } else {
-        required.addConstraint(isSeed, {});
+        required.addConstraint(isSeed);
       }
     }
   }
@@ -135,8 +137,8 @@ void SeedInfo::patchSeed(const ExecutionState &state, ref<Expr> condition,
                                          ie = assignment.bindings.end();
        it != ie; ++it) {
     const Array *array = it->first;
-    ref<ConstantExpr> arrayConstantSize = cast<ConstantExpr>(
-        state.constraints.cs().concretization().evaluate(array->size));
+    ref<ConstantExpr> arrayConstantSize =
+        cast<ConstantExpr>(assignment.evaluate(array->size));
     for (unsigned i = 0; i < arrayConstantSize->getZExtValue(); ++i) {
       ref<Expr> read = ReadExpr::create(UpdateList(array, 0),
                                         ConstantExpr::alloc(i, Expr::Int32));
@@ -156,12 +158,10 @@ void SeedInfo::patchSeed(const ExecutionState &state, ref<Expr> condition,
         auto s = it->second;
         s.store(i, value->getZExtValue(8));
         assignment.bindings.replace({it->first, s});
-        required.addConstraint(
-            EqExpr::create(read,
-                           ConstantExpr::alloc(it->second.load(i), Expr::Int8)),
-            {});
+        required.addConstraint(EqExpr::create(
+            read, ConstantExpr::alloc(it->second.load(i), Expr::Int8)));
       } else {
-        required.addConstraint(isSeed, {});
+        required.addConstraint(isSeed);
       }
     }
   }

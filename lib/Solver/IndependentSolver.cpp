@@ -18,6 +18,7 @@
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprHashMap.h"
 #include "klee/Expr/ExprUtil.h"
+#include "klee/Expr/IndependentConstraintSetUnion.h"
 #include "klee/Expr/IndependentSet.h"
 #include "klee/Solver/SolverImpl.h"
 #include "klee/Support/Debug.h"
@@ -67,21 +68,24 @@ bool IndependentSolver::computeValidity(const Query &query,
                                         PartialValidity &result) {
   std::vector<ref<const IndependentConstraintSet>> factors;
   query.getAllDependentConstraintsSets(factors);
-  ConstraintSet tmp(factors);
+  ConstraintSet tmp(factors,
+                    query.constraints.independentElements().concretizedExprs);
   return solver->impl->computeValidity(query.withConstraints(tmp), result);
 }
 
 bool IndependentSolver::computeTruth(const Query &query, bool &isValid) {
   std::vector<ref<const IndependentConstraintSet>> factors;
   query.getAllDependentConstraintsSets(factors);
-  ConstraintSet tmp(factors);
+  ConstraintSet tmp(factors,
+                    query.constraints.independentElements().concretizedExprs);
   return solver->impl->computeTruth(query.withConstraints(tmp), isValid);
 }
 
 bool IndependentSolver::computeValue(const Query &query, ref<Expr> &result) {
   std::vector<ref<const IndependentConstraintSet>> factors;
   query.getAllDependentConstraintsSets(factors);
-  ConstraintSet tmp(factors);
+  ConstraintSet tmp(factors,
+                    query.constraints.independentElements().concretizedExprs);
   return solver->impl->computeValue(query.withConstraints(tmp), result);
 }
 
@@ -160,7 +164,9 @@ bool IndependentSolver::computeInitialValues(
                                               hasSolution);
   }
 
-  ConstraintSet dependentConstriants(dependentFactors);
+  ConstraintSet dependentConstriants(
+      dependentFactors,
+      query.constraints.independentElements().concretizedExprs);
 
   std::vector<const Array *> dependentFactorsObjects;
   calculateArraysInFactors(dependentFactors, query.expr,
@@ -188,19 +194,25 @@ bool IndependentSolver::computeInitialValues(
     it->calculateArrayReferences(arraysInFactor);
     // Going to use this as the "fresh" expression for the Query() invocation
     // below
-    assert(it->exprs.size() >= 1 && "No null/empty factors");
-    if (arraysInFactor.size() == 0) {
-      continue;
-    }
     ConstraintSet tmp(it);
     std::vector<SparseStorage<unsigned char>> tempValues;
-    if (!solver->impl->computeInitialValues(
-            Query(tmp, Expr::createFalse(), query.id), arraysInFactor,
-            tempValues, hasSolution)) {
-      values.clear();
+    if (arraysInFactor.size() == 0) {
+      continue;
+    } else if (it->exprs.size() == 0) {
+      ref<SolverResponse> tempResult = new InvalidResponse();
+      bool success =
+          tempResult->tryGetInitialValuesFor(arraysInFactor, tempValues);
+      assert(success && "Can not get initial values (Independent solver)!");
+    } else {
+      if (!solver->impl->computeInitialValues(
+              Query(tmp, Expr::createFalse(), query.id), arraysInFactor,
+              tempValues, hasSolution)) {
+        values.clear();
+        return false;
+      }
+    }
 
-      return false;
-    } else if (!hasSolution) {
+    if (!hasSolution) {
       values.clear();
 
       return true;
@@ -254,7 +266,9 @@ bool IndependentSolver::check(const Query &query, ref<SolverResponse> &result) {
     return solver->impl->check(query, result);
   }
 
-  ConstraintSet dependentConstriants(dependentFactors);
+  ConstraintSet dependentConstriants(
+      dependentFactors,
+      query.constraints.independentElements().concretizedExprs);
 
   std::vector<const Array *> dependentFactorsObjects;
   std::vector<SparseStorage<unsigned char>> dependentFactorsValues;
@@ -284,17 +298,21 @@ bool IndependentSolver::check(const Query &query, ref<SolverResponse> &result) {
     it->calculateArrayReferences(arraysInFactor);
     // Going to use this as the "fresh" expression for the Query() invocation
     // below
-    assert(it->exprs.size() >= 1 && "No null/empty factors");
-    if (arraysInFactor.size() == 0) {
-      continue;
-    }
     ref<SolverResponse> tempResult;
     std::vector<SparseStorage<unsigned char>> tempValues;
-    if (!solver->impl->check(
-            Query(ConstraintSet(it), Expr::createFalse(), query.id),
-            tempResult)) {
-      return false;
-    } else if (isa<ValidResponse>(tempResult)) {
+    if (arraysInFactor.size() == 0) {
+      continue;
+    } else if (it->exprs.size() == 0) {
+      tempResult = new InvalidResponse();
+    } else {
+      if (!solver->impl->check(
+              Query(ConstraintSet(it), Expr::createFalse(), query.id),
+              tempResult)) {
+        return false;
+      }
+    }
+
+    if (isa<ValidResponse>(tempResult)) {
       result = tempResult;
       return true;
     } else {
@@ -324,7 +342,8 @@ bool IndependentSolver::computeValidityCore(const Query &query,
                                             bool &isValid) {
   std::vector<ref<const IndependentConstraintSet>> factors;
   query.getAllDependentConstraintsSets(factors);
-  ConstraintSet tmp(factors);
+  ConstraintSet tmp(factors,
+                    query.constraints.independentElements().concretizedExprs);
   return solver->impl->computeValidityCore(query.withConstraints(tmp),
                                            validityCore, isValid);
 }

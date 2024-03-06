@@ -106,8 +106,8 @@ TargetForest::UnorderedTargetsSet::~UnorderedTargetsSet() {
 
 void TargetForest::Layer::addTrace(
     const Result &result,
-    const std::unordered_map<ref<Location>, std::unordered_set<KBlock *>,
-                             RefLocationHash, RefLocationCmp> &locToBlocks) {
+    const std::unordered_map<ref<Location>, KBlockSet, RefLocationHash,
+                             RefLocationCmp> &locToBlocks) {
   auto forest = this;
   for (size_t i = 0; i < result.locations.size(); ++i) {
     const auto &loc = result.locations[i];

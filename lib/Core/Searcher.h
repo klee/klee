@@ -165,7 +165,8 @@ class GuidedSearcher final : public Searcher {
                          std::unique_ptr<TargetedSearcher>,
                          TargetHistoryTargetHash, TargetHistoryTargetCmp>;
   using TargetForestHisoryTargetVector = std::vector<TargetHistoryTargetPair>;
-  using TargetForestHistoryTargetSet =
+  using TargetForestHistoryTargetSet = std::set<TargetHistoryTargetPair>;
+  using TargetForestHistoryTargetHashSet =
       std::unordered_set<TargetHistoryTargetPair, TargetHistoryTargetHash,
                          TargetHistoryTargetCmp>;
 
@@ -186,7 +187,7 @@ class GuidedSearcher final : public Searcher {
 
   TargetHashSet removedTargets;
   TargetHashSet addedTargets;
-  TargetForestHistoryTargetSet currTargets;
+  TargetForestHistoryTargetHashSet currTargets;
 
   TargetForestHisoryTargetVector historiesAndTargets;
   bool isThereTarget(ref<const TargetsHistory> history, ref<Target> target);

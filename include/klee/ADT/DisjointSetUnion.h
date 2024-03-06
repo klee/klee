@@ -32,7 +32,7 @@ public:
   using internal_storage_ty = std::unordered_set<ValueType, HASH, PRED>;
   using disjoint_sets_ty =
       std::unordered_map<ValueType, ref<const SetType>, HASH, PRED>;
-  using iterator = typename internal_storage_ty::iterator;
+  using iterator = typename internal_storage_ty::const_iterator;
 
 protected:
   std::unordered_map<ValueType, ValueType, HASH, PRED> parent;

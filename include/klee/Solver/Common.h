@@ -14,7 +14,6 @@
 #ifndef KLEE_COMMON_H
 #define KLEE_COMMON_H
 
-#include "klee/Solver/AddressGenerator.h"
 #include "klee/Solver/Solver.h"
 
 #include <string>
@@ -28,8 +27,7 @@ const char SOLVER_QUERIES_KQUERY_FILE_NAME[] = "solver-queries.kquery";
 std::unique_ptr<Solver> constructSolverChain(
     std::unique_ptr<Solver> coreSolver, std::string querySMT2LogPath,
     std::string baseSolverQuerySMT2LogPath, std::string queryKQueryLogPath,
-    std::string baseSolverQueryKQueryLogPath,
-    AddressGenerator *addressGenerator, ArrayCache &arrayCache);
+    std::string baseSolverQueryKQueryLogPath, ArrayCache &arrayCache);
 } // namespace klee
 
 #endif /* KLEE_COMMON_H */

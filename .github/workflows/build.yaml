@@ -11,6 +11,7 @@ on:
 env:
   BASE_IMAGE: ubuntu:jammy-20230126
   REPOSITORY: ghcr.io/klee
+  BUILD_SUFFIX: "default"
   COVERAGE: 0
   DISABLE_ASSERTIONS: 0
   ENABLE_DOXYGEN: 0

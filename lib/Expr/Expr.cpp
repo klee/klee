@@ -73,7 +73,7 @@ ref<Expr> Expr::createTempRead(const Array *array, Expr::Width w,
         ReadExpr::create(ul, ConstantExpr::alloc(off, Expr::Int32)),
         Expr::Bool);
   case Expr::Int8:
-    return ReadExpr::create(ul, ConstantExpr::alloc(0, Expr::Int32));
+    return ReadExpr::create(ul, ConstantExpr::alloc(off, Expr::Int32));
   case Expr::Int16:
     return ConcatExpr::create(
         ReadExpr::create(ul, ConstantExpr::alloc(off + 1, Expr::Int32)),
@@ -1649,6 +1649,65 @@ ref<Expr> SelectExpr::create(ref<Expr> c, ref<Expr> t, ref<Expr> f) {
 
 /***/
 
+bool isReadExprAtOffset(ref<Expr> e, const ReadExpr *base, ref<Expr> offset) {
+  const ReadExpr *re = dyn_cast<ReadExpr>(e.get());
+  if (!re || (re->getWidth() != Expr::Int8))
+    return false;
+  return SubExpr::create(re->index, base->index) == offset;
+}
+
+ref<ReadExpr> Expr::hasOrderedReads(bool stride) const {
+  if (auto read = dyn_cast<ReadExpr>(this)) {
+    return cast<ReadExpr>(const_cast<ReadExpr *>(read));
+  }
+  if (!isa<ConcatExpr>(this)) {
+    return ref<ReadExpr>();
+  }
+
+  ReadExpr *base = dyn_cast<ReadExpr>(getKid(0));
+  int strideNum = stride ? 1 : -1;
+
+  // right now, all Reads are byte reads but some
+  // transformations might change this
+  if (!base || base->getWidth() != Expr::Int8) {
+    return NULL;
+  }
+
+  // Get stride expr in proper index width.
+  Expr::Width idxWidth = base->index->getWidth();
+  ref<Expr> strideExpr = ConstantExpr::alloc(strideNum, idxWidth);
+  ref<Expr> offset = ConstantExpr::create(0, idxWidth);
+
+  ref<Expr> e = getKid(1);
+
+  // concat chains are unbalanced to the right
+  while (e->getKind() == Expr::Concat) {
+    offset = AddExpr::create(offset, strideExpr);
+    if (!isReadExprAtOffset(e->getKid(0), base, offset)) {
+      return NULL;
+    }
+
+    e = e->getKid(1);
+  }
+
+  offset = AddExpr::create(offset, strideExpr);
+  if (!isReadExprAtOffset(e, base, offset))
+    return NULL;
+
+  if (!stride)
+    return cast<ReadExpr>(e.get());
+  else
+    return base;
+}
+
+ref<ReadExpr> Expr::hasOrderedReads() const {
+  ref<ReadExpr> result = hasOrderedReads(false);
+  if (!result) {
+    result = hasOrderedReads(true);
+  }
+  return result;
+}
+
 ref<Expr> ConcatExpr::create(const ref<Expr> &l, const ref<Expr> &r) {
   Expr::Width w = l->getWidth() + r->getWidth();
 
@@ -2427,6 +2486,8 @@ static ref<Expr> UleExpr_create(const ref<Expr> &l, const ref<Expr> &r) {
     return OrExpr::create(Expr::createIsZero(l), r);
   } else if (r->isZero()) {
     return EqExpr::create(l, r);
+  } else if (l->isZero()) {
+    return Expr::createTrue();
   } else {
     return UleExpr::alloc(l, r);
   }

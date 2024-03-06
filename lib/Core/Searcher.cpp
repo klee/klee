@@ -159,16 +159,19 @@ void TargetedSearcher::update(
 
   // update current
   if (current && std::find(removedStates.begin(), removedStates.end(),
-                           current) == removedStates.end())
+                           current) == removedStates.end()) {
     states->update(current, getWeight(current));
+  }
 
   // insert states
-  for (const auto state : addedStates)
+  for (const auto state : addedStates) {
     states->insert(state, getWeight(state));
+  }
 
   // remove states
-  for (const auto state : removedStates)
+  for (const auto state : removedStates) {
     states->remove(state);
+  }
 }
 
 weight_type TargetedSearcher::getWeight(ExecutionState *es) {
@@ -195,7 +198,7 @@ ExecutionState &GuidedSearcher::selectState() {
   unsigned size = historiesAndTargets.size();
   interleave ^= 1;
   ExecutionState *state = nullptr;
-  if (interleave || !size) {
+  if (interleave || size == 0) {
     state = &baseSearcher->selectState();
   } else {
     index = theRNG.getInt32() % size;

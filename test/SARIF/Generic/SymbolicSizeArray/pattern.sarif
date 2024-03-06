@@ -11,6 +11,37 @@
                     {
                       "location": {
                         "message": {
+                          "text": "memory error: null pointer exception"
+                        },
+                        "physicalLocation": {
+                          "artifactLocation": {
+                            "uri": "SymbolicSizeArray.c"
+                          },
+                          "region": {
+                            "endColumn": null,
+                            "endLine": null,
+                            "startColumn": 8,
+                            "startLine": 15
+                          }
+                        }
+                      },
+                      "metadata": null
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "codeFlows": [
+            {
+              "threadFlows": [
+                {
+                  "locations": [
+                    {
+                      "location": {
+                        "message": {
                           "text": "Heap memory allocation"
                         },
                         "physicalLocation": {
@@ -24,8 +55,7 @@
                             "startLine": 14
                           }
                         }
-                      },
-                      "metadata": null
+                      }
                     },
                     {
                       "location": {

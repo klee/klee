@@ -198,7 +198,7 @@ static ref<Expr> getComplexPointerRestrictions(
     if (innerAlignmentRequirement.isNull()) {
       continue;
     }
-    restrictions.addConstraint(innerAlignmentRequirement, {});
+    restrictions.addConstraint(innerAlignmentRequirement);
   }
 
   auto simplified = Simplificator::simplify(restrictions.cs());

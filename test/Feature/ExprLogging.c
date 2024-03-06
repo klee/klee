@@ -8,8 +8,8 @@
 // RUN: %kleaver -print-ast %t.klee-out/solver-queries.kquery > %t3.log
 // RUN: %kleaver -print-ast %t3.log > %t4.log
 // RUN: diff %t3.log %t4.log
-// RUN: grep "^; Query" %t.klee-out/all-queries.smt2 | wc -l | grep -q 17
-// RUN: grep "^; Query" %t.klee-out/solver-queries.smt2 | wc -l | grep -q 17
+// RUN: grep "^; Query" %t.klee-out/all-queries.smt2 | wc -l | grep -q 13
+// RUN: grep "^; Query" %t.klee-out/solver-queries.smt2 | wc -l | grep -q 13
 
 #include "klee/klee.h"
 

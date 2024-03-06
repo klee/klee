@@ -1,7 +1,7 @@
 // RUN: %clang  -Wno-everything %s -emit-llvm %O0opt -g -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --skip-not-lazy-initialized --min-number-elements-li=1 %t1.bc 2>&1
-// RUN: %ktest-tool %t.klee-out/test000003.ktest | FileCheck %s
+// RUN: %klee --output-dir=%t.klee-out --skip-not-lazy-initialized --min-number-elements-li=4 %t1.bc 2>&1
+// RUN: %ktest-tool %t.klee-out/test000004.ktest | FileCheck %s
 
 #include "klee/klee.h"
 

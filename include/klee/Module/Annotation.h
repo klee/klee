@@ -9,17 +9,12 @@
 #ifndef KLEE_ANNOTATION_H
 #define KLEE_ANNOTATION_H
 
-#include "map"
-#include "set"
-#include "string"
-#include "vector"
+#include "nlohmann/json_fwd.hpp"
 
-#include "nlohmann/json.hpp"
-#include <optional>
-
-#include "klee/Config/config.h"
-
-#include "llvm/IR/Module.h"
+#include <map>
+#include <set>
+#include <string>
+#include <vector>
 
 using json = nlohmann::json;
 

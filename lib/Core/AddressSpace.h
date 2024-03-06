@@ -27,7 +27,8 @@ class TimingSolver;
 template <class T> class ref;
 
 typedef std::pair<const MemoryObject *, const ObjectState *> ObjectPair;
-typedef std::vector<IDType> ResolutionList;
+typedef std::pair<const MemoryObject *, ref<const ObjectState>> RefObjectPair;
+typedef std::vector<ObjectPair> ResolutionList;
 
 typedef std::function<bool(const MemoryObject *)> MOPredicate;
 
@@ -73,17 +74,18 @@ public:
   //
   // The mapping from ids to objects to safely update the underlying objects
   // if required (e.g. useful for symbolic sizes).
-  IDMap idToObjects;
+
+  mutable bool complete = false;
 
   AddressSpace() : cowKey(1) {}
   AddressSpace(const AddressSpace &b)
-      : cowKey(++b.cowKey), objects(b.objects), idToObjects(b.idToObjects) {}
+      : cowKey(++b.cowKey), objects(b.objects), complete(b.complete) {}
   ~AddressSpace() {}
 
   /// Resolve address to an ObjectPair in result.
   /// \return true iff an object was found.
   bool resolveOne(const ref<ConstantExpr> &address, KType *objectType,
-                  IDType &result) const;
+                  ObjectPair &result) const;
 
   /// Resolve address to an ObjectPair in result.
   ///
@@ -95,7 +97,7 @@ public:
   ///               (when returning true).
   /// \return true iff an object was found at \a address.
   bool resolveOne(ExecutionState &state, TimingSolver *solver,
-                  ref<Expr> address, KType *objectType, IDType &result,
+                  ref<Expr> address, KType *objectType, ObjectPair &result,
                   bool &success, const std::atomic_bool &haltExecution) const;
 
   /// @brief Tries to resolve the pointer in the concrete object
@@ -108,8 +110,8 @@ public:
   /// @param success True iff object was found.
   /// @return false iff the resolution is incomplete (query timed out).
   bool resolveOneIfUnique(ExecutionState &state, TimingSolver *solver,
-                          ref<Expr> address, KType *objectType, IDType &result,
-                          bool &success) const;
+                          ref<Expr> address, KType *objectType,
+                          ObjectPair &result, bool &success) const;
 
   /// Resolve pointer `p` to a list of `ObjectPairs` it can point
   /// to. If `maxResolutions` is non-zero then no more than that many
@@ -126,13 +128,15 @@ public:
 
   /// Add a binding to the address space.
   void bindObject(const MemoryObject *mo, ObjectState *os);
+  void bindObject(const MemoryObject *mo, const ObjectState *os);
 
   /// Remove a binding from the address space.
   void unbindObject(const MemoryObject *mo);
 
   /// Lookup a binding from a MemoryObject.
   ObjectPair findObject(const MemoryObject *mo) const;
-  ObjectPair findObject(IDType id) const;
+  RefObjectPair lazyInitializeObject(const MemoryObject *mo) const;
+  RefObjectPair findOrLazyInitializeObject(const MemoryObject *mo) const;
 
   /// Copy the concrete values of all managed ObjectStates into the
   /// actual system memory location they were allocated at.

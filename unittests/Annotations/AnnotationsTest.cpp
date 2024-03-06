@@ -11,8 +11,11 @@
 
 #include "klee/Module/Annotation.h"
 
+#include "nlohmann/json.hpp"
+
 #include <vector>
 
+using json = nlohmann::json;
 using namespace klee;
 
 TEST(AnnotationsTest, Empty) {

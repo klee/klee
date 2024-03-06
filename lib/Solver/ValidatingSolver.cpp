@@ -116,12 +116,10 @@ bool ValidatingSolver::computeInitialValues(
 
       for (unsigned j = 0; j < arrayConstantSize->getZExtValue(); j++) {
         unsigned char value = values[i].load(j);
-        bindings.addConstraint(
-            EqExpr::create(
-                ReadExpr::create(UpdateList(array, 0),
-                                 ConstantExpr::alloc(j, array->getDomain())),
-                ConstantExpr::alloc(value, array->getRange())),
-            {});
+        bindings.addConstraint(EqExpr::create(
+            ReadExpr::create(UpdateList(array, 0),
+                             ConstantExpr::alloc(j, array->getDomain())),
+            ConstantExpr::alloc(value, array->getRange())));
       }
     }
     ref<Expr> constraints = Expr::createIsZero(query.expr);
@@ -173,12 +171,10 @@ bool ValidatingSolver::check(const Query &query, ref<SolverResponse> &result) {
 
       for (unsigned j = 0; j < arrayConstantSize->getZExtValue(); j++) {
         unsigned char value = arrayValues.second.load(j);
-        bindings.addConstraint(
-            EqExpr::create(
-                ReadExpr::create(UpdateList(array, 0),
-                                 ConstantExpr::alloc(j, array->getDomain())),
-                ConstantExpr::alloc(value, array->getRange())),
-            {});
+        bindings.addConstraint(EqExpr::create(
+            ReadExpr::create(UpdateList(array, 0),
+                             ConstantExpr::alloc(j, array->getDomain())),
+            ConstantExpr::alloc(value, array->getRange())));
       }
     }
     ref<Expr> constraints = Expr::createIsZero(query.expr);

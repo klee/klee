@@ -881,7 +881,7 @@ void KleeHandler::writeTestCaseXML(bool isError, const KTest &assignments,
       // Pointer types
       v.print(*file, false);
     } else if (name.find("float") == 0) {
-      llvm::APFloat(APFloatBase::IEEEhalf(), v).print(*file);
+      llvm::APFloat(APFloatBase::IEEEsingle(), v).print(*file);
     } else if (name.find("double") == 0) {
       llvm::APFloat(APFloatBase::IEEEdouble(), v).print(*file);
     } else if (name.rfind("_t") != std::string::npos) {
@@ -1496,7 +1496,7 @@ static int run_klee_on_function(int pArgc, char **pArgv, char **pEnvp,
     *meta_file << "\t<producer>" << PACKAGE_STRING << "</producer>\n";
 
     // Assume with early exit a bug finding mode and otherwise coverage
-    if (OptExitOnError)
+    if (UseGuidedSearch == Interpreter::GuidanceKind::ErrorGuidance)
       *meta_file << "\t<specification>COVER( init(main()), FQL(COVER "
                     "EDGES(@CALL(__VERIFIER_error))) )</specification>\n";
     else

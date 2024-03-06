@@ -572,7 +572,9 @@ bool BitwuzlaSolverImpl::internalRunSolver(
       if (bitwuzla_term_unsat_core.count(bitwuzla_constraint)) {
         ref<Expr> constraint =
             env.bitwuzla_ast_expr_to_klee_expr[bitwuzla_constraint];
-        unsatCore.insert(constraint);
+        if (Expr::createIsZero(constraint) != query.getOriginalQueryExpr()) {
+          unsatCore.insert(constraint);
+        }
       }
     }
     assert(validityCore && "validityCore cannot be nullptr");

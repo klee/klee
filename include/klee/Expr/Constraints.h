@@ -34,24 +34,50 @@ struct KInstruction;
 /// Resembles a set of constraints that can be passed around
 ///
 class ConstraintSet {
+private:
+  /// Epoch counter used to control ownership of objects.
+  mutable unsigned cowKey;
+
+  constraints_ty _constraints;
+  symcretes_ty _symcretes;
+  mutable std::shared_ptr<Assignment> _concretization;
+  std::shared_ptr<IndependentConstraintSetUnion> _independentElements;
+  unsigned copyOnWriteOwner;
+
+  void checkCopyOnWriteOwner();
+
 public:
   ConstraintSet(constraints_ty cs, symcretes_ty symcretes,
                 Assignment concretization);
   explicit ConstraintSet(ref<const IndependentConstraintSet> ics);
   explicit ConstraintSet(
-      const std::vector<ref<const IndependentConstraintSet>> &ics);
+      const std::vector<ref<const IndependentConstraintSet>> &ics,
+      const ExprHashMap<ref<Expr>> &concretizedExprs);
   explicit ConstraintSet(constraints_ty cs);
   explicit ConstraintSet();
-  void fork();
+  ConstraintSet(const ConstraintSet &b)
+      : cowKey(++b.cowKey), _constraints(b._constraints),
+        _symcretes(b._symcretes), _concretization(b._concretization),
+        _independentElements(b._independentElements),
+        copyOnWriteOwner(b.copyOnWriteOwner) {}
+  ConstraintSet &operator=(const ConstraintSet &b) {
+    cowKey = ++b.cowKey;
+    _constraints = b._constraints;
+    _symcretes = b._symcretes;
+    _concretization = b._concretization;
+    _independentElements = b._independentElements;
+    copyOnWriteOwner = b.copyOnWriteOwner;
+    return *this;
+  }
 
-  void addConstraint(ref<Expr> e, const Assignment &delta);
-  void addSymcrete(ref<Symcrete> s, const Assignment &concretization);
+  void addConstraint(ref<Expr> e);
+  void addSymcrete(ref<Symcrete> s);
   bool isSymcretized(ref<Expr> expr) const;
 
-  void rewriteConcretization(const Assignment &a);
+  void rewriteConcretization(const Assignment &a) const;
   ConstraintSet withExpr(ref<Expr> e) const {
     ConstraintSet copy = ConstraintSet(*this);
-    copy.addConstraint(e, Assignment());
+    copy.addConstraint(e);
     return copy;
   }
 
@@ -85,12 +111,6 @@ public:
   void getAllDependentConstraintsSets(
       ref<Expr> queryExpr,
       std::vector<ref<const IndependentConstraintSet>> &result) const;
-
-private:
-  constraints_ty _constraints;
-  symcretes_ty _symcretes;
-  Assignment _concretization;
-  std::shared_ptr<IndependentConstraintSetUnion> _independentElements;
 };
 
 class PathConstraints {
@@ -100,13 +120,11 @@ public:
 
   void advancePath(KInstruction *ki);
   void advancePath(const Path &path);
-  void fork();
 
-  ExprHashSet addConstraint(ref<Expr> e, const Assignment &delta,
-                            Path::PathIndex currIndex);
-  ExprHashSet addConstraint(ref<Expr> e, const Assignment &delta);
+  ExprHashSet addConstraint(ref<Expr> e, Path::PathIndex currIndex);
+  ExprHashSet addConstraint(ref<Expr> e);
   bool isSymcretized(ref<Expr> expr) const;
-  void addSymcrete(ref<Symcrete> s, const Assignment &concretization);
+  void addSymcrete(ref<Symcrete> s);
   void rewriteConcretization(const Assignment &a);
 
   const constraints_ty &original() const;

@@ -183,63 +183,66 @@ public:
 
 ConstraintSet::ConstraintSet(constraints_ty cs, symcretes_ty symcretes,
                              Assignment concretization)
-    : _constraints(cs), _symcretes(symcretes), _concretization(concretization),
+    : cowKey(1), _constraints(cs), _symcretes(symcretes),
+      _concretization(new Assignment(concretization)),
       _independentElements(new IndependentConstraintSetUnion(
-          _constraints, _symcretes, _concretization)) {}
+          _constraints, _symcretes, *_concretization)),
+      copyOnWriteOwner(cowKey) {}
 
 ConstraintSet::ConstraintSet(ref<const IndependentConstraintSet> ics)
-    : _constraints(ics->getConstraints()), _symcretes(ics->getSymcretes()),
-      _concretization(ics->concretization),
-      _independentElements(new IndependentConstraintSetUnion(ics)) {}
+    : cowKey(1), _constraints(ics->getConstraints()),
+      _symcretes(ics->getSymcretes()),
+      _concretization(new Assignment(ics->concretization)),
+      _independentElements(new IndependentConstraintSetUnion(ics)),
+      copyOnWriteOwner(cowKey) {}
 
 ConstraintSet::ConstraintSet(
-    const std::vector<ref<const IndependentConstraintSet>> &factors)
-    : _independentElements(new IndependentConstraintSetUnion(
-          _constraints, _symcretes, _concretization)) {
+    const std::vector<ref<const IndependentConstraintSet>> &factors,
+    const ExprHashMap<ref<Expr>> &concretizedExprs)
+    : cowKey(1), _concretization(new Assignment()),
+      _independentElements(new IndependentConstraintSetUnion(
+          _constraints, _symcretes, *_concretization)),
+      copyOnWriteOwner(cowKey) {
   for (auto ics : factors) {
     constraints_ty constraints = ics->getConstraints();
     SymcreteOrderedSet symcretes = ics->getSymcretes();
     IndependentConstraintSetUnion icsu(ics);
     _constraints.insert(constraints.begin(), constraints.end());
     _symcretes.insert(symcretes.begin(), symcretes.end());
-    _concretization.addIndependentAssignment(ics->concretization);
+    _concretization->addIndependentAssignment(ics->concretization);
     _independentElements->addIndependentConstraintSetUnion(icsu);
   }
+  _independentElements->concretizedExprs = concretizedExprs;
 }
 
 ConstraintSet::ConstraintSet(constraints_ty cs) : ConstraintSet(cs, {}, {}) {}
 
 ConstraintSet::ConstraintSet()
-    : _independentElements(new IndependentConstraintSetUnion()) {}
+    : cowKey(1), _concretization(new Assignment()),
+      _independentElements(new IndependentConstraintSetUnion()),
+      copyOnWriteOwner(cowKey) {}
 
-void ConstraintSet::fork() {
-  _independentElements = std::make_shared<IndependentConstraintSetUnion>(
-      IndependentConstraintSetUnion(*_independentElements));
+void ConstraintSet::checkCopyOnWriteOwner() {
+  if (cowKey != copyOnWriteOwner) {
+    _independentElements = std::make_shared<IndependentConstraintSetUnion>(
+        IndependentConstraintSetUnion(*_independentElements));
+    _concretization =
+        std::make_shared<Assignment>(Assignment(*_concretization));
+  }
 }
 
-void ConstraintSet::addConstraint(ref<Expr> e, const Assignment &delta) {
+void ConstraintSet::addConstraint(ref<Expr> e) {
+  checkCopyOnWriteOwner();
   _constraints.insert(e);
-  // Update bindings
-  for (auto &i : delta.bindings) {
-    _concretization.bindings.replace({i.first, i.second});
-  }
-  _independentElements->updateConcretization(delta);
   _independentElements->addExpr(e);
 }
 
 IDType Symcrete::idCounter = 0;
 
-void ConstraintSet::addSymcrete(ref<Symcrete> s,
-                                const Assignment &concretization) {
+void ConstraintSet::addSymcrete(ref<Symcrete> s) {
+  checkCopyOnWriteOwner();
   _symcretes.insert(s);
   _independentElements->addSymcrete(s);
-  Assignment dependentConcretization;
-  for (auto i : s->dependentArrays()) {
-    _concretization.bindings.replace({i, concretization.bindings.at(i)});
-    dependentConcretization.bindings.replace(
-        {i, concretization.bindings.at(i)});
-  }
-  _independentElements->updateConcretization(dependentConcretization);
 }
 
 bool ConstraintSet::isSymcretized(ref<Expr> expr) const {
@@ -251,10 +254,10 @@ bool ConstraintSet::isSymcretized(ref<Expr> expr) const {
   return false;
 }
 
-void ConstraintSet::rewriteConcretization(const Assignment &a) {
+void ConstraintSet::rewriteConcretization(const Assignment &a) const {
   for (auto i : a.bindings) {
     if (concretization().bindings.count(i.first)) {
-      _concretization.bindings.replace({i.first, i.second});
+      _concretization->bindings.replace({i.first, i.second});
     }
   }
   _independentElements->updateConcretization(a);
@@ -305,7 +308,8 @@ void ConstraintSet::dump() const { this->print(llvm::errs()); }
 void ConstraintSet::changeCS(constraints_ty &cs) {
   _constraints = cs;
   _independentElements = std::make_shared<IndependentConstraintSetUnion>(
-      IndependentConstraintSetUnion(_constraints, _symcretes, _concretization));
+      IndependentConstraintSetUnion(_constraints, _symcretes,
+                                    *_concretization));
 }
 
 const constraints_ty &ConstraintSet::cs() const { return _constraints; }
@@ -324,7 +328,7 @@ const ExprHashMap<Path::PathIndex> &PathConstraints::indexes() const {
 }
 
 const Assignment &ConstraintSet::concretization() const {
-  return _concretization;
+  return *_concretization;
 }
 
 const constraints_ty &PathConstraints::original() const { return _original; }
@@ -342,9 +346,7 @@ PathConstraints::orderedCS() const {
 
 void PathConstraints::advancePath(KInstruction *ki) { _path.advance(ki); }
 
-void PathConstraints::fork() { constraints.fork(); }
-
-ExprHashSet PathConstraints::addConstraint(ref<Expr> e, const Assignment &delta,
+ExprHashSet PathConstraints::addConstraint(ref<Expr> e,
                                            Path::PathIndex currIndex) {
   auto expr = Simplificator::simplifyExpr(constraints, e);
   if (auto ce = dyn_cast<ConstantExpr>(expr.simplified)) {
@@ -365,7 +367,7 @@ ExprHashSet PathConstraints::addConstraint(ref<Expr> e, const Assignment &delta,
       auto indexConstraints = orderedConstraints[currIndex].second;
       indexConstraints.insert(expr);
       orderedConstraints.replace({currIndex, indexConstraints});
-      constraints.addConstraint(expr, delta);
+      constraints.addConstraint(expr);
     }
   }
 
@@ -383,18 +385,16 @@ ExprHashSet PathConstraints::addConstraint(ref<Expr> e, const Assignment &delta,
   return added;
 }
 
-ExprHashSet PathConstraints::addConstraint(ref<Expr> e,
-                                           const Assignment &delta) {
-  return addConstraint(e, delta, _path.getCurrentIndex());
+ExprHashSet PathConstraints::addConstraint(ref<Expr> e) {
+  return addConstraint(e, _path.getCurrentIndex());
 }
 
 bool PathConstraints::isSymcretized(ref<Expr> expr) const {
   return constraints.isSymcretized(expr);
 }
 
-void PathConstraints::addSymcrete(ref<Symcrete> s,
-                                  const Assignment &concretization) {
-  constraints.addSymcrete(s, concretization);
+void PathConstraints::addSymcrete(ref<Symcrete> s) {
+  constraints.addSymcrete(s);
 }
 
 void PathConstraints::rewriteConcretization(const Assignment &a) {

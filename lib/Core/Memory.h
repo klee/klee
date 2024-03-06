@@ -68,11 +68,9 @@ public:
   IDType id;
   mutable unsigned timestamp;
 
-  uint64_t address;
   ref<Expr> addressExpr;
 
   /// size in bytes
-  unsigned size;
   ref<Expr> sizeExpr;
 
   uint64_t alignment;
@@ -87,6 +85,8 @@ public:
   bool isUserSpecified;
 
   MemoryManager *parent;
+  KType *type;
+  const Array *content;
 
   /// "Location" for which this memory object was allocated. This
   /// should be either the allocating instruction or the global object
@@ -100,22 +100,23 @@ public:
 public:
   // XXX this is just a temp hack, should be removed
   explicit MemoryObject(uint64_t _address)
-      : id(0), timestamp(0), address(_address), addressExpr(nullptr), size(0),
-        sizeExpr(nullptr), alignment(0), isFixed(true),
-        isLazyInitialized(false), parent(NULL), allocSite(0) {}
+      : id(0), timestamp(0), addressExpr(Expr::createPointer(_address)),
+        sizeExpr(Expr::createPointer(0)), alignment(0), isFixed(true),
+        isLazyInitialized(false), parent(nullptr), type(nullptr),
+        content(nullptr), allocSite(nullptr) {}
 
   MemoryObject(
-      uint64_t _address, unsigned _size, uint64_t alignment, bool _isLocal,
+      ref<Expr> _address, ref<Expr> _size, uint64_t alignment, bool _isLocal,
       bool _isGlobal, bool _isFixed, bool _isLazyInitialized,
-      ref<CodeLocation> _allocSite, MemoryManager *_parent,
-      ref<Expr> _addressExpr = nullptr, ref<Expr> _sizeExpr = nullptr,
-      unsigned _timestamp = 0 /* unused if _isLazyInitialized is false*/)
-      : id(counter++), timestamp(_timestamp), address(_address),
-        addressExpr(_addressExpr), size(_size), sizeExpr(_sizeExpr),
-        alignment(alignment), name("unnamed"), isLocal(_isLocal),
-        isGlobal(_isGlobal), isFixed(_isFixed),
+      ref<CodeLocation> _allocSite, MemoryManager *_parent, KType *_type,
+      unsigned _timestamp = 0 /* unused if _isLazyInitialized is false*/,
+      const Array *_content =
+          nullptr /* unused if _isLazyInitialized is false*/)
+      : id(counter++), timestamp(_timestamp), addressExpr(_address),
+        sizeExpr(_size), alignment(alignment), name("unnamed"),
+        isLocal(_isLocal), isGlobal(_isGlobal), isFixed(_isFixed),
         isLazyInitialized(_isLazyInitialized), isUserSpecified(false),
-        parent(_parent), allocSite(_allocSite) {
+        parent(_parent), type(_type), content(_content), allocSite(_allocSite) {
     if (isLazyInitialized) {
       timestamp = _timestamp;
     } else {
@@ -133,21 +134,8 @@ public:
   void updateTimestamp() const { this->timestamp = time++; }
 
   bool hasSymbolicSize() const { return !isa<ConstantExpr>(getSizeExpr()); }
-  ref<ConstantExpr> getBaseConstantExpr() const {
-    return ConstantExpr::create(address, Context::get().getPointerWidth());
-  }
-  ref<Expr> getBaseExpr() const {
-    if (addressExpr) {
-      return addressExpr;
-    }
-    return getBaseConstantExpr();
-  }
-  ref<Expr> getSizeExpr() const {
-    if (sizeExpr) {
-      return sizeExpr;
-    }
-    return Expr::createPointer(size);
-  }
+  ref<Expr> getBaseExpr() const { return addressExpr; }
+  ref<Expr> getSizeExpr() const { return sizeExpr; }
   ref<Expr> getOffsetExpr(ref<Expr> pointer) const {
     return SubExpr::create(pointer, getBaseExpr());
   }
@@ -183,11 +171,11 @@ public:
     // Short-cut with id
     if (id == b.id)
       return 0;
-    if (address != b.address)
-      return (address < b.address ? -1 : 1);
+    if (addressExpr != b.addressExpr)
+      return (addressExpr < b.addressExpr ? -1 : 1);
 
-    if (size != b.size)
-      return (size < b.size ? -1 : 1);
+    if (sizeExpr != b.sizeExpr)
+      return (sizeExpr < b.sizeExpr ? -1 : 1);
 
     if (allocSite->source != b.allocSite->source)
       return (allocSite->source < b.allocSite->source ? -1 : 1);
@@ -231,6 +219,7 @@ private:
 
 public:
   bool readOnly;
+  bool wasWritten = false;
 
 public:
   /// Create a new object state for the given memory

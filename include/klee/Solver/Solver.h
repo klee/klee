@@ -23,7 +23,6 @@ namespace klee {
 class ConstraintSet;
 class Expr;
 class SolverImpl;
-class AddressGenerator;
 
 /// Collection of meta data that a solver can have access to. This is
 /// independent of the actual constraints but can be used as a two-way
@@ -273,9 +272,7 @@ std::unique_ptr<Solver> createDummySolver();
 // Create a solver based on the supplied ``CoreSolverType``.
 std::unique_ptr<Solver> createCoreSolver(CoreSolverType cst);
 
-std::unique_ptr<Solver>
-createConcretizingSolver(std::unique_ptr<Solver> s,
-                         AddressGenerator *addressGenerator);
+std::unique_ptr<Solver> createConcretizingSolver(std::unique_ptr<Solver> s);
 
 /// Return a list of all unique symbolic objects referenced by the
 /// given Query.

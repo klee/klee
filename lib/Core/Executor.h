@@ -73,7 +73,6 @@ class Value;
 } // namespace llvm
 
 namespace klee {
-class AddressManager;
 class Array;
 struct Cell;
 class CodeGraphInfo;
@@ -146,7 +145,6 @@ private:
 
   ExternalDispatcher *externalDispatcher;
   std::unique_ptr<TimingSolver> solver;
-  std::unique_ptr<AddressManager> addressManager;
   std::unique_ptr<MemoryManager> memory;
   TypeManager *typeSystemManager;
 
@@ -296,6 +294,8 @@ private:
   ObjectState *bindObjectInState(ExecutionState &state, const MemoryObject *mo,
                                  KType *dynamicType, bool IsAlloca,
                                  const Array *array = nullptr);
+  ObjectState *bindObjectInState(ExecutionState &state, const MemoryObject *mo,
+                                 const ObjectState *object);
 
   /// Resolve a pointer to the memory objects it could point to the
   /// start of, forking execution when necessary and generating errors
@@ -305,7 +305,8 @@ private:
   /// \param results[out] A list of ((MemoryObject,ObjectState),
   /// state) pairs for each object the given address can point to the
   /// beginning of.
-  typedef std::vector<std::pair<IDType, ExecutionState *>> ExactResolutionList;
+  typedef std::vector<std::pair<const MemoryObject *, ExecutionState *>>
+      ExactResolutionList;
   bool resolveExact(ExecutionState &state, ref<Expr> p, KType *type,
                     ExactResolutionList &results, const std::string &name);
 
@@ -314,16 +315,17 @@ private:
                       const ObjectState *reallocFrom,
                       size_t allocationAlignment, bool checkOutOfMemory);
 
-  bool computeSizes(ExecutionState &state, ref<Expr> size,
+  bool computeSizes(const ConstraintSet &constraints,
                     ref<Expr> symbolicSizesSum,
                     std::vector<const Array *> &objects,
-                    std::vector<SparseStorage<unsigned char>> &values);
+                    std::vector<SparseStorage<unsigned char>> &values,
+                    SolverQueryMetaData &metaData);
 
   MemoryObject *allocate(ExecutionState &state, ref<Expr> size, bool isLocal,
                          bool isGlobal, ref<CodeLocation> allocSite,
-                         size_t allocationAlignment,
+                         size_t allocationAlignment, KType *type,
                          ref<Expr> lazyInitializationSource = ref<Expr>(),
-                         unsigned timestamp = 0);
+                         unsigned timestamp = 0, bool isSymbolic = false);
 
   /// Allocate and bind a new object in a particular state. NOTE: This
   /// function may fork.
@@ -371,17 +373,19 @@ private:
   void executeCall(ExecutionState &state, KInstruction *ki, llvm::Function *f,
                    std::vector<ref<Expr>> &arguments);
 
+  typedef std::vector<ref<const MemoryObject>> ObjectResolutionList;
+
   bool resolveMemoryObjects(ExecutionState &state, ref<Expr> address,
                             KType *targetType, KInstruction *target,
                             unsigned bytes,
-                            std::vector<IDType> &mayBeResolvedMemoryObjects,
+                            ObjectResolutionList &mayBeResolvedMemoryObjects,
                             bool &mayBeOutOfBound, bool &mayLazyInitialize,
                             bool &incomplete, bool onlyLazyInitialize = false);
 
   bool checkResolvedMemoryObjects(
       ExecutionState &state, ref<Expr> address, KInstruction *target,
-      unsigned bytes, const std::vector<IDType> &mayBeResolvedMemoryObjects,
-      bool hasLazyInitialized, std::vector<IDType> &resolvedMemoryObjects,
+      unsigned bytes, const ObjectResolutionList &mayBeResolvedMemoryObjects,
+      bool hasLazyInitialized, ObjectResolutionList &resolvedMemoryObjects,
       std::vector<ref<Expr>> &resolveConditions,
       std::vector<ref<Expr>> &unboundConditions, ref<Expr> &checkOutOfBounds,
       bool &mayBeOutOfBound);
@@ -392,19 +396,9 @@ private:
                  ref<Expr> checkOutOfBounds, bool hasLazyInitialized,
                  ref<Expr> &guard, bool &mayBeInBounds);
 
-  bool collectConcretizations(ExecutionState &state,
-                              const std::vector<ref<Expr>> &resolveConditions,
-                              const std::vector<ref<Expr>> &unboundConditions,
-                              const std::vector<IDType> &resolvedMemoryObjects,
-                              ref<Expr> checkOutOfBounds,
-                              bool hasLazyInitialized, ref<Expr> &guard,
-                              std::vector<Assignment> &resolveConcretizations,
-                              bool &mayBeInBounds);
-
   void collectReads(ExecutionState &state, ref<Expr> address, KType *targetType,
                     Expr::Width type, unsigned bytes,
-                    const std::vector<IDType> &resolvedMemoryObjects,
-                    const std::vector<Assignment> &resolveConcretizations,
+                    const ObjectResolutionList &resolvedMemoryObjects,
                     std::vector<ref<Expr>> &results);
 
   // do address resolution / object binding / out of bounds checking
@@ -414,24 +408,21 @@ private:
                               ref<Expr> value /* undef if read */,
                               KInstruction *target /* undef if write */);
 
-  bool lazyInitializeObject(ExecutionState &state, ref<Expr> address,
-                            const KInstruction *target, KType *targetType,
-                            uint64_t size, bool isLocal, IDType &id,
-                            bool isConstant = true);
+  ref<const MemoryObject>
+  lazyInitializeObject(ExecutionState &state, ref<Expr> address,
+                       const KInstruction *target, KType *targetType,
+                       uint64_t concreteSize, ref<Expr> size, bool isLocal,
+                       bool isConstant = true);
 
-  IDType lazyInitializeLocalObject(ExecutionState &state, StackFrame &sf,
-                                   ref<Expr> address,
-                                   const KInstruction *target);
+  void lazyInitializeLocalObject(ExecutionState &state, StackFrame &sf,
+                                 ref<Expr> address, const KInstruction *target);
 
-  IDType lazyInitializeLocalObject(ExecutionState &state, ref<Expr> address,
-                                   const KInstruction *target);
+  void lazyInitializeLocalObject(ExecutionState &state, ref<Expr> address,
+                                 const KInstruction *target);
 
   void executeMakeSymbolic(ExecutionState &state, const MemoryObject *mo,
                            KType *type, const ref<SymbolicSource> source,
                            bool isLocal);
-
-  void updateStateWithSymcretes(ExecutionState &state,
-                                const Assignment &assignment);
 
   /// Assume that `current` state stepped to `block`.
   /// Can we reach at least one target of `current` from there?
@@ -456,10 +447,6 @@ private:
   // If the MaxStatic*Pct limits have been reached, concretize the condition and
   // return it. Otherwise, return the unmodified condition.
   ref<Expr> maxStaticPctChecks(ExecutionState &current, ref<Expr> condition);
-
-  Assignment computeConcretization(const ConstraintSet &constraints,
-                                   ref<Expr> condition,
-                                   SolverQueryMetaData &queryMetaData);
 
   /// Add the given (boolean) condition as a constraint on state. This
   /// function is a wrapper around the state's addConstraint function
@@ -657,9 +644,6 @@ private:
   uint64_t updateNameVersion(ExecutionState &state, const std::string &name);
 
   const Array *makeArray(ref<Expr> size, const ref<SymbolicSource> source);
-
-  ExecutionState *prepareStateForPOSIX(KInstIterator &caller,
-                                       ExecutionState *state);
 
   void prepareTargetedExecution(ExecutionState &initialState,
                                 ref<TargetForest> whitelist);

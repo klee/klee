@@ -54,7 +54,9 @@ std::string MemoryObject::getAllocInfo() const {
   std::string result;
   llvm::raw_string_ostream info(result);
 
-  info << "MO" << id << "[" << size << "]";
+  info << "MO" << id << "[";
+  sizeExpr->print(info);
+  info << "]";
 
   if (allocSite && allocSite->source) {
     const llvm::Value *allocSiteSource = allocSite->source->unwrap();
@@ -91,7 +93,7 @@ ObjectState::ObjectState(const ObjectState &os)
     : copyOnWriteOwner(0), object(os.object), knownSymbolics(os.knownSymbolics),
       unflushedMask(os.unflushedMask), updates(os.updates),
       lastUpdate(os.lastUpdate), size(os.size), dynamicType(os.dynamicType),
-      readOnly(os.readOnly) {}
+      readOnly(os.readOnly), wasWritten(os.wasWritten) {}
 
 ArrayCache *ObjectState::getArrayCache() const {
   assert(object && "object was NULL");
@@ -172,14 +174,21 @@ ref<Expr> ObjectState::read8(ref<Expr> offset) const {
          "constant offset passed to symbolic read8");
   flushForRead();
 
-  if (object && object->size > 4096) {
-    std::string allocInfo = object->getAllocInfo();
-    klee_warning_once(
-        nullptr,
-        "Symbolic memory access will send the following array of %d bytes to "
-        "the constraint solver -- large symbolic arrays may cause significant "
-        "performance issues: %s",
-        object->size, allocInfo.c_str());
+  if (object) {
+    if (ref<ConstantExpr> sizeExpr =
+            dyn_cast<ConstantExpr>(object->getSizeExpr())) {
+      auto moSize = sizeExpr->getZExtValue();
+      if (object && moSize > 4096) {
+        std::string allocInfo = object->getAllocInfo();
+        klee_warning_once(nullptr,
+                          "Symbolic memory access will send the following "
+                          "array of %lu bytes to "
+                          "the constraint solver -- large symbolic arrays may "
+                          "cause significant "
+                          "performance issues: %s",
+                          moSize, allocInfo.c_str());
+      }
+    }
   }
 
   return ReadExpr::create(getUpdates(), ZExtExpr::create(offset, Expr::Int32));
@@ -188,9 +197,12 @@ ref<Expr> ObjectState::read8(ref<Expr> offset) const {
 void ObjectState::write8(unsigned offset, uint8_t value) {
   knownSymbolics.store(offset, ConstantExpr::create(value, Expr::Int8));
   unflushedMask.store(offset, true);
+  wasWritten = true;
 }
 
 void ObjectState::write8(unsigned offset, ref<Expr> value) {
+  wasWritten = true;
+
   // can happen when ExtractExpr special cases
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(value)) {
     write8(offset, (uint8_t)CE->getZExtValue(8));
@@ -201,24 +213,32 @@ void ObjectState::write8(unsigned offset, ref<Expr> value) {
 }
 
 void ObjectState::write8(ref<Expr> offset, ref<Expr> value) {
+  wasWritten = true;
+
   assert(!isa<ConstantExpr>(offset) &&
          "constant offset passed to symbolic write8");
   flushForWrite();
 
-  if (object && object->size > 4096) {
-    std::string allocInfo = object->getAllocInfo();
-    klee_warning_once(
-        nullptr,
-        "Symbolic memory access will send the following array of %d bytes to "
-        "the constraint solver -- large symbolic arrays may cause significant "
-        "performance issues: %s",
-        object->size, allocInfo.c_str());
+  if (ref<ConstantExpr> sizeExpr =
+          dyn_cast<ConstantExpr>(object->getSizeExpr())) {
+    auto moSize = sizeExpr->getZExtValue();
+    if (object && moSize > 4096) {
+      std::string allocInfo = object->getAllocInfo();
+      klee_warning_once(nullptr,
+                        "Symbolic memory access will send the following array "
+                        "of %lu bytes to "
+                        "the constraint solver -- large symbolic arrays may "
+                        "cause significant "
+                        "performance issues: %s",
+                        moSize, allocInfo.c_str());
+    }
   }
 
   updates.extend(ZExtExpr::create(offset, Expr::Int32), value);
 }
 
 void ObjectState::write(ref<const ObjectState> os) {
+  wasWritten = true;
   knownSymbolics = os->knownSymbolics;
   unflushedMask = os->unflushedMask;
   updates = UpdateList(updates.root, os->updates.head);
@@ -373,16 +393,16 @@ void ObjectState::print() const {
   llvm::errs() << "-- ObjectState --\n";
   llvm::errs() << "\tMemoryObject ID: " << object->id << "\n";
   llvm::errs() << "\tRoot Object: " << updates.root << "\n";
-  llvm::errs() << "\tSize: " << object->size << "\n";
+  llvm::errs() << "\tSize: ";
+  object->getSizeExpr()->print(llvm::errs());
+  llvm::errs() << "\n";
 
   llvm::errs() << "\tBytes:\n";
-  for (unsigned i = 0; i < object->size; i++) {
-    llvm::errs() << "\t\t[" << i << "]"
-                 << " known? " << !knownSymbolics.load(i).isNull()
-                 << " unflushed? " << unflushedMask.load(i) << " = ";
-    ref<Expr> e = read8(i);
-    llvm::errs() << e << "\n";
-  }
+  llvm::errs() << "known:\n";
+  knownSymbolics.print(llvm::errs(), Density::Sparse);
+  llvm::errs() << "\nunflushed:\n";
+  unflushedMask.print(llvm::errs(), Density::Sparse);
+  llvm::errs() << "\n";
 
   llvm::errs() << "\tUpdates:\n";
   for (const auto *un = updates.head.get(); un; un = un->next.get()) {

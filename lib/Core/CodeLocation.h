@@ -75,6 +75,10 @@ public:
   /// @param location location info in source code.
   /// @return SARIFs representation of location.
   PhysicalLocationJson serialize() const;
+
+  /// @brief Equals code locations.
+  /// @param b Code location to equal.
+  bool equals(const CodeLocation &b) const;
 };
 
 }; // namespace klee

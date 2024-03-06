@@ -16,44 +16,6 @@
 using namespace klee;
 
 //------------------------------ HELPER FUNCTIONS ---------------------------//
-bool ArrayExprHelper::isReadExprAtOffset(ref<Expr> e, const ReadExpr *base,
-                                         ref<Expr> offset) {
-  const ReadExpr *re = dyn_cast<ReadExpr>(e.get());
-  if (!re || (re->getWidth() != Expr::Int8))
-    return false;
-  return SubExpr::create(re->index, base->index) == offset;
-}
-
-ReadExpr *ArrayExprHelper::hasOrderedReads(const ConcatExpr &ce) {
-  const ReadExpr *base = dyn_cast<ReadExpr>(ce.getKid(0));
-
-  // right now, all Reads are byte reads but some
-  // transformations might change this
-  if (!base || base->getWidth() != Expr::Int8) {
-    return nullptr;
-  }
-
-  // Get stride expr in proper index width.
-  Expr::Width idxWidth = base->index->getWidth();
-  ref<Expr> strideExpr = ConstantExpr::alloc(-1, idxWidth);
-  ref<Expr> offset = ConstantExpr::create(0, idxWidth);
-
-  ref<Expr> e = ce.getKid(1);
-
-  // concat chains are unbalanced to the right
-  while (e->getKind() == Expr::Concat) {
-    offset = AddExpr::create(offset, strideExpr);
-    if (!isReadExprAtOffset(e->getKid(0), base, offset))
-      return nullptr;
-    e = e->getKid(1);
-  }
-
-  offset = AddExpr::create(offset, strideExpr);
-  if (!isReadExprAtOffset(e, base, offset))
-    return nullptr;
-
-  return cast<ReadExpr>(e.get());
-}
 
 void ArrayExprHelper::collectAlternatives(
     const SelectExpr &se, std::vector<ref<Expr>> &alternatives) {
@@ -72,7 +34,7 @@ void ArrayExprHelper::collectAlternatives(
 //--------------------------- INDEX-BASED OPTIMIZATION-----------------------//
 ExprVisitor::Action
 ConstantArrayExprVisitor::visitConcat(const ConcatExpr &ce) {
-  ReadExpr *base = ArrayExprHelper::hasOrderedReads(ce);
+  ref<ReadExpr> base = ce.hasOrderedReads();
   return base ? visitRead(*base) : Action::doChildren();
 }
 
@@ -162,7 +124,7 @@ ExprVisitor::Action IndexTransformationExprVisitor::visitMul(const MulExpr &e) {
 
 //-------------------------- VALUE-BASED OPTIMIZATION------------------------//
 ExprVisitor::Action ArrayReadExprVisitor::visitConcat(const ConcatExpr &ce) {
-  ReadExpr *base = ArrayExprHelper::hasOrderedReads(ce);
+  ref<ReadExpr> base = ce.hasOrderedReads();
   if (base) {
     return inspectRead(const_cast<ConcatExpr *>(&ce), ce.getWidth(), *base);
   }

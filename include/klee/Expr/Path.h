@@ -24,6 +24,9 @@ public:
   struct PathIndex {
     unsigned long block;
     unsigned long instruction;
+    bool operator==(const PathIndex &rhs) const {
+      return block == rhs.block && instruction == rhs.instruction;
+    }
   };
 
   struct PathIndexCompare {

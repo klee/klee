@@ -97,9 +97,12 @@ void IndependentConstraintSet::addValuesToAssignment(
   }
 }
 
-IndependentConstraintSet::IndependentConstraintSet() {}
+IndependentConstraintSet::IndependentConstraintSet() {
+  concretizedSets.reset(new InnerSetUnion());
+}
 
 IndependentConstraintSet::IndependentConstraintSet(ref<ExprOrSymcrete> v) {
+  concretizedSets.reset(new InnerSetUnion());
   if (isa<ExprOrSymcrete::left>(v)) {
     initIndependentConstraintSet(cast<ExprOrSymcrete::left>(v)->value());
   } else {
@@ -327,6 +330,8 @@ IndependentConstraintSet::merge(ref<const IndependentConstraintSet> A,
   }
   b->addValuesToAssignment(b->concretization.keys(), b->concretization.values(),
                            a->concretization);
+
+  a->concretizedSets->add(*b->concretizedSets.get());
 
   if (!a->concretization.bindings.empty()) {
     InnerSetUnion DSU;

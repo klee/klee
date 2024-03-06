@@ -96,7 +96,7 @@ private:
   using TargetToSpeculativeStateToDistanceResultMap =
       std::unordered_map<KBlock *, SpeculativeStateToDistanceResultMap>;
 
-  using StatesSet = std::unordered_set<ExecutionState *>;
+  using StatesSet = states_ty;
 
   CodeGraphInfo &codeGraphInfo;
   TargetToSpeculativeStateToDistanceResultMap distanceResultCache;

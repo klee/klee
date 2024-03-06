@@ -51,6 +51,7 @@ struct Cell;
 class Executor;
 class Expr;
 class InterpreterHandler;
+struct KBlockCompare;
 struct KInstruction;
 class KModule;
 struct KFunction;
@@ -58,6 +59,23 @@ struct KCallBlock;
 template <class T> class ref;
 
 enum KBlockType { Base, Call, Return };
+
+struct KBlockCompare {
+  bool operator()(const KBlock *a, const KBlock *b) const;
+};
+
+template <class T> using KBlockMap = std::map<KBlock *, T, KBlockCompare>;
+
+using KBlockSet = std::set<KBlock *, KBlockCompare>;
+
+struct KFunctionCompare {
+  bool operator()(const KFunction *a, const KFunction *b) const;
+};
+
+template <class T>
+using KFunctionMap = std::map<KFunction *, T, KFunctionCompare>;
+
+using KFunctionSet = std::set<KFunction *, KFunctionCompare>;
 
 struct KBlock : public KValue {
   KFunction *parent;
@@ -78,6 +96,9 @@ protected:
   KBlock &operator=(const KBlock &) = delete;
 
 public:
+  KBlockSet successors();
+  KBlockSet predecessors();
+
   unsigned getNumInstructions() const noexcept { return basicBlock()->size(); }
   KInstruction *getFirstInstruction() const noexcept { return instructions[0]; }
   KInstruction *getLastInstruction() const noexcept {
@@ -127,13 +148,12 @@ public:
 
 struct KCallBlock : KBlock {
   KInstruction *kcallInstruction;
-  std::set<llvm::Function *> calledFunctions;
+  KFunctionSet calledFunctions;
 
 public:
   KCallBlock(KFunction *, llvm::BasicBlock *, KModule *,
              const std::unordered_map<llvm::Instruction *, unsigned> &,
-             std::set<llvm::Function *>, KInstruction **,
-             unsigned &globalIndexInc);
+             KInstruction **, unsigned &globalIndexInc);
   static bool classof(const KCallBlock *) { return true; }
   static bool classof(const KBlock *E) {
     return E->getKBlockType() == KBlockType::Call;
@@ -229,20 +249,6 @@ public:
   [[nodiscard]] inline unsigned getGlobalIndex() const { return globalIndex; }
 };
 
-struct KBlockCompare {
-  bool operator()(const KBlock *a, const KBlock *b) const {
-    return a->parent->getGlobalIndex() < b->parent->getGlobalIndex() ||
-           (a->parent->getGlobalIndex() == b->parent->getGlobalIndex() &&
-            a->getId() < b->getId());
-  }
-};
-
-struct KFunctionCompare {
-  bool operator()(const KFunction *a, const KFunction *b) const {
-    return a->id < b->id;
-  }
-};
-
 struct KConstant : public KValue {
 public:
   /// Actual LLVM constant this represents.
@@ -303,13 +309,13 @@ public:
   // Our shadow versions of LLVM structures.
   std::vector<std::unique_ptr<KFunction>> functions;
   std::unordered_map<const llvm::Function *, KFunction *> functionMap;
-  std::unordered_map<llvm::Function *, std::set<llvm::Function *>> callMap;
+  KFunctionMap<KFunctionSet> callMap;
   std::unordered_map<std::string, KFunction *> functionNameMap;
   [[nodiscard]] unsigned getFunctionId(const llvm::Function *) const;
 
   // Functions which escape (may be called indirectly)
   // XXX change to KFunction
-  std::set<llvm::Function *> escapingFunctions;
+  KFunctionSet escapingFunctions;
 
   std::set<std::string> mainModuleFunctions;
   std::set<std::string> mainModuleGlobals;

@@ -44,6 +44,10 @@ struct LocationInfo {
   /// @param location location info in source code.
   /// @return SARIFs representation of location.
   PhysicalLocationJson serialize() const;
+
+  bool operator==(const LocationInfo &rhs) const {
+    return file == rhs.file && line == rhs.line && column == rhs.column;
+  }
 };
 
 LocationInfo getLocationInfo(const llvm::Function *func);

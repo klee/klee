@@ -150,8 +150,7 @@ Path Path::parse(const std::string &str, const KModule &km) {
 
 Path::TransitionKind Path::getTransitionKind(KBlock *a, KBlock *b) {
   if (auto cb = dyn_cast<KCallBlock>(a)) {
-    if (cb->calledFunctions.count(b->parent->function()) &&
-        b == b->parent->entryKBlock) {
+    if (cb->calledFunctions.count(b->parent) && b == b->parent->entryKBlock) {
       return TransitionKind::StepInto;
     }
   }

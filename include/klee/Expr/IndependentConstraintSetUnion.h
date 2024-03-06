@@ -22,8 +22,7 @@ public:
 public:
   void updateConcretization(const Assignment &delta);
   void removeConcretization(const Assignment &remove);
-  void calculateUpdateConcretizationQueue();
-  void calculateRemoveConcretizationQueue();
+  void flushConcretization();
   void reEvaluateConcretization(const Assignment &newConcretization);
 
   IndependentConstraintSetUnion getConcretizedVersion();
@@ -45,7 +44,7 @@ public:
 
   void addExpr(ref<Expr> e);
   void addSymcrete(ref<Symcrete> s);
-  void calculateQueue();
+  void flushConstraints();
 };
 } // namespace klee
 

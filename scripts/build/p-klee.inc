@@ -23,6 +23,7 @@ build_klee() {
     "-DENABLE_UNIT_TESTS=TRUE"
     "-DENABLE_SYSTEM_TESTS=TRUE"
     "-DENABLE_DOXYGEN=${ENABLE_DOXYGEN}"
+    "-DBUILD_SUFFIX=${BUILD_SUFFIX}"
     "-DLIT_ARGS=\"-v;--time-tests\""
   )
 

@@ -7,7 +7,6 @@
 #
 #===------------------------------------------------------------------------===#
 add_library(kleeCore
-  AddressManager.cpp
   AddressSpace.cpp
   BidirectionalSearcher.cpp
   CallPathManager.cpp

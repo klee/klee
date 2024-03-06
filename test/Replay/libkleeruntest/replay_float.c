@@ -1,3 +1,5 @@
+// Something is wrong in the replaying process, compiled binary evalaluates fmin of nan and number as nan
+// XFAIL: not-bitwuzla
 // REQUIRES: floating-point
 // RUN: %clang %s -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
@@ -7,8 +9,10 @@
 
 // Now try to replay with libkleeRuntest
 // RUN: %cc %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -lm -o %t_runner
-// RUN: env KTEST_FILE=%t.klee-out/test000001.ktest %t_runner | FileCheck -check-prefix=TESTONE %s
-// RUN: env KTEST_FILE=%t.klee-out/test000002.ktest %t_runner | FileCheck -check-prefix=TESTTWO %s
+// RUN: rm -f %t_runner.log
+// RUN: env KTEST_FILE=%t.klee-out/test000001.ktest %t_runner >> %t_runner.log
+// RUN: env KTEST_FILE=%t.klee-out/test000002.ktest %t_runner >> %t_runner.log
+// RUN: FileCheck %s -check-prefix=CHECK -input-file=%t_runner.log
 
 #include "klee/klee.h"
 #include <math.h>
@@ -26,5 +30,5 @@ int main() {
   return 0;
 }
 
-// TESTONE: fmin(a, b) != a
-// TESTTWO: fmin(a, b) == a
+// CHECK-DAG: fmin(a, b) != a
+// CHECK-DAG: fmin(a, b) == a

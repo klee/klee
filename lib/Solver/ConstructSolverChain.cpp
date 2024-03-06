@@ -28,13 +28,11 @@ DISABLE_WARNING_POP
 #include <utility>
 
 namespace klee {
-class AddressGenerator;
 
 std::unique_ptr<Solver> constructSolverChain(
     std::unique_ptr<Solver> coreSolver, std::string querySMT2LogPath,
     std::string baseSolverQuerySMT2LogPath, std::string queryKQueryLogPath,
-    std::string baseSolverQueryKQueryLogPath,
-    AddressGenerator *addressGenerator, ArrayCache &arrayCache) {
+    std::string baseSolverQueryKQueryLogPath, ArrayCache &arrayCache) {
   Solver *rawCoreSolver = coreSolver.get();
   std::unique_ptr<Solver> solver = std::move(coreSolver);
   const time::Span minQueryTimeToLog(MinQueryTimeToLog);
@@ -74,7 +72,7 @@ std::unique_ptr<Solver> constructSolverChain(
     solver = createIndependentSolver(std::move(solver));
 
   if (UseConcretizingSolver)
-    solver = createConcretizingSolver(std::move(solver), addressGenerator);
+    solver = createConcretizingSolver(std::move(solver));
 
   if (UseCexCache && UseConcretizingSolver)
     solver = createCexCachingSolver(std::move(solver));

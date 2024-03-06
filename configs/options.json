@@ -29,7 +29,7 @@
                 "--output-istats=false",
                 "--output-stats=false",
                 "--max-time=${maxTime}s",
-                "--max-sym-alloc=${maxSymAlloc}",
+                "--max-sym-size-alloc=${maxSymAlloc}",
                 "--max-forks=${maxForks}",
                 "--max-solver-time=${maxSolverTime}s",
                 "--smart-resolve-entry-function",

@@ -11,6 +11,7 @@
 #define KLEE_TARGETCALCULATOR_H
 
 #include "ObjectManager.h"
+
 #include "klee/ADT/RNG.h"
 #include "klee/Module/KModule.h"
 #include "klee/Module/Target.h"
@@ -38,18 +39,12 @@ class ExecutionState;
 
 enum class TrackCoverageBy { None, Blocks, Branches, All };
 
-typedef std::pair<llvm::BasicBlock *, unsigned> Branch;
-
 class TargetCalculator : public Subscriber {
-  using StatesSet = std::unordered_set<ExecutionState *>;
-
-  typedef std::unordered_set<KBlock *> VisitedBlocks;
-  typedef std::unordered_set<Branch, BranchHash> VisitedBranches;
+  using StatesSet = states_ty;
 
   enum HistoryKind { Blocks, Transitions };
 
-  typedef std::unordered_map<KFunction *,
-                             std::map<KBlock *, std::set<unsigned>>>
+  typedef std::unordered_map<KFunction *, KBlockMap<std::set<unsigned>>>
       CoveredBranches;
 
   typedef std::unordered_set<KFunction *> CoveredFunctionsBranches;
@@ -78,8 +73,7 @@ private:
   CoveredFunctionsBranches fullyCoveredFunctions;
   StatesSet localStates;
 
-  const std::map<KBlock *, std::set<unsigned>> &
-  getCoverageTargets(KFunction *kf);
+  const KBlockMap<std::set<unsigned>> &getCoverageTargets(KFunction *kf);
 };
 } // namespace klee
 

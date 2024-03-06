@@ -9,8 +9,15 @@
 #include "klee/Module/Annotation.h"
 #include "klee/Support/ErrorHandling.h"
 
-#include <fstream>
+#include "klee/Support/CompilerWarning.h"
+DISABLE_WARNING_PUSH
+DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include <llvm/Support/raw_ostream.h>
+DISABLE_WARNING_POP
+
+#include "nlohmann/json.hpp"
+
+#include <fstream>
 
 namespace klee {
 

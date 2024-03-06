@@ -180,7 +180,6 @@ ExecutionState::ExecutionState(const ExecutionState &state)
       prevTargets_(state.prevTargets_), targets_(state.targets_),
       prevHistory_(state.prevHistory_), history_(state.history_),
       isTargeted_(state.isTargeted_) {
-  constraints.fork();
   queryMetaData.id = state.id;
 }
 
@@ -247,11 +246,10 @@ void ExecutionState::pushFrame(KInstIterator caller, KFunction *kf) {
 
 void ExecutionState::popFrame() {
   const StackFrame &sf = stack.valueStack().back();
-  for (const auto id : sf.allocas) {
-    const MemoryObject *memoryObject = addressSpace.findObject(id).first;
+  for (auto &memoryObject : sf.allocas) {
     assert(memoryObject);
-    removePointerResolutions(memoryObject);
-    addressSpace.unbindObject(memoryObject);
+    removePointerResolutions(memoryObject.get());
+    addressSpace.unbindObject(memoryObject.get());
   }
   stack.popFrame();
 }
@@ -285,8 +283,7 @@ bool ExecutionState::getBase(
     return true;
   }
   case Expr::Concat: {
-    ref<ReadExpr> base =
-        ArrayExprHelper::hasOrderedReads(*dyn_cast<ConcatExpr>(expr));
+    ref<ReadExpr> base = expr->hasOrderedReads();
     if (!base) {
       return false;
     }
@@ -319,7 +316,7 @@ bool ExecutionState::getBase(
 void ExecutionState::removePointerResolutions(const MemoryObject *mo) {
   for (auto resolution = begin(resolvedPointers);
        resolution != end(resolvedPointers);) {
-    resolution->second.erase(mo->id);
+    resolution->second.erase(mo);
     if (resolution->second.size() == 0) {
       resolution = resolvedPointers.erase(resolution);
     } else {
@@ -329,7 +326,7 @@ void ExecutionState::removePointerResolutions(const MemoryObject *mo) {
 
   for (auto resolution = begin(resolvedSubobjects);
        resolution != end(resolvedSubobjects);) {
-    resolution->second.erase(mo->id);
+    resolution->second.erase(mo);
     if (resolution->second.size() == 0) {
       resolution = resolvedSubobjects.erase(resolution);
     } else {
@@ -351,8 +348,8 @@ void ExecutionState::addPointerResolution(ref<Expr> address,
                                           const MemoryObject *mo,
                                           unsigned size) {
   if (!isa<ConstantExpr>(address)) {
-    resolvedPointers[address].insert(mo->id);
-    resolvedSubobjects[MemorySubobject(address, size)].insert(mo->id);
+    resolvedPointers[address].insert(mo);
+    resolvedSubobjects[MemorySubobject(address, size)].insert(mo);
   }
 }
 
@@ -361,8 +358,8 @@ void ExecutionState::addUniquePointerResolution(ref<Expr> address,
                                                 unsigned size) {
   if (!isa<ConstantExpr>(address)) {
     removePointerResolutions(address, size);
-    resolvedPointers[address].insert(mo->id);
-    resolvedSubobjects[MemorySubobject(address, size)].insert(mo->id);
+    resolvedPointers[address].insert(mo);
+    resolvedSubobjects[MemorySubobject(address, size)].insert(mo);
   }
 }
 
@@ -424,8 +421,8 @@ void ExecutionState::dumpStack(llvm::raw_ostream &out) const {
   }
 }
 
-void ExecutionState::addConstraint(ref<Expr> e, const Assignment &delta) {
-  constraints.addConstraint(e, delta);
+void ExecutionState::addConstraint(ref<Expr> e) {
+  constraints.addConstraint(e);
 }
 
 void ExecutionState::addCexPreference(const ref<Expr> &cond) {
