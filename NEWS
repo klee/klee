@@ -3,7 +3,7 @@ KLEE 3.1, 29 February 2024
 
 Incorporating changes from 8 June 2023 to 29 February 2024.
 Maintainers during this time span: @ccadar, @MartinNowack, @251.
-Documentation at http://klee.github.io/releases/docs/v3.1
+Documentation at https://klee-se.org/releases/docs/v3.1
 
 == Major features and important changes ==
 - New execution tree implementation and klee-exec-tree tool (@251)
@@ -42,7 +42,7 @@ KLEE 3.0, 7 June 2023
 Incorporating changes from 8 April 2022 to 7 June 2023.
 Maintainers during this time span: @ccadar, @MartinNowack, @251.
 (@251 joined as a new maintainer during 2022).
-Documentation at http://klee.github.io/releases/docs/v3.0
+Documentation at https://klee-se.org/releases/docs/v3.0
 
 == Major features ==
 - Added support for the KDAlloc memory allocator, which enables KLEE to more robustly detect use-after-free errors, improves the detection of buffer overflows, and provides deterministic memory allocation (@danielschemmel, based on https://srg.doc.ic.ac.uk/publications/22-kdalloc-ecoop.html)
@@ -83,7 +83,7 @@ KLEE 2.3, 4 April 2022
 
 Incorporating changes from 8 December 2020 to 4 April 2022.
 Maintainers during this time span: @ccadar and @MartinNowack
-Documentation at http://klee.github.io/releases/docs/v2.3
+Documentation at https://klee-se.org/releases/docs/v2.3
 
 == LLVM support ==
 - Current recommended version is LLVM 11
@@ -121,7 +121,7 @@ KLEE 2.2, 7 December 2020
 
 Incorporating changes from 4 March 2020 to 7 December 2020.
 Maintainers during this time span: @ccadar and @MartinNowack
-Documentation at http://klee.github.io/releases/docs/v2.2
+Documentation at https://klee-se.org/releases/docs/v2.2
 
 == Major features ==
 - Added support for C++ exceptions (@corrodedHash, @futile, @jbuening)
@@ -183,7 +183,7 @@ KLEE 2.1, 3 March 2020
 =======================
 Incorporating changes from 20 March 2019 to 3 March 2020.
 Maintainers during this time span: @ccadar and @MartinNowack
-Documentation at http://klee.github.io/releases/docs/v2.1
+Documentation at https://klee-se.org/releases/docs/v2.1
 
 == Major features ==
 - New container-based architecture for KLEE Web (@Denis-Gavrielov, @andronat)
@@ -230,7 +230,7 @@ KLEE 2.0, 19 March 2019
 ========================
 Incorporating changes from 22 July 2017 to 19 March 2019
 Maintainers during this time span: @AndreaMattavelli, @ccadar, @delcypher, @MartinNowack
-Documentation at http://klee.github.io/releases/docs/v2.0
+Documentation at https://klee-se.org/releases/docs/v2.0
 
 == Major features ==
 - Added support for KLEE array optimizations from ISSTA'17 paper "Accelerating Array Constraints in Symbolic Execution" (@AndreaMattavelli, @MartinNowack, @ccadar)
@@ -322,7 +322,7 @@ comments, web version, website, etc. (@andronat, @251, @andreamattavelli, @ccada
 KLEE 1.4.0, 21 July 2017
 ========================
 (Incorporating changes from 4 November 2016 up to and including 21 July 2017)
-Documentation at http://klee.github.io/releases/docs/v1.4.0/
+Documentation at https://klee-se.org/releases/docs/v1.4.0/
 
 This will be the last version supporting LLVM 2.9 and the autoconf build system.
 
@@ -377,7 +377,7 @@ KLEE 1.3.0, 30 November 2016
 * Improved determinism of KLEE, an essential feature for experiments involving KLEE (@MartinNowack)
 * KLEE-web has been improved and refactored, and now available at http://klee.doc.ic.ac.uk/ (@giacomoguerci, @helicopter88, @andronat, @ccadar, based on work by @ains, @ben-chin, @ilovepjs, @JamesDavidCarr, Kaho Sato, Conrad Watt, @ccadar)
 * Renamed --replay-out to --replay-ktest and --replay-out-dir to replay-ktest-dir (@delcypher)
-* Split creation of symbolic files and stdin in two distinct options, documented at http://klee.github.io/docs/options/#symbolic-environment (@andreamattavelli)
+* Split creation of symbolic files and stdin in two distinct options, documented at https://klee-se.org/docs/options/#symbolic-environment (@andreamattavelli)
 * Support for logging queries before invoking the solver via --log-partial-queries-early, useful for debugging solver crashes (@MartinNowack)
 * Added --stats-write-after-instructions and --istats-write-after-instructions to update each statistic after n steps (@MartinNowack)
 * Added --compress-log and --debug-compress-instructions to gzip-compress logs (@MartinNowack)
