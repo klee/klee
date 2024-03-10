@@ -26,7 +26,7 @@ set(KLEE_VERSION "${KLEE_VERSION_MAJOR}.${KLEE_VERSION_MINOR}")
 
 message(STATUS "KLEE version ${KLEE_VERSION}")
 set(PACKAGE_STRING "\"KLEE ${KLEE_VERSION}\"")
-set(PACKAGE_URL "\"https://klee.github.io\"")
+set(PACKAGE_URL "\"https://klee-se.org/\"")
 
 ################################################################################
 # Sanity check - Disallow building in source.
