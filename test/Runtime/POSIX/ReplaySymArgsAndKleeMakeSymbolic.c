@@ -15,6 +15,6 @@ int main (int argc, char** argv) {
   int a;
   klee_make_symbolic(&a, sizeof(a), "a");
   // If Replay works properly printf will be executed
-  // REPLAY: Replay succeed, printf worked
+  // REPLAY: Replay succeeded, printf worked
   printf("Replay succeeded, printf worked\n");
 }
