@@ -260,12 +260,8 @@ private:
 
   void executeInstruction(ExecutionState &state, KInstruction *ki);
 
-  void targetedRun(ExecutionState &initialState, KBlock *target,
-                   ExecutionState **resultState = nullptr);
-
   void seed(ExecutionState &initialState);
   void run(ExecutionState *initialState);
-  void runWithTarget(ExecutionState &state, KFunction *kf, KBlock *target);
 
   void initializeTypeManager();
 

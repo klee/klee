@@ -4670,25 +4670,6 @@ void Executor::run(ExecutionState *initialState) {
   haltExecution = HaltExecution::NotHalt;
 }
 
-void Executor::runWithTarget(ExecutionState &state, KFunction *kf,
-                             KBlock *target) {
-  if (pathWriter)
-    state.pathOS = pathWriter->open();
-  if (symPathWriter)
-    state.symPathOS = symPathWriter->open();
-
-  if (statsTracker)
-    statsTracker->framePushed(state, 0);
-
-  processForest = std::make_unique<PForest>();
-  processForest->addRoot(&state);
-  targetedRun(state, target);
-  processForest = nullptr;
-
-  if (statsTracker)
-    statsTracker->done();
-}
-
 void Executor::initializeTypeManager() {
   if (UseAdvancedTypeSystem) {
     typeSystemManager = new CXXTypeManager(kmodule.get());
@@ -4792,55 +4773,6 @@ void Executor::goForward(ref<ForwardAction> action) {
       targetCalculator->isCovered(state.initPC->parent->parent)) {
     haltExecution = HaltExecution::CovCheck;
   }
-}
-
-void Executor::targetedRun(ExecutionState &initialState, KBlock *target,
-                           ExecutionState **resultState) {
-  // Delay init till now so that ticks don't accrue during optimization and
-  // such.
-  if (guidanceKind != GuidanceKind::ErrorGuidance)
-    timers.reset();
-
-  // TODO: Inconsistent init, sort things out later
-  objectManager->addProcessForest(processForest.get());
-  objectManager->addInitialState(&initialState);
-
-  TargetedSearcher *targetedSearcher = new TargetedSearcher(
-      ReachBlockTarget::create(target), *distanceCalculator);
-
-  searcher = std::make_unique<ForwardOnlySearcher>(targetedSearcher);
-
-  // main interpreter loop
-  KInstruction *terminator =
-      target != nullptr ? target->getFirstInstruction() : nullptr;
-  while (!searcher->empty() && !haltExecution) {
-    auto action = searcher->selectAction();
-    auto forward = cast<ForwardAction>(action);
-
-    KInstruction *ki = forward->state->pc;
-
-    if (ki == terminator) {
-      *resultState = forward->state->copy();
-      terminateStateEarly(*forward->state, "",
-                          StateTerminationType::SilentExit);
-      objectManager->updateSubscribers();
-      haltExecution = HaltExecution::ReachedTarget;
-      break;
-    }
-
-    executeAction(action);
-    objectManager->updateSubscribers();
-
-    if (!checkMemoryUsage()) {
-      objectManager->updateSubscribers();
-    }
-  }
-
-  searcher = nullptr;
-
-  doDumpStates();
-  if (*resultState)
-    haltExecution = HaltExecution::NotHalt;
 }
 
 std::string Executor::getAddressInfo(ExecutionState &state,
