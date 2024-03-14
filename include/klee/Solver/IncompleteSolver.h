@@ -51,7 +51,7 @@ public:
   /// is not found, then the values array must be unmodified.
   virtual bool
   computeInitialValues(const Query &, const std::vector<const Array *> &objects,
-                       std::vector<SparseStorage<unsigned char>> &values,
+                       std::vector<SparseStorageImpl<unsigned char>> &values,
                        bool &hasSolution) = 0;
 };
 
@@ -70,10 +70,10 @@ public:
   bool computeTruth(const Query &, bool &isValid);
   bool computeValidity(const Query &, PartialValidity &result);
   bool computeValue(const Query &, ref<Expr> &result);
-  bool computeInitialValues(const Query &,
-                            const std::vector<const Array *> &objects,
-                            std::vector<SparseStorage<unsigned char>> &values,
-                            bool &hasSolution);
+  bool
+  computeInitialValues(const Query &, const std::vector<const Array *> &objects,
+                       std::vector<SparseStorageImpl<unsigned char>> &values,
+                       bool &hasSolution);
   bool check(const Query &query, ref<SolverResponse> &result);
   bool computeValidityCore(const Query &query, ValidityCore &validityCore,
                            bool &hasSolution);

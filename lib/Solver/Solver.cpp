@@ -10,6 +10,7 @@
 #include "klee/Solver/Solver.h"
 
 #include "klee/Expr/Constraints.h"
+#include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Solver/SolverImpl.h"
 #include "klee/Solver/SolverUtil.h"
@@ -85,15 +86,21 @@ bool Solver::mayBeFalse(const Query &query, bool &result) {
   return true;
 }
 
-bool Solver::getValue(const Query &query, ref<Expr> &result) {
-  // Maintain invariants implementation expect.
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(query.expr)) {
-    result = CE;
-    return true;
+template <typename ExprType>
+bool Solver::getValue(const Query &query, ref<ExprType> &result) {
+  static_assert(std::is_base_of<Expr, ExprType>::value);
+  if constexpr (std::is_base_of<ExprType, ConstantExpr>::value) {
+    // Maintain invariants implementation expect.
+    if (ConstantExpr *CE = dyn_cast<ConstantExpr>(query.expr)) {
+      result = CE;
+      return true;
+    }
   }
-  if (ConstantPointerExpr *CP = dyn_cast<ConstantPointerExpr>(query.expr)) {
-    result = CP;
-    return true;
+  if constexpr (std::is_base_of<ExprType, ConstantPointerExpr>::value) {
+    if (ConstantPointerExpr *CP = dyn_cast<ConstantPointerExpr>(query.expr)) {
+      result = CP;
+      return true;
+    }
   }
 
   // FIXME: Push ConstantExpr requirement down.
@@ -101,31 +108,16 @@ bool Solver::getValue(const Query &query, ref<Expr> &result) {
   if (!impl->computeValue(query, tmp))
     return false;
 
-  result = tmp;
+  assert(isa<ExprType>(tmp));
+  result = cast<ExprType>(tmp);
   return true;
 }
 
-bool Solver::getValue(const Query &query, ref<ConstantExpr> &result) {
-  ref<Expr> tmp;
-  if (!getValue(query, tmp)) {
-    return false;
-  }
-
-  assert(isa<ConstantExpr>(tmp));
-  result = cast<ConstantExpr>(tmp);
-  return true;
-}
-
-bool Solver::getValue(const Query &query, ref<ConstantPointerExpr> &result) {
-  ref<Expr> tmp;
-  if (!getValue(query, tmp)) {
-    return false;
-  }
-
-  assert(isa<ConstantPointerExpr>(tmp));
-  result = cast<ConstantPointerExpr>(tmp);
-  return true;
-}
+template bool Solver::getValue<Expr>(const Query &, ref<Expr> &);
+template bool Solver::getValue<ConstantExpr>(const Query &,
+                                             ref<ConstantExpr> &);
+template bool Solver::getValue<ConstantPointerExpr>(const Query &,
+                                                    ref<ConstantPointerExpr> &);
 
 bool Solver::getMinimalUnsignedValue(const Query &query,
                                      ref<ConstantExpr> &result) {
@@ -173,7 +165,7 @@ bool Solver::getValidityCore(const Query &query, ValidityCore &validityCore,
 
 bool Solver::getInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<SparseStorage<unsigned char>> &values) {
+    std::vector<SparseStorageImpl<unsigned char>> &values) {
   bool hasSolution;
   bool success =
       impl->computeInitialValues(query, objects, values, hasSolution);

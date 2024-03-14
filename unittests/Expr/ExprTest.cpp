@@ -126,7 +126,7 @@ TEST(ExprTest, ReadExprFoldingBasic) {
   unsigned size = 5;
 
   // Constant array
-  SparseStorage<ref<ConstantExpr>> Contents(
+  SparseStorageImpl<ref<ConstantExpr>> Contents(
       ConstantExpr::create(0, Expr::Int8));
   for (unsigned i = 0; i < size; ++i)
     Contents.store(i, ConstantExpr::create(i + 1, Expr::Int8));
@@ -154,7 +154,7 @@ TEST(ExprTest, ReadExprFoldingIndexOutOfBound) {
   unsigned size = 5;
 
   // Constant array
-  SparseStorage<ref<ConstantExpr>> Contents(
+  SparseStorageImpl<ref<ConstantExpr>> Contents(
       ConstantExpr::create(0, Expr::Int8));
   for (unsigned i = 0; i < size; ++i)
     Contents.store(i, ConstantExpr::create(i + 1, Expr::Int8));
@@ -176,7 +176,7 @@ TEST(ExprTest, ReadExprFoldingConstantUpdate) {
   unsigned size = 5;
 
   // Constant array
-  SparseStorage<ref<ConstantExpr>> Contents(
+  SparseStorageImpl<ref<ConstantExpr>> Contents(
       ConstantExpr::create(0, Expr::Int8));
   for (unsigned i = 0; i < size; ++i)
     Contents.store(i, ConstantExpr::create(i + 1, Expr::Int8));
@@ -203,7 +203,7 @@ TEST(ExprTest, ReadExprFoldingConstantMultipleUpdate) {
   unsigned size = 5;
 
   // Constant array
-  SparseStorage<ref<ConstantExpr>> Contents(
+  SparseStorageImpl<ref<ConstantExpr>> Contents(
       ConstantExpr::create(0, Expr::Int8));
   for (unsigned i = 0; i < size; ++i)
     Contents.store(i, ConstantExpr::create(i + 1, Expr::Int8));
@@ -232,7 +232,7 @@ TEST(ExprTest, ReadExprFoldingSymbolicValueUpdate) {
   unsigned size = 5;
 
   // Constant array
-  SparseStorage<ref<ConstantExpr>> Contents(
+  SparseStorageImpl<ref<ConstantExpr>> Contents(
       ConstantExpr::create(0, Expr::Int8));
   for (unsigned i = 0; i < size; ++i)
     Contents.store(i, ConstantExpr::create(i + 1, Expr::Int8));
@@ -261,7 +261,7 @@ TEST(ExprTest, ReadExprFoldingSymbolicIndexUpdate) {
   unsigned size = 5;
 
   // Constant array
-  SparseStorage<ref<ConstantExpr>> Contents(
+  SparseStorageImpl<ref<ConstantExpr>> Contents(
       ConstantExpr::create(0, Expr::Int8));
   for (unsigned i = 0; i < size; ++i)
     Contents.store(i, ConstantExpr::create(i + 1, Expr::Int8));

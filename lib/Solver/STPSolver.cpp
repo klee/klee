@@ -108,10 +108,10 @@ public:
 
   bool computeTruth(const Query &, bool &isValid) override;
   bool computeValue(const Query &, ref<Expr> &result) override;
-  bool computeInitialValues(const Query &,
-                            const std::vector<const Array *> &objects,
-                            std::vector<SparseStorage<unsigned char>> &values,
-                            bool &hasSolution) override;
+  bool
+  computeInitialValues(const Query &, const std::vector<const Array *> &objects,
+                       std::vector<SparseStorageImpl<unsigned char>> &values,
+                       bool &hasSolution) override;
   SolverRunStatus getOperationStatusCode() override;
 };
 
@@ -221,7 +221,7 @@ char *STPSolverImpl::getConstraintLog(const Query &query) {
 
 bool STPSolverImpl::computeTruth(const Query &query, bool &isValid) {
   std::vector<const Array *> objects;
-  std::vector<SparseStorage<unsigned char>> values;
+  std::vector<SparseStorageImpl<unsigned char>> values;
   bool hasSolution;
 
   if (!computeInitialValues(query, objects, values, hasSolution))
@@ -233,7 +233,7 @@ bool STPSolverImpl::computeTruth(const Query &query, bool &isValid) {
 
 bool STPSolverImpl::computeValue(const Query &query, ref<Expr> &result) {
   std::vector<const Array *> objects;
-  std::vector<SparseStorage<unsigned char>> values;
+  std::vector<SparseStorageImpl<unsigned char>> values;
   bool hasSolution;
 
   // Find the object used in the expression, and compute an assignment
@@ -253,7 +253,7 @@ bool STPSolverImpl::computeValue(const Query &query, ref<Expr> &result) {
 static SolverImpl::SolverRunStatus
 runAndGetCex(::VC vc, STPBuilder *builder, ::VCExpr q,
              const std::vector<const Array *> &objects,
-             std::vector<SparseStorage<unsigned char>> &values,
+             std::vector<SparseStorageImpl<unsigned char>> &values,
              bool &hasSolution) {
   // XXX I want to be able to timeout here, safely
   hasSolution = !vc_query(vc, q);
@@ -291,7 +291,7 @@ static void stpTimeoutHandler(int x) { _exit(52); }
 static SolverImpl::SolverRunStatus
 runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
                    const std::vector<const Array *> &objects,
-                   std::vector<SparseStorage<unsigned char>> &values,
+                   std::vector<SparseStorageImpl<unsigned char>> &values,
                    bool &hasSolution, time::Span timeout) {
   unsigned char *pos = shared_memory_ptr;
   // unsigned sum = 0;
@@ -425,7 +425,7 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
 
 bool STPSolverImpl::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorageImpl<unsigned char>> &values, bool &hasSolution) {
   runStatusCode = SOLVER_RUN_STATUS_FAILURE;
   TimerStatIncrementer t(stats::queryTime);
 

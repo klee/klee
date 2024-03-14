@@ -38,7 +38,7 @@ TEST_F(Z3SolverTest, GetConstraintLog) {
   constraints_ty Constraints;
 
   const std::vector<uint64_t> ConstantValues{1, 2, 3, 4};
-  SparseStorage<ref<ConstantExpr>> ConstantExpressions(
+  SparseStorageImpl<ref<ConstantExpr>> ConstantExpressions(
       ConstantExpr::create(0, Expr::Int8));
 
   for (unsigned i = 0; i < ConstantValues.size(); ++i) {

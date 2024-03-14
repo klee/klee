@@ -557,7 +557,7 @@ SourceResult ParserImpl::ParseConstantSource() {
     ConsumeExpectedToken(Token::KWNull);
   }
 
-  SparseStorage<ref<ConstantExpr>> Values(storage, defaultValue);
+  SparseStorageImpl<ref<ConstantExpr>> Values(storage, defaultValue);
   return SourceBuilder::constant(Values.clone());
 }
 

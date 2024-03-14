@@ -49,6 +49,7 @@ class Solver;
 typedef uint64_t IDType;
 
 extern llvm::cl::opt<bool> UseTypeBasedAliasAnalysis;
+extern llvm::cl::opt<unsigned long> MaxFixedSizeStructureSize;
 
 class MemoryObject {
   friend class STPBuilder;
@@ -223,8 +224,8 @@ public:
 
 class ObjectStage {
 private:
-  using storage_ty = Storage<ref<Expr>, OptionalRefEq<Expr>>;
-  using bool_storage_ty = Storage<bool>;
+  using storage_ty = SparseStorage<ref<Expr>, OptionalRefEq<Expr>>;
+  using bool_storage_ty = SparseStorage<bool>;
   /// knownSymbolics[byte] holds the expression for byte,
   /// if byte is known
   mutable std::unique_ptr<storage_ty> knownSymbolics;

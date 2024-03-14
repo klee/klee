@@ -110,7 +110,7 @@ bool StagedSolverImpl::computeValue(const Query &query, ref<Expr> &result) {
 
 bool StagedSolverImpl::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorageImpl<unsigned char>> &values, bool &hasSolution) {
   if (primary->computeInitialValues(query, objects, values, hasSolution))
     return true;
 
@@ -121,7 +121,7 @@ bool StagedSolverImpl::computeInitialValues(
 bool StagedSolverImpl::check(const Query &query, ref<SolverResponse> &result) {
   std::vector<const Array *> objects;
   findSymbolicObjects(query, objects);
-  std::vector<SparseStorage<unsigned char>> values;
+  std::vector<SparseStorageImpl<unsigned char>> values;
 
   bool hasSolution;
 

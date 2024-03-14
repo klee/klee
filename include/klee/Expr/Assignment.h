@@ -30,7 +30,7 @@ typedef std::function<bool(ref<Expr>)> ExprPredicate;
 class Assignment {
 public:
   using bindings_ty =
-      PersistentMap<const Array *, SparseStorage<unsigned char>>;
+      PersistentMap<const Array *, SparseStorageImpl<unsigned char>>;
 
   bindings_ty bindings;
 
@@ -42,11 +42,11 @@ public:
   Assignment() {}
   Assignment(const bindings_ty &_bindings) : bindings(_bindings) {}
   Assignment(const std::vector<const Array *> &objects,
-             const std::vector<SparseStorage<unsigned char>> &values) {
+             const std::vector<SparseStorageImpl<unsigned char>> &values) {
     assert(objects.size() == values.size());
     for (unsigned i = 0; i < values.size(); ++i) {
       const Array *os = objects.at(i);
-      const SparseStorage<unsigned char> &arr = values.at(i);
+      const SparseStorageImpl<unsigned char> &arr = values.at(i);
       bindings.insert(std::make_pair(os, arr));
     }
   }
@@ -77,7 +77,7 @@ public:
   bool isEmpty() { return begin() == end(); }
 
   std::vector<const Array *> keys() const;
-  std::vector<SparseStorage<unsigned char>> values() const;
+  std::vector<SparseStorageImpl<unsigned char>> values() const;
 };
 
 class AssignmentEvaluator : public ExprEvaluator {

@@ -18,11 +18,12 @@ TEST(AssignmentTest, FoldNotOptimized) {
       SourceBuilder::makeSymbolic("simple_array", 0));
   // Create a simple assignment
   std::vector<const Array *> objects;
-  SparseStorage<unsigned char> value(0);
-  std::vector<SparseStorage<unsigned char>> values;
+  SparseStorageImpl<unsigned char> value(0);
+  std::vector<SparseStorageImpl<unsigned char>> values;
 
   objects.push_back(array);
   value.store(0, 128);
+  value.dump();
   values.push_back(value);
   // We want to simplify to a constant so allow free values so
   // if the assignment is incomplete we don't get back a constant.

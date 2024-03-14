@@ -59,10 +59,9 @@ public:
   bool check(const Query &query, ref<SolverResponse> &result);
 
   bool computeValue(const Query &, ref<Expr> &result);
-  bool computeInitialValues(const Query &query,
-                            const std::vector<const Array *> &objects,
-                            std::vector<SparseStorage<unsigned char>> &values,
-                            bool &hasSolution);
+  bool computeInitialValues(
+      const Query &query, const std::vector<const Array *> &objects,
+      std::vector<SparseStorageImpl<unsigned char>> &values, bool &hasSolution);
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query &);
   void setCoreSolverTimeout(time::Span timeout);
@@ -537,7 +536,7 @@ bool ConcretizingSolver::computeValue(const Query &query, ref<Expr> &result) {
 
 bool ConcretizingSolver::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorageImpl<unsigned char>> &values, bool &hasSolution) {
   if (!query.containsSymcretes()) {
     return solver->impl->computeInitialValues(query, objects, values,
                                               hasSolution);

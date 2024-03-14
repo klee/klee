@@ -315,7 +315,7 @@ private:
   bool computeSizes(const ConstraintSet &constraints,
                     ref<Expr> symbolicSizesSum,
                     std::vector<const Array *> &objects,
-                    std::vector<SparseStorage<unsigned char>> &values,
+                    std::vector<SparseStorageImpl<unsigned char>> &values,
                     SolverQueryMetaData &metaData);
 
   MemoryObject *allocate(ExecutionState &state, ref<Expr> size, bool isLocal,

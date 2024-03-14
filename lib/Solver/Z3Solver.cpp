@@ -225,7 +225,7 @@ private:
 
   bool internalRunSolver(const ConstraintQuery &query, Z3SolverEnv &env,
                          ObjectAssignment needObjects,
-                         std::vector<SparseStorage<unsigned char>> *values,
+                         std::vector<SparseStorageImpl<unsigned char>> *values,
                          ValidityCore *validityCore, bool &hasSolution);
 
   bool validateZ3Model(::Z3_solver &theSolver, ::Z3_model &theModel);
@@ -233,7 +233,7 @@ private:
   SolverImpl::SolverRunStatus
   handleSolverResponse(::Z3_solver theSolver, ::Z3_lbool satisfiable,
                        const Z3SolverEnv &env, ObjectAssignment needObjects,
-                       std::vector<SparseStorage<unsigned char>> *values,
+                       std::vector<SparseStorageImpl<unsigned char>> *values,
                        bool &hasSolution);
 
 protected:
@@ -248,9 +248,10 @@ protected:
   bool computeTruth(const ConstraintQuery &, Z3SolverEnv &env, bool &isValid);
   bool computeValue(const ConstraintQuery &, Z3SolverEnv &env,
                     ref<Expr> &result);
-  bool computeInitialValues(const ConstraintQuery &, Z3SolverEnv &env,
-                            std::vector<SparseStorage<unsigned char>> &values,
-                            bool &hasSolution);
+  bool
+  computeInitialValues(const ConstraintQuery &, Z3SolverEnv &env,
+                       std::vector<SparseStorageImpl<unsigned char>> &values,
+                       bool &hasSolution);
   bool check(const ConstraintQuery &query, Z3SolverEnv &env,
              ref<SolverResponse> &result);
   bool computeValidityCore(const ConstraintQuery &query, Z3SolverEnv &env,
@@ -436,7 +437,7 @@ bool Z3SolverImpl::computeTruth(const ConstraintQuery &query, Z3SolverEnv &env,
 
 bool Z3SolverImpl::computeValue(const ConstraintQuery &query, Z3SolverEnv &env,
                                 ref<Expr> &result) {
-  std::vector<SparseStorage<unsigned char>> values;
+  std::vector<SparseStorageImpl<unsigned char>> values;
   bool hasSolution;
 
   // Find the object used in the expression, and compute an assignment
@@ -455,7 +456,7 @@ bool Z3SolverImpl::computeValue(const ConstraintQuery &query, Z3SolverEnv &env,
 
 bool Z3SolverImpl::computeInitialValues(
     const ConstraintQuery &query, Z3SolverEnv &env,
-    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorageImpl<unsigned char>> &values, bool &hasSolution) {
   return internalRunSolver(query, env,
                            ObjectAssignment::NeededForObjectsFromEnv, &values,
                            /*validityCore=*/NULL, hasSolution);
@@ -463,7 +464,7 @@ bool Z3SolverImpl::computeInitialValues(
 
 bool Z3SolverImpl::check(const ConstraintQuery &query, Z3SolverEnv &env,
                          ref<SolverResponse> &result) {
-  std::vector<SparseStorage<unsigned char>> values;
+  std::vector<SparseStorageImpl<unsigned char>> values;
   ValidityCore validityCore;
   bool hasSolution = false;
   bool status =
@@ -492,7 +493,7 @@ bool Z3SolverImpl::computeValidityCore(const ConstraintQuery &query,
 bool Z3SolverImpl::internalRunSolver(
     const ConstraintQuery &query, Z3SolverEnv &env,
     ObjectAssignment needObjects,
-    std::vector<SparseStorage<unsigned char>> *values,
+    std::vector<SparseStorageImpl<unsigned char>> *values,
     ValidityCore *validityCore, bool &hasSolution) {
 
   if (ProduceUnsatCore && validityCore) {
@@ -672,7 +673,7 @@ bool Z3SolverImpl::internalRunSolver(
 SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
     ::Z3_solver theSolver, ::Z3_lbool satisfiable, const Z3SolverEnv &env,
     ObjectAssignment needObjects,
-    std::vector<SparseStorage<unsigned char>> *values, bool &hasSolution) {
+    std::vector<SparseStorageImpl<unsigned char>> *values, bool &hasSolution) {
   switch (satisfiable) {
   case Z3_L_TRUE: {
     hasSolution = true;
@@ -688,7 +689,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
     Z3_model_inc_ref(builder->ctx, theModel);
     values->reserve(objects->size());
     for (auto array : *objects) {
-      SparseStorage<unsigned char> data;
+      SparseStorageImpl<unsigned char> data;
 
       ::Z3_ast arraySizeExpr;
       Z3_model_eval(builder->ctx, theModel, builder->construct(array->size),
@@ -898,10 +899,11 @@ public:
     return Z3SolverImpl::computeValue(ConstraintQuery(query, false), env,
                                       result);
   }
-  bool computeInitialValues(const Query &query,
-                            const std::vector<const Array *> &objects,
-                            std::vector<SparseStorage<unsigned char>> &values,
-                            bool &hasSolution) override {
+  bool
+  computeInitialValues(const Query &query,
+                       const std::vector<const Array *> &objects,
+                       std::vector<SparseStorageImpl<unsigned char>> &values,
+                       bool &hasSolution) override {
     Z3SolverEnv env(objects);
     return Z3SolverImpl::computeInitialValues(ConstraintQuery(query, false),
                                               env, values, hasSolution);
@@ -1083,10 +1085,11 @@ public:
   /// implementation of the SolverImpl interface
   bool computeTruth(const Query &query, bool &isValid) override;
   bool computeValue(const Query &query, ref<Expr> &result) override;
-  bool computeInitialValues(const Query &query,
-                            const std::vector<const Array *> &objects,
-                            std::vector<SparseStorage<unsigned char>> &values,
-                            bool &hasSolution) override;
+  bool
+  computeInitialValues(const Query &query,
+                       const std::vector<const Array *> &objects,
+                       std::vector<SparseStorageImpl<unsigned char>> &values,
+                       bool &hasSolution) override;
   bool check(const Query &query, ref<SolverResponse> &result) override;
   bool computeValidityCore(const Query &query, ValidityCore &validityCore,
                            bool &isValid) override;
@@ -1163,7 +1166,7 @@ bool Z3TreeSolverImpl::computeValue(const Query &query, ref<Expr> &result) {
 
 bool Z3TreeSolverImpl::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorageImpl<unsigned char>> &values, bool &hasSolution) {
   auto q = prepare(query);
   currentSolver->env.objectsForGetModel = objects;
   return Z3SolverImpl::computeInitialValues(q, currentSolver->env, values,

@@ -1059,10 +1059,10 @@ public:
 
   PartialValidity computeTruth(const Query &);
   bool computeValue(const Query &, ref<Expr> &result);
-  bool computeInitialValues(const Query &,
-                            const std::vector<const Array *> &objects,
-                            std::vector<SparseStorage<unsigned char>> &values,
-                            bool &hasSolution);
+  bool
+  computeInitialValues(const Query &, const std::vector<const Array *> &objects,
+                       std::vector<SparseStorageImpl<unsigned char>> &values,
+                       bool &hasSolution);
 };
 
 FastCexSolver::FastCexSolver() {}
@@ -1169,7 +1169,7 @@ bool FastCexSolver::computeValue(const Query &query, ref<Expr> &result) {
 
 bool FastCexSolver::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorageImpl<unsigned char>> &values, bool &hasSolution) {
   CexData cd;
 
   bool isValid;
@@ -1187,7 +1187,7 @@ bool FastCexSolver::computeInitialValues(
   for (unsigned i = 0; i != objects.size(); ++i) {
     const Array *array = objects[i];
     assert(array);
-    SparseStorage<unsigned char> data;
+    SparseStorageImpl<unsigned char> data;
     ref<ConstantExpr> arrayConstantSize =
         dyn_cast<ConstantExpr>(cd.evaluatePossible(array->size));
     assert(arrayConstantSize &&

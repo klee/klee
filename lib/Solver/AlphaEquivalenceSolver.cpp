@@ -41,10 +41,9 @@ public:
   bool computeTruth(const Query &, bool &isValid);
   bool computeValidity(const Query &, PartialValidity &result);
   bool computeValue(const Query &, ref<Expr> &result);
-  bool computeInitialValues(const Query &query,
-                            const std::vector<const Array *> &objects,
-                            std::vector<SparseStorage<unsigned char>> &values,
-                            bool &hasSolution);
+  bool computeInitialValues(
+      const Query &query, const std::vector<const Array *> &objects,
+      std::vector<SparseStorageImpl<unsigned char>> &values, bool &hasSolution);
   bool check(const Query &query, ref<SolverResponse> &result);
   bool computeValidityCore(const Query &query, ValidityCore &validityCore,
                            bool &isValid);
@@ -59,7 +58,7 @@ public:
                 AlphaBuilder &builder);
   Assignment
   changeVersion(const std::vector<const Array *> &objects,
-                const std::vector<SparseStorage<unsigned char>> &values,
+                const std::vector<SparseStorageImpl<unsigned char>> &values,
                 const ArrayCache::ArrayHashMap<const Array *> &reverse);
   Assignment
   changeVersion(const Assignment &a,
@@ -85,10 +84,10 @@ AlphaEquivalenceSolver::changeVersion(const ValidityCore &validityCore,
 
 Assignment AlphaEquivalenceSolver::changeVersion(
     const std::vector<const Array *> &objects,
-    const std::vector<SparseStorage<unsigned char>> &values,
+    const std::vector<SparseStorageImpl<unsigned char>> &values,
     const ArrayCache::ArrayHashMap<const Array *> &reverse) {
   std::vector<const Array *> reverseObjects;
-  std::vector<SparseStorage<unsigned char>> reverseValues;
+  std::vector<SparseStorageImpl<unsigned char>> reverseValues;
   for (size_t i = 0; i < objects.size(); i++) {
     if (reverse.count(objects.at(i)) != 0) {
       reverseObjects.push_back(reverse.at(objects.at(i)));
@@ -112,7 +111,7 @@ Assignment AlphaEquivalenceSolver::changeVersion(
     const Assignment &a,
     const ArrayCache::ArrayHashMap<const Array *> &reverse) {
   std::vector<const Array *> objects = a.keys();
-  std::vector<SparseStorage<unsigned char>> values = a.values();
+  std::vector<SparseStorageImpl<unsigned char>> values = a.values();
   return changeVersion(objects, values, reverse);
 }
 
@@ -168,7 +167,7 @@ bool AlphaEquivalenceSolver::computeValue(const Query &query,
 
 bool AlphaEquivalenceSolver::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorageImpl<unsigned char>> &values, bool &hasSolution) {
   AlphaBuilder builder;
   constraints_ty alphaQuery = builder.visitConstraints(query.constraints.cs());
   ref<Expr> alphaQueryExpr = builder.build(query.expr);

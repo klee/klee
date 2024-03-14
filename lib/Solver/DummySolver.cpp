@@ -22,10 +22,10 @@ public:
   bool computeValidity(const Query &, PartialValidity &result);
   bool computeTruth(const Query &, bool &isValid);
   bool computeValue(const Query &, ref<Expr> &result);
-  bool computeInitialValues(const Query &,
-                            const std::vector<const Array *> &objects,
-                            std::vector<SparseStorage<unsigned char>> &values,
-                            bool &hasSolution);
+  bool
+  computeInitialValues(const Query &, const std::vector<const Array *> &objects,
+                       std::vector<SparseStorageImpl<unsigned char>> &values,
+                       bool &hasSolution);
   bool check(const Query &query, ref<SolverResponse> &result);
   bool computeValidityCore(const Query &query, ValidityCore &validityCore,
                            bool &isValid);
@@ -55,7 +55,7 @@ bool DummySolverImpl::computeValue(const Query &, ref<Expr> &result) {
 
 bool DummySolverImpl::computeInitialValues(
     const Query &, const std::vector<const Array *> &objects,
-    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorageImpl<unsigned char>> &values, bool &hasSolution) {
   ++stats::solverQueries;
   ++stats::queryCounterexamples;
   return false;

@@ -79,11 +79,11 @@ IndependentConstraintSet::removeConcretization(
 
 void IndependentConstraintSet::addValuesToAssignment(
     const std::vector<const Array *> &objects,
-    const std::vector<SparseStorage<unsigned char>> &values,
+    const std::vector<SparseStorageImpl<unsigned char>> &values,
     Assignment &assign) const {
   for (unsigned i = 0; i < objects.size(); i++) {
     if (assign.bindings.count(objects[i])) {
-      SparseStorage<unsigned char> value = assign.bindings.at(objects[i]);
+      SparseStorageImpl<unsigned char> value = assign.bindings.at(objects[i]);
       DenseSet<unsigned> ds = (elements.find(objects[i]))->second;
       for (std::set<unsigned>::iterator it2 = ds.begin(); it2 != ds.end();
            it2++) {

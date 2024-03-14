@@ -39,7 +39,7 @@ ref<Expr> getConstant(int value, Expr::Width width) {
 
 TEST(ArrayExprTest, HashCollisions) {
   klee::OptimizeArray = ALL;
-  SparseStorage<ref<ConstantExpr>> constVals(
+  SparseStorageImpl<ref<ConstantExpr>> constVals(
       ConstantExpr::create(5, Expr::Int8));
   const Array *array = Array::create(
       ConstantExpr::create(256, sizeof(uint64_t) * CHAR_BIT),
@@ -60,8 +60,8 @@ TEST(ArrayExprTest, HashCollisions) {
   ASSERT_NE(updatedRead, firstRead);
   ASSERT_EQ(updatedRead->hash(), firstRead->hash());
 
-  SparseStorage<unsigned char> value({6, 0, 0, 0});
-  std::vector<SparseStorage<unsigned char>> values = {value};
+  SparseStorageImpl<unsigned char> value({6, 0, 0, 0});
+  std::vector<SparseStorageImpl<unsigned char>> values = {value};
   std::vector<const Array *> assignmentArrays = {symArray};
   auto a = std::make_unique<Assignment>(assignmentArrays, values);
 

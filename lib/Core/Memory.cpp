@@ -43,12 +43,26 @@ DISABLE_WARNING_POP
 #include <sstream>
 
 namespace klee {
-llvm::cl::opt<bool>
-    UseImmerStructures("use-immer-structures",
-                       llvm::cl::desc("Use optimized persistent structures "
-                                      "form immer project (default=false)"),
-                       llvm::cl::init(false));
-}
+llvm::cl::opt<MemoryType> MemoryBackend(
+    "memory-backend",
+    llvm::cl::desc("Type of data structures to use for memory modelling "
+                   "(default=fixed)"),
+    llvm::cl::values(clEnumValN(MemoryType::Fixed, "fixed",
+                                "Use fixed size data structure (default) "),
+                     clEnumValN(MemoryType::Dynamic, "dynamic",
+                                "Use dynamic size data structure"),
+                     clEnumValN(MemoryType::Persistent, "persistent",
+                                "Use persistent data structures"),
+                     clEnumValN(MemoryType::Mixed, "mixed",
+                                "Use according to the conditions")),
+    llvm::cl::init(MemoryType::Fixed));
+
+llvm::cl::opt<unsigned long> MaxFixedSizeStructureSize(
+    "max-fixed-size-structures-size",
+    llvm::cl::desc("Maximum available size to use dense structures for memory "
+                   "(default 10Mb)"),
+    llvm::cl::init(10ll << 10));
+} // namespace klee
 
 using namespace llvm;
 using namespace klee;
@@ -517,16 +531,17 @@ ObjectStage::ObjectStage(const Array *array, ref<Expr> defaultValue, bool safe,
                          Expr::Width width)
     : updates(array, nullptr), size(array->size), safeRead(safe), width(width) {
   knownSymbolics.reset(constructStorage<ref<Expr>, OptionalRefEq<Expr>>(
-      array->getSize(), defaultValue));
-  unflushedMask.reset(constructStorage(array->getSize(), false));
+      array->getSize(), defaultValue, MaxFixedSizeStructureSize));
+  unflushedMask.reset(
+      constructStorage(array->getSize(), false, MaxFixedSizeStructureSize));
 }
 
 ObjectStage::ObjectStage(ref<Expr> size, ref<Expr> defaultValue, bool safe,
                          Expr::Width width)
     : updates(nullptr, nullptr), size(size), safeRead(safe), width(width) {
-  knownSymbolics.reset(
-      constructStorage<ref<Expr>, OptionalRefEq<Expr>>(size, defaultValue));
-  unflushedMask.reset(constructStorage(size, false));
+  knownSymbolics.reset(constructStorage<ref<Expr>, OptionalRefEq<Expr>>(
+      size, defaultValue, MaxFixedSizeStructureSize));
+  unflushedMask.reset(constructStorage(size, false, MaxFixedSizeStructureSize));
 }
 
 ObjectStage::ObjectStage(const ObjectStage &os)
@@ -540,8 +555,8 @@ const UpdateList &ObjectStage::getUpdates() const {
   if (auto sizeExpr = dyn_cast<ConstantExpr>(size)) {
     auto size = sizeExpr->getZExtValue();
     if (knownSymbolics->storage().size() == size) {
-      std::unique_ptr<Storage<ref<ConstantExpr>>> values(
-          constructStorage(sizeExpr, ConstantExpr::create(0, width)));
+      std::unique_ptr<SparseStorage<ref<ConstantExpr>>> values(constructStorage(
+          sizeExpr, ConstantExpr::create(0, width), MaxFixedSizeStructureSize));
       UpdateList symbolicUpdates = UpdateList(nullptr, nullptr);
       for (unsigned i = 0; i < size; i++) {
         auto value = knownSymbolics->load(i);
@@ -562,10 +577,11 @@ const UpdateList &ObjectStage::getUpdates() const {
   }
 
   if (!updates.root) {
-    auto array = Array::create(size,
-                               SourceBuilder::constant(constructStorage(
-                                   size, ConstantExpr::create(0, width))),
-                               Expr::Int32, width);
+    auto array = Array::create(
+        size,
+        SourceBuilder::constant(constructStorage(
+            size, ConstantExpr::create(0, width), MaxFixedSizeStructureSize)),
+        Expr::Int32, width);
     updates = UpdateList(array, updates.head);
   }
 
@@ -575,10 +591,11 @@ const UpdateList &ObjectStage::getUpdates() const {
 }
 
 void ObjectStage::initializeToZero() {
-  auto array = Array::create(size,
-                             SourceBuilder::constant(constructStorage(
-                                 size, ConstantExpr::create(0, width))),
-                             Expr::Int32, width);
+  auto array = Array::create(
+      size,
+      SourceBuilder::constant(constructStorage(
+          size, ConstantExpr::create(0, width), MaxFixedSizeStructureSize)),
+      Expr::Int32, width);
   updates = UpdateList(array, nullptr);
   knownSymbolics->reset();
   unflushedMask->reset();

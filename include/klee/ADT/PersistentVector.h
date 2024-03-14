@@ -30,9 +30,9 @@ private:
   PersistentVector(const Vector &b) : elts(b) {}
 
 public:
-  PersistentVector() {}
+  PersistentVector() = default;
   PersistentVector(const PersistentVector &b) : elts(b.elts) {}
-  ~PersistentVector() {}
+  ~PersistentVector() = default;
 
   PersistentVector &operator=(const PersistentVector &b) {
     elts = b.elts;
@@ -49,7 +49,7 @@ public:
   void set(size_t index, const value_type &value) {
     elts = elts.set(index, value);
   }
-  void init(const size_t &n) { elts = Vector(n); }
+  void reset(size_t n) { elts = Vector(n); }
   void push_back(const value_type &value) { elts = elts.push_back(value); }
   const value_type &back() const { return elts.back(); }
   const value_type &front() const { return elts.front(); }

@@ -166,7 +166,7 @@ public:
 
   virtual bool tryGetInitialValuesFor(
       const std::vector<const Array *> &objects,
-      std::vector<SparseStorage<unsigned char>> &values) const {
+      std::vector<SparseStorageImpl<unsigned char>> &values) const {
     return false;
   }
 
@@ -238,7 +238,7 @@ private:
 
 public:
   InvalidResponse(const std::vector<const Array *> &objects,
-                  std::vector<SparseStorage<unsigned char>> &values)
+                  std::vector<SparseStorageImpl<unsigned char>> &values)
       : result(Assignment(objects, values)) {}
 
   InvalidResponse(Assignment::bindings_ty &initialValues)
@@ -248,13 +248,13 @@ public:
 
   bool tryGetInitialValuesFor(
       const std::vector<const Array *> &objects,
-      std::vector<SparseStorage<unsigned char>> &values) const {
+      std::vector<SparseStorageImpl<unsigned char>> &values) const {
     values.reserve(objects.size());
     for (auto object : objects) {
       if (result.bindings.count(object)) {
         values.push_back(result.bindings.at(object));
       } else {
-        values.push_back(SparseStorage<unsigned char>(0));
+        values.push_back(SparseStorageImpl<unsigned char>(0));
       }
     }
     return true;
@@ -266,14 +266,14 @@ public:
   }
 
   Assignment initialValuesFor(const std::vector<const Array *> objects) const {
-    std::vector<SparseStorage<unsigned char>> values;
+    std::vector<SparseStorageImpl<unsigned char>> values;
     std::ignore = tryGetInitialValuesFor(objects, values);
     return Assignment(objects, values);
   }
 
   void initialValuesFor(
       const std::vector<const Array *> objects,
-      std::vector<SparseStorage<unsigned char>> &values) const {
+      std::vector<SparseStorageImpl<unsigned char>> &values) const {
     std::ignore = tryGetInitialValuesFor(objects, values);
   }
 

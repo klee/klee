@@ -9,7 +9,7 @@
 using namespace klee;
 
 ref<SymbolicSource>
-SourceBuilder::constant(Storage<ref<ConstantExpr>> *constantValues) {
+SourceBuilder::constant(SparseStorage<ref<ConstantExpr>> *constantValues) {
   ref<SymbolicSource> r(new ConstantSource(constantValues));
   r->computeHash();
   return r;

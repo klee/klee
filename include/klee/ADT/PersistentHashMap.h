@@ -15,6 +15,7 @@
 #endif /* IMMER_NO_EXCEPTIONS */
 
 #include <immer/map.hpp>
+#include <immer/map_transient.hpp>
 
 namespace klee {
 
@@ -22,23 +23,25 @@ template <class K, class D, class HASH = std::hash<K>,
           class EQUAL = std::equal_to<K>>
 class PersistentHashMap {
 public:
-  typedef immer::map<K, D, HASH, EQUAL> Map;
+  typedef immer::map_transient<K, D, HASH, EQUAL> Map;
   typedef typename Map::iterator iterator;
   typedef K key_type;
   typedef std::pair<K, D> value_type;
 
 private:
-  Map elts;
+  mutable Map elts;
 
-  PersistentHashMap(const Map &b) : elts(b) {}
+  PersistentHashMap(const Map &b) : elts(b.persistent().transient()) {}
 
 public:
-  PersistentHashMap() {}
-  PersistentHashMap(const PersistentHashMap &b) : elts(b.elts) {}
-  ~PersistentHashMap() {}
+  PersistentHashMap() = default;
+  PersistentHashMap(const PersistentHashMap &b) {
+    elts = b.elts.persistent().transient();
+  }
+  ~PersistentHashMap() = default;
 
   PersistentHashMap &operator=(const PersistentHashMap &b) {
-    elts = b.elts;
+    elts = b.elts.persistent().transient();
     return *this;
   }
   bool operator==(const PersistentHashMap &b) const { return elts == b.elts; }
@@ -51,29 +54,17 @@ public:
 
   void insert(const value_type &value) {
     if (!lookup(value.first)) {
-      elts = elts.insert(value);
+      elts.insert(value);
     }
   }
-  void replace(const value_type &value) { elts = elts.insert(value); }
-  void remove(const key_type &key) { elts = elts.erase(key); }
+  void replace(const value_type &value) { elts.insert(value); }
+  void remove(const key_type &key) { elts.erase(key); }
 
   iterator begin() const { return elts.begin(); }
   iterator end() const { return elts.end(); }
 
-  const D &operator[](const key_type &key) {
-    return elts[key];
-    // auto value = lookup(key);
-    // if (value) {
-    //   return *value;
-    // } else {
-    //   value_type defVal;
-    //   defVal.first = key;
-    //   insert(defVal);
-    //   return *lookup(key);
-    // }
-  }
-
   const D &at(const key_type &key) const { return elts.at(key); }
+  const D &operator[](const key_type &key) { return at(key); }
 
   void clear() { elts = Map(); }
 };

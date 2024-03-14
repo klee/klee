@@ -237,13 +237,13 @@ private:
 
   bool internalRunSolver(const ConstraintQuery &query, BitwuzlaSolverEnv &env,
                          ObjectAssignment needObjects,
-                         std::vector<SparseStorage<unsigned char>> *values,
+                         std::vector<SparseStorageImpl<unsigned char>> *values,
                          ValidityCore *validityCore, bool &hasSolution);
 
   SolverImpl::SolverRunStatus handleSolverResponse(
       Bitwuzla &theSolver, Result satisfiable, const BitwuzlaSolverEnv &env,
       ObjectAssignment needObjects,
-      std::vector<SparseStorage<unsigned char>> *values, bool &hasSolution);
+      std::vector<SparseStorageImpl<unsigned char>> *values, bool &hasSolution);
 
 protected:
   BitwuzlaSolverImpl();
@@ -257,9 +257,10 @@ protected:
                     bool &isValid);
   bool computeValue(const ConstraintQuery &, BitwuzlaSolverEnv &env,
                     ref<Expr> &result);
-  bool computeInitialValues(const ConstraintQuery &, BitwuzlaSolverEnv &env,
-                            std::vector<SparseStorage<unsigned char>> &values,
-                            bool &hasSolution);
+  bool
+  computeInitialValues(const ConstraintQuery &, BitwuzlaSolverEnv &env,
+                       std::vector<SparseStorageImpl<unsigned char>> &values,
+                       bool &hasSolution);
   bool check(const ConstraintQuery &query, BitwuzlaSolverEnv &env,
              ref<SolverResponse> &result);
   bool computeValidityCore(const ConstraintQuery &query, BitwuzlaSolverEnv &env,
@@ -404,7 +405,7 @@ bool BitwuzlaSolverImpl::computeTruth(const ConstraintQuery &query,
 bool BitwuzlaSolverImpl::computeValue(const ConstraintQuery &query,
                                       BitwuzlaSolverEnv &env,
                                       ref<Expr> &result) {
-  std::vector<SparseStorage<unsigned char>> values;
+  std::vector<SparseStorageImpl<unsigned char>> values;
   bool hasSolution;
 
   // Find the object used in the expression, and compute an assignment
@@ -423,7 +424,7 @@ bool BitwuzlaSolverImpl::computeValue(const ConstraintQuery &query,
 
 bool BitwuzlaSolverImpl::computeInitialValues(
     const ConstraintQuery &query, BitwuzlaSolverEnv &env,
-    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorageImpl<unsigned char>> &values, bool &hasSolution) {
   return internalRunSolver(query, env,
                            ObjectAssignment::NeededForObjectsFromEnv, &values,
                            /*validityCore=*/NULL, hasSolution);
@@ -432,7 +433,7 @@ bool BitwuzlaSolverImpl::computeInitialValues(
 bool BitwuzlaSolverImpl::check(const ConstraintQuery &query,
                                BitwuzlaSolverEnv &env,
                                ref<SolverResponse> &result) {
-  std::vector<SparseStorage<unsigned char>> values;
+  std::vector<SparseStorageImpl<unsigned char>> values;
   ValidityCore validityCore;
   bool hasSolution = false;
   bool status =
@@ -461,7 +462,7 @@ bool BitwuzlaSolverImpl::computeValidityCore(const ConstraintQuery &query,
 bool BitwuzlaSolverImpl::internalRunSolver(
     const ConstraintQuery &query, BitwuzlaSolverEnv &env,
     ObjectAssignment needObjects,
-    std::vector<SparseStorage<unsigned char>> *values,
+    std::vector<SparseStorageImpl<unsigned char>> *values,
     ValidityCore *validityCore, bool &hasSolution) {
   TimerStatIncrementer t(stats::queryTime);
   runStatusCode = SolverImpl::SOLVER_RUN_STATUS_FAILURE;
@@ -611,7 +612,7 @@ bool BitwuzlaSolverImpl::internalRunSolver(
 SolverImpl::SolverRunStatus BitwuzlaSolverImpl::handleSolverResponse(
     Bitwuzla &theSolver, Result satisfiable, const BitwuzlaSolverEnv &env,
     ObjectAssignment needObjects,
-    std::vector<SparseStorage<unsigned char>> *values, bool &hasSolution) {
+    std::vector<SparseStorageImpl<unsigned char>> *values, bool &hasSolution) {
   switch (satisfiable) {
   case Result::SAT: {
     hasSolution = true;
@@ -625,7 +626,7 @@ SolverImpl::SolverRunStatus BitwuzlaSolverImpl::handleSolverResponse(
 
     values->reserve(objects->size());
     for (auto array : *objects) {
-      SparseStorage<unsigned char> data;
+      SparseStorageImpl<unsigned char> data;
 
       if (env.usedArrayBytes.count(array)) {
         std::unordered_set<uint64_t> offsetValues;
@@ -702,10 +703,11 @@ public:
     return BitwuzlaSolverImpl::computeValue(ConstraintQuery(query, false), env,
                                             result);
   }
-  bool computeInitialValues(const Query &query,
-                            const std::vector<const Array *> &objects,
-                            std::vector<SparseStorage<unsigned char>> &values,
-                            bool &hasSolution) override {
+  bool
+  computeInitialValues(const Query &query,
+                       const std::vector<const Array *> &objects,
+                       std::vector<SparseStorageImpl<unsigned char>> &values,
+                       bool &hasSolution) override {
     BitwuzlaSolverEnv env(objects);
     return BitwuzlaSolverImpl::computeInitialValues(
         ConstraintQuery(query, false), env, values, hasSolution);
@@ -878,10 +880,11 @@ public:
   /// implementation of the SolverImpl interface
   bool computeTruth(const Query &query, bool &isValid) override;
   bool computeValue(const Query &query, ref<Expr> &result) override;
-  bool computeInitialValues(const Query &query,
-                            const std::vector<const Array *> &objects,
-                            std::vector<SparseStorage<unsigned char>> &values,
-                            bool &hasSolution) override;
+  bool
+  computeInitialValues(const Query &query,
+                       const std::vector<const Array *> &objects,
+                       std::vector<SparseStorageImpl<unsigned char>> &values,
+                       bool &hasSolution) override;
   bool check(const Query &query, ref<SolverResponse> &result) override;
   bool computeValidityCore(const Query &query, ValidityCore &validityCore,
                            bool &isValid) override;
@@ -959,7 +962,7 @@ bool BitwuzlaTreeSolverImpl::computeValue(const Query &query,
 
 bool BitwuzlaTreeSolverImpl::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorageImpl<unsigned char>> &values, bool &hasSolution) {
   auto q = prepare(query);
   currentSolver->env.objectsForGetModel = objects;
   return BitwuzlaSolverImpl::computeInitialValues(q, currentSolver->env, values,

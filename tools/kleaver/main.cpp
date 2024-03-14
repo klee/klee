@@ -255,7 +255,7 @@ static bool EvaluateInputAST(const char *Filename, const llvm::MemoryBuffer *MB,
                        << ")";
         }
       } else {
-        std::vector<SparseStorage<unsigned char>> result;
+        std::vector<SparseStorageImpl<unsigned char>> result;
 
         constraints_ty constraints(QC->Constraints.begin(),
                                    QC->Constraints.end());

@@ -141,9 +141,8 @@ public:
   /// satisfying assignment.
   ///
   /// \return True on success.
-  bool getValue(const Query &, ref<Expr> &result);
-  bool getValue(const Query &, ref<ConstantExpr> &result);
-  bool getValue(const Query &, ref<ConstantPointerExpr> &result);
+  template <typename ExprType>
+  bool getValue(const Query &query, ref<ExprType> &result);
 
   /// getValue - Compute the minimal possible non-negative value for the given
   /// expression.
@@ -171,7 +170,7 @@ public:
   // they want. This also allows us to optimize the representation.
   bool getInitialValues(const Query &,
                         const std::vector<const Array *> &objects,
-                        std::vector<SparseStorage<unsigned char>> &result);
+                        std::vector<SparseStorageImpl<unsigned char>> &result);
 
   bool getValidityCore(const Query &, ValidityCore &validityCore, bool &result);
 

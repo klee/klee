@@ -10,7 +10,6 @@
 #ifndef KLEE_KTEST_H
 #define KLEE_KTEST_H
 
-#include <stddef.h>
 #include <stdint.h>
 
 #ifdef __cplusplus

@@ -100,20 +100,19 @@ public:
   bool computeTruth(const Query &, bool &isValid);
   bool computeValue(const Query &, ref<Expr> &result);
 
-  bool computeInitialValues(const Query &query,
-                            const std::vector<const Array *> &objects,
-                            std::vector<SparseStorage<unsigned char>> &values,
-                            bool &hasSolution);
+  bool computeInitialValues(
+      const Query &query, const std::vector<const Array *> &objects,
+      std::vector<SparseStorageImpl<unsigned char>> &values, bool &hasSolution);
 
   SolverImpl::SolverRunStatus
   runAndGetCex(const Query &query, const std::vector<const Array *> &objects,
-               std::vector<SparseStorage<unsigned char>> &values,
+               std::vector<SparseStorageImpl<unsigned char>> &values,
                bool &hasSolution);
 
   SolverImpl::SolverRunStatus
   runAndGetCexForked(const Query &query,
                      const std::vector<const Array *> &objects,
-                     std::vector<SparseStorage<unsigned char>> &values,
+                     std::vector<SparseStorageImpl<unsigned char>> &values,
                      bool &hasSolution, time::Span timeout);
 
   SolverRunStatus getOperationStatusCode();
@@ -154,7 +153,7 @@ bool MetaSMTSolverImpl<SolverContext>::computeTruth(const Query &query,
 
   bool success = false;
   std::vector<const Array *> objects;
-  std::vector<SparseStorage<unsigned char>> values;
+  std::vector<SparseStorageImpl<unsigned char>> values;
   bool hasSolution;
 
   if (computeInitialValues(query, objects, values, hasSolution)) {
@@ -172,7 +171,7 @@ bool MetaSMTSolverImpl<SolverContext>::computeValue(const Query &query,
 
   bool success = false;
   std::vector<const Array *> objects;
-  std::vector<SparseStorage<unsigned char>> values;
+  std::vector<SparseStorageImpl<unsigned char>> values;
   bool hasSolution;
 
   // Find the object used in the expression, and compute an assignment for them.
@@ -191,7 +190,7 @@ bool MetaSMTSolverImpl<SolverContext>::computeValue(const Query &query,
 template <typename SolverContext>
 bool MetaSMTSolverImpl<SolverContext>::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorageImpl<unsigned char>> &values, bool &hasSolution) {
 
   _runStatusCode = SOLVER_RUN_STATUS_FAILURE;
 
@@ -226,7 +225,7 @@ bool MetaSMTSolverImpl<SolverContext>::computeInitialValues(
 template <typename SolverContext>
 SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCex(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorageImpl<unsigned char>> &values, bool &hasSolution) {
 
   // assume the constraints of the query
   for (auto &constraint : query.constraints.cs())
@@ -261,7 +260,7 @@ SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCex(
       typename SolverContext::result_type array_exp =
           _builder->getInitialArray(array);
 
-      SparseStorage<unsigned char> data(0);
+      SparseStorageImpl<unsigned char> data(0);
 
       for (unsigned offset : readOffsets.at(array)) {
         typename SolverContext::result_type elem_exp = evaluate(
@@ -288,7 +287,7 @@ template <typename SolverContext>
 SolverImpl::SolverRunStatus
 MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution,
+    std::vector<SparseStorageImpl<unsigned char>> &values, bool &hasSolution,
     time::Span timeout) {
   unsigned char *pos = shared_memory_ptr;
   // unsigned sum = 0;
@@ -405,9 +404,9 @@ MetaSMTSolverImpl<SolverContext>::runAndGetCexForked(
     }
 
     if (hasSolution) {
-      values = std::vector<SparseStorage<unsigned char>>(objects.size());
+      values = std::vector<SparseStorageImpl<unsigned char>>(objects.size());
       for (unsigned i = 0; i < objects.size(); ++i) {
-        SparseStorage<unsigned char> &data = values[i];
+        SparseStorageImpl<unsigned char> &data = values[i];
         data.store(0, pos, pos + shared_memory_sizes_ptr[i]);
         pos += shared_memory_sizes_ptr[i];
       }

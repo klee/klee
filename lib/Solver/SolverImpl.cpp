@@ -58,7 +58,7 @@ bool SolverImpl::computeValidity(const Query &query,
 bool SolverImpl::check(const Query &query, ref<SolverResponse> &result) {
   std::vector<const Array *> objects;
   findSymbolicObjects(query, objects);
-  std::vector<SparseStorage<unsigned char>> values;
+  std::vector<SparseStorageImpl<unsigned char>> values;
 
   bool hasSolution;
 

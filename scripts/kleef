@@ -62,6 +62,8 @@ def klee_options(
         #  "--search=nurs:md2u", "--search=random-path",
         #  "-const-array-opt",
         "--only-output-make-symbolic-arrays",
+        "--memory-backend=mixed",
+        "--max-fixed-size-structures-size=64",
     ]
 
     if is32:

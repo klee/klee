@@ -130,10 +130,10 @@ public:
   removeConcretization(const Assignment &delta,
                        ExprHashMap<ref<Expr>> &changedExprs) const;
 
-  void
-  addValuesToAssignment(const std::vector<const Array *> &objects,
-                        const std::vector<SparseStorage<unsigned char>> &values,
-                        Assignment &assign) const;
+  void addValuesToAssignment(
+      const std::vector<const Array *> &objects,
+      const std::vector<SparseStorageImpl<unsigned char>> &values,
+      Assignment &assign) const;
 
   IndependentConstraintSet();
   explicit IndependentConstraintSet(ref<ExprOrSymcrete> v);

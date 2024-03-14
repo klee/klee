@@ -5215,7 +5215,7 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
 
   // Prepare external memory for invoking the function
   auto arrays = state.constraints.cs().gatherArrays();
-  std::vector<SparseStorage<unsigned char>> values;
+  std::vector<SparseStorageImpl<unsigned char>> values;
   solver->getInitialValues(state.constraints.cs(), arrays, values,
                            state.queryMetaData);
   Assignment assignment(arrays, values);
@@ -5705,11 +5705,11 @@ void Executor::concretizeSize(ExecutionState &state, ref<Expr> size,
                  reallocFrom, allocationAlignment, checkOutOfMemory);
 }
 
-bool Executor::computeSizes(const ConstraintSet &constraints,
-                            ref<Expr> symbolicSizesSum,
-                            std::vector<const Array *> &objects,
-                            std::vector<SparseStorage<unsigned char>> &values,
-                            SolverQueryMetaData &metaData) {
+bool Executor::computeSizes(
+    const ConstraintSet &constraints, ref<Expr> symbolicSizesSum,
+    std::vector<const Array *> &objects,
+    std::vector<SparseStorageImpl<unsigned char>> &values,
+    SolverQueryMetaData &metaData) {
   ref<ConstantExpr> minimalSumValue;
   ref<SolverResponse> response;
 
@@ -6753,7 +6753,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
         if (!obj) {
           if (ZeroSeedExtension) {
             si.assignment.bindings.replace(
-                {array, SparseStorage<unsigned char>(0)});
+                {array, SparseStorageImpl<unsigned char>(0)});
           } else if (!AllowSeedExtension) {
             terminateStateOnUserError(state,
                                       "ran out of inputs during seeding");
@@ -6777,7 +6777,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
               terminateStateOnUserError(state, msg.str());
               break;
             } else {
-              SparseStorage<unsigned char> values;
+              SparseStorageImpl<unsigned char> values;
               if (si.assignment.bindings.find(array) !=
                   si.assignment.bindings.end()) {
                 values = si.assignment.bindings.at(array);
@@ -7498,7 +7498,7 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
         createNonOverflowingSumExpr(symbolicSizesTerms);
 
     std::vector<const Array *> symcreteObjects;
-    std::vector<SparseStorage<unsigned char>> symcreteValues;
+    std::vector<SparseStorageImpl<unsigned char>> symcreteValues;
     bool success =
         computeSizes(extendedConstraints.cs(), symbolicSizesSum,
                      symcreteObjects, symcreteValues, state.queryMetaData);
@@ -7538,7 +7538,7 @@ bool Executor::getSymbolicSolution(const ExecutionState &state, KTest &res) {
       addresses.push_back(address);
       unsigned char *charAddressIterator =
           reinterpret_cast<unsigned char *>(&address);
-      SparseStorage<unsigned char> storage(0);
+      SparseStorageImpl<unsigned char> storage(0);
       storage.store(0, charAddressIterator,
                     charAddressIterator + sizeof(address));
       ref<ConstantExpr> constantAddress = ConstantExpr::create(

@@ -168,7 +168,7 @@ bool QueryLoggingSolver::computeValue(const Query &query, ref<Expr> &result) {
 
 bool QueryLoggingSolver::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorageImpl<unsigned char>> &values, bool &hasSolution) {
   startQuery(query, "InitialValues", 0, &objects);
 
   ExprHashSet expressions;
@@ -178,7 +178,7 @@ bool QueryLoggingSolver::computeInitialValues(
 
   std::vector<const Array *> allObjects;
   findSymbolicObjects(expressions.begin(), expressions.end(), allObjects);
-  std::vector<SparseStorage<unsigned char>> allValues;
+  std::vector<SparseStorageImpl<unsigned char>> allValues;
 
   bool success = solver->impl->computeInitialValues(query, allObjects,
                                                     allValues, hasSolution);
@@ -194,7 +194,7 @@ bool QueryLoggingSolver::computeInitialValues(
       success = invalidResponse->tryGetInitialValuesFor(objects, values);
       assert(success);
       Assignment allSolutionAssignment(allObjects, allValues);
-      std::vector<SparseStorage<unsigned char>>::iterator values_it =
+      std::vector<SparseStorageImpl<unsigned char>>::iterator values_it =
           values.begin();
 
       Assignment solutionAssignment(objects, values);
@@ -202,7 +202,7 @@ bool QueryLoggingSolver::computeInitialValues(
                                                       e = objects.end();
            i != e; ++i, ++values_it) {
         const Array *array = *i;
-        SparseStorage<unsigned char> &data = *values_it;
+        SparseStorageImpl<unsigned char> &data = *values_it;
         logBuffer << queryCommentSign << "     " << array->getIdentifier()
                   << " = [";
         ref<ConstantExpr> arrayConstantSize =
@@ -249,7 +249,7 @@ bool QueryLoggingSolver::check(const Query &query,
                                              e = initialValues.end();
            i != e; ++i) {
         const Array *array = i->first;
-        const SparseStorage<unsigned char> &data = i->second;
+        const SparseStorageImpl<unsigned char> &data = i->second;
         logBuffer << queryCommentSign << "     " << array->getIdentifier()
                   << " = [";
         ref<ConstantExpr> arrayConstantSize =

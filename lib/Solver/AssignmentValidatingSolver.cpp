@@ -31,16 +31,17 @@ public:
   bool computeValidity(const Query &, PartialValidity &result);
   bool computeTruth(const Query &, bool &isValid);
   bool computeValue(const Query &, ref<Expr> &result);
-  bool computeInitialValues(const Query &,
-                            const std::vector<const Array *> &objects,
-                            std::vector<SparseStorage<unsigned char>> &values,
-                            bool &hasSolution);
+  bool
+  computeInitialValues(const Query &, const std::vector<const Array *> &objects,
+                       std::vector<SparseStorageImpl<unsigned char>> &values,
+                       bool &hasSolution);
   bool check(const Query &query, ref<SolverResponse> &result);
   bool computeValidityCore(const Query &query, ValidityCore &validityCore,
                            bool &isValid);
-  void validateAssignment(const Query &query,
-                          const std::vector<const Array *> &objects,
-                          std::vector<SparseStorage<unsigned char>> &values);
+  void
+  validateAssignment(const Query &query,
+                     const std::vector<const Array *> &objects,
+                     std::vector<SparseStorageImpl<unsigned char>> &values);
   SolverRunStatus getOperationStatusCode();
   char *getConstraintLog(const Query &);
   void setCoreSolverTimeout(time::Span timeout);
@@ -63,7 +64,7 @@ bool AssignmentValidatingSolver::computeValue(const Query &query,
 
 void AssignmentValidatingSolver::validateAssignment(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<SparseStorage<unsigned char>> &values) {
+    std::vector<SparseStorageImpl<unsigned char>> &values) {
   // Use `_allowFreeValues` so that if we are missing an assignment
   // we can't compute a constant and flag this as a problem.
   Assignment assignment(objects, values);
@@ -122,7 +123,7 @@ void AssignmentValidatingSolver::validateAssignment(
 
 bool AssignmentValidatingSolver::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorageImpl<unsigned char>> &values, bool &hasSolution) {
   bool success =
       solver->impl->computeInitialValues(query, objects, values, hasSolution);
   if (!hasSolution)
@@ -144,7 +145,7 @@ bool AssignmentValidatingSolver::check(const Query &query,
 
   std::vector<const Array *> objects;
   findSymbolicObjects(query, objects);
-  std::vector<SparseStorage<unsigned char>> values;
+  std::vector<SparseStorageImpl<unsigned char>> values;
 
   assert(isa<InvalidResponse>(result));
   cast<InvalidResponse>(result)->tryGetInitialValuesFor(objects, values);

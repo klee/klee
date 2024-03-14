@@ -84,8 +84,8 @@ std::vector<const Array *> Assignment::keys() const {
   return result;
 }
 
-std::vector<SparseStorage<unsigned char>> Assignment::values() const {
-  std::vector<SparseStorage<unsigned char>> result;
+std::vector<SparseStorageImpl<unsigned char>> Assignment::values() const {
+  std::vector<SparseStorageImpl<unsigned char>> result;
   result.reserve(bindings.size());
   for (auto i : bindings) {
     result.push_back(i.second);

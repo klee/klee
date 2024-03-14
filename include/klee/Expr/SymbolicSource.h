@@ -75,9 +75,9 @@ public:
 
 class ConstantSource : public SymbolicSource {
 public:
-  const std::unique_ptr<Storage<ref<ConstantExpr>>> constantValues;
+  const std::unique_ptr<SparseStorage<ref<ConstantExpr>>> constantValues;
 
-  ConstantSource(Storage<ref<ConstantExpr>> *_constantValues)
+  ConstantSource(SparseStorage<ref<ConstantExpr>> *_constantValues)
       : constantValues(_constantValues) {
     assert(constantValues->defaultV() && "Constant must be constant!");
   }

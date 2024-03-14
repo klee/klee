@@ -51,10 +51,9 @@ public:
   bool computeTruth(const Query &, bool &isValid);
   bool computeValidity(const Query &, PartialValidity &result);
   bool computeValue(const Query &, ref<Expr> &result);
-  bool computeInitialValues(const Query &query,
-                            const std::vector<const Array *> &objects,
-                            std::vector<SparseStorage<unsigned char>> &values,
-                            bool &hasSolution);
+  bool computeInitialValues(
+      const Query &query, const std::vector<const Array *> &objects,
+      std::vector<SparseStorageImpl<unsigned char>> &values, bool &hasSolution);
   bool check(const Query &query, ref<SolverResponse> &result);
   bool computeValidityCore(const Query &query, ValidityCore &validityCore,
                            bool &isValid);
@@ -94,7 +93,7 @@ bool IndependentSolver::computeValue(const Query &query, ref<Expr> &result) {
 // in the case ``objects`` doesn't contain all the assignments needed.
 bool assertCreatedPointEvaluatesToTrue(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<SparseStorage<unsigned char>> &values,
+    std::vector<SparseStorageImpl<unsigned char>> &values,
     Assignment::bindings_ty &retMap) {
   // _allowFreeValues is set to true so that if there are missing bytes in the
   // assignment we will end up with a non ConstantExpr after evaluating the
@@ -136,7 +135,7 @@ bool assertCreatedPointEvaluatesToTrue(const Query &query,
                                        Assignment::bindings_ty &bindings,
                                        Assignment::bindings_ty &retMap) {
   std::vector<const Array *> objects;
-  std::vector<SparseStorage<unsigned char>> values;
+  std::vector<SparseStorageImpl<unsigned char>> values;
   objects.reserve(bindings.size());
   values.reserve(bindings.size());
   for (auto &ovp : bindings) {
@@ -148,7 +147,7 @@ bool assertCreatedPointEvaluatesToTrue(const Query &query,
 
 bool IndependentSolver::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorageImpl<unsigned char>> &values, bool &hasSolution) {
   // We assume the query has a solution except proven differently
   // This is important in case we don't have any constraints but
   // we need initial values for requested array objects.
@@ -173,7 +172,7 @@ bool IndependentSolver::computeInitialValues(
                            dependentFactorsObjects);
 
   if (dependentFactorsObjects.size() != 0) {
-    std::vector<SparseStorage<unsigned char>> dependentFactorsValues;
+    std::vector<SparseStorageImpl<unsigned char>> dependentFactorsValues;
 
     if (!solver->impl->computeInitialValues(
             query.withConstraints(dependentConstriants),
@@ -195,7 +194,7 @@ bool IndependentSolver::computeInitialValues(
     // Going to use this as the "fresh" expression for the Query() invocation
     // below
     ConstraintSet tmp(it);
-    std::vector<SparseStorage<unsigned char>> tempValues;
+    std::vector<SparseStorageImpl<unsigned char>> tempValues;
     if (arraysInFactor.size() == 0) {
       continue;
     } else if (it->exprs.size() == 0) {
@@ -237,7 +236,7 @@ bool IndependentSolver::computeInitialValues(
           dyn_cast<ConstantExpr>(retMap.evaluate(arr->size));
       assert(arrayConstantSize &&
              "Array of symbolic size had not receive value for size!");
-      SparseStorage<unsigned char> ret(0);
+      SparseStorageImpl<unsigned char> ret(0);
       values.push_back(ret);
     } else {
       values.push_back(retMap.bindings.at(arr));
@@ -271,7 +270,7 @@ bool IndependentSolver::check(const Query &query, ref<SolverResponse> &result) {
       query.constraints.independentElements().concretizedExprs);
 
   std::vector<const Array *> dependentFactorsObjects;
-  std::vector<SparseStorage<unsigned char>> dependentFactorsValues;
+  std::vector<SparseStorageImpl<unsigned char>> dependentFactorsValues;
   ref<SolverResponse> dependentFactorsResult;
 
   calculateArraysInFactors(dependentFactors, query.expr,
@@ -299,7 +298,7 @@ bool IndependentSolver::check(const Query &query, ref<SolverResponse> &result) {
     // Going to use this as the "fresh" expression for the Query() invocation
     // below
     ref<SolverResponse> tempResult;
-    std::vector<SparseStorage<unsigned char>> tempValues;
+    std::vector<SparseStorageImpl<unsigned char>> tempValues;
     if (arraysInFactor.size() == 0) {
       continue;
     } else if (it->exprs.size() == 0) {

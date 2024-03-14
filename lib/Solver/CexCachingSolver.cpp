@@ -103,10 +103,10 @@ public:
   bool computeTruth(const Query &, bool &isValid);
   bool computeValidity(const Query &, PartialValidity &result);
   bool computeValue(const Query &, ref<Expr> &result);
-  bool computeInitialValues(const Query &,
-                            const std::vector<const Array *> &objects,
-                            std::vector<SparseStorage<unsigned char>> &values,
-                            bool &hasSolution);
+  bool
+  computeInitialValues(const Query &, const std::vector<const Array *> &objects,
+                       std::vector<SparseStorageImpl<unsigned char>> &values,
+                       bool &hasSolution);
   bool check(const Query &query, ref<SolverResponse> &result);
   bool computeValidityCore(const Query &, ValidityCore &validityCore,
                            bool &isValid);
@@ -391,7 +391,7 @@ bool CexCachingSolver::computeValue(const Query &query, ref<Expr> &result) {
 
 bool CexCachingSolver::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) {
+    std::vector<SparseStorageImpl<unsigned char>> &values, bool &hasSolution) {
   TimerStatIncrementer t(stats::cexCacheTime);
   ref<SolverResponse> a;
   if (!getResponse(query, a))
@@ -403,7 +403,7 @@ bool CexCachingSolver::computeInitialValues(
 
   // FIXME: We should use smarter assignment for result so we don't
   // need redundant copy.
-  values = std::vector<SparseStorage<unsigned char>>(objects.size());
+  values = std::vector<SparseStorageImpl<unsigned char>>(objects.size());
   Assignment::bindings_ty aBindings;
   a->tryGetInitialValues(aBindings);
 
@@ -416,7 +416,7 @@ bool CexCachingSolver::computeInitialValues(
           cast<InvalidResponse>(a)->evaluate(os->size);
       assert(arrayConstantSize &&
              "Array of symbolic size had not receive value for size!");
-      values[i] = SparseStorage<unsigned char>(0);
+      values[i] = SparseStorageImpl<unsigned char>(0);
     } else {
       values[i] = it->second;
     }

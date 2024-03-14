@@ -12,12 +12,11 @@
 
 #include "AddressSpace.h"
 
+#include "klee/ADT/FixedSizeStorageAdapter.h"
 #include "klee/ADT/ImmutableList.h"
 #include "klee/ADT/ImmutableSet.h"
-#include "klee/ADT/PersistentHashMap.h"
 #include "klee/ADT/PersistentMap.h"
 #include "klee/ADT/PersistentSet.h"
-#include "klee/ADT/PersistentVector.h"
 #include "klee/ADT/SparseStorage.h"
 #include "klee/ADT/TreeStream.h"
 #include "klee/Core/TerminationTypes.h"

@@ -145,8 +145,8 @@ class DefaultExprBuilder : public ExprBuilder {
     return SgeExpr::alloc(LHS, RHS);
   }
 
-  virtual ref<Expr> Pointer(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-    return PointerExpr::create(LHS, RHS);
+  virtual ref<Expr> Pointer(const ref<Expr> &Base, const ref<Expr> &Value) {
+    return PointerExpr::create(Base, Value);
   }
 };
 
@@ -340,8 +340,8 @@ public:
     return Builder.Select(cast<NonConstantExpr>(Cond), LHS, RHS);
   }
 
-  virtual ref<Expr> Pointer(const ref<Expr> &LHS, const ref<Expr> &RHS) {
-    return Builder.Pointer(LHS, RHS);
+  virtual ref<Expr> Pointer(const ref<Expr> &Base, const ref<Expr> &Value) {
+    return Builder.Pointer(Base, Value);
   }
 
   virtual ref<Expr> Concat(const ref<Expr> &LHS, const ref<Expr> &RHS) {

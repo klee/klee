@@ -94,9 +94,11 @@ public:
   virtual bool computeValue(const Query &query, ref<Expr> &result) = 0;
 
   /// \sa Solver::getInitialValues()
-  virtual bool computeInitialValues(
-      const Query &query, const std::vector<const Array *> &objects,
-      std::vector<SparseStorage<unsigned char>> &values, bool &hasSolution) = 0;
+  virtual bool
+  computeInitialValues(const Query &query,
+                       const std::vector<const Array *> &objects,
+                       std::vector<SparseStorageImpl<unsigned char>> &values,
+                       bool &hasSolution) = 0;
 
   virtual bool check(const Query &query, ref<SolverResponse> &result);
 
