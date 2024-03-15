@@ -1,7 +1,7 @@
 // sqlite databases must be opened with write permissions, so we copy the test cases to the output dir
 RUN: rm -rf %t.klee-stats
 RUN: mkdir %t.klee-stats
-RUN: cp -r %S/klee-stats/run %t.klee-stats/
+RUN: cp -r %S/run %t.klee-stats/
 RUN: %klee-stats --table-format=csv %t.klee-stats/run | FileCheck --check-prefix=CHECK-CSV %s
 RUN: %klee-stats --table-format=readable-csv %t.klee-stats/run | FileCheck --check-prefix=CHECK-READABLECSV %s
 

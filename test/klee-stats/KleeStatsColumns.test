@@ -1,7 +1,7 @@
 // sqlite databases must be opened with write permissions, so we copy the test cases to the output dir
 RUN: rm -rf %t.klee-stats
 RUN: mkdir %t.klee-stats
-RUN: cp -r %S/klee-stats/missing_column %S/klee-stats/run %S/klee-stats/additional_column %t.klee-stats/
+RUN: cp -r %S/missing_column %S/run %S/additional_column %t.klee-stats/
 RUN %klee-stats --print-all %t.klee-stats/missing_column %t.klee-stats/run %t.klee-stats/additional_column | FileCheck %s
 
 // Path, Instrs, ..., extra_column
