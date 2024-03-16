@@ -919,8 +919,10 @@ void Executor::branch(ExecutionState &state,
 
     // XXX do proper balance or keep random?
     result.push_back(&state);
+    // Note: we branch (N-1) times - original state is kept!
     for (unsigned i=1; i<N; ++i) {
       ExecutionState *es = result[theRNG.getInt32() % i];
+      // Here, branch is invoked.
       ExecutionState *ns = es->branch();
       addedStates.push_back(ns);
       result.push_back(ns);
@@ -3767,6 +3769,8 @@ void Executor::terminateState(ExecutionState &state,
   interpreterHandler->incPathsExplored();
   executionTree->setTerminationType(state, reason);
 
+  klee_warning("\t\t\tPop %d", state.id);
+
   std::vector<ExecutionState *>::iterator it =
       std::find(addedStates.begin(), addedStates.end(), &state);
   if (it==addedStates.end()) {
@@ -3783,6 +3787,8 @@ void Executor::terminateState(ExecutionState &state,
     executionTree->remove(state.executionTreeNode);
     delete &state;
   }
+
+  // klee_warning("Pop\t");
 }
 
 static bool shouldWriteTest(const ExecutionState &state) {
@@ -4719,6 +4725,8 @@ void Executor::runFunctionAsMain(Function *f,
 
   ExecutionState *state =
       new ExecutionState(kmodule->functionMap[f], memory.get());
+
+  klee_warning("Created initial state %d", (int) state->id);
 
   if (pathWriter) 
     state->pathOS = pathWriter->open();
