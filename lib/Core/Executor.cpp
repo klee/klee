@@ -1217,8 +1217,8 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       }
     }
 
-    addConstraint(*trueState, condition);
-    addConstraint(*falseState, Expr::createIsZero(condition));
+    addConstraint(*trueState, condition); // Add true condition to true state.
+    addConstraint(*falseState, Expr::createIsZero(condition)); // Add false condition to false state.
 
     // Kinda gross, do we even really still want this option?
     if (MaxDepth && MaxDepth<=trueState->depth) {
@@ -1227,7 +1227,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       return StatePair(nullptr, nullptr);
     }
 
-    return StatePair(trueState, falseState);
+    return StatePair(trueState, falseState); // Important.
   }
 }
 
@@ -1246,7 +1246,7 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
     for (std::vector<SeedInfo>::iterator siit = it->second.begin(), 
            siie = it->second.end(); siit != siie; ++siit) {
       bool res;
-      bool success = solver->mustBeFalse(state.constraints,
+      bool success = solver->mustBeFalse(state.constraints, // This may not be the current state! Issue.
                                          siit->assignment.evaluate(condition),
                                          res, state.queryMetaData);
       assert(success && "FIXME: Unhandled solver failure");

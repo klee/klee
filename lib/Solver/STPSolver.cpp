@@ -29,6 +29,7 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/wait.h>
+#include <vector>
 #include <unistd.h>
 
 namespace {
@@ -90,6 +91,7 @@ private:
   time::Span timeout;
   bool useForkedSTP;
   SolverRunStatus runStatusCode;
+  ConstraintSet assertionStack;
 
 public:
   explicit STPSolverImpl(bool useForkedSTP, bool optimizeDivides = true);
@@ -197,6 +199,8 @@ STPSolverImpl::~STPSolverImpl() {
 
 std::string STPSolverImpl::getConstraintLog(const Query &query) {
   vc_push(vc);
+
+  klee_warning("Constraint being logged!");
 
   for (const auto &constraint : query.constraints)
     vc_assertFormula(vc, builder->construct(constraint));
@@ -386,10 +390,27 @@ bool STPSolverImpl::computeInitialValues(
   runStatusCode = SOLVER_RUN_STATUS_FAILURE;
   TimerStatIncrementer t(stats::queryTime);
 
-  vc_push(vc);
-
-  for (const auto &constraint : query.constraints)
-    vc_assertFormula(vc, builder->construct(constraint));
+  auto stack_it = assertionStack.begin();
+  auto query_it = query.constraints.begin();
+  // LCP between the assertion stack and the query constraints.
+  while (stack_it != assertionStack.end() && query_it != query.constraints.end() && !(*stack_it)->compare(*(*query_it))) {
+    ++stack_it;
+    ++query_it;
+    klee_warning("Equal constraint found!");
+  }
+  // Pop off extra constraints from stack.
+  size_t pops = std::distance(stack_it, assertionStack.end());
+  for (size_t i = 0; i < pops; ++i) {
+    vc_pop(vc);
+    assertionStack.pop_back();
+  }
+  // Add the remaining query constraints.
+  while (query_it != query.constraints.end()) {
+    vc_push(vc);
+    assertionStack.push_back(*query_it);
+    vc_assertFormula(vc, builder->construct(*query_it));
+    ++query_it;
+  }
 
   ++stats::solverQueries;
   ++stats::queryCounterexamples;
@@ -422,8 +443,6 @@ bool STPSolverImpl::computeInitialValues(
     else
       ++stats::queriesValid;
   }
-
-  vc_pop(vc);
 
   return success;
 }

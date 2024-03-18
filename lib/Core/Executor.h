@@ -98,7 +98,7 @@ class Executor : public Interpreter {
   friend klee::Searcher *klee::constructUserSearcher(Executor &executor);
 
 public:
-  typedef std::pair<ExecutionState*,ExecutionState*> StatePair;
+  typedef std::pair<ExecutionState*,ExecutionState*> StatePair; // Returns a pair of states!
 
   /// The random number generator.
   RNG theRNG;

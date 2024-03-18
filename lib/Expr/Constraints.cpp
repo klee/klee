@@ -176,3 +176,5 @@ klee::ConstraintSet::constraint_iterator ConstraintSet::end() const {
 size_t ConstraintSet::size() const noexcept { return constraints.size(); }
 
 void ConstraintSet::push_back(const ref<Expr> &e) { constraints.push_back(e); }
+
+void ConstraintSet::pop_back() { constraints.pop_back(); }
