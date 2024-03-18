@@ -135,6 +135,10 @@ jobs:
         uses: actions/checkout@v3
         with:
           submodules: recursive
+      - name: Memory layout fix for old clang
+        run: |
+          # TODO remove this once upstream fix is available
+          sudo sysctl -w vm.mmap_rnd_bits=28
       - name: Build KLEE
         env: ${{ matrix.env }}
         run: scripts/build/build.sh klee --docker --create-final-image
