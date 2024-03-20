@@ -19,6 +19,7 @@
 #include "klee/Support/Debug.h"
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/FileHandling.h"
+#include "klee/Support/KConfig.h"
 #include "klee/Support/ModuleUtil.h"
 #include "klee/Support/OptionCategories.h"
 #include "klee/Support/PrintVersion.h"
@@ -1606,6 +1607,11 @@ int main(int argc, char **argv, char **envp) {
     llvm::errs().resetColor();
 
   handler->getInfoStream() << stats.str();
+
+  {
+    auto config_file = handler->openOutputFile("klee.kconfig");
+    KConfig::get().manifest(*config_file);
+  }
 
   delete handler;
 
