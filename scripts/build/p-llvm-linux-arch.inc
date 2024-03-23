@@ -112,7 +112,6 @@ is_installed_llvm() {
   lc=$(which "llvm-config-${LLVM_VERSION_MAJOR}")
   check_llvm_config_version 1 "${lc}" && return 0
 
-
   return 1
 }
 
