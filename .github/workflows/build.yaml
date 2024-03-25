@@ -18,7 +18,7 @@ env:
   ENABLE_DEBUG: 1
   GTEST_VERSION: 1.11.0
   KLEE_RUNTIME_BUILD: "Debug+Asserts"
-  LLVM_VERSION: 11
+  LLVM_VERSION: 13
   MINISAT_VERSION: "master"
   REQUIRES_RTTI: 0
   SOLVERS: STP:Z3
@@ -39,9 +39,9 @@ jobs:
           "LLVM 16",
           "LLVM 15",
           "LLVM 14",
-          "LLVM 13",
+          "LLVM 13, Doxygen",
           "LLVM 12",
-          "LLVM 11, Doxygen",
+          "LLVM 11",
           "ASan",
           "UBSan",
           "MSan",
@@ -62,16 +62,16 @@ jobs:
           - name: "LLVM 14"
             env:
               LLVM_VERSION: 14
-          - name: "LLVM 13"
+          - name: "LLVM 13, Doxygen"
             env:
               LLVM_VERSION: 13
+              ENABLE_DOXYGEN: 1
           - name: "LLVM 12"
             env:
               LLVM_VERSION: 12
-          - name: "LLVM 11, Doxygen"
+          - name: "LLVM 11"
             env:
               LLVM_VERSION: 11
-              ENABLE_DOXYGEN: 1
           # Sanitizer builds. Do unoptimized build otherwise the optimizer
           # might remove problematic code
           - name: "ASan"
@@ -79,13 +79,13 @@ jobs:
               SANITIZER_BUILD: address
               ENABLE_OPTIMIZED: 0
               USE_TCMALLOC: 0
-              SANITIZER_LLVM_VERSION: 12
+              SANITIZER_LLVM_VERSION: 13
           - name: "UBSan"
             env:
               SANITIZER_BUILD: undefined
               ENABLE_OPTIMIZED: 0
               USE_TCMALLOC: 0
-              SANITIZER_LLVM_VERSION: 12
+              SANITIZER_LLVM_VERSION: 13
           - name: "MSan"
             env:
               SANITIZER_BUILD: memory
