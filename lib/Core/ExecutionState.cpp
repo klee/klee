@@ -78,9 +78,6 @@ ExecutionState::ExecutionState(KFunction *kf, MemoryManager *mm)
     : pc(kf->instructions), prevPC(pc) {
   pushFrame(nullptr, kf);
   setID();
-
-  klee_warning("\t\t\tPush %d", (int) id);
-
   if (mm->stackFactory && mm->heapFactory) {
     stackAllocator = mm->stackFactory.makeAllocator();
     heapAllocator = mm->heapFactory.makeAllocator();
@@ -121,7 +118,6 @@ ExecutionState::ExecutionState(const ExecutionState& state):
     forkDisabled(state.forkDisabled),
     base_addrs(state.base_addrs),
     base_mos(state.base_mos) {
-  // klee_warning("\t\t\tCreating %d", id);
   for (const auto &cur_mergehandler: openMergeStack)
     cur_mergehandler->addOpenState(this);
 }
@@ -133,8 +129,6 @@ ExecutionState *ExecutionState::branch() {
   falseState->setID();
   falseState->coveredNew = false;
   falseState->coveredLines.clear();
-
-  klee_warning("\t\t\tCreating %d", falseState->id);
 
   return falseState;
 }

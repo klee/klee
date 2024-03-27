@@ -919,10 +919,8 @@ void Executor::branch(ExecutionState &state,
 
     // XXX do proper balance or keep random?
     result.push_back(&state);
-    // Note: we branch (N-1) times - original state is kept!
     for (unsigned i=1; i<N; ++i) {
       ExecutionState *es = result[theRNG.getInt32() % i];
-      // Here, branch is invoked.
       ExecutionState *ns = es->branch();
       addedStates.push_back(ns);
       result.push_back(ns);
@@ -1217,8 +1215,8 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       }
     }
 
-    addConstraint(*trueState, condition); // Add true condition to true state.
-    addConstraint(*falseState, Expr::createIsZero(condition)); // Add false condition to false state.
+    addConstraint(*trueState, condition);
+    addConstraint(*falseState, Expr::createIsZero(condition));
 
     // Kinda gross, do we even really still want this option?
     if (MaxDepth && MaxDepth<=trueState->depth) {
@@ -1227,7 +1225,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       return StatePair(nullptr, nullptr);
     }
 
-    return StatePair(trueState, falseState); // Important.
+    return StatePair(trueState, falseState);
   }
 }
 
@@ -1246,7 +1244,7 @@ void Executor::addConstraint(ExecutionState &state, ref<Expr> condition) {
     for (std::vector<SeedInfo>::iterator siit = it->second.begin(), 
            siie = it->second.end(); siit != siie; ++siit) {
       bool res;
-      bool success = solver->mustBeFalse(state.constraints, // This may not be the current state! Issue.
+      bool success = solver->mustBeFalse(state.constraints,
                                          siit->assignment.evaluate(condition),
                                          res, state.queryMetaData);
       assert(success && "FIXME: Unhandled solver failure");
@@ -3769,8 +3767,6 @@ void Executor::terminateState(ExecutionState &state,
   interpreterHandler->incPathsExplored();
   executionTree->setTerminationType(state, reason);
 
-  klee_warning("\t\t\tPop %d", state.id);
-
   std::vector<ExecutionState *>::iterator it =
       std::find(addedStates.begin(), addedStates.end(), &state);
   if (it==addedStates.end()) {
@@ -3787,8 +3783,6 @@ void Executor::terminateState(ExecutionState &state,
     executionTree->remove(state.executionTreeNode);
     delete &state;
   }
-
-  // klee_warning("Pop\t");
 }
 
 static bool shouldWriteTest(const ExecutionState &state) {
@@ -4725,8 +4719,6 @@ void Executor::runFunctionAsMain(Function *f,
 
   ExecutionState *state =
       new ExecutionState(kmodule->functionMap[f], memory.get());
-
-  klee_warning("Created initial state %d", (int) state->id);
 
   if (pathWriter) 
     state->pathOS = pathWriter->open();

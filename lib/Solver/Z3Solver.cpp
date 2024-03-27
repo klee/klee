@@ -109,7 +109,6 @@ Z3SolverImpl::Z3SolverImpl()
               ? Z3LogInteractionFile.c_str()
               : NULL)),
       runStatusCode(SOLVER_RUN_STATUS_FAILURE) {
-  assert(false && "Z3 not implemented");
   assert(builder && "unable to create Z3Builder");
   solverParameters = Z3_mk_params(builder->ctx);
   Z3_params_inc_ref(builder->ctx, solverParameters);

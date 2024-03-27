@@ -29,7 +29,6 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/wait.h>
-#include <vector>
 #include <unistd.h>
 
 namespace {
@@ -197,10 +196,9 @@ STPSolverImpl::~STPSolverImpl() {
 
 /***/
 
+// TODO: Should this be incremental?
 std::string STPSolverImpl::getConstraintLog(const Query &query) {
   vc_push(vc);
-
-  klee_warning("Constraint being logged!");
 
   for (const auto &constraint : query.constraints)
     vc_assertFormula(vc, builder->construct(constraint));
