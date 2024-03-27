@@ -17,6 +17,8 @@
 #include <sys/mman.h>
 #include <sys/time.h>
 #include <time.h>
+#include <errno.h>
+#include <limits.h>
 
 #include "klee/klee.h"
 
@@ -101,7 +103,28 @@ void klee_make_symbolic(void *array, size_t nbytes, const char *name) {
       exit(1);
     }
   }
-
+  if (testPosition == 0) {
+    char *testPositionFromEnv = getenv("KLEE_TEST_POSITION");
+    if (testPositionFromEnv != NULL) {
+      unsigned long  testPositionFromEnvUl = strtoul(testPositionFromEnv, NULL, 10);
+      if (testPositionFromEnvUl == 0) {
+        if (errno == EINVAL) {
+          fprintf(stderr, "KLEE-RUNTIME: Conversion error occurred: %d\n", errno);
+          exit(1);
+        }
+        if (errno == ERANGE) {
+          fprintf(stderr, "KLEE-RUNTIME: The value provided in KLEE_TEST_POSITION is out of range\n");
+          exit(1);
+        }
+      }
+      if (testPositionFromEnvUl <= UINT_MAX) {
+        testPosition = (unsigned)testPositionFromEnvUl;
+      } else {
+        fprintf(stderr, "KLEE-RUNTIME: The value provided in KLEE_TEST_POSITION is out of range\n");
+        exit(1);
+      }
+    }
+  }
   for (;; ++testPosition) {
     if (testPosition >= testData->numObjects) {
       report_internal_error("out of inputs. Will use zero if continuing.");
