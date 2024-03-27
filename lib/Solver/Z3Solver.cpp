@@ -59,6 +59,7 @@ namespace klee {
 
 class Z3SolverImpl : public SolverImpl {
 private:
+  Z3_solver z3Solver;
   std::unique_ptr<Z3Builder> builder;
   time::Span timeout;
   SolverRunStatus runStatusCode;
@@ -113,7 +114,7 @@ Z3SolverImpl::Z3SolverImpl()
   solverParameters = Z3_mk_params(builder->ctx);
   Z3_params_inc_ref(builder->ctx, solverParameters);
   timeoutParamStrSymbol = Z3_mk_string_symbol(builder->ctx, "timeout");
-  setCoreSolverTimeout(timeout);
+  setCoreSolverTimeout(timeout); // TODO: Set incremental solver timeout?
 
   if (!Z3QueryDumpFile.empty()) {
     std::string error;
@@ -133,9 +134,14 @@ Z3SolverImpl::Z3SolverImpl()
     ss.flush();
     Z3_global_param_set("verbose", underlyingString.c_str());
   }
+
+  z3Solver = Z3_mk_solver(builder->ctx);
+  Z3_solver_inc_ref(builder->ctx, z3Solver);
+  Z3_solver_set_params(builder->ctx, z3Solver, solverParameters);
 }
 
 Z3SolverImpl::~Z3SolverImpl() {
+  Z3_solver_dec_ref(builder->ctx, z3Solver);
   Z3_params_dec_ref(builder->ctx, solverParameters);
 }
 
@@ -241,23 +247,14 @@ bool Z3SolverImpl::computeInitialValues(
 bool Z3SolverImpl::internalRunSolver(
     const Query &query, const std::vector<const Array *> *objects,
     std::vector<std::vector<unsigned char> > *values, bool &hasSolution) {
+  Z3_solver_push(builder->ctx, z3Solver);
 
   TimerStatIncrementer t(stats::queryTime);
-  // NOTE: Z3 will switch to using a slower solver internally if push/pop are
-  // used so for now it is likely that creating a new solver each time is the
-  // right way to go until Z3 changes its behaviour.
-  //
-  // TODO: Investigate using a custom tactic as described in
-  // https://github.com/klee/klee/issues/653
-  Z3_solver theSolver = Z3_mk_solver(builder->ctx);
-  Z3_solver_inc_ref(builder->ctx, theSolver);
-  Z3_solver_set_params(builder->ctx, theSolver, solverParameters);
-
   runStatusCode = SOLVER_RUN_STATUS_FAILURE;
 
   ConstantArrayFinder constant_arrays_in_query;
   for (auto const &constraint : query.constraints) {
-    Z3_solver_assert(builder->ctx, theSolver, builder->construct(constraint));
+    Z3_solver_assert(builder->ctx, z3Solver, builder->construct(constraint));
     constant_arrays_in_query.visit(constraint);
   }
   ++stats::solverQueries;
@@ -273,7 +270,7 @@ bool Z3SolverImpl::internalRunSolver(
            "Constant array found in query, but not handled by Z3Builder");
     for (auto const &arrayIndexValueExpr :
          builder->constant_array_assertions[constant_array]) {
-      Z3_solver_assert(builder->ctx, theSolver, arrayIndexValueExpr);
+      Z3_solver_assert(builder->ctx, z3Solver, arrayIndexValueExpr);
     }
   }
 
@@ -283,29 +280,29 @@ bool Z3SolverImpl::internalRunSolver(
   // negation of the equivalent i.e.
   // ∃ X Constraints(X) ∧ ¬ query(X)
   Z3_solver_assert(
-      builder->ctx, theSolver,
+      builder->ctx, z3Solver,
       Z3ASTHandle(Z3_mk_not(builder->ctx, z3QueryExpr), builder->ctx));
 
   if (dumpedQueriesFile) {
     *dumpedQueriesFile << "; start Z3 query\n";
-    *dumpedQueriesFile << Z3_solver_to_string(builder->ctx, theSolver);
+    *dumpedQueriesFile << Z3_solver_to_string(builder->ctx, z3Solver);
     *dumpedQueriesFile << "(check-sat)\n";
     *dumpedQueriesFile << "(reset)\n";
     *dumpedQueriesFile << "; end Z3 query\n\n";
     dumpedQueriesFile->flush();
   }
 
-  ::Z3_lbool satisfiable = Z3_solver_check(builder->ctx, theSolver);
-  runStatusCode = handleSolverResponse(theSolver, satisfiable, objects, values,
+  ::Z3_lbool satisfiable = Z3_solver_check(builder->ctx, z3Solver);
+  runStatusCode = handleSolverResponse(z3Solver, satisfiable, objects, values,
                                        hasSolution);
 
-  Z3_solver_dec_ref(builder->ctx, theSolver);
   // Clear the builder's cache to prevent memory usage exploding.
   // By using ``autoClearConstructCache=false`` and clearning now
   // we allow Z3_ast expressions to be shared from an entire
   // ``Query`` rather than only sharing within a single call to
   // ``builder->construct()``.
   builder->clearConstructCache();
+  Z3_solver_pop(builder->ctx, z3Solver, 1);
 
   if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE ||
       runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE) {
