@@ -59,6 +59,7 @@ namespace klee {
 
 class Z3SolverImpl : public SolverImpl {
 private:
+  ConstraintSet assertionStack;
   Z3_solver z3Solver;
   std::unique_ptr<Z3Builder> builder;
   time::Span timeout;
@@ -247,24 +248,60 @@ bool Z3SolverImpl::computeInitialValues(
 bool Z3SolverImpl::internalRunSolver(
     const Query &query, const std::vector<const Array *> *objects,
     std::vector<std::vector<unsigned char> > *values, bool &hasSolution) {
-  Z3_solver_push(builder->ctx, z3Solver);
-
-  TimerStatIncrementer t(stats::queryTime);
   runStatusCode = SOLVER_RUN_STATUS_FAILURE;
+  TimerStatIncrementer t(stats::queryTime);
 
-  ConstantArrayFinder constant_arrays_in_query;
-  for (auto const &constraint : query.constraints) {
-    Z3_solver_assert(builder->ctx, z3Solver, builder->construct(constraint));
-    constant_arrays_in_query.visit(constraint);
+  // TODO: Reduce duplication with STPSolverImpl::computeInitialValues.
+  auto stack_it = assertionStack.begin();
+  auto query_it = query.constraints.begin();
+  // LCP between the assertion stack and the query constraints.
+  while (stack_it != assertionStack.end() && query_it != query.constraints.end() && !(*stack_it)->compare(*(*query_it))) {
+    ++stack_it;
+    ++query_it;
+    klee_warning("Equal constraint found!"); // TODO: Remove this.
   }
+  // Pop off extra constraints from stack.
+  size_t pops = std::distance(stack_it, assertionStack.end());
+  for (size_t i = 0; i < pops; ++i) {
+    Z3_solver_pop(builder->ctx, z3Solver, 1);
+    assertionStack.pop_back();
+  }
+  // Add the remaining query constraints.
+  while (query_it != query.constraints.end()) {
+    Z3_solver_push(builder->ctx, z3Solver);
+    assertionStack.push_back(*query_it);
+    Z3_solver_assert(builder->ctx, z3Solver, builder->construct(*query_it));
+
+    ConstantArrayFinder constant_arrays_in_query;
+    constant_arrays_in_query.visit(*query_it);
+    // Add constant array assertions, NB: at the same level, to benefit from
+    // incrementality over them. Downside is that we may assert the same
+    // constraint multiple times.
+    for (auto const &constant_array : constant_arrays_in_query.results) {
+      assert(builder->constant_array_assertions.count(constant_array) == 1 &&
+              "Constant array found in query, but not handled by Z3Builder");
+      for (auto const &arrayIndexValueExpr :
+            builder->constant_array_assertions[constant_array]) {
+        Z3_solver_assert(builder->ctx, z3Solver, arrayIndexValueExpr);
+      }
+    }
+
+    ++query_it;
+  }
+
   ++stats::solverQueries;
   if (objects)
     ++stats::queryCounterexamples;
 
+  // We don't persist the negation of the query expression to the assertion stack;
+  // it is unintuitive that negation would aid future constraint sets.
+  // Push a level for constraints related to the query expression:
+  Z3_solver_push(builder->ctx, z3Solver);
   Z3ASTHandle z3QueryExpr =
       Z3ASTHandle(builder->construct(query.expr), builder->ctx);
-  constant_arrays_in_query.visit(query.expr);
 
+  ConstantArrayFinder constant_arrays_in_query;
+  constant_arrays_in_query.visit(query.expr);
   for (auto const &constant_array : constant_arrays_in_query.results) {
     assert(builder->constant_array_assertions.count(constant_array) == 1 &&
            "Constant array found in query, but not handled by Z3Builder");
@@ -302,6 +339,8 @@ bool Z3SolverImpl::internalRunSolver(
   // ``Query`` rather than only sharing within a single call to
   // ``builder->construct()``.
   builder->clearConstructCache();
+
+  // Pop the level relating to the query expression:
   Z3_solver_pop(builder->ctx, z3Solver, 1);
 
   if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE ||

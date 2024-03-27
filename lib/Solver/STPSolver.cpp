@@ -388,13 +388,14 @@ bool STPSolverImpl::computeInitialValues(
   runStatusCode = SOLVER_RUN_STATUS_FAILURE;
   TimerStatIncrementer t(stats::queryTime);
 
+  // TODO: Reduce duplication with Z3SolverImpl::internalRunSolver.
   auto stack_it = assertionStack.begin();
   auto query_it = query.constraints.begin();
   // LCP between the assertion stack and the query constraints.
   while (stack_it != assertionStack.end() && query_it != query.constraints.end() && !(*stack_it)->compare(*(*query_it))) {
     ++stack_it;
     ++query_it;
-    klee_warning("Equal constraint found!");
+    klee_warning("Equal constraint found!"); // TODO: Remove this.
   }
   // Pop off extra constraints from stack.
   size_t pops = std::distance(stack_it, assertionStack.end());
