@@ -38,6 +38,8 @@ extern llvm::cl::opt<bool> UseIndependentSolver;
 
 extern llvm::cl::opt<bool> DebugValidateSolver;
 
+extern llvm::cl::opt<bool> UseIncrementalSolver;
+
 extern llvm::cl::opt<std::string> MinQueryTimeToLog;
 
 extern llvm::cl::opt<bool> LogTimedOutQueries;

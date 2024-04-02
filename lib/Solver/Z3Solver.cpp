@@ -24,6 +24,7 @@
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverImpl.h"
+#include "klee/Solver/SolverCmdLine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -69,6 +70,10 @@ private:
   // Parameter symbols
   ::Z3_symbol timeoutParamStrSymbol;
 
+  bool internalRunSolverIncremental(const Query &,
+                                    const std::vector<const Array *> *,
+                                    std::vector<std::vector<unsigned char> > *,
+                                    bool &hasSolution);
   bool internalRunSolver(const Query &,
                          const std::vector<const Array *> *objects,
                          std::vector<std::vector<unsigned char> > *values,
@@ -136,13 +141,17 @@ Z3SolverImpl::Z3SolverImpl()
     Z3_global_param_set("verbose", underlyingString.c_str());
   }
 
-  z3Solver = Z3_mk_solver(builder->ctx);
-  Z3_solver_inc_ref(builder->ctx, z3Solver);
-  Z3_solver_set_params(builder->ctx, z3Solver, solverParameters);
+  if (UseIncrementalSolver) {
+    z3Solver = Z3_mk_solver(builder->ctx);
+    Z3_solver_inc_ref(builder->ctx, z3Solver);
+    Z3_solver_set_params(builder->ctx, z3Solver, solverParameters);
+  }
 }
 
 Z3SolverImpl::~Z3SolverImpl() {
-  Z3_solver_dec_ref(builder->ctx, z3Solver);
+  if (UseIncrementalSolver) {
+    Z3_solver_dec_ref(builder->ctx, z3Solver);
+  }
   Z3_params_dec_ref(builder->ctx, solverParameters);
 }
 
@@ -246,6 +255,93 @@ bool Z3SolverImpl::computeInitialValues(
 }
 
 bool Z3SolverImpl::internalRunSolver(
+    const Query &query, const std::vector<const Array *> *objects,
+    std::vector<std::vector<unsigned char> > *values, bool &hasSolution) {
+  if (UseIncrementalSolver) {
+    return internalRunSolverIncremental(query, objects, values, hasSolution);
+  }
+
+  TimerStatIncrementer t(stats::queryTime);
+  // NOTE: Z3 will switch to using a slower solver internally if push/pop are
+  // used so for now it is likely that creating a new solver each time is the
+  // right way to go until Z3 changes its behaviour.
+  //
+  // TODO: Investigate using a custom tactic as described in
+  // https://github.com/klee/klee/issues/653
+  Z3_solver theSolver = Z3_mk_solver(builder->ctx);
+  Z3_solver_inc_ref(builder->ctx, theSolver);
+  Z3_solver_set_params(builder->ctx, theSolver, solverParameters);
+
+  runStatusCode = SOLVER_RUN_STATUS_FAILURE;
+
+  ConstantArrayFinder constant_arrays_in_query;
+  for (auto const &constraint : query.constraints) {
+    Z3_solver_assert(builder->ctx, theSolver, builder->construct(constraint));
+    constant_arrays_in_query.visit(constraint);
+  }
+  ++stats::solverQueries;
+  if (objects)
+    ++stats::queryCounterexamples;
+
+  Z3ASTHandle z3QueryExpr =
+      Z3ASTHandle(builder->construct(query.expr), builder->ctx);
+  constant_arrays_in_query.visit(query.expr);
+
+  for (auto const &constant_array : constant_arrays_in_query.results) {
+    assert(builder->constant_array_assertions.count(constant_array) == 1 &&
+           "Constant array found in query, but not handled by Z3Builder");
+    for (auto const &arrayIndexValueExpr :
+         builder->constant_array_assertions[constant_array]) {
+      Z3_solver_assert(builder->ctx, theSolver, arrayIndexValueExpr);
+    }
+  }
+
+  // KLEE Queries are validity queries i.e.
+  // ∀ X Constraints(X) → query(X)
+  // but Z3 works in terms of satisfiability so instead we ask the
+  // negation of the equivalent i.e.
+  // ∃ X Constraints(X) ∧ ¬ query(X)
+  Z3_solver_assert(
+      builder->ctx, theSolver,
+      Z3ASTHandle(Z3_mk_not(builder->ctx, z3QueryExpr), builder->ctx));
+
+  if (dumpedQueriesFile) {
+    *dumpedQueriesFile << "; start Z3 query\n";
+    *dumpedQueriesFile << Z3_solver_to_string(builder->ctx, theSolver);
+    *dumpedQueriesFile << "(check-sat)\n";
+    *dumpedQueriesFile << "(reset)\n";
+    *dumpedQueriesFile << "; end Z3 query\n\n";
+    dumpedQueriesFile->flush();
+  }
+
+  ::Z3_lbool satisfiable = Z3_solver_check(builder->ctx, theSolver);
+  runStatusCode = handleSolverResponse(theSolver, satisfiable, objects, values,
+                                       hasSolution);
+
+  Z3_solver_dec_ref(builder->ctx, theSolver);
+  // Clear the builder's cache to prevent memory usage exploding.
+  // By using ``autoClearConstructCache=false`` and clearning now
+  // we allow Z3_ast expressions to be shared from an entire
+  // ``Query`` rather than only sharing within a single call to
+  // ``builder->construct()``.
+  builder->clearConstructCache();
+
+  if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE ||
+      runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE) {
+    if (hasSolution) {
+      ++stats::queriesInvalid;
+    } else {
+      ++stats::queriesValid;
+    }
+    return true; // success
+  }
+  if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_INTERRUPTED) {
+    raise(SIGINT);
+  }
+  return false; // failed
+}
+
+bool Z3SolverImpl::internalRunSolverIncremental(
     const Query &query, const std::vector<const Array *> *objects,
     std::vector<std::vector<unsigned char> > *values, bool &hasSolution) {
   runStatusCode = SOLVER_RUN_STATUS_FAILURE;
