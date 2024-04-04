@@ -392,8 +392,9 @@ bool Z3SolverImpl::internalRunSolverIncremental(
   // it is unintuitive that negation would aid future constraint sets.
   // Push a level for constraints related to the query expression:
   Z3_solver_push(builder->ctx, z3Solver);
-  Z3ASTHandle z3QueryExpr =
-      Z3ASTHandle(builder->construct(query.expr), builder->ctx);
+  // Z3ASTHandle z3QueryExpr =
+  //     Z3ASTHandle(builder->construct(query.expr), builder->ctx);
+  Z3ASTHandle z3QueryExpr = builder->construct(query.expr);
 
   ConstantArrayFinder constant_arrays_in_query;
   constant_arrays_in_query.visit(query.expr);
