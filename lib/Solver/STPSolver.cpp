@@ -448,7 +448,6 @@ bool STPSolverImpl::computeInitialValuesIncremental(
   while (stack_it != assertionStack.end() && query_it != query.constraints.end() && !(*stack_it)->compare(*(*query_it))) {
     ++stack_it;
     ++query_it;
-    klee_warning("Equal constraint found!"); // TODO: Remove this.
   }
   // Pop off extra constraints from stack.
   size_t pops = std::distance(stack_it, assertionStack.end());
