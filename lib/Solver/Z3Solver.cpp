@@ -256,7 +256,7 @@ bool Z3SolverImpl::computeInitialValues(
 
 bool Z3SolverImpl::internalRunSolver(
     const Query &query, const std::vector<const Array *> *objects,
-    std::vector<std::vector<unsigned char> > *values, bool &hasSolution) {
+    std::vector<std::vector<unsigned char> > *values, bool &hasSolution) {\
   if (UseIncrementalSolver) {
     return internalRunSolverIncremental(query, objects, values, hasSolution);
   }
@@ -347,74 +347,50 @@ bool Z3SolverImpl::internalRunSolverIncremental(
   runStatusCode = SOLVER_RUN_STATUS_FAILURE;
   TimerStatIncrementer t(stats::queryTime);
 
-  // TODO: Reduce duplication with STPSolverImpl::computeInitialValues.
-  auto stack_it = assertionStack.begin();
-  auto query_it = query.constraints.begin();
-  // LCP between the assertion stack and the query constraints.
-  while (stack_it != assertionStack.end() && query_it != query.constraints.end() && !(*stack_it)->compare(*(*query_it))) {
-    ++stack_it;
-    ++query_it;
-  }
-  // Pop off extra constraints from stack.
-  size_t pops = std::distance(stack_it, assertionStack.end());
-  for (size_t i = 0; i < pops; ++i) {
-    Z3_solver_pop(builder->ctx, z3Solver, 1);
-    assertionStack.pop_back();
-  }
-  // Add the remaining query constraints.
-  while (query_it != query.constraints.end()) {
-    Z3_solver_push(builder->ctx, z3Solver);
-    assertionStack.push_back(*query_it);
-    Z3_solver_assert(builder->ctx, z3Solver, builder->construct(*query_it));
+  // TODO: Better handle constant arrays.
+  std::vector<Z3ASTHandle> assumptions;
+  ConstantArrayFinder constant_arrays_in_query;
 
-    ConstantArrayFinder constant_arrays_in_query;
-    constant_arrays_in_query.visit(*query_it);
-    // Add constant array assertions, NB: at the same level, to benefit from
-    // incrementality over them. Downside is that we may assert the same
-    // constraint multiple times.
-    for (auto const &constant_array : constant_arrays_in_query.results) {
-      assert(builder->constant_array_assertions.count(constant_array) == 1 &&
-              "Constant array found in query, but not handled by Z3Builder");
-      for (auto const &arrayIndexValueExpr :
-            builder->constant_array_assertions[constant_array]) {
-        Z3_solver_assert(builder->ctx, z3Solver, arrayIndexValueExpr);
-      }
+  auto assertConstraint = [&](const ref<Expr> &constraint) -> void {
+    auto [assumption, implication] = builder->assumptionLiteral(constraint);
+    assumptions.push_back(assumption);
+    if (implication) {
+      Z3_solver_assert(builder->ctx, z3Solver, implication.value());
+    } else {
+      // klee_warning("Using existing assumption literal");
     }
+    constant_arrays_in_query.visit(constraint);
+  };
 
-    ++query_it;
+  for (const auto &constraint : query.constraints) {
+    assertConstraint(constraint);
   }
-
   ++stats::solverQueries;
   if (objects)
     ++stats::queryCounterexamples;
-
-  // We don't persist the negation of the query expression to the assertion stack;
-  // it is unintuitive that negation would aid future constraint sets.
-  // Push a level for constraints related to the query expression:
-  Z3_solver_push(builder->ctx, z3Solver);
-  // Z3ASTHandle z3QueryExpr =
-  //     Z3ASTHandle(builder->construct(query.expr), builder->ctx);
-  Z3ASTHandle z3QueryExpr = builder->construct(query.expr);
-
-  ConstantArrayFinder constant_arrays_in_query;
-  constant_arrays_in_query.visit(query.expr);
-  for (auto const &constant_array : constant_arrays_in_query.results) {
-    assert(builder->constant_array_assertions.count(constant_array) == 1 &&
-           "Constant array found in query, but not handled by Z3Builder");
-    for (auto const &arrayIndexValueExpr :
-         builder->constant_array_assertions[constant_array]) {
-      Z3_solver_assert(builder->ctx, z3Solver, arrayIndexValueExpr);
-    }
-  }
 
   // KLEE Queries are validity queries i.e.
   // ∀ X Constraints(X) → query(X)
   // but Z3 works in terms of satisfiability so instead we ask the
   // negation of the equivalent i.e.
   // ∃ X Constraints(X) ∧ ¬ query(X)
-  Z3_solver_assert(
-      builder->ctx, z3Solver,
-      Z3ASTHandle(Z3_mk_not(builder->ctx, z3QueryExpr), builder->ctx));
+  auto negatedExpr = Expr::createIsZero(query.expr);
+  assertConstraint(negatedExpr);
+
+  for (auto const &constant_array : constant_arrays_in_query.results) {
+    assert(builder->constant_array_assertions.count(constant_array) == 1 &&
+           "Constant array found in query, but not handled by Z3Builder");
+    for (unsigned i = 0, e = constant_array->size; i != e; ++i) {
+      auto [assumption, implication] = builder->assumptionLiteralConstantArray(
+          constant_array, i, builder->constant_array_assertions[constant_array][i]);
+      assumptions.push_back(assumption);
+      if (implication) {
+        Z3_solver_assert(builder->ctx, z3Solver, implication.value());
+      } else {
+        klee_warning("Using existing assumption literal - constant array");
+      }
+    }
+  }
 
   if (dumpedQueriesFile) {
     *dumpedQueriesFile << "; start Z3 query\n";
@@ -425,7 +401,15 @@ bool Z3SolverImpl::internalRunSolverIncremental(
     dumpedQueriesFile->flush();
   }
 
-  ::Z3_lbool satisfiable = Z3_solver_check(builder->ctx, z3Solver);
+  std::vector<::Z3_ast> raw_assumptions{assumptions.cbegin(),
+                                        assumptions.cend()};
+  // (check-sat-assuming):
+  ::Z3_lbool satisfiable = Z3_solver_check_assumptions(
+    builder->ctx,
+    z3Solver,
+    /*num_assumptions=*/raw_assumptions.size(),
+    /*assumptions=*/raw_assumptions.size() ? raw_assumptions.data() : nullptr);
+  
   runStatusCode = handleSolverResponse(z3Solver, satisfiable, objects, values,
                                        hasSolution);
 
@@ -434,10 +418,7 @@ bool Z3SolverImpl::internalRunSolverIncremental(
   // we allow Z3_ast expressions to be shared from an entire
   // ``Query`` rather than only sharing within a single call to
   // ``builder->construct()``.
-  builder->clearConstructCache();
-
-  // Pop the level relating to the query expression:
-  Z3_solver_pop(builder->ctx, z3Solver, 1);
+  builder->clearConstructCache(); // Doesn't clear the constant array assertions.
 
   if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE ||
       runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE) {
