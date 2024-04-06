@@ -41,7 +41,7 @@ jobs:
         include:
           - name: "test"
             env:
-              LLVM_VERSION: 13
+              LLVM_VERSION: 11
     steps:
       - name: Checkout KLEE source code
         uses: actions/checkout@v3

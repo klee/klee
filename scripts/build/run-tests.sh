@@ -1,4 +1,17 @@
 #!/bin/bash
+DIR="$(cd "$(dirname "$0")" && pwd)"
+run_tests() {
+  build_dir="$1"
+  KLEE_SRC="$(cd "${DIR}"/../../ && pwd)"
+
+  # TODO change to pinpoint specific directory
+  cd "${build_dir}"
+
+  # Remove klee from PATH
+  export PATH="/home/klee/klee_build/bin:$PATH"
+  if which klee; then
+    return 1 # should not happen
+  fi
 
 clang++ -o test/unittestsmark test/unittestsmark/No_Errors_Build_Test_Code.cpp
 clang++ -o test/unittestsmark test/unittestsmark/racecond.cpp
@@ -9,3 +22,4 @@ klee test/unittestsmark/No_Errors_Build_Test_Code.cpp
 klee test/unittestsmark/racecond.cpp
 klee test/unittestsmark/undefined_behaviour.cpp
 klee test/unittestsmark/deadlock.cpp
+}
