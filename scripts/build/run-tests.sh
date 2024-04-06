@@ -147,5 +147,5 @@ main() {
 
   run_tests "${directory}"
 
-
+}
 main "$@"
