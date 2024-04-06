@@ -1,4 +1,4 @@
-KLEE Symbolic Virtual Machine
+KLEE Symbolis Virtual Machine
 =============================
 
 [![Build Status](https://github.com/klee/klee/workflows/CI/badge.svg)](https://github.com/klee/klee/actions?query=workflow%3ACI)
