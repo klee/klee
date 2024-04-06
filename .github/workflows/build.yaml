@@ -37,7 +37,20 @@ jobs:
       matrix:
         name: [
           "LLVM 16",
-
+          "LLVM 15",
+          "LLVM 14",
+          "LLVM 13",
+          "LLVM 12",
+          "LLVM 11, Doxygen",
+          "ASan",
+          "UBSan",
+          "MSan",
+          "Z3 only",
+          "metaSMT",
+          "STP master",
+          "Latest klee-uclibc",
+          "Asserts disabled",
+          "No TCMalloc, optimised runtime",
         ]
         include:
           - name: "LLVM 16"
@@ -116,3 +129,63 @@ jobs:
       - name: Build KLEE
         env: ${{ matrix.env }}
         run: scripts/build/build.sh klee --docker --create-final-image
+      - name: Run tests
+        run: scripts/build/run-tests.sh --run-docker --debug
+
+  macOS:
+    runs-on: macos-latest
+    env:
+      BASE: /tmp
+      SOLVERS: STP
+      UCLIBC_VERSION: 0
+      USE_TCMALLOC: 0
+      USE_LIBCXX: 0
+    steps:
+      - name: Install newer version of Bash
+        run: brew install bash
+      - name: Checkout KLEE source code
+        uses: actions/checkout@v3
+      - name: Build KLEE
+        run: scripts/build/build.sh klee --debug --install-system-deps
+      - name: Run tests
+        run: scripts/build/run-tests.sh /tmp/klee_build* --debug
+
+  Docker:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout KLEE Code
+        uses: actions/checkout@v3
+      - name: Build Docker image
+        run: docker build .
+
+  Coverage:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        name: [
+          "STP",
+          "Z3",
+        ]
+        include:
+          - name: "STP"
+            env:
+              SOLVERS: STP:Z3
+          - name: "Z3"
+            env:
+              SOLVERS: Z3
+    env:
+      ENABLE_OPTIMIZED: 0
+      COVERAGE: 1
+    steps:
+      - name: Checkout KLEE source code
+        uses: actions/checkout@v3
+        with:
+          # Codecov may run into "Issue detecting commit SHA. Please run
+          # actions/checkout with fetch-depth > 1 or set to 0" when uploading.
+          # See also https://github.com/codecov/codecov-action/issues/190
+          fetch-depth: 2
+      - name: Build KLEE
+        env: ${{ matrix.env }}
+        run: scripts/build/build.sh klee --docker --create-final-image
+      - name: Run tests
+        run: scripts/build/run-tests.sh --coverage --upload-coverage --run-docker --debug
