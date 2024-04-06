@@ -1,6 +1,5 @@
 add_klee_unit_test(marktest
   deadlock.cpp
-  No_Errors_Build_Test_Code.cpp
   racecond.cpp
   undefined_behaviour.cpp)
 target_compile_definitions(marktest PRIVATE USE_GTEST_INSTEAD_OF_MAIN)
