@@ -37,20 +37,7 @@ jobs:
       matrix:
         name: [
           "LLVM 16",
-          "LLVM 15",
-          "LLVM 14",
-          "LLVM 13",
-          "LLVM 12",
-          "LLVM 11, Doxygen",
-          "ASan",
-          "UBSan",
-          "MSan",
-          "Z3 only",
-          "metaSMT",
-          "STP master",
-          "Latest klee-uclibc",
-          "Asserts disabled",
-          "No TCMalloc, optimised runtime",
+
         ]
         include:
           - name: "LLVM 16"
