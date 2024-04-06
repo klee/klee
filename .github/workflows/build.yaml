@@ -48,5 +48,5 @@ jobs:
       - name: Build KLEE
         env: ${{ matrix.env }}
         run: scripts/build/build.sh klee --docker --create-final-image
-        name: Run tests
+      - name: Run tests
         run: scripts/build/run-tests.sh
