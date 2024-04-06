@@ -1,6 +1,7 @@
 #!/bin/bash
 DIR="$(cd "$(dirname "$0")" && pwd)"
-run_tests() {
+run_tests() 
+{
   build_dir="$1"
   KLEE_SRC="$(cd "${DIR}"/../../ && pwd)"
 
@@ -13,13 +14,12 @@ run_tests() {
     return 1 # should not happen
   fi
 
-clang++ -o test/unittestsmark test/unittestsmark/No_Errors_Build_Test_Code.cpp
-clang++ -o test/unittestsmark test/unittestsmark/racecond.cpp
-clang++ -o test/unittestsmark test/unittestsmark/undefined_behaviour.cpp
-clang++ -o test/unittestsmark test/unittestsmark/deadlock.cpp
-
-klee test/unittestsmark/No_Errors_Build_Test_Code.cpp
-klee test/unittestsmark/racecond.cpp
-klee test/unittestsmark/undefined_behaviour.cpp
-klee test/unittestsmark/deadlock.cpp
+clang -c -emit-llvm -O0 test/unittestsmark/No_Errors_Build_Test_Code.cpp
+klee test/unittestsmark/No_Errors_Build_Test_Code.bc
+clang -c -emit-llvm -O0 test/unittestsmark/racecond.cpp
+klee test/unittestsmark/racecond.bc
+clang -c -emit-llvm -O0 test/unittestsmark/undefined_behaviour.cpp
+klee test/unittestsmark/undefined_behaviour.bc
+clang -c -emit-llvm -O0 test/unittestsmark/deadlock.cpp
+klee test/unittestsmark/deadlock.bc
 }
