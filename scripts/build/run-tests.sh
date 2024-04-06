@@ -22,4 +22,5 @@ clang -c -emit-llvm -O0 test/unittestsmark/undefined_behaviour.cpp
 klee test/unittestsmark/undefined_behaviour.bc
 clang -c -emit-llvm -O0 test/unittestsmark/deadlock.cpp
 klee test/unittestsmark/deadlock.bc
+echo "why"
 }
