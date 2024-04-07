@@ -1,5 +1,6 @@
 #include <iostream>
 #include <thread>
+#include "gtest/gtest.h"
 
 const int NUM_THREADS = 2;
 int counter = 0;

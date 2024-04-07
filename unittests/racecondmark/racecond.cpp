@@ -1,6 +1,7 @@
 #include <iostream>
 #include <thread>
 #include <mutex>
+#include "gtest/gtest.h"
 
 int sharedVariable = 0;
 std::mutex mutex; // Мьютекс для синхронизации доступа к общей переменной

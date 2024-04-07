@@ -1,7 +1,5 @@
-add_klee_unit_test(deadlock
+add_klee_unit_test(marktest1
   deadlock.cpp)
-target_link_libraries(deadlock PRIVATE kleaverExpr kleaverSolver)
-target_compile_options(deadlock PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
-target_compile_definitions(deadlock PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})
-
-target_include_directories(deadlock PRIVATE ${KLEE_INCLUDE_DIRS})
+target_compile_definitions(marktest1 PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})
+target_compile_options(marktest1 PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
+target_include_directories(marktest1 PRIVATE ${KLEE_INCLUDE_DIRS})
