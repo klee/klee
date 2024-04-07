@@ -3,8 +3,19 @@
 set -e
 set -u
 
-cd mytests
+cd mytests/deadlockmark
 
-for file in *.cpp; do
-    klee $file
-done
+clang++ -emit-llvm -O0 -c -g deadlock.cpp
+klee deadlock.bc
+
+cd ..
+cd mytests/racecondmark
+
+clang++ -emit-llvm -O0 -c -g racecond.cpp
+klee deadlock.bc
+
+cd ..
+cd mytests/undefined_behaviour_mark
+
+clang++ -emit-llvm -O0 -c -g undefined_behaviour.cpp
+klee deadlock.bc
