@@ -50,6 +50,7 @@ run_tests() {
   if [ "${COVERAGE}" -eq 1 ]; then
     coverage_setup "${build_dir}"
   fi
+cd ~/
 cd mytests/deadlockmark
 
 clang++ -emit-llvm -O0 -c -g deadlock.cpp
