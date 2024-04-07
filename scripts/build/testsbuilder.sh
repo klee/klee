@@ -1,5 +1,6 @@
 #!/bin/bash
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/home/klee/.local/bin:$PATH"
+ls -la /tmp
 pwd
 echo $PATH
 echo $(which klee)
