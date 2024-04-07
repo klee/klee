@@ -51,7 +51,8 @@ run_tests() {
     coverage_setup "${build_dir}"
   fi
 cd ~/
-cd mytests/deadlockmark
+cd mytests
+cd deadlockmark
 
 clang++ -emit-llvm -O0 -c -g deadlock.cpp
 klee deadlock.bc
