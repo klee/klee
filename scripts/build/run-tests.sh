@@ -50,21 +50,21 @@ run_tests() {
   if [ "${COVERAGE}" -eq 1 ]; then
     coverage_setup "${build_dir}"
   fi
-cd ~/
-cd mytests
-cd deadlockmark
+
+cd ..
+cd /tmp/klee_src/mytests/deadlockmark
 
 clang++ -emit-llvm -O0 -c -g deadlock.cpp
 klee deadlock.bc
 
 cd ..
-cd mytests/racecondmark
+cd /tmp/klee_src/mytests/racecondmark
 
 clang++ -emit-llvm -O0 -c -g racecond.cpp
 klee deadlock.bc
 
 cd ..
-cd mytests/undefined_behaviour_mark
+cd /tmp/klee_src/mytests/undefined_behaviour_mark
 
 clang++ -emit-llvm -O0 -c -g undefined_behaviour.cpp
 klee deadlock.bc
