@@ -1,7 +1,6 @@
 #include <iostream>
 #include <thread>
 #include <mutex>
-#include "gtest/gtest.h"
 
 std::mutex mutex1;
 std::mutex mutex2;
