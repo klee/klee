@@ -1,5 +1,9 @@
 #!/bin/bash
 
+pwd
+echo $PATH
+echo $(which klee)
+
 set -e
 set -u
 
