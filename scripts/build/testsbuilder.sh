@@ -57,23 +57,17 @@ main() {
     return 0
   fi
 
-cd ~/
-cd /tmp/klee_src/mytests/deadlockmark
+  cd /tmp/klee_src/mytests/deadlockmark
+  clang++ -emit-llvm -O0 -c -g deadlock.cpp
+  klee deadlock.bc
 
-clang++ -emit-llvm -O0 -c -g deadlock.cpp
-klee deadlock.bc
+  cd /tmp/klee_src/mytests/racecondmark
+  clang++ -emit-llvm -O0 -c -g racecond.cpp
+  klee racecond.bc
 
-cd ~/
-cd /tmp/klee_src/mytests/racecondmark
-
-clang++ -emit-llvm -O0 -c -g racecond.cpp
-klee racecond.bc
-
-cd ~/
-cd /tmp/klee_src/mytests/undefined_behaviour_mark
-
-clang++ -emit-llvm -O0 -c -g undefined_behaviour.cpp
-klee undefined_behaviour.bc
+  cd /tmp/klee_src/mytests/undefined_behaviour_mark
+  clang++ -emit-llvm -O0 -c -g undefined_behaviour.cpp
+  klee undefined_behaviour.bc
 }
 
 main "$@"

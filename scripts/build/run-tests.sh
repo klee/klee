@@ -51,11 +51,7 @@ run_tests() {
     coverage_setup "${build_dir}"
   fi
 
-pwd
-echo $PATH
-echo $(which klee)
-
-make unittests
+  make unittests
   
   # Generate and upload coverage if COVERAGE is set
   if [ "${COVERAGE}" -eq 1 ]; then
