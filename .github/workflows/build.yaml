@@ -10,7 +10,7 @@ on:
 # Defaults for building KLEE
 env:
   BASE_IMAGE: ubuntu:jammy-20230126
-  REPOSITORY: ghcr.io/klee
+  REPOSITORY: ghcr.io/unittestbot/klee
   BUILD_SUFFIX: "default"
   COVERAGE: 0
   DISABLE_ASSERTIONS: 0
