@@ -1,35 +1,37 @@
+#include "gtest/gtest.h"
+
+#include "klee/Expr/ArrayCache.h"
+#include "klee/Expr/Assignment.h"
+
 #include <iostream>
-#include <thread>
-#include <mutex>
+#include <vector>
 
-std::mutex mutex1;
-std::mutex mutex2;
+int finished = 0;
 
-void process1() {
-std::lock_guard<std::mutex> lock1(mutex1);
-std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Имитация обработки
-std::lock_guard<std::mutex> lock2(mutex2);
+using namespace klee;
 
-// Критическая секция процесса 1
-std::cout << "Процесс 1 выполняет работу." << std::endl;
-}
+TEST(AssignmentTest, FoldNotOptimized)
+{
+  ArrayCache ac;
+  const Array* array = ac.CreateArray("simple_array", /*size=*/ 1);
+  // Create a simple assignment
+  std::vector<const Array*> objects;
+  std::vector<unsigned char> value;
+  std::vector< std::vector<unsigned char> > values;
+  objects.push_back(array);
+  value.push_back(128);
+  values.push_back(value);
+  // We want to simplify to a constant so allow free values so
+  // if the assignment is incomplete we don't get back a constant.
+  Assignment assignment(objects, values, /*_allowFreeValues=*/true);
 
-void process2() {
-std::lock_guard<std::mutex> lock2(mutex2);
-std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Имитация обработки
-std::lock_guard<std::mutex> lock1(mutex1);
+  // Now make an expression that reads from the array at position
+  // zero.
+  ref<Expr> read = NotOptimizedExpr::alloc(Expr::createTempRead(array, Expr::Int8));
 
-// Критическая секция процесса 2
-std::cout << "Процесс 2 выполняет работу." << std::endl;
-}
-
-int main() {
-setlocale(LC_ALL, "Russian");
-std::thread t1(process1);
-std::thread t2(process2);
-
-t1.join();
-t2.join();
-
-return 0;
+  // Now evaluate. The OptimizedExpr should be folded
+  ref<Expr> evaluated = assignment.evaluate(read);
+  const ConstantExpr* asConstant = dyn_cast<ConstantExpr>(evaluated);
+  ASSERT_TRUE(asConstant != NULL);
+  ASSERT_EQ(asConstant->getZExtValue(), (unsigned) 128);
 }
