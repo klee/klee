@@ -52,6 +52,9 @@ run_tests() {
   fi
 
 pwd
+echo $PATH
+echo $(which klee)
+
 
 make unittests
   
