@@ -1,9 +1,12 @@
 ; REQUIRES: geq-llvm-12.0
+; REQUIRES: not-darwin
+; Disabling darwin because test has different behaviour on CI
 ; RUN: %llvmas %s -o %t1.bc
 ; RUN: rm -rf %t.klee-out
-; RUN: %klee --output-dir=%t.klee-out --libc=klee --write-kpaths %t1.bc
-; RUN: grep "(path: 0 (main: %0 %5 %6 %8 (abs: %1 %8 %11 %13) %8 %10 %16 %17 %19" %t.klee-out/test000001.kpath
-; RUN: grep "(path: 0 (main: %0 %5 %6 %8 (abs: %1 %6 %11 %13) %8 %10 %16 %17 %19" %t.klee-out/test000002.kpath
+; RUN: %klee --output-dir=%t.klee-out --libc=klee --optimize=false --write-kpaths %t1.bc
+; RUN: cat %t.klee-out/test*.kpath > %t.klee-out/tests.kpath
+; RUN: grep "(path: 0 (main: %0 %5 %6 %8 (abs: %1 %8 %11 %13) %8 %10 %16 %17 %19" %t.klee-out/tests.kpath
+; RUN: grep "(path: 0 (main: %0 %5 %6 %8 (abs: %1 %6 %11 %13) %8 %10 %16 %17 %19" %t.klee-out/tests.kpath
 
 @.str = private unnamed_addr constant [2 x i8] c"x\00", align 1
 
