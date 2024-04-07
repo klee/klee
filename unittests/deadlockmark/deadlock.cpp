@@ -3,6 +3,12 @@
 #include <mutex>
 #include "gtest/gtest.h"
 
+int val1=0;
+TEST(TestTopic, TrivialEquality)
+{
+    EXPECT_EQ(val1, 0);
+}
+
 std::mutex mutex1;
 std::mutex mutex2;
 
