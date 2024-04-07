@@ -51,4 +51,4 @@ jobs:
       - name: Run tests
         run: scripts/build/run-tests.sh --run-docker --debug
       - name: Run my tests
-        run: scripts/build/testbuilder.sh --run-docker --debug
+        run: scripts/build/testsbuilder.sh --run-docker --debug
