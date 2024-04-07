@@ -3,6 +3,8 @@
 set -e
 set -u
 
+ls -la
+
 cd mytests/deadlockmark
 
 clang++ -emit-llvm -O0 -c -g deadlock.cpp

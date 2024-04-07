@@ -107,6 +107,22 @@ function run_docker() {
 
  # Run the image that was build last with extended capabilities to allow tracing tests
  "${docker_arguments[@]}" "$(docker images -q | head -n 1)" /bin/bash -i -c "ulimit -s 16384; source /home/klee/.bashrc; export; /tmp/klee_src/scripts/build/run-tests.sh ${script_arguments[*]}"
+cd mytests/deadlockmark
+
+clang++ -emit-llvm -O0 -c -g deadlock.cpp
+klee deadlock.bc
+
+cd ..
+cd mytests/racecondmark
+
+clang++ -emit-llvm -O0 -c -g racecond.cpp
+klee deadlock.bc
+
+cd ..
+cd mytests/undefined_behaviour_mark
+
+clang++ -emit-llvm -O0 -c -g undefined_behaviour.cpp
+klee deadlock.bc
 }
 
 main() {
