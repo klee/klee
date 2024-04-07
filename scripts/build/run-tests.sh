@@ -51,6 +51,8 @@ run_tests() {
     coverage_setup "${build_dir}"
   fi
 
+pwd
+
 make unittests
   
   # Generate and upload coverage if COVERAGE is set
