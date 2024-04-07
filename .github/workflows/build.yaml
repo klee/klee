@@ -49,6 +49,10 @@ jobs:
         env: ${{ matrix.env }}
         run: scripts/build/build.sh klee --docker --create-final-image
       - name: Run tests
-        run: scripts/build/run-tests.sh --run-docker --debug
+        run: 
+            sudo sysctl vm.mmap_rnd_bits=28
+            scripts/build/run-tests.sh --run-docker --debug
       - name: Run my tests
-        run: scripts/build/testsbuilder.sh --run-docker --debug --privileged
+        run: 
+            sudo sysctl vm.mmap_rnd_bits=28
+            scripts/build/testsbuilder.sh --run-docker --debug
