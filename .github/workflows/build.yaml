@@ -49,7 +49,6 @@ jobs:
         env: ${{ matrix.env }}
         run: scripts/build/build.sh klee --docker --create-final-image
       - name: Run tests
-        run: 
-            scripts/build/run-tests.sh --run-docker --debug
+        run: scripts/build/run-tests.sh --run-docker --debug
       - name: Run my tests
         run: sudo scripts/build/testsbuilder.sh --run-docker --debug
