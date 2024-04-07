@@ -50,9 +50,6 @@ jobs:
         run: scripts/build/build.sh klee --docker --create-final-image
       - name: Run tests
         run: 
-            sudo sysctl vm.mmap_rnd_bits=28
             scripts/build/run-tests.sh --run-docker --debug
       - name: Run my tests
-        run: 
-            sudo sysctl vm.mmap_rnd_bits=28
-            scripts/build/testsbuilder.sh --run-docker --debug
+        run: sudo scripts/build/testsbuilder.sh --run-docker --debug
