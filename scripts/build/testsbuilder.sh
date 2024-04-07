@@ -8,9 +8,6 @@ echo $(which klee)
 set -e
 set -u
 
-cd /tmp/klee_build110stp_z3
-make
-
 cd ~/
 cd /tmp/klee_src/mytests/deadlockmark
 
