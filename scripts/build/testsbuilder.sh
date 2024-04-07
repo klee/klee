@@ -3,21 +3,23 @@
 set -e
 set -u
 
-ls -la
+cd /tmp/klee_build110stp_z3
+make
 
-cd mytests/deadlockmark
+cd ~/
+cd /tmp/klee_src/mytests/deadlockmark
 
 clang++ -emit-llvm -O0 -c -g deadlock.cpp
 klee deadlock.bc
 
-cd ..
-cd mytests/racecondmark
+cd ~/
+cd /tmp/klee_src/mytests/racecondmark
 
 clang++ -emit-llvm -O0 -c -g racecond.cpp
-klee deadlock.bc
+klee racecond.bc
 
-cd ..
-cd mytests/undefined_behaviour_mark
+cd ~/
+cd /tmp/klee_src/mytests/undefined_behaviour_mark
 
 clang++ -emit-llvm -O0 -c -g undefined_behaviour.cpp
-klee deadlock.bc
+klee undefined_behaviour.bc
