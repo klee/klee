@@ -55,7 +55,6 @@ pwd
 echo $PATH
 echo $(which klee)
 
-
 make unittests
   
   # Generate and upload coverage if COVERAGE is set
