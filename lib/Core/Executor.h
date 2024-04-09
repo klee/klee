@@ -260,6 +260,11 @@ private:
                     ExactResolutionList &results,
                     const std::string &name);
 
+  bool shouldHandleSymbolicSizeObjects() const;
+
+  bool addCapacityConstraint(ExecutionState &state, ref<Expr> size,
+                             uint64_t &capacity);
+
   /// Allocate and bind a new object in a particular state. NOTE: This
   /// function may fork.
   ///

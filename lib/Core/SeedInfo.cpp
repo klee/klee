@@ -22,7 +22,14 @@
 using namespace klee;
 
 KTestObject *SeedInfo::getNextInput(const MemoryObject *mo,
-                                   bool byName) {
+                                    bool byName) {
+  if (!mo->hasConcreteSize()) {
+    klee_warning("no support for symbolic size");
+    return nullptr;
+  }
+
+  unsigned concreteSize = mo->getConcreteSize();
+
   if (byName) {
     unsigned i;
     
@@ -40,7 +47,7 @@ KTestObject *SeedInfo::getNextInput(const MemoryObject *mo,
         break;
     if (i<input->numObjects) {
       KTestObject *obj = &input->objects[i];
-      if (obj->numBytes == mo->size) {
+      if (obj->numBytes == concreteSize) {
         used.insert(obj);
         klee_warning_once(mo, "using seed input %s[%d] for: %s (no name match)",
                           obj->name, obj->numBytes, mo->name.c_str());

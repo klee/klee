@@ -81,12 +81,12 @@ void MemoryObject::getAllocInfo(std::string &result) const {
 ObjectState::ObjectState(const MemoryObject *mo)
   : copyOnWriteOwner(0),
     object(mo),
-    concreteStore(new uint8_t[mo->size]),
+    concreteStore(new uint8_t[mo->capacity]),
     concreteMask(nullptr),
     knownSymbolics(nullptr),
     unflushedMask(nullptr),
     updates(nullptr, nullptr),
-    size(mo->size),
+    size(mo->capacity),
     readOnly(false) {
   if (!UseConstantArrays) {
     static unsigned id = 0;
@@ -101,12 +101,12 @@ ObjectState::ObjectState(const MemoryObject *mo)
 ObjectState::ObjectState(const MemoryObject *mo, const Array *array)
   : copyOnWriteOwner(0),
     object(mo),
-    concreteStore(new uint8_t[mo->size]),
+    concreteStore(new uint8_t[mo->capacity]),
     concreteMask(nullptr),
     knownSymbolics(nullptr),
     unflushedMask(nullptr),
     updates(array, nullptr),
-    size(mo->size),
+    size(mo->capacity),
     readOnly(false) {
   makeSymbolic();
   memset(concreteStore, 0, size);
@@ -140,7 +140,7 @@ ObjectState::~ObjectState() {
 }
 
 ArrayCache *ObjectState::getArrayCache() const {
-  assert(object && "object was NULL");
+  assert(!object.isNull() && "object was NULL");
   return object->parent->getArrayCache();
 }
 
@@ -154,10 +154,10 @@ const UpdateList &ObjectState::getUpdates() const {
     // FIXME: We should be able to do this more efficiently, we just need to be
     // careful to get the interaction with the cache right. In particular we
     // should avoid creating UpdateNode instances we never use.
-    unsigned NumWrites = updates.head ? updates.head->getSize() : 0;
-    std::vector< std::pair< ref<Expr>, ref<Expr> > > Writes(NumWrites);
+    unsigned numWrites = updates.head.isNull() ? 0 : updates.head->getSize();
+    std::vector< std::pair< ref<Expr>, ref<Expr> > > Writes(numWrites);
     const auto *un = updates.head.get();
-    for (unsigned i = NumWrites; i != 0; un = un->next.get()) {
+    for (unsigned i = numWrites; i != 0; un = un->next.get()) {
       --i;
       Writes[i] = std::make_pair(un->index, un->value);
     }
@@ -220,7 +220,7 @@ void ObjectState::makeConcrete() {
 }
 
 void ObjectState::makeSymbolic() {
-  assert(!updates.head &&
+  assert(updates.head.isNull() &&
          "XXX makeSymbolic of objects with symbolic values is unsupported");
 
   // XXX simplify this, can just delete various arrays I guess

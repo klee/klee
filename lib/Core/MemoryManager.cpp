@@ -267,18 +267,24 @@ MemoryManager::~MemoryManager() {
   }
 }
 
-MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
-                                      bool isGlobal, ExecutionState *state,
+MemoryObject *MemoryManager::allocate(ref<Expr> size, uint64_t capacity,
+                                      bool isLocal, bool isGlobal,
+                                      ExecutionState *state,
                                       const llvm::Value *allocSite,
                                       size_t alignment) {
-  if (size > 10 * 1024 * 1024)
-    klee_warning_once(0, "Large alloc: %" PRIu64
-                         " bytes.  KLEE may run out of memory.",
-                      size);
+  if (capacity > 10 * 1024 * 1024)
+    klee_warning_once(0,
+                      "Large alloc: %" PRIu64 " bytes.  KLEE may run out of memory.",
+                      capacity);
 
   // Return NULL if size is zero, this is equal to error during allocation
-  if (NullOnZeroMalloc && size == 0)
-    return 0;
+  if (NullOnZeroMalloc) {
+    if (isa<ConstantExpr>(size)) {
+      if (dyn_cast<ConstantExpr>(size)->getZExtValue() == 0) {
+        return nullptr;
+      }
+    }
+  }
 
   if (!llvm::isPowerOf2_64(alignment)) {
     klee_warning("Only alignment of power of two is supported");
@@ -294,18 +300,18 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
           dyn_cast<llvm::GlobalVariable>(allocSite);
       if (isa<llvm::Function>(allocSite) || (gv && gv->isConstant())) {
         allocAddress = constantsAllocator.allocate(
-            std::max(size, static_cast<std::uint64_t>(alignment)));
+            std::max(capacity, static_cast<std::uint64_t>(alignment)));
       } else {
         allocAddress = globalsAllocator.allocate(
-            std::max(size, static_cast<std::uint64_t>(alignment)));
+            std::max(capacity, static_cast<std::uint64_t>(alignment)));
       }
     } else {
       if (isLocal) {
         allocAddress = state->stackAllocator.allocate(
-            std::max(size, static_cast<std::uint64_t>(alignment)));
+            std::max(capacity, static_cast<std::uint64_t>(alignment)));
       } else {
         allocAddress = state->heapAllocator.allocate(
-            std::max(size, static_cast<std::uint64_t>(alignment)));
+            std::max(capacity, static_cast<std::uint64_t>(alignment)));
       }
     }
 
@@ -313,9 +319,9 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
   } else {
     // Use malloc for the standard case
     if (alignment <= 8)
-      address = (uint64_t)malloc(size);
+      address = (uint64_t)malloc(capacity);
     else {
-      int res = posix_memalign((void **)&address, alignment, size);
+      int res = posix_memalign((void **)&address, alignment, capacity);
       if (res < 0) {
         klee_warning("Allocating aligned memory failed.");
         address = 0;
@@ -327,10 +333,19 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
     return 0;
 
   ++stats::allocations;
-  MemoryObject *res = new MemoryObject(address, size, alignment, isLocal,
+  MemoryObject *res = new MemoryObject(address, size, capacity, alignment, isLocal,
                                        isGlobal, false, allocSite, this);
   objects.insert(res);
   return res;
+}
+
+MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal, bool isGlobal,
+                                      ExecutionState *state,
+                                      const llvm::Value *allocSite,
+                                      size_t alignment) {
+  ref<ConstantExpr> sizeExpr =
+      ConstantExpr::create(size, Context::get().getPointerWidth());
+  return allocate(sizeExpr, size, isLocal, isGlobal, state, allocSite, alignment);
 }
 
 MemoryObject *MemoryManager::allocateFixed(uint64_t address, uint64_t size,
@@ -339,14 +354,16 @@ MemoryObject *MemoryManager::allocateFixed(uint64_t address, uint64_t size,
   for (objects_ty::iterator it = objects.begin(), ie = objects.end(); it != ie;
        ++it) {
     MemoryObject *mo = *it;
-    if (address + size > mo->address && address < mo->address + mo->size)
+    if (address + size > mo->address && address < mo->address + mo->capacity)
       klee_error("Trying to allocate an overlapping object");
   }
 #endif
 
   ++stats::allocations;
+  ref<ConstantExpr> sizeExpr = ConstantExpr::create(size, Context::get().getPointerWidth());
+  uint64_t capacity = size;
   MemoryObject *res =
-      new MemoryObject(address, size, 0, false, true, true, allocSite, this);
+      new MemoryObject(address, sizeExpr, capacity, 0, false, true, true, allocSite, this);
   objects.insert(res);
   return res;
 }

@@ -61,10 +61,7 @@ bool AddressSpace::resolveOne(const ref<ConstantExpr> &addr,
 
   if (const auto res = objects.lookup_previous(&hack)) {
     const auto &mo = res->first;
-    // Check if the provided address is between start and end of the object
-    // [mo->address, mo->address + mo->size) or the object is a 0-sized object.
-    if ((mo->size==0 && address==mo->address) ||
-        (address - mo->address < mo->size)) {
+    if (mayPointToMemoryObject(address, mo)) {
       result.first = res->first;
       result.second = res->second.get();
       return true;
@@ -96,7 +93,7 @@ bool AddressSpace::resolveOne(ExecutionState &state,
 
     if (res) {
       const MemoryObject *mo = res->first;
-      if (example - mo->address < mo->size) {
+      if (mayPointToMemoryObject(example, mo)) {
         result.first = res->first;
         result.second = res->second.get();
         success = true;
@@ -315,7 +312,7 @@ std::size_t AddressSpace::copyOutConcretes() {
 void AddressSpace::copyOutConcrete(const MemoryObject *mo,
                                    const ObjectState *os) const {
   auto address = reinterpret_cast<std::uint8_t *>(mo->address);
-  std::memcpy(address, os->concreteStore, mo->size);
+  std::memcpy(address, os->concreteStore, mo->capacity);
 }
 
 bool AddressSpace::copyInConcretes(bool concretize) {
@@ -339,7 +336,7 @@ bool AddressSpace::copyInConcrete(const MemoryObject *mo, const ObjectState *os,
 
   // Don't do anything if the underlying representation has not been changed
   // externally.
-  if (std::memcmp(address, os->concreteStore, mo->size) == 0)
+  if (std::memcmp(address, os->concreteStore, mo->capacity) == 0)
     return true;
 
   // External object representation has been changed
@@ -353,24 +350,39 @@ bool AddressSpace::copyInConcrete(const MemoryObject *mo, const ObjectState *os,
   // path and `memcpy` the new values from the external object to the internal
   // representation
   if (!wos->unflushedMask) {
-    std::memcpy(wos->concreteStore, address, mo->size);
+    std::memcpy(wos->concreteStore, address, mo->capacity);
     return true;
   }
 
   // Check if object should be concretized
   if (concretize) {
     wos->makeConcrete();
-    std::memcpy(wos->concreteStore, address, mo->size);
+    std::memcpy(wos->concreteStore, address, mo->capacity);
   } else {
     // The object is partially symbolic, it needs to be updated byte-by-byte
     // via object state's `write` function
-    for (size_t i = 0, ie = mo->size; i < ie; ++i) {
+    for (size_t i = 0, ie = mo->capacity; i < ie; ++i) {
       u_int8_t external_byte_value = *(address + i);
       if (external_byte_value != wos->concreteStore[i])
         wos->write8(i, external_byte_value);
     }
   }
   return true;
+}
+
+bool AddressSpace::mayPointToMemoryObject(uint64_t address, const MemoryObject *mo) const {
+  if (mo->hasConcreteSize()) {
+    // Check if the provided address is between start and end of the object
+    // [mo->address, mo->address + mo->size) or the object is a 0-sized object.
+    unsigned concreteSize = mo->getConcreteSize();
+    return ((concreteSize == 0 && address == mo->address) || \
+            (address - mo->address < concreteSize));
+  } else {
+    // The capacity is non-zero,
+    // so if the symbolic size must be zero,
+    // then this memory object will be still resolved (as in the concrete case).
+    return address - mo->address < mo->capacity;
+  }
 }
 
 /***/

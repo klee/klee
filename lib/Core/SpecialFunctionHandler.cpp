@@ -227,13 +227,20 @@ SpecialFunctionHandler::readStringAtAddress(ExecutionState &state,
   const MemoryObject *mo = op.first;
   const ObjectState *os = op.second;
 
+  if (!mo->hasConcreteSize()) {
+    executor.terminateStateOnUserError(
+      state, "no support for symbolic size in readStringAtAddress");
+    return "";
+  }
+
   auto relativeOffset = mo->getOffsetExpr(address);
   // the relativeOffset must be concrete as the address is concrete
   size_t offset = cast<ConstantExpr>(relativeOffset)->getZExtValue();
 
+  uint64_t concreteSize = mo->getConcreteSize();
   std::ostringstream buf;
   char c = 0;
-  for (size_t i = offset; i < mo->size; ++i) {
+  for (size_t i = offset; i < concreteSize; ++i) {
     ref<Expr> cur = os->read8(i);
     cur = executor.toUnique(state, cur);
     assert(isa<ConstantExpr>(cur) && 
@@ -610,11 +617,18 @@ void SpecialFunctionHandler::handleGetObjSize(ExecutionState &state,
   executor.resolveExact(state, arguments[0], rl, "klee_get_obj_size");
   for (Executor::ExactResolutionList::iterator it = rl.begin(), 
          ie = rl.end(); it != ie; ++it) {
+    const MemoryObject *mo = it->first.first;
+    if (!mo->hasConcreteSize()) {
+      executor.terminateStateOnUserError(
+        state, "no support for symbolic size in klee_get_obj_size");
+      return;
+    }
+
     executor.bindLocal(
-        target, *it->second,
-        ConstantExpr::create(it->first.first->size,
-                             executor.kmodule->targetData->getTypeSizeInBits(
-                                 target->inst->getType())));
+      target, *it->second,
+      ConstantExpr::create(mo->getConcreteSize(),
+                           executor.kmodule->targetData->getTypeSizeInBits(
+                               target->inst->getType())));
   }
 }
 

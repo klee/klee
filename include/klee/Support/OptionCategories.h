@@ -31,6 +31,7 @@ namespace klee {
   extern llvm::cl::OptionCategory SearchCat;
   extern llvm::cl::OptionCategory ExecTreeCat;
   extern llvm::cl::OptionCategory SeedingCat;
+  extern llvm::cl::OptionCategory SizeModelCat;
   extern llvm::cl::OptionCategory SolvingCat;
   extern llvm::cl::OptionCategory StatsCat;
   extern llvm::cl::OptionCategory TerminationCat;

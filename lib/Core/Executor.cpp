@@ -111,6 +111,9 @@ cl::OptionCategory SeedingCat(
     "Seeding options",
     "These options are related to the use of seeds to start exploration.");
 
+cl::OptionCategory SizeModelCat("Size model options",
+                                "These are size model options.");
+
 cl::OptionCategory
     TerminationCat("State and overall termination options",
                    "These options control termination of the overall KLEE "
@@ -471,6 +474,31 @@ cl::opt<bool> DebugCheckForImpliedValues(
     "debug-check-for-implied-values", cl::init(false),
     cl::desc("Debug the implied value optimization"),
     cl::cat(DebugCat));
+
+enum SizeModels {
+  Concrete,
+  Range,
+};
+
+cl::opt<SizeModels> SizeModel(
+  "size-model",
+  cl::desc("Specify the size model of memory objects"),
+  llvm::cl::values(
+    clEnumValN(SizeModels::Concrete, "concrete", "concrete size model"),
+    clEnumValN(SizeModels::Range, "range", "bounded symbolic size model")
+  ),
+  cl::init(SizeModels::Concrete),
+  cl::cat(SizeModelCat)
+);
+
+#define DEFAULT_CAPACITY (10u)
+
+cl::opt<unsigned> Capacity(
+  "capacity",
+  cl::desc("Specify the capacity of symbolic-size memory objects"),
+  cl::init(DEFAULT_CAPACITY),
+  cl::cat(SizeModelCat)
+);
 
 } // namespace
 
@@ -844,7 +872,12 @@ void Executor::initializeGlobalObjects(ExecutionState &state) {
     MemoryObject *mo = globalObjects.find(&v)->second;
     ObjectState *os = bindObjectInState(state, mo, false);
 
-    if (v.isDeclaration() && mo->size) {
+    // currently, global memory objects must have a concrete size
+    if (!mo->hasConcreteSize()) {
+      klee_error("Global memory objects must have a concrete size");
+    }
+
+    if (v.isDeclaration() && mo->getConcreteSize() > 0) {
       // Program already running -> object already initialized.
       // Read concrete value and write it to our copy.
       void *addr;
@@ -857,7 +890,7 @@ void Executor::initializeGlobalObjects(ExecutionState &state) {
         klee_error("Unable to load symbol(%.*s) while initializing globals",
                    static_cast<int>(v.getName().size()), v.getName().data());
       }
-      for (unsigned offset = 0; offset < mo->size; offset++) {
+      for (unsigned offset = 0; offset < mo->getConcreteSize(); offset++) {
         os->write8(offset, static_cast<unsigned char *>(addr)[offset]);
       }
     } else if (v.hasInitializer()) {
@@ -3736,7 +3769,7 @@ std::string Executor::getAddressInfo(ExecutionState &state,
     std::string alloc_info;
     mo->getAllocInfo(alloc_info);
     info << "object at " << mo->address
-         << " of size " << mo->size << "\n"
+         << " of size " << *mo->size << "\n"
          << "\t\t" << alloc_info << "\n";
   }
   if (lower!=state.addressSpace.objects.begin()) {
@@ -3749,7 +3782,7 @@ std::string Executor::getAddressInfo(ExecutionState &state,
       std::string alloc_info;
       mo->getAllocInfo(alloc_info);
       info << "object at " << mo->address 
-           << " of size " << mo->size << "\n"
+           << " of size " << *mo->size << "\n"
            << "\t\t" << alloc_info << "\n";
     }
   }
@@ -4202,6 +4235,56 @@ ObjectState *Executor::bindObjectInState(ExecutionState &state,
   return os;
 }
 
+bool Executor::shouldHandleSymbolicSizeObjects() const {
+  return SizeModel != SizeModels::Concrete;
+}
+
+bool Executor::addCapacityConstraint(ExecutionState &state, ref<Expr> size,
+                                     uint64_t &capacity) {
+  capacity = Capacity;
+  if (capacity == 0) {
+    capacity = DEFAULT_CAPACITY;
+    klee_warning("The capacity must be non-zero, setting to: %lu", capacity);
+  }
+
+  Solver::Validity result = Solver::False;
+
+  do {
+    // encode the condition that forces the size to reside in the range [0, capacity]
+    ref<Expr> upperBound = UleExpr::create(
+        size, ConstantExpr::create(capacity, Context::get().getPointerWidth()));
+    ref<Expr> lowerBound = UleExpr::create(
+        ConstantExpr::create(0, Context::get().getPointerWidth()), size);
+    ref<Expr> capacityConstraint = AndExpr::create(upperBound, lowerBound);
+
+    solver->setTimeout(coreSolverTimeout);
+    bool success = solver->evaluate(state.constraints, capacityConstraint,
+                                    result, state.queryMetaData);
+    solver->setTimeout(time::Span());
+    if (!success) {
+      return false;
+    }
+
+    switch (result) {
+      case Solver::Unknown:
+        // the capacity constraint is satisfiable
+        state.addConstraint(capacityConstraint);
+        break;
+
+      case Solver::False:
+        // the capacity constraint is unsatisfiable, try to increase the capacity...
+        capacity += 10;
+        break;
+
+      default:
+        // the capacity constraint is already implied
+        break;
+    }
+  } while (result == Solver::False);
+
+  return true;
+}
+
 void Executor::executeAlloc(ExecutionState &state,
                             ref<Expr> size,
                             bool isLocal,
@@ -4210,14 +4293,29 @@ void Executor::executeAlloc(ExecutionState &state,
                             const ObjectState *reallocFrom,
                             size_t allocationAlignment) {
   size = toUnique(state, size);
-  if (ConstantExpr *CE = dyn_cast<ConstantExpr>(size)) {
+  if (isa<ConstantExpr>(size) || shouldHandleSymbolicSizeObjects()) {
     const llvm::Value *allocSite = state.prevPC->inst;
     if (allocationAlignment == 0) {
       allocationAlignment = getAllocationAlignment(allocSite);
     }
-    MemoryObject *mo =
-        memory->allocate(CE->getZExtValue(), isLocal, /*isGlobal=*/false,
-                         &state, allocSite, allocationAlignment);
+
+    uint64_t capacity;
+    if (isa<ConstantExpr>(size)) {
+      capacity = dyn_cast<ConstantExpr>(size)->getZExtValue();
+    } else {
+      const InstructionInfo &info = kmodule->infos->getInfo(*state.prevPC->inst);
+      if (!addCapacityConstraint(state, size, capacity)) {
+        terminateStateOnProgramError(state, "failed to add capacity constraint",
+                                     StateTerminationType::Model);
+        return;
+      }
+
+      klee_message("allocating symbolic size (capacity = %lu, at %s:%u)",
+                   capacity, info.file.data(), info.line);
+    }
+
+    MemoryObject *mo = memory->allocate(size, capacity, isLocal, false, &state,
+                                        allocSite, allocationAlignment);
     if (!mo) {
       bindLocal(target, state, 
                 ConstantExpr::alloc(0, Context::get().getPointerWidth()));
@@ -4469,7 +4567,7 @@ void Executor::executeMemoryOperation(ExecutionState &state,
     if (success) {
       const MemoryObject *mo = op.first;
 
-      if (MaxSymArraySize && mo->size >= MaxSymArraySize) {
+      if (MaxSymArraySize && mo->capacity >= MaxSymArraySize) {
         address = toConstant(state, address, "max-sym-array-size");
       }
 
@@ -4609,21 +4707,29 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
     while (!state.arrayNames.insert(uniqueName).second) {
       uniqueName = name + "_" + llvm::utostr(++id);
     }
-    const Array *array = arrayCache.CreateArray(uniqueName, mo->size);
+    const Array *array = arrayCache.CreateArray(uniqueName, mo->capacity);
     bindObjectInState(state, mo, false, array);
     state.addSymbolic(mo, array);
     
     auto found = seedMap.find(&state);
     if (found != seedMap.end()) {
-      // In seed mode we need to add this as binding
+      if (!mo->hasConcreteSize()) {
+        terminateStateOnError(state,
+                              "no support for symbolic size in seed mode",
+                              StateTerminationType::Model, "", nullptr);
+        return;
+      }
 
+      unsigned concreteSize = mo->getConcreteSize();
+
+      // In seed mode we need to add this as binding
       for (SeedInfo &si : found->second) {
         KTestObject *obj = si.getNextInput(mo, NamedSeedMatching);
 
         if (!obj) {
           if (AllowSeedExtension) {
             std::vector<unsigned char> &values = si.assignment.bindings[array];
-            values = std::vector<unsigned char>(mo->size, '\0');
+            values = std::vector<unsigned char>(concreteSize, '\0');
           } else /*if (!AllowSeedExtension)*/ {
             terminateStateOnUserError(state,
                                       "ran out of inputs during seeding");
@@ -4631,11 +4737,11 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
           }
         } else {
           /* The condition below implies obj->numBytes != mo->size */
-          if ((obj->numBytes < mo->size && !AllowSeedExtension) ||
-              (obj->numBytes > mo->size && !AllowSeedTruncation)) {
+          if ((obj->numBytes < concreteSize && !AllowSeedExtension) ||
+              (obj->numBytes > concreteSize && !AllowSeedTruncation)) {
             std::stringstream msg;
 	    msg << "replace size mismatch: "
-		<< mo->name << "[" << mo->size << "]"
+		<< mo->name << "[" << concreteSize << "]"
 		<< " vs " << obj->name << "[" << obj->numBytes << "]"
 		<< " in test\n";
             terminateStateOnUserError(state, msg.str());
@@ -4644,23 +4750,31 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
             /* Either sizes are equal or seed extension/trucation is allowed */
             std::vector<unsigned char> &values = si.assignment.bindings[array];
             values.insert(values.begin(), obj->bytes,
-                          obj->bytes + std::min(obj->numBytes, mo->size));
-              for (unsigned i = obj->numBytes; i < mo->size; ++i)
+                          obj->bytes + std::min(obj->numBytes, concreteSize));
+              for (unsigned i = obj->numBytes; i < concreteSize; ++i)
                 values.push_back('\0');
           }
         }
       }
     }
   } else {
+    if (!mo->hasConcreteSize()) {
+      terminateStateOnError(state,
+                            "no support for symbolic size in replay mode",
+                            StateTerminationType::Model, "", nullptr);
+      return;
+    }
+
+    unsigned concreteSize = mo->getConcreteSize();
     ObjectState *os = bindObjectInState(state, mo, false);
     if (replayPosition >= replayKTest->numObjects) {
       terminateStateOnUserError(state, "replay count mismatch");
     } else {
       KTestObject *obj = &replayKTest->objects[replayPosition++];
-      if (obj->numBytes != mo->size) {
+      if (obj->numBytes != concreteSize) {
         terminateStateOnUserError(state, "replay size mismatch");
       } else {
-        for (unsigned i=0; i<mo->size; i++)
+        for (unsigned i = 0; i < concreteSize; i++)
           os->write8(i, obj->bytes[i]);
       }
     }
@@ -4864,9 +4978,32 @@ bool Executor::getSymbolicSolution(const ExecutionState &state,
                              ConstantExpr::alloc(0, Expr::Bool));
     return false;
   }
+
+  Assignment assignment(objects, values);
   
-  for (unsigned i = 0; i != state.symbolics.size(); ++i)
-    res.push_back(std::make_pair(state.symbolics[i].first->name, values[i]));
+  for (unsigned i = 0; i != state.symbolics.size(); ++i) {
+    ref<const MemoryObject> mo = state.symbolics[i].first;
+    std::vector<unsigned char> &value = values[i];
+
+    ref<Expr> evaluatedSize = assignment.evaluate(mo->size);
+    if (!isa<ConstantExpr>(evaluatedSize)) {
+      klee_error("Failed to evaluate symbolic size expression");
+      return false;
+    }
+
+    uint64_t concretizedSize = dyn_cast<ConstantExpr>(evaluatedSize)->getZExtValue();
+    if (concretizedSize > value.size()) {
+      klee_error("Invalid concretized size");
+      return false;
+    }
+
+    std::vector<unsigned char> actualValue;
+    for (unsigned j = 0; j < concretizedSize; j++) {
+      actualValue.push_back(value[j]);
+    }
+    res.push_back(std::make_pair(mo->name, actualValue));
+  }
+
   return true;
 }
 
