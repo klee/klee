@@ -1,0 +1,3 @@
+# Tell ShellCheck to use bash when checking scripts
+# This is alternative for disable=SC2148
+shell=bash
