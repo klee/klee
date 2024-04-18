@@ -125,7 +125,7 @@ jobs:
               KLEE_RUNTIME_BUILD: "Release+Debug+Asserts"
     steps:
       - name: Checkout KLEE source code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Build KLEE
         env: ${{ matrix.env }}
         run: scripts/build/build.sh klee --docker --create-final-image
@@ -146,7 +146,7 @@ jobs:
       - name: Install newer version of Bash
         run: brew install bash
       - name: Checkout KLEE source code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Build KLEE
         run: scripts/build/build.sh klee --debug --install-system-deps
       - name: Run tests
@@ -156,7 +156,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout KLEE Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - name: Build Docker image
         run: docker build .
 
@@ -180,7 +180,7 @@ jobs:
       COVERAGE: 1
     steps:
       - name: Checkout KLEE source code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # Codecov may run into "Issue detecting commit SHA. Please run
           # actions/checkout with fetch-depth > 1 or set to 0" when uploading.
