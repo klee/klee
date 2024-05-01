@@ -923,6 +923,8 @@ void Executor::branch(ExecutionState &state,
       ExecutionState *es = result[theRNG.getInt32() % i];
       ExecutionState *ns = es->branch();
       addedStates.push_back(ns);
+      klee_warning("Push! - branch");
+      klee_error("Branch reached - here!");
       result.push_back(ns);
       executionTree->attach(es->executionTreeNode, ns, es, reason);
     }
@@ -1195,6 +1197,9 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       }
     }
 
+    solver->solver->push(); // TODO: should really change this so timer can time it!
+
+    klee_warning("Push! - fork");
     executionTree->attach(current.executionTreeNode, falseState, trueState, reason);
     stats::incBranchStat(reason, 1);
 
@@ -3764,6 +3769,9 @@ void Executor::terminateState(ExecutionState &state,
                       "replay did not consume all objects in test input.");
   }
 
+  solver->solver->pop(); // TODO: Should change - see push comment.
+  klee_warning("Pop - terminate %d", state.getID());
+
   interpreterHandler->incPathsExplored();
   executionTree->setTerminationType(state, reason);
 
@@ -4719,6 +4727,9 @@ void Executor::runFunctionAsMain(Function *f,
 
   ExecutionState *state =
       new ExecutionState(kmodule->functionMap[f], memory.get());
+
+  solver->solver->push();
+  klee_warning("Starting state %d", state->getID());
 
   if (pathWriter) 
     state->pathOS = pathWriter->open();

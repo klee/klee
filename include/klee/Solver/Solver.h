@@ -75,6 +75,14 @@ namespace klee {
     Solver(std::unique_ptr<SolverImpl> impl);
     virtual ~Solver();
 
+    virtual void push() {
+      assert(false && "Push not implemented for this solver");
+    }
+
+    virtual void pop() {
+      assert(false && "Pop not implemented for this solver");
+    }
+
     /// evaluate - Determine for a particular state if the query
     /// expression is provably true, provably false or neither.
     ///

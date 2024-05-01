@@ -30,6 +30,7 @@
 #include <sys/shm.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <vector>
 
 namespace {
 
@@ -90,6 +91,7 @@ private:
   time::Span timeout;
   bool useForkedSTP;
   SolverRunStatus runStatusCode;
+  std::vector<ConstraintSet> assertionStack;
 
 public:
   explicit STPSolverImpl(bool useForkedSTP, bool optimizeDivides = true);
@@ -105,6 +107,9 @@ public:
                             std::vector<std::vector<unsigned char>> &values,
                             bool &hasSolution) override;
   SolverRunStatus getOperationStatusCode() override;
+
+  void push();
+  void pop();
 };
 
 STPSolverImpl::STPSolverImpl(bool useForkedSTP, bool optimizeDivides)
@@ -386,10 +391,23 @@ bool STPSolverImpl::computeInitialValues(
   runStatusCode = SOLVER_RUN_STATUS_FAILURE;
   TimerStatIncrementer t(stats::queryTime);
 
-  vc_push(vc);
-
-  for (const auto &constraint : query.constraints)
-    vc_assertFormula(vc, builder->construct(constraint));
+  auto level = assertionStack.back();
+  auto stack_it = level.begin();
+  auto query_it = query.constraints.begin();
+  // LCP between the assertion stack and the query constraints.
+  while (stack_it != level.end() && query_it != query.constraints.end() && !(*stack_it)->compare(*(*query_it))) {
+    ++stack_it;
+    ++query_it;
+  }
+  if (stack_it != level.end()) {
+    klee_error("Old constraint set is not prefix of current one! Have you disabled optimiations?");
+  }
+  // Add the remaining query constraints.
+  while (query_it != query.constraints.end()) {
+    level.push_back(*query_it);
+    vc_assertFormula(vc, builder->construct(*query_it));
+    ++query_it;
+  }
 
   ++stats::solverQueries;
   ++stats::queryCounterexamples;
@@ -423,13 +441,21 @@ bool STPSolverImpl::computeInitialValues(
       ++stats::queriesValid;
   }
 
-  vc_pop(vc);
-
   return success;
 }
 
 SolverImpl::SolverRunStatus STPSolverImpl::getOperationStatusCode() {
   return runStatusCode;
+}
+
+void STPSolverImpl::push() {
+  vc_push(vc);
+  assertionStack.emplace_back();
+}
+
+void STPSolverImpl::pop() {
+  vc_pop(vc);
+  assertionStack.pop_back();
 }
 
 STPSolver::STPSolver(bool useForkedSTP, bool optimizeDivides)
@@ -441,6 +467,14 @@ std::string STPSolver::getConstraintLog(const Query &query) {
 
 void STPSolver::setCoreSolverTimeout(time::Span timeout) {
   impl->setCoreSolverTimeout(timeout);
+}
+
+void STPSolver::push() {
+  static_cast<STPSolverImpl *>(impl.get())->push();
+}
+
+void STPSolver::pop() {
+  static_cast<STPSolverImpl *>(impl.get())->pop();
 }
 
 } // klee
