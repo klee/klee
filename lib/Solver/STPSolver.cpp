@@ -392,7 +392,7 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
 bool STPSolverImpl::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
     std::vector<std::vector<unsigned char>> &values, bool &hasSolution) {
-  if (UseIncrementalSolver) {
+  if (BasicStackSolver) {
     return computeInitialValuesIncremental(query, objects, values, hasSolution);
   }
 
@@ -523,7 +523,7 @@ void STPSolver::setCoreSolverTimeout(time::Span timeout) {
 }
 
 void STPSolver::push() {
-  if (!UseIncrementalSolver) {
+  if (!BasicStackSolver) {
     klee_error("Non incremental solver used in incremental mode");
   }
 
@@ -531,7 +531,7 @@ void STPSolver::push() {
 }
 
 void STPSolver::pop() {
-  if (!UseIncrementalSolver) {
+  if (!BasicStackSolver) {
     klee_error("Non incremental solver used in incremental mode");
   }
 

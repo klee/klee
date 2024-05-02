@@ -62,9 +62,14 @@ cl::opt<bool> DebugValidateSolver(
              "with the results of the core solver (default=false)"),
     cl::cat(SolvingCat));
 
-cl::opt<bool> UseIncrementalSolver(
-    "use-incremental", cl::init(false),
-    cl::desc("Use incremental solving (default=false)"),
+cl::opt<bool> BasicStackSolver(
+    "basic-stack", cl::init(false),
+    cl::desc("Use the basic stack incremental strategy (default=false)"),
+    cl::cat(SolvingCat));
+
+cl::opt<bool> LcpPpSolver(
+    "lcp-pp", cl::init(false),
+    cl::desc("Use the LCP-PP incremental strategy (default=false)"),
     cl::cat(SolvingCat));
 
 cl::opt<bool> Verbose(

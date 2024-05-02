@@ -1199,7 +1199,7 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       }
     }
 
-    if (UseIncrementalSolver) {
+    if (BasicStackSolver) {
       solver->solver->push(); // TODO: should really change this so timer can time it!
     }
 
@@ -3776,7 +3776,7 @@ void Executor::terminateState(ExecutionState &state,
                       "replay did not consume all objects in test input.");
   }
 
-  if (UseIncrementalSolver) {
+  if (BasicStackSolver) {
     solver->solver->pop(); // TODO: Should change - see push comment.
   }
 
@@ -4740,7 +4740,7 @@ void Executor::runFunctionAsMain(Function *f,
   ExecutionState *state =
       new ExecutionState(kmodule->functionMap[f], memory.get());
 
-  if (UseIncrementalSolver) {
+  if (BasicStackSolver) {
     solver->solver->push();
   }
 

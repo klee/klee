@@ -38,7 +38,9 @@ extern llvm::cl::opt<bool> UseIndependentSolver;
 
 extern llvm::cl::opt<bool> DebugValidateSolver;
 
-extern llvm::cl::opt<bool> UseIncrementalSolver;
+extern llvm::cl::opt<bool> BasicStackSolver;
+
+extern llvm::cl::opt<bool> LcpPpSolver;
 
 extern llvm::cl::opt<bool> Verbose;
 
