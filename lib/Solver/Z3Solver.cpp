@@ -460,23 +460,31 @@ bool Z3SolverImpl::internalRunSolverBasicStack(
   runStatusCode = SOLVER_RUN_STATUS_FAILURE;
   TimerStatIncrementer t(stats::queryTime);
 
-  auto level = assertionStack.back();
-  auto stack_it = level.begin();
   auto query_it = query.constraints.begin();
-
-  // LCP between the assertion stack and the query constraints.
-  while (stack_it != level.end() && query_it != query.constraints.end() && !(*stack_it)->compare(*(*query_it))) {
-    ++stack_it;
-    ++query_it;
+  if (Verbose) {
+    klee_warning("Debugging assertion stack");
   }
-  if (stack_it != level.end()) {
-    klee_error("Old constraint set is not prefix of current one! Have you disabled optimiations?");
+  for (auto const &level : assertionStack) {
+    if (Verbose) {
+      klee_warning("%d ", level.size());
+    }
+    auto stack_it = level.begin();
+    while (stack_it != level.end() && query_it != query.constraints.end() && !(*stack_it)->compare(*(*query_it))) {
+      ++stack_it;
+      ++query_it;
+    }
+    if (stack_it != level.end()) {
+      klee_error("Old constraint set is not prefix of current one! Have you disabled optimiations?");
+    }
+  }
+  if (Verbose) {
+    klee_warning("Done debugging assertion stack\n");
   }
 
   { // Add the remaining query constraints.
     ConstantArrayFinder constant_arrays_in_query;
     while (query_it != query.constraints.end()) {
-      level.push_back(*query_it);
+      assertionStack.back().push_back(*query_it);
       Z3_solver_assert(builder->ctx, z3Solver, builder->construct(*query_it));
       constant_arrays_in_query.visit(*query_it);
       ++query_it;
