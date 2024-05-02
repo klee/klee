@@ -1197,7 +1197,9 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
       }
     }
 
-    solver->solver->push(); // TODO: should really change this so timer can time it!
+    if (UseIncrementalSolver) {
+      solver->solver->push(); // TODO: should really change this so timer can time it!
+    }
 
     klee_warning("Push! - fork");
     executionTree->attach(current.executionTreeNode, falseState, trueState, reason);
@@ -3769,7 +3771,10 @@ void Executor::terminateState(ExecutionState &state,
                       "replay did not consume all objects in test input.");
   }
 
-  solver->solver->pop(); // TODO: Should change - see push comment.
+  if (UseIncrementalSolver) {
+    solver->solver->pop(); // TODO: Should change - see push comment.
+  }
+
   klee_warning("Pop - terminate %d", state.getID());
 
   interpreterHandler->incPathsExplored();
@@ -4728,7 +4733,10 @@ void Executor::runFunctionAsMain(Function *f,
   ExecutionState *state =
       new ExecutionState(kmodule->functionMap[f], memory.get());
 
-  solver->solver->push();
+  if (UseIncrementalSolver) {
+    solver->solver->push();
+  }
+  
   klee_warning("Starting state %d", state->getID());
 
   if (pathWriter) 

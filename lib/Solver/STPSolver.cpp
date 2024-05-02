@@ -93,6 +93,10 @@ private:
   SolverRunStatus runStatusCode;
   std::vector<ConstraintSet> assertionStack;
 
+  bool computeInitialValuesIncremental(
+      const Query &query, const std::vector<const Array *> &objects,
+      std::vector<std::vector<unsigned char>> &values, bool &hasSolution);
+
 public:
   explicit STPSolverImpl(bool useForkedSTP, bool optimizeDivides = true);
   ~STPSolverImpl() override;
@@ -388,12 +392,60 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
 bool STPSolverImpl::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
     std::vector<std::vector<unsigned char>> &values, bool &hasSolution) {
+  if (UseIncrementalSolver) {
+    return computeInitialValuesIncremental(query, objects, values, hasSolution);
+  }
+
+  runStatusCode = SOLVER_RUN_STATUS_FAILURE;
+  TimerStatIncrementer t(stats::queryTime);
+
+  vc_push(vc);
+  for (const auto &constraint : query.constraints)
+    vc_assertFormula(vc, builder->construct(constraint));
+
+  ++stats::solverQueries;
+  ++stats::queryCounterexamples;
+  ExprHandle stp_e = builder->construct(query.expr);
+  if (DebugDumpSTPQueries) {
+    char *buf;
+    unsigned long len;
+    vc_printQueryStateToBuffer(vc, stp_e, &buf, &len, false);
+    klee_warning("STP query:\n%.*s\n", (unsigned)len, buf);
+    free(buf);
+  }
+  bool success;
+  if (useForkedSTP) {
+    runStatusCode = runAndGetCexForked(vc, builder.get(), stp_e, objects,
+                                       values, hasSolution, timeout);
+    success = ((SOLVER_RUN_STATUS_SUCCESS_SOLVABLE == runStatusCode) ||
+               (SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE == runStatusCode));
+  } else {
+    runStatusCode =
+        runAndGetCex(vc, builder.get(), stp_e, objects, values, hasSolution);
+    success = true;
+  }
+  if (success) {
+    if (hasSolution)
+      ++stats::queriesInvalid;
+    else
+      ++stats::queriesValid;
+  }
+
+  vc_pop(vc);
+
+  return success;
+}
+
+bool STPSolverImpl::computeInitialValuesIncremental(
+    const Query &query, const std::vector<const Array *> &objects,
+    std::vector<std::vector<unsigned char>> &values, bool &hasSolution) {
   runStatusCode = SOLVER_RUN_STATUS_FAILURE;
   TimerStatIncrementer t(stats::queryTime);
 
   auto level = assertionStack.back();
   auto stack_it = level.begin();
   auto query_it = query.constraints.begin();
+
   // LCP between the assertion stack and the query constraints.
   while (stack_it != level.end() && query_it != query.constraints.end() && !(*stack_it)->compare(*(*query_it))) {
     ++stack_it;
@@ -402,6 +454,7 @@ bool STPSolverImpl::computeInitialValues(
   if (stack_it != level.end()) {
     klee_error("Old constraint set is not prefix of current one! Have you disabled optimiations?");
   }
+
   // Add the remaining query constraints.
   while (query_it != query.constraints.end()) {
     level.push_back(*query_it);
@@ -470,10 +523,18 @@ void STPSolver::setCoreSolverTimeout(time::Span timeout) {
 }
 
 void STPSolver::push() {
+  if (!UseIncrementalSolver) {
+    klee_error("Non incremental solver used in incremental mode");
+  }
+
   static_cast<STPSolverImpl *>(impl.get())->push();
 }
 
 void STPSolver::pop() {
+  if (!UseIncrementalSolver) {
+    klee_error("Non incremental solver used in incremental mode");
+  }
+
   static_cast<STPSolverImpl *>(impl.get())->pop();
 }
 
