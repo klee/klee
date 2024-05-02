@@ -926,7 +926,9 @@ void Executor::branch(ExecutionState &state,
       if (Verbose) {
         klee_warning("Push! - branch");
       }
-      solver->solver->push();
+      if (BasicStackSolver) {
+        solver->solver->push();
+      }
       result.push_back(ns);
       executionTree->attach(es->executionTreeNode, ns, es, reason);
     }
