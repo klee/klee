@@ -925,8 +925,8 @@ void Executor::branch(ExecutionState &state,
       addedStates.push_back(ns);
       if (Verbose) {
         klee_warning("Push! - branch");
-        klee_error("Branch reached - here!");
       }
+      solver->solver->push();
       result.push_back(ns);
       executionTree->attach(es->executionTreeNode, ns, es, reason);
     }
@@ -4743,8 +4743,10 @@ void Executor::runFunctionAsMain(Function *f,
   if (UseIncrementalSolver) {
     solver->solver->push();
   }
-  
-  klee_warning("Starting state %d", state->getID());
+
+  if (Verbose) {
+    klee_warning("Starting state %d", state->getID());
+  }
 
   if (pathWriter) 
     state->pathOS = pathWriter->open();
