@@ -3611,8 +3611,11 @@ void Executor::doDumpStates() {
   }
 
   klee_message("halting execution, dumping remaining states");
-  for (const auto &state : states)
-    terminateStateEarly(*state, "Execution halting.", StateTerminationType::Interrupted);
+
+  for (auto it = states.rbegin(); it != states.rend(); ++it) {
+    terminateStateEarly(**it, "Execution halting.", StateTerminationType::Interrupted);
+  }
+
   updateStates(nullptr);
 }
 
