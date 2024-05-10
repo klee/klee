@@ -29,9 +29,6 @@ public:
   /// format.
   std::string getConstraintLog(const Query &) override;
 
-  void push() override;
-  void pop() override;
-
   /// setCoreSolverTimeout - Set constraint solver timeout delay to the given
   /// value; 0
   /// is off.
