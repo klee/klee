@@ -923,12 +923,6 @@ void Executor::branch(ExecutionState &state,
       ExecutionState *es = result[theRNG.getInt32() % i];
       ExecutionState *ns = es->branch();
       addedStates.push_back(ns);
-      if (Verbose) {
-        klee_warning("Push! - branch");
-      }
-      if (BasicStackSolver) {
-        solver->solver->push();
-      }
       result.push_back(ns);
       executionTree->attach(es->executionTreeNode, ns, es, reason);
     }
@@ -1199,14 +1193,6 @@ Executor::StatePair Executor::fork(ExecutionState &current, ref<Expr> condition,
         std::swap(trueState->coveredNew, falseState->coveredNew);
         std::swap(trueState->coveredLines, falseState->coveredLines);
       }
-    }
-
-    if (BasicStackSolver) {
-      solver->solver->push(); // TODO: should really change this so timer can time it!
-    }
-
-    if (Verbose) {
-      klee_warning("Push! - fork");
     }
 
     executionTree->attach(current.executionTreeNode, falseState, trueState, reason);
@@ -3611,11 +3597,8 @@ void Executor::doDumpStates() {
   }
 
   klee_message("halting execution, dumping remaining states");
-
-  for (auto it = states.rbegin(); it != states.rend(); ++it) {
-    terminateStateEarly(**it, "Execution halting.", StateTerminationType::Interrupted);
-  }
-
+  for (const auto &state : states)
+    terminateStateEarly(*state, "Execution halting.", StateTerminationType::Interrupted);
   updateStates(nullptr);
 }
 
@@ -3779,14 +3762,6 @@ void Executor::terminateState(ExecutionState &state,
   if (replayKTest && replayPosition!=replayKTest->numObjects) {
     klee_warning_once(replayKTest,
                       "replay did not consume all objects in test input.");
-  }
-
-  if (BasicStackSolver) {
-    solver->solver->pop(); // TODO: Should change - see push comment.
-  }
-
-  if (Verbose) {
-    klee_warning("Pop - terminate %d", state.getID());
   }
 
   interpreterHandler->incPathsExplored();
@@ -4744,14 +4719,6 @@ void Executor::runFunctionAsMain(Function *f,
 
   ExecutionState *state =
       new ExecutionState(kmodule->functionMap[f], memory.get());
-
-  if (BasicStackSolver) {
-    solver->solver->push();
-  }
-
-  if (Verbose) {
-    klee_warning("Starting state %d", state->getID());
-  }
 
   if (pathWriter) 
     state->pathOS = pathWriter->open();

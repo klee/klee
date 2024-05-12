@@ -38,12 +38,6 @@ extern llvm::cl::opt<bool> UseIndependentSolver;
 
 extern llvm::cl::opt<bool> DebugValidateSolver;
 
-extern llvm::cl::opt<bool> BasicStackSolver;
-
-extern llvm::cl::opt<bool> LcpPpSolver;
-
-extern llvm::cl::opt<bool> Verbose;
-
 extern llvm::cl::opt<std::string> MinQueryTimeToLog;
 
 extern llvm::cl::opt<bool> LogTimedOutQueries;

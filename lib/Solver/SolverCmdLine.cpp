@@ -62,21 +62,6 @@ cl::opt<bool> DebugValidateSolver(
              "with the results of the core solver (default=false)"),
     cl::cat(SolvingCat));
 
-cl::opt<bool> BasicStackSolver(
-    "basic-stack", cl::init(false),
-    cl::desc("Use the basic stack incremental strategy (default=false)"),
-    cl::cat(SolvingCat));
-
-cl::opt<bool> LcpPpSolver(
-    "lcp-pp", cl::init(false),
-    cl::desc("Use the LCP-PP incremental strategy (default=false)"),
-    cl::cat(SolvingCat));
-
-cl::opt<bool> Verbose(
-    "verbose", cl::init(false),
-    cl::desc("Use verbose debugging statements"),
-    cl::cat(SolvingCat));
-
 cl::opt<std::string> MinQueryTimeToLog(
     "min-query-time-to-log",
     cl::desc("Set time threshold for queries logged in files. "
