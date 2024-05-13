@@ -261,6 +261,10 @@ bool Z3SolverImpl::internalRunSolver(
     ++stack_it;
     ++query_it;
   }
+
+  // LCP is computed; start the timer.
+  TimerStatIncrementer postLCPIncrementer(stats::postLCPTime);
+
   // Pop off extra constraints from stack.
   size_t pops = std::distance(stack_it, ppStack.end());
   for (size_t i = 0; i < pops; ++i) {
