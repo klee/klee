@@ -60,8 +60,7 @@ namespace klee {
 
 class Z3SolverImpl : public SolverImpl {
 private:
-  std::vector<ConstraintSet> assertionStack;
-  ConstraintSet ppStack;
+  ConstraintSet assertionStack;
   Z3_solver z3Solver;
   std::unique_ptr<Z3Builder> builder;
   time::Span timeout;
@@ -254,10 +253,10 @@ bool Z3SolverImpl::internalRunSolver(
   TimerStatIncrementer t(stats::queryTime);
 
   // TODO: Reduce duplication with STPSolverImpl::computeInitialValues.
-  auto stack_it = ppStack.begin();
+  auto stack_it = assertionStack.begin();
   auto query_it = query.constraints.begin();
   // LCP between the assertion stack and the query constraints.
-  while (stack_it != ppStack.end() && query_it != query.constraints.end() && !(*stack_it)->compare(*(*query_it))) {
+  while (stack_it != assertionStack.end() && query_it != query.constraints.end() && !(*stack_it)->compare(*(*query_it))) {
     ++stack_it;
     ++query_it;
   }
@@ -266,15 +265,15 @@ bool Z3SolverImpl::internalRunSolver(
   TimerStatIncrementer postLCPIncrementer(stats::postLCPTime);
 
   // Pop off extra constraints from stack.
-  size_t pops = std::distance(stack_it, ppStack.end());
+  size_t pops = std::distance(stack_it, assertionStack.end());
   for (size_t i = 0; i < pops; ++i) {
     Z3_solver_pop(builder->ctx, z3Solver, 1);
-    ppStack.pop_back();
+    assertionStack.pop_back();
   }
   // Add the remaining query constraints.
   while (query_it != query.constraints.end()) {
     Z3_solver_push(builder->ctx, z3Solver);
-    ppStack.push_back(*query_it);
+    assertionStack.push_back(*query_it);
     Z3_solver_assert(builder->ctx, z3Solver, builder->construct(*query_it));
 
     ConstantArrayFinder constant_arrays_in_query;
