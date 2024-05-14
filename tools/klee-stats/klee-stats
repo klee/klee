@@ -78,7 +78,6 @@ Legend = [
         "relative time spent in the counterexample caching code wrt wall time (incl. constraint solver)",
         "RelCexCacheTime",
     ),
-    ("TPostLCP(s)", "time spent post LCP", "PostLCPTime"),
     ("TQuery(s)", "time spent in the constraint solver", "QueryTime"),
     (
         "TSolver(s)",
@@ -366,7 +365,6 @@ def add_artificial_columns(record):
         "UserTime",
         "WallTime",
         "QueryTime",
-        "PostLCPTime",  # Convert from ms to s.
         "SolverTime",
         "CexCacheTime",
         "ForkTime",

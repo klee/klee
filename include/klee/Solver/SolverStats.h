@@ -27,7 +27,6 @@ namespace stats {
   extern Statistic queryConstructs;
   extern Statistic queryCounterexamples;
   extern Statistic queryTime;
-  extern Statistic postLCPTime;
   
 #ifdef KLEE_ARRAY_DEBUG
   extern Statistic arrayHashTime;
