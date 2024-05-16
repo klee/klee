@@ -151,8 +151,8 @@ jobs:
   macOS:
     runs-on: macos-latest
     env:
+      LLVM_VERSION: 14
       BASE: /tmp
-      LLVM_VERSION: 13
       SOLVERS: STP
       UCLIBC_VERSION: 0
       USE_TCMALLOC: 0
