@@ -7,7 +7,7 @@ install_build_dependencies_klee() {
     brew install doxygen graphviz
   fi
 
-  pip3 install --user --upgrade lit tabulate
+  brew install python-tabulate lit
 
   # Get path of package location
   base_path=$(python3 -m site --user-base)
