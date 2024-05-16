@@ -9,13 +9,13 @@ install_binary_artifact_llvm () {
 is_installed_llvm() {
     # Check if llvm-config with the right version exists
     LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
-    [[ -f "/usr/local/opt/llvm@${LLVM_VERSION_MAJOR}/bin/llvm-config" ]]
+    [[ -f "/opt/homebrew/opt/llvm@${LLVM_VERSION_MAJOR}/bin/llvm-config" ]]
 }
 
 setup_artifact_variables_llvm() {
   LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
-  LLVM_CONFIG="/usr/local/opt/llvm@${LLVM_VERSION_MAJOR}/bin/llvm-config"
-  BITCODE_CC="/usr/local/opt/llvm@${LLVM_VERSION_MAJOR}/bin/clang"
-  BITCODE_CXX="/usr/local/opt/llvm@${LLVM_VERSION_MAJOR}/bin/clang++"
-  LLVM_INSTALL="/usr/local/opt/llvm@${LLVM_VERSION_MAJOR}/"
+  LLVM_CONFIG="/opt/homebrew/opt/llvm@${LLVM_VERSION_MAJOR}/bin/llvm-config"
+  BITCODE_CC="/opt/homebrew/opt/llvm@${LLVM_VERSION_MAJOR}/bin/clang"
+  BITCODE_CXX="/opt/homebrew/opt/llvm@${LLVM_VERSION_MAJOR}/bin/clang++"
+  LLVM_INSTALL="/opt/homebrew/opt/llvm@${LLVM_VERSION_MAJOR}/"
 }
