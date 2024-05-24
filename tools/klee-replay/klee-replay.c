@@ -21,6 +21,7 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include <limits.h>
 
 #if defined(__APPLE__) || defined(__FreeBSD__)
 #include <signal.h>
