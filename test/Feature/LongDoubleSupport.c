@@ -34,7 +34,11 @@ int main() {
 
   assert(N0 == 6);
   assert(N1 == 9);
-  assert(N2 == 13);
+  // This is the case on Apple Silicon
+  if (sizeof(long double) == sizeof(double))
+    assert(N2 == 9);
+  else
+    assert(N2 == 13);
 
   return 0;
 }
