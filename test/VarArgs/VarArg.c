@@ -1,3 +1,6 @@
+// Variadic functions are not currently supported on Apple Silicon
+// REQUIRES: not-darwin
+
 /* This test needs deterministic allocation with enough spacing
    between the allocations.  Otherwise, if by coincidence the
    allocated vararg memory object is directly before another valid

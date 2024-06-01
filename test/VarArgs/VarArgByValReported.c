@@ -1,3 +1,6 @@
+// Variadic functions are not currently supported on Apple Silicon
+// REQUIRES: not-darwin
+
 /* This is the test reported in
    https://github.com/klee/klee/issues/189, checking the correctness
    of variadic arguments passed with the byval attribute */
