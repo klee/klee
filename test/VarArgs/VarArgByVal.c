@@ -1,3 +1,6 @@
+// Variadic functions are not currently supported on Apple Silicon
+// REQUIRES: not-darwin
+
 /* This test checks that KLEE correctly handles variadic arguments with the
    byval attribute */
 
