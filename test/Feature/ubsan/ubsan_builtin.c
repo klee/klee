@@ -1,3 +1,6 @@
+// The test currently fails on the macOS version used in the CI: the compiler does not generate a call to __ubsan_handle_invalid_builtin.  This seems to be an issue with Clang rather than KLEE.
+// REQUIRES: not-darwin
+
 // RUN: %clang %s -fsanitize=builtin -w -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --emit-all-errors --ubsan-runtime %t.bc 2>&1 | FileCheck %s
