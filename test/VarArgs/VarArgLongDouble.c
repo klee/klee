@@ -1,3 +1,6 @@
+// Variadic functions are not currently supported on Apple Silicon
+// REQUIRES: not-darwin
+
 // RUN: %clang %s -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out %t.bc | FileCheck %s
