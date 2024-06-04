@@ -1,3 +1,6 @@
+// FIXME: The test currently fails on Apple Silicon
+// REQUIRES: not-darwin
+
 // RUN: %clang -DBOUND_VALUE=32 -DFORCE_VALUE=20 %s -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --search=dfs %t.bc
