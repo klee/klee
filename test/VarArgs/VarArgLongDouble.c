@@ -1,5 +1,5 @@
-// Variadic functions are not currently supported on Apple Silicon
-// REQUIRES: not-darwin
+// Variadic functions are only supported on x86_64
+// REQUIRES: x86_64
 
 // RUN: %clang %s -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
