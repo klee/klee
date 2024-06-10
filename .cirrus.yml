@@ -5,7 +5,7 @@ task:
   deps_script:
     - sed -i.bak -e 's/quarterly/latest/' /etc/pkg/FreeBSD.conf
     - env ASSUME_ALWAYS_YES=yes pkg update -f
-    - env ASSUME_ALWAYS_YES=yes pkg install -y llvm13 gmake z3 cmake pkgconf google-perftools python3 py39-sqlite3 py39-tabulate
+    - env ASSUME_ALWAYS_YES=yes pkg install -y llvm13 gmake z3 cmake pkgconf google-perftools python311 py311-sqlite3 py311-tabulate
   build_script:
     - mkdir build
     - cd build
