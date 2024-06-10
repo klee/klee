@@ -1,5 +1,5 @@
-// Variadic functions are not currently supported on Apple Silicon
-// REQUIRES: not-darwin
+// Variadic functions are only supported on x86_64
+// REQUIRES: x86_64
 
 /* This test is for the alignment of variadic arguments.  In
    particular, on x86 arguments > 8 bytes (long double arguments in

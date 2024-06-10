@@ -1,5 +1,5 @@
-// Variadic functions are not currently supported on Apple Silicon
-// REQUIRES: not-darwin
+// Variadic functions are only supported on x86_64
+// REQUIRES: x86_64
 
 /* This test needs deterministic allocation with enough spacing
    between the allocations.  Otherwise, if by coincidence the
