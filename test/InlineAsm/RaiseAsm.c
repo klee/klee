@@ -1,5 +1,4 @@
-// Not supported on Apple Silicon
-// REQUIRES: not-darwin
+// REQUIRES: x86_64
 
 // RUN: %clang %s -emit-llvm %O0opt -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
