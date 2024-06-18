@@ -75,25 +75,28 @@ install_libcxx() {
     export LLVM_COMPILER=clang
     export LLVM_COMPILER_PATH="$(dirname "${BITCODE_CC}")"
 
+    local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
+    local libraries
+
     if [[ "${LLVM_VERSION_SHORT}" -ge "140" ]]; then
       cd "${LIBCXX_BUILD}/runtimes" || return 1
       make install || return 1
+      if [[ "${OS}" == "osx" ]]; then
+          libraries=("${LIBCXX_INSTALL}"/lib/*/lib*.dylib)
+      else
+          libraries=("${LIBCXX_INSTALL}"/lib/*/lib*.so)
+      fi
+      libraries+=("${LIBCXX_INSTALL}"/lib/*/lib*.a)
     else
       cd "${LIBCXX_BUILD}/projects" || return 1
       make install || return 1
+      if [[ "${OS}" == "osx" ]]; then
+          libraries=("${LIBCXX_INSTALL}"/lib/lib*.dylib)
+      else
+          libraries=("${LIBCXX_INSTALL}"/lib/lib*.so)
+      fi
+      libraries+=("${LIBCXX_INSTALL}"/lib/lib*.a)
     fi
-
-    local libraries
-
-    if [[ "${OS}" == "osx" ]]; then
-      libraries=("${LIBCXX_INSTALL}"/lib/*/lib*.dylib)
-    else
-      libraries=("${LIBCXX_INSTALL}"/lib/*/lib*.so)
-    fi
-
-    local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
-    libraries+=("${LIBCXX_INSTALL}"/lib/*/lib*.a)
-
 
     for p in "${libraries[@]}" ; do
       extract-bc "$p"
