@@ -35,7 +35,7 @@ bool LocalVarDeclarationFinderPass::runOnFunction(llvm::Function &function) {
               llvm::dyn_cast<const llvm::DbgDeclareInst>(&instruction)) {
         llvm::Value *source = debugDeclareInstruction->getAddress();
         if (llvm::Instruction *sourceInstruction =
-                llvm::dyn_cast<llvm::Instruction>(source)) {
+                llvm::dyn_cast_or_null<llvm::Instruction>(source)) {
           sourceInstruction->setDebugLoc(
               debugDeclareInstruction->getDebugLoc());
           anyChanged = true;

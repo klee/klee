@@ -55,6 +55,10 @@ DISABLE_WARNING_POP
 #include <unordered_map>
 #include <vector>
 
+#ifdef HAVE_CTYPE_EXTERNALS
+#include <ctype.h>
+#endif
+
 struct KTest;
 
 namespace llvm {
@@ -128,6 +132,12 @@ public:
 
 private:
   int *errno_addr;
+
+#ifdef HAVE_CTYPE_EXTERNALS
+  decltype(__ctype_b_loc()) c_type_b_loc_addr;
+  decltype(__ctype_tolower_loc()) c_type_tolower_addr;
+  decltype(__ctype_toupper_loc()) c_type_toupper_addr;
+#endif
 
   size_t maxNewWriteableOSSize = 0;
   size_t maxNewStateStackSize = 0;
@@ -267,8 +277,21 @@ private:
 
   // Given a concrete object in our [klee's] address space, add it to
   // objects checked code can reference.
-  MemoryObject *addExternalObject(ExecutionState &state, void *addr, KType *,
-                                  unsigned size, bool isReadOnly);
+  ObjectPair addExternalObject(ExecutionState &state, const void *addr, KType *,
+                               unsigned size, bool isReadOnly);
+  ObjectPair addExternalObjectAsNonStatic(ExecutionState &state, KType *,
+                                          unsigned size, bool isReadOnly);
+
+#ifdef HAVE_CTYPE_EXTERNALS
+  template <typename F>
+  decltype(auto) addCTypeFixedObject(ExecutionState &state, int addressSpaceNum,
+                                     llvm::Module &m, F objectProvider);
+
+  template <typename F>
+  decltype(auto) addCTypeModelledObject(ExecutionState &state,
+                                        int addressSpaceNum, llvm::Module &m,
+                                        F objectProvider);
+#endif
 
   void initializeGlobalAlias(const llvm::Constant *c, ExecutionState &state);
   void initializeGlobalObject(ExecutionState &state, ObjectState *os,
@@ -442,8 +465,8 @@ private:
   StatePair forkInternal(ExecutionState &current, ref<Expr> condition,
                          BranchType reason);
 
-  // If the MaxStatic*Pct limits have been reached, concretize the condition and
-  // return it. Otherwise, return the unmodified condition.
+  // If the MaxStatic*Pct limits have been reached, concretize the condition
+  // and return it. Otherwise, return the unmodified condition.
   ref<Expr> maxStaticPctChecks(ExecutionState &current, ref<Expr> condition);
 
   /// Add the given (boolean) condition as a constraint on state. This
@@ -587,8 +610,8 @@ private:
                              unsigned size = 0,
                              const MemoryObject *mo = nullptr) const;
 
-  // Determines the \param lastInstruction of the \param state which is not KLEE
-  // internal and returns its KInstruction
+  // Determines the \param lastInstruction of the \param state which is not
+  // KLEE internal and returns its KInstruction
   const KInstruction *
   getLastNonKleeInternalInstruction(const ExecutionState &state) const;
 
@@ -697,7 +720,8 @@ private:
   void doImpliedValueConcretization(ExecutionState &state, ref<Expr> e,
                                     ref<ConstantExpr> value);
 
-  /// check memory usage and terminate states when over threshold of -max-memory
+  /// check memory usage and terminate states when over threshold of
+  /// -max-memory
   /// + 100MB \return true if below threshold, false otherwise (states were
   /// terminated)
   bool checkMemoryUsage();

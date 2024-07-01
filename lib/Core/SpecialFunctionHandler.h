@@ -181,6 +181,11 @@ public:
   HANDLER(handleNonnullArg);
   HANDLER(handleNullabilityArg);
   HANDLER(handlePointerOverflow);
+#ifdef HAVE_CTYPE_EXTERNALS
+  HANDLER(handleCTypeBLoc);
+  HANDLER(handleCTypeToLowerLoc);
+  HANDLER(handleCTypeToUpperLoc);
+#endif
 #undef HANDLER
 };
 } // namespace klee

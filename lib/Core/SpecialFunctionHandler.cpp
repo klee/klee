@@ -191,6 +191,11 @@ static SpecialFunctionHandler::HandlerInfo handlerInfo[] = {
     add("klee_rintf", handleRint, true),
 #if defined(__x86_64__) || defined(__i386__)
     add("klee_rintl", handleRint, true),
+#if defined(HAVE_CTYPE_EXTERNALS)
+    add("__ctype_b_loc", handleCTypeBLoc, true),
+    add("__ctype_tolower_loc", handleCTypeToLowerLoc, true),
+    add("__ctype_toupper_loc", handleCTypeToUpperLoc, true),
+#endif
 #endif
 #undef addDNR
 #undef add
@@ -1214,3 +1219,34 @@ void SpecialFunctionHandler::handleFAbs(ExecutionState &state,
   ref<Expr> result = FAbsExpr::create(arguments[0]);
   executor.bindLocal(target, state, result);
 }
+
+#ifdef HAVE_CTYPE_EXTERNALS
+
+void SpecialFunctionHandler::handleCTypeBLoc(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr>> &arguments) {
+  ref<ConstantExpr> pointerValue = Expr::createPointer(
+      reinterpret_cast<uint64_t>(executor.c_type_b_loc_addr));
+  ref<Expr> result = ConstantPointerExpr::create(pointerValue, pointerValue);
+  executor.bindLocal(target, state, result);
+}
+
+void SpecialFunctionHandler::handleCTypeToLowerLoc(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr>> &arguments) {
+  ref<ConstantExpr> pointerValue = Expr::createPointer(
+      reinterpret_cast<uint64_t>(executor.c_type_tolower_addr));
+  ref<Expr> result = ConstantPointerExpr::create(pointerValue, pointerValue);
+  executor.bindLocal(target, state, result);
+}
+
+void SpecialFunctionHandler::handleCTypeToUpperLoc(
+    ExecutionState &state, KInstruction *target,
+    std::vector<ref<Expr>> &arguments) {
+  ref<ConstantExpr> pointerValue = Expr::createPointer(
+      reinterpret_cast<uint64_t>(executor.c_type_toupper_addr));
+  ref<Expr> result = ConstantPointerExpr::create(pointerValue, pointerValue);
+  executor.bindLocal(target, state, result);
+}
+
+#endif

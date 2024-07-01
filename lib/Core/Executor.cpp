@@ -125,8 +125,13 @@ DISABLE_WARNING_POP
 #include <string>
 #include <sys/mman.h>
 #include <sys/resource.h>
+#include <type_traits>
 #include <utility>
 #include <vector>
+
+#ifdef HAVE_CTYPE_EXTERNALS
+#include <ctype.h>
+#endif
 
 using namespace llvm;
 using namespace klee;
@@ -813,9 +818,22 @@ void Executor::initializeGlobalObject(ExecutionState &state, ObjectState *os,
   }
 }
 
-MemoryObject *Executor::addExternalObject(ExecutionState &state, void *addr,
-                                          KType *type, unsigned size,
-                                          bool isReadOnly) {
+ObjectPair Executor::addExternalObjectAsNonStatic(ExecutionState &state,
+                                                  KType *type, unsigned size,
+                                                  bool isReadOnly) {
+  auto mo =
+      allocate(state, Expr::createPointer(size), false, true, nullptr, 8, type);
+  mo->isFixed = true;
+
+  auto os = bindObjectInState(state, mo, type, false);
+  os->setReadOnly(isReadOnly);
+
+  return ObjectPair{mo, os};
+}
+
+ObjectPair Executor::addExternalObject(ExecutionState &state, const void *addr,
+                                       KType *type, unsigned size,
+                                       bool isReadOnly) {
   auto mo = memory->allocateFixed(reinterpret_cast<std::uint64_t>(addr), size,
                                   nullptr, type);
   ObjectState *os = bindObjectInState(state, mo, type, false);
@@ -827,7 +845,7 @@ MemoryObject *Executor::addExternalObject(ExecutionState &state, void *addr,
   }
   if (isReadOnly)
     os->setReadOnly(true);
-  return mo;
+  return {mo, os};
 }
 
 extern void *__dso_handle __attribute__((__weak__));
@@ -846,9 +864,92 @@ void Executor::initializeGlobals(ExecutionState &state) {
   initializeGlobalObjects(state);
 }
 
+#ifdef HAVE_CTYPE_EXTERNALS
+static const std::size_t kCTypeMemSize = 384;
+static const std::size_t kCTypeMemOffset = 128;
+
+template <typename F>
+decltype(auto) Executor::addCTypeFixedObject(ExecutionState &state,
+                                             int addressSpaceNum, Module &m,
+                                             F objectProvider) {
+  using underlying_t = decltype(**objectProvider());
+
+  static_assert(std::is_integral_v<std::remove_reference_t<underlying_t>>,
+                "ctype structure expected to contain integral variables");
+
+  // Obtain types for required object
+  llvm::Type *type =
+      llvm::IntegerType::get(m.getContext(), sizeof(underlying_t) * CHAR_BIT);
+  llvm::Type *pointerType = llvm::PointerType::get(type, addressSpaceNum);
+
+  auto ctypeObj =
+      addExternalObject(state,
+                        const_cast<void *>(reinterpret_cast<const void *>(
+                            *objectProvider() - kCTypeMemOffset)),
+                        typeSystemManager->getWrappedType(type),
+                        kCTypeMemSize * sizeof(underlying_t), true);
+
+  auto ctypePointerObj = addExternalObject(
+      state, objectProvider(), typeSystemManager->getWrappedType(pointerType),
+      Context::get().getPointerWidthInBytes(), true);
+  state.addressSpace
+      .getWriteable(ctypePointerObj.first, ctypePointerObj.second)
+      ->write(0,
+              ConstantPointerExpr::create(
+                  ctypeObj.first->getBaseExpr(),
+                  AddExpr::create(ctypeObj.first->getBaseExpr(),
+                                  Expr::createPointer(kCTypeMemOffset *
+                                                      sizeof(underlying_t)))));
+  return objectProvider();
+}
+
+template <typename F>
+decltype(auto) Executor::addCTypeModelledObject(ExecutionState &state,
+                                                int addressSpaceNum, Module &m,
+                                                F objectProvider) {
+  using underlying_t = decltype(**objectProvider());
+
+  static_assert(std::is_integral_v<std::remove_reference_t<underlying_t>>,
+                "ctype structure expected to contain integral variables");
+  // Obtain types for required object
+  llvm::Type *type =
+      llvm::IntegerType::get(m.getContext(), sizeof(underlying_t) * CHAR_BIT);
+  llvm::Type *pointerType = llvm::PointerType::get(type, addressSpaceNum);
+
+  // Allocate memory
+  auto ctypeObj = addExternalObjectAsNonStatic(
+      state, typeSystemManager->getWrappedType(type),
+      kCTypeMemSize * sizeof(underlying_t), true);
+  auto ctypePointerObj = addExternalObjectAsNonStatic(
+      state, typeSystemManager->getWrappedType(pointerType),
+      Context::get().getPointerWidthInBytes(), true);
+
+  // Write address of memory into pointer
+  state.addressSpace
+      .getWriteable(ctypePointerObj.first, ctypePointerObj.second)
+      ->write(0, AddExpr::create(ctypeObj.first->getBaseExpr(),
+                                 Expr::createPointer(kCTypeMemOffset *
+                                                     sizeof(underlying_t))));
+
+  // Write content from actiual ctype into modelled memory
+  ref<ConstantExpr> seg = cast<ConstantExpr>(ctypeObj.first->getBaseExpr());
+  auto addr =
+      reinterpret_cast<const uint8_t *>(*objectProvider() - kCTypeMemOffset);
+  for (unsigned i = 0; i < kCTypeMemSize * sizeof(underlying_t); i++) {
+    ref<Expr> byte = ConstantExpr::create(addr[i], Expr::Int8);
+    state.addressSpace.getWriteable(ctypeObj.first, ctypeObj.second)
+        ->write(i, PointerExpr::create(seg, byte));
+  }
+
+  // Return address to pointer
+  return reinterpret_cast<decltype(objectProvider())>(
+      cast<ConstantExpr>(ctypePointerObj.first->getBaseExpr())->getZExtValue());
+};
+#endif
+
 void Executor::allocateGlobalObjects(ExecutionState &state) {
   Module *m = kmodule->module.get();
-  unsigned int adressSpaceNum = kmodule->targetData->getAllocaAddrSpace();
+  unsigned int addressSpaceNum = kmodule->targetData->getAllocaAddrSpace();
 
   if (m->getModuleInlineAsm() != "")
     klee_warning("executable has module level assembly (ignoring)");
@@ -889,18 +990,14 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
 
   llvm::Type *pointerErrnoAddr = llvm::PointerType::get(
       llvm::IntegerType::get(m->getContext(), sizeof(*errno_addr) * CHAR_BIT),
-      adressSpaceNum);
-  MemoryObject *errnoObj = nullptr;
+      addressSpaceNum);
+  const MemoryObject *errnoObj = nullptr;
 
   if (Context::get().getPointerWidth() == 32) {
-    errnoObj = allocate(state, Expr::createPointer(sizeof(*errno_addr)), false,
-                        true, nullptr, 8,
-                        typeSystemManager->getWrappedType(pointerErrnoAddr));
-    errnoObj->isFixed = true;
-
-    bindObjectInState(state, errnoObj,
-                      typeSystemManager->getWrappedType(pointerErrnoAddr),
-                      false);
+    errnoObj = addExternalObjectAsNonStatic(
+                   state, typeSystemManager->getWrappedType(pointerErrnoAddr),
+                   sizeof(*errno_addr), false)
+                   .first;
     errno_addr = reinterpret_cast<int *>(
         cast<ConstantExpr>(errnoObj->getBaseExpr())->getZExtValue());
   } else {
@@ -908,53 +1005,44 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
     errnoObj =
         addExternalObject(state, (void *)errno_addr,
                           typeSystemManager->getWrappedType(pointerErrnoAddr),
-                          sizeof *errno_addr, false);
+                          sizeof *errno_addr, false)
+            .first;
   }
 
   // Copy values from and to program space explicitly
-  errnoObj->isUserSpecified = true;
+  const_cast<MemoryObject *>(errnoObj)->isUserSpecified = true;
 #endif
 
   // Disabled, we don't want to promote use of live externals.
 #ifdef HAVE_CTYPE_EXTERNALS
 #ifndef WINDOWS
 #ifndef DARWIN
+
   /* from /usr/include/ctype.h:
-       These point into arrays of 384, so they can be indexed by any `unsigned
-       char' value [0,255]; by EOF (-1); or by any `signed char' value
-       [-128,-1).  ISO C requires that the ctype functions work for `unsigned */
-  const uint16_t **addr = __ctype_b_loc();
+         These point into arrays of 384, so they can be indexed by any
+     `unsigned char' value [0,255]; by EOF (-1); or by any `signed char' value
+         [-128,-1).  ISO C requires that the ctype functions work for
+     `unsigned */
 
-  llvm::Type *pointerAddr = llvm::PointerType::get(
-      llvm::IntegerType::get(m->getContext(), sizeof(**addr) * CHAR_BIT),
-      adressSpaceNum);
-  addExternalObject(state, const_cast<uint16_t *>(*addr - 128),
-                    typeSystemManager->getWrappedType(pointerAddr),
-                    384 * sizeof **addr, true);
-  addExternalObject(state, addr, typeSystemManager->getWrappedType(pointerAddr),
-                    sizeof(*addr), true);
-
-  const int32_t **lowerAddr = __ctype_tolower_loc();
-  llvm::Type *pointerLowerAddr = llvm::PointerType::get(
-      llvm::IntegerType::get(m->getContext(), sizeof(**lowerAddr) * CHAR_BIT),
-      adressSpaceNum);
-  addExternalObject(state, const_cast<int32_t *>(*lowerAddr - 128),
-                    typeSystemManager->getWrappedType(pointerLowerAddr),
-                    384 * sizeof **lowerAddr, true);
-  addExternalObject(state, lowerAddr,
-                    typeSystemManager->getWrappedType(pointerLowerAddr),
-                    sizeof(*lowerAddr), true);
-
-  const int32_t **upper_addr = __ctype_toupper_loc();
-  llvm::Type *pointerUpperAddr = llvm::PointerType::get(
-      llvm::IntegerType::get(m->getContext(), sizeof(**upper_addr) * CHAR_BIT),
-      0);
-  addExternalObject(state, const_cast<int32_t *>(*upper_addr - 128),
-                    typeSystemManager->getWrappedType(pointerUpperAddr),
-                    384 * sizeof **upper_addr, true);
-  addExternalObject(state, upper_addr,
-                    typeSystemManager->getWrappedType(pointerUpperAddr),
-                    sizeof(*upper_addr), true);
+  // We assume that KLEE is running on 64-bit platform.
+  // Therefore, for 32-bit binaries we can not just use addresses
+  // of actual ctype* objects in memory.
+  // Hence, we need to model then in address space.
+  if (Context::get().getPointerWidth() == 32) {
+    c_type_b_loc_addr =
+        addCTypeModelledObject(state, addressSpaceNum, *m, __ctype_b_loc);
+    c_type_tolower_addr =
+        addCTypeModelledObject(state, addressSpaceNum, *m, __ctype_tolower_loc);
+    c_type_toupper_addr =
+        addCTypeModelledObject(state, addressSpaceNum, *m, __ctype_toupper_loc);
+  } else {
+    c_type_b_loc_addr =
+        addCTypeFixedObject(state, addressSpaceNum, *m, __ctype_b_loc);
+    c_type_tolower_addr =
+        addCTypeFixedObject(state, addressSpaceNum, *m, __ctype_tolower_loc);
+    c_type_toupper_addr =
+        addCTypeFixedObject(state, addressSpaceNum, *m, __ctype_toupper_loc);
+  }
 #endif
 #endif
 #endif
@@ -2113,7 +2201,6 @@ ref<klee::ConstantExpr> Executor::getEhTypeidFor(ref<Expr> type_info) {
 
 void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
                            std::vector<ref<Expr>> &arguments) {
-
   Instruction *i = ki->inst();
   if (isa_and_nonnull<DbgInfoIntrinsic>(i))
     return;
@@ -4307,9 +4394,20 @@ void Executor::computeOffsetsSeqTy(KGEPInstruction *kgepi,
       kmodule->targetData->getTypeStoreSize(it->getContainedType(0));
   const Value *operand = it.getOperand();
   if (const Constant *c = dyn_cast<Constant>(operand)) {
-    ref<ConstantExpr> index =
-        cast<ConstantExpr>(evalConstant(c, llvm::APFloat::rmNearestTiesToEven))
-            ->SExt(Context::get().getPointerWidth());
+    auto expr = evalConstant(c, llvm::APFloat::rmNearestTiesToEven);
+    ref<ConstantExpr> index = nullptr;
+    if (expr->getKind() == Expr::Constant) {
+      index = cast<ConstantExpr>(
+                  evalConstant(c, llvm::APFloat::rmNearestTiesToEven))
+                  ->SExt(Context::get().getPointerWidth());
+    } else {
+      assert(expr->getKind() == Expr::ConstantPointer);
+      index = cast<ConstantExpr>(
+                  cast<ConstantPointerExpr>(
+                      evalConstant(c, llvm::APFloat::rmNearestTiesToEven))
+                      ->getValue())
+                  ->SExt(Context::get().getPointerWidth());
+    }
     ref<ConstantExpr> addend = index->Mul(
         ConstantExpr::alloc(elementSize, Context::get().getPointerWidth()));
     constantOffset = constantOffset->Add(addend);
@@ -5120,6 +5218,12 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
                                     std::vector<ref<Expr>> &arguments) {
   // check if specialFunctionHandler wants it
   if (const auto *func = dyn_cast<KFunction>(callable)) {
+    if (func->getName() == "raise") {
+      terminateStateOnError(state, "Call to \"raise\" is unmodelled",
+                            StateTerminationType::Model);
+      return;
+    }
+
     if (specialFunctionHandler->handle(state, func->function(), target,
                                        arguments))
       return;
@@ -5605,7 +5709,6 @@ void Executor::concretizeSize(ExecutionState &state, ref<Expr> size,
                               bool zeroMemory, const ObjectState *reallocFrom,
                               size_t allocationAlignment,
                               bool checkOutOfMemory) {
-
   // XXX For now we just pick a size. Ideally we would support
   // symbolic sizes fully but even if we don't it would be better to
   // "smartly" pick a value, for example we could fork and pick the
@@ -5744,7 +5847,6 @@ MemoryObject *Executor::allocate(ExecutionState &state, ref<Expr> size,
                                  ref<Expr> conditionExpr,
                                  ref<Expr> lazyInitializationSource,
                                  unsigned timestamp, bool isSymbolic) {
-
   size = ZExtExpr::create(size, Context::get().getPointerWidth());
 
   /* Try to find existing solution. */
@@ -5895,17 +5997,23 @@ bool Executor::resolveMemoryObjects(
     bool checkAddress = readBase && readBase->updates.getSize() == 0 &&
                         readBase->updates.root->isSymbolicArray();
     if (!checkAddress && isa<SelectExpr>(base)) {
-      checkAddress = true;
       std::vector<ref<Expr>> alternatives;
       ArrayExprHelper::collectAlternatives(*cast<SelectExpr>(base),
                                            alternatives);
-      for (auto alt : alternatives) {
-        if (isa<ConstantExpr>(alt)) {
-          continue;
+      checkAddress = std::find_if(alternatives.begin(), alternatives.end(),
+                                  [](ref<Expr> expr) {
+                                    return !isa<ConstantExpr>(expr);
+                                  }) != alternatives.end();
+
+      if (checkAddress) {
+        for (auto alt : alternatives) {
+          if (isa<ConstantExpr>(alt)) {
+            continue;
+          }
+          readBase = alt->hasOrderedReads();
+          checkAddress &= readBase && readBase->updates.getSize() == 0 &&
+                          readBase->updates.root->isSymbolicArray();
         }
-        readBase = alt->hasOrderedReads();
-        checkAddress &= readBase && readBase->updates.getSize() == 0 &&
-                        readBase->updates.root->isSymbolicArray();
       }
     }
 
@@ -5971,7 +6079,6 @@ bool Executor::checkResolvedMemoryObjects(
     std::vector<ref<Expr>> &resolveConditions,
     std::vector<ref<Expr>> &unboundConditions, ref<Expr> &checkOutOfBounds,
     bool &mayBeOutOfBound) {
-
   ref<Expr> base = address->getBase();
   ref<PointerExpr> basePointer = PointerExpr::create(base, base);
   unsigned size = bytes;
@@ -7119,7 +7226,6 @@ unsigned Executor::getSymbolicPathStreamID(const ExecutionState &state) {
 
 void Executor::getConstraintLog(const ExecutionState &state, std::string &res,
                                 Interpreter::LogType logFormat) {
-
   switch (logFormat) {
   case STP: {
     auto query = state.toQuery();

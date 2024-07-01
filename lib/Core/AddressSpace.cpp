@@ -13,6 +13,7 @@
 #include "Memory.h"
 #include "TimingSolver.h"
 
+#include "klee/Expr/ArrayExprVisitor.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Module/KType.h"
 #include "klee/Statistics/TimerStatIncrementer.h"
@@ -197,6 +198,24 @@ public:
       std::pair<ref<const MemoryObject>, ref<Expr>> moBasePair;
       if (state.getBase(base, moBasePair)) {
         timestamp = moBasePair.first->timestamp;
+      }
+    }
+    // This is hack to deal with the poineters, which are represented as
+    // select expressions from constant pointers with symbolic condition.
+    // in such case we allow to resolve in all objects in the address space,
+    // but should forbid lazy initilization.
+    if (isa<SelectExpr>(base)) {
+      std::vector<ref<Expr>> alternatives;
+      ArrayExprHelper::collectAlternatives(cast<SelectExpr>(*base),
+                                           alternatives);
+      if (std::find_if_not(alternatives.begin(), alternatives.end(),
+                           [](ref<Expr> expr) {
+                             return isa<ConstantExpr>(expr);
+                           }) == alternatives.end()) {
+        skipNotSymbolicObjects = false;
+        skipNotLazyInitialized = false;
+        skipLocal = false;
+        skipGlobal = false;
       }
     }
   }
