@@ -259,11 +259,9 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os,
 
 // Breaks down a constraint into all of it's individual pieces, returning a
 // list of IndependentElementSets or the independent factors.
-//
-// Caller takes ownership of returned std::list.
-static std::list<IndependentElementSet>*
+static std::unique_ptr<std::list<IndependentElementSet>>
 getAllIndependentConstraintsSets(const Query &query) {
-  std::list<IndependentElementSet> *factors = new std::list<IndependentElementSet>();
+  auto factors = std::make_unique<std::list<IndependentElementSet>>();
   ConstantExpr *CE = dyn_cast<ConstantExpr>(query.expr);
   if (CE) {
     assert(CE && CE->isFalse() && "the expr should always be false and "
@@ -285,16 +283,14 @@ getAllIndependentConstraintsSets(const Query &query) {
   bool doneLoop = false;
   do {
     doneLoop = true;
-    std::list<IndependentElementSet> *done =
-        new std::list<IndependentElementSet>;
+    auto done = std::make_unique<std::list<IndependentElementSet>>();
     while (factors->size() > 0) {
       IndependentElementSet current = factors->front();
       factors->pop_front();
       // This list represents the set of factors that are separate from current.
       // Those that are not inserted into this list (queue) intersect with
       // current.
-      std::list<IndependentElementSet> *keep =
-          new std::list<IndependentElementSet>;
+      auto keep = std::make_unique<std::list<IndependentElementSet>>();
       while (factors->size() > 0) {
         IndependentElementSet compare = factors->front();
         factors->pop_front();
@@ -309,11 +305,9 @@ getAllIndependentConstraintsSets(const Query &query) {
         }
       }
       done->push_back(current);
-      delete factors;
-      factors = keep;
+      factors = std::move(keep);
     }
-    delete factors;
-    factors = done;
+    factors = std::move(done);
   } while (!doneLoop);
 
   return factors;
@@ -479,11 +473,10 @@ bool IndependentSolver::computeInitialValues(const Query& query,
   // This is important in case we don't have any constraints but
   // we need initial values for requested array objects.
   hasSolution = true;
-  // FIXME: When we switch to C++11 this should be a std::unique_ptr so we don't need
-  // to remember to manually call delete
-  std::list<IndependentElementSet> *factors = getAllIndependentConstraintsSets(query);
 
-  //Used to rearrange all of the answers into the correct order
+  auto factors = getAllIndependentConstraintsSets(query);
+
+  // Used to rearrange all of the answers into the correct order
   std::map<const Array*, std::vector<unsigned char> > retMap;
   for (std::list<IndependentElementSet>::iterator it = factors->begin();
        it != factors->end(); ++it) {
@@ -499,11 +492,9 @@ bool IndependentSolver::computeInitialValues(const Query& query,
     if (!solver->impl->computeInitialValues(Query(tmp, ConstantExpr::alloc(0, Expr::Bool)),
                                             arraysInFactor, tempValues, hasSolution)){
       values.clear();
-      delete factors;
       return false;
     } else if (!hasSolution){
       values.clear();
-      delete factors;
       return true;
     } else {
       assert(tempValues.size() == arraysInFactor.size() &&
@@ -542,7 +533,6 @@ bool IndependentSolver::computeInitialValues(const Query& query,
     }
   }
   assert(assertCreatedPointEvaluatesToTrue(query, objects, values, retMap) && "should satisfy the equation");
-  delete factors;
   return true;
 }
 
