@@ -3,7 +3,7 @@
 // RUN: %klee --output-dir=%t.klee-out --optimize-aggressive --track-coverage=branches --optimize=true --emit-all-errors --only-output-states-covering-new=true --dump-states-on-halt=all --search=dfs %t1.bc
 
 // RUN: rm -f ./%gcov-files-path*.gcda ./%gcov-files-path*.gcno ./%gcov-files-path*.gcov
-// RUN: %cc -DGCOV %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner --coverage
+// RUN: %cc -DGCOV %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner %gcov-options
 // RUN: %replay %t.klee-out %t_runner
 // RUN: gcov -b %gcov-files-path > %t.cov.log
 
@@ -13,7 +13,7 @@
 // RUN: %klee --output-dir=%t.klee-out --optimize-aggressive=false --track-coverage=branches --optimize=true --emit-all-errors --only-output-states-covering-new=true --dump-states-on-halt=all --search=dfs %t1.bc
 
 // RUN: rm -f ./%gcov-files-path*.gcda ./%gcov-files-path*.gcno ./%gcov-files-path*.gcov
-// RUN: %cc -DGCOV %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner --coverage
+// RUN: %cc -DGCOV %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner %gcov-options
 // RUN: %replay %t.klee-out %t_runner
 // RUN: gcov -b %gcov-files-path > %t.cov.log
 

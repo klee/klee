@@ -3,7 +3,7 @@
 // RUN: %klee --output-dir=%t.klee-out --optimize-aggressive=false --track-coverage=all --max-cycles=2 --optimize=true --emit-all-errors --delete-dead-loops=false --use-forked-solver=false --max-memory=6008 --cex-cache-validity-cores --only-output-states-covering-new=true --dump-states-on-halt=all --use-sym-size-alloc=true --symbolic-allocation-threshold=8192 %t1.bc 2>&1
 
 // RUN: rm -f ./%gcov-files-path*.gcda ./%gcov-files-path*.gcno ./%gcov-files-path*.gcov
-// RUN: %cc -DGCOV %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner --coverage
+// RUN: %cc -DGCOV %s %libkleeruntest -Wl,-rpath %libkleeruntestdir -o %t_runner %gcov-options
 // RUN: %replay %t.klee-out %t_runner
 // RUN: gcov -b %gcov-files-path > %t.cov.log
 
