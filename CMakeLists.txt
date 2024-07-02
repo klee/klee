@@ -513,10 +513,16 @@ if (ENABLE_KLEE_LIBCXX)
           HINTS ${KLEE_LIBCXX_DIR}
           REQUIRED
   )
+
+  if (NOT EXISTS ${KLEE_LIBCXX_BC_PATH})
+    message (FATAL_ERROR "Could not find libc++ bitcode library")
+  endif()
+
   message(STATUS "Found libc++ library: \"${KLEE_LIBCXX_BC_PATH}\"")
 
+
   find_path(KLEE_LIBCXX_PLATFORM_INCLUDE_PATH
-          NAMES __config_site #We are searching for a platform-specific C++ library header called `__config_site`
+          NAMES __config_site # We are searching for a platform-specific C++ library header called `__config_site`
           DOC "Path to platform-specific libc++ include directory"
           PATH_SUFFIXES "x86_64-unknown-linux-gnu/c++/v1" "include/x86_64-unknown-linux-gnu/c++/v1"
           HINTS ${KLEE_LIBCXX_INCLUDE_DIR}
@@ -524,13 +530,17 @@ if (ENABLE_KLEE_LIBCXX)
   )
 
   find_path(KLEE_LIBCXX_INCLUDE_PATH
-          NAMES cerrno #We are searching for a C++ library header called `cerrno`
+          NAMES cerrno # We are searching for a C++ library header called `cerrno`
           DOC "Path to libc++ include directory"
           PATH_SUFFIXES "c++/v1" "include/c++/v1"
           HINTS ${KLEE_LIBCXX_INCLUDE_DIR}
           REQUIRED
           NO_DEFAULT_PATH # Make sure we don't pick-up the standard library's path
   )
+
+  if (NOT EXISTS ${KLEE_LIBCXX_INCLUDE_PATH})
+    message (FATAL_ERROR "Could not find path to libc++ include directory")
+  endif()
 
   message(STATUS "Found libc++ include path: ${KLEE_LIBCXX_INCLUDE_PATH} and ${KLEE_LIBCXX_PLATFORM_INCLUDE_PATH} ")
 
