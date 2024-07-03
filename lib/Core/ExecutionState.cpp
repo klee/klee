@@ -162,9 +162,9 @@ void ExecutionState::deallocate(const MemoryObject *mo) {
 
   auto address = reinterpret_cast<void *>(mo->address);
   if (mo->isLocal) {
-    stackAllocator.free(address, std::max(mo->size, mo->alignment));
+    stackAllocator.free(address, std::max(mo->capacity, mo->alignment));
   } else {
-    heapAllocator.free(address, std::max(mo->size, mo->alignment));
+    heapAllocator.free(address, std::max(mo->capacity, mo->alignment));
   }
 }
 
@@ -333,7 +333,7 @@ bool ExecutionState::merge(const ExecutionState &b) {
     assert(otherOS);
 
     ObjectState *wos = addressSpace.getWriteable(mo, os);
-    for (unsigned i=0; i<mo->size; i++) {
+    for (unsigned i = 0; i < mo->capacity; i++) {
       ref<Expr> av = wos->read8(i);
       ref<Expr> bv = otherOS->read8(i);
       wos->write(i, SelectExpr::create(inA, av, bv));
