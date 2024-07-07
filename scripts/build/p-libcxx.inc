@@ -98,7 +98,28 @@ install_libcxx() {
       libraries+=("${LIBCXX_INSTALL}"/lib/lib*.a)
     fi
 
+    local libraries
+    local libraries_dir
+
+    # in some versions, libraries are placed in lib/, in others in lib/*/
+    if compgen -G "${LIBCXX_INSTALL}"/lib/*/lib*.a; then
+       libraries_dir="${LIBCXX_INSTALL}"/lib/*/
+    else
+       libraries_dir="${LIBCXX_INSTALL}"/lib/
+    fi
+
+    echo "Found libraries directory: $libraries_dir"
+
+    if [[ "${OS}" == "osx" ]]; then
+       libraries=(${libraries_dir}/lib*.dylib)
+    else
+       libraries=(${libraries_dir}/lib*.so)
+    fi
+
+    libraries+=(${libraries_dir}/lib*.a)
+
     for p in "${libraries[@]}" ; do
+      echo "Extracting bitcode for $p"
       extract-bc "$p"
     done
 
