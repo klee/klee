@@ -69,9 +69,11 @@ jobs:
           - name: "LLVM 12"
             env:
               LLVM_VERSION: 12
+              USE_LIBCXX: 0
           - name: "LLVM 11"
             env:
               LLVM_VERSION: 11
+              USE_LIBCXX: 0
           # Sanitizer builds. Do unoptimized build otherwise the optimizer
           # might remove problematic code
           - name: "ASan"
