@@ -246,9 +246,6 @@ cl::opt<HaltExecution::Reason> DumpStatesOnHalt(
     cl::values(
         clEnumValN(HaltExecution::Reason::NotHalt, "none",
                    "Do not dump test cases for all active states on exit."),
-        clEnumValN(HaltExecution::Reason::UnreachedTarget, "unreached",
-                   "Dump test cases for all active states on exit if error not "
-                   "reached."),
         clEnumValN(HaltExecution::Reason::Unspecified, "all",
                    "Dump test cases for all active states on exit (default)")),
     cl::cat(TestGenCat));
@@ -4451,17 +4448,9 @@ void Executor::decreaseConfidenceFromStoppedStates(
 
 void Executor::doDumpStates() {
   auto &states = objectManager->getStates();
-  if (DumpStatesOnHalt == HaltExecution::Reason::NotHalt ||
-      (DumpStatesOnHalt == HaltExecution::Reason::UnreachedTarget &&
-       haltExecution == HaltExecution::Reason::ReachedTarget) ||
-      states.empty()) {
+  if (DumpStatesOnHalt == HaltExecution::Reason::NotHalt || states.empty()) {
     interpreterHandler->incPathsExplored(states.size());
     return;
-  }
-
-  if (FunctionCallReproduce != "" &&
-      haltExecution != HaltExecution::Reason::ReachedTarget) {
-    haltExecution = HaltExecution::UnreachedTarget;
   }
 
   klee_message("halting execution, dumping remaining states");

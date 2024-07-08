@@ -98,7 +98,6 @@ enum Reason {
   CovCheck,
   NoMoreStates,
   ReachedTarget,
-  UnreachedTarget,
   ErrorOnWhichShouldExit,
   Interrupt,
   MaxDepth,

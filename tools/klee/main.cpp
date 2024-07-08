@@ -680,10 +680,7 @@ void KleeHandler::processTestCase(const ExecutionState &state,
   unsigned id = ++m_numTotalTests;
   if (!WriteNone &&
       (FunctionCallReproduce == "" || strcmp(suffix, "assert.err") == 0 ||
-       strcmp(suffix, "reachable.err") == 0 ||
-       (DumpStatesOnHalt == HaltExecution::Reason::UnreachedTarget &&
-        m_interpreter->getHaltExecution() ==
-            HaltExecution::Reason::UnreachedTarget))) {
+       strcmp(suffix, "reachable.err") == 0)) {
     KTest ktest;
     ktest.numArgs = m_argc;
     ktest.args = m_argv;

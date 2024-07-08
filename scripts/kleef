@@ -81,7 +81,7 @@ def klee_options(
             "--function-call-reproduce=reach_error",
             # "--max-cycles=0",
             # "--tc-type=bug",
-            "--dump-states-on-halt=unreached",  # Explicitly do not dump states
+            "--dump-states-on-halt=none",  # Explicitly do not dump states
             "--exit-on-error-type=Assert",  # Only generate test cases of type assert
             # "--dump-test-case-type=Assert", # Only dump test cases of type assert
             "--search=dfs",
