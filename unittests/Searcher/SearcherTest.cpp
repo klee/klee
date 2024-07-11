@@ -6,7 +6,7 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#include "klee/Core/BranchTypes.h"
+
 #define KLEE_UNITTEST
 
 #include "gtest/gtest.h"
@@ -17,11 +17,7 @@
 #include "Core/Searcher.h"
 #include "klee/ADT/RNG.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/raw_ostream.h"
-DISABLE_WARNING_POP
 
 using namespace klee;
 
@@ -46,7 +42,7 @@ TEST(SearcherTest, RandomPath) {
 
   // Two states
   ExecutionState es1(es);
-  processForest.attach(es.ptreeNode, &es1, &es, BranchType::NONE);
+  processForest.attach(es.ptreeNode, &es1, &es);
   rp.update(&es, {&es1}, {});
 
   // Random path seed dependant
@@ -80,7 +76,7 @@ TEST(SearcherTest, TwoRandomPath) {
                        ->root.getPointer();
 
   ExecutionState es(root);
-  processForest.attach(root.ptreeNode, &es, &root, BranchType::NONE);
+  processForest.attach(root.ptreeNode, &es, &root);
 
   RNG rng, rng1;
   RandomPathSearcher rp(processForest, rng);
@@ -95,7 +91,7 @@ TEST(SearcherTest, TwoRandomPath) {
 
   // Two states
   ExecutionState es1(es);
-  processForest.attach(es.ptreeNode, &es1, &es, BranchType::NONE);
+  processForest.attach(es.ptreeNode, &es1, &es);
 
   rp.update(&es, {}, {});
   rp1.update(nullptr, {&es1}, {});
@@ -142,7 +138,7 @@ TEST(SearcherTest, TwoRandomPathDot) {
   rootPNode = root.ptreeNode;
 
   ExecutionState es(root);
-  processForest.attach(root.ptreeNode, &es, &root, BranchType::NONE);
+  processForest.attach(root.ptreeNode, &es, &root);
   rightLeafPNode = root.ptreeNode;
   esParentPNode = es.ptreeNode;
 
@@ -153,7 +149,7 @@ TEST(SearcherTest, TwoRandomPathDot) {
   rp.update(nullptr, {&es}, {});
 
   ExecutionState es1(es);
-  processForest.attach(es.ptreeNode, &es1, &es, BranchType::NONE);
+  processForest.attach(es.ptreeNode, &es1, &es);
   esLeafPNode = es.ptreeNode;
   es1LeafPNode = es1.ptreeNode;
 

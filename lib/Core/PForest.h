@@ -12,6 +12,7 @@
 #define KLEE_PFOREST_H
 
 #include "PTree.h"
+#include "klee/Support/ErrorHandling.h"
 
 #include <map>
 
@@ -32,7 +33,7 @@ public:
   ~PForest();
   void addRoot(ExecutionState *initialState);
   void attach(PTreeNode *node, ExecutionState *leftState,
-              ExecutionState *rightState, BranchType reason);
+              ExecutionState *rightState);
   void remove(PTreeNode *node);
   const std::map<uint32_t, PTree *> &getPTrees() { return trees; }
   void dump(llvm::raw_ostream &os);

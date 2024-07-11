@@ -11,20 +11,15 @@
 #include "klee/ADT/TreeStream.h"
 
 #include "klee/Support/Debug.h"
+#ifdef ENABLE_KLEE_DEBUG
+#include "llvm/Support/raw_ostream.h"
+#endif
 
 #include <cassert>
 #include <fstream>
-#include <iomanip>
-#include <iterator>
 #include <map>
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
-#include "llvm/Support/raw_ostream.h"
-DISABLE_WARNING_POP
-
-#include <string.h>
+#include <cstring>
 
 using namespace klee;
 

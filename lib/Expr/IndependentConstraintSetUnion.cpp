@@ -184,7 +184,7 @@ void IndependentConstraintSetUnion::flushConstraints() {
   while (!constraintQueue.empty()) {
     auto constraint = constraintQueue[constraintQueue.size() - 1];
     if (auto expr = dyn_cast<ExprOrSymcrete::left>(constraint)) {
-      if (auto ce = dyn_cast<ConstantExpr>(expr->value())) {
+      if (auto ce [[maybe_unused]] = dyn_cast<ConstantExpr>(expr->value())) {
         assert(ce->isTrue() && "Attempt to add invalid constraint");
         constraintQueue.pop_back();
         continue;

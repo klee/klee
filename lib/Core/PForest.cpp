@@ -13,10 +13,6 @@
 
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprPPrinter.h"
-#include "klee/Support/OptionCategories.h"
-
-#include <bitset>
-#include <vector>
 
 using namespace klee;
 using namespace llvm;
@@ -27,9 +23,9 @@ void PForest::addRoot(ExecutionState *initialState) {
 }
 
 void PForest::attach(PTreeNode *node, ExecutionState *leftState,
-                     ExecutionState *rightState, BranchType reason) {
+                     ExecutionState *rightState) {
   assert(trees.find(node->getTreeID()) != trees.end());
-  trees[node->getTreeID()]->attach(node, leftState, rightState, reason);
+  trees[node->getTreeID()]->attach(node, leftState, rightState);
 }
 
 void PForest::remove(PTreeNode *node) {

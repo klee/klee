@@ -10,11 +10,7 @@
 #ifndef KLEE_EXTERNALDISPATCHER_H
 #define KLEE_EXTERNALDISPATCHER_H
 
-#include "klee/Config/Version.h"
-
-#include <map>
-#include <memory>
-#include <stdint.h>
+#include <cstdint>
 #include <string>
 
 namespace llvm {

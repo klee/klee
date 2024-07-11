@@ -17,7 +17,6 @@
 #include "klee/Core/Interpreter.h"
 #include "klee/Module/TargetHash.h"
 
-#include <map>
 #include <unordered_map>
 
 #ifndef KLEE_TARGETMANAGER_H

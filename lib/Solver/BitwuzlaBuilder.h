@@ -10,15 +10,10 @@
 #ifndef BITWUZLABUILDER_H_
 #define BITWUZLABUILDER_H_
 
-#include "klee/Config/config.h"
 #include "klee/Expr/ArrayExprHash.h"
 #include "klee/Expr/ExprHashMap.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/APFloat.h"
-DISABLE_WARNING_POP
 
 #include <bitwuzla/cpp/bitwuzla.h>
 #include <unordered_map>

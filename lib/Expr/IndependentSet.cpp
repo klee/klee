@@ -2,7 +2,6 @@
 
 #include "klee/ADT/Ref.h"
 #include "klee/Expr/Assignment.h"
-#include "klee/Expr/Constraints.h"
 #include "klee/Expr/ExprHashMap.h"
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Expr/IndependentConstraintSetUnion.h"
@@ -10,7 +9,6 @@
 #include "klee/Expr/Symcrete.h"
 #include "klee/Module/KModule.h"
 
-#include <list>
 #include <queue>
 #include <set>
 #include <vector>

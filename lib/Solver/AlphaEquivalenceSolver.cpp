@@ -18,14 +18,6 @@
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/ExprHashMap.h"
 #include "klee/Solver/SolverImpl.h"
-#include "klee/Support/Debug.h"
-
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/raw_ostream.h"
-DISABLE_WARNING_POP
 
 using namespace klee;
 using namespace llvm;

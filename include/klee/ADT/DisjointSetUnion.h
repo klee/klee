@@ -2,19 +2,10 @@
 #define KLEE_DISJOINEDSETUNION_H
 
 #include "klee/ADT/Either.h"
-#include "klee/ADT/PersistentMap.h"
-#include "klee/ADT/PersistentSet.h"
 #include "klee/ADT/Ref.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/Symcrete.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
-#include "llvm/Support/raw_ostream.h"
-DISABLE_WARNING_POP
-
-#include <map>
 #include <set>
 #include <unordered_map>
 #include <unordered_set>

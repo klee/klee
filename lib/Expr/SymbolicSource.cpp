@@ -6,11 +6,8 @@
 #include "klee/Module/KModule.h"
 #include "klee/Module/KValue.h"
 
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
-DISABLE_WARNING_POP
 
 #include <vector>
 

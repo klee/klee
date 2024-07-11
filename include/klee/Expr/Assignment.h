@@ -14,7 +14,6 @@
 #include "klee/ADT/SparseStorage.h"
 #include "klee/Expr/ExprEvaluator.h"
 
-#include <map>
 #include <set>
 
 namespace klee {

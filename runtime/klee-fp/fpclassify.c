@@ -62,18 +62,18 @@ int fpclassifyl(long double f) { return __fpclassifyl(f); }
 
 // __finitef
 int __finitef(float f) {
-  return (!klee_is_nan_float(f)) & (!klee_is_infinite_float(f));
+  return (!klee_is_nan_float(f)) && (!klee_is_infinite_float(f));
 }
 int finitef(float f) { return __finitef(f); }
 
 // __finite
 int __finite(double f) {
-  return (!klee_is_nan_double(f)) & (!klee_is_infinite_double(f));
+  return (!klee_is_nan_double(f)) && (!klee_is_infinite_double(f));
 }
 int finite(double f) { return __finite(f); }
 
 // __finitel
 int __finitel(long double f) {
-  return (!klee_is_nan_long_double(f)) & (!klee_is_infinite_long_double(f));
+  return (!klee_is_nan_long_double(f)) && (!klee_is_infinite_long_double(f));
 }
-int finitel(long double f) { return finitel(f); }
+int finitel(long double f) { return __finitel(f); }

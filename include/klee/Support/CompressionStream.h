@@ -12,11 +12,7 @@
 
 #include "zlib.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/raw_ostream.h"
-DISABLE_WARNING_POP
 
 namespace klee {
 const size_t BUFSIZE = 128 * 1024;

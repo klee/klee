@@ -24,13 +24,6 @@
 #include "klee/Solver/SolverImpl.h"
 #include "klee/Solver/SolverUtil.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
-#include "llvm/Support/Casting.h"
-DISABLE_WARNING_POP
-
-#include <algorithm>
 #include <queue>
 #include <vector>
 
@@ -172,7 +165,7 @@ bool ConcretizingSolver::getBrokenArrays(
   }
 
   ValidityCore validityCore;
-  bool success = result->tryGetValidityCore(validityCore);
+  [[maybe_unused]] bool success = result->tryGetValidityCore(validityCore);
   assert(success);
 
   constraints_ty allValidityCoreConstraints = validityCore.constraints;
@@ -219,7 +212,7 @@ bool ConcretizingSolver::relaxSymcreteConstraints(const Query &query,
 
     std::queue<const Array *> arrayQueue;
 
-    bool addressArrayPresent = false;
+    [[maybe_unused]] bool addressArrayPresent = false;
     for (const Array *array : currentlyBrokenSymcretizedArrays) {
       if (symcretesDependentFromArrays.count(array) &&
           usedSymcretizedArrays.insert(array).second) {
@@ -500,7 +493,7 @@ bool ConcretizingSolver::computeValidityCore(const Query &query,
       cache.insert(key, assign);
       isValid = false;
     } else {
-      bool success = result->tryGetValidityCore(validityCore);
+      [[maybe_unused]] bool success = result->tryGetValidityCore(validityCore);
       assert(success);
     }
   }

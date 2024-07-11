@@ -12,17 +12,12 @@
 
 #include "klee/Config/config.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
-#include "llvm/Support/Debug.h"
-DISABLE_WARNING_POP
-
 // We define wrappers around the LLVM DEBUG macros that are conditionalized on
 // whether the LLVM we are building against has the symbols needed by these
 // checks.
 
 #ifdef ENABLE_KLEE_DEBUG
+#include "llvm/Support/Debug.h"
 #define KLEE_DEBUG_WITH_TYPE(TYPE, X) DEBUG_WITH_TYPE(TYPE, X)
 #else
 #define KLEE_DEBUG_WITH_TYPE(TYPE, X)                                          \

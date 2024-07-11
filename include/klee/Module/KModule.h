@@ -10,26 +10,19 @@
 #ifndef KLEE_KMODULE_H
 #define KLEE_KMODULE_H
 
-#include "klee/Config/Version.h"
 #include "klee/Core/Interpreter.h"
 #include "klee/Module/KCallable.h"
 #include "klee/Module/KValue.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/Support/Casting.h"
-DISABLE_WARNING_POP
 
-#include <deque>
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 namespace llvm {

@@ -116,7 +116,7 @@ if (DOWNLOAD_FILECHECK_SOURCE)
     ${FILECHECK_SRC_FILE}
   )
   llvm_config(FileCheck "${USE_LLVM_SHARED}" support)
-  target_include_directories(FileCheck PRIVATE ${LLVM_INCLUDE_DIRS})
+  target_include_directories(FileCheck SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
   target_link_libraries(FileCheck PRIVATE ${FILECHECK_NEEDED_LIBS})
 endif()
 
@@ -137,7 +137,7 @@ if (DOWNLOAD_NOT_SOURCE)
     ${NOT_SRC_FILE}
   )
   llvm_config("not" "${USE_LLVM_SHARED}" support)
-  target_include_directories("not" PRIVATE ${LLVM_INCLUDE_DIRS})
+  target_include_directories("not" SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
   target_link_libraries("not" PRIVATE ${NOT_NEEDED_LIBS})
 endif()
 

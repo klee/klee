@@ -6,6 +6,7 @@ required_variables_klee=(
   "USE_TCMALLOC"
   "USE_LIBCXX"
   "ENABLE_DOXYGEN"
+  "ENABLE_WARNINGS_AS_ERRORS"
 )
 
 required_variables_check_klee() {
@@ -13,6 +14,7 @@ required_variables_check_klee() {
   check_bool "USE_TCMALLOC"
   check_bool "USE_LIBCXX"
   check_bool "ENABLE_DOXYGEN"
+  check_bool "ENABLE_WARNINGS_AS_ERRORS"
 }
 
 # On which artifacts does KLEE depend on

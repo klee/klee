@@ -11,6 +11,7 @@ add_library(kleeADT
 )
 
 llvm_config(kleeADT "${USE_LLVM_SHARED}" support)
-target_include_directories(kleeADT PRIVATE ${KLEE_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})
+target_include_directories(kleeADT SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
+target_include_directories(kleeADT PRIVATE ${KLEE_INCLUDE_DIRS})
 target_compile_options(kleeADT PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
 target_compile_definitions(kleeADT PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})

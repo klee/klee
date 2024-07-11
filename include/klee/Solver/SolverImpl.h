@@ -115,12 +115,12 @@ public:
   /// status code
   static const char *getOperationStatusString(SolverRunStatus statusCode);
 
-  virtual char *getConstraintLog(const Query &query) {
+  virtual char *getConstraintLog(const Query &) {
     // dummy
     return nullptr;
   }
 
-  virtual void setCoreSolverTimeout(time::Span timeout){};
+  virtual void setCoreSolverTimeout(time::Span) {}
 
   virtual void notifyStateTermination(std::uint32_t id) = 0;
 };

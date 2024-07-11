@@ -27,15 +27,6 @@
 #include "klee/System/Time.h"
 #include "klee/Utilities/Math.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
-DISABLE_WARNING_POP
-
 #include <cassert>
 #include <cmath>
 #include <set>
@@ -47,7 +38,7 @@ using namespace llvm;
 
 ExecutionState &DFSSearcher::selectState() { return *states.back(); }
 
-void DFSSearcher::update(ExecutionState *current,
+void DFSSearcher::update(ExecutionState *,
                          const std::vector<ExecutionState *> &addedStates,
                          const std::vector<ExecutionState *> &removedStates) {
   // insert states
@@ -116,7 +107,7 @@ ExecutionState &RandomSearcher::selectState() {
 }
 
 void RandomSearcher::update(
-    ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
+    ExecutionState *, const std::vector<ExecutionState *> &addedStates,
     const std::vector<ExecutionState *> &removedStates) {
   // insert states
   states.insert(states.end(), addedStates.begin(), addedStates.end());
@@ -518,7 +509,7 @@ ExecutionState &RandomPathSearcher::selectState() {
 }
 
 void RandomPathSearcher::update(
-    ExecutionState *current, const std::vector<ExecutionState *> &addedStates,
+    ExecutionState *, const std::vector<ExecutionState *> &addedStates,
     const std::vector<ExecutionState *> &removedStates) {
   // insert states
   for (auto &es : addedStates) {
@@ -649,7 +640,7 @@ class TimeMetric final : public IterativeDeepeningSearcher::Metric {
 
 public:
   void selectState() final { startTime = time::getWallTime(); }
-  bool exceeds(const ExecutionState &state) const final {
+  bool exceeds(const ExecutionState &) const final {
     return time::getWallTime() - startTime > time;
   }
   void increaseLimit() final {

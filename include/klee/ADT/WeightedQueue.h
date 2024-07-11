@@ -10,10 +10,11 @@
 #ifndef KLEE_WEIGHTEDQUEUE_H
 #define KLEE_WEIGHTEDQUEUE_H
 
-#include <deque>
 #include <functional>
 #include <map>
 #include <unordered_map>
+
+#include "klee/Support/CompilerWarning.h"
 
 namespace klee {
 
@@ -109,7 +110,7 @@ T WeightedQueue<T, Comparator>::choose(
       return result;
     }
   }
-  assert(0 && "unreachable");
+  unreachable();
 }
 
 template <class T, class Comparator>

@@ -8,17 +8,12 @@
 //===----------------------------------------------------------------------===//
 #include "Passes.h"
 
-#include "klee/Support/CompilerWarning.h"
-
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-DISABLE_WARNING_POP
 
 using namespace klee;
 

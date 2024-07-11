@@ -1,6 +1,8 @@
 #ifndef KLEE_FIXEDSIZESTORAGEADAPTER_H
 #define KLEE_FIXEDSIZESTORAGEADAPTER_H
 
+#include "klee/Support/CompilerWarning.h"
+
 #ifndef IMMER_NO_EXCEPTIONS
 #define IMMER_NO_EXCEPTIONS
 #endif /* IMMER_NO_EXCEPTIONS */
@@ -109,6 +111,7 @@ template <typename ValueType> struct FixedSizeStorageAdapter {
       }
       default:
         assert(0 && "unhandled iterator kind");
+        unreachable();
       }
     }
     ~iterator() {
@@ -127,6 +130,7 @@ template <typename ValueType> struct FixedSizeStorageAdapter {
       }
       default:
         assert(0 && "unhandled iterator kind");
+        unreachable();
       }
     }
 
@@ -147,6 +151,7 @@ template <typename ValueType> struct FixedSizeStorageAdapter {
       }
       default:
         assert(0 && "unhandled iterator kind");
+        unreachable();
       }
       return *this;
     }
@@ -163,6 +168,7 @@ template <typename ValueType> struct FixedSizeStorageAdapter {
       }
       default:
         assert(0 && "unhandled iterator kind");
+        unreachable();
       }
     }
     bool operator!=(const iterator &other) const {
@@ -178,6 +184,7 @@ template <typename ValueType> struct FixedSizeStorageAdapter {
       }
       default:
         assert(0 && "unhandled iterator kind");
+        unreachable();
       }
     }
   };

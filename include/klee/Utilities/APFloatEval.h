@@ -10,12 +10,7 @@
 #ifndef KLEE_APFLOAT_EVAL_H
 #define KLEE_APFLOAT_EVAL_H
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/APFloat.h"
-#include "llvm/Support/ErrorHandling.h"
-DISABLE_WARNING_POP
 
 namespace klee {
 

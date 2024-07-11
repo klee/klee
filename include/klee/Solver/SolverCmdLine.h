@@ -15,14 +15,7 @@
 #ifndef KLEE_SOLVERCMDLINE_H
 #define KLEE_SOLVERCMDLINE_H
 
-#include "klee/Config/config.h"
-#include "klee/Support/CompilerWarning.h"
-
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/CommandLine.h"
-DISABLE_WARNING_POP
 
 namespace klee {
 

@@ -9,10 +9,10 @@
 
 #include "klee/ADT/KTest.h"
 
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #define KTEST_VERSION 4
 #define KTEST_MAGIC_SIZE 5

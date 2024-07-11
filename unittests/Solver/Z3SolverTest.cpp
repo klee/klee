@@ -8,15 +8,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <algorithm>
-#include <iterator>
 #include <vector>
 
 #include "gtest/gtest.h"
 
 #include "klee/ADT/SparseStorage.h"
 #include "klee/Expr/ArrayCache.h"
-#include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/SourceBuilder.h"
 #include "klee/Solver/Solver.h"

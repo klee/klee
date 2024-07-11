@@ -1,12 +1,8 @@
 #include "klee/ADT/SparseStorage.h"
 #include "klee/Expr/Expr.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/raw_ostream.h"
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
-DISABLE_WARNING_POP
 
 namespace klee {
 template <>

@@ -10,27 +10,28 @@
 #ifndef KLEE_METASMTBUILDER_H
 #define KLEE_METASMTBUILDER_H
 
-#include "ConstantDivision.h"
-
 #include "klee/Config/config.h"
-#include "klee/Expr/ArrayExprHash.h"
-#include "klee/Expr/Expr.h"
-#include "klee/Expr/ExprHashMap.h"
-#include "klee/Expr/ExprPPrinter.h"
 
 #ifdef ENABLE_METASMT
 
+#include "ConstantDivision.h"
+
+#include "klee/ADT/Bits.h"
+#include "klee/Expr/ArrayExprHash.h"
+#include "klee/Expr/Expr.h"
+#include "klee/Expr/ExprHashMap.h"
+#include "klee/Solver/SolverStats.h"
 #include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
+
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-DISABLE_WARNING_POP
 
 #include <metaSMT/frontend/Array.hpp>
 #include <metaSMT/frontend/Logic.hpp>
 #include <metaSMT/frontend/QF_BV.hpp>
+
+#include <cassert>
 
 using namespace metaSMT;
 using namespace metaSMT::logic::QF_BV;
@@ -751,12 +752,13 @@ MetaSMTBuilder<SolverContext>::constructActual(ref<Expr> e, int *width_out) {
     *width_out = ce->getWidth();
     unsigned numKids = ce->getNumKids();
 
-    if (numKids > 0) {
-      res = evaluate(_solver, construct(ce->getKid(numKids - 1), 0));
-      for (int i = numKids - 2; i >= 0; i--) {
-        res = evaluate(_solver, concat(construct(ce->getKid(i), 0), res));
-      }
+    assert(numKids > 0);
+
+    res = evaluate(_solver, construct(ce->getKid(numKids - 1), 0));
+    for (int i = numKids - 2; i >= 0; i--) {
+      res = evaluate(_solver, concat(construct(ce->getKid(i), 0), res));
     }
+
     break;
   }
 
@@ -1242,8 +1244,8 @@ MetaSMTBuilder<SolverContext>::constructActual(ref<Expr> e, int *width_out) {
 #endif
 
   default:
-    assert(false);
-    break;
+    assert(false && "unexpected expression");
+    unreachable();
   };
   return res;
 }

@@ -18,13 +18,8 @@
 #include "klee/Solver/SolverStats.h"
 #include "klee/Support/ErrorHandling.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Support/CommandLine.h"
-DISABLE_WARNING_POP
 
 using namespace klee;
 
@@ -147,7 +142,7 @@ Z3ASTHandle Z3Builder::buildArray(const char *name, unsigned indexWidth,
   return Z3ASTHandle(Z3_mk_const(ctx, s, t), ctx);
 }
 
-Z3ASTHandle Z3Builder::buildConstantArray(const char *name, unsigned indexWidth,
+Z3ASTHandle Z3Builder::buildConstantArray(const char *, unsigned indexWidth,
                                           unsigned valueWidth, unsigned value) {
   Z3SortHandle domainSort = getBvSort(indexWidth);
   Z3ASTHandle defaultValue = bvZExtConst(valueWidth, value);

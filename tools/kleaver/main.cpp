@@ -10,13 +10,11 @@
 #include "klee/ADT/SparseStorage.h"
 #include "klee/Config/Version.h"
 #include "klee/Expr/ArrayCache.h"
-#include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprBuilder.h"
 #include "klee/Expr/ExprHashMap.h"
 #include "klee/Expr/ExprPPrinter.h"
 #include "klee/Expr/ExprSMTLIBPrinter.h"
-#include "klee/Expr/ExprVisitor.h"
 #include "klee/Expr/Parser/Lexer.h"
 #include "klee/Expr/Parser/Parser.h"
 #include "klee/Solver/Common.h"
@@ -27,16 +25,12 @@
 #include "klee/Support/OptionCategories.h"
 #include "klee/Support/PrintVersion.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
-DISABLE_WARNING_POP
 
 #include <sys/stat.h>
 #include <unistd.h>

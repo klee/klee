@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 /*
  * Return the (stdio) flags for a given mode. Store the flags
@@ -211,7 +212,7 @@ size_t fwrite(const void *buffer, size_t size, size_t count, FILE *stream) {
   }
 
   int fd = get_file_descriptor(stream);
-  void *cop_buf = buffer;
+  const void *cop_buf = buffer;
   int write_byte = write(fd, cop_buf, size * count);
   if (write_byte == -1) {
     return 0;

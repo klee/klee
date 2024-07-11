@@ -10,14 +10,6 @@
 #ifndef KLEE_BITS_H
 #define KLEE_BITS_H
 
-#include "klee/Config/Version.h"
-
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
-#include "llvm/Support/DataTypes.h"
-DISABLE_WARNING_POP
-
 #include <cassert>
 #include <cstddef>
 #include <cstdint>

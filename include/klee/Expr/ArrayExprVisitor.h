@@ -10,14 +10,10 @@
 #ifndef KLEE_ARRAYEXPRVISITOR_H
 #define KLEE_ARRAYEXPRVISITOR_H
 
-#include "klee/Expr/ExprBuilder.h"
 #include "klee/Expr/ExprHashMap.h"
 #include "klee/Expr/ExprVisitor.h"
-#include "klee/Solver/SolverCmdLine.h"
 
 #include <map>
-#include <unordered_map>
-#include <unordered_set>
 
 namespace klee {
 

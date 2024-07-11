@@ -8,10 +8,6 @@
 //===----------------------------------------------------------------------===//
 #include "Passes.h"
 
-#include "klee/Support/CompilerWarning.h"
-
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constant.h"
@@ -20,9 +16,6 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Casting.h"
-DISABLE_WARNING_POP
-
-#include <cassert>
 
 using namespace klee;
 

@@ -17,7 +17,6 @@
 #include "klee/Core/TargetedExecutionReporter.h"
 #include "klee/Module/LocationInfo.h"
 #include "klee/Module/SarifReport.h"
-#include "klee/Module/TargetForest.h"
 #include "klee/Solver/SolverCmdLine.h"
 #include "klee/Statistics/Statistics.h"
 #include "klee/Support/Debug.h"
@@ -29,12 +28,10 @@
 #include "klee/System/Time.h"
 
 #include "klee/Support/CompilerWarning.h"
-#include "llvm/Analysis/CallGraph.h"
-#include "llvm/IR/Attributes.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/APFloat.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -46,13 +43,11 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/ManagedStatic.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
-DISABLE_WARNING_POP
 
 #include <csignal>
 #include <dirent.h>
@@ -65,7 +60,6 @@ DISABLE_WARNING_POP
 #include <ctime>
 #include <fstream>
 #include <iomanip>
-#include <iterator>
 #include <sstream>
 
 using json = nlohmann::json;
@@ -457,25 +451,27 @@ public:
   KleeHandler(int argc, char **argv);
   ~KleeHandler();
 
-  llvm::raw_ostream &getInfoStream() const { return *m_infoFile; }
+  llvm::raw_ostream &getInfoStream() const override { return *m_infoFile; }
   /// Returns the number of test cases successfully generated so far
   unsigned getNumTestCases() { return m_numGeneratedTests; }
   unsigned getNumPathsCompleted() { return m_pathsCompleted; }
   unsigned getNumPathsExplored() { return m_pathsExplored; }
-  void incPathsCompleted() { ++m_pathsCompleted; }
-  void incPathsExplored(std::uint32_t num = 1) { m_pathsExplored += num; }
+  void incPathsCompleted() override { ++m_pathsCompleted; }
+  void incPathsExplored(std::uint32_t num = 1) override {
+    m_pathsExplored += num;
+  }
 
   void setInterpreter(Interpreter *i);
 
   void processTestCase(const ExecutionState &state, const char *message,
-                       const char *suffix, bool isError = false);
+                       const char *suffix, bool isError = false) override;
 
   void writeTestCaseXML(bool isError, const KTest &out, unsigned id,
                         unsigned version = 0);
 
-  std::string getOutputFilename(const std::string &filename);
+  std::string getOutputFilename(const std::string &filename) override;
   std::unique_ptr<llvm::raw_fd_ostream>
-  openOutputFile(const std::string &filename);
+  openOutputFile(const std::string &filename) override;
   std::string getTestFilename(const std::string &suffix, unsigned id,
                               unsigned version = 0);
   std::unique_ptr<llvm::raw_fd_ostream>

@@ -17,11 +17,7 @@
 #include "klee/Config/Version.h"
 #include "klee/Support/OptionCategories.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Analysis/GlobalsModRef.h"
-#include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -29,7 +25,6 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DynamicLibrary.h"
-#include "llvm/Support/PluginLoader.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
@@ -37,7 +32,6 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Utils.h"
-DISABLE_WARNING_POP
 
 using namespace llvm;
 

@@ -17,15 +17,8 @@
 #include "klee/Expr/Expr.h"
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverStats.h"
-#include "klee/Support/ErrorHandling.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/CommandLine.h"
-DISABLE_WARNING_POP
 
 using namespace klee;
 
@@ -262,7 +255,8 @@ Z3ASTHandle Z3BitvectorBuilder::constructAShrByConstant(Z3ASTHandle expr,
   }
 }
 
-void Z3BitvectorBuilder::FPCastWidthAssert(int *width_out, char const *msg) {
+void Z3BitvectorBuilder::FPCastWidthAssert([[maybe_unused]] int *width_out,
+                                           [[maybe_unused]] char const *msg) {
   assert(&(ConstantExpr::widthToFloatSemantics(*width_out)) !=
              &(llvm::APFloat::Bogus()) &&
          msg);
@@ -936,6 +930,7 @@ Z3SortHandle Z3BitvectorBuilder::getFloatSortFromBitWidth(unsigned bitWidth) {
   default:
     assert(0 &&
            "bitWidth cannot converted to a IEEE-754 binary-* number by Z3");
+    unreachable();
   }
 }
 

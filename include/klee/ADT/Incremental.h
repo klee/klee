@@ -272,7 +272,7 @@ public:
       frame_index += framesSize();
     return frame_it(ids, frame_index);
   }
-  frame_it end(int frame_index) const { return frame_it(ids); }
+  frame_it end(int) const { return frame_it(ids); }
 
   void insert(const _Value &v) { ids[v].insert(current_frame); }
 

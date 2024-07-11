@@ -9,10 +9,6 @@
 
 #include "klee/Expr/ArrayExprVisitor.h"
 
-#include "klee/Support/ErrorHandling.h"
-
-#include <algorithm>
-
 using namespace klee;
 
 //------------------------------ HELPER FUNCTIONS ---------------------------//

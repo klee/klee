@@ -9,6 +9,7 @@
 
 #include "klee/Solver/Solver.h"
 
+#include "klee/ADT/Bits.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprUtil.h"

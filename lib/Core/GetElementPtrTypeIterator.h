@@ -18,14 +18,10 @@
 #ifndef KLEE_GETELEMENTPTRTYPEITERATOR_H
 #define KLEE_GETELEMENTPTRTYPEITERATOR_H
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/User.h"
-DISABLE_WARNING_POP
 
 #include "klee/Config/Version.h"
 
@@ -87,8 +83,9 @@ public:
 
   generic_gep_type_iterator &operator++() { // Preincrement
 #if LLVM_VERSION_CODE >= LLVM_VERSION(11, 0)
-    if (isa<llvm::StructType>(CurTy) || isa<llvm::ArrayType>(CurTy) ||
-        isa<llvm::VectorType>(CurTy)) {
+    if (llvm::isa<llvm::StructType>(CurTy) ||
+        llvm::isa<llvm::ArrayType>(CurTy) ||
+        llvm::isa<llvm::VectorType>(CurTy)) {
       CurTy = llvm::GetElementPtrInst::getTypeAtIndex(CurTy, getOperand());
 #else
     if (llvm::CompositeType *CT = dyn_cast<llvm::CompositeType>(CurTy)) {
@@ -158,12 +155,12 @@ inline vce_type_iterator vce_type_end(const llvm::ConstantExpr *CE) {
 
 template <typename ItTy>
 inline generic_gep_type_iterator<ItTy> gep_type_begin(llvm::Type *Op0, ItTy I,
-                                                      ItTy E) {
+                                                      ItTy) {
   return generic_gep_type_iterator<ItTy>::begin(Op0, I);
 }
 
 template <typename ItTy>
-inline generic_gep_type_iterator<ItTy> gep_type_end(llvm::Type *Op0, ItTy I,
+inline generic_gep_type_iterator<ItTy> gep_type_end(llvm::Type *, ItTy,
                                                     ItTy E) {
   return generic_gep_type_iterator<ItTy>::end(E);
 }

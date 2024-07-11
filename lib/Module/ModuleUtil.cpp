@@ -9,13 +9,9 @@
 
 #include "klee/Support/ModuleUtil.h"
 
-#include "klee/Config/Version.h"
 #include "klee/Support/Debug.h"
 #include "klee/Support/ErrorHandling.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/Magic.h"
@@ -24,8 +20,6 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ValueSymbolTable.h"
@@ -33,110 +27,14 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Linker/Linker.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Error.h"
-#include "llvm/Object/ObjectFile.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
-DISABLE_WARNING_POP
 
-#include <algorithm>
-#include <fstream>
-#include <map>
-#include <set>
-#include <sstream>
 #include <string>
 #include <unordered_set>
 
 using namespace llvm;
 using namespace klee;
-
-/// Based on GetAllUndefinedSymbols() from LLVM3.2
-///
-/// GetAllUndefinedSymbols - calculates the set of undefined symbols that still
-/// exist in an LLVM module. This is a bit tricky because there may be two
-/// symbols with the same name but different LLVM types that will be resolved to
-/// each other but aren't currently (thus we need to treat it as resolved).
-///
-/// Inputs:
-///  M - The module in which to find undefined symbols.
-///
-/// Outputs:
-///  UndefinedSymbols - A set of C++ strings containing the name of all
-///                     undefined symbols.
-///
-static void GetAllUndefinedSymbols(Module *M,
-                                   std::set<std::string> &UndefinedSymbols) {
-  static const std::string llvmIntrinsicPrefix = "llvm.";
-  std::set<std::string> DefinedSymbols;
-  UndefinedSymbols.clear();
-  KLEE_DEBUG_WITH_TYPE("klee_linker",
-                       dbgs() << "*** Computing undefined symbols for "
-                              << M->getModuleIdentifier() << " ***\n");
-
-  for (auto const &Function : *M) {
-    if (Function.hasName()) {
-      if (Function.isDeclaration())
-        UndefinedSymbols.insert(Function.getName().str());
-      else if (!Function.hasLocalLinkage()) {
-        assert(!Function.hasDLLImportStorageClass() &&
-               "Found dllimported non-external symbol!");
-        DefinedSymbols.insert(Function.getName().str());
-      }
-    }
-  }
-
-  for (Module::const_global_iterator I = M->global_begin(), E = M->global_end();
-       I != E; ++I)
-    if (I->hasName()) {
-      if (I->isDeclaration())
-        UndefinedSymbols.insert(I->getName().str());
-      else if (!I->hasLocalLinkage()) {
-        assert(!I->hasDLLImportStorageClass() &&
-               "Found dllimported non-external symbol!");
-        DefinedSymbols.insert(I->getName().str());
-      }
-    }
-
-  for (Module::const_alias_iterator I = M->alias_begin(), E = M->alias_end();
-       I != E; ++I)
-    if (I->hasName())
-      DefinedSymbols.insert(I->getName().str());
-
-  // Prune out any defined symbols from the undefined symbols set
-  // and other symbols we don't want to treat as an undefined symbol
-  std::vector<std::string> SymbolsToRemove;
-  for (std::set<std::string>::iterator I = UndefinedSymbols.begin();
-       I != UndefinedSymbols.end(); ++I) {
-    if (DefinedSymbols.find(*I) != DefinedSymbols.end()) {
-      SymbolsToRemove.push_back(*I);
-      continue;
-    }
-
-    // Strip out llvm intrinsics
-    if ((I->size() >= llvmIntrinsicPrefix.size()) &&
-        (I->compare(0, llvmIntrinsicPrefix.size(), llvmIntrinsicPrefix) == 0)) {
-      KLEE_DEBUG_WITH_TYPE(
-          "klee_linker", dbgs() << "LLVM intrinsic " << *I
-                                << " has will be removed from undefined symbols"
-                                << "\n");
-      SymbolsToRemove.push_back(*I);
-      continue;
-    }
-
-    // Symbol really is undefined
-    KLEE_DEBUG_WITH_TYPE("klee_linker",
-                         dbgs() << "Symbol " << *I << " is undefined.\n");
-  }
-
-  // Now remove the symbols from undefined set.
-  for (auto const &symbol : SymbolsToRemove)
-    UndefinedSymbols.erase(symbol);
-
-  KLEE_DEBUG_WITH_TYPE("klee_linker",
-                       dbgs()
-                           << "*** Finished computing undefined symbols ***\n");
-}
 
 bool klee::linkModules(llvm::Module *composite,
                        std::vector<std::unique_ptr<llvm::Module>> &modules,

@@ -17,13 +17,11 @@
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverImpl.h"
+#include "klee/Solver/SolverStats.h"
+#include "klee/Statistics/TimerStatIncrementer.h"
 #include "klee/Support/ErrorHandling.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/ErrorHandling.h"
-DISABLE_WARNING_POP
 
 #include <metaSMT/DirectSolver_Context.hpp>
 
@@ -95,7 +93,7 @@ public:
 
   char *getConstraintLog(const Query &);
   void setCoreSolverTimeout(time::Span timeout) { _timeout = timeout; }
-  void notifyStateTermination(std::uint32_t id) {}
+  void notifyStateTermination(std::uint32_t) {}
 
   bool computeTruth(const Query &, bool &isValid);
   bool computeValue(const Query &, ref<Expr> &result);
@@ -281,7 +279,7 @@ SolverImpl::SolverRunStatus MetaSMTSolverImpl<SolverContext>::runAndGetCex(
   }
 }
 
-static void metaSMTTimeoutHandler(int x) { _exit(52); }
+static void metaSMTTimeoutHandler(int) { _exit(52); }
 
 template <typename SolverContext>
 SolverImpl::SolverRunStatus

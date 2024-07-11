@@ -19,14 +19,11 @@
 #include "klee/Expr/SymbolicSource.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
+#include "klee/Support/ErrorHandling.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
-DISABLE_WARNING_POP
 
 #include <cassert>
 #include <cstdlib>
@@ -159,7 +156,7 @@ class ParserImpl : public Parser {
            Tok.kind != Token::LSquare && Tok.kind != Token::RSquare);
     _ConsumeExpectedToken(k);
   }
-  void _ConsumeExpectedToken(Token::Kind k) {
+  void _ConsumeExpectedToken([[maybe_unused]] Token::Kind k) {
     assert(Tok.kind == k && "Unexpected token!");
     GetNextNonCommentToken();
   }
@@ -296,13 +293,13 @@ class ParserImpl : public Parser {
   IntegerResult ParseIntegerConstant(Expr::Width Type);
 
   ExprResult ParseExpr(TypeResult ExpectedType);
-  ExprResult ParseParenExpr(TypeResult ExpectedType);
+  ExprResult ParseParenExpr();
   ExprResult ParseUnaryParenExpr(const Token &Name, unsigned Kind, bool IsFixed,
                                  Expr::Width ResTy);
   ExprResult ParseBinaryParenExpr(const Token &Name, unsigned Kind,
                                   bool IsFixed, Expr::Width ResTy);
   ExprResult ParseSelectParenExpr(const Token &Name, Expr::Width ResTy);
-  ExprResult ParseConcatParenExpr(const Token &Name, Expr::Width ResTy);
+  ExprResult ParseConcatParenExpr(Expr::Width ResTy);
   ExprResult ParseExtractParenExpr(const Token &Name, Expr::Width ResTy);
   ExprResult ParseAnyReadParenExpr(const Token &Name, unsigned Kind,
                                    Expr::Width ResTy);
@@ -562,7 +559,7 @@ SourceResult ParserImpl::ParseConstantSource() {
 }
 
 SourceResult ParserImpl::ParseSymbolicSizeConstantAddressSource() {
-  assert(0 && "unimplemented");
+  klee_error("unimplemented");
   // auto valueExpr = ParseNumber(64).get();
   // auto versionExpr = ParseNumber(64).get();
   // auto value = dyn_cast<ConstantExpr>(valueExpr);
@@ -880,7 +877,7 @@ ExprResult ParserImpl::ParseExpr(TypeResult ExpectedType) {
   }
 
   Token Start = Tok;
-  ExprResult Res = ParseParenExpr(ExpectedType);
+  ExprResult Res = ParseParenExpr();
   if (!Res.isValid()) {
     // If we know the type, define the identifier just so we don't get
     // use-of-undef errors.
@@ -1029,7 +1026,7 @@ static bool LookupExprInfo(const Token &Tok, unsigned &Kind, bool &IsFixed,
 /// paren-expr = '(' type number ')'
 /// paren-expr = '(' identifier [type] expr+ ')
 /// paren-expr = '(' ('Read' | 'ReadMSB' | 'ReadLSB') type expr update-list ')'
-ExprResult ParserImpl::ParseParenExpr(TypeResult FIXME_UNUSED) {
+ExprResult ParserImpl::ParseParenExpr() {
   if (Tok.kind != Token::LParen) {
     Error("unexpected token.");
     ConsumeAnyToken();
@@ -1098,7 +1095,7 @@ ExprResult ParserImpl::ParseParenExpr(TypeResult FIXME_UNUSED) {
   if (NumArgs == -1) {
     switch (ExprKind) {
     case eMacroKind_Concat:
-      return ParseConcatParenExpr(Name, ResTy);
+      return ParseConcatParenExpr(ResTy);
 
     case Expr::Extract:
       return ParseExtractParenExpr(Name, ResTy);
@@ -1315,8 +1312,7 @@ ExprResult ParserImpl::ParseSelectParenExpr(const Token &Name,
 }
 
 // FIXME: Rewrite to only accept binary form. Make type optional.
-ExprResult ParserImpl::ParseConcatParenExpr(const Token &Name,
-                                            Expr::Width ResTy) {
+ExprResult ParserImpl::ParseConcatParenExpr(Expr::Width ResTy) {
   std::vector<ExprHandle> Kids;
 
   unsigned Width = 0;

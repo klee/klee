@@ -17,7 +17,6 @@
 #include "ObjectManager.h"
 #include "klee/Core/TargetedExecutionReporter.h"
 #include "klee/Module/KModule.h"
-#include "klee/Module/Target.h"
 #include "klee/Module/TargetForest.h"
 
 #include <unordered_map>

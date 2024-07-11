@@ -14,11 +14,7 @@
 #include "klee/Module/LocationInfo.h"
 #include "klee/Support/ErrorHandling.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/IntrinsicInst.h"
-DISABLE_WARNING_POP
 
 using namespace llvm;
 using namespace klee;
@@ -237,7 +233,7 @@ class NumericTraceId : public TraceId {
 
 public:
   std::string toString() const override { return std::to_string(id); }
-  void getNextId(const klee::ResultJson &resultJson) override { id++; }
+  void getNextId(const klee::ResultJson &) override { id++; }
 };
 
 TraceId *createTraceId(const std::string &toolName,

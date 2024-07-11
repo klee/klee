@@ -16,13 +16,7 @@
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/SourceBuilder.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/CommandLine.h"
-DISABLE_WARNING_POP
-
-#include <iostream>
 
 using namespace klee;
 namespace klee {

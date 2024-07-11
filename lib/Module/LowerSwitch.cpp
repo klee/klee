@@ -15,14 +15,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Passes.h"
-#include "klee/Config/Version.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
-DISABLE_WARNING_POP
 
 #include <algorithm>
 

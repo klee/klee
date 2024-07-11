@@ -12,7 +12,6 @@
 #include "ConstructStorage.h"
 #include "Memory.h"
 
-#include "klee/Expr/ArrayExprVisitor.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Module/Cell.h"
 #include "klee/Module/KInstruction.h"
@@ -20,17 +19,12 @@
 #include "klee/Support/Casting.h"
 #include "klee/Support/OptionCategories.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/APFloat.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-DISABLE_WARNING_POP
 
 #include <cassert>
-#include <fstream>
 #include <iomanip>
 #include <set>
 #include <sstream>
@@ -423,7 +417,6 @@ BasicBlock *ExecutionState::getPCBlock() const {
 
 void ExecutionState::increaseLevel() {
   llvm::BasicBlock *srcbb = getPrevPCBlock();
-  llvm::BasicBlock *dstbb = getPCBlock();
   KFunction *kf = prevPC->parent->parent;
   KModule *kmodule = kf->parent;
 

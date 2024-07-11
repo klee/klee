@@ -66,7 +66,7 @@ static int create_link(const char *fname, exe_disk_file_t *dfile,
 }
 
 static int create_dir(const char *fname, exe_disk_file_t *dfile,
-                      const char *tmpdir) {
+                      __attribute__((unused)) const char *tmpdir) {
   int res = mkdir(fname, dfile->stat->st_mode);
   if (res < 0) {
     perror("mkdir");
@@ -101,7 +101,7 @@ int wait_for_timeout_or_exit(pid_t pid, const char *name, int *statusp) {
 }
 
 static int create_char_dev(const char *fname, exe_disk_file_t *dfile,
-                           const char *tmpdir) {
+                           __attribute__((unused)) const char *tmpdir) {
   struct stat64 *s = dfile->stat;
   unsigned flen = dfile->size;
   char *contents = dfile->contents;
@@ -228,8 +228,9 @@ static int create_char_dev(const char *fname, exe_disk_file_t *dfile,
   }
 }
 
-static int create_pipe(const char *fname, exe_disk_file_t *dfile,
-                       const char *tmpdir) {
+static int create_pipe(__attribute__((unused)) const char *fname,
+                       exe_disk_file_t *dfile,
+                       __attribute__((unused)) const char *tmpdir) {
   // struct stat64 *s = dfile->stat;
   unsigned flen = dfile->size;
   char *contents = dfile->contents;
@@ -291,7 +292,7 @@ static int create_pipe(const char *fname, exe_disk_file_t *dfile,
 int futimes(int fd, const struct timeval tv[2]);
 
 static int create_reg_file(const char *fname, exe_disk_file_t *dfile,
-                           const char *tmpdir) {
+                           __attribute__((unused)) const char *tmpdir) {
   struct stat64 *s = dfile->stat;
   char *contents = dfile->contents;
   unsigned flen = dfile->size;

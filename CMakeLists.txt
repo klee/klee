@@ -678,10 +678,10 @@ configure_file(${CMAKE_SOURCE_DIR}/include/klee/Config/CompileTimeInfo.h.cmin
 ################################################################################
 # Set KLEE-specific include files
 ################################################################################
-include_directories("${CMAKE_BINARY_DIR}/include")
-include_directories("${CMAKE_SOURCE_DIR}/include")
-include_directories("${JSON_SRC_DIR}/include")
-include_directories("${IMMER_SRC_DIR}")
+include_directories(SYSTEM "${CMAKE_BINARY_DIR}/include")
+include_directories(SYSTEM "${CMAKE_SOURCE_DIR}/include")
+include_directories(SYSTEM "${JSON_SRC_DIR}/include")
+include_directories(SYSTEM "${IMMER_SRC_DIR}")
 # set(KLEE_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/include ${CMAKE_BINARY_DIR}/include)
 
 ################################################################################

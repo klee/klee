@@ -10,13 +10,10 @@
 #include "ExternalDispatcher.h"
 
 #include "CoreStats.h"
-#include "klee/Config/Version.h"
 #include "klee/Module/KCallable.h"
 #include "klee/Module/KModule.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/IR/Constants.h"
@@ -29,11 +26,11 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
-DISABLE_WARNING_POP
 
 #include <cfenv>
-#include <csetjmp>
 #include <csignal>
+
+#include "setjmp.h"
 
 using namespace llvm;
 using namespace klee;
@@ -44,7 +41,7 @@ static sigjmp_buf escapeCallJmpBuf;
 
 extern "C" {
 
-static void sigsegv_handler(int signal, siginfo_t *info, void *context) {
+static void sigsegv_handler(int, siginfo_t *, void *) {
   siglongjmp(escapeCallJmpBuf, 1);
 }
 }
@@ -349,12 +346,13 @@ Function *ExternalDispatcherImpl::createDispatcher(KCallable *target,
         target->getName(), FTy, func->function()->getAttributes());
     result = Builder.CreateCall(dispatchTarget,
                                 llvm::ArrayRef<Value *>(args, args + i));
-  } else if (auto *asmValue = dyn_cast<KInlineAsm>(target)) {
+  } else {
+    auto *asmValue = dyn_cast<KInlineAsm>(target);
+    assert(asmValue && "Unhandled KCallable type");
     result = Builder.CreateCall(asmValue->inlineAsm(),
                                 llvm::ArrayRef<Value *>(args, args + i));
-  } else {
-    assert(0 && "Unhandled KCallable derived class");
   }
+
   if (result->getType() != Type::getVoidTy(ctx)) {
     auto resp = Builder.CreateBitCast(
         argI64s, PointerType::getUnqual(result->getType()));

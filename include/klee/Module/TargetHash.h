@@ -12,7 +12,6 @@
 
 #include "klee/ADT/Ref.h"
 
-#include <map>
 #include <unordered_map>
 #include <unordered_set>
 

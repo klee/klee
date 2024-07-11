@@ -3,7 +3,6 @@
 
 #include "klee/ADT/ImmutableList.h"
 
-#include <stack>
 #include <string>
 #include <vector>
 

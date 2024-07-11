@@ -4,15 +4,8 @@
 #include "klee/Expr/Expr.h"
 #include "klee/Module/KModule.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
-DISABLE_WARNING_POP
 
 using namespace klee;
 using namespace llvm;
@@ -24,13 +17,13 @@ KType::KType(llvm::Type *type, TypeManager *parent)
   innerTypes[this].insert(0);
 }
 
-bool KType::isAccessableFrom(KType *accessingType) const { return true; }
+bool KType::isAccessableFrom(KType *) const { return true; }
 
 llvm::Type *KType::getRawType() const { return type; }
 
 TypeSystemKind KType::getTypeSystemKind() const { return typeSystemKind; }
 
-void KType::handleMemoryAccess(KType *, ref<Expr>, ref<Expr>, bool isWrite) {}
+void KType::handleMemoryAccess(KType *, ref<Expr>, ref<Expr>, bool) {}
 
 size_t KType::getSize() const { return typeStoreSize; }
 

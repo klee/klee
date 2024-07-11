@@ -5,11 +5,6 @@
 #include "TargetManager.h"
 
 #include "klee/Module/KModule.h"
-#include "klee/Module/Target.h"
-#include "klee/Support/Debug.h"
-
-#include "llvm/Support/CommandLine.h"
-#include <algorithm>
 
 using namespace llvm;
 using namespace klee;
@@ -38,15 +33,14 @@ ExecutionState *ObjectManager::branchState(ExecutionState *state,
   assert(statesUpdated);
   ExecutionState *newState = state->branch();
   addedStates.push_back(newState);
-  processForest->attach(state->ptreeNode, newState, state, reason);
+  processForest->attach(state->ptreeNode, newState, state);
   stats::incBranchStat(reason, 1);
   return newState;
 }
 
 void ObjectManager::removeState(ExecutionState *state) {
-  std::vector<ExecutionState *>::iterator itr =
-      std::find(removedStates.begin(), removedStates.end(), state);
-  assert(itr == removedStates.end());
+  assert(std::find(removedStates.begin(), removedStates.end(), state) ==
+         removedStates.end());
 
   if (!statesUpdated) {
     statesUpdated = true;

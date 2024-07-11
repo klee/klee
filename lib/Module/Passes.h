@@ -10,18 +10,11 @@
 #ifndef KLEE_PASSES_H
 #define KLEE_PASSES_H
 
-#include "klee/Config/Version.h"
-
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
-DISABLE_WARNING_POP
 
 namespace llvm {
 class Function;
@@ -49,7 +42,7 @@ class RaiseAsmPass : public llvm::ModulePass {
     return getIntrinsic(M, IID, &Ty0, 1);
   }
 
-  bool runOnInstruction(llvm::Module &M, llvm::Instruction *I);
+  bool runOnInstruction(llvm::Instruction *I);
 
 public:
   RaiseAsmPass() : llvm::ModulePass(ID), TLI(0) {}

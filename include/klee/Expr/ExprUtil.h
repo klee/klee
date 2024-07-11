@@ -15,7 +15,6 @@
 #include "klee/Expr/ExprVisitor.h"
 
 #include <set>
-#include <unordered_set>
 #include <vector>
 
 namespace klee {

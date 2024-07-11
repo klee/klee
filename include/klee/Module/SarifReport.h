@@ -10,15 +10,16 @@
 #ifndef KLEE_SARIF_REPORT_H
 #define KLEE_SARIF_REPORT_H
 
+#include "klee/ADT/Ref.h"
+
+#include <llvm/IR/Function.h>
+
+#include "nlohmann/json.hpp"
+
 #include <optional>
-#include <set>
 #include <string>
 #include <unordered_set>
 #include <vector>
-
-#include "klee/ADT/Ref.h"
-#include "nlohmann/json.hpp"
-#include "llvm/IR/Function.h"
 
 using json = nlohmann::json;
 
@@ -102,11 +103,11 @@ struct Fingerprints {
   std::string cooddy_uid;
 };
 
-static void to_json(json &j, const Fingerprints &p) {
+[[maybe_unused]] static void to_json(json &j, const Fingerprints &p) {
   j = json{{"cooddy.uid", p.cooddy_uid}};
 }
 
-static void from_json(const json &j, Fingerprints &p) {
+[[maybe_unused]] static void from_json(const json &j, Fingerprints &p) {
   j.at("cooddy.uid").get_to(p.cooddy_uid);
 }
 

@@ -8,12 +8,8 @@
 //===----------------------------------------------------------------------===//
 #include "klee/Support/RoundingModeUtil.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/APFloat.h"
 #include "llvm/Support/ErrorHandling.h"
-DISABLE_WARNING_POP
 
 #include <cfenv>
 

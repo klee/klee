@@ -11,9 +11,7 @@
 
 #include "Passes.h"
 
-#include "klee/Config/Version.h"
 #include "klee/Core/Interpreter.h"
-#include "klee/Module/Cell.h"
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
 #include "klee/Module/LocationInfo.h"
@@ -22,9 +20,6 @@
 #include "klee/Support/ModuleUtil.h"
 #include "klee/Support/OptionCategories.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/IR/CFG.h"
@@ -40,17 +35,13 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Linker/Linker.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/Path.h"
-#include "llvm/Support/raw_os_ostream.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/Scalarizer.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
-DISABLE_WARNING_POP
 
 #include <memory>
-#include <sstream>
 #include <utility>
 
 using namespace llvm;
@@ -686,8 +677,8 @@ KBlock::KBlock(
     const std::unordered_map<Instruction *, unsigned> &instructionToRegisterMap,
     KInstruction **instructionsKF, unsigned &globalIndexInc,
     KBlockType blockType)
-    : KValue(block, KValue::Kind::BLOCK), blockKind(blockType),
-      parent(_kfunction) {
+    : KValue(block, KValue::Kind::BLOCK), parent(_kfunction),
+      blockKind(blockType) {
   instructions = instructionsKF;
 
   for (auto &it : *block) {

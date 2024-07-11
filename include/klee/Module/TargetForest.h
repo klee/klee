@@ -272,11 +272,9 @@ private:
     bool deepFind(ref<Target> target) const;
     bool deepFindIn(ref<Target> child, ref<Target> target) const;
     size_t size() const { return forest.size(); }
-    Layer *replaceChildWith(
-        ref<Target> child,
-        const std::unordered_set<ref<UnorderedTargetsSet>,
-                                 UnorderedTargetsSetHash,
-                                 UnorderedTargetsSetCmp> &other) const;
+    Layer *replaceChildWith(const std::unordered_set<
+                            ref<UnorderedTargetsSet>, UnorderedTargetsSetHash,
+                            UnorderedTargetsSetCmp> &other) const;
     Layer *replaceChildWith(ref<UnorderedTargetsSet> child, Layer *other) const;
     Layer *removeChild(ref<Target> child) const;
     Layer *addChild(ref<Target> child) const;

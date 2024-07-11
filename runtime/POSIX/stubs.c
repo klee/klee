@@ -31,6 +31,12 @@
 #include <sys/wait.h>
 
 #include "klee/Config/config.h"
+#include "klee/Support/CompilerWarning.h"
+
+DISABLE_WARNING_PUSH
+// clang-format off
+DISABLE_WARNING(-Wignored-attributes)
+// clang-format on
 
 void klee_warning(const char *);
 void klee_warning_once(const char *);
@@ -622,3 +628,4 @@ int munmap(void *start, size_t length) {
   errno = EPERM;
   return -1;
 }
+DISABLE_WARNING_POP

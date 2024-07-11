@@ -8,15 +8,9 @@
 //===----------------------------------------------------------------------===//
 #include "klee/Support/FileHandling.h"
 
-#include "klee/Config/Version.h"
 #include "klee/Config/config.h"
-#include "klee/Support/ErrorHandling.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/FileSystem.h"
-DISABLE_WARNING_POP
 
 #ifdef HAVE_ZLIB_H
 #include "klee/Support/CompressionStream.h"

@@ -11,14 +11,9 @@
 #include "klee/Module/KModule.h"
 #include "klee/Module/LocationInfo.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include <llvm/IR/InstrTypes.h>
 #include <llvm/IR/Instructions.h>
-DISABLE_WARNING_POP
 
 #include <string>
 

@@ -10,7 +10,6 @@
 #ifndef KLEE_ARRAYEXPRREWRITER_H
 #define KLEE_ARRAYEXPRREWRITER_H
 
-#include <iterator>
 #include <map>
 #include <vector>
 

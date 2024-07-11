@@ -85,11 +85,9 @@ ref<SymbolicSource> SourceBuilder::value(const llvm::Value &_allocSite,
   if (const llvm::Argument *allocSite = dyn_cast<llvm::Argument>(&_allocSite)) {
     return argument(*allocSite, _index, km);
   }
-  if (const llvm::Instruction *allocSite =
-          dyn_cast<llvm::Instruction>(&_allocSite)) {
-    return instruction(*allocSite, _index, km);
-  }
-  assert(0 && "unreachable");
+  const llvm::Instruction *allocSite = dyn_cast<llvm::Instruction>(&_allocSite);
+  assert(allocSite && "Invalid allocSite value");
+  return instruction(*allocSite, _index, km);
 }
 
 ref<SymbolicSource> SourceBuilder::irreproducible(const std::string &name) {

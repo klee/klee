@@ -9,7 +9,6 @@
 
 #include "klee/Expr/Constraints.h"
 
-#include "klee/Expr/ArrayExprVisitor.h"
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprHashMap.h"
@@ -22,16 +21,11 @@
 #include "klee/Expr/SymbolicSource.h"
 #include "klee/Expr/Symcrete.h"
 #include "klee/Module/KModule.h"
+#include "klee/Support/CompilerWarning.h"
 #include "klee/Support/OptionCategories.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
-DISABLE_WARNING_POP
-
-#include <map>
 
 using namespace klee;
 
@@ -152,6 +146,7 @@ public:
       }
       default:
         assert(0 && "unreachable");
+        unreachable();
       }
     } else {
       return source;
@@ -186,7 +181,7 @@ public:
     return UpdateList(root, updates[0]);
   }
 
-  Action visitRead(const ReadExpr &re) override { return Action::doChildren(); }
+  Action visitRead(const ReadExpr &) override { return Action::doChildren(); }
 
 public:
   ExprHashSet replacementDependency;
@@ -403,7 +398,7 @@ void PathConstraints::advancePath(KInstruction *ki) { _path.advance(ki); }
 ExprHashSet PathConstraints::addConstraint(ref<Expr> e,
                                            Path::PathIndex currIndex) {
   auto expr = Simplificator::simplifyExpr(constraints, e);
-  if (auto ce = dyn_cast<ConstantExpr>(expr.simplified)) {
+  if (auto ce [[maybe_unused]] = dyn_cast<ConstantExpr>(expr.simplified)) {
     assert(ce->isTrue() && "Attempt to add invalid constraint");
     return {};
   }
@@ -411,7 +406,7 @@ ExprHashSet PathConstraints::addConstraint(ref<Expr> e,
   std::vector<ref<Expr>> exprs;
   Expr::splitAnds(expr.simplified, exprs);
   for (auto expr : exprs) {
-    if (auto ce = dyn_cast<ConstantExpr>(expr)) {
+    if (auto ce [[maybe_unused]] = dyn_cast<ConstantExpr>(expr)) {
       assert(ce->isTrue() && "Expression simplified to false");
     } else {
       _original.insert(expr);

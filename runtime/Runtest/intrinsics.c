@@ -16,7 +16,6 @@
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/time.h>
-#include <time.h>
 
 #include "klee/klee.h"
 
@@ -205,10 +204,11 @@ int klee_range(int begin, int end, const char *name) {
   return x;
 }
 
-void klee_prefer_cex(void *object, uintptr_t condition) {}
+void klee_prefer_cex(__attribute__((unused)) void *object,
+                     __attribute__((unused)) uintptr_t condition) {}
 
 void klee_abort() { abort(); }
 
-void klee_print_expr(const char *msg, ...) {}
+void klee_print_expr(__attribute__((unused)) const char *msg, ...) {}
 
-void klee_set_forking(unsigned enable) {}
+void klee_set_forking(__attribute__((unused)) unsigned enable) {}

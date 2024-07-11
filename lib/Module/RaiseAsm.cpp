@@ -11,9 +11,6 @@
 #include "klee/Config/Version.h"
 #include "klee/Support/ErrorHandling.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Function.h"
@@ -28,7 +25,6 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/TargetRegistry.h"
 #endif
 #include "llvm/Target/TargetMachine.h"
-DISABLE_WARNING_POP
 
 using namespace llvm;
 using namespace klee;
@@ -43,7 +39,7 @@ Function *RaiseAsmPass::getIntrinsic(llvm::Module &M, unsigned IID, Type **Tys,
 
 // FIXME: This should just be implemented as a patch to
 // X86TargetAsmInfo.cpp, then everyone will benefit.
-bool RaiseAsmPass::runOnInstruction(Module &M, Instruction *I) {
+bool RaiseAsmPass::runOnInstruction(Instruction *I) {
   // We can just raise inline assembler using calls
   CallInst *ci = dyn_cast<CallInst>(I);
   if (!ci)
@@ -108,7 +104,7 @@ bool RaiseAsmPass::runOnModule(Module &M) {
       for (BasicBlock::iterator ii = bi->begin(), ie = bi->end(); ii != ie;) {
         Instruction *i = &*ii;
         ++ii;
-        changed |= runOnInstruction(M, i);
+        changed |= runOnInstruction(i);
       }
     }
   }

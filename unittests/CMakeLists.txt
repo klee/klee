@@ -148,9 +148,9 @@ else()
       endif()
 
       # add includes for LLVM's modifications
-      target_include_directories(gtest BEFORE PRIVATE ${LLVM_INCLUDE_DIRS})
+      target_include_directories(gtest SYSTEM BEFORE PRIVATE ${LLVM_INCLUDE_DIRS})
       # we cannot disable gtest_main, but will not use it later
-      target_include_directories(gtest_main BEFORE PRIVATE ${LLVM_INCLUDE_DIRS})
+      target_include_directories(gtest_main SYSTEM BEFORE PRIVATE ${LLVM_INCLUDE_DIRS})
     endif()
 
     # try using system installation of GTest instead
@@ -248,9 +248,9 @@ target_link_libraries(unittest_main
   ${GTEST_TARGET_NAME}
 )
 target_include_directories(unittest_main
+  SYSTEM
   INTERFACE
   ${KLEE_COMPONENT_EXTRA_INCLUDE_DIRS}
-
   PRIVATE
   ${LLVM_INCLUDE_DIRS}
 )

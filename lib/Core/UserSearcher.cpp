@@ -13,14 +13,8 @@
 #include "Searcher.h"
 
 #include "klee/Core/Interpreter.h"
-#include "klee/Support/ErrorHandling.h"
-#include "klee/Support/OptionCategories.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/CommandLine.h"
-DISABLE_WARNING_POP
 
 using namespace llvm;
 using namespace klee;

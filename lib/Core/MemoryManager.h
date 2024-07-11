@@ -53,7 +53,6 @@ public:
                          const Array *content = nullptr);
   MemoryObject *allocateFixed(uint64_t address, uint64_t size,
                               ref<CodeLocation> allocSite, KType *type);
-  void deallocate(const MemoryObject *mo);
   void markFreed(MemoryObject *mo);
   /*
    * Returns the size used by deterministic allocation in bytes

@@ -11,7 +11,6 @@
 
 #include "ExecutionState.h"
 
-#include "klee/Config/Version.h"
 #include "klee/Expr/Constraints.h"
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverStats.h"

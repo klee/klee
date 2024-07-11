@@ -10,9 +10,9 @@
 #ifndef KLEE_IMMUTABLETREE_H
 #define KLEE_IMMUTABLETREE_H
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
-#include <vector>
 
 namespace klee {
 template <class K, class V, class KOV, class CMP> class ImmutableTree {
@@ -259,8 +259,10 @@ ImmutableTree<K, V, KOV, CMP>::Node::~Node() {
 template <class K, class V, class KOV, class CMP>
 inline void ImmutableTree<K, V, KOV, CMP>::Node::decref() {
   --references;
-  if (references == 0)
+
+  if (references == 0 && !isTerminator()) {
     delete this;
+  }
 }
 
 template <class K, class V, class KOV, class CMP>

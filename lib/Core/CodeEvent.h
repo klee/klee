@@ -16,12 +16,8 @@
 #include "klee/Module/KValue.h"
 #include "klee/Module/SarifReport.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/Casting.h"
-DISABLE_WARNING_POP
 
 #include <optional>
 #include <string>

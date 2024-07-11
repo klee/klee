@@ -11,7 +11,6 @@
 #define KLEE_LOCATIONINFO_H
 
 #include <cstdint>
-#include <memory>
 #include <optional>
 #include <string>
 

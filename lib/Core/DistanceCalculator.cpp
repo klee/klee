@@ -11,16 +11,6 @@
 #include "ExecutionState.h"
 #include "klee/Module/CodeGraphInfo.h"
 #include "klee/Module/KInstruction.h"
-#include "klee/Module/Target.h"
-
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
-#include "llvm/IR/CFG.h"
-#include "llvm/IR/IntrinsicInst.h"
-DISABLE_WARNING_POP
-
-#include <limits>
 
 using namespace llvm;
 using namespace klee;
@@ -50,7 +40,7 @@ unsigned DistanceCalculator::SpeculativeState::computeHash() {
 
 DistanceResult DistanceCalculator::getDistance(const ExecutionState &state,
                                                KBlock *target) {
-  return getDistance(state.prevPC, state.pc, state.stack.callStack(), target);
+  return getDistance(state.pc, state.stack.callStack(), target);
 }
 
 DistanceResult DistanceCalculator::getDistance(KBlock *kb, TargetKind kind,
@@ -87,7 +77,7 @@ DistanceResult DistanceCalculator::computeDistance(KBlock *kb, TargetKind kind,
     break;
 
   case PostTarget:
-    res = tryGetPostTargetWeight(kb, weight, target);
+    res = tryGetPostTargetWeight(kb, weight);
     isInsideFunction = false;
     break;
 
@@ -97,9 +87,10 @@ DistanceResult DistanceCalculator::computeDistance(KBlock *kb, TargetKind kind,
   return DistanceResult(res, weight, isInsideFunction);
 }
 
-DistanceResult DistanceCalculator::getDistance(
-    const KInstruction *prevPC, const KInstruction *pc,
-    const ExecutionStack::call_stack_ty &frames, KBlock *target) {
+DistanceResult
+DistanceCalculator::getDistance(const KInstruction *pc,
+                                const ExecutionStack::call_stack_ty &frames,
+                                KBlock *target) {
   KBlock *kb = pc->parent;
   const auto &distanceToTargetFunction =
       codeGraphInfo.getBackwardDistance(target->parent);
@@ -203,9 +194,9 @@ WeightResult DistanceCalculator::tryGetPreTargetWeight(KBlock *kb,
   return res == Done ? Continue : res;
 }
 
-WeightResult DistanceCalculator::tryGetPostTargetWeight(KBlock *kb,
-                                                        weight_type &weight,
-                                                        KBlock *target) const {
+WeightResult
+DistanceCalculator::tryGetPostTargetWeight(KBlock *kb,
+                                           weight_type &weight) const {
   KFunction *currentKF = kb->parent;
   std::vector<KBlock *> &localTargets = currentKF->returnKBlocks;
 

@@ -20,13 +20,8 @@
 #include "klee/Solver/SolverStats.h"
 #include "klee/Support/ErrorHandling.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/CommandLine.h"
-DISABLE_WARNING_POP
 
 namespace klee {
 
@@ -72,7 +67,7 @@ Term BitwuzlaBuilder::buildArray(const char *name, unsigned indexWidth,
   return mk_const(t, std::string(name));
 }
 
-Term BitwuzlaBuilder::buildConstantArray(const char *name, unsigned indexWidth,
+Term BitwuzlaBuilder::buildConstantArray(const char *, unsigned indexWidth,
                                          unsigned valueWidth, unsigned value) {
   Sort domainSort = getBvSort(indexWidth);
   Sort rangeSort = getBvSort(valueWidth);
@@ -454,7 +449,8 @@ Term BitwuzlaBuilder::construct(ref<Expr> e, int *width_out) {
   }
 }
 
-void BitwuzlaBuilder::FPCastWidthAssert(int *width_out, char const *msg) {
+void BitwuzlaBuilder::FPCastWidthAssert([[maybe_unused]] int *width_out,
+                                        [[maybe_unused]] char const *msg) {
   assert(&(ConstantExpr::widthToFloatSemantics(*width_out)) !=
              &(llvm::APFloat::Bogus()) &&
          msg);

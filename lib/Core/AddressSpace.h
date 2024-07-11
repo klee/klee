@@ -121,7 +121,7 @@ public:
   /// \return true iff the resolution is incomplete (`maxResolutions`
   /// is non-zero and it was reached, or a query timed out).
   bool resolve(ExecutionState &state, TimingSolver *solver, ref<PointerExpr> p,
-               KType *objectType, ResolutionList &rl, ResolutionList &rlSkipped,
+               KType *objectType, ResolutionList &rl,
                unsigned maxResolutions = 0,
                time::Span timeout = time::Span()) const;
 

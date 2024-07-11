@@ -3,12 +3,8 @@
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/Casting.h"
-DISABLE_WARNING_POP
+#include <stack>
 
 using namespace klee;
 using namespace llvm;
@@ -154,7 +150,7 @@ Path::TransitionKind Path::getTransitionKind(KBlock *a, KBlock *b) {
       return TransitionKind::StepInto;
     }
   }
-  if (auto rb = dyn_cast<KReturnBlock>(a)) {
+  if (isa<KReturnBlock>(a)) {
     return TransitionKind::StepOut;
   }
   assert(a->parent == b->parent);

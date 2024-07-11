@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Passes.h"
-#include <unordered_set>
 
 namespace klee {
 

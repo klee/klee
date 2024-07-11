@@ -5,7 +5,6 @@
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/SourceBuilder.h"
 
-#include <iostream>
 #include <vector>
 
 int finished = 0;

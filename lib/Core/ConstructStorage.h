@@ -13,6 +13,7 @@
 #include "klee/ADT/FixedSizeStorageAdapter.h"
 #include "klee/ADT/SparseStorage.h"
 #include "klee/Expr/Expr.h"
+#include "klee/Support/CompilerWarning.h"
 
 #include <cassert>
 #include <functional>
@@ -65,6 +66,7 @@ constructStorage(ref<Expr> size, const ValueType &defaultValue,
   }
   default:
     assert(0 && "unhandled memory type");
+    unreachable();
   }
 }
 
@@ -90,6 +92,7 @@ constructStorage(size_t size, size_t treshold = MaxFixedSizeStructureSize) {
   }
   default:
     assert(0 && "unhandled memory type");
+    unreachable();
   }
 }
 } // namespace klee

@@ -60,7 +60,8 @@ static void __create_new_dfile(exe_disk_file_t *dfile, unsigned size,
   if (!standart_io) {
     char read_bytes_name[64];
     char write_bytes_name[64];
-    for (const char *sp = name; *sp; ++sp) {
+    const char *sp = name;
+    for (; *sp; ++sp) {
       read_bytes_name[sp - name] = *sp;
       write_bytes_name[sp - name] = *sp;
     }
@@ -119,7 +120,7 @@ static void __create_new_dfile(exe_disk_file_t *dfile, unsigned size,
   dfile->stat = s;
 }
 
-static unsigned __sym_uint32(const char *name) {
+__attribute__((unused)) static unsigned __sym_uint32(const char *name) {
   unsigned x;
   klee_make_symbolic(&x, sizeof x, name);
   return x;
@@ -162,8 +163,8 @@ void klee_init_fds(unsigned n_files, unsigned file_length,
     unsigned int i;
     for (i = 0; i < stdin_length; i++) {
       klee_prefer_cex(__exe_fs.sym_stdin,
-                      32 <= __exe_fs.sym_stdin->contents[i] &
-                          __exe_fs.sym_stdin->contents[i] <= 126);
+                      (32 <= __exe_fs.sym_stdin->contents[i]) &
+                          (__exe_fs.sym_stdin->contents[i] <= 126));
     }
     __exe_env.fds[0].dfile = __exe_fs.sym_stdin;
     off64_t *ptr = malloc(sizeof(off64_t));

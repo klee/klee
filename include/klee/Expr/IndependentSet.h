@@ -10,13 +10,8 @@
 #include "klee/Expr/ExprHashMap.h"
 #include "klee/Expr/Symcrete.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/raw_ostream.h"
-DISABLE_WARNING_POP
 
-#include <map>
 #include <set>
 #include <string>
 #include <vector>

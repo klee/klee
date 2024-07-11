@@ -112,8 +112,8 @@ ObjectState *AddressSpace::getWriteable(const MemoryObject *mo,
 
 ///
 
-bool AddressSpace::resolveOne(ref<ConstantPointerExpr> address,
-                              KType *objectType, ObjectPair &result) const {
+bool AddressSpace::resolveOne(ref<ConstantPointerExpr> address, KType *,
+                              ObjectPair &result) const {
   uint64_t baseConst = address->getConstantBase()->getZExtValue();
   uint64_t addressConst = address->getConstantValue()->getZExtValue();
   MemoryObject hack(baseConst);
@@ -143,9 +143,8 @@ bool AddressSpace::resolveOne(ref<ConstantPointerExpr> address,
 
 bool AddressSpace::resolveOneIfUnique(ExecutionState &state,
                                       TimingSolver *solver,
-                                      ref<PointerExpr> address,
-                                      KType *objectType, ObjectPair &result,
-                                      bool &success) const {
+                                      ref<PointerExpr> address, KType *,
+                                      ObjectPair &result, bool &success) const {
   ref<Expr> base = address->getBase();
   ref<Expr> uniqueAddress = base;
   if (!isa<ConstantExpr>(uniqueAddress) &&
@@ -325,8 +324,8 @@ int AddressSpace::checkPointerInObject(ExecutionState &state,
 
 bool AddressSpace::resolve(ExecutionState &state, TimingSolver *solver,
                            ref<PointerExpr> p, KType *objectType,
-                           ResolutionList &rl, ResolutionList &rlSkipped,
-                           unsigned maxResolutions, time::Span timeout) const {
+                           ResolutionList &rl, unsigned maxResolutions,
+                           time::Span timeout) const {
   ResolvePredicate predicate(state, p, objectType, complete);
   if (ref<ConstantPointerExpr> CP = dyn_cast<ConstantPointerExpr>(p)) {
     ObjectPair res;

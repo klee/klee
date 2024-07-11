@@ -13,7 +13,6 @@
 
 #include "klee/ADT/Ref.h"
 #include "gtest/gtest.h"
-#include <iostream>
 
 using klee::ref;
 

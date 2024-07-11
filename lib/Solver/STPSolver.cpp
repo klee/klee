@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 #include "klee/Config/config.h"
+#include "klee/Solver/SolverStats.h"
+#include "klee/Statistics/TimerStatIncrementer.h"
 
 #ifdef ENABLE_STP
 
@@ -20,12 +22,8 @@
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/OptionCategories.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errno.h"
-DISABLE_WARNING_POP
 
 #include <array>
 #include <csignal>
@@ -104,7 +102,7 @@ public:
   void setCoreSolverTimeout(time::Span timeout) override {
     this->timeout = timeout;
   }
-  void notifyStateTermination(std::uint32_t id) override {}
+  void notifyStateTermination(std::uint32_t) override {}
 
   bool computeTruth(const Query &, bool &isValid) override;
   bool computeValue(const Query &, ref<Expr> &result) override;
@@ -286,7 +284,7 @@ runAndGetCex(::VC vc, STPBuilder *builder, ::VCExpr q,
   return SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE;
 }
 
-static void stpTimeoutHandler(int x) { _exit(52); }
+static void stpTimeoutHandler(int) { _exit(52); }
 
 static SolverImpl::SolverRunStatus
 runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,

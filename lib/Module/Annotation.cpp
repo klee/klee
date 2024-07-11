@@ -7,17 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Module/Annotation.h"
+#include "klee/Support/CompilerWarning.h"
 #include "klee/Support/ErrorHandling.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include <llvm/Support/raw_ostream.h>
-DISABLE_WARNING_POP
 
 #include "nlohmann/json.hpp"
 
 #include <fstream>
+#include <map>
+#include <vector>
 
 namespace klee {
 
@@ -167,6 +166,8 @@ Ptr stringToKindPtr(const std::string &str) {
     return std::make_shared<Alloc>(str);
   case Statement::Kind::Free:
     return std::make_shared<Free>(str);
+  default:
+    unreachable();
   }
 }
 

@@ -38,12 +38,12 @@ public:
   /* Returns name of inner value if so exists. */
   [[nodiscard]] virtual llvm::StringRef getName() const;
 
-  [[nodiscard]] virtual bool operator<(const KValue &rhs) const = 0;
+  [[nodiscard]] virtual bool operator<(const KValue &) const = 0;
   [[nodiscard]] virtual unsigned hash() const = 0;
 
   /* Kind of value. Serves for llvm rtti purposes. */
   [[nodiscard]] Kind getKind() const { return kind; }
-  [[nodiscard]] static bool classof(const KValue *rhs) { return true; }
+  [[nodiscard]] static bool classof(const KValue *) { return true; }
 
   virtual ~KValue() = default;
 };

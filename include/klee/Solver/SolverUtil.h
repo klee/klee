@@ -165,16 +165,16 @@ public:
   virtual ResponseKind getResponseKind() const = 0;
 
   virtual bool tryGetInitialValuesFor(
-      const std::vector<const Array *> &objects,
-      std::vector<SparseStorageImpl<unsigned char>> &values) const {
+      const std::vector<const Array *> &,
+      std::vector<SparseStorageImpl<unsigned char>> &) const {
     return false;
   }
 
-  virtual bool tryGetInitialValues(Assignment::bindings_ty &values) const {
+  virtual bool tryGetInitialValues(Assignment::bindings_ty &) const {
     return false;
   }
 
-  virtual bool tryGetValidityCore(ValidityCore &validityCore) { return false; }
+  virtual bool tryGetValidityCore(ValidityCore &) { return false; }
 
   static bool classof(const SolverResponse *) { return true; }
 
@@ -333,7 +333,7 @@ public:
     return b.getResponseKind() == ResponseKind::Unknown;
   }
 
-  bool lessThen(const SolverResponse &b) const { return false; }
+  bool lessThen(const SolverResponse &) const { return false; }
 
   void dump() { llvm::errs() << "Unknown response"; }
 };

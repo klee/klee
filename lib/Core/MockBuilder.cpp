@@ -656,7 +656,8 @@ void MockBuilder::buildAnnotationForExternalFunctionReturn(
 }
 
 void MockBuilder::buildAnnotationForExternalFunctionProperties(
-    llvm::Function *func, const std::set<Statement::Property> &properties) {
+    [[maybe_unused]] llvm::Function *func,
+    const std::set<Statement::Property> &properties) {
   for (const auto &property : properties) {
     switch (property) {
     case Statement::Property::Deterministic:

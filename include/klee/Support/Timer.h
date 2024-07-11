@@ -12,11 +12,7 @@
 
 #include "klee/System/Time.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/SmallVector.h"
-DISABLE_WARNING_POP
 
 #include <functional>
 #include <memory>

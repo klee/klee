@@ -10,7 +10,6 @@
 #include "klee/Expr/ArrayExprOptimizer.h"
 
 #include "klee/ADT/BitArray.h"
-#include "klee/Config/Version.h"
 #include "klee/Expr/ArrayExprRewriter.h"
 #include "klee/Expr/ArrayExprVisitor.h"
 #include "klee/Expr/Assignment.h"
@@ -20,12 +19,8 @@
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/OptionCategories.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/CommandLine.h"
-DISABLE_WARNING_POP
 
 #include <algorithm>
 #include <cassert>

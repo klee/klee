@@ -16,12 +16,8 @@
 #include "klee/Module/KModule.h"
 #include "klee/Support/PrintContext.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-DISABLE_WARNING_POP
 
 #include <map>
 #include <vector>
@@ -275,7 +271,7 @@ private:
     printUpdateList(re->updates, PC);
   }
 
-  void printExtract(const ExtractExpr *ee, PrintContext &PC, unsigned indent) {
+  void printExtract(const ExtractExpr *ee, PrintContext &PC) {
     PC << ee->offset << ' ';
     print(ee->expr, PC);
   }
@@ -466,7 +462,7 @@ public:
         if (const ReadExpr *re = dyn_cast<ReadExpr>(e)) {
           printRead(re, PC, indent);
         } else if (const ExtractExpr *ee = dyn_cast<ExtractExpr>(e)) {
-          printExtract(ee, PC, indent);
+          printExtract(ee, PC);
         } else if (e->getKind() == Expr::Concat || e->getKind() == Expr::SExt)
           printExpr(e.get(), PC, indent, true);
         else

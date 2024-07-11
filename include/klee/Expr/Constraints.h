@@ -21,7 +21,6 @@
 #include "klee/Expr/Path.h"
 #include "klee/Expr/Symcrete.h"
 
-#include <set>
 #include <vector>
 
 namespace klee {

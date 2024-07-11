@@ -10,6 +10,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Config/config.h"
+#include "klee/Solver/SolverStats.h"
+#include "klee/Statistics/TimerStatIncrementer.h"
 
 #ifdef ENABLE_BITWUZLA
 
@@ -23,8 +25,6 @@
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverImpl.h"
-#include "klee/Support/ErrorHandling.h"
-#include "klee/Support/FileHandling.h"
 #include "klee/Support/OptionCategories.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
@@ -52,16 +52,12 @@ llvm::cl::opt<unsigned> BitwuzlaVerbosityLevel(
     llvm::cl::cat(klee::SolvingCat));
 } // namespace
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/ErrorHandling.h"
-DISABLE_WARNING_POP
 
 namespace {
 bool interrupted = false;
 
-void signal_handler(int signum) { interrupted = true; }
+void signal_handler(int) { interrupted = true; }
 } // namespace
 
 namespace klee {
@@ -680,8 +676,8 @@ public:
   BitwuzlaNonIncSolverImpl() = default;
 
   /// implementation of BitwuzlaSolverImpl interface
-  Bitwuzla &initNativeBitwuzla(const ConstraintQuery &query,
-                               BitwuzlaASTIncSet &assertions) override {
+  Bitwuzla &initNativeBitwuzla(const ConstraintQuery &,
+                               BitwuzlaASTIncSet &) override {
     theSolver.emplace(solverParameters);
     return theSolver.value();
   }
@@ -690,7 +686,7 @@ public:
     deleteNativeBitwuzla(theSolver);
   }
 
-  void push(Bitwuzla &s) override {}
+  void push(Bitwuzla &) override {}
 
   /// implementation of the SolverImpl interface
   bool computeTruth(const Query &query, bool &isValid) override {
@@ -723,7 +719,7 @@ public:
     return BitwuzlaSolverImpl::computeValidityCore(
         ConstraintQuery(query, false), env, validityCore, isValid);
   }
-  void notifyStateTermination(std::uint32_t id) override {}
+  void notifyStateTermination(std::uint32_t) override {}
 };
 
 BitwuzlaSolver::BitwuzlaSolver()
@@ -867,11 +863,11 @@ public:
   BitwuzlaTreeSolverImpl(size_t maxSolvers) : maxSolvers(maxSolvers){};
 
   /// implementation of BitwuzlaSolverImpl interface
-  Bitwuzla &initNativeBitwuzla(const ConstraintQuery &query,
-                               BitwuzlaASTIncSet &assertions) override {
+  Bitwuzla &initNativeBitwuzla(const ConstraintQuery &,
+                               BitwuzlaASTIncSet &) override {
     return currentSolver->getOrInit();
   }
-  void deinitNativeBitwuzla(Bitwuzla &theSolver) override {
+  void deinitNativeBitwuzla(Bitwuzla &) override {
     assert(currentSolver->isConsistent());
     solvers.push_back(std::move(currentSolver));
   }

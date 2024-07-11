@@ -13,15 +13,10 @@
 #include "klee/Expr/ArrayExprVisitor.h"
 #include "klee/Support/Casting.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/APInt.h"
-DISABLE_WARNING_POP
 
 #include <cassert>
 #include <cstdint>
-#include <set>
 #include <utility>
 
 using namespace klee;
@@ -90,7 +85,10 @@ ref<Expr> ExprRewriter::rewrite(const ref<Expr> &e, const array2idx_ty &arrays,
           set++;
         }
         if (set > 0 && set < size / width)
-          invert = ((float)set / (float)(size / width)) > 0.5 ? true : false;
+          invert = (static_cast<float>(set) / (static_cast<float>(size) /
+                                               static_cast<float>(width))) > 0.5
+                       ? true
+                       : false;
         int start = -1;
         for (unsigned i = 0; i < size / width; ++i) {
           if ((!invert && ba.get(i)) || (invert && !ba.get(i))) {

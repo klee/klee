@@ -1,8 +1,6 @@
 #ifndef KLEE_INDEPENDENTCONSTRAINTSETUNION_H
 #define KLEE_INDEPENDENTCONSTRAINTSETUNION_H
 
-#include "klee/ADT/Either.h"
-
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/IndependentSet.h"
 

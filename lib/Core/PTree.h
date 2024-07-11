@@ -12,13 +12,8 @@
 
 #include "klee/Core/BranchTypes.h"
 #include "klee/Expr/Expr.h"
-#include "klee/Support/ErrorHandling.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/PointerIntPair.h"
-DISABLE_WARNING_POP
 
 namespace klee {
 class ExecutionState;
@@ -60,7 +55,7 @@ public:
   ~PTree() = default;
 
   void attach(PTreeNode *node, ExecutionState *leftState,
-              ExecutionState *rightState, BranchType reason);
+              ExecutionState *rightState);
   void remove(PTreeNode *node);
   void dump(llvm::raw_ostream &os);
   std::uint32_t getID() const { return id; };

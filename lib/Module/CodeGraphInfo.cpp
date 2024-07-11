@@ -12,11 +12,7 @@
 
 #include "klee/Module/KModule.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/CFG.h"
-DISABLE_WARNING_POP
 
 #include <deque>
 #include <unordered_map>

@@ -11,16 +11,12 @@
 #include "klee/Core/Context.h"
 
 #include "klee/ADT/Either.h"
-#include "klee/Config/Version.h"
 #include "klee/Core/Interpreter.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Module/KModule.h"
 #include "klee/Solver/Solver.h"
 #include "klee/Support/ErrorHandling.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/IR/Constants.h"
@@ -28,10 +24,7 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/Support/raw_ostream.h"
-DISABLE_WARNING_POP
 
 #include <cassert>
 
@@ -39,8 +32,8 @@ using namespace llvm;
 
 namespace klee {
 extern llvm::cl::opt<unsigned> X86FPAsX87FP80;
-ref<Expr> X87FP80ToFPTrunc(ref<Expr> arg, Expr::Width type,
-                           llvm::APFloat::roundingMode rm) {
+ref<Expr> X87FP80ToFPTrunc(ref<Expr> arg, [[maybe_unused]] Expr::Width type,
+                           [[maybe_unused]] llvm::APFloat::roundingMode rm) {
   ref<Expr> result = arg;
 #ifdef ENABLE_FP
   Expr::Width resultType = type;
@@ -281,7 +274,7 @@ ref<Expr> Executor::evalConstantExpr(const llvm::ConstantExpr *ce,
   llvm::Type *type = ce->getType();
 
   ref<Expr> op1(0), op2(0), op3(0);
-  bool isPointer1(false), isPointer2(false), isPointer3(false);
+  [[maybe_unused]] bool isPointer1(false), isPointer2(false), isPointer3(false);
   int numOperands = ce->getNumOperands();
 
   if (numOperands > 0) {

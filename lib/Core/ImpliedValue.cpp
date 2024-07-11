@@ -9,9 +9,6 @@
 
 #include "ImpliedValue.h"
 
-#include "klee/Core/Context.h"
-
-#include "klee/Expr/Constraints.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Solver/Solver.h"

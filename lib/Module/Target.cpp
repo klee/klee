@@ -10,10 +10,10 @@
 #include "klee/Module/Target.h"
 #include "klee/Module/TargetHash.h"
 
-#include "klee/Module/CodeGraphInfo.h"
 #include "klee/Module/KInstruction.h"
 
-#include <set>
+#include <llvm/Support/CommandLine.h>
+
 #include <sstream>
 #include <vector>
 

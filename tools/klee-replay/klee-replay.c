@@ -11,7 +11,6 @@
 
 #include "klee/ADT/KTest.h"
 
-#include <assert.h>
 #include <errno.h>
 #include <getopt.h>
 #include <stdint.h>
@@ -120,7 +119,7 @@ static void int_handler(int signal) {
   }
 }
 
-static void timeout_handler(int signal) {
+static void timeout_handler(__attribute__((unused)) int signum) {
   fprintf(stderr, "KLEE-REPLAY: NOTE: EXIT STATUS: TIMED OUT (%d seconds)\n",
           monitored_timeout);
   if (monitored_pid) {
@@ -168,7 +167,9 @@ static inline char *strip_root_dir(char *executable, char *rootdir) {
   return executable + strlen(rootdir);
 }
 
-static void run_monitored(char *executable, int argc, char **argv) {
+static void run_monitored(__attribute__((unused)) char *executable,
+                          __attribute__((unused)) int argc,
+                          __attribute__((unused)) char **argv) {
   int pid;
   const char *t = getenv("KLEE_REPLAY_TIMEOUT");
   if (!t)
@@ -458,11 +459,17 @@ unsigned klee_assume(uintptr_t x) {
   return 0;
 }
 
-unsigned klee_is_symbolic(uintptr_t x) { return 0; }
+unsigned klee_is_symbolic(__attribute__((unused)) uintptr_t x) { return 0; }
 
-void klee_prefer_cex(void *buffer, uintptr_t condition) { ; }
+void klee_prefer_cex(__attribute__((unused)) void *buffer,
+                     __attribute__((unused)) uintptr_t condition) {
+  ;
+}
 
-void klee_posix_prefer_cex(void *buffer, uintptr_t condition) { ; }
+void klee_posix_prefer_cex(__attribute__((unused)) void *buffer,
+                           __attribute__((unused)) uintptr_t condition) {
+  ;
+}
 
 void klee_make_symbolic(void *addr, size_t nbytes, const char *name) {
   if (obj_index >= input->numObjects) {
@@ -510,12 +517,14 @@ int klee_range(int start, int end, const char *name) {
   }
 }
 
-void klee_report_error(const char *file, int line, const char *message,
-                       const char *suffix) {
+void klee_report_error(__attribute__((unused)) const char *file,
+                       __attribute__((unused)) int line,
+                       __attribute__((unused)) const char *message,
+                       __attribute__((unused)) const char *suffix) {
   __emit_error(message);
 }
 
-void klee_mark_global(void *object) { ; }
+void klee_mark_global(__attribute__((unused)) void *object) { ; }
 
 /*** HELPER FUNCTIONS ***/
 

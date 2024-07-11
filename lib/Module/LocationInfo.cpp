@@ -10,21 +10,14 @@
 #include "klee/Module/LocationInfo.h"
 #include "klee/Module/SarifReport.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/Support/FormattedStream.h"
-DISABLE_WARNING_POP
+#include <llvm/IR/GlobalVariable.h>
 
-#include <cstdint>
 #include <optional>
 
 namespace klee {

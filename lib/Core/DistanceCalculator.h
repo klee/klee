@@ -51,7 +51,7 @@ public:
 
   DistanceResult getDistance(const ExecutionState &es, KBlock *target);
 
-  DistanceResult getDistance(const KInstruction *prevPC, const KInstruction *pc,
+  DistanceResult getDistance(const KInstruction *pc,
                              const ExecutionStack::call_stack_ty &frames,
                              KBlock *target);
 
@@ -118,8 +118,7 @@ private:
                                      KBlock *target) const;
   WeightResult tryGetTargetWeight(KBlock *kb, weight_type &weight,
                                   KBlock *target) const;
-  WeightResult tryGetPostTargetWeight(KBlock *kb, weight_type &weight,
-                                      KBlock *target) const;
+  WeightResult tryGetPostTargetWeight(KBlock *kb, weight_type &weight) const;
 };
 } // namespace klee
 

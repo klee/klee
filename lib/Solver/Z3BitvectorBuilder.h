@@ -10,22 +10,17 @@
 
 #ifndef KLEE_Z3_BITVECTOR_BUILDER_H
 #define KLEE_Z3_BITVECTOR_BUILDER_H
-#include "Z3BitvectorBuilder.h"
 #include "Z3Builder.h"
-#include "klee/Config/config.h"
-#include "klee/Expr/ArrayExprHash.h"
-#include "klee/Expr/ExprHashMap.h"
 
-#include <unordered_map>
 #include <z3.h>
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/APFloat.h"
-DISABLE_WARNING_POP
 
 namespace klee {
+
+class Expr;
+template <typename T> class ref;
+
 class Z3BitvectorBuilder : public Z3Builder {
 private:
   void FPCastWidthAssert(int *width_out, char const *msg);

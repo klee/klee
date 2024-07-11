@@ -12,27 +12,18 @@
 
 #include "CodeLocation.h"
 #include "MemoryManager.h"
-#include "TimingSolver.h"
 #include "klee/ADT/Ref.h"
 #include "klee/ADT/SparseStorage.h"
-#include "klee/Core/Context.h"
 
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Expr/SourceBuilder.h"
-
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
-#include "llvm/ADT/StringExtras.h"
-DISABLE_WARNING_POP
 
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
-#include <vector>
 
 namespace llvm {
 class Value;

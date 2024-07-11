@@ -12,35 +12,27 @@
 #include "ConstructStorage.h"
 #include "ExecutionState.h"
 #include "MemoryManager.h"
+#include "klee/ADT/Bits.h"
 #include "klee/ADT/Ref.h"
 #include "klee/ADT/SparseStorage.h"
 #include "klee/Core/Context.h"
 
 #include "CodeLocation.h"
-#include "klee/ADT/BitArray.h"
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/Expr.h"
 #include "klee/Module/KType.h"
 #include "klee/Solver/Solver.h"
 #include "klee/Support/ErrorHandling.h"
-#include "klee/Support/OptionCategories.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-DISABLE_WARNING_POP
 
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
-#include <functional>
-#include <sstream>
 
 namespace klee {
 llvm::cl::opt<MemoryType> MemoryBackend(
@@ -167,7 +159,7 @@ ref<Expr> ObjectState::read8(ref<Expr> offset) const {
         std::string allocInfo = object->getAllocInfo();
         klee_warning_once(nullptr,
                           "Symbolic memory access will send the following "
-                          "array of %lu bytes to "
+                          "array of %" PRId64 " bytes to "
                           "the constraint solver -- large symbolic arrays may "
                           "cause significant "
                           "performance issues: %s",
@@ -196,7 +188,7 @@ ref<Expr> ObjectState::readValue8(ref<Expr> offset) const {
         std::string allocInfo = object->getAllocInfo();
         klee_warning_once(nullptr,
                           "Symbolic memory access will send the following "
-                          "array of %lu bytes to "
+                          "array of %" PRId64 " bytes to "
                           "the constraint solver -- large symbolic arrays may "
                           "cause significant "
                           "performance issues: %s",
@@ -219,7 +211,7 @@ ref<Expr> ObjectState::readBase8(ref<Expr> offset) const {
         std::string allocInfo = object->getAllocInfo();
         klee_warning_once(nullptr,
                           "Symbolic memory access will send the following "
-                          "array of %lu bytes to "
+                          "array of %" PRId64 " bytes to "
                           "the constraint solver -- large symbolic arrays may "
                           "cause significant "
                           "performance issues: %s",
@@ -261,7 +253,7 @@ void ObjectState::write8(ref<Expr> offset, ref<Expr> value) {
       std::string allocInfo = object->getAllocInfo();
       klee_warning_once(nullptr,
                         "Symbolic memory access will send the following array "
-                        "of %lu bytes to "
+                        "array of %" PRId64 " bytes to "
                         "the constraint solver -- large symbolic arrays may "
                         "cause significant "
                         "performance issues: %s",

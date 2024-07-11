@@ -11,13 +11,7 @@
 #ifndef KLEE_BITWUZLAHASHCONFIG_H
 #define KLEE_BITWUZLAHASHCONFIG_H
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/CommandLine.h"
-DISABLE_WARNING_POP
-
-#include <atomic>
 
 namespace BitwuzlaHashConfig {
 extern llvm::cl::opt<bool> UseConstructHashBitwuzla;

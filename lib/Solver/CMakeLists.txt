@@ -48,7 +48,9 @@ target_link_libraries(kleaverSolver PRIVATE
   kleeSupport
   kleeModule
   ${KLEE_SOLVER_LIBRARIES})
-target_include_directories(kleaverSolver PRIVATE ${KLEE_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS} ${KLEE_SOLVER_INCLUDE_DIRS})
+
+target_include_directories(kleaverSolver PRIVATE ${KLEE_INCLUDE_DIRS})
+target_include_directories(kleaverSolver SYSTEM PRIVATE ${KLEE_SOLVER_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})
 target_compile_options(kleaverSolver PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
 target_compile_definitions(kleaverSolver PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})
 

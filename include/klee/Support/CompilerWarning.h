@@ -37,5 +37,13 @@
 #define DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #endif
 
+/// @brief marks instructions as unreachable
+/// From C++23 in std: https://en.cppreference.com/w/cpp/utility/unreachable
+__attribute__((noreturn)) inline void unreachable() {
+#if defined(__GNUC__) || defined(__clang__)
+  __builtin_unreachable();
+#endif
+}
+
 #endif // KLEE_INCLUDE_KLEE_SUPPORT_COMPILERWARNING_H
 // clang-format off

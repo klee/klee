@@ -12,18 +12,14 @@
  * data that are common to both KLEE and Kleaver.
  */
 
+#include "klee/Config/config.h"
+
 #include "klee/Solver/SolverCmdLine.h"
 
-#include "klee/Config/Version.h"
 #include "klee/Support/OptionCategories.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/CommandLine.h"
-DISABLE_WARNING_POP
 
 using namespace llvm;
 

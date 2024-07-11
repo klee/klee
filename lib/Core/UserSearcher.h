@@ -10,12 +10,6 @@
 #ifndef KLEE_USERSEARCHER_H
 #define KLEE_USERSEARCHER_H
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
-#include "llvm/Support/CommandLine.h"
-DISABLE_WARNING_POP
-
 namespace klee {
 class Executor;
 class Searcher;

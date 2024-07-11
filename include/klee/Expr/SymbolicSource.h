@@ -4,17 +4,12 @@
 #include "klee/ADT/Ref.h"
 
 #include "klee/ADT/SparseStorage.h"
-#include "klee/Support/CompilerWarning.h"
-#include <memory>
 
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Argument.h"
-#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
-DISABLE_WARNING_POP
 
+#include <memory>
 #include <set>
 #include <string>
 #include <vector>
@@ -290,7 +285,7 @@ public:
     return S->getKind() == Kind::Argument;
   }
 
-  static bool classof(const ArgumentSource *S) { return true; }
+  static bool classof(const ArgumentSource *) { return true; }
 
   const llvm::Value &value() const override { return allocSite; }
 
@@ -313,7 +308,7 @@ public:
     return S->getKind() == Kind::Instruction;
   }
 
-  static bool classof(const InstructionSource *S) { return true; }
+  static bool classof(const InstructionSource *) { return true; }
 
   const llvm::Value &value() const override { return allocSite; }
 

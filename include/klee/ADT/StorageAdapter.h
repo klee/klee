@@ -2,6 +2,7 @@
 #define KLEE_STORAGEADAPTER_H
 
 #include "klee/ADT/PersistentHashMap.h"
+#include "klee/Support/CompilerWarning.h"
 
 #ifndef IMMER_NO_EXCEPTIONS
 #define IMMER_NO_EXCEPTIONS
@@ -139,6 +140,7 @@ struct StorageAdapter {
       }
       default:
         assert(0 && "unhandled iterator kind");
+        unreachable();
       }
     }
     ~iterator() {
@@ -157,6 +159,7 @@ struct StorageAdapter {
       }
       default:
         assert(0 && "unhandled iterator kind");
+        unreachable();
       }
     }
 
@@ -177,6 +180,7 @@ struct StorageAdapter {
       }
       default:
         assert(0 && "unhandled iterator kind");
+        unreachable();
       }
       return *this;
     }
@@ -193,6 +197,7 @@ struct StorageAdapter {
       }
       default:
         assert(0 && "unhandled iterator kind");
+        unreachable();
       }
     }
     bool operator!=(const iterator &other) const {
@@ -208,6 +213,7 @@ struct StorageAdapter {
       }
       default:
         assert(0 && "unhandled iterator kind");
+        unreachable();
       }
     }
   };

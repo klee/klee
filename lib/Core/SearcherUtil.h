@@ -3,8 +3,6 @@
 #define KLEE_SEARCHERUTIL_H
 
 #include "ExecutionState.h"
-#include "klee/Expr/Path.h"
-#include "klee/Module/KInstruction.h"
 
 namespace klee {
 

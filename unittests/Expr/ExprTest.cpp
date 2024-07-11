@@ -8,7 +8,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "gtest/gtest.h"
-#include <iostream>
 
 #include "klee/Expr/ArrayCache.h"
 #include "klee/Expr/Expr.h"

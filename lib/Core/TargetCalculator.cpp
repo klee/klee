@@ -15,6 +15,8 @@
 #include "klee/Module/KInstruction.h"
 #include "klee/Module/Target.h"
 #include "klee/Module/TargetHash.h"
+#include "klee/Support/CompilerWarning.h"
+#include "klee/Support/OptionCategories.h"
 
 #include <set>
 #include <vector>
@@ -33,8 +35,6 @@ llvm::cl::opt<TrackCoverageBy> TrackCoverage(
     cl::init(TrackCoverageBy::None), cl::cat(ExecCat));
 
 void TargetCalculator::update(const ExecutionState &state) {
-  Function *initialFunction = state.getInitPCBlock()->getParent();
-
   if (state.prevPC == state.prevPC->parent->getLastInstruction() &&
       !fullyCoveredFunctions.count(state.pc->parent->parent)) {
     auto &fBranches = getCoverageTargets(state.pc->parent->parent);
@@ -160,11 +160,11 @@ TargetCalculator::getCoverageTargets(KFunction *kf) {
   case TrackCoverageBy::Branches:
     return codeGraphInfo.getFunctionConditionalBranches(kf);
   case TrackCoverageBy::None:
+    [[fallthrough]];
   case TrackCoverageBy::All:
     return codeGraphInfo.getFunctionBranches(kf);
-
   default:
-    assert(0 && "not implemented");
+    unreachable();
   }
 }
 

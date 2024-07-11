@@ -38,6 +38,7 @@ target_link_libraries(kleaverExpr PRIVATE
 )
 
 llvm_config(kleaverExpr "${USE_LLVM_SHARED}" support)
-target_include_directories(kleaverExpr PRIVATE ${KLEE_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})
+target_include_directories(kleaverExpr SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
+target_include_directories(kleaverExpr PRIVATE ${KLEE_INCLUDE_DIRS})
 target_compile_options(kleaverExpr PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
 target_compile_definitions(kleaverExpr PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})

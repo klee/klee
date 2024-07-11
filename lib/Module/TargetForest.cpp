@@ -11,11 +11,8 @@
 
 #include "klee/Core/TargetedExecutionReporter.h"
 #include "klee/Expr/Expr.h"
-#include "klee/Module/KInstruction.h"
 #include "klee/Module/KModule.h"
 #include "klee/Module/TargetHash.h"
-
-#include "klee/Support/ErrorHandling.h"
 
 using namespace klee;
 using namespace llvm;
@@ -379,7 +376,6 @@ TargetForest::Layer *TargetForest::Layer::replaceChildWith(
 }
 
 TargetForest::Layer *TargetForest::Layer::replaceChildWith(
-    ref<Target> child,
     const std::unordered_set<ref<UnorderedTargetsSet>, UnorderedTargetsSetHash,
                              UnorderedTargetsSetCmp> &other) const {
   std::vector<Layer *> layers;
@@ -504,7 +500,7 @@ void TargetForest::stepTo(ref<Target> loc) {
     return;
   }
   history = history->add(loc);
-  forest = forest->replaceChildWith(loc, res->second);
+  forest = forest->replaceChildWith(res->second);
 }
 
 void TargetForest::add(ref<Target> target) {

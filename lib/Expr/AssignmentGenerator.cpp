@@ -12,20 +12,12 @@
 #include "klee/Expr/Assignment.h"
 #include "klee/Support/Casting.h"
 #include "klee/Support/ErrorHandling.h"
-#include "klee/klee.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/raw_ostream.h"
-DISABLE_WARNING_POP
 
 #include <cassert>
 #include <cstdint>
-#include <map>
-#include <set>
-#include <stddef.h>
 #include <string>
 #include <utility>
 

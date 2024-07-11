@@ -59,6 +59,8 @@ llvm_config(kleeModule "${USE_LLVM_SHARED}"
 target_link_libraries(kleeModule PRIVATE
   kleeSupport
 )
-target_include_directories(kleeModule PRIVATE ${KLEE_INCLUDE_DIRS} ${LLVM_INCLUDE_DIRS})
+
+target_include_directories(kleeModule SYSTEM PRIVATE ${LLVM_INCLUDE_DIRS})
+target_include_directories(kleeModule PRIVATE ${KLEE_INCLUDE_DIRS})
 target_compile_options(kleeModule PRIVATE ${KLEE_COMPONENT_CXX_FLAGS})
 target_compile_definitions(kleeModule PRIVATE ${KLEE_COMPONENT_CXX_DEFINES})

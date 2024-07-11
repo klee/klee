@@ -10,13 +10,7 @@
 #ifndef KLEE_CASTING_H
 #define KLEE_CASTING_H
 
-#include "klee/Config/Version.h"
-
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/Casting.h"
-DISABLE_WARNING_POP
 
 namespace klee {
 

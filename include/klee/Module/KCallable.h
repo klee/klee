@@ -11,15 +11,10 @@
 #define KLEE_KCALLABLE_H
 
 #include "klee/Module/KValue.h"
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/Twine.h"
-#include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/Casting.h"
-DISABLE_WARNING_POP
 
 #include <functional>
 #include <string>

@@ -78,6 +78,8 @@ set(COMMON_CC_FLAGS
         -D__STDC_CONSTANT_MACROS
         -Wall
         -Wwrite-strings
+        -Wno-unused-command-line-argument
+        -Wno-override-module
         -Xclang
         -disable-O0-optnone
         )

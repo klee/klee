@@ -13,14 +13,7 @@
 #include "KModule.h"
 #include "KValue.h"
 
-#include "klee/Config/Version.h"
-#include "klee/Support/CompilerWarning.h"
-#include "llvm/IR/Argument.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
-#include "llvm/Support/DataTypes.h"
 #include "llvm/Support/raw_ostream.h"
-DISABLE_WARNING_POP
 
 #include <unordered_map>
 #include <vector>

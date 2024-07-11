@@ -51,7 +51,7 @@ void TargetManager::updateMiss(ExecutionState &state, ref<Target> target) {
   }
 }
 
-void TargetManager::updateContinue(ExecutionState &state, ref<Target> target) {}
+void TargetManager::updateContinue(ExecutionState &, ref<Target>) {}
 
 void TargetManager::updateDone(ExecutionState &state, ref<Target> target) {
   auto &stateTargetForest = targetForest(state);

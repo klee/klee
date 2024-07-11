@@ -3,8 +3,6 @@
 #include "Searcher.h"
 #include "SearcherUtil.h"
 
-namespace {} // namespace
-
 namespace klee {
 
 ref<SearcherAction> ForwardOnlySearcher::selectAction() {

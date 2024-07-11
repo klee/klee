@@ -7,21 +7,29 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "klee/Config/config.h"
+
+#ifdef ENABLE_BITWUZLA
 #include "BitwuzlaSolver.h"
+#endif
+
+#ifdef ENABLE_METASMT
 #include "MetaSMTSolver.h"
+#endif
+
+#ifdef ENABLE_STP
 #include "STPSolver.h"
+#endif
+
+#ifdef ENABLE_Z3
 #include "Z3Solver.h"
+#endif
 
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverCmdLine.h"
 #include "klee/Support/ErrorHandling.h"
 
-#include "klee/Support/CompilerWarning.h"
-DISABLE_WARNING_PUSH
-DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
-DISABLE_WARNING_POP
 
 #include <memory>
 #include <string>

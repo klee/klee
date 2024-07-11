@@ -1,4 +1,5 @@
 #include "klee/Solver/SolverUtil.h"
+#include "klee/Support/CompilerWarning.h"
 
 namespace klee {
 
@@ -16,6 +17,8 @@ const char *pv_to_str(PartialValidity pv) {
     return "TrueOrFalse";
   case PValidity::None:
     return "None";
+  default:
+    unreachable();
   }
 }
 
@@ -29,6 +32,7 @@ Validity fromPartial(PartialValidity pv) {
     return Validity::Unknown;
   default:
     assert(0 && "PV not convertible to Validity");
+    unreachable();
   }
 }
 
@@ -40,13 +44,13 @@ PartialValidity toPartial(Validity v) {
     return PValidity::MustBeFalse;
   case Validity::Unknown:
     return PValidity::TrueOrFalse;
+  default:
+    unreachable();
   }
 }
 
 PartialValidity negatePartialValidity(PartialValidity pv) {
   switch (pv) {
-  default:
-    assert(0 && "invalid partial validity");
   case PValidity::MustBeTrue:
     return PValidity::MustBeFalse;
   case PValidity::MustBeFalse:
@@ -57,6 +61,9 @@ PartialValidity negatePartialValidity(PartialValidity pv) {
     return PValidity::MayBeTrue;
   case PValidity::TrueOrFalse:
     return PValidity::TrueOrFalse;
+  default:
+    assert(0 && "invalid partial validity");
+    unreachable();
   }
 }
 
