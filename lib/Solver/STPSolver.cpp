@@ -38,8 +38,8 @@ llvm::cl::opt<bool> DebugDumpSTPQueries(
     llvm::cl::desc("Dump every STP query to stderr (default=false)"),
     llvm::cl::cat(klee::SolvingCat));
 
-llvm::cl::opt<bool> IgnoreSolverFailures(
-    "ignore-solver-failures", llvm::cl::init(false),
+llvm::cl::opt<bool> IgnoreSTPFailures(
+    "ignore-stp-failures", llvm::cl::init(false),
     llvm::cl::desc("Ignore any STP solver failures (default=false)"),
     llvm::cl::cat(klee::SolvingCat));
 
@@ -327,7 +327,7 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
 
     if (res < 0) {
       klee_warning("waitpid() for STP failed");
-      if (!IgnoreSolverFailures)
+      if (!IgnoreSTPFailures)
         exit(1);
       return SolverImpl::SOLVER_RUN_STATUS_WAITPID_FAILED;
     }
@@ -338,7 +338,7 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
     if (WIFSIGNALED(status) || !WIFEXITED(status)) {
       klee_warning("STP did not return successfully.  Most likely you forgot "
                    "to run 'ulimit -s unlimited'");
-      if (!IgnoreSolverFailures) {
+      if (!IgnoreSTPFailures) {
         exit(1);
       }
       return SolverImpl::SOLVER_RUN_STATUS_INTERRUPTED;
@@ -374,7 +374,7 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
 
     // unknown return code
     klee_warning("STP did not return a recognized code");
-    if (!IgnoreSolverFailures)
+    if (!IgnoreSTPFailures)
       exit(1);
     return SolverImpl::SOLVER_RUN_STATUS_UNEXPECTED_EXIT_CODE;
   }
