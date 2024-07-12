@@ -293,9 +293,11 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
   int pid = fork();
   // - error
   if (pid == -1) {
-    klee_warning("fork failed (for STP) - %s", llvm::sys::StrError(errno).c_str());
-    if (!IgnoreSolverFailures)
-      exit(1);
+    std::string msg = "fork() failed for STP - " + llvm::sys::StrError(errno);
+    llvm::errs() << msg << "\n";
+    if (IgnoreSTPFailures)
+      klee_warning("%s", msg.c_str());
+    else klee_error("%s", msg.c_str());
     return SolverImpl::SOLVER_RUN_STATUS_FORK_FAILED;
   }
   // - child (solver)
@@ -326,9 +328,11 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
     } while (res < 0 && errno == EINTR);
 
     if (res < 0) {
-      klee_warning("waitpid() for STP failed");
-      if (!IgnoreSTPFailures)
-        exit(1);
+      const char *msg = "waitpid() for STP failed";
+      if (IgnoreSTPFailures)
+        klee_warning("%s", msg);
+      else klee_error("%s", msg);
+
       return SolverImpl::SOLVER_RUN_STATUS_WAITPID_FAILED;
     }
 
@@ -336,11 +340,12 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
     // "occasion" return a status when the process was terminated by a
     // signal, so test signal first.
     if (WIFSIGNALED(status) || !WIFEXITED(status)) {
-      klee_warning("STP did not return successfully.  Most likely you forgot "
-                   "to run 'ulimit -s unlimited'");
-      if (!IgnoreSTPFailures) {
-        exit(1);
-      }
+      const char *msg = "STP did not return successfully. "
+                        "Most likely you forgot to run 'ulimit -s unlimited'";
+      if (IgnoreSTPFailures)
+        klee_warning("%s", msg);
+      else klee_error("%s", msg);
+
       return SolverImpl::SOLVER_RUN_STATUS_INTERRUPTED;
     }
 
@@ -373,9 +378,11 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
     }
 
     // unknown return code
-    klee_warning("STP did not return a recognized code");
-    if (!IgnoreSTPFailures)
-      exit(1);
+    const char* msg = "STP did not return a recognised code";
+    if (IgnoreSTPFailures)
+      klee_warning("%s", msg);
+    else klee_error("%s", msg);
+
     return SolverImpl::SOLVER_RUN_STATUS_UNEXPECTED_EXIT_CODE;
   }
 }
