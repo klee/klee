@@ -32,10 +32,8 @@
  */
 
 #include <limits.h>
-#include <ctype.h>
-#include <errno.h>
-#include <stdlib.h>
-
+#include <stddef.h>
+#include "errno.h"
 
 /*
  * Convert a string to a long integer.
@@ -60,7 +58,7 @@ strtol(const char * nptr, char ** endptr, int base)
 	s = nptr;
 	do {
 		c = *s++;
-	} while (isspace((unsigned char)c));
+	} while (c == ' ');
 	if (c == '-') {
 		neg = 1;
 		c = *s++;

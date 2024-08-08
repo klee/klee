@@ -7,8 +7,6 @@
 //
 //===----------------------------------------------------------------------===*/
 
-#include <string.h>
-
 char *strrchr(const char *t, int c) {
   char ch;
   const char *l=0;

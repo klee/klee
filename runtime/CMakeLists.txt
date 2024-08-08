@@ -74,7 +74,6 @@ set(COMMON_CC_FLAGS
         "-I${CMAKE_SOURCE_DIR}/include"
         "-I${CMAKE_BINARY_DIR}/include"
         -D_FORTIFY_SOURCE=0
-        -D_GNU_SOURCE
         -D__STDC_LIMIT_MACROS
         -D__STDC_CONSTANT_MACROS
         -Wall
