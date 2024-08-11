@@ -9,6 +9,9 @@ install_build_dependencies_klee() {
 
   brew install python-tabulate lit
 
+  # brew does not seem to update this properly for 0.9.0_1
+  export PYTHONPATH=/opt/homebrew/Cellar/python-tabulate/0.9.0_1/libexec/lib/python3.12/site-packages
+
   # Get path of package location
   base_path=$(python3 -m site --user-base)
   export PATH="${base_path}/bin:$PATH"
