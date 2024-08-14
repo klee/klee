@@ -48,18 +48,14 @@ private:
 public:
   unsigned id;
   uint64_t address;
-
-  /// size in bytes
-  unsigned size;
-  unsigned alignment;
+  ref<Expr> size;
+  uint64_t capacity;
+  uint64_t alignment;
   mutable std::string name;
-
   bool isLocal;
   mutable bool isGlobal;
   bool isFixed;
-
   bool isUserSpecified;
-
   MemoryManager *parent;
 
   /// "Location" for which this memory object was allocated. This
@@ -73,33 +69,17 @@ public:
 
 public:
   // XXX this is just a temp hack, should be removed
-  explicit
-  MemoryObject(uint64_t _address) 
-    : id(counter++),
-      address(_address),
-      size(0),
-      alignment(0),
-      isFixed(true),
-      parent(NULL),
-      allocSite(0) {
-  }
+  explicit MemoryObject(uint64_t address)
+    : id(counter++), address(address), size(nullptr), capacity(0),
+      alignment(0), isFixed(true), parent(NULL), allocSite(0) {}
 
-  MemoryObject(uint64_t _address, unsigned _size, unsigned _alignment,
-               bool _isLocal, bool _isGlobal, bool _isFixed,
-               const llvm::Value *_allocSite,
-               MemoryManager *_parent)
-    : id(counter++),
-      address(_address),
-      size(_size),
-      alignment(_alignment),
-      name("unnamed"),
-      isLocal(_isLocal),
-      isGlobal(_isGlobal),
-      isFixed(_isFixed),
-      isUserSpecified(false),
-      parent(_parent), 
-      allocSite(_allocSite) {
-  }
+  MemoryObject(uint64_t address, ref<Expr> size, uint64_t capacity,
+               unsigned alignment, bool isLocal, bool isGlobal, bool isFixed,
+               const llvm::Value *allocSite, MemoryManager *parent)
+    : id(counter++), address(address), size(size), capacity(capacity),
+      alignment(alignment), name("unnamed"), isLocal(isLocal),
+      isGlobal(isGlobal), isFixed(isFixed), isUserSpecified(false),
+      parent(parent), allocSite(allocSite) {}
 
   ~MemoryObject();
 
@@ -113,35 +93,57 @@ public:
   ref<ConstantExpr> getBaseExpr() const { 
     return ConstantExpr::create(address, Context::get().getPointerWidth());
   }
-  ref<ConstantExpr> getSizeExpr() const { 
-    return ConstantExpr::create(size, Context::get().getPointerWidth());
+
+  ref<Expr> getSizeExpr() const {
+    return size;
   }
+
+  inline bool hasConcreteSize() const {
+    return isa<ConstantExpr>(size);
+  }
+
+  inline uint64_t getConcreteSize() const {
+    assert(hasConcreteSize());
+    return dyn_cast<ConstantExpr>(size)->getZExtValue();
+  }
+
   ref<Expr> getOffsetExpr(ref<Expr> pointer) const {
     return SubExpr::create(pointer, getBaseExpr());
   }
+
   ref<Expr> getBoundsCheckPointer(ref<Expr> pointer) const {
     return getBoundsCheckOffset(getOffsetExpr(pointer));
   }
+
   ref<Expr> getBoundsCheckPointer(ref<Expr> pointer, unsigned bytes) const {
     return getBoundsCheckOffset(getOffsetExpr(pointer), bytes);
   }
 
   ref<Expr> getBoundsCheckOffset(ref<Expr> offset) const {
-    if (size==0) {
-      return EqExpr::create(offset, 
-                            ConstantExpr::alloc(0, Context::get().getPointerWidth()));
+    if (hasConcreteSize() && getConcreteSize() == 0) {
+      return EqExpr::create(
+        offset, ConstantExpr::alloc(0, Context::get().getPointerWidth()));
     } else {
       return UltExpr::create(offset, getSizeExpr());
     }
   }
+
   ref<Expr> getBoundsCheckOffset(ref<Expr> offset, unsigned bytes) const {
-    if (bytes<=size) {
-      return UltExpr::create(offset, 
-                             ConstantExpr::alloc(size - bytes + 1, 
-                                                 Context::get().getPointerWidth()));
-    } else {
-      return ConstantExpr::alloc(0, Expr::Bool);
+    if (hasConcreteSize()) {
+      unsigned concreteSize = getConcreteSize();
+      if (bytes <= concreteSize) {
+        return UltExpr::create(
+            offset, ConstantExpr::alloc(concreteSize - bytes + 1,
+                                        Context::get().getPointerWidth()));
+      } else {
+        return ConstantExpr::alloc(0, Expr::Bool);
+      }
     }
+
+    ref<Expr> bytesExpr = ConstantExpr::create(bytes, Context::get().getPointerWidth());
+    ref<Expr> bytesCheck = UleExpr::create(bytesExpr, size);
+    ref<Expr> offsetCheck = UleExpr::create(offset, SubExpr::create(size, bytesExpr));
+    return AndExpr::create(bytesCheck, offsetCheck);
   }
 
   /// Compare this object with memory object b.
@@ -154,8 +156,19 @@ public:
     if (address != b.address)
       return (address < b.address ? -1 : 1);
 
-    if (size != b.size)
-      return (size < b.size ? -1 : 1);
+    if (capacity != b.capacity)
+      return (capacity < b.capacity ? -1 : 1);
+
+    if (hasConcreteSize() && b.hasConcreteSize()) {
+      if (getConcreteSize() != b.getConcreteSize()) {
+        return (getConcreteSize() < b.getConcreteSize() ? -1 : 1);
+      }
+    }
+
+    int r = getSizeExpr().compare(b.getSizeExpr());
+    if (r != 0) {
+      return r;
+    }
 
     if (allocSite != b.allocSite)
       return (allocSite < b.allocSite ? -1 : 1);
@@ -194,7 +207,7 @@ private:
   mutable UpdateList updates;
 
 public:
-  unsigned size;
+  uint64_t size;
 
   bool readOnly;
 
