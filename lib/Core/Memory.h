@@ -221,6 +221,11 @@ private:
   /// if byte is known
   mutable std::unique_ptr<storage_ty> knownSymbolics;
 
+public:
+  std::vector<uint8_t> concreteStore;
+  std::vector<bool> concreteMask;
+
+private:
   /// unflushedMask[byte] is set if byte is unflushed
   /// mutable because may need flushed during read of const
   mutable std::unique_ptr<bool_storage_ty> unflushedMask;
@@ -257,6 +262,8 @@ public:
     return knownSymbolics->storage().size() + unflushedMask->storage().size();
   }
   void initializeToZero();
+
+  void flushToConcreteStore(Assignment &assignment);
 
 private:
   const UpdateList &getUpdates() const;
@@ -337,6 +344,8 @@ public:
   bool isAccessableFrom(KType *) const;
 
   KType *getDynamicType() const;
+
+  void flushToConcreteStore(Assignment &assignment);
 
 private:
   ref<Expr> read8(ref<Expr> offset) const;

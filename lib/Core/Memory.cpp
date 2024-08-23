@@ -20,8 +20,10 @@
 #include "CodeLocation.h"
 #include "klee/Expr/Assignment.h"
 #include "klee/Expr/Expr.h"
+#include "klee/Expr/SourceBuilder.h"
 #include "klee/Module/KType.h"
 #include "klee/Solver/Solver.h"
+#include "klee/Support/Casting.h"
 #include "klee/Support/ErrorHandling.h"
 
 #include "llvm/IR/Function.h"
@@ -33,6 +35,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <cstdint>
 
 namespace klee {
 llvm::cl::opt<MemoryType> MemoryBackend(
@@ -512,6 +515,10 @@ void ObjectState::print() const {
 
 KType *ObjectState::getDynamicType() const { return dynamicType; }
 
+void ObjectState::flushToConcreteStore(Assignment &assignment) {
+  valueOS.flushToConcreteStore(assignment);
+}
+
 bool ObjectState::isAccessableFrom(KType *accessingType) const {
   return !UseTypeBasedAliasAnalysis ||
          dynamicType->isAccessableFrom(accessingType);
@@ -526,6 +533,13 @@ ObjectStage::ObjectStage(const Array *array, ref<Expr> defaultValue, bool safe,
       array->getSize(), defaultValue, MaxFixedSizeStructureSize));
   unflushedMask.reset(
       constructStorage(array->getSize(), false, MaxFixedSizeStructureSize));
+
+  if (width == Expr::Int8) {
+    if (auto const_size = dyn_cast<ConstantExpr>(size)) {
+      concreteStore = std::vector<uint8_t>(const_size->getZExtValue());
+      concreteMask = std::vector<bool>(const_size->getZExtValue(), false);
+    }
+  }
 }
 
 ObjectStage::ObjectStage(ref<Expr> size, ref<Expr> defaultValue, bool safe,
@@ -534,16 +548,50 @@ ObjectStage::ObjectStage(ref<Expr> size, ref<Expr> defaultValue, bool safe,
   knownSymbolics.reset(constructStorage<ref<Expr>, OptionalRefEq<Expr>>(
       size, defaultValue, MaxFixedSizeStructureSize));
   unflushedMask.reset(constructStorage(size, false, MaxFixedSizeStructureSize));
+
+  if (width == Expr::Int8) {
+    if (auto const_size = dyn_cast<ConstantExpr>(size)) {
+      concreteStore = std::vector<uint8_t>(const_size->getZExtValue());
+      concreteMask = std::vector<bool>(const_size->getZExtValue(), false);
+    }
+  }
 }
 
 ObjectStage::ObjectStage(const ObjectStage &os)
     : knownSymbolics(os.knownSymbolics->clone()),
+      concreteStore(os.concreteStore), concreteMask(os.concreteMask),
       unflushedMask(os.unflushedMask->clone()), updates(os.updates),
       size(os.size), safeRead(os.safeRead), width(os.width) {}
 
 /***/
 
 const UpdateList &ObjectStage::getUpdates() const {
+
+  if (width == Expr::Int8) {
+    if (auto sizeExpr = dyn_cast<ConstantExpr>(size)) {
+      size_t count = 0;
+      for (size_t i = 0; i < sizeExpr->getZExtValue(); ++i) {
+        if (concreteMask[i]) {
+          ++count;
+        } else {
+          break;
+        }
+      }
+      if (count == sizeExpr->getZExtValue()) {
+        std::unique_ptr<SparseStorage<ref<ConstantExpr>>> values(
+            constructStorage(sizeExpr, ConstantExpr::create(0, width),
+                             MaxFixedSizeStructureSize));
+        for (size_t i = 0; i < sizeExpr->getZExtValue(); ++i) {
+          values->store(i, ConstantExpr::create(concreteStore[i], Expr::Int8));
+        }
+        auto array =
+            Array::create(sizeExpr, SourceBuilder::constant(values->clone()),
+                          Expr::Int32, width);
+        updates = UpdateList(array, nullptr);
+      }
+    }
+  }
+
   if (auto sizeExpr = dyn_cast<ConstantExpr>(size)) {
     auto size = sizeExpr->getZExtValue();
     if (knownSymbolics->storage().size() == size) {
@@ -583,6 +631,17 @@ const UpdateList &ObjectStage::getUpdates() const {
 }
 
 void ObjectStage::initializeToZero() {
+  if (width == Expr::Int8) {
+    if (auto const_size = dyn_cast<ConstantExpr>(size)) {
+      concreteStore = std::vector<uint8_t>(const_size->getZExtValue(), 0);
+      concreteMask = std::vector<bool>(const_size->getZExtValue(), true);
+      updates = UpdateList(nullptr, nullptr);
+      unflushedMask->reset();
+      knownSymbolics->reset();
+      return;
+    }
+  }
+
   auto array = Array::create(
       size,
       SourceBuilder::constant(constructStorage(
@@ -593,10 +652,29 @@ void ObjectStage::initializeToZero() {
   unflushedMask->reset();
 }
 
+void ObjectStage::flushToConcreteStore(Assignment &assignment) {
+  AssignmentEvaluator evaluator(assignment, false);
+  if (auto const_size = dyn_cast<ConstantExpr>(size)) {
+    for (size_t i = 0; i < const_size->getZExtValue(); ++i) {
+      if (concreteMask[i]) {
+        continue;
+      }
+      auto byte = evaluator.visit(readWidth(i));
+      concreteStore[i] = cast<ConstantExpr>(byte)->getZExtValue(Expr::Int8);
+      // concreteMask[i] = true;
+    }
+  }
+}
+
 void ObjectStage::flushForRead() const {
   for (const auto &unflushed : unflushedMask->storage()) {
     auto offset = unflushed.first;
-    auto value = knownSymbolics->load(offset);
+    ref<Expr> value;
+    if (offset < concreteMask.size() && concreteMask[offset]) {
+      value = ConstantExpr::create(concreteStore[offset], Expr::Int8);
+    } else {
+      value = knownSymbolics->load(offset);
+    }
     assert(value);
     updates.extend(ConstantExpr::create(offset, Expr::Int32), value);
   }
@@ -607,11 +685,22 @@ void ObjectStage::flushForWrite() {
   flushForRead();
   // The write is symbolic offset and might overwrite any byte
   knownSymbolics->reset(nullptr);
+  if (auto const_size = dyn_cast<ConstantExpr>(size)) {
+    concreteMask = std::vector<bool>(const_size->getZExtValue(), false);
+  }
 }
 
 /***/
 
 ref<Expr> ObjectStage::readWidth(unsigned offset) const {
+  if (width == Expr::Int8) {
+    if (auto const_size = dyn_cast<ConstantExpr>(size)) {
+      if (offset < const_size->getZExtValue() && concreteMask[offset]) {
+        return ConstantExpr::create(concreteStore[offset], width);
+      }
+    }
+  }
+
   if (auto byte = knownSymbolics->load(offset)) {
     return byte;
   } else {
@@ -632,6 +721,23 @@ ref<Expr> ObjectStage::readWidth(ref<Expr> offset) const {
 }
 
 void ObjectStage::writeWidth(unsigned offset, uint64_t value) {
+  if (width == Expr::Int8) {
+    assert(value <= UINT8_MAX);
+    if (auto const_size = dyn_cast<ConstantExpr>(size)) {
+      if (offset < const_size->getZExtValue()) {
+        if (concreteMask[offset] && concreteStore[offset] == value) {
+          return;
+        }
+        concreteStore[offset] = value;
+        concreteMask[offset] = true;
+        unflushedMask->store(offset, true);
+        return;
+      } else {
+        concreteMask[offset] = false;
+      }
+    }
+  }
+
   auto byte = knownSymbolics->load(offset);
   if (byte) {
     auto ce = dyn_cast<ConstantExpr>(byte);
@@ -648,6 +754,14 @@ void ObjectStage::writeWidth(unsigned offset, ref<Expr> value) {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(value)) {
     writeWidth(offset, CE->getZExtValue(width));
   } else {
+    if (auto const_size = dyn_cast<ConstantExpr>(size)) {
+      if (width == Expr::Int8) {
+        if (offset < const_size->getZExtValue() && concreteMask[offset]) {
+          concreteMask[offset] = false;
+          unflushedMask->store(offset, true);
+        }
+      }
+    }
     auto byte = knownSymbolics->load(offset);
     if (byte && byte == value) {
       return;
@@ -663,7 +777,9 @@ void ObjectStage::writeWidth(ref<Expr> offset, ref<Expr> value) {
 
   if (knownSymbolics->defaultV() && knownSymbolics->defaultV() == value &&
       knownSymbolics->storage().size() == 0 && updates.getSize() == 0) {
-    return;
+    if (!(isa<ConstantExpr>(size) && width == Expr::Int8)) {
+      return;
+    }
   }
 
   flushForWrite();
@@ -674,23 +790,52 @@ void ObjectStage::writeWidth(ref<Expr> offset, ref<Expr> value) {
 void ObjectStage::write(const ObjectStage &os) {
   auto constSize = dyn_cast<ConstantExpr>(size);
   auto osConstSize = dyn_cast<ConstantExpr>(os.size);
-  if (constSize || osConstSize) {
-    size_t bound = 0;
-    if (osConstSize && constSize) {
-      bound = std::min(constSize->getZExtValue(), osConstSize->getZExtValue());
-    } else if (constSize) {
-      bound = constSize->getZExtValue();
+
+  assert(width == os.width);
+
+  if (constSize) {
+    if (osConstSize) {
+      size_t bound =
+          std::min(constSize->getZExtValue(), osConstSize->getZExtValue());
+      for (size_t i = 0; i < bound; ++i) {
+        knownSymbolics->store(i, os.knownSymbolics->load(i));
+        unflushedMask->store(i, os.unflushedMask->load(i));
+      }
+      if (width == Expr::Int8) {
+        concreteStore = std::vector<uint8_t>(constSize->getZExtValue(), 0);
+        concreteMask = std::vector<bool>(constSize->getZExtValue(), false);
+        for (size_t i = 0; i < bound; ++i) {
+          concreteStore[i] = os.concreteStore[i];
+          concreteMask[i] = os.concreteMask[i];
+        }
+      }
     } else {
-      bound = osConstSize->getZExtValue();
-    }
-    for (size_t i = 0; i < bound; ++i) {
-      knownSymbolics->store(i, os.knownSymbolics->load(i));
-      unflushedMask->store(i, os.unflushedMask->load(i));
+      for (size_t i = 0; i < constSize->getZExtValue(); ++i) {
+        knownSymbolics->store(i, os.knownSymbolics->load(i));
+        unflushedMask->store(i, os.unflushedMask->load(i));
+      }
+      if (width == Expr::Int8) {
+        concreteStore = std::vector<uint8_t>(constSize->getZExtValue(), 0);
+        concreteMask = std::vector<bool>(constSize->getZExtValue(), false);
+      }
     }
   } else {
-    knownSymbolics.reset(os.knownSymbolics->clone());
-    unflushedMask.reset(os.unflushedMask->clone());
+    if (osConstSize) {
+      for (size_t i = 0; i < osConstSize->getZExtValue(); ++i) {
+        if (width == Expr::Int8 && os.concreteMask[i]) {
+          knownSymbolics->store(
+              i, ConstantExpr::create(os.concreteStore[i], Expr::Int8));
+        } else {
+          knownSymbolics->store(i, os.knownSymbolics->load(i));
+        }
+        unflushedMask->store(i, os.unflushedMask->load(i));
+      }
+    } else {
+      knownSymbolics.reset(os.knownSymbolics->clone());
+      unflushedMask.reset(os.unflushedMask->clone());
+    }
   }
+
   updates = UpdateList(updates.root, os.updates.head);
 }
 

@@ -19,6 +19,7 @@
 #include "klee/Statistics/TimerStatIncrementer.h"
 
 #include "CoreStats.h"
+#include <cstring>
 
 namespace klee {
 llvm::cl::OptionCategory
@@ -413,22 +414,36 @@ ref<ConstantExpr> toConstantExpr(ref<Expr> expr) {
 void AddressSpace::copyOutConcrete(const MemoryObject *mo,
                                    const ObjectState *os,
                                    const Assignment &assignment) const {
-  if (ref<ConstantExpr> addressExpr =
-          dyn_cast<ConstantExpr>(mo->getBaseExpr())) {
-    auto address =
-        reinterpret_cast<std::uint8_t *>(addressExpr->getZExtValue());
-    AssignmentEvaluator evaluator(assignment, false);
-    if (ref<ConstantExpr> sizeExpr =
-            dyn_cast<ConstantExpr>(mo->getSizeExpr())) {
-      size_t moSize = sizeExpr->getZExtValue();
-      std::vector<uint8_t> concreteStore(moSize);
-      for (size_t i = 0; i < moSize; i++) {
-        auto byte = evaluator.visit(os->readValue8(i));
-        concreteStore[i] = cast<ConstantExpr>(byte)->getZExtValue(Expr::Int8);
-      }
-      std::memcpy(address, concreteStore.data(), moSize);
+
+  if (auto addressExpr = dyn_cast<ConstantExpr>(mo->getBaseExpr())) {
+    if (auto sizeExpr = dyn_cast<ConstantExpr>(mo->getSizeExpr())) {
+      auto address =
+          reinterpret_cast<std::uint8_t *>(addressExpr->getZExtValue());
+      auto size = sizeExpr->getZExtValue();
+
+      // llvm::outs() << "copying out address: " << address << "\n";
+
+      std::memcpy(address, os->valueOS.concreteStore.data(), size);
     }
   }
+
+  // if (ref<ConstantExpr> addressExpr =
+  //         dyn_cast<ConstantExpr>(mo->getBaseExpr())) {
+  //   auto address =
+  //       reinterpret_cast<std::uint8_t *>(addressExpr->getZExtValue());
+  //   AssignmentEvaluator evaluator(assignment, false);
+  //   if (ref<ConstantExpr> sizeExpr =
+  //           dyn_cast<ConstantExpr>(mo->getSizeExpr())) {
+  //     size_t moSize = sizeExpr->getZExtValue();
+  //     std::vector<uint8_t> concreteStore(moSize);
+  //     for (size_t i = 0; i < moSize; i++) {
+  //       auto byte = evaluator.visit(os->readValue8(i));
+  //       concreteStore[i] =
+  //       cast<ConstantExpr>(byte)->getZExtValue(Expr::Int8);
+  //     }
+  //     std::memcpy(address, concreteStore.data(), moSize);
+  //   }
+  // }
 }
 
 bool AddressSpace::copyInConcretes(const Assignment &assignment) {
@@ -453,22 +468,25 @@ bool AddressSpace::copyInConcretes(const Assignment &assignment) {
 bool AddressSpace::copyInConcrete(const MemoryObject *mo, const ObjectState *os,
                                   uint64_t src_address,
                                   const Assignment &assignment) {
-  AssignmentEvaluator evaluator(assignment, false);
   auto address = reinterpret_cast<std::uint8_t *>(src_address);
-  size_t moSize =
-      cast<ConstantExpr>(evaluator.visit(mo->getSizeExpr()))->getZExtValue();
-  std::vector<uint8_t> concreteStore(moSize);
-  for (size_t i = 0; i < moSize; i++) {
-    auto byte = evaluator.visit(os->readValue8(i));
-    concreteStore[i] = cast<ConstantExpr>(byte)->getZExtValue(8);
-  }
-  if (memcmp(address, concreteStore.data(), moSize) != 0) {
+  size_t moSize = cast<ConstantExpr>(mo->getSizeExpr())->getZExtValue();
+
+  // llvm::outs() << "copying in address: " << address << "\n";
+
+  if (memcmp(address, os->valueOS.concreteStore.data(), moSize) != 0) {
     if (os->readOnly) {
+      for (size_t i = 0; i < moSize; ++i) {
+        if (address[i] != os->valueOS.concreteStore.data()[i]) {
+          // llvm::errs() << "difference at " << i << " values: " << (unsigned
+          // int)address[i] << " " << (unsigned
+          // int)os->valueOS.concreteStore.data()[i] << "\n";
+        }
+      }
       return false;
     } else {
       ObjectState *wos = getWriteable(mo, os);
       for (size_t i = 0; i < moSize; i++) {
-        wos->write(i, ConstantExpr::create(address[i], Expr::Int8));
+        wos->write8(i, address[i]);
       }
     }
   }

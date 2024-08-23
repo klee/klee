@@ -489,9 +489,9 @@ Executor::Executor(LLVMContext &ctx, const InterpreterOptions &opts,
                    InterpreterHandler *ih)
     : Interpreter(opts), interpreterHandler(ih), searcher(nullptr),
       externalDispatcher(new ExternalDispatcher(ctx)), statsTracker(0),
-      pathWriter(0), symPathWriter(0),
-      specialFunctionHandler(0), timers{time::Span(TimerInterval)},
-      guidanceKind(opts.Guidance), codeGraphInfo(new CodeGraphInfo()),
+      pathWriter(0), symPathWriter(0), specialFunctionHandler(0),
+      timers{time::Span(TimerInterval)}, guidanceKind(opts.Guidance),
+      codeGraphInfo(new CodeGraphInfo()),
       distanceCalculator(new DistanceCalculator(*codeGraphInfo)),
       targetCalculator(new TargetCalculator(*codeGraphInfo)),
       targetManager(new TargetManager(guidanceKind, *distanceCalculator,
@@ -5243,13 +5243,26 @@ void Executor::callExternalFunction(ExecutionState &state, KInstruction *target,
           ExternalCallPolicy::All) { // don't bother checking uniqueness
         ref<Expr> arg = *ai;
         if (auto pointer = dyn_cast<PointerExpr>(arg)) {
-          arg = pointer->getValue();
+          ref<ConstantExpr> base = evaluator.visit(pointer->getBase());
+          ref<ConstantExpr> value = evaluator.visit(pointer->getValue());
+          value->toMemory(&args[wordIndex]);
+          ref<ConstantPointerExpr> const_pointer =
+              ConstantPointerExpr::create(base, value);
+          ObjectPair op;
+          if (state.addressSpace.resolveOne(const_pointer, nullptr, op) &&
+              !op.second->readOnly) {
+            auto *os = state.addressSpace.getWriteable(op.first, op.second);
+            os->flushToConcreteStore(model);
+          }
+          addConstraint(state, EqExpr::create(const_pointer->getValue(), arg));
+          wordIndex += (value->getWidth() + 63) / 64;
+        } else {
+          arg = optimizer.optimizeExpr(arg, true);
+          ref<ConstantExpr> ce = evaluator.visit(arg);
+          ce->toMemory(&args[wordIndex]);
+          addConstraint(state, EqExpr::create(ce, arg));
+          wordIndex += (ce->getWidth() + 63) / 64;
         }
-        arg = optimizer.optimizeExpr(arg, true);
-        ref<ConstantExpr> ce = evaluator.visit(arg);
-        ce->toMemory(&args[wordIndex]);
-        addConstraint(state, EqExpr::create(ce, arg));
-        wordIndex += (ce->getWidth() + 63) / 64;
       } else {
         ref<Expr> arg = toUnique(state, *ai);
         if (ConstantExpr *ce = dyn_cast<ConstantExpr>(arg)) {
