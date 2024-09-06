@@ -2,6 +2,7 @@
 install_build_dependencies_klee() {
   brew upgrade python               # upgrade to Python 3
   brew link --overwrite python
+  export PATH="$(brew --prefix python)/libexec/bin:$PATH"
 
   if [[ $(to_bool "${ENABLE_DOXYGEN}") -eq 1 ]]; then
     brew install doxygen graphviz
