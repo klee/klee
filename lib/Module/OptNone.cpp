@@ -25,7 +25,7 @@ bool OptNonePass::runOnModule(llvm::Module &M) {
   // and mark all functions that contain such call or invoke as optnone
   llvm::SmallPtrSet<llvm::Function *,16> CallingFunctions;
   for (auto &F : M) {
-    if (!F.hasName() || !F.getName().startswith("klee_"))
+    if (!F.hasName() || F.getName().find("klee_") != 0)
       continue;
     for (auto *U : F.users()) {
       // skip non-calls and non-invokes

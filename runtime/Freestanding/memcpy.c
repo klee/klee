@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===*/
 
-#include <stdlib.h>
+#include <stddef.h>
 
 void *memcpy(void *destaddr, void const *srcaddr, size_t len) {
   char *dest = destaddr;

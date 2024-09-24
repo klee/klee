@@ -7,9 +7,9 @@
 //
 //===----------------------------------------------------------------------===*/
 
-#undef _GNU_SOURCE
+#include <stddef.h>
 
-#include <string.h>
+void *memcpy(void *destaddr, void const *srcaddr, size_t len);
 
 void *mempcpy(void *destaddr, void const *srcaddr, size_t len) {
   return (char *)memcpy(destaddr, srcaddr, len) + len;

@@ -52,7 +52,7 @@ static bool shouldSetColor(const char *pfx, const char *msg,
   if (pfx && strcmp(pfx, prefixToSearchFor) == 0)
     return true;
 
-  if (llvm::StringRef(msg).startswith(prefixToSearchFor))
+  if (llvm::StringRef(msg).find(prefixToSearchFor) == 0)
     return true;
 
   return false;
