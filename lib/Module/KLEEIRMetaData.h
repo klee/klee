@@ -43,7 +43,7 @@ public:
     if (!sv)
       return false;
 
-    return sv->getString().equals(value);
+    return sv->getString() == value;
   }
 };
 }
