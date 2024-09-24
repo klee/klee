@@ -21,7 +21,11 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(16, 0)
+#include "llvm/TargetParser/Host.h"
+#else
 #include "llvm/Support/Host.h"
+#endif
 #if LLVM_VERSION_CODE >= LLVM_VERSION(14, 0)
 #include "llvm/MC/TargetRegistry.h"
 #else

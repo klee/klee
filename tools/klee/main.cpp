@@ -38,7 +38,11 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
+#if LLVM_VERSION_CODE >= LLVM_VERSION(16, 0)
+#include "llvm/TargetParser/Host.h"
+#else
 #include "llvm/Support/Host.h"
+#endif
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -402,7 +406,7 @@ KleeHandler::KleeHandler(int argc, char **argv)
       if (errno != EEXIST)
         klee_error("cannot create \"%s\": %s", m_outputDirectory.c_str(), strerror(errno));
     }
-    if (i == INT_MAX && m_outputDirectory.str().equals(""))
+    if (i == INT_MAX && m_outputDirectory.str() == "")
         klee_error("cannot create output directory: index out of range");
   }
 
@@ -661,9 +665,14 @@ std::string KleeHandler::getRunTimeLibraryPath(const char *argv0) {
 
   SmallString<128> libDir;
 
-  if (strlen( KLEE_INSTALL_BIN_DIR ) != 0 &&
-      strlen( KLEE_INSTALL_RUNTIME_DIR ) != 0 &&
-      toolRoot.str().endswith( KLEE_INSTALL_BIN_DIR ))
+  if (strlen(KLEE_INSTALL_BIN_DIR) != 0 &&
+      strlen(KLEE_INSTALL_RUNTIME_DIR) != 0 &&
+#if LLVM_VERSION_CODE >= LLVM_VERSION(16, 0)
+      toolRoot.str().ends_with(KLEE_INSTALL_BIN_DIR)
+#else
+      toolRoot.str().endswith(KLEE_INSTALL_BIN_DIR)
+#endif
+  )
   {
     KLEE_DEBUG_WITH_TYPE("klee_runtime", llvm::dbgs() <<
                          "Using installed KLEE library runtime: ");
