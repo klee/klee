@@ -30,3 +30,5 @@ lit.site.cfg
 autoconf/aclocal.m4
 autoconf/autom4te.cache/
 autom4te.cache/
+googletest-release*
+
