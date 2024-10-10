@@ -98,7 +98,10 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
               Builder.CreatePointerCast(dst, i8pp, "vacopy.cast.dst");
           auto castedSrc =
               Builder.CreatePointerCast(src, i8pp, "vacopy.cast.src");
-#if LLVM_VERSION_CODE >= LLVM_VERSION(15, 0)
+#if LLVM_VERSION_CODE >= LLVM_VERSION(18, 0)
+          auto load = Builder.CreateLoad(Builder.getPtrTy(), castedSrc,
+                                         "vacopy.read");
+#elif LLVM_VERSION_CODE >= LLVM_VERSION(15, 0)
           auto load = Builder.CreateLoad(Builder.getInt8PtrTy(), castedSrc,
                                          "vacopy.read");
 #else
