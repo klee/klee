@@ -38,7 +38,7 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
-#if LLVM_VERSION_MAJOR >= 18
+#if LLVM_VERSION_CODE >= LLVM_VERSION(18,0)
 #include "llvm/TargetParser/Host.h"
 #else
 #include "llvm/Support/Host.h"

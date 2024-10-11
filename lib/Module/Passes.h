@@ -15,7 +15,7 @@
 #include "klee/Support/CompilerWarning.h"
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
-#if LLVM_VERSION_MAJOR >= 18 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(18,0)  
 #include "llvm/TargetParser/Triple.h"
 #else 
 #include "llvm/ADT/Triple.h"
