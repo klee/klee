@@ -20,6 +20,12 @@ download_stp() {
 
   # Download STP
   git_clone_or_update "${stp_url}" "${BASE}/stp-${STP_VERSION}" "${STP_VERSION}"
+
+  if [[ "${STP_VERSION}" == "master" ]]; then
+     cd "${BASE}/stp-${STP_VERSION}" || return 1
+     git submodule init
+     git submodule update
+  fi
 }
 
 build_stp() {
