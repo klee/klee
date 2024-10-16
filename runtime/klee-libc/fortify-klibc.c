@@ -11,12 +11,9 @@
 
 #include "klee/klee.h"
 
-#include <string.h>
+#include <stddef.h>
 
-#ifdef __APPLE__
-/* macOS does not provide mempcpy in string.h */
 void *mempcpy(void *destaddr, void const *srcaddr, size_t len);
-#endif
 
 void *__mempcpy_chk(void *dest, const void *src, size_t len, size_t destlen) {
   if (len > destlen)
@@ -25,17 +22,25 @@ void *__mempcpy_chk(void *dest, const void *src, size_t len, size_t destlen) {
   return mempcpy(dest, src, len);
 }
 
+char *stpcpy(char * to, const char * from);
+
 char *__stpcpy_chk(char *dest, const char *src, size_t destlen) {
   return stpcpy(dest, src);
 }
+
+char *strcat(char * s, const char * append);
 
 char *__strcat_chk(char *dest, const char *src, size_t destlen) {
   return strcat(dest, src);
 }
 
+char *strcpy(char *to, const char *from);
+
 char *__strcpy_chk(char *dest, const char *src, size_t destlen) {
   return strcpy(dest, src);
 }
+
+char *strncpy(char * dst, const char * src, size_t n);
 
 char *__strncpy_chk(char *s1, const char *s2, size_t n, size_t s1len) {
   return strncpy(s1, s2, n);

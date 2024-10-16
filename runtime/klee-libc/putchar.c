@@ -7,11 +7,12 @@
 //
 //===----------------------------------------------------------------------===*/
 
-#include <stdio.h>
-#include <unistd.h>
+#include <stddef.h>
+#include <stdint.h>
 
-/* Some header may #define putchar. */
-#undef putchar
+intptr_t write(int fildes, const void *buf, size_t nbyte);
+
+#define EOF -1
 
 int putchar(int c) {
   char x = c;
