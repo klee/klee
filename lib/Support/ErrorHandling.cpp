@@ -52,10 +52,11 @@ static bool shouldSetColor(const char *pfx, const char *msg,
   if (pfx && strcmp(pfx, prefixToSearchFor) == 0)
     return true;
 
-  if (llvm::StringRef(msg).startswith(prefixToSearchFor))
-    return true;
-
-  return false;
+#if LLVM_VERSION_CODE >= LLVM_VERSION(16, 0)
+  return llvm::StringRef(msg).starts_with(prefixToSearchFor);
+#else
+  return llvm::StringRef(msg).startswith(prefixToSearchFor);
+#endif
 }
 
 static void klee_vfmessage(FILE *fp, const char *pfx, const char *msg,
