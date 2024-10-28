@@ -37,10 +37,14 @@ run_tests() {
   # TODO change to pinpoint specific directory
   cd "${build_dir}"
 
-  # Remove klee from PATH
-  export PATH=${PATH/":/home/klee/klee_build/bin"/}
+  # Remove klee from PATH. The goal is that for test cases klee is referenced via `%klee` not accidently being picked up via PATH
   if which klee; then
-    return 1 # should not happen
+    full_path_to_klee="$(which klee)"
+    target_directory="$(dirname "${full_path_to_klee}")"
+    PATH=${PATH/$target_directory/}
+    if which klee; then
+      return 1 # should not happen
+    fi
   fi
 
   ###############################################################################

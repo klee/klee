@@ -237,7 +237,10 @@ namespace klee {
       }
       return base;
     }
-      
+
+// NOTE: In more recent LLVM versions ConstantExpr is getting more limited:
+// https://discourse.llvm.org/t/rfc-remove-most-constant-expressions/63179
+#if LLVM_VERSION_MAJOR < 19
     case Instruction::ICmp: {
       switch(ce->getPredicate()) {
       default: assert(0 && "unhandled ICmp predicate");
@@ -253,6 +256,7 @@ namespace klee {
       case ICmpInst::ICMP_SLE: return op1->Sle(op2);
       }
     }
+#endif
 
     case Instruction::Select:
       return op1->isTrue() ? op2 : op3;

@@ -1,10 +1,16 @@
 # Build scripts for STP
 # Variables that any artifact of this package might depend on
 setup_build_variables_stp() {
+  source "${DIR}/common-functions"
+
   STP_SUFFIX="${SANITIZER_SUFFIX}"
 
   MINISAT_BUILD_PATH="${BASE}/minisat-build${STP_SUFFIX}"
   MINISAT_INSTALL_PATH="${BASE}/minisat-install${STP_SUFFIX}"
+
+  if version_gt "${STP_VERSION}" "2.3.4"; then
+     ABC_INSTALL_PATH="${BASE}/stp-${STP_VERSION}-build${STP_SUFFIX}/lib/extlib-abc/build/"
+  fi
 
   STP_BUILD_PATH="${BASE}/stp-${STP_VERSION}-build${STP_SUFFIX}"
   STP_INSTALL_PATH="${BASE}/stp-${STP_VERSION}-install${STP_SUFFIX}"
@@ -14,12 +20,17 @@ setup_build_variables_stp() {
 }
 
 download_stp() {
-  source "${DIR}/common-functions"
   # Download minisat
   git_clone_or_update https://github.com/stp/minisat "${BASE}/minisat" "master"
 
   # Download STP
   git_clone_or_update "${stp_url}" "${BASE}/stp-${STP_VERSION}" "${STP_VERSION}"
+
+  if version_gt "${STP_VERSION}" "2.3.4"; then
+     cd "${BASE}/stp-${STP_VERSION}" || return 1
+     git submodule init
+     git submodule update
+  fi
 }
 
 build_stp() {
@@ -98,6 +109,9 @@ get_build_artifacts_stp() {
     setup_build_variables_stp
     echo "${MINISAT_INSTALL_PATH}"
     echo "${STP_INSTALL_PATH}"
+    if version_gt "${STP_VERSION}" "2.3.4"; then
+       echo "${ABC_INSTALL_PATH}"
+    fi
   )
 }
 

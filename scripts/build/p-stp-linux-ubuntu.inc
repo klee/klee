@@ -5,13 +5,13 @@ install_build_dependencies_stp() {
 
   dependencies=(
     build-essential
-
     bison
     ca-certificates
     cmake
     flex
     git
     zlib1g-dev
+    libtinfo-dev
   )
 
   #Install essential dependencies

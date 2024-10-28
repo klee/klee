@@ -10,6 +10,7 @@ install_build_dependencies_klee() {
     python3-setuptools
     python3-pip
     python3-wheel
+    libtinfo-dev
   )
 
   if [[ "${SOLVERS:-}" == "metaSMT" ]]; then
