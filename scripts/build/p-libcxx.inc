@@ -39,7 +39,12 @@ build_libcxx() {
   )
 
   if [[ "${LLVM_VERSION_SHORT}" -ge "140" ]]; then
-    cmake_flags+=("-DLLVM_ENABLE_RUNTIMES=libcxx;libcxxabi")
+    if [[ "${LLVM_VERSION_SHORT}" -ge "170" ]]; then
+       cmake_flags+=("-DLLVM_ENABLE_RUNTIMES=libcxx;libcxxabi;libunwind")
+       cmake_flags+=("-DLIBCXXABI_USE_LLVM_UNWINDER:BOOL=ON")
+    else
+       cmake_flags+=("-DLLVM_ENABLE_RUNTIMES=libcxx;libcxxabi")
+    fi
     cmake_flags+=("-DLLVM_ENABLE_PROJECTS=")
     cmake_flags+=("-DLLVM_ENABLE_PROJECTS_USED:BOOL=ON")
   else
