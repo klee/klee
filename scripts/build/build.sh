@@ -207,7 +207,7 @@ build_docker() {
       # An empty config id indicates nothing to build
       [[ -z "${dep_config_id}" ]] && continue
 
-      echo "FROM ${REPOSITORY}/${v}:${dep_config_id}_${base_image}_${base_tag} as ${v}_base"
+      echo "FROM ${REPOSITORY}/${v}:${dep_config_id}_${base_image}_${base_tag} AS ${v}_base"
     done
 
     # If multiple source images are available use the first one as a base image
@@ -222,7 +222,7 @@ build_docker() {
       if [[ "${hasBaseImage}" -eq 0 ]]; then
         hasBaseImage=1
         # Use base image as building base
-        echo "FROM ${v}_base as intermediate"
+        echo "FROM ${v}_base AS intermediate"
       else
         # Copy artifacts
         # TODO: maybe get list of specific directories to copys
@@ -233,7 +233,7 @@ build_docker() {
     if [[ "${hasBaseImage}" -eq 0 ]]; then
       hasBaseImage=1
       # Use base image as building base
-      echo "FROM ${BASE_IMAGE} as intermediate"
+      echo "FROM ${BASE_IMAGE} AS intermediate"
     fi
 
     # Retrieve list of required variables and make them available in Docker
@@ -269,7 +269,7 @@ build_docker() {
     # Copy all the build artifacts to the final image: build artifact is the full path
     # and will be the same in the destination docker image
     if [[ "${is_dependency}" -eq 1 || "${CREATE_FINAL_IMAGE}" -eq 0 ]]; then
-      echo "FROM ${BASE_IMAGE} as final"
+      echo "FROM ${BASE_IMAGE} AS final"
       local build_artifacts
       mapfile -t build_artifacts <<< "$(execution_action "get_build_artifacts" "${component}")"
       for artifact in "${build_artifacts[@]}"; do
