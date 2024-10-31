@@ -185,7 +185,11 @@ configure_llvm() {
     )
     if [[ "${LLVM_VERSION_SHORT}" -ge "140" ]]; then
       CONFIG+=("-DLLVM_ENABLE_PROJECTS=${ENABLED_LLVM_PROJECTS}")
-      CONFIG+=("-DLLVM_ENABLE_RUNTIMES=libcxx;libcxxabi")
+      if [[ "${LLVM_VERSION_SHORT}" -ge "170" ]]; then
+        CONFIG+=("-DLLVM_ENABLE_RUNTIMES=libcxx;libcxxabi;libunwind")
+      else
+        CONFIG+=("-DLLVM_ENABLE_RUNTIMES=libcxx;libcxxabi")
+      fi
     else
       CONFIG+=("-DLLVM_ENABLE_PROJECTS=${ENABLED_LLVM_PROJECTS};libcxx;libcxxabi")
     fi
