@@ -7,9 +7,6 @@
 //
 //===----------------------------------------------------------------------===*/
 
-#include <stdlib.h>
-#include <string.h>
-
 /* DWD - I prefer to be internal */
 #if 0
 void *calloc(size_t nmemb, size_t size) {

@@ -31,11 +31,6 @@
  * SUCH DAMAGE.
  */
 
-#include <string.h>
-
-/* Defeat object checking stuff. */
-#undef strcat
-
 char * strcat(char * s, const char * append) {
 	char *save = s;
 

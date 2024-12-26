@@ -7,8 +7,6 @@
 //
 //===----------------------------------------------------------------------===*/
 
-#include <sys/types.h>
-#include <sys/param.h>
 #include <stdint.h>
 
 #undef htons
@@ -17,11 +15,11 @@
 #undef ntohl
 
 /* Make sure we can recognize the endianness. */
-#if (!defined(BYTE_ORDER) || !defined(BIG_ENDIAN) || !defined(LITTLE_ENDIAN))
+#if !defined(__BYTE_ORDER__) || !defined(__ORDER_LITTLE_ENDIAN__)
 #error "Unknown platform endianness!"
 #endif
 
-#if BYTE_ORDER == LITTLE_ENDIAN
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
 
 uint16_t htons(uint16_t v) {
   return (v >> 8) | (v << 8);

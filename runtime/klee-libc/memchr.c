@@ -34,7 +34,7 @@
  * SUCH DAMAGE.
  */
 
-#include <string.h>
+#include <stddef.h>
 
 void *memchr(const void *s, int c, size_t n) {
   if (n != 0) {

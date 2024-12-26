@@ -29,11 +29,6 @@
  * SUCH DAMAGE.
  */
 
-#include <string.h>
-
-/* Defeat object checking stuff. */
-#undef stpcpy
-
 char *
 stpcpy(char * to, const char * from)
 {
