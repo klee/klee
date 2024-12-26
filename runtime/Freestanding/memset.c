@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===*/
 
-#include <stdlib.h>
+#include <stddef.h>
 
 void *memset(void *dst, int s, size_t count) {
   char *a = dst;

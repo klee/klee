@@ -34,7 +34,7 @@
  * SUCH DAMAGE.
  */
 
-#include <string.h>
+#include <stddef.h>
 
 /*
  * Compare memory regions.
