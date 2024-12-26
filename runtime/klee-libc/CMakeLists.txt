@@ -34,6 +34,7 @@ set(SRC_FILES
         strtoul.c
         tolower.c
         toupper.c
+        errno.c
         )
 
 # Add __NO_INLINE__ to prevent glibc from using inline definitions of some
