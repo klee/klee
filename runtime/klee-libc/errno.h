@@ -1,6 +1,9 @@
-/*
+/*-
  * Copyright (c) 1990, 1993
  *	The Regents of the University of California.  All rights reserved.
+ *
+ * This code is derived from software contributed to Berkeley by
+ * Chris Torek.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,82 +34,51 @@
  * SUCH DAMAGE.
  */
 
-#include <limits.h>
-#include <stddef.h>
-#include "errno.h"
+#pragma once
 
-/*
- * Convert a string to an unsigned long integer.
- *
- * Assumes that the upper and lower case
- * alphabets and digits are each contiguous.
- */
-unsigned long
-strtoul(const char * nptr, char ** endptr, int base)
-{
-	const char *s;
-	unsigned long acc;
-	char c;
-	unsigned long cutoff;
-	int neg, any, cutlim;
+#if __has_include(<errno.h>)
 
-	/*
-	 * See strtol for comments as to the logic used.
-	 */
-	s = nptr;
-	do {
-		c = *s++;
-	} while (c == ' ' || (c >= '\t' && c <= '\r')); // isspace(c)
-	if (c == '-') {
-		neg = 1;
-		c = *s++;
-	} else {
-		neg = 0;
-		if (c == '+')
-			c = *s++;
-	}
-	if ((base == 0 || base == 16) &&
-	    c == '0' && (*s == 'x' || *s == 'X')) {
-		c = s[1];
-		s += 2;
-		base = 16;
-	}
-	if (base == 0)
-		base = c == '0' ? 8 : 10;
-	acc = any = 0;
-	if (base < 2 || base > 36)
-		goto noconv;
+#include <errno.h>
 
-	cutoff = ULONG_MAX / base;
-	cutlim = ULONG_MAX % base;
-	for ( ; ; c = *s++) {
-		if (c >= '0' && c <= '9')
-			c -= '0';
-		else if (c >= 'A' && c <= 'Z')
-			c -= 'A' - 10;
-		else if (c >= 'a' && c <= 'z')
-			c -= 'a' - 10;
-		else
-			break;
-		if (c >= base)
-			break;
-		if (any < 0 || acc > cutoff || (acc == cutoff && c > cutlim))
-			any = -1;
-		else {
-			any = 1;
-			acc *= base;
-			acc += c;
-		}
-	}
-	if (any < 0) {
-		acc = ULONG_MAX;
-		errno = ERANGE;
-	} else if (!any) {
-noconv:
-		errno = EINVAL;
-	} else if (neg)
-		acc = -acc;
-	if (endptr != NULL)
-		*endptr = (char *)(any ? s - 1 : nptr);
-	return (acc);
-}
+#else
+
+extern int errno;
+
+#define KLEE_FREESTANDING_ERRNO
+
+#define	EPERM		 1	/* Operation not permitted */
+#define	ENOENT		 2	/* No such file or directory */
+#define	ESRCH		 3	/* No such process */
+#define	EINTR		 4	/* Interrupted system call */
+#define	EIO		     5	/* I/O error */
+#define	ENXIO		 6	/* No such device or address */
+#define	E2BIG		 7	/* Argument list too long */
+#define	ENOEXEC		 8	/* Exec format error */
+#define	EBADF		 9	/* Bad file number */
+#define	ECHILD		10	/* No child processes */
+#define	EAGAIN		11	/* Try again */
+#define	ENOMEM		12	/* Out of memory */
+#define	EACCES		13	/* Permission denied */
+#define	EFAULT		14	/* Bad address */
+#define	ENOTBLK		15	/* Block device required */
+#define	EBUSY		16	/* Device or resource busy */
+#define	EEXIST		17	/* File exists */
+#define	EXDEV		18	/* Cross-device link */
+#define	ENODEV		19	/* No such device */
+#define	ENOTDIR		20	/* Not a directory */
+#define	EISDIR		21	/* Is a directory */
+#define	EINVAL		22	/* Invalid argument */
+#define	ENFILE		23	/* File table overflow */
+#define	EMFILE		24	/* Too many open files */
+#define	ENOTTY		25	/* Not a typewriter */
+#define	ETXTBSY		26	/* Text file busy */
+#define	EFBIG		27	/* File too large */
+#define	ENOSPC		28	/* No space left on device */
+#define	ESPIPE		29	/* Illegal seek */
+#define	EROFS		30	/* Read-only file system */
+#define	EMLINK		31	/* Too many links */
+#define	EPIPE		32	/* Broken pipe */
+#define	EDOM		33	/* Math argument out of domain of func */
+#define	ERANGE		34	/* Math result not representable */
+
+#endif // __has_include_next("errno.h")
