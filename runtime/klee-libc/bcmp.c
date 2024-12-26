@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===*/
 
-#include <strings.h>
+#include <stddef.h>
 
 int bcmp(const void *s1, const void *s2, size_t n) {
   const unsigned char *p1 = s1, *p2 = s2;

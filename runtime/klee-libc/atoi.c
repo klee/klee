@@ -30,7 +30,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-#include <stdlib.h>
+
+#include <stddef.h>
+
+long
+strtol(const char * nptr, char ** endptr, int base);
 
 int atoi(const char *str) {
   return (int)strtol(str, (char **)NULL, 10);
