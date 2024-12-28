@@ -12,7 +12,7 @@
 
 #include "klee/klee.h"
 
-#include <string.h>
+void *memmove(void *dst, const void *src, size_t count);
 
 void *__memmove_chk(void *dest, const void *src, size_t len, size_t destlen) {
   if (len > destlen)
@@ -21,12 +21,16 @@ void *__memmove_chk(void *dest, const void *src, size_t len, size_t destlen) {
   return memmove(dest, src, len);
 }
 
+void *memset(void *dst, int s, size_t count);
+
 void *__memset_chk(void *dest, int c, size_t len, size_t destlen) {
   if (len > destlen)
     klee_report_error(__FILE__, __LINE__, "memset overflow", "ptr.err");
 
   return memset(dest, c, len);
 }
+
+void *memcpy(void *destaddr, void const *srcaddr, size_t len);
 
 void *__memcpy_chk(void *dest, const void *src, size_t len, size_t destlen) {
   if (len > destlen)

@@ -7,6 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+// NOTE: Make rlimit64 and off64_t available on Linux
+// https://www.gnu.org/software/libc/manual/html_node/Feature-Test-Macros.html
+#define _LARGEFILE64_SOURCE
+
 #ifdef __FreeBSD__
 #include "FreeBSD.h"
 #endif
@@ -22,6 +26,7 @@
 #ifndef __FreeBSD__
 #include <utmp.h>
 #endif
+
 #include <sys/mman.h>
 #include <sys/resource.h>
 #include <sys/stat.h>

@@ -34,7 +34,7 @@
  * SUCH DAMAGE.
  */
 
-#include <stdlib.h>
+#include <stddef.h>
 /*
  * Copy src to dst, truncating or null-padding to always copy n bytes.
  * Return dst.
