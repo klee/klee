@@ -1244,7 +1244,7 @@ int main(int argc, char **argv, char **envp) {
   KCommandLine::KeepOnlyCategories(
      {&ChecksCat,      &DebugCat,    &ExtCallsCat, &ExprCat,     &LinkCat,
       &MemoryCat,      &MergeCat,    &MiscCat,     &ModuleCat,   &ReplayCat,
-      &SearchCat,      &SeedingCat,  &SolvingCat,  &StartCat,    &StatsCat,
+      &SearchCat,      &SeedingCat,  &SizeModelCat, &SolvingCat,  &StartCat, &StatsCat,
       &TerminationCat, &TestCaseCat, &TestGenCat,  &ExecTreeCat, &ExecTreeCat});
   llvm::InitializeNativeTarget();
 

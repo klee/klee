@@ -154,6 +154,8 @@ namespace klee {
     /// @return
     bool copyInConcrete(const MemoryObject *mo, const ObjectState *os,
                         uint64_t src_address, bool concretize);
+
+    bool mayPointToMemoryObject(uint64_t address, const MemoryObject *mo) const;
   };
 } // End klee namespace
 
