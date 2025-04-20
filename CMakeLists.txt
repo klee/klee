@@ -179,6 +179,38 @@ if (NOT EXISTS "${LLVM_AS}")
   message(FATAL_ERROR "Failed to find llvm-as at \"${LLVM_AS}\"")
 endif()
 
+
+###############################################################################
+# Find Torch (libtorch) for Reinforcement Learning support
+###############################################################################
+option(ENABLE_RL_SEARCHER "Enable Reinforcement Learning searcher" OFF)
+if (ENABLE_RL_SEARCHER)
+  message(STATUS "Reinforcement Learning searcher enabled")
+  
+  # Find libtorch package
+  find_package(Torch REQUIRED)
+  if (NOT Torch_FOUND)
+    message(FATAL_ERROR "libtorch not found. Please install libtorch or disable RL searcher with -DENABLE_RL_SEARCHER=OFF")
+  endif()
+  
+  message(STATUS "Found libtorch: ${TORCH_LIBRARIES}")
+  
+  # Add torch include directories
+  list(APPEND KLEE_COMPONENT_EXTRA_INCLUDE_DIRS ${TORCH_INCLUDE_DIRS})
+  
+  # Add define to enable RL searcher in code
+  list(APPEND KLEE_COMPONENT_CXX_DEFINES -DENABLE_RL_SEARCHER)
+  
+  # Report torch configuration
+  message(STATUS "Torch version: ${Torch_VERSION}")
+  message(STATUS "Torch include dirs: ${TORCH_INCLUDE_DIRS}")
+  message(STATUS "Torch libraries: ${TORCH_LIBRARIES}")
+else()
+  message(STATUS "Reinforcement Learning searcher disabled")
+endif()
+
+
+
 # Check for dynamic linking
 if (LLVM_LINK_LLVM_DYLIB)
   set(USE_LLVM_SHARED USE_SHARED)

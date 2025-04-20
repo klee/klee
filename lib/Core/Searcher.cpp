@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Searcher.h"
+#include "RLPathSearcher.h"
 
 #include "CoreStats.h"
 #include "ExecutionState.h"

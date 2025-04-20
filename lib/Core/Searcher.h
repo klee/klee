@@ -34,6 +34,7 @@ namespace klee {
   template<class T, class Comparator> class DiscretePDF;
   class ExecutionState;
   class Executor;
+  class RLPathSearcher;
 
   /// A Searcher implements an exploration strategy for the Executor by selecting
   /// states for further exploration using different strategies or heuristics.
@@ -71,7 +72,8 @@ namespace klee {
       NURS_RP,
       NURS_ICnt,
       NURS_CPICnt,
-      NURS_QC
+      NURS_QC,
+      RLPath
     };
   };
 
