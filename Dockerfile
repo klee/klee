@@ -34,28 +34,17 @@ ENV Z3_VERSION=4.8.15
 ENV USE_LIBCXX=1
 ENV KLEE_RUNTIME_BUILD="Debug+Asserts"
 ENV SQLITE_VERSION=3400100
-ENV ENABLE_RL_SEARCHER=1
 LABEL maintainer="KLEE Developers"
 
 # TODO remove adding sudo package
 # Create ``klee`` user for container with password ``klee``.
 # and give it password-less sudo access (temporarily so we can use the CI scripts)
-RUN apt update && DEBIAN_FRONTEND=noninteractive apt -y --no-install-recommends install sudo less emacs-nox vim-nox file python3-dateutil wget unzip && \
+RUN apt update && DEBIAN_FRONTEND=noninteractive apt -y --no-install-recommends install sudo less emacs-nox vim-nox file python3-dateutil && \
     rm -rf /var/lib/apt/lists/* && \
     useradd -m klee && \
     echo klee:klee | chpasswd && \
     cp /etc/sudoers /etc/sudoers.bak && \
     echo 'klee  ALL=(root) NOPASSWD: ALL' >> /etc/sudoers
-
-# Install libtorch (PyTorch C++ frontend)
-# Choose CPU version for compatibility - use CUDA version if GPU support is needed
-RUN mkdir -p /opt/libtorch && \
-    wget -q -O /tmp/libtorch.zip https://download.pytorch.org/libtorch/cpu/libtorch-cxx11-abi-shared-with-deps-2.1.0%2Bcpu.zip && \
-    unzip -q /tmp/libtorch.zip -d /opt && \
-    rm /tmp/libtorch.zip && \
-    echo "export CMAKE_PREFIX_PATH=\$CMAKE_PREFIX_PATH:/opt/libtorch" >> /etc/profile.d/libtorch.sh && \
-    echo "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:/opt/libtorch/lib" >> /etc/profile.d/libtorch.sh && \
-    chmod +x /etc/profile.d/libtorch.sh
 
 # Copy across source files needed for build
 COPY --chown=klee:klee . /tmp/klee_src/
@@ -63,13 +52,9 @@ COPY --chown=klee:klee . /tmp/klee_src/
 USER klee
 WORKDIR /home/klee
 # Build and set klee user to be owner
-# Add -DENABLE_RL_SEARCHER=ON to CMake options
-RUN /tmp/klee_src/scripts/build/build.sh --debug --install-system-deps klee && \
-    cd /home/klee/klee_build && \
-    cmake /tmp/klee_src -DCMAKE_BUILD_TYPE=RelWithDebInfo -DENABLE_SOLVER_STP=ON -DENABLE_SOLVER_Z3=ON -DENABLE_POSIX_RUNTIME=ON -DENABLE_UNIT_TESTS=ON -DENABLE_SYSTEM_TESTS=ON -DENABLE_RL_SEARCHER=ON -DCMAKE_PREFIX_PATH=/opt/libtorch && \
-    make -j$(nproc) && \
-    pip3 install flask wllvm && \
+RUN /tmp/klee_src/scripts/build/build.sh --debug --install-system-deps klee && pip3 install flask wllvm && \
     sudo rm -rf /var/lib/apt/lists/*
+
 
 ENV PATH="$PATH:/tmp/llvm-130-install_O_D_A/bin:/home/klee/klee_build/bin:/home/klee/.local/bin"
 ENV BASE=/tmp
@@ -79,11 +64,10 @@ RUN /bin/bash -c 'echo "export \"PATH=$PATH:$(cd ${BASE}/llvm-*-install*/bin/ &&
 # Add KLEE header files to system standard include folder
 RUN sudo /bin/bash -c 'ln -s /tmp/klee_src/include/klee /usr/include/'
 
-# Set LD_LIBRARY_PATH to include libtorch libraries
-ENV LD_LIBRARY_PATH=/home/klee/klee_build/lib/:/opt/libtorch/lib
+ENV LD_LIBRARY_PATH=/home/klee/klee_build/lib/
 
 # Add KLEE binary directory to PATH
 RUN /bin/bash -c 'ln -s ${BASE}/klee_src /home/klee/ && ln -s ${BASE}/klee_build* /home/klee/klee_build'
 
 # TODO Remove when STP is fixed
-RUN /bin/bash -c 'echo "export LD_LIBRARY_PATH=$(cd ${BASE}/metaSMT-*-deps/stp-git-basic/lib/ && pwd):/opt/libtorch/lib:$LD_LIBRARY_PATH" >> /home/klee/.bashrc'
+RUN /bin/bash -c 'echo "export LD_LIBRARY_PATH=$(cd ${BASE}/metaSMT-*-deps/stp-git-basic/lib/ && pwd):$LD_LIBRARY_PATH" >> /home/klee/.bashrc'

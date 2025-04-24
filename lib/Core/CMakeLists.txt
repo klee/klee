@@ -27,8 +27,6 @@ add_library(kleeCore
   StatsTracker.cpp
   TimingSolver.cpp
   UserSearcher.cpp
-  RLInterface.cpp
-  RLPathSearcher.cpp
 )
 
 target_link_libraries(kleeCore PRIVATE
@@ -38,11 +36,6 @@ target_link_libraries(kleeCore PRIVATE
   kleaverExpr
   kleeSupport
 )
-
-# 添加 libtorch 链接，如果启用了 RL 搜索器
-if (ENABLE_RL_SEARCHER)
-  target_link_libraries(kleeCore PRIVATE ${TORCH_LIBRARIES})
-endif()
 
 llvm_config(kleeCore "${USE_LLVM_SHARED}" core executionengine mcjit native support)
 target_link_libraries(kleeCore PRIVATE ${SQLite3_LIBRARIES})
