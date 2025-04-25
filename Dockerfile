@@ -6,7 +6,7 @@ FROM ghcr.io/klee/stp:2.3.3_ubuntu_jammy-20230126 AS stp_base
 FROM ghcr.io/klee/z3:4.8.15_ubuntu_jammy-20230126 AS z3_base
 FROM ghcr.io/klee/libcxx:130_ubuntu_jammy-20230126 AS libcxx_base
 FROM ghcr.io/klee/sqlite:3400100_ubuntu_jammy-20230126 AS sqlite3_base
-FROM llvm_base as intermediate
+FROM llvm_base AS intermediate
 COPY --from=gtest_base /tmp /tmp/
 COPY --from=uclibc_base /tmp /tmp/
 COPY --from=tcmalloc_base /tmp /tmp/
@@ -24,7 +24,7 @@ ENV ENABLE_DEBUG=1
 ENV DISABLE_ASSERTIONS=0
 ENV REQUIRES_RTTI=0
 ENV SOLVERS=STP:Z3
-ENV GTEST_VERSION=1.11.0
+ENV GTEST_VERSION=1.12.1
 ENV UCLIBC_VERSION=klee_uclibc_v1.3
 ENV TCMALLOC_VERSION=2.9.1
 ENV SANITIZER_BUILD=
@@ -64,7 +64,7 @@ RUN /bin/bash -c 'echo "export \"PATH=$PATH:$(cd ${BASE}/llvm-*-install*/bin/ &&
 # Add KLEE header files to system standard include folder
 RUN sudo /bin/bash -c 'ln -s /tmp/klee_src/include/klee /usr/include/'
 
-ENV LD_LIBRARY_PATH /home/klee/klee_build/lib/
+ENV LD_LIBRARY_PATH=/home/klee/klee_build/lib/
 
 # Add KLEE binary directory to PATH
 RUN /bin/bash -c 'ln -s ${BASE}/klee_src /home/klee/ && ln -s ${BASE}/klee_build* /home/klee/klee_build'
