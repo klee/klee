@@ -32,7 +32,7 @@ env:
 
 jobs:
   Linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         name: [
@@ -156,7 +156,7 @@ jobs:
         run:  source .venv/bin/activate && scripts/build/run-tests.sh /tmp/klee_build* --debug
 
   Docker:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout KLEE Code
         uses: actions/checkout@v4
@@ -164,7 +164,7 @@ jobs:
         run: docker build .
 
   Coverage:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         name: [
