@@ -139,7 +139,7 @@ jobs:
     env:
       LLVM_VERSION: 14
       BASE: /tmp
-      SOLVERS: STP
+      SOLVERS: Z3
       UCLIBC_VERSION: 0
       USE_TCMALLOC: 0
       USE_LIBCXX: 0
