@@ -9,5 +9,5 @@ install_binary_artifact_z3 () {
 }
 
 is_installed_z3() {
-    [[ -f "/usr/local/opt/z3/bin/z3" ]]
+    [[ -f "/opt/homebrew/bin/z3" ]]
 }
