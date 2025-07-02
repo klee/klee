@@ -6,7 +6,7 @@ FROM ghcr.io/klee/stp:2.3.3_ubuntu_jammy-20230126 AS stp_base
 FROM ghcr.io/klee/z3:4.8.15_ubuntu_jammy-20230126 AS z3_base
 FROM ghcr.io/klee/libcxx:130_ubuntu_jammy-20230126 AS libcxx_base
 FROM ghcr.io/klee/sqlite:3400100_ubuntu_jammy-20230126 AS sqlite3_base
-FROM llvm_base as intermediate
+FROM llvm_base AS intermediate
 COPY --from=gtest_base /tmp /tmp/
 COPY --from=uclibc_base /tmp /tmp/
 COPY --from=tcmalloc_base /tmp /tmp/
