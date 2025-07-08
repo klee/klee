@@ -1,4 +1,6 @@
 // REQUIRES: not-msan
+// On Darwin, we don't use tcmalloc or similar allocators, therefore reporting used memory is imprecise
+// REQUIRES: not-darwin
 // MSan adds additional memory that overflows the counter
 //
 // Check that we properly kill states when we exceed our memory bounds, for both
