@@ -30,13 +30,23 @@ if (ENABLE_SOLVER_Z3)
 
     message(STATUS "Found Z3")
     set(ENABLE_Z3 1) # For config.h
-    list(APPEND KLEE_COMPONENT_EXTRA_INCLUDE_DIRS ${Z3_INCLUDE_DIRS})
-    list(APPEND KLEE_SOLVER_LIBRARIES ${Z3_LIBRARIES})
 
     # Check the signature of `Z3_get_error_msg()`
     cmake_push_check_state()
     set(CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES} ${Z3_INCLUDE_DIRS})
     set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} ${Z3_LIBRARIES})
+
+    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+      string(REPLACE ".so" ".dylib" Z3_LIBRARIES ${Z3_LIBRARIES})
+      message(STATUS "New Z3 library path: ${Z3_LIBRARIES}")
+
+      if(EXISTS "${Z3_LIBRARIES}")
+        message(STATUS "Found Z3 library on MacOS")
+      else()
+        message(STATUS "Z3 library not found on MacOS.")
+      endif()
+    endif()
+
 
     check_cxx_source_compiles("
     #include <z3.h>
@@ -54,8 +64,9 @@ if (ENABLE_SOLVER_Z3)
       message(STATUS "Z3_get_error_msg does not require context")
     endif()
 
+    list(APPEND KLEE_COMPONENT_EXTRA_INCLUDE_DIRS ${Z3_INCLUDE_DIRS})
+    list(APPEND KLEE_SOLVER_LIBRARIES ${Z3_LIBRARIES})
     list(APPEND KLEE_SOLVER_INCLUDE_DIRS ${Z3_INCLUDE_DIRS})
-    list(APPEND KLEE_SOLVER_LIBRARY_DIRS ${Z3_LIBRARIES})
 
   else()
     message(FATAL_ERROR "Z3 not found.")
