@@ -364,8 +364,6 @@ check_cxx_symbol_exists(mallinfo malloc.h HAVE_MALLINFO)
 check_cxx_symbol_exists(mallinfo2 malloc.h HAVE_MALLINFO2)
 check_cxx_symbol_exists(malloc_zone_statistics malloc/malloc.h HAVE_MALLOC_ZONE_STATISTICS)
 
-check_include_file(sys/statfs.h HAVE_SYSSTATFS_H)
-
 # FIXME: This is needed by the runtime not KLEE itself so we are testing the wrong
 # compiler.
 check_include_file("selinux/selinux.h" HAVE_SELINUX_SELINUX_H)
