@@ -26,10 +26,6 @@
 #include <dirent.h>
 #include <sys/types.h>
 
-#ifdef HAVE_SYSSTATFS_H
-#include <sys/statfs.h>
-#endif
-
 #include <sys/stat.h>
 
 #ifdef __APPLE__
@@ -38,15 +34,20 @@
 #endif
 #include <sys/dtrace.h>
 #endif
+
 #ifdef __FreeBSD__
 #include "FreeBSD.h"
 #endif
+
 #if defined(__APPLE__) || defined(__FreeBSD__)
 #include <sys/mount.h>
 #include <sys/param.h>
 #if !defined(dirent64)
 #define dirent64 dirent
 #endif
+#else
+// Linux
+#include <sys/vfs.h>
 #endif
 
 typedef struct {
