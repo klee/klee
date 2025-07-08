@@ -52,9 +52,6 @@
 /* Define to 1 if you have the <sys/capability.h> header file. */
 #cmakedefine HAVE_SYS_CAPABILITY_H @HAVE_SYS_CAPABILITY_H@
 
-/* Z3 needs a Z3_context passed to Z3_get_error_msg() */
-#cmakedefine HAVE_Z3_GET_ERROR_MSG_NEEDS_CONTEXT @HAVE_Z3_GET_ERROR_MSG_NEEDS_CONTEXT@
-
 /* Define to 1 if you have the <zlib.h> header file. */
 #cmakedefine HAVE_ZLIB_H @HAVE_ZLIB_H@
 

@@ -47,23 +47,6 @@ if (ENABLE_SOLVER_Z3)
       endif()
     endif()
 
-
-    check_cxx_source_compiles("
-    #include <z3.h>
-    void custom_z3_error_handler(Z3_context ctx, Z3_error_code ec) {
-      ::Z3_string errorMsg = Z3_get_error_msg(ctx, ec);
-    }
-    int main(int argc, char** argv) {
-        return 0;
-    }
-    " HAVE_Z3_GET_ERROR_MSG_NEEDS_CONTEXT)
-    cmake_pop_check_state()
-    if (HAVE_Z3_GET_ERROR_MSG_NEEDS_CONTEXT)
-      message(STATUS "Z3_get_error_msg requires context")
-    else()
-      message(STATUS "Z3_get_error_msg does not require context")
-    endif()
-
     list(APPEND KLEE_COMPONENT_EXTRA_INCLUDE_DIRS ${Z3_INCLUDE_DIRS})
     list(APPEND KLEE_SOLVER_LIBRARIES ${Z3_LIBRARIES})
     list(APPEND KLEE_SOLVER_INCLUDE_DIRS ${Z3_INCLUDE_DIRS})
