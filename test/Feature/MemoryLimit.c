@@ -7,13 +7,15 @@
 
 // RUN: %clang -emit-llvm -DLITTLE_ALLOC -g -c %s -o %t.little.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --max-memory=20 %t.little.bc > %t.little.log
+// Disable kdalloc as `MemoryLimit::getUsedDeterministicSize()` currently returns `0`
+// RUN: %klee --output-dir=%t.klee-out --kdalloc=false --max-memory=20 %t.little.bc > %t.little.log
 // RUN: FileCheck -check-prefix=CHECK-LITTLE -input-file=%t.little.log %s
 // RUN: FileCheck -check-prefix=CHECK-WRN -input-file=%t.klee-out/warnings.txt %s
 
 // RUN: %clang -emit-llvm -g -c %s -o %t.big.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --max-memory=20 %t.big.bc > %t.big.log 2> %t.big.err
+// Disable kdalloc as `MemoryLimit::getUsedDeterministicSize()` currently returns `0`
+// RUN: %klee --output-dir=%t.klee-out --kdalloc=false --max-memory=20 %t.big.bc > %t.big.log 2> %t.big.err
 // RUN: FileCheck -check-prefix=CHECK-BIG -input-file=%t.big.log %s
 // RUN: FileCheck -check-prefix=CHECK-WRN -input-file=%t.klee-out/warnings.txt %s
 
