@@ -340,20 +340,21 @@ endif()
 ################################################################################
 # Detect libutil
 ################################################################################
-check_include_file(pty.h HAVE_PTY_H)
-check_include_file(util.h HAVE_UTIL_H)
-check_include_file(libutil.h HAVE_LIBUTIL_H)
-if (HAVE_PTY_H OR HAVE_UTIL_H OR HAVE_LIBUTIL_H)
-  check_function_exists(openpty openpty_in_libc)
-  if (NOT openpty_in_libc)
-    check_library_exists(util openpty "" openpty_in_libutil)
-    if (openpty_in_libutil)
-      set(LIBUTIL_LIBRARIES util)
-    else ()
-      message(FATAL_ERROR "Could not find libutil")
-    endif (openpty_in_libutil)
-  endif (NOT openpty_in_libc)
-endif (HAVE_PTY_H OR HAVE_UTIL_H OR HAVE_LIBUTIL_H)
+find_library(UTIL_LIBRARY NAMES util)
+message(STATUS "Found libutil ${UTIL_LIBRARY}")
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+  find_path(UTIL_INCLUDE_DIR NAMES util.h libutil.h)
+  message(STATUS "Found libutil include dir ${UTIL_INCLUDE_DIR}")
+
+elseif(UNIX)
+  find_path(UTIL_INCLUDE_DIR NAMES pty.h)
+  message(STATUS "Found libutil include dir ${UTIL_INCLUDE_DIR}")
+endif()
+
+if (NOT UTIL_INCLUDE_DIR)
+  message(FATAL_ERROR "Could not find libutil")
+endif()
 
 ################################################################################
 # Miscellaneous header file detection

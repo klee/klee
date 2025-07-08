@@ -23,18 +23,15 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 
-#ifdef HAVE_PTY_H
-#include <pty.h>
-#elif defined(HAVE_UTIL_H)
-#include <util.h>
-#elif defined(HAVE_LIBUTIL_H)
-#include <libutil.h>
-#endif
-
 #if defined(__APPLE__)
+#include <util.h>
 #include <sys/termios.h>
+#elif defined(__FreeBSD__)
+#include <libutil.h>
+#include <termios.h>
 #else
 #include <termios.h>
+#include <pty.h>
 #endif
 
 static void create_file(int target_fd,
