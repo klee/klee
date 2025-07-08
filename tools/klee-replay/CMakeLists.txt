@@ -6,7 +6,7 @@
 # License. See LICENSE.TXT for details.
 #
 #===------------------------------------------------------------------------===#
-if (HAVE_PTY_H OR HAVE_UTIL_H OR HAVE_LIBUTIL_H)
+if (UTIL_INCLUDE_DIR)
   add_executable(klee-replay
     fd_init.c
     file-creator.c
@@ -21,9 +21,9 @@ if (HAVE_PTY_H OR HAVE_UTIL_H OR HAVE_LIBUTIL_H)
     target_link_libraries(klee-replay PRIVATE ${LIBCAP_LIBRARIES})
   endif()
 
-  if (openpty_in_libutil)
-    target_link_libraries(klee-replay PRIVATE ${LIBUTIL_LIBRARIES})
-  endif (openpty_in_libutil)
+  if (UTIL_LIBRARY)
+    target_link_libraries(klee-replay PRIVATE ${UTIL_LIBRARY})
+  endif (UTIL_LIBRARY)
 
   install(TARGETS klee-replay RUNTIME DESTINATION bin)
 else()
