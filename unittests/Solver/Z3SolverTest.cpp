@@ -21,6 +21,8 @@
 
 #include <memory>
 
+#include "../../lib/Solver/Z3Builder.h"
+
 using namespace klee;
 
 namespace {
@@ -68,4 +70,15 @@ TEST_F(Z3SolverTest, GetConstraintLog) {
   const char *Occurence =
       std::strstr(ConstraintsString.c_str(), ExpectedArraySelection);
   ASSERT_STRNE(Occurence, nullptr);
+}
+
+
+TEST_F(Z3SolverTest, GetError) {
+  const ref<Expr> Lhs = NotOptimizedExpr::alloc(ConstantExpr::alloc(4, Expr::Int8));
+  const ref<Expr> Rhs = ConstantExpr::alloc(12, Expr::Int16);
+
+  const ref<Expr> sdiv = SDivExpr::alloc(Lhs, Rhs);
+
+  auto builder = Z3Builder(true, nullptr);
+  EXPECT_EXIT(builder.construct(sdiv), ::testing::KilledBySignal(SIGABRT), "Incorrect use of Z3");
 }
