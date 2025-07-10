@@ -667,7 +667,7 @@ if (ENABLE_UNIT_TESTS OR ENABLE_SYSTEM_TESTS)
   find_program(
     LIT_TOOL
     NAMES ${LIT_TOOL_NAMES}
-    HINTS "${LLVM_TOOLS_BINARY_DIR}"
+    HINTS "${LLVM_TOOLS_BINARY_DIR}" "${LIT_DIR}"
     DOC "Path to lit tool"
   )
 
