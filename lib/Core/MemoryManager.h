@@ -11,6 +11,7 @@
 #define KLEE_MEMORYMANAGER_H
 
 #include "klee/KDAlloc/kdalloc.h"
+#include "klee/Expr/Expr.h"
 
 #include <cstddef>
 #include <set>
@@ -54,13 +55,21 @@ public:
    * Returns memory object which contains a handle to real virtual process
    * memory.
    */
+  MemoryObject *allocate(ref<Expr> size, uint64_t capacity, bool isLocal,
+                         bool isGlobal, ExecutionState *state,
+                         const llvm::Value *allocSite, size_t alignment);
+
   MemoryObject *allocate(uint64_t size, bool isLocal, bool isGlobal,
                          ExecutionState *state, const llvm::Value *allocSite,
                          size_t alignment);
+
   MemoryObject *allocateFixed(uint64_t address, uint64_t size,
                               const llvm::Value *allocSite);
+
   void markFreed(MemoryObject *mo);
+
   bool markMappingsAsUnneeded();
+
   ArrayCache *getArrayCache() const { return arrayCache; }
 
   /*
