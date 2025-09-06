@@ -1,0 +1,3 @@
+[submodule "klee-uclibc"]
+	path = 3rd/klee-uclibc
+	url = https://github.com/klee/klee-uclibc.git
