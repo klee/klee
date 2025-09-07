@@ -13,10 +13,10 @@
 #include <cstddef>
 
 namespace klee {
-  namespace util {
-    /// Get total malloc usage in bytes
-    size_t GetTotalMallocUsage();
-  }
-}
+namespace util {
+/// Get total malloc usage in bytes
+size_t GetTotalMallocUsage();
+} // namespace util
+} // namespace klee
 
 #endif /* KLEE_MEMORYUSAGE_H */

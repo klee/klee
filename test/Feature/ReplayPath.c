@@ -22,14 +22,25 @@ int main() {
 
   klee_make_symbolic(&x, sizeof x, "x");
 
-  if (x&1) res *= 2; else cond_exit();
-  if (x&2) res *= 3; else cond_exit();
-  if (x&4) res *= 5; else cond_exit();
+  if (x & 1)
+    res *= 2;
+  else
+    cond_exit();
+  if (x & 2)
+    res *= 3;
+  else
+    cond_exit();
+  if (x & 4)
+    res *= 5;
+  else
+    cond_exit();
 
   // get forced branch coverage
-  if (x&2) res *= 7;
-  if (!(x&2)) res *= 11;
+  if (x & 2)
+    res *= 7;
+  if (!(x & 2))
+    res *= 11;
   printf("res: %d\n", res);
- 
+
   return 0;
 }

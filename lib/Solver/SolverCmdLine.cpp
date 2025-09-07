@@ -43,9 +43,10 @@ cl::opt<bool> UseFastCexSolver(
     cl::desc("Enable an experimental range-based solver (default=false)"),
     cl::cat(SolvingCat));
 
-cl::opt<bool> UseCexCache("use-cex-cache", cl::init(true),
-                          cl::desc("Use the counterexample cache (default=true)"),
-                          cl::cat(SolvingCat));
+cl::opt<bool>
+    UseCexCache("use-cex-cache", cl::init(true),
+                cl::desc("Use the counterexample cache (default=true)"),
+                cl::cat(SolvingCat));
 
 cl::opt<bool> UseBranchCache("use-branch-cache", cl::init(true),
                              cl::desc("Use the branch cache (default=true)"),
@@ -75,8 +76,9 @@ cl::opt<bool>
 
 cl::opt<std::string> MaxCoreSolverTime(
     "max-solver-time",
-    cl::desc("Maximum amount of time for a single SMT query (default=0s (off)). "
-             "Enables --use-forked-solver"),
+    cl::desc(
+        "Maximum amount of time for a single SMT query (default=0s (off)). "
+        "Enables --use-forked-solver"),
     cl::cat(SolvingCat));
 
 cl::opt<bool> UseForkedCoreSolver(
@@ -118,7 +120,7 @@ void KCommandLine::KeepOnlyCategories(
 
   for (auto &elem : map) {
     if (elem.first() == "version" || elem.first() == "color" ||
-        elem.first() == "help"    || elem.first() == "help-list")
+        elem.first() == "help" || elem.first() == "help-list")
       continue;
 
     bool keep = false;
@@ -152,17 +154,19 @@ void KCommandLine::KeepOnlyCategories(
 #define METASMT_DEFAULT_BACKEND METASMT_BACKEND_STP
 #endif
 
-cl::opt<klee::MetaSMTBackendType>
-MetaSMTBackend("metasmt-backend",
-               cl::desc("Specify the MetaSMT solver backend type " METASMT_DEFAULT_BACKEND_STR),
-               cl::values(clEnumValN(METASMT_BACKEND_STP, "stp", "Use metaSMT with STP"),
-                          clEnumValN(METASMT_BACKEND_Z3, "z3", "Use metaSMT with Z3"),
-                          clEnumValN(METASMT_BACKEND_BOOLECTOR, "btor",
-                                     "Use metaSMT with Boolector"),
-                          clEnumValN(METASMT_BACKEND_CVC4, "cvc4", "Use metaSMT with CVC4"),
-                          clEnumValN(METASMT_BACKEND_YICES2, "yices2", "Use metaSMT with Yices2")),
-               cl::init(METASMT_DEFAULT_BACKEND),
-               cl::cat(SolvingCat));
+cl::opt<klee::MetaSMTBackendType> MetaSMTBackend(
+    "metasmt-backend",
+    cl::desc(
+        "Specify the MetaSMT solver backend type " METASMT_DEFAULT_BACKEND_STR),
+    cl::values(clEnumValN(METASMT_BACKEND_STP, "stp", "Use metaSMT with STP"),
+               clEnumValN(METASMT_BACKEND_Z3, "z3", "Use metaSMT with Z3"),
+               clEnumValN(METASMT_BACKEND_BOOLECTOR, "btor",
+                          "Use metaSMT with Boolector"),
+               clEnumValN(METASMT_BACKEND_CVC4, "cvc4",
+                          "Use metaSMT with CVC4"),
+               clEnumValN(METASMT_BACKEND_YICES2, "yices2",
+                          "Use metaSMT with Yices2")),
+    cl::init(METASMT_DEFAULT_BACKEND), cl::cat(SolvingCat));
 
 #undef METASMT_DEFAULT_BACKEND
 #undef METASMT_DEFAULT_BACKEND_STR
@@ -201,8 +205,8 @@ cl::opt<CoreSolverType> CoreSolverToUse(
 
 cl::opt<CoreSolverType> DebugCrossCheckCoreSolverWith(
     "debug-crosscheck-core-solver",
-    cl::desc(
-        "Specifiy a solver to use for crosschecking the results of the core solver"),
+    cl::desc("Specifiy a solver to use for crosschecking the results of the "
+             "core solver"),
     cl::values(clEnumValN(STP_SOLVER, "stp", "STP"),
                clEnumValN(METASMT_SOLVER, "metasmt", "metaSMT"),
                clEnumValN(DUMMY_SOLVER, "dummy", "Dummy solver"),

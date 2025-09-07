@@ -25,24 +25,24 @@ using namespace klee;
 namespace {
 llvm::cl::opt<bool> UseConstructHashZ3(
     "use-construct-hash-z3",
-    llvm::cl::desc("Use hash-consing during Z3 query construction (default=true)"),
-    llvm::cl::init(true),
-    llvm::cl::cat(klee::ExprCat));
+    llvm::cl::desc(
+        "Use hash-consing during Z3 query construction (default=true)"),
+    llvm::cl::init(true), llvm::cl::cat(klee::ExprCat));
 
 // FIXME: This should be std::atomic<bool>. Need C++11 for that.
 bool Z3InterationLogOpen = false;
-}
+} // namespace
 
 namespace klee {
 
 // Declared here rather than `Z3Builder.h` so they can be called in gdb.
 template <> void Z3NodeHandle<Z3_sort>::dump() {
-  llvm::errs() << "Z3SortHandle:\n" << ::Z3_sort_to_string(context, node)
-               << "\n";
+  llvm::errs() << "Z3SortHandle:\n"
+               << ::Z3_sort_to_string(context, node) << "\n";
 }
 template <> void Z3NodeHandle<Z3_ast>::dump() {
-  llvm::errs() << "Z3ASTHandle:\n" << ::Z3_ast_to_string(context, as_ast())
-               << "\n";
+  llvm::errs() << "Z3ASTHandle:\n"
+               << ::Z3_ast_to_string(context, as_ast()) << "\n";
 }
 
 void custom_z3_error_handler(Z3_context ctx, Z3_error_code ec) {
@@ -68,14 +68,17 @@ void Z3ArrayExprHash::clear() {
   _array_hash.clear();
 }
 
-Z3Builder::Z3Builder(bool autoClearConstructCache, const char* z3LogInteractionFileArg)
-    : autoClearConstructCache(autoClearConstructCache), z3LogInteractionFile("") {
+Z3Builder::Z3Builder(bool autoClearConstructCache,
+                     const char *z3LogInteractionFileArg)
+    : autoClearConstructCache(autoClearConstructCache),
+      z3LogInteractionFile("") {
   if (z3LogInteractionFileArg)
     this->z3LogInteractionFile = std::string(z3LogInteractionFileArg);
   if (z3LogInteractionFile.length() > 0) {
     klee_message("Logging Z3 API interaction to \"%s\"",
                  z3LogInteractionFile.c_str());
-    assert(!Z3InterationLogOpen && "interaction log should not already be open");
+    assert(!Z3InterationLogOpen &&
+           "interaction log should not already be open");
     Z3_open_log(z3LogInteractionFile.c_str());
     Z3InterationLogOpen = true;
   }
@@ -309,7 +312,8 @@ Z3ASTHandle Z3Builder::iffExpr(Z3ASTHandle lhs, Z3ASTHandle rhs) {
   Z3SortHandle rhsSort = Z3SortHandle(Z3_get_sort(ctx, rhs), ctx);
   assert(Z3_get_sort_kind(ctx, lhsSort) == Z3_get_sort_kind(ctx, rhsSort) &&
          "lhs and rhs sorts must match");
-  assert(Z3_get_sort_kind(ctx, lhsSort) == Z3_BOOL_SORT && "args must have BOOL sort");
+  assert(Z3_get_sort_kind(ctx, lhsSort) == Z3_BOOL_SORT &&
+         "args must have BOOL sort");
   return Z3ASTHandle(Z3_mk_iff(ctx, lhs, rhs), ctx);
 }
 
@@ -391,8 +395,8 @@ Z3ASTHandle Z3Builder::getInitialArray(const Array *root) {
     // number
     std::string unique_name = root->name + "_" + unique_id;
 
-    array_expr = buildArray(unique_name.c_str(), root->getDomain(),
-                            root->getRange());
+    array_expr =
+        buildArray(unique_name.c_str(), root->getDomain(), root->getRange());
 
     if (root->isConstantArray() && constant_array_assertions.count(root) == 0) {
       std::vector<Z3ASTHandle> array_assertions;
@@ -458,7 +462,7 @@ Z3ASTHandle Z3Builder::construct(ref<Expr> e, int *width_out) {
   if (!UseConstructHashZ3 || isa<ConstantExpr>(e)) {
     return constructActual(e, width_out);
   } else {
-    ExprHashMap<std::pair<Z3ASTHandle, unsigned> >::iterator it =
+    ExprHashMap<std::pair<Z3ASTHandle, unsigned>>::iterator it =
         constructed.find(e);
     if (it != constructed.end()) {
       if (width_out)
@@ -558,7 +562,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     }
   }
 
-  // Casting
+    // Casting
 
   case Expr::ZExt: {
     int srcWidth;
@@ -789,7 +793,7 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     }
   }
 
-  // Comparison
+    // Comparison
 
   case Expr::Eq: {
     EqExpr *ee = cast<EqExpr>(e);
@@ -859,5 +863,5 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
     return getTrue();
   }
 }
-}
+} // namespace klee
 #endif // ENABLE_Z3

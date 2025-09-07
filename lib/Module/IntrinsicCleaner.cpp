@@ -15,8 +15,8 @@
 #include "klee/Support/CompilerWarning.h"
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
-#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -99,8 +99,8 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
           auto castedSrc =
               Builder.CreatePointerCast(src, i8pp, "vacopy.cast.src");
 #if LLVM_VERSION_CODE >= LLVM_VERSION(15, 0)
-          auto load = Builder.CreateLoad(Builder.getPtrTy(), castedSrc,
-                                         "vacopy.read");
+          auto load =
+              Builder.CreateLoad(Builder.getPtrTy(), castedSrc, "vacopy.read");
 #else
           auto load =
               Builder.CreateLoad(castedSrc->getType()->getPointerElementType(),
@@ -240,50 +240,54 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         Value *overflow = nullptr;
         Value *result = nullptr;
         Value *saturated = nullptr;
-        switch(ii->getIntrinsicID()) {
-          case Intrinsic::usub_sat:
+        switch (ii->getIntrinsicID()) {
+        case Intrinsic::usub_sat:
+          result = builder.CreateSub(op1, op2);
+          overflow = builder.CreateICmpULT(op1, op2); // a < b  =>  a - b < 0
+          saturated = ConstantInt::get(ctx, APInt(bw, 0));
+          break;
+        case Intrinsic::uadd_sat:
+          result = builder.CreateAdd(op1, op2);
+          overflow = builder.CreateICmpULT(result, op1); // a + b < a
+          saturated = ConstantInt::get(ctx, APInt::getMaxValue(bw));
+          break;
+        case Intrinsic::ssub_sat:
+        case Intrinsic::sadd_sat: {
+          if (ii->getIntrinsicID() == Intrinsic::ssub_sat) {
             result = builder.CreateSub(op1, op2);
-            overflow = builder.CreateICmpULT(op1, op2); // a < b  =>  a - b < 0
-            saturated = ConstantInt::get(ctx, APInt(bw, 0));
-            break;
-          case Intrinsic::uadd_sat:
+          } else {
             result = builder.CreateAdd(op1, op2);
-            overflow = builder.CreateICmpULT(result, op1); // a + b < a
-            saturated = ConstantInt::get(ctx, APInt::getMaxValue(bw));
-            break;
-          case Intrinsic::ssub_sat:
-          case Intrinsic::sadd_sat: {
-            if (ii->getIntrinsicID() == Intrinsic::ssub_sat) {
-              result = builder.CreateSub(op1, op2);
-            } else {
-              result = builder.CreateAdd(op1, op2);
-            }
-            ConstantInt *zero = ConstantInt::get(ctx, APInt(bw, 0));
-            ConstantInt *smin = ConstantInt::get(ctx, APInt::getSignedMinValue(bw));
-            ConstantInt *smax = ConstantInt::get(ctx, APInt::getSignedMaxValue(bw));
-
-            Value *sign1 = builder.CreateICmpSLT(op1, zero);
-            Value *sign2 = builder.CreateICmpSLT(op2, zero);
-            Value *signR = builder.CreateICmpSLT(result, zero);
-
-            if (ii->getIntrinsicID() == Intrinsic::ssub_sat) {
-              saturated = builder.CreateSelect(sign2, smax, smin);
-            } else {
-              saturated = builder.CreateSelect(sign2, smin, smax);
-            }
-
-            // The sign of the result differs from the sign of the first operand
-            overflow = builder.CreateXor(sign1, signR);
-            if (ii->getIntrinsicID() == Intrinsic::ssub_sat) {
-              // AND the signs of the operands differ
-              overflow = builder.CreateAnd(overflow, builder.CreateXor(sign1, sign2));
-            } else {
-              // AND the signs of the operands are the same
-              overflow = builder.CreateAnd(overflow, builder.CreateNot(builder.CreateXor(sign1, sign2)));
-            }
-            break;
           }
-          default: ;
+          ConstantInt *zero = ConstantInt::get(ctx, APInt(bw, 0));
+          ConstantInt *smin =
+              ConstantInt::get(ctx, APInt::getSignedMinValue(bw));
+          ConstantInt *smax =
+              ConstantInt::get(ctx, APInt::getSignedMaxValue(bw));
+
+          Value *sign1 = builder.CreateICmpSLT(op1, zero);
+          Value *sign2 = builder.CreateICmpSLT(op2, zero);
+          Value *signR = builder.CreateICmpSLT(result, zero);
+
+          if (ii->getIntrinsicID() == Intrinsic::ssub_sat) {
+            saturated = builder.CreateSelect(sign2, smax, smin);
+          } else {
+            saturated = builder.CreateSelect(sign2, smin, smax);
+          }
+
+          // The sign of the result differs from the sign of the first operand
+          overflow = builder.CreateXor(sign1, signR);
+          if (ii->getIntrinsicID() == Intrinsic::ssub_sat) {
+            // AND the signs of the operands differ
+            overflow =
+                builder.CreateAnd(overflow, builder.CreateXor(sign1, sign2));
+          } else {
+            // AND the signs of the operands are the same
+            overflow = builder.CreateAnd(
+                overflow, builder.CreateNot(builder.CreateXor(sign1, sign2)));
+          }
+          break;
+        }
+        default:;
         }
 
         result = builder.CreateSelect(overflow, saturated, result);
@@ -311,8 +315,8 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         // check if the instruction after the one we just replaced is not the
         // end of the basic block and if it is not (i.e. it is a valid
         // instruction), delete it and all remaining because the cleaner just
-        // introduced a terminating instruction (unreachable) otherwise llvm will
-        // assert in Verifier::visitTerminatorInstr
+        // introduced a terminating instruction (unreachable) otherwise llvm
+        // will assert in Verifier::visitTerminatorInstr
         while (i != ie) { // i was already incremented above.
           i = i->eraseFromParent();
         }
@@ -330,7 +334,8 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         break;
       }
       case Intrinsic::is_constant: {
-        if(auto* constant = llvm::ConstantFoldInstruction(ii, ii->getModule()->getDataLayout()))
+        if (auto *constant = llvm::ConstantFoldInstruction(
+                ii, ii->getModule()->getDataLayout()))
           ii->replaceAllUsesWith(constant);
         else
           ii->replaceAllUsesWith(ConstantInt::getFalse(ii->getType()));
@@ -411,7 +416,8 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       default: {
         const Function *Callee = ii->getCalledFunction();
         llvm::StringRef name = Callee->getName();
-        klee_warning_once((void*)Callee, "unsupported intrinsic %.*s", (int)name.size(), name.data());
+        klee_warning_once((void *)Callee, "unsupported intrinsic %.*s",
+                          (int)name.size(), name.data());
         break;
       }
       }

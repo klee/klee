@@ -96,7 +96,9 @@ public:
   ~STPSolverImpl() override;
 
   std::string getConstraintLog(const Query &) override;
-  void setCoreSolverTimeout(time::Span timeout) override { this->timeout = timeout; }
+  void setCoreSolverTimeout(time::Span timeout) override {
+    this->timeout = timeout;
+  }
 
   bool computeTruth(const Query &, bool &isValid) override;
   bool computeValue(const Query &, ref<Expr> &result) override;
@@ -109,8 +111,8 @@ public:
 
 STPSolverImpl::STPSolverImpl(bool useForkedSTP, bool optimizeDivides)
     : vc(vc_createValidityChecker()),
-      builder(new STPBuilder(vc, optimizeDivides)),
-      useForkedSTP(useForkedSTP), runStatusCode(SOLVER_RUN_STATUS_FAILURE) {
+      builder(new STPBuilder(vc, optimizeDivides)), useForkedSTP(useForkedSTP),
+      runStatusCode(SOLVER_RUN_STATUS_FAILURE) {
   assert(vc && "unable to create validity checker");
   assert(builder && "unable to create STPBuilder");
 
@@ -293,7 +295,8 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
   int pid = fork();
   // - error
   if (pid == -1) {
-    klee_warning("fork failed (for STP) - %s", llvm::sys::StrError(errno).c_str());
+    klee_warning("fork failed (for STP) - %s",
+                 llvm::sys::StrError(errno).c_str());
     if (!IgnoreSolverFailures)
       exit(1);
     return SolverImpl::SOLVER_RUN_STATUS_FORK_FAILED;
@@ -316,7 +319,7 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
       }
     }
     _exit(res);
-  // - parent
+    // - parent
   } else {
     int status;
     pid_t res;
@@ -443,5 +446,5 @@ void STPSolver::setCoreSolverTimeout(time::Span timeout) {
   impl->setCoreSolverTimeout(timeout);
 }
 
-} // klee
+} // namespace klee
 #endif // ENABLE_STP

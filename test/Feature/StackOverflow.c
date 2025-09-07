@@ -3,10 +3,10 @@
 // RUN: %klee --output-dir=%t.klee-out %t.bc > %t.output.log 2>&1
 // RUN: FileCheck -input-file=%t.output.log %s
 
-void recursive(unsigned nr){
+void recursive(unsigned nr) {
   if (nr == 0)
     return;
-  recursive(nr-1);
+  recursive(nr - 1);
 }
 
 int main() {

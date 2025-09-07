@@ -8,10 +8,10 @@
 #ifdef LINK_LLVM_LIB_TEST_EXEC
 extern void printint(int d);
 
-int main(int argc, char * argv[]) {
-	printint(5);
-	// CHECK: KLEE: WARNING ONCE: calling external: printf
-	return 0;
+int main(int argc, char *argv[]) {
+  printint(5);
+  // CHECK: KLEE: WARNING ONCE: calling external: printf
+  return 0;
 }
 #endif
 
@@ -19,6 +19,6 @@ int main(int argc, char * argv[]) {
 #include <stdio.h>
 
 void printint(int d) {
-	printf("%d\n", d);
+  printf("%d\n", d);
 }
 #endif

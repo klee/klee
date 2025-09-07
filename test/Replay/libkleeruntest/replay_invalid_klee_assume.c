@@ -23,8 +23,7 @@
 #error ASSUME_VALUE must be defined
 #endif
 
-
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   int x = 54;
   klee_make_symbolic(&x, sizeof(x), "x");
   klee_assume(x == ASSUME_VALUE);
@@ -41,4 +40,3 @@ int main(int argc, char** argv) {
 
 // CHECK_FATAL: KLEE_RUN_TEST_ERROR: invalid klee_assume
 // CHECK_FATAL-NOT: x=1
-

@@ -57,14 +57,15 @@ static cl::opt<bool> VerifyEach("verify-each",
                                          "optimization passes (default=false)"),
                                 cl::init(false), cl::cat(klee::ModuleCat));
 
-static cl::opt<bool>
-    Strip("strip-all", cl::desc("Strip all symbol information from executable (default=false)"),
-          cl::init(false), cl::cat(klee::ModuleCat));
+static cl::opt<bool> Strip(
+    "strip-all",
+    cl::desc("Strip all symbol information from executable (default=false)"),
+    cl::init(false), cl::cat(klee::ModuleCat));
 
-static cl::opt<bool>
-    StripDebug("strip-debug",
-               cl::desc("Strip debugger symbol info from executable (default=false)"),
-               cl::init(false), cl::cat(klee::ModuleCat));
+static cl::opt<bool> StripDebug(
+    "strip-debug",
+    cl::desc("Strip debugger symbol info from executable (default=false)"),
+    cl::init(false), cl::cat(klee::ModuleCat));
 
 // A utility function that adds a pass to the pass manager but will also add
 // a verifier pass after if we're supposed to verify.
@@ -88,8 +89,8 @@ static void AddStandardCompilePasses(legacy::PassManager &PM) {
   addPass(PM, createCFGSimplificationPass());       // Clean up disgusting code
   addPass(PM, createPromoteMemoryToRegisterPass()); // Kill useless allocas
   addPass(PM, createGlobalOptimizerPass());         // Optimize out global vars
-  addPass(PM, createGlobalDCEPass()); // Remove unused fns and globs
-  addPass(PM, createSCCPPass()); // Constant prop with SCCP
+  addPass(PM, createGlobalDCEPass());            // Remove unused fns and globs
+  addPass(PM, createSCCPPass());                 // Constant prop with SCCP
   addPass(PM, createDeadArgEliminationPass());   // Dead argument elimination
   addPass(PM, createInstructionCombiningPass()); // Clean up after IPCP & DAE
   addPass(PM, createCFGSimplificationPass());    // Clean up after IPCP & DAE
@@ -117,7 +118,7 @@ static void AddStandardCompilePasses(legacy::PassManager &PM) {
   addPass(PM, createCFGSimplificationPass());   // Merge & remove BBs
   addPass(PM, createReassociatePass());         // Reassociate expressions
   addPass(PM, createLoopRotatePass());
-  addPass(PM, createLICMPass());         // Hoist loop invariants
+  addPass(PM, createLICMPass()); // Hoist loop invariants
 #if LLVM_VERSION_CODE <= LLVM_VERSION(14, 0)
   addPass(PM, createLoopUnswitchPass()); // Unswitch loops.
 #endif

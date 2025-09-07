@@ -1,7 +1,6 @@
 // FIXME: This file is a bastard child of opt.cpp and llvm-ld's
 // Optimize.cpp. This stuff should live in common code.
 
-
 //===- Optimize.cpp - Optimize a complete program -------------------------===//
 //
 //                     The LLVM Compiler Infrastructure

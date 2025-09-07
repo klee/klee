@@ -3,8 +3,8 @@
 // RUN: %klee --output-dir=%t.klee-out --libc=uclibc --exit-on-error %t1.bc
 
 #include <assert.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 int main() {
   printf("HOME: %s\n", getenv("HOME"));

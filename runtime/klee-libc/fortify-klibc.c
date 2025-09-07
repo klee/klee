@@ -22,13 +22,13 @@ void *__mempcpy_chk(void *dest, const void *src, size_t len, size_t destlen) {
   return mempcpy(dest, src, len);
 }
 
-char *stpcpy(char * to, const char * from);
+char *stpcpy(char *to, const char *from);
 
 char *__stpcpy_chk(char *dest, const char *src, size_t destlen) {
   return stpcpy(dest, src);
 }
 
-char *strcat(char * s, const char * append);
+char *strcat(char *s, const char *append);
 
 char *__strcat_chk(char *dest, const char *src, size_t destlen) {
   return strcat(dest, src);
@@ -40,7 +40,7 @@ char *__strcpy_chk(char *dest, const char *src, size_t destlen) {
   return strcpy(dest, src);
 }
 
-char *strncpy(char * dst, const char * src, size_t n);
+char *strncpy(char *dst, const char *src, size_t n);
 
 char *__strncpy_chk(char *s1, const char *s2, size_t n, size_t s1len) {
   return strncpy(s1, s2, n);

@@ -35,7 +35,8 @@ protected:
   // @brief buffer to store logs before flushing to file
   llvm::raw_string_ostream logBuffer;
   unsigned queryCount;
-  time::Span minQueryTimeToLog; // we log to file only those queries which take longer than the specified time
+  time::Span minQueryTimeToLog; // we log to file only those queries which take
+                                // longer than the specified time
   bool logTimedOutQueries = false;
   time::Point startTime;
   time::Span lastQueryDuration;

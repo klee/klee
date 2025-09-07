@@ -4,7 +4,7 @@
 // RUN: %klee-stats --print-columns 'BCov(%),Branches,FullBranches,PartialBranches' --table-format=csv %t.klee-out > %t.stats
 // RUN: FileCheck -check-prefix=CHECK-STATS -input-file=%t.stats %s
 
-int main(){
+int main() {
   int a = 42;
   a -= 42;
   return a;

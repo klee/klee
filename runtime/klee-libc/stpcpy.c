@@ -29,10 +29,9 @@
  * SUCH DAMAGE.
  */
 
-char *
-stpcpy(char * to, const char * from)
-{
+char *stpcpy(char *to, const char *from) {
 
-	for (; (*to = *from); ++from, ++to);
-	return(to);
+  for (; (*to = *from); ++from, ++to)
+    ;
+  return (to);
 }

@@ -51,25 +51,25 @@
 #endif
 
 typedef struct {
-  unsigned size;  /* in bytes */
-  char* contents;
-  struct stat64* stat;
+  unsigned size; /* in bytes */
+  char *contents;
+  struct stat64 *stat;
 } exe_disk_file_t;
 
 typedef enum {
-  eOpen         = (1 << 0),
-  eCloseOnExec  = (1 << 1),
-  eReadable     = (1 << 2),
-  eWriteable    = (1 << 3)
+  eOpen = (1 << 0),
+  eCloseOnExec = (1 << 1),
+  eReadable = (1 << 2),
+  eWriteable = (1 << 3)
 } exe_file_flag_t;
 
-typedef struct {      
-  int fd;                   /* actual fd if not symbolic */
-  unsigned flags;           /* set of exe_file_flag_t values. fields
-                               are only defined when flags at least
-                               has eOpen. */
-  off64_t off;              /* offset */
-  exe_disk_file_t* dfile;   /* ptr to file on disk, if symbolic */
+typedef struct {
+  int fd;                 /* actual fd if not symbolic */
+  unsigned flags;         /* set of exe_file_flag_t values. fields
+                             are only defined when flags at least
+                             has eOpen. */
+  off64_t off;            /* offset */
+  exe_disk_file_t *dfile; /* ptr to file on disk, if symbolic */
 } exe_file_t;
 
 typedef struct {
@@ -78,8 +78,9 @@ typedef struct {
   unsigned stdout_writes; /* how many chars were written to stdout */
   exe_disk_file_t *sym_files;
   /* --- */
-  /* the maximum number of failures on one path; gets decremented after each failure */
-  unsigned max_failures; 
+  /* the maximum number of failures on one path; gets decremented after each
+   * failure */
+  unsigned max_failures;
 
   /* Which read, write etc. call should fail */
   int *read_fail, *write_fail, *close_fail, *ftruncate_fail, *getcwd_fail;
@@ -97,7 +98,7 @@ typedef struct {
   /* If set, writes execute as expected.  Otherwise, writes extending
      the file size only change the contents up to the initial
      size. The file offset is always incremented correctly. */
-  int save_all_writes; 
+  int save_all_writes;
 } exe_sym_env_t;
 
 extern exe_file_system_t __exe_fs;

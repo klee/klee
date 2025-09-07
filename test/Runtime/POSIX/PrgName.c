@@ -6,7 +6,6 @@
 // RUN: grep -q "No" %t.log
 // RUN: grep -qv "Yes" %t.log
 
-
 /* Simple test for argv[0] */
 
 #include <stdio.h>
@@ -15,7 +14,8 @@ int f(int argc, char **argv) {
 
   if (argv[0][5] == '7')
     printf("Yes\n");
-  else printf("No\n");
+  else
+    printf("No\n");
 
   printf("%c\n", argv[0][5]);
 
@@ -25,7 +25,6 @@ int f(int argc, char **argv) {
 
   return 0;
 }
-
 
 int main(int argc, char **argv) {
   f(argc, argv);

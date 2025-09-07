@@ -33,9 +33,6 @@
 
 #include <stddef.h>
 
-long
-strtol(const char * nptr, char ** endptr, int base);
+long strtol(const char *nptr, char **endptr, int base);
 
-int atoi(const char *str) {
-  return (int)strtol(str, (char **)NULL, 10);
-}
+int atoi(const char *str) { return (int)strtol(str, (char **)NULL, 10); }

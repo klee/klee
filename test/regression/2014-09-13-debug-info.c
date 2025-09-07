@@ -25,7 +25,7 @@ void f3(void) {}
 int main() {
   int x;
   klee_make_symbolic(&x, sizeof x, "x");
-  klee_assume((unsigned) x < 256);
+  klee_assume((unsigned)x < 256);
 
   if (x == 17) {
     f0();

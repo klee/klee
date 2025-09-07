@@ -29,6 +29,6 @@ public:
 /// createMetaSMTSolver - Create a solver using the metaSMT backend set by
 /// the option MetaSMTBackend.
 std::unique_ptr<Solver> createMetaSMTSolver();
-}
+} // namespace klee
 
 #endif /* KLEE_METASMTSOLVER_H */

@@ -21,20 +21,20 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 DISABLE_WARNING_POP
 
 namespace klee {
-  extern llvm::cl::OptionCategory DebugCat;
-  extern llvm::cl::OptionCategory ExprCat;
-  extern llvm::cl::OptionCategory ExtCallsCat;
-  extern llvm::cl::OptionCategory MemoryCat;
-  extern llvm::cl::OptionCategory MergeCat;
-  extern llvm::cl::OptionCategory MiscCat;
-  extern llvm::cl::OptionCategory ModuleCat;
-  extern llvm::cl::OptionCategory SearchCat;
-  extern llvm::cl::OptionCategory ExecTreeCat;
-  extern llvm::cl::OptionCategory SeedingCat;
-  extern llvm::cl::OptionCategory SolvingCat;
-  extern llvm::cl::OptionCategory StatsCat;
-  extern llvm::cl::OptionCategory TerminationCat;
-  extern llvm::cl::OptionCategory TestGenCat;
-}
+extern llvm::cl::OptionCategory DebugCat;
+extern llvm::cl::OptionCategory ExprCat;
+extern llvm::cl::OptionCategory ExtCallsCat;
+extern llvm::cl::OptionCategory MemoryCat;
+extern llvm::cl::OptionCategory MergeCat;
+extern llvm::cl::OptionCategory MiscCat;
+extern llvm::cl::OptionCategory ModuleCat;
+extern llvm::cl::OptionCategory SearchCat;
+extern llvm::cl::OptionCategory ExecTreeCat;
+extern llvm::cl::OptionCategory SeedingCat;
+extern llvm::cl::OptionCategory SolvingCat;
+extern llvm::cl::OptionCategory StatsCat;
+extern llvm::cl::OptionCategory TerminationCat;
+extern llvm::cl::OptionCategory TestGenCat;
+} // namespace klee
 
 #endif /* KLEE_OPTIONCATEGORIES_H */

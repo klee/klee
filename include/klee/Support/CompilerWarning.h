@@ -24,7 +24,7 @@
 #define DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #else
 #define DISABLE_WARNING_DEPRECATED_DECLARATIONS                                \
-  DISABLE_WARNING(-Wdeprecated-declarations)
+  DISABLE_WARNING(-Wdeprecated - declarations)
 #endif
 
 #else

@@ -16,11 +16,11 @@
 
 #ifdef ENABLE_Z3
 
-#include "Z3Solver.h"
 #include "Z3Builder.h"
+#include "Z3Solver.h"
 
-#include "klee/Expr/Constraints.h"
 #include "klee/Expr/Assignment.h"
+#include "klee/Expr/Constraints.h"
 #include "klee/Expr/ExprUtil.h"
 #include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverImpl.h"
@@ -39,19 +39,21 @@ llvm::cl::opt<std::string> Z3LogInteractionFile(
 
 llvm::cl::opt<std::string> Z3QueryDumpFile(
     "debug-z3-dump-queries", llvm::cl::init(""),
-    llvm::cl::desc("Dump Z3's representation of the query to the specified path"),
+    llvm::cl::desc(
+        "Dump Z3's representation of the query to the specified path"),
     llvm::cl::cat(klee::SolvingCat));
 
 llvm::cl::opt<bool> Z3ValidateModels(
     "debug-z3-validate-models", llvm::cl::init(false),
-    llvm::cl::desc("When generating Z3 models validate these against the query"),
+    llvm::cl::desc(
+        "When generating Z3 models validate these against the query"),
     llvm::cl::cat(klee::SolvingCat));
 
 llvm::cl::opt<unsigned>
     Z3VerbosityLevel("debug-z3-verbosity", llvm::cl::init(0),
                      llvm::cl::desc("Z3 verbosity level (default=0)"),
                      llvm::cl::cat(klee::SolvingCat));
-}
+} // namespace
 
 #include "llvm/Support/ErrorHandling.h"
 
@@ -69,7 +71,7 @@ private:
 
   bool internalRunSolver(const Query &,
                          const std::vector<const Array *> *objects,
-                         std::vector<std::vector<unsigned char> > *values,
+                         std::vector<std::vector<unsigned char>> *values,
                          bool &hasSolution);
   bool validateZ3Model(::Z3_solver &theSolver, ::Z3_model &theModel);
 
@@ -81,7 +83,8 @@ public:
   void setCoreSolverTimeout(time::Span _timeout) override {
     timeout = _timeout;
 
-    auto timeoutInMilliSeconds = static_cast<unsigned>((timeout.toMicroseconds() / 1000));
+    auto timeoutInMilliSeconds =
+        static_cast<unsigned>((timeout.toMicroseconds() / 1000));
     if (!timeoutInMilliSeconds)
       timeoutInMilliSeconds = UINT_MAX;
     Z3_params_set_uint(builder->ctx, solverParameters, timeoutParamStrSymbol,
@@ -215,7 +218,7 @@ bool Z3SolverImpl::computeTruth(const Query &query, bool &isValid) {
 
 bool Z3SolverImpl::computeValue(const Query &query, ref<Expr> &result) {
   std::vector<const Array *> objects;
-  std::vector<std::vector<unsigned char> > values;
+  std::vector<std::vector<unsigned char>> values;
   bool hasSolution;
 
   // Find the object used in the expression, and compute an assignment
@@ -234,13 +237,13 @@ bool Z3SolverImpl::computeValue(const Query &query, ref<Expr> &result) {
 
 bool Z3SolverImpl::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<std::vector<unsigned char> > &values, bool &hasSolution) {
+    std::vector<std::vector<unsigned char>> &values, bool &hasSolution) {
   return internalRunSolver(query, &objects, &values, hasSolution);
 }
 
 bool Z3SolverImpl::internalRunSolver(
     const Query &query, const std::vector<const Array *> *objects,
-    std::vector<std::vector<unsigned char> > *values, bool &hasSolution) {
+    std::vector<std::vector<unsigned char>> *values, bool &hasSolution) {
 
   TimerStatIncrementer t(stats::queryTime);
   // NOTE: Z3 will switch to using a slower solver internally if push/pop are
@@ -325,7 +328,7 @@ bool Z3SolverImpl::internalRunSolver(
 SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
     ::Z3_solver theSolver, ::Z3_lbool satisfiable,
     const std::vector<const Array *> *objects,
-    std::vector<std::vector<unsigned char> > *values, bool &hasSolution) {
+    std::vector<std::vector<unsigned char>> *values, bool &hasSolution) {
   switch (satisfiable) {
   case Z3_L_TRUE: {
     hasSolution = true;
@@ -351,8 +354,7 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
         ::Z3_ast arrayElementExpr;
         Z3ASTHandle initial_read = builder->getInitialRead(array, offset);
 
-        __attribute__((unused))
-        bool successfulEval =
+        __attribute__((unused)) bool successfulEval =
             Z3_model_eval(builder->ctx, theModel, initial_read,
                           /*model_completion=*/true, &arrayElementExpr);
         assert(successfulEval && "Failed to evaluate model");
@@ -362,9 +364,8 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
                "Evaluated expression has wrong sort");
 
         int arrayElementValue = 0;
-        __attribute__((unused))
-        bool successGet = Z3_get_numeral_int(builder->ctx, arrayElementExpr,
-                                             &arrayElementValue);
+        __attribute__((unused)) bool successGet = Z3_get_numeral_int(
+            builder->ctx, arrayElementExpr, &arrayElementValue);
         assert(successGet && "failed to get value back");
         assert(arrayElementValue >= 0 && arrayElementValue <= 255 &&
                "Integer from model is out of range");
@@ -408,7 +409,8 @@ SolverImpl::SolverRunStatus Z3SolverImpl::handleSolverResponse(
   }
 }
 
-bool Z3SolverImpl::validateZ3Model(::Z3_solver &theSolver, ::Z3_model &theModel) {
+bool Z3SolverImpl::validateZ3Model(::Z3_solver &theSolver,
+                                   ::Z3_model &theModel) {
   bool success = true;
   ::Z3_ast_vector constraints =
       Z3_solver_get_assertions(builder->ctx, theSolver);
@@ -421,8 +423,7 @@ bool Z3SolverImpl::validateZ3Model(::Z3_solver &theSolver, ::Z3_model &theModel)
         Z3_ast_vector_get(builder->ctx, constraints, index), builder->ctx);
 
     ::Z3_ast rawEvaluatedExpr;
-    __attribute__((unused))
-    bool successfulEval =
+    __attribute__((unused)) bool successfulEval =
         Z3_model_eval(builder->ctx, theModel, constraint,
                       /*model_completion=*/true, &rawEvaluatedExpr);
     assert(successfulEval && "Failed to evaluate model");
@@ -435,8 +436,7 @@ bool Z3SolverImpl::validateZ3Model(::Z3_solver &theSolver, ::Z3_model &theModel)
     assert(Z3_get_sort_kind(builder->ctx, sort) == Z3_BOOL_SORT &&
            "Evaluated expression has wrong sort");
 
-    Z3_lbool evaluatedValue =
-        Z3_get_bool_value(builder->ctx, evaluatedExpr);
+    Z3_lbool evaluatedValue = Z3_get_bool_value(builder->ctx, evaluatedExpr);
     if (evaluatedValue != Z3_L_TRUE) {
       llvm::errs() << "Validating model failed:\n"
                    << "The expression:\n";
@@ -449,8 +449,10 @@ bool Z3SolverImpl::validateZ3Model(::Z3_solver &theSolver, ::Z3_model &theModel)
   }
 
   if (!success) {
-    llvm::errs() << "Solver state:\n" << Z3_solver_to_string(builder->ctx, theSolver) << "\n";
-    llvm::errs() << "Model:\n" << Z3_model_to_string(builder->ctx, theModel) << "\n";
+    llvm::errs() << "Solver state:\n"
+                 << Z3_solver_to_string(builder->ctx, theSolver) << "\n";
+    llvm::errs() << "Model:\n"
+                 << Z3_model_to_string(builder->ctx, theModel) << "\n";
   }
 
   Z3_ast_vector_dec_ref(builder->ctx, constraints);
@@ -460,5 +462,5 @@ bool Z3SolverImpl::validateZ3Model(::Z3_solver &theSolver, ::Z3_model &theModel)
 SolverImpl::SolverRunStatus Z3SolverImpl::getOperationStatusCode() {
   return runStatusCode;
 }
-}
+} // namespace klee
 #endif // ENABLE_Z3

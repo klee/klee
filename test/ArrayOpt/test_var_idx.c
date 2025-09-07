@@ -22,10 +22,10 @@
 // CHECK-OPT_V: KLEE: WARNING: OPT_V: successful
 // CHECK-CONST_ARR: const_arr
 
-#include <stdio.h>
 #include "klee/klee.h"
+#include <stdio.h>
 
-unsigned array[5] = {1,2,3,4,5};
+unsigned array[5] = {1, 2, 3, 4, 5};
 
 int main() {
   unsigned idx;
@@ -35,9 +35,9 @@ int main() {
   // CHECK-DAG: No
   // CHECK-DAG: Yes
   if (array[idx] == 3)
-	  printf("Yes\n");
+    printf("Yes\n");
   else
-	  printf("No\n");
+    printf("No\n");
 
   // CHECK-DAG: KLEE: done: completed paths = 2
 

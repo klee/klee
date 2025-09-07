@@ -13,19 +13,19 @@
 #include <random>
 
 namespace klee {
-  struct RNG : std::mt19937 {
-    RNG();
-    explicit RNG(RNG::result_type seed);
+struct RNG : std::mt19937 {
+  RNG();
+  explicit RNG(RNG::result_type seed);
 
-    /* generates a random number on [0,0xffffffff]-interval */
-    unsigned int getInt32();
-    /* generates a random number on [0,1)-real-interval */
-    double getDoubleL();
-    /* generates a random number on (0,1)-real-interval */
-    double getDouble();
-    /* generators a random flop */
-    bool getBool();
-  };
-}
+  /* generates a random number on [0,0xffffffff]-interval */
+  unsigned int getInt32();
+  /* generates a random number on [0,1)-real-interval */
+  double getDoubleL();
+  /* generates a random number on (0,1)-real-interval */
+  double getDouble();
+  /* generators a random flop */
+  bool getBool();
+};
+} // namespace klee
 
 #endif /* KLEE_RNG_H */

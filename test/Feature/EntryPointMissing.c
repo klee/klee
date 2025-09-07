@@ -25,7 +25,6 @@
 // RUN: rm -rf %t.klee-out
 // RUN: not %klee --output-dir=%t.klee-out --entry-point=missing --libc=klee --posix-runtime %t.bc 2>&1 | FileCheck -check-prefix=CHECK-MISSING %s
 
-
 /* Missing main */
 
 // RUN: %clang -emit-llvm -g -c %s -o %t.bc

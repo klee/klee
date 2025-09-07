@@ -60,15 +60,15 @@ static exe_disk_file_t *__get_sym_file(const char *pathname) {
   if (c == 0 || pathname[1] != 0)
     return NULL;
 
-  for (i=0; i<__exe_fs.n_sym_files; ++i) {
-    if (c == 'A' + (char) i) {
+  for (i = 0; i < __exe_fs.n_sym_files; ++i) {
+    if (c == 'A' + (char)i) {
       exe_disk_file_t *df = &__exe_fs.sym_files[i];
       if (df->stat->st_ino == 0)
         return NULL;
       return df;
     }
   }
-  
+
   return NULL;
 }
 
@@ -78,7 +78,7 @@ static const char *__concretize_string(const char *s);
 
 /* Returns pointer to the file entry for a valid fd */
 static exe_file_t *__get_file(int fd) {
-  if (fd>=0 && fd<MAX_FDS) {
+  if (fd >= 0 && fd < MAX_FDS) {
     exe_file_t *f = &__exe_env.fds[fd];
     if (f->flags & eOpen)
       return f;
@@ -89,7 +89,7 @@ static exe_file_t *__get_file(int fd) {
 
 int access(const char *pathname, int mode) {
   exe_disk_file_t *dfile = __get_sym_file(pathname);
-  
+
   if (dfile) {
     /* XXX we should check against stat values but we also need to
        enforce in open and friends then. */
@@ -98,31 +98,31 @@ int access(const char *pathname, int mode) {
   return syscall(__NR_access, __concretize_string(pathname), mode);
 }
 
-mode_t umask(mode_t mask) {  
+mode_t umask(mode_t mask) {
   mode_t r = __exe_env.umask;
   __exe_env.umask = mask & 0777;
   return r;
 }
 
-
 /* Returns 1 if the process has the access rights specified by 'flags'
-   to the file with stat 's', and returns 0 otherwise. 
-   We allow access if any user has access to the file, so we ignore 
+   to the file with stat 's', and returns 0 otherwise.
+   We allow access if any user has access to the file, so we ignore
    s->st_uid / geteuid() and s->st_gid / getegid(). */
 static int has_permission(int flags, struct stat64 *s) {
   mode_t mode = s->st_mode;
   int read_request = ((flags & O_RDONLY) | (flags & O_RDWR)) ? 1 : 0;
   int write_request = ((flags & O_WRONLY) | (flags & O_RDWR)) ? 1 : 0;
 
-  /* It is important to do this check using only bitwise operators so that we 
+  /* It is important to do this check using only bitwise operators so that we
      return 0 a single time in symbolic execution mode. */
-  if ((read_request  & !((mode & S_IRUSR) | (mode & S_IRGRP) | (mode & S_IROTH))) |
-      (write_request & !((mode & S_IWUSR) | (mode & S_IWGRP) | (mode & S_IWOTH))))
+  if ((read_request &
+       !((mode & S_IRUSR) | (mode & S_IRGRP) | (mode & S_IROTH))) |
+      (write_request &
+       !((mode & S_IWUSR) | (mode & S_IWGRP) | (mode & S_IWOTH))))
     return 0;
 
   return 1;
 }
-
 
 int __fd_open(const char *pathname, int flags, mode_t mode) {
   exe_disk_file_t *df;
@@ -136,26 +136,26 @@ int __fd_open(const char *pathname, int flags, mode_t mode) {
     errno = EMFILE;
     return -1;
   }
-  
+
   f = &__exe_env.fds[fd];
 
   /* Should be the case if file was available, but just in case. */
   memset(f, 0, sizeof *f);
 
-  df = __get_sym_file(pathname); 
-  if (df) {    
+  df = __get_sym_file(pathname);
+  if (df) {
     /* XXX Should check access against mode / stat / possible
        deletion. */
     f->dfile = df;
-    
+
     if ((flags & O_CREAT) && (flags & O_EXCL)) {
       errno = EEXIST;
       return -1;
     }
-    
+
     if ((flags & O_TRUNC) && (flags & O_RDONLY)) {
       /* The result of using O_TRUNC with O_RDONLY is undefined, so we
-	 return error */
+         return error */
       klee_warning("Undefined call to open(): O_TRUNC | O_RDONLY\n");
       errno = EACCES;
       return -1;
@@ -163,26 +163,25 @@ int __fd_open(const char *pathname, int flags, mode_t mode) {
 
     if ((flags & O_EXCL) && !(flags & O_CREAT)) {
       /* The result of using O_EXCL without O_CREAT is undefined, so
-	 we return error */
+         we return error */
       klee_warning("Undefined call to open(): O_EXCL w/o O_RDONLY\n");
       errno = EACCES;
       return -1;
     }
 
     if (!has_permission(flags, df->stat)) {
-	errno = EACCES;
-	return -1;
-    }
-    else
-      f->dfile->stat->st_mode = ((f->dfile->stat->st_mode & ~0777) |
-				 (mode & ~__exe_env.umask));
-  } else {    
+      errno = EACCES;
+      return -1;
+    } else
+      f->dfile->stat->st_mode =
+          ((f->dfile->stat->st_mode & ~0777) | (mode & ~__exe_env.umask));
+  } else {
     int os_fd = syscall(__NR_open, __concretize_string(pathname), flags, mode);
     if (os_fd == -1)
       return -1;
     f->fd = os_fd;
   }
-  
+
   f->flags = eOpen;
   if ((flags & O_ACCMODE) == O_RDONLY) {
     f->flags |= eReadable;
@@ -191,7 +190,7 @@ int __fd_open(const char *pathname, int flags, mode_t mode) {
   } else { /* XXX What actually happens here if != O_RDWR. */
     f->flags |= eReadable | eWriteable;
   }
-  
+
   return fd;
 }
 
@@ -224,13 +223,14 @@ int __fd_openat(int basefd, const char *pathname, int flags, mode_t mode) {
     errno = EMFILE;
     return -1;
   }
-  
+
   f = &__exe_env.fds[fd];
 
   /* Should be the case if file was available, but just in case. */
   memset(f, 0, sizeof *f);
 
-  int os_fd = syscall(__NR_openat, (long)basefd, __concretize_string(pathname), (long)flags, mode);
+  int os_fd = syscall(__NR_openat, (long)basefd, __concretize_string(pathname),
+                      (long)flags, mode);
   if (os_fd == -1)
     return -1;
 
@@ -246,7 +246,6 @@ int __fd_openat(int basefd, const char *pathname, int flags, mode_t mode) {
 
   return fd;
 }
-
 
 int utimes(const char *path, const struct timeval times[2]) {
   exe_disk_file_t *dfile = __get_sym_file(path);
@@ -272,8 +271,7 @@ int utimes(const char *path, const struct timeval times[2]) {
   return syscall(__NR_utimes, __concretize_string(path), times);
 }
 
-
-int futimesat(int fd, const char* path, const struct timeval times[2]) {
+int futimesat(int fd, const char *path, const struct timeval times[2]) {
   if (fd != AT_FDCWD) {
     exe_file_t *f = __get_file(fd);
 
@@ -294,19 +292,19 @@ int futimesat(int fd, const char* path, const struct timeval times[2]) {
   return syscall(__NR_futimesat, (long)fd,
                  (path ? __concretize_string(path) : NULL), times);
 }
- 
+
 int close(int fd) {
   static int n_calls = 0;
   exe_file_t *f;
   int r = 0;
-  
-  n_calls++;  
+
+  n_calls++;
 
   f = __get_file(fd);
   if (!f) {
     errno = EBADF;
     return -1;
-  } 
+  }
 
   if (__exe_fs.max_failures && *__exe_fs.close_fail == n_calls) {
     __exe_fs.max_failures--;
@@ -323,7 +321,7 @@ int close(int fd) {
 #endif
 
   memset(f, 0, sizeof *f);
-  
+
   return r;
 }
 
@@ -333,27 +331,27 @@ ssize_t read(int fd, void *buf, size_t count) {
 
   n_calls++;
 
-  if (count == 0) 
+  if (count == 0)
     return 0;
 
   if (buf == NULL) {
     errno = EFAULT;
     return -1;
   }
-  
+
   f = __get_file(fd);
 
   if (!f) {
     errno = EBADF;
     return -1;
-  }  
+  }
 
   if (__exe_fs.max_failures && *__exe_fs.read_fail == n_calls) {
     __exe_fs.max_failures--;
     errno = EIO;
     return -1;
   }
-  
+
   if (!f->dfile) {
     /* concrete file */
     int r;
@@ -366,16 +364,15 @@ ssize_t read(int fd, void *buf, size_t count) {
     if (f->fd == 0)
       r = syscall(__NR_read, f->fd, buf, count);
     else
-      r = syscall(__NR_pread64, f->fd, buf, count, (off64_t) f->off);
+      r = syscall(__NR_pread64, f->fd, buf, count, (off64_t)f->off);
 
     if (r == -1)
       return -1;
-    
+
     if (f->fd != 0)
       f->off += r;
     return r;
-  }
-  else {
+  } else {
     assert(f->off >= 0);
     if (((off64_t)f->dfile->size) < f->off)
       return 0;
@@ -384,14 +381,13 @@ ssize_t read(int fd, void *buf, size_t count) {
     if (f->off + count > f->dfile->size) {
       count = f->dfile->size - f->off;
     }
-    
+
     memcpy(buf, f->dfile->contents + f->off, count);
     f->off += count;
-    
+
     return count;
   }
 }
-
 
 ssize_t write(int fd, const void *buf, size_t count) {
   static int n_calls = 0;
@@ -423,34 +419,34 @@ ssize_t write(int fd, const void *buf, size_t count) {
     klee_check_memory_access(buf, count);
     if (f->fd == 1 || f->fd == 2)
       r = syscall(__NR_write, f->fd, buf, count);
-    else r = syscall(__NR_pwrite64, f->fd, buf, count, (off64_t) f->off);
+    else
+      r = syscall(__NR_pwrite64, f->fd, buf, count, (off64_t)f->off);
 
     if (r == -1)
       return -1;
-    
+
     assert(r >= 0);
     if (f->fd != 1 && f->fd != 2)
       f->off += r;
 
     return r;
-  }
-  else {
-    /* symbolic file */    
+  } else {
+    /* symbolic file */
     size_t actual_count = 0;
     if (f->off + count <= f->dfile->size)
       actual_count = count;
     else {
       if (__exe_env.save_all_writes)
-	assert(0);
+        assert(0);
       else {
-	if (f->off < (off64_t) f->dfile->size)
-	  actual_count = f->dfile->size - f->off;	
+        if (f->off < (off64_t)f->dfile->size)
+          actual_count = f->dfile->size - f->off;
       }
     }
-    
+
     if (actual_count)
       memcpy(f->dfile->contents + f->off, buf, actual_count);
-    
+
     if (count != actual_count)
       klee_warning("write() ignores bytes.\n");
 
@@ -461,7 +457,6 @@ ssize_t write(int fd, const void *buf, size_t count) {
     return count;
   }
 }
-
 
 off64_t __fd_lseek(int fd, off64_t offset, int whence) {
   off64_t new_off;
@@ -498,32 +493,38 @@ off64_t __fd_lseek(int fd, off64_t offset, int whence) {
     f->off = new_off;
     return new_off;
   }
-  
+
   switch (whence) {
-  case SEEK_SET: new_off = offset; break;
-  case SEEK_CUR: new_off = f->off + offset; break;
-  case SEEK_END: new_off = f->dfile->size + offset; break;
+  case SEEK_SET:
+    new_off = offset;
+    break;
+  case SEEK_CUR:
+    new_off = f->off + offset;
+    break;
+  case SEEK_END:
+    new_off = f->dfile->size + offset;
+    break;
   default: {
     errno = EINVAL;
-    return (off64_t) -1;
+    return (off64_t)-1;
   }
   }
 
   if (new_off < 0) {
     errno = EINVAL;
-    return (off64_t) -1;
+    return (off64_t)-1;
   }
-    
+
   f->off = new_off;
   return f->off;
 }
 
-int __fd_stat(const char *path, struct stat64 *buf) {  
+int __fd_stat(const char *path, struct stat64 *buf) {
   exe_disk_file_t *dfile = __get_sym_file(path);
   if (dfile) {
     memcpy(buf, dfile->stat, sizeof(*dfile->stat));
     return 0;
-  } 
+  }
 
   {
 #if __WORDSIZE == 64
@@ -534,7 +535,7 @@ int __fd_stat(const char *path, struct stat64 *buf) {
   }
 }
 
-int fstatat(int fd, const char *path, struct stat *buf, int flags) {  
+int fstatat(int fd, const char *path, struct stat *buf, int flags) {
   if (fd != AT_FDCWD) {
     exe_file_t *f = __get_file(fd);
 
@@ -552,13 +553,13 @@ int fstatat(int fd, const char *path, struct stat *buf, int flags) {
   if (dfile) {
     memcpy(buf, dfile->stat, sizeof(*dfile->stat));
     return 0;
-  } 
+  }
 
 #ifdef FSTATAT_PATH_ACCEPTS_NULL
-  #define PATHPARAM (path ? __concretize_string(path) : NULL)
+#define PATHPARAM (path ? __concretize_string(path) : NULL)
 #else
   assert(path);
-  #define PATHPARAM (__concretize_string(path))
+#define PATHPARAM (__concretize_string(path))
 #endif
 
 #if (defined __NR_newfstatat) && (__NR_newfstatat != 0)
@@ -574,9 +575,9 @@ int __fd_lstat(const char *path, struct stat64 *buf) {
   if (dfile) {
     memcpy(buf, dfile->stat, sizeof(*dfile->stat));
     return 0;
-  } 
+  }
 
-  {    
+  {
 #if __WORDSIZE == 64
     return syscall(__NR_lstat, __concretize_string(path), buf);
 #else
@@ -600,7 +601,7 @@ int chdir(const char *path) {
 
 int fchdir(int fd) {
   exe_file_t *f = __get_file(fd);
-  
+
   if (!f) {
     errno = EBADF;
     return -1;
@@ -619,9 +620,8 @@ int fchdir(int fd) {
 static int __df_chmod(exe_disk_file_t *df, mode_t mode) {
   if (geteuid() == df->stat->st_uid) {
     if (getgid() != df->stat->st_gid)
-      mode &= ~ S_ISGID;
-    df->stat->st_mode = ((df->stat->st_mode & ~07777) | 
-                         (mode & 07777));
+      mode &= ~S_ISGID;
+    df->stat->st_mode = ((df->stat->st_mode & ~07777) | (mode & 07777));
     return 0;
   } else {
     errno = EPERM;
@@ -652,7 +652,7 @@ int fchmod(int fd, mode_t mode) {
   static int n_calls = 0;
 
   exe_file_t *f = __get_file(fd);
-  
+
   if (!f) {
     errno = EBADF;
     return -1;
@@ -675,7 +675,7 @@ int fchmod(int fd, mode_t mode) {
 static int __df_chown(exe_disk_file_t *df, uid_t owner, gid_t group) {
   klee_warning("symbolic file, ignoring (EPERM)");
   errno = EPERM;
-  return -1;  
+  return -1;
 }
 
 int chown(const char *path, uid_t owner, gid_t group) {
@@ -721,7 +721,7 @@ int __fd_fstat(int fd, struct stat64 *buf) {
     errno = EBADF;
     return -1;
   }
-  
+
   if (!f->dfile) {
 #if __WORDSIZE == 64
     return syscall(__NR_fstat, f->fd, buf);
@@ -729,7 +729,7 @@ int __fd_fstat(int fd, struct stat64 *buf) {
     return syscall(__NR_fstat64, f->fd, buf);
 #endif
   }
-  
+
   memcpy(buf, f->dfile->stat, sizeof(*f->dfile->stat));
   return 0;
 }
@@ -750,7 +750,7 @@ int __fd_ftruncate(int fd, off64_t length) {
     errno = EIO;
     return -1;
   }
-  
+
   if (f->dfile) {
     klee_warning("symbolic file, ignoring (EIO)");
     errno = EIO;
@@ -776,18 +776,18 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
     errno = EINVAL;
     return -1;
   } else {
-    if ((unsigned long) f->off < 4096u) {
+    if ((unsigned long)f->off < 4096u) {
       /* Return our dirents */
-      off64_t i, pad, bytes=0;
+      off64_t i, pad, bytes = 0;
 
       /* What happens for bad offsets? */
       i = f->off / sizeof(*dirp);
-      if (((off64_t) (i * sizeof(*dirp)) != f->off) ||
+      if (((off64_t)(i * sizeof(*dirp)) != f->off) ||
           i > __exe_fs.n_sym_files) {
         errno = EINVAL;
         return -1;
-      } 
-      for (; i<__exe_fs.n_sym_files; ++i) {
+      }
+      for (; i < __exe_fs.n_sym_files; ++i) {
         exe_disk_file_t *df = &__exe_fs.sym_files[i];
         dirp->d_ino = df->stat->st_ino;
         dirp->d_reclen = sizeof(*dirp);
@@ -795,14 +795,14 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
         dirp->d_name[0] = 'A' + i;
         dirp->d_name[1] = '\0';
 #ifdef _DIRENT_HAVE_D_OFF
-        dirp->d_off = (i+1) * sizeof(*dirp);
+        dirp->d_off = (i + 1) * sizeof(*dirp);
 #endif
         bytes += dirp->d_reclen;
         ++dirp;
       }
-      
+
       /* Fake jump to OS records by a "deleted" file. */
-      pad = count>=4096 ? 4096 : count;
+      pad = count >= 4096 ? 4096 : count;
       dirp->d_ino = 0;
       dirp->d_reclen = pad - bytes;
       dirp->d_type = DT_UNKNOWN;
@@ -820,14 +820,14 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
       /* For reasons which I really don't understand, if I don't
          memset this then sometimes the kernel returns d_ino==0 for
          some valid entries? Am I crazy? Can writeback possibly be
-         failing? 
-      
+         failing?
+
          Even more bizarre, interchanging the memset and the seek also
          case strange behavior. Really should be debugged properly. */
       memset(dirp, 0, count);
       off64_t s = syscall(__NR_lseek, f->fd, os_pos, SEEK_SET);
       (void)s;
-      assert(s != (off64_t) -1);
+      assert(s != (off64_t)-1);
       int res = syscall(__NR_getdents64, f->fd, dirp, count);
       if (res > -1) {
         int pos = 0;
@@ -837,7 +837,7 @@ int __fd_getdents(unsigned int fd, struct dirent64 *dirp, unsigned int count) {
 
         /* Patch offsets */
         while (pos < res) {
-          struct dirent64 *dp = (struct dirent64*) ((char*) dirp + pos);
+          struct dirent64 *dp = (struct dirent64 *)((char *)dirp + pos);
 #ifdef _DIRENT_HAVE_D_OFF
           dp->d_off += 4096;
 #endif
@@ -866,15 +866,15 @@ int ioctl(int fd, unsigned long request, ...) {
     errno = EBADF;
     return -1;
   }
-  
+
   va_start(ap, request);
-  buf = va_arg(ap, void*);
+  buf = va_arg(ap, void *);
   va_end(ap);
   if (f->dfile) {
-    struct stat *stat = (struct stat*) f->dfile->stat;
+    struct stat *stat = (struct stat *)f->dfile->stat;
 
     switch (request) {
-    case TCGETS: {      
+    case TCGETS: {
       struct termios *ts = buf;
 
       klee_warning_once("(TCGETS) symbolic file, incomplete model");
@@ -928,7 +928,7 @@ int ioctl(int fd, unsigned long request, ...) {
     case TCSETSW: {
       /* const struct termios *ts = buf; */
       klee_warning_once("(TCSETSW) symbolic file, silently ignoring");
-      if (fd==0) {
+      if (fd == 0) {
         return 0;
       } else {
         errno = ENOTTY;
@@ -938,7 +938,7 @@ int ioctl(int fd, unsigned long request, ...) {
     case TCSETSF: {
       /* const struct termios *ts = buf; */
       klee_warning_once("(TCSETSF) symbolic file, silently ignoring");
-      if (S_ISCHR(stat->st_mode)) {        
+      if (S_ISCHR(stat->st_mode)) {
         return 0;
       } else {
         errno = ENOTTY;
@@ -972,7 +972,7 @@ int ioctl(int fd, unsigned long request, ...) {
       int *res = buf;
       klee_warning_once("(FIONREAD) symbolic file, incomplete model");
       if (S_ISCHR(stat->st_mode)) {
-        if (f->off < (off64_t) f->dfile->size) {
+        if (f->off < (off64_t)f->dfile->size) {
           *res = f->dfile->size - f->off;
         } else {
           *res = 0;
@@ -1008,10 +1008,10 @@ int fcntl(int fd, int cmd, ...) {
     return -1;
   }
 #ifdef F_GETSIG
-  if (cmd==F_GETFD || cmd==F_GETFL || cmd==F_GETOWN || cmd==F_GETSIG ||
-      cmd==F_GETLEASE || cmd==F_NOTIFY) {
+  if (cmd == F_GETFD || cmd == F_GETFL || cmd == F_GETOWN || cmd == F_GETSIG ||
+      cmd == F_GETLEASE || cmd == F_NOTIFY) {
 #else
-   if (cmd==F_GETFD || cmd==F_GETFL || cmd==F_GETOWN) {
+  if (cmd == F_GETFD || cmd == F_GETFL || cmd == F_GETOWN) {
 #endif
     arg = 0;
   } else if (cmd == F_GETLK || cmd == F_SETLK || cmd == F_SETLKW) {
@@ -1025,13 +1025,13 @@ int fcntl(int fd, int cmd, ...) {
   }
 
   if (f->dfile) {
-    switch(cmd) {
+    switch (cmd) {
     case F_GETFD: {
       int flags = 0;
       if (f->flags & eCloseOnExec)
         flags |= FD_CLOEXEC;
       return flags;
-    } 
+    }
     case F_SETFD: {
       f->flags &= ~eCloseOnExec;
       if (arg & FD_CLOEXEC)
@@ -1040,10 +1040,10 @@ int fcntl(int fd, int cmd, ...) {
     }
     case F_GETFL: {
       /* XXX (CrC): This should return the status flags: O_APPEND,
-	 O_ASYNC, O_DIRECT, O_NOATIME, O_NONBLOCK.  As of now, we
-	 discard these flags during open().  We should save them and
-	 return them here.  These same flags can be set by F_SETFL,
-	 which we could also handle properly. 
+         O_ASYNC, O_DIRECT, O_NOATIME, O_NONBLOCK.  As of now, we
+         discard these flags during open().  We should save them and
+         return them here.  These same flags can be set by F_SETFL,
+         which we could also handle properly.
       */
       return 0;
     }
@@ -1089,7 +1089,7 @@ int fstatfs(int fd, struct statfs *buf) {
     errno = EBADF;
     return -1;
   }
-  
+
   if (f->dfile) {
     klee_warning("symbolic file, ignoring (EBADF)");
     errno = EBADF;
@@ -1113,19 +1113,20 @@ int fsync(int fd) {
 int dup2(int oldfd, int newfd) {
   exe_file_t *f = __get_file(oldfd);
 
-  if (!f || !(newfd>=0 && newfd<MAX_FDS)) {
+  if (!f || !(newfd >= 0 && newfd < MAX_FDS)) {
     errno = EBADF;
     return -1;
   } else {
     exe_file_t *f2 = &__exe_env.fds[newfd];
-    if (f2->flags & eOpen) close(newfd);
+    if (f2->flags & eOpen)
+      close(newfd);
 
     /* XXX Incorrect, really we need another data structure for open
        files */
     *f2 = *f;
 
     f2->flags &= ~eCloseOnExec;
-      
+
     /* I'm not sure it is wise, but we can get away with not dup'ng
        the OS fd, since actually that will in many cases effect the
        sharing of the open file (and the process should never have
@@ -1157,7 +1158,7 @@ int dup(int oldfd) {
 int rmdir(const char *pathname) {
   exe_disk_file_t *dfile = __get_sym_file(pathname);
   if (dfile) {
-    /* XXX check access */ 
+    /* XXX check access */
     if (S_ISDIR(dfile->stat->st_mode)) {
       dfile->stat->st_ino = 0;
       return 0;
@@ -1175,7 +1176,7 @@ int rmdir(const char *pathname) {
 int unlink(const char *pathname) {
   exe_disk_file_t *dfile = __get_sym_file(pathname);
   if (dfile) {
-    /* XXX check access */ 
+    /* XXX check access */
     if (S_ISREG(dfile->stat->st_mode)) {
       dfile->stat->st_ino = 0;
       return 0;
@@ -1198,7 +1199,7 @@ int unlinkat(int dirfd, const char *pathname, int flags) {
      problems if unlink changes to actually delete files */
   exe_disk_file_t *dfile = __get_sym_file(pathname);
   if (dfile) {
-    /* XXX check access */ 
+    /* XXX check access */
     if (S_ISREG(dfile->stat->st_mode)) {
       dfile->stat->st_ino = 0;
       return 0;
@@ -1223,11 +1224,15 @@ ssize_t readlink(const char *path, char *buf, size_t bufsize) {
        handle paths anyway... */
     if (S_ISLNK(dfile->stat->st_mode)) {
       buf[0] = path[0];
-      if (bufsize>1) buf[1] = '.';
-      if (bufsize>2) buf[2] = 'l';
-      if (bufsize>3) buf[3] = 'n';
-      if (bufsize>4) buf[4] = 'k';
-      return (bufsize>5) ? 5 : bufsize;
+      if (bufsize > 1)
+        buf[1] = '.';
+      if (bufsize > 2)
+        buf[2] = 'l';
+      if (bufsize > 3)
+        buf[3] = 'n';
+      if (bufsize > 4)
+        buf[4] = 'k';
+      return (bufsize > 5) ? 5 : bufsize;
     } else {
       errno = EINVAL;
       return -1;
@@ -1240,12 +1245,12 @@ ssize_t readlink(const char *path, char *buf, size_t bufsize) {
 #undef FD_CLR
 #undef FD_ISSET
 #undef FD_ZERO
-#define	FD_SET(n, p)	((p)->fds_bits[(n)/NFDBITS] |= (1 << ((n) % NFDBITS)))
-#define	FD_CLR(n, p)	((p)->fds_bits[(n)/NFDBITS] &= ~(1 << ((n) % NFDBITS)))
-#define	FD_ISSET(n, p)	((p)->fds_bits[(n)/NFDBITS] & (1 << ((n) % NFDBITS)))
-#define FD_ZERO(p)	memset((char *)(p), '\0', sizeof(*(p)))
-int select(int nfds, fd_set *read, fd_set *write,
-           fd_set *except, struct timeval *timeout) {
+#define FD_SET(n, p) ((p)->fds_bits[(n) / NFDBITS] |= (1 << ((n) % NFDBITS)))
+#define FD_CLR(n, p) ((p)->fds_bits[(n) / NFDBITS] &= ~(1 << ((n) % NFDBITS)))
+#define FD_ISSET(n, p) ((p)->fds_bits[(n) / NFDBITS] & (1 << ((n) % NFDBITS)))
+#define FD_ZERO(p) memset((char *)(p), '\0', sizeof(*(p)))
+int select(int nfds, fd_set *read, fd_set *write, fd_set *except,
+           struct timeval *timeout) {
   fd_set in_read, in_write, in_except, os_read, os_write, os_except;
   int i, count = 0, os_nfds = 0;
 
@@ -1262,7 +1267,7 @@ int select(int nfds, fd_set *read, fd_set *write,
   } else {
     FD_ZERO(&in_write);
   }
-   
+
   if (except) {
     in_except = *except;
     FD_ZERO(except);
@@ -1275,23 +1280,31 @@ int select(int nfds, fd_set *read, fd_set *write,
   FD_ZERO(&os_except);
 
   /* Check for symbolic stuff */
-  for (i=0; i<nfds; i++) {    
-    if (FD_ISSET(i, &in_read) || FD_ISSET(i, &in_write) || FD_ISSET(i, &in_except)) {
+  for (i = 0; i < nfds; i++) {
+    if (FD_ISSET(i, &in_read) || FD_ISSET(i, &in_write) ||
+        FD_ISSET(i, &in_except)) {
       exe_file_t *f = __get_file(i);
       if (!f) {
         errno = EBADF;
         return -1;
       } else if (f->dfile) {
         /* Operations on this fd will never block... */
-        if (FD_ISSET(i, &in_read)) FD_SET(i, read);
-        if (FD_ISSET(i, &in_write)) FD_SET(i, write);
-        if (FD_ISSET(i, &in_except)) FD_SET(i, except);
+        if (FD_ISSET(i, &in_read))
+          FD_SET(i, read);
+        if (FD_ISSET(i, &in_write))
+          FD_SET(i, write);
+        if (FD_ISSET(i, &in_except))
+          FD_SET(i, except);
         ++count;
       } else {
-        if (FD_ISSET(i, &in_read)) FD_SET(f->fd, &os_read);
-        if (FD_ISSET(i, &in_write)) FD_SET(f->fd, &os_write);
-        if (FD_ISSET(i, &in_except)) FD_SET(f->fd, &os_except);
-        if (f->fd >= os_nfds) os_nfds = f->fd + 1;
+        if (FD_ISSET(i, &in_read))
+          FD_SET(f->fd, &os_read);
+        if (FD_ISSET(i, &in_write))
+          FD_SET(f->fd, &os_write);
+        if (FD_ISSET(i, &in_except))
+          FD_SET(f->fd, &os_except);
+        if (f->fd >= os_nfds)
+          os_nfds = f->fd + 1;
       }
     }
   }
@@ -1299,10 +1312,9 @@ int select(int nfds, fd_set *read, fd_set *write,
   if (os_nfds > 0) {
     /* Never allow blocking select. This is broken but what else can
        we do. */
-    struct timeval tv = { 0, 0 };    
-    int r = syscall(__NR_select, os_nfds, 
-                    &os_read, &os_write, &os_except, &tv);
-    
+    struct timeval tv = {0, 0};
+    int r = syscall(__NR_select, os_nfds, &os_read, &os_write, &os_except, &tv);
+
     if (r == -1) {
       /* If no symbolic results, return error. Otherwise we will
          silently ignore the OS error. */
@@ -1312,12 +1324,15 @@ int select(int nfds, fd_set *read, fd_set *write,
       count += r;
 
       /* Translate resulting sets back */
-      for (i=0; i<nfds; i++) {
+      for (i = 0; i < nfds; i++) {
         exe_file_t *f = __get_file(i);
         if (f && !f->dfile) {
-          if (read && FD_ISSET(f->fd, &os_read)) FD_SET(i, read);
-          if (write && FD_ISSET(f->fd, &os_write)) FD_SET(i, write);
-          if (except && FD_ISSET(f->fd, &os_except)) FD_SET(i, except);
+          if (read && FD_ISSET(f->fd, &os_read))
+            FD_SET(i, read);
+          if (write && FD_ISSET(f->fd, &os_write))
+            FD_SET(i, write);
+          if (except && FD_ISSET(f->fd, &os_except))
+            FD_SET(i, except);
         }
       }
     }
@@ -1351,7 +1366,7 @@ char *getcwd(char *buf, size_t size) {
     errno = EINVAL;
     return NULL;
   }
-  
+
   buf = __concretize_ptr(buf);
   size = __concretize_size(size);
   /* XXX In terms of looking for bugs we really should do this check
@@ -1368,7 +1383,7 @@ char *getcwd(char *buf, size_t size) {
 
 static void *__concretize_ptr(const void *p) {
   /* XXX 32-bit assumption */
-  char *pc = (char*) klee_get_valuel((long) p);
+  char *pc = (char *)klee_get_valuel((long)p);
   klee_assume(pc == p);
   return pc;
 }
@@ -1391,25 +1406,24 @@ static const char *__concretize_string(const char *s) {
         break;
       continue;
     }
-    if (!(i&(i-1))) {
+    if (!(i & (i - 1))) {
       if (!c) {
         *sc = 0;
         break;
-      } else if (c=='/') {
+      } else if (c == '/') {
         *sc = '/';
-      } 
+      }
     } else {
-      char cc = (char) klee_get_valuel((long)c);
+      char cc = (char)klee_get_valuel((long)c);
       klee_assume(cc == c);
       *sc = cc;
-      if (!cc) break;
+      if (!cc)
+        break;
     }
   }
 
   return s;
 }
-
-
 
 /* Trivial model:
    if path is "/" (basically no change) accept, otherwise reject
@@ -1419,11 +1433,11 @@ int chroot(const char *path) {
     errno = ENOENT;
     return -1;
   }
-    
+
   if (path[0] == '/' && path[1] == '\0') {
     return 0;
   }
-  
+
   klee_warning("ignoring (ENOENT)");
   errno = ENOENT;
   return -1;

@@ -10,8 +10,8 @@
 #ifndef KLEE_ARRAYCACHE_H
 #define KLEE_ARRAYCACHE_H
 
-#include "klee/Expr/Expr.h"
 #include "klee/Expr/ArrayExprHash.h" // For klee::ArrayHashFn
+#include "klee/Expr/Expr.h"
 
 #include <string>
 #include <unordered_set>
@@ -67,6 +67,6 @@ private:
   typedef std::vector<const Array *> ArrayPtrVec;
   ArrayPtrVec concreteArrays;
 };
-}
+} // namespace klee
 
 #endif /* KLEE_ARRAYCACHE_H */

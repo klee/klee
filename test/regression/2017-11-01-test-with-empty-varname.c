@@ -8,5 +8,5 @@ int main() {
   unsigned a;
 
   klee_make_symbolic(&a, sizeof(a), "");
-// CHECK-NOT: KLEE: WARNING: unable to write output test case, losing it
+  // CHECK-NOT: KLEE: WARNING: unable to write output test case, losing it
 }

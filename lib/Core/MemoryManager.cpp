@@ -20,16 +20,16 @@
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MathExtras.h"
-#include "llvm/Support/Alignment.h"
 DISABLE_WARNING_POP
 
-#include <cinttypes>
 #include <algorithm>
+#include <cinttypes>
+#include <string>
 #include <sys/mman.h>
 #include <tuple>
-#include <string>
 
 using namespace klee;
 
@@ -126,7 +126,7 @@ llvm::cl::opt<bool> NullOnZeroMalloc(
     "return-null-on-zero-malloc",
     llvm::cl::desc("Returns NULL if malloc(0) is called (default=false)"),
     llvm::cl::init(false), llvm::cl::cat(MemoryCat));
-} // namespace
+} // namespace klee
 
 /***/
 MemoryManager::MemoryManager(ArrayCache *_arrayCache)
@@ -272,9 +272,9 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
                                       const llvm::Value *allocSite,
                                       size_t alignment) {
   if (size > 10 * 1024 * 1024)
-    klee_warning_once(0, "Large alloc: %" PRIu64
-                         " bytes.  KLEE may run out of memory.",
-                      size);
+    klee_warning_once(
+        0, "Large alloc: %" PRIu64 " bytes.  KLEE may run out of memory.",
+        size);
 
   // Return NULL if size is zero, this is equal to error during allocation
   if (NullOnZeroMalloc && size == 0)

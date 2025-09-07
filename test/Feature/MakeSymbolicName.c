@@ -8,7 +8,7 @@ int main() {
   int a[4] = {1, 2, 3, 4};
   unsigned i;
 
-  klee_make_symbolic(&i, sizeof(i), "index");  
+  klee_make_symbolic(&i, sizeof(i), "index");
   if (i > 3)
     klee_silent_exit(0);
 

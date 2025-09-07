@@ -28,7 +28,7 @@ int main() {
     // to use by an external function.
     printf("%s%s%n\n", (char *)&a, (char *)&b, &c);
     printf("after: a = %d b = %d c = %d\n", a, b, c);
-    //CHECK: after: a = 2 b = 3 c = 2
+    // CHECK: after: a = 2 b = 3 c = 2
   }
 
   return 0;

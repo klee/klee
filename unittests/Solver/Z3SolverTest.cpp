@@ -72,13 +72,14 @@ TEST_F(Z3SolverTest, GetConstraintLog) {
   ASSERT_STRNE(Occurence, nullptr);
 }
 
-
 TEST_F(Z3SolverTest, GetError) {
-  const ref<Expr> Lhs = NotOptimizedExpr::alloc(ConstantExpr::alloc(4, Expr::Int8));
+  const ref<Expr> Lhs =
+      NotOptimizedExpr::alloc(ConstantExpr::alloc(4, Expr::Int8));
   const ref<Expr> Rhs = ConstantExpr::alloc(12, Expr::Int16);
 
   const ref<Expr> sdiv = SDivExpr::alloc(Lhs, Rhs);
 
   auto builder = Z3Builder(true, nullptr);
-  EXPECT_EXIT(builder.construct(sdiv), ::testing::KilledBySignal(SIGABRT), "Incorrect use of Z3");
+  EXPECT_EXIT(builder.construct(sdiv), ::testing::KilledBySignal(SIGABRT),
+              "Incorrect use of Z3");
 }

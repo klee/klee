@@ -11,16 +11,16 @@
 #define KLEE_USERSEARCHER_H
 
 namespace klee {
-  class Executor;
-  class Searcher;
+class Executor;
+class Searcher;
 
-  // XXX gross, should be on demand?
-  bool userSearcherRequiresMD2U();
-  bool userSearcherRequiresInMemoryExecutionTree();
+// XXX gross, should be on demand?
+bool userSearcherRequiresMD2U();
+bool userSearcherRequiresInMemoryExecutionTree();
 
-  void initializeSearchOptions();
+void initializeSearchOptions();
 
-  Searcher *constructUserSearcher(Executor &executor);
-}
+Searcher *constructUserSearcher(Executor &executor);
+} // namespace klee
 
 #endif /* KLEE_USERSEARCHER_H */

@@ -6,15 +6,15 @@
 
 #include <assert.h>
 
-extern int __cxa_thread_atexit_impl(void (*)(void*), void*, void *);
+extern int __cxa_thread_atexit_impl(void (*)(void *), void *, void *);
 
 static int x; // a global whose address we can take
 
 void boo(void *h) {
-  assert(h == (void*)&x);
+  assert(h == (void *)&x);
 }
 
 int main() {
-  __cxa_thread_atexit_impl(boo, (void*)&x, (void*)0);
+  __cxa_thread_atexit_impl(boo, (void *)&x, (void *)0);
   return 0;
 }

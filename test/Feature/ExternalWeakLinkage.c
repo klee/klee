@@ -7,6 +7,6 @@
 void __attribute__((weak)) IAmSoWeak(int);
 
 int main() {
-  assert(IAmSoWeak==0);
+  assert(IAmSoWeak == 0);
   return 0;
 }

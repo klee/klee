@@ -1,4 +1,5 @@
-//===-- SearcherTest.cpp ----------------------------------------------------===//
+//===-- SearcherTest.cpp
+//----------------------------------------------------===//
 //
 //                     The KLEE Symbolic Virtual Machine
 //
@@ -156,14 +157,21 @@ TEST(SearcherTest, TwoRandomPathDot) {
       << "\tnode [style=\"filled\",width=.1,height=.1,fontname=\"Terminus\"]\n"
       << "\tedge [arrowsize=.3]\n"
       << "\tn" << rootExecutionTreeNode << " [shape=diamond];\n"
-      << "\tn" << rootExecutionTreeNode << " -> n" << esParentExecutionTreeNode << " [label=0b011];\n"
-      << "\tn" << rootExecutionTreeNode << " -> n" << rightLeafExecutionTreeNode << " [label=0b000];\n"
-      << "\tn" << rightLeafExecutionTreeNode << " [shape=diamond,fillcolor=green];\n"
+      << "\tn" << rootExecutionTreeNode << " -> n" << esParentExecutionTreeNode
+      << " [label=0b011];\n"
+      << "\tn" << rootExecutionTreeNode << " -> n" << rightLeafExecutionTreeNode
+      << " [label=0b000];\n"
+      << "\tn" << rightLeafExecutionTreeNode
+      << " [shape=diamond,fillcolor=green];\n"
       << "\tn" << esParentExecutionTreeNode << " [shape=diamond];\n"
-      << "\tn" << esParentExecutionTreeNode << " -> n" << es1LeafExecutionTreeNode << " [label=0b010];\n"
-      << "\tn" << esParentExecutionTreeNode << " -> n" << esLeafExecutionTreeNode << " [label=0b001];\n"
-      << "\tn" << esLeafExecutionTreeNode << " [shape=diamond,fillcolor=green];\n"
-      << "\tn" << es1LeafExecutionTreeNode << " [shape=diamond,fillcolor=green];\n"
+      << "\tn" << esParentExecutionTreeNode << " -> n"
+      << es1LeafExecutionTreeNode << " [label=0b010];\n"
+      << "\tn" << esParentExecutionTreeNode << " -> n"
+      << esLeafExecutionTreeNode << " [label=0b001];\n"
+      << "\tn" << esLeafExecutionTreeNode
+      << " [shape=diamond,fillcolor=green];\n"
+      << "\tn" << es1LeafExecutionTreeNode
+      << " [shape=diamond,fillcolor=green];\n"
       << "}\n";
   std::string executionTreeDot;
   llvm::raw_string_ostream executionTreeDotStream(executionTreeDot);
@@ -186,12 +194,17 @@ TEST(SearcherTest, TwoRandomPathDot) {
       << "\tnode [style=\"filled\",width=.1,height=.1,fontname=\"Terminus\"]\n"
       << "\tedge [arrowsize=.3]\n"
       << "\tn" << rootExecutionTreeNode << " [shape=diamond];\n"
-      << "\tn" << rootExecutionTreeNode << " -> n" << esParentExecutionTreeNode << " [label=0b001];\n"
-      << "\tn" << rootExecutionTreeNode << " -> n" << rightLeafExecutionTreeNode << " [label=0b000];\n"
-      << "\tn" << rightLeafExecutionTreeNode << " [shape=diamond,fillcolor=green];\n"
+      << "\tn" << rootExecutionTreeNode << " -> n" << esParentExecutionTreeNode
+      << " [label=0b001];\n"
+      << "\tn" << rootExecutionTreeNode << " -> n" << rightLeafExecutionTreeNode
+      << " [label=0b000];\n"
+      << "\tn" << rightLeafExecutionTreeNode
+      << " [shape=diamond,fillcolor=green];\n"
       << "\tn" << esParentExecutionTreeNode << " [shape=diamond];\n"
-      << "\tn" << esParentExecutionTreeNode << " -> n" << es1LeafExecutionTreeNode << " [label=0b001];\n"
-      << "\tn" << es1LeafExecutionTreeNode << " [shape=diamond,fillcolor=green];\n"
+      << "\tn" << esParentExecutionTreeNode << " -> n"
+      << es1LeafExecutionTreeNode << " [label=0b001];\n"
+      << "\tn" << es1LeafExecutionTreeNode
+      << " [shape=diamond,fillcolor=green];\n"
       << "}\n";
 
   executionTreeDot = "";
@@ -213,4 +226,4 @@ TEST(SearcherDeathTest, TooManyRandomPaths) {
   RandomPathSearcher rp2(&executionTree, rng);
   ASSERT_DEATH({ RandomPathSearcher rp3(&executionTree, rng); }, "");
 }
-}
+} // namespace

@@ -29,7 +29,7 @@ int main() {
   if (i < 5000) {
     double d = i;
     // CHECK: concretizing (reason: floating point)
-    assert((unsigned) d < 5001);
+    assert((unsigned)d < 5001);
   }
 
   // CHECK-STATS: 3

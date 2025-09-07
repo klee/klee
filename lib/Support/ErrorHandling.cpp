@@ -12,14 +12,14 @@
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/raw_ostream.h"
 DISABLE_WARNING_POP
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdarg.h>
 #include <assert.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include <set>
@@ -164,7 +164,7 @@ void klee::klee_warning(const char *msg, ...) {
 
 /* Prints a warning once per message. */
 void klee::klee_warning_once(const void *id, const char *msg, ...) {
-  static std::set<std::pair<const void *, const char *> > keys;
+  static std::set<std::pair<const void *, const char *>> keys;
   std::pair<const void *, const char *> key;
 
   /* "calling external" messages contain the actual arguments with

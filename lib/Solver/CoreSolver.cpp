@@ -7,19 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MetaSMTSolver.h"
 #include "STPSolver.h"
 #include "Z3Solver.h"
-#include "MetaSMTSolver.h"
 
+#include "klee/Solver/Solver.h"
 #include "klee/Solver/SolverCmdLine.h"
 #include "klee/Support/ErrorHandling.h"
-#include "klee/Solver/Solver.h"
 
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <string>
 #include <memory>
+#include <string>
 
 namespace klee {
 
@@ -28,7 +28,8 @@ std::unique_ptr<Solver> createCoreSolver(CoreSolverType cst) {
   case STP_SOLVER:
 #ifdef ENABLE_STP
     klee_message("Using STP solver backend");
-    return std::make_unique<STPSolver>(UseForkedCoreSolver, CoreSolverOptimizeDivides);
+    return std::make_unique<STPSolver>(UseForkedCoreSolver,
+                                       CoreSolverOptimizeDivides);
 #else
     klee_message("Not compiled with STP support");
     return NULL;
@@ -58,4 +59,4 @@ std::unique_ptr<Solver> createCoreSolver(CoreSolverType cst) {
     llvm_unreachable("Unsupported CoreSolverType");
   }
 }
-}
+} // namespace klee

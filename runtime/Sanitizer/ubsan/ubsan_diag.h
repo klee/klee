@@ -12,8 +12,8 @@
 
 // NOTE: Needs to be kept in sync with compiler-rt/lib/ubsan/ubsan_diag.h
 // from LLVM project.
-// But in fact, only TypeName in TypeDescriptor and ErrorType commonly were used,
-// so how it is.
+// But in fact, only TypeName in TypeDescriptor and ErrorType commonly were
+// used, so how it is.
 
 #ifndef UBSAN_DIAG_H
 #define UBSAN_DIAG_H

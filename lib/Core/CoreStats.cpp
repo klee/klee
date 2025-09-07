@@ -10,7 +10,6 @@
 #include "CoreStats.h"
 #include "klee/Support/ErrorHandling.h"
 
-
 using namespace klee;
 
 Statistic stats::allocations("Allocations", "Alloc");
@@ -31,16 +30,19 @@ Statistic stats::states("States", "States");
 Statistic stats::trueBranches("TrueBranches", "Bt");
 Statistic stats::uncoveredInstructions("UncoveredInstructions", "Iuncov");
 
-
 // branch stats and setter
 
 #undef BTYPE
-#define BTYPE(Name,I) Statistic stats::branches ## Name("Branches"#Name, "Br"#Name);
+#define BTYPE(Name, I)                                                         \
+  Statistic stats::branches##Name("Branches" #Name, "Br" #Name);
 BRANCH_TYPES
 
 void stats::incBranchStat(BranchType reason, std::uint32_t value) {
 #undef BTYPE
-#define BTYPE(N,I) case BranchType::N : stats::branches ## N += value; break;
+#define BTYPE(N, I)                                                            \
+  case BranchType::N:                                                          \
+    stats::branches##N += value;                                               \
+    break;
   switch (reason) {
     BRANCH_TYPES
   default:
@@ -49,9 +51,9 @@ void stats::incBranchStat(BranchType reason, std::uint32_t value) {
   }
 }
 
-
 // termination types
 
 #undef TCLASS
-#define TCLASS(Name,I) Statistic stats::termination ## Name("Termination"#Name, "Trm"#Name);
+#define TCLASS(Name, I)                                                        \
+  Statistic stats::termination##Name("Termination" #Name, "Trm" #Name);
 TERMINATION_CLASSES

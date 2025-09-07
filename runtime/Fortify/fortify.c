@@ -21,8 +21,7 @@ char *__fgets_chk(char *s, size_t size, int strsize, struct FILE *stream) {
   return fgets(s, size, stream);
 }
 
-ssize_t pread(int fd, void *buf, size_t count,
-                     off_t offset);
+ssize_t pread(int fd, void *buf, size_t count, off_t offset);
 
 ssize_t __pread_chk(int fd, void *buf, size_t nbytes, off_t offset,
                     size_t buflen) {
@@ -52,7 +51,8 @@ ssize_t __readlink_chk(const char *path, char *buf, size_t len, size_t buflen) {
 
 char *realpath(const char *path, char *resolved_path);
 
-// Reference: https://pubs.opengroup.org/onlinepubs/009695399/basedefs/limits.h.html
+// Reference:
+// https://pubs.opengroup.org/onlinepubs/009695399/basedefs/limits.h.html
 #ifdef PATH_MAX
 #undef PATH_MAX
 #endif // PATH_MAX

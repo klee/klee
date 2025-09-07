@@ -24,7 +24,7 @@ int main() {
   klee_make_symbolic(&i, sizeof(i), "i");
   double d = i;
   // CHECK: concretizing (reason: floating point)
-  assert((unsigned) d == 12345678);
+  assert((unsigned)d == 12345678);
 
   // CHECK-STATS: 1
   // This one query involves the constraint that i == 12345678

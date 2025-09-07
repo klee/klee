@@ -39,7 +39,8 @@ llvm::cl::opt<bool> UseIncompleteMerge(
 
 llvm::cl::opt<bool> DebugLogIncompleteMerge(
     "debug-log-incomplete-merge", llvm::cl::init(false),
-    llvm::cl::desc("Debug information for incomplete path merging (default=false)"),
+    llvm::cl::desc(
+        "Debug information for incomplete path merging (default=false)"),
     llvm::cl::cat(klee::MergeCat));
 
 double MergeHandler::getMean() {
@@ -49,11 +50,11 @@ double MergeHandler::getMean() {
   return closedMean;
 }
 
-unsigned MergeHandler::getInstructionDistance(ExecutionState *es){
+unsigned MergeHandler::getInstructionDistance(ExecutionState *es) {
   return es->steppedInstructions - openInstruction;
 }
 
-ExecutionState *MergeHandler::getPrioritizeState(){
+ExecutionState *MergeHandler::getPrioritizeState() {
   for (ExecutionState *cur_state : openStates) {
     bool stateIsClosed =
         (executor->mergingSearcher->inCloseMerge.find(cur_state) !=
@@ -66,27 +67,25 @@ ExecutionState *MergeHandler::getPrioritizeState(){
   return 0;
 }
 
-
-void MergeHandler::addOpenState(ExecutionState *es){
+void MergeHandler::addOpenState(ExecutionState *es) {
   openStates.push_back(es);
 }
 
-void MergeHandler::removeOpenState(ExecutionState *es){
+void MergeHandler::removeOpenState(ExecutionState *es) {
   auto it = std::find(openStates.begin(), openStates.end(), es);
   assert(it != openStates.end());
   std::swap(*it, openStates.back());
   openStates.pop_back();
 }
 
-void MergeHandler::addClosedState(ExecutionState *es,
-                                         llvm::Instruction *mp) {
+void MergeHandler::addClosedState(ExecutionState *es, llvm::Instruction *mp) {
   // Update stats
   ++closedStateCount;
 
   // Incremental update of mean (travelling mean)
   // https://math.stackexchange.com/a/1836447
   closedMean += (static_cast<double>(getInstructionDistance(es)) - closedMean) /
-               closedStateCount;
+                closedStateCount;
 
   // Remove from openStates
   removeOpenState(es);
@@ -104,9 +103,10 @@ void MergeHandler::addClosedState(ExecutionState *es,
     auto &cpv = closePoint->second;
     bool mergedSuccessful = false;
 
-    for (auto& mState: cpv) {
+    for (auto &mState : cpv) {
       if (mState->merge(*es)) {
-        executor->terminateStateEarlyAlgorithm(*es, "merged state.", StateTerminationType::Merge);
+        executor->terminateStateEarlyAlgorithm(*es, "merged state.",
+                                               StateTerminationType::Merge);
         executor->mergingSearcher->inCloseMerge.erase(es);
         mergedSuccessful = true;
         break;
@@ -120,8 +120,8 @@ void MergeHandler::addClosedState(ExecutionState *es,
 }
 
 void MergeHandler::releaseStates() {
-  for (auto& curMergeGroup: reachedCloseMerge) {
-    for (auto curState: curMergeGroup.second) {
+  for (auto &curMergeGroup : reachedCloseMerge) {
+    for (auto curState : curMergeGroup.second) {
       executor->mergingSearcher->continueState(*curState);
       executor->mergingSearcher->inCloseMerge.erase(curState);
     }
@@ -129,14 +129,12 @@ void MergeHandler::releaseStates() {
   reachedCloseMerge.clear();
 }
 
-bool MergeHandler::hasMergedStates() {
-  return (!reachedCloseMerge.empty());
-}
+bool MergeHandler::hasMergedStates() { return (!reachedCloseMerge.empty()); }
 
 MergeHandler::MergeHandler(Executor *_executor, ExecutionState *es)
     : executor(_executor), openInstruction(es->steppedInstructions),
       closedMean(0), closedStateCount(0) {
-    executor->mergingSearcher->mergeGroups.push_back(this);
+  executor->mergingSearcher->mergeGroups.push_back(this);
   addOpenState(es);
 }
 
@@ -150,4 +148,4 @@ MergeHandler::~MergeHandler() {
 
   releaseStates();
 }
-}
+} // namespace klee

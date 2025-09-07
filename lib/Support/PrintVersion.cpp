@@ -8,10 +8,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "klee/Support/PrintVersion.h"
-#include "klee/Config/config.h"
 #include "klee/Config/Version.h"
-#include "llvm/Support/raw_ostream.h"
+#include "klee/Config/config.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include "klee/Config/CompileTimeInfo.h"
 

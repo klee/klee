@@ -9,10 +9,10 @@
 // CHECK: KLEE: WARNING: OPT_I: successful
 // CHECK-CONST_ARR: const_arr
 
-#include <stdio.h>
 #include "klee/klee.h"
+#include <stdio.h>
 
-char array[5] = {1,-2,3,-4,-5};
+char array[5] = {1, -2, 3, -4, -5};
 
 int main() {
 
@@ -23,7 +23,7 @@ int main() {
 
   // CHECK-DAG: Yes
   // CHECK-DAG: No
-  if (array[k&1] > 0)
+  if (array[k & 1] > 0)
     printf("Yes\n");
   else
     printf("No\n");

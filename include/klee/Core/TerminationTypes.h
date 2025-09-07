@@ -12,7 +12,6 @@
 
 #include <cstdint>
 
-
 #define TERMINATION_CLASSES                                                    \
   TCLASS(Exit, 1U)                                                             \
   TCLASS(Early, 2U)                                                            \
@@ -25,12 +24,11 @@
 
 ///@brief Termination classes categorize termination types
 enum class StateTerminationClass : std::uint8_t {
-  /// \cond DO_NOT_DOCUMENT
-  #define TCLASS(N,I) N = (I),
+/// \cond DO_NOT_DOCUMENT
+#define TCLASS(N, I) N = (I),
   TERMINATION_CLASSES
   /// \endcond
 };
-
 
 // (Name, ID, file suffix)
 #define TERMINATION_TYPES                                                      \
@@ -73,24 +71,22 @@ enum class StateTerminationClass : std::uint8_t {
   TTMARK(EARLYUSER, 80U)                                                       \
   TTMARK(END, 80U)
 
-
 ///@brief Reason an ExecutionState got terminated.
 enum class StateTerminationType : std::uint8_t {
-  /// \cond DO_NOT_DOCUMENT
-  #define TTYPE(N,I,S) N = (I),
-  #define TTMARK(N,I) N = (I),
+/// \cond DO_NOT_DOCUMENT
+#define TTYPE(N, I, S) N = (I),
+#define TTMARK(N, I) N = (I),
   TERMINATION_TYPES
   /// \endcond
 };
-
 
 // reset definitions
 
 #undef TCLASS
 #undef TTYPE
 #undef TTMARK
-#define TCLASS(N,I)
-#define TTYPE(N,I,S)
-#define TTMARK(N,I)
+#define TCLASS(N, I)
+#define TTYPE(N, I, S)
+#define TTMARK(N, I)
 
 #endif

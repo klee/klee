@@ -16,16 +16,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <time.h>
 #include <unistd.h>
 
 #include "klee/ADT/KTest.h"
 
-
-#define SMALL_BUFFER_SIZE 64 // To hold "arg<N>" string, temporary
-                             // filename, etc.
+#define SMALL_BUFFER_SIZE                                                      \
+  64 // To hold "arg<N>" string, temporary
+     // filename, etc.
 
 #define MAX_FILE_SIZES 256
 
@@ -147,7 +147,8 @@ int main(int argc, char *argv[]) {
         "Usage: %s <random-seed> <argument-types>\n"
         "       If <random-seed> is 0, time(NULL)*getpid() is used as a seed\n"
         "       <argument-types> are the ones accepted by KLEE: --sym-args, "
-        "--sym-files etc. and --bout-file <filename> for the output file (default: random.bout).\n"
+        "--sym-files etc. and --bout-file <filename> for the output file "
+        "(default: random.bout).\n"
         "   Ex: %s 100 --sym-args 0 2 2 --sym-files 1 8\n",
         argv[0], argv[0]);
   }
@@ -158,7 +159,7 @@ int main(int argc, char *argv[]) {
   else
     srandom(time(NULL) * getpid());
 
-  if ((argv_copy = (char **) malloc((argc - 1) * sizeof(char *))) == NULL) {
+  if ((argv_copy = (char **)malloc((argc - 1) * sizeof(char *))) == NULL) {
     error_exit("%s:%d: malloc() failure\n", __FILE__, __LINE__);
   }
   argv_copy[0] = argv[0];
@@ -295,4 +296,3 @@ int main(int argc, char *argv[]) {
   free(argv_copy);
   return 0;
 }
-

@@ -24,7 +24,7 @@ class LLVMContext;
 class Module;
 class raw_ostream;
 class raw_fd_ostream;
-}
+} // namespace llvm
 
 namespace klee {
 class ExecutionState;
@@ -39,13 +39,13 @@ public:
   virtual llvm::raw_ostream &getInfoStream() const = 0;
 
   virtual std::string getOutputFilename(const std::string &filename) = 0;
-  virtual std::unique_ptr<llvm::raw_fd_ostream> openOutputFile(const std::string &filename) = 0;
+  virtual std::unique_ptr<llvm::raw_fd_ostream>
+  openOutputFile(const std::string &filename) = 0;
 
   virtual void incPathsCompleted() = 0;
   virtual void incPathsExplored(std::uint32_t num = 1) = 0;
 
-  virtual void processTestCase(const ExecutionState &state,
-                               const char *err,
+  virtual void processTestCase(const ExecutionState &state, const char *err,
                                const char *suffix) = 0;
 };
 
@@ -69,11 +69,10 @@ public:
           CheckDivZero(_CheckDivZero), CheckOvershift(_CheckOvershift) {}
   };
 
-  enum LogType
-  {
-	  STP, //.CVC (STP's native language)
-	  KQUERY, //.KQUERY files (kQuery native language)
-	  SMTLIB2 //.SMT2 files (SMTLIB version 2 files)
+  enum LogType {
+    STP,    //.CVC (STP's native language)
+    KQUERY, //.KQUERY files (kQuery native language)
+    SMTLIB2 //.SMT2 files (SMTLIB version 2 files)
   };
 
   /// InterpreterOptions - Options varying the runtime behavior during
@@ -84,17 +83,14 @@ public:
     /// symbolic execution on concrete programs.
     unsigned MakeConcreteSymbolic;
 
-    InterpreterOptions()
-      : MakeConcreteSymbolic(false)
-    {}
+    InterpreterOptions() : MakeConcreteSymbolic(false) {}
   };
 
 protected:
   const InterpreterOptions interpreterOpts;
 
   Interpreter(const InterpreterOptions &_interpreterOpts)
-    : interpreterOpts(_interpreterOpts)
-  {}
+      : interpreterOpts(_interpreterOpts) {}
 
 public:
   virtual ~Interpreter() {}
@@ -133,9 +129,7 @@ public:
   // for the search. use null to reset.
   virtual void useSeeds(const std::vector<struct KTest *> *seeds) = 0;
 
-  virtual void runFunctionAsMain(llvm::Function *f,
-                                 int argc,
-                                 char **argv,
+  virtual void runFunctionAsMain(llvm::Function *f, int argc, char **argv,
                                  char **envp) = 0;
 
   /*** Runtime options ***/
@@ -152,20 +146,18 @@ public:
 
   virtual unsigned getSymbolicPathStreamID(const ExecutionState &state) = 0;
 
-  virtual void getConstraintLog(const ExecutionState &state,
-                                std::string &res,
+  virtual void getConstraintLog(const ExecutionState &state, std::string &res,
                                 LogType logFormat = STP) = 0;
 
-  virtual bool getSymbolicSolution(const ExecutionState &state,
-                                   std::vector<
-                                   std::pair<std::string,
-                                   std::vector<unsigned char> > >
-                                   &res) = 0;
+  virtual bool getSymbolicSolution(
+      const ExecutionState &state,
+      std::vector<std::pair<std::string, std::vector<unsigned char>>> &res) = 0;
 
-  virtual void getCoveredLines(const ExecutionState &state,
-                               std::map<const std::string*, std::set<unsigned> > &res) = 0;
+  virtual void
+  getCoveredLines(const ExecutionState &state,
+                  std::map<const std::string *, std::set<unsigned>> &res) = 0;
 };
 
-} // End klee namespace
+} // namespace klee
 
 #endif /* KLEE_INTERPRETER_H */

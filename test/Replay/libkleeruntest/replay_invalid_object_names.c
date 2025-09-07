@@ -24,8 +24,7 @@
 #define STRINGIFY(X) #X
 #define XSTRINGIFY(X) STRINGIFY(X)
 
-
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   int x = 1;
   klee_make_symbolic(&x, sizeof(x), XSTRINGIFY(OBJ_NAME));
   klee_assume(x == 0);
@@ -42,4 +41,3 @@ int main(int argc, char** argv) {
 
 // CHECK_FATAL: KLEE_RUN_TEST_ERROR: object name mismatch. Requesting "wrong_name" but returning "simple_name"
 // CHECK_FATAL-NOT: x=0
-

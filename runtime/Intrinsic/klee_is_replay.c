@@ -10,6 +10,4 @@
 
 #include "klee/klee.h"
 
-unsigned klee_is_replay() {
-  return 0;
-}
+unsigned klee_is_replay() { return 0; }

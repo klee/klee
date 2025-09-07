@@ -25,7 +25,8 @@ llvm::cl::opt<unsigned> BatchSize(
 
 using namespace klee;
 
-void prepare_statement(sqlite3 *db, const std::string &query, sqlite3_stmt **stmt) {
+void prepare_statement(sqlite3 *db, const std::string &query,
+                       sqlite3_stmt **stmt) {
   int result;
 #ifdef SQLITE_PREPARE_PERSISTENT
   result = sqlite3_prepare_v3(db, query.c_str(), -1, SQLITE_PREPARE_PERSISTENT,
@@ -156,12 +157,14 @@ void ExecutionTreeWriter::write(const AnnotatedExecutionTreeNode &node) {
   rc |= sqlite3_bind_int64(
       insertStmt, 3,
       node.left.getPointer()
-          ? (static_cast<AnnotatedExecutionTreeNode *>(node.left.getPointer()))->id
+          ? (static_cast<AnnotatedExecutionTreeNode *>(node.left.getPointer()))
+                ->id
           : 0);
   rc |= sqlite3_bind_int64(
       insertStmt, 4,
       node.right.getPointer()
-          ? (static_cast<AnnotatedExecutionTreeNode *>(node.right.getPointer()))->id
+          ? (static_cast<AnnotatedExecutionTreeNode *>(node.right.getPointer()))
+                ->id
           : 0);
   rc |= sqlite3_bind_int(insertStmt, 5, node.asmLine);
   std::uint8_t value{0};

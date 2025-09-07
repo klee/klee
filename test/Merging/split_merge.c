@@ -10,7 +10,6 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --use-merge --debug-log-merge --search=random-path %t.bc 2>&1 | FileCheck %s
 
-
 // CHECK: open merge:
 // CHECK: close merge:
 // CHECK: close merge:
@@ -19,7 +18,7 @@
 
 #include "klee/klee.h"
 
-int main(int argc, char** args){
+int main(int argc, char **args) {
 
   int x;
   int foo = 0;
@@ -28,9 +27,9 @@ int main(int argc, char** args){
 
   klee_open_merge();
 
-  if (x == 1){
+  if (x == 1) {
     foo = 5;
-  } else if (x == 2){
+  } else if (x == 2) {
     klee_close_merge();
     return 6;
   } else {

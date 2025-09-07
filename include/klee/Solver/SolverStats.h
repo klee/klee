@@ -15,24 +15,24 @@
 namespace klee {
 namespace stats {
 
-  extern Statistic cexCacheTime;
-  extern Statistic solverQueries;
-  extern Statistic queries;
-  extern Statistic queriesInvalid;
-  extern Statistic queriesValid;
-  extern Statistic queryCacheHits;
-  extern Statistic queryCacheMisses;
-  extern Statistic queryCexCacheHits;
-  extern Statistic queryCexCacheMisses;
-  extern Statistic queryConstructs;
-  extern Statistic queryCounterexamples;
-  extern Statistic queryTime;
-  
+extern Statistic cexCacheTime;
+extern Statistic solverQueries;
+extern Statistic queries;
+extern Statistic queriesInvalid;
+extern Statistic queriesValid;
+extern Statistic queryCacheHits;
+extern Statistic queryCacheMisses;
+extern Statistic queryCexCacheHits;
+extern Statistic queryCexCacheMisses;
+extern Statistic queryConstructs;
+extern Statistic queryCounterexamples;
+extern Statistic queryTime;
+
 #ifdef KLEE_ARRAY_DEBUG
-  extern Statistic arrayHashTime;
+extern Statistic arrayHashTime;
 #endif
 
-}
-}
+} // namespace stats
+} // namespace klee
 
 #endif /* KLEE_SOLVERSTATS_H */

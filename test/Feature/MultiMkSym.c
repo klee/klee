@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-char* mk_sym(int size) {
+char *mk_sym(int size) {
   char *a = malloc(size);
   klee_make_symbolic(a, size, "a");
   return a;
@@ -27,14 +27,15 @@ int main() {
     a = mk_sym(1);
     if (a[0] > 'a')
       printf("Yes\n");
-    else printf("No\n");
-  }
-  else {
+    else
+      printf("No\n");
+  } else {
     printf("Allocate obj of size 2\n");
     b = mk_sym(100);
     if (b[99] > 'a')
       printf("Yes\n");
-    else printf("No\n");
+    else
+      printf("No\n");
   }
 
   return 0;

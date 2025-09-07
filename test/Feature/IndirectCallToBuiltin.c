@@ -2,8 +2,8 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out %t1.bc
 
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 int main() {
   void *(*allocator)(size_t) = malloc;

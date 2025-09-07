@@ -12,8 +12,7 @@ int main() {
   x[0] = i;
 
   // DEMAND FAILED:Memory.cpp:read8:199: <isByteFlushed(offset)> is false: "unflushed byte without cache value"
-  char y =  x[1];
+  char y = x[1];
 
   return 0;
 }
-

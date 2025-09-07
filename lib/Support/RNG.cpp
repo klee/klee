@@ -19,7 +19,7 @@ llvm::cl::opt<RNG::result_type> RNGInitialSeed(
     llvm::cl::cat(klee::MiscCat));
 }
 
-RNG::RNG() : std::mt19937(RNGInitialSeed.getValue()) { }
+RNG::RNG() : std::mt19937(RNGInitialSeed.getValue()) {}
 
 RNG::RNG(RNG::result_type seed) : std::mt19937(seed) {}
 
@@ -32,13 +32,13 @@ unsigned int RNG::getInt32() {
 
 /* generates a random number on [0,1)-real-interval */
 double RNG::getDoubleL() {
-  return getInt32()*(1.0/4294967296.0); 
+  return getInt32() * (1.0 / 4294967296.0);
   /* divided by 2^32 */
 }
 
 /* generates a random number on (0,1)-real-interval */
 double RNG::getDouble() {
-  return (((double)getInt32()) + 0.5)*(1.0/4294967296.0); 
+  return (((double)getInt32()) + 0.5) * (1.0 / 4294967296.0);
   /* divided by 2^32 */
 }
 

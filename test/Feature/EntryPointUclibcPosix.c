@@ -29,7 +29,6 @@
 // RUN: %clang -emit-llvm -g -c -DMAIN %s -o %t.bc
 // RUN: %klee --posix-runtime --output-dir=%t.klee-out --entry-point=other_main %t.bc | FileCheck %s
 
-
 #include <stdio.h>
 
 int other_main() {

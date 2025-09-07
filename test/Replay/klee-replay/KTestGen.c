@@ -12,11 +12,11 @@
 
 // CHECK: KLEE-REPLAY: NOTE: EXIT STATUS: NORMAL
 
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 int check_fd(int fd, const int file_size) {
@@ -73,4 +73,3 @@ int main(int argc, char **argv) {
 
   return 0;
 }
-

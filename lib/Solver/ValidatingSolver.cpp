@@ -20,7 +20,7 @@ namespace klee {
 class ValidatingSolver : public SolverImpl {
 private:
   std::unique_ptr<Solver> solver;
-  std::unique_ptr<Solver, void(*)(Solver*)> oracle;
+  std::unique_ptr<Solver, void (*)(Solver *)> oracle;
 
 public:
   ValidatingSolver(std::unique_ptr<Solver> solver, Solver *oracle,
@@ -90,7 +90,7 @@ bool ValidatingSolver::computeValue(const Query &query, ref<Expr> &result) {
 
 bool ValidatingSolver::computeInitialValues(
     const Query &query, const std::vector<const Array *> &objects,
-    std::vector<std::vector<unsigned char> > &values, bool &hasSolution) {
+    std::vector<std::vector<unsigned char>> &values, bool &hasSolution) {
   bool answer;
 
   if (!solver->impl->computeInitialValues(query, objects, values, hasSolution))
@@ -148,4 +148,4 @@ std::unique_ptr<Solver> createValidatingSolver(std::unique_ptr<Solver> s,
   return std::make_unique<Solver>(
       std::make_unique<ValidatingSolver>(std::move(s), oracle, ownsOracle));
 }
-}
+} // namespace klee

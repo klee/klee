@@ -17,6 +17,8 @@
 #include "klee/Support/CompilerWarning.h"
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
+#include "llvm/ExecutionEngine/GenericValue.h"
+#include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -24,11 +26,9 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/ExecutionEngine/GenericValue.h"
-#include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/Support/DynamicLibrary.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
 DISABLE_WARNING_POP
 
 #include <csetjmp>
@@ -68,8 +68,7 @@ private:
 public:
   ExternalDispatcherImpl(llvm::LLVMContext &ctx);
   ~ExternalDispatcherImpl();
-  bool executeCall(KCallable *callable, llvm::Instruction *i,
-                   uint64_t *args);
+  bool executeCall(KCallable *callable, llvm::Instruction *i, uint64_t *args);
   void *resolveSymbol(const std::string &name);
   int getLastErrno();
   void setLastErrno(int newErrno);
@@ -335,12 +334,12 @@ Function *ExternalDispatcherImpl::createDispatcher(KCallable *target,
   }
 
   llvm::CallInst *result;
-  if (auto* func = dyn_cast<KFunction>(target)) {
-    auto dispatchTarget = module->getOrInsertFunction(target->getName(), FTy,
-                                                      func->function->getAttributes());
+  if (auto *func = dyn_cast<KFunction>(target)) {
+    auto dispatchTarget = module->getOrInsertFunction(
+        target->getName(), FTy, func->function->getAttributes());
     result = Builder.CreateCall(dispatchTarget,
                                 llvm::ArrayRef<Value *>(args, args + i));
-  } else if (auto* asmValue = dyn_cast<KInlineAsm>(target)) {
+  } else if (auto *asmValue = dyn_cast<KInlineAsm>(target)) {
     result = Builder.CreateCall(asmValue->getInlineAsm(),
                                 llvm::ArrayRef<Value *>(args, args + i));
   } else {
@@ -369,8 +368,8 @@ ExternalDispatcher::ExternalDispatcher(llvm::LLVMContext &ctx)
 
 ExternalDispatcher::~ExternalDispatcher() { delete impl; }
 
-bool ExternalDispatcher::executeCall(KCallable *callable,
-                                     llvm::Instruction *i, uint64_t *args) {
+bool ExternalDispatcher::executeCall(KCallable *callable, llvm::Instruction *i,
+                                     uint64_t *args) {
   return impl->executeCall(callable, i, args);
 }
 
@@ -382,4 +381,4 @@ int ExternalDispatcher::getLastErrno() { return impl->getLastErrno(); }
 void ExternalDispatcher::setLastErrno(int newErrno) {
   impl->setLastErrno(newErrno);
 }
-}
+} // namespace klee

@@ -57,12 +57,13 @@ llvm::cl::opt<bool> PCAllConstWidths(
 
 class PPrinter : public ExprPPrinter {
 public:
-  std::set<const Array*> usedArrays;
+  std::set<const Array *> usedArrays;
+
 private:
   std::map<ref<Expr>, unsigned> bindings;
-  std::map<const UpdateNode*, unsigned> updateBindings;
-  std::set< ref<Expr> > couldPrint, shouldPrint;
-  std::set<const UpdateNode*> couldPrintUpdates, shouldPrintUpdates;
+  std::map<const UpdateNode *, unsigned> updateBindings;
+  std::set<ref<Expr>> couldPrint, shouldPrint;
+  std::set<const UpdateNode *> couldPrintUpdates, shouldPrintUpdates;
   llvm::raw_ostream &os;
   unsigned counter;
   unsigned updateCounter;
@@ -78,17 +79,16 @@ private:
     return e->getWidth() != Expr::Bool;
   }
 
-  bool isVerySimple(const ref<Expr> &e) { 
-    return isa<ConstantExpr>(e) || bindings.find(e)!=bindings.end();
+  bool isVerySimple(const ref<Expr> &e) {
+    return isa<ConstantExpr>(e) || bindings.find(e) != bindings.end();
   }
 
   bool isVerySimpleUpdate(const UpdateNode *un) {
-    return !un || updateBindings.find(un)!=updateBindings.end();
+    return !un || updateBindings.find(un) != updateBindings.end();
   }
 
-
   // document me!
-  bool isSimple(const ref<Expr> &e) { 
+  bool isSimple(const ref<Expr> &e) {
     if (isVerySimple(e)) {
       return true;
     } else if (const ReadExpr *re = dyn_cast<ReadExpr>(e)) {
@@ -96,7 +96,7 @@ private:
              isVerySimpleUpdate(re->updates.head.get());
     } else {
       Expr *ep = e.get();
-      for (unsigned i=0; i<ep->getNumKids(); i++)
+      for (unsigned i = 0; i < ep->getNumKids(); i++)
         if (!isVerySimple(ep->getKid(i)))
           return false;
       return true;
@@ -104,12 +104,12 @@ private:
   }
 
   bool hasSimpleKids(const Expr *ep) {
-      for (unsigned i=0; i<ep->getNumKids(); i++)
-        if (!isSimple(ep->getKid(i)))
-          return false;
-      return true;
+    for (unsigned i = 0; i < ep->getNumKids(); i++)
+      if (!isSimple(ep->getKid(i)))
+        return false;
+    return true;
   }
-  
+
   void scanUpdate(const UpdateNode *un) {
     // FIXME: This needs to be non-recursive.
     if (un) {
@@ -127,7 +127,7 @@ private:
     if (!isa<ConstantExpr>(e)) {
       if (couldPrint.insert(e).second) {
         Expr *ep = e.get();
-        for (unsigned i=0; i<ep->getNumKids(); i++)
+        for (unsigned i = 0; i < ep->getNumKids(); i++)
           scan1(ep->getKid(i));
         if (const ReadExpr *re = dyn_cast<ReadExpr>(e)) {
           usedArrays.insert(re->updates.root);
@@ -158,7 +158,7 @@ private:
       // We are done if we hit the cache.
       std::map<const UpdateNode *, unsigned>::iterator it =
           updateBindings.find(un.get());
-      if (it!=updateBindings.end()) {
+      if (it != updateBindings.end()) {
         if (openedList)
           PC << "] @ ";
         PC << "U" << it->second;
@@ -171,8 +171,8 @@ private:
         PC << "U" << updateCounter << ":";
         updateBindings.insert(std::make_pair(un.get(), updateCounter++));
         openedList = nextShouldBreak = false;
-     }
-    
+      }
+
       if (!openedList) {
         openedList = 1;
         PC << '[';
@@ -181,16 +181,16 @@ private:
         PC << ',';
         printSeparator(PC, !nextShouldBreak, middleIndent);
       }
-      //PC << "(=";
-      //unsigned innerIndent = PC.pos;
+      // PC << "(=";
+      // unsigned innerIndent = PC.pos;
       print(un->index, PC);
-      //printSeparator(PC, isSimple(un->index), innerIndent);
+      // printSeparator(PC, isSimple(un->index), innerIndent);
       PC << "=";
       print(un->value, PC);
-      //PC << ')';
-      
-      nextShouldBreak = !(isa<ConstantExpr>(un->index) && 
-                          isa<ConstantExpr>(un->value));
+      // PC << ')';
+
+      nextShouldBreak =
+          !(isa<ConstantExpr>(un->index) && isa<ConstantExpr>(un->value));
     }
 
     if (openedList)
@@ -212,66 +212,65 @@ private:
     PC << e->getWidth();
   }
 
-  
   bool isReadExprAtOffset(ref<Expr> e, const ReadExpr *base, ref<Expr> offset) {
     const ReadExpr *re = dyn_cast<ReadExpr>(e.get());
-      
+
     // right now, all Reads are byte reads but some
     // transformations might change this
     if (!re || (re->getWidth() != Expr::Int8))
       return false;
-      
-    // Check if the index follows the stride. 
+
+    // Check if the index follows the stride.
     // FIXME: How aggressive should this be simplified. The
     // canonicalizing builder is probably the right choice, but this
     // is yet another area where we would really prefer it to be
     // global or else use static methods.
     return SubExpr::create(re->index, base->index) == offset;
   }
-  
-  
+
   /// hasOrderedReads: \arg e must be a ConcatExpr, \arg stride must
-  /// be 1 or -1.  
+  /// be 1 or -1.
   ///
   /// If all children of this Concat are reads or concats of reads
   /// with consecutive offsets according to the given \arg stride, it
   /// returns the base ReadExpr according to \arg stride: first Read
   /// for 1 (MSB), last Read for -1 (LSB).  Otherwise, it returns
   /// null.
-  const ReadExpr* hasOrderedReads(ref<Expr> e, int stride) {
+  const ReadExpr *hasOrderedReads(ref<Expr> e, int stride) {
     assert(e->getKind() == Expr::Concat);
     assert(stride == 1 || stride == -1);
-    
+
     const ReadExpr *base = dyn_cast<ReadExpr>(e->getKid(0));
-    
+
     // right now, all Reads are byte reads but some
     // transformations might change this
     if (!base || base->getWidth() != Expr::Int8)
       return NULL;
-    
+
     // Get stride expr in proper index width.
     Expr::Width idxWidth = base->index->getWidth();
     ref<Expr> strideExpr = ConstantExpr::alloc(stride, idxWidth);
     ref<Expr> offset = ConstantExpr::create(0, idxWidth);
-    
+
     e = e->getKid(1);
-    
+
     // concat chains are unbalanced to the right
     while (e->getKind() == Expr::Concat) {
       offset = AddExpr::create(offset, strideExpr);
       if (!isReadExprAtOffset(e->getKid(0), base, offset))
-	return NULL;
-      
+        return NULL;
+
       e = e->getKid(1);
     }
-    
+
     offset = AddExpr::create(offset, strideExpr);
     if (!isReadExprAtOffset(e, base, offset))
       return NULL;
-    
+
     if (stride == -1)
       return cast<ReadExpr>(e.get());
-    else return base;
+    else
+      return base;
   }
 
 #if 0
@@ -306,24 +305,21 @@ private:
     print(ee->expr, PC);
   }
 
-  void printExpr(const Expr *ep, PrintContext &PC, unsigned indent, bool printConstWidth=false) {
+  void printExpr(const Expr *ep, PrintContext &PC, unsigned indent,
+                 bool printConstWidth = false) {
     bool simple = hasSimpleKids(ep);
-    
+
     print(ep->getKid(0), PC);
-    for (unsigned i=1; i<ep->getNumKids(); i++) {
+    for (unsigned i = 1; i < ep->getNumKids(); i++) {
       printSeparator(PC, simple, indent);
       print(ep->getKid(i), PC, printConstWidth);
     }
   }
 
 public:
-  PPrinter(llvm::raw_ostream &_os) : os(_os), newline("\n") {
-    reset();
-  }
+  PPrinter(llvm::raw_ostream &_os) : os(_os), newline("\n") { reset(); }
 
-  void setNewline(const std::string &_newline) {
-    newline = _newline;
-  }
+  void setNewline(const std::string &_newline) { newline = _newline; }
 
   void setForceNoLineBreaks(bool _forceNoLineBreaks) {
     forceNoLineBreaks = _forceNoLineBreaks;
@@ -347,22 +343,22 @@ public:
     scan1(e);
   }
 
-  void print(const ref<Expr> &e, unsigned level=0) {
+  void print(const ref<Expr> &e, unsigned level = 0) {
     PrintContext PC(os);
     PC.pos = level;
     print(e, PC);
   }
 
-  void printConst(const ref<ConstantExpr> &e, PrintContext &PC, 
+  void printConst(const ref<ConstantExpr> &e, PrintContext &PC,
                   bool printWidth) {
     if (e->getWidth() == Expr::Bool)
       PC << (e->isTrue() ? "true" : "false");
     else {
       if (PCAllConstWidths)
-	printWidth = true;
-    
+        printWidth = true;
+
       if (printWidth)
-	PC << "(w" << e->getWidth() << " ";
+        PC << "(w" << e->getWidth() << " ";
 
       if (e->getWidth() <= 64) {
         PC << e->getZExtValue();
@@ -373,16 +369,17 @@ public:
       }
 
       if (printWidth)
-	PC << ")";
-    }    
+        PC << ")";
+    }
   }
 
-  void print(const ref<Expr> &e, PrintContext &PC, bool printConstWidth=false) {
+  void print(const ref<Expr> &e, PrintContext &PC,
+             bool printConstWidth = false) {
     if (ConstantExpr *CE = dyn_cast<ConstantExpr>(e))
       printConst(CE, PC, printConstWidth);
     else {
       std::map<ref<Expr>, unsigned>::iterator it = bindings.find(e);
-      if (it!=bindings.end()) {
+      if (it != bindings.end()) {
         PC << 'N' << it->second;
       } else {
         if (!hasScan || shouldPrint.count(e)) {
@@ -398,21 +395,21 @@ public:
         // or they are (base + offset) and base will get printed with
         // a declaration.
         if (PCMultibyteReads && e->getKind() == Expr::Concat) {
-	  const ReadExpr *base = hasOrderedReads(e, -1);
-	  const bool isLSB = (base != nullptr);
-	  if (!isLSB)
-	    base = hasOrderedReads(e, 1);
-	  if (base) {
-	    PC << "(Read" << (isLSB ? "LSB" : "MSB");
-	    printWidth(PC, e);
-	    PC << ' ';
-	    printRead(base, PC, PC.pos);
-	    PC << ')';
-	    return;
-	  }
+          const ReadExpr *base = hasOrderedReads(e, -1);
+          const bool isLSB = (base != nullptr);
+          if (!isLSB)
+            base = hasOrderedReads(e, 1);
+          if (base) {
+            PC << "(Read" << (isLSB ? "LSB" : "MSB");
+            printWidth(PC, e);
+            PC << ' ';
+            printRead(base, PC, PC.pos);
+            PC << ')';
+            return;
+          }
         }
 
-	PC << '(' << e->getKind();
+        PC << '(' << e->getKind();
         printWidth(PC, e);
         PC << ' ';
 
@@ -424,9 +421,9 @@ public:
         } else if (const ExtractExpr *ee = dyn_cast<ExtractExpr>(e)) {
           printExtract(ee, PC, indent);
         } else if (e->getKind() == Expr::Concat || e->getKind() == Expr::SExt)
-	  printExpr(e.get(), PC, indent, true);
-	else
-          printExpr(e.get(), PC, indent);	
+          printExpr(e.get(), PC, indent, true);
+        else
+          printExpr(e.get(), PC, indent);
         PC << ")";
       }
     }
@@ -447,8 +444,7 @@ ExprPPrinter *klee::ExprPPrinter::create(llvm::raw_ostream &os) {
   return new PPrinter(os);
 }
 
-void ExprPPrinter::printOne(llvm::raw_ostream &os,
-                            const char *message, 
+void ExprPPrinter::printOne(llvm::raw_ostream &os, const char *message,
                             const ref<Expr> &e) {
   PPrinter p(os);
   p.scan(e);
@@ -483,16 +479,13 @@ struct ArrayPtrsByName {
     return a1->name < a2->name;
   }
 };
-}
+} // namespace
 
-void ExprPPrinter::printQuery(llvm::raw_ostream &os,
-                              const ConstraintSet &constraints,
-                              const ref<Expr> &q,
-                              const ref<Expr> *evalExprsBegin,
-                              const ref<Expr> *evalExprsEnd,
-                              const Array * const *evalArraysBegin,
-                              const Array * const *evalArraysEnd,
-                              bool printArrayDecls) {
+void ExprPPrinter::printQuery(
+    llvm::raw_ostream &os, const ConstraintSet &constraints, const ref<Expr> &q,
+    const ref<Expr> *evalExprsBegin, const ref<Expr> *evalExprsEnd,
+    const Array *const *evalArraysBegin, const Array *const *evalArraysEnd,
+    bool printArrayDecls) {
   PPrinter p(os);
 
   for (const auto &constraint : constraints)
@@ -503,10 +496,10 @@ void ExprPPrinter::printQuery(llvm::raw_ostream &os,
     p.scan(*it);
 
   PrintContext PC(os);
-  
+
   // Print array declarations.
   if (printArrayDecls) {
-    for (const Array * const* it = evalArraysBegin; it != evalArraysEnd; ++it)
+    for (const Array *const *it = evalArraysBegin; it != evalArraysEnd; ++it)
       p.usedArrays.insert(*it);
     std::vector<const Array *> sortedArray(p.usedArrays.begin(),
                                            p.usedArrays.end());
@@ -533,7 +526,7 @@ void ExprPPrinter::printQuery(llvm::raw_ostream &os,
   }
 
   PC << "(query [";
-  
+
   // Ident at constraint list;
   unsigned indent = PC.pos;
   for (auto it = constraints.begin(), ie = constraints.end(); it != ie;) {
@@ -544,15 +537,15 @@ void ExprPPrinter::printQuery(llvm::raw_ostream &os,
   }
   PC << ']';
 
-  p.printSeparator(PC, constraints.empty(), indent-1);
+  p.printSeparator(PC, constraints.empty(), indent - 1);
   p.print(q, PC);
 
   // Print expressions to obtain values for, if any.
   if (evalExprsBegin != evalExprsEnd) {
-    p.printSeparator(PC, q->isFalse(), indent-1);
+    p.printSeparator(PC, q->isFalse(), indent - 1);
     PC << '[';
     for (const ref<Expr> *it = evalExprsBegin; it != evalExprsEnd; ++it) {
-      p.print(*it, PC, /*printConstWidth*/true);
+      p.print(*it, PC, /*printConstWidth*/ true);
       if (it + 1 != evalExprsEnd)
         PC.breakLine(indent);
     }
@@ -566,7 +559,7 @@ void ExprPPrinter::printQuery(llvm::raw_ostream &os,
 
     PC.breakLine(indent - 1);
     PC << '[';
-    for (const Array * const* it = evalArraysBegin; it != evalArraysEnd; ++it) {
+    for (const Array *const *it = evalArraysBegin; it != evalArraysEnd; ++it) {
       PC << (*it)->name;
       if (it + 1 != evalArraysEnd)
         PC.breakLine(indent);

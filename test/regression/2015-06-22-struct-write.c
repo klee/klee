@@ -7,10 +7,10 @@
 #include <assert.h>
 
 union U0 {
-	signed f3 :18;
+  signed f3 : 18;
 };
 
-static union U0 u = { 0UL };
+static union U0 u = {0UL};
 
 int main(int argc, char **argv) {
   u.f3 = 534;
@@ -19,4 +19,3 @@ int main(int argc, char **argv) {
 
   return 0;
 }
-

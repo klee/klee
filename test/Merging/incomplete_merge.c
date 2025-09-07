@@ -38,7 +38,7 @@ int main(int argc, char **args) {
   if (a == 0) {
     klee_open_merge();
 
-    for (int i = 0; i < 5; ++i){
+    for (int i = 0; i < 5; ++i) {
       foo += 2;
     }
     if (x == 1) {

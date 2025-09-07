@@ -9,15 +9,15 @@
 #include "klee/klee.h"
 #include "stdlib.h"
 
-int main(){
-	int a, b;
-	klee_make_symbolic (&a, sizeof(int), "a");
-	klee_make_symbolic (&b, sizeof(int), "b");
-	klee_assume(a<2);
-	klee_assume(a>=0);
-	malloc(a);
-	if(b){
-		b++;//do something
-	}
-	return b;
+int main() {
+  int a, b;
+  klee_make_symbolic(&a, sizeof(int), "a");
+  klee_make_symbolic(&b, sizeof(int), "b");
+  klee_assume(a < 2);
+  klee_assume(a >= 0);
+  malloc(a);
+  if (b) {
+    b++; // do something
+  }
+  return b;
 }

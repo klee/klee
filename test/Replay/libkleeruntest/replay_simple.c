@@ -12,7 +12,7 @@
 #include "klee/klee.h"
 #include <stdio.h>
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   int x = 0;
   klee_make_symbolic(&x, sizeof(x), "x");
 

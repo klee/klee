@@ -41,8 +41,8 @@ char RaiseAsmPass::ID = 0;
 
 Function *RaiseAsmPass::getIntrinsic(llvm::Module &M, unsigned IID, Type **Tys,
                                      unsigned NumTys) {
-  return Intrinsic::getDeclaration(&M, (llvm::Intrinsic::ID) IID,
-                                   llvm::ArrayRef<llvm::Type*>(Tys, NumTys));
+  return Intrinsic::getDeclaration(&M, (llvm::Intrinsic::ID)IID,
+                                   llvm::ArrayRef<llvm::Type *>(Tys, NumTys));
 }
 
 // FIXME: This should just be implemented as a patch to
@@ -90,7 +90,7 @@ bool RaiseAsmPass::runOnModule(Module &M) {
     TargetTriple = llvm::sys::getDefaultTargetTriple();
   const Target *Target = TargetRegistry::lookupTarget(TargetTriple, Err);
 
-  TargetMachine * TM = 0;
+  TargetMachine *TM = 0;
   if (Target == 0) {
     klee_warning("Warning: unable to select target: %s", Err.c_str());
     TLI = 0;
@@ -112,7 +112,7 @@ bool RaiseAsmPass::runOnModule(Module &M) {
     for (Function::iterator bi = fi->begin(), be = fi->end(); bi != be; ++bi) {
       for (BasicBlock::iterator ii = bi->begin(), ie = bi->end(); ii != ie;) {
         Instruction *i = &*ii;
-        ++ii;  
+        ++ii;
         changed |= runOnInstruction(M, i);
       }
     }

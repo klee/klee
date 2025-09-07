@@ -9,10 +9,10 @@
 
 int main() {
   char c;
-  char* ptr = &c;
+  char *ptr = &c;
 
   size_t offset;
-  volatile char* result;
+  volatile char *result;
 
   klee_make_symbolic(&offset, sizeof(offset), "offset");
   klee_assume((size_t)(ptr) + offset != 0);

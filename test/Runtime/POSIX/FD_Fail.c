@@ -2,12 +2,12 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --libc=uclibc --posix-runtime %t1.bc --max-fail 1 | FileCheck %s
 
-#include <stdio.h>
 #include <assert.h>
+#include <stdio.h>
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   char buf[1024];
-  FILE* f = fopen("/dev/zero", "rb");
+  FILE *f = fopen("/dev/zero", "rb");
   assert(f);
 
   int r = fread(buf, 1, 100, f);

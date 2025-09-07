@@ -10,7 +10,7 @@ int main() {
   free(p);
 
   p = malloc(0);
-  void *arr[4] = { p, 0, 0, 0 };
+  void *arr[4] = {p, 0, 0, 0};
 
   // symbolic case
   free(arr[klee_range(0, 4, "range")]);

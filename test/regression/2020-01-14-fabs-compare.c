@@ -2,8 +2,8 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --exit-on-error --output-dir=%t.klee-out %t.bc
 
-#include <math.h>
 #include <assert.h>
+#include <math.h>
 
 int main(void) {
   long double a = 0.25;

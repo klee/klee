@@ -22,8 +22,7 @@
 #error INT_TYPE must be defined
 #endif
 
-
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   INT_TYPE x = 1;
   klee_make_symbolic(&x, sizeof(x), "x");
   klee_assume(x == 0);
@@ -40,4 +39,3 @@ int main(int argc, char** argv) {
 
 // CHECK_FATAL: KLEE_RUN_TEST_ERROR: object sizes differ. Expected 4 but got 1
 // CHECK_FATAL-NOT: x=0
-

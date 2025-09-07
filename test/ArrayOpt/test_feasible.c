@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-char array[5] = {0,1,0,1,0};
+char array[5] = {0, 1, 0, 1, 0};
 
 int main() {
   unsigned k;
@@ -38,7 +38,7 @@ int main() {
   // CHECK-DAG: Correct!
   if (array[k] == 0) {
     printf("zero\n");
-    if (k==0|k==2|k==4) {
+    if (k == 0 | k == 2 | k == 4) {
       printf("Correct!\n");
     } else {
       klee_assert(0);

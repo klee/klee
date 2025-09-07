@@ -19,7 +19,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   int x = 54, y = 55;
   klee_make_symbolic(&x, sizeof(x), "x");
   klee_make_symbolic(&y, sizeof(y), "y");

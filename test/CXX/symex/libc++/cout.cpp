@@ -11,7 +11,7 @@
 
 #include <iostream>
 
-int main(int argc, char** args){
+int main(int argc, char **args) {
   std::cout << "cout" << std::endl;
   std::cerr << "cerr" << std::endl;
   return 0;

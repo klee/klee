@@ -19,10 +19,10 @@
 #include <string>
 
 namespace klee {
-    const char ALL_QUERIES_SMT2_FILE_NAME[]="all-queries.smt2";
-    const char SOLVER_QUERIES_SMT2_FILE_NAME[]="solver-queries.smt2";
-    const char ALL_QUERIES_KQUERY_FILE_NAME[]="all-queries.kquery";
-    const char SOLVER_QUERIES_KQUERY_FILE_NAME[]="solver-queries.kquery";
+const char ALL_QUERIES_SMT2_FILE_NAME[] = "all-queries.smt2";
+const char SOLVER_QUERIES_SMT2_FILE_NAME[] = "solver-queries.smt2";
+const char ALL_QUERIES_KQUERY_FILE_NAME[] = "all-queries.kquery";
+const char SOLVER_QUERIES_KQUERY_FILE_NAME[] = "solver-queries.kquery";
 
 std::unique_ptr<Solver> constructSolverChain(
     std::unique_ptr<Solver> coreSolver, std::string querySMT2LogPath,

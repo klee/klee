@@ -7,21 +7,20 @@
 
 // objective: check handling of more than one failing external call
 
-
 #include "klee/klee.h"
 
 #include <stdbool.h>
 #include <string.h>
 
-int main(int argc, char * argv[]) {
+int main(int argc, char *argv[]) {
   bool b;
   klee_make_symbolic(&b, sizeof(bool), "b");
 
-  char * s0;
+  char *s0;
   if (b) {
-    s0 = strdup((char *) 0xdeadbeef);
+    s0 = strdup((char *)0xdeadbeef);
   } else {
-    s0 = strdup((void *) 0xdeafbee5);
+    s0 = strdup((void *)0xdeafbee5);
   }
-  (void) s0;
+  (void)s0;
 }

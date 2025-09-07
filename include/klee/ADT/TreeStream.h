@@ -15,62 +15,61 @@
 
 namespace klee {
 
-  typedef unsigned TreeStreamID;
-  class TreeOStream;
+typedef unsigned TreeStreamID;
+class TreeOStream;
 
-  class TreeStreamWriter {
-    static const unsigned bufferSize = 4*4096;
+class TreeStreamWriter {
+  static const unsigned bufferSize = 4 * 4096;
 
-    friend class TreeOStream;
+  friend class TreeOStream;
 
-  private:
-    char buffer[bufferSize];
-    unsigned lastID, bufferCount;
+private:
+  char buffer[bufferSize];
+  unsigned lastID, bufferCount;
 
-    std::string path;
-    std::ofstream *output;
-    unsigned ids;
+  std::string path;
+  std::ofstream *output;
+  unsigned ids;
 
-    void write(TreeOStream &os, const char *s, unsigned size);
-    void flushBuffer();
+  void write(TreeOStream &os, const char *s, unsigned size);
+  void flushBuffer();
 
-  public:
-    TreeStreamWriter(const std::string &_path);
-    ~TreeStreamWriter();
+public:
+  TreeStreamWriter(const std::string &_path);
+  ~TreeStreamWriter();
 
-    bool good();
+  bool good();
 
-    TreeOStream open();
-    TreeOStream open(const TreeOStream &node);
+  TreeOStream open();
+  TreeOStream open(const TreeOStream &node);
 
-    void flush();
+  void flush();
 
-    // hack, to be replace by proper stream capabilities
-    void readStream(TreeStreamID id,
-                    std::vector<unsigned char> &out);
-  };
+  // hack, to be replace by proper stream capabilities
+  void readStream(TreeStreamID id, std::vector<unsigned char> &out);
+};
 
-  class TreeOStream {
-    friend class TreeStreamWriter;
+class TreeOStream {
+  friend class TreeStreamWriter;
 
-  private:
-    TreeStreamWriter *writer;
-    unsigned id;
-    
-    TreeOStream(TreeStreamWriter &_writer, unsigned _id);
+private:
+  TreeStreamWriter *writer;
+  unsigned id;
 
-  public:
-    TreeOStream();
-    ~TreeOStream();
+  TreeOStream(TreeStreamWriter &_writer, unsigned _id);
 
-    unsigned getID() const;
+public:
+  TreeOStream();
+  ~TreeOStream();
 
-    void write(const char *buffer, unsigned size);
+  unsigned getID() const;
 
-    TreeOStream &operator<<(const std::string &s);
+  void write(const char *buffer, unsigned size);
 
-    void flush();
-  };
-}
+  TreeOStream &operator<<(const std::string &s);
+
+  void flush();
+};
+} // namespace klee
 
 #endif /* KLEE_TREESTREAM_H */

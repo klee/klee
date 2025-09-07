@@ -14,14 +14,16 @@
 #include "klee/klee.h"
 
 int main(void) {
-	int foo;
-	int bar = 42;
-	klee_make_symbolic(&foo, sizeof(foo), "foo");
+  int foo;
+  int bar = 42;
+  klee_make_symbolic(&foo, sizeof(foo), "foo");
 
-	if (foo) bar -= 17;
-	else bar += 5;
+  if (foo)
+    bar -= 17;
+  else
+    bar += 5;
 
-	return bar;
+  return bar;
 }
 
 // MINISAT: KLEE: Using STP solver backend

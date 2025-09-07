@@ -6,7 +6,7 @@
 #include <fcntl.h>
 
 int main(int argc, char **argv) {
-  int fd = open("A", O_RDWR|O_TRUNC);
+  int fd = open("A", O_RDWR | O_TRUNC);
   if (fd == -1)
     klee_silent_exit(0);
   assert(fd == 3);

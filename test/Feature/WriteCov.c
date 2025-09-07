@@ -12,10 +12,12 @@
 #include <stdio.h>
 
 int main() {
-  if (klee_range(0,2, "range")) {
-    assert(__LINE__ == 16); printf("__LINE__ = %d\n", __LINE__);
+  if (klee_range(0, 2, "range")) {
+    assert(__LINE__ == 16);
+    printf("__LINE__ = %d\n", __LINE__);
   } else {
-    assert(__LINE__ == 18); printf("__LINE__ = %d\n", __LINE__);
+    assert(__LINE__ == 18);
+    printf("__LINE__ = %d\n", __LINE__);
   }
   return 0;
 }

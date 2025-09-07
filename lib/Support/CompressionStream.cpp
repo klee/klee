@@ -6,17 +6,17 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#include "klee/Config/config.h"
 #include "klee/Config/Version.h"
+#include "klee/Config/config.h"
 #ifdef HAVE_ZLIB_H
 #include "klee/Support/CompressionStream.h"
 
 #include "llvm/Support/FileSystem.h"
 
-#include <fcntl.h>
 #include <errno.h>
-#include <sys/types.h>
+#include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 namespace klee {
@@ -26,8 +26,7 @@ compressed_fd_ostream::compressed_fd_ostream(const std::string &Filename,
     : llvm::raw_ostream(), pos(0) {
   ErrorInfo = "";
   // Open file in binary mode
-  std::error_code EC =
-      llvm::sys::fs::openFileForWrite(Filename, FD);
+  std::error_code EC = llvm::sys::fs::openFileForWrite(Filename, FD);
   if (EC) {
     ErrorInfo = EC.message();
     FD = -1;
@@ -42,11 +41,12 @@ compressed_fd_ostream::compressed_fd_ostream(const std::string &Filename,
   strm.avail_in = 0;
   strm.avail_out = BUFSIZE;
 
-  const auto ret = deflateInit2(&strm, Z_BEST_COMPRESSION, Z_DEFLATED, 31,
-                                8 /* memory usage default, 0 smallest, 9 highest*/,
-                                Z_DEFAULT_STRATEGY);
+  const auto ret = deflateInit2(
+      &strm, Z_BEST_COMPRESSION, Z_DEFLATED, 31,
+      8 /* memory usage default, 0 smallest, 9 highest*/, Z_DEFAULT_STRATEGY);
   if (ret != Z_OK)
-    ErrorInfo = "Deflate initialisation returned with error: " + std::to_string(ret);
+    ErrorInfo =
+        "Deflate initialisation returned with error: " + std::to_string(ret);
 }
 
 void compressed_fd_ostream::writeFullCompressedData() {
@@ -90,7 +90,7 @@ void compressed_fd_ostream::write_impl(const char *Ptr, size_t Size) {
   // Check if there is still data to compress
   while (strm.avail_in != 0) {
     // compress data
-    const auto res __attribute__ ((unused)) = deflate(&strm, Z_NO_FLUSH);
+    const auto res __attribute__((unused)) = deflate(&strm, Z_NO_FLUSH);
     assert(res == Z_OK);
     writeFullCompressedData();
   }
@@ -112,5 +112,5 @@ void compressed_fd_ostream::write_file(const char *Ptr, size_t Size) {
     Size -= ret;
   } while (Size > 0);
 }
-}
+} // namespace klee
 #endif

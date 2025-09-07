@@ -14,33 +14,33 @@
 
 namespace klee {
 
-  /// Context - Helper class for storing global information about a KLEE run.
-  class Context {
-    /// Whether the target architecture is little endian or not.
-    bool IsLittleEndian;
+/// Context - Helper class for storing global information about a KLEE run.
+class Context {
+  /// Whether the target architecture is little endian or not.
+  bool IsLittleEndian;
 
-    /// The pointer width of the target architecture.
-    Expr::Width PointerWidth;
+  /// The pointer width of the target architecture.
+  Expr::Width PointerWidth;
 
-  protected:
-    Context(bool _IsLittleEndian, Expr::Width _PointerWidth)
+protected:
+  Context(bool _IsLittleEndian, Expr::Width _PointerWidth)
       : IsLittleEndian(_IsLittleEndian), PointerWidth(_PointerWidth) {}
-    
-  public:
-    Context() {}
 
-    /// initialize - Construct the global Context instance.
-    static void initialize(bool IsLittleEndian, Expr::Width PointerWidth);
+public:
+  Context() {}
 
-    /// get - Return the global singleton instance of the Context.
-    static const Context &get();
+  /// initialize - Construct the global Context instance.
+  static void initialize(bool IsLittleEndian, Expr::Width PointerWidth);
 
-    bool isLittleEndian() const { return IsLittleEndian; }
+  /// get - Return the global singleton instance of the Context.
+  static const Context &get();
 
-    /// Returns width of the pointer in bits
-    Expr::Width getPointerWidth() const { return PointerWidth; }
-  };
-  
-} // End klee namespace
+  bool isLittleEndian() const { return IsLittleEndian; }
+
+  /// Returns width of the pointer in bits
+  Expr::Width getPointerWidth() const { return PointerWidth; }
+};
+
+} // namespace klee
 
 #endif /* KLEE_CONTEXT_H */

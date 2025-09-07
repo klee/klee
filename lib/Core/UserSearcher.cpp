@@ -54,37 +54,34 @@ cl::opt<bool> UseIterativeDeepeningTimeSearch(
     "use-iterative-deepening-time-search",
     cl::desc(
         "Use iterative deepening time search (experimental) (default=false)"),
-    cl::init(false),
-    cl::cat(SearchCat));
+    cl::init(false), cl::cat(SearchCat));
 
 cl::opt<bool> UseBatchingSearch(
     "use-batching-search",
     cl::desc("Use batching searcher (keep running selected state for N "
              "instructions/time, see --batch-instructions and --batch-time) "
              "(default=false)"),
-    cl::init(false),
-    cl::cat(SearchCat));
+    cl::init(false), cl::cat(SearchCat));
 
 cl::opt<unsigned> BatchInstructions(
     "batch-instructions",
     cl::desc("Number of instructions to batch when using "
              "--use-batching-search.  Set to 0 to disable (default=10000)"),
-    cl::init(10000),
-    cl::cat(SearchCat));
+    cl::init(10000), cl::cat(SearchCat));
 
 cl::opt<std::string> BatchTime(
     "batch-time",
     cl::desc("Amount of time to batch when using "
              "--use-batching-search.  Set to 0s to disable (default=5s)"),
-    cl::init("5s"),
-    cl::cat(SearchCat));
+    cl::init("5s"), cl::cat(SearchCat));
 
 void initializeSearchOptions() {
   // default values
   if (CoreSearch.empty()) {
     if (UseMerge) {
       CoreSearch.push_back(Searcher::NURS_CovNew);
-      klee_warning("--use-merge enabled. Using NURS_CovNew as default searcher.");
+      klee_warning(
+          "--use-merge enabled. Using NURS_CovNew as default searcher.");
     } else {
       CoreSearch.push_back(Searcher::RandomPath);
       CoreSearch.push_back(Searcher::NURS_CovNew);
@@ -93,15 +90,21 @@ void initializeSearchOptions() {
 }
 
 bool userSearcherRequiresMD2U() {
-  return (std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_MD2U) != CoreSearch.end() ||
-          std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_CovNew) != CoreSearch.end() ||
-          std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_ICnt) != CoreSearch.end() ||
-          std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_CPICnt) != CoreSearch.end() ||
-          std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_QC) != CoreSearch.end());
+  return (std::find(CoreSearch.begin(), CoreSearch.end(),
+                    Searcher::NURS_MD2U) != CoreSearch.end() ||
+          std::find(CoreSearch.begin(), CoreSearch.end(),
+                    Searcher::NURS_CovNew) != CoreSearch.end() ||
+          std::find(CoreSearch.begin(), CoreSearch.end(),
+                    Searcher::NURS_ICnt) != CoreSearch.end() ||
+          std::find(CoreSearch.begin(), CoreSearch.end(),
+                    Searcher::NURS_CPICnt) != CoreSearch.end() ||
+          std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::NURS_QC) !=
+              CoreSearch.end());
 }
 
 bool userSearcherRequiresInMemoryExecutionTree() {
-  return std::find(CoreSearch.begin(), CoreSearch.end(), Searcher::RandomPath) != CoreSearch.end();
+  return std::find(CoreSearch.begin(), CoreSearch.end(),
+                   Searcher::RandomPath) != CoreSearch.end();
 }
 
 } // namespace klee
@@ -110,17 +113,44 @@ Searcher *getNewSearcher(Searcher::CoreSearchType type, RNG &rng,
                          InMemoryExecutionTree *executionTree) {
   Searcher *searcher = nullptr;
   switch (type) {
-    case Searcher::DFS: searcher = new DFSSearcher(); break;
-    case Searcher::BFS: searcher = new BFSSearcher(); break;
-    case Searcher::RandomState: searcher = new RandomSearcher(rng); break;
-    case Searcher::RandomPath: searcher = new RandomPathSearcher(executionTree, rng); break;
-    case Searcher::NURS_CovNew: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::CoveringNew, rng); break;
-    case Searcher::NURS_MD2U: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::MinDistToUncovered, rng); break;
-    case Searcher::NURS_Depth: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::Depth, rng); break;
-    case Searcher::NURS_RP: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::RP, rng); break;
-    case Searcher::NURS_ICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::InstCount, rng); break;
-    case Searcher::NURS_CPICnt: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::CPInstCount, rng); break;
-    case Searcher::NURS_QC: searcher = new WeightedRandomSearcher(WeightedRandomSearcher::QueryCost, rng); break;
+  case Searcher::DFS:
+    searcher = new DFSSearcher();
+    break;
+  case Searcher::BFS:
+    searcher = new BFSSearcher();
+    break;
+  case Searcher::RandomState:
+    searcher = new RandomSearcher(rng);
+    break;
+  case Searcher::RandomPath:
+    searcher = new RandomPathSearcher(executionTree, rng);
+    break;
+  case Searcher::NURS_CovNew:
+    searcher =
+        new WeightedRandomSearcher(WeightedRandomSearcher::CoveringNew, rng);
+    break;
+  case Searcher::NURS_MD2U:
+    searcher = new WeightedRandomSearcher(
+        WeightedRandomSearcher::MinDistToUncovered, rng);
+    break;
+  case Searcher::NURS_Depth:
+    searcher = new WeightedRandomSearcher(WeightedRandomSearcher::Depth, rng);
+    break;
+  case Searcher::NURS_RP:
+    searcher = new WeightedRandomSearcher(WeightedRandomSearcher::RP, rng);
+    break;
+  case Searcher::NURS_ICnt:
+    searcher =
+        new WeightedRandomSearcher(WeightedRandomSearcher::InstCount, rng);
+    break;
+  case Searcher::NURS_CPICnt:
+    searcher =
+        new WeightedRandomSearcher(WeightedRandomSearcher::CPInstCount, rng);
+    break;
+  case Searcher::NURS_QC:
+    searcher =
+        new WeightedRandomSearcher(WeightedRandomSearcher::QueryCost, rng);
+    break;
   }
 
   return searcher;

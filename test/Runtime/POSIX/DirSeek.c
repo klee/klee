@@ -15,10 +15,10 @@
 // Therefore gentmp generates a directory with a specific amount of entries
 
 #include <assert.h>
-#include <sys/types.h>
 #include <dirent.h>
 #include <errno.h>
 #include <string.h>
+#include <sys/types.h>
 
 int main(int argc, char **argv) {
   char first[256], second[256];

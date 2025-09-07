@@ -8,7 +8,7 @@
 
 #include "klee/klee.h"
 
-int main(int argc, char** args){
+int main(int argc, char **args) {
 
   int x;
   int p;
@@ -18,10 +18,10 @@ int main(int argc, char** args){
   x = x % 20;
 
   klee_open_merge();
-  for (i = 0; i < x; ++i){
-    if (x % 3 == 0){
+  for (i = 0; i < x; ++i) {
+    if (x % 3 == 0) {
       klee_close_merge();
-      if (x > 10){
+      if (x > 10) {
         return 1;
       } else {
         return 2;
@@ -31,12 +31,11 @@ int main(int argc, char** args){
   klee_close_merge();
 
   klee_open_merge();
-  if (x > 10){
+  if (x > 10) {
     p = 1;
   } else {
     p = 2;
   }
   klee_close_merge();
   return p;
-
 }

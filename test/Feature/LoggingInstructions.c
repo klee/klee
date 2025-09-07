@@ -19,7 +19,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-char array[5] = { 1, 2, 3, -4, 5 };
+char array[5] = {1, 2, 3, -4, 5};
 
 int main() {
   unsigned k;

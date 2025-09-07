@@ -8,7 +8,6 @@
 
 #include <stdlib.h>
 
-
 void foo(void) {}
 void bar(void) {}
 
@@ -17,7 +16,6 @@ int memop(void) {
   klee_make_symbolic(&p, sizeof(p), "p");
   return *p;
 }
-
 
 int main(void) {
   // alloc
@@ -50,7 +48,6 @@ int main(void) {
   klee_assume((lptr == &&one) | (lptr == &&two));
   goto *lptr;
 
-
 one:
   p = malloc(size0);
   if (p) {
@@ -66,12 +63,17 @@ one:
 
 two:
   switch (sw_cond) {
-  case 8: memop(); break; // memop
-  case 15: (*fptr)(); break;
+  case 8:
+    memop();
+    break; // memop
+  case 15:
+    (*fptr)();
+    break;
   default: {
     int c = 42;
     // conditional
-    if (cond) c++;
+    if (cond)
+      c++;
     return c;
   }
   }

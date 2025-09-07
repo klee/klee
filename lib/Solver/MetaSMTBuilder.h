@@ -23,9 +23,9 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/CommandLine.h"
 
+#include <metaSMT/frontend/Array.hpp>
 #include <metaSMT/frontend/Logic.hpp>
 #include <metaSMT/frontend/QF_BV.hpp>
-#include <metaSMT/frontend/Array.hpp>
 
 using namespace metaSMT;
 using namespace metaSMT::logic::QF_BV;
@@ -41,10 +41,12 @@ llvm::cl::opt<bool> UseConstructHashMetaSMT(
 
 namespace klee {
 
-typedef metaSMT::logic::Predicate<proto::terminal<
-    metaSMT::logic::tag::true_tag>::type> const MetaSMTConstTrue;
-typedef metaSMT::logic::Predicate<proto::terminal<
-    metaSMT::logic::tag::false_tag>::type> const MetaSMTConstFalse;
+typedef metaSMT::logic::Predicate<
+    proto::terminal<metaSMT::logic::tag::true_tag>::type> const
+    MetaSMTConstTrue;
+typedef metaSMT::logic::Predicate<
+    proto::terminal<metaSMT::logic::tag::false_tag>::type> const
+    MetaSMTConstFalse;
 typedef metaSMT::logic::Array::array MetaSMTArray;
 
 template <typename SolverContext> class MetaSMTBuilder;
@@ -130,11 +132,11 @@ public:
   MetaSMTArray buildArray(unsigned elem_width, unsigned index_width);
 
 private:
-  typedef ExprHashMap<std::pair<typename SolverContext::result_type, unsigned> >
+  typedef ExprHashMap<std::pair<typename SolverContext::result_type, unsigned>>
       MetaSMTExprHashMap;
   typedef typename MetaSMTExprHashMap::iterator MetaSMTExprHashMapIter;
-  typedef typename MetaSMTExprHashMap::const_iterator
-      MetaSMTExprHashMapConstIter;
+  typedef
+      typename MetaSMTExprHashMap::const_iterator MetaSMTExprHashMapConstIter;
 
   SolverContext &_solver;
   bool _optimizeDivides;
@@ -320,10 +322,10 @@ MetaSMTBuilder<SolverContext>::constructAShrByConstant(
     res = bvZero(width);
   } else {
     res = evaluate(
-        _solver,
-        metaSMT::logic::Ite(isSigned, concat(bvMinusOne(shift),
-                                             bvExtract(expr, width - 1, shift)),
-                            bvRightShift(expr, width, shift)));
+        _solver, metaSMT::logic::Ite(isSigned,
+                                     concat(bvMinusOne(shift),
+                                            bvExtract(expr, width - 1, shift)),
+                                     bvRightShift(expr, width, shift)));
   }
 
   return (res);
@@ -660,10 +662,11 @@ MetaSMTBuilder<SolverContext>::constructActual(ref<Expr> e, int *width_out) {
       while (tmp->getWidth() > 64) {
         tmp = tmp->Extract(64, tmp->getWidth() - 64);
         unsigned min_width = std::min(64U, tmp->getWidth());
-        res = evaluate(_solver,
-                       concat(bvConst64(min_width, tmp->Extract(0, min_width)
-                                                       ->getZExtValue()),
-                              res));
+        res = evaluate(
+            _solver,
+            concat(bvConst64(min_width,
+                             tmp->Extract(0, min_width)->getZExtValue()),
+                   res));
       }
     }
     break;

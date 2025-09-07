@@ -27,10 +27,10 @@ size_t fileSize(const char *filename) {
     return fileSize;
   }
 
-  return (size_t) -1;
+  return (size_t)-1;
 }
 
 int main(void) {
   size_t size = fileSize("/bin/sh");
-  return (size != (size_t) -1) ? 0 : 1;
+  return (size != (size_t)-1) ? 0 : 1;
 }

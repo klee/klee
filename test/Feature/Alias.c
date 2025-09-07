@@ -33,7 +33,7 @@ int main() {
   assert((int)d == 52);
 
   assert(c == &b);
-  assert((int*)&d != &b);
+  assert((int *)&d != &b);
 
   assert(foo() == 52);
   assert(foo2() == 52);

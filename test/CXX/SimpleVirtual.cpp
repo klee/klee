@@ -19,7 +19,7 @@ public:
   virtual int getX() { return 2; };
 };
 
-Thing *getThing(bool which) { 
+Thing *getThing(bool which) {
   return which ? new Thing() : new Thing2();
 }
 
@@ -28,12 +28,12 @@ int main(int argc) {
   Thing *two = getThing(true);
 
   int x = one->getX() + two->getX();
-  assert(x==3);
+  assert(x == 3);
 
   delete two;
   delete one;
-  
-  assert(decon==2);
+
+  assert(decon == 2);
 
   return 0;
 }

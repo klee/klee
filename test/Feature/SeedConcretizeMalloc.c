@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
 
   if (s != 100)
     printf("Error\n");
-    // CHECK-NOT: Error
+  // CHECK-NOT: Error
 
   // CHECK-STATS: 4
   // These queries are due to the explicit constraint asserting that s is 100 and the implicit one checking if we have a huge malloc

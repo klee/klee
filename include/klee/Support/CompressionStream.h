@@ -10,8 +10,8 @@
 #ifndef KLEE_COMPRESSIONSTREAM_H
 #define KLEE_COMPRESSIONSTREAM_H
 
-#include "llvm/Support/raw_ostream.h"
 #include "zlib.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace klee {
 const size_t BUFSIZE = 128 * 1024;
@@ -41,6 +41,6 @@ public:
 
   ~compressed_fd_ostream();
 };
-}
+} // namespace klee
 
 #endif /* KLEE_COMPRESSIONSTREAM_H */

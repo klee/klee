@@ -46,4 +46,4 @@ klee_open_compressed_output_file(const std::string &path, std::string &error) {
   return f;
 }
 #endif
-}
+} // namespace klee

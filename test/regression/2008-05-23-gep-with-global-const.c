@@ -7,7 +7,7 @@
 int a;
 
 int main() {
-  void *p1 = &((char*) 0)[(long) &a];
+  void *p1 = &((char *)0)[(long)&a];
   void *p2 = &a;
 
   assert(p1 == p2);

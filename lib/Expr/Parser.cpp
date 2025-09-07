@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "klee/Expr/Parser/Parser.h"
 #include "klee/Config/Version.h"
-#include "klee/Expr/Constraints.h"
 #include "klee/Expr/ArrayCache.h"
+#include "klee/Expr/Constraints.h"
 #include "klee/Expr/ExprBuilder.h"
 #include "klee/Expr/ExprPPrinter.h"
 #include "klee/Expr/Parser/Lexer.h"
-#include "klee/Expr/Parser/Parser.h"
 #include "klee/Solver/Solver.h"
 
 #include "llvm/ADT/APInt.h"
@@ -22,335 +22,323 @@
 
 #include <cassert>
 #include <cstdlib>
-#include <map>
 #include <cstring>
+#include <map>
 
 using namespace llvm;
 using namespace klee;
 using namespace klee::expr;
 
 namespace {
-  /// ParseResult - Represent a possibly invalid parse result.
-  template<typename T>
-  struct ParseResult {
-    bool IsValid;
-    T Value;
+/// ParseResult - Represent a possibly invalid parse result.
+template <typename T> struct ParseResult {
+  bool IsValid;
+  T Value;
 
-  public:
-    ParseResult() : IsValid(false), Value() {}
-    ParseResult(T _Value) : IsValid(true), Value(_Value) {}
-    ParseResult(bool _IsValid, T _Value) : IsValid(_IsValid), Value(_Value) {}
+public:
+  ParseResult() : IsValid(false), Value() {}
+  ParseResult(T _Value) : IsValid(true), Value(_Value) {}
+  ParseResult(bool _IsValid, T _Value) : IsValid(_IsValid), Value(_Value) {}
 
-    bool isValid() { 
-      return IsValid; 
+  bool isValid() { return IsValid; }
+  T get() {
+    assert(IsValid && "get() on invalid ParseResult!");
+    return Value;
+  }
+};
+
+class ExprResult {
+  bool IsValid;
+  ExprHandle Value;
+
+public:
+  ExprResult() : IsValid(false) {}
+  ExprResult(ExprHandle _Value) : IsValid(true), Value(_Value) {}
+  ExprResult(ref<ConstantExpr> _Value) : IsValid(true), Value(_Value.get()) {}
+  ExprResult(bool _IsValid, ExprHandle _Value)
+      : IsValid(_IsValid), Value(_Value) {}
+
+  bool isValid() { return IsValid; }
+  ExprHandle get() {
+    assert(IsValid && "get() on invalid ParseResult!");
+    return Value;
+  }
+};
+
+typedef ParseResult<Decl *> DeclResult;
+typedef ParseResult<Expr::Width> TypeResult;
+typedef ParseResult<VersionHandle> VersionResult;
+typedef ParseResult<uint64_t> IntegerResult;
+
+/// NumberOrExprResult - Represent a number or expression. This is used to
+/// wrap an expression production which may be a number, but for
+/// which the type width is unknown.
+class NumberOrExprResult {
+  Token AsNumber;
+  ExprResult AsExpr;
+  bool IsNumber;
+
+public:
+  NumberOrExprResult() : IsNumber(false) {}
+  explicit NumberOrExprResult(Token _AsNumber)
+      : AsNumber(_AsNumber), IsNumber(true) {}
+  explicit NumberOrExprResult(ExprResult _AsExpr)
+      : AsExpr(_AsExpr), IsNumber(false) {}
+
+  bool isNumber() const { return IsNumber; }
+  const Token &getNumber() const {
+    assert(IsNumber && "Invalid accessor call.");
+    return AsNumber;
+  }
+  const ExprResult &getExpr() const {
+    assert(!IsNumber && "Invalid accessor call.");
+    return AsExpr;
+  }
+};
+
+/// ParserImpl - Parser implementation.
+class ParserImpl : public Parser {
+  typedef std::map<const std::string, const Identifier *> IdentifierTabTy;
+  typedef std::map<const Identifier *, ExprHandle> ExprSymTabTy;
+  typedef std::map<const Identifier *, VersionHandle> VersionSymTabTy;
+
+  const std::string Filename;
+  const MemoryBuffer *TheMemoryBuffer;
+  ExprBuilder *Builder;
+  ArrayCache TheArrayCache;
+  bool ClearArrayAfterQuery;
+
+  Lexer TheLexer;
+  unsigned MaxErrors;
+  unsigned NumErrors;
+
+  // FIXME: Use LLVM symbol tables?
+  IdentifierTabTy IdentifierTab;
+
+  std::map<const Identifier *, const ArrayDecl *> ArraySymTab;
+  ExprSymTabTy ExprSymTab;
+  VersionSymTabTy VersionSymTab;
+
+  /// Tok - The currently lexed token.
+  Token Tok;
+
+  /// ParenLevel - The current depth of matched '(' tokens.
+  unsigned ParenLevel;
+  /// SquareLevel - The current depth of matched '[' tokens.
+  unsigned SquareLevel;
+
+  /* Core parsing functionality */
+
+  const Identifier *GetOrCreateIdentifier(const Token &Tok);
+
+  void GetNextNonCommentToken() {
+    do {
+      TheLexer.Lex(Tok);
+    } while (Tok.kind == Token::Comment);
+  }
+
+  /// ConsumeToken - Consume the current 'peek token' and lex the next one.
+  void ConsumeToken() {
+    assert(Tok.kind != Token::LParen && Tok.kind != Token::RParen &&
+           Tok.kind != Token::LSquare && Tok.kind != Token::RSquare);
+    GetNextNonCommentToken();
+  }
+
+  /// ConsumeExpectedToken - Check that the current token is of the
+  /// expected kind and consume it.
+  void ConsumeExpectedToken(Token::Kind k) {
+    assert(Tok.kind != Token::LParen && Tok.kind != Token::RParen &&
+           Tok.kind != Token::LSquare && Tok.kind != Token::RSquare);
+    _ConsumeExpectedToken(k);
+  }
+  void _ConsumeExpectedToken(Token::Kind k) {
+    assert(Tok.kind == k && "Unexpected token!");
+    GetNextNonCommentToken();
+  }
+
+  void ConsumeLParen() {
+    ++ParenLevel;
+    _ConsumeExpectedToken(Token::LParen);
+  }
+
+  void ConsumeRParen() {
+    if (ParenLevel) // Cannot go below zero.
+      --ParenLevel;
+    _ConsumeExpectedToken(Token::RParen);
+  }
+
+  void ConsumeLSquare() {
+    ++SquareLevel;
+    _ConsumeExpectedToken(Token::LSquare);
+  }
+
+  void ConsumeRSquare() {
+    if (SquareLevel) // Cannot go below zero.
+      --SquareLevel;
+    _ConsumeExpectedToken(Token::RSquare);
+  }
+
+  void ConsumeAnyToken() {
+    switch (Tok.kind) {
+    case Token::LParen:
+      return ConsumeLParen();
+    case Token::RParen:
+      return ConsumeRParen();
+    case Token::LSquare:
+      return ConsumeLSquare();
+    case Token::RSquare:
+      return ConsumeRSquare();
+    default:
+      return ConsumeToken();
     }
-    T get() { 
-      assert(IsValid && "get() on invalid ParseResult!");
-      return Value; 
-    }
-  };
-  
-  class ExprResult {
-    bool IsValid;
-    ExprHandle Value;
+  }
 
-  public:
-    ExprResult() : IsValid(false) {}
-    ExprResult(ExprHandle _Value) : IsValid(true), Value(_Value) {}
-    ExprResult(ref<ConstantExpr> _Value) : IsValid(true), Value(_Value.get()) {}
-    ExprResult(bool _IsValid, ExprHandle _Value) : IsValid(_IsValid), Value(_Value) {}
+  /* Utility functions */
 
-    bool isValid() { 
-      return IsValid; 
-    }
-    ExprHandle get() { 
-      assert(IsValid && "get() on invalid ParseResult!");
-      return Value; 
-    }
-  };
-
-  typedef ParseResult<Decl*> DeclResult;
-  typedef ParseResult<Expr::Width> TypeResult;
-  typedef ParseResult<VersionHandle> VersionResult;
-  typedef ParseResult<uint64_t> IntegerResult;
-
-  /// NumberOrExprResult - Represent a number or expression. This is used to
-  /// wrap an expression production which may be a number, but for
-  /// which the type width is unknown.
-  class NumberOrExprResult {
-    Token AsNumber;
-    ExprResult AsExpr;
-    bool IsNumber;
-
-  public:
-    NumberOrExprResult() : IsNumber(false) {}
-    explicit NumberOrExprResult(Token _AsNumber) : AsNumber(_AsNumber),
-                                                   IsNumber(true) {}
-    explicit NumberOrExprResult(ExprResult _AsExpr) : AsExpr(_AsExpr),
-                                                      IsNumber(false) {}
-    
-    bool isNumber() const { return IsNumber; }
-    const Token &getNumber() const { 
-      assert(IsNumber && "Invalid accessor call.");
-      return AsNumber; 
-    }
-    const ExprResult &getExpr() const {
-      assert(!IsNumber && "Invalid accessor call.");
-      return AsExpr;
-    }
-  };
-
-  /// ParserImpl - Parser implementation.
-  class ParserImpl : public Parser {
-    typedef std::map<const std::string, const Identifier*> IdentifierTabTy;
-    typedef std::map<const Identifier*, ExprHandle> ExprSymTabTy;
-    typedef std::map<const Identifier*, VersionHandle> VersionSymTabTy;
-
-    const std::string Filename;
-    const MemoryBuffer *TheMemoryBuffer;
-    ExprBuilder *Builder;
-    ArrayCache TheArrayCache;
-    bool ClearArrayAfterQuery;
-
-    Lexer TheLexer;
-    unsigned MaxErrors;
-    unsigned NumErrors;
-
-    // FIXME: Use LLVM symbol tables?
-    IdentifierTabTy IdentifierTab;
-
-    std::map<const Identifier*, const ArrayDecl*> ArraySymTab;
-    ExprSymTabTy ExprSymTab;
-    VersionSymTabTy VersionSymTab;
-
-    /// Tok - The currently lexed token.
-    Token Tok;
-
-    /// ParenLevel - The current depth of matched '(' tokens. 
-    unsigned ParenLevel;
-    /// SquareLevel - The current depth of matched '[' tokens.
-    unsigned SquareLevel;
-
-    /* Core parsing functionality */
-    
-    const Identifier *GetOrCreateIdentifier(const Token &Tok);
-
-    void GetNextNonCommentToken() {
-      do {
-        TheLexer.Lex(Tok);
-      } while (Tok.kind == Token::Comment);
-    }
-
-    /// ConsumeToken - Consume the current 'peek token' and lex the next one.
-    void ConsumeToken() {
-      assert(Tok.kind != Token::LParen && Tok.kind != Token::RParen &&
-             Tok.kind != Token::LSquare && Tok.kind != Token::RSquare);
-      GetNextNonCommentToken();
-    }
-
-    /// ConsumeExpectedToken - Check that the current token is of the
-    /// expected kind and consume it.
-    void ConsumeExpectedToken(Token::Kind k) {
-      assert(Tok.kind != Token::LParen && Tok.kind != Token::RParen &&
-             Tok.kind != Token::LSquare && Tok.kind != Token::RSquare);
-      _ConsumeExpectedToken(k);
-    }
-    void _ConsumeExpectedToken(Token::Kind k) {
-      assert(Tok.kind == k && "Unexpected token!");
-      GetNextNonCommentToken();
-    }
-
-    void ConsumeLParen() {
-      ++ParenLevel;
-      _ConsumeExpectedToken(Token::LParen);
-    }
-
-    void ConsumeRParen() {
-      if (ParenLevel) // Cannot go below zero.
-        --ParenLevel;
-      _ConsumeExpectedToken(Token::RParen);
-    }
-
-    void ConsumeLSquare() {
-      ++SquareLevel;
-      _ConsumeExpectedToken(Token::LSquare);
-    }
-
-    void ConsumeRSquare() {
-      if (SquareLevel) // Cannot go below zero.
-        --SquareLevel;
-      _ConsumeExpectedToken(Token::RSquare);
-    }
-
-    void ConsumeAnyToken() {
-      switch (Tok.kind) {
-      case Token::LParen: return ConsumeLParen();
-      case Token::RParen: return ConsumeRParen();
-      case Token::LSquare: return ConsumeLSquare();
-      case Token::RSquare: return ConsumeRSquare();
-      default: 
-        return ConsumeToken();
-      }
-    }
-
-    /* Utility functions */
-
-    /// SkipUntilRParen - Scan forward to the next token following an
-    /// rparen at the given level, or EOF, whichever is first.
-    void SkipUntilRParen(unsigned Level) {
-      // FIXME: I keep wavering on whether it is an error to call this
-      // with the current token an rparen. In most cases this should
-      // have been handled differently (error reported,
-      // whatever). Audit & resolve.
-      assert(Level <= ParenLevel && 
-             "Refusing to skip until rparen at higher level.");
-      while (Tok.kind != Token::EndOfFile) {
-        if (Tok.kind == Token::RParen && ParenLevel == Level) {
-          ConsumeRParen();
-          break;
-        }
-        ConsumeAnyToken();
-      }
-    }
-
-    /// SkipUntilRParen - Scan forward until reaching an rparen token
-    /// at the current level (or EOF).
-    void SkipUntilRParen() {
-      SkipUntilRParen(ParenLevel);
-    }
-    
-    /// ExpectRParen - Utility method to close an sexp. This expects to
-    /// eat an rparen, and emits a diagnostic and skips to the next one
-    /// (or EOF) if it cannot.
-    void ExpectRParen(const char *Msg) {
-      if (Tok.kind == Token::EndOfFile) {
-        // FIXME: Combine with Msg
-        Error("expected ')' but found end-of-file.", Tok);
-      } else if (Tok.kind != Token::RParen) {
-        Error(Msg, Tok);
-        SkipUntilRParen();
-      } else {
+  /// SkipUntilRParen - Scan forward to the next token following an
+  /// rparen at the given level, or EOF, whichever is first.
+  void SkipUntilRParen(unsigned Level) {
+    // FIXME: I keep wavering on whether it is an error to call this
+    // with the current token an rparen. In most cases this should
+    // have been handled differently (error reported,
+    // whatever). Audit & resolve.
+    assert(Level <= ParenLevel &&
+           "Refusing to skip until rparen at higher level.");
+    while (Tok.kind != Token::EndOfFile) {
+      if (Tok.kind == Token::RParen && ParenLevel == Level) {
         ConsumeRParen();
+        break;
       }
-    }
-
-    /// SkipUntilRSquare - Scan forward to the next token following an
-    /// rsquare at the given level, or EOF, whichever is first.
-    void SkipUntilRSquare(unsigned Level) {
-      // FIXME: I keep wavering on whether it is an error to call this
-      // with the current token an rparen. In most cases this should
-      // have been handled differently (error reported,
-      // whatever). Audit & resolve.
-      assert(Level <= ParenLevel && 
-             "Refusing to skip until rparen at higher level.");
-      while (Tok.kind != Token::EndOfFile) {
-        if (Tok.kind == Token::RSquare && ParenLevel == Level) {
-          ConsumeRSquare();
-          break;
-        }
-        ConsumeAnyToken();
-      }
-    }
-
-    /// SkipUntilRSquare - Scan forward until reaching an rsquare token
-    /// at the current level (or EOF).
-    void SkipUntilRSquare() {
-      SkipUntilRSquare(ParenLevel);
-    }
-    
-    /// ExpectRSquare - Utility method to close an array. This expects
-    /// to eat an rparen, and emits a diagnostic and skips to the next
-    /// one (or EOF) if it cannot.
-    void ExpectRSquare(const char *Msg) {
-      if (Tok.kind == Token::EndOfFile) {
-        // FIXME: Combine with Msg
-        Error("expected ']' but found end-of-file.", Tok);
-      } else if (Tok.kind != Token::RSquare) {
-        Error(Msg, Tok);
-        SkipUntilRSquare();
-      } else {
-        ConsumeRSquare();
-      }
-    }
-
-    /*** Grammar productions ****/
-
-    /* Top level decls */
-
-    DeclResult ParseArrayDecl();
-    DeclResult ParseExprVarDecl();
-    DeclResult ParseVersionVarDecl();
-    DeclResult ParseCommandDecl();
-
-    /* Commands */
-
-    DeclResult ParseQueryCommand();
-
-    /* Etc. */
-
-    NumberOrExprResult ParseNumberOrExpr();
-    IntegerResult ParseIntegerConstant(Expr::Width Type);
-
-    ExprResult ParseExpr(TypeResult ExpectedType);
-    ExprResult ParseParenExpr(TypeResult ExpectedType);
-    ExprResult ParseUnaryParenExpr(const Token &Name,
-                                   unsigned Kind, bool IsFixed,
-                                   Expr::Width ResTy);
-    ExprResult ParseBinaryParenExpr(const Token &Name,
-                                    unsigned Kind, bool IsFixed,
-                                    Expr::Width ResTy);
-    ExprResult ParseSelectParenExpr(const Token &Name, Expr::Width ResTy);
-    ExprResult ParseConcatParenExpr(const Token &Name, Expr::Width ResTy);
-    ExprResult ParseExtractParenExpr(const Token &Name, Expr::Width ResTy);
-    ExprResult ParseAnyReadParenExpr(const Token &Name,
-                                     unsigned Kind,
-                                     Expr::Width ResTy);
-    void ParseMatchedBinaryArgs(const Token &Name, 
-                                TypeResult ExpectType,
-                                ExprResult &LHS, ExprResult &RHS);
-    ExprResult ParseNumber(Expr::Width Width);
-    ExprResult ParseNumberToken(Expr::Width Width, const Token &Tok);
-
-    VersionResult ParseVersionSpecifier();
-    VersionResult ParseVersion();
-
-    TypeResult ParseTypeSpecifier();
-
-    /*** Diagnostics ***/
-    
-    void Error(const char *Message, const Token &At);
-    void Error(const char *Message) { Error(Message, Tok); }
-
-  public:
-    ParserImpl(const std::string _Filename, const MemoryBuffer *MB,
-               ExprBuilder *_Builder, bool _ClearArrayAfterQuery)
-        : Filename(_Filename), TheMemoryBuffer(MB), Builder(_Builder),
-          ClearArrayAfterQuery(_ClearArrayAfterQuery), TheLexer(MB),
-          MaxErrors(~0u), NumErrors(0) {}
-
-    virtual ~ParserImpl();
-
-    /// Initialize - Initialize the parsing state. This must be called
-    /// prior to the start of parsing.
-    void Initialize() {
-      ParenLevel = SquareLevel = 0;
-
       ConsumeAnyToken();
     }
+  }
 
-    /* Parser interface implementation */
+  /// SkipUntilRParen - Scan forward until reaching an rparen token
+  /// at the current level (or EOF).
+  void SkipUntilRParen() { SkipUntilRParen(ParenLevel); }
 
-    virtual Decl *ParseTopLevelDecl();
-
-    virtual void SetMaxErrors(unsigned N) {
-      MaxErrors = N;
+  /// ExpectRParen - Utility method to close an sexp. This expects to
+  /// eat an rparen, and emits a diagnostic and skips to the next one
+  /// (or EOF) if it cannot.
+  void ExpectRParen(const char *Msg) {
+    if (Tok.kind == Token::EndOfFile) {
+      // FIXME: Combine with Msg
+      Error("expected ')' but found end-of-file.", Tok);
+    } else if (Tok.kind != Token::RParen) {
+      Error(Msg, Tok);
+      SkipUntilRParen();
+    } else {
+      ConsumeRParen();
     }
+  }
 
-    virtual unsigned GetNumErrors() const {
-      return NumErrors; 
+  /// SkipUntilRSquare - Scan forward to the next token following an
+  /// rsquare at the given level, or EOF, whichever is first.
+  void SkipUntilRSquare(unsigned Level) {
+    // FIXME: I keep wavering on whether it is an error to call this
+    // with the current token an rparen. In most cases this should
+    // have been handled differently (error reported,
+    // whatever). Audit & resolve.
+    assert(Level <= ParenLevel &&
+           "Refusing to skip until rparen at higher level.");
+    while (Tok.kind != Token::EndOfFile) {
+      if (Tok.kind == Token::RSquare && ParenLevel == Level) {
+        ConsumeRSquare();
+        break;
+      }
+      ConsumeAnyToken();
     }
-  };
-}
+  }
+
+  /// SkipUntilRSquare - Scan forward until reaching an rsquare token
+  /// at the current level (or EOF).
+  void SkipUntilRSquare() { SkipUntilRSquare(ParenLevel); }
+
+  /// ExpectRSquare - Utility method to close an array. This expects
+  /// to eat an rparen, and emits a diagnostic and skips to the next
+  /// one (or EOF) if it cannot.
+  void ExpectRSquare(const char *Msg) {
+    if (Tok.kind == Token::EndOfFile) {
+      // FIXME: Combine with Msg
+      Error("expected ']' but found end-of-file.", Tok);
+    } else if (Tok.kind != Token::RSquare) {
+      Error(Msg, Tok);
+      SkipUntilRSquare();
+    } else {
+      ConsumeRSquare();
+    }
+  }
+
+  /*** Grammar productions ****/
+
+  /* Top level decls */
+
+  DeclResult ParseArrayDecl();
+  DeclResult ParseExprVarDecl();
+  DeclResult ParseVersionVarDecl();
+  DeclResult ParseCommandDecl();
+
+  /* Commands */
+
+  DeclResult ParseQueryCommand();
+
+  /* Etc. */
+
+  NumberOrExprResult ParseNumberOrExpr();
+  IntegerResult ParseIntegerConstant(Expr::Width Type);
+
+  ExprResult ParseExpr(TypeResult ExpectedType);
+  ExprResult ParseParenExpr(TypeResult ExpectedType);
+  ExprResult ParseUnaryParenExpr(const Token &Name, unsigned Kind, bool IsFixed,
+                                 Expr::Width ResTy);
+  ExprResult ParseBinaryParenExpr(const Token &Name, unsigned Kind,
+                                  bool IsFixed, Expr::Width ResTy);
+  ExprResult ParseSelectParenExpr(const Token &Name, Expr::Width ResTy);
+  ExprResult ParseConcatParenExpr(const Token &Name, Expr::Width ResTy);
+  ExprResult ParseExtractParenExpr(const Token &Name, Expr::Width ResTy);
+  ExprResult ParseAnyReadParenExpr(const Token &Name, unsigned Kind,
+                                   Expr::Width ResTy);
+  void ParseMatchedBinaryArgs(const Token &Name, TypeResult ExpectType,
+                              ExprResult &LHS, ExprResult &RHS);
+  ExprResult ParseNumber(Expr::Width Width);
+  ExprResult ParseNumberToken(Expr::Width Width, const Token &Tok);
+
+  VersionResult ParseVersionSpecifier();
+  VersionResult ParseVersion();
+
+  TypeResult ParseTypeSpecifier();
+
+  /*** Diagnostics ***/
+
+  void Error(const char *Message, const Token &At);
+  void Error(const char *Message) { Error(Message, Tok); }
+
+public:
+  ParserImpl(const std::string _Filename, const MemoryBuffer *MB,
+             ExprBuilder *_Builder, bool _ClearArrayAfterQuery)
+      : Filename(_Filename), TheMemoryBuffer(MB), Builder(_Builder),
+        ClearArrayAfterQuery(_ClearArrayAfterQuery), TheLexer(MB),
+        MaxErrors(~0u), NumErrors(0) {}
+
+  virtual ~ParserImpl();
+
+  /// Initialize - Initialize the parsing state. This must be called
+  /// prior to the start of parsing.
+  void Initialize() {
+    ParenLevel = SquareLevel = 0;
+
+    ConsumeAnyToken();
+  }
+
+  /* Parser interface implementation */
+
+  virtual Decl *ParseTopLevelDecl();
+
+  virtual void SetMaxErrors(unsigned N) { MaxErrors = N; }
+
+  virtual unsigned GetNumErrors() const { return NumErrors; }
+};
+} // namespace
 
 const Identifier *ParserImpl::GetOrCreateIdentifier(const Token &Tok) {
   // FIXME: Make not horribly inefficient please.
@@ -396,14 +384,14 @@ Decl *ParserImpl::ParseTopLevelDecl() {
 /// ParseArrayDecl - Parse an array declaration. The lexer should be positioned
 /// at the opening 'array'.
 ///
-/// array-declaration = "array" name "[" [ size ] "]" ":" domain "->" range 
+/// array-declaration = "array" name "[" [ size ] "]" ":" domain "->" range
 ///                       "=" array-initializer
 /// array-initializer = "symbolic" | "{" { numeric-literal } "}"
 DeclResult ParserImpl::ParseArrayDecl() {
   // FIXME: Recovery here is horrible, we need to scan to next decl start or
   // something.
   ConsumeExpectedToken(Token::KWArray);
-  
+
   if (Tok.kind != Token::Identifier) {
     Error("expected identifier token.");
     return DeclResult();
@@ -413,10 +401,10 @@ DeclResult ParserImpl::ParseArrayDecl() {
   IntegerResult Size;
   TypeResult DomainType;
   TypeResult RangeType;
-  std::vector< ref<ConstantExpr> > Values;
+  std::vector<ref<ConstantExpr>> Values;
 
   ConsumeToken();
-  
+
   if (Tok.kind != Token::LSquare) {
     Error("expected '['.");
     goto exit;
@@ -431,7 +419,7 @@ DeclResult ParserImpl::ParseArrayDecl() {
     goto exit;
   }
   ConsumeRSquare();
-  
+
   if (Tok.kind != Token::Colon) {
     Error("expected ':'.");
     goto exit;
@@ -453,7 +441,7 @@ DeclResult ParserImpl::ParseArrayDecl() {
   ConsumeExpectedToken(Token::Equals);
 
   if (Tok.kind == Token::KWSymbolic) {
-    ConsumeExpectedToken(Token::KWSymbolic);    
+    ConsumeExpectedToken(Token::KWSymbolic);
   } else if (Tok.kind == Token::LSquare) {
     ConsumeLSquare();
     while (Tok.kind != Token::RSquare) {
@@ -510,7 +498,7 @@ DeclResult ParserImpl::ParseArrayDecl() {
 
   // FIXME: Validate that this array is undeclared.
 
- exit:
+exit:
   if (!Size.isValid())
     Size = 1;
   if (!DomainType.isValid())
@@ -526,14 +514,13 @@ DeclResult ParserImpl::ParseArrayDecl() {
                                      &Values[0] + Values.size());
   else
     Root = TheArrayCache.CreateArray(Label->Name, Size.get());
-  ArrayDecl *AD = new ArrayDecl(Label, Size.get(), 
-                                DomainType.get(), RangeType.get(), Root);
+  ArrayDecl *AD =
+      new ArrayDecl(Label, Size.get(), DomainType.get(), RangeType.get(), Root);
 
   ArraySymTab[Label] = AD;
 
   // Create the initial version reference.
-  VersionSymTab.insert(std::make_pair(Label,
-                                      UpdateList(Root, NULL)));
+  VersionSymTab.insert(std::make_pair(Label, UpdateList(Root, NULL)));
 
   return AD;
 }
@@ -564,12 +551,12 @@ DeclResult ParserImpl::ParseCommandDecl() {
 
 /// ParseQueryCommand - Parse query command. The lexer should be
 /// positioned at the 'query' keyword.
-/// 
+///
 /// 'query' expressions-list expression [expressions-list [array-list]]
 DeclResult ParserImpl::ParseQueryCommand() {
   std::vector<ExprHandle> Constraints;
   std::vector<ExprHandle> Values;
-  std::vector<const Array*> Objects;
+  std::vector<const Array *> Objects;
   ExprResult Res;
 
   // FIXME: We need a command for this. Or something.
@@ -578,12 +565,13 @@ DeclResult ParserImpl::ParseQueryCommand() {
 
   // Reinsert initial array versions.
   // FIXME: Remove this!
-  for (std::map<const Identifier*, const ArrayDecl*>::iterator
-         it = ArraySymTab.begin(), ie = ArraySymTab.end(); it != ie; ++it) {
-    VersionSymTab.insert(std::make_pair(it->second->Name,
-                                        UpdateList(it->second->Root, NULL)));
+  for (std::map<const Identifier *, const ArrayDecl *>::iterator
+           it = ArraySymTab.begin(),
+           ie = ArraySymTab.end();
+       it != ie; ++it) {
+    VersionSymTab.insert(
+        std::make_pair(it->second->Name, UpdateList(it->second->Root, NULL)));
   }
-
 
   ConsumeExpectedToken(Token::KWQuery);
   if (Tok.kind != Token::LSquare) {
@@ -620,7 +608,7 @@ DeclResult ParserImpl::ParseQueryCommand() {
     SkipUntilRParen();
     return DeclResult();
   }
-  
+
   ConsumeLSquare();
   // FIXME: Should avoid reading past unbalanced parens here.
   while (Tok.kind != Token::RSquare) {
@@ -665,8 +653,8 @@ DeclResult ParserImpl::ParseQueryCommand() {
     ConsumeToken();
 
     // Lookup array.
-    std::map<const Identifier*, const ArrayDecl*>::iterator
-      it = ArraySymTab.find(Label);
+    std::map<const Identifier *, const ArrayDecl *>::iterator it =
+        ArraySymTab.find(Label);
 
     if (it == ArraySymTab.end()) {
       Error("unknown array", LTok);
@@ -676,7 +664,7 @@ DeclResult ParserImpl::ParseQueryCommand() {
   }
   ConsumeRSquare();
 
- exit:
+exit:
   if (Tok.kind != Token::EndOfFile)
     ExpectRParen("unexpected argument to 'query'.");
 
@@ -691,7 +679,7 @@ DeclResult ParserImpl::ParseQueryCommand() {
 /// ParseNumberOrExpr - Parse an expression whose type cannot be
 /// predicted.
 NumberOrExprResult ParserImpl::ParseNumberOrExpr() {
-  if (Tok.kind == Token::Number){ 
+  if (Tok.kind == Token::Number) {
     Token Num = Tok;
     ConsumeToken();
     return NumberOrExprResult(Num);
@@ -720,14 +708,14 @@ ExprResult ParserImpl::ParseExpr(TypeResult ExpectedType) {
     ConsumeToken();
     return ExprResult(Builder->Constant(Value, Expr::Bool));
   }
-  
+
   if (Tok.kind == Token::Number) {
     if (!ExpectedType.isValid()) {
       Error("cannot infer type of number.");
       ConsumeToken();
       return ExprResult();
     }
-    
+
     return ParseNumber(ExpectedType.get());
   }
 
@@ -759,7 +747,7 @@ ExprResult ParserImpl::ParseExpr(TypeResult ExpectedType) {
   ExprResult Res = ParseParenExpr(ExpectedType);
   if (!Res.isValid()) {
     // If we know the type, define the identifier just so we don't get
-    // use-of-undef errors. 
+    // use-of-undef errors.
     // FIXME: Maybe we should let the symbol table map to invalid
     // entries?
     if (Label && ExpectedType.isValid()) {
@@ -768,7 +756,7 @@ ExprResult ParserImpl::ParseExpr(TypeResult ExpectedType) {
     }
     return Res;
   } else if (ExpectedType.isValid()) {
-    // Type check result.    
+    // Type check result.
     if (Res.get()->getWidth() != ExpectedType.get()) {
       // FIXME: Need more info, and range
       Error("expression has incorrect type.", Start);
@@ -800,19 +788,19 @@ enum MacroKind {
 /// kind. -1 indicates the kind is variadic or has non-expression
 /// arguments.
 /// \return True if the token is a valid kind or macro name.
-static bool LookupExprInfo(const Token &Tok, unsigned &Kind, 
-                           bool &IsFixed, int &NumArgs) {
-#define SetOK(kind, isfixed, numargs) (Kind=kind, IsFixed=isfixed,\
-                                       NumArgs=numargs, true)
+static bool LookupExprInfo(const Token &Tok, unsigned &Kind, bool &IsFixed,
+                           int &NumArgs) {
+#define SetOK(kind, isfixed, numargs)                                          \
+  (Kind = kind, IsFixed = isfixed, NumArgs = numargs, true)
   assert(Tok.kind == Token::Identifier && "Unexpected token.");
-  
+
   switch (Tok.length) {
   case 2:
     if (memcmp(Tok.start, "Eq", 2) == 0)
       return SetOK(Expr::Eq, false, 2);
     if (memcmp(Tok.start, "Ne", 2) == 0)
       return SetOK(Expr::Ne, false, 2);
-    
+
     if (memcmp(Tok.start, "Or", 2) == 0)
       return SetOK(Expr::Or, true, 2);
     break;
@@ -852,8 +840,6 @@ static bool LookupExprInfo(const Token &Tok, unsigned &Kind,
       return SetOK(Expr::Sge, false, 2);
     break;
 
-    
-
   case 4:
     if (memcmp(Tok.start, "Read", 4) == 0)
       return SetOK(Expr::Read, true, -1);
@@ -870,20 +856,20 @@ static bool LookupExprInfo(const Token &Tok, unsigned &Kind,
       return SetOK(Expr::URem, true, 2);
     if (memcmp(Tok.start, "SRem", 4) == 0)
       return SetOK(Expr::SRem, true, 2);
-    
+
     if (memcmp(Tok.start, "SExt", 4) == 0)
       return SetOK(Expr::SExt, false, 1);
     if (memcmp(Tok.start, "ZExt", 4) == 0)
       return SetOK(Expr::ZExt, false, 1);
     break;
-    
+
   case 6:
     if (memcmp(Tok.start, "Concat", 6) == 0)
-      return SetOK(eMacroKind_Concat, false, -1); 
+      return SetOK(eMacroKind_Concat, false, -1);
     if (memcmp(Tok.start, "Select", 6) == 0)
       return SetOK(Expr::Select, false, 3);
     break;
-    
+
   case 7:
     if (memcmp(Tok.start, "Extract", 7) == 0)
       return SetOK(Expr::Extract, false, -1);
@@ -913,7 +899,7 @@ ExprResult ParserImpl::ParseParenExpr(TypeResult FIXME_UNUSED) {
   }
 
   ConsumeLParen();
-  
+
   // Check for coercion case (w32 11).
   if (Tok.kind == Token::KWWidth) {
     TypeResult ExpectedType = ParseTypeSpecifier();
@@ -923,18 +909,18 @@ ExprResult ParserImpl::ParseParenExpr(TypeResult FIXME_UNUSED) {
       SkipUntilRParen();
       return ExprResult();
     }
-    
+
     // Make sure this was a type specifier we support.
     ExprResult Res;
-    if (ExpectedType.isValid()) 
+    if (ExpectedType.isValid())
       Res = ParseNumber(ExpectedType.get());
     else
       ConsumeToken();
 
-    ExpectRParen("unexpected argument in coercion.");  
+    ExpectRParen("unexpected argument in coercion.");
     return Res;
   }
-  
+
   if (Tok.kind != Token::Identifier) {
     Error("unexpected token, expected expression.");
     SkipUntilRParen();
@@ -1009,9 +995,8 @@ ExprResult ParserImpl::ParseParenExpr(TypeResult FIXME_UNUSED) {
   }
 }
 
-ExprResult ParserImpl::ParseUnaryParenExpr(const Token &Name,
-                                           unsigned Kind, bool IsFixed,
-                                           Expr::Width ResTy) {
+ExprResult ParserImpl::ParseUnaryParenExpr(const Token &Name, unsigned Kind,
+                                           bool IsFixed, Expr::Width ResTy) {
   if (Tok.kind == Token::RParen) {
     Error("unexpected end of arguments.", Name);
     ConsumeRParen();
@@ -1022,7 +1007,7 @@ ExprResult ParserImpl::ParseUnaryParenExpr(const Token &Name,
   if (!Arg.isValid())
     Arg = Builder->Constant(0, ResTy);
 
-  ExpectRParen("unexpected argument in unary expression.");  
+  ExpectRParen("unexpected argument in unary expression.");
   ExprHandle E = Arg.get();
   switch (Kind) {
   case eMacroKind_Neg:
@@ -1048,9 +1033,9 @@ ExprResult ParserImpl::ParseUnaryParenExpr(const Token &Name,
 ///
 /// Name - The name token of the expression, for diagnostics.
 /// ExpectType - The expected type of the arguments, if known.
-void ParserImpl::ParseMatchedBinaryArgs(const Token &Name, 
-                                        TypeResult ExpectType,
-                                        ExprResult &LHS, ExprResult &RHS) {
+void ParserImpl::ParseMatchedBinaryArgs(const Token &Name,
+                                        TypeResult ExpectType, ExprResult &LHS,
+                                        ExprResult &RHS) {
   if (Tok.kind == Token::RParen) {
     Error("unexpected end of arguments.", Name);
     ConsumeRParen();
@@ -1078,7 +1063,7 @@ void ParserImpl::ParseMatchedBinaryArgs(const Token &Name,
 
     if (LHS_NOE.isNumber()) {
       NumberOrExprResult RHS_NOE = ParseNumberOrExpr();
-      
+
       if (RHS_NOE.isNumber()) {
         Error("ambiguous arguments to expression.", Name);
       } else {
@@ -1100,12 +1085,11 @@ void ParserImpl::ParseMatchedBinaryArgs(const Token &Name,
   ExpectRParen("unexpected argument to expression.");
 }
 
-ExprResult ParserImpl::ParseBinaryParenExpr(const Token &Name,
-                                           unsigned Kind, bool IsFixed,
-                                           Expr::Width ResTy) {
+ExprResult ParserImpl::ParseBinaryParenExpr(const Token &Name, unsigned Kind,
+                                            bool IsFixed, Expr::Width ResTy) {
   ExprResult LHS, RHS;
-  ParseMatchedBinaryArgs(Name, IsFixed ? TypeResult(ResTy) : TypeResult(), 
-                         LHS, RHS);
+  ParseMatchedBinaryArgs(Name, IsFixed ? TypeResult(ResTy) : TypeResult(), LHS,
+                         RHS);
   if (!LHS.isValid() || !RHS.isValid())
     return Builder->Constant(0, ResTy);
 
@@ -1115,40 +1099,63 @@ ExprResult ParserImpl::ParseBinaryParenExpr(const Token &Name,
     return Builder->Constant(0, ResTy);
   }
 
-  switch (Kind) {    
-  case Expr::Add: return Builder->Add(LHS_E, RHS_E);
-  case Expr::Sub: return Builder->Sub(LHS_E, RHS_E);
-  case Expr::Mul: return Builder->Mul(LHS_E, RHS_E);
-  case Expr::UDiv: return Builder->UDiv(LHS_E, RHS_E);
-  case Expr::SDiv: return Builder->SDiv(LHS_E, RHS_E);
-  case Expr::URem: return Builder->URem(LHS_E, RHS_E);
-  case Expr::SRem: return Builder->SRem(LHS_E, RHS_E);
+  switch (Kind) {
+  case Expr::Add:
+    return Builder->Add(LHS_E, RHS_E);
+  case Expr::Sub:
+    return Builder->Sub(LHS_E, RHS_E);
+  case Expr::Mul:
+    return Builder->Mul(LHS_E, RHS_E);
+  case Expr::UDiv:
+    return Builder->UDiv(LHS_E, RHS_E);
+  case Expr::SDiv:
+    return Builder->SDiv(LHS_E, RHS_E);
+  case Expr::URem:
+    return Builder->URem(LHS_E, RHS_E);
+  case Expr::SRem:
+    return Builder->SRem(LHS_E, RHS_E);
 
-  case Expr::AShr: return Builder->AShr(LHS_E, RHS_E);
-  case Expr::LShr: return Builder->LShr(LHS_E, RHS_E);
-  case Expr::Shl: return Builder->Shl(LHS_E, RHS_E);
+  case Expr::AShr:
+    return Builder->AShr(LHS_E, RHS_E);
+  case Expr::LShr:
+    return Builder->LShr(LHS_E, RHS_E);
+  case Expr::Shl:
+    return Builder->Shl(LHS_E, RHS_E);
 
-  case Expr::And: return Builder->And(LHS_E, RHS_E);
-  case Expr::Or:  return Builder->Or(LHS_E, RHS_E);
-  case Expr::Xor: return Builder->Xor(LHS_E, RHS_E);
+  case Expr::And:
+    return Builder->And(LHS_E, RHS_E);
+  case Expr::Or:
+    return Builder->Or(LHS_E, RHS_E);
+  case Expr::Xor:
+    return Builder->Xor(LHS_E, RHS_E);
 
-  case Expr::Eq:  return Builder->Eq(LHS_E, RHS_E);
-  case Expr::Ne:  return Builder->Ne(LHS_E, RHS_E);
-  case Expr::Ult: return Builder->Ult(LHS_E, RHS_E);
-  case Expr::Ule: return Builder->Ule(LHS_E, RHS_E);
-  case Expr::Ugt: return Builder->Ugt(LHS_E, RHS_E);
-  case Expr::Uge: return Builder->Uge(LHS_E, RHS_E);
-  case Expr::Slt: return Builder->Slt(LHS_E, RHS_E);
-  case Expr::Sle: return Builder->Sle(LHS_E, RHS_E);
-  case Expr::Sgt: return Builder->Sgt(LHS_E, RHS_E);
-  case Expr::Sge: return Builder->Sge(LHS_E, RHS_E);
+  case Expr::Eq:
+    return Builder->Eq(LHS_E, RHS_E);
+  case Expr::Ne:
+    return Builder->Ne(LHS_E, RHS_E);
+  case Expr::Ult:
+    return Builder->Ult(LHS_E, RHS_E);
+  case Expr::Ule:
+    return Builder->Ule(LHS_E, RHS_E);
+  case Expr::Ugt:
+    return Builder->Ugt(LHS_E, RHS_E);
+  case Expr::Uge:
+    return Builder->Uge(LHS_E, RHS_E);
+  case Expr::Slt:
+    return Builder->Slt(LHS_E, RHS_E);
+  case Expr::Sle:
+    return Builder->Sle(LHS_E, RHS_E);
+  case Expr::Sgt:
+    return Builder->Sgt(LHS_E, RHS_E);
+  case Expr::Sge:
+    return Builder->Sge(LHS_E, RHS_E);
   default:
     Error("FIXME: unhandled kind.", Name);
     return Builder->Constant(0, ResTy);
-  }  
+  }
 }
 
-ExprResult ParserImpl::ParseSelectParenExpr(const Token &Name, 
+ExprResult ParserImpl::ParseSelectParenExpr(const Token &Name,
                                             Expr::Width ResTy) {
   // FIXME: Why does this need to be here?
   if (Tok.kind == Token::RParen) {
@@ -1165,12 +1172,11 @@ ExprResult ParserImpl::ParseSelectParenExpr(const Token &Name,
   return Builder->Select(Cond.get(), LHS.get(), RHS.get());
 }
 
-
 // FIXME: Rewrite to only accept binary form. Make type optional.
 ExprResult ParserImpl::ParseConcatParenExpr(const Token &Name,
                                             Expr::Width ResTy) {
   std::vector<ExprHandle> Kids;
-  
+
   unsigned Width = 0;
   while (Tok.kind != Token::RParen) {
     ExprResult E = ParseExpr(TypeResult());
@@ -1180,11 +1186,11 @@ ExprResult ParserImpl::ParseConcatParenExpr(const Token &Name,
       SkipUntilRParen();
       return Builder->Constant(0, ResTy);
     }
-    
+
     Kids.push_back(E.get());
     Width += E.get()->getWidth();
   }
-  
+
   ConsumeRParen();
 
   if (Width != ResTy) {
@@ -1215,7 +1221,7 @@ ExprResult ParserImpl::ParseExtractParenExpr(const Token &Name,
   if (!OffsetExpr.isValid() || !Child.isValid())
     return Builder->Constant(0, ResTy);
 
-  unsigned Offset = (unsigned) OffsetExpr.get();
+  unsigned Offset = (unsigned)OffsetExpr.get();
   if (Offset + ResTy > Child.get()->getWidth()) {
     Error("extract out-of-range of child expression.", Name);
     return Builder->Constant(0, ResTy);
@@ -1224,13 +1230,12 @@ ExprResult ParserImpl::ParseExtractParenExpr(const Token &Name,
   return Builder->Extract(Child.get(), Offset, ResTy);
 }
 
-ExprResult ParserImpl::ParseAnyReadParenExpr(const Token &Name,
-                                             unsigned Kind,
+ExprResult ParserImpl::ParseAnyReadParenExpr(const Token &Name, unsigned Kind,
                                              Expr::Width ResTy) {
   NumberOrExprResult Index = ParseNumberOrExpr();
   VersionResult Array = ParseVersionSpecifier();
   ExpectRParen("unexpected argument in read expression.");
-  
+
   if (!Array.isValid())
     return Builder->Constant(0, ResTy);
 
@@ -1245,7 +1250,7 @@ ExprResult ParserImpl::ParseAnyReadParenExpr(const Token &Name,
     IndexExpr = ParseNumberToken(ArrayDomainType, Index.getNumber());
   else
     IndexExpr = Index.getExpr();
-  
+
   if (!IndexExpr.isValid())
     return Builder->Constant(0, ResTy);
   else if (IndexExpr.get()->getWidth() != ArrayDomainType) {
@@ -1262,19 +1267,19 @@ ExprResult ParserImpl::ParseAnyReadParenExpr(const Token &Name,
   case eMacroKind_ReadLSB:
   case eMacroKind_ReadMSB: {
     unsigned NumReads = ResTy / ArrayRangeType;
-    if (ResTy != NumReads*ArrayRangeType) {
+    if (ResTy != NumReads * ArrayRangeType) {
       Error("invalid ordered read (not multiple of range type).", Name);
       return Builder->Constant(0, ResTy);
     }
     std::vector<ExprHandle> Kids(NumReads);
     ExprHandle Index = IndexExpr.get();
-    for (unsigned i=0; i != NumReads; ++i) {
+    for (unsigned i = 0; i != NumReads; ++i) {
       // FIXME: We rely on folding here to not complicate things to where the
       // Read macro pattern fails to match.
       ExprHandle OffsetIndex = Index;
       if (i)
-        OffsetIndex = AddExpr::create(OffsetIndex,
-                                      Builder->Constant(i, ArrayDomainType));
+        OffsetIndex =
+            AddExpr::create(OffsetIndex, Builder->Constant(i, ArrayDomainType));
       Kids[i] = Builder->Read(Array.get(), OffsetIndex);
     }
     if (Kind == eMacroKind_ReadLSB)
@@ -1298,7 +1303,7 @@ VersionResult ParserImpl::ParseVersionSpecifier() {
 
     if (Tok.kind != Token::Colon) {
       VersionSymTabTy::iterator it = VersionSymTab.find(Label);
-      
+
       if (it == VersionSymTab.end()) {
         Error("invalid version reference.", LTok);
         return VersionResult(false, UpdateList(0, NULL));
@@ -1321,27 +1326,26 @@ VersionResult ParserImpl::ParseVersionSpecifier() {
     Res =
         VersionResult(true, UpdateList(TheArrayCache.CreateArray("", 0), NULL));
   }
-  
+
   if (Label)
     VersionSymTab.insert(std::make_pair(Label, Res.get()));
   return Res;
 }
 
 namespace {
-  /// WriteInfo - Helper class used for storing information about a parsed
-  /// write, prior to type checking.
-  struct WriteInfo {
-    NumberOrExprResult LHS;
-    NumberOrExprResult RHS;
-    Token LHSTok;
-    Token RHSTok;
-    
-    WriteInfo(NumberOrExprResult _LHS, NumberOrExprResult _RHS,
-              Token _LHSTok, Token _RHSTok) : LHS(_LHS), RHS(_RHS),
-                                              LHSTok(_LHSTok), RHSTok(_RHSTok) {
-    }
-  };
-}
+/// WriteInfo - Helper class used for storing information about a parsed
+/// write, prior to type checking.
+struct WriteInfo {
+  NumberOrExprResult LHS;
+  NumberOrExprResult RHS;
+  Token LHSTok;
+  Token RHSTok;
+
+  WriteInfo(NumberOrExprResult _LHS, NumberOrExprResult _RHS, Token _LHSTok,
+            Token _RHSTok)
+      : LHS(_LHS), RHS(_RHS), LHSTok(_LHSTok), RHSTok(_RHSTok) {}
+};
+} // namespace
 
 /// version - '[' update-list? ']' '@' version-specifier
 /// update-list - empty
@@ -1349,24 +1353,24 @@ namespace {
 VersionResult ParserImpl::ParseVersion() {
   if (Tok.kind != Token::LSquare)
     return VersionResult(false, UpdateList(0, NULL));
-  
+
   std::vector<WriteInfo> Writes;
   ConsumeLSquare();
   for (;;) {
     Token LHSTok = Tok;
     NumberOrExprResult LHS = ParseNumberOrExpr();
-    
+
     if (Tok.kind != Token::Equals) {
       Error("expected '='.", Tok);
       break;
     }
-    
+
     ConsumeToken();
     Token RHSTok = Tok;
     NumberOrExprResult RHS = ParseNumberOrExpr();
 
     Writes.push_back(WriteInfo(LHS, RHS, LHSTok, RHSTok));
-    
+
     if (Tok.kind == Token::Comma)
       ConsumeToken();
     else
@@ -1379,7 +1383,7 @@ VersionResult ParserImpl::ParseVersion() {
   if (Tok.kind != Token::At) {
     Error("expected '@'.", Tok);
     return VersionResult(false, UpdateList(0, NULL));
-  } 
+  }
 
   ConsumeExpectedToken(Token::At);
 
@@ -1392,8 +1396,9 @@ VersionResult ParserImpl::ParseVersion() {
   Expr::Width ArrayDomainType = Expr::Int32;
   Expr::Width ArrayRangeType = Expr::Int8;
 
-  for (std::vector<WriteInfo>::reverse_iterator it = Writes.rbegin(), 
-         ie = Writes.rend(); it != ie; ++it) {
+  for (std::vector<WriteInfo>::reverse_iterator it = Writes.rbegin(),
+                                                ie = Writes.rend();
+       it != ie; ++it) {
     const WriteInfo &WI = *it;
     ExprResult LHS, RHS;
     // FIXME: This can be factored into common helper for coercing a
@@ -1417,7 +1422,7 @@ VersionResult ParserImpl::ParseVersion() {
         RHS = ExprResult();
       }
     }
-    
+
     if (LHS.isValid() && RHS.isValid())
       Base.extend(LHS.get(), RHS.get());
   }
@@ -1454,7 +1459,7 @@ ExprResult ParserImpl::ParseNumberToken(Expr::Width Type, const Token &Tok) {
   if ((Tok.length >= 2 && S[0] == '0') &&
       (S[1] == 'b' || S[1] == 'o' || S[1] == 'x')) {
     if (S[1] == 'b') {
-      Radix = 2; 
+      Radix = 2;
       RadixBits = 1;
     } else if (S[1] == 'o') {
       Radix = 8;
@@ -1477,12 +1482,12 @@ ExprResult ParserImpl::ParseNumberToken(Expr::Width Type, const Token &Tok) {
   APInt Val(RadixBits * N, 0);
   APInt RadixVal(Val.getBitWidth(), Radix);
   APInt DigitVal(Val.getBitWidth(), 0);
-  for (unsigned i=0; i<N; ++i) {
+  for (unsigned i = 0; i < N; ++i) {
     unsigned Digit, Char = S[i];
-    
+
     if (Char == '_')
       continue;
-    
+
     if ('0' <= Char && Char <= '9')
       Digit = Char - '0';
     else if ('a' <= Char && Char <= 'z')
@@ -1508,9 +1513,9 @@ ExprResult ParserImpl::ParseNumberToken(Expr::Width Type, const Token &Tok) {
     Val = -Val;
 
   if (Type < Val.getBitWidth())
-    Val=Val.trunc(Type);
+    Val = Val.trunc(Type);
   else if (Type > Val.getBitWidth())
-    Val=Val.zext(Type);
+    Val = Val.zext(Type);
 
   return ExprResult(Builder->Constant(Val));
 }
@@ -1522,7 +1527,7 @@ TypeResult ParserImpl::ParseTypeSpecifier() {
   assert(Tok.kind == Token::KWWidth && "Unexpected token.");
 
   // FIXME: Need APInt technically.
-  int width = atoi(std::string(Tok.start+1,Tok.length-1).c_str());
+  int width = atoi(std::string(Tok.start + 1, Tok.length - 1).c_str());
   ConsumeToken();
 
   // FIXME: We should impose some sort of maximum just for sanity?
@@ -1534,25 +1539,23 @@ void ParserImpl::Error(const char *Message, const Token &At) {
   if (MaxErrors && NumErrors >= MaxErrors)
     return;
 
-  llvm::errs() << Filename
-            << ":" << At.line << ":" << At.column 
-            << ": error: " << Message << "\n";
+  llvm::errs() << Filename << ":" << At.line << ":" << At.column
+               << ": error: " << Message << "\n";
 
   // Skip carat diagnostics on EOF token.
   if (At.kind == Token::EndOfFile)
     return;
-  
+
   // Simple caret style diagnostics.
   const char *LineBegin = At.start, *LineEnd = At.start,
-    *BufferBegin = TheMemoryBuffer->getBufferStart(),
-    *BufferEnd = TheMemoryBuffer->getBufferEnd();
+             *BufferBegin = TheMemoryBuffer->getBufferStart(),
+             *BufferEnd = TheMemoryBuffer->getBufferEnd();
 
   // Run line pointers forward and back.
-  while (LineBegin > BufferBegin && 
-         LineBegin[-1] != '\r' && LineBegin[-1] != '\n')
+  while (LineBegin > BufferBegin && LineBegin[-1] != '\r' &&
+         LineBegin[-1] != '\n')
     --LineBegin;
-  while (LineEnd < BufferEnd && 
-         LineEnd[0] != '\r' && LineEnd[0] != '\n')
+  while (LineEnd < BufferEnd && LineEnd[0] != '\r' && LineEnd[0] != '\n')
     ++LineEnd;
 
   // Show the line.
@@ -1560,10 +1563,10 @@ void ParserImpl::Error(const char *Message, const Token &At) {
 
   // Show the caret or squiggly, making sure to print back spaces the
   // same.
-  for (const char *S=LineBegin; S != At.start; ++S)
+  for (const char *S = LineBegin; S != At.start; ++S)
     llvm::errs() << (isspace(*S) ? *S : ' ');
   if (At.length > 1) {
-    for (unsigned i=0; i<At.length; ++i)
+    for (unsigned i = 0; i < At.length; ++i)
       llvm::errs() << '~';
   } else
     llvm::errs() << '^';
@@ -1576,25 +1579,24 @@ ParserImpl::~ParserImpl() {
   // Note the Identifiers are not disjoint across the symbol
   // tables so we need to keep track of what has freed to
   // avoid doing a double free.
-  std::set<const Identifier*> freedNodes;
+  std::set<const Identifier *> freedNodes;
   for (IdentifierTabTy::iterator pi = IdentifierTab.begin(),
                                  pe = IdentifierTab.end();
        pi != pe; ++pi) {
-    const Identifier* id = pi->second;
+    const Identifier *id = pi->second;
     if (freedNodes.insert(id).second)
       delete id;
   }
-  for (ExprSymTabTy::iterator pi = ExprSymTab.begin(),
-                              pe = ExprSymTab.end();
+  for (ExprSymTabTy::iterator pi = ExprSymTab.begin(), pe = ExprSymTab.end();
        pi != pe; ++pi) {
-    const Identifier* id = pi->first;
+    const Identifier *id = pi->first;
     if (freedNodes.insert(id).second)
       delete id;
   }
   for (VersionSymTabTy::iterator pi = VersionSymTab.begin(),
                                  pe = VersionSymTab.end();
        pi != pe; ++pi) {
-    const Identifier* id = pi->first;
+    const Identifier *id = pi->first;
     if (freedNodes.insert(id).second)
       delete id;
   }
@@ -1606,9 +1608,8 @@ ParserImpl::~ParserImpl() {
 Decl::Decl(DeclKind _Kind) : Kind(_Kind) {}
 
 void ArrayDecl::dump() {
-  llvm::outs() << "array " << Root->name
-            << "[" << Root->size << "]"
-            << " : " << 'w' << Domain << " -> " << 'w' << Range << " = ";
+  llvm::outs() << "array " << Root->name << "[" << Root->size << "]"
+               << " : " << 'w' << Domain << " -> " << 'w' << Range << " = ";
 
   if (Root->isSymbolicArray()) {
     llvm::outs() << "symbolic\n";
@@ -1625,7 +1626,7 @@ void ArrayDecl::dump() {
 
 void QueryCommand::dump() {
   const ExprHandle *ValuesBegin = 0, *ValuesEnd = 0;
-  const Array * const* ObjectsBegin = 0, * const* ObjectsEnd = 0;
+  const Array *const *ObjectsBegin = 0, *const *ObjectsEnd = 0;
   if (!Values.empty()) {
     ValuesBegin = &Values[0];
     ValuesEnd = ValuesBegin + Values.size();
@@ -1641,11 +1642,9 @@ void QueryCommand::dump() {
 
 // Public parser API
 
-Parser::Parser() {
-}
+Parser::Parser() {}
 
-Parser::~Parser() {
-}
+Parser::~Parser() {}
 
 Parser *Parser::Create(const std::string Filename, const MemoryBuffer *MB,
                        ExprBuilder *Builder, bool ClearArrayAfterQuery) {

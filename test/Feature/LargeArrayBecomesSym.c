@@ -1,4 +1,4 @@
-/* This test checks that KLEE emits a warning when a large (> 4096) 
+/* This test checks that KLEE emits a warning when a large (> 4096)
    concrete array becomes symbolic. */
 
 // RUN: %clang %s -emit-llvm %O0opt -c -o %t1.bc

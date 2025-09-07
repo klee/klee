@@ -9,21 +9,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
 
   int sym = klee_int("sym");
-  int* heap_int = calloc(1, sizeof(*heap_int));
+  int *heap_int = calloc(1, sizeof(*heap_int));
 
   klee_open_merge();
 
-  if(sym != 0) {
+  if (sym != 0) {
     *heap_int = 1;
   }
 
   klee_close_merge();
 
   klee_print_expr("*heap_int: ", *heap_int);
-  if(*heap_int != 0) {
+  if (*heap_int != 0) {
     printf("true\n");
   } else {
     printf("false\n");

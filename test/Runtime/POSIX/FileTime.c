@@ -3,17 +3,17 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --libc=uclibc --posix-runtime %t1.bc --sym-files 1 1
 
-#include <stdio.h>
 #include <assert.h>
+#include <stdio.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 
 const char filePath[] = "A";
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
 
   // Create the file
-  FILE* const f = fopen(filePath, "w");
+  FILE *const f = fopen(filePath, "w");
   assert(f);
   const int r = fclose(f);
   assert(r == 0);
@@ -42,6 +42,6 @@ int main(int argc, char** argv) {
 
   assert(sb.st_atim.tv_sec >= now.tv_sec && sb.st_atim.tv_sec <= someTimeAfter.tv_sec);
   assert(sb.st_mtim.tv_sec >= now.tv_sec && sb.st_mtim.tv_sec <= someTimeAfter.tv_sec);
-  
+
   return 0;
 }

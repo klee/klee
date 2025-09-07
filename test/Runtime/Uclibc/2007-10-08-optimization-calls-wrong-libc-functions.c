@@ -2,8 +2,8 @@
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --exit-on-error --optimize --libc=uclibc %t1.bc
 
-#include <string.h>
 #include <assert.h>
+#include <string.h>
 
 #include "klee/klee.h"
 
@@ -17,6 +17,6 @@ int main() {
   if (a) {
     assert(0);
   }
-  
+
   return 0;
 }

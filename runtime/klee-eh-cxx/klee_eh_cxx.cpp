@@ -19,15 +19,15 @@
 
 // from libcxxabi
 #ifdef __has_include
-#  if __has_include(<cxa_exception.h>)
-#    include <cxa_exception.h> // renamed with LLVM 10
-#  elif __has_include(<cxa_exception.hpp>)
-#    include <cxa_exception.hpp>
-#  else
-#    error "missing 'cxa_exception' header from libcxxabi"
-#  endif
+#if __has_include(<cxa_exception.h>)
+#include <cxa_exception.h> // renamed with LLVM 10
+#elif __has_include(<cxa_exception.hpp>)
+#include <cxa_exception.hpp>
 #else
-#  include <cxa_exception.hpp> // assume old name
+#error "missing 'cxa_exception' header from libcxxabi"
+#endif
+#else
+#include <cxa_exception.hpp> // assume old name
 #endif
 #include <private_typeinfo.h>
 
@@ -52,11 +52,8 @@ bool _klee_eh_can_catch(const void *catcherType,
 // for small adjustments so they work in our code as well.
 
 // Copied from libcxxabi/cxa_exception.cpp (including comments)
-inline
-__cxa_exception*
-cxa_exception_from_thrown_object(void* thrown_object)
-{
-    return static_cast<__cxa_exception*>(thrown_object) - 1;
+inline __cxa_exception *cxa_exception_from_thrown_object(void *thrown_object) {
+  return static_cast<__cxa_exception *>(thrown_object) - 1;
 }
 
 // Copied from libcxxabi/cxa_exception.cpp (including comments)
@@ -64,25 +61,23 @@ cxa_exception_from_thrown_object(void* thrown_object)
 //  Get the exception object from the unwind pointer.
 //  Relies on the structure layout, where the unwind pointer is right in
 //  front of the user's exception object
-inline
-__cxa_exception*
-cxa_exception_from_exception_unwind_exception(_Unwind_Exception* unwind_exception)
-{
+inline __cxa_exception *cxa_exception_from_exception_unwind_exception(
+    _Unwind_Exception *unwind_exception) {
   return cxa_exception_from_thrown_object(unwind_exception + 1);
 }
 
 // Copied from libcxxabi/cxa_personality.cpp (including comments)
-void*
-get_thrown_object_ptr(_Unwind_Exception* unwind_exception)
-{
+void *get_thrown_object_ptr(_Unwind_Exception *unwind_exception) {
   // added for usage inside KLEE (i.e., outside of libcxxabi)
   using namespace __cxxabiv1;
 
-  // Even for foreign exceptions, the exception object is *probably* at unwind_exception + 1
+  // Even for foreign exceptions, the exception object is *probably* at
+  // unwind_exception + 1
   //    Regardless, this library is prohibited from touching a foreign exception
-  void* adjustedPtr = unwind_exception + 1;
+  void *adjustedPtr = unwind_exception + 1;
   if (__getExceptionClass(unwind_exception) == kOurDependentExceptionClass)
-      adjustedPtr = ((__cxa_dependent_exception*)adjustedPtr - 1)->primaryException;
+    adjustedPtr =
+        ((__cxa_dependent_exception *)adjustedPtr - 1)->primaryException;
   return adjustedPtr;
 }
 } // namespace

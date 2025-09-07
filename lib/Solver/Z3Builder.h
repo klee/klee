@@ -102,7 +102,7 @@ public:
 };
 
 class Z3Builder {
-  ExprHashMap<std::pair<Z3ASTHandle, unsigned> > constructed;
+  ExprHashMap<std::pair<Z3ASTHandle, unsigned>> constructed;
   Z3ArrayExprHash _arr_hash;
 
 private:
@@ -171,7 +171,7 @@ private:
 
 public:
   Z3_context ctx;
-  std::unordered_map<const Array *, std::vector<Z3ASTHandle> >
+  std::unordered_map<const Array *, std::vector<Z3ASTHandle>>
       constant_array_assertions;
   Z3Builder(bool autoClearConstructCache, const char *z3LogInteractionFile);
   ~Z3Builder();
@@ -189,6 +189,6 @@ public:
 
   void clearConstructCache() { constructed.clear(); }
 };
-}
+} // namespace klee
 
 #endif /* KLEE_Z3BUILDER_H */

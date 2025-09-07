@@ -16,8 +16,8 @@ public:
 
 int main() {
   Test rt(2);
-  
-  assert(rt.getX()==2);
+
+  assert(rt.getX() == 2);
 
   return 0;
 }

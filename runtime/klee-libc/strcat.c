@@ -31,12 +31,12 @@
  * SUCH DAMAGE.
  */
 
-char * strcat(char * s, const char * append) {
-	char *save = s;
+char *strcat(char *s, const char *append) {
+  char *save = s;
 
-	for (; *s; ++s)
-		;
-	while ((*s++ = *append++))
-		;
-	return(save);
+  for (; *s; ++s)
+    ;
+  while ((*s++ = *append++))
+    ;
+  return (save);
 }

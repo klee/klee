@@ -28,6 +28,6 @@ public:
   /// value; 0 is off.
   void setCoreSolverTimeout(time::Span timeout) override;
 };
-}
+} // namespace klee
 
 #endif /* KLEE_Z3SOLVER_H */

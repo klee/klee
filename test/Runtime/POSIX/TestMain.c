@@ -8,16 +8,16 @@
 #ifdef MAIN1
 #include <stdio.h>
 int main() {
- printf("Execute main1\n");
- // CHECK-MAIN1: Execute main1
- return 0;
+  printf("Execute main1\n");
+  // CHECK-MAIN1: Execute main1
+  return 0;
 }
 #endif
 #ifdef MAIN2
 #include <stdio.h>
 int main(void) {
- printf("Execute main2\n");
- // CHECK-MAIN2: Execute main2
- return 0;
+  printf("Execute main2\n");
+  // CHECK-MAIN2: Execute main2
+  return 0;
 }
 #endif

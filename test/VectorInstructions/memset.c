@@ -4,7 +4,7 @@
 
 #include <string.h>
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
   char arr[1000];
   memset(arr, 1, sizeof(arr));
   return arr[argc];
