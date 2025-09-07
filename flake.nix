@@ -18,15 +18,18 @@
           }
           {
             packages = with pkgs; [
-              clang-tools
               cmake
               z3
+              gperftools
+              sqlite
               ninja
               cppcheck
-              doxygen
-              gtest
-              lcov
-            ] ++ (with pkgs.llvmPackages_13; [libllvm libcxx]);
+              lit
+            ] ++ (with pkgs.llvmPackages_13; [
+              libllvm
+              libcxx
+              clang-tools
+            ]);
           };
       });
     };
