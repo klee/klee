@@ -5,7 +5,7 @@ Debug+Asserts/
 Output/
 
 # commonly used as cmake build directory
-/build
+/build/
 
 cscope.*
 *~
@@ -31,5 +31,23 @@ autoconf/aclocal.m4
 autoconf/autom4te.cache/
 autom4te.cache/
 
-/build/
-/3rd/libcxx/
+# LLVM IR files
+*.ll
+*.bc
+
+# Third-party dependencies
+/3rd/
+
+# Cache files
+/.cache/
+
+# Other examples
+/examples/*
+!/examples/get_sign/
+!/examples/regexp/
+!/examples/sort/
+!/examples/hard_switch/
+!/examples/justfile
+
+# Python related files
+__pycache__/
