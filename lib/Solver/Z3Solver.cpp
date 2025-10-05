@@ -11,6 +11,7 @@
 #include "klee/Support/ErrorHandling.h"
 #include "klee/Support/FileHandling.h"
 #include "klee/Support/OptionCategories.h"
+#include "klee/Support/TimeLogger.h"
 
 #include <csignal>
 
@@ -27,6 +28,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <filesystem>
 #include <memory>
 
 namespace {
@@ -41,6 +43,11 @@ llvm::cl::opt<std::string> Z3QueryDumpFile(
     "debug-z3-dump-queries", llvm::cl::init(""),
     llvm::cl::desc(
         "Dump Z3's representation of the query to the specified path"),
+    llvm::cl::cat(klee::SolvingCat));
+
+llvm::cl::opt<std::string> Z3StatsOutputDir(
+    "debug-z3-stats-output-dir", llvm::cl::init(""),
+    llvm::cl::desc("Dump Z3's stats to the specified directory"),
     llvm::cl::cat(klee::SolvingCat));
 
 llvm::cl::opt<bool> Z3ValidateModels(
@@ -58,6 +65,11 @@ llvm::cl::opt<unsigned>
 #include "llvm/Support/ErrorHandling.h"
 
 namespace klee {
+
+inline std::string getFullFilePath(const std::string &filename) {
+  std::string outDir = Z3StatsOutputDir.getValue();
+  return (std::filesystem::path{outDir} / filename).string();
+}
 
 class Z3SolverImpl : public SolverImpl {
 private:
@@ -245,6 +257,9 @@ bool Z3SolverImpl::internalRunSolver(
     const Query &query, const std::vector<const Array *> *objects,
     std::vector<std::vector<unsigned char>> *values, bool &hasSolution) {
 
+  std::string queryStatsFilePath =
+      !Z3StatsOutputDir.empty() ? getFullFilePath("query-stats.csv") : "";
+  TimeLogger tl(queryStatsFilePath);
   TimerStatIncrementer t(stats::queryTime);
   // NOTE: Z3 will switch to using a slower solver internally if push/pop are
   // used so for now it is likely that creating a new solver each time is the
@@ -313,14 +328,31 @@ bool Z3SolverImpl::internalRunSolver(
   if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_SOLVABLE ||
       runStatusCode == SolverImpl::SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE) {
     if (hasSolution) {
+      tl.lap("unsat");
       ++stats::queriesInvalid;
     } else {
+      tl.lap("sat");
       ++stats::queriesValid;
     }
     return true; // success
-  }
-  if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_INTERRUPTED) {
+  } else if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_INTERRUPTED) {
+    tl.lap("interrupted");
     raise(SIGINT);
+  } else if (runStatusCode == SolverImpl::SOLVER_RUN_STATUS_TIMEOUT &&
+             !Z3StatsOutputDir.empty()) {
+    tl.lap("timeout");
+    std::string filePath = getFullFilePath("timeout.queries");
+    std::string error;
+    auto file = klee_append_output_file(filePath, error);
+    if (!file) {
+      klee_error("Could not open file %s : %s", filePath.c_str(),
+                 error.c_str());
+    }
+    *file << "; start Z3 query\n";
+    *file << Z3_solver_to_string(builder->ctx, theSolver);
+    *file << "(check-sat)\n";
+    *file << "(reset)\n";
+    *file << "; end Z3 query\n\n";
   }
   return false; // failed
 }
