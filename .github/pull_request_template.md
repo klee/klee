@@ -4,7 +4,7 @@ Thank you for contributing to KLEE. We are looking forward to reviewing your PR.
 To review your PR, please add a summary of the proposed changes and ensure all items are fulfilled in the checklist above, by placing an "x" inside each applicable pair of brackets. More details about each item can be found in the [Developer's Guide](https://klee-se.org/docs/developers-guide/#pull-requests).
 -->
 
-## Summary: 
+## Summary:
 
 
 ## Checklist:

@@ -1,4 +1,4 @@
-install_build_dependencies_sqlite() { 
+install_build_dependencies_sqlite() {
   return 0
 }
 install_binary_artifact_sqlite() {

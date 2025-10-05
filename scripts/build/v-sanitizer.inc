@@ -15,7 +15,7 @@ required_variables_check_sanitizer() {
     SANITIZER_BUILD=""
     return 0
   fi
-  
+
   local sanitizers
   IFS=":" read -r -a sanitizers <<< "${SANITIZER_BUILD}"
   for sanitizer in "${sanitizers[@]}"; do
@@ -23,7 +23,7 @@ required_variables_check_sanitizer() {
     [[ "${sanitizer}" == "address" ]] && continue
     [[ "${sanitizer}" == "memory" ]] && continue
     [[ "${sanitizer}" == "undefined" ]] && continue
-    
+
     echo "Unknown sanitizer: $sanitizer"
     exit 1
   done

@@ -30,7 +30,7 @@ exit:
 	%val2 = load i32, i32* %idx2
 	call void(i8*, ...) @klee_print_expr(i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str2, i32 0, i32 0), i32 %val2)
 	; CHECK: 1:4096
-	
+
 	; Initialize with constant array
 	%array = alloca [2 x i32];
 	store [2 x i32][i32 7, i32 9], [2 x i32]* %array
@@ -46,6 +46,6 @@ exit:
 	%val4 = load i32, i32* %idx4
 	call void(i8*, ...) @klee_print_expr(i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str2, i32 0, i32 0), i32 %val4)
 	; CHECK: 1:9
-	
+
 	ret i32 0
 }

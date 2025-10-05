@@ -32,7 +32,7 @@ public:
   bool isBlack() { return !m_mark; }
   bool leftIsBlack() { return !left || left->isBlack(); }
   bool rightIsBlack() { return !right || right->isBlack(); }
-  void setSum() { 
+  void setSum() {
     sumWeights = weight;
     if (left) sumWeights += left->sumWeights;
     if (right) sumWeights += right->sumWeights;
@@ -245,7 +245,7 @@ void DiscretePDF<T, Comparator>::split(Node *n) {
       p->parent->markRed();
 
       // not same direction
-      if (!((n==p->left && p==p->parent->left) || 
+      if (!((n==p->left && p==p->parent->left) ||
             (n==p->right && p==p->parent->right))) {
         rotate(n);
         p = n;
@@ -331,7 +331,7 @@ void DiscretePDF<T, Comparator>::lengthen(Node *n) {
       // sibling is black, and sibling's far child is red
 
       rotate(sibling);
-      if (!n->parent->isBlack()) 
+      if (!n->parent->isBlack())
         sibling->markRed();
       sibling->left->markBlack();
       sibling->right->markBlack();
@@ -346,4 +346,3 @@ void DiscretePDF<T, Comparator>::propagateSumsUp(Node *n) {
 }
 
 }
-

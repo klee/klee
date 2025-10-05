@@ -15,4 +15,3 @@ lib/Module  - klee facilities for working with LLVM modules, including
               execution.
 
 lib/Core    - The core symbolic virtual machine.
-

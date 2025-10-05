@@ -1,10 +1,10 @@
 # ===-- vec2.py -----------------------------------------------------------===##
-# 
+#
 #                      The KLEE Symbolic Virtual Machine
-# 
+#
 #  This file is distributed under the University of Illinois Open Source
 #  License. See LICENSE.TXT for details.
-# 
+#
 # ===----------------------------------------------------------------------===##
 
 from __future__ import division
@@ -35,8 +35,8 @@ def rotate((x,y),angle):
 
 def rotate90((x,y)):
 	return (-y,x)
-	
-def abs(a): return (_abs(a[0]),_abs(a[1]))	
+
+def abs(a): return (_abs(a[0]),_abs(a[1]))
 def inv(a):	return (-a[0], -a[1])
 
 def add(a,b):	return (a[0]+b[0], a[1]+b[1])
@@ -65,7 +65,7 @@ def normalizeOrZero(a):
 		return mulN(a, 1.0/length(a))
 	except ZeroDivisionError:
 		return (0.0,0.0)
-	
+
 def min((a0,a1),(b0,b1)):
 	return (_min(a0,b0),_min(a1,b1))
 def max((a0,a1),(b0,b1)):
@@ -85,4 +85,3 @@ def sumlist(l):
 	return reduce(add, l)
 def avglist(l):
 	return mulN(sumlist(l), 1.0/len(l))
-

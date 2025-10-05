@@ -2,10 +2,10 @@
 
  :written_by {Clark Barrett}
  :date {May 7, 2007}
- 
+
  :theory BV_ArraysEx
 
- :language 
+ :language
  "Closed quantifier-free formulas built over an arbitrary expansion of the
   BV_ArraysEx signature with free function and predicate symbols over
   the sorts of BV_ArraysEx.  Formulas in ite terms must satisfy the same
@@ -15,5 +15,3 @@
  :extensions
  "As in the logic QF_BV."
 )
-
-

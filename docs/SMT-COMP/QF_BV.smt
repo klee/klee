@@ -229,7 +229,7 @@
     For all numerals j > 1 and 0 < m, and all terms of s and t of
     sort BitVec[m],
 
-    (bvashr s t) abbreviates 
+    (bvashr s t) abbreviates
       (ite (= (extract[|m-1|:|m-1|] s) bit0)
            (bvlshr s t)
            (bvnot (bvlshr (bvnot s) t)))
@@ -258,4 +258,3 @@
 
  "
 )
-

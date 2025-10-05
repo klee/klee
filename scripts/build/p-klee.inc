@@ -67,8 +67,8 @@ fi
   local KLEE_Z3_CONFIGURE_OPTION=("-DENABLE_SOLVER_Z3=OFF")
   local KLEE_STP_CONFIGURE_OPTION=("-DENABLE_SOLVER_STP=OFF")
   local KLEE_METASMT_CONFIGURE_OPTION=("-DENABLE_SOLVER_METASMT=OFF")
-  
-  
+
+
   for solver in "${SELECTED_SOLVERS[@]}"; do
     echo "Setting CMake configuration option for ${solver}"
     case "${solver}" in
@@ -103,7 +103,7 @@ fi
       exit 1
     esac
   done
-  
+
   CMAKE_ARGUMENTS+=(
     "${KLEE_Z3_CONFIGURE_OPTION[@]}"
     "${KLEE_STP_CONFIGURE_OPTION[@]}"
@@ -131,7 +131,7 @@ fi
   else
     CMAKE_ARGUMENTS+=("-DENABLE_KLEE_ASSERTS=TRUE")
   fi
-  
+
   if [ "X${ENABLE_OPTIMIZED}" == "X1" ]; then
     CMAKE_ARGUMENTS+=("-DCMAKE_BUILD_TYPE=RelWithDebInfo")
   else
@@ -139,14 +139,14 @@ fi
   fi
 
   CMAKE_ARGUMENTS+=("-DKLEE_RUNTIME_BUILD_TYPE=${KLEE_RUNTIME_BUILD}")
-  
+
 # TODO: We should support Ninja too
 # Configure KLEE
 
   local CXX_FLAGS=("")
   local C_FLAGS=("")
   local LD_FLAGS=("")
-  
+
   if [ "${COVERAGE}" -eq 1 ]; then
     CXX_FLAGS+=("-fprofile-arcs" "-ftest-coverage")
     C_FLAGS+=("-fprofile-arcs" "-ftest-coverage")

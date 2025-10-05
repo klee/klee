@@ -1,12 +1,12 @@
 #!/usr/bin/python
 
 # ===-- DumpTreeStream.py -------------------------------------------------===##
-# 
+#
 #                      The KLEE Symbolic Virtual Machine
-# 
+#
 #  This file is distributed under the University of Illinois Open Source
 #  License. See LICENSE.TXT for details.
-# 
+#
 # ===----------------------------------------------------------------------===##
 
 from __future__ import division
@@ -39,7 +39,7 @@ def writeTreeStream(path, output):
             f = open('%s%04d'%(output,i), 'wb')
             f.write(data)
             f.close()
-            
+
 def main(args):
     from optparse import OptionParser
     op = OptionParser("usage: %prog input outputPrefix")
@@ -51,7 +51,6 @@ def main(args):
     data = f.read()
     f.close()
     writeTreeStream(data, outputPrefix)
-    
+
 if __name__=='__main__':
     main(sys.argv)
-

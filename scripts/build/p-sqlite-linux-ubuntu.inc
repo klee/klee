@@ -1,4 +1,4 @@
-install_build_dependencies_sqlite() { 
+install_build_dependencies_sqlite() {
   source "${DIR}/common-functions"
   with_sudo apt update -y
 

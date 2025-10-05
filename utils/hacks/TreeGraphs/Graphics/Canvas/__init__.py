@@ -1,10 +1,10 @@
 # ===-- __init__.py -------------------------------------------------------===##
-# 
+#
 #                      The KLEE Symbolic Virtual Machine
-# 
+#
 #  This file is distributed under the University of Illinois Open Source
 #  License. See LICENSE.TXT for details.
-# 
+#
 # ===----------------------------------------------------------------------===##
 
 
@@ -24,9 +24,9 @@ from reportlab.pdfbase import pdfmetrics
 class Canvas:
 	def startDrawing(self, (w,h)):
 	def endDrawing(self):
-		
+
 	def getAspect(self):
-		
+
 	def setColor(self, r, g, b):
 	def setLineWidth(self, width):
 	def drawOutlineBox(self, x0, y0, x1, y1):
@@ -56,20 +56,20 @@ class BaseCanvas:
 		for pt in pts:
 			self.drawPoint(pt)
 		self.endDrawPoints()
-		
+
 	def drawStringCentered(self, boxLL, boxUR, text):
 		ll,ur = self.getStringBBox(text)
 		stringSize = vec2.sub(ur,ll)
 		boxSize = vec2.sub(boxUR,boxLL)
 		deltaSize = vec2.sub(boxSize, stringSize)
 		halfDeltaSize = vec2.mulN(deltaSize, .5)
-		
+
 		self.drawString(vec2.add(boxLL,halfDeltaSize), text)
 
 	def getStringSize(self, string):
 		ll,ur = self.getStringBBox(string)
 		return vec2.sub(ur,ll)
-	
+
 class PdfCanvas(BaseCanvas):
 	def __init__(self, name, basePos=(300,400), baseScale=(250,250), pageSize=None):
 		self._font = 'Times-Roman'
@@ -80,16 +80,16 @@ class PdfCanvas(BaseCanvas):
 		self.basePos = tuple(basePos)
 		self.baseScale = tuple(baseScale)
 		self.lastFontSizeSet = None
-		
+
 		self.kLineScaleFactor = 1.95
-		
+
 	def getAspect(self):
 		return 1.0,1.0
-		
+
 	def startDrawing(self):
 		self.pointSize = 1
 		self.scaleX = self.scaleY = 1
-		
+
 		self.translate((self.basePos[0] + self.baseScale[0], self.basePos[1] + self.baseScale[1]))
 		self.scale(self.baseScale)
 
@@ -102,21 +102,21 @@ class PdfCanvas(BaseCanvas):
 
 		self.pointSize = 1
 		self.scaleX = self.scaleY = 1
-		
+
 		self.translate((self.basePos[0] + self.baseScale[0], self.basePos[1] + self.baseScale[1]))
 		self.scale(self.baseScale)
 
 		self.setColor(0,0,0)
 		self.setLineWidth(1)
 		self.setPointSize(1)
-		
+
 		if self.lastFontSizeSet is not None:
 			self.setFontSize(self.lastFontSizeSet)
-			
+
 	def endDrawing(self):
 		self.c.showPage()
 		self.c.save()
-		
+
 	def setColor(self, r, g, b):
 		self.c.setStrokeColorRGB(r,g,b)
 		self.c.setFillColorRGB(r,g,b)
@@ -171,7 +171,7 @@ class PdfCanvas(BaseCanvas):
 		self.c.drawPath(p)
 	def drawBezier(self, (p0,p1,p2,p3)):
 		self.c.bezier(*(p0+p1+p2+p3))
-		
+
 	def pushTransform(self):
 		self.state.append( (self.scaleX,self.scaleY) )
 		self.c.saveState()
@@ -198,7 +198,7 @@ class PdfCanvas(BaseCanvas):
 #		self.c.setFont("Times-Roman", size/(2*avgScale))
 	def drawString(self, (x, y), text):
 		self.c.drawString(x, y, text)
-		
+
 	def drawOutlineString(self, (x,y), text):
 		t = self.c.beginText(x, y)
 		t.setTextRenderMode(1)

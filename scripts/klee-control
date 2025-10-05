@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 # ===-- klee-control ------------------------------------------------------===##
-# 
+#
 #                      The KLEE Symbolic Virtual Machine
-# 
+#
 #  This file is distributed under the University of Illinois Open Source
 #  License. See LICENSE.TXT for details.
-# 
+#
 # ===----------------------------------------------------------------------===##
 
 import os, signal, popen2
@@ -27,7 +27,7 @@ def execCmd(pid, gdbCmd, opts):
     cout,cin = popen2.popen2(cmd)
     cin.close()
     return cout.read()
-    
+
 def main():
     from optparse import OptionParser
     op = OptionParser("usage: %prog <PID | test directory>")
@@ -64,22 +64,22 @@ def main():
             pid = getPID(args[0])
         except:
             pid = None
-            
+
     if pid is None:
         op.error("unable to determine PID (bad pid or test directory)")
 
     if opts.printPid:
         print pid
         return
-    print 'pid: %d'%pid    
+    print 'pid: %d'%pid
     if opts.backtrace:
         execCmd(pid, 'bt', opts)
     if opts.dumpStates:
-        execCmd(pid, "p dumpStates = 1", opts)        
+        execCmd(pid, "p dumpStates = 1", opts)
     if opts.dumpTree:
-        execCmd(pid, "p dumpExecutionTree = 1", opts)        
+        execCmd(pid, "p dumpExecutionTree = 1", opts)
     if opts.stopForking:
-        execCmd(pid, 'p stop_forking()', opts)    
+        execCmd(pid, 'p stop_forking()', opts)
     if opts.haltExecution:
         execCmd(pid, 'p halt_execution()', opts)
     if opts.printTicks:
@@ -88,11 +88,10 @@ def main():
         for ln in lns:
             if ln.startswith('$1') and '=' in ln:
                 print ln.split('=',1)[1].strip()
-    if opts.int:    
+    if opts.int:
         os.kill(pid, signal.SIGINT)
-    if opts.kill:    
+    if opts.kill:
         os.kill(pid, signal.SIGKILL)
 
 if __name__=='__main__':
     main()
-

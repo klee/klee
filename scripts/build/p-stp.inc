@@ -62,7 +62,7 @@ build_stp() {
     cmake "${minisat_cmake_args[@]}" "${BASE}/minisat"
 
   # Try to build parallel
-  make "-j$(nproc)" || make 
+  make "-j$(nproc)" || make
   make install
 
   mkdir -p "${STP_BUILD_PATH}"

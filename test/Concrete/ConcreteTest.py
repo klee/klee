@@ -45,10 +45,10 @@ def testFile(name, klee_path, lli_path):
 
     kleeOut = subprocess.check_output(klee_cmd).decode()
     print('-- klee output --\n%s--\n' % (kleeOut,))
-        
+
     if lliOut != kleeOut:
         raise SystemExit('outputs differ')
-        
+
 def testOneFile(f, printOutput=False):
     try:
         testFile(f, printOutput)

@@ -3,7 +3,7 @@
 // RUN: %klee --output-dir=%t.klee-out --exit-on-error %t1.bc
 
 // This is a bug in llvm-gcc4.0 but seems to be fixed in llvm-gcc4.2,
-// its included here mostly as a reminder. 
+// its included here mostly as a reminder.
 
 #include <assert.h>
 #include <stdio.h>

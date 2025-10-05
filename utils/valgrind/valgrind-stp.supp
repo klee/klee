@@ -24,7 +24,7 @@
    fun:_ZNSt6vector*
    fun:_ZN4BEEV7BeevMgr*
 }
-{ 
+{
    LLVM:Tmp1
    Memcheck:Leak
    fun:_vgrZU_libstdcZpZpZa__Znwj

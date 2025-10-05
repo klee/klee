@@ -6,7 +6,7 @@
 ; deterministic. They do, however, assume that the sign bit of the address as a
 ; 64-bit value will never be set.
 @gInt = global i32 10
-@gIntWithConstant = global i32 sub(i32 ptrtoint(i32* @gInt to i32), 
+@gIntWithConstant = global i32 sub(i32 ptrtoint(i32* @gInt to i32),
                                  i32 ptrtoint(i32* @gInt to i32))
 
 define void @"test_int_to_ptr"() {
@@ -19,7 +19,7 @@ define void @"test_int_to_ptr"() {
   call void @print_i32(i32 %t2)
   call void @print_i32(i32 %t3)
   call void @print_i64(i64 %t4)
-    
+
   ret void
 }
 
@@ -30,11 +30,11 @@ define void @"test_constant_ops"() {
 
   %t4 = icmp eq i8 trunc(i64 ptrtoint(i32* @gInt to i64) to i8), %t1
   %t5 = zext i1 %t4 to i8
-    
+
   call void @print_i8(i8 %t5)
   call void @print_i64(i64 %t2)
   call void @print_i64(i64 %t3)
-  
+
   ret void
 }
 
@@ -51,30 +51,30 @@ define void @"test_logical_ops"() {
   %t4 = shl i64 lshr(i64 or(i64 ptrtoint(i32* @gInt to i64), i64 1), i64 8), 8
   %t5 = shl i64 ashr(i64 or(i64 ptrtoint(i32* @gInt to i64), i64 1), i64 8), 8
   %t6 = lshr i64 shl(i64 or(i64 ptrtoint(i32* @gInt to i64), i64 1), i64 8), 8
-  
+
   %t7 = icmp eq i64 %t4, %t5
   %t8 = icmp ne i64 %t4, %t6
-  
+
   %t9 = zext i1 %t7 to i8
   %t10 = zext i1 %t8 to i8
-  
+
   call void @print_i8(i8 %t9)
   call void @print_i8(i8 %t10)
-  
-  ret void   
+
+  ret void
 }
 
 %test.struct.type = type { i32, i32 }
 @test_struct = global %test.struct.type { i32 0, i32 10 }
 
 define void @"test_misc"() {
-  ; probability that @gInt == 100 is very very low 
+  ; probability that @gInt == 100 is very very low
   %t1 = add i32 select(i1 icmp eq (i32* @gInt, i32* inttoptr(i32 100 to i32*)), i32 10, i32 0), 0
   call void @print_i32(i32 %t1)
 
   %t2 = load i32, i32* getelementptr(%test.struct.type, %test.struct.type* @test_struct, i32 0, i32 1)
-  call void @print_i32(i32 %t2)                             
-        
+  call void @print_i32(i32 %t2)
+
   ret void
 }
 
@@ -85,7 +85,7 @@ define void @"test_simple_arith"() {
 
   call void @print_i32(i32 %t3)
 
-  ret void     
+  ret void
 }
 
 define void @"test_div_and_mod"() {
@@ -111,9 +111,9 @@ define void @"test_div_and_mod"() {
   call void @print_i32(i32 %x3)
   call void @print_i32(i32 %x4)
 
-  ret void     
+  ret void
 }
-        
+
 define void @test_cmp() {
   %t1 = add i8 zext(i1 icmp ult (i64 ptrtoint(i32* @gInt to i64), i64 0) to i8), 1
   %t2 = add i8 zext(i1 icmp ule (i64 ptrtoint(i32* @gInt to i64), i64 0) to i8), 1
@@ -146,7 +146,7 @@ define i32 @main() {
     call void @test_div_and_mod()
 
     call void @test_cmp()
- 
+
     call void @test_int_to_ptr()
 
     call void @test_constant_ops()
@@ -154,7 +154,7 @@ define i32 @main() {
     call void @test_logical_ops()
 
     call void @test_misc()
-    
+
     ret i32 0
 }
 

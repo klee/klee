@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 # ===-- IStatsSum.py ------------------------------------------------------===##
-# 
+#
 #                      The KLEE Symbolic Virtual Machine
-# 
+#
 #  This file is distributed under the University of Illinois Open Source
 #  License. See LICENSE.TXT for details.
-# 
+#
 # ===----------------------------------------------------------------------===##
 
 from __future__ import division
@@ -33,9 +33,9 @@ def getSummary(input):
     def putback(ln,elt):
         assert elt[0] is None
         elt[0] = ln
-        
+
     events = None
-    
+
     # read header (up to ob=)
     while 1:
         lns = getLines()
@@ -87,7 +87,7 @@ def getSummary(input):
         return results
 
     summed = [0]*len(events)
-    
+
     # read statistics
     while 1:
         lns = getLines()
@@ -106,7 +106,7 @@ def getSummary(input):
                 pass
 
     return events,summed
-    
+
 def main(args):
     from optparse import OptionParser
     op = OptionParser("usage: %prog [options] file")
@@ -127,7 +127,7 @@ def main(args):
 
     print '-- totals --'
     items = total.items()
-    table = []    
+    table = []
     for e,(s,N) in items:
         table.append((str(e),str(s),str(N),str(s//N)))
     w = map(lambda l: max(map(len,l)), zip(*table))

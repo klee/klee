@@ -21,10 +21,10 @@ download_libcxx() {
   fi
 
 
-  touch "${LIBCXX_SRC}/.src_checked_out" 
+  touch "${LIBCXX_SRC}/.src_checked_out"
 }
 
-build_libcxx() { 
+build_libcxx() {
   mkdir -p "${LIBCXX_BUILD}"
   cd "${LIBCXX_BUILD}"
   local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"

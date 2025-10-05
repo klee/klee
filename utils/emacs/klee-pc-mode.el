@@ -1,17 +1,17 @@
 ;;===-- klee-pc-mode.el ---------------------------------------------------===;;
-;; 
+;;
 ;;                     The KLEE Symbolic Virtual Machine
-;; 
+;;
 ;; This file is distributed under the University of Illinois Open Source
 ;; License. See LICENSE.TXT for details.
-;; 
+;;
 ;;===----------------------------------------------------------------------===;;
 
 (provide 'klee-pc-mode)
 
 (require 'font-lock)
 
-(defvar klee-pc-mode-syntax-table nil 
+(defvar klee-pc-mode-syntax-table nil
   "Syntax table used while in ft-bt mode.")
 
 ;;; --------------------------------------------------

@@ -55,7 +55,7 @@ run_tests() {
     coverage_setup "${build_dir}"
   fi
   make unittests
-  
+
   # Generate and upload coverage if COVERAGE is set
   if [ "${COVERAGE}" -eq 1 ]; then
     coverage_update "${build_dir}" "unittests"
@@ -69,7 +69,7 @@ run_tests() {
   fi
 
   make systemtests || return 1
-  
+
   # If metaSMT is the only solver, then rerun lit tests with non-default metaSMT backends
   if [ "X${SOLVERS}" == "XmetaSMT" ]; then
     base_path="$(python3 -m site --user-base)"
@@ -81,7 +81,7 @@ run_tests() {
       fi
     done
   fi
-  
+
   # Generate and upload coverage if COVERAGE is set
   if [ "${COVERAGE}" -eq 1 ]; then
     coverage_update "${build_dir}" "systemtests"
@@ -103,7 +103,7 @@ function run_docker() {
  if [[ "${COVERAGE}" -eq 1 ]]; then
    script_arguments+=("--coverage")
  fi
- 
+
  if [[ "${UPLOAD_COVERAGE}" -eq 1 ]]; then
    docker_arguments+=($(bash <(curl -s https://codecov.io/env)))
    script_arguments+=("--upload-coverage")
@@ -152,7 +152,7 @@ main() {
   fi
 
   run_tests "${directory}"
-  
+
   # FIXME Enable separated coverage tags again
   if [[ "${UPLOAD_COVERAGE}" -eq 1 ]]; then
     upload_coverage systemtests systemtests_unittests

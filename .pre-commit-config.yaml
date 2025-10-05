@@ -5,6 +5,8 @@ repos:
           - id: check-yaml
           - id: end-of-file-fixer
           - id: trailing-whitespace
+          - id: mixed-line-ending
+          - id: end-of-file-fixer
     - repo: https://github.com/pre-commit/mirrors-clang-format
       rev: v14.0.6
       hooks:

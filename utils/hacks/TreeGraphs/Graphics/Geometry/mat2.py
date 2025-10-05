@@ -1,17 +1,17 @@
 # ===-- mat2.py -----------------------------------------------------------===##
-# 
+#
 #                      The KLEE Symbolic Virtual Machine
-# 
+#
 #  This file is distributed under the University of Illinois Open Source
 #  License. See LICENSE.TXT for details.
-# 
+#
 # ===----------------------------------------------------------------------===##
 
 import vec2
 
 def det(m):
 	((m00,m01),(m10,m11))= m
-	
+
 	return m00*m11 - m01*m10
 
 def mul(a,b):

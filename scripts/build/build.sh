@@ -8,7 +8,7 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 
 show_help() {
   local name="$1"
-  echo "$name [--docker] [--keep-dockerfile] [--install-system-deps] component*" 
+  echo "$name [--docker] [--keep-dockerfile] [--install-system-deps] component*"
   echo "Available components:"
   for component_path in "$DIR/v-"*.inc; do
     [ -e "$component_path" ] || continue
@@ -105,7 +105,7 @@ check_docker_os() {
 build_docker() {
   local component=$1
   local is_dependency=$2
-  
+
   load_component "${component}" "v" || { echo "Loading component failed ${component}"; return 1; }
 
   # Extract repository, image, tag from base image
@@ -194,7 +194,7 @@ build_docker() {
 
   local docker_container_context=""
   docker_container_context=$(execution_action "get_docker_container_context" "${component}") || docker_container_context=""
-  
+
   # Prepare Dockerfile
   local dockerfile="${temp_dir}/Dockerfile"
 
@@ -218,7 +218,7 @@ build_docker() {
 
       # An empty config id indicates nothing to build
       [[ -z "${dep_config_id}" ]] && continue
-      
+
       if [[ "${hasBaseImage}" -eq 0 ]]; then
         hasBaseImage=1
         # Use base image as building base
@@ -276,7 +276,7 @@ build_docker() {
         [[ -z "${artifact}" ]] && continue
         echo "COPY --from=intermediate ${artifact} ${artifact}"
       done
-    
+
       # Copy all the runtime dependencies
       for dep_component in "${all_depending_runtime_artifact_components[@]}"; do
         [[ -z "${dep_component}" ]] && continue
@@ -785,7 +785,7 @@ main() {
       echo "No REPOSITORY provided"
       exit 1
     fi
-    
+
     # Gather information about the base image
     check_docker_os "${BASE_IMAGE}"
 

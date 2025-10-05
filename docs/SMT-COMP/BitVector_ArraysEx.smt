@@ -2,7 +2,7 @@
 
  :written_by {Clark Barrett}
  :date {May 7, 2007}
- 
+
 :sorts_description {
     All sort symbols of the form BitVec[m],
     where m is a numeral greater than 0.
@@ -40,7 +40,7 @@
 }
 
 
- :definition 
+ :definition
  "This is a theory containing an infinite number of copies of the theory of
   functional arrays with extensionality: one for each pair of bitvector sorts.
   It can be formally defined as the union of the SMT-LIB theory
@@ -60,15 +60,13 @@
   Fixed_Size_Bitvectors for details.
 
   If for i=1,2, T_i is an SMT-LIB theory with sorts S_i, function symbols F_i,
-  predicate symbols P_i, and axioms A_i, by \"union\" of T_1 and T_2 
+  predicate symbols P_i, and axioms A_i, by \"union\" of T_1 and T_2
   we mean the theory T with sorts S_1 U S_2, function symbols F_1 U F_2,
   predicate symbols P_1 U P_2, and axioms A_1 U A_2 (where U stands for set
   theoretic union).
 
-  The theory T is a well-defined SMT-LIB theory whenever S_1, S_2, F_1, F_2, 
+  The theory T is a well-defined SMT-LIB theory whenever S_1, S_2, F_1, F_2,
   P_1, P_2 are all pairwise disjoint, as is the case for the component theories
-  considered here. 
+  considered here.
  "
 )
-
-

@@ -17,7 +17,7 @@ install_build_dependencies_llvm() {
     git
     ninja
   )
-  
+
   #Install essential dependencies
   with_sudo pacman --no-confirm -S "${dependencies[@]}"
 }

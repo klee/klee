@@ -11,7 +11,7 @@ download_tcmalloc() {
   tar xfz "gperftools-${TCMALLOC_VERSION}.tar.gz"
 }
 
-build_tcmalloc() { 
+build_tcmalloc() {
   cd "${TCMALLOC_SRC_PATH}"
   ./configure --disable-dependency-tracking --disable-cpu-profiler \
     --disable-heap-checker --disable-debugalloc  --enable-minimal \

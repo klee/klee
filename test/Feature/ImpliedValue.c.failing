@@ -92,7 +92,7 @@ int main() {
   case 6:
     if (util_make_and_i1(!a, !b)) {
       assert(!klee_is_symbolic(a));
-      assert(!klee_is_symbolic(b));      
+      assert(!klee_is_symbolic(b));
       printf("and(%d,%d) = true case\n", a, b);
     }
     break;
@@ -101,7 +101,7 @@ int main() {
   case 7:
     if (!util_make_or_i1(a, b)) {
       assert(!klee_is_symbolic(a));
-      assert(!klee_is_symbolic(b));      
+      assert(!klee_is_symbolic(b));
       printf("or(%d,%d) = false case\n", a, b);
     }
     break;
@@ -110,7 +110,7 @@ int main() {
     // partial evaluated
 // RUN: grep "add constant case: 0xDE" %t4.out
   case 8:
-    if (util_make_concat2(a+0xCD,0xCD) == 0xABCD) { 
+    if (util_make_concat2(a+0xCD,0xCD) == 0xABCD) {
       assert(!klee_is_symbolic(a));
       printf("add constant case: 0x%X\n", a);
     }
@@ -118,7 +118,7 @@ int main() {
 
 // RUN: grep "sub constant case: 0x60" %t4.out
   case 9:
-    if (util_make_concat2(0x0B-a,0xCD) == 0xABCD) { 
+    if (util_make_concat2(0x0B-a,0xCD) == 0xABCD) {
       assert(!klee_is_symbolic(a));
       printf("sub constant case: 0x%X\n", a);
     }
@@ -126,7 +126,7 @@ int main() {
 
 // RUN: grep "xor constant case: 0xA0" %t4.out
   case 10:
-    if (util_make_concat2(0x0B ^ a,0xCD) == 0xABCD) { 
+    if (util_make_concat2(0x0B ^ a,0xCD) == 0xABCD) {
       assert(!klee_is_symbolic(a));
       printf("xor constant case: 0x%X\n", a);
     }

@@ -20,12 +20,12 @@ function get_git_hash() {
   local url="$1"
   local branch="$2"
   local commit_id=""
-  
+
   # List remote git branches and get the commit id of the branch
   commit_id="$(git ls-remote -h "$url" |grep "$branch" | cut -d$'\t' -f 1)"
-  
+
   # If that doesn't work use the branch instead of the commit id
-  if [[ -z "${commit_id}" ]]; then 
+  if [[ -z "${commit_id}" ]]; then
     echo "${branch}"
   else
     echo "${commit_id:0:7}"

@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 # ===-- IStatsMerge.py ----------------------------------------------------===##
-# 
+#
 #                      The KLEE Symbolic Virtual Machine
-# 
+#
 #  This file is distributed under the University of Illinois Open Source
 #  License. See LICENSE.TXT for details.
-# 
+#
 # ===----------------------------------------------------------------------===##
 
 from __future__ import division
@@ -22,7 +22,7 @@ def checkAssemblies(directories):
             return open(os.path.join(d,'assembly.ll')).read()
         except:
             raise MergeError("unable to open assembly for: %s"%(`d`,))
-    
+
     reference = read(directories[0])
     for d in directories[1:]:
         if reference != read(d):
@@ -53,9 +53,9 @@ def merge(inputs, output, outputDir):
     def putback(ln,elt):
         assert elt[0] is None
         elt[0] = ln
-        
+
     events = None
-    
+
     # read header (up to ob=)
     while 1:
         lns = getLines()
@@ -86,7 +86,7 @@ def merge(inputs, output, outputDir):
             raise MergeError("instruction or line specifications differ")
         elif [d for d in datas if len(d)!=numEvents+2]:
             raise MergeError("statistics differ in event counts")
-        
+
         result = [datas[0][0],datas[0][1]]
         for i,ev in enumerate(events):
             s = sum([d[i+2] for d in datas])
@@ -128,7 +128,7 @@ def merge(inputs, output, outputDir):
                     putback(ln, elt)
                     break
         return results
-    
+
     # read statistics
     while 1:
         lns = getLines()
@@ -153,7 +153,7 @@ def merge(inputs, output, outputDir):
                 output.write(cfn)
                 output.write(calls)
                 print >>output,' '.join(map(str,stat))
-            
+
 def main(args):
     from optparse import OptionParser
     op = OptionParser("usage: %prog [options] directories+ output")
@@ -173,7 +173,7 @@ def main(args):
 
     if not os.path.exists(output):
         os.mkdir(output)
-        
+
     assembly = open(os.path.join(directories[0],'assembly.ll')).read()
     open(os.path.join(output,'assembly.ll'),'w').write(assembly)
 

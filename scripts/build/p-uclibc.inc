@@ -9,7 +9,7 @@ download_uclibc() {
   git_clone_or_update "${uclibc_url}" "${UCLIBC_PATH}" "${UCLIBC_VERSION}"
 }
 
-build_uclibc() { 
+build_uclibc() {
   cd "${UCLIBC_PATH}" || return 1
   ./configure --make-llvm-lib --with-cc "${BITCODE_CC}" --with-llvm-config "${LLVM_CONFIG}"
   make || return 1
@@ -17,7 +17,7 @@ build_uclibc() {
 }
 
 install_uclibc() {
-  return 0  
+  return 0
 }
 
 # Check if the binary artifact is installed

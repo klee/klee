@@ -1,10 +1,10 @@
 # ===-- mat4.py -----------------------------------------------------------===##
-# 
+#
 #                      The KLEE Symbolic Virtual Machine
-# 
+#
 #  This file is distributed under the University of Illinois Open Source
 #  License. See LICENSE.TXT for details.
-# 
+#
 # ===----------------------------------------------------------------------===##
 
 import vec4,mat3
@@ -43,7 +43,7 @@ def fromortho(left,right,bottom,top,znear,zfar):
 
 def mulN(m,N):
 	return tuple([vec4.mulN(v,N) for v in m])
-	
+
 def mul(a,b):
 	b_trans= zip(* b)
 	return tuple([transmulvec4(b_trans, a_r) for a_r in a])
@@ -54,109 +54,109 @@ def transmulvec4(m_trans,v):
 
 def mulvec4(m,v):
 	return transmulvec4(zip(* m), v)
-	
+
 def trans(m):
-	((m00,m01,m02,m03),	
-	 (m10,m11,m12,m13),	
-	 (m20,m21,m22,m23),	
+	((m00,m01,m02,m03),
+	 (m10,m11,m12,m13),
+	 (m20,m21,m22,m23),
 	 (m30,m31,m32,m33))= m
-	 
-	return (	(m00,m10,m20,m30),	
-				(m01,m11,m21,m31),	
-				(m02,m12,m22,m32),	
+
+	return (	(m00,m10,m20,m30),
+				(m01,m11,m21,m31),
+				(m02,m12,m22,m32),
 				(m03,m13,m23,m33))
 
 def det(m):
-	((m00,m01,m02,m03),	
-	 (m10,m11,m12,m13),	
-	 (m20,m21,m22,m23),	
+	((m00,m01,m02,m03),
+	 (m10,m11,m12,m13),
+	 (m20,m21,m22,m23),
 	 (m30,m31,m32,m33))= m
-	 
-	a= m00 * mat3.det(	((m11, m12, m13), 
-						 (m21, m22, m23), 
+
+	a= m00 * mat3.det(	((m11, m12, m13),
+						 (m21, m22, m23),
 						 (m31, m32, m33)) );
-	b= m10 * mat3.det(	((m01, m02, m03), 
-						 (m21, m22, m23), 
+	b= m10 * mat3.det(	((m01, m02, m03),
+						 (m21, m22, m23),
 						 (m31, m32, m33)) );
-	c= m20 * mat3.det(  ((m01, m02, m03), 
-						 (m11, m12, m13), 
+	c= m20 * mat3.det(  ((m01, m02, m03),
+						 (m11, m12, m13),
 						 (m31, m32, m33)) );
-	d= m30 * mat3.det(	((m01, m02, m03), 
-						 (m11, m12, m13), 
+	d= m30 * mat3.det(	((m01, m02, m03),
+						 (m11, m12, m13),
 						 (m21, m22, m23)) );
-	
+
 	return a-b+c-d;
 
 def adj(m):
-	((m00,m01,m02,m03),	
-	 (m10,m11,m12,m13),	
-	 (m20,m21,m22,m23),	
+	((m00,m01,m02,m03),
+	 (m10,m11,m12,m13),
+	 (m20,m21,m22,m23),
 	 (m30,m31,m32,m33))= m
-	 
-	t00=  mat3.det( ((m11, m12, m13), 
+
+	t00=  mat3.det( ((m11, m12, m13),
 					 (m21, m22, m23),
 					 (m31, m32, m33)) )
-	t01= -mat3.det( ((m10, m12, m13), 
+	t01= -mat3.det( ((m10, m12, m13),
 					 (m20, m22, m23),
 					 (m30, m32, m33)) )
-	t02=  mat3.det( ((m10, m11, m13), 
+	t02=  mat3.det( ((m10, m11, m13),
 					 (m20, m21, m23),
 					 (m30, m31, m33)) )
-	t03= -mat3.det( ((m10, m11, m12), 
+	t03= -mat3.det( ((m10, m11, m12),
 					 (m20, m21, m22),
 					 (m30, m31, m32)) )
 
 
-	t10= -mat3.det( ((m01, m02, m03), 
+	t10= -mat3.det( ((m01, m02, m03),
 					 (m21, m22, m23),
 					 (m31, m32, m33)) )
-	t11=  mat3.det( ((m00, m02, m03), 
+	t11=  mat3.det( ((m00, m02, m03),
 					 (m20, m22, m23),
 					 (m30, m32, m33)) )
-	t12= -mat3.det( ((m00, m01, m03), 
+	t12= -mat3.det( ((m00, m01, m03),
 					 (m20, m21, m23),
 					 (m30, m31, m33)) )
-	t13=  mat3.det( ((m00, m01, m02), 
+	t13=  mat3.det( ((m00, m01, m02),
 					 (m20, m21, m22),
 					 (m30, m31, m32)) )
 
-	t20=  mat3.det( ((m01, m02, m03), 
+	t20=  mat3.det( ((m01, m02, m03),
 					 (m11, m12, m13),
 					 (m31, m32, m33)) )
-	t21= -mat3.det( ((m00, m02, m03), 
+	t21= -mat3.det( ((m00, m02, m03),
 					 (m10, m12, m13),
 					 (m30, m32, m33)) )
-	t22=  mat3.det( ((m00, m01, m03), 
+	t22=  mat3.det( ((m00, m01, m03),
 					 (m10, m11, m13),
 					 (m30, m31, m33)) )
-	t23= -mat3.det( ((m00, m01, m02), 
+	t23= -mat3.det( ((m00, m01, m02),
 					 (m10, m11, m12),
 					 (m30, m31, m32)) )
 
-	t30= -mat3.det( ((m01, m02, m03), 
+	t30= -mat3.det( ((m01, m02, m03),
 					 (m11, m12, m13),
 					 (m21, m22, m23)) )
-	t31=  mat3.det( ((m00, m02, m03), 
+	t31=  mat3.det( ((m00, m02, m03),
 					 (m10, m12, m13),
 					 (m20, m22, m23)) )
-	t32= -mat3.det( ((m00, m01, m03), 
+	t32= -mat3.det( ((m00, m01, m03),
 					 (m10, m11, m13),
 					 (m20, m21, m23)) )
-	t33=  mat3.det( ((m00, m01, m02), 
+	t33=  mat3.det( ((m00, m01, m02),
 					 (m10, m11, m12),
 					 (m20, m21, m22)) )
-					
+
 	return ((t00,t01,t02,t03),
 			(t10,t11,t12,t13),
 			(t20,t21,t22,t23),
 			(t30,t31,t32,t33))
-	
+
 def inv(m):
 	d= det(m)
 	t= trans(adj(m))
 	v= 1.0/d
 	return tuple([(a*v,b*v,c*v,d*v) for a,b,c,d in t])
-	
+
 def toGL(m):
 	m0,m1,m2,m3= m
 	return m0+m1+m2+m3

@@ -1,10 +1,10 @@
 # ===-- mat3.py -----------------------------------------------------------===##
-# 
+#
 #                      The KLEE Symbolic Virtual Machine
-# 
+#
 #  This file is distributed under the University of Illinois Open Source
 #  License. See LICENSE.TXT for details.
-# 
+#
 # ===----------------------------------------------------------------------===##
 
 import vec3,mat2
@@ -45,5 +45,5 @@ def det(m):
 	a= m00 * mat2.det( ((m11, m12), (m21, m22)) );
 	b= m10 * mat2.det( ((m01, m02), (m21, m22)) );
 	c= m20 * mat2.det( ((m01, m02), (m11, m12)) );
-	
+
 	return a-b+c

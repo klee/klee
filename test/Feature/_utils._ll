@@ -40,7 +40,7 @@ define i32 @util_make_concat4(i8 %a, i8 %b, i8 %c, i8 %d) {
         ret i32 %concat
 }
 
-define i64 @util_make_concat8(i8 %a, i8 %b, i8 %c, i8 %d, 
+define i64 @util_make_concat8(i8 %a, i8 %b, i8 %c, i8 %d,
                               i8 %e, i8 %f, i8 %g, i8 %h) {
         %tmp = alloca i64
         %tmp8 = bitcast i64* %tmp to i8*

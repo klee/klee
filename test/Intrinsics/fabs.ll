@@ -22,7 +22,7 @@
 ; To clean the resulting llvm-ir up for LLVM-versions < 6,
 ; I ran `opt -S -strip -strip-debug -strip-named-metadata'
 ; on the resulting ir. Additionally I removed the 'speculatable'
-; attribute where it appeared. 
+; attribute where it appeared.
 ;
 ; RUN: %llvmas %s -o=%t.bc
 ; RUN: rm -rf %t.klee-out

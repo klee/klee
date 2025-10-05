@@ -16,13 +16,13 @@ build_z3() {
   local LDFLAGS=""
   local CC=""
   local CXX=""
-  
+
   # Check if sanitizers should be used to build z3
   if [[ "${SANITIZER_SUFFIX}x" != "x" ]]; then
     CFLAGS="${SANITIZER_C_FLAGS[*]}"
     CXXFLAGS="${SANITIZER_CXX_FLAGS[*]}"
     LDFLAGS="${SANITIZER_LD_FLAGS[*]}"
-    
+
     CC="${SANITIZER_C_COMPILER}"
     CXX="${SANITIZER_CXX_COMPILER}"
   fi

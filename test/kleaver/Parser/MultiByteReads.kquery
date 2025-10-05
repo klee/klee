@@ -17,4 +17,3 @@ array arr2[8] : w32 -> w8 = symbolic
                               (Concat w24 (Read w8 3 arr2)
                                           (Concat w16 (Read w8 4 arr2) (Read w8 5 arr2))))))]
        false)
-

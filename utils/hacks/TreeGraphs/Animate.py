@@ -1,12 +1,12 @@
 #!/usr/bin/python
 
 # ===-- Animate.py --------------------------------------------------------===##
-# 
+#
 #                      The KLEE Symbolic Virtual Machine
-# 
+#
 #  This file is distributed under the University of Illinois Open Source
 #  License. See LICENSE.TXT for details.
-# 
+#
 # ===----------------------------------------------------------------------===##
 
 import os
@@ -34,7 +34,7 @@ def main():
     symPath,outputDir = args
     if not os.path.exists(outputDir):
         os.mkdir(outputDir)
-    
+
     for frame,count in enumerate(range(opts.startCount, opts.endCount,
                                      opts.countStride)):
         print 'generating frame %d with path count %d...' % (frame+1, count)
@@ -54,7 +54,7 @@ def main():
         img = Image.open(jpg_tmp_path)
         img = img.convert('RGB')
         img.save(jpg_path, quality=100)
-        
+
 if __name__=='__main__':
     try:
         main()

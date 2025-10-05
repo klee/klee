@@ -19,7 +19,7 @@ install_build_dependencies_llvm() {
     git
     ninja-build
   )
-  
+
   if [[ "${SANITIZERS[*]}" == "memory" ]]; then
     dependencies+=(ninja-build)
   fi

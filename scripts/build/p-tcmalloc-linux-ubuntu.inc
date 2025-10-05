@@ -1,4 +1,4 @@
-install_build_dependencies_tcmalloc() { 
+install_build_dependencies_tcmalloc() {
   source "${DIR}/common-functions"
   with_sudo apt update -y
 

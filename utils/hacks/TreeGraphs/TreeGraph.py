@@ -1,12 +1,12 @@
 #!/usr/bin/python
 
 # ===-- TreeGraph.py ------------------------------------------------------===##
-# 
+#
 #                      The KLEE Symbolic Virtual Machine
-# 
+#
 #  This file is distributed under the University of Illinois Open Source
 #  License. See LICENSE.TXT for details.
-# 
+#
 # ===----------------------------------------------------------------------===##
 
 from __future__ import division
@@ -27,7 +27,7 @@ def generator_fold(it):
     result happens to also be a generator. This simplifies the
     writing of iterators over recursive data structures.
     """
-   
+
     for res in it:
         if isinstance(res,GeneratorType):
             for res in generator_fold(res):
@@ -35,7 +35,7 @@ def generator_fold(it):
         else:
             yield res
 
-                
+
 def drawTree(a, b, maxDepth, sizes, depth=0):
     yield (a, b)
     if depth<maxDepth:
@@ -44,7 +44,7 @@ def drawTree(a, b, maxDepth, sizes, depth=0):
                        maxDepth, sizes, depth+1)
         yield drawTree(b, vec2.add(b, (+height,height)),
                        maxDepth, sizes, depth+1)
-    
+
 def makeTreeGraph(output, symPath, count, shuffle=False):
     random.seed(10)
     c = PdfCanvas(output, basePos=(0,0), baseScale=(72*5,72*5),
@@ -78,7 +78,7 @@ def makeTreeGraph(output, symPath, count, shuffle=False):
         return m((x,(N**(1+y)-N)/(N**2-N)))
         return m((x,y))
 #    c.drawOutlineBox((-.5,0),(.5,1))
-    
+
     #[c.drawLine(lm(a),lm(b)) for a,b in generator_fold(res)]
 
     spanAngle = math.pi*.9
@@ -94,7 +94,7 @@ def makeTreeGraph(output, symPath, count, shuffle=False):
     def getTreePos(depth, maxDepth, index, ranges=None, depthOrder=None):
         isoT = depth/(maxDepth-1)
         isoCent = vec2.add((0.,-.9),(0.,isoT*.9))
-        isoRadius = zeroRad + (oneRad-zeroRad)*isoT        
+        isoRadius = zeroRad + (oneRad-zeroRad)*isoT
         total = 2**(depth+1)
         #        isoSpanAngle = math.pi*.5 - vec2.toangle(vec2.sub(vec2.fromangle(math.pi*.5 + spanAngle,.9),
         #                                             isoCent))
@@ -201,7 +201,7 @@ def makeTreeGraph(output, symPath, count, shuffle=False):
                 p2 = pts[min(len(pts)-1,i+1)]
                 p3 = pts[min(len(pts)-1,i+2)]
                 #segments[(p1,p2)] = segments.get((p1,p2),[]) + [(p0,p1)]
-                
+
                 if (p1,p2) not in side:
                     segments.add((p0,p1,p2,p3))
                     side.add((p1,p2))
@@ -271,15 +271,15 @@ def makeTreeGraph(output, symPath, count, shuffle=False):
     if 0:
         c.setPointSize(10)
         c.drawPoints(allPoints)
-    
+
     if 0:
         N = 20
-        for i in range(N+1):        
+        for i in range(N+1):
             t = 2*i/N - 1
             c.drawLine(m((t,0)), m((t,1)))
-    
+
     c.endDrawing()
-        
+
 def main():
     from optparse import OptionParser
     op = OptionParser("usage: %prog [options] <tree-stream-path> <output-path>")
@@ -294,7 +294,7 @@ def main():
 
     symPath,output = args
     makeTreeGraph(output, symPath, opts.count, opts.shuffle)
-    
+
 if __name__=='__main__':
     try:
         main()

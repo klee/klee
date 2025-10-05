@@ -7,7 +7,7 @@ required_variables_check_solvers() {
   local solvers
   IFS=":" read -r -a solvers <<< "${SOLVERS}"
   [[ -z "${solvers[*]}" ]] && { echo "SOLVERS can't be empty"; exit 1; }
-  
+
   for solver in "${solvers[@]}"; do
     [[ -z "${solver}" ]] && continue
     solver="$(to_lower ${solver})"
@@ -15,7 +15,7 @@ required_variables_check_solvers() {
     [[ "${solver}" == "z3" ]] && continue
     [[ "${solver}" == "stp" ]] && continue
     [[ "${solver}" == "metasmt" ]] && continue
-    
+
     echo "Unknown solver: \"$solver\""
     exit 1
   done

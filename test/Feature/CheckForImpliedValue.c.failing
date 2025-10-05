@@ -8,7 +8,7 @@
 #define swap(x) (((x)>>16) | (((x)&0xFFFF)<<16))
 int main() {
   unsigned x, y;
-  
+
   klee_make_symbolic(&x, sizeof x, "x");
   klee_make_symbolic(&y, sizeof y, "y");
 

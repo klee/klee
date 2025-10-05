@@ -34,8 +34,8 @@ def find_klee_bin_dir():
       print("Failed to find KLEE at this script location or in PATH. Quitting ...")
       sys.exit(1)
   print("Using", KLEE)
- 
-  
+
+
 
 def split_args():
   prog = None
@@ -69,13 +69,13 @@ def get_stdin_file(tmpdir):
   with open(stdin_file_name, 'w') as f:
     stdin_size = f.write(stdin)
   return stdin_file_name, stdin_size
-    
-  
+
+
 
 def prog_args_to_posix(prog_args):
   posix_args = []
   sym_file = 'A'
-  sym_file_sizes = [] 
+  sym_file_sizes = []
   gen_out_args = []
   for parg in prog_args:
       file_size = maybe_file_size(parg)
@@ -113,7 +113,7 @@ def main():
       posix_args += ["--sym-stdin", str(stdin_size)]
   ktest_file = create_ktest_file(gen_out_args,tmpdir.name)
   klee_args += ["-seed-file=" + ktest_file]
-  
+
   proc = subprocess.Popen([KLEE] + klee_args + [prog] + posix_args, stdout=sys.stdout, stderr=sys.stderr)
   while proc.returncode is None:
       try:
@@ -125,5 +125,3 @@ def main():
 
 if __name__ == "__main__":
   main()
-
-

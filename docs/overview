@@ -14,7 +14,7 @@
 /// KLEE makes queries to STP to solve symbolic constraints.
 ///
 /// The rest of this document describes some of the important components of KLEE
-/// 
+///
 /// @section executor Interpreter
 /// klee::Interpreter is the main abstract class defining the interface of the
 /// bitcode interpreter. klee::Executor is the main concrete instance of this
@@ -25,7 +25,7 @@
 /// On a branch, if condition is symbolic, klee::Executor::fork returns a
 /// klee::ExecutionState::StatePair which is a pair of ExecutionState to be
 /// executed.
-/// 
+///
 /// @section memory Memory model
 /// MemoryObject's represent allocation sites in the program (calls to malloc, stack
 /// objects, global variables)
@@ -33,8 +33,8 @@
 /// allocated at that site.
 /// ObjectState's are used to store the actual contents of a MemoryObject in a
 /// particular ExecutionState (but
-/// can be shared). I need better names for these two things. 
-/// 
+/// can be shared). I need better names for these two things.
+///
 /// Each ExecutionState stores a mapping of MemoryObjects -> ObjectState using the
 /// AddressSpace data
 /// structure (implemented as an immutable tree so that copying is cheap and the
@@ -46,7 +46,7 @@
 /// create a copy of the object (AddressSpace::getWriteable). This is the COW
 /// mechanism (which gets used
 /// for all objects, not just globals).
-/// 
+///
 /// From the point of view of the state and this mapping there is no distinction
 /// between stack, heap, and global
 /// objects. The only special handling for stack objects is that the MemoryObject is
@@ -57,7 +57,7 @@
 /// (references to the memory object
 /// may still remain in ReadExprs, but conceptually the actual memory is no longer
 /// addressable).
-/// 
+///
 /// It is also important that the AddressSpace mapping is ordered. We use this when
 /// we need to resolve a symbolic
 /// address to an ObjectState by first getting a particular value for the symbolic
@@ -93,7 +93,7 @@
 /// UpdateList and UpdateNode structures
 /// which are again immutable data structures so that copy is cheap and the sharing
 /// is exploited.
-/// 
+///
 /// @section searcher Searcher
 /// Base classe: klee::Searcher. The Executor uses a Searcher to select the next
 /// state (i.e. program instance following a single path) for which an

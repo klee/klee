@@ -205,7 +205,7 @@ Documentation at https://klee-se.org/releases/docs/v2.1
 - Added -timer-interval (default 1s) to specify the minimum interval to check timers (@251)
 - Added nurs:rp searcher which uses non-uniform random search with 1/2^depth (@kren1)
 - Replaced the behavior of the nurs:depth searcher to use NURS with depth (@kren1)
-- klee-stats: new --grafana option (see above) 
+- klee-stats: new --grafana option (see above)
 - klee-stats: new --to-csv option for converting statistics to the CSV format (@251)
 - klee-stats: removed --sample-interval, --sort-by, --compare-by, --precision.  These can be now simulated by querying the SQL database directly (@kren1)
 - klee-replay: added --keep-replay-dir option to keep the replay directory (@ccadar)
@@ -251,7 +251,7 @@ Documentation at https://klee-se.org/releases/docs/v2.0
 - Renamed several options (@ccadar)
   * --environ to --env-file
   * --no-output to --write-no-tests
-  * --red-zone-space to --redzone-size 
+  * --red-zone-space to --redzone-size
   * --run-in to --run-in-dir
   * --seed-out to --seed-file
   * --seed-out-dir to --seed-dir
@@ -454,4 +454,4 @@ KLEE 1.0.0, 10 August 2015
 * Added Dockerfile for building a KLEE Docker image (Dan Liew, @delcypher)
 * Added a new option, --rewrite-equalities, which makes it possible to disable the optimisation that rewrites existing constraints when an equality with a constant is added (Cristian Cadar, @ccadar)
 * Cleaner, more efficient timestamps (Emil Rakadjiev, @erakadjiev)
-* Improved integer overflow detection (Luca Dariz, @luckyluke) 
+* Improved integer overflow detection (Luca Dariz, @luckyluke)

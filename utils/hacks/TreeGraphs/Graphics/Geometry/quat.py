@@ -1,10 +1,10 @@
 # ===-- quat.py -----------------------------------------------------------===##
-# 
+#
 #                      The KLEE Symbolic Virtual Machine
-# 
+#
 #  This file is distributed under the University of Illinois Open Source
 #  License. See LICENSE.TXT for details.
-# 
+#
 # ===----------------------------------------------------------------------===##
 
 from __future__ import division
@@ -20,7 +20,7 @@ def fromaxisangle(axisangle):
 	ang_2= angle/2.0
 	s_ang= math.sin(ang_2)
 	c_ang= math.cos(ang_2)
-	
+
 	q= vec3.mulN(axis, s_ang) + (c_ang,)
 	return normalize(q)
 
@@ -35,7 +35,7 @@ def fromnormals_faster(n1,n2):
 	half_n= vec3.normalize(vec3.add(n1, n2))
 	cos_half_angle= vec3.dot(n1, half_n)
 	sin_half_angle= 1.0 - cos_half_angle**2
-	
+
 	return vec3.mulN(axis, sin_half_angle) + (cos_half_angle,)
 
 def fromvectors(v1,v2):
@@ -62,7 +62,7 @@ def mul(a, b):
 
 	x= aw*bx + ax*bw + ay*bz - az*by
 	y= aw*by + ay*bw + az*bx - ax*bz
-	z= aw*bz + az*bw + ax*by - ay*bx 
+	z= aw*bz + az*bw + ax*by - ay*bx
 	w= aw*bw - ax*bx - ay*by - az*bz
 
 	return (x,y,z,w)
@@ -87,7 +87,7 @@ def tomat3x3(q):
 					2.0 * ( x*z + y*w ))
 	m1=	(			2.0 * ( x*y + z*w ),
 			1.0 -	2.0 * ( x*x + z*z ),
-					2.0 * ( y*z - x*w )) 
+					2.0 * ( y*z - x*w ))
 	m2=	(			2.0 * ( x*z - y*w ),
 					2.0 * ( y*z + x*w ),
 			1.0 -	2.0 * ( x*x + y*y ))
@@ -105,7 +105,7 @@ def slerp(a, b, t):
 	raise NotImplementedError
 
 	cos_omega= vec4.dot(a, b)
-	
+
 	if (cos_omega<0.0):
 		cos_omega= -cos_omega
 		b= vec4.neg(b)

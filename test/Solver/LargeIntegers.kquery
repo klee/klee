@@ -12,6 +12,6 @@ array a[64] : w32 -> w8 = symbolic
 
 # RUN: grep -A 1 "Query 2" %t > %t2
 # RUN: grep "Array 0:	a.16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1" %t2
-(query [(Eq 0x0102030405060708090A0B0C0D0E0F10 (ReadLSB w128 0 a))] 
-       false 
+(query [(Eq 0x0102030405060708090A0B0C0D0E0F10 (ReadLSB w128 0 a))]
+       false
        [] [a])

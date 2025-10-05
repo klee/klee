@@ -1,5 +1,5 @@
 # Build dependencies
-install_build_dependencies_uclibc() { 
+install_build_dependencies_uclibc() {
   source "${DIR}/common-functions"
   with_sudo apt update -y
 
