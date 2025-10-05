@@ -35,6 +35,21 @@ klee_open_output_file(const std::string &path, std::string &error) {
   return f;
 }
 
+std::unique_ptr<llvm::raw_fd_ostream>
+klee_append_output_file(const std::string &path, std::string &error) {
+  error.clear();
+  std::error_code ec;
+
+  auto f = std::make_unique<llvm::raw_fd_ostream>(path.c_str(), ec,
+                                                  llvm::sys::fs::OF_Append);
+  if (ec)
+    error = ec.message();
+  if (!error.empty()) {
+    f.reset(nullptr);
+  }
+  return f;
+}
+
 #ifdef HAVE_ZLIB_H
 std::unique_ptr<llvm::raw_ostream>
 klee_open_compressed_output_file(const std::string &path, std::string &error) {

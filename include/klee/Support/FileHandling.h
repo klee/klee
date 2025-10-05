@@ -23,6 +23,9 @@ namespace klee {
 std::unique_ptr<llvm::raw_fd_ostream>
 klee_open_output_file(const std::string &path, std::string &error);
 
+std::unique_ptr<llvm::raw_fd_ostream>
+klee_append_output_file(const std::string &path, std::string &error);
+
 #ifdef HAVE_ZLIB_H
 std::unique_ptr<llvm::raw_ostream>
 klee_open_compressed_output_file(const std::string &path, std::string &error);
