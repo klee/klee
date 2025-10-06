@@ -32,3 +32,18 @@ lua version="5.4.8":
         make install INSTALL_TOP=$PWD/install
         get-bc $PWD/install/bin/lua
     popd
+
+openssl version="3.5.4":
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    if [ ! -d "openssl" ]; then
+        curl -fL -O https://github.com/openssl/openssl/releases/download/openssl-{{version}}/openssl-{{version}}.tar.gz
+        tar zxf openssl-{{version}}.tar.gz
+        mv openssl-{{version}} openssl
+        rm openssl-{{version}}.tar.gz
+    fi
+    pushd openssl
+        {{gclang_config}} ./Configure  --prefix=$PWD/install no-shared no-module enable-tls1_3 enable-rc5 enable-md2 enable-ec_nistp_64_gcc_128 enable-ssl3
+        make -j $(nproc)
+        make -j $(nproc) install
+    popd
