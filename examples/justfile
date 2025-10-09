@@ -47,3 +47,72 @@ openssl version="3.5.4":
         make -j $(nproc)
         make -j $(nproc) install
     popd
+
+# bc (GNU bc)
+bc version="1.07.1" gclang_config="":
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    if [ ! -d "bc-src" ]; then
+        curl -fL -O https://mirrors.ibiblio.org/gnu/bc/bc-{{version}}.tar.gz
+        tar zxf bc-{{version}}.tar.gz
+        mv bc-{{version}} bc-src
+        rm bc-{{version}}.tar.gz
+    fi
+    pushd bc-src
+        ./configure {{gclang_config}} --prefix=$PWD/install
+        make -j "$(nproc)"
+        make install
+        get-bc "$PWD/install/bin/bc"
+    popd
+
+# tic (from ncurses)
+tic version="6.4" gclang_config="":
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    if [ ! -d "ncurses" ]; then
+        curl -fL -O https://mirrors.ibiblio.org/gnu/ncurses/ncurses-{{version}}.tar.gz
+        tar zxf ncurses-{{version}}.tar.gz
+        mv ncurses-{{version}} ncurses
+        rm ncurses-{{version}}.tar.gz
+    fi
+    pushd ncurses
+        ./configure {{gclang_config}} --with-termlib --without-debug --prefix=$PWD/install
+        make -j "$(nproc)"
+        make install
+        get-bc "$PWD/install/bin/tic"
+    popd
+
+bison version="3.8.2" gclang_config="":
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    if [ ! -d "bison" ]; then
+        curl -fL -O https://mirrors.ibiblio.org/gnu/bison/bison-{{version}}.tar.gz
+        tar zxf bison-{{version}}.tar.gz
+        mv bison-{{version}} bison
+        rm bison-{{version}}.tar.gz
+    fi
+    pushd bison
+        ./configure {{gclang_config}} --prefix=$PWD/install
+        make -j "$(nproc)"
+        make install
+        get-bc "$PWD/install/bin/bison"
+    popd
+
+# readelf and strip (from binutils)
+binutils version="2.42" gclang_config="":
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    if [ ! -d "binutils" ]; then
+        curl -fL -O https://mirrors.ibiblio.org/gnu/binutils/binutils-{{version}}.tar.xz
+        tar Jxf binutils-{{version}}.tar.xz
+        mv binutils-{{version}} binutils
+        rm binutils-{{version}}.tar.xz
+    fi
+    pushd binutils
+        ./configure {{gclang_config}} --disable-werror --prefix=$PWD/install
+        make -j "$(nproc)"
+        make install
+        # Install paths are the installed names; 'strip-new' is a build-tree name.
+        get-bc "$PWD/install/bin/readelf"
+        get-bc "$PWD/install/bin/strip"
+    popd
