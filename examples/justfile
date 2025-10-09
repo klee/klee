@@ -60,9 +60,10 @@ bc version="1.07.1" gclang_config="":
     fi
     pushd bc-src
         ./configure {{gclang_config}} --prefix=$PWD/install
-        make -j "$(nproc)"
-        make install
-        get-bc "$PWD/install/bin/bc"
+        make clean
+        make {{gclang_config}} STRIP=: -j "$(nproc)"
+        make {{gclang_config}} STRIP=: install
+        # get-bc "$PWD/install/bin/bc"
     popd
 
 # tic (from ncurses)
@@ -79,7 +80,7 @@ tic version="6.4" gclang_config="":
         ./configure {{gclang_config}} --with-termlib --without-debug --prefix=$PWD/install
         make -j "$(nproc)"
         make install
-        get-bc "$PWD/install/bin/tic"
+        # get-bc "$PWD/install/bin/tic"
     popd
 
 bison version="3.8.2" gclang_config="":
@@ -95,9 +96,9 @@ bison version="3.8.2" gclang_config="":
         ./configure {{gclang_config}} --prefix=$PWD/install
         make -j "$(nproc)"
         make install
-        get-bc "$PWD/install/bin/bison"
+        # get-bc "$PWD/install/bin/bison"
     popd
-
+  
 # readelf and strip (from binutils)
 binutils version="2.42" gclang_config="":
     #!/usr/bin/env bash
@@ -113,6 +114,6 @@ binutils version="2.42" gclang_config="":
         make -j "$(nproc)"
         make install
         # Install paths are the installed names; 'strip-new' is a build-tree name.
-        get-bc "$PWD/install/bin/readelf"
-        get-bc "$PWD/install/bin/strip"
+        # get-bc "$PWD/install/bin/readelf"
+        # get-bc "$PWD/install/bin/strip"
     popd
