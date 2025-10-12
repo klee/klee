@@ -48,6 +48,37 @@ openssl version="3.5.4":
         make -j $(nproc) install
     popd
 
+curl version="8.16.0":
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    install_dir=$PWD/curl/install
+    src_dir=$PWD/curl/src
+    if [ ! -d "$src_dir" ]; then
+        mkdir -p $PWD/curl
+        curl -fL -O https://curl.se/download/curl-{{version}}.tar.gz
+        tar zxf curl-{{version}}.tar.gz
+        mv curl-{{version}} $src_dir
+        rm curl-{{version}}.tar.gz
+    fi
+    pushd $src_dir
+        make clean
+        {{gclang_config}} ./configure --prefix=$install_dir \
+            --without-libpsl   \
+            --without-librtmp  \
+            --without-libgsasl \
+            --without-ssl      \
+            --without-zlib     \
+            --without-brotli   \
+            --without-zstd     \
+            --disable-pthreads \
+            --disable-rt       \
+            --disable-shared
+        make -j $(nproc)
+        make -j $(nproc) install
+    popd
+    get-bc $install_dir/bin/curl
+
+
 # bc (GNU bc)
 bc version="1.07.1":
     #!/usr/bin/env bash
@@ -118,3 +149,93 @@ binutils version="2.42":
         get-bc "$PWD/install/bin/readelf"
         get-bc "$PWD/install/bin/strip"
     popd
+
+# ---- tiffinfo (from libtiff) ----
+tiffinfo version="4.6.0":
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    if [ ! -d "tiff" ]; then
+        curl -fL -O https://download.osgeo.org/libtiff/tiff-{{version}}.tar.gz
+        tar zxf tiff-{{version}}.tar.gz
+        mv tiff-{{version}} tiff
+        rm tiff-{{version}}.tar.gz
+    fi
+    pushd tiff
+        make clean || true
+        {{gclang_config}} ./configure --prefix="$PWD/install" --disable-shared
+        make -j "$(nproc)"
+        make install
+        get-bc "$PWD/install/bin/tiffinfo"
+    popd
+
+
+# ---- flvmeta  ----
+flvmeta version="1.2.2":
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    if [ ! -d "flvmeta" ]; then
+        curl -fL -o flvmeta-{{version}}.tar.gz \
+          "https://github.com/noirotm/flvmeta/archive/refs/tags/v{{version}}.tar.gz"
+        tar zxf flvmeta-{{version}}.tar.gz
+        mv flvmeta-{{version}} flvmeta
+        rm flvmeta-{{version}}.tar.gz
+    fi
+    pushd flvmeta
+        rm -rf build
+        {{gclang_config}} cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_INSTALL_PREFIX="$PWD/install" \
+            -DBUILD_SHARED_LIBS=OFF
+        ninja -C build -j "$(nproc)"
+        ninja -C build install
+        get-bc "$PWD/install/bin/flvmeta"
+    popd
+
+# ---- transicc (from lcms2) ----
+transicc version="2.16":
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    if [ ! -d "lcms2" ]; then
+        curl -fL -O https://downloads.sourceforge.net/project/lcms/lcms/{{version}}/lcms2-{{version}}.tar.gz
+        tar zxf lcms2-{{version}}.tar.gz
+        mv lcms2-{{version}} lcms2
+        rm lcms2-{{version}}.tar.gz
+    fi
+    pushd lcms2
+        make clean || true
+        {{gclang_config}} ./configure --prefix="$PWD/install" --disable-shared
+        make -j "$(nproc)"
+        make install
+        get-bc "$PWD/install/bin/transicc"
+    popd
+
+
+# ---- jasper  ----
+jasper version="4.2.4":
+    #!/usr/bin/env bash
+    set -euxo pipefail
+
+    # fresh, correct source (includes cmake/ modules)
+    rm -rf jasper jasper-{{version}}.tar.gz
+    curl -fL -o jasper-{{version}}.tar.gz \
+      "https://github.com/jasper-software/jasper/releases/download/version-{{version}}/jasper-{{version}}.tar.gz"
+    tar zxf jasper-{{version}}.tar.gz
+    mv jasper-{{version}} jasper
+    rm jasper-{{version}}.tar.gz
+
+    # build OUTSIDE the source tree to avoid "InSourceBuild" logic and double 'build/' paths
+    rm -rf build-jasper
+    mkdir -p build-jasper
+
+    # make sure CC/CXX/CFLAGS are applied to the first configure
+    {{gclang_config}} cmake -S jasper -B build-jasper -G Ninja \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCMAKE_INSTALL_PREFIX="$PWD/jasper/install" \
+        -DJAS_ENABLE_PROGRAMS=ON \
+        -DJAS_ENABLE_SHARED=OFF
+
+    ninja -C build-jasper -j"$(nproc)"
+    ninja -C build-jasper install
+
+    get-bc "$PWD/jasper/install/bin/jasper"
+
