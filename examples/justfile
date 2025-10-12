@@ -49,7 +49,7 @@ openssl version="3.5.4":
     popd
 
 # bc (GNU bc)
-bc version="1.07.1" gclang_config="":
+bc version="1.07.1":
     #!/usr/bin/env bash
     set -euxo pipefail
     if [ ! -d "bc-src" ]; then
@@ -59,15 +59,16 @@ bc version="1.07.1" gclang_config="":
         rm bc-{{version}}.tar.gz
     fi
     pushd bc-src
-        ./configure {{gclang_config}} --prefix=$PWD/install
+        {{gclang_config}}
+        ./configure --prefix=$PWD/install --disable-shared
         make clean
-        make {{gclang_config}} STRIP=: -j "$(nproc)"
-        make {{gclang_config}} STRIP=: install
-        # get-bc "$PWD/install/bin/bc"
+        make -j $(nproc)
+        make -j $(nproc) install
+        get-bc "$PWD/install/bin/bc"
     popd
 
 # tic (from ncurses)
-tic version="6.4" gclang_config="":
+tic version="6.4":
     #!/usr/bin/env bash
     set -euxo pipefail
     if [ ! -d "ncurses" ]; then
@@ -77,13 +78,13 @@ tic version="6.4" gclang_config="":
         rm ncurses-{{version}}.tar.gz
     fi
     pushd ncurses
-        ./configure {{gclang_config}} --with-termlib --without-debug --prefix=$PWD/install
+        {{gclang_config}} ./configure  --with-termlib --without-debug --prefix=$PWD/install
         make -j "$(nproc)"
         make install
-        # get-bc "$PWD/install/bin/tic"
+        get-bc "$PWD/install/bin/tic"
     popd
 
-bison version="3.8.2" gclang_config="":
+bison version="3.8.2":
     #!/usr/bin/env bash
     set -euxo pipefail
     if [ ! -d "bison" ]; then
@@ -93,14 +94,14 @@ bison version="3.8.2" gclang_config="":
         rm bison-{{version}}.tar.gz
     fi
     pushd bison
-        ./configure {{gclang_config}} --prefix=$PWD/install
+        {{gclang_config}} ./configure --prefix=$PWD/install
         make -j "$(nproc)"
         make install
-        # get-bc "$PWD/install/bin/bison"
+        get-bc "$PWD/install/bin/bison"
     popd
   
 # readelf and strip (from binutils)
-binutils version="2.42" gclang_config="":
+binutils version="2.42":
     #!/usr/bin/env bash
     set -euxo pipefail
     if [ ! -d "binutils" ]; then
@@ -110,10 +111,10 @@ binutils version="2.42" gclang_config="":
         rm binutils-{{version}}.tar.xz
     fi
     pushd binutils
-        ./configure {{gclang_config}} --disable-werror --prefix=$PWD/install
+        {{gclang_config}}
+        ./configure --disable-werror --prefix=$PWD/install
         make -j "$(nproc)"
         make install
-        # Install paths are the installed names; 'strip-new' is a build-tree name.
-        # get-bc "$PWD/install/bin/readelf"
-        # get-bc "$PWD/install/bin/strip"
+        get-bc "$PWD/install/bin/readelf"
+        get-bc "$PWD/install/bin/strip"
     popd
