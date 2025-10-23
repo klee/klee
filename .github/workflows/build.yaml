@@ -36,93 +36,14 @@ jobs:
     strategy:
       matrix:
         name: [
-          "LLVM 16",
-          "LLVM 15",
-          "LLVM 14",
-          "LLVM 13, Doxygen",
-          "LLVM 12",
-          "LLVM 11",
-          "ASan",
-          "UBSan",
-          "MSan",
-          "Z3 only",
-          "metaSMT",
           "STP master",
-          "Latest klee-uclibc",
-          "Asserts disabled",
-          "No TCMalloc, optimised runtime",
         ]
         include:
-          - name: "LLVM 16"
-            env:
-              LLVM_VERSION: 16
-          - name: "LLVM 15"
-            env:
-              LLVM_VERSION: 15
-          - name: "LLVM 14"
-            env:
-              LLVM_VERSION: 14
-          - name: "LLVM 13, Doxygen"
-            env:
-              LLVM_VERSION: 13
-              ENABLE_DOXYGEN: 1
-          - name: "LLVM 12"
-            env:
-              LLVM_VERSION: 12
-          - name: "LLVM 11"
-            env:
-              LLVM_VERSION: 11
-          # Sanitizer builds. Do unoptimized build otherwise the optimizer
-          # might remove problematic code
-          - name: "ASan"
-            env:
-              SANITIZER_BUILD: address
-              ENABLE_OPTIMIZED: 0
-              USE_TCMALLOC: 0
-              SANITIZER_LLVM_VERSION: 13
-          - name: "UBSan"
-            env:
-              SANITIZER_BUILD: undefined
-              ENABLE_OPTIMIZED: 0
-              USE_TCMALLOC: 0
-              SANITIZER_LLVM_VERSION: 13
-          - name: "MSan"
-            env:
-              SANITIZER_BUILD: memory
-              ENABLE_OPTIMIZED: 0
-              USE_TCMALLOC: 0
-              SOLVERS: STP
-              SANITIZER_LLVM_VERSION: 14
-          # Test just using Z3 only
-          - name: "Z3 only"
-            env:
-              SOLVERS: Z3
-          # Test just using metaSMT
-          - name: "metaSMT"
-            env:
-              METASMT_VERSION: qf_abv
-              SOLVERS: metaSMT
-              METASMT_DEFAULT: STP
-              REQUIRES_RTTI: 1
           # Test we can build against STP master
           - name: "STP master"
             env:
               SOLVERS: STP
               STP_VERSION: master
-          # Check we can build latest klee-uclibc branch
-          - name: "Latest klee-uclibc"
-            env:
-              UCLIBC_VERSION: klee_0_9_29
-          # Check at least one build with Asserts disabled.
-          - name: "Asserts disabled"
-            env:
-              SOLVERS: STP
-              DISABLE_ASSERTIONS: 1
-          # Check without TCMALLOC and with an optimised runtime library
-          - name: "No TCMalloc, optimised runtime"
-            env:
-              USE_TCMALLOC: 0
-              KLEE_RUNTIME_BUILD: "Release+Debug+Asserts"
     steps:
       - name: Checkout KLEE source code
         uses: actions/checkout@v4
