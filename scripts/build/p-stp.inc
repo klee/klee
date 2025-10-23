@@ -9,7 +9,7 @@ setup_build_variables_stp() {
   MINISAT_INSTALL_PATH="${BASE}/minisat-install${STP_SUFFIX}"
 
   if version_gt "${STP_VERSION}" "2.3.4"; then
-     ABC_INSTALL_PATH="${BASE}/stp-${STP_VERSION}-build${STP_SUFFIX}/lib/extlib-abc/build/"
+     ABC_INSTALL_PATH="${BASE}/stp-${STP_VERSION}-build${STP_SUFFIX}/lib/extlib-abc/"
   fi
 
   STP_BUILD_PATH="${BASE}/stp-${STP_VERSION}-build${STP_SUFFIX}"
