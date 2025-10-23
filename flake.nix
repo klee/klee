@@ -37,6 +37,7 @@
               cppcheck
               lit
               texinfo
+              unzip
             ]
             ++ (with pkgs.llvmPackages_13; [
               libllvm
@@ -44,6 +45,8 @@
               clang-tools
             ])
             ++ (with pkgs.python312Packages; [
+              pandas
+              matplotlib
               distutils
               tabulate
               z3-solver
