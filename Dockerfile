@@ -64,7 +64,7 @@ RUN /bin/bash -c 'echo "export \"PATH=$PATH:$(cd ${BASE}/llvm-*-install*/bin/ &&
 # Add KLEE header files to system standard include folder
 RUN sudo /bin/bash -c 'ln -s /tmp/klee_src/include/klee /usr/include/'
 
-ENV LD_LIBRARY_PATH /home/klee/klee_build/lib/
+ENV LD_LIBRARY_PATH=/home/klee/klee_build/lib/
 
 # Add KLEE binary directory to PATH
 RUN /bin/bash -c 'ln -s ${BASE}/klee_src /home/klee/ && ln -s ${BASE}/klee_build* /home/klee/klee_build'
