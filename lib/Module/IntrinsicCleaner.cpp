@@ -72,13 +72,11 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       case Intrinsic::fmuladd:
       case Intrinsic::fshr:
       case Intrinsic::fshl:
-#if LLVM_VERSION_CODE >= LLVM_VERSION(12, 0)
       case Intrinsic::abs:
       case Intrinsic::smax:
       case Intrinsic::smin:
       case Intrinsic::umax:
       case Intrinsic::umin:
-#endif
         break;
 
         // Lower vacopy so that object resolution etc is handled by
@@ -360,9 +358,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
       case Intrinsic::exp2:
       case Intrinsic::exp:
       case Intrinsic::expect:
-#if LLVM_VERSION_CODE >= LLVM_VERSION(12, 0)
       case Intrinsic::experimental_noalias_scope_decl:
-#endif
       case Intrinsic::floor:
 #if LLVM_VERSION_CODE < LLVM_VERSION(16, 0)
       case Intrinsic::flt_rounds:
