@@ -82,6 +82,11 @@ static void stp_error_handler(const char *err_msg) {
 }
 
 namespace klee {
+  static void stp_failure(std::string const& err_msg) {
+    if (IgnoreSTPFailures)
+      klee_warning("%s", err_msg.c_str());
+    else klee_error("%s", err_msg.c_str());
+  }
 
 class STPSolverImpl : public SolverImpl {
 private:
@@ -293,11 +298,7 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
   int pid = fork();
   // - error
   if (pid == -1) {
-    std::string msg = "fork() failed for STP - " + llvm::sys::StrError(errno);
-    llvm::errs() << msg << "\n";
-    if (IgnoreSTPFailures)
-      klee_warning("%s", msg.c_str());
-    else klee_error("%s", msg.c_str());
+    stp_failure("fork() failed for STP - " + llvm::sys::StrError(errno));
     return SolverImpl::SOLVER_RUN_STATUS_FORK_FAILED;
   }
   // - child (solver)
@@ -328,11 +329,7 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
     } while (res < 0 && errno == EINTR);
 
     if (res < 0) {
-      const char *msg = "waitpid() for STP failed";
-      if (IgnoreSTPFailures)
-        klee_warning("%s", msg);
-      else klee_error("%s", msg);
-
+      stp_failure("waitpid() for STP failed");
       return SolverImpl::SOLVER_RUN_STATUS_WAITPID_FAILED;
     }
 
@@ -340,11 +337,8 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
     // "occasion" return a status when the process was terminated by a
     // signal, so test signal first.
     if (WIFSIGNALED(status) || !WIFEXITED(status)) {
-      const char *msg = "STP did not return successfully. "
-                        "Most likely you forgot to run 'ulimit -s unlimited'";
-      if (IgnoreSTPFailures)
-        klee_warning("%s", msg);
-      else klee_error("%s", msg);
+      stp_failure("STP did not return successfully. "
+                  "Most likely you forgot to run 'ulimit -s unlimited'");
 
       return SolverImpl::SOLVER_RUN_STATUS_INTERRUPTED;
     }
@@ -378,11 +372,7 @@ runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
     }
 
     // unknown return code
-    const char* msg = "STP did not return a recognised code";
-    if (IgnoreSTPFailures)
-      klee_warning("%s", msg);
-    else klee_error("%s", msg);
-
+    stp_failure("STP did not return a recognised code");
     return SolverImpl::SOLVER_RUN_STATUS_UNEXPECTED_EXIT_CODE;
   }
 }
