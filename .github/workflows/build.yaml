@@ -40,8 +40,6 @@ jobs:
           "LLVM 15",
           "LLVM 14",
           "LLVM 13, Doxygen",
-          "LLVM 12",
-          "LLVM 11",
           "ASan",
           "UBSan",
           "MSan",
@@ -66,12 +64,6 @@ jobs:
             env:
               LLVM_VERSION: 13
               ENABLE_DOXYGEN: 1
-          - name: "LLVM 12"
-            env:
-              LLVM_VERSION: 12
-          - name: "LLVM 11"
-            env:
-              LLVM_VERSION: 11
           # Sanitizer builds. Do unoptimized build otherwise the optimizer
           # might remove problematic code
           - name: "ASan"

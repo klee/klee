@@ -1768,7 +1768,6 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       break;
     }
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(12, 0)
     case Intrinsic::abs: {
       if (isa<VectorType>(i->getOperand(0)->getType()))
         return terminateStateOnExecError(
@@ -1833,7 +1832,6 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       bindLocal(ki, state, result);
       break;
     }
-#endif
 
     case Intrinsic::fshr:
     case Intrinsic::fshl: {
