@@ -1,3 +1,33 @@
+KLEE 3.2, 23 December 2025
+==========================
+
+Incorporating changes from 1 March 2024 to 23 December 2025.
+Maintainers during this time span: @ccadar, @MartinNowack, @251, @danielschemmel
+Documentation at https://klee-se.org/releases/docs/v3.2
+
+== Major features and important changes ==
+- KLEE acquired a new domain name: klee-se.org
+- Added an option to generate XML test cases (@misonijnik)
+- Improved the freestanding runtime (@mrexodia)
+- Fixed support for concrete objects > 2^32 bytes (@ccadar)
+
+== LLVM support ==
+- Current recommended version is LLVM 16
+- Added partial support for LLVM 17-19 (@mrexodia)
+- Removed support for LLVM < 13 (@ccadar)
+- KLEE 3.2 will be the last version with support for LLVM <15
+
+== Options, scripts and KLEE intrinsics added, changed or removed ==
+- Renamed --ignore-solver-failures to --ignore-stp-failures (@ccadar)
+
+== Other changes ==
+- Added functions for comparing versions to build scripts (@ccadar)
+- Added handler for _Exit (@fwc)
+- Reorganised tests: (@ccadar)
+- Disallow symbolic objects > 2^32 bytes, which were previously handled incorrectly (@ccadar)
+- Smaller refactorings, fixes and improvements, test cases, maintenance, comments, web version, website, etc. (@251, @ccadar, @danielschemmel, @dependabot, @homyhost, @jamacku, @jbuening, @MartinNowack, @ricardaxel, @sp1ff, @sreeshmaheshwar, @xokdvium)
+
+
 KLEE 3.1, 29 February 2024
 ==========================
 
