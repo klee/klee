@@ -69,6 +69,7 @@ class IntrinsicCleanerPass : public llvm::ModulePass {
   llvm::IntrinsicLowering *IL;
 
   bool runOnBasicBlock(llvm::BasicBlock &b, llvm::Module &M);
+  bool runOnFunction(llvm::Function &F);
 
 public:
   IntrinsicCleanerPass(const llvm::DataLayout &TD)
