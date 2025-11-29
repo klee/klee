@@ -15,8 +15,8 @@
 #include "klee/Support/CompilerWarning.h"
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
-#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -40,14 +40,42 @@ char IntrinsicCleanerPass::ID;
 
 bool IntrinsicCleanerPass::runOnModule(Module &M) {
   bool dirty = false;
-  for (Module::iterator f = M.begin(), fe = M.end(); f != fe; ++f)
-    for (Function::iterator b = f->begin(), be = f->end(); b != be; ++b)
-      dirty |= runOnBasicBlock(*b, M);
+  for (auto &f: M) {
+    dirty |= runOnFunction(f);
+    for (auto &b: f)
+      dirty |= runOnBasicBlock(b, M);
+  }
 
   if (Function *Declare = M.getFunction("llvm.trap")) {
     Declare->eraseFromParent();
     dirty = true;
   }
+  return dirty;
+}
+
+bool IntrinsicCleanerPass::runOnFunction(Function &F) {
+  bool dirty = false;
+  std::vector<FreezeInst *> freezeInstrs;
+
+  for (auto &bb : F) {
+    for (auto &instr : bb) {
+      FreezeInst *fi = dyn_cast<FreezeInst>(&instr);
+      if (fi) {
+        dirty = true;
+        freezeInstrs.push_back(fi);
+        Value *op = fi->getOperand(0);
+        if (isa<UndefValue>(op) || isa<PoisonValue>(op))
+          // op is undef or poison, replace with null constant of the same type
+          op = Constant::getNullValue(op->getType());
+        fi->replaceAllUsesWith(op);
+        fi->dropAllReferences();
+      }
+    }
+  }
+
+  for (auto *fi : freezeInstrs)
+    fi->eraseFromParent();
+
   return dirty;
 }
 
