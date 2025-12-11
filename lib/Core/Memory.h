@@ -47,11 +47,11 @@ private:
 
 public:
   unsigned id;
-  uint64_t address;
+  uintptr_t address;
 
   /// size in bytes
-  unsigned size;
-  unsigned alignment;
+  size_t size;
+  size_t alignment;
   mutable std::string name;
 
   bool isLocal;
@@ -84,7 +84,7 @@ public:
       allocSite(0) {
   }
 
-  MemoryObject(uint64_t _address, unsigned _size, unsigned _alignment,
+  MemoryObject(uintptr_t _address, size_t _size, size_t _alignment,
                bool _isLocal, bool _isGlobal, bool _isFixed,
                const llvm::Value *_allocSite,
                MemoryManager *_parent)
@@ -110,10 +110,10 @@ public:
     this->name = name;
   }
 
-  ref<ConstantExpr> getBaseExpr() const { 
+  ref<ConstantExpr> getBaseExpr() const {
     return ConstantExpr::create(address, Context::get().getPointerWidth());
   }
-  ref<ConstantExpr> getSizeExpr() const { 
+  ref<ConstantExpr> getSizeExpr() const {
     return ConstantExpr::create(size, Context::get().getPointerWidth());
   }
   ref<Expr> getOffsetExpr(ref<Expr> pointer) const {
@@ -122,7 +122,7 @@ public:
   ref<Expr> getBoundsCheckPointer(ref<Expr> pointer) const {
     return getBoundsCheckOffset(getOffsetExpr(pointer));
   }
-  ref<Expr> getBoundsCheckPointer(ref<Expr> pointer, unsigned bytes) const {
+  ref<Expr> getBoundsCheckPointer(ref<Expr> pointer, size_t bytes) const {
     return getBoundsCheckOffset(getOffsetExpr(pointer), bytes);
   }
 
@@ -134,7 +134,7 @@ public:
       return UltExpr::create(offset, getSizeExpr());
     }
   }
-  ref<Expr> getBoundsCheckOffset(ref<Expr> offset, unsigned bytes) const {
+  ref<Expr> getBoundsCheckOffset(ref<Expr> offset, size_t bytes) const {
     if (bytes<=size) {
       return UltExpr::create(offset, 
                              ConstantExpr::alloc(size - bytes + 1, 
@@ -194,7 +194,7 @@ private:
   mutable UpdateList updates;
 
 public:
-  unsigned size;
+  size_t size;
 
   bool readOnly;
 
@@ -222,16 +222,16 @@ public:
   void initializeToRandom();
 
   ref<Expr> read(ref<Expr> offset, Expr::Width width) const;
-  ref<Expr> read(unsigned offset, Expr::Width width) const;
-  ref<Expr> read8(unsigned offset) const;
+  ref<Expr> read(size_t offset, Expr::Width width) const;
+  ref<Expr> read8(size_t offset) const;
 
-  void write(unsigned offset, ref<Expr> value);
+  void write(size_t offset, ref<Expr> value);
   void write(ref<Expr> offset, ref<Expr> value);
 
-  void write8(unsigned offset, uint8_t value);
-  void write16(unsigned offset, uint16_t value);
-  void write32(unsigned offset, uint32_t value);
-  void write64(unsigned offset, uint64_t value);
+  void write8(size_t offset, uint8_t value);
+  void write16(size_t offset, uint16_t value);
+  void write32(size_t offset, uint32_t value);
+  void write64(size_t offset, uint64_t value);
   void print() const;
 
   /// Generate concrete values for each symbolic byte of the object and put them
@@ -252,28 +252,28 @@ private:
   void makeSymbolic();
 
   ref<Expr> read8(ref<Expr> offset) const;
-  void write8(unsigned offset, ref<Expr> value);
+  void write8(size_t offset, ref<Expr> value);
   void write8(ref<Expr> offset, ref<Expr> value);
 
-  void fastRangeCheckOffset(ref<Expr> offset, unsigned *base_r, 
-                            unsigned *size_r) const;
-  void flushRangeForRead(unsigned rangeBase, unsigned rangeSize) const;
-  void flushRangeForWrite(unsigned rangeBase, unsigned rangeSize);
+  void fastRangeCheckOffset(ref<Expr> offset, size_t *base_r,
+                            size_t *size_r) const;
+  void flushRangeForRead(size_t rangeBase, size_t rangeSize) const;
+  void flushRangeForWrite(size_t rangeBase, size_t rangeSize);
 
   /// isByteConcrete ==> !isByteKnownSymbolic
-  bool isByteConcrete(unsigned offset) const;
+  bool isByteConcrete(size_t offset) const;
 
   /// isByteKnownSymbolic ==> !isByteConcrete
-  bool isByteKnownSymbolic(unsigned offset) const;
+  bool isByteKnownSymbolic(size_t offset) const;
 
   /// isByteUnflushed(i) => (isByteConcrete(i) || isByteKnownSymbolic(i))
-  bool isByteUnflushed(unsigned offset) const;
+  bool isByteUnflushed(size_t offset) const;
 
-  void markByteConcrete(unsigned offset);
-  void markByteSymbolic(unsigned offset);
-  void markByteFlushed(unsigned offset);
-  void markByteUnflushed(unsigned offset);
-  void setKnownSymbolic(unsigned offset, Expr *value);
+  void markByteConcrete(size_t offset);
+  void markByteSymbolic(size_t offset);
+  void markByteFlushed(size_t offset);
+  void markByteUnflushed(size_t offset);
+  void setKnownSymbolic(size_t offset, Expr *value);
 
   ArrayCache *getArrayCache() const;
 };

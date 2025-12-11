@@ -4642,7 +4642,7 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
             /* Either sizes are equal or seed extension/trucation is allowed */
             std::vector<unsigned char> &values = si.assignment.bindings[array];
             values.insert(values.begin(), obj->bytes,
-                          obj->bytes + std::min(obj->numBytes, mo->size));
+                          obj->bytes + std::min((size_t) obj->numBytes, mo->size));
               for (unsigned i = obj->numBytes; i < mo->size; ++i)
                 values.push_back('\0');
           }
