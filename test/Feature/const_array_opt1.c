@@ -1,6 +1,5 @@
-// REQUIRES: not-msan
 // REQUIRES: not-ubsan
-// Disabling msan and ubsan because it times out on CI
+// Disabling ubsan because it times out on CI
 // RUN: %clang %s -emit-llvm %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --const-array-opt --max-time=10 --only-output-states-covering-new %t.bc | FileCheck %s

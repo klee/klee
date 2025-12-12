@@ -41,7 +41,6 @@ config.enable_z3 = True if @ENABLE_Z3@ == 1 else False
 config.enable_zlib = True if @HAVE_ZLIB_H@ == 1 else False
 config.have_asan = True if @IS_ASAN_BUILD@ == 1 else False
 config.have_ubsan = True if @IS_UBSAN_BUILD@ == 1 else False
-config.have_msan = True if @IS_MSAN_BUILD@ == 1 else False
 config.have_32bit_support = True if @M32_SUPPORTED@ == 1 else False
 config.have_sqlite3 = True if "@SQLITE_CLI@".strip() != "" else False
 
