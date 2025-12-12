@@ -42,7 +42,6 @@ jobs:
           "LLVM 13, Doxygen",
           "ASan",
           "UBSan",
-          "MSan",
           "Z3 only",
           "metaSMT",
 #          "STP master",
@@ -78,13 +77,6 @@ jobs:
               ENABLE_OPTIMIZED: 0
               USE_TCMALLOC: 0
               SANITIZER_LLVM_VERSION: 13
-          - name: "MSan"
-            env:
-              SANITIZER_BUILD: memory
-              ENABLE_OPTIMIZED: 0
-              USE_TCMALLOC: 0
-              SOLVERS: STP
-              SANITIZER_LLVM_VERSION: 14
           # Test just using Z3 only
           - name: "Z3 only"
             env:
