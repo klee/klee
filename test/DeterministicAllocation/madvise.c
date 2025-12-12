@@ -1,10 +1,10 @@
-// REQUIRES: not-msan && not-asan
+// REQUIRES: not-asan
 // RUN: %clang %s -emit-llvm -g -c -o %t.bc
 // RUN: rm -rf %t.klee-out %t.log
 // RUN: %klee -kdalloc -kdalloc-quarantine=-1 -output-dir=%t.klee-out %t.bc -exit-on-error 2>&1 | tee %t.log
 // RUN: FileCheck %s -input-file=%t.log
 
-// This test is disabled for asan and msan because they create additional page faults
+// This test is disabled for asan because it creates additional page faults
 
 #include <assert.h>
 #include <stddef.h>
