@@ -1,5 +1,3 @@
-// REQUIRES: not-msan
-// Disabling msan because it times out on CI
 // REQUIRES: libcxx
 // REQUIRES: uclibc
 // RUN: %clangxx %s -emit-llvm %O0opt -c -std=c++11 %libcxx_includes -g -nostdinc++ -o %t1.bc

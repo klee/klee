@@ -15,10 +15,8 @@
 
 #include <sys/resource.h>
 
-// This test is disabled for asan and msan because they create additional page
-// faults
-#if !defined(__has_feature) ||                                                 \
-    (!__has_feature(memory_sanitizer) && !__has_feature(address_sanitizer))
+// This test is disabled for asan because it creates additional page faults
+#if !defined(__has_feature) || !__has_feature(address_sanitizer)
 
 std::size_t write_to_allocations(std::vector<void *> &allocations) {
   struct rusage ru;

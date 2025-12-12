@@ -1,4 +1,3 @@
-// REQUIRES: not-msan
 // Requires instrumented zlib linked
 // REQUIRES: zlib
 // RUN: %clang %s -emit-llvm -g %O0opt -c -o %t1.bc
