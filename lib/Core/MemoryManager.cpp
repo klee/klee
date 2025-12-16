@@ -272,8 +272,9 @@ MemoryObject *MemoryManager::allocate(uint64_t size, bool isLocal,
                                       const llvm::Value *allocSite,
                                       size_t alignment) {
   if (size > 10 * 1024 * 1024)
-    klee_warning_once(0, "Large alloc: %" PRIu64
-                         " bytes.  KLEE may run out of memory.",
+    klee_warning_once(nullptr,
+                      "Large memory allocation (%" PRIu64 " bytes). "
+                      "KLEE may run out of memory.",
                       size);
 
   // Return NULL if size is zero, this is equal to error during allocation

@@ -11,7 +11,7 @@ int main() {
   assert(p);
   p[1] = 52;
 
-  // CHECK: KLEE: WARNING ONCE: Large alloc
+  // CHECK: KLEE: WARNING ONCE: Large memory allocation (1073741824 bytes). KLEE may run out of memory.
   int *p2 = realloc(p, 1<<30);
   assert(!p2 || p2[1] == 52);
 
