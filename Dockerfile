@@ -1,11 +1,11 @@
-FROM ghcr.io/klee/llvm:130_O_D_A_ubuntu_jammy-20230126 AS llvm_base
-FROM ghcr.io/klee/gtest:1.11.0_ubuntu_jammy-20230126 AS gtest_base
-FROM ghcr.io/klee/uclibc:klee_uclibc_v1.3_130_ubuntu_jammy-20230126 AS uclibc_base
-FROM ghcr.io/klee/tcmalloc:2.9.1_ubuntu_jammy-20230126 AS tcmalloc_base
-FROM ghcr.io/klee/stp:2.3.3_ubuntu_jammy-20230126 AS stp_base
-FROM ghcr.io/klee/z3:4.8.15_ubuntu_jammy-20230126 AS z3_base
-FROM ghcr.io/klee/libcxx:130_ubuntu_jammy-20230126 AS libcxx_base
-FROM ghcr.io/klee/sqlite:3400100_ubuntu_jammy-20230126 AS sqlite3_base
+FROM ghcr.io/klee/llvm:160_O_D_A_ubuntu_jammy-20251001 AS llvm_base
+FROM ghcr.io/klee/gtest:1.16.0_ubuntu_jammy-20251001 AS gtest_base
+FROM ghcr.io/klee/uclibc:klee_uclibc_v1.4_160_ubuntu_jammy-20251001 AS uclibc_base
+FROM ghcr.io/klee/tcmalloc:2.9.1_ubuntu_jammy-20251001 AS tcmalloc_base
+FROM ghcr.io/klee/stp:2.3.4_ubuntu_jammy-20251001 AS stp_base
+FROM ghcr.io/klee/z3:4.8.15_ubuntu_jammy-20251001 AS z3_base
+FROM ghcr.io/klee/libcxx:160_ubuntu_jammy-20251001 AS libcxx_base
+FROM ghcr.io/klee/sqlite:3400100_ubuntu_jammy-20251001 AS sqlite3_base
 FROM llvm_base AS intermediate
 COPY --from=gtest_base /tmp /tmp/
 COPY --from=uclibc_base /tmp /tmp/
@@ -17,7 +17,7 @@ COPY --from=sqlite3_base /tmp /tmp/
 ENV COVERAGE=0
 ENV USE_TCMALLOC=1
 ENV BASE=/tmp
-ENV LLVM_VERSION=13.0
+ENV LLVM_VERSION=16.0
 ENV ENABLE_DOXYGEN=1
 ENV ENABLE_OPTIMIZED=1
 ENV ENABLE_DEBUG=1
@@ -28,7 +28,7 @@ ENV GTEST_VERSION=1.16.0
 ENV UCLIBC_VERSION=klee_uclibc_v1.3
 ENV TCMALLOC_VERSION=2.9.1
 ENV SANITIZER_BUILD=
-ENV STP_VERSION=2.3.3
+ENV STP_VERSION=2.3.4
 ENV MINISAT_VERSION=master
 ENV Z3_VERSION=4.8.15
 ENV USE_LIBCXX=1
@@ -56,7 +56,7 @@ RUN /tmp/klee_src/scripts/build/build.sh --debug --install-system-deps klee && p
     sudo rm -rf /var/lib/apt/lists/*
 
 
-ENV PATH="$PATH:/tmp/llvm-130-install_O_D_A/bin:/home/klee/klee_build/bin:/home/klee/.local/bin"
+ENV PATH="$PATH:/tmp/llvm-160-install_O_D_A/bin:/home/klee/klee_build/bin:/home/klee/.local/bin"
 ENV BASE=/tmp
 # Add path to local LLVM installation - let system install precede local install
 RUN /bin/bash -c 'echo "export \"PATH=$PATH:$(cd ${BASE}/llvm-*-install*/bin/ && pwd)\" >> /home/klee/.bashrc"'
