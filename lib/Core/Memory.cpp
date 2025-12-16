@@ -375,11 +375,20 @@ ref<Expr> ObjectState::read8(size_t offset) const {
   }    
 }
 
-ref<Expr> ObjectState::read8(ref<Expr> offset) const {
+ref<Expr> ObjectState::read8(Executor &executor, ExecutionState &state, ref<Expr> offset) const {
   assert(!isa<ConstantExpr>(offset) &&
          "constant offset passed to symbolic read8");
+
   size_t base, size;
   fastRangeCheckOffset(offset, &base, &size);
+
+  if (size > UINT32_MAX) {
+    executor.terminateStateOnExecError(
+        state, "Symbolic reads from objects larger than 4 GiB are not allowed "
+               "(object size: " + llvm::utostr(size) + " bytes).");
+    return nullptr;
+  }
+
   flushRangeForRead(base, size);
 
   if (size > 4096) {
@@ -387,7 +396,7 @@ ref<Expr> ObjectState::read8(ref<Expr> offset) const {
     object->getAllocInfo(allocInfo);
     klee_warning_once(
         nullptr,
-        "Symbolic memory access will send the following array of %zu bytes to "
+        "Symbolic memory read will send the following array of %zu bytes to "
         "the constraint solver -- large symbolic arrays may cause significant "
         "performance issues: %s",
         size, allocInfo.c_str());
@@ -417,11 +426,18 @@ void ObjectState::write8(size_t offset, ref<Expr> value) {
   }
 }
 
-void ObjectState::write8(ref<Expr> offset, ref<Expr> value) {
+void ObjectState::write8(Executor &executor, ExecutionState &state, ref<Expr> offset, ref<Expr> value) {
   assert(!isa<ConstantExpr>(offset) &&
          "constant offset passed to symbolic write8");
   size_t base, size;
   fastRangeCheckOffset(offset, &base, &size);
+
+  if (size > UINT32_MAX) {
+    executor.terminateStateOnExecError(
+        state, "Symbolic writes from objects larger than 4 GiB are not allowed "
+               "(object size: " + llvm::utostr(size) + " bytes).");
+  }
+
   flushRangeForWrite(base, size);
 
   if (size > 4096) {
@@ -429,7 +445,7 @@ void ObjectState::write8(ref<Expr> offset, ref<Expr> value) {
     object->getAllocInfo(allocInfo);
     klee_warning_once(
         nullptr,
-        "Symbolic memory access will send the following array of %zu bytes to "
+        "Symbolic memory write will send the following array of %zu bytes to "
         "the constraint solver -- large symbolic arrays may cause significant "
         "performance issues: %s",
         size, allocInfo.c_str());
@@ -440,7 +456,8 @@ void ObjectState::write8(ref<Expr> offset, ref<Expr> value) {
 
 /***/
 
-ref<Expr> ObjectState::read(ref<Expr> offset, Expr::Width width) const {
+ref<Expr> ObjectState::read(Executor &executor, ExecutionState &state,
+                            ref<Expr> offset, Expr::Width width) const {
   // Truncate offset to 32-bits.
   offset = ZExtExpr::create(offset, Expr::Int32);
 
@@ -450,7 +467,7 @@ ref<Expr> ObjectState::read(ref<Expr> offset, Expr::Width width) const {
 
   // Treat bool specially, it is the only non-byte sized write we allow.
   if (width == Expr::Bool)
-    return ExtractExpr::create(read8(offset), 0, Expr::Bool);
+    return ExtractExpr::create(read8(executor, state, offset), 0, Expr::Bool);
 
   // Otherwise, follow the slow general case.
   size_t NumBytes = width / 8;
@@ -458,9 +475,9 @@ ref<Expr> ObjectState::read(ref<Expr> offset, Expr::Width width) const {
   ref<Expr> Res(0);
   for (size_t i = 0; i != NumBytes; ++i) {
     size_t idx = Context::get().isLittleEndian() ? i : (NumBytes - i - 1);
-    ref<Expr> Byte = read8(AddExpr::create(offset, 
-                                           ConstantExpr::create(idx, 
-                                                                Expr::Int32)));
+    ref<Expr> Byte =
+        read8(executor, state,
+              AddExpr::create(offset, ConstantExpr::create(idx, Expr::Int32)));
     Res = i ? ConcatExpr::create(Byte, Res) : Byte;
   }
 
@@ -485,7 +502,8 @@ ref<Expr> ObjectState::read(size_t offset, Expr::Width width) const {
   return Res;
 }
 
-void ObjectState::write(ref<Expr> offset, ref<Expr> value) {
+void ObjectState::write(Executor &executor, ExecutionState &state,
+                        ref<Expr> offset, ref<Expr> value) {
   // Truncate offset to 32-bits.
   offset = ZExtExpr::create(offset, Expr::Int32);
 
@@ -498,7 +516,7 @@ void ObjectState::write(ref<Expr> offset, ref<Expr> value) {
   // Treat bool specially, it is the only non-byte sized write we allow.
   Expr::Width w = value->getWidth();
   if (w == Expr::Bool) {
-    write8(offset, ZExtExpr::create(value, Expr::Int8));
+    write8(executor, state, offset, ZExtExpr::create(value, Expr::Int8));
     return;
   }
 
@@ -507,7 +525,7 @@ void ObjectState::write(ref<Expr> offset, ref<Expr> value) {
   assert(w == NumBytes * 8 && "Invalid write size!");
   for (size_t i = 0; i != NumBytes; ++i) {
     size_t idx = Context::get().isLittleEndian() ? i : (NumBytes - i - 1);
-    write8(AddExpr::create(offset, ConstantExpr::create(idx, Expr::Int32)),
+    write8(executor, state, AddExpr::create(offset, ConstantExpr::create(idx, Expr::Int32)),
            ExtractExpr::create(value, 8 * i, Expr::Int8));
   }
 }

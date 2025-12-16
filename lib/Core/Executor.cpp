@@ -4494,10 +4494,10 @@ void Executor::executeMemoryOperation(ExecutionState &state,
                                          StateTerminationType::ReadOnly);
           } else {
             ObjectState *wos = state.addressSpace.getWriteable(mo, os);
-            wos->write(offset, value);
+            wos->write(*this, state, offset, value);
           }
         } else {
-          ref<Expr> result = os->read(offset, type);
+          ref<Expr> result = os->read(*this, state, offset, type);
 
           if (interpreterOpts.MakeConcreteSymbolic)
             result = replaceReadWithSymbolic(state, result);
@@ -4544,10 +4544,10 @@ void Executor::executeMemoryOperation(ExecutionState &state,
                                        StateTerminationType::ReadOnly);
         } else {
           ObjectState *wos = bound->addressSpace.getWriteable(mo, os);
-          wos->write(mo->getOffsetExpr(address), value);
+          wos->write(*this, state, mo->getOffsetExpr(address), value);
         }
       } else {
-        ref<Expr> result = os->read(mo->getOffsetExpr(address), type);
+        ref<Expr> result = os->read(*this, state, mo->getOffsetExpr(address), type);
         bindLocal(target, *bound, result);
       }
     }
@@ -4909,7 +4909,7 @@ void Executor::doImpliedValueConcretization(ExecutionState &state,
         assert(!os->readOnly && 
                "not possible? read only object with static read?");
         ObjectState *wos = state.addressSpace.getWriteable(mo, os);
-        wos->write(CE, it->second);
+        wos->write(*this, state, CE, it->second);
       }
     }
   }

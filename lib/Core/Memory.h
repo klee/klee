@@ -221,12 +221,14 @@ public:
   /// Make contents all concrete and random
   void initializeToRandom();
 
-  ref<Expr> read(ref<Expr> offset, Expr::Width width) const;
+  ref<Expr> read(Executor &executor, ExecutionState &state,
+                 ref<Expr> offset, Expr::Width width) const;
   ref<Expr> read(size_t offset, Expr::Width width) const;
   ref<Expr> read8(size_t offset) const;
 
   void write(size_t offset, ref<Expr> value);
-  void write(ref<Expr> offset, ref<Expr> value);
+  void write(Executor &executor, ExecutionState &state,
+             ref<Expr> offset, ref<Expr> value);
 
   void write8(size_t offset, uint8_t value);
   void write16(size_t offset, uint16_t value);
@@ -251,9 +253,11 @@ private:
 
   void makeSymbolic();
 
-  ref<Expr> read8(ref<Expr> offset) const;
+  ref<Expr> read8(Executor &executor, ExecutionState &state,
+                  ref<Expr> offset) const;
   void write8(size_t offset, ref<Expr> value);
-  void write8(ref<Expr> offset, ref<Expr> value);
+  void write8(Executor &executor,ExecutionState &state,
+              ref<Expr> offset, ref<Expr> value);
 
   void fastRangeCheckOffset(ref<Expr> offset, size_t *base_r,
                             size_t *size_r) const;
