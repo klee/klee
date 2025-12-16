@@ -23,11 +23,12 @@ int main() {
   klee_make_symbolic(&k, sizeof(k), "k");
   klee_assume(k < N);
   a[k] = 3;
-  // CHECK: KLEE: WARNING ONCE: Symbolic memory access will send the following array of 4100 bytes to the constraint solver
+  // CHECK: KLEE: WARNING ONCE: Symbolic memory write will send the following array of 4100 bytes to the constraint solver
 
   unsigned i;
   klee_make_symbolic(&i, sizeof(i), "i");
   klee_assume(i < N);
   if (a[i] == 2)
+  // CHECK: KLEE: WARNING ONCE: Symbolic memory read will send the following array of 4100 bytes to the constraint solver
     assert(i == 1);
 }
