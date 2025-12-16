@@ -4600,6 +4600,14 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
                                    const std::string &name) {
   // Create a new object state for the memory object (instead of a copy).
   if (!replayKTest) {
+    // Check if the size is greater than UINT32_MAX
+    if (mo->size > UINT32_MAX) {
+      terminateStateOnExecError(
+          state, "Symbolic objects larger than 4 GiB are not allowed "
+                 "(requested " + llvm::utostr(mo->size) + " bytes).");
+      return;
+    }
+
     // Find a unique name for this array.  First try the original name,
     // or if that fails try adding a unique identifier.
     unsigned id = 0;
