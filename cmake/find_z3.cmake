@@ -6,7 +6,6 @@
 # License. See LICENSE.TXT for details.
 #
 #===------------------------------------------------------------------------===#
-include(CMakePushCheckState)
 
 find_package(Z3)
 # Set the default so that if the following is true:
@@ -26,15 +25,8 @@ option(ENABLE_SOLVER_Z3 "Enable Z3 solver support" ${ENABLE_SOLVER_Z3_DEFAULT})
 if (ENABLE_SOLVER_Z3)
   message(STATUS "Z3 solver support enabled")
   if (Z3_FOUND)
-    include(CheckCXXSourceCompiles)
-
     message(STATUS "Found Z3")
     set(ENABLE_Z3 1) # For config.h
-
-    # Check the signature of `Z3_get_error_msg()`
-    cmake_push_check_state()
-    set(CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES} ${Z3_INCLUDE_DIRS})
-    set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} ${Z3_LIBRARIES})
 
     if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
       string(REPLACE ".so" ".dylib" Z3_LIBRARIES ${Z3_LIBRARIES})
