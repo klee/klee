@@ -10,6 +10,7 @@
 #ifndef KLEE_INSTRUCTIONINFOTABLE_H
 #define KLEE_INSTRUCTIONINFOTABLE_H
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_map>
