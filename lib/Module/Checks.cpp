@@ -14,6 +14,8 @@
 #include "KLEEIRMetaData.h"
 
 #include "klee/Support/CompilerWarning.h"
+
+#include <llvm/Support/NativeFormatting.h>
 DISABLE_WARNING_PUSH
 DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/IR/Constants.h"
@@ -35,6 +37,84 @@ DISABLE_WARNING_POP
 
 using namespace llvm;
 using namespace klee;
+
+char SignedDivOverflowCheckPass::ID;
+
+bool SignedDivOverflowCheckPass::runOnModule(Module &M) {
+  std::vector<llvm::BinaryOperator *> divInstruction;
+
+  for (auto &F : M) {
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        auto binOp = dyn_cast<BinaryOperator>(&I);
+        if (!binOp)
+          continue;
+
+        // find all [s][div|rem] instructions
+        auto opcode = binOp->getOpcode();
+        if (opcode != Instruction::SDiv && opcode != Instruction::SRem)
+          continue;
+
+        /*
+         * Check if the operands do not contain values, such that the operand
+         * corresponding to the numerator is the smallest possible value
+         * and the operand corresponding to the denominator is -1 (if constant
+         * values)
+         */
+        llvm::Value *LHS = binOp->getOperand(0);
+        llvm::Value *RHS = binOp->getOperand(1);
+
+        if (auto *CLHS = llvm::dyn_cast<llvm::ConstantInt>(LHS)) {
+          if (auto *CRHS = llvm::dyn_cast<llvm::ConstantInt>(RHS)) {
+            bool isIntMin = CLHS->isMinSignedValue();
+            bool isNegOne = CRHS->isAllOnesValue();
+
+            if (!(isIntMin && isNegOne)) {
+              continue;
+            }
+          }
+        }
+
+        // Check if the operand is already being checked for overflow
+        if (KleeIRMetaData::hasAnnotation(
+          I, "klee.check.overflow", "True"))
+          continue;
+        divInstruction.push_back(binOp);
+      }
+    }
+  }
+
+  // If nothing to do, return
+  if (divInstruction.empty())
+    return false;
+
+  LLVMContext &ctx = M.getContext();
+  KleeIRMetaData md(ctx);
+
+  auto divOverflowCheckFunction = M.getOrInsertFunction(
+      "klee_signed_div_overflow_check", Type::getVoidTy(ctx),
+      Type::getInt1Ty(ctx));
+
+  for (auto &divInst : divInstruction) {
+    llvm::IRBuilder<> Builder(divInst /* Inserts before divInst*/);
+    llvm::IntegerType *Ty = cast<llvm::IntegerType>(divInst->getType());
+
+    llvm::Value *LHS = divInst->getOperand(0);
+    llvm::Value *RHS = divInst->getOperand(1);
+    llvm::Value *IntMin =
+      Builder.getInt(llvm::APInt::getSignedMinValue(Ty->getBitWidth()));
+    llvm::Value *NegOne = llvm::Constant::getAllOnesValue(Ty);
+
+    llvm::Value *LHSCmp = Builder.CreateICmpEQ(LHS, IntMin);
+    llvm::Value *RHSCmp = Builder.CreateICmpEQ(RHS, NegOne);
+    llvm::Value *overflow = Builder.CreateAnd(LHSCmp, RHSCmp);
+
+    Builder.CreateCall(divOverflowCheckFunction, overflow);
+    md.addAnnotation(*divInst, "klee.check.overflow", "True");
+  }
+
+  return true;
+}
 
 char DivCheckPass::ID;
 

@@ -109,6 +109,28 @@ public:
   bool runOnModule(llvm::Module &M) override;
 };
 
+/// This pass injects checks to check for signed division overflow.
+///
+/// Signed division overflow occurs when the quotient that should be produced
+/// by a division operation can not be expressed within the given signed
+/// type. This undefined behavior may be present when a SDiv or SRem is
+/// executed.
+///
+/// Example:
+/// \code
+///     int x, y, result;
+///     x = INT_MIN; // Defined behaviour
+///     y = -1; // Defined behaviour
+///     result = x / y; // Undefined behaviour
+/// \endcode
+class SignedDivOverflowCheckPass : public llvm::ModulePass {
+  static char ID;
+
+  public:
+    SignedDivOverflowCheckPass() : ModulePass(ID) {}
+    bool runOnModule(llvm::Module &M) override;
+};
+
 /// This pass injects checks to check for overshifting.
 ///
 /// Overshifting is where a Shl, LShr or AShr is performed

@@ -33,7 +33,7 @@ using namespace llvm;
 using namespace klee;
 
 void klee::instrument(bool CheckDivZero, bool CheckOvershift,
-                      llvm::Module *module) {
+  bool CheckSignedOverflow, llvm::Module *module) {
   // Inject checks prior to optimization... we also perform the
   // invariant transformations that we will end up doing later so that
   // optimize is seeing what is as close as possible to the final
@@ -55,6 +55,9 @@ void klee::instrument(bool CheckDivZero, bool CheckOvershift,
     pm.add(new DivCheckPass());
   if (CheckOvershift)
     pm.add(new OvershiftCheckPass());
+  if (CheckSignedOverflow) {
+    pm.add(new SignedDivOverflowCheckPass());
+  }
 
   llvm::DataLayout targetData(module);
   pm.add(new IntrinsicCleanerPass(targetData));

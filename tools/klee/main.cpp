@@ -221,6 +221,12 @@ namespace {
                cl::cat(ChecksCat));
 
   cl::opt<bool>
+  CheckSignedOverflow("check-signed-overflow",
+               cl::desc("Inject checks for signed integer overflow (default=false)"),
+               cl::init(false),
+               cl::cat(ChecksCat));
+
+  cl::opt<bool>
   CheckOvershift("check-overshift",
                  cl::desc("Inject checks for overshift (default=true)"),
                  cl::init(true),
@@ -1370,7 +1376,8 @@ int main(int argc, char **argv, char **envp) {
   Interpreter::ModuleOptions Opts(LibraryDir.c_str(), EntryPoint, opt_suffix,
                                   /*Optimize=*/OptimizeModule,
                                   /*CheckDivZero=*/CheckDivZero,
-                                  /*CheckOvershift=*/CheckOvershift);
+                                  /*CheckOvershift=*/CheckOvershift,
+                                  /*CheckSignedOverflow=*/ CheckSignedOverflow);
 
   // Get the main function
   for (auto &module : loadedModules) {

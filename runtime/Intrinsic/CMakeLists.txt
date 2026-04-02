@@ -16,6 +16,7 @@ set(SRC_FILES
         klee_is_replay.c
         klee_overshift_check.c
         klee_range.c
+        klee_signed_div_overflow_check.c
         )
 
 # Build it
