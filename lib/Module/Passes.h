@@ -126,9 +126,31 @@ public:
 class SignedDivOverflowCheckPass : public llvm::ModulePass {
   static char ID;
 
-  public:
-    SignedDivOverflowCheckPass() : ModulePass(ID) {}
-    bool runOnModule(llvm::Module &M) override;
+public:
+  SignedDivOverflowCheckPass() : ModulePass(ID) {}
+  bool runOnModule(llvm::Module &M) override;
+};
+
+/// This pass injects checks to check for signed add/sub/mul overflow.
+///
+/// Signed overflow with regard to addition, subtraction, and multiplication
+/// shall occur when it is not possible to represent the result of the operation
+/// within the given signed type. This behavior may be present when an Add, Sub
+/// , or Mul instruction is present.
+///
+/// Example:
+/// \code
+///     int x, y, result;
+///     x = INT_MAX; // Defined behaviour
+///     y = INT_MAX; // Defined behaviour
+///     result = x + y; // Undefined behaviour
+/// \endcode
+class SignedMultiArithOverflowCheckPass : public llvm::ModulePass {
+  static char ID;
+
+public:
+  SignedMultiArithOverflowCheckPass() : ModulePass(ID) {}
+  bool runOnModule(llvm::Module &M) override;
 };
 
 /// This pass injects checks to check for overshifting.

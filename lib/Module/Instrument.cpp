@@ -14,6 +14,6 @@ using namespace klee;
 void klee::checkModule(bool DontVerfify, llvm::Module *module) { assert(0); }
 
 void klee::instrument(bool CheckDivZero, bool CheckOvershift,
-  bool CheckSignedOverflow, llvm::Module *module) {
+                      bool CheckSignedOverflow, llvm::Module *module) {
   assert(0);
 }

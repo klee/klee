@@ -38,6 +38,88 @@ DISABLE_WARNING_POP
 using namespace llvm;
 using namespace klee;
 
+char SignedMultiArithOverflowCheckPass::ID;
+
+bool SignedMultiArithOverflowCheckPass::runOnModule(Module &M) {
+  std::vector<llvm::BinaryOperator *> overflowInstructions;
+
+  for (auto &F : M) {
+    for (auto &BB : F) {
+      for (auto &I : BB) {
+        auto binOp = dyn_cast<BinaryOperator>(&I);
+        if (!binOp)
+          continue;
+
+        // find all [add|sub|mul] instructions
+        auto opcode = binOp->getOpcode();
+        if (opcode != Instruction::Add && opcode != Instruction::Sub &&
+            opcode != Instruction::Mul)
+          continue;
+
+        // Check if the operand is already being checked for overflow
+        if (KleeIRMetaData::hasAnnotation(I, "klee.check.overflow", "True"))
+          continue;
+        overflowInstructions.push_back(binOp);
+      }
+    }
+  }
+
+  // If nothing to do, return
+  if (overflowInstructions.empty())
+    return false;
+
+  LLVMContext &ctx = M.getContext();
+  KleeIRMetaData md(ctx);
+
+  auto overflowCheckFunction =
+      M.getOrInsertFunction("klee_signed_overflow_check", Type::getVoidTy(ctx),
+                            Type::getInt1Ty(ctx),   // overflow flag
+                            Type::getInt8PtrTy(ctx) // opcode string
+      );
+
+  for (auto &overflowInst : overflowInstructions) {
+    llvm::Intrinsic::ID IID;
+
+    llvm::IRBuilder<> Builder(overflowInst /* Inserts before arith op*/);
+    llvm::IntegerType *Ty = cast<llvm::IntegerType>(overflowInst->getType());
+    llvm::Value *opCodeStr =
+        Builder.CreateGlobalStringPtr(overflowInst->getOpcodeName());
+
+    llvm::Value *LHS = overflowInst->getOperand(0);
+    llvm::Value *RHS = overflowInst->getOperand(1);
+
+    switch (overflowInst->getOpcode()) {
+    case Instruction::Add:
+      IID = Intrinsic::sadd_with_overflow;
+      break;
+    case Instruction::Sub:
+      IID = Intrinsic::ssub_with_overflow;
+      break;
+    case Instruction::Mul:
+      IID = Intrinsic::smul_with_overflow;
+      break;
+    default:
+      llvm_unreachable("Unsupported opcode");
+    }
+
+    // Replace all instances of respective instruction with overflow intrinsic
+    llvm::Function *overflowIntrinsic = Intrinsic::getDeclaration(&M, IID, Ty);
+    llvm::Value *pair = Builder.CreateCall(overflowIntrinsic, {LHS, RHS});
+
+    // Collect the results of performing this intrinsic
+    llvm::Value *result = Builder.CreateExtractValue(pair, {0});
+    llvm::Value *overflow = Builder.CreateExtractValue(pair, {1});
+
+    Builder.CreateCall(overflowCheckFunction, {overflow, opCodeStr});
+
+    md.addAnnotation(*overflowInst, "klee.check.overflow", "True");
+    overflowInst->replaceAllUsesWith(result);
+    overflowInst->eraseFromParent();
+  }
+
+  return true;
+}
+
 char SignedDivOverflowCheckPass::ID;
 
 bool SignedDivOverflowCheckPass::runOnModule(Module &M) {
@@ -76,8 +158,7 @@ bool SignedDivOverflowCheckPass::runOnModule(Module &M) {
         }
 
         // Check if the operand is already being checked for overflow
-        if (KleeIRMetaData::hasAnnotation(
-          I, "klee.check.overflow", "True"))
+        if (KleeIRMetaData::hasAnnotation(I, "klee.check.overflow", "True"))
           continue;
         divInstruction.push_back(binOp);
       }
@@ -91,9 +172,12 @@ bool SignedDivOverflowCheckPass::runOnModule(Module &M) {
   LLVMContext &ctx = M.getContext();
   KleeIRMetaData md(ctx);
 
-  auto divOverflowCheckFunction = M.getOrInsertFunction(
-      "klee_signed_div_overflow_check", Type::getVoidTy(ctx),
-      Type::getInt1Ty(ctx));
+  auto overflowCheckFunction =
+      M.getOrInsertFunction("klee_signed_overflow_check",
+                            Type::getVoidTy(ctx),   // void
+                            Type::getInt1Ty(ctx),   // overflow flag
+                            Type::getInt8PtrTy(ctx) // opcode string
+      );
 
   for (auto &divInst : divInstruction) {
     llvm::IRBuilder<> Builder(divInst /* Inserts before divInst*/);
@@ -102,14 +186,17 @@ bool SignedDivOverflowCheckPass::runOnModule(Module &M) {
     llvm::Value *LHS = divInst->getOperand(0);
     llvm::Value *RHS = divInst->getOperand(1);
     llvm::Value *IntMin =
-      Builder.getInt(llvm::APInt::getSignedMinValue(Ty->getBitWidth()));
+        Builder.getInt(llvm::APInt::getSignedMinValue(Ty->getBitWidth()));
     llvm::Value *NegOne = llvm::Constant::getAllOnesValue(Ty);
 
     llvm::Value *LHSCmp = Builder.CreateICmpEQ(LHS, IntMin);
     llvm::Value *RHSCmp = Builder.CreateICmpEQ(RHS, NegOne);
     llvm::Value *overflow = Builder.CreateAnd(LHSCmp, RHSCmp);
 
-    Builder.CreateCall(divOverflowCheckFunction, overflow);
+    llvm::Value *opcodeStr =
+        Builder.CreateGlobalStringPtr(divInst->getOpcodeName());
+
+    Builder.CreateCall(overflowCheckFunction, {overflow, opcodeStr});
     md.addAnnotation(*divInst, "klee.check.overflow", "True");
   }
 

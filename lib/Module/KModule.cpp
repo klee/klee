@@ -194,7 +194,7 @@ bool KModule::link(std::vector<std::unique_ptr<llvm::Module>> &modules,
 
 void KModule::instrument(const Interpreter::ModuleOptions &opts) {
   klee::instrument(opts.CheckDivZero, opts.CheckOvershift,
-    opts.CheckSignedOverflow, module.get());
+                   opts.CheckSignedOverflow, module.get());
 }
 
 void KModule::optimiseAndPrepare(
@@ -203,7 +203,7 @@ void KModule::optimiseAndPrepare(
   // Add internal functions which are not used to check if instructions
   // have been already visited
   if (opts.CheckSignedOverflow)
-    addInternalFunction("klee_signed_div_overflow_check");
+    addInternalFunction("klee_signed_overflow_check");
   if (opts.CheckDivZero)
     addInternalFunction("klee_div_zero_check");
   if (opts.CheckOvershift)

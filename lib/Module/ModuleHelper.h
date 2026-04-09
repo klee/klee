@@ -25,8 +25,8 @@ void optimiseAndPrepare(bool OptimiseKLEECall, bool Optimize,
                         llvm::ArrayRef<const char *> preservedFunctions,
                         llvm::Module *module);
 void checkModule(bool DontVerfify, llvm::Module *module);
-void instrument(bool CheckDivZero, bool CheckOvershift, bool
-  CheckSignedOverflow, llvm::Module *module);
+void instrument(bool CheckDivZero, bool CheckOvershift,
+                bool CheckSignedOverflow, llvm::Module *module);
 
 void injectStaticConstructorsAndDestructors(llvm::Module *m,
                                             llvm::StringRef entryFunction);
