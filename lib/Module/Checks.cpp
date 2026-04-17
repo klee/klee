@@ -56,6 +56,12 @@ bool SignedMultiArithOverflowCheckPass::runOnModule(Module &M) {
             opcode != Instruction::Mul)
           continue;
 
+        // confirmation that the operation is intended to be signed and we
+        // should not expect overflow
+        if (!binOp->hasNoSignedWrap()) {
+          continue;
+        }
+
         // Check if the operand is already being checked for overflow
         if (KleeIRMetaData::hasAnnotation(I, "klee.check.overflow", "True"))
           continue;

@@ -114,7 +114,8 @@ public:
 /// Signed division overflow occurs when the quotient that should be produced
 /// by a division operation can not be expressed within the given signed
 /// type. This undefined behavior may be present when a SDiv or SRem is
-/// executed.
+/// executed. Note: This pass only applies to arithmetic operations that are
+/// marked with the NSW flag, as LLVM does not specify signedness otherwise.
 ///
 /// Example:
 /// \code
