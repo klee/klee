@@ -3589,14 +3589,24 @@ bool Executor::checkMemoryUsage() {
 }
 
 void Executor::doDumpStates() {
-  if (!DumpStatesOnHalt || states.empty()) {
-    interpreterHandler->incPathsExplored(states.size());
+  if (states.empty())
     return;
+
+  std::vector<ExecutionState *> remainingStates(states.begin(), states.end());
+
+  if (DumpStatesOnHalt) {
+    klee_message("halting execution, dumping remaining states");
+
+    for (ExecutionState *state : remainingStates) {
+      terminateStateEarly(*state, "Execution halting.",
+                          StateTerminationType::Interrupted);
+    }
+  } else {
+    for (ExecutionState *state : remainingStates) {
+      terminateState(*state, StateTerminationType::Interrupted);
+    }
   }
 
-  klee_message("halting execution, dumping remaining states");
-  for (const auto &state : states)
-    terminateStateEarly(*state, "Execution halting.", StateTerminationType::Interrupted);
   updateStates(nullptr);
 }
 
@@ -4774,7 +4784,7 @@ void Executor::runFunctionAsMain(Function *f,
   executionTree = nullptr;
 
   // hack to clear memory objects
-  memory = nullptr;
+  memory = std::make_unique<MemoryManager>(&arrayCache);
 
   globalObjects.clear();
   globalAddresses.clear();
