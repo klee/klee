@@ -3592,20 +3592,15 @@ void Executor::doDumpStates() {
   if (states.empty())
     return;
 
-  std::vector<ExecutionState *> remainingStates(states.begin(), states.end());
-
-  if (DumpStatesOnHalt) {
+  if (DumpStatesOnHalt)
     klee_message("halting execution, dumping remaining states");
 
-    for (ExecutionState *state : remainingStates) {
+  for (ExecutionState *state : states)
+    if (DumpStatesOnHalt)
       terminateStateEarly(*state, "Execution halting.",
                           StateTerminationType::Interrupted);
-    }
-  } else {
-    for (ExecutionState *state : remainingStates) {
+    else
       terminateState(*state, StateTerminationType::Interrupted);
-    }
-  }
 
   updateStates(nullptr);
 }
