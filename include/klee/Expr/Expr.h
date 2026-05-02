@@ -117,8 +117,6 @@ public:
   
 
   enum Kind {
-    InvalidKind = -1,
-
     // Primitive
 
     Constant = 0,
