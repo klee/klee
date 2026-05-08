@@ -28,8 +28,6 @@ UpdateNode::UpdateNode(const ref<UpdateNode> &_next, const ref<Expr> &_index,
   size = next ? next->size + 1 : 1;
 }
 
-extern "C" void vc_DeleteExpr(void*);
-
 int UpdateNode::compare(const UpdateNode &b) const {
   if (int i = index.compare(b.index)) 
     return i;
