@@ -509,11 +509,8 @@ public:
 private:
   unsigned hashValue;
 
-  // FIXME: Make =delete when we switch to C++11
-  Array(const Array& array);
-
-  // FIXME: Make =delete when we switch to C++11
-  Array& operator =(const Array& array);
+  Array(const Array& array) = delete;
+  Array& operator=(const Array& array) = delete;
 
   ~Array();
 
