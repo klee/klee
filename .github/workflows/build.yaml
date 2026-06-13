@@ -119,7 +119,7 @@ jobs:
   macOS:
     runs-on: macos-latest
     env:
-      LLVM_VERSION: 14
+      LLVM_VERSION: 16
       BASE: /tmp
       SOLVERS: Z3
       UCLIBC_VERSION: 0
