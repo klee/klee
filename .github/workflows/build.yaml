@@ -18,7 +18,7 @@ env:
   ENABLE_DEBUG: 1
   GTEST_VERSION: 1.16.0
   KLEE_RUNTIME_BUILD: "Debug+Asserts"
-  LLVM_VERSION: 13
+  LLVM_VERSION: 16
   MINISAT_VERSION: "master"
   REQUIRES_RTTI: 0
   SOLVERS: STP:Z3
@@ -36,10 +36,9 @@ jobs:
     strategy:
       matrix:
         name: [
-          "LLVM 16",
+          "LLVM 16, Doxygen",
           "LLVM 15",
           "LLVM 14",
-          "LLVM 13, Doxygen",
           "ASan",
           "UBSan",
           "Z3 only",
@@ -50,19 +49,16 @@ jobs:
           "No TCMalloc, optimised runtime",
         ]
         include:
-          - name: "LLVM 16"
+          - name: "LLVM 16, Doxygen"
             env:
               LLVM_VERSION: 16
+              ENABLE_DOXYGEN: 1
           - name: "LLVM 15"
             env:
               LLVM_VERSION: 15
           - name: "LLVM 14"
             env:
               LLVM_VERSION: 14
-          - name: "LLVM 13, Doxygen"
-            env:
-              LLVM_VERSION: 13
-              ENABLE_DOXYGEN: 1
           # Sanitizer builds. Do unoptimized build otherwise the optimizer
           # might remove problematic code
           - name: "ASan"
@@ -70,13 +66,13 @@ jobs:
               SANITIZER_BUILD: address
               ENABLE_OPTIMIZED: 0
               USE_TCMALLOC: 0
-              SANITIZER_LLVM_VERSION: 13
+              SANITIZER_LLVM_VERSION: 16
           - name: "UBSan"
             env:
               SANITIZER_BUILD: undefined
               ENABLE_OPTIMIZED: 0
               USE_TCMALLOC: 0
-              SANITIZER_LLVM_VERSION: 13
+              SANITIZER_LLVM_VERSION: 16
           # Test just using Z3 only
           - name: "Z3 only"
             env:
