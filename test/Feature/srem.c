@@ -5,6 +5,7 @@
 // RUN: %klee --output-dir=%t.klee-out --klee-call-optimisation=false --optimize %t.bc 2>&1 | FileCheck %s
 #include "klee/klee.h"
 #include <assert.h>
+#include <stdio.h>
 
 int main(int argc, char** argv)
 {
@@ -16,15 +17,19 @@ int main(int argc, char** argv)
     if (y >= 0) {
       if (y < 2) {
         // Two test cases generated taking this path, one for y == 0 and y == 1
-        // CHECK: srem.c:[[@LINE+1]]: divide by zero
+        // CHECK: srem.c:[[@LINE+2]]: divide by zero
+        printf("a\n");
         assert(1 % y == 0);
       } else {
+        printf("b\n");
         assert(1 % y == 1);
       }
     } else {
       if (y > -2) {
+        printf("c\n");
         assert(1 % y == 0);
       } else {
+        printf("d\n");
         assert(1 % y == 1);
       }
     }
