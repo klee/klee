@@ -1,4 +1,3 @@
-; REQUIRES: geq-llvm-15.0
 ; RUN: %S/ConcreteTest.py --klee='%klee' --lli=%lli %s
 
 ; Most of the test below use the *address* of gInt as part of their computation,
@@ -69,7 +68,9 @@ define void @"test_logical_ops"() {
 
 define void @"test_misc"() {
   ; probability that @gInt == 100 is very very low 
-  %t1 = add i32 select(i1 icmp eq (i32* @gInt, i32* inttoptr(i32 100 to i32*)), i32 10, i32 0), 0
+  %t1.cmp = icmp eq i32* @gInt, inttoptr(i32 100 to i32*)
+  %t1.select = select i1 %t1.cmp, i32 10, i32 0
+  %t1 = add i32 %t1.select, 0
   call void @print_i32(i32 %t1)
 
   %t2 = load i32, i32* getelementptr(%test.struct.type, %test.struct.type* @test_struct, i32 0, i32 1)
