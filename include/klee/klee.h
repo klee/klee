@@ -86,6 +86,15 @@ extern "C" {
    */
   uintptr_t klee_choose(uintptr_t n);
 
+  /* Darwin's assert.h does not declare glibc's __assert_fail, but KLEE models
+   * it as a special function.
+   */
+#ifdef __APPLE__
+  __attribute__((noreturn))
+  void __assert_fail(const char *expr, const char *file, unsigned line,
+                     const char *function);
+#endif
+
   /* special klee assert macro. this assert should be used when path consistency
    * across platforms is desired (e.g., in tests).
    * NB: __assert_fail is a klee "special" function
