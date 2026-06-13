@@ -9,6 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <algorithm>
+#include <csignal>
 #include <iterator>
 #include <vector>
 
