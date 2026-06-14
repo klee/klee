@@ -579,6 +579,7 @@ Executor::setModule(std::vector<std::unique_ptr<llvm::Module>> &modules,
   preservedFunctions.push_back("memset");
   preservedFunctions.push_back("memcpy");
   preservedFunctions.push_back("memcmp");
+  preservedFunctions.push_back("bcmp");
   preservedFunctions.push_back("memmove");
 
   kmodule->optimiseAndPrepare(opts, preservedFunctions);
