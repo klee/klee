@@ -404,6 +404,22 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         break;
       }
 
+#if LLVM_VERSION_CODE >= LLVM_VERSION(17, 0)
+      case Intrinsic::ptrmask: {
+        IRBuilder<> builder(ii);
+        Value *ptr = ii->getArgOperand(0);
+        Value *mask = ii->getArgOperand(1);
+        Type *maskType = mask->getType();
+        Value *ptrAsInt = builder.CreatePtrToInt(ptr, maskType);
+        Value *maskedPtr = builder.CreateAnd(ptrAsInt, mask);
+        Value *replacement = builder.CreateIntToPtr(maskedPtr, ii->getType());
+        ii->replaceAllUsesWith(replacement);
+        ii->eraseFromParent();
+        dirty = true;
+        break;
+      }
+#endif
+
       // The following intrinsics are currently handled by LowerIntrinsicCall
       // (Invoking LowerIntrinsicCall with any intrinsics not on this
       // list throws an exception.)
