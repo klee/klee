@@ -13,7 +13,6 @@ set(SRC_FILES
         abort.c
         atexit.c
         atoi.c
-        bcmp.c
         calloc.c
         fortify-klibc.c
         htonl.c
