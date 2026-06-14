@@ -81,6 +81,7 @@ static constexpr std::array handlerInfo = {
   addDNR("__assert_fail", handleAssertFail),
   addDNR("__assert", handleAssertFail),
   addDNR("_assert", handleAssert),
+  addDNR("klee_assert_fail", handleAssertFail),
   addDNR("abort", handleAbort),
   addDNR("_exit", handleExit),
   addDNR("_Exit", handleExit),
@@ -293,7 +294,7 @@ void SpecialFunctionHandler::handleAssertFail(
     ExecutionState &state, KInstruction *target,
     std::vector<ref<Expr>> &arguments) {
   assert(arguments.size() == 4 &&
-         "invalid number of arguments to __assert_fail");
+         "invalid number of arguments to assert fail");
   executor.terminateStateOnProgramError(
       state, "ASSERTION FAIL: " + readStringAtAddress(state, arguments[0]),
       StateTerminationType::Assert);
