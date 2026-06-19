@@ -16,6 +16,8 @@
 #include <time.h>
 #include <unistd.h>
 
+#include <vector>
+
 #include "klee/ADT/KTest.h"
 
 #if defined(__FreeBSD__) || defined(__minix) || defined(__APPLE__)
@@ -131,9 +133,9 @@ int main(int argc, char *argv[]) {
     char filename[7] = "A_data";
     char statname[12] = "A_data_stat";
     char sym_file_name = 'A';
-    FILE *fp[file_counter];
-    unsigned char *file_content[file_counter];
-    struct stat64 file_stat[file_counter];
+    std::vector<FILE *> fp(file_counter);
+    std::vector<unsigned char *> file_content(file_counter);
+    std::vector<struct stat64> file_stat(file_counter);
     long max_file_size = 0;
 
     for (unsigned current_file = 0; current_file < file_counter;
@@ -146,7 +148,7 @@ int main(int argc, char *argv[]) {
 #endif
 #endif
       if ((fp[current_file] = fopen(content_filename, "r")) == NULL ||
-          stat64(content_filename, file_stat + current_file) < 0) {
+          stat64(content_filename, &file_stat[current_file]) < 0) {
         perror("Failed to open");
         fprintf(stderr, "Failure opening %s %p\n", content_filename,
                 fp[current_file]);
