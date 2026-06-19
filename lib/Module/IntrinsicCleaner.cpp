@@ -346,6 +346,45 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         dirty = true;
         break;
       }
+      case Intrinsic::load_relative: {
+        llvm::IRBuilder<> Builder(ii);
+        Type *i8Ty = Type::getInt8Ty(ctx);
+        Type *i32Ty = Type::getInt32Ty(ctx);
+        Value *base = ii->getArgOperand(0);
+        Value *offset = ii->getArgOperand(1);
+        unsigned addressSpace = base->getType()->getPointerAddressSpace();
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(15, 0)
+        Value *baseAsI8 = base;
+#else
+        auto *i8PtrTy = PointerType::get(i8Ty, addressSpace);
+        Value *baseAsI8 =
+            Builder.CreatePointerCast(base, i8PtrTy, "load.relative.cast");
+#endif
+
+        Value *loadAddr =
+            Builder.CreateGEP(i8Ty, baseAsI8, offset, "load.relative.offset");
+#if LLVM_VERSION_CODE < LLVM_VERSION(15, 0)
+        auto *i32PtrTy = PointerType::get(i32Ty, addressSpace);
+        loadAddr =
+            Builder.CreatePointerCast(loadAddr, i32PtrTy, "load.relative.ptr");
+#endif
+
+        Value *relative =
+            Builder.CreateLoad(i32Ty, loadAddr, "load.relative.value");
+        Type *intptrTy = DataLayout.getIntPtrType(ctx, addressSpace);
+        Value *relativeExt =
+            Builder.CreateSExt(relative, intptrTy, "load.relative.sext");
+        Value *baseInt = Builder.CreatePtrToInt(base, intptrTy);
+        Value *resultInt =
+            Builder.CreateAdd(baseInt, relativeExt, "load.relative.result");
+        Value *result = Builder.CreateIntToPtr(resultInt, ii->getType());
+
+        ii->replaceAllUsesWith(result);
+        ii->eraseFromParent();
+        dirty = true;
+        break;
+      }
       case Intrinsic::objectsize: {
         // Lower the call to a concrete value
         auto replacement = llvm::lowerObjectSizeCall(ii, DataLayout, nullptr,
