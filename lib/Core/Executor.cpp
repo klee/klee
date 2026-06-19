@@ -1974,7 +1974,8 @@ void Executor::executeCall(ExecutionState &state, KInstruction *ki, Function *f,
       uint64_t size = 0; // total size of variadic arguments
       bool requires16ByteAlignment = false;
 
-      uint64_t offsets[callingArgs]; // offsets of variadic arguments
+      // Offsets of variadic arguments.
+      std::vector<uint64_t> offsets(callingArgs);
       uint64_t argWidth;             // width of current variadic argument
 
       const CallBase &cb = cast<CallBase>(*i);
