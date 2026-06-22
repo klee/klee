@@ -25,6 +25,12 @@ build_klee() {
     "-DLIT_ARGS=-v"
   )
 
+  if [ -n "${KLEE_TEST_OPTIONS:-}" ]; then
+    CMAKE_ARGUMENTS+=(
+      "-DLIT_ARGS=-v;--param;klee_opts=${KLEE_TEST_OPTIONS}"
+    )
+  fi
+
 
 ###############################################################################
 # klee-uclibc
