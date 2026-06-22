@@ -35,6 +35,54 @@ DISABLE_WARNING_POP
 using namespace llvm;
 
 namespace klee {
+namespace {
+
+// Extract the target pointer from a relative-table entry of the form
+// trunc(ptrtoint(target) - ptrtoint(table)).
+Constant *getRelativeTarget(Constant *entry, const GlobalVariable *table) {
+  auto *trunc = dyn_cast<ConstantExpr>(entry);
+  if (!trunc || trunc->getOpcode() != Instruction::Trunc)
+    return nullptr;
+  auto *sub = dyn_cast<ConstantExpr>(trunc->getOperand(0));
+  if (!sub || sub->getOpcode() != Instruction::Sub)
+    return nullptr;
+  auto *targetAsInt = dyn_cast<ConstantExpr>(sub->getOperand(0));
+  auto *baseAsInt = dyn_cast<ConstantExpr>(sub->getOperand(1));
+  if (!targetAsInt || targetAsInt->getOpcode() != Instruction::PtrToInt ||
+      !baseAsInt || baseAsInt->getOpcode() != Instruction::PtrToInt ||
+      baseAsInt->getOperand(0)->stripPointerCasts() != table)
+    return nullptr;
+  return cast<Constant>(targetAsInt->getOperand(0));
+}
+
+// Convert a constant i32 relative-offset table into an equivalent absolute
+// pointer table
+GlobalVariable *getAbsoluteRelativeTable(Module &M, GlobalVariable *table,
+                                         Type *pointerType) {
+  auto *initializer = dyn_cast_or_null<ConstantArray>(table->getInitializer());
+  if (!initializer ||
+      !initializer->getType()->getElementType()->isIntegerTy(32))
+    return nullptr;
+  std::string name = (table->getName() + ".klee_absolute").str();
+  if (auto *absoluteTable = M.getNamedGlobal(name))
+    return absoluteTable;
+  std::vector<Constant *> targets;
+  targets.reserve(initializer->getNumOperands());
+  for (Value *operand : initializer->operand_values()) {
+    Constant *target = getRelativeTarget(cast<Constant>(operand), table);
+    if (!target)
+      return nullptr;
+    targets.push_back(ConstantExpr::getPointerCast(target, pointerType));
+  }
+  auto *arrayType = ArrayType::get(pointerType, targets.size());
+  auto *absoluteTable = new GlobalVariable(
+      M, arrayType, true, GlobalValue::PrivateLinkage,
+      ConstantArray::get(arrayType, targets), name);
+  absoluteTable->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
+  return absoluteTable;
+}
+
+} // namespace
 
 char IntrinsicCleanerPass::ID;
 
@@ -334,7 +382,7 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
 
         i = ii->eraseFromParent();
 
-        // check if the instruction after the one we just replaced is not the
+        // Check if the instruction after the one we just replaced is not the
         // end of the basic block and if it is not (i.e. it is a valid
         // instruction), delete it and all remaining because the cleaner just
         // introduced a terminating instruction (unreachable) otherwise llvm will
@@ -353,6 +401,28 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         Value *base = ii->getArgOperand(0);
         Value *offset = ii->getArgOperand(1);
         unsigned addressSpace = base->getType()->getPointerAddressSpace();
+
+        // Relative tables encode signed 32-bit link-time relocations. KLEE's
+        // deterministic allocator (KDAlloc) may place the table and its targets
+        // more than 2 GiB apart, so preserve the relocation by converting a
+        // static relative table to an absolute pointer table before execution.
+        if (auto *table = dyn_cast<GlobalVariable>(base->stripPointerCasts())) {
+          if (auto *absoluteTable =
+                  getAbsoluteRelativeTable(M, table, ii->getType())) {
+            Value *index = Builder.CreateUDiv(
+                offset, ConstantInt::get(offset->getType(), 4),
+                "load.relative.index");
+            Value *entry = Builder.CreateInBoundsGEP(
+                absoluteTable->getValueType(), absoluteTable,
+                {Builder.getInt32(0), index}, "load.relative.entry");
+            Value *result =
+                Builder.CreateLoad(ii->getType(), entry, "load.relative.result");
+            ii->replaceAllUsesWith(result);
+            ii->eraseFromParent();
+            dirty = true;
+            break;
+          }
+        }
 
 #if LLVM_VERSION_CODE >= LLVM_VERSION(15, 0)
         Value *baseAsI8 = base;
