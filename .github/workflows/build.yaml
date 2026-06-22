@@ -37,7 +37,7 @@ jobs:
       matrix:
         name: [
           "LLVM 16, Doxygen",
-          "LLVM 15",
+          "LLVM 15, KDAlloc disabled",
           "LLVM 14",
           "ASan",
           "UBSan",
@@ -53,9 +53,10 @@ jobs:
             env:
               LLVM_VERSION: 16
               ENABLE_DOXYGEN: 1
-          - name: "LLVM 15"
+          - name: "LLVM 15, KDAlloc disabled"
             env:
               LLVM_VERSION: 15
+              KLEE_TEST_OPTIONS: --kdalloc=false
           - name: "LLVM 14"
             env:
               LLVM_VERSION: 14
