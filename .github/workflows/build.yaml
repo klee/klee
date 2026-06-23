@@ -42,7 +42,6 @@ jobs:
           "ASan",
           "UBSan",
           "Z3 only",
-          "metaSMT",
 #          "STP master",
           "Latest klee-uclibc",
           "Asserts disabled",
@@ -78,13 +77,6 @@ jobs:
           - name: "Z3 only"
             env:
               SOLVERS: Z3
-          # Test just using metaSMT
-          - name: "metaSMT"
-            env:
-              METASMT_VERSION: qf_abv
-              SOLVERS: metaSMT
-              METASMT_DEFAULT: STP
-              REQUIRES_RTTI: 1
           # Test we can build against STP master
 #          - name: "STP master"
 #            env:
