@@ -9,7 +9,7 @@ on:
 
 # Defaults for building KLEE
 env:
-  BASE_IMAGE: ubuntu:jammy-20230126
+  BASE_IMAGE: ubuntu:jammy-20251001
   REPOSITORY: ghcr.io/klee
   COVERAGE: 0
   DISABLE_ASSERTIONS: 0
@@ -22,7 +22,7 @@ env:
   MINISAT_VERSION: "master"
   REQUIRES_RTTI: 0
   SOLVERS: STP:Z3
-  STP_VERSION: 2.3.3
+  STP_VERSION: 2.3.4
   TCMALLOC_VERSION: 2.9.1
   UCLIBC_VERSION: klee_uclibc_v1.4
   USE_TCMALLOC: 1
