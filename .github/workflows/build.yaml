@@ -98,7 +98,7 @@ jobs:
               KLEE_RUNTIME_BUILD: "Release+Debug+Asserts"
     steps:
       - name: Checkout KLEE source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Build KLEE
         env: ${{ matrix.env }}
         run: scripts/build/build.sh klee --docker --create-final-image
@@ -118,7 +118,7 @@ jobs:
       - name: Install newer version of Bash
         run: brew install bash
       - name: Checkout KLEE source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Create virtualenv for Python3 (PEP 668)
         run:  python3 -m venv .venv
       - name: Build KLEE
@@ -133,7 +133,7 @@ jobs:
         shell: cpa.sh {0}
     steps:
       - name: Repository checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - uses: cross-platform-actions/action@v1.2.0
         with:
           operating_system: 'freebsd'
@@ -171,7 +171,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout KLEE Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Build Docker image
         run: docker build .
 
@@ -195,7 +195,7 @@ jobs:
       COVERAGE: 1
     steps:
       - name: Checkout KLEE source code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           # Codecov may run into "Issue detecting commit SHA. Please run
           # actions/checkout with fetch-depth > 1 or set to 0" when uploading.
