@@ -283,20 +283,11 @@ Function *ExternalDispatcherImpl::createDispatcher(KCallable *target,
 
   llvm::IRBuilder<> Builder(dBB);
   // Get a Value* for &gTheArgsP, as an i64**.
-#if LLVM_VERSION_CODE >= LLVM_VERSION(15, 0)
   auto argI64sp = Builder.CreateIntToPtr(
       ConstantInt::get(Type::getInt64Ty(ctx), (uintptr_t)&gTheArgsP),
       PointerType::getUnqual(PointerType::getUnqual(Type::getInt64Ty(ctx))),
       "argsp");
   auto argI64s = Builder.CreateLoad(Builder.getPtrTy(), argI64sp, "args");
-#else
-  auto argI64sp = Builder.CreateIntToPtr(
-      ConstantInt::get(Type::getInt64Ty(ctx), (uintptr_t)(void *)&gTheArgsP),
-      PointerType::getUnqual(PointerType::getUnqual(Type::getInt64Ty(ctx))),
-      "argsp");
-  auto argI64s = Builder.CreateLoad(
-      argI64sp->getType()->getPointerElementType(), argI64sp, "args");
-#endif
   // Get the target function type.
   FunctionType *FTy = target->getFunctionType();
 
@@ -313,22 +304,12 @@ Function *ExternalDispatcherImpl::createDispatcher(KCallable *target,
     if (argTy->isX86_FP80Ty() && idx & 0x01)
       idx++;
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(15, 0)
     auto argI64p =
         Builder.CreateGEP(Builder.getPtrTy(), argI64s,
                           ConstantInt::get(Type::getInt32Ty(ctx), idx));
 
     auto argp = Builder.CreateBitCast(argI64p, PointerType::getUnqual(argTy));
     args[i] = Builder.CreateLoad(argTy, argp);
-#else
-    auto argI64p =
-        Builder.CreateGEP(argI64s->getType()->getPointerElementType(), argI64s,
-                          ConstantInt::get(Type::getInt32Ty(ctx), idx));
-
-    auto argp = Builder.CreateBitCast(argI64p, PointerType::getUnqual(argTy));
-    args[i] =
-        Builder.CreateLoad(argp->getType()->getPointerElementType(), argp);
-#endif
 
     unsigned argSize = argTy->getPrimitiveSizeInBits();
     idx += ((!!argSize ? argSize : 64) + 63) / 64;

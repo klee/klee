@@ -172,14 +172,8 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
               Builder.CreatePointerCast(dst, i8pp, "vacopy.cast.dst");
           auto castedSrc =
               Builder.CreatePointerCast(src, i8pp, "vacopy.cast.src");
-#if LLVM_VERSION_CODE >= LLVM_VERSION(15, 0)
           auto load =
               Builder.CreateLoad(Builder.getPtrTy(), castedSrc, "vacopy.read");
-#else
-          auto load =
-              Builder.CreateLoad(castedSrc->getType()->getPointerElementType(),
-                                 castedSrc, "vacopy.read");
-#endif
           Builder.CreateStore(load, castedDst, false /* isVolatile */);
         } else {
           assert(WordSize == 8 && "Invalid word size!");
@@ -187,13 +181,8 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
           auto pDst = Builder.CreatePointerCast(dst, i64p, "vacopy.cast.dst");
           auto pSrc = Builder.CreatePointerCast(src, i64p, "vacopy.cast.src");
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(15, 0)
           auto pSrcType = Builder.getPtrTy();
           auto pDstType = Builder.getPtrTy();
-#else
-          auto pSrcType = pSrc->getType()->getPointerElementType();
-          auto pDstType = pDst->getType()->getPointerElementType();
-#endif
           auto val = Builder.CreateLoad(pSrcType, pSrc);
           Builder.CreateStore(val, pDst, ii);
 
@@ -428,21 +417,10 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
           }
         }
 
-#if LLVM_VERSION_CODE >= LLVM_VERSION(15, 0)
         Value *baseAsI8 = base;
-#else
-        auto *i8PtrTy = PointerType::get(i8Ty, addressSpace);
-        Value *baseAsI8 =
-            Builder.CreatePointerCast(base, i8PtrTy, "load.relative.cast");
-#endif
 
         Value *loadAddr =
             Builder.CreateGEP(i8Ty, baseAsI8, offset, "load.relative.offset");
-#if LLVM_VERSION_CODE < LLVM_VERSION(15, 0)
-        auto *i32PtrTy = PointerType::get(i32Ty, addressSpace);
-        loadAddr =
-            Builder.CreatePointerCast(loadAddr, i32PtrTy, "load.relative.ptr");
-#endif
 
         Value *relative =
             Builder.CreateLoad(i32Ty, loadAddr, "load.relative.value");
