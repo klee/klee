@@ -26,11 +26,7 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #else
 #include "llvm/Support/Host.h"
 #endif
-#if LLVM_VERSION_CODE >= LLVM_VERSION(14, 0)
 #include "llvm/MC/TargetRegistry.h"
-#else
-#include "llvm/Support/TargetRegistry.h"
-#endif
 #include "llvm/Target/TargetMachine.h"
 DISABLE_WARNING_POP
 

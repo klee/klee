@@ -15,9 +15,6 @@
 #include "ExecutionState.h"
 #include "ExecutionTree.h"
 #include "ExternalDispatcher.h"
-#if LLVM_VERSION_CODE <= LLVM_VERSION(14, 0)
-#include "GetElementPtrTypeIterator.h"
-#endif
 #include "ImpliedValue.h"
 #include "Memory.h"
 #include "MemoryManager.h"
@@ -69,9 +66,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
-#if LLVM_VERSION_CODE >= LLVM_VERSION(15, 0)
 #include "llvm/IR/GetElementPtrTypeIterator.h"
-#endif
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
@@ -2473,12 +2468,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
     if (f) {
       const FunctionType *fType = f->getFunctionType();
-#if LLVM_VERSION_MAJOR >= 15
       const FunctionType *fpType = cb.getFunctionType();
-#else
-      const FunctionType *fpType =
-          dyn_cast<FunctionType>(fp->getType()->getPointerElementType());
-#endif
 
       // special case the call with a bitcast case
       if (fType != fpType) {
@@ -3426,17 +3416,10 @@ template <typename TypeIt>
 void Executor::computeOffsetsSeqTy(KGEPInstruction *kgepi,
                                    ref<ConstantExpr> &constantOffset,
                                    uint64_t index, const TypeIt it) {
-#if LLVM_VERSION_CODE <= LLVM_VERSION(14, 0)
-  assert(it->getNumContainedTypes() == 1 &&
-         "Sequential type must contain one subtype");
-  uint64_t elementSize =
-      kmodule->targetData->getTypeStoreSize(it->getContainedType(0));
-#else
   assert(it.isSequential() && "Called with non-sequential type");
   // Get the size of a single element
   std::uint64_t elementSize =
       kmodule->targetData->getTypeStoreSize(it.getIndexedType());
-#endif
   const Value *operand = it.getOperand();
   if (const Constant *c = dyn_cast<Constant>(operand)) {
     ref<ConstantExpr> index =
@@ -3455,21 +3438,13 @@ void Executor::computeOffsets(KGEPInstruction *kgepi, TypeIt ib, TypeIt ie) {
     ConstantExpr::alloc(0, Context::get().getPointerWidth());
   uint64_t index = 1;
   for (TypeIt ii = ib; ii != ie; ++ii) {
-#if LLVM_VERSION_CODE <= LLVM_VERSION(14, 0)
-    if (StructType *st = dyn_cast<StructType>(*ii)) {
-#else
     if (StructType *st = ii.getStructTypeOrNull()) {
-#endif
       const StructLayout *sl = kmodule->targetData->getStructLayout(st);
       const ConstantInt *ci = cast<ConstantInt>(ii.getOperand());
       uint64_t addend = sl->getElementOffset((unsigned) ci->getZExtValue());
       constantOffset = constantOffset->Add(ConstantExpr::alloc(addend,
                                                                Context::get().getPointerWidth()));
-#if LLVM_VERSION_CODE <= LLVM_VERSION(14, 0)
-    } else if (ii->isArrayTy() || ii->isVectorTy() || ii->isPointerTy()) {
-#else
     } else if (ii.isSequential()) {
-#endif
       computeOffsetsSeqTy(kgepi, constantOffset, index, ii);
     } else
       assert("invalid type" && 0);
@@ -3481,11 +3456,7 @@ void Executor::computeOffsets(KGEPInstruction *kgepi, TypeIt ib, TypeIt ie) {
 void Executor::bindInstructionConstants(KInstruction *KI) {
   if (GetElementPtrInst *gepi = dyn_cast<GetElementPtrInst>(KI->inst)) {
     KGEPInstruction *kgepi = static_cast<KGEPInstruction *>(KI);
-#if LLVM_VERSION_CODE <= LLVM_VERSION(14, 0)
-    computeOffsets(kgepi, klee::gep_type_begin(gepi), klee::gep_type_end(gepi));
-#else
     computeOffsets(kgepi, llvm::gep_type_begin(gepi), llvm::gep_type_end(gepi));
-#endif
   } else if (InsertValueInst *ivi = dyn_cast<InsertValueInst>(KI->inst)) {
     KGEPInstruction *kgepi = static_cast<KGEPInstruction *>(KI);
     llvm::Value *agg = ivi->getAggregateOperand();
