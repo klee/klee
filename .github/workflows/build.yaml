@@ -38,7 +38,6 @@ jobs:
         name: [
           "LLVM 16, Doxygen",
           "LLVM 15, KDAlloc disabled",
-          "LLVM 14",
           "ASan",
           "UBSan",
           "Z3 only",
@@ -56,9 +55,6 @@ jobs:
             env:
               LLVM_VERSION: 15
               KLEE_TEST_OPTIONS: --kdalloc=false
-          - name: "LLVM 14"
-            env:
-              LLVM_VERSION: 14
           # Sanitizer builds. Do unoptimized build otherwise the optimizer
           # might remove problematic code
           - name: "ASan"
