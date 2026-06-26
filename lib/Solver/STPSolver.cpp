@@ -178,7 +178,7 @@ STPSolverImpl::STPSolverImpl(bool useForkedSTP, bool optimizeDivides)
   if (useForkedSTP) {
     assert(shared_memory_id == 0 && "shared memory id already allocated");
     shared_memory_id =
-        shmget(IPC_PRIVATE, shared_memory_size, IPC_CREAT | 0700);
+        shmget(IPC_PRIVATE, shared_memory_size, IPC_CREAT | 0600);
     if (shared_memory_id < 0)
       llvm::report_fatal_error(
           llvm::Twine("unable to allocate shared memory region: ") +
