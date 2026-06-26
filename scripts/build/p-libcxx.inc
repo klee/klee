@@ -38,18 +38,14 @@ build_libcxx() {
    "-DCMAKE_INSTALL_PREFIX=${LIBCXX_INSTALL}"
   )
 
-  if [[ "${LLVM_VERSION_SHORT}" -ge "140" ]]; then
-    if [[ "${LLVM_VERSION_SHORT}" -ge "170" ]]; then
-       cmake_flags+=("-DLLVM_ENABLE_RUNTIMES=libcxx;libcxxabi;libunwind")
-       cmake_flags+=("-DLIBCXXABI_USE_LLVM_UNWINDER:BOOL=ON")
-    else
-       cmake_flags+=("-DLLVM_ENABLE_RUNTIMES=libcxx;libcxxabi")
-    fi
-    cmake_flags+=("-DLLVM_ENABLE_PROJECTS=")
-    cmake_flags+=("-DLLVM_ENABLE_PROJECTS_USED:BOOL=ON")
+  if [[ "${LLVM_VERSION_SHORT}" -ge "170" ]]; then
+     cmake_flags+=("-DLLVM_ENABLE_RUNTIMES=libcxx;libcxxabi;libunwind")
+     cmake_flags+=("-DLIBCXXABI_USE_LLVM_UNWINDER:BOOL=ON")
   else
-    cmake_flags+=("-DLLVM_ENABLE_PROJECTS=libcxx;libcxxabi")
+     cmake_flags+=("-DLLVM_ENABLE_RUNTIMES=libcxx;libcxxabi")
   fi
+  cmake_flags+=("-DLLVM_ENABLE_PROJECTS=")
+  cmake_flags+=("-DLLVM_ENABLE_PROJECTS_USED:BOOL=ON")
   # Static ABI libraries are not supported under OS X
   if [[ "${OS}" == "osx" ]]; then
     cmake_flags+=("-DLIBCXX_ENABLE_STATIC_ABI_LIBRARY:BOOL=OFF")
@@ -64,11 +60,7 @@ build_libcxx() {
     export LLVM_COMPILER_PATH="$(dirname "${BITCODE_CC}")"
 
     cmake "${cmake_flags[@]}" "${LIBCXX_SRC}/llvm"
-   if [[ "${LLVM_VERSION_SHORT}" -ge "140" ]]; then
-     make runtimes "-j$(nproc)" || make runtimes || return 1
-   else
-     make cxx "-j$(nproc)" || make cxx || return 1
-   fi
+   make runtimes "-j$(nproc)" || make runtimes || return 1
   )
 }
 
@@ -83,25 +75,14 @@ install_libcxx() {
     local LLVM_VERSION_MAJOR="${LLVM_VERSION/.*/}"
     local libraries
 
-    if [[ "${LLVM_VERSION_SHORT}" -ge "140" ]]; then
-      cd "${LIBCXX_BUILD}/runtimes" || return 1
-      make install || return 1
-      if [[ "${OS}" == "osx" ]]; then
-          libraries=("${LIBCXX_INSTALL}"/lib/*/lib*.dylib)
-      else
-          libraries=("${LIBCXX_INSTALL}"/lib/*/lib*.so)
-      fi
-      libraries+=("${LIBCXX_INSTALL}"/lib/*/lib*.a)
+    cd "${LIBCXX_BUILD}/runtimes" || return 1
+    make install || return 1
+    if [[ "${OS}" == "osx" ]]; then
+        libraries=("${LIBCXX_INSTALL}"/lib/*/lib*.dylib)
     else
-      cd "${LIBCXX_BUILD}/projects" || return 1
-      make install || return 1
-      if [[ "${OS}" == "osx" ]]; then
-          libraries=("${LIBCXX_INSTALL}"/lib/lib*.dylib)
-      else
-          libraries=("${LIBCXX_INSTALL}"/lib/lib*.so)
-      fi
-      libraries+=("${LIBCXX_INSTALL}"/lib/lib*.a)
+        libraries=("${LIBCXX_INSTALL}"/lib/*/lib*.so)
     fi
+    libraries+=("${LIBCXX_INSTALL}"/lib/*/lib*.a)
 
     for p in "${libraries[@]}" ; do
       extract-bc "$p"

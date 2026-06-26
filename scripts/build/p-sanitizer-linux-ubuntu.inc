@@ -41,7 +41,7 @@ install_binary_artifact_sanitizer() {
     "clang${version}"
   )
 
-  if [[ "${SANITIZER_LLVM_VERSION_MAJOR}" -ge 14 && "${LLVM_UPSTREAM_USED}" -eq 1 ]]; then
+  if [[ "${LLVM_UPSTREAM_USED}" -eq 1 ]]; then
     dependencies+=("libclang-rt${version}-dev")
   fi
 

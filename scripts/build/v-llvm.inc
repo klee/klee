@@ -7,6 +7,12 @@ required_variables_llvm=(
 )
 
 required_variables_check_llvm() {
+  local llvm_version_major="${LLVM_VERSION/.*/}"
+  if [[ "${llvm_version_major}" -lt 15 ]]; then
+    echo "LLVM_VERSION must be 15 or newer"
+    exit 1
+  fi
+
   check_bool "ENABLE_DEBUG"
   check_bool "ENABLE_OPTIMIZED"
   check_bool "DISABLE_ASSERTIONS"
