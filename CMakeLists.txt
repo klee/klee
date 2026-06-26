@@ -113,6 +113,9 @@ include(CMakePushCheckState)
 ################################################################################
 find_package(LLVM REQUIRED CONFIG HINTS "${LLVM_DIR}")
 message(STATUS "LLVM directory ${LLVM_DIR}")
+if (LLVM_VERSION_MAJOR LESS 15)
+  message(FATAL_ERROR "KLEE requires LLVM 15 or newer")
+endif()
 set(LLVMCC "${LLVM_TOOLS_BINARY_DIR}/clang"
   CACHE
   PATH
