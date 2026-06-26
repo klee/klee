@@ -1,4 +1,3 @@
-// REQUIRES: geq-llvm-12.0
 
 // RUN: %clang %s -fsanitize=unsigned-shift-base -emit-llvm -g %O0opt -c -o %t.bc
 // RUN: rm -rf %t.klee-out
