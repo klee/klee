@@ -30,48 +30,41 @@ endfunction()
 
 function(ensure_valid_llvm_gtest_target)
   block(SCOPE_FOR VARIABLES)
-  if ("${LLVM_VERSION_MAJOR}" LESS 13)
-    list(FIND LLVM_EXPORTED_TARGETS "gtest" _GTEST_INDEX)
-    if (${_GTEST_INDEX} GREATER -1)
-      return()
+  # Use that LLVM's Google Test always depends on LLVM's own support library.
+
+  # If LLVM was built using "BUILD_SHARED_LIBS=ON", we need to collect
+  # IMPORTED_LINK_DEPENDENT_LIBRARIES[_<CONFIGURATION>] for the target.
+  get_target_property(_GTEST_DEPENDENCIES gtest
+    IMPORTED_LINK_DEPENDENT_LIBRARIES)
+  if (NOT _GTEST_DEPENDENCIES)
+    set(_GTEST_DEPENDENCIES "")
+  endif()
+  get_target_property(_GTEST_CONFIGS gtest IMPORTED_CONFIGURATIONS)
+  foreach(_GTEST_CONFIG "${_GTEST_CONFIGS}")
+    get_target_property(_GTEST_DEP_CONFIG gtest
+      IMPORTED_LINK_DEPENDENT_LIBRARIES_${_GTEST_CONFIG})
+    if (_GTEST_DEP_CONFIG)
+      list(APPEND _GTEST_DEPENDENCIES "${_GTEST_DEP_CONFIG}")
     endif()
+  endforeach()
+
+  # PUBLIC and INTERFACE link dependencies (when LLVM uses static linking)
+  get_target_property(_GTEST_LINK_LIBS gtest INTERFACE_LINK_LIBRARIES)
+  if (_GTEST_LINK_LIBS)
+      list(APPEND _GTEST_DEPENDENCIES "${_GTEST_LINK_LIBS}")
+  endif()
+
+  # Determine the name of the library offering LLVM's support.
+  if ("${LLVM_LINK_LLVM_DYLIB}")
+    set(_SUPPORT_DEPENDENCY "LLVM")
   else()
-    # use that LLVM's Google Test always depends on LLVM's own support library
+    llvm_map_components_to_libnames(_SUPPORT_DEPENDENCY support)
+  endif()
 
-    # if LLVM was built using "BUILD_SHARED_LIBS=ON", we need to collect
-    # IMPORTED_LINK_DEPENDENT_LIBRARIES[_<CONFIGURATION>] for the target
-    get_target_property(_GTEST_DEPENDENCIES gtest
-      IMPORTED_LINK_DEPENDENT_LIBRARIES)
-    if (NOT _GTEST_DEPENDENCIES)
-      set(_GTEST_DEPENDENCIES "")
-    endif()
-    get_target_property(_GTEST_CONFIGS gtest IMPORTED_CONFIGURATIONS)
-    foreach(_GTEST_CONFIG "${_GTEST_CONFIGS}")
-      get_target_property(_GTEST_DEP_CONFIG gtest
-        IMPORTED_LINK_DEPENDENT_LIBRARIES_${_GTEST_CONFIG})
-      if (_GTEST_DEP_CONFIG)
-        list(APPEND _GTEST_DEPENDENCIES "${_GTEST_DEP_CONFIG}")
-      endif()
-    endforeach()
-
-    # PUBLIC and INTERFACE link dependencies (when LLVM uses static linking)
-    get_target_property(_GTEST_LINK_LIBS gtest INTERFACE_LINK_LIBRARIES)
-    if (_GTEST_LINK_LIBS)
-        list(APPEND _GTEST_DEPENDENCIES "${_GTEST_LINK_LIBS}")
-    endif()
-
-    # determine the name of the library offering LLVM's support
-    if ("${LLVM_LINK_LLVM_DYLIB}")
-      set(_SUPPORT_DEPENDENCY "LLVM")
-    else()
-      llvm_map_components_to_libnames(_SUPPORT_DEPENDENCY support)
-    endif()
-
-    # check if this support library is among the dependencies of gtest
-    list(FIND _GTEST_DEPENDENCIES "${_SUPPORT_DEPENDENCY}" _SUPPORT_INDEX)
-    if (${_SUPPORT_INDEX} GREATER -1)
-      return()
-    endif()
+  # Check if this support library is among the dependencies of gtest.
+  list(FIND _GTEST_DEPENDENCIES "${_SUPPORT_DEPENDENCY}" _SUPPORT_INDEX)
+  if (${_SUPPORT_INDEX} GREATER -1)
+    return()
   endif()
 
   message(FATAL_ERROR "An existing 'gtest' CMake target was imported. This "
@@ -113,15 +106,6 @@ if (TARGET gtest)
       "LLVM from exporting this target.")
   endif()
 
-  # older LLVM versions do not set INTERFACE_INCLUDE_DIRECTORIES for gtest
-  if ("${LLVM_VERSION_MAJOR}" LESS 12)
-    if (IS_DIRECTORY "${LLVM_BUILD_MAIN_SRC_DIR}")
-      target_include_directories(gtest
-        INTERFACE
-        "${LLVM_BUILD_MAIN_SRC_DIR}/utils/unittest/googletest/include"
-      )
-    endif()
-  endif()
 else()
   # LLVM's 'gtest' target is not reused
 
@@ -138,14 +122,6 @@ else()
 
       add_subdirectory("${LLVM_BUILD_MAIN_SRC_DIR}/utils/unittest/"
         "${CMAKE_CURRENT_BINARY_DIR}/gtest_build")
-
-      # older LLVM versions do not set INTERFACE_INCLUDE_DIRECTORIES for gtest
-      if ("${LLVM_VERSION_MAJOR}" LESS 12)
-        target_include_directories(gtest
-          INTERFACE
-          "${LLVM_BUILD_MAIN_SRC_DIR}/utils/unittest/googletest/include"
-        )
-      endif()
 
       # add includes for LLVM's modifications
       target_include_directories(gtest BEFORE PRIVATE ${LLVM_INCLUDE_DIRS})
