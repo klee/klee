@@ -21,7 +21,6 @@
 ;   return abs_a;
 ; }
 ; ```
-; REQUIRES: geq-llvm-12.0
 ; RUN: rm -rf %t.klee-out
 ; RUN: %klee -exit-on-error --output-dir=%t.klee-out --optimize=false %s
 

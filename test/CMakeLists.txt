@@ -17,11 +17,7 @@ set(LLVMCXX "${LLVMCXX} -I${CMAKE_SOURCE_DIR}/include")
 set(NATIVE_CC "${CMAKE_C_COMPILER} ${CMAKE_C_FLAGS} -I ${CMAKE_SOURCE_DIR}/include")
 set(NATIVE_CXX "${CMAKE_CXX_COMPILER} ${CMAKE_CXX_FLAGS} -I ${CMAKE_SOURCE_DIR}/include")
 
-if (${LLVM_VERSION_MAJOR} GREATER_EQUAL 15)
-   set(TARGET_TRIPLE "${LLVM_TARGET_TRIPLE}")
-else()
-   set(TARGET_TRIPLE "${TARGET_TRIPLE}")
-endif()
+set(TARGET_TRIPLE "${LLVM_TARGET_TRIPLE}")
 
 # Extend native compiler invocation on macOS to point to the currently selected systems directory
 if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")

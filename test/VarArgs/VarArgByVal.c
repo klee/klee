@@ -1,7 +1,6 @@
 // Variadic functions are only supported on x86_64
 // REQUIRES: x86_64
 
-// REQUIRES: geq-llvm-15.0
 /* This test checks that KLEE correctly handles variadic arguments with the
    byval attribute */
 
@@ -10,7 +9,6 @@
 // RUN: %klee --exit-on-error --output-dir=%t.klee-out %t1.bc
 // RUN: FileCheck %s --input-file=%t.klee-out/assembly.ll
 //
-// TODO: Make noundef unconditional when LLVM 14 is the oldest supported version.
 // CHECK: call void (ptr, i32, ...) @test1(ptr sret(%struct.foo) align 8 {{.*}}, i32 noundef -1, ptr noundef byval(%struct.foo) align 8 {{.*}}, ptr noundef byval(%struct.bar) align 8 {{.*}})
 // CHECK: call void (ptr, i32, i64, ...) @test2(ptr sret(%struct.foo) align 8 {{.*}}, i32 noundef {{.*}}, i64 noundef {{.*}}, i32 noundef {{.*}}, ptr noundef byval(%struct.foo) align 8 {{.*}}, i64 noundef {{.*}}, ptr noundef byval(%struct.bar) align 8 {{.*}}, ptr noundef byval(%struct.foo) align 8 {{.*}}, ptr noundef byval(%struct.bar) align 8 {{.*}})
 #include <stdarg.h>
