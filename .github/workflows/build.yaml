@@ -144,7 +144,7 @@ jobs:
             echo "::group::Dependencies installation"
             sudo -E pkg install -y \
                 cmake ninja z3 llvm16 pkgconf google-perftools googletest \
-                sqlite3 py311-tabulate
+                sqlite3 py312-tabulate
             echo "::endgroup::"
 
             echo "::group::CMake configuration"
