@@ -1,6 +1,8 @@
 ; RUN: %llvmas %s -o=%t.bc
-; RUN: rm -rf %t.klee-out
-; RUN: %klee --output-dir=%t.klee-out --optimize=false %t.bc 2>&1 | FileCheck %s
+; RUN: rm -rf %t.none.klee-out
+; RUN: rm -rf %t.concrete.klee-out
+; RUN: %klee --external-calls=none --output-dir=%t.none.klee-out --optimize=false %t.bc 2>&1 | FileCheck %s
+; RUN: %klee --external-calls=concrete -exit-on-error --output-dir=%t.concrete.klee-out --optimize=false %t.bc 2>&1 | FileCheck %s -check-prefix=CHECK-EXTERNAL-CONCRETE
 
 ; Check that IntrinsicCleaner notices missing intrinsic
 ; CHECK: KLEE: WARNING ONCE: unsupported intrinsic llvm.minnum.f32
@@ -16,8 +18,21 @@
 ; CHECK: KLEE: done: generated tests = 2
 
 
+; Check that Executor calls missing intrinsic as external
+; when only external function calls with concrete arguments are allowed
+; CHECK-EXTERNAL-CONCRETE: KLEE: WARNING ONCE: unsupported intrinsic llvm.minnum.f32
+; CHECK-EXTERNAL-CONCRETE-NOT: KLEE: WARNING: unimplemented intrinsic: llvm.minnum.f32
+; CHECK-EXTERNAL-CONCRETE-NOT: KLEE: ERROR: (location information missing) unimplemented intrinsic
+; CHECK-EXTERNAL-CONCRETE: KLEE: WARNING ONCE: calling external: llvm.minnum.f32
 
-; This test checks that KLEE will ignore intrinsics that are not executed
+; Check that Executor explores all paths
+; CHECK-EXTERNAL-CONCRETE: KLEE: done: completed paths = 3
+; CHECK-EXTERNAL-CONCRETE: KLEE: done: partially completed paths = 0
+; CHECK-EXTERNAL-CONCRETE: KLEE: done: generated tests = 3
+
+
+; This test checks that KLEE will call intrinsics that are not implemented
+; when policy allows to do that
 ; It consists of a dead function that is called on one path but not on
 ; another path.
 ;
