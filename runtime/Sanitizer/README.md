@@ -17,17 +17,25 @@ For compiling/linking with **all** available checks to catch **both** undefined 
 add one of the following options:
 
 * Short exclusive form
-    * `-fsanitize=undefined,float-divide-by-zero,unsigned-integer-overflow,implicit-conversion,nullability -fno-sanitize=local-bounds,function,vptr`
+    * LLVM 16 and lower
+        * `-fsanitize=undefined,float-divide-by-zero,unsigned-integer-overflow,implicit-conversion,nullability -fno-sanitize=local-bounds,function,vptr`
+    * LLVM 17 and higher
+        * `-fsanitize=undefined,float-divide-by-zero,unsigned-integer-overflow,implicit-conversion,nullability -fno-sanitize=local-bounds,vptr`
 * Verbose inclusive form
     * LLVM 11 and lower
         * `-fsanitize=alignment,bool,builtin,array-bounds,enum,float-cast-overflow,float-divide-by-zero,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change,integer-divide-by-zero,nonnull-attribute,null,nullability-arg,nullability-assign,nullability-return,object-size,pointer-overflow,return,returns-nonnull-attribute,shift,signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound`
-    * LLVM 12 and higher
+    * LLVM 12 through 16
         * `-fsanitize=alignment,bool,builtin,array-bounds,enum,float-cast-overflow,float-divide-by-zero,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change,integer-divide-by-zero,nonnull-attribute,null,nullability-arg,nullability-assign,nullability-return,object-size,pointer-overflow,return,returns-nonnull-attribute,shift,unsigned-shift-base,signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound`
+    * LLVM 17 and higher
+        * `-fsanitize=alignment,bool,builtin,array-bounds,enum,float-cast-overflow,float-divide-by-zero,function,implicit-unsigned-integer-truncation,implicit-signed-integer-truncation,implicit-integer-sign-change,integer-divide-by-zero,nonnull-attribute,null,nullability-arg,nullability-assign,nullability-return,object-size,pointer-overflow,return,returns-nonnull-attribute,shift,unsigned-shift-base,signed-integer-overflow,unreachable,unsigned-integer-overflow,vla-bound`
 
 For compiling/linking with **all** available checks to catch **only** undefined behaviour, just add
 the following option:
 
-* `-fsanitize=undefined -fno-sanitize=local-bounds,function,vptr`
+* LLVM 16 and lower
+    * `-fsanitize=undefined -fno-sanitize=local-bounds,function,vptr`
+* LLVM 17 and higher
+    * `-fsanitize=undefined -fno-sanitize=local-bounds,vptr`
 
 ## Available checks
 
@@ -40,6 +48,7 @@ Available checks for KLEE as are:
 * `-fsanitize=enum`
 * `-fsanitize=float-cast-overflow`
 * `-fsanitize=float-divide-by-zero`
+* `-fsanitize=function` (LLVM 17 and higher)
 * `-fsanitize=implicit-unsigned-integer-truncation`
 * `-fsanitize=implicit-signed-integer-truncation`
 * `-fsanitize=implicit-integer-sign-change`
@@ -65,7 +74,7 @@ Available checks for KLEE as are:
 Also, note some unavailable checks as are:
 
 * `-fsanitize=local-bounds`
-* `-fsanitize=function`
+* `-fsanitize=function` (LLVM 16 and lower)
 * `-fsanitize=objc-cast`
 * `-fsanitize=vptr`
 

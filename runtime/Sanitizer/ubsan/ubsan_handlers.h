@@ -102,4 +102,11 @@ struct PointerOverflowData {
   SourceLocation Loc;
 };
 
+#if LLVM_VERSION_MAJOR >= 17
+struct FunctionTypeMismatchData {
+  SourceLocation Loc;
+  const TypeDescriptor &Type;
+};
+#endif
+
 #endif // UBSAN_HANDLERS_H
