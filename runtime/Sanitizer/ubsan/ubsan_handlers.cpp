@@ -92,8 +92,12 @@ static const char *get_suffix(ErrorType ET) {
   case ErrorType::InvalidEnumLoad:
     return "invalid_load.err";
   case ErrorType::FunctionTypeMismatch:
+#if LLVM_VERSION_MAJOR >= 17
+    return "function_type_mismatch.err";
+#else
     // This check is unsupported
     return "exec.err";
+#endif
   case ErrorType::InvalidNullReturn:
   case ErrorType::InvalidNullReturnWithNullability:
   case ErrorType::InvalidNullArgument:
@@ -500,5 +504,25 @@ extern "C" void __ubsan_handle_pointer_overflow_abort(PointerOverflowData *Data,
 
   handlePointerOverflowImpl(Data, Base, Result);
 }
+
+#if LLVM_VERSION_MAJOR >= 17
+static void handleFunctionTypeMismatch(FunctionTypeMismatchData * /*Data*/,
+                                       ValueHandle /*Function*/) {
+  ErrorType ET = ErrorType::FunctionTypeMismatch;
+  report_error_type(ET);
+}
+
+extern "C" void
+__ubsan_handle_function_type_mismatch(FunctionTypeMismatchData *Data,
+                                      ValueHandle Function) {
+  handleFunctionTypeMismatch(Data, Function);
+}
+
+extern "C" void
+__ubsan_handle_function_type_mismatch_abort(FunctionTypeMismatchData *Data,
+                                            ValueHandle Function) {
+  handleFunctionTypeMismatch(Data, Function);
+}
+#endif
 
 } // namespace __ubsan
