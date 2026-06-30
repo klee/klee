@@ -324,6 +324,17 @@ Function *ExternalDispatcherImpl::createDispatcher(KCallable *target,
   } else if (auto* asmValue = dyn_cast<KInlineAsm>(target)) {
     result = Builder.CreateCall(asmValue->getInlineAsm(),
                                 llvm::ArrayRef<Value *>(args, args + i));
+  } else if (auto* intrinsicValue = dyn_cast<KIntrinsic>(target)) {
+    auto *intrinsic = intrinsicValue->getFunction();
+    // Re-declare the intrinsic in the dispatch module. Calling the original
+    // function from the user's module would create invalid cross-module IR.
+    auto dispatchTarget =
+        module->getOrInsertFunction(intrinsic->getName(),
+                                    intrinsic->getFunctionType(),
+                                    intrinsic->getAttributes());
+    result = Builder.CreateCall(dispatchTarget,
+                                llvm::ArrayRef<Value *>(args, args + i));
+    result->setCallingConv(intrinsic->getCallingConv());
   } else {
     assert(0 && "Unhandled KCallable derived class");
   }
