@@ -36,6 +36,7 @@ jobs:
     strategy:
       matrix:
         name: [
+          "LLVM 17",
           "LLVM 16, Doxygen",
           "LLVM 15, KDAlloc disabled",
           "ASan",
@@ -47,6 +48,9 @@ jobs:
           "No TCMalloc, optimised runtime",
         ]
         include:
+          - name: "LLVM 17"
+            env:
+              LLVM_VERSION: 17
           - name: "LLVM 16, Doxygen"
             env:
               LLVM_VERSION: 16
