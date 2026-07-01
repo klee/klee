@@ -1,3 +1,6 @@
+// The test checks that when an external call is made with a symbolic
+// argument, the concretized value is chosen to be the seed value
+
 // RUN: %clang -emit-llvm -c -g %s -o %t.bc
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --entry-point=TestGen %t.bc
@@ -14,15 +17,20 @@
 #include <stdlib.h>
 
 void TestGen() {
-  int x;
-  klee_make_symbolic(&x, sizeof(x), "x");
-  klee_assume(x == 12345678);
+  int a, b;
+  klee_make_symbolic(&a, sizeof(a), "a");
+  klee_make_symbolic(&b, sizeof(b), "b");
+  klee_assume(a == 12345678);
+  klee_assume(b == 123456);
 }
 
 int main() {
-  int x;
-  klee_make_symbolic(&x, sizeof(x), "x");
-  assert(abs(x) == 12345678);
+  int a, b;
+  klee_make_symbolic(&a, sizeof(a), "a");
+  klee_make_symbolic(&b, sizeof(b), "b");
+  div_t r = div(a, b);
+  assert(r.quot == 100);
+  assert(r.rem == 78);
 
-  // CHECK-STATS: 1
+  // CHECK-STATS: 2
 }
