@@ -32,6 +32,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <cstdint>
 #include <map>
 #include <memory>
 #include <set>
@@ -52,6 +53,7 @@ namespace llvm {
   class GlobalValue;
   class Instruction;
   class LLVMContext;
+  class MDNode;
   class DataLayout;
   class Twine;
   class Value;
@@ -228,6 +230,23 @@ private:
 			      unsigned offset);
   void initializeGlobals(ExecutionState &state);
   void allocateGlobalObjects(ExecutionState &state);
+
+  MemoryObject *allocateFunctionMemoryObject(ExecutionState &state,
+                                             llvm::Function &function,
+                                             std::uint64_t prefixBytes);
+
+  /// Allocate KLEE's synthetic object for a function and return the concrete
+  /// address that should be used as the function pointer value.
+  std::uint64_t allocateFunctionObject(ExecutionState &state,
+                                       llvm::Function &function);
+
+#if LLVM_VERSION_CODE >= LLVM_VERSION(17, 0)
+  /// Allocate a synthetic function object containing LLVM's UBSan function
+  /// sanitizer prefix and return the address after that prefix.
+  std::uint64_t allocateFunctionObjectWithUBSan(ExecutionState &state,
+                                                llvm::Function &function,
+                                                llvm::MDNode &metadata);
+#endif
   void initializeGlobalAliases();
   void initializeGlobalObjects(ExecutionState &state);
 
