@@ -24,8 +24,14 @@ define void @"test_int_to_ptr"() {
 
 define void @"test_constant_ops"() {
   %t1 = add i8 trunc(i64 add(i64 ptrtoint(i32* @gInt to i64), i64 -10) to i8), 10
-  %t2 = and i64 sub(i64 sext(i32 ptrtoint(i32* @gInt to i32) to i64), i64 ptrtoint(i32* @gInt to i64)), 4294967295
-  %t3 = and i64 sub(i64 zext(i32 ptrtoint(i32* @gInt to i32) to i64), i64 ptrtoint(i32* @gInt to i64)), 4294967295
+  %addr32 = ptrtoint i32* @gInt to i32
+  %addr64 = ptrtoint i32* @gInt to i64
+  %t2.ext = sext i32 %addr32 to i64
+  %t2.sub = sub i64 %t2.ext, %addr64
+  %t2 = and i64 %t2.sub, 4294967295
+  %t3.ext = zext i32 %addr32 to i64
+  %t3.sub = sub i64 %t3.ext, %addr64
+  %t3 = and i64 %t3.sub, 4294967295
 
   %t4 = icmp eq i8 trunc(i64 ptrtoint(i32* @gInt to i64) to i8), %t1
   %t5 = zext i1 %t4 to i8
@@ -38,18 +44,29 @@ define void @"test_constant_ops"() {
 }
 
 define void @"test_logical_ops"() {
-  %t1 = add i32 -10, and(i32 ptrtoint(i32* @gInt to i32), i32 xor(i32 ptrtoint(i32* @gInt to i32), i32 -1))
-  %t2 = add i32 -10, or(i32 ptrtoint(i32* @gInt to i32), i32 xor(i32 ptrtoint(i32* @gInt to i32), i32 -1))
-  %t3 = add i32 -10, xor(i32 xor(i32 ptrtoint(i32* @gInt to i32), i32 1024),  i32 ptrtoint(i32* @gInt to i32))
+  %addr32 = ptrtoint i32* @gInt to i32
+  %not.addr32 = xor i32 %addr32, -1
+  %and.addr32 = and i32 %addr32, %not.addr32
+  %t1 = add i32 -10, %and.addr32
+  %or.addr32 = or i32 %addr32, %not.addr32
+  %t2 = add i32 -10, %or.addr32
+  %xor.tmp = xor i32 %addr32, 1024
+  %xor.addr32 = xor i32 %xor.tmp, %addr32
+  %t3 = add i32 -10, %xor.addr32
 
   call void @print_i32(i32 %t1)
   call void @print_i32(i32 %t2)
   call void @print_i32(i32 %t3)
 
   ; or the address with 1 to ensure the addresses will differ in 'ne' below
-  %t4 = shl i64 lshr(i64 or(i64 ptrtoint(i32* @gInt to i64), i64 1), i64 8), 8
-  %t5 = shl i64 ashr(i64 or(i64 ptrtoint(i32* @gInt to i64), i64 1), i64 8), 8
-  %t6 = lshr i64 shl(i64 or(i64 ptrtoint(i32* @gInt to i64), i64 1), i64 8), 8
+  %addr64 = ptrtoint i32* @gInt to i64
+  %or.addr64 = or i64 %addr64, 1
+  %t4.shift = lshr i64 %or.addr64, 8
+  %t4 = shl i64 %t4.shift, 8
+  %t5.shift = ashr i64 %or.addr64, 8
+  %t5 = shl i64 %t5.shift, 8
+  %t6.shift = shl i64 %or.addr64, 8
+  %t6 = lshr i64 %t6.shift, 8
   
   %t7 = icmp eq i64 %t4, %t5
   %t8 = icmp ne i64 %t4, %t6
@@ -90,16 +107,37 @@ define void @"test_simple_arith"() {
 }
         
 define void @test_cmp() {
-  %t1 = add i8 zext(i1 icmp ult (i64 ptrtoint(i32* @gInt to i64), i64 0) to i8), 1
-  %t2 = add i8 zext(i1 icmp ule (i64 ptrtoint(i32* @gInt to i64), i64 0) to i8), 1
-  %t3 = add i8 zext(i1 icmp uge (i64 ptrtoint(i32* @gInt to i64), i64 0) to i8), 1
-  %t4 = add i8 zext(i1 icmp ugt (i64 ptrtoint(i32* @gInt to i64), i64 0) to i8), 1
-  %t5 = add i8 zext(i1 icmp slt (i64 ptrtoint(i32* @gInt to i64), i64 0) to i8), 1
-  %t6 = add i8 zext(i1 icmp sle (i64 ptrtoint(i32* @gInt to i64), i64 0) to i8), 1
-  %t7 = add i8 zext(i1 icmp sge (i64 ptrtoint(i32* @gInt to i64), i64 0) to i8), 1
-  %t8 = add i8 zext(i1 icmp sgt (i64 ptrtoint(i32* @gInt to i64), i64 0) to i8), 1
-  %t9 = add i8 zext(i1 icmp eq (i64 ptrtoint(i32* @gInt to i64), i64 10) to i8), 1
-  %t10 = add i8 zext(i1 icmp ne (i64 ptrtoint(i32* @gInt to i64), i64 10) to i8), 1
+  %addr64 = ptrtoint i32* @gInt to i64
+  %t1.cmp = icmp ult i64 %addr64, 0
+  %t1.ext = zext i1 %t1.cmp to i8
+  %t1 = add i8 %t1.ext, 1
+  %t2.cmp = icmp ule i64 %addr64, 0
+  %t2.ext = zext i1 %t2.cmp to i8
+  %t2 = add i8 %t2.ext, 1
+  %t3.cmp = icmp uge i64 %addr64, 0
+  %t3.ext = zext i1 %t3.cmp to i8
+  %t3 = add i8 %t3.ext, 1
+  %t4.cmp = icmp ugt i64 %addr64, 0
+  %t4.ext = zext i1 %t4.cmp to i8
+  %t4 = add i8 %t4.ext, 1
+  %t5.cmp = icmp slt i64 %addr64, 0
+  %t5.ext = zext i1 %t5.cmp to i8
+  %t5 = add i8 %t5.ext, 1
+  %t6.cmp = icmp sle i64 %addr64, 0
+  %t6.ext = zext i1 %t6.cmp to i8
+  %t6 = add i8 %t6.ext, 1
+  %t7.cmp = icmp sge i64 %addr64, 0
+  %t7.ext = zext i1 %t7.cmp to i8
+  %t7 = add i8 %t7.ext, 1
+  %t8.cmp = icmp sgt i64 %addr64, 0
+  %t8.ext = zext i1 %t8.cmp to i8
+  %t8 = add i8 %t8.ext, 1
+  %t9.cmp = icmp eq i64 %addr64, 10
+  %t9.ext = zext i1 %t9.cmp to i8
+  %t9 = add i8 %t9.ext, 1
+  %t10.cmp = icmp ne i64 %addr64, 10
+  %t10.ext = zext i1 %t10.cmp to i8
+  %t10 = add i8 %t10.ext, 1
 
   call void @print_i1(i8 %t1)
   call void @print_i1(i8 %t2)
