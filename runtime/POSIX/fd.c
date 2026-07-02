@@ -153,7 +153,7 @@ int __fd_open(const char *pathname, int flags, mode_t mode) {
       return -1;
     }
     
-    if ((flags & O_TRUNC) && (flags & O_RDONLY)) {
+    if ((flags & O_TRUNC) && (flags & O_ACCMODE) == O_RDONLY) {
       /* The result of using O_TRUNC with O_RDONLY is undefined, so we
 	 return error */
       klee_warning("Undefined call to open(): O_TRUNC | O_RDONLY\n");
