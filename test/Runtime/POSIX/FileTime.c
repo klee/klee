@@ -1,7 +1,7 @@
 // Tests the functionality of setting and getting file access and modification times
 // RUN: %clang %s -emit-llvm %O0opt -c -o %t1.bc
 // RUN: rm -rf %t.klee-out
-// RUN: %klee --output-dir=%t.klee-out --libc=uclibc --posix-runtime %t1.bc --sym-files 1 1
+// RUN: %klee --output-dir=%t.klee-out --libc=uclibc --posix-runtime %t1.bc --sym-files 1 1 2>&1 | FileCheck %s
 
 #include <stdio.h>
 #include <assert.h>
@@ -15,6 +15,7 @@ int main(int argc, char** argv) {
   // Create the file
   FILE* const f = fopen(filePath, "w");
   assert(f);
+  // CHECK: KLEE: ERROR: {{.*}} ASSERTION FAIL: f
   const int r = fclose(f);
   assert(r == 0);
 
@@ -41,7 +42,9 @@ int main(int argc, char** argv) {
   stat(filePath, &sb);
 
   assert(sb.st_atim.tv_sec >= now.tv_sec && sb.st_atim.tv_sec <= someTimeAfter.tv_sec);
+  // CHECK-NOT: KLEE: ERROR: {{.*}} ASSERTION FAIL: sb.st_atim.tv_sec >= now.tv_sec && sb.st_atim.tv_sec <= someTimeAfter.tv_sec
   assert(sb.st_mtim.tv_sec >= now.tv_sec && sb.st_mtim.tv_sec <= someTimeAfter.tv_sec);
+  // CHECK-NOT: KLEE: ERROR: {{.*}} ASSERTION FAIL: sb.st_mtim.tv_sec >= now.tv_sec && sb.st_mtim.tv_sec <= someTimeAfter.tv_sec
   
   return 0;
 }
