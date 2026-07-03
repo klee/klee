@@ -252,9 +252,9 @@ int utimes(const char *path, const struct timeval times[2]) {
   exe_disk_file_t *dfile = __get_sym_file(path);
 
   if (dfile) {
+    struct timeval newTimes[2];
 
     if (!times) {
-      struct timeval newTimes[2];
       gettimeofday(&(newTimes[0]), NULL);
       newTimes[1] = newTimes[0];
       times = newTimes;
