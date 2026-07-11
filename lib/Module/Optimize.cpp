@@ -168,7 +168,7 @@ void klee::optimizeModule(llvm::Module *M,
       StringRef GVName = GV.getName();
 
       for (const char *fun : preservedFunctions)
-        if (GVName.equals(fun))
+        if (GVName == fun)
           return true;
 
       return false;
