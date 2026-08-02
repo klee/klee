@@ -3440,6 +3440,11 @@ void Executor::computeOffsetsSeqTy(KGEPInstruction *kgepi,
 
 template <typename TypeIt>
 void Executor::computeOffsets(KGEPInstruction *kgepi, TypeIt ib, TypeIt ie) {
+  // Recomputing the offsets of an instruction must overwrite the previous
+  // result, not add to it. bindModuleConstants() runs once per
+  // runFunctionAsMain() call, so each call would otherwise append another
+  // copy of every variable GEP index (e.g. when replaying several ktests).
+  kgepi->indices.clear();
   ref<ConstantExpr> constantOffset =
     ConstantExpr::alloc(0, Context::get().getPointerWidth());
   uint64_t index = 1;
