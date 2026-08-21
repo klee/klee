@@ -17,7 +17,8 @@ int main(int argc, char** argv) {
   assert(x == 0);
   
   int fd = open("A", O_RDONLY);
-  assert(fd != -1);
+  if (fd == -1)
+    return 1;
 
   // EFAULT buf is outside your accessible address space. (man page)
   x = read(fd, 0, 1);
@@ -28,8 +29,12 @@ int main(int argc, char** argv) {
   assert(x == -1 && errno == EBADF);
 
   fd = open("A", O_RDONLY);
-  assert(fd != -1);
+  if (fd == -1)
+    return 1;
+
   x = read(fd, buf, 1);
-  assert(x == 1);  
+  assert(x == 1);
+
+  return 0;
 }
 
