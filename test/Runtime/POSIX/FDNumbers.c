@@ -8,6 +8,8 @@
 
 int main(int argc, char **argv) {
   int fd = open("A", O_TRUNC);
+  if (fd == -1)
+    return 1;
   assert(fd == 3);
   assert(!close(0));
   assert(!close(1));

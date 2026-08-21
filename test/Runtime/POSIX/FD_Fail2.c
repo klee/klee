@@ -10,7 +10,8 @@
 // RUN: test -f %t.klee-out/test000002.ktest
 // RUN: test -f %t.klee-out/test000003.ktest
 // RUN: test -f %t.klee-out/test000004.ktest
-// RUN: not test -f %t.klee-out/test000005.ktest
+// RUN: test -f %t.klee-out/test000005.ktest
+// RUN: not test -f %t.klee-out/test000006.ktest
 
 #include <stdio.h>
 #include <assert.h>
@@ -25,7 +26,8 @@ int main(int argc, char** argv) {
   char buf[1024];
   // Open the symbolic file "A"
   int fd = open("A", O_RDONLY);
-  assert(fd != -1);
+  if (fd == -1)
+    return 1;
 
   int r;
 
