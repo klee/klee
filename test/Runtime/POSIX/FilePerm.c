@@ -14,7 +14,12 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <klee/klee.h>
+
 int main(int argc, char** argv) {
+  mode_t perms;
+  klee_make_symbolic(&perms, sizeof(perms), "perms");
+  chmod("A", perms);
   int fd = open("A", O_RDWR);
   if (fd != -1)
     printf("File 'A' opened successfully\n");

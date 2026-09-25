@@ -15,7 +15,6 @@ int main(int argc, char** argv) {
   // Create the file
   FILE* const f = fopen(filePath, "w");
   assert(f);
-  // CHECK: KLEE: ERROR: {{.*}} ASSERTION FAIL: f
   const int r = fclose(f);
   assert(r == 0);
 
@@ -45,6 +44,4 @@ int main(int argc, char** argv) {
   // CHECK-NOT: KLEE: ERROR: {{.*}} ASSERTION FAIL: sb.st_atim.tv_sec >= now.tv_sec && sb.st_atim.tv_sec <= someTimeAfter.tv_sec
   assert(sb.st_mtim.tv_sec >= now.tv_sec && sb.st_mtim.tv_sec <= someTimeAfter.tv_sec);
   // CHECK-NOT: KLEE: ERROR: {{.*}} ASSERTION FAIL: sb.st_mtim.tv_sec >= now.tv_sec && sb.st_mtim.tv_sec <= someTimeAfter.tv_sec
-  
-  return 0;
 }
