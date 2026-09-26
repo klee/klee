@@ -152,6 +152,14 @@ fi
   local CXX_FLAGS=("")
   local C_FLAGS=("")
   local LD_FLAGS=("")
+
+  local KLEE_LLVM_INCLUDE_DIR
+  KLEE_LLVM_INCLUDE_DIR="$("${LLVM_CONFIG}" --includedir)" || return 1
+  if [[ -f "${KLEE_LLVM_INCLUDE_DIR}/cxxabi.h" ]]; then
+    # Some LLVM installations also contain libc++abi headers. Search these
+    # after the host C++ headers to avoid mixing libc++abi with libstdc++.
+    CXX_FLAGS+=("-idirafter" "${KLEE_LLVM_INCLUDE_DIR}")
+  fi
   
   if [ "${COVERAGE}" -eq 1 ]; then
     CXX_FLAGS+=("-fprofile-arcs" "-ftest-coverage")
