@@ -7,10 +7,12 @@
 // x86_64-redhat-linux-gnu as a build directory for all CMake projects which
 // leads to a test failure due to an unwanted change to x86_64-redhat-1-gnu.
 //
-// RUN: %clang %s -std=c99 -emit-llvm %O0opt -g -c -DTDIR=%T -o %t2.bc
-// RUN: touch %T/futimesat-dummy
+// RUN: %clang %s -std=c99 -emit-llvm %O0opt -g -c -DTDIR=%t.dir -o %t2.bc
+// RUN: mkdir -p %t.dir
+// RUN: touch %t.dir/futimesat-dummy
 // RUN: rm -rf %t.klee-out
 // RUN: %klee --output-dir=%t.klee-out --posix-runtime --exit-on-error %t2.bc --sym-files 1 10
+// RUN: rm -rf %t.dir
 
 // According to https://man7.org/linux/man-pages/man2/futimesat.2.html
 // _GNU_SOURCE should be defined for glibc.
