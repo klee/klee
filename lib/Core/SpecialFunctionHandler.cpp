@@ -134,6 +134,10 @@ static constexpr std::array handlerInfo = {
   add("_ZdaPv", handleDeleteArray, false),
   // operator delete(void*)
   add("_ZdlPv", handleDelete, false),
+  // operator delete[](void*, size_t) (sized deallocation)
+  add("_ZdaPvm", handleDeleteArray, false),
+  // operator delete(void*, size_t) (sized deallocation)
+  add("_ZdlPvm", handleDelete, false),
 
   // operator new[](unsigned int)
   add("_Znaj", handleNewArray, true),
@@ -370,7 +374,10 @@ void SpecialFunctionHandler::handleDelete(ExecutionState &state,
   // new/delete, new[]/delete[]).
 
   // XXX should type check args
-  assert(arguments.size()==1 && "invalid number of arguments to delete");
+  // arguments.size() == 2 is the sized-deallocation form,
+  // delete(void*, size_t); the size argument is not needed to free.
+  assert((arguments.size() == 1 || arguments.size() == 2) &&
+         "invalid number of arguments to delete");
   executor.executeFree(state, arguments[0]);
 }
 
@@ -386,7 +393,10 @@ void SpecialFunctionHandler::handleDeleteArray(ExecutionState &state,
                                  KInstruction *target,
                                  std::vector<ref<Expr> > &arguments) {
   // XXX should type check args
-  assert(arguments.size()==1 && "invalid number of arguments to delete[]");
+  // arguments.size() == 2 is the sized-deallocation form,
+  // delete[](void*, size_t); the size argument is not needed to free.
+  assert((arguments.size() == 1 || arguments.size() == 2) &&
+         "invalid number of arguments to delete[]");
   executor.executeFree(state, arguments[0]);
 }
 
