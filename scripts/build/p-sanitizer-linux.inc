@@ -33,6 +33,9 @@ is_installed_sanitizer() {
   local SANITIZER_LLVM_VERSION_MINOR="${SANITIZER_LLVM_VERSION/*./}"
   local version="${SANITIZER_LLVM_VERSION_MAJOR}"
 
-  # Check if clang with the right version exists
-  which "clang-${version}"
+  # The compiler can be installed without its sanitizer runtime libraries.
+  which "clang-${version}" || return 1
+  printf 'int main() { return 0; }\n' |
+    "clang++-${version}" "-fsanitize=${SANITIZER_BUILD//:/,}" \
+      -x c++ - -o /dev/null
 }
