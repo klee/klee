@@ -17,10 +17,14 @@ entry:
 
 define i32 @main(i32 %argc, i8** nocapture %argv) nounwind readnone {
 entry:
-  br i1 icmp ne (i8* @external_function, i8* null), label %bbtrue, label %bbfalse
+  %cond = icmp ne i8* @external_function, null
+  br i1 %cond, label %bbtrue, label %bbfalse
 
 bbtrue:
-  %0 = tail call i32 bitcast (i8* @external_function to i32 (void (i8*)*, i8*, i8*)*)(void (i8*)* nonnull @foo, i8* getelementptr inbounds (<{ [56 x i8] }>, <{ [56 x i8] }>* @bar, i64 0, i32 0, i64 0), i8* bitcast (i8** @handle to i8*))
+  %fn = bitcast i8* @external_function to i32 (void (i8*)*, i8*, i8*)*
+  %arg1 = getelementptr inbounds <{ [56 x i8] }>, <{ [56 x i8] }>* @bar, i64 0, i32 0, i64 0
+  %arg2 = bitcast i8** @handle to i8*
+  %0 = tail call i32 %fn(void (i8*)* nonnull @foo, i8* %arg1, i8* %arg2)
   ret i32 0
 
 bbfalse:
