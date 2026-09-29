@@ -14,7 +14,8 @@ install_build_dependencies_libcxx() {
 
   with_sudo pacman --no-confirm -S "${dependencies[@]}"
 
-  pip install --user wllvm
-  base_path="$(python -m site --user-base)"
-  export PATH="$PATH:${base_path}/bin"
+  local wllvm_venv="${HOME}/.venvs/wllvm"
+  python -m venv "${wllvm_venv}" || return 1
+  "${wllvm_venv}/bin/python" -m pip install wllvm || return 1
+  export PATH="${wllvm_venv}/bin:${PATH}"
 }

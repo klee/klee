@@ -39,7 +39,7 @@ LABEL maintainer="KLEE Developers"
 # TODO remove adding sudo package
 # Create ``klee`` user for container with password ``klee``.
 # and give it password-less sudo access (temporarily so we can use the CI scripts)
-RUN apt update && DEBIAN_FRONTEND=noninteractive apt -y --no-install-recommends install sudo less emacs-nox vim-nox file python3-dateutil && \
+RUN apt update && DEBIAN_FRONTEND=noninteractive apt -y --no-install-recommends install sudo less emacs-nox vim-nox file python3-venv && \
     rm -rf /var/lib/apt/lists/* && \
     useradd -m klee && \
     echo klee:klee | chpasswd && \
@@ -52,11 +52,12 @@ COPY --chown=klee:klee . /tmp/klee_src/
 USER klee
 WORKDIR /home/klee
 # Build and set klee user to be owner
-RUN /tmp/klee_src/scripts/build/build.sh --debug --install-system-deps klee && pip3 install flask wllvm && \
+RUN /tmp/klee_src/scripts/build/build.sh --debug --install-system-deps klee && \
+    python3 -m venv /home/klee/.venvs/klee && /home/klee/.venvs/klee/bin/pip install flask python-dateutil wllvm lit tabulate && \
     sudo rm -rf /var/lib/apt/lists/*
 
 
-ENV PATH="$PATH:/tmp/llvm-160-install_O_D_A/bin:/home/klee/klee_build/bin:/home/klee/.local/bin"
+ENV PATH="/home/klee/.venvs/klee/bin:$PATH:/tmp/llvm-160-install_O_D_A/bin:/home/klee/klee_build/bin"
 ENV BASE=/tmp
 # Add path to local LLVM installation - let system install precede local install
 RUN /bin/bash -c 'echo "export \"PATH=$PATH:$(cd ${BASE}/llvm-*-install*/bin/ && pwd)\" >> /home/klee/.bashrc"'
