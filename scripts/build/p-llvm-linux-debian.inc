@@ -12,7 +12,6 @@ install_build_dependencies_llvm() {
     groff
     gcc
     g++
-    python3-distutils
     make
     git # To check out code
     zlib1g-dev

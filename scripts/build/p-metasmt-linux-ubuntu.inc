@@ -21,7 +21,6 @@ install_build_dependencies_metasmt() {
     python3
     curl
     python-is-python3 # Need for old Z3
-    python3-distutils
     python3-pip
     python3-toml
     default-jre # Needed for ANTLR
