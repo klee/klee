@@ -10,7 +10,6 @@ install_build_dependencies_llvm() {
     groff
     gcc
     g++
-    python-distutils-extra
     make
     git # To check out code
     zlib1g-dev
