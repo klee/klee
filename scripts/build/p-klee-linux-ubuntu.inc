@@ -9,6 +9,7 @@ install_build_dependencies_klee() {
     python3
     python3-setuptools
     python3-pip
+    python3-venv # Needed to install lit and tabulate in a venv
     python3-wheel
     libtinfo-dev
   )
@@ -29,8 +30,9 @@ install_build_dependencies_klee() {
 
   with_sudo apt-get -y --no-install-recommends install "${dependencies[@]}"
 
-  pip3 install --user lit
-  pip3 install --user tabulate
-  base_path="$(python3 -m site --user-base)"
-  export PATH="$PATH:${base_path}/bin"
+  # Prepend the venv to PATH, so its python3 (with tabulate) is used by klee-stats
+  local klee_venv="${HOME}/.venvs/klee"
+  python3 -m venv "${klee_venv}" || return 1
+  "${klee_venv}/bin/python" -m pip install lit tabulate || return 1
+  export PATH="${klee_venv}/bin:${PATH}"
 }
