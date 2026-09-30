@@ -172,7 +172,7 @@ jobs:
             echo "::endgroup::"
 
             echo "::group::Testing"
-            ctest --build-generator Ninja --build-and-test . build
+            cmake --build build --target check
             echo "::endgroup::"
 
   Docker:
