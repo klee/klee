@@ -1,10 +1,14 @@
 # Build information for KLEE
+# Keep test options optional while forwarding them into Docker builds.
+KLEE_TEST_OPTIONS="${KLEE_TEST_OPTIONS:-}"
+
 required_variables_klee=(
   "COVERAGE"
   "KLEE_RUNTIME_BUILD"
   "USE_TCMALLOC"
   "USE_LIBCXX"
   "ENABLE_DOXYGEN"
+  "KLEE_TEST_OPTIONS"
 )
 
 required_variables_check_klee() {
