@@ -9,7 +9,7 @@ on:
 
 # Defaults for building KLEE
 env:
-  BASE_IMAGE: ubuntu:jammy-20251001
+  BASE_IMAGE: ubuntu:noble-20260911
   REPOSITORY: ghcr.io/klee
   COVERAGE: 0
   DISABLE_ASSERTIONS: 0
@@ -32,7 +32,7 @@ env:
 
 jobs:
   Linux:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         name: [
@@ -176,7 +176,7 @@ jobs:
             echo "::endgroup::"
 
   Docker:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout KLEE Code
         uses: actions/checkout@v6
@@ -184,7 +184,7 @@ jobs:
         run: docker build .
 
   Coverage:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         name: [
