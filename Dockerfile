@@ -1,10 +1,10 @@
-FROM ghcr.io/klee/llvm:160_O_D_A_ubuntu_jammy-20251001 AS llvm_base
+FROM ghcr.io/klee/llvm:180_O_D_A_ubuntu_jammy-20251001 AS llvm_base
 FROM ghcr.io/klee/gtest:1.16.0_ubuntu_jammy-20251001 AS gtest_base
-FROM ghcr.io/klee/uclibc:klee_uclibc_v1.4_160_ubuntu_jammy-20251001 AS uclibc_base
+FROM ghcr.io/klee/uclibc:klee_uclibc_v1.4_180_ubuntu_jammy-20251001 AS uclibc_base
 FROM ghcr.io/klee/tcmalloc:2.9.1_ubuntu_jammy-20251001 AS tcmalloc_base
 FROM ghcr.io/klee/stp:2.3.4_ubuntu_jammy-20251001 AS stp_base
 FROM ghcr.io/klee/z3:4.8.15_ubuntu_jammy-20251001 AS z3_base
-FROM ghcr.io/klee/libcxx:160_ubuntu_jammy-20251001 AS libcxx_base
+FROM ghcr.io/klee/libcxx:180_ubuntu_jammy-20251001 AS libcxx_base
 FROM ghcr.io/klee/sqlite:3400100_ubuntu_jammy-20251001 AS sqlite3_base
 FROM llvm_base AS intermediate
 COPY --from=gtest_base /tmp /tmp/
@@ -17,7 +17,7 @@ COPY --from=sqlite3_base /tmp /tmp/
 ENV COVERAGE=0
 ENV USE_TCMALLOC=1
 ENV BASE=/tmp
-ENV LLVM_VERSION=16.0
+ENV LLVM_VERSION=18.0
 ENV ENABLE_DOXYGEN=1
 ENV ENABLE_OPTIMIZED=1
 ENV ENABLE_DEBUG=1
