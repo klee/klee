@@ -18,7 +18,7 @@ env:
   ENABLE_DEBUG: 1
   GTEST_VERSION: 1.16.0
   KLEE_RUNTIME_BUILD: "Debug+Asserts"
-  LLVM_VERSION: 16
+  LLVM_VERSION: 18
   MINISAT_VERSION: "master"
   REQUIRES_RTTI: 0
   SOLVERS: STP:Z3
@@ -37,10 +37,10 @@ jobs:
       matrix:
         name: [
           "LLVM 19",
-          "LLVM 18",
-          "LLVM 17",
-          "LLVM 16, Doxygen",
-          "LLVM 15, KDAlloc disabled",
+          "LLVM 18, Doxygen",
+          "LLVM 17, KDAlloc disabled",
+          "LLVM 16",
+          "LLVM 15",
           "ASan",
           "UBSan",
           "Z3 only",
@@ -53,20 +53,20 @@ jobs:
           - name: "LLVM 19"
             env:
               LLVM_VERSION: 19
-          - name: "LLVM 18"
+          - name: "LLVM 18, Doxygen"
             env:
               LLVM_VERSION: 18
-          - name: "LLVM 17"
+              ENABLE_DOXYGEN: 1
+          - name: "LLVM 17, KDAlloc disabled"
             env:
               LLVM_VERSION: 17
-          - name: "LLVM 16, Doxygen"
+              KLEE_TEST_OPTIONS: --kdalloc=false
+          - name: "LLVM 16"
             env:
               LLVM_VERSION: 16
-              ENABLE_DOXYGEN: 1
-          - name: "LLVM 15, KDAlloc disabled"
+          - name: "LLVM 15"
             env:
               LLVM_VERSION: 15
-              KLEE_TEST_OPTIONS: --kdalloc=false
           # Sanitizer builds. Do unoptimized build otherwise the optimizer
           # might remove problematic code
           - name: "ASan"
@@ -74,13 +74,13 @@ jobs:
               SANITIZER_BUILD: address
               ENABLE_OPTIMIZED: 0
               USE_TCMALLOC: 0
-              SANITIZER_LLVM_VERSION: 16
+              SANITIZER_LLVM_VERSION: 18
           - name: "UBSan"
             env:
               SANITIZER_BUILD: undefined
               ENABLE_OPTIMIZED: 0
               USE_TCMALLOC: 0
-              SANITIZER_LLVM_VERSION: 16
+              SANITIZER_LLVM_VERSION: 18
           # Test just using Z3 only
           - name: "Z3 only"
             env:
@@ -116,7 +116,7 @@ jobs:
   macOS:
     runs-on: macos-latest
     env:
-      LLVM_VERSION: 16
+      LLVM_VERSION: 18
       BASE: /tmp
       SOLVERS: Z3
       UCLIBC_VERSION: 0
