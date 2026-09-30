@@ -191,7 +191,9 @@ fi
       echo "CMAKE_PREFIX_PATH=\"${cmake_concatenated}\" \\"
     fi
 
-    echo "cmake ${CMAKE_ARGUMENTS[*]} \"${KLEE_SRC}\""
+    printf 'cmake'
+    printf ' %q' "${CMAKE_ARGUMENTS[@]}" "${KLEE_SRC}"
+    printf '\n'
   } > "${KLEE_BUILD_DIR}/.build_command"
 
   source "${KLEE_BUILD_DIR}/.build_command"
