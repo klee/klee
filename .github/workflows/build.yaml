@@ -156,9 +156,9 @@ jobs:
             echo "::group::Dependencies installation"
             sudo -E pkg install -y \
                 cmake ninja z3 llvm18 pkgconf google-perftools googletest \
-                sqlite3 python312
+                sqlite3 python3
 
-            python3.12 -m venv .venv
+            python3 -m venv .venv
             .venv/bin/python -m pip install lit==18.1.8 tabulate
             export PATH="$PWD/.venv/bin:$PATH"
             echo "::endgroup::"
