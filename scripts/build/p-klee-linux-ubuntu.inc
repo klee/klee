@@ -14,6 +14,11 @@ install_build_dependencies_klee() {
     libtinfo-dev
   )
 
+  if [[ "${DISTRIBUTION_VER}" == "24.04" ]]; then
+    # Clang can select GCC 14 even though build-essential installs G++ 13.
+    dependencies+=(libstdc++-14-dev)
+  fi
+
   if [[ "${SOLVERS:-}" == "metaSMT" ]]; then
     dependencies+=(
       libboost-dev
