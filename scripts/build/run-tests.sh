@@ -22,9 +22,14 @@ coverage_update() {
   tags="$2"
   codecov_suffix=(${tags// /})
   build_dir="$1"
-  # Create report
+  # Some target directories have no counters after unit tests. Allow those
+  # directories to be empty, but require source coverage in the final report.
   # (NOTE: "--rc lcov_branch_coverage=1" needs to be added in all calls, otherwise branch coverage gets dropped)
-  lcov -q --rc lcov_branch_coverage=1 --directory "${build_dir}/lib" --directory "${build_dir}/runtime" --directory "${build_dir}/tools" --directory "${build_dir}/unittests" --base-directory="${KLEE_SRC}" --no-external --exclude "${KLEE_SRC}/test/*" --exclude "${KLEE_SRC}/unittests/*" --ignore-errors unused --capture --output-file coverage.info
+  lcov -q --rc lcov_branch_coverage=1 --directory "${build_dir}/lib" --directory "${build_dir}/runtime" --directory "${build_dir}/tools" --directory "${build_dir}/unittests" --base-directory="${KLEE_SRC}" --no-external --exclude "${KLEE_SRC}/test/*" --exclude "${KLEE_SRC}/unittests/*" --ignore-errors unused,empty --capture --output-file coverage.info
+  if ! grep -q '^SF:' coverage.info; then
+    echo "No source coverage captured in coverage.info" >&2
+    return 1
+  fi
   # Combine baseline and measured coverage
   lcov -q --rc lcov_branch_coverage=1 -a coverage_base.info -a coverage.info -o coverage_all.info."${codecov_suffix}"
   # Debug info
