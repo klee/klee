@@ -155,13 +155,18 @@ jobs:
 
             echo "::group::Dependencies installation"
             sudo -E pkg install -y \
-                cmake ninja z3 llvm16 pkgconf google-perftools googletest \
-                sqlite3 py312-tabulate
+                cmake ninja z3 llvm18 pkgconf google-perftools googletest \
+                sqlite3 python312
+
+            python3.12 -m venv .venv
+            .venv/bin/python -m pip install lit==18.1.8 tabulate
+            export PATH="$PWD/.venv/bin:$PATH"
             echo "::endgroup::"
 
             echo "::group::CMake configuration"
             cmake -B build -G Ninja \
                 -DLLVM_DIR=`sysctl -n user.localbase`/lib/cmake/llvm \
+                -DLIT_TOOL="$PWD/.venv/bin/lit" \
                 -DENABLE_POSIX_RUNTIME=YES -DENABLE_UNIT_TESTS=YES \
                 -DENABLE_SYSTEM_TESTS=YES -DENABLE_TCMALLOC=yes \
                 -DENABLE_SOLVER_Z3=yes
