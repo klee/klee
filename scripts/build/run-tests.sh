@@ -8,10 +8,14 @@ coverage_setup() {
   local build_dir="$1"
   # Zero coverage for any file, e.g. previous tests
   lcov -q --directory "${build_dir}" --no-external --zerocounters
-  # Create a baseline by capturing any file used for compilation, no execution yet
-  lcov -q --rc lcov_branch_coverage=1 --directory "${build_dir}" --base-directory="${KLEE_SRC}" --no-external --capture --initial --output-file coverage_base.info
-  lcov -q --rc lcov_branch_coverage=1 --remove coverage_base.info 'test/*' --output-file coverage_base.info
-  lcov -q --rc lcov_branch_coverage=1 --remove coverage_base.info 'unittests/*' --output-file coverage_base.info
+  # Create the baseline before execution.
+  # --directory: Capture target directories only, excluding CMake
+  #   compiler-identification probes under the top-level CMakeFiles directory.
+  # --exclude: Exclude test/ and unittests/ during capture to avoid gcov
+  #   function-range mismatches in GoogleTest macros.
+  # --ignore-errors: Allow unused exclusion patterns because system-test
+  # sources may have no coverage records.
+  lcov -q --rc lcov_branch_coverage=1 --directory "${build_dir}/lib" --directory "${build_dir}/runtime" --directory "${build_dir}/tools" --directory "${build_dir}/unittests" --base-directory="${KLEE_SRC}" --no-external --exclude "${KLEE_SRC}/test/*" --exclude "${KLEE_SRC}/unittests/*" --ignore-errors unused --capture --initial --output-file coverage_base.info
 }
 
 coverage_update() {
@@ -20,10 +24,7 @@ coverage_update() {
   build_dir="$1"
   # Create report
   # (NOTE: "--rc lcov_branch_coverage=1" needs to be added in all calls, otherwise branch coverage gets dropped)
-  lcov -q --rc lcov_branch_coverage=1 --directory "${build_dir}" --base-directory="${KLEE_SRC}" --no-external --capture --output-file coverage.info
-  # Exclude uninteresting coverage goals (LLVM, googletest, and KLEE system and unit tests)
-  lcov -q --rc lcov_branch_coverage=1 --remove coverage.info 'test/*' --output-file coverage.info
-  lcov -q --rc lcov_branch_coverage=1 --remove coverage.info 'unittests/*' --output-file coverage.info
+  lcov -q --rc lcov_branch_coverage=1 --directory "${build_dir}/lib" --directory "${build_dir}/runtime" --directory "${build_dir}/tools" --directory "${build_dir}/unittests" --base-directory="${KLEE_SRC}" --no-external --exclude "${KLEE_SRC}/test/*" --exclude "${KLEE_SRC}/unittests/*" --ignore-errors unused --capture --output-file coverage.info
   # Combine baseline and measured coverage
   lcov -q --rc lcov_branch_coverage=1 -a coverage_base.info -a coverage.info -o coverage_all.info."${codecov_suffix}"
   # Debug info
