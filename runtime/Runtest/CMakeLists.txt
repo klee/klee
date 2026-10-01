@@ -22,4 +22,11 @@ set_target_properties(kleeRuntest
 )
 target_include_directories(kleeRuntest PRIVATE ${KLEE_INCLUDE_DIRS})
 
+# Match kleeBasic's exception settings for the shared KTest.cpp source.
+if (NOT LLVM_ENABLE_EH AND NOT ENABLE_SOLVER_METASMT)
+  target_compile_options(kleeRuntest PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>
+  )
+endif()
+
 install(TARGETS kleeRuntest DESTINATION "${CMAKE_INSTALL_FULL_LIBDIR}")
