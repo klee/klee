@@ -1,3 +1,41 @@
+KLEE 3.3, 15 October 2026
+=========================
+
+Incorporating changes from 24 December 2025 to 15 October 2026.
+Maintainers during this time span: @ccadar
+Documentation at https://klee-se.org/releases/docs/v3.3
+
+== Major features and important changes ==
+- New KLEE Web version (@FinnLeh, @YiLai-qed)
+- Execute unsupported intrinsics via external calls (@operasfantom)
+
+== LLVM support ==
+- Current recommended version is LLVM 18
+- Added full support for LLVM 17-19 (@ccadar)
+- Removed support for LLVM < 15 (@ccadar)
+- KLEE 3.3 will be the last version with support for LLVM 15
+
+== Options, scripts and KLEE intrinsics added, changed or removed ==
+- Initialised the struct stats of symbolic files (A, B, ...) to fixed sane defaults. In particular, symbolic files are now regular files for which we have read and write permissions (@ccadar)
+- Added support for the llvm.load.relative intrinsic (@ccadar)
+- Added support for the llvm.ptrmask intrinsic (@ccadar)
+- Improved support for the llvm.load.relative intrinsic (@ccadar)
+
+== Other changes ==
+- Add support for the new pass manager of LLVM 17+ (@ccadar)
+- Add UBSan support for the (LLVM 17+) function type mismatch handler ABI (@operasfantom)
+- Enforced fd access mode checks for sym-file read/write operations (@dino-fan777)
+- Moved FreeBSD CI from Cirrus CI to GitHub Actions (@arrowd)
+- Fix a crash when runFunctionAsMain() is invoked multiple times, particularly when replaying multiple .ktest files (@nokitoino)
+- Recompute GEP indices instead of accumulating them across runs (@nokitoino)
+- Fixed permission checks in the POSIX runtime (@ccadar)
+- Fixed dangling pointer in utimes() for symbolic files when the second argument is NULL (@fkil)
+- Improvements to KLEE's freestanding library (@ccadar)
+- Fixed issue with leaking solver shared memory segments (@ccadar)
+- Added a UBSan tutorial (@5467845)
+- Smaller refactorings, fixes and improvements, test cases, maintenance, comments, web version, website, etc. (@12300001111, @251, @arrowd, @ccadar, @danielschemmel, @davidtr1037, @dependabot, @foxtran, @jbuening, @operasfantom)
+
+
 KLEE 3.2, 23 December 2025
 ==========================
 
