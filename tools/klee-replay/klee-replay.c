@@ -23,7 +23,7 @@
 #include <unistd.h>
 #include <limits.h>
 
-#if defined(__APPLE__) || defined(__FreeBSD__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)
 #include <signal.h>
 
 #ifndef fgetc_unlocked
@@ -193,10 +193,10 @@ static void run_monitored(char *executable, int argc, char **argv) {
      * do this, because later on we might want to kill pid _and_ all processes
      * spawned by it and its descendants.
      */
-#ifndef __FreeBSD__
-    setpgrp();
-#else
+#if defined(__FreeBSD__) || defined(__OpenBSD__)
     setpgrp(0, 0);
+#else
+    setpgrp();
 #endif
 
     if (!rootdir) {
