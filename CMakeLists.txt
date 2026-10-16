@@ -346,7 +346,9 @@ endif()
 find_library(UTIL_LIBRARY NAMES util)
 message(STATUS "Found libutil ${UTIL_LIBRARY}")
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR
+   CMAKE_SYSTEM_NAME STREQUAL "FreeBSD" OR
+   CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
   find_path(UTIL_INCLUDE_DIR NAMES util.h libutil.h)
   message(STATUS "Found libutil include dir ${UTIL_INCLUDE_DIR}")
 
