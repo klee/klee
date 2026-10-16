@@ -5072,7 +5072,10 @@ void Executor::prepareForEarlyExit() {
 
 /// Returns the errno location in memory
 int *Executor::getErrnoLocation(const ExecutionState &state) const {
-#if !defined(__APPLE__) && !defined(__FreeBSD__)
+#if defined(__OpenBSD__)
+  /* From /usr/include/errno.h: errno is defined as (*__errno()). */
+  return __errno();
+#elif !defined(__APPLE__) && !defined(__FreeBSD__)
   /* From /usr/include/errno.h: it [errno] is a per-thread variable. */
   return __errno_location();
 #else
