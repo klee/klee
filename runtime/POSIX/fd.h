@@ -16,7 +16,7 @@
 #error "_LARGEFILE64_SOURCE should be defined"
 #endif
 
-#if defined(__APPLE__) || defined(__FreeBSD__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)
 #else
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
@@ -35,11 +35,20 @@
 #include <sys/dtrace.h>
 #endif
 
+#ifdef __OpenBSD__
+#ifndef stat64
+#define stat64 stat
+#endif
+#ifndef off64_t
+#define off64_t off_t
+#endif
+#endif
+
 #ifdef __FreeBSD__
 #include "FreeBSD.h"
 #endif
 
-#if defined(__APPLE__) || defined(__FreeBSD__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)
 #include <sys/mount.h>
 #include <sys/param.h>
 #if !defined(dirent64)
