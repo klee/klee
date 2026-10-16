@@ -20,7 +20,7 @@
 
 #include "klee/ADT/KTest.h"
 
-#if defined(__FreeBSD__) || defined(__minix) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__minix) || defined(__APPLE__) || defined(__OpenBSD__)
 #define stat64 stat
 #endif
 

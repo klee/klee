@@ -29,6 +29,9 @@
 #elif defined(__FreeBSD__)
 #include <libutil.h>
 #include <termios.h>
+#elif defined(__OpenBSD__)
+#include <util.h>
+#include <termios.h>
 #else
 #include <termios.h>
 #include <pty.h>

@@ -108,6 +108,9 @@ static constexpr std::array handlerInfo = {
 #else
   add("__error", handleErrnoLocation, true),
 #endif
+#if defined(__OpenBSD__)
+  add("__errno", handleErrnoLocation, true),
+#endif
   add("klee_is_symbolic", handleIsSymbolic, true),
   add("klee_make_symbolic", handleMakeSymbolic, false),
   add("klee_mark_global", handleMarkGlobal, false),
