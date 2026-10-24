@@ -57,7 +57,7 @@ RUN /tmp/klee_src/scripts/build/build.sh --debug --install-system-deps klee && \
     sudo rm -rf /var/lib/apt/lists/*
 
 
-ENV PATH="/home/klee/.venvs/klee/bin:$PATH:/tmp/llvm-160-install_O_D_A/bin:/home/klee/klee_build/bin"
+ENV PATH="/home/klee/.venvs/klee/bin:$PATH:/tmp/llvm-180-install_O_D_A/bin:/home/klee/klee_build/bin"
 ENV BASE=/tmp
 # Add path to local LLVM installation - let system install precede local install
 RUN /bin/bash -c 'echo "export \"PATH=$PATH:$(cd ${BASE}/llvm-*-install*/bin/ && pwd)\" >> /home/klee/.bashrc"'
