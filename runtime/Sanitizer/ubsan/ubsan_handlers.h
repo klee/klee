@@ -67,6 +67,9 @@ struct InvalidValueData {
 };
 
 /// Known implicit conversion check kinds.
+#if LLVM_VERSION_CODE >= LLVM_VERSION(19, 0)
+/// This is used for bitfield conversion checks as well.
+#endif
 /// Keep in sync with the enum of the same name in CGExprScalar.cpp
 enum ImplicitConversionCheckKind : unsigned char {
   ICCK_IntegerTruncation = 0, // Legacy, was only used by clang 7.
@@ -81,6 +84,9 @@ struct ImplicitConversionData {
   const TypeDescriptor &FromType;
   const TypeDescriptor &ToType;
   /* ImplicitConversionCheckKind */ unsigned char Kind;
+#if LLVM_VERSION_CODE >= LLVM_VERSION(19, 0)
+  unsigned int BitfieldBits;
+#endif
 };
 
 struct InvalidBuiltinData {
