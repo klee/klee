@@ -185,6 +185,74 @@ jobs:
             cmake --build build --target check
             echo "::endgroup::"
 
+  OpenBSD:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: cpa.sh {0}
+    steps:
+      - name: Repository checkout
+        uses: actions/checkout@v6
+      - uses: cross-platform-actions/action@v1.2.0
+        with:
+          operating_system: 'openbsd'
+          # KLEE supports LLVM up to 19, which is available in
+          # OpenBSD 7.9.
+          version: '7.9'
+          architecture: 'x86_64'
+          # KLEE's deterministic allocator reserves a large
+          # virtual address space, while OpenBSD limits the data
+          # size to 1.5 GiB for the staff login class. The hard
+          # limit is unlimited, so raise the soft limit.
+          run: |
+            set -e
+            export PATH="/usr/local/bin:/usr/local/sbin:$PATH"
+
+            ulimit -d 67108864
+
+            # Make sure pkg_add uses the official package mirror.
+            echo "https://cdn.openbsd.org/pub/OpenBSD" | sudo tee /etc/installurl
+
+            echo "::group::Dependencies installation"
+            sudo pkg_add cmake ninja gmake z3 llvm%19 llvm-lit gtest \
+                sqlite3 py3-tabulate
+            echo "::endgroup::"
+
+            echo "::group::CMake configuration"
+            # KLEE's POSIX runtime relies on Linux-style __NR_* syscall
+            # mappings, which OpenBSD does not provide. The OpenBSD port of
+            # KLEE also builds with the POSIX runtime disabled.
+            #
+            # System tests are not yet stable on OpenBSD. Keep building and
+            # running unit tests until the platform-specific failures have
+            # been triaged.
+            KLEE_TEST_OPTIONS="--kdalloc-heap-size=4 --kdalloc-stack-size=4 --kdalloc-globals-size=2 --kdalloc-constants-size=2"
+            cmake -B build -G Ninja \
+                -DLLVM_DIR=/usr/local/llvm19/lib/cmake/llvm \
+                -DLLVMCC=/usr/local/bin/clang-19 \
+                -DLLVMCXX=/usr/local/bin/clang++-19 \
+                -DLLVM_LINK=/usr/local/bin/llvm-link-19 \
+                -DLLVM_AR=/usr/local/bin/llvm-ar-19 \
+                -DLLVM_AS=/usr/local/bin/llvm-as-19 \
+                -DLIT_TOOL="$(command -v lit)" \
+                -DLIT_ARGS="-v;--param;klee_opts=${KLEE_TEST_OPTIONS}" \
+                -DENABLE_DOCS=OFF \
+                -DENABLE_POSIX_RUNTIME=NO \
+                -DENABLE_UNIT_TESTS=YES \
+                -DENABLE_SYSTEM_TESTS=NO \
+                -DENABLE_TCMALLOC=NO \
+                -DENABLE_SOLVER_STP=OFF \
+                -DENABLE_SOLVER_Z3=YES
+            echo "::endgroup::"
+
+            echo "::group::Building"
+            cmake --build build
+            echo "::endgroup::"
+
+            echo "::group::Testing"
+            cmake --build build --target check
+            echo "::endgroup::"
+
   Docker:
     runs-on: ubuntu-24.04
     steps:
