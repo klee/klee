@@ -250,7 +250,11 @@ endfunction()
 # Unit Tests
 add_subdirectory(Assignment)
 add_subdirectory(Expr)
-add_subdirectory(KDAlloc)
+# KDAlloc tests reserve multiple TiB of address space, which exceeds
+# OpenBSD's RLIMIT_DATA hard limit.
+if (NOT CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
+  add_subdirectory(KDAlloc)
+endif()
 add_subdirectory(Ref)
 add_subdirectory(Solver)
 add_subdirectory(Searcher)
