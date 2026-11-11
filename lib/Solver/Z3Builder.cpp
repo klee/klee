@@ -475,6 +475,16 @@ Z3ASTHandle Z3Builder::construct(ref<Expr> e, int *width_out) {
   }
 }
 
+/** Like construct(), but an expression of width 1, which construct() returns
+    as a bool, is converted to a bitvector of width 1. */
+Z3ASTHandle Z3Builder::constructBitVector(ref<Expr> e) {
+  int width;
+  Z3ASTHandle res = construct(e, &width);
+  if (width == 1)
+    return iteExpr(res, bvOne(1), bvZero(1));
+  return res;
+}
+
 /** if *width_out!=1 then result is a bitvector,
     otherwise it is a bool */
 Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
@@ -538,10 +548,10 @@ Z3ASTHandle Z3Builder::constructActual(ref<Expr> e, int *width_out) {
   case Expr::Concat: {
     ConcatExpr *ce = cast<ConcatExpr>(e);
     unsigned numKids = ce->getNumKids();
-    Z3ASTHandle res = construct(ce->getKid(numKids - 1), 0);
+    Z3ASTHandle res = constructBitVector(ce->getKid(numKids - 1));
     for (int i = numKids - 2; i >= 0; i--) {
-      res =
-          Z3ASTHandle(Z3_mk_concat(ctx, construct(ce->getKid(i), 0), res), ctx);
+      res = Z3ASTHandle(
+          Z3_mk_concat(ctx, constructBitVector(ce->getKid(i)), res), ctx);
     }
     *width_out = ce->getWidth();
     return res;
