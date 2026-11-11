@@ -1,0 +1,2 @@
+# REQUIRES: z3
+# RUN: %kleaver -solver-backend=z3 %S/Inputs/ConcatBool.kquery.inc 2>&1 | FileCheck %S/Inputs/ConcatBool.kquery.inc

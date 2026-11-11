@@ -160,6 +160,7 @@ private:
 
   Z3ASTHandle constructActual(ref<Expr> e, int *width_out);
   Z3ASTHandle construct(ref<Expr> e, int *width_out);
+  Z3ASTHandle constructBitVector(ref<Expr> e);
 
   Z3ASTHandle buildArray(const char *name, unsigned indexWidth,
                          unsigned valueWidth);
