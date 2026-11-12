@@ -33,6 +33,9 @@ class Executor;
 class MemoryManager;
 class Solver;
 
+/// Maximum size in bytes of an object used symbolically.
+unsigned getMaxSymObjSize();
+
 class MemoryObject {
   friend class STPBuilder;
   friend class ObjectState;
