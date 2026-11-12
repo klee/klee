@@ -4676,11 +4676,13 @@ void Executor::executeMakeSymbolic(ExecutionState &state,
                                    const std::string &name) {
   // Create a new object state for the memory object (instead of a copy).
   if (!replayKTest) {
-    // Check if the size is greater than UINT32_MAX
-    if (mo->size > UINT32_MAX) {
-      terminateStateOnExecError(
-          state, "Symbolic objects larger than 4 GiB are not allowed "
-                 "(requested " + llvm::utostr(mo->size) + " bytes).");
+    // Check the configured symbolic object size limit.
+    if (mo->size > getMaxSymObjSize()) {
+      terminateStateOnExecError(state,
+                  "Symbolic objects larger than " +
+                  llvm::utostr(getMaxSymObjSize()) + " bytes are not allowed " +
+                  "(requested " + llvm::utostr(mo->size) + " bytes). " +
+                  "Use --max-sym-obj-size to increase this limit.");
       return;
     }
 

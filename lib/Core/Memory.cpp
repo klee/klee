@@ -32,18 +32,28 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 DISABLE_WARNING_POP
 
 #include <cassert>
+#include <cstdint>
 #include <sstream>
 
 using namespace llvm;
 using namespace klee;
 
 namespace {
+  cl::opt<unsigned> MaxSymObjSize(
+      "max-sym-obj-size",
+      cl::desc("Maximum object size in bytes for symbolic contents or symbolic "
+               "offsets (default=4194304 (4 MiB), maximum=4294967295 (~4 GiB); "),
+      cl::init(4 * 1024 * 1024),
+      cl::cat(TerminationCat));
+
   cl::opt<bool>
   UseConstantArrays("use-constant-arrays",
                     cl::desc("Use constant arrays instead of updates when possible (default=true)\n"),
                     cl::init(true),
                     cl::cat(SolvingCat));
 }
+
+unsigned klee::getMaxSymObjSize() { return MaxSymObjSize; }
 
 /***/
 
@@ -382,10 +392,12 @@ ref<Expr> ObjectState::read8(Executor &executor, ExecutionState &state, ref<Expr
   size_t base, size;
   fastRangeCheckOffset(offset, &base, &size);
 
-  if (size > UINT32_MAX) {
-    executor.terminateStateOnExecError(
-        state, "Symbolic reads from objects larger than 4 GiB are not allowed "
-               "(object size: " + llvm::utostr(size) + " bytes).");
+  if (size > getMaxSymObjSize()) {
+    executor.terminateStateOnExecError(state,
+                "Symbolic reads from objects larger than " +
+                llvm::utostr(getMaxSymObjSize()) + " bytes are not allowed " +
+                "(object size: " + llvm::utostr(size) + " bytes). " +
+                "Use --max-sym-obj-size to increase this limit.");
     return nullptr;
   }
 
@@ -432,10 +444,13 @@ void ObjectState::write8(Executor &executor, ExecutionState &state, ref<Expr> of
   size_t base, size;
   fastRangeCheckOffset(offset, &base, &size);
 
-  if (size > UINT32_MAX) {
-    executor.terminateStateOnExecError(
-        state, "Symbolic writes from objects larger than 4 GiB are not allowed "
-               "(object size: " + llvm::utostr(size) + " bytes).");
+  if (size > getMaxSymObjSize()) {
+    executor.terminateStateOnExecError(state,
+                   "Symbolic writes from objects larger than " +
+                   llvm::utostr(getMaxSymObjSize()) + " bytes are not allowed " +
+                   "(object size: " + llvm::utostr(size) + " bytes). " +
+                   "Use --max-sym-obj-size to increase this limit.");
+    return;
   }
 
   flushRangeForWrite(base, size);
