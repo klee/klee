@@ -27,6 +27,7 @@ DISABLE_WARNING_DEPRECATED_DECLARATIONS
 #include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TargetSelect.h"
 DISABLE_WARNING_POP
@@ -336,7 +337,7 @@ Function *ExternalDispatcherImpl::createDispatcher(KCallable *target,
                                 llvm::ArrayRef<Value *>(args, args + i));
     result->setCallingConv(intrinsic->getCallingConv());
   } else {
-    assert(0 && "Unhandled KCallable derived class");
+    llvm::report_fatal_error("Unhandled KCallable derived class");
   }
   if (result->getType() != Type::getVoidTy(ctx)) {
     auto resp = Builder.CreateBitCast(

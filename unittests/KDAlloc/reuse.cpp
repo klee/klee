@@ -116,7 +116,15 @@ void reuse_test() {
       auto *ptr = allocator.allocate(size);
       allocator.free(ptr, 8);
       auto emplaced = allocations.emplace(ptr);
-      assert(emplaced.second);
+#if defined(USE_GTEST_INSTEAD_OF_MAIN)
+      ASSERT_TRUE(emplaced.second)
+          << "Unlimited quarantine reused an allocation address";
+#else
+      if (!emplaced.second) {
+        std::cerr << "Unlimited quarantine reused an allocation address\n";
+        std::abort();
+      }
+#endif
     }
   }
 

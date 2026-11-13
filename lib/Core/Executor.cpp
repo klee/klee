@@ -1681,7 +1681,7 @@ void Executor::unwindToNextLandingpad(ExecutionState &state) {
     lowestStackIndex = cui->catchingStackIndex;
     popFrames = true;
   } else {
-    assert(false && "invalid UnwindingInformation subclass");
+    llvm::report_fatal_error("invalid UnwindingInformation subclass");
   }
 
   for (std::size_t i = startIndex; i > lowestStackIndex; i--) {
