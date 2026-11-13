@@ -11,6 +11,8 @@
 #define KLEE_IMMUTABLETREE_H
 
 #include <cassert>
+#include <cstdio>
+#include <cstdlib>
 #include <vector>
 
 namespace klee {
@@ -273,7 +275,15 @@ namespace klee {
   template<class K, class V, class KOV, class CMP>
   inline void ImmutableTree<K,V,KOV,CMP>::Node::decref() {
     --references;
-    if (references==0) delete this;
+    if (references == 0) {
+      // Diagnose a broken reference count rather than attempting to delete
+      // static storage.
+      if (this == &terminator) {
+        std::fputs("ImmutableTree sentinel reference count reached zero\n", stderr);
+        std::abort();
+      }
+      delete this;
+    }
   }
 
   template<class K, class V, class KOV, class CMP>
