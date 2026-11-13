@@ -1,0 +1,2 @@
+# REQUIRES: stp
+# RUN: %kleaver -solver-backend=stp %S/Inputs/ConcatBool.kquery.inc 2>&1 | FileCheck %S/Inputs/ConcatBool.kquery.inc

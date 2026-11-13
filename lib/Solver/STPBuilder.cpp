@@ -519,6 +519,15 @@ ExprHandle STPBuilder::construct(ref<Expr> e, int *width_out) {
   }
 }
 
+/** Like construct(), but an expression of width 1, which construct() returns
+    as a bool, is converted to a bitvector of width 1. */
+ExprHandle STPBuilder::constructBitVector(ref<Expr> e) {
+  int width;
+  ExprHandle res = construct(e, &width);
+  if (width == 1)
+    return vc_iteExpr(vc, res, bvOne(1), bvZero(1));
+  return res;
+}
 
 /** if *width_out!=1 then result is a bitvector,
     otherwise it is a bool */
@@ -581,9 +590,9 @@ ExprHandle STPBuilder::constructActual(ref<Expr> e, int *width_out) {
   case Expr::Concat: {
     ConcatExpr *ce = cast<ConcatExpr>(e);
     unsigned numKids = ce->getNumKids();
-    ExprHandle res = construct(ce->getKid(numKids-1), 0);
+    ExprHandle res = constructBitVector(ce->getKid(numKids - 1));
     for (int i=numKids-2; i>=0; i--) {
-      res = vc_bvConcatExpr(vc, construct(ce->getKid(i), 0), res);
+      res = vc_bvConcatExpr(vc, constructBitVector(ce->getKid(i)), res);
     }
     *width_out = ce->getWidth();
     return res;
