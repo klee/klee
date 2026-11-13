@@ -107,6 +107,7 @@ private:
 
   ExprHandle constructActual(ref<Expr> e, int *width_out);
   ExprHandle construct(ref<Expr> e, int *width_out);
+  ExprHandle constructBitVector(ref<Expr> e);
   
   ::VCExpr buildVar(const char *name, unsigned width);
   ::VCExpr buildArray(const char *name, unsigned indexWidth, unsigned valueWidth);
