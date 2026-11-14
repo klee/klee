@@ -402,8 +402,18 @@ bool IntrinsicCleanerPass::runOnBasicBlock(BasicBlock &b, Module &M) {
         if (auto *table = dyn_cast<GlobalVariable>(base->stripPointerCasts())) {
           if (auto *absoluteTable =
                   getAbsoluteRelativeTable(M, table, ii->getType())) {
+            // The offset may be narrower than 3 bits (e.g. i1 or i2), for which
+            // the constant 4 truncated to the offset type is zero and the division
+            // is by zero. Compute the index in i32 (or the offset type if wider).
+            Type *indexTy =
+                offset->getType()->getPrimitiveSizeInBits() > 32
+                    ? offset->getType()
+                    : Type::getInt32Ty(ctx);
+            Value *offsetWide =
+                Builder.CreateZExtOrBitCast(offset, indexTy,
+                                            "load.relative.offset.ext");
             Value *index = Builder.CreateUDiv(
-                offset, ConstantInt::get(offset->getType(), 4),
+                offsetWide, ConstantInt::get(indexTy, 4),
                 "load.relative.index");
             Value *entry = Builder.CreateInBoundsGEP(
                 absoluteTable->getValueType(), absoluteTable,
