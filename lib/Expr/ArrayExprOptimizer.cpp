@@ -202,20 +202,11 @@ bool ExprOptimizer::computeIndexes(array2idx_ty &arrays, const ref<Expr> &e,
     idxt_v.visit(e);
     assert((idxt_v.getWidth() % arr->range == 0) && "Read is not aligned");
     Expr::Width width = idxt_v.getWidth() / arr->range;
-
-    if (auto e = idxt_v.getMul()) {
-      // If we have a MulExpr in the index, we can optimize our search by
-      // skipping all those indexes that are not multiple of such value.
-      // In fact, they will be rejected by the MulExpr interpreter since it
-      // will not find any integer solution
-      auto ce = dyn_cast<ConstantExpr>(e);
-      assert(ce && "Not a constant expression");
-      uint64_t mulVal = (*ce->getAPValue().getRawData());
-      // So far we try to limit this optimization, but we may try some more
-      // aggressive conditions (i.e. mulVal > width)
-      if (width == 1 && mulVal > 1)
-        width = mulVal;
-    }
+    // Do not use a constant multiplier found in the predicate as an index
+    // stride. That constant may multiply a loaded (not indexed) value, and
+    // its divisibility constraint does not apply to the index expression;
+    // a wrong stride makes valid indices unreachable and can wrongly mark
+    // feasible branches infeasible (see issue #1841).
 
     // For each concrete value 'i' stored in the array
     for (size_t aIdx = 0; aIdx < arr->constantValues.size(); aIdx += width) {
