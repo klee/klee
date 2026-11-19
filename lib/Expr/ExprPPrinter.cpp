@@ -251,7 +251,9 @@ private:
     
     // Get stride expr in proper index width.
     Expr::Width idxWidth = base->index->getWidth();
-    ref<Expr> strideExpr = ConstantExpr::alloc(stride, idxWidth);
+    ref<ConstantExpr> strideExpr = ConstantExpr::alloc(1, idxWidth);
+    if (stride == -1)
+      strideExpr = strideExpr->Neg();
     ref<Expr> offset = ConstantExpr::create(0, idxWidth);
     
     e = e->getKid(1);
