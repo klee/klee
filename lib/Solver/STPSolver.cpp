@@ -27,8 +27,7 @@
 #include <csignal>
 #include <memory>
 #include <string>
-#include <sys/ipc.h>
-#include <sys/shm.h>
+#include <sys/mman.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -64,18 +63,7 @@ llvm::cl::opt<SAT> SATSolver(
 
 #define vc_bvBoolExtract IAMTHESPAWNOFSATAN
 
-static unsigned char *shared_memory_ptr = nullptr;
-static int shared_memory_id = 0;
-// Darwin by default has a very small limit on the maximum amount of shared
-// memory, which will quickly be exhausted by KLEE running its tests in
-// parallel. For now, we work around this by just requesting a smaller size --
-// in practice users hitting this limit on counterexample sizes probably already
-// are hitting more serious scalability issues.
-#ifdef __APPLE__
-static const unsigned shared_memory_size = 1 << 16;
-#else
 static const unsigned shared_memory_size = 1 << 20;
-#endif
 
 static void stp_error_handler(const char *err_msg) {
   fprintf(stderr, "error: STP Error: %s\n", err_msg);
@@ -95,6 +83,7 @@ private:
   std::unique_ptr<STPBuilder> builder;
   time::Span timeout;
   bool useForkedSTP;
+  unsigned char *sharedMemory = nullptr;
   SolverRunStatus runStatusCode;
 
 public:
@@ -176,28 +165,21 @@ STPSolverImpl::STPSolverImpl(bool useForkedSTP, bool optimizeDivides)
   vc_registerErrorHandler(::stp_error_handler);
 
   if (useForkedSTP) {
-    assert(shared_memory_id == 0 && "shared memory id already allocated");
-    shared_memory_id =
-        shmget(IPC_PRIVATE, shared_memory_size, IPC_CREAT | 0600);
-    if (shared_memory_id < 0)
+    // The solver child inherits this mapping across fork(). The kernel
+    // reclaims it when the last process using it exits.
+    void *mapping = mmap(nullptr, shared_memory_size, PROT_READ | PROT_WRITE,
+                         MAP_SHARED | MAP_ANON, -1, 0);
+    if (mapping == MAP_FAILED)
       llvm::report_fatal_error(
-          llvm::Twine("unable to allocate shared memory region: ") +
+          llvm::Twine("unable to map shared memory region: ") +
           llvm::sys::StrError(errno));
-    shared_memory_ptr = (unsigned char *)shmat(shared_memory_id, nullptr, 0);
-    int shmatErrno = errno;
-    shmctl(shared_memory_id, IPC_RMID, nullptr);
-    if (shared_memory_ptr == (void *)-1)
-      llvm::report_fatal_error(
-          llvm::Twine("unable to attach shared memory region: ") +
-          llvm::sys::StrError(shmatErrno));
+    sharedMemory = static_cast<unsigned char *>(mapping);
   }
 }
 
 STPSolverImpl::~STPSolverImpl() {
-  // Detach the memory region.
-  shmdt(shared_memory_ptr);
-  shared_memory_ptr = nullptr;
-  shared_memory_id = 0;
+  if (useForkedSTP)
+    munmap(sharedMemory, shared_memory_size);
 
   builder.reset();
 
@@ -289,8 +271,7 @@ static SolverImpl::SolverRunStatus
 runAndGetCexForked(::VC vc, STPBuilder *builder, ::VCExpr q,
                    const std::vector<const Array *> &objects,
                    std::vector<std::vector<unsigned char>> &values,
-                   bool &hasSolution, time::Span timeout) {
-  unsigned char *pos = shared_memory_ptr;
+                   bool &hasSolution, time::Span timeout, unsigned char *pos) {
   unsigned sum = 0;
   for (const auto object : objects)
     sum += object->size;
@@ -409,8 +390,9 @@ bool STPSolverImpl::computeInitialValues(
 
   bool success;
   if (useForkedSTP) {
-    runStatusCode = runAndGetCexForked(vc, builder.get(), stp_e, objects,
-                                       values, hasSolution, timeout);
+    runStatusCode =
+        runAndGetCexForked(vc, builder.get(), stp_e, objects, values,
+                           hasSolution, timeout, sharedMemory);
     success = ((SOLVER_RUN_STATUS_SUCCESS_SOLVABLE == runStatusCode) ||
                (SOLVER_RUN_STATUS_SUCCESS_UNSOLVABLE == runStatusCode));
   } else {
